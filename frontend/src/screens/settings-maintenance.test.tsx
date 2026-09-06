@@ -110,8 +110,10 @@ describe("ResetDataCard (danger zone)", () => {
     // buys it: the danger zone had to sit unarmed on a page a reader was
     // already on, so the page rendered and the card withheld itself. It has a
     // page of its own now, so an unarmed installation has no such destination —
-    // the address falls back and nothing about resetting appears anywhere.
-    await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
+    // the address reaches the boundary and nothing about resetting appears.
+    expect(
+      await screen.findByText(/this settings page is not yours to open/i),
+    ).toBeTruthy();
     expect(screen.queryByText(/reset data/i)).toBeNull();
   });
 
@@ -123,9 +125,12 @@ describe("ResetDataCard (danger zone)", () => {
       resetDataBackend({ roles: ["rep"], dataResetAvailable: true, allow: {} }),
     );
     render(<SettingsScreen route={settingsHref("reset")} />);
-    // With no member grant, the rep falls back to Account — proven here by
-    // the identity card rendering instead of anything maintenance-shaped.
-    await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
+    // With no grant the rep is told the page is not theirs, and the address
+    // they were sent is left in the bar. Waited on the boundary's own words
+    // rather than on an absence, which is also true mid-load.
+    expect(
+      await screen.findByText(/this settings page is not yours to open/i),
+    ).toBeTruthy();
     expect(screen.queryByText(/reset data/i)).toBeNull();
   });
 
@@ -162,10 +167,12 @@ describe("ResetDataCard (danger zone)", () => {
       }),
     );
     render(<SettingsScreen route={settingsHref("reset")} />);
-    // The catalog gives this reader no reset page at all, so the address falls
-    // back — asserted through the identity card, which is what the fallback
-    // renders, rather than through an absence that is also true mid-load.
-    await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
+    // The catalog gives this reader no reset page at all, so the address
+    // reaches the boundary — asserted through its own words rather than through
+    // an absence that is also true mid-load.
+    expect(
+      await screen.findByText(/this settings page is not yours to open/i),
+    ).toBeTruthy();
     expect(screen.queryByText(/reset data/i)).toBeNull();
   });
 

@@ -47,7 +47,7 @@ func addModelLaneJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig,
 	// role holds — only the sentence is absent without a lane — but a group
 	// documented as taking no config is the wrong place for something that
 	// reads one.
-	addWeeklyReviewJobs(reg, pool, log, cfg.WeeklyReviewBrain, cfg.WeeklyMail)
+	addWeeklyReviewJobs(reg, pool, log, cfg.WeeklyReviewBrain, cfg.WeeklyLearningsBrain, cfg.WeeklyMail)
 	addDeclaredWorker[VoiceBuildRetryArgs](reg, &voiceBuildRetryWorker{store: ai.NewVoiceStore(InstallationDB(pool)), log: log})
 	// The reindex is a dispatcher plus a workspace worker, and neither is
 	// ticked: the api enqueues the dispatcher once per confirmed reindex

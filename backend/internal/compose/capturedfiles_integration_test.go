@@ -114,7 +114,7 @@ func mailRecord(sourceID string) connector.NormalizedRecord {
 	const counterparty = "her@example.com"
 	return connector.NormalizedRecord{
 		EntityType: "activity",
-		NaturalKey: connector.NaturalKey{SourceSystem: "imap", SourceID: sourceID},
+		NaturalKey: connector.NaturalKey{SourceSystem: connector.EmailSourceSystem, SourceID: sourceID},
 		Fields: capture.ActivityFields{
 			Kind:      "email",
 			Subject:   "The signed contract",
@@ -162,13 +162,17 @@ func onePDF() connector.Part {
 
 func filesFor(ctx context.Context, t *testing.T, db *database.DB, sourceID string) []capturedFile {
 	t.Helper()
-	return filesFrom(ctx, t, db, "imap", sourceID)
+	return filesFrom(ctx, t, db, connector.EmailSourceSystem, sourceID)
 }
 
-// filesFrom reads the rows a given adapter's message produced. The stored
-// identity names the ADAPTER as well as the message, so a reader has to say
+// filesFrom reads the rows a given SOURCE SYSTEM's message produced. The stored
+// identity names that system as well as the message, so a reader has to say
 // which one it means — and a channel capture and a mail capture landing under
 // the same source id is exactly the collision that naming prevents.
+//
+// For mail the system is the one shared identity rather than the adapter's
+// name: two connectors reading one message produce one file set, so asking by
+// adapter would find nothing.
 func filesFrom(ctx context.Context, t *testing.T, db *database.DB, system, sourceID string) []capturedFile {
 	t.Helper()
 	var out []capturedFile
@@ -228,7 +232,7 @@ func TestACapturedMessagesFileBecomesAnAttachment(t *testing.T) {
 	// The stored identity NAMES THE ADAPTER. A bare Message-ID is not unique
 	// across adapters, so the same mailbox pulled by two of them would collide
 	// on the unique index and the second file would be dropped in silence.
-	if got.sourceID == nil || *got.sourceID != "imap:msg-with-file-"+tag {
+	if got.sourceID == nil || *got.sourceID != "email:msg-with-file-"+tag {
 		t.Errorf("external_source_id = %v, want the adapter named alongside the message", got.sourceID)
 	}
 	// And the bytes are actually there. A row pointing at an object that was
@@ -289,8 +293,8 @@ func TestTheDatabaseRefusesASecondRowForTheSameProviderPart(t *testing.T) {
 				source, captured_by, external_source_id, external_part_id)
 			VALUES ('activity', $1, 'contract.pdf',
 			        'some/other/key', 'imap', 'connector:imap', $2, $3)`,
-			activityOf(ctx, t, db, "imap:msg-racing-pulls-"+tag),
-			"imap:msg-racing-pulls-"+tag, *stored[0].partID)
+			activityOf(ctx, t, db, "email:msg-racing-pulls-"+tag),
+			"email:msg-racing-pulls-"+tag, *stored[0].partID)
 		return err
 	})
 	if err == nil {
@@ -494,7 +498,9 @@ func TestACapturedFilesCategoryNamesTheTransportThatCarriedIt(t *testing.T) {
 		t.Errorf("a telegram photo's category = %q, want message_attachment — "+
 			"the transport that carried it decides, and it was not mail", got)
 	}
-	mailFiles := filesFrom(ctx, t, db, "imap", mailID)
+	// The mail side asks by the shared mail identity; the channel side above
+	// still asks by its provider, which is the contrast this test is about.
+	mailFiles := filesFrom(ctx, t, db, connector.EmailSourceSystem, mailID)
 	if len(mailFiles) != 1 {
 		t.Fatalf("the mail message stored %d files, want 1", len(mailFiles))
 	}

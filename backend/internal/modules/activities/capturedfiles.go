@@ -245,10 +245,16 @@ func refuseUnderivedCategory(from CapturedFileSource) error {
 // providerMessageKey is the stored message identity, and it names the SYSTEM
 // as well as the message.
 //
-// A bare Message-ID is not unique across adapters: the same mailbox pulled by
-// both imap and gmail yields the same id, and the unique index on this column
-// would then let the second adapter's file collide with the first and be
-// dropped by ON CONFLICT — a file lost, silently, to a deployment choice.
+// The system half is now the one mail identity rather than the adapter's name,
+// which INVERTS what this key used to be for. It used to keep a mailbox pulled
+// by both imap and gmail from dropping the second adapter's file on the unique
+// index. That was the right answer while the two adapters produced two
+// activities; with one activity behind one message, the second adapter's copy
+// of a file is a duplicate of the first, and dropping it is the point.
+//
+// What the system half still does is keep DIFFERENT sources apart: an
+// extension's records, and the demo's, carry their own namespace, so nothing
+// there can collide with a real mailbox's files.
 func providerMessageKey(from CapturedFileSource) string {
 	return from.System + ":" + from.MessageID
 }

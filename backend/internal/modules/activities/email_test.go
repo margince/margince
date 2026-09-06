@@ -19,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // stubUnsubscribeLinker stands in for the consent module's preference-token
@@ -261,16 +262,21 @@ func TestASendGoesOutThroughTheMailboxItResolved(t *testing.T) {
 				provider:  provider,
 				to:        []string{"client@acme.test"},
 			}
-			// BOTH, and the same value: the delivery names the connector that
-			// transmits, and the activity's source_system is the natural key the
-			// provider's own echo carries. Two answers here would file a
-			// duplicate timeline row for every message anybody sends.
+			// The two answers are deliberately DIFFERENT, and each is the only
+			// right one for its job. The delivery names the mailbox that
+			// transmits — hand it the wrong one and the send goes out through a
+			// connector this sender has no grant on. The timeline row carries the
+			// transport-independent mail identity, so the provider's echo folds
+			// onto it whichever connector reads the message back; keying it on
+			// this mailbox is what left a Gmail send and its IMAP echo as two
+			// rows.
 			if got := m.delivery(ids.NewV7(), threading{}, SendOrigin{}).Provider; got != provider {
 				t.Errorf("delivery provider = %q, want %q — handed to a connector this sender has no grant on", got, provider)
 			}
 			act := m.activity(threading{})
-			if act.SourceSystem == nil || *act.SourceSystem != provider {
-				t.Errorf("activity source_system = %v, want %q — the echo would key onto nothing and land as a second row", act.SourceSystem, provider)
+			if act.SourceSystem == nil || *act.SourceSystem != connector.EmailSourceSystem {
+				t.Errorf("activity source_system = %v, want %q — a send keyed on its own mailbox cannot absorb an echo read by another connector",
+					act.SourceSystem, connector.EmailSourceSystem)
 			}
 		})
 	}

@@ -116,7 +116,7 @@ function cardStory(
 }
 
 const meta: Meta<typeof ProviderCard> = {
-  title: "Settings/Admin settings/Integrations/Contact data provider",
+  title: "Settings/Data/Integrations/Contact data provider",
   component: ProviderCard,
 };
 export default meta;

@@ -118,7 +118,7 @@ function story(
 }
 
 const meta: Meta<typeof AiRoutingCard> = {
-  title: "Settings/Admin settings/AI/Model routing",
+  title: "Settings/AI/Models & routing/Model routing",
   component: AiRoutingCard,
 };
 export default meta;

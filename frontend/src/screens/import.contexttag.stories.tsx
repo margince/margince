@@ -11,7 +11,7 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 // perform, so these would otherwise have no rendered state anywhere.
 
 const meta: Meta = {
-  title: "Settings/Admin settings/Maintenance/Import/Context tag",
+  title: "Settings/Data/Data import/Context tag",
   parameters: { layout: "padded" },
 };
 export default meta;

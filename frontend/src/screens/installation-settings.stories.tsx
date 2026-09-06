@@ -52,7 +52,7 @@ const MANAGER = { installation_settings: ["read", "update"] } as const;
 const READER = { installation_settings: ["read"] } as const;
 
 const meta: Meta<typeof InstallationSettingsCard> = {
-  title: "Settings/Admin settings/General/Installation",
+  title: "Settings/Company/Company profile/Installation",
   component: InstallationSettingsCard,
 };
 export default meta;

@@ -124,7 +124,7 @@ function story(body: Record<string, unknown>, allow: GrantSpec = {}) {
 }
 
 const meta: Meta<typeof CaptureActivityTab> = {
-  title: "Settings/You/Capture activity",
+  title: "Settings/You/Capture activity/Capture activity",
   component: CaptureActivityTab,
 };
 export default meta;

@@ -73,3 +73,47 @@ func TestActivityDrillThroughTakesTheProjectGrant(t *testing.T) {
 		}
 	}
 }
+
+// Filtering by a granted field takes that grant, and still SERVES it to a seat
+// that holds it.
+//
+// project_id is defended twice over: by filterScopes, which refuses the VALUE
+// (auth.EnsureVisibleLive — an unreadable id is 404 before a row is counted),
+// and now by the vocabulary gate, which refuses the NAME.
+//
+// SO THIS TEST STILL PASSES WITH THE VOCABULARY GATE REVERTED, and that is
+// stated here rather than left for somebody to discover: filterScopes alone
+// refuses this request, so what is proved below is the BEHAVIOUR a caller sees,
+// not the new gate. Every granted filter in the catalog today carries
+// filterScopes, so no shipped report can present the failing case at all.
+// TestTheVocabularyGateReadsTheCallersFilterKeys (reportgrants_test.go) is what
+// fails when the fix is removed, and it says why it is written against the call
+// site instead.
+func TestFilteringByAGrantedFieldTakesItsGrant(t *testing.T) {
+	e := setupForecast(t)
+	org := e.seedID(t, `INSERT INTO organization (id, display_name, source, captured_by)
+		VALUES ($1, 'Filter Co', 'manual', 'human:x')`)
+	project := e.seedID(t, `INSERT INTO project (id, name, organization_id, source, captured_by)
+		VALUES ($1, 'Unlistable rollout', $2, 'manual', 'human:x')`, org)
+	activity := e.seedID(t, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
+		VALUES ($1, 'meeting', 'kickoff', now() - interval '1 hour', 'manual', 'human:x')`)
+	e.seedID(t, `INSERT INTO activity_link (id, activity_id, entity_type, project_id) VALUES ($1, $2, 'project', $3)`,
+		activity, project)
+
+	body := `{"filters":{"project_id":"` + project.String() + `"},"group_by":["kind"]}`
+
+	if status, answer := e.runReportStatus(
+		e.activityReader(), t, "activities-by-kind", body,
+	); status == http.StatusOK {
+		t.Errorf("filtering by project without project.read → 200, want a refusal.\n"+
+			"A non-zero count answers whether that project exists and has work filed "+
+			"under it, which grouping by the same field is refused for.\nbody: %s", answer)
+	}
+	// And the grant still BUYS the filter. Without this, a rule that refused
+	// EVERYONE would satisfy the assertion above while breaking the feature.
+	if status, answer := e.runReportStatus(
+		e.activityReader("project"), t, "activities-by-kind", body,
+	); status != http.StatusOK {
+		t.Errorf("filtering by project WITH project.read → %d, want 200: %s", status, answer)
+	}
+}

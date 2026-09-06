@@ -306,40 +306,17 @@ func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 			`SELECT handle FROM person_social WHERE person_id = $1 AND platform = 'linkedin'`, id)
 	}
 	if err == nil {
-		_, err = tx.Exec(ctx, `DELETE FROM person_social WHERE person_id = $1`, id)
+		err = deleteIdentifyingSatellites(ctx, tx, id)
 	}
+	// The JUDGEMENTS made about them: what a classifier concluded their replies
+	// meant with every human correction of it, and the handoffs naming them.
+	// The activity TEXT survives an anonymize — no floor applies — so a verdict
+	// or a "rejected: not qualified" left beside those words goes on reading as
+	// a live conclusion about somebody the row no longer names.
 	if err == nil {
-		_, err = tx.Exec(ctx, `DELETE FROM person_email WHERE person_id = $1`, id)
-	}
-	if err == nil {
-		_, err = tx.Exec(ctx, `DELETE FROM person_phone WHERE person_id = $1`, id)
-	}
-	if err == nil {
-		// The enrichment sidecar holds the subject's title and employer with
-		// the verbatim sentence naming them. Anonymizing the person row above
-		// cascades to nothing, so a sweep that skipped this would leave the
-		// quote standing beside an "Erased Subject" record.
-		_, err = tx.Exec(ctx, `DELETE FROM person_profile_field WHERE person_id = $1`, id)
-	}
-	if err == nil {
-		// What a classifier concluded this person's replies MEANT, and every
-		// human correction of it. Anonymizing the person row cascades to
-		// nothing here either, so a sweep that skipped it would leave "replied
-		// negatively, corrected by a colleague" standing beside an "Erased
-		// Subject" record — a judgement about somebody the row no longer names.
-		//
-		// The subject's activity TEXT survives an anonymize: the eraser redacts
-		// it under the statutory correspondence floor and the anonymize applies
-		// no floor at all. That is what makes this a delete rather than an
-		// omission — the words stay, so a verdict left beside them goes on being
-		// read as a live conclusion about a person.
 		err = deleteReplyVerdictHistoryFor(ctx, tx, id)
 	}
 	if err == nil {
-		// The handoffs naming them too. Anonymizing the person row cascades to
-		// nothing here either, so a sweep that skipped it would leave "rejected:
-		// not qualified" standing beside an "Erased Subject" record — a
-		// judgement colleagues made about somebody the row no longer names.
 		err = deleteSubjectHandoffs(ctx, tx, id)
 	}
 	if err == nil {
@@ -355,13 +332,6 @@ func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 		// leave the subject's name in a commitment beside an "Erased Subject"
 		// record.
 		err = redactCommitmentsNaming(ctx, tx, ids.From[ids.PersonKind](id))
-	}
-	if err == nil {
-		// The channel identity is a resolution key on the subject as
-		// much as their address: left behind, it would keep binding
-		// inbound messages to the row this sweep just anonymized.
-		_, err = tx.Exec(ctx,
-			`DELETE FROM person_channel_identity WHERE person_id = $1`, id)
 	}
 	if err == nil {
 		_, err = tx.Exec(ctx,
@@ -397,6 +367,36 @@ func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	}
 	if err == nil {
 		err = scrubPersonGraphTraces(ctx, tx, id, subjectEmails, subjectName, linkedInHandles)
+	}
+	return err
+}
+
+// deleteIdentifyingSatellites removes the rows that name the subject outright.
+//
+// In this file, one statement per table: gates/satellite_lifecycle_test.go
+// reads this FILE's SQL literals to prove every satellite is handled, so a
+// helper elsewhere or a loop over identifiers is invisible to it.
+func deleteIdentifyingSatellites(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+	var err error
+	// The anonymize UPDATES the person row rather than deleting it, so none of
+	// these cascades — one skipped leaves the subject readable beside an
+	// "Erased Subject" record.
+	if err == nil {
+		_, err = tx.Exec(ctx, `DELETE FROM person_social WHERE person_id = $1`, id)
+	}
+	if err == nil {
+		_, err = tx.Exec(ctx, `DELETE FROM person_email WHERE person_id = $1`, id)
+	}
+	if err == nil {
+		_, err = tx.Exec(ctx, `DELETE FROM person_phone WHERE person_id = $1`, id)
+	}
+	if err == nil {
+		// The sidecar holds their title and employer verbatim.
+		_, err = tx.Exec(ctx, `DELETE FROM person_profile_field WHERE person_id = $1`, id)
+	}
+	if err == nil {
+		// A resolution key: left behind it keeps binding inbound mail here.
+		_, err = tx.Exec(ctx, `DELETE FROM person_channel_identity WHERE person_id = $1`, id)
 	}
 	return err
 }
@@ -460,6 +460,9 @@ func clearCommunicationRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, addre
 		       subject_id = NULL, subject_kind = NULL
 		 WHERE subject_id = $1`, id); err != nil {
 		return err
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM privacy_notice_case WHERE person_id = $1`, id); err != nil {
+		return fmt.Errorf("clear the person's notice cases: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `DELETE FROM communication_basis WHERE person_id = $1`, id); err != nil {
 		return err
