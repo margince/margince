@@ -59,8 +59,16 @@ import (
 // the message a missing table gets. Every path here is a WRITE — archiving,
 // deleting or relinking the satellite's rows.
 type satellitePath struct {
-	name   string
-	file   string
+	name string
+	// files list the path's implementation, read together.
+	//
+	// A LIST rather than one path: an obligation is a property of the code that
+	// discharges it, not of the file it happens to sit in, and a gate keyed to
+	// one filename fails the day somebody splits a long function — reporting a
+	// satellite as unhandled when the statement simply moved. That is the gate
+	// becoming a second copy of its subject, which is the failure this shape
+	// avoids.
+	files  []string
 	remedy string
 	// archivedOnly restricts the path to satellites carrying archived_at.
 	archivedOnly bool
@@ -76,19 +84,24 @@ type satellitePath struct {
 var satelliteLifecyclePaths = []satellitePath{
 	{
 		name:         "archive_cascade",
-		file:         "internal/modules/people/personarchive.go",
+		files:        []string{"internal/modules/people/personarchive.go"},
 		remedy:       "add it to ArchivePerson's statement list — an unlisted satellite stays LIVE under an archived Person",
 		archivedOnly: true,
 	},
 	{
-		name:    "retention_anonymize",
-		file:    "internal/modules/privacy/retentionactions.go",
+		name: "retention_anonymize",
+		files: []string{
+			"internal/modules/privacy/retentionactions.go",
+			// The bearer links the anonymize clears — the opt-in token, the
+			// confirm link and what came back through it — live beside it.
+			"internal/modules/privacy/subjectlinks.go",
+		},
 		remedy:  "delete its rows in the person/anonymize executor — the sweep anonymizes the person row and would leave this satellite's copy of the subject behind",
 		piiOnly: true,
 	},
 	{
 		name:    "merge_relink",
-		file:    "internal/modules/people/mergerelink.go",
+		files:   []string{"internal/modules/people/mergerelink.go"},
 		remedy:  "relink its rows onto the survivor in relinkPersonReferences — rows left on the merged-away person are orphaned, invisible to every read of the survivor",
 		piiOnly: true,
 	},
@@ -184,13 +197,16 @@ func personSatellites(t *testing.T) map[string]map[string]bool {
 	return satellites
 }
 
-// pathWrites returns the tables one lifecycle file writes.
-func pathWrites(t *testing.T, file string) map[string]bool {
+// pathWrites returns the tables one lifecycle path writes, across every file it
+// is implemented in.
+func pathWrites(t *testing.T, files []string) map[string]bool {
 	t.Helper()
 	writes := map[string]bool{}
-	for _, lit := range sqlLiterals(t, file) {
-		for _, table := range sqlWriteTargets(lit) {
-			writes[table] = true
+	for _, file := range files {
+		for _, lit := range sqlLiterals(t, file) {
+			for _, table := range sqlWriteTargets(lit) {
+				writes[table] = true
+			}
 		}
 	}
 	return writes
@@ -201,7 +217,7 @@ func TestEveryPersonSatelliteJoinsEveryLifecyclePathThatApplies(t *testing.T) {
 	satellites := personSatellites(t)
 	var missing []string
 	for _, path := range satelliteLifecyclePaths {
-		writes := pathWrites(t, path.file)
+		writes := pathWrites(t, path.files)
 		for table, cols := range satellites {
 			if path.archivedOnly && !cols["archived_at"] {
 				continue // removed by the person FK cascade; nothing to archive
@@ -213,7 +229,7 @@ func TestEveryPersonSatelliteJoinsEveryLifecyclePathThatApplies(t *testing.T) {
 				continue
 			}
 			missing = append(missing, "person satellite "+table+" is not handled by the "+path.name+
-				" path ("+path.file+") — "+path.remedy)
+				" path ("+strings.Join(path.files, ", ")+") — "+path.remedy)
 		}
 	}
 	sort.Strings(missing)
