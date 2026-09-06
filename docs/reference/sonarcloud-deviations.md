@@ -31,9 +31,12 @@ deliberately outlives its constructor, which is the one shape S8188 has no way
 to distinguish from a leak: it reads a `CancelFunc` that leaves the function and
 cannot follow it into the closure that calls it.
 
-**What holds it instead.** Returning the three values together is itself the
-guard — a caller cannot obtain the context without also obtaining the end of it,
-and cannot start a lane first, because the wait group a lane must be given comes
-from the same call. `TestJoinCancelsTheLanesAndWaitsForThem` and
-`TestJoinReportsALaneThatDoesNotStop` in `backend/cmd/worker` cover the
-ordering and the bounded overrun.
+**What holds it instead.** The caller has to defer the closure — nothing in the
+type system makes it. What returning the three values together removes is the
+*ordering* hazard — the half nothing was holding when a deleted `defer` left
+every test in the repository passing: a lane cannot exist before its own
+shutdown is registered, because the wait group a lane must be given comes from
+the same call that produced the closure. A caller that discards the closure is
+still a caller with no shutdown, and the tests are what say otherwise —
+`TestJoinCancelsTheLanesAndWaitsForThem` covers the cancel and the wait,
+`TestJoinReportsALaneThatDoesNotStop` the bounded overrun.
