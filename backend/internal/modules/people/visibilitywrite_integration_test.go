@@ -19,9 +19,12 @@ package people
 // direction, at any time.
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -158,5 +161,43 @@ func TestAWriteGrantHolderMovesVisibility(t *testing.T) {
 	}
 	if got := e.visibilityOf(t, published); got != "owner" {
 		t.Errorf("visibility = %q, want owner", got)
+	}
+}
+
+// TestCapturePrivacyStillHidesAContactFromTheNewDoor is the security question
+// the change had to answer, and the reason it is safe.
+//
+// The write gate is `person: update` plus EnsureWritable, which is weaker than
+// the ownership test POST /people/{id}/publish applies on purpose: capture
+// privacy is the importing user's alone, and an admin reading a colleague's
+// unpromoted captured contacts is the disclosure that boundary exists to
+// prevent (founder decision, rowscope.go).
+//
+// The new door does not weaken it, because the two gates compose. A
+// capture-private row is invisible to every other seat under the row-scope
+// arm, so EnsureWritable cannot find it and the patch answers NOT FOUND — the
+// same existence-hiding answer the owner's verb gives. Neither a teammate nor
+// an admin can publish somebody else's private contact through this field.
+func TestCapturePrivacyStillHidesAContactFromTheNewDoor(t *testing.T) {
+	e := setupCapturePrivacy(t)
+	captured := e.capturePerson(t, "owner")
+
+	for _, reader := range []struct {
+		name  string
+		user  ids.UUID
+		scope principal.RowScope
+	}{
+		{"a teammate", e.teammate, principal.RowScopeTeam},
+		{"an admin", e.admin, principal.RowScopeAll},
+	} {
+		_, err := e.store.UpdatePerson(e.as(reader.user, reader.scope), captured,
+			UpdatePersonInput{Visibility: visibility("workspace")})
+		if !errors.Is(err, apperrors.ErrNotFound) {
+			t.Errorf("%s publishing somebody else's capture-private contact: err = %v, want not found",
+				reader.name, err)
+		}
+	}
+	if got := e.visibilityOf(t, captured); got != "owner" {
+		t.Errorf("visibility = %q, want owner — the contact was published by somebody who is not its owner", got)
 	}
 }
