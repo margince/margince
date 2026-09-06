@@ -24,8 +24,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -199,5 +199,96 @@ func TestCapturePrivacyStillHidesAContactFromTheNewDoor(t *testing.T) {
 	}
 	if got := e.visibilityOf(t, captured); got != "owner" {
 		t.Errorf("visibility = %q, want owner — the contact was published by somebody who is not its owner", got)
+	}
+}
+
+// TestNarrowingRefusesToMakeARecordNobodyCanRead is the trap the field would
+// otherwise set, and it is reachable two ways: an unbounded caller narrowing a
+// row that already has no owner, and any caller clearing owner_id in the same
+// patch that narrows.
+//
+// The row-scope arm reads `visibility <> 'owner' OR owner_id = me`, so a row
+// that says 'owner' and names nobody is invisible to every seat — including
+// whoever just wrote it, and including the admin who would have to repair it.
+func TestNarrowingRefusesToMakeARecordNobodyCanRead(t *testing.T) {
+	e := setupCapturePrivacy(t)
+
+	t.Run("a row that already has no owner", func(t *testing.T) {
+		id := ids.New[ids.PersonKind]()
+		ctx := e.as(e.admin, principal.RowScopeAll)
+		if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+			_, err := tx.Exec(ctx, `
+				INSERT INTO person (id, full_name, source, captured_by, visibility)
+				VALUES ($1, 'Ownerless Contact', 'manual', 'human:test', 'workspace')`, id)
+			return err
+		}); err != nil {
+			t.Fatalf("seeding an ownerless contact: %v", err)
+		}
+		if _, err := e.store.UpdatePerson(ctx, id,
+			UpdatePersonInput{Visibility: visibility("owner")}); err == nil {
+			t.Error("an admin narrowed an ownerless contact — the row is now readable by nobody")
+		}
+	})
+
+	t.Run("clearing the owner in the same patch", func(t *testing.T) {
+		published := e.capturePerson(t, "workspace")
+		ctx := e.as(e.owner, principal.RowScopeOwn)
+		if _, err := e.store.UpdatePerson(ctx, published, UpdatePersonInput{
+			Visibility: visibility("owner"),
+			Clear:      []string{"owner_id"},
+		}); err == nil {
+			t.Error("a contact was made private with its owner cleared — nobody can read it")
+		}
+	})
+}
+
+// TestAStaleVisibilityWriteIsRefused is the race the column cannot tolerate.
+//
+// UpdatePerson reads the row and decides admission BEFORE it locks it: an
+// unconditional patch takes its FOR UPDATE inside ApplyGuarded. So a write
+// admitted while the contact was public can land after its owner has just made
+// it private, re-publishing a record somebody deliberately closed and writing
+// `workspace -> workspace` into the audit, because the before-image came from
+// the stale read.
+//
+// This drives the guard directly rather than trying to interleave two
+// transactions: refuseStaleVisibility is handed the before-image a racing
+// caller would have carried — the row as it looked while still public — and
+// must refuse it now that the stored row says otherwise.
+func TestAStaleVisibilityWriteIsRefused(t *testing.T) {
+	e := setupCapturePrivacy(t)
+	published := e.capturePerson(t, "workspace")
+	ctx := e.as(e.owner, principal.RowScopeOwn)
+
+	// The row as the racing caller read it: still public.
+	stale, err := e.store.GetPerson(ctx, published, storekit.LiveOnly)
+	if err != nil {
+		t.Fatalf("reading the person: %v", err)
+	}
+
+	// Its owner makes it private in between.
+	if _, err := e.store.UpdatePerson(ctx, published,
+		UpdatePersonInput{Visibility: visibility("owner")}); err != nil {
+		t.Fatalf("making it private: %v", err)
+	}
+
+	// The racing write reaches the guard carrying the stale before-image.
+	err = e.store.tx(ctx, func(tx pgx.Tx) error {
+		return refuseStaleVisibility(ctx, tx, published, stale)
+	})
+	if !errors.Is(err, apperrors.ErrConflict) {
+		t.Errorf("a write built on a stale read: err = %v, want conflict — it would have "+
+			"re-published a contact its owner had just made private", err)
+	}
+
+	// And the guard admits a write whose before-image is current.
+	fresh, err := e.store.GetPerson(ctx, published, storekit.LiveOnly)
+	if err != nil {
+		t.Fatalf("re-reading the person: %v", err)
+	}
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		return refuseStaleVisibility(ctx, tx, published, fresh)
+	}); err != nil {
+		t.Errorf("a write built on a current read was refused: %v", err)
 	}
 }

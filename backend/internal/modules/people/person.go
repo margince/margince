@@ -296,6 +296,9 @@ func (s *Store) UpdatePerson(ctx context.Context, id ids.PersonID, in UpdatePers
 			return fmt.Errorf("read person before update: %w", err)
 		}
 
+		if err := refuseUnreadableResult(current, in); err != nil {
+			return err
+		}
 		p, err := buildPersonPatch(current, in)
 		if err != nil {
 			return err
@@ -318,6 +321,11 @@ func (s *Store) UpdatePerson(ctx context.Context, id ids.PersonID, in UpdatePers
 			return nil
 		}
 
+		if in.Visibility != nil {
+			if err := refuseStaleVisibility(ctx, tx, id, current); err != nil {
+				return err
+			}
+		}
 		if err := p.ApplyGuarded(ctx, tx, "person", id.UUID, in.IfVersion); err != nil {
 			return fmt.Errorf("apply person patch: %w", err)
 		}
@@ -326,9 +334,7 @@ func (s *Store) UpdatePerson(ctx context.Context, id ids.PersonID, in UpdatePers
 				return err
 			}
 		}
-		if err := s.carryHistoryIfPublished(ctx, tx, id, current, in); err != nil {
-			return err
-		}
+
 		if in.Emails != nil || in.Phones != nil {
 			by, err := storekit.CapturedBy(ctx)
 			if err != nil {
@@ -341,19 +347,15 @@ func (s *Store) UpdatePerson(ctx context.Context, id ids.PersonID, in UpdatePers
 				return err
 			}
 		}
-		before, after := p.Before(), p.After()
-		if in.Social != nil {
-			before["social"] = current.Social
-			after["social"] = in.Social
+		// AFTER the addresses are replaced, never before: the cohort pass
+		// selects the correspondence to attach by reading this person's live
+		// person_email rows, so running it first would file mail from an
+		// address the same patch is removing — and the replacement archives
+		// the address without retracting the links.
+		if err := s.carryHistoryIfPublished(ctx, tx, id, current, in); err != nil {
+			return err
 		}
-		if in.Emails != nil {
-			before["emails"] = current.Emails
-			after["emails"] = in.Emails
-		}
-		if in.Phones != nil {
-			before["phones"] = current.Phones
-			after["phones"] = in.Phones
-		}
+		before, after := personChangeImages(p, current, in)
 		auditID, err := storekit.AuditWithTrail(ctx, tx, in.Trail, "person", id.UUID, before, after)
 		if err != nil {
 			return fmt.Errorf("audit person update: %w", err)
@@ -372,32 +374,29 @@ func (s *Store) UpdatePerson(ctx context.Context, id ids.PersonID, in UpdatePers
 // buildPersonPatch stages only the fields the caller supplied, each
 // diffed against the current row so the audit before/after captures the
 // real change and an unchanged field is left out of the UPDATE.
-// carryHistoryIfPublished takes a contact's mail and meetings with it when this
-// patch is what published the contact.
+// personChangeImages is the before/after pair the audit row records.
 //
-// The same thing POST /people/{id}/publish does at the end of its own write.
-// Without it the two doors to one field disagree about what the field MEANS:
-// the owner's verb carries the correspondence across, so a colleague opening
-// the record finds the history, while a patch setting the same column left them
-// a contact nobody has ever spoken to. Same fact, two answers, decided by which
-// door the caller happened to use.
-//
-// WIDENING ONLY. The cohort pass links and re-derives — it is how a record
-// OPENS — so running it on a narrowing would be reading it backwards. Making a
-// contact private does not re-hold what was already shared; the activities keep
-// their own audiences, which is what the contract says.
-func (s *Store) carryHistoryIfPublished(
-	ctx context.Context, tx pgx.Tx, id ids.PersonID,
-	current crmcontracts.Person, in UpdatePersonInput,
-) error {
-	if in.Visibility == nil || *in.Visibility != visibilityWorkspace {
-		return nil
+// The patch knows the columns it staged; the relations it does not, because
+// they are written as their own rows rather than as columns on the person. So
+// the three replaced sets are folded in here, and a relation the caller did not
+// supply stays out of both images rather than appearing as an unchanged one.
+func personChangeImages(
+	p *storekit.Patch, current crmcontracts.Person, in UpdatePersonInput,
+) (before, after map[string]any) {
+	before, after = p.Before(), p.After()
+	if in.Social != nil {
+		before["social"] = current.Social
+		after["social"] = in.Social
 	}
-	if current.Visibility == nil || *current.Visibility != visibilityOwner {
-		return nil
+	if in.Emails != nil {
+		before["emails"] = current.Emails
+		after["emails"] = in.Emails
 	}
-	_, err := s.PromotePersonCohortTx(ctx, tx, id)
-	return err
+	if in.Phones != nil {
+		before["phones"] = current.Phones
+		after["phones"] = in.Phones
+	}
+	return before, after
 }
 
 func buildPersonPatch(current crmcontracts.Person, in UpdatePersonInput) (*storekit.Patch, error) {

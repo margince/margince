@@ -3253,7 +3253,8 @@ export const de = {
   "personAccess.share": "Mit dem Unternehmen teilen",
   "personAccess.published": "Das Unternehmen sieht diese Person jetzt.",
   "personAccess.makePrivate": "Privat setzen",
-  "personAccess.madePrivate": "Diese Person sieht jetzt nur noch ihr Besitzer.",
+  "personAccess.madePrivate":
+    "Diese Person gehört wieder ihrem Besitzer. Wer den Datensatz ausdrücklich freigegeben bekommen hat, behält den Zugriff.",
   "compose.reply": "Antworten",
   "compose.writeEmail": "E-Mail schreiben",
   "compose.relink": "Neu verknüpfen",

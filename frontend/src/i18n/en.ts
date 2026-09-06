@@ -3335,7 +3335,8 @@ export const en = {
   "personAccess.share": "Share with the organization",
   "personAccess.published": "The organization can see this person now.",
   "personAccess.makePrivate": "Make private",
-  "personAccess.madePrivate": "Only the owner can see this person now.",
+  "personAccess.madePrivate":
+    "This person is the owner's again. Anyone the record was explicitly shared with keeps their access.",
   "compose.reply": "Reply",
   "compose.writeEmail": "Write email",
   "compose.relink": "Relink",

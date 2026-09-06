@@ -3216,7 +3216,8 @@ export const vi = {
   "personAccess.share": "Chia sẻ với tổ chức",
   "personAccess.published": "Tổ chức đã xem được người này.",
   "personAccess.makePrivate": "Đặt ở chế độ riêng tư",
-  "personAccess.madePrivate": "Bây giờ chỉ chủ sở hữu xem được người này.",
+  "personAccess.madePrivate":
+    "Người này thuộc về chủ sở hữu trở lại. Những ai đã được chia sẻ bản ghi vẫn giữ quyền truy cập.",
   "compose.reply": "Trả lời",
   "compose.writeEmail": "Viết email",
   "compose.relink": "Liên kết lại",
