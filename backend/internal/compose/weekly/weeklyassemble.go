@@ -100,49 +100,7 @@ func (e *Engine) AssembleFor(ctx context.Context, now time.Time) (Review, bool, 
 			UserID: userID, LocalWeekStart: weekStart, AsOf: now.UTC(),
 			LearningsState: LearningsNotRun,
 		}
-		if review.Counts, err = countWeek(ctx, tx, userID, start, end); err != nil {
-			return err
-		}
-		// Leads and meetings read separately from the tallies above: different
-		// tables, different scope clauses, and each dated by a rule that takes
-		// a paragraph to justify. They fold onto the same Counts because a
-		// reader of a week wants one set of figures.
-		c := &review.Counts
-		if c.LeadsRouted, c.LeadsAnsweredInTarget, c.LeadsBreached, err =
-			countWeekLeads(ctx, tx, userID, start, end); err != nil {
-			return err
-		}
-		if c.MeetingsHeld, c.MeetingsWithNextStep, err =
-			countWeekMeetings(ctx, tx, userID, start, end); err != nil {
-			return err
-		}
-		if review.Money, err = countWeekMoney(ctx, tx, userID, start, end); err != nil {
-			return err
-		}
-		// The plan's outcome, settled once and then frozen alongside the rest.
-		//
-		// Settled BEFORE the counts are written, so the review records what the
-		// week actually came to rather than what was still open when the job
-		// happened to run. CloseWeek is idempotent, so the dispatcher's extra
-		// ticks inside a week do not re-settle a commitment the rep completed
-		// after the first pass.
-		if e.plan != nil {
-			c := &review.Counts
-			if c.CommitmentsDue, c.CommitmentsKept, err = e.plan.CloseWeek(ctx, now); err != nil {
-				return err
-			}
-		}
-		if review.Deals, err = readWeekDeals(ctx, tx, userID, start, end); err != nil {
-			return err
-		}
-		// The week this one is measured against: the rep's most recent EARLIER
-		// review, whenever it was.
-		//
-		// Their previous review rather than "last week" by arithmetic. A rep
-		// with a gap — a leave, a worker outage — has a prior week that is not
-		// seven days back, and looking for one would find nothing and report
-		// every count as new.
-		if review.PriorReviewID, err = priorReview(ctx, tx, userID, weekStart); err != nil {
+		if err := e.measureWeek(ctx, tx, &review, now, start, end); err != nil {
 			return err
 		}
 
@@ -213,6 +171,68 @@ func (e *Engine) AssembleFor(ctx context.Context, now time.Time) (Review, bool, 
 // It asks Postgres rather than doing the arithmetic in Go so the zone lookup
 // and the conversion are one answer: a DST week is 167 or 169 hours, and
 // adding 7*24h to a start would measure an hour of the wrong week twice a year.
+// measureWeek reads everything the review states about the week and fills it
+// into review, leaving AssembleFor the transaction's judgement: whether this
+// rep's week is already taken, and what follows from writing it.
+//
+// The division is the read/write line rather than a length. Every figure below
+// is settled BEFORE the insert decides anything, so the whole set can be
+// gathered without knowing yet whether a row will land — which is also why it
+// takes the review by pointer and returns only an error.
+func (e *Engine) measureWeek(
+	ctx context.Context, tx pgx.Tx, review *Review, now, start, end time.Time,
+) error {
+	userID := review.UserID
+	weekStart := review.LocalWeekStart
+	var err error
+	if review.Counts, err = countWeek(ctx, tx, userID, start, end); err != nil {
+		return err
+	}
+	// Leads and meetings read separately from the tallies above: different
+	// tables, different scope clauses, and each dated by a rule that takes
+	// a paragraph to justify. They fold onto the same Counts because a
+	// reader of a week wants one set of figures.
+	c := &review.Counts
+	c.LeadsRouted, c.LeadsAnsweredInTarget, c.LeadsBreached, err = countWeekLeads(ctx, tx, userID, start, end)
+	if err != nil {
+		return err
+	}
+	c.MeetingsHeld, c.MeetingsWithNextStep, err = countWeekMeetings(ctx, tx, userID, start, end)
+	if err != nil {
+		return err
+	}
+	if review.Money, err = countWeekMoney(ctx, tx, userID, start, end); err != nil {
+		return err
+	}
+	// The plan's outcome, settled once and then frozen alongside the rest.
+	//
+	// Settled BEFORE the counts are written, so the review records what the
+	// week actually came to rather than what was still open when the job
+	// happened to run. CloseWeek is idempotent, so the dispatcher's extra
+	// ticks inside a week do not re-settle a commitment the rep completed
+	// after the first pass.
+	if e.plan != nil {
+		c := &review.Counts
+		if c.CommitmentsDue, c.CommitmentsKept, err = e.plan.CloseWeek(ctx, now); err != nil {
+			return err
+		}
+	}
+	if review.Deals, err = readWeekDeals(ctx, tx, userID, start, end); err != nil {
+		return err
+	}
+	// The week this one is measured against: the rep's most recent EARLIER
+	// review, whenever it was.
+	//
+	// Their previous review rather than "last week" by arithmetic. A rep
+	// with a gap — a leave, a worker outage — has a prior week that is not
+	// seven days back, and looking for one would find nothing and report
+	// every count as new.
+	if review.PriorReviewID, err = priorReview(ctx, tx, userID, weekStart); err != nil {
+		return err
+	}
+	return nil
+}
+
 func localWeekWindow(ctx context.Context, tx pgx.Tx, weekStart time.Time) (time.Time, time.Time, error) {
 	zone, err := identity.TimezoneOf(ctx, tx)
 	if err != nil {
