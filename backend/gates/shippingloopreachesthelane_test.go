@@ -33,7 +33,10 @@ func TestTheShippingLoopNamesARoutineThatReachesTheIntegrationLane(t *testing.T)
 
 	rules := readRepoFile(t, filepath.Join(repoRoot, "AGENTS.md"))
 	shipping := section(t, rules, "## Shipping a change")
-	if !strings.Contains(shipping, integrationRoutine) {
+	// The COMMAND, not the word: a step that mentions check-all while telling a
+	// contributor to run something else reads to this gate exactly like one that
+	// tells them to run it.
+	if !strings.Contains(shipping, "`make "+integrationRoutine+"`") {
 		t.Errorf("the shipping loop does not name `make %s`, so the routine a contributor is told "+
 			"to run stops at `check` — which reaches the integration lane not at all, because its "+
 			"test target is `go test ./...` and every integration file is behind a build tag",
@@ -42,11 +45,28 @@ func TestTheShippingLoopNamesARoutineThatReachesTheIntegrationLane(t *testing.T)
 
 	root := readRepoFile(t, filepath.Join(repoRoot, "Makefile"))
 	recipe := section(t, root, "\n"+integrationRoutine+":")
-	if !strings.Contains(recipe, "test-integration") {
+	if !invokes(recipe, "test-integration") {
 		t.Errorf("`make %s` no longer runs test-integration, so the rulebook now points at a "+
 			"routine as blind as the one it replaced — and blind in the way that reports success",
 			integrationRoutine)
 	}
+}
+
+// invokes reports whether a recipe RUNS a target rather than merely mentioning
+// it. The recipe carries the reasoning for what it does and does not run, so
+// the lane's name appears in its comments whatever the commands do — and a
+// recipe that stopped running the lane would keep every one of those words.
+func invokes(recipe, target string) bool {
+	for _, line := range strings.Split(recipe, "\n") {
+		command := strings.TrimSpace(line)
+		if strings.HasPrefix(command, "#") {
+			continue
+		}
+		if strings.Contains(command, "$(MAKE)") && strings.Contains(command, target) {
+			return true
+		}
+	}
+	return false
 }
 
 // section is the text from a heading or a recipe's first line to the start of
