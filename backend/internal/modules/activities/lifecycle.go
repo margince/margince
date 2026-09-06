@@ -91,7 +91,7 @@ func (s *Store) UpdateActivity(ctx context.Context, id ids.ActivityID, in Update
 		if !held && in.MeetingStatus != nil && current.Kind != crmcontracts.ActivityKindMeeting {
 			return &MeetingStatusKindError{Kind: string(current.Kind)}
 		}
-		if err := ensureAssigneeExists(ctx, tx, in.AssigneeID); err != nil {
+		if err := ensureAssigneeCanHoldWork(ctx, tx, in.AssigneeID); err != nil {
 			return err
 		}
 		// Every placeholder is derived from the argument slice rather than
@@ -169,25 +169,6 @@ func renormalizeTranscriptPatch(current crmcontracts.Activity, in *UpdateActivit
 		return err
 	}
 	in.Body = &normalized
-	return nil
-}
-
-// ensureAssigneeExists checks a client-supplied user reference before it
-// lands: the FK checks existence, RLS the tenancy. Nil means the patch
-// doesn't touch the assignee, which is not this function's to gate.
-func ensureAssigneeExists(ctx context.Context, tx pgx.Tx, assigneeID *ids.UserID) error {
-	if assigneeID == nil {
-		return nil
-	}
-	var exists bool
-	if err := tx.QueryRow(ctx,
-		`SELECT EXISTS (SELECT 1 FROM app_user WHERE id = $1 AND status = 'active' AND archived_at IS NULL)`,
-		*assigneeID).Scan(&exists); err != nil {
-		return err
-	}
-	if !exists {
-		return apperrors.ErrNotFound
-	}
 	return nil
 }
 
