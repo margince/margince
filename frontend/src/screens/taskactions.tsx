@@ -281,3 +281,33 @@ export function useNoticeRead(invalidateKeys: readonly QueryKey[]) {
     },
   });
 }
+
+/**
+ * Running one failed automation firing again.
+ *
+ * It resolves with the server's answer rather than throwing on a refusal,
+ * because a refusal is a fact about the run and not a fault: the firing was
+ * blocked on purpose, or its handler has not been established safe to repeat,
+ * or its trigger event cannot be rebuilt. Each of those is something to TELL
+ * the reader, and an error path would have to reconstruct which one it was.
+ */
+export function useAutomationRetry(invalidateKeys: readonly QueryKey[]) {
+  const t = useT();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data, error } = await api.POST("/automations/runs/{id}/retry", {
+        params: { path: { id } },
+      });
+      if (error) {
+        throwProblem(error, t);
+      }
+      return data;
+    },
+    onSuccess: () => {
+      for (const queryKey of invalidateKeys) {
+        queryClient.invalidateQueries({ queryKey });
+      }
+    },
+  });
+}

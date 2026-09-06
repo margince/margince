@@ -339,6 +339,10 @@ func (stubs) ListAutomationCatalog(w nethttp.ResponseWriter, r *nethttp.Request)
 	httperr.NotImplemented(w, r, "ListAutomationCatalog")
 }
 
+func (stubs) RetryAutomationRun(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RetryAutomationRun")
+}
+
 func (stubs) DeleteAutomation(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "DeleteAutomation")
 }

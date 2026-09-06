@@ -786,6 +786,18 @@ BEGIN
   RETURN NULL;
 END;
 
+public.assurance_cycle acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.assurance_cycle.assurance_cycle_closes_after_opening CHECK (((closed_at IS NULL) OR (closed_at >= opened_at)))
+public.assurance_cycle.assurance_cycle_pkey PRIMARY KEY (id)
+public.assurance_cycle.assurance_cycle_scope_present CHECK ((length(btrim(scope)) > 0))
+public.assurance_cycle.closed_at timestamp with time zone gen=- def=-
+public.assurance_cycle.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.assurance_cycle.id uuid NOT NULL gen=- def=uuidv7()
+public.assurance_cycle.opened_at timestamp with time zone NOT NULL gen=- def=now()
+public.assurance_cycle.opened_by text NOT NULL gen=- def=-
+public.assurance_cycle.scope text NOT NULL gen=- def=-
+public.assurance_cycle_one_open_per_scope CREATE UNIQUE INDEX assurance_cycle_one_open_per_scope ON public.assurance_cycle USING btree (scope) WHERE (closed_at IS NULL)
+public.assurance_cycle_pkey CREATE UNIQUE INDEX assurance_cycle_pkey ON public.assurance_cycle USING btree (id)
 public.assurance_exception acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.assurance_exception.affected_minor bigint gen=- def=-
 public.assurance_exception.assurance_exception_amount_currency_pair CHECK (((affected_minor IS NULL) = (currency IS NULL)))
@@ -882,6 +894,28 @@ public.assurance_source_coverage.updated_at timestamp with time zone NOT NULL ge
 public.assurance_source_coverage.uq_assurance_source_coverage_run_source UNIQUE (run_id, source)
 public.assurance_source_coverage.version bigint NOT NULL gen=- def=1
 public.assurance_source_coverage_pkey CREATE UNIQUE INDEX assurance_source_coverage_pkey ON public.assurance_source_coverage USING btree (id)
+public.assurance_task_item acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.assurance_task_item.assurance_task_item_cycle_id_fkey FOREIGN KEY (cycle_id) REFERENCES assurance_cycle(id) ON DELETE CASCADE
+public.assurance_task_item.assurance_task_item_exception_id_fkey FOREIGN KEY (exception_id) REFERENCES assurance_exception(id) ON DELETE CASCADE
+public.assurance_task_item.assurance_task_item_once UNIQUE (exception_id, cycle_id)
+public.assurance_task_item.assurance_task_item_one_task_per_subject EXCLUDE USING gist (cycle_id WITH =, subject_kind WITH =, subject_id WITH =, task_activity_id WITH <>)
+public.assurance_task_item.assurance_task_item_pkey PRIMARY KEY (id)
+public.assurance_task_item.assurance_task_item_state CHECK ((state = ANY (ARRAY['open'::text, 'resolved'::text, 'dismissed'::text])))
+public.assurance_task_item.assurance_task_item_subject_kind CHECK ((subject_kind = ANY (ARRAY['deal'::text, 'signal'::text, 'offer'::text, 'contract'::text])))
+public.assurance_task_item.assurance_task_item_task_activity_id_fkey FOREIGN KEY (task_activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.assurance_task_item.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.assurance_task_item.cycle_id uuid NOT NULL gen=- def=-
+public.assurance_task_item.exception_id uuid NOT NULL gen=- def=-
+public.assurance_task_item.id uuid NOT NULL gen=- def=uuidv7()
+public.assurance_task_item.state text NOT NULL gen=- def='open'::text
+public.assurance_task_item.subject_id uuid NOT NULL gen=- def=-
+public.assurance_task_item.subject_kind text NOT NULL gen=- def=-
+public.assurance_task_item.task_activity_id uuid NOT NULL gen=- def=-
+public.assurance_task_item_by_task CREATE INDEX assurance_task_item_by_task ON public.assurance_task_item USING btree (task_activity_id)
+public.assurance_task_item_once CREATE UNIQUE INDEX assurance_task_item_once ON public.assurance_task_item USING btree (exception_id, cycle_id)
+public.assurance_task_item_one_task_per_subject CREATE INDEX assurance_task_item_one_task_per_subject ON public.assurance_task_item USING gist (cycle_id, subject_kind, subject_id, task_activity_id)
+public.assurance_task_item_open_in_cycle CREATE INDEX assurance_task_item_open_in_cycle ON public.assurance_task_item USING btree (cycle_id, subject_kind, subject_id) WHERE (state = 'open'::text)
+public.assurance_task_item_pkey CREATE UNIQUE INDEX assurance_task_item_pkey ON public.assurance_task_item USING btree (id)
 public.attachment acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.attachment.activity_id uuid gen=- def=-
 public.attachment.archived_at timestamp with time zone gen=- def=-
