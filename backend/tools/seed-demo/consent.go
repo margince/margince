@@ -74,7 +74,7 @@ func seedConsent(c *client, cfg demoConfig, companies []company, refs pipelineRe
 			skippedDOI = append(skippedDOI, want.Purpose)
 			continue
 		}
-		body := jsonBody{"purpose_id": purpose.id, "new_state": want.State, "source": seedSource}
+		body := consentBody(purpose, want)
 		// Recording the state a person is already in is a no-op the API
 		// accepts, so the count reflects what CHANGED rather than what was
 		// sent — otherwise every run reports the same six as fresh.
@@ -95,6 +95,65 @@ func seedConsent(c *client, cfg demoConfig, companies []company, refs pipelineRe
 			len(skippedDOI), strings.Join(skippedDOI, ", "))
 	}
 	return recorded, nil
+}
+
+// consentBody is the request one seeded consent state sends.
+//
+// Split out from the loop so the wording rule is testable without a workspace
+// behind it: the asymmetry between a grant and a withdrawal is the part worth
+// pinning, and it is invisible in an end-to-end seeding run that only reports
+// how many rows changed.
+func consentBody(purpose consentPurpose, want demoConsent) jsonBody {
+	body := jsonBody{"purpose_id": purpose.id, "new_state": want.State, "source": seedSource}
+	// Sent only with a grant. The writer drops wording passed with a
+	// withdrawal, so including it would be dead weight that also reads, to
+	// anybody looking at the request, like a withdrawal claiming a screen.
+	if want.State == "granted" {
+		body["wording"] = grantWording(want, purpose.label)
+	}
+	return body
+}
+
+// maxWordingRunes is the contract's ceiling on a recorded wording
+// (CreateConsentRequest.wording, and the CHECK behind it). Duplicated here
+// because the seeder speaks to the API over HTTP and cannot import the module's
+// unexported bound — and a fallback that overran it would 422 the whole run,
+// which is the failure this function exists to prevent.
+const maxWordingRunes = 2000
+
+// grantWording settles what a seeded GRANT claims the subject was shown.
+//
+// A dataset that has authored real form copy wins outright: the consent
+// surfaces read this back, and a demo is worth more when what it shows is the
+// sentence a person would really have agreed to.
+//
+// The fallback deliberately does NOT read like consent copy. #4583 removed the
+// old 'recorded via API' placeholder because a proof row carrying it "reads
+// like evidence and holds none", and a seeder inventing a plausible "I agree
+// to…" would put that back with better grammar. So the stand-in names the
+// purpose it covers and then says what it is, on the row, where anybody reading
+// the consent history or a subject access export sees it.
+//
+// Only grants reach here. A withdrawal demonstrates nothing, the writer drops
+// any wording passed with one, and the API requires none.
+func grantWording(want demoConsent, label string) string {
+	if authored := strings.TrimSpace(want.Wording); authored != "" {
+		return authored
+	}
+	name := strings.TrimSpace(label)
+	if name == "" {
+		// A purpose the workspace does not label still has its machine key, and
+		// a stand-in that names nothing is worse than one naming that.
+		name = want.Purpose
+	}
+	const suffix = " — seeded demo data; no subject was shown this text."
+	// The label is dataset-supplied and nothing upstream bounds it, so the
+	// truncation happens on the part that can grow, not on the sentence that
+	// carries the disclosure.
+	if room := maxWordingRunes - len([]rune(suffix)); len([]rune(name)) > room {
+		name = string([]rune(name)[:room])
+	}
+	return name + suffix
 }
 
 // consentState reads what a person has already agreed to for one purpose.
@@ -140,6 +199,7 @@ func findPersonByName(c *client, name string) (string, bool, error) {
 type consentPurpose struct {
 	id          string
 	requiresDOI bool
+	label       string
 }
 
 func loadPurposes(c *client, mode runMode) (map[string]consentPurpose, error) {
@@ -151,6 +211,7 @@ func loadPurposes(c *client, mode runMode) (map[string]consentPurpose, error) {
 		Data []struct {
 			ID                  string `json:"id"`
 			Key                 string `json:"key"`
+			Label               string `json:"label"`
 			RequiresDoubleOptIn bool   `json:"requires_double_opt_in"`
 		} `json:"data"`
 	}
@@ -158,7 +219,7 @@ func loadPurposes(c *client, mode runMode) (map[string]consentPurpose, error) {
 		return nil, fmt.Errorf("listing consent purposes: %w", err)
 	}
 	for _, row := range page.Data {
-		out[row.Key] = consentPurpose{id: row.ID, requiresDOI: row.RequiresDoubleOptIn}
+		out[row.Key] = consentPurpose{id: row.ID, requiresDOI: row.RequiresDoubleOptIn, label: row.Label}
 	}
 	return out, nil
 }

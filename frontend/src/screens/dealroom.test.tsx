@@ -128,3 +128,22 @@ it("a reader who may not write is offered no way to open a room", async () => {
 
   await waitFor(() => expect(container).toBeEmptyDOMElement());
 });
+
+// A live room is marked as live rather than merely named: the badge carries the
+// success tone and the breathing dot, which is what a rep reads at a glance to
+// know a buyer can walk in right now. A room that is finished carries neither —
+// the two would otherwise be one word apart on a card nobody reads twice.
+it("marks a live room as current and a closed one as not", async () => {
+  stubApi([room("live")]);
+  const live = render(<DealRoomAside dealId="deal-1" dealName="Acme" />);
+  const liveBadge = (await live.findByText("Live")).closest(".badge");
+  expect(liveBadge).toHaveClass("badge-success");
+  expect(liveBadge?.querySelector(".badge-live-dot")).toBeInTheDocument();
+
+  cleanup();
+  stubApi([room("closed")]);
+  const closed = render(<DealRoomAside dealId="deal-1" dealName="Acme" />);
+  const closedBadge = (await closed.findByText("Closed")).closest(".badge");
+  expect(closedBadge).not.toHaveClass("badge-success");
+  expect(closedBadge?.querySelector(".badge-live-dot")).not.toBeInTheDocument();
+});

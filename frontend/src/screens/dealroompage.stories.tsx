@@ -102,7 +102,15 @@ export const Loading: Story = { render: served([], true) };
  *  opening a room is the deal page's verb, not this page's. */
 export const NoRoom: Story = { render: served([]) };
 
-/** A live room with an end date: the state chip and the two verbs in the
- *  header, the banner naming the day access stops, the welcome text a buyer
- *  reads first, and the buyer's own row beside it. */
+/** A live room with an end date: the state chip beside the room's name with
+ *  its breathing dot, the attendance line under it, the two verbs at the far
+ *  end, the banner naming the day access stops, the welcome text a buyer reads
+ *  first, and the buyer's own row beside it. */
 export const Live: Story = { render: served([ROOM]) };
+
+/** A room a rep has stopped. The same head, with the chip in the warn tone and
+ *  no dot — the state is something the room recorded, not something happening
+ *  now — and the banner saying what a buyer arriving would meet. */
+export const Paused: Story = {
+  render: served([{ ...ROOM, state: "paused" }]),
+};

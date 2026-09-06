@@ -29,7 +29,7 @@ func (h Handlers) GetPreferenceCenter(w http.ResponseWriter, r *http.Request, to
 		writeConsentErr(w, r, err)
 		return
 	}
-	view, err := h.store.PublicPreferenceView(r.Context(), ref.PersonID)
+	view, err := h.store.PublicPreferenceView(r.Context(), ref)
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return
@@ -107,7 +107,7 @@ func (h Handlers) UpdatePreferences(w http.ResponseWriter, r *http.Request, toke
 		writeConsentErr(w, r, err)
 		return
 	}
-	view, err := h.store.PublicPreferenceView(r.Context(), ref.PersonID)
+	view, err := h.store.PublicPreferenceView(r.Context(), ref)
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return

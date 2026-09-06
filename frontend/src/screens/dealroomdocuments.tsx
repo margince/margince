@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Upload } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -7,6 +8,7 @@ import { Button, Field } from "../design-system/atoms";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { AddDocumentDialog } from "./adddocument";
 import { problemMessageOf, throwProblem } from "./common";
 import "./dealroomdocuments.css";
 
@@ -14,6 +16,13 @@ import "./dealroomdocuments.css";
 // buyer gets to read, under which of the four fixed groups. The board that
 // draws them lives in dealroomthreads.tsx; nothing added here reaches the
 // buyer until the room is published.
+//
+// A room shares the deal's OWN files rather than holding files of its own, so
+// there are two steps and the screen names both: a file is uploaded to the deal
+// (the same dialog the deal's Files area opens, filing against the same record),
+// and then chosen here. Without the first control on this page a rep with an
+// empty Files area read "The deal's Files area is empty" and had nowhere on the
+// screen to go — the upload existed one tab away and nothing said so.
 
 type DealRoom = components["schemas"]["DealRoom"];
 
@@ -53,6 +62,7 @@ export function AddDocument({
   const t = useT();
   const [attachmentId, setAttachmentId] = useState("");
   const [group, setGroup] = useState(DOCUMENT_GROUPS[0].key);
+  const [uploading, setUploading] = useState(false);
   // The deal's Files area — uploads and the files its emails carried, hidden
   // ones excluded — is what a room may share; the server refuses anything else.
   const files = useQuery({
@@ -121,7 +131,21 @@ export function AddDocument({
         >
           {t("room.docs.add")}
         </Button>
+        {/* The way out of an empty picker, beside the picker rather than on
+            another tab. The dialog files against the DEAL — the room shares the
+            deal's files and owns none — and the landed upload invalidates
+            `deal-documents`, which is this list's own key, so the new file is
+            in the picker when the dialog closes. */}
+        <Button small variant="ghost" onClick={() => setUploading(true)}>
+          <Upload aria-hidden />
+          {t("room.docs.upload")}
+        </Button>
       </div>
+      <AddDocumentDialog
+        anchor={{ record: "deal", id: room.deal_id }}
+        open={uploading}
+        onClose={() => setUploading(false)}
+      />
       <p className="t-caption">{t("room.editorial")}</p>
       {add.isError ? (
         <p className="t-caption t-danger">{problemMessageOf(add.error, t)}</p>
