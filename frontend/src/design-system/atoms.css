@@ -78,6 +78,47 @@
   background: currentColor;
   flex: none;
 }
+
+/* The LIVE spelling: the same pill with a dot that breathes, for a status that
+ * is true as the page is being read rather than one the record remembers. The
+ * dot is `currentColor`, so it says what the label says — a toned pill marks in
+ * its tone's ink and an untoned one in the pill's own — and it is the only
+ * moving thing in this vocabulary.
+ *
+ * `quiet` already draws a still dot from ::before; with `live` the breathing
+ * one is the mark, so the static one goes rather than the two doubling. */
+.badge-live::before {
+  content: none;
+}
+.badge-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: currentColor;
+  flex: none;
+  animation: badge-live-breathe 2.2s var(--ease-in-out) infinite;
+}
+@keyframes badge-live-breathe {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.72);
+  }
+}
+/* Like `.skeleton` above, this animation never ends, so a reader who asked for
+   less motion cannot wait it out. It stops at the resting dot rather than at
+   nothing: the dot is what marks the state as current, and a badge that lost it
+   under reduced motion would say something different from the one beside it. */
+@media (prefers-reduced-motion: reduce) {
+  .badge-live-dot {
+    animation: none;
+  }
+}
 .card {
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);

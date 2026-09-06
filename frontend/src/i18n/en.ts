@@ -5894,11 +5894,12 @@ export const en = {
   "room.docs.empty": "No documents in the room yet.",
   "room.docs.fileLabel": "File from this deal",
   "room.docs.fileHint":
-    "Anything in the deal's Files area can go in: uploads and the files its emails carried.",
+    "Anything in the deal's Files area can go in: uploads and the files its emails carried. Upload a file to put a new one there.",
   "room.docs.pickFile": "Pick a file",
   "room.docs.noFiles": "The deal's Files area is empty",
   "room.docs.groupLabel": "Group",
   "room.docs.add": "Add to room",
+  "room.docs.upload": "Upload a file",
   "room.docs.remove": "Remove {title} from the room",
   "room.docs.group.commercial": "Commercial",
   "room.docs.group.legal": "Legal",

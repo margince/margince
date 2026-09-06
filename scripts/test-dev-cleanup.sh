@@ -441,6 +441,11 @@ check "4" "$preexisting_writes" \
 # And every non-default write is the detector's own answer rather than a
 # hard-coded 1, which would claim a preexisting stack on every launch and
 # disable the release for good.
+#
+# The answer now sits under the SECOND ask — the one after take_down_running_stack
+# — which is the only one whose answer is still true when the boot starts: what
+# the takedown removed is this run's to release, and only a process that survived
+# TERM and KILL is a stack it did not start.
 # Counted by ADJACENCY rather than with grep -A: overlapping context windows are
 # merged into one, so a second pair a line apart would be reported as one match
 # and a path that stopped asking would look identical to a path that never did.
@@ -548,8 +553,79 @@ planted_kill="$(printf '  kill "$fe_pid" 2>/dev/null || true\n  kill -TERM $work
 check "5" "$planted_kill" \
       "and the scan recognises a bare kill, an attached signal, a braced pid, and both detached-signal spellings"
 
+# A SECOND `make dev` TAKES THE FIRST ONE DOWN, and says so.
+#
+# `make dev` on a live stack used to boot BESIDE it: the new processes wrote
+# their pids into the same record and the old ones became nameless, so
+# `make dev-stop` stopped the new stack and the old api, vite and worker went on.
+# The WORKER is the one this is really about — it holds no port, so nothing
+# reports it, and it keeps draining the queue against a database the next run is
+# about to migrate.
+#
+# Driven through the lifted functions rather than through a real `make dev`: what
+# is under test is the takedown, and a gate that booted two stacks would need a
+# database, a Redis and two minutes to prove the same thing.
+lift with_database
+lift port_listeners
+lift stack_server_pids
+lift stack_victims
+lift take_down_running_stack
+
+restart_probe() {
+    local rundir worker out
+    rundir="$(mktemp -d)"
+    # A worker-shaped survivor: recorded, and holding no port. The port backstop
+    # cannot see it, so the record is the only thing that can.
+    bash -c 'trap "" TERM; while :; do sleep 0.2; done' & worker=$!
+    remember "$worker"
+    disown
+    printf 'WORKER_PID=%s\nDB=%s\nREDIS_DB=7\n' "$worker" "$db" >"$rundir/env"
+
+    state="$rundir/env"
+    label="probe stack"
+    APP_DSN="postgres://margince_app@localhost:5432/margince?sslmode=disable"
+    REDIS_PORT=6379
+    out="$(take_down_running_stack)"
+
+    check "0" "$(settled "$worker")" \
+          "a second dev run stops the worker the first one left, which no port would have found"
+    # SAID OUT LOUD. A command that silently kills a worker somebody is watching
+    # logs from is a surprise even when it is the right behaviour.
+    case "$out" in
+        *restarting*"1 process"*) printf '  ok   %s\n' "and it names what it stopped" ;;
+        *) printf '  FAIL %s\n       got:  %s\n' "it did not name what it stopped" "$out" >&2
+           failures=$((failures + 1)) ;;
+    esac
+    # THE RECORD SURVIVES. This run is taking the claim over, not releasing it:
+    # the ports and the Redis database stay reserved to this slug, and the boot
+    # rewrites the file a moment later. Deleting it here would drop a claim
+    # another worktree could then take.
+    check "1" "$([[ -f "$rundir/env" ]] && echo 1 || echo 0)" \
+          "and it leaves the claim in place for the boot that is taking it over"
+    rm -rf "$rundir"
+}
+restart_probe
+
+# AND A SLUG WITH NOTHING RUNNING SAYS NOTHING. The line is for a surprise; a
+# `make dev` on an empty slug is not one, and a restart notice on every ordinary
+# run is a line people stop reading.
+quiet_probe() {
+    local rundir out
+    rundir="$(mktemp -d)"
+    printf 'DB=%s\nREDIS_DB=7\n' "$db" >"$rundir/env"
+    state="$rundir/env"
+    label="probe stack"
+    APP_DSN="postgres://margince_app@localhost:5432/margince?sslmode=disable"
+    REDIS_PORT=6379
+    out="$(take_down_running_stack)"
+    check "" "$out" "a dev run on an empty slug says nothing about restarting"
+    rm -rf "$rundir"
+}
+quiet_probe
+
 if [ "$failures" -gt 0 ]; then
     printf 'FAIL: %d check(s)\n' "$failures" >&2
     exit 1
 fi
 printf '==> dev cleanup: a failed boot takes its api, its vite and its worker with it\n'
+printf '==> dev restart: a second run takes the first one down and says so\n'

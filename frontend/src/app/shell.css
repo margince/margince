@@ -99,17 +99,11 @@
   grid-template-columns: var(--railW) 1fr;
   height: 100vh;
   box-sizing: border-box;
-  /* The lit ground (DESIGN.md §2): the page colour with the two corner lights
-     painted INTO it — the emerald one behind the sidebar at the top-left, the
-     indigo one at the bottom-right. A background rather than an element, so
-     nothing is stacked, scrolled or measured for it; and never animated, because
-     atmosphere that moves is a feature. Fixed radii and no repeat: each is a
-     pool of light in one corner, faint enough that the eye does not find it. */
-  background:
-    radial-gradient(900px 620px at 0 0, var(--glowA), transparent 70%) no-repeat,
-    radial-gradient(900px 620px at 100% 100%, var(--glowB), transparent 70%)
-    no-repeat,
-    var(--bgPage);
+  /* The lit ground (DESIGN.md §2): the emerald light behind the sidebar at the
+     top-left, the indigo one at the bottom-right, painted into the page colour.
+     Declared once in tokens.css, because the buyer's Deal Room stands on the
+     same ground from outside this shell. */
+  background: var(--groundLit);
   /* `viewport-fit=cover` exposes the horizontal insets too, and this layout is
      the one that applies in landscape — where the notch sits over the sidebar's
      own edge, on top of the brand chip and the column of icons. */

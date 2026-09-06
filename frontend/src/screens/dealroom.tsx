@@ -24,7 +24,7 @@ import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, QueryStates, throwProblem } from "./common";
-import { useParticipants } from "./dealroomaccess";
+import { useRoomAttendance } from "./dealroomaccess";
 
 type DealRoom = components["schemas"]["DealRoom"];
 type DealRoomState = components["schemas"]["DealRoomState"];
@@ -53,6 +53,55 @@ export const STATE_LABELS: Record<DealRoomState, MessageKey> = {
   expired: "room.state.expired",
   archived: "room.state.archived",
 };
+
+// What each state SAYS, in the badge vocabulary. `live` is the one state that
+// is good news about a room — a buyer can walk in right now — so it is the one
+// that takes the success tone; the two that stopped a buyer at the door take
+// warn; a room nobody can enter again takes danger. The states before a room
+// has ever opened are standing rather than verdict and take no tone at all: a
+// draft is not going badly.
+//
+// Keyed by the contract's closed union for the same reason the labels are.
+const STATE_TONES: Record<
+  DealRoomState,
+  "success" | "warn" | "danger" | "accent" | undefined
+> = {
+  draft: undefined,
+  building: undefined,
+  ready: undefined,
+  publishing: "accent",
+  live: "success",
+  paused: "warn",
+  closed: undefined,
+  expired: "warn",
+  archived: "danger",
+};
+
+// The states whose truth is about THIS MOMENT rather than about something the
+// room recorded earlier: a buyer is in the door now, or bytes are moving now.
+// They are what earns the badge's breathing dot.
+const CURRENT_STATES: ReadonlySet<DealRoomState> = new Set([
+  "live",
+  "publishing",
+]);
+
+/**
+ * A room's state as one chip, drawn the same on the deal's card and at the head
+ * of the room's own page.
+ *
+ * One component rather than a `Badge` at each of the two call sites: the tone
+ * and the breathing dot are a reading of the state, and a reading spelled twice
+ * is how a room comes to look live in the margin of the deal and merely open on
+ * its own page.
+ */
+export function RoomStateBadge({ state }: Readonly<{ state: DealRoomState }>) {
+  const t = useT();
+  return (
+    <Badge tone={STATE_TONES[state]} live={CURRENT_STATES.has(state)}>
+      {t(STATE_LABELS[state])}
+    </Badge>
+  );
+}
 
 /**
  * The deal page's Deal Room card. A deal with no room gets the one control
@@ -83,22 +132,17 @@ export function DealRoomAside({
 function RoomCard({ room }: Readonly<{ room: DealRoom }>) {
   const t = useT();
   const { locale } = useLocale();
-  const participants = useParticipants(room.id);
-  const rows = participants.data?.data ?? [];
-  const invited = rows.filter((p) => !p.revoked_at).length;
-  const active = rows.filter((p) => !p.revoked_at && p.has_signed_in).length;
-  const lastSeen = rows
-    .map((p) => p.last_seen_at)
-    .filter((v): v is string => typeof v === "string")
-    .sort()
-    .at(-1);
+  const { invited, active, lastSeen } = useRoomAttendance(room.id);
   return (
     <Panel
       title={t("room.card.title")}
-      titleAction={<Badge>{t(STATE_LABELS[room.state])}</Badge>}
+      titleAction={<RoomStateBadge state={room.state} />}
     >
       <PanelBody>
-        <p>{room.title}</p>
+        {/* The room's own name is what this card is ABOUT — the panel's title
+            is the product's word for the surface — so it takes the card-title
+            rung rather than reading as the first line of the caption under it. */}
+        <p className="t-h3">{room.title}</p>
         <p className="t-caption">
           {t("room.card.people", {
             invited: formatNumber(invited, locale),

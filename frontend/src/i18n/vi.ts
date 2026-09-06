@@ -5697,11 +5697,12 @@ export const vi = {
   "room.docs.empty": "Chưa có tài liệu nào trong phòng.",
   "room.docs.fileLabel": "Tệp từ giao dịch này",
   "room.docs.fileHint":
-    "Mọi thứ trong khu Tệp của giao dịch đều có thể đưa vào: tệp tải lên và tệp đi kèm email.",
+    "Mọi thứ trong khu Tệp của giao dịch đều có thể đưa vào: tệp tải lên và tệp đi kèm email. Dùng “Tải tệp lên” để thêm tệp mới vào đó.",
   "room.docs.pickFile": "Chọn tệp",
   "room.docs.noFiles": "Khu Tệp của giao dịch đang trống",
   "room.docs.groupLabel": "Nhóm",
   "room.docs.add": "Thêm vào phòng",
+  "room.docs.upload": "Tải tệp lên",
   "room.docs.remove": "Gỡ {title} khỏi phòng",
   "room.docs.group.commercial": "Thương mại",
   "room.docs.group.legal": "Pháp lý",
