@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, vi } from "vitest";
+import { takeUnroutedSessionProbes } from "./src/screens/unrouted-session";
 
 // Node ≥23 ships its own global Web Storage: a `localStorage` getter that
 // yields undefined unless the process was started with --localstorage-file.
@@ -120,6 +121,34 @@ if (typeof window !== "undefined") {
     window.location.hash = "";
   });
 }
+
+// A case that left `GET /me` unrouted FAILS, rather than warning into the log.
+//
+// The stub cannot guess a session, so it refuses one — and a refused session
+// reads as a malformed one: every capability hook fails closed and the surface
+// draws its denied branch. Which branch a case then asserts against depends on
+// whether that query settled first, so the case passes alone and fails under
+// load, on a different name each run (#3483). Failing here makes the branch a
+// case runs against its own choice again.
+//
+// Registered for every environment, not just jsdom: the stub is reachable from
+// any suite that imports it, and a guard that skips where it thinks the defect
+// cannot be is how a census stops seeing its subject.
+//
+// Read AFTER the case rather than watched during it, because the probe can fire
+// from a render the case kicked off and never awaited — which is exactly the
+// case that would otherwise pass.
+afterEach(() => {
+  const unrouted = takeUnroutedSessionProbes();
+  if (unrouted > 0) {
+    throw new Error(
+      `this case left GET /me unrouted (${unrouted} probe(s)): the fetch stub refused a session ` +
+        "it cannot guess, so every capability hook failed closed and the surface drew its denied " +
+        "branch. Route it — '\"GET /me\": meRoute({ … })' with the grants the case is about — or, " +
+        "if the denied branch is the point, take the count with takeUnroutedSessionProbes() to say so.",
+    );
+  }
+});
 
 // The calendar-drift lane: run the whole suite as if it were N days from now.
 //

@@ -12,9 +12,12 @@ import {
   Badge,
   Button,
   Checkbox,
+  Field,
   Modal,
   PendingBody,
 } from "../design-system/atoms";
+import { DateInput, isISODate } from "../design-system/dateinput";
+import { calendarDay, dueInstant } from "../format/calendarday";
 import { formatDate, formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
@@ -116,22 +119,38 @@ export function TaskCompleteCheck({
 }
 
 /**
- * TaskQuickActions is the verb a rep needs on a next-step row beyond the tick:
- * snooze, offered only for a dated task, since there is no day to move a task
- * to that never had one. Complete lives on `TaskCompleteCheck` instead —
- * `showComplete` keeps it here too for the one caller (the detail modal) that
- * has no row-level checkbox of its own to tick.
+ * TaskQuickActions is the verbs a rep needs on a next-step row beyond the tick.
+ *
+ * Snooze, offered only for a DATED task, since one day after nothing is
+ * nothing. And a date picker, offered always — an undated task is exactly the
+ * one a rep wants to put a day on, and it is the one the snooze cannot serve.
+ *
+ * The two are not the same verb spelled twice. Snooze answers "not yet" in one
+ * press and moves the task's own due date by a day; the picker answers
+ * "Tuesday", which the snooze cannot reach in principle rather than merely in
+ * clicks — a task three days overdue snoozes to two days overdue.
+ *
+ * Complete lives on `TaskCompleteCheck` instead — `showComplete` keeps it here
+ * too for the one caller (the detail modal) that has no row-level checkbox of
+ * its own to tick.
  */
 export function TaskQuickActions({
   activityId,
   dueAt,
   update,
   showComplete = true,
+  showDuePicker = false,
 }: Readonly<{
   activityId: string;
   dueAt?: string | null;
   update: ReturnType<typeof useTaskUpdate>;
   showComplete?: boolean;
+  // Whether the reader may name a day, rather than only step the due date on.
+  // OFF by default, and the default is the point: this is a per-row action slot
+  // on the 360 next-steps lists, where a date box in every row is heavier than
+  // the surface intends. The detail modal opts in, because that is where a
+  // reader already came to work on one task.
+  showDuePicker?: boolean;
 }>) {
   const t = useT();
   const nextDue = snoozedDueAt(dueAt);
@@ -161,7 +180,82 @@ export function TaskQuickActions({
           {t("tasks.snooze")}
         </Button>
       )}
+      {showDuePicker && (
+        <TaskDueDatePick
+          activityId={activityId}
+          dueAt={dueAt}
+          update={update}
+        />
+      )}
     </>
+  );
+}
+
+// Moving a task to a day the reader names.
+//
+// Beside the snooze rather than instead of it, because they answer different
+// questions. Snooze is "not yet" and takes one press; this is "Tuesday",
+// which no number of presses reaches — and the snooze cannot reach it in
+// principle, not just in clicks: it adds a day to the task's OWN due date, so
+// a task three days overdue snoozes to two days overdue and the reader presses
+// it four times to mean tomorrow.
+//
+// It is offered on an UNDATED task too, where the snooze is not. A task with no
+// day has nothing to move but is exactly the one a rep wants to put a date on,
+// and the button above is hidden for it — snoozedDueAt returns null, because
+// one day after nothing is nothing.
+function TaskDueDatePick({
+  activityId,
+  dueAt,
+  update,
+}: Readonly<{
+  activityId: string;
+  dueAt?: string | null;
+  update: ReturnType<typeof useTaskUpdate>;
+}>) {
+  const t = useT();
+  const pending = update.isPending && update.variables?.id === activityId;
+  // Seeded from the task's own day in the VIEWER's zone, matching what the
+  // meta line above reads it in: a picker opening on a different day than the
+  // one displayed beside it would be two answers to "when is this due".
+  const seeded = dueAt ? calendarDay(new Date(dueAt), viewerZone()) : "";
+  // Narrowed rather than asserted. calendarDay returns a string, and the
+  // control's type says it takes a calendar day or nothing — so a value that
+  // is neither opens the picker empty instead of feeding the element something
+  // it would silently reject.
+  const current = isISODate(seeded) ? seeded : "";
+  return (
+    <Field label={t("tasks.moveTo")}>
+      {(field) => (
+        <DateInput
+          {...field}
+          value={current}
+          disabled={pending}
+          onChange={(event) => {
+            const day = event.target.value;
+            // Narrowed with the control's own guard, not merely tested for
+            // empty. A `type="date"` box clears itself for anything it cannot
+            // parse — `2026-02-30` arrives as "" — but HTML permits a year of
+            // FOUR OR MORE digits, so `10000-09-15` is a value the element
+            // reports happily and `dueInstant` throws a RangeError on. A year
+            // typo would have reached an uncaught exception with nothing on
+            // screen to say the date was refused.
+            //
+            // isISODate requires exactly four, which refuses that and the
+            // cleared box in one question — and clearing IS a case to refuse:
+            // it is the browser's own empty state, not a request to undate the
+            // task.
+            if (!isISODate(day)) {
+              return;
+            }
+            update.mutate({
+              id: activityId,
+              body: { due_at: dueInstant(day) },
+            });
+          }}
+        />
+      )}
+    </Field>
   );
 }
 
@@ -249,6 +343,7 @@ export function TaskDetailModal({
                 activityId={task.id}
                 dueAt={task.due_at}
                 update={update}
+                showDuePicker
               />
             </div>
           )}

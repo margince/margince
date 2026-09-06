@@ -272,6 +272,40 @@ kinds:
       linked one, and writes only what changed. The hash covers the source's own
       values, so a pass over an unchanged ledger writes nothing.
 
+  capture_backfill_reconcile:
+    role: worker
+    fleet: true
+    go_type: CaptureBackfillReconcileArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    cadence: 24h
+    registration: {when: [GmailRegistry], absent: registers_nothing}
+    reason: >-
+      The nightly pass ADR-0063 called for and nobody built: it puts a paging
+      job back behind every backfill run that is still live.
+
+      IT EXISTS BECAUSE TWO CORRECT DECISIONS MEET BADLY. capture_backfill is
+      inserted with one attempt, because the run ROW owns the outcome and a
+      River retry would re-page a run the engine already ended; and a run is
+      protected by a unique index over the connection while it is queued or
+      running, so one import cannot start on top of another. If that single
+      attempt is ever lost to something the engine never sees — a worker killed
+      mid-page, a rescue, a queue that dropped it — the row stays live with no
+      job behind it, and the index then refuses every future StartBackfill for
+      that connection. The import stops and the only symptom is a person who
+      cannot start one.
+
+      It re-enqueues rather than deciding anything: the insert carries the same
+      ByArgs uniqueness the start does, so a run whose job is alive dedupes onto
+      it and a run whose job is gone gets a new one. Nightly rather than
+      minutely because the failure it repairs is rare and its cost is a delay,
+      not a loss — and a pass that ran often enough to notice quickly would
+      spend its every tick confirming that nothing was wrong.
+
+      Two minutes bounds an enumeration and an insert per live run. It does no
+      paging itself: the job it queues does that, under its own eight.
+
   capture_backfill:
     role: worker
     go_type: CaptureBackfillArgs

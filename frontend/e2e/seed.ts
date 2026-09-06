@@ -62,12 +62,74 @@ const E2E_ADMIN_GRANTS: GrantSpec = {
   // alone: the routing writes the sweep passes over are not what it measures,
   // and a grant this fixture does not need is a grant it should not claim.
   ai_routing: ["read"],
-  // The audit page asks for BOTH — the trail's own read, and the reset grant
-  // AuditLogCard still stands in for the admin role it checks. Either one alone
-  // leaves the entry invisible and the address falling back to Account, which
-  // is the failure this pair exists to keep out of the sweep.
+  // The trail's own read. `AuditLogCard` asked for `system_reset:delete` as a
+  // stand-in for the admin role until that card was repointed at the object it
+  // actually needs, so the pair below is now two independent pages rather than
+  // one page needing two grants.
   audit_log: ["read"],
+  // Emptying the installation. The page ALSO needs the deployment to arm
+  // `data_reset_available`, which this fixture does not — so `settings/reset`
+  // stays out of the derived sweep rather than being a page the run reports and
+  // never reads.
   system_reset: ["delete"],
+
+  // The settings objects this fixture's principal actually needs, which is
+  // fewer than the thirteen the redesign added.
+  //
+  // A grant nothing asks for is a grant this fixture should not claim: it makes
+  // the mock describe a principal the product cannot distinguish from a narrower
+  // one, and it hides the day a card starts asking. So the list below is what
+  // some card or catalog entry reads TODAY, verified against the source rather
+  // than against the object vocabulary.
+  //
+  // THREE OF THE THIRTEEN ARE ABSENT because no client code reads them yet, and
+  // that is a real gap rather than a fixture decision:
+  //   user_admin        — `UsersAdminCard` still calls useHoldsAdminRole
+  //   team_admin        — `TeamsCard` still calls useHoldsAdminRole
+  //   oauth_application — `OAuthAppCard` still asks capture_settings:update,
+  //                       which an ordinary sales role holds
+  // Each object exists in the contract and is seeded server-side; the card that
+  // should ask for it was never repointed. Adding them here would paper over
+  // that — the sweep would pass either way, and the day somebody repoints those
+  // cards the fixture would already agree.
+  //
+  // Extensions is TWO reads behind one flag — the unit inventory and every
+  // role's grant on every object — and its toggles write through the update.
+  role_admin: ["read", "update"],
+  // The subject queue: read to open it, update to move a request through its
+  // statuses. Creating one asks `person:update`, which is why the person grant
+  // above stays read-only and no spec opens a request.
+  privacy_request: ["read", "update"],
+  job_health: ["read"],
+  extension_access: ["read"],
+  // AI usage, model calls and the health card, all three.
+  ai_diagnostics: ["read"],
+  // The purposes card's own verb. The READ stays on `person` above, which is
+  // the gate the endpoint actually applies, and nothing here updates or deletes
+  // a purpose.
+  consent_config: ["create"],
+  // Read alone: the page opens on it, and the sign-in card's WRITE still checks
+  // `installation_settings:update`, which this fixture already holds.
+  authentication_policy: ["read"],
+  // Held even though `license:read` above already opens the Seats page, so the
+  // card takes its entitlement branch and never reads this. It is the grant a
+  // Management seat has INSTEAD of the licence, and naming it keeps the fixture
+  // honest about which of the two answers each half.
+  seat_usage: ["read"],
+
+  // Three pages the hand-written sweep never named, and so three grants nobody
+  // noticed were missing. The derived sweep found them on its first run — which
+  // is the argument for deriving it: a list that omits a page omits the reason
+  // it would have failed too.
+  //
+  // Tags is the shared vocabulary, Products the catalogue an offer is built
+  // from, and Data import the run that brings records in. All three are
+  // ordinary sales surfaces rather than administration, which is why an admin
+  // fixture holding neither read looked like nothing was wrong.
+  tag: ["create", "read", "update", "delete"],
+  product: ["create", "read", "update", "delete"],
+  offer_template: ["create", "read", "update", "delete"],
+  import_run: ["create", "read", "update"],
 };
 
 // The coherent seed (mirrors design/seed-fixtures.md entities: Anna Weber,
@@ -409,7 +471,12 @@ export const reportFixtures: Record<string, unknown> = {
   "projects-by-phase": {
     report: "projects-by-phase",
     plan: { group_by: ["phase"] },
-    columns: ["phase", "projects", "open_deal_value_minor", "won_deal_value_minor"],
+    columns: [
+      "phase",
+      "projects",
+      "open_deal_value_minor",
+      "won_deal_value_minor",
+    ],
     rows: [
       {
         phase: "delivering",
@@ -1244,6 +1311,13 @@ export async function mockApi(
       const me = meFixture({ allow: E2E_ADMIN_GRANTS });
       return json({
         ...me,
+        // Armed, so `settings/reset` is a page this principal opens rather than
+        // one the sweep names and never reads. RENDERING the danger zone resets
+        // nothing: the POST happens after a reader types the workspace name and
+        // presses the button, and no spec does either. A page left out of the
+        // census because the fixture would not open it is the exact defect the
+        // derived sweep exists to end.
+        data_reset_available: true,
         user: {
           ...me.user,
           id: "u1",
