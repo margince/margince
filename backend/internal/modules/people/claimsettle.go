@@ -34,6 +34,11 @@ import (
 // rather than an overwrite.
 const claimStatusOpen = "open"
 
+// claimIDKey names the claim inside a person's audit image. The trail's entity
+// is the PERSON — a claim is a fact about one — so the row has to say which of
+// their claims moved.
+const claimIDKey = "claim_id"
+
 // SettleConversationClaim records that a claim finished, and how.
 //
 // Gated on `person` UPDATE and the person's own writability, the same pair
@@ -104,8 +109,8 @@ func (s *Store) SettleConversationClaim(ctx context.Context, claimID ids.UUID, o
 			return fmt.Errorf("settle the claim: %w", err)
 		}
 		auditID, err := storekit.Audit(ctx, tx, "update", "person", personID,
-			map[string]any{"claim_status": current, "claim_id": claimID.String()},
-			map[string]any{"claim_status": outcome, "claim_id": claimID.String()})
+			map[string]any{"claim_status": current, claimIDKey: claimID.String()},
+			map[string]any{"claim_status": outcome, claimIDKey: claimID.String()})
 		if err != nil {
 			return fmt.Errorf("audit the settlement: %w", err)
 		}
