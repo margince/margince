@@ -4964,7 +4964,11 @@ paths:
       summary: Log an activity (the `log_activity` MCP verb).
       description: |
         Captured activities carry `source_system` + `source_id`; re-running capture with the
-        same pair is idempotent (no duplicate). An activity may link to >1 entity
+        same pair is idempotent (no duplicate). Captured and sent MAIL is keyed
+        `source_system: email` + the RFC822 Message-ID, one identity shared by every mail
+        transport, so the same message reaching two connected mailboxes is one activity —
+        and that reserved value is refused here (422): only a connector, or this system's
+        own send, may claim a mail identity. An activity may link to >1 entity
         (person and deal). `log_activity` is 🟢 (reversible).
       x-mcp-tool: { verb: log_activity, record_type: activity, tier: auto_execute, scope: write }
       parameters:
@@ -4985,16 +4989,20 @@ paths:
                     - { entity_type: deal, entity_id: 018f3a1b-0000-7000-8000-000000000030 }
                   source: ui
               capturedEmail:
-                summary: Idempotent captured email (re-run → no dupe)
+                summary: Idempotent logged activity keyed by a caller's own system (re-run → no dupe)
+                description: >-
+                  `source_system` names YOUR system. It may not be `email`, which is reserved for
+                  mail captured by a connector or sent by this system — a caller who could write it
+                  would plant a row under a Message-ID and suppress the real message.
                 value:
                   kind: email
                   subject: 'Re: proposal'
                   occurred_at: '2026-05-02T16:00:00Z'
-                  source_system: gmail
-                  source_id: 'CAF=abc@mail.gmail.com'
+                  source_system: acme-helpdesk
+                  source_id: 'ticket-4471'
                   links:
                     - { entity_type: deal, entity_id: 018f3a1b-0000-7000-8000-000000000030 }
-                  source: 'email:CAF=abc@mail.gmail.com'
+                  source: 'acme-helpdesk:ticket-4471'
               transcript:
                 summary: 'A pasted or uploaded meeting transcript (ADR-0058)'
                 description: >-
@@ -30108,7 +30116,7 @@ components:
             links, is_done/due_at for a task, provenance and timestamps — and subject, body,
             thread_key, capture_label, source_id and raw are null. An `available` row is complete.
         meeting_status: { type: [string, 'null'], enum: [null, booked, held, no_show, canceled], description: 'Set only when kind=meeting.' }
-        source_system: { type: [string, 'null'], description: 'gmail/gcal/outlook/transcript — idempotency key part.' }
+        source_system: { type: [string, 'null'], description: 'Which system this record came from — `email` for any captured or sent mail (one identity across gmail/outlook/imap), else gcal/outlook/transcript or a caller''s own. Idempotency key part.' }
         source_id: { type: [string, 'null'], description: Provider message/event id — idempotency key part. }
         links:
           type: array

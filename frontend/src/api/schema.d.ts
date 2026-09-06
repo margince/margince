@@ -3255,7 +3255,11 @@ export interface paths {
         /**
          * Log an activity (the `log_activity` MCP verb).
          * @description Captured activities carry `source_system` + `source_id`; re-running capture with the
-         *     same pair is idempotent (no duplicate). An activity may link to >1 entity
+         *     same pair is idempotent (no duplicate). Captured and sent MAIL is keyed
+         *     `source_system: email` + the RFC822 Message-ID, one identity shared by every mail
+         *     transport, so the same message reaching two connected mailboxes is one activity —
+         *     and that reserved value is refused here (422): only a connector, or this system's
+         *     own send, may claim a mail identity. An activity may link to >1 entity
          *     (person and deal). `log_activity` is 🟢 (reversible).
          */
         post: operations["logActivity"];
@@ -21626,7 +21630,7 @@ export interface components {
              * @enum {string|null}
              */
             meeting_status?: null | "booked" | "held" | "no_show" | "canceled";
-            /** @description gmail/gcal/outlook/transcript — idempotency key part. */
+            /** @description Which system this record came from — `email` for any captured or sent mail (one identity across gmail/outlook/imap), else gcal/outlook/transcript or a caller's own. Idempotency key part. */
             source_system?: string | null;
             /** @description Provider message/event id — idempotency key part. */
             source_id?: string | null;

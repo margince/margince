@@ -94,7 +94,10 @@ type-asserts and skips a connector that doesn't:
 `Sink.Upsert` is the single write path (the core-principle diagram above): one transaction commits the
 raw original + the domain row + the `audit_log` entry (stamped from the *connector* principal, never
 forgeable) + the outbox event, idempotent on the `(source_system, source_id)` natural key so any replay
-— a re-delivered push, a re-anchored cursor, an overlapping backfill page — collapses to a no-op.
+— a re-delivered push, a re-anchored cursor, an overlapping backfill page, *or the same message read by a
+second mail connector* — collapses to a no-op. Mail keys on one transport-independent identity
+(`connector.EmailSourceSystem`), and the Sink refuses an email record that arrives keyed on an adapter's
+name instead: that is what one message, one activity rests on.
 
 One pipeline concern runs *inside* the Sink, before anything is written:
 
@@ -402,7 +405,11 @@ The pipeline is live; these were scoped out, not missed:
   Sink, once per record.
 - **connector ≤ human.** A demoted human instantly narrows every grant the sync runs under.
 - **Capture is idempotent on `(source_system, source_id)`.** Replays, re-anchored cursors, overlapping
-  backfill pages — all no-ops.
+  backfill pages — all no-ops. For mail that key is `("email", Message-ID)`: the SAME key whichever
+  adapter read the message, so one mailbox synced over both Gmail and IMAP lands one activity, not two.
+  The adapter's name stays on `source` and `captured_by`, which is what still answers "which mailbox".
+  The first adapter to deliver a message supplies the stored original and its attachments; a later
+  copy adds no second set.
 - **A failure degrades a connection, never kills it.** `error` is syncable (daily probe); only
   `disconnected`/`reauth_required` park a row.
 - **Connecting is human-only.** An agent never self-connects a mailbox.
