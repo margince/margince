@@ -167,6 +167,11 @@ type ingressSource struct {
 // it has one, which is what an operator needs before the unit ever runs.
 type declaredChannel struct {
 	Provider string `json:"provider"`
+	// CredentialModel mirrors extension.Channel.CredentialModel. It is in the
+	// manifest because it is what the registry publishes and what every privacy
+	// rule about a channel message keys on — a generated composition that
+	// dropped it would put the decision back where it was derived.
+	CredentialModel extension.CredentialModel `json:"credential_model"`
 	// SuppliesTransport mirrors extension.Channel.SuppliesTransport: false is
 	// the documented capture-only case, not an omission.
 	SuppliesTransport bool `json:"supplies_transport"`

@@ -33,12 +33,26 @@ type stubForecast struct {
 	movements []Movement
 	drivers   []Driver
 	calls     int
+	// teamCalls and teamID record what the TEAM path asked for, which is the
+	// one thing a stub can prove about it: the seam is what decides the book,
+	// and a team snapshot that quietly took the rep's would look identical
+	// here without this.
+	teamCalls int
+	teamID    ids.UUID
 }
 
 func (s *stubForecast) CloseWeek(
 	_ context.Context, _ pgx.Tx, _, _ time.Time,
 ) ([]Outlook, []Movement, []Driver, error) {
 	s.calls++
+	return s.outlooks, s.movements, s.drivers, nil
+}
+
+func (s *stubForecast) CloseTeamWeek(
+	_ context.Context, _ pgx.Tx, teamID ids.UUID, _, _ time.Time,
+) ([]Outlook, []Movement, []Driver, error) {
+	s.teamCalls++
+	s.teamID = teamID
 	return s.outlooks, s.movements, s.drivers, nil
 }
 

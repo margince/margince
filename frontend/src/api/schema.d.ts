@@ -29225,6 +29225,20 @@ export interface components {
              */
             reps: components["schemas"]["TeamWeeklyRep"][];
             /**
+             * @description Where the TEAM's week was landing, one entry per horizon — the week, the month and
+             *     the fiscal quarter.
+             *
+             *     NOT the sum of its members' outlooks. A deal owned by nobody on the team is in
+             *     neither, and one the team works but a member owns is in both, so adding six personal
+             *     landings would answer a question nobody asked. This is read over the team's own book.
+             *
+             *     EMPTY when no forecast was composed when the snapshot was written, which is not the
+             *     same as a team that landed on nothing — a reader says "no forecast" rather than
+             *     drawing zeros. Every figure is a COPY, so it still reads after the snapshots it came
+             *     from age out under retention.
+             */
+            outlook?: components["schemas"]["WeeklyReviewOutlook"][];
+            /**
              * @description The Monday agenda: every id in `reps`, permuted into the order a lead should raise
              *     them. Derived on read from the same focus ranking that picked each rep's
              *     `focus_kind` — a rep who ASKED for help first, a quiet week last — so the meeting

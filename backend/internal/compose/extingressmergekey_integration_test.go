@@ -26,7 +26,7 @@ func setupVouchingIngress(t *testing.T) *ingressEnv {
 	t.Helper()
 	e := setupExtRuntime(t)
 	composeCapturingUnit(t, ingressUnit,
-		[]extension.Channel{{Provider: ingressProbeProvider}},
+		[]extension.Channel{{Provider: ingressProbeProvider, CredentialModel: extension.CredentialPerMember}},
 		extension.IngressSource{
 			System: ingressProbeSystem,
 			Lands:  []extension.RecordKind{extension.KindActivity},
