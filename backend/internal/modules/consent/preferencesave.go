@@ -20,6 +20,7 @@ package consent
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
@@ -106,6 +107,9 @@ func (s *Store) PublicSaveChoices(
 	}
 	var refused []ChoiceOutcome
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := lockOneSubjectsConsent(ctx, tx, personID); err != nil {
+			return err
+		}
 		refused = nil
 		for _, pass := range []ConsentState{StateWithdrawn, StateGranted} {
 			for _, c := range choices {
@@ -191,6 +195,34 @@ func subjectTakesAGrantTx(ctx context.Context, tx pgx.Tx, sub subject) (bool, er
 	return false, err
 }
 
+// lockOneSubjectsConsent serializes multi-purpose consent transactions for one
+// person.
+//
+// Three of them write several purposes in one transaction, and each takes the
+// row lock recordAdmittedTx needs in its OWN order: the withdrawal sweeps go by
+// ascending purpose key, and a granular save goes withdrawals-first so a
+// refused grant cannot cost the suppression saved beside it. A save of {grant a,
+// withdraw b} therefore locks b before a while an unsubscribe-everything locks
+// a before b, and two of those at once on one person deadlock — Postgres aborts
+// one, and what the reader sees is a preference change that failed for no
+// reason they can act on.
+//
+// Ordering the writes instead would mean choosing between the two orders, and
+// the save's order is load-bearing. So the serialization is a lock of its own,
+// taken first and held to commit: inside it, the order stops mattering.
+//
+// Advisory rather than a row lock, because a purpose the person holds NO row
+// for is exactly the case a row lock cannot cover — and a first grant is that
+// case. The key is the person, so two DIFFERENT subjects never wait for each
+// other.
+func lockOneSubjectsConsent(ctx context.Context, tx pgx.Tx, personID ids.PersonID) error {
+	if _, err := tx.Exec(ctx,
+		`SELECT pg_advisory_xact_lock(hashtextextended($1::text, 0))`, personID); err != nil {
+		return fmt.Errorf("consent: taking the subject's consent lock: %w", err)
+	}
+	return nil
+}
+
 // PublicWithdrawAll stops the named purposes in one transaction and
 // returns ONLY the ones this call actually changed.
 //
@@ -205,6 +237,9 @@ func (s *Store) PublicWithdrawAll(
 ) ([]string, error) {
 	var changed []string
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := lockOneSubjectsConsent(ctx, tx, personID); err != nil {
+			return err
+		}
 		var err error
 		changed, err = s.withdrawPurposesTx(ctx, tx, personID, purposeKeys)
 		return err
@@ -237,6 +272,9 @@ func (s *Store) PublicWithdrawEverything(
 ) ([]string, error) {
 	var changed []string
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := lockOneSubjectsConsent(ctx, tx, personID); err != nil {
+			return err
+		}
 		keys, err := withdrawablePurposeKeysTx(ctx, tx)
 		if err != nil {
 			return err

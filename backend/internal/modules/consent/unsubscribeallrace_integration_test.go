@@ -27,10 +27,14 @@ package consent
 import (
 	"context"
 	"errors"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestUnsubscribeAllStopsAPurposeGrantedWhileItWasRunning(t *testing.T) {
@@ -122,4 +126,69 @@ func waitForLockWait(t *testing.T, e *channelConsentEnv) {
 				"so this case interleaved nothing and would pass over the defect it is named for")
 		}
 	}
+}
+
+// Two multi-purpose consent transactions for one person do not interleave.
+//
+// Each of the three writes several purposes in one transaction, and each takes
+// its row locks in its OWN order: the withdrawal sweeps go by ascending purpose
+// key, a granular save goes withdrawals-first so a refused grant cannot cost
+// the suppression beside it. A save of {grant a, withdraw b} therefore locks b
+// before a while an unsubscribe-everything locks a before b — and two at once
+// on one person deadlock. Postgres aborts one, and the reader sees a preference
+// change that failed for no reason they can act on.
+//
+// Held by taking the person's lock from another session and watching the write
+// wait for it. That is the mechanism itself rather than a race for the symptom:
+// a deadlock test would have to lose a coin toss to fail.
+func TestOnePersonsConsentWritesDoNotInterleave(t *testing.T) {
+	e := setupChannelConsent(t)
+	ctx := context.Background()
+
+	holder, err := pgx.Connect(ctx, os.Getenv("MARGINCE_TEST_DSN"))
+	if err != nil {
+		t.Fatalf("opening the holding connection: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := holder.Close(context.Background()); err != nil {
+			t.Errorf("closing the holding connection: %v", err)
+		}
+	})
+	// The same key the writes take, spelled the same way: a lock on some other
+	// number would be a test of nothing.
+	if _, err := holder.Exec(ctx,
+		`SELECT pg_advisory_lock(hashtextextended($1::text, 0))`, e.person); err != nil {
+		t.Fatalf("taking the person's lock: %v", err)
+	}
+
+	pressed := make(chan error, 1)
+	go func() {
+		_, err := e.store.PublicWithdrawEverything(publicPreferencesCtx(e), e.person)
+		pressed <- err
+	}()
+
+	waitForLockWait(t, e)
+	if _, err := holder.Exec(ctx,
+		`SELECT pg_advisory_unlock(hashtextextended($1::text, 0))`, e.person); err != nil {
+		t.Fatalf("releasing the person's lock: %v", err)
+	}
+
+	select {
+	case err := <-pressed:
+		if err != nil {
+			t.Fatalf("the press failed once the lock was free: %v", err)
+		}
+	case <-time.After(30 * time.Second):
+		t.Fatal("the press never finished after the lock was released")
+	}
+}
+
+// publicPreferencesCtx is the principal the public middleware binds on this
+// surface: a system actor, because the caller holds a token rather than a seat.
+func publicPreferencesCtx(e *channelConsentEnv) context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalSystem, ID: "system:public_preferences",
+	})
 }
