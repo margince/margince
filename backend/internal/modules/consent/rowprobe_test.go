@@ -33,12 +33,16 @@ func TestAWithdrawalTakesThePermissiveProbeAndAGrantTheLiveOne(t *testing.T) {
 		want  any
 		why   string
 	}{
-		{StateWithdrawn, auth.EnsureWritable,
+		{
+			StateWithdrawn, auth.EnsureWritable,
 			"a withdrawal must stay recordable against an archived subject: suppression is what " +
-				"you most want still working once somebody has asked to be forgotten"},
-		{StateGranted, auth.EnsureWritableLive,
+				"you most want still working once somebody has asked to be forgotten",
+		},
+		{
+			StateGranted, auth.EnsureWritableLive,
 			"a grant against an archived subject accrues consent, event, audit and outbox rows " +
-				"for somebody whose means to stop it the erasure has already destroyed"},
+				"for somebody whose means to stop it the erasure has already destroyed",
+		},
 	} {
 		probe, err := rowProbeFor(c.state)
 		if err != nil {
