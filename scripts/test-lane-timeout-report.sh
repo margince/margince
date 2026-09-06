@@ -53,6 +53,13 @@ printf 'FAIL\tpkg [build failed]\nEXIT 2\n' > "$tmp/build.log"
 check "$(lane_timed_out "$tmp/build.log" && echo no || echo yes)" \
     "a package that died some other way is NOT excused as a timeout"
 
+# And a TEST that prints the marker is not go test printing it. These very
+# fixtures quote the string, so an unanchored match would classify this
+# harness's own package as timed out — the same wrong diagnosis one level down.
+printf '    lane_test.go:42: want the log to carry *** Test killed with quit\n--- FAIL: TestX\n' > "$tmp/quoted.log"
+check "$(lane_timed_out "$tmp/quoted.log" && echo no || echo yes)" \
+    "a test QUOTING the kill marker mid-line is not read as a timeout"
+
 # The timeout is named in the clock's own words, before the reconciliation.
 # Order is the whole point: the first thing printed is what the reader debugs.
 check "$(grep -qF 'exceeded its ${IT_TIMEOUT} budget' "$lane" && echo yes || echo no)" \
@@ -80,6 +87,20 @@ check "$(grep -qF 'TestSomethingElseEntirely' "$tmp/divergence" && echo yes || e
     "another package's assigned-but-not-run survives"
 check "$(grep -qF 'TestAppearedFromNowhere' "$tmp/divergence" && echo yes || echo no)" \
     "and so does a ran-but-not-assigned somewhere else"
+
+# The DIRECTION matters as much as the package. A timeout explains tests that
+# were assigned and did not run, and nothing else — a killed package may have
+# run some before it died, and one of those turning up unassigned is a
+# divergence the timeout does not account for.
+cat > "$tmp/direction" <<'EOF'
+  assigned but not run: backend|./internal/compose/integration|TestKilledWithTheRest
+  ran but not assigned: backend|./internal/compose/integration|TestRanBeforeTheKill
+EOF
+lane_drop_timed_out "$tmp/direction" "$tmp/timedout"
+check "$(grep -qF 'TestKilledWithTheRest' "$tmp/direction" && echo no || echo yes)" \
+    "the timed-out package's assigned-but-not-run goes"
+check "$(grep -qF 'TestRanBeforeTheKill' "$tmp/direction" && echo yes || echo no)" \
+    "but its ran-but-not-assigned stays — the timeout does not explain that one"
 
 # Suppressed to empty means the timeout accounted for all of it, and a header
 # with no evidence under it is a finding that says nothing.
