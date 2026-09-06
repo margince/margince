@@ -6,14 +6,12 @@ import {
   render as rtlRender,
   screen,
   waitFor,
-  within,
 } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { type Locale, LocaleProvider } from "../i18n";
-import { AiSettingsTab } from "./ai-settings";
+import { ProvidersStat, SpendStat } from "./ai-settings";
 
 // Settings → AI, as one page: two readings above a strip that chooses between
 // five bodies.
@@ -135,10 +133,27 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("AiSettingsTab", () => {
-  it("answers both readings before a tab is chosen", async () => {
+// The two readings an operator opens AI settings for. They used to sit in a
+// header above a five-tab strip; each tab is its own page now, so they ride the
+// two pages they belong to — spend on usage, providers on models.
+//
+// The three cases below survived the strip's deletion because none of them was
+// about the strip: what a WITHHELD reading says, what a FAILED one says, and
+// that both answer at all. The three that went with it drove tab switching and
+// the confirm dialog that guarded a routing draft across a shared address —
+// behaviour that no longer exists, because leaving the routing page is an
+// address change the app's own unsaved guard sees.
+const BothStats = () => (
+  <>
+    <SpendStat />
+    <ProvidersStat />
+  </>
+);
+
+describe("the AI readings", () => {
+  it("answers both readings", async () => {
     vi.stubGlobal("fetch", backendFor(OPERATOR));
-    render(<AiSettingsTab />);
+    render(<BothStats />);
 
     // Tokens are the budget the runtime actually enforces; the money is the
     // estimate priced on read, and it is a second line rather than the figure.
@@ -155,7 +170,7 @@ describe("AiSettingsTab", () => {
   // only about who may read it.
   it("says a reading is withheld rather than dropping it", async () => {
     vi.stubGlobal("fetch", backendFor(NO_READINGS));
-    render(<AiSettingsTab />);
+    render(<BothStats />);
 
     expect(await screen.findAllByText("Not yours to see")).toHaveLength(2);
   });
@@ -165,96 +180,11 @@ describe("AiSettingsTab", () => {
   // page that says it is still working for ever.
   it("says a reading could not be read rather than reading for ever", async () => {
     vi.stubGlobal("fetch", backendFor(OPERATOR, { usage: true, keys: true }));
-    render(<AiSettingsTab />);
+    render(<BothStats />);
 
     await waitFor(() =>
       expect(screen.getAllByText("Could not be read")).toHaveLength(2),
     );
     expect(screen.queryByText("Reading…")).toBeNull();
-  });
-
-  it("opens on routing and swaps one body at a time", async () => {
-    const user = userEvent.setup();
-    vi.stubGlobal("fetch", backendFor(OPERATOR));
-    render(<AiSettingsTab />);
-
-    // The lane the routing binds, which is the Routing body.
-    expect(await screen.findByText("premium")).toBeTruthy();
-
-    await user.click(screen.getByRole("button", { name: "Providers" }));
-    expect(await screen.findByText("Model provider keys")).toBeTruthy();
-    // And the body it replaced is GONE rather than merely scrolled past —
-    // each is its own read, and keeping four warm behind a strip nobody is
-    // looking at spends the installation's read budget on absent screens.
-    expect(screen.queryByText("Routing lanes")).toBeNull();
-
-    await user.click(screen.getByRole("button", { name: "Logs" }));
-    expect(await screen.findByText("AI call trace")).toBeTruthy();
-  });
-
-  // The routing draft is a document held in the card, and the strip above it is
-  // a place a reader MOVES — which the app's own unsaved guard cannot see,
-  // because it watches addresses and every tab here shares one.
-  it("asks before a tab change would discard routing edits", async () => {
-    const user = userEvent.setup();
-    vi.stubGlobal("fetch", backendFor(OPERATOR));
-    render(<AiSettingsTab />);
-
-    const lane = await screen.findByTestId("ai-routing-tier-premium");
-    await user.click(within(lane).getByRole("button", { name: /change/i }));
-    const model = within(lane).getByRole("combobox", { name: "Model" });
-    await user.clear(model);
-    await user.type(model, "claude-opus-5");
-
-    await user.click(screen.getByRole("button", { name: "Usage" }));
-    // Still on Routing, with the question in front of the reader.
-    const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText(/have not been saved/i)).toBeTruthy();
-    expect(screen.getByText("Routing lanes")).toBeTruthy();
-
-    await user.click(within(dialog).getByRole("button", { name: /discard/i }));
-    expect(await screen.findByText("AI usage & budget")).toBeTruthy();
-  });
-
-  // And a form that has been SAVED is no longer unsaved.
-  //
-  // The re-seed guard refuses to touch a dirty form, and a successful write
-  // leaves the form dirty by that measure until the draft is re-seeded from what
-  // the server returned. Without that, the page went on offering to discard
-  // edits that had already landed — the worst shape this question can take,
-  // because a reader who says yes loses nothing and learns to distrust it.
-  it("stops asking once the edits have been saved", async () => {
-    const user = userEvent.setup();
-    const saved = {
-      ...ROUTING,
-      tiers: { premium: { provider: "anthropic", model: "claude-opus-5" } },
-    };
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-        const req =
-          input instanceof Request ? input : new Request(String(input), init);
-        if (req.url.includes("/ai/routing")) {
-          // The PUT answers with the stored document, which is what the form
-          // re-seeds from.
-          return jsonResponse(req.method === "PUT" ? saved : ROUTING);
-        }
-        return backendFor(OPERATOR)(input, init);
-      }),
-    );
-    render(<AiSettingsTab />);
-
-    const lane = await screen.findByTestId("ai-routing-tier-premium");
-    await user.click(within(lane).getByRole("button", { name: /change/i }));
-    const model = within(lane).getByRole("combobox", { name: "Model" });
-    await user.clear(model);
-    await user.type(model, "claude-opus-5");
-    await user.click(screen.getByRole("button", { name: /save routing/i }));
-    await screen.findByText(/Routing saved/i);
-
-    // Leaving now is an ordinary move, not a question.
-    await user.click(screen.getByRole("button", { name: "Usage" }));
-    expect(await screen.findByText("AI usage & budget")).toBeTruthy();
-    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });

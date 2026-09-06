@@ -1,18 +1,13 @@
 import { useState } from "react";
 import { useCan } from "../app/capability";
 import { StatCard } from "../design-system/atoms";
-import { ConfirmModal } from "../design-system/confirmmodal";
-import { RecordTabs } from "../design-system/recordtabs";
 import { formatMoney, formatNumber } from "../format/format";
 import { formatElapsed, useNow } from "../format/now";
 import { useLocale, useT } from "../i18n";
-import { AiHealthCard } from "./ai-health";
-import { AiProviderKeysCard, useProviderKeys } from "./ai-provider-keys";
-import { AiRoutingCard, useRouting } from "./ai-routing";
-import { AiCallsCard, useLastCallAt } from "./aicalls";
-import { AiUsageCard, bandTone, currentMonth, useAiUsage } from "./aiusage";
-import { AutomationsAdmin } from "./automations";
-import { ModelCostsCard } from "./rates";
+import { useProviderKeys } from "./ai-provider-keys";
+import { useRouting } from "./ai-routing";
+import { useLastCallAt } from "./aicalls";
+import { bandTone, currentMonth, useAiUsage } from "./aiusage";
 import "./ai-settings.css";
 
 // The organization's AI as ONE page with five bodies, read in the order the
@@ -33,108 +28,18 @@ import "./ai-settings.css";
 // so seeing it takes the automation write grant and not any AI-named object — and
 // each keeps its place and says so rather than vanishing, because an absent spend
 // card claims nothing was spent.
-const AI_TABS = [
-  "routing",
-  "providers",
-  "automations",
-  "usage",
-  "logs",
-] as const;
-
-type AiTab = (typeof AI_TABS)[number];
-
-export function AiSettingsTab() {
-  const t = useT();
-  const [tab, setTab] = useState<AiTab>("routing");
-  // A routing draft is a document held in the card, not a field that saves
-  // itself, and the strip above it is a place a reader moves rather than a
-  // navigation the app's own unsaved guard can see: the guard watches ADDRESSES,
-  // and every tab here shares one. So the shell asks, and a switch that would
-  // discard work waits for an answer.
-  const [routingDirty, setRoutingDirty] = useState(false);
-  const [pending, setPending] = useState<AiTab | null>(null);
-
-  const choose = (next: AiTab) => {
-    if (next === tab) {
-      return;
-    }
-    if (tab === "routing" && routingDirty) {
-      setPending(next);
-      return;
-    }
-    setTab(next);
-  };
-
-  return (
-    <>
-      <header className="ai-settings-head">
-        <p className="settings-panel-sub">{t("aiSettings.sub")}</p>
-        <div className="ai-settings-stats">
-          <SpendStat />
-          <ProvidersStat />
-        </div>
-      </header>
-      <RecordTabs
-        options={AI_TABS}
-        value={tab}
-        onChange={choose}
-        label={t("aiSettings.tabs")}
-        labels={{
-          routing: t("aiSettings.tab.routing"),
-          providers: t("aiSettings.tab.providers"),
-          automations: t("aiSettings.tab.automations"),
-          usage: t("aiSettings.tab.usage"),
-          logs: t("aiSettings.tab.logs"),
-        }}
-      />
-      {/* One body at a time, mounted only while it is open: each is a query
-          against a different endpoint, and keeping four of them warm behind a
-          strip nobody is looking at spends the installation's read budget on
-          screens that are not on screen. */}
-      {tab === "routing" && (
-        <AiRoutingCard
-          onDirtyChange={setRoutingDirty}
-          onPriceSheet={() => choose("usage")}
-        />
-      )}
-      {tab === "providers" && (
-        <>
-          <AiProviderKeysCard />
-          {/* Whether the vendors above are actually ANSWERING. It belongs with
-              the credentials rather than with the bindings, because the three
-              readings are one story told in order — which vendor a lane names,
-              whether we hold a key for it, whether it replied — and the last two
-              are the pair an operator checks together when a lane goes quiet. */}
-          <AiHealthCard />
-        </>
-      )}
-      {tab === "automations" && <AutomationsAdmin />}
-      {tab === "usage" && (
-        <>
-          <AiUsageCard />
-          <ModelCostsCard />
-        </>
-      )}
-      {tab === "logs" && <AiCallsCard />}
-      <ConfirmModal
-        open={pending !== null}
-        onClose={() => setPending(null)}
-        title={t("aiSettings.discardTitle")}
-        confirmLabel={t("aiSettings.discard")}
-        confirmVariant="danger"
-        onConfirm={() => {
-          if (pending) {
-            setRoutingDirty(false);
-            setTab(pending);
-          }
-          setPending(null);
-        }}
-      >
-        {t("aiSettings.discardBody")}
-      </ConfirmModal>
-    </>
-  );
-}
+// The two readings an operator opens the AI settings for — how much has this
+// month cost, and can we still call.
+//
+// They used to sit in a header above a five-tab strip, answered before a tab was
+// chosen. The strip is gone: each of its tabs is its own page now, so there is
+// no header to hold them and no shared address to hold them ABOVE. They keep
+// their place instead by riding the two pages they each belong to — spend on
+// usage, providers on models — which is where a reader looking for either would
+// go anyway.
+//
+// Exported rather than moved so the queries, the locale formatting and the
+// withheld-reading behaviour stay in one file with the cards that share them.
 
 // What this month has cost, in the denomination the runtime actually meters:
 // tokens against the monthly ceiling, with the priced estimate under it.
@@ -145,7 +50,7 @@ export function AiSettingsTab() {
 // The estimate is priced on read from the workspace's sheet and a call outside it
 // carries no price at all, so the money line is absent rather than short when
 // nothing in the month priced.
-function SpendStat() {
+export function SpendStat() {
   const t = useT();
   const { locale } = useLocale();
   const canSee = useCan("automation", "update");
@@ -212,7 +117,7 @@ function SpendStat() {
 // page where that is visible before the call. The missing half needs both reads,
 // so a reader who may see the keys but not the routing gets the count and no
 // claim about what is broken — silence rather than a reassuring zero.
-function ProvidersStat() {
+export function ProvidersStat() {
   const t = useT();
   const { locale } = useLocale();
   const canSeeKeys = useCan("ai_routing", "read");

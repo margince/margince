@@ -93,7 +93,6 @@ describe("who may open what", () => {
       "system-health",
       "extensions",
       "reset",
-      "roles",
       "authentication",
       "seats",
     ] satisfies SettingsPageId[]) {
@@ -155,6 +154,61 @@ describe("requirements that are not permissions", () => {
   });
 });
 
+describe("the reset page needs the deployment's consent as well as the grant", () => {
+  // Two conditions of different kinds, and the page needs BOTH.
+  //
+  // `system_reset:delete` says this reader may wipe an installation that permits
+  // wiping. `data_reset_available` says whether this one does — the compiled
+  // default is false in every posture, so most installations have no such
+  // destination whoever is reading. Offering a reset the server would refuse is
+  // worse here than anywhere else in settings.
+  function opensReset(
+    allow: NonNullable<Parameters<typeof meFixture>[0]>["allow"],
+    armed: boolean,
+  ) {
+    const me = meFixture({ roles: ["admin"], allow });
+    return visibleSettingsPages({ ...me, data_reset_available: armed }).some(
+      (page) => page.id === "reset",
+    );
+  }
+
+  it("opens when the grant and the flag are both there", () => {
+    expect(opensReset({ system_reset: ["delete"] }, true)).toBe(true);
+  });
+
+  it("stays shut on an unarmed installation, whatever the grant says", () => {
+    expect(opensReset({ system_reset: ["delete"] }, false)).toBe(false);
+  });
+
+  it("stays shut for a reader without the grant, however armed", () => {
+    expect(opensReset({}, true)).toBe(false);
+  });
+
+  it("stays shut when /me carries no flag at all", () => {
+    // The state a fixture cannot reach by accident: a server older than the
+    // field, or a snapshot cached before it shipped. `meFixture` always supplies
+    // it, so without this case the `?? false` can be flipped to `?? true` with
+    // every other test still green — and what that ships is a wipe offered on an
+    // installation that never consented to one.
+    const me = meFixture({
+      roles: ["admin"],
+      allow: { system_reset: ["delete"] },
+    });
+    const { data_reset_available: _absent, ...withoutFlag } = me;
+    expect(
+      visibleSettingsPages(withoutFlag as typeof me).some(
+        (p) => p.id === "reset",
+      ),
+    ).toBe(false);
+  });
+
+  it("is not opened by a READ of the same object", () => {
+    // The verb is the whole gate here: `delete` is the only one that means
+    // "may wipe this", and a read of system_reset means nothing at all.
+    expect(opensReset({ system_reset: ["read"] }, true)).toBe(false);
+  });
+});
+
 describe("holds — the evaluator the four surfaces share", () => {
   it("denies a grant arm while /me is unresolved", () => {
     expect(
@@ -182,67 +236,84 @@ describe("holds — the evaluator the four surfaces share", () => {
 // Each case below is a deliberate correction of a client that disagreed with
 // the server, and stating them as tests is what stops the next author reading
 // the difference as an accident.
-describe("pages that admit readers the old register refused", () => {
+// A page must not open on a grant the CARDS inside it still refuse.
+//
+// The server moved these reads onto narrow objects, and the plan widens each
+// page to match. The cards have not followed: JobHealthCard,
+// ExtensionAccessCard, AuditLogCard and ResetDataCard still gate on the literal
+// admin role, the AI cards still check `automation:update`, SignInMethodsCard
+// still reads the installation aggregate, and LicenseCard never calls the
+// seat-usage endpoint the split shipped.
+//
+// So each page keeps a requirement its cards actually honour, and these cases
+// hold that pairing rather than the widening — a page that opened and then said
+// "admin only" is worse than one that stayed shut, because the reader cannot
+// tell a missing permission from a broken screen.
+//
+// Every case here is written to FAIL when the card is rewritten, which is the
+// signal to widen the page in the same change.
+describe("no page promises what its cards will not give", () => {
   function opens(page: SettingsPageId, allow: Parameters<typeof meFixture>[0]) {
     return visibleSettingsPages(meFixture(allow)).some((p) => p.id === page);
   }
 
-  it("opens extensions to a grant holder, not only the literal admin role", () => {
-    // `GET /v1/extensions` gates on extension_access.read, which ops holds. The
-    // old entry asked whether the reader WAS an admin, so it refused an ops
-    // principal the server answers 200 — the client disagreeing with the
-    // authority, which is what this redesign exists to stop.
+  it("keeps extensions shut for an ops holder of the grant", () => {
+    // ExtensionAccessCard: useHoldsAdminRole.
     expect(
       opens("extensions", {
         roles: ["ops"],
         allow: { extension_access: ["read"] },
       }),
-    ).toBe(true);
-    expect(opens("extensions", { roles: ["rep"], allow: {} })).toBe(false);
+    ).toBe(false);
   });
 
-  it("opens system-health on the job-health grant", () => {
-    // Same shape: the old entry was `isAdmin || embedding_reindex.read`, and
-    // its own comment said nobody below ops had anything to read there — which
-    // is the audience the grant already names.
+  it("keeps system-health shut for a job_health holder", () => {
+    // JobHealthCard: useHoldsAdminRole. The page opens on the reindex read,
+    // which is what its other card honours.
     expect(
       opens("system-health", {
         roles: ["ops"],
         allow: { job_health: ["read"] },
       }),
+    ).toBe(false);
+    expect(
+      opens("system-health", {
+        roles: ["ops"],
+        allow: { embedding_reindex: ["read"] },
+      }),
     ).toBe(true);
-    expect(opens("system-health", { roles: ["rep"], allow: {} })).toBe(false);
   });
 
-  it("opens audit on audit_log alone, without person.read", () => {
-    // privacy/auditlog.go requires exactly audit_log.read. The old entry folded
-    // the audit trail in with the consent registry, so a reader could hold the
-    // audit grant and still be refused the page carrying it.
+  it("keeps audit shut for a delegated audit_log holder", () => {
+    // AuditLogCard: useHoldsAdminRole.
     expect(
-      opens("audit", { roles: ["admin"], allow: { audit_log: ["read"] } }),
-    ).toBe(true);
-    expect(
-      opens("audit", { roles: ["rep"], allow: { person: ["read"] } }),
+      opens("audit", { roles: ["management"], allow: { audit_log: ["read"] } }),
     ).toBe(false);
   });
 
-  it("opens seats to management on seat_usage without license", () => {
-    // The split shipped for this reader: capacity without commercial standing.
-    // The old License entry asked for `license.read`, which management does not
-    // hold, so the page management is meant to use was hidden from them.
+  it("keeps seats shut for a seat_usage holder without license", () => {
+    // LicenseCard calls /installation/license and nothing else, so this reader
+    // would land on an error rather than on the capacity count.
     expect(
       opens("seats", {
         roles: ["management"],
         allow: { seat_usage: ["read"] },
       }),
+    ).toBe(false);
+    expect(
+      opens("seats", { roles: ["admin"], allow: { license: ["read"] } }),
     ).toBe(true);
-    expect(opens("seats", { roles: ["rep"], allow: {} })).toBe(false);
   });
 
-  it("opens authentication on its own grants", () => {
-    // Split out of the old General entry, which asked for installation
-    // settings, the company-context flag or FX rates — none of which is
-    // authentication, and all of which a reader can lack while holding this.
+  it("opens authentication on its own grant, and not on the one every role holds", () => {
+    // The one page in this describe that is FIXED rather than waiting: its card
+    // reads GET /installation/authentication-policy now, so the page can ask
+    // for the grant that endpoint takes.
+    //
+    // The second half is the point. `installation_settings:read` is held by
+    // every seeded role — a rep reads it for the base currency — so a page
+    // opening on it would put the installation's sign-in policy in front of the
+    // whole workspace, which is what the backend split existed to close.
     expect(
       opens("authentication", {
         roles: ["management"],
@@ -257,18 +328,34 @@ describe("pages that admit readers the old register refused", () => {
     ).toBe(false);
   });
 
-  it("splits the AI page by what each half actually reads", () => {
-    // A narrowing, not a widening: management held `automation` and so reached
-    // the whole combined page. Now they reach the parts their grants cover and
-    // NOT the routing editor, which asks for ai_routing they do not hold.
-    const management = {
+  it("opens the AI pages on the grant their cards check", () => {
+    // `automation:update`, not `ai_diagnostics`: the runtime's spend is
+    // operator information, so seeing it takes the automation WRITE grant.
+    const withDiagnostics = {
       roles: ["management"],
-      allow: { automation: ["read"], ai_diagnostics: ["read"] },
+      allow: { ai_diagnostics: ["read"] },
     } satisfies Parameters<typeof meFixture>[0];
-    expect(opens("automations", management)).toBe(true);
-    expect(opens("usage", management)).toBe(true);
-    expect(opens("model-calls", management)).toBe(true);
-    expect(opens("models", management)).toBe(false);
+    expect(opens("usage", withDiagnostics)).toBe(false);
+    expect(opens("model-calls", withDiagnostics)).toBe(false);
+
+    const withAutomationWrite = {
+      roles: ["ops"],
+      allow: { automation: ["read", "update"] },
+    } satisfies Parameters<typeof meFixture>[0];
+    expect(opens("usage", withAutomationWrite)).toBe(true);
+    expect(opens("model-calls", withAutomationWrite)).toBe(true);
+  });
+
+  it("opens leads on custom_field, which is what its three cards read", () => {
+    // Lead sources, disqualify reasons and handling are custom-field vocabulary
+    // server-side. Asking for `pipeline` would hide the page from a holder who
+    // may read it and open it for one whose reads then 403.
+    expect(
+      opens("leads", { roles: ["rep"], allow: { custom_field: ["read"] } }),
+    ).toBe(true);
+    expect(
+      opens("leads", { roles: ["rep"], allow: { pipeline: ["read"] } }),
+    ).toBe(false);
   });
 });
 

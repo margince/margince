@@ -30,6 +30,11 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // rest of the product does not use.
   "explain.col.record",
   "explain.col.pipeline",
+  // The settings group heading. "AI" is the initialism Vietnamese uses too —
+  // the vi catalog already carries it untranslated wherever it appears in a
+  // sentence, so rendering "Trí tuệ nhân tạo" on one nav heading would give
+  // that one surface a vocabulary the rest of the product does not use.
+  "settings.group.ai",
   // The area's name, which is the same word in all three catalogs by decision:
   // "Analytics" is what the product calls this surface, and both German and
   // Vietnamese borrow it as a term of art rather than translating it. The
