@@ -53,9 +53,14 @@ describe("finishing a task from the row", () => {
 
     // The write itself, not merely that a button was pressed: a control that
     // renamed the promise and sent nothing would satisfy a visibility check.
+    //
+    // And the PRECONDITION with it. Unpinned, two readers completing one task
+    // each overwrite the other and both are told it worked; the header is what
+    // makes the second press a refusal instead.
     await waitFor(async () => {
       expect(await patchedTask()).toEqual({
         id: "task-1",
+        ifMatch: "3",
         body: { is_done: true },
       });
     });
@@ -66,9 +71,13 @@ describe("finishing a task from the row", () => {
       }),
     );
 
+    // The undo pins on the version the COMPLETION produced, not the one the row
+    // was drawn at: re-sending 3 here would be refused as skew by the very write
+    // it is undoing.
     await waitFor(async () => {
       expect(await patchedTask()).toEqual({
         id: "task-1",
+        ifMatch: "4",
         body: { is_done: false },
       });
     });
@@ -182,7 +191,7 @@ describe("the day's figures after the work is done", () => {
 // go to one endpoint, so a test that only counted requests could not tell
 // completing from reopening.
 async function patchedTask(): Promise<
-  { id: string; body: unknown } | undefined
+  { id: string; ifMatch: string | null; body: unknown } | undefined
 > {
   const calls = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls;
   for (let at = calls.length - 1; at >= 0; at--) {
@@ -195,7 +204,11 @@ async function patchedTask(): Promise<
     }
     const match = /\/activities\/([^/?]+)$/.exec(input.url.split("?")[0]);
     if (match) {
-      return { id: match[1], body: await input.clone().json() };
+      return {
+        id: match[1],
+        ifMatch: input.headers.get("If-Match"),
+        body: await input.clone().json(),
+      };
     }
   }
   return undefined;

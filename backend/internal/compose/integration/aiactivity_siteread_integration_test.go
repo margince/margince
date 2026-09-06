@@ -231,10 +231,13 @@ func TestAWebsiteReadRunsAndSettlesInTheProjection(t *testing.T) {
 	}
 }
 
-// The read's own vocabulary has words the projection's does not, and each maps
-// to the honest one: a truncated crawl is `degraded` with the reason it
-// stopped, never `done`.
-func TestATruncatedWebsiteReadSettlesDegradedWithItsStopReason(t *testing.T) {
+// The read's own vocabulary has words the projection's does not, and `partial`
+// is the one that maps to two: the projection's `degraded` is what the rail's
+// fault arm is bounded on, so it claims somebody must be TOLD, and a crawl that
+// filled the page budget it was given is not that. It settles `done` and still
+// says where it stopped — the reason is the record, the state is the
+// interruption.
+func TestAWebsiteReadThatFilledItsPageBudgetSettlesDoneWithItsStopReason(t *testing.T) {
 	f := newWebsiteReadFixture(t)
 	claim, err := f.env.People.BeginSiteRead(f.worker, f.readID, siteReadLease)
 	if err != nil {
@@ -249,11 +252,36 @@ func TestATruncatedWebsiteReadSettlesDegradedWithItsStopReason(t *testing.T) {
 	f.drain(t)
 
 	got := f.projection(t)
-	if got.State != "degraded" {
-		t.Fatalf("state = %s, want degraded — a partial read must never read as done", got.State)
+	if got.State != "done" {
+		t.Fatalf("state = %s, want done — a crawl that filled its page budget is not somebody's to act on", got.State)
 	}
 	if got.DegradeReason == nil || *got.DegradeReason != "The read stopped at its page limit." {
 		t.Fatalf("degrade_reason = %v, want the closed sentence for a page cap", got.DegradeReason)
+	}
+}
+
+// The other half of that split, driven end to end so the two cannot be proved
+// only where they are decided. A read short of what it was ASKED for still
+// settles `degraded` — here a crawl that filled its page budget AND lost an
+// extraction lane, which is the shape stopped_reason alone cannot see, since
+// the row spells it with the cap's own reason.
+func TestAWebsiteReadThatAlsoLostALaneStaysDegraded(t *testing.T) {
+	f := newWebsiteReadFixture(t)
+	claim, err := f.env.People.BeginSiteRead(f.worker, f.readID, siteReadLease)
+	if err != nil {
+		t.Fatalf("BeginSiteRead: %v", err)
+	}
+	stopped := "page_cap"
+	if err := f.env.People.FinishSiteRead(f.worker, f.readID, people.FinishSiteReadInput{
+		Status: "partial", ClaimedAt: &claim.ClaimedAt, StoppedReason: &stopped,
+		Warnings: []string{people.SiteReadPartialExtractionWarning},
+	}); err != nil {
+		t.Fatalf("FinishSiteRead: %v", err)
+	}
+	f.drain(t)
+
+	if got := f.projection(t); got.State != "degraded" {
+		t.Fatalf("state = %s, want degraded — a lost lane is a fault however full the page budget was", got.State)
 	}
 }
 

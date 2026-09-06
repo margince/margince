@@ -174,6 +174,11 @@ type Task struct {
 	// on the page that are not theirs. Without this the rows read identically,
 	// and the one nobody owns — the whole point of that scope — cannot say so.
 	AssigneeID *ids.UUID
+	// Version is the task row's version, for the If-Match the lane's own verbs
+	// send. The lane offers `complete` and `snooze`, so a row that arrived
+	// without it can be acted on and cannot be acted on SAFELY: two people
+	// ticking one task each overwrite the other, and neither is told.
+	Version *int64
 }
 
 // Receipts is what the system did on its own, most recent first.
@@ -351,79 +356,6 @@ type DealFigures struct {
 	// where ExpectedCloseDate is nil — a deal with no close date is not late by
 	// one, it has none to be late by.
 	CloseOverdue bool
-}
-
-// Meetings is today's booked meetings that have not happened yet.
-//
-// Optional as the other two are: nil means this feed does not read meetings,
-// which is not the same as a day with none in it.
-type Meetings interface {
-	Today(ctx context.Context, from, until time.Time, limit int) ([]Meeting, error)
-}
-
-// MeetingsAwaitingOutcome is today's meetings that have started and whose
-// result nobody has recorded.
-//
-// A separate seam from Meetings rather than a second method on it, because it
-// asks the opposite question of the same table and every stub of that interface
-// would otherwise have to answer both. Optional the same way: nil means this
-// feed does not read them, which is not a day with none.
-type MeetingsAwaitingOutcome interface {
-	Since(ctx context.Context, from, until time.Time, limit int) ([]MeetingAwaitingOutcome, error)
-}
-
-// MeetingAwaitingOutcome is one appointment that happened and owes an answer.
-//
-// It carries less than Meeting because the two rows ask for different things: a
-// meeting still ahead offers preparation, which needs a person's page and a
-// readable body to judge. This one offers recording what happened, which needs
-// the activity and nothing else — so there is no PersonID or prep tri-state
-// here, and adding them would be fields no caller reads.
-type MeetingAwaitingOutcome struct {
-	ID      ids.UUID
-	Subject string
-	// StartedAt is when it began, which is in the past for every row here. It
-	// is not a due moment: a meeting that happened cannot be late, and stamping
-	// it as due would put an overdue mark on a row whose whole point is that
-	// the meeting is over.
-	StartedAt time.Time
-}
-
-// Meeting is one appointment still ahead of the reader.
-type Meeting struct {
-	ID       ids.UUID
-	Subject  string
-	StartsAt time.Time
-
-	// PersonID is whose page the brief is read on, and it is zero whenever the
-	// meeting names nobody this reader may see.
-	//
-	// The brief is not a page of its own: it opens as `?prep=<activity>` on a
-	// PERSON's record, so the activity id the row already carries names the
-	// meeting and says nothing about where to read it. Without this the lane
-	// could describe a meeting and offer no way to prepare for it, which is
-	// the one thing a rep opens the row to do.
-	//
-	// An internal meeting legitimately has none, and so does one whose only
-	// attendees are people the reader cannot read. Both stay zero and the row
-	// offers no verb rather than a link to somebody's page picked at random.
-	PersonID ids.UUID
-
-	// NeedsPrep is true when nothing has been written down for a meeting that
-	// is about to happen: no agenda or notes body, and nobody outside this
-	// organization recorded on it.
-	//
-	// It is a THREE-state answer squeezed into a bool plus its guard below, and
-	// the third state is why: a meeting whose content this reader may not read
-	// arrives with an empty body for a reason that has nothing to do with
-	// preparation. Calling that "needs prep" would tell a rep to prepare a
-	// meeting they cannot see, so the lane leaves PrepKnown false instead and
-	// the surface says nothing rather than something false.
-	NeedsPrep bool
-
-	// PrepKnown reports whether NeedsPrep was answerable at all. False when the
-	// row's content is withheld from this reader.
-	PrepKnown bool
 }
 
 // Notices is the acting person's own unread notices — the durable

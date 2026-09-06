@@ -1,0 +1,56 @@
+name: scan_finds_the_question_nobody_answered
+task: account_scan
+site: org_scan
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5-1
+fixture:
+  name: Brandt Automotive GmbH
+  industry: Automotive
+  contacts:
+    - label: anna
+      name: Anna Vogt
+  open_deals:
+    - label: retrofit
+      name: Fleet retrofit 2026
+      stage: Proposal
+      amount_minor: 4800000
+      currency: EUR
+      stalled: false
+  messages:
+    - label: our_proposal
+      kind: email
+      direction: outbound
+      subject: "Fleet retrofit 2026 — proposal"
+      at: "2026-07-01T09:00:00Z"
+      text: "Hi Anna, attached is the proposal for the retrofit of the first 40 vehicles. Happy to walk the board through it whenever suits."
+    - label: her_question
+      kind: email
+      direction: inbound
+      subject: "Re: Fleet retrofit 2026 — proposal"
+      at: "2026-07-03T14:20:00Z"
+      text: "Thanks, this reads well. One thing before I take it to the board: can you confirm whether the installation can be done at our depot in Kassel rather than at your site? That decides the timeline for us."
+    - label: our_aside
+      kind: email
+      direction: outbound
+      subject: "Re: Fleet retrofit 2026 — proposal"
+      at: "2026-07-04T08:05:00Z"
+      text: "Good to hear it reads well. I'll send over the reference list from the Hamburg fleet separately."
+expect:
+  outcome: accepted
+  # The finding a correct scan cannot miss: Anna asked where the installation
+  # happens and our only later message talks about something else. A scan
+  # that raises nothing here, or rests its finding on the proposal instead
+  # of the question, has not read the conversation.
+  answer: [her_question]
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    Score whether the scan raises a question_unanswered finding resting on the
+    inbound message that asks about installation at the Kassel depot, quoting
+    that message's own words verbatim, and whether its action is draft_reply.
+    A finding that paraphrases the question rather than quoting it, or that
+    cites the proposal email, is wrong. A reply that also raises the
+    reference-list promise as commitment_unmet is fine; one that invents a
+    risk or a need the messages do not state is worse than silence.

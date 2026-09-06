@@ -49,6 +49,11 @@ type dealFacts struct {
 	// date, so a deal nobody has contacted and one contacted the day it was
 	// written down carry the same instant.
 	everTouched bool
+	// asOf is the DATABASE's clock, read in the same statement as the row.
+	// going-cold measures against it rather than against the service's, so
+	// both ends of that subtraction come from the clock that wrote the touch —
+	// see DealCoverage.TouchedAsOf.
+	asOf time.Time
 }
 
 // readDealFacts loads the deal row the rules decide on.
@@ -60,8 +65,9 @@ func readDealFacts(ctx context.Context, tx pgx.Tx, dealID ids.DealID) (dealFacts
 	var org *ids.UUID
 	err := tx.QueryRow(ctx, fmt.Sprintf(`
 		SELECT status, organization_id, %s,
-		       last_activity_at IS NOT NULL
-		  FROM deal WHERE id = $1`, idlebase.SQL("")), dealID).Scan(&out.status, &org, &out.lastTouchAt, &out.everTouched)
+		       last_activity_at IS NOT NULL, now()
+		  FROM deal WHERE id = $1`, idlebase.SQL("")), dealID).
+		Scan(&out.status, &org, &out.lastTouchAt, &out.everTouched, &out.asOf)
 	if err != nil {
 		return out, fmt.Errorf("network: reading the deal a coverage view describes: %w", err)
 	}

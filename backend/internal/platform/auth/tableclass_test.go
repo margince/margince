@@ -134,9 +134,30 @@ func TestTheContentGateIsTheDiscoverGateNarrowedByAudience(t *testing.T) {
 		if !strings.Contains(content, arm) {
 			t.Errorf("the content gate lacks the %q arm: %s", arm, content)
 		}
+	}
+	// The arms that must NOT reach discovery are the ones that would admit a row
+	// on the strength of the AUDIENCE rather than of the reader's presence.
+	// `audience = 'workspace'` is a statement about the audience, so admitting it
+	// would make every workspace-audience row discoverable to a reader whose row
+	// scope reaches none of the records behind it; captured_by names one seat's
+	// provenance; audience_member names people somebody added to a list.
+	for _, arm := range []string{"a.audience = 'workspace'", "a.captured_by LIKE $", "activity_audience_member am"} {
 		if strings.Contains(discover, arm) {
 			t.Errorf("the discover gate carries the audience arm %q; a last-touch marker would hide a limited mail: %s", arm, discover)
 		}
+	}
+	// MEMBERSHIP is deliberately on both sides, and it is the one arm that
+	// belongs there. Being stamped on a meeting is honest evidence that a reader
+	// may learn it exists, and without it an attendee cannot reach a meeting
+	// filed under a contact private to the seat that captured it — discovery
+	// asks whether a LINKED record is visible, and theirs is not.
+	//
+	// It widens discovery and cannot narrow it: content still composes discovery
+	// whole (the prefix check above) and then ANDs the audience, so a row a
+	// reader may read is still always one they may discover.
+	if !strings.Contains(discover, "activity_participant ap") {
+		t.Errorf("the discover gate lost its membership arm; an attendee cannot reach "+
+			"a meeting filed under a record private to somebody else: %s", discover)
 	}
 
 	// The audience is a property of the row and does not yield to row_scope=all.

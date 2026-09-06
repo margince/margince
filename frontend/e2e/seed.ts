@@ -41,10 +41,14 @@ const E2E_ADMIN_GRANTS: GrantSpec = {
   // that card's draft is the one that OUTLIVES its dialog, so it is the only
   // settings edit a reader can still be holding while they navigate away.
   installation_settings: ["read", "update"],
-  // The consent registry's own gate, and so the Privacy & audit ENTRY's: the
-  // server reads purposes under `person:read` (consent/store.go), not under a
-  // role. Read alone, because no spec exercises a person write from here and a
-  // grant this fixture does not need is a grant it should not claim.
+  // The consent registry's own gate: the server reads purposes under
+  // `person:read` (consent/store.go), not under a role. Read alone, because no
+  // spec exercises a person write from here and a grant this fixture does not
+  // need is a grant it should not claim.
+  //
+  // It no longer opens the Privacy & audit ENTRY — every seeded role holds this
+  // read, so the page moved to `privacy_request`, which this fixture holds
+  // below. The card still needs `person`, which is why it stays.
   person: ["read"],
   // Filters & views reads the vocabulary and previews a tree under `list:read`
   // (collections/handlers.go), and saving a filter as a dynamic list is a
@@ -82,16 +86,21 @@ const E2E_ADMIN_GRANTS: GrantSpec = {
   // some card or catalog entry reads TODAY, verified against the source rather
   // than against the object vocabulary.
   //
-  // THREE OF THE THIRTEEN ARE ABSENT because no client code reads them yet, and
+  // ONE OF THE THIRTEEN IS STILL ABSENT because no client code reads it, and
   // that is a real gap rather than a fixture decision:
-  //   user_admin        — `UsersAdminCard` still calls useHoldsAdminRole
-  //   team_admin        — `TeamsCard` still calls useHoldsAdminRole
   //   oauth_application — `OAuthAppCard` still asks capture_settings:update,
   //                       which an ordinary sales role holds
-  // Each object exists in the contract and is seeded server-side; the card that
-  // should ask for it was never repointed. Adding them here would paper over
-  // that — the sweep would pass either way, and the day somebody repoints those
-  // cards the fixture would already agree.
+  // The object exists in the contract and is seeded server-side; the card that
+  // should ask for it was never repointed. Adding it here would paper over that
+  // — the sweep would pass either way, and the day somebody repoints that card
+  // the fixture would already agree.
+  //
+  // `user_admin` and `team_admin` were on that list and are below now: the
+  // roster and team cards ask them verb by verb, and the Members and Teams
+  // ENTRIES follow them too, so a fixture without them would sweep two pages
+  // the mock cannot open.
+  user_admin: ["read", "create", "update", "delete"],
+  team_admin: ["read", "create", "update"],
   //
   // Extensions is TWO reads behind one flag — the unit inventory and every
   // role's grant on every object — and its toggles write through the update.

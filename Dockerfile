@@ -131,7 +131,27 @@ RUN --mount=type=cache,id=margince-gobuild,target=/root/.cache/go-build \
 # run provides.
 FROM --platform=$BUILDPLATFORM node:24-alpine AS web-build
 
-RUN corepack enable
+# The pnpm version is the repository's, not the build day's. `corepack enable`
+# installs the shim and nothing else: with no manifest to read, the shim
+# resolves whatever npm calls latest at build time, so a new pnpm major reaches
+# this image with nothing in the tree having changed. That is how this build
+# went red on pnpm 12 with a green commit — the composed workspace's `link:`
+# overrides resolve to dangling symlinks there and the composed typecheck
+# fails on `Cannot find module 'react'`.
+#
+# package.json's "packageManager" is the one pin, the same field the workflows
+# read. It is copied to a directory of ITS OWN because `pnpm fetch` below
+# deliberately runs with no manifest beside the lockfile — see there.
+#
+# Nothing in this stage mounts a cache over corepack's home, and that is this
+# layer's doing: a mount is not part of the image, so it would hide the version
+# activated here and leave the shim resolving latest again — with, in the fetch
+# step below, no manifest in /app to correct it. Baked into a layer instead, the
+# pinned pnpm is simply present, and BuildKit re-runs this only when the pin
+# changes.
+COPY package.json /pnpm-pin/package.json
+RUN corepack enable \
+    && corepack prepare "$(node -p 'require("/pnpm-pin/package.json").packageManager')" --activate
 
 # `pnpm fetch` lays down a virtual store, and the install that follows it
 # reorganises that directory once the workspace's members are visible. pnpm
@@ -154,7 +174,6 @@ WORKDIR /app
 # would have broken this build with an error about a missing importer.
 COPY pnpm-lock.yaml ./
 RUN --mount=type=cache,id=margince-pnpm-store,target=/pnpm-store \
-    --mount=type=cache,id=margince-corepack,target=/root/.cache/node/corepack \
     pnpm fetch --store-dir /pnpm-store
 
 # The composition: the MERGED contracts the TS types are generated from and the
@@ -185,6 +204,29 @@ COPY extensions/ ./extensions/
 # lifecycle runs, and this build needs no postinstall hook.
 RUN --mount=type=cache,id=margince-pnpm-store,target=/pnpm-store \
     pnpm install --frozen-lockfile --prefer-offline --ignore-scripts --store-dir /pnpm-store
+
+# The COMPOSED workspace, and the install that gives each enabled unit its own
+# dependencies. The install above resolves the SPA and nothing else: a unit's
+# frontend/ is not a member of the root workspace (pnpm-workspace.yaml says
+# why), so without this step a unit's screen has no react, no
+# @tanstack/react-query and no @types/react to resolve, and the composed
+# typecheck below fails on every one of them — measured, with the version
+# pinned, so it is not the pnpm question.
+#
+# Copied from gobase rather than regenerated, for the reason the registry is:
+# this image has no Go toolchain. The workspace's `host` symlink is relative,
+# so it lands on /app/frontend here exactly as it lands on frontend/ elsewhere,
+# and it must stay a symlink through the copy — resolved to a directory it would
+# be a second copy of the SPA.
+#
+# --no-frozen-lockfile, and explicitly, for the reason the make lane states: this
+# lockfile is GENERATED under ignored build output and regenerating it is the
+# point, and CI=true above would otherwise flip the default to frozen against a
+# lockfile no image carries.
+COPY --from=gobase /src/build/composition-frontend/workspace/ ./build/composition-frontend/workspace/
+RUN --mount=type=cache,id=margince-pnpm-store,target=/pnpm-store \
+    cd build/composition-frontend/workspace \
+    && pnpm install --no-frozen-lockfile --prefer-offline --ignore-scripts --store-dir /pnpm-store
 
 # Regenerate the contract types from the MERGED crm.yaml, then build the composed
 # lane. This keeps the image's types pinned to the contract it was built against
@@ -229,7 +271,6 @@ ENV MARGINCE_BUILD_REVISION=$MARGINCE_BUILD_REVISION
 ARG MARGINCE_RELEASE_VERSION=dev
 ENV MARGINCE_RELEASE_VERSION=$MARGINCE_RELEASE_VERSION
 RUN --mount=type=cache,id=margince-tsbuildinfo,target=/app/frontend/node_modules/.tmp \
-    --mount=type=cache,id=margince-corepack,target=/root/.cache/node/corepack \
     pnpm gen:composed-types && pnpm gen:events:composed && pnpm build:composed
 
 # ── api: runtime ──────────────────────────────────────────────────────────────

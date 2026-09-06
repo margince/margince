@@ -160,6 +160,7 @@ func createPersonInTx(ctx context.Context, tx pgx.Tx, in CreatePersonInput, by s
 		// saying why — and the answer that makes the gap visible rather than
 		// leaving the question unasked.
 		Acquisition:  in.Acquisition,
+		Visibility:   visibilityFor(bornOwnerScoped(ctx)),
 		FullName:     in.FullName,
 		FirstName:    in.FirstName,
 		LastName:     in.LastName,
@@ -250,8 +251,18 @@ type UpdatePersonInput struct {
 	LastName  *string
 	Title     *string
 	OwnerID   *ids.UserID
-	Social    map[string]any
-	Address   *crmcontracts.Address
+	// Visibility moves a contact between 'workspace' and 'owner', in either
+	// direction, for anybody the write gate admits.
+	//
+	// It was one-way until now — POST /people/{id}/publish only widened — on
+	// the reasoning that a colleague may already have acted on seeing the
+	// contact. That reasoning assumed a human made the disclosure, and the
+	// common case is not a human: the sender classifier publishes a contact it
+	// judges a real counterparty with nobody approving it, so a machine made a
+	// decision no human could undo, the row's own owner included.
+	Visibility *string
+	Social     map[string]any
+	Address    *crmcontracts.Address
 	// Emails replaces the person's live addresses when non-nil. nil is "not
 	// supplied" and leaves the stored rows standing, exactly as Social is —
 	// the distinction matters for an import whose file carried no email
@@ -286,6 +297,9 @@ func (s *Store) UpdatePerson(ctx context.Context, id ids.PersonID, in UpdatePers
 			return fmt.Errorf("read person before update: %w", err)
 		}
 
+		if err := refuseUnreadableResult(current, in); err != nil {
+			return err
+		}
 		p, err := buildPersonPatch(current, in)
 		if err != nil {
 			return err
@@ -308,6 +322,11 @@ func (s *Store) UpdatePerson(ctx context.Context, id ids.PersonID, in UpdatePers
 			return nil
 		}
 
+		if in.Visibility != nil {
+			if err := refuseStaleVisibility(ctx, tx, id, current); err != nil {
+				return err
+			}
+		}
 		if err := p.ApplyGuarded(ctx, tx, "person", id.UUID, in.IfVersion); err != nil {
 			return fmt.Errorf("apply person patch: %w", err)
 		}
@@ -316,6 +335,7 @@ func (s *Store) UpdatePerson(ctx context.Context, id ids.PersonID, in UpdatePers
 				return err
 			}
 		}
+
 		if in.Emails != nil || in.Phones != nil {
 			by, err := storekit.CapturedBy(ctx)
 			if err != nil {
@@ -328,19 +348,15 @@ func (s *Store) UpdatePerson(ctx context.Context, id ids.PersonID, in UpdatePers
 				return err
 			}
 		}
-		before, after := p.Before(), p.After()
-		if in.Social != nil {
-			before["social"] = current.Social
-			after["social"] = in.Social
+		// AFTER the addresses are replaced, never before: the cohort pass
+		// selects the correspondence to attach by reading this person's live
+		// person_email rows, so running it first would file mail from an
+		// address the same patch is removing — and the replacement archives
+		// the address without retracting the links.
+		if err := s.carryHistoryIfPublished(ctx, tx, id, current, in); err != nil {
+			return err
 		}
-		if in.Emails != nil {
-			before["emails"] = current.Emails
-			after["emails"] = in.Emails
-		}
-		if in.Phones != nil {
-			before["phones"] = current.Phones
-			after["phones"] = in.Phones
-		}
+		before, after := personChangeImages(p, current, in)
 		auditID, err := storekit.AuditWithTrail(ctx, tx, in.Trail, "person", id.UUID, before, after)
 		if err != nil {
 			return fmt.Errorf("audit person update: %w", err)
@@ -359,6 +375,31 @@ func (s *Store) UpdatePerson(ctx context.Context, id ids.PersonID, in UpdatePers
 // buildPersonPatch stages only the fields the caller supplied, each
 // diffed against the current row so the audit before/after captures the
 // real change and an unchanged field is left out of the UPDATE.
+// personChangeImages is the before/after pair the audit row records.
+//
+// The patch knows the columns it staged; the relations it does not, because
+// they are written as their own rows rather than as columns on the person. So
+// the three replaced sets are folded in here, and a relation the caller did not
+// supply stays out of both images rather than appearing as an unchanged one.
+func personChangeImages(
+	p *storekit.Patch, current crmcontracts.Person, in UpdatePersonInput,
+) (before, after map[string]any) {
+	before, after = p.Before(), p.After()
+	if in.Social != nil {
+		before["social"] = current.Social
+		after["social"] = in.Social
+	}
+	if in.Emails != nil {
+		before["emails"] = current.Emails
+		after["emails"] = in.Emails
+	}
+	if in.Phones != nil {
+		before["phones"] = current.Phones
+		after["phones"] = in.Phones
+	}
+	return before, after
+}
+
 func buildPersonPatch(current crmcontracts.Person, in UpdatePersonInput) (*storekit.Patch, error) {
 	p := storekit.NewPatch()
 	if in.FullName != nil {
@@ -375,6 +416,9 @@ func buildPersonPatch(current crmcontracts.Person, in UpdatePersonInput) (*store
 	}
 	if in.OwnerID != nil {
 		p.Set(ownerIDColumn, current.OwnerId, *in.OwnerID)
+	}
+	if in.Visibility != nil {
+		p.Set("visibility", current.Visibility, *in.Visibility)
 	}
 	if err := storekit.ApplyClears(p, in.Clear, clearablePersonColumns(current)); err != nil {
 		return nil, err

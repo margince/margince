@@ -1,0 +1,55 @@
+name: scan_finds_the_promise_we_did_not_keep
+task: account_scan
+site: org_scan
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5-1
+fixture:
+  name: Nordlicht Logistik AG
+  industry: Logistics
+  contacts:
+    - label: jonas
+      name: Jonas Feld
+  open_deals:
+    - label: telematics
+      name: Telematics rollout
+      stage: Discovery
+      amount_minor: 1500000
+      currency: EUR
+      stalled: false
+  messages:
+    - label: his_ask
+      kind: email
+      direction: inbound
+      subject: "Telematics — next steps"
+      at: "2026-08-10T10:00:00Z"
+      text: "Good call yesterday. Before we go further my team wants to see a sample of the driver reports the units produce."
+    - label: our_promise
+      kind: email
+      direction: outbound
+      subject: "Re: Telematics — next steps"
+      at: "2026-08-10T15:30:00Z"
+      text: "Will do — I'll send you two anonymised driver reports from a comparable fleet by Friday so your team can see the level of detail."
+    - label: his_nudge
+      kind: email
+      direction: inbound
+      subject: "Re: Telematics — next steps"
+      at: "2026-08-19T08:45:00Z"
+      text: "Morning — did the sample reports get held up somewhere? The team is meeting on Thursday and would like to have them in hand."
+expect:
+  outcome: accepted
+  # We promised two reports by Friday and nine days later he is asking where
+  # they are. A correct scan rests on the promise (commitment_unmet) or on
+  # the nudge (question_unanswered); either way the nudge is the message a
+  # reader must be shown, because it is what needs an answer today.
+  answer: [his_nudge]
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    Score whether the scan raises a commitment_unmet finding on our promise
+    of the sample reports, or a question_unanswered finding on the nudge that
+    asks where they are, quoting the cited message verbatim, with the action
+    draft_reply. A scan that invents a delivery date for the reports, or a
+    reason they were held up, states something no message says and scores
+    below one that only says the promise is open.

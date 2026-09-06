@@ -381,6 +381,10 @@ describe("SettingsScreen restructured pages", () => {
         roles: ["admin"],
         allow: {
           person: ["read"],
+          // What opens Privacy now. `person:read` still reaches the purposes
+          // list — that endpoint's gate is unchanged — but it no longer opens
+          // the page, because every seeded role holds it.
+          retention_policy: ["read"],
           audit_log: ["read"],
         },
       }),
@@ -419,15 +423,20 @@ describe("SettingsScreen restructured pages", () => {
     expect(await screen.findByText("update")).toBeTruthy();
   });
 
-  // The READ alone opens it, editor included. Before this page absorbed it the
-  // automations editor was a route of its own that nothing gated, so gating the
-  // page on the WRITE grant would be the merge inheriting the spend cards'
-  // authority and dropping the door's — an operator who may read the automations
-  // would reach a page they cannot open.
-  it("opens Automations for an operator on the automations read alone, editor and all", async () => {
+  // The WRITE opens it, editor included. The page absorbed a route that nothing
+  // gated, and for a while it asked the read — which every seeded role holds,
+  // so the page that DEFINES automations stood in a rep's rail with nothing on
+  // it she could change. Reading what an automation did is answered on the
+  // records it touched, not here.
+  it("opens Automations for an operator who may change one, editor and all", async () => {
+    // The write, not the read: management and manager read `automation` to see
+    // what ran, and the page that DEFINES automations is not theirs.
     vi.stubGlobal(
       "fetch",
-      mergedEntryBackend({ roles: ["ops"], allow: { automation: ["read"] } }),
+      mergedEntryBackend({
+        roles: ["ops"],
+        allow: { automation: ["read", "create", "update"] },
+      }),
     );
     renderSettings("automations");
     await waitFor(() =>

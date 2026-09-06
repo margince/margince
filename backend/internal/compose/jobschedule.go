@@ -163,6 +163,7 @@ func configDependencies(cfg JobRunnerConfig) map[string]bool {
 		"ClassifyBrain":          cfg.ClassifyBrain != nil,
 		"OwedBrain":              cfg.OwedBrain != nil,
 		"DeepReadBrain":          cfg.DeepReadBrain != nil,
+		"AccountScanBrain":       cfg.AccountScanBrain != nil,
 		"Embedder":               cfg.Embedder != nil,
 		"EnrichBrain":            cfg.EnrichBrain != nil,
 		"GmailRegistry":          cfg.GmailRegistry != nil,

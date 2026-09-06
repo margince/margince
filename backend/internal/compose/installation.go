@@ -134,12 +134,7 @@ const setupTokenFile = "config/margince-setup-token" // #nosec G101 -- a path, n
 func announceSetupToken(ctx context.Context, svc *identity.Service, log *slog.Logger) error {
 	raw, err := svc.MintSetupToken(ctx)
 	if errors.Is(err, identity.ErrSetupTokenExists) {
-		abs, pathErr := filepath.Abs(setupTokenFile)
-		if pathErr != nil {
-			abs = setupTokenFile
-		}
-		log.Warn("installation is unprovisioned and a setup token is already outstanding — the one issued earlier is still the credential; if it was lost, replace it with `margince-migrate setup-token`",
-			"token_file", abs)
+		announceOutstandingToken(log)
 		return nil
 	}
 	if err != nil {
@@ -161,6 +156,39 @@ func announceSetupToken(ctx context.Context, svc *identity.Service, log *slog.Lo
 	log.Warn("installation is unprovisioned: claim it with the one-time setup token in the token file",
 		"token_file", path)
 	return nil
+}
+
+// announceOutstandingToken reports a token minted by an earlier boot, and NAMES
+// THE FILE ONLY IF THE FILE IS THERE.
+//
+// The earlier boot may have failed to write it — a read-only config directory,
+// or a path already taken, which O_EXCL refuses on principle — and announced the
+// token in its own log instead. That is a sanctioned fallback, and it leaves
+// this boot in a position where the path is computable and the file is not
+// there. Naming it anyway sends an operator to a path that does not exist, with
+// nothing saying the credential went somewhere else; the file became the channel
+// a successful boot points at, so the name carries weight it did not use to.
+//
+// A stat that fails for any OTHER reason is treated the same way. The point is
+// not whether the file is absent, it is whether this process can VOUCH for it —
+// a path named on the strength of a permission error is the same false promise
+// as one named on the strength of nothing.
+//
+// Either way the token itself is not reprinted: it is not in reach here, and the
+// replacement command is the honest end of the trail once both channels are
+// gone.
+func announceOutstandingToken(log *slog.Logger) {
+	abs, pathErr := filepath.Abs(setupTokenFile)
+	if pathErr != nil {
+		abs = setupTokenFile
+	}
+	if _, statErr := os.Stat(abs); statErr != nil {
+		log.Warn("installation is unprovisioned and a setup token is already outstanding, but no readable token file is here — an earlier boot announced it in its own log instead, or the file has since gone. Issue a replacement with `margince-migrate setup-token`",
+			"looked_in", abs, "stat_error", statErr)
+		return
+	}
+	log.Warn("installation is unprovisioned and a setup token is already outstanding — the one issued earlier is still the credential; if it was lost, replace it with `margince-migrate setup-token`",
+		"token_file", abs)
 }
 
 // writeSetupTokenFile writes the plaintext 0600 and returns the path it used,

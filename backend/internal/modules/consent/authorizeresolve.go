@@ -20,6 +20,7 @@ package consent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -72,19 +73,31 @@ type resolution struct {
 // a gate that answers about recipients. A future caller that reaches this
 // without that probe would be handing the engine unvalidated ids, and both
 // supported arms would then be reachable by naming a stranger's deal.
-func (g *Gate) resolveCategory(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (resolution, error) {
+// repliedIntoThisConversation asks the thread arm however the conversation is
+// named in this phase.
+//
+// The anchor is preferred because it is what the caller pointed at. The thread
+// key is the transmit phase's only handle: no anchor survives on
+// communication_decision, and a reply allowed at staging that cannot be
+// re-derived at transmit is parked rather than sent.
+func (g *Gate) repliedIntoThisConversation(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (bool, error) {
 	if req.AnchorActivityID != (ids.UUID{}) {
-		replied, err := repliesToTheSubject(ctx, tx, req.AnchorActivityID, subject)
-		if err != nil {
-			return resolution{}, err
-		}
-		if replied {
-			return resolution{
-				Category:  commsauthz.CategoryReplyToInbound,
-				Basis:     commsauthz.BasisSubjectInitiatedCorrespondence,
-				Supported: true,
-			}, nil
-		}
+		return repliesToTheSubject(ctx, tx, req.AnchorActivityID, subject)
+	}
+	return wroteIntoThread(ctx, tx, req.ThreadKey, subject)
+}
+
+func (g *Gate) resolveCategory(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (resolution, error) {
+	replied, err := g.repliedIntoThisConversation(ctx, tx, req, subject)
+	if err != nil {
+		return resolution{}, err
+	}
+	if replied {
+		return resolution{
+			Category:  commsauthz.CategoryReplyToInbound,
+			Basis:     commsauthz.BasisSubjectInitiatedCorrespondence,
+			Supported: true,
+		}, nil
 	}
 	live, err := liveDealInLinks(ctx, tx, req.Links, subject)
 	if err != nil {
@@ -234,15 +247,45 @@ func stagedClaims(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (map[stri
 // which is exactly what the engine had before resolution existed. That is the
 // right answer for a delivery staged before this code shipped, and it refuses
 // nothing that used to send.
-func stagedRequestFor(req commsauthz.TransmitRequest, r connector.Recipient, claims map[string]stagedClaim) commsauthz.Request {
+//
+// The thread key comes from the delivery rather than the claim, because it
+// describes the message and not one recipient of it.
+func stagedRequestFor(req commsauthz.TransmitRequest, r connector.Recipient, claims map[string]stagedClaim, threadKey string) commsauthz.Request {
 	staged := claims[decisionRecipientKey(r)]
 	return commsauthz.Request{
 		Recipients:       []connector.Recipient{r},
 		Context:          staged.category,
 		LegacyPurposeKey: req.PurposeKey,
-		Subject:          req.Subject,
-		Body:             req.Body,
+		// The conversation, carried from the delivery row. Without it the thread
+		// arm cannot run at transmit and a reply authorized at staging parks.
+		ThreadKey: threadKey,
+		Subject:   req.Subject,
+		Body:      req.Body,
 	}
+}
+
+// deliveryThreadKey reads the conversation a delivery belongs to.
+//
+// comms_outbound.thread_key is written when the message is staged, from the
+// same origin the anchor came from, so it names the conversation at transmit
+// without communication_decision having to store an anchor of its own.
+func deliveryThreadKey(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (string, error) {
+	var key *string
+	err := tx.QueryRow(ctx,
+		`SELECT thread_key FROM comms_outbound WHERE id = $1`, deliveryID).Scan(&key)
+	if errors.Is(err, pgx.ErrNoRows) {
+		// The delivery is gone. Not this function's answer to give: the caller
+		// asks the evidence question with no thread, which refuses rather than
+		// inventing one.
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("consent: read the delivery's thread: %w", err)
+	}
+	if key == nil {
+		return "", nil
+	}
+	return *key, nil
 }
 
 // stagedClaim is what one recipient's staging decision said.

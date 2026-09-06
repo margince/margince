@@ -14,13 +14,8 @@ import { openingCase } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { OverflowMenu } from "./atoms";
+import { useDebouncedSearch } from "./debouncedsearch";
 import "./listtable.css";
-
-// The value list's own search box debounces on the same rhythm as the list
-// search (listquery.tsx's SEARCH_DEBOUNCE_MS) — kept as a sibling constant
-// rather than imported, since that one is a screen-binding concern and this
-// is a design-system one; the number is the contract, not the module.
-const FILTER_SEARCH_DEBOUNCE_MS = 250;
 
 // The list surface's shell: the header (view tabs, count, primary action),
 // the caption and the toolbar (search, filter chips, an archived toggle and
@@ -374,50 +369,8 @@ function AsyncFilterValueList({
 }>) {
   const t = useT();
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<
-    readonly { value: string; label: string }[]
-  >([]);
-  const [pending, setPending] = useState(false);
-  const [failed, setFailed] = useState(false);
   const search = chip.search;
-
-  useEffect(() => {
-    if (!search) {
-      return;
-    }
-    if (!query) {
-      // Nothing typed yet: no request, and no stale hits from an
-      // abandoned query linger once the box is cleared back to empty.
-      setResults([]);
-      setPending(false);
-      setFailed(false);
-      return;
-    }
-    let cancelled = false;
-    setPending(true);
-    const timer = setTimeout(() => {
-      search(query)
-        .then((next) => {
-          if (cancelled) {
-            return;
-          }
-          setResults(next);
-          setFailed(false);
-          setPending(false);
-        })
-        .catch(() => {
-          if (cancelled) {
-            return;
-          }
-          setFailed(true);
-          setPending(false);
-        });
-    }, FILTER_SEARCH_DEBOUNCE_MS);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [query, search]);
+  const { results, pending, failed } = useDebouncedSearch(search, query);
 
   if (!search) {
     return null;

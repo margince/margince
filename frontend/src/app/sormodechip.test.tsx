@@ -11,9 +11,16 @@ import { SorModeChip } from "./sormodechip";
 function mount(
   mode: "native" | "overlay" | undefined,
   // Which seat is looking. The mode is reported to every seat; the LINK to the
-  // Integrations entry belongs to an operator, so the role is part of what this
-  // component answers rather than harness detail.
+  // Integrations entry belongs to whoever may CHANGE the installation's wiring,
+  // so what this principal holds is part of what the component answers rather
+  // than harness detail.
+  //
+  // Grants, not a role name: the chip asks the settings catalog whether this
+  // reader opens the Integrations page. A fixture naming only a role would
+  // answer a question the component no longer asks — and an edited admin role
+  // really can hold nothing, which is the case a role-name gate would get wrong.
   roles: string[] = ["admin"],
+  connects = true,
 ) {
   const fetchMock = vi.fn(async () => {
     const systemOfRecord = mode ? { system_of_record: { mode } } : {};
@@ -22,6 +29,19 @@ function mount(
         user: { id: "u1", email: "a@example.test", display_name: "A" },
         roles,
         teams: [],
+        authorization: {
+          objects: {
+            // The read is always held, because every seeded role holds it —
+            // whether capture is working shows up on the records they open.
+            // `connects` moves only the write, which is the verb the page asks.
+            overlay_connection: {
+              read: true,
+              create: connects,
+              update: connects,
+              delete: connects,
+            },
+          },
+        },
         ...systemOfRecord,
       }),
       { headers: { "Content-Type": "application/json" } },
@@ -83,9 +103,13 @@ it("links to Settings → Integrations and explains the mode in its label", asyn
 it("reports the mode to a seat that cannot open Integrations, without linking", async () => {
   // The mode changes what every screen can do, so hiding it from a rep would
   // leave them reading narrowed lists with nothing saying why. What a rep must
-  // not get is the affordance: Integrations lives in Admin settings, and a link
-  // that lands on the Account fallback is a chip that lied.
-  mount("overlay", ["rep"]);
+  // not get is the affordance: Integrations opens for whoever may change the
+  // installation's wiring, and a link that lands on the access boundary is a
+  // chip that lied.
+  //
+  // A rep really does READ `overlay_connection` — that is why the page moved to
+  // the write — so this fixture withholds the write rather than the object.
+  mount("overlay", ["rep"], false);
   // Found by its TEXT, because a plain span is not a labelable element: the
   // explanation is visually-hidden text inside the chip rather than an
   // `aria-label` a screen reader is free to ignore there.

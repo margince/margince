@@ -66,6 +66,14 @@ function backend(
      * attempted.
      */
     me?: readonly string[];
+    /**
+     * The grants this principal holds, when a case needs something other than
+     * the full pair. The card asks two DIFFERENT objects — `team_admin` for the
+     * verbs and `user_admin:read` for the membership the roster carries — so a
+     * case can now describe a reader who sees who is in a team and may not
+     * change it, which one admin check could not express.
+     */
+    allow?: Record<string, Record<string, boolean>>;
   }>,
 ) {
   const calls: Call[] = [];
@@ -93,10 +101,35 @@ function backend(
         // `user` is required on MeResponse — useMe() treats a payload
         // without it as an availability failure and never resolves `.data`,
         // which would silently read every seat here as non-admin.
+        //
+        // The GRANTS matter for the same reason, one level up: the card asks
+        // `team_admin` for its verbs and `user_admin:read` for the membership
+        // the roster carries, so a payload naming a role and no authorization
+        // describes a principal the API cannot produce — and every case here
+        // would pass with nothing rendered. `allow` lets a case withhold one
+        // of the two, which is the reader the split made possible.
         return new Response(
           JSON.stringify({
             user: { email: "you@acme.test" },
             roles: opts.me ?? ["admin"],
+            authorization: {
+              objects: opts.allow ?? {
+                team_admin: {
+                  read: true,
+                  create: true,
+                  update: true,
+                  delete: false,
+                },
+                user_admin: {
+                  read: true,
+                  create: true,
+                  update: true,
+                  delete: true,
+                },
+              },
+              seat_type: "full",
+              row_scope: "all",
+            },
           }),
           { headers: { "Content-Type": "application/json" } },
         );
@@ -538,16 +571,52 @@ describe("TeamsCard membership", () => {
 
   // Team membership is admin surface, so a non-admin gets no membership
   // control and no membership LIST: the roster handler only sends `team_ids`
-  // to an admin caller (`WithRoles: isAdmin`), so a read-only render built
+  // to a caller holding `user_admin:read` (`WithRoles: mayManage`), so a
+  // read-only render built
   // from an ops seat's own roster read would show nobody as a member of
   // anything — a false statement, not an honest withholding. The card states
   // why once, and the disclosure body says the same thing rather than
   // fabricate a list.
+  // The reader one admin check could not express: they hold the roster read
+  // that CARRIES membership and neither team verb. The list is the answer they
+  // came for, so it renders — and every box is disabled rather than gone,
+  // because removing them would withhold the reading along with the writing.
+  it("shows membership read-only to a seat holding the roster read and no team verb", async () => {
+    const { fetchMock } = backend({
+      teams: [{ id: "t-1", name: "Nord", member_count: 1 }],
+      users: ROSTER,
+      me: ["custom"],
+      allow: {
+        user_admin: { read: true, create: false, update: false, delete: false },
+      },
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <Providers>
+        <TeamsCard />
+      </Providers>,
+    );
+    await openTeam();
+
+    // The positive control first: a box only a resolved snapshot draws. Without
+    // it the assertions below would run against the loading render, where every
+    // predicate reads false and nothing is drawn at all.
+    const boxes = await screen.findAllByRole("checkbox");
+    expect(boxes.length).toBeGreaterThan(0);
+    for (const box of boxes) {
+      expect(box).toBeDisabled();
+    }
+  });
+
   it("withholds membership entirely from a seat that may not read or change it", async () => {
     const { fetchMock, calls } = backend({
       teams: [{ id: "t-1", name: "Nord", member_count: 1 }],
       users: ROSTER,
+      // Ops, spelled as what ops HOLDS: neither `team_admin` nor `user_admin`
+      // is seeded to it. The role name alone used to carry this case; it says
+      // the grants now, which is what the card reads.
       me: ["ops"],
+      allow: {},
     });
     vi.stubGlobal("fetch", fetchMock);
     render(

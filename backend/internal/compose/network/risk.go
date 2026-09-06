@@ -105,6 +105,20 @@ type DealCoverage struct {
 	// that as "do not judge", so a hand-built fixture cannot accidentally
 	// assert a cold deal it never described.
 	LastTouchAt time.Time
+	// TouchedAsOf is the DATABASE's clock at the moment LastTouchAt was read,
+	// and it is the only thing going-cold may measure against.
+	//
+	// last_activity_at is written by the database (`now()` on the capture
+	// path). Subtracting it from the service's clock is a subtraction across
+	// TWO clocks, and an app container and a database container on different
+	// hosts — or a VM whose clock drifts, or Docker Desktop on macOS — do not
+	// agree. Where they disagree across a day boundary the count comes out one
+	// short, and a deal drops out of the 30/60-day view a day late.
+	//
+	// Zero for a coverage built by hand rather than read, which the fold reads
+	// as "do not judge" exactly as it reads a zero LastTouchAt: a fixture that
+	// never described a clock has not described a cold deal either.
+	TouchedAsOf time.Time
 	// EverTouched says a touch has actually been captured, as opposed to
 	// LastTouchAt standing in with the deal's creation. The engagement rules
 	// read it to tell a deal nobody has worked from one that is simply new:
@@ -196,6 +210,7 @@ func CoverageFor(ctx context.Context, tx pgx.Tx, dealID ids.DealID, now time.Tim
 		return out, err
 	}
 	out.Status, out.LastTouchAt, out.EverTouched = facts.status, facts.lastTouchAt, facts.everTouched
+	out.TouchedAsOf = facts.asOf
 
 	stakeholders, err := deals.Stakeholders(ctx, tx, dealID, now)
 	if err != nil {
@@ -301,7 +316,7 @@ func foldRisks(c DealCoverage, now time.Time) []Risk {
 	// Who has left, and REPORT-PARAM-2's silence. Both are appended last so a
 	// deal's structural findings read before its temporal ones.
 	risks = append(risks, departureRisks(c)...)
-	if r, found := goingCold(c, now); found {
+	if r, found := goingCold(c); found {
 		risks = append(risks, r)
 	}
 	return risks
@@ -355,11 +370,18 @@ func departureRisks(c DealCoverage) []Risk {
 // has been silent since the epoch — the difference between "we did not look"
 // and "nobody has spoken" is the whole finding, and reading the first as the
 // second would flag every deal in a fixture that never described one.
-func goingCold(c DealCoverage, now time.Time) (Risk, bool) {
-	if c.Status != dealStatusOpen || c.LastTouchAt.IsZero() {
+//
+// IT DOES NOT TAKE THE CALLER'S CLOCK, and that is the point rather than an
+// omission. Both ends of this subtraction have to come from the database: the
+// touch was stamped there, and measuring it against the service's clock is a
+// subtraction across two that a real deployment does not keep in step. A zero
+// TouchedAsOf is the same "do not judge" a zero LastTouchAt is — a coverage
+// built by hand described no clock, so it described no silence either.
+func goingCold(c DealCoverage) (Risk, bool) {
+	if c.Status != dealStatusOpen || c.LastTouchAt.IsZero() || c.TouchedAsOf.IsZero() {
 		return Risk{}, false
 	}
-	days := elapsed.Days(c.LastTouchAt, now)
+	days := elapsed.Days(c.LastTouchAt, c.TouchedAsOf)
 	if days < goingColdDays {
 		return Risk{}, false
 	}

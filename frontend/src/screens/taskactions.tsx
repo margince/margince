@@ -7,6 +7,7 @@ import {
 import { useId } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { ifMatch, requireVersion } from "../api/version";
 import { useRecordZone } from "../app/recordzone";
 import {
   Badge,
@@ -35,6 +36,10 @@ import { EntityRef } from "./entityref";
 type Activity = components["schemas"]["Activity"];
 type TaskPatch = {
   id: string;
+  // The version the press was decided against. Every verb on a task goes
+  // through this one mutation, so pinning it here pins all four at once — and
+  // an unpinned tick is a task two people can complete, each told it worked.
+  version: number | undefined;
   body: { is_done?: boolean; due_at?: string; remind_at?: string | null };
 };
 
@@ -45,13 +50,20 @@ export function useTaskUpdate(invalidateKeys: readonly QueryKey[]) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: TaskPatch) => {
-      const { error } = await api.PATCH("/activities/{id}", {
-        params: { path: { id: input.id } },
+      const { data, error } = await api.PATCH("/activities/{id}", {
+        params: {
+          path: { id: input.id },
+          ...ifMatch(requireVersion(input.version)),
+        },
         body: input.body,
       });
       if (error) {
         throwProblem(error, t);
       }
+      // The version the write PRODUCED, answered so a follow-on press has one.
+      // An undo re-sending the version the row was drawn at would be refused as
+      // skew by the very write it is undoing.
+      return data?.version;
     },
     onSuccess: (_data, input) => {
       for (const queryKey of invalidateKeys) {
@@ -84,9 +96,11 @@ export function snoozedDueAt(dueAt: string | null | undefined): string | null {
  */
 export function TaskCompleteCheck({
   activityId,
+  version,
   update,
 }: Readonly<{
   activityId: string;
+  version: number | undefined;
   update: ReturnType<typeof useTaskUpdate>;
 }>) {
   const t = useT();
@@ -106,7 +120,7 @@ export function TaskCompleteCheck({
         checked={false}
         disabled={pending}
         onChange={() =>
-          update.mutate({ id: activityId, body: { is_done: true } })
+          update.mutate({ id: activityId, version, body: { is_done: true } })
         }
       />
       {failed && (
@@ -136,12 +150,14 @@ export function TaskCompleteCheck({
  */
 export function TaskQuickActions({
   activityId,
+  version,
   dueAt,
   update,
   showComplete = true,
   showDuePicker = false,
 }: Readonly<{
   activityId: string;
+  version: number | undefined;
   dueAt?: string | null;
   update: ReturnType<typeof useTaskUpdate>;
   showComplete?: boolean;
@@ -163,7 +179,7 @@ export function TaskQuickActions({
           variant="primary"
           disabled={pending}
           onClick={() =>
-            update.mutate({ id: activityId, body: { is_done: true } })
+            update.mutate({ id: activityId, version, body: { is_done: true } })
           }
         >
           {t("tasks.complete")}
@@ -174,7 +190,11 @@ export function TaskQuickActions({
           small
           disabled={pending}
           onClick={() =>
-            update.mutate({ id: activityId, body: { due_at: nextDue } })
+            update.mutate({
+              id: activityId,
+              version,
+              body: { due_at: nextDue },
+            })
           }
         >
           {t("tasks.snooze")}
@@ -183,6 +203,7 @@ export function TaskQuickActions({
       {showDuePicker && (
         <TaskDueDatePick
           activityId={activityId}
+          version={version}
           dueAt={dueAt}
           update={update}
         />
@@ -206,10 +227,12 @@ export function TaskQuickActions({
 // one day after nothing is nothing.
 function TaskDueDatePick({
   activityId,
+  version,
   dueAt,
   update,
 }: Readonly<{
   activityId: string;
+  version: number | undefined;
   dueAt?: string | null;
   update: ReturnType<typeof useTaskUpdate>;
 }>) {
@@ -250,6 +273,7 @@ function TaskDueDatePick({
             }
             update.mutate({
               id: activityId,
+              version,
               body: { due_at: dueInstant(day) },
             });
           }}
@@ -341,6 +365,7 @@ export function TaskDetailModal({
             <div className="form-actions">
               <TaskQuickActions
                 activityId={task.id}
+                version={task.version}
                 dueAt={task.due_at}
                 update={update}
                 showDuePicker
@@ -422,10 +447,17 @@ export function useMeetingOutcome(invalidateKeys: readonly QueryKey[]) {
   return useMutation({
     mutationFn: async (input: {
       id: string;
+      // The version the answer was decided against, for the reason the task
+      // verb beside it carries one: two readers answering the same meeting
+      // would otherwise both succeed and the later one would win silently.
+      version: number | undefined;
       status: "held" | "no_show" | "canceled";
     }) => {
       const { error } = await api.PATCH("/activities/{id}", {
-        params: { path: { id: input.id } },
+        params: {
+          path: { id: input.id },
+          ...ifMatch(requireVersion(input.version)),
+        },
         body: { meeting_status: input.status },
       });
       if (error) {

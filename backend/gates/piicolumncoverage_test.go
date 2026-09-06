@@ -84,6 +84,14 @@ var erasureColumnBaseline = map[string][]string{
 	},
 	"activity": {
 		"audience",
+		// Both are a CLASS this repository defines, not a sentence anybody wrote.
+		// audience_reason is one of posture, pending_verdict, no_record,
+		// no_counterparty or workspace_floor — the rule that decided who may
+		// read the row, which compose then reads back to reconcile a link or
+		// widen a history. capture_label is the single word `commitment`.
+		// Neither says anything about the subject that the cleared text does
+		// not, and clearing audience_reason would break the audience decision on
+		// a row whose content is already gone.
 		"audience_reason",
 		"capture_label",
 		// One of two words this repository defines, saying whether the message
@@ -130,8 +138,14 @@ var erasureColumnBaseline = map[string][]string{
 		"sender_kind",
 		"template_key",
 		"bounce_kind",
-		"bounce_reason",
 		"consent_purpose",
+		// OUR side of the message — the display name the workspace sends under,
+		// which is the same string on every delivery to everyone. It is not the
+		// subject's name and does not vary with them, so erasing a subject has
+		// nothing to remove here. bounce_reason WAS on this list and is not any
+		// more: provider text routinely quotes the recipient address in full,
+		// which put the address back on the one table whose whole point is that
+		// the address copy is scrubbed.
 		"from_name",
 		"in_reply_to",
 		"message_id",
@@ -144,9 +158,6 @@ var erasureColumnBaseline = map[string][]string{
 	},
 	"lead": {
 		"captured_by",
-		"disqualify_note",
-		"linkedin_url",
-		"score_override_reason",
 		"source",
 		"source_id",
 		"source_system",
@@ -155,8 +166,6 @@ var erasureColumnBaseline = map[string][]string{
 	},
 	"person": {
 		"captured_by",
-		"photo_object_key",
-		"photo_origin",
 		"source",
 		"visibility",
 	},

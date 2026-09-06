@@ -37,11 +37,17 @@ body {
  * else's brand, and on a dark surface the platform's own scrollbar chrome fights
  * the palette rather than joining it.
  *
- * Declared at the root because these properties INHERIT — with one exception,
- * `scrollbar-width`, which does not and is therefore declared on every element
- * below. A component that wants different can still say so locally
- * (`.mw-artifact` and the conversation thread already hide their scrollbars this
- * way, and a class selector outranks both rules here).
+ * Declared at the root because these properties INHERIT. The scrollbar pair is
+ * the exception and has its own rules below: `scrollbar-width` does not inherit
+ * at all, and the thumb colour answers the pointer per element, which an
+ * inherited value cannot. What a component can still say for itself differs
+ * between the two, and the difference is specificity. The WIDTH sits on `*`,
+ * which carries none, so one class beats it — `.mw-artifact` and the
+ * conversation thread hide their bars exactly that way. The COLOUR under the
+ * pointer is `*:hover:not(:has(:hover))`, and `:not()` and `:has()` each take
+ * their argument's, so that is (0,2,0): a single class LOSES to it, and a
+ * component that wants a thumb colour of its own needs two classes or `:hover`
+ * in its own selector.
  */
 :root {
   /* The colour only. The caret keeps the platform's own BAR: a block caret is
@@ -53,28 +59,32 @@ body {
      range thumbs, progress fills. This replaces the same declaration repeated in
      three screens — see onboarding-facts.css, now redundant. */
   accent-color: var(--accent);
-  /* Thumb, then track. The track is TRANSPARENT rather than --bgPage on purpose:
-     a scroller is not always on the page surface — the rail is a dark green field
-     in both themes, and a code block has its own fill — so naming a colour here
-     would mismatch every scroller that is not on the page background. Transparent
-     shows whatever is actually behind it and cannot be wrong. */
-  scrollbar-color: var(--accent) transparent;
 }
 
 /*
- * The thin scrollbar, on EVERY scroller.
+ * The thin scrollbar on EVERY scroller. --accent at rest would put the
+ * palette's one loud colour on every capped card, so a bar is --borderControl
+ * until the pointer says which scroller it is on.
  *
- * `scrollbar-width` is the one property in the block above that does not
- * inherit, so declaring it on `:root` alone styled the document scroller and
- * nothing else: every in-app scroller — the content area, the rail, a capped
- * card — kept the platform's default-width bar next to a thumb that was already
- * painted in the accent. The universal selector carries zero specificity, so a
- * scroller that deliberately hides its bar (`scrollbar-width: none` on
- * `.mw-artifact`, the conversation thread) still wins.
+ * That accent has to light ONE bar, not a stack: hover is a chain, so `*:hover`
+ * matches html, body, the pane and the board together and the shell's bar would
+ * be accent whenever the pointer was anywhere in the window. Excluding an
+ * element that has a hovered descendant leaves the one whose own box — bar,
+ * padding, gutter — the pointer is actually over.
+ *
+ * Both properties sit on `*`: `scrollbar-width` does not inherit at all, and an
+ * inherited colour would hand a hovered scroller's accent to every bar nested
+ * inside it. The track is transparent because a scroller is not always on
+ * --bgPage — the rail is a dark green field, a code block has its own fill.
  */
 *,
 ::backdrop {
   scrollbar-width: thin;
+  scrollbar-color: var(--borderControl) transparent;
+}
+
+*:hover:not(:has(:hover)) {
+  scrollbar-color: var(--accent) transparent;
 }
 
 /* Selected text reads as the accent holding it, in both themes: --bgPage on

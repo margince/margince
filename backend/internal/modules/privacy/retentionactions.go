@@ -81,32 +81,6 @@ func (*RetentionService) erasePayload(ctx context.Context, tx pgx.Tx, id ids.UUI
 	return err
 }
 
-func (*RetentionService) anonymizeLead(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-	if _, err := tx.Exec(ctx, `
-		UPDATE lead SET full_name = 'Anonymized Lead', email = NULL, title = NULL,
-		  company_name = NULL, candidate_org_key = NULL, raw = NULL,
-		  archived_at = coalesce(archived_at, now())
-		WHERE id = $1`, id); err != nil {
-		return err
-	}
-	// The score's explanation goes with the lead it explains. Both tables
-	// hold personal data the UPDATE above cannot reach: the retained series
-	// embeds activity ids inside its factors JSON, and a manual signal names
-	// the colleague who entered it and carries their written reason. This is
-	// an ANONYMIZE, not a delete, so the lead row survives and fires no
-	// ON DELETE cascade — the FKs on those tables do nothing here, which is
-	// why each has to be named (ADR-0105).
-	if _, err := tx.Exec(ctx, `DELETE FROM lead_score_history WHERE lead_id = $1`, id); err != nil {
-		return err
-	}
-	if _, err := tx.Exec(ctx, `DELETE FROM lead_manual_signal WHERE lead_id = $1`, id); err != nil {
-		return err
-	}
-	_, err := tx.Exec(ctx,
-		`DELETE FROM embedding WHERE entity_type = 'lead' AND entity_id = $1`, id)
-	return err
-}
-
 func (*RetentionService) anonymizePerson(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	return anonymizePersonRecord(ctx, tx, id)
 }
@@ -266,7 +240,7 @@ func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	}
 	_, err = tx.Exec(ctx, fmt.Sprintf(`
 		UPDATE person SET first_name = NULL, last_name = NULL, full_name = $2,
-		  title = NULL, raw = NULL,
+		  title = NULL, raw = NULL, photo_object_key = NULL, photo_origin = NULL,
 		  address_line1 = NULL, address_line2 = NULL, address_city = NULL,
 		  address_region = NULL, address_postal_code = NULL, address_country = NULL,
 		  archived_at = coalesce(archived_at, now())%s

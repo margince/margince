@@ -404,6 +404,13 @@ func taskFromActivity(row crmcontracts.Activity) attention.Task {
 		assignee := ids.UUID(*row.AssigneeId)
 		task.AssigneeID = &assignee
 	}
+	// And the version, for the same reason and from the same row: the lane's
+	// verbs write to this task, and a press that names no version is one
+	// somebody else's press can overwrite unannounced.
+	if row.Version != nil {
+		version := int64(*row.Version)
+		task.Version = &version
+	}
 	return task
 }
 

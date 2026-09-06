@@ -9,8 +9,10 @@
 // page, because both pages call the same component.
 
 import type { components } from "../../api/schema";
-import { Badge } from "../../design-system/atoms";
-import { formatNumber } from "../../format/format";
+import { useRecordZone } from "../../app/recordzone";
+import { Badge, Button } from "../../design-system/atoms";
+import { Popover } from "../../design-system/popover";
+import { formatDate, formatNumber } from "../../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 
@@ -33,8 +35,21 @@ export type CitedKind = Cited["entity_type"];
 /** How prose says which writer produced it. */
 export type WrittenByWriter = components["schemas"]["WrittenBy"];
 
+/**
+ * The receipt behind one chip: the record's own words, when they are dated,
+ * and where they came from. What a reader rests on the chip to see, so the
+ * claim is checked against the evidence rather than against the chip's kind
+ * repeated back at them. Carried only by a chip standing for ONE record —
+ * a count cannot quote.
+ */
+export type CitationReceipt = {
+  quote?: string;
+  at?: string;
+  origin?: string;
+};
+
 export type CitationChip =
-  | {
+  | ({
       openable: true;
       entityType: CitedKind;
       entityId: string;
@@ -44,10 +59,14 @@ export type CitationChip =
       // already speaks for several records, and one of their names would
       // read as though it spoke for the rest.
       name?: string;
-    }
-  | {
+    } & CitationReceipt)
+  | ({
       openable: false;
       entityType: CitedKind;
+      // The record's id where the chip stands for one: not for opening it —
+      // this chip opens nothing — but for telling two chips of one kind
+      // apart, which their labels alone cannot when neither carries a name.
+      entityId?: string;
       count: number;
       // A chip a reader cannot open needs its name MORE than an openable one,
       // not less: there is no click to find out which record it means. An
@@ -55,7 +74,17 @@ export type CitationChip =
       // is the run of identical labels the counted chip exists to avoid.
       // Absent once the chip counts several, for the same reason as above.
       name?: string;
-    };
+    } & CitationReceipt);
+
+/** What a citation carries beyond the record it points at. */
+function receiptOf(cited: Cited): CitationReceipt {
+  return { quote: cited.quote, at: cited.at, origin: cited.origin };
+}
+
+/** Whether a citation has anything to rest on — words, a date or an origin. */
+function hasReceipt(cited: Cited): boolean {
+  return Boolean(cited.quote || cited.at || cited.origin);
+}
 
 /**
  * citationChips turns a sentence's raw evidence into what a reader should see.
@@ -87,29 +116,17 @@ export function citationChips(
     const identity = `${cited.entity_type}:${cited.entity_id}`;
     const already = seenAt.get(identity);
     if (already !== undefined) {
-      // The same record cited twice is one source, so the chip stays — but the
-      // server names a record on the citation rather than once per record, and
-      // nothing promises the FIRST mention is the one that carried the name.
-      // Dropping the repeat outright therefore threw away the only name there
-      // was, and the chip fell back to its bare kind. Still one record, so it
-      // may still speak with its own name; `count === 1` is what says it has
-      // not since become a group speaking for several.
-      const held = chips[already];
-      if (held.name === undefined && held.count === 1 && cited.name) {
-        held.name = cited.name;
-      }
+      nameRepeat(chips[already], cited);
       continue;
     }
     const isOpenable = openable(cited.entity_type);
-    if (isOpenable && !groupable(cited.entity_type)) {
+    // Its own chip: a record with a page of its own, or one carrying a
+    // receipt. A citation with a receipt is never folded into a count — the
+    // quote is about ONE record, and a chip for three activities that opened
+    // one message's words would be claiming the other two said the same.
+    if ((isOpenable && !groupable(cited.entity_type)) || hasReceipt(cited)) {
       seenAt.set(identity, chips.length);
-      chips.push({
-        openable: true,
-        entityType: cited.entity_type,
-        entityId: cited.entity_id,
-        count: 1,
-        name: cited.name,
-      });
+      chips.push(ownChip(cited, isOpenable));
       continue;
     }
     const at = groupAt.get(cited.entity_type);
@@ -145,6 +162,40 @@ export function citationChips(
     grouped.name = undefined;
   }
   return chips;
+}
+
+// The same record cited twice is one source, so the chip stays — but the
+// server names a record on the citation rather than once per record, and
+// nothing promises the FIRST mention is the one that carried the name.
+// Dropping the repeat outright therefore threw away the only name there was,
+// and the chip fell back to its bare kind. Still one record, so it may still
+// speak with its own name; `count === 1` is what says it has not since become
+// a group speaking for several.
+function nameRepeat(held: CitationChip, cited: Cited) {
+  if (held.name === undefined && held.count === 1 && cited.name) {
+    held.name = cited.name;
+  }
+}
+
+// A chip standing for exactly this record, with whatever receipt it carries.
+function ownChip(cited: Cited, isOpenable: boolean): CitationChip {
+  return isOpenable
+    ? {
+        openable: true,
+        entityType: cited.entity_type,
+        entityId: cited.entity_id,
+        count: 1,
+        name: cited.name,
+        ...receiptOf(cited),
+      }
+    : {
+        openable: false,
+        entityType: cited.entity_type,
+        entityId: cited.entity_id,
+        count: 1,
+        name: cited.name,
+        ...receiptOf(cited),
+      };
 }
 
 // The citation kinds that open a RECEIPT rather than a record page. Only these
@@ -271,25 +322,83 @@ export function Citations({
   }
   return (
     <span className="co-brief-cites">
-      {chips.map((chip) =>
-        chip.openable ? (
+      {chips.map((chip) => {
+        const open = chip.openable
+          ? () => onOpenRecord?.(chip.entityType, chip.entityId, siblings)
+          : undefined;
+        if (chip.quote || chip.at || chip.origin) {
+          return (
+            <CitationWithReceipt
+              key={chipKey(chip)}
+              chip={chip}
+              label={chipLabel(chip, t, locale)}
+              onOpen={open}
+            />
+          );
+        }
+        return chip.openable ? (
           <button
-            key={`${chip.entityType}:${chip.entityId}`}
+            key={chipKey(chip)}
             type="button"
             className="co-brief-cite"
-            onClick={() =>
-              onOpenRecord?.(chip.entityType, chip.entityId, siblings)
-            }
+            onClick={open}
           >
             {chipLabel(chip, t, locale)}
           </button>
         ) : (
-          <span key={chip.entityType} className="co-brief-cite-flat">
+          <span key={chipKey(chip)} className="co-brief-cite-flat">
             {chipLabel(chip, t, locale)}
           </span>
-        ),
-      )}
+        );
+      })}
     </span>
+  );
+}
+
+// Keyed by the record where the chip stands for one, and by the kind where it
+// counts several: two receipted activities on one sentence are two chips, and
+// keying both on their kind would draw one.
+function chipKey(chip: CitationChip): string {
+  return chip.count === 1 && chip.entityId
+    ? `${chip.entityType}:${chip.entityId}`
+    : chip.entityType;
+}
+
+/**
+ * A chip with the evidence behind it. Resting on it opens the record's own
+ * words in the agent's rule, and under them where and when they were said;
+ * a reader checks the claim there. The record itself is one more step, for
+ * the chip whose record has a page — never the chip's own click, because a
+ * click that navigated away would be a receipt the reader cannot rest on.
+ */
+function CitationWithReceipt({
+  chip,
+  label,
+  onOpen,
+}: Readonly<{
+  chip: CitationChip;
+  label: string;
+  onOpen?: () => void;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const recordZone = useRecordZone();
+  const dated = chip.at ? formatDate(chip.at, locale, recordZone) : undefined;
+  const provenance = [chip.origin, dated].filter(Boolean).join(" · ");
+  return (
+    <Popover onHover className="co-brief-cite co-cite-receipted" label={label}>
+      {chip.quote && (
+        <blockquote className="co-cite-quote">{chip.quote}</blockquote>
+      )}
+      {provenance && <p className="co-cite-origin t-caption">{provenance}</p>}
+      {onOpen && (
+        <p className="co-cite-open">
+          <Button small variant="ghost" onClick={onOpen}>
+            {t("co.cite.open")}
+          </Button>
+        </p>
+      )}
+    </Popover>
   );
 }
 

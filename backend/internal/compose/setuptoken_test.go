@@ -4,6 +4,7 @@
 package compose
 
 import (
+	"log/slog"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -285,4 +286,63 @@ func TestWriteSetupTokenFileRefusesADirectoryPathItCannotOwn(t *testing.T) {
 			}
 		})
 	}
+}
+
+// A boot that finds a token already outstanding names the file only when the
+// file is there.
+//
+// The sequence this exists for: the first boot minted the token, the write
+// failed — a read-only config directory, or a path already taken — and the token
+// went to that boot's log, which is the sanctioned fallback. The process
+// restarts. The second boot can compute the path and the file is not there, so
+// naming it sends an operator somewhere they will find nothing, with nothing
+// saying the credential was announced elsewhere.
+func TestAnOutstandingTokenNamesNoFileWhenThereIsNone(t *testing.T) {
+	t.Chdir(t.TempDir())
+	log, lines := recordingLogger()
+
+	announceOutstandingToken(log)
+
+	entry := lines.String()
+	if strings.Contains(entry, "token_file") {
+		t.Errorf("the log names a token_file that is not there:\n\t%s", entry)
+	}
+	// It still says WHERE it looked — an operator debugging a missing file needs
+	// the path — but under a key that reports a search rather than a location.
+	if !strings.Contains(entry, "looked_in") {
+		t.Errorf("the log does not say where it looked:\n\t%s", entry)
+	}
+	if !strings.Contains(entry, "margince-migrate setup-token") {
+		t.Errorf("the log does not point at the replacement, which is the only "+
+			"honest end of the trail once both channels are gone:\n\t%s", entry)
+	}
+}
+
+// And it does name the file when the file IS there, which is the ordinary case
+// and the whole reason the branch says anything at all.
+func TestAnOutstandingTokenNamesTheFileWhenItIsThere(t *testing.T) {
+	t.Chdir(t.TempDir())
+	if err := os.MkdirAll(filepath.Dir(setupTokenFile), 0o700); err != nil {
+		t.Fatalf("prepare the config directory: %v", err)
+	}
+	if err := os.WriteFile(setupTokenFile, []byte("an earlier boot's token"), 0o600); err != nil {
+		t.Fatalf("write the token file: %v", err)
+	}
+	log, lines := recordingLogger()
+
+	announceOutstandingToken(log)
+
+	entry := lines.String()
+	if !strings.Contains(entry, "token_file") {
+		t.Errorf("the log does not name the token file that is right there:\n\t%s", entry)
+	}
+	if strings.Contains(entry, "looked_in") {
+		t.Errorf("the log reports a search for a file it found:\n\t%s", entry)
+	}
+}
+
+// recordingLogger is a logger whose output the caller can read back.
+func recordingLogger() (*slog.Logger, *strings.Builder) {
+	var lines strings.Builder
+	return slog.New(slog.NewTextHandler(&lines, &slog.HandlerOptions{Level: slog.LevelWarn})), &lines
 }

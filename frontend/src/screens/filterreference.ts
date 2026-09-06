@@ -9,11 +9,11 @@
 // engine gains, whereas a map keyed on `stage` covers every field that ever
 // points at a stage.
 //
-// One target is deliberately absent. An organization list is unbounded — a
-// workspace has as many accounts as it has customers — so it cannot be
-// enumerated into a dropdown, and the async picker it needs is its own change.
-// `boundedReference` says which targets this module can answer, so the caller
-// falls back to a plain box rather than rendering an empty list.
+// One target is enumerated differently. An organization list is unbounded — a
+// workspace has as many accounts as it has customers — so it cannot be read
+// whole into a dropdown; it is SEARCHED instead. `boundedReference` says which
+// targets this module can list, so the caller reaches for the search box rather
+// than rendering a list that stopped short of the workspace.
 
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
@@ -28,6 +28,27 @@ export type Reference = NonNullable<
 
 /** One option, already carrying the label a reader should see. */
 export type ReferenceOption = Readonly<{ value: string; label: string }>;
+
+/**
+ * Organizations by name, for the one reference that is searched rather than
+ * listed.
+ *
+ * Bounded at twenty like the list toolbar's own company filter: a picker is for
+ * choosing something the reader already has in mind, and a longer page is more
+ * to scroll rather than more to find. Somebody who cannot see their account in
+ * twenty needs more of its name typed, not more rows.
+ */
+export async function searchOrganizations(
+  query: string,
+): Promise<readonly ReferenceOption[]> {
+  const { data, error } = await api.GET("/organizations", {
+    params: { query: { q: query, limit: 20 } },
+  });
+  if (error) {
+    throwProblem(error);
+  }
+  return data.data.map((org) => ({ value: org.id, label: org.display_name }));
+}
 
 /**
  * Whether this module can enumerate the target.

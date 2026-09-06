@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // referenceColumns are the row-scoped records a report's rows can point AT,
@@ -292,6 +293,80 @@ func TestEveryJoinedVocabularyDeclaresWhereItsScopeComesFrom(t *testing.T) {
 	}
 }
 
+// A vocabulary entry read over a join declares SOME defence — a grant or a
+// scopeVia — for the table it reaches into.
+//
+// The gate above asks only about ROW scope, and answers "nothing owed" for a
+// joined table that has none. That is right for `stage`, which is pipeline
+// configuration every seat reads. It is wrong for a table whose protection is
+// an OBJECT grant instead, and the difference is invisible from the row-scope
+// registry: sdr_handoff carries no row scope and is gated by auth.Require on
+// `lead`, so the row-scope gate passed it while a seat holding activity.read
+// alone read handoff acceptances off a meeting report.
+//
+// This gate cannot say WHICH object a table owes — nothing in the tree maps a
+// table to its RBAC object, and inventing that map here would be a second copy
+// of a fact the owning module states. What it can say is that somebody decided:
+// a joined table is either configuration everyone may read, in which case it is
+// ratified below by name, or it is protected, in which case the vocabulary
+// entry names its grant or its scopeVia. Silence is what shipped the leak.
+func TestEveryJoinedVocabularyDeclaresADefence(t *testing.T) {
+	t.Parallel()
+	defer freelyReadableJoins.AssertAllMatched(t)
+
+	checked := 0
+	for _, report := range slices.Sorted(maps.Keys(prebuiltReports)) {
+		spec := prebuiltReports[report]
+		aliases := joinAliases(spec)
+		if len(aliases) == 0 {
+			continue
+		}
+		for _, vocabulary := range []map[string]string{spec.dimensions, spec.filters} {
+			for _, field := range slices.Sorted(maps.Keys(vocabulary)) {
+				alias, joined := joinedAlias(vocabulary[field], aliases)
+				if !joined {
+					continue
+				}
+				checked++
+				if _, granted := spec.grants[field]; granted {
+					continue
+				}
+				if _, via := spec.scopeVia[field]; via {
+					continue
+				}
+				if freelyReadableJoins.Waived(t, aliases[alias]) {
+					continue
+				}
+				t.Errorf("report %q offers %q, which reads joined table %q, and declares "+
+					"neither a grant nor a scopeVia.\n\n"+
+					"A joined table's own gate does not travel with the join: this report's "+
+					"object check asks about %q and nothing asks about %q. Name the object in "+
+					"spec.grants, or the id column its row scope inherits from in "+
+					"spec.scopeVia, or ratify the table in freelyReadableJoins if every seat "+
+					"may read it.",
+					report, field, aliases[alias], spec.entity, aliases[alias])
+			}
+		}
+	}
+	if checked == 0 {
+		t.Fatal("no report exposes a vocabulary entry read over a join — either the catalog " +
+			"changed shape or joinAliases stopped parsing, and this gate is holding nothing")
+	}
+}
+
+// freelyReadableJoins are the joined tables no seat is kept out of, so a
+// vocabulary entry reading one owes neither a grant nor a row scope.
+//
+// By TABLE rather than by field: what makes a stage freely readable is a fact
+// about stages, and a waiver written per field would need restating for every
+// vocabulary entry that reads one.
+var freelyReadableJoins = gatekit.Waive(map[string]string{
+	"stage": "pipeline configuration. A stage's name and win_probability are the board every " +
+		"seat already works on, and the forecast reads win_probability to weight a deal the " +
+		"caller has passed the deal gate for — there is no seat that may see the deal and not " +
+		"the stage it sits in",
+})
+
 // rowScopedTable asks the row-scope machinery itself whether a table has a
 // scope, rather than keeping a second copy of its registry.
 //
@@ -307,19 +382,43 @@ func rowScopedTable(t *testing.T, table string) bool {
 
 // joinAliases maps every alias a spec's joins introduce to the table it names.
 //
-// `[LEFT ]JOIN <table> <alias> ON …` is the one shape reportSpec.joins carries;
-// TestWinLossVocabularyMatchesItsPinnedShape holds the ON side of it.
+// TWO shapes, and the second is why this does not stop at the first match.
+//
+//   - `[LEFT ]JOIN <table> <alias> ON …`, the plain join.
+//   - `LEFT JOIN LATERAL ( … ) <alias> ON …`, whose alias names a SUBQUERY. The
+//     table a caller of that alias really reaches is the one in the subquery's
+//     FROM, and the subquery may carry plain joins of its own.
+//
+// Reading only the first match is what made this gate blind. Against a lateral
+// it matched the subquery's INNER join and returned that alias, so the outer
+// alias — the one every exposed expression is written against — never entered
+// the map, joinedAlias answered false for it, and the dimension was skipped
+// without being checked. The gate reported PASS having looked at nothing, which
+// is the failure AGENTS.md rule 8 names: a census that fails short reads
+// exactly like one that passes.
 func joinAliases(spec reportSpec) map[string]string {
 	aliases := map[string]string{}
 	for _, join := range spec.joins {
-		if m := joinAlias.FindStringSubmatch(join); m != nil {
+		for _, m := range joinAlias.FindAllStringSubmatch(join, -1) {
 			aliases[m[2]] = m[1]
+		}
+		// The lateral's alias sits after `)` rather than after a table name, so
+		// it needs its own pattern, and the table it stands for comes from the
+		// subquery's FROM.
+		alias := lateralAlias.FindStringSubmatch(join)
+		from := lateralFrom.FindStringSubmatch(join)
+		if alias != nil && from != nil {
+			aliases[alias[1]] = from[1]
 		}
 	}
 	return aliases
 }
 
-var joinAlias = regexp.MustCompile(`JOIN\s+(\w+)\s+(\w+)\s+ON\b`)
+var (
+	joinAlias    = regexp.MustCompile(`JOIN\s+(\w+)\s+(\w+)\s+ON\b`)
+	lateralAlias = regexp.MustCompile(`\)\s*(\w+)\s+ON\b`)
+	lateralFrom  = regexp.MustCompile(`FROM\s+(\w+)\s`)
+)
 
 // joinedAlias reports which joined alias an expression reads, if any.
 //

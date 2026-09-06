@@ -55,9 +55,7 @@ func AssuranceExceptions(ctx context.Context, tx pgx.Tx) ([]assurance.Exception,
 	// visibility decision having been made about it. A LEFT join would let
 	// exactly the rows nobody can gate through.
 	sql := fmt.Sprintf(`
-		SELECT e.id, e.type, e.subject_kind, e.subject_id, e.severity,
-		       e.affected_minor, e.currency, e.owner_id, e.status,
-		       e.claim, e.observed, e.first_seen_at, e.last_seen_at
+		SELECT `+exceptionColumns+`
 		FROM assurance_exception e
 		JOIN deal d ON d.id = e.subject_id
 		WHERE e.status = 'open'
@@ -78,25 +76,40 @@ func AssuranceExceptions(ctx context.Context, tx pgx.Tx) ([]assurance.Exception,
 	}
 	defer rows.Close()
 
-	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (assurance.Exception, error) {
-		var out assurance.Exception
-		var id, subjectID ids.UUID
-		var owner *ids.UUID
-		var currency *string
-		var firstSeen, lastSeen time.Time
-		err := row.Scan(&id, &out.Type, &out.SubjectKind, &subjectID, &out.Severity,
-			&out.AffectedMinor, &currency, &owner, &out.Status,
-			&out.Claim, &out.Observed, &firstSeen, &lastSeen)
-		out.ID = id
-		out.SubjectID = subjectID
-		out.FirstSeenAt = firstSeen
-		out.LastSeenAt = lastSeen
-		if currency != nil {
-			out.Currency = *currency
-		}
-		if owner != nil {
-			out.OwnerID = owner
-		}
-		return out, err
-	})
+	return pgx.CollectRows(rows, scanException)
+}
+
+// exceptionColumns is the select list every read of a finding shares, aliased
+// `e`. Two readers exist — this one and bundleableFindings, which asks a
+// different question of the same rows — and the column ORDER is what scanException
+// below binds to positionally, so the two have to move together or the scan
+// silently reads a currency into a status.
+const exceptionColumns = `e.id, e.type, e.subject_kind, e.subject_id, e.severity,
+	       e.affected_minor, e.currency, e.owner_id, e.status,
+	       e.claim, e.observed, e.first_seen_at, e.last_seen_at`
+
+// scanException reads one row of exceptionColumns.
+//
+// The nullable columns are read through pointers and folded in afterwards
+// because assurance.Exception carries a plain string for the currency: SQL NULL
+// there is "no money was named", which is a different fact from the empty
+// string only in that nothing may print it as a currency.
+func scanException(row pgx.CollectableRow) (assurance.Exception, error) {
+	var out assurance.Exception
+	var id, subjectID ids.UUID
+	var owner *ids.UUID
+	var currency *string
+	var firstSeen, lastSeen time.Time
+	err := row.Scan(&id, &out.Type, &out.SubjectKind, &subjectID, &out.Severity,
+		&out.AffectedMinor, &currency, &owner, &out.Status,
+		&out.Claim, &out.Observed, &firstSeen, &lastSeen)
+	out.ID = id
+	out.SubjectID = subjectID
+	out.FirstSeenAt = firstSeen
+	out.LastSeenAt = lastSeen
+	if currency != nil {
+		out.Currency = *currency
+	}
+	out.OwnerID = owner
+	return out, err
 }

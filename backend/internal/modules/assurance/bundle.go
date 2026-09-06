@@ -28,15 +28,16 @@ package assurance
 // was that a team sees each other's — which is what makes "what is still open in
 // this cycle" answerable at all rather than one seat at a time.
 //
-// NOTHING CALLS THIS YET. The nightly sweep in compose/jobs_assurance.go still
-// only scans and logs; it opens no cycle and bundles nothing, so no cycle and
-// no task item exists in a running installation. The orchestration is a compose
-// seam of its own — read the open exceptions, group them by subject, mint one
-// task per subject through the activities door, bundle each finding — carrying
-// its own questions about who a task is assigned to and what it says. Tracked
-// in margince/margince#4593 rather than smuggled in here, and until it lands
-// the tests are the only caller. Stated plainly so a reader does not conclude
-// from green tests that the feature runs.
+// THE CALLER IS compose/assurancebundle.go, driven by the nightly sweep: it
+// reads the open exceptions, groups them by subject, mints one task per subject
+// through the activities door and bundles each finding under it. A cycle's scope
+// is the scan's own run id, so one night is one cycle.
+//
+// The tests below call this store directly and seed their task rows with raw
+// SQL, which is what a store's own suite should do — and it means none of them
+// would fail if that caller were deleted. The suite that would is
+// compose/assurancebundle_integration_test.go, which drives the worker and reads
+// the task back the way a rep's list renders it.
 
 import (
 	"context"

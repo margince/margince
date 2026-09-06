@@ -374,24 +374,7 @@
   color: var(--textPrimary);
   text-wrap: pretty;
 }
-.co-move-why {
-  display: inline;
-  line-height: 1.55;
-  max-width: 78ch;
-  text-wrap: pretty;
-  /* It carries the working behind the advice, so it is marked as text that
-     opens something: a dotted rule rather than a link's solid one, because it
-     goes nowhere — it says what it already said, with the records under it. */
-  text-decoration: underline dotted var(--borderStrong);
-  text-underline-offset: 3px;
-}
-.co-move-why:hover {
-  color: var(--textPrimary);
-}
-
-/* The reason with nothing behind it: the same voice as the one that opens the
-   working, without the rule that promises it. A dotted rule over a reason that
-   opens nothing teaches the reader the working is never there. */
+/* The reason: the part a rep judges, in a quieter voice than the ask. */
 .co-move-reason {
   display: inline;
   line-height: 1.55;
@@ -399,12 +382,50 @@
   text-wrap: pretty;
 }
 
-/* The panel over that reason names itself: the reason is behind it by then,
-   and a list of records with nothing over it is a reader guessing which
-   question it answers. */
+/* The records under the reason, named for what they are: a list of chips
+   with nothing over it is a reader guessing which question it answers. */
+.co-move-basis {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-2);
+  margin-top: var(--space-1);
+}
 .co-move-basis-head {
   display: block;
   color: var(--textMeta);
+}
+.co-move-basis > .co-brief-cites {
+  margin-inline-start: 0;
+}
+
+/* A chip with a receipt behind it is marked the way every other opening
+   claim on the page is — the indigo dotted rule — whether or not its record
+   has a page: resting on it opens the words, which is the affordance. */
+.co-cite-receipted {
+  text-decoration: underline dotted var(--aiMed);
+}
+
+/* The receipt: the record's own words in the agent's rule, the DESIGN.md
+   source chip — then where and when they were said, then the way to the
+   record for a chip that has one. The quote is the reader's check on the
+   claim above, so it leads. */
+.co-cite-quote {
+  margin: 0;
+  border-left: 2px solid var(--aiMed);
+  padding-left: var(--space-2);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  color: var(--textContent);
+  max-width: 48ch;
+}
+.co-cite-origin {
+  margin: var(--space-1) 0 0;
+}
+/* The way to the record, set off from the words above it. The interval is
+   this line's own, not the button's: a primitive keeps its own spacing. */
+.co-cite-open {
+  margin: var(--space-2) 0 0;
 }
 .co-move-do {
   display: flex;
@@ -1310,8 +1331,12 @@
    that row to the button and pushing the ask half a button away from its own
    reason. The count follows what the left column actually holds, because an
    explicit row with nothing in it still draws its gap. */
-.co-lead .co-move-body:has(.co-move-why) {
+.co-lead .co-move-body:has(.co-move-reason),
+.co-lead .co-move-body:has(.co-move-basis) {
   grid-template-rows: auto auto;
+}
+.co-lead .co-move-body:has(.co-move-reason):has(.co-move-basis) {
+  grid-template-rows: auto auto auto;
 }
 /* An equal `gap` does NOT draw equal gutters: half-leading lives inside each
    line's own box, so three lines at three sizes push their neighbours apart by
@@ -1320,11 +1345,12 @@
    the gap above is the whole distance a reader sees. A browser that does not
    support it falls back to the leading it always had. */
 .co-lead .co-move-ask,
-.co-lead .co-move-why {
+.co-lead .co-move-reason {
   text-box: trim-both cap alphabetic;
 }
 .co-lead .co-move-ask,
-.co-lead .co-move-why {
+.co-lead .co-move-reason,
+.co-lead .co-move-basis {
   grid-column: 1;
 }
 /* The wrapper stops being a box of its own so its two halves can land in the
@@ -1855,4 +1881,19 @@
 .co-recent-empty {
   margin: 0;
   color: var(--textMeta);
+}
+
+/* The read's own line under the needs list: who wrote the findings, what was
+   read, and what the reader should know beside them. Inline, like the
+   commitment badge it sits with. */
+.co-scan-foot {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+/* The row Margince fills while it reads: the pending block takes the row's
+   own padding and nothing else. */
+.co-move-reading {
+  display: block;
 }

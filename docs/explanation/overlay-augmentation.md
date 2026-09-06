@@ -6,9 +6,8 @@ cached mirror alongside it. This page is the mental model — the two SoR modes,
 mirror is a cache and not a copy of authority, how it stays in sync, how it fails closed, and what
 happens on teardown.
 
-The full design (decisions, spike findings, review trail) lives in the working design doc at
-`.tmp/hubspot-overlay/design.md` (an internal build artifact, not tracked in git); this page is the
-durable summary. Cross-references: [write-backbone.md](write-backbone.md) (the audit+outbox shape overlay
+The decisions, spike findings and review trail behind it are not in this repository; this page is the
+durable summary, and it is the whole of what a reader here needs. Cross-references: [write-backbone.md](write-backbone.md) (the audit+outbox shape overlay
 *ingest* deliberately does not use), [authorization.md](authorization.md) (the RBAC gate overlay's
 connection lifecycle rides), [contract-first.md](contract-first.md) (the frozen contract this seam
 binds to), [composition-layer.md](composition-layer.md) (where the per-workspace dispatch lives).
