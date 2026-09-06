@@ -40054,7 +40054,7 @@ components:
         occurred_at: { type: string, format: date-time, description: "When a done_for_you receipt actually happened." }
         actions:
           type: array
-          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry] }
+          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry, reply] }
           description: |
             What this item offers. `decide` and `merge` mean the verb is irreversible and a
             person must choose; `complete` and `snooze` are a task's own verbs; `open` is
@@ -41168,7 +41168,7 @@ components:
         occurred_at: { type: string, format: date-time, description: 'When the thing being reported happened.' }
         actions:
           type: array
-          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry] }
+          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry, reply] }
           description: 'What this item offers, routed to the endpoint that owns the verb.'
         band:
           type: string

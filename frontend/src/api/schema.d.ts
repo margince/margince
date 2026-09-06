@@ -30125,7 +30125,7 @@ export interface components {
              *     suggestion until later in the day. One word for both would make a client that
              *     handles `snooze` generically write the wrong endpoint.
              */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply")[];
         };
         /**
          * @description The two records a duplicate item proposes to merge, with the detection-time
@@ -31183,7 +31183,7 @@ export interface components {
              */
             occurred_at?: string;
             /** @description What this item offers, routed to the endpoint that owns the verb. */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply")[];
             /**
              * @description The heading this row sits under, as an OUTCOME rather than a priority number.
              *

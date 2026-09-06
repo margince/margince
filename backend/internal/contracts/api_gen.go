@@ -1426,6 +1426,7 @@ const (
 	AttentionItemActionsDismiss     AttentionItemActions = "dismiss"
 	AttentionItemActionsMerge       AttentionItemActions = "merge"
 	AttentionItemActionsOpen        AttentionItemActions = "open"
+	AttentionItemActionsReply       AttentionItemActions = "reply"
 	AttentionItemActionsRetry       AttentionItemActions = "retry"
 	AttentionItemActionsSetAside    AttentionItemActions = "set_aside"
 	AttentionItemActionsSnooze      AttentionItemActions = "snooze"
@@ -1447,6 +1448,8 @@ func (e AttentionItemActions) Valid() bool {
 	case AttentionItemActionsMerge:
 		return true
 	case AttentionItemActionsOpen:
+		return true
+	case AttentionItemActionsReply:
 		return true
 	case AttentionItemActionsRetry:
 		return true
@@ -13807,6 +13810,7 @@ const (
 	WorklistItemActionsDismiss     WorklistItemActions = "dismiss"
 	WorklistItemActionsMerge       WorklistItemActions = "merge"
 	WorklistItemActionsOpen        WorklistItemActions = "open"
+	WorklistItemActionsReply       WorklistItemActions = "reply"
 	WorklistItemActionsRetry       WorklistItemActions = "retry"
 	WorklistItemActionsSetAside    WorklistItemActions = "set_aside"
 	WorklistItemActionsSnooze      WorklistItemActions = "snooze"
@@ -13828,6 +13832,8 @@ func (e WorklistItemActions) Valid() bool {
 	case WorklistItemActionsMerge:
 		return true
 	case WorklistItemActionsOpen:
+		return true
+	case WorklistItemActionsReply:
 		return true
 	case WorklistItemActionsRetry:
 		return true

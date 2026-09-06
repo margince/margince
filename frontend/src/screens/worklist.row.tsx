@@ -18,6 +18,7 @@ import { translatePlural, useLocale, useT } from "../i18n";
 import { ApprovalRow } from "./approvalrow";
 import { tomorrowMorning } from "./briefqueue";
 import { problemMessageOf } from "./common";
+import { ChannelReplyAction, RELINK_KINDS, type RelinkKind } from "./compose";
 import { type BriefMarkRequest, useBriefItemMark } from "./home.queries";
 import {
   useAutomationRetry,
@@ -309,6 +310,22 @@ function RowAnswer({ item }: Readonly<{ item: WorklistItem }>) {
   // given ON the row — but the answers differ, so the control is its own.
   if (item.source === "meeting_outcome" && item.actions.includes("decide")) {
     return <MeetingOutcome id={item.id} />;
+  }
+  // Answering the buyer where the reader is standing. The server offers `reply`
+  // only where the wait IS mail and names a record to file the answer against,
+  // so the row asks what it was sent rather than re-deriving either.
+  const replyTo = replyTarget(item);
+  if (replyTo) {
+    return (
+      <div className="worklist-row-verbs">
+        <ChannelReplyAction
+          activityId={item.id}
+          kind="email"
+          entityType={replyTo.type}
+          entityId={replyTo.id}
+        />
+      </div>
+    );
   }
   // A task the server says can be finished, finished HERE. Not a batch: a group
   // row stands for a pile and names no single activity to complete.
@@ -1008,6 +1025,9 @@ const VERB_LABEL: Record<
   // AutomationRetry, which acts in place, so VERB_DESTINATION routes it
   // nowhere and this label is never the one a reader sees.
   retry: (t) => t("worklist.verb.retry"),
+  // The composer's own word, not a second one: ChannelReplyAction draws the
+  // button this labels, and two spellings of one act would read as two acts.
+  reply: (t) => t("compose.reply"),
 };
 
 // The day's figures, and the dials that narrow them.
@@ -1165,4 +1185,25 @@ function MeetingOutcome({ id }: Readonly<{ id: string }>) {
       </Button>
     </div>
   );
+}
+
+// The record a reply would be filed against, or nothing.
+//
+// Both halves must hold. The verb says the server judged this wait answerable —
+// it is mail, not a channel message the mail composer would answer in the wrong
+// place. The subject says WHICH record the sent message links to, and its type
+// has to be one the composer can file against: the row's own vocabulary is
+// wider than RELINK_KINDS, so an `activity` subject would type-check as a
+// string and fail at the composer.
+function replyTarget(
+  item: WorklistItem,
+): { type: RelinkKind; id: string } | undefined {
+  if (!item.actions.includes("reply") || !item.subject) {
+    return undefined;
+  }
+  const type = item.subject.type;
+  if (!RELINK_KINDS.includes(type as RelinkKind)) {
+    return undefined;
+  }
+  return { type: type as RelinkKind, id: item.subject.id };
 }

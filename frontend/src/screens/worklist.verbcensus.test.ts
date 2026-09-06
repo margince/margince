@@ -52,6 +52,11 @@ const ANSWERED_BY = {
   // would open the automations page, which is where the RULE is fixed — a
   // different act from re-running the firing that broke.
   retry: { how: "inline", file: "worklist.row.tsx" },
+  // Answering the buyer opens the composer over the row, through the same
+  // ChannelReplyAction the 360 timelines mount. Routing it would send the
+  // reader to the record to press reply there, which is the hand-off the queue
+  // exists to remove.
+  reply: { how: "inline", file: "worklist.row.tsx" },
 } as const satisfies Record<
   Verb,
   { how: "routed" } | { how: "inline"; file: string }
