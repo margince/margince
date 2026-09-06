@@ -2878,6 +2878,7 @@ public.idx_weekly_plan_commitment_plan CREATE INDEX idx_weekly_plan_commitment_p
 public.idx_weekly_plan_owner CREATE INDEX idx_weekly_plan_owner ON public.weekly_plan USING btree (owner_id, local_week_start DESC)
 public.idx_weekly_review_deal_review CREATE INDEX idx_weekly_review_deal_review ON public.weekly_review_deal USING btree (weekly_review_id, occurred_at DESC)
 public.idx_weekly_review_driver_bar CREATE INDEX idx_weekly_review_driver_bar ON public.weekly_review_driver USING btree (weekly_review_id, period_kind, bar)
+public.idx_weekly_review_learning_review CREATE INDEX idx_weekly_review_learning_review ON public.weekly_review_learning USING btree (weekly_review_id, "position")
 public.idx_weekly_review_user CREATE INDEX idx_weekly_review_user ON public.weekly_review USING btree (user_id, local_week_start DESC)
 public.import_record_map acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.import_record_map.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -5363,6 +5364,8 @@ public.uq_voice_profile_version_number CREATE UNIQUE INDEX uq_voice_profile_vers
 public.uq_voice_profile_version_profile_number CREATE UNIQUE INDEX uq_voice_profile_version_profile_number ON public.voice_profile_version USING btree (voice_profile_id, profile_version)
 public.uq_weekly_plan_owner_week CREATE UNIQUE INDEX uq_weekly_plan_owner_week ON public.weekly_plan USING btree (owner_id, local_week_start)
 public.uq_weekly_review_driver_deal CREATE UNIQUE INDEX uq_weekly_review_driver_deal ON public.weekly_review_driver USING btree (weekly_review_id, period_kind, bar, deal_id)
+public.uq_weekly_review_learning_citation CREATE UNIQUE INDEX uq_weekly_review_learning_citation ON public.weekly_review_learning_citation USING btree (learning_id, subject_type, subject_id)
+public.uq_weekly_review_learning_slot CREATE UNIQUE INDEX uq_weekly_review_learning_slot ON public.weekly_review_learning USING btree (weekly_review_id, "position")
 public.uq_weekly_review_movement_bar CREATE UNIQUE INDEX uq_weekly_review_movement_bar ON public.weekly_review_movement USING btree (weekly_review_id, period_kind, bar)
 public.uq_weekly_review_outlook_period CREATE UNIQUE INDEX uq_weekly_review_outlook_period ON public.weekly_review_outlook USING btree (weekly_review_id, period_kind)
 public.uq_weekly_review_user_week CREATE UNIQUE INDEX uq_weekly_review_user_week ON public.weekly_review USING btree (user_id, local_week_start)
@@ -5710,6 +5713,8 @@ public.weekly_review.id uuid NOT NULL gen=- def=uuidv7()
 public.weekly_review.leads_answered_in_target integer NOT NULL gen=- def=0
 public.weekly_review.leads_breached integer NOT NULL gen=- def=0
 public.weekly_review.leads_routed integer NOT NULL gen=- def=0
+public.weekly_review.learned_at timestamp with time zone gen=- def=-
+public.weekly_review.learnings_state text NOT NULL gen=- def='not_run'::text
 public.weekly_review.local_week_start date NOT NULL gen=- def=-
 public.weekly_review.mail_attempted_at timestamp with time zone gen=- def=-
 public.weekly_review.mail_error text gen=- def=-
@@ -5731,6 +5736,8 @@ public.weekly_review.user_id uuid NOT NULL gen=- def=-
 public.weekly_review.weekly_review_commitments_are_tallies CHECK (((commitments_due >= 0) AND (commitments_kept >= 0) AND (commitments_kept <= commitments_due)))
 public.weekly_review.weekly_review_counts_are_tallies CHECK (((tasks_due >= 0) AND (tasks_done >= 0) AND (tasks_carried_over >= 0) AND (deals_moved >= 0) AND (deals_won >= 0) AND (deals_lost >= 0) AND (proposals_accepted >= 0) AND (proposals_rejected >= 0) AND (brief_items_acted >= 0) AND (brief_items_dismissed >= 0)))
 public.weekly_review.weekly_review_currency_check CHECK (((base_currency IS NULL) OR (base_currency ~ '^[A-Z]{3}$'::text)))
+public.weekly_review.weekly_review_learned_at_matches_state CHECK (((NOT (learnings_state IS DISTINCT FROM 'not_run'::text)) = (learned_at IS NULL)))
+public.weekly_review.weekly_review_learnings_state_check CHECK ((learnings_state = ANY (ARRAY['not_run'::text, 'insufficient_evidence'::text, 'synthesized'::text])))
 public.weekly_review.weekly_review_mail_error_length CHECK (((mail_error IS NULL) OR (char_length(mail_error) <= 500)))
 public.weekly_review.weekly_review_mail_error_needs_an_attempt CHECK (((mail_error IS NULL) OR (mail_attempted_at IS NOT NULL)))
 public.weekly_review.weekly_review_money_names_its_currency CHECK (((base_currency IS NULL) = ((pipeline_created_minor IS NULL) AND (pipeline_won_minor IS NULL) AND (pipeline_lost_minor IS NULL))))
@@ -5771,6 +5778,33 @@ public.weekly_review_driver.weekly_review_driver_pkey PRIMARY KEY (id)
 public.weekly_review_driver.weekly_review_driver_review_fkey FOREIGN KEY (weekly_review_id) REFERENCES weekly_review(id) ON DELETE CASCADE
 public.weekly_review_driver.weekly_review_id uuid NOT NULL gen=- def=-
 public.weekly_review_driver_pkey CREATE UNIQUE INDEX weekly_review_driver_pkey ON public.weekly_review_driver USING btree (id)
+public.weekly_review_learning acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.weekly_review_learning.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.weekly_review_learning.id uuid NOT NULL gen=- def=uuidv7()
+public.weekly_review_learning.kind text NOT NULL gen=- def=-
+public.weekly_review_learning.position integer NOT NULL gen=- def=-
+public.weekly_review_learning.text text NOT NULL gen=- def=-
+public.weekly_review_learning.uq_weekly_review_learning_slot UNIQUE (weekly_review_id, "position")
+public.weekly_review_learning.weekly_review_id uuid NOT NULL gen=- def=-
+public.weekly_review_learning.weekly_review_learning_kind_check CHECK ((kind = ANY (ARRAY['worked'::text, 'did_not_work'::text, 'pattern'::text, 'experiment'::text])))
+public.weekly_review_learning.weekly_review_learning_pkey PRIMARY KEY (id)
+public.weekly_review_learning.weekly_review_learning_position_sane CHECK (("position" >= 0))
+public.weekly_review_learning.weekly_review_learning_review_fkey FOREIGN KEY (weekly_review_id) REFERENCES weekly_review(id) ON DELETE CASCADE
+public.weekly_review_learning.weekly_review_learning_text_bound CHECK ((length(text) <= 400))
+public.weekly_review_learning.weekly_review_learning_text_present CHECK ((btrim(text) <> ''::text))
+public.weekly_review_learning_citation acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.weekly_review_learning_citation.id uuid NOT NULL gen=- def=uuidv7()
+public.weekly_review_learning_citation.label text NOT NULL gen=- def=-
+public.weekly_review_learning_citation.learning_id uuid NOT NULL gen=- def=-
+public.weekly_review_learning_citation.subject_id uuid NOT NULL gen=- def=-
+public.weekly_review_learning_citation.subject_type text NOT NULL gen=- def=-
+public.weekly_review_learning_citation.uq_weekly_review_learning_citation UNIQUE (learning_id, subject_type, subject_id)
+public.weekly_review_learning_citation.weekly_review_learning_citation_label_present CHECK ((btrim(label) <> ''::text))
+public.weekly_review_learning_citation.weekly_review_learning_citation_learning_fkey FOREIGN KEY (learning_id) REFERENCES weekly_review_learning(id) ON DELETE CASCADE
+public.weekly_review_learning_citation.weekly_review_learning_citation_pkey PRIMARY KEY (id)
+public.weekly_review_learning_citation.weekly_review_learning_citation_subject_check CHECK ((subject_type = ANY (ARRAY['deal'::text, 'commitment'::text])))
+public.weekly_review_learning_citation_pkey CREATE UNIQUE INDEX weekly_review_learning_citation_pkey ON public.weekly_review_learning_citation USING btree (id)
+public.weekly_review_learning_pkey CREATE UNIQUE INDEX weekly_review_learning_pkey ON public.weekly_review_learning USING btree (id)
 public.weekly_review_movement acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.weekly_review_movement.bar text NOT NULL gen=- def=-
 public.weekly_review_movement.delta_minor bigint NOT NULL gen=- def=-
