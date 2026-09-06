@@ -36,8 +36,17 @@ type StrandedContact struct {
 	ActivityID  ids.UUID
 }
 
-// StrandedContacts lists the connector-made owner-private people no ledger row
-// has ever been written for.
+// StrandedContacts lists the owner-private people an automation made and no
+// ledger row has ever been written for — a connector's, and an AGENT's, which
+// are stranded the same way and were previously never asked about at all.
+//
+// It asks only where the verdict engine has something to judge: a captured
+// message from that very address. A contact known only from a meeting has none —
+// a calendar names no counterparty — and stays owner-private until its owner
+// publishes it or qualifying correspondence arrives. That is deliberate rather
+// than a gap: an invitation is not evidence about whose business a person is,
+// and manufacturing a verdict from one would promote a contact on the strength
+// of somebody having been in a room.
 //
 // Any status counts as asked, not merely a live one: a terminal `advisor` is an
 // answer, and re-asking a settled question would put a decided sender back in
@@ -90,12 +99,26 @@ func (s *PendingStore) StrandedContacts(ctx context.Context, limit int) ([]Stran
 			   AND p.archived_at IS NULL
 			   AND p.merged_into_id IS NULL
 			   AND p.owner_id IS NOT NULL
-			   AND p.captured_by LIKE 'connector:%'
+			   AND (p.captured_by LIKE 'connector:%' OR p.captured_by LIKE 'agent:%')
 			   AND NOT EXISTS (SELECT 1 FROM capture_pending_counterparty q
 			                    WHERE q.email = pe.email)
 			   AND NOT EXISTS (SELECT 1 FROM audit_log al
 			                    WHERE al.entity_type = 'person' AND al.entity_id = p.id
 			                      AND al.actor_type = 'human')
+			   -- The message the projection above looks for, asked here as a
+			   -- FILTER so a contact the engine cannot judge does not consume
+			   -- the page. A person known only from a meeting has no such
+			   -- message — a calendar names no counterparty — and would
+			   -- otherwise be drawn, discarded after the LIMIT, and drawn
+			   -- again next tick, crowding out the contacts a verdict can
+			   -- actually be reached for.
+			   AND EXISTS (SELECT 1
+			                 FROM activity_link l
+			                 JOIN activity a ON a.id = l.activity_id
+			                WHERE l.entity_type = 'person' AND l.person_id = p.id
+			                  AND a.captured_by LIKE 'connector:%'
+			                  AND lower(btrim(coalesce(a.counterparty_email, ''))) = pe.email
+			                  AND a.archived_at IS NULL AND a.restricted_at IS NULL)
 			 ORDER BY random()
 			 LIMIT $1`, limit)
 		if err != nil {

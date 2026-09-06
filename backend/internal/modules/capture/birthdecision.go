@@ -102,6 +102,13 @@ func decideBirthTx(
 ) (birthDecision, error) {
 	// Non-mail kinds keep the workspace default: a meeting or a channel message
 	// is not correspondence a mailbox posture was ever asked about.
+	//
+	// A captured MEETING is still held — by limitLinkLessAudience, which writes
+	// the hold onto the ROW and leaves the import posture empty. It must not be
+	// held here instead: this decision welds its reason to posture_at_import, so
+	// the import contribution would re-pin the row to `participants` after any
+	// later widening (activities' contributionOf), and a meeting that got filed
+	// against a workspace record would never actually open.
 	if fields.Kind != "email" {
 		return birthDecision{}, nil
 	}

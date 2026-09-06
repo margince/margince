@@ -99,6 +99,24 @@ type replayCandidate struct {
 	ourHeaderIsTrusted bool
 }
 
+// partyListIsAttested is this candidate's answer to the question
+// capture.ParticipantListAttested asks of a live record: did the PROVIDER state
+// this party list?
+//
+// Both halves are read from what the row persisted. The mail half is the stored
+// owner attestation. The calendar half is the connector that captured the row,
+// because a calendar's attendee list is the provider's own record of who was
+// invited rather than a header somebody typed — and `source` comes from
+// captured_by, which capture wrote, not from anything the record claimed about
+// itself.
+//
+// A replayed row and a live one must name the same people, so this answers the
+// same question live capture asks; a drift here is an attendee who reads a
+// meeting on one path and not the other.
+func (c replayCandidate) partyListIsAttested() bool {
+	return c.ourHeaderIsTrusted || c.source == sourceGCal || c.source == sourceGraphCal
+}
+
 // replayParticipantsBatch re-reads up to limit stored originals and returns how
 // many activities it settled — written, empty or refused alike, because every
 // one of them is progress the next pass will not repeat.
@@ -256,7 +274,7 @@ func replayOne(ctx context.Context, tx pgx.Tx, c replayCandidate) (string, error
 		return replayFoundNone, nil
 	}
 	if err := capture.StampFurtherParticipants(ctx, tx, c.activityID, c.kind,
-		c.ourHeaderIsTrusted, participants); err != nil {
+		c.partyListIsAttested(), participants); err != nil {
 		return "", err
 	}
 	// The rows just written carry whatever name the original gave, so the

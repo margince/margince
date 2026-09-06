@@ -14,6 +14,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // meetingItem renders one appointment still ahead today.
@@ -75,8 +76,27 @@ func meetingItem(meeting Meeting) crmcontracts.AttentionItem {
 		kind := meetingKindUnprepared
 		item.Kind = &kind
 	}
+	// Whose calendar it came off, where one claims it. Absent for a meeting
+	// booked in the app or captured before the host was recorded — the row then
+	// names nobody rather than guessing at an owner.
+	if !meeting.HostUserID.IsZero() {
+		host := openapi_types.UUID(meeting.HostUserID)
+		item.HostUserId = &host
+	}
 	return item
 }
+
+// The two meeting lanes' source words, as the wire spells them.
+//
+// Spelled once here and read by scope.go, which has to know that both lanes
+// answer the ownership question in their own query. A second spelling would be
+// silent in the direction that matters: the comparison would simply never match,
+// the scope filter would re-judge rows it must not, and an invited colleague's
+// meetings would vanish from their own page with nothing to say why.
+const (
+	sourceMeeting        = "meeting"
+	sourceMeetingOutcome = "meeting_outcome"
+)
 
 // meetingKindUnprepared marks a meeting with nothing written down for it.
 //
@@ -126,17 +146,24 @@ func classifyMeeting(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 		item:       row,
 		deadlineAt: deadlineOf(item.DueAt),
 		occurredAt: occurredOf(item, asOf),
-		// NOT the reader's, and the obvious claim here is false. The lane lists
-		// meeting activities under the caller's ROW SCOPE — no owner or attendee
-		// predicate — so a team-scoped reader receives their team's meetings and
-		// naming the reader would make every one of them look like the reader's
-		// own appointment.
+		// The HOST, and never the reader. A team-scoped reader receives their
+		// team's meetings, so naming the reader would make every colleague's
+		// appointment look like their own — which is what this row used to do,
+		// by naming nobody at all.
 		//
-		// The activity carries no owner this lane reads, so nobody is named. A
-		// meeting's real owner is its organiser, which arrives with the attendee
-		// read that does not exist yet.
-		ownerRef: unassigned(),
+		// ownerFrom answers unassigned for a meeting no calendar claims, which is
+		// the honest answer for one booked in the app.
+		ownerRef: ownerFrom(hostOf(item)),
 	}
+}
+
+// hostOf reads the host id back off the wire item, which is where the lane put
+// it. Zero when the row names no host.
+func hostOf(item crmcontracts.AttentionItem) ids.UUID {
+	if item.HostUserId == nil {
+		return ids.UUID{}
+	}
+	return ids.UUID(*item.HostUserId)
 }
 
 // meetingAwaitingOutcomeItem draws one meeting that happened and owes an answer.
@@ -163,7 +190,7 @@ func classifyMeeting(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 func meetingAwaitingOutcomeItem(meeting MeetingAwaitingOutcome) crmcontracts.AttentionItem {
 	subject := meeting.Subject
 	started := meeting.StartedAt
-	return crmcontracts.AttentionItem{
+	item := crmcontracts.AttentionItem{
 		Id:         meeting.ID.String(),
 		Source:     crmcontracts.AttentionItemSource("meeting_outcome"),
 		Title:      &subject,
@@ -174,6 +201,13 @@ func meetingAwaitingOutcomeItem(meeting MeetingAwaitingOutcome) crmcontracts.Att
 		},
 		Version: meeting.Version,
 	}
+	// The same owner the forward lane names, for the same reason: a row that
+	// says whose meeting it was is one a manager can read a team's day from.
+	if !meeting.HostUserID.IsZero() {
+		host := openapi_types.UUID(meeting.HostUserID)
+		item.HostUserId = &host
+	}
+	return item
 }
 
 // classifyUnansweredMeeting places a meeting that happened and owes an answer.
@@ -196,10 +230,10 @@ func classifyUnansweredMeeting(item crmcontracts.AttentionItem, asOf time.Time) 
 	return ranked{
 		item:       row,
 		occurredAt: occurredOf(item, asOf),
-		// Nobody, for the reason classifyMeeting gives at length: the lane reads
-		// meeting activities under the caller's ROW SCOPE with no owner or
-		// attendee predicate, so a team-scoped reader receives their team's and
-		// naming the reader would make each one look like their own.
-		ownerRef: unassigned(),
+		// The host, exactly as classifyMeeting names one — the two lanes are the
+		// same meetings asked about from either side of their start time, and an
+		// owner on one but not the other would file the same appointment under
+		// two different people as the day goes past it.
+		ownerRef: ownerFrom(hostOf(item)),
 	}
 }

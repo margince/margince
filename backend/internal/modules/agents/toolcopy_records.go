@@ -50,7 +50,10 @@ var createRecordCopy = toolCopy{
 	Limits: "Creating a deal requires a pipeline_id and a stage_id, and list_pipelines is what " +
 		"yields them for a deal that does not exist yet. Only the fields the chosen record_type " +
 		"actually stores are accepted, and a field belonging to a neighbouring type is refused " +
-		"rather than dropped.",
+		"rather than dropped. A PERSON created here is visible to the human you are acting for " +
+		"and to nobody else, until they publish it or correspondence with that address earns a " +
+		"widening verdict — attending a meeting together does not earn one. Do not tell anyone " +
+		"a contact you just created is on their colleagues' screens.",
 	Instead: "Search first when the record might already exist — a second copy of a person or " +
 		"account is a problem that then needs merge_records to undo.",
 	Retain: "The new record's id comes back in the result; keep it for anything that links to it.",

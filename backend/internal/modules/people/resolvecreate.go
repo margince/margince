@@ -36,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -60,6 +61,30 @@ func visibilityFor(ownerScoped bool) string {
 		return visibilityOwner
 	}
 	return visibilityWorkspace
+}
+
+// bornOwnerScoped answers whether the ACTOR behind a typed create makes the new
+// contact its owner's rather than the workspace's.
+//
+// A human typing a contact into the UI, the REST API or a CSV import is
+// publishing it on purpose, and that decision stands. An AGENT minting one from
+// a tool call is not that decision: create_record executes without a human
+// seeing the row first, so a contact an agent invented while answering a
+// question about one seat's meeting became readable by every account in the
+// installation. A connector is the same case, and it is what the capture ensurer
+// already decides for itself.
+//
+// The two automation types are named rather than "anything not human", because
+// the fourth type is the SYSTEM principal — the relay, the privacy engines, the
+// retention passes — which carries no human owner at all. An 'owner' row with a
+// NULL owner_id is readable by nobody, so sweeping those in would strand every
+// contact a maintenance pass creates.
+func bornOwnerScoped(ctx context.Context) bool {
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		return false
+	}
+	return actor.Type == principal.PrincipalAgent || actor.Type == principal.PrincipalConnector
 }
 
 // ownerFromUUID adapts the storage-level owner id the capture and triage paths

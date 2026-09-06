@@ -83,9 +83,46 @@ func activityDiscoverClause(p principal.Principal, alias string, arg func(any) i
 	// caller has been paying it; it only surfaced as a budget failure when
 	// capture privacy stopped exempting the all-scope reader the perf
 	// fixture happens to run as.
-	return fmt.Sprintf(`%[3]s AND coalesce((SELECT bool_or(%[2]s)
-	   FROM activity_link l WHERE l.activity_id = %[1]s.id), true)`,
-		alias, linkTargetVisible(p, "l", arg), available)
+	//
+	// The membership arm is the second way in, and it is what keeps a meeting's
+	// own attendees able to reach it. Discovery asks whether any LINKED record
+	// is visible, so a meeting filed under a contact private to the seat that
+	// captured it fails that test for a colleague who was IN the meeting — the
+	// invitation is on their calendar and the row denies them. Membership is
+	// the honest answer to "may this person learn this exists": they were on it.
+	//
+	// It admits EXISTENCE only. Content still needs the audience arm, the linked
+	// private person stays unreadable with its own visibility check, and neither
+	// the availability test nor object RBAC is relaxed. Nothing here reads
+	// host_user_id: that column labels whose calendar a row came off, which is
+	// ownership rather than membership, and a label is not evidence that anybody
+	// was present.
+	return fmt.Sprintf(`%[3]s AND (coalesce((SELECT bool_or(%[2]s)
+	   FROM activity_link l WHERE l.activity_id = %[1]s.id), true)
+	   OR %[4]s)`,
+		alias, linkTargetVisible(p, "l", arg), available, activityMembershipArm(p, alias, arg))
+}
+
+// activityMembershipArm is the "I was on this" test: the caller's own seat
+// imported the row, or they are stamped as one of its participants.
+//
+// One spelling, two readers. The audience arm composes it to decide CONTENT, and
+// the discover clause composes it to decide EXISTENCE — and they must agree
+// about what membership means, or an attendee reads a meeting they cannot
+// discover, or discovers one they cannot read. Its existential twin, which asks
+// whether ANYBODY matches before a write narrows a row, is ActivityHasAReaderTx
+// in audienceorphan.go; change an arm here and change it there.
+//
+// Deliberately NOT included: the captured_by suffix match and the
+// audience='workspace' arm that the audience test also carries. The first names
+// one seat's provenance and the second is a statement about the audience rather
+// than about who was present, and neither is evidence of membership — putting
+// them here would widen discovery to rows the caller was never on.
+func activityMembershipArm(p principal.Principal, alias string, arg func(any) int) string {
+	me := arg(p.UserID)
+	return fmt.Sprintf(`(EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = %[1]s.id AND ci.user_id = $%[2]d)
+	   OR EXISTS (SELECT 1 FROM activity_participant ap WHERE ap.activity_id = %[1]s.id AND ap.user_id = $%[2]d))`,
+		alias, me)
 }
 
 // ActivityContentClause is the stronger activity gate: discoverable AND the
@@ -155,15 +192,17 @@ func activityAudienceArm(p principal.Principal, alias string, arg func(any) int)
 	// mail) from this one (was this your mail).
 	author := arg("%:" + p.UserID.String())
 	teams := arg(p.TeamIDs)
+	// The two membership arms are activityMembershipArm's, composed rather than
+	// repeated: discovery asks the same question of the same two tables, and a
+	// second copy is how one of them gains an arm the other lacks.
 	return fmt.Sprintf(`(%[1]s.audience = 'workspace'
 	   OR %[1]s.captured_by LIKE $%[3]d
-	   OR EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = %[1]s.id AND ci.user_id = $%[2]d)
-	   OR EXISTS (SELECT 1 FROM activity_participant ap WHERE ap.activity_id = %[1]s.id AND ap.user_id = $%[2]d)
+	   OR %[5]s
 	   OR (%[1]s.audience = 'selected' AND EXISTS (
 	      SELECT 1 FROM activity_audience_member am WHERE am.activity_id = %[1]s.id
 	        AND ((am.subject_type = 'user' AND am.subject_id = $%[2]d)
 	          OR (am.subject_type = 'team' AND am.subject_id = ANY($%[4]d))))))`,
-		alias, me, author, teams)
+		alias, me, author, teams, activityMembershipArm(p, alias, arg))
 }
 
 // SignalScopeClause is the signal analogue of ActivityDiscoverClause: a

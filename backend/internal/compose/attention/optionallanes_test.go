@@ -244,7 +244,7 @@ type stubMeetingsAwaitingOutcome struct {
 	err  error
 }
 
-func (s *stubMeetingsAwaitingOutcome) Since(_ context.Context, _, _ time.Time, _ int) ([]MeetingAwaitingOutcome, error) {
+func (s *stubMeetingsAwaitingOutcome) Since(_ context.Context, _, _ time.Time, _ int, _ TaskScope, _ ids.UUID) ([]MeetingAwaitingOutcome, error) {
 	return s.rows, s.err
 }
 
@@ -257,7 +257,7 @@ type stubMeetings struct {
 	from *time.Time
 }
 
-func (s *stubMeetings) Today(_ context.Context, from, _ time.Time, _ int) ([]Meeting, error) {
+func (s *stubMeetings) Today(_ context.Context, from, _ time.Time, _ int, _ TaskScope, _ ids.UUID) ([]Meeting, error) {
 	s.from = &from
 	s.calls++
 	return s.rows, s.err

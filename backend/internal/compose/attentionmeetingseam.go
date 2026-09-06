@@ -17,6 +17,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // attentionMeetings reads today's remaining meetings through the activities
@@ -36,11 +37,17 @@ type attentionMeetings struct{ store *activities.Store }
 
 func (m attentionMeetings) Today(
 	ctx context.Context, from, until time.Time, limit int,
+	scope attention.TaskScope, owner ids.UUID,
 ) ([]attention.Meeting, error) {
 	kind := string(crmcontracts.ActivityKindMeeting)
-	rows, _, err := m.store.ListActivities(ctx, activities.ListActivitiesInput{
+	in := activities.ListActivitiesInput{
 		Kind: &kind, OccurredAfter: &from, OccurredBefore: &until, Limit: &limit,
-	})
+		ReadableOnly: true,
+	}
+	if !applyMeetingScope(ctx, &in, scope, owner) {
+		return nil, nil
+	}
+	rows, _, err := m.store.ListActivities(ctx, in)
 	if err != nil {
 		return nil, err
 	}
@@ -49,16 +56,73 @@ func (m attentionMeetings) Today(
 		if !meetingStillWorthPreparing(row) {
 			continue
 		}
+		// The store was asked for readable rows only, so a withheld one here
+		// would be a gate that did not hold. Checked rather than assumed: this
+		// lane names the meeting in a reader's brief, and the cost of being
+		// wrong is a subject on a screen it does not belong on.
+		if row.ContentState != nil && *row.ContentState != crmcontracts.ActivityContentStateAvailable {
+			continue
+		}
 		needsPrep, known := meetingPrep(row)
 		ahead = append(ahead, attention.Meeting{
 			ID: ids.UUID(row.Id), Subject: subjectOfMeeting(row), StartsAt: row.OccurredAt,
 			NeedsPrep: needsPrep, PrepKnown: known, PersonID: personOnMeeting(row),
+			HostUserID: hostOfMeeting(row),
 		})
 	}
 	// Soonest first: the lane is a countdown, and the store returns activities
 	// newest-first, which is the opposite order for a day still ahead.
 	sort.SliceStable(ahead, func(i, j int) bool { return ahead[i].StartsAt.Before(ahead[j].StartsAt) })
 	return ahead, nil
+}
+
+// applyMeetingScope turns the lane's scope into the store's meeting dials.
+//
+// One function, both lanes, because the two ask the same question of the same
+// table from either side of a start time — and a mapping written twice is how
+// one of them ends up answering "mine" with everybody's.
+//
+// It follows openTasksDueBy exactly, including where each answer comes FROM:
+// "mine" is the acting reader, read off the context, while "owned by" is the
+// named person the caller passed. A false answer means there is no reader to
+// answer for, which is a page of nothing rather than a refusal — reading every
+// meeting and calling the result theirs is the widening this narrowing exists to
+// prevent.
+//
+// TasksVisible sets no dial: the lane feed shows what the reader may see, which
+// the row-scope gate and the audience arm have already decided.
+func applyMeetingScope(
+	ctx context.Context, in *activities.ListActivitiesInput, scope attention.TaskScope, owner ids.UUID,
+) bool {
+	switch scope {
+	case attention.TasksMine:
+		actor, ok := principal.Actor(ctx)
+		if !ok || actor.UserID.IsZero() {
+			return false
+		}
+		reader := ids.From[ids.UserKind](actor.UserID)
+		in.OnMeetingOf = &reader
+	case attention.TasksOwnedBy:
+		if owner.IsZero() {
+			return false
+		}
+		host := ids.From[ids.UserKind](owner)
+		in.MeetingHost = &host
+	case attention.TasksUnassigned:
+		in.UnhostedMeetings = true
+	case attention.TasksVisible:
+	}
+	return true
+}
+
+// hostOfMeeting is the seat whose calendar the meeting came off, zero when no
+// calendar claims it — a meeting booked in the app, or captured before the host
+// was recorded.
+func hostOfMeeting(row crmcontracts.Activity) ids.UUID {
+	if row.HostUserId == nil {
+		return ids.UUID{}
+	}
+	return ids.UUID(*row.HostUserId)
 }
 
 // meetingStillWorthPreparing keeps the meetings a rep can still do something
@@ -150,20 +214,29 @@ type attentionMeetingsAwaitingOutcome struct{ store *activities.Store }
 
 func (m attentionMeetingsAwaitingOutcome) Since(
 	ctx context.Context, from, until time.Time, limit int,
+	scope attention.TaskScope, owner ids.UUID,
 ) ([]attention.MeetingAwaitingOutcome, error) {
 	kind := string(crmcontracts.ActivityKindMeeting)
-	rows, _, err := m.store.ListActivities(ctx, activities.ListActivitiesInput{
+	in := activities.ListActivitiesInput{
 		Kind: &kind, OccurredAfter: &from, OccurredBefore: &until,
-		AwaitingOutcome: true, Limit: &limit,
-	})
+		AwaitingOutcome: true, Limit: &limit, ReadableOnly: true,
+	}
+	if !applyMeetingScope(ctx, &in, scope, owner) {
+		return nil, nil
+	}
+	rows, _, err := m.store.ListActivities(ctx, in)
 	if err != nil {
 		return nil, err
 	}
 	over := make([]attention.MeetingAwaitingOutcome, 0, len(rows))
 	for _, row := range rows {
+		// Same defensive check the forward lane makes, for the same reason.
+		if row.ContentState != nil && *row.ContentState != crmcontracts.ActivityContentStateAvailable {
+			continue
+		}
 		over = append(over, attention.MeetingAwaitingOutcome{
 			ID: ids.UUID(row.Id), Subject: subjectOfMeeting(row), StartedAt: row.OccurredAt,
-			Version: row.Version,
+			Version: row.Version, HostUserID: hostOfMeeting(row),
 		})
 	}
 	// Longest unanswered first: the store returns activities newest-first, and

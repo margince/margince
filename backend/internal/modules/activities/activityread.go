@@ -85,6 +85,41 @@ type ListActivitiesInput struct {
 	// personal queue it arrives as though already theirs, which is how one
 	// automation's follow-up came to sit on every colleague's page.
 	UnassignedQueue bool
+
+	// The three meeting narrowings the brief lanes ask with.
+	//
+	// They are worklist OWNERSHIP filters, not authorization. What a reader may
+	// see is decided by the row-scope gate and the audience arm, which read
+	// capture provenance, imports and participants — never host_user_id. These
+	// only choose which of the rows a reader already passes the lane is about.
+	//
+	// OnMeetingOf is "mine": the meetings this person is genuinely on — their own
+	// calendar hosted it, their seat imported it, or they are stamped as a
+	// participant. Three sources because a meeting reaches a person three ways,
+	// and asking about the host alone would drop every meeting a colleague was
+	// invited to.
+	OnMeetingOf *ids.UserID
+	// MeetingHost is one NAMED person's own calendar — a manager opening the day
+	// of the rep an exception named. Exact, unlike OnMeetingOf: asking for a
+	// rep's day means the rep's calendar, not every meeting they were invited to.
+	MeetingHost *ids.UserID
+	// UnhostedMeetings is the meetings no calendar claims: booked in the app, or
+	// captured before the host was recorded. Its own scope for the reason
+	// UnassignedQueue is one — unowned work is picked up deliberately rather
+	// than arriving unbidden in everybody's day.
+	UnhostedMeetings bool
+
+	// ReadableOnly drops the rows this caller may discover but not read, in SQL,
+	// BEFORE the page is cut.
+	//
+	// For a timeline that is wrong: a withheld row is a real event, and showing
+	// it with its content blanked is how a reader learns something happened
+	// without learning what. For a WORKLIST it is the only correct answer. A lane
+	// offers rows to act on, and a row whose subject the reader cannot read is
+	// not one — worse, dropping it after the fetch spends the page on rows the
+	// caller then discards, so a full page of a colleague's held meetings hides
+	// the reader's own meeting sitting behind them.
+	ReadableOnly bool
 	// WithinProjectID narrows to one body of work, EXCLUDING what belongs to
 	// another project and keeping what belongs to none.
 	//

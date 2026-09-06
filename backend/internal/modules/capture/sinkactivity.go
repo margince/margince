@@ -125,11 +125,11 @@ func (s *Sink) finishNewActivity(
 	// Everyone else who was in it — the CCs, the meeting's organizer and
 	// attendees. Separate from the two ends above because these are resolved
 	// against our own people here rather than promoted later.
-	// The recipient list is OURS to trust only when the provider attested our
-	// own mailbox owner sent this message — then the Cc line is what our user
-	// typed. On anything inbound it is the sender's text.
+	// The party list is OURS to trust only when the PROVIDER stated it — our own
+	// mailbox owner attested as the sender, or a calendar enumerating its
+	// attendees. On anything inbound it is the sender's text.
 	if err := StampFurtherParticipants(ctx, tx, id, fields.Kind,
-		rec.Counterparty.SentByOwner(), rec.Participants); err != nil {
+		ParticipantListAttested(rec), rec.Participants); err != nil {
 		return counterpartyDecision{}, err
 	}
 	// And the names those rows just recorded, for an attendee who is ALREADY a
@@ -196,7 +196,7 @@ func (s *Sink) finishNewActivity(
 			return counterpartyDecision{}, err
 		}
 	}
-	if err := limitLinkLessAudience(ctx, tx, id, rec, fields.Kind, decision, derivedLinks); err != nil {
+	if err := limitLinkLessAudience(ctx, tx, id, rec, decision, derivedLinks); err != nil {
 		return counterpartyDecision{}, err
 	}
 	// This mailbox's own record of having imported the message, and the
@@ -243,8 +243,8 @@ func (s *Sink) upsertActivity(
 	audience, audienceReason := birth.bornAudience()
 	var id ids.ActivityID
 	err := tx.QueryRow(ctx, `
-		INSERT INTO activity (kind, channel_provider, subject, body, occurred_at, direction, source_system, source_id, source, captured_by, thread_key, counterparty_email, counterparty_outbound_attested, bulk_mail_attested, audience, audience_reason, has_calendar_part)
-		VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), NULLIF($4, ''), $5, NULLIF($6, ''), $7, $8, $9, $10, NULLIF($11, ''), NULLIF($12, ''), $13, $14, $15, NULLIF($16, ''), $17)
+		INSERT INTO activity (kind, channel_provider, subject, body, occurred_at, direction, source_system, source_id, source, captured_by, thread_key, counterparty_email, counterparty_outbound_attested, bulk_mail_attested, audience, audience_reason, has_calendar_part, host_user_id)
+		VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), NULLIF($4, ''), $5, NULLIF($6, ''), $7, $8, $9, $10, NULLIF($11, ''), NULLIF($12, ''), $13, $14, $15, NULLIF($16, ''), $17, $18)
 		ON CONFLICT (source_system, source_id) WHERE source_system IS NOT NULL AND source_id IS NOT NULL
 		DO NOTHING
 		RETURNING id`,
@@ -273,7 +273,10 @@ func (s *Sink) upsertActivity(
 		// calendar part stores false rather than NULL: NULL is reserved for the
 		// rows captured before this column existed, so the two stay tellable
 		// apart.
-		fields.HasCalendarPart).Scan(&id)
+		fields.HasCalendarPart,
+		// Whose calendar a MEETING came off, so the brief lanes can say whose
+		// meeting a row is instead of offering every seat's to everybody.
+		meetingHostUserID(ctx, fields.Kind)).Scan(&id)
 	if err == nil {
 		// Field-level provenance (B-E02.12) for the content fields this
 		// capture set — same source/author the row itself carries.

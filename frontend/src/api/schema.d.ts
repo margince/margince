@@ -30427,6 +30427,22 @@ export interface components {
              */
             with_person?: string;
             /**
+             * Format: uuid
+             * @description Whose calendar a meeting came off. Sent by `source: meeting` and
+             *     `source: meeting_outcome`.
+             *
+             *     It names the row's OWNER, which is what lets a manager's view say whose
+             *     appointment each one is rather than presenting a team's calendars as one
+             *     undifferentiated day. It is a label and never an authority: what a caller may
+             *     read is decided before this field is filled in, and a client must not infer a
+             *     permission from it.
+             *
+             *     ABSENT where no calendar claims the meeting — one booked in the app, or one
+             *     captured before the host was recorded. The row then names nobody rather than
+             *     guessing at an owner.
+             */
+            host_user_id?: string;
+            /**
              * @description Which underlying CONDITION this row reports, for a surface that groups repeated
              *     failures of one thing into one row. Two failures of one broken automation carry
              *     the same value; a failure of a different rule carries a different one.

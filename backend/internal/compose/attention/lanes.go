@@ -362,8 +362,14 @@ type DealFigures struct {
 //
 // Optional as the other two are: nil means this feed does not read meetings,
 // which is not the same as a day with none in it.
+//
+// It takes the same scope the task lane does, for the same reason. A meeting is
+// somebody's: it came off one seat's calendar, or it names them as a
+// participant. Answering "today's meetings" with everybody's put one seat's
+// appointments in every colleague's brief, which is how a rep read the line
+// "a meeting with Lucy" about a meeting that was never hers.
 type Meetings interface {
-	Today(ctx context.Context, from, until time.Time, limit int) ([]Meeting, error)
+	Today(ctx context.Context, from, until time.Time, limit int, scope TaskScope, owner ids.UUID) ([]Meeting, error)
 }
 
 // MeetingsAwaitingOutcome is today's meetings that have started and whose
@@ -373,8 +379,12 @@ type Meetings interface {
 // asks the opposite question of the same table and every stub of that interface
 // would otherwise have to answer both. Optional the same way: nil means this
 // feed does not read them, which is not a day with none.
+//
+// Scoped exactly as Meetings is: the same rows, asked about from the other side
+// of their start time, so a lane that narrowed only one of the two would leak
+// through whichever half was left open.
 type MeetingsAwaitingOutcome interface {
-	Since(ctx context.Context, from, until time.Time, limit int) ([]MeetingAwaitingOutcome, error)
+	Since(ctx context.Context, from, until time.Time, limit int, scope TaskScope, owner ids.UUID) ([]MeetingAwaitingOutcome, error)
 }
 
 // MeetingAwaitingOutcome is one appointment that happened and owes an answer.
@@ -400,6 +410,12 @@ type MeetingAwaitingOutcome struct {
 	// takes no conditional write, and the client must be told that rather than
 	// shown a zero it would send as a real version.
 	Version *int64
+
+	// HostUserID is whose calendar this came off, and it is what the row names
+	// as its owner. Zero when no calendar claims it — booked in the app, or
+	// captured before the host was recorded — and the row then names nobody
+	// rather than guessing.
+	HostUserID ids.UUID
 }
 
 // Meeting is one appointment still ahead of the reader.
@@ -437,6 +453,12 @@ type Meeting struct {
 	// PrepKnown reports whether NeedsPrep was answerable at all. False when the
 	// row's content is withheld from this reader.
 	PrepKnown bool
+
+	// HostUserID is whose calendar this came off, and it is what the row names as
+	// its owner. Zero when no calendar claims it — booked in the app, or captured
+	// before the host was recorded — and the row then names nobody rather than
+	// guessing.
+	HostUserID ids.UUID
 }
 
 // Notices is the acting person's own unread notices — the durable

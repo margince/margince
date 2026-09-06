@@ -160,6 +160,7 @@ func createPersonInTx(ctx context.Context, tx pgx.Tx, in CreatePersonInput, by s
 		// saying why — and the answer that makes the gap visible rather than
 		// leaving the question unasked.
 		Acquisition:  in.Acquisition,
+		Visibility:   visibilityFor(bornOwnerScoped(ctx)),
 		FullName:     in.FullName,
 		FirstName:    in.FirstName,
 		LastName:     in.LastName,
