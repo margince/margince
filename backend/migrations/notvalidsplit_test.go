@@ -149,27 +149,43 @@ func checkNotValidSplits(t *testing.T, namespace string, dir fs.FS) {
 // working exactly as intended, and it appears in the same file shape.
 func validatedInTheSameFile(sql string) []string {
 	statements := executableSQL(sql)
-	pending := map[string]bool{}
-	for _, m := range addsNotValid.FindAllStringSubmatch(statements, -1) {
-		pending[constraintName(m[1])] = true
+	// POSITION, not merely presence. A file may validate an earlier `foo`, drop
+	// it, and add a replacement `foo` NOT VALID — which leaves the replacement
+	// pending, exactly as intended. Reading the two sets independently would
+	// pair that VALIDATE with the ADD that came after it and block a correct
+	// migration, so an ADD counts only against a VALIDATE that FOLLOWS it.
+	addedAt := map[string]int{}
+	for _, m := range addsNotValid.FindAllStringSubmatchIndex(statements, -1) {
+		name := constraintName(statements[m[2]:m[3]])
+		if _, seen := addedAt[name]; !seen {
+			addedAt[name] = m[0]
+		}
 	}
-	if len(pending) == 0 {
+	if len(addedAt) == 0 {
 		return nil
 	}
 	var found []string
-	for _, m := range validatesConstraint.FindAllStringSubmatch(statements, -1) {
-		name := constraintName(m[1])
-		if pending[name] {
-			found = append(found, name)
-			delete(pending, name)
+	reported := map[string]bool{}
+	for _, m := range validatesConstraint.FindAllStringSubmatchIndex(statements, -1) {
+		name := constraintName(statements[m[2]:m[3]])
+		at, added := addedAt[name]
+		if !added || m[0] < at || reported[name] {
+			continue
 		}
+		reported[name] = true
+		found = append(found, name)
 	}
 	return found
 }
 
-// constraintName normalizes an identifier the way Postgres folds one: unquoted
-// names are case-insensitive, so a file adding `Foo` and validating `foo` is
-// naming one constraint.
+// constraintName normalizes an identifier the way Postgres reads one: an
+// unquoted name folds to lower case, a quoted one keeps exactly the case it was
+// written in. Folding both would make `"Foo"` and `foo` — which are two
+// different constraints to the server — read here as one, and block a migration
+// that adds the first while validating the second.
 func constraintName(raw string) string {
-	return strings.ToLower(strings.Trim(raw, `"`))
+	if strings.HasPrefix(raw, `"`) && strings.HasSuffix(raw, `"`) && len(raw) > 1 {
+		return strings.Trim(raw, `"`)
+	}
+	return strings.ToLower(raw)
 }
