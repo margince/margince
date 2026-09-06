@@ -30,11 +30,14 @@ afterEach(() => {
 function auditLogBackend() {
   return vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input instanceof Request ? input.url : input);
-    // The trail is the admin's alone, so every case below needs a principal who
-    // may read it — an anonymous fixture would only ever exercise the withheld
-    // rung, which has a case of its own on the Privacy & audit page.
+    // `AuditLogCard` gates itself on `audit_log:read`, which is what
+    // `GET /v1/audit-log` asks for, so every case below needs a principal
+    // holding that grant — an anonymous fixture would only ever exercise the
+    // withheld rung, which has a case of its own on the Audit log page.
     if (url.endsWith("/v1/me")) {
-      return jsonResponse(meFixture({ roles: ["admin"] }));
+      return jsonResponse(
+        meFixture({ roles: ["admin"], allow: { audit_log: ["read"] } }),
+      );
     }
     if (url.includes("/audit-log")) {
       return jsonResponse({
@@ -126,7 +129,9 @@ describe("AuditLogCard", () => {
       "fetch",
       vi.fn(async (input: RequestInfo | URL) =>
         String(input instanceof Request ? input.url : input).endsWith("/v1/me")
-          ? jsonResponse(meFixture({ roles: ["admin"] }))
+          ? jsonResponse(
+              meFixture({ roles: ["admin"], allow: { audit_log: ["read"] } }),
+            )
           : jsonResponse({
               data: [],
               page: { next_cursor: null, has_more: false },
@@ -143,7 +148,9 @@ describe("AuditLogCard", () => {
       vi.fn(async (input: RequestInfo | URL) => {
         const url = String(input instanceof Request ? input.url : input);
         if (url.endsWith("/v1/me")) {
-          return jsonResponse(meFixture({ roles: ["admin"] }));
+          return jsonResponse(
+            meFixture({ roles: ["admin"], allow: { audit_log: ["read"] } }),
+          );
         }
         if (url.includes("/audit-log")) {
           return jsonResponse({ title: "Upstream is down" }, 500);
@@ -206,7 +213,9 @@ describe("AuditLogCard", () => {
       vi.fn(async (input: RequestInfo | URL) => {
         const url = String(input instanceof Request ? input.url : input);
         if (url.endsWith("/v1/me")) {
-          return jsonResponse(meFixture({ roles: ["admin"] }));
+          return jsonResponse(
+            meFixture({ roles: ["admin"], allow: { audit_log: ["read"] } }),
+          );
         }
         if (url.includes("/audit-log")) {
           return jsonResponse({

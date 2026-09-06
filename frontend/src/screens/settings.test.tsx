@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { pickOption } from "../design-system/select-testing";
 import { LOCALES, localeNameKey, translate } from "../i18n";
-import { SettingsScreen, tabContent } from "./settings";
+import { AuditLogCard, SettingsScreen, tabContent } from "./settings";
 import {
   auditEntry,
   IDLE_JOB_HEALTH,
@@ -62,8 +62,10 @@ function aiRateReaderBackend() {
             // of them but reaches neither on its own, so a fixture without this
             // would be testing the fallback to Account.
             //
-            // NOT the automation write grant, which is what the cards check —
-            // that is the whole fixture: reach the page, be refused the card.
+            // NOT `ai_diagnostics:read`, which is what the cards check — that
+            // is the whole fixture: reach the page, be refused the card. The
+            // cards asked `automation:update` before the runtime's spend got an
+            // object of its own.
             //
             // Usage opens on `ai_model_rate` alone, so this reader gets there
             // and finds the spend withheld. Model calls asks for the same grant
@@ -206,7 +208,7 @@ describe("SettingsScreen RBAC surfaces", () => {
   // The five-tab strip that used to carry these is gone — each card is its own
   // address now — so the two withheld readings are asserted on the two pages
   // that hold them rather than one page's tabs.
-  it("withholds the AI spend from a principal without the automation grant", async () => {
+  it("withholds the AI spend from a principal without the diagnostics read", async () => {
     vi.stubGlobal("fetch", aiRateReaderBackend());
     render(<SettingsScreen route={settingsHref("usage")} />);
 
@@ -214,7 +216,7 @@ describe("SettingsScreen RBAC surfaces", () => {
     await waitFor(() =>
       expect(screen.getByText("AI model costs")).toBeTruthy(),
     );
-    // ...and the card whose endpoint requires the automation grant KEEPS its
+    // ...and the card whose endpoint requires `ai_diagnostics:read` KEEPS its
     // place and says it is withheld. Absent, it would claim the installation had
     // spent nothing — a statement about the data, where the truth is only about
     // who may read it. No request is made for it, so a rep never hits a 403
@@ -238,7 +240,12 @@ describe("SettingsScreen RBAC surfaces", () => {
     // the card ever diverge again this fails, which is the right alarm.
     vi.stubGlobal("fetch", aiRateReaderBackend());
     render(<SettingsScreen route={settingsHref("model-calls")} />);
-    await waitFor(() => expect(screen.queryByText("Reading…")).toBeNull());
+    // Waited on the FALLBACK's own content rather than on an absence: the trace
+    // is missing before /me resolves too, so an absence alone would pass
+    // against a page that goes on to render it.
+    await waitFor(() =>
+      expect(screen.getByText("test@example.test")).toBeTruthy(),
+    );
     expect(screen.queryByText("AI call trace")).toBeNull();
   });
 });
@@ -362,11 +369,6 @@ describe("SettingsScreen restructured pages", () => {
         allow: {
           person: ["read"],
           audit_log: ["read"],
-          // Audit asks for this too, because `AuditLogCard` still gates itself
-          // on the literal admin role: `system_reset:delete` is the grant only
-          // admin holds, and it stands in for that until the card honours
-          // `audit_log`. Dropping it here would test the fallback, not the page.
-          system_reset: ["delete"],
         },
       }),
     );
@@ -393,11 +395,6 @@ describe("SettingsScreen restructured pages", () => {
         allow: {
           person: ["read"],
           audit_log: ["read"],
-          // Audit asks for this too, because `AuditLogCard` still gates itself
-          // on the literal admin role: `system_reset:delete` is the grant only
-          // admin holds, and it stands in for that until the card honours
-          // `audit_log`. Dropping it here would test the fallback, not the page.
-          system_reset: ["delete"],
         },
       }),
     );
@@ -434,31 +431,44 @@ describe("SettingsScreen restructured pages", () => {
     ).toBeTruthy();
   });
 
-  // The trail is the admin's alone, and the page carrying it opens on
-  // `audit_log:read` — a grant ops can hold. So the withholding still has to
-  // happen INSIDE the card: the page's own gate is not the card's gate, and a
-  // reader who reaches the page for the read still may not see the trail.
-  it("does not offer the audit trail to an ops seat, and asks the server for nothing", async () => {
-    // Ops holds `audit_log:read` and the server admits it — but `AuditLogCard`
-    // still gates itself on the literal admin role, so the page asks for admin
-    // too rather than opening and then refusing. That makes this absence rather
-    // than a withheld card, and it is the weaker of the two answers: a card that
-    // says "only an admin can read the full trail" tells a reader something,
-    // where a missing page tells them nothing.
-    //
-    // It is still the right answer while the card refuses, and it stops being
-    // the answer in the change that rewrites the card — at which point this
-    // fails and goes back to asserting the withheld body.
+  // The trail answers to `audit_log:read`, which is what
+  // `GET /v1/audit-log` asks for and what `AuditLogCard` asks for now — it
+  // asked whether the reader WAS an admin before. The page opens on the same
+  // grant, so the two agree: a holder reaches the page AND the trail on it.
+  it("serves the audit trail to an ops seat holding the trail read", async () => {
     const backend = mergedEntryBackend({
       roles: ["ops"],
       allow: { audit_log: ["read"] },
     });
     vi.stubGlobal("fetch", backend);
     renderSettings("audit");
-    await waitFor(() => expect(screen.queryByText("Reading…")).toBeNull());
-    expect(screen.queryByRole("heading", { name: "Audit log" })).toBeNull();
-    // And the request is never issued: it could only ever come back 403, and a
-    // red failure with a futile Retry is what the withheld body replaces.
+    expect(
+      await screen.findByRole("heading", { name: "Audit log" }),
+    ).toBeTruthy();
+    // Reached the wire rather than merely rendering a shell: the card's fetch is
+    // `enabled` on the same grant, so an entry it served is what says the read
+    // was honoured end to end.
+    expect(await screen.findByText("update")).toBeTruthy();
+  });
+
+  // The other half, and the reason opening the page is not the whole answer: a
+  // reader who reaches this page some other way still may not see the trail, so
+  // the card carries its own gate and says so rather than rendering empty.
+  it("withholds the trail from a reader without the read, and asks the server for nothing", async () => {
+    const backend = mergedEntryBackend({
+      roles: ["ops"],
+      allow: { person: ["read"] },
+    });
+    vi.stubGlobal("fetch", backend);
+    // Rendered directly: without the grant the catalog gives this reader no
+    // Audit log row at all, so the card is the only way to reach the branch.
+    render(<AuditLogCard />);
+    expect(
+      await screen.findByText(translate("en", "settings.auditAdminOnly")),
+    ).toBeTruthy();
+    // WITHHELD rather than absent, and the request is never issued: it could
+    // only ever come back 403, and a red failure with a futile Retry is what
+    // the withheld body replaces.
     const asked = backend.mock.calls.map((call) =>
       String(call[0] instanceof Request ? call[0].url : call[0]),
     );
@@ -495,7 +505,7 @@ describe("SettingsScreen restructured pages", () => {
       screen.getByRole("heading", { name: "Background jobs" }),
     ).toBeTruthy();
     expect(
-      screen.getByText(/Only an admin can see background-job health/),
+      screen.getByText(/background-job health needs permission/i),
     ).toBeTruthy();
   });
 

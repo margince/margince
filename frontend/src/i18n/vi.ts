@@ -3882,7 +3882,7 @@ export const vi = {
   "settings.jobs": "Tác vụ nền",
   "settings.jobsSub": "Hàng đợi đang giữ gì, và công việc của ai đã thất bại.",
   "jobs.adminOnly":
-    "Chỉ quản trị viên xem được tình trạng tác vụ nền. Báo cáo này bao trùm công việc của toàn bộ bản triển khai, nên không hiển thị rộng hơn.",
+    "Xem tình trạng tác vụ nền cần quyền mà ghế của bạn không có. Báo cáo này bao trùm công việc của toàn bộ bản triển khai, nên không mở cho tất cả mọi người.",
   "jobs.empty":
     "Không có gì trong hàng đợi nền — không có việc đang chờ, đang chạy, đang thử lại hay đã chết.",
   "jobs.workspaceKinds": "Tổ chức này",
@@ -3936,7 +3936,7 @@ export const vi = {
   "settings.auditSub":
     "mọi hành động đều được quy trách — người, Agent hay connector",
   "settings.auditAdminOnly":
-    "Chỉ quản trị viên đọc được toàn bộ dấu vết. Nó ghi lại mọi người thực hiện và mọi bản ghi họ chạm tới, nên không mở rộng hơn.",
+    "Đọc toàn bộ dấu vết cần quyền mà ghế của bạn không có. Nó ghi lại mọi người thực hiện và mọi bản ghi họ chạm tới, nên không mở cho tất cả mọi người.",
   "settings.auditFilters": "Bộ lọc",
   "settings.auditEntries": "Nhật ký kiểm toán",
   "settings.auditTrailLabel": "Các hành động đã ghi",
@@ -3954,7 +3954,7 @@ export const vi = {
   "settings.due": "hạn {date}",
 
   "privacy.purposesReadOnly":
-    "Chế độ chỉ đọc — chỉ quản trị viên hoặc ops mới thêm được mục đích.",
+    "Chế độ chỉ đọc — thêm mục đích cần quyền mà ghế của bạn không có.",
   "privacy.addPurpose": "Thêm mục đích",
   "privacy.purposesRegistry": "Mục đích đã đăng ký",
   "privacy.purposeKey": "Khoá",
@@ -3965,7 +3965,7 @@ export const vi = {
     "Một mục đích đã tạo thì không đổi tên hay xoá được — danh mục chỉ thêm mới. Hãy chọn khoá thật cẩn thận.",
   "privacy.facetAll": "Tất cả",
   "privacy.inboxAdminOnly":
-    "Chỉ quản trị viên xem được yêu cầu của chủ thể dữ liệu. Danh sách nêu tên người đã yêu cầu, nên không mở rộng hơn.",
+    "Xem yêu cầu của chủ thể dữ liệu cần quyền mà ghế của bạn không có. Danh sách nêu tên người đã yêu cầu, nên không mở cho tất cả mọi người.",
   "privacy.overdue": "Quá hạn",
   "privacy.closed":
     "Đã đóng — một yêu cầu đã đóng không bao giờ mở lại. Mối lo mới là một yêu cầu mới.",
@@ -6204,6 +6204,8 @@ export const vi = {
   "license.refused.title": "Giấy phép của bản cài đặt này bị từ chối",
   "license.refused.body":
     "Token trong deployment đã được xuất trình và bị từ chối. Mọi thứ vẫn hoạt động, không giới hạn, cho đến khi token được thay — hãy kiểm tra token và đồng hồ của bản cài đặt.",
+  "license.seats.capacityOnly":
+    "Số chỗ đầy đủ mà bản cài đặt này đang dùng. Quyền hạn được cấp không thuộc phạm vi bạn xem.",
   "license.seats.title": "Số chỗ",
   "license.seats.used": "Chỗ đang dùng",
   "license.seats.granted": "Chỗ được cấp",
@@ -6431,7 +6433,7 @@ export const vi = {
   "extAccess.sub":
     "Mỗi đơn vị tiện ích đã ghép vào bản cài đặt này mang theo những gì, và vai trò nào được dùng. Chỉ dành cho quản trị viên.",
   "extAccess.adminOnly":
-    "Chỉ quản trị viên mới truy cập được phần tiện ích mở rộng.",
+    "Trang này cần quyền đọc các tiện ích mở rộng của bản triển khai và các vai trò của nó. Ghế của bạn chỉ có một hoặc không có quyền nào.",
   "extAccess.readOnly":
     "Chỗ ngồi của bạn chỉ đọc được trang này. Muốn đổi quyền cần chỗ ngồi đầy đủ.",
   "extAccess.empty":

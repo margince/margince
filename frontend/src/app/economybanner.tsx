@@ -13,11 +13,12 @@ import { useCan } from "./capability";
 
 export function EconomyBanner() {
   const t = useT();
-  // GET /ai/usage gates on automation:update, not on any AI-named object — the
-  // budget it reports is the automation runtime's, and the server treats
-  // seeing it as an operator concern. Binding this to a more intuitive object
-  // would 403 the banner for exactly the roles that are meant to see it.
-  const enabled = useCan("automation", "update");
+  // GET /ai/usage asks for ai_diagnostics:read (ai/usage.go). It used to ride
+  // automation:update — an AI reading behind another object's WRITE grant — and
+  // three client gates were left on that object when the server moved. The
+  // object is named here rather than a role so a rebinding fails in a test
+  // instead of 403-ing in a browser.
+  const enabled = useCan("ai_diagnostics", "read");
   const previousBand = useRef<string | undefined>(undefined);
   const [occurrence, setOccurrence] = useState(0);
   const [dismissedOccurrence, setDismissedOccurrence] = useState<string | null>(

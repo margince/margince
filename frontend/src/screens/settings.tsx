@@ -16,7 +16,7 @@ import {
 import { api, FIRST_PAGE } from "../api/client";
 import type { components, operations } from "../api/schema";
 import { dotTier } from "../app/autonomy";
-import { useCanWrite, useHoldsAdminRole } from "../app/capability";
+import { useCan, useCanWrite } from "../app/capability";
 import { isEntityKind } from "../app/entity";
 import { useRecordZone } from "../app/recordzone";
 import { navigate, navigateReplacing, type Route } from "../app/router";
@@ -1502,18 +1502,22 @@ function ToolRow({
 }
 
 // The danger-zone reset action: wipes the installation back to its first-boot
-// state. Double-gated client-side — the admin role AND the server-driven
+// state. Double-gated client-side — `system_reset:delete` AND the server-driven
 // `data_reset_available` flag on /me (never VITE_UI_PREVIEW_RESET, which is the
 // unrelated password-reset link) — so the affordance is invisible unless the
 // deployment armed the capability; the server gates the endpoint on that same
 // value and 404s it otherwise, regardless of what this card renders.
 //
-// This is admin-ONLY, and narrower than the Maintenance entry
-// that hosts it — that entry opens on the embedding_reindex read, so an ops seat
-// reaches it for the search index and simply finds no reset control. The
-// server's auth.RequireAdmin on /admin/reset-data admits only the literal
-// "admin" role (mirrors users-admin.tsx's isAdmin check), so neither a manager
-// nor an ops user may see a button that can only 403. The organization's name
+// Two conditions of different kinds, and it needs both: the grant says this
+// reader may wipe an installation that permits wiping, the flag says whether
+// this one does. The compiled default is false in every posture.
+//
+// The GRANT, not the admin role. compose/datareset.go asks
+// auth.Require(system_reset, delete) — it read auth.RequireAdmin while no
+// object named the verb, and this comment outlived that. A role edited to carry
+// the verb reaches the control and one that lost it does not, which the role
+// name could not say either way. The page above it now asks the same thing, so
+// a reader who gets here can use it. The organization's name
 // is not carried on MeResponse, so this never fetches or compares it
 // client-side: the input just has to be non-empty to enable the confirm
 // button, and the server is the sole judge of whether the typed text actually
@@ -1528,7 +1532,16 @@ function ResetDataCard() {
   const t = useT();
   const { locale } = useLocale();
   const me = useMe();
-  const isAdmin = useHoldsAdminRole();
+  // `system_reset:delete`, which is what POST /admin/reset-data asks for
+  // (compose/datareset.go). The literal admin role guarded it while no object
+  // named the verb; one does now, so a role edited to carry it reaches the
+  // control and one that lost it does not — which the role name could not say.
+  //
+  // `useCanWrite`: the reset is a POST, and a read seat is refused every
+  // mutation by the seat ceiling above RBAC (identity/admission.go) whatever
+  // its grants say. Offering the danger zone to one would be a button that
+  // types the workspace name and then 403s.
+  const canSee = useCanWrite("system_reset", "delete");
   const workspaceName = me.data?.workspace_name ?? "";
   const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState("");
@@ -1562,7 +1575,7 @@ function ResetDataCard() {
     },
   });
 
-  if (!isAdmin || !me.data?.data_reset_available) {
+  if (!canSee || !me.data?.data_reset_available) {
     return null;
   }
 
@@ -2444,16 +2457,16 @@ function AuditLogEntries({
   meUserId,
 }: Readonly<{ filters: AuditLogFilters; meUserId?: string }>): ReactNode {
   const t = useT();
-  // The full trail is the admin's alone (AAD-ROLE-4/A91, enforced by
-  // privacy.ListAuditLog), while the page it sits on opens for ops too — the
-  // consent registry above is theirs. So the read is gated here rather than
-  // merely rendered, and the fetch is disabled for anyone else: an ops seat
-  // reaching this page must not issue a call that can only 403, and must not be
-  // handed a red failure with a Retry that cannot succeed.
-  const isAdmin = useHoldsAdminRole();
+  // `audit_log:read`, which is what privacy.ListAuditLog asks for.
+  //
+  // It was the literal admin role (AAD-ROLE-4/A91) until the trail got an
+  // object of its own. Gated here rather than merely rendered, and the fetch is
+  // disabled for anyone without it: a reader must not issue a call that can
+  // only 403, nor be handed a red failure with a Retry that cannot succeed.
+  const canSee = useCan("audit_log", "read");
   const query = useInfiniteQuery({
     queryKey: ["audit-log", filters],
-    enabled: isAdmin,
+    enabled: canSee,
     initialPageParam: FIRST_PAGE,
     queryFn: async ({ pageParam }) => {
       const { data, error } = await api.GET("/audit-log", {
@@ -2473,7 +2486,7 @@ function AuditLogEntries({
   // kept as sequential branches rather than a nested ternary in the JSX below.
   // The whole trail is the control of ONE stacked row now, so no branch wraps
   // itself in a `PanelBody`: the row it sits in already owns the inset.
-  if (!isAdmin) {
+  if (!canSee) {
     // Withheld rather than absent, and the card keeps its place: an absent trail
     // on a page that opens for ops would read as "nothing has happened here",
     // which is a different claim from "this is not yours to read". The same
@@ -2531,7 +2544,7 @@ export function AuditLogCard() {
   // the viewer back to themselves. It is the BARE user id; the wire spells a
   // human actor "human:<uuid>", and ActorTag owns that difference.
   const meUserId = useMe().data?.user?.id;
-  const isAdmin = useHoldsAdminRole();
+  const canSee = useCan("audit_log", "read");
   const [filters, setFilters] = useState<AuditLogFilters>(UNFILTERED_AUDIT_LOG);
   // The row reads what is being typed; the entries read what has settled.
   const asked = useSettledAuditLogFilters(filters);
@@ -2553,7 +2566,7 @@ export function AuditLogCard() {
               inputs that narrow a list they cannot see are a control with
               nothing behind it. The TRAIL below stays and says why — absence
               there would claim nothing had happened. */}
-          {isAdmin && (
+          {canSee && (
             <Disclosure summary={t("settings.auditFilters")}>
               <AuditLogFilterFields filters={filters} onChange={setFilters} />
             </Disclosure>

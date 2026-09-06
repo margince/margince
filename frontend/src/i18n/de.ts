@@ -3937,7 +3937,7 @@ export const de = {
   "settings.jobsSub":
     "Was in der Warteschlange hängt und wessen Arbeit gescheitert ist.",
   "jobs.adminOnly":
-    "Nur ein Admin sieht den Zustand der Hintergrund-Jobs. Der Bericht umfasst die Arbeit der ganzen Installation und wird deshalb nicht breiter gezeigt.",
+    "Für den Zustand der Hintergrund-Jobs fehlt Ihrem Sitzplatz die Berechtigung. Der Bericht umfasst die Arbeit der ganzen Installation und steht deshalb nicht allen offen.",
   "jobs.empty":
     "Nichts in der Hintergrund-Warteschlange — nichts wartet, läuft, wiederholt sich oder ist tot.",
   "jobs.workspaceKinds": "Diese Organisation",
@@ -3990,7 +3990,7 @@ export const de = {
   "audit.noHumanAuthority": "Keine menschliche Autorisierung erfasst",
   "settings.auditSub": "jede Aktion, zugeordnet — Mensch, Agent oder Connector",
   "settings.auditAdminOnly":
-    "Nur Admins lesen den vollständigen Verlauf. Er hält jede handelnde Person und jeden berührten Datensatz fest — deshalb ist er nicht weiter zugänglich.",
+    "Zum Lesen des vollständigen Verlaufs fehlt Ihrem Sitzplatz die Berechtigung. Er hält jede handelnde Person und jeden berührten Datensatz fest — deshalb steht er nicht allen offen.",
   "settings.auditFilters": "Filter",
   "settings.auditEntries": "Audit-Log",
   "settings.auditTrailLabel": "Aufgezeichnete Aktionen",
@@ -4008,7 +4008,7 @@ export const de = {
   "settings.due": "fällig {date}",
 
   "privacy.purposesReadOnly":
-    "Nur-Lese-Ansicht — nur ein Admin oder Ops kann einen Zweck anlegen.",
+    "Nur-Lese-Ansicht — zum Anlegen eines Zwecks fehlt Ihrem Sitzplatz die Berechtigung.",
   "privacy.addPurpose": "Zweck hinzufügen",
   "privacy.purposesRegistry": "Erfasste Zwecke",
   "privacy.purposeKey": "Schlüssel",
@@ -4019,7 +4019,7 @@ export const de = {
     "Ein Zweck kann nach dem Anlegen nicht umbenannt oder entfernt werden — der Katalog ist append-only. Wähle den Schlüssel sorgfältig.",
   "privacy.facetAll": "Alle",
   "privacy.inboxAdminOnly":
-    "Nur Admins sehen Betroffenenanfragen. Sie nennen die Personen, die angefragt haben — deshalb ist die Liste nicht weiter zugänglich.",
+    "Für Betroffenenanfragen fehlt Ihrem Sitzplatz die Berechtigung. Sie nennen die Personen, die angefragt haben — deshalb steht die Liste nicht allen offen.",
   "privacy.overdue": "Überfällig",
   "privacy.closed":
     "Abgeschlossen — eine abgeschlossene Anfrage wird nie wieder geöffnet. Ein neues Anliegen ist eine neue Anfrage.",
@@ -6273,6 +6273,8 @@ export const de = {
   "license.refused.title": "Die Lizenz dieser Installation wurde abgelehnt",
   "license.refused.body":
     "Das Token im Deployment wurde vorgelegt und abgelehnt. Alles funktioniert weiter und unbegrenzt, bis es ersetzt wird — prüfe das Token und die Uhr der Installation.",
+  "license.seats.capacityOnly":
+    "Wie viele Vollplätze diese Installation nutzt. Was ihr zusteht, dürfen Sie nicht einsehen.",
   "license.seats.title": "Plätze",
   "license.seats.used": "Belegte Sitzplätze",
   "license.seats.granted": "Gewährte Sitzplätze",
@@ -6506,7 +6508,8 @@ export const de = {
   "extAccess.title": "Erweiterungen & Zugriff",
   "extAccess.sub":
     "Was jede zusammengesetzte Erweiterungseinheit in diese Installation eingebracht hat und welche Rolle sie nutzen darf. Nur für Admins.",
-  "extAccess.adminOnly": "Der Erweiterungszugriff steht nur Admins offen.",
+  "extAccess.adminOnly":
+    "Diese Seite braucht die Berechtigung, die Erweiterungen der Installation und ihre Rollen zu lesen. Ihr Sitzplatz hat nur eine davon oder keine.",
   "extAccess.readOnly":
     "Ihr Sitzplatz liest diese Seite. Eine Berechtigung zu ändern erfordert einen vollen Sitzplatz.",
   "extAccess.empty":
