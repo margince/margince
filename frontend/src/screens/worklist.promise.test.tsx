@@ -15,7 +15,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { WorklistScreen } from "./worklist";
-import { day, jsonResponse, row, stub } from "./worklist.testkit";
+import { day, row, stub } from "./worklist.testkit";
 
 afterEach(() => {
   cleanup();
@@ -72,7 +72,7 @@ describe("a promise the reader made", () => {
               ? await input.clone().text()
               : String(init?.body ?? "");
           sent.push(JSON.parse(body));
-          return jsonResponse({}, 204);
+          return new Response(null, { status: 204 });
         }
         return passthrough(input, init);
       }),
