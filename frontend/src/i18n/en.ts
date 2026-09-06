@@ -837,6 +837,13 @@ export const en = {
   "org.filterSizeBandAll": "Any size",
   "person.consent": "Consent",
   "consent.grant": "Grant",
+  // Submitted as the proof row's wording when an operator records a grant
+  // here. It does NOT quote a screen the subject read — this door has none —
+  // so it says what actually happened: a named operator attested to a consent
+  // obtained away from the product. A canned subject-facing sentence would be
+  // the fabricated proof this rule exists to remove.
+  "consent.operatorWording":
+    "Recorded in the CRM by a member of staff, who attested that this person gave their consent for {label} outside the product. No wording was shown to them here.",
   "consent.withdraw": "Withdraw",
   "consent.doiBySubject":
     "This purpose is confirmed by the person themselves, through a link mailed to their own address. Use \u201cAsk them to confirm their details\u201d below.",

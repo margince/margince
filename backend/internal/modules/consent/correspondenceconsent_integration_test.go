@@ -33,6 +33,10 @@ func (e *qualifyingEnv) grant(t *testing.T, state string) {
 		PurposeID: ids.From[ids.PurposeKind](ids.MustParse(e.correspondence.ID)),
 		NewState:  state,
 		Source:    &source,
+		// Only a grant needs it, and passing it for a withdrawal too keeps this
+		// helper one shape. wordingFor drops it on a withdrawal, so the proof
+		// row does not claim a sentence that accompanied the grant.
+		PolicyText: &grantWording,
 	}); err != nil {
 		t.Fatalf("recording consent %q: %v", state, err)
 	}

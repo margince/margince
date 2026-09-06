@@ -70,6 +70,13 @@ const (
 )
 
 // consentCarrySpec is one carry's answers to the four questions above.
+// carriedWordingVersion names the wording a carried withdrawal records.
+//
+// A carry writes a note, not a sentence the subject read, so this identifies
+// the note's own text rather than any consent screen. It moves when that text
+// moves, which is what lets an old proof row still say which wording it carried.
+const carriedWordingVersion = "carry-v1"
+
 type consentCarrySpec struct {
 	// name is what a reader of an error or a failing gate sees.
 	name string
@@ -80,6 +87,13 @@ type consentCarrySpec struct {
 	// source is written to both consent_event.source and
 	// consent_event.policy_version, as the pre-shared copies did.
 	source string
+	// carriedWordingVersion names the wording below. It is a version id, and the
+	// source ("merge"/"promotion") used to be written into this column — a value
+	// that answers "how did this row get here", not "which sentence is this".
+	// consent_event_wording_pairs stores the note and its version together, so
+	// the pair is filled with a real version rather than a second copy of the
+	// source.
+	//
 	// policyText is the sentence a reader of the proof row sees. Each carry
 	// says what actually happened to the record, so an audit reading the event
 	// alone can tell a merge from a promotion.
@@ -183,9 +197,9 @@ func flipCarriedWithdrawals(ctx context.Context, tx pgx.Tx, spec consentCarrySpe
 		)
 		INSERT INTO consent_event (%[2]s, purpose_id, new_state, source,
 		                           policy_text, policy_version, captured_at, captured_by)
-		SELECT $2, purpose_id, 'withdrawn', $5, $6, $5, $3, $4
+		SELECT $2, purpose_id, 'withdrawn', $5, $6, $7, $3, $4
 		FROM flipped`, spec.from, spec.to),
-		fromID, toID, now, by, spec.source, spec.policyText)
+		fromID, toID, now, by, spec.source, spec.policyText, carriedWordingVersion)
 	if err != nil {
 		return fmt.Errorf("carry withdrawals onto the surviving record: %w", err)
 	}

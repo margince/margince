@@ -1632,6 +1632,7 @@ public.consent_event.consent_event_person_id_fkey FOREIGN KEY (person_id) REFERE
 public.consent_event.consent_event_pkey PRIMARY KEY (id)
 public.consent_event.consent_event_purpose_id_fkey FOREIGN KEY (purpose_id) REFERENCES consent_purpose(id) ON DELETE RESTRICT
 public.consent_event.consent_event_subject CHECK (((person_id IS NOT NULL) OR (lead_id IS NOT NULL)))
+public.consent_event.consent_event_wording_pairs CHECK (((policy_text IS NULL) = (policy_version IS NULL)))
 public.consent_event.double_opt_in_confirmed_at timestamp with time zone gen=- def=-
 public.consent_event.id uuid NOT NULL gen=- def=uuidv7()
 public.consent_event.issuance_trigger text gen=- def=-
@@ -1639,8 +1640,8 @@ public.consent_event.lawful_basis text gen=- def=-
 public.consent_event.lead_id uuid gen=- def=-
 public.consent_event.new_state text NOT NULL gen=- def=-
 public.consent_event.person_id uuid gen=- def=-
-public.consent_event.policy_text text NOT NULL gen=- def=-
-public.consent_event.policy_version text NOT NULL gen=- def=-
+public.consent_event.policy_text text gen=- def=-
+public.consent_event.policy_version text gen=- def=-
 public.consent_event.purpose_id uuid NOT NULL gen=- def=-
 public.consent_event.source text NOT NULL gen=- def=-
 public.consent_event_pkey CREATE UNIQUE INDEX consent_event_pkey ON public.consent_event USING btree (id)

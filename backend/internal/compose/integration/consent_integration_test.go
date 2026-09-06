@@ -317,6 +317,7 @@ func TestConsentDoubleOptInNorm(t *testing.T) {
 	}
 	status := c.Call(t, "POST", "/v1/people/"+c.personID+"/consent", AnyMap{
 		"purpose_id": c.purposes["marketing_email"], "new_state": "granted",
+		"wording": "Yes, you may contact me about this.",
 	}, nil, &problem)
 	if status != 422 {
 		t.Fatalf("DOI-less marketing grant → %d, want 422", status)
@@ -324,6 +325,7 @@ func TestConsentDoubleOptInNorm(t *testing.T) {
 	// A fabricated token proves nothing: only a server-issued one confirms.
 	if status := c.Call(t, "POST", "/v1/people/"+c.personID+"/consent", AnyMap{
 		"purpose_id": c.purposes["marketing_email"], "new_state": "granted",
+		"wording":             "Yes, you may contact me about this.",
 		"double_opt_in_token": "doi-token-forged",
 	}, nil, nil); status != 422 {
 		t.Fatalf("forged DOI grant → %d, want 422", status)
@@ -425,6 +427,7 @@ func TestConsentProofLogIsAppendOnlyAndIdempotent(t *testing.T) {
 	grant := func() int {
 		return c.Call(t, "POST", "/v1/people/"+c.personID+"/consent", AnyMap{
 			"purpose_id": c.purposes["transactional"], "new_state": "granted",
+			"wording": "Yes, you may contact me about this.",
 		}, nil, nil)
 	}
 	if status := grant(); status != http.StatusOK {

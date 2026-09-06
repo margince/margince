@@ -345,6 +345,9 @@ func admitRecord(ctx context.Context, in RecordInput) (subject, ConsentState, er
 	if err != nil {
 		return subject{}, "", err
 	}
+	if err := requireRecordableWording(state, in.PolicyText, in.PolicyVersion); err != nil {
+		return subject{}, "", err
+	}
 	return sub, state, nil
 }
 
