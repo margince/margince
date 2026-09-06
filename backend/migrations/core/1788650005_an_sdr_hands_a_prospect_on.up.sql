@@ -51,6 +51,13 @@ CREATE TABLE IF NOT EXISTS sdr_handoff_reason (
 CREATE UNIQUE INDEX IF NOT EXISTS sdr_handoff_reason_label_once
     ON sdr_handoff_reason (applies_to, lower(btrim(label)));
 
+-- Redundant against the primary key on its own, and load-bearing as a FOREIGN
+-- KEY TARGET: it is what lets a handoff reference (reason_id, applies_to) as a
+-- pair, so the database refuses a rejection citing a recycle-only reason. A
+-- plain reference to the id would be satisfied by any row in the catalog.
+ALTER TABLE sdr_handoff_reason
+    ADD CONSTRAINT sdr_handoff_reason_id_kind UNIQUE (id, applies_to);
+
 -- The handoff itself.
 --
 -- ONE ROW PER HANDOFF, carrying its CURRENT state, with the transitions kept
@@ -75,14 +82,24 @@ CREATE TABLE IF NOT EXISTS sdr_handoff (
     -- the handoff is open, and required the moment it is not — the CHECK below
     -- is what makes "rejected with no reason" unrepresentable rather than
     -- merely discouraged.
-    reason_id uuid REFERENCES sdr_handoff_reason(id),
+    -- The composite reference is what ties the reason to the transition it
+    -- explains. A plain reference to the id alone lets a rejection cite a
+    -- recycle-only reason: both rows exist, the FK is satisfied, and the report
+    -- then counts "needs more qualification first" as a reason people are
+    -- refused. The pair is carried on the row so the database can check it.
+    reason_id uuid,
+    reason_applies_to text,
     -- What the decider wanted to say beyond the reason. Secondary by design: the
     -- countable answer is reason_id, and this is the sentence a human adds.
     note text,
     -- The deal the acceptance created or linked. NULL until accepted; the
     -- anchor #4492's held-meeting conversion reads rather than guessing from a
     -- deal that merely shares a company.
-    deal_id uuid REFERENCES deal(id) ON DELETE SET NULL,
+    -- RESTRICT, not SET NULL. Nulling this on a deal delete would silently
+    -- destroy the conversion anchor and leave an accepted handoff violating its
+    -- own constraint; a deal that an acceptance produced is not a row to remove
+    -- while the handoff still points at it.
+    deal_id uuid REFERENCES deal(id) ON DELETE RESTRICT,
     submitted_at timestamptz NOT NULL DEFAULT now(),
     decided_at timestamptz,
     created_at timestamptz NOT NULL DEFAULT now(),
@@ -97,15 +114,31 @@ CREATE TABLE IF NOT EXISTS sdr_handoff (
     -- accepted handoff would describe a refusal that never happened.
     CONSTRAINT sdr_handoff_reason_when_refused CHECK (
         (status IN ('rejected', 'recycled')) = (reason_id IS NOT NULL)),
-    -- A decided handoff knows when. Same both-or-neither shape the reply verdict
-    -- uses one table over: a moment with no decision claims one that was never
-    -- made, and a decision with no moment cannot be aged or ordered.
+    -- The reason's own kind and the status it explains agree. Without this a
+    -- rejection may cite a recycle reason and the report counts it under the
+    -- wrong question.
+    CONSTRAINT sdr_handoff_reason_matches_status CHECK (
+        reason_applies_to IS NULL OR reason_applies_to = status),
+    CONSTRAINT sdr_handoff_reason_pair CHECK (
+        (reason_id IS NULL) = (reason_applies_to IS NULL)),
+    FOREIGN KEY (reason_id, reason_applies_to)
+        REFERENCES sdr_handoff_reason (id, applies_to) ON DELETE RESTRICT,
+    -- A TERMINAL handoff knows when it was decided. Recycled is deliberately not
+    -- terminal and carries no decided_at: sending a prospect back to the SDR is
+    -- an answer to this round and an invitation to another, so the handoff
+    -- returns to the queue rather than ending. A recycled row that carried a
+    -- decision moment would be closed, which is exactly the contradiction an
+    -- earlier draft of this file described in prose and made unreachable in SQL.
     CONSTRAINT sdr_handoff_decided_stamped CHECK (
-        (status = 'submitted') = (decided_at IS NULL)),
-    -- A deal belongs to an acceptance. Attaching one to a rejected handoff would
-    -- credit an SDR for a deal their handoff was refused for.
+        (status IN ('accepted', 'rejected')) = (decided_at IS NOT NULL)),
+    -- A deal belongs to an acceptance, and an acceptance HAS one. Both
+    -- directions, because each failure is real: a deal on a rejection would
+    -- credit an SDR for work their handoff was refused for, and an acceptance
+    -- without one is the anchor missing from the only place that can hold it —
+    -- which sends the held-meeting conversion back to guessing from a deal that
+    -- merely shares a company.
     CONSTRAINT sdr_handoff_deal_when_accepted CHECK (
-        deal_id IS NULL OR status = 'accepted')
+        (status = 'accepted') = (deal_id IS NOT NULL))
 );
 
 -- The transitions, append-only.
@@ -121,12 +154,22 @@ CREATE TABLE IF NOT EXISTS sdr_handoff_event (
     -- it is the previous event's to_status, and storing it twice is how two
     -- copies of one history come to disagree.
     to_status text NOT NULL,
-    reason_id uuid REFERENCES sdr_handoff_reason(id),
+    -- The same pair as the handoff row, held the same way: a history that
+    -- recorded a rejection citing a recycle reason would answer "why were my
+    -- handoffs rejected" with a reason nobody was ever rejected for.
+    reason_id uuid,
+    reason_applies_to text,
     note text,
     actor text NOT NULL,
     occurred_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT sdr_handoff_event_status CHECK (
-        to_status IN ('submitted', 'accepted', 'rejected', 'recycled'))
+        to_status IN ('submitted', 'accepted', 'rejected', 'recycled')),
+    CONSTRAINT sdr_handoff_event_reason_pair CHECK (
+        (reason_id IS NULL) = (reason_applies_to IS NULL)),
+    CONSTRAINT sdr_handoff_event_reason_matches CHECK (
+        reason_applies_to IS NULL OR reason_applies_to = to_status),
+    FOREIGN KEY (reason_id, reason_applies_to)
+        REFERENCES sdr_handoff_reason (id, applies_to) ON DELETE RESTRICT
 );
 
 -- An SDR's own handoffs, newest first: the read behind "what happened to what I

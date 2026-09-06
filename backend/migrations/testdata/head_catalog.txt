@@ -4671,17 +4671,20 @@ public.sdr_handoff.lead_id uuid gen=- def=-
 public.sdr_handoff.note text gen=- def=-
 public.sdr_handoff.organization_id uuid gen=- def=-
 public.sdr_handoff.person_id uuid gen=- def=-
+public.sdr_handoff.reason_applies_to text gen=- def=-
 public.sdr_handoff.reason_id uuid gen=- def=-
 public.sdr_handoff.sdr_handoff_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES app_user(id)
-public.sdr_handoff.sdr_handoff_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE SET NULL
-public.sdr_handoff.sdr_handoff_deal_when_accepted CHECK (((deal_id IS NULL) OR (status = 'accepted'::text)))
-public.sdr_handoff.sdr_handoff_decided_stamped CHECK (((status = 'submitted'::text) = (decided_at IS NULL)))
+public.sdr_handoff.sdr_handoff_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE RESTRICT
+public.sdr_handoff.sdr_handoff_deal_when_accepted CHECK (((status = 'accepted'::text) = (deal_id IS NOT NULL)))
+public.sdr_handoff.sdr_handoff_decided_stamped CHECK (((status = ANY (ARRAY['accepted'::text, 'rejected'::text])) = (decided_at IS NOT NULL)))
 public.sdr_handoff.sdr_handoff_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE CASCADE
 public.sdr_handoff.sdr_handoff_one_subject CHECK (((lead_id IS NULL) <> (person_id IS NULL)))
 public.sdr_handoff.sdr_handoff_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organization(id) ON DELETE SET NULL
 public.sdr_handoff.sdr_handoff_person_id_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
 public.sdr_handoff.sdr_handoff_pkey PRIMARY KEY (id)
-public.sdr_handoff.sdr_handoff_reason_id_fkey FOREIGN KEY (reason_id) REFERENCES sdr_handoff_reason(id)
+public.sdr_handoff.sdr_handoff_reason_id_reason_applies_to_fkey FOREIGN KEY (reason_id, reason_applies_to) REFERENCES sdr_handoff_reason(id, applies_to) ON DELETE RESTRICT
+public.sdr_handoff.sdr_handoff_reason_matches_status CHECK (((reason_applies_to IS NULL) OR (reason_applies_to = status)))
+public.sdr_handoff.sdr_handoff_reason_pair CHECK (((reason_id IS NULL) = (reason_applies_to IS NULL)))
 public.sdr_handoff.sdr_handoff_reason_when_refused CHECK (((status = ANY (ARRAY['rejected'::text, 'recycled'::text])) = (reason_id IS NOT NULL)))
 public.sdr_handoff.sdr_handoff_status CHECK ((status = ANY (ARRAY['submitted'::text, 'accepted'::text, 'rejected'::text, 'recycled'::text])))
 public.sdr_handoff.sdr_handoff_submitted_by_fkey FOREIGN KEY (submitted_by) REFERENCES app_user(id)
@@ -4696,10 +4699,13 @@ public.sdr_handoff_event.handoff_id uuid NOT NULL gen=- def=-
 public.sdr_handoff_event.id uuid NOT NULL gen=- def=uuidv7()
 public.sdr_handoff_event.note text gen=- def=-
 public.sdr_handoff_event.occurred_at timestamp with time zone NOT NULL gen=- def=now()
+public.sdr_handoff_event.reason_applies_to text gen=- def=-
 public.sdr_handoff_event.reason_id uuid gen=- def=-
 public.sdr_handoff_event.sdr_handoff_event_handoff_id_fkey FOREIGN KEY (handoff_id) REFERENCES sdr_handoff(id) ON DELETE CASCADE
 public.sdr_handoff_event.sdr_handoff_event_pkey PRIMARY KEY (id)
-public.sdr_handoff_event.sdr_handoff_event_reason_id_fkey FOREIGN KEY (reason_id) REFERENCES sdr_handoff_reason(id)
+public.sdr_handoff_event.sdr_handoff_event_reason_id_reason_applies_to_fkey FOREIGN KEY (reason_id, reason_applies_to) REFERENCES sdr_handoff_reason(id, applies_to) ON DELETE RESTRICT
+public.sdr_handoff_event.sdr_handoff_event_reason_matches CHECK (((reason_applies_to IS NULL) OR (reason_applies_to = to_status)))
+public.sdr_handoff_event.sdr_handoff_event_reason_pair CHECK (((reason_id IS NULL) = (reason_applies_to IS NULL)))
 public.sdr_handoff_event.sdr_handoff_event_status CHECK ((to_status = ANY (ARRAY['submitted'::text, 'accepted'::text, 'rejected'::text, 'recycled'::text])))
 public.sdr_handoff_event.to_status text NOT NULL gen=- def=-
 public.sdr_handoff_event_pkey CREATE UNIQUE INDEX sdr_handoff_event_pkey ON public.sdr_handoff_event USING btree (id)
@@ -4711,12 +4717,14 @@ public.sdr_handoff_reason.created_at timestamp with time zone NOT NULL gen=- def
 public.sdr_handoff_reason.id uuid NOT NULL gen=- def=uuidv7()
 public.sdr_handoff_reason.label text NOT NULL gen=- def=-
 public.sdr_handoff_reason.sdr_handoff_reason_applies_to CHECK ((applies_to = ANY (ARRAY['rejected'::text, 'recycled'::text])))
+public.sdr_handoff_reason.sdr_handoff_reason_id_kind UNIQUE (id, applies_to)
 public.sdr_handoff_reason.sdr_handoff_reason_label_present CHECK ((length(btrim(label)) > 0))
 public.sdr_handoff_reason.sdr_handoff_reason_pkey PRIMARY KEY (id)
 public.sdr_handoff_reason.sort_order integer NOT NULL gen=- def=0
 public.sdr_handoff_reason.system boolean NOT NULL gen=- def=false
 public.sdr_handoff_reason.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.sdr_handoff_reason.version bigint NOT NULL gen=- def=1
+public.sdr_handoff_reason_id_kind CREATE UNIQUE INDEX sdr_handoff_reason_id_kind ON public.sdr_handoff_reason USING btree (id, applies_to)
 public.sdr_handoff_reason_label_once CREATE UNIQUE INDEX sdr_handoff_reason_label_once ON public.sdr_handoff_reason USING btree (applies_to, lower(btrim(label)))
 public.sdr_handoff_reason_pkey CREATE UNIQUE INDEX sdr_handoff_reason_pkey ON public.sdr_handoff_reason USING btree (id)
 public.session acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false

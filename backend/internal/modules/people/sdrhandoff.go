@@ -136,7 +136,7 @@ func (s *Store) SubmitHandoff(ctx context.Context, in NewSDRHandoff) (ids.UUID, 
 		).Scan(&id); err != nil {
 			return fmt.Errorf("people: submitting the handoff: %w", err)
 		}
-		if err := appendHandoffEvent(ctx, tx, id, HandoffSubmitted, nil, in.Note, actor.ID); err != nil {
+		if err := appendHandoffEvent(ctx, tx, id, HandoffSubmitted, nil, nil, in.Note, actor.ID); err != nil {
 			return err
 		}
 		if _, err := storekit.AuditEvent(ctx, tx, "create", "sdr_handoff", id, map[string]any{
@@ -181,19 +181,45 @@ func (s *Store) DecideHandoff(ctx context.Context, id ids.UUID, in HandoffDecisi
 		return errNoActorForHandoff
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// The SUBJECT's write scope, not the handoff's. A handoff is a record
+		// about a lead or a person, and a seat that may not write that record has
+		// no business deciding what happens to it — auth.Require above answers
+		// "may this role decide handoffs at all", which is a different question
+		// from "may this seat touch THIS prospect". Without it any seat holding
+		// lead:update could accept a colleague's handoff on an account they
+		// cannot see.
+		if err := ensureHandoffSubjectWritable(ctx, tx, id); err != nil {
+			return err
+		}
+		// An INACTIVE reason is not a choice a decider may make today. The row
+		// stays for the history that points at it — deactivating is how an
+		// operator retires a reason without orphaning last quarter's rejections —
+		// but a new decision citing one would record a reason nobody is offered.
+		if err := refuseRetiredReason(ctx, tx, in.ReasonID); err != nil {
+			return err
+		}
+		kind := reasonKindFor(in)
 		tag, err := tx.Exec(ctx, `
 			UPDATE sdr_handoff
-			   SET status = $2, reason_id = $3, note = coalesce(nullif($4, ''), note),
-			       deal_id = $5, decided_at = now(), updated_at = now(), version = version + 1
-			 WHERE id = $1 AND status = $6`,
-			id, in.Status, in.ReasonID, in.Note, in.DealID, HandoffSubmitted)
+			   SET status = $2, reason_id = $3, reason_applies_to = $4,
+			       note = coalesce(nullif($5, ''), note),
+			       deal_id = $6,
+			       decided_at = CASE WHEN $2 IN ('accepted', 'rejected') THEN now() END,
+			       -- An acceptance CLAIMS the handoff for whoever accepted it. A
+			       -- queue handoff is offered to nobody in particular, and leaving
+			       -- assigned_to null after somebody took it loses the one fact an
+			       -- "who owns this now" read needs.
+			       assigned_to = CASE WHEN $2 = 'accepted' THEN $7::uuid ELSE assigned_to END,
+			       updated_at = now(), version = version + 1
+			 WHERE id = $1 AND status = $8`,
+			id, in.Status, in.ReasonID, kind, in.Note, in.DealID, actor.UserID, HandoffSubmitted)
 		if err != nil {
 			return fmt.Errorf("people: deciding the handoff: %w", err)
 		}
 		if tag.RowsAffected() == 0 {
 			return handoffDecisionMiss(ctx, tx, id)
 		}
-		if err := appendHandoffEvent(ctx, tx, id, in.Status, in.ReasonID, in.Note, actor.ID); err != nil {
+		if err := appendHandoffEvent(ctx, tx, id, in.Status, in.ReasonID, kind, in.Note, actor.ID); err != nil {
 			return err
 		}
 		if _, err := storekit.AuditEvent(ctx, tx, "update", "sdr_handoff", id, map[string]any{
@@ -247,11 +273,11 @@ func validateHandoffDecision(in HandoffDecision) error {
 // appendHandoffEvent records one transition. Both writers go through it, so the
 // submission and every later decision cannot come to be recorded two ways.
 func appendHandoffEvent(
-	ctx context.Context, tx pgx.Tx, id ids.UUID, status string, reasonID *ids.UUID, note, actor string,
+	ctx context.Context, tx pgx.Tx, id ids.UUID, status string, reasonID *ids.UUID, reasonKind *string, note, actor string,
 ) error {
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO sdr_handoff_event (handoff_id, to_status, reason_id, note, actor)
-		VALUES ($1, $2, $3, nullif($4, ''), $5)`, id, status, reasonID, note, actor); err != nil {
+		INSERT INTO sdr_handoff_event (handoff_id, to_status, reason_id, reason_applies_to, note, actor)
+		VALUES ($1, $2, $3, $4, nullif($5, ''), $6)`, id, status, reasonID, reasonKind, note, actor); err != nil {
 		return fmt.Errorf("people: recording the handoff transition: %w", err)
 	}
 	return nil
@@ -265,3 +291,121 @@ var (
 	errHandoffDealOnRefusal = errors.New(
 		"a refused handoff carries no deal: attaching one would credit the submitter for work their handoff was refused for")
 )
+
+// ensureHandoffSubjectWritable applies the SUBJECT's row scope to a handoff
+// decision.
+//
+// The handoff has no owner column of its own to scope by, and inventing one
+// would be a second answer to a question the lead and the person already
+// answer. So the gate is the subject's: a seat that may write this prospect may
+// decide what happens to it, and one that may not gets the 404 every other
+// out-of-scope write gets, so the refusal does not disclose that the handoff is
+// there.
+func ensureHandoffSubjectWritable(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+	var leadID, personID *ids.UUID
+	err := tx.QueryRow(ctx,
+		`SELECT lead_id, person_id FROM sdr_handoff WHERE id = $1`, id).Scan(&leadID, &personID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return apperrors.ErrNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("people: reading the handoff's subject: %w", err)
+	}
+	// Exactly one is set — the sdr_handoff_one_subject constraint holds it — so
+	// this reaches the table that actually carries the row scope.
+	if leadID != nil {
+		return auth.EnsureWritable(ctx, tx, "lead", *leadID)
+	}
+	if personID != nil {
+		return auth.EnsureWritable(ctx, tx, "person", *personID)
+	}
+	return errHandoffNeedsOneSubject
+}
+
+// reasonKindFor is the reason's own category, carried beside its id so the
+// database can check the pair.
+//
+// It is DERIVED from the decision rather than taken from the caller: the two
+// must agree, and a caller that could supply both could supply a mismatched
+// pair for the composite key to reject — a 500 where the product means to
+// refuse a rejection citing a recycle reason with a sentence.
+func reasonKindFor(in HandoffDecision) *string {
+	if in.ReasonID == nil {
+		return nil
+	}
+	kind := in.Status
+	return &kind
+}
+
+// ResubmitHandoff puts a recycled handoff back in front of a receiver.
+//
+// Recycling is the one decision that does not end a handoff: it says "not now,
+// worth another try", and a prospect that could never be handed on again would
+// make that an elaborate rejection. The CAS is `status = recycled`, so this
+// reopens exactly the handoffs that were sent back and nothing else.
+//
+// The reason and the decision moment go with it. A reopened handoff is waiting
+// again, and a reason left standing would answer "why was this refused" about a
+// round that is no longer the current one — the history is where that answer
+// lives.
+func (s *Store) ResubmitHandoff(ctx context.Context, id ids.UUID, assignTo *ids.UUID) error {
+	if err := auth.Require(ctx, rbacHandoff, principal.ActionUpdate); err != nil {
+		return err
+	}
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		return errNoActorForHandoff
+	}
+	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := ensureHandoffSubjectWritable(ctx, tx, id); err != nil {
+			return err
+		}
+		tag, err := tx.Exec(ctx, `
+			UPDATE sdr_handoff
+			   SET status = $2, reason_id = NULL, reason_applies_to = NULL, decided_at = NULL,
+			       assigned_to = coalesce($3::uuid, assigned_to),
+			       submitted_at = now(), updated_at = now(), version = version + 1
+			 WHERE id = $1 AND status = $4`,
+			id, HandoffSubmitted, assignTo, HandoffRecycled)
+		if err != nil {
+			return fmt.Errorf("people: resubmitting the handoff: %w", err)
+		}
+		if tag.RowsAffected() == 0 {
+			return errHandoffNotRecycled
+		}
+		if err := appendHandoffEvent(ctx, tx, id, HandoffSubmitted, nil, nil, "", actor.ID); err != nil {
+			return err
+		}
+		if _, err := storekit.AuditEvent(ctx, tx, "update", "sdr_handoff", id, map[string]any{
+			handoffStatusKey: HandoffSubmitted, "resubmitted": true,
+		}); err != nil {
+			return err
+		}
+		return nil
+	})
+}
+
+// refuseRetiredReason keeps a deactivated reason out of a NEW decision.
+func refuseRetiredReason(ctx context.Context, tx pgx.Tx, reasonID *ids.UUID) error {
+	if reasonID == nil {
+		return nil
+	}
+	var active bool
+	err := tx.QueryRow(ctx, `SELECT active FROM sdr_handoff_reason WHERE id = $1`, *reasonID).Scan(&active)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return apperrors.ErrNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("people: reading the reason's standing: %w", err)
+	}
+	if !active {
+		return errHandoffReasonRetired
+	}
+	return nil
+}
+
+var errHandoffReasonRetired = errors.New(
+	"that reason has been retired: it stays on the handoffs already decided for it, and is not one to choose now")
+
+var errHandoffNotRecycled = errors.New(
+	"only a recycled handoff is resubmitted: an open one is already waiting, and a decided one is closed")

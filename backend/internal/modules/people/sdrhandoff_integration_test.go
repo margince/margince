@@ -99,7 +99,7 @@ func TestARejectedHandoffMustNameItsReason(t *testing.T) {
 func TestARejectionRecordsTheReasonItNames(t *testing.T) {
 	e := setupPromoteConsent(t)
 	lead := e.seedLead(t, "handoff-reason@example.test")
-	reason := e.someHandoffReason(t, "rejected")
+	reason := e.someHandoffReason(t, HandoffRejected)
 	id, err := e.store.SubmitHandoff(e.ctx, NewSDRHandoff{LeadID: leadPtr(lead)})
 	if err != nil {
 		t.Fatalf("submitting the handoff: %v", err)
@@ -132,7 +132,7 @@ func TestARejectionRecordsTheReasonItNames(t *testing.T) {
 func TestAHandoffIsDecidedOnlyOnce(t *testing.T) {
 	e := setupPromoteConsent(t)
 	lead := e.seedLead(t, "handoff-twice@example.test")
-	reason := e.someHandoffReason(t, "rejected")
+	reason := e.someHandoffReason(t, HandoffRejected)
 	id, err := e.store.SubmitHandoff(e.ctx, NewSDRHandoff{LeadID: leadPtr(lead)})
 	if err != nil {
 		t.Fatalf("submitting the handoff: %v", err)
@@ -192,7 +192,7 @@ func TestAHandoffNamesExactlyOneSubject(t *testing.T) {
 func TestARefusedHandoffCarriesNoDeal(t *testing.T) {
 	e := setupPromoteConsent(t)
 	lead := e.seedLead(t, "handoff-nodeal@example.test")
-	reason := e.someHandoffReason(t, "rejected")
+	reason := e.someHandoffReason(t, HandoffRejected)
 	deal := e.seedDealForHandoff(t)
 	id, err := e.store.SubmitHandoff(e.ctx, NewSDRHandoff{LeadID: leadPtr(lead)})
 	if err != nil {
@@ -322,4 +322,173 @@ func (e *promoteConsentEnv) seedPersonForHandoff(t *testing.T) ids.UUID {
 func leadPtr(id ids.LeadID) *ids.UUID {
 	out := id.UUID
 	return &out
+}
+
+// A recycled handoff goes BACK, and can be handed on again.
+//
+// This is the transition an earlier draft described in prose and made
+// unreachable in SQL: the CAS admitted only `submitted`, so a recycled handoff
+// was terminal and "worth another try, not now" was an elaborate rejection.
+func TestARecycledHandoffCanBeHandedOnAgain(t *testing.T) {
+	e := setupPromoteConsent(t)
+	lead := e.seedLead(t, "handoff-recycle@example.test")
+	reason := e.someHandoffReason(t, HandoffRecycled)
+	deal := e.seedDealForHandoff(t)
+	id, err := e.store.SubmitHandoff(e.ctx, NewSDRHandoff{LeadID: leadPtr(lead)})
+	if err != nil {
+		t.Fatalf("submitting the handoff: %v", err)
+	}
+	if err := e.store.DecideHandoff(e.ctx, id, HandoffDecision{
+		Status: HandoffRecycled, ReasonID: &reason,
+	}); err != nil {
+		t.Fatalf("recycling the handoff: %v", err)
+	}
+
+	// A recycled handoff is NOT closed: it carries no decision moment, because
+	// the round ended and the handoff did not.
+	if got := e.readHandoff(t, id); got.decidedAt != nil {
+		t.Error("a recycled handoff carries a decision moment — it reads as closed")
+	}
+
+	if err := e.store.ResubmitHandoff(e.ctx, id, nil); err != nil {
+		t.Fatalf("resubmitting: %v", err)
+	}
+	got := e.readHandoff(t, id)
+	if got.status != HandoffSubmitted {
+		t.Fatalf("status = %q after resubmit, want it waiting again", got.status)
+	}
+	// The recycle reason is cleared: it answered the round that is over, and
+	// leaving it would say this open handoff was refused.
+	if got.reasonID != nil {
+		t.Error("the resubmitted handoff still carries the recycle reason")
+	}
+
+	// And it can now be accepted, which is what makes the round-trip real.
+	if err := e.store.DecideHandoff(e.ctx, id, HandoffDecision{
+		Status: HandoffAccepted, DealID: &deal,
+	}); err != nil {
+		t.Fatalf("accepting after a recycle: %v", err)
+	}
+
+	// Four transitions, in order. The history is the only place that says this
+	// prospect was sent back once before it was taken.
+	events := e.handoffEvents(t, id)
+	want := []string{HandoffSubmitted, HandoffRecycled, HandoffSubmitted, HandoffAccepted}
+	if len(events) != len(want) {
+		t.Fatalf("events = %v, want %v", events, want)
+	}
+	for i := range want {
+		if events[i] != want[i] {
+			t.Fatalf("events = %v, want %v", events, want)
+		}
+	}
+}
+
+// An acceptance REQUIRES its deal. Without one the conversion anchor is missing
+// from the only place that can hold it, which sends the held-meeting rate back
+// to guessing from a deal that merely shares a company.
+func TestAnAcceptanceWithoutADealIsRefused(t *testing.T) {
+	e := setupPromoteConsent(t)
+	lead := e.seedLead(t, "handoff-nodealaccept@example.test")
+	id, err := e.store.SubmitHandoff(e.ctx, NewSDRHandoff{LeadID: leadPtr(lead)})
+	if err != nil {
+		t.Fatalf("submitting the handoff: %v", err)
+	}
+
+	err = e.store.DecideHandoff(e.ctx, id, HandoffDecision{Status: HandoffAccepted})
+
+	if err == nil {
+		t.Fatal("an acceptance with no deal was allowed — the conversion anchor is missing")
+	}
+	if got := e.readHandoff(t, id); got.status != HandoffSubmitted {
+		t.Errorf("status = %q, want the handoff still open", got.status)
+	}
+}
+
+// A rejection may not cite a RECYCLE reason.
+//
+// Both rows exist and a plain foreign key would be satisfied by either, so the
+// report would count "needs more qualification first" among the reasons people
+// are refused. The composite key is what refuses it, and this drives the
+// database rather than the Go check in front of it.
+func TestARejectionCannotCiteARecycleReason(t *testing.T) {
+	e := setupPromoteConsent(t)
+	lead := e.seedLead(t, "handoff-crossreason@example.test")
+	recycleReason := e.someHandoffReason(t, HandoffRecycled)
+	id, err := e.store.SubmitHandoff(e.ctx, NewSDRHandoff{LeadID: leadPtr(lead)})
+	if err != nil {
+		t.Fatalf("submitting the handoff: %v", err)
+	}
+
+	err = e.store.DecideHandoff(e.ctx, id, HandoffDecision{
+		Status: HandoffRejected, ReasonID: &recycleReason,
+	})
+
+	if err == nil {
+		t.Fatal("a rejection cited a recycle-only reason — the report would count it under the wrong question")
+	}
+	if got := e.readHandoff(t, id); got.status != HandoffSubmitted {
+		t.Errorf("status = %q, want the handoff still open", got.status)
+	}
+}
+
+// A RETIRED reason is not a choice a decider may make today.
+//
+// The row stays for the handoffs already decided for it — deactivating is how an
+// operator retires a reason without orphaning last quarter's rejections — but a
+// new decision citing one would record a reason nobody is offered.
+func TestARetiredReasonCannotBeChosen(t *testing.T) {
+	e := setupPromoteConsent(t)
+	lead := e.seedLead(t, "handoff-retired@example.test")
+	reason := e.someHandoffReason(t, HandoffRejected)
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE sdr_handoff_reason SET active = false WHERE id = $1`, reason); err != nil {
+		t.Fatalf("retiring the reason: %v", err)
+	}
+	id, err := e.store.SubmitHandoff(e.ctx, NewSDRHandoff{LeadID: leadPtr(lead)})
+	if err != nil {
+		t.Fatalf("submitting the handoff: %v", err)
+	}
+
+	err = e.store.DecideHandoff(e.ctx, id, HandoffDecision{
+		Status: HandoffRejected, ReasonID: &reason,
+	})
+
+	if !errors.Is(err, errHandoffReasonRetired) {
+		t.Fatalf("err = %v, want a retired reason to be refused", err)
+	}
+	if got := e.readHandoff(t, id); got.status != HandoffSubmitted {
+		t.Errorf("status = %q, want the handoff still open", got.status)
+	}
+}
+
+// An acceptance CLAIMS the handoff for whoever accepted it.
+//
+// A queue handoff is offered to nobody in particular, and leaving assigned_to
+// null after somebody took it loses the one fact a "who owns this now" read
+// needs.
+func TestAcceptingAQueueHandoffClaimsIt(t *testing.T) {
+	e := setupPromoteConsent(t)
+	lead := e.seedLead(t, "handoff-claim@example.test")
+	deal := e.seedDealForHandoff(t)
+	// Offered to nobody: AssignedTo is deliberately absent.
+	id, err := e.store.SubmitHandoff(e.ctx, NewSDRHandoff{LeadID: leadPtr(lead)})
+	if err != nil {
+		t.Fatalf("submitting the handoff: %v", err)
+	}
+
+	if err := e.store.DecideHandoff(e.ctx, id, HandoffDecision{
+		Status: HandoffAccepted, DealID: &deal,
+	}); err != nil {
+		t.Fatalf("accepting the handoff: %v", err)
+	}
+
+	var assigned *ids.UUID
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT assigned_to FROM sdr_handoff WHERE id = $1`, id).Scan(&assigned); err != nil {
+		t.Fatalf("reading the owner: %v", err)
+	}
+	if assigned == nil || *assigned != e.user {
+		t.Errorf("assigned_to = %v, want the seat that accepted it (%v)", assigned, e.user)
+	}
 }
