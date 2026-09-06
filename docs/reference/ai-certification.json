@@ -5,8 +5,8 @@
     "sites_best_partial": 0,
     "sites_best_stale": 0,
     "sites_absent": 0,
-    "scenarios": 141,
-    "records": 81,
+    "scenarios": 142,
+    "records": 74,
     "bindings": 10
   },
   "bindings": [
@@ -20,9 +20,9 @@
       "sites_current": 36,
       "sites_partial": 0,
       "sites_stale": 0,
-      "runs": 378,
+      "runs": 381,
       "passed": 330,
-      "reliability": 0.873015873015873,
+      "reliability": 0.8661417322834646,
       "slowest_p95_ms": 4970,
       "bands": {
         "certified": 17,
@@ -180,9 +180,9 @@
       "sites_current": 35,
       "sites_partial": 0,
       "sites_stale": 0,
-      "runs": 369,
-      "passed": 289,
-      "reliability": 0.7831978319783198,
+      "runs": 372,
+      "passed": 298,
+      "reliability": 0.8010752688172043,
       "slowest_p95_ms": 5546,
       "bands": {
         "certified": 12,
@@ -311,7 +311,7 @@
           "env": "eu_hosted"
         },
         "band": "not_supported",
-        "reliability": 0.8695652173913043,
+        "reliability": 0.8333333333333334,
         "state": "current"
       },
       "scenarios": [
@@ -339,6 +339,11 @@
           "name": "a_promise_is_not_a_slipping_deal",
           "expects": "accepted",
           "file": "backend/internal/compose/aicert/corpus/agent_loop/a_promise_is_not_a_slipping_deal.yaml"
+        },
+        {
+          "name": "a_stepless_deal_is_a_slipping_deal",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/agent_loop/a_stepless_deal_is_a_slipping_deal.yaml"
         },
         {
           "name": "a_structured_question_is_not_a_text_search",
@@ -440,16 +445,16 @@
           },
           "state": "current",
           "band": "not_supported",
-          "scenarios_measured": 23,
-          "scenarios_total": 23,
-          "runs": 69,
+          "scenarios_measured": 24,
+          "scenarios_total": 24,
+          "runs": 72,
           "passed": 60,
-          "reliability": 0.8695652173913043,
-          "latency_p50_ms": 1219,
-          "latency_p95_ms": 1604,
+          "reliability": 0.8333333333333334,
+          "latency_p50_ms": 1084,
+          "latency_p95_ms": 1312,
           "reported": {
             "accepted": 60,
-            "wrong_answer": 9,
+            "wrong_answer": 12,
             "invalid": 0,
             "abstained": 0
           },
@@ -464,7 +469,7 @@
           "state": "stale",
           "band": "not_supported",
           "scenarios_measured": null,
-          "scenarios_total": 23,
+          "scenarios_total": 24,
           "runs": 115,
           "passed": 74,
           "reliability": 0.6434782608695652,
@@ -486,17 +491,17 @@
           },
           "state": "current",
           "band": "not_supported",
-          "scenarios_measured": 23,
-          "scenarios_total": 23,
-          "runs": 69,
-          "passed": 36,
-          "reliability": 0.5217391304347826,
-          "latency_p50_ms": 1603,
-          "latency_p95_ms": 2402,
+          "scenarios_measured": 24,
+          "scenarios_total": 24,
+          "runs": 72,
+          "passed": 45,
+          "reliability": 0.625,
+          "latency_p50_ms": 1504,
+          "latency_p95_ms": 2589,
           "reported": {
-            "accepted": 36,
-            "wrong_answer": 17,
-            "invalid": 16,
+            "accepted": 45,
+            "wrong_answer": 16,
+            "invalid": 11,
             "abstained": 0
           },
           "stale_reason": ""
@@ -4680,69 +4685,5 @@
       ]
     }
   ],
-  "unclaimed_records": [
-    {
-      "task": "",
-      "binding": {
-        "provider": "",
-        "model": "",
-        "env": ""
-      },
-      "reason": "it names no scenario of any site its task ships, so no row above can attribute it"
-    },
-    {
-      "task": "",
-      "binding": {
-        "provider": "",
-        "model": "",
-        "env": ""
-      },
-      "reason": "it names no scenario of any site its task ships, so no row above can attribute it"
-    },
-    {
-      "task": "",
-      "binding": {
-        "provider": "",
-        "model": "",
-        "env": ""
-      },
-      "reason": "it names no scenario of any site its task ships, so no row above can attribute it"
-    },
-    {
-      "task": "",
-      "binding": {
-        "provider": "",
-        "model": "",
-        "env": ""
-      },
-      "reason": "it names no scenario of any site its task ships, so no row above can attribute it"
-    },
-    {
-      "task": "",
-      "binding": {
-        "provider": "",
-        "model": "",
-        "env": ""
-      },
-      "reason": "it names no scenario of any site its task ships, so no row above can attribute it"
-    },
-    {
-      "task": "",
-      "binding": {
-        "provider": "",
-        "model": "",
-        "env": ""
-      },
-      "reason": "it names no scenario of any site its task ships, so no row above can attribute it"
-    },
-    {
-      "task": "",
-      "binding": {
-        "provider": "",
-        "model": "",
-        "env": ""
-      },
-      "reason": "it names no scenario of any site its task ships, so no row above can attribute it"
-    }
-  ]
+  "unclaimed_records": []
 }

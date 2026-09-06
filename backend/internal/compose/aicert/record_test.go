@@ -176,3 +176,37 @@ func TestRecordForSiteFoldsOnlyThatSitesScenarios(t *testing.T) {
 		t.Fatal("a site this record never measured reports a tally")
 	}
 }
+
+// A file under the records tree that names no task is not a record.
+//
+// The use-case lane commits its verdicts here too (mcp_e2e/<model>/), and they
+// have no task and no binding. Admitting one publishes a row whose every
+// identity column is blank and counts it in the total that says how much of
+// this product has been certified — which is the one number on that page a
+// reader takes at face value.
+func TestLoadRecordsSkipsAFileThatNamesNoTask(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "mcp_e2e", "some-model"), 0o750); err != nil {
+		t.Fatal(err)
+	}
+	verdict := `{"scenario":"case1_log_it","criteria":[8,14],"passed":3,"runs":3,"pass_at":2}`
+	if err := os.WriteFile(filepath.Join(dir, "mcp_e2e", "some-model", "case1_log_it.json"), []byte(verdict), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, "draft_reply"), 0o750); err != nil {
+		t.Fatal(err)
+	}
+	certRecord := `{"task":"draft_reply","provider":"gemini","served_model":"m","env_class":"eu_hosted"}`
+	if err := os.WriteFile(filepath.Join(dir, "draft_reply", "r.json"), []byte(certRecord), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := aicert.LoadRecords(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0].Task != "draft_reply" {
+		t.Fatalf("LoadRecords = %+v, want only the record that names a task — a use-case verdict "+
+			"read as a certification record publishes a row with no identity", got)
+	}
+}

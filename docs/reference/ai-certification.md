@@ -29,8 +29,8 @@ How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.m
 | … best state `partial` | 0 |
 | … best state `stale` | 0 |
 | … `absent` on every binding | 0 |
-| Scenarios in the corpus | 141 |
-| Committed records | 81 |
+| Scenarios in the corpus | 142 |
+| Committed records | 74 |
 | Bindings measured | 10 |
 
 A site's *best* state is the strongest state any of its bindings reached. A
@@ -81,7 +81,7 @@ Which model to run each site on, and what that choice rests on.
 | Site | Best model tested | Band | Reliability | State | Scenarios | Records |
 |---|---|---|---:|---|---:|---:|
 | [`account_scan/org_scan`](#account_scanorg_scan) | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `supported_degraded` | 0.67 | `current` | 2 | 2 |
-| [`agent_loop/loop`](#agent_looploop) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `not_supported` | 0.87 | `current` | 23 | 3 |
+| [`agent_loop/loop`](#agent_looploop) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `not_supported` | 0.83 | `current` | 24 | 3 |
 | [`brief_ranking/rank`](#brief_rankingrank) | `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | `certified` | 1.00 | `current` | 1 | 4 |
 | [`capture_classify/classify`](#capture_classifyclassify) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `certified` | 1.00 | `current` | 5 | 3 |
 | [`capture_confidentiality_verdict/thread`](#capture_confidentiality_verdictthread) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `certified` | 1.00 | `current` | 8 | 2 |
@@ -143,7 +143,7 @@ verdict each reached. Each record's own p50 and p95 are in the site tables.
 
 | Provider | Model | Env | Sites | `current` | `partial` | `stale` | Runs | Passed | Reliability | Slowest p95 | `certified` | `supported_degraded` | `not_supported` |
 |---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini` | `gemini-3.1-flash-lite` | `eu_hosted` | 36 | 36 | 0 | 0 | 378 | 330 | 0.87 | 4970ms | 17 | 5 | 14 |
+| `gemini` | `gemini-3.1-flash-lite` | `eu_hosted` | 36 | 36 | 0 | 0 | 381 | 330 | 0.87 | 4970ms | 17 | 5 | 14 |
 | `gemini` | `gemini-3.1-pro-preview` | `eu_hosted` | 6 | 6 | 0 | 0 | 36 | 36 | 1.00 | 46554ms | 4 | 0 | 2 |
 | `gemini` | `gemini-3.5-flash` | `eu_hosted` | 13 | 13 | 0 | 0 | 90 | 86 | 0.96 | 26168ms | 9 | 0 | 4 |
 | `openai_compatible` | `anthropic/claude-haiku-4.5` | `eu_hosted` | 1 | 1 | 0 | 0 | 15 | 9 | 0.60 | 3731ms | 0 | 0 | 1 |
@@ -151,7 +151,7 @@ verdict each reached. Each record's own p50 and p95 are in the site tables.
 | `openai_compatible` | `mistralai/ministral-8b-2512` | `cloud_frontier` | 3 | 0 | 0 | 3 | 15 | 14 | 0.93 | 22390ms | 1 | 2 | 0 |
 | `openai_compatible` | `mistralai/mistral-large-2512` | `cloud_frontier` | 5 | 4 | 0 | 1 | 30 | 27 | 0.90 | 4574ms | 4 | 0 | 1 |
 | `openai_compatible` | `mistralai/mistral-large-2512` | `eu_hosted` | 6 | 6 | 0 | 0 | 42 | 37 | 0.88 | 4337ms | 4 | 1 | 1 |
-| `openai_compatible` | `openai/gpt-oss-120b` | `eu_hosted` | 35 | 35 | 0 | 0 | 369 | 289 | 0.78 | 5546ms | 12 | 9 | 14 |
+| `openai_compatible` | `openai/gpt-oss-120b` | `eu_hosted` | 35 | 35 | 0 | 0 | 372 | 298 | 0.80 | 5546ms | 12 | 9 | 14 |
 | `openai_compatible` | `z-ai/glm-5.2` | `cloud_frontier` | 5 | 4 | 0 | 1 | 30 | 28 | 0.93 | 18372ms | 4 | 0 | 1 |
 
 ## Stale records, and why
@@ -224,7 +224,7 @@ Certified without the company context production prepends (`identity`, `position
 
 Scope a run of it can claim: `single_turn`.
 
-Scenarios (23):
+Scenarios (24):
 
 | Scenario | Expects | Case |
 |---|---|---|
@@ -233,6 +233,7 @@ Scenarios (23):
 | `a_goal_no_tool_can_serve_ends_the_turn` | `accepted` | [a_goal_no_tool_can_serve_ends_the_turn.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/a_goal_no_tool_can_serve_ends_the_turn.yaml) |
 | `a_name_alone_is_still_a_search` | `accepted` | [a_name_alone_is_still_a_search.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/a_name_alone_is_still_a_search.yaml) |
 | `a_promise_is_not_a_slipping_deal` | `accepted` | [a_promise_is_not_a_slipping_deal.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/a_promise_is_not_a_slipping_deal.yaml) |
+| `a_stepless_deal_is_a_slipping_deal` | `accepted` | [a_stepless_deal_is_a_slipping_deal.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/a_stepless_deal_is_a_slipping_deal.yaml) |
 | `a_structured_question_is_not_a_text_search` | `accepted` | [a_structured_question_is_not_a_text_search.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/a_structured_question_is_not_a_text_search.yaml) |
 | `a_thin_relationship_is_not_a_slipping_deal` | `accepted` | [a_thin_relationship_is_not_a_slipping_deal.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/a_thin_relationship_is_not_a_slipping_deal.yaml) |
 | `a_total_is_still_a_report` | `accepted` | [a_total_is_still_a_report.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/a_total_is_still_a_report.yaml) |
@@ -256,9 +257,9 @@ Records (3):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 23/23 | `not_supported` | 69 | 60 | 0.87 | 1219ms | 1604ms | 60 | 9 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 24/24 | `not_supported` | 72 | 60 | 0.83 | 1084ms | 1312ms | 60 | 12 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `not_supported` | 115 | 74 | 0.64 | 1804ms | 2954ms | 74 | 40 | 1 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 23/23 | `not_supported` | 69 | 36 | 0.52 | 1603ms | 2402ms | 36 | 17 | 16 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 24/24 | `not_supported` | 72 | 45 | 0.62 | 1504ms | 2589ms | 45 | 16 | 11 | 0 |
 
 ### `brief_ranking`
 
@@ -1109,16 +1110,4 @@ Records (2):
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 3/3 | `not_supported` | 9 | 6 | 0.67 | 997ms | 1239ms | 6 | 3 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 3/3 | `not_supported` | 9 | 6 | 0.67 | 879ms | 1619ms | 6 | 3 | 0 | 0 |
-
-## Records no shipped site claims
-
-| Task | Binding | Why no row carries it |
-|---|---|---|
-| `` | ` ·  · ` | it names no scenario of any site its task ships, so no row above can attribute it |
-| `` | ` ·  · ` | it names no scenario of any site its task ships, so no row above can attribute it |
-| `` | ` ·  · ` | it names no scenario of any site its task ships, so no row above can attribute it |
-| `` | ` ·  · ` | it names no scenario of any site its task ships, so no row above can attribute it |
-| `` | ` ·  · ` | it names no scenario of any site its task ships, so no row above can attribute it |
-| `` | ` ·  · ` | it names no scenario of any site its task ships, so no row above can attribute it |
-| `` | ` ·  · ` | it names no scenario of any site its task ships, so no row above can attribute it |
 

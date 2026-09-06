@@ -262,6 +262,15 @@ func LoadRecords(dir string) ([]Record, error) {
 		if decodeErr := json.Unmarshal(raw, &r); decodeErr != nil {
 			return fmt.Errorf("aicert: parsing %s: %w", path, decodeErr)
 		}
+		// A file under this tree that names no task is not a certification
+		// record. The use-case lane files its verdicts here too — one folder per
+		// model under UseCaseVerdictDir — because they belong beside the records
+		// they sit next to in a reader's mind. They carry no task and no
+		// binding, so admitting them would publish a row with an empty identity
+		// and count it in a total that says how much has been certified.
+		if r.Task == "" {
+			return nil
+		}
 		records = append(records, r)
 		return nil
 	})

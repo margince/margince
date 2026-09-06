@@ -256,6 +256,14 @@ var (
 	e2eCriterion     = regexp.MustCompile(`\d+`)
 )
 
+// verdictKey is what a committed verdict is filed under. The model is half of
+// it: a pass rate belongs to the model that produced it, and two models that
+// ran the same case have two answers, not one.
+type verdictKey struct {
+	model    string
+	scenario string
+}
+
 type e2eVerdict struct {
 	Scenario string `json:"scenario"`
 	Passed   int    `json:"passed"`
@@ -301,7 +309,7 @@ func readE2ELLMCases(scenarioDir, recordDir string) ([]caseRow, error) {
 			}
 		}
 		row.Requires = sortedCopy(toolsInBlock(e2eMustCallBlock, text))
-		if v, ok := verdicts[row.Name]; ok {
+		if v, ok := verdictFor(verdicts, row.Name); ok {
 			row.Recorded, row.Runs, row.Passed, row.PassAt = true, v.Runs, v.Passed, v.PassAt
 			row.Model = v.Model
 		}
@@ -314,8 +322,8 @@ func readE2ELLMCases(scenarioDir, recordDir string) ([]caseRow, error) {
 // readE2ELLMVerdicts reads the committed verdicts. A missing directory is not
 // an error: it means the paid lane has not been run on this checkout, which the
 // page says outright.
-func readE2ELLMVerdicts(dir string) (map[string]e2eVerdict, error) {
-	out := map[string]e2eVerdict{}
+func readE2ELLMVerdicts(dir string) (map[verdictKey]e2eVerdict, error) {
+	out := map[verdictKey]e2eVerdict{}
 	entries, err := os.ReadDir(dir)
 	if os.IsNotExist(err) {
 		return out, nil
@@ -344,7 +352,12 @@ func readE2ELLMVerdicts(dir string) (map[string]e2eVerdict, error) {
 				return nil, fmt.Errorf("%s/%s: %w", model.Name(), entry.Name(), decodeErr)
 			}
 			v.Model = model.Name()
-			out[v.Scenario] = v
+			// Keyed by MODEL AND SCENARIO. Keying on the scenario alone let the
+			// last model directory read win, so a page could show one model's
+			// pass rate beside another's on the next row and say nothing about
+			// it. Today one model has run; the bug would appear silently on the
+			// day a second one does, which is the worst time to find it.
+			out[verdictKey{model: model.Name(), scenario: v.Scenario}] = v
 		}
 	}
 	return out, nil
@@ -379,6 +392,28 @@ func readCriteria(path string) (map[int]criterionRow, error) {
 		}
 	}
 	return out, nil
+}
+
+// verdictFor picks one model's verdict for a case, by model name in order, so
+// the page is byte-stable and every row on it comes from the same model rather
+// than from whichever directory the filesystem listed first.
+//
+// It reports the FIRST model alphabetically that ran the case. That is a choice
+// the page states in its own totals, and it is only visible once a second model
+// has run — at which point this wants replacing with a column per model rather
+// than a rule for picking one.
+func verdictFor(verdicts map[verdictKey]e2eVerdict, scenario string) (e2eVerdict, bool) {
+	var chosen e2eVerdict
+	found := false
+	for key, v := range verdicts {
+		if key.scenario != scenario {
+			continue
+		}
+		if !found || key.model < chosen.Model {
+			chosen, found = v, true
+		}
+	}
+	return chosen, found
 }
 
 func toolsInBlock(block *regexp.Regexp, text string) []string {
