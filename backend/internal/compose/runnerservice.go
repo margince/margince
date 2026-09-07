@@ -10,7 +10,6 @@ package compose
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -22,7 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/overlay"
-	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/retrieval"
@@ -335,114 +333,6 @@ func (s *RunnerService) executeJob(ctx context.Context, job runner.QueuedJob) {
 	s.finishJob(ctx, job.ID, &runID, "")
 }
 
-// HandleEvent is the cg:overnight-agent consumer: an approval decision
-// on a runner staging resumes the parked run with the human's answer.
-// Every other event on the group's streams is not ours — nil, not an
-// error, so the group keeps flowing.
-func (s *RunnerService) HandleEvent(ctx context.Context, env kevents.Envelope) error {
-	if env.Type != "approval.decided" {
-		return nil
-	}
-	approvalID := ids.From[ids.ApprovalKind](env.Entity.ID)
-	// The envelope carries no tenant (ADR-0091 §6): this consumer resolves the
-	// installation, exactly as the request paths beside it do.
-	ws, err := s.identity.InstallationWorkspace(ctx)
-	if err != nil {
-		return err
-	}
-	ctx = principal.WithWorkspaceID(ctx, ws.UUID)
-	// The resume path's own actor, for the same reason Tick binds one: every
-	// terminal write below announces the occurrence to the AI-activity
-	// projection, and an announcement carries the write shape — a ledger row and
-	// an outbox row, both of which take their actor from the context. Without it
-	// MarkFailed rolls back, the claim is not undone, and the run is parked
-	// forever in a state no redelivery can close.
-	ctx = principal.WithCorrelationID(ctx, env.EventID)
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: resumeActor,
-	})
-
-	// The payload is read BEFORE the run is claimed: claiming is one-way, so
-	// every step after it must end in a terminal status rather than in a
-	// retriable error — a redelivery would find nothing to resume and leave
-	// the run parked in 'running' forever.
-	var payload struct {
-		Verdict      string          `json:"verdict"`
-		Edited       bool            `json:"edited"`
-		EditedChange json.RawMessage `json:"edited_change"`
-	}
-	if err := json.Unmarshal(env.Payload, &payload); err != nil {
-		return fmt.Errorf("runner: approval.decided payload: %w", err)
-	}
-
-	// Claim, don't just look: the bus is at-least-once and a resumed run is
-	// a fresh loop with a fresh budget, not an idempotent effect.
-	suspended, found, err := s.store.ClaimSuspendedByApproval(ctx, approvalID)
-	if err != nil {
-		return err
-	}
-	if !found {
-		return nil // a human-surface approval, or a decision already resumed
-	}
-	// Modify-then-approve (ADR-0036 §4): the authority now binds to the
-	// HUMAN's version of the call, so the resumed run must re-present
-	// exactly that — the originally staged args no longer redeem.
-	if payload.Verdict == "approved" && payload.Edited {
-		if len(payload.EditedChange) == 0 {
-			return s.store.MarkFailed(ctx, suspended.RunID, runner.FailureEditedApprovalCarriedNoChange)
-		}
-		suspended.Pending.Args = payload.EditedChange
-	}
-
-	agentIdentity, err := s.identity.AuthenticateAgentByID(ctx, suspended.PassportID)
-	if err != nil {
-		// The passport died while the run was parked (revoked, expired,
-		// human deactivated). The run cannot act anymore — close it. WHICH of
-		// those happened is the identity module's own message, so it goes to the
-		// operator and not to the column the person reads.
-		s.log.Warn("runner: a suspended run's authority died before it could resume",
-			"trigger_ref", suspended.TriggerRef, "run", suspended.RunID, "cause", err)
-		return s.store.MarkFailed(ctx, suspended.RunID, runner.FailurePassportNoLongerValid)
-	}
-	// The resumed leg is the SAME logical run but a new causal moment;
-	// it groups its writes under a fresh correlation id.
-	runCtx := principal.WithCorrelationID(principal.WithActor(ctx, agentIdentity.Principal()), ids.NewV7())
-	runCtx = principal.WithAgentRunID(runCtx, suspended.RunID)
-
-	spec, known := s.specByName(suspended.SpecName)
-	if !known {
-		s.log.Warn("runner: a suspended run's agent left the catalog",
-			"trigger_ref", suspended.TriggerRef, "run", suspended.RunID, "spec", suspended.SpecName)
-		return s.store.MarkFailed(ctx, suspended.RunID, runner.FailureSpecLeftTheCatalog)
-	}
-
-	bounded, cancel := context.WithTimeout(runCtx, RunWallClock)
-	defer cancel()
-	// Tools rides the CURRENT catalog entry, beside the current budget and
-	// for the same reason: a suspended run resumes under the authority the
-	// entry states now, never the one it stated when the call was staged.
-	res, err := s.runner.Resume(bounded, runner.Job{
-		Goal:       suspended.Goal,
-		TriggerRef: suspended.TriggerRef,
-		Budget:     spec.Budget,
-		Tools:      spec.Tools,
-		// Resolved fresh on resume rather than carried in the suspended row:
-		// the summary is written after the human answers, so it takes the
-		// language the installation has NOW, the same way Tools rides the
-		// current catalog entry above.
-		LanguageRule: promptlang.Rule(identity.BaseLanguageForPrompt(bounded, s.pool)),
-	}, runner.Decision{
-		Pending:  suspended.Pending,
-		Approved: payload.Verdict == "approved",
-	})
-	s.landOutcome(runCtx, suspended.RunID, suspended.TriggerRef, res, err)
-	return nil
-}
-
-// landOutcome persists how a run ended. triggerRef names the occurrence for the
-// operator log, which is where a fault's cause goes: the run's own error is a
-// wrapped internal one, and agent_run.degrade_reason is read by the human the run
-// acted for.
 func (s *RunnerService) landOutcome(ctx context.Context, runID ids.UUID, triggerRef string, res runner.Result, runErr error) {
 	if runErr != nil {
 		s.log.Error("runner: a run faulted outside its own degrade path",
