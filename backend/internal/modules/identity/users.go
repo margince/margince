@@ -38,7 +38,16 @@ const (
 	userStatusActive      = "active"
 	userStatusDeactivated = "deactivated"
 	userAuditKeyStatus    = "status"
-	roleAdmin             = "admin"
+	// teamAuditKeyMember names the seat a team change is about, in the audit
+	// image and in nothing else. One spelling, because the before and after
+	// images of one change are diffed against each other.
+	teamAuditKeyMember = "member"
+	// changeMemberAdded is team.changed's word for a seat joining. Two writers
+	// reach it — an admin's SetTeamMember and an invite that named teams — and
+	// a consumer matches on the string, so a second spelling would be a second
+	// fact as far as that consumer is concerned.
+	changeMemberAdded = "member_added"
+	roleAdmin         = "admin"
 )
 
 // The distinct refusals this surface can answer with. Each WRAPS

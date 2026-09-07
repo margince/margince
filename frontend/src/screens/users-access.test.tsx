@@ -48,7 +48,13 @@ type RosterUser = {
 // and a literal here reads to the a11y lint as an ARIA role on an element.
 const REP: Parameters<typeof AccessPreviewPanel>[0]["role"] = "rep";
 
-type Call = { method: string; path: string; body: unknown };
+type Call = {
+  method: string;
+  path: string;
+  body: unknown;
+  // The query, because a GET carries what a POST used to put in its body.
+  query: Record<string, string>;
+};
 
 function backend(
   opts: Readonly<{
@@ -84,10 +90,12 @@ function backend(
       // would answer every write as if it were a read.
       const request =
         input instanceof Request ? input : new Request(String(input), init);
-      const path = new URL(request.url, "http://localhost").pathname;
+      const url = new URL(request.url, "http://localhost");
+      const path = url.pathname;
       calls.push({
         method: request.method,
         path,
+        query: Object.fromEntries(url.searchParams),
         // A membership write carries NO body — the ids are the path. Reading
         // one unconditionally throws, and the mock would then answer the
         // write as a network failure that looks exactly like a refusal.
@@ -240,8 +248,12 @@ describe("AccessPreviewPanel", () => {
       ),
     ).toBeTruthy();
     // The role and the teams are what the server evaluates, so they have to
-    // reach it.
-    expect(calls[0]?.body).toEqual({ role: "rep", team_ids: ["t-1"] });
+    // reach it — in the QUERY, because the preview is a GET. That method is
+    // load-bearing rather than incidental: the seat ceiling is method-based,
+    // so a read wearing POST is refused to a read-seat admin, whose whole
+    // purpose is reading.
+    expect(calls[0]?.method).toBe("GET");
+    expect(calls[0]?.query).toEqual({ role: "rep", team_ids: "t-1" });
   });
 
   // A team scope with no team is a real posture — the seat is on no team yet —

@@ -101,7 +101,7 @@ func (s *Service) InviteUser(ctx context.Context, actor Identity, in InviteUserI
 			roleID, newUserID); err != nil {
 			return err
 		}
-		if err := joinTeamsTx(ctx, tx, newUserID.UUID, in.TeamIDs); err != nil {
+		if err := s.joinTeamsTx(ctx, tx, actor, newUserID.UUID, in.TeamIDs); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx,

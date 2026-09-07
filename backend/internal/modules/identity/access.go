@@ -25,6 +25,15 @@ type Access struct {
 	Role        string
 	Permissions principal.Permissions
 	Teams       []teamRow
+	// MemberStatus is the seat's own status, and it is the TENSE of everything
+	// beside it. A suspended or deactivated member's stored grants are exactly
+	// what this answer lists, and login refuses them — so a surface reading it
+	// as "sees" rather than "would see" states something untrue.
+	//
+	// Empty on the preview, which computes access for nobody yet: there is no
+	// member to have a status, and inventing "active" would be a claim about a
+	// seat that does not exist.
+	MemberStatus string
 }
 
 // PreviewAccess evaluates a role and a team set that do not belong to anyone
@@ -55,12 +64,24 @@ func (s *Service) UserAccess(ctx context.Context, actor Identity, userID ids.Use
 	}
 	var out Access
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		var exists bool
-		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM app_user WHERE id = $1 AND archived_at IS NULL)`, userID).Scan(&exists); err != nil {
-			return err
-		}
-		if !exists {
+		// The status is read in the same statement that answers whether the
+		// member is there, because it is the one thing that makes the grants
+		// below readable as a tense rather than as a claim about today.
+		//
+		// `archived_at IS NULL` alone, and deliberately: a deactivated seat is
+		// exactly who an admin asks about — reviewing who had access to what
+		// needs a former member's grants readable — so liveness would refuse
+		// the case this read exists for. That used to be a ratification in the
+		// live-member census; it is now the answer itself, because the status
+		// travels to the caller instead of being silently ignored.
+		var status string
+		err := tx.QueryRow(ctx,
+			`SELECT status FROM app_user WHERE id = $1 AND archived_at IS NULL`, userID).Scan(&status)
+		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
+		}
+		if err != nil {
+			return err
 		}
 		roles, teams, _, err := loadGrants(ctx, tx, userID)
 		if err != nil {
@@ -71,6 +92,7 @@ func (s *Service) UserAccess(ctx context.Context, actor Identity, userID ids.Use
 			teamIDs = append(teamIDs, t.UUID)
 		}
 		out, err = accessFor(ctx, tx, roles, teamIDs)
+		out.MemberStatus = status
 		return err
 	})
 	return out, err

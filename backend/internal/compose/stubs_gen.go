@@ -2231,7 +2231,7 @@ func (stubs) InviteUser(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "InviteUser")
 }
 
-func (stubs) PreviewAccess(w nethttp.ResponseWriter, r *nethttp.Request) {
+func (stubs) PreviewAccess(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.PreviewAccessParams) {
 	httperr.NotImplemented(w, r, "PreviewAccess")
 }
 

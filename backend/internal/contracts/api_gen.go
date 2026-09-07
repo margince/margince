@@ -145,6 +145,30 @@ func (e AccessPreviewIdentityRead) Valid() bool {
 	}
 }
 
+// Defines values for AccessPreviewMemberStatus.
+const (
+	AccessPreviewMemberStatusActive      AccessPreviewMemberStatus = "active"
+	AccessPreviewMemberStatusDeactivated AccessPreviewMemberStatus = "deactivated"
+	AccessPreviewMemberStatusInvited     AccessPreviewMemberStatus = "invited"
+	AccessPreviewMemberStatusSuspended   AccessPreviewMemberStatus = "suspended"
+)
+
+// Valid indicates whether the value is a known member of the AccessPreviewMemberStatus enum.
+func (e AccessPreviewMemberStatus) Valid() bool {
+	switch e {
+	case AccessPreviewMemberStatusActive:
+		return true
+	case AccessPreviewMemberStatusDeactivated:
+		return true
+	case AccessPreviewMemberStatusInvited:
+		return true
+	case AccessPreviewMemberStatusSuspended:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AccessPreviewRowScope.
 const (
 	AccessPreviewRowScopeAll  AccessPreviewRowScope = "all"
@@ -160,36 +184,6 @@ func (e AccessPreviewRowScope) Valid() bool {
 	case AccessPreviewRowScopeOwn:
 		return true
 	case AccessPreviewRowScopeTeam:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for AccessPreviewRequestRole.
-const (
-	AccessPreviewRequestRoleAdmin      AccessPreviewRequestRole = "admin"
-	AccessPreviewRequestRoleManagement AccessPreviewRequestRole = "management"
-	AccessPreviewRequestRoleManager    AccessPreviewRequestRole = "manager"
-	AccessPreviewRequestRoleOps        AccessPreviewRequestRole = "ops"
-	AccessPreviewRequestRoleReadOnly   AccessPreviewRequestRole = "read_only"
-	AccessPreviewRequestRoleRep        AccessPreviewRequestRole = "rep"
-)
-
-// Valid indicates whether the value is a known member of the AccessPreviewRequestRole enum.
-func (e AccessPreviewRequestRole) Valid() bool {
-	switch e {
-	case AccessPreviewRequestRoleAdmin:
-		return true
-	case AccessPreviewRequestRoleManagement:
-		return true
-	case AccessPreviewRequestRoleManager:
-		return true
-	case AccessPreviewRequestRoleOps:
-		return true
-	case AccessPreviewRequestRoleReadOnly:
-		return true
-	case AccessPreviewRequestRoleRep:
 		return true
 	default:
 		return false
@@ -13287,16 +13281,16 @@ func (e VoiceBuildStatusCode) Valid() bool {
 
 // Defines values for VoiceCorpusPreviewRequestFormat.
 const (
-	Text       VoiceCorpusPreviewRequestFormat = "text"
-	Transcript VoiceCorpusPreviewRequestFormat = "transcript"
+	VoiceCorpusPreviewRequestFormatText       VoiceCorpusPreviewRequestFormat = "text"
+	VoiceCorpusPreviewRequestFormatTranscript VoiceCorpusPreviewRequestFormat = "transcript"
 )
 
 // Valid indicates whether the value is a known member of the VoiceCorpusPreviewRequestFormat enum.
 func (e VoiceCorpusPreviewRequestFormat) Valid() bool {
 	switch e {
-	case Text:
+	case VoiceCorpusPreviewRequestFormatText:
 		return true
-	case Transcript:
+	case VoiceCorpusPreviewRequestFormatTranscript:
 		return true
 	default:
 		return false
@@ -16561,6 +16555,36 @@ func (e ListSignalsParamsResolutionState) Valid() bool {
 	}
 }
 
+// Defines values for PreviewAccessParamsRole.
+const (
+	PreviewAccessParamsRoleAdmin      PreviewAccessParamsRole = "admin"
+	PreviewAccessParamsRoleManagement PreviewAccessParamsRole = "management"
+	PreviewAccessParamsRoleManager    PreviewAccessParamsRole = "manager"
+	PreviewAccessParamsRoleOps        PreviewAccessParamsRole = "ops"
+	PreviewAccessParamsRoleReadOnly   PreviewAccessParamsRole = "read_only"
+	PreviewAccessParamsRoleRep        PreviewAccessParamsRole = "rep"
+)
+
+// Valid indicates whether the value is a known member of the PreviewAccessParamsRole enum.
+func (e PreviewAccessParamsRole) Valid() bool {
+	switch e {
+	case PreviewAccessParamsRoleAdmin:
+		return true
+	case PreviewAccessParamsRoleManagement:
+		return true
+	case PreviewAccessParamsRoleManager:
+		return true
+	case PreviewAccessParamsRoleOps:
+		return true
+	case PreviewAccessParamsRoleReadOnly:
+		return true
+	case PreviewAccessParamsRoleRep:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SetWeeklyPlanCommitmentStateJSONBodyState.
 const (
 	Done    SetWeeklyPlanCommitmentStateJSONBodyState = "done"
@@ -16719,6 +16743,10 @@ type AccessPreview struct {
 
 	// IdentityRead Customer identity (person, organization, lead, deal) is readable by every seat that holds the object grant; row scope governs projects and writes.
 	IdentityRead *AccessPreviewIdentityRead `json:"identity_read,omitempty"`
+
+	// MemberStatus The member's own status, present on `GET /users/{id}/access` and absent on the preview, which computes access for nobody yet.
+	// It is the TENSE of everything else in this answer. A suspended or deactivated member's stored grants are exactly what is listed here, and login refuses them — so a screen that says "sees" rather than "would see" tells an admin something untrue. Carried rather than refused: an admin reviewing who had access to what needs a former member's grants readable, and a 404 would make that impossible.
+	MemberStatus *AccessPreviewMemberStatus `json:"member_status,omitempty"`
 	Objects      map[string]struct {
 		Create bool `json:"create"`
 		Delete bool `json:"delete"`
@@ -16736,17 +16764,12 @@ type AccessPreviewFieldMasksCondition string
 // AccessPreviewIdentityRead Customer identity (person, organization, lead, deal) is readable by every seat that holds the object grant; row scope governs projects and writes.
 type AccessPreviewIdentityRead string
 
+// AccessPreviewMemberStatus The member's own status, present on `GET /users/{id}/access` and absent on the preview, which computes access for nobody yet.
+// It is the TENSE of everything else in this answer. A suspended or deactivated member's stored grants are exactly what is listed here, and login refuses them — so a screen that says "sees" rather than "would see" tells an admin something untrue. Carried rather than refused: an admin reviewing who had access to what needs a former member's grants readable, and a 404 would make that impossible.
+type AccessPreviewMemberStatus string
+
 // AccessPreviewRowScope defines model for AccessPreview.RowScope.
 type AccessPreviewRowScope string
-
-// AccessPreviewRequest defines model for AccessPreviewRequest.
-type AccessPreviewRequest struct {
-	Role    AccessPreviewRequestRole `json:"role"`
-	TeamIds *[]openapi_types.UUID    `json:"team_ids,omitempty"`
-}
-
-// AccessPreviewRequestRole defines model for AccessPreviewRequest.Role.
-type AccessPreviewRequestRole string
 
 // AccountDraftReason One thing the draft was written from, named so the reader can check it rather than
 // take the draft on trust. Structured rather than a phrase, because the composer
@@ -41097,6 +41120,15 @@ type ListUsersParams struct {
 	IncludeInactive *bool `form:"include_inactive,omitempty" json:"include_inactive,omitempty"`
 }
 
+// PreviewAccessParams defines parameters for PreviewAccess.
+type PreviewAccessParams struct {
+	Role    PreviewAccessParamsRole `form:"role" json:"role"`
+	TeamIds *[]openapi_types.UUID   `form:"team_ids,omitempty" json:"team_ids,omitempty"`
+}
+
+// PreviewAccessParamsRole defines parameters for PreviewAccess.
+type PreviewAccessParamsRole string
+
 // ListSavedViewsParams defines parameters for ListSavedViews.
 type ListSavedViewsParams struct {
 	Resource *SavedViewResource `form:"resource,omitempty" json:"resource,omitempty"`
@@ -42280,9 +42312,6 @@ type UpdateTeamJSONRequestBody = UpdateTeamRequest
 
 // InviteUserJSONRequestBody defines body for InviteUser for application/json ContentType.
 type InviteUserJSONRequestBody = InviteUserRequest
-
-// PreviewAccessJSONRequestBody defines body for PreviewAccess for application/json ContentType.
-type PreviewAccessJSONRequestBody = AccessPreviewRequest
 
 // DeactivateUserJSONRequestBody defines body for DeactivateUser for application/json ContentType.
 type DeactivateUserJSONRequestBody = DeactivateUserRequest
@@ -51821,8 +51850,8 @@ type ServerInterface interface {
 	// (POST /users)
 	InviteUser(w http.ResponseWriter, r *http.Request)
 	// What a seat with this role and these teams will see and may do.
-	// (POST /users/access-preview)
-	PreviewAccess(w http.ResponseWriter, r *http.Request)
+	// (GET /users/access-preview)
+	PreviewAccess(w http.ResponseWriter, r *http.Request, params PreviewAccessParams)
 	// What this member sees and may do today, from their roles and teams.
 	// (GET /users/{id}/access)
 	GetUserAccess(w http.ResponseWriter, r *http.Request, id Id)
@@ -55316,8 +55345,8 @@ func (_ Unimplemented) InviteUser(w http.ResponseWriter, r *http.Request) {
 }
 
 // What a seat with this role and these teams will see and may do.
-// (POST /users/access-preview)
-func (_ Unimplemented) PreviewAccess(w http.ResponseWriter, r *http.Request) {
+// (GET /users/access-preview)
+func (_ Unimplemented) PreviewAccess(w http.ResponseWriter, r *http.Request, params PreviewAccessParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -79113,14 +79142,46 @@ func (siw *ServerInterfaceWrapper) InviteUser(w http.ResponseWriter, r *http.Req
 // PreviewAccess operation middleware
 func (siw *ServerInterfaceWrapper) PreviewAccess(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params PreviewAccessParams
+
+	// ------------- Required query parameter "role" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "role", r.URL.Query(), &params.Role, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "role"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "role", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "team_ids" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", false, false, "team_ids", r.URL.Query(), &params.TeamIds, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "team_ids"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "team_ids", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.PreviewAccess(w, r)
+		siw.Handler.PreviewAccess(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -83394,7 +83455,7 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/users", wrapper.InviteUser)
 	})
 	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/users/access-preview", wrapper.PreviewAccess)
+		r.Get(options.BaseURL+"/users/access-preview", wrapper.PreviewAccess)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/users/{id}/access", wrapper.GetUserAccess)

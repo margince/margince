@@ -35,7 +35,16 @@ func userInvitedPayload(userID ids.UserID, role string, by ids.UserID, teams []i
 // joinTeamsTx puts a new member on the teams the invite named. Every team
 // must exist and be live — an invite naming a team that is not there is a
 // mistake to surface, not a membership to drop silently.
-func joinTeamsTx(ctx context.Context, tx pgx.Tx, userID ids.UUID, teams []ids.UUID) error {
+//
+// Each membership is announced with team.changed{member_added}, in this same
+// transaction, through the SAME writer an admin's later SetTeamMembership goes
+// through. A team grants row scope, so who is on one is who-sees-what: a
+// consumer refreshing that on team.changed would otherwise have to know a
+// second trigger — user.invited.team_ids — and know it only for the invite
+// path. It fails in the direction that matters, because a consumer handling
+// team.changed correctly and unaware of the exception is stale with no way to
+// notice.
+func (s *Service) joinTeamsTx(ctx context.Context, tx pgx.Tx, actor Identity, userID ids.UUID, teams []ids.UUID) error {
 	for _, teamID := range uniqueTeams(teams) {
 		tag, err := tx.Exec(ctx, `
 			INSERT INTO team_membership (team_id, user_id)
@@ -49,6 +58,11 @@ func joinTeamsTx(ctx context.Context, tx pgx.Tx, userID ids.UUID, teams []ids.UU
 				Field: fieldTeamIDs, Code: "unknown_team",
 				Message: "team " + teamID.String() + " does not exist or is archived",
 			}
+		}
+		if err := s.recordTeamChange(ctx, tx, actor, teamID, &userID, changeMemberAdded,
+			map[string]any{teamAuditKeyMember: userID, "on": false},
+			map[string]any{teamAuditKeyMember: userID, "on": true}); err != nil {
+			return err
 		}
 	}
 	return nil

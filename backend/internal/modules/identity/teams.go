@@ -175,7 +175,7 @@ func (s *Service) SetTeamMember(ctx context.Context, actor Identity, teamID, use
 		var tag pgconn.CommandTag
 		change := "member_removed"
 		if on {
-			change = "member_added"
+			change = changeMemberAdded
 			tag, err = tx.Exec(ctx, `INSERT INTO team_membership (team_id, user_id) VALUES ($1, $2)
 				ON CONFLICT (team_id, user_id) DO NOTHING`, teamID, userID)
 		} else {
@@ -188,7 +188,8 @@ func (s *Service) SetTeamMember(ctx context.Context, actor Identity, teamID, use
 			return nil
 		}
 		return s.recordTeamChange(ctx, tx, actor, teamID, &userID, change,
-			map[string]any{"member": userID, "on": !on}, map[string]any{"member": userID, "on": on})
+			map[string]any{teamAuditKeyMember: userID, "on": !on},
+			map[string]any{teamAuditKeyMember: userID, "on": on})
 	})
 }
 

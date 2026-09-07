@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../api/client";
-import type { components } from "../api/schema";
+import type { components, operations } from "../api/schema";
 import { useCan, useCanWrite } from "../app/capability";
 import {
   Button,
@@ -32,7 +32,10 @@ import "./users-access.css";
 
 type AccessPreview = components["schemas"]["AccessPreview"];
 type Team = components["schemas"]["Team"];
-type Role = components["schemas"]["AccessPreviewRequest"]["role"];
+// The preview's role comes off the OPERATION rather than a request schema: the
+// endpoint is a GET, so its parameters are the query and there is no body shape
+// to name.
+type Role = operations["previewAccess"]["parameters"]["query"]["role"];
 
 // The objects worth a line in the preview: the record kinds a rep works.
 const PREVIEW_OBJECTS = [
@@ -49,8 +52,8 @@ function useAccessPreview(role: Role, teamIds: string[]) {
     // set of teams has to spell the same key wherever it is read.
     queryKey: ["access-preview", role, [...teamIds].sort(stable).join(",")],
     queryFn: async (): Promise<AccessPreview> => {
-      const { data, error } = await api.POST("/users/access-preview", {
-        body: { role, team_ids: teamIds },
+      const { data, error } = await api.GET("/users/access-preview", {
+        params: { query: { role, team_ids: teamIds } },
       });
       if (error) throwProblem(error);
       return data;

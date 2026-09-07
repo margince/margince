@@ -277,3 +277,88 @@ func containsUser(users []userWire, id string) bool {
 	}
 	return false
 }
+
+// accessWire is what the two access doors answer. `member_status` is a pointer
+// so absent stays distinguishable from empty: the preview computes access for
+// nobody yet and carries none.
+type accessWire struct {
+	Role         string  `json:"role"`
+	RowScope     string  `json:"row_scope"`
+	MemberStatus *string `json:"member_status"`
+}
+
+// The access preview is a GET, and the method is the whole point: the seat
+// ceiling is method-based, so this read wearing POST was refused to a read-seat
+// admin — a read, denied to the seat whose entire purpose is reading.
+//
+// Over HTTP rather than through the service, because what changed is the
+// routing: the role and the teams now ride the query, and nothing below the
+// handler would notice if they stopped arriving.
+func TestTheAccessPreviewIsAReadAndAnswersOnTheQuery(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+
+	var preview accessWire
+	if status := e.Call(t, "GET", "/v1/users/access-preview?role=rep", nil, nil, &preview); status != http.StatusOK {
+		t.Fatalf("preview -> %d, want 200", status)
+	}
+	if preview.Role != "rep" {
+		t.Errorf("role = %q, want rep — the query parameter reached the evaluation", preview.Role)
+	}
+	if preview.RowScope == "" {
+		t.Error("row_scope is empty; the preview answered nothing about what the seat sees")
+	}
+	// Nobody holds this access yet, so there is no status to carry. An
+	// "active" here would be a claim about a seat that does not exist.
+	if preview.MemberStatus != nil {
+		t.Errorf("member_status = %q on the preview, want absent", *preview.MemberStatus)
+	}
+
+	// The POST is gone with the defect: a read that answers on both methods
+	// leaves the one the seat ceiling refuses reachable.
+	if status := e.Call(t, "POST", "/v1/users/access-preview",
+		map[string]any{"role": "rep"}, nil, nil); status != http.StatusMethodNotAllowed {
+		t.Errorf("POST preview -> %d, want 405", status)
+	}
+}
+
+// The access read carries the member's own status, which is the TENSE of the
+// grants beside it: a deactivated member's stored access is exactly what the
+// answer lists, and login refuses them.
+func TestTheAccessReadCarriesTheMembersStatusOverHTTP(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+
+	var invited userWire
+	if status := e.Call(t, "POST", "/v1/users", map[string]any{
+		"email": "tense@acme.test", "display_name": "Ten Se", "role": "rep",
+	}, nil, &invited); status != http.StatusCreated {
+		t.Fatalf("invite -> %d, want 201", status)
+	}
+
+	var access accessWire
+	if status := e.Call(t, "GET", "/v1/users/"+invited.ID+"/access", nil, nil, &access); status != http.StatusOK {
+		t.Fatalf("access -> %d, want 200", status)
+	}
+	if access.MemberStatus == nil || *access.MemberStatus != "invited" {
+		t.Fatalf("member_status = %v, want invited — without it the screen says a member SEES what "+
+			"they would only see once they can sign in", access.MemberStatus)
+	}
+
+	if status := e.Call(t, "POST", "/v1/users/"+invited.ID+"/deactivate", map[string]any{}, nil, nil); status != http.StatusOK {
+		t.Fatalf("deactivate -> %d, want 200", status)
+	}
+	var gone accessWire
+	// Still readable: an admin reviewing who had access to what needs a former
+	// member's grants, and a 404 would throw that use away to fix the wording.
+	if status := e.Call(t, "GET", "/v1/users/"+invited.ID+"/access", nil, nil, &gone); status != http.StatusOK {
+		t.Fatalf("access after deactivation -> %d, want 200", status)
+	}
+	if gone.MemberStatus == nil || *gone.MemberStatus != "deactivated" {
+		t.Errorf("member_status = %v, want deactivated", gone.MemberStatus)
+	}
+	if gone.Role != access.Role {
+		t.Errorf("the grants changed with the status: %q then %q — what is wrong on this surface is "+
+			"the tense, not the data", access.Role, gone.Role)
+	}
+}

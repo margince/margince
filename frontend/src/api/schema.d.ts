@@ -9856,15 +9856,19 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
-        put?: never;
         /**
          * What a seat with this role and these teams will see and may do.
          * @description Computed from the evaluated policy — the same role documents, field masks and read
          *     classes the gates read — so the invite screen shows the truth rather than a second
          *     interpretation. Admin only.
+         *
+         *     A GET, and the method is load-bearing: the seat ceiling is method-based, so this read
+         *     wearing POST was refused to a read-seat admin — a read, denied to the seat whose whole
+         *     purpose is reading. The parameters are the query rather than a body for that reason.
          */
-        post: operations["previewAccess"];
+        get: operations["previewAccess"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -24871,14 +24875,15 @@ export interface components {
             /** @description The teams the member joins on arrival, in the same transaction as the seat and the role. A team-scoped role (`manager`, `rep`) with no team sees and edits only its own records; the access preview says what a given role + teams will see before the invite is sent. */
             team_ids?: string[];
         };
-        AccessPreviewRequest: {
-            /** @enum {string} */
-            role: "admin" | "management" | "manager" | "rep" | "read_only" | "ops";
-            team_ids?: string[];
-        };
         /** @description What a seat with this role and these teams may do — computed by the server from the evaluated policy, the same one the gates read, so the screen never interprets the role a second way. Used before an invite (`POST /users/access-preview`) and for an existing member (`GET /users/{id}/access`). */
         AccessPreview: {
             role: string;
+            /**
+             * @description The member's own status, present on `GET /users/{id}/access` and absent on the preview, which computes access for nobody yet.
+             *     It is the TENSE of everything else in this answer. A suspended or deactivated member's stored grants are exactly what is listed here, and login refuses them — so a screen that says "sees" rather than "would see" tells an admin something untrue. Carried rather than refused: an admin reviewing who had access to what needs a former member's grants readable, and a 404 would make that impossible.
+             * @enum {string}
+             */
+            member_status?: "invited" | "active" | "suspended" | "deactivated";
             /** @enum {string} */
             row_scope: "own" | "team" | "all";
             /**
@@ -47803,16 +47808,15 @@ export interface operations {
     };
     previewAccess: {
         parameters: {
-            query?: never;
+            query: {
+                role: "admin" | "management" | "manager" | "rep" | "read_only" | "ops";
+                team_ids?: string[];
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AccessPreviewRequest"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description The access. */
             200: {
