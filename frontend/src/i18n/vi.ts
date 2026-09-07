@@ -3655,6 +3655,10 @@ export const vi = {
   "settings.appearance": "Giao di\u1ec7n",
   "settings.appearanceHelp":
     "S\u00e1ng, t\u1ed1i, ho\u1eb7c theo thi\u1ebft b\u1ecb n\u00e0y. Menu t\u00e0i kho\u1ea3n c\u0169ng \u0111\u1ed5i \u0111\u01b0\u1ee3c.",
+  "settings.displayName": "T\u00ean c\u1ee7a b\u1ea1n",
+  "settings.displayNameHelp":
+    "C\u00e1ch \u0111\u1ed3ng nghi\u1ec7p th\u1ea5y b\u1ea1n \u2014 tr\u00ean b\u1ea3n ghi, trong danh s\u00e1ch ch\u1ecdn v\u00e0 trong nh\u1eadt k\u00fd.",
+  "settings.displayNameSave": "L\u01b0u",
   "settings.languageHelp": "Chỉ giữ trong phiên làm việc.",
   "role.admin": "Quản trị",
   "role.management": "Ban lãnh đạo",

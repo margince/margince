@@ -179,6 +179,85 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     expect(screen.queryByText(/typed by a person/i)).toBeNull();
   });
 
+  // The queue opens on the seat's OWN leads or on every lead, and which one is
+  // the server's row scope rather than the caller's role keys. The screen used
+  // to read `roles` for this, which is a second reading of the same policy: a
+  // custom role, or a seeded role whose scope an operator edits, opened the
+  // wrong view while the server answered correctly.
+  //
+  // The assertion is the request the list actually makes, because that is where
+  // the filter lands — a rendered row count would pass for a screen that asked
+  // for everything and happened to be handed one lead.
+  describe("the queue's opening view follows the row scope, not the role", () => {
+    const leadRequestFor = async (
+      authorization: Record<string, unknown> | undefined,
+    ) => {
+      const asked: string[] = [];
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (request: Request) => {
+          if (request.url.endsWith("/v1/me")) {
+            return jsonResponse({
+              user: { id: "u-9", display_name: "Me" },
+              // Deliberately the role that USED to decide this. It says "open
+              // wide" in every case below, so the two narrow arms fail if
+              // anything still reads the role instead of the scope.
+              roles: ["admin"],
+              teams: [],
+              ...(authorization ? { authorization } : {}),
+            });
+          }
+          // The LIST query specifically: the screen also asks /leads/settings,
+          // which carries no filter and would satisfy the assertions vacuously.
+          if (/\/v1\/leads\?/.test(request.url)) {
+            asked.push(request.url);
+          }
+          return jsonResponse({ data: [lead], page: { next_cursor: null } });
+        }),
+      );
+      render(<LeadsScreen />);
+      await waitFor(() => expect(asked.length).toBeGreaterThan(0));
+      return asked[0];
+    };
+
+    const objects = { lead: { read: true } };
+
+    it("a seat scoped to its own records asks for its own", async () => {
+      const url = await leadRequestFor({
+        seat_type: "full",
+        row_scope: "own",
+        objects,
+      });
+      expect(url).toContain("owner_id=u-9");
+    });
+
+    it("a seat scoped to its team asks for every lead", async () => {
+      const url = await leadRequestFor({
+        seat_type: "full",
+        row_scope: "team",
+        objects,
+      });
+      expect(url).not.toContain("owner_id=");
+    });
+
+    it("a seat scoped to the whole installation asks for every lead", async () => {
+      const url = await leadRequestFor({
+        seat_type: "full",
+        row_scope: "all",
+        objects,
+      });
+      expect(url).not.toContain("owner_id=");
+    });
+
+    // Fail closed: a response carrying no authorization block at all is the
+    // narrow view, never the wide one. `row_scope !== "own"` would read a
+    // missing answer as permission to open on everything.
+    it("a response with no authorization block asks for its own", async () => {
+      const url = await leadRequestFor(undefined);
+      expect(url).toContain("owner_id=u-9");
+    });
+  });
+
   it("a lead row navigates to the LEAD detail, not the person screen", async () => {
     vi.stubGlobal(
       "fetch",

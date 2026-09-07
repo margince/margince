@@ -626,6 +626,7 @@ var agentPolicies = map[string]agentPolicy{
 	"PUT /v1/leads/{id}/manual-signals":                                  {Op: "setLeadManualSignal", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/me/agent-grants/{spec}":                                     {Op: "setMyAgentGrant", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/me/brief-delivery":                                          {Op: "saveMyBriefDelivery", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"PUT /v1/me/display-name":                                            {Op: "saveMyDisplayName", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/me/email-signature":                                         {Op: "saveMyEmailSignature", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/me/linkedin-account":                                        {Op: "saveMyLinkedInAccount", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/me/locale":                                                  {Op: "saveMyLocale", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

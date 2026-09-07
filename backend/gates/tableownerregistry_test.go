@@ -103,6 +103,7 @@ var tableOwners = map[string]string{
 	"pipeline":             "internal/modules/deals",
 	"stage":                "internal/modules/deals",
 	"stage_exit_criterion": "internal/modules/deals",
+	"deal_stage_evidence":  "internal/modules/deals",
 	"deal_stage_history":   "internal/modules/deals",
 	// The Deal Room is its own capability rather than a corner of deals: it
 	// owns an external audience, its own credentials and an immutable

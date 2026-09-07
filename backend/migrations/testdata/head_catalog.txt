@@ -2185,8 +2185,45 @@ public.deal_room_thread.state text NOT NULL gen=- def='open'::text
 public.deal_room_thread.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.deal_room_thread.version bigint NOT NULL gen=- def=1
 public.deal_room_thread_pkey CREATE UNIQUE INDEX deal_room_thread_pkey ON public.deal_room_thread USING btree (id)
+public.deal_stage_evidence acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.deal_stage_evidence.author_side text NOT NULL gen=- def=-
+public.deal_stage_evidence.commitment text NOT NULL gen=- def=-
+public.deal_stage_evidence.confidence numeric(3,2) gen=- def=-
+public.deal_stage_evidence.contradicted_by uuid gen=- def=-
+public.deal_stage_evidence.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.deal_stage_evidence.criterion_id uuid NOT NULL gen=- def=-
+public.deal_stage_evidence.deal_id uuid NOT NULL gen=- def=-
+public.deal_stage_evidence.deal_stage_evidence_author_side_check CHECK ((author_side = ANY (ARRAY['buyer'::text, 'seller'::text, 'unknown'::text])))
+public.deal_stage_evidence.deal_stage_evidence_commitment_check CHECK ((commitment = ANY (ARRAY['agreed'::text, 'proposed'::text, 'none'::text])))
+public.deal_stage_evidence.deal_stage_evidence_confidence_range CHECK (((confidence IS NULL) OR ((confidence >= (0)::numeric) AND (confidence <= (1)::numeric))))
+public.deal_stage_evidence.deal_stage_evidence_contradicted_fkey FOREIGN KEY (contradicted_by) REFERENCES deal_stage_evidence(id) ON DELETE SET NULL
+public.deal_stage_evidence.deal_stage_evidence_criterion_fkey FOREIGN KEY (criterion_id) REFERENCES stage_exit_criterion(id) ON DELETE RESTRICT
+public.deal_stage_evidence.deal_stage_evidence_deal_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
+public.deal_stage_evidence.deal_stage_evidence_deterministic_is_certain CHECK (((extracted_by <> 'deterministic'::text) OR (confidence IS NULL)))
+public.deal_stage_evidence.deal_stage_evidence_pkey PRIMARY KEY (id)
+public.deal_stage_evidence.deal_stage_evidence_refutation_whole CHECK (((refuted_at IS NULL) = (refuted_by IS NULL)))
+public.deal_stage_evidence.deal_stage_evidence_refuted_by_fkey FOREIGN KEY (refuted_by) REFERENCES app_user(id) ON DELETE SET NULL
+public.deal_stage_evidence.deal_stage_evidence_snippet_len CHECK (((snippet IS NULL) OR (length(snippet) <= 500)))
+public.deal_stage_evidence.deal_stage_evidence_source_type_check CHECK ((source_type = ANY (ARRAY['activity'::text, 'contract'::text])))
+public.deal_stage_evidence.extracted_by text NOT NULL gen=- def=-
+public.deal_stage_evidence.id uuid NOT NULL gen=- def=uuidv7()
+public.deal_stage_evidence.met boolean NOT NULL gen=- def=-
+public.deal_stage_evidence.observed_at timestamp with time zone NOT NULL gen=- def=-
+public.deal_stage_evidence.refuted_at timestamp with time zone gen=- def=-
+public.deal_stage_evidence.refuted_by uuid gen=- def=-
+public.deal_stage_evidence.snippet text gen=- def=-
+public.deal_stage_evidence.source_id uuid NOT NULL gen=- def=-
+public.deal_stage_evidence.source_lines integer[] gen=- def=-
+public.deal_stage_evidence.source_type text NOT NULL gen=- def=-
+public.deal_stage_evidence.trg_deal_stage_evidence_updated CREATE TRIGGER trg_deal_stage_evidence_updated BEFORE UPDATE ON public.deal_stage_evidence FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
+public.deal_stage_evidence.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.deal_stage_evidence.version bigint NOT NULL gen=- def=1
+public.deal_stage_evidence_deal_ix CREATE INDEX deal_stage_evidence_deal_ix ON public.deal_stage_evidence USING btree (deal_id, criterion_id) WHERE (refuted_at IS NULL)
+public.deal_stage_evidence_one_per_source_ux CREATE UNIQUE INDEX deal_stage_evidence_one_per_source_ux ON public.deal_stage_evidence USING btree (deal_id, criterion_id, source_type, source_id)
+public.deal_stage_evidence_pkey CREATE UNIQUE INDEX deal_stage_evidence_pkey ON public.deal_stage_evidence USING btree (id)
 public.deal_stage_history acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.deal_stage_history.amount_minor_at_change bigint gen=- def=-
+public.deal_stage_history.approval_id uuid gen=- def=-
 public.deal_stage_history.changed_at timestamp with time zone NOT NULL gen=- def=now()
 public.deal_stage_history.changed_by text NOT NULL gen=- def=-
 public.deal_stage_history.currency_at_change character(3) gen=- def=-
@@ -2194,10 +2231,12 @@ public.deal_stage_history.deal_id uuid NOT NULL gen=- def=-
 public.deal_stage_history.deal_stage_history_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
 public.deal_stage_history.deal_stage_history_from_stage_id_fkey FOREIGN KEY (from_stage_id) REFERENCES stage(id) ON DELETE SET NULL (from_stage_id)
 public.deal_stage_history.deal_stage_history_pkey PRIMARY KEY (id)
+public.deal_stage_history.deal_stage_history_reversal_fkey FOREIGN KEY (reversal_of) REFERENCES deal_stage_history(id) ON DELETE SET NULL
 public.deal_stage_history.deal_stage_history_to_stage_id_fkey FOREIGN KEY (to_stage_id) REFERENCES stage(id) ON DELETE RESTRICT
 public.deal_stage_history.deal_stage_history_win_probability_at_change_check CHECK (((win_probability_at_change IS NULL) OR ((win_probability_at_change >= 0) AND (win_probability_at_change <= 100))))
 public.deal_stage_history.from_stage_id uuid gen=- def=-
 public.deal_stage_history.id uuid NOT NULL gen=- def=uuidv7()
+public.deal_stage_history.reversal_of uuid gen=- def=-
 public.deal_stage_history.to_stage_id uuid NOT NULL gen=- def=-
 public.deal_stage_history.win_probability_at_change smallint gen=- def=-
 public.deal_stage_history_pkey CREATE UNIQUE INDEX deal_stage_history_pkey ON public.deal_stage_history USING btree (id)

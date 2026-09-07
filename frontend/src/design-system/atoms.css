@@ -792,8 +792,17 @@
 }
 
 /* A lighter, secondary text affordance for in-row actions that must not
- * compete with the primary Accept / Reject buttons. */
-.link-button {
+ * compete with the primary Accept / Reject buttons.
+ *
+ * `.btn.btn-link` rides along on every rule below rather than declaring a look
+ * of its own: `Button`'s `link` variant IS this affordance, reached through the
+ * component by a verb that also needs its refusal and `pending` contracts, and
+ * a second declaration would be a second spelling of one appearance for the two
+ * to drift apart on. Two classes, so the pair outranks `.btn`'s own box on
+ * specificity rather than on which of the two sheets the bundler emitted
+ * first. */
+.link-button,
+.btn.btn-link {
   font-family: var(--f-body);
   font-size: var(--fs-meta);
   font-weight: 600;
@@ -803,6 +812,12 @@
   padding: 2px 4px;
   border-radius: var(--r-sm);
   cursor: pointer;
+  /* The two floors `.btn` keeps so a short verb still reads as a pressable box.
+     A text affordance is not a box, so a 6rem-wide "Share" with 40px of air
+     around it would be the button chrome surviving the thing that removed it.
+     Harmless on a bare `.link-button`, which never had either. */
+  min-inline-size: 0;
+  min-block-size: 0;
   /* A flex line rather than inline text, so an icon and its label share one row
      and one vertical centre. Inline, the glyph sat on the text baseline with a
      descender gap under it and nothing could space the pair. */
@@ -810,7 +825,8 @@
   align-items: center;
   gap: var(--space-1);
 }
-.link-button:hover {
+.link-button:hover,
+.btn.btn-link:hover {
   text-decoration: underline;
 }
 /* A glyph a caller drops in here arrives from lucide at its own default of
@@ -819,7 +835,8 @@
    exactly this reason; this class carried the same shape and none of the rule,
    so a link button was the one affordance in the product where an icon was the
    caller's problem. The size belongs to the control, not to the call site. */
-.link-button svg {
+.link-button svg,
+.btn.btn-link svg {
   inline-size: 16px;
   block-size: 16px;
   flex: none;
@@ -833,7 +850,8 @@
  * A real outline also survives Windows High Contrast Mode, which drops
  * box-shadow entirely — the transparent-outline trick the filled controls use
  * exists only to keep something there when it does. */
-.link-button:focus-visible {
+.link-button:focus-visible,
+.btn.btn-link:focus-visible {
   outline: var(--focus-ring);
   outline-offset: 2px;
 }
