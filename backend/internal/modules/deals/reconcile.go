@@ -171,6 +171,10 @@ func (r *FollowUpReconciler) reconcileWorkspace(ctx context.Context) error {
 				  -- The subject lands in an approval every decider of the
 				  -- deal reads, so only a message the whole workspace may
 				  -- read is evidence here; a limited one is its audience's.
+				  -- Spelled inline rather than through auth.AudienceWorkspaceOnly
+				  -- because this statement is a plain string with no format
+				  -- verbs; the predicate is the helper's, and a change to one
+				  -- is a change to both.
 				  AND a.audience = 'workspace'
 				  AND a.occurred_at >= $1
 				ORDER BY a.occurred_at DESC, a.id DESC

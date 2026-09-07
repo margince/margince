@@ -191,6 +191,13 @@ func setupRuns(t *testing.T, cfg runsConfig) *runsEnv {
 			return cfg.identifiersOf(), nil
 		},
 	)
+	// The requester's organization standing. Bound by default to "holds it",
+	// because these suites are about budgets, fences and submission and would
+	// otherwise all model a rep who cannot read companies. The withheld case
+	// has its own fixture.
+	store.WithRequesterStanding(func(context.Context, pgx.Tx, string) (bool, error) {
+		return !cfg.requesterLacksOrgRead, nil
+	})
 	if !cfg.withoutEnqueue {
 		store.WithSubmitEnqueue(func(context.Context, pgx.Tx, string, string) error {
 			e.enqueued++
@@ -206,6 +213,13 @@ func setupRuns(t *testing.T, cfg runsConfig) *runsEnv {
 				// bought facts onto them. Read alone is the read_only seat, and
 				// what that seat must not do is exactly this.
 				"person": {Read: true, Update: true},
+				// The EMPLOYER travels with the subject, and reading it is the
+				// organization grant's question — SubjectIdentifiers withholds
+				// the company name and domain without it, which leaves an
+				// otherwise-matchable contact unmatchable. A rep holds this;
+				// the fixture simply never needed to say so until the employer
+				// read was gated.
+				"organization": {Read: true},
 				// What enrichment COSTS is readable by any seat that may see
 				// the connection — a rep asking "are we out of credits" is
 				// asking about the installation, not about a person.
@@ -223,6 +237,10 @@ func setupRuns(t *testing.T, cfg runsConfig) *runsEnv {
 type runsConfig struct {
 	ceilings       map[string]int
 	withoutEnqueue bool
+	// requesterLacksOrgRead models a run queued by a rep who may not read
+	// organizations, so the employer must not travel with the subject when
+	// the connector re-resolves it under its own system principal.
+	requesterLacksOrgRead bool
 	// subjectLastName picks the fake's scenario, which it reads out of the
 	// subject's name. Empty means Muster, which succeeds.
 	subjectLastName string

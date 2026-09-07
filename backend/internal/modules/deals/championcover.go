@@ -284,12 +284,12 @@ func engagedAmong(
 		  AND EXISTS (
 			SELECT 1 FROM activity a
 			JOIN activity_link l ON l.activity_id = a.id AND l.person_id = r.person_id
-			WHERE a.kind IN %[4]s AND a.archived_at IS NULL
+			WHERE a.kind IN %[4]s AND a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a")+`
 			  AND a.occurred_at >= $%[2]d AND a.direction = 'inbound')
 		  AND EXISTS (
 			SELECT 1 FROM activity a
 			JOIN activity_link l ON l.activity_id = a.id AND l.person_id = r.person_id
-			WHERE a.kind IN %[4]s AND a.archived_at IS NULL
+			WHERE a.kind IN %[4]s AND a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a")+`
 			  AND a.occurred_at >= $%[2]d AND a.direction = 'outbound')`,
 		dealsPos, windowPos, bound, healthActivityKinds), args...)
 	if err != nil {

@@ -199,6 +199,15 @@ func (s *Store) leaseForSubmit(ctx context.Context, tx pgx.Tx, name, runID strin
 	if !req.Identifiers.Matchable(desc.MatchRules) {
 		return none, false, s.markSkipped(ctx, tx, runID, provider.SkipNoIdentifiers)
 	}
+	// The employer travels only if the REQUESTER could read it — the re-read
+	// above runs as the connector, and requesterstanding.go says why.
+	skip, err := s.withholdEmployerIfUnreadable(ctx, tx, runID, &req, desc)
+	if err != nil {
+		return none, false, err
+	}
+	if skip {
+		return none, false, s.markSkipped(ctx, tx, runID, provider.SkipNoIdentifiers)
+	}
 	cred, err := s.unseal(ctx, tx, conn.credentialRef)
 	if err != nil {
 		return none, false, err

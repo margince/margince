@@ -87,12 +87,12 @@ func EngagedStakeholders(ctx context.Context, tx pgx.Tx, dealID ids.DealID, now 
 		  AND EXISTS (
 			SELECT 1 FROM activity a
 			JOIN activity_link l ON l.activity_id = a.id AND l.person_id = r.person_id
-			WHERE a.kind IN %[4]s AND a.archived_at IS NULL
+			WHERE a.kind IN %[4]s AND a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a")+`
 			  AND a.occurred_at >= $%[2]d AND a.direction = 'inbound')
 		  AND EXISTS (
 			SELECT 1 FROM activity a
 			JOIN activity_link l ON l.activity_id = a.id AND l.person_id = r.person_id
-			WHERE a.kind IN %[4]s AND a.archived_at IS NULL
+			WHERE a.kind IN %[4]s AND a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a")+`
 			  AND a.occurred_at >= $%[2]d AND a.direction = 'outbound')
 		ORDER BY r.person_id`, dealPos, windowPos, bound, healthActivityKinds), args...))
 }

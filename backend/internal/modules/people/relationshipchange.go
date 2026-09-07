@@ -16,6 +16,12 @@ package people
 //
 // The cost is one extra pass over one person's interactions, which is the same
 // order as the timeline query rendered next to it.
+//
+// Both passes carry auth.AudienceWorkspaceOnly, for the reason stated where it
+// is defined: a change derived from a held message discloses that message. The
+// score this differences is folded in strength.go, which asks the same question
+// of the same kinds — a change computed over a wider set than the score it
+// reports a change IN would also be arithmetic about two different populations.
 
 import (
 	"context"
@@ -174,7 +180,8 @@ func changeInputs(ctx context.Context, tx pgx.Tx, personID ids.PersonID, now tim
 		       max(a.occurred_at) FILTER (WHERE a.direction = 'inbound')
 		  FROM activity a
 		  JOIN activity_link l ON l.activity_id = a.id AND l.person_id = $1
-		 WHERE a.kind IN `+strengthKinds+` AND a.archived_at IS NULL`,
+		 WHERE a.kind IN `+strengthKinds+` AND a.archived_at IS NULL`+
+		auth.AudienceWorkspaceOnly("a"),
 		personID,
 		now.AddDate(0, 0, -relStrengthWindowDays),
 		asOf,
@@ -197,7 +204,7 @@ func changeInputs(ctx context.Context, tx pgx.Tx, personID ids.PersonID, now tim
 		  FROM activity a
 		  JOIN activity_link l ON l.activity_id = a.id AND l.person_id = $1
 		 WHERE a.kind IN `+strengthKinds+` AND a.archived_at IS NULL
-		   AND a.occurred_at < $2`,
+		   AND a.occurred_at < $2`+auth.AudienceWorkspaceOnly("a"),
 		personID, *in.LatestInbound,
 	).Scan(&in.PrecedingInteraction); err != nil {
 		return relstrength.ChangeInputs{}, fmt.Errorf("people: reading what preceded a contact's last reply: %w", err)
