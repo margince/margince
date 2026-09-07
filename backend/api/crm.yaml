@@ -14858,7 +14858,7 @@ paths:
       x-agent-access: human-only
       summary: List the composed extension units and what each contributes. Admin-only, human-only, read-only.
       description: |
-        What this binary actually composed (ADR-0069): one entry per enabled unit under
+        What this binary actually composed (ADR-0120): one entry per enabled unit under
         `extensions/`, with the RBAC objects, routes and jobs it contributes. The role editor
         reads it to group `ext_<unit>_<object>` grants under the unit that declared them —
         without it a grant map is a flat list of names with no way to say which product surface
@@ -35634,7 +35634,7 @@ components:
         version:
           type: string
           description: >-
-            The unit's own declared version. It carries NO authority (ADR-0069 §7): operator
+            The unit's own declared version. It carries NO authority (ADR-0120 §7): operator
             decisions bind to manifest digests, never to this string. Display only.
         rbac_objects:
           type: array

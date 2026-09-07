@@ -145,7 +145,7 @@ Two categories never reach the allowlist check:
 
 - **First-party packages** are ignored by coordinate (`ignore-packages`):
   `github.com/margince/margince/*` (our own Go modules) and
-  `example.margince.dev/*` (the committed extension stubs, ADR-0069). They carry
+  `example.margince.dev/*` (the committed extension stubs, ADR-0120). They carry
   no third-party license to gate.
 - **Local composite actions** under `.github/actions/` are ignored by coordinate
   too (`./.github/actions/*`). They are first-party files carrying the repo's own

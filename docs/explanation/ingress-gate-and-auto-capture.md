@@ -485,7 +485,7 @@ was entitled to.
 | ADR-0063 | Automatic contact creation |
 | ADR-0072 / A118 | The tier ladder, the decision ledger, the confidence floor, hide-then-redact |
 | ADR-0082 / A127 | The internal-only drop and the own-domain list |
-| ADR-0069 | The extension tier |
+| ADR-0120 | The extension tier |
 | ADR-0107 / A158 | A message names the transport that carried it, separately from its kind |
 | CAP-PARAM-5 / -6 / -7 | Personal-mail domains, the transactional registry, workspace capture settings |
 

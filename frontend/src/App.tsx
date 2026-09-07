@@ -342,7 +342,7 @@ function ResetRoute() {
   return <AuthScreen onAuthed={() => navigate({ screen: "brief" })} />;
 }
 
-// #/ext/<unit> (ADR-0069) — the composed extension tier's one route into the
+// #/ext/<unit> (ADR-0120) — the composed extension tier's one route into the
 // SPA. The registry is generated per installation, so this arm is the SAME
 // code in the vanilla tree, where every unit name misses and the honest
 // not-found card renders; that lane is the default one and must never crash or

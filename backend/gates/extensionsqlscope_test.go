@@ -83,7 +83,7 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
-// extSchema is the one schema an extension's tables live in (ADR-0069 §9); the
+// extSchema is the one schema an extension's tables live in (ADR-0120 §9); the
 // migration gate refuses a unit relation anywhere else.
 const extSchema = "ext"
 

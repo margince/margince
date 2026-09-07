@@ -78,7 +78,7 @@ export MARGINCE_TEST_BLOBSTORE_BUCKET     ?= margince-test
 # production deployment sets its own environment and never runs make.
 export MARGINCE_ENV          ?= dev
 
-# The composed workspace (ADR-0069): every build/test lane runs against
+# The composed workspace (ADR-0120): every build/test lane runs against
 # build/composition/go.work, so an enabled extension set under
 # extensions/ is compiled in — vanilla composes empty and the output is
 # unchanged (the generator's vanilla wiring is byte-identical to the

@@ -285,7 +285,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `jobfleetwide_test.go` | H2 | A FleetWide declaration is a promise: this job enumerates and enqueues, and does no tenant write of its own (jobs.FleetWide). |
 | `jobwirekey_test.go` | H2 | One workspace arg, one spelling, and only where it means something. |
 | `listenvelope_test.go` | H2 | The contract's list envelope has ONE shape, and something depends on that. |
-| `manifestdigest_test.go` | H2 | Manifest-hash encoding fitness function (ADR-0069 §7): every hash a generated unit manifest publishes says which algorithm produced it. |
+| `manifestdigest_test.go` | H2 | Manifest-hash encoding fitness function (ADR-0120 §7): every hash a generated unit manifest publishes says which algorithm produced it. |
 | `positionalrowscan_test.go` | H2 | A positional row mapping may only target a struct its own package declares. |
 | `promptversionderived_test.go` | H2 | A cached answer is keyed by a fingerprint, and the fingerprint has to move when the prompt that produced the answer moves. |
 | `replyverdictvocabulary_test.go` | H1 | The reply verdict is spelled in three places, and they have to agree. |
@@ -311,7 +311,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `dealforecastmovement_test.go` | H2 | A deal row changes through one door, and that door records the forecast. |
 | `errmatch_test.go` | H2 | Postgres failures are classified by SQLSTATE/constraint name (the storekit.UniqueViolation / CheckViolation helpers), never by message text: an error-string substring match silently breaks on a locale change, a driver upgrade, or an unrelated error that happens to mention the same identifier — and it misclassifies infrastructure faults as client faults. |
 | `evidencedeletes_test.go` | H2 | No domain code deletes an evidence row. |
-| `extensions_arch_test.go` | H2 | Extension-tier fitness functions (ADR-0069 §3): the compiler already walls extensions off from internal/\*\* (their module paths sit outside the backend module), these tests hold the rest of the import contract from the tree — every extension source dir (enabled or fixture) is enrolled the moment it exists. |
+| `extensions_arch_test.go` | H2 | Extension-tier fitness functions (ADR-0120 §3): the compiler already walls extensions off from internal/\*\* (their module paths sit outside the backend module), these tests hold the rest of the import contract from the tree — every extension source dir (enabled or fixture) is enrolled the moment it exists. |
 | `flagdefault_test.go` | H2 | No string flag takes its default straight from the environment. |
 | `followablecitations_test.go` | H1 | A file this push touched does not send its reader to a document they cannot open. |
 | `formulafieldscope_test.go` | H3 | The negative-scope half of the formula-field boundary proof (RD-AC-7): a formula field is a database-GENERATED artifact, never a runtime-authored one, so NO contract operation may accept a writable formula\_sql in its request body — ComputedField.formula\_sql (crm.yaml) is a response-only display field, never echoed back as an editable one. |

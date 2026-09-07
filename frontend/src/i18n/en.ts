@@ -226,7 +226,7 @@ export const en = {
   "screen.pending":
     "Not built yet — this surface arrives with its build ticket.",
 
-  // The composed extension tier (ADR-0069): #/ext/<unit>. The registry is
+  // The composed extension tier (ADR-0120): #/ext/<unit>. The registry is
   // generated per installation, so these two strings are the only part of a
   // unit surface the core catalogs own.
   "ext.notFound":

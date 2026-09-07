@@ -3,7 +3,7 @@
 
 // Command extmigrategate applies one extension unit's migrations as its
 // restricted ext_<name> role against a throwaway database and then asserts
-// what the catalog actually holds (ADR-0069).
+// what the catalog actually holds (ADR-0120).
 //
 // It is the closing gate of the extension migration rules, and the only one
 // that is not textual. gen-composition's pre-apply rule reads the SQL and

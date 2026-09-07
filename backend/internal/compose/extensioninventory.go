@@ -22,7 +22,7 @@ import (
 
 // extensionCompositionObserved is the system_log action carrying the
 // composed extension set; one row per observed CHANGE, so install,
-// upgrade and removal — which all happen in source (ADR-0069 §5) — leave
+// upgrade and removal — which all happen in source (ADR-0120 §5) — leave
 // an attributable trail even though no request performed them.
 const extensionCompositionObserved = "extension.composition_observed"
 
@@ -34,7 +34,7 @@ const extensionLedgerFact = "extension-inventory"
 // observedExtension is one unit of the recorded set. It gains the
 // manifest digest when the governance slice embeds digests into the
 // composed binary; until then name+version identify the unit in the log
-// (the version string carries no authority, ADR-0069 §7).
+// (the version string carries no authority, ADR-0120 §7).
 type observedExtension struct {
 	Name    string `json:"name"`
 	Version string `json:"version"`

@@ -6,7 +6,7 @@ module github.com/margince/margince/backend
 // choice, revisit if broader portability becomes a goal.
 go 1.26.6
 
-// The composed extension set (ADR-0069): a constant import path the role
+// The composed extension set (ADR-0120): a constant import path the role
 // binaries wire — api, worker and mcp today; migrate joins when the
 // extension migration namespace lands. Bare builds resolve the committed
 // vanilla stub via this replace, `make` lanes override it with the

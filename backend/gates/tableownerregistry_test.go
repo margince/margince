@@ -251,7 +251,7 @@ var tableOwners = map[string]string{
 	// (validator, freeze probe, per-entry audit verb) the entry already
 	// carries. The unusual owner is therefore the invariant, not an exception.
 	"setting": "internal/platform/settings",
-	// The extension tier's secret namespace (ADR-0069): the mapping from an
+	// The extension tier's secret namespace (ADR-0120): the mapping from an
 	// extension's own key names onto keyvault refs. Owned by the platform
 	// mechanism for the same reason `setting` is — no module owns the row
 	// shape, and a second writer would be a second namespace wall, which is

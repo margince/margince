@@ -10213,7 +10213,7 @@ export interface paths {
         };
         /**
          * List the composed extension units and what each contributes. Admin-only, human-only, read-only.
-         * @description What this binary actually composed (ADR-0069): one entry per enabled unit under
+         * @description What this binary actually composed (ADR-0120): one entry per enabled unit under
          *     `extensions/`, with the RBAC objects, routes and jobs it contributes. The role editor
          *     reads it to group `ext_<unit>_<object>` grants under the unit that declared them —
          *     without it a grant map is a flat list of names with no way to say which product surface
@@ -26045,7 +26045,7 @@ export interface components {
             name: string;
             /** @description One sentence from the unit's own declaration saying what it is for. The access screen lists every composed unit, and a name alone leaves an operator deciding what to grant to something called `de`; only the unit's author knows the answer, so the declaration is where it comes from. Required at boot — a unit without one does not compose. */
             description: string;
-            /** @description The unit's own declared version. It carries NO authority (ADR-0069 §7): operator decisions bind to manifest digests, never to this string. Display only. */
+            /** @description The unit's own declared version. It carries NO authority (ADR-0120 §7): operator decisions bind to manifest digests, never to this string. Display only. */
             version: string;
             /** @description The `ext_<name>_<object>` names this unit's operations gate on, registered into the vocabulary at boot — exactly the objects `setRoleObjectGrant` will accept for this unit. Sorted, and empty for a unit that owns no records (the common case). */
             rbac_objects: string[];

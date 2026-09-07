@@ -7,7 +7,7 @@ import { beginModelCall, endModelCall } from "./model-inflight";
 // regenerate with `pnpm gen:api` after a crm.yaml change; never hand-edit.
 //
 // The specifier is the composition alias, not "./schema", and that is the whole
-// of what makes an extension unit's screen able to use this client (ADR-0069).
+// of what makes an extension unit's screen able to use this client (ADR-0120).
 // The VANILLA lane resolves it to src/api/schema.d.ts — the base contract — so
 // `api.GET("/ext/notes")` is correctly a type error there: that
 // installation does not serve the route. The COMPOSED lane

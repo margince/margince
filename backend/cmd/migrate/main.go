@@ -3,7 +3,7 @@
 
 // Command migrate is the schema-migration process role (ADR-0054,
 // amended §2): applies the embedded core + custom namespaces (ADR-0017)
-// and the composed extension set's namespaces (ADR-0069) with the
+// and the composed extension set's namespaces (ADR-0120) with the
 // owner-role DSN. Thin main, a testable run().
 package main
 

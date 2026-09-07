@@ -59,7 +59,7 @@ func TestConfiguringTheWorkerFailsBeforeAnythingIsOpened(t *testing.T) {
 
 // TestConfiguringTheWorkerCarriesTheDeploymentPostureOntoTheConfig is the
 // success path, and the only test here that reaches the extension registration.
-// A failing registration aborts the worker boot (ADR-0069 EXT-P4), so this also
+// A failing registration aborts the worker boot (ADR-0120 EXT-P4), so this also
 // asserts that the set THIS build composes is one the boot survives.
 //
 // The capture posture is resolved LAST, after the logger exists, because it

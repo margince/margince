@@ -67,7 +67,7 @@
   description: "Deals, pipeline, stages, leads, offers"
 - name: "area: extensions"
   color: "BFD4F2"
-  description: "The extension tier (ADR-0069): units, the published pkg surface, composition"
+  description: "The extension tier (ADR-0120): units, the published pkg surface, composition"
 - name: "area: finance"
   color: "BFD4F2"
   description: "Invoices, payments, FX, contracts"

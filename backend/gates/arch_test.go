@@ -127,7 +127,7 @@ func TestNoSiblingModuleImports(t *testing.T) {
 // TestSharedIsPure: internal/shared (kernel + apperrors + ports) is the
 // Tier-0 leaf layer — stdlib, each other, and the published extension
 // surface beneath it (ports alias published seam types so a core module
-// and an extension register the same type, ADR-0069 §3). Anything else
+// and an extension register the same type, ADR-0120 §3). Anything else
 // is an architecture defect.
 func TestSharedIsPure(t *testing.T) {
 	t.Parallel()
@@ -145,7 +145,7 @@ func TestSharedIsPure(t *testing.T) {
 }
 
 // TestPublishedSurfaceIsPure: backend/pkg is the published extension
-// surface (ADR-0069 §3) and the outermost leaf — stdlib and itself,
+// surface (ADR-0120 §3) and the outermost leaf — stdlib and itself,
 // nothing else. Any other import would become transitively-frozen
 // published API the moment an extension binds it.
 func TestPublishedSurfaceIsPure(t *testing.T) {

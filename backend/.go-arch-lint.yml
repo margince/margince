@@ -16,7 +16,7 @@ exclude:
   - tools
 
 vendors:
-  # The composed extension set (ADR-0069): an out-of-module import — the
+  # The composed extension set (ADR-0120): an out-of-module import — the
   # committed vanilla stub in bare builds, the generated module under
   # build/composition/ in composed ones. Only cmd wires it (the fitness
   # test in backend/gates/extensions_arch_test.go holds the same rule).
@@ -65,7 +65,7 @@ vendors:
   brotli: { in: github.com/andybalholm/** }
 
 components:
-  # The published extension surface (ADR-0069 §3): the outermost Tier-0
+  # The published extension surface (ADR-0120 §3): the outermost Tier-0
   # leaf, importable by every layer (and by extensions outside this
   # module); its own imports are gated to stdlib by depguard pkg-purity +
   # TestPublishedSurfaceIsPure.

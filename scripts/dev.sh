@@ -1013,7 +1013,7 @@ up)
     # The base `margince` db already exists (db-up + db-init); only a slugged
     # env needs its own database created.
     [[ -n "$slug" ]] && psql_owner postgres -c "CREATE DATABASE \"${db}\"" 2>&1 || true
-    # The composed workspace (ADR-0069): materialize build/composition/
+    # The composed workspace (ADR-0120): materialize build/composition/
     # and build the role binaries against it, so an enabled extension set
     # under extensions/ reaches the dev stack; vanilla composes empty.
     #

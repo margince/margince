@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package jurisdiction carries the jurisdiction-pack contract of the
-// published extension surface (ADR-0069 §3, ADR-0042): a pack supplies
+// published extension surface (ADR-0120 §3, ADR-0042): a pack supplies
 // country-specific POLICY the core engines consult — it is never an
 // actor. These types are frozen published API from their first external
 // consumer; they evolve additively or through versioned successors,
@@ -136,7 +136,7 @@ type Retention interface {
 // type, never free-set"), so a class exists only when a record type the
 // product holds derives into it. Extensions supply floors for known
 // classes, they do not add kinds — vocabulary registration is
-// deliberately deferred (ADR-0069 §13), and an unknown name would be a
+// deliberately deferred (ADR-0120 §13), and an unknown name would be a
 // floor that looks registered while no engine ever consults it.
 type RetentionClassName string
 
@@ -165,7 +165,7 @@ func (n RetentionClassName) Validate() error {
 	case CommercialCorrespondence, AccountingRecords:
 		return nil
 	}
-	return fmt.Errorf("retention class %q is not in the closed class set — vocabulary registration is deferred (ADR-0069 §13)", string(n))
+	return fmt.Errorf("retention class %q is not in the closed class set — vocabulary registration is deferred (ADR-0120 §13)", string(n))
 }
 
 // Anchor names where a retention period starts counting. The zero value

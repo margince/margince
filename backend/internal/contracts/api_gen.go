@@ -20855,7 +20855,7 @@ type ComposedExtension struct {
 	// Routes The unit's published operations, one entry per method+path pair. Sorted by path then method. A bare path would under-report the surface — one path serving GET and DELETE is two capabilities to an operator auditing what a unit can do, and collapsing them hides the destructive one behind the harmless one.
 	Routes []ComposedExtensionRoute `json:"routes"`
 
-	// Version The unit's own declared version. It carries NO authority (ADR-0069 §7): operator decisions bind to manifest digests, never to this string. Display only.
+	// Version The unit's own declared version. It carries NO authority (ADR-0120 §7): operator decisions bind to manifest digests, never to this string. Display only.
 	Version string `json:"version"`
 }
 
