@@ -273,6 +273,11 @@ export function stubFetch(
 // describe a reader every verb is withheld from. A spec about a refusal
 // answers /me itself, with a `user`, and is passed through untouched.
 async function withSession(answer: Response): Promise<Response> {
+  // A refusal is a session too — the 401 the boundary tells apart from an
+  // unavailable server — and stays exactly as the responder answered it.
+  if (!answer.ok) {
+    return answer;
+  }
   const body: unknown = await answer.clone().json();
   if (typeof body === "object" && body !== null && "user" in body) {
     return answer;
