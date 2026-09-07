@@ -196,8 +196,6 @@ backend/tools/extmigrategate/role.go core 0213
 backend/tools/extmigrategate/role.go migration 0206
 backend/tools/gen-composition/extmigrations.go core 0213
 backend/tools/gen-composition/scan_test.go migration 0002
-backend/tools/seed-demo/apiclient.go migration 0273
-backend/tools/seed-demo/comms.go migration 0282
 desktop/build/build-postgres.sh core 0032
 desktop/build/build-postgres.sh core 0052
 docs/deployment.md migration 0015

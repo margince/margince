@@ -104,7 +104,7 @@ UNCACHED_TEST_PKGS := ./gates ./internal/modules/ai/
 
 .DEFAULT_GOAL := help
 
-.PHONY: perfdoc help check build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial lint arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db seed-demo migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln tools tools-go hooks
+.PHONY: perfdoc help check build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial lint arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln tools tools-go hooks
 
 help: ## List targets with their descriptions (the default goal)
 	@grep -hE '^[a-zA-Z][a-zA-Z0-9_-]*:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -709,13 +709,6 @@ seed-reset: ## Clear the demo RECORDS, keeping the installation and its config (
 seed-dev-db: ## Apply the dev DB seed for API-less demo data (scripts/seed-dev.sql); run after seed-dev
 	$(PSQL) $(DEV_DB_NAME) -v ON_ERROR_STOP=1 < ../scripts/seed-dev.sql
 
-# MARGINCE_SEED_DSN is not optional in practice, and the root target always
-# supplies it: without a DSN the seeder silently skips teams, seats, finance
-# links and facts, then fails in the ownership pass with "no seats to own
-# anything". Run this through the root `make seed-demo`, which reads the
-# password and the DSN for you.
-seed-demo: composition ## Fill a running stack from the demo dataset (prefer the root `make seed-demo`)
-	$(GOWORK_COMPOSED) $(GO) run ./tools/seed-demo -dataset "$(DATASET)" $(SEED_ARGS)
 
 # The COMPOSED workspace is load-bearing here, not tidiness: cmd/migrate
 # applies the enabled units' migrations from the composed extension set, and

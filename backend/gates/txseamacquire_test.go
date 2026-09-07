@@ -87,7 +87,6 @@ func TestATxAcceptingFunctionAcquiresNoConnectionOfItsOwn(t *testing.T) {
 		// tiers that serve requests rather than widening to tools/, because
 		// this gate's subject is the C5 shared-tx seam and a demo fixture that
 		// owns its own connection is not one.
-		"tools/seed-demo/nightlypasses.go": "requestNightlyWorklistPasses opens the transaction itself and hands it to the two request helpers; nothing here runs on a caller's tx",
 	})
 	roots := []string{"internal", "cmd"}
 	scope := gatekit.Scope{

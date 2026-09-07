@@ -61,15 +61,6 @@ coverage-extensions.out
 /backend/migrate
 /backend/mcp
 
-# Same for the tools module, and BOTH paths it lands on: `go build ./tools/...`
-# from backend/ drops the binary at the first, `go build ./...` from
-# backend/tools/ drops it beside its own source at the second. A `git add -A`
-# will happily commit either — it has done both, the second time because only
-# the first was anchored here. An anchored rule is right for a build artifact
-# whose name collides with a package directory, so the two are listed rather
-# than loosened to a bare `seed-demo`.
-/backend/seed-demo
-/backend/tools/seed-demo/seed-demo
 
 # Session working notes — local only, not part of the published repo
 /review_*.md
@@ -181,7 +172,6 @@ workspace/
 /backend/tools/gen-perfdoc/gen-perfdoc.exe
 /backend/tools/contract-overlay/contract-overlay
 /backend/tools/contract-overlay/contract-overlay.exe
-/seed-demo
 
 # e2e-llm run artifacts. The lane writes a transcript per run (hundreds of KB
 # each) plus a small verdict file. The TRANSCRIPTS are evidence for the run that
@@ -227,4 +217,3 @@ dump.rdb
 /backend/tools/gen-recordfields/gen-recordfields
 /backend/tools/gen-stubs/gen-stubs
 /backend/tools/gen-workflow/gen-workflow
-/backend/tools/seed-demo/seed-demo

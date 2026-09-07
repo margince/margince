@@ -153,7 +153,7 @@ login_as() {
 # hold, so the account is held on the very value it should end up with, and the
 # product refuses rotating a password to itself. Two changes clear it honestly:
 # out to a detour value and back. This is the same dance
-# backend/tools/seed-demo/apiclient.go does, and for the same reason.
+# the dataset loader does, and for the same reason.
 DETOUR_PASSWORD="${DETOUR_PASSWORD:-demo-password-123-first-change}"
 
 # Sign in with the chosen password, or fall back to the bootstrap one and
