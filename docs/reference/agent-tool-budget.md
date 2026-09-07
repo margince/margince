@@ -30,8 +30,8 @@ alone. A frame that grows a paragraph spends it on every run of every agent.
 
 | Agent | Tools | Tokens | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 5 | 1634 | 4% | 21576 | 6 | 5 |
-| `overnight_at_risk_sweep` | 7 | 2467 | 7% | 20743 | 15 | 9 |
+| `morning_brief` | 5 | 1634 | 4% | 21576 | 6 | 6 |
+| `overnight_at_risk_sweep` | 7 | 2467 | 7% | 20743 | 15 | 10 |
 | _whole served catalog, for scale_ | 73 | 21707 | 66% | — | — | — |
 
 ### `morning_brief`
@@ -111,19 +111,16 @@ scenarios name that tool as the WRONG reach. 22 of those scenarios offer the mod
 whole catalog and score which tool it picks, so the confusions it names were chosen
 against the real surface rather than guessed.
 
-**It is a rubric-mention heuristic, not an observed error rate.** The count is
-registered tool names appearing in a scenario's rubric prose, minus that scenario's
-own expected step. A weight of 5 does not mean a model went wrong five times; it
-means five scenario rubrics name a tool on this menu as the reach to avoid. The
-measurement that would replace it is sampling real runs for chosen-vs-wanted.
+**It is an authored count, not an observed error rate.** Each scenario DECLARES
+the tools its goal makes tempting, in a `near_misses:` list beside its expected
+step. A weight of 5 does not mean a model went wrong five times; it means five
+scenarios name a tool on this menu as the reach to avoid. The measurement that
+would replace it is sampling real runs for chosen-vs-wanted.
 
-**Two limits, both real.** A scenario's near-misses live only in its `rubric:` free
-text, so the count is read by matching registered tool names in that prose minus the
-scenario's own answer — which over-counts, because a rubric quotes the right tool's
-copy and that copy names others. And each count was measured under a *different*
-scenario's goal, so summing them over one agent's fixed goal borrows precision the
-number does not have. Read it as an ordering of which tools cause trouble on this
-surface, not as a prediction about one agent.
+**One limit remains.** Each count was authored under a *different* scenario's goal,
+so summing them over one agent's fixed goal borrows precision the number does not
+have. Read it as an ordering of which tools cause trouble on this surface, not as a
+prediction about one agent.
 
 Every scenario in the corpus was read; none was skipped.
 
@@ -157,7 +154,7 @@ a term in an addition.
 | `book_meeting` | 393 | — |
 | `enrich` | 393 | — |
 | `compose_analytics_report` | 390 | — |
-| `search_records` | 385 | 6 scenarios |
+| `search_records` | 385 | 9 scenarios |
 | `forecast_movement` | 351 | — |
 | `describe_report_vocabulary` | 349 | — |
 | `forecast_readings` | 349 | — |
@@ -183,7 +180,7 @@ a term in an addition.
 | `qualify_lead` | 230 | — |
 | `apply_tag` | 227 | — |
 | `create_task` | 222 | — |
-| `read_record` | 222 | 2 scenarios |
+| `read_record` | 222 | 3 scenarios |
 | `whats_slipping_this_week` | 211 | 2 scenarios |
 | `at_risk_relationships` | 208 | — |
 | `read_brief` | 206 | — |

@@ -31,6 +31,8 @@ expect:
     The distinction is the point of the pair: one tool reports open promises,
     the other reports deals with none, and a surface where either answers both
     is one where a rep cannot tell which they were told.
+  near_misses:
+    - review_commitments
   bands:
     certified_min: 70
     degraded_min: 50

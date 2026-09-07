@@ -23,6 +23,9 @@ expect:
     organization the grounding identifies. search_records would return the
     account the grounding has already supplied, and account_coverage answers a
     different question — who is covered — without naming a path in.
+  near_misses:
+    - search_records
+    - account_coverage
   bands:
     certified_min: 70
     degraded_min: 50

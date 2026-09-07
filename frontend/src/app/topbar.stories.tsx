@@ -362,20 +362,21 @@ const SETTINGS_SECTION: NavSection = {
   activeId: "privacy",
   groups: [
     {
-      headingKey: "settings.group.you",
+      headingKey: "settings.group.me",
       items: [
         { id: "account", labelKey: "settings.tab.account", icon: UserRound },
       ],
     },
     {
-      headingKey: "settings.group.admin",
+      headingKey: "settings.group.governance",
       items: [
         { id: "privacy", labelKey: "settings.tab.privacy", icon: ShieldCheck },
-        {
-          id: "data-model",
-          labelKey: "settings.tab.data-model",
-          icon: Database,
-        },
+      ],
+    },
+    {
+      headingKey: "settings.group.sales",
+      items: [
+        { id: "fields", labelKey: "settings.tab.fields", icon: Database },
       ],
     },
   ],

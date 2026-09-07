@@ -47,6 +47,14 @@ import "./atoms.css";
  * so a reader learns one colour for "Margince did this" rather than one per
  * surface, and it never marks importance: a destructive verb an agent performs
  * is still danger.
+ *
+ * `link` is the quietest rung: the text affordance `.link-button` already draws
+ * for an `<a>` or a hand-rolled `<button>`, reached through this component by a
+ * verb that also needs what only this component gives — the refusal contract
+ * and the `pending` one. It wears that same class rather than a look of its
+ * own, so the two spellings of a link affordance cannot drift apart. `small`
+ * and `iconOnly` say nothing here: the class has no fill, no width floor and no
+ * control height for either to shrink.
  */
 export type ButtonVariant =
   | "primary"
@@ -54,7 +62,8 @@ export type ButtonVariant =
   | "danger"
   | "federated"
   | "ai"
-  | "aiQuiet";
+  | "aiQuiet"
+  | "link";
 
 /**
  * The turning mark a control shows while a write it started is in flight.

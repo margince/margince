@@ -467,7 +467,7 @@ export function RetentionCard() {
   // After every hook, so the hook call order stays unconditional.
   //
   // Withheld, not absent: a permission is what denies this, so the card keeps
-  // its place and says so. It shares the Privacy & audit page with the consent
+  // its place and says so. It shares the Privacy & retention page with the consent
   // registry an ops seat comes here for, and beside a subject queue that
   // explains its own emptiness — a card that simply vanished would leave that
   // reader to conclude this installation keeps everything forever.

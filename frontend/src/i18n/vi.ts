@@ -3656,6 +3656,9 @@ export const vi = {
   "delivery.weeklyHelp": "Đánh giá thứ Hai có được gửi qua email hay không.",
   "delivery.byEmail": "Qua email",
   "delivery.none": "Không qua email",
+  "settings.appearance": "Giao di\u1ec7n",
+  "settings.appearanceHelp":
+    "S\u00e1ng, t\u1ed1i, ho\u1eb7c theo thi\u1ebft b\u1ecb n\u00e0y. Menu t\u00e0i kho\u1ea3n c\u0169ng \u0111\u1ed5i \u0111\u01b0\u1ee3c.",
   "settings.languageHelp": "Chỉ giữ trong phiên làm việc.",
   "role.admin": "Quản trị",
   "role.management": "Ban lãnh đạo",
@@ -4712,6 +4715,12 @@ export const vi = {
     "Có thể giới hạn từng tin nhắn sau đó, và loại trừ địa chỉ hoặc tên miền ngay từ đầu.",
   "mailSharing.danger":
     "NGUY HIỂM: Tắt chia sẻ email sẽ khiến việc sử dụng CRM trở nên khó khăn. Email mới chỉ hiển thị với những người trong từng tin nhắn.",
+  "mailSharing.posture.shared":
+    "Th\u01b0 m\u1edbi thu th\u1eadp \u0111\u01b0\u1ee3c \u0111\u1ed3ng nghi\u1ec7p th\u1ea5y \u0111\u01b0\u1ee3c ng\u01b0\u1eddi \u0111\u00f3 \u0111\u1ecdc.",
+  "mailSharing.posture.private":
+    "Th\u01b0 m\u1edbi thu th\u1eadp ch\u1ec9 d\u00e0nh cho ng\u01b0\u1eddi trong th\u01b0 v\u00e0 h\u1ed9p th\u01b0 \u0111\u00e3 thu.",
+  "mailSharing.posture.where":
+    "Thay \u0111\u1ed5i \u1edf Quy t\u1eafc thu th\u1eadp",
   "mailSharing.sharedPosture.label": "Cho phép hộp thư chia sẻ ngay khi nhận",
   "mailSharing.sharedPosture.help":
     "Cho phép đồng nghiệp đặt hộp thư của họ ở chế độ chia sẻ, khi đó thư thu thập được cả nhóm đọc ngay lúc đến, trước khi có bất kỳ đánh giá nào. Mặc định tắt.",
@@ -6075,6 +6084,24 @@ export const vi = {
   // từ đó, và một dòng lặp lại tiêu đề của chính nó thì không gọi tên được gì.
   "settings.home": "Trang ch\u00ednh c\u00e0i \u0111\u1eb7t",
   "settings.home.yours": "C\u00e0i \u0111\u1eb7t c\u1ee7a b\u1ea1n",
+  "settings.home.manage":
+    "Nh\u1eefng g\u00ec b\u1ea1n c\u00f3 th\u1ec3 thay \u0111\u1ed5i",
+  "settings.home.manageSub":
+    "C\u00e1c c\u00e0i \u0111\u1eb7t b\u1ea1n c\u00f3 quy\u1ec1n ch\u1ec9nh s\u1eeda.",
+  "settings.home.lookUp":
+    "Nh\u1eefng g\u00ec b\u1ea1n c\u00f3 th\u1ec3 tra c\u1ee9u",
+  "settings.home.lookUpSub":
+    "B\u1ea1n c\u00f3 th\u1ec3 \u0111\u1ecdc; vi\u1ec7c thay \u0111\u1ed5i kh\u00f4ng thu\u1ed9c vai tr\u00f2 c\u1ee7a b\u1ea1n.",
+  "settings.home.rolesLabel": "Vai tr\u00f2 c\u1ee7a b\u1ea1n",
+  "settings.home.seatLabel": "Ch\u1ed7 ng\u1ed3i c\u1ee7a b\u1ea1n",
+  "settings.home.seat.full":
+    "Ch\u1ed7 \u0111\u1ea7y \u0111\u1ee7 \u2014 b\u1ea1n c\u00f3 th\u1ec3 thay \u0111\u1ed5i",
+  "settings.home.seat.read":
+    "Ch\u1ed7 ch\u1ec9 \u0111\u1ecdc \u2014 b\u1ea1n c\u00f3 th\u1ec3 xem, kh\u00f4ng th\u1ec3 thay \u0111\u1ed5i",
+  "settings.home.reachLabel": "B\u1ea3n ghi b\u1ea1n ti\u1ebfp c\u1eadn",
+  "settings.home.reach.own": "B\u1ea3n ghi c\u1ee7a ri\u00eang b\u1ea1n",
+  "settings.home.reach.team": "B\u1ea3n ghi c\u1ee7a nh\u00f3m b\u1ea1n",
+  "settings.home.reach.all": "M\u1ecdi b\u1ea3n ghi trong t\u1ed5 ch\u1ee9c",
   "settings.home.access": "Quy\u1ec1n truy c\u1eadp c\u1ee7a b\u1ea1n",
   "settings.boundary.deniedTitle":
     "Trang c\u00e0i \u0111\u1eb7t n\u00e0y kh\u00f4ng m\u1edf cho b\u1ea1n",
@@ -6149,6 +6176,8 @@ export const vi = {
     "Trang n\u00e0y \u1ea3nh h\u01b0\u1edfng \u0111\u1ebfn ai: {scope}",
   "settings.scopeAriaMixed":
     "Trang n\u00e0y c\u00f3 c\u00e1c c\u00e0i \u0111\u1eb7t \u1ea3nh h\u01b0\u1edfng \u0111\u1ebfn nh\u1eefng ng\u01b0\u1eddi kh\u00e1c nhau \u2014 m\u1ed7i c\u00e0i \u0111\u1eb7t t\u1ef1 n\u00f3i r\u00f5.",
+  "settings.readOnlyPage":
+    "B\u1ea1n c\u00f3 th\u1ec3 xem c\u00e1c c\u00e0i \u0111\u1eb7t n\u00e0y nh\u01b0ng kh\u00f4ng th\u1ec3 thay \u0111\u1ed5i \u2014 vi\u1ec7c thay \u0111\u1ed5i kh\u00f4ng thu\u1ed9c vai tr\u00f2 c\u1ee7a b\u1ea1n.",
   "settings.search.label": "T\u00ecm trong c\u00e0i \u0111\u1eb7t",
   "settings.search.placeholder": "T\u00ecm c\u00e0i \u0111\u1eb7t",
   "settings.search.none":
@@ -6187,7 +6216,7 @@ export const vi = {
   "settings.tab.users": "Người dùng & nhóm",
   "settings.tab.extensions": "Tiện ích mở rộng",
   "settings.tab.integrations": "Tích hợp",
-  "settings.tab.capture": "Thu thập",
+  "settings.tab.capture": "Quy tắc thu thập",
   "settings.tab.data-model": "Mô hình dữ liệu",
   "settings.tab.ai": "AI",
   "settings.tab.knowledge": "Tri thức",
@@ -6246,7 +6275,7 @@ export const vi = {
   "knowledge.new.topicHint":
     "Viết một câu, đừng viết nhãn. Câu này được trích lại cho người hỏi điều bộ này không bao gồm — họ đọc nó vào lúc kém kiên nhẫn nhất.",
   "knowledge.new.submit": "Tạo bộ",
-  "settings.tab.privacy": "Quyền riêng tư & kiểm toán",
+  "settings.tab.privacy": "Quyền riêng tư & lưu trữ",
   "settings.tab.capture-activity": "Hoạt động thu thập",
   "captureActivity.title": "Hoạt động thu thập",
   "captureActivity.sub":
@@ -6425,8 +6454,6 @@ export const vi = {
     "Giấy phép hết hạn vào {expiry}. Không có gì thay đổi trước ngày đó.",
   "license.counting":
     "Chỗ đầy đủ chưa bị vô hiệu hoá và chưa bị tạm ngưng, bao gồm cả agent. Chỗ chỉ đọc là không giới hạn và không bao giờ được tính. Thành viên mới được xét theo con số này.",
-  "settings.group.you": "Cá nhân",
-  "settings.group.admin": "Cài đặt quản trị",
   "settings.rates.fxTitle": "Tỷ giá",
   "settings.rates.fxIntro":
     "Tỷ giá quy đổi số tiền ngoại tệ về tiền tệ gốc của bạn. Tỷ giá mới có hiệu lực từ hôm nay trở đi; tỷ giá quá khứ không bao giờ bị sửa.",
@@ -8633,6 +8660,7 @@ export const vi = {
   "worklist.untitled.relationship_decay": "Một mối quan hệ đang nguội",
   "worklist.untitled.failed_approval": "Điều bạn duyệt đã không chạy",
   "worklist.untitled.dsr": "Một yêu cầu quyền riêng tư",
+  "worklist.untitled.notice_case": "Một thông báo cần gửi cho người này",
   "worklist.untitled.sync_health": "Đồng bộ CRM cần chú ý",
   "worklist.sync.class.contacts": "người",
   "worklist.sync.class.companies": "công ty",

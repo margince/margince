@@ -9,6 +9,9 @@
 
 import "@testing-library/jest-dom/vitest";
 
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { cleanup, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -16,6 +19,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { Button } from "./atoms";
 import { type Visibility, VisibilityBadge, VisibilityLine } from "./visibility";
+
+const here = dirname(fileURLToPath(import.meta.url));
 
 afterEach(cleanup);
 
@@ -54,12 +59,25 @@ describe("VisibilityLine", () => {
     const { container } = draw(
       <VisibilityLine
         state="team"
-        action={<Button small>Make private</Button>}
+        action={<Button variant="link">Make private</Button>}
       />,
     );
     const line = container.querySelector(".visibility-line");
     expect(line?.querySelector(".visibility")).toBeInTheDocument();
     expect(line?.querySelector("button")).toHaveTextContent("Make private");
+  });
+
+  // jsdom loads no stylesheet and computes no layout, so where the slot SITS
+  // is asserted on the sheet itself — the same way the federated door's
+  // geometry is. The order test above holds the DOM half of the same claim.
+  it("seats the verb immediately after the fact, not at the far end", () => {
+    const css = readFileSync(join(here, "visibility.css"), "utf8");
+    const rule = /(?:^|\n)\.visibility-line__action\s*\{([^}]*)\}/.exec(css);
+    expect(rule).not.toBeNull();
+    // An `auto` margin here puts the whole width of the surface between the
+    // word and the verb that changes it, which is the one thing this line
+    // exists to keep together.
+    expect(rule?.[1]).not.toMatch(/margin(-inline-start|-left)?:[^;]*auto/);
   });
 
   it("draws no slot for a verb the reader does not have", () => {
@@ -74,7 +92,7 @@ describe("VisibilityLine", () => {
       <VisibilityLine
         state="participants"
         marks={<span className="reason">Marked confidential</span>}
-        action={<Button small>Change visibility</Button>}
+        action={<Button variant="link">Change visibility</Button>}
       />,
     );
     const children = Array.from(

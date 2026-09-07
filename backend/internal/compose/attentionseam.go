@@ -327,6 +327,12 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// question — that one is what to prepare for, this is what to close off.
 		attention.WithMeetingsAwaitingOutcome(
 			attentionMeetingsAwaitingOutcome{store: activities.NewStore(db)}),
+		// The other compliance clock, beside the DSR one: the disclosure
+		// duties a contact is owed for how it was obtained. Bound here rather
+		// than left nil because the deadline is the whole point of the row —
+		// a case recorded, dated and shown to nobody is a control that only
+		// looks like one.
+		attention.WithNoticeCases(attentionNoticeCases{store: consent.NewStore(db)}),
 	).WithWaiting(attentionWaiting{
 		store: activities.NewStore(db).WithOwnDomains(
 			ownDomainReader{store: capture.NewOwnDomainStore(db)}),

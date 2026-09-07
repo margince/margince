@@ -3700,6 +3700,9 @@ export const de = {
     "Ob der Rückblick am Montag zusätzlich per E-Mail kommt.",
   "delivery.byEmail": "Per E-Mail",
   "delivery.none": "Nicht per E-Mail",
+  "settings.appearance": "Darstellung",
+  "settings.appearanceHelp":
+    "Hell, dunkel oder was dieses Ger\u00e4t eingestellt hat. Das Kontomen\u00fc \u00e4ndert es ebenfalls.",
   "settings.languageHelp": "Gilt für diese Sitzung.",
   "role.admin": "Admin",
   "role.management": "Geschäftsleitung",
@@ -4774,6 +4777,11 @@ export const de = {
     "Einzelne Nachrichten lassen sich nachträglich einschränken, Adressen und Domains vorab ausschließen.",
   "mailSharing.danger":
     "ACHTUNG: E-Mail-Freigabe ausschalten macht die Nutzung des CRM schwierig. Neue E-Mails sind dann nur noch für die Beteiligten der jeweiligen Nachricht sichtbar.",
+  "mailSharing.posture.shared":
+    "Neu erfasste Post ist f\u00fcr Kolleginnen und Kollegen lesbar, die die Person sehen.",
+  "mailSharing.posture.private":
+    "Neu erfasste Post bleibt bei den Beteiligten der Nachricht und dem erfassenden Postfach.",
+  "mailSharing.posture.where": "Dies unter Erfassungsregeln \u00e4ndern",
   "mailSharing.sharedPosture.label": "Postfächern erlauben, sofort zu teilen",
   "mailSharing.sharedPosture.help":
     "Erlaubt Kolleginnen und Kollegen, das eigene Postfach auf „geteilt“ zu stellen — eine erfasste Nachricht ist dann für das Team lesbar, sobald sie ankommt, bevor sie eingestuft wurde. Standardmäßig aus.",
@@ -6142,6 +6150,22 @@ export const de = {
   // Überschrift wiederholt, benennt nichts.
   "settings.home": "Einstellungen-Start",
   "settings.home.yours": "Ihre Einstellungen",
+  "settings.home.manage": "Was Sie \u00e4ndern k\u00f6nnen",
+  "settings.home.manageSub":
+    "Einstellungen, f\u00fcr die Sie die Berechtigung haben.",
+  "settings.home.lookUp": "Was Sie nachschlagen k\u00f6nnen",
+  "settings.home.lookUpSub":
+    "Sie k\u00f6nnen diese lesen; das \u00c4ndern geh\u00f6rt nicht zu Ihrer Rolle.",
+  "settings.home.rolesLabel": "Ihre Rolle",
+  "settings.home.seatLabel": "Ihr Sitzplatz",
+  "settings.home.seat.full":
+    "Voller Sitzplatz \u2014 Sie k\u00f6nnen \u00c4nderungen vornehmen",
+  "settings.home.seat.read":
+    "Nur-Lese-Sitzplatz \u2014 Sie k\u00f6nnen sehen, nicht \u00e4ndern",
+  "settings.home.reachLabel": "Datens\u00e4tze, die Sie erreichen",
+  "settings.home.reach.own": "Ihre eigenen Datens\u00e4tze",
+  "settings.home.reach.team": "Die Datens\u00e4tze Ihres Teams",
+  "settings.home.reach.all": "Jeden Datensatz in der Organisation",
   "settings.home.access": "Ihr Zugriff",
   "settings.boundary.deniedTitle":
     "Diese Einstellungsseite steht Ihnen nicht offen",
@@ -6214,6 +6238,8 @@ export const de = {
   "settings.scopeAria": "Wen diese Seite betrifft: {scope}",
   "settings.scopeAriaMixed":
     "Diese Seite enth\u00e4lt Einstellungen, die unterschiedliche Personen betreffen \u2014 jede sagt es selbst.",
+  "settings.readOnlyPage":
+    "Sie k\u00f6nnen diese Einstellungen sehen, aber nicht \u00e4ndern \u2014 das \u00c4ndern geh\u00f6rt nicht zu Ihrer Rolle.",
   "settings.search.label": "Einstellungen durchsuchen",
   "settings.search.placeholder": "Einstellungen suchen",
   "settings.search.none": "Keine Einstellungsseite passt dazu.",
@@ -6251,7 +6277,7 @@ export const de = {
   "settings.tab.users": "Benutzer & Teams",
   "settings.tab.extensions": "Erweiterungen",
   "settings.tab.integrations": "Integrationen",
-  "settings.tab.capture": "Erfassung",
+  "settings.tab.capture": "Erfassungsregeln",
   "settings.tab.data-model": "Datenmodell",
   "settings.tab.ai": "KI",
   "settings.tab.knowledge": "Wissen",
@@ -6312,7 +6338,7 @@ export const de = {
   "knowledge.new.topicHint":
     "Schreiben Sie einen Satz, kein Schlagwort. Er wird demjenigen zitiert, dessen Frage diese Sammlung nicht abdeckt — also im ungeduldigsten Moment gelesen.",
   "knowledge.new.submit": "Sammlung anlegen",
-  "settings.tab.privacy": "Datenschutz & Audit",
+  "settings.tab.privacy": "Datenschutz & Aufbewahrung",
   "settings.tab.capture-activity": "Erfassungsaktivität",
   "captureActivity.title": "Erfassungsaktivität",
   "captureActivity.sub":
@@ -6494,8 +6520,6 @@ export const de = {
     "Die Lizenz läuft am {expiry} ab. Vor diesem Datum ändert sich nichts.",
   "license.counting":
     "Volle Sitzplätze, die weder deaktiviert noch gesperrt sind, Agenten eingeschlossen. Lesende Sitzplätze sind unbegrenzt und werden nie gezählt. Gegen diese Zahl wird ein neues Mitglied zugelassen.",
-  "settings.group.you": "Persönlich",
-  "settings.group.admin": "Admin-Einstellungen",
   "settings.rates.fxTitle": "Währungskurse",
   "settings.rates.fxIntro":
     "Wechselkurse, die Fremdwährungsbeträge in deine Basiswährung umrechnen. Neue Kurse gelten ab heute oder später; vergangene Kurse werden nie geändert.",
@@ -8744,6 +8768,8 @@ export const de = {
   "worklist.untitled.relationship_decay": "Eine Beziehung schläft ein",
   "worklist.untitled.failed_approval": "Etwas Zugestimmtes lief nicht",
   "worklist.untitled.dsr": "Eine offene Datenschutzanfrage",
+  "worklist.untitled.notice_case":
+    "Eine Auskunft, die diese Person zu bekommen hat",
   "worklist.untitled.sync_health":
     "Die CRM-Synchronisierung braucht Aufmerksamkeit",
   "worklist.sync.class.contacts": "Personen",

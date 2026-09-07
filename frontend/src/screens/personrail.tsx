@@ -454,7 +454,13 @@ function EmailRow({ person }: Readonly<{ person: Person }>) {
   return (
     <FieldRow label={t("person.rail.email")} icon={<Mail />}>
       {email ? (
-        <ContactLink kind="email" value={email} className="pe-meta-link" />
+        <ContactLink
+          kind="email"
+          value={email}
+          record={{ entityType: "person", entityId: person.id }}
+          readOnly={Boolean(person.archived_at)}
+          className="pe-meta-link"
+        />
       ) : (
         <span className="pe-rail-value-muted">{t("field.unset")}</span>
       )}

@@ -2,24 +2,20 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
-import { mailtoUri, telUri } from "./contacturi";
+import { mailbox, telUri } from "./contacturi";
 
-describe("mailtoUri", () => {
-  it("links an ordinary address, trimmed", () => {
-    expect(mailtoUri(" dana@brandt.example ")).toBe(
-      "mailto:dana@brandt.example",
-    );
+describe("mailbox", () => {
+  it("admits an ordinary address, trimmed", () => {
+    expect(mailbox(" dana@brandt.example ")).toBe("dana@brandt.example");
   });
 
   it("keeps the plus a mailbox may carry", () => {
-    expect(mailtoUri("dana+crm@brandt.example")).toBe(
-      "mailto:dana+crm@brandt.example",
-    );
+    expect(mailbox("dana+crm@brandt.example")).toBe("dana+crm@brandt.example");
   });
 
-  it("refuses an address that would carry a header into the mail client", () => {
-    // Each of these reaches the reader's client as a second field or a
-    // broken scheme, so none becomes a link.
+  it("refuses an address that would carry a header or a second recipient", () => {
+    // Each of these reaches whatever consumes the address as a second field or
+    // a broken scheme, so none is admitted.
     for (const bad of [
       "dana@brandt.example?subject=hi",
       "dana@brandt.example&cc=x@y.example",
@@ -32,7 +28,7 @@ describe("mailtoUri", () => {
       "not an address",
       "",
     ]) {
-      expect(mailtoUri(bad), bad).toBeNull();
+      expect(mailbox(bad), bad).toBeNull();
     }
   });
 });

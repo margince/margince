@@ -86,6 +86,9 @@ type Service struct {
 	// dsrs is OPTIONAL like the lanes above it, and withheld-by-grant on top:
 	// even where it is bound, only a DSR admin's read succeeds.
 	dsrs DSRs
+	// noticeCases is OPTIONAL and withheld-by-grant exactly as dsrs is — the
+	// same privacy_request object gates both reads.
+	noticeCases NoticeCases
 	// syncHealth is OPTIONAL like the lanes above it, and mode-gated on top:
 	// even where it is bound, a workspace not in overlay mode answers
 	// ErrModeNotOverlay and the lane stays absent (optionallanes.go).

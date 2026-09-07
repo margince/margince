@@ -107,12 +107,18 @@ func unresolvedNoticeStates() []string {
 	return out
 }
 
-// OpenNoticeCase is one duty still owed: what rule put it there, and by when.
+// OpenNoticeCase is one duty still owed: whose it is, what rule put it there,
+// and by when.
+//
+// PersonID is carried because the duty is discharged on that person's own
+// screen — there is no notice-case screen to route to, so a card naming only the
+// case would prompt a reader with nowhere to go.
 type OpenNoticeCase struct {
-	ID      ids.UUID
-	Rule    NoticeRule
-	DueAt   time.Time
-	Blocked bool
+	ID       ids.UUID
+	PersonID ids.PersonID
+	Rule     NoticeRule
+	DueAt    time.Time
+	Blocked  bool
 }
 
 // openNoticeLaneDefault mirrors the DSR lane's small page for the same reason:
@@ -154,7 +160,7 @@ func (s *Store) OpenNoticeCasesDueSoonest(ctx context.Context, limit int) ([]Ope
 	var out []OpenNoticeCase
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			SELECT id, rule, due_at, state = 'blocked'
+			SELECT id, person_id, rule, due_at, state = 'blocked'
 			  FROM privacy_notice_case
 			 WHERE state = ANY($1)
 			 ORDER BY due_at, id
@@ -165,7 +171,7 @@ func (s *Store) OpenNoticeCasesDueSoonest(ctx context.Context, limit int) ([]Ope
 		defer rows.Close()
 		for rows.Next() {
 			var c OpenNoticeCase
-			if err := rows.Scan(&c.ID, &c.Rule, &c.DueAt, &c.Blocked); err != nil {
+			if err := rows.Scan(&c.ID, &c.PersonID, &c.Rule, &c.DueAt, &c.Blocked); err != nil {
 				return err
 			}
 			out = append(out, c)

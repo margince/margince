@@ -388,5 +388,5 @@ winnability, revenue, timing, momentum, warmth — with the evidence rows behind
 them.
 
 **Settings → AI** and **Settings → Agents** are where the models and the agent
-registry are configured. **Settings → Privacy & audit** holds the full audit
+registry are configured. **Settings → Audit log** holds the full audit
 trail: every action, attributed to a human, an agent or a connector.

@@ -63,6 +63,9 @@
   max-width: 100%;
   overflow-wrap: anywhere;
   white-space: normal;
+  /* A button centres its text; a wrapped address reads from the left like
+     the name above it. */
+  text-align: left;
 }
 
 @media (max-width: 720px) {

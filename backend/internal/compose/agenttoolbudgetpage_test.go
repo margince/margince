@@ -88,18 +88,27 @@ func renderAgentToolBudgetPage(b agentToolBudget) []byte {
 	fmt.Fprintf(&p, "scenarios name that tool as the WRONG reach. %d of those scenarios offer the model the\n", b.Corpus.OfferingCatalog)
 	p.WriteString("whole catalog and score which tool it picks, so the confusions it names were chosen\n")
 	p.WriteString("against the real surface rather than guessed.\n\n")
-	p.WriteString("**It is a rubric-mention heuristic, not an observed error rate.** The count is\n")
-	p.WriteString("registered tool names appearing in a scenario's rubric prose, minus that scenario's\n")
-	p.WriteString("own expected step. A weight of 5 does not mean a model went wrong five times; it\n")
-	p.WriteString("means five scenario rubrics name a tool on this menu as the reach to avoid. The\n")
-	p.WriteString("measurement that would replace it is sampling real runs for chosen-vs-wanted.\n\n")
-	p.WriteString("**Two limits, both real.** A scenario's near-misses live only in its `rubric:` free\n")
-	p.WriteString("text, so the count is read by matching registered tool names in that prose minus the\n")
-	p.WriteString("scenario's own answer — which over-counts, because a rubric quotes the right tool's\n")
-	p.WriteString("copy and that copy names others. And each count was measured under a *different*\n")
-	p.WriteString("scenario's goal, so summing them over one agent's fixed goal borrows precision the\n")
-	p.WriteString("number does not have. Read it as an ordering of which tools cause trouble on this\n")
-	p.WriteString("surface, not as a prediction about one agent.\n\n")
+	p.WriteString("**It is an authored count, not an observed error rate.** Each scenario DECLARES\n")
+	p.WriteString("the tools its goal makes tempting, in a `near_misses:` list beside its expected\n")
+	p.WriteString("step. A weight of 5 does not mean a model went wrong five times; it means five\n")
+	p.WriteString("scenarios name a tool on this menu as the reach to avoid. The measurement that\n")
+	p.WriteString("would replace it is sampling real runs for chosen-vs-wanted.\n\n")
+	if len(b.Corpus.ReadByProse) > 0 {
+		fmt.Fprintf(&p, "**%d scenarios declare no near misses**, so theirs are read out of rubric prose by\n",
+			len(b.Corpus.ReadByProse))
+		p.WriteString("matching registered tool names minus the scenario's own answer. That is wrong in\n")
+		p.WriteString("BOTH directions — it counts a tool a rubric merely quotes, and misses one the\n")
+		p.WriteString("rubric names in words, since \"a search would re-find the person\" is search_records\n")
+		p.WriteString("to a reader and nothing to a matcher. They are named rather than absorbed:\n\n")
+		for _, name := range b.Corpus.ReadByProse {
+			fmt.Fprintf(&p, "- %s\n", name)
+		}
+		p.WriteString("\n")
+	}
+	p.WriteString("**One limit remains.** Each count was authored under a *different* scenario's goal,\n")
+	p.WriteString("so summing them over one agent's fixed goal borrows precision the number does not\n")
+	p.WriteString("have. Read it as an ordering of which tools cause trouble on this surface, not as a\n")
+	p.WriteString("prediction about one agent.\n\n")
 	if len(b.Corpus.Skipped) > 0 {
 		fmt.Fprintf(&p, "**%d scenarios were skipped by the scan** and are named here rather than dropped:\n\n", len(b.Corpus.Skipped))
 		for _, s := range b.Corpus.Skipped {

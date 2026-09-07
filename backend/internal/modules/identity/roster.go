@@ -18,10 +18,12 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // ListUsersInput narrows and pages the roster; Q is a case-insensitive
@@ -30,20 +32,16 @@ type ListUsersInput struct {
 	Q      *string
 	Cursor *string
 	Limit  *int
-	// IncludeInactive widens the roster to deactivated/suspended members —
-	// the admin management view; the default active-only roster serves the
-	// share/assignee pickers. The server gates the widened view to admins.
-	IncludeInactive bool
-	// WithRoles reads each user's role keys AND the teams they are in. Admin-only,
-	// and the reason the read is optional at all: the pickers every other user
-	// reads this roster for render neither, so they should not pay per row to
-	// fetch them. The wire mapping withholds both independently — this makes the
-	// non-admin page not even carry them out of the database.
+	// IncludeInactive ASKS to widen the roster to deactivated and suspended
+	// members. It is a request and not an authorization: ListUsers honors it
+	// only for a caller the user_admin grant admits, and serves everyone else
+	// the active-only roster the share and assignee pickers read.
 	//
-	// One flag for the two because they are disclosed together and to the same
-	// caller: an admin managing seats needs both, and nobody else may see either.
-	// Two flags would be two ways to spell one authorization decision.
-	WithRoles bool
+	// The role keys and team memberships that ride the same widened view are
+	// not a field here at all. They follow the same grant, decided in the same
+	// place, because two ways to spell one authorization decision is how the
+	// two come to disagree.
+	IncludeInactive bool
 }
 
 type userRow struct {
@@ -144,10 +142,27 @@ func scanUser(r pgx.Row) (userRow, error) {
 const getUserQuery = `SELECT ` + userColumns + ` FROM app_user
 	WHERE id = $2 AND archived_at IS NULL`
 
-// GetUser reads one member by id regardless of status — the read every admin
-// write returns after a mutation, so it always asks for the role keys.
-// ErrNotFound when absent or archived.
+// GetUser reads one member by id regardless of status — the read every member
+// administration write returns after a mutation, so it always asks for the role
+// keys. ErrNotFound when absent or archived.
+//
+// Gated on user_admin because of what it discloses, not because of who calls
+// it: it serves role keys, team memberships and a deactivated seat's status
+// unconditionally, which is the management view. The handlers that call it
+// admit on the same grant first; this is the check that survives the next
+// caller, who will not remember to.
+//
+// ANY verb on that object, not read specifically, because this is the tail of
+// every member-administration write and the verbs are grantable apart. A role
+// carrying user_admin.delete without user_admin.read may deactivate a seat, so
+// demanding read here would commit the deactivation and then answer 403 — the
+// account changed and the response says it did not.
 func (s *Service) GetUser(ctx context.Context, userID ids.UserID) (userRow, error) {
+	if err := auth.RequireAny(ctx, objectUserAdmin,
+		principal.ActionRead, principal.ActionCreate,
+		principal.ActionUpdate, principal.ActionDelete); err != nil {
+		return userRow{}, err
+	}
 	var u userRow
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		row, scanErr := scanUser(tx.QueryRow(ctx, getUserQuery, true, userID))
@@ -163,20 +178,54 @@ func (s *Service) GetUser(ctx context.Context, userID ids.UserID) (userRow, erro
 	return u, err
 }
 
-// ListUsers returns one keyset page of the installation's active members,
-// optionally filtered by in.Q.
-func (s *Service) ListUsers(ctx context.Context, in ListUsersInput) ([]userRow, storekit.Page, error) {
+// ListUsers returns one keyset page of the installation's members, optionally
+// filtered by in.Q. Active seats only, unless the caller may administer members
+// and asked for the rest.
+//
+// TWO decisions, both taken here rather than by the caller. Membership is the
+// boundary on the roster itself: everybody who works here may see who else
+// does, because a share or assignee picker that only some seats could read
+// would be a broken feature rather than a narrower one. The user_admin grant is
+// the boundary on the MANAGEMENT view — role keys, team memberships, and seats
+// that are no longer active — because that view says who can do what, which is
+// an administrator's answer.
+//
+// A grant and not the literal admin role, so an installation that delegates
+// member administration gets the view that goes with it.
+func (s *Service) ListUsers(ctx context.Context, in ListUsersInput) (RosterPage, error) {
+	if err := auth.RequireMember(ctx); err != nil {
+		return RosterPage{}, err
+	}
+	mayManage := auth.Require(ctx, objectUserAdmin, principal.ActionRead) == nil
 	plain, filtered := listUsersQuery, listUsersFilteredQuery
-	if in.IncludeInactive {
+	if mayManage && in.IncludeInactive {
 		plain, filtered = listUsersAllQuery, listUsersAllFilteredQuery
 	}
-	return listRosterPage(ctx, s.db, in.Q, in.Cursor, in.Limit, rosterQuery[userRow]{
+	rows, page, err := listRosterPage(ctx, s.db, in.Q, in.Cursor, in.Limit, rosterQuery[userRow]{
 		plain:     plain,
 		filtered:  filtered,
-		leadArgs:  []any{in.WithRoles},
+		leadArgs:  []any{mayManage},
 		scan:      scanUser,
 		cursorKey: func(u userRow) (time.Time, ids.UUID) { return u.CreatedAt, u.ID },
 	})
+	return RosterPage{Users: rows, Page: page, Management: mayManage}, err
+}
+
+// RosterPage is one roster read: the rows, the keyset position, and WHICH VIEW
+// the service served.
+//
+// Management rides along because the wire mapping has to agree with the SQL,
+// and the caller cannot re-derive the answer reliably. The HTTP handler asks
+// through a human Identity, which an agent request does not carry, so an agent
+// holding its granting human's user_admin read got the widened rows and the
+// narrow mapping — inactive seats disclosed, role keys stripped, neither view
+// whole. One decision, taken where the query is chosen, and reported.
+type RosterPage struct {
+	Users []userRow
+	Page  storekit.Page
+	// Management is true when this page is the administration view: it carries
+	// role keys, team memberships, and seats that are no longer active.
+	Management bool
 }
 
 // ListTeamsInput narrows and pages the team list; Q is a case-insensitive
@@ -233,6 +282,9 @@ func scanTeam(r pgx.Row) (teamRow, error) {
 // tenant column off team and, with this slice, off app_user too. The member
 // count is the installation's, which is the only count there is.
 func (s *Service) ListTeams(ctx context.Context, in ListTeamsInput) ([]teamRow, storekit.Page, error) {
+	if err := auth.RequireMember(ctx); err != nil {
+		return nil, storekit.Page{}, err
+	}
 	return listRosterPage(ctx, s.db, in.Q, in.Cursor, in.Limit, rosterQuery[teamRow]{
 		plain:     listTeamsQuery,
 		filtered:  listTeamsFilteredQuery,

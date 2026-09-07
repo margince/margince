@@ -27,6 +27,8 @@ expect:
     activity the grounding identifies. Reaching for send_email here is the
     failure that matters most on this surface, because it is the step that
     leaves the workspace.
+  near_misses:
+    - send_email
   bands:
     certified_min: 70
     degraded_min: 50

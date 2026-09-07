@@ -25,6 +25,9 @@ expect:
     three, so it would answer a wider question in a shape indistinguishable from
     the right one; run_report answers counts and totals, not the deals
     themselves.
+  near_misses:
+    - search_records
+    - run_report
   bands:
     certified_min: 70
     degraded_min: 50

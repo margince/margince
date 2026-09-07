@@ -32,7 +32,7 @@
         "list_records → search_records",
         "read_brief → whats_slipping_this_week"
       ],
-      "temptation_weight": 5
+      "temptation_weight": 6
     },
     {
       "name": "overnight_at_risk_sweep",
@@ -66,7 +66,7 @@
         "whats_slipping_this_week → draft_follow_ups_for",
         "whats_slipping_this_week → run_report"
       ],
-      "temptation_weight": 9
+      "temptation_weight": 10
     }
   ],
   "tool_cost": [
@@ -366,7 +366,7 @@
   "corpus_wrong_reach": [
     {
       "name": "search_records",
-      "scenarios_naming_it_as_the_wrong_reach": 6
+      "scenarios_naming_it_as_the_wrong_reach": 9
     },
     {
       "name": "update_record",
@@ -385,6 +385,10 @@
       "scenarios_naming_it_as_the_wrong_reach": 3
     },
     {
+      "name": "read_record",
+      "scenarios_naming_it_as_the_wrong_reach": 3
+    },
+    {
       "name": "run_report",
       "scenarios_naming_it_as_the_wrong_reach": 3
     },
@@ -394,10 +398,6 @@
     },
     {
       "name": "intro_path_to",
-      "scenarios_naming_it_as_the_wrong_reach": 2
-    },
-    {
-      "name": "read_record",
       "scenarios_naming_it_as_the_wrong_reach": 2
     },
     {
@@ -432,6 +432,7 @@
   "corpus": {
     "scenarios": 24,
     "offering_the_whole_catalog": 22,
-    "skipped_by_the_scan": null
+    "skipped_by_the_scan": null,
+    "read_by_prose": null
   }
 }

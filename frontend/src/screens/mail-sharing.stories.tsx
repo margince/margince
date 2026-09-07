@@ -33,7 +33,7 @@ const MANAGER = { capture_settings: ["read", "update"] } as const;
 const READER = { capture_settings: ["read"] } as const;
 
 const meta: Meta<typeof MailSharingCard> = {
-  title: "Settings/You/Connections/Email sharing",
+  title: "Settings/Data/Capture rules/Email sharing",
   component: MailSharingCard,
 };
 export default meta;

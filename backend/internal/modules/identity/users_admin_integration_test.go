@@ -27,17 +27,22 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// The roster read gates the role-key lookup on WithRoles, and the wire mapping
-// withholds the keys again for a non-admin. Those are two independent defences,
-// so the HTTP deny arm passes even with this one forced open — which is exactly
-// why the read needs its own test rather than borrowing that one's coverage.
-func TestRosterReadFetchesRoleKeysOnlyWhenAsked(t *testing.T) {
+// The roster read decides the management view from the user_admin grant, and
+// the wire mapping withholds the keys again for a caller who does not hold it.
+// Those are two independent defences, so the HTTP deny arm would pass even with
+// this one forced open — which is exactly why the read needs its own test
+// rather than borrowing that one's coverage.
+//
+// The seeded member holds no grant, so it stands for every caller who may read
+// the roster and may not administer it.
+func TestRosterReadDisclosesRoleKeysOnlyToAMemberAdministrator(t *testing.T) {
 	e := setupRevocationEnv(t, "roster-role-keys")
 
-	withheld, _, err := e.svc.ListUsers(e.wsCtx(e.admin), ListUsersInput{})
+	member, err := e.svc.ListUsers(e.wsCtx(e.member), ListUsersInput{})
 	if err != nil {
-		t.Fatalf("list without roles: %v", err)
+		t.Fatalf("list as a member: %v", err)
 	}
+	withheld := member.Users
 	if len(withheld) == 0 {
 		t.Fatal("roster is empty; the assertions below would hold vacuously")
 	}
@@ -45,14 +50,18 @@ func TestRosterReadFetchesRoleKeysOnlyWhenAsked(t *testing.T) {
 		// NIL, not empty: an empty list would claim the member holds no role,
 		// which is a different and false statement.
 		if u.Roles != nil {
-			t.Errorf("member %q carries roles %v on a read that did not ask for them", u.Email, u.Roles)
+			t.Errorf("member %q carries roles %v on a read by a caller who may not administer members", u.Email, u.Roles)
 		}
 	}
 
-	asked, _, err := e.svc.ListUsers(e.wsCtx(e.admin), ListUsersInput{WithRoles: true})
+	// The SAME call, by a caller holding user_admin. Nothing in the input
+	// changes: the grant is the whole difference, which is the property under
+	// test — a caller cannot ask its way into the management view.
+	administrator, err := e.svc.ListUsers(e.wsCtx(e.admin), ListUsersInput{})
 	if err != nil {
-		t.Fatalf("list with roles: %v", err)
+		t.Fatalf("list as an administrator: %v", err)
 	}
+	asked := administrator.Users
 	var adminRow, memberRow *userRow
 	for i := range asked {
 		switch asked[i].ID {
@@ -63,11 +72,11 @@ func TestRosterReadFetchesRoleKeysOnlyWhenAsked(t *testing.T) {
 		}
 	}
 	if adminRow == nil || len(adminRow.Roles) != 1 || adminRow.Roles[0] != roleAdmin {
-		t.Errorf("bootstrap admin roles = %v, want [admin] once the read asks", adminRow)
+		t.Errorf("bootstrap admin roles = %v, want [admin] for an administrator's read", adminRow)
 	}
-	// The other arm of the same distinction: a seat holding NO role, read WITH
-	// the flag, comes back empty-but-present. Nil here would be indistinguishable
-	// from "never asked", which is what the COALESCE exists to prevent.
+	// The other arm of the same distinction: a seat holding NO role, read BY AN
+	// ADMINISTRATOR, comes back empty-but-present. Nil here would be
+	// indistinguishable from "withheld", which is what the COALESCE prevents.
 	if memberRow == nil {
 		t.Fatal("the seeded member is missing from the roster")
 	}

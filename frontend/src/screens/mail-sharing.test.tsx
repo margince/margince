@@ -13,7 +13,7 @@ import { type GrantSpec, meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { MailSharingCard } from "./mail-sharing";
 
-// The workspace mail-sharing posture (Settings → Connections): every role
+// The workspace mail-sharing posture (Settings → Capture rules): every role
 // reads it, only capture_settings:update holders change it, and switching it
 // off is a deliberate act — the danger callout and an explicit Save stand
 // between the flip and the write.

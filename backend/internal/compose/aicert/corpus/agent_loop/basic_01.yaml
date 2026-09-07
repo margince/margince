@@ -43,6 +43,8 @@ expect:
     calls list_open_deals (the tool that can supply it) rather than jumping
     straight to log_activity or fabricating a "final" answer with no
     observations to ground it.
+  near_misses:
+    - log_activity
   bands:
     certified_min: 70
     degraded_min: 50

@@ -70,7 +70,8 @@ func classifyDay(day crmcontracts.Attention, asOf time.Time, money dayMoney) []r
 	})
 	rows = appendLane(rows, day.Commitments, asOf, classifyCommitment)
 	rows = appendLane(rows, day.DidNotRun, asOf, classifyFailedApproval)
-	rows = appendLane(rows, day.Dsr, asOf, classifyDSR)
+	rows = appendLane(rows, day.Dsr, asOf, classifyLegalDeadline)
+	rows = appendLane(rows, day.NoticeCases, asOf, classifyLegalDeadline)
 	rows = appendLane(rows, day.AtRisk, asOf, func(item crmcontracts.AttentionItem, at time.Time) ranked {
 		return classifyRisk(item, at, bar, money)
 	})
@@ -217,17 +218,25 @@ func classifyIntroduction(item crmcontracts.AttentionItem, asOf time.Time) ranke
 	}
 }
 
-// classifyDSR: a clock the law started. It reaches only privacy admins — the
-// lane is absent for everyone else — so it never needs explaining to a rep.
-func classifyDSR(item crmcontracts.AttentionItem, asOf time.Time) ranked {
+// classifyLegalDeadline: a clock the law started, and the shape BOTH compliance
+// lanes take. A subject request and a disclosure duty differ in what they oblige
+// and in nothing this function decides — same band, same reason, same deadline
+// stamp, same unassigned owner — so they share it rather than drifting apart.
+//
+// UNASSIGNED, for both. Each is a compliance queue rather than a personal one:
+// the lane reads every open item due soonest behind one gate, so several admins
+// see the same row and none owns it by having looked. A subject request has no
+// assignee column at all; a notice case has a nullable owner that is frequently
+// empty, and reading it as an assignment would hide an unowned overdue duty from
+// everybody — the failure the lane exists to prevent.
+//
+// Both lanes reach only privacy admins — they are absent for everyone else — so
+// neither ever needs explaining to a rep.
+func classifyLegalDeadline(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	row := base(item, levelWaiting, "system", "legal_deadline_missed")
 	stampDeadline(&row, item.DueAt, asOf)
 	row.Because = []crmcontracts.WorklistReason{reason("legal_deadline", nil)}
 	return ranked{
-		// A compliance queue, not a personal one: the lane reads every open
-		// request due soonest behind the DSR-admin gate, so several admins see
-		// the same case and none of them owns it by having looked. The request
-		// has no assignee column to read.
 		ownerRef:   unassigned(),
 		item:       row,
 		deadlineAt: deadlineOf(item.DueAt),

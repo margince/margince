@@ -126,10 +126,12 @@ describe("the settings stories are filed where the product files them", () => {
 
 // WHAT THIS GATE DOES NOT HOLD, said plainly so the next author does not assume
 // it does: that the page a story NAMES is the page whose dispatch arm renders
-// its card. Two stories were misfiled that way in this very change — the
-// autonomy card sat under Agents while `tabContent` renders it on Account, and
-// mail sharing sat under Capture while it renders on Connections. Both were
-// found by hand and fixed.
+// its card. Two stories were misfiled that way once — the autonomy card sat
+// under Agents while `tabContent` rendered it on Account, and mail sharing sat
+// under Capture while it rendered on Connections. Both were found by hand, and
+// both were resolved the other way in the end: the CARDS moved to the pages
+// their stories had always named, because the stories were right about where
+// each belonged.
 //
 // A gate for it was written and deleted. Reading the card-to-page map out of
 // `settings.tsx` works for a card the screen renders directly, and stops at the
