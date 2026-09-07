@@ -110,15 +110,6 @@ func composeSources(t *testing.T) []string {
 	return out
 }
 
-func readGoSource(t *testing.T, path string) string {
-	t.Helper()
-	source, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("reading %s: %v", path, err)
-	}
-	return string(source)
-}
-
 // constructionsOf cuts out each construction of a SERVICE in this package,
 // together with the builder chain that follows it.
 //

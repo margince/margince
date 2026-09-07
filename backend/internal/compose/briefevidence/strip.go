@@ -17,6 +17,10 @@ package briefevidence
 // Spelled once and shared by both writers rather than copied into each, because
 // two spellings of "never persist this" is one spelling and one omission.
 //
+// Held by: TestNobodyClearsAnEmailSummaryByHand (backend/gates/briefevidencestrip_test.go),
+// with TestEveryCacheOfGroundedProseStripsThroughTheSharedRule beside it holding
+// that both writers reach the rule at all.
+//
 // It takes the same Targets the collectors produce, so a writer strips what a
 // reader would have filled and the two can never name different fields.
 func Strip(targets []Target) {

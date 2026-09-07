@@ -140,7 +140,7 @@ func (s *Service) Get(ctx context.Context, dealID ids.DealID, refresh bool) (crm
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return crmcontracts.DealStatusCard{}, err
 	}
-	card, timeline, err := s.get(ctx, dealID, refresh)
+	card, timeline, err := s.cardAndTimeline(ctx, dealID, refresh)
 	if err != nil {
 		return crmcontracts.DealStatusCard{}, err
 	}
@@ -157,7 +157,7 @@ func (s *Service) Get(ctx context.Context, dealID ids.DealID, refresh bool) (crm
 	return card, nil
 }
 
-// cardEvidence is every citation on the card that could name a message: the
+// cardEvidence collects the card's citations that could name a message: the
 // three prose sections, the verdict's reasons, and the recommended move's own
 // basis — which is a different wire shape carrying the same activity.
 func cardEvidence(card *crmcontracts.DealStatusCard) []briefevidence.Target {
@@ -176,10 +176,10 @@ func cardEvidence(card *crmcontracts.DealStatusCard) []briefevidence.Target {
 	return targets
 }
 
-// get is the card itself, and the timeline it was gathered from. The two
-// travel together because the caller enriches from the second — reading the
-// deal's messages a second time would ask the same gate the same question.
-func (s *Service) get(
+// cardAndTimeline is the card itself, and the rows it was gathered from. The
+// two travel together because the caller enriches from the second — reading the
+// deal's messages again would ask the same gate the same question.
+func (s *Service) cardAndTimeline(
 	ctx context.Context, dealID ids.DealID, refresh bool,
 ) (crmcontracts.DealStatusCard, []crmcontracts.Activity, error) {
 	userID, err := actingUser(ctx)

@@ -21,6 +21,6 @@
 //
 // One Attach per response, one read behind it. The producers differ in shape —
 // sentences, suggestions, draft reasons, a deal's next move — so each has a
-// collector that turns its own slices into Targets, and the batching rule is
-// spelled once here rather than nine times over nine wire types.
+// collector that turns its own slices into Targets, and the batching rule lives
+// here rather than in each of the nine wire types.
 package briefevidence

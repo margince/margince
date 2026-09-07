@@ -32,6 +32,7 @@ type ReaderFunc func(
 	ctx context.Context, activityIDs []ids.UUID,
 ) (map[ids.UUID]crmcontracts.EmailSummary, error)
 
+// EmailSummariesByID satisfies Reader.
 func (f ReaderFunc) EmailSummariesByID(
 	ctx context.Context, activityIDs []ids.UUID,
 ) (map[ids.UUID]crmcontracts.EmailSummary, error) {
@@ -41,6 +42,8 @@ func (f ReaderFunc) EmailSummariesByID(
 // InTx reads inside a transaction the caller already holds, so the enrichment
 // sees the same snapshot as the assembly around it and spends no second
 // connection. Bind it to activities.EmailSummariesByIDBatch.
+//
+//nolint:ireturn // Reader IS the product: the caller holds a transaction and wants the one interface Attach takes, and a concrete type here would be a second name for the same thing.
 func InTx(
 	tx pgx.Tx,
 	batch func(context.Context, pgx.Tx, []ids.UUID) (map[ids.UUID]crmcontracts.EmailSummary, error),
@@ -59,6 +62,8 @@ func InTx(
 // under the caller's own scope, and every row in it carries the canonical
 // summary the reader is entitled to. Reading them a second time would ask the
 // same question of the same gate and get the same answer, one statement later.
+//
+//nolint:ireturn // same as InTx — this exists to produce a Reader out of rows already held.
 func FromActivities(rows []crmcontracts.Activity) Reader {
 	held := make(map[ids.UUID]crmcontracts.EmailSummary, len(rows))
 	for _, row := range rows {

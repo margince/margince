@@ -9,6 +9,23 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 )
 
+// decorate is what runs over the finished sections rather than as one of them.
+//
+// Neither step names a section of its own, and neither may run inside the loop
+// above: the work attention hangs a fact on rows two sections already read, and
+// the email rows open citations written by three. A reader denied the
+// activities behind either still gets the deals and the projects, with the
+// payload saying what is missing.
+func (a *assembly) decorate() error {
+	if err := a.readWorkAttention(); err != nil {
+		return err
+	}
+	// Last of all: the citations are written by the sections and the attention
+	// rows alike, so the one read that opens them can only be taken once they
+	// all exist.
+	return a.attachEmailSummaries()
+}
+
 // attachEmailSummaries fills in the canonical email row behind every cited
 // message on this page, in one read for the whole response.
 //
@@ -30,7 +47,7 @@ func (a *assembly) attachEmailSummaries() error {
 	)
 }
 
-// evidenceRows is every cited record on this page that could be a message,
+// evidenceRows collects the page's cited records that could be a message,
 // addressed in place so the enrichment writes back into the response.
 func (a *assembly) evidenceRows() []briefevidence.Target {
 	var targets []briefevidence.Target

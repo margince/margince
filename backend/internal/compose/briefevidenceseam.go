@@ -19,6 +19,8 @@ import (
 // before the enrichment existed — no error, no empty section, just a chip that
 // does nothing — so the omission is invisible except to the assembly test that
 // asserts every one of them holds a reader.
+//
+//nolint:ireturn // the seam's whole job is to hand every construction site the one interface they take.
 func emailRows(pool *pgxpool.Pool) briefevidence.Reader {
 	return activities.NewStore(InstallationDB(pool))
 }

@@ -8,7 +8,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
-// meetingEvidence is every citation in a finished brief: the sections' prose,
+// meetingEvidence collects a finished brief's citations: the sections' prose,
 // and the plan's prepared questions and scenarios, which cite records directly
 // rather than through a sentence.
 func meetingEvidence(brief *crmcontracts.MeetingBrief) []briefevidence.Target {
