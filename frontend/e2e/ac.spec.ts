@@ -325,14 +325,16 @@ test("AC-shell-1k: one h1 per railed page, and on a record it is the record's ow
 
   // An id segment that names no record is the screen's own state, so it is named
   // in WORDS and never as the slug it is addressed by: #/settings/privacy is the
-  // privacy surface, and the sidebar's level beside it carries "Settings" — the
+  // privacy surface, and the heading over the level's first group carries "Settings" — the
   // page said that word twice while naming the surface never. "privacy" itself
   // is a route slug no reader should ever be shown.
   await page.goto("/#/settings/privacy");
   const settingsHeading = page.getByRole("heading", { level: 1 });
   await expect(settingsHeading).toHaveCount(1);
   await expect(settingsHeading).toHaveText("Datenschutz & Aufbewahrung");
-  await expect(page.locator(".rail .navtitle")).toHaveText("Einstellungen");
+  await expect(page.locator(".rail .navheading").first()).toHaveText(
+    "Einstellungen",
+  );
   await expect(page.locator("main")).not.toContainText("privacy");
 });
 
