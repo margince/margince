@@ -275,9 +275,16 @@ func baseComposeOptions(ctx context.Context, cfg apiConfig, capCfg compose.Captu
 	// registry rebuilds in WithKeyvault/WithGraphCapture apply it too — not just
 	// the Gmail path WithGmailCapture threads it into (ADR-0072).
 	opts = append(opts, compose.WithCaptureConfig(capCfg))
-	// Always applied, including the empty default: /metrics stays off until
-	// an operator sets --metrics-token, never silently open.
+	// Always applied, including the empty default — which SERVES the
+	// exposition, so the posture is said out loud here rather than left for
+	// somebody to infer from an absent variable. The same reason the two
+	// unset-base-URL warnings exist: an installation whose /metrics is
+	// reachable from further away than its operator assumes needs to see that
+	// in the boot log, not discover it from who is scraping it.
 	opts = append(opts, compose.WithMetricsToken(cfg.metricsToken))
+	if cfg.metricsToken == "" {
+		logger.Warn("api: MARGINCE_METRICS_TOKEN is unset — /metrics is served to anything that reaches this port, and its exposition carries workspace ids; set the variable to require a Bearer credential")
+	}
 	if cfg.publicBaseURL != "" {
 		opts = append(opts, compose.WithPublicBaseURL(cfg.publicBaseURL))
 		// The canonical MCP resource (RFC 9728) is the same configured
