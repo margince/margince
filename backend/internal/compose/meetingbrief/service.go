@@ -209,26 +209,6 @@ func (s *Service) assembleFiled(ctx context.Context, activityID ids.UUID, reques
 	return out, filed, nil
 }
 
-// meetingEvidence is every citation in a finished brief: the sections' prose,
-// and the plan's prepared questions and scenarios, which cite records directly
-// rather than through a sentence.
-func meetingEvidence(brief *crmcontracts.MeetingBrief) []briefevidence.Target {
-	var targets []briefevidence.Target
-	for i := range brief.Sections {
-		targets = append(targets, briefevidence.FromSentences(brief.Sections[i].Sentences)...)
-	}
-	if brief.Plan == nil {
-		return targets
-	}
-	for i := range brief.Plan.Questions {
-		targets = append(targets, briefevidence.FromEvidence(brief.Plan.Questions[i].Evidence)...)
-	}
-	for i := range brief.Plan.Scenarios {
-		targets = append(targets, briefevidence.FromEvidence(brief.Plan.Scenarios[i].Evidence)...)
-	}
-	return targets
-}
-
 // omissions names what this reader's own grants kept out of the brief.
 //
 // Nil rather than an empty slice when the reader could see everything: the
