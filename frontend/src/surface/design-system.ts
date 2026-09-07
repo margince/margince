@@ -119,6 +119,21 @@ export {
 // in extensions/*/frontend exactly as it does in core, and a unit left with only
 // TextInput has to accept free text where the contract declares an enum.
 export { Select, type SelectOption } from "../design-system/select";
+// Stack and Row, because a unit ships no stylesheet and therefore cannot put
+// space between two things it renders.
+//
+// This is the gap every other export here works around rather than closes: a
+// unit that draws a name beside the button that removes it gets them jammed
+// together inline, and its only two ways out are a bare `<div>` with no gap at
+// all or a core class name copied out of atoms.css — a promise nobody made,
+// which a rename breaks silently in a tree the renamer never opens.
+//
+// What is published is the SCALE, not a flexbox: `gap` names a step and the
+// steps are the tokens, so a screen assembled from core cards and unit rows is
+// spaced by one system rather than two. They draw nothing — a box a reader can
+// see is a Card, and a layout primitive that grew a ground would be a second
+// one of those under a name that hides it.
+export { Row, type SpaceStep, Stack } from "../design-system/stack";
 // TokenInput, because a unit collecting a LIST of short values has otherwise to
 // ask for them comma-separated in a TextInput and split the string itself.
 //

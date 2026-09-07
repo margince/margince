@@ -12,7 +12,9 @@ import {
   type Fact,
   FactList,
   Field,
+  Row,
   SectionHeader,
+  Stack,
   TextInput,
 } from "@margince/frontend/design-system";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -103,21 +105,21 @@ function AbsentEndpoint({ canOpen }: Readonly<{ canOpen: boolean }>) {
     onSettled: refresh,
   });
   return (
-    <>
+    <Stack gap="4">
       <p>
         <Badge tone="warn">{t("extOpenchannel.endpoint.absent")}</Badge>
       </p>
       {canOpen ? (
-        <div className="card-actions">
+        <Row>
           <Button disabled={open.isPending} onClick={() => open.mutate()}>
             {t("extOpenchannel.endpoint.open")}
           </Button>
-        </div>
+        </Row>
       ) : null}
       {open.isError ? (
         <p role="alert">{t("extOpenchannel.endpoint.openFailed")}</p>
       ) : null}
-    </>
+    </Stack>
   );
 }
 
@@ -202,8 +204,8 @@ function SigningSecret({ endpointId }: Readonly<{ endpointId: string }>) {
     onSettled: refresh,
   });
   return (
-    <>
-      <div className="card-actions">
+    <Stack gap="4">
+      <Row>
         <Button
           variant="ghost"
           disabled={mint.isPending}
@@ -211,7 +213,7 @@ function SigningSecret({ endpointId }: Readonly<{ endpointId: string }>) {
         >
           {t("extOpenchannel.secret.mint")}
         </Button>
-      </div>
+      </Row>
       {secret ? (
         <>
           <Callout tone="warn">{t("extOpenchannel.secret.shownOnce")}</Callout>
@@ -226,7 +228,7 @@ function SigningSecret({ endpointId }: Readonly<{ endpointId: string }>) {
       {mint.isError ? (
         <p role="alert">{t("extOpenchannel.secret.mintFailed")}</p>
       ) : null}
-    </>
+    </Stack>
   );
 }
 
@@ -255,8 +257,8 @@ function PauseResume({ enabled }: Readonly<{ enabled: boolean }>) {
     onSettled: refresh,
   });
   return (
-    <>
-      <div className="card-actions">
+    <Stack gap="4">
+      <Row>
         <Button
           variant={enabled ? "danger" : "primary"}
           disabled={setEnabled.isPending}
@@ -266,11 +268,11 @@ function PauseResume({ enabled }: Readonly<{ enabled: boolean }>) {
             ? t("extOpenchannel.endpoint.pause")
             : t("extOpenchannel.endpoint.resume")}
         </Button>
-      </div>
+      </Row>
       {setEnabled.isError ? (
         <p role="alert">{t("extOpenchannel.endpoint.enabledFailed")}</p>
       ) : null}
-    </>
+    </Stack>
   );
 }
 
@@ -315,14 +317,14 @@ function OutboundUrlForm({
           />
         )}
       </Field>
-      <div className="form-actions">
+      <Row justify="end">
         <Button
           disabled={draft.trim() === "" || register.isPending}
           onClick={() => register.mutate(draft.trim())}
         >
           {t("extOpenchannel.outbound.register")}
         </Button>
-      </div>
+      </Row>
       {register.isError ? (
         <p role="alert">{t("extOpenchannel.outbound.registerFailed")}</p>
       ) : null}
