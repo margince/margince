@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -325,5 +326,56 @@ func TestSuggestionsAreOmittedWhenNeitherInputReachesTheCaller(t *testing.T) {
 	}
 	if !named {
 		t.Errorf("sections_omitted = %v, want it to name suggestions", view.SectionsOmitted)
+	}
+}
+
+// The two readers of the dismissal ledger ask the same question of the account.
+//
+// UndismissedAdvice and KeepUndismissed both read one table, both key it on an
+// organization id the caller supplies, and both answer whether this reader has
+// judged advice about that account. Only the first checked that the caller may
+// see the account; the second was reached behind two other checks, so the
+// protection belonged to its call site rather than to the read — and a second
+// call site would not have inherited it.
+//
+// The rep holds the object grant and cannot see THIS row: the account is
+// capture-private to a colleague, which is the one narrowing that survives on
+// an organization (every seat otherwise reads them all). The refusal therefore
+// comes from visibility rather than from holding no organization read at all,
+// which a test refusing everybody would also produce.
+func TestBothReadersOfTheDismissalLedgerGateOnTheAccount(t *testing.T) {
+	e := integration.Setup(t)
+	svc := org360Service(e)
+	org := ids.From[ids.OrganizationKind](e.SeedOrg(t, "Someone Else's Account", &e.Rep2))
+	// Capture privacy: a connector-minted account answers to its owner alone
+	// until it is promoted, whatever the reader's row scope.
+	e.WsExec(t, `UPDATE organization SET visibility = 'owner', owner_id = $2 WHERE id = $1`,
+		org.UUID, e.Rep2)
+
+	stranger := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
+		RoleKeys: []string{"rep"},
+		Objects: map[string]principal.ObjectGrant{
+			"organization": {Read: true}, "installation_settings": {Read: true},
+		},
+		RowScope: principal.RowScopeOwn,
+	})
+
+	// The premise: this seat holds organization:read and still cannot see THIS
+	// account. Without it the assertions below prove only that a caller holding
+	// nothing is refused.
+	if _, err := svc.UndismissedAdvice(stranger, org); err == nil {
+		t.Fatal("the reader can see the account, so neither arm below is a test of the gate")
+	}
+
+	// One suggestion in hand, as a caller would pass it. Its content does not
+	// matter: what is under test is whether the ACCOUNT is checked before the
+	// ledger is read about it.
+	found := []crmcontracts.Organization360Suggestion{{
+		Kind:        "stalled_deal",
+		Fingerprint: "stalled_deal:" + org.String(),
+	}}
+	if _, err := svc.KeepUndismissed(stranger, org, found); err == nil {
+		t.Error("KeepUndismissed answered about an account the caller cannot see, " +
+			"while UndismissedAdvice beside it refused the same reader")
 	}
 }
