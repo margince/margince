@@ -382,9 +382,13 @@ function CaptureActivityWindow({ scope }: Readonly<{ scope: Scope }>) {
 // It filters the rows already LOADED, not the window, so the count line beside
 // it says both numbers. A filter that silently showed 12 of 26 would be a worse
 // answer than no filter at all.
-// A bucket counts every message that met an outcome, so its label has to hold
-// for all of them at once.
 //
+// Each tile is labelled with its bucket's own name, which is honest again now
+// that the counters group by the SETTLED outcome: every message under
+// `deferred` really is still waiting. While they grouped by what the pipeline
+// recorded, one number covered the senders being judged and the ones already
+// answered, and this tile read "Waiting on a verdict — 31" over rows that each
+// said the verdict had landed.
 function CaptureFunnel({
   funnel,
   selected,
