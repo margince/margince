@@ -539,7 +539,7 @@ describe("CompanyRail", () => {
     // reader cannot even see. Scoped to People's own panel — Deals is
     // unrelated and legitimately shows its own "Add" for its own empty read.
     const peoplePanel = screen
-      .getByRole("heading", { name: "Their key people" })
+      .getByRole("heading", { name: "Their key contacts" })
       .closest<HTMLElement>("details");
     expect(peoplePanel).not.toBeNull();
     expect(
@@ -828,7 +828,7 @@ describe("CompanyRail", () => {
       }),
     });
     const peoplePanel = screen
-      .getByRole("heading", { name: "Their key people" })
+      .getByRole("heading", { name: "Their key contacts" })
       .closest<HTMLElement>("details");
     expect(peoplePanel).not.toBeNull();
     if (!peoplePanel) {
@@ -1016,10 +1016,10 @@ describe("CompanyRail", () => {
     await userEvent.click(
       screen.getByRole("button", { name: en["co.rail.people.add"] }),
     );
-    expect(spy).toHaveBeenCalledWith("people");
+    expect(spy).toHaveBeenCalledWith("contacts");
     // That is the empty roster's one verb: no second "Add" under it.
     const peoplePanel = screen
-      .getByRole("heading", { name: "Their key people" })
+      .getByRole("heading", { name: "Their key contacts" })
       .closest<HTMLElement>("details");
     expect(peoplePanel).not.toBeNull();
     expect(
@@ -1056,7 +1056,7 @@ describe("CompanyRail", () => {
     });
     // Twenty-five is where the server cut, not how many there are: the
     // summary carries no badge and the verb no figure, on both sections.
-    for (const name of ["Their key people", "Active deals"]) {
+    for (const name of ["Their key contacts", "Active deals"]) {
       const panel = screen
         .getByRole("heading", { name })
         .closest<HTMLElement>("details");

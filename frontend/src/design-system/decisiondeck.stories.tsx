@@ -164,7 +164,7 @@ const CHIPS = (
           <AutonomyDot tier="confirm" />
           <span className="t-caption">
             {shared.kind === "site_lead"
-              ? "Add a person found on the site"
+              ? "Add a contact found on the site"
               : "Send an email"}
           </span>
         </>

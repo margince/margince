@@ -213,3 +213,33 @@ it("answers the old reports address, carrying the segment across", () => {
     id3: undefined,
   });
 });
+
+// The account's contact tab is addressed `contacts`. Every link already sent
+// names it `people`, and one that lands on Overview has kept the reader on the
+// account and still lost them the roster.
+it("answers the old company contacts tab, keeping the account and what is under it", () => {
+  expect(parseHash("#/companies/o-1/people")).toEqual({
+    screen: "companies",
+    id: "o-1",
+    id2: "contacts",
+    id3: undefined,
+  });
+  expect(parseHash("#/companies/o-1/people/p-2")).toEqual({
+    screen: "companies",
+    id: "o-1",
+    id2: "contacts",
+    id3: "p-2",
+  });
+  // A query on the hash belongs to the screen, not the route, so the tab still
+  // resolves for an address carrying paging keys.
+  expect(parseHash("#/companies/o-1/people?cursor=x").id2).toBe("contacts");
+});
+
+// The tab is a VIEW of the account (IDENTITY_DEPTH), so the old address and the
+// new one are the same thing on screen: were they two identities, arriving on a
+// bookmark would throw the page away and lose the reader's scroll.
+it("gives the old and new company contacts addresses one identity", () => {
+  expect(routeIdentity(parseHash("#/companies/o-1/people"))).toBe(
+    routeIdentity(parseHash("#/companies/o-1/contacts")),
+  );
+});

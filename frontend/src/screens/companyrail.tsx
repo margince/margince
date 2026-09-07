@@ -95,10 +95,10 @@ export function CompanyRail({
   // rather than narrowing: squeezed to a third of its width it is a column of
   // broken cards, and no mockup draws the two side by side.
   composerOpen: boolean;
-  // Where each panel's header link goes: Deals/People switch the record's own
+  // Where each panel's header link goes: Deals/Contacts switch the record's own
   // tab strip, Details opens Profile. One callback rather than three, because
   // every use is the same verb aimed at a different tab.
-  onTab: (tab: "deals" | "people" | "profile") => void;
+  onTab: (tab: "deals" | "contacts" | "profile") => void;
 }>) {
   const t = useT();
   if (composerOpen) {
@@ -422,7 +422,7 @@ function DealRailRow({ deal }: Readonly<{ deal: Deal }>) {
 /**
  * PeopleSection is a glance at the roster: who is here, how they have
  * answered, and, where the graph read supports it, the colleagues already in
- * contact with them. The set-role and route-in verbs stay on the People tab's
+ * contact with them. The set-role and route-in verbs stay on the Contacts tab's
  * own roster rather than being rebuilt here a second time.
  */
 function PeopleSection({
@@ -432,7 +432,7 @@ function PeopleSection({
 }: Readonly<{
   view?: Organization360;
   loading: boolean;
-  onTab: (tab: "people") => void;
+  onTab: (tab: "contacts") => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -456,7 +456,7 @@ function PeopleSection({
     >
       {state === "ready" ? (
         // The top of the byReach order: the rail glances at who matters most
-        // on the account, and the People tab is the full roster.
+        // on the account, and the Contacts tab is the full roster.
         <ul className="record-card-list">
           {contacts.slice(0, RAIL_ROW_LIMIT).map((contact) => (
             <li key={contact.person_id}>
@@ -478,7 +478,7 @@ function PeopleSection({
               tab twice under two names. */}
           {state === "empty" && (
             <div className="card-actions">
-              <Button small variant="ghost" onClick={() => onTab("people")}>
+              <Button small variant="ghost" onClick={() => onTab("contacts")}>
                 {t("co.rail.people.add")}
               </Button>
             </div>
@@ -487,7 +487,7 @@ function PeopleSection({
       )}
       {state === "ready" && (
         <div className="card-actions">
-          <Button small variant="ghost" onClick={() => onTab("people")}>
+          <Button small variant="ghost" onClick={() => onTab("contacts")}>
             {count != null
               ? t("co.rail.all", { count: formatNumber(count, locale) })
               : t("co.rail.allUncounted")}

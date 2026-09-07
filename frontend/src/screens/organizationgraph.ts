@@ -4,7 +4,7 @@ import { throwProblem } from "./common";
 
 // The account's one-hop connection graph, as data.
 //
-// What is left of the connections card after the People tab stopped drawing
+// What is left of the connections card after the Contacts tab stopped drawing
 // one. The card, its expanded modal and the radial diagram all answered "who
 // works at this account" a second and third time beside a roster that already
 // said so, in a picture of unlabeled dots that was hidden from screen readers

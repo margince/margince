@@ -167,12 +167,12 @@ import { invalidateRecord } from "./recordwritekeys";
 
 type Organization = components["schemas"]["Organization"];
 
-// Where the account stands with us (ADR-0079/A124), in the words a reader
+// Where the account stands with us (ADR-0079), in the words a reader
 // sees. Lives in companylookups.ts, the leaf both this screen and the rail
 // import, so the two cannot drift onto two different label sets for the same
 // enum. Re-exported: every existing caller of `LIFECYCLE_LABELS` from this
 // module still resolves, and this file still reads it below as its own.
-// What it is TO US, multi-valued (ADR-0079/A124). Moved beside
+// What it is TO US, multi-valued (ADR-0079). Moved beside
 // LIFECYCLE_LABELS in companylookups.ts because the two vocabularies OVERLAP —
 // `customer` is a member of both — and only a module holding both can tell
 // that the header is about to print one word twice. Re-exported for the same
@@ -517,7 +517,7 @@ export function companyEditFields(
         label: t(RELATIONSHIP_TYPE_LABELS[value]),
       })),
     },
-    // The company's own LinkedIn page. A canonical column since ADR-0085/A130,
+    // The company's own LinkedIn page. A canonical column since ADR-0085,
     // not a custom field, because it carries identity semantics — matching,
     // dedupe, enrichment — and the person side already treats it that way. The
     // server normalizes what is pasted, so a URL copied from any tab of the
@@ -695,7 +695,7 @@ export function CompaniesScreen() {
             key: "relationship",
             header: t("org.relationshipTypes"),
             // A filter with no column to read it back on is a list that cannot
-            // say why a row matched. Multi-valued on purpose (ADR-0079/A124):
+            // say why a row matched. Multi-valued on purpose (ADR-0079):
             // an account can be a partner AND a customer, and showing only the
             // first would make the second look untrue.
             cell: (org: Organization) =>
@@ -1283,9 +1283,9 @@ function companyTabCounts(
     return {};
   }
   const counts: Partial<Record<CompanyTab, number>> = {};
-  const people = wholeCount(view.people);
-  if (people != null) {
-    counts.people = people;
+  const contacts = wholeCount(view.people);
+  if (contacts != null) {
+    counts.contacts = contacts;
   }
   const deals = wholeCount(view.deals);
   if (deals != null) {
@@ -1306,7 +1306,7 @@ function companyTabsFor(
   // read does not select the extension row, so that field is always absent
   // and every partner would lose the tab. The type is equivalent and IS
   // returned — an org carries it exactly when it has a programme, which the
-  // store enforces in both directions (ADR-0079/A124).
+  // store enforces in both directions (ADR-0079).
   const isPartner = (org.relationship_types ?? []).includes("partner");
   const drop = new Set<CompanyTab>();
   if (!isPartner && tab !== "partner") {
@@ -1470,7 +1470,7 @@ function CompanyRecord({
             // `tab.overview`, which four other record types render and none of
             // them is this.
             overview: t("tab.overview"),
-            people: t("tab.contacts"),
+            contacts: t("tab.contacts"),
             deals: t("tab.deals"),
             tasks: t("tab.tasks"),
             timeline: t("tab.timeline"),
@@ -2222,11 +2222,11 @@ function CompanyRecordBody({
           onClose={() => onCompose(null)}
         />
       )}
-      {/* The People tab gives the account team the whole middle column, with
+      {/* The Contacts tab gives the account team the whole middle column, with
           room for the title and the last exchange beside each name. The
           rail's capped summary stands beside it — a top-3 glance is the
           reader's anchor across tabs, not a second copy of the roster. */}
-      {tab === "people" && (
+      {tab === "contacts" && (
         <div className="co-overview-stack">
           {/* The account's people, ranked and paged. One representation, not
               three: the roster card, the connections card and its diagram all
@@ -2447,7 +2447,7 @@ function CompanyOverviewStack({
     <div className="co-overview-stack">
       {/* The readings lead, under the bar that chose this tab: five doors into
           the tabs that hold their rows. They belong to THIS tab rather than to
-          the record — the People tab is a roster and the Documents tab is a
+          the record — the Contacts tab is a roster and the Documents tab is a
           filing cabinet, and a row of account readings over either is a header
           for a page it is not describing. */}
       {!overlay && view && (

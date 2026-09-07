@@ -127,7 +127,7 @@ function CoverageGrid({ orgId }: Readonly<{ orgId: string }>) {
 
   const shown = selected.length > 0 ? selected : defaultSelection(colleagues);
   // The account's contacts as the GRAPH knows them, narrowed by this grid's own
-  // search box. Not the caller's rows: the People tab's list is filtered and
+  // search box. Not the caller's rows: the Contacts tab's list is filtered and
   // paged, and a coverage comparison built from a page reports the team as
   // covering nobody the moment a reader narrows the list — a false claim, not
   // a smaller one.

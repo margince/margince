@@ -22,7 +22,7 @@ const LABELS: RelationshipMapLabels = {
   emptyTitle: "No route recorded yet",
   emptyBody:
     "Start by assigning the buying roles, or import the interactions this account already has.",
-  nothingSelected: "Select a person to see the best route into them.",
+  nothingSelected: "Select a contact to see the best route into them.",
 };
 
 const FULL: RelationshipMapModel = {

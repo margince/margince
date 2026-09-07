@@ -375,7 +375,7 @@ describe("the tallies", () => {
     expect(await screen.findByText("messages read")).toBeInTheDocument();
     expect(screen.getByText("kept")).toBeInTheDocument();
     expect(screen.queryByText("ignored")).not.toBeInTheDocument();
-    expect(screen.queryByText("people found")).not.toBeInTheDocument();
+    expect(screen.queryByText("contacts found")).not.toBeInTheDocument();
     expect(screen.queryByText("companies found")).not.toBeInTheDocument();
     // The absent counts are absent, not zero.
     expect(screen.queryByText("0")).not.toBeInTheDocument();

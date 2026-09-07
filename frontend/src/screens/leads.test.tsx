@@ -381,7 +381,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     // The page stays (ADR-0119): the outcome is said here, with the contact.
     expect(window.location.hash).toBe("#/leads/l-1");
     expect(
-      await screen.findByText(/Jonas Petersen is now a person:/),
+      await screen.findByText(/Jonas Petersen is now a contact:/),
     ).toBeTruthy();
   });
 
@@ -676,7 +676,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
   });
 
   it("a promoted lead keeps its page and says what the promotion did", async () => {
-    // AC-leaddetail-5 (ADR-0119/A170). The page used to redirect here, which
+    // AC-leaddetail-5 (ADR-0119). The page used to redirect here, which
     // told the reader the lead had ceased to exist — untrue of a record this
     // product keeps, audits and can reverse — and left the reversal with
     // nowhere to start from. It also hid whether promotion merged into a
@@ -725,7 +725,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
   });
 
   it("the promote dialog says what promotion will do before the rep commits", async () => {
-    // ADR-0119/A170: merge-into-existing vs create is the difference between
+    // ADR-0119: merge-into-existing vs create is the difference between
     // "my prospect is now a person" and "my prospect was already someone we
     // knew". The preview runs the same ladder the promotion runs.
     stubFetch(async (url) => {
@@ -740,7 +740,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     render(<LeadScreen id="l-1" />);
     await userEvent.click(await screen.findByTestId("lead-qualify"));
     expect(
-      await screen.findByText(/Promoting will merge into the existing person/),
+      await screen.findByText(/Promoting will merge into the existing contact/),
     ).toBeTruthy();
   });
 
@@ -815,7 +815,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
   it("a promoted lead reads as promoted, not disqualified", async () => {
     // Both closures archive the row, so a page keying its terminal sentence off
     // archived_at alone told every promoted lead it had been disqualified. The
-    // redirect hid that until ADR-0119/A170 removed it.
+    // redirect hid that until ADR-0119 removed it.
     stubFetch(async (input: RequestInfo | URL) => {
       if (String(input).includes("/records/lead/")) {
         return jsonResponse({
@@ -1006,7 +1006,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
   it("promote is disabled for an ineligible lead, and the button says why", async () => {
     // A LIVE lead with no email: ineligible, but still on screen. A promoted
     // lead is terminal and carries no promote control at all, so it cannot
-    // stand in for "ineligible" (ADR-0119/A170).
+    // stand in for "ineligible" (ADR-0119).
     stubFetch(async () => jsonResponse({ ...lead, email: null }));
     render(<LeadScreen id="l-1" />);
     const button = await screen.findByRole("button", { name: "Qualify" });

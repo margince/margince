@@ -1046,7 +1046,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
   // Contacts are a company fact (who to talk to), the same class of thing as
   // an office or a service line — they belong on the board, in the section
   // nav and the group list, not folded into the tail below it.
-  it("promotes people found on the site to their own section on the board", () => {
+  it("promotes contacts found on the site to their own section on the board", () => {
     renderTriage([], { ...readWith([]), people: [FOUNDER] });
 
     const nav = screen.getByRole("navigation", { name: "Jump to a section" });
@@ -1076,7 +1076,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
       throw new Error("expected the Contacts section to exist");
     }
     expect(
-      within(section).getByText("No people found on your site."),
+      within(section).getByText("No contacts found on your site."),
     ).toBeInTheDocument();
     // No bare digit stands in for the honest sentence, and the section
     // carries no outstanding count of its own in the nav either — nothing

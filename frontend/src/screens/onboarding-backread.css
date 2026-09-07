@@ -145,7 +145,7 @@
 }
 
 /* Value above label on screen, label first in the DOM: a description list read
-   aloud as "people found, 47" means something, "47, people found" does not. */
+   aloud as "contacts found, 47" means something, "47, contacts found" does not. */
 .ob-backread-tally {
   display: flex;
   flex-direction: column-reverse;
@@ -186,7 +186,7 @@
 /* Widths are the PANE's, not the window's — see the container note at the top
    of the file. */
 
-/* Two tallies of ~96px leave an uppercase label ("people found") three lines
+/* Two tallies of ~96px leave an uppercase label ("contacts found") three lines
    under a one-line number, which is a tile that is mostly label. One column
    instead, and a lone column of tiles is really a list: the label takes the
    left of the line and its number the right, where a reader scanning a column

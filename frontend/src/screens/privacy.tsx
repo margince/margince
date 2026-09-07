@@ -422,9 +422,9 @@ function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
 
       {kind === "erasure" ? (
         <div className="field">
-          <span className="t-label">{t("privacy.person")}</span>
+          <span className="t-label">{t("privacy.contact")}</span>
           <RecordPicker
-            label={t("privacy.person")}
+            label={t("privacy.contact")}
             searchTargets={searchPersonCandidates}
             selected={person}
             onPick={(candidate) => {
@@ -433,7 +433,7 @@ function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
               dismissCreateError();
             }}
           />
-          <p className="t-caption">{t("privacy.erasureNeedsPerson")}</p>
+          <p className="t-caption">{t("privacy.erasureNeedsContact")}</p>
         </div>
       ) : (
         <Field

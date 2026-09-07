@@ -128,6 +128,13 @@ export function parseHash(hash: string): Route {
   if (screen === "home") {
     return { screen: "brief", id, id2, id3 };
   }
+  // The account's contact tab is addressed `contacts`, and a link already sent
+  // to a colleague names it `people`. The account and anything below the tab
+  // ride along, so an old address opens the same roster the new one does rather
+  // than dropping the reader on Overview.
+  if (screen === "companies" && id2 === "people") {
+    return { screen, id, id2: "contacts", id3 };
+  }
   if (!isScreen(screen)) {
     // A hash comes out of the URL bar, so its first segment is text a human
     // typed, not a Screen. An address this app does not answer is a page — the

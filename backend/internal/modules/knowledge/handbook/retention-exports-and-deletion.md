@@ -18,7 +18,7 @@ These are the defaults. All six are editable.
 | Leads that never converted | 365 days | Anonymise |
 | All captured activity | 1095 days (3 years) | Archive |
 | Call transcripts | 365 days | Erase |
-| People with no consent and no deal | 730 days (2 years) | Anonymise |
+| Contacts with no consent and no deal | 730 days (2 years) | Anonymise |
 | Lost deals | 1825 days (5 years) | Archive |
 | AI call payloads | 365 days | Erase |
 
@@ -33,7 +33,7 @@ policy yet — nothing in this installation ages out."
 
 This matters more than people expect.
 
-- **Leads** and **people** count from when the record was created.
+- **Leads** and **contacts** count from when the record was created.
 - **Captured activity** and **call transcripts** count from the message's own
   date — when it was sent or received, not when it was filed.
 - **Deals** count from when the deal was closed.
@@ -50,7 +50,7 @@ destroy data."
 
 Anonymise is **not** erase-minus-a-detail. The two clear different things. An
 erasure also reaches the raw captured messages, the attachments those messages
-carried, the person's lead rows and scores, their unsubscribe tokens and their
+carried, the contact's lead rows and scores, their unsubscribe tokens and their
 Deal Room seats. Anonymising leaves all of those.
 
 ### What anonymise and erase actually do
@@ -58,10 +58,10 @@ Deal Room seats. Anonymising leaves all of those.
 **Anonymising a lead** replaces the name with "Anonymized Lead", clears the
 email, title and company, and deletes the lead's score history.
 
-**Anonymising a person** clears the names, title and postal address, sets the
+**Anonymising a contact** clears the names, title and postal address, sets the
 name to "Erased Subject", clears every custom field, and deletes their email
 addresses, phone numbers, social handles and channel identities. No suppression
-entry is written — the person may lawfully come back.
+entry is written — the contact may lawfully come back.
 
 **Erasing a call transcript** clears the body and replaces the subject with
 "Erased", and purges the attachments — the bytes, not just the rows. It
@@ -79,7 +79,7 @@ re-point an existing rule at a different scope; a different scope is a different
 rule.
 
 Not every combination is allowed. The legal pairs are: erase or anonymise a
-person, archive or erase an activity, archive a deal, erase an AI call payload,
+contact, archive or erase an activity, archive a deal, erase an AI call payload,
 and anonymise a lead.
 
 A rule can carry an optional **lawful basis** — the Article 6 basis the window is
@@ -167,19 +167,19 @@ and the product states it without softening:
 > An access request is fulfilled by hand: record what you sent in the
 > resolution. **This system does not assemble or export the data for you.**
 
-There is no "download everything about this person" button. If you need to
+There is no "download everything about this contact" button. If you need to
 answer a subject access request, you gather the data yourself and record what
 you sent. Plan for that.
 
 ### Erasure requests
 
-An erasure request **must name a person in this organization**. A free-text
+An erasure request **must name a contact in this organization**. A free-text
 subject cannot be erased, because there is no record to erase.
 
 Fulfilling one is deliberately hard to do by accident. You type **ERASE** to
 confirm, and the warning is exact:
 
-> This permanently erases the person across the whole system — record, captured
+> This permanently erases the contact across the whole system — record, captured
 > activity, and derived values. It cannot be undone. The erasure is itself
 > audited.
 
@@ -195,7 +195,7 @@ partial success.
 
 When an erasure hits a statutory retention obligation, you are told:
 
-> Blocked — legal hold. This person is inside a statutory retention window, so
+> Blocked — legal hold. This contact is inside a statutory retention window, so
 > erasure does not win here (Art. 17(3)(b)). **The block applies to every role,
 > including admin — there is no override.** The attempt was audited.
 
@@ -254,7 +254,7 @@ their own recorded address — use **Ask them to confirm their details**. This i
 the point of double opt-in: a confirmation an employee can complete on the
 contact's behalf is not evidence that the contact agreed.
 
-The default is **deny**. A purpose with no record for a person is not consent.
+The default is **deny**. A purpose with no record for a contact is not consent.
 
 Every consent change is written to a **proof log** that records who did it and
 how: a Human, an Agent, the System, or a Connector — or honestly "actor not
@@ -300,6 +300,6 @@ Three things about it:
 - **Every export writes an audit entry.** Someone can always find out who took a
   copy of what, and when.
 
-This is a record export, not a person export. It does not assemble everything
+This is a record export, not a contact export. It does not assemble everything
 held about one individual — see the access-request section above for why that is
 a manual job.

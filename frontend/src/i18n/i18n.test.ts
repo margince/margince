@@ -154,10 +154,13 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "deals.pipeline",
   "deal.fcPipeline",
   "cf.obj.deal",
-  "cf.obj.person",
   "cf.obj.lead",
   "co.brief.cite.deal",
-  "co.brief.cite.person",
+  // The singular of the same noun, on the account facts strip and on the
+  // overnight scan's tally. Both are the borrowed word beside a numeral, so
+  // there is nothing left in either string for Vietnamese to translate.
+  "co.facts.deals_one",
+  "today.scan.readDeals_one",
   "deals.unit",
   "contracts.renew.deal",
   "contracts.deal",
@@ -557,7 +560,7 @@ describe("catalog keys against the surfaces that render them", () => {
 });
 
 /*
- * The tenant is called "organization" to a reader (A107/ADR-0061): one
+ * The tenant is called "organization" to a reader (ADR-0061): one
  * installation serves one organization, and "workspace" is the internal
  * boundary the schema and the RBAC code use. A second noun for one thing reads
  * as two concepts the product does not have.

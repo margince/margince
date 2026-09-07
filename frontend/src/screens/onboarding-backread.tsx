@@ -63,7 +63,7 @@ const TALLIES: readonly { key: keyof BackfillCounts; label: MessageKey }[] = [
   { key: "messages_scanned", label: "ob.backread.tallyMessages" },
   { key: "captured", label: "ob.backread.tallyCaptured" },
   { key: "skipped", label: "ob.backread.tallySkipped" },
-  { key: "people_created", label: "ob.backread.tallyPeople" },
+  { key: "people_created", label: "ob.backread.tallyContacts" },
   { key: "organizations_created", label: "ob.backread.tallyCompanies" },
 ];
 
