@@ -326,11 +326,9 @@ func (m *CallMeter) publishRailLive(ctx context.Context, tx pgx.Tx, c Call, clai
 	// caller passing a zero lease has asked for the shortest believable one,
 	// not for an immortal row.
 	seconds := max(int(math.Ceil(lease.Seconds())), 1)
-	ledgerID, err := storekit.LogSystem(ctx, tx, "ai_task.state_changed", map[string]any{
-		"source": SourceRouter, "occurrence_key": key, "state": railStateRunning, "lease_seconds": seconds,
-	})
+	ledgerID, err := logRailStateChange(ctx, tx, key, railStateRunning)
 	if err != nil {
-		return fmt.Errorf("ai: log rail start: %w", err)
+		return err
 	}
 	task := string(c.Task)
 	payload := crmcontracts.InternalEventAiTaskStateChanged{

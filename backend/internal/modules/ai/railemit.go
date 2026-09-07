@@ -179,11 +179,9 @@ func (m *CallMeter) announceRail(ctx context.Context, tx pgx.Tx, terminal Call) 
 	if err != nil {
 		return err
 	}
-	ledgerID, err := storekit.LogSystem(ctx, tx, "ai_task.state_changed", map[string]any{
-		"source": SourceRouter, "occurrence_key": key, "state": railState(terminal),
-	})
+	ledgerID, err := logRailStateChange(ctx, tx, key, railState(terminal))
 	if err != nil {
-		return fmt.Errorf("ai: log rail state change: %w", err)
+		return err
 	}
 	// The call ran for LatencyMS before it finished, so its start is derivable
 	// from the database's own clock rather than this process's — a host clock
@@ -220,6 +218,22 @@ func (m *CallMeter) announceRail(ctx context.Context, tx pgx.Tx, terminal Call) 
 		return fmt.Errorf("ai: publish rail state change: %w", err)
 	}
 	return nil
+}
+
+// logRailStateChange writes the ledger row every rail announcement rides.
+//
+// One writer for the start, the renewals and the settle, so the three cannot
+// describe one occurrence in two vocabularies: the ledger row is what keeps an
+// entity-less event attributable, and a reader following a trace back to it
+// should find the same three facts whichever announcement wrote it.
+func logRailStateChange(ctx context.Context, tx pgx.Tx, key, state string) (ids.UUID, error) {
+	ledgerID, err := storekit.LogSystem(ctx, tx, "ai_task.state_changed", map[string]any{
+		"source": SourceRouter, "occurrence_key": key, "state": state,
+	})
+	if err != nil {
+		return ids.Nil, fmt.Errorf("ai: log rail state change: %w", err)
+	}
+	return ledgerID, nil
 }
 
 // unitOfWorkKey identifies the occurrence this call belongs to: one piece of

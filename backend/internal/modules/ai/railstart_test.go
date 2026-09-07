@@ -124,7 +124,7 @@ func TestOneLogicalCallAnnouncesItsStartOnce(t *testing.T) {
 // local router and the cert lane both inject one, and the honest behaviour is
 // no announcement rather than a no-op method they were forced to grow.
 func TestARecorderThatCannotAnnounceIsNotAskedTo(t *testing.T) {
-	starter := &countingStarter{claim: aClaim()}
+	starter := &countingStarter{}
 	r := assembleRouter(nil, nil, ProfileEUHosted, &memoryMeter{}, StaticBudget(0), &memCallStore{}, nil, false, nil)
 	lc := newLogicalCall()
 	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())

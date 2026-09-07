@@ -20,15 +20,17 @@ import (
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
 )
 
-// start announces one call's beginning the way the router does before it serves
-// an attempt, and answers the claim it made. The lease is the caller's, so a
-// test can pin what the projection derives stale_after from rather than
-// restating the router's own arithmetic.
-func (f *routerFixture) start(t *testing.T, task ai.Task, lease time.Duration) ai.RailClaim {
+// start announces a summarize call's beginning the way the router does before
+// it serves an attempt, and answers the claim it made. The lease is the
+// caller's, so a test can pin what the projection derives stale_after from
+// rather than restating the router's own arithmetic. Summarize because it is a
+// router-reported task every case here reads back; a task the router does not
+// report goes through startCall and the meter directly, and asserts the refusal.
+func (f *routerFixture) start(t *testing.T, lease time.Duration) ai.RailClaim {
 	t.Helper()
-	claim, announced := f.meter.AnnounceRailStart(f.ctx, f.startCall(task), lease)
+	claim, announced := f.meter.AnnounceRailStart(f.ctx, f.startCall(ai.TaskSummarize), lease)
 	if !announced {
-		t.Fatalf("the start of %s was not announced", task)
+		t.Fatal("the start of the summarize call was not announced")
 	}
 	return claim
 }
@@ -52,7 +54,7 @@ func (f *routerFixture) startCall(task ai.Task) ai.Call {
 func TestACallSaysItIsRunningBeforeItSaysWhatItDid(t *testing.T) {
 	f := newRouterFixture(t)
 
-	f.start(t, ai.TaskSummarize, 5*time.Minute)
+	f.start(t, 5*time.Minute)
 	f.drain(t)
 
 	live := f.row(t, ai.TaskSummarize)
@@ -94,7 +96,7 @@ func TestACallSaysItIsRunningBeforeItSaysWhatItDid(t *testing.T) {
 func TestTheStartAndTheSettleAreOneOccurrence(t *testing.T) {
 	f := newRouterFixture(t)
 
-	f.start(t, ai.TaskSummarize, 5*time.Minute)
+	f.start(t, 5*time.Minute)
 	f.call(t, ai.TaskSummarize, nil)
 	f.drain(t)
 
@@ -117,7 +119,7 @@ func TestTheStartAndTheSettleAreOneOccurrence(t *testing.T) {
 func TestASettledOccurrenceKeepsNoLease(t *testing.T) {
 	f := newRouterFixture(t)
 
-	f.start(t, ai.TaskSummarize, 5*time.Minute)
+	f.start(t, 5*time.Minute)
 	f.call(t, ai.TaskSummarize, nil)
 	f.drain(t)
 
@@ -138,7 +140,7 @@ func TestTheProjectionStoresTheLeaseTheRouterDerived(t *testing.T) {
 	f := newRouterFixture(t)
 	const lease = 97 * time.Second
 
-	f.start(t, ai.TaskSummarize, lease)
+	f.start(t, lease)
 	f.drain(t)
 
 	got := f.row(t, ai.TaskSummarize)
@@ -159,7 +161,7 @@ func TestTheProjectionStoresTheLeaseTheRouterDerived(t *testing.T) {
 func TestARenewalExtendsTheLeaseAndKeepsTheClaim(t *testing.T) {
 	f := newRouterFixture(t)
 
-	claim := f.start(t, ai.TaskSummarize, 5*time.Minute)
+	claim := f.start(t, 5*time.Minute)
 	f.drain(t)
 	opened := f.row(t, ai.TaskSummarize)
 
@@ -197,7 +199,7 @@ func TestARenewalExtendsTheLeaseAndKeepsTheClaim(t *testing.T) {
 func TestARenewalCannotReopenASettledOccurrence(t *testing.T) {
 	f := newRouterFixture(t)
 
-	claim := f.start(t, ai.TaskSummarize, 5*time.Minute)
+	claim := f.start(t, 5*time.Minute)
 	f.call(t, ai.TaskSummarize, nil)
 	f.drain(t)
 
@@ -247,7 +249,7 @@ func TestAStartOutsideACorrelationScopeIsNotAnnounced(t *testing.T) {
 func TestASubSecondLeaseIsStillALease(t *testing.T) {
 	f := newRouterFixture(t)
 
-	f.start(t, ai.TaskSummarize, 500*time.Millisecond)
+	f.start(t, 500*time.Millisecond)
 	f.drain(t)
 
 	got := f.row(t, ai.TaskSummarize)
@@ -322,7 +324,7 @@ func TestAStartNothingSettledIsClosedByTheSweep(t *testing.T) {
 	// A one-second lease and a cutoff past it, rather than a backdated row: the
 	// sweep takes its cutoff from the caller precisely so a test can reach the
 	// real predicate without writing state the real writer never writes.
-	f.start(t, ai.TaskSummarize, time.Second)
+	f.start(t, time.Second)
 	f.drain(t)
 	if got := f.row(t, ai.TaskSummarize); got.State != "running" {
 		t.Fatalf("state before the sweep = %q, want running", got.State)
@@ -353,7 +355,7 @@ func TestAStartNothingSettledIsClosedByTheSweep(t *testing.T) {
 func TestTheSweepLeavesAnOccurrenceInsideItsLease(t *testing.T) {
 	f := newRouterFixture(t)
 
-	f.start(t, ai.TaskSummarize, time.Hour)
+	f.start(t, time.Hour)
 	f.drain(t)
 
 	if closed := f.sweep(t, f.dbNow(t)); closed != 0 {
