@@ -67,26 +67,36 @@ func TestMeServesTheZoneTheSeatWasStoredWith(t *testing.T) {
 	}
 }
 
-// The guard against serving an empty string, which is not a zone.
+// The two shapes that are not a zone, and both are omitted rather than served.
 //
-// app_user.timezone is NOT NULL and defaults to 'UTC', so in practice every
-// seat has one and this endpoint always answers. The guard is for the shape
-// rather than the data: Identity is an ordinary struct that several paths
-// build partially — oauth_refresh.go makes one carrying a user id and a
-// workspace and nothing else — and if one of those ever reached this response
-// the field would arrive as "", which a client would parse as a zone and fail
-// on. Omitted says "ask the browser"; empty says "here is a zone" and lies.
-func TestMeOmitsTheZoneRatherThanServingAnEmptyOne(t *testing.T) {
+// NULL is one of them now. app_user.timezone was NOT NULL DEFAULT 'UTC' and
+// nothing ever wrote it, so every value it held was that default rather than a
+// choice — which is why the working-hours setting made it nullable, the way
+// `locale` beside it already was. Absent means NOBODY HAS CHOSEN, and this
+// endpoint has to say that rather than answer 'UTC' on their behalf: a client
+// told a zone renders instants in it, and a client told nothing asks the
+// browser, which is the right answer for a person who has never said.
+//
+// The empty string is the other, and it is the shape rather than the data:
+// Identity is an ordinary struct several paths build partially, and one of
+// those reaching this response would send "" — which a client parses as a zone
+// and fails on. Omitted says "ask the browser"; empty says "here is a zone"
+// and lies.
+func TestMeOmitsTheZoneRatherThanServingOneThatIsNotThere(t *testing.T) {
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Zone E2E", "ada@example.com", "Ada Admin")
 
-	// The column refuses NULL, so the impossible state cannot be seeded — which
-	// is worth asserting rather than assuming, because it is the reason the
-	// serving path can be simple.
 	if _, err := e.Owner.Exec(t.Context(),
-		`UPDATE app_user SET timezone = NULL WHERE email = $1`, "ada@example.com"); err == nil {
-		t.Fatal("app_user.timezone accepted NULL — a seat with no zone is now reachable, and the " +
-			"absent-versus-chosen question this endpoint sidesteps becomes real")
+		`UPDATE app_user SET timezone = NULL WHERE email = $1`, "ada@example.com"); err != nil {
+		t.Fatalf("seeding a seat that has chosen no zone: %v", err)
+	}
+	var unchosen meUser
+	if status := e.Call(t, "GET", "/v1/me", nil, nil, &unchosen); status != http.StatusOK {
+		t.Fatalf("GET /me = %d, want 200", status)
+	}
+	if unchosen.User.Timezone != nil {
+		t.Errorf("/me served timezone=%q for a seat that has chosen none — a client renders every "+
+			"instant in it, and nobody chose it", *unchosen.User.Timezone)
 	}
 
 	// An empty string is not refused by the column, and it is the shape the

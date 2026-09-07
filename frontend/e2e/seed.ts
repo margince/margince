@@ -1359,6 +1359,20 @@ export async function mockApi(
         system_of_record: { mode: sorMode },
       });
     }
+    // When this reader is bookable. The Account page carries the card, and a
+    // page whose card cannot load its own answer renders around a gap — which
+    // is what the specs on that page would then be measuring.
+    if (path === "/me/working-hours") {
+      return json({
+        chosen: false,
+        working_hours: {
+          start_time: "09:00",
+          end_time: "17:00",
+          days: [1, 2, 3, 4, 5],
+          timezone: "Europe/Berlin",
+        },
+      });
+    }
     if (path.startsWith("/installation/oauth-apps/") && method === "GET") {
       // Answered explicitly, per vendor: the catch-all would hand back a list
       // envelope, and the card would then read a source and a redirect list off
