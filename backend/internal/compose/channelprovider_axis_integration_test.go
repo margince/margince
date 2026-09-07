@@ -99,7 +99,6 @@ func TestActivityChannelProviderReferencesTheRegistry(t *testing.T) {
 // would fail for the wrong reason and this test would report a passing FK it
 // never actually reached.
 func TestActivityChannelProviderFKRefusesAnUnregisteredProvider(t *testing.T) {
-
 	_, err := integration.OwnerConn(t).Exec(context.Background(), `
 		INSERT INTO activity (kind, channel_provider, source, captured_by)
 		VALUES ('message', 'no_such_transport', 'manual', 'test')`)

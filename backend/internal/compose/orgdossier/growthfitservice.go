@@ -25,6 +25,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/briefevidence"
 	"github.com/margince/margince/backend/internal/compose/claims"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -79,6 +80,45 @@ type GrowthFitService struct {
 	// re-pointed lane invalidates rather than serving assessments written
 	// against a model that is no longer wired.
 	routingVersion string
+	// emailRows opens the messages the assessment cites. Held rather than read
+	// inline because the assessment is CACHED: a summary is assembled out of
+	// one reader's own grants, so it is attached on the way out and never to
+	// the row that gets saved.
+	emailRows briefevidence.Reader
+}
+
+// WithEmailSummaries binds the reader that opens a cited message.
+func (s *GrowthFitService) WithEmailSummaries(reader briefevidence.Reader) *GrowthFitService {
+	s.emailRows = reader
+	return s
+}
+
+// enrich attaches the canonical email row behind every citation in a finished
+// assessment, in one read, after any save.
+//
+// Five lists cite records — the four prose lanes and the sub-scores, whose
+// evidence is on the same footing as any other claim's.
+func (s *GrowthFitService) enrich(ctx context.Context, out crmcontracts.OrganizationGrowthFit) (crmcontracts.OrganizationGrowthFit, error) {
+	var targets []briefevidence.Target
+	for _, lane := range []*[]crmcontracts.OrganizationBriefSentence{
+		out.PositiveFactors, out.NegativeFactors, out.Objections, out.Whitespace,
+	} {
+		if lane != nil {
+			targets = append(targets, briefevidence.FromSentences(*lane)...)
+		}
+	}
+	if out.SubScores != nil {
+		scores := *out.SubScores
+		for i := range scores {
+			if scores[i].Evidence != nil {
+				targets = append(targets, briefevidence.FromEvidence(*scores[i].Evidence)...)
+			}
+		}
+	}
+	if err := briefevidence.Attach(ctx, s.emailRows, targets); err != nil {
+		return crmcontracts.OrganizationGrowthFit{}, err
+	}
+	return out, nil
 }
 
 // NewGrowthFitService binds the assessment to its reads; compose constructs it
@@ -161,7 +201,7 @@ func (s *GrowthFitService) Get(ctx context.Context, orgID ids.OrganizationID, fo
 		return zero, err
 	}
 	if found && !force && cached.usable(fingerprint, utc()) {
-		return cached.wire(orgID), nil
+		return s.enrich(ctx, cached.wire(orgID))
 	}
 
 	assessed, by, laneFailed := WriteGrowthFit(ctx, s.lane, in, offering.Confirmed, utc, lang)
@@ -175,7 +215,7 @@ func (s *GrowthFitService) Get(ctx context.Context, orgID ids.OrganizationID, fo
 		// The contract says as much for this endpoint: a refresh the budget
 		// refuses returns the cached assembly with its age rather than an
 		// error. Its `generated_at` is that age.
-		return cached.wire(orgID), nil
+		return s.enrich(ctx, cached.wire(orgID))
 	}
 	written := storedGrowthFit{
 		Fingerprint:  fingerprint,
@@ -196,12 +236,12 @@ func (s *GrowthFitService) Get(ctx context.Context, orgID ids.OrganizationID, fo
 	// retry never happens. For a company held on human-entered values there is
 	// no expiry either, so that would be permanent.
 	if laneFailed {
-		return written.wire(orgID), nil
+		return s.enrich(ctx, written.wire(orgID))
 	}
 	if err := s.save(ctx, userID, orgID, written); err != nil {
 		return zero, err
 	}
-	return written.wire(orgID), nil
+	return s.enrich(ctx, written.wire(orgID))
 }
 
 // usable reports whether this build may still serve a cached entry.

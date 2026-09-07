@@ -181,7 +181,8 @@ func fillCommercialStrip(out *struct {
 	OpenPipelineMinorBase *int                `json:"open_pipeline_minor_base,omitempty"`
 	PricedCount           int                 `json:"priced_count"`
 	StalledCount          int                 `json:"stalled_count"`
-}, open pipeline) {
+}, open pipeline,
+) {
 	out.OpenCount = open.OpenCount
 	out.StalledCount = len(open.Stalled)
 	out.PricedCount = open.Priced

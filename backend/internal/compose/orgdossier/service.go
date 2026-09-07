@@ -22,6 +22,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/briefevidence"
 	"github.com/margince/margince/backend/internal/compose/claims"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -72,6 +73,30 @@ type Service struct {
 	// re-pointed lane invalidates rather than serving assemblies written
 	// against a model that is no longer wired.
 	routingVersion string
+	// emailRows opens the messages the dossier cites. Held rather than read
+	// inline because the dossier is CACHED: a summary is assembled out of one
+	// reader's own grants, so it is attached to the wire value on the way out
+	// and never to the row that gets saved.
+	emailRows briefevidence.Reader
+}
+
+// WithEmailSummaries binds the reader that opens a cited message.
+func (s *Service) WithEmailSummaries(reader briefevidence.Reader) *Service {
+	s.emailRows = reader
+	return s
+}
+
+// enrich attaches the canonical email row behind every citation in a finished
+// dossier, in one read, after any save.
+func (s *Service) enrich(ctx context.Context, out crmcontracts.OrganizationDossier) (crmcontracts.OrganizationDossier, error) {
+	var targets []briefevidence.Target
+	for i := range out.Sections {
+		targets = append(targets, briefevidence.FromSentences(out.Sections[i].Sentences)...)
+	}
+	if err := briefevidence.Attach(ctx, s.emailRows, targets); err != nil {
+		return crmcontracts.OrganizationDossier{}, err
+	}
+	return out, nil
 }
 
 // NewService binds the dossier to its reads; compose constructs it once per
@@ -168,7 +193,7 @@ func (s *Service) Get(ctx context.Context, orgID ids.OrganizationID, force bool)
 		return zero, err
 	}
 	if found && !force && cached.usable(fingerprint) {
-		return cached.wire(orgID, s.now().UTC()), nil
+		return s.enrich(ctx, cached.wire(orgID, s.now().UTC()))
 	}
 
 	// The company is NAMED to the rail here, from the same input the dossier
@@ -183,7 +208,7 @@ func (s *Service) Get(ctx context.Context, orgID ids.OrganizationID, force bool)
 		// The same gate the ordinary read applies: a lane being down is a
 		// reason to keep a good answer, never to serve one written from facts
 		// that have since moved or in a shape this build cannot read.
-		return cached.wire(orgID, s.now().UTC()), nil
+		return s.enrich(ctx, cached.wire(orgID, s.now().UTC()))
 	}
 	written := stored{
 		Fingerprint:    fingerprint,
@@ -197,12 +222,12 @@ func (s *Service) Get(ctx context.Context, orgID ids.OrganizationID, force bool)
 	// the current fingerprint, this plainer answer would be served as a hit on
 	// every later read, so one transient outage would outlive itself.
 	if laneFailed {
-		return written.wire(orgID, s.now().UTC()), nil
+		return s.enrich(ctx, written.wire(orgID, s.now().UTC()))
 	}
 	if err := s.save(ctx, userID, orgID, written); err != nil {
 		return zero, err
 	}
-	return written.wire(orgID, s.now().UTC()), nil
+	return s.enrich(ctx, written.wire(orgID, s.now().UTC()))
 }
 
 // keepGrounded runs every assembled sentence past the SHARED filter, whichever

@@ -253,6 +253,12 @@ func taskAttention(task overdueTask) *crmcontracts.Organization360WorkAttention 
 // commitmentAttention is the open commitment they made to us, as the card's
 // one fact. The body travels verbatim: the extractor writes free text, so the
 // card quotes what was said rather than asserting a paraphrase of it.
+//
+// The receipt is written twice, in two shapes, on purpose. `source_activity_id`
+// is the durable field this card has always carried. `source_evidence` is the
+// same conversation as the citation every other grounded row on the page uses,
+// which is what lets one renderer decide whether it can be opened — and an
+// email among them then opens as the message rather than as a bare link.
 func commitmentAttention(commitment people.ProjectCommitment) *crmcontracts.Organization360WorkAttention {
 	if commitment.Body == "" {
 		return nil
@@ -264,6 +270,10 @@ func commitmentAttention(commitment people.ProjectCommitment) *crmcontracts.Orga
 		Who:              namedOrNobody(commitment.Who),
 		DueAt:            commitment.DueAt,
 		SourceActivityId: &source,
+		SourceEvidence: &crmcontracts.OrganizationBriefEvidence{
+			EntityType: crmcontracts.OrganizationBriefEvidenceEntityTypeActivity,
+			EntityId:   source,
+		},
 	}
 }
 

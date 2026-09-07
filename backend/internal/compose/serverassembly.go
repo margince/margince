@@ -295,7 +295,8 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	// fields are not among them), so it needs no field catalog of its own.
 	s.importHandlers = importHandlers{db: InstallationDB(pool), uploadLimit: s.uploadLimits.CSVImport}
 	s.org360Svc = org360.NewService(pool, s.peopleStore, s.dealsStore, ProjectsStore(pool), approvals.NewService(InstallationDB(pool)), time.Now)
-	s.orgBriefSvc = orgbrief.NewService(pool, s.org360Svc, s.peopleStore, nil, "", time.Now)
+	s.orgBriefSvc = orgbrief.NewService(pool, s.org360Svc, s.peopleStore, nil, "", time.Now).
+		WithEmailSummaries(emailRows(pool))
 	s.orgBriefHandlers = orgbrief.NewHandlers(s.orgBriefSvc, s.sorDispatch.isOverlay)
 	// The dossier reads the SAME people store the 360 and the brief read, so
 	// the three cannot drift about what a company's facts are. No model lane is
@@ -305,17 +306,19 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	// The two floors differ in kind — the dossier's still describes the company,
 	// where growth fit's can only abstain — which is why they are separate
 	// options rather than one.
-	s.orgDossierSvc = orgdossier.NewService(pool, s.peopleStore, nil, "", time.Now)
+	s.orgDossierSvc = orgdossier.NewService(pool, s.peopleStore, nil, "", time.Now).
+		WithEmailSummaries(emailRows(pool))
 	s.orgGrowthFitSvc = orgdossier.NewGrowthFitService(
 		pool, s.peopleStore, offeringConfirmed(s.peopleStore), nil, "", time.Now,
-	)
+	).WithEmailSummaries(emailRows(pool))
 	s.orgDossierHandlers = orgdossier.NewHandlers(
 		s.orgDossierSvc, s.orgGrowthFitSvc, s.sorDispatch.isOverlay,
 	)
 	// The account scan over the same composite read and the same dismissals.
 	// No lane and no job runner here: an ensure on this role settles the
 	// rules' floor in-request, and WithAccountScan binds the api role's.
-	s.orgScanSvc = orgscan.NewService(pool, s.org360Svc, s.org360Svc, nil, nil, nil, time.Now, s.log)
+	s.orgScanSvc = orgscan.NewService(pool, s.org360Svc, s.org360Svc, nil, nil, nil, time.Now, s.log).
+		WithEmailSummaries(emailRows(pool))
 	s.orgScanHandlers = orgscan.NewHandlers(s.orgScanSvc, s.sorDispatch.isOverlay)
 	s.org360Svc.RecogniseScanFindings(s.orgScanSvc)
 	// AFTER the dossier service exists: the drafter takes it as a dependency,
@@ -330,6 +333,7 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	s.accountDraftHandlers = accountdraft.NewHandlers(
 		accountdraft.NewService(s.org360Svc, nil).
 			WithEnvelope(draftEnvelope(pool, s.log)).
+			WithEmailSummaries(emailRows(pool)).
 			WithDossier(s.orgDossierSvc), s.sorDispatch.isOverlay,
 	)
 	s.org360Handlers = org360.NewHandlers(

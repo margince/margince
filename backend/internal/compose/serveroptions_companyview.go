@@ -46,6 +46,7 @@ func WithAccountDraft(brain completer) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		svc := accountdraft.NewService(s.org360Svc, brain).
 			WithEnvelope(draftEnvelope(pool, s.log)).
+			WithEmailSummaries(emailRows(pool)).
 			WithDossier(s.orgDossierSvc).
 			WithVoice(ai.NewVoiceStore(InstallationDB(pool)), s.log)
 		s.accountDraftHandlers = accountdraft.NewHandlers(svc, s.sorDispatch.isOverlay)
@@ -64,7 +65,8 @@ func WithAccountDraft(brain completer) Option {
 // leaving text attributed to a model that no longer writes it.
 func WithAccountBrief(brain completer, routingVersion string) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
-		s.orgBriefSvc = orgbrief.NewService(pool, s.org360Svc, s.peopleStore, brain, routingVersion, time.Now)
+		s.orgBriefSvc = orgbrief.NewService(pool, s.org360Svc, s.peopleStore, brain, routingVersion, time.Now).
+			WithEmailSummaries(emailRows(pool))
 		s.orgBriefHandlers = orgbrief.NewHandlers(s.orgBriefSvc, s.sorDispatch.isOverlay)
 	}
 }
@@ -84,7 +86,8 @@ func WithAccountBrief(brain completer, routingVersion string) Option {
 // holds. Either option may run first.
 func WithCompanyDossier(brain completer, routingVersion string) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
-		s.orgDossierSvc = orgdossier.NewService(pool, s.peopleStore, brain, routingVersion, time.Now)
+		s.orgDossierSvc = orgdossier.NewService(pool, s.peopleStore, brain, routingVersion, time.Now).
+			WithEmailSummaries(emailRows(pool))
 		s.orgDossierHandlers = orgdossier.NewHandlers(
 			s.orgDossierSvc, s.orgGrowthFitSvc, s.sorDispatch.isOverlay)
 	}
@@ -107,7 +110,8 @@ func WithCompanyDossier(brain completer, routingVersion string) Option {
 func WithGrowthFit(brain completer, routingVersion string) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		s.orgGrowthFitSvc = orgdossier.NewGrowthFitService(
-			pool, s.peopleStore, offeringConfirmed(s.peopleStore), brain, routingVersion, time.Now)
+			pool, s.peopleStore, offeringConfirmed(s.peopleStore), brain, routingVersion, time.Now).
+			WithEmailSummaries(emailRows(pool))
 		s.orgDossierHandlers = orgdossier.NewHandlers(
 			s.orgDossierSvc, s.orgGrowthFitSvc, s.sorDispatch.isOverlay)
 	}

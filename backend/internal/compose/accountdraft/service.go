@@ -16,6 +16,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/briefevidence"
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	"github.com/margince/margince/backend/internal/compose/org360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -76,6 +77,17 @@ type Service struct {
 	// in whole would carry the learning-signal writes with it.
 	voice draftvoice.Reader
 	log   *slog.Logger
+	// emailRows opens the messages the draft's reasons cite. This service holds
+	// no pool and no transaction of its own, so the reader is injected rather
+	// than built here.
+	emailRows briefevidence.Reader
+}
+
+// WithEmailSummaries binds the reader that opens a cited message, so a reason
+// resting on a conversation opens that conversation.
+func (s *Service) WithEmailSummaries(reader briefevidence.Reader) *Service {
+	s.emailRows = reader
+	return s
 }
 
 // WithVoice binds the sender's voice profile read, so a rep who has built one
@@ -175,6 +187,11 @@ func (s *Service) Draft(
 	// The scoped read's own report of what the narrowing kept, so the
 	// composer's scope line counts what the draft was actually written from.
 	out.Scope = view.Scope
+	// Nothing here is stored, so there is no ordering to respect — only the
+	// one read, over the reasons this draft actually cites.
+	if err := briefevidence.Attach(ctx, s.emailRows, briefevidence.FromReasons(out.Reasoning)); err != nil {
+		return crmcontracts.AccountEmailDraft{}, err
+	}
 	return out, nil
 }
 

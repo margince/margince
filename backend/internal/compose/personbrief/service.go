@@ -26,6 +26,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/briefevidence"
 	"github.com/margince/margince/backend/internal/compose/claims"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -63,6 +64,26 @@ type Service struct {
 	// re-pointing the lane rewrites briefs rather than leaving text attributed
 	// to a model that no longer writes it.
 	routingVersion string
+	// emailRows opens the messages the brief cites. Held rather than read
+	// inline because the brief is CACHED: what a citation says is one reader's
+	// to keep, and the message behind it is another reader's to receive, so it
+	// is attached on the way out and never to the row that gets saved.
+	emailRows briefevidence.Reader
+}
+
+// WithEmailSummaries binds the reader that opens a cited message.
+func (s *Service) WithEmailSummaries(reader briefevidence.Reader) *Service {
+	s.emailRows = reader
+	return s
+}
+
+// enrich attaches the canonical email row behind every citation, in one read,
+// after any save.
+func (s *Service) enrich(ctx context.Context, out crmcontracts.PersonBrief) (crmcontracts.PersonBrief, error) {
+	if err := briefevidence.Attach(ctx, s.emailRows, briefevidence.FromSentences(out.Sentences)); err != nil {
+		return crmcontracts.PersonBrief{}, err
+	}
+	return out, nil
 }
 
 // NewService binds the brief to the composite read it is written from and the
@@ -120,7 +141,7 @@ func (s *Service) Get(ctx context.Context, personID ids.PersonID, force bool) (c
 		return crmcontracts.PersonBrief{}, err
 	}
 	if found && !force && cached.Version == storedVersion && cached.Fingerprint == fingerprint {
-		return cached.wire(personID), nil
+		return s.enrich(ctx, cached.wire(personID))
 	}
 
 	// The contact is NAMED to the rail here, where the assembled input holds
@@ -139,7 +160,7 @@ func (s *Service) Get(ctx context.Context, personID ids.PersonID, force bool) (c
 	if err := s.save(ctx, userID, personID, written); err != nil {
 		return crmcontracts.PersonBrief{}, err
 	}
-	return written.wire(personID), nil
+	return s.enrich(ctx, written.wire(personID))
 }
 
 func (b stored) wire(personID ids.PersonID) crmcontracts.PersonBrief {

@@ -85,10 +85,14 @@ func TestAShortModelListIsToppedUpFromTheFloor(t *testing.T) {
 	// A record with enough in it that the floor writes several questions.
 	in.Company = "Northwind"
 	in.Commitments = append(in.Commitments,
-		ClaimIn{PersonName: "Ana Roth", Kind: kindPriority, Body: "cut onboarding time",
-			Status: statusOpen, SourceID: activityID},
-		ClaimIn{PersonName: "Ana Roth", Kind: kindSuccessCriterion, Body: "one dashboard for ops",
-			Status: statusOpen, SourceID: activityID})
+		ClaimIn{
+			PersonName: "Ana Roth", Kind: kindPriority, Body: "cut onboarding time",
+			Status: statusOpen, SourceID: activityID,
+		},
+		ClaimIn{
+			PersonName: "Ana Roth", Kind: kindSuccessCriterion, Body: "one dashboard for ops",
+			Status: statusOpen, SourceID: activityID,
+		})
 	floor := floorFor(in)
 	if len(floor.Questions) < 2 {
 		t.Fatalf("the fixture gives the floor %d questions; this test needs at least 2", len(floor.Questions))

@@ -79,7 +79,8 @@ func WithAccountScan(inserter *jobs.Runner, brain completer, routingVersion func
 				}, accountScanInsertOpts())
 			}
 		}
-		s.orgScanSvc = orgscan.NewService(pool, s.org360Svc, s.org360Svc, brain, enqueue, routingVersion, time.Now, s.log)
+		s.orgScanSvc = orgscan.NewService(pool, s.org360Svc, s.org360Svc, brain, enqueue, routingVersion, time.Now, s.log).
+			WithEmailSummaries(emailRows(pool))
 		s.orgScanHandlers = orgscan.NewHandlers(s.orgScanSvc, s.sorDispatch.isOverlay)
 		s.org360Svc.RecogniseScanFindings(s.orgScanSvc)
 	}
@@ -94,6 +95,11 @@ type accountScanWorker struct {
 
 // newAccountScanWorker builds the worker role's scan service over its own
 // composite read: the worker never queues, so it carries no enqueuer.
+//
+// It carries no email-summary reader either, and that is not an omission. The
+// worker only ever calls Run, which writes findings; the summaries are attached
+// by wire, on the reader's side, out of the reader's own grants. A reader here
+// would be wired to a code path that never asks it anything.
 func newAccountScanWorker(pool *pgxpool.Pool, brain completer, routingVersion func() string, log *slog.Logger) *accountScanWorker {
 	view := org360.NewService(pool, people.NewStore(InstallationDB(pool)),
 		deals.NewStore(InstallationDB(pool), DealsInstallation()), ProjectsStore(pool),

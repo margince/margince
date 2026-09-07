@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/briefevidence"
 	"github.com/margince/margince/backend/internal/compose/org360"
 	"github.com/margince/margince/backend/internal/compose/orgbrief"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -79,6 +80,17 @@ type Service struct {
 	routingVersion func() string
 	now            func() time.Time
 	log            *slog.Logger
+	// emailRows opens the messages the findings cite. Held rather than read
+	// inline because findings are STORED: a summary is assembled out of one
+	// reader's own grants, so it is attached to the merged list on the way out
+	// and never to the rows that get settled.
+	emailRows briefevidence.Reader
+}
+
+// WithEmailSummaries binds the reader that opens a cited message.
+func (s *Service) WithEmailSummaries(reader briefevidence.Reader) *Service {
+	s.emailRows = reader
+	return s
 }
 
 // NewService binds the scan to the composite read it is written from, the
@@ -345,6 +357,13 @@ func (s *Service) wire(
 		}
 	}
 	findings, dropped := merge(rules, read)
+	// Once, over the merged list rather than in either writer: the rules' rows
+	// and the stored ones cite the same account's conversations, and enriching
+	// each side would read the same message twice and let one copy carry a
+	// summary the other lacks.
+	if err := briefevidence.Attach(ctx, s.emailRows, briefevidence.FromSuggestions(findings)); err != nil {
+		return crmcontracts.OrganizationScan{}, err
+	}
 	out := crmcontracts.OrganizationScan{
 		OrganizationId:  openapi_types.UUID(orgID.UUID),
 		State:           crmcontracts.OrganizationScanStateNever,

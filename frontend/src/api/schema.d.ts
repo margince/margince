@@ -18536,6 +18536,11 @@ export interface components {
              *     client already labels the chip with. Descriptive only, like `name`.
              */
             origin?: string;
+            /**
+             * @description The canonical email row, present when this citation resolves to an email this reader may receive a summary of. It is what lets a cited message be opened as the exact message rather than quoted at: the reader gets the same row the timeline draws, and the same drawer behind it.
+             *     A `withheld` summary carries no subject, preview or counterparty — the citation still names a message, and the words stay the audience's. Absence never proves the activity is not an email: an older server sends none, and a reader outside `activity:read` gets none either. Never stored, because it is assembled per reader: a cached brief that carried one would serve the first reader's access to the second.
+             */
+            readonly email_summary?: components["schemas"]["EmailSummary"] | null;
         };
         /**
          * @description What the accounting mirror knows about one customer (ADR-0083/A128).
@@ -18869,6 +18874,11 @@ export interface components {
              * @description The captured conversation the claim was read from — the receipt a reader opens to check it.
              */
             source_activity_id?: string | null;
+            /**
+             * @description The same receipt as `source_activity_id`, in the shape every other cited record on this page has — so the card renders it through the one citation path and an email among them opens as a message.
+             *     Both are sent: `source_activity_id` is the durable field, and a client that has one and not the other still draws the older link. Null when the claim was read from nothing, and on a server that predates this field.
+             */
+            readonly source_evidence?: components["schemas"]["OrganizationBriefEvidence"] | null;
         };
         Organization360Deal: {
             /** Format: uuid */
@@ -20616,6 +20626,11 @@ export interface components {
             activity_id?: string | null;
             /** Format: date-time */
             occurred_at?: string | null;
+            /**
+             * @description The canonical email row behind `activity_id`, when that activity is an email this reader may receive a summary of. The move's basis then opens the message it rests on instead of only naming it.
+             *     Carried on this shape as well as on `OrganizationBriefEvidence` because the deal card's basis is its own wire type, and a reader that could open a cited message on the brief but not on the move would be the same citation behaving differently on two pages. Same rules as there: withheld carries no words, absence proves nothing, never stored.
+             */
+            readonly email_summary?: components["schemas"]["EmailSummary"] | null;
         };
         DealCoverage: {
             /** Format: uuid */
