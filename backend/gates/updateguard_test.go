@@ -152,8 +152,8 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	// consequence), and one clearing is one clearing. Both send the conditional
 	// UPDATE through QueryRow so the row the write produced is the row the
 	// audit describes.
-	"internal/modules/deals:SuspendTransitionPolicy": "conditioned on suspended_at IS NULL; ErrNoRows means a concurrent pass suspended it first and that reason stands",
-	"internal/modules/deals:ResumeTransitionPolicy":  "conditioned on suspended_at IS NOT NULL; ErrNoRows means a concurrent caller already cleared it",
+	"internal/modules/deals:suspendTransitionPolicyTx": "conditioned on suspended_at IS NULL; ErrNoRows means a concurrent pass suspended it first and that reason stands",
+	"internal/modules/deals:ResumeTransitionPolicy":    "conditioned on suspended_at IS NOT NULL; ErrNoRows means a concurrent caller already cleared it",
 
 	// The second of that shape, and the reason it is ratified rather than
 	// taught to the witness: crediting a bare mention of pgx.ErrNoRows would

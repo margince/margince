@@ -15,6 +15,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -261,13 +262,14 @@ func (s *Store) RecordProgressionDecided(
 		return err
 	}
 	return s.Tx(ctx, func(tx pgx.Tx) error {
-		return recordProgressionDecidedTx(ctx, tx, approvalID, outcome, reason, edited)
+		return recordProgressionDecidedTx(
+			ctx, tx, approvalID, outcome, reason, edited, s.clock())
 	})
 }
 
 func recordProgressionDecidedTx(
 	ctx context.Context, tx pgx.Tx, approvalID ids.UUID,
-	outcome string, reason *string, edited bool,
+	outcome string, reason *string, edited bool, now time.Time,
 ) error {
 	if !progressionOutcomes[outcome] {
 		return fmt.Errorf("deals: %q is not a stage progression outcome", outcome)
@@ -279,14 +281,17 @@ func recordProgressionDecidedTx(
 	}
 	var id ids.UUID
 	var dealID ids.DealID
+	// The transition comes back with the row rather than from a second read:
+	// the sweep below needs it, and the row already carries it.
+	var moved TransitionRef
 	err := tx.QueryRow(ctx, `
 		UPDATE stage_progression_outcome
 		   SET outcome = $2, rejection_reason = $3, evidence_corrected = $4,
 		       decided_at = now()
 		 WHERE approval_id = $1 AND outcome = $5
-		RETURNING id, deal_id`,
+		RETURNING id, deal_id, pipeline_id, from_stage_id, to_stage_id`,
 		approvalID, outcome, reason, edited, ProgressionProposed).
-		Scan(&id, &dealID)
+		Scan(&id, &dealID, &moved.PipelineID, &moved.FromStageID, &moved.ToStageID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Either nothing was proposed under this approval, or it was already
 		// decided. Both are ordinary on an at-least-once path — a redelivered
@@ -310,7 +315,15 @@ func recordProgressionDecidedTx(
 	if err != nil {
 		return fmt.Errorf("audit the stage move's outcome: %w", err)
 	}
-	return emitProgressionChanged(ctx, tx, auditID, dealID)
+	if err := emitProgressionChanged(ctx, tx, auditID, dealID); err != nil {
+		return err
+	}
+	// Asked on EVERY decision, not only on the ones that look bad. A rule
+	// crosses its ceiling when a reversal lands, but it also crosses it when
+	// the clean approvals that were holding the rate down age out of the
+	// window — so a sweep that only ran on reversals would leave a transition
+	// running automatically on a record that had already failed.
+	return suspendIfRecordWentBadTx(ctx, tx, moved, now)
 }
 
 // progressionOutcomes is the vocabulary the column's CHECK holds, spelled here

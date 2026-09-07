@@ -306,46 +306,64 @@ func (s *Store) SuspendTransitionPolicy(
 	if err := auth.Require(ctx, "pipeline", principal.ActionUpdate); err != nil {
 		return err
 	}
+	return s.Tx(ctx, func(tx pgx.Tx) error {
+		return suspendTransitionPolicyTx(ctx, tx, in, reason)
+	})
+}
+
+// suspendTransitionPolicyTx is the suspension itself, inside a caller's
+// transaction.
+//
+// Split from the exported verb so the measured sweep on the decision path can
+// call it in the transaction that records the outcome — the count that trips
+// the ceiling and the suspension it justifies have to commit together, or
+// there is a window where the rule is off in the numbers and on in the table.
+//
+// It carries no auth.Require of its own: the two callers reach it having
+// already answered that question — the exported verb gates the admin, and the
+// decision path is the product acting on its own measurements, where there is
+// no principal whose pipeline:update permission is the thing in question.
+func suspendTransitionPolicyTx(
+	ctx context.Context, tx pgx.Tx, in TransitionRef, reason string,
+) error {
 	if reason == "" {
 		// The column's CHECK refuses this too. Answering here says which field
 		// the caller should fill rather than a 23514.
 		return errors.New("deals: a suspension names why it happened")
 	}
-	return s.Tx(ctx, func(tx pgx.Tx) error {
-		before, err := lockTransitionPolicy(ctx, tx, in)
-		if err != nil {
-			return err
-		}
-		if before.Suspended() {
+	before, err := lockTransitionPolicy(ctx, tx, in)
+	if err != nil {
+		return err
+	}
+	if before.Suspended() {
+		return nil
+	}
+	var after TransitionPolicy
+	if err := tx.QueryRow(ctx, `
+		UPDATE stage_progression_policy
+		   SET suspended_at = now(), suspended_reason = $2,
+		       updated_at = now(), version = version + 1
+		 WHERE id = $1 AND suspended_at IS NULL
+		RETURNING id, pipeline_id, from_stage_id, to_stage_id, mode,
+			clean_acceptance_threshold, correction_reversal_threshold,
+			min_reviewed, min_observation_days, window_days, undo_window_hours,
+			enabled_by, enabled_at, suspended_at, suspended_reason, version`,
+		before.ID, reason).
+		Scan(&after.ID, &after.PipelineID, &after.FromStageID, &after.ToStageID,
+			&after.Mode, &after.CleanAcceptanceThreshold,
+			&after.CorrectionReversalThreshold, &after.MinReviewed,
+			&after.MinObservationDays, &after.WindowDays, &after.UndoWindowHours,
+			&after.EnabledBy, &after.EnabledAt, &after.SuspendedAt,
+			&after.SuspendedReason, &after.Version); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			// Suspended by a concurrent pass between the read and here. Its
+			// reason stands, for the same reason the check above lets the
+			// first one stand.
 			return nil
 		}
-		var after TransitionPolicy
-		if err := tx.QueryRow(ctx, `
-			UPDATE stage_progression_policy
-			   SET suspended_at = now(), suspended_reason = $2,
-			       updated_at = now(), version = version + 1
-			 WHERE id = $1 AND suspended_at IS NULL
-			RETURNING id, pipeline_id, from_stage_id, to_stage_id, mode,
-				clean_acceptance_threshold, correction_reversal_threshold,
-				min_reviewed, min_observation_days, window_days, undo_window_hours,
-				enabled_by, enabled_at, suspended_at, suspended_reason, version`,
-			before.ID, reason).
-			Scan(&after.ID, &after.PipelineID, &after.FromStageID, &after.ToStageID,
-				&after.Mode, &after.CleanAcceptanceThreshold,
-				&after.CorrectionReversalThreshold, &after.MinReviewed,
-				&after.MinObservationDays, &after.WindowDays, &after.UndoWindowHours,
-				&after.EnabledBy, &after.EnabledAt, &after.SuspendedAt,
-				&after.SuspendedReason, &after.Version); err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				// Suspended by a concurrent pass between the read and here.
-				// Its reason stands, for the same reason the check above lets
-				// the first one stand.
-				return nil
-			}
-			return fmt.Errorf("suspend the transition's automation: %w", err)
-		}
-		return auditPolicySuspension(ctx, tx, *before, after)
-	})
+		return fmt.Errorf("suspend the transition's automation: %w", err)
+	}
+	return auditPolicySuspension(ctx, tx, *before, after)
 }
 
 // ResumeTransitionPolicy clears a suspension, deliberately.
