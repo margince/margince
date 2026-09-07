@@ -80,6 +80,42 @@ function stubRenewalFetch(onRenewal: (request: Request) => Promise<Response>) {
 }
 
 describe("ContractRenewModal", () => {
+  // A reader admitted through the DEAL may not be able to open the company
+  // (#1983): organization_id comes back null and masked_fields names it. They
+  // may still renew, so the modal keeps working — but the deal picker is filled
+  // by listing that company's deals, and an empty picker would read as "this
+  // company has no deals" rather than "you cannot see them".
+  it("says why the deal picker is missing when the counterparty is withheld", async () => {
+    const listed = vi.fn();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const request =
+          input instanceof Request ? input : new Request(input, init);
+        listed(new URL(request.url).pathname);
+        return new Response("not found", { status: 404 });
+      }),
+    );
+    show(
+      <ContractRenewModal
+        contract={{
+          ...PREDECESSOR,
+          organization_id: null,
+          masked_fields: ["organization_id"],
+        }}
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(
+      await screen.findByText(/company, so its deals cannot be listed/),
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Deal/)).not.toBeInTheDocument();
+    // And no request went out for a company the reader cannot open.
+    expect(listed).not.toHaveBeenCalledWith("/v1/deals");
+  });
+
   it("posts the successor's own title, basis and the predecessor's version as If-Match, with no deal picked", async () => {
     let posted: { body: unknown; ifMatch: string | null; path: string } | null =
       null;

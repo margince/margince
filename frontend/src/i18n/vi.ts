@@ -1211,6 +1211,8 @@ export const vi = {
   "contracts.renew.dealHint":
     "Deal \u0111\u00e3 gi\u00e0nh \u0111\u01b0\u1ee3c k\u1ef3 h\u1ea1n n\u00e0y, n\u1ebfu c\u00f3 \u2014 kh\u00f4ng bao gi\u1edd l\u00e0 deal c\u1ee7a h\u1ee3p \u0111\u1ed3ng tr\u01b0\u1edbc.",
   "contracts.renew.dealNone": "Kh\u00f4ng c\u00f3 deal",
+  "contracts.renew.dealWithheldCompany":
+    "Bạn không mở được công ty của thỏa thuận này nên không thể liệt kê các deal của họ. Lần gia hạn vẫn giữ nguyên đối tác và không ghi nhận deal nào.",
   "contracts.renew.submit": "Gia h\u1ea1n",
   "contracts.deal": "Deal",
   "contracts.statusChange.title": "\u0110\u1ed5i tr\u1ea1ng th\u00e1i",
