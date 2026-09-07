@@ -191,6 +191,13 @@ func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
 		})
 		return
 	}
+	var notDisqualified *NotDisqualifiedError
+	if errors.As(err, &notDisqualified) {
+		httperr.Write(w, r, &httperr.DetailedError{
+			Status: http.StatusConflict, Code: "not_disqualified", Detail: notDisqualified.Error(),
+		})
+		return
+	}
 	var alreadyMerged *AlreadyMergedError
 	if errors.As(err, &alreadyMerged) {
 		e := &httperr.DetailedError{

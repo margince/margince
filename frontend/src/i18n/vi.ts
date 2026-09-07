@@ -2146,6 +2146,11 @@ export const vi = {
   "lead.demoteReason": "Lý do (được ghi vào nhật ký)",
   "lead.demoteReasonRequired": "H\u00e3y n\u00eau l\u00fd do tr\u01b0\u1edbc.",
   "lead.demoteConfirm": "Hoàn tác",
+  "lead.reopen": "Mở lại",
+  "lead.reopenDialog": "Mở lại lead này?",
+  "lead.reopenExplain":
+    "Lead quay lại thang trạng thái mở, ở đúng trạng thái khi bị loại, và lý do được xóa. Lịch sử và điểm số được giữ nguyên.",
+  "lead.reopenConfirm": "Mở lại lead",
   "lead.promotedOutcomePending": "Đang đọc kết quả của lần chuyển này…",
   "lead.promotedOutcomeUnavailable":
     "Không thể hiển thị việc này đã gộp hay tạo hồ sơ người mới.",

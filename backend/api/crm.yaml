@@ -7510,6 +7510,46 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  /leads/{id}/reopen:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Leads]
+      operationId: reopenLead
+      # Human-only, on the same ground the disqualify it reverses is: deciding a
+      # lead is worth pursuing again is a judgement, and the governed tool would
+      # need its own registry entry and approvals authority.
+      x-agent-access: human-only
+      summary: Put a disqualified lead back on the open ladder.
+      description: |
+        The reverse of `DELETE /leads/{id}`. It clears the archive, the reason and the note,
+        and returns the lead to the status it held when it was disqualified — read from that
+        act's own audit row rather than guessed at, because the status a lead had reached is
+        a fact the trail already holds and re-deriving it would answer about today's data.
+
+        A row whose audit trail no longer names a status reopens to `engaged`, which is what a
+        lead somebody is choosing to pursue again is: `new` would claim nobody had touched it,
+        and refusing would leave a lead nothing can reopen because of a record it does not own.
+
+        Emits `lead.updated`. Reopening a lead that is not disqualified is a **409**: the verb
+        answers about a state the lead is not in, and silently succeeding would tell a caller
+        it had undone something.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: The reopened lead.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Lead' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: The lead is not disqualified, so there is nothing to reopen.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   /leads/{id}/score:
     parameters:
       - $ref: '#/components/parameters/Id'

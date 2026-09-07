@@ -197,6 +197,20 @@ func (h Handlers) DemoteLead(w http.ResponseWriter, r *http.Request, id crmcontr
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
+// ReopenLead puts a disqualified lead back on the open ladder — POST
+// /leads/{id}/reopen, the reverse of the disqualify below.
+//
+// No body. What a reopen restores is read from the trail rather than supplied,
+// so there is nothing for a caller to say beyond which lead.
+func (h Handlers) ReopenLead(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.ReopenLeadParams) {
+	lead, err := h.store.ReopenLead(r.Context(), pathID[ids.LeadKind](id))
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, lead)
+}
+
 // DisqualifyLead: DELETE /leads/{id} — the one path where
 // "disqualified ⇒ archived" is enforced.
 // DisqualifyLead: DELETE /leads/{id}. The body is optional on the wire — an

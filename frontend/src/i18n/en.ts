@@ -2236,6 +2236,11 @@ export const en = {
   "lead.demoteReason": "Reason (recorded in the audit trail)",
   "lead.demoteReasonRequired": "Say why first.",
   "lead.demoteConfirm": "Reverse",
+  "lead.reopen": "Reopen",
+  "lead.reopenDialog": "Reopen this lead?",
+  "lead.reopenExplain":
+    "The lead goes back on the open ladder at the status it had when it was disqualified, and the reason is cleared. Its history and its score are kept.",
+  "lead.reopenConfirm": "Reopen lead",
   "lead.promotedOutcomePending": "Reading what this promotion did…",
   "lead.promotedOutcomeUnavailable":
     "We cannot show whether this merged or created a person.",
