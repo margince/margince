@@ -607,6 +607,6 @@ describe("the generic draft row", () => {
 
     // The name used to be plain text inside the row's label, so a reader who
     // wanted to know who Sarah Cole is had nowhere to press.
-    expect(screen.getByRole("button", { name: "Sarah Cole" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Sarah Cole" })).toBeTruthy();
   });
 });

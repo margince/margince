@@ -111,7 +111,7 @@ describe("an edge row in a record's history", () => {
     render(<RecordHistory kind="person" id="p1" restore={RESTORE} />);
 
     await user.click(
-      await screen.findByRole("button", { name: "Employer GmbH" }),
+      await screen.findByRole("link", { name: "Employer GmbH" }),
     );
 
     expect(globalThis.location.hash).toBe("#/companies/org-9");

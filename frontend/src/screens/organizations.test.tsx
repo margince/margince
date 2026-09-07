@@ -2196,8 +2196,16 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     // The name opens the record, and it is the LINK's whole name: the mark
     // beside it draws initials as text, which would otherwise be announced
     // ahead of the person they stand for.
-    const name = await screen.findByRole("link", { name: "Anna Brandt" });
-    expect(name.getAttribute("href")).toBe("#/contacts/p-1");
+    //
+    // The page names this contact in more than one place — the roster card and
+    // the references beside it — so every one of them is asserted rather than
+    // the first: one of them pointing somewhere else is exactly the defect a
+    // single lookup would miss.
+    const names = await screen.findAllByRole("link", { name: "Anna Brandt" });
+    for (const each of names) {
+      expect(each.getAttribute("href")).toBe("#/contacts/p-1");
+    }
+    const name = names[0];
     expect(screen.getAllByText("Head of Procurement").length).toBeGreaterThan(
       0,
     );

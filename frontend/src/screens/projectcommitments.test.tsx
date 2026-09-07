@@ -28,9 +28,7 @@ const COMMITMENT = {
 // The shared builder, so the fixture is a COMPLETE Project360 rather than one
 // asserted into the type: a cast fixture can drop a required field and still
 // compile, and the test would go on passing after the wire shape moved.
-function view(
-  commitments: components["schemas"]["Project360Commitment"][],
-) {
+function view(commitments: components["schemas"]["Project360Commitment"][]) {
   return project360({
     commitments: { data: commitments, page: { has_more: false } },
   });
@@ -81,8 +79,6 @@ describe("a project's commitments", () => {
       </LocaleProvider>,
     );
 
-    expect(
-      screen.getByText(en["project.commitments.overdue"]),
-    ).toBeTruthy();
+    expect(screen.getByText(en["project.commitments.overdue"])).toBeTruthy();
   });
 });

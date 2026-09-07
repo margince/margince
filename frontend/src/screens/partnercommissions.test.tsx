@@ -152,8 +152,9 @@ describe("the commission panel", () => {
     render(<PartnerCommissions organizationId="o-1" />);
     const ledger = await screen.findByTestId("commission-ledger");
 
-    // The control the design system routes with is a button, not an anchor.
-    const link = await within(ledger).findByRole("button", {
+    // A cross-record reference is an anchor, so the deal opens the ways a link
+    // does — a new tab, a bookmark, the keyboard.
+    const link = await within(ledger).findByRole("link", {
       name: "Northgate rollout",
     });
     expect(link).toBeTruthy();
