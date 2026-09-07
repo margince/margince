@@ -73,10 +73,12 @@ func seedLifecycle(c *client, cfg demoConfig, refs pipelineRefs, plan map[string
 			if current == stage {
 				continue
 			}
-			// The write is version-checked, so a concurrent edit loses rather
-			// than being silently overwritten.
-			body := jsonBody{"lifecycle": stage, "if_version": version}
-			if err := c.patch("/v1/organizations/"+orgID, body, nil); err != nil {
+			// The version guard goes in the If-Match HEADER, which is the only
+			// place these endpoints read it: an `if_version` in the body is
+			// accepted and ignored, so a guard spelled that way answers 200 and
+			// writes anyway.
+			body := jsonBody{"lifecycle": stage}
+			if err := c.patchGuarded("/v1/organizations/"+orgID, version, body, nil); err != nil {
 				return changed, fmt.Errorf("setting %s to %s: %w", domain, stage, err)
 			}
 			changed++

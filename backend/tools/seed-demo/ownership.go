@@ -148,8 +148,8 @@ func setOrganizationOwner(c *client, orgID, ownerID string) (bool, error) {
 	if current.OwnerID == ownerID {
 		return false, nil
 	}
-	body := jsonBody{"owner_id": ownerID, "if_version": current.Version}
-	if err := c.patch("/v1/organizations/"+orgID, body, nil); err != nil {
+	body := jsonBody{"owner_id": ownerID}
+	if err := c.patchGuarded("/v1/organizations/"+orgID, current.Version, body, nil); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -183,8 +183,8 @@ func setStaffOwner(c *client, orgID, ownerID string, mode runMode) (int, error) 
 		if current.OwnerID == ownerID {
 			continue
 		}
-		body := jsonBody{"owner_id": ownerID, "if_version": current.Version}
-		if err := c.patch("/v1/people/"+personID, body, nil); err != nil {
+		body := jsonBody{"owner_id": ownerID}
+		if err := c.patchGuarded("/v1/people/"+personID, current.Version, body, nil); err != nil {
 			return changed, fmt.Errorf("owning person %s: %w", personID, err)
 		}
 		changed++

@@ -87,8 +87,8 @@ func seedRelationshipTypes(c *client, cfg demoConfig, refs pipelineRefs, mode ru
 		if sameTypes(current.Types, want) {
 			continue
 		}
-		body := jsonBody{"relationship_types": want, "if_version": current.Version}
-		if err := c.patch("/v1/organizations/"+orgID, body, nil); err != nil {
+		body := jsonBody{"relationship_types": want}
+		if err := c.patchGuarded("/v1/organizations/"+orgID, current.Version, body, nil); err != nil {
 			return changed, fmt.Errorf("typing %s as %s: %w", domain, strings.Join(want, "+"), err)
 		}
 		changed++
