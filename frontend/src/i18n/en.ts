@@ -8656,6 +8656,8 @@ export const en = {
   "worklist.completeness.bounded":
     "{shown} shown · {sources} sources have more",
   "worklist.clear": "Nothing is waiting on you.",
+  "worklist.clearOfTasksToday":
+    "No tasks are due today or overdue. Later work is on each record's own Tasks tab.",
   "worklist.clearOfWhatWasRead":
     "Nothing is waiting among the sources that answered.",
   "worklist.partial": "{sources}, so this is not the whole day.",

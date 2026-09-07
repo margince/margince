@@ -8514,6 +8514,8 @@ export const de = {
   "worklist.completeness.bounded":
     "{shown} angezeigt · {sources} Quellen haben mehr",
   "worklist.clear": "Nichts wartet auf dich.",
+  "worklist.clearOfTasksToday":
+    "Heute ist keine Aufgabe fällig und nichts ist überfällig. Spätere Aufgaben stehen im Tab „Aufgaben“ des jeweiligen Datensatzes.",
   "worklist.clearOfWhatWasRead":
     "Unter den Quellen, die geantwortet haben, wartet nichts.",
   "worklist.partial": "{sources} — das ist nicht der ganze Tag.",

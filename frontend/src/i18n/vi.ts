@@ -8411,6 +8411,8 @@ export const vi = {
     "Hiển thị {loaded} trong {total} — xem tiếp trong ngày để thấy phần còn lại",
   "worklist.completeness.bounded": "Hiển thị {shown} · {sources} nguồn còn nữa",
   "worklist.clear": "Không có gì đang chờ bạn.",
+  "worklist.clearOfTasksToday":
+    "Hôm nay không có công việc đến hạn và không có việc quá hạn. Công việc về sau nằm ở tab Công việc của từng hồ sơ.",
   "worklist.clearOfWhatWasRead":
     "Không có gì đang chờ trong các nguồn đã trả lời.",
   "worklist.partial": "{sources}, nên đây chưa phải cả ngày.",
