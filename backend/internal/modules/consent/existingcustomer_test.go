@@ -7,12 +7,21 @@ package consent
 // the DDL will not store the failing case for one of them.
 
 import (
+	"context"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/pkg/extension/messaging"
 )
 
-// germanConditions is what extensions/de declares.
+// germanConditions is what extensions/de declares — a deliberate mirror rather
+// than a second answer. It compares this literal against the pack's in both
+// directions, so a condition added to one and not the other fails.
+//
+// Held by: TestTheGermanExceptionFixtureMirrorsThePack (backend/gates/deexceptionmirror_test.go)
+//
+// Copied rather than imported because extensions/de depends on backend, so
+// reading it back here would be a cycle.
 func germanConditions() messaging.MarketingException {
 	return messaging.MarketingException{
 		Kind:                         messaging.ExistingCustomer,
@@ -61,5 +70,36 @@ func TestSaleEvidenceMustBeRecorded(t *testing.T) {
 	}
 	if !conditionsMet(all, "INV-1", true) {
 		t.Error("a recorded sale reference did not allow")
+	}
+}
+
+// The exception Germany ships today refuses before it reads anything.
+//
+// RequiresSimilarity is set, and similarity is unanswerable with the fields this
+// tree has — so existingCustomerAllows short-circuits ahead of the row read.
+//
+// Without this, the file's other tests exercise conditionsMet — a function the
+// SHIPPED German exception never reaches. This is the case that fails the day
+// somebody drops RequiresSimilarity from the pack to "make the exception work",
+// which is the one change the mirror gate cannot tell from a legitimate one.
+func TestTheShippedGermanExceptionRefusesBeforeReadingARow(t *testing.T) {
+	german := germanConditions()
+	if !german.RequiresSimilarity {
+		t.Fatal("the shipped German exception no longer requires similarity. That is the field " +
+			"that makes it refuse without reading a row, so this probe would dereference its nil " +
+			"transaction — but the change worth noticing is the product one: similarity cannot " +
+			"be answered with today's fields, so dropping it grants §7(3) on evidence nobody has")
+	}
+
+	// A NIL transaction is the assertion: a query would dereference it, so
+	// returning cleanly proves the refusal precedes the read.
+	allowed, err := existingCustomerAllows(context.Background(), nil, ids.NewV7().String(), &german)
+	if err != nil {
+		t.Fatalf("evaluating the shipped German exception: %v", err)
+	}
+	if allowed {
+		t.Error("the shipped §7(3) exception allowed a send. It requires similarity, which this " +
+			"tree cannot answer, so the only safe answer is a refusal — and an allow here would " +
+			"be one reached without reading the customer's row at all")
 	}
 }

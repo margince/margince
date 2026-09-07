@@ -58,8 +58,26 @@ func TestNewDeclaresTheGoBDFloors(t *testing.T) {
 // four conditions hold. The pack declares all four; declaring three would be an
 // exception the engine applies while checking less than the statute asks, which
 // is worse than none because it looks lawful.
+//
+// Read off New(), not off messagingRules(): what binds an installation is the
+// rule set compose registers out of the extension, and asserting the helper
+// would leave New() free to ship a different one. A pack that declared four
+// conditions in a function nobody wires and three in the one it does is a
+// §7(3) that looks lawful in its own tests.
+//
+// This asserts the DECLARATION and no more, deliberately: a pack states rules
+// and the core evaluates them, and this unit cannot reach the evaluator — it is
+// unexported in internal/modules/consent, and backend cannot import this module
+// back without a cycle. What the engine does with these four is held on the
+// other side, by consent's own tests over conditionsMet, and the two are tied
+// together by gates/deexceptionmirror_test.go.
 func TestTheExistingCustomerExceptionCarriesAllFourConditions(t *testing.T) {
-	rules := messagingRules()
+	shipped := New().Messaging
+	if len(shipped) != 1 {
+		t.Fatalf("New() ships %d messaging rule set(s), want exactly one — the engine registers "+
+			"every one of them, so a second is a second answer about German law", len(shipped))
+	}
+	rules := shipped[0]
 	if len(rules.MarketingExceptions) != 1 {
 		t.Fatalf("%d marketing exceptions declared, want exactly the §7(3) one", len(rules.MarketingExceptions))
 	}
