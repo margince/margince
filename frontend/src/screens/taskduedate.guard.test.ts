@@ -20,7 +20,7 @@ describe("the days a task may be moved to", () => {
     // guard a year typo reaches an uncaught exception with nothing on screen
     // to say the date was refused.
     expect(isISODate("10000-09-15")).toBe(false);
-    expect(() => dueInstant("10000-09-15")).toThrow();
+    expect(() => dueInstant("10000-09-15", "Europe/Berlin")).toThrow();
   });
 
   it("refuses the cleared box", () => {
@@ -34,8 +34,10 @@ describe("the days a task may be moved to", () => {
     // The guard has to ADMIT as well as refuse: one that said no to everything
     // would pass both tests above and break the feature.
     expect(isISODate("2026-09-15")).toBe(true);
-    expect(new Date(dueInstant("2026-09-15")).getTime()).toBe(
-      new Date("2026-09-15T23:59:59").getTime(),
+    // Read back in the zone it was minted for, the instant is that day's last
+    // whole second — the same day the picker offered, for every reader.
+    expect(dueInstant("2026-09-15", "Europe/Berlin")).toBe(
+      "2026-09-15T21:59:59.000Z",
     );
   });
 });

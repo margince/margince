@@ -12,7 +12,6 @@ import { Callout } from "../design-system/callout";
 import { useToast } from "../design-system/toast";
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { leadIdentityName } from "../format/leadname";
-import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
@@ -455,7 +454,7 @@ function LeadsWorkbench({
                     })}`
                   : ""}
                 {lead.next_task_due_at
-                  ? ` · ${formatDateAbbrev(lead.next_task_due_at, locale, viewerZone())}`
+                  ? ` · ${formatDateAbbrev(lead.next_task_due_at, locale, recordZone)}`
                   : ""}
               </span>
             ),
