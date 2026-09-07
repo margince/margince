@@ -334,3 +334,24 @@ func TestGeneratedFilesSkipped(t *testing.T) {
 		t.Fatal("generated file should be skipped")
 	}
 }
+
+// The ceiling is a line count, and a file's last line is the one before its
+// terminating newline — not a phantom line after it. Measuring the boundary
+// from both sides is the point: a gate that reads 500 as 501 fails a file the
+// rubric admits, and one that reads 501 as 500 admits a file it should fail.
+func TestLargeFile_theCeilingIsCountedTheWayTheTreeCountsLines(t *testing.T) {
+	// 1 package line + 499 filler = 500 lines, newline-terminated.
+	at := "package p\n" + strings.Repeat("// filler\n", 499)
+	if got := counts(lintSource(t, "p.go", at), "large-file"); got != 0 {
+		t.Fatalf("file at the 500-line ceiling: large-file = %d, want 0", got)
+	}
+	over := "package p\n" + strings.Repeat("// filler\n", 500)
+	if got := counts(lintSource(t, "p.go", over), "large-file"); got != 1 {
+		t.Fatalf("file one line over the ceiling: large-file = %d, want 1", got)
+	}
+	// No terminating newline: the last line still counts, and only once.
+	unterminated := "package p\n" + strings.Repeat("// filler\n", 498) + "// last"
+	if got := counts(lintSource(t, "p.go", unterminated), "large-file"); got != 0 {
+		t.Fatalf("unterminated file at the ceiling: large-file = %d, want 0", got)
+	}
+}

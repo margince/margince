@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/shared/kernel/capabilitypath"
 )
 
 // publicCall hits the API with NO cookie jar and NO workspace header —
@@ -29,6 +30,20 @@ import (
 //
 //craft:ignore naked-any generic JSON test helper: body and out are each call's own shape
 func publicCall(t *testing.T, e *apptest.AppEnv, method, path string, body any, headers map[string]string, out any) int {
+	t.Helper()
+	status, _ := publicCallWithHeaders(t, e, method, path, body, headers, out)
+	return status
+}
+
+// publicCallWithHeaders is the one place that knows how an anonymous request is
+// shaped. publicCall drops the response headers because almost every caller only
+// asks about the status; publictokencache_integration_test.go asks about the
+// headers, and that question went unasked for as long as there was no way to
+// pose it. One builder, so a change to how these requests are made — a timeout,
+// a redirect policy, a header — cannot reach one caller and miss the other.
+//
+//craft:ignore naked-any generic JSON test helper: body and out are each call's own shape
+func publicCallWithHeaders(t *testing.T, e *apptest.AppEnv, method, path string, body any, headers map[string]string, out any) (int, http.Header) {
 	t.Helper()
 	var reqBody io.Reader
 	if body != nil {
@@ -48,7 +63,7 @@ func publicCall(t *testing.T, e *apptest.AppEnv, method, path string, body any, 
 	}
 	resp, err := e.TS.Client().Do(req) //nolint:bodyclose // closed by apptest.CloseBody below; bodyclose only recognises a Close in the same package
 	if err != nil {
-		t.Fatalf("%s %s: %v", method, path, err)
+		t.Fatalf("%s %s: %v", method, capabilitypath.Redact(path), err)
 	}
 	defer apptest.CloseBody(t, resp)
 	raw, err := io.ReadAll(resp.Body)
@@ -57,10 +72,10 @@ func publicCall(t *testing.T, e *apptest.AppEnv, method, path string, body any, 
 	}
 	if out != nil && len(raw) > 0 {
 		if err := json.Unmarshal(raw, out); err != nil {
-			t.Fatalf("%s %s: decoding %q: %v", method, path, raw, err)
+			t.Fatalf("%s %s: decoding %q: %v", method, capabilitypath.Redact(path), raw, err)
 		}
 	}
-	return resp.StatusCode
+	return resp.StatusCode, resp.Header
 }
 
 // bookingSlug reads the bootstrap-seeded page slug through the owner
