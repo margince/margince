@@ -369,7 +369,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `rulebooklength_test.go` | H3 | A rulebook is read in full by every session and, for its Craftsmanship section, by every gate prompt — so its length is a running cost rather than a matter of taste. |
 | `workflowtimeouts_test.go` | H3 | Every workflow job carries a wall-clock ceiling. |
 
-## Falsification (11)
+## Falsification (12)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -383,4 +383,5 @@ The eight shapes, what each is for, and how each one silently passes:
 | `triggerwrittencolumncases_test.go` | H2 | The trigger-written-column reader driven with SYNTHETIC statements, for the reason retainedcolumncases\_test.go gives for its own: the tree is supposed to pass, so a reader proven only by "nothing in the tree trips it" is one that keeps passing after it stops working. |
 | `txseamreach_test.go` | H2 | Following a call one hop further than the name it is spelled with. |
 | `updateguardcases_test.go` | H2 | What the concurrency-guard census judges a function on, driven with SYNTHETIC source rather than the tree — the same reason retainedcolumncases\_test.go gives for its own cases. |
+| `writeauthorityplanted_test.go` | H2 | The defect the reach census exists for, planted and run. |
 | `writelivenesscases_test.go` | H2 | What the liveness census judges, and what it credits, driven with SYNTHETIC source rather than the tree — the same reason updateguardcases\_test.go gives for its own. |
