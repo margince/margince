@@ -42,8 +42,6 @@ type TaskPatch = {
   body: { is_done?: boolean; due_at?: string; remind_at?: string | null };
 };
 
-const ONE_DAY_MS = 86_400_000;
-
 export function useTaskUpdate(invalidateKeys: readonly QueryKey[]) {
   const t = useT();
   const queryClient = useQueryClient();
@@ -76,12 +74,35 @@ export function useTaskUpdate(invalidateKeys: readonly QueryKey[]) {
   });
 }
 
-/** The next due date one snooze away, or null for a task that has no date to move. */
-export function snoozedDueAt(dueAt: string | null | undefined): string | null {
+/**
+ * The next due date one snooze away, or null for a task that has no date to
+ * move.
+ *
+ * A snooze moves the task to the NEXT CALENDAR DAY, which is not the same as
+ * adding twenty-four hours. A local day is not always that long: on Europe's
+ * spring-forward day, adding a day to the 28th at 23:59:59 lands at 00:59:59
+ * on the 30th, so a rep pressing "tomorrow" skips the 29th entirely. The
+ * accept path warns about exactly this arithmetic where it stamps a deadline;
+ * this writer was doing it.
+ *
+ * Read and re-minted through the calendar helpers, in the zone the deadline
+ * belongs to, so a snooze lands on the day it names for every colleague.
+ */
+export function snoozedDueAt(
+  dueAt: string | null | undefined,
+  zone: string,
+): string | null {
   if (!dueAt) {
     return null;
   }
-  return new Date(new Date(dueAt).getTime() + ONE_DAY_MS).toISOString();
+  const today = calendarDay(new Date(dueAt), zone);
+  const [year, month, day] = today.split("-").map(Number);
+  // Through UTC parts, which is a pure calendar step: no zone reading happens
+  // here, so no DST transition can shorten or lengthen the day being counted.
+  const next = new Date(Date.UTC(year, month - 1, day + 1))
+    .toISOString()
+    .slice(0, "yyyy-mm-dd".length);
+  return dueInstant(next, zone);
 }
 
 /**
@@ -168,7 +189,8 @@ export function TaskQuickActions({
   showDuePicker?: boolean;
 }>) {
   const t = useT();
-  const nextDue = snoozedDueAt(dueAt);
+  const recordZone = useRecordZone();
+  const nextDue = snoozedDueAt(dueAt, recordZone);
   const pending = update.isPending && update.variables?.id === activityId;
   return (
     <>

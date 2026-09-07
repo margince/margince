@@ -307,6 +307,10 @@ describe("reading a transcript for its next steps", () => {
 
     expect(await screen.findByText("1 expired undecided")).toBeTruthy();
     expect(screen.queryByText(/accepted/)).toBeNull();
+    // And not "1 suggestion reviewed" beside it. Counting every staged id as
+    // reviewed put the two claims on the card at once, each contradicting the
+    // other.
+    expect(screen.queryByText("1 suggestion reviewed")).toBeNull();
   });
 
   // An approved suggestion whose effect did not run produced NO task. Reading
@@ -344,6 +348,8 @@ describe("reading a transcript for its next steps", () => {
     expect(
       await screen.findByText("Status unavailable for 1 suggestion"),
     ).toBeTruthy();
+    // A status nobody could read is not a decision somebody made.
+    expect(screen.queryByText("1 suggestion reviewed")).toBeNull();
   });
 
   it("offers a first reading, and no outcome, on a transcript nobody has read", async () => {

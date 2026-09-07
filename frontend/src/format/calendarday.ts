@@ -135,8 +135,19 @@ export function dueInstant(day: string, zone: string): string {
   if (!isRealCalendarDay(day)) {
     throw new RangeError(`not a calendar day: ${day}`);
   }
+  // Years 0-99 are refused rather than resolved. `endOfDayInZone` reaches
+  // Date.UTC, which maps a two-digit year onto 1900-1999 — so "0099-09-09"
+  // would come back as 1999 and the caller would never know the day it asked
+  // for was not the day it got. isRealCalendarDay admits it on shape, and this
+  // is the one place that can tell the difference.
+  if (Number(day.slice(0, 4)) < 100) {
+    throw new RangeError(`year out of range: ${day}`);
+  }
+  // FLOORED, not truncated toward zero. `% 1000` on a negative instant rounds
+  // the wrong way — a day before 1970 would land on the next day's midnight,
+  // which is the very off-by-one-day this signature exists to end.
   const lastMs = new Date(endOfDayInZone(day, zone)).getTime();
-  return new Date(lastMs - (lastMs % 1000)).toISOString();
+  return new Date(Math.floor(lastMs / 1000) * 1000).toISOString();
 }
 
 // The wall-clock value a `datetime-local` input shows for an instant, in the

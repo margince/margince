@@ -103,6 +103,23 @@ describe("dueInstant", () => {
     expect(() => dueInstant("2026-02-30", "Europe/Berlin")).toThrow();
     expect(() => dueInstant("10000-09-15", "Europe/Berlin")).toThrow();
   });
+
+  // Date.UTC maps a two-digit year onto 1900-1999, so this would have come
+  // back as 1999 and the caller would never learn the day it asked for was not
+  // the day it got.
+  it("refuses a year the underlying clock would silently move", () => {
+    expect(() => dueInstant("0099-09-09", "UTC")).toThrow();
+  });
+
+  // `% 1000` on a negative instant rounds toward zero, which is the wrong way:
+  // the last second of 31 December 1969 became the first of 1 January 1970 —
+  // the very off-by-one-day this signature exists to end.
+  it("keeps its day before 1970, where the arithmetic changes sign", () => {
+    expect(dueInstant("1969-12-31", "UTC")).toBe("1969-12-31T23:59:59.000Z");
+    expect(calendarDay(new Date(dueInstant("1969-12-31", "UTC")), "UTC")).toBe(
+      "1969-12-31",
+    );
+  });
 });
 
 describe("localDateTimeValue", () => {
