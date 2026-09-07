@@ -207,12 +207,12 @@ export const en = {
   "shell.capture.share": "{percent} · {scanned} of {total} messages",
   "shell.capture.count": "{scanned} messages so far",
   "shell.capture.open": "Open the import",
-  // The sidebar's second level. The control READS one word at every depth; its
-  // accessible name says where it leads, and the level of destinations needs a
-  // name of its own to be led back to.
+  // The sidebar's second level. Out of the section the control names the whole
+  // product it returns to; deeper it READS one word at every depth while its
+  // accessible name says which list it leads back to.
+  "shell.navBackApp": "Back to app",
   "shell.navBack": "Back",
   "shell.navBackTo": "Back to {name}",
-  "shell.navTop": "Destinations",
   // At phone width a section's entries are reached from the page head. The
   // control READS the entry it is on; the name says what pressing it does and
   // keeps that word inside itself (WCAG 2.5.3).
@@ -6326,7 +6326,7 @@ export const en = {
   // are: the mailbox and the network a PERSON connected, against the outside
   // systems the INSTALLATION is wired to. One row carried both before, which
   // is why it had to be ungated to keep a rep's own mailbox reachable.
-  "settings.home": "Settings home",
+  "settings.home": "Overview",
   "settings.home.yours": "Your settings",
   "settings.home.manage": "What you can change",
   "settings.home.manageSub": "Settings you have the permission to edit.",
@@ -6347,8 +6347,7 @@ export const en = {
     "The address in the bar is a real page \u2014 your seat does not reach it. It is still there to copy if you need to ask somebody who does.",
   "settings.boundary.unknownTitle": "No settings page has this address",
   "settings.boundary.unknownBody":
-    "The link may be from an older version, or mistyped. Settings home lists every page your seat can open.",
-  "settings.boundary.back": "Settings home",
+    "The link may be from an older version, or mistyped. The settings overview lists every page your seat can open.",
   "settings.page.account.sub": "How you appear and sign in \u2014 yours alone.",
   "settings.page.voice.sub": "The words drafts use when they write as you.",
   "settings.page.agents.sub":

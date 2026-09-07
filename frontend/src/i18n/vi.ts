@@ -206,9 +206,9 @@ export const vi = {
   "shell.capture.share": "{percent} · {scanned} trên {total} thư",
   "shell.capture.count": "{scanned} thư cho đến nay",
   "shell.capture.open": "Mở phần nhập",
+  "shell.navBackApp": "Quay lại ứng dụng",
   "shell.navBack": "Quay lại",
   "shell.navBackTo": "Quay lại {name}",
-  "shell.navTop": "Điều hướng",
   "shell.sectionSwitch": "{name} — chuyển mục",
   "attention.selected": "Đã chọn {n}",
   "locale.name.en": "English",
@@ -6122,7 +6122,7 @@ export const vi = {
   "cf.retired": "Đã ngừng dùng",
   // "Chung" thay vì "Tổ chức" cho mục đầu tiên: tiêu đề nhóm phía trên đã nói
   // từ đó, và một dòng lặp lại tiêu đề của chính nó thì không gọi tên được gì.
-  "settings.home": "Trang ch\u00ednh c\u00e0i \u0111\u1eb7t",
+  "settings.home": "T\u1ed5ng quan",
   "settings.home.yours": "C\u00e0i \u0111\u1eb7t c\u1ee7a b\u1ea1n",
   "settings.home.manage":
     "Nh\u1eefng g\u00ec b\u1ea1n c\u00f3 th\u1ec3 thay \u0111\u1ed5i",
@@ -6150,8 +6150,7 @@ export const vi = {
   "settings.boundary.unknownTitle":
     "Kh\u00f4ng c\u00f3 trang c\u00e0i \u0111\u1eb7t n\u00e0o \u1edf \u0111\u1ecba ch\u1ec9 n\u00e0y",
   "settings.boundary.unknownBody":
-    "Li\u00ean k\u1ebft c\u00f3 th\u1ec3 t\u1eeb phi\u00ean b\u1ea3n c\u0169 ho\u1eb7c g\u00f5 sai. Trang ch\u00ednh c\u00e0i \u0111\u1eb7t li\u1ec7t k\u00ea m\u1ecdi trang gh\u1ebf c\u1ee7a b\u1ea1n m\u1edf \u0111\u01b0\u1ee3c.",
-  "settings.boundary.back": "Trang ch\u00ednh c\u00e0i \u0111\u1eb7t",
+    "Li\u00ean k\u1ebft c\u00f3 th\u1ec3 t\u1eeb phi\u00ean b\u1ea3n c\u0169 ho\u1eb7c g\u00f5 sai. Trang t\u1ed5ng quan c\u00e0i \u0111\u1eb7t li\u1ec7t k\u00ea m\u1ecdi trang gh\u1ebf c\u1ee7a b\u1ea1n m\u1edf \u0111\u01b0\u1ee3c.",
   "settings.page.account.sub":
     "C\u00e1ch b\u1ea1n hi\u1ec3n th\u1ecb v\u00e0 \u0111\u0103ng nh\u1eadp \u2014 ch\u1ec9 c\u1ee7a ri\u00eang b\u1ea1n.",
   "settings.page.voice.sub":

@@ -130,9 +130,12 @@ export type NavTrailLevel = {
   // See NavSection.lead. Carried down by navTrail, which is the only path from
   // a section to a rendered level.
   lead?: ReactNode;
-  // Absent on the primary level, which the navigation landmark already names.
-  // Present, it prints the level's own heading and pushes the group labels a
-  // heading level down.
+  // What the level is CALLED, for everything that names it from outside: the
+  // top bar's trail, the phone-width switcher, and the way back UP to it from
+  // the level below. The rail does not print it — a level names itself through
+  // the heading over its first group. Absent on the primary level, which the
+  // navigation landmark already names, and which is therefore what the way out
+  // of a section is walking back to.
   titleKey?: MessageKey;
   groups: readonly NavLevelGroup[];
   activeId?: string;
@@ -286,9 +289,11 @@ export function navTrail(
     }
     level = {
       // A child level is named by the entry that opened it — the reader drilled
-      // in through that word, so it is the word that says where they are.
+      // in through that word, so it is the word that says where they are. The
+      // rail prints that name as the heading over the level's one group, and the
+      // top bar's trail and the way back up read it from here.
       titleKey: active.labelKey,
-      groups: [{ items: children }],
+      groups: [{ headingKey: active.labelKey, items: children }],
       activeId: segments[depth],
       path: [...level.path, active.id],
     };

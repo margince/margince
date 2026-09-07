@@ -128,14 +128,6 @@
 .app.railexpanded {
   --railW: 224px;
 }
-/* A settings route's second level is a narrower column than the destinations:
-   its rows are a section's entries rather than places to go, and 210px holds
-   the longest of them (DESIGN.md §6). Read off the sidebar's own `leveled`
-   class rather than the route, so the shell keeps one opinion about what a
-   level is (app/shell.tsx). */
-.app.railexpanded:has(> .rail.leveled) {
-  --railW: 210px;
-}
 /* Reduce means reduce, not remove: the MOVEMENT goes (the column snaps to its
    new width), while the label's opacity crossfade stays. A fade is not motion,
    and stripping it would leave labels appearing and vanishing with no signal
@@ -502,8 +494,7 @@
 .rail.collapsed .ws-logo .company-logo-img {
   object-position: center;
 }
-.rail.collapsed .ws-logo-powered,
-.rail.leveled .ws-logo-powered {
+.rail.collapsed .ws-logo-powered {
   display: none;
 }
 .rail .ws-chip {
@@ -603,8 +594,16 @@
   gap: var(--space-1);
 }
 /* A group is a section of the column, and the heading sits IN that space: the
-   air above it belongs to the break, the air under it belongs to its rows. */
-.rail .navgroup + .navgroup {
+   air above it belongs to the break, the air under it belongs to its rows.
+   ONE break, spelled once: whatever a group is separated from — the group before
+   it, or the level's head — the interval is the same, and two of them drifting
+   apart is how a column stops having a rhythm. Without the second selector the
+   level's own name sat against the search field and read as that field's label
+   rather than as the heading over the rows. Collapsed the field is gone and the
+   break is not: the margin belongs to the GROUP, so the way out of the section
+   still stands clear of the icons under it. */
+.rail .navgroup + .navgroup,
+.rail .navlead + .navgroup {
   margin-top: var(--space-5);
 }
 /* A quiet label over a group, not a heading competing with the rows under it:
@@ -839,50 +838,6 @@
     animation: none;
   }
 }
-/* The level's own name, at the head of its rows. It is the page's section, so it
-   sits at heading level 2 and the group labels under it move down to 3 — the
-   outline a screen reader walks says which level these rows belong to.
-   It reads at the lead size: the level is a place, and a name set smaller than
-   the rows under it reads as their caption instead. */
-.rail .navtitle {
-  margin: 0;
-  padding: 0 14px; /* ds:ignore matches .navheading's inset, so the title sits on the rows' own text column */
-  font-family: var(--f-display);
-  font-size: var(--fs-lead);
-  font-weight: var(--fw-semibold);
-  color: var(--textPrimary);
-  /* One line in both states. Left to wrap, a two-word level name set two lines
-     deep expanded and one line deep collapsed, and the rows under it moved on
-     the collapse. The panel clips its own overflow-x expanded; collapsed the
-     name is not drawn at all. */
-  white-space: nowrap;
-}
-/* The header block ends here, and the rule says so — bled out through the title's
-   own inset and the rail's gutter so it meets both edges and divides the SIDEBAR
-   rather than underlining a word. Carried by the title rather than by the first
-   group, so it travels with the thing it belongs to: collapsed, the name gives up
-   its ink and this line is what is left of the level's head. */
-.rail .navtitle::after {
-  content: "";
-  display: block;
-  height: 1px;
-  margin: var(--space-3) calc(-1 * (14px + var(--space-2))) 0; /* ds:ignore reaches the rail's edge through the title's 14px inset */
-  background: var(--borderSubtle);
-}
-/* The rows start clear of that rule rather than against it. */
-.rail .navtitle + .navgroup {
-  margin-top: var(--space-3);
-}
-/* Collapsed there is no room for the name — and it must not leave the document
-   either: the rows below are icons, and this heading is what says which level
-   they are. So it keeps its BOX and gives up only its ink, the same trade
-   `.navheading` makes one level up. Taken out of the flow instead (the `.sr-only`
-   treatment this used to have) it took 37px of the column with it, and every row
-   under it jumped up by that much on the collapse. The rule it carries stays and
-   still divides the level's head from its rows. */
-.rail.collapsed .navtitle {
-  color: transparent;
-}
 /* The way back up: the first control in the level and the only one that leaves
    it, so it is the one thing here that looks like a control. On `.navitem`'s
    geometry — the level's header and its rows stand on one column of icons — with
@@ -926,16 +881,6 @@
   .rail .navback svg {
     transition: none;
   }
-}
-/* A level takes the brand's WORDS for its own rows: the mark alone already stands
-   for the product here, and it keeps the job it has — the link home — so the head
-   is never a dead box. The level's own name stands a row below, where the words
-   would have been.
-   One selector serves both sidebar widths: nothing more specific than `.rail …`
-   claims `display` on the brand's words, so the 56px rail follows without being
-   named. */
-.rail.leveled .ws-name {
-  display: none;
 }
 /* ===== the foot: what the installation is entitled to =====
  * A reading, not a destination — so it rides the rows' geometry (it stands in
@@ -1806,9 +1751,16 @@
  * Not `.suggest-popup`'s geometry, and deliberately: that list is PORTALLED and
  * measured against the viewport because its anchor can sit anywhere in a form.
  * This one lives in the rail, which is a positioned column of known width, so
- * it hangs off its own wrapper and needs no measuring at all. */
+ * it hangs off its own wrapper and needs no measuring at all.
+ *
+ * No horizontal inset: the field's edges are the ROWS' edges. A row is a
+ * `.navwrap` spanning the level, and its own inset is inside it — so a padding
+ * here would stand the box the reader types in narrower than every box under
+ * it, which reads as a field that belongs to something else. The vertical air
+ * separates it from the way back up above; the break below it is the first
+ * group's, on the same interval every group break takes. */
 .navlead {
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-2) 0;
 }
 
 /* Absent in the collapsed rail, which is 56px wide: a text field in there is a

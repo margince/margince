@@ -63,22 +63,24 @@ describe("SettingsScreen page layout", () => {
     // and its current row, which the home address has no answer for.
     renderNav();
     // ONE navigation landmark in the chrome: the level names itself with a
-    // heading rather than opening a second `nav` beside the sidebar's own.
+    // heading inside it rather than opening a second `nav` beside the sidebar's
+    // own. The name stands over the level's FIRST group, which is the one the
+    // Overview row belongs to.
     const nav = screen.getByRole("navigation", { name: /primary navigation/i });
-    expect(
-      within(nav).getByRole("heading", { level: 2, name: "Settings" }),
-    ).toBeTruthy();
+    const [name] = within(nav).getAllByRole("heading", { level: 2 });
+    expect(name?.textContent).toBe("Settings");
     // The granted pages appear once the /me probe resolves the grant map.
     await waitFor(() =>
       expect(screen.getByRole("link", { name: "Fields" })).toBeTruthy(),
     );
-    // The headings the level carries, under its own title rather than beside
-    // it. A group with no visible member is dropped rather than printed empty,
-    // so this fixture's grants decide which of the seven appear — and the
-    // subjects it does open are named in catalog order.
+    // The subject headings the level carries, after the one naming the level. A
+    // group with no visible member is dropped rather than printed empty, so
+    // this fixture's grants decide which of the seven appear — and the subjects
+    // it does open are named in catalog order.
     expect(
       within(nav)
-        .getAllByRole("heading", { level: 3 })
+        .getAllByRole("heading", { level: 2 })
+        .slice(1)
         .map((heading) => heading.textContent),
     ).toEqual(["You", "People", "Sales", "Governance"]);
     for (const label of [
@@ -277,8 +279,9 @@ const pagesNamed = (...ids: readonly SettingsPageId[]) => [
   ),
 ];
 
-// Without the home row: a claim about ONE group's rows is not a claim about the
-// headingless row above all of them.
+// Without the home row: a claim about ONE subject group's rows is not a claim
+// about the row above all of them, which sits in the group carrying the level's
+// own name.
 const pagesIn = (group: SettingsGroupId) =>
   SETTINGS_PAGES.filter((page) => page.group === group).map((page) =>
     labelOf(page.id),
@@ -576,7 +579,9 @@ describe("SettingsScreen page visibility", () => {
     // And each page is under the heading that claims it: the flat order above
     // would read the same if a page were declared in the wrong group.
     const nav = screen.getByRole("navigation", { name: /primary navigation/i });
-    const headings = within(nav).getAllByRole("heading", { level: 3 });
+    // The level's own name leads them — it heads the group the Overview row is
+    // in — so the subject headings start one along.
+    const headings = within(nav).getAllByRole("heading", { level: 2 }).slice(1);
     // Asserted before any heading is read, so a level that lost a group fails
     // on the missing heading rather than on a lookup inside it.
     expect(headings.map((heading) => heading.textContent)).toEqual(

@@ -312,9 +312,12 @@ scrolls inside itself.
   Pipeline, Projects; Intelligence — Reports, Ask Margince. No badges: the
   queues that used to badge (approvals, tasks) are lanes of the Worklist, which
   reports its counts on the page. Settings is not a row; it opens from the
-  account menu and publishes its own second level (You / Admin settings) as a
-  210px column on the same glass, which the sidebar becomes while a settings
-  route is open. The agent's orb stays at the foot.
+  account menu and publishes its own second level (Overview, then the subject
+  groups) on the same glass, which the sidebar becomes while a settings route is
+  open — at the sidebar's own width and under the sidebar's own head, because it
+  is the same column showing a different list rather than a second panel. The
+  level names itself with the heading over its first group, and the way out of it
+  reads "Back to app". The agent's orb stays at the foot.
 - **Top bar**: 48px, glass, a hairline under it. The breadcrumb on the left,
   the command field in the middle (`⌘K`), the reader's monogram on the right.
   It is the application's one bar and every screen has it. Nothing that

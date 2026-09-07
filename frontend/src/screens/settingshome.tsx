@@ -79,7 +79,10 @@ export function SettingsBoundary({
           }}
         >
           <ArrowLeft />
-          {t("settings.boundary.back")}
+          {/* The rail's OWN word for this address, not a second one: the link
+              goes exactly where the sidebar's first row goes, and a place named
+              twice is a place a reader has to work out is one place. */}
+          {t("settings.home")}
         </a>
       }
     >

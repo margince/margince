@@ -200,9 +200,9 @@ export const de = {
   "shell.capture.share": "{percent} · {scanned} von {total} Nachrichten",
   "shell.capture.count": "Bisher {scanned} Nachrichten",
   "shell.capture.open": "Import öffnen",
+  "shell.navBackApp": "Zurück zur App",
   "shell.navBack": "Zurück",
   "shell.navBackTo": "Zurück zu {name}",
-  "shell.navTop": "Bereiche",
   "shell.sectionSwitch": "{name} — Bereich wechseln",
   "attention.selected": "{n} ausgewählt",
   "locale.name.en": "English",
@@ -6184,7 +6184,7 @@ export const de = {
   // "Allgemein" statt "Organisation" für den ersten Eintrag: die Gruppen-
   // überschrift darüber sagt das Wort schon, und eine Zeile, die ihre eigene
   // Überschrift wiederholt, benennt nichts.
-  "settings.home": "Einstellungen-Start",
+  "settings.home": "\u00dcbersicht",
   "settings.home.yours": "Ihre Einstellungen",
   "settings.home.manage": "Was Sie \u00e4ndern k\u00f6nnen",
   "settings.home.manageSub":
@@ -6209,8 +6209,7 @@ export const de = {
     "Die Adresse in der Leiste ist eine echte Seite \u2014 Ihr Sitzplatz erreicht sie nicht. Sie bleibt stehen, damit Sie sie kopieren und jemanden fragen k\u00f6nnen, der sie erreicht.",
   "settings.boundary.unknownTitle": "Keine Einstellungsseite hat diese Adresse",
   "settings.boundary.unknownBody":
-    "Der Link stammt vielleicht aus einer \u00e4lteren Version oder ist vertippt. Der Einstellungen-Start listet jede Seite auf, die Ihr Sitzplatz \u00f6ffnen kann.",
-  "settings.boundary.back": "Einstellungen-Start",
+    "Der Link stammt vielleicht aus einer \u00e4lteren Version oder ist vertippt. Die Einstellungs\u00fcbersicht listet jede Seite auf, die Ihr Sitzplatz \u00f6ffnen kann.",
   "settings.page.account.sub":
     "Wie Sie erscheinen und sich anmelden \u2014 nur f\u00fcr Sie.",
   "settings.page.voice.sub":

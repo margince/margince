@@ -604,14 +604,20 @@ export function useSettingsSection(route: Route): NavSection {
     named !== undefined && !pages.some((page) => page.id === named.id)
       ? [{ items: [navEntry(named)] } satisfies NavLevelGroup]
       : [];
-  // Settings home, above the seven groups and in a headingless group of its
-  // own. Not a member of one: it belongs to no topic, and a group that owned it
-  // would take it away on the day that group had no other visible page.
+  // Settings home, above the seven groups and in a group of its own. Not a
+  // member of one: it belongs to no topic, and a group that owned it would take
+  // it away on the day that group had no other visible page.
+  //
+  // Its heading is the SECTION's name, and it is the only place the sidebar says
+  // "Settings": the level names itself through the heading over its first group
+  // rather than through a title of its own, so this group carries the name for
+  // the whole level.
   //
   // `SETTINGS_HOME_ID` rather than a page id, because home is not a page — it
   // is the address with no page segment, and `settingsHref()` with no argument
   // is exactly that. A row keyed on a page id would go current on that page.
   const home: NavLevelGroup = {
+    headingKey: "nav.settings",
     items: [
       {
         id: SETTINGS_HOME_ID,

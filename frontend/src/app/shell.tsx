@@ -539,9 +539,16 @@ function SectionPickGroup({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  // The group carrying the section's OWN name goes unheaded here: the sheet has
+  // already said it at heading level 2 above this list, and a group repeating it
+  // would name the section twice in the same view. In the sidebar that group is
+  // what names the level at all, which is why the name lives on the group rather
+  // than being spelled again in this file.
+  const heading =
+    group.headingKey === section.titleKey ? undefined : group.headingKey;
   return (
     <div className="sectionpickgroup">
-      {group.headingKey && <h3 className="t-label">{t(group.headingKey)}</h3>}
+      {heading && <h3 className="t-label">{t(heading)}</h3>}
       {group.items.map((entry) => (
         <a
           key={entry.id}

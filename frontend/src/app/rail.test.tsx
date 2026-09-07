@@ -431,10 +431,12 @@ describe("Rail levels (a section's entries as the second level)", () => {
     expect(current[0].getAttribute("aria-label")).toBe("Account");
   });
 
-  // The level names itself at heading level 2, so its group labels move down to
-  // 3 — the outline reads Settings → You / Admin settings, and the rail's
-  // own destinations keep level 2 for their groups on every other route.
-  it("names the level at heading level 2 and its groups at 3", () => {
+  // A level draws no name of its own: it is named by the heading over its first
+  // group, so a level's groups stand at the same heading level the
+  // destinations' do and the outline never gains a rung with the depth. The one
+  // navigation landmark names the navigation; the headings inside it name the
+  // groups, and nothing between them names the panel twice.
+  it("gives a level's groups the destinations' own heading level", () => {
     render(
       <WorkspaceRail
         route={{ screen: "settings", id: "account" }}
@@ -443,10 +445,8 @@ describe("Rail levels (a section's entries as the second level)", () => {
     );
     expect(
       screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),
-    ).toEqual(["Settings"]);
-    expect(
-      screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent),
     ).toEqual(["You", "Governance"]);
+    expect(screen.queryAllByRole("heading", { level: 3 })).toHaveLength(0);
   });
 
   // A section belongs to ONE screen. Without this the fixture's entries would
@@ -462,17 +462,33 @@ describe("Rail levels (a section's entries as the second level)", () => {
     expect(levelLabels()).toEqual(CANONICAL_ORDER);
   });
 
-  // The control READS one word at every depth — the reader knows what they
-  // walked down from — while its accessible name still says where it leads.
-  // WCAG 2.5.3 holds because "Back" is contained in "Back to Destinations".
-  it("reads Back and is named for the level it leads to", () => {
+  // Out of the section the control names what it returns to, and names it in
+  // full: the level above is the whole product, which is not a list a reader
+  // can be assumed to have walked down from — a deep link into settings is the
+  // common way in, and "Back" alone told that reader nothing about where it led.
+  it("reads and is named Back to app at the section's own level", () => {
     render(
       <WorkspaceRail
         route={{ screen: "settings", id: "account" }}
         section={fixtureSection("account")}
       />,
     );
-    const back = screen.getByRole("button", { name: "Back to Destinations" });
+    const back = screen.getByRole("button", { name: "Back to app" });
+    expect(back.querySelector(".navlabel")?.textContent).toBe("Back to app");
+  });
+
+  // Deeper it is one step between two lists of the same section, and the word
+  // for that step is the same at every depth — so the control READS "Back"
+  // while its accessible name says which list it leads to. WCAG 2.5.3 holds
+  // because "Back" is contained in "Back to Settings".
+  it("reads Back and is named for the level it leads to below the section", () => {
+    render(
+      <WorkspaceRail
+        route={{ screen: "settings", id: "deep", id2: "deeper" }}
+        section={fixtureSection("deep")}
+      />,
+    );
+    const back = screen.getByRole("button", { name: "Back to Settings" });
     expect(back.querySelector(".navlabel")?.textContent).toBe("Back");
   });
 
@@ -494,7 +510,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
 
     navigate({ screen: "settings", id: "account" });
     await user.click(
-      await screen.findByRole("button", { name: "Back to Destinations" }),
+      await screen.findByRole("button", { name: "Back to app" }),
     );
     expect(window.location.hash).toBe("#/analytics");
     // The panel is derived from the address, so the destinations arrive with it —
@@ -518,7 +534,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
     render(<Shell onOpenSearch={ignoreSearch}>{null}</Shell>);
     navigate({ screen: "settings", id: "account" });
     const back = await screen.findByRole("button", {
-      name: "Back to Destinations",
+      name: "Back to app",
     });
 
     back.click();
@@ -545,27 +561,62 @@ describe("Rail levels (a section's entries as the second level)", () => {
     window.location.hash = "#/settings/account";
     render(<Shell onOpenSearch={ignoreSearch}>{null}</Shell>);
     await user.click(
-      await screen.findByRole("button", { name: "Back to Destinations" }),
+      await screen.findByRole("button", { name: "Back to app" }),
     );
     expect(window.location.hash).toBe("#/brief");
   });
 
-  // The level's rows take the brand's WORDS — the mark alone stands for the
-  // product here — and nothing else. The mark stays, and with it the job it
-  // holds: the link to the Brief. A head reduced to a dead box would take that with it.
-  it("hides the brand words but keeps the mark while a level is shown", () => {
+  // The head belongs to the SIDEBAR and not to the list under it: a level is the
+  // same column showing a different set of rows, so every part of the head is
+  // drawn exactly as it is on a route with no level. Asserted as a COMPARISON
+  // and not only as "visible": the defect this guards is a rule that fires on
+  // the level alone, and two absolute expectations would pass a head that had
+  // quietly changed in both places. The plain rail is checked to be drawn at all,
+  // so a head hidden everywhere cannot satisfy the comparison either.
+  it("draws the product's own head the same on a level as off one", () => {
     shellStyles = mountShellStyles();
-    const { container } = render(
+    const parts = [".ws-chip", ".ws-name"];
+    const plain = render(<WorkspaceRail route={{ screen: "brief" }} />);
+    const leveled = render(
       <WorkspaceRail
         route={{ screen: "settings", id: "account" }}
         section={fixtureSection("account")}
       />,
     );
-    expect(railDisplay(container, ".ws-name")).toBe("none");
-    expect(railDisplay(container, ".ws-chip")).not.toBe("none");
-    expect(
-      screen.getByRole("link", { name: "Margince" }).getAttribute("href"),
-    ).toBe("#/brief");
+    for (const part of parts) {
+      expect(railDisplay(plain.container, part)).not.toBe("none");
+      expect(railDisplay(leveled.container, part)).toBe(
+        railDisplay(plain.container, part),
+      );
+    }
+  });
+
+  // The other half of the same head, and the half a real installation actually
+  // wears: the company's own mark with "Powered by Margince" under it. That line
+  // used to go with the brand's words on a level, so the one thing in the chrome
+  // saying what the product IS was absent from every settings address.
+  it("draws an installation's own head the same on a level as off one", () => {
+    shellStyles = mountShellStyles();
+    const client = newClient();
+    client.setQueryData(["company"], TWO_MARKS);
+    const parts = [".company-logo", ".ws-logo-powered"];
+    const plain = renderWith(
+      client,
+      <WorkspaceRail route={{ screen: "brief" }} />,
+    );
+    const leveled = renderWith(
+      client,
+      <WorkspaceRail
+        route={{ screen: "settings", id: "account" }}
+        section={fixtureSection("account")}
+      />,
+    );
+    for (const part of parts) {
+      expect(railDisplay(plain.container, part)).not.toBe("none");
+      expect(railDisplay(leveled.container, part)).toBe(
+        railDisplay(plain.container, part),
+      );
+    }
   });
 
   // Whose product this is, above whose product it runs on. Every reader of a
@@ -709,16 +760,6 @@ describe("Rail levels (a section's entries as the second level)", () => {
     expect(
       container.querySelector(".company-logo img")?.getAttribute("src"),
     ).toBe(TWO_MARKS.logo_url);
-  });
-
-  // The other half of the same rule: outside a level the head is the head. The
-  // brand assertion alone is satisfied by a rail that hides the words everywhere,
-  // or by one that hides them nowhere.
-  it("keeps the brand words on a route with no level", () => {
-    shellStyles = mountShellStyles();
-    const { container } = render(<WorkspaceRail route={{ screen: "brief" }} />);
-    expect(railDisplay(container, ".ws-name")).not.toBe("none");
-    expect(railDisplay(container, ".ws-chip")).not.toBe("none");
   });
 
   // An entry that HAS children opens them: standing on it, the panel shows the

@@ -372,6 +372,19 @@ describe("SettingsScreen RBAC surfaces", () => {
     // Account.
     expect(screen.queryByText("AI call trace")).toBeNull();
   });
+
+  // The way off the boundary leads to the settings home, which is the address
+  // the sidebar's first row leads to — so it wears that row's word rather than
+  // a second name for one place. Read from the catalog, so renaming the row
+  // renames this link and cannot leave the two saying different things.
+  it("names the way off the boundary with the sidebar's own word for it", async () => {
+    vi.stubGlobal("fetch", aiRateReaderBackend());
+    render(<SettingsScreen route={settingsHref("model-calls")} />);
+    const back = await screen.findByRole("link", {
+      name: translate("en", "settings.home"),
+    });
+    expect(back.getAttribute("href")).toBe("#/settings");
+  });
 });
 
 // A reindex marker with work waiting, so the search-index card has a state to
