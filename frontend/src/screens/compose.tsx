@@ -46,7 +46,7 @@ import {
   identifierNumber,
 } from "../format/format";
 import { viewerZone, zoneNameAndOffset } from "../format/timezone";
-import { type Locale, useLocale, useT } from "../i18n";
+import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { entityTimelineKeys } from "./activitykeys";
 import {
@@ -2556,6 +2556,7 @@ export function ComposeModal({
   );
   const nameOf = (linkType: string, linkId: string) =>
     linkType === "user" ? colleagues.get(linkId) : records(linkType, linkId);
+  const plural = usePlural();
   // Whose conversation this is. A thread delivered only to colleagues' mailboxes
   // is theirs, and the reply still goes out from the reader's own mailbox under
   // the reader's own name — which is the sentence the notice below says.
@@ -3259,22 +3260,17 @@ export function ComposeModal({
             answer to anything the reader just did. */}
             {answeringColleaguesMail && (
               <Callout tone="info">
-                {t(
-                  colleagueMailboxes.length === 1
-                    ? "compose.colleagueMailbox"
-                    : "compose.colleagueMailboxes",
-                  {
-                    names: new Intl.ListFormat(INTL_LOCALE[locale], {
-                      style: "long",
-                      type: "conjunction",
-                    }).format(
-                      colleagueMailboxes.map(
-                        (seat) =>
-                          nameOf("user", seat) ?? t("compose.colleagueUnnamed"),
-                      ),
+                {plural("compose.colleagueMailbox", colleagueMailboxes.length, {
+                  names: new Intl.ListFormat(INTL_LOCALE[locale], {
+                    style: "long",
+                    type: "conjunction",
+                  }).format(
+                    colleagueMailboxes.map(
+                      (seat) =>
+                        nameOf("user", seat) ?? t("compose.colleagueUnnamed"),
                     ),
-                  },
-                )}
+                  ),
+                })}
               </Callout>
             )}
             {/* Every message says where it files. Mail ASKS — its answer travels

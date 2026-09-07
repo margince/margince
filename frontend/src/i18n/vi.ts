@@ -3281,9 +3281,9 @@ export const vi = {
     "Những người nhận được nêu tên không thấy các địa chỉ này, và cũng không thấy rằng có ai khác được gửi kèm.",
   "compose.threadGone":
     "Không thể trả lời cuộc trò chuyện đó nữa, nên cửa sổ này mở theo cách viết thông thường. Hãy kiểm tra người nhận trước khi gửi.",
-  "compose.colleagueMailbox":
+  "compose.colleagueMailbox_one":
     "Thư này được gửi đến hộp thư của {names}. Trả lời của bạn sẽ gửi đi từ hộp thư của chính bạn, dưới tên bạn.",
-  "compose.colleagueMailboxes":
+  "compose.colleagueMailbox_other":
     "Thư này được gửi đến hộp thư của {names}. Trả lời của bạn sẽ gửi đi từ hộp thư của chính bạn, dưới tên bạn.",
   "compose.colleagueUnnamed": "một đồng nghiệp",
   "compose.attach": "Đính kèm",

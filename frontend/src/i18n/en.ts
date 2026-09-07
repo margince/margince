@@ -3402,9 +3402,9 @@ export const en = {
     "The named recipients cannot see these addresses, and cannot see that anyone else was copied.",
   "compose.threadGone":
     "That conversation can no longer be answered, so this opened on the usual way of writing to them. Check the recipient before you send.",
-  "compose.colleagueMailbox":
+  "compose.colleagueMailbox_one":
     "This message was delivered to {names}'s mailbox. Your reply goes out from your own mailbox, under your name.",
-  "compose.colleagueMailboxes":
+  "compose.colleagueMailbox_other":
     "This message was delivered to the mailboxes of {names}. Your reply goes out from your own mailbox, under your name.",
   "compose.colleagueUnnamed": "a colleague",
   "compose.attach": "Attach",
