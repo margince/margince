@@ -31,11 +31,19 @@ const board = {
   truncated: false,
 };
 
-async function openBoard() {
+/**
+ * The board drawn on Brief, settled, with the driver its rows are pressed with.
+ *
+ * The heading is asserted here rather than in a frame of its own: it is the
+ * precondition every test below reads through — the board is an open titled
+ * panel like the blocks around it, so a row is on screen without anything
+ * being opened first.
+ */
+async function drawBoard() {
+  const user = userEvent.setup();
   render(<BriefTeamBoard offered />);
-  // The board sits behind a disclosure: the reader's own day is what they came
-  // for, and a table of colleagues above it would push that off the screen.
-  await userEvent.click(await screen.findByText(en["worklist.board.title"]));
+  await screen.findByRole("heading", { name: en["worklist.board.title"] });
+  return user;
 }
 
 describe("the team board on Brief", () => {
@@ -56,9 +64,9 @@ describe("the team board on Brief", () => {
   // a second time — a row that answers a question by asking it again.
   it("opens a colleague's own queue by name in the address", async () => {
     stubApi({ "GET /worklist/team": () => jsonResponse(board) });
-    await openBoard();
+    const user = await drawBoard();
 
-    await userEvent.click(await screen.findByText("Lena Fischer"));
+    await user.click(await screen.findByText("Lena Fischer"));
 
     expect(globalThis.location.hash).toBe(
       "#/worklist/11111111-1111-4111-8111-111111111111",
@@ -69,9 +77,9 @@ describe("the team board on Brief", () => {
   // scope word. Both rows are doors, not one door and one shrug.
   it("opens the unassigned pile by its scope word", async () => {
     stubApi({ "GET /worklist/team": () => jsonResponse(board) });
-    await openBoard();
+    const user = await drawBoard();
 
-    await userEvent.click(await screen.findByText(en["worklist.board.nobody"]));
+    await user.click(await screen.findByText(en["worklist.board.nobody"]));
 
     expect(globalThis.location.hash).toBe("#/worklist/unassigned");
   });
@@ -80,7 +88,7 @@ describe("the team board on Brief", () => {
   // counts for the same morning because they are not two reads.
   it("reads the board through the shared key, not a second endpoint", async () => {
     const calls = stubApi({ "GET /worklist/team": () => jsonResponse(board) });
-    await openBoard();
+    await drawBoard();
 
     await screen.findByText("Lena Fischer");
     const boardReads = calls.filter((call) => call.path === "/worklist/team");

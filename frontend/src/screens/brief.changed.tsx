@@ -58,7 +58,7 @@ export function ChangedSinceBrief({ day }: Readonly<{ day: Worklist }>) {
   const named = changed.slice(0, NAMED);
   const rest = changed.length - named.length;
   return (
-    <Callout tone="info">
+    <Callout tone="info" className="brief-notice">
       {t("brief.changed.lead")}{" "}
       {named.map((item) => itemTitle(item, t, locale)).join(" · ")}
       {rest > 0

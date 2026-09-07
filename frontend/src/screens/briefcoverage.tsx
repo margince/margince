@@ -33,7 +33,7 @@ export function BriefCoverage({ day }: Readonly<{ day: Worklist }>) {
     return null;
   }
   return (
-    <Callout tone="info" className="brief-coverage">
+    <Callout tone="info" className="brief-notice brief-coverage">
       {/* The refusals first and outside the disclosure: a source the reader may
           not see at all is a fact about their day, not a detail to expand. A
           bounded source is the detail — the page did read it, and there is

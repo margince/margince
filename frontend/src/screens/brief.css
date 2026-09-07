@@ -164,6 +164,18 @@
   margin-bottom: var(--space-6);
 }
 
+/* A notice about the page as a whole — a source withheld, a row that moved
+ * since the night looked — and the strip it qualifies are sibling surfaces, so
+ * the interval between them is `--gapCards` and moves when that role is
+ * retuned. It is declared on the JOIN rather than as a margin either surface
+ * owns: on a morning with nothing to disclose neither notice renders, and a top
+ * margin belonging to the strip would open a gap under the greeting for a
+ * callout that is not there. */
+.brief-wrap > .brief-notice + .brief-notice,
+.brief-wrap > .brief-notice + .brief-readings {
+  margin-block-start: var(--gapCards);
+}
+
 /* ── The work column ───────────────────────────────────────────────────────
  * Two panels, in the order the day decides (see `brief.tsx`): the deck first
  * while decisions are waiting, the ranked queue first once the deck is clear. */

@@ -9,7 +9,8 @@
 // whole point of showing counts rather than rows. The board is where a lead
 // decides who to look at; the queue is where they look.
 
-import { DataTable, Disclosure } from "../design-system/atoms";
+import { DataTable } from "../design-system/atoms";
+import { Panel, PanelBody } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
 import { CoachingMoves } from "./worklist.coaching";
@@ -106,10 +107,10 @@ function count(value: number | undefined) {
 
 // The team's load, above the reader's own queue.
 //
-// Behind a Disclosure rather than always open: it is the lead's second
-// question. Their own day is still what they came for, and a table of five
-// colleagues above it would push the work they are answerable for off the top
-// of the screen every morning.
+// A titled panel, open, on both surfaces that draw it. This is a reading a lead
+// came to either page FOR, so it stands open like the panels beside it rather
+// than behind a control — a table of counts folded away reads as a block that
+// failed to load, not as one waiting to be asked for.
 export function TeamBoard({
   onOwner,
   onUnassigned,
@@ -129,84 +130,89 @@ export function TeamBoard({
       ? "unavailable"
       : "ready";
   return (
-    <Disclosure summary={t("worklist.board.title")}>
-      <SurfaceState
-        state={state}
-        emptyLabel={t("worklist.board.empty")}
-        loadingLabel={t("worklist.board.loading")}
-        detail={{ onRetry: () => void board.refetch() }}
-      >
-        {board.data && (
-          <>
-            {/* WHAT to do about the table, above the table. A lead reading five
-                columns across six people is doing arithmetic before they can
-                act; these are the same numbers with the arithmetic done. Drawn
-                from board.data, so they add no request and cannot disagree with
-                the rows beneath them. */}
-            <CoachingMoves members={board.data.members} onOwner={onOwner} />
-            <DataTable
-              label={t("worklist.board.title")}
-              rows={rowsOf(
-                board.data.members,
-                board.data.unassigned,
-                t("worklist.board.nobody"),
+    <Panel title={t("worklist.board.title")}>
+      {/* The table carries its own cell padding but not the panel's inset, so
+          it sits in a `PanelBody` with the coaching lines and the floor caveat
+          rather than full-bleed against the panel's own edges. */}
+      <PanelBody>
+        <SurfaceState
+          state={state}
+          emptyLabel={t("worklist.board.empty")}
+          loadingLabel={t("worklist.board.loading")}
+          detail={{ onRetry: () => void board.refetch() }}
+        >
+          {board.data && (
+            <>
+              {/* WHAT to do about the table, above the table. A lead reading
+                  five columns across six people is doing arithmetic before they
+                  can act; these are the same numbers with the arithmetic done.
+                  Drawn from board.data, so they add no request and cannot
+                  disagree with the rows beneath them. */}
+              <CoachingMoves members={board.data.members} onOwner={onOwner} />
+              <DataTable
+                label={t("worklist.board.title")}
+                rows={rowsOf(
+                  board.data.members,
+                  board.data.unassigned,
+                  t("worklist.board.nobody"),
+                )}
+                rowKey={(row) => row.id || "unassigned"}
+                // Every row goes somewhere: a person's row opens their day, and
+                // the unassigned row opens the scope that holds unowned work.
+                //
+                // DataTable draws every row as pressable once onRowClick is set —
+                // it has no per-row opt-out — so a row that led nowhere would look
+                // exactly like one that led somewhere and do nothing when pressed.
+                onRowClick={(row) => {
+                  if (row.id === "") {
+                    onUnassigned();
+                    return;
+                  }
+                  onOwner(row.id);
+                }}
+                columns={[
+                  {
+                    key: "name",
+                    header: t("worklist.board.member"),
+                    render: (row) => row.name,
+                  },
+                  {
+                    key: "waiting",
+                    header: t("worklist.board.waiting"),
+                    render: (row) => count(row.waiting),
+                  },
+                  {
+                    key: "at_risk",
+                    header: t("worklist.board.atRisk"),
+                    render: (row) => count(row.atRisk),
+                  },
+                  {
+                    key: "overdue",
+                    header: t("worklist.board.overdue"),
+                    render: (row) => count(row.overdue),
+                  },
+                  // The column the coaching lines above are drawn from. Without
+                  // it a lead reads "Ana owes 3 promises" with nowhere on the
+                  // page to check it — a suggestion they cannot verify is one
+                  // they stop trusting.
+                  {
+                    key: "promises_due",
+                    header: t("worklist.board.promises"),
+                    render: (row) => count(row.promises),
+                  },
+                ]}
+              />
+              {/* A count read to its bound is a FLOOR, and saying so is the
+                  whole reason the server sends the flag. A lead told "3" over a
+                  figure that is really 3-or-more will not go looking, which is
+                  the one direction this surface must not get wrong. */}
+              {board.data.truncated && (
+                <p className="t-caption">{t("worklist.board.truncated")}</p>
               )}
-              rowKey={(row) => row.id || "unassigned"}
-              // Every row goes somewhere: a person's row opens their day, and
-              // the unassigned row opens the scope that holds unowned work.
-              //
-              // DataTable draws every row as pressable once onRowClick is set —
-              // it has no per-row opt-out — so a row that led nowhere would look
-              // exactly like one that led somewhere and do nothing when pressed.
-              onRowClick={(row) => {
-                if (row.id === "") {
-                  onUnassigned();
-                  return;
-                }
-                onOwner(row.id);
-              }}
-              columns={[
-                {
-                  key: "name",
-                  header: t("worklist.board.member"),
-                  render: (row) => row.name,
-                },
-                {
-                  key: "waiting",
-                  header: t("worklist.board.waiting"),
-                  render: (row) => count(row.waiting),
-                },
-                {
-                  key: "at_risk",
-                  header: t("worklist.board.atRisk"),
-                  render: (row) => count(row.atRisk),
-                },
-                {
-                  key: "overdue",
-                  header: t("worklist.board.overdue"),
-                  render: (row) => count(row.overdue),
-                },
-                // The column the coaching lines above are drawn from. Without
-                // it a lead reads "Ana owes 3 promises" with nowhere on the
-                // page to check it — a suggestion they cannot verify is one
-                // they stop trusting.
-                {
-                  key: "promises_due",
-                  header: t("worklist.board.promises"),
-                  render: (row) => count(row.promises),
-                },
-              ]}
-            />
-            {/* A count read to its bound is a FLOOR, and saying so is the whole
-                reason the server sends the flag. A lead told "3" over a figure
-                that is really 3-or-more will not go looking, which is the one
-                direction this surface must not get wrong. */}
-            {board.data.truncated && (
-              <p className="t-caption">{t("worklist.board.truncated")}</p>
-            )}
-          </>
-        )}
-      </SurfaceState>
-    </Disclosure>
+            </>
+          )}
+        </SurfaceState>
+      </PanelBody>
+    </Panel>
   );
 }
