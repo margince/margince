@@ -5,8 +5,11 @@ package httpserver
 
 import (
 	"fmt"
+	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"sort"
 	"strings"
 	"sync"
 	"testing"
@@ -258,5 +261,218 @@ func TestNilMetricsIsInert(t *testing.T) {
 	m.Write(&b)
 	if b.Len() != 0 {
 		t.Errorf("a nil HTTPMetrics wrote an exposition: %q", b.String())
+	}
+}
+
+// A CLIENT-CHOSEN METHOD MUST NOT GROW THESE MAPS. This is a regression test
+// for a real hole, not a hypothetical: r.Method is a token net/http accepts as
+// anything token-shaped, and the route cap did not bound it. Measured before
+// the fix, 5000 distinct methods produced 5000 series in EACH map against a
+// 500-route cap, which an unauthenticated caller could have driven until the
+// process died.
+func TestAClientChosenMethodCannotGrowTheSeries(t *testing.T) {
+	m := NewHTTPMetrics()
+	for i := range 5000 {
+		m.observe("/v1/x", fmt.Sprintf("EVIL%d", i), 200, time.Millisecond)
+	}
+	// One real route, and every nonsense method folded into `other`.
+	if got := len(m.latency); got != 1 {
+		t.Errorf("latency series = %d, want 1 — the method dimension is unbounded", got)
+	}
+	if got := len(m.requests); got != 1 {
+		t.Errorf("request series = %d, want 1 — the method dimension is unbounded", got)
+	}
+	got := rendered(m)
+	if want := `method="other"`; !strings.Contains(got, want) {
+		t.Errorf("exposition missing %q", want)
+	}
+	if strings.Contains(got, "EVIL") {
+		t.Error("a client-supplied method reached a label value")
+	}
+}
+
+// The nine real methods keep their own identity — folding everything would be
+// a cheap bound that destroyed the label's meaning.
+func TestTheRealMethodsAreNotFolded(t *testing.T) {
+	m := NewHTTPMetrics()
+	for _, method := range []string{
+		http.MethodGet, http.MethodHead, http.MethodPost, http.MethodPut, http.MethodPatch,
+		http.MethodDelete, http.MethodConnect, http.MethodOptions, http.MethodTrace,
+	} {
+		m.observe("/v1/x", method, 200, time.Millisecond)
+		if got := normalizeMethod(method); got != method {
+			t.Errorf("normalizeMethod(%q) = %q, want it unchanged", method, got)
+		}
+	}
+	if got := len(m.latency); got != 9 {
+		t.Errorf("latency series = %d, want 9 (one per real method)", got)
+	}
+}
+
+// The counter map is capped on ITS OWN count, because it is keyed one dimension
+// wider than the histogram (status) and the two do not grow in step. Asserting
+// a bound about one map while the other grows was the original mistake.
+func TestTheCounterMapIsCappedIndependently(t *testing.T) {
+	m := NewHTTPMetrics()
+	// One route, one method, absurdly many statuses: the histogram holds a
+	// single series throughout while the counter map is the one under pressure.
+	for status := range maxRequestSeries + 100 {
+		m.observe("/v1/x", http.MethodGet, status, time.Millisecond)
+	}
+	if got := len(m.latency); got != 1 {
+		t.Errorf("latency series = %d, want 1", got)
+	}
+	if got := len(m.requests); got > maxRequestSeries+1 {
+		t.Errorf("request series = %d, want at most the cap plus the overflow series", got)
+	}
+	if !strings.Contains(rendered(m), routeOverflowLabel) {
+		t.Error("no overflow series once the counter map passed its cap")
+	}
+}
+
+// observe on a nil receiver is reachable independently of Measure, and must be
+// inert rather than a panic -- and inert means it also recorded nothing, which
+// is the half a no-panic test would leave unstated.
+func TestObserveOnANilStoreIsInert(t *testing.T) {
+	var m *HTTPMetrics
+	m.observe("/v1/x", http.MethodGet, 200, time.Millisecond) // must not panic
+	if got := rendered(m); got != "" {
+		t.Errorf("a nil store recorded an observation: %q", got)
+	}
+}
+
+// The exposition is sorted, and the comparators have to order every dimension:
+// unsorted output is not wrong to a parser but it makes a scrape diff unreadable
+// and a test flap on map order. Same route and method, differing only in status,
+// exercises the last comparison the counter's sort makes.
+func TestTheExpositionIsSortedOnEveryDimension(t *testing.T) {
+	m := NewHTTPMetrics()
+	// Deliberately inserted out of order.
+	m.observe("/v1/b", http.MethodPost, 500, time.Millisecond)
+	m.observe("/v1/a", http.MethodGet, 404, time.Millisecond)
+	m.observe("/v1/a", http.MethodGet, 200, time.Millisecond)
+	m.observe("/v1/a", http.MethodPost, 201, time.Millisecond)
+
+	var counters []string
+	for _, line := range strings.Split(rendered(m), "\n") {
+		if strings.HasPrefix(line, "margince_http_requests_total{") {
+			counters = append(counters, line)
+		}
+	}
+	if len(counters) != 4 {
+		t.Fatalf("counter lines = %d, want 4:\n%s", len(counters), strings.Join(counters, "\n"))
+	}
+	if !sort.StringsAreSorted(counters) {
+		t.Errorf("counter lines are not sorted:\n%s", strings.Join(counters, "\n"))
+	}
+}
+
+// A PANICKING HANDLER MUST NOT BE RECORDED AS A SUCCESS. This is the regression
+// test for the worst bug this file had: RecoverPanics wraps Measure from the
+// OUTSIDE, so the 500 the client receives is written after this middleware's
+// defer has already run, on a different ResponseWriter. rec.status was
+// therefore still its 200 default, and a route panicking on every single
+// request reported a 100% success rate -- measured, not theorised: the client
+// got 500 while the exposition said status="200".
+func TestAPanickingHandlerIsRecordedAsFiveHundred(t *testing.T) {
+	m := NewHTTPMetrics()
+	inner := m.Measure(routeOf("/v1/boom"))(http.HandlerFunc(
+		func(http.ResponseWriter, *http.Request) { panic("handler exploded") }))
+	h := RecoverPanics(slog.New(slog.NewTextHandler(io.Discard, nil)), inner)
+
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/v1/boom", nil))
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("the client received %d, want 500 — the premise of this test is gone", rec.Code)
+	}
+	got := rendered(m)
+	if want := `margince_http_requests_total{route="/v1/boom",method="GET",status="500"} 1`; !strings.Contains(got, want) {
+		t.Errorf("exposition missing %q\n--- got ---\n%s", want, got)
+	}
+	if strings.Contains(got, `route="/v1/boom",method="GET",status="200"`) {
+		t.Error("a panicking handler was recorded as a 200")
+	}
+}
+
+// A handler that wrote a status and THEN panicked keeps what it wrote: the
+// client really did receive that status, and overriding it to 500 would be a
+// second wrong answer rather than a correction.
+func TestAHandlerThatAnsweredBeforePanickingKeepsItsStatus(t *testing.T) {
+	m := NewHTTPMetrics()
+	inner := m.Measure(routeOf("/v1/half"))(http.HandlerFunc(
+		func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusAccepted)
+			panic("exploded after answering")
+		}))
+	h := RecoverPanics(slog.New(slog.NewTextHandler(io.Discard, nil)), inner)
+	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/v1/half", nil))
+
+	if want := `margince_http_requests_total{route="/v1/half",method="POST",status="202"} 1`; !strings.Contains(rendered(m), want) {
+		t.Errorf("exposition missing %q\n--- got ---\n%s", want, rendered(m))
+	}
+}
+
+// LABEL VALUES MUST CARRY ONLY THE THREE ESCAPES PROMETHEUS DEFINES.
+//
+// %q was used here first, and Go's escaping is not Prometheus': %q also emits
+// \t, \r, \xNN and \uNNNN, which the parser rejects as an invalid escape
+// sequence -- and it rejects the WHOLE SCRAPE when it does, so one stray byte
+// in one label takes every family in this process off the dashboard at once.
+func TestLabelValuesUseOnlyPrometheusEscapes(t *testing.T) {
+	cases := map[string]string{
+		`/v1/plain`:         `"/v1/plain"`,
+		"/v1/with\"quote":   `"/v1/with\"quote"`,
+		`/v1/with\slash`:    `"/v1/with\\slash"`,
+		"/v1/with\nnewline": `"/v1/with\nnewline"`,
+		// Dropped rather than escaped: %q would have written \t and \x00 here,
+		// and neither is a legal Prometheus escape.
+		"/v1/with\ttab":    `"/v1/withtab"`,
+		"/v1/with\x00null": `"/v1/withnull"`,
+	}
+	for in, want := range cases {
+		if got := label(in); got != want {
+			t.Errorf("label(%q) = %s, want %s", in, got, want)
+		}
+	}
+}
+
+// The same, end to end: a hostile route reaching the store must not produce an
+// exposition carrying an escape Prometheus refuses.
+func TestAHostileRouteCannotBreakTheWholeScrape(t *testing.T) {
+	m := NewHTTPMetrics()
+	m.observe("/v1/\t\x01evil\"\\", http.MethodGet, 200, time.Millisecond)
+	got := rendered(m)
+	for _, illegal := range []string{`\t`, `\x`, `\u`, `\r`} {
+		if strings.Contains(got, illegal) {
+			t.Errorf("the exposition carries %q, which Prometheus rejects — and it rejects the whole scrape\n--- got ---\n%s", illegal, got)
+		}
+	}
+}
+
+// ONLY THE FIRST WriteHeader IS THE CLIENT'S STATUS. net/http sends one status
+// line and warns about the rest, so recording the last ATTEMPT reports a status
+// nobody received. A handler that answered 201 and then hit an error path
+// calling 500 was counted as a 500 the client never saw -- and the access log
+// said the same thing, since it shares this recorder.
+func TestOnlyTheFirstWrittenStatusIsRecorded(t *testing.T) {
+	m := NewHTTPMetrics()
+	h := m.Measure(routeOf("/v1/twice"))(http.HandlerFunc(
+		func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusCreated)
+			w.WriteHeader(http.StatusInternalServerError) // superfluous; never sent
+		}))
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/v1/twice", nil))
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("the client received %d, want 201 — the premise of this test is gone", rec.Code)
+	}
+	got := rendered(m)
+	if want := `margince_http_requests_total{route="/v1/twice",method="POST",status="201"} 1`; !strings.Contains(got, want) {
+		t.Errorf("exposition missing %q\n--- got ---\n%s", want, got)
+	}
+	if strings.Contains(got, `status="500"`) {
+		t.Error("a status the client never received was recorded")
 	}
 }

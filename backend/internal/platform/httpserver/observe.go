@@ -142,13 +142,32 @@ func AccessLog(log *slog.Logger, next http.Handler) http.Handler {
 }
 
 // statusRecorder captures the response status for the access log.
+//
+// wrote distinguishes "the handler answered 200" from "nobody answered": the
+// zero value of status has to be the 200 net/http sends for a handler that just
+// returns, so the field alone cannot tell those apart. The HTTP metrics need
+// that distinction to record a panicking handler honestly -- see Measure.
 type statusRecorder struct {
 	http.ResponseWriter
 	status int
+	wrote  bool
 }
 
+// WriteHeader records the FIRST status only, because that is the only one the
+// client receives: net/http sends one status line and logs a "superfluous
+// WriteHeader" for every call after it. Recording the last attempt instead --
+// which this did -- reports a status that was never sent. A handler that
+// answered 201 and then tried 500 on a later error path was logged, and
+// counted, as a 500 the client never saw.
+//
+// The call is still forwarded, so net/http's own warning is not suppressed:
+// a double WriteHeader is a handler bug, and hiding it here would remove the
+// one signal that says so.
 func (r *statusRecorder) WriteHeader(status int) {
-	r.status = status
+	if !r.wrote {
+		r.status = status
+		r.wrote = true
+	}
 	r.ResponseWriter.WriteHeader(status)
 }
 

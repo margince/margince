@@ -78,16 +78,34 @@ Operational endpoints (served next to `/v1`):
   | `margince_http_requests_in_flight` | gauge | — |
 
   **`route` is the matched route TEMPLATE, never the request path** —
-  `/v1/deals/{dealId}`, not `/v1/deals/9f3c…`. The path carries record ids, and
-  a label carrying ids grows one series per record for the life of the process.
-  A request that matched no route is counted under `route="unmatched"`, as one
-  series however many distinct paths it arrived on. The access log is the
-  opposite reading on purpose: it logs the real path, because a log line answers
-  "what did clients ask".
+  `/v1/deals/{id}`, not `/v1/deals/9f3c…`. The path carries record ids, and a
+  label carrying ids grows one series per record for the life of the process.
+  The access log is the opposite reading on purpose: it logs the real path,
+  because a log line answers "what did clients ask".
+
+  **What this section does NOT count, because the measurement sits inside the
+  router rather than in front of it.** It runs as chi *operation* middleware, so
+  it only sees a request that already matched a registered method and path:
+
+  - a **404** for an unrouted path, and a **405** for a method that route does
+    not serve — chi answers both itself, and neither enters a wrapper, so
+    scanner traffic is invisible here;
+  - a **400 from parameter parsing** — the generated wrapper binds path, query
+    and header parameters and calls its error handler *before* the middleware
+    chain, so a `GET /v1/deals/not-a-uuid` is a real client-visible 400 that
+    appears in neither family.
+
+  The access log carries all three. Counting them would mean instrumenting in
+  front of the router, where the route template is not yet known — which is why
+  the store has an `unmatched` bucket it can use, and why nothing on `/v1`
+  currently fills it.
 
   The measurement sits **outside** the admission gate, the idempotency replay
   and the overlay guard, so a `403` counts as that route's latency — which is
-  what a client experienced. `p95` over five minutes, per route:
+  what a client experienced. A handler that **panics** is recorded as `500`,
+  matching what `RecoverPanics` sends the client, and a handler that answered
+  and *then* panicked keeps the status it actually sent. `p95` over five
+  minutes, per route:
 
   ```promql
   histogram_quantile(0.95, sum by (route, le) (
