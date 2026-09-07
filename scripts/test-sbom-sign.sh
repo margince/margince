@@ -58,12 +58,12 @@ done
 log="$work/first.log"
 if ! run_sign "$log"; then fail "the first sbom-sign run did not succeed"; fi
 signed=$(grep -c . "$log" || true)
-[ "$signed" -eq 3 ] || fail "the first run signed $signed file(s), want 3 — an unsigned SBOM is the failure this target exists to prevent"
+[[ "$signed" -eq 3 ]] || fail "the first run signed $signed file(s), want 3 — an unsigned SBOM is the failure this target exists to prevent"
 
 log="$work/second.log"
 if ! run_sign "$log"; then fail "the re-run did not succeed"; fi
 signed=$(grep -c . "$log" || true)
-[ "$signed" -eq 0 ] || fail "the re-run signed $signed file(s) that already carry a current bundle — every one of those is a second permanent Rekor entry, and the first is left corroborating nothing"
+[[ "$signed" -eq 0 ]] || fail "the re-run signed $signed file(s) that already carry a current bundle — every one of those is a second permanent Rekor entry, and the first is left corroborating nothing"
 
 # An SBOM regenerated under its bundle IS signed again: the old bundle covers
 # bytes that are gone, and skipping there would publish a signature that
@@ -73,7 +73,7 @@ printf '{"changed":true}\n' >"$sboms/margince.cdx.json"
 log="$work/third.log"
 if ! run_sign "$log"; then fail "the run over a regenerated SBOM did not succeed"; fi
 signed=$(grep -c . "$log" || true)
-[ "$signed" -eq 1 ] || fail "a regenerated SBOM under an older bundle was signed $signed time(s), want 1 — its bundle covers bytes that no longer exist"
+[[ "$signed" -eq 1 ]] || fail "a regenerated SBOM under an older bundle was signed $signed time(s), want 1 — its bundle covers bytes that no longer exist"
 grep -q 'margince.cdx.json$' "$log" || fail "the run signed something other than the SBOM that changed"
 
 # An empty bundle is not a signature. A cancelled write can leave one.
