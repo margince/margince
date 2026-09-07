@@ -13,7 +13,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { EmailDetail } from "./emaildetail";
-import { EmailEntry } from "./emailentry";
+import { EmailEntry, EmailWords } from "./emailentry";
 import { EmailReference } from "./emailreference";
 
 // The row, the citation and the drawer, held to the promises the arrangement
@@ -94,6 +94,35 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+});
+
+describe("EmailWords", () => {
+  it("draws the server's preview and nothing around it", () => {
+    const { container } = wrap(<EmailWords summary={READABLE} />);
+    expect(
+      screen.getByText("Können wir Dienstag sprechen?"),
+    ).toBeInTheDocument();
+    // The words alone. A host mounting this has already drawn the sender and
+    // the time, so a second copy of either here is the defect the component
+    // exists to prevent.
+    expect(container.textContent).toBe("Können wir Dienstag sprechen?");
+  });
+
+  // The reason this lives beside EmailEntry rather than in the thread card.
+  // WITHHELD carries a preview on purpose, so a component that read the field
+  // instead of the rule would print it and this would fail.
+  it("prints nothing of a withheld message, whatever the summary carries", () => {
+    expect(WITHHELD.preview).toBeTruthy();
+    const { container } = wrap(<EmailWords summary={WITHHELD} />);
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("draws nothing when the sender wrote nothing", () => {
+    const { container } = wrap(
+      <EmailWords summary={{ ...READABLE, preview: null }} />,
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
 });
 
 describe("EmailEntry", () => {
