@@ -311,8 +311,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          # The contract-breaking gate and the strict lint's
-          # new-from-merge-base both diff against origin/main — a shallow
+          # The contract-breaking gate, the citation gate and the strict
+          # lint's new-from-merge-base all diff against origin/main — a shallow
           # checkout has no base ref and would silently disarm them.
           fetch-depth: 0
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
@@ -392,6 +392,7 @@ jobs:
           # In CI a missing base ref is a broken checkout, never a skip.
           CONTRACT_BREAKING_REQUIRE_BASE: "1"
           MIGRATION_VERSIONS_REQUIRE_BASE: "1"
+          CITATION_SCOPE_REQUIRE_BASE: "1"
           # A migration baseline consolidation reuses a namespace's lowest
           # versions under new names, which check-migration-versions.sh cannot
           # tell from the collision outage it exists to report. This declares
@@ -954,7 +955,7 @@ jobs:
           flavor: plain
       - name: Boot the dev stack and migrate
         run: make db-up && make migrate
-      # The deployment configuration (A107/ADR-0061): the api bootstraps the
+      # The deployment configuration (ADR-0061): the api bootstraps the
       # demo organization itself at boot; the credentials match seed-dev.sh's
       # demo defaults (admin@demo.test / demo-password-123 — throwaway CI-only
       # values, same posture as the compose stack's dev DSNs).
