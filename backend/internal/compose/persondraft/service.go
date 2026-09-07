@@ -185,8 +185,6 @@ func Wire(draft Draft, by crmcontracts.WrittenBy, voiceDegraded bool, lang strin
 		}
 		out.To = &to
 	}
-	// The DRAFT's language, not the server's: a German draft owes a German
-	// disclosure.
 	out.AiDisclosure = draftfloor.AIDisclosureFor(aiWritten, textlang.Lang(lang))
 	return out
 }

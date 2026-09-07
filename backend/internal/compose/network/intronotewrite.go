@@ -310,8 +310,6 @@ func wireIntroNote(
 		AiGenerated: &aiWritten,
 		Reasoning:   noteReasons(facts),
 	}
-	// The DRAFT's language, not the server's: a German draft owes a German
-	// disclosure.
 	out.AiDisclosure = draftfloor.AIDisclosureFor(aiWritten, noteLang(facts.lang))
 	return out
 }

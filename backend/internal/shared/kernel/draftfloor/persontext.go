@@ -176,8 +176,10 @@ func AIDisclosure(lang textlang.Lang) string {
 }
 
 // AIDisclosureFor answers the contract's optional disclosure field: the Art. 50
-// line in the draft's own language when a model wrote it, and nil when a person
-// did.
+// line when a model wrote the draft, and nil when a person did.
+//
+// The DRAFT's language, not the server's — a German draft owes a German
+// disclosure, and the caller passes the language the draft is written in.
 //
 // The pointer is why this exists beside AIDisclosure rather than at each
 // composer. Four of them stamp the field under the same condition, and the
