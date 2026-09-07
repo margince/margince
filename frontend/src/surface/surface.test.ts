@@ -55,12 +55,19 @@ describe("the published frontend surface", () => {
       "FactList",
       "Field",
       "RecordPicker",
+      // Row and Stack: the gap every other name on this list works around. A
+      // unit ships no stylesheet, so before these its only ways to separate two
+      // things were a bare div (no gap at all) and a core class name copied out
+      // of atoms.css. They publish the SCALE — `gap` names a token step — so a
+      // screen of core cards and unit rows is spaced by one system.
+      "Row",
       "SectionHeader",
       // SegmentedControl and TokenInput: a unit could offer a closed choice only
       // as a dropdown, and could collect a list only as comma-separated text.
       // Both already existed in core; neither was reachable from a unit.
       "SegmentedControl",
       "Select",
+      "Stack",
       "TextInput",
       "TokenInput",
       "TokenList",
