@@ -99,9 +99,10 @@ func (c Context) Block(fence promptfence.Fence) string {
 // without this a model writes the author's rhythm in its own vocabulary — and
 // the tell a reader notices first is a translated metaphor no native speaker
 // says.
-const VocabularyRule = "Vocabulary: use the words this author uses, including the terms they borrow from other languages. " +
+const VocabularyRule = "Vocabulary: within the draft's own output_language, use the words this author uses, including the terms they borrow from other languages. " +
 	"Keep a borrowed term in the form they write it — never translate a metaphor into a compound word native speakers do not say. " +
-	"When unsure a word is real in their language, use the plainer wording they would."
+	"Where the samples are in another language than the draft, take their register and directness and write the plain equivalent a native speaker of the draft's language would use: a phrase lifted across languages is the tell this rule exists to stop. " +
+	"When unsure a word is real in the draft's language, use the plainer wording they would."
 
 // SystemRule is what a voiced call's system turn says about the block arriving
 // in its user turn. Without it the model is handed a profile with no statement
@@ -110,7 +111,8 @@ const VocabularyRule = "Vocabulary: use the words this author uses, including th
 const SystemRule = `VOICE PROFILE
 The user turn carries the sender's own voice profile. It controls expression — rhythm, vocabulary, directness, sentence length, structure — and never facts.
 Obey its avoid rules. Treat its style metrics as limits, not targets.
-Where the profile and a grounding rule disagree, the grounding rule wins: a fact bent to fit a phrasing is the one error the sender cannot see before it goes out.`
+Where the profile and a grounding rule disagree, the grounding rule wins: a fact bent to fit a phrasing is the one error the sender cannot see before it goes out.
+The profile never chooses the LANGUAGE. Its samples are whatever their author happened to write, and a profile built from one language does not mean its owner writes only that language. Write in output_language even when every sample you were given is in another, and carry the profile across: rhythm, directness, sentence length and structure are the same person's in any language, and the words are not.`
 
 // Violations runs the deterministic floor over the two texts a draft is made
 // of, independently. Concatenation would hide a canned opener inside the body,

@@ -94,6 +94,27 @@ func (e ActivityKind) Valid() bool {
 	}
 }
 
+// Defines values for ActivityLanguage.
+const (
+	De ActivityLanguage = "de"
+	En ActivityLanguage = "en"
+	Vi ActivityLanguage = "vi"
+)
+
+// Valid indicates whether the value is a known member of the ActivityLanguage enum.
+func (e ActivityLanguage) Valid() bool {
+	switch e {
+	case De:
+		return true
+	case En:
+		return true
+	case Vi:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityMeetingStatus.
 const (
 	ActivityMeetingStatusBooked   ActivityMeetingStatus = "booked"
@@ -389,6 +410,11 @@ type Activity struct {
 	IsDone *bool        `json:"is_done,omitempty"`
 	Kind   ActivityKind `json:"kind"`
 
+	// Language What language this message is written in, read from its own text when it was captured. Null on a message whose text was too short to tell, on anything hand-logged, and on every row captured before this was recorded — all of which mean "not known", never "not any of these".
+	// A detector's observation, not a declaration by its author, and it describes the message rather than the person: the same contact writes in two languages and each message says which it is. A drafted reply follows it, so that a reply to an English thread is written in English whatever language its sender's own writing samples happen to be in.
+	// Withheld with the rest of the content: it is derived from the body, so a caller who may discover the row without reading it is not told this either.
+	Language *ActivityLanguage `json:"language,omitempty"`
+
 	// Links One activity may link to >1 entity (person + deal).
 	Links *[]ActivityLink `json:"links,omitempty"`
 
@@ -431,6 +457,11 @@ type ActivityDirection string
 
 // ActivityKind defines model for Activity.Kind.
 type ActivityKind string
+
+// ActivityLanguage What language this message is written in, read from its own text when it was captured. Null on a message whose text was too short to tell, on anything hand-logged, and on every row captured before this was recorded — all of which mean "not known", never "not any of these".
+// A detector's observation, not a declaration by its author, and it describes the message rather than the person: the same contact writes in two languages and each message says which it is. A drafted reply follows it, so that a reply to an English thread is written in English whatever language its sender's own writing samples happen to be in.
+// Withheld with the rest of the content: it is derived from the body, so a caller who may discover the row without reading it is not told this either.
+type ActivityLanguage string
 
 // ActivityMeetingStatus Set only when kind=meeting.
 type ActivityMeetingStatus string

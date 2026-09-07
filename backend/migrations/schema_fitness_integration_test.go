@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // TestSchema_amountMinorBaseHasOneWriter is the fitness function for the
@@ -548,5 +549,40 @@ func TestFK_rowScopedTargetsHaveVisibilityDecision(t *testing.T) {
 	}
 	if err := rows.Err(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// Every language the product ships is a language a captured message may
+// record.
+//
+// Derived from textlang.Shipped rather than listed, because the failure this
+// prevents is silent in the direction that matters: the CHECK admitted de and
+// en for as long as the product shipped Vietnamese too, so a detected
+// Vietnamese message could not be stored at all — and nothing said so, because
+// nothing wrote the column. A fourth language added to the Go list fails here
+// until the constraint admits it.
+func TestSchema_theLanguageCheckAdmitsEveryShippedLanguage(t *testing.T) {
+	owner, _ := dsns(t)
+	conn := connect(t, owner)
+	resetSchema(t, conn)
+	migrateAll(t, conn)
+
+	var definition string
+	if err := conn.QueryRow(context.Background(), `
+		SELECT pg_get_constraintdef(oid)
+		  FROM pg_constraint
+		 WHERE conname = 'activity_language_check'`).Scan(&definition); err != nil {
+		t.Fatalf("reading the language constraint: %v", err)
+	}
+	for _, lang := range textlang.Shipped {
+		if !strings.Contains(definition, "'"+string(lang)+"'") {
+			t.Errorf("the product ships %q but activity_language_check does not admit it, so a message in "+
+				"that language cannot record what it is written in: %s", lang, definition)
+		}
+	}
+	// NULL stays admitted: it is what every row captured before this carried,
+	// and what a message too short to tell still carries.
+	if !strings.Contains(definition, "IS NULL") {
+		t.Errorf("activity_language_check no longer admits NULL, which is what an unknown language records: %s", definition)
 	}
 }

@@ -39,7 +39,11 @@ type activityScan struct {
 	// assigneeID and hostUserID are typed ids in the row and openapi UUIDs on
 	// the record.
 	assigneeID, hostUserID *ids.UUID
-	kind                   string
+	// language is scanned as text and mapped to the contract enum: the column
+	// is a CHECK-constrained string, and a row written before the enum existed
+	// must not fail a read.
+	language *string
+	kind     string
 	// The nullable strings that become typed contract enums.
 	channelProvider, direction, meetingStatus, threadKey, captureLabel *string
 	// audienceReason says why a derived audience is what it is. It travels with
@@ -88,6 +92,7 @@ var activityProjection = []activityColumn{
 	{"a.source_system", func(s *activityScan) any { return &s.a.SourceSystem }},
 	{"a.source_id", func(s *activityScan) any { return &s.a.SourceId }},
 	{"a.source", func(s *activityScan) any { return &s.a.Source }},
+	{"a.language", func(s *activityScan) any { return &s.language }},
 	{"a.captured_by", func(s *activityScan) any { return &s.a.CapturedBy }},
 	{"a.version", func(s *activityScan) any { return &s.version }},
 	{"a.created_at", func(s *activityScan) any { return &s.a.CreatedAt }},
@@ -143,6 +148,9 @@ func (s *activityScan) record() crmcontracts.Activity {
 		// at the provider — goes; the markers stay.
 		state = crmcontracts.ActivityContentStateWithheld
 		a.Subject, a.Body, a.SourceId = nil, nil, nil
+		// The language too: it was read off the body, so answering it would
+		// tell a caller one fact about text they may not read.
+		a.Language = nil
 		threadKey, captureLabel, audienceReason = nil, nil, nil
 	}
 	a.ContentState = &state
@@ -153,6 +161,10 @@ func (s *activityScan) record() crmcontracts.Activity {
 	// meeting is a marker like its date and its direction, and a caller who may
 	// discover the row may know whose meeting it was.
 	a.HostUserId = uuidPtr(s.hostUserID)
+	if s.language != nil && s.contentAvailable {
+		lang := crmcontracts.ActivityLanguage(*s.language)
+		a.Language = &lang
+	}
 	a.Kind = crmcontracts.ActivityKind(s.kind)
 	a.ChannelProvider = s.channelProvider
 	if s.direction != nil {

@@ -155,6 +155,27 @@ func Detect(text string) Lang {
 	return winner(scoreStopwords(reply, lead))
 }
 
+// DetectFirst reports the language of the first text that yields one.
+//
+// The texts are the SAME message's, in descending order of how much evidence
+// each carries — a body before its subject, never one message before another.
+// Detect is deliberately biased toward Unknown (it wants three stopword hits
+// and a clear margin), so a two-line note falls through to the shorter text
+// rather than being guessed at, and a caller with nothing left decides for
+// itself what an unresolved language means.
+//
+// One helper rather than a ladder spelled per caller: the footer, the capture
+// writer and the drafting envelope all ask this same question, and three
+// copies of "body, then subject" is three chances to order them differently.
+func DetectFirst(texts ...string) Lang {
+	for _, text := range texts {
+		if lang := Detect(text); lang != Unknown {
+			return lang
+		}
+	}
+	return Unknown
+}
+
 // score is one language's evidence, counted two ways because the two bars ask
 // different questions. Hits asks "is there enough evidence to speak at all",
 // so every hit counts once wherever it sits. Weighted asks "which language is

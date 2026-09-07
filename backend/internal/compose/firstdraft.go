@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
+	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 )
 
@@ -64,7 +65,11 @@ func (d replyDrafter) DraftFirstEmail(ctx context.Context, intent string) (strin
 		return fallbackSubject, fallbackBody, nil
 	}
 	data := replyActivityData{
-		Envelope: d.envelope.Resolve(ctx, intent, state),
+		// A first message answers nothing, so there is no correspondence to
+		// read: the rep's typed intent is the only text, and it is far too
+		// short to clear the detector's bar. The base-language tier is what
+		// actually decides this surface.
+		Envelope: d.envelope.Resolve(ctx, draftfloor.Written{Body: intent}, state),
 		// Threaded is FALSE and the subject and body are empty, which is what
 		// makes this a first message rather than a reply with the evidence
 		// missing: nothing is being answered, so nothing may carry "Re:".

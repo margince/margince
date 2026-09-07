@@ -6,6 +6,7 @@ package compose
 // Binding the correspondence envelope every drafting surface is handed.
 
 import (
+	"context"
 	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -22,10 +23,18 @@ import (
 // all resolve the sender the same way, so a draft cannot be written as the
 // right person on one screen and as nobody on another.
 //
-// The sender is identity's, and it is the ONE thing here that reaches the
-// database. Everything else the resolver does is pure.
+// The sender and the installation's base language are identity's, and they are
+// the only things here that reach the database. Everything else the resolver
+// does is pure.
+//
+// The base language is the tier under the correspondence: a thread too short to
+// detect, and a FIRST message which has no correspondence at all, both land on
+// what the team said they work in rather than on English by default.
 func draftEnvelope(pool *pgxpool.Pool, log *slog.Logger) *draftfloor.Resolver {
 	return draftfloor.NewResolver().
 		WithSender(identity.NewService(pool)).
+		WithBaseLanguage(func(ctx context.Context) string {
+			return identity.BaseLanguageForPrompt(ctx, pool)
+		}).
 		WithLogger(log)
 }

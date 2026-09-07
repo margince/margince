@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -251,8 +252,8 @@ func (s *Sink) upsertActivity(
 	audience, audienceReason := birth.bornAudience()
 	var id ids.ActivityID
 	err := tx.QueryRow(ctx, `
-		INSERT INTO activity (kind, channel_provider, subject, body, occurred_at, direction, source_system, source_id, source, captured_by, thread_key, counterparty_email, counterparty_outbound_attested, bulk_mail_attested, audience, audience_reason, has_calendar_part, host_user_id)
-		VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), NULLIF($4, ''), $5, NULLIF($6, ''), $7, $8, $9, $10, NULLIF($11, ''), NULLIF($12, ''), $13, $14, $15, NULLIF($16, ''), $17, $18)
+		INSERT INTO activity (kind, channel_provider, subject, body, occurred_at, direction, source_system, source_id, source, captured_by, thread_key, counterparty_email, counterparty_outbound_attested, bulk_mail_attested, audience, audience_reason, has_calendar_part, host_user_id, language)
+		VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), NULLIF($4, ''), $5, NULLIF($6, ''), $7, $8, $9, $10, NULLIF($11, ''), NULLIF($12, ''), $13, $14, $15, NULLIF($16, ''), $17, $18, NULLIF($19, ''))
 		ON CONFLICT (source_system, source_id) WHERE source_system IS NOT NULL AND source_id IS NOT NULL
 		DO NOTHING
 		RETURNING id`,
@@ -284,7 +285,13 @@ func (s *Sink) upsertActivity(
 		fields.HasCalendarPart,
 		// Whose calendar a MEETING came off, so the brief lanes can say whose
 		// meeting a row is instead of offering every seat's to everybody.
-		meetingHostUserID(ctx, fields.Kind)).Scan(&id)
+		meetingHostUserID(ctx, fields.Kind),
+		// What language the message is written in, read from its own text at
+		// the moment it arrives. Body before subject: a reply's subject line is
+		// often still in the sender's language while the message under it is
+		// not. Unknown stores NULL, which is what every row carried before this
+		// and what the search index already treats as "no stemming".
+		string(textlang.DetectFirst(fields.Body, fields.Subject))).Scan(&id)
 	if err == nil {
 		// Field-level provenance (B-E02.12) for the content fields this
 		// capture set — same source/author the row itself carries.

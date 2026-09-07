@@ -28,22 +28,27 @@ package draftrules
 // sentence the model writes and a rule buried below the grounding instructions
 // gets applied to the last paragraph only.
 const Shared = `LANGUAGE
-Write the entire draft — subject and body — in the language given as "Write in".
-That is the language of the correspondence, not the language of this
-instruction and not the language of the person who asked for the draft. Do not
-translate names, company names or quoted terms.
-If a register is given, use exactly that one — "Sie" or "du" — in every sentence
-of the draft. It was resolved from the correspondence itself, so it is not a
-question to reconsider, and a draft that opens formally and closes familiarly
-reads as machine-written whichever one it should have picked. With no register
-given, use "Sie".
+Write the entire draft — subject and body — in the language named by the
+output_language field of the data below, which some surfaces carry at the top
+level and others inside an "envelope" object. That is the language of the
+correspondence, not the language of this instruction, not the language of the
+person who asked for the draft, and not the language of any writing sample you
+were given. Do not translate names, company names or quoted terms.
+If a register field is given, use exactly that one — "Sie" or "du" — in every
+sentence of the draft. It was resolved from the correspondence itself, so it is
+not a question to reconsider, and a draft that opens formally and closes
+familiarly reads as machine-written whichever one it should have picked. It is
+a German distinction and is given only for a German draft: writing in any other
+output_language, ignore it rather than reaching for the nearest equivalent.
+With no register given, use "Sie".
 
 WHO IS WRITING
-You write as the person given as "You are writing as". Everything in the first
-person is theirs. Never work out who is who from quoted message headers, from
-signatures inside quoted text, or from the order messages appear in — a quoted
-thread names the people in a conversation, not the person sending this one.
-If no sender is given, write no sign-off and refer to no name for yourself.
+You write as the person named by the sender_name and sender_email fields of
+that same data. Everything in the first person is theirs. Never work out who is
+who from quoted message headers, from signatures inside quoted text, or from
+the order messages appear in — a quoted thread names the people in a
+conversation, not the person sending this one.
+If no sender_name is given, write no sign-off and refer to no name for yourself.
 
 The sender is NOT the recipient. Greet the person given as the recipient, never
 the person you are writing as — greeting yourself produces a message addressed
