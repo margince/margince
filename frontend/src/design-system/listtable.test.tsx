@@ -1507,6 +1507,15 @@ describe("the applied filter row does not clip what it hosts", () => {
 
   // The row gave up its own clipping, so the rounding has to live on the
   // segments at each end. Without these the pill reads as a bare rectangle.
+  // The row is 30px tall and its segments take that height from it; the more
+  // segment sits in a wrapper that centres instead of stretching, so it has
+  // to claim the height itself or it is as tall as its glyph — and axe then
+  // refuses the leads page for a 15px pointer target (WCAG 2.2 AA, 2.5.8).
+  it("fills the row with the more segment, like the segment beside it", () => {
+    expect(declarationsFor(".lt-frow-seg")).toContain("height: 100%");
+    expect(declarationsFor(".lt-frow-more")).toContain("height: 100%");
+  });
+
   it("rounds the segments at each of its ends", () => {
     const left = declarationsFor(".lt-frow > :first-child");
     expect(left).toContain("border-top-left-radius: var(--r-full)");
