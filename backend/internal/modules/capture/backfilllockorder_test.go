@@ -46,6 +46,13 @@ var liveRunWrites = []string{
 
 const connectionLock = "lockConnectionTx"
 
+// backfillTable is what the lock must come before — ANY statement naming it,
+// not only the write. StartBackfill reads capture_backfill for the widen-only
+// rule before it inserts, and that read is part of the decision: a lock taken
+// between the two would serialize the insert while both transactions had
+// already seen the same page of history.
+const backfillTable = "capture_backfill"
+
 func TestEveryWriterOfALiveBackfillLocksTheConnectionFirst(t *testing.T) {
 	t.Parallel()
 	fset := token.NewFileSet()
@@ -68,11 +75,15 @@ func TestEveryWriterOfALiveBackfillLocksTheConnectionFirst(t *testing.T) {
 			if !ok || fn.Body == nil {
 				continue
 			}
-			writeAt, ok := firstLiveRunWrite(fn)
-			if !ok {
+			if !givesALiveRun(fn) {
 				continue
 			}
 			judged++
+			touchAt, touches := firstStatementNaming(fn, backfillTable)
+			if !touches {
+				t.Fatalf("%s: %s was judged a live-run writer and yet names no %s statement — the "+
+					"two readers of this file's source disagree", filepath.Join("internal/modules/capture", name), fn.Name.Name, backfillTable)
+			}
 			lockAt, locked := firstCallTo(fn, connectionLock)
 			switch {
 			case !locked:
@@ -80,7 +91,7 @@ func TestEveryWriterOfALiveBackfillLocksTheConnectionFirst(t *testing.T) {
 					"uq_capture_backfill_live is the only thing stopping a second live run, and the "+
 					"violation it raises is answerable on one of these paths and not the other",
 					filepath.Join("internal/modules/capture", name), fn.Name.Name, connectionLock)
-			case lockAt > writeAt:
+			case lockAt > touchAt:
 				t.Errorf("%s: %s takes %s AFTER it has already read or written capture_backfill. "+
 					"A lock taken after the decision serializes nothing — both transactions have "+
 					"already seen a connection with no live run",
@@ -97,9 +108,20 @@ func TestEveryWriterOfALiveBackfillLocksTheConnectionFirst(t *testing.T) {
 	}
 }
 
-// firstLiveRunWrite is the position of the earliest statement in this function
-// that gives a connection a live run.
-func firstLiveRunWrite(fn *ast.FuncDecl) (token.Pos, bool) {
+// givesALiveRun answers whether this function is one of the two that can put a
+// connection into the state uq_capture_backfill_live admits one of.
+func givesALiveRun(fn *ast.FuncDecl) bool {
+	for _, fragment := range liveRunWrites {
+		if _, found := firstStatementNaming(fn, fragment); found {
+			return true
+		}
+	}
+	return false
+}
+
+// firstStatementNaming is the position of the earliest SQL literal in this
+// function containing the given text.
+func firstStatementNaming(fn *ast.FuncDecl, want string) (token.Pos, bool) {
 	first, found := token.Pos(0), false
 	ast.Inspect(fn.Body, func(node ast.Node) bool {
 		// The literal's STRING, never its source text: a statement written in
@@ -114,13 +136,11 @@ func firstLiveRunWrite(fn *ast.FuncDecl) (token.Pos, bool) {
 		if !isString {
 			return true
 		}
-		for _, fragment := range liveRunWrites {
-			if !strings.Contains(text, fragment) {
-				continue
-			}
-			if !found || node.Pos() < first {
-				first, found = node.Pos(), true
-			}
+		if !strings.Contains(text, want) {
+			return true
+		}
+		if !found || node.Pos() < first {
+			first, found = node.Pos(), true
 		}
 		return true
 	})
