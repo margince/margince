@@ -68,10 +68,12 @@ type SiteRead struct {
 	// the terminal report is the authority once Status ends.
 	Phase     *string
 	PagesRead int
-	// LogoObjectKey addresses the mark the read resolved from the company's
-	// own site, parked on the dossier until a confirmation binds it to the
-	// record (RecordSiteReadLogo). Nil while none was resolved.
-	LogoObjectKey *string
+	// LogoObjectKey addresses the wide mark the read resolved from the
+	// company's own site, and LogoIconObjectKey the square badge beside it,
+	// each parked on the dossier until a confirmation binds it to the record
+	// (RecordSiteReadLogo). Nil while none was resolved for that slot.
+	LogoObjectKey     *string
+	LogoIconObjectKey *string
 	// Attempt is which claim of this read is current, and AttemptAt is when it
 	// became current. Attempt rises whenever a claim supersedes something other
 	// than a fresh queue — a deferral taken up again, a retryable failure tried
@@ -131,7 +133,7 @@ type SiteReadPerson struct {
 // scanSiteRead pairs with it positionally.
 const siteReadColumns = `id, organization_id, target_kind, seed_url, status, status_code, status_detail, next_attempt_at, pages, skipped,
 	stopped_reason, fact_count, proposal_ids, requested_by, profile_fields, facts, people, legal_entities, warnings,
-	draft_version, proposal_hash, phase, pages_read, logo_object_key, attempt, attempt_at,
+	draft_version, proposal_hash, phase, pages_read, logo_object_key, logo_icon_object_key, attempt, attempt_at,
 	created_at, updated_at, started_at, first_grounded_at, finished_at, confirmed_at`
 
 // siteReadOrgKey names the audit payload's org reference once (the goconst
@@ -437,7 +439,7 @@ func scanSiteRead(row pgx.Row) (SiteRead, error) {
 		&sr.StatusCode, &sr.StatusDetail, &sr.NextAttemptAt, &pagesRaw, &skippedRaw,
 		&sr.StoppedReason, &sr.FactCount, &sr.ProposalIDs, &sr.RequestedBy,
 		&profileRaw, &factsRaw, &peopleRaw, &entitiesRaw, &warningsRaw, &sr.DraftVersion, &sr.ProposalHash,
-		&sr.Phase, &sr.PagesRead, &sr.LogoObjectKey, &sr.Attempt, &sr.AttemptAt,
+		&sr.Phase, &sr.PagesRead, &sr.LogoObjectKey, &sr.LogoIconObjectKey, &sr.Attempt, &sr.AttemptAt,
 		&sr.CreatedAt, &sr.UpdatedAt, &sr.StartedAt, &sr.FirstGroundedAt, &sr.FinishedAt, &sr.ConfirmedAt); err != nil {
 		return SiteRead{}, err
 	}

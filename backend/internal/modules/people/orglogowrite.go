@@ -15,7 +15,8 @@ package people
 // WHICH SLOT IS A PARAMETER, NOT A SECOND STATEMENT. Six writers reach these
 // four columns: a person setting the installation's wordmark and the same
 // person taking it off, the same pair again for the badge, a website resolve,
-// and a site-read confirmation adopting what it found. Every one of them used
+// and a site-read confirmation adopting what it found — in both slots, for the
+// cold start that resolved a badge beside the lockup. Every one of them used
 // to be a candidate for its own copy of this UPDATE, and copies agree right up
 // until one of them is edited. The CASE arms are what a bind parameter costs
 // here, and they buy a statement that no writer can spell differently.
@@ -64,12 +65,14 @@ type LogoSlot int
 
 const (
 	// LogoWide is the lockup an expanded sidebar and a record page have room
-	// for. It is the mark a website read resolves, and the one every
+	// for. It is the mark every website read resolves, and the one every
 	// organization can wear.
 	LogoWide LogoSlot = iota
 	// LogoIcon is the square badge a collapsed 56px rail draws. Only the
-	// installation's own company wears one today, and only from an upload —
-	// no read resolves one, so this slot has no machine writer to hold off.
+	// installation's own company wears one today: the cold-start read resolves
+	// it from the site's icons beside the lockup (compose/sitelockup.go), and
+	// a person's upload replaces it — so this slot obeys the same
+	// human-precedence rule the wide one does.
 	LogoIcon
 )
 
@@ -85,6 +88,11 @@ const logoFieldName = "logo"
 // leave a reader unable to tell which picture moved.
 // Held by: TestAClaimedSpellingIsTheOnlySpellingWhereItIsUsed (backend/gates/claimedspelling_test.go)
 const logoIconFieldName = "logo_icon"
+
+// String is how the slot is named to a person — in a log line, an error — and
+// it is the field's own spelling, so the name a reader sees is the one they can
+// grep for in the record of a change.
+func (s LogoSlot) String() string { return s.field() }
 
 // wide is the slot as the statements above take it — a named method rather than
 // a `slot == LogoWide` comparison at each call site, because that comparison IS

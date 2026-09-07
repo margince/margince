@@ -72,6 +72,12 @@ func TestSiteReadDebugReportsPagesLanesAndProposal(t *testing.T) {
 	if len(report.Logo.Candidates) != 1 || report.Logo.Candidates[0].Outcome != logoOutcomeChosen {
 		t.Fatalf("candidates = %+v, want the chosen icon", report.Logo.Candidates)
 	}
+	// The page declared no lockup, so the icon serves both widths from the wide
+	// slot and the badge slot's report says so rather than staying blank.
+	if report.LogoIcon.SourceURL != "" || len(report.LogoIcon.Candidates) != 1 ||
+		report.LogoIcon.Candidates[0].Outcome != badgeOutcomeIsTheWideMark {
+		t.Fatalf("logo icon = %+v, want no badge and the reason", report.LogoIcon)
+	}
 
 	byName := map[string]DebugField{}
 	for _, f := range report.Extraction.Fields {

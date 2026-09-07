@@ -42,8 +42,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// touchIconURL is the mark acme.example declares on its landing page.
-const touchIconURL = seedURL + "/touch.png"
+// touchIconURL is the icon acme.example declares on its landing page, and
+// wordmarkURL the wide lockup the page labels as its logo.
+const (
+	touchIconURL = seedURL + "/touch.png"
+	wordmarkURL  = seedURL + "/brand/wordmark.png"
+)
 
 // onboardingLogoWorker builds the logo lane over a fake site and an in-memory
 // object store — the worker as the onboarding read runs it, minus the crawl.
@@ -55,7 +59,7 @@ func onboardingLogoWorker(e *integration.Env, site *assetSite, blob blobstore.St
 }
 
 // declaringCrawl is what the seed page declared, as the crawl carries it into
-// the logo lane.
+// the logo lane: an icon, and no lockup.
 func declaringCrawl() siteCrawl {
 	return siteCrawl{
 		SeedURL: seedURL,
@@ -65,9 +69,24 @@ func declaringCrawl() siteCrawl {
 	}
 }
 
+// declaringBothMarks is a seed page that declares its icon AND labels its
+// wordmark as its logo — the site the two-slot cold start exists for.
+func declaringBothMarks() siteCrawl {
+	crawl := declaringCrawl()
+	crawl.SeedAssets.logos = []string{wordmarkURL}
+	return crawl
+}
+
 // readTheOnboardingSite starts the unbound dossier, claims it the way the
-// worker does, and runs the logo lane over the seed page's declarations.
+// worker does, and runs the logo lane over an icon-only seed page.
 func readTheOnboardingSite(t *testing.T, e *integration.Env, w *siteDeepReadWorker) SiteDeepReadArgs {
+	t.Helper()
+	return readTheOnboardingSiteDeclaring(t, e, w, declaringCrawl())
+}
+
+// readTheOnboardingSiteDeclaring is readTheOnboardingSite over the seed page a
+// case describes.
+func readTheOnboardingSiteDeclaring(t *testing.T, e *integration.Env, w *siteDeepReadWorker, crawl siteCrawl) SiteDeepReadArgs {
 	t.Helper()
 	read, joined, err := e.People.StartOnboardingSiteRead(
 		e.As(e.Rep1, nil, integration.AdminPerms), seedURL, "human:"+e.Rep1.String(), nil)
@@ -83,7 +102,7 @@ func readTheOnboardingSite(t *testing.T, e *integration.Env, w *siteDeepReadWork
 	if err != nil {
 		t.Fatalf("claim the onboarding read: %v", err)
 	}
-	w.resolveLogo(workerCtx, args, claim, declaringCrawl())
+	w.resolveLogo(workerCtx, args, claim, crawl)
 	return args
 }
 
@@ -155,14 +174,26 @@ func confirmTheAnchorAsTheAPIDoes(t *testing.T, e *integration.Env, engine *deep
 	return ids.From[ids.OrganizationKind](ids.UUID(confirmed.OrganizationId))
 }
 
-// parkedLogo answers what the dossier is holding for the confirmation.
+// parkedLogo answers what the dossier is holding for the confirmation in the
+// wide slot.
 func parkedLogo(t *testing.T, e *integration.Env, readID ids.UUID) (key, origin *string) {
 	t.Helper()
+	return parkedMark(t, e, readID, people.LogoWide)
+}
+
+// parkedMark answers what the dossier is holding for the confirmation in one
+// slot.
+func parkedMark(t *testing.T, e *integration.Env, readID ids.UUID, slot people.LogoSlot) (key, origin *string) {
+	t.Helper()
+	columns := "logo_object_key, logo_origin"
+	if slot == people.LogoIcon {
+		columns = "logo_icon_object_key, logo_icon_origin"
+	}
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT logo_object_key, logo_origin FROM site_read WHERE id = $1`, readID).Scan(&key, &origin)
+			`SELECT `+columns+` FROM site_read WHERE id = $1`, readID).Scan(&key, &origin)
 	}); err != nil {
-		t.Fatalf("reading the dossier's logo: %v", err)
+		t.Fatalf("reading the dossier's %s: %v", slot, err)
 	}
 	return key, origin
 }
@@ -556,7 +587,7 @@ func TestADossierThatEndedRefusesALateParkedMark(t *testing.T) {
 			args, claim := endedOnboardingRead(t, e, status)
 			workerCtx := deepReadWorkerCtx(context.Background(), args)
 			late := siteReadLogoKey(ids.From[ids.WorkspaceKind](e.WS), args.SiteReadID)
-			recorded, superseded, err := e.People.RecordSiteReadLogo(workerCtx, args.SiteReadID, claim.ClaimedAt, late, touchIconURL)
+			recorded, superseded, err := e.People.RecordSiteReadLogo(workerCtx, args.SiteReadID, claim.ClaimedAt, people.LogoWide, late, touchIconURL)
 			if err != nil {
 				t.Fatalf("parking a mark on a %s read: %v", status, err)
 			}
@@ -626,7 +657,7 @@ func TestOnlyTheAttemptHoldingTheReadParksItsMark(t *testing.T) {
 	current := reclaimTheRead(t, e, args)
 
 	held := siteReadLogoKey(ids.From[ids.WorkspaceKind](e.WS), args.SiteReadID)
-	recorded, superseded, err := e.People.RecordSiteReadLogo(workerCtx, args.SiteReadID, current.ClaimedAt, held, touchIconURL)
+	recorded, superseded, err := e.People.RecordSiteReadLogo(workerCtx, args.SiteReadID, current.ClaimedAt, people.LogoWide, held, touchIconURL)
 	if err != nil {
 		t.Fatalf("the holding attempt parking its mark: %v", err)
 	}
@@ -635,7 +666,7 @@ func TestOnlyTheAttemptHoldingTheReadParksItsMark(t *testing.T) {
 	}
 
 	late := siteReadLogoKey(ids.From[ids.WorkspaceKind](e.WS), args.SiteReadID)
-	recorded, superseded, err = e.People.RecordSiteReadLogo(workerCtx, args.SiteReadID, stalled.ClaimedAt, late, seedURL+"/stale.png")
+	recorded, superseded, err = e.People.RecordSiteReadLogo(workerCtx, args.SiteReadID, stalled.ClaimedAt, people.LogoWide, late, seedURL+"/stale.png")
 	if err != nil {
 		t.Fatalf("the stalled attempt parking its mark: %v", err)
 	}
@@ -715,11 +746,14 @@ func anchorWearingAPersonsMark(t *testing.T, e *integration.Env, blob blobstore.
 }
 
 // rowsNaming counts every row that could still lead something back to an
-// object — the dossiers that parked it and the companies that wear it.
+// object — the dossiers that parked it and the companies that wear it, in
+// either slot.
 func rowsNaming(t *testing.T, e *integration.Env, key string) int {
 	t.Helper()
-	return e.WsCount(t, `SELECT count(*) FROM site_read WHERE logo_object_key = $1`, key) +
-		e.WsCount(t, `SELECT count(*) FROM organization WHERE logo_object_key = $1`, key)
+	return e.WsCount(t, `SELECT count(*) FROM site_read
+			WHERE logo_object_key = $1 OR logo_icon_object_key = $1`, key) +
+		e.WsCount(t, `SELECT count(*) FROM organization
+			WHERE logo_object_key = $1 OR logo_icon_object_key = $1`, key)
 }
 
 // readTheAnchorsSiteFor runs the logo lane over the seed page and answers the

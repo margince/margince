@@ -5165,6 +5165,8 @@ public.site_read.finished_at timestamp with time zone gen=- def=-
 public.site_read.first_grounded_at timestamp with time zone gen=- def=-
 public.site_read.id uuid NOT NULL gen=- def=uuidv7()
 public.site_read.legal_entities jsonb NOT NULL gen=- def='[]'::jsonb
+public.site_read.logo_icon_object_key text gen=- def=-
+public.site_read.logo_icon_origin text gen=- def=-
 public.site_read.logo_object_key text gen=- def=-
 public.site_read.logo_origin text gen=- def=-
 public.site_read.next_attempt_at timestamp with time zone gen=- def=-

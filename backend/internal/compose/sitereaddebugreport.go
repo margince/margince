@@ -92,13 +92,13 @@ type DebugDrop struct {
 	Reason          string `json:"reason"`
 }
 
-// DebugLogo is what the visual-identity lane made of the seed page: the mark
-// it chose, and every candidate it tried with what became of each. The
-// candidate list is the tuning signal — when a company's face comes out wrong,
-// what you need is why the obvious logo was passed over.
+// DebugLogo is what the visual-identity lane made of the seed page for ONE
+// slot: the mark it chose, and every candidate it tried with what became of
+// each. The candidate list is the tuning signal — when a company's face comes
+// out wrong, what you need is why the obvious logo was passed over.
 type DebugLogo struct {
 	// SourceURL is the asset the chosen mark came from; empty when the chain
-	// yielded nothing usable and the record would keep its monogram.
+	// yielded nothing usable and the slot would stay empty.
 	SourceURL string `json:"source_url,omitempty"`
 	// SourceSize is the chosen source's own dimensions ("512x512").
 	SourceSize string `json:"source_size,omitempty"`

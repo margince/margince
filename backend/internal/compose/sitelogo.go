@@ -16,7 +16,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"log/slog"
 	"strings"
 	"time"
 
@@ -102,12 +101,17 @@ func siteReadLogoKey(wsID ids.WorkspaceID, readID ids.UUID) string {
 	return blobstore.WorkspaceKey(wsID, organizationLogoKind, "site-read/"+readID.String()+"/"+ids.NewV7().String())
 }
 
-// declaredAssets is the visual identity one page declared in its <head>. The
-// crawl carries the seed page's set forward so the resolve reads it instead of
-// fetching the home page a second time.
+// declaredAssets is the visual identity one page declared: the sharing card
+// and the icons its <head> named, and the pictures the page itself calls its
+// logo. The crawl carries the seed page's set forward so the resolve reads it
+// instead of fetching the home page a second time.
 type declaredAssets struct {
 	ogImage string
 	icons   []webread.IconRef
+	// logos is what the page calls its LOGO — the lockup, where icons are the
+	// badge (webread.Page.Logos). Only the cold-start read spends a fetch on
+	// them (sitelockup.go).
+	logos []string
 }
 
 // assetFetcher is the slice of *webread.Fetcher the logo resolve needs.
@@ -127,6 +131,20 @@ type resolvedLogo struct {
 	SourceWidth  int
 	SourceHeight int
 }
+
+// aspect is the source's long side over its short side — 1 for a square, the
+// same ratio the chain ranks candidates by.
+func (l resolvedLogo) aspect() float64 {
+	short, long := min(l.SourceWidth, l.SourceHeight), max(l.SourceWidth, l.SourceHeight)
+	if short <= 0 {
+		return 0
+	}
+	return float64(long) / float64(short)
+}
+
+// square reports whether the mark is square enough to be a badge — the same
+// test the chain takes a candidate on sight by.
+func (l resolvedLogo) square() bool { return l.aspect() <= logoSquareAspect }
 
 // logoAttempt is what became of one candidate.
 type logoAttempt struct {
@@ -215,14 +233,17 @@ func fetchLogoCandidate(ctx context.Context, fetch assetFetcher, rawURL string) 
 	return resolvedLogo{PNG: png, SourceURL: rawURL, SourceWidth: width, SourceHeight: height}, aspect, ""
 }
 
-// resolveLogo gives the company its face: resolve the mark from what the seed
-// page declared, store the normalized bytes, then point a row at them.
+// resolveLogo gives the company its face: resolve the mark(s) from what the
+// seed page declared, store the normalized bytes, then point a row at them.
 //
-// WHICH row depends on whether the company exists yet. An enrichment read has
-// its organization and names it directly. An onboarding read does not — it
-// reads the installation's own website to propose the anchor a human then
-// confirms into being — so the reference waits on the dossier until that
-// confirmation claims it (recordDossierLogo). Both resolve from the same
+// WHICH row — and HOW MANY marks — depends on whether the company exists yet.
+// An enrichment read has its organization and names it directly, and it
+// resolves ONE mark: the square-preferring one every record card draws as an
+// avatar. An onboarding read does not — it reads the installation's own website
+// to propose the anchor a human then confirms into being — so its references
+// wait on the dossier until that confirmation claims them (recordDossierLogo),
+// and it resolves TWO, because the anchor is the one company the chrome draws
+// at two widths (resolveDossierMarks). Both paths resolve from the same
 // declarations on the same page, because the alternative for the anchor is no
 // logo at all: nothing else ever offers this company one.
 //
@@ -258,6 +279,10 @@ func (w *siteDeepReadWorker) resolveLogo(ctx context.Context, args SiteDeepReadA
 	ctx, cancel := context.WithTimeout(ctx, logoLaneBudget)
 	defer cancel()
 
+	if claim.OrganizationID == nil {
+		w.resolveDossierMarks(ctx, args, claim, crawl)
+		return
+	}
 	// claim.SeedURL is the spelling that ANSWERED — the deep read replaces it
 	// with the crawl's own once the crawl returns, so /favicon.ico is never
 	// guessed under a host that served nothing.
@@ -268,15 +293,10 @@ func (w *siteDeepReadWorker) resolveLogo(ctx context.Context, args SiteDeepReadA
 			"candidates", logoAttemptSummary(attempts))
 		return
 	}
-
 	// Bytes first, row second: the other order would point a row at bytes that
 	// are not there, which is the one outcome a user would see.
 	key := w.storeResolvedLogo(ctx, args, claim, logo)
 	if key == "" {
-		return
-	}
-	if claim.OrganizationID == nil {
-		w.recordDossierLogo(ctx, args.SiteReadID, claim, key, logo, attempts)
 		return
 	}
 	w.recordOrganizationLogo(ctx, args.SiteReadID,
@@ -334,59 +354,36 @@ func (w *siteDeepReadWorker) recordOrganizationLogo(ctx context.Context, readID 
 		"stored_bytes", len(logo.PNG), "candidates", logoAttemptSummary(attempts))
 }
 
-// recordDossierLogo parks the mark on the read that resolved it, for a company
-// that does not exist yet. The confirmation binds it as it creates the anchor,
-// under the same human-precedence rule an organization write obeys; a read
-// nobody confirms simply never hands it over.
+// recordDossierLogo parks one of the marks on the read that resolved it, for a
+// company that does not exist yet. The confirmation binds it as it creates the
+// anchor, under the same human-precedence rule an organization write obeys; a
+// read nobody confirms simply never hands it over.
 //
 // The park carries the lease this attempt claimed the read under, so a dossier
 // that has moved on — ended, or reclaimed by a replacement attempt — refuses
 // the reference. The bytes stored for a refused park are collected right here:
 // an object no row names is one nothing can find to collect later, so the
 // attempt that stored it is the last chance it gets.
-func (w *siteDeepReadWorker) recordDossierLogo(ctx context.Context, readID ids.UUID, claim people.SiteReadClaim, key string, logo resolvedLogo, attempts []logoAttempt) {
-	recorded, superseded, err := w.people.RecordSiteReadLogo(ctx, readID, claim.ClaimedAt, key, logo.SourceURL)
+func (w *siteDeepReadWorker) recordDossierLogo(ctx context.Context, readID ids.UUID, claim people.SiteReadClaim, slot people.LogoSlot, key string, logo resolvedLogo, attempts []logoAttempt) {
+	recorded, superseded, err := w.people.RecordSiteReadLogo(ctx, readID, claim.ClaimedAt, slot, key, logo.SourceURL)
 	if err != nil {
 		// Kept for the same reason the organization write keeps its bytes: a
 		// failed call is not a write that did not happen.
 		w.log.WarnContext(ctx, "recording the resolved logo on the dossier failed; its bytes are left in place because the write's outcome is unknown",
-			"read", readID.String(), "source", logo.SourceURL, "key", key, "err", err)
+			"read", readID.String(), "slot", slot.String(), "source", logo.SourceURL, "key", key, "err", err)
 		return
 	}
 	if !recorded {
 		w.reclaimLogoObject(ctx, readID, &key)
 		w.log.InfoContext(ctx, "resolved logo left unused: the website read is past taking one — it has its company, it has already reported, or another attempt holds it now",
-			"read", readID.String(), "source", logo.SourceURL)
+			"read", readID.String(), "slot", slot.String(), "source", logo.SourceURL)
 		return
 	}
 	w.reclaimLogoObject(ctx, readID, superseded)
-	w.log.InfoContext(ctx, "site read resolved the logo the confirmed company will wear",
-		"read", readID.String(), "source", logo.SourceURL,
+	w.log.InfoContext(ctx, "site read resolved a mark the confirmed company will wear",
+		"read", readID.String(), "slot", slot.String(), "source", logo.SourceURL,
 		"source_size", fmt.Sprintf("%dx%d", logo.SourceWidth, logo.SourceHeight),
 		"stored_bytes", len(logo.PNG), "candidates", logoAttemptSummary(attempts))
-}
-
-// reclaimParkedLogo collects the mark a read parked and can no longer hand to
-// anybody. The onboarding lane stores its bytes while the page is still in
-// hand, long before the confirmation that would adopt them exists; a read that
-// ends without a dossier never reaches that confirmation, and the reference on
-// the dossier row is the only thing that can still find the object.
-//
-// Best-effort like the rest of the lane, and for a sharper reason here: the
-// read has already failed, and storage is not worth failing it a second time.
-// The store answers only with a key no record names, so nothing on this path
-// can delete bytes a company wears.
-func (w *siteDeepReadWorker) reclaimParkedLogo(ctx context.Context, readID ids.UUID) {
-	if w.blob == nil {
-		return
-	}
-	key, err := w.people.DiscardSiteReadLogo(ctx, readID)
-	if err != nil {
-		w.log.WarnContext(ctx, "dropping the logo parked on a read that ended without a company failed",
-			"read", readID.String(), "err", err)
-		return
-	}
-	w.reclaimLogoObject(ctx, readID, key)
 }
 
 // logoWorthResolving asks before resolving anything: a field a person holds is
@@ -421,46 +418,6 @@ func debugLogo(logo resolvedLogo, attempts []logoAttempt) DebugLogo {
 		out.StoredBytes = len(logo.PNG)
 	}
 	return out
-}
-
-// reclaimLogoObject deletes an object nothing references any more: the mark a
-// successful write superseded, this attempt's own bytes when the write did not
-// happen, or the mark a confirmation declined to adopt. Best-effort like the
-// rest of the lane — a failure here costs storage, never correctness, so it is
-// logged and the caller carries on.
-//
-// It runs on a DETACHED context, for the same reason finish() does: this is
-// the answer to work that has already happened, and the most likely reason to
-// be reclaiming at all is that the work ran out of time. Reusing the context
-// that just expired would skip exactly the deletes that matter — and an
-// object at a per-attempt key that no row ever named is one nothing else can
-// find to collect later.
-//
-// A nil store is a role that holds no objects; it never reaches a key worth
-// collecting, because the row-writing calls that report one are guarded by the
-// same fact.
-//
-// `subject` names what the collection belongs to — the dossier a resolve ran
-// for, or the company a person's own write superseded a mark on. It is a
-// caller's string rather than a read id because the upload path has no read:
-// the detached-context rule above is the invariant, and a second copy of it
-// spelled for uploads is how one of the two paths quietly loses it.
-func deleteUnreferencedLogo(ctx context.Context, blob blobstore.Store, log *slog.Logger, subject string, key *string) {
-	if blob == nil || key == nil || *key == "" {
-		return
-	}
-	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), logoReclaimBudget)
-	defer cancel()
-	if err := blob.Delete(ctx, *key); err != nil {
-		log.WarnContext(ctx, "reclaiming an unreferenced logo object failed",
-			"subject", subject, "key", *key, "err", err)
-	}
-}
-
-// reclaimLogoObject binds the worker's own object store and logger to the
-// collection every write path in this lane ends with.
-func (w *siteDeepReadWorker) reclaimLogoObject(ctx context.Context, readID ids.UUID, key *string) {
-	deleteUnreferencedLogo(ctx, w.blob, w.log, "read "+readID.String(), key)
 }
 
 // logoAttemptSummary renders the attempts as one log-friendly line, so a
