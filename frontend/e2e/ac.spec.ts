@@ -511,10 +511,16 @@ test("AC-pipeline-7: board↔table swaps views preserving the deal set", async (
   // card for this deal is on the board", not "this text is the card".
   const boardCard = page.locator('[data-deal="d-fleet"]');
   await expect(boardCard).toBeVisible();
-  // The card IS the link — `data-deal` sits on the anchor — and the role is
-  // asserted rather than assumed, because that is the behaviour the change
-  // bought: a middle-click and an open-in-new-tab on a deal card.
-  await expect(boardCard).toHaveRole("link");
+  // The card HOLDS the link rather than being one. It carries two
+  // destinations now — the deal and the company behind it — and an anchor
+  // inside an anchor is invalid markup the browser unnests, so the deal's link
+  // is stretched over the card instead of wrapped around it.
+  //
+  // The link is still asserted, because it is the behaviour worth having: a
+  // middle-click and an open-in-new-tab on a deal card. It is asserted on the
+  // anchor that carries it, which is what a reader actually presses.
+  const boardLink = boardCard.getByRole("link", { name: /Fleet retrofit/ });
+  await expect(boardLink).toHaveAttribute("href", /#\/deals\/d-fleet/);
   await expect(boardCard).toContainText("Fleet retrofit");
   await page.getByRole("button", { name: "Tabelle" }).click();
   // The board is gone, so its card locator is the proof the view swapped
@@ -2314,10 +2320,11 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
     // and reaching it STOPS the withdrawal — a control that walks out from
     // under the focus ring three and a half seconds after a reader tabbed to it
     // is a control they cannot use (WCAG 2.2.1).
-    // A BUTTON, not a link: `EntityRef` opens the record through the app's own
-    // hash router rather than by navigating, so what the message carries is a
-    // control. Which is the point — it is focusable either way.
-    const carried = said.getByRole("button").first();
+    // A LINK: `EntityRef` is an anchor over the app's own hash route, so the
+    // record opens the ways a link does — a new tab, a bookmark, the keyboard.
+    // Which is the point here — it is focusable either way, and this test is
+    // about whether a keyboard reader can reach it and keep it.
+    const carried = said.getByRole("link").first();
     await carried.focus();
     await expect(carried).toBeFocused();
     await page.waitForTimeout(4000);
