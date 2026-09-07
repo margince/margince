@@ -8,6 +8,12 @@
 # offender with its frozen line count. A waived file may shrink but never
 # grow past its recorded count; once it drops to the cap or below, its entry
 # must be REMOVED so the file is back under the hard cap for good.
+#
+# THE COUNT IS `wc -l`. craft static's large-file check holds this same cap over
+# these same files, and countLines in cli/craft/static/runner.go is written to
+# answer the number this awk reads. Two gates over one cap that cannot share a
+# helper across bash and Go, so each names the other: a file at exactly the cap
+# must pass BOTH, which holds only while both count alike.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

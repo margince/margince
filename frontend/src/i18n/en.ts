@@ -985,6 +985,21 @@ export const en = {
   "timeline.group.collapse": "Close",
   "timeline.group.openThread": "View the whole thread",
   "timeline.group.mayContinue": "may continue earlier",
+  // A thread on the chronology is one card: the kind, the count and who was
+  // on it over the subject, then each message with who wrote it and when.
+  "timeline.group.kind": "Thread",
+  "timeline.group.earlier_other": "Show {count} earlier messages",
+  "timeline.group.earlier_one": "Show {count} earlier message",
+  "timeline.group.hideEarlier": "Hide earlier messages",
+  // Who a message in a thread is from, as an actor and a verb: "Ida Keller
+  // wrote", "We sent to Ida Keller". "We" rather than a name, because a
+  // captured mail names the other side and not which seat sent it.
+  "timeline.thread.wrote": "wrote",
+  "timeline.thread.you": "You",
+  "timeline.thread.we": "We",
+  "timeline.thread.them": "Them",
+  "timeline.thread.sentTo": "sent to {who}",
+  "timeline.thread.sent": "sent",
   "timeline.filters.kind": "Activity kind",
   "timeline.filters.kind.all": "All kinds",
   "timeline.filters.kind.email": "Email",
