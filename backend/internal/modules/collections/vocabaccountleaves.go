@@ -53,13 +53,26 @@ var relationshipTypeField = storekit.Field{
 // naming it would otherwise keep selecting on a fact somebody deliberately
 // removed.
 //
-// FieldText rather than a picklist: a domain is free text with no enum to
-// compare against, and the column is stored lower-cased (org_domain_norm), so a
-// caller's value matches the stored form only when they spell it the same way.
-// That is the same contract every other text leaf here offers.
+// FieldDomain rather than text, and that is the difference between this leaf
+// answering the question and merely accepting it. The column stores a host, and
+// a caller pasting `https://www.acme.example/careers` out of an email signature
+// is asking about `acme.example` — the organization LIST has folded its own
+// `domain` parameter that way all along, so a text leaf here made one product
+// fact answer two different questions depending on which surface asked.
+//
+// It also settles the operators: `contains` is not offered, because folding a
+// fragment to a host and then substring-matching it would answer something
+// nobody asked. Equality, membership and presence are what a normalized value
+// can honestly support.
+//
+// One difference from the list parameter, stated because it is real rather than
+// an oversight: liveness. The list's domain clause follows the caller's
+// `include_archived`; this engine's BaseWhere pins `archived_at IS NULL`
+// unconditionally, so the leaf answers over live accounts. That is consistent
+// with every other leaf on this engine, which is the property worth keeping.
 var domainField = storekit.Field{
 	Expr: "od.domain",
-	Type: storekit.FieldText,
+	Type: storekit.FieldDomain,
 	Link: "EXISTS (SELECT 1 FROM organization_domain od" +
 		" WHERE od.organization_id = t.id AND od.archived_at IS NULL AND %s)",
 }

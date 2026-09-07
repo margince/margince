@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // comparisonSQL is closed over the operator constants above; compileLeaf
@@ -65,6 +66,8 @@ func inOperand(p Predicate, field Field) (any, error) {
 		return inNumberOperand(raw, field, p.Field)
 	case FieldCurrency:
 		return inCurrencyOperand(raw, field, p.Field)
+	case FieldDomain:
+		return inDomainOperand(raw, p.Field)
 	default: // text, picklist, id — string-valued types (dates take no `in`).
 		return inStringOperand(raw, field, p.Field)
 	}
@@ -144,6 +147,8 @@ func scalarOperand(value any, field Field, name, op string) (any, error) {
 	switch field.Type {
 	case FieldText, FieldPicklist:
 		return scalarStringOperand(value, invalid, "a string")
+	case FieldDomain:
+		return scalarDomainOperand(value, invalid)
 	case FieldID:
 		return scalarUUIDOperand(value, invalid)
 	case FieldNumber:
@@ -286,3 +291,55 @@ func scalarBoolOperand(value any, invalid func(string) error) (any, error) {
 // % and _ and the escape character itself must match themselves, and Postgres'
 // default LIKE escape is backslash, so the compiled predicate needs no ESCAPE
 // clause of its own.
+
+// scalarDomainOperand folds a domain operand to the host the column stores.
+//
+// `https://www.acme.example/careers`, `WWW.Acme.Example` and `acme.example` are
+// one question, and values.ParseDomain is the answer the organization list
+// already gives it — the same function on both surfaces, so the two answer the
+// same rows.
+//
+// Held by: TestADomainFilterAnswersTheSameAccountOnBothSurfaces
+// (backend/internal/compose/integration/domainleafparity_integration_test.go)
+//
+// A value that is not a domain at all is refused rather than folded to empty.
+// Empty would bind and match nothing, which reads to a caller exactly like a
+// domain nobody uses, and the mistake would stay invisible in a saved view.
+//
+//craft:ignore naked-any value is a decoded JSON filter operand and the return a bind parameter — scalarOperand's own span across the SQL scalar types
+func scalarDomainOperand(value any, invalid func(string) error) (any, error) {
+	text, ok := value.(string)
+	if !ok {
+		return nil, invalid("a domain")
+	}
+	parsed, err := values.ParseDomain(text)
+	if err != nil {
+		return nil, invalid("a domain, or a URL one can be read from")
+	}
+	return parsed.String(), nil
+}
+
+// inDomainOperand folds every member of an `in` list, refusing the first that
+// is not a domain — the same rule as the scalar arm, applied per member so one
+// bad entry is named rather than silently matching nothing.
+func inDomainOperand(raw []any, name string) ([]string, error) {
+	out := make([]string, 0, len(raw))
+	for _, member := range raw {
+		text, ok := member.(string)
+		if !ok {
+			return nil, &PredicateError{
+				Field: name, Code: CodeFilterValueInvalid,
+				Message: "in on a domain field takes strings",
+			}
+		}
+		parsed, err := values.ParseDomain(text)
+		if err != nil {
+			return nil, &PredicateError{
+				Field: name, Code: CodeFilterValueInvalid,
+				Message: fmt.Sprintf("%q is not a domain, or a URL one can be read from", text),
+			}
+		}
+		out = append(out, parsed.String())
+	}
+	return out, nil
+}

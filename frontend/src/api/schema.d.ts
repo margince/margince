@@ -24706,11 +24706,19 @@ export interface components {
              */
             name: string;
             /**
-             * @description The six custom-field types plus `id` for a reference to another
-             *     record. The type decides the operators, which is why it is here.
+             * @description The six custom-field types, plus `id` for a reference to another record and
+             *     `domain` for a host column. The type decides the operators, which is why it is here.
+             *
+             *     `domain` also decides what happens to the VALUE, and it is the only type that does:
+             *     the operand is folded to the host the column stores, so
+             *     `https://www.acme.example/careers`, `WWW.Acme.Example` and `acme.example` are one
+             *     filter. A builder can offer a plain text box for it — the server reads the domain out
+             *     of whatever the reader pastes, and refuses a value no domain can be read from rather
+             *     than matching nothing. `contains` is absent from its operators for the same reason:
+             *     a folded value has no fragment to match against.
              * @enum {string}
              */
-            type: "text" | "number" | "date" | "currency" | "picklist" | "boolean" | "id";
+            type: "text" | "number" | "date" | "currency" | "picklist" | "boolean" | "id" | "domain";
             /**
              * @description The operator subset this field's type admits (LVS-PARAM-1), in one
              *     stable order. An operator absent here is one the engine refuses for

@@ -70,6 +70,12 @@ var correspondingTypes = map[string]string{
 	"FieldBoolean":  "KindBoolean",
 	"FieldPicklist": "KindText",
 	"FieldCurrency": "KindNumber",
+	// A domain column is text as far as search's structured where is
+	// concerned: it compares the stored string. What storekit adds is the
+	// FOLDING of the operand before it binds, which is a normalization rather
+	// than a different question — so the two surfaces are comparable, and the
+	// operator difference below is the real one.
+	"FieldDomain": "KindText",
 }
 
 // declaredDifferences ratifies each operator one surface offers and the other
@@ -83,6 +89,7 @@ var declaredDifferences = gatekit.Waive(map[string]string{
 	"FieldDate/exists":     exists,
 	"FieldBoolean/exists":  exists,
 	"FieldPicklist/exists": exists,
+	"FieldDomain/exists":   exists,
 	"FieldCurrency/exists": exists,
 	"FieldText/contains":   "search declares no `contains` operator. Its structured `where` answers exact and ordering comparisons; approximate text is the free-text half of the same request, not a structured operator. storekit has no free-text half, so `contains` is the only way to ask there. The split is real, but nothing states it as a decision — it is how the two surfaces were built.",
 	"FieldBoolean/neq":     "search offers `eq` alone on a boolean, its vocabulary saying `neq true` is `eq false`. THAT REASONING NO LONGER HOLDS: with neq NULL-safe, `neq true` selects false AND unset, which `eq false` does not. storekit's boolean neq now answers a question search cannot express. Waived because closing it is a product decision about search's vocabulary, not a repair.",
