@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
+import type { GrantSpec } from "../app/mefixture";
 import { PrivacyInboxCard } from "./privacy";
 import {
-  installFetchStub,
   jsonResponse,
-  meRoute,
   type RouteMap,
   StoryProviders,
+  stubWithSession,
 } from "./story-utils";
 
 // The DSR inbox (the settings/privacy tab's PrivacyInboxCard): the G-2 open
@@ -43,14 +43,27 @@ const DSRS = {
   page: { next_cursor: null, has_more: false },
 };
 
-// The subject-request queue is the admin's alone (useHoldsAdminRole), so the
-// session is what decides whether these stories show the queue at all: without
-// it every one of them drew "this is admin only" under a name promising rows.
+// The card asks three separate object grants, and a session holding none of
+// them draws "seeing subject requests needs permission" under every name here —
+// rows, form and confirm alike. A role name does not stand in for them:
+// `meFixture` seats an admin by default, so a session naming only a role reads
+// as fully authorised while every `useCan` on it answers false.
+//
+//   privacy_request:read   — the queue itself (consent/dsr.go), and the query
+//                            is disabled without it, so no row ever arrives
+//   privacy_request:update — the transition verbs and the erasure fulfil
+//   person:update          — OPENING a request, which writes the person named
+//
+// Every story here is an officer working the queue, so every one holds all
+// three; the refusals each grant governs are privacy.test.tsx's subject.
+const WORKS_SUBJECT_REQUESTS: GrantSpec = {
+  privacy_request: ["read", "update"],
+  person: ["update"],
+};
+
 function inbox(routes: RouteMap) {
   return () => {
-    installFetchStub({ "GET /me": meRoute({}), ...routes }, () =>
-      jsonResponse(DSRS),
-    );
+    stubWithSession(routes, WORKS_SUBJECT_REQUESTS);
     return (
       <StoryProviders>
         <PrivacyInboxCard />

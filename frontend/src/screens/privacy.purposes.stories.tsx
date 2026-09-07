@@ -3,13 +3,9 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import type { GrantSpec } from "../app/mefixture";
 import { ConsentPurposesCard } from "./privacy";
-import {
-  installFetchStub,
-  jsonResponse,
-  meRoute,
-  StoryProviders,
-} from "./story-utils";
+import { jsonResponse, StoryProviders, stubWithSession } from "./story-utils";
 
 // The consent registry (the Privacy & retention tab's ConsentPurposesCard). Its own
 // file rather than a second component in privacy.stories.tsx, so each surface
@@ -43,15 +39,21 @@ const PURPOSES = {
   ],
 };
 
-// Appending a purpose is admin/ops, and the registry is readable by every seat —
-// so the ROLES on the session, not an object grant, are what decide whether the
-// header carries a verb (useHoldsConsentAdminRole).
-function purposes(roles: string[], purposeList: unknown = PURPOSES) {
+// Appending a purpose asks `consent_config:create` (consent/store.go's
+// CreatePurpose) and the registry is readable by every seat, so the GRANT is
+// what decides whether the header carries a verb. A role name does not carry
+// it and does not fail loudly either: `meFixture` seats an admin by default, so
+// a session naming only a role is a real principal holding no object grants —
+// the card draws, the capture is green, and the verb is missing from the story
+// whose whole subject is the verb.
+const MAY_APPEND_PURPOSE: GrantSpec = { consent_config: ["create"] };
+
+function purposes(allow: GrantSpec, purposeList: unknown = PURPOSES) {
   return () => {
-    installFetchStub({
-      "GET /me": meRoute({}, { roles }),
-      "GET /consent-purposes": () => jsonResponse(purposeList),
-    });
+    stubWithSession(
+      { "GET /consent-purposes": () => jsonResponse(purposeList) },
+      allow,
+    );
     return (
       <StoryProviders>
         <ConsentPurposesCard />
@@ -68,32 +70,34 @@ export default meta;
 
 type Story = StoryObj<typeof ConsentPurposesCard>;
 
-// An ops seat: the registry, and `Add purpose` in the card header above it.
-export const Registry: Story = { render: purposes(["ops"]) };
+// A seat that may append: the registry, and `Add purpose` in the card header
+// above it.
+export const Registry: Story = { render: purposes(MAY_APPEND_PURPOSE) };
 
-// A rep: the same registry, no verb, and the read-only posture as the registry
-// row's own description — the sentence sits at the label's x rather than as a
-// loose paragraph between the card's line and the badges.
-export const ReadOnly: Story = { render: purposes(["rep"]) };
+// A seat without the grant: the same registry, no verb, and the read-only
+// posture as the registry row's own description — the sentence sits at the
+// label's x rather than as a loose paragraph between the card's line and the
+// badges.
+export const ReadOnly: Story = { render: purposes({}) };
 
 // Dark, because the registry is a run of badges and one of them carries `warn`
 // for a double-opt-in purpose: a tinted badge against `--bgElevated` is the pair
 // most likely to collapse when the ground goes dark.
 export const RegistryDark: Story = {
   globals: { theme: "dark" },
-  render: purposes(["ops"]),
+  render: purposes(MAY_APPEND_PURPOSE),
 };
 
 // Nothing registered yet — the honest empty answer to the row's question, which
 // takes a row's interval rather than a page-sized plate.
 export const Empty: Story = {
-  render: purposes(["ops"], { data: [] }),
+  render: purposes(MAY_APPEND_PURPOSE, { data: [] }),
 };
 
 // The append-only warning is the dialog's first line, said exactly once and
 // beside the key it is about.
 export const AddPurpose: Story = {
-  render: purposes(["ops"]),
+  render: purposes(MAY_APPEND_PURPOSE),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(

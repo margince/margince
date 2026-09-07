@@ -2862,7 +2862,7 @@ test.describe("filters and views", () => {
       name: "Welche Datensätze gefiltert werden",
     });
     await expect(
-      objects.getByRole("button", { name: "Geschäfte", pressed: true }),
+      objects.getByRole("button", { name: "Deals", pressed: true }),
     ).toBeVisible();
 
     // "Kontakte": `filters.tab.contacts` is a different KEY from the nav's, and

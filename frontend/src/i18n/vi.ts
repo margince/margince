@@ -289,8 +289,8 @@ export const vi = {
   "board.count": "{count} deal",
   "board.weighted": "trọng số {value}",
   "board.mixedCurrencies": "nhiều loại tiền tệ — không có tổng chung",
-  "dealfiles.hidden": "Đã ẩn khỏi giao dịch này",
-  "dealfiles.unhidden": "Đã hiện lại ở giao dịch này",
+  "dealfiles.hidden": "Đã ẩn khỏi deal này",
+  "dealfiles.unhidden": "Đã hiện lại ở deal này",
   "deal.stalled": "đình trệ",
   "deal.singleThreaded": "chỉ một đầu mối",
   "deal.staged": "chờ duyệt",
@@ -493,8 +493,7 @@ export const vi = {
   "rel.add": "Thêm quan hệ",
   "rel.addStakeholder": "Thêm bên liên quan",
   "rel.dealStakeholders": "Các bên liên quan",
-  "rel.dealStakeholdersEmpty":
-    "Chưa ghi nhận bên liên quan nào cho giao dịch này",
+  "rel.dealStakeholdersEmpty": "Chưa ghi nhận bên liên quan nào cho deal này",
   "rel.kind": "Loại",
   "rel.saveDone": "Đã lưu mối quan hệ",
   "rel.role": "Vai trò",
@@ -596,7 +595,7 @@ export const vi = {
   "table.rangeLoaded": "{first}–{last} trong {count} {unit} đã tải",
   "unit.contacts": "liên hệ",
   "unit.companies": "công ty",
-  "unit.deals": "thương vụ",
+  "unit.deals": "deal",
   "unit.leads": "khách hàng tiềm năng",
   "unit.partners": "đối tác",
   "unit.products": "sản phẩm",
@@ -841,7 +840,7 @@ export const vi = {
   // mistaken for.
   "co.strip.title": "Tình hình tài khoản này",
   "co.strip.convertedAsOf": "{count} đã quy đổi, tỷ giá từ {date}",
-  "co.strip.noOpenDeals": "Không có thương vụ mở",
+  "co.strip.noOpenDeals": "Không có deal mở",
   "co.strip.pipeline": "Pipeline đang mở",
   "co.description.label": "Mô tả",
   "co.description.placeholder": "Thêm mô tả",
@@ -866,7 +865,7 @@ export const vi = {
   "co.strip.fin.error": "Không đọc được",
   "co.strip.fin.loading": "Đang tải…",
   "co.strip.unpriced": "Không có giá trị quy đổi được",
-  "co.strip.pricedPartly": "{priced}/{total} thương vụ có giá trị",
+  "co.strip.pricedPartly": "{priced}/{total} deal có giá trị",
   "co.strip.health": "Trao đổi",
   "co.strip.healthOneSided": "Một chiều",
   "co.strip.healthBalanced": "Trao đổi cân bằng",
@@ -951,7 +950,7 @@ export const vi = {
   "co.health.means.relationship":
     "Hai bên còn liên lạc hay không — ai đã viết, cách đây bao lâu và bên nào chủ động trước.",
   "co.health.means.commercial":
-    "Công việc đang chạy có tiến triển không — các thương vụ đang mở, giai đoạn của chúng và đã đứng yên bao lâu.",
+    "Công việc đang chạy có tiến triển không — các deal đang mở, giai đoạn của chúng và đã đứng yên bao lâu.",
   "co.health.means.payment":
     "Hóa đơn có được thanh toán đúng hạn không — hiện đang quá hạn những gì và tài khoản này thường trả trễ bao lâu.",
   "co.health.rating.atRisk": "Có rủi ro",
@@ -1005,8 +1004,8 @@ export const vi = {
     "Điều người mua thấy làm tiêu đề. Bạn có thể đổi sau.",
   "room.create.defaultTitle": "{deal}",
   "roompage.none":
-    "Giao dịch này chưa có Deal Room. Hãy mở một phòng từ trang giao dịch.",
-  "roompage.backToDeal": "← Về giao dịch",
+    "Deal này chưa có Deal Room. Hãy mở một phòng từ trang deal.",
+  "roompage.backToDeal": "← Về deal",
   "roompage.accessMenu": "Quyền vào phòng",
   "roompage.pause": "Tạm dừng",
   "roompage.pauseHint":
@@ -1196,7 +1195,7 @@ export const vi = {
     "C\u1ea7n b\u00e1o tr\u01b0\u1edbc bao l\u00e2u \u0111\u1ec3 h\u1ee7y. C\u1ea3nh b\u00e1o gia h\u1ea1n xu\u1ea5t hi\u1ec7n tr\u01b0\u1edbc h\u1ea1n n\u00e0y, kh\u00f4ng ph\u1ea3i tr\u01b0\u1edbc ng\u00e0y gia h\u1ea1n.",
   "contracts.form.signedOn": "\u0110\u00e3 k\u00fd",
   "contracts.form.signedOnHint":
-    "Ch\u1ec9 khi bi\u1ebft ch\u1eafc \u0111\u00e3 k\u00fd \u2014 kh\u00f4ng l\u1ea5y t\u1eeb ng\u00e0y ch\u1ed1t c\u1ee7a th\u01b0\u01a1ng v\u1ee5.",
+    "Ch\u1ec9 khi bi\u1ebft ch\u1eafc \u0111\u00e3 k\u00fd \u2014 kh\u00f4ng l\u1ea5y t\u1eeb ng\u00e0y ch\u1ed1t c\u1ee7a deal.",
   "contracts.form.save": "Ghi nh\u1eadn h\u1ee3p \u0111\u1ed3ng",
   "contracts.form.errNoName":
     "H\u1ee3p \u0111\u1ed3ng c\u1ea7n c\u00f3 ti\u00eau \u0111\u1ec1.",
@@ -1280,26 +1279,24 @@ export const vi = {
   "co.facts.pipeline": "Pipeline \u0111ang m\u1edf",
   "co.facts.inFlight": "\u0110ang tri\u1ec3n khai",
   "co.facts.reading": "\u0110ang \u0111\u1ecdc\u2026",
-  "co.facts.noDeals":
-    "Kh\u00f4ng c\u00f3 th\u01b0\u01a1ng v\u1ee5 \u0111ang m\u1edf",
+  "co.facts.noDeals": "Kh\u00f4ng c\u00f3 deal \u0111ang m\u1edf",
   "co.facts.unpriced": "Ch\u01b0a \u0111\u1ecbnh gi\u00e1",
   "co.facts.nothing": "Kh\u00f4ng c\u00f3 g\u00ec",
-  "co.facts.deals_one": "1 th\u01b0\u01a1ng v\u1ee5",
-  "co.facts.deals_other": "{count} th\u01b0\u01a1ng v\u1ee5",
+  "co.facts.deals_one": "1 deal",
+  "co.facts.deals_other": "{count} deal",
   "co.facts.projects_one": "1 d\u1ef1 \u00e1n",
   "co.facts.projects_other": "{count} d\u1ef1 \u00e1n",
   "co.facts.atLeast": "ho\u1eb7c h\u01a1n",
   "co.work.title": "Đang tiến hành, và vì sao",
   "co.work.count": "{count} \u0111ang tri\u1ec3n khai",
   "co.work.countAtLeast": "{count}+ \u0111ang tri\u1ec3n khai",
-  "co.work.deals": "Th\u01b0\u01a1ng v\u1ee5",
+  "co.work.deals": "Deal",
   "co.work.noDealsDetail":
     "Deal là nơi ghi giá trị và ngày chốt. Tạo một deal khi đã có thứ để theo đuổi.",
-  "co.work.noDeals":
-    "Kh\u00f4ng c\u00f3 th\u01b0\u01a1ng v\u1ee5 n\u00e0o \u0111ang m\u1edf.",
+  "co.work.noDeals": "Kh\u00f4ng c\u00f3 deal n\u00e0o \u0111ang m\u1edf.",
   "co.work.closes": "ch\u1ed1t {date}",
   "co.work.stalled":
-    "Kh\u00f4ng c\u00f3 g\u00ec \u0111\u01b0\u1ee3c ghi nh\u1eadn cho th\u01b0\u01a1ng v\u1ee5 n\u00e0y trong 60 ng\u00e0y qua.",
+    "Kh\u00f4ng c\u00f3 g\u00ec \u0111\u01b0\u1ee3c ghi nh\u1eadn cho deal n\u00e0y trong 60 ng\u00e0y qua.",
   "co.work.overdueTask":
     "{who} \u0111\u00e1ng l\u1ebd ph\u1ea3i \u2018{title}\u2019 tr\u01b0\u1edbc {date} nh\u01b0ng ch\u01b0a l\u00e0m.",
   "co.work.overdueTaskUnnamed":
@@ -1399,8 +1396,7 @@ export const vi = {
   "approval.kind.org_name_promotion": "Đổi tên một công ty",
   "approval.kind.vcard_create": "Tạo liên hệ từ danh thiếp",
   "approval.kind.lifecycle_change": "Giai đoạn công ty",
-  "approval.kind.stage_progression":
-    "Chuyển giao dịch sang giai đoạn tiếp theo",
+  "approval.kind.stage_progression": "Chuyển deal sang giai đoạn tiếp theo",
   "approval.field.because": "Lý do",
   "approval.field.from_stage": "Từ",
   "approval.field.to_stage": "Đến",
@@ -1766,7 +1762,7 @@ export const vi = {
   "co.people.board.suggest": "Đề xuất vai trò",
   "co.people.board.suggesting": "Đang đọc tin nhắn của họ",
   "co.people.board.suggestNoDeal":
-    "Vai trò được ghi trên một thương vụ, và khách hàng này không có thương vụ nào đang mở.",
+    "Vai trò được ghi trên một deal, và khách hàng này không có deal nào đang mở.",
   "co.people.board.suggestWrote":
     "Đã ghi {count} liên hệ từ chính lời họ viết.",
   "co.people.board.suggestUnavailable":
@@ -1983,7 +1979,7 @@ export const vi = {
   "tagResult.viewAll": "Xem tất cả {count} {kind}",
   "tagResult.resultsTitle": "Bản ghi có thẻ này",
   "tagResult.nothingCarries":
-    "Chưa có bản ghi nào mang thẻ này. Hãy gán thẻ từ một liên hệ, công ty hoặc thương vụ.",
+    "Chưa có bản ghi nào mang thẻ này. Hãy gán thẻ từ một liên hệ, công ty hoặc deal.",
   "tagResult.loadingRows": "Đang tải {kind}…",
   "tagResult.noneLeft": "Không còn bản ghi nào mang thẻ",
   "tagResult.unnamed": "Chưa có tên",
@@ -2288,10 +2284,10 @@ export const vi = {
   "lead.ladder.disqualifiedWithReason": "Đã loại: {reason}",
   "lead.qualify.title": "Xác nhận đủ điều kiện cho {name}",
   "lead.qualify.contact": "Liên hệ",
-  "lead.qualify.alsoDeal": "Đồng thời mở một thương vụ",
+  "lead.qualify.alsoDeal": "Đồng thời mở một deal",
   "lead.qualify.pipeline": "Quy trình",
   "lead.qualify.stage": "Giai đoạn",
-  "lead.qualify.dealName": "Tên thương vụ",
+  "lead.qualify.dealName": "Tên deal",
   "lead.qualify.amount": "Số tiền ({currency})",
   "lead.qualify.amountHint":
     "Tùy chọn. Đơn vị nguyên; theo tiền tệ cơ sở của cài đặt.",
@@ -2304,7 +2300,7 @@ export const vi = {
   "lead.qualify.reasonMeetingHeld": "Lý do: đã họp vào {at}.",
   "lead.qualify.reasonHuman": "Lý do: do bạn xác nhận.",
   "lead.qualify.confirm": "Đủ điều kiện",
-  "lead.qualify.confirmWithDeal": "Đủ điều kiện và mở thương vụ",
+  "lead.qualify.confirmWithDeal": "Đủ điều kiện và mở deal",
   "lead.qualify.done": "{name} giờ là liên hệ trong CRM:",
   "lead.disqualify.title": "Loại {name}",
   "lead.disqualify.reason": "Lý do",
@@ -2325,7 +2321,7 @@ export const vi = {
     "Thao tác này chốt deal ở trạng thái {status}. Hãy xác nhận trước — chưa có gì xảy ra cho đến khi bạn xác nhận.",
   "deals.lostReason": "Lý do thua",
   "deals.winNoEvidence":
-    "Thương vụ này chưa có hợp đồng đã ký đính kèm, hãy cho biết nó được chốt bằng cách nào. Câu trả lời được lưu trên thương vụ và được tính trong báo cáo.",
+    "Deal này chưa có hợp đồng đã ký đính kèm, hãy cho biết nó được chốt bằng cách nào. Câu trả lời được lưu trên deal và được tính trong báo cáo.",
   "deals.winReason": "Chốt bằng cách nào?",
   "deals.winReasonPick": "Chọn cách chốt",
   "deals.winReasonImported": "Nhập từ hệ thống khác",
@@ -2347,12 +2343,12 @@ export const vi = {
   "deal.companyWithheld": "Công ty bị ẩn",
   "deal.partnerWithheld": "Đối tác bị ẩn",
   "deal.forecastCategory": "Nhóm dự báo",
-  "deal.strip.title": "Giao dịch đang ở đâu",
-  "deal.seats.title": "Ai tham gia giao dịch này",
-  "deal.seats.empty": "Chưa ghi nhận ai trong giao dịch này",
+  "deal.strip.title": "Deal đang ở đâu",
+  "deal.seats.title": "Ai tham gia deal này",
+  "deal.seats.empty": "Chưa ghi nhận ai trong deal này",
   "deal.seats.ours": "{count} người bên mình phụ trách",
   "deal.committee.title": "Nhóm ra quyết định mua",
-  "deal.committee.empty": "Chưa có ai được ghi nhận cho giao dịch này",
+  "deal.committee.empty": "Chưa có ai được ghi nhận cho deal này",
   "deal.committee.engaged": "Đang trao đổi",
   "deal.committee.quiet": "Chưa hồi đáp",
   "deal.committee.legendEngaged": "Đang trao đổi với chúng ta",
@@ -2365,7 +2361,7 @@ export const vi = {
   "deal.strip.money.noOffer": "Chưa có báo giá nào",
   "deal.strip.close": "Ngày chốt",
   "deal.strip.close.none": "Chưa có ngày",
-  "deal.strip.close.noneDetail": "Chưa ai nói khi nào giao dịch này chốt",
+  "deal.strip.close.noneDetail": "Chưa ai nói khi nào deal này chốt",
   "deal.strip.close.inDays": "trong {days} ngày",
   "deal.strip.close.overdue": "quá hạn {days} ngày",
   "deal.strip.close.provisional": "tạm tính, chưa ai xác nhận",
@@ -2375,11 +2371,11 @@ export const vi = {
   "deal.strip.people.champion": "đã có người ủng hộ",
   "deal.strip.people.noChampion": "chưa có người ủng hộ",
   "deal.strip.people.none": "Chưa có ai",
-  "deal.strip.people.noneDetail": "Chưa ghi nhận ai trong giao dịch này",
+  "deal.strip.people.noneDetail": "Chưa ghi nhận ai trong deal này",
   "deal.strip.momentum": "Nhịp độ",
   "deal.strip.momentum.detail": "kể từ lần liên hệ cuối",
   "deal.strip.withheld": "Đã ẩn",
-  "deal.strip.withheldDetail": "Bạn không được xem ai tham gia giao dịch này",
+  "deal.strip.withheldDetail": "Bạn không được xem ai tham gia deal này",
   "deal.forecast.commit": "cam kết",
   "deal.forecast.bestCase": "trường hợp tốt nhất",
   "deal.forecast.pipeline": "pipeline",
@@ -2444,7 +2440,7 @@ export const vi = {
   "deal.offers": "Báo giá",
   "deal.newOffer": "Báo giá mới",
   "deal.offerNeedsCurrency":
-    "Hãy định giá thương vụ này trước — báo giá được lập theo tiền tệ của thương vụ.",
+    "Hãy định giá deal này trước — báo giá được lập theo tiền tệ của deal.",
   "deal.offerNumber": "Số báo giá",
   "deal.offerRevision": "Bản",
   "deal.offersEmpty": "Chưa có báo giá",
@@ -2587,8 +2583,8 @@ export const vi = {
     "Trước tiên: {lead} — {consequence} Rồi {rest} mục nữa.",
 
   // Câu mở đầu của Bản tin tuần, dựng từ các con số đã đóng băng.
-  "brief.week.won": "Bạn đã chốt {count} giao dịch.",
-  "brief.week.moved": "Bạn đã đẩy {count} giao dịch tiến lên.",
+  "brief.week.won": "Bạn đã chốt {count} deal.",
+  "brief.week.moved": "Bạn đã đẩy {count} deal tiến lên.",
   "brief.week.met": "Bạn đã có {count} cuộc họp.",
   "brief.week.carryPromises": "{count} cam kết còn dang dở.",
   "brief.week.carryTasks": "{count} công việc còn dang dở.",
@@ -3132,19 +3128,19 @@ export const vi = {
   "docs.reading.hide": "Ẩn phần đọc",
 
   // Thêm một tài liệu. Câu hỏi "Thuộc về đâu" mới là quyết định thật: chỉ tài
-  // liệu gắn với một thương vụ mới được đọc để lấy các trường của thương vụ.
+  // liệu gắn với một deal mới được đọc để lấy các trường của deal.
   // Phần gợi ý nói thẳng điều đó, thay vì để người dùng tự đoán qua một bảng
   // không bao giờ hiện ra.
   "docs.add.action": "Thêm tài liệu",
   "docs.add.title": "Thêm tài liệu",
   "docs.add.about": "Thuộc về",
   "docs.add.aboutHint":
-    "Tài liệu gắn với một thương vụ có thể được đọc để lấy các trường của thương vụ; gắn với công ty thì không.",
+    "Tài liệu gắn với một deal có thể được đọc để lấy các trường của deal; gắn với công ty thì không.",
   "docs.add.thisCompany": "Công ty này",
-  "docs.add.aDeal": "Một thương vụ",
-  "docs.add.dealSearch": "Tìm trong các thương vụ của tài khoản này",
+  "docs.add.aDeal": "Một deal",
+  "docs.add.dealSearch": "Tìm trong các deal của tài khoản này",
   "docs.add.dealSearchReach":
-    "Tìm kiếm chỉ quét {deals} thương vụ mới nhất của tài khoản này và hiển thị {matches} kết quả đầu tiên. Thương vụ cũ hơn thế thì không chọn được ở đây.",
+    "Tìm kiếm chỉ quét {deals} deal mới nhất của tài khoản này và hiển thị {matches} kết quả đầu tiên. Deal cũ hơn thế thì không chọn được ở đây.",
   "docs.add.category": "Phân loại",
   "docs.add.name": "Tiêu đề",
   "docs.add.nameHint": "Không bắt buộc. Để trống thì dòng hiển thị tên tệp.",
@@ -3155,7 +3151,7 @@ export const vi = {
   "docs.add.submit": "Tải lên",
   "docs.add.uploading": "Đang tải lên…",
   "docs.add.errNoFile": "Hãy chọn một tệp để tải lên.",
-  "docs.add.errNoDeal": "Hãy chọn thương vụ để gắn tài liệu này vào.",
+  "docs.add.errNoDeal": "Hãy chọn deal để gắn tài liệu này vào.",
   "docs.add.errRefused": "Bạn không được thêm tài liệu vào bản ghi này.",
   "docs.add.errTooLarge":
     "Tệp này lớn hơn {size}, là mức tối đa bản cài đặt này nhận. Hãy chọn tệp nhỏ hơn.",
@@ -3215,23 +3211,23 @@ export const vi = {
   "docs.category.other": "Khác",
   "files.title": "Tệp",
   "files.sub":
-    "Những gì bạn đã tải lên giao dịch này và những gì đến cùng email và tin nhắn của nó.",
+    "Những gì bạn đã tải lên deal này và những gì đến cùng email và tin nhắn của nó.",
   "files.empty":
-    "Chưa có tệp nào trên giao dịch này. Hãy tải lên một tệp hoặc liên kết một email có đính kèm.",
+    "Chưa có tệp nào trên deal này. Hãy tải lên một tệp hoặc liên kết một email có đính kèm.",
   "files.origin": "Tệp đính kèm của tin nhắn từ {who}, {when}",
   "files.originUnknown": "người gửi không rõ",
   "files.uploaded": "Đã tải lên {when}",
   "files.hiddenBadge": "Đã ẩn",
   "files.rowActions": "Thao tác cho {name}",
-  "files.hide": "Ẩn khỏi giao dịch này",
-  "files.unhide": "Hiện lại trên giao dịch này",
+  "files.hide": "Ẩn khỏi deal này",
+  "files.unhide": "Hiện lại trên deal này",
   "files.delete": "Xóa",
-  "files.hideTitle": "Ẩn {name} khỏi giao dịch này?",
+  "files.hideTitle": "Ẩn {name} khỏi deal này?",
   "files.hideBody":
-    "Tin nhắn và tệp đính kèm vẫn ở trên hoạt động và trong thư viện của công ty. Chỉ giao dịch này không còn liệt kê nó.",
+    "Tin nhắn và tệp đính kèm vẫn ở trên hoạt động và trong thư viện của công ty. Chỉ deal này không còn liệt kê nó.",
   "files.deleteTitle": "Xóa {name}?",
   "files.deleteBody":
-    "Tệp bị gỡ khỏi giao dịch này, và khỏi mọi Deal Room đang chia sẻ nó.",
+    "Tệp bị gỡ khỏi deal này, và khỏi mọi Deal Room đang chia sẻ nó.",
   "files.showHidden": "Hiện các tệp đã ẩn",
   "files.hideHidden": "Ẩn các tệp đã ẩn",
   "docs.state.draft": "Bản nháp",
@@ -3372,7 +3368,7 @@ export const vi = {
   "compose.whyHint":
     "Hồ sơ quyết định điều gì được phép; phần này nói bạn đang làm gì để đối chiếu được.",
   "compose.why.requestedFollowup": "Họ đã nhờ tôi liên hệ",
-  "compose.why.activeDeal": "Về một thương vụ đang tiến hành",
+  "compose.why.activeDeal": "Về một deal đang tiến hành",
   "compose.why.quote": "Báo giá hoặc đề xuất họ đã hỏi",
   "compose.why.service": "Hỗ trợ cho thứ họ đã mua",
   "compose.why.invoice": "Về hóa đơn hoặc thanh toán",
@@ -3805,7 +3801,7 @@ export const vi = {
   "agent.activity.documentExtractNamed.failed": "Tôi không đọc được {name}.",
   "agent.activity.accountScan.queued": "Việc đọc một tài khoản đang chờ xử lý.",
   "agent.activity.accountScan.running":
-    "Tôi đang đọc các trao đổi và giao dịch của một tài khoản.",
+    "Tôi đang đọc các trao đổi và deal của một tài khoản.",
   "agent.activity.accountScan.stalled":
     "Việc đọc một tài khoản kéo dài bất thường. Có thể nó đã dừng. Mở lại tài khoản để bắt đầu đọc lại từ đầu.",
   "agent.activity.accountScan.done": "Những gì một tài khoản cần đã sẵn sàng.",
@@ -3815,7 +3811,7 @@ export const vi = {
     "Tôi không hoàn thành được việc đọc một tài khoản.",
   "agent.activity.accountScanNamed.queued": "Việc đọc {name} đang chờ xử lý.",
   "agent.activity.accountScanNamed.running":
-    "Tôi đang đọc các trao đổi và giao dịch của {name}.",
+    "Tôi đang đọc các trao đổi và deal của {name}.",
   "agent.activity.accountScanNamed.stalled":
     "Việc đọc {name} kéo dài bất thường. Có thể nó đã dừng. Mở lại tài khoản để bắt đầu đọc lại từ đầu.",
   "agent.activity.accountScanNamed.done": "Những gì {name} cần đã sẵn sàng.",
@@ -4255,14 +4251,14 @@ export const vi = {
     "“{name}” sẽ rời khỏi pipeline và các giai đoạn sau dồn lên. Lịch sử chuyển giai đoạn vẫn đọc được. Các deal còn nằm ở đây phải chuyển đi trước.",
   "stage.criteria.title": "Tiêu chí rời giai đoạn",
   "stage.criteria.sub":
-    "Điều gì phải đúng trước khi một thương vụ rời giai đoạn này.",
+    "Điều gì phải đúng trước khi một deal rời giai đoạn này.",
   "stage.criteria.buyerCallout":
     "Bằng chứng phải đến từ bên mua. Tin nhắn do đội của bạn viết không bao giờ thỏa mãn tiêu chí về điều bên mua đã làm.",
   "stage.criteria.unreadable":
     "Tôi không đọc được tiêu chí của giai đoạn này lúc này. Hãy tải lại trước khi thay đổi — những gì bạn thấy có thể chưa đầy đủ.",
   "stage.criteria.none": "Giai đoạn này chưa yêu cầu gì.",
   "stage.criteria.terminal":
-    "Giai đoạn thắng hoặc thua là nơi thương vụ dừng lại, nên nó không yêu cầu gì để rời đi.",
+    "Giai đoạn thắng hoặc thua là nơi deal dừng lại, nên nó không yêu cầu gì để rời đi.",
   "stage.criteria.add": "Thêm tiêu chí",
   "stage.criteria.key": "Khóa",
   "stage.criteria.keyHint":
@@ -4540,7 +4536,7 @@ export const vi = {
   "ob.fieldHint.buying_intents":
     "Dấu hiệu thường cho thấy một khách hàng sắp mua, ví dụ một đợt tuyển dụng hay một hạn chót.",
   "ob.fieldHint.common_objections":
-    "Mối lo thường làm chậm hoặc chặn một thương vụ nhất, để người bán chuẩn bị trước.",
+    "Mối lo thường làm chậm hoặc chặn một deal nhất, để người bán chuẩn bị trước.",
   "ob.fieldHint.sales_motion":
     "Chặng đường từ lần trao đổi đầu tiên đến lúc ký hợp đồng, kể cả bước dùng thử hay đấu thầu.",
   "ob.fieldHint.legal_name":
@@ -4672,11 +4668,11 @@ export const vi = {
   // nối hộp thư trong onboarding và một lần nữa trong phần cài đặt.
   "overnightGrant.title": "Chuẩn bị qua đêm",
   "overnightGrant.sub":
-    "Margince xem qua các thương vụ của bạn trong khi bạn ngủ và chuẩn bị sẵn buổi sáng cho bạn. Nó hành động với tư cách của bạn, chỉ thấy những gì bạn được thấy, và bạn có thể dừng bất cứ lúc nào.",
+    "Margince xem qua các deal của bạn trong khi bạn ngủ và chuẩn bị sẵn buổi sáng cho bạn. Nó hành động với tư cách của bạn, chỉ thấy những gì bạn được thấy, và bạn có thể dừng bất cứ lúc nào.",
   "overnightGrant.label":
     "Cho phép Margince chuẩn bị bản tóm tắt buổi sáng qua đêm",
   "overnightGrant.help":
-    "Nó đọc thương vụ và email của bạn để sắp xếp việc gì cần bạn hôm nay, và ghi ghi chú trở lại. Nó không thể gửi: quyền bạn cấp ở đây chỉ gồm đọc và ghi, không bao giờ gửi.",
+    "Nó đọc deal và email của bạn để sắp xếp việc gì cần bạn hôm nay, và ghi ghi chú trở lại. Nó không thể gửi: quyền bạn cấp ở đây chỉ gồm đọc và ghi, không bao giờ gửi.",
   "overnightGrant.danger":
     "Nếu không cấp quyền này, trợ lý không thể đọc hoặc thêm ghi chú vào bản tin qua đêm. Dữ liệu, danh sách công việc và bản tổng kết tuần theo lịch vẫn có sẵn.",
   "overnightGrant.saveFailed":
@@ -5401,7 +5397,7 @@ export const vi = {
     "Tôi không thể ghi nhận rằng thiết lập đã hoàn tất. Thử lại, hoặc để đó và hoàn tất sau trong Cài đặt.",
   "ob.conv.basis.title": "Trước hết, cơ sở.",
   "ob.conv.basis.body":
-    "Đơn vị tiền tệ cơ sở và múi giờ báo cáo là của toàn hệ thống: mọi thương vụ, báo cáo và bản tóm tắt đều định giá và ghi ngày theo đó. Những gì nó được tự thay đổi mà không hỏi là do bạn quyết định. Tất cả được điền sẵn và có thể đổi sau trong Cài đặt, cho đến khi một thương vụ đã khóa đơn vị tiền tệ.",
+    "Đơn vị tiền tệ cơ sở và múi giờ báo cáo là của toàn hệ thống: mọi deal, báo cáo và bản tóm tắt đều định giá và ghi ngày theo đó. Những gì nó được tự thay đổi mà không hỏi là do bạn quyết định. Tất cả được điền sẵn và có thể đổi sau trong Cài đặt, cho đến khi một deal đã khóa đơn vị tiền tệ.",
   "ob.conv.basis.reportingTitle": "Cơ sở báo cáo",
   "ob.conv.basis.timezoneNeeded": "Cần một múi giờ báo cáo.",
   "ob.conv.basis.autonomyTitle": "Những gì nó có thể tự thay đổi",
@@ -5524,7 +5520,7 @@ export const vi = {
   "ob.backread.window3m": "3 tháng — bối cảnh gần đây",
   "ob.backread.window6m": "6 tháng — nên chọn",
   "ob.backread.window12m": "12 tháng — trọn một chu kỳ bán hàng",
-  "ob.backread.window24m": "2 năm — cả mối quan hệ, không chỉ thương vụ",
+  "ob.backread.window24m": "2 năm — cả mối quan hệ, không chỉ deal",
   "ob.backread.window60m": "5 năm — tất cả những gì hộp thư còn giữ",
   "ob.backread.estimate": "Khoảng {messages} thư trong khoảng thời gian đó.",
   "ob.backread.estimateHeuristic": "Ước tính từ hộp thư, chưa đếm thật.",
@@ -5830,11 +5826,11 @@ export const vi = {
   "room.docs.sub":
     "Những gì người mua có thể đọc, kèm cuộc trao đổi về từng tài liệu bên dưới.",
   "room.docs.empty": "Chưa có tài liệu nào trong phòng.",
-  "room.docs.fileLabel": "Tệp từ giao dịch này",
+  "room.docs.fileLabel": "Tệp từ deal này",
   "room.docs.fileHint":
-    "Mọi thứ trong khu Tệp của giao dịch đều có thể đưa vào: tệp tải lên và tệp đi kèm email. Dùng “Tải tệp lên” để thêm tệp mới vào đó.",
+    "Mọi thứ trong khu Tệp của deal đều có thể đưa vào: tệp tải lên và tệp đi kèm email. Dùng “Tải tệp lên” để thêm tệp mới vào đó.",
   "room.docs.pickFile": "Chọn tệp",
-  "room.docs.noFiles": "Khu Tệp của giao dịch đang trống",
+  "room.docs.noFiles": "Khu Tệp của deal đang trống",
   "room.docs.groupLabel": "Nhóm",
   "room.docs.add": "Thêm vào phòng",
   "room.docs.upload": "Tải tệp lên",
@@ -5879,7 +5875,7 @@ export const vi = {
   "deal360.verdict.cold": "Nguội",
   "dealmail.title": "Email",
   "dealmail.sub.reply": "Họ đã viết và chưa ai trả lời.",
-  "dealmail.sub.fresh": "Viết cho những liên hệ trong thương vụ này.",
+  "dealmail.sub.fresh": "Viết cho những liên hệ trong deal này.",
   "dealmail.reply": "Soạn thư trả lời",
   "dealmail.send": "Gửi email",
   "recordmail.title": "Email",
@@ -6182,7 +6178,7 @@ export const vi = {
   "settings.page.stageautomation.sub":
     "Th\u00e0nh t\u00edch c\u1ee7a t\u1eebng b\u01b0\u1edbc chuy\u1ec3n giai \u0111o\u1ea1n, tr\u01b0\u1edbc khi \u0111\u01b0\u1ee3c tin \u0111\u1ec3 t\u1ef1 di chuy\u1ec3n th\u01b0\u01a1ng v\u1ee5.",
   "settings.page.pipelines.sub":
-    "C\u00e1c giai \u0111o\u1ea1n m\u1ed9t th\u01b0\u01a1ng v\u1ee5 \u0111i qua, cho to\u00e0n c\u00f4ng ty.",
+    "C\u00e1c giai \u0111o\u1ea1n m\u1ed9t deal \u0111i qua, cho to\u00e0n c\u00f4ng ty.",
   "settings.page.leads.sub":
     "T\u1eeb ng\u1eef c\u00f4ng ty n\u00e0y d\u00f9ng \u0111\u1ec3 m\u00f4 t\u1ea3 m\u1ed9t lead \u0111\u1ebfn t\u1eeb \u0111\u00e2u.",
   "settings.page.fields.sub":
@@ -7989,7 +7985,7 @@ export const vi = {
   "person.meeting.goal": "Mục tiêu cuộc họp",
   "person.meeting.attendees": "Người tham dự",
   "person.meeting.commitments": "Cam kết còn mở",
-  "person.meeting.deal_state": "Tình trạng thương vụ",
+  "person.meeting.deal_state": "Tình trạng deal",
   "person.meeting.risks": "Rủi ro và điểm cần lưu ý",
   "person.meeting.talking_points": "Gợi ý nội dung trao đổi",
   "person.meeting.company_context": "Lần gặp gần nhất",
@@ -8030,12 +8026,12 @@ export const vi = {
   // giống nhau ở mọi nơi.
   "today.scan.queued": "Margince sẽ đọc tài khoản này trong giây lát.",
   "today.scan.reading":
-    "Margince đang đọc các trao đổi và giao dịch của tài khoản này.",
+    "Margince đang đọc các trao đổi và deal của tài khoản này.",
   "today.scan.read": "Đã đọc {exchanges} và {deals}",
   "today.scan.readExchanges_one": "{count} trao đổi",
   "today.scan.readExchanges_other": "{count} trao đổi",
-  "today.scan.readDeals_one": "{count} giao dịch",
-  "today.scan.readDeals_other": "{count} giao dịch",
+  "today.scan.readDeals_one": "{count} deal",
+  "today.scan.readDeals_other": "{count} deal",
   "today.scan.stale":
     "Tài khoản đã thay đổi kể từ đó. Nó sẽ được đọc lại trong vòng một giờ.",
   "today.scan.resumes": "Việc đọc sẽ tiếp tục {when}; ngân sách AI đã hoãn nó.",
@@ -8222,13 +8218,13 @@ export const vi = {
   "filters.objectLabel": "L\u1ecdc lo\u1ea1i b\u1ea3n ghi n\u00e0o",
   "filters.tab.contacts": "Liên hệ",
   "filters.tab.companies": "C\u00f4ng ty",
-  "filters.tab.deals": "Th\u01b0\u01a1ng v\u1ee5",
+  "filters.tab.deals": "Deal",
   "filters.builderTitle": "B\u1ed9 l\u1ecdc",
   "filters.dynamic":
     "\u0110\u1ed9ng \u2014 t\u00ednh l\u1ea1i sau m\u1ecdi s\u1ef1 ki\u1ec7n",
   "filters.matchContacts": "{count} liên hệ khớp",
   "filters.matchCompanies": "{count} c\u00f4ng ty kh\u1edbp",
-  "filters.matchDeals": "{count} th\u01b0\u01a1ng v\u1ee5 kh\u1edbp",
+  "filters.matchDeals": "{count} deal kh\u1edbp",
   "filters.noFilterYet":
     "Th\u00eam \u0111i\u1ec1u ki\u1ec7n \u0111\u1ec3 xem k\u1ebft qu\u1ea3",
   "filters.countUnavailable":
@@ -8315,7 +8311,7 @@ export const vi = {
   "unit.projects": "dự án",
   "companyProjects.title": "Dự án",
   "companyProjects.empty":
-    "Dự án là khối công việc mà một thương vụ hướng tới. Công ty này xuất hiện ở đây khi tham gia một dự án — với vai trò khách hàng, đối tác hoặc nhà thầu phụ.",
+    "Dự án là khối công việc mà một deal hướng tới. Công ty này xuất hiện ở đây khi tham gia một dự án — với vai trò khách hàng, đối tác hoặc nhà thầu phụ.",
   "projectCompanies.title": "Công ty",
   "projectCompanies.empty":
     "Dự án là công việc nhiều công ty cùng làm — khách hàng, cùng mọi đối tác hoặc nhà thầu phụ tham gia.",
@@ -8379,12 +8375,12 @@ export const vi = {
   "project.phase.closed": "Đã đóng",
   "project.emptyTitle": "Chưa có dự án",
   "project.emptyBody":
-    "Dự án là phần việc mà một thương vụ hướng tới. Nó bắt đầu trong thương vụ, ở giai đoạn khởi xướng, và tiếp tục sau khi thắng: khi thương vụ đã thắng, việc triển khai được theo dõi ở đây.",
+    "Dự án là phần việc mà một deal hướng tới. Nó bắt đầu trong deal, ở giai đoạn khởi xướng, và tiếp tục sau khi thắng: khi deal đã thắng, việc triển khai được theo dõi ở đây.",
   "project.emptyKey":
     "Mỗi dự án đều được cấp một mã ngắn. Mọi email có mã đó trong ngoặc vuông ở tiêu đề sẽ tự động được xếp vào dự án.",
   "project.rollups.empty": "Chưa có số liệu cho dự án này.",
-  "project.rollups.openValue": "Giá trị thương vụ đang mở",
-  "project.rollups.wonValue": "Giá trị thương vụ đã thắng",
+  "project.rollups.openValue": "Giá trị deal đang mở",
+  "project.rollups.wonValue": "Giá trị deal đã thắng",
   "project.rollups.openDeals": "Mở các deal",
   "project.rollups.openCommitmentsList": "Mở phần còn nợ",
   "project.rollups.openCommitments": "Cam kết đang mở",
@@ -8397,10 +8393,10 @@ export const vi = {
   "project.history.moved": "{from} → {to}",
   "project.history.born": "Bắt đầu ở {phase}",
   "project.history.bySystem": "Hệ thống",
-  "project.deals.title": "Thương vụ",
+  "project.deals.title": "Deal",
   "project.deals.empty":
-    "Chưa có thương vụ nào gắn với dự án này. Thương vụ chọn dự án trong biểu mẫu của chính nó.",
-  "project.deals.more": "Còn nhiều thương vụ hơn ở đây — mở pipeline.",
+    "Chưa có deal nào gắn với dự án này. Deal chọn dự án trong biểu mẫu của chính nó.",
+  "project.deals.more": "Còn nhiều deal hơn ở đây — mở pipeline.",
   "project.stakeholders.title": "Các bên liên quan",
   "project.stakeholders.empty":
     "Chưa ai có vai trò trong dự án này. Bên liên quan là liên hệ giữ một vai trò ở đây — nhà tài trợ, trưởng dự án, người ủng hộ.",
@@ -8422,7 +8418,7 @@ export const vi = {
     "Chưa có thỏa thuận nào xếp dưới dự án này. Hợp đồng chỉ định dự án khi được ghi nhận.",
   "project.documents.title": "Tài liệu",
   "project.documents.empty":
-    "Chưa có tệp nào đính kèm dự án này. Tệp đính kèm thương vụ vẫn ở lại thương vụ.",
+    "Chưa có tệp nào đính kèm dự án này. Tệp đính kèm deal vẫn ở lại deal.",
   "project.commitments.title": "Cam kết đang mở",
   "project.commitments.empty":
     "Chưa có việc đang mở nào xếp dưới dự án này. Việc liên kết với dự án sẽ hiện ở đây, hạn gần nhất trước.",
@@ -8442,14 +8438,14 @@ export const vi = {
   "deal.projectNew": "Dự án mới…",
   "deal.projectWithheld": "Dự án bị ẩn",
   "deal.projectNeedsCompany":
-    "Chọn công ty của thương vụ trước — dự án được khởi tạo trên một công ty.",
+    "Chọn công ty của deal trước — dự án được khởi tạo trên một công ty.",
   "deal.projectUnnamed": "Dự án",
   "deal.startDeliveryTitle": "Bắt đầu triển khai",
   "deal.startDelivery": "Bắt đầu triển khai",
   "deal.startDeliveryAttached":
-    "Thương vụ này đã gắn với {project}, nhưng dự án chưa ở giai đoạn triển khai. Chuyển ngay?",
+    "Deal này đã gắn với {project}, nhưng dự án chưa ở giai đoạn triển khai. Chuyển ngay?",
   "deal.startDeliveryBody":
-    "Thương vụ này đã thắng và chưa gắn dự án. Gắn vào {project} và chuyển dự án sang triển khai?",
+    "Deal này đã thắng và chưa gắn dự án. Gắn vào {project} và chuyển dự án sang triển khai?",
 
   // The Worklist's own words: the ranked queue, its dials, and the phrase
   // for every fact the server sends as a closed vocabulary.
@@ -8596,7 +8592,7 @@ export const vi = {
   "worklist.board.empty": "Chưa có ai được xếp cùng nhóm với bạn.",
   "worklist.board.member": "Ai",
   "worklist.board.waiting": "Đang chờ trả lời",
-  "worklist.board.atRisk": "Giao dịch có rủi ro",
+  "worklist.board.atRisk": "Deal có rủi ro",
   "worklist.board.overdue": "Quá hạn",
   "worklist.board.nobody": "Chưa có ai",
   "worklist.coaching.title": "Đáng trao đổi sáng nay",
@@ -8609,9 +8605,8 @@ export const vi = {
     "Có nhiều việc hơn số đếm được ở đây. Đây là mức tối thiểu, không phải tổng số.",
   "worklist.readings.label": "Hôm nay có gì đang bị đe dọa",
   "worklist.readings.revenue": "Doanh thu bị đe dọa",
-  "worklist.readings.revenue.detail": "Trên các thương vụ đang trôi hôm nay",
-  "worklist.readings.revenue.unpriced":
-    "Không thương vụ rủi ro nào định giá được",
+  "worklist.readings.revenue.detail": "Trên các deal đang trôi hôm nay",
+  "worklist.readings.revenue.unpriced": "Không deal rủi ro nào định giá được",
   "worklist.readings.openLane": "Mở luồng này",
   "worklist.readings.replies": "Khách phản hồi",
   "worklist.readings.replies.detail": "Khách đang chờ một câu trả lời",
@@ -8649,14 +8644,14 @@ export const vi = {
   "worklist.filter.all": "Tất cả",
   "worklist.filter.customer_waiting": "Khách đang chờ",
   "worklist.filter.leads": "Khách tiềm năng",
-  "worklist.filter.deals_at_risk": "Giao dịch rủi ro",
+  "worklist.filter.deals_at_risk": "Deal rủi ro",
   "worklist.filter.meetings": "Cuộc họp",
   "worklist.filter.tasks": "Công việc",
   "worklist.filter.decisions": "Quyết định",
   "worklist.filter.system": "Hệ thống",
   "worklist.category.customer_waiting": "Khách đang chờ",
   "worklist.category.leads": "Khách tiềm năng",
-  "worklist.category.deals_at_risk": "Giao dịch rủi ro",
+  "worklist.category.deals_at_risk": "Deal rủi ro",
   "worklist.category.meetings": "Cuộc họp",
   "worklist.category.tasks": "Công việc",
   "worklist.category.decisions": "Quyết định",
@@ -8672,11 +8667,11 @@ export const vi = {
   "worklist.because.due_today": "đến hạn hôm nay",
   "worklist.because.closing_soon": "có ngày chốt",
   "worklist.because.expected_revenue":
-    "một giao dịch đang mở phụ thuộc vào liên hệ này",
+    "một deal đang mở phụ thuộc vào liên hệ này",
   "worklist.because.expected_revenue.value": "trị giá {value}",
-  "worklist.because.material": "trên mức giao dịch mở thông thường",
+  "worklist.because.material": "trên mức deal mở thông thường",
   "worklist.because.material.value": "trị giá {value}, trên mức thông thường",
-  "worklist.because.below_material": "dưới mức giao dịch mở thông thường",
+  "worklist.because.below_material": "dưới mức deal mở thông thường",
   "worklist.because.below_material.value":
     "trị giá {value}, dưới mức thông thường",
   "worklist.because.quiet_days": "đã im lặng",
@@ -8721,7 +8716,7 @@ export const vi = {
   "worklist.consequence.promise_breaks":
     "Nếu bạn không làm gì, một lời hứa bị phá vỡ.",
   "worklist.consequence.deal_drifts":
-    "Nếu bạn không làm gì, giao dịch tiếp tục trôi.",
+    "Nếu bạn không làm gì, deal tiếp tục trôi.",
   "worklist.consequence.deal_slips_past_close":
     "Nếu bạn không làm gì, nó trôi qua ngày đã thống nhất.",
   "worklist.consequence.meeting_unprepared":
@@ -8745,7 +8740,7 @@ export const vi = {
   "worklist.untitled.conversation_claim": "Một lời hứa của bạn",
   "worklist.untitled.customer_waiting": "Ai đó đang chờ trả lời",
   "worklist.untitled.lead_response": "Một khách tiềm năng",
-  "worklist.untitled.deal_at_risk": "Một giao dịch đang trôi",
+  "worklist.untitled.deal_at_risk": "Một deal đang trôi",
   "worklist.untitled.meeting": "Một cuộc họp",
   "worklist.untitled.meeting_outcome": "Một cuộc họp",
   "worklist.untitled.relationship_decay": "Một mối quan hệ đang nguội",
@@ -8755,7 +8750,7 @@ export const vi = {
   "worklist.untitled.sync_health": "Đồng bộ CRM cần chú ý",
   "worklist.sync.class.contacts": "liên hệ",
   "worklist.sync.class.companies": "công ty",
-  "worklist.sync.class.deals": "giao dịch",
+  "worklist.sync.class.deals": "deal",
   "worklist.sync.class.leads": "khách hàng tiềm năng",
   "worklist.sync.class.calls": "cuộc gọi",
   "worklist.sync.class.meetings": "cuộc họp",
@@ -9008,10 +9003,10 @@ export const vi = {
   "person.readings.promises": "Lời hứa còn mở",
   "person.readings.nothingOwed": "không nợ gì",
   "person.readings.onTime": "chưa có lời hứa nào trễ",
-  "person.readings.deal": "Giao dịch họ quyết định",
-  "person.readings.openDeals": "Mở giao dịch",
+  "person.readings.deal": "Deal họ quyết định",
+  "person.readings.openDeals": "Deal đang mở",
   "person.readings.openMeetings": "Mở cuộc họp",
-  "deal360.brief": "Giao dịch này là gì",
+  "deal360.brief": "Deal này là gì",
   "deal.strip.openHistory": "Xem sổ ghi",
   "deal.strip.lastTouch": "Lần chạm cuối",
   "lead.standing.qualified": "Đã đủ điều kiện",

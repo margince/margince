@@ -4222,7 +4222,7 @@ export const de = {
   "restricted.pin.action": "Datensatz festsetzen",
   "restricted.pin.submit": "Anheften",
   "restricted.pin.idHint":
-    "Für Korrespondenz, die die automatische Regel nicht erkennt — Lieferanten- und Einkaufspost ist nach §257 HGB aufbewahrungspflichtig und hat in diesem Produkt kein Geschäft, an dem sie hängt. Die Datensatz-ID steht im Audit-Eintrag.",
+    "Für Korrespondenz, die die automatische Regel nicht erkennt — Lieferanten- und Einkaufspost ist nach §257 HGB aufbewahrungspflichtig und hat in diesem Produkt keinen Deal, an dem sie hängt. Die Datensatz-ID steht im Audit-Eintrag.",
   "restricted.pin.idMalformed":
     "Das ist keine Datensatz-ID. Sie besteht aus 8-4-4-4-12 Hexadezimalzeichen und steht vollständig im Audit-Eintrag des Datensatzes.",
   "restricted.pin.idPlaceholder": "Datensatz-ID",
@@ -6240,7 +6240,7 @@ export const de = {
   "settings.page.stageautomation.sub":
     "Was jeder Phasen\u00fcbergang vorzuweisen hat, bevor ihm zugetraut wird, Gesch\u00e4fte selbst zu bewegen.",
   "settings.page.pipelines.sub":
-    "Die Phasen, die ein Gesch\u00e4ft durchl\u00e4uft \u2014 f\u00fcr das ganze Unternehmen.",
+    "Die Phasen, die ein Deal durchl\u00e4uft \u2014 f\u00fcr das ganze Unternehmen.",
   "settings.page.leads.sub":
     "Die Worte, mit denen dieses Unternehmen beschreibt, woher ein Lead kam.",
   "settings.page.fields.sub":
@@ -8328,12 +8328,12 @@ export const de = {
   "filters.objectLabel": "Welche Datens\u00e4tze gefiltert werden",
   "filters.tab.contacts": "Kontakte",
   "filters.tab.companies": "Firmen",
-  "filters.tab.deals": "Gesch\u00e4fte",
+  "filters.tab.deals": "Deals",
   "filters.builderTitle": "Filter",
   "filters.dynamic": "Dynamisch \u2014 bei jedem Ereignis neu berechnet",
   "filters.matchContacts": "{count} Kontakte treffen zu",
   "filters.matchCompanies": "{count} Firmen treffen zu",
-  "filters.matchDeals": "{count} Gesch\u00e4fte treffen zu",
+  "filters.matchDeals": "{count} Deals treffen zu",
   "filters.noFilterYet": "Bedingung hinzuf\u00fcgen, um die Treffer zu sehen",
   "filters.countUnavailable": "Anzahl nicht verf\u00fcgbar",
   "filters.loadingVocabulary": "Filterbare Felder werden geladen\u2026",

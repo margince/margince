@@ -156,6 +156,11 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "cf.obj.deal",
   "cf.obj.lead",
   "co.brief.cite.deal",
+  // The singular of the same noun, on the account facts strip and on the
+  // overnight scan's tally. Both are the borrowed word beside a numeral, so
+  // there is nothing left in either string for Vietnamese to translate.
+  "co.facts.deals_one",
+  "today.scan.readDeals_one",
   "deals.unit",
   "contracts.renew.deal",
   "contracts.deal",
