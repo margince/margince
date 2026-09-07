@@ -79,20 +79,19 @@
      150–200ms). The column also animates a geometric property, so every frame
      re-lays-out the content beside it — a shorter run is cheaper as well as
      better. */
-  /* The reading column, for the pages that want one. Read DOWN — a settings
-     form, a company or contact record with its rail of facts beside prose — and
-     a measured line is the point; a label a monitor away from its control is
-     worse, not wider. Scanned ACROSS — a list, a board, a report — and the cap
-     only ever pushed columns off the right edge of a wide display. Which
-     screens are in which family is decided in ONE place, `GRIDDED_RECORD_SCREENS`
-     in app/nav.ts, because it is a judgement made by opening the page.
+  /* ONE reading column, and every capped page is capped at it — a settings
+     form, the Brief, a company or contact record alike. A page is either read
+     DOWN, where a measured line is the point and a label a monitor away from
+     its control is worse rather than wider, or scanned ACROSS, where a cap only
+     ever pushed columns off the right edge of a wide display. That is the whole
+     decision: which family a screen is in, decided in ONE place
+     (`GRIDDED_RECORD_SCREENS` and `GRIDDED_SCREENS` in app/nav.ts, because it is
+     a judgement made by opening the page) — never how wide its own measure is,
+     because two measures put the same sentence on two line lengths depending on
+     which page a reader opened it from.
      The page head is never capped: full width on every screen, and a capped
      column is centred under it. */
   --pageColumn: 1280px;
-  /* A record's own cap. Wider than --pageColumn because a record page is a
-     header, a tab strip and two columns under them, where a settings page is
-     one column of cards — see .main-record. */
-  --recordColumn: 1400px;
 
   --railW: 56px;
   display: grid;
@@ -244,12 +243,16 @@
      what is left. */
   flex: none;
 }
-/* The pages that keep the reading column — see --pageColumn and
-   GRIDDED_RECORD_SCREENS. Centred in the page: the column is the thing being
-   read, so it sits in the middle of the space it is given rather than hugging
-   one edge of it. The page head above stays full width and is therefore wider
-   than it on a big display — deliberately, since the head is the window's
-   chrome and the column is the document. */
+/* Every page that keeps the reading column, and the ONE place the measure is
+   applied — see --pageColumn, `GRIDDED_SCREENS` and `GRIDDED_RECORD_SCREENS`.
+   A record is in this rule like any other capped page: it carries more parts
+   than a settings page does, which changes what stands inside the column and
+   not how wide the column is.
+   Centred in the page: the column is the thing being read, so it sits in the
+   middle of the space it is given rather than hugging one edge of it. The page
+   head above stays full width and is therefore wider than it on a big display —
+   deliberately, since the head is the window's chrome and the column is the
+   document. */
 .main-gridded .wrap {
   max-width: var(--pageColumn);
   margin: 0 auto;
@@ -377,8 +380,10 @@
    flow around the shortcut cap — it is held clear of it instead. */
 /* head row: the brand alone — the control that collapses this panel stands in
    the top bar (app/topbar.css), where it does not travel with the panel it
-   opens. Its height is the strip's, less the rail's own top padding and plus the
-   strip's rule, so the row under it starts on the line the strip ends on. */
+   opens. Its FLOOR is the strip's height, less the rail's own top padding and
+   plus the strip's rule, so the row under it starts on the line the strip ends
+   on — and a longer installation name is free to take a second line and push the
+   rows down with it rather than being clipped by the box. */
 .rail .railhead {
   display: flex;
   align-items: center;
@@ -391,17 +396,18 @@
      stops shrinking) moved the whole column. Both halves of that are wrong: the
      logomark's axis is the strip's, and the rows hold still. */
   flex: none;
-  /* The strip's height exactly, pulled up out of the rail's own top padding: the
-     logomark then sits on the same horizontal axis as the trail and the search
-     across the rule from it, and the panel's 1px row gap still puts the first
-     destination's row on the line under that rule. */
-  height: var(--topbarH);
+  /* The strip's height as a FLOOR, pulled up out of the rail's own top padding:
+     at one line the head is the strip's own measure, so the logomark reads as
+     standing on the axis the trail and the search stand on across the rule, and
+     the panel's 1px row gap puts the first destination's row on the line under
+     that rule. A head that outgrows the floor — a name that wraps — takes the
+     rows down with it, because the box has to be as tall as the lockup inside
+     it: any less and the product attribution stands outside its own head. */
+  min-height: var(--topbarH);
   margin-top: calc(-1 * var(--space-3));
   /* A breath between the mark and the first destination: with the mark at the
      head's full height the row under it read as one more item in its stack. */
   margin-bottom: var(--space-3);
-  /* The release marker below hangs off this box. */
-  position: relative;
 }
 /* Collapsed, the head is the logomark alone, centred: the control that opens
    and closes this panel now stands in the top bar, where it does not travel
@@ -417,7 +423,10 @@
   text-decoration: none;
   color: var(--textPrimary);
   border-radius: var(--r-sm);
-  padding: var(--space-1);
+  /* More air above than below: the block hangs from the head's top edge rather
+     than sitting in the middle of it, so the mark keeps its distance from the
+     strip's line while the name reads as the start of the column under it. */
+  padding: var(--space-2) var(--space-1) var(--space-1);
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -427,7 +436,7 @@
    exactly as one lockup. The no-logo path below keeps the compact monogram and
    company name because initials do not identify a company on their own. */
 .rail.expanded .railhead:has(.ws-logo) {
-  height: 80px;
+  min-height: 80px;
   margin-top: 0;
 }
 .rail .ws-logo {
@@ -513,6 +522,17 @@
   color: var(--textOnAccent);
   display: grid;
   place-items: center;
+  /* The mark holds the block's first line, not its middle: beside a name that
+     wraps to two lines a centred chip drifts down the head and off the axis the
+     strip's own glyphs stand on. */
+  align-self: start;
+}
+/* Collapsed there is no first line to hold — the name gives up its box (below)
+   and the mark IS the head, so it takes the axis every glyph in the column
+   below it stands on. The `.ws` inset is zeroed in the same state, so nothing
+   else offsets it. */
+.rail.collapsed .ws-chip {
+  align-self: center;
 }
 /* The same slot holding the COMPANY's mark. The chip's own ground goes: what
    stands here is a logo drawn for its own background, or the monogram Avatar
@@ -537,6 +557,9 @@
 .rail .ws-name {
   display: flex;
   flex-direction: column;
+  /* The two lines are one lockup, not a stack: the name and what it runs on
+     belong together, and set solid they read as one word wrapped. */
+  gap: var(--space-1);
   min-width: 0;
   width: auto;
   opacity: 1;
@@ -554,8 +577,13 @@
     transition: opacity var(--dur-state) var(--ease-in-out);
   }
 }
+/* Collapsed the name is gone in BOTH axes. Width alone left its block height
+   standing — a name that wraps to two lines expanded held that much air open in
+   the 56px column, so the head's height (and every row under it) depended on how
+   long the installation's name is on a rail nobody can read it in. */
 .rail.collapsed .ws-name {
   width: 0;
+  height: 0;
   opacity: 0;
 }
 .rail .ws-name b {
@@ -564,7 +592,10 @@
   font-size: var(--fs-lead);
   font-weight: var(--fw-semibold);
   color: var(--textPrimary);
-  line-height: 1.25;
+  /* Set tight, because a company name is a NAME rather than prose: two lines of
+     it are one object and the reading leading between them pulled it apart. The
+     air the lockup needs is the gap above, which belongs to the block. */
+  line-height: 1.1;
 }
 /* The line under the installation's name, and the build marker at the panel's
    foot. Both are the same voice as the rest of the panel at a smaller size —
@@ -1674,11 +1705,11 @@
 }
 
 /* A list screen is one full-height surface: the page itself does not scroll,
- * the table's own body does. It keeps the same 1280px column and the same page
- * gutter as every other screen — it used to opt out of the cap, which read as
- * "a list uses the width it is given" until a 4K window gave it 3000px and a
- * six-column table stretched across a metre of desk with the eye losing the row
- * between name and status.
+ * the table's own body does. It keeps the same reading column (--pageColumn) and
+ * the same page gutter as every other screen — it used to opt out of the cap,
+ * which read as "a list uses the width it is given" until a 4K window gave it
+ * 3000px and a six-column table stretched across a metre of desk with the eye
+ * losing the row between name and status.
  *
  * Keyed off the wrap CARRYING a surface, not on it being the only child. An
  * `:only-child` rule states that the layout depends on the surface having no
@@ -1718,16 +1749,11 @@
   margin-bottom: var(--space-4);
 }
 
-/* A record reads wider than a settings page or the Brief: it carries a
-   header, a tab strip and two columns under them, where the others are one
-   column of prose-width cards. */
-.main-record .wrap {
-  max-width: var(--recordColumn);
-}
 /* A named container, so a block inside the reading column can measure the WORK
-   column it sits in. The record's tab strip needs it: its rules divide the
-   page's chrome from its document and run the full width of the column, while
-   the column itself caps the record at a readable measure.
+   column it sits in — the record page's ONLY reason for a class of its own,
+   since its width is the one every capped page has. The record's tab strip
+   needs it: its rules divide the page's chrome from its document and run the
+   full width of the column, which the column caps at the reading measure.
 
    Nothing else about the layout changes — inline-size containment only lets a
    child ask how wide this is.

@@ -779,10 +779,11 @@ export function PageTitle({
   );
 }
 
-// The work column's own classes. A RECORD reads wider than a settings page or
-// the Brief: it carries a header, a tab strip and two columns under them,
-// where the others are one column of prose-width cards. Two widths, and the
-// class is what says which — see --pageColumn / --recordColumn.
+// The work column's own classes. `main-gridded` is the capped reading column and
+// there is one measure for every page that keeps it (--pageColumn);
+// `main-record` adds nothing to that width and never appears without it — it
+// NAMES the column as a container, which is what lets the record's tab strip
+// measure the column it spans (shell.css, `container-name: work`).
 function mainClasses(gridded: boolean, griddedRecord: boolean): string {
   if (!gridded) {
     return "main";

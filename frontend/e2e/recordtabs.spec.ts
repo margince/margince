@@ -106,12 +106,12 @@ test.describe("the record tab strip", () => {
   // is a record nobody notices is not being measured.
   //
   // 2200px is in the list because the reading column is CAPPED there
-  // (--recordColumn) while the work column keeps growing, and a record's column
-  // takes no auto margins — so above the cap the column sits at the start of the
-  // container rather than in the middle of it. A breakout that centres itself
-  // then misses by half the slack, which is tens of pixels and depends on
-  // nothing but the two widths. Below the cap the same error is only half a
-  // scrollbar wide and a runner with overlay scrollbars cannot see it at all.
+  // (--pageColumn) while the work column keeps growing, so the `@container work`
+  // the breakout measures itself against is hundreds of pixels wider than the
+  // column the strip actually sits in. A breakout sized from the container then
+  // overhangs by half the slack, which depends on nothing but the two widths.
+  // Below the cap the two are the same width, the same error is at most a
+  // scrollbar wide, and a runner with overlay scrollbars cannot see it at all.
   for (const record of RECORDS) {
     for (const width of [1440, 2200]) {
       test(`keeps the width of the column it sits in on a ${record.name} at ${width}px`, async ({
