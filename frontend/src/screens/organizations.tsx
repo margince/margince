@@ -78,6 +78,7 @@ import {
   CompanyPrimaryActions,
   CompanyRelationshipBadges,
   displayHost,
+  useCompanyVerbRefusal,
 } from "./companyheader";
 import {
   LIFECYCLE_LABELS,
@@ -154,6 +155,7 @@ import { groupChronology } from "./timelinegroups";
 // it works today only because the company record page pulls that stylesheet in
 // for its own sake, so this file renders unstyled anywhere else.
 import "./company360.css";
+import { useAccountScan } from "./accountscan";
 import { invalidateRecord } from "./recordwritekeys";
 
 // Companies list + company 360 (B-EP09.10a/b). Firmographics render
@@ -1774,6 +1776,13 @@ type ComposeAnchor =
   | { kind: "reply"; id: string }
   | { kind: "account"; id: string };
 
+// A suggestion action kind the page has no handler for. Reached only if the
+// contract grows a kind before this page does, which TypeScript refuses at the
+// switch that calls it — the runtime throw is for a payload the build never saw.
+function unreachableAction(kind: never): never {
+  throw new Error(`no surface performs the suggestion action ${String(kind)}`);
+}
+
 // The composer, opened on whichever anchor the page holds. Extracted so the
 // page does not carry a branch per anchor kind in its own JSX.
 function AccountComposer({
@@ -1830,12 +1839,18 @@ function CompanyPage({
   const queryClient = useQueryClient();
   const recordZone = useRecordZone();
   const archivedParagraphId = useId();
+  // Why this account takes no changes from this reader — archived, or not
+  // theirs to write — said ONCE for the page. The header's verbs, the
+  // document upload and the relationship edges all point at this sentence,
+  // so a rep opening a colleague's account is told once rather than offered
+  // controls whose save the server refuses.
+  const verbRefusal = useCompanyVerbRefusal(org);
   // Only when the paragraph below is actually rendered — the raw `useId()`
   // value is always truthy, so passing IT unconditionally told
   // CompanyActionBadges a sentence was already drawn for every account,
-  // archived or not, and left its own fallback (the "not yours to change"
-  // case) pointing `aria-describedby` at an id nothing on the page carries.
-  const archivedReasonId = org.archived_at ? archivedParagraphId : undefined;
+  // refused or not, and left its own fallback pointing `aria-describedby` at
+  // an id nothing on the page carries.
+  const archivedReasonId = verbRefusal ? archivedParagraphId : undefined;
   // ONE composer, opened two ways. Anchored on a timeline message it answers
   // that message; anchored on a person it starts a new one and grounds on the
   // account instead of a thread (ADR-0087 §1). Two pieces of state would let
@@ -1940,9 +1955,9 @@ function CompanyPage({
               for the same reason, so the reason belongs to the page rather than
               to whichever group is drawing — stated in each, an archived
               account said the same thing twice as soon as the menu opened. */}
-          {org.archived_at && (
+          {verbRefusal && (
             <p className="t-caption" id={archivedParagraphId}>
-              {t("record.archivedReadOnly")}
+              {verbRefusal}
             </p>
           )}
           <CompanyPrimaryActions
@@ -1986,6 +2001,7 @@ function CompanyPage({
         org={org}
         view={view}
         overlay={overlay}
+        refusedReasonId={archivedReasonId}
         loading={loading}
         failed={failed}
         tab={tab}
@@ -1995,16 +2011,30 @@ function CompanyPage({
         composing={composing}
         onCompose={setComposing}
         onPerform={(action) => {
-          if (action.kind === "draft_reply" && action.activity_id) {
-            setComposing({ kind: "reply", id: action.activity_id });
-          } else if (action.kind === "open_deal" && action.deal_id) {
-            navigate({ screen: "deals", id: action.deal_id });
+          // Total over the kinds the server can name: a kind this page
+          // cannot perform is a compile error here, never a button that
+          // swallows the click.
+          switch (action.kind) {
+            case "draft_reply":
+              if (action.activity_id) {
+                setComposing({ kind: "reply", id: action.activity_id });
+              }
+              return;
+            case "open_deal":
+              if (action.deal_id) {
+                navigate({ screen: "deals", id: action.deal_id });
+              }
+              return;
+            case "add_task":
+              // Never reached: the advice section writes the step itself,
+              // through the same POST /tasks the task form uses, because the
+              // server prepared the body and this page would only be relaying
+              // it. Routing it through a surface here would put a second
+              // author on a sentence a rule already wrote.
+              return;
+            default:
+              unreachableAction(action.kind);
           }
-          // `add_task` never reaches here: the advice section writes the step
-          // itself, through the same POST /tasks the task form uses, because
-          // the server prepared the body and this page would only be relaying
-          // it. Routing it through a surface here would put a second author on
-          // a sentence a rule already wrote.
         }}
         decisionsOpen={decisionsOpen}
         onDecisionsOpen={setDecisionsOpen}
@@ -2085,6 +2115,7 @@ function CompanyRecordBody({
   onOpenTask,
   taskUpdate,
   onOpenHistory,
+  refusedReasonId,
 }: Readonly<{
   org: Organization;
   view?: Organization360View;
@@ -2108,6 +2139,9 @@ function CompanyRecordBody({
   onOpenTask: (activityId: string | null) => void;
   taskUpdate: ReturnType<typeof useTaskUpdate>;
   onOpenHistory: () => void;
+  // The page's one sentence about why this account takes no changes, by id,
+  // for the profile tab's relationship edges.
+  refusedReasonId?: string;
 }>) {
   // Whether this company is this reader's to change. It used to be
   // `!org.archived_at`, which answered a different question: an archived
@@ -2237,7 +2271,10 @@ function CompanyRecordBody({
               already read on an agreement's own row. Two panels, and no file on
               both of them. */}
           <CompanyContractsCard orgId={org.id} />
-          <CompanyDocumentsCard orgId={org.id} />
+          <CompanyDocumentsCard
+            orgId={org.id}
+            refusedReasonId={refusedReasonId}
+          />
         </div>
       )}
       {/* The decision queue belongs to the OVERVIEW. Leaving it standing over
@@ -2271,6 +2308,7 @@ function CompanyRecordBody({
           org={org}
           offerOnOverview={nothingOnFile(view)}
           onOpenHistory={onOpenHistory}
+          refusedReasonId={refusedReasonId}
           t={t}
         />
       )}
@@ -2387,6 +2425,10 @@ function CompanyOverviewStack({
     entityType === "user"
       ? colleagues.get(entityId)
       : records(entityType, entityId);
+  // The reader's scan of this account, asked for on open. Only once the 360
+  // has answered natively: the scan is read from the same records, and an
+  // overlay workspace has none of them here.
+  const scan = useAccountScan(org.id, !overlay && view !== undefined);
   // ONE reading of the account, drawn in two panes: the 360's call at the
   // full measure, and the needs list in the left column under it. Computed
   // here, once, so the verdict and the queue cannot disagree.
@@ -2399,6 +2441,7 @@ function CompanyOverviewStack({
     onDraftTo,
     onOpenRecord,
     onPerform,
+    scan,
   });
   return (
     <div className="co-overview-stack">
@@ -2735,6 +2778,7 @@ function CompanyTasksTab({
           : (step) => (
               <TaskQuickActions
                 activityId={step.activity_id}
+                version={step.version}
                 dueAt={step.due_at}
                 update={update}
                 showComplete={false}
@@ -2807,12 +2851,15 @@ function CompanyProfileTab({
   // Both at once is two buttons that start the same crawl.
   offerOnOverview,
   onOpenHistory,
+  refusedReasonId,
   t,
 }: Readonly<{
   active: boolean;
   org: Organization;
   offerOnOverview: boolean;
   onOpenHistory: () => void;
+  // See ReferenceDisclosures: the page's one read-only sentence, by id.
+  refusedReasonId?: string;
   t: ReturnType<typeof useT>;
 }>) {
   if (!active) {
@@ -2823,6 +2870,7 @@ function CompanyProfileTab({
       org={org}
       offerOnOverview={offerOnOverview}
       onOpenHistory={onOpenHistory}
+      refusedReasonId={refusedReasonId}
       t={t}
     />
   );
@@ -2832,11 +2880,15 @@ function ReferenceDisclosures({
   org,
   offerOnOverview,
   onOpenHistory,
+  refusedReasonId,
   t,
 }: Readonly<{
   org: Organization;
   offerOnOverview: boolean;
   onOpenHistory: () => void;
+  // The page's one sentence about why this account takes no changes, while
+  // it does not: an edge is written through the account's own write gate.
+  refusedReasonId?: string;
   t: ReturnType<typeof useT>;
 }>): ReactNode {
   return (
@@ -2850,7 +2902,10 @@ function ReferenceDisclosures({
               reconcile. */}
           <Panel title={t("co.relationships.title")}>
             <PanelBody>
-              <RelationshipsTab scope={{ organization_id: org.id }} />
+              <RelationshipsTab
+                scope={{ organization_id: org.id }}
+                refusedReasonId={refusedReasonId}
+              />
             </PanelBody>
           </Panel>
           <Panel title={t("co.tools.title")}>

@@ -11,6 +11,8 @@ package agents
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -189,5 +191,76 @@ func TestProgressDealStageInfoPinsTheCurrentDealVersion(t *testing.T) {
 	}
 	if info.Summary == "" {
 		t.Fatal("the inbox needs a one-line summary")
+	}
+}
+
+// The win-evidence claim reaches the provider through THIS door, not only
+// through advance_deal's.
+//
+// The census in backend/gates/winevidencedoors_test.go holds that the door
+// names the field; this holds that naming it does something. A schema that
+// advertises an argument the handler drops is worse than one that never offered
+// it: the caller answers the win gate's refusal, is refused again, and has no
+// way to tell that its answer went nowhere.
+func TestProgressDealCarriesTheWinEvidenceToTheProvider(t *testing.T) {
+	dealID, stageID, noteID := ids.NewV7(), ids.NewV7(), ids.NewV7()
+	p := progressFixture(dealID, noteID)
+	tool := progressDeal{p: p, stages: fixedStages{semantic: "won"}}
+
+	if _, err := tool.Handle(context.Background(), json.RawMessage(
+		`{"deal_id":"`+dealID.String()+`","to_stage_id":"`+stageID.String()+
+			`","won_without_contract_reason":"purchase_order",`+
+			`"won_without_contract_detail":"PO-4471 countersigned"}`)); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(p.advances) != 1 {
+		t.Fatalf("advances = %d, want the one move", len(p.advances))
+	}
+	got := p.advances[0]
+	if got.WonWithoutContractReason == nil || *got.WonWithoutContractReason != "purchase_order" {
+		t.Errorf("won_without_contract_reason = %v, want the caller's claim — a paperless win "+
+			"through this door is refused with no argument that answers it", got.WonWithoutContractReason)
+	}
+	if got.WonWithoutContractDetail == nil || *got.WonWithoutContractDetail != "PO-4471 countersigned" {
+		t.Errorf("won_without_contract_detail = %v, want the caller's detail", got.WonWithoutContractDetail)
+	}
+}
+
+// noteFailsSoR advances a deal and then refuses the note, which is the only
+// partial failure this composition can produce.
+type noteFailsSoR struct {
+	*fakeSoR
+	refusal error
+}
+
+func (f noteFailsSoR) Create(context.Context, datasource.CreateInput) (datasource.EntityRef, error) {
+	return datasource.EntityRef{}, f.refusal
+}
+
+// A note that fails after the move says the MOVE STANDS.
+//
+// This is the composition's one honest hard case: two writes, no transaction
+// between them, and a caller who has to know which half happened. An error that
+// only said "logging failed" would read as nothing having happened, and the
+// caller's repair — retrying progress_deal — would move an already-moved deal.
+func TestProgressDealSaysTheMoveStandsWhenTheNoteFails(t *testing.T) {
+	dealID, stageID := ids.NewV7(), ids.NewV7()
+	p := noteFailsSoR{fakeSoR: progressFixture(dealID, ids.NewV7()), refusal: errors.New("activity store unreachable")}
+	tool := progressDeal{p: p, stages: fixedStages{semantic: "open"}}
+
+	_, err := tool.Handle(context.Background(), json.RawMessage(
+		`{"deal_id":"`+dealID.String()+`","to_stage_id":"`+stageID.String()+`","note":"left a voicemail"}`))
+	if err == nil {
+		t.Fatal("a refused note returned no error, so a caller would read the note as written")
+	}
+	if len(p.advances) != 1 {
+		t.Fatalf("advances = %d, want the move that did happen", len(p.advances))
+	}
+	for _, want := range []string{"the move stands", "log_activity"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error %q does not say %q — a caller told only that logging failed retries the "+
+				"whole verb and moves an already-moved deal", err, want)
+		}
 	}
 }

@@ -95,12 +95,7 @@ func anotherLivePersonHoldsAChannelAccount(ctx context.Context, tx pgx.Tx, subje
 	if len(identities) == 0 {
 		return false, nil
 	}
-	providers := make([]string, 0, len(identities))
-	accounts := make([]string, 0, len(identities))
-	for _, identity := range identities {
-		providers = append(providers, identity.Provider)
-		accounts = append(accounts, identity.ChannelUserID)
-	}
+	providers, accounts := channelIdentityPairs(identities)
 	var held bool
 	err := tx.QueryRow(ctx, `
 		SELECT EXISTS (

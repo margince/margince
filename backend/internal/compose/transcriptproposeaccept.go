@@ -136,15 +136,15 @@ func stampTranscriptDue(ctx context.Context, tx pgx.Tx, in *activities.LogActivi
 	}
 	// The last second of the named day.
 	//
-	// NOT the same instant the web composer's own date box produces, and the
-	// difference is deliberate. format/calendarday.dueInstant resolves the day
-	// in the BROWSER's zone, because a rep typing a due date is setting a
-	// deadline for themselves. This one resolves in the installation's, for the
-	// reason above: a transcript's deadline is a record fact read back by
-	// colleagues elsewhere. A rep far from the installation's zone will see the
-	// two land an hour or more apart, and on the far side of midnight, a day
-	// apart. Making them agree means deciding which of the two readings a due
-	// date IS, and that is a product question rather than a bug in either.
+	// The same instant the web composer's date box now produces:
+	// format/calendarday.dueInstant resolves the picked day against the same
+	// installation zone this does. It used to resolve in the BROWSER's, and the
+	// two readings disagreed by a whole day for anyone east of the
+	// installation — a proposal approved for 9 September was read back as a
+	// task due the 10th, because this stamp lands on the day's last second and
+	// any eastward offset at all pushes that past midnight. A deadline is a
+	// record fact read back by colleagues elsewhere, so there is one clock for
+	// it: this one.
 	//
 	// Built from the day's OWN parts rather than by adding a day and taking a
 	// second back. A local day is not always 24 hours: on Europe/Berlin's

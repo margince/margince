@@ -176,6 +176,17 @@ func (ContractKind) kind() string { return "contract" }
 // ContractID names one contract row — an agreement an account has signed.
 type ContractID = ID[ContractKind]
 
+// ExitCriterionKind is the stage_exit_criterion entity tag — what a stage
+// requires before a deal may leave it. Declared out-of-line for the reason
+// given above OfferTemplateKind: this identifier is longer than every entry
+// in the aligned blocks, so folding it in would reflow all of them.
+type ExitCriterionKind struct{}
+
+func (ExitCriterionKind) kind() string { return "stage_exit_criterion" }
+
+// ExitCriterionID names one stage_exit_criterion row.
+type ExitCriterionID = ID[ExitCriterionKind]
+
 // CommissionEntryKind is the commission-ledger entity tag. Declared
 // out-of-line for the reason given above OfferTemplateKind.
 type CommissionEntryKind struct{}

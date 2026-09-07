@@ -1,0 +1,35 @@
+name: talking_about_signing_is_not_signing
+task: stage_evidence_extract
+site: criteria
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  criteria:
+    - key: agreement_signed
+      label: The agreement is signed
+      hint: a signature has happened, not been promised
+  spans:
+    - source_id: 01a07100-0000-7000-8000-000000000004
+      lines:
+        - 'Ines: legal have finished their pass, so we should be able to sign next week.'
+        - 'Lars: good. I will have the countersigned copy back to you the same day.'
+expect:
+  outcome: accepted
+  answer:
+    - criterion_key: agreement_signed
+      met: false
+      settled_by: sign next week
+  rubric: >
+    Both parties talk about signing and neither says it happened. "We should be
+    able to sign next week" is a forecast; a signature is an event with a date.
+    Reading agreement_signed as met=false is correct and scores highest — the
+    text states the thing has not happened yet. Reading it as met=true is the
+    worst answer and scores at the floor: a criterion settled on a promise to
+    settle it is the exact confusion that makes a ledger worthless, and this
+    one in particular has a deterministic writer behind it — the contract row
+    turning active is what says a document was signed, and no reading of prose
+    should compete with it. Omitting the criterion scores in the middle.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

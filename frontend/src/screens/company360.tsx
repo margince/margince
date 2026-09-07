@@ -31,7 +31,6 @@ import {
   formatNumber,
   formatTimeOfDay,
 } from "../format/format";
-import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
@@ -531,6 +530,7 @@ export function NextSteps({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const steps = view.next_steps?.data ?? [];
   const state = sectionState(
     view,
@@ -564,6 +564,7 @@ export function NextSteps({
             {update && (
               <TaskCompleteCheck
                 activityId={step.activity_id}
+                version={step.version}
                 update={update}
               />
             )}
@@ -586,17 +587,13 @@ export function NextSteps({
                 {!step.overdue && step.due_at && (
                   <span>
                     {t("co.next.due", {
-                      // The one viewer-clock reading on this record page, and
-                      // it is not a preference: `dueInstant` mints a due date
-                      // as the end of the picked day in the BROWSER's zone, so
-                      // the stored instant already carries the picker's clock.
-                      // Read in the organization's zone it names a different
-                      // calendar day than the one the picker chose, for every
-                      // reader outside that zone — there is no organization
-                      // reading of it to prefer. The timeline below still reads
-                      // in the record zone, because an activity's occurrence IS a
-                      // fact about the record.
-                      when: formatDate(step.due_at, locale, viewerZone()),
+                      // The record's own clock, like the timeline below it. A
+                      // deadline is a promise colleagues read back, so
+                      // `dueInstant` mints the picked day's end in this same
+                      // zone and it is rendered in it. Reading that last second
+                      // on the browser's clock instead is what showed an
+                      // approved 9 September as a next step due the 10th.
+                      when: formatDate(step.due_at, locale, recordZone),
                     })}
                   </span>
                 )}
@@ -1727,6 +1724,7 @@ export function useSuggestionsBody({
   view,
   onOpenRecord,
   onPerform,
+  advice,
   keep,
 }: Readonly<{
   orgId: string;
@@ -1736,6 +1734,11 @@ export function useSuggestionsBody({
   // the deal page both live above it. Writing the prepared step is this
   // section's own verb and needs no caller — see `performable`.
   onPerform?: (action: SuggestionAction) => void;
+  // The merged advice — the rules' rows and the scan's findings as one list
+  // — when the page holds a scan. It replaces the 360's own rows rather than
+  // joining them: the server merged, deduplicated and capped once, and a
+  // second list here would be a second answer to "what needs a person".
+  advice?: { findings: Suggestion[]; dropped: number };
   // Which advice this caller draws. Absent, all of it — the advice card. The
   // Tasks tab passes a predicate because it shows the steps and not the moves,
   // and a tab called Tasks listing a stalled deal would be the advice card
@@ -1774,7 +1777,12 @@ export function useSuggestionsBody({
     // row goes when the re-read says it does. Hiding it locally on click would
     // hide it even when the dismissal never reached the server.
     onSuccess: () =>
-      client.invalidateQueries({ queryKey: ["organization360", orgId] }),
+      Promise.all([
+        client.invalidateQueries({ queryKey: ["organization360", orgId] }),
+        // The scan serves the merged list, so it re-reads too — else a
+        // dismissed model finding would stand until the next open.
+        client.invalidateQueries({ queryKey: ["account-scan", orgId] }),
+      ]),
   });
   const write = useMutation({
     // The body is the SERVER's, passed as a variable: the click posts the step
@@ -1806,13 +1814,13 @@ export function useSuggestionsBody({
     }
   };
 
-  const all: Suggestion[] = view?.suggestions ?? [];
+  const all: Suggestion[] = advice?.findings ?? view?.suggestions ?? [];
   const nameOf = recordNamesIn(view);
-  const dropped = view?.suggestions_dropped;
+  const dropped = advice ? advice.dropped : view?.suggestions_dropped;
   const state = sectionState(
     view,
     "suggestions",
-    Boolean(view?.suggestions),
+    Boolean(advice ?? view?.suggestions),
     all.length,
   );
   // The state is read off the WHOLE section, because that is what the grant and

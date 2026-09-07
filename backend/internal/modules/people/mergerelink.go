@@ -345,12 +345,15 @@ func relinkProviderPurchases(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 // walks merged_into_id.
 //
 // Delete before repoint, because uq_activity_participant spans
-// (activity, role, user, person, address): where BOTH halves of the merge sat on
-// one activity in the same role and with the same other arms, they are one party
-// recorded twice, so the source's row is dropped rather than collided into the
-// survivor's. Two rows differing by address are NOT that case — they are two
-// addresses of one party — and both repoint, which is what capture would have
-// written had the records been one all along.
+// (activity, role, user, person, address, channel_user_id): where BOTH halves of
+// the merge sat on one activity in the same role and with the same other arms,
+// they are one party recorded twice, so the source's row is dropped rather than
+// collided into the survivor's. Two rows differing by address are NOT that case
+// — they are two addresses of one party — and both repoint, which is what
+// capture would have written had the records been one all along. Two differing
+// by ACCOUNT are the same story in the chat vocabulary, which is why the twin
+// test carries that arm too: without it a merge silently drops one of the two
+// group chats a person was on.
 func relinkParticipantRows(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.PersonID) error {
 	if _, err := tx.Exec(ctx, `
 		DELETE FROM activity_participant ap
@@ -362,7 +365,8 @@ func relinkParticipantRows(ctx context.Context, tx pgx.Tx, sourceID, targetID id
 		          AND twin.person_id = $2
 		          AND coalesce(twin.user_id, '00000000-0000-0000-0000-000000000000')
 		            = coalesce(ap.user_id, '00000000-0000-0000-0000-000000000000')
-		          AND coalesce(twin.address, '') = coalesce(ap.address, ''))`,
+		          AND coalesce(twin.address, '') = coalesce(ap.address, '')
+		          AND coalesce(twin.channel_user_id, '') = coalesce(ap.channel_user_id, ''))`,
 		sourceID, targetID); err != nil {
 		return fmt.Errorf("drop the duplicated participant rows: %w", err)
 	}

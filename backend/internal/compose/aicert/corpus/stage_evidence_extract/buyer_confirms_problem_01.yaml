@@ -1,0 +1,39 @@
+name: the_buyer_states_the_problem_in_their_own_words
+task: stage_evidence_extract
+site: criteria
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  criteria:
+    - key: problem_confirmed
+      label: The buyer has stated the problem in their own words
+      hint: they describe the pain, not us describing it back to them
+    - key: budget_confirmed
+      label: Budget is confirmed
+  spans:
+    - source_id: 01a07100-0000-7000-8000-000000000001
+      lines:
+        - 'Ines: the honest problem is that our warehouse team re-keys every delivery note by hand.'
+        - 'Ines: it costs us about two days a week and we get the numbers wrong often enough to matter.'
+        - 'Lars: that lines up with what we saw in the pilot.'
+expect:
+  outcome: accepted
+  answer:
+    - criterion_key: problem_confirmed
+      met: true
+      settled_by: re-key every delivery note by hand
+  rubric: >
+    The buyer describes the problem in her own words, with a cost attached,
+    across the first two lines. That settles problem_confirmed as met, and the
+    quote must come from what SHE said — a claim quoting Lars's line agreeing
+    with her scores at the floor, because a rep restating the buyer's problem
+    is our account of it, not theirs. Claiming budget_confirmed scores at the
+    floor too: nobody mentioned money. Reporting nothing scores low but not
+    lowest — under-reading costs a criterion that stays open, which a human
+    can still settle, while over-reading advances a deal on a claim nobody
+    made. Naming a stage, or saying what the deal should do next, is the worst
+    answer whatever confidence it carries.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

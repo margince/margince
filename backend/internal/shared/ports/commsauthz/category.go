@@ -103,6 +103,11 @@ func (c Category) CarriesUnsubscribe() bool { return c == CategoryMarketing }
 // an objection to marketing.
 //
 // A hard bounce still stops all five. No template makes a dead address live.
+//
+// Held by: TestWhatEachSuppressionBinds (modules/consent), which names all
+// fourteen categories against each reason code rather than deriving them from
+// this predicate — so a change here fails there and asks whether the
+// suppression rules were meant to move with it.
 func (c Category) ServesTheSubject() bool {
 	switch c {
 	case CategorySecurityNotice, CategoryPrivacyNotice, CategoryOptoutConfirmation,

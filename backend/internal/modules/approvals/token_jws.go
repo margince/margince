@@ -23,6 +23,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -168,12 +169,28 @@ func signingKey(ctx context.Context, tx pgx.Tx) (string, ed25519.PrivateKey, err
 	if err != nil {
 		return "", nil, fmt.Errorf("crmapprovals: keygen: %w", err)
 	}
-	kid = ids.NewV7().String()
+	keyID := ids.NewV7()
+	kid = keyID.String()
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO signing_key (kid, private_key, public_key)
 		VALUES ($1, $2, $3)`,
 		kid, []byte(fresh), []byte(public)); err != nil {
 		return "", nil, err
+	}
+	// A private key coming into existence is recorded, because the row itself
+	// cannot say who was in the building when it appeared: every token this
+	// installation ever signs traces back to this one mint, and a verifier
+	// disputing a signature has no other place to read when the key it names
+	// was made. AuditEvent rather than Audit — there is no prior key to image,
+	// and a first mint that had to invent one would be describing a state that
+	// never existed.
+	//
+	// The image carries the kid and nothing else. The private key is in the
+	// argument list one statement above, and audit_log is append-only and read
+	// by every compliance export there is.
+	if _, err := storekit.AuditEvent(ctx, tx, "create", entitySigningKey, keyID,
+		map[string]any{"kid": kid}); err != nil {
+		return "", nil, fmt.Errorf("crmapprovals: recording the signing key mint: %w", err)
 	}
 	return kid, fresh, nil
 }

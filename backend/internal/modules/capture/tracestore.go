@@ -331,22 +331,18 @@ const settledOutcome = `CASE
 // the outcome. Mail is unguarded, so a `captured` row carrying noise_prior or
 // decided_prior still reports the settled PRIOR verdict that explains it.
 //
-// A MEMBER'S OWN VERDICT IS THEIRS, and the ledger says which one is: the same
-// `NOT resolved_by_owner OR owner_id = <the reader>` the stranded-contact scan
-// asks (strandedcontacts.go). A machine verdict is a fact about the sender and
-// applies to everybody; one a person reached is a fact about their own
-// correspondence. Without it a workspace row — whose t.user_id is NULL — reports
-// whatever a colleague decided about that address, and this read is exactly
-// where a manager sees it.
+// The join carries the trace's OWNER, and that is the isolation rather than a
+// belt on one: the ledger row records who raised the disposition, an address is
+// not unique across members, and `d.email = a.counterparty_email` alone answers
+// with ANOTHER member's verdict about the same person. A disposition can say
+// `personal` or `advisor` about a sender, which is a statement about that
+// member's own correspondence.
 //
-// It also settles which of several historical rows answers: the ledger keeps one
-// per address per owner, so the newest-first LIMIT 1 was picking between people
-// rather than between times.
-//
-// BOTH joins carry the workspace, and that is not belt-and-braces: there is no
-// RLS on these tables since 0217, an address is not unique across tenants, and
-// an unscoped `d.email = a.counterparty_email` would answer with ANOTHER
-// workspace's verdict about the same person.
+// A workspace-owned trace has no member to match, so it joins the row the
+// workspace itself raised — `t.user_id IS NULL AND d.owner_id IS NULL` — and
+// never a member's. There is nothing behind this: the tables carry no policy
+// and no workspace column, so a predicate this query does not write is a
+// predicate nothing writes.
 //
 // The widened arm additionally requires a MEMBER, which keeps it on the
 // personal side of the read. `a.channel_provider IS NULL` used to make that
@@ -370,7 +366,7 @@ const resolutionJoin = `
 		         SELECT status, kind, resolved_at
 		           FROM capture_pending_counterparty
 		          WHERE email = a.counterparty_email
-		            AND (NOT resolved_by_owner OR owner_id = t.user_id)
+		            AND owner_id IS NOT DISTINCT FROM t.user_id
 		            AND (a.channel_provider IS NULL
 		                 OR (t.user_id IS NOT NULL
 		                     AND t.outcome IN ('deferred', 'suppressed')))

@@ -133,6 +133,7 @@ export const en = {
   "history.field.occurred_at": "Occurred",
   "history.field.organization_id": "Company",
   "history.field.owner_id": "Owner",
+  "history.field.visibility": "Visibility",
   "history.field.parent_org_id": "Parent company",
   "history.field.partner_attribution": "Partner attribution",
   "history.field.partner_org_id": "Partner",
@@ -161,7 +162,7 @@ export const en = {
   "autonomy.auto": "auto-execute",
   "autonomy.confirm": "confirm-first",
 
-  "nav.home": "Brief",
+  "nav.brief": "Brief",
   "nav.contacts": "People",
   "nav.companies": "Companies",
   "nav.leads": "Leads",
@@ -206,12 +207,12 @@ export const en = {
   "shell.capture.share": "{percent} · {scanned} of {total} messages",
   "shell.capture.count": "{scanned} messages so far",
   "shell.capture.open": "Open the import",
-  // The sidebar's second level. The control READS one word at every depth; its
-  // accessible name says where it leads, and the level of destinations needs a
-  // name of its own to be led back to.
+  // The sidebar's second level. Out of the section the control names the whole
+  // product it returns to; deeper it READS one word at every depth while its
+  // accessible name says which list it leads back to.
+  "shell.navBackApp": "Back to app",
   "shell.navBack": "Back",
   "shell.navBackTo": "Back to {name}",
-  "shell.navTop": "Destinations",
   // At phone width a section's entries are reached from the page head. The
   // control READS the entry it is on; the name says what pressing it does and
   // keeps that word inside itself (WCAG 2.5.3).
@@ -331,7 +332,7 @@ export const en = {
   "record.archivedReadOnly":
     "This company is archived. Restore it to change anything on it.",
   "record.notYoursToChange":
-    "This company belongs to someone else. Ask its owner to share it with you if you need to make changes.",
+    "You cannot change this company. Ask its owner to share it with you, or your administrator for the right to edit it.",
   "record.logActivityRefused":
     "You do not have permission to log activities on this record.",
   "record.share": "Share",
@@ -984,6 +985,21 @@ export const en = {
   "timeline.group.collapse": "Close",
   "timeline.group.openThread": "View the whole thread",
   "timeline.group.mayContinue": "may continue earlier",
+  // A thread on the chronology is one card: the kind, the count and who was
+  // on it over the subject, then each message with who wrote it and when.
+  "timeline.group.kind": "Thread",
+  "timeline.group.earlier_other": "Show {count} earlier messages",
+  "timeline.group.earlier_one": "Show {count} earlier message",
+  "timeline.group.hideEarlier": "Hide earlier messages",
+  // Who a message in a thread is from, as an actor and a verb: "Ida Keller
+  // wrote", "We sent to Ida Keller". "We" rather than a name, because a
+  // captured mail names the other side and not which seat sent it.
+  "timeline.thread.wrote": "wrote",
+  "timeline.thread.you": "You",
+  "timeline.thread.we": "We",
+  "timeline.thread.them": "Them",
+  "timeline.thread.sentTo": "sent to {who}",
+  "timeline.thread.sent": "sent",
   "timeline.filters.kind": "Activity kind",
   "timeline.filters.kind.all": "All kinds",
   "timeline.filters.kind.email": "Email",
@@ -1143,11 +1159,11 @@ export const en = {
   "access.emailLabel": "Email",
   "access.capabilityLegend": "What may they do?",
   "access.inviteNote":
-    "You will get the link to copy. If a mail relay is configured it is also sent to them.",
+    "You will get the link to copy. If a mail relay is configured we also try to send it to them.",
   "access.issued.title": "Link for {name}",
   "access.issued.mailed": "Sent to {email}. You can also copy it below.",
   "access.issued.notMailed":
-    "No mail was sent. Copy the link and send it yourself.",
+    "The link was not mailed. Copy it and send it yourself.",
   "access.issued.linkLabel": "Their link",
   "access.issued.copy": "Copy link",
   "access.issued.copied": "Copied",
@@ -1463,6 +1479,10 @@ export const en = {
   "approval.kind.org_name_promotion": "Rename an account",
   "approval.kind.vcard_create": "Create a person from a card",
   "approval.kind.lifecycle_change": "Account stage",
+  "approval.kind.stage_progression": "Move a deal to the next stage",
+  "approval.field.because": "Why",
+  "approval.field.from_stage": "From",
+  "approval.field.to_stage": "To",
   "approval.kind.transcript_proposal": "Add a next step from a transcript",
   "approval.kind.fx_rate_proposal": "Refresh exchange rates",
   "approval.kind.ai_model_rate_proposal": "Refresh model prices",
@@ -1481,7 +1501,6 @@ export const en = {
   // back to the payload's JSON keys, and a business question reads as a
   // database row.
   "approval.field.basis": "Why",
-  "approval.field.because": "Why",
   "approval.field.step": "The step",
   "approval.field.intent": "Why this was drafted",
   "approval.field.evidence_snippet": "What the page said",
@@ -1537,8 +1556,13 @@ export const en = {
   "co.suggest.kind.stalled_deal": "Stalled deal",
   "co.suggest.kind.no_next_step": "Nothing scheduled",
   "co.suggest.kind.lifecycle_conflict": "Record disagrees",
+  "co.suggest.kind.commitment_unmet": "Promise unmet",
+  "co.suggest.kind.question_unanswered": "Question unanswered",
+  "co.suggest.kind.risk_raised": "Risk raised",
+  "co.suggest.kind.need_raised": "Need raised",
   "co.suggest.more": "{count} more not shown here.",
   "co.suggest.basedOn": "What this is based on",
+  "co.cite.open": "Open the record",
   "co.suggest.dismiss": "Not now",
   "co.suggest.byline": "Margince suggests",
   "co.suggest.dismissFailed":
@@ -1979,6 +2003,14 @@ export const en = {
   "tagAdmin.nameLabel": "Name",
   "tagAdmin.colorLabel": "Colour",
   "tagAdmin.colorNone": "No colour",
+  "tagAdmin.color.teal": "Teal",
+  "tagAdmin.color.amber": "Amber",
+  "tagAdmin.color.rose": "Rose",
+  "tagAdmin.color.slate": "Slate",
+  "tagAdmin.color.sky": "Sky",
+  "tagAdmin.color.violet": "Violet",
+  "tagAdmin.color.lime": "Lime",
+  "tagAdmin.color.orange": "Orange",
   "tagAdmin.create": "Add",
   "tagAdmin.save": "Save",
   "tagAdmin.edit": "Edit",
@@ -2172,6 +2204,8 @@ export const en = {
   "lead.railTitle": "Owner",
   "lead.detailsUnset": "Not set",
   "lead.terminalReadOnly": "This lead is closed and takes no changes.",
+  "lead.notYoursToChange":
+    "You cannot change this lead. Ask its owner to share it with you, or your administrator for the right to edit it.",
   "lead.callNotInOverlay":
     "This lead is a mirror of the system of record, which takes no activity from here \u2014 log the call where the record lives.",
   "lead.boardCountsUnavailable":
@@ -2443,6 +2477,8 @@ export const en = {
   "deal.archiveConfirm":
     "Archiving removes this deal from the active pipeline. This cannot be undone from the UI.",
   "deal.archivedReadOnly": "This deal is archived and takes no changes.",
+  "deal.notYoursToChange":
+    "You cannot change this deal. Ask its owner to share it with you, or your administrator for the right to edit it.",
   "deal.reopen": "Reopen",
   "deal.reopenPick": "Move this deal back to an open stage",
   "deal.reopenConfirm": "Reopen",
@@ -2578,61 +2614,61 @@ export const en = {
   "decision.status.rejected": "Rejected",
   "decision.status.expired": "Expired",
 
-  "home.pipelineWeighted": "{amount} weighted",
-  "home.pipelineCount_one": "{count} open deal",
-  "home.pipelineCount_other": "{count} open deals",
-  "home.pipelinePartial":
+  "brief.pipelineWeighted": "{amount} weighted",
+  "brief.pipelineCount_one": "{count} open deal",
+  "brief.pipelineCount_other": "{count} open deals",
+  "brief.pipelinePartial":
     "{count} deals are not in these figures — your access does not cover them.",
-  "home.pipelineUnavailable": "This figure could not be loaded.",
+  "brief.pipelineUnavailable": "This figure could not be loaded.",
   // The morning brief's own narrative. The "no pass" line is the honest degrade:
   // a run nobody annotated and a night with nothing in it read identically as
   // silence, so the screen says which one this is.
   // The week just gone. No nav entry of its own: Today is the single door to
   // the work that waits on a person, and this is a view of that same work.
-  "home.panel.weekly": "Last week",
-  "home.weekly.weekOf": "Week of {day}",
+  "brief.panel.weekly": "Last week",
+  "brief.weekly.weekOf": "Week of {day}",
   // What the week TAUGHT, as against what it was. Every learning shows what it
   // rests on, because a claim about cause is one the reader cannot check
   // against anything else on the page.
-  "home.weekly.learnings.title": "What this week taught",
-  "home.weekly.learnings.worked": "What worked",
-  "home.weekly.learnings.didNotWork": "What did not",
-  "home.weekly.learnings.pattern": "A pattern",
-  "home.weekly.learnings.experiment": "Worth trying",
+  "brief.weekly.learnings.title": "What this week taught",
+  "brief.weekly.learnings.worked": "What worked",
+  "brief.weekly.learnings.didNotWork": "What did not",
+  "brief.weekly.learnings.pattern": "A pattern",
+  "brief.weekly.learnings.experiment": "Worth trying",
   // Two empty states, never one: a week nobody read and a week that held no
   // lesson are different facts, and only one of them is about the week.
-  "home.weekly.learnings.notRun": "Nobody has read this week yet.",
-  "home.weekly.learnings.insufficient":
+  "brief.weekly.learnings.notRun": "Nobody has read this week yet.",
+  "brief.weekly.learnings.insufficient":
     "Not enough happened this week to draw a lesson from.",
   // How WELL the week went, beside what happened in it. Each block is drawn only
   // when the server sent it: a rep who carried no leads did not score zero on
   // the funnel, and an empty row would read as failure at something nobody
   // asked of them.
-  "home.weekly.scorecard.title": "How the week went",
-  "home.weekly.scorecard.leadBlock": "Leads and meetings",
-  "home.weekly.scorecard.dealBlock": "Deals",
-  "home.weekly.scorecard.advanced": "Leads moved forward",
-  "home.weekly.scorecard.advancedBasis":
+  "brief.weekly.scorecard.title": "How the week went",
+  "brief.weekly.scorecard.leadBlock": "Leads and meetings",
+  "brief.weekly.scorecard.dealBlock": "Deals",
+  "brief.weekly.scorecard.advanced": "Leads moved forward",
+  "brief.weekly.scorecard.advancedBasis":
     "Steps up the ladder, counted per move",
-  "home.weekly.scorecard.answeredInTarget": "Answered in target",
-  "home.weekly.scorecard.breachedDetail": "{count} breached the target",
-  "home.weekly.scorecard.meetingsHeld": "Meetings held",
-  "home.weekly.scorecard.meetingsBasis": "{booked} booked · {noShow} no-show",
-  "home.weekly.scorecard.partialHistory": "Meetings without history",
-  "home.weekly.scorecard.partialHistoryBasis":
+  "brief.weekly.scorecard.answeredInTarget": "Answered in target",
+  "brief.weekly.scorecard.breachedDetail": "{count} breached the target",
+  "brief.weekly.scorecard.meetingsHeld": "Meetings held",
+  "brief.weekly.scorecard.meetingsBasis": "{booked} booked · {noShow} no-show",
+  "brief.weekly.scorecard.partialHistory": "Meetings without history",
+  "brief.weekly.scorecard.partialHistoryBasis":
     "These predate the meeting history, so the counts above are a floor",
-  "home.weekly.scorecard.advances": "Stage advances",
-  "home.weekly.scorecard.regressionsDetail": "{count} went backwards",
-  "home.weekly.scorecard.medianDaysInStage": "Median days in stage",
-  "home.weekly.scorecard.medianBasis": "For the stages deals left this week",
-  "home.weekly.scorecard.withNextStep": "With a next step",
-  "home.weekly.scorecard.ofOpen": "of {total} open deals",
-  "home.weekly.scorecard.multiThreaded": "More than one person",
-  "home.weekly.scorecard.multiThreadedBasis":
+  "brief.weekly.scorecard.advances": "Stage advances",
+  "brief.weekly.scorecard.regressionsDetail": "{count} went backwards",
+  "brief.weekly.scorecard.medianDaysInStage": "Median days in stage",
+  "brief.weekly.scorecard.medianBasis": "For the stages deals left this week",
+  "brief.weekly.scorecard.withNextStep": "With a next step",
+  "brief.weekly.scorecard.ofOpen": "of {total} open deals",
+  "brief.weekly.scorecard.multiThreaded": "More than one person",
+  "brief.weekly.scorecard.multiThreadedBasis":
     "of {total} open deals, in the last 30 days",
-  "home.weekly.scorecard.closeDateSound": "Close date holds up",
-  "home.weekly.scorecard.forecastMoves": "Forecast upgrades",
-  "home.weekly.scorecard.forecastMovesBasis": "{down} downgraded",
+  "brief.weekly.scorecard.closeDateSound": "Close date holds up",
+  "brief.weekly.scorecard.forecastMoves": "Forecast upgrades",
+  "brief.weekly.scorecard.forecastMovesBasis": "{down} downgraded",
   // The week ahead. The frozen review says what happened; this is the only part
   // of that page anybody can still change.
   "plan.title": "Plan next week",
@@ -2791,167 +2827,167 @@ export const en = {
   "plan.new.save": "Add",
   "plan.new.cancel": "Cancel",
 
-  "home.weekly.outlook": "Where the week was landing",
-  "home.weekly.outlook.week": "This week",
-  "home.weekly.outlook.month": "This month",
-  "home.weekly.outlook.quarter": "This quarter",
-  "home.weekly.outlook.none":
+  "brief.weekly.outlook": "Where the week was landing",
+  "brief.weekly.outlook.week": "This week",
+  "brief.weekly.outlook.month": "This month",
+  "brief.weekly.outlook.quarter": "This quarter",
+  "brief.weekly.outlook.none":
     "No forecast was composed when this review was written, so this week records no landing. That is different from a week that landed on nothing.",
-  "home.weekly.outlook.won": "Won",
-  "home.weekly.outlook.commit": "Commit remaining",
-  "home.weekly.outlook.bestCase": "Best case (incl. commit)",
-  "home.weekly.outlook.weighted": "Weighted",
-  "home.weekly.outlook.landing": "Projected landing",
-  "home.weekly.outlook.measure.commit_evidence": "Read from commit evidence",
-  "home.weekly.outlook.measure.weighted": "Read from the weighted pipeline",
-  "home.weekly.outlook.measure.manager_call": "Read from the manager's call",
-  "home.weekly.bridge": "How the week moved it",
-  "home.weekly.bridge.opening": "Monday",
-  "home.weekly.bridge.closing": "Friday",
-  "home.weekly.bridge.noOpening":
+  "brief.weekly.outlook.won": "Won",
+  "brief.weekly.outlook.commit": "Commit remaining",
+  "brief.weekly.outlook.bestCase": "Best case (incl. commit)",
+  "brief.weekly.outlook.weighted": "Weighted",
+  "brief.weekly.outlook.landing": "Projected landing",
+  "brief.weekly.outlook.measure.commit_evidence": "Read from commit evidence",
+  "brief.weekly.outlook.measure.weighted": "Read from the weighted pipeline",
+  "brief.weekly.outlook.measure.manager_call": "Read from the manager's call",
+  "brief.weekly.bridge": "How the week moved it",
+  "brief.weekly.bridge.opening": "Monday",
+  "brief.weekly.bridge.closing": "Friday",
+  "brief.weekly.bridge.noOpening":
     "No Monday snapshot for this week, so there is no opening figure to have moved from.",
-  "home.weekly.bridge.reconcile":
+  "brief.weekly.bridge.reconcile":
     "These bars do not add up to the closing figure. Read the two totals, not the steps.",
-  "home.weekly.bar.created": "Created",
-  "home.weekly.bar.advanced": "Advanced",
-  "home.weekly.bar.slipped": "Slipped",
-  "home.weekly.bar.won": "Won",
-  "home.weekly.bar.lost": "Lost",
-  "home.weekly.bar.other": "Rates and definitions",
-  "home.weekly.frozen": "Frozen",
-  "home.weekly.written": "written {at}",
-  "home.weekly.pickWeek": "Open another week",
-  "home.weekly.none":
+  "brief.weekly.bar.created": "Created",
+  "brief.weekly.bar.advanced": "Advanced",
+  "brief.weekly.bar.slipped": "Slipped",
+  "brief.weekly.bar.won": "Won",
+  "brief.weekly.bar.lost": "Lost",
+  "brief.weekly.bar.other": "Rates and definitions",
+  "brief.weekly.frozen": "Frozen",
+  "brief.weekly.written": "written {at}",
+  "brief.weekly.pickWeek": "Open another week",
+  "brief.weekly.none":
     "No weekly review yet — the first one is written on the Monday after your first full week.",
-  "home.weekly.tasksDelivered": "Tasks delivered",
-  "home.weekly.ofDue": "{done} of {due}",
-  "home.weekly.dealsWon": "Won",
-  "home.weekly.dealsLost": "Lost",
-  "home.weekly.dealsMoved": "Moved",
-  "home.weekly.decided": "You decided",
-  "home.weekly.acceptedRejected": "{accepted} yes · {rejected} no",
-  "home.weekly.noNarrative":
+  "brief.weekly.tasksDelivered": "Tasks delivered",
+  "brief.weekly.ofDue": "{done} of {due}",
+  "brief.weekly.dealsWon": "Won",
+  "brief.weekly.dealsLost": "Lost",
+  "brief.weekly.dealsMoved": "Moved",
+  "brief.weekly.decided": "You decided",
+  "brief.weekly.acceptedRejected": "{accepted} yes · {rejected} no",
+  "brief.weekly.noNarrative":
     "No summary of this week — Margince did not run a pass over it. The numbers below are still the week's own.",
-  "home.weekly.queueWorked": "Morning queue",
-  "home.weekly.actedDismissed": "{acted} acted · {dismissed} dismissed",
-  "home.weekly.sincePrior": "{delta} vs last week",
-  "home.weekly.wonVsPrior": "{value} · {delta} vs prior week",
-  "home.weekly.leadsAnswered": "Leads answered in time",
-  "home.weekly.ofRouted": "{answered} of {routed}",
-  "home.weekly.planCommitmentsKept": "Plan commitments kept",
-  "home.weekly.meetingsHeld": "Meetings with a next step",
-  "home.weekly.ofMeetings": "{withStep} of {held}",
-  "home.weekly.carriedOver": "Carried over",
-  "home.weekly.outcome.moved": "moved",
-  "home.weekly.outcome.won": "won",
-  "home.weekly.outcome.lost": "lost",
-  "home.act": "Done",
-  "home.dismiss": "Dismiss",
-  "home.actedState": "acted",
-  "home.dismissedState": "dismissed",
-  "home.evidence_other": "{count} evidence rows",
-  "home.evidence_one": "{count} evidence row",
-  "home.openDeal": "Open deal",
-  "home.factorWinnability": "Winnability",
-  "home.factorRevenue": "Revenue",
-  "home.factorTiming": "Timing",
-  "home.factorMomentum": "Momentum",
-  "home.factorWarmth": "Warmth",
+  "brief.weekly.queueWorked": "Morning queue",
+  "brief.weekly.actedDismissed": "{acted} acted · {dismissed} dismissed",
+  "brief.weekly.sincePrior": "{delta} vs last week",
+  "brief.weekly.wonVsPrior": "{value} · {delta} vs prior week",
+  "brief.weekly.leadsAnswered": "Leads answered in time",
+  "brief.weekly.ofRouted": "{answered} of {routed}",
+  "brief.weekly.planCommitmentsKept": "Plan commitments kept",
+  "brief.weekly.meetingsHeld": "Meetings with a next step",
+  "brief.weekly.ofMeetings": "{withStep} of {held}",
+  "brief.weekly.carriedOver": "Carried over",
+  "brief.weekly.outcome.moved": "moved",
+  "brief.weekly.outcome.won": "won",
+  "brief.weekly.outcome.lost": "lost",
+  "brief.act": "Done",
+  "brief.dismiss": "Dismiss",
+  "brief.actedState": "acted",
+  "brief.dismissedState": "dismissed",
+  "brief.evidence_other": "{count} evidence rows",
+  "brief.evidence_one": "{count} evidence row",
+  "brief.openDeal": "Open deal",
+  "brief.factorWinnability": "Winnability",
+  "brief.factorRevenue": "Revenue",
+  "brief.factorTiming": "Timing",
+  "brief.factorMomentum": "Momentum",
+  "brief.factorWarmth": "Warmth",
 
-  "home.digestFor": "digest for {date}",
-  "home.digestSynced": "Emails synced",
-  "home.digestPeople": "People created",
-  "home.digestOrgs": "Companies created",
-  "home.digestDedupe": "Duplicates to review",
-  "home.digestClassify":
+  "brief.digestFor": "digest for {date}",
+  "brief.digestSynced": "Emails synced",
+  "brief.digestPeople": "People created",
+  "brief.digestOrgs": "Companies created",
+  "brief.digestDedupe": "Duplicates to review",
+  "brief.digestClassify":
     "Classified overnight: {commitments} commitments · {meetings} meetings · {noise} noise",
-  "home.digestProjects": "Projects",
-  "home.digestPhaseChanges": "Phase moves",
-  "home.digestNewCommitments": "New commitments",
-  "home.digestGoneQuiet": "Gone quiet",
-  "home.digestPhaseChange": "{from} → {to}",
-  "home.digestCommitmentCount": "{count} new open commitments",
-  "home.digestQuietDays": "quiet for {days} days",
-  "home.glance.morning": "Good morning, {name}.",
-  "home.glance.morningAnon": "Good morning.",
-  "home.glance.afternoon": "Good afternoon, {name}.",
-  "home.glance.afternoonAnon": "Good afternoon.",
-  "home.glance.evening": "Good evening, {name}.",
-  "home.glance.eveningAnon": "Good evening.",
-  "home.glance.night": "Still at it, {name}.",
-  "home.glance.nightAnon": "Still at it.",
-  "home.glance.introWeekly": "This is the week you just closed.",
-  "home.glance.intro": "Here is your day.",
-  "home.panel.decisions": "Waiting on you",
-  "home.panel.overnight": "Overnight",
-  "home.panel.position": "Position",
-  "home.panel.schedule": "Today's schedule",
-  "home.schedule.clear": "Nothing is booked today.",
-  "home.panel.promises": "Promises & tasks",
-  "home.promises.clear": "Nothing is open on you.",
-  "home.promises.untracked":
+  "brief.digestProjects": "Projects",
+  "brief.digestPhaseChanges": "Phase moves",
+  "brief.digestNewCommitments": "New commitments",
+  "brief.digestGoneQuiet": "Gone quiet",
+  "brief.digestPhaseChange": "{from} → {to}",
+  "brief.digestCommitmentCount": "{count} new open commitments",
+  "brief.digestQuietDays": "quiet for {days} days",
+  "brief.glance.morning": "Good morning, {name}.",
+  "brief.glance.morningAnon": "Good morning.",
+  "brief.glance.afternoon": "Good afternoon, {name}.",
+  "brief.glance.afternoonAnon": "Good afternoon.",
+  "brief.glance.evening": "Good evening, {name}.",
+  "brief.glance.eveningAnon": "Good evening.",
+  "brief.glance.night": "Still at it, {name}.",
+  "brief.glance.nightAnon": "Still at it.",
+  "brief.glance.introWeekly": "This is the week you just closed.",
+  "brief.glance.intro": "Here is your day.",
+  "brief.panel.decisions": "Waiting on you",
+  "brief.panel.overnight": "Overnight",
+  "brief.panel.position": "Position",
+  "brief.panel.schedule": "Today's schedule",
+  "brief.schedule.clear": "Nothing is booked today.",
+  "brief.panel.promises": "Promises & tasks",
+  "brief.promises.clear": "Nothing is open on you.",
+  "brief.promises.untracked":
     "Promises made in conversation are not tracked yet — only tasks are listed here.",
-  "home.panel.watch": "Gone quiet",
-  "home.overnight.fixConnector": "Fix the connection",
-  "home.watch.clear": "Nothing has gone quiet.",
-  "home.readings.label": "Your morning, in five readings",
-  "home.readings.truncated":
+  "brief.panel.watch": "Gone quiet",
+  "brief.overnight.fixConnector": "Fix the connection",
+  "brief.watch.clear": "Nothing has gone quiet.",
+  "brief.readings.label": "Your morning, in five readings",
+  "brief.readings.truncated":
     "A source was read to its limit, so every figure above is a floor.",
-  "home.readings.urgent": "Urgent moves",
-  "home.readings.urgentBasis": "somebody waiting or a promise breaking",
-  "home.readings.decisions": "Decisions waiting",
-  "home.readings.decisionsBasis": "somebody is blocked until you answer",
-  "home.readings.pipeline": "Pipeline outlook",
-  "home.readings.pipelineWorkspace": "Pipeline outlook · whole organization",
-  "home.readings.pipelineBasis":
+  "brief.readings.urgent": "Urgent moves",
+  "brief.readings.urgentBasis": "somebody waiting or a promise breaking",
+  "brief.readings.decisions": "Decisions waiting",
+  "brief.readings.decisionsBasis": "somebody is blocked until you answer",
+  "brief.readings.pipeline": "Pipeline outlook",
+  "brief.readings.pipelineWorkspace": "Pipeline outlook · whole organization",
+  "brief.readings.pipelineBasis":
     "{weighted} weighted · {priced} of {eligible} priced",
-  "home.readings.pipelineUnread": "the pipeline could not be read",
-  "home.readings.pipelineReading": "reading the pipeline",
-  "home.readings.openLane": "Open these",
-  "home.readings.meetings": "Meetings ahead",
-  "home.readings.meetingsBasis": "on today's calendar",
-  "home.readings.needsPrep_one": "1 needs prep",
-  "home.readings.needsPrep_other": "{count} need prep",
-  "home.readings.prepUnknown": "not all could be checked",
-  "home.readings.prepared": "all prepared",
-  "home.readings.leads": "Lead response",
-  "home.readings.leadsBasis": "owed a first answer",
-  "home.readings.leadsDue": "next due {value}",
-  "home.rail": "Context",
-  "home.pct": "{pct}%",
-  "home.deck.later": "Later",
-  "home.deck.showMore": "Show the whole message",
-  "home.deck.showLess": "Show less",
-  "home.deck.view": "How the queue is shown",
-  "home.deck.viewDeck": "Deck",
-  "home.deck.viewList": "List",
-  "home.deck.keys":
+  "brief.readings.pipelineUnread": "the pipeline could not be read",
+  "brief.readings.pipelineReading": "reading the pipeline",
+  "brief.readings.openLane": "Open these",
+  "brief.readings.meetings": "Meetings ahead",
+  "brief.readings.meetingsBasis": "on today's calendar",
+  "brief.readings.needsPrep_one": "1 needs prep",
+  "brief.readings.needsPrep_other": "{count} need prep",
+  "brief.readings.prepUnknown": "not all could be checked",
+  "brief.readings.prepared": "all prepared",
+  "brief.readings.leads": "Lead response",
+  "brief.readings.leadsBasis": "owed a first answer",
+  "brief.readings.leadsDue": "next due {value}",
+  "brief.rail": "Context",
+  "brief.pct": "{pct}%",
+  "brief.deck.later": "Later",
+  "brief.deck.showMore": "Show the whole message",
+  "brief.deck.showLess": "Show less",
+  "brief.deck.view": "How the queue is shown",
+  "brief.deck.viewDeck": "Deck",
+  "brief.deck.viewList": "List",
+  "brief.deck.keys":
     "Arrows stage a decision: → accept · ← reject · ↑ edit · ↓ later · U undo · Enter sends the staged ones",
-  "home.deck.behind_one": "1 more behind",
-  "home.deck.behind_other": "{count} more behind",
-  "home.deck.staged_one": "1 decision staged",
-  "home.deck.staged_other": "{count} decisions staged",
-  "home.deck.commit": "Send staged decisions",
-  "home.deck.unstage": "Undo the last one",
-  "home.deck.clearedTitle": "Deck clear",
-  "home.deck.cleared_one": "1 decision sent",
-  "home.deck.cleared_other": "{count} decisions sent",
-  "home.deck.clearedTime": "at {at}",
-  "home.deck.empty": "Nothing is waiting on you.",
-  "home.deck.bundleSummary": "One decision · {count} items",
-  "home.deck.bundleMembers": "Show the {count} items",
-  "home.brief.rank": "Rank",
-  "home.brief.composite": "Score",
+  "brief.deck.behind_one": "1 more behind",
+  "brief.deck.behind_other": "{count} more behind",
+  "brief.deck.staged_one": "1 decision staged",
+  "brief.deck.staged_other": "{count} decisions staged",
+  "brief.deck.commit": "Send staged decisions",
+  "brief.deck.unstage": "Undo the last one",
+  "brief.deck.clearedTitle": "Deck clear",
+  "brief.deck.cleared_one": "1 decision sent",
+  "brief.deck.cleared_other": "{count} decisions sent",
+  "brief.deck.clearedTime": "at {at}",
+  "brief.deck.empty": "Nothing is waiting on you.",
+  "brief.deck.bundleSummary": "One decision · {count} items",
+  "brief.deck.bundleMembers": "Show the {count} items",
+  "brief.rank": "Rank",
+  "brief.composite": "Score",
   // A deal the rep dismissed, come back. The suppression rule holds a dismissed
   // deal out until a linked activity arrives after the mark, so the sentence
   // states that rule rather than guessing: it can only ever name an activity.
-  "home.brief.previouslyDismissed": "Flagged {day} — you dismissed it.",
-  "home.brief.returnedWith": "It came back with activity on",
-  "home.brief.revenueBasis": "Revenue measured against {amount}",
-  "home.brief.resurfaces": "Back",
-  "home.evidenceNone": "no evidence recorded",
-  "home.snooze": "Snooze",
-  "home.snoozedState": "snoozed",
+  "brief.previouslyDismissed": "Flagged {day} — you dismissed it.",
+  "brief.returnedWith": "It came back with activity on",
+  "brief.revenueBasis": "Revenue measured against {amount}",
+  "brief.resurfaces": "Back",
+  "brief.evidenceNone": "no evidence recorded",
+  "brief.snooze": "Snooze",
+  "brief.snoozedState": "snoozed",
 
   "enrich.toInbox": "Open the Worklist",
 
@@ -3010,6 +3046,21 @@ export const en = {
   "transcriptread.proposals_other":
     "{count} next steps waiting for your review",
   "transcriptread.proposals_one": "{count} next step waiting for your review",
+  "transcriptread.staged_one": "{count} next step suggested",
+  "transcriptread.staged_other": "{count} next steps suggested",
+  "transcriptread.decided_one": "{count} suggestion reviewed",
+  "transcriptread.decided_other": "{count} suggestions reviewed",
+  "transcriptread.decidedDetail": "{accepted} accepted, {rejected} declined",
+  "transcriptread.expired_one": "{count} expired undecided",
+  "transcriptread.expired_other": "{count} expired undecided",
+  "transcriptread.effectFailed_one":
+    "{count} accepted suggestion did not produce its task.",
+  "transcriptread.effectFailed_other":
+    "{count} accepted suggestions did not produce their tasks.",
+  "transcriptread.statusUnknown_one":
+    "Status unavailable for {count} suggestion",
+  "transcriptread.statusUnknown_other":
+    "Status unavailable for {count} suggestions",
   "transcriptread.nothingStated":
     "Read in full. This conversation states no next steps.",
   "transcriptread.failedFallback":
@@ -3237,6 +3288,8 @@ export const en = {
     "That file could not be sent for reading. Nothing was changed.",
   "extraction.loading": "Checking whether this file has been read…",
   "extraction.reading": "Reading this file…",
+  "extraction.stalled":
+    "Reading this file has taken unusually long. It may have stopped.",
   "extraction.failed": "This file could not be read.",
   "extraction.groundedNothing":
     "AI read this file and it states none of the deal fields.",
@@ -3323,11 +3376,14 @@ export const en = {
 
   "personAccess.title": "Who can see this person",
   "personAccess.privateToYou":
-    "Private to you. Your mailbox created this person, and nobody else in the organization can see them — not your team, and not an admin.",
+    "Private to its owner. Nobody else in the organization can see this person — not the team, and not an admin.",
   "personAccess.organization":
     "Everyone in the organization can see this person.",
   "personAccess.share": "Share with the organization",
   "personAccess.published": "The organization can see this person now.",
+  "personAccess.makePrivate": "Make private",
+  "personAccess.madePrivate":
+    "This person is the owner's again. Anyone the record was explicitly shared with keeps their access.",
   "compose.reply": "Reply",
   "compose.writeEmail": "Write email",
   "compose.relink": "Relink",
@@ -3385,6 +3441,11 @@ export const en = {
     "The named recipients cannot see these addresses, and cannot see that anyone else was copied.",
   "compose.threadGone":
     "That conversation can no longer be answered, so this opened on the usual way of writing to them. Check the recipient before you send.",
+  "compose.colleagueMailbox_one":
+    "This message was delivered to {names}'s mailbox. Your reply goes out from your own mailbox, under your name.",
+  "compose.colleagueMailbox_other":
+    "This message was delivered to the mailboxes of {names}. Your reply goes out from your own mailbox, under your name.",
+  "compose.colleagueUnnamed": "a colleague",
   "compose.attach": "Attach",
   "compose.filesOnRecord": "On this record",
   "compose.filesLoading": "Reading the record's files…",
@@ -3448,6 +3509,8 @@ export const en = {
     "They took back their permission. Nobody here can lift that, including an administrator.",
   "sendPermission.reason.restricted":
     "Their data is under a processing restriction. Nobody here can lift that, including an administrator.",
+  "sendPermission.reason.askedUsToStop":
+    "They asked us to stop writing to them. Nobody here can lift that, including an administrator.",
   "sendPermission.reason.bounced":
     "That address does not accept mail. Correcting it is the fix, not an override.",
   "sendPermission.reason.tooMany":
@@ -3494,6 +3557,8 @@ export const en = {
   "compose.consentGoto": "Review consent",
   "compose.draftUnavailable":
     "AI drafting is unavailable (the model is not configured). You can still write the email yourself.",
+  "compose.draftUnsupportedHere":
+    "AI drafting is not offered from this page. You can still write the email yourself.",
   "compose.sendUnavailable":
     "Sending is unavailable (no mailer is configured).",
   "compose.mailboxNotSendCapable":
@@ -3759,6 +3824,13 @@ export const en = {
   "delivery.weeklyHelp": "Whether Monday's review also arrives by email.",
   "delivery.byEmail": "By email",
   "delivery.none": "Not by email",
+  "settings.appearance": "Appearance",
+  "settings.appearanceHelp":
+    "Light, dark, or whatever this device is set to. The account menu changes it too.",
+  "settings.displayName": "Your name",
+  "settings.displayNameHelp":
+    "How colleagues see you \u2014 on records you touch, in pickers, and in the trail.",
+  "settings.displayNameSave": "Save",
   "settings.languageHelp": "Lasts for this session.",
   "role.admin": "Admin",
   "role.management": "Management",
@@ -3843,7 +3915,7 @@ export const en = {
     "Your document is queued to be read.",
   "agent.activity.documentExtract.running": "I'm reading your document.",
   "agent.activity.documentExtract.stalled":
-    "Reading your document has taken unusually long. It may have stopped.",
+    "Reading your document has taken unusually long. It may have stopped. Open the file and ask for it to be read again.",
   "agent.activity.documentExtract.done": "I've read your document.",
   "agent.activity.documentExtract.degraded":
     "I got partway through your document and stopped.",
@@ -3856,7 +3928,7 @@ export const en = {
   "agent.activity.documentExtractNamed.queued": "{name} is queued to be read.",
   "agent.activity.documentExtractNamed.running": "I'm reading {name}.",
   "agent.activity.documentExtractNamed.stalled":
-    "Reading {name} has taken unusually long. It may have stopped.",
+    "Reading {name} has taken unusually long. It may have stopped. Open the file and ask for it to be read again.",
   "agent.activity.documentExtractNamed.done": "I've read {name}.",
   "agent.activity.documentExtractNamed.degraded":
     "I got partway through {name} and stopped.",
@@ -3887,6 +3959,26 @@ export const en = {
   // These four were deliberately not narrated until the router could say
   // `running`: reporting them settled-only meant a line that appeared already
   // finished, which tells a waiting reader nothing they did not already know.
+  // The account scan: one reader's read of one account, filed under them
+  // and named for the account the rail can say which one is ready.
+  "agent.activity.accountScan.queued": "Reading an account is queued.",
+  "agent.activity.accountScan.running":
+    "I'm reading an account's exchanges and deals.",
+  "agent.activity.accountScan.stalled":
+    "Reading an account has taken unusually long. It may have stopped. Opening the account again starts a fresh read.",
+  "agent.activity.accountScan.done": "What an account needs is ready.",
+  "agent.activity.accountScan.degraded":
+    "I read an account as far as the records let me and stopped.",
+  "agent.activity.accountScan.failed": "I couldn't finish reading an account.",
+  "agent.activity.accountScanNamed.queued": "Reading {name} is queued.",
+  "agent.activity.accountScanNamed.running":
+    "I'm reading {name}'s exchanges and deals.",
+  "agent.activity.accountScanNamed.stalled":
+    "Reading {name} has taken unusually long. It may have stopped. Opening the account again starts a fresh read.",
+  "agent.activity.accountScanNamed.done": "What {name} needs is ready.",
+  "agent.activity.accountScanNamed.degraded":
+    "I read {name} as far as the records let me and stopped.",
+  "agent.activity.accountScanNamed.failed": "I couldn't finish reading {name}.",
   //
   // summarize is five sites over three kinds of record — a company, a person,
   // a meeting — so the unnamed lines name none of them: "this company" was a
@@ -4306,6 +4398,35 @@ export const en = {
   "stage.removeTitle": "Remove this stage?",
   "stage.removeBody":
     "“{name}” leaves the pipeline and the stages after it move up. Past stage changes stay readable. Deals still sitting on it have to move first.",
+  "stage.criteria.title": "Exit criteria",
+  "stage.criteria.sub": "What must be true before a deal leaves this stage.",
+  "stage.criteria.buyerCallout":
+    "Evidence has to come from the buyer. A message your team wrote never satisfies a criterion about what the buyer did.",
+  "stage.criteria.unreadable":
+    "I could not read this stage's criteria just now. Reload before you change them — what you see may be incomplete.",
+  "stage.criteria.none": "This stage asks for nothing yet.",
+  "stage.criteria.terminal":
+    "A won or lost stage is where a deal stops, so it requires nothing to leave it.",
+  "stage.criteria.add": "Add criterion",
+  "stage.criteria.key": "Key",
+  "stage.criteria.keyHint":
+    "The name evidence cites. Lower-case letters, digits and underscores. It cannot be changed later.",
+  "stage.criteria.label": "Label",
+  "stage.criteria.kind": "Kind",
+  "stage.criteria.required": "Required",
+  "stage.criteria.optional": "Optional",
+  "stage.criteria.hint": "Hint",
+  "stage.criteria.edit": "Edit criterion",
+  "stage.criteria.remove": "Remove",
+  "stage.criteria.removeTitle": "Remove this criterion?",
+  "stage.criteria.removeBody":
+    "“{name}” stops being asked for. Evidence already recorded against it stays readable.",
+  "stage.criteria.kindBuyerConfirmed": "Buyer confirmed",
+  "stage.criteria.kindEventHeld": "Event held",
+  "stage.criteria.kindDocumentSigned": "Document signed",
+  "stage.criteria.kindRoleIdentified": "Role identified",
+  "stage.criteria.kindTermsAccepted": "Terms accepted",
+  "stage.criteria.kindCustom": "Custom",
 
   "ob.url": "Website",
   "ob.urlScheme": "https://",
@@ -4795,6 +4916,11 @@ export const en = {
     "Individual messages can be limited afterwards, and addresses or domains excluded up front.",
   "mailSharing.danger":
     "DANGER: Switching off email sharing will make usage of the CRM difficult. New mail will be visible only to the people on each message.",
+  "mailSharing.posture.shared":
+    "Newly captured mail is readable by colleagues who can see the person.",
+  "mailSharing.posture.private":
+    "Newly captured mail is held to the people on the message and the mailbox that captured it.",
+  "mailSharing.posture.where": "Change this on Capture rules",
   "mailSharing.sharedPosture.label": "Allow mailboxes to share on arrival",
   "mailSharing.sharedPosture.help":
     "Lets a colleague put their own mailbox in the shared posture, where a captured message is readable by the team the moment it lands, before anything has judged it. Off by default.",
@@ -6200,16 +6326,28 @@ export const en = {
   // are: the mailbox and the network a PERSON connected, against the outside
   // systems the INSTALLATION is wired to. One row carried both before, which
   // is why it had to be ungated to keep a rep's own mailbox reachable.
-  "settings.home": "Settings home",
+  "settings.home": "Overview",
   "settings.home.yours": "Your settings",
+  "settings.home.manage": "What you can change",
+  "settings.home.manageSub": "Settings you have the permission to edit.",
+  "settings.home.lookUp": "What you can look up",
+  "settings.home.lookUpSub":
+    "You can read these; changing them is not part of your role.",
+  "settings.home.rolesLabel": "Your role",
+  "settings.home.seatLabel": "Your seat",
+  "settings.home.seat.full": "Full seat \u2014 you can make changes",
+  "settings.home.seat.read": "Read-only seat \u2014 you can look, not change",
+  "settings.home.reachLabel": "Records you reach",
+  "settings.home.reach.own": "Your own records",
+  "settings.home.reach.team": "Your team\u2019s records",
+  "settings.home.reach.all": "Every record in the organization",
   "settings.home.access": "Your access",
   "settings.boundary.deniedTitle": "This settings page is not yours to open",
   "settings.boundary.deniedBody":
     "The address in the bar is a real page \u2014 your seat does not reach it. It is still there to copy if you need to ask somebody who does.",
   "settings.boundary.unknownTitle": "No settings page has this address",
   "settings.boundary.unknownBody":
-    "The link may be from an older version, or mistyped. Settings home lists every page your seat can open.",
-  "settings.boundary.back": "Settings home",
+    "The link may be from an older version, or mistyped. The settings overview lists every page your seat can open.",
   "settings.page.account.sub": "How you appear and sign in \u2014 yours alone.",
   "settings.page.voice.sub": "The words drafts use when they write as you.",
   "settings.page.agents.sub":
@@ -6262,6 +6400,15 @@ export const en = {
   "settings.page.extensions.sub":
     "The units this build composed, and which roles reach them.",
   "settings.page.reset.sub": "Emptying this installation. There is no undo.",
+  "settings.scope.self": "Only you",
+  "settings.scope.mixed": "Mixed",
+  "settings.scope.workspace": "Company",
+  "settings.scope.installation": "Installation",
+  "settings.scopeAria": "Who this page affects: {scope}",
+  "settings.scopeAriaMixed":
+    "This page holds settings that affect different people \u2014 each one says which.",
+  "settings.readOnlyPage":
+    "You can see these settings but not change them \u2014 changing them is not part of your role.",
   "settings.search.label": "Search settings",
   "settings.search.placeholder": "Search settings",
   "settings.search.none": "No settings page matches that.",
@@ -6299,7 +6446,7 @@ export const en = {
   "settings.tab.users": "Users & teams",
   "settings.tab.extensions": "Extensions",
   "settings.tab.integrations": "Integrations",
-  "settings.tab.capture": "Capture",
+  "settings.tab.capture": "Capture rules",
   "settings.tab.data-model": "Data model",
   "settings.tab.ai": "AI",
   "settings.tab.knowledge": "Knowledge",
@@ -6358,7 +6505,7 @@ export const en = {
   "knowledge.new.topicHint":
     "Write a sentence, not a label. It is quoted back to whoever asks a question this set does not cover, so it is read at their least patient moment.",
   "knowledge.new.submit": "Create set",
-  "settings.tab.privacy": "Privacy & audit",
+  "settings.tab.privacy": "Privacy & retention",
   "settings.tab.capture-activity": "Capture activity",
   "verdictPass.subject.senders": "Senders",
   "verdictPass.subject.threads": "Threads",
@@ -6545,8 +6692,6 @@ export const en = {
     "The license expires on {expiry}. Nothing changes before that date.",
   "license.counting":
     "Full seats that are neither deactivated nor suspended, agents included. Read-only seats are unlimited and never counted. This is the count a new member is admitted against.",
-  "settings.group.you": "You",
-  "settings.group.admin": "Admin settings",
   "settings.rates.fxTitle": "Currency rates",
   "settings.rates.fxIntro":
     "Exchange rates that convert foreign-currency amounts to your base currency. New rates take effect today or later; past rates are never changed.",
@@ -6776,17 +6921,18 @@ export const en = {
   "extAccess.nobodyReads":
     "No role holds read on {object}, so every member sees an empty screen where this extension should be. Grant read to at least one role below.",
   "users.empty": "No users yet.",
-  "users.adminOnly": "Managing users is available to admins only.",
+  "users.adminOnly": "You do not have permission to manage users.",
   "users.inviteTitle": "Invite a user",
   "users.teamsLabel": "Teams",
   "users.noTeamsYet": "No teams yet.",
   "users.teamMembersLabel": "Who is in this team",
-  "users.teamMembersAdminOnly": "Membership is visible to admins only.",
+  "users.teamMembersAdminOnly":
+    "You do not have permission to see who is in this team.",
   "users.teamNobodyToAdd": "No users to add yet.",
   "users.teamsTitle": "Teams",
   "users.teamsSub":
     "Named groups you can share records with. Membership alone still grants no access for most roles — the exception is Team Lead: adding one to a team gives them that team's records to read and work, without a share being arranged.",
-  "users.teamsAdminOnly": "Managing teams is available to admins only.",
+  "users.teamsAdminOnly": "You do not have permission to manage teams.",
   "users.deactivated": "{name} deactivated",
   "users.reactivated": "{name} reactivated",
   "users.roleSaved": "Role changed for {name}",
@@ -7305,6 +7451,28 @@ export const en = {
   "aiRouting.saving": "Saving the binding…",
   "aiRouting.saved": "Routing saved. Every process is now serving it.",
   "aiRouting.adminOnly": "Only an admin or ops can change model routing.",
+  "workingHours.title": "When you are bookable",
+  "workingHours.sub":
+    "Yours alone. Nobody sets these for you, and you set them for nobody else.",
+  "workingHours.unset":
+    "You have not chosen yet, so customers are offered 09:00–17:00, Monday to Friday, on the installation's clock.",
+  "workingHours.start": "Day starts",
+  "workingHours.end": "Day ends",
+  "workingHours.days": "Days you work",
+  "workingHours.timezone": "Your timezone",
+  "workingHours.timezoneHelp":
+    "The clock those two times are read on. Pre-filled from this browser.",
+  "workingHours.narrowed":
+    "You are bookable for less of the week than before, so fewer customers will find a time. That is the change, not a fault.",
+  "workingHours.saveFailed": "Those hours were not saved.",
+  "workingHours.save": "Save working hours",
+  "workingHours.day.1": "Monday",
+  "workingHours.day.2": "Tuesday",
+  "workingHours.day.3": "Wednesday",
+  "workingHours.day.4": "Thursday",
+  "workingHours.day.5": "Friday",
+  "workingHours.day.6": "Saturday",
+  "workingHours.day.7": "Sunday",
   "autonomy.title": "What answers itself",
   "autonomy.sub":
     "Small corrections you have been confirming by hand. Switch one on and it applies as soon as it comes up, with the change and an Undo waiting on your day.",
@@ -7800,6 +7968,8 @@ export const en = {
   "person.rail.detailsTitle": "Details",
   "person.rail.archivedReadOnly":
     "This person is archived. Restore them to change anything here.",
+  "person.notYoursToChange":
+    "You cannot change this person. Ask their owner to share them with you, or your administrator for the right to edit them.",
   // Fired when an employment row's version could not be read back before a
   // write — the row is not saved unpinned, so the reader is told to reload
   // rather than left to think the edit landed.
@@ -8055,6 +8225,17 @@ export const en = {
   // The licensed data provider (ADR-0101). Two surfaces share this
   // vocabulary — the Settings card and the person page — so a state reads
   // the same wherever it appears.
+  "today.scan.queued": "Margince will read this account in a moment.",
+  "today.scan.reading":
+    "Margince is reading this account's exchanges and deals.",
+  "today.scan.read": "Read {exchanges} and {deals}",
+  "today.scan.readExchanges_one": "{count} exchange",
+  "today.scan.readExchanges_other": "{count} exchanges",
+  "today.scan.readDeals_one": "{count} deal",
+  "today.scan.readDeals_other": "{count} deals",
+  "today.scan.stale":
+    "The account has moved since. It is read again within the hour.",
+  "today.scan.resumes": "Reading resumes {when}; the AI budget deferred it.",
   "provider.title": "Contact data",
   "provider.readOnly":
     "Read-only view — connecting a provider spends money, so it is an admin or ops action.",
@@ -8275,6 +8456,13 @@ export const en = {
   "filters.noMatches": "No records match this filter.",
   "filters.loadView": "Load a saved filter",
   "filters.pickRecord": "Choose one",
+  "filters.searchRecords": "Search companies",
+  "filters.typeToSearch": "Type to search",
+  "filters.searching": "Searching…",
+  "filters.searchFailed": "Could not search",
+  "filters.noRecordMatches": "No companies match",
+  "filters.changeRecord": "Change",
+  "filters.removeRecord": "Remove {record}",
   "filters.loadingRecords": "Loading choices…",
   "filters.pickValue": "Choose a value",
   "filters.exportCsv": "Export CSV",
@@ -8504,6 +8692,8 @@ export const en = {
   "worklist.completeness.bounded":
     "{shown} shown · {sources} sources have more",
   "worklist.clear": "Nothing is waiting on you.",
+  "worklist.clearOfTasksToday":
+    "No tasks are due today or overdue. Later work is on each record's own Tasks tab.",
   "worklist.clearOfWhatWasRead":
     "Nothing is waiting among the sources that answered.",
   "worklist.partial": "{sources}, so this is not the whole day.",
@@ -8784,6 +8974,7 @@ export const en = {
   "worklist.untitled.relationship_decay": "A relationship is going quiet",
   "worklist.untitled.failed_approval": "Something you approved did not run",
   "worklist.untitled.dsr": "An open privacy request",
+  "worklist.untitled.notice_case": "A disclosure this person is owed",
   "worklist.untitled.sync_health": "The CRM sync needs attention",
   "worklist.sync.class.contacts": "people",
   "worklist.sync.class.companies": "companies",

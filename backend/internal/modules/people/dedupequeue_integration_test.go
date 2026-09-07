@@ -671,6 +671,134 @@ func TestDedupeDispositionAdmitsABoundedOwnerOfBothRecords(t *testing.T) {
 // its own arm. Nothing else in this package would notice: every other merge
 // test acts with RowScopeAll, for which auth.Unbounded waves the whole question
 // through.
+// A refused merge leaves NOTHING behind — not the mark, and not the audit row
+// that says a merge happened.
+//
+// The mark and the merge used to be two transactions with a compensating
+// re-open between them, so a refusal committed 'merged' and its audit row
+// first and then took the mark back with a second write. A re-open that failed,
+// or a process that stopped in the gap, left the candidate claiming a merge
+// that never happened: suppressed for the whole workspace, absent from every
+// queue, with nothing to repair it (#1970).
+//
+// This asserts the POST-CONDITION rather than the interleaving, which is the
+// only thing available: injecting a failure between the mark and the merge
+// needs the two to be separable, and that separability is exactly what the fix
+// removes. What it pins is that a refusal costs the row nothing — and that the
+// audit ledger carries no merge for it, which the old shape wrote and then
+// could not unwrite.
+func TestARefusedMergeLeavesNoMarkAndNoAuditOfOne(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	first, second := seedPersonPair(ctx, t, e, "Nora Atomic", "nora@atomic.test", "Norah Atomic", "norah@atomic.test", "atomic.test")
+	c := openCandidates(ctx, t, e, "person")[0]
+
+	// The colleague owns the loser and not the winner: mergePair's bare
+	// conflict, reached only once the merge is under way.
+	winner, loser := first, second
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE person SET owner_id = $1 WHERE id = $2`, e.otherRep, loser)
+		return err
+	}); err != nil {
+		t.Fatalf("handing the loser to the colleague: %v", err)
+	}
+
+	if _, err := e.store.DisposeDedupeCandidate(e.asOwnScoped(e.otherRep), c.ID, "merge", &winner); !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("the refused merge answered %v, want ErrConflict", err)
+	}
+
+	// The row is OPEN, and open because the mark never committed rather than
+	// because a second write put it back.
+	var disposition string
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`SELECT disposition FROM dedupe_candidate WHERE id = $1`, c.ID).Scan(&disposition)
+	}); err != nil {
+		t.Fatalf("reading the candidate back: %v", err)
+	}
+	if disposition != "open" {
+		t.Errorf("disposition = %q, want open — a refused merge left the pair claiming one, "+
+			"which suppresses it for the whole workspace with nothing to repair it", disposition)
+	}
+
+	// And the ledger says no merge was decided. This is the half a compensating
+	// re-open could never take back: the audit row for the mark was committed
+	// before the merge was attempted, so it outlived the refusal.
+	var merged int
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			SELECT count(*) FROM audit_log
+			 WHERE entity_type = 'dedupe_candidate' AND entity_id = $1
+			   AND after->>'disposition' = 'merged'`, c.ID).Scan(&merged)
+	}); err != nil {
+		t.Fatalf("counting the merge audit rows: %v", err)
+	}
+	if merged != 0 {
+		t.Errorf("%d audit row(s) record a merge that was refused — the ledger is the record "+
+			"a reviewer reads, and it says something happened that did not", merged)
+	}
+}
+
+// The queue says whether the caller could actually decide each pair.
+//
+// Capture creates the near-duplicate owned by the mailbox owner while the
+// incumbent belongs to whoever worked it, so a pair whose ends have different
+// owners is the common shape — and deciding one needs write authority over
+// BOTH ends, because dismissing suppresses both records for the whole workspace
+// and merging rewrites one into the other. Neither owner holds that.
+//
+// The pair is still LISTED: the person who can see a duplicate is the person
+// best placed to notice it, and narrowing the list would hide a real duplicate
+// rather than merely leave it stuck. What was missing is the truth about the
+// buttons — they rendered unconditionally and the refusal arrived after the
+// POST.
+func TestTheQueueSaysWhichPairsThisCallerCouldDecide(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	_, second := seedPersonPair(ctx, t, e, "Otto Split", "otto@split.test", "Ottoo Split", "ottoo@split.test", "split.test")
+	c := openCandidates(ctx, t, e, "person")[0]
+
+	// An unbounded reader can decide it, which is the control: a flag that were
+	// false for everybody would pass the assertion below for the wrong reason.
+	if !c.CanDecide {
+		t.Fatal("an unbounded reader cannot decide a pair it can see — can_decide is false for everyone")
+	}
+
+	// Hand ONE end to a colleague. Now neither owner holds both.
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE person SET owner_id = $1 WHERE id = $2`, e.otherRep, second)
+		return err
+	}); err != nil {
+		t.Fatalf("handing one end to the colleague: %v", err)
+	}
+
+	colleague := e.asOwnScoped(e.otherRep)
+	listed := openCandidates(colleague, t, e, "person")
+	if len(listed) != 1 {
+		t.Fatalf("the colleague sees %d pair(s), want 1 — a duplicate they can see must stay "+
+			"listed even when they cannot settle it", len(listed))
+	}
+	if listed[0].CanDecide {
+		t.Error("can_decide is true for a caller who owns one end of the pair — the buttons will " +
+			"render and the POST will answer 403, which is the whole defect")
+	}
+
+	// And the flag is not merely pessimistic for a bounded seat: give the
+	// colleague both ends and it turns true.
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE person SET owner_id = $1 WHERE id IN ($2, $3)`,
+			e.otherRep, listed[0].LeftID, listed[0].RightID)
+		return err
+	}); err != nil {
+		t.Fatalf("handing both ends to the colleague: %v", err)
+	}
+	both := openCandidates(colleague, t, e, "person")
+	if len(both) != 1 || !both[0].CanDecide {
+		t.Errorf("can_decide = %v for a caller who owns BOTH ends, want true — a flag that is "+
+			"always false hides the buttons from everyone", both)
+	}
+}
+
 func TestDedupeMergeArmKeepsItsOwnRefusal(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()

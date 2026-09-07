@@ -7,6 +7,7 @@ import {
 import { useId } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { ifMatch, requireVersion } from "../api/version";
 import { useRecordZone } from "../app/recordzone";
 import {
   Badge,
@@ -19,7 +20,6 @@ import {
 import { DateInput, isISODate } from "../design-system/dateinput";
 import { calendarDay, dueInstant } from "../format/calendarday";
 import { formatDate, formatDateTime } from "../format/format";
-import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
 import { EntityRef } from "./entityref";
@@ -35,23 +35,32 @@ import { EntityRef } from "./entityref";
 type Activity = components["schemas"]["Activity"];
 type TaskPatch = {
   id: string;
+  // The version the press was decided against. Every verb on a task goes
+  // through this one mutation, so pinning it here pins all four at once — and
+  // an unpinned tick is a task two people can complete, each told it worked.
+  version: number | undefined;
   body: { is_done?: boolean; due_at?: string; remind_at?: string | null };
 };
-
-const ONE_DAY_MS = 86_400_000;
 
 export function useTaskUpdate(invalidateKeys: readonly QueryKey[]) {
   const t = useT();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: TaskPatch) => {
-      const { error } = await api.PATCH("/activities/{id}", {
-        params: { path: { id: input.id } },
+      const { data, error } = await api.PATCH("/activities/{id}", {
+        params: {
+          path: { id: input.id },
+          ...ifMatch(requireVersion(input.version)),
+        },
         body: input.body,
       });
       if (error) {
         throwProblem(error, t);
       }
+      // The version the write PRODUCED, answered so a follow-on press has one.
+      // An undo re-sending the version the row was drawn at would be refused as
+      // skew by the very write it is undoing.
+      return data?.version;
     },
     onSuccess: (_data, input) => {
       for (const queryKey of invalidateKeys) {
@@ -65,12 +74,35 @@ export function useTaskUpdate(invalidateKeys: readonly QueryKey[]) {
   });
 }
 
-/** The next due date one snooze away, or null for a task that has no date to move. */
-export function snoozedDueAt(dueAt: string | null | undefined): string | null {
+/**
+ * The next due date one snooze away, or null for a task that has no date to
+ * move.
+ *
+ * A snooze moves the task to the NEXT CALENDAR DAY, which is not the same as
+ * adding twenty-four hours. A local day is not always that long: on Europe's
+ * spring-forward day, adding a day to the 28th at 23:59:59 lands at 00:59:59
+ * on the 30th, so a rep pressing "tomorrow" skips the 29th entirely. The
+ * accept path warns about exactly this arithmetic where it stamps a deadline;
+ * this writer was doing it.
+ *
+ * Read and re-minted through the calendar helpers, in the zone the deadline
+ * belongs to, so a snooze lands on the day it names for every colleague.
+ */
+export function snoozedDueAt(
+  dueAt: string | null | undefined,
+  zone: string,
+): string | null {
   if (!dueAt) {
     return null;
   }
-  return new Date(new Date(dueAt).getTime() + ONE_DAY_MS).toISOString();
+  const today = calendarDay(new Date(dueAt), zone);
+  const [year, month, day] = today.split("-").map(Number);
+  // Through UTC parts, which is a pure calendar step: no zone reading happens
+  // here, so no DST transition can shorten or lengthen the day being counted.
+  const next = new Date(Date.UTC(year, month - 1, day + 1))
+    .toISOString()
+    .slice(0, "yyyy-mm-dd".length);
+  return dueInstant(next, zone);
 }
 
 /**
@@ -84,9 +116,11 @@ export function snoozedDueAt(dueAt: string | null | undefined): string | null {
  */
 export function TaskCompleteCheck({
   activityId,
+  version,
   update,
 }: Readonly<{
   activityId: string;
+  version: number | undefined;
   update: ReturnType<typeof useTaskUpdate>;
 }>) {
   const t = useT();
@@ -106,7 +140,7 @@ export function TaskCompleteCheck({
         checked={false}
         disabled={pending}
         onChange={() =>
-          update.mutate({ id: activityId, body: { is_done: true } })
+          update.mutate({ id: activityId, version, body: { is_done: true } })
         }
       />
       {failed && (
@@ -136,12 +170,14 @@ export function TaskCompleteCheck({
  */
 export function TaskQuickActions({
   activityId,
+  version,
   dueAt,
   update,
   showComplete = true,
   showDuePicker = false,
 }: Readonly<{
   activityId: string;
+  version: number | undefined;
   dueAt?: string | null;
   update: ReturnType<typeof useTaskUpdate>;
   showComplete?: boolean;
@@ -153,7 +189,8 @@ export function TaskQuickActions({
   showDuePicker?: boolean;
 }>) {
   const t = useT();
-  const nextDue = snoozedDueAt(dueAt);
+  const recordZone = useRecordZone();
+  const nextDue = snoozedDueAt(dueAt, recordZone);
   const pending = update.isPending && update.variables?.id === activityId;
   return (
     <>
@@ -163,7 +200,7 @@ export function TaskQuickActions({
           variant="primary"
           disabled={pending}
           onClick={() =>
-            update.mutate({ id: activityId, body: { is_done: true } })
+            update.mutate({ id: activityId, version, body: { is_done: true } })
           }
         >
           {t("tasks.complete")}
@@ -174,7 +211,11 @@ export function TaskQuickActions({
           small
           disabled={pending}
           onClick={() =>
-            update.mutate({ id: activityId, body: { due_at: nextDue } })
+            update.mutate({
+              id: activityId,
+              version,
+              body: { due_at: nextDue },
+            })
           }
         >
           {t("tasks.snooze")}
@@ -183,6 +224,7 @@ export function TaskQuickActions({
       {showDuePicker && (
         <TaskDueDatePick
           activityId={activityId}
+          version={version}
           dueAt={dueAt}
           update={update}
         />
@@ -206,19 +248,22 @@ export function TaskQuickActions({
 // one day after nothing is nothing.
 function TaskDueDatePick({
   activityId,
+  version,
   dueAt,
   update,
 }: Readonly<{
   activityId: string;
+  version: number | undefined;
   dueAt?: string | null;
   update: ReturnType<typeof useTaskUpdate>;
 }>) {
   const t = useT();
   const pending = update.isPending && update.variables?.id === activityId;
-  // Seeded from the task's own day in the VIEWER's zone, matching what the
-  // meta line above reads it in: a picker opening on a different day than the
-  // one displayed beside it would be two answers to "when is this due".
-  const seeded = dueAt ? calendarDay(new Date(dueAt), viewerZone()) : "";
+  const recordZone = useRecordZone();
+  // Seeded from the task's own day in the INSTALLATION's zone, matching what
+  // the meta line above reads it in: a picker opening on a different day than
+  // the one displayed beside it would be two answers to "when is this due".
+  const seeded = dueAt ? calendarDay(new Date(dueAt), recordZone) : "";
   // Narrowed rather than asserted. calendarDay returns a string, and the
   // control's type says it takes a calendar day or nothing — so a value that
   // is neither opens the picker empty instead of feeding the element something
@@ -250,7 +295,8 @@ function TaskDueDatePick({
             }
             update.mutate({
               id: activityId,
-              body: { due_at: dueInstant(day) },
+              version,
+              body: { due_at: dueInstant(day, recordZone) },
             });
           }}
         />
@@ -315,14 +361,13 @@ export function TaskDetailModal({
             {task.due_at ? (
               <span>
                 {t("co.next.due", {
-                  // The one viewer-clock reading on this record surface, and it
-                  // is not a preference: `dueInstant` mints a due date as the
-                  // end of the picked day in the BROWSER's zone, so the stored
-                  // instant already carries the picker's clock. Read in the
-                  // organization's zone it names a different calendar day than
-                  // the one the picker chose, for every reader outside that
-                  // zone — there is no organization reading of it to prefer.
-                  when: formatDate(task.due_at, locale, viewerZone()),
+                  // The record's own clock, like every other date on this
+                  // surface. A deadline is a fact colleagues read back, so the
+                  // day it names cannot depend on where the reader is sitting:
+                  // `dueInstant` mints the picked day's end in this same zone,
+                  // and reading it in the browser's instead is what made an
+                  // approved 9 September arrive as a task due the 10th.
+                  when: formatDate(task.due_at, locale, recordZone),
                 })}
               </span>
             ) : (
@@ -341,6 +386,7 @@ export function TaskDetailModal({
             <div className="form-actions">
               <TaskQuickActions
                 activityId={task.id}
+                version={task.version}
                 dueAt={task.due_at}
                 update={update}
                 showDuePicker
@@ -422,10 +468,17 @@ export function useMeetingOutcome(invalidateKeys: readonly QueryKey[]) {
   return useMutation({
     mutationFn: async (input: {
       id: string;
+      // The version the answer was decided against, for the reason the task
+      // verb beside it carries one: two readers answering the same meeting
+      // would otherwise both succeed and the later one would win silently.
+      version: number | undefined;
       status: "held" | "no_show" | "canceled";
     }) => {
       const { error } = await api.PATCH("/activities/{id}", {
-        params: { path: { id: input.id } },
+        params: {
+          path: { id: input.id },
+          ...ifMatch(requireVersion(input.version)),
+        },
         body: { meeting_status: input.status },
       });
       if (error) {

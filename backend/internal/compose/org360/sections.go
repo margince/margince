@@ -170,7 +170,7 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, now
 		return nil, crmcontracts.PageInfo{}, nil, err
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT a.id, coalesce(a.subject, ''), a.due_at, a.assignee_id, a.occurred_at,
+		SELECT a.id, coalesce(a.subject, ''), a.due_at, a.assignee_id, a.occurred_at, a.version,
 		       (SELECT dl.deal_id FROM activity_link dl
 		         WHERE dl.activity_id = a.id AND dl.entity_type = 'deal' AND %[3]s
 		         ORDER BY dl.id LIMIT 1),
@@ -196,10 +196,17 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, now
 		// task was filed, but two tasks due the same day have to rank the same
 		// here as on the contact page, and there the older one leads.
 		var occurredAt time.Time
-		if err := row.Scan(&id, &step.Subject, &step.DueAt, &assignee, &occurredAt, &dealID, &personID); err != nil {
+		// The version the row's own tick and snooze write with. Read here rather
+		// than fetched per press: a list that offered a verb and made the caller
+		// go and find the version first would be two round trips for one click,
+		// and the version it found could already be the wrong one.
+		var version int64
+		if err := row.Scan(&id, &step.Subject, &step.DueAt, &assignee, &occurredAt, &version,
+			&dealID, &personID); err != nil {
 			return step, err
 		}
 		step.ActivityId = openapi_types.UUID(id)
+		step.Version = &version
 		step.AssigneeId = uuidPtr(assignee)
 		step.LinkedDealId = uuidPtr(dealID)
 		step.LinkedPersonId = uuidPtr(personID)

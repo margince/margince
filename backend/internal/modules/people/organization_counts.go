@@ -10,12 +10,14 @@ package people
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -35,7 +37,7 @@ import (
 // shown no count of a pipeline it may not see. Absent means withheld; every
 // visible account carries a number, zero included, so a reader can tell
 // "none" from "not yours to know".
-func attachOrgCounts(ctx context.Context, tx pgx.Tx, orgs []crmcontracts.Organization) error {
+func attachOrgCounts(ctx context.Context, tx pgx.Tx, orgs []crmcontracts.Organization, asOf time.Time) error {
 	if len(orgs) == 0 {
 		return nil
 	}
@@ -80,7 +82,7 @@ func attachOrgCounts(ctx context.Context, tx pgx.Tx, orgs []crmcontracts.Organiz
 	if !dealsVisible {
 		return nil
 	}
-	return fillOpenDealCounts(ctx, tx, idx, orgIDs)
+	return fillOpenDealCounts(ctx, tx, idx, orgIDs, asOf)
 }
 
 // grantVisible is the object-grant half of a read, answered from the
@@ -125,7 +127,7 @@ func fillContactCounts(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUI
 		 JOIN person p ON p.id = rel.person_id AND p.archived_at IS NULL
 		 WHERE rel.organization_id = ANY($1)
 		   AND rel.kind = 'employment'
-		   AND `+CurrentPrimaryEmploymentSQL("rel")+`
+		   AND `+employment.CurrentPrimarySQL("rel")+`
 		   AND rel.archived_at IS NULL`+edgeBound+scope+`
 		 GROUP BY rel.organization_id`, args,
 		func(o *crmcontracts.Organization, n int) { o.ContactCount = &n })
@@ -136,11 +138,11 @@ func fillContactCounts(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUI
 // list's count and the company page's open-pipeline tile derive from the
 // same rows and cannot disagree.
 // Held by: TestEveryOpenDealCountComesFromTheRollup (backend/internal/modules/people/opendealcount_test.go)
-func fillOpenDealCounts(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUID]*crmcontracts.Organization, orgIDs []ids.UUID) error {
+func fillOpenDealCounts(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUID]*crmcontracts.Organization, orgIDs []ids.UUID, asOf time.Time) error {
 	return fillCount(ctx, tx, idx,
 		`SELECT organization_id, open_deal_count
-		 FROM organization_open_pipeline_rollup
-		 WHERE organization_id = ANY($1)`, []any{orgIDs},
+		 FROM organization_open_pipeline_rollup($2)
+		 WHERE organization_id = ANY($1)`, []any{orgIDs, asOf},
 		func(o *crmcontracts.Organization, n int) { o.OpenDealCount = &n })
 }
 

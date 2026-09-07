@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -57,11 +58,17 @@ func directOpenPipelineReadPriced(
 	ctx context.Context, t *testing.T, e *Env, orgID ids.UUID,
 ) (minor *int64, count, priced int, found bool) {
 	t.Helper()
+	// The same day the reader binds (people.rollupAsOf): the rollup is asked for
+	// a date, and a test that let the database pick its own CURRENT_DATE would
+	// be reading a rollup at a date the product never asks for — a whole day
+	// apart at midnight in the database's zone, which is the divergence binding
+	// the date removed.
+	asOf := time.Now().UTC().Truncate(24 * time.Hour)
 	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`SELECT open_pipeline_minor_base, open_deal_count, priced_deal_count
-			 FROM organization_open_pipeline_rollup WHERE organization_id = $1`,
-			orgID).Scan(&minor, &count, &priced)
+			 FROM organization_open_pipeline_rollup($2) WHERE organization_id = $1`,
+			orgID, asOf).Scan(&minor, &count, &priced)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, 0, 0, false

@@ -305,6 +305,75 @@ func TestAFixedRecordClearsItsFindingOnTheNextScan(t *testing.T) {
 	}
 }
 
+// A finding somebody DEFERRED is not swept away when its condition clears.
+//
+// "Remind me later" is an answer about WHEN, not about whether, so the finding
+// stays open and comes back at remind_at. CloseCleared carves those rows out —
+// and its clause compared outcome against 'deferred', the vocabulary this table
+// shipped with, renamed to remind_later by migration 1788416000 before any row
+// existed. So the carve-out had never matched: a deferred finding cleared like
+// any other the first night its condition went away, and the reminder never
+// came. Nothing covered CloseCleared at all, which is how a dead literal
+// survived a rename.
+func TestADeferredFindingSurvivesItsConditionClearing(t *testing.T) {
+	t.Parallel()
+	e := setupScan(t)
+	ctx := e.as()
+
+	past := time.Now().UTC().AddDate(0, 0, -10)
+	sick := Subject{
+		DealID: ids.NewV7().String(), Owner: e.rep.String(),
+		ExpectedClose: &past, Category: "commit", HasNextStep: true, HasEconomicBuyer: true,
+	}
+	subjects := []Subject{sick}
+	scanner := NewScanner(e.store,
+		func(context.Context, pgx.Tx) ([]Subject, error) { return subjects, nil },
+		checkedCoverage, DefaultConfig())
+
+	if _, err := scanner.Scan(ctx, time.Now().UTC()); err != nil {
+		t.Fatal(err)
+	}
+
+	// The deferral goes through Resolve, the real door. A hand-written
+	// assurance_resolution row could carry a spelling the writer never
+	// produces — and a disagreement between writer and reader is exactly the
+	// defect this test exists for, so seeding one by hand would hide it.
+	var exception ids.UUID
+	if err := e.store.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`SELECT id FROM assurance_exception WHERE subject_id = $1 AND type = $2`,
+			sick.DealID, TypeClosePast).Scan(&exception)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	remind := time.Now().UTC().AddDate(0, 0, 14)
+	if err := e.store.Resolve(ctx, exception, Resolution{
+		Outcome: OutcomeRemindLater, Reason: "not this week", RemindAt: &remind,
+	}, time.Now().UTC()); err != nil {
+		t.Fatalf("deferring the finding: %v", err)
+	}
+
+	// Tonight the condition goes away on its own.
+	future := time.Now().UTC().AddDate(0, 0, 20)
+	subjects[0].ExpectedClose = &future
+	if _, err := scanner.Scan(ctx, time.Now().UTC()); err != nil {
+		t.Fatal(err)
+	}
+
+	var status string
+	if err := e.store.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`SELECT status FROM assurance_exception WHERE id = $1`, exception).Scan(&status)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if status != "open" {
+		t.Errorf("the deferred finding is %q, want %q — a rep who asked to be reminded "+
+			"in two weeks is not reminded at all once the sweep closes it",
+			status, "open")
+	}
+}
+
 // A finding whose rule needs a source that went unread tonight stays open:
 // on such a night "not observed" means "not looked", not "not there".
 func TestAFindingWhoseSourceWentUnreadStaysOpen(t *testing.T) {

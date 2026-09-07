@@ -39,10 +39,16 @@ type SlippingDeal struct {
 	// second read per deal, and nothing here widens what the list already
 	// showed the caller. Nil where the row carries none (an overlay-mirror
 	// deal has no native stage; a deal can be ownerless).
-	StageID           *ids.UUID
-	OwnerID           *ids.UUID
-	Stalled           bool
-	CloseOverdue      bool
+	StageID      *ids.UUID
+	OwnerID      *ids.UUID
+	Stalled      bool
+	CloseOverdue bool
+	// NoOpenNextStep says the deal carries no open, unarchived task of its
+	// own. It is the sweep's third named signal, and the only one that is an
+	// ABSENCE: what the deal list carries is what a deal has, so this is
+	// answered by its own read (compose.dealsWithNoOpenNextStep, which states
+	// what counts).
+	NoOpenNextStep    bool
 	LastActivityAt    *time.Time
 	CreatedAt         time.Time
 	ExpectedCloseDate *time.Time
@@ -57,6 +63,19 @@ type SlippingLister func(ctx context.Context) ([]SlippingDeal, error)
 // it as a draft activity on the deal's timeline — a proposal, never a
 // send. Compose implements it over the same deterministic draft voice
 // draft_email uses and the same provider write path every tool rides.
+//
+// IT PERSISTS, where draft_email deliberately does not, and the difference is
+// the act rather than an inconsistency.
+//
+// This tool drafts N for later triage, and the `draft_activity_id` it answers
+// is the whole point of it: a batch that lived only in the transcript would be
+// unusable, because nobody triages ten drafts out of a chat scrollback. The
+// write is what makes it a tool rather than a wall of text.
+//
+// draft_email drafts ONE message meant to be sent now, so it returns text and
+// files nothing — matching the HTTP draft endpoint the web app's own button
+// calls, which is an agreement worth keeping. compose.commsAdapter's
+// DraftAccountEmail carries that half of the reasoning.
 type FollowUpDrafter func(ctx context.Context, deal SlippingDeal) (draftActivityID ids.UUID, summary string, err error)
 
 // RegisterSlippingTools wires the pipeline-risk intents. No lister, no
@@ -261,6 +280,17 @@ func rankSlipping(candidates []SlippingDeal) []slippingItem {
 			it.evidence = append(it.evidence, SlippingEvidence{
 				Source:  "deal.expected_close_date",
 				Snippet: "expected close " + d.ExpectedCloseDate.UTC().Format("2006-01-02") + " is past due",
+			})
+		}
+		// The one claim grounded in an ABSENCE, so the source names the read
+		// rather than a field: there is no column whose value evidences that
+		// nothing is there. The no-guess gate below still applies — a deal
+		// reaches the answer on this flag alone only because the flag IS the
+		// finding, which the two above are not.
+		if d.NoOpenNextStep {
+			it.evidence = append(it.evidence, SlippingEvidence{
+				Source:  "activity.task",
+				Snippet: "no open next step on this deal",
 			})
 		}
 		if len(it.evidence) == 0 {

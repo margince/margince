@@ -245,10 +245,12 @@ jobs:
       #     durable win is the dependency-download layer, which only busts
       #     when a module pin changes. This step exposes the Actions cache
       #     credentials buildx needs for type=gha.
-      #   - The cache MOUNTS (the Go compile cache, the pnpm store, corepack's
-      #     pnpm download, tsc's .tsbuildinfo) are not layers and no layer
-      #     cache carries them; actions/cache + buildkit-cache-dance below
-      #     save and restore their contents around the bake.
+      #   - The cache MOUNTS (the Go compile cache, the pnpm store, tsc's
+      #     .tsbuildinfo) are not layers and no layer cache carries them;
+      #     actions/cache + buildkit-cache-dance below save and restore their
+      #     contents around the bake. Corepack's download is NOT among them:
+      #     the pinned pnpm is baked into a layer of its own, so a mount over
+      #     its home would hide the version the image is supposed to run.
       #
       # Both cache steps carry continue-on-error: they only make the bake
       # faster, so a cache-service outage or a broken injection must cost this
@@ -275,8 +277,7 @@ jobs:
             {
               ".buildx-mount-cache/go-build": { "target": "/root/.cache/go-build", "id": "margince-gobuild" },
               ".buildx-mount-cache/pnpm-store": { "target": "/pnpm-store", "id": "margince-pnpm-store" },
-              ".buildx-mount-cache/tsbuildinfo": { "target": "/app/frontend/node_modules/.tmp", "id": "margince-tsbuildinfo" },
-              ".buildx-mount-cache/corepack": { "target": "/root/.cache/node/corepack", "id": "margince-corepack" }
+              ".buildx-mount-cache/tsbuildinfo": { "target": "/app/frontend/node_modules/.tmp", "id": "margince-tsbuildinfo" }
             }
           skip-extraction: ${{ steps.mount-cache.outputs.cache-hit }}
       # ghcr only for pulling the private release-management CLI image; the

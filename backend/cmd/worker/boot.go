@@ -178,6 +178,20 @@ func startEventLanes(laneCtx context.Context, background *sync.WaitGroup, cfg wo
 		}
 	}
 
+	// Stage evidence from records that already settle something: a signed
+	// contract, a meeting that took place. Ungated for the same reason the
+	// vCard import below is — every claim it writes restates what a record
+	// says, so no model lane is involved and gating it would delete the
+	// feature in an AI-less deployment for a reason that is not its own.
+	//
+	// The lane it is TOLD about is the model's half: whether this installation
+	// can also read what was said. Without one the trigger queues no reading,
+	// because River discards a job whose kind no worker claims.
+	if err := startStageEvidenceTrigger(laneCtx, pool, rdb,
+		modelPath.StageEvidenceExtract != nil, lanes.background, logger, stdout); err != nil {
+		return lanes, err
+	}
+
 	// A card attached to that same mail, imported on arrival — and deliberately
 	// NOT gated on the enrich lane, because parsing a .vcf needs no model.
 	// Gating it here would delete the feature in an AI-less deployment for a
@@ -406,6 +420,7 @@ func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cl
 	startCommissionAccrual(ctx, pool, rdb, background, logger, stdout)
 
 	startIntroAdvance(ctx, pool, rdb, background, logger, stdout)
+	startStageProgressionOutcome(ctx, pool, rdb, background, logger, stdout)
 	startNoticeCaseOpen(ctx, pool, rdb, background, logger, stdout)
 
 	startDealRoomTimeline(ctx, pool, rdb, background, logger, stdout)

@@ -12,7 +12,6 @@ import { Callout } from "../design-system/callout";
 import { useToast } from "../design-system/toast";
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { leadIdentityName } from "../format/leadname";
-import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
@@ -197,12 +196,26 @@ export function LeadsScreen() {
         {(session) => (
           <LeadsWorkbench
             viewerId={session.user.id}
-            // An admin or manager opens on every lead — they run the queue; a
-            // rep opens on their own.
-            opensOnAll={session.roles.some(
-              (role) =>
-                role === "admin" || role === "manager" || role === "management",
-            )}
+            // A seat scoped past its own records opens on every lead — they run
+            // the queue; a seat scoped to its own opens on those.
+            //
+            // The opening FILTER, not a permission: every seat holding the lead
+            // grant may read any lead (auth/tableclass.go), so this decides
+            // which view the queue starts in and nothing about what it may
+            // fetch. The row scope the server computed, though, rather than the
+            // role keys it came from — those were a second reading of the same
+            // policy, and a custom role, or a seeded role whose grants an
+            // operator edits, opens the wrong view while the server answers
+            // correctly.
+            //
+            // Written as the POSITIVE test, so an absent authorization block
+            // opens on "mine". `!== "own"` would read a missing answer as
+            // permission to open on everything, which is the wrong direction to
+            // be wrong in — and the block is optional on this response.
+            opensOnAll={
+              session.authorization?.row_scope === "team" ||
+              session.authorization?.row_scope === "all"
+            }
           />
         )}
       </QueryGate>
@@ -441,7 +454,7 @@ function LeadsWorkbench({
                     })}`
                   : ""}
                 {lead.next_task_due_at
-                  ? ` · ${formatDateAbbrev(lead.next_task_due_at, locale, viewerZone())}`
+                  ? ` · ${formatDateAbbrev(lead.next_task_due_at, locale, recordZone)}`
                   : ""}
               </span>
             ),

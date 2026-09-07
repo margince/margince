@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 73 |
 | Resources | 12 |
-| Tool catalog | 203.5 KB |
+| Tool catalog | 205.6 KB |
 | Resource catalog | 4.5 KB |
-| Approx. wire tokens | 53230 |
+| Approx. wire tokens | 53783 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 96.5 KB | 47% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 49.6 KB | 24% | Yes, every step |
-| Input schemas | 42.0 KB | 20% | Yes, every step |
+| Output schemas | 96.6 KB | 46% | **No** — a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 49.9 KB | 24% | Yes, every step |
+| Input schemas | 43.8 KB | 21% | Yes, every step |
 | _Names, annotations, punctuation_ | 15.4 KB | 7% | Partly |
-| **Description + input schema** | **91.6 KB** | **45%** | **the recurring cost** |
+| **Description + input schema** | **93.6 KB** | **45%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -77,7 +77,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`check_location_support`](#check_location_support) | Can a card read this device's location | yes | [`ui://margince/geo-probe.html`](#geo_probe_view) | 1.8 KB |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 1.7 KB |
 | [`compose_analytics_report`](#compose_analytics_report) | Compose an analytics report | yes |  | 2.6 KB |
-| [`create_record`](#create_record) | Create a record |  |  | 3.3 KB |
+| [`create_record`](#create_record) | Create a record |  |  | 3.5 KB |
 | [`create_tag`](#create_tag) | Create a tag |  |  | 1.9 KB |
 | [`create_task`](#create_task) | Create a task |  |  | 2.2 KB |
 | [`data_coverage`](#data_coverage) | How current the sources are | yes |  | 1.7 KB |
@@ -103,13 +103,13 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`list_pipelines`](#list_pipelines) | List pipelines and their stages | yes |  | 2.3 KB |
 | [`list_records`](#list_records) | List records | yes |  | 3.3 KB |
 | [`list_tags`](#list_tags) | List tags | yes |  | 1.6 KB |
-| [`log_activity`](#log_activity) | Log an activity |  |  | 3.8 KB |
+| [`log_activity`](#log_activity) | Log an activity |  |  | 3.9 KB |
 | [`merge_records`](#merge_records) | Merge two records |  |  | 2.4 KB |
 | [`merge_tags`](#merge_tags) | Fold one tag into another |  |  | 2.0 KB |
 | [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 8.7 KB |
 | [`prepare_handoff`](#prepare_handoff) | Prepare a delivery handoff | yes | [`ui://margince/handoff.html`](#handoff_view) | 3.9 KB |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 4.2 KB |
-| [`progress_deal`](#progress_deal) | Progress a deal with a note |  |  | 3.0 KB |
+| [`progress_deal`](#progress_deal) | Progress a deal with a note |  |  | 3.4 KB |
 | [`promote_lead`](#promote_lead) | Promote a lead to a person |  |  | 2.4 KB |
 | [`qualify_lead`](#qualify_lead) | Qualify a lead |  |  | 2.4 KB |
 | [`query_workspace`](#query_workspace) | Query the workspace | yes |  | 4.0 KB |
@@ -129,9 +129,9 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`run_report`](#run_report) | Run a report | yes |  | 5.0 KB |
 | [`search_context`](#search_context) | Search for relevant material | yes |  | 3.1 KB |
 | [`search_records`](#search_records) | Search records | yes |  | 2.8 KB |
-| [`send_account_email`](#send_account_email) | Start an email conversation from a record |  |  | 3.9 KB |
-| [`send_email`](#send_email) | Send an email |  |  | 3.6 KB |
-| [`send_message`](#send_message) | Reply on a channel conversation |  |  | 2.9 KB |
+| [`send_account_email`](#send_account_email) | Start an email conversation from a record |  |  | 4.2 KB |
+| [`send_email`](#send_email) | Send an email |  |  | 3.9 KB |
+| [`send_message`](#send_message) | Reply on a channel conversation |  |  | 3.3 KB |
 | [`update_record`](#update_record) | Update a record |  |  | 3.8 KB |
 | [`update_tag`](#update_tag) | Rename or recolour a tag |  |  | 2.0 KB |
 | [`whats_slipping_this_week`](#whats_slipping_this_week) | What's slipping this week | yes | [`ui://margince/pipeline-review.html`](#pipeline_review_view) | 2.3 KB |
@@ -2614,7 +2614,7 @@ Render a report whose every figure comes from a saved analytics run. The documen
 
 **Create a record**
 
-Create a person, organization, deal, lead, project, activity or relationship that does not exist yet. Creating a deal requires a pipeline_id and a stage_id, and list_pipelines is what yields them for a deal that does not exist yet. Only the fields the chosen record_type actually stores are accepted, and a field belonging to a neighbouring type is refused rather than dropped. Search first when the record might already exist — a second copy of a person or account is a problem that then needs merge_records to undo. The new record's id comes back in the result; keep it for anything that links to it. (Governance: runs immediately; requires passport scope "write".)
+Create a person, organization, deal, lead, project, activity or relationship that does not exist yet. Creating a deal requires a pipeline_id and a stage_id, and list_pipelines is what yields them for a deal that does not exist yet. Only the fields the chosen record_type actually stores are accepted, and a field belonging to a neighbouring type is refused rather than dropped. A PERSON created here is visible to the human you are acting for and to nobody else, until they publish it or correspondence with that address earns a widening verdict — attending a meeting together does not earn one. Do not tell anyone a contact you just created is on their colleagues' screens. Search first when the record might already exist — a second copy of a person or account is a problem that then needs merge_records to undo. The new record's id comes back in the result; keep it for anything that links to it. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -2834,7 +2834,11 @@ Coin a new word in the workspace vocabulary, so records can be grouped by it. li
         "teal",
         "amber",
         "rose",
-        "slate"
+        "slate",
+        "sky",
+        "violet",
+        "lime",
+        "orange"
       ],
       "type": "string"
     },
@@ -6995,7 +6999,7 @@ Record something that happened — a call, a meeting, a note, a message — on t
       "type": "string"
     },
     "links": {
-      "description": "Every record this was about, ALL OF THEM in this call. A meeting or a call is with a PERSON and reaches their company through them — linking one to a company is REFUSED, so name the person who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval a human must decide before it takes effect.",
+      "description": "Every record this was about, ALL OF THEM in this call — EXCEPT a project, which this verb REFUSES: filing under a project writes a write-once retention mark, so it is made through relink_activity, which a person approves. A meeting or a call is with a PERSON and reaches their company through them — linking one to a company is REFUSED, so name the person who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval a human must decide before it takes effect.",
       "items": {
         "additionalProperties": false,
         "properties": {
@@ -8870,6 +8874,21 @@ Move a deal to a new stage and leave a note on its timeline saying why, in one c
       "description": "The target stage, by id — obtain it from list_pipelines, since a deal you have read carries only the stage it is already IN. That stage's semantic decides what happens next: open executes immediately, won or lost is staged for a human's approval.",
       "format": "uuid",
       "type": "string"
+    },
+    "won_without_contract_detail": {
+      "description": "What the reason was, required when it is other",
+      "type": "string"
+    },
+    "won_without_contract_reason": {
+      "description": "Why this win has no contract behind it. Omit when the deal has a signed contract with its paper attached; a win claiming neither is refused.",
+      "enum": [
+        "imported",
+        "purchase_order",
+        "verbal",
+        "renewal_by_email",
+        "other"
+      ],
+      "type": "string"
     }
   },
   "required": [
@@ -9898,6 +9917,9 @@ Renders its result in [`ui://margince/account-brief.html`](#account_brief_view),
                 ],
                 "type": "object"
               },
+              "previous_rank": {
+                "type": "integer"
+              },
               "rank": {
                 "type": "integer"
               },
@@ -9932,6 +9954,9 @@ Renders its result in [`ui://margince/account-brief.html`](#account_brief_view),
           "type": "array"
         },
         "local_day": {
+          "type": "string"
+        },
+        "previous_local_day": {
           "type": "string"
         }
       },
@@ -12605,12 +12630,13 @@ Answer a question about totals, counts or breakdowns — pipeline by stage, deal
       "type": "array"
     },
     "report": {
-      "description": "The prebuilt report to run. Send `report` ALONE for the default answer listed below — that call takes no other argument and needs nothing read first. activities-by-kind: count as activities grouped by kind. deals-by-stage: count as deals, sum(amount_minor) as amount_minor_sum grouped by stage_id, currency. forecast: count as deals, sum(amount_minor) as unweighted_minor, sum(weighted_amount_minor) as weighted_minor grouped by forecast_category, currency. leads-by-status: count as leads grouped by status. open-deals-per-company: count as open_deals grouped by organization_id. pipeline-current: count as deals, sum(amount_base_minor) as amount_base_minor_sum, sum(weighted_base_minor) as weighted_base_minor_sum, count(amount_base_minor) as priced_deals grouped by stage_id. project-commitments: sum(overdue_commitments) as overdue_commitments, sum(open_commitments) as open_commitments grouped by project_id, name, key, phase, owner_id. projects-by-phase: count as projects, sum(open_deal_value_minor) as open_deal_value_minor, sum(won_deal_value_minor) as won_deal_value_minor grouped by phase. projects-gone-quiet: count as projects grouped by project_id, name, key, phase, owner_id, last_activity_at, quiet_since. stage-age: count as deals, median(days_in_stage) as median_days, p75(days_in_stage) as p75_days grouped by stage_id. win-loss: count as deals, sum(amount_minor) as amount_minor_sum, median(days_to_close) as median_days_to_close, p75(days_to_close) as p75_days_to_close grouped by status, currency. To narrow one instead, its `group_by`, `filters` and `aggregates` accept ONLY that report's own names, published at margince://schema/reports and answered by describe_report_vocabulary; a name outside them is refused by name, with that argument's accepted list. A `pipeline_id` or `stage_id` used in a plan comes from list_pipelines.",
+      "description": "The prebuilt report to run. Send `report` ALONE for the default answer listed below — that call takes no other argument and needs nothing read first. activities-by-kind: count as activities grouped by kind. deals-by-stage: count as deals, sum(amount_minor) as amount_minor_sum grouped by stage_id, currency. forecast: count as deals, sum(amount_minor) as unweighted_minor, sum(weighted_amount_minor) as weighted_minor grouped by forecast_category, currency. leads-by-status: count as leads grouped by status. meeting-conversion: count as meetings grouped by became_opportunity. open-deals-per-company: count as open_deals grouped by organization_id. pipeline-current: count as deals, sum(amount_base_minor) as amount_base_minor_sum, sum(weighted_base_minor) as weighted_base_minor_sum, count(amount_base_minor) as priced_deals grouped by stage_id. project-commitments: sum(overdue_commitments) as overdue_commitments, sum(open_commitments) as open_commitments grouped by project_id, name, key, phase, owner_id. projects-by-phase: count as projects, sum(open_deal_value_minor) as open_deal_value_minor, sum(won_deal_value_minor) as won_deal_value_minor grouped by phase. projects-gone-quiet: count as projects grouped by project_id, name, key, phase, owner_id, last_activity_at, quiet_since. stage-age: count as deals, median(days_in_stage) as median_days, p75(days_in_stage) as p75_days grouped by stage_id. win-loss: count as deals, sum(amount_minor) as amount_minor_sum, median(days_to_close) as median_days_to_close, p75(days_to_close) as p75_days_to_close grouped by status, currency. To narrow one instead, its `group_by`, `filters` and `aggregates` accept ONLY that report's own names, published at margince://schema/reports and answered by describe_report_vocabulary; a name outside them is refused by name, with that argument's accepted list. A `pipeline_id` or `stage_id` used in a plan comes from list_pipelines.",
       "enum": [
         "activities-by-kind",
         "deals-by-stage",
         "forecast",
         "leads-by-status",
+        "meeting-conversion",
         "open-deals-per-company",
         "pipeline-current",
         "project-commitments",
@@ -13206,6 +13232,25 @@ Put a mail on the wire to a real recipient, from this workspace, starting a new 
       "description": "Purpose key the recipients must have granted",
       "type": "string"
     },
+    "evidence": {
+      "additionalProperties": false,
+      "description": "The record that bears out the category: required for invoice_or_payment, contract_notice and precontract_quote, which cannot be allowed without one",
+      "properties": {
+        "contract_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "deal_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "invoice_id": {
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "idempotency_key": {
       "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
@@ -13443,6 +13488,25 @@ Put a mail on the wire to a real recipient, from this workspace, and record it o
       "description": "Purpose key the recipients must have granted",
       "type": "string"
     },
+    "evidence": {
+      "additionalProperties": false,
+      "description": "The record that bears out the category: required for invoice_or_payment, contract_notice and precontract_quote, which cannot be allowed without one",
+      "properties": {
+        "contract_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "deal_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "invoice_id": {
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "idempotency_key": {
       "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
@@ -13644,6 +13708,25 @@ Reply on a captured chat conversation — the channels this workspace has connec
     "consent_purpose": {
       "description": "Purpose key the recipient must have granted",
       "type": "string"
+    },
+    "evidence": {
+      "additionalProperties": false,
+      "description": "The record that bears out the category: required for invoice_or_payment, contract_notice and precontract_quote, which cannot be allowed without one",
+      "properties": {
+        "contract_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "deal_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "invoice_id": {
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "type": "object"
     },
     "idempotency_key": {
       "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
@@ -13990,6 +14073,10 @@ Rename, recolour or describe a word that already exists. Fields left out are unc
         "amber",
         "rose",
         "slate",
+        "sky",
+        "violet",
+        "lime",
+        "orange",
         "none"
       ],
       "type": "string"

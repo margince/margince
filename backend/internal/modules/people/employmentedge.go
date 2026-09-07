@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -81,7 +82,7 @@ func plantEmploymentEdge(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyIn
 		SELECT 'employment', $1, $2, true, $3, $4
 		WHERE NOT EXISTS (
 			SELECT 1 FROM relationship
-			WHERE person_id = $1 AND `+CurrentPrimarySlotSQL("")+`)
+			WHERE person_id = $1 AND `+employment.CurrentPrimarySlotSQL("")+`)
 		ON CONFLICT DO NOTHING
 		RETURNING id`,
 		personID, orgID, in.Source, in.CapturedBy).Scan(&edgeID)

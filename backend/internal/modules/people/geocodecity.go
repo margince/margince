@@ -31,6 +31,9 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // LookupCity answers a point for a city NAME, derived from the located
@@ -63,6 +66,14 @@ func (s *Store) LookupCity(ctx context.Context, city string) (CachedPlace, bool,
 	// GROUP BY always returns exactly one row, and scanning that NULL into a
 	// float64 is an error rather than the not-found this function means. Found
 	// by the test for a city nobody is in.
+	// The object grant, before the row scope below composes anything. The scope
+	// clause narrows to the companies this caller could list; it does not ask
+	// whether they may list companies at all, and scopeOrAllRows answers ALL
+	// ROWS for an unbounded principal — so a caller holding no organization
+	// grant would learn a city's centroid from every company in it.
+	if err := auth.Require(ctx, "organization", principal.ActionRead); err != nil {
+		return CachedPlace{}, false, err
+	}
 	var lat, lon, latSpread, lonSpread *float64
 	var located int
 	err := s.tx(ctx, func(tx pgx.Tx) error {

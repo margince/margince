@@ -1,6 +1,5 @@
 /*
- * Trust primitives — the Margince-specific vocabulary (design-language §4,
- * foundation v0: specs/design/design-system/margince.css).
+ * Trust primitives — the Margince-specific vocabulary (design-language §4).
  * Staged / real / human-typed are three DISTINGUISHABLE styles (§5c);
  * confidence is a first-class glyph, low shown as low, never hidden (§4.2).
  * Colours read from tokens only — the conformance gate enforces it.

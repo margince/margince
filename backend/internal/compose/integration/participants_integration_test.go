@@ -41,7 +41,7 @@ func stampParties(t *testing.T, e *Env, activity ids.ActivityID, trusted bool, p
 	t.Helper()
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-		return capture.StampFurtherParticipants(ctx, tx, activity, "email", trusted, parties)
+		return capture.StampFurtherParticipants(ctx, tx, activity, "email", "", trusted, parties)
 	}); err != nil {
 		t.Fatalf("StampFurtherParticipants: %v", err)
 	}
@@ -168,7 +168,7 @@ func TestANonInteractionKindStampsNoParties(t *testing.T) {
 
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-		return capture.StampFurtherParticipants(ctx, tx, note, "note", true,
+		return capture.StampFurtherParticipants(ctx, tx, note, "note", "", true,
 			[]connector.MessageParticipant{{Email: "sam@target.example", Role: connector.ParticipantRoleCC}})
 	}); err != nil {
 		t.Fatalf("StampFurtherParticipants: %v", err)

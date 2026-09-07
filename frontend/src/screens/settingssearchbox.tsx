@@ -27,7 +27,20 @@ import { settingsSearch } from "./settingssearch";
  */
 export function SettingsSearchBox({
   pages,
-}: Readonly<{ pages: readonly SettingsPage[] }>) {
+  onPick,
+}: Readonly<{
+  pages: readonly SettingsPage[];
+  /**
+   * Called after the box has navigated, for a host that has to get out of the
+   * way — the phone-width section drawer is the one, since it is a full-screen
+   * sheet that would otherwise stay open over the page just opened.
+   *
+   * The same contract the drawer's group rows already use, rather than a route
+   * listener inside the sheet: the box knows it moved, and a listener would
+   * also fire for a move the reader made some other way.
+   */
+  onPick?: () => void;
+}>) {
   const t = useT();
   const [typed, setTyped] = useState("");
   // -1 is "nothing active", which is where a fresh query starts: the first row
@@ -100,6 +113,7 @@ export function SettingsSearchBox({
     setTyped("");
     setActive(-1);
     navigate(settingsHref(hit.page.id));
+    onPick?.();
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
@@ -216,9 +230,13 @@ export function SettingsSearchBox({
                 }}
               >
                 <span className="settingssearch-label">{hit.label}</span>
-                {/* `t-caption`, the catalogued utility, rather than a rule of
-                    its own saying the same two properties. */}
-                <span className="t-caption">{hit.group}</span>
+                {/* Where it lives AND whose state it changes. The scope comes
+                    off the hit's own page, which the hit has carried all along
+                    — a reader searching "domain" gets two hits on two pages and
+                    the badge is what tells them which one is the company's. */}
+                <span className="t-caption">
+                  {hit.group} · {t(`settings.scope.${hit.page.scope}`)}
+                </span>
               </a>
             ))
           )}

@@ -49,6 +49,7 @@ export const initialConversationState: ConversationState = {
   activeBuildId: null,
   lastBuildStage: null,
   lastBuildStatus: null,
+  lastBuildDetail: null,
   linkedinStatus: "pending",
 };
 
@@ -399,6 +400,7 @@ function applyEvent(
         activeBuildId: event.buildId,
         lastBuildStage: null,
         lastBuildStatus: null,
+        lastBuildDetail: null,
       });
     case "BUILD_STAGE":
       // A stage from vo.result means a deferred build resumed on its own:
@@ -409,6 +411,7 @@ function applyEvent(
           phase: "vo.building",
           lastBuildStage: event.stage,
           lastBuildStatus: null,
+          lastBuildDetail: null,
         },
         [
           {
@@ -421,7 +424,11 @@ function applyEvent(
     case "BUILD_TERMINAL":
       return withEntries(
         state,
-        { phase: "vo.result", lastBuildStatus: event.status },
+        {
+          phase: "vo.result",
+          lastBuildStatus: event.status,
+          lastBuildDetail: event.detail,
+        },
         [
           {
             kind: "outcome",

@@ -111,7 +111,7 @@ func (e *Eraser) ErasePerson(ctx context.Context, personID ids.UUID, reason stri
 			return err
 		}
 
-		leadsWiped, err := anonymizeSubjectRows(ctx, tx, subject, emails)
+		leadsWiped, err := anonymizeSubjectRows(ctx, tx, subject, emails, identities)
 		if err != nil {
 			return err
 		}
@@ -288,7 +288,10 @@ func purgeRedactedActivityTraces(ctx context.Context, tx pgx.Tx, activities []id
 // holds subject data exactly like a core one (see subjectcolumns.go).
 // It returns the wiped lead ids so the caller can tombstone each twin's
 // own audit spine.
-func anonymizeSubjectRows(ctx context.Context, tx pgx.Tx, personID ids.PersonID, emails []string) ([]ids.UUID, error) {
+func anonymizeSubjectRows(
+	ctx context.Context, tx pgx.Tx, personID ids.PersonID,
+	emails []string, identities []channelIdentity,
+) ([]ids.UUID, error) {
 	// Read BEFORE the person row is anonymized below: the LinkedIn sweep at
 	// the end of this function matches on the subject's name, and by then the
 	// column holds the tombstone instead.
@@ -310,7 +313,7 @@ func anonymizeSubjectRows(ctx context.Context, tx pgx.Tx, personID ids.PersonID,
 	}
 	if _, err := tx.Exec(ctx, fmt.Sprintf(`
 		UPDATE person SET first_name = NULL, last_name = NULL, full_name = $2,
-		  title = NULL, raw = NULL,
+		  title = NULL, raw = NULL, photo_object_key = NULL, photo_origin = NULL,
 		  address_line1 = NULL, address_line2 = NULL, address_city = NULL,
 		  address_region = NULL, address_postal_code = NULL, address_country = NULL,
 		  archived_at = coalesce(archived_at, now())%s
@@ -324,7 +327,7 @@ func anonymizeSubjectRows(ctx context.Context, tx pgx.Tx, personID ids.PersonID,
 	if err != nil {
 		return nil, err
 	}
-	if err := scrubSubjectFromGraph(ctx, tx, personID, emails, subjectName, linkedInHandles); err != nil {
+	if err := scrubSubjectFromGraph(ctx, tx, personID, emails, identities, subjectName, linkedInHandles); err != nil {
 		return nil, err
 	}
 	if err := deleteConsentCapabilities(ctx, tx, personID); err != nil {

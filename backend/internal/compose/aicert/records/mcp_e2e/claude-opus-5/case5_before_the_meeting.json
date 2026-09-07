@@ -1,0 +1,11 @@
+{
+  "scenario": "case5_before_the_meeting",
+  "criteria": [
+    1,
+    2,
+    5
+  ],
+  "passed": 3,
+  "runs": 3,
+  "pass_at": 2
+}

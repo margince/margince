@@ -29,6 +29,8 @@ import (
 	"sort"
 	"strings"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
@@ -99,12 +101,14 @@ const agentLoopCorpusDir = "aicert/corpus/agent_loop"
 // wrongReachCensus is how often each tool is named as the WRONG reach across
 // the agent_loop certification scenarios, plus what the scan could not read.
 //
-// THE METHOD IS A PROSE HEURISTIC AND THE PAGE SAYS SO. A scenario's near
-// misses exist only inside its `rubric:` free text; only the intended answer is
-// structured. So a mention is counted when the rubric names a registered tool
-// that is not that scenario's own answer. It over-counts, because a rubric
-// quotes the right tool's copy and that copy names others, and it is sensitive
-// to how a rubric is phrased.
+// A scenario DECLARES its near misses, and that is what is counted. Where it
+// declares none the rubric's prose is scanned instead — a mention counts when
+// the rubric names a registered tool that is not that scenario's own answer —
+// and the scenario is NAMED as read that way, on the page.
+//
+// The prose scan over-counts, because a rubric quotes the right tool's copy and
+// that copy names its neighbours, and it is sensitive to how a rubric is
+// phrased. That is why it is the fallback rather than the method.
 //
 // Skipped names what the scan could not classify. It is reported rather than
 // dropped: a census that silently ignored the scenarios it could not read would
@@ -114,6 +118,14 @@ type wrongReachCensus struct {
 	Scenarios int
 	Catalog   int
 	Skipped   []string
+	// Heuristic names the scenarios whose near misses were read out of rubric
+	// PROSE because the scenario declares none of its own.
+	//
+	// Named rather than counted, and named on the published page. A fallback
+	// that is silent about which scenarios it still applies to hides exactly
+	// the error it exists to shrink: the reader sees one number and cannot tell
+	// which part of it was measured and which part guessed.
+	Heuristic []string
 }
 
 var (
@@ -176,10 +188,14 @@ func readWrongReachCensus(dir string, specs []mcp.ToolSpec) (wrongReachCensus, e
 				entry.Name()+" (this scan could not read its expected step, so a wrong reach cannot be told from the right one)")
 			continue
 		}
-		named := map[string]bool{}
-		for _, match := range toolNameInProse.FindAllString(rubric[1], -1) {
-			if registered[match] && match != answer {
-				named[match] = true
+		named := declaredNearMisses(body, registered, answer)
+		if named == nil {
+			census.Heuristic = append(census.Heuristic, entry.Name())
+			named = map[string]bool{}
+			for _, match := range toolNameInProse.FindAllString(rubric[1], -1) {
+				if registered[match] && match != answer {
+					named[match] = true
+				}
 			}
 		}
 		for name := range named {
@@ -187,7 +203,42 @@ func readWrongReachCensus(dir string, specs []mcp.ToolSpec) (wrongReachCensus, e
 		}
 	}
 	sort.Strings(census.Skipped)
+	sort.Strings(census.Heuristic)
 	return census, nil
+}
+
+// declaredNearMisses is the scenario's own list, or nil when it declares none.
+//
+// Nil and empty are different answers and the caller acts on the difference: a
+// scenario that declares none is read by the prose fallback and said to be,
+// while one declaring an empty list has said its goal has no plausible wrong
+// reach — a claim, not an absence.
+//
+// Decoded here rather than through aicert.LoadScenarioFile because aicert
+// imports this package, so a test in it cannot import aicert back. The key is
+// aicert.Expectations' own `near_misses` tag and this is a MIRROR of it: rename
+// the field there and every scenario falls to the prose fallback, which
+// TestTheWrongReachCensusReadsWhatTheScenariosDeclare below fails on.
+//
+// The answer is excluded even when a scenario names it, because a list holding
+// the tool the scenario exists to reward would count the right answer as the
+// temptation — the failure the skipped-scenario guard above is about.
+func declaredNearMisses(body []byte, registered map[string]bool, answer string) map[string]bool {
+	var declared struct {
+		Expect struct {
+			NearMisses []string `yaml:"near_misses"`
+		} `yaml:"expect"`
+	}
+	if err := yaml.Unmarshal(body, &declared); err != nil || declared.Expect.NearMisses == nil {
+		return nil
+	}
+	named := map[string]bool{}
+	for _, tool := range declared.Expect.NearMisses {
+		if registered[tool] && tool != answer {
+			named[tool] = true
+		}
+	}
+	return named
 }
 
 // temptationWeight sums the corpus's wrong-reach counts over an agent's

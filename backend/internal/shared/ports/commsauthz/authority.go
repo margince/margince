@@ -102,10 +102,10 @@ func (l AuthorityLevel) CanOverrule(decided AuthorityLevel) bool {
 // which fails when a new absolute reason is added without an arm here.
 func LevelForReason(reasonCode string) AuthorityLevel {
 	switch reasonCode {
-	// THE SUBJECT'S OWN ACT. An objection, a withdrawal and a restriction are
-	// things the person did, and Art. 21 makes the first absolute. Nobody in
-	// the installation lifts these, admin included.
-	case ReasonObjection, ReasonRestricted, ReasonConsentWithdrawn:
+	// THE SUBJECT'S OWN ACT. An objection, a withdrawal, a restriction and a
+	// request to stop are things the person did, and Art. 21 makes the first
+	// absolute. Nobody in the installation lifts these, admin included.
+	case ReasonObjection, ReasonRestricted, ReasonSubjectRequest, ReasonConsentWithdrawn:
 		return LevelSubject
 
 	// EVERYTHING ELSE IS THE ENGINE READING AN INCOMPLETE RECORD, and a seat

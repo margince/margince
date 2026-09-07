@@ -24,6 +24,8 @@ expect:
     person needs before they walk in — open commitments, stakeholders, the state
     of the deal. The goal names an imminent meeting, so score high only if the
     turn calls prep_for_meeting on the account the grounding identifies.
+  near_misses:
+    - catch_me_up_on
   bands:
     certified_min: 70
     degraded_min: 50

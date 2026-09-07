@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 import {
   extensionFrontendFiles,
   filesUnder,
-  scriptKindFor,
+  parseSource,
 } from "../../scripts/lib/source-tree";
 import { en } from "./en";
 
@@ -174,13 +174,7 @@ function waivedAt(source: string, node: ts.Node): boolean {
 }
 
 function findingsIn(path: string, source: string): Finding[] {
-  const parsed = ts.createSourceFile(
-    path,
-    source,
-    ts.ScriptTarget.Latest,
-    true,
-    scriptKindFor(path),
-  );
+  const parsed = parseSource(path, source);
   const rel = relative(srcRoot, path).split("\\").join("/");
   const found: Finding[] = [];
   const walk = (node: ts.Node): void => {

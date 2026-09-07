@@ -24,6 +24,9 @@ expect:
     phrasing appears on none of them, so it would answer an empty list that
     reads as "no customer ever hit this". query_workspace needs conditions in
     a closed vocabulary, and "a pilot that stalled" is not one.
+  near_misses:
+    - search_records
+    - query_workspace
   bands:
     certified_min: 70
     degraded_min: 50

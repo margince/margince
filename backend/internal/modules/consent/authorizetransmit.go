@@ -59,19 +59,22 @@ func (g *Gate) AuthorizeTransmit(ctx context.Context, req commsauthz.TransmitReq
 	setID := ids.NewV7()
 	ticket := commsauthz.TransmitTicket{DeliveryID: req.DeliveryID, Attempt: req.Attempt, DecisionSetID: setID}
 
-	// The legacy gate still rules while the engine is in observe mode, so its
-	// answer is taken first and carried onto every row. A disagreement is then
-	// readable in the record rather than only in a counter that dies with the
-	// process.
+	// The legacy gate's answer, recorded beside the engine's on every row so a
+	// disagreement is readable in the record rather than only in a counter that
+	// dies with the process.
+	//
+	// IT NO LONGER DECIDES, with one exception the rollback lever depends on:
+	// Effective consults it only when NO recipient's category is enforced,
+	// which the shipped posture never produces but an operator moving a
+	// category back to observe deliberately does. The dispatcher used to ask it
+	// a second time after the ticket already said yes; that call is gone.
 	legacyErr := g.RequireGrantedForRecipients(ctx, req.Recipients, req.PurposeKey)
-	switch {
-	case legacyErr == nil:
-	case errors.Is(legacyErr, apperrors.ErrConsentNotGranted):
-	default:
-		// NOT an answer. The question could not be asked, so nothing has been
-		// learned and nothing is recorded — the dispatcher retries.
-		return commsauthz.TransmitTicket{}, legacyErr
-	}
+	// Three outcomes, and only two of them are answers: granted, not granted,
+	// and anything else. That third one is NOT a no — whether it matters
+	// depends on the posture, and the posture is not known until the modes are
+	// read inside the transaction below, so it is carried there as a value
+	// rather than decided here.
+	legacyUnanswerable := legacyErr != nil && !errors.Is(legacyErr, apperrors.ErrConsentNotGranted)
 	legacyAllowed := legacyErr == nil
 
 	err := g.store.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -92,8 +95,42 @@ func (g *Gate) AuthorizeTransmit(ctx context.Context, req commsauthz.TransmitReq
 		if err := g.recordDecisions(ctx, tx, req, setID, set); err != nil {
 			return err
 		}
+		// AN UNANSWERABLE LEGACY GATE IS ONLY FATAL WHERE ITS ANSWER IS USED.
+		//
+		// Effective consults legacyAllowed only when no recipient's category is
+		// enforced, which the shipped posture never produces. Where it IS
+		// consulted — an operator has moved a category back to observe — a gate
+		// that failed to answer must retry rather than refuse: a refusal parks
+		// with a reason a human can act on, and a failure to LEARN the answer
+		// is not one. Treating the outage as a refusal would destroy every
+		// in-flight delivery in the window instead of deferring them.
+		// An absolute denial needs no second opinion: it refuses in every mode,
+		// so an unanswerable legacy gate changes nothing and retrying would
+		// hold a message the subject already stopped.
+		if legacyUnanswerable && !set.HasAbsoluteDenial() && !set.HasEnforcedRecipient(modeFor) {
+			return legacyErr
+		}
 		ticket.Allowed = set.Effective(modeFor, legacyAllowed)
 		ticket.Reason = refusalReason(set, legacyAllowed)
+		// The message that goes must be the message that was authorized.
+		//
+		// Asked LAST, and only of a send the engine would otherwise allow: a
+		// delivery already refused is parked with a reason about the recipient,
+		// and replacing that with "the wording changed" would tell an operator
+		// to re-approve a message somebody had objected to. A changed body on
+		// an allowed send is its own refusal, and it parks rather than denying
+		// forever — the wording is a thing a human can look at and re-send.
+		if ticket.Allowed {
+			changed, err := g.wordingDiffersFromStaging(ctx, tx, req)
+			if err != nil {
+				return err
+			}
+			if changed {
+				ticket.Allowed = false
+				ticket.Reason = "this message was edited after it was authorized, so the wording that " +
+					"was checked is not the wording that would go"
+			}
+		}
 		return nil
 	})
 	if err != nil {
@@ -121,6 +158,13 @@ func (g *Gate) decideRecipients(ctx context.Context, tx pgx.Tx, req commsauthz.T
 	if err != nil {
 		return commsauthz.DecisionSet{}, err
 	}
+	// The conversation this delivery belongs to. Staging asked the thread arm
+	// with the anchor the caller named; nothing carries that anchor forward, so
+	// transmit names the same thread from the delivery row instead.
+	threadKey, err := deliveryThreadKey(ctx, tx, req.DeliveryID)
+	if err != nil {
+		return commsauthz.DecisionSet{}, err
+	}
 	// Every address's cap lock, sorted, before the first recipient is counted.
 	// Taking them inside the loop would order them by the caller's To list, and
 	// two messages naming the same pair in opposite orders would deadlock.
@@ -128,7 +172,7 @@ func (g *Gate) decideRecipients(ctx context.Context, tx pgx.Tx, req commsauthz.T
 		return commsauthz.DecisionSet{}, err
 	}
 	for _, r := range req.Recipients {
-		d, err := g.decideOne(ctx, tx, r, stagedRequestFor(req, r, claims), commsauthz.PhaseTransmit)
+		d, err := g.decideOne(ctx, tx, r, stagedRequestFor(req, r, claims, threadKey), commsauthz.PhaseTransmit)
 		if err != nil {
 			return commsauthz.DecisionSet{}, err
 		}
@@ -178,7 +222,7 @@ func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 		// the sends the legacy gate allows — an inversion rather than a
 		// tightening, and it would have arrived the day somebody flipped a
 		// mode rather than the day this code was written.
-		return g.decideLead(ctx, tx, r, req, d)
+		return g.decideLead(ctx, tx, r, req, d, phase)
 	}
 	parsed, err := ids.Parse(personID)
 	if err != nil {
@@ -186,19 +230,30 @@ func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 	}
 	d.SubjectKind, d.SubjectID = entityPerson, parsed
 
-	suppressed, kind, err := liveSuppression(ctx, tx, personID, r)
+	// READ FIRST, APPLY AFTER THE CATEGORY IS KNOWN. What a suppression binds
+	// depends on what the message is, and nothing knows that until the record
+	// has been resolved — see applySuppression.
+	kinds, err := liveSuppression(ctx, tx, personID, r)
 	if err != nil {
 		return commsauthz.Decision{}, err
 	}
-	if suppressed {
+	if kind, absolute := bindsEveryCategory(kinds); absolute {
+		// Nothing a category could say would change this answer, so the record
+		// is not resolved at all. An objection and a restriction do NOT come
+		// through here — both need the category before they can be applied.
 		d.Verdict = commsauthz.VerdictDeny
 		d.ReasonCode = kind
 		d.Suppression = kind
 		return d, nil
 	}
-	return g.decideResolved(ctx, tx, req, subjectRef{
+	d, err = g.decideResolved(ctx, tx, req, subjectRef{
 		Kind: entityPerson, ID: personID, Address: r.Email,
-	}, d, phase)
+	}, d, phase, len(kinds) > 0)
+	if err != nil {
+		return commsauthz.Decision{}, err
+	}
+	d = applySuppression(d, kinds)
+	return d, nil
 }
 
 // blockedReasonCode translates the verdict's own code into the engine's
@@ -277,7 +332,7 @@ func refusalReason(set commsauthz.DecisionSet, legacyAllowed bool) string {
 // message that was authorized, and storing the words themselves would make the
 // decision a second copy of the mail.
 func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.TransmitRequest, setID ids.UUID, set commsauthz.DecisionSet) error {
-	sum := WordingDigest(req.Subject, req.Body)
+	sum := SendingDigest(req.Subject, req.Body, req.HTMLBody)
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return err
@@ -334,47 +389,65 @@ func nullableText(s string) *string {
 // bounce is a fact about a MAILBOX, so it is recorded against the address and
 // keeps applying when the same address later appears on a different record.
 // The person arm carries objections and restrictions, which follow the human.
-func liveSuppression(ctx context.Context, tx pgx.Tx, personID string, r connector.Recipient) (bool, string, error) {
-	var kind string
-	// STRONGEST first, not newest. Ordering by time would let a weaker
-	// suppression recorded later mask an objection recorded earlier, and the
-	// reason code is what decides whether a refusal survives observe mode — so
-	// a masked objection is a message that goes out to somebody who said stop.
-	// This is also the only reader in the tree that applies these rows: the
-	// legacy gate reads person_consent and never looks here.
-	err := tx.QueryRow(ctx, `
-		SELECT kind FROM communication_suppression
+func liveSuppression(ctx context.Context, tx pgx.Tx, personID string, r connector.Recipient) ([]string, error) {
+	// EVERY live kind, not the strongest one.
+	//
+	// An earlier version took one row ordered by a fixed strength, which was
+	// sound while every kind refused everything: whichever won, the answer was
+	// the same. It stopped being sound when reach became category-dependent —
+	// a marketing objection sorts first and binds the LEAST, so a person
+	// carrying both an objection and a hard bounce had the bounce masked and
+	// their invoice sent to a dead mailbox. Strength is no longer a total
+	// order, so the caller is given all of them and applies each.
+	//
+	// Reading the row is not applying it: what a suppression BINDS depends on
+	// the category, which is not known here. applySuppression decides that,
+	// after resolution.
+	rows, err := tx.Query(ctx, `
+		SELECT DISTINCT kind FROM communication_suppression
 		 WHERE revoked_at IS NULL
 		   AND (person_id = $1
 		        OR lead_id = $1
-		        OR (address IS NOT NULL AND $2 <> '' AND lower(address) = lower($2)))
-		 ORDER BY CASE kind
-		            WHEN 'marketing_objection'    THEN 0
-		            WHEN 'processing_restriction' THEN 1
-		            WHEN 'subject_request'        THEN 2
-		            WHEN 'hard_bounce'            THEN 3
-		            ELSE 4
-		          END, recorded_at DESC
-		 LIMIT 1`, personID, r.Email).Scan(&kind)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return false, "", nil
-	}
+		        OR (address IS NOT NULL AND $2 <> '' AND lower(address) = lower($2)))`,
+		personID, r.Email)
 	if err != nil {
-		return false, "", fmt.Errorf("consent: read the recipient's suppressions: %w", err)
+		return nil, fmt.Errorf("consent: read the recipient's suppressions: %w", err)
 	}
+	defer rows.Close()
+	var kinds []string
+	for rows.Next() {
+		var kind string
+		if err := rows.Scan(&kind); err != nil {
+			return nil, fmt.Errorf("consent: read the recipient's suppressions: %w", err)
+		}
+		kinds = append(kinds, reasonForSuppressionKind(kind))
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("consent: read the recipient's suppressions: %w", err)
+	}
+	return kinds, nil
+}
+
+// reasonForSuppressionKind maps a stored kind onto the reason code a decision
+// row carries.
+//
+// A kind this code does not recognise gets its OWN code rather than being
+// folded onto a known one: suppressionBinds refuses an unrecognised code
+// outright, and folding it onto a recognised one would hand it that code's
+// narrower reach. That is exactly how subject_request came to permit five
+// categories of mail while wearing the statutory restriction's name.
+func reasonForSuppressionKind(kind string) string {
 	switch kind {
 	case "marketing_objection":
-		return true, commsauthz.ReasonObjection, nil
+		return commsauthz.ReasonObjection
 	case "processing_restriction":
-		return true, commsauthz.ReasonRestricted, nil
+		return commsauthz.ReasonRestricted
+	case "subject_request":
+		return commsauthz.ReasonSubjectRequest
 	case "hard_bounce":
-		return true, commsauthz.ReasonHardBounce, nil
+		return commsauthz.ReasonHardBounce
 	default:
-		// A kind this code does not recognise still SUPPRESSES, and absolutely.
-		// Somebody added a row shape to the constraint and not to this switch;
-		// treating the unknown case as the weaker one would let the next kind
-		// added to the table be the one that sends.
-		return true, commsauthz.ReasonRestricted, nil
+		return "unrecognised_suppression:" + kind
 	}
 }
 

@@ -2,8 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { House, UserRound } from "lucide-react";
 import { StoryProviders } from "../screens/story-utils";
-import { railTrail } from "./nav";
+import { type NavSection, railTrail } from "./nav";
 import { NavLevelView } from "./navlevel";
 
 // One level of the sidebar as the rail draws it: the rows, their groups, the
@@ -21,8 +22,33 @@ import { NavLevelView } from "./navlevel";
 const RESTING = { collapsed: false, tip: null, onTip: () => {} };
 const COLLAPSED = { collapsed: true, tip: null, onTip: () => {} };
 
-const primary = railTrail({ screen: "home" })[0];
-const settings = railTrail({ screen: "settings" });
+// The one section the app publishes is settings, and it is assembled from live
+// grants — so the drilled level below is a fixture of the same SHAPE: a group
+// carrying the level's own name with the Overview row in it, then a subject
+// group. Handed to `railTrail`, because a route with no section answers with the
+// primary level alone and the drilled story would be a second picture of it.
+const SETTINGS: NavSection = {
+  screen: "settings",
+  titleKey: "nav.settings",
+  activeId: "account",
+  groups: [
+    {
+      headingKey: "nav.settings",
+      items: [
+        { id: "home", labelKey: "settings.home", icon: House, level: true },
+      ],
+    },
+    {
+      headingKey: "settings.group.me",
+      items: [
+        { id: "account", labelKey: "settings.tab.account", icon: UserRound },
+      ],
+    },
+  ],
+};
+
+const primary = railTrail({ screen: "brief" })[0];
+const settings = railTrail({ screen: "settings", id: "account" }, SETTINGS);
 
 function level(
   which: (typeof settings)[number],
@@ -93,15 +119,12 @@ export const Collapsed: Story = {
 };
 
 /**
- * A drilled level, which is the case the component exists for: it prints its
- * own heading, pushes the group labels a heading level down, and offers the way
- * back to the level above.
+ * A drilled level, which is the case the component exists for: the same rows in
+ * the same groups, named by the heading over the first of them, with the way out
+ * of the section above them.
  */
 export const Drilled: Story = {
-  render: () =>
-    settings.length > 1
-      ? level(settings[1], RESTING, undefined, settings[0])()
-      : level(primary, RESTING)(),
+  render: level(settings[1], RESTING, undefined, settings[0]),
 };
 
 /** At 390px the rail is the phone's own bar rather than a column, so the rows

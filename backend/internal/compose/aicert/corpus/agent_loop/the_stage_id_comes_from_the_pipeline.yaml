@@ -20,6 +20,9 @@ expect:
     list_pipelines first. A turn that calls progress_deal or advance_deal
     straight away has to supply a to_stage_id it cannot have — the stage is named
     "negotiation" in words, and a word is not the identifier the call takes.
+  near_misses:
+    - progress_deal
+    - advance_deal
   bands:
     certified_min: 70
     degraded_min: 50

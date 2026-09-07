@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../api/client";
+import { useCanWrite } from "../app/capability";
 import type { EntityKind } from "../app/entity";
 import { useRecordZone } from "../app/recordzone";
 import {
@@ -18,11 +19,10 @@ import {
 } from "../design-system/recordpicker";
 import { Select } from "../design-system/select";
 import { calendarDay, dueInstant, middayInstant } from "../format/calendarday";
-import { viewerZone } from "../format/timezone";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { entityTimelineKeys, taskWriteKeys } from "./activitykeys";
-import { problemMessageOf, throwProblem, useSorMode } from "./common";
+import { problemMessageOf, throwProblem, useMe, useSorMode } from "./common";
 
 // Log a note or task from a 360 (person/company/deal/lead): the contract's
 // logActivity POST, linked to the record being viewed, occurred_at stamped
@@ -71,16 +71,15 @@ type OpeningKind = "note" | "task" | "call";
 // change it instead of being assumed at submit behind an empty box.
 //
 // Which zone that is follows what the day MEANS, the same split the draft's
-// `day` field carries. A note or meeting files under a heading on the record's
-// timeline, grouped in the record zone, so the day it can be offered is the record's
-// today; a task's day is a personal due date, minted by `dueInstant` in the
-// browser's zone and rendered there, so its today is the writer's own. Offer a
-// day from the other zone and the composer names a day the entry does not land
-// on: an afternoon in Los Angeles is already tomorrow on a Berlin clock, so a
-// writer offered their own today, accepting it, watched the entry file under the
-// day after.
-function todayDay(kind: ActivityDraft["kind"], recordZone: string): string {
-  return calendarDay(new Date(), kind === "task" ? viewerZone() : recordZone);
+// `day` field carries. Every kind this form writes files against the record's
+// clock: a note or meeting lands under a heading on the record's timeline, and
+// a task's due date is a deadline colleagues read back, minted by `dueInstant`
+// in that same zone and rendered there. Offering a day from the browser's zone
+// instead names a day the entry does not land on — an afternoon in Los Angeles
+// is already tomorrow on a Berlin clock, so a writer offered their own today,
+// accepting it, watched the entry file under the day after.
+function todayDay(_kind: ActivityDraft["kind"], recordZone: string): string {
+  return calendarDay(new Date(), recordZone);
 }
 
 // Whether a Select's answer is a kind this form writes.
@@ -181,14 +180,13 @@ function activityRequestBody(
     subject: input.subject.trim(),
     body: outgoingBody || null,
     occurred_at: occurredInstant(input, recordZone),
-    // A due date becomes the instant that day ENDS in the writer's
-    // own zone (format/calendarday). Handing the bare `yyyy-mm-dd` to
-    // `new Date` reads it as UTC midnight instead, which is neither the
-    // end of the day nor, west of UTC, the day the writer picked: the task
-    // arrived already overdue, and the tasks list — which buckets in the
-    // reader's zone — filed it under yesterday.
+    // A due date becomes the instant that day ENDS on the RECORD's clock
+    // (format/calendarday), which is the same zone the worklist buckets
+    // overdue in and the same one the task detail renders. Minting it in the
+    // writer's own zone instead is what let an approved 9 September come back
+    // as a task due the 10th for a colleague sitting further east.
     ...(input.kind === "task" && input.day
-      ? { due_at: dueInstant(input.day) }
+      ? { due_at: dueInstant(input.day, recordZone) }
       : {}),
     // Held: a hand-logged meeting already took place (the date caps at
     // today), and held is what the lead ladder reads as engagement.
@@ -491,6 +489,18 @@ export function LogActivity({
   askedKind?: OpeningKind;
 }>) {
   const t = useT();
+  // useCanWrite, not useCan: the form issues a POST, and a read seat is
+  // refused before RBAC is consulted — the same rule the header verbs on
+  // personpage.tsx state for the identical write. The card stays and says so
+  // rather than vanishing: a rep whose role may not log a call needs to learn
+  // that from the page, not from the absence of a form the product has.
+  //
+  // Refused only once /me has ANSWERED. Claiming a refusal the server has not
+  // decided is worse than a form that is briefly quiet — the same rule the
+  // header verbs hold with their own pending state.
+  const me = useMe();
+  const canLog = useCanWrite("activity", "create");
+  const logRefused = me.data?.authorization !== undefined && !canLog;
   // Logging an activity writes to a mirrored record; in overlay every write
   // answers unsupported_by_sor, so the form would only fail on submit. Guarded
   // to render nothing rather than an affordance that can't work (P1/A107,
@@ -498,6 +508,13 @@ export function LogActivity({
   const overlay = useSorMode() === "overlay";
   if (overlay) {
     return null;
+  }
+  if (logRefused) {
+    return (
+      <Card className="card-stack" title={t("log.title")} sub={t("log.sub")}>
+        <p className="t-caption">{t("record.logActivityRefused")}</p>
+      </Card>
+    );
   }
   return (
     <Card className="card-stack" title={t("log.title")} sub={t("log.sub")}>

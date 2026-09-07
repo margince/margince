@@ -79,6 +79,7 @@ var cannotReachIdentity = gatekit.Waive(map[string]string{
 	"internal/modules/activities/audience.go":        "activities cannot import identity (ADR-0054 §3); the predicate must move tier first",
 	"internal/modules/activities/assignee.go":        "activities cannot import identity (ADR-0054 §3); the predicate must move tier first. This one asks a second question of the same row — whether the seat is an agent — which identity.LiveMemberSQL does not answer and which the assignee refusal is entirely about",
 	"internal/modules/dealrooms/store_public.go":     "dealrooms cannot import identity (ADR-0054 §3); the predicate must move tier first",
+	"internal/modules/dealrooms/room_write.go":       "dealrooms cannot import identity (ADR-0054 §3); the predicate must move tier first. It arrived here from namesTheSeatRatherThanOffersIt, where it did NOT belong: a steward is somebody a buyer is pointed at for help, so the seat is being offered rather than named, and the entry was recording the defect (a deactivated colleague could be one) instead of a reason. Fixed in issue 2596",
 	"internal/modules/capture/owneridentitystore.go": "capture cannot import identity (ADR-0054 §3); the predicate must move tier first",
 	"internal/modules/people/counterpartyname.go":    "people cannot import identity (ADR-0054 §3); the predicate must move tier first",
 	"internal/modules/people/leadrouting.go":         "people cannot import identity (ADR-0054 §3); the predicate must move tier first",
@@ -126,7 +127,6 @@ var deliberatelyNotLiveness = gatekit.Waive(map[string]string{
 // here on a guess — and it stays listed so it reads as open rather than settled.
 var namesTheSeatRatherThanOffersIt = gatekit.Waive(map[string]string{
 	"internal/modules/dealrooms/preview.go":      "renders a steward's name and address on a room that already exists; a departed colleague's name is still the right label on what they did",
-	"internal/modules/dealrooms/room_write.go":   "DEFECT, not a decision: a deactivated seat can be a new room's steward. Product call on who may be one, so it is issue 2596",
 	"internal/modules/identity/access.go":        "UserAccess evaluates an EXISTING member's roles and teams as they stand, which an admin needs precisely when the seat is deactivated",
 	"internal/modules/identity/actoridentity.go": "resolves the display name and address of whoever performed a past action; the actor of an audit row does not stop having a name",
 	"internal/modules/identity/seatnames.go":     "answers \"what is this id called\" for ids the caller already holds; a name that blanks on deactivation makes historical rows unreadable",

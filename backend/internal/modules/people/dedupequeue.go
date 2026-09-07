@@ -57,6 +57,20 @@ type DedupeCandidateRow struct {
 	DisposedBy  *ids.UUID
 	DisposedAt  *time.Time
 	CreatedAt   time.Time
+	// CanDecide says whether THIS caller could actually dispose of the pair.
+	//
+	// Deciding needs write authority over BOTH ends — dismissing suppresses
+	// both records as duplicates for the whole workspace, and merging rewrites
+	// one into the other. A pair whose ends have different owners is therefore
+	// undecidable by any bounded seat, and it is a common shape: capture creates
+	// the near-duplicate owned by the mailbox owner while the incumbent belongs
+	// to whoever worked it.
+	//
+	// The queue lists it anyway, because the person who can SEE a duplicate is
+	// the person best placed to notice it. What was missing is the truth about
+	// the buttons: they were rendered unconditionally and the refusal arrived
+	// only after the POST.
+	CanDecide bool
 }
 
 // DedupeQueueInput filters one list page.
@@ -144,67 +158,6 @@ func requireDedupeWrite(ctx context.Context, entityType string) error {
 	return auth.Require(ctx, entityType, principal.ActionUpdate)
 }
 
-// dedupeVisibilityClause renders the queue's row-scope filter: a candidate
-// surfaces only when BOTH sides of its pair are visible to the caller —
-// the evidence snapshot reads both records, so listing a pair IS a read of
-// them (H1). Empty for unbounded callers.
-func dedupeVisibilityClause(ctx context.Context, arg func(any) int, mustBeLive bool) (string, error) {
-	personClause, err := auth.ScopeClauseFor(ctx, entityPerson, "vp", arg)
-	if err != nil {
-		return "", err
-	}
-	orgClause, err := auth.ScopeClauseFor(ctx, entityOrganization, "vo", arg)
-	if err != nil {
-		return "", err
-	}
-	leadClause, err := auth.ScopeClauseFor(ctx, entityLead, "vl", arg)
-	if err != nil {
-		return "", err
-	}
-	return fmt.Sprintf(`((entity_type = 'person' AND %s) OR (entity_type = 'organization' AND %s) OR (entity_type = 'lead' AND %s))`,
-		bothSidesServable(entityPerson, "vp", "left_person_id", "right_person_id", personClause, mustBeLive),
-		bothSidesServable(entityOrganization, "vo", "left_org_id", "right_org_id", orgClause, mustBeLive),
-		bothSidesServable(entityLead, "vl", "left_lead_id", "right_lead_id", leadClause, mustBeLive)), nil
-}
-
-// bothSidesServable is the per-side predicate for one entity type: the subject
-// row must EXIST, be LIVE, and pass whatever row scope the caller has.
-//
-// Emitted unconditionally, where the predicate this replaced was skipped whole
-// when no record type narrowed the caller. That was not the bug — person and
-// organization are capture-private, so even an all-scope human is bounded on
-// them and the clause was built anyway — but it made the liveness term depend on
-// a scope the reader might not have. A system principal is unbounded on all
-// three (auth.Unbounded), so on the day one reads this queue the old shape would
-// have served it every archived pair in the installation.
-//
-// The liveness term is not part of the scope clause and cannot be folded into
-// it. auth.EnsureVisibleLive says why in its own words: erasure anonymizes a
-// person in place and stamps archived_at while LEAVING owner_id alone, so a
-// scope predicate answers "yes, still yours" for a record every live read path
-// refuses. The same is true of a plain archive.
-//
-// Without it a decision outlives both records it is about. The candidate carries
-// its own archived_at and nothing sweeps it when a SUBJECT is archived, so the
-// pair keeps the confidence it was filed with and holds its rank in a lane that
-// serves ten by score. Archiving one of two duplicates is a reasonable way to
-// resolve a pair — the most natural one for a company entered twice, since it
-// needs no merge decision — so the more diligently a workspace resolves them
-// that way, the faster its queue fills with its own finished work.
-func bothSidesServable(entityType, alias, leftColumn, rightColumn, scopeClause string, mustBeLive bool) string {
-	side := func(column string) string {
-		terms := fmt.Sprintf("%[1]s.id = dedupe_candidate.%[2]s", alias, column)
-		if mustBeLive {
-			terms += fmt.Sprintf(" AND %s.archived_at IS NULL", alias)
-		}
-		if scopeClause != "" {
-			terms += " AND " + scopeClause
-		}
-		return fmt.Sprintf("EXISTS (SELECT 1 FROM %s %s WHERE %s)", entityType, alias, terms)
-	}
-	return "(" + side(leftColumn) + " AND " + side(rightColumn) + ")"
-}
-
 // ListDedupeCandidates pages the queue, confidence-sorted (AC-dedupe-1).
 func (s *Store) ListDedupeCandidates(ctx context.Context, in DedupeQueueInput) ([]DedupeCandidateRow, string, error) {
 	if err := requireDedupeRead(ctx, in.EntityType); err != nil {
@@ -217,19 +170,27 @@ func (s *Store) ListDedupeCandidates(ctx context.Context, in DedupeQueueInput) (
 		in.Limit = dedupeQueueDefaultLimit
 	}
 
+	args := []any{in.Status}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	// Computed in the SAME statement as the page rather than probed per row: the
+	// answer is a predicate over the two subject rows, and asking it row by row
+	// would be two round trips per candidate for a fact the query already has
+	// the joins for.
+	decidable, err := dedupeDecidableExpr(ctx, arg, in.Status == dispositionOpen)
+	if err != nil {
+		return nil, "", err
+	}
 	query := `
 		SELECT id, entity_type, coalesce(left_person_id, left_org_id, left_lead_id), coalesce(right_person_id, right_org_id, right_lead_id),
-		       confidence, evidence, disposition, disposed_by, disposed_at, created_at
+		       confidence, evidence, disposition, disposed_by, disposed_at, created_at,
+		       ` + decidable + `
 		FROM dedupe_candidate
 		WHERE disposition = $1 AND archived_at IS NULL`
-	args := []any{in.Status}
 	// Liveness binds the OPEN lane only. A decided pair is a record of what
 	// somebody decided, and every merge archives the loser by definition — so
 	// asking both sides to be live on `status=merged` would hide every row that
 	// filter exists to serve.
-	visClause, err := dedupeVisibilityClause(ctx,
-		func(v any) int { args = append(args, v); return len(args) },
-		in.Status == dispositionOpen)
+	visClause, err := dedupeVisibilityClause(ctx, arg, in.Status == dispositionOpen)
 	if err != nil {
 		return nil, "", err
 	}
@@ -261,7 +222,8 @@ func (s *Store) ListDedupeCandidates(ctx context.Context, in DedupeQueueInput) (
 		for res.Next() {
 			var r DedupeCandidateRow
 			if err := res.Scan(&r.ID, &r.EntityType, &r.LeftID, &r.RightID, &r.Confidence,
-				&r.Evidence, &r.Disposition, &r.DisposedBy, &r.DisposedAt, &r.CreatedAt); err != nil {
+				&r.Evidence, &r.Disposition, &r.DisposedBy, &r.DisposedAt, &r.CreatedAt,
+				&r.CanDecide); err != nil {
 				return err
 			}
 			rows = append(rows, r)
@@ -407,11 +369,7 @@ func (s *Store) OpenCandidatesNaming(ctx context.Context, entityType string, id 
 	if err := requireDedupeRead(ctx, entityType); err != nil {
 		return nil, err
 	}
-	column, ok := map[string][2]string{
-		entityPerson:       {"left_person_id", "right_person_id"},
-		entityOrganization: {"left_org_id", "right_org_id"},
-		entityLead:         {"left_lead_id", "right_lead_id"},
-	}[entityType]
+	side, ok := dedupePairSideFor(entityType)
 	if !ok {
 		// Not an error: most record types have no dedupe queue at all, and a
 		// create of one is entitled to ask and be told nothing was filed.
@@ -424,7 +382,7 @@ func (s *Store) OpenCandidatesNaming(ctx context.Context, entityType string, id 
 		       confidence, evidence, disposition, disposed_by, disposed_at, created_at
 		  FROM dedupe_candidate
 		 WHERE disposition = $1 AND archived_at IS NULL
-		   AND (%s = $2 OR %s = $2)`, column[0], column[1])
+		   AND (%s = $2 OR %s = $2)`, side.left, side.right)
 	visClause, err := dedupeVisibilityClause(ctx,
 		func(v any) int { args = append(args, v); return len(args) }, true)
 	if err != nil {

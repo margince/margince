@@ -161,7 +161,7 @@ capture() {
 
 cmd_verify() {
   local ref="${1:-}"
-  [ -n "$ref" ] || die "usage: migration-baseline.sh verify <base-ref>"
+  [[ -n "$ref" ]] || die "usage: migration-baseline.sh verify <base-ref>"
   require_container
   git rev-parse --verify -q "$ref" >/dev/null || die "base ref '$ref' not found — fetch it first"
 

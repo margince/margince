@@ -64,14 +64,26 @@ type stalledDeal struct {
 // reads only the first, so the count is the half a fingerprint built from
 // IsStalled's own inputs would miss.
 //
-// They are not everything a person can do to a deal. Editing it — re-pricing,
-// pushing the close date, changing the owner — moves neither, so a dismissal
-// survives that. deal.version would catch all of it and is monotone, but it also
-// bumps on writes no person made: CloseDateCorrector patches expected_close_date
-// from a sweep, and keying on it would hand a rep back advice they dismissed
-// because a nightly job touched the row. Which edits count as working a deal is a
-// product question rather than one to infer from the schema, and it has not been
-// answered: this fingerprint should derive from that answer, not stand in for it.
+// They are not everything a person can do to a deal, and that is the RULE rather
+// than a gap in it: worked means a new activity or a stage move, and nothing
+// else re-arms a dismissal.
+//
+// Editing the deal — re-pricing, pushing the close date — moves neither, so a
+// dismissal survives it. That is deliberate. Those are bookkeeping: the rep who
+// said "not now" said it about a deal nobody is talking to, and correcting its
+// amount does not make anybody talk to it. Advice returning on a re-price would
+// arrive with nothing new to say.
+//
+// Changing the OWNER needs no term either, and the reason is one level up: a
+// dismissal is per-user. The new owner has dismissed nothing, so the advice is
+// already live for them; adding an owner term would only re-arm it for the
+// person who handed the deal on.
+//
+// deal.version would catch all of it and is monotone, and it is still the wrong
+// key: it bumps on writes no person made — CloseDateCorrector patches
+// expected_close_date from a sweep — so keying on it hands a rep back advice
+// they dismissed because a nightly job touched the row. That is why the
+// fingerprint names its two inputs rather than counting every write.
 //
 // wait_until is deliberately NOT here, though the stall rule reads it: a deferral
 // can be set, expire, and be cleared, returning the deal to a shape the rep already

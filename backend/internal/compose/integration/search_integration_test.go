@@ -15,10 +15,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/search"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -304,4 +310,60 @@ func hasType(hits []search.Hit, want string) bool {
 		}
 	}
 	return false
+}
+
+// The ceiling compose arms on the search surface still serves an ordinary
+// search.
+//
+// The other half of the bound — that a spent ceiling reads as an actionable
+// "too broad" rather than a 5xx — is asserted in the search module's own
+// rankingfault_test.go, where it is a pure function of an error and a context.
+// It is NOT asserted by racing a live statement against a one-millisecond
+// budget: that test times the machine it runs on, and it flaked exactly that
+// way when it was written here.
+//
+// What this one holds is the direction a unit test cannot: a ceiling that
+// refused ordinary work would satisfy every assertion about the fault and break
+// the product.
+func TestTheSearchCeilingStillServesAnOrdinarySearch(t *testing.T) {
+	e := SetupSearch(t)
+	e.SeedID(t, `INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, 'Rostock Person', 'manual', 'human:x')`)
+
+	status, body := callSearch(t, e, database.CallerPredicateBudget, "Rostock")
+
+	if status != http.StatusOK {
+		t.Fatalf("status = %d, want 200 under the ceiling compose arms: %s", status, body)
+	}
+	if !strings.Contains(body, "Rostock Person") {
+		t.Errorf("the seeded person did not come back — the ceiling is refusing work it should "+
+			"serve: %s", body)
+	}
+}
+
+// callSearch drives GET /search through the module's own handler, over a handle
+// bounded the way compose bounds the one it wires (server.go).
+func callSearch(t *testing.T, e *SearchEnv, budget time.Duration, q string) (int, string) {
+	t.Helper()
+	db := database.BindTo(e.Pool, ids.From[ids.WorkspaceKind](e.WS)).Bounded(budget)
+	h := search.NewHandlers(db, nil, nil)
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/v1/search?q="+q, nil).WithContext(searchAs(e))
+	h.Search(rec, req, crmcontracts.SearchParams{Q: q})
+	return rec.Code, rec.Body.String()
+}
+
+// searchAs is a reader who may see everything, so the assertions below are
+// about the ceiling rather than about scope.
+func searchAs(e *SearchEnv) context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,
+		Permissions: principal.Permissions{
+			Objects: map[string]principal.ObjectGrant{
+				"person": {Read: true}, "organization": {Read: true},
+				"installation_settings": {Read: true},
+			},
+			RowScope: principal.RowScopeAll,
+		},
+	})
 }

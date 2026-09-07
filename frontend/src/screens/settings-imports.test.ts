@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import { sourceFileAt } from "../../scripts/lib/source-tree";
 
 // The settings catalog is split in two so the shell can ask where a settings
 // entry lives without paying to draw it. `settingsnav.tsx` answers the address
@@ -62,12 +63,7 @@ function resolveSpecifier(fromFile: string, specifier: string): string | null {
  * same edge would not show up as a new dependency in review.
  */
 function importsOf(file: string): string[] {
-  const source = ts.createSourceFile(
-    file,
-    readFileSync(file, "utf8"),
-    ts.ScriptTarget.Latest,
-    true,
-  );
+  const source = sourceFileAt(file);
   const out: string[] = [];
   const visit = (node: ts.Node) => {
     if (
@@ -92,6 +88,32 @@ function importsOf(file: string): string[] {
 }
 
 /**
+ * The source files `file` imports, parsed ONCE per file and kept for the run.
+ *
+ * Every entry point below walks the same shared subgraph — the design system,
+ * the api client, i18n — so a module's parse is paid once for the run, not once
+ * per entry that reaches it. Per entry, the walks re-parse that subgraph as many
+ * times as there are entries, and the file's cost grows with the product of the
+ * two rather than their sum.
+ *
+ * The tree does not change while the suite runs, so a parsed edge list is as
+ * true on the last walk as on the first.
+ */
+const resolvedImports = new Map<string, string[]>();
+
+function edgesOf(file: string): string[] {
+  const known = resolvedImports.get(file);
+  if (known) {
+    return known;
+  }
+  const edges = importsOf(file)
+    .map((specifier) => resolveSpecifier(file, specifier))
+    .filter((next): next is string => next !== null);
+  resolvedImports.set(file, edges);
+  return edges;
+}
+
+/**
  * The shortest import path from `entry` to `target`, or null when unreachable.
  * Returning the path rather than a boolean is what makes a failure actionable:
  * the offending edge is usually three hops in and invisible from the entry.
@@ -102,9 +124,8 @@ function pathTo(entry: string, target: string): string[] | null {
   while (queue.length > 0) {
     const trail = queue.shift() as string[];
     const head = trail[trail.length - 1];
-    for (const specifier of importsOf(head)) {
-      const next = resolveSpecifier(head, specifier);
-      if (next === null || seen.has(next)) {
+    for (const next of edgesOf(head)) {
+      if (seen.has(next)) {
         continue;
       }
       if (next === target) {
@@ -126,7 +147,7 @@ function pathTo(entry: string, target: string): string[] | null {
  * Two trees qualify. `src/app/**` is the always-loaded shell. `src/screens/**`
  * is every other screen: a screen that only wants an ADDRESS must not drag the
  * settings cards into its own chunk, which is what `worklist.copy.ts` did —
- * putting the whole settings screen behind Home, the default landing page.
+ * putting the whole settings screen behind Brief, the default landing page.
  *
  * Tests, stories and the testkit are excluded on purpose: they ask this module
  * for both halves, that is what they are for, and they ship in no chunk.

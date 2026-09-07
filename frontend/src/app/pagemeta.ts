@@ -20,7 +20,7 @@ import type { Route, Screen } from "./router";
 /**
  * Screens that head THEMSELVES, so the shell prints no heading above them.
  *
- * Home greets the reader by name in its own h1 — "Guten Morgen, Demo." — and
+ * Brief greets the reader by name in its own h1 — "Guten Morgen, Demo." — and
  * the shell's own nav label above it named the page a second time at heading
  * level.
  * Two top-level headings is no outline at all, and it is the same defect the
@@ -30,7 +30,7 @@ import type { Route, Screen } from "./router";
  * heading somewhere on it. A screen whose own heading is an h2 still wants the
  * shell to name the page.
  */
-// Home greets the reader in its own h1. The tag page heads itself with the
+// Brief greets the reader in its own h1. The tag page heads itself with the
 // TAG'S NAME, which the shell cannot know: "Tag" above a pill spelling
 // "Automation World 2026" names the page twice and names it worse both times —
 // a reader arriving from a search hit wants the word they searched at the top.
@@ -42,7 +42,7 @@ import type { Route, Screen } from "./router";
 // A screen here is a screen that passes `title`, and the two must move together
 // or the page is named twice at heading level.
 export const SELF_HEADED_SCREENS: ReadonlySet<string> = new Set([
-  "home",
+  "brief",
   "tags",
   "contacts",
   "companies",

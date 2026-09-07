@@ -174,7 +174,9 @@ test.describe("Analytics sections", () => {
     ).toBeVisible();
   });
 
-  test("a section with nothing to report says so in words", async ({ page }) => {
+  test("a section with nothing to report says so in words", async ({
+    page,
+  }) => {
     await openAnalytics(page, "delivery");
     // projects-gone-quiet answers no rows, which is a real answer — "nothing
     // has gone quiet" — and an empty table would leave a reader wondering
@@ -222,7 +224,9 @@ test.describe("Analytics sections", () => {
           overflow: element.scrollWidth - element.clientWidth,
         }))
         .filter(({ overflow }) => overflow > 1)
-        .map(({ name, overflow }) => `${name}: ${overflow}px past the viewport`),
+        .map(
+          ({ name, overflow }) => `${name}: ${overflow}px past the viewport`,
+        ),
     );
     expect(
       overflowing,

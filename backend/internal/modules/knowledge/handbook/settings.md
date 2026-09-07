@@ -2,12 +2,41 @@
 
 Settings is reached from the **account menu**, not from the main navigation.
 
-It has two groups. **You** — five pages every member gets. **Admin settings** —
-ten pages that appear only for an Admin or an Ops seat.
+It has **seven groups** and 28 pages. Which of them you see depends on what your
+role lets you do, and the rule has two halves worth knowing, because they answer
+two different questions.
 
-If you are not an operator, the admin group is simply absent. It does not show
-you a row of locked cards, because a page announcing that it exists and is not
-yours is the one thing an absent section is chosen to avoid saying.
+**The sidebar lists what you can change.** A page whose every control is closed
+to you is not in it. That is about prominence, not permission — it keeps the list
+you navigate past every day down to the work you can actually do.
+
+**The settings home lists everything you can open**, in two parts: *What you can
+change*, which is the sidebar again, and *What you can look up*, which is the
+rest. Search finds both. So a page missing from your sidebar is still yours to
+read: open the settings home, or search for it, or follow a link straight to it.
+
+If a page is genuinely not yours, opening its address says so plainly and leaves
+the address alone, so you can quote it to whoever can grant it.
+
+A page you can read and not change says so once, at the top, instead of leaving
+you to work it out from a screenful of greyed-out buttons.
+
+## Whose settings am I changing?
+
+Every page carries a badge beside its heading saying who a change there affects:
+
+| Badge | What it means |
+|---|---|
+| **Only you** | Your own seat. Nobody else sees the difference. |
+| **Your team** | The people on your team. |
+| **Company** | Everyone in this organization. |
+| **Installation** | Every organization on this deployment. |
+| **Mixed** | The page holds settings of more than one kind. Read the card. |
+
+Three pages are **Mixed**, and each for a named reason: *Connections* and
+*Capture activity* sit among your own settings but each carries one card that
+binds everybody, and *Integrations* holds an installation-wide provider setting
+beside workspace-level wiring.
 
 ---
 
@@ -15,9 +44,11 @@ yours is the one thing an absent section is chosen to avoid saying.
 
 ## Account
 
-Your account as one card: who you are, and the three answers that belong to you —
-how you sign in, how you sign off, and which language the product speaks to you
-in. English, German and Vietnamese are available.
+Your account as one card: who you are, and the answers that belong to you alone
+— how you sign in, how you sign off, which language the product speaks to you in
+(English, German and Vietnamese), and how it looks. **Appearance** is here as
+well as in the account menu; they are one setting with two doors, so changing it
+in either place moves the other.
 
 **Your email signature** lives here. It is appended below every message you send,
 above the unsubscribe footer. Leave it empty to send unsigned.
@@ -93,9 +124,15 @@ page says once above them; that is the default and not a misconfiguration.
 
 ---
 
-# Administrator settings
+# The rest of settings
 
-## General
+Six groups beyond your own. Which pages you see, and whether you can change them
+rather than only read them, follows your role — see the table at the end.
+
+## Company
+
+*Group: Company.* Sign-in methods and OAuth applications moved to their own
+**Sign-in & apps** page in the same group.
 
 **Installation settings** — the organization's name, timezone and base currency.
 
@@ -107,9 +144,11 @@ last quarter reported.
 **Company context** — what Margince knows about your own company, and where it
 read it from. You can also tell it directly.
 
-## Users & teams
+## Members, Teams, and Seats & license
 
-Two cards.
+*Group: People.* One page each now — the roster, the team list, and the seat
+count with the licence beside it. **Roles & permissions** is not built yet, and
+is deliberately absent from the navigation rather than present and empty.
 
 **Users** — "Everyone who holds a seat here, deactivated accounts included."
 Invite, change role, deactivate, reactivate. Reading the roster is open to every
@@ -117,12 +156,15 @@ user; managing it is administrators only.
 
 **Teams** — named groups you can share records with. Create one, archive it, and
 open a team to add or remove the users in it. Being in a team grants no access on
-its own: no shipped role is team-scoped, so a team matters when a record is
-shared with it.
+its own — with one exception: a **Team Lead** reads and works their team's
+records, so for them a team is what "their team" means. For every other shipped
+role a team matters when a record is shared with it.
 
 See [Seats, roles and who can see what](seats-roles-and-access.md).
 
 ## Integrations
+
+*Group: Data.*
 
 What the installation is wired to, as opposed to what one person connected.
 
@@ -134,6 +176,8 @@ What the installation is wired to, as opposed to what one person connected.
   mode, and the one-way switch to running natively.
 
 ## Extensions
+
+*Group: Governance.*
 
 Every extension unit this installation was built with, and what each may reach.
 
@@ -151,10 +195,15 @@ A unit that registers no permission objects — a jurisdiction pack, for instanc
 which only supplies retention policy the core consults — is listed with nothing to
 grant, which is the correct and common answer.
 
-Admin only, and the admin role specifically: Ops administers the rest of this
-half of settings and not this page.
+Admin and Ops both reach it: the page asks for the extension inventory read and
+the role-directory read, and Ops holds both.
 
-## Capture
+## Capture rules
+
+*Group: Data.* The **Email sharing** rule now lives here, at the top: it decides
+whether captured mail is shared with colleagues, which is everybody's business
+rather than one seat's. Your own connections page states what it currently says
+and links here to change it.
 
 The posture that decides what enters the CRM at all. In the order the page puts
 them:
@@ -174,7 +223,16 @@ a consumer mailbox still creates the person — it just never creates a company.
 decided each one — a model verdict, a heuristic, or a person. "Letting a domain
 back in re-opens the company question rather than merely clearing a flag."
 
-## Data model
+## Pipelines, Lead handling, Fields, Tags, and Products & offers
+
+*Group: Sales.* Five pages now, one per subject, where this was one page with a
+tab strip.
+
+Every seat can READ all five. Four of them — pipelines, lead handling, fields and
+tags — are an operator's to change, so for most people they appear under *What
+you can look up* on the settings home rather than in the sidebar. **Products &
+offers** is the exception: a sales seat authors both, so it stays in their
+sidebar.
 
 The shape a record takes: which fields it carries, which stages it moves through,
 and the priced things that go on an offer.
@@ -187,7 +245,9 @@ and the priced things that go on an offer.
   default.
 - **Products** and **Offer templates**.
 
-## AI
+## Models & routing, Automations, AI usage, and Model calls
+
+*Group: AI.* Four pages, split from one.
 
 **Model routing** — which model serves each tier. "Changes take effect without a
 restart, and every process picks them up within a minute."
@@ -201,13 +261,18 @@ also run entirely against a local model with no cloud key at all.
 
 ## Knowledge
 
+*Group: Data.* **Data import** is its own page in the same group.
+
 **Document sets**: "Bodies of text this organization can be asked questions of.
 An answer comes only from what is filed here, and a question they do not cover is
 refused rather than guessed at."
 
 See [Documents and files](documents-and-files.md#document-sets--asking-your-documents-questions).
 
-## Privacy & audit
+## Privacy & retention
+
+*Group: Governance.* The **Audit log** is its own page now, beside it: the two
+answer to different permissions, so a reader could hold one and not the other.
 
 Five things, and they are the heart of the compliance story:
 
@@ -227,14 +292,20 @@ person who asked.
 Full detail in
 [What is kept, what is destroyed](retention-exports-and-deletion.md).
 
-## License
+## Seats & license
+
+*Group: People.*
 
 **License and seats.** How many seats are in use, how many are granted, and
 whether the licence is present and valid.
 
 See [Seats, roles and who can see what](seats-roles-and-access.md#the-licence).
 
-## Maintenance
+## System health, Data import, and Reset
+
+*Group: Governance and Data.* Three pages, split so that a reindex, a queue
+reading and "empty the installation" are no longer three buttons on one screen.
+**Reset** appears only where the deployment has armed it.
 
 - **Import a file** — a CSV of companies, up to 10 MB.
 - **Search index** — rebuilding the index behind search and the AI's retrieval.
@@ -246,18 +317,44 @@ See [Seats, roles and who can see what](seats-roles-and-access.md#the-licence).
 
 ---
 
-## Which settings need which role
+## Which settings you get
 
-| Page | Who |
-|---|---|
-| Account, Writing voice, Agents, Connections, Capture activity | every user |
-| General, Users & teams, Integrations, Capture, Data model, AI, Knowledge, License, Maintenance | Admin or Ops |
-| Privacy & audit | Admin or Ops; the audit log and privacy inbox inside it are Admin only |
-| Extensions | Admin only — Ops does not reach it |
-| Job health, Reset data, user administration | Admin only |
+Pages follow **permissions**, not role names. A custom role holding the right
+permission reaches the page with no change to the product, and an Admin whose
+role lost a permission stops reaching the page that needs it.
 
-A few things sit outside the role system entirely and need the Admin role, full
-stop: user administration, privacy erasure, and reading the audit log.
+Two questions, and they have different answers:
+
+- **Can I open it?** Search finds it, the settings home lists it, and its address
+  works.
+- **Can I change it?** It is in the sidebar, and its controls are live.
+
+A **read-only seat** is the clearest case of the two coming apart: it keeps every
+page it could read before and loses every control that writes to the server.
+Your own preferences still work — the language and the appearance are settings
+about your browser, not about anyone's records.
+
+| You are | You can change | You can also look up |
+|---|---|---|
+| A sales seat | Your own five pages, Products & offers, Company profile, Capture rules | Pipelines, Lead handling, Fields, Tags, Knowledge |
+| A team lead | The same | The same |
+| Management | The same | The above plus AI usage, model calls, seat counts and the sign-in status — all of them readable and none of them theirs to change |
+| Ops | Most of the operational catalog, including the model rates and the extension inventory | The rest |
+| Admin | Everything the deployment has armed | — |
+
+That first row surprises people, so it is worth saying plainly: a sales seat can
+edit **Capture rules** and the **company profile**, because those cards ask for a
+permission every sales role holds. If that is not what you want, the fix is the
+permission, not the page.
+
+Nearly everything is a permission now, including the three that used to be role
+checks: administering members answers to `user_admin`, reading the audit log to
+`audit_log`, and the privacy queue to `privacy_request`. A custom role granted
+one of those reaches the page, and an Admin whose role lost it does not.
+
+A handful of paths still ask for the literal Admin role, and they are the ones
+about recovering access rather than using the product: the last-admin rule, and
+the deployment-level resets.
 
 ## Two things administrators should decide early
 

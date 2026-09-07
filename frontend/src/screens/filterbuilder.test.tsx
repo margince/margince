@@ -115,6 +115,38 @@ function stubSeats() {
   );
 }
 
+// The companies door as the search calls it, plus the seats every other picker
+// on this screen reads on mount.
+function stubOrganizations() {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input instanceof Request ? input.url : input);
+      let body: unknown = {
+        data: [],
+        page: { next_cursor: null, has_more: false },
+      };
+      if (url.includes("/organizations")) {
+        // Answers only what the query narrows to, so a test asking for
+        // something absent gets the empty answer rather than a stub that
+        // always has a hit.
+        const q = new URL(url, "http://test").searchParams.get("q") ?? "";
+        body = {
+          data:
+            "northgate".includes(q.toLowerCase()) && q !== ""
+              ? [{ id: "org-1", display_name: "Northgate" }]
+              : [],
+          page: { next_cursor: null, has_more: false },
+        };
+      }
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }),
+  );
+}
+
 function wire() {
   return JSON.parse(screen.getByTestId("wire").textContent ?? "{}");
 }
@@ -200,20 +232,125 @@ describe("an id clause names a record, not a uuid", () => {
     });
   });
 
-  it("keeps a plain box for a target too large to enumerate", async () => {
+  it("searches for a target too large to enumerate, and only a hit becomes the value", async () => {
     resetIDsForTest();
-    stubSeats();
+    stubOrganizations();
+    const user = userEvent.setup();
     render(
       <Harness
         start={newGroup("and", [newLeaf("organization_id", "eq", "")])}
       />,
     );
 
-    // An account list grows with the business, so it is not a dropdown. The box
-    // stays until the async picker exists — a half-filled list would be worse,
-    // since a reader could not tell a missing account from an absent one.
-    expect(await screen.findByRole("textbox", { name: "Value" })).toBeTruthy();
+    // An account list grows with the business, so it is not a dropdown. It is
+    // not a uuid box either: nobody types one from memory, and one typed wrong
+    // matches nothing and reads as "no companies match".
+    const box = await screen.findByRole("textbox", {
+      name: "Search companies",
+    });
     expect(screen.queryByRole("combobox", { name: "Value" })).toBeNull();
+
+    // The TYPED WORDS ARE NOT THE VALUE. This is the whole guarantee: until a
+    // hit is chosen the clause carries nothing, so a half-typed name cannot
+    // reach the engine as one.
+    await user.type(box, "north");
+    expect(wire()).toEqual({
+      and: [{ field: "organization_id", op: "eq", value: "" }],
+    });
+
+    await user.click(await screen.findByRole("button", { name: "Northgate" }));
+
+    // And what lands on the wire is the id, chosen rather than composed.
+    expect(wire()).toEqual({
+      and: [{ field: "organization_id", op: "eq", value: "org-1" }],
+    });
+    // The name stands where the search box was, so the reader can see their
+    // choice took rather than wondering whether it did.
+    expect(screen.getByText("Northgate")).toBeTruthy();
+  });
+
+  it("says a search found nothing rather than showing an empty list", async () => {
+    resetIDsForTest();
+    stubOrganizations();
+    const user = userEvent.setup();
+    render(
+      <Harness
+        start={newGroup("and", [newLeaf("organization_id", "eq", "")])}
+      />,
+    );
+
+    // A list with no rows and no line above it reads as a confident "this
+    // workspace has no such company", which is a settled answer to a question
+    // that got one — the exact failure this whole surface exists to prevent.
+    await user.type(
+      await screen.findByRole("textbox", { name: "Search companies" }),
+      "zzz",
+    );
+    expect(await screen.findByText("No companies match")).toBeTruthy();
+  });
+
+  it("names records one at a time for a list clause, and never as free text", async () => {
+    resetIDsForTest();
+    stubSeats();
+    const user = userEvent.setup();
+    render(
+      <Harness start={newGroup("and", [newLeaf("owner_id", "in", [])])} />,
+    );
+
+    // `in` used to win over the reference and hand back a token box, so every
+    // id field's LIST was free text — a uuid typed wrong there compiles,
+    // matches nothing, and reads as a settled "no rows" exactly as the single
+    // case did. The operator changes how many records are named, not whether
+    // they are chosen.
+    expect(screen.queryByRole("textbox", { name: "Values" })).toBeNull();
+
+    await pickOption(
+      user,
+      await screen.findByRole("combobox", { name: "Value" }),
+      "Ann Lee",
+    );
+    await pickOption(
+      user,
+      await screen.findByRole("combobox", { name: "Value" }),
+      "Bruno Sá",
+    );
+
+    expect(wire()).toEqual({
+      and: [{ field: "owner_id", op: "in", value: ["u-1", "u-2"] }],
+    });
+
+    // And a record already named can be dropped, or a list is a one-way door.
+    await user.click(screen.getByRole("button", { name: "Remove Ann Lee" }));
+    expect(wire()).toEqual({
+      and: [{ field: "owner_id", op: "in", value: ["u-2"] }],
+    });
+  });
+
+  it("searches for each company a list clause names", async () => {
+    resetIDsForTest();
+    stubOrganizations();
+    const user = userEvent.setup();
+    render(
+      <Harness
+        start={newGroup("and", [newLeaf("organization_id", "in", [])])}
+      />,
+    );
+
+    // The unbounded target takes the same rule through its own control: the
+    // search box stays open under what the clause already holds, because the
+    // next pick is the point.
+    await user.type(
+      await screen.findByRole("textbox", { name: "Search companies" }),
+      "north",
+    );
+    await user.click(await screen.findByRole("button", { name: "Northgate" }));
+
+    expect(wire()).toEqual({
+      and: [{ field: "organization_id", op: "in", value: ["org-1"] }],
+    });
+    expect(
+      screen.getByRole("textbox", { name: "Search companies" }),
+    ).toBeTruthy();
   });
 
   it("asks nothing of a reader when the operator already answered", async () => {

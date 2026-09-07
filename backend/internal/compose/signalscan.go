@@ -34,6 +34,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // ghostedThresholdDays (SIG-PARAM-6) is twice the no_reply suggestion's window,
@@ -80,7 +81,7 @@ func scanGhostedThreads(ctx context.Context, tx pgx.Tx, now time.Time) ([]ghoste
 			  FROM activity a
 			  JOIN (`+activities.OrgReachSet()+`) ro ON ro.activity_id = a.id
 			 WHERE a.archived_at IS NULL
-			   AND a.kind IN ('email','call','meeting')
+			   AND a.kind IN `+relstrength.InteractionKindSQLGroup()+`
 			   -- An interaction with no recorded direction cannot say who spoke
 			   -- last, so it is skipped rather than guessed at — the same rule
 			   -- PO-F-4 applies to the engagement state.

@@ -227,6 +227,13 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    // Worker threads rather than child processes. Every test file still gets
+    // its own module graph and its own jsdom (isolation is unchanged — the
+    // suite has module-level state that a shared graph breaks, measured at 28
+    // failures with `isolate: false`); what a thread saves is the process spawn
+    // and the IPC per file, across six hundred files. Measured on the whole
+    // suite: 123s to 108s, same verdict on every test.
+    pool: "threads",
     // Derived in vitest.budget.ts, which carries the measurement and the
     // arithmetic. The short version: a test of N sequential waits may spend N
     // seconds without a single wait failing, and the longest chain here is six —

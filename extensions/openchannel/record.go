@@ -67,6 +67,21 @@ type arrival struct {
 	// one end would silently disable that gate rather than pass it.
 	From party `json:"from"`
 	To   party `json:"to"`
+	// Participants is who ELSE was in the conversation — the roster of a group,
+	// the people neither end of the exchange. Optional: a two-party message
+	// names nobody here and nothing changes.
+	//
+	// The two ends stay where they are. `from` is still the sender and `to`
+	// still the member, because direction is defined against them and a roster
+	// is not; a sender who repeats themselves here changes nothing, since the
+	// core keys a participant row on the identity and writes it once.
+	//
+	// It records WHO WAS PRESENT and grants nobody a read. The core resolves a
+	// party to a contact it already holds and never to one of our own seats:
+	// this edge is anonymous — whoever holds the signing secret writes this
+	// document — so a roster naming a colleague is a claim by a stranger, and
+	// the core treats it as one.
+	Participants []party `json:"participants"`
 }
 
 // party is one end of a message as the sending system names it.
@@ -133,6 +148,7 @@ func recordFor(ref string, body []byte, sentAt time.Time) (extension.Record, err
 		// unique within the endpoint.
 		ThreadKey:    provider + ":" + ref + ":" + threadOf(doc),
 		Counterparty: counterpartyOf(doc.From),
+		Participants: participantsOf(doc),
 		Addresses:    addresses,
 		// The bytes as they arrived, kept as evidence — the document the sender
 		// signed rather than a re-encoding of the fields above, so what the
@@ -234,4 +250,45 @@ func mailDomain(email string) string {
 		return ""
 	}
 	return strings.ToLower(strings.TrimSpace(email[at+1:]))
+}
+
+// participantsOf maps the roster onto the core's, dropping a party the document
+// named with no identity at all.
+//
+// DROPPED HERE rather than passed on, because the core refuses the whole RECORD
+// over one — a blank entry in a hand-written JSON document is a sender's typo,
+// and losing the message over it would be this connector reporting a fault the
+// sender can neither see nor fix. A party with nothing to identify them carries
+// no information to lose: `{"name": "Bob"}` says somebody unnameable was there.
+//
+// Everyone is an ATTENDEE. This document has no vocabulary for where in a
+// conversation somebody stood, and the two positions it does name — the sender
+// and the member — are already the two ends. Attendee is the honest word for
+// "present, and not either end"; inventing `to` or `cc` from silence would put a
+// header position on a message that has no headers.
+//
+// The addresses on a roster are NOT folded into Record.Addresses. That set is
+// what the core's internal-message gate reads, and addressesOf explains why the
+// SENDER alone decides whether there is a set at all: adding our own group's
+// colleagues to it is exactly how a message from a real outside sender comes to
+// look like colleagues talking and gets dropped.
+func participantsOf(doc arrival) []extension.Participant {
+	if len(doc.Participants) == 0 {
+		return nil
+	}
+	roster := make([]extension.Participant, 0, len(doc.Participants))
+	for _, p := range doc.Participants {
+		account := strings.TrimSpace(p.Account)
+		email := strings.TrimSpace(p.Email)
+		if account == "" && email == "" {
+			continue
+		}
+		roster = append(roster, extension.Participant{
+			Account: account,
+			Email:   email,
+			Name:    strings.TrimSpace(p.Name),
+			Role:    extension.ParticipantRoleAttendee,
+		})
+	}
+	return roster
 }

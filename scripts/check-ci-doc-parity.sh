@@ -52,13 +52,13 @@ check() {
   # An extraction that silently yields nothing would pass while checking nothing,
   # which is the failure this file is written against.
   count="$(printf '%s\n' "$paths" | grep -c . || true)"
-  if [ "$count" -eq 0 ]; then
+  if [[ "$count" -eq 0 ]]; then
     echo "FAIL: extracted no paths from $workflow under '$anchor' — the anchor moved or the block changed shape, so this gate was about to pass without comparing anything" >&2
     fail=1
     return
   fi
   while IFS= read -r path; do
-    [ -n "$path" ] || continue
+    [[ -n "$path" ]] || continue
     # Matched as a backticked literal: the prose is free to add commentary around
     # an entry, but the entry itself has to appear exactly as the workflow spells
     # it, or it is not the same path.
@@ -67,7 +67,7 @@ check() {
       missing=1
     }
   done <<< "$paths"
-  [ "$missing" -eq 0 ] || fail=1
+  [[ "$missing" -eq 0 ]] || fail=1
   echo "checked $count path(s) from $workflow against $doc"
 }
 
@@ -80,7 +80,7 @@ check .github/workflows/ci.yml "filters: |" infra/ci-pipeline.md
 # line goes unchecked and this gate still reports OK, which is the one way this
 # file can now mislead. Spelled out rather than left implicit for that reason.
 
-if [ "$fail" -eq 0 ]; then
+if [[ "$fail" -eq 0 ]]; then
   echo "OK: every filtered path is documented"
 fi
 exit "$fail"

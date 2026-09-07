@@ -134,6 +134,9 @@ func zeroPayloadRefusalDrivers() map[string]func(context.Context) error {
 		GeocodeOrganizationArgs{}.Kind(): func(ctx context.Context) error {
 			return (&geocodeWorker{}).Work(ctx, &river.Job[GeocodeOrganizationArgs]{})
 		},
+		AccountScanArgs{}.Kind(): func(ctx context.Context) error {
+			return (&accountScanWorker{}).Work(ctx, &river.Job[AccountScanArgs]{})
+		},
 		CheckOrganizationVatArgs{}.Kind(): func(ctx context.Context) error {
 			return (&vatCheckWorker{}).Work(ctx, &river.Job[CheckOrganizationVatArgs]{})
 		},
@@ -221,6 +224,11 @@ func idBearingRefusalDrivers() map[string]func(context.Context) error {
 		TranscriptProposeArgs{}.Kind(): func(ctx context.Context) error {
 			return (&transcriptProposeWorker{log: slog.New(slog.DiscardHandler)}).Work(
 				ctx, &river.Job[TranscriptProposeArgs]{Args: TranscriptProposeArgs{}})
+		},
+
+		StageEvidenceReadArgs{}.Kind(): func(ctx context.Context) error {
+			return (&stageEvidenceReadWorker{log: slog.New(slog.DiscardHandler)}).Work(
+				ctx, &river.Job[StageEvidenceReadArgs]{Args: StageEvidenceReadArgs{}})
 		},
 
 		DocumentExtractArgs{}.Kind(): func(ctx context.Context) error {

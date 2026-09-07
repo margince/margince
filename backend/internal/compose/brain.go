@@ -57,7 +57,10 @@ type ModelPath struct {
 	// is created from it. Its own task, not the profile lane's: it asks one
 	// cheap question of one page to stop a crawl early, so it must not bill the
 	// profile lane's premium-only ladder for it.
-	SiteTriage   completer
+	SiteTriage completer
+	// AccountScan reads one account for one reader and says what needs a
+	// person, quoting the exchanges it read (orgscan).
+	AccountScan  completer
 	RateExtract  completer // the model-cost refresh pricing-page extraction lane
 	BriefRanking completer // the Morning-Brief L2 re-order (B-E05.2)
 	// Summarize serves both of the company view's grounded-prose sites: the
@@ -134,6 +137,13 @@ type ModelPath struct {
 	// in, this one cites the transcript LINES, which is what makes a proposal
 	// checkable against the text on screen.
 	TranscriptPropose completer
+	// StageEvidenceExtract is the lane that reads a deal's stage exit criteria
+	// against what was actually said. Separate from TranscriptPropose because
+	// the question differs: that site asks what somebody promised to DO, this
+	// one asks whether a named criterion is settled — and its reply names a
+	// criterion and never a stage, so what follows from a settled criterion
+	// stays the policy function's call rather than a reader's.
+	StageEvidenceExtract completer
 	// DocumentExtract is the RD-WIRE-N-1 lane that reads one attached document
 	// for the deal facts it states. It is the only lane whose input may be
 	// BYTES rather than prose, which is why it is typed as a documentCompleter:
@@ -174,6 +184,16 @@ func (p *ModelPath) SetCompanyContextEnabled(enabled bool) {
 // (MCP-SESS-COST) that every served model call is charged against, and answers
 // the same path for chaining. A ModelPath without one meters the workspace and
 // nothing else, which is correct for every role that serves no inbound agent.
+// RoutingVersion identifies the binding the lanes currently ride, read live
+// from the router so a role that rebinds at runtime reports the new one.
+// Empty for a path with no router — the offline fake, or no model at all.
+func (m ModelPath) RoutingVersion() string {
+	if m.router == nil {
+		return ""
+	}
+	return m.router.RoutingVersion()
+}
+
 func (m ModelPath) WithAgentTokenSpend(spend ai.AgentTokenSpender) ModelPath {
 	if m.router != nil {
 		m.router.WithAgentTokenSpend(spend)
@@ -290,6 +310,7 @@ func modelPathForRouter(router *ai.Router, companyContext *companyContextProvide
 		BriefRanking:                  brain(ai.TaskBriefRanking),
 		Summarize:                     brain(ai.TaskSummarize),
 		DealHealth:                    brain(ai.TaskDealHealth),
+		AccountScan:                   brain(ai.TaskAccountScan),
 		ProposeRoles:                  brain(ai.TaskProposeRoles),
 		CorpusAsk:                     brain(ai.TaskCorpusAsk),
 		GrowthFit:                     brain(ai.TaskGrowthFit),
@@ -303,6 +324,7 @@ func modelPathForRouter(router *ai.Router, companyContext *companyContextProvide
 		WeeklyReview:                  brain(ai.TaskWeeklyReview),
 		WeeklyLearnings:               brain(ai.TaskWeeklyLearnings),
 		TranscriptPropose:             brain(ai.TaskTranscriptPropose),
+		StageEvidenceExtract:          brain(ai.TaskStageEvidenceExtract),
 		DocumentExtract:               brain(ai.TaskDocumentExtract),
 		Enrich:                        brain(ai.TaskEnrich),
 		VoiceBuild:                    brain(ai.TaskVoiceBuild),

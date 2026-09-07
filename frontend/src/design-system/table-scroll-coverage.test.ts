@@ -6,6 +6,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import { parseSource } from "../../scripts/lib/source-tree";
 
 // Fitness function for a table that runs past its box with no way to reach the
 // rest of it.
@@ -90,13 +91,7 @@ function srOnly(
 
 /** `<file>:<line>` for every `<table>` in one file with no TableScroll above it. */
 function unwrappedIn(fileName: string, text: string): string[] {
-  const source = ts.createSourceFile(
-    fileName,
-    text,
-    ts.ScriptTarget.Latest,
-    true,
-    ts.ScriptKind.TSX,
-  );
+  const source = parseSource(fileName, text);
   const found: string[] = [];
   const visit = (node: ts.Node) => {
     const opening = ts.isJsxElement(node)

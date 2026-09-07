@@ -60,8 +60,24 @@ func (e *stagingEnv) pastTheWindow() {
 	e.svc.now = func() time.Time { return at }
 }
 
+// drainEarlierCases marks every candidate an earlier case in this package left
+// behind, so a count taken afterwards is about this test's row and nothing
+// else. The sweep is installation-wide by design and the lane's database is one
+// installation shared by the whole package, so any approved agent call another
+// case never redeemed — a version-skew refusal is one — is a candidate here
+// too. Marking is idempotent, so a drained row is not due again.
+func (e *stagingEnv) drainEarlierCases(t *testing.T) {
+	t.Helper()
+	e.pastTheWindow()
+	if _, err := e.svc.MarkLapsedRedemptions(e.sweeping()); err != nil {
+		t.Fatalf("draining what earlier cases left: %v", err)
+	}
+	e.svc.now = time.Now
+}
+
 func TestAnApprovalTheAgentNeverRedeemedIsMarkedRatherThanLeftSilent(t *testing.T) {
 	e := setupStaging(t)
+	e.drainEarlierCases(t)
 	id := e.lapsed(t)
 
 	// Before the window closes there is nothing to say: the agent may still

@@ -3,7 +3,7 @@
 # fitness tests — which are `//go:build integration` and need a real
 # Postgres — never blocked a PR. This pipeline runs BOTH lanes plus the
 # pinned vulnerability scan, the deterministic craftsmanship gate, and the
-# frontend lane as required checks, so a migration that forgets FORCE RLS,
+# frontend lane as required checks, so a migration that widens a boundary,
 # an erasure that misses a PII table, a vulnerable dependency, a swallowed
 # error, or a UI regression fails the merge instead of shipping.
 #
@@ -100,6 +100,14 @@ jobs:
       frontend: ${{ steps.filter.outputs.frontend == 'true' || github.event_name == 'merge_group' }}
       e2e: ${{ steps.filter.outputs.e2e == 'true' || github.event_name == 'merge_group' }}
       deps: ${{ steps.filter.outputs.deps == 'true' || github.event_name == 'merge_group' }}
+      # The three paths that decide what the role images ARE. Deliberately not
+      # backend/** or frontend/**: the images copy build output, so a source
+      # change can break one without touching these — but a three-role bake on
+      # every backend PR is most of the cost the release-trigger cleanup was
+      # removing, and the compile that would catch nearly all of it already runs
+      # in deterministic-gates. The trade is written down in infra/ci-pipeline.md
+      # rather than left to be inferred from this filter.
+      images: ${{ steps.filter.outputs.images == 'true' || github.event_name == 'merge_group' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -208,9 +216,13 @@ jobs:
               # dependency change is exactly the kind that needs fe-drift,
               # fe-unit and fe-bundle to have an opinion. pnpm-workspace.yaml is
               # named because `overrides` lives there: it resolves versions the
-              # lockfile then merely records.
+              # lockfile then merely records, and the root package.json because
+              # `packageManager` decides WHICH pnpm reads both — a pnpm major
+              # resolves the same lockfile differently, which is how this lane
+              # went red on a commit that touched nothing else.
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
+              - 'package.json'
               # And the root scripts the lane's own targets execute —
               # check-contract-frontend-drift.sh is a gate this lane is the only
               # runner of, and phase-timer.sh brackets every leg of it. The whole
@@ -248,6 +260,10 @@ jobs:
             # /pnpm-lock.yaml now, which `**/` still matches because it matches
             # zero segments, so this keeps firing and needs no edit next time the
             # workspace moves.
+            images:
+              - 'Dockerfile'
+              - '.dockerignore'
+              - 'docker-bake.hcl'
             deps:
               - 'go.work'
               - 'go.work.sum'
@@ -557,6 +573,18 @@ jobs:
       - name: the dev stack resolves DSNs the way the product does
         working-directory: .
         run: make test-dev-dsn
+      # And the same class again, one lane over: the two integration entry
+      # points have to name ONE Redis, or a run reads as broken when it is only
+      # under-provisioned by its own launcher.
+      - name: both integration entry points resolve one Redis address
+        working-directory: .
+        run: make test-testdb-redis
+      # And when the lane does break, it has to name what broke: a package over
+      # its budget used to read as a sharding failure, which is the wrong thing
+      # to debug.
+      - name: a package over its budget reads as a timeout
+        working-directory: .
+        run: make test-lane-timeout-report
       # The pin gate rides along here, and only here, because it reads the WHOLE
       # workflow directory while the backend scope names one file: sbom.yml and
       # patch.yml match no scope, so gated on the classifier this check would
@@ -838,7 +866,43 @@ jobs:
         timeout-minutes: 8
         uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f # v8.2.1
         with:
-          args: ${{ github.event_name == 'merge_group' && '-Dsonar.branch.name=main' || '' }}
+          # WHICH BRANCH THIS ANALYSIS IS FILED UNDER, said for every event
+          # rather than for one.
+          #
+          # An analysis carrying no `sonar.branch.name` is filed as the
+          # project's MAIN branch. On a pull request that is right — the action
+          # sets sonar.pullrequest.* itself and the scan decorates the PR — and
+          # on merge_group the ref is the queue's ephemeral one, so `main` is
+          # named outright. Every OTHER event fell through to the same empty
+          # argument, and a workflow_dispatch has no pull-request context: a
+          # run dispatched on a feature branch published that branch's tree as
+          # main's stored verdict, which is the one every scheduled check reads.
+          #
+          # It is not hypothetical and it is not rare. `main`'s two most recent
+          # analyses were `issue-1985-agent-carriage` and
+          # `issue-2381-ast-censuses`, neither revision a commit on main, while
+          # merge_group — the one event this argument covered — has not fired
+          # since 2026-08-20. So the quality gate has been reporting on feature
+          # branches for as long as anyone has been dispatching this workflow,
+          # including a bug already fixed on main and a new-code coverage figure
+          # belonging to somebody's diff.
+          #
+          # `main` when the ref genuinely IS main, so a dispatch there refreshes
+          # the verdict that no merge_group is left to refresh; the branch's own
+          # name otherwise, so a dispatched branch is filed as itself and can
+          # only ever describe itself.
+          # The empty case is LAST on purpose. `&&` here yields its right
+          # operand, and an empty string is falsy, so `pull_request && ''`
+          # would fall straight through the `||` beside it and hand a pull
+          # request the `<number>/merge` ref as a branch name. Ordering the
+          # arms so that only a truthy argument short-circuits is what keeps
+          # the PR arm empty.
+          args: >-
+            ${{ (github.event_name == 'merge_group' || github.ref_name == 'main')
+                && '-Dsonar.branch.name=main'
+             || (github.event_name != 'pull_request'
+                && format('-Dsonar.branch.name={0}', github.ref_name))
+             || '' }}
       - name: No token yet — scan skipped
         if: ${{ env.SONAR_TOKEN == '' }}
         run: echo "SONAR_TOKEN not set; skipping CI scan (Automatic Analysis still active). Add the secret to activate."
@@ -866,9 +930,9 @@ jobs:
         with:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
+      # No version input: the pin is package.json's "packageManager", which pnpm
+      # and corepack read too. A second one here is refused as a mismatch.
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
-        with:
-          version: 11
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
@@ -951,17 +1015,22 @@ jobs:
 
   # The UAT lane: the AC-<screen>-N screen-acceptance criteria as named
   # Playwright tests, plus the axe WCAG 2.2 AA gate, the 390px
-  # no-horizontal-scroll sweep, and the PERF-1 record-open budget. The suite
-  # mocks the API at the network edge (the coherent seed fixture), so it is
-  # self-contained — no backend needed — and a UI regression that breaks a
-  # named acceptance criterion fails the merge instead of shipping.
+  # no-horizontal-scroll sweep, and PERF-1's held-read claim for a record open.
+  # The suite mocks the API at the network edge (the coherent seed fixture), so
+  # it is self-contained — no backend needed — and it is in the `ci` aggregate
+  # below: a UI regression that breaks a named acceptance criterion fails the
+  # merge instead of shipping. Nothing in it reads a clock — the record-open
+  # BUDGET belongs to `make bench-mobile` — so a slow runner cannot redden it.
   uat:
     name: uat (AC screens + axe WCAG 2.2 AA + 390px, mocked)
     timeout-minutes: 20
-    # Fail fast: the Playwright UAT lane only starts once the cheaper frontend
-    # gate (biome + vitest + tsc + build) is green; both are frontend-gated, so
-    # they skip together on non-frontend PRs.
-    needs: [changes, frontend]
+    # BESIDE the frontend lane, not behind it. This job builds the SPA itself
+    # (`pnpm e2e` is a build and then the run) and shares no artefact with
+    # `frontend`, so an order between them buys nothing but latency — and since
+    # both gate the merge, the sequence would be the aggregate's wall clock on
+    # every frontend change. What the order saved was this job's runner minutes
+    # on a change biome would have refused, which is cheaper than the wait.
+    needs: [changes]
     if: needs.changes.outputs.frontend == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
     permissions:
@@ -973,9 +1042,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # No version input: the pin is package.json's "packageManager", which pnpm
+      # and corepack read too. A second one here is refused as a mismatch.
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
-        with:
-          version: 11
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
@@ -1008,7 +1077,7 @@ jobs:
   #   sonarcloud                 — advisory, for merge speed during heavy
   #                                development. Listing it here would make it
   #                                blocking by the back door.
-  #   vuln, live-boot, uat       — advisory today, and deliberately still
+  #   vuln, live-boot            — advisory today, and deliberately still
   #                                advisory here. See below.
   #
   # WHAT THE REPOSITORY ACTUALLY REQUIRES, said once and only here so the file
@@ -1026,21 +1095,62 @@ jobs:
   # part of it. It is not: #2543's keyserver hang cancelled that job and the pull
   # request stayed mergeable, because this aggregate alone decides.
   #
-  # This list is EXACTLY the contexts the ruleset required before the
-  # aggregate replaced them, and that equality is the point: this change moves
-  # where the verdict is computed, not what the verdict covers. Adding a lane and
-  # collapsing the contexts in one step would mean a red merge queue with two
-  # candidate explanations, during the week we are establishing whether the queue
-  # itself works.
+  # This list began as EXACTLY the contexts the ruleset required before the
+  # aggregate replaced them, because that change moved where the verdict is
+  # computed, not what the verdict covers. A lane joins it as its own change, so
+  # a red aggregate has one candidate explanation. `uat`, `license-gate` and
+  # `images` joined that way, each on its own evidence.
   #
-  # vuln, live-boot and uat are the tempting additions — they run on every
-  # qualifying change and a red one does not stop a merge, which is not a state
-  # worth keeping. The reason to wait is the batching: a flaky job under a merge
-  # queue does not cost one re-run, it fails the whole group it was checked in and
+  # vuln and live-boot are the tempting additions — they run on every qualifying
+  # change and a red one does not stop a merge, which is not a state worth
+  # keeping. The reason to wait is the batching: a flaky job under a merge queue
+  # does not cost one re-run, it fails the whole group it was checked in and
   # every entry in that group is re-queued, and nothing has ever exercised these
-  # three under a gate that blocks.
-  # Promote them once the queue has a measured baseline, as their own change, so a
-  # regression has one explanation.
+  # two under a gate that blocks. Promote them once the queue has a measured
+  # baseline, as their own change, so a regression has one explanation.
+  # The role images BUILD on a PR that changes what they are.
+  #
+  # Nothing built them between two correct changes. ci.yml's old
+  # `docker images` job was removed because release.yml baked on every push to
+  # main, so that build was the de-facto gate and a break surfaced within a
+  # commit of landing — a Dockerfile-only PR matching no scope was an accepted
+  # trade against that net. release.yml then became dispatch-only, to stop ~400
+  # release runs a week competing for the org-wide runner ceiling. Right on its
+  # own terms, and it removed the net the trade depended on: the first person to
+  # notice a broken image became whoever cut the next release, with the offending
+  # commit arbitrarily far back.
+  #
+  # BUILD ONLY, PUSH NOTHING. No registry credentials, no digest, no release side
+  # effect — this answers "does it still build", which is the question that went
+  # unasked. Through docker-bake.hcl so the PR exercises the same definition the
+  # release does; a second spelling here would be a gate that passes while the
+  # release breaks.
+  #
+  # Gated at the JOB level like every other lane, so a path skip reports as
+  # passing rather than producing no check run — the same trap the license gate
+  # above is written to avoid.
+  images:
+    name: images (build only)
+    timeout-minutes: 30
+    needs: [changes]
+    if: >-
+      needs.changes.outputs.images == 'true'
+      && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The default group is the three roles. No --push and no --set that names
+      # a registry: the images stay in the runner's builder and go nowhere.
+      - name: Build the role images
+        run: docker buildx bake -f docker-bake.hcl default
+
   ci:
     name: ci
     timeout-minutes: 10
@@ -1056,7 +1166,15 @@ jobs:
       - extension-reference
       - integration
       - frontend
+      # The screen-acceptance lane gates the merge. It was advisory on the
+      # argument that a flaky job under a merge queue re-queues every entry in
+      # its group; the queue is not in use, and an advisory lane is one a red
+      # verdict never stops anybody on. Its classifier skip is admissible here
+      # for the same reason `frontend`'s is: on a pull request a skip means out
+      # of scope, and on the merge queue every scope is true so it cannot skip.
+      - uat
       - license-gate
+      - images
     runs-on: ubuntu-latest
     permissions:
       contents: read

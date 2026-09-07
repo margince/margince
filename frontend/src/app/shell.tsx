@@ -9,7 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { Avatar, Button, Modal } from "../design-system/atoms";
+import { Avatar, Badge, Button, Modal } from "../design-system/atoms";
 import { CompanyLogo } from "../design-system/companylogo";
 import { Logomark } from "../design-system/logomark";
 import { useLocale, useT } from "../i18n";
@@ -49,7 +49,7 @@ import {
   sectionHead,
 } from "./pagemeta";
 import { usePopoverDismiss } from "./popover";
-import { displayVersion } from "./release";
+import { displayVersion, narrowVersion } from "./release";
 import { type Route, routeHash, useRoute } from "./router";
 import { useScrollMemory } from "./scrollmemory";
 import { TopBar } from "./topbar";
@@ -108,6 +108,23 @@ function writeStored(key: string, value: string): void {
 // wordmark.
 function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
   const t = useT();
+  /* WHAT BUILD THIS IS, on the brand's own second line.
+   *
+   * It is the alpha marker: a corner ribbon across the mark said the product is
+   * unfinished and nothing else, where a version says that AND which build a
+   * reader is looking at — the thing worth having in front of somebody the first
+   * time they see the product, which is why it stands beside the name rather
+   * than at the foot of a column a demo never scrolls to.
+   *
+   * On every branch, including the one with no installation to attribute: the
+   * marker is a fact about the BUILD, so it does not depend on whether there is
+   * a company name above it. At 56px the word shortens (release.ts) and nothing
+   * else in that column is a label at all. */
+  const marker = (
+    <span className="ws-alpha">
+      {narrow ? narrowVersion() : displayVersion()}
+    </span>
+  );
   // The installation's own organization (A107/ADR-0061: one installation, one
   // organization), OBSERVED on the entry the onboarding gate already filled.
   // A disabled observer: it never fetches, so it cannot re-trigger the gate's
@@ -124,14 +141,19 @@ function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
   // never invented to fill the line.
   if (!installation) {
     return (
-      <a className="ws" href="#/home" aria-label={t("shell.logoAria")}>
-        <span className="ws-chip">
-          <Logomark />
-        </span>
-        <span className="ws-name">
-          <b>{t("shell.logoAria")}</b>
-        </span>
-      </a>
+      <>
+        <a className="ws" href="#/brief" aria-label={t("shell.logoAria")}>
+          <span className="ws-chip">
+            <Logomark />
+          </span>
+          <span className="ws-name">
+            <b>{t("shell.logoAria")}</b>
+          </span>
+        </a>
+        {/* No attribution line here: the product's own mark is already above it,
+            and a company name is never invented to fill the row. */}
+        <span className="ws-org">{marker}</span>
+      </>
     );
   }
   // Which of the company's two marks this width can carry. Collapsed the panel
@@ -147,51 +169,61 @@ function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
       : installation.logo_url;
   if (mark) {
     return (
+      <>
+        <a
+          className="ws ws-logo"
+          href="#/brief"
+          aria-label={t("shell.companyLogoAria", {
+            company: installation.display_name,
+          })}
+        >
+          <CompanyLogo
+            name={installation.display_name}
+            src={mark}
+            fallback={<b>{installation.display_name}</b>}
+          />
+        </a>
+        <span className="ws-org">
+          <span className="ws-org-text">
+            {t("shell.poweredByPrefix")}{" "}
+            <span className="ws-logo-product">{t("shell.logoAria")}</span>
+          </span>
+          {marker}
+        </span>
+      </>
+    );
+  }
+  return (
+    <>
       <a
-        className="ws ws-logo"
-        href="#/home"
+        className="ws"
+        href="#/brief"
         aria-label={t("shell.companyLogoAria", {
           company: installation.display_name,
         })}
       >
-        <CompanyLogo
-          name={installation.display_name}
-          src={mark}
-          fallback={<b>{installation.display_name}</b>}
-        />
-        <span className="ws-org ws-logo-powered">
-          <span>{t("shell.poweredByPrefix")}</span>
-          <span className="ws-logo-product">{t("shell.logoAria")}</span>
+        {/* The mark the onboarding website read resolved from the company's own
+            site, in the slot the product's mark holds otherwise — one slot, so
+            the brand block does not move when onboarding finishes and so the
+            rail's own rules about the mark have one thing to name. Avatar draws
+            its deterministic monogram underneath, and a company whose site
+            declared no icon has a face rather than a gap. */}
+        <span className="ws-chip ws-chip-company">
+          <Avatar
+            identity={installation.organization_id}
+            name={installation.display_name}
+            shape="organization"
+          />
+        </span>
+        <span className="ws-name">
+          <b>{installation.display_name}</b>
         </span>
       </a>
-    );
-  }
-  return (
-    <a
-      className="ws"
-      href="#/home"
-      aria-label={t("shell.companyLogoAria", {
-        company: installation.display_name,
-      })}
-    >
-      {/* The mark the onboarding website read resolved from the company's own
-          site, in the slot the product's mark holds otherwise — one slot, so the
-          brand block does not move when onboarding finishes and so the rail's
-          own rules about the mark have one thing to name. Avatar draws its
-          deterministic monogram underneath, and a company whose site declared no
-          icon has a face rather than a gap. */}
-      <span className="ws-chip ws-chip-company">
-        <Avatar
-          identity={installation.organization_id}
-          name={installation.display_name}
-          shape="organization"
-        />
+      <span className="ws-org">
+        <span className="ws-org-text">{t("shell.poweredBy")}</span>
+        {marker}
       </span>
-      <span className="ws-name">
-        <b>{installation.display_name}</b>
-        <span className="ws-org">{t("shell.poweredBy")}</span>
-      </span>
-    </a>
+    </>
   );
 }
 
@@ -447,27 +479,19 @@ export function WorkspaceRail({
             page. What the installation is ENTITLED to used to sit here as its
             own grey row, and it now reaches a reader through the Core instead: a
             licence fault turns the orb amber, which is a thing somebody notices.
-            The whole foot goes on a drilled-in level, element and all: an empty
-            box left behind would still hold the band and the rule that divide a
-            reading from the rows above it. And it goes at phone width, where
-            there is no column to have a foot: the bar's centre cell above is
-            where the agent stands there, and two of these would be two Cores. */}
-        {!leveled && !phone && (
+            It keeps the foot on a drilled-in level, REDUCED rather than removed
+            (app/agentrail.css): the agent belongs to the whole session, so an
+            amber orb has to survive a reader walking into settings — but the
+            column it stands under there is one section's own pages, and the ball
+            at rail size would lead a list it is not about. Same block, same
+            Core, smaller. It still goes at phone width, where there is no column
+            to have a foot: the bar's centre cell above is where the agent stands
+            there, and two of these would be two Cores. */}
+        {!phone && (
           <div className="railagent">
             <AgentRail route={route} />
           </div>
         )}
-        {/* WHAT BUILD THIS IS, under everything else. It is the alpha marker
-            now: a corner ribbon across the brand said the product is
-            unfinished and nothing else, where a version says that AND which
-            build a reader is looking at — which is the thing worth having in
-            front of somebody the first time they see the product.
-            It stays at 56px, where every label in the panel is gone: the
-            sentence is four characters wide and it is the one line here that a
-            reader may need to read back to us. It goes on a drilled-in level
-            too, because it is a fact about the BUILD rather than about the
-            level, and at phone width there is no column to have a foot. */}
-        {!phone && <p className="railversion">{displayVersion()}</p>}
       </nav>
     </>
   );
@@ -536,9 +560,16 @@ function SectionPickGroup({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  // The group carrying the section's OWN name goes unheaded here: the sheet has
+  // already said it at heading level 2 above this list, and a group repeating it
+  // would name the section twice in the same view. In the sidebar that group is
+  // what names the level at all, which is why the name lives on the group rather
+  // than being spelled again in this file.
+  const heading =
+    group.headingKey === section.titleKey ? undefined : group.headingKey;
   return (
     <div className="sectionpickgroup">
-      {group.headingKey && <h3 className="t-label">{t(group.headingKey)}</h3>}
+      {heading && <h3 className="t-label">{t(heading)}</h3>}
       {group.items.map((entry) => (
         <a
           key={entry.id}
@@ -608,6 +639,11 @@ function SectionSwitcher({
         <h2 id={titleId} className="t-h2">
           {t(section.titleKey)}
         </h2>
+        {/* Above the rows, exactly where the rail puts it. Without this the
+            search was unreachable at phone width — the one width where the
+            navigation is hardest to scan, since the rail is gone and the whole
+            list is behind this button. */}
+        {section.leadFor?.(close)}
         <div className="sectionpick">
           {section.groups.map((group, index) => (
             <SectionPickGroup
@@ -685,7 +721,7 @@ export function PageTitle({
   // yielding to a surface that will not name itself either.
   const unitNamesPage =
     route.screen === EXTENSION_SCREEN && findExtension(route.id) !== null;
-  // A screen that heads ITSELF. Home greets the reader by name in its own h1,
+  // A screen that heads ITSELF. Brief greets the reader by name in its own h1,
   // so the shell printing the nav label above it named the page twice at heading
   // level — a document outline with two top-level headings, which is exactly
   // what the branches above exist to prevent for records and units.
@@ -701,6 +737,9 @@ export function PageTitle({
   // the screen-keyed table can only carry a sentence true of all of them. The
   // table remains for screens that ARE one page.
   const subKey = inSection?.entry.subKey ?? PAGE_SUB_KEYS[route.screen];
+  // Whose state the page changes. Only a settings entry carries one, and only
+  // then: on every other screen the answer is the record in front of you.
+  const scopeKey = inSection?.entry.scopeKey;
 
   if (recordNamesPage || unitNamesPage || selfHeaded) {
     return null;
@@ -720,25 +759,52 @@ export function PageTitle({
       <div className="pagetitle-text">
         {/* The heading is named by the PAGE even when a control is all it
             contains. Name-from-content would otherwise reach into the switcher's
-            own `aria-label` — "Privacy & audit — change section" — and put an
+            own `aria-label` — "Privacy & retention — change section" — and put an
             instruction in the document's heading list. The control keeps that
             name; the heading states the page. */}
-        <h1
-          className={switcher ? "t-display pageswitchhead" : "t-display"}
-          aria-label={switcher ? title : undefined}
-        >
-          {switcher || title}
-        </h1>
+        {/* The heading and the scope share one ROW: `.pagetitle-text` stacks its
+            children, so a badge placed as a sibling would sit under the heading
+            at full width and read as a second line of the title. */}
+        <div className="pagetitle-head">
+          <h1
+            className={switcher ? "t-display pageswitchhead" : "t-display"}
+            aria-label={switcher ? title : undefined}
+          >
+            {switcher || title}
+          </h1>
+          {/* Beside the heading rather than inside it: the scope is about the
+              page, not part of its name, and a heading carrying it would read
+              "Capture rules Company" in every document outline and screen
+              reader. `quiet` because it states a fact rather than flagging one
+              — a page being company-wide is the ordinary case, not a warning.
+              `quiet` keeps the vocabulary and drops the fill (design-system
+              README, Badge); it still draws the status dot. */}
+          {scopeKey && (
+            <Badge quiet>
+              {/* The mixed page says something different from the others: not
+                  WHO it affects, but that it has no single answer and each
+                  setting states its own. "Who this page affects: Mixed" would
+                  be a non-sentence. */}
+              <span className="sr-only">
+                {scopeKey === "settings.scope.mixed"
+                  ? t("settings.scopeAriaMixed")
+                  : t("settings.scopeAria", { scope: t(scopeKey) })}
+              </span>
+              <span aria-hidden="true">{t(scopeKey)}</span>
+            </Badge>
+          )}
+        </div>
         {subKey && <p className="pagesub">{t(subKey)}</p>}
       </div>
     </div>
   );
 }
 
-// The work column's own classes. A RECORD reads wider than a settings page or
-// the home screen: it carries a header, a tab strip and two columns under them,
-// where the others are one column of prose-width cards. Two widths, and the
-// class is what says which — see --pageColumn / --recordColumn.
+// The work column's own classes. `main-gridded` is the capped reading column and
+// there is one measure for every page that keeps it (--pageColumn);
+// `main-record` adds nothing to that width and never appears without it — it
+// NAMES the column as a container, which is what lets the record's tab strip
+// measure the column it spans (shell.css, `container-name: work`).
 function mainClasses(gridded: boolean, griddedRecord: boolean): string {
   if (!gridded) {
     return "main";
@@ -774,7 +840,7 @@ export function Shell({
   const griddedRecord =
     route.id !== undefined && GRIDDED_RECORD_SCREENS.has(route.screen);
   // The id-less half of the same policy: a screen that reads down but is not a
-  // record, so there is no id to key on. Home is the one today.
+  // record, so there is no id to key on. Brief is the one today.
   const griddedScreen = GRIDDED_SCREENS.has(route.screen);
   // A unit is NOT in this family, though it is leveled: the reading column is a
   // claim about the page's own content, and a unit's surface is the unit's to

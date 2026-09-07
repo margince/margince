@@ -418,6 +418,35 @@ export const APrivacyRequestOnItsClock: Story = {
   },
 };
 
+// A disclosure this person is owed and has not had. Same clock as the row
+// above, drawn differently in the one way that matters: this row NAMES the
+// person and offers `open`, because a notice case has no screen of its own and
+// the disclosure is sent from that person's page.
+//
+// The title names the ARTICLE rather than the case state, which is what a
+// reader needs to decide anything: an Art. 14 duty means the subject does not
+// know we hold their data at all.
+export const ADisclosureThisPersonIsOwed: Story = {
+  args: {
+    ...baseArgs,
+    item: {
+      id: "notice1",
+      source: "notice_case",
+      category: "system",
+      level: 1,
+      consequence: "legal_deadline_missed",
+      title: "An Art. 14 disclosure is due",
+      subject: { type: "person", id: "01a05500-0000-7000-8000-0000000000d1" },
+      because: [{ kind: "legal_deadline" }],
+      actions: ["open"],
+    },
+  },
+  render: (args) => {
+    stubRow(false);
+    return <WorklistRow {...args} />;
+  },
+};
+
 /**
  * A meeting that happened, and nobody has said how it went.
  *

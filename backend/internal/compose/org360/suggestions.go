@@ -24,10 +24,7 @@ package org360
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -81,7 +78,7 @@ var (
 func (a *assembly) readSuggestions() error {
 	// Resolved first, and unconditionally: dismissals are per user, so a caller
 	// with no user id has no suggestions surface at all. Leaving this to
-	// keepUndismissed — which is skipped when no rule fires — made the section
+	// withoutDismissed — which is skipped when no rule fires — made the section
 	// present for such a caller on a quiet account and omitted on a busy one.
 	if _, err := actingUser(a.ctx); err != nil {
 		return err
@@ -132,7 +129,7 @@ func (s *Service) suggestionsFor(
 	// Dismissals are applied BEFORE the cap, so judging one row reveals the next
 	// instead of shrinking the card. Capping first would spend a slot on a
 	// suggestion the rep has already dealt with.
-	kept, err := s.keepUndismissed(ctx, tx, orgID, found)
+	kept, err := s.withoutDismissed(ctx, tx, orgID, found)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -170,11 +167,11 @@ func candidateSuggestions(
 	return found
 }
 
-// keepUndismissed removes the suggestions this caller has already judged.
+// withoutDismissed removes the suggestions this caller has already judged.
 //
 // The database is asked about THESE fingerprints, not for the caller's whole
 // dismissal history — so the read is bounded by the suggestions in hand.
-func (s *Service) keepUndismissed(
+func (s *Service) withoutDismissed(
 	ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID,
 	found []crmcontracts.Organization360Suggestion,
 ) ([]crmcontracts.Organization360Suggestion, error) {
@@ -213,14 +210,14 @@ func appendIf(
 // left to infer it from the evidence order — an ordering nobody promised.
 func setDraftReply(out *crmcontracts.Organization360Suggestion, activityID ids.UUID) {
 	id := openapi_types.UUID(activityID)
-	out.Action = newSuggestionAction(crmcontracts.Organization360SuggestionActionKindDraftReply)
+	out.Action = NewSuggestionAction(crmcontracts.Organization360SuggestionActionKindDraftReply)
 	out.Action.ActivityId = &id
 }
 
 // setOpenDeal points at the deal that stalled.
 func setOpenDeal(out *crmcontracts.Organization360Suggestion, dealID ids.UUID) {
 	id := openapi_types.UUID(dealID)
-	out.Action = newSuggestionAction(crmcontracts.Organization360SuggestionActionKindOpenDeal)
+	out.Action = NewSuggestionAction(crmcontracts.Organization360SuggestionActionKindOpenDeal)
 	out.Action.DealId = &id
 }
 
@@ -228,7 +225,7 @@ func setOpenDeal(out *crmcontracts.Organization360Suggestion, dealID ids.UUID) {
 // The client posts that body unchanged, so the sentence the reader accepted and
 // the task they get are the same sentence.
 func setAddTask(out *crmcontracts.Organization360Suggestion, step nextStep) {
-	out.Action = newSuggestionAction(crmcontracts.Organization360SuggestionActionKindAddTask)
+	out.Action = NewSuggestionAction(crmcontracts.Organization360SuggestionActionKindAddTask)
 	body := step.body
 	out.Action.Task = &body
 	if step.dealID != nil {
@@ -237,12 +234,12 @@ func setAddTask(out *crmcontracts.Organization360Suggestion, step nextStep) {
 	}
 }
 
-// newSuggestionAction builds the generated anonymous action struct. The shape is
+// NewSuggestionAction builds the generated anonymous action struct. The shape is
 // spelled here and only here: a second literal would drift the moment the
 // contract gains a field.
 //
 //nolint:staticcheck // ST1003: the field names mirror the oapi-codegen type this must assign to
-func newSuggestionAction(kind crmcontracts.Organization360SuggestionActionKind) *struct {
+func NewSuggestionAction(kind crmcontracts.Organization360SuggestionActionKind) *struct {
 	ActivityId *openapi_types.UUID                              `json:"activity_id,omitempty"`
 	DealId     *openapi_types.UUID                              `json:"deal_id,omitempty"`
 	Kind       crmcontracts.Organization360SuggestionActionKind `json:"kind"`
@@ -286,6 +283,14 @@ func staleThread(
 	evidence := []crmcontracts.OrganizationBriefEvidence{{
 		EntityType: crmcontracts.OrganizationBriefEvidenceEntityTypeActivity,
 		EntityId:   openapi_types.UUID(newest.ID),
+		// The message's own subject names the chip and its opening words are
+		// the quote — each only where the reader may read them, which is
+		// where the read left them empty otherwise. The channel and the date
+		// need no such grant: that we spoke, and when, is the rule's own fact.
+		Name:   nonEmpty(newest.Subject),
+		Quote:  nonEmpty(newest.Excerpt),
+		At:     ptrTime(newest.At),
+		Origin: ptrString(sentOrigin(newest.Kind)),
 	}}
 	out := &crmcontracts.Organization360Suggestion{
 		Kind: suggestNoReply,
@@ -313,7 +318,12 @@ func stalledDealSuggestions(stalled []stalledDeal) []crmcontracts.Organization36
 		evidence := []crmcontracts.OrganizationBriefEvidence{{
 			EntityType: crmcontracts.OrganizationBriefEvidenceEntityTypeDeal,
 			EntityId:   openapi_types.UUID(deal.ID),
+			Name:       ptrString(deal.Name),
+			Origin:     ptrString(originStalledDeal),
 		}}
+		if !deal.IdleSince.IsZero() {
+			evidence[0].At = ptrTime(deal.IdleSince)
+		}
 		subjectType := crmcontracts.Organization360SuggestionSubjectTypeDeal
 		subjectID := openapi_types.UUID(deal.ID)
 		out = append(out, crmcontracts.Organization360Suggestion{
@@ -353,10 +363,19 @@ func lifecycleConflict(
 	if !in.contractEnded || !liveLifecycles[in.lifecycle] {
 		return nil
 	}
+	// The record cited is the account, because the contract's citable kinds
+	// have no word for a signal; the WORDS are the signal's own, so the
+	// reader checks the conflict against what the mail said rather than
+	// against this rule's paraphrase of it.
 	evidence := []crmcontracts.OrganizationBriefEvidence{{
 		EntityType: crmcontracts.OrganizationBriefEvidenceEntityTypeOrganization,
 		EntityId:   openapi_types.UUID(orgID.UUID),
+		Quote:      nonEmpty(in.contractEndedSaid),
+		Origin:     ptrString(originContractEnded),
 	}}
+	if !in.contractEndedAt.IsZero() {
+		evidence[0].At = ptrTime(in.contractEndedAt)
+	}
 	return &crmcontracts.Organization360Suggestion{
 		Kind: suggestConflict,
 		Reason: fmt.Sprintf(
@@ -377,26 +396,3 @@ func lifecycleConflict(
 // that already reads as over — former_customer, disqualified — is not in
 // conflict with the mail that says so; it is the mail's conclusion.
 var liveLifecycles = map[string]bool{"prospect": true, "opportunity": true, "customer": true}
-
-// A title and a date are OPTIONAL on the wire, so both are pointers. Spelled
-// once here rather than inline, because a suggestion that carried a zero time
-// would render as "due 1 January year one" — a date is either the evidence's or
-// it is absent.
-func ptrString(v string) *string     { return &v }
-func ptrTime(v time.Time) *time.Time { return &v }
-
-// fingerprint identifies a suggestion by what it fired ON, not by what kind
-// it is.
-//
-// That is what lets a dismissal be both durable and self-expiring: the same
-// situation stays dismissed, and a changed one raises again on its own. A
-// kind-keyed dismissal would bury every future stall on the account, and the
-// surface would get quieter the longer it ran regardless of what happened.
-func fingerprint(kind, subject string, evidence []crmcontracts.OrganizationBriefEvidence) string {
-	parts := []string{kind, subject}
-	for _, cited := range evidence {
-		parts = append(parts, string(cited.EntityType)+":"+cited.EntityId.String())
-	}
-	sum := sha256.Sum256([]byte(strings.Join(parts, "\x00")))
-	return hex.EncodeToString(sum[:])
-}

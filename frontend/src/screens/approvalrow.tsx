@@ -64,7 +64,7 @@ import "./approvalrow.css";
 // instead of offering a re-stage retry.
 //
 // It lives beside the approvals queries rather than inside any one screen
-// because several surfaces draw it: the workspace-wide decisions queue, Home,
+// because several surfaces draw it: the workspace-wide decisions queue, Brief,
 // and the company record's decisions panel.
 
 // Shared decision sink (AC-6, cross-surface): owns the screen-level state that
@@ -115,7 +115,7 @@ export function useDecisionSink(): {
 //
 // `skip` is deliberately absent: the queue is something somebody works to the end,
 // and "later" on a surface whose whole purpose is to be emptied is a verb that
-// only moves work sideways. The deck on Home is where later belongs.
+// only moves work sideways. The deck on Brief is where later belongs.
 //
 // `showMore` / `showLess` are absent for a different reason and it is worth
 // stating: the row clamps a long draft, and the way through to the whole of it on
@@ -275,6 +275,12 @@ export function ApprovalRow({
     },
     onSuccess: (_data, input) => {
       queryClient.invalidateQueries({ queryKey: ["approvals"] });
+      // THIS approval, by id, and not only the lists it appears in. Anything
+      // reading one decision on its own — the transcript card counting what
+      // became of what it staged — otherwise keeps the answer it fetched
+      // before the decision, and says a suggestion is waiting for a review
+      // that has already happened.
+      queryClient.invalidateQueries({ queryKey: ["approval", approval.id] });
       for (const queryKey of extraInvalidateKeys ?? []) {
         queryClient.invalidateQueries({ queryKey });
       }
@@ -285,6 +291,9 @@ export function ApprovalRow({
       if (problem && isAlreadyDecided(problem)) {
         onAlreadyDecided?.();
         queryClient.invalidateQueries({ queryKey: ["approvals", "pending"] });
+        // Somebody else decided it while this row was open, so the single
+        // read is stale for the same reason and in the same way.
+        queryClient.invalidateQueries({ queryKey: ["approval", approval.id] });
       }
     },
   });

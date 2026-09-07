@@ -216,6 +216,15 @@ func (s *Store) readClaims(
 	ctx context.Context, tx pgx.Tx, personID ids.PersonID, within *ids.ProjectID,
 	extra, order string, limit int,
 ) ([]crmcontracts.ConversationClaim, error) {
+	// The object grant first, then the audience clause. The clause narrows rows
+	// for a caller already admitted; it asks nobody whether the caller may read
+	// an activity at all, so composing one on its own admits a principal holding
+	// no activity grant to every claim whose source they happen to be in the
+	// audience of. Both callers require this today — the object read is the gate
+	// they document — and this is the check that survives the third one.
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		return nil, err
+	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	personPos := arg(personID)

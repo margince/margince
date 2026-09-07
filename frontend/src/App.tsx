@@ -58,6 +58,7 @@ import {
 import { isPersonTab } from "./screens/persontab";
 import { ReleaseSkewScreen, useSkewedApiRelease } from "./screens/releaseskew";
 import { fetchSetupStatus, SetupClaimScreen } from "./screens/setupclaim";
+import { WriteToHost } from "./screens/writeto";
 
 // Route → screen. The table below is TOTAL over `Screen` (app/router.tsx), so
 // every address the product answers has a view and an address it does not answer
@@ -131,9 +132,9 @@ const FiltersScreen = lazy(
     import("./screens/filters").then((m) => ({ default: m.FiltersScreen })),
   ),
 );
-const HomeScreen = lazy(
+const BriefScreen = lazy(
   routed(() =>
-    import("./screens/home").then((m) => ({ default: m.HomeScreen })),
+    import("./screens/brief").then((m) => ({ default: m.BriefScreen })),
   ),
 );
 const LeadScreen = lazy(
@@ -333,12 +334,12 @@ function ShareRoute({ id, id2 }: Readonly<{ id?: string; id2?: string }>) {
 //
 // A stale or bare reset link has no token, so the embedded form renders as an
 // ordinary login rather than ResetForm — and its own "restore the originally
-// requested route" check (LoginForm's onSuccess) never fires home for a
+// requested route" check (LoginForm's onSuccess) never navigates to the Brief for a
 // non-empty hash, which this one always is. Without an explicit navigate here, a
 // successful sign-in from this route would leave the reader signed in but still
 // looking at a login form.
 function ResetRoute() {
-  return <AuthScreen onAuthed={() => navigate({ screen: "home" })} />;
+  return <AuthScreen onAuthed={() => navigate({ screen: "brief" })} />;
 }
 
 // #/ext/<unit> (ADR-0069) — the composed extension tier's one route into the
@@ -445,7 +446,7 @@ type ScreenArgs = Readonly<{ id?: string; id2?: string }>;
 // gets. A fallback arm cannot tell an unwired screen from an unknown address.
 const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
   {
-    home: () => <HomeScreen />,
+    brief: () => <BriefScreen />,
     // The tab rides the URL, so it survives a reload and can be linked to.
     // An unknown segment falls back to overview rather than rendering an
     // empty page: a mistyped link should land somewhere, not nowhere.
@@ -918,7 +919,7 @@ function AuthedApp({
   // to the shell, where each screen renders its own error state and its own
   // retry; the splash is for waiting, not for having waited.
   // The progress read joins the splash for the same reason the company read
-  // does: a shell painted before it answers is a home page the gate then
+  // does: a shell painted before it answers is a landing page the gate then
   // pulls away from under the reader.
   if (company.isPending || recordZone.pending || progress.pending) {
     return (
@@ -930,9 +931,13 @@ function AuthedApp({
 
   return (
     <RecordZoneProvider zone={recordZone.zone}>
-      <AuthedShell onOpenSearch={() => setPaletteOpen(true)}>
-        <ScreenView screen={route.screen} id={route.id} id2={route.id2} />
-      </AuthedShell>
+      {/* An address pressed on any screen writes from here: the composer is
+          the product's, not the reader's mail client's. */}
+      <WriteToHost>
+        <AuthedShell onOpenSearch={() => setPaletteOpen(true)}>
+          <ScreenView screen={route.screen} id={route.id} id2={route.id2} />
+        </AuthedShell>
+      </WriteToHost>
       <CommandPalette
         open={paletteOpen}
         onClose={() => setPaletteOpen(false)}

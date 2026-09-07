@@ -10,7 +10,9 @@ package main
 // two locations it is written to can stay byte-identical).
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -251,7 +253,49 @@ const composedFrontendWorkspaceDir = "build/composition-frontend/workspace"
 //
 // The link targets are inside frontend/node_modules, so the ROOT install must
 // have run first. The make lanes order it that way, and a dangling link here
-// fails loudly at the next resolve rather than silently resolving twice.
+// costs the composed typecheck rather than resolving twice in silence.
+
+// hostLinkName is the symlink the emitted workspace carries to the host SPA,
+// and every override below names its target THROUGH it.
+//
+// This is the third pnpm behaviour change this file has had to absorb, and the
+// first that shows nothing. pnpm 12 miscomputes a `link:` whose target climbs
+// out of the workspace root: for a spec with N leading `../` it writes the
+// member's symlink with 2N parent segments too many, so the link dangles, the
+// install still exits 0, and the composed lane fails hundreds of lines later on
+// `Cannot find module 'react'`. Measured on 12.3.4; 10 and 11 resolve the same
+// spec correctly, which is why an unpinned build environment was the only place
+// it appeared.
+//
+// Reached through this link a target carries no `../` at all, so there is
+// nothing left to miscount and 10, 11 and 12 all land in frontend/node_modules.
+// A SYMLINK, not `file:` — which satisfies the same specifier by copying the
+// package into the virtual store, and a second @types/react under a second path
+// is precisely the "two unrelated types with this name" failure these overrides
+// exist to prevent.
+const hostLinkName = "host"
+
+// workspaceToRepoRoot is the path from the emitted workspace back up to the
+// repository root, DERIVED from composedFrontendWorkspaceDir: a hand-counted
+// `../../../` is a second spelling of that constant, and it goes stale the day
+// the directory moves without anything failing.
+func workspaceToRepoRoot() string {
+	return strings.Repeat("../", strings.Count(composedFrontendWorkspaceDir, "/")+1)
+}
+
+// linkHost points the emitted workspace at the host SPA. Replaced rather than
+// kept, for the reason the member list is: a link left behind by a move
+// resolves somewhere nobody chose.
+func linkHost(dir string) error {
+	link := filepath.Join(dir, hostLinkName)
+	if err := os.Remove(link); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return fmt.Errorf("replacing the composed workspace's host link: %w", err)
+	}
+	if err := os.Symlink(workspaceToRepoRoot()+"frontend", link); err != nil {
+		return fmt.Errorf("linking the host SPA into the composed workspace: %w — on Windows creating a symlink needs Developer Mode", err)
+	}
+	return nil
+}
 
 // emitComposedFrontendWorkspace writes a pnpm workspace whose members are the
 // host SPA and each enabled unit's frontend layer.
@@ -291,6 +335,10 @@ func emitComposedFrontendWorkspace(dir string, units []string) error {
 	if err := os.WriteFile(filepath.Join(dir, "package.json"), manifest, 0o644); err != nil { // #nosec G306 -- generated build artifact
 		return err
 	}
+	if err := linkHost(dir); err != nil {
+		return err
+	}
+	root := workspaceToRepoRoot()
 
 	// Sorted, for the same reason go.work's members are: the emitted bytes must
 	// not depend on the order the tree was walked in.
@@ -305,9 +353,12 @@ func emitComposedFrontendWorkspace(dir string, units []string) error {
 	b.WriteString("# only those. Members are reached by relative path out of this generated\n")
 	b.WriteString("# directory rather than copied, so an edit in extensions/<unit>/frontend/ is\n")
 	b.WriteString("# what the next install resolves. The host SPA is not a member — see above.\n")
+	b.WriteString("# `" + hostLinkName + "` beside this file is a symlink to the host SPA, and every\n")
+	b.WriteString("# override below names its target through that link rather than climbing out\n")
+	b.WriteString("# of this directory with `../` — which pnpm 12 miscounts.\n")
 	b.WriteString("packages:\n")
 	for _, unit := range members {
-		fmt.Fprintf(&b, "  - ../../../extensions/%s/frontend\n", unit)
+		fmt.Fprintf(&b, "  - %sextensions/%s/frontend\n", root, unit)
 	}
 	// esbuild ships a platform binary and needs its install script to run — the
 	// same carve-out the root workspace states, for the same reason.
@@ -327,12 +378,13 @@ func emitComposedFrontendWorkspace(dir string, units []string) error {
 	// rather than linked, a unit gets its own @types/react and tsc reports two
 	// unrelated types of the same name against the host's design system.
 	b.WriteString("\noverrides:\n")
+	host := "link:./" + hostLinkName
 	for _, override := range [][2]string{
-		{"@margince/frontend", "link:../../../frontend"},
-		{"react", "link:../../../frontend/node_modules/react"},
-		{"react-dom", "link:../../../frontend/node_modules/react-dom"},
-		{"@tanstack/react-query", "link:../../../frontend/node_modules/@tanstack/react-query"},
-		{"@types/react", "link:../../../frontend/node_modules/@types/react"},
+		{"@margince/frontend", host},
+		{"react", host + "/node_modules/react"},
+		{"react-dom", host + "/node_modules/react-dom"},
+		{"@tanstack/react-query", host + "/node_modules/@tanstack/react-query"},
+		{"@types/react", host + "/node_modules/@types/react"},
 	} {
 		fmt.Fprintf(&b, "  %q: %q\n", override[0], override[1])
 	}

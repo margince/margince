@@ -23,6 +23,9 @@ expect:
     person the grounding identifies. intro_path_to takes an organization and
     answers about an account rather than an individual, and a search would only
     re-find the person already supplied.
+  near_misses:
+    - intro_path_to
+    - search_records
   bands:
     certified_min: 70
     degraded_min: 50

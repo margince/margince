@@ -81,7 +81,9 @@ def parse_scenario(path):
             continue
         seq = None
 
-        m = re.match(r"^([A-Za-z_][A-Za-z0-9_]*):\s*(.*)$", line)
+        # No \s* after the colon: the value is stripped two lines down, so it
+        # only made the pattern ambiguous about which of the two ate the spaces.
+        m = re.match(r"^([A-Za-z_][A-Za-z0-9_]*):(.*)$", line)
         if not m:
             continue
         key, value = m.group(1), m.group(2).strip()

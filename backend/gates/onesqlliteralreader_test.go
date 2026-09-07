@@ -54,7 +54,7 @@ const sqlLiteralReaderFloor = 20
 // rawReaderWaivers ratifies the files where the SOURCE text is what is meant.
 // Each is checked, and AssertAllMatched reports one that has gone stale.
 var rawReaderWaivers = gatekit.Waive(map[string]string{
-	"gates/inboundsigningrecipe_test.go": "compares a Go format against one read out of .tsx TEXT, where the separator really is a backslash and an n — decoded, this side would be a newline and the two would read as disagreeing",
+	"gates/inboundsigningrecipe_test.go:lit.Value": "compares a Go format against one read out of .tsx TEXT, where the separator really is a backslash and an n — decoded, this side would be a newline and the two would read as disagreeing",
 })
 
 // judgesSQLLiterals is the census's subject: a file that both walks Go string
@@ -95,10 +95,13 @@ func TestEveryCensusOfSQLReadsItAsPostgresReceivesIt(t *testing.T) {
 			return
 		}
 		judged = append(judged, path)
-		if rawReaderWaivers.Waived(t, path) {
-			return
-		}
 		for _, site := range rawLiteralReadsIn(file) {
+			// Asked about the READ, not the file. Keyed by file, this guard
+			// returned before the loop, so a raw read added to a waived file
+			// afterwards was invisible to the census that exists to find one.
+			if rawReaderWaivers.Waived(t, path+":"+site) {
+				continue
+			}
 			findings = append(findings, path+": "+site)
 		}
 	})

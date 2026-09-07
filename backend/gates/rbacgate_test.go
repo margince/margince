@@ -47,6 +47,7 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -69,7 +70,17 @@ import (
 // So an entry added here is a security decision, and the reason has to survive
 // being read on its own: "a sweep runs it" is not one, "no row leaves this
 // call" is.
-var ungatedEntryPoints = gatekit.Waive(map[string]string{ // #nosec G101 -- waiver rationales for the fitness gate, not credentials
+var ungatedEntryPoints = gatekit.Waive(map[string]string{
+	"internal/modules/people:DecidableForMerge": "answers WHICH of the given rows this caller could merge — a permission map, not data. It deliberately requires no object grant, because a reader whose role lacks the update verb is a legitimate caller whose answer is \"no verb for you\", and refusing the read would cost them the merge card they are entitled to see. WritableSubset omits every row they cannot see, so the map never names a record the caller could not have listed",
+
+	"internal/modules/activities:LabeledCaptureCountSince": "a COUNT and nothing else: it answers how many captured activities carry a label since a date, for the AI-cost arithmetic on the backfill preview. No row, no id and no text leaves it, so there is nothing for a row gate to withhold — and the number is the installation's, not one caller's. Reached from a signed-in human's preview request rather than a worker, which is why the bound is stated as the shape of the answer rather than the principal",
+
+	"internal/modules/capture:CorrespondsWith": "a bool the verdict engine asks itself while deciding whether an address corresponds with us, under the system principal on the capture path. It returns no row and reaches no caller: the answer goes into a verdict that is itself audited, and a human never invokes it",
+
+	"internal/modules/capture:ListMine": "the caller's OWN traffic, and the predicate is the caller: it reads the actor off the context and refuses an invocation naming no member, then selects on that user id. There is no id from the request to gate — a caller can only ever ask about themselves",
+
+	"internal/modules/capture:SweepOlderThan": "a retention sweep that deletes traces past their window and returns a count. Run by the worker under the system principal, on a clock rather than a request; no caller names a row and nothing is disclosed",
+	// #nosec G101 -- waiver rationales for the fitness gate, not credentials
 	"internal/modules/knowledge:ReconcileHandbook":          "brings the shipped handbook corpus in line with the pages THIS BINARY carries, reached from nothing but the api boot step, which runs under a system principal holding no object grants at all \u2014 so there is no human grant a gate here could consult, and adding one would refuse the only caller rather than protect anything. Nothing about its subject is caller-chosen: the pages come from the embedded filesystem compiled into the binary, and every row it touches is found by `managed_source = 'handbook'`, so a corpus or document a person created is unreachable from here by construction \u2014 TestTheReconciliationLeavesAWorkspacesOwnCorpusAlone holds that. The tenant is bound the way every boot write is: bootLedgerScope resolves the installation's workspace and binds the transaction to it, and the boot cannot pick another. It returns a COUNT of pages written, never a row and never any prose",
 	"internal/modules/knowledge:EmbedDocument":              "gives one document's passages their vectors, reached from the ingest worker and from the drift sweep, both of which run under a system principal holding no object grants. There is no human grant to consult and no row a caller chose: it takes a document id the calling job already read from a row, reads only that document's passages, and writes only vectors back onto them. It exposes NOTHING — no text leaves, no row is returned, and the count it answers is a number of rows touched. A gate here would refuse the only two callers and protect no one. Reading what a passage says is the ask's business, and the ask is gated",
 	"internal/modules/knowledge:SweepAbandonedIngests":      "closes the ingests that stopped without saying so \u2014 a document left `running` by a process that died on its LAST attempt, which River cannot rescue because there is no attempt left to run. Reached only from the periodic drift sweep, under the same system principal and the same workspace binding as SweepCorpusDrift beside it, and bounded the same way: the sweep's args declare one workspace and workspaceJobCtx binds the transaction to it. It takes no id and no caller-chosen value \u2014 its subject is derived entirely from the database's own clock against ingest_started_at \u2014 and it returns a count, never a row. A gate here would refuse the only caller and protect nothing; what it protects AGAINST is a corpus permanently unaskable because one upload's worker was killed",
@@ -195,14 +206,14 @@ var ungatedEntryPoints = gatekit.Waive(map[string]string{ // #nosec G101 -- waiv
 	"internal/modules/identity:ChangePassword":               "acts on the CALLER's own row and nobody else's: it reads the user id off the bound principal rather than taking one, so there is no other account it could reach and no object for a grant to narrow. What authorizes it is not the session but the CURRENT PASSWORD, verified inside the transaction — a stricter bar than any role, and the reason a stolen session cannot use it. A caller with no user behind it (agent seat, system principal) is refused outright",
 	"internal/modules/identity:MyDelivery":                   "reads the CALLER's own row and nobody else's: the user id comes off the bound principal rather than from a parameter, so there is no other account it could reach and no object for a grant to narrow — the same shape as SaveMyLocale below. It refuses every principal that is not a human seat, agents included, because what lands in a person's inbox is theirs and an agent acting under their authority must not read it",
 	"internal/modules/identity:SaveMyDelivery":               "writes the CALLER's own row and nobody else's, on the same terms as SaveMyLocale below: the id comes off the principal, no parameter names an account, and the values are confined to the vocabulary the column's CHECK admits. An agent acting under someone's authority is refused, because deciding how often the product may interrupt a person is that person's own call",
+	"internal/modules/identity:SaveMyDisplayName":            "writes the CALLER's own row and nobody else's, on the same terms as SaveMyLocale below: the id comes off the bound principal rather than from a parameter, so there is no other account it could reach and no object for a grant to narrow. It refuses every principal that is not a human seat, agents included, because an agent carrying its grantor's authority must not rename its grantor. The name is trimmed, bounded by the contract's own length, and written only to a LIVE member — a deactivated seat is refused, so a departed colleague cannot go on renaming themselves in the pickers their old records appear in",
+	"internal/modules/identity:MyWorkingHours":               "reads the CALLER's own row and nobody else's, on the same terms as MyDelivery above: the user id comes off the bound principal rather than from a parameter, so there is no other account it could reach. It answers when this person is bookable and whether they chose it, which is a fact about their own week",
+	"internal/modules/identity:SaveMyWorkingHours":           "writes the CALLER's own row and nobody else's, on the same terms as SaveMyLocale below: the id comes off the principal and no parameter names an account. An agent acting under someone's authority is refused, because when a person is bookable is that person's call — and an installation-wide version of this setting, which an admin WOULD gate, is the shape the design refuses (docs/explanation/scheduling.md)",
 	"internal/modules/identity:SaveMyLocale":                 "writes the CALLER's own row and nobody else's: the user id comes off the bound principal rather than from a parameter, so there is no other account it could reach and no object for a grant to narrow — the same shape as ChangePassword above. It refuses every principal that is not a human seat, agents included, because a display language is a preference about a person's own screen and an agent acting under someone's authority must not change what they read. The value is confined to the languages the product ships a catalog for; nothing else is written, and nothing is read back that the caller did not already have",
 	"internal/modules/identity:ClaimInstallation":            "pre-authentication by construction (ADR-0105): it CREATES the first admin, so there is no principal to gate on — gating it would require the grant it is about to mint. The setup token is the authorization, checked inside the same transaction as the create, and an installation that already holds an organization is refused before the token is even read",
 	"internal/modules/identity:RotateSetupToken":             "operator-only recovery, the same posture as reset-password beside it (ADR-0061 §4): reachable only from cmd/migrate with the OWNER DSN, never over HTTP, because rotating invalidates a live claim credential and that is precisely what an attacker wants while the operator still holds one. Like MintSetupToken it refuses on an installation that holds an organization, under the installation advisory lock — before that point there is no principal to gate on, and after it there is nothing left to claim",
 	"internal/modules/identity:SetupTokenOutstanding":        "answers one boolean — is this installation waiting to be claimed — to a caller who cannot authenticate because no user exists yet. It reads no tenant data and returns no record; the same fact is already visible to any stranger from the 503 every other route answers while unprovisioned, so there is nothing here a grant could withhold",
-	"internal/modules/identity:SeatNames":                    "names colleagues by app_user id and returns nothing else. There is no object to grant on: a SEAT is not a record (it is outside datasource.RecordTypes, so nothing points at one and no grant names it), which is the same reason ai:RateFor is here. What bounds it is AUTHENTICATION — every app_user row belongs to the one installation the caller has already authenticated into — and what it discloses is a colleague's display name, which who_knows and account_coverage already answer to any authenticated reader",
 	"internal/modules/identity:ActorIdentity":                "answers who the CALLER is, and nothing else: it reads display_name and email off the one app_user row the principal already authenticated as, resolving UserID then OnBehalfOf so an agent writes as the human whose authority it holds. There is no object to grant on for the same reason SeatNames has none — a seat is not a record — and this is one step narrower than SeatNames, which names colleagues where this names only the asker. Nothing here is disclosure: the caller presented these credentials to make the call, and the row it reads back is the one those credentials named. A principal with no human behind it, and a seat the installation does not hold, both answer empty rather than erroring, because an unsigned draft is the specified outcome there (DRAFT-AC-E-6)",
-	"internal/modules/identity:ResolveColleague":             "Colleagues, narrowed to one answer. It runs that same read and then discards everything but an EXACT match on a live human seat's own display name or work address, so it discloses strictly less: a caller who names a string learns whether that string is somebody here, which the roster it delegates to would have told them along with everyone else's name. Same bound, because it is the same query — the workspace predicate plus authentication — and the same absence of an object to grant on, a seat not being a record. It exists so a WRITER can decide whether to hand work to a name a machine read out of a document, and it answers no rather than a near miss: two matches, a truncated roster and an agent seat all resolve to nothing, so the ambiguity a roster reports as several rows cannot become a task on the wrong colleague's list",
-	"internal/modules/identity:Colleagues":                   "the workspace roster, one step wider than SeatNames beside it: SeatNames answers what an id a caller already holds is called, this answers WHICH id — the question that comes first, and the one nothing on the tool surface could ask. Same reason there is no object to grant on: a seat is not a record (outside datasource.RecordTypes, so nothing points at one and no grant names it). What bounds it is the WORKSPACE PREDICATE (workspace_id = current_setting, the same one the REST roster carries — RLS was retired in core 0217, so the predicate is the scope) plus authentication. What it discloses is a colleague's display name — which who_knows already answers to any authenticated reader — and their work address on the workspace's own domain. It lists ONLY seats that can receive work: archived, suspended and locked-out ones are filtered in the query rather than reported with a flag, because WHICH colleague is suspended is an admin's fact and the REST roster honours include_inactive for an admin alone",
 	"internal/modules/identity:ActorProfile":                 "ActorIdentity's fuller answer, for a surface that must NAME the caller rather than sign as them: the same one app_user row the principal already authenticated as, resolved the same way (UserID then OnBehalfOf), plus the locale and timezone that row holds. Everything above applies unchanged — a seat is not a record, so there is no object to grant on, and nothing here is disclosure because the caller presented these credentials to make the call. It is what the whoami tool answers, and an assistant that cannot say who it acts for cannot set an owner, assign a task, or write stored prose in the reader's language",
 	"internal/modules/identity:Get":                          "onboarding wizard state, SELF-scoped: onboardingActor resolves the authenticated human and the query is keyed on user_id, so no object grant applies to your own checkpoint",
 	"internal/modules/identity:Put":                          "the write half of the same self-scoped wizard state; onboardingActor is the gate and the row is keyed on the acting user",
@@ -260,9 +271,6 @@ var ungatedEntryPoints = gatekit.Waive(map[string]string{ // #nosec G101 -- waiv
 	"internal/modules/identity:EffectiveAuthority":        "the two above, read in ONE snapshot; it is the same layer as both and gating it on itself would recurse for the same reason",
 	"internal/modules/identity:AdmittedAuthority":         "the same snapshot again, with the passport's own liveness asked beside it — what the admission gate reads at every tool call, so it IS the gate's own read and gating it would recurse. It answers about a credential the caller already presented rather than about any record",
 	"internal/modules/identity:IssuePassport":             "gated by the explicit Identity parameter (the authenticated session): a passport is minted for that identity only, capped by validScopes",
-	"internal/modules/identity:GetUser":                   "roster read (A52): same rationale as ListUsers — a single member read is intentionally visible to every authenticated seat, and AUTHENTICATED MEMBERSHIP is the whole boundary; \"user\" is deliberately absent from policy.coreObjects",
-	"internal/modules/identity:ListUsers":                 "roster read (A52): the member roster is intentionally visible to every authenticated seat, by design, not by oversight — a share-subject picker that only some roles could see would be a broken feature, not a narrower one. Authenticated membership IS the boundary; \"user\" is deliberately absent from policy.coreObjects (the closed RBAC object set), because gating it would mean granting read on it to all five default roles (no role may reasonably be refused the roster) and backfilling every already-seeded workspace's role.permissions — object-level RBAC exists to narrow WHO sees a record among peers, and there is no such narrowing here to express",
-	"internal/modules/identity:ListTeams":                 "roster read (A52): same rationale as ListUsers — the team list is intentionally visible to every authenticated seat, with authenticated membership as the whole boundary, and \"team\" is deliberately absent from policy.coreObjects for the same reason: gating it would grant read to every role, not restrict it, while requiring a backfill of every seeded workspace's role.permissions",
 
 	// Public-by-design token surfaces: possession of the emailed or
 	// published capability is the authority; there is no authenticated
@@ -292,6 +300,8 @@ var ungatedEntryPoints = gatekit.Waive(map[string]string{ // #nosec G101 -- waiv
 	"internal/modules/agents/runner:SaveOutcome":              "agent-runner persistence driven by the worker loop under the system principal; admission happened at the tool gate that enqueued the run",
 	"internal/modules/agents/runner:MarkFailed":               "agent-runner persistence driven by the worker loop under the system principal; admission happened at the tool gate that enqueued the run",
 	"internal/modules/agents/runner:ClaimSuspendedByApproval": "agent-runner persistence driven by the worker loop under the system principal; admission happened at the tool gate that enqueued the run",
+	"internal/modules/agents/runner:PeekSuspendedByApproval":  "the read half of the same claim, on the same bus path and under the same system principal: it answers whether a parked run can resume at all, before the one-way claim is taken",
+	"internal/modules/agents/runner:ClaimAndClose":            "the claim and its terminal status in one write, for a run the subscriber has already decided cannot resume; same worker loop, same system principal, and no caller-chosen subject — the approval id comes off the envelope",
 	"internal/modules/agents/runner:EnqueueJob":               "agent-runner persistence driven by the worker loop under the system principal; admission happened at the tool gate that enqueued the run",
 	"internal/modules/agents/runner:ClaimDueJobs":             "agent-runner persistence driven by the worker loop under the system principal; admission happened at the tool gate that enqueued the run",
 	// A rep's own standing decision, and the bound is the SIGNATURE rather than
@@ -462,6 +472,8 @@ var entryPointsOutsideModules = gatekit.Waive(map[string]string{
 	"internal/compose/orgdossier/service.go":          "orgdossier.Service.Get — the company dossier read, opening with auth.RequireHuman and assembling only from reads the caller makes themselves, so the row-scope gates run in the people store this calls rather than here",
 	"internal/compose/orgdossier/growthfitservice.go": "orgdossier.GrowthFitService.Get — the growth-fit read, ratified on the same terms as its dossier sibling: it opens with auth.RequireHuman and every record it counts arrives through a read the caller makes themselves, so the row-scope gates run in the people store rather than here",
 	"internal/compose/orgbrief/service.go":            "orgbrief.Service.Get and .Ask — the organization brief read and its question surface, both opening with auth.RequireHuman; whether RequireHuman alone is the right admission for them is a question for the tier's own review, not for this sweep",
+	"internal/compose/orgscan/service.go":             "orgscan.Service.Get and .Ensure — the account scan, ratified on orgbrief's terms: both open with auth.RequireHuman and resolve the acting user, the row they read is keyed per reader behind auth.EnsureVisible on the account, and everything the scan is written from arrives through the caller's own gated 360 and the content-gated words read, so the row-scope gates run in those reads rather than here. Run is the worker's entry and binds the reader's own principal before any read",
+	"internal/compose/org360/advice.go":               "org360.Service.UndismissedAdvice and .KeepUndismissed — the advice seam the account scan merges with. Both resolve the acting user, both run behind auth.EnsureVisible on the account, and the rules they run are the same grant-gated reads the composite's own suggestions section runs, so the object and row gates are those reads' rather than a second spelling here",
 	"internal/compose/persondraft/service.go":         "persondraft.Service.Draft — the person-side email draft, ratified on the same terms as its accountdraft mirror: it opens with auth.RequireHuman and every record it grounds in arrives through the caller's own gated person 360, so the row-scope gates run in that read rather than here. It also writes nothing, so there is no mutation for this gate to be the last line in front of",
 	"internal/compose/leaddraft/service.go":           "leaddraft.Service.Draft — the lead-side email draft, ratified on the same terms as its persondraft mirror: it opens with auth.RequireHuman, the lead arrives through the people store's own gated GetLead and the correspondence through the activities store's own list, so the row-scope gates run in those reads rather than here. It also writes nothing, so there is no mutation for this gate to be the last line in front of",
 	"internal/compose/accountdraft/service.go":        "accountdraft.Service.Draft — the account-started email draft, ratified on the same terms as its orgbrief sibling: it opens with auth.RequireHuman and every record it grounds in arrives through the caller's own gated 360, so the row-scope gates run in that read rather than here. It also writes nothing, so there is no mutation for this gate to be the last line in front of",
@@ -469,7 +481,8 @@ var entryPointsOutsideModules = gatekit.Waive(map[string]string{
 	"internal/compose/attention/feed.go":              "attention.Service.Assemble — the day's read, matched because its dependency interfaces carry List/Count methods. It holds no store and opens no transaction: every lane is a read through the owning module's own gated entry point (approvals.Service.ListWire, people.Store.ListDedupeCandidates and CountOpenDedupeCandidates, activities.Store.ListActivities), and a lane whose read is refused is omitted and named rather than returned empty. Ratified here only as a subject the roots do not cover",
 	"internal/compose/attention/worklist.go":          "attention.Service.Worklist — the same day's read, ranked. Matched for the reason feed.go is: its dependency interfaces carry List/Count methods. It holds no store and opens no transaction of its own, and it reads NOTHING the lane feed did not already read — it calls Assemble and re-projects the result, so every gate that admitted a lane there is the gate that admitted it here, and a lane refused there arrives refused. Ratified here only as a subject the roots do not cover",
 	"internal/compose/attention/teamboard.go":         "attention.Service.TeamBoard — the manager's counts over the same work, matched for the reason its two siblings are. It holds no store and opens no transaction. It admits the read on the reader's own ROW SCOPE first, before touching a source: a tier below team is ErrPermissionDenied, and an unbound membership reader is refused rather than answered as an empty team. Every count then comes from a read the caller makes themselves — identity.Service.LiveTeammatesOfCaller (auth.RequireHuman, and the roster it walks is the caller's own teams), activities.Store.WaitingReplies and OverdueLoadByAssignee (auth.Require plus the activity scope clauses), the at-risk lane's own gated list — so what it reports is bounded by what this reader may already open, and a source that refuses fails the board rather than drawing a column of zeros. It writes nothing. Ratified here only as a subject the roots do not cover",
-	"internal/compose/runnerservice.go":               "RunnerService.TickWorkspace and .HandleEvent — the agent runner's worker-loop and event-bus seams, which carry no human principal at all; that posture is what the module-side waivers spell out for their sweep entry points, and applying the same reasoning to compose needs the tier brought under the gate first",
+	"internal/compose/runnerservice.go":               "RunnerService.TickWorkspace — the agent runner's worker-loop seam, which carries no human principal at all; that posture is what the module-side waivers spell out for their sweep entry points, and applying the same reasoning to compose needs the tier brought under the gate first",
+	"internal/compose/runnerresume.go":                "RunnerService.HandleEvent — the same posture on the event-bus seam: a decision arrives on the bus under no human principal, and the authority it resumes under is re-derived from the parked run's own passport",
 	"internal/platform/blobstore/memory.go":           "memoryStore's Put/Get/Delete/Health — a blobstore.Store driver, matched only because the receiver type name ends in \"Store\". It moves opaque bytes under a caller-supplied key and holds no record and no workspace column, so there is no RBAC object for this gate's rule to name",
 	"internal/platform/blobstore/s3.go":               "s3Store's Put/Get/Delete/Health — the same driver interface over S3, matched by the same receiver-name suffix; the admission that matters for a blob is taken by the module surface that mints its key, not by an object-storage client",
 	"internal/platform/blobstore/fs.go":               "fsStore's Put/Get/Delete/DeletePrefix/Health — the same driver interface over a local directory, matched by the same receiver-name suffix, and ratified on the same terms as its two siblings: the admission that matters for a blob is taken by the module surface that mints its key. What is different here is worth naming rather than hiding behind the sameness — a key becomes a PATH, so fsStore.path refuses an absolute or traversing key outright (ErrInvalidKey). That is not this gate's object rule; it is the key prefix that carries tenant isolation, and a traversal would walk through it and serve a different object than the row named",
@@ -637,7 +650,7 @@ func packageFunctionIndex(t *testing.T) map[string]gatePkg {
 				}
 				ast.Inspect(fn.Body, func(n ast.Node) bool {
 					if sel, ok := n.(*ast.SelectorExpr); ok {
-						if pkg, ok := sel.X.(*ast.Ident); ok && pkg.Name == "auth" {
+						if pkg, ok := sel.X.(*ast.Ident); ok && pkg.Name == "auth" && isAuthDecision(sel.Sel.Name) {
 							info.auth = true
 						}
 						info.calls[sel.Sel.Name] = true
@@ -655,6 +668,202 @@ func packageFunctionIndex(t *testing.T) map[string]gatePkg {
 		}
 	}
 	return pkgs
+}
+
+// isAuthDecision says whether this name in the auth package REFUSES a caller.
+//
+// The gate used to count any selector on the package, which meant auth.Actor —
+// a read of who is calling — satisfied it, and so did every clause builder. A
+// clause builder is not a gate: auth.ScopeClauseFor renders a row predicate for
+// a caller already admitted, and a method that composes one while asking nobody
+// whether the caller may be there at all is exactly the shape this test claims
+// to catch. Two such reads were found the day this changed.
+//
+// The set is DERIVED from the verb the function's name starts with, not typed
+// out: Require, Ensure, Admit, Hold and Lock are the package's refusal verbs,
+// and a new one inherits the rule by being named like its neighbours. The
+// census below proves the convention still describes the package.
+func isAuthDecision(name string) bool {
+	for _, verb := range authDecisionVerbs {
+		if strings.HasPrefix(name, verb) {
+			return true
+		}
+	}
+	return authDecisionsByRatification[name] != ""
+}
+
+var authDecisionVerbs = []string{"Require", "Ensure", "Admit", "Hold"}
+
+// gatekit:fixture the exported auth names that read like a refusal and are not
+// one, each with what it actually does — a classification of the package, not a
+// cost this gate is paying.
+//
+// authNotDecisions are exported names that READ like a refusal and are not one.
+// Stated rather than left implicit, because the census below cannot tell them
+// apart: each returns ErrNotFound or ErrPermissionDenied for a reason that is
+// about the ROW rather than about the caller, so the sentinel heuristic would
+// keep proposing them.
+var authNotDecisions = map[string]string{
+	"MasksAnyRowOf":   "answers a BOOLEAN about the caller's role and returns no error of its own. The refusal is the caller's: deals turns it into a parse error on a sort over a withheld column",
+	"VisibleSubset":   "OMITS the rows the caller may not see rather than refusing, and answers an empty map for a caller holding no read at all. Its callers use the set to withhold a reference, which is a projection decision made above it",
+	"WritableSubset":  "the write half of the same shape: an empty map for a caller with no update verb, and omission rather than refusal for the rest",
+	"LockSubjectLive": "takes a row lock and refuses a table outside the closed set or a row already archived. It never reads the principal: the authority probe is a separate call the caller makes first, and its own comment says so",
+	"StampWritable":   "stamps a per-row boolean the CLIENT reads to decide what to offer. It removes no row and refuses no caller — its comment separates what the client is told from what the server enforces",
+}
+
+// gatekit:fixture the decisions whose names do not carry a refusal verb, each
+// with the reason it refuses — expected data about the auth package, not costs
+// this gate is paying.
+//
+// authDecisionsByRatification are the decisions whose names do not carry a
+// refusal verb. Each entry says why it refuses, because a name that reads like
+// a query and behaves like a gate is the thing a reader gets wrong.
+var authDecisionsByRatification = map[string]string{
+	"EdgeReadAdmitted": "the relationship-edge admission itself: it answers whether this caller may read an edge, and the readers that compose a clause call it first",
+	"EdgeReadScope":    "calls EdgeReadAdmitted before composing, so a caller it refuses gets an error rather than a predicate",
+	"VisibleTo":        "per-record read admission — it answers about ONE row and its callers act on the refusal",
+	"WritableBy":       "the write half of the same question",
+}
+
+// TestTheAuthDecisionVerbsStillDescribeThePackage holds the convention the gate
+// derives from. A refusal added under a SIXTH verb would be invisible to
+// isAuthDecision, and the gate would go on passing — under-recognition, which
+// reports PASS with nothing to notice.
+func TestTheAuthDecisionVerbsStillDescribeThePackage(t *testing.T) {
+	t.Parallel()
+
+	decisions := 0
+	err := filepath.WalkDir(filepath.Join("internal", "platform", "auth"), func(path string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+			return err
+		}
+		file, parseErr := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+		if parseErr != nil {
+			return parseErr
+		}
+		for _, decl := range file.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok || fn.Recv != nil || !fn.Name.IsExported() {
+				continue
+			}
+			if reason, named := authNotDecisions[fn.Name.Name]; named {
+				if isAuthDecision(fn.Name.Name) {
+					t.Errorf("auth.%s is named a non-decision (%s) but the classifier counts it: "+
+						"one of the two is wrong, and the classifier is what the gate believes", fn.Name.Name, reason)
+				}
+				continue
+			}
+			if isAuthDecision(fn.Name.Name) {
+				decisions++
+				// A counted name that no longer refuses is the regression this
+				// census exists for: it keeps every entry point reaching it
+				// passing. Checked for the counted names too, which is the half
+				// an earlier version of this test skipped.
+				if !refusesSomehow(fn) {
+					t.Errorf("auth.%s is counted as a gate but its body neither refuses nor delegates to something that does: "+
+						"if it stopped refusing, every entry point that reaches it is now ungated and passing", fn.Name.Name)
+				}
+				continue
+			}
+			// A function that is NOT counted must not look like a refusal. The
+			// tell is the sentinel: a gate returns a refusal, a clause builder
+			// returns SQL.
+			if returnsPermissionDenied(fn) {
+				t.Errorf("auth.%s refuses a caller with ErrPermissionDenied but is not counted as a gate: "+
+					"name it with one of %v, ratify it in authDecisionsByRatification with the reason it refuses, "+
+					"or name it in authNotDecisions if the refusal is about the row rather than the caller",
+					fn.Name.Name, authDecisionVerbs)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("reading the auth package: %v", err)
+	}
+	// A parser regression that read no declarations would report a clean
+	// package. The floor is near the real count.
+	if decisions < 25 {
+		t.Fatalf("found only %d decisions in platform/auth — the walk has lost the package "+
+			"and every entry point would now count as ungated", decisions)
+	}
+	for name := range authDecisionsByRatification {
+		if !authPackageDeclares(t, name) {
+			t.Errorf("authDecisionsByRatification names auth.%s, which the package no longer exports: "+
+				"a stale entry silently keeps a renamed gate counted", name)
+		}
+	}
+}
+
+// refusesSomehow reports whether the body can refuse at all — by naming a
+// refusal sentinel itself, or by calling something that does.
+//
+// Deliberately loose. Most gates in this package refuse through an unexported
+// helper (ensureWriteAuthority, refuseBuyer, probeExistsLive) or by returning
+// ErrNotFound so existence stays hidden, so a sentinel-only test would report
+// two thirds of the package as broken. What it catches is the case that matters:
+// a counted name whose body stopped being able to refuse anything.
+func refusesSomehow(fn *ast.FuncDecl) bool {
+	if returnsPermissionDenied(fn) {
+		return true
+	}
+	refuses := false
+	ast.Inspect(fn.Body, func(n ast.Node) bool {
+		switch node := n.(type) {
+		case *ast.SelectorExpr:
+			switch node.Sel.Name {
+			case "ErrNotFound", "ErrPermissionDenied", "ErrConflict":
+				refuses = true
+			}
+		case *ast.Ident:
+			// A call to a sibling gate, exported or not: the unexported
+			// helpers are named for what they do to a caller.
+			if isAuthDecision(node.Name) || strings.HasPrefix(node.Name, "ensure") ||
+				strings.HasPrefix(node.Name, "refuse") || strings.HasPrefix(node.Name, "probe") {
+				refuses = true
+			}
+		}
+		return !refuses
+	})
+	return refuses
+}
+
+// returnsPermissionDenied reports whether the body ever names the refusal
+// sentinel. It is the cheapest tell that a function decides rather than
+// composes, and it is a heuristic in one direction only: a gate that refuses
+// through a helper is missed, which is why the ratification map exists.
+func returnsPermissionDenied(fn *ast.FuncDecl) bool {
+	found := false
+	ast.Inspect(fn.Body, func(n ast.Node) bool {
+		if sel, ok := n.(*ast.SelectorExpr); ok && sel.Sel.Name == "ErrPermissionDenied" {
+			found = true
+		}
+		return !found
+	})
+	return found
+}
+
+func authPackageDeclares(t *testing.T, name string) bool {
+	t.Helper()
+	declared := false
+	err := filepath.WalkDir(filepath.Join("internal", "platform", "auth"), func(path string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+			return err
+		}
+		file, parseErr := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+		if parseErr != nil {
+			return parseErr
+		}
+		for _, decl := range file.Decls {
+			if fn, ok := decl.(*ast.FuncDecl); ok && fn.Recv == nil && fn.Name.Name == name {
+				declared = true
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("reading the auth package: %v", err)
+	}
+	return declared
 }
 
 // reachesAuthGate resolves gatedness transitively over the calls a name can

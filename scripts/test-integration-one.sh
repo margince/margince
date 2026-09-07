@@ -19,6 +19,10 @@ cd "$ROOT"
 # shellcheck source=scripts/lib-testdb.sh
 source "$ROOT/scripts/lib-testdb.sh"
 resolve_it_timeout
+# The Redis address the fixtures need. Reached through `make test-it` it arrives
+# from backend/Makefile; run directly — which the usage block above invites — it
+# did not, and every Redis-using test in the package failed naming Redis.
+resolve_test_redis
 # One package oversubscribes nothing, but the harness ASSERTS the ceiling and the
 # budget rather than skipping when they are absent — a skipped capacity check
 # reads exactly like a passing one.
@@ -26,15 +30,15 @@ declare_lane_budget 1
 
 DIR="${1:-}"
 RUN="${2:-}"
-if [ -z "$DIR" ]; then
+if [[ -z "$DIR" ]]; then
   echo "usage: $0 DIR [RUN]   (DIR e.g. backend/internal/compose/integration; RUN e.g. TestFoo)" >&2
   exit 2
 fi
 # Every integration package lives in the backend module; map the repo-root dir to
 # a module-relative package path.
-if [ "$DIR" = "backend" ]; then
+if [[ "$DIR" = "backend" ]]; then
   rel="."
-elif [ "${DIR#backend/}" != "$DIR" ]; then
+elif [[ "${DIR#backend/}" != "$DIR" ]]; then
   rel="./${DIR#backend/}"
 else
   echo "FAIL: '$DIR' is not under the backend module" >&2
@@ -50,7 +54,7 @@ make_clone "$db"
 trap 'st=$?; if ! drop_clone "$db"; then echo "FAIL: clone db $db was not dropped — leaked on the test cluster" >&2; if [[ "$st" -eq 0 ]]; then st=1; fi; fi; exit "$st"' EXIT
 
 run_flag=()
-[ -n "$RUN" ] && run_flag=(-run "$RUN")
+[[ -n "$RUN" ]] && run_flag=(-run "$RUN")
 echo "test-integration-one: backend $rel ${RUN:+(-run $RUN) }(db=$db)"
 
 ( cd backend \
@@ -59,5 +63,6 @@ echo "test-integration-one: backend $rel ${RUN:+(-run $RUN) }(db=$db)"
        MARGINCE_TEST_DSN="$(owner_clone_dsn "$db")" \
        MARGINCE_TEST_APP_DSN="$(app_clone_dsn "$db")" \
        MARGINCE_TEST_BLOBSTORE_BUCKET="$(bucket_for one)" \
-       MARGINCE_TEST_REDIS_DB="${MARGINCE_TEST_REDIS_DB:-15}" \
+       MARGINCE_TEST_REDIS="$MARGINCE_TEST_REDIS" \
+       MARGINCE_TEST_REDIS_DB="$MARGINCE_TEST_REDIS_DB" \
     go test -p 1 -tags=integration -v -count=1 -timeout="$IT_TIMEOUT" "${run_flag[@]+"${run_flag[@]}"}" "$rel" ${IT_ARGS:+$IT_ARGS} )

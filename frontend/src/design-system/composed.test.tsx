@@ -198,8 +198,15 @@ describe("DealCard + PipelineBoard", () => {
         zone="Europe/Berlin"
       />,
     );
+    // Selected by CLASS, because which class it carries is the behaviour: the
+    // refusal is prose and wraps, where `.board-col-weighted` is a money line
+    // that ellipsises — sharing it cut this sentence to "several currencies —
+    // no sing…" in a 240px stage. Matched on the words alone, the assertion
+    // stayed green through exactly that.
     expect(
-      screen.getByText("several currencies — no single total"),
+      screen.getByText("several currencies — no single total", {
+        selector: ".board-col-refusal",
+      }),
     ).toBeTruthy();
     // The count is a fact and stays; no money figure is invented beside it.
     expect(screen.getByText("29 deals")).toBeTruthy();

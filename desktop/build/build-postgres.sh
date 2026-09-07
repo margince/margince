@@ -42,7 +42,7 @@ require_tools() {
   for tool in curl shasum make clang install_name_tool otool codesign vtool; do
     command -v "$tool" >/dev/null 2>&1 || missing+=("$tool")
   done
-  if [ ${#missing[@]} -gt 0 ]; then
+  if [[ ${#missing[@]} -gt 0 ]]; then
     echo "missing required tools: ${missing[*]}" >&2
     echo "install the Xcode Command Line Tools: xcode-select --install" >&2
     exit 1
@@ -53,14 +53,14 @@ require_tools() {
 # truncated or tampered cache in .work can never silently reach a build.
 fetch() {
   local url="$1" dest="$2" want="$3"
-  if [ ! -f "$dest" ]; then
+  if [[ ! -f "$dest" ]]; then
     log "downloading $(basename "$dest")"
     curl -fSL --retry 3 --max-time 600 "$url" -o "$dest.part"
     mv "$dest.part" "$dest"
   fi
   local got
   got="$(shasum -a 256 "$dest" | awk '{print $1}')"
-  if [ "$got" != "$want" ]; then
+  if [[ "$got" != "$want" ]]; then
     echo "checksum mismatch for $dest" >&2
     echo "  expected $want" >&2
     echo "  actual   $got" >&2
@@ -204,7 +204,7 @@ verify() {
     done < <(otool -L "$file" | tail -n +2 | awk '{print $1}')
   done < <(mach_o_files)
 
-  if [ "$offenders" -gt 0 ]; then
+  if [[ "$offenders" -gt 0 ]]; then
     echo "FAIL: $offenders link(s) reference an absolute path outside the bundle" >&2
     exit 1
   fi
@@ -232,7 +232,7 @@ verify() {
     fi
   done < <(mach_o_files)
 
-  if [ "$missing_rpath" -gt 0 ]; then
+  if [[ "$missing_rpath" -gt 0 ]]; then
     echo "FAIL: $missing_rpath file(s) have no rpath, so their bundled libraries cannot be found" >&2
     exit 1
   fi
@@ -246,14 +246,14 @@ verify() {
   # `CREATE EXTENSION` on first launch.
   local ext
   for ext in vector unaccent pg_trgm btree_gist; do
-    if [ ! -f "$OUT/share/extension/$ext.control" ]; then
+    if [[ ! -f "$OUT/share/extension/$ext.control" ]]; then
       echo "FAIL: extension '$ext' is missing from the build" >&2
       exit 1
     fi
     # lib/<ext>.dylib, measured rather than assumed: this build installs its
     # loadable modules directly under lib/ and has no lib/postgresql at all, and
     # they are .dylib rather than the .so a Linux Postgres would produce.
-    if [ ! -f "$OUT/lib/$ext.dylib" ]; then
+    if [[ ! -f "$OUT/lib/$ext.dylib" ]]; then
       echo "FAIL: extension '$ext' has a control file but no loadable module at lib/$ext.dylib" >&2
       exit 1
     fi

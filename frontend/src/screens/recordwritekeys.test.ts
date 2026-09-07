@@ -6,6 +6,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import { parseSource } from "../../scripts/lib/source-tree";
 import { ENTITY_KINDS } from "../app/entity";
 import { recordWriteKeys } from "./recordwritekeys";
 
@@ -48,12 +49,7 @@ describe("every restore callback goes through the helper", scanBudget, () => {
     const offenders: string[] = [];
     for (const file of sourceFiles()) {
       const text = readFileSync(file, "utf8");
-      const parsed = ts.createSourceFile(
-        file,
-        text,
-        ts.ScriptTarget.Latest,
-        true,
-      );
+      const parsed = parseSource(file, text);
       const visit = (node: ts.Node): void => {
         if (
           ts.isPropertyAssignment(node) &&

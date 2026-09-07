@@ -71,11 +71,16 @@ function render(ui: ReactNode) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  return rtlRender(
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
-    </QueryClientProvider>,
-  );
+  // The client is returned so a test can re-render against the SAME cache — a
+  // fresh one would empty it, which is the opposite of the stale-entry case.
+  return {
+    ...rtlRender(
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">{ui}</LocaleProvider>
+      </QueryClientProvider>,
+    ),
+    queryClient: client,
+  };
 }
 
 // Two purposes, because the send rules differ by purpose: transactional is the

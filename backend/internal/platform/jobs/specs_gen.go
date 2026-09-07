@@ -11,13 +11,23 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "253c873e99809cdb538a3da45bfb8e43db5c16d5c16f72b20fcd05a5d8a56101"
+const JobContractHash = "7a3c1713548210bc273dc5f45d2131f3603e5f335890d59e878cee95ceb4fd8d"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
 // over the kinds it registered and refuses the boot when any is missing,
 // because a kind with no Spec would run at River's one-minute default.
 var specs = map[string]Spec{
+	"account_scan": {
+		Kind:         "account_scan",
+		GoType:       "AccountScanArgs",
+		Role:         Worker,
+		Queue:        "transcript_read",
+		Timeout:      TimeoutPolicy{Fixed: 4 * time.Minute},
+		OptsOwner:    OptsCaller,
+		Registration: Registration{When: []string{"AccountScanBrain"}, AbsentRegistersAnyway: true},
+		Args:         []ArgField{{Name: "OrganizationID"}, {Name: "ScanID"}, {Name: "ViewerID"}, {Name: "Workspace"}},
+	},
 	"agent_scheduler": {
 		Kind:         "agent_scheduler",
 		GoType:       "AgentSchedulerArgs",
@@ -614,6 +624,16 @@ var specs = map[string]Spec{
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"DeepReadBrain"}, AbsentRegistersAnyway: true},
 		Args:         []ArgField{{Name: "MaxPages", Scalar: true, Reason: "this run's page ceiling, or zero for the deployment's own. The worker clamps it against the configured cap, so it can only ever narrow what an operator set, and a crawl budget states nothing about a subject."}, {Name: "OrganizationID"}, {Name: "RequestedBy"}, {Name: "SiteReadID"}, {Name: "Workspace"}},
+	},
+	"stage_evidence_read": {
+		Kind:         "stage_evidence_read",
+		GoType:       "StageEvidenceReadArgs",
+		Role:         Worker,
+		Queue:        "transcript_read",
+		Timeout:      TimeoutPolicy{Fixed: 4 * time.Minute},
+		OptsOwner:    OptsCaller,
+		Registration: Registration{When: []string{"StageEvidenceBrain"}},
+		Args:         []ArgField{{Name: "ActivityID"}, {Name: "DealID"}, {Name: "Workspace"}},
 	},
 	"technical_enrich_backfill": {
 		Kind:         "technical_enrich_backfill",

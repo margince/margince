@@ -62,10 +62,14 @@ function blockScalar(text: string): string {
 }
 
 function scenarioSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .replaceAll(/[^a-z0-9]+/g, "_")
-    .replaceAll(/^_+|_+$/g, "");
+  return (
+    name
+      .toLowerCase()
+      .replaceAll(/[^a-z0-9]+/g, "_")
+      // The lookbehind keeps the trailing run from being retried from every
+      // underscore in it, which is quadratic on a name that is mostly separators.
+      .replaceAll(/^_+|(?<!_)_+$/g, "")
+  );
 }
 
 export function scenarioYaml(call: AiCallDetail, name: string): string {

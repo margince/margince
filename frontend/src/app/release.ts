@@ -88,3 +88,20 @@ export function displayVersion(): string {
   const release = comparableRelease(SPA_RELEASE) ? SPA_RELEASE : ALPHA_FALLBACK;
   return `v${release}-alpha`;
 }
+
+/**
+ * The same marker for a column that has one glyph of room.
+ *
+ * The 56px rail carries no label anywhere else in it, and "v0.1-alpha" is wider
+ * than the column: shortened to the letter mathematics and every other product
+ * already uses for this channel, the marker still says alpha and still fits
+ * beside the mark. It is the SAME string with one word abbreviated rather than a
+ * second literal, so a release that changes the version cannot leave the narrow
+ * form printing an older one.
+ *
+ * Only a trailing `alpha` is touched. A build on any other channel keeps its own
+ * word — abbreviating one we have no glyph for would be inventing a marker.
+ */
+export function narrowVersion(): string {
+  return displayVersion().replace(/-alpha$/, "-\u03b1");
+}

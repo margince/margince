@@ -316,6 +316,27 @@ func (e ActivityKind) Valid() bool {
 	}
 }
 
+// Defines values for ActivityLanguage.
+const (
+	ActivityLanguageDe ActivityLanguage = "de"
+	ActivityLanguageEn ActivityLanguage = "en"
+	ActivityLanguageVi ActivityLanguage = "vi"
+)
+
+// Valid indicates whether the value is a known member of the ActivityLanguage enum.
+func (e ActivityLanguage) Valid() bool {
+	switch e {
+	case ActivityLanguageDe:
+		return true
+	case ActivityLanguageEn:
+		return true
+	case ActivityLanguageVi:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityMeetingStatus.
 const (
 	ActivityMeetingStatusBooked   ActivityMeetingStatus = "booked"
@@ -558,6 +579,7 @@ func (e AiActivityItemState) Valid() bool {
 
 // Defines values for AiActivityKind.
 const (
+	AiActivityKindAccountScan                   AiActivityKind = "account_scan"
 	AiActivityKindBriefRanking                  AiActivityKind = "brief_ranking"
 	AiActivityKindCaptureClassify               AiActivityKind = "capture_classify"
 	AiActivityKindCaptureConfidentialityVerdict AiActivityKind = "capture_confidentiality_verdict"
@@ -582,6 +604,7 @@ const (
 	AiActivityKindSiteFactExtract               AiActivityKind = "site_fact_extract"
 	AiActivityKindSiteRead                      AiActivityKind = "site_read"
 	AiActivityKindSiteTriage                    AiActivityKind = "site_triage"
+	AiActivityKindStageEvidenceExtract          AiActivityKind = "stage_evidence_extract"
 	AiActivityKindSummarize                     AiActivityKind = "summarize"
 	AiActivityKindTranscript                    AiActivityKind = "transcript"
 	AiActivityKindTranscriptPropose             AiActivityKind = "transcript_propose"
@@ -593,6 +616,8 @@ const (
 // Valid indicates whether the value is a known member of the AiActivityKind enum.
 func (e AiActivityKind) Valid() bool {
 	switch e {
+	case AiActivityKindAccountScan:
+		return true
 	case AiActivityKindBriefRanking:
 		return true
 	case AiActivityKindCaptureClassify:
@@ -640,6 +665,8 @@ func (e AiActivityKind) Valid() bool {
 	case AiActivityKindSiteRead:
 		return true
 	case AiActivityKindSiteTriage:
+		return true
+	case AiActivityKindStageEvidenceExtract:
 		return true
 	case AiActivityKindSummarize:
 		return true
@@ -1015,6 +1042,7 @@ func (e ApprovalBundleMemberOutcome) Valid() bool {
 // Defines values for ApprovalEvidenceSourceType.
 const (
 	ApprovalEvidenceSourceTypeActivity     ApprovalEvidenceSourceType = "activity"
+	ApprovalEvidenceSourceTypeContract     ApprovalEvidenceSourceType = "contract"
 	ApprovalEvidenceSourceTypeDeal         ApprovalEvidenceSourceType = "deal"
 	ApprovalEvidenceSourceTypePage         ApprovalEvidenceSourceType = "page"
 	ApprovalEvidenceSourceTypeRelationship ApprovalEvidenceSourceType = "relationship"
@@ -1025,6 +1053,8 @@ const (
 func (e ApprovalEvidenceSourceType) Valid() bool {
 	switch e {
 	case ApprovalEvidenceSourceTypeActivity:
+		return true
+	case ApprovalEvidenceSourceTypeContract:
 		return true
 	case ApprovalEvidenceSourceTypeDeal:
 		return true
@@ -1345,6 +1375,7 @@ const (
 	AttentionLanesOmittedMeetings           AttentionLanesOmitted = "meetings"
 	AttentionLanesOmittedMeetingsUnreported AttentionLanesOmitted = "meetings_unreported"
 	AttentionLanesOmittedNeedsYou           AttentionLanesOmitted = "needs_you"
+	AttentionLanesOmittedNoticeCase         AttentionLanesOmitted = "notice_case"
 	AttentionLanesOmittedNotices            AttentionLanesOmitted = "notices"
 	AttentionLanesOmittedPlanned            AttentionLanesOmitted = "planned"
 	AttentionLanesOmittedRelationshipDecay  AttentionLanesOmitted = "relationship_decay"
@@ -1381,6 +1412,8 @@ func (e AttentionLanesOmitted) Valid() bool {
 	case AttentionLanesOmittedMeetingsUnreported:
 		return true
 	case AttentionLanesOmittedNeedsYou:
+		return true
+	case AttentionLanesOmittedNoticeCase:
 		return true
 	case AttentionLanesOmittedNotices:
 		return true
@@ -1484,6 +1517,7 @@ const (
 	AttentionItemSourceMeeting             AttentionItemSource = "meeting"
 	AttentionItemSourceMeetingOutcome      AttentionItemSource = "meeting_outcome"
 	AttentionItemSourceNotice              AttentionItemSource = "notice"
+	AttentionItemSourceNoticeCase          AttentionItemSource = "notice_case"
 	AttentionItemSourceRelationshipDecay   AttentionItemSource = "relationship_decay"
 	AttentionItemSourceSyncHealth          AttentionItemSource = "sync_health"
 	AttentionItemSourceTask                AttentionItemSource = "task"
@@ -1526,6 +1560,8 @@ func (e AttentionItemSource) Valid() bool {
 	case AttentionItemSourceMeetingOutcome:
 		return true
 	case AttentionItemSourceNotice:
+		return true
+	case AttentionItemSourceNoticeCase:
 		return true
 	case AttentionItemSourceRelationshipDecay:
 		return true
@@ -4656,10 +4692,14 @@ func (e CreateStageRequestSemantic) Valid() bool {
 
 // Defines values for CreateTagRequestColor.
 const (
-	CreateTagRequestColorAmber CreateTagRequestColor = "amber"
-	CreateTagRequestColorRose  CreateTagRequestColor = "rose"
-	CreateTagRequestColorSlate CreateTagRequestColor = "slate"
-	CreateTagRequestColorTeal  CreateTagRequestColor = "teal"
+	CreateTagRequestColorAmber  CreateTagRequestColor = "amber"
+	CreateTagRequestColorLime   CreateTagRequestColor = "lime"
+	CreateTagRequestColorOrange CreateTagRequestColor = "orange"
+	CreateTagRequestColorRose   CreateTagRequestColor = "rose"
+	CreateTagRequestColorSky    CreateTagRequestColor = "sky"
+	CreateTagRequestColorSlate  CreateTagRequestColor = "slate"
+	CreateTagRequestColorTeal   CreateTagRequestColor = "teal"
+	CreateTagRequestColorViolet CreateTagRequestColor = "violet"
 )
 
 // Valid indicates whether the value is a known member of the CreateTagRequestColor enum.
@@ -4667,11 +4707,19 @@ func (e CreateTagRequestColor) Valid() bool {
 	switch e {
 	case CreateTagRequestColorAmber:
 		return true
+	case CreateTagRequestColorLime:
+		return true
+	case CreateTagRequestColorOrange:
+		return true
 	case CreateTagRequestColorRose:
+		return true
+	case CreateTagRequestColorSky:
 		return true
 	case CreateTagRequestColorSlate:
 		return true
 	case CreateTagRequestColorTeal:
+		return true
+	case CreateTagRequestColorViolet:
 		return true
 	default:
 		return false
@@ -8061,20 +8109,32 @@ func (e Organization360SuggestionActionKind) Valid() bool {
 
 // Defines values for Organization360SuggestionKind.
 const (
-	Organization360SuggestionKindLifecycleConflict Organization360SuggestionKind = "lifecycle_conflict"
-	Organization360SuggestionKindNoNextStep        Organization360SuggestionKind = "no_next_step"
-	Organization360SuggestionKindNoReply           Organization360SuggestionKind = "no_reply"
-	Organization360SuggestionKindStalledDeal       Organization360SuggestionKind = "stalled_deal"
+	Organization360SuggestionKindCommitmentUnmet    Organization360SuggestionKind = "commitment_unmet"
+	Organization360SuggestionKindLifecycleConflict  Organization360SuggestionKind = "lifecycle_conflict"
+	Organization360SuggestionKindNeedRaised         Organization360SuggestionKind = "need_raised"
+	Organization360SuggestionKindNoNextStep         Organization360SuggestionKind = "no_next_step"
+	Organization360SuggestionKindNoReply            Organization360SuggestionKind = "no_reply"
+	Organization360SuggestionKindQuestionUnanswered Organization360SuggestionKind = "question_unanswered"
+	Organization360SuggestionKindRiskRaised         Organization360SuggestionKind = "risk_raised"
+	Organization360SuggestionKindStalledDeal        Organization360SuggestionKind = "stalled_deal"
 )
 
 // Valid indicates whether the value is a known member of the Organization360SuggestionKind enum.
 func (e Organization360SuggestionKind) Valid() bool {
 	switch e {
+	case Organization360SuggestionKindCommitmentUnmet:
+		return true
 	case Organization360SuggestionKindLifecycleConflict:
+		return true
+	case Organization360SuggestionKindNeedRaised:
 		return true
 	case Organization360SuggestionKindNoNextStep:
 		return true
 	case Organization360SuggestionKindNoReply:
+		return true
+	case Organization360SuggestionKindQuestionUnanswered:
+		return true
+	case Organization360SuggestionKindRiskRaised:
 		return true
 	case Organization360SuggestionKindStalledDeal:
 		return true
@@ -8554,6 +8614,36 @@ func (e OrganizationQuestion) Valid() bool {
 	case OrganizationQuestionWhatsChanged:
 		return true
 	case OrganizationQuestionWhatsOpen:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for OrganizationScanState.
+const (
+	OrganizationScanStateDegraded OrganizationScanState = "degraded"
+	OrganizationScanStateDone     OrganizationScanState = "done"
+	OrganizationScanStateFailed   OrganizationScanState = "failed"
+	OrganizationScanStateNever    OrganizationScanState = "never"
+	OrganizationScanStateQueued   OrganizationScanState = "queued"
+	OrganizationScanStateRunning  OrganizationScanState = "running"
+)
+
+// Valid indicates whether the value is a known member of the OrganizationScanState enum.
+func (e OrganizationScanState) Valid() bool {
+	switch e {
+	case OrganizationScanStateDegraded:
+		return true
+	case OrganizationScanStateDone:
+		return true
+	case OrganizationScanStateFailed:
+		return true
+	case OrganizationScanStateNever:
+		return true
+	case OrganizationScanStateQueued:
+		return true
+	case OrganizationScanStateRunning:
 		return true
 	default:
 		return false
@@ -10428,10 +10518,14 @@ func (e RecordQualifyingEventRequestKind) Valid() bool {
 
 // Defines values for RecordTagColor.
 const (
-	RecordTagColorAmber RecordTagColor = "amber"
-	RecordTagColorRose  RecordTagColor = "rose"
-	RecordTagColorSlate RecordTagColor = "slate"
-	RecordTagColorTeal  RecordTagColor = "teal"
+	RecordTagColorAmber  RecordTagColor = "amber"
+	RecordTagColorLime   RecordTagColor = "lime"
+	RecordTagColorOrange RecordTagColor = "orange"
+	RecordTagColorRose   RecordTagColor = "rose"
+	RecordTagColorSky    RecordTagColor = "sky"
+	RecordTagColorSlate  RecordTagColor = "slate"
+	RecordTagColorTeal   RecordTagColor = "teal"
+	RecordTagColorViolet RecordTagColor = "violet"
 )
 
 // Valid indicates whether the value is a known member of the RecordTagColor enum.
@@ -10439,11 +10533,19 @@ func (e RecordTagColor) Valid() bool {
 	switch e {
 	case RecordTagColorAmber:
 		return true
+	case RecordTagColorLime:
+		return true
+	case RecordTagColorOrange:
+		return true
 	case RecordTagColorRose:
+		return true
+	case RecordTagColorSky:
 		return true
 	case RecordTagColorSlate:
 		return true
 	case RecordTagColorTeal:
+		return true
+	case RecordTagColorViolet:
 		return true
 	default:
 		return false
@@ -10797,10 +10899,14 @@ func (e RetentionScope) Valid() bool {
 
 // Defines values for RowTagColor.
 const (
-	RowTagColorAmber RowTagColor = "amber"
-	RowTagColorRose  RowTagColor = "rose"
-	RowTagColorSlate RowTagColor = "slate"
-	RowTagColorTeal  RowTagColor = "teal"
+	RowTagColorAmber  RowTagColor = "amber"
+	RowTagColorLime   RowTagColor = "lime"
+	RowTagColorOrange RowTagColor = "orange"
+	RowTagColorRose   RowTagColor = "rose"
+	RowTagColorSky    RowTagColor = "sky"
+	RowTagColorSlate  RowTagColor = "slate"
+	RowTagColorTeal   RowTagColor = "teal"
+	RowTagColorViolet RowTagColor = "violet"
 )
 
 // Valid indicates whether the value is a known member of the RowTagColor enum.
@@ -10808,11 +10914,19 @@ func (e RowTagColor) Valid() bool {
 	switch e {
 	case RowTagColorAmber:
 		return true
+	case RowTagColorLime:
+		return true
+	case RowTagColorOrange:
+		return true
 	case RowTagColorRose:
+		return true
+	case RowTagColorSky:
 		return true
 	case RowTagColorSlate:
 		return true
 	case RowTagColorTeal:
+		return true
+	case RowTagColorViolet:
 		return true
 	default:
 		return false
@@ -11632,6 +11746,7 @@ func (e SignalStatus) Valid() bool {
 // Defines values for SignalEvidenceSourceType.
 const (
 	SignalEvidenceSourceTypeActivity     SignalEvidenceSourceType = "activity"
+	SignalEvidenceSourceTypeContract     SignalEvidenceSourceType = "contract"
 	SignalEvidenceSourceTypeDeal         SignalEvidenceSourceType = "deal"
 	SignalEvidenceSourceTypePage         SignalEvidenceSourceType = "page"
 	SignalEvidenceSourceTypeRelationship SignalEvidenceSourceType = "relationship"
@@ -11642,6 +11757,8 @@ const (
 func (e SignalEvidenceSourceType) Valid() bool {
 	switch e {
 	case SignalEvidenceSourceTypeActivity:
+		return true
+	case SignalEvidenceSourceTypeContract:
 		return true
 	case SignalEvidenceSourceTypeDeal:
 		return true
@@ -11929,6 +12046,96 @@ func (e StageSemantic) Valid() bool {
 	}
 }
 
+// Defines values for StageCriterionKind.
+const (
+	BuyerConfirmed StageCriterionKind = "buyer_confirmed"
+	Custom         StageCriterionKind = "custom"
+	DocumentSigned StageCriterionKind = "document_signed"
+	EventHeld      StageCriterionKind = "event_held"
+	RoleIdentified StageCriterionKind = "role_identified"
+	TermsAccepted  StageCriterionKind = "terms_accepted"
+)
+
+// Valid indicates whether the value is a known member of the StageCriterionKind enum.
+func (e StageCriterionKind) Valid() bool {
+	switch e {
+	case BuyerConfirmed:
+		return true
+	case Custom:
+		return true
+	case DocumentSigned:
+		return true
+	case EventHeld:
+		return true
+	case RoleIdentified:
+		return true
+	case TermsAccepted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StageEvidenceAuthorSide.
+const (
+	StageEvidenceAuthorSideBuyer   StageEvidenceAuthorSide = "buyer"
+	StageEvidenceAuthorSideSeller  StageEvidenceAuthorSide = "seller"
+	StageEvidenceAuthorSideUnknown StageEvidenceAuthorSide = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the StageEvidenceAuthorSide enum.
+func (e StageEvidenceAuthorSide) Valid() bool {
+	switch e {
+	case StageEvidenceAuthorSideBuyer:
+		return true
+	case StageEvidenceAuthorSideSeller:
+		return true
+	case StageEvidenceAuthorSideUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StageEvidenceCommitment.
+const (
+	StageEvidenceCommitmentAgreed   StageEvidenceCommitment = "agreed"
+	StageEvidenceCommitmentNone     StageEvidenceCommitment = "none"
+	StageEvidenceCommitmentProposed StageEvidenceCommitment = "proposed"
+)
+
+// Valid indicates whether the value is a known member of the StageEvidenceCommitment enum.
+func (e StageEvidenceCommitment) Valid() bool {
+	switch e {
+	case StageEvidenceCommitmentAgreed:
+		return true
+	case StageEvidenceCommitmentNone:
+		return true
+	case StageEvidenceCommitmentProposed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StageEvidenceSource.
+const (
+	StageEvidenceSourceActivity StageEvidenceSource = "activity"
+	StageEvidenceSourceContract StageEvidenceSource = "contract"
+)
+
+// Valid indicates whether the value is a known member of the StageEvidenceSource enum.
+func (e StageEvidenceSource) Valid() bool {
+	switch e {
+	case StageEvidenceSourceActivity:
+		return true
+	case StageEvidenceSourceContract:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for StartBackfillRequestWindow.
 const (
 	StartBackfillRequestWindowN12m StartBackfillRequestWindow = "12m"
@@ -11958,10 +12165,14 @@ func (e StartBackfillRequestWindow) Valid() bool {
 
 // Defines values for TagColor.
 const (
-	TagColorAmber TagColor = "amber"
-	TagColorRose  TagColor = "rose"
-	TagColorSlate TagColor = "slate"
-	TagColorTeal  TagColor = "teal"
+	TagColorAmber  TagColor = "amber"
+	TagColorLime   TagColor = "lime"
+	TagColorOrange TagColor = "orange"
+	TagColorRose   TagColor = "rose"
+	TagColorSky    TagColor = "sky"
+	TagColorSlate  TagColor = "slate"
+	TagColorTeal   TagColor = "teal"
+	TagColorViolet TagColor = "violet"
 )
 
 // Valid indicates whether the value is a known member of the TagColor enum.
@@ -11969,11 +12180,19 @@ func (e TagColor) Valid() bool {
 	switch e {
 	case TagColorAmber:
 		return true
+	case TagColorLime:
+		return true
+	case TagColorOrange:
+		return true
 	case TagColorRose:
+		return true
+	case TagColorSky:
 		return true
 	case TagColorSlate:
 		return true
 	case TagColorTeal:
+		return true
+	case TagColorViolet:
 		return true
 	default:
 		return false
@@ -11982,22 +12201,34 @@ func (e TagColor) Valid() bool {
 
 // Defines values for TagDetailColor.
 const (
-	Amber TagDetailColor = "amber"
-	Rose  TagDetailColor = "rose"
-	Slate TagDetailColor = "slate"
-	Teal  TagDetailColor = "teal"
+	TagDetailColorAmber  TagDetailColor = "amber"
+	TagDetailColorLime   TagDetailColor = "lime"
+	TagDetailColorOrange TagDetailColor = "orange"
+	TagDetailColorRose   TagDetailColor = "rose"
+	TagDetailColorSky    TagDetailColor = "sky"
+	TagDetailColorSlate  TagDetailColor = "slate"
+	TagDetailColorTeal   TagDetailColor = "teal"
+	TagDetailColorViolet TagDetailColor = "violet"
 )
 
 // Valid indicates whether the value is a known member of the TagDetailColor enum.
 func (e TagDetailColor) Valid() bool {
 	switch e {
-	case Amber:
+	case TagDetailColorAmber:
 		return true
-	case Rose:
+	case TagDetailColorLime:
 		return true
-	case Slate:
+	case TagDetailColorOrange:
 		return true
-	case Teal:
+	case TagDetailColorRose:
+		return true
+	case TagDetailColorSky:
+		return true
+	case TagDetailColorSlate:
+		return true
+	case TagDetailColorTeal:
+		return true
+	case TagDetailColorViolet:
 		return true
 	default:
 		return false
@@ -12595,6 +12826,24 @@ func (e UpdateOrganizationRequestSizeBand) Valid() bool {
 	}
 }
 
+// Defines values for UpdatePersonRequestVisibility.
+const (
+	UpdatePersonRequestVisibilityOwner     UpdatePersonRequestVisibility = "owner"
+	UpdatePersonRequestVisibilityWorkspace UpdatePersonRequestVisibility = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the UpdatePersonRequestVisibility enum.
+func (e UpdatePersonRequestVisibility) Valid() bool {
+	switch e {
+	case UpdatePersonRequestVisibilityOwner:
+		return true
+	case UpdatePersonRequestVisibilityWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UpdateSignalRequestSeverity.
 const (
 	UpdateSignalRequestSeverityInfo   UpdateSignalRequestSeverity = "info"
@@ -12663,11 +12912,15 @@ func (e UpdateStageRequestSemantic) Valid() bool {
 
 // Defines values for UpdateTagRequestColor.
 const (
-	UpdateTagRequestColorAmber UpdateTagRequestColor = "amber"
-	UpdateTagRequestColorNone  UpdateTagRequestColor = "none"
-	UpdateTagRequestColorRose  UpdateTagRequestColor = "rose"
-	UpdateTagRequestColorSlate UpdateTagRequestColor = "slate"
-	UpdateTagRequestColorTeal  UpdateTagRequestColor = "teal"
+	UpdateTagRequestColorAmber  UpdateTagRequestColor = "amber"
+	UpdateTagRequestColorLime   UpdateTagRequestColor = "lime"
+	UpdateTagRequestColorNone   UpdateTagRequestColor = "none"
+	UpdateTagRequestColorOrange UpdateTagRequestColor = "orange"
+	UpdateTagRequestColorRose   UpdateTagRequestColor = "rose"
+	UpdateTagRequestColorSky    UpdateTagRequestColor = "sky"
+	UpdateTagRequestColorSlate  UpdateTagRequestColor = "slate"
+	UpdateTagRequestColorTeal   UpdateTagRequestColor = "teal"
+	UpdateTagRequestColorViolet UpdateTagRequestColor = "violet"
 )
 
 // Valid indicates whether the value is a known member of the UpdateTagRequestColor enum.
@@ -12675,13 +12928,21 @@ func (e UpdateTagRequestColor) Valid() bool {
 	switch e {
 	case UpdateTagRequestColorAmber:
 		return true
+	case UpdateTagRequestColorLime:
+		return true
 	case UpdateTagRequestColorNone:
 		return true
+	case UpdateTagRequestColorOrange:
+		return true
 	case UpdateTagRequestColorRose:
+		return true
+	case UpdateTagRequestColorSky:
 		return true
 	case UpdateTagRequestColorSlate:
 		return true
 	case UpdateTagRequestColorTeal:
+		return true
+	case UpdateTagRequestColorViolet:
 		return true
 	default:
 		return false
@@ -12813,19 +13074,19 @@ func (e UpsertPartnerRequestRelationshipStage) Valid() bool {
 
 // Defines values for UserLocale.
 const (
-	UserLocaleDe UserLocale = "de"
-	UserLocaleEn UserLocale = "en"
-	UserLocaleVi UserLocale = "vi"
+	De UserLocale = "de"
+	En UserLocale = "en"
+	Vi UserLocale = "vi"
 )
 
 // Valid indicates whether the value is a known member of the UserLocale enum.
 func (e UserLocale) Valid() bool {
 	switch e {
-	case UserLocaleDe:
+	case De:
 		return true
-	case UserLocaleEn:
+	case En:
 		return true
-	case UserLocaleVi:
+	case Vi:
 		return true
 	default:
 		return false
@@ -13005,16 +13266,16 @@ func (e VoiceBuildStatusCode) Valid() bool {
 
 // Defines values for VoiceCorpusPreviewRequestFormat.
 const (
-	VoiceCorpusPreviewRequestFormatText       VoiceCorpusPreviewRequestFormat = "text"
-	VoiceCorpusPreviewRequestFormatTranscript VoiceCorpusPreviewRequestFormat = "transcript"
+	Text       VoiceCorpusPreviewRequestFormat = "text"
+	Transcript VoiceCorpusPreviewRequestFormat = "transcript"
 )
 
 // Valid indicates whether the value is a known member of the VoiceCorpusPreviewRequestFormat enum.
 func (e VoiceCorpusPreviewRequestFormat) Valid() bool {
 	switch e {
-	case VoiceCorpusPreviewRequestFormatText:
+	case Text:
 		return true
-	case VoiceCorpusPreviewRequestFormatTranscript:
+	case Transcript:
 		return true
 	default:
 		return false
@@ -14196,6 +14457,7 @@ const (
 	WorklistItemSourceMeeting             WorklistItemSource = "meeting"
 	WorklistItemSourceMeetingOutcome      WorklistItemSource = "meeting_outcome"
 	WorklistItemSourceNotice              WorklistItemSource = "notice"
+	WorklistItemSourceNoticeCase          WorklistItemSource = "notice_case"
 	WorklistItemSourceRelationshipDecay   WorklistItemSource = "relationship_decay"
 	WorklistItemSourceSyncHealth          WorklistItemSource = "sync_health"
 	WorklistItemSourceTask                WorklistItemSource = "task"
@@ -14240,6 +14502,8 @@ func (e WorklistItemSource) Valid() bool {
 	case WorklistItemSourceMeetingOutcome:
 		return true
 	case WorklistItemSourceNotice:
+		return true
+	case WorklistItemSourceNoticeCase:
 		return true
 	case WorklistItemSourceRelationshipDecay:
 		return true
@@ -14325,6 +14589,7 @@ const (
 	WorklistReachSourceMeeting             WorklistReachSource = "meeting"
 	WorklistReachSourceMeetingOutcome      WorklistReachSource = "meeting_outcome"
 	WorklistReachSourceNotice              WorklistReachSource = "notice"
+	WorklistReachSourceNoticeCase          WorklistReachSource = "notice_case"
 	WorklistReachSourceRelationshipDecay   WorklistReachSource = "relationship_decay"
 	WorklistReachSourceSyncHealth          WorklistReachSource = "sync_health"
 	WorklistReachSourceTask                WorklistReachSource = "task"
@@ -14369,6 +14634,8 @@ func (e WorklistReachSource) Valid() bool {
 	case WorklistReachSourceMeetingOutcome:
 		return true
 	case WorklistReachSourceNotice:
+		return true
+	case WorklistReachSourceNoticeCase:
 		return true
 	case WorklistReachSourceRelationshipDecay:
 		return true
@@ -16604,6 +16871,11 @@ type Activity struct {
 	IsDone *bool        `json:"is_done,omitempty"`
 	Kind   ActivityKind `json:"kind"`
 
+	// Language What language this message is written in, read from its own text when it was captured. Null on a message whose text was too short to tell, on anything hand-logged, and on every row captured before this was recorded — all of which mean "not known", never "not any of these".
+	// A detector's observation, not a declaration by its author, and it describes the message rather than the person: the same contact writes in two languages and each message says which it is. A drafted reply follows it, so that a reply to an English thread is written in English whatever language its sender's own writing samples happen to be in.
+	// Withheld with the rest of the content: it is derived from the body, so a caller who may discover the row without reading it is not told this either.
+	Language *ActivityLanguage `json:"language,omitempty"`
+
 	// Links One activity may link to >1 entity (person + deal).
 	Links *[]ActivityLink `json:"links,omitempty"`
 
@@ -16646,6 +16918,11 @@ type ActivityDirection string
 
 // ActivityKind defines model for Activity.Kind.
 type ActivityKind string
+
+// ActivityLanguage What language this message is written in, read from its own text when it was captured. Null on a message whose text was too short to tell, on anything hand-logged, and on every row captured before this was recorded — all of which mean "not known", never "not any of these".
+// A detector's observation, not a declaration by its author, and it describes the message rather than the person: the same contact writes in two languages and each message says which it is. A drafted reply follows it, so that a reply to an English thread is written in English whatever language its sender's own writing samples happen to be in.
+// Withheld with the rest of the content: it is derived from the body, so a caller who may discover the row without reading it is not told this either.
+type ActivityLanguage string
 
 // ActivityMeetingStatus Set only when kind=meeting.
 type ActivityMeetingStatus string
@@ -16849,6 +17126,9 @@ type AiActivityItem struct {
 	// a row cannot be left stalled by a writer that forgot, because no writer writes it.
 	State AiActivityItemState `json:"state"`
 
+	// SubjectId That record's id, so the name can link to it.
+	SubjectId *openapi_types.UUID `json:"subject_id,omitempty"`
+
 	// SubjectLabel What the occurrence was ABOUT, named: the document that was read, in the words the
 	// product titles it elsewhere. "I'm reading Q3-offer.pdf" is a sentence about the
 	// reader's afternoon; "I'm reading your document" is a sentence about software.
@@ -16862,6 +17142,17 @@ type AiActivityItem struct {
 	// and a client that has no name draws its generic sentence. The client owns the
 	// words either way — this is the NAME to put in them, never a sentence.
 	SubjectLabel *string `json:"subject_label,omitempty"`
+
+	// SubjectType The kind of record `subject_label` names, as the emitting source spells it:
+	// `organization`, `person` and `activity` from the kernel's entity kinds, and
+	// `attachment` from the document reading, which has no kernel kind. It is here so
+	// a client can make the name a way to reach the record rather than a word in a
+	// sentence; a client needs both this and `subject_id` before it links.
+	//
+	// Admissible on the same ground as the label — it is the reader's own record, already
+	// shown to them on the surface the occurrence came from. A kind the client has no
+	// page for is drawn as text, which is what an older client does with every kind.
+	SubjectType *string `json:"subject_type,omitempty"`
 
 	// Summary The occurrence's own prose when it wrote any, capped on the way to the wire. It is
 	// optional by construction: nothing validates that a finishing occurrence produced one,
@@ -17753,6 +18044,13 @@ type AttachmentExtraction struct {
 	Id      openapi_types.UUID       `json:"id"`
 	Omitted []OmittedExtractionField `json:"omitted"`
 
+	// Stalled true when a live reading has aged past the lease its worker holds: the worker
+	// died, timed out, or never claimed it, and nothing will move the reading on its
+	// own. Derived at read time, never stored. Asking for the file to be read again
+	// then starts a fresh attempt instead of joining this one. Always false once the
+	// reading is done or failed.
+	Stalled bool `json:"stalled"`
+
 	// Status queued/running are live; done and failed are terminal. `done` with zero grounded fields is a correct answer, not a failure.
 	Status AttachmentExtractionStatus `json:"status"`
 
@@ -17976,6 +18274,27 @@ type Attention struct {
 	// NeedsYou Decisions only a person can make, highest-stakes first.
 	NeedsYou []AttentionItem `json:"needs_you"`
 
+	// NoticeCases Disclosure duties nobody has discharged, soonest deadline first — the
+	// Art. 13 and Art. 14 notices a person is owed because of how their
+	// record was obtained. Each card carries which article put it there, by
+	// when the notice is owed, and WHO is owed it — unlike `dsr`, which
+	// names no subject, because a subject request is worked on the case
+	// queue's own screen and a notice case has none. The disclosure is sent
+	// from the person's page, so the card names that person and offers
+	// `open` to reach it.
+	//
+	// The deadline runs from the ACQUISITION, not from when the case was
+	// recorded, so an import carrying last year's business card arrives
+	// already late and the lane says so.
+	//
+	// Withheld — named in `lanes_omitted` — for every reader the case queue
+	// itself refuses, exactly as `dsr` is: both reads are gated on the same
+	// privacy-request object.
+	//
+	// Absent — not empty — on an installation whose feed does not read
+	// the notice queue.
+	NoticeCases *[]AttentionItem `json:"notice_cases,omitempty"`
+
 	// Notices The acting person's UNREAD notices, newest first — the durable
 	// informational line a system flow needed them to see (an automation's
 	// notify firing, a lead-SLA escalation). The card carries the notice's
@@ -18124,6 +18443,9 @@ type AttentionCounts struct {
 	MeetingsUnreported *int `json:"meetings_unreported,omitempty"`
 	NeedsYou           int  `json:"needs_you"`
 
+	// NoticeCases How many undischarged disclosure duties this lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the soonest deadlines, which is the order the lane is in.
+	NoticeCases *int `json:"notice_cases,omitempty"`
+
 	// Notices How many unread notices the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the newest.
 	Notices *int `json:"notices,omitempty"`
 
@@ -18257,6 +18579,20 @@ type AttentionItem struct {
 	// DueAt When this is due (tasks), or when it lapses (approvals).
 	DueAt *time.Time `json:"due_at,omitempty"`
 
+	// HostUserId Whose calendar a meeting came off. Sent by `source: meeting` and
+	// `source: meeting_outcome`.
+	//
+	// It names the row's OWNER, which is what lets a manager's view say whose
+	// appointment each one is rather than presenting a team's calendars as one
+	// undifferentiated day. It is a label and never an authority: what a caller may
+	// read is decided before this field is filled in, and a client must not infer a
+	// permission from it.
+	//
+	// ABSENT where no calendar claims the meeting — one booked in the app, or one
+	// captured before the host was recorded. The row then names nobody rather than
+	// guessing at an owner.
+	HostUserId *openapi_types.UUID `json:"host_user_id,omitempty"`
+
 	// Id The owning record's id, as its own endpoint spells it.
 	Id string `json:"id"`
 
@@ -18329,6 +18665,12 @@ type AttentionItem struct {
 	// three languages, so a duplicate pair sends its `kind` and `confidence`
 	// and the client writes the line in the reader's own.
 	Title *string `json:"title,omitempty"`
+
+	// Version The version of the row this item's own verbs write to, present where it names one — a
+	// task today. Carried for the reason `email_summary` carries one: a lane that offers
+	// `complete` and `snooze` has to name the row those presses condition on, or two people
+	// acting on one task each overwrite the other and neither is told.
+	Version *RowVersion `json:"version,omitempty"`
 
 	// WithPerson Whose record a `meeting` row's brief is read on. Sent only for
 	// `source: meeting`, and only where the meeting names a person this caller may
@@ -19522,11 +19864,18 @@ type CaptureSettings struct {
 	// excluded (cold start reads it). Default is ON (the testing posture).
 	AutoEnrich bool `json:"auto_enrich"`
 
-	// MailSharing The workspace's mail-sharing posture, ON by default: a captured email is readable by
-	// every colleague who can see the contact. Switched OFF, every email captured FROM THEN ON
-	// is held to its participants and the capturing mailbox owner — already-captured mail keeps
-	// the audience it has. Turning it off makes shared pipeline work hard; the setting exists
-	// for installations that accept that cost.
+	// MailSharing The workspace's capture-sharing posture, ON by default: captured correspondence is
+	// readable by every colleague who can see the contact. Switched OFF, everything captured
+	// FROM THEN ON is held to its participants and the capturing member — already-captured
+	// correspondence keeps the audience it has. Turning it off makes shared pipeline work
+	// hard; the setting exists for installations that accept that cost.
+	//
+	// It is named for mail because mail is what it governed first, and it now governs one
+	// more thing: a chat on a transport whose credential belongs to ONE member is that
+	// member's own correspondence and is held by this switch exactly as their mail is. A chat
+	// on a transport the installation SHARES — a bot, an official account — is the company's
+	// own business and is not touched, because there is no member such a message could be
+	// held for.
 	MailSharing bool `json:"mail_sharing"`
 
 	// SharedPostureAllowed Whether a seat may put their mailbox in the `shared` posture at all — colleagues
@@ -21658,6 +22007,20 @@ type CreateSignalRequestSeverity string
 // CreateSignalRequestSourceChannel defines model for CreateSignalRequest.SourceChannel.
 type CreateSignalRequestSourceChannel string
 
+// CreateStageExitCriterionRequest defines model for CreateStageExitCriterionRequest.
+type CreateStageExitCriterionRequest struct {
+	Hint *string `json:"hint,omitempty"`
+	Key  string  `json:"key"`
+
+	// Kind What KIND of fact settles a criterion. This is not decoration: the kind
+	// decides which evidence sources may satisfy it. `buyer_confirmed`,
+	// `event_held`, `document_signed` and `terms_accepted` each name something the
+	// BUYER did, so a seller's own message can never settle one.
+	Kind     StageCriterionKind `json:"kind"`
+	Label    string             `json:"label"`
+	Required *bool              `json:"required,omitempty"`
+}
+
 // CreateStageRequest defines model for CreateStageRequest.
 type CreateStageRequest struct {
 	Name           string                      `json:"name"`
@@ -22242,15 +22605,21 @@ type DealRoomInvitationIssued struct {
 	Credential          string    `json:"credential"`
 	CredentialExpiresAt time.Time `json:"credential_expires_at"`
 
-	// Delivered Whether the invitation was handed to a mail relay. False when the
-	// installation has no outbound mail configured — the participant and the
-	// credential are still recorded, and the caller is expected to deliver the
-	// link itself rather than being told the invitation failed.
-	Delivered bool `json:"delivered"`
-
 	// Participant One named person admitted to one room. Not an app_user: a participant consumes
 	// no licence, holds no CRM authority, and their whole reach is this one room.
 	Participant DealRoomParticipant `json:"participant"`
+
+	// Queued Whether a mail relay accepted the invitation for sending. False when the
+	// installation has no outbound mail configured, or the relay refused it — the
+	// participant and the credential are recorded either way, and the caller is
+	// expected to pass the link on themselves rather than being told the
+	// invitation failed.
+	//
+	// Deliberately not `delivered`: a relay accepting a message is not a mailbox
+	// receiving it, and an address that hard-bounces a second later was `queued`
+	// all the same. The one attempt is stamped onto the invitation, which the
+	// roster reports; nothing revises it afterwards.
+	Queued bool `json:"queued"`
 }
 
 // DealRoomLinkRequest defines model for DealRoomLinkRequest.
@@ -22536,6 +22905,20 @@ type DecideCommissionRequestDecision string
 
 // DedupeCandidate One DH-DDL-1 review-queue row: the canonical unordered pair, its confidence, and the detection-time evidence snapshot (DH-N-8).
 type DedupeCandidate struct {
+	// CanDecide Whether THIS caller could dispose of the pair — merge it, dismiss it,
+	// or undo a decision. Deciding needs write authority over BOTH ends:
+	// dismissing suppresses both records as duplicates for the whole
+	// workspace, and merging rewrites one into the other.
+	//
+	// A pair whose ends have different owners is therefore undecidable by
+	// any bounded seat, and it is a common shape — capture creates the
+	// near-duplicate owned by the mailbox owner while the incumbent belongs
+	// to whoever worked it. The pair is still LISTED, because the person
+	// who can see a duplicate is the person best placed to notice it; this
+	// says whether the buttons will work, which the client should gate on
+	// rather than discovering through a 403 after the POST.
+	CanDecide bool `json:"can_decide"`
+
 	// Confidence The PO-F-1/PO-F-2 fuzzy score at detection.
 	Confidence float32             `json:"confidence"`
 	CreatedAt  time.Time           `json:"created_at"`
@@ -23010,7 +23393,16 @@ type ExtractedFieldConfidence string
 // the same mutation share it. `old_value`/`new_value` are display-form strings; null means
 // the empty/created origin.
 type FieldHistoryEntry struct {
-	ActorId    string                      `json:"actor_id"`
+	ActorId string `json:"actor_id"`
+
+	// ActorName The actor's display name, resolved from `app_user` on the read path
+	// (PD-002) — the same resolution `/audit-log` and the record history
+	// do, so two rails on one screen name the same person the same way.
+	// Present only for a human actor: agent, connector and system ids name
+	// a machine, and their human authority is `on_behalf_of_name`. Null
+	// when no user row resolves — a deactivated or deleted member still has
+	// audit rows, and an honest identifier is better than an invented name.
+	ActorName  *string                     `json:"actor_name,omitempty"`
 	ActorType  FieldHistoryEntryActorType  `json:"actor_type"`
 	ChangedAt  time.Time                   `json:"changed_at"`
 	EntityId   openapi_types.UUID          `json:"entity_id"`
@@ -23022,6 +23414,9 @@ type FieldHistoryEntry struct {
 	Id       openapi_types.UUID      `json:"id"`
 	NewValue *string                 `json:"new_value,omitempty"`
 	OldValue *string                 `json:"old_value,omitempty"`
+
+	// OnBehalfOfName Resolved display name for the human whose authority a machine acted under.
+	OnBehalfOfName *string `json:"on_behalf_of_name,omitempty"`
 
 	// PassportId Agent Seat Passport that authorized the change; present for agent actors only.
 	PassportId *openapi_types.UUID `json:"passport_id,omitempty"`
@@ -26102,6 +26497,28 @@ type MyAgentGrants struct {
 	Data []MyAgentGrant `json:"data"`
 }
 
+// MyWorkingHoursResponse The caller's own working hours, and whether they are theirs or the fallback.
+type MyWorkingHoursResponse struct {
+	// Chosen False when nobody has chosen: the hours above are then the fallback —
+	// 09:00-17:00, Monday to Friday — and the screen should offer them as a
+	// starting point rather than present them as a decision somebody made.
+	Chosen bool `json:"chosen"`
+
+	// WorkingHours When one person is bookable, on their own clock.
+	//
+	// Personal, never installation-wide: people on one team sit in different
+	// countries, some work part time, and one pair of numbers set by an admin
+	// is wrong for most of them while the people it fails cannot change it.
+	// This is the setting a person's display language is: their own, and
+	// nobody else's to set.
+	//
+	// One range on every working day rather than a range per day. The two
+	// cases that prompted it — 8-18 Monday to Saturday, 9-13 Monday to
+	// Thursday — are both a range plus a set of days, and per-day hours can be
+	// added on top later without redoing this.
+	WorkingHours WorkingHours `json:"working_hours"`
+}
+
 // NewForecastCall defines model for NewForecastCall.
 type NewForecastCall struct {
 	AmountMinor int64 `json:"amount_minor"`
@@ -27022,6 +27439,11 @@ type Organization360NextStep struct {
 	LinkedPersonId *openapi_types.UUID `json:"linked_person_id,omitempty"`
 	Overdue        bool                `json:"overdue"`
 	Subject        string              `json:"subject"`
+
+	// Version The task's version, carried so the tick and the snooze beside this row can write with
+	// `If-Match`. The same reason `EmailSummary` carries one: a projection a reader can act
+	// from has to name the row it will act on, or every press is last-write-wins.
+	Version *RowVersion `json:"version,omitempty"`
 }
 
 // Organization360Project One body of work on the record page: enough to name it, say where it stands and who holds it. The full row is `GET /projects/{id}`. Shared by the company page and the person page, so a project reads the same on both.
@@ -27234,13 +27656,26 @@ type Organization360Suggestion struct {
 	// suggestions to recognize it, so a value it cannot match stores nothing.
 	Fingerprint string `json:"fingerprint"`
 
-	// Kind `no_reply` — an outbound message on a thread nobody answered.
+	// Kind The four RULE kinds, computed from the account's records with no model:
+	//
+	// `no_reply` — an outbound message on a thread nobody answered.
 	// `stalled_deal` — an open deal idle past the 60-day stall window.
 	// `no_next_step` — an active account with no open task on it.
 	// `lifecycle_conflict` — the account's own correspondence contradicts the stage it is
 	// filed under: a `contract_ended` signal stands while the record still reads as a live
 	// customer or an open opportunity. The page states the conflict rather than resolving
 	// it, because which of the two is wrong is a judgment only the reader can make.
+	//
+	// The four READ kinds, which only the account scan raises — each from words the
+	// model read in the account's own exchanges, quoted on the citation so the reader
+	// checks the claim against them:
+	//
+	// `commitment_unmet` — we said we would do something in an exchange and nothing on
+	// the record says it happened.
+	// `question_unanswered` — they asked something and no later exchange of ours answers it.
+	// `risk_raised` — they wrote something that puts the relationship or a deal at risk:
+	// a budget cut, a competitor, a decision-maker leaving.
+	// `need_raised` — they wrote about a need or a plan nothing on the record has picked up.
 	Kind Organization360SuggestionKind `json:"kind"`
 
 	// Reason The rule that fired, in the words the rep reads. Never a score.
@@ -27257,6 +27692,12 @@ type Organization360Suggestion struct {
 	// It is NOT part of the fingerprint (PO-AC-N-14). Folding it in would resurrect every
 	// suggestion every reader has ever dismissed the moment the wording changed.
 	Title *string `json:"title,omitempty"`
+
+	// WrittenBy Which writer raised this row. Absent on the 360's own rows — every one of those
+	// is a rule — and `model` on a finding the account scan read from the account's
+	// words. Never silently interchangeable: a reader weighing advice needs to know
+	// whether a comparison or a reading stands behind it.
+	WrittenBy *WrittenBy `json:"written_by,omitempty"`
 }
 
 // Organization360SuggestionActionKind `draft_reply` — open the composer on the message that went unanswered.
@@ -27264,13 +27705,26 @@ type Organization360Suggestion struct {
 // `add_task` — write the step named in `task`, through `POST /tasks`.
 type Organization360SuggestionActionKind string
 
-// Organization360SuggestionKind `no_reply` — an outbound message on a thread nobody answered.
+// Organization360SuggestionKind The four RULE kinds, computed from the account's records with no model:
+//
+// `no_reply` — an outbound message on a thread nobody answered.
 // `stalled_deal` — an open deal idle past the 60-day stall window.
 // `no_next_step` — an active account with no open task on it.
 // `lifecycle_conflict` — the account's own correspondence contradicts the stage it is
 // filed under: a `contract_ended` signal stands while the record still reads as a live
 // customer or an open opportunity. The page states the conflict rather than resolving
 // it, because which of the two is wrong is a judgment only the reader can make.
+//
+// The four READ kinds, which only the account scan raises — each from words the
+// model read in the account's own exchanges, quoted on the citation so the reader
+// checks the claim against them:
+//
+// `commitment_unmet` — we said we would do something in an exchange and nothing on
+// the record says it happened.
+// `question_unanswered` — they asked something and no later exchange of ours answers it.
+// `risk_raised` — they wrote something that puts the relationship or a deal at risk:
+// a budget cut, a competitor, a decision-maker leaving.
+// `need_raised` — they wrote about a need or a plan nothing on the record has picked up.
 type Organization360SuggestionKind string
 
 // Organization360SuggestionSubjectType defines model for Organization360Suggestion.SubjectType.
@@ -27381,6 +27835,11 @@ type OrganizationBrief struct {
 
 // OrganizationBriefEvidence One record a brief sentence was written from.
 type OrganizationBriefEvidence struct {
+	// At The instant the evidence is dated — when the message was sent, when
+	// the deal was last worked, when the signal was read. The client
+	// prints it in the reader's own calendar. Absent for a record with no
+	// date of its own.
+	At         *time.Time                          `json:"at,omitempty"`
 	EntityId   openapi_types.UUID                  `json:"entity_id"`
 	EntityType OrganizationBriefEvidenceEntityType `json:"entity_type"`
 
@@ -27391,6 +27850,20 @@ type OrganizationBriefEvidence struct {
 	// leaves this out. Descriptive only — grounding checks type and id,
 	// never the name.
 	Name *string `json:"name,omitempty"`
+
+	// Origin Where the words came from, in the writer's own language and the
+	// reader's terms — "Email you sent", "Open deal, last worked",
+	// "Read from their mail". One short phrase, never a record kind the
+	// client already labels the chip with. Descriptive only, like `name`.
+	Origin *string `json:"origin,omitempty"`
+
+	// Quote The record's own words, verbatim — a message's subject line, a
+	// signal's sentence. Never a paraphrase and never a summary: it is
+	// what a reader checks the claim against without opening the record,
+	// so a writer that has no verbatim words leaves it out. Absent when
+	// the reader may not read the record's content, even where they may
+	// know it exists.
+	Quote *string `json:"quote,omitempty"`
 }
 
 // OrganizationBriefEvidenceEntityType defines model for OrganizationBriefEvidence.EntityType.
@@ -28175,6 +28648,75 @@ type OrganizationProfileFieldListResponse struct {
 // `meeting_prep` — who to talk to, where the pipeline stands, what is unanswered.
 // `whats_changed` — what has moved on this account recently.
 type OrganizationQuestion string
+
+// OrganizationScan One reader's scan of one account: the state of the read, and what the account looks
+// like it needs — the model's stored findings and the 360's live rules as ONE list,
+// deduplicated by fingerprint, this reader's dismissals applied, capped and the cap
+// reported. Every finding cites the records it rests on and, where the model read
+// words, quotes them verbatim; a finding that could not be grounded is dropped whole,
+// never shown with its citation stripped.
+type OrganizationScan struct {
+	// DegradeReason Why the read finished below the model — server-authored, in the reader's terms,
+	// never a provider's message. Null when the model wrote the findings.
+	DegradeReason *string `json:"degrade_reason,omitempty"`
+
+	// Findings The merged advice, in priority order: the rules' own rows first in their own
+	// order, then the model's findings by the order it gave them. Dismissed rows are
+	// gone; the cap is applied here and reported in `findings_dropped`.
+	Findings []Organization360Suggestion `json:"findings"`
+
+	// FindingsDropped How many of this reader's undismissed findings the cap left out.
+	FindingsDropped int `json:"findings_dropped"`
+
+	// GeneratedAt When the stored findings were written. Null until a read has settled.
+	GeneratedAt *time.Time `json:"generated_at,omitempty"`
+
+	// GeneratedBy Which writer produced the stored findings. Absent until a read has settled.
+	GeneratedBy    *WrittenBy         `json:"generated_by,omitempty"`
+	OrganizationId openapi_types.UUID `json:"organization_id"`
+
+	// Read What the last settled read took in, so the page can say "read 14 exchanges and
+	// 3 deals" rather than "done". Null until a read has settled.
+	Read *struct {
+		Deals     int `json:"deals"`
+		Exchanges int `json:"exchanges"`
+	} `json:"read,omitempty"`
+
+	// ResumesAt When a read the AI budget deferred will try again. Null unless the scan is in
+	// flight and waiting on budget.
+	ResumesAt *time.Time `json:"resumes_at,omitempty"`
+
+	// Stale The account has changed since the stored findings were written and they have not
+	// been re-read, because the reader's last scan is younger than the rescan floor.
+	// The findings still answer; the flag is said beside them rather than instead of them.
+	Stale *bool `json:"stale,omitempty"`
+
+	// State Where this reader's scan of the account stands. `never` — this reader has not asked
+	// for one. `queued` / `running` — a read is in flight, on the rail. `done` — the
+	// model read the account and its findings are stored. `degraded` — the read finished
+	// on the deterministic floor (no model lane, the AI budget deferred past the job's
+	// patience, or a reply the grounding filter refused whole); the rules' own advice is
+	// what stands. `failed` — the read could not run at all; the rules' advice still
+	// answers, and `degrade_reason` says what stopped it.
+	State OrganizationScanState `json:"state"`
+}
+
+// OrganizationScanRequest What an ensure may ask beyond "make it current".
+type OrganizationScanRequest struct {
+	// Force Read the account again even though the stored findings' fingerprint matches or
+	// the rescan floor has not passed. A scan already in flight is still returned as
+	// it stands rather than started twice.
+	Force *bool `json:"force,omitempty"`
+}
+
+// OrganizationScanState Where this reader's scan of the account stands. `never` — this reader has not asked
+// for one. `queued` / `running` — a read is in flight, on the rail. `done` — the
+// model read the account and its findings are stored. `degraded` — the read finished
+// on the deterministic floor (no model lane, the AI budget deferred past the job's
+// patience, or a reply the grounding filter refused whole); the rules' own advice is
+// what stands. `failed` — the read could not run at all; the rules' advice still
+// answers, and `degrade_reason` says what stopped it.
+type OrganizationScanState string
 
 // OrganizationStrength defines model for OrganizationStrength.
 type OrganizationStrength struct {
@@ -31036,6 +31578,11 @@ type ReplyRecipient struct {
 
 	// FullName The name as recorded, empty when no readable person is on the message.
 	FullName string `json:"full_name"`
+
+	// MailboxUserIds Every member of this organization whose OWN mailbox this message was delivered to, in the order the imports were recorded. It says whose conversation a reply would be joining: a thread that reached only a colleague's mailbox is theirs, and a reply still goes out from the caller's own mailbox under the caller's own name.
+	// A label of where the message arrived, never a grant. It is answered only to a caller who may already read the message's content, and a seat named here is named because their credential delivered the row.
+	// Empty is an answer: a hand-logged activity was typed rather than delivered, and a row whose recorded provenance names no seat this organization still holds resolves to nobody. Always an array, never null.
+	MailboxUserIds []openapi_types.UUID `json:"mailbox_user_ids"`
 }
 
 // ReportBlock One element of a report. What fields are legal is decided by `kind`.
@@ -31437,6 +31984,14 @@ type SaveLinkedInAccountRequest struct {
 
 	// ProfileUrl Absolute http(s) URL. Empty clears the stored value.
 	ProfileUrl *string `json:"profile_url,omitempty"`
+}
+
+// SaveMyDisplayNameRequest defines model for SaveMyDisplayNameRequest.
+type SaveMyDisplayNameRequest struct {
+	// DisplayName The name colleagues see. Surrounding whitespace is trimmed and a name
+	// that is only whitespace is refused — the same bounds the invite form
+	// applies, because this writes the same column.
+	DisplayName string `json:"display_name"`
 }
 
 // SaveMyLocaleRequest defines model for SaveMyLocaleRequest.
@@ -32671,6 +33226,140 @@ type Stage struct {
 // StageSemantic defines model for Stage.Semantic.
 type StageSemantic string
 
+// StageCriterionKind What KIND of fact settles a criterion. This is not decoration: the kind
+// decides which evidence sources may satisfy it. `buyer_confirmed`,
+// `event_held`, `document_signed` and `terms_accepted` each name something the
+// BUYER did, so a seller's own message can never settle one.
+type StageCriterionKind string
+
+// StageEvidence One observation about a deal against one of its stage's exit criteria.
+// Mirrors `deal_stage_evidence`. Configuration says what a stage requires;
+// this says what was seen, and where.
+type StageEvidence struct {
+	// AuthorSide Who authored the cited thing. Computed by the engine from the activity's
+	// direction, its participants and the installation's own email domains —
+	// never claimed by a model.
+	//
+	// It settles the criteria that turn on WHOSE WORD something is:
+	// `buyer_confirmed` and `terms_accepted` take `buyer`-authored evidence
+	// and nothing else, because a message our own side wrote saying they
+	// confirmed something is our claim about them, not theirs.
+	//
+	// The other kinds turn on a recorded fact instead. A meeting either took
+	// place or it did not, and both sides sign a contract, so `event_held` and
+	// `document_signed` are judged on the record — a meeting's transcript or
+	// its status, a contract turning active — and this field rides along as
+	// the trail's account of who spoke rather than as the test.
+	AuthorSide StageEvidenceAuthorSide `json:"author_side"`
+
+	// Commitment Whether the cited text agreed to the thing or merely floated it. "We
+	// could meet Thursday" is `proposed`; "Thursday works" is `agreed`.
+	Commitment StageEvidenceCommitment `json:"commitment"`
+
+	// Confidence How sure the reader was. Absent for a deterministic writer: a record
+	// either states the fact or it does not.
+	Confidence  *float32           `json:"confidence,omitempty"`
+	CreatedAt   *time.Time         `json:"created_at,omitempty"`
+	CriterionId openapi_types.UUID `json:"criterion_id"`
+	DealId      openapi_types.UUID `json:"deal_id"`
+
+	// ExtractedBy Which writer made the claim — `deterministic`, or the model task that read it.
+	ExtractedBy string             `json:"extracted_by"`
+	Id          openapi_types.UUID `json:"id"`
+
+	// Met Whether the criterion was satisfied, not merely discussed.
+	Met        bool      `json:"met"`
+	ObservedAt time.Time `json:"observed_at"`
+
+	// RefutedAt When a human marked this claim incorrect. The row survives: why a
+	// stage move was reversed is a question asked later.
+	RefutedAt *time.Time          `json:"refuted_at,omitempty"`
+	RefutedBy *openapi_types.UUID `json:"refuted_by,omitempty"`
+
+	// Snippet The cited words, at most 500 characters.
+	Snippet *string `json:"snippet,omitempty"`
+
+	// SourceId The activity, contract or deal-room decision this was read from.
+	SourceId openapi_types.UUID `json:"source_id"`
+
+	// SourceLines 1-based transcript lines, when the claim quotes one.
+	SourceLines *[]int `json:"source_lines,omitempty"`
+
+	// SourceType What kind of record the observation was read from.
+	SourceType StageEvidenceSource `json:"source_type"`
+	UpdatedAt  *time.Time          `json:"updated_at,omitempty"`
+	Version    *int64              `json:"version,omitempty"`
+}
+
+// StageEvidenceAuthorSide Who authored the cited thing. Computed by the engine from the activity's
+// direction, its participants and the installation's own email domains —
+// never claimed by a model.
+//
+// It settles the criteria that turn on WHOSE WORD something is:
+// `buyer_confirmed` and `terms_accepted` take `buyer`-authored evidence
+// and nothing else, because a message our own side wrote saying they
+// confirmed something is our claim about them, not theirs.
+//
+// The other kinds turn on a recorded fact instead. A meeting either took
+// place or it did not, and both sides sign a contract, so `event_held` and
+// `document_signed` are judged on the record — a meeting's transcript or
+// its status, a contract turning active — and this field rides along as
+// the trail's account of who spoke rather than as the test.
+type StageEvidenceAuthorSide string
+
+// StageEvidenceCommitment Whether the cited text agreed to the thing or merely floated it. "We
+// could meet Thursday" is `proposed`; "Thursday works" is `agreed`.
+type StageEvidenceCommitment string
+
+// StageEvidenceListResponse defines model for StageEvidenceListResponse.
+type StageEvidenceListResponse struct {
+	Data []StageEvidence `json:"data"`
+	Page PageInfo        `json:"page"`
+}
+
+// StageEvidenceSource What kind of record the observation was read from.
+type StageEvidenceSource string
+
+// StageExitCriterion One thing that must be true of a deal before it leaves a stage. Mirrors the
+// `stage_exit_criterion` table. Configuration, not observation: whether a
+// particular deal has met it is evidence recorded elsewhere.
+type StageExitCriterion struct {
+	ArchivedAt *time.Time `json:"archived_at,omitempty"`
+	CreatedAt  *time.Time `json:"created_at,omitempty"`
+
+	// Hint Guidance for whoever reviews the evidence.
+	Hint *string            `json:"hint,omitempty"`
+	Id   openapi_types.UUID `json:"id"`
+
+	// Key The stable machine name an evidence extractor cites. Unique among the
+	// stage's live criteria and never editable; archiving frees it for reuse.
+	Key string `json:"key"`
+
+	// Kind What KIND of fact settles a criterion. This is not decoration: the kind
+	// decides which evidence sources may satisfy it. `buyer_confirmed`,
+	// `event_held`, `document_signed` and `terms_accepted` each name something the
+	// BUYER did, so a seller's own message can never settle one.
+	Kind StageCriterionKind `json:"kind"`
+
+	// Label What a human reads.
+	Label string `json:"label"`
+
+	// Position Order within the stage.
+	Position int `json:"position"`
+
+	// Required An optional criterion is gathered and shown but never blocks.
+	Required  bool               `json:"required"`
+	StageId   openapi_types.UUID `json:"stage_id"`
+	UpdatedAt *time.Time         `json:"updated_at,omitempty"`
+	Version   *int64             `json:"version,omitempty"`
+}
+
+// StageExitCriterionListResponse defines model for StageExitCriterionListResponse.
+type StageExitCriterionListResponse struct {
+	Data []StageExitCriterion `json:"data"`
+	Page PageInfo             `json:"page"`
+}
+
 // StageListResponse defines model for StageListResponse.
 type StageListResponse struct {
 	Data []Stage  `json:"data"`
@@ -33286,7 +33975,7 @@ type UpdateCaptureSettingsRequest struct {
 	// AutoEnrich Toggle captured-organization auto-enrichment.
 	AutoEnrich *bool `json:"auto_enrich,omitempty"`
 
-	// MailSharing Toggle the workspace mail-sharing posture; affects mail captured from now on.
+	// MailSharing Toggle the workspace mail-sharing posture; affects correspondence captured from now on — mail, and chat on a transport whose credential belongs to one member.
 	MailSharing *bool `json:"mail_sharing,omitempty"`
 
 	// SharedPostureAllowed Allow a seat to put their mailbox in the `shared` posture. Off by default; see CaptureSettings.shared_posture_allowed for what turning it on asserts.
@@ -33634,11 +34323,57 @@ type UpdatePersonRequest struct {
 	// `Person360.dead_addresses` already names which address bounced; until now the
 	// contract's own remedy for that was to visit the person page, because the write
 	// existed on create and nowhere else.
-	Phones               *[]PersonPhoneInput     `json:"phones,omitempty"`
-	Social               *map[string]interface{} `json:"social,omitempty"`
-	Title                *string                 `json:"title,omitempty"`
-	AdditionalProperties map[string]interface{}  `json:"-"`
+	Phones *[]PersonPhoneInput     `json:"phones,omitempty"`
+	Social *map[string]interface{} `json:"social,omitempty"`
+	Title  *string                 `json:"title,omitempty"`
+
+	// Visibility Who may see this contact: `workspace` for everyone in the organization,
+	// `owner` for the person named by `owner_id` alone.
+	//
+	// An ORDINARY field, writable in BOTH directions by anybody the write gate
+	// admits. It used to move one way only, through `POST /people/{id}/publish`,
+	// on the reasoning that a colleague may already have acted on seeing the
+	// contact. That reasoning assumed a human made the disclosure. The sender
+	// classifier publishes a contact it judges a real counterparty without
+	// anybody approving it, so the common case was a machine making a decision
+	// no human could undo — the row's own owner included.
+	//
+	// Narrowing a contact does not retract what was already done with it. Mail,
+	// meetings and deals filed against it keep their own audiences, and a
+	// colleague mid-conversation keeps their thread; what changes is who finds
+	// the contact from here on.
+	//
+	// A contact narrowed to `owner` stays with the owner it already names;
+	// narrowing does not reassign it to whoever pressed the button. A row that
+	// names nobody is not reachable through this field at all — an unowned
+	// record is nobody's to change until somebody claims it, which the write
+	// gate already enforces for every field on this endpoint.
+	Visibility           *UpdatePersonRequestVisibility `json:"visibility,omitempty"`
+	AdditionalProperties map[string]interface{}         `json:"-"`
 }
+
+// UpdatePersonRequestVisibility Who may see this contact: `workspace` for everyone in the organization,
+// `owner` for the person named by `owner_id` alone.
+//
+// An ORDINARY field, writable in BOTH directions by anybody the write gate
+// admits. It used to move one way only, through `POST /people/{id}/publish`,
+// on the reasoning that a colleague may already have acted on seeing the
+// contact. That reasoning assumed a human made the disclosure. The sender
+// classifier publishes a contact it judges a real counterparty without
+// anybody approving it, so the common case was a machine making a decision
+// no human could undo — the row's own owner included.
+//
+// Narrowing a contact does not retract what was already done with it. Mail,
+// meetings and deals filed against it keep their own audiences, and a
+// colleague mid-conversation keeps their thread; what changes is who finds
+// the contact from here on.
+//
+// A contact narrowed to `owner` stays with the owner it already names;
+// narrowing does not reassign it to whoever pressed the button. A row that
+// names nobody is not reachable through this field at all — an unowned
+// record is nobody's to change until somebody claims it, which the write
+// gate already enforces for every field on this endpoint.
+type UpdatePersonRequestVisibility string
 
 // UpdatePipelineRequest defines model for UpdatePipelineRequest.
 type UpdatePipelineRequest struct {
@@ -33727,6 +34462,24 @@ type UpdateSignalRequestSeverity string
 
 // UpdateSignalRequestStatus defines model for UpdateSignalRequest.Status.
 type UpdateSignalRequestStatus string
+
+// UpdateStageExitCriterionRequest The `key` is absent by design — see the operation description. So is
+// `position`: moving one criterion is only half a reorder, because the
+// row it displaces is not renumbered, and two criteria sharing a slot
+// order arbitrarily. A stage's criteria are appended in the order they
+// are added, and closing the gap on an archive is what keeps that order
+// contiguous.
+type UpdateStageExitCriterionRequest struct {
+	Hint *string `json:"hint,omitempty"`
+
+	// Kind What KIND of fact settles a criterion. This is not decoration: the kind
+	// decides which evidence sources may satisfy it. `buyer_confirmed`,
+	// `event_held`, `document_signed` and `terms_accepted` each name something the
+	// BUYER did, so a seller's own message can never settle one.
+	Kind     *StageCriterionKind `json:"kind,omitempty"`
+	Label    *string             `json:"label,omitempty"`
+	Required *bool               `json:"required,omitempty"`
+}
 
 // UpdateStageRequest defines model for UpdateStageRequest.
 type UpdateStageRequest struct {
@@ -34766,6 +35519,37 @@ type WeeklyScorecardLeadBlock struct {
 	Promoted               int `json:"promoted"`
 }
 
+// WorkingHours When one person is bookable, on their own clock.
+//
+// Personal, never installation-wide: people on one team sit in different
+// countries, some work part time, and one pair of numbers set by an admin
+// is wrong for most of them while the people it fails cannot change it.
+// This is the setting a person's display language is: their own, and
+// nobody else's to set.
+//
+// One range on every working day rather than a range per day. The two
+// cases that prompted it — 8-18 Monday to Saturday, 9-13 Monday to
+// Thursday — are both a range plus a set of days, and per-day hours can be
+// added on top later without redoing this.
+type WorkingHours struct {
+	// Days The days worked, as ISO-8601 weekday numbers — 1 is Monday.
+	Days []int `json:"days"`
+
+	// EndTime The minute the working day ends, exclusive. `24:00` is the honest
+	// spelling of "until midnight" and is why this is not the same pattern
+	// as `start_time`.
+	EndTime string `json:"end_time"`
+
+	// StartTime The first minute of the working day, `HH:MM` on the person's own clock.
+	StartTime string `json:"start_time"`
+
+	// Timezone The IANA zone the two times are read on. A person who has never
+	// chosen one is read on the installation's reporting timezone, which
+	// is what makes the unset case work rather than scheduling everybody
+	// on UTC.
+	Timezone string `json:"timezone"`
+}
+
 // Worklist The rep's day, ranked. One list rather than fourteen lanes, because a reader
 // cannot compare the position of one lane with another to work out that an item
 // several screens down matters more.
@@ -35475,6 +36259,12 @@ type WorklistItem struct {
 	// a deterministic rule stated as a belief is a lie about where the sentence came
 	// from.
 	Verdict *WorklistDealVerdict `json:"verdict,omitempty"`
+
+	// Version The version of the row this item's own verbs write to, present where it names one — a
+	// task today. Carried for the reason `email_summary` carries one: a lane that offers
+	// `complete` and `snooze` has to name the row those presses condition on, or two people
+	// acting on one task each overwrite the other and neither is told.
+	Version *RowVersion `json:"version,omitempty"`
 
 	// WithPerson Whose record a `meeting` row's brief is read on, carried out from
 	// `AttentionItem.with_person`.
@@ -40146,6 +40936,50 @@ type UpdateStageParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// ListStageExitCriteriaParams defines parameters for ListStageExitCriteria.
+type ListStageExitCriteriaParams struct {
+	IncludeArchived *bool `form:"include_archived,omitempty" json:"include_archived,omitempty"`
+}
+
+// CreateStageExitCriterionParams defines parameters for CreateStageExitCriterion.
+type CreateStageExitCriterionParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// ArchiveStageExitCriterionParams defines parameters for ArchiveStageExitCriterion.
+type ArchiveStageExitCriterionParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
+// UpdateStageExitCriterionParams defines parameters for UpdateStageExitCriterion.
+type UpdateStageExitCriterionParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
 // ListTagsParams defines parameters for ListTags.
 type ListTagsParams struct {
 	// IncludeArchived Include soft-deleted (archived) rows. Default false.
@@ -41112,6 +41946,9 @@ type SetMyAgentGrantJSONRequestBody = SetMyAgentGrantRequest
 // SaveMyBriefDeliveryJSONRequestBody defines body for SaveMyBriefDelivery for application/json ContentType.
 type SaveMyBriefDeliveryJSONRequestBody = BriefDelivery
 
+// SaveMyDisplayNameJSONRequestBody defines body for SaveMyDisplayName for application/json ContentType.
+type SaveMyDisplayNameJSONRequestBody = SaveMyDisplayNameRequest
+
 // SaveMyEmailSignatureJSONRequestBody defines body for SaveMyEmailSignature for application/json ContentType.
 type SaveMyEmailSignatureJSONRequestBody = SaveEmailSignatureRequest
 
@@ -41123,6 +41960,9 @@ type ImportLinkedInConnectionsMultipartRequestBody ImportLinkedInConnectionsMult
 
 // SaveMyLocaleJSONRequestBody defines body for SaveMyLocale for application/json ContentType.
 type SaveMyLocaleJSONRequestBody = SaveMyLocaleRequest
+
+// SaveMyWorkingHoursJSONRequestBody defines body for SaveMyWorkingHours for application/json ContentType.
+type SaveMyWorkingHoursJSONRequestBody = WorkingHours
 
 // RaiseNoticeJSONRequestBody defines body for RaiseNotice for application/json ContentType.
 type RaiseNoticeJSONRequestBody = RaiseNoticeRequest
@@ -41186,6 +42026,9 @@ type UpsertPartnerJSONRequestBody = UpsertPartnerRequest
 
 // UpdateOrganizationProfileFieldJSONRequestBody defines body for UpdateOrganizationProfileField for application/json ContentType.
 type UpdateOrganizationProfileFieldJSONRequestBody = UpdateOrganizationProfileFieldRequest
+
+// EnsureOrganizationScanJSONRequestBody defines body for EnsureOrganizationScan for application/json ContentType.
+type EnsureOrganizationScanJSONRequestBody = OrganizationScanRequest
 
 // DismissOrganizationSuggestionJSONRequestBody defines body for DismissOrganizationSuggestion for application/json ContentType.
 type DismissOrganizationSuggestionJSONRequestBody DismissOrganizationSuggestionJSONBody
@@ -41363,6 +42206,12 @@ type CreateStageJSONRequestBody = CreateStageRequest
 
 // UpdateStageJSONRequestBody defines body for UpdateStage for application/json ContentType.
 type UpdateStageJSONRequestBody = UpdateStageRequest
+
+// CreateStageExitCriterionJSONRequestBody defines body for CreateStageExitCriterion for application/json ContentType.
+type CreateStageExitCriterionJSONRequestBody = CreateStageExitCriterionRequest
+
+// UpdateStageExitCriterionJSONRequestBody defines body for UpdateStageExitCriterion for application/json ContentType.
+type UpdateStageExitCriterionJSONRequestBody = UpdateStageExitCriterionRequest
 
 // CreateTagJSONRequestBody defines body for CreateTag for application/json ContentType.
 type CreateTagJSONRequestBody = CreateTagRequest
@@ -48700,6 +49549,14 @@ func (a *UpdatePersonRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "title")
 	}
 
+	if raw, found := object["visibility"]; found {
+		err = json.Unmarshal(raw, &a.Visibility)
+		if err != nil {
+			return fmt.Errorf("error reading 'visibility': %w", err)
+		}
+		delete(object, "visibility")
+	}
+
 	if len(object) != 0 {
 		a.AdditionalProperties = make(map[string]interface{})
 		for fieldName, fieldBuf := range object {
@@ -48779,6 +49636,13 @@ func (a UpdatePersonRequest) MarshalJSON() ([]byte, error) {
 		object["title"], err = json.Marshal(a.Title)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'title': %w", err)
+		}
+	}
+
+	if a.Visibility != nil {
+		object["visibility"], err = json.Marshal(a.Visibility)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'visibility': %w", err)
 		}
 	}
 
@@ -49901,6 +50765,9 @@ type ServerInterface interface {
 	// Read the buying roles out of what this deal's contacts have written.
 	// (POST /deals/{id}/role-proposals)
 	ProposeDealRoles(w http.ResponseWriter, r *http.Request, id Id)
+	// What has been observed about this deal against its stage's criteria.
+	// (GET /deals/{id}/stage-evidence)
+	ListStageEvidence(w http.ResponseWriter, r *http.Request, id Id)
 	// List a deal's stakeholders (deal↔person relationships).
 	// (GET /deals/{id}/stakeholders)
 	ListDealStakeholders(w http.ResponseWriter, r *http.Request, id Id)
@@ -50174,6 +51041,9 @@ type ServerInterface interface {
 	// Choose what the product may send you.
 	// (PUT /me/brief-delivery)
 	SaveMyBriefDelivery(w http.ResponseWriter, r *http.Request)
+	// Change the name colleagues see you by.
+	// (PUT /me/display-name)
+	SaveMyDisplayName(w http.ResponseWriter, r *http.Request)
 	// The sign-off appended to mail you send.
 	// (GET /me/email-signature)
 	GetMyEmailSignature(w http.ResponseWriter, r *http.Request)
@@ -50195,6 +51065,12 @@ type ServerInterface interface {
 	// Choose the language your own interface is in.
 	// (PUT /me/locale)
 	SaveMyLocale(w http.ResponseWriter, r *http.Request)
+	// When you are bookable.
+	// (GET /me/working-hours)
+	GetMyWorkingHours(w http.ResponseWriter, r *http.Request)
+	// Choose the hours and days you are bookable.
+	// (PUT /me/working-hours)
+	SaveMyWorkingHours(w http.ResponseWriter, r *http.Request)
 	// Raise a coaching notice for a colleague. It lands in their Worklist's notices lane.
 	// (POST /notices)
 	RaiseNotice(w http.ResponseWriter, r *http.Request)
@@ -50381,6 +51257,12 @@ type ServerInterface interface {
 	// Confirm a profile field without changing its value.
 	// (POST /organizations/{id}/profile-fields/{field}/confirm)
 	ConfirmOrganizationProfileField(w http.ResponseWriter, r *http.Request, id Id, field ProfileFieldKey, params ConfirmOrganizationProfileFieldParams)
+	// What this account needs, as the model last read it for this reader.
+	// (GET /organizations/{id}/scan)
+	GetOrganizationScan(w http.ResponseWriter, r *http.Request, id Id)
+	// Make sure this reader's scan of the account is current, reading it again only when the account changed.
+	// (POST /organizations/{id}/scan)
+	EnsureOrganizationScan(w http.ResponseWriter, r *http.Request, id Id)
 	// The newest deep read on this account, so a crawl that failed after the rep navigated away is still visible.
 	// (GET /organizations/{id}/site-reads/latest)
 	GetLatestSiteRead(w http.ResponseWriter, r *http.Request, id Id)
@@ -50834,6 +51716,18 @@ type ServerInterface interface {
 	// Update a stage (rename / reorder / probability).
 	// (PATCH /stages/{id})
 	UpdateStage(w http.ResponseWriter, r *http.Request, id Id, params UpdateStageParams)
+	// What a deal must satisfy before it leaves this stage.
+	// (GET /stages/{id}/exit-criteria)
+	ListStageExitCriteria(w http.ResponseWriter, r *http.Request, id Id, params ListStageExitCriteriaParams)
+	// Add an exit criterion to a stage.
+	// (POST /stages/{id}/exit-criteria)
+	CreateStageExitCriterion(w http.ResponseWriter, r *http.Request, id Id, params CreateStageExitCriterionParams)
+	// Remove a criterion from its stage (soft delete; archive is the delete).
+	// (DELETE /stages/{id}/exit-criteria/{criterion_id})
+	ArchiveStageExitCriterion(w http.ResponseWriter, r *http.Request, id Id, criterionId openapi_types.UUID, params ArchiveStageExitCriterionParams)
+	// Edit a criterion's label, kind, requiredness, hint or position.
+	// (PATCH /stages/{id}/exit-criteria/{criterion_id})
+	UpdateStageExitCriterion(w http.ResponseWriter, r *http.Request, id Id, criterionId openapi_types.UUID, params UpdateStageExitCriterionParams)
 	// List tags.
 	// (GET /tags)
 	ListTags(w http.ResponseWriter, r *http.Request, params ListTagsParams)
@@ -52352,6 +53246,12 @@ func (_ Unimplemented) ProposeDealRoles(w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// What has been observed about this deal against its stage's criteria.
+// (GET /deals/{id}/stage-evidence)
+func (_ Unimplemented) ListStageEvidence(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // List a deal's stakeholders (deal↔person relationships).
 // (GET /deals/{id}/stakeholders)
 func (_ Unimplemented) ListDealStakeholders(w http.ResponseWriter, r *http.Request, id Id) {
@@ -52898,6 +53798,12 @@ func (_ Unimplemented) SaveMyBriefDelivery(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Change the name colleagues see you by.
+// (PUT /me/display-name)
+func (_ Unimplemented) SaveMyDisplayName(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // The sign-off appended to mail you send.
 // (GET /me/email-signature)
 func (_ Unimplemented) GetMyEmailSignature(w http.ResponseWriter, r *http.Request) {
@@ -52937,6 +53843,18 @@ func (_ Unimplemented) GetMyLinkedInReach(w http.ResponseWriter, r *http.Request
 // Choose the language your own interface is in.
 // (PUT /me/locale)
 func (_ Unimplemented) SaveMyLocale(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// When you are bookable.
+// (GET /me/working-hours)
+func (_ Unimplemented) GetMyWorkingHours(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Choose the hours and days you are bookable.
+// (PUT /me/working-hours)
+func (_ Unimplemented) SaveMyWorkingHours(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -53309,6 +54227,18 @@ func (_ Unimplemented) UpdateOrganizationProfileField(w http.ResponseWriter, r *
 // Confirm a profile field without changing its value.
 // (POST /organizations/{id}/profile-fields/{field}/confirm)
 func (_ Unimplemented) ConfirmOrganizationProfileField(w http.ResponseWriter, r *http.Request, id Id, field ProfileFieldKey, params ConfirmOrganizationProfileFieldParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What this account needs, as the model last read it for this reader.
+// (GET /organizations/{id}/scan)
+func (_ Unimplemented) GetOrganizationScan(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Make sure this reader's scan of the account is current, reading it again only when the account changed.
+// (POST /organizations/{id}/scan)
+func (_ Unimplemented) EnsureOrganizationScan(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -54215,6 +55145,30 @@ func (_ Unimplemented) GetStage(w http.ResponseWriter, r *http.Request, id Id) {
 // Update a stage (rename / reorder / probability).
 // (PATCH /stages/{id})
 func (_ Unimplemented) UpdateStage(w http.ResponseWriter, r *http.Request, id Id, params UpdateStageParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What a deal must satisfy before it leaves this stage.
+// (GET /stages/{id}/exit-criteria)
+func (_ Unimplemented) ListStageExitCriteria(w http.ResponseWriter, r *http.Request, id Id, params ListStageExitCriteriaParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Add an exit criterion to a stage.
+// (POST /stages/{id}/exit-criteria)
+func (_ Unimplemented) CreateStageExitCriterion(w http.ResponseWriter, r *http.Request, id Id, params CreateStageExitCriterionParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Remove a criterion from its stage (soft delete; archive is the delete).
+// (DELETE /stages/{id}/exit-criteria/{criterion_id})
+func (_ Unimplemented) ArchiveStageExitCriterion(w http.ResponseWriter, r *http.Request, id Id, criterionId openapi_types.UUID, params ArchiveStageExitCriterionParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Edit a criterion's label, kind, requiredness, hint or position.
+// (PATCH /stages/{id}/exit-criteria/{criterion_id})
+func (_ Unimplemented) UpdateStageExitCriterion(w http.ResponseWriter, r *http.Request, id Id, criterionId openapi_types.UUID, params UpdateStageExitCriterionParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -63385,6 +64339,40 @@ func (siw *ServerInterfaceWrapper) ProposeDealRoles(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// ListStageEvidence operation middleware
+func (siw *ServerInterfaceWrapper) ListStageEvidence(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListStageEvidence(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListDealStakeholders operation middleware
 func (siw *ServerInterfaceWrapper) ListDealStakeholders(w http.ResponseWriter, r *http.Request) {
 
@@ -66746,6 +67734,26 @@ func (siw *ServerInterfaceWrapper) SaveMyBriefDelivery(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
+// SaveMyDisplayName operation middleware
+func (siw *ServerInterfaceWrapper) SaveMyDisplayName(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SaveMyDisplayName(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetMyEmailSignature operation middleware
 func (siw *ServerInterfaceWrapper) GetMyEmailSignature(w http.ResponseWriter, r *http.Request) {
 
@@ -66896,6 +67904,46 @@ func (siw *ServerInterfaceWrapper) SaveMyLocale(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SaveMyLocale(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMyWorkingHours operation middleware
+func (siw *ServerInterfaceWrapper) GetMyWorkingHours(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMyWorkingHours(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SaveMyWorkingHours operation middleware
+func (siw *ServerInterfaceWrapper) SaveMyWorkingHours(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SaveMyWorkingHours(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -70342,6 +71390,70 @@ func (siw *ServerInterfaceWrapper) ConfirmOrganizationProfileField(w http.Respon
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ConfirmOrganizationProfileField(w, r, id, field, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetOrganizationScan operation middleware
+func (siw *ServerInterfaceWrapper) GetOrganizationScan(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetOrganizationScan(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// EnsureOrganizationScan operation middleware
+func (siw *ServerInterfaceWrapper) EnsureOrganizationScan(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.EnsureOrganizationScan(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -77044,6 +78156,242 @@ func (siw *ServerInterfaceWrapper) UpdateStage(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// ListStageExitCriteria operation middleware
+func (siw *ServerInterfaceWrapper) ListStageExitCriteria(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListStageExitCriteriaParams
+
+	// ------------- Optional query parameter "include_archived" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "include_archived", r.URL.Query(), &params.IncludeArchived, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "include_archived"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "include_archived", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListStageExitCriteria(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateStageExitCriterion operation middleware
+func (siw *ServerInterfaceWrapper) CreateStageExitCriterion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateStageExitCriterionParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateStageExitCriterion(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ArchiveStageExitCriterion operation middleware
+func (siw *ServerInterfaceWrapper) ArchiveStageExitCriterion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "criterion_id" -------------
+	var criterionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "criterion_id", chi.URLParam(r, "criterion_id"), &criterionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "criterion_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ArchiveStageExitCriterionParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ArchiveStageExitCriterion(w, r, id, criterionId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateStageExitCriterion operation middleware
+func (siw *ServerInterfaceWrapper) UpdateStageExitCriterion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "criterion_id" -------------
+	var criterionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "criterion_id", chi.URLParam(r, "criterion_id"), &criterionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "criterion_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UpdateStageExitCriterionParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateStageExitCriterion(w, r, id, criterionId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListTags operation middleware
 func (siw *ServerInterfaceWrapper) ListTags(w http.ResponseWriter, r *http.Request) {
 
@@ -80991,6 +82339,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/deals/{id}/role-proposals", wrapper.ProposeDealRoles)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/deals/{id}/stage-evidence", wrapper.ListStageEvidence)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deals/{id}/stakeholders", wrapper.ListDealStakeholders)
 	})
 	r.Group(func(r chi.Router) {
@@ -81264,6 +82615,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Put(options.BaseURL+"/me/brief-delivery", wrapper.SaveMyBriefDelivery)
 	})
 	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/me/display-name", wrapper.SaveMyDisplayName)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me/email-signature", wrapper.GetMyEmailSignature)
 	})
 	r.Group(func(r chi.Router) {
@@ -81283,6 +82637,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/me/locale", wrapper.SaveMyLocale)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/me/working-hours", wrapper.GetMyWorkingHours)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/me/working-hours", wrapper.SaveMyWorkingHours)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/notices", wrapper.RaiseNotice)
@@ -81469,6 +82829,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/organizations/{id}/profile-fields/{field}/confirm", wrapper.ConfirmOrganizationProfileField)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/organizations/{id}/scan", wrapper.GetOrganizationScan)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/organizations/{id}/scan", wrapper.EnsureOrganizationScan)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/organizations/{id}/site-reads/latest", wrapper.GetLatestSiteRead)
@@ -81922,6 +83288,18 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/stages/{id}", wrapper.UpdateStage)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/stages/{id}/exit-criteria", wrapper.ListStageExitCriteria)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/stages/{id}/exit-criteria", wrapper.CreateStageExitCriterion)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/stages/{id}/exit-criteria/{criterion_id}", wrapper.ArchiveStageExitCriterion)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/stages/{id}/exit-criteria/{criterion_id}", wrapper.UpdateStageExitCriterion)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/tags", wrapper.ListTags)

@@ -31,6 +31,11 @@ type buyerRoom struct {
 	roomID     string
 	credential string
 	email      string
+	// queued is what the invitation said about its own mail: whether a relay
+	// accepted it, never that a mailbox received it. Carried here so the suite
+	// asserting that distinction shares this helper rather than growing a
+	// second copy of the same three requests.
+	queued bool
 }
 
 // openRoomWithABuyer creates a room and invites one buyer into it. There is no
@@ -58,7 +63,15 @@ func openRoomWithABuyer(t *testing.T, e *apptest.AppEnv) buyerRoom {
 	if credential == "" {
 		t.Fatalf("invite returned no credential: %v", issued)
 	}
-	return buyerRoom{roomID: roomID, credential: credential, email: "laura@buyer.example"}
+	// Asserted rather than defaulted: `queued` is a required response property,
+	// and reading a missing one as false would let the two tests that expect
+	// false pass against a response that had dropped the field entirely.
+	queued, present := issued["queued"].(bool)
+	if !present {
+		t.Fatalf("the issued invitation carries no boolean `queued`, so nothing says whether the "+
+			"seller must pass the link on by hand: %v", issued)
+	}
+	return buyerRoom{roomID: roomID, credential: credential, email: "laura@buyer.example", queued: queued}
 }
 
 func bearer(token string) map[string]string {
@@ -148,8 +161,12 @@ func TestABuyerEntersTheRoomReadsTheReleaseAndSpeaks(t *testing.T) {
 		t.Fatalf("paused me = %d %v, want access paused and no room", status, paused)
 	}
 	var refused AnyMap
-	if status := publicCall(t, e, "POST", "/v1/public/rooms/threads", AnyMap{"body": "still there?"}, bearer(token), &refused); status != http.StatusUnprocessableEntity || refused["code"] != "deal_room_paused" {
-		t.Fatalf("comment while paused = %d %v, want 422 deal_room_paused", status, refused)
+	// 409, not 422: nothing is wrong with what the buyer sent. The room's state
+	// conflicts with the write, and only the seller can clear it — which is a
+	// different thing to tell a client than "we could not process your input"
+	// (#2269).
+	if status := publicCall(t, e, "POST", "/v1/public/rooms/threads", AnyMap{"body": "still there?"}, bearer(token), &refused); status != http.StatusConflict || refused["code"] != "deal_room_paused" {
+		t.Fatalf("comment while paused = %d %v, want 409 deal_room_paused", status, refused)
 	}
 
 	// Revoke: the next request is refused.
@@ -418,9 +435,10 @@ func TestTheConversationFlowsBothWaysAndADocumentIsNeverConfirmed(t *testing.T) 
 	if status := e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/threads/"+requiredID+"/resolve", nil, nil, nil); status != http.StatusOK {
 		t.Fatalf("resolve = %d", status)
 	}
-	// A resolved thread takes no more replies.
-	if status := publicCall(t, e, "POST", "/v1/public/rooms/threads/"+requiredID+"/comments", AnyMap{"body": "one more"}, bearer(rita), nil); status != http.StatusUnprocessableEntity {
-		t.Fatalf("reply on resolved = %d, want 422", status)
+	// A resolved thread takes no more replies — a conflict with the thread's
+	// state rather than a fault in the reply, and answered as one.
+	if status := publicCall(t, e, "POST", "/v1/public/rooms/threads/"+requiredID+"/comments", AnyMap{"body": "one more"}, bearer(rita), nil); status != http.StatusConflict {
+		t.Fatalf("reply on resolved = %d, want 409", status)
 	}
 
 	// The seller has no decisions read either: the whole surface went with the
@@ -448,8 +466,8 @@ func TestTheConversationFlowsBothWaysAndADocumentIsNeverConfirmed(t *testing.T) 
 
 	// Paused: the conversation reads, but nobody on the buyer's side writes.
 	e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/pause", AnyMap{}, nil, nil)
-	if status := publicCall(t, e, "POST", "/v1/public/rooms/threads", AnyMap{"body": "hello?"}, bearer(laura), nil); status != http.StatusUnprocessableEntity {
-		t.Fatalf("thread while paused = %d, want 422", status)
+	if status := publicCall(t, e, "POST", "/v1/public/rooms/threads", AnyMap{"body": "hello?"}, bearer(laura), nil); status != http.StatusConflict {
+		t.Fatalf("thread while paused = %d, want 409", status)
 	}
 }
 

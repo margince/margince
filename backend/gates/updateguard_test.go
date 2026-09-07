@@ -132,7 +132,7 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	// helper shared by three write paths puts between the call site and
 	// storekit.LockRow.
 	"internal/modules/activities:SetAudience":              "held FOR UPDATE via lockActivityForWrite, one hop past what this witness's AST walk follows — see the shared rationale above",
-	"internal/modules/activities:UpdateActivity":           "held FOR UPDATE via lockActivityForWrite, one hop past what this witness's AST walk follows — see the shared rationale above",
+	"internal/modules/activities:updateActivityInTx":       "held FOR UPDATE via lockActivityForWrite, one hop past what this witness's AST walk follows — see the shared rationale above",
 	"internal/modules/activities:RefuseArchiveActivity":    "held FOR UPDATE via lockActivityForWrite, one hop past what this witness's AST walk follows — see the shared rationale above; this self-touch (SET archived_at = archived_at) never commits, since the trigger it deliberately provokes refuses every write to the held row it runs against",
 	"internal/modules/activities:finalizeRelinkedActivity": "the row is already held FOR UPDATE by relinkActivityRow, its only caller, from before this function runs — the guard is the caller's lock, held across the whole transaction, not a second one taken here; this witness's AST walk sees neither the caller's lockActivityForWrite (a second hop) nor that this function is only ever reached under it",
 	// This IS a compare-and-set write; what this gate cannot see is the shape it
@@ -216,7 +216,6 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/privacy:anonymizeLeadTwins":         "terminal absolute write: the same erasure statement as anonymizeSubjectRows, extracted for length — it overwrites the lead twin's PII columns regardless of concurrent state, by design",
 	"internal/modules/privacy:archiveActivity":            "terminal absolute write: the retention sweep archives an over-age activity regardless of concurrent state, by design — a concurrent edit does not make the record younger",
 	"internal/modules/privacy:archiveDeal":                "terminal absolute write: the retention sweep archives an over-age lost/won deal regardless of concurrent state, by design",
-	"internal/modules/privacy:anonymizeLead":              "terminal absolute write: the retention sweep anonymizes an over-age lead regardless of concurrent state, by design, and its selector already excludes an already-anonymized row",
 	"internal/modules/privacy:eraseActivityContent":       "terminal absolute write: the sweep's activity/erase action empties the body and stamps the tombstone subject regardless of concurrent state, by design",
 	"internal/modules/privacy:anonymizePersonRecord":      "terminal absolute write: the sweep's person/anonymize action overwrites the PII columns regardless of concurrent state, by design",
 

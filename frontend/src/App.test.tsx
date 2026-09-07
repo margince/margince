@@ -28,7 +28,7 @@ beforeEach(() => {
     value: ["fr-FR"],
     configurable: true,
   });
-  // Only the session probe succeeds; the home screen's own data calls fail and
+  // Only the session probe succeeds; the Brief's own data calls fail and
   // fall to their QueryGate error state (the rail still renders — that is what
   // this test asserts). Routing by URL keeps the stub honest per endpoint.
   vi.stubGlobal("fetch", vi.fn(sessionOnlyFetch()));
@@ -294,7 +294,7 @@ describe("locale switch", () => {
       "Deutsch",
     );
 
-    window.location.hash = "#/home";
+    window.location.hash = "#/brief";
     await waitFor(() =>
       expect(screen.getByRole("link", { name: "Personen" })).toBeTruthy(),
     );
@@ -580,7 +580,7 @@ describe("password-reset deep link", () => {
     expect(await screen.findByLabelText("New password")).toBeTruthy();
   });
 
-  it("reaches home on the sign-in that follows a completed reset", async () => {
+  it("reaches the Brief on the sign-in that follows a completed reset", async () => {
     // No session at the start: the ordinary case for a password reset. Once
     // the login below succeeds, /v1/me flips to authenticated — proving the
     // sign-in actually completed the redirect rather than getting stuck
@@ -646,7 +646,7 @@ describe("password-reset deep link", () => {
       screen.getByLabelText("Password"),
       "an entirely new password{enter}",
     );
-    // The rail is proof the app reached home, not proof merely that /v1/me
+    // The rail is proof the app reached the Brief, not proof merely that /v1/me
     // now resolves — a stale reset hash would instead leave login re-rendered
     // with nowhere for the post-login redirect to go.
     expect(
@@ -654,7 +654,7 @@ describe("password-reset deep link", () => {
     ).toBeTruthy();
   });
 
-  it("reaches home on a sign-in from a bare reset link that never carried a token", async () => {
+  it("reaches the Brief on a sign-in from a bare reset link that never carried a token", async () => {
     // No query string at all — a stale or hand-typed "#/reset-password" with
     // nothing to reset. No token reaches the screen, so this mounts
     // straight into the ordinary login form (never ResetForm, and never the

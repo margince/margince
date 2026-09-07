@@ -100,7 +100,15 @@ function ChangeWho({ change }: Readonly<{ change: FieldHistoryEntry }>) {
   const viewerId = useViewerId();
   return (
     <span className="who t-caption">
-      <ProvenanceTag provenance={provenanceOfEntry(change, viewerId)} />
+      <ProvenanceTag
+        provenance={provenanceOfEntry(change, viewerId)}
+        // Handed in for the same reason the record rail hands it in: the design
+        // system has no record lookups, so a resolved name only reaches the chip
+        // if the caller passes it. Without this the two rails render side by
+        // side on one screen and only one of them names anybody — which is what
+        // teaches a reader that attribution here is unreliable.
+        renderUser={() => change.actor_name}
+      />
       <ChangeGrounding change={change} />
     </span>
   );

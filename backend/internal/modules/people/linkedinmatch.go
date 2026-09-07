@@ -30,6 +30,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -207,7 +208,7 @@ func matchGhostsByEmail(ctx context.Context, tx pgx.Tx, owner, onlyPerson ids.UU
 // parameter positions: the owner filter, the person row scope, and the
 // single-person narrowing.
 // A var and not a const, because the employment-currency predicate is a
-// function call: EmploymentIsCurrentSQL is the one definition of "this job is
+// function call: employment.IsCurrentSQL is the one definition of "this job is
 // still theirs", and a const cannot reach it. This query used to hand-spell it
 // and got the semantics right, which is what made the copy invisible.
 var suggestNameEmployerMatchSQL = `
@@ -234,7 +235,7 @@ var suggestNameEmployerMatchSQL = `
 		       -- Still employed TODAY, the same test the coverage and intro
 		       -- reads take: a future end date is still employment.
 		       AND r.archived_at IS NULL
-		       AND ` + EmploymentIsCurrentSQL("r.ended_at") + `
+		       AND ` + employment.IsCurrentSQL("r.ended_at") + `
 		     WHERE g.match_status = 'unmatched'
 		       AND g.tombstoned_at IS NULL
 		       -- The employer is matched through matched_org_id, which the

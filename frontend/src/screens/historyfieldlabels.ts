@@ -70,6 +70,7 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
   ["subject", "history.field.subject"],
   ["target_end_date", "history.field.target_end_date"],
   ["title", "history.field.title"],
+  ["visibility", "history.field.visibility"],
   ["wait_until", "history.field.wait_until"],
 ]);
 

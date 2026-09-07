@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -40,8 +45,6 @@ function TranscriptReadOutcome({
   report,
 }: Readonly<{ report: TranscriptReadReport }>) {
   const t = useT();
-  const plural = usePlural();
-  const { locale } = useLocale();
   if (report.status === "failed") {
     return (
       <Callout tone="danger" live="status">
@@ -56,6 +59,69 @@ function TranscriptReadOutcome({
       </Callout>
     );
   }
+  return <TranscriptReadProposals ids={report.proposal_ids} />;
+}
+
+// What became of what the reading staged.
+//
+// `proposal_ids` is a FROZEN record of what this run proposed — it is written
+// once and never touched again — and the card read its length under the words
+// "waiting for your review". So a rep who accepted the only suggestion, and
+// watched the task appear, came back to a card still saying one was waiting.
+// Nothing was wrong with the number; the sentence was about a different fact.
+//
+// The decisions are read where they actually live, one authorised read per
+// staged approval, keyed ["approval", id] — the key approvalrow already
+// invalidates when a decision lands, so accepting from the worklist refreshes
+// this card without a reload.
+//
+// A hook cannot sit under a changing early return, which is why this is its own
+// component: the parent returns before it for a failed or empty reading.
+function TranscriptReadProposals({ ids }: Readonly<{ ids: string[] }>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const decisions = useQueries({
+    queries: ids.map((id) => ({
+      queryKey: ["approval", id],
+      queryFn: async () => {
+        const { data, error } = await api.GET("/approvals/{id}", {
+          params: { path: { id } },
+        });
+        if (error) {
+          throwProblem(error);
+        }
+        return data;
+      },
+      // A decided approval does not un-decide, and this card is often on
+      // screen while the rep works elsewhere in the record.
+      staleTime: 10_000,
+      retry: false,
+    })),
+  });
+
+  const settled = decisions.filter((one) => !one.isPending);
+  const known = settled.filter((one) => !one.isError).map((one) => one.data);
+  const unreadable = settled.length - known.length;
+  const pending = known.filter((one) => one?.status === "pending").length;
+  const approved = known.filter((one) => one?.status === "approved").length;
+  const rejected = known.filter((one) => one?.status === "rejected").length;
+  const expired = known.filter((one) => one?.status === "expired").length;
+  // An approved suggestion whose effect did not run has NOT produced the task
+  // it promised. Counting it as done would tell a rep the work exists when it
+  // does not — the one reading of this card that costs them a commitment.
+  const effectFailed = known.filter((one) => one?.effect_failed_at).length;
+  // Only what a PERSON actually decided. An approval that lapsed was reviewed
+  // by nobody, and one whose status could not be read is unknown rather than
+  // settled — counting either as reviewed makes the card claim an answer that
+  // was never given, next to a line saying the opposite.
+  const reviewed = approved + rejected;
+
+  // Until every read has answered, the historical count is all that can be
+  // said honestly. Saying "reviewed" early would claim decisions not yet seen,
+  // and saying "waiting" early is the bug this replaced.
+  const loading = settled.length < ids.length;
+
   return (
     <p
       style={{
@@ -68,10 +134,50 @@ function TranscriptReadOutcome({
     >
       <AutonomyDot tier="confirm" />
       <span className="t-caption">
-        {plural("transcriptread.proposals", report.proposal_ids.length, {
-          count: formatNumber(report.proposal_ids.length, locale),
-        })}
+        {loading
+          ? plural("transcriptread.staged", ids.length, {
+              count: formatNumber(ids.length, locale),
+            })
+          : pending > 0
+            ? plural("transcriptread.proposals", pending, {
+                count: formatNumber(pending, locale),
+              })
+            : plural("transcriptread.decided", reviewed, {
+                count: formatNumber(reviewed, locale),
+              })}
       </span>
+      {!loading && pending === 0 && (approved > 0 || rejected > 0) && (
+        <span className="t-caption">
+          {t("transcriptread.decidedDetail", {
+            accepted: formatNumber(approved, locale),
+            rejected: formatNumber(rejected, locale),
+          })}
+        </span>
+      )}
+      {!loading && expired > 0 && (
+        <span className="t-caption">
+          {plural("transcriptread.expired", expired, {
+            count: formatNumber(expired, locale),
+          })}
+        </span>
+      )}
+      {effectFailed > 0 && (
+        <Callout tone="danger" live="status">
+          {plural("transcriptread.effectFailed", effectFailed, {
+            count: formatNumber(effectFailed, locale),
+          })}
+        </Callout>
+      )}
+      {unreadable > 0 && (
+        <span className="t-caption">
+          {plural("transcriptread.statusUnknown", unreadable, {
+            count: formatNumber(unreadable, locale),
+          })}
+        </span>
+      )}
+      {/* The worklist is where a pending suggestion is decided. Once none is,
+          it is still where the decided ones are listed, so the button keeps
+          leading somewhere real rather than disappearing. */}
       <Button small onClick={() => navigate({ screen: "worklist" })}>
         {t("enrich.toInbox")}
       </Button>

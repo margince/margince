@@ -27,6 +27,7 @@ type progressDealArgs struct {
 	LostReason *string  `json:"lost_reason"`
 	Note       *string  `json:"note"`
 	IfVersion  *int64   `json:"if_version"`
+	WinEvidenceArgs
 }
 
 type progressDeal struct {
@@ -47,7 +48,7 @@ func (t progressDeal) Spec() mcp.ToolSpec {
 		InputSchema: schema(`{"type":"object","required":["deal_id","to_stage_id"],"properties":{
 			"deal_id":{"type":"string","format":"uuid"},
 			"to_stage_id":{"type":"string","format":"uuid"` + stageIDNote + `},
-			"lost_reason":{"type":"string","description":"Required when the target stage closes the deal as lost"},
+			"lost_reason":{"type":"string","description":"Required when the target stage closes the deal as lost"}` + winEvidenceProperties + `,
 			"note":{"type":"string","description":"Logged as a note on the deal's timeline after the move"},
 			"if_version":{"type":"integer"},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on retry after a human approved a won/lost move"}},
@@ -98,11 +99,13 @@ func (t progressDeal) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 		return nil, err
 	}
 	if _, err := t.p.AdvanceDeal(ctx, datasource.AdvanceDealInput{
-		DealID:     args.DealID,
-		ToStageID:  args.ToStageID,
-		LostReason: args.LostReason,
-		Source:     ToolSource,
-		IfVersion:  pin,
+		DealID:                   args.DealID,
+		ToStageID:                args.ToStageID,
+		LostReason:               args.LostReason,
+		WonWithoutContractReason: args.WonWithoutContractReason,
+		WonWithoutContractDetail: args.WonWithoutContractDetail,
+		Source:                   ToolSource,
+		IfVersion:                pin,
 	}); err != nil {
 		return nil, err
 	}

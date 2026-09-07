@@ -23,6 +23,7 @@ func sarSections(pkg *SARPackage, personID ids.PersonID, emails []string, leads 
 	sections = append(sections, sarRecordSections(pkg)...)
 	sections = append(sections, sarMessagingSections(pkg, personID, emails, leads)...)
 	sections = append(sections, sarConsentSections(pkg)...)
+	sections = append(sections, sarConsentLinkSections(pkg)...)
 	sections = append(sections, sarCommunicationSections(pkg, personID, leads)...)
 	return append(sections, sarProvenanceSections(pkg)...)
 }
@@ -65,13 +66,27 @@ func sarIdentitySections(pkg *SARPackage) []sarSection {
 		  WHERE p.person_id = $1`, nil},
 		{&pkg.ChannelIdentities, `SELECT provider, channel_user_id, username, blocked_at, source, created_at, archived_at
 		   FROM person_channel_identity WHERE person_id = $1`, nil},
-		{&pkg.InteractionParticipation, `SELECT ap.activity_id, ap.role, ap.address, ap.display_name, ap.created_at,
-		       a.kind, a.occurred_at, a.direction
+		// THREE identities, because a participant row holds the subject three
+		// ways and Art. 15 owes what is HELD: by person_id, by the address a
+		// message carried, and by the ACCOUNT a chat roster named them with —
+		// the third human in a group, who has a provider account and no
+		// address anywhere. Two arms where the erasure has three would say the
+		// installation holds nothing about a conversation it holds a row about
+		// and erases on request.
+		//
+		// The account is paired with the transport off the activity already
+		// joined here, for the reason every other reader of that column pairs
+		// it: an account id is only the subject's against the provider that
+		// issued it.
+		{&pkg.InteractionParticipation, `SELECT ap.activity_id, ap.role, ap.address, ap.channel_user_id,
+		       ap.display_name, ap.created_at, a.kind, a.occurred_at, a.direction
 		   FROM activity_participant ap
 		   JOIN activity a ON a.id = ap.activity_id
 		  WHERE ap.person_id = $1
 		     OR (ap.address IS NOT NULL AND ap.address IN (
-		         SELECT lower(email) FROM person_email WHERE person_id = $1))`, nil},
+		         SELECT lower(email) FROM person_email WHERE person_id = $1))
+		     OR (ap.channel_user_id IS NOT NULL AND (a.channel_provider, ap.channel_user_id) IN (
+		         SELECT provider, channel_user_id FROM person_channel_identity WHERE person_id = $1))`, nil},
 		// The same reach erasure uses: matched, or carrying their address, or
 		// bearing their name at an employer they actually work for. Art. 15
 		// owes what is HELD, and an unmatched ghost holds their name and
@@ -221,10 +236,6 @@ func sarConsentSections(pkg *SARPackage) []sarSection {
 		{&pkg.ConsentQualifyingEvents, `SELECT kind, occurred_at, source_entity_type, created_at AS captured_at
 		   FROM consent_qualifying_event
 		   WHERE person_id = $1`, nil},
-		// The token row itself is deliberately NOT read: it is a live
-		// credential, and the subject already holds their own copy in the mail
-		// that delivered it. Registered sarForbidden so a future section over
-		// it fails the coverage gate rather than shipping.
 		{&pkg.ConfirmSubmissions, `SELECT kind, field, proposed_value, submitted_at, resolution, resolved_at
 		   FROM person_confirm_submission
 		   WHERE person_id = $1`, nil},

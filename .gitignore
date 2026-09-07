@@ -184,8 +184,13 @@ workspace/
 /seed-demo
 
 # e2e-llm run artifacts. The lane writes a transcript per run (hundreds of KB
-# each) plus a small verdict file. They are evidence for the run that produced
-# them, not repository content — read them locally, do not carry them in git.
+# each) plus a small verdict file. The TRANSCRIPTS are evidence for the run that
+# produced them, not repository content — read them locally.
+#
+# The verdicts are not here: they are committed, beside the certification lane's
+# own records, under backend/internal/compose/aicert/records/mcp_e2e/<model>/.
+# A pass rate nobody can read without paying for a run again is a number the
+# next reader has to take on trust.
 e2e/llm/records/
 
 # The three binaries `make dev` and the build targets produce. Named here for
@@ -199,3 +204,27 @@ e2e/llm/records/
 # snapshot of one machine's test data, so it is neither product nor an artifact
 # anybody regenerates.
 dump.rdb
+
+# A tool built in place. `go build` inside backend/tools/<name>/ writes its
+# output as <name> beside the source, which is how a 19 MB Mach-O came to be
+# committed on a pull request about dropping a database column (#2129).
+#
+# One line per tool rather than a pattern over the directory: the tools hold
+# ordinary Go files with no extension distinguishing them from a binary, and a
+# pattern wide enough to catch the output would hide a source file somebody
+# forgot to add. TestNoCompiledBinaryIsTracked is what actually enforces this —
+# these lines keep the artifact out of `git status` so nobody reaches for -f.
+/backend/tools/contract-overlay/contract-overlay
+/backend/tools/contract-subset/contract-subset
+/backend/tools/extmigrategate/extmigrategate
+/backend/tools/gen-agentpolicy/gen-agentpolicy
+/backend/tools/gen-aitasks/gen-aitasks
+/backend/tools/gen-composition/gen-composition
+/backend/tools/gen-configschema/gen-configschema
+/backend/tools/gen-jobs/gen-jobs
+/backend/tools/gen-payloads/gen-payloads
+/backend/tools/gen-perfdoc/gen-perfdoc
+/backend/tools/gen-recordfields/gen-recordfields
+/backend/tools/gen-stubs/gen-stubs
+/backend/tools/gen-workflow/gen-workflow
+/backend/tools/seed-demo/seed-demo

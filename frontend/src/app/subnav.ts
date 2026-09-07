@@ -45,6 +45,14 @@ export type NavLevelEntry = {
   // is many pages behind one screen — `PAGE_SUB_KEYS[route.screen]` can only
   // describe all of them at once, which is no description of any of them.
   subKey?: MessageKey;
+  // Whose state this page changes, in the reader's own words — "Only you",
+  // "Company", "Installation". A settings page is the one place a person cannot
+  // tell that from the controls: a toggle that changes your signature and a
+  // toggle that changes everybody's mail routing look identical.
+  //
+  // On the ENTRY for the same reason `subKey` is: the section knows which page
+  // this is, and a screen-keyed table would have to answer for all of them.
+  scopeKey?: MessageKey;
   icon: LucideIcon;
   // The level this entry opens. Grouping is possible at every depth, so the
   // children are a flat list only until one needs headings.
@@ -100,6 +108,14 @@ export type NavSection = {
   // below, because the trail is what the rail actually renders: a slot added to
   // one alone is a field nothing draws.
   lead?: ReactNode;
+  // The same thing for a host that must close itself once the lead has moved
+  // the reader — the phone-width section drawer, which is a full-screen sheet
+  // and would otherwise stay open over the page just opened.
+  //
+  // A second field rather than making `lead` a function: the rail has nothing
+  // to dismiss and would have to invent an empty callback, and `navTrail`
+  // carries `lead` down to a level that never wants this one.
+  leadFor?: (onPick: () => void) => ReactNode;
 };
 
 // The attention counts the rail badges. They ride the level rather than being
@@ -114,9 +130,12 @@ export type NavTrailLevel = {
   // See NavSection.lead. Carried down by navTrail, which is the only path from
   // a section to a rendered level.
   lead?: ReactNode;
-  // Absent on the primary level, which the navigation landmark already names.
-  // Present, it prints the level's own heading and pushes the group labels a
-  // heading level down.
+  // What the level is CALLED, for everything that names it from outside: the
+  // top bar's trail, the phone-width switcher, and the way back UP to it from
+  // the level below. The rail does not print it — a level names itself through
+  // the heading over its first group. Absent on the primary level, which the
+  // navigation landmark already names, and which is therefore what the way out
+  // of a section is walking back to.
   titleKey?: MessageKey;
   groups: readonly NavLevelGroup[];
   activeId?: string;
@@ -270,9 +289,11 @@ export function navTrail(
     }
     level = {
       // A child level is named by the entry that opened it — the reader drilled
-      // in through that word, so it is the word that says where they are.
+      // in through that word, so it is the word that says where they are. The
+      // rail prints that name as the heading over the level's one group, and the
+      // top bar's trail and the way back up read it from here.
       titleKey: active.labelKey,
-      groups: [{ items: children }],
+      groups: [{ headingKey: active.labelKey, items: children }],
       activeId: segments[depth],
       path: [...level.path, active.id],
     };

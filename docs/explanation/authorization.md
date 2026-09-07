@@ -30,12 +30,29 @@ RBAC**:
 
 | Caller | Transport | Credential |
 |---|---|---|
-| A **human** | web app / HTTP | the `crm_session` cookie (from `POST /v1/auth/login`) |
+| A **human** | web app / HTTP | the `crm_session` cookie (from `POST /v1/auth/login`) — `Secure; HttpOnly`, see below |
 | An **agent** | REST | `Authorization: Bearer mgp_…` (a passport) |
 | An **agent** | MCP (`/mcp`, Streamable HTTP) | `Authorization: Bearer mgp_…` — a passport minted directly, or one the OAuth handshake issued for exactly the scopes the human ticked on the consent screen |
 
 (No request names a tenant: one installation serves one organization, and the
 admission middleware binds that singleton workspace itself before any handler runs.)
+
+**Calling `/v1` as a human from a shell.** `crm_session` is set `Secure`, so a
+cookie jar will not replay it over plain `http` — `curl -c jar -b jar` against a
+dev stack sends no credential at all and every call answers 401, which reads as
+an auth defect rather than a transport rule. Read the value out of the login
+response and pass it explicitly:
+
+```
+token=$(curl -sS -i -X POST http://localhost:8080/v1/auth/login   -H 'content-type: application/json'   -d '{"email":"…","password":"…"}' |
+  sed -n 's/^[Ss]et-[Cc]ookie: crm_session=\([^;]*\).*/\1/p')
+
+curl -sS http://localhost:8080/v1/me -H "Cookie: crm_session=$token"
+```
+
+There is no bearer token for a human — `Authorization: Bearer` is the agent's
+credential, and a passport is not something a person's session can be exchanged
+for. An agent calling the same routes uses its passport and skips all of this.
 
 ### What a passport is
 

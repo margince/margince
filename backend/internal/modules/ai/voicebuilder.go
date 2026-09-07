@@ -48,6 +48,15 @@ func SafeVoiceBuildFailure(err error) string {
 	if errors.Is(err, ErrProviderQuota) {
 		return "Our AI provider refused the call: the account behind it is out of budget or over its quota, so the build never ran. Your previous version is unchanged. Raise the limit on the provider account, then build again."
 	}
+	// Asked before the answer-shaped default below for the same reason: the
+	// offline stand-in DID answer, but with the one string it produces for
+	// every request, so reading its reply as a bad profile blames a corpus for
+	// a missing setting. An installation that never bound a vendor reaches this
+	// on its FIRST build and on every retry after, which is exactly the case
+	// the default message cost an operator an hour of retrying.
+	if errors.Is(err, ErrUnconfiguredModel) {
+		return "Voice building is unavailable until an AI provider is configured: the offline stand-in model answered instead. Open Settings → AI, bind each tier to a vendor and add that vendor's key under Model provider keys, then build again."
+	}
 	// A burst limit, not an empty account: the same build succeeds shortly,
 	// and telling this operator to go raise a spending limit would send them
 	// to a console where nothing is wrong.

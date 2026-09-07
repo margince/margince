@@ -3,7 +3,7 @@ import { Trash2 } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useHoldsAdminRole } from "../app/capability";
+import { useCan, useCanWrite } from "../app/capability";
 import {
   Button,
   Checkbox,
@@ -151,7 +151,21 @@ export function TeamsCard() {
   // gates on: an ops seat reads the roster below but does not change who is
   // on a team. `me.isSuccess` below keeps the read-only line from flashing
   // at an admin while /me is still in flight.
-  const canAdminister = useHoldsAdminRole();
+  // The two verbs teams.go takes: CreateTeam is `team_admin:create`, and both
+  // UpdateTeam and SetTeamMember are `team_admin:update`.
+  //
+  // `useCanWrite`, not `useCan`: the seat ceiling sits ABOVE RBAC
+  // (identity/admission.go), so a read seat holding the grant is refused every
+  // one of these writes.
+  const canCreateTeam = useCanWrite("team_admin", "create");
+  const canEditTeam = useCanWrite("team_admin", "update");
+  // Membership is a DIFFERENT grant from the verb that changes it: `team_ids`
+  // rides the roster's privileged projection, which handlers_roster.go gates on
+  // `user_admin:read`. A holder of the team write without that read would get
+  // every entry back with no `team_ids` at all and draw a list showing nobody
+  // as a member of anything — a false statement about the team rather than an
+  // honest withholding. So membership needs BOTH.
+  const canSeeMembership = useCan("user_admin", "read");
   // The shared roster read, not a second query of this card's own. Both spell
   // the same list under the same cache key, so whichever mounted first decided
   // what the other one read back — and only one of the two follows the
@@ -215,12 +229,14 @@ export function TeamsCard() {
     // team, inside a list of teams, saying its own name twice.
     <Panel
       title={t("users.teamsTitle")}
-      titleAction={canAdminister ? <NewTeamAction /> : undefined}
+      titleAction={canCreateTeam ? <NewTeamAction /> : undefined}
     >
       <PanelBody>
         <p className="settings-panel-sub">
           {t("users.teamsSub")}
-          {me.isSuccess && !canAdminister && ` ${t("users.teamsAdminOnly")}`}
+          {me.isSuccess &&
+            !(canCreateTeam || canEditTeam) &&
+            ` ${t("users.teamsAdminOnly")}`}
         </p>
         {/* A refused archive belongs to the card, not to the row: the roster
             below is refetched on success, so the only thing left to say is that
@@ -255,7 +271,8 @@ export function TeamsCard() {
                     team={team}
                     archiving={archive.isPending}
                     onArchive={() => archive.mutate(team.id)}
-                    canAdminister={canAdminister}
+                    canEditTeam={canEditTeam}
+                    canSeeMembership={canSeeMembership}
                   />
                 ))}
               </SettingList>
@@ -282,12 +299,14 @@ function TeamRow({
   team,
   archiving,
   onArchive,
-  canAdminister,
+  canEditTeam,
+  canSeeMembership,
 }: Readonly<{
   team: Team;
   archiving: boolean;
   onArchive: () => void;
-  canAdminister: boolean;
+  canEditTeam: boolean;
+  canSeeMembership: boolean;
 }>) {
   const t = useT();
   const plural = usePlural();
@@ -310,7 +329,7 @@ function TeamRow({
         </span>
       }
       action={
-        canAdminister ? (
+        canEditTeam ? (
           <Button
             small
             variant="ghost"
@@ -324,7 +343,11 @@ function TeamRow({
         ) : undefined
       }
     >
-      <TeamMembers team={team} canAdminister={canAdminister} />
+      <TeamMembers
+        team={team}
+        canEditTeam={canEditTeam}
+        canSeeMembership={canSeeMembership}
+      />
     </Disclosure>
   );
 }
@@ -337,30 +360,36 @@ function TeamRow({
 // be a second answer to "who is in this team", and the two would disagree the
 // first time one of them was cached.
 //
-// `canAdminister` withholds the whole membership list rather than merely
-// disabling its checkboxes: an ops seat that may read this roster still gets
-// no `team_ids` on any entry in it (see the query gate below), so a list
-// built from that read would show nobody as a member of anything — a false
-// statement about the team, not an honest withholding. Both the write
-// affordance and the read it would need are the admin's, stated once at the
-// card level (`TeamsCard`'s sub line) rather than as a control that looks
-// pressable and 403s.
+// The membership list is withheld WHOLE rather than drawn with its checkboxes
+// disabled: a caller without `user_admin:read` gets no `team_ids` on any entry
+// in the roster (see the query gate below), so a list built from that read
+// would show nobody as a member of anything — a false statement about the team,
+// not an honest withholding. Stated once at the card level (`TeamsCard`'s sub
+// line) rather than as a control that looks pressable and 403s.
+//
+// Two grants, because they answer two questions. `canSeeMembership` is whether
+// the roster will carry membership at all; `canEditTeam` is whether this reader
+// may change it. A holder of the write without the read is a real principal —
+// nothing seeds the pair together — and drawing them an empty list would be the
+// falsehood above.
 function TeamMembers({
   team,
-  canAdminister,
-}: Readonly<{ team: Team; canAdminister: boolean }>) {
+  canEditTeam,
+  canSeeMembership,
+}: Readonly<{ team: Team; canEditTeam: boolean; canSeeMembership: boolean }>) {
   const t = useT();
   const qc = useQueryClient();
   // Membership is admin-only DATA, not only an admin-only write: the roster
   // handler sends `team_ids` at all only when the caller is an admin
-  // (`WithRoles: isAdmin`, backend/internal/modules/identity/handlers_roster.go)
+  // (`WithRoles: mayManage`, backend/internal/modules/identity/handlers_roster.go,
+  // which resolves that flag from `user_admin:read`)
   // — every entry a non-admin reads back carries none. A read-only list built
   // from that response would show nobody as a member of anything, which is a
   // false statement about the team rather than an honest withholding, so the
   // read is skipped rather than attempted (design-system/README.md's
   // "Absent, disabled, or withheld", permission-denial row).
-  const users = useRoster("user", canAdminister);
-  const usersPartial = useRosterPartial("user", canAdminister);
+  const users = useRoster("user", canSeeMembership);
+  const usersPartial = useRosterPartial("user", canSeeMembership);
   // Both writes are the same endpoint under two methods, so they are one
   // mutation with the membership as a variable — never a closure over the row
   // being drawn, which react-query re-arms a render late.
@@ -386,7 +415,7 @@ function TeamMembers({
     },
   });
 
-  if (!canAdminister) {
+  if (!canSeeMembership) {
     return <p className="t-caption">{t("users.teamMembersAdminOnly")}</p>;
   }
 
@@ -423,7 +452,13 @@ function TeamMembers({
                     className="t-body"
                     label={person.display_name}
                     checked={(person.team_ids ?? []).includes(team.id)}
-                    disabled={setMember.isPending}
+                    // Disabled rather than absent for a reader who may SEE
+                    // membership and not change it: the list is the answer they
+                    // came for and every box is part of it, so removing them
+                    // would withhold the reading as well as the writing. One
+                    // admin check used to cover both questions, and splitting
+                    // them made this reader possible for the first time.
+                    disabled={setMember.isPending || !canEditTeam}
                     onChange={(event) =>
                       setMember.mutate({
                         userId: person.id,

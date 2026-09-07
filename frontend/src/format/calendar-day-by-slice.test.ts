@@ -6,6 +6,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import { parseSource } from "../../scripts/lib/source-tree";
 
 // A calendar day cut out of an ISO string is UTC's day, whoever is reading.
 //
@@ -53,6 +54,10 @@ const deliberateUtcDays: Record<string, { sites: number; why: string }> = {
   "format/timezone.ts#shifted": {
     sites: 1,
     why: "the same round trip as adjacentMonth's: the date is built with Date.UTC(...) from a day this function was GIVEN, and the components read back are the ones just written. It is arithmetic on a named day, not a reading of the clock, and the zoned question is answered by startOfDayInstant on the next line",
+  },
+  "screens/taskactions.tsx#next": {
+    sites: 1,
+    why: "the same round trip as shifted's: the date is built with Date.UTC(...) from a day calendarDay just named in the record's zone, and the parts read back are the ones just written. A snooze steps to the NEXT CALENDAR DAY, and doing it here rather than by adding 86_400_000 is the point — a local day is not always that long, and the old arithmetic skipped Berlin's 29 March. dueInstant answers the zoned question on the next line",
   },
   "mcp-apps/bridge.ts#day": {
     sites: 1,
@@ -137,13 +142,7 @@ function isIsoSlice(node: ts.Node): node is ts.CallExpression {
 }
 
 function isoSliceSites(path: string, source: string): Finding[] {
-  const parsed = ts.createSourceFile(
-    path,
-    source,
-    ts.ScriptTarget.Latest,
-    true,
-    path.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
-  );
+  const parsed = parseSource(path, source);
   const found: Finding[] = [];
   const visit = (node: ts.Node): void => {
     if (isIsoSlice(node)) {

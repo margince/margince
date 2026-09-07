@@ -78,6 +78,28 @@ type jwksRefreshFlight struct {
 	err  error
 }
 
+// jwksFetchTimeout bounds the key fetch. A refusal, not a preference.
+//
+// Five seconds, the same bound the consent-metadata fetch takes, and for a
+// sharper version of the same reason: a sign-in is in flight while this runs,
+// and a provider that cannot serve a few kilobytes of JSON in five seconds is
+// not one to hold an authentication open for.
+//
+// The caching inverts the risk that would otherwise argue for a longer bound.
+// Keys are held under `expires` and refreshes COALESCE — the first caller
+// fetches and everyone arriving during it waits on that outcome. So:
+//
+//   - Too tight costs one retry on a cold cache. The fetch is rare (a first
+//     sign-in after a deploy, a key rotation), and a failed refresh does not
+//     invalidate keys still within `expires`.
+//   - Too loose blocks EVERY concurrent waiter for the full timeout, because
+//     they are all sharing one in-flight fetch. Thirty seconds of that is a
+//     provider hiccup becoming a sign-in outage.
+//
+// The cheap failure is one retry; the expensive one is every sign-in arriving
+// during a slow response. The bound is set for the expensive one.
+const jwksFetchTimeout = 5 * time.Second
+
 // newOIDCVerifier builds a verifier for one issuer. checkIssuer and
 // matchIdentity are both callbacks so a shared verifier does not need to
 // hardcode which provider — or which caller — it is: Google Pub/Sub and Google
@@ -88,7 +110,7 @@ func newOIDCVerifier(jwksURL string, checkIssuer, matchIdentity func(oidcClaims)
 		jwksURL:       jwksURL,
 		checkIssuer:   checkIssuer,
 		matchIdentity: matchIdentity,
-		client:        &http.Client{Timeout: 30 * time.Second},
+		client:        &http.Client{Timeout: jwksFetchTimeout},
 		now:           time.Now,
 	}
 }

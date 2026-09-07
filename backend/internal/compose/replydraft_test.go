@@ -11,6 +11,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -308,5 +309,51 @@ func TestAVoicedDraftIsToldTheGreetingRuleToo(t *testing.T) {
 	}
 	if !strings.Contains(req.System, "plain text") {
 		t.Error("the voiced system prompt does not carry the plain-text rule")
+	}
+}
+
+// An English thread answered under a German-only voice profile is drafted in
+// ENGLISH.
+//
+// This is the defect this program was written for: the corpus taught the model
+// a language along with a register, the language rule pointed at a field no
+// payload carried, and the draft came back in German to an English-speaking
+// vendor. The request is what this asserts on — the language the model is
+// TOLD, and the rule that tells it — because a stub's canned answer proves
+// nothing about what a live model would write.
+func TestAnEnglishThreadIsDraftedInEnglishUnderAGermanVoice(t *testing.T) {
+	brain := &replyBrainStub{response: model.Response{
+		Text: `{"subject":"Re: Invoice","body":"Hello,\n\nI have the invoice in front of me.\n\nBest"}`,
+	}}
+	drafter := replyDrafter{brain: brain}
+
+	// A voice block of the shape a German-only corpus produces: every exemplar
+	// German, and nothing in it about which language to write in.
+	germanVoice := func(fence promptfence.Fence) string {
+		return fence.Wrap("VOICE\nSchreibt kurz und direkt.\n" +
+			"Beispiel: \"Moin. Die Zahlen sind Quatsch, das korrigieren wir bis Freitag.\"")
+	}
+
+	if _, err := drafter.complete(context.Background(), replyActivityData{
+		Envelope: draftfloor.Envelope{Language: "en", ConversationState: "fresh"},
+		Subject:  "Outstanding invoice",
+		Body:     "Hello, I am writing about the invoice outstanding since December.",
+	}, germanVoice); err != nil {
+		t.Fatalf("complete: %v", err)
+	}
+
+	// The model is TOLD English, in the payload it actually receives.
+	if !strings.Contains(brain.request.Messages[0].Content, `"output_language":"en"`) {
+		t.Errorf("the draft request does not carry the thread's language: %s", brain.request.Messages[0].Content)
+	}
+	// And the rule that reads it names the field the payload carries. Pointing
+	// at a field nothing sends is what let the corpus decide instead.
+	if !strings.Contains(brain.request.System, "output_language") {
+		t.Error("the system turn's language rule does not name the field the payload carries")
+	}
+	// The voice rule says in as many words that the profile does not choose
+	// the language, which is the sentence that counteracts German exemplars.
+	if !strings.Contains(brain.request.System, "never chooses the LANGUAGE") {
+		t.Error("the voice rule does not say the profile leaves the language alone")
 	}
 }

@@ -317,7 +317,11 @@ invisible to the other for no reason either author chose. A walk is the worst
 place for a second answer: the gate with the narrower walk reads a smaller tree
 and reports the same word for it, PASS, and there is no failing assertion to
 notice. The one answer is now `frontend/scripts/lib/source-tree.ts`, with its
-test beside it rather than inside either caller.
+test beside it rather than inside either caller. The parse went the same way
+once there were two dozen of them: each gate called the compiler itself and the
+calls disagreed about the dialect, so one read a `.ts` file as TSX and walked
+parse recovery for the rest of it. `parseSource` and `sourceFileAt` in the same
+file are the one parser now, and its test fails a second call site by name.
 
 ## What this does not ask for
 

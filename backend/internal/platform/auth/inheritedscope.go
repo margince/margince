@@ -83,9 +83,87 @@ func activityDiscoverClause(p principal.Principal, alias string, arg func(any) i
 	// caller has been paying it; it only surfaced as a budget failure when
 	// capture privacy stopped exempting the all-scope reader the perf
 	// fixture happens to run as.
-	return fmt.Sprintf(`%[3]s AND coalesce((SELECT bool_or(%[2]s)
-	   FROM activity_link l WHERE l.activity_id = %[1]s.id), true)`,
-		alias, linkTargetVisible(p, "l", arg), available)
+	//
+	// The membership arm is the second way in, and it is what keeps a MEETING's
+	// own attendees able to reach it. Discovery asks whether any LINKED record
+	// is visible, so a meeting filed under a contact private to the seat that
+	// captured it fails that test for a colleague who was IN the meeting — the
+	// invitation is on their calendar and the row denies them. Membership is
+	// the honest answer to "may this person learn this exists": they were on it.
+	//
+	// It admits EXISTENCE only. Content still needs the audience arm, the linked
+	// private person stays unreadable with its own visibility check, and neither
+	// the availability test nor object RBAC is relaxed. Nothing here reads
+	// host_user_id: that column labels whose calendar a row came off, which is
+	// ownership rather than membership, and a label is not evidence that anybody
+	// was present.
+	return fmt.Sprintf(`%[3]s AND (coalesce((SELECT bool_or(%[2]s)
+	   FROM activity_link l WHERE l.activity_id = %[1]s.id), true)
+	   OR %[4]s)`,
+		alias, linkTargetVisible(p, "l", arg), available, activityAttendanceArm(p, alias, arg))
+}
+
+// activityAttendanceArm is the discovery half of membership: the caller was on
+// this row on evidence they could not have written themselves.
+//
+// It is deliberately NARROWER than activityMembershipArm, which decides content.
+// The difference is one column and it is the whole security of this clause.
+//
+// Capture stamps the ACTING SEAT as an activity_participant of every activity it
+// writes (sinkactivity.go stampCaptureParticipants), with no attestation behind
+// it. So "I have a participant row" means only "my connector landed this", and
+// admitting that would let a seat discover every row its own connector ever
+// captured — including one later filed under a record it may not read, which is
+// exactly the state capture refuses to replay onto. Restricting the arm to
+// kind='meeting' does NOT close that: the extension ingress copies a unit's
+// chosen Kind straight through with no vocabulary check (compose/extingress.go),
+// so "meeting" is a word a caller picks.
+//
+// The two evidenced sources, both of which a caller controls neither half of:
+//
+//   - capture_import, written only after mailboxWasARecipientTx found one of the
+//     seat's OWN exact addresses on the message — the provider delivered it;
+//   - a participant row carrying an address, which is written from a party list
+//     only when the provider itself enumerated it (capture's
+//     ParticipantListAttested). The seat-stamp above carries no address, so the
+//     `address IS NOT NULL` test is what tells the two apart.
+//
+// Content is unaffected: activityAudienceArm keeps the wider membership test, so
+// a seat that may already read a row still reads it. This arm only decides who
+// may learn a row EXISTS through attendance rather than through its links.
+func activityAttendanceArm(p principal.Principal, alias string, arg func(any) int) string {
+	me := arg(p.UserID)
+	return fmt.Sprintf(`(EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = %[1]s.id AND ci.user_id = $%[2]d)
+	   OR EXISTS (SELECT 1 FROM activity_participant ap
+	               WHERE ap.activity_id = %[1]s.id AND ap.user_id = $%[2]d AND ap.address IS NOT NULL))`,
+		alias, me)
+}
+
+// activityMembershipArm is the "I was on this" test for CONTENT: the caller's
+// own seat imported the row, or they are stamped as one of its participants.
+//
+// Its discovery counterpart is activityAttendanceArm above, which is narrower by
+// one column and says why. The two are allowed to differ in exactly that
+// direction — content may be granted to a seat that discovery would not admit,
+// because a seat reading a row it already captured discloses nothing new, while
+// discovery decides whether an UNRELATED row becomes visible at all. They must
+// never differ the other way: a row a caller can read must always be one they
+// can discover, which holds because the content gate composes discovery whole
+// and then ANDs this.
+//
+// Its existential twin, which asks whether ANYBODY matches before a write
+// narrows a row, is ActivityHasAReaderTx in audienceorphan.go; change an arm
+// here and change it there.
+//
+// Deliberately NOT included: the captured_by suffix match and the
+// audience='workspace' arm that the audience test also carries. The first names
+// one seat's provenance and the second is a statement about the audience rather
+// than about who was present.
+func activityMembershipArm(p principal.Principal, alias string, arg func(any) int) string {
+	me := arg(p.UserID)
+	return fmt.Sprintf(`(EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = %[1]s.id AND ci.user_id = $%[2]d)
+	   OR EXISTS (SELECT 1 FROM activity_participant ap WHERE ap.activity_id = %[1]s.id AND ap.user_id = $%[2]d))`,
+		alias, me)
 }
 
 // ActivityContentClause is the stronger activity gate: discoverable AND the
@@ -155,120 +233,17 @@ func activityAudienceArm(p principal.Principal, alias string, arg func(any) int)
 	// mail) from this one (was this your mail).
 	author := arg("%:" + p.UserID.String())
 	teams := arg(p.TeamIDs)
+	// The two membership arms are activityMembershipArm's, composed rather than
+	// repeated: discovery asks the same question of the same two tables, and a
+	// second copy is how one of them gains an arm the other lacks.
 	return fmt.Sprintf(`(%[1]s.audience = 'workspace'
 	   OR %[1]s.captured_by LIKE $%[3]d
-	   OR EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = %[1]s.id AND ci.user_id = $%[2]d)
-	   OR EXISTS (SELECT 1 FROM activity_participant ap WHERE ap.activity_id = %[1]s.id AND ap.user_id = $%[2]d)
+	   OR %[5]s
 	   OR (%[1]s.audience = 'selected' AND EXISTS (
 	      SELECT 1 FROM activity_audience_member am WHERE am.activity_id = %[1]s.id
 	        AND ((am.subject_type = 'user' AND am.subject_id = $%[2]d)
 	          OR (am.subject_type = 'team' AND am.subject_id = ANY($%[4]d))))))`,
-		alias, me, author, teams)
-}
-
-// SignalScopeClause is the signal analogue of ActivityDiscoverClause: a
-// A signal is visible when its SUBJECT is visible and its own visibility
-// admits the reader. A subject-less signal (a raw item still awaiting
-// resolution) is workspace-shared, like an unlinked note.
-//
-// The subject arm is the older half: a signal's free-text summary and evidence
-// inherit the sensitivity of the record it is ABOUT. That was the whole rule
-// while a signal's evidence could only come from records at least as visible as
-// its subject — the producers reached an account through a direct activity_link
-// row, which is the same link that makes an activity readable to that account's
-// readers (ActivityDiscoverClause is the any-link rule).
-//
-// The producers now also reach an account through the employer of the contact a
-// message is filed against, and through its deal. Neither is a link on the
-// activity, so a signal's evidence can be narrower than its subject, and the
-// signal carries its own visibility to say so. It is capture privacy, so it
-// does NOT yield to row_scope=all: an admin reading a colleague's unpromoted
-// correspondence through a summary of it is the same disclosure the boundary
-// exists to prevent, taking the long way round.
-//
-// It lives here, not in the signals module, because the signals store's reads
-// and the approvals surface's staged-archive visibility probe both enforce it
-// — scope policy has exactly one spelling (ADR-0054 §8). alias names the
-// signal table in the outer query.
-func SignalScopeClause(ctx context.Context, alias string, arg func(any) int) (string, error) {
-	p, err := rbacActor(ctx)
-	if err != nil {
-		return "", err
-	}
-	// The system principal — the producers themselves, the relay, the privacy
-	// engines — reads both arms away. Everyone else faces the private arm,
-	// unbounded or not.
-	if p.Type == principal.PrincipalSystem {
-		return "", nil
-	}
-	private := fmt.Sprintf("(%[1]s.visibility <> 'owner' OR %[1]s.owner_id = $%d)",
-		alias, arg(p.UserID))
-	if UnboundedFor(p, tablePerson, tableOrganization, tableDeal, tableProject) {
-		return private, nil
-	}
-	person := VisiblePredicate(p, tablePerson, arg)
-	organization := VisiblePredicate(p, tableOrganization, arg)
-	deal := VisiblePredicate(p, tableDeal, arg)
-	// A project-subject signal inherits the project's visibility, the same
-	// way the three older subjects do; an arm missing here would DROP such a
-	// signal for every bounded reader, not withhold it for a reason. The arm
-	// also takes the project OBJECT grant, which the row predicate alone does
-	// not ask: a project's row scope admits every seat, so without the grant
-	// half a seat holding signal.read and no project.read would read a summary
-	// that names a project it may not list.
-	project := VisiblePredicate(p, tableProject, arg)
-	projectArm := sqlNoRow
-	if p.Permissions.Allows(tableProject, principal.ActionRead) {
-		projectArm = fmt.Sprintf("EXISTS (SELECT 1 FROM project sj WHERE sj.id = %s.entity_id AND %s)", alias, project("sj"))
-	}
-	return fmt.Sprintf(`(%[6]s AND (%[1]s.entity_type IS NULL
-	 OR (%[1]s.entity_type = 'person'       AND EXISTS (SELECT 1 FROM person sp WHERE sp.id = %[1]s.entity_id AND %[2]s))
-	 OR (%[1]s.entity_type = 'organization' AND EXISTS (SELECT 1 FROM organization so WHERE so.id = %[1]s.entity_id AND %[3]s))
-	 OR (%[1]s.entity_type = 'deal'         AND EXISTS (SELECT 1 FROM deal sd WHERE sd.id = %[1]s.entity_id AND %[4]s))
-	 OR (%[1]s.entity_type = 'project'      AND %[5]s)))`,
-		alias, person("sp"), organization("so"), deal("sd"), projectArm, private), nil
-}
-
-// EnsureSignalVisible is EnsureVisible for signals, using the
-// subject-entity scope above; out of scope reads as ErrNotFound.
-func EnsureSignalVisible(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	idPos := arg(id)
-
-	clause, err := SignalScopeClause(ctx, "s", arg)
-	if err != nil {
-		return err
-	}
-	if clause == "" {
-		return nil
-	}
-	var visible bool
-	err = tx.QueryRow(ctx,
-		fmt.Sprintf(`SELECT EXISTS (SELECT 1 FROM signal s WHERE s.id = $%d AND %s)`, idPos, clause),
-		args...).Scan(&visible)
-	if err != nil {
-		return err
-	}
-	if !visible {
-		return apperrors.ErrNotFound
-	}
-	return nil
-}
-
-// EnsureSignalVisibleLive is EnsureSignalVisible with the two strictnesses a
-// caller serving STORED data needs — the row must still be live, and an
-// unbounded actor does not skip the probe. See EnsureVisibleLive.
-func EnsureSignalVisibleLive(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	idPos := arg(id)
-
-	clause, err := SignalScopeClause(ctx, "s", arg)
-	if err != nil {
-		return err
-	}
-	return probeExistsLive(ctx, tx, "signal s", "s", idPos, clause, args)
+		alias, me, author, teams, activityMembershipArm(p, alias, arg))
 }
 
 // EnsureActivityVisible is EnsureVisible for activities under the DISCOVER

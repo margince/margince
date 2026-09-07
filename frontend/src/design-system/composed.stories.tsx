@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { useLayoutEffect, useRef } from "react";
 import { Button, SegmentedControl } from "./atoms";
 import {
   type BoardDeal,
@@ -454,4 +455,176 @@ export const BoardWithALongStageName: StoryObj = {
       zone="Europe/Berlin"
     />
   ),
+};
+
+// A FOLDED STAGE beside open ones, which is the only shape a fold can be read
+// in: it takes the width its name and count need and hands the rest back, and
+// "the rest" is only visible next to a stage that kept it.
+//
+// Three stages rather than the deal board above, because a fold belongs at the
+// terminal end of a pipeline and the deal board's right-hand end is past the
+// edge of every frame this catalog captures — a folded column nobody can see
+// documents nothing. Same reason it is not on the phone story: one stage takes
+// four fifths of that width, so anything but the first is off screen.
+//
+// The head is a real control here (`aria-expanded`, Enter and Space) because
+// the column carries `collapsed`; the two open stages stay the plain text they
+// have always been, which is the per-column rule the board keeps. Pressing it
+// does nothing — the catalog draws states rather than driving them.
+const foldedStageColumns: BoardMoneyColumn[] = [
+  {
+    stage: "negotiation",
+    label: "Negotiation",
+    probabilityPct: 80,
+    rawMinor: 54_000,
+    weightedMinor: 43_200,
+    currency: "EUR",
+    deals: [boardDeal("f1", "Initech upgrade", 54_000, 21)],
+  },
+  {
+    stage: "won",
+    label: "Closed Won",
+    probabilityPct: 100,
+    rawMinor: 61_000,
+    weightedMinor: 61_000,
+    currency: "EUR",
+    deals: [boardDeal("f2", "Umbrella Corp", 61_000, 2)],
+  },
+  {
+    // Its count comes from the stage rather than from the cards: a folded
+    // column draws none of them, and a figure taken from what is drawn would
+    // read zero on every stage a reader folds away.
+    stage: "lost",
+    label: "Closed Lost",
+    probabilityPct: 0,
+    rawMinor: 18_000,
+    weightedMinor: 0,
+    currency: "EUR",
+    count: 8,
+    collapsed: true,
+    deals: [],
+  },
+];
+
+export const BoardWithAFoldedStage: StoryObj = {
+  render: () => (
+    <PipelineBoard
+      columns={foldedStageColumns}
+      cardHref={(d) => `#/deals/${d.id}`}
+      zone="Europe/Berlin"
+      onToggleColumn={() => undefined}
+    />
+  ),
+};
+
+// A STAGE MID-SCROLL, which is the one state that shows what its head is for.
+//
+// At rest the head is indistinguishable from the column behind it: they carry
+// one ground, so whether the band reaches the column's edges or leaves a strip
+// of scrollport above and beside it looks identical until something scrolls
+// through that strip. A card passing under the head is what tells them apart —
+// it goes BEHIND the band and is visible nowhere above or beside it.
+//
+// Deep enough to overflow, in a frame short enough to overflow it: a column
+// takes its `overflow-y: auto` from the list surface (listtable.css) and only
+// scrolls when the surface has a bounded height to scroll inside. The second
+// stage holds one deal, so the same head reads beside it at rest.
+const scrollingStageColumns: BoardMoneyColumn[] = [
+  {
+    stage: "discovery",
+    label: "Discovery",
+    probabilityPct: 10,
+    rawMinor: 197_000,
+    weightedMinor: 19_700,
+    currency: "EUR",
+    deals: [
+      boardDeal("s1", "Contoso renewal", 12_000, 3),
+      boardDeal("s2", "Fabrikam expansion", 33_000, 9),
+      boardDeal("s3", "Globex onboarding", 28_000, 14),
+      boardDeal("s4", "Initech upgrade", 54_000, 21),
+      boardDeal("s5", "Umbrella Corp", 61_000, 2),
+      boardDeal("s6", "Northwind pilot", 9_000, 6),
+    ],
+  },
+  {
+    stage: "qualified",
+    label: "Qualified",
+    probabilityPct: 30,
+    rawMinor: 28_000,
+    weightedMinor: 8_400,
+    currency: "EUR",
+    deals: [boardDeal("s7", "Tailspin rollout", 28_000, 11)],
+  },
+];
+
+// Short enough that six deals do not fit, which is what makes the stage a
+// scroller at all; the offset is three cards deep, which catches one of them
+// halfway under the band rather than a seam between two.
+const FRAME_H_PX = 440;
+const SCROLLED_PAST_PX = 340;
+
+function StageMidScroll() {
+  const frame = useRef<HTMLDivElement>(null);
+
+  // Scrolled, not passed: the board has no prop for a stage's offset, and the
+  // same reasoning the sort-menu story presses its own trigger with — a frame
+  // of a stage that never scrolled would picture the very thing this story
+  // exists to rule out.
+  useLayoutEffect(() => {
+    const stage = frame.current?.querySelector(".board-col");
+    if (!(stage instanceof HTMLElement)) {
+      throw new Error(
+        "this frame drew no stage, so there is nothing to scroll",
+      );
+    }
+    stage.scrollTop = SCROLLED_PAST_PX;
+    // A frame that does not bound the surface leaves every stage its full
+    // height, and the story would then picture a head sealing nothing while
+    // reading as though it had.
+    if (stage.scrollTop === 0) {
+      throw new Error("the stage did not scroll: the frame left it unbounded");
+    }
+  }, []);
+
+  return (
+    <div ref={frame} style={{ display: "flex", height: FRAME_H_PX }}>
+      <ListSurface count="7 deals" action={<Button small>New deal</Button>}>
+        <PipelineBoard
+          columns={scrollingStageColumns}
+          cardHref={(d) => `#/deals/${d.id}`}
+          zone="Europe/Berlin"
+        />
+      </ListSurface>
+    </div>
+  );
+}
+
+export const BoardWithAScrolledStage: StoryObj = {
+  render: () => <StageMidScroll />,
+};
+
+/**
+ * The same board on a phone, where a reader swipes between stages instead of
+ * seeing them side by side.
+ *
+ * One stage and the gap after it take four fifths of the board's width, so the
+ * next stage shows about a quarter of itself — the peek is the only thing that
+ * says the pipeline carries on, and the board snaps so a swipe cannot leave the
+ * reader parked between two stages. The frame reuses the deal board above
+ * unchanged: the phone shape is the stylesheet's, not a second component's, and
+ * a story that built its own columns could agree with the CSS while the real
+ * board did not.
+ *
+ * `uat-phone` is what makes the capture gate drive the browser to 390px —
+ * Storybook's own viewport is applied by the manager, which the gate's bare
+ * `iframe.html` never runs, so without the tag this would be captured at
+ * desktop width and would picture the very layout it exists to rule out.
+ * `fullscreen` keeps the catalog's 2rem frame off it: 390px less two frames is
+ * not a width any reader has.
+ */
+export const BoardAtPhoneWidth: StoryObj = {
+  ...BoardInSurface,
+  parameters: { layout: "fullscreen" },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };

@@ -389,9 +389,12 @@ func openConfidentialityQuestionTx(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, owner ids.UUID,
 	rec connector.NormalizedRecord, fields ActivityFields, birth birthDecision,
 ) error {
-	if fields.Kind != "email" {
-		// A meeting or a channel message is not correspondence a
-		// confidentiality classifier was ever asked about.
+	if fields.Kind != kindEmail {
+		// The classifier is opened per DELIVERING MAILBOX, and only mail has
+		// one. A member-bound chat is correspondence — the workspace floor, a
+		// counterparty hold and a sender's own marker all reach it — but the
+		// posture that would commission a verdict about it lives on
+		// capture_connection, where no channel transport has a row.
 		return nil
 	}
 	// The posture decides whether this mailbox has a question at all, and it is

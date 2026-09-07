@@ -37,7 +37,9 @@ function trimDecimal(value: string): string {
   if (!value.includes(".")) {
     return value;
   }
-  return value.replace(/0+$/, "").replace(/\.$/, "");
+  // Lookbehind: the run of zeros is found once, not retried from each zero in
+  // it. numeric(20,10) is short, but the shape is the one that hangs a tab.
+  return value.replace(/(?<!0)0+$/, "").replace(/\.$/, "");
 }
 
 // Withheld, not absent (design-system README, "Absent, disabled, or withheld"):

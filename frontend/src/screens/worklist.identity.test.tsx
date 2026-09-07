@@ -17,7 +17,7 @@ import {
 // address and remounting it is waste — which is what a plan to lower it said.
 //
 // It is not one address. `#/worklist/<owner>` and `#/worklist/unassigned` are
-// real addresses that the home team board navigates to, and App.tsx hands that
+// real addresses that the Brief team board navigates to, and App.tsx hands that
 // segment to the screen as `opensOn`. The screen reads it in useState
 // INITIALISERS, so it is used once at mount and never again.
 //
@@ -63,7 +63,7 @@ describe("the worklist's routed identity", () => {
     expect(READS[0]).toContain("scope=mine");
     const before = READS.length;
 
-    // What the home team board's "unassigned" arm does.
+    // What the Brief team board's "unassigned" arm does.
     window.location.hash = "#/worklist/unassigned";
 
     // The read for the NEW question. Without a remount this never arrives, and

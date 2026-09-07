@@ -128,9 +128,11 @@ check monitoring. Read-only inspection (`git status`, `diff`, `log`) can stay
 sandboxed.
 
 1. Branch off `main`: `git switch -c <type>/<slug> origin/main`.
-2. Run `make check` before pushing — it is both halves, `frontend/` included,
-   with nothing to add on top. The pre-push hook runs `craft static --strict`
-   diff-scoped too — fix what it finds, never bypass it; install it via `make hooks`.
+2. Run `make check` before pushing — both halves, `frontend/` included. **For a
+   change touching backend Go, run `make check-all` instead**: `check` reaches the
+   integration lane not at all, so a green one says nothing about it. The pre-push
+   hook runs `craft static --strict` diff-scoped too — fix what it finds, never
+   bypass it; install it via `make hooks`.
 3. Push and open a PR.
 4. CI, CodeRabbit and SonarCloud must all pass. Address review findings
    rather than dismissing them.

@@ -59,9 +59,9 @@ curl -fsS --max-time 10 "$API_BASE/readyz" >/dev/null 2>&1 \
   || fail "$API_BASE/readyz is not answering — start the stack first (make dev)"
 
 status="$(api POST /auth/login "$(jq -n --arg e "$ADMIN_EMAIL" --arg p "$ADMIN_PASSWORD" '{email:$e,password:$p}')")"
-[ "$status" = "200" ] || fail "login returned HTTP $status"
+[[ "$status" = "200" ]] || fail "login returned HTTP $status"
 SESSION="$(sed -n 's/^[Ss]et-[Cc]ookie: crm_session=\([^;]*\).*/\1/p' "$workdir/headers" | tr -d '\r')"
-[ -n "$SESSION" ] || fail "the server answered OK but set no crm_session cookie"
+[[ -n "$SESSION" ]] || fail "the server answered OK but set no crm_session cookie"
 echo "  OK: logged in as $ADMIN_EMAIL"
 
 # ---- the company -----------------------------------------------------------
@@ -70,7 +70,7 @@ echo "  OK: logged in as $ADMIN_EMAIL"
 # so a demo account that is not one cannot show the cards this exists to show.
 echo "== the company =="
 org_id="$(psql_one "SELECT id FROM organization WHERE display_name = '$COMPANY' AND archived_at IS NULL LIMIT 1")"
-if [ -z "$org_id" ]; then
+if [[ -z "$org_id" ]]; then
   status="$(api POST /organizations "$(jq -n --arg n "$COMPANY" '{
     display_name: $n,
     lifecycle: "customer",
@@ -79,7 +79,7 @@ if [ -z "$org_id" ]; then
     employee_band: "51_200",
     source: "manual"
   }')")"
-  [ "$status" = "201" ] || { cat "$workdir/body" >&2; fail "creating $COMPANY returned HTTP $status"; }
+  [[ "$status" = "201" ]] || { cat "$workdir/body" >&2; fail "creating $COMPANY returned HTTP $status"; }
   org_id="$(jq -r .id < "$workdir/body")"
   echo "  OK: created $COMPANY"
 else
@@ -97,7 +97,7 @@ person_id() { psql_one "SELECT id FROM person WHERE full_name = '$1' AND archive
 ensure_person() { # ensure_person <name> <email> <title>
   local name="$1" email="$2" title="$3" existing status
   existing="$(person_id "$name")"
-  if [ -n "$existing" ]; then
+  if [[ -n "$existing" ]]; then
     # stderr, not stdout: stdout IS the id this function returns, and a
     # progress line on it becomes part of the value the caller captures.
     echo "  OK: $name already present" >&2
@@ -111,7 +111,7 @@ ensure_person() { # ensure_person <name> <email> <title>
     organization_id: $o,
     source: "manual"
   }')")"
-  [ "$status" = "201" ] || { cat "$workdir/body" >&2; fail "creating $name returned HTTP $status"; }
+  [[ "$status" = "201" ]] || { cat "$workdir/body" >&2; fail "creating $name returned HTTP $status"; }
   echo "  OK: created $name" >&2
   jq -r .id < "$workdir/body"
 }
@@ -126,15 +126,15 @@ mark_id="$(ensure_person "Mark Hughes" "mark@glazedfrog.example" "Operations Man
 # refuses to rank its deals, which is correct and shows nothing.
 echo "== the deals =="
 status="$(api GET /pipelines)"
-[ "$status" = "200" ] || fail "GET /v1/pipelines returned HTTP $status"
+[[ "$status" = "200" ]] || fail "GET /v1/pipelines returned HTTP $status"
 pipeline_id="$(jq -r '.data[] | select(.is_default) | .id' "$workdir/body")"
 stage_proposal="$(jq -r --arg p "$pipeline_id" '.data[] | select(.id == $p) | .stages[] | select(.name == "Proposal") | .id' "$workdir/body")"
 stage_qualified="$(jq -r --arg p "$pipeline_id" '.data[] | select(.id == $p) | .stages[] | select(.name == "Qualified") | .id' "$workdir/body")"
-[ -n "$stage_proposal" ] && [ -n "$stage_qualified" ] || fail "the default pipeline has no Proposal/Qualified stage"
+[[ -n "$stage_proposal" ]] && [[ -n "$stage_qualified" ]] || fail "the default pipeline has no Proposal/Qualified stage"
 
 ensure_deal() { # ensure_deal <name> <stage-id> <amount-minor> <close-date>
   local name="$1" stage="$2" amount="$3" closes="$4" status
-  if [ -n "$(psql_one "SELECT id FROM deal WHERE name = '$name' AND archived_at IS NULL LIMIT 1")" ]; then
+  if [[ -n "$(psql_one "SELECT id FROM deal WHERE name = '$name' AND archived_at IS NULL LIMIT 1")" ]]; then
     echo "  OK: deal $name already present"
     return
   fi
@@ -143,7 +143,7 @@ ensure_deal() { # ensure_deal <name> <stage-id> <amount-minor> <close-date>
       name: $n, pipeline_id: $p, stage_id: $s, organization_id: $o,
       amount_minor: $a, currency: "EUR", expected_close_date: $c, source: "manual"
     }')")"
-  [ "$status" = "201" ] || { cat "$workdir/body" >&2; fail "creating deal $name returned HTTP $status"; }
+  [[ "$status" = "201" ]] || { cat "$workdir/body" >&2; fail "creating deal $name returned HTTP $status"; }
   echo "  OK: created deal $name"
 }
 
@@ -158,12 +158,12 @@ ensure_deal "Facade retrofit programme" "$stage_qualified" 4200000 "2027-02-15"
 echo "== the history =="
 ensure_activity() { # ensure_activity <source-id> <json-body>
   local key="$1" body="$2" status
-  if [ -n "$(psql_one "SELECT id FROM activity WHERE source_id = '$key' AND archived_at IS NULL LIMIT 1")" ]; then
+  if [[ -n "$(psql_one "SELECT id FROM activity WHERE source_id = '$key' AND archived_at IS NULL LIMIT 1")" ]]; then
     echo "  OK: $key already present"
     return
   fi
   status="$(api POST /activities "$body")"
-  [ "$status" = "201" ] || { cat "$workdir/body" >&2; fail "creating activity $key returned HTTP $status"; }
+  [[ "$status" = "201" ]] || { cat "$workdir/body" >&2; fail "creating activity $key returned HTTP $status"; }
   echo "  OK: created $key"
 }
 
@@ -209,7 +209,7 @@ ensure_activity demo-gf-task "$(jq -n --arg o "$org_id" '{
 # the writer the moment the mirror changes.
 echo "== the accounting source =="
 conn_id="$(psql_one "SELECT id FROM finance_connection WHERE archived_at IS NULL AND status <> 'disconnected' LIMIT 1")"
-if [ -z "$conn_id" ]; then
+if [[ -z "$conn_id" ]]; then
   conn_id="$(psql_one "INSERT INTO finance_connection
       (provider, status, credential_ref, source, captured_by)
     VALUES ('offline_demo', 'active', 'offline://demo', 'system', 'system:seed')
@@ -219,7 +219,7 @@ else
   echo "  OK: an accounting source is already connected"
 fi
 
-if [ -z "$(psql_one "SELECT 1 FROM finance_customer_link WHERE organization_id = '$org_id' AND archived_at IS NULL")" ]; then
+if [[ -z "$(psql_one "SELECT 1 FROM finance_customer_link WHERE organization_id = '$org_id' AND archived_at IS NULL")" ]]; then
   psql_one "INSERT INTO finance_customer_link
       (connection_id, organization_id, external_customer_id,
        sync_hash, source, captured_by)

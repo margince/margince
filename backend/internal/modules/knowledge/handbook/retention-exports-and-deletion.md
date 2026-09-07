@@ -239,7 +239,7 @@ held — every erasure so far could be completed in full."
 
 ## Consent
 
-**Settings → Privacy & audit** carries a registry of **purposes** — the reasons
+**Settings → Privacy & retention** carries a registry of **purposes** — the reasons
 this organization processes personal data. Each purpose has a key, a label, and
 a flag for whether it requires double opt-in.
 
@@ -267,7 +267,7 @@ Agents cannot write consent at all. See
 
 ## The audit trail
 
-**Settings → Privacy & audit → Audit log** records "every action, attributed —
+**Settings → Audit log** records "every action, attributed —
 human, agent, or connector."
 
 You can filter it by actor, entity type, entity id, action, and a date range,

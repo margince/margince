@@ -1,0 +1,9 @@
+{
+  "scenario": "case2_business_card",
+  "criteria": [
+    4
+  ],
+  "passed": 2,
+  "runs": 3,
+  "pass_at": 2
+}

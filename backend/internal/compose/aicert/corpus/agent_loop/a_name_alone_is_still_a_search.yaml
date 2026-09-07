@@ -22,6 +22,9 @@ expect:
     match a stored value exactly or return nothing — a confident empty answer
     where a text match would have found the account. read_record needs an id
     nothing in this window supplies.
+  near_misses:
+    - query_workspace
+    - read_record
   bands:
     certified_min: 70
     degraded_min: 50

@@ -256,19 +256,43 @@ func TestTheInstallationsOwnMailIsNotAskedForAPurposeGrant(t *testing.T) {
 	}
 }
 
-// TestAUserSendIsStillAskedForItsPurposeGrant is the other half. Without it the
-// exemption above could widen to every message and nothing would fail.
-func TestAUserSendIsStillAskedForItsPurposeGrant(t *testing.T) {
-	store := &fakeStore{delivery: liveDelivery()}
-	gate := &legacyPurposeGate{}
-	d := newTestDispatcher(store, fakeResolver{sender: &fakeSender{}, granted: []string{sendScope}}, gate)
+// TestBothLanesAreAskedTheSameQuestion is the other half of the case above.
+//
+// The controller lane used to be EXEMPTED from a second, legacy question the
+// dispatcher asked after the engine had already answered — and the exemption
+// existed only because a controller row carries no consent_purpose, so that
+// question could only ever answer "not granted". With the legacy question gone
+// there is no exemption left to widen: both lanes reach the engine, and the
+// engine is what decides. This pins that they do.
+func TestBothLanesAreAskedTheSameQuestion(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		controller bool
+	}{{"a rep's send", false}, {"the installation's own mail", true}} {
+		store := &fakeStore{delivery: liveDelivery()}
+		res := fakeResolver{sender: &fakeSender{}, granted: []string{sendScope}}
+		gate := &legacyPurposeGate{}
+		d := newTestDispatcher(store, res, gate)
+		if tc.controller {
+			// The controller lane transmits through its own relay, so the case
+			// needs one wired to reach transmit at all.
+			store.delivery = controllerDelivery()
+			d = newTestDispatcher(store, fakeResolver{}, gate).
+				WithControllerRelay(&fakeRelay{}, &fakeVault{secret: "https://margince.test/#/confirm/t"})
+		}
 
-	if _, _, err := d.DispatchWithWait(context.Background(), store.delivery.ID); err != nil {
-		t.Fatalf("DispatchWithWait: %v", err)
-	}
-	if len(gate.askedWithPurpose) != 1 || gate.askedWithPurpose[0] != "marketing" {
-		t.Errorf("a rep's send put %q to the legacy gate, want exactly one ask for %q: the "+
-			"controller exemption must not widen to ordinary mail",
-			gate.askedWithPurpose, "marketing")
+		if _, _, err := d.DispatchWithWait(context.Background(), store.delivery.ID); err != nil {
+			t.Fatalf("%s: DispatchWithWait: %v", tc.name, err)
+		}
+		if gate.authzSeen != 1 {
+			t.Errorf("%s: the transmit authority was asked %d times, want exactly 1 — one lane "+
+				"reaching the engine and the other not is the side door this pins shut",
+				tc.name, gate.authzSeen)
+		}
+		if len(gate.askedWithPurpose) != 0 {
+			t.Errorf("%s: the legacy purpose gate was asked %q at transmit; it is not an authority "+
+				"there any more and asking it again could only park what the engine allowed",
+				tc.name, gate.askedWithPurpose)
+		}
 	}
 }

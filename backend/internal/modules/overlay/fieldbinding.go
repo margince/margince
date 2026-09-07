@@ -152,7 +152,7 @@ var personBindings = EntityBinding{
 	Bindings: append([]FieldBinding{
 		{
 			WireSlot: "writable", Disposition: DispositionNativeOnly,
-			Reason: "Whether THIS caller may change the row, answered by this installation's own write gate from its ownership, teams and record grants. An incumbent CRM's permission model is not those, so a mirrored value would be a different question's answer wearing this field's name.",
+			Reason: "Whether THIS caller may change the row. An incumbent CRM's permission model is not this installation's, so a mirrored value would be a different question's answer wearing this field's name — but the slot is SERVER-COMPUTED rather than unanswerable, and in overlay mode it is computed differently: the write-back contract supporting an update of this type, and the seat holding the grant. overlay.Writable is the one spelling of that. The row-scope term the native answer adds is already true of any record an assembler is filling, because the mirror read that produced it is visibility-joined.",
 		},
 		{
 			WireSlot: "visibility", Disposition: DispositionNativeOnly,
@@ -219,7 +219,7 @@ var organizationBindings = EntityBinding{
 		},
 		{
 			WireSlot: "writable", Disposition: DispositionNativeOnly,
-			Reason: "Whether THIS caller may change the row, answered by this installation's own write gate from its ownership, teams and record grants. An incumbent CRM's permission model is not those, so a mirrored value would be a different question's answer wearing this field's name.",
+			Reason: "Whether THIS caller may change the row. An incumbent CRM's permission model is not this installation's, so a mirrored value would be a different question's answer wearing this field's name — but the slot is SERVER-COMPUTED rather than unanswerable, and in overlay mode it is computed differently: the write-back contract supporting an update of this type, and the seat holding the grant. overlay.Writable is the one spelling of that. The row-scope term the native answer adds is already true of any record an assembler is filling, because the mirror read that produced it is visibility-joined.",
 		},
 		{
 			WireSlot: "visibility", Disposition: DispositionNativeOnly,

@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useId, useState } from "react";
 import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
+import { useRecordWriteRefusal } from "../app/capability";
 import { PageAsideToggle, usePageAside } from "../app/pageaside";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
@@ -155,7 +156,12 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
       name={project.name}
       subtitle={<ProjectSubtitle view={view} />}
       zone={recordZone}
-      badges={
+      // The phase and the key read beside the name, not at the far end of
+      // the header among the verbs: both are tags ON the record — where it
+      // stands and what a human calls it in a subject line — and a reader
+      // looking at the name was finding them across the page, above the
+      // buttons that act on it.
+      nameBadge={
         <>
           <PhaseBadge phase={project.phase} />
           {project.key && <ProjectKeyChip projectKey={project.key} />}
@@ -309,13 +315,10 @@ function ProjectSubtitle({ view }: Readonly<{ view: Project360 }>) {
 // controls the save refuses with nothing a reader could do about it.
 function useProjectVerbRefusal(project: Project): string | undefined {
   const t = useT();
-  if (project.archived_at) {
-    return t("project.archivedReadOnly");
-  }
-  if (!(project.writable ?? false)) {
-    return t("project.notYoursToChange");
-  }
-  return undefined;
+  return useRecordWriteRefusal("project", project, {
+    archived: t("project.archivedReadOnly"),
+    notYours: t("project.notYoursToChange"),
+  });
 }
 
 // refusedReasonId is the id of the sentence the BAND renders, passed in rather

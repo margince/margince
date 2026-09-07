@@ -30,7 +30,7 @@ if range="$(sysctl -n net.ipv4.ip_local_port_range 2>/dev/null)"; then
   read -r lo _ <<<"$range"
 fi
 
-if [ ! -f "$compose_file" ]; then
+if [[ ! -f "$compose_file" ]]; then
   echo "check-host-ports: $compose_file not found" >&2
   exit 1
 fi
@@ -50,7 +50,7 @@ while IFS= read -r line; do
       continue
       ;;
   esac
-  if [ "$hostport" -ge "$lo" ]; then
+  if [[ "$hostport" -ge "$lo" ]]; then
     echo "EPHEMERAL HOST PORT: $hostport is at or above the ephemeral floor ($lo) — pick one below it: $line" >&2
     fail=1
   fi
@@ -68,7 +68,7 @@ done < <(awk '
   }
 ' "$compose_file")
 
-if [ "$fail" -eq 0 ]; then
+if [[ "$fail" -eq 0 ]]; then
   echo "host ports OK (all below the ephemeral floor $lo)"
 fi
 exit "$fail"

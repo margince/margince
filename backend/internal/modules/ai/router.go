@@ -222,9 +222,9 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 	}
 	ladder = r.applyProfile(ladder)
 
-	// The rail's opening line. It sits HERE and not higher, and the ladder it
-	// is given is the ADJUSTED one — announceRailStartOnce says why both.
-	lc.announceRailStartOnce(ctx, r, task, ladder)
+	// The rail's opening line. It sits HERE and not higher — announceRailStartOnce
+	// says why.
+	lc.announceRailStartOnce(ctx, r, task)
 
 	// A cached answer only serves when its tier is still on the adjusted
 	// ladder: after a budget band tightened or the profile remapped the

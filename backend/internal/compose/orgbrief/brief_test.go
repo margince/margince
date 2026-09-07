@@ -611,3 +611,29 @@ func TestAssembleFailsRatherThanCachingABriefThatLostItsCompanyHalf(t *testing.T
 		t.Fatalf("assemble without the profile = %v, want it not to read the store at all", err)
 	}
 }
+
+// A citation is a POINTER, and until now that was all the filter checked. A
+// sentence naming a date, a discount or a currency the cited row does not carry
+// passed as checked — which is what an instruction embedded in captured mail
+// text, or a plain hallucination, produces.
+func TestParseBriefDropsASentenceWhoseFactsTheCitedRecordDoesNotCarry(t *testing.T) {
+	in := inputFixture()
+	activity := `[{"entity_type":"activity","entity_id":"22222222-2222-4222-8222-222222222222"}]`
+	reply := `{"sentences":[
+	  {"text":"They wrote back on 10 July and nobody has replied since.","evidence":` + activity + `},
+	  {"text":"They asked for the proposal again on 3 September.","evidence":` + activity + `},
+	  {"text":"They are holding out for 40% off.","evidence":` + activity + `}
+	]}`
+	kept, err := ParseBrief(reply, briefOrgID, in)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	if len(kept) != 1 {
+		t.Fatalf("kept %d sentences, want only the one whose date the activity carries: %v", len(kept), kept)
+	}
+	// The reading — nobody has replied since — is the sentence's own and is not
+	// checked. Only the date is, and the cited row carries it.
+	if !strings.Contains(kept[0].Text, "10 July") {
+		t.Errorf("kept %q, want the sentence whose date is in the row it cites", kept[0].Text)
+	}
+}

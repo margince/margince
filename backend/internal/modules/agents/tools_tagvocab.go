@@ -57,7 +57,7 @@ func (t createTag) Spec() mcp.ToolSpec {
 		// is a change to that door, not to this one.
 		InputSchema: schema(`{"type":"object","required":["name"],"properties":{
 			"name":{"type":"string","minLength":1,"maxLength":64},
-			"color":{"type":"string","enum":["teal","amber","rose","slate"]}},
+			"color":{"type":"string","enum":["teal","amber","rose","slate","sky","violet","lime","orange"]}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[Tag](),
 	}
@@ -103,7 +103,7 @@ func (t updateTag) Spec() mcp.ToolSpec {
 		InputSchema: schema(`{"type":"object","required":["tag_id"],"properties":{
 			"tag_id":{"type":"string","format":"uuid"},
 			"name":{"type":"string","minLength":1,"maxLength":64},
-			"color":{"type":"string","enum":["teal","amber","rose","slate","none"]},
+			"color":{"type":"string","enum":["teal","amber","rose","slate","sky","violet","lime","orange","none"]},
 			"description":{"type":"string"}},"additionalProperties":false}`),
 		OutputSchema: schemaFor[Tag](),
 	}

@@ -28,6 +28,9 @@ expect:
     update_record on either one guessed, and it guessed silently, which is worse
     than guessing loudly; a turn that searches spends a call to learn what the
     window already told it.
+  near_misses:
+    - update_record
+    - search_records
   bands:
     certified_min: 70
     degraded_min: 50

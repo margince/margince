@@ -41,7 +41,7 @@ import (
 // message was permitted, so committing the delivery without it would put out
 // mail the installation cannot account for — which is the exact gap this table
 // exists to close.
-func recordBasis(ctx context.Context, tx pgx.Tx, subject subjectRef, res resolution, req commsauthz.Request, w windows) error {
+func recordBasis(ctx context.Context, tx pgx.Tx, subject subjectRef, res resolution, req commsauthz.Request, w packRules) error {
 	if !res.Supported || res.Basis == "" {
 		// Nothing was concluded, so there is nothing to stand behind. An
 		// unsupported resolution falls through to the legacy verdict, whose own
@@ -119,7 +119,7 @@ func subjectAuditEntity(subject subjectRef) string {
 // when the thing behind it stops supporting a send. A basis outliving its
 // evidence would be a record saying a message was lawful on a ground that had
 // already run out.
-func basisLifetime(category commsauthz.Category, w windows) time.Duration {
+func basisLifetime(category commsauthz.Category, w packRules) time.Duration {
 	if category == commsauthz.CategoryActiveDealFollowup {
 		return w.dealFollow
 	}

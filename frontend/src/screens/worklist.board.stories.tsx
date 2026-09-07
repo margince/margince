@@ -9,6 +9,10 @@ import { TeamBoard } from "./worklist.board";
 // WHO ON THE TEAM IS CARRYING WHAT — counts, not rows, because the queue below
 // ranks one person's day and cannot answer "who is drowning".
 //
+// An open titled panel, the same shape as the blocks either side of it on both
+// surfaces that draw it, which is why every frame below shows the heading and
+// the state under it with nothing to unfold first.
+//
 // The frames are about the three honest answers a board can give. A team with
 // somebody carrying more than the rest is the one a lead opens it for. A board
 // that could not be READ says so rather than drawing zeros, which would be the

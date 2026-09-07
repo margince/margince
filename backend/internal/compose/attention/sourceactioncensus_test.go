@@ -81,6 +81,9 @@ var performedBySource = map[string][]crmcontracts.AttentionItemActions{
 	"failed_approval": {"open"},
 	// The privacy queue's own row. It is read here and answered there.
 	"dsr": {"open"},
+	// The disclosure duty, read here and discharged on the person's own screen
+	// — the send that meets it is a mail, not a verb this queue can perform.
+	"notice_case": {"open"},
 }
 
 func TestNoLaneAdvertisesAVerbTheClientCannotPerform(t *testing.T) {
@@ -297,7 +300,12 @@ func aDayWithEveryLaneCarryingARow(t *testing.T) crmcontracts.Attention {
 			rows: []MeetingAwaitingOutcome{{
 				ID: ids.NewV7(), Subject: "a meeting that happened", StartedAt: readInstant,
 			}},
-		})).
+		}),
+		// The other clock the law started, an Option for the same reason and so
+		// just as easy to leave out of a fixture.
+		WithNoticeCases(&stubNoticeCases{rows: []NoticeCase{{
+			ID: ids.NewV7(), Rule: "art14", DueAt: readInstant,
+		}}})).
 		WithUndelivered(&stubUndelivered{rows: []ParkedSend{{
 			ID: ids.NewV7(), Subject: "a send that never left",
 			Reason: "the address bounced twice", ParkedAt: readInstant,

@@ -26,7 +26,7 @@ import (
 const scenarioCap = 3
 
 // groundedLine is claims.Grounded over this package's sentence shape.
-func groundedLine(sentence Sentence, known map[Evidence]bool) bool {
+func groundedLine(sentence Sentence, known map[Evidence]string) bool {
 	return claims.Grounded(sentence, known)
 }
 
@@ -49,12 +49,12 @@ func spellsAnID(lines ...string) bool {
 // groundedEvidenceOnly is the same rule for a field that carries citations
 // without prose of its own: at least one, and every one a record the reader
 // can open.
-func groundedEvidenceOnly(cited []Evidence, known map[Evidence]bool) bool {
+func groundedEvidenceOnly(cited []Evidence, known map[Evidence]string) bool {
 	if len(cited) == 0 {
 		return false
 	}
 	for _, one := range cited {
-		if !known[Evidence{EntityType: one.EntityType, EntityID: one.EntityID}] {
+		if _, ok := known[Evidence{EntityType: one.EntityType, EntityID: one.EntityID}]; !ok {
 			return false
 		}
 	}
@@ -153,7 +153,7 @@ func emptyReply(written Plan) bool {
 }
 
 func keptPlanSentence(
-	raw *replySentence, field string, known map[Evidence]bool,
+	raw *replySentence, field string, known map[Evidence]string,
 ) (Sentence, bool) {
 	if raw == nil {
 		return Sentence{}, false
@@ -163,7 +163,7 @@ func keptPlanSentence(
 
 // keptLine is the one filter every prose field goes through.
 func keptLine(
-	text, nature string, evidence []replyEvidence, field string, known map[Evidence]bool,
+	text, nature string, evidence []replyEvidence, field string, known map[Evidence]string,
 ) (Sentence, bool) {
 	if strings.TrimSpace(text) == "" {
 		return Sentence{}, false
@@ -192,7 +192,7 @@ func citedRecords(evidence []replyEvidence) []Evidence {
 	return out
 }
 
-func keptRisk(raw *replyRisk, known map[Evidence]bool) *Risk {
+func keptRisk(raw *replyRisk, known map[Evidence]string) *Risk {
 	if raw == nil {
 		return nil
 	}
@@ -216,7 +216,7 @@ func keptRisk(raw *replyRisk, known map[Evidence]bool) *Risk {
 	return &Risk{Text: sentence, Response: response}
 }
 
-func keptAsks(raw []replyAsk, known map[Evidence]bool) []Ask {
+func keptAsks(raw []replyAsk, known map[Evidence]string) []Ask {
 	out := make([]Ask, 0, len(raw))
 	for _, ask := range raw {
 		if len(out) == askCap {
@@ -252,7 +252,7 @@ func tierOf(raw string) crmcontracts.MeetingPlanTier {
 	}
 }
 
-func keptQuestions(raw []replyQuestion, known map[Evidence]bool) []Question {
+func keptQuestions(raw []replyQuestion, known map[Evidence]string) []Question {
 	out := make([]Question, 0, len(raw))
 	for _, question := range raw {
 		if len(out) == questionCap {
@@ -278,7 +278,7 @@ func keptQuestions(raw []replyQuestion, known map[Evidence]bool) []Question {
 	return out
 }
 
-func keptScenarios(raw []replyScenario, known map[Evidence]bool) []Scenario {
+func keptScenarios(raw []replyScenario, known map[Evidence]string) []Scenario {
 	out := make([]Scenario, 0, len(raw))
 	for _, scenario := range raw {
 		if len(out) == scenarioCap {

@@ -22,6 +22,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/pkg/extension/messaging"
 )
 
 const (
@@ -41,12 +43,22 @@ const (
 )
 
 // windows are the spans an evidence check measures against.
-type windows struct {
+// packRules is what this installation's jurisdiction sets: the spans that bind
+// a follow-up, and the marketing exception it grants.
+//
+// One struct because it is one read. packRulesFor is already the single settings
+// read on the send path, and a second resolver would mean a second query and
+// two places that can disagree about which pack is in force.
+type packRules struct {
 	reply      time.Duration
 	dealFollow time.Duration
+	// marketingException is the exception this jurisdiction allows, nil for
+	// none — which is the answer for a pack that declares none and for an
+	// installation that names no country.
+	marketingException *messaging.MarketingException
 }
 
-// windowsFor resolves the spans that bind this installation.
+// packRulesFor resolves the rules that bind this installation.
 //
 // A jurisdiction that declares a window shortens the core default; one that
 // declares none, and an installation that names no country at all, gets the
@@ -54,11 +66,11 @@ type windows struct {
 // country stated should behave exactly as it did before jurisdiction packs
 // existed, rather than losing the ability to follow up because nobody has
 // filled in a setting.
-func (s *Store) windowsFor(ctx context.Context, tx pgx.Tx) (windows, error) {
-	out := windows{reply: defaultReplyWindow, dealFollow: defaultDealFollowUpWindow}
+func (s *Store) packRulesFor(ctx context.Context, tx pgx.Tx) (packRules, error) {
+	out := packRules{reply: defaultReplyWindow, dealFollow: defaultDealFollowUpWindow}
 	rules, applicable, err := s.applicableRules(ctx, tx)
 	if err != nil {
-		return windows{}, err
+		return packRules{}, err
 	}
 	if !applicable {
 		return out, nil
@@ -72,13 +84,24 @@ func (s *Store) windowsFor(ctx context.Context, tx pgx.Tx) (windows, error) {
 	if rules.DealFollowUpWindow > 0 && rules.DealFollowUpWindow < out.dealFollow {
 		out.dealFollow = rules.DealFollowUpWindow
 	}
+	// THE EXCEPTION IS THE PACK'S TO GRANT, and a jurisdiction that declares
+	// none grants none. Germany's §7(3) used to be read straight out of a flag
+	// table with no reference to where the installation is, so a Vietnamese
+	// installation — whose pack declares no exceptions at all — took marketing
+	// authority from a German sale.
+	for i, e := range rules.MarketingExceptions {
+		if e.Kind == messaging.ExistingCustomer {
+			out.marketingException = &rules.MarketingExceptions[i]
+			break
+		}
+	}
 	return out, nil
 }
 
 // Why installation.country is MachineryApplied, recorded here because this is
 // the reader that needs it:
 //
-// windowsFor runs inside the transaction that binds a decision, under whatever
+// packRulesFor runs inside the transaction that binds a decision, under whatever
 // principal is sending. A rep holds no settings-read grant and a dispatching
 // worker holds the system principal, so a gated read fails the send outright —
 // with a 500, not a refusal, because "the caller may not read a setting" is not

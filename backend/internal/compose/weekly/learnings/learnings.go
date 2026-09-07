@@ -125,7 +125,7 @@ Return ONLY a JSON object: {"learnings":[{"kind":"...","text":"...","citations":
 
 "kind" is exactly one of: worked, did_not_work, pattern, experiment.
 "text" is ONE sentence. Not a list, not a heading.
-"citations" names the rows the claim is drawn from, by the "type" and "id" given in the summary.
+"citations" names the rows the claim is drawn from, by the "type" and "id" given in the summary. Only the deals and commitments are rows: each carries an id you can cite. The counts are totals of the week and carry no id, so nothing in them can be cited.
 
 EVERY learning must cite at least one row from the summary, and every id you write must appear there. A claim you cannot point at is a claim you must not make: leave it out. Returning fewer learnings, or none at all, is a correct answer.
 

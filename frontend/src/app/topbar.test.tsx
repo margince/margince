@@ -108,7 +108,7 @@ describe("Top bar search (AC-shell-7)", () => {
     const user = userEvent.setup();
     const onOpenSearch = vi.fn();
     const { container } = renderTopBar(
-      { screen: "home" },
+      { screen: "brief" },
       { onOpenSearch, onToggle: ignoreToggle },
     );
 
@@ -123,7 +123,7 @@ describe("Top bar search (AC-shell-7)", () => {
 
   it("is a button rather than the field it is styled as", () => {
     const { container } = renderTopBar(
-      { screen: "home" },
+      { screen: "brief" },
       { onToggle: ignoreToggle },
     );
     expect(container.querySelector(".topbar-search")?.tagName).toBe("BUTTON");
@@ -135,7 +135,7 @@ describe("Top bar search (AC-shell-7)", () => {
   // a kbd that leaked into it fails this.
   it("is named for what it does, with the shortcut kept out of that name", () => {
     const { container } = renderTopBar(
-      { screen: "home" },
+      { screen: "brief" },
       { onToggle: ignoreToggle },
     );
     expect(
@@ -164,7 +164,7 @@ describe("Top bar sidebar toggle", () => {
   it("reports the sidebar expanded and calls the handler on click", async () => {
     const user = userEvent.setup();
     const onToggle = vi.fn();
-    renderTopBar({ screen: "home" }, { onToggle });
+    renderTopBar({ screen: "brief" }, { onToggle });
 
     const toggle = screen.getByRole("button", { name: "Collapse sidebar" });
     expect(toggle.getAttribute("aria-expanded")).toBe("true");
@@ -178,7 +178,7 @@ describe("Top bar sidebar toggle", () => {
   // changes.
   it("reports the sidebar collapsed and names the state it will move to", () => {
     renderTopBar(
-      { screen: "home" },
+      { screen: "brief" },
       { collapsed: true, onToggle: ignoreToggle },
     );
     const toggle = screen.getByRole("button", { name: "Expand sidebar" });
@@ -189,7 +189,7 @@ describe("Top bar sidebar toggle", () => {
   // conditioned on the handler because the handler is the only evidence the bar
   // has that a sidebar exists at all.
   it("mints no control when it is handed no toggle", () => {
-    const { container } = renderTopBar({ screen: "home" });
+    const { container } = renderTopBar({ screen: "brief" });
     expect(container.querySelector(".topbar-toggle")).toBeNull();
     expect(screen.queryByRole("button", { name: /sidebar$/ })).toBeNull();
   });

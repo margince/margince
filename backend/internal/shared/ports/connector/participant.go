@@ -26,6 +26,22 @@ type MessageParticipant struct {
 	// every attendee in full, and a person minted from a bare address is
 	// otherwise stuck with the local part of their own email forever.
 	DisplayName string
+	// ChannelUserID is the account the transport knows this party by, for a
+	// party a chat names and mail cannot: the third human in a group, who has
+	// an account id and no address at all. Empty for every mail and calendar
+	// party, whose identity is their address.
+	//
+	// It does not carry the provider, because the record already names the
+	// transport that enumerated the party (ActivityFields.ChannelProvider) and
+	// an account is only meaningful against it. Two columns for one fact are
+	// two that can disagree.
+	//
+	// It is the WEAKEST identity of the four. Capture resolves it to a person
+	// record through person_channel_identity and never to a colleague's seat:
+	// nothing in this system attests that a channel account belongs to a
+	// member, so a roster naming one proves only that the account was in the
+	// room.
+	ChannelUserID string
 }
 
 // The roles a further participant may hold. The set is closed by the

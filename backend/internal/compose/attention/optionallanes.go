@@ -101,7 +101,7 @@ func (s *Service) optionalLanes(
 		{
 			name: "meetings", bound: s.meetings != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
-				booked, err := s.meetings.Today(ctx, asOf, until, plannedCap)
+				booked, err := s.meetings.Today(ctx, asOf, until, plannedCap, s.taskScope, s.taskOwner)
 				return renderEach(booked, meetingItem), err
 			},
 			into: &out.Meetings, count: &out.Counts.Meetings,
@@ -117,7 +117,7 @@ func (s *Service) optionalLanes(
 				if err != nil {
 					return nil, err
 				}
-				over, err := s.meetingsAwaitingOutcome.Since(ctx, began, asOf, plannedCap)
+				over, err := s.meetingsAwaitingOutcome.Since(ctx, began, asOf, plannedCap, s.taskScope, s.taskOwner)
 				return renderEach(over, meetingAwaitingOutcomeItem), err
 			},
 			into: &out.MeetingsUnreported, count: &out.Counts.MeetingsUnreported,
@@ -163,6 +163,20 @@ func (s *Service) optionalLanes(
 				}), err
 			},
 			into: &out.Dsr, count: &out.Counts.Dsr,
+		},
+		{
+			name: "notice_case", bound: s.noticeCases != nil,
+			read: func() ([]crmcontracts.AttentionItem, error) {
+				// No window, for the DSR lane's reason: the deadline is the
+				// law's and it does not stop running because a case got old.
+				// An Art. 14 duty that aged out of this lane would be one the
+				// installation had quietly decided not to meet.
+				owed, err := s.noticeCases.OpenDueSoonest(ctx, doneCap)
+				return renderEach(owed, func(duty NoticeCase) crmcontracts.AttentionItem {
+					return noticeCaseItem(duty, asOf)
+				}), err
+			},
+			into: &out.NoticeCases, count: &out.Counts.NoticeCases,
 		},
 		{
 			name: "relationship_decay", bound: s.decay != nil,

@@ -70,6 +70,20 @@ func Waive[K ~string](entries map[K]string) *Waivers[K] {
 // Waived reports whether subject is ratified, recording the match so
 // AssertAllMatched can tell a live waiver from one describing code that is gone.
 //
+// ASK IT ABOUT AN OFFENDER, never about a candidate. Code that is gone is the
+// weaker half of what the match records: on the offender path the loop stops
+// reaching Waived the moment the subject stops offending, so a waiver also
+// decays when the code is still there and has been FIXED — bidirectional for
+// free, with nobody having to remember to delete the entry.
+//
+// Asked as a pre-filter — before the offence is determined, on a subject that
+// is merely a place one might live — that property is lost, and worse: the
+// guard discards every finding in the set behind it, including the ones added
+// after the entry was written. Two readers of this comment took "code that is
+// gone" for the limit of the mechanism and wrote a gate that way; #2164 is what
+// that cost, and TestEveryWaiverIsAskedAboutAnOffenderNotACandidate is what now
+// holds the rest to it.
+//
 // It takes t because a reasonless entry must fail where it is RELIED ON: a
 // separate validation step is one more call a new gate can omit, and a waiver
 // whose reason nothing checks is exactly the gap this package closes.

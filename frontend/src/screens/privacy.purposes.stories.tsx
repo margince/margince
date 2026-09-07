@@ -11,7 +11,7 @@ import {
   StoryProviders,
 } from "./story-utils";
 
-// The consent registry (the Privacy & audit tab's ConsentPurposesCard). Its own
+// The consent registry (the Privacy & retention tab's ConsentPurposesCard). Its own
 // file rather than a second component in privacy.stories.tsx, so each surface
 // keeps one story title: `fe-uat` keys on the co-located name, and a card with
 // no story of its own is a card nobody looks at in either theme.
@@ -61,7 +61,7 @@ function purposes(roles: string[], purposeList: unknown = PURPOSES) {
 }
 
 const meta: Meta<typeof ConsentPurposesCard> = {
-  title: "Settings/Governance/Privacy & audit/Consent purposes",
+  title: "Settings/Governance/Privacy & retention/Consent purposes",
   component: ConsentPurposesCard,
 };
 export default meta;

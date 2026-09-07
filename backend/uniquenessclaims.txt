@@ -62,7 +62,7 @@ gates/outboundanonymity_test.go#func isDefaultClient
 gates/preferencecentrewriters_test.go#func TestThePreferenceCentreResolvesOnePrimaryAddress
 gates/replayscope_test.go#var replayScopeConsts
 gates/restrictedreaders_test.go#var activityReaderScope
-gates/tableownership_test.go#var tableOwners
+gates/tableownerregistry_test.go#var tableOwners
 internal/compose/accountdraft/service.go#const aiDisclosure
 internal/compose/agentcommand.go#const block at const opApproveApproval
 internal/compose/agentcommand_integration_test.go#func archivableRecordTypes
@@ -198,7 +198,6 @@ internal/compose/org360/pipelineread.go#type pipeline.Stalled
 internal/compose/org360/sections.go#func edgeScope
 internal/compose/org360/suggestionreads.go#func newestMessage
 internal/compose/org360/suggestions.go#func candidateSuggestions
-internal/compose/org360/suggestions.go#func ptrString
 internal/compose/orgbrief/ask.go#const askSystem
 internal/compose/orgbrief/ask.go#var askInstruction
 internal/compose/orgbrief/ask_test.go#func declaredQuestions
@@ -283,7 +282,7 @@ internal/modules/activities/retentionstampproject.go#const BasisProjectLinked
 internal/modules/activities/scheduledsend.go#const block at const FieldScheduledAt
 internal/modules/activities/scheduledsendfire.go#method Store.OverdueScheduledSends
 internal/modules/activities/scheduledsendstore.go#const scheduledSendStatusExpr
-internal/modules/activities/scheduling.go#const block at const businessDayStartHour
+internal/modules/activities/scheduling.go#const block at const assumedMeetingDuration
 internal/modules/activities/scheduling.go#var block at var errAvailabilityToNotAfterFrom
 internal/modules/activities/transcript_integration_test.go#func TestUpdateActivityNormalizesATranscriptBody
 internal/modules/activities/transcriptnorm.go#func transcriptLines
@@ -608,7 +607,7 @@ internal/platform/testdb/river.go#func EnsureRiverSchema
 internal/shared/buildinfo/buildinfo.go#var ReleaseVersion
 internal/shared/gatekit/scope.go#method Scope.normalizedRoots
 internal/shared/kernel/draftfloor/envelope.go#func langOrDefault
-internal/shared/kernel/events/catalog.go#const streamOverlay
+internal/shared/kernel/events/streams.go#const streamOverlay
 internal/shared/kernel/pipelinetrace/registry.go#func FunnelStages
 internal/shared/kernel/principal/principal.go#const HumanIDPrefix
 internal/shared/kernel/promptfence/promptfence.go#func FromMarker

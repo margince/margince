@@ -248,8 +248,9 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 // Every refusal is about the record's own shape rather than its content: who
 // is presenting it, whether it can be written idempotently at all, whether it
 // claims a provenance other than the presenter's, whether a mail record uses
-// the one mail identity, and whether the counterparty it names is one the
-// resolver can act on. None needs a transaction, so none should hold one.
+// the one mail identity, whether the counterparty it names is one the resolver
+// can act on, and whether its indexed identity values are small enough to be
+// written at all. None needs a transaction, so none should hold one.
 func admitRecord(ctx context.Context, rec connector.NormalizedRecord) (principal.Principal, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalConnector {
@@ -270,6 +271,9 @@ func admitRecord(ctx context.Context, rec connector.NormalizedRecord) (principal
 		return principal.Principal{}, err
 	}
 	if err := admitCounterpartyKeys(rec.Counterparty); err != nil {
+		return principal.Principal{}, err
+	}
+	if err := admitIndexableKeys(rec); err != nil {
 		return principal.Principal{}, err
 	}
 	return actor, nil

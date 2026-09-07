@@ -14,7 +14,7 @@ package consent
 // refusal is the failure mode that makes reps distrust the product and route
 // around it, and it costs more than the permission it was protecting. So a
 // validator that cannot find its evidence answers "review, and here is what to
-// link" rather than "no" — the send still goes while the engine is observed,
+// link" rather than "no" — the send parks under the shipped posture, and goes only where a category has been moved back to observe,
 // and a human is told what the record is missing.
 
 import (
@@ -26,6 +26,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -37,13 +38,22 @@ import (
 // It runs only for a claim that reached arm 3 of resolution: no thread and no
 // live deal already answered, so this is the caller saying what the message is
 // and the engine going to look.
-func (g *Gate) validate(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, category commsauthz.Category, w windows) (resolution, error) {
+func (g *Gate) validate(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, category commsauthz.Category, w packRules) (resolution, error) {
 	unsupported := resolution{Category: category, Supported: false, Reason: commsauthz.ReasonNoEvidence}
-	if subject.Kind != entityPerson {
-		// Only the person arm has record evidence to read: invoices and
-		// contracts hang off an organization reached through employment, and a
-		// lead holds none of those. A lead's own answers come from the legacy
-		// verdict path, which decideLead reaches without passing through here.
+	if subject.Kind != entityPerson && category != commsauthz.CategoryReplyToInbound &&
+		category != commsauthz.CategoryRequestedFollowup {
+		// A LEAD REACHES ONE ARM AND NO OTHER.
+		//
+		// The correspondence arm asks who wrote to us, and both of its readers
+		// answer about a lead on their own: wroteToUsWithin shares the
+		// authorIsTheSubject spelling, which matches a lead through its bare
+		// address, and askedToBeContacted returns false for a non-person rather
+		// than querying a person-keyed table.
+		//
+		// Every other arm reads a record a lead cannot hold — an invoice or
+		// contract hangs off an organization reached through employment, and a
+		// confirmation link is minted against a person. Those stay unsupported
+		// and fall through to the lead's own grant.
 		return unsupported, nil
 	}
 	// THE NAMED RECORD MUST BE ONE THE CALLER MAY SEE, before it is read.
@@ -88,7 +98,7 @@ func (g *Gate) validate(ctx context.Context, tx pgx.Tx, req commsauthz.Request, 
 // trade fair" has recorded the request, and asking them to record it a second
 // time in a different table would be asking them to restate what the CRM
 // already knows.
-func (g *Gate) validateRequestedFollowup(ctx context.Context, tx pgx.Tx, subject subjectRef, w windows, category commsauthz.Category) (resolution, error) {
+func (g *Gate) validateRequestedFollowup(ctx context.Context, tx pgx.Tx, subject subjectRef, w packRules, category commsauthz.Category) (resolution, error) {
 	// AUTHORSHIP, through the shared reader. An earlier version asked
 	// activity_link — a FILING link with no author concept — which read "some
 	// inbound activity is filed under this person". A caller may post an
@@ -141,15 +151,7 @@ func validateInvoice(ctx context.Context, tx pgx.Tx, req commsauthz.Request, sub
 			   AND i.void_at IS NULL
 			   AND r.kind = 'employment'
 			   AND r.person_id = $2::uuid
-			   -- A DATE comparison, not a null check: somebody serving three
-			   -- months' notice still works there, and reading the column's
-			   -- presence as "gone" would take them off their employer's
-			   -- contact list the day their notice was filed. This is
-			   -- people.EmploymentIsCurrentSQL spelled out — consent may not
-			   -- import a sibling module (ADR-0054 §3), so it is ratified by
-			   -- name in the employment-currency gate alongside the five other
-			   -- statements in the same position.
-			   AND (r.ended_at IS NULL OR r.ended_at > current_date)
+			   AND `+employment.IsCurrentSQL("r.ended_at")+`
 			   AND r.archived_at IS NULL
 		)`, req.Evidence.InvoiceID)
 }
@@ -167,15 +169,7 @@ func validateContract(ctx context.Context, tx pgx.Tx, req commsauthz.Request, su
 			   AND c.archived_at IS NULL
 			   AND r.kind = 'employment'
 			   AND r.person_id = $2::uuid
-			   -- A DATE comparison, not a null check: somebody serving three
-			   -- months' notice still works there, and reading the column's
-			   -- presence as "gone" would take them off their employer's
-			   -- contact list the day their notice was filed. This is
-			   -- people.EmploymentIsCurrentSQL spelled out — consent may not
-			   -- import a sibling module (ADR-0054 §3), so it is ratified by
-			   -- name in the employment-currency gate alongside the five other
-			   -- statements in the same position.
-			   AND (r.ended_at IS NULL OR r.ended_at > current_date)
+			   AND `+employment.IsCurrentSQL("r.ended_at")+`
 			   AND r.archived_at IS NULL
 		)`, req.Evidence.ContractID)
 }

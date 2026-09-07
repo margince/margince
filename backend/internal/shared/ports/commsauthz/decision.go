@@ -105,11 +105,24 @@ type Request struct {
 	Evidence Evidence
 	// AnchorActivityID is the message being replied to, zero when there is none.
 	AnchorActivityID ids.UUID
+	// ThreadKey names the conversation when the anchor itself is gone.
+	//
+	// Staging has the anchor; transmit does not, because communication_decision
+	// records none. The delivery row carries thread_key, so the transmit phase
+	// names the thread directly and reaches the same evidence. Set one or the
+	// other — the anchor is preferred, since it is what the caller actually
+	// pointed at.
+	ThreadKey string
 	// Links are the records this message is filed under.
 	Links []ids.UUID
 	// Subject and Body are fingerprinted, never stored on the decision.
 	Subject string
 	Body    string
+	// HTMLBody is the markup alternative, carried for the reason
+	// TransmitRequest carries it: the fingerprint stamped here is what the
+	// transmit phase compares against, so a field missing from one side is a
+	// field neither side can notice changing.
+	HTMLBody string
 }
 
 // Decision is the engine's answer about ONE recipient at ONE phase.
@@ -178,6 +191,11 @@ type TransmitRequest struct {
 	PurposeKey string
 	Subject    string
 	Body       string
+	// HTMLBody is the markup alternative, empty for a plain-text send. It is
+	// part of the request because it is part of the MESSAGE: a client rendering
+	// markup shows this and not Body, so a fingerprint that ignored it would
+	// leave the half most recipients read outside what was authorized.
+	HTMLBody string
 }
 
 // TransmitTicket is what a dispatcher must hold before it calls a provider.

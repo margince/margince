@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // TestSchema_amountMinorBaseHasOneWriter is the fitness function for the
@@ -122,33 +123,37 @@ func TestSchema_amountMinorBaseHasOneWriter(t *testing.T) {
 }
 
 // TestSchema_organizationOpenPipelineRollupIsSecurityInvoker closes the
-// RD-AC-N-1 half of the same boundary proof: the cross-record roll-up MUST
-// run as security_invoker (inheriting the caller's own RLS), never as the
-// view owner's elevated privilege — a view created without the option, or
-// with it later stripped by a careless CREATE OR REPLACE, would silently
-// leak every workspace's pipeline total to every other workspace.
+// RD-AC-N-1 half of the same boundary proof: the cross-record roll-up MUST run
+// with the CALLER's own privileges, never the definer's — one created or
+// redefined the other way would silently hand every workspace's pipeline total
+// to every other workspace.
+//
+// It asks pg_proc now rather than pg_class.reloptions, because the rollup is a
+// FUNCTION taking its as-of date (a view cannot take a parameter). The
+// invariant is unchanged; where Postgres records it moved. Asked of the
+// catalogue rather than of the migration text, so a later CREATE OR REPLACE
+// that quietly drops the property is caught by what the database ended up
+// with — which is the failure this test exists for.
 func TestSchema_organizationOpenPipelineRollupIsSecurityInvoker(t *testing.T) {
 	ownerDSN, _ := dsns(t)
 	owner := connect(t, ownerDSN)
 	headSchema(t, owner)
 	ctx := context.Background()
 
-	var reloptions []string
+	var definerRights bool
 	if err := owner.QueryRow(
 		ctx, `
-		SELECT COALESCE(reloptions, '{}') FROM pg_class
-		WHERE relname = 'organization_open_pipeline_rollup' AND relnamespace = 'public'::regnamespace`,
-	).Scan(&reloptions); err != nil {
-		t.Fatalf("querying pg_class.reloptions for organization_open_pipeline_rollup: %v", err)
+		SELECT prosecdef FROM pg_proc
+		WHERE proname = 'organization_open_pipeline_rollup'
+		  AND pronamespace = 'public'::regnamespace`,
+	).Scan(&definerRights); err != nil {
+		t.Fatalf("querying pg_proc.prosecdef for organization_open_pipeline_rollup: %v — a rollup "+
+			"the catalogue does not carry is one this proof cannot make at all", err)
 	}
-	found := false
-	for _, opt := range reloptions {
-		if opt == "security_invoker=true" {
-			found = true
-		}
-	}
-	if !found {
-		t.Errorf("organization_open_pipeline_rollup view reloptions %v do not include security_invoker=true", reloptions)
+	if definerRights {
+		t.Error("organization_open_pipeline_rollup runs with DEFINER rights: it reads deals across " +
+			"records, so the caller's own privileges are the only thing standing between one " +
+			"workspace's pipeline total and every other workspace")
 	}
 }
 
@@ -172,6 +177,7 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"deal.project_id":                 "gated: auth.EnsureLinkTarget in CreateDeal/UpdateDeal (H1) — the anchor project is client-supplied, so naming it is a read of it",
 	"deal_document_hide.deal_id":      "gated: auth.EnsureWritable(deal) in activities.setDealDocumentHidden — the deal is the route's own {id}, and hiding a file from its Files area changes what that deal lists, so the caller must be able to change the deal, not merely see it; the attachment half is then checked against THIS caller's view of the area, so a miss of either reads as not-found",
 	"deal_room.deal_id":               "gated: auth.EnsureWritableLive in createRoomTx — STRONGER than the EnsureLinkTarget its siblings take, deliberately. The deal a room is opened on is client-supplied, so naming it is a read of it; but opening a room also starts showing that deal to an outside party, which visibility alone does not authorize. A room on a deal the caller could merely see would publish that deal's existence, and its editorial text, to buyers",
+	"deal_stage_evidence.deal_id":     "gated: the deal an observation is hung on is caller-supplied on every door, and all three take a row-scope probe on it before touching the ledger — auth.EnsureWritableLive in RecordStageEvidence and RefuteStageEvidence, auth.EnsureVisibleLive in ListStageEvidence. WRITABLE rather than visible on the two write paths, because a manual grant widens visibility at either access level and evidence is what a stage move later rests on: a read share must not be able to hang a claim on somebody else's deal, nor strike out one already there. The deterministic writer has no door of its own — it goes through RecordStageEvidence and inherits that probe",
 	"contract.organization_id":        "gated: auth.EnsureLinkTarget in createContractTx (H1) — the counterparty is client-supplied, so naming it is a read of it",
 	// The deal and project links carry a SECOND obligation the sibling columns
 	// above do not, and it is the reason this table's gate is not just a copy.
@@ -421,6 +427,12 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// predicate, so an edge never discloses a contact the caller cannot open.
 	"graph_interaction_edge.person_id":        "derived projection: folded from participant rows by the graph-edge consumer, never written from a request",
 	"activity_participant_replay.activity_id": "job bookkeeping: written by the system-principal replay pass sweeping every activity in the workspace, never from a request. The row records THAT an original was re-read and what the parse found — it returns no record to any caller and discloses nothing about the activity it names",
+	// The same shape as the replay marker above, asking the other question: not
+	// whether an original was parsed, but whether its attendees were resolved
+	// under the current rule. It needs a marker of its own because the replay's
+	// records a completed PARSE, and every meeting this pass must re-read
+	// already carries one.
+	"activity_meeting_attendee_repair.activity_id": "job bookkeeping: written by the system-principal attendee repair sweeping every captured meeting in the workspace, never from a request. The row records THAT a meeting's attendees were re-resolved and what the parse found — it returns no record to any caller and discloses nothing about the meeting it names",
 	// The LinkedIn ghost's match arms (CG-DDL-2). A ghost is not a record and
 	// carries no client-supplied reference: the matcher resolves both ids from
 	// its own row-scoped lookups, and a human confirming a suggestion
@@ -477,17 +489,22 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"finance_customer_link.organization_id":   "schema only, no writer yet (#725): the mapping write does not exist, and when it lands it must put the named company through auth.EnsureLinkTarget — this entry is the obligation, not a record of one already met",
 	"finance_invoice.organization_id":         "schema only, no writer yet (#725): the sync pass does not exist, and when it lands it must resolve the organization from the customer link rather than from any request body",
 	"finance_payment.organization_id":         "schema only, no writer yet (#725): the sync pass does not exist, and when it lands it must resolve the organization from the customer link rather than from any request body",
-	"activity_reader_state.activity_id":       "gated: every disposition write goes through Store.judgeMessage, which puts the id through auth.EnsureActivityContentVisibleLive — the row-scoped CONTENT read, inside the same transaction as the write — before the reader-state row lands. A message the caller cannot read answers apperrors.ErrNotFound, the same as one that does not exist, so a rep cannot set aside — and thereby learn about — correspondence they may not read",
-	"relationship_nudge_dismissal.person_id":  "gated: both writes put the contact through auth.EnsureVisible inside the same transaction, then take the person lock, before the dismissal row lands. A contact the caller cannot open answers apperrors.ErrNotFound like one that does not exist, so a rep cannot set aside — and thereby learn about — somebody they may not read. The read side is bound to the caller's own reader_id, so a row cannot disclose a contact to anybody but the person who wrote it",
-	"intro_request.person_id":                 "gated: Store.Create puts the contact through auth.EnsureVisibleLive before the insert, so an ask cannot name a person its requester could not open",
-	"intro_request.through_person_id":         "gated: the intermediary is caller-supplied like the contact, and Store.Create puts it through the same auth.EnsureVisibleLive — without it a rep could learn a contact exists by routing an ask through them and reading which error came back",
-	"sdr_handoff.lead_id":                     "gated: caller-supplied, and Store.SubmitHandoff puts it through auth.EnsureLinkTarget before the insert. auth.Require answers whether the role may hand prospects on at all, which is a different question from whether this seat may hand on THIS one — without the probe a seat could name a lead outside its scope and learn from the outcome that the id exists",
-	"sdr_handoff.person_id":                   "gated: the other half of the one-subject constraint, caller-supplied and probed on the same terms as lead_id in the same transaction",
-	"sdr_handoff.organization_id":             "gated: the company the handoff is filed under, caller-supplied and probed beside the subject — a handoff filed against an account its own author cannot open would name one in every later read of that company",
-	"sdr_handoff.deal_id":                     "gated: what an acceptance links, caller-supplied on the decision and put through auth.EnsureLinkTarget in Store.DecideHandoff before the UPDATE. It is the anchor the held-meeting conversion reads, so an ungated one would let that conversion read a deal through a link its author had no scope for",
-	"privacy_notice_case.person_id":           "server-derived: the case is opened by the person.created consumer, in the transaction that created the acquisition it is owed for, and the person is the one the EVENT names — never an id off a request body. The acquisitions the duty is computed from are read from that same person's own rows, so there is nothing here a caller could point elsewhere",
-	"assurance_task_item.task_activity_id":    "server-derived: the nightly pass mints the task through the ordinary activity door and then names the one it just created — the module owns no activity and reaches for none, which is why BundleInput carries the id rather than resolving one. No production caller yet; when the pass lands it must keep minting rather than accepting an id, and this entry is that obligation",
-	"intro_request.source_activity_id":        "server-derived: the reply consumer names the activity it is already processing, and a human marking the handshake names one from the timeline they are already reading. ON DELETE SET NULL, so the ask still answers after the message is gone",
+	// One reader's account scan. The company is client-supplied — it is the
+	// record the reader opened — and the row is keyed to the reader's own user
+	// id, so a scan can never answer anybody but the person who asked for it.
+	"org_scan.organization_id":               "client-supplied and gated: every entry point takes auth.RequireHuman and then reaches the company through Service.load, which runs auth.EnsureVisible inside the same transaction as the read of the scan row, so a company the caller cannot open is ErrNotFound rather than a readable scan. Ensure additionally assembles the account first — the composite read refuses before any row is consulted — and the worker re-assembles under the viewer's own principal (WorkerContext), never the job runner's",
+	"activity_reader_state.activity_id":      "gated: every disposition write goes through Store.judgeMessage, which puts the id through auth.EnsureActivityContentVisibleLive — the row-scoped CONTENT read, inside the same transaction as the write — before the reader-state row lands. A message the caller cannot read answers apperrors.ErrNotFound, the same as one that does not exist, so a rep cannot set aside — and thereby learn about — correspondence they may not read",
+	"relationship_nudge_dismissal.person_id": "gated: both writes put the contact through auth.EnsureVisible inside the same transaction, then take the person lock, before the dismissal row lands. A contact the caller cannot open answers apperrors.ErrNotFound like one that does not exist, so a rep cannot set aside — and thereby learn about — somebody they may not read. The read side is bound to the caller's own reader_id, so a row cannot disclose a contact to anybody but the person who wrote it",
+	"intro_request.person_id":                "gated: Store.Create puts the contact through auth.EnsureVisibleLive before the insert, so an ask cannot name a person its requester could not open",
+	"intro_request.through_person_id":        "gated: the intermediary is caller-supplied like the contact, and Store.Create puts it through the same auth.EnsureVisibleLive — without it a rep could learn a contact exists by routing an ask through them and reading which error came back",
+	"sdr_handoff.lead_id":                    "gated: caller-supplied, and Store.SubmitHandoff puts it through auth.EnsureLinkTarget before the insert. auth.Require answers whether the role may hand prospects on at all, which is a different question from whether this seat may hand on THIS one — without the probe a seat could name a lead outside its scope and learn from the outcome that the id exists",
+	"sdr_handoff.person_id":                  "gated: the other half of the one-subject constraint, caller-supplied and probed on the same terms as lead_id in the same transaction",
+	"sdr_handoff.organization_id":            "gated: the company the handoff is filed under, caller-supplied and probed beside the subject — a handoff filed against an account its own author cannot open would name one in every later read of that company",
+	"sdr_handoff.deal_id":                    "gated: what an acceptance links, caller-supplied on the decision and put through auth.EnsureLinkTarget in Store.DecideHandoff before the UPDATE. It is the anchor the held-meeting conversion reads, so an ungated one would let that conversion read a deal through a link its author had no scope for",
+	"privacy_notice_case.person_id":          "server-derived: the case is opened by the person.created consumer, in the transaction that created the acquisition it is owed for, and the person is the one the EVENT names — never an id off a request body. The acquisitions the duty is computed from are read from that same person's own rows, so there is nothing here a caller could point elsewhere",
+	"assurance_task_item.task_activity_id":   "server-derived: the nightly pass mints the task through the ordinary activity door and then names the one it just created — the module owns no activity and reaches for none, which is why BundleInput carries the id rather than resolving one. No production caller yet; when the pass lands it must keep minting rather than accepting an id, and this entry is that obligation",
+	"intro_request.source_activity_id":       "server-derived: the reply consumer names the activity it is already processing, and a human marking the handshake names one from the timeline they are already reading. ON DELETE SET NULL, so the ask still answers after the message is gone",
+	"stage_progression_outcome.deal_id":      "server-derived: the ledger row names the deal the transaction is ALREADY processing. RecordProgressionProposed is reached only from StageProgressionProposer.stageCard, which writes it from the facts ReadStageProgressionFacts read on that same deal in that same transaction; RecordProgressionDecided names the entity off the approval event's own envelope. Neither takes an id from a request body, and the proposer runs under a system principal — there is no caller scope for a target probe to test. What the act is gated on instead is authority over the move itself: auth.Require(deal, update), on the ledger write as much as on the decision, because opening a proposal to move a deal is a write about that deal",
 })
 
 // TestFK_rowScopedTargetsHaveVisibilityDecision derives the H1 obligation
@@ -534,5 +551,40 @@ func TestFK_rowScopedTargetsHaveVisibilityDecision(t *testing.T) {
 	}
 	if err := rows.Err(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// Every language the product ships is a language a captured message may
+// record.
+//
+// Derived from textlang.Shipped rather than listed, because the failure this
+// prevents is silent in the direction that matters: the CHECK admitted de and
+// en for as long as the product shipped Vietnamese too, so a detected
+// Vietnamese message could not be stored at all — and nothing said so, because
+// nothing wrote the column. A fourth language added to the Go list fails here
+// until the constraint admits it.
+func TestSchema_theLanguageCheckAdmitsEveryShippedLanguage(t *testing.T) {
+	owner, _ := dsns(t)
+	conn := connect(t, owner)
+	resetSchema(t, conn)
+	migrateAll(t, conn)
+
+	var definition string
+	if err := conn.QueryRow(context.Background(), `
+		SELECT pg_get_constraintdef(oid)
+		  FROM pg_constraint
+		 WHERE conname = 'activity_language_check'`).Scan(&definition); err != nil {
+		t.Fatalf("reading the language constraint: %v", err)
+	}
+	for _, lang := range textlang.Shipped {
+		if !strings.Contains(definition, "'"+string(lang)+"'") {
+			t.Errorf("the product ships %q but activity_language_check does not admit it, so a message in "+
+				"that language cannot record what it is written in: %s", lang, definition)
+		}
+	}
+	// NULL stays admitted: it is what every row captured before this carried,
+	// and what a message too short to tell still carries.
+	if !strings.Contains(definition, "IS NULL") {
+		t.Errorf("activity_language_check no longer admits NULL, which is what an unknown language records: %s", definition)
 	}
 }

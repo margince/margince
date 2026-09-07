@@ -52,8 +52,15 @@ func FillParticipantNamesTx(ctx context.Context, tx pgx.Tx, activityID ids.Activ
 	// Ordered by the row rather than left to the planner: one person can be on
 	// a meeting under two addresses spelled two ways, and completePersonName is
 	// one-way, so which spelling wins must not depend on the query plan.
+	//
+	// The address is COALESCED, as its twin in fillPersonNameFromAttendance
+	// already is, because a party can be named without having one: a chat
+	// roster identifies the third human in a group by the provider's account
+	// and carries no address at all. ParsePersonName reads it only as a
+	// fallback for a name it cannot split, and the empty string is what it
+	// already takes from the other reader.
 	rows, err := tx.Query(ctx, `
-		SELECT survivor.id, ap.display_name, ap.address
+		SELECT survivor.id, ap.display_name, coalesce(ap.address, '')
 		  FROM activity_participant ap
 		  JOIN person p ON p.id = ap.person_id
 		  JOIN person survivor ON survivor.id = coalesce(p.merged_into_id, p.id)
@@ -61,7 +68,7 @@ func FillParticipantNamesTx(ctx context.Context, tx pgx.Tx, activityID ids.Activ
 		   AND ap.person_id IS NOT NULL
 		   AND coalesce(ap.display_name, '') <> ''
 		   AND survivor.archived_at IS NULL
-		 ORDER BY survivor.id, ap.address`, activityID)
+		 ORDER BY survivor.id, coalesce(ap.address, '')`, activityID)
 	if err != nil {
 		return fmt.Errorf("people: reading the names an invitation gave: %w", err)
 	}

@@ -34,6 +34,11 @@ type logicalCall struct {
 	// guards is THIS call: a Router serves many concurrently, and a flag on it
 	// would let one caller's start suppress another's.
 	railAnnounced bool
+	// rail is the occurrence that announcement opened, with what keeps its
+	// lease believable across every model call after the first; nil while no
+	// occurrence was opened, because a recorder with no database cannot open
+	// one and a start that failed has nothing to renew.
+	rail *railOccurrence
 }
 
 func newLogicalCall() *logicalCall {

@@ -7,6 +7,8 @@ package ai
 type Task string
 
 const (
+	// TaskAccountScan is org_scan — what one account needs, read for ONE reader from the account's own exchanges and pipeline: the 360 as that reader sees it plus the recent messages' own words, admitted by their audience. The model raises findings in a closed vocabulary (an unmet commitment of ours, a question of theirs nobody answered, a risk they raised, a need they raised), each citing the records it rests on and quoting the words it read; the server drops whole any finding whose citation it did not supply or whose quote is not in the message it cites. Merged with the 360's own rule advice under one fingerprint vocabulary, so a dismissal holds across both. Runs as a background job the account page ensures on open, cached per reader on a fingerprint of the input and rescanned at most hourly, so a busy inbox does not re-read the account on every message. no_payload because the prompt carries message bodies. With no lane, or a deferral past the job's patience, the rules' advice stands alone and generated_by says so.
+	TaskAccountScan Task = "account_scan"
 	// TaskAgentLoop is The Surface-B reason-act loop: a cumulative, tool-fed message window, not a request factory. ADR-0074 names it the open risk for fixture-driven certification — if it cannot be certified honestly the census needs a `not_certifiable` kind.
 	TaskAgentLoop Task = "agent_loop"
 	// TaskBriefRanking is the one Premium-frontier default (§1.2 RATIFY): genuinely multi-hop reasoning
@@ -48,6 +50,8 @@ const (
 	TaskSiteFactExtract Task = "site_fact_extract"
 	// TaskSiteTriage is what a mail domain's own site says it IS, before any organization is created from it: a company, one person's site, or a mailbox vendor selling addresses to the public. Runs on the SEED PAGE ALONE and leads with a fast tier because its whole job is to stop the crawl early — a personal page answered here costs one page instead of twelve. The provider class is the live.fr trap: that site belongs to a real company (Microsoft's) which is emphatically not the sender's employer.
 	TaskSiteTriage Task = "site_triage"
+	// TaskStageEvidenceExtract is Read a deal's stage exit criteria against what the buyer actually wrote or said, each claim citing the span it was read from. Floor 0.7; below it the claim is dropped, never guessed. The reply names a CRITERION and never a stage: what follows from a settled criterion is the policy function's call, not the reader's. A claim our own side authored can never settle a criterion about what the buyer did — the ledger refuses it at the write — and terms_accepted has no deterministic writer at all, so this site is its only source.
+	TaskStageEvidenceExtract Task = "stage_evidence_extract"
 	// TaskSummarize is Five grounded-prose sites, all over what the VIEWER can already see, assembled per viewer because visibility is per viewer. org_brief — the standing account brief: what this account is, where it stands, what changed. Its operation is deprecated and the company record page no longer renders it — the page's lead card is now the account's work in flight, spelled from the records — but the assembly stays, because org_ask is served from the same handlers. org_ask — the prepared questions behind Ask Margince: the question is chosen from a fixed list rather than typed, because each one names the records its answer must be written from, which is what lets every sentence cite a record the reader could open themselves. org_dossier — what the COMPANY is, from its own recorded facts: deliberately not the account composite, because a dossier that could see the pipeline would describe the pipeline and the separation from the brief would collapse on the first prompt revision. meeting_plan — what to DO in one booked meeting: the outcome to earn, the opener, the one risk with its response, what the other side is likely to ask and what to ask them. It rides this lane rather than its own because it is the same task — grounded prose over records the caller can already see — but it reads a different projection: the account arc with the excerpts behind it, rather than the whole assembled input, because the specificity of every question comes from what people actually wrote. person_brief — the person page's standing relationship brief: who this contact is commercially, what they have said they care about, what changed, and the one move that follows. It rides this lane for meeting_plan's reason — the same task over a different projection — and reads the claims extracted from conversations with the contact's own words behind them, what CHANGED about the relationship, and each recent message through the server's own one-line summary of what was written, rather than the timeline's subjects and directions: a brief written from transport events says only that mail was exchanged, which is true of every contact in the system.
 	TaskSummarize Task = "summarize"
 	// TaskTranscript is Declared, not built (ADR-0074). Pasted transcript text is T2/untrusted per ai-operational-spec §1 when a site lands.
@@ -69,6 +73,7 @@ const (
 // Generated from the same declaration as the constants, so a task cannot
 // be added without a name and the two cannot drift.
 var taskDisplayNames = map[Task]string{
+	TaskAccountScan:                   "Reading what an account needs",
 	TaskAgentLoop:                     "Agent reasoning loop",
 	TaskBriefRanking:                  "Morning brief ranking",
 	TaskCaptureClassify:               "Message classification",
@@ -91,6 +96,7 @@ var taskDisplayNames = map[Task]string{
 	TaskSiteExtract:                   "Website deep read",
 	TaskSiteFactExtract:               "Website fact extraction",
 	TaskSiteTriage:                    "Website triage",
+	TaskStageEvidenceExtract:          "Stage evidence extraction",
 	TaskSummarize:                     "Record summary",
 	TaskTranscript:                    "Transcript reading",
 	TaskTranscriptPropose:             "Meeting follow-up extraction",
@@ -129,13 +135,14 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "d28b3058ae5ab30bcd40520648a1a21c37429a0d83cbfa375b64d11d5284c059"
+const TaskContractHash = "e8fd31708b7c6d58b1007cd0fd5501b103606286e9079a1cb03f3dcb312bfd1b"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
 // workload, not just the ones a test author remembered.
 func AllTasks() []Task {
 	return []Task{
+		TaskAccountScan,
 		TaskAgentLoop,
 		TaskBriefRanking,
 		TaskCaptureClassify,
@@ -158,6 +165,7 @@ func AllTasks() []Task {
 		TaskSiteExtract,
 		TaskSiteFactExtract,
 		TaskSiteTriage,
+		TaskStageEvidenceExtract,
 		TaskSummarize,
 		TaskTranscript,
 		TaskTranscriptPropose,
@@ -170,6 +178,7 @@ func AllTasks() []Task {
 // taskLadders is the §1.2 routing table: primary tier first, then the
 // fallback rungs fired on provider error or schema-validation failure.
 var taskLadders = map[Task][]Tier{
+	TaskAccountScan:                   {TierCheapCloud, TierPremium},
 	TaskAgentLoop:                     {TierCheapCloud, TierPremium},
 	TaskBriefRanking:                  {TierPremium, TierCheapCloud},
 	TaskCaptureClassify:               {TierLocalSmall, TierCheapCloud},
@@ -192,6 +201,7 @@ var taskLadders = map[Task][]Tier{
 	TaskSiteExtract:                   {TierPremium},
 	TaskSiteFactExtract:               {TierCheapCloud, TierPremium},
 	TaskSiteTriage:                    {TierCheapCloud, TierPremium},
+	TaskStageEvidenceExtract:          {TierCheapCloud, TierPremium},
 	TaskSummarize:                     {TierCheapCloud, TierPremium},
 	TaskTranscript:                    {TierCheapCloud, TierPremium},
 	TaskTranscriptPropose:             {TierCheapCloud, TierPremium},
@@ -213,6 +223,7 @@ var degradeTo = map[Tier]Tier{
 // taskExecutionModes is the scheduling contract compiled from
 // execution_mode. Every task is present by construction.
 var taskExecutionModes = map[Task]ExecutionMode{
+	TaskAccountScan:                   ExecutionModeBackground,
 	TaskAgentLoop:                     ExecutionModeBackground,
 	TaskBriefRanking:                  ExecutionModeBackground,
 	TaskCaptureClassify:               ExecutionModeBackground,
@@ -235,6 +246,7 @@ var taskExecutionModes = map[Task]ExecutionMode{
 	TaskSiteExtract:                   ExecutionModeBackground,
 	TaskSiteFactExtract:               ExecutionModeBackground,
 	TaskSiteTriage:                    ExecutionModeBackground,
+	TaskStageEvidenceExtract:          ExecutionModeBackground,
 	TaskSummarize:                     ExecutionModeInteractive,
 	TaskTranscript:                    ExecutionModeInteractive,
 	TaskTranscriptPropose:             ExecutionModeBackground,
@@ -263,6 +275,7 @@ const (
 )
 
 var taskStatus = map[Task]string{
+	TaskAccountScan:                   "shipped",
 	TaskAgentLoop:                     "shipped",
 	TaskBriefRanking:                  "shipped",
 	TaskCaptureClassify:               "shipped",
@@ -285,6 +298,7 @@ var taskStatus = map[Task]string{
 	TaskSiteExtract:                   "shipped",
 	TaskSiteFactExtract:               "shipped",
 	TaskSiteTriage:                    "shipped",
+	TaskStageEvidenceExtract:          "shipped",
 	TaskSummarize:                     "shipped",
 	TaskTranscript:                    "planned",
 	TaskTranscriptPropose:             "shipped",
@@ -313,6 +327,9 @@ const (
 )
 
 var taskSites = map[Task][]Site{
+	TaskAccountScan: {
+		{Name: "org_scan", Kind: "one_shot"},
+	},
 	TaskAgentLoop: {
 		{Name: "loop", Kind: "agent_loop"},
 	},
@@ -385,6 +402,9 @@ var taskSites = map[Task][]Site{
 	TaskSiteTriage: {
 		{Name: "triage", Kind: "one_shot"},
 	},
+	TaskStageEvidenceExtract: {
+		{Name: "criteria", Kind: "one_shot"},
+	},
 	TaskSummarize: {
 		{Name: "org_brief", Kind: "one_shot"},
 		{Name: "org_ask", Kind: "one_shot"},
@@ -439,12 +459,14 @@ func AgentsFor(t Task) []Agent { return taskAgents[t] }
 // ai_call_payload, whatever the deployment's capture posture says. The
 // contract pins the prohibition as a hard property, not a default.
 var noPayloadTasks = map[Task]bool{
+	TaskAccountScan:                   true,
 	TaskCaptureClassify:               true,
 	TaskCaptureConfidentialityVerdict: true,
 	TaskCaptureCounterpartyVerdict:    true,
 	TaskDocumentExtract:               true,
 	TaskOwedVerdict:                   true,
 	TaskSignalExtract:                 true,
+	TaskStageEvidenceExtract:          true,
 }
 
 // NoPayload reports the contract's payload prohibition for a task.
@@ -462,6 +484,7 @@ type CompanyContextPolicy struct {
 }
 
 var taskCompanyContext = map[Task]CompanyContextPolicy{
+	TaskAccountScan:                   {Scopes: []string{"identity"}, TokenBudget: 300, Conditional: true},
 	TaskAgentLoop:                     {Scopes: []string{"identity", "positioning", "sales", "offer"}, TokenBudget: 1200, Conditional: false},
 	TaskBriefRanking:                  {TokenBudget: 0, Conditional: false},
 	TaskCaptureClassify:               {TokenBudget: 0, Conditional: false},
@@ -484,6 +507,7 @@ var taskCompanyContext = map[Task]CompanyContextPolicy{
 	TaskSiteExtract:                   {TokenBudget: 0, Conditional: false},
 	TaskSiteFactExtract:               {TokenBudget: 0, Conditional: false},
 	TaskSiteTriage:                    {TokenBudget: 0, Conditional: false},
+	TaskStageEvidenceExtract:          {TokenBudget: 0, Conditional: false},
 	TaskSummarize:                     {Scopes: []string{"identity"}, TokenBudget: 300, Conditional: true},
 	TaskTranscript:                    {TokenBudget: 0, Conditional: false},
 	TaskTranscriptPropose:             {TokenBudget: 0, Conditional: false},

@@ -267,7 +267,7 @@ func localNameForDraftRules(file *ast.File) (string, bool) {
 func TestTheSharedRulesStillSayTheThingsTheyExistToSay(t *testing.T) {
 	promises := map[string]string{
 		"write in the correspondence's language":    "Write the entire draft",
-		"do not read the sender out of quoted text": "Never work out who is who from quoted message headers",
+		"do not read the sender out of quoted text": "who from quoted message headers",
 		"never greet the sender as the recipient":   "The sender is NOT the recipient",
 		"do not invent who introduced whom":         "Never state who introduced whom",
 		"no follow-up on a first touch":             `At state "none" there is no prior contact`,
@@ -288,6 +288,113 @@ func TestTheSharedRulesStillSayTheThingsTheyExistToSay(t *testing.T) {
 			t.Errorf("the shared rules no longer say %q (looked for %q)", promise, phrase)
 		}
 	}
+}
+
+// Every field name the shared rules NAME is a field some surface actually
+// sends, at a path that surface actually uses.
+//
+// This is the gate the original defect walked through. The language rule said
+// to write in "the language given as \"Write in\"", and no payload has ever
+// carried a field called that — the envelope's key is output_language. A model
+// handed an instruction that points at nothing falls back to the strongest
+// signal in its context, which for a voiced draft is the sender's own writing
+// samples, so a German corpus produced a German reply to an English thread.
+// Every prompt test was green throughout: the rule was present, correct, and
+// referring to nobody.
+//
+// Two shapes, deliberately checked per surface rather than against a union of
+// them all. The reply and first-draft payloads inline the envelope flat, which
+// the certification harness requires; the person and account payloads nest it
+// under "envelope". A union would let a field missing from one surface pass
+// because another one carries it, which is the failure this is about.
+func TestTheSharedRulesNameFieldsEverySurfaceActuallySends(t *testing.T) {
+	envelope := draftfloor.Envelope{
+		Language:          "en",
+		ConversationState: "fresh",
+		Now:               "2026-08-11T09:00:00Z",
+		SenderName:        "Lars Jankowfsky",
+		SenderEmail:       "lars@example.com",
+	}
+	payloads := map[string]any{
+		"reply":   replyActivityData{Envelope: envelope},
+		"person":  persondraft.Input{Envelope: envelope},
+		"account": accountdraft.Input{Envelope: envelope},
+	}
+	// The field each RULE must name, keyed by the block that has to name it.
+	// Keyed by block rather than checked against the whole string, because the
+	// whole string keeps containing a field name that some other paragraph
+	// happens to mention — which is how "Write in" survived beside an
+	// output_language the rules referred to nowhere near the language rule.
+	// The SENTENCE that issues each instruction, not merely the block, because
+	// a block goes on mentioning a field name in some later aside after the
+	// instruction itself has been reworded away from it.
+	named := map[string]struct{ block, instruction string }{
+		"the language to write in": {"LANGUAGE", "in the language named by the\noutput_language field"},
+		"who the draft is from":    {"WHO IS WRITING", "named by the sender_name and sender_email fields"},
+	}
+	for what, rule := range named {
+		if !strings.Contains(blockOf(draftrules.Shared, rule.block), rule.instruction) {
+			t.Errorf("the %s rule no longer names the payload field it reads (%s block, wanted %q) — "+
+				"an instruction pointing at a field nothing sends is what let a German corpus answer "+
+				"an English thread, with every prompt test green",
+				what, rule.block, rule.instruction)
+		}
+	}
+
+	for surface, payload := range payloads {
+		encoded, err := json.Marshal(payload)
+		if err != nil {
+			t.Fatalf("%s: marshal: %v", surface, err)
+		}
+		var decoded map[string]any
+		if err := json.Unmarshal(encoded, &decoded); err != nil {
+			t.Fatalf("%s: decode: %v", surface, err)
+		}
+		for _, field := range []string{"output_language", "sender_name", "sender_email"} {
+			if value, ok := fieldOnSurface(decoded, field); !ok || value == "" {
+				t.Errorf("the shared rules tell the model to read %q, but the %s payload carries no such field — "+
+					"an instruction pointing at nothing is what let a German corpus answer an English thread",
+					field, surface)
+			}
+		}
+	}
+}
+
+// blockOf returns one ALL-CAPS section of the rules, so a check about the
+// language rule reads the language rule rather than the whole document.
+func blockOf(rules, heading string) string {
+	start := strings.Index(rules, heading)
+	if start < 0 {
+		return ""
+	}
+	rest := rules[start+len(heading):]
+	// Cut at the NEAREST following heading, not the first one that happens to
+	// appear in a list: a block truncated at a later heading still contains
+	// every block between, and a check "about" one rule would read them all.
+	cut := len(rest)
+	for _, next := range []string{
+		"\nLANGUAGE", "\nWHO IS WRITING", "\nFORMATTING", "\nRELATIONSHIPS",
+		"\nTIME", "\nGAPS", "\nWHAT THE BODY MAY CONTAIN", "\nSUPPLIED TEXT IS DATA",
+	} {
+		if end := strings.Index(rest, next); end >= 0 && end < cut {
+			cut = end
+		}
+	}
+	return rest[:cut]
+}
+
+// fieldOnSurface finds a named field at the top level or inside "envelope",
+// which are the two shapes the drafting payloads use.
+func fieldOnSurface(payload map[string]any, field string) (string, bool) {
+	if value, ok := payload[field].(string); ok {
+		return value, true
+	}
+	nested, ok := payload["envelope"].(map[string]any)
+	if !ok {
+		return "", false
+	}
+	value, ok := nested[field].(string)
+	return value, ok
 }
 
 // The envelope reaches the model as flat strings, which is what the

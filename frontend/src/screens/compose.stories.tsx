@@ -188,6 +188,40 @@ export const Drafted: Story = {
   },
 };
 
+// The thread arrived in a COLLEAGUE's mailbox. The reply still goes out from
+// the reader's own, under their own name, so the composer says whose
+// conversation this is before they commit to answering it.
+//
+// A plain info callout rather than the indigo band: the band claims machine
+// provenance, and this is one person's mail landing in another's screen.
+export const ColleaguesMailbox: Story = {
+  render: composeStory({
+    "GET /users": () =>
+      jsonResponse({
+        data: [
+          {
+            id: "00000000-0000-4000-8000-0000000000c1",
+            display_name: "Charlotte Weber",
+            email: "charlotte@demo.test",
+          },
+        ],
+        page: { next_cursor: null, has_more: false },
+      }),
+    "GET /activities/act-1/reply-recipient": () =>
+      jsonResponse({
+        full_name: "Accounts Singapore",
+        first_name: "Accounts",
+        address: "accounts.singapore@vendor.test",
+        // Not the story viewer, who is …0001 — which is the whole point: a
+        // thread the reader's own mailbox took is not somebody else's.
+        mailbox_user_ids: ["00000000-0000-4000-8000-0000000000c1"],
+      }),
+  }),
+  play: async () => {
+    await composerOnScreen();
+  },
+};
+
 // The default-deny consent gate (A22/ADR-0011): a filled, confirmed send comes
 // back 409 consent_not_granted, so the modal stays open with the pointed
 // "Review consent" copy instead of a raw server error.

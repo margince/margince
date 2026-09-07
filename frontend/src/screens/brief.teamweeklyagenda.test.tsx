@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
 import { TeamWeeklySection } from "./brief.teamweekly";
 import { agendaRows, agendaText } from "./brief.teamweeklyagenda";
-import { jsonResponse, render, stubApi } from "./home.testkit";
+import { jsonResponse, render, stubApi } from "./brief.testkit";
 import type { TeamWeeklyRep, TeamWeeklyReview } from "./teamweekly.queries";
 
 afterEach(() => {

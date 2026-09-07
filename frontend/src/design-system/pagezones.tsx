@@ -9,7 +9,7 @@ import "./pagezones.css";
 //
 // It carries the grid and nothing else — no name, no mark, no badge, no tabs.
 // Those belong to whatever composes it (`RecordView` for a record page), which
-// is what makes the shape available to a page that is not a record: the Home
+// is what makes the shape available to a page that is not a record: the Brief
 // screen's work column with its context rail is the same layout as a company's,
 // and a second stylesheet spelling the same three ratios and the same two folds
 // would drift the first time either moved.

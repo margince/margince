@@ -33,6 +33,7 @@ import {
   companyEditFields,
   mapOrgUpdate,
 } from "./organizations";
+import { WriteToHost } from "./writeto";
 
 // The same P-14/15/16/1 shared-block wiring as contacts
 // (people.test.tsx) — search/sort/pagination, the rich create modal
@@ -57,7 +58,11 @@ function render(ui: ReactNode) {
   return rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <RecordShell>{ui}</RecordShell>
+        {/* The composer host is the shell's in the running app (`App.tsx`);
+            the people cards' addresses are buttons into it. */}
+        <WriteToHost>
+          <RecordShell>{ui}</RecordShell>
+        </WriteToHost>
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -735,7 +740,11 @@ describe("CompanyScreen — edit domains round-trip (B7)", () => {
 
     await userEvent.click(await openRecordMenu("edit-record"));
     await screen.findByLabelText("Industry");
-    await userEvent.click(screen.getByText("Add domain"));
+    // The modal's own row-adder: the rail's details grid now offers an inline
+    // "Add domain" to a seat holding the grant, and this is about the form.
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByText("Add domain"),
+    );
     await userEvent.type(screen.getByLabelText("Domain *"), "brandt.example");
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
@@ -991,6 +1000,9 @@ describe("CompanyScreen — overlay mode write affordances", () => {
       user: { id: "u1", email: "me@brandt.example", locale: "en-US" },
       roles: ["admin"],
       teams: [],
+      authorization: meFixture({
+        allow: { organization: ["read", "update", "delete"] },
+      }).authorization,
       system_of_record: { mode: "overlay" },
     });
   }
@@ -1678,6 +1690,50 @@ describe("CompanyScreen — next-step suggestions", () => {
     expect(screen.getByRole("button", { name: "deal" })).toBeTruthy();
   });
 
+  it("opens the composer on the message a draft-reply action names", async () => {
+    // Through the PAGE: the card only names the action, and the page is
+    // what performs it. A reply composer holds the rail's column while open.
+    const unanswered = {
+      ...stalledSuggestion,
+      kind: "no_reply",
+      fingerprint: "fp-reply-1",
+      reason: "You reached out 15 days ago and nobody has come back.",
+      action: { kind: "draft_reply", activity_id: "a-1" },
+    };
+    stubFetch(companyBackstop, {
+      org360: { ...org360, suggestions: [unanswered] },
+    });
+    const { container } = render(<CompanyScreen id="o-1" />);
+    await screen.findByText("Brandt Automotive GmbH");
+    await waitFor(() =>
+      expect(container.querySelector(".co-rail")).toBeTruthy(),
+    );
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Create draft" }),
+    );
+    await waitFor(() => expect(container.querySelector(".co-rail")).toBeNull());
+  });
+
+  it("goes to the deal an open-deal action names", async () => {
+    stubFetch(companyBackstop, {
+      org360: {
+        ...org360,
+        suggestions: [
+          {
+            ...stalledSuggestion,
+            action: { kind: "open_deal", deal_id: "d-7" },
+          },
+        ],
+      },
+    });
+    render(<CompanyScreen id="o-1" />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Open the deal" }),
+    );
+    await waitFor(() => expect(window.location.hash).toContain("d-7"));
+  });
+
   it("names how many suggestions the card left out", async () => {
     const three60 = {
       ...org360,
@@ -2101,6 +2157,13 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
   // which is three round trips spent on a decision the list could have carried.
   it("carries what a listed contact does and how to write to them", async () => {
     stubFetch(companyBackstop, {
+      // The reader has a mailbox to send from, so the address is the
+      // composer's; without one it would be their own mail client's.
+      connectors: {
+        data: [
+          { id: "g1", provider: "gmail", status: "connected", scopes: [] },
+        ],
+      },
       org360: {
         ...org360,
         people: {
@@ -2140,14 +2203,15 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     );
 
     // The address is its own control, a sibling of the name rather than
-    // nested inside it: a link inside a link is a press whose destination
-    // nobody can predict.
-    const write = screen.getAllByRole("link", {
-      name: "anna.brandt@brandt-automotive.de",
-    })[0];
-    expect(write.getAttribute("href")).toBe(
-      "mailto:anna.brandt@brandt-automotive.de",
-    );
+    // nested inside it: a control inside a link is a press whose destination
+    // nobody can predict. A button, into the product's composer, and never
+    // a link the reader's own mail client would take.
+    const write = (
+      await screen.findAllByRole("button", {
+        name: "anna.brandt@brandt-automotive.de",
+      })
+    )[0];
+    expect(write.hasAttribute("href")).toBe(false);
     expect(name.contains(write)).toBe(false);
   });
 

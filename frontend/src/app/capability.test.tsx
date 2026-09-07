@@ -14,6 +14,7 @@ import {
   useCanWrite,
   useCanWriteRecord,
   useHoldsOperatorSeat,
+  useRecordWriteRefusal,
 } from "./capability";
 import { meFixture } from "./mefixture";
 
@@ -421,5 +422,72 @@ describe("useCanWriteRecord", () => {
     expect(await canWriteRecord("organization", { writable: true })).toBe(
       false,
     );
+  });
+});
+
+describe("useRecordWriteRefusal — the sentence a record page's verbs share", () => {
+  const granted = { allow: { deal: ["read", "update"] } } as const;
+  const reasons = {
+    archived: "This deal is archived.",
+    notYours: "You cannot change this deal.",
+  };
+
+  async function refusal(
+    record: Parameters<typeof useRecordWriteRefusal>[1],
+  ): Promise<string | undefined> {
+    const { result } = renderHook(
+      () => ({
+        me: useMe(),
+        reason: useRecordWriteRefusal("deal", record, reasons),
+      }),
+      { wrapper },
+    );
+    await waitFor(() => {
+      expect(result.current.me.isPending).toBe(false);
+    });
+    return result.current.reason;
+  }
+
+  it("refuses nothing on a live record the caller may write", async () => {
+    stubMe(meFixture(granted));
+
+    expect(
+      await refusal({ writable: true, archived_at: null }),
+    ).toBeUndefined();
+  });
+
+  it("names the archive first, whatever the caller's authority", async () => {
+    // The reason a reader can act on wins over the one they cannot.
+    stubMe(meFixture(granted));
+
+    expect(
+      await refusal({ writable: false, archived_at: "2026-07-01T00:00:00Z" }),
+    ).toBe(reasons.archived);
+  });
+
+  it("refuses a colleague's record with the ownership sentence", async () => {
+    // The case the whole hook exists for: the grant is held on the object and
+    // the row is somebody else's, which only the server's flag can say.
+    stubMe(meFixture(granted));
+
+    expect(await refusal({ writable: false })).toBe(reasons.notYours);
+  });
+
+  it("refuses a writable row when the object grant is missing", async () => {
+    stubMe(meFixture({ allow: { deal: ["read"] } } as const));
+
+    expect(await refusal({ writable: true })).toBe(reasons.notYours);
+  });
+
+  it("refuses a writable row on a read seat", async () => {
+    stubMe(meFixture({ ...granted, seat: "read" }));
+
+    expect(await refusal({ writable: true })).toBe(reasons.notYours);
+  });
+
+  it("refuses a record carrying no writable flag, failing closed", async () => {
+    stubMe(meFixture(granted));
+
+    expect(await refusal({})).toBe(reasons.notYours);
   });
 });

@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -241,7 +242,7 @@ func relinkPersonEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.Pe
 		UPDATE relationship a SET person_id = $2,
 		  is_current_primary = a.is_current_primary AND NOT EXISTS (
 		    SELECT 1 FROM relationship b
-		    WHERE b.person_id = $2 AND `+CurrentPrimarySlotSQL("b")+`)
+		    WHERE b.person_id = $2 AND `+employment.CurrentPrimarySlotSQL("b")+`)
 		WHERE a.person_id = $1 AND a.kind <> 'works_with' AND a.archived_at IS NULL`, sourceID, targetID)
 	return moved + tag.RowsAffected(), err
 }

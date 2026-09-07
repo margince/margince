@@ -220,8 +220,16 @@ type stubConsent struct {
 	armed     bool
 	authzErr  error
 	authzSeen int
+	// authzAsked is who the ENGINE was put to, recorded the same way asked
+	// records the legacy gate's list. The dispatcher asks only the engine now,
+	// so this is the field a coverage case asserts on.
+	authzAsked []string
 }
 
+// RequireGrantedForRecipients satisfies the seam. The DISPATCHER no longer calls
+// it — the engine is the only authority at transmit — so a case arming s.err
+// proves nothing about what stops a send. It records what it was asked so a
+// case can assert the dispatcher does NOT ask it.
 func (s *stubConsent) RequireGrantedForRecipients(_ context.Context, recipients []connector.Recipient, _ string) error {
 	s.asked = nil
 	for _, r := range recipients {
@@ -374,17 +382,25 @@ func (f consentFunc) RequireGrantedForRecipients(ctx context.Context, r []connec
 // wrong attempt, and no ticket at all.
 func (s *stubConsent) AuthorizeTransmit(_ context.Context, req commsauthz.TransmitRequest) (commsauthz.TransmitTicket, error) {
 	s.authzSeen++
+	s.authzAsked = nil
+	for _, r := range req.Recipients {
+		if r.Channel != nil {
+			s.authzAsked = append(s.authzAsked, r.Channel.Provider+":"+r.Channel.ChannelUserID)
+			continue
+		}
+		s.authzAsked = append(s.authzAsked, r.Email)
+	}
 	if s.authzErr != nil {
 		return commsauthz.TransmitTicket{}, s.authzErr
 	}
 	if s.armed {
 		return s.ticket, nil
 	}
-	// Unarmed, the stub behaves as the engine does in observe mode: it records
-	// a decision and permits the send, leaving the legacy gate to rule. It must
-	// NOT mirror s.err — that field is the LEGACY gate's answer, and a stub
-	// that refused here too would make every legacy test pass for the engine's
-	// reason instead of its own.
+	// Unarmed, the stub permits: a case that is about seats, attachments or
+	// scopes says nothing about consent and should not have to arm it. It must
+	// NOT mirror s.err — that field is the LEGACY gate's answer, which the
+	// dispatcher no longer consults, and a stub that refused here too would
+	// make a case pass for a reason it never stated.
 	return commsauthz.TransmitTicket{
 		DeliveryID:    req.DeliveryID,
 		Attempt:       req.Attempt,

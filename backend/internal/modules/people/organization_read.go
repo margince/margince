@@ -77,11 +77,18 @@ func getOrganizationInTx(ctx context.Context, tx pgx.Tx, id ids.OrganizationID,
 	if err != nil {
 		return crmcontracts.Organization{}, err
 	}
+	// Sampled ONCE for this read, and handed to both rollup readers below. The
+	// row count and the computed pipeline total are two queries against the
+	// same function, and a clock read separately by each would pick different
+	// FX dates for one response whenever UTC midnight fell between them —
+	// which is the divergence binding the date exists to remove, reappearing
+	// one level down.
+	asOf := rollupAsOf()
 	// The two list-row counts, on the single read too, so the page a row
 	// opens into agrees with the row. Attached here rather than in
 	// readOrganization: a write's before-image has no use for them.
 	single := []crmcontracts.Organization{out}
-	if err := attachOrgCounts(ctx, tx, single); err != nil {
+	if err := attachOrgCounts(ctx, tx, single, asOf); err != nil {
 		return crmcontracts.Organization{}, fmt.Errorf("read organization counts: %w", err)
 	}
 	out = single[0]
@@ -90,7 +97,7 @@ func getOrganizationInTx(ctx context.Context, tx pgx.Tx, id ids.OrganizationID,
 	// rollup read below, and out.ComputedFields stays its nil zero
 	// value — omitempty then drops the key entirely on marshal (T1).
 	if computedFieldsVisible(ctx) {
-		open, err := openPipelineRollup(ctx, tx, id)
+		open, err := openPipelineRollup(ctx, tx, id, asOf)
 		if err != nil {
 			return crmcontracts.Organization{}, fmt.Errorf("read open pipeline rollup: %w", err)
 		}

@@ -229,7 +229,9 @@ func (s *Store) ListOrganizations(ctx context.Context, in ListOrganizationsInput
 				func(o *crmcontracts.Organization, tags []storekit.RowTag) { o.Tags = wireRowTags(tags) }); err != nil {
 				return err
 			}
-			return attachOrgCounts(ctx, tx, orgs)
+			// One sample for the page, for the reason the single read binds
+			// one: every row on it is counted against the same day.
+			return attachOrgCounts(ctx, tx, orgs, rollupAsOf())
 		},
 		cursorKey: func(last crmcontracts.Organization) (time.Time, ids.UUID) {
 			return last.CreatedAt, ids.UUID(last.Id)

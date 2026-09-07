@@ -23,6 +23,7 @@ it can be answered for.
 
 | Task | Ladder | Stays local | Prompt not retained | Status |
 | --- | --- | --- | --- | --- |
+| `account_scan` | `cheap_cloud` → `premium` | no | yes | shipped |
 | `agent_loop` | `cheap_cloud` → `premium` | no | no | shipped |
 | `brief_ranking` | `premium` → `cheap_cloud` | no | no | shipped |
 | `capture_classify` | `local_small` → `cheap_cloud` | no | yes | shipped |
@@ -45,6 +46,7 @@ it can be answered for.
 | `site_extract` | `premium` | no | no | shipped |
 | `site_fact_extract` | `cheap_cloud` → `premium` | no | no | shipped |
 | `site_triage` | `cheap_cloud` → `premium` | no | no | shipped |
+| `stage_evidence_extract` | `cheap_cloud` → `premium` | no | yes | shipped |
 | `summarize` | `cheap_cloud` → `premium` | no | no | shipped |
 | `transcript` | `cheap_cloud` → `premium` | no | no | planned |
 | `transcript_propose` | `cheap_cloud` → `premium` | no | no | shipped |

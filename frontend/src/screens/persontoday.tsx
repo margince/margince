@@ -86,6 +86,40 @@ export const MOMENT_EVIDENCE_LABEL = {
   MessageKey
 >;
 
+type PersonMomentEvidence = components["schemas"]["PersonMomentEvidence"];
+
+/**
+ * What one piece of a moment's evidence says, in the shape every claim on a
+ * record states it. The QUOTE is the verbatim excerpt when the server has
+ * one — the words that were actually written — and the label otherwise; the
+ * origin line names the kind of record it came from and when. A label put
+ * where the quote goes, over a kind word, read "record" twice and quoted
+ * nothing.
+ */
+export function momentGrounding(
+  evidence: readonly PersonMomentEvidence[],
+  t: ReturnType<typeof useT>,
+  locale: Locale,
+  recordZone: string,
+): Grounding[] {
+  return evidence.map((item) => {
+    const observed = item.observed_at
+      ? formatDate(item.observed_at, locale, recordZone)
+      : undefined;
+    return {
+      key: `${item.type}-${item.id ?? item.label}`,
+      quote: item.snippet ?? item.label,
+      from: [
+        item.snippet ? item.label : undefined,
+        t(MOMENT_EVIDENCE_LABEL[item.type]),
+        observed,
+      ]
+        .filter(Boolean)
+        .join(" · "),
+    };
+  });
+}
+
 // The standing's colour. Two rules mean somebody is being kept waiting and
 // read as warnings; the quiet success state reads as settled rather than as
 // something nobody has judged. Everything else is a live thread — a fact about
@@ -134,6 +168,7 @@ export function PersonToday({
   const plural = usePlural();
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const taskRows = useOpenTaskRows(view);
   // The day's work is read from two sources — the moment and the open tasks —
   // and a grant can withhold either. The panel then names what it could not
@@ -171,11 +206,7 @@ export function PersonToday({
   // the label a reader can act on, and the kind of record it was read from.
   // Same disclosure as the account's call, because it is the same promise —
   // nothing a machine says here is unsourced.
-  const restsOn: Grounding[] = moment.evidence.map((item) => ({
-    key: `${item.type}-${item.id ?? item.label}`,
-    quote: item.label,
-    from: t(MOMENT_EVIDENCE_LABEL[item.type]),
-  }));
+  const restsOn = momentGrounding(moment.evidence, t, locale, recordZone);
   const footer = (
     <div className="pe-today-foot">
       <span>

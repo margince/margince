@@ -26,6 +26,11 @@ import (
 // and a typo in any of them would silently ask for a grant nobody holds.
 const objectActivity = "activity"
 
+// objectDeal is the RBAC object a stage move is governed by. Spelled here
+// rather than imported, for targetImportRun's reason: approvals may not import
+// a module it governs.
+const objectDeal = "deal"
+
 // targetImportRun is the staged target a migrate-in commit names, and the RBAC
 // object the migration module admits on (migration.ImportRunObject). One word
 // for both, spelled here rather than imported: approvals may not import a
@@ -243,6 +248,11 @@ var decisionGrants = map[string][]grantRequirement{
 	// somebody who may read the transcript but not add to the timeline could
 	// otherwise release a task they could not have logged themselves.
 	"transcript_proposal": {{objectActivity, principal.ActionCreate}},
+	// A proposed stage move is decided by whoever may MOVE the deal. Approving
+	// it performs the advance, so read is not enough: somebody who can see a
+	// deal but not steer it must not be able to release a move they could not
+	// have made by hand.
+	"stage_progression": {{objectDeal, principal.ActionUpdate}},
 	// An automation's request_approval stages under emit_flow_event, and that
 	// action IS the confirm-first act: approving it performs no downstream
 	// write, it finishes the asking. The grant is the one the action catalog

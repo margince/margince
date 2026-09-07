@@ -37,6 +37,10 @@ var languageEnumSchemas = []string{
 	"UpdateInstallationSettingsRequest",
 	"SaveMyLocaleRequest",
 	"User",
+	// A captured message's own detected language. Nullable, so its enum carries
+	// `null` beside the codes — which is not a language and is dropped before
+	// the comparison below.
+	"Activity",
 }
 
 func TestEveryLanguageEnumInTheContractListsTheShippedLanguages(t *testing.T) {
@@ -90,7 +94,7 @@ func schemaBody(contract, name string) (string, bool) {
 // property name is what marks it as a language rather than any other enum the
 // schema happens to carry.
 func languageEnumOf(body string) ([]string, bool) {
-	property := regexp.MustCompile(`(?m)^\s+(locale|base_language):\s*$`)
+	property := regexp.MustCompile(`(?m)^\s+(locale|base_language|language):\s*$`)
 	loc := property.FindStringIndex(body)
 	if loc == nil {
 		return nil, false
@@ -101,7 +105,10 @@ func languageEnumOf(body string) ([]string, bool) {
 	}
 	var out []string
 	for _, value := range strings.Split(enum[1], ",") {
-		if trimmed := strings.TrimSpace(value); trimmed != "" {
+		// `null` on a nullable enum says the value may be absent, which is a
+		// different claim from naming a language. Dropped here so a nullable
+		// property is compared against the shipped set like any other.
+		if trimmed := strings.TrimSpace(value); trimmed != "" && trimmed != "null" {
 			out = append(out, trimmed)
 		}
 	}

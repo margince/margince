@@ -342,8 +342,7 @@ describe("a record timeline you can work in", () => {
     );
   });
 
-  it("folds a conversation into one row that opens, with the conversation's own verbs on it", async () => {
-    const user = userEvent.setup();
+  it("draws a conversation as one card, with the conversation's own verbs on it", async () => {
     const thread = ["a-1", "a-2", "a-3"].map((id, index) =>
       activity({
         id,
@@ -359,13 +358,12 @@ describe("a record timeline you can work in", () => {
     mount();
 
     expect(await screen.findByText("3 messages")).toBeTruthy();
-    // One row for three mails, titled by the newest.
+    // One card for three mails, titled once by the newest: its members carry
+    // their words, not the subject over again.
     expect(screen.getAllByText(/Cutover plan/)).toHaveLength(1);
-    // Relink is reachable from the group without opening it.
+    expect(document.querySelectorAll(".tl-msg")).toHaveLength(3);
+    // Relink is reachable from the card's head.
     expect(screen.getByRole("button", { name: "relink a-1" })).toBeTruthy();
-
-    await user.click(screen.getByRole("button", { name: "Open" }));
-    expect(screen.getAllByText(/Cutover plan/)).toHaveLength(4);
   });
 
   // The LEAD page's own path. Every surface it uses is the shared one, so a
@@ -430,13 +428,12 @@ describe("a record timeline you can work in", () => {
     expect(opened).toEqual(["a-1"]);
   });
 
-  it("draws a collapsed conversation of emails with the canonical row", async () => {
-    // The defect this holds: a group wrote its own subject-and-preview markup
-    // for the newest message while a lone email beside it drew EmailEntry, so
-    // one page showed two readings of a message. The preview differs from the
-    // body on purpose — a row rendering the body where the server's preview
-    // belongs is the drift, and a fixture whose two texts agreed could not tell
-    // them apart.
+  it("draws a conversation's messages from the server's preview, never the body", async () => {
+    // The defect this holds: a group wrote its own reading of a message while
+    // a lone email beside it drew the server's, so one page showed two
+    // readings of one mail. The preview differs from the body on purpose — a
+    // message rendering the body where the server's preview belongs is the
+    // drift, and a fixture whose two texts agreed could not tell them apart.
     const thread = ["a-1", "a-2"].map((id, index) =>
       activity({
         id,
@@ -465,12 +462,12 @@ describe("a record timeline you can work in", () => {
     mount();
 
     expect(await screen.findByText("2 messages")).toBeTruthy();
-    // The canonical row's own parts, on the COLLAPSED group: the server's
-    // preview and the access badge. Asserting the preview alone would pass over
-    // a hand-written span that happened to print the same string.
-    expect(screen.getByText("Are we still moving on the 14th?")).toBeTruthy();
-    expect(document.querySelector(".emailentry")).not.toBeNull();
-    // And not the body: the group must not fall back to the raw text when the
+    // The server's preview on each message.
+    expect(
+      screen.getAllByText("Are we still moving on the 14th?"),
+    ).toHaveLength(2);
+    expect(document.querySelectorAll(".tl-msg")).toHaveLength(2);
+    // And not the body: a message must not fall back to the raw text when the
     // server composed a preview for it.
     expect(screen.queryByText(/Long body with a signature/)).toBeNull();
   });

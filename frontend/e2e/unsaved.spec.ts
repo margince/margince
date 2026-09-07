@@ -51,7 +51,7 @@ const typeAndCloseDialog = async (page: Page, name: string) => {
 // Selected by destination rather than by name: this link's accessible name is
 // the installation's own company, which a fixture is free to change, and what
 // the test needs is only that it goes somewhere outside settings.
-const leaveSettings = (page: Page) => page.locator('a[href="#/home"]').click();
+const leaveSettings = (page: Page) => page.locator('a[href="#/brief"]').click();
 
 test("a settings draft holds the page when the reader leaves for another screen", async ({
   page,
@@ -85,5 +85,5 @@ test("discarding leaves for the screen the reader asked for", async ({
 
   await page.getByRole("button", { name: /verwerfen/i }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
-  await expect(page).toHaveURL(/#\/home$/);
+  await expect(page).toHaveURL(/#\/brief$/);
 });

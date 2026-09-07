@@ -55,6 +55,16 @@ openapi: 3.1.0
 #     `x-agent-access: auth-bootstrap` — the auth/session machinery itself (workspace bootstrap,
 #     login/logout); the pre-auth endpoints (bootstrap, login) override `security: []` (no prior
 #     credential required); not tier-gated, not an agent tool.
+#   - `x-waits-on-model: always | on-miss` — the handler calls an AI model and HOLDS THE REQUEST
+#     OPEN until the model answers, so the caller is waiting on the agent for the whole of that
+#     time. `always` is a handler that generates on every call (a draft, the meeting brief);
+#     `on-miss` one that serves a stored reading and generates only when it has none (the person
+#     brief, the dossier, the deal status). Absent means the operation answers without a model
+#     or enqueues the work and answers at once (a deep read, a document extraction). The SPA reads
+#     the marked set to light the AI-activity rail the instant such a request leaves rather than
+#     at its next poll of the feed, and `backend/gates/modelroutes_test.go` holds the SPA's copy
+#     to this one in both directions. It is a claim about the handler: read the handler before
+#     you add or remove one.
 #
 # Deferred areas (NOT specified here — see data-model.md §12): sequences/cadences,
 # telephony/click-to-call, the dedicated embedding store, workflow-run records.
@@ -1290,6 +1300,7 @@ paths:
     get:
       tags: [People]
       operationId: getPersonBrief
+      x-waits-on-model: on-miss
       x-agent-access: human-only
       # Session cookie only, matching auth.RequireHuman at runtime.
       security: [{ cookieAuth: [] }]
@@ -1325,6 +1336,7 @@ paths:
     post:
       tags: [People]
       operationId: regeneratePersonBrief
+      x-waits-on-model: always
       x-agent-access: human-only
       security: [{ cookieAuth: [] }]
       summary: Regenerate this person's brief, ignoring the cached one.
@@ -1348,6 +1360,7 @@ paths:
     post:
       tags: [People, AI]
       operationId: draftPersonEmail
+      x-waits-on-model: always
       x-agent-access: human-only
       security: [{ cookieAuth: [] }]
       summary: Draft an email to this person, grounded in their record.
@@ -1651,6 +1664,7 @@ paths:
     post:
       tags: [People, AI]
       operationId: draftIntroNote
+      x-waits-on-model: always
       x-agent-access: human-only
       security: [{ cookieAuth: [] }]
       summary: Draft the forwardable note a colleague can paste into their own introduction.
@@ -2747,6 +2761,7 @@ paths:
     post:
       tags: [Organizations, AI]
       operationId: draftIntroRequest
+      x-waits-on-model: always
       x-agent-access: human-only
       security: [{ cookieAuth: [] }]
       summary: Draft the message asking a colleague to introduce you.
@@ -2953,6 +2968,7 @@ paths:
     get:
       tags: [Organizations]
       operationId: getOrganizationDossier
+      x-waits-on-model: on-miss
       x-agent-access: human-only
       security: [{ cookieAuth: [] }]
       summary: What this company IS — assembled from its own facts, every sentence citing one.
@@ -2993,6 +3009,7 @@ paths:
     post:
       tags: [Organizations]
       operationId: refreshOrganizationDossier
+      x-waits-on-model: always
       x-agent-access: human-only
       security: [{ cookieAuth: [] }]
       summary: Reassemble the dossier now, past a fingerprint that still matches.
@@ -3068,12 +3085,85 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /organizations/{id}/scan:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Organizations]
+      operationId: getOrganizationScan
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: What this account needs, as the model last read it for this reader.
+      description: |
+        The account scan is the model's reading of one account for one reader: what the
+        exchanges and the pipeline say needs a person, each finding citing the records it
+        rests on and quoting the words it read. It is the same advice shape the 360's own
+        rules produce, and the answer here MERGES both — the rules run live on every read,
+        the model's findings are the stored ones — deduplicated by fingerprint, with this
+        reader's dismissals applied and the display cap reported rather than hidden.
+
+        **Per reader, never shared.** The scan is written from the reader's own composite
+        read and the message words their audience admits, so a colleague's scan would
+        disclose records this reader cannot open. A scan is therefore keyed
+        (reader, account), and this read is `never` for a reader who has not asked yet.
+
+        **Read-only.** Nothing here starts work: a `never` or a stale answer stays what it
+        is until `POST` asks. The state names whether the stored findings are current,
+        whether a read is in flight, and — when the AI budget deferred it — when it resumes.
+      responses:
+        '200':
+          description: The reader's scan of this account, or `never`.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrganizationScan' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    post:
+      tags: [Organizations]
+      operationId: ensureOrganizationScan
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Make sure this reader's scan of the account is current, reading it again only when the account changed.
+      description: |
+        Opening an account page calls this once. It compares the account as this reader
+        sees it now — a fingerprint over the composite read, the recent message words, the
+        prompt and the routing — against the stored scan, and answers in one of three ways:
+
+        - the stored findings, unchanged, when the fingerprint still matches (no model call,
+          no cost);
+        - the stored findings marked `stale`, when the account has moved but the reader's
+          last scan is younger than the rescan floor — one hour — because a busy inbox
+          must not re-read the account on every message;
+        - a `queued` scan, when the findings are missing, older than the floor, or `force`
+          is set. The read runs as a background job under this reader's own grants and
+          reports on the AI activity rail; poll `GET` until it settles.
+
+        A scan already in flight is returned as it stands rather than started twice.
+        `force` skips the floor and the fingerprint, never the in-flight check.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OrganizationScanRequest' }
+      responses:
+        '200':
+          description: The scan as it now stands — current, stale, or in flight.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrganizationScan' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /organizations/{id}/growth-fit:
     parameters:
       - $ref: '#/components/parameters/Id'
     get:
       tags: [Organizations]
       operationId: getOrganizationGrowthFit
+      x-waits-on-model: on-miss
       x-agent-access: human-only
       security: [{ cookieAuth: [] }]
       summary: How well this company fits what we sell — banded, with both completeness counts.
@@ -3109,6 +3199,7 @@ paths:
     post:
       tags: [Organizations]
       operationId: refreshOrganizationGrowthFit
+      x-waits-on-model: always
       x-agent-access: human-only
       security: [{ cookieAuth: [] }]
       summary: Re-assemble the caller's growth fit now, past a fingerprint that still matches.
@@ -3133,6 +3224,7 @@ paths:
     get:
       tags: [Organizations]
       operationId: getOrganizationBrief
+      x-waits-on-model: on-miss
       # The company record page no longer renders a written account brief: its one
       # card is now the account's work in flight, spelled from the records rather
       # than around them. The operation stays for clients built against it, and
@@ -3184,6 +3276,7 @@ paths:
     post:
       tags: [Organizations]
       operationId: regenerateOrganizationBrief
+      x-waits-on-model: always
       # The company record page no longer renders a written account brief: its one
       # card is now the account's work in flight, spelled from the records rather
       # than around them. The operation stays for clients built against it, and
@@ -3270,6 +3363,7 @@ paths:
     post:
       tags: [Organizations]
       operationId: askAboutOrganization
+      x-waits-on-model: always
       x-agent-access: human-only
       security: [{ cookieAuth: [] }]
       summary: Ask one of the prepared questions about this account.
@@ -3327,6 +3421,7 @@ paths:
     post:
       tags: [Organizations, AI]
       operationId: draftAccountEmail
+      x-waits-on-model: always
       x-agent-access: human-only
       security: [{ cookieAuth: [] }]
       summary: Draft an email to this account, grounded in its records.
@@ -3492,6 +3587,7 @@ paths:
     post:
       tags: [Organizations, AI]
       operationId: scrapeCompany
+      x-waits-on-model: always
       summary: Enrich this organization from its website (evidence-or-omit) — a staged 🟡 proposal.
       description: |
         The `enrich` verb applied to an existing organization (EP05 / ADR-0006 scrape seam). Fetches
@@ -4841,6 +4937,147 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  # ------------------------ /deals/{id}/stage-evidence ------------------------
+  /deals/{id}/stage-evidence:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Deals]
+      operationId: listStageEvidence
+      summary: What has been observed about this deal against its stage's criteria.
+      description: |
+        The evidence ledger for one deal, newest observation first.
+
+        Refuted claims are INCLUDED and carry `refuted_at`. A reader asking what
+        a stage move rested on needs the claim that was withdrawn as much as the
+        ones that stood.
+
+        `author_side` is the column to read before trusting a claim: evidence for
+        a criterion naming something the buyer did is only good when the buyer
+        authored it.
+      responses:
+        '200':
+          description: The deal's evidence.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StageEvidenceListResponse' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ------------------------ /stages/{id}/exit-criteria ------------------------
+  /stages/{id}/exit-criteria:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Pipelines]
+      operationId: listStageExitCriteria
+      summary: What a deal must satisfy before it leaves this stage.
+      description: |
+        The stage's exit criteria in `position` order. Live rows only unless
+        `include_archived` is set — an archived criterion stays readable because
+        evidence recorded against it cites it by id, and a reader opening an older
+        deal must still see what the stage asked for at the time.
+
+        A terminal (`won`/`lost`) stage always answers an empty list: there is no
+        leaving it, so there is nothing it can require.
+      parameters:
+        - name: include_archived
+          in: query
+          required: false
+          schema: { type: boolean, default: false }
+      responses:
+        '200':
+          description: The stage's criteria.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StageExitCriterionListResponse' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Pipelines]
+      operationId: createStageExitCriterion
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Add an exit criterion to a stage.
+      description: |
+        Requires `pipeline:update`, like every other pipeline-shape edit.
+
+        Two refusals, both `422`. `terminal_stage_has_no_exit_criteria` on a
+        `won`/`lost` stage. `criterion_key_taken` when the stage already has a LIVE
+        criterion with this key — archiving one frees its key for reuse, and both
+        rows survive so the older evidence stays legible.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateStageExitCriterionRequest' }
+      responses:
+        '201':
+          description: The created criterion.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StageExitCriterion' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /stages/{id}/exit-criteria/{criterion_id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - name: criterion_id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    patch:
+      tags: [Pipelines]
+      operationId: updateStageExitCriterion
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Edit a criterion's label, kind, requiredness, hint or position.
+      description: |
+        Requires `pipeline:update`. The `key` is NOT editable: evidence cites a
+        criterion by key across an edit, so changing it would silently orphan every
+        claim already recorded against it. Archive the criterion and add a new one
+        under the new key instead.
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateStageExitCriterionRequest' }
+      responses:
+        '200':
+          description: The updated criterion.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StageExitCriterion' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Pipelines]
+      operationId: archiveStageExitCriterion
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Remove a criterion from its stage (soft delete; archive is the delete).
+      description: |
+        Requires `pipeline:update`. Archiving rather than deleting is what keeps
+        recorded evidence readable — a claim references the criterion it settled.
+        The surviving criteria shift down so `position` stays contiguous.
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '204': { description: Archived. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
   # ------------------------ /channel-providers -------------------------------
   /channel-providers:
     get:
@@ -5281,6 +5518,7 @@ paths:
     get:
       tags: [Activities]
       operationId: getMeetingBrief
+      x-waits-on-model: always
       summary: The pre-meeting brief for one booked meeting — goal, commitments, where the deal stands.
       description: |
         The prep dossier for a meeting, in the fixed eight-section order of ADR-0097 D5.
@@ -5595,6 +5833,7 @@ paths:
     post:
       tags: [Activities, AI]
       operationId: draftEmail
+      x-waits-on-model: always
       summary: Draft a reply/follow-up email for context (the `draft_email` MCP verb).
       description: Drafting is 🟢 (never auto-sends). The draft is returned, not sent.
       x-mcp-tool: { verb: draft_email, record_type: activity, tier: auto_execute, scope: draft }
@@ -5654,6 +5893,11 @@ paths:
 
         Sending still requires `to` on the send request and gates consent
         independently; this only saves typing an address the record already holds.
+
+        `mailbox_user_ids` answers a different question from the three name fields:
+        not who the reply goes TO, but whose mailbox the message being answered
+        arrived in. A composer shows it so a reply into a colleague's conversation
+        says so before it is sent.
       responses:
         '200':
           description: The recipient a reply would go to, with empty fields where unknown.
@@ -6447,6 +6691,7 @@ paths:
               schema: { $ref: '#/components/schemas/DealRoomThread' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
         '429':
           description: Rate-limited.
@@ -6475,6 +6720,7 @@ paths:
               schema: { $ref: '#/components/schemas/DealRoomThread' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
         '429':
           description: Rate-limited.
@@ -7315,6 +7561,7 @@ paths:
     post:
       tags: [Leads, AI]
       operationId: draftLeadEmail
+      x-waits-on-model: always
       x-agent-access: human-only
       security: [{ cookieAuth: [] }]
       summary: Draft an email to this lead, grounded in their record.
@@ -8824,6 +9071,7 @@ paths:
     post:
       tags: [AI]
       operationId: coldStartReadback
+      x-waits-on-model: always
       summary: Website cold-start read-back — returns a staged proposal with evidence.
       description: |
         Reads back a structured company profile (ICP, buying center, value proposition, USP, buying
@@ -8896,6 +9144,7 @@ paths:
     post:
       tags: [AI]
       operationId: coldStartPreview
+      x-waits-on-model: always
       summary: Read a company back from a website (or text) to PRE-FILL the company form. Stages nothing.
       description: |
         The same extraction + no-guess gate as POST /coldstart, with no staging: the fields are returned
@@ -9000,6 +9249,7 @@ paths:
     post:
       tags: [Organizations, AI]
       operationId: messageOnboardingCompany
+      x-waits-on-model: always
       summary: Continue the scoped company-setup conversation with or without a website read.
       description: |
         Uses the acting human's resumable onboarding state as the conversation and AI-run scope.
@@ -9441,6 +9691,7 @@ paths:
     post:
       tags: [Organizations, AI]
       operationId: messageCompanySiteRead
+      x-waits-on-model: always
       security: [ { cookieAuth: [] } ]
       x-agent-access: human-only
       summary: Ask Margince about a website read and receive reviewable company-field suggestions.
@@ -13774,9 +14025,11 @@ paths:
         history rather than a name nobody has ever spoken to. Individual messages keep their own
         audience: publishing the CONTACT is not publishing the correspondence.
 
-        One direction only. A contact the organization can see is not narrowed back by this door or
-        any other, because a colleague may already have written to them on the strength of seeing
-        them.
+        This door only widens, and it is no longer the only one: `visibility` on
+        `PATCH /people/{id}` moves a contact both ways for anybody the write gate admits. This
+        endpoint stays because it is the OWNER's verb — it answers 404 rather than 403 for a
+        contact that is not theirs, so capture privacy keeps hiding the row's existence, and it
+        carries the contact's mail and meetings across with it.
       responses:
         '204': { description: The contact is the organization's. }
         '401': { $ref: '#/components/responses/Unauthorized' }
@@ -14042,7 +14295,9 @@ paths:
       description: |
         The workspace member roster: id + display name + email + seat/status. Any authenticated member
         may read it (needed to pick a record-share subject and to resolve subject/granter names). Excludes
-        archived users. Row-scoped by workspace RLS. `User.roles` rides the row only for an admin caller,
+        archived users. Bounded by authenticated membership: every seat may read who else works here,
+        because a share or assignee picker only some seats could read would be a broken feature.
+        `User.roles` rides the row only for a caller holding the `user_admin` grant,
         who is the only one who can act on it.
       x-mcp-tool: { verb: list_colleagues, record_type: app_user, tier: auto_execute, scope: read }
       parameters:
@@ -14527,7 +14782,7 @@ paths:
       summary: List workspace teams — cursor-paginated. Read-only.
       description: |
         Teams available as record-share subjects, with a member count. Any authenticated member may read.
-        Excludes archived teams. Row-scoped by workspace RLS.
+        Excludes archived teams. Bounded by authenticated membership, like the member roster beside it.
       # NO annotation, and that is the fix rather than an omission. It said
       # x-mcp-tool search_records/team, and search_records has never served
       # `team` — the parity gate checks only that the named VERB is registered,
@@ -15556,10 +15811,11 @@ paths:
       operationId: inviteDealRoomParticipant
       summary: Admit a named person to the room.
       description: |
-        HUMAN-ONLY. Records the person and mints one credential for them. Whether that
-        credential is delivered depends on the installation having outbound mail
-        configured; the participant and the invitation are recorded either way, so a
-        mail failure never leaves a half-admitted person.
+        HUMAN-ONLY. Records the person and mints one credential for them. Whether a mail
+        relay took the credential is reported as `queued` — it is false when the
+        installation has no outbound mail configured and when the relay refused the
+        message. The participant and the invitation are recorded either way, so a mail
+        failure never leaves a half-admitted person.
 
         One live seat per address: inviting an address that already holds one is
         rejected (409 `deal_room_participant_already_invited`). Re-inviting an address
@@ -16291,6 +16547,7 @@ paths:
     post:
       tags: [Offers]
       operationId: regenerateOffer
+      x-waits-on-model: always
       summary: Mint the next revision as a fresh draft — mechanically, or AI-drafted from captured signal.
       description: |
         Copies the sent offer's header + lines into revision N+1 as a new `draft`, marks the prior revision
@@ -16678,6 +16935,7 @@ paths:
     post:
       tags: [Brief]
       operationId: generateMorningBrief
+      x-waits-on-model: on-miss
       summary: Assemble the acting rep's brief for today if the overnight pass has not already.
       description: |
         The catch-up path. The overnight pass owns generation: it assembles one run per rep per
@@ -18395,6 +18653,7 @@ paths:
     get:
       tags: [Deals]
       operationId: getDealStatus
+      x-waits-on-model: on-miss
       security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
       summary: Where the deal stands, what could lose it, and the one thing to do next.
       x-mcp-tool: { verb: read_record, record_type: deal, tier: auto_execute, scope: read }
@@ -18490,6 +18749,7 @@ paths:
     post:
       tags: [Deals, AI]
       operationId: proposeDealRoles
+      x-waits-on-model: always
       x-agent-access: human-only
       security: [{ cookieAuth: [] }]
       summary: Read the buying roles out of what this deal's contacts have written.
@@ -18774,6 +19034,56 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /me/working-hours:
+    get:
+      tags: [Identity]
+      operationId: getMyWorkingHours
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: When you are bookable.
+      description: |
+        Always the CALLER's own. A person who has chosen nothing is answered with
+        the fallback and `chosen: false`, so a screen can offer it as a starting
+        point rather than show it as a decision they made.
+      responses:
+        '200':
+          description: The caller's working hours.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MyWorkingHoursResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    put:
+      tags: [Identity]
+      operationId: saveMyWorkingHours
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Choose the hours and days you are bookable.
+      description: |
+        Always the CALLER's own, never anybody else's — an admin does not set a
+        colleague's working hours through this API, for the reason the setting
+        exists at all.
+
+        The times are read on the timezone sent with them, which is also stored:
+        it is the person's own zone and the product had no author for it before
+        this. Sending the browser's zone is the expected first write.
+
+        Narrowing these hours narrows what a customer can book. A screen that
+        does not say so at the moment of saving has built a trap rather than a
+        setting.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WorkingHours' }
+      responses:
+        '200':
+          description: The hours as stored.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MyWorkingHoursResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /me/locale:
     put:
       tags: [Identity]
@@ -18806,6 +19116,41 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/User' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /me/display-name:
+    put:
+      tags: [Identity]
+      operationId: saveMyDisplayName
+      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Change the name colleagues see you by.
+      description: |
+        Always the CALLER's own, never anybody else's. An admin changing a
+        colleague's name is a different act with a different audience, and this
+        API does not offer it — there is no id to pass.
+
+        The name was written once, when the seat was invited or the installation
+        was created, and nothing could change it afterwards. A person who married,
+        was invited as "j.smith" or was simply typed wrong had no way to correct
+        the name their colleagues see beside every record they touch.
+
+        The name is read from `app_user` wherever it is shown — the roster, the
+        share pickers, the audit trail — so one write reaches every surface.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SaveMyDisplayNameRequest' }
+      responses:
+        '200':
+          description: The caller's seat, with the new name.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /me/ai-activity:
@@ -20447,6 +20792,7 @@ paths:
     post:
       tags: [Knowledge, AI]
       operationId: askCorpus
+      x-waits-on-model: always
       x-agent-access: human-only
       security: [{ cookieAuth: [] }]
       summary: Ask this corpus a question, answered only from its documents.
@@ -21609,11 +21955,18 @@ components:
         mail_sharing:
           type: boolean
           description: |
-            The workspace's mail-sharing posture, ON by default: a captured email is readable by
-            every colleague who can see the contact. Switched OFF, every email captured FROM THEN ON
-            is held to its participants and the capturing mailbox owner — already-captured mail keeps
-            the audience it has. Turning it off makes shared pipeline work hard; the setting exists
-            for installations that accept that cost.
+            The workspace's capture-sharing posture, ON by default: captured correspondence is
+            readable by every colleague who can see the contact. Switched OFF, everything captured
+            FROM THEN ON is held to its participants and the capturing member — already-captured
+            correspondence keeps the audience it has. Turning it off makes shared pipeline work
+            hard; the setting exists for installations that accept that cost.
+
+            It is named for mail because mail is what it governed first, and it now governs one
+            more thing: a chat on a transport whose credential belongs to ONE member is that
+            member's own correspondence and is held by this switch exactly as their mail is. A chat
+            on a transport the installation SHARES — a bot, an official account — is the company's
+            own business and is not touched, because there is no member such a message could be
+            held for.
         shared_posture_allowed:
           type: boolean
           description: |
@@ -22044,7 +22397,7 @@ components:
       description: A sparse capture-settings patch (admin/ops).
       properties:
         auto_enrich: { type: boolean, description: Toggle captured-organization auto-enrichment. }
-        mail_sharing: { type: boolean, description: 'Toggle the workspace mail-sharing posture; affects mail captured from now on.' }
+        mail_sharing: { type: boolean, description: 'Toggle the workspace mail-sharing posture; affects correspondence captured from now on — mail, and chat on a transport whose credential belongs to one member.' }
         signature_enrich: { type: boolean, description: 'Toggle the tenant-wide default for reading contact details out of captured mail — its signature and any attached vCard. A mailbox that set its own switch keeps it.' }
         shared_posture_allowed: { type: boolean, description: 'Allow a seat to put their mailbox in the `shared` posture. Off by default; see CaptureSettings.shared_posture_allowed for what turning it on asserts.' }
 
@@ -23089,7 +23442,7 @@ components:
     DedupeCandidate:
       type: object
       description: 'One DH-DDL-1 review-queue row: the canonical unordered pair, its confidence, and the detection-time evidence snapshot (DH-N-8).'
-      required: [id, entity_type, left_id, right_id, confidence, evidence, status, created_at]
+      required: [id, entity_type, left_id, right_id, confidence, evidence, status, created_at, can_decide]
       properties:
         id: { type: string, format: uuid }
         entity_type: { type: string, enum: [person, organization, lead], description: 'A pair is always same-type (ADR-0118/A169 §2): a lead is proposed as a duplicate of a lead or of nothing.' }
@@ -23109,6 +23462,21 @@ components:
               signal: { type: string, description: 'agree | collide | one_sided' }
               score: { type: [number, 'null'], description: 'The field''s contribution where scored (e.g. name_sim).' }
         status: { type: string, enum: [open, merged, not_a_duplicate] }
+        can_decide:
+          type: boolean
+          description: |
+            Whether THIS caller could dispose of the pair — merge it, dismiss it,
+            or undo a decision. Deciding needs write authority over BOTH ends:
+            dismissing suppresses both records as duplicates for the whole
+            workspace, and merging rewrites one into the other.
+
+            A pair whose ends have different owners is therefore undecidable by
+            any bounded seat, and it is a common shape — capture creates the
+            near-duplicate owned by the mailbox owner while the incumbent belongs
+            to whoever worked it. The pair is still LISTED, because the person
+            who can see a duplicate is the person best placed to notice it; this
+            says whether the buttons will work, which the client should gate on
+            rather than discovering through a 403 after the POST.
         disposed_by: { type: [string, 'null'], format: uuid }
         disposed_at: { type: [string, 'null'], format: date-time }
         created_at: { type: string, format: date-time }
@@ -24922,6 +25290,31 @@ components:
         last_name: { type: [string, 'null'] }
         title: { type: [string, 'null'] }
         owner_id: { type: [string, 'null'], format: uuid }
+        visibility:
+          type: string
+          enum: [workspace, owner]
+          description: |
+            Who may see this contact: `workspace` for everyone in the organization,
+            `owner` for the person named by `owner_id` alone.
+
+            An ORDINARY field, writable in BOTH directions by anybody the write gate
+            admits. It used to move one way only, through `POST /people/{id}/publish`,
+            on the reasoning that a colleague may already have acted on seeing the
+            contact. That reasoning assumed a human made the disclosure. The sender
+            classifier publishes a contact it judges a real counterparty without
+            anybody approving it, so the common case was a machine making a decision
+            no human could undo — the row's own owner included.
+
+            Narrowing a contact does not retract what was already done with it. Mail,
+            meetings and deals filed against it keep their own audiences, and a
+            colleague mid-conversation keeps their thread; what changes is who finds
+            the contact from here on.
+
+            A contact narrowed to `owner` stays with the owner it already names;
+            narrowing does not reassign it to whoever pressed the button. A row that
+            names nobody is not reachable through this field at all — an unowned
+            record is nobody's to change until somebody claims it, which the write
+            gate already enforces for every field on this endpoint.
         social: { type: object, additionalProperties: true }
         address: { $ref: '#/components/schemas/Address' }
         emails:
@@ -25310,6 +25703,88 @@ components:
               minimum: 0
               description: How many current contacts of this account the caller can see and the score was chosen from.
 
+    OrganizationScanRequest:
+      type: object
+      description: What an ensure may ask beyond "make it current".
+      properties:
+        force:
+          type: boolean
+          default: false
+          description: |
+            Read the account again even though the stored findings' fingerprint matches or
+            the rescan floor has not passed. A scan already in flight is still returned as
+            it stands rather than started twice.
+
+    OrganizationScanState:
+      type: string
+      enum: [never, queued, running, done, degraded, failed]
+      description: |
+        Where this reader's scan of the account stands. `never` — this reader has not asked
+        for one. `queued` / `running` — a read is in flight, on the rail. `done` — the
+        model read the account and its findings are stored. `degraded` — the read finished
+        on the deterministic floor (no model lane, the AI budget deferred past the job's
+        patience, or a reply the grounding filter refused whole); the rules' own advice is
+        what stands. `failed` — the read could not run at all; the rules' advice still
+        answers, and `degrade_reason` says what stopped it.
+
+    OrganizationScan:
+      type: object
+      description: |
+        One reader's scan of one account: the state of the read, and what the account looks
+        like it needs — the model's stored findings and the 360's live rules as ONE list,
+        deduplicated by fingerprint, this reader's dismissals applied, capped and the cap
+        reported. Every finding cites the records it rests on and, where the model read
+        words, quotes them verbatim; a finding that could not be grounded is dropped whole,
+        never shown with its citation stripped.
+      required: [organization_id, state, findings, findings_dropped]
+      properties:
+        organization_id: { type: string, format: uuid }
+        state: { $ref: '#/components/schemas/OrganizationScanState' }
+        generated_at:
+          type: [string, 'null']
+          format: date-time
+          description: When the stored findings were written. Null until a read has settled.
+        generated_by:
+          allOf: [{ $ref: '#/components/schemas/WrittenBy' }]
+          description: Which writer produced the stored findings. Absent until a read has settled.
+        stale:
+          type: boolean
+          description: |
+            The account has changed since the stored findings were written and they have not
+            been re-read, because the reader's last scan is younger than the rescan floor.
+            The findings still answer; the flag is said beside them rather than instead of them.
+        resumes_at:
+          type: [string, 'null']
+          format: date-time
+          description: |
+            When a read the AI budget deferred will try again. Null unless the scan is in
+            flight and waiting on budget.
+        degrade_reason:
+          type: [string, 'null']
+          description: |
+            Why the read finished below the model — server-authored, in the reader's terms,
+            never a provider's message. Null when the model wrote the findings.
+        read:
+          type: [object, 'null']
+          description: |
+            What the last settled read took in, so the page can say "read 14 exchanges and
+            3 deals" rather than "done". Null until a read has settled.
+          required: [exchanges, deals]
+          properties:
+            exchanges: { type: integer, minimum: 0 }
+            deals: { type: integer, minimum: 0 }
+        findings:
+          type: array
+          description: |
+            The merged advice, in priority order: the rules' own rows first in their own
+            order, then the model's findings by the order it gave them. Dismissed rows are
+            gone; the cap is applied here and reported in `findings_dropped`.
+          items: { $ref: '#/components/schemas/Organization360Suggestion' }
+        findings_dropped:
+          type: integer
+          minimum: 0
+          description: How many of this reader's undismissed findings the cap left out.
+
     OrganizationDossier:
       type: object
       description: |
@@ -25697,6 +26172,30 @@ components:
             writer either already knew the name from the record it read, or
             leaves this out. Descriptive only — grounding checks type and id,
             never the name.
+        quote:
+          type: string
+          description: |
+            The record's own words, verbatim — a message's subject line, a
+            signal's sentence. Never a paraphrase and never a summary: it is
+            what a reader checks the claim against without opening the record,
+            so a writer that has no verbatim words leaves it out. Absent when
+            the reader may not read the record's content, even where they may
+            know it exists.
+        at:
+          type: string
+          format: date-time
+          description: |
+            The instant the evidence is dated — when the message was sent, when
+            the deal was last worked, when the signal was read. The client
+            prints it in the reader's own calendar. Absent for a record with no
+            date of its own.
+        origin:
+          type: string
+          description: |
+            Where the words came from, in the writer's own language and the
+            reader's terms — "Email you sent", "Open deal, last worked",
+            "Read from their mail". One short phrase, never a record kind the
+            client already labels the chip with. Descriptive only, like `name`.
 
     OrganizationFinanceSummary:
       type: object
@@ -26288,6 +26787,12 @@ components:
         assignee_id: { type: [string, 'null'], format: uuid }
         linked_deal_id: { type: [string, 'null'], format: uuid }
         linked_person_id: { type: [string, 'null'], format: uuid }
+        version:
+          allOf: [{ $ref: '#/components/schemas/RowVersion' }]
+          description: |
+            The task's version, carried so the tick and the snooze beside this row can write with
+            `If-Match`. The same reason `EmailSummary` carries one: a projection a reader can act
+            from has to name the row it will act on, or every press is last-write-wins.
 
     Organization360NextMeeting:
       type: object
@@ -26344,8 +26849,12 @@ components:
       properties:
         kind:
           type: string
-          enum: [no_reply, stalled_deal, no_next_step, lifecycle_conflict]
+          enum:
+            [no_reply, stalled_deal, no_next_step, lifecycle_conflict,
+             commitment_unmet, question_unanswered, risk_raised, need_raised]
           description: |
+            The four RULE kinds, computed from the account's records with no model:
+
             `no_reply` — an outbound message on a thread nobody answered.
             `stalled_deal` — an open deal idle past the 60-day stall window.
             `no_next_step` — an active account with no open task on it.
@@ -26353,6 +26862,17 @@ components:
             filed under: a `contract_ended` signal stands while the record still reads as a live
             customer or an open opportunity. The page states the conflict rather than resolving
             it, because which of the two is wrong is a judgment only the reader can make.
+
+            The four READ kinds, which only the account scan raises — each from words the
+            model read in the account's own exchanges, quoted on the citation so the reader
+            checks the claim against them:
+
+            `commitment_unmet` — we said we would do something in an exchange and nothing on
+            the record says it happened.
+            `question_unanswered` — they asked something and no later exchange of ours answers it.
+            `risk_raised` — they wrote something that puts the relationship or a deal at risk:
+            a budget cut, a competitor, a decision-maker leaving.
+            `need_raised` — they wrote about a need or a plan nothing on the record has picked up.
         title:
           type: [string, 'null']
           description: |
@@ -26392,6 +26912,13 @@ components:
           description: The rule that fired, in the words the rep reads. Never a score.
         subject_type: { type: [string, 'null'], enum: [null, deal, person, organization] }
         subject_id: { type: [string, 'null'], format: uuid }
+        written_by:
+          allOf: [{ $ref: '#/components/schemas/WrittenBy' }]
+          description: |
+            Which writer raised this row. Absent on the 360's own rows — every one of those
+            is a rule — and `model` on a finding the account scan read from the account's
+            words. Never silently interchangeable: a reader weighing advice needs to know
+            whether a comparison or a reading stands behind it.
         evidence:
           type: array
           description: The records the rule fired on — always ones this reader can open.
@@ -28634,6 +29161,76 @@ components:
             FOR — a name, a role, a way to reach the sender — and past it a block
             is a document riding on every message.
 
+    SaveMyDisplayNameRequest:
+      type: object
+      required: [display_name]
+      properties:
+        display_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: |
+            The name colleagues see. Surrounding whitespace is trimmed and a name
+            that is only whitespace is refused — the same bounds the invite form
+            applies, because this writes the same column.
+      additionalProperties: false
+    WorkingHours:
+      type: object
+      additionalProperties: false
+      required: [start_time, end_time, days, timezone]
+      description: |
+        When one person is bookable, on their own clock.
+
+        Personal, never installation-wide: people on one team sit in different
+        countries, some work part time, and one pair of numbers set by an admin
+        is wrong for most of them while the people it fails cannot change it.
+        This is the setting a person's display language is: their own, and
+        nobody else's to set.
+
+        One range on every working day rather than a range per day. The two
+        cases that prompted it — 8-18 Monday to Saturday, 9-13 Monday to
+        Thursday — are both a range plus a set of days, and per-day hours can be
+        added on top later without redoing this.
+      properties:
+        start_time:
+          type: string
+          pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+          description: The first minute of the working day, `HH:MM` on the person's own clock.
+        end_time:
+          type: string
+          pattern: '^([01][0-9]|2[0-3]:[0-5][0-9]|24:00)$'
+          description: |
+            The minute the working day ends, exclusive. `24:00` is the honest
+            spelling of "until midnight" and is why this is not the same pattern
+            as `start_time`.
+        days:
+          type: array
+          minItems: 1
+          maxItems: 7
+          items: { type: integer, minimum: 1, maximum: 7 }
+          description: The days worked, as ISO-8601 weekday numbers — 1 is Monday.
+        timezone:
+          type: string
+          description: |
+            The IANA zone the two times are read on. A person who has never
+            chosen one is read on the installation's reporting timezone, which
+            is what makes the unset case work rather than scheduling everybody
+            on UTC.
+
+    MyWorkingHoursResponse:
+      type: object
+      additionalProperties: false
+      required: [working_hours, chosen]
+      description: The caller's own working hours, and whether they are theirs or the fallback.
+      properties:
+        working_hours: { $ref: '#/components/schemas/WorkingHours' }
+        chosen:
+          type: boolean
+          description: |
+            False when nobody has chosen: the hours above are then the fallback —
+            09:00-17:00, Monday to Friday — and the screen should offer them as a
+            starting point rather than present them as a decision somebody made.
+
     SaveMyLocaleRequest:
       type: object
       required: [locale]
@@ -30076,6 +30673,168 @@ components:
         semantic: { type: string, enum: [open, won, lost] }
         win_probability: { type: integer, minimum: 0, maximum: 100 }
 
+    StageEvidence:
+      type: object
+      description: |
+        One observation about a deal against one of its stage's exit criteria.
+        Mirrors `deal_stage_evidence`. Configuration says what a stage requires;
+        this says what was seen, and where.
+      required:
+        [id, deal_id, criterion_id, source_type, source_id, author_side,
+         commitment, met, observed_at, extracted_by]
+      properties:
+        id: { type: string, format: uuid }
+        deal_id: { type: string, format: uuid }
+        criterion_id: { type: string, format: uuid }
+        source_type: { $ref: '#/components/schemas/StageEvidenceSource' }
+        source_id:
+          type: string
+          format: uuid
+          description: |
+            The activity, contract or deal-room decision this was read from.
+        source_lines:
+          type: [array, 'null']
+          items: { type: integer }
+          description: |
+            1-based transcript lines, when the claim quotes one.
+        snippet:
+          type: [string, 'null']
+          description: The cited words, at most 500 characters.
+        author_side: { $ref: '#/components/schemas/StageEvidenceAuthorSide' }
+        commitment: { $ref: '#/components/schemas/StageEvidenceCommitment' }
+        met:
+          type: boolean
+          description: Whether the criterion was satisfied, not merely discussed.
+        confidence:
+          type: [number, 'null']
+          minimum: 0
+          maximum: 1
+          description: |
+            How sure the reader was. Absent for a deterministic writer: a record
+            either states the fact or it does not.
+        observed_at: { type: string, format: date-time }
+        extracted_by:
+          type: string
+          description: |
+            Which writer made the claim — `deterministic`, or the model task that read it.
+        refuted_at:
+          type: [string, 'null']
+          format: date-time
+          description: |
+            When a human marked this claim incorrect. The row survives: why a
+            stage move was reversed is a question asked later.
+        refuted_by: { type: [string, 'null'], format: uuid }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        version: { type: integer, format: int64 }
+
+    StageEvidenceSource:
+      type: string
+      description: What kind of record the observation was read from.
+      enum: [activity, contract]
+
+    StageEvidenceAuthorSide:
+      type: string
+      description: |
+        Who authored the cited thing. Computed by the engine from the activity's
+        direction, its participants and the installation's own email domains —
+        never claimed by a model.
+
+        It settles the criteria that turn on WHOSE WORD something is:
+        `buyer_confirmed` and `terms_accepted` take `buyer`-authored evidence
+        and nothing else, because a message our own side wrote saying they
+        confirmed something is our claim about them, not theirs.
+
+        The other kinds turn on a recorded fact instead. A meeting either took
+        place or it did not, and both sides sign a contract, so `event_held` and
+        `document_signed` are judged on the record — a meeting's transcript or
+        its status, a contract turning active — and this field rides along as
+        the trail's account of who spoke rather than as the test.
+      enum: [buyer, seller, unknown]
+
+    StageEvidenceCommitment:
+      type: string
+      description: |
+        Whether the cited text agreed to the thing or merely floated it. "We
+        could meet Thursday" is `proposed`; "Thursday works" is `agreed`.
+      enum: [agreed, proposed, none]
+
+    StageEvidenceListResponse:
+      type: object
+      required: [data, page]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/StageEvidence' } }
+        page: { $ref: '#/components/schemas/PageInfo' }
+
+    StageExitCriterion:
+      type: object
+      description: |
+        One thing that must be true of a deal before it leaves a stage. Mirrors the
+        `stage_exit_criterion` table. Configuration, not observation: whether a
+        particular deal has met it is evidence recorded elsewhere.
+      required: [id, stage_id, key, label, kind, required, position]
+      properties:
+        id: { type: string, format: uuid }
+        stage_id: { type: string, format: uuid }
+        key:
+          type: string
+          description: |
+            The stable machine name an evidence extractor cites. Unique among the
+            stage's live criteria and never editable; archiving frees it for reuse.
+        label: { type: string, description: What a human reads. }
+        kind: { $ref: '#/components/schemas/StageCriterionKind' }
+        required:
+          type: boolean
+          default: true
+          description: An optional criterion is gathered and shown but never blocks.
+        hint: { type: [string, 'null'], description: Guidance for whoever reviews the evidence. }
+        position: { type: integer, description: Order within the stage. }
+        version: { type: integer, format: int64 }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        archived_at: { type: [string, 'null'], format: date-time }
+
+    StageCriterionKind:
+      type: string
+      description: |
+        What KIND of fact settles a criterion. This is not decoration: the kind
+        decides which evidence sources may satisfy it. `buyer_confirmed`,
+        `event_held`, `document_signed` and `terms_accepted` each name something the
+        BUYER did, so a seller's own message can never settle one.
+      enum: [buyer_confirmed, event_held, document_signed, role_identified, terms_accepted, custom]
+
+    CreateStageExitCriterionRequest:
+      type: object
+      required: [key, label, kind]
+      properties:
+        key: { type: string }
+        label: { type: string }
+        kind: { $ref: '#/components/schemas/StageCriterionKind' }
+        required: { type: boolean, default: true }
+        hint: { type: string }
+
+    UpdateStageExitCriterionRequest:
+      type: object
+      description: |
+        The `key` is absent by design — see the operation description. So is
+        `position`: moving one criterion is only half a reorder, because the
+        row it displaces is not renumbered, and two criteria sharing a slot
+        order arbitrarily. A stage's criteria are appended in the order they
+        are added, and closing the gap on an archive is what keeps that order
+        contiguous.
+      properties:
+        label: { type: string }
+        kind: { $ref: '#/components/schemas/StageCriterionKind' }
+        required: { type: boolean }
+        hint: { type: [string, 'null'] }
+
+    StageExitCriterionListResponse:
+      type: object
+      required: [data, page]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/StageExitCriterion' } }
+        page: { $ref: '#/components/schemas/PageInfo' }
+
     StageListResponse:
       type: object
       required: [data, page]
@@ -30226,6 +30985,24 @@ components:
             are separate axes, and reading one off the other is what ADR-0107 retired.
         subject: { type: [string, 'null'] }
         body: { type: [string, 'null'] }
+        language:
+          type: [string, 'null']
+          readOnly: true
+          enum: [de, en, vi, null]
+          description: >-
+            What language this message is written in, read from its own text when it
+            was captured. Null on a message whose text was too short to tell, on
+            anything hand-logged, and on every row captured before this was recorded —
+            all of which mean "not known", never "not any of these".
+
+            A detector's observation, not a declaration by its author, and it describes
+            the message rather than the person: the same contact writes in two languages
+            and each message says which it is. A drafted reply follows it, so that a
+            reply to an English thread is written in English whatever language its
+            sender's own writing samples happen to be in.
+
+            Withheld with the rest of the content: it is derived from the body, so a
+            caller who may discover the row without reading it is not told this either.
         occurred_at: { type: string, format: date-time }
         due_at: { type: [string, 'null'], format: date-time, description: Task only. }
         remind_at: { type: [string, 'null'], format: date-time, description: 'Task only. Reminder-fire time; the B-E16.6 scan reads tasks whose reminder is due, not-done, and un-archived.' }
@@ -30790,13 +31567,21 @@ components:
         honestly omitted. A reading that is still running carries empty lists; that is not
         the same answer as a finished reading that grounded nothing, which is why `status`
         is required rather than inferable from the lists (RD-AC-N-2).
-      required: [id, status, fields, omitted, created_at]
+      required: [id, status, stalled, fields, omitted, created_at]
       properties:
         id: { type: string, format: uuid, description: This reading's own id. }
         status:
           type: string
           enum: [queued, running, done, failed]
           description: queued/running are live; done and failed are terminal. `done` with zero grounded fields is a correct answer, not a failure.
+        stalled:
+          type: boolean
+          description: |
+            true when a live reading has aged past the lease its worker holds: the worker
+            died, timed out, or never claimed it, and nothing will move the reading on its
+            own. Derived at read time, never stored. Asking for the file to be read again
+            then starts a fresh attempt instead of joining this one. Always false once the
+            reading is done or failed.
         status_detail:
           type: [string, 'null']
           description: |
@@ -30890,8 +31675,27 @@ components:
 
         One person rather than a list. A reply is written to somebody, and a group
         thread degrades to the most likely counterparty rather than to nobody.
-      required: [full_name, first_name, address]
+      required: [full_name, first_name, address, mailbox_user_ids]
       properties:
+        mailbox_user_ids:
+          type: array
+          uniqueItems: true
+          items: { type: string, format: uuid }
+          description: >-
+            Every member of this organization whose OWN mailbox this message was
+            delivered to, in the order the imports were recorded. It says whose
+            conversation a reply would be joining: a thread that reached only a
+            colleague's mailbox is theirs, and a reply still goes out from the
+            caller's own mailbox under the caller's own name.
+
+            A label of where the message arrived, never a grant. It is answered
+            only to a caller who may already read the message's content, and a
+            seat named here is named because their credential delivered the row.
+
+            Empty is an answer: a hand-logged activity was typed rather than
+            delivered, and a row whose recorded provenance names no seat this
+            organization still holds resolves to nobody. Always an array, never
+            null.
         full_name:
           type: string
           description: The name as recorded, empty when no readable person is on the message.
@@ -32250,7 +33054,7 @@ components:
       required: [snippet]
       properties:
         snippet: { type: string }
-        source_type: { type: [string, 'null'], enum: [activity, deal, signal, relationship, page, null] }
+        source_type: { type: [string, 'null'], enum: [activity, deal, signal, relationship, page, contract, null] }
         source_id: { type: [string, 'null'] }
 
     RecordQualifyingEventRequest:
@@ -32582,8 +33386,9 @@ components:
         name: { type: string, maxLength: 64 }
         # The palette the design system draws, closed on purpose: a tag is a
         # shared word, and a colour a reader cannot tell from another one is
-        # not a distinction. Mirrors the tag_color_check constraint.
-        color: { type: [string, 'null'], enum: [teal, amber, rose, slate, null] }
+        # not a distinction. Eight is what the token layer keeps apart at dot
+        # size in both themes. Mirrors the tag_color_check constraint.
+        color: { type: [string, 'null'], enum: [teal, amber, rose, slate, sky, violet, lime, orange, null] }
         description: { type: [string, 'null'] }
         # The If-Match precondition a caller sends back when they rename this
         # tag. Without it on the read, a client has nothing to quote and every
@@ -32601,7 +33406,7 @@ components:
         # collapsed before the length is measured, so a name that fits once
         # normalized is accepted even when it was typed longer.
         name: { type: string, maxLength: 64 }
-        color: { type: [string, 'null'], enum: [teal, amber, rose, slate, null] }
+        color: { type: [string, 'null'], enum: [teal, amber, rose, slate, sky, violet, lime, orange, null] }
         description: { type: [string, 'null'] }
 
     RowTag:
@@ -32614,7 +33419,7 @@ components:
       properties:
         tag_id: { type: string, format: uuid }
         name: { type: string }
-        color: { type: [string, 'null'], enum: [teal, amber, rose, slate, null] }
+        color: { type: [string, 'null'], enum: [teal, amber, rose, slate, sky, violet, lime, orange, null] }
 
     RecordTagsResponse:
       type: object
@@ -32634,7 +33439,7 @@ components:
       properties:
         tag_id: { type: string, format: uuid }
         name: { type: string }
-        color: { type: [string, 'null'], enum: [teal, amber, rose, slate, null] }
+        color: { type: [string, 'null'], enum: [teal, amber, rose, slate, sky, violet, lime, orange, null] }
         description: { type: [string, 'null'] }
         # Archived tags stay ON the records that carry them: retiring a word
         # stops it being applied, it does not un-tag a history that was true.
@@ -32661,7 +33466,7 @@ components:
       properties:
         id: { type: string, format: uuid }
         name: { type: string, maxLength: 64 }
-        color: { type: [string, 'null'], enum: [teal, amber, rose, slate, null] }
+        color: { type: [string, 'null'], enum: [teal, amber, rose, slate, sky, violet, lime, orange, null] }
         description: { type: [string, 'null'] }
         version: { type: integer, format: int64 }
         created_at: { type: string, format: date-time }
@@ -32694,7 +33499,7 @@ components:
         The name cannot be cleared. A tag without one cannot be applied or read.
       properties:
         name: { type: string, maxLength: 64 }
-        color: { type: string, enum: [teal, amber, rose, slate, none] }
+        color: { type: string, enum: [teal, amber, rose, slate, sky, violet, lime, orange, none] }
         description: { type: string }
 
     MergeTagsRequest:
@@ -34890,6 +35695,17 @@ components:
         changed_at: { type: string, format: date-time }
         actor_type: { type: string, enum: [human, agent, system, connector, buyer] }
         actor_id: { type: string }
+        actor_name:
+          type: [string, 'null']
+          description: |
+            The actor's display name, resolved from `app_user` on the read path
+            (PD-002) — the same resolution `/audit-log` and the record history
+            do, so two rails on one screen name the same person the same way.
+            Present only for a human actor: agent, connector and system ids name
+            a machine, and their human authority is `on_behalf_of_name`. Null
+            when no user row resolves — a deactivated or deleted member still has
+            audit rows, and an honest identifier is better than an invented name.
+        on_behalf_of_name: { type: [string, 'null'], description: Resolved display name for the human whose authority a machine acted under. }
         passport_id: { type: [string, 'null'], format: uuid, description: Agent Seat Passport that authorized the change; present for agent actors only. }
         evidence: { type: [object, 'null'], additionalProperties: true, description: Grounding evidence for an agent-authored change; present for agent actors only. }
         undid_audit_log_id:
@@ -35511,8 +36327,9 @@ components:
          capture_counterparty_verdict, cert_judge,
          cold_start, deal_health, draft_reply, enrich, growth_fit, nl_search,
          offer_draft, rate_extract, signal_extract, site_extract, site_fact_extract,
-         site_triage, summarize, transcript, transcript_propose, voice_build,
-         corpus_ask, weekly_review, weekly_learnings, propose_roles, owed_verdict]
+         site_triage, stage_evidence_extract, summarize, transcript, transcript_propose, voice_build,
+         corpus_ask, weekly_review, weekly_learnings, propose_roles, owed_verdict,
+         account_scan]
       description: |
         What kind of AI work an occurrence is. Every AI task this build can run reports here,
         because a task that reports nothing is AI work the product performed and then denied.
@@ -35591,6 +36408,23 @@ components:
             Absent is the ordinary case, not an error: most kinds are about no single record,
             and a client that has no name draws its generic sentence. The client owns the
             words either way — this is the NAME to put in them, never a sentence.
+        subject_type:
+          type: [string, 'null']
+          maxLength: 64
+          description: |
+            The kind of record `subject_label` names, as the emitting source spells it:
+            `organization`, `person` and `activity` from the kernel's entity kinds, and
+            `attachment` from the document reading, which has no kernel kind. It is here so
+            a client can make the name a way to reach the record rather than a word in a
+            sentence; a client needs both this and `subject_id` before it links.
+
+            Admissible on the same ground as the label — it is the reader's own record, already
+            shown to them on the surface the occurrence came from. A kind the client has no
+            page for is drawn as text, which is what an older client does with every kind.
+        subject_id:
+          type: [string, 'null']
+          format: uuid
+          description: That record's id, so the name can link to it.
     AgentTool:
       type: object
       # title and description are required because registration guarantees
@@ -36819,7 +37653,7 @@ components:
       required: [evidence_snippet]
       properties:
         evidence_snippet: { type: string, description: 'The fragment as it reads in the source, quoted rather than paraphrased.' }
-        source_type: { type: [string, 'null'], enum: [activity, deal, signal, relationship, page, null] }
+        source_type: { type: [string, 'null'], enum: [activity, deal, signal, relationship, page, contract, null] }
         source_id: { type: [string, 'null'], format: uuid }
         source_lines:
           type: array
@@ -38340,20 +39174,26 @@ components:
         `credential` is returned ONCE and never again — only its hash is stored, so it
         cannot be recovered, only replaced by a resend. Treat it as a secret: it admits
         the bearer to everything the room has published.
-      required: [participant, credential, credential_expires_at, delivered]
+      required: [participant, credential, credential_expires_at, queued]
       properties:
         participant: { $ref: '#/components/schemas/DealRoomParticipant' }
         credential:
           type: string
           description: The raw one-time credential. Put it in the link's fragment, never its path.
         credential_expires_at: { type: string, format: date-time }
-        delivered:
+        queued:
           type: boolean
           description: |
-            Whether the invitation was handed to a mail relay. False when the
-            installation has no outbound mail configured — the participant and the
-            credential are still recorded, and the caller is expected to deliver the
-            link itself rather than being told the invitation failed.
+            Whether a mail relay accepted the invitation for sending. False when the
+            installation has no outbound mail configured, or the relay refused it — the
+            participant and the credential are recorded either way, and the caller is
+            expected to pass the link on themselves rather than being told the
+            invitation failed.
+
+            Deliberately not `delivered`: a relay accepting a message is not a mailbox
+            receiving it, and an address that hard-bounces a second later was `queued`
+            all the same. The one attempt is stamped onto the invitation, which the
+            roster reports; nothing revises it afterwards.
       additionalProperties: false
 
     DealRoomPreviewIssued:
@@ -39929,6 +40769,29 @@ components:
 
             Absent — not empty — on an installation whose feed does not read
             the case queue.
+        notice_cases:
+          type: array
+          items: { $ref: '#/components/schemas/AttentionItem' }
+          description: |
+            Disclosure duties nobody has discharged, soonest deadline first — the
+            Art. 13 and Art. 14 notices a person is owed because of how their
+            record was obtained. Each card carries which article put it there, by
+            when the notice is owed, and WHO is owed it — unlike `dsr`, which
+            names no subject, because a subject request is worked on the case
+            queue's own screen and a notice case has none. The disclosure is sent
+            from the person's page, so the card names that person and offers
+            `open` to reach it.
+
+            The deadline runs from the ACQUISITION, not from when the case was
+            recorded, so an import carrying last year's business card arrives
+            already late and the lane says so.
+
+            Withheld — named in `lanes_omitted` — for every reader the case queue
+            itself refuses, exactly as `dsr` is: both reads are gated on the same
+            privacy-request object.
+
+            Absent — not empty — on an installation whose feed does not read
+            the notice queue.
         did_not_run:
           type: array
           items: { $ref: '#/components/schemas/AttentionItem' }
@@ -40091,7 +40954,7 @@ components:
             not read introductions.
         lanes_omitted:
           type: array
-          items: { type: string, enum: [this_morning, needs_you, planned, done_for_you, commitments, at_risk, meetings, relationship_decay, did_not_run, dsr, sync_health, capture_health, ai_work_health, bounces, undelivered, automation_health, notices, introductions, meetings_unreported] }
+          items: { type: string, enum: [this_morning, needs_you, planned, done_for_you, commitments, at_risk, meetings, relationship_decay, did_not_run, dsr, notice_case, sync_health, capture_health, ai_work_health, bounces, undelivered, automation_health, notices, introductions, meetings_unreported] }
           description: "Lanes withheld because the caller may not read what they contain. Never returned empty instead."
         counts: { $ref: '#/components/schemas/AttentionCounts' }
 
@@ -40166,6 +41029,13 @@ components:
             How many unresolved data-subject requests this lane is CARRYING — the
             bounded page, as the other lanes report. A reader past the bound sees
             the soonest deadlines, which is the order the lane is in.
+        notice_cases:
+          type: integer
+          minimum: 0
+          description: >-
+            How many undischarged disclosure duties this lane is CARRYING — the
+            bounded page, as the other lanes report. A reader past the bound sees
+            the soonest deadlines, which is the order the lane is in.
         sync_health:
           type: integer
           minimum: 0
@@ -40229,7 +41099,7 @@ components:
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
           type: string
-          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, sync_health, capture_health, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome]
+          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, sync_health, capture_health, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome]
           description: "Which producer raised it, and therefore which endpoint its verbs go to."
         kind: { type: string, description: 'The producer''s own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority.' }
         title:
@@ -40294,6 +41164,22 @@ components:
             attendees are people the caller may not read — the two are indistinguishable
             here on purpose, since both mean the same thing to a client: there is no page
             to read this brief on, so offer no way in rather than one that opens nothing.
+        host_user_id:
+          type: string
+          format: uuid
+          description: |
+            Whose calendar a meeting came off. Sent by `source: meeting` and
+            `source: meeting_outcome`.
+
+            It names the row's OWNER, which is what lets a manager's view say whose
+            appointment each one is rather than presenting a team's calendars as one
+            undifferentiated day. It is a label and never an authority: what a caller may
+            read is decided before this field is filled in, and a client must not infer a
+            permission from it.
+
+            ABSENT where no calendar claims the meeting — one booked in the app, or one
+            captured before the host was recorded. The row then names nobody rather than
+            guessing at an owner.
         cause_ref:
           type: string
           description: |
@@ -40351,6 +41237,13 @@ components:
             and the row nobody owns — the whole point of that scope — cannot say so.
         due_at: { type: string, format: date-time, description: "When this is due (tasks), or when it lapses (approvals)." }
         overdue: { type: boolean, description: "Past due at the read instant, resolved server-side so every surface agrees." }
+        version:
+          allOf: [{ $ref: '#/components/schemas/RowVersion' }]
+          description: |
+            The version of the row this item's own verbs write to, present where it names one — a
+            task today. Carried for the reason `email_summary` carries one: a lane that offers
+            `complete` and `snooze` has to name the row those presses condition on, or two people
+            acting on one task each overwrite the other and neither is told.
         occurred_at: { type: string, format: date-time, description: "When a done_for_you receipt actually happened." }
         actions:
           type: array
@@ -40613,7 +41506,7 @@ components:
       properties:
         source:
           type: string
-          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, sync_health, capture_health, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, batch]
+          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, sync_health, capture_health, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, batch]
           description: 'Which producer these numbers are about. The same vocabulary as an item source.'
         considered:
           type: integer
@@ -41335,7 +42228,7 @@ components:
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
           type: string
-          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, sync_health, capture_health, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, batch]
+          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, sync_health, capture_health, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, batch]
           description: |
             Which producer raised it, and therefore which endpoint its verbs go to.
 
@@ -41466,6 +42359,13 @@ components:
             attendees are all withheld both produce, and both mean the same thing here.
         due_at: { type: string, format: date-time, description: 'When this is due, or when the meeting starts.' }
         overdue: { type: boolean, description: 'Past due at the read instant, resolved server-side so every surface agrees.' }
+        version:
+          allOf: [{ $ref: '#/components/schemas/RowVersion' }]
+          description: |
+            The version of the row this item's own verbs write to, present where it names one — a
+            task today. Carried for the reason `email_summary` carries one: a lane that offers
+            `complete` and `snooze` has to name the row those presses condition on, or two people
+            acting on one task each overwrite the other and neither is told.
         occurred_at: { type: string, format: date-time, description: 'When the thing being reported happened.' }
         actions:
           type: array

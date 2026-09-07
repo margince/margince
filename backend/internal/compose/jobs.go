@@ -224,11 +224,23 @@ type JobRunnerConfig struct {
 	// weekly uses — an operator configures outbound mail once. A zero value
 	// mails nothing, and the brief is on Home either way.
 	BriefMail BriefMailConfig
+	// StageEvidenceBrain is the lane a queued criteria reading runs on. NIL
+	// registers nothing: no human is waiting on the row, so an installation
+	// without a model keeps the deterministic evidence and reads no prose.
+	StageEvidenceBrain completer
 	// TranscriptProposeBrain is the lane a queued transcript reading runs on.
 	// Nil = no AI configured, and the kind registers anyway so the reading
 	// FAILS with a message the rep can see rather than sitting queued behind a
 	// worker that will never pick it up.
 	TranscriptProposeBrain completer
+	// AccountScanBrain is the model lane the account scan reads with
+	// (modelPath.AccountScan). May be nil: the worker registers regardless,
+	// and a queued scan settles on the rules' floor with a reason rather
+	// than sitting queued behind a job no one works.
+	AccountScanBrain completer
+	// AccountScanRoutingVersion identifies the binding the scan's fingerprint
+	// carries, read live from the path (ModelPath.RoutingVersion).
+	AccountScanRoutingVersion func() string
 	// Geocoder resolves a company's address to a point. Nil in a deployment
 	// that geocodes nothing — an offline demo, or one that has not been given
 	// a provider — and the worker records that rather than retrying forever.

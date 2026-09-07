@@ -9,8 +9,17 @@ package commsauthz
 const (
 	// ReasonObjection is Art. 21 — the subject objected to direct marketing.
 	ReasonObjection = "marketing_objection"
-	// ReasonRestricted is a statutory or subject-requested processing restriction.
+	// ReasonRestricted is a STATUTORY processing restriction (Art. 18).
 	ReasonRestricted = "processing_restricted"
+	// ReasonSubjectRequest is the subject asking us to stop, in their own
+	// words, relayed by whoever took the call.
+	//
+	// Distinct from ReasonRestricted because they are different facts and the
+	// difference decides two things: a statutory restriction is nobody's to
+	// overrule, where a request the subject made can be lifted by the subject;
+	// and a decision row that called one the other misstates a legal fact in a
+	// record the subject can obtain under Art. 15.
+	ReasonSubjectRequest = "subject_request"
 	// ReasonHardBounce is an address that does not accept mail.
 	ReasonHardBounce = "hard_bounce"
 	// ReasonUnconfirmedDOI is a marketing grant whose round trip never happened.
@@ -53,6 +62,7 @@ const (
 var absoluteDenials = map[string]bool{
 	ReasonObjection:      true,
 	ReasonRestricted:     true,
+	ReasonSubjectRequest: true,
 	ReasonHardBounce:     true,
 	ReasonUnconfirmedDOI: true,
 	// A recipient the engine cannot resolve to exactly one subject is the
@@ -117,16 +127,15 @@ func (s DecisionSet) Effective(modeFor func(Category) Mode, legacyAllowed bool) 
 		// recipient is not a message that may go out.
 		return false
 	}
-	enforced := false
 	for _, d := range s.Decisions {
 		if modeFor(d.Resolved) != ModeEnforce {
 			continue
 		}
-		enforced = true
 		if d.Verdict != VerdictAllow {
 			return false
 		}
 	}
+	enforced := s.HasEnforcedRecipient(modeFor)
 	// THE ENGINE ALONE DECIDES A RECIPIENT IT ENFORCES.
 	//
 	// While every category observed, this returned legacyAllowed and the old
@@ -139,9 +148,11 @@ func (s DecisionSet) Effective(modeFor func(Category) Mode, legacyAllowed bool) 
 	// a message can have, and being overruled by a weaker authority is the
 	// regression this rollout exists to end.
 	//
-	// A set with NO enforced recipient still defers. That is not a fallback: it
-	// is a category still being observed, and the old gate is what decides
-	// there until it is not.
+	// A set with NO enforced recipient still defers, and under the shipped
+	// posture that never happens: enforceEveryCategory puts all fourteen at
+	// enforce. It is reachable only when an operator has deliberately moved a
+	// category back to observe, which is the rollback lever — so the old gate
+	// decides exactly where somebody asked it to and nowhere else.
 	if enforced {
 		return true
 	}
@@ -187,4 +198,19 @@ func (d Decision) CanBeOverruled() bool {
 		return false
 	}
 	return LevelForReason(d.ReasonCode) == LevelMachine && !Absolute(d.ReasonCode)
+}
+
+// HasEnforcedRecipient reports whether any recipient's resolved category is at
+// enforce, and so whether the engine's own answer is the one that decides.
+//
+// Extracted rather than recomputed by a caller: Effective's deferral to the old
+// gate turns on exactly this question, and a second spelling of it would let
+// the two disagree about which authority is live.
+func (s DecisionSet) HasEnforcedRecipient(modeFor func(Category) Mode) bool {
+	for _, d := range s.Decisions {
+		if modeFor(d.Resolved) == ModeEnforce {
+			return true
+		}
+	}
+	return false
 }

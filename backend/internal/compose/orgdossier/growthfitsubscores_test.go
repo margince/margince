@@ -17,9 +17,9 @@ import (
 // grounding filter: a number a reader cannot check is the unexplainable score
 // this whole model replaced.
 
-func knownRecord() (map[claims.Evidence]bool, claims.Evidence) {
+func knownRecord() (map[claims.Evidence]string, claims.Evidence) {
 	cited := claims.Evidence{EntityType: "fact", EntityID: "f-1"}
-	return map[claims.Evidence]bool{cited: true}, cited
+	return map[claims.Evidence]string{cited: `{"statement":"Grounded."}`}, cited
 }
 
 func TestASubScoreCitingNothingTheAssemblyKnowsIsDropped(t *testing.T) {

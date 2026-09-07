@@ -1,8 +1,10 @@
 /** @vitest-environment jsdom */
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { House } from "lucide-react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "../App";
+import { en } from "../i18n/en";
 import { memoryStorage } from "../testing/appharness";
 import { parseHash, type Route } from "./router";
 import { PageTitle, Shell } from "./shell";
@@ -94,6 +96,86 @@ describe("PageTitle", () => {
     expect(screen.queryByRole("link", { name: "Analytics" })).toBeNull();
   });
 
+  // Whose state the page changes, beside its heading. Only a settings entry
+  // carries a scope, and every settings page declares one in the catalog — the
+  // field had no reader at all until this, so a person could not tell a toggle
+  // that changes their own signature from one that changes everybody's mail
+  // routing.
+  it("names whose state a settings page changes, beside its heading", () => {
+    const scoped = fixtureSection("account");
+    const you = scoped.groups[0]?.items[0];
+    if (!you) {
+      throw new Error("the fixture published no account entry");
+    }
+    render(
+      <PageTitle
+        route={parseHash("#/settings/account")}
+        section={{
+          ...scoped,
+          groups: [
+            {
+              ...scoped.groups[0],
+              items: [{ ...you, scopeKey: "settings.scope.self" }],
+            },
+            ...scoped.groups.slice(1),
+          ],
+        }}
+      />,
+    );
+    expect(screen.getByText(en["settings.scope.self"])).toBeTruthy();
+    // Beside the heading, never inside it: a heading carrying the scope would
+    // read "Account Only you" in every document outline and screen reader.
+    expect(screen.getByRole("heading", { level: 1 }).textContent).not.toContain(
+      en["settings.scope.self"],
+    );
+  });
+
+  // The mixed page says something DIFFERENT to a screen reader: not who it
+  // affects, but that it has no single answer. "Who this page affects: Mixed"
+  // would be a non-sentence, and a reader relying on that line would be told
+  // less than a sighted one.
+  it("explains a mixed page rather than naming a non-answer", () => {
+    const scoped = fixtureSection("account");
+    const you = scoped.groups[0]?.items[0];
+    if (!you) {
+      throw new Error("the fixture published no account entry");
+    }
+    render(
+      <PageTitle
+        route={parseHash("#/settings/connections")}
+        section={{
+          ...scoped,
+          groups: [
+            {
+              ...scoped.groups[0],
+              items: [{ ...you, scopeKey: "settings.scope.mixed" }],
+            },
+            ...scoped.groups.slice(1),
+          ],
+        }}
+      />,
+    );
+    expect(screen.getByText(en["settings.scope.mixed"])).toBeTruthy();
+    expect(screen.getByText(en["settings.scopeAriaMixed"])).toBeTruthy();
+    // And NOT the who-sentence, which is the one this replaces.
+    expect(document.body.textContent).not.toContain("Who this page affects");
+  });
+
+  // An entry with no scope draws no badge, which is every screen outside
+  // settings: there the answer is the record in front of you.
+  it("draws no scope where the entry declares none", () => {
+    render(
+      <PageTitle
+        route={parseHash("#/settings/account")}
+        section={fixtureSection("account")}
+      />,
+    );
+    // No BADGE, not "none of the two labels I happened to list": enumerating
+    // them would pass against a mutation that defaulted an absent scope to a
+    // third label.
+    expect(document.querySelector(".badge")).toBeNull();
+  });
+
   // AC-shell-1k: every authenticated route resolves to real copy. This bites on
   // a new off-rail route landing in the router without a title key — the old
   // fallback rendered the raw screen slug.
@@ -144,8 +226,10 @@ describe("PageTitle", () => {
       "bring your own agent — governed by the two-tier contract",
     );
     // Directly under the name it explains, inside the title's own text column —
-    // not beside the actions, where it would read as product chrome.
-    expect(heading.nextElementSibling).toBe(sub);
+    // not beside the actions, where it would read as product chrome. The
+    // heading's own parent is the row it shares with the scope badge, so the
+    // subtitle follows THAT rather than the heading itself.
+    expect(heading.closest(".pagetitle-head")?.nextElementSibling).toBe(sub);
     expect(container.querySelector(".pagetitle-text")?.contains(sub)).toBe(
       true,
     );
@@ -161,11 +245,11 @@ describe("PageTitle", () => {
     expect(container.querySelector(".pagesub")).toBeNull();
   });
 
-  // Home greets the reader by name in its own h1, so the shell adds none: two
+  // Brief greets the reader by name in its own h1, so the shell adds none: two
   // top-level headings is no document outline at all. Same yield-whole rule as
   // a record route below, for the same reason.
   it("renders nothing at all on a screen that heads itself", () => {
-    const { container } = render(<PageTitle route={{ screen: "home" }} />);
+    const { container } = render(<PageTitle route={{ screen: "brief" }} />);
     expect(container.querySelector(".pagetitle")).toBeNull();
     expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
   });
@@ -236,6 +320,14 @@ describe("PageTitle", () => {
 // page's name, never a second name for it.
 describe("Section switcher (the page title at phone width)", () => {
   const deepRoute: Route = { screen: "settings", id: "deep" };
+  // The row a section publishes in the group that carries the section's own
+  // name — settings puts its Overview there (screens/settingsnav.tsx).
+  const OVERVIEW = {
+    id: "home",
+    labelKey: "settings.home",
+    icon: House,
+    level: true,
+  } as const;
 
   // Above the breakpoint the sidebar's level carries the section, so the title
   // names the ENTRY and mints no control at all — a switcher there would be a
@@ -243,7 +335,7 @@ describe("Section switcher (the page title at phone width)", () => {
   it("renders no switcher above the phone breakpoint", () => {
     render(<PageTitle route={deepRoute} section={fixtureSection("deep")} />);
     expect(
-      screen.getByRole("heading", { level: 1, name: "Privacy & audit" }),
+      screen.getByRole("heading", { level: 1, name: "Privacy & retention" }),
     ).toBeTruthy();
     expect(screen.queryByRole("button", { name: /change section/ })).toBeNull();
   });
@@ -257,12 +349,12 @@ describe("Section switcher (the page title at phone width)", () => {
     render(<PageTitle route={deepRoute} section={fixtureSection("deep")} />);
     const heading = screen.getByRole("heading", { level: 1 });
     const switcher = screen.getByRole("button", {
-      name: "Privacy & audit — change section",
+      name: "Privacy & retention — change section",
     });
     expect(heading.contains(switcher)).toBe(true);
     // The visible word is the entry, and it is part of the name (WCAG 2.5.3), so
     // a reader driving the app by voice says what they can see.
-    expect(switcher.textContent).toContain("Privacy & audit");
+    expect(switcher.textContent).toContain("Privacy & retention");
     expect(switcher.getAttribute("aria-expanded")).toBe("false");
     // One heading, and the entry's name is in it once — not once in a heading
     // and again in a control under it.
@@ -276,7 +368,9 @@ describe("Section switcher (the page title at phone width)", () => {
     stubPhoneViewport();
     render(<PageTitle route={deepRoute} section={fixtureSection("deep")} />);
     await user.click(
-      screen.getByRole("button", { name: "Privacy & audit — change section" }),
+      screen.getByRole("button", {
+        name: "Privacy & retention — change section",
+      }),
     );
     const dialog = screen.getByRole("dialog");
     // Named by the section, with its groups and every entry it publishes.
@@ -287,7 +381,7 @@ describe("Section switcher (the page title at phone width)", () => {
       within(dialog)
         .getAllByRole("heading", { level: 3 })
         .map((heading) => heading.textContent),
-    ).toEqual(["You", "Admin settings"]);
+    ).toEqual(["You", "Governance"]);
     expect(
       within(dialog)
         .getAllByRole("link")
@@ -300,12 +394,47 @@ describe("Section switcher (the page title at phone width)", () => {
     expect(current[0].getAttribute("href")).toBe("#/settings/deep");
   });
 
+  // The sidebar names its level with the heading over the level's first group,
+  // so the section publishes a group carrying its own name. This sheet already
+  // says that name at heading level 2, so the group arrives unheaded here —
+  // otherwise the same word stands twice in one view, once as the sheet's title
+  // and once as a label over the first row.
+  it("does not repeat the section's name over the group that carries it", async () => {
+    const user = userEvent.setup();
+    stubPhoneViewport();
+    const section = fixtureSection("deep");
+    const named = {
+      ...section,
+      groups: [
+        { headingKey: section.titleKey, items: [OVERVIEW] },
+        ...section.groups,
+      ],
+    };
+    render(<PageTitle route={deepRoute} section={named} />);
+    await user.click(
+      screen.getByRole("button", {
+        name: "Privacy & retention — change section",
+      }),
+    );
+    const dialog = screen.getByRole("dialog");
+    expect(
+      within(dialog)
+        .getAllByRole("heading")
+        .map((heading) => `${heading.tagName}:${heading.textContent}`),
+    ).toEqual(["H2:Settings", "H3:You", "H3:Governance"]);
+    // The row itself is still in the list — it is the group's HEADING that is
+    // redundant here, not the entry under it.
+    expect(within(dialog).getByRole("link", { name: "Overview" })).toBeTruthy();
+  });
+
   it("navigates and closes itself when an entry is picked", async () => {
     const user = userEvent.setup();
     stubPhoneViewport();
     render(<PageTitle route={deepRoute} section={fixtureSection("deep")} />);
     await user.click(
-      screen.getByRole("button", { name: "Privacy & audit — change section" }),
+      screen.getByRole("button", {
+        name: "Privacy & retention — change section",
+      }),
     );
     await user.click(
       within(screen.getByRole("dialog")).getByRole("link", { name: "Account" }),
@@ -322,7 +451,9 @@ describe("Section switcher (the page title at phone width)", () => {
     stubPhoneViewport();
     render(<PageTitle route={deepRoute} section={fixtureSection("deep")} />);
     await user.click(
-      screen.getByRole("button", { name: "Privacy & audit — change section" }),
+      screen.getByRole("button", {
+        name: "Privacy & retention — change section",
+      }),
     );
     await user.click(
       within(screen.getByRole("dialog")).getByRole("button", { name: "Close" }),
@@ -405,12 +536,12 @@ describe("Shell", () => {
   // thing separating them is the id. The marker is what the stylesheet keys the
   // cap on, so a route landing in the wrong family is a layout regression that
   // nothing else would catch. The sets themselves are GRIDDED_RECORD_SCREENS
-  // (keyed on an id) and GRIDDED_SCREENS (the id-less half, which is Home).
+  // (keyed on an id) and GRIDDED_SCREENS (the id-less half, which is Brief).
   it.each([
     ["#/settings/account", true],
     ["#/companies/o-1", true],
     ["#/contacts/p-1", true],
-    // Home carries no id and is capped anyway: it reads down, and its decision
+    // Brief carries no id and is capped anyway: it reads down, and its decision
     // cards carry drafted prose somebody has to read before deciding.
     ["#/", true],
     ["#/companies", false],
@@ -602,10 +733,13 @@ describe("Shell", () => {
   });
 
   // A sidebar showing a section's entries is navigation inside ONE destination,
-  // and the agent belongs to the whole session — so it is absent there rather
-  // than re-parented under a sub-level. The foot goes with it: an empty box would
-  // leave the band and the rule that divide a reading from the rows above it.
-  it("mounts no agent while the rail shows a section's own entries", async () => {
+  // and the agent belongs to the whole SESSION — so it keeps its foot there
+  // rather than going quiet because a reader walked into settings, which is
+  // where they would go to fix whatever the orb is amber about. Still one block,
+  // reduced by the rail's own state (app/agentrail.css) rather than by a second
+  // component: two Cores reporting one session is the thing that rule exists to
+  // stop, at any size.
+  it("keeps the one agent at the foot while the rail shows a section's own entries", async () => {
     window.location.hash = "#/settings/account";
     const { container } = render(
       <Shell onOpenSearch={ignoreSearch}>{null}</Shell>,
@@ -620,8 +754,11 @@ describe("Shell", () => {
     expect(
       await within(rail).findByRole("link", { name: "Account" }),
     ).toBeTruthy();
-    expect(container.querySelector(".arblock")).toBeNull();
-    expect(container.querySelector(".railagent")).toBeNull();
+    expect(rail.className).toContain("leveled");
+    expect(container.querySelectorAll(".arblock")).toHaveLength(1);
+    expect(
+      container.querySelector(".rail .railagent")?.querySelector(".arblock"),
+    ).not.toBeNull();
   });
 
   it("renders rail-less for the documented exceptions (AC-shell layout exception)", () => {

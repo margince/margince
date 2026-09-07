@@ -3,7 +3,7 @@ import { cleanup, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
 import { BriefFeed } from "./brief.feed";
-import { render } from "./home.testkit";
+import { render } from "./brief.testkit";
 import type { Worklist, WorklistItem } from "./worklist.queries";
 
 // The morning as ONE feed.
@@ -245,7 +245,7 @@ describe("the morning feed", () => {
     expect(container.textContent).toContain("Aster is waiting");
   });
 
-  // Home has no second column to open a row INTO. A rank button that answered
+  // Brief has no second column to open a row INTO. A rank button that answered
   // nothing is a dead control.
   it("draws the rank as a number, not as a control that opens nothing", () => {
     const { container } = render(

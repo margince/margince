@@ -138,12 +138,23 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 	// something from eight months ago are different messages, and only the
 	// timestamp tells them apart.
 	state := d.conversationState(activity)
-	envelope := d.envelope.Resolve(ctx, body, state)
+	// The thread's own language decides the reply's. The stored label is
+	// preferred where capture recorded one: it was read from the message when
+	// it arrived, where detection now reads a body that has grown a quoted
+	// chain in whatever languages the exchange has since used.
+	envelope := d.envelope.Resolve(ctx, draftfloor.Written{
+		Stored:  activityLanguage(activity),
+		Body:    body,
+		Subject: topic,
+	}, state)
 	recipient, surname := d.recipientName(ctx, ids.From[ids.ActivityKind](anchor))
 
 	fallbackSubject, fallbackBody := activities.DeterministicEmailDraft(activities.DraftContext{
-		Topic:     topic,
-		Body:      body,
+		Topic: topic,
+		Body:  body,
+		// The SAME language the model was told, so a model failure changes who
+		// wrote the draft and not what language it is in.
+		Language:  envelope.Lang(),
 		Band:      state.Band,
 		Threaded:  threaded,
 		Recipient: recipient,
@@ -253,4 +264,16 @@ func threadFlag(threaded bool) string {
 		return "inbound_mail"
 	}
 	return ""
+}
+
+// activityLanguage is the language capture recorded on a message, or empty.
+//
+// Empty for every row captured before it was recorded and for anything typed
+// by hand, which is the same answer: not known. The envelope's ladder falls
+// through to reading the text, which is what those rows always relied on.
+func activityLanguage(activity crmcontracts.Activity) string {
+	if activity.Language == nil {
+		return ""
+	}
+	return string(*activity.Language)
 }

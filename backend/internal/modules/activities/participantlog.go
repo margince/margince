@@ -44,7 +44,7 @@ const (
 // link — an unlinked note is a workspace-shared thought, not a conversation
 // with anybody.
 func stampLoggedParticipants(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, kind string, direction *string, links []ActivityLinkInput) error {
-	if !relstrength.IsInteractionKind(kind) {
+	if !relstrength.IsParticipantKind(kind) {
 		return nil
 	}
 	actor, ok := principal.Actor(ctx)

@@ -13,15 +13,24 @@
 import {
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   rmSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { extensionLayers, filesUnder, scriptKindFor } from "./source-tree";
+import {
+  extensionFrontendFiles,
+  extensionLayers,
+  filesUnder,
+  parseSource,
+  scriptKindFor,
+  sourceFileAt,
+} from "./source-tree";
 
 describe("the walk the source-wide gates share", () => {
   let dir = "";
@@ -192,13 +201,7 @@ describe("the walk the source-wide gates share", () => {
     expect(scriptKindFor("a.cts")).toBe(ts.ScriptKind.TS);
     // The property the .ts arm exists for, rather than the enum value: a
     // generic call in a .ts file parses, and would be a syntax error as TSX.
-    const generic = ts.createSourceFile(
-      "a.ts",
-      "const x = f<T>();",
-      ts.ScriptTarget.ES2022,
-      true,
-      scriptKindFor("a.ts"),
-    );
+    const generic = parseSource("a.ts", "const x = f<T>();");
     expect(generic.statements.length).toBe(1);
   });
 
@@ -236,5 +239,79 @@ describe("the walk the source-wide gates share", () => {
       recursive: true,
     });
     expect(extensionLayers(dir)).toEqual([]);
+  });
+});
+
+describe("the one parser the source-wide gates share", () => {
+  let dir = "";
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), "source-parse-"));
+  });
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("reads a module in its own dialect, with parents set", () => {
+    // JSX is only syntax in a .tsx file; a .ts generic is only a generic there.
+    const jsx = parseSource("a.tsx", "const x = <div />;");
+    const [jsxStatement] = jsx.statements;
+    if (!ts.isVariableStatement(jsxStatement))
+      throw new Error("not a statement");
+    const jsxInit = jsxStatement.declarationList.declarations[0].initializer;
+    expect(jsxInit && ts.isJsxSelfClosingElement(jsxInit)).toBe(true);
+    const generic = parseSource("a.ts", "const x = f<T>();");
+    const [genericStatement] = generic.statements;
+    if (!ts.isVariableStatement(genericStatement))
+      throw new Error("not a statement");
+    const call = genericStatement.declarationList.declarations[0].initializer;
+    expect(
+      call && ts.isCallExpression(call) && call.typeArguments?.length,
+    ).toBe(1);
+    // A walk that asks a node for its parent must get one: every gate that
+    // reads `node.parent` would otherwise compare against undefined and
+    // quietly match nothing.
+    expect(genericStatement.parent).toBe(generic);
+  });
+
+  it("parses a file once for the run and hands every reader the same tree", () => {
+    const file = join(dir, "once.ts");
+    writeFileSync(file, "export const a = 1;");
+    const first = sourceFileAt(file);
+    writeFileSync(file, "export const a = 2;");
+    // The second read is the FIRST tree, not a re-parse of the edited file:
+    // the tree under test does not change during a run, and a reader that
+    // re-parsed would pay the whole corpus again for every pass that asks.
+    expect(sourceFileAt(file)).toBe(first);
+    expect(first.text).toBe("export const a = 1;");
+  });
+
+  // The gates used to call the compiler themselves, and disagreed about the
+  // dialect — one read a `.ts` file as TSX and walked parse recovery for the
+  // rest of the file, reporting PASS over what it had not seen. A single parse
+  // site is what keeps them reading the same tree, and this is what holds it:
+  // a second `ts.createSourceFile` anywhere in the frontend, core or extension
+  // tier, fails here and names itself.
+  it("is the only place the frontend calls the compiler's parser", () => {
+    const frontendRoot = join(
+      dirname(fileURLToPath(import.meta.url)),
+      "..",
+      "..",
+    );
+    const corpus = [
+      ...filesUnder(join(frontendRoot, "src")),
+      ...filesUnder(join(frontendRoot, "scripts")),
+      ...filesUnder(join(frontendRoot, "e2e")),
+      ...extensionFrontendFiles(join(frontendRoot, "..", "extensions")),
+    ];
+    // The census must have read something, or an emptied corpus passes vacuously.
+    expect(corpus.length).toBeGreaterThan(100);
+    // Spelled in two halves so this file does not name itself a parser.
+    const call = ["ts.createSourceFile", "("].join("");
+    const parsers = corpus
+      .filter((file) => readFileSync(file, "utf8").includes(call))
+      .map((file) => file.slice(frontendRoot.length + 1))
+      .sort();
+    expect(parsers).toEqual(["scripts/lib/source-tree.ts"]);
   });
 });

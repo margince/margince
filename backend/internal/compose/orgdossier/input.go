@@ -112,19 +112,21 @@ func BuildInput(ctx context.Context, facts Facts, id ids.OrganizationID) (Input,
 // — and the receipt endpoint has nothing to answer with, because the row
 // carries no provenance of its own. A citation that resolves to nothing teaches
 // the reader that citations do not work.
-func KnownRecords(in Input) map[claims.Evidence]bool {
-	known := map[claims.Evidence]bool{}
+// The VALUE is what that row said, as the model was shown it, so a sentence can
+// be held to the rows it points at rather than only to their existence.
+func KnownRecords(in Input) map[claims.Evidence]string {
+	known := map[claims.Evidence]string{}
 	for _, field := range in.ProfileFields {
 		if field.Id == nil {
 			continue
 		}
-		known[claims.Evidence{EntityType: citeProfileField, EntityID: field.Id.String()}] = true
+		known[claims.Evidence{EntityType: citeProfileField, EntityID: field.Id.String()}] = claims.Source(field)
 	}
 	for _, fact := range in.Facts {
 		if fact.Id == nil {
 			continue
 		}
-		known[claims.Evidence{EntityType: citeFact, EntityID: fact.Id.String()}] = true
+		known[claims.Evidence{EntityType: citeFact, EntityID: fact.Id.String()}] = claims.Source(fact)
 	}
 	return known
 }

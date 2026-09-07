@@ -54,7 +54,7 @@ const MANAGER = { capture_settings: ["read", "update"] } as const;
 const READER = { capture_settings: ["read"] } as const;
 
 const meta: Meta<typeof OwnDomainsCard> = {
-  title: "Settings/Data/Capture/Own domains",
+  title: "Settings/Data/Capture rules/Own domains",
   component: OwnDomainsCard,
 };
 export default meta;

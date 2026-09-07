@@ -28,7 +28,7 @@ import { SELF_HEADED_SCREENS } from "./pagemeta";
 const HEADS_ITSELF_WITHOUT_THE_HOOK: Readonly<Record<string, string>> = {
   // "Guten Morgen, Demo." — the greeting is the heading, and it is a person's
   // name rather than the page's.
-  home: "greets the reader by name",
+  brief: "greets the reader by name",
   // The tag's own name, which the shell cannot know from the route alone.
   tags: "heads itself with the tag",
 };

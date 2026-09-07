@@ -104,10 +104,12 @@ decision rather than an omission.
 - [mcp-info.md](reference/mcp-info.md) — the served MCP surface exactly as a client receives it, with `mcp-info.json` beside it as the same surface byte for byte. Generated from the running registry, never hand-edited; the generator fails the build when the committed copy and the served surface disagree. The largest page here by an order of magnitude — a lookup table, not something to read through.
 - [agent-tool-budget.md](reference/agent-tool-budget.md) — what each agent's tool menu costs in prompt tokens, agent by agent, against the published ceiling. Generated with its `.json` sibling, never hand-edited.
 - [ai-certification.md](reference/ai-certification.md) — what the AI certification lane covers: every shipped invocation site, the scenarios it is scored against with a link to each case, an index naming the best model still measured for each site, and a table per (provider, model, env) binding, with `ai-certification.json` beside it carrying the same numbers for a reader who wants to analyse them. Generated from the corpus, the records and the invocation-site census, never hand-edited; a stale record says which scenario moved under it.
+- [mcp-tool-coverage.md](reference/mcp-tool-coverage.md) — which served MCP tools the USE-CASE lane actually drives: per tool, the cases that require it, what those cases scored and on which model, the scheduled agents that attach it, and what it costs. With `mcp-tool-coverage.json` beside it. Generated from the served surface, `e2e/llm/scenarios` and the verdicts that lane commits, never hand-edited. It reads that lane ALONE — single steps are `ai-certification.md`’s question — and it answers what neither page does: a tool can be paid for on every step of every run and be required by no case at all.
 - [supply-chain.md](reference/supply-chain.md) — the source-tree SBOMs, the license gate, keyless signing, and the pinned toolchain.
 
 Several reference pages are **generated** and say so in their own first lines —
-`mcp-info`, `agent-tool-budget`, `ai-certification`, `rbac-matrix`, `performance-budgets` and the
+`mcp-info`, `agent-tool-budget`, `ai-certification`, `mcp-tool-coverage`, `rbac-matrix`,
+`performance-budgets` and the
 `perfbench/` records. Do not hand-edit them, and do not try to shorten them: their
 length is a function of the surface they tabulate, which is why
 `backend/gates/docspagelength_test.go` reads that marker and exempts them from the page
@@ -125,6 +127,7 @@ budget rather than keeping its own list of which pages are generated.
 - [ai-egress.md](reference/ai-egress.md) — every declared AI task, and whether the text it reads can leave the installation. Generated from `backend/api/ai-tasks.yaml`, never hand-edited.
 - [issue-labels.md](reference/issue-labels.md) — the full issue-label taxonomy. The binding short form is in `AGENTS.md`.
 - [license-release-rule.md](reference/license-release-rule.md) — the BUSL Change-Date release-stamping rule. (The per-file SPDX license *header* rule is described in [backend-onboarding.md](explanation/backend-onboarding.md) and `AGENTS.md`.)
+- [sonarcloud-deviations.md](reference/sonarcloud-deviations.md) — the SonarCloud findings that stay open on purpose, one entry each saying what would break if somebody applied the rule. Everything not listed there is a finding to fix.
 
 ### Explanation — understand the why
 
@@ -148,10 +151,11 @@ budget rather than keeping its own list of which pages are generated.
 - [capture-connectors.md](explanation/capture-connectors.md) — the governed **ingress** surface: the connector seam (Gmail / IMAP / Graph / Calendar / Telegram), the one Sink that owns every write, the grant-time scope gate, the ingestion modes (bounded backfill, continuous sync, Gmail push, Telegram long poll), the OAuth connect/callback flow, vault-sealed credentials, and the connect UI.
 - [ingress-gate-and-auto-capture.md](explanation/ingress-gate-and-auto-capture.md) — what happens to a message after a connector fetches it, the same for every source: the ingress gate's checks and its two results, the single capture transaction (internal-only check, raw payload, activity write, tier ladder T0–T4), and the verdict engine that decides whether an unknown sender becomes a contact. Says which steps are plain code and which use AI (with the task name), what a dropped message does and does not store, which limits are configurable, and what the per-member **Capture activity** tab shows.
 - [mail-history-import.md](explanation/mail-history-import.md) — the bounded backward scan a fresh mailbox is offered: the scope count that reads ids and no bodies, the consent estimate (measured units × measured per-unit cost, `observed` vs `heuristic`, and why an unpriceable estimate hides rather than shows `$0`), the resumable page loop and its failure ladder, the yields a run measures about itself, and the sweeps that spend after the progress bar fills.
-- [channel-capture-parity.md](explanation/channel-capture-parity.md) — where a captured channel message and a captured email stop being the same product: the two gates (`decideBirthTx`'s kind check and the address-keyed import row), a capability-by-capability table of what each side gets, and why closing it is a product decision about whose privacy a bot's traffic is rather than a refactor.
+- [channel-capture-parity.md](explanation/channel-capture-parity.md) — whose correspondence a captured chat is: the rule that a member-bound credential puts it on the mailbox path while a shared one keeps it workspace business, which rungs of the birth ladder each faces, what makes the import row's delivery evidence sound, and a capability-by-capability table of what each side gets.
 - [outbound-messaging.md](explanation/outbound-messaging.md) — the egress twin of capture: the staging row, the transmit-time gates, receipt-before-bookkeeping, and the channel reply.
 - [outbound-webhooks.md](explanation/outbound-webhooks.md) — the governed egress surface: subscription config vs. delivery engine, secret sealing, the contract-first payload pipeline (`api/public-events.yaml` + `gen-payloads` + the typed `EmitEvent` seam) and its additive-only versioning, the retry/dead-letter state machine, the owner-scope fan-out gate (incl. the ratified deferred-delivery exceptions), and the Settings → Integrations UI.
-- [privacy-and-consent.md](explanation/privacy-and-consent.md) — the consent gate and the GDPR engines (erasure / SAR / retention).
+- [scheduling.md](explanation/scheduling.md) — how a meeting time is proposed: whose working hours decide which slots are offerable (the person's, not the installation's), what a person sets and what the unset fallback is, which clock the hours are read on and why that is this page's decision rather than the general zone rule's, and how `activities` reaches a fact `identity` owns.
+- [privacy-and-consent.md](explanation/privacy-and-consent.md) — the authorization engine that decides whether each message may go, and the GDPR engines (erasure / SAR / retention).
 
 **AI, retrieval and automation**
 

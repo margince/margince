@@ -30,6 +30,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -53,6 +54,11 @@ type assuranceSweepWorker struct {
 	pool *pgxpool.Pool
 	now  func() time.Time
 	log  *slog.Logger
+	// activities is the door the bundled task is minted through — the same one
+	// REST CreateTask and MCP create_task use. It is held here rather than built
+	// per pass because a store is a handle, and the seam that needs it takes it
+	// as a dependency so a test can hand in one over its own pool.
+	activities *activities.Store
 }
 
 func (w *assuranceSweepWorker) Work(ctx context.Context, _ *river.Job[AssuranceSweepArgs]) error {
@@ -88,17 +94,32 @@ func (w *assuranceSweepWorker) assureWorkspace(ctx context.Context, workspace id
 // that had stopped running entirely would otherwise be visible only as a page
 // that stopped changing.
 func (w *assuranceSweepWorker) check(ctx context.Context, ws ids.UUID) error {
-	scanner := assurance.NewScanner(
-		assurance.NewStore(InstallationDB(w.pool)),
-		AssuranceSubjects, AssuranceCoverage, assurance.DefaultConfig(),
-	)
+	store := assurance.NewStore(InstallationDB(w.pool))
+	scanner := assurance.NewScanner(store, AssuranceSubjects, AssuranceCoverage, assurance.DefaultConfig())
 	result, err := scanner.Scan(ctx, w.now())
 	if err != nil {
 		return err
 	}
+
+	// Bundling runs AFTER the scan has committed, and its failure does NOT fail
+	// the job. The findings are recorded and the three surfaces render them
+	// either way; returning an error here would have River retry a pass whose
+	// real output already landed, re-scanning and re-minting on every attempt.
+	// A night that scanned but did not bundle is a night without tasks, which
+	// the next pass mints again — the loss is bounded, and the log says so.
+	minted, bundleErr := bundleRunFindings(ctx, bundleDeps{
+		bundles:    store,
+		activities: w.activities,
+		exceptions: bundleableFindings,
+	}, result.RunID)
+	if bundleErr != nil {
+		w.log.ErrorContext(ctx, "the findings were recorded but not bundled into tasks",
+			"workspace_id", ws, "run_id", result.RunID, "error", bundleErr)
+	}
+
 	w.log.InfoContext(ctx, "the forecast's inputs were checked",
 		"workspace_id", ws, "run_id", result.RunID,
 		"eligible_deals", result.EligibleDeals, "findings", result.Findings, "cleared", result.Cleared,
-		"readiness", result.Readiness, "status", result.Status)
+		"readiness", result.Readiness, "status", result.Status, "tasks_minted", minted)
 	return nil
 }

@@ -66,6 +66,7 @@ import { describe, expect, it } from "vitest";
 import {
   extensionFrontendFiles,
   filesUnder,
+  parseSource,
   scriptKindFor,
 } from "../../scripts/lib/source-tree";
 
@@ -135,13 +136,7 @@ function findNativeControls(path: string, text: string): string[] {
   // escape, and every escape begins with a backslash — so a file with neither a
   // name nor a backslash cannot spell one, and skipping it costs no coverage.
   if (!prefilter.test(text)) return [];
-  const source = ts.createSourceFile(
-    path,
-    text,
-    ts.ScriptTarget.ES2022,
-    true,
-    scriptKindFor(path),
-  );
+  const source = parseSource(path, text);
   const found: string[] = [];
   // Anything not already TSX is read a SECOND time as TSX, and the findings
   // unioned. This is ONE mechanism rather than a per-extension rule, and it

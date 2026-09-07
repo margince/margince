@@ -23,6 +23,13 @@ function classesOf(name: string): string[] {
   return (screen.getByRole("button", { name }).className ?? "").split(" ");
 }
 
+// A stylesheet's selectors, with comments removed first. A prose comment naming
+// a class would otherwise arrive inside the text preceding a `{` and be read as
+// part of the selector that follows it.
+function stripComments(css: string): string {
+  return css.replace(/\/\*[\s\S]*?\*\//g, "");
+}
+
 describe("Button", () => {
   it("names its variant and size in the class list the stylesheet keys on", () => {
     render(
@@ -462,5 +469,49 @@ describe("base.css draws the federated door without touching the mark", () => {
     expect(rule?.[1]).toMatch(
       /min-block-size:\s*max\(var\(--control-h\),\s*44px\)/,
     );
+  });
+});
+
+describe("the link variant is the .link-button affordance, not a copy of it", () => {
+  it("emits the class the stylesheet keys on", () => {
+    render(<Button variant="link">Make private</Button>);
+    expect(classesOf("Make private")).toContain("btn-link");
+  });
+
+  // The look has ONE declaration, and this holds both halves of that.
+  //
+  // Every rule reaching the variant must name `.link-button` in the same
+  // selector list, or it is a second spelling of the text affordance and the
+  // two drift the moment either is touched. And each must be written
+  // `.btn.btn-link`: one class ties with `.btn` on specificity, and a tie is
+  // settled by which sheet the bundler emitted first — an order neither file
+  // states and nothing here could assert.
+  //
+  // Derived from the sheet rather than from a list of the rules that exist
+  // today, because a rule added later is exactly the case a list would miss.
+  it("shares every rule with .link-button, and outranks the button box", () => {
+    const sheet = stripComments(readFileSync(join(here, "atoms.css"), "utf8"));
+    const selectors = [...sheet.matchAll(/([^{}]*)\{[^}]*\}/g)]
+      .map(([, selector]) => selector.replace(/\s+/g, " ").trim())
+      .filter((selector) => selector.includes("btn-link"));
+    expect(selectors.length).toBeGreaterThan(0);
+    for (const selector of selectors) {
+      expect(selector).toContain(".link-button");
+      expect(selector).toContain(".btn.btn-link");
+    }
+  });
+
+  // The two floors `.btn` keeps so a short verb still reads as a pressable box.
+  // A text affordance is not a box: left in place they draw 6rem of width and
+  // 40px of height around a link, which is the button chrome surviving the
+  // variant that removed it.
+  it("gives up the width and height floors the button box keeps", () => {
+    const css = readFileSync(join(here, "atoms.css"), "utf8");
+    const rule = /\.link-button,\s*\.btn\.btn-link\s*\{([^}]*)\}/.exec(
+      stripComments(css),
+    );
+    expect(rule).not.toBeNull();
+    expect(rule?.[1]).toMatch(/min-inline-size:\s*0/);
+    expect(rule?.[1]).toMatch(/min-block-size:\s*0/);
   });
 });

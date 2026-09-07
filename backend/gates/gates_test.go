@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 	"testing"
 )
@@ -77,4 +78,40 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 	os.Exit(m.Run())
+}
+
+// trackedFile is one entry from the index, with the one mode bit a gate that
+// reads files cares about.
+type trackedFile struct {
+	path    string
+	symlink bool
+}
+
+// trackedFiles reads the index. `-s` carries the mode, which is how a symlink is
+// told from a file without stat-ing it; `-z` makes the output NUL-delimited, so
+// no filename can be misread.
+//
+// It lives HERE, in the one file with no build constraint, for the reason
+// repoRoot does: behind `//go:build !integration` it is invisible to `make lint`,
+// which sets that tag, so a gate that used it compiled under `go test` and
+// failed to compile under the linter.
+func trackedFiles(t *testing.T) []trackedFile {
+	t.Helper()
+	out, err := exec.Command("git", "-C", repoRoot, "ls-files", "-sz").Output()
+	if err != nil {
+		t.Fatalf("listing tracked files: %v (this test must run inside the git worktree)", err)
+	}
+	var files []trackedFile
+	for _, row := range strings.Split(strings.TrimRight(string(out), "\x00"), "\x00") {
+		if row == "" {
+			continue
+		}
+		// <mode> <sha> <stage>\t<path>
+		meta, path, ok := strings.Cut(row, "\t")
+		if !ok {
+			continue
+		}
+		files = append(files, trackedFile{path: path, symlink: strings.HasPrefix(meta, "120000")})
+	}
+	return files
 }

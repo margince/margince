@@ -52,7 +52,9 @@ var waivedEnvelopeFields = gatekit.Waive(map[string]string{
 	"NaturalKey": "half core-derived: the published Record carries the provider's own Key and the port pairs it with the derived source system",
 	"Links": "deliberately absent — a record naming the core rows it attaches to would make the link-visibility probe a per-row existence oracle over the scope the ingest runs under. " +
 		"What a message is about is decided by the core's counterparty resolution",
-	"Participants": "the further parties beyond the two ends. Addresses already carries every party the internal-only gate needs, and a unit reporting attendee structure has no consumer today",
+	"participantsAreProviderAttested": "the attestation that a PROVIDER enumerated the party list, which is what lets capture bind an invited colleague's user_id from it. " +
+		"Deliberately unpublishable rather than merely unpublished: it is the core's answer about the SOURCE, stamped from the registry that ran the connector, and a unit able to assert it could manufacture an interaction edge naming any colleague — the exact forgery the inbound-mail rule refuses. " +
+		"Unexported so it cannot be set by assignment either, which means a unit's record arrives un-attested and keeps the strict mail rule",
 	"Parts": "attachments. The published path EXISTS now (extension.InboundFile plus the " +
 		"published sniff/sanitize pair and the four published inbound bounds), so this is no " +
 		"longer a capability gap — it is a deliberate hold: the field lands in the PR of the " +
@@ -129,6 +131,59 @@ func TestThePublishedActivityMirrorsTheCoreOne(t *testing.T) {
 	for name := range published {
 		if !coreFields[name] {
 			t.Errorf("extension.ActivityFields.%s has no counterpart in capture.ActivityFields — a unit sets it and the core never sees it", name)
+		}
+	}
+}
+
+// TestThePublishedParticipantMirrorsTheCoreOne is the mirror one level further
+// in again, and the level this file's own essay says is where a field goes
+// silent: MessageParticipant.ChannelUserID arrived in the same change that
+// published the roster, and without this walk the port could have carried a
+// party the core stores and a unit can never name.
+func TestThePublishedParticipantMirrorsTheCoreOne(t *testing.T) {
+	published := fieldsOf(reflect.TypeOf(extension.Participant{}))
+	core := reflect.TypeOf(connector.MessageParticipant{})
+	if core.NumField() == 0 {
+		t.Fatal("the core participant shape reflected as empty")
+	}
+	// The two spell one pairing differently, so the walk is over the core's
+	// names translated into the published ones rather than over names alone:
+	// `Email`/`DisplayName` on the core are `Email`/`Name` here, and
+	// `ChannelUserID` is `Account`. Renaming either side for a word would be a
+	// change at a published surface, so the map is where the pairing lives.
+	//
+	// Every core field pairs, so there is no waiver map. Role is published under
+	// a NARROWER vocabulary rather than not at all — extension.ParticipantRoles
+	// omits the core's `bcc`, because a bcc line exists only on the SENDER's own
+	// copy of a message and a unit hands over one it RECEIVED. The values it
+	// does publish are held equal to the core's by
+	// TestEveryPublishedRoleIsTheCoresOwn.
+	publishedName := map[string]string{
+		"Email":         "Email",
+		"DisplayName":   "Name",
+		"ChannelUserID": "Account",
+		"Role":          "Role",
+	}
+	for i := range core.NumField() {
+		field := core.Field(i)
+		want, paired := publishedName[field.Name]
+		if !paired {
+			t.Errorf("connector.MessageParticipant.%s has no published name in this walk — a party field the core stores and a unit cannot state. Publish it and pair it here, or waive it", field.Name)
+			continue
+		}
+		if !published[want] {
+			t.Errorf("connector.MessageParticipant.%s is not on extension.Participant (as %s) — a unit cannot name it, so every roster party takes the zero value", field.Name, want)
+		}
+	}
+	// And the other way: a published field nothing maps onto is a promise to a
+	// unit that participantsOf drops on the floor.
+	pairedPublished := map[string]bool{}
+	for _, want := range publishedName {
+		pairedPublished[want] = true
+	}
+	for name := range published {
+		if !pairedPublished[name] {
+			t.Errorf("extension.Participant.%s pairs with nothing on connector.MessageParticipant — a unit sets it and the core never sees it", name)
 		}
 	}
 }

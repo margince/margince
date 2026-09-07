@@ -39,7 +39,7 @@ caches="$(gh api "repos/$repo/actions/caches?per_page=100" \
 # An empty listing is ambiguous — a repository with no caches looks exactly like
 # a token that cannot read them, and the second one must not pass for a clean
 # sweep. There is always at least one cache on a repository whose CI has run.
-if [ -z "$caches" ]; then
+if [[ -z "$caches" ]]; then
 	echo "reap-build-caches: $repo listed no caches at all — refusing to report a clean sweep over a read that returned nothing" >&2
 	exit 1
 fi
@@ -50,7 +50,7 @@ freed=0
 kept=0
 
 while IFS=$'\t' read -r created id key size; do
-	[ -n "$id" ] || continue
+	[[ -n "$id" ]] || continue
 	case "$key" in
 	go-build-*) ;;
 	*) continue ;;
@@ -72,7 +72,7 @@ while IFS=$'\t' read -r created id key size; do
 	case " $seen_groups " in
 	*" $group "*)
 		printf 'delete  %6s MB  %s  (superseded)\n' "$((size / 1048576))" "$key"
-		if [ "$dry_run" != "1" ]; then
+		if [[ "$dry_run" != "1" ]]; then
 			gh api -X DELETE "repos/$repo/actions/caches/$id" --silent
 		fi
 		deleted=$((deleted + 1))
@@ -86,11 +86,11 @@ while IFS=$'\t' read -r created id key size; do
 	esac
 done <<<"$caches"
 
-if [ "$kept" -eq 0 ]; then
+if [[ "$kept" -eq 0 ]]; then
 	echo "reap-build-caches: no go-build-* cache found — the key prefix changed, so this ran over nothing" >&2
 	exit 1
 fi
 
 verb="freed"
-[ "$dry_run" = "1" ] && verb="would free"
+[[ "$dry_run" = "1" ]] && verb="would free"
 echo "reap-build-caches: kept $kept, deleted $deleted, $verb $((freed / 1048576)) MB"

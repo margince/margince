@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 import {
   extensionFrontendFiles,
   filesUnder,
-  scriptKindFor,
+  parseSource,
 } from "../../scripts/lib/source-tree";
 import { NAV } from "./nav";
 import { SCREENS, type Screen } from "./router";
@@ -62,13 +62,7 @@ function shippedSources(): string[] {
 }
 
 function parse(path: string, source: string): ts.SourceFile {
-  return ts.createSourceFile(
-    path,
-    source,
-    ts.ScriptTarget.Latest,
-    true,
-    scriptKindFor(path),
-  );
+  return parseSource(path, source);
 }
 
 /**

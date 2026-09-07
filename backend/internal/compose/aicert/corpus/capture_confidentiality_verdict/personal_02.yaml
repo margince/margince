@@ -1,0 +1,56 @@
+name: a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys
+task: capture_confidentiality_verdict
+site: thread
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5.1
+fixture:
+  subject: "WG: Ihre Mobilfunkrechnung 08/2026 - Ahornweg 14, 65203 Wiesbaden"
+  attachments:
+    - Rechnung_08_2026.pdf
+  body: |
+    Von: t.weidner@weidner-handel.de
+    An: belege@weidner-handel.de
+    Betreff: WG: Ihre Mobilfunkrechnung 08/2026
+
+    Fuer die Spesenabrechnung.
+
+    ---------- Weitergeleitete Nachricht ----------
+
+    Kundennummer 41-882-6630
+    Rechnungsbetrag: 68,40 EUR, faellig am 02.09.2026
+
+    Sehr geehrter Herr Weidner,
+
+    Ihre Rechnung fuer den Abrechnungszeitraum August 2026 steht bereit. Der
+    Betrag wird von Ihrem hinterlegten Konto eingezogen. Die Einzelverbindungs-
+    nachweise fuer beide Rufnummern finden Sie im Kundenportal.
+
+    Mit freundlichen Gruessen
+    Ihr Kundenservice
+expect:
+  outcome: accepted
+  answer: personal
+  rubric: >
+    A consumer mobile-phone bill for the mailbox owner, forwarded from his work
+    address to an expense-capture address so the cost can be reimbursed. The
+    subject carries his home street address and the body names his customer
+    number and a direct-debit from his own account.
+    This is the owner's household, not the company's trade. Forwarding a private
+    bill through a work mailbox does not make it company business, and neither
+    does claiming the money back: what the money is FOR decides, not who
+    forwards it. "personal" scores high.
+    "ordinary" is the failure this scenario exists to catch and scores zero at
+    any confidence. It publishes a founder's home address and his private
+    telephone account to every colleague in a shared CRM, silently, with nothing
+    on the screen saying it happened. Other holding kinds score in the middle:
+    they are wrong, but wrong in the direction that costs one click.
+    Note the trap. Every surface signal here reads like ordinary trade — an
+    invoice, an amount, a due date, a customer number, a supplier writing to a
+    company address, and both ends of the forward inside the company's own
+    domain, so there is no external private counterparty to notice. A classifier
+    keying on the FORM of the mail rather than on whose life it belongs to
+    answers "ordinary".
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

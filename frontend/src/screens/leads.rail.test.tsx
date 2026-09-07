@@ -10,6 +10,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { meFixture } from "../app/mefixture";
 import { RecordShell } from "../app/testing/recordshell.testkit";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
@@ -40,6 +41,8 @@ afterEach(() => {
 });
 
 const lead = {
+  // The caller's own lead: absent means NOT writable per the contract.
+  writable: true,
   id: "l-1",
   full_name: "Jonas Petersen",
   email: "jonas@nordwind.example",
@@ -76,6 +79,8 @@ function stubFetch(onPatch: (body: unknown) => Response) {
           user: { id: "u-9", display_name: "Me" },
           roles: ["rep"],
           teams: [],
+          authorization: meFixture({ allow: { lead: ["read", "update"] } })
+            .authorization,
         });
       }
       if (pathname.endsWith("/v1/users")) {

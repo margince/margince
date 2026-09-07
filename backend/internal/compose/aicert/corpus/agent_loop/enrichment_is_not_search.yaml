@@ -23,6 +23,8 @@ expect:
     it is the only step that can satisfy this goal. Score high only if the turn
     calls it on the organization the grounding identifies. search_records would
     search the very records the goal has already said are empty.
+  near_misses:
+    - search_records
   bands:
     certified_min: 70
     degraded_min: 50

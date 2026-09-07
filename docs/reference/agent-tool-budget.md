@@ -16,8 +16,8 @@ exists, and what it displaces is the observations the run is reasoning over.
 Each agent declares its tools in [`backend/api/ai-tasks.yaml`](../../backend/api/ai-tasks.yaml)
 under `agent_loop`'s `agents:`. Read the numbers below **before** adding one.
 
-The window is 24576 tokens. An agent's listing may take 17408 of them (17/24). The whole
-served catalog is held to 21504 — a floor for the certification lane, not a budget any
+The window is 32768 tokens. An agent's listing may take 23210 of them (17/24). The whole
+served catalog is held to 28672 — a floor for the certification lane, not a budget any
 feature is expected to argue with.
 
 Before any tool is listed the frame itself costs **353 tokens** — the output contract,
@@ -30,15 +30,15 @@ alone. A frame that grows a paragraph spends it on every run of every agent.
 
 | Agent | Tools | Tokens | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 5 | 1634 | 6% | 15774 | 6 | 5 |
-| `overnight_at_risk_sweep` | 7 | 2467 | 10% | 14941 | 15 | 8 |
-| _whole served catalog, for scale_ | 73 | 21497 | 87% | — | — | — |
+| `morning_brief` | 5 | 1634 | 4% | 21576 | 6 | 6 |
+| `overnight_at_risk_sweep` | 7 | 2509 | 7% | 20701 | 15 | 10 |
+| _whole served catalog, for scale_ | 73 | 22009 | 67% | — | — | — |
 
 ### `morning_brief`
 
-> Prepare the acting person's existing Morning Brief. First call read_brief. Its items are the queue already ranked for this person; do not assemble a workspace-wide list. Read the evidence for those items, then call annotate_brief with one concise narrative and grounded findings: why each item matters, what changed and the next move. Use each returned item_id unchanged, never its deal_id, and cite only that item's evidence_ids. Keep the existing order. If there are no items, finish without inventing a brief. A tool refusal means the findings were not saved: correct it before claiming completion.
+> Prepare the acting person's existing Morning Brief. First call read_brief. Its items are the queue already ranked for this person; do not assemble a workspace-wide list. Read the evidence for those items, then call annotate_brief with one concise narrative and grounded findings: why each item matters, what changed and the next move. An item with a previous_rank was already on this queue on the run's previous_local_day: say what has changed since then rather than reporting it as new. An item without one may simply not have ranked that day, so do not call it new either. Use each returned item_id unchanged, never its deal_id, and cite only that item's evidence_ids. Keep the existing order. If there are no items, finish without inventing a brief. A tool refusal means the findings were not saved: correct it before claiming completion.
 
-Attaches 5 tools for 1634 tokens, leaving 15774 of its budget and 22942 tokens of the
+Attaches 5 tools for 1634 tokens, leaving 21576 of its budget and 31134 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `annotate_brief`
@@ -61,7 +61,7 @@ cannot call, so a run may spend a step discovering the refusal:
 
 > Sweep this workspace's open deals for risk: find deals with no activity in 14+ days, stakeholders gone quiet, or missing next steps. Log ONE note activity per at-risk deal summarizing the risk and the evidence (cite the records you read). Do not advance stages, send anything, or archive anything.
 
-Attaches 7 tools for 2467 tokens, leaving 14941 of its budget and 22109 tokens of the
+Attaches 7 tools for 2509 tokens, leaving 20701 of its budget and 30259 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `at_risk_relationships`
@@ -106,30 +106,27 @@ times the menu. And lowering it is not always an improvement — adding
 `review_commitments` to the sweep *raises* this count while cutting that agent's
 temptation weight almost in half.
 
-**Temptation weight** sums, over an agent's tools, how many of the 23 certification
-scenarios name that tool as the WRONG reach. 21 of those scenarios offer the model the
+**Temptation weight** sums, over an agent's tools, how many of the 24 certification
+scenarios name that tool as the WRONG reach. 22 of those scenarios offer the model the
 whole catalog and score which tool it picks, so the confusions it names were chosen
 against the real surface rather than guessed.
 
-**It is a rubric-mention heuristic, not an observed error rate.** The count is
-registered tool names appearing in a scenario's rubric prose, minus that scenario's
-own expected step. A weight of 5 does not mean a model went wrong five times; it
-means five scenario rubrics name a tool on this menu as the reach to avoid. The
-measurement that would replace it is sampling real runs for chosen-vs-wanted.
+**It is an authored count, not an observed error rate.** Each scenario DECLARES
+the tools its goal makes tempting, in a `near_misses:` list beside its expected
+step. A weight of 5 does not mean a model went wrong five times; it means five
+scenarios name a tool on this menu as the reach to avoid. The measurement that
+would replace it is sampling real runs for chosen-vs-wanted.
 
-**Two limits, both real.** A scenario's near-misses live only in its `rubric:` free
-text, so the count is read by matching registered tool names in that prose minus the
-scenario's own answer — which over-counts, because a rubric quotes the right tool's
-copy and that copy names others. And each count was measured under a *different*
-scenario's goal, so summing them over one agent's fixed goal borrows precision the
-number does not have. Read it as an ordering of which tools cause trouble on this
-surface, not as a prediction about one agent.
+**One limit remains.** Each count was authored under a *different* scenario's goal,
+so summing them over one agent's fixed goal borrows precision the number does not
+have. Read it as an ordering of which tools cause trouble on this surface, not as a
+prediction about one agent.
 
 Every scenario in the corpus was read; none was skipped.
 
 ## What each tool costs, largest first
 
-Median 263 tokens, mean 294, across 73 served tools.
+Median 263 tokens, mean 301, across 73 served tools.
 
 **These do not sum to the catalog total.** Each row is one tool rendered alone and
 divided by four, so every row carries its own rounding; the catalog figure divides
@@ -138,26 +135,26 @@ a term in an addition.
 
 | Tool | Tokens | Named as the wrong reach in |
 |---|---:|---:|
-| `run_report` | 917 | 3 scenarios |
+| `run_report` | 939 | 3 scenarios |
+| `send_account_email` | 742 | — |
+| `log_activity` | 677 | 1 scenario |
 | `preview_import` | 677 | — |
-| `send_account_email` | 655 | — |
-| `log_activity` | 635 | 1 scenario |
-| `send_email` | 588 | 1 scenario |
+| `send_email` | 675 | 1 scenario |
 | `update_record` | 572 | 4 scenarios |
+| `send_message` | 518 | — |
 | `list_records` | 508 | — |
+| `progress_deal` | 501 | 3 scenarios |
 | `resolve_entities` | 498 | — |
 | `query_workspace` | 484 | 3 scenarios |
+| `create_record` | 473 | 1 scenario |
 | `run_analytics_query` | 465 | — |
 | `advance_deal` | 443 | 1 scenario |
-| `send_message` | 431 | — |
 | `annotate_brief` | 418 | — |
-| `progress_deal` | 404 | 3 scenarios |
-| `review_commitments` | 401 | — |
-| `create_record` | 398 | 1 scenario |
+| `review_commitments` | 401 | 1 scenario |
 | `book_meeting` | 393 | — |
 | `enrich` | 393 | — |
 | `compose_analytics_report` | 390 | — |
-| `search_records` | 385 | 6 scenarios |
+| `search_records` | 385 | 9 scenarios |
 | `forecast_movement` | 351 | — |
 | `describe_report_vocabulary` | 349 | — |
 | `forecast_readings` | 349 | — |
@@ -183,19 +180,19 @@ a term in an addition.
 | `qualify_lead` | 230 | — |
 | `apply_tag` | 227 | — |
 | `create_task` | 222 | — |
-| `read_record` | 222 | 2 scenarios |
+| `read_record` | 222 | 3 scenarios |
 | `whats_slipping_this_week` | 211 | 2 scenarios |
 | `at_risk_relationships` | 208 | — |
 | `read_brief` | 206 | — |
 | `relink_activities` | 206 | — |
+| `update_tag` | 205 | — |
 | `merge_tags` | 198 | — |
 | `relink_thread` | 197 | — |
-| `update_tag` | 197 | — |
 | `who_knows` | 194 | — |
 | `list_pipelines` | 191 | — |
 | `disqualify_lead` | 190 | — |
 | `intro_path_to` | 190 | 2 scenarios |
-| `create_tag` | 175 | — |
+| `create_tag` | 183 | — |
 | `list_channel_providers` | 174 | — |
 | `remove_tag` | 167 | — |
 | `check_location_support` | 156 | — |

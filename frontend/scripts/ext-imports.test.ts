@@ -82,7 +82,7 @@ import { tmpdir } from "node:os";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
-import { extensionLayers, filesUnder, scriptKindFor } from "./lib/source-tree";
+import { extensionLayers, filesUnder, parseSource } from "./lib/source-tree";
 
 const frontendRoot = resolve(__dirname, "..");
 const repoRoot = resolve(frontendRoot, "..");
@@ -217,13 +217,7 @@ function specifiersIn(path: string, text: string): Specifier[] {
 // they each built their own, which is a second parse of identical text and,
 // worse, two trees a later edit could make disagree.
 function parse(path: string, text: string): ts.SourceFile {
-  return ts.createSourceFile(
-    path,
-    text,
-    ts.ScriptTarget.ES2022,
-    true,
-    scriptKindFor(path),
-  );
+  return parseSource(path, text);
 }
 
 // astSpecifiers is this gate's ONE reading of "what does this source import" —

@@ -12,6 +12,7 @@ package people
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -122,11 +123,11 @@ func computedFieldsVisible(ctx context.Context) bool {
 // all, every deal priced, and some priced while others could not be. Without
 // pricedCount the third is indistinguishable from the second, and a total
 // covering half the pipeline would be reported as the pipeline.
-func openPipelineRollup(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) (roll openPipeline, err error) {
+func openPipelineRollup(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, asOf time.Time) (roll openPipeline, err error) {
 	err = tx.QueryRow(ctx,
 		`SELECT open_pipeline_minor_base, open_deal_count, priced_deal_count
-		 FROM organization_open_pipeline_rollup WHERE organization_id = $1`,
-		orgID).Scan(&roll.minorBase, &roll.dealCount, &roll.pricedCount)
+		 FROM organization_open_pipeline_rollup($2) WHERE organization_id = $1`,
+		orgID, asOf).Scan(&roll.minorBase, &roll.dealCount, &roll.pricedCount)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Scan never ran, so roll is still its zero value — return it, not
 		// literal zeroes: the honest "nothing to sum" case above, not a

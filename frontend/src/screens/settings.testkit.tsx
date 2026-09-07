@@ -102,10 +102,26 @@ export const PIPELINE_ADMIN: GrantSpec = {
 const ADMIN_GRANTS: GrantSpec = {
   ...PIPELINE_ADMIN,
   custom_field: ["read", "create", "update"],
-  // The consent registry's own gate (consent/store.go demands person:read), which
-  // every seeded role holds — so a fixture standing in for a real principal has to
-  // carry it or Privacy & audit disappears for reasons the test is not about.
+  // A seeded admin holds all four verbs on their own voice profile. It was
+  // absent while nothing asked — Writing voice opened for everybody — and its
+  // absence made this fixture describe an account the product never issues.
+  voice_profile: ["read", "create", "update", "delete"],
+  // The consent registry's own gate (consent/store.go demands person:read),
+  // which every seeded role holds. It is the floor a fixture standing in for a
+  // real principal carries — but it no longer OPENS Privacy: that page asks
+  // `retention_policy` or `privacy_request`, neither of which anybody below
+  // admin and ops holds.
   person: ["read"],
+  // What actually opens Privacy & retention for this admin fixture. Named here
+  // rather than left to `person`, because the page moved off the read every
+  // seat holds and a fixture that did not follow would quietly stop rendering
+  // the page its cases are about.
+  retention_policy: ["read", "create", "update"],
+  // The roster and team pages. They used to open for every authenticated
+  // reader; they follow `user_admin` and `team_admin` now, and the layout cases
+  // that render this fixture expect both present.
+  user_admin: ["read", "create", "update", "delete"],
+  team_admin: ["read", "create", "update"],
 };
 
 // The read grant on ONE object, as a GrantSpec.
@@ -115,10 +131,14 @@ const ADMIN_GRANTS: GrantSpec = {
 // not satisfy GrantSpec, and only fails in `tsc -b`, where test files are
 // typechecked, rather than under the app project alone.
 export function readOn(object: RbacObject): GrantSpec {
-  // `person:read` rides along because Privacy asks for it, and every seeded role
-  // holds it — so a case about ONE object's entry is not also a case about losing
-  // the consent registry. Isolating the object under test means holding the floor
-  // steady, not stripping it.
+  // `person:read` rides along because every seeded role holds it and the consent
+  // registry's own endpoint demands it — so a case about ONE object's entry is
+  // not also a case about losing that read. Isolating the object under test
+  // means holding the floor steady, not stripping it.
+  //
+  // The floor no longer reaches a PAGE. Privacy used to open on it, which made
+  // every `readOn` case also a case about Privacy; the page asks the two
+  // governance objects now, and the expectations lost their trailing "privacy".
   const spec: GrantSpec = { person: ["read"] };
   spec[object] = ["read"];
   return spec;
@@ -130,9 +150,11 @@ export function readOn(object: RbacObject): GrantSpec {
 // promised, gets undefined, and throws mid-render — which takes the whole entry
 // down and surfaces as its OTHER cards being absent, nowhere near the cause.
 //
-// Shared because this screen has two fetch fakes (`settingsBackend` here and
-// `mergedEntryBackend`, which parameterizes the seat), and a keyed endpoint
-// added to one of them alone leaves the other failing exactly that way.
+// Shared because this screen has several fetch fakes — `settingsBackend` here,
+// `mergedEntryBackend` parameterizing the seat, `settingsNavBackend` the grant
+// map — and a keyed endpoint added to one of them alone leaves the others
+// failing exactly that way. Every fake routes through here for that reason;
+// counting them in this comment is how the sentence goes stale, so it does not.
 export function keyedEnvelope(url: string) {
   // `providers` is required in the contract, so a card is right to index it
   // directly; an empty list is the honest answer for an installation that has
@@ -145,6 +167,16 @@ export function keyedEnvelope(url: string) {
   // no model in the window — which is what a test fixture is.
   if (url.includes("/ai/health")) {
     return jsonResponse({ window_hours: 1, rungs: [] });
+  }
+  // `budget` is required too, and the agent at the foot of the settings rail
+  // indexes it for the currency its spend figure is in. A month with no call is
+  // the honest answer for a fixture, and the figure it draws is then absent
+  // rather than a confident zero (app/agentrail.tsx).
+  if (url.includes("/ai/usage")) {
+    return jsonResponse({
+      days: [],
+      budget: { monthly_tokens: 0, spent_tokens: 0, band: "normal" },
+    });
   }
   return null;
 }
@@ -162,6 +194,20 @@ export function settingsBackend() {
       return jsonResponse({
         ...me,
         user: { ...me.user, email: "ada@acme.test" },
+      });
+    }
+    // When this reader is bookable. The Account tab carries the card, and a
+    // page whose card cannot load its own answer renders nothing around it —
+    // which is what every case on this tab would then be measuring.
+    if (url.includes("/me/working-hours")) {
+      return jsonResponse({
+        chosen: false,
+        working_hours: {
+          start_time: "09:00",
+          end_time: "17:00",
+          days: [1, 2, 3, 4, 5],
+          timezone: "Europe/Berlin",
+        },
       });
     }
     if (url.includes("/passports")) {

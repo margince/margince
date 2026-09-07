@@ -33,6 +33,8 @@ expect:
     deals) — score high only if the response answers with {"final":...}
     stating 3, grounded in the seed observation, rather than calling
     list_open_deals again for data it already has.
+  near_misses:
+    - list_open_deals
   bands:
     certified_min: 70
     degraded_min: 50

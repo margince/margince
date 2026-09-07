@@ -101,42 +101,47 @@ export function activityTimeline(
     locale: Locale;
   }>,
 ): TimelineEntry[] {
-  return (activities ?? []).map((activity) => ({
-    id: activity.id,
-    kind: timelineKind(activity.kind),
-    title: timelineTitle(activity),
-    // Carried beside the rendered title, which may be the body or the kind:
-    // bulk grouping needs the message's OWN subject or it folds unrelated
-    // subjectless rows together.
-    subject: activity.subject,
-    // The body is already in the composite read this row came from, so a
-    // timeline of unreadable subject lines was a rendering choice, not a
-    // limit of what the page knew.
-    body: activity.body,
-    direction: activity.direction,
-    counterparts: who
-      ? withWhom(peopleOn(activity.links, who.nameOf), who.t, who.locale)
-      : undefined,
-    // What this exchange was ABOUT, when it is filed against a deal. A
-    // chronology of an account runs several deals through one list, and the
-    // row that does not say which one is a row a reader has to open to place.
-    via: who ? dealChip(activity, who.nameOf) : undefined,
-    // The server's own row model, carried rather than re-derived. Present
-    // exactly when kind=email, so the row branches on the field and every
-    // other kind keeps the reading it had.
-    emailSummary: activity.email_summary ?? undefined,
-    audience: activity.audience,
-    withheld: activity.content_state === "withheld",
-    threadKey: activity.thread_key,
-    bulkAttested: activity.bulk_mail_attested,
-    atIso: activity.occurred_at,
-    provenance: provenanceOf(activity.captured_by, viewerUserId),
-    // Offered on the row rather than by each caller: a transcript is readable
-    // wherever it is listed, and a per-screen opt-in is how the same affordance
-    // ends up on the deal and missing on the person who was in the meeting.
-    detail: isTranscriptActivity(activity) ? (
-      <TranscriptReadCard activityId={activity.id} />
-    ) : undefined,
-    actions: renderActions?.(activity),
-  }));
+  return (activities ?? []).map((activity) => {
+    // Resolved once: the phrase the row shows and the names a thread counts
+    // are two readings of ONE list, and resolving it twice is how they drift.
+    const people = who ? peopleOn(activity.links, who.nameOf) : undefined;
+    return {
+      id: activity.id,
+      kind: timelineKind(activity.kind),
+      title: timelineTitle(activity),
+      // Carried beside the rendered title, which may be the body or the kind:
+      // bulk grouping needs the message's OWN subject or it folds unrelated
+      // subjectless rows together.
+      subject: activity.subject,
+      // The body is already in the composite read this row came from, so a
+      // timeline of unreadable subject lines was a rendering choice, not a
+      // limit of what the page knew.
+      body: activity.body,
+      direction: activity.direction,
+      counterparts:
+        people && who ? withWhom(people, who.t, who.locale) : undefined,
+      counterpartNames: people,
+      // What this exchange was ABOUT, when it is filed against a deal. A
+      // chronology of an account runs several deals through one list, and the
+      // row that does not say which one is a row a reader has to open to place.
+      via: who ? dealChip(activity, who.nameOf) : undefined,
+      // The server's own row model, carried rather than re-derived. Present
+      // exactly when kind=email, so the row branches on the field and every
+      // other kind keeps the reading it had.
+      emailSummary: activity.email_summary ?? undefined,
+      audience: activity.audience,
+      withheld: activity.content_state === "withheld",
+      threadKey: activity.thread_key,
+      bulkAttested: activity.bulk_mail_attested,
+      atIso: activity.occurred_at,
+      provenance: provenanceOf(activity.captured_by, viewerUserId),
+      // Offered on the row rather than by each caller: a transcript is readable
+      // wherever it is listed, and a per-screen opt-in is how the same affordance
+      // ends up on the deal and missing on the person who was in the meeting.
+      detail: isTranscriptActivity(activity) ? (
+        <TranscriptReadCard activityId={activity.id} />
+      ) : undefined,
+      actions: renderActions?.(activity),
+    };
+  });
 }

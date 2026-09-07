@@ -99,7 +99,7 @@
    * size.
    * Light diverges for the same reason one step removed. --accentLight is an
    * alpha tint, so what sits BEHIND it decides what the text is read against,
-   * and the grounds went grey: the home glance's count chip (--accentText on
+   * and the grounds went grey: the Brief glance's count chip (--accentText on
    * --accentLight, 15px) measured 4.36:1 once the page stopped being white.
    * The fill cannot move either way — #0b7a53 is the brand emerald — so the text
    * does: 5.14:1 on that chip now, and clear of 4.5:1 on every ground in the
@@ -114,7 +114,7 @@
    * every surface in the ladder, and the darkest one it sits on is the rail
    * (--bgSidebar). At #68756e it measured 4.42:1 on the page and 3.98:1 on the
    * rail once those stopped being white — under the 4.5:1 AA needs for text this
-   * size, which axe caught on seven elements of the home glance alone. 4.64:1 at
+   * size, which axe caught on seven elements of the Brief glance alone. 4.64:1 at
    * its worst ground now. A text tone answers to the ground it is read on, so
    * moving one without the other is what breaks it. */
   --textSecondary: #5f6a64;
@@ -277,6 +277,27 @@
    * both so a call site reads the role rather than knowing which theme
    * collapses it, exactly as --successText and --textOnAccentControl do. */
   --dangerText: #b91c1c;
+
+  /* ===== Tag tones =====
+   * The eight hues an admin picks from when naming a tag, and the ONLY colours
+   * in the product that carry no meaning: a tag's colour says "not that other
+   * tag", nothing more. Named as their own family rather than borrowed from
+   * --accent/--warn/--danger, which is what the first four did: a tag that
+   * reads --danger looks like a warning to anyone who knows the rest of the
+   * palette, and a retune of the status colours would silently recolour every
+   * tag in the workspace.
+   *
+   * Chosen to stay apart from each other at 7px — the dot is the whole cue —
+   * and to clear 3:1 against both --bgCard and the dark theme's ground, so one
+   * set serves both themes and a tag does not change identity with the toggle. */
+  --tagTeal: #0f766e;
+  --tagAmber: #b45309;
+  --tagRose: #be123c;
+  --tagSlate: #64748b;
+  --tagSky: #0284c7;
+  --tagViolet: #7c3aed;
+  --tagLime: #4d7c0f;
+  --tagOrange: #ea580c;
 
   /* ===== Corners =====
    * One ladder, in fours: 4 / 8 / 12 / 16 / 20, and the pill. Every corner in
@@ -708,6 +729,18 @@
    * 4.22:1 and 3.88:1. --danger itself stays put — it is also a FILL, under
    * white ink, and lightening that would cost the fill its own contrast. */
   --dangerText: #fb9a9a;
+
+  /* The tag tones lift on a dark ground. Each keeps its hue and its distance
+   * from its neighbours — a tag that reads teal in light must not read sky in
+   * dark, because the colour is the only thing telling two tags apart. */
+  --tagTeal: #2dd4bf;
+  --tagAmber: #fbbf24;
+  --tagRose: #fb7185;
+  --tagSlate: #94a3b8;
+  --tagSky: #38bdf8;
+  --tagViolet: #a78bfa;
+  --tagLime: #a3e635;
+  --tagOrange: #fb923c;
 }
 
 /*
@@ -803,6 +836,15 @@
     --danger: #f87171;
     --dangerBg: rgba(248, 113, 113, 0.16);
     --dangerText: #fb9a9a;
+
+    --tagTeal: #2dd4bf;
+    --tagAmber: #fbbf24;
+    --tagRose: #fb7185;
+    --tagSlate: #94a3b8;
+    --tagSky: #38bdf8;
+    --tagViolet: #a78bfa;
+    --tagLime: #a3e635;
+    --tagOrange: #fb923c;
   }
 }
 

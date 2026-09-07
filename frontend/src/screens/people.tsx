@@ -155,6 +155,35 @@ function asPhoneType(
     : "work";
 }
 
+// The email rows a writer supplied, blank ones dropped and position taken from
+// where each one sits in the list.
+//
+// ONE MAPPER FOR BOTH REQUESTS, because `PersonEmailInput` is one schema for
+// both: create and update describing an address differently is exactly what
+// that shared schema exists to prevent.
+function personEmailInputs(rows: FormRows) {
+  return (rows.emails ?? [])
+    .filter((row) => (row.email ?? "").trim().length > 0)
+    .map((row, index) => ({
+      email: row.email.trim(),
+      email_type: asEmailType(row.email_type),
+      is_primary: row.is_primary === "true",
+      position: index,
+    }));
+}
+
+// The phone rows, the same way and for the same reason.
+function personPhoneInputs(rows: FormRows) {
+  return (rows.phones ?? [])
+    .filter((row) => (row.phone ?? "").trim().length > 0)
+    .map((row, index) => ({
+      phone: row.phone.trim(),
+      phone_type: asPhoneType(row.phone_type),
+      is_primary: row.is_primary === "true",
+      position: index,
+    }));
+}
+
 // Builds the create-contact request body: scalar fields trim to undefined
 // when blank (never sent rather than sent empty), `social.linkedin` folds
 // into the `social` object, and each repeatable row becomes an
@@ -164,22 +193,8 @@ export function mapPersonBody(
   rows: FormRows,
 ): CreatePersonRequest {
   const linkedin = values["social.linkedin"]?.trim();
-  const emails = (rows.emails ?? [])
-    .filter((row) => (row.email ?? "").trim().length > 0)
-    .map((row, index) => ({
-      email: row.email.trim(),
-      email_type: asEmailType(row.email_type),
-      is_primary: row.is_primary === "true",
-      position: index,
-    }));
-  const phones = (rows.phones ?? [])
-    .filter((row) => (row.phone ?? "").trim().length > 0)
-    .map((row, index) => ({
-      phone: row.phone.trim(),
-      phone_type: asPhoneType(row.phone_type),
-      is_primary: row.is_primary === "true",
-      position: index,
-    }));
+  const emails = personEmailInputs(rows);
+  const phones = personPhoneInputs(rows);
   return {
     full_name: values.full_name.trim(),
     first_name: values.first_name?.trim() || undefined,
@@ -196,10 +211,20 @@ function stringField(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
-// Builds the PATCH body: only the UpdatePersonRequest fields (never
-// emails/phones — not in the contract's update shape).
+// Builds the PATCH body.
+//
+// `emails` and `phones` REPLACE their sets rather than adding to them, which is
+// what a correction needs: a bounced address is fixed by sending the set that
+// should stand, and an append-only field could never remove the one that is
+// dead. So an empty list is SENT, not omitted — a contact whose last address
+// was wrong and is now gone is a real answer, and omitting it would silently
+// keep the address the reader just deleted.
+//
+// `rows` is absent only where a caller has no repeatable fields at all; the
+// person form always has both, so the sets go out on every save.
 export function mapPersonUpdate(
   values: Record<string, unknown>,
+  rows?: FormRows,
 ): UpdatePersonRequest {
   const linkedin = stringField(values["social.linkedin"]).trim();
   return {
@@ -208,6 +233,8 @@ export function mapPersonUpdate(
     last_name: stringField(values.last_name).trim() || undefined,
     title: stringField(values.title).trim() || undefined,
     social: linkedin ? { linkedin } : undefined,
+    emails: rows ? personEmailInputs(rows) : undefined,
+    phones: rows ? personPhoneInputs(rows) : undefined,
   };
 }
 
@@ -272,13 +299,24 @@ function contactCreateFields(t: ReturnType<typeof useT>): CreateField[] {
   ];
 }
 
-const personEditFields: CreateField[] = [
-  { key: "full_name", label: "create.fullName", required: true },
-  { key: "first_name", label: "create.firstName" },
-  { key: "last_name", label: "create.lastName" },
-  { key: "title", label: "create.personTitle" },
-  { key: "social.linkedin", label: "create.linkedin" },
-];
+// The edit form is contactCreateFields WITHOUT the create-only parts, so the
+// two cannot come to describe an address differently — the same reason one
+// mapper serves both request bodies.
+//
+// It carries the email and phone rows because nothing else in the product can
+// change them. A bounced send names the address that refused it and sends the
+// reader here; a form that omitted the field left that reader at a page which
+// reported the failure and could not fix it.
+//
+// Moving the primary marker between two addresses of the SAME type is refused
+// by the server with a bare 409 today. Not a limit of this form and not
+// introduced here — the same PATCH has answered that way since the field
+// existed — but the primary radio is the first control that reaches it, so the
+// conflict is shown rather than swallowed. Correcting an address, adding one
+// and removing one all work.
+function personEditFields(t: ReturnType<typeof useT>): CreateField[] {
+  return contactCreateFields(t);
+}
 
 async function createContact(
   values: Record<string, string>,
@@ -587,7 +625,18 @@ function PersonActionBadges({
           t("record.saveDone", { name: saved.full_name })
         }
         notice={overlay ? t("overlay.partialWriteBack") : undefined}
-        fields={[...personEditFields, ...cf.formFields]}
+        // An address is unique among LIVE rows across the workspace
+        // (uq_person_email_dedupe), so a correction can now collide with the
+        // contact that already holds it — 409 `duplicate_email`, naming that
+        // record. Create has always offered the way there; edit could not
+        // collide until it carried the address field, and a conflict the
+        // reader cannot follow is a dead end on the one screen that fixes
+        // addresses.
+        resolveExisting={(_code, existingId) => ({
+          screen: "contacts",
+          id: existingId,
+        })}
+        fields={[...personEditFields(t), ...cf.formFields]}
         record={{
           id: person.id,
           version: person.version,
@@ -596,16 +645,21 @@ function PersonActionBadges({
           last_name: person.last_name ?? "",
           title: person.title ?? "",
           "social.linkedin": stringField(person.social?.linkedin),
+          // The rows the form prefills from. `is_primary` is stringified by
+          // prefillRows like every other cell, and read back as `=== "true"`,
+          // so the primary marker survives a save that did not touch it.
+          emails: person.emails ?? [],
+          phones: person.phones ?? [],
           ...cf.recordSlice(person),
         }}
-        update={async (values, _rows, opened) => {
+        update={async (values, rows, opened) => {
           const { data, error } = await api.PATCH("/people/{id}", {
             params: {
               path: { id },
               ...ifMatch(requireVersion(opened?.version)),
             },
             body: {
-              ...mapPersonUpdate(values),
+              ...mapPersonUpdate(values, rows),
               // A diff against what the form prefilled from: a
               // snapshot sends `null` for every empty custom field,
               // and the API reads that as clearing a column nobody

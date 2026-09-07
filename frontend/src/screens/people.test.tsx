@@ -13,6 +13,7 @@ import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { meFixture } from "../app/mefixture";
 import { activityTimeline } from "../design-system/activitytimeline";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
@@ -250,7 +251,27 @@ function stubFetch(
         sections: [],
       });
     }
-    return responder(request.url, request.method, request);
+    const answer = await responder(request.url, request.method, request);
+    // The record's verbs and the relationships panel ask the grant before
+    // they draw, so a responder that never named a session gets one holding
+    // what a rep working their own contacts holds. A spec that answers /me
+    // itself — overlay mode, a refusal — is passed through untouched.
+    if (pathname.endsWith("/me") && answer.ok) {
+      const body: unknown = await answer.clone().json();
+      if (typeof body === "object" && body !== null && "user" in body) {
+        return answer;
+      }
+      return jsonResponse(
+        meFixture({
+          allow: {
+            person: ["read", "create", "update", "delete"],
+            relationship: ["read", "create", "update", "delete"],
+            activity: ["read", "create"],
+          },
+        }),
+      );
+    }
+    return answer;
   });
   vi.stubGlobal("fetch", fetchMock);
   return { fetchMock, urls };
@@ -473,6 +494,226 @@ describe("PersonScreen — edit with If-Match (P-1)", () => {
     expect(
       screen.queryByText("if-match version 1 does not match current version 2"),
     ).toBeNull();
+  });
+});
+
+describe("PersonScreen — correcting an address that refused a send", () => {
+  // A bounced send names the address that refused it and routes the reader
+  // here. Until this form carried the field, that route ended at a page which
+  // reported the failure and could not fix it: `emails` was on
+  // UpdatePersonRequest and on the create form, and on no edit form anywhere.
+  it("sends the corrected set, not an addition to it", async () => {
+    let patchBody: unknown = null;
+    stubFetch(async (url, method, request) => {
+      if (method === "PATCH") {
+        patchBody = JSON.parse(await request.text());
+        return jsonResponse({ ...anna, version: 2 });
+      }
+      if (url.includes("/activities")) {
+        return jsonResponse({ data: [] });
+      }
+      return jsonResponse(anna);
+    });
+    render(<PersonScreen id="p-1" />);
+
+    await waitFor(() => expect(screen.getByTestId("edit-record")).toBeTruthy());
+    await userEvent.click(screen.getByTestId("edit-record"));
+
+    // The row is PREFILLED from the record, which is what makes this a
+    // correction rather than a re-entry: a reader fixing one character must not
+    // have to retype the addresses that were already right.
+    const address = await screen.findByDisplayValue(
+      "anna.weber@brandt.example",
+    );
+    await userEvent.clear(address);
+    await userEvent.type(address, "anna.weber@brandt.de");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(patchBody).toBeTruthy());
+    // ONE entry, carrying the new address. The field replaces the set, so a
+    // body with two would mean the dead address survived the correction —
+    // exactly the failure the reader came here to undo.
+    expect(patchBody).toMatchObject({
+      emails: [{ email: "anna.weber@brandt.de", is_primary: true }],
+    });
+  });
+
+  it("carries an untouched address back unchanged, type and primary included", async () => {
+    // A save that corrects ONE address must not quietly rewrite the others.
+    // The set is replaced wholesale, so every row the reader did not touch is
+    // re-sent from the prefill — and a subfield the prefill dropped would come
+    // back as the mapper's default, silently retyping a personal address as
+    // work.
+    const twoAddresses = {
+      ...anna,
+      emails: [
+        {
+          id: "e-1",
+          email: "anna.weber@brandt.example",
+          email_type: "work",
+          is_primary: true,
+        },
+        {
+          id: "e-2",
+          email: "anna@privat.example",
+          email_type: "personal",
+          is_primary: false,
+        },
+      ],
+    };
+    const sent: Record<string, unknown>[] = [];
+    stubFetch(async (url, method, request) => {
+      if (method === "PATCH") {
+        sent.push(JSON.parse(await request.text()));
+        return jsonResponse({ ...twoAddresses, version: 2 });
+      }
+      if (url.includes("/activities")) {
+        return jsonResponse({ data: [] });
+      }
+      return jsonResponse(twoAddresses);
+    });
+    render(<PersonScreen id="p-1" />);
+
+    await waitFor(() => expect(screen.getByTestId("edit-record")).toBeTruthy());
+    await userEvent.click(screen.getByTestId("edit-record"));
+
+    const dead = await screen.findByDisplayValue("anna.weber@brandt.example");
+    await userEvent.clear(dead);
+    await userEvent.type(dead, "anna.weber@brandt.de");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0].emails).toEqual([
+      {
+        email: "anna.weber@brandt.de",
+        email_type: "work",
+        is_primary: true,
+        position: 0,
+      },
+      {
+        email: "anna@privat.example",
+        email_type: "personal",
+        is_primary: false,
+        position: 1,
+      },
+    ]);
+  });
+
+  it("offers the way to the contact already holding a corrected address", async () => {
+    // An address names exactly one live record (uq_person_email_dedupe), so a
+    // correction can land on one somebody else already holds. Create has always
+    // offered this route; edit could not collide until it carried the field.
+    stubFetch(async (url, method) => {
+      if (method === "PATCH") {
+        return jsonResponse(
+          {
+            type: "about:blank",
+            title: "Conflict",
+            status: 409,
+            code: "duplicate_email",
+            detail: "a live record with this key already exists",
+            details: { existing_id: "p-2" },
+          },
+          409,
+        );
+      }
+      if (url.includes("/activities")) {
+        return jsonResponse({ data: [] });
+      }
+      return jsonResponse(anna);
+    });
+    render(<PersonScreen id="p-1" />);
+
+    await waitFor(() => expect(screen.getByTestId("edit-record")).toBeTruthy());
+    await userEvent.click(screen.getByTestId("edit-record"));
+    const address = await screen.findByDisplayValue(
+      "anna.weber@brandt.example",
+    );
+    await userEvent.clear(address);
+    await userEvent.type(address, "someone.else@brandt.example");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    // Without the route the reader is told the address is taken and left with
+    // no way to see by whom, on the one screen that exists to fix addresses.
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "View existing record" }),
+      ).toBeTruthy(),
+    );
+  });
+
+  it("shows the refusal when the server declines a primary swap", async () => {
+    // Moving the primary marker between two same-type addresses is refused by
+    // the writer today (it promotes before it demotes, and the unique index
+    // sees two live primaries). Not this form's bug and not introduced here,
+    // but the primary radio is the first control that reaches it — so the
+    // reader must be told the save did not land, never left looking at a
+    // dialog that closed as though it had.
+    stubFetch(async (url, method) => {
+      if (method === "PATCH") {
+        return jsonResponse(
+          {
+            type: "about:blank",
+            title: "Conflict",
+            status: 409,
+            code: "conflict",
+            detail: "conflict",
+          },
+          409,
+        );
+      }
+      if (url.includes("/activities")) {
+        return jsonResponse({ data: [] });
+      }
+      return jsonResponse(anna);
+    });
+    render(<PersonScreen id="p-1" />);
+
+    await waitFor(() => expect(screen.getByTestId("edit-record")).toBeTruthy());
+    await userEvent.click(screen.getByTestId("edit-record"));
+    const address = await screen.findByDisplayValue(
+      "anna.weber@brandt.example",
+    );
+    await userEvent.clear(address);
+    await userEvent.type(address, "anna.weber@brandt.de");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    // The form stays open with the reader's entry in it. A dialog that closed
+    // here would report a correction the record never took.
+    await waitFor(() =>
+      expect(screen.getByDisplayValue("anna.weber@brandt.de")).toBeTruthy(),
+    );
+  });
+
+  it("sends an empty set when the reader removes the last address", async () => {
+    const sent: Record<string, unknown>[] = [];
+    stubFetch(async (url, method, request) => {
+      if (method === "PATCH") {
+        sent.push(JSON.parse(await request.text()));
+        return jsonResponse({ ...anna, emails: [], version: 2 });
+      }
+      if (url.includes("/activities")) {
+        return jsonResponse({ data: [] });
+      }
+      return jsonResponse(anna);
+    });
+    render(<PersonScreen id="p-1" />);
+
+    await waitFor(() => expect(screen.getByTestId("edit-record")).toBeTruthy());
+    await userEvent.click(screen.getByTestId("edit-record"));
+
+    await screen.findByDisplayValue("anna.weber@brandt.example");
+    // The row is taken OUT, which is the gesture the form offers for it —
+    // emptying the box leaves a required field blank and the browser refuses
+    // the submit, so a reader who wants no address presses Remove.
+    await userEvent.click(screen.getAllByRole("button", { name: "Remove" })[0]);
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(sent).toHaveLength(1));
+    // `[]` rather than an omitted key. Omitting it would read as "leave the
+    // addresses alone" and keep the one the reader just deleted — a contact
+    // with no working address is a real answer and has to be sendable.
+    expect(sent[0].emails).toEqual([]);
   });
 });
 

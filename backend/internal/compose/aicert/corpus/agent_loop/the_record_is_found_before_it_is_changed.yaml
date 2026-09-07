@@ -21,6 +21,9 @@ expect:
     calling update_record or progress_deal here had to invent an identifier,
     which is the failure this scenario exists to catch — and it is worse, not
     better, when the invented id happens to be well-formed.
+  near_misses:
+    - update_record
+    - progress_deal
   bands:
     certified_min: 70
     degraded_min: 50

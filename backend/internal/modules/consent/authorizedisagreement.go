@@ -6,11 +6,14 @@ package consent
 // How far apart the engine and the old purpose gate are, read from the record
 // rather than guessed.
 //
-// The engine has run in observe mode since it shipped: it decides, records, and
-// the old gate rules. That was always meant to end in a measurement — enforcing
-// a rule nobody has measured is how a compliance change becomes an outage, and
-// the one number that decides whether enforcement is safe is how often the two
-// already disagree, broken down by what the disagreement WAS.
+// The engine decides wherever a category is enforced, which the shipped posture
+// makes universal; an operator who moves one back to observe hands that
+// category to the old gate again, which is the rollback lever. The old gate's
+// answer is recorded beside the engine's on every TRANSMIT row, and the two
+// still disagree — so the measurement that once said whether enforcing was safe
+// now says whether it stayed safe. Enforcing a rule nobody measures is how a
+// compliance change becomes an outage, and that is as true after the flip as
+// before it.
 //
 // A count alone would not answer it. "The engine is stricter on 4,000
 // deliveries" reads as alarming and may be entirely correct — those may all be

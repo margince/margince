@@ -106,10 +106,22 @@ func (h Handlers) GetReplyRecipient(w http.ResponseWriter, r *http.Request, id c
 		writeStoreErr(w, r, err)
 		return
 	}
+	// Whose mailbox this arrived in, which is a different question from who a
+	// reply goes to: the names above are the counterparty, this is our own side.
+	mailboxes, err := h.store.MailboxesFor(ctx, anchor)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	seats := make([]openapi_types.UUID, 0, len(mailboxes))
+	for _, seat := range mailboxes {
+		seats = append(seats, openapi_types.UUID(seat))
+	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ReplyRecipient{
-		FullName:  recipient.FullName,
-		FirstName: recipient.FirstName,
-		Address:   address,
+		FullName:       recipient.FullName,
+		FirstName:      recipient.FirstName,
+		Address:        address,
+		MailboxUserIds: seats,
 	})
 }
 
@@ -211,6 +223,15 @@ type DraftContext struct {
 	// Body is the text of the message being answered, used to detect the
 	// language of the correspondence. Empty falls back to the topic.
 	Body string
+	// Language is the language already resolved for this draft, when the
+	// caller has one. A caller holding an envelope MUST pass it: the model
+	// draft and the deterministic fallback are two answers to one request, and
+	// a fallback that re-derived the language would change what language the
+	// rep is shown the moment a model call failed.
+	//
+	// Empty means the caller has no envelope — the two-tier detection below is
+	// then the honest answer rather than a guess at one.
+	Language textlang.Lang
 	// Band is where the correspondence stands. The zero value is BandNone.
 	Band convstate.Band
 }
@@ -230,6 +251,11 @@ func IsMailThread(kind crmcontracts.ActivityKind, direction *crmcontracts.Activi
 // preferring the body because a subject line rarely carries enough words to
 // clear the detector's floor.
 func (c DraftContext) language() textlang.Lang {
+	// What the caller already resolved, which walked a longer ladder than this
+	// one can: it saw the stored language and the installation's own.
+	if c.Language != textlang.Unknown && c.Language != "" {
+		return c.Language
+	}
 	if lang := textlang.Detect(c.Body); lang != textlang.Unknown {
 		return lang
 	}

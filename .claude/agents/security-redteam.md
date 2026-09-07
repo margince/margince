@@ -25,11 +25,13 @@ missing copy of a gate that exists elsewhere (rule 1).
 ## Threat model — this codebase's load-bearing invariants
 
 Redteam against the architecture the repo commits to (`CLAUDE.md`, spec
-`contract/interfaces.md` §0, the RLS/write-shape contracts):
+`contract/interfaces.md` §0, the isolation and write-shape contracts):
 
 - **Tenant isolation (highest priority).** Every tenant query MUST go through
-  `database.WithWorkspaceTx` (the RLS GUC contract) — there is no raw-pool path for
-  tenant data. Any new `workspace_id` table needs FORCE RLS. Hunt for: a query that
+  `database.WithWorkspaceTx` — there is no raw-pool path for tenant data. Core carries NO
+  row-level security at all: the workspace bound on the context and the
+  predicates in `platform/auth` are the isolation, so a missing predicate is the defect a
+  policy would once have caught. Hunt for: a query that
   bypasses the GUC, a GUC-unset path, a cross-workspace id accepted from the body, a
   join that widens row scope, a missing `EnsureVisible` on any path that **returns a
   record** (including replay/conflict/error paths — rule 3).

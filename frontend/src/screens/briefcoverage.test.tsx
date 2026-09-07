@@ -3,8 +3,8 @@ import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
+import { render } from "./brief.testkit";
 import { BriefCoverage } from "./briefcoverage";
-import { render } from "./home.testkit";
 import type { Worklist } from "./worklist.queries";
 
 // What the page is NOT showing, per source.

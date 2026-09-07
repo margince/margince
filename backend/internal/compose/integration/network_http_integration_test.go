@@ -233,6 +233,13 @@ func TestGoingColdFiresOnTheReportingWindowAndCarriesTheDayCount(t *testing.T) {
 	// Age the last touch past REPORT-PARAM-2's window. Written through the
 	// owner connection because no API sets this column — it is maintained by
 	// the capture path, and the point of the test is the read, not the write.
+	//
+	// Backdated by the DATABASE's clock, which is also the clock the read
+	// measures against. This used to be the flaky half of the pair: the write
+	// took `now()` and the count took the service's, so on a machine whose
+	// database clock leads the host — a VM, Docker Desktop on macOS — the
+	// answer came back 40. It passed in CI on the coincidence that the two
+	// agreed there.
 	ageLastTouch(t, e, deal, 41)
 
 	risks := coverageRisks(t, e, deal)

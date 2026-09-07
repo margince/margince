@@ -52,7 +52,7 @@ const business = (
   </Panel>
 );
 
-// A work column with a rail of context on the RIGHT — the Home screen's shape
+// A work column with a rail of context on the RIGHT — the Brief screen's shape
 // and the company record's.
 export const Aside: Story = {
   args: {

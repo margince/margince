@@ -62,6 +62,7 @@ import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import { sourceFileAt } from "../../scripts/lib/source-tree";
 
 const srcRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const ROUTER = join(srcRoot, "app/router.tsx");
@@ -87,24 +88,6 @@ const NOT_OURS_TO_INSET: ReadonlyMap<string, string> = new Map([
 // ---------------------------------------------------------------------------
 // Reading source
 // ---------------------------------------------------------------------------
-
-const parsed = new Map<string, ts.SourceFile>();
-
-function sourceOf(path: string): ts.SourceFile {
-  const hit = parsed.get(path);
-  if (hit) {
-    return hit;
-  }
-  const file = ts.createSourceFile(
-    path,
-    readFileSync(path, "utf8"),
-    ts.ScriptTarget.Latest,
-    true,
-    path.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
-  );
-  parsed.set(path, file);
-  return file;
-}
 
 function declarationNamed(
   file: ts.SourceFile,
@@ -349,7 +332,11 @@ function componentSource(
   if (!binding?.file.startsWith(srcRoot) || hops >= 8) {
     return undefined;
   }
-  return componentSource(sourceOf(binding.file), binding.exported, hops + 1);
+  return componentSource(
+    sourceFileAt(binding.file),
+    binding.exported,
+    hops + 1,
+  );
 }
 
 /** `export const EXTENSION_SCREEN = "ext"`, followed through the import. */
@@ -360,7 +347,7 @@ function constantString(file: ts.SourceFile, name: string): string | undefined {
   }
   const binding = bindingsOf(file).get(name);
   return binding
-    ? constantString(sourceOf(binding.file), binding.exported)
+    ? constantString(sourceFileAt(binding.file), binding.exported)
     : undefined;
 }
 
@@ -661,19 +648,21 @@ function componentVerdict(
 
 /** Every address this build answers, from the union that owns them. */
 function screenNames(): string[] {
-  return stringsIn(declarationNamed(sourceOf(ROUTER), "SCREENS")?.initializer);
+  return stringsIn(
+    declarationNamed(sourceFileAt(ROUTER), "SCREENS")?.initializer,
+  );
 }
 
 /** The documented rail-less family, from the set that owns it. */
 function railLessNames(): string[] {
   return stringsIn(
-    declarationNamed(sourceOf(NAV), "RAIL_LESS_SCREENS")?.initializer,
+    declarationNamed(sourceFileAt(NAV), "RAIL_LESS_SCREENS")?.initializer,
   );
 }
 
 /** Screen → the expression that renders it, from the dispatch that owns it. */
 function dispatch(): ReadonlyMap<string, ts.Expression> {
-  const file = sourceOf(APP);
+  const file = sourceFileAt(APP);
   const literal = declarationNamed(file, "SCREEN_VIEWS")?.initializer;
   const out = new Map<string, ts.Expression>();
   if (!literal || !ts.isObjectLiteralExpression(literal)) {
@@ -725,7 +714,7 @@ function raillessComponents(): ReadonlySet<string> {
     }
     ts.forEachChild(node, visit);
   };
-  visit(sourceOf(APP));
+  visit(sourceFileAt(APP));
   return out;
 }
 
@@ -770,7 +759,7 @@ describe("page gutter", () => {
     const insetting = selfInsettingClasses();
     const railless = raillessComponents();
     expect(railless.size).toBeGreaterThan(0);
-    const app = sourceOf(APP);
+    const app = sourceFileAt(APP);
     const judged: string[] = [];
     const flush: string[] = [];
     for (const screen of screens) {

@@ -12,6 +12,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { meFixture } from "../app/mefixture";
 import { RecordShell } from "../app/testing/recordshell.testkit";
 import { pickOption } from "../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
@@ -24,6 +25,7 @@ import {
   scoreTone,
   terminalBadge,
 } from "./leads";
+import { WriteToHost } from "./writeto";
 
 // The status/score-override/assign-to-me controls (Phase 4) resolve the
 // session principal via /v1/me, which needs a workspace slug before it will
@@ -91,13 +93,24 @@ function render(ui: ReactNode) {
         {/* The region is the shell's in the running app (`main.tsx`); a suite whose
           subject is what a write SAYS mounts it the same way. */}
         <ToastProvider>
-          <RecordShell>{ui}</RecordShell>
+          {/* The composer host is the shell's too (`App.tsx`): the header's
+              address is a button into it. */}
+          <WriteToHost>
+            <RecordShell>{ui}</RecordShell>
+          </WriteToHost>
           <ToastRegion />
         </ToastProvider>
       </LocaleProvider>
     </QueryClientProvider>,
   );
 }
+
+// The grants a rep working their own leads holds, spelled once for every
+// /me this file serves.
+const LEAD_GRANTS = {
+  lead: ["read", "create", "update", "delete"],
+  activity: ["read", "create"],
+} as const;
 
 const anna = {
   id: "p-1",
@@ -116,6 +129,9 @@ const lead = {
   score: 72,
   captured_by: "human:u-1",
   source: "manual",
+  // The caller's own lead: absent means NOT writable per the contract, and
+  // a fixture that omits it describes a reader every write here refuses.
+  writable: true,
   version: 1,
   created_at: "2026-06-01T08:00:00Z",
   updated_at: "2026-06-20T08:00:00Z",
@@ -153,6 +169,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
             user: { id: "u-9", display_name: "Me" },
             roles: ["rep"],
             teams: [],
+            authorization: meFixture({ allow: LEAD_GRANTS }).authorization,
           });
         }
         if (request.url.includes("/users")) {
@@ -174,6 +191,85 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     expect(screen.queryByText(/typed by a person/i)).toBeNull();
   });
 
+  // The queue opens on the seat's OWN leads or on every lead, and which one is
+  // the server's row scope rather than the caller's role keys. The screen used
+  // to read `roles` for this, which is a second reading of the same policy: a
+  // custom role, or a seeded role whose scope an operator edits, opened the
+  // wrong view while the server answered correctly.
+  //
+  // The assertion is the request the list actually makes, because that is where
+  // the filter lands — a rendered row count would pass for a screen that asked
+  // for everything and happened to be handed one lead.
+  describe("the queue's opening view follows the row scope, not the role", () => {
+    const leadRequestFor = async (
+      authorization: Record<string, unknown> | undefined,
+    ) => {
+      const asked: string[] = [];
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (request: Request) => {
+          if (request.url.endsWith("/v1/me")) {
+            return jsonResponse({
+              user: { id: "u-9", display_name: "Me" },
+              // Deliberately the role that USED to decide this. It says "open
+              // wide" in every case below, so the two narrow arms fail if
+              // anything still reads the role instead of the scope.
+              roles: ["admin"],
+              teams: [],
+              ...(authorization ? { authorization } : {}),
+            });
+          }
+          // The LIST query specifically: the screen also asks /leads/settings,
+          // which carries no filter and would satisfy the assertions vacuously.
+          if (/\/v1\/leads\?/.test(request.url)) {
+            asked.push(request.url);
+          }
+          return jsonResponse({ data: [lead], page: { next_cursor: null } });
+        }),
+      );
+      render(<LeadsScreen />);
+      await waitFor(() => expect(asked.length).toBeGreaterThan(0));
+      return asked[0];
+    };
+
+    const objects = { lead: { read: true } };
+
+    it("a seat scoped to its own records asks for its own", async () => {
+      const url = await leadRequestFor({
+        seat_type: "full",
+        row_scope: "own",
+        objects,
+      });
+      expect(url).toContain("owner_id=u-9");
+    });
+
+    it("a seat scoped to its team asks for every lead", async () => {
+      const url = await leadRequestFor({
+        seat_type: "full",
+        row_scope: "team",
+        objects,
+      });
+      expect(url).not.toContain("owner_id=");
+    });
+
+    it("a seat scoped to the whole installation asks for every lead", async () => {
+      const url = await leadRequestFor({
+        seat_type: "full",
+        row_scope: "all",
+        objects,
+      });
+      expect(url).not.toContain("owner_id=");
+    });
+
+    // Fail closed: a response carrying no authorization block at all is the
+    // narrow view, never the wide one. `row_scope !== "own"` would read a
+    // missing answer as permission to open on everything.
+    it("a response with no authorization block asks for its own", async () => {
+      const url = await leadRequestFor(undefined);
+      expect(url).toContain("owner_id=u-9");
+    });
+  });
+
   it("a lead row navigates to the LEAD detail, not the person screen", async () => {
     vi.stubGlobal(
       "fetch",
@@ -183,6 +279,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
               user: { id: "u-9", display_name: "Me" },
               roles: ["rep"],
               teams: [],
+              authorization: meFixture({ allow: LEAD_GRANTS }).authorization,
             })
           : jsonResponse({ data: [lead], page: { next_cursor: null } }),
       ),
@@ -397,6 +494,12 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
             sections: [],
           });
         }
+        if (new URL(url).pathname.endsWith("/me")) {
+          return jsonResponse(meFixture({ allow: LEAD_GRANTS }));
+        }
+        if (method === "GET" && url.endsWith("/v1/connectors")) {
+          return jsonResponse({ data: [] });
+        }
         return jsonResponse(lead);
       },
     );
@@ -539,6 +642,37 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     ).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: "Change Company" })).toBeNull();
     expect(screen.queryByDisplayValue("Nordwind Logistik")).toBeNull();
+  });
+
+  // `writable` is what the server's write gate would answer on a mutation. A
+  // rep holding lead.update on the OBJECT was offered Edit, Promote and the
+  // inline rows on a colleague's lead, and learned from the 403 after filling
+  // the form in that it was never theirs to save.
+  it("refuses every write on a live lead this caller may not change, from the one sentence it prints", async () => {
+    stubFetch(async () =>
+      jsonResponse({ ...lead, owner_id: "u-other", writable: false }),
+    );
+    render(<LeadScreen id="l-1" />);
+
+    const sentence =
+      "You cannot change this lead. Ask its owner to share it with you, or your administrator for the right to edit it.";
+    // The band says it once for the page; the inline rows each carry the same
+    // sentence beside their own value, as they do on a closed lead.
+    expect((await screen.findAllByText(sentence)).length).toBeGreaterThan(0);
+    // Each verb is refused in place, and the id it describes itself by
+    // resolves to that one sentence — a disabled button whose reason is
+    // nowhere on the page is a dead button.
+    for (const testId of ["edit-record", "lead-qualify", "lead-disqualify"]) {
+      const control = await screen.findByTestId(testId);
+      expect(control.hasAttribute("disabled")).toBe(true);
+      expect(
+        document.getElementById(control.getAttribute("aria-describedby") ?? "")
+          ?.textContent,
+      ).toBe(sentence);
+    }
+    // The inline rows read as text with no control to press, the same shape a
+    // closed lead takes.
+    expect(screen.queryByRole("button", { name: "Change Company" })).toBeNull();
   });
 
   it("a promoted lead keeps its page and says what the promotion did", async () => {
@@ -908,6 +1042,11 @@ function stubFetch(
         sections: [],
       });
     }
+    // The reader's mail connections, which the shell reads for every page:
+    // none here, so the lead's address is the reader's own mail client's.
+    if (request.method === "GET" && request.url.endsWith("/v1/connectors")) {
+      return jsonResponse({ data: [] });
+    }
     // The administered vocabularies, as a fresh installation ships them:
     // the screens read their labels and pick lists off these.
     if (request.method === "GET" && request.url.endsWith("/v1/lead-sources")) {
@@ -932,6 +1071,7 @@ function stubFetch(
         user: { id: "u-9", display_name: "Me" },
         roles: ["rep"],
         teams: [],
+        authorization: meFixture({ allow: LEAD_GRANTS }).authorization,
       });
     }
     if (request.method === "GET" && request.url.includes("/manual-signals")) {
@@ -1469,6 +1609,7 @@ describe("LeadScreen — overlay mode write affordances", () => {
       user: { id: "u1", email: "me@nordwind.example", locale: "en-US" },
       roles: ["admin"],
       teams: [],
+      authorization: meFixture({ allow: LEAD_GRANTS }).authorization,
       system_of_record: { mode: "overlay" },
     });
   }
@@ -1683,17 +1824,25 @@ function stubFetchWithMe(
     request: Request,
   ) => Promise<Response | undefined>,
   meId = "u-9",
+  // The reader's own mail connections, which the shell reads for every page
+  // and which decide whether the lead's address is the composer's or their
+  // mail client's. None, unless a suite about writing to the lead says so.
+  connectors: unknown = { data: [] },
 ): { urls: string[] } {
   const urls: string[] = [];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (request: Request) => {
       urls.push(request.url);
+      if (request.method === "GET" && request.url.endsWith("/v1/connectors")) {
+        return jsonResponse(connectors);
+      }
       if (request.url.endsWith("/v1/me")) {
         return jsonResponse({
           user: { id: meId, display_name: "Me" },
           roles: ["rep"],
           teams: [],
+          authorization: meFixture({ allow: LEAD_GRANTS }).authorization,
         });
       }
       if (new URL(request.url).pathname.endsWith("/context")) {
@@ -2412,5 +2561,28 @@ describe("LeadScreen — the header's Email verb", () => {
     const verb = await screen.findByRole("button", { name: "Email" });
     expect(verb.querySelector(".lucide-mail")).toBeTruthy();
     expect(verb.hasAttribute("disabled")).toBe(false);
+  });
+
+  it("opens the composer on the lead from the header's address, already addressed", async () => {
+    // The address is a BUTTON into the product's composer and not a link
+    // for the reader's mail client: a message that left through `mailto:`
+    // was never filed on the lead. The composer is offered because the reader
+    // has a mailbox to send from.
+    stubFetchWithMe(async () => jsonResponse(lead), "u-9", {
+      data: [{ id: "g1", provider: "gmail", status: "connected", scopes: [] }],
+    });
+    render(<LeadScreen id="l-1" />);
+    const address = await screen.findByRole("button", {
+      name: "jonas@nordwind.example",
+    });
+    expect(address.hasAttribute("href")).toBe(false);
+    await userEvent.click(address);
+
+    const dialog = await screen.findByRole("dialog", { name: /Draft email/ });
+    expect(
+      await within(dialog).findByRole("button", {
+        name: "Remove jonas@nordwind.example",
+      }),
+    ).toBeTruthy();
   });
 });

@@ -192,6 +192,25 @@ func (re *runnerEnv) runRow(t *testing.T, trigger string) (status string, trace 
 	return status, trace, approvalID
 }
 
+// runRowWithReason is runRow plus the column the person reads: which failure
+// closed the run, not merely that one did.
+func (re *runnerEnv) runRowWithReason(t *testing.T, trigger string) (status, reason string, approvalID *string) {
+	t.Helper()
+	var stored *string
+	err := database.WithWorkspaceTx(re.wsCtx, re.pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT status, degrade_reason, approval_id::text FROM agent_run WHERE trigger_ref = $1`, trigger).
+			Scan(&status, &stored, &approvalID)
+	})
+	if err != nil {
+		t.Fatalf("run row for %s: %v", trigger, err)
+	}
+	if stored != nil {
+		reason = *stored
+	}
+	return status, reason, approvalID
+}
+
 func TestRunnerFullLoopWritesAsGovernedAgent(t *testing.T) {
 	re := setupRunner(t)
 	trigger := "overnight_at_risk_sweep:e2e-full"
@@ -571,5 +590,92 @@ func TestASuspendedRunWhoseAuthorityDiesIsClosedRatherThanParkedForever(t *testi
 
 	if status, _, _ = re.runRow(t, trigger); status != "failed" {
 		t.Fatalf("run status = %s, want failed — a run whose authority died must be closed, not left parked", status)
+	}
+}
+
+// A terminal write that FAILS leaves the run resumable, so the redelivery
+// genuinely retries.
+//
+// The claim used to be one transaction and the close a second. If the close
+// failed — a connection drop, a lock timeout — the claim stuck and the reason
+// did not: the redelivery found no awaiting_approval row, correctly declined to
+// start a second loop of a mutation a human approved once, and acked. Nothing
+// closed the run until the abandoned sweep reached it 30–60 minutes later and
+// recorded the generic `abandoned` reason instead of the specific one the first
+// attempt was carrying, with the AI-activity rail showing the occurrence live
+// and then stalled in between (#2224).
+//
+// Driven by failing the write rather than by reading the code: a cancelled
+// context is what a connection drop looks like from inside, and the two states
+// this distinguishes — `awaiting_approval` and `running` — are one word apart in
+// the row and half an hour apart for the person waiting.
+func TestATerminalWriteThatFailsLeavesTheRunResumable(t *testing.T) {
+	re := setupRunner(t)
+	var org struct {
+		ID string `json:"id"`
+	}
+	if status := re.Call(t, "POST", "/v1/organizations", integration.AnyMap{
+		"display_name": "Close Failed Retriable",
+	}, nil, &org); status != http.StatusCreated {
+		t.Fatalf("create organization → %d", status)
+	}
+
+	trigger := "overnight_at_risk_sweep:e2e-close-failed"
+	re.brain.Script(
+		fmt.Sprintf(`{"tool":"enrich","args":{"organization_id":"%s"}}`, org.ID),
+		`{"final":{"summary":"never reached"}}`,
+	)
+	re.enqueue(t, stagingSpecName, trigger, &re.passportID)
+	re.tick(t)
+
+	status, _, approvalID := re.runRow(t, trigger)
+	if status != "awaiting_approval" || approvalID == nil {
+		t.Fatalf("run = %s approval=%v, want a parked run", status, approvalID)
+	}
+	parked, err := ids.ParseAs[ids.ApprovalKind](*approvalID)
+	if err != nil {
+		t.Fatalf("parsing the approval id: %v", err)
+	}
+
+	// The close fails. Before this change the equivalent failure landed AFTER
+	// the claim, so the row was already out of awaiting_approval and no
+	// redelivery could reach it.
+	dead, cancel := context.WithCancel(re.wsCtx)
+	cancel()
+	if _, err := re.store.ClaimAndClose(dead, parked, runner.FailurePassportNoLongerValid); err == nil {
+		t.Fatal("a close on a cancelled context reported success — the test cannot tell a rolled-back write from a completed one")
+	}
+
+	if status, _, _ = re.runRow(t, trigger); status != "awaiting_approval" {
+		t.Fatalf("after a failed close the run is %s, want awaiting_approval — the claim went with the "+
+			"write it could not finish, or the run is stranded until the abandoned sweep", status)
+	}
+
+	// The redelivery, which is the whole point of leaving it resumable.
+	closed, err := re.store.ClaimAndClose(re.wsCtx, parked, runner.FailurePassportNoLongerValid)
+	if err != nil {
+		t.Fatalf("the retry could not close the run: %v", err)
+	}
+	if !closed {
+		t.Fatal("the retry found nothing to close — the failed attempt consumed the claim after all")
+	}
+
+	var reason string
+	if status, reason, _ = re.runRowWithReason(t, trigger); status != "failed" {
+		t.Fatalf("run status = %s, want failed", status)
+	}
+	// The SPECIFIC reason, which is what the abandoned sweep cannot record.
+	if reason != string(runner.FailurePassportNoLongerValid) {
+		t.Errorf("the run closed as %q, want %q", reason, runner.FailurePassportNoLongerValid)
+	}
+
+	// And a third delivery closes nothing: the terminal write is as one-way as
+	// the claim it replaced.
+	again, err := re.store.ClaimAndClose(re.wsCtx, parked, runner.FailurePassportNoLongerValid)
+	if err != nil {
+		t.Fatalf("a third delivery errored rather than declining: %v", err)
+	}
+	if again {
+		t.Error("a third delivery closed the run a second time")
 	}
 }

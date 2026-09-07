@@ -1,0 +1,47 @@
+name: counsels_fee_note_to_the_company_is_held_by_the_dispute_it_bills_for
+task: capture_confidentiality_verdict
+site: thread
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5.1
+fixture:
+  subject: "Kostennote 2026/447 - Weidner Handels GmbH ./. Brenner Logistik"
+  attachments:
+    - Kostennote_2026_447.pdf
+  body: |
+    Sehr geehrter Herr Weidner,
+
+    anbei unsere Kostennote fuer die Vertretung im laufenden Verfahren.
+
+    Rechnungsempfaenger: Weidner Handels GmbH, USt-IdNr. DE288114907
+    Gebuehren nach RVG   4.200,00 EUR
+    Auslagen               186,40 EUR
+    Gesamt               5.198,58 EUR
+
+    Enthalten ist die Stellungnahme zur Widerklage sowie die Besprechung zur
+    Vergleichsbereitschaft der Gegenseite.
+
+    Mit kollegialen Gruessen
+    Kanzlei am Hafen
+expect:
+  outcome: accepted
+  answer: legal
+  rubric: >
+    A law firm billing the company for representing it in a live lawsuit. The
+    invoice is addressed to the company, carries its VAT number and reads like
+    any other supplier bill — and the work it bills for is a pending
+    counterclaim and the other side's willingness to settle.
+    A sensitive subject beats ordinary trade, and a company-addressed invoice is
+    no exception. That an invoice names the company is evidence of ordinary
+    trade, never on its own a reason to open a thread. "legal" scores high, and
+    any other holding kind scores in the middle: the thread stays private, which
+    is the outcome that matters.
+    "ordinary" is the failure this scenario exists to catch and scores zero at
+    any confidence. It is the specific overreach a rule like "an invoice
+    addressed to the company is ordinary" would cause, and the cost is real: the
+    case name, the counterclaim and the fact that the opponent may settle land
+    on every colleague's screen while the matter is still running. Litigation
+    posture is exactly what a company holds close.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

@@ -58,12 +58,14 @@ func TestEveryPersistedBriefFieldIsServedOrNamedAsWithheld(t *testing.T) {
 	snoozedUntil := time.Date(2026, 8, 9, 8, 44, 0, 0, time.UTC)
 	meetingID := ids.NewV7()
 	annotatedAt := time.Date(2026, 8, 8, 6, 12, 0, 0, time.UTC)
+	previousRank := 5
 	run := briefs.BriefRun{
 		ID: runID, UserID: userID, GeneratedAt: generated, AsOf: asOf,
 		LocalDay:       time.Date(2026, 8, 8, 0, 0, 0, 0, time.UTC),
 		CandidateCount: 17, RevenueNormMinor: 918_273, RevenueNormCurrency: "CHF",
 		Narrative:   "Two replies overnight, one deal went quiet.",
 		AnnotatedAt: &annotatedAt,
+		PreviousDay: time.Date(2026, 8, 7, 0, 0, 0, 0, time.UTC),
 		Items: []briefs.BriefRunItem{{
 			ID: itemID, DealID: dealID, Rank: 3, Composite: 0.815,
 			Features: briefs.BriefFeatureVector{
@@ -72,7 +74,8 @@ func TestEveryPersistedBriefFieldIsServedOrNamedAsWithheld(t *testing.T) {
 			EvidenceIDs: []ids.UUID{evidence}, State: "snoozed",
 			StateAt: &stateAt, SnoozedUntil: &snoozedUntil,
 			ReopenOn: values.ReopenOnMeeting, ReopenRef: &meetingID,
-			Finding: "He asked about the delivery date yesterday.",
+			Finding:      "He asked about the delivery date yesterday.",
+			PreviousRank: &previousRank,
 			Lineage: &briefs.ItemLineage{
 				DismissedOn:  time.Date(2026, 8, 5, 0, 0, 0, 0, time.UTC),
 				ReturnedWith: time.Date(2026, 8, 7, 9, 15, 0, 0, time.UTC),
@@ -106,6 +109,7 @@ func TestEveryPersistedBriefFieldIsServedOrNamedAsWithheld(t *testing.T) {
 		"AsOf":           `"as_of":"2026-08-08T05:22:00Z"`,
 		"LocalDay":       `"local_day":"2026-08-08"`,
 		"CandidateCount": `"candidate_count":17`,
+		"PreviousDay":    `"previous_local_day":"2026-08-07"`,
 		"Narrative":      "Two replies overnight, one deal went quiet.",
 		"AnnotatedAt":    "2026-08-08T06:12:00Z",
 		// Withheld — so the probe is what a LEAK would look like: the value
@@ -122,7 +126,8 @@ func TestEveryPersistedBriefFieldIsServedOrNamedAsWithheld(t *testing.T) {
 	assertEveryFieldSurvives(t, "BriefRunItem", reflect.TypeOf(run.Items[0]), map[string]string{
 		"ID": `"item_id":"` + itemID.String(), "DealID": `"deal_id":"` + dealID.String(),
 		"Rank": `"rank":3`, "Composite": `"composite":0.815`, "Features": `"momentum":0.44`,
-		"EvidenceIDs": `"evidence_ids":["` + evidence.String(), "State": `"state":"snoozed"`,
+		"PreviousRank": `"previous_rank":5`,
+		"EvidenceIDs":  `"evidence_ids":["` + evidence.String(), "State": `"state":"snoozed"`,
 		"StateAt": `"state_at":"2026-08-08T07:33:00Z"`, "SnoozedUntil": `"snoozed_until":"2026-08-09T08:44:00Z"`,
 		// Served, not withheld: without the condition a snooze carrying no
 		// moment reads to an agent as one that never lifts, and it would report

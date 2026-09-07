@@ -28,6 +28,7 @@ import type { MarginceCoreState } from "../design-system/margince-core";
  * readable instead of disappearing.
  */
 export const TASK_SAID: Readonly<Record<string, string>> = {
+  account_scan: "Read what an account needs",
   agent_loop: "Worked through a request",
   brief_ranking: "Ranked your morning brief",
   capture_classify: "Sorted captured mail",
@@ -46,6 +47,7 @@ export const TASK_SAID: Readonly<Record<string, string>> = {
   offer_draft: "Drafted an offer",
   rate_extract: "Read pricing off a page",
   signal_extract: "Found signals in a thread",
+  stage_evidence_extract: "Checked what a deal still needs",
   site_extract: "Read a company website",
   site_fact_extract: "Pulled facts off a web page",
   site_triage: "Picked which pages to read",
@@ -266,6 +268,10 @@ export const SAID: Readonly<Record<string, string>> = {
   person360: "Reading everything about this contact",
   personBrief: "Summarising a contact",
   pipelines: "Reading the pipeline",
+  // The brief is written on every open, from the reader's own records, and the
+  // rail's own line follows on its next poll: this is the sentence for the
+  // second before the feed can name the meeting.
+  meetingBrief: "Preparing a meeting brief",
   "record-history": "Reading what changed",
   tasks: "Reading your tasks",
   teams: "Reading the team",

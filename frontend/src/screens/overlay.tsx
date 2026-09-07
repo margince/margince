@@ -42,7 +42,7 @@ import "./overlay.css";
 // overlay-health.tsx, split out purely to keep this file under the length
 // cap and its own functions under the cognitive-complexity gate — that file
 // has exactly one caller (this one), unlike connector-status.tsx's genuine
-// two-caller reuse (connectors.tsx and home.tsx).
+// two-caller reuse (connectors.tsx and brief.tsx).
 //
 // The card is ONE settings row: what the installation is bound to, and the
 // verb that binds it. Region + private-app token are two inputs submitted

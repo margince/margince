@@ -166,13 +166,14 @@ orphan guard in `i18n.test.ts` counts a key as rendered when it starts with a
 template stem, so an interpolated key would vouch for the whole namespace forever
 and a retired kind's copy would sit in three catalogs with nothing to flag it.
 
-**Eight kinds are narrated**, in en/de/vi, total over all six states:
+**Nine kinds are narrated**, in en/de/vi, total over all six states:
 
 | Kind | Reported by | The line a rep sees |
 |---|---|---|
 | `morning_brief` | carrier (`agent_runner`) | the scheduled brief |
 | `overnight_at_risk_sweep` | carrier (`agent_runner`) | the scheduled sweep |
 | `document_extract` | carrier (`attachment_extraction`) | reading a document you attached |
+| `account_scan` | carrier (`account_scan`, the `org_scan` row) | "I'm reading Brandt Automotive's exchanges and deals." — named for the account, because the reader who opened three accounts and moved on needs to know which is ready |
 | `site_read` | carrier (`site_read`) | reading a company's website, named for the company |
 | `weekly_review` | router | the weekly retrospective, under the rep's own principal |
 | `summarize` | router | "I'm writing your summary." |
@@ -201,6 +202,45 @@ ticker's own `enrich` key names DIFFERENT work — a provider run on a person
 (`organizations.tsx`), which POSTs `/organizations/{id}/enrich` and therefore
 runs `cold_start`, not this task. The deep read rides its own `site-read` ticker
 key, not this one.
+
+### The ask: what this tab knows before the feed does
+
+The feed arrives on a poll, so between a person pressing "Draft with AI" and
+the next read there is a live model call nothing on screen reports. The client
+closes that window from its own end (`frontend/src/api/model-inflight.ts`): it
+counts every request it is holding open to a route whose handler calls a model
+and waits, and the rail treats a non-zero count as `working` — with no kind, no
+state and no sentence, because it knows none of those, and ranked below every
+occurrence the feed carries so the feed names the work the moment it can. The
+count also drops the poll to its live cadence and refetches on both edges of
+the request, so the feed's own line follows within seconds.
+
+**Which routes count is the contract's to say, not the client's.** An operation
+whose handler holds the request open on a model carries
+`x-waits-on-model: always` (a draft, the meeting brief — generated on every
+call) or `x-waits-on-model: on-miss` (the dossier, the person brief, the deal
+status, the morning brief — served from a stored reading and generated only
+when there is none). The client's `MODEL_ROUTES` table (`api/client.ts`) is a
+declared mirror of the marked set, keyed by method AND path because the dossier
+is read and refreshed at one path and only the refresh generates every time;
+`backend/gates/modelroutes_test.go` fails when the two disagree in either
+direction or on the value. The list was nine path suffixes checked for POST
+only before this, and it drifted both ways with nothing failing: it named a
+route that calls a data provider and no model, and it missed every GET that
+generates — which is how the meeting brief ran two model calls per open with
+the chrome at rest.
+
+An `on-miss` route answers from the store in well under a second and from the
+model in many, and nothing the client can see at the moment the request leaves
+tells the two apart. So it is counted only once the request has outlived
+`CACHE_ANSWER_GRACE_MS` (one second): a stored answer never lights the orb —
+that is the reader's own click — and a generation lights it a second late
+rather than not at all.
+
+A route that enqueues model work and answers 202 is deliberately unmarked: it
+holds nothing open, and its occurrence reaches the rail the way every
+background run does, through its carrier and the feed. A surface that starts
+one calls `watchStartedAiRun` instead, which is the other bridge.
 
 ### Two surfaces, one action, no double narration
 
@@ -231,6 +271,7 @@ emitters at once.
 | Every contract kind has something that produces it | `TestEveryContractKindHasSomethingThatProducesIt` |
 | The read's text caps are the ones the contract publishes | `TestTheReadsTextCapsAreTheOnesTheContractPublishes` |
 | Every spec name can be a message-key segment | `TestEverySpecNameCanBeAMessageKeySegment` |
+| The client's table of routes that hold a model call open is the contract's `x-waits-on-model` set, in both directions and on the value | `TestTheClientsModelRouteTableIsTheContracts` (`backend/gates/modelroutes_test.go`) |
 | Every contract kind is displayed or carries a written reason | the TypeScript `Record` type — a **compile error**, not a test |
 | Every displayed kind has copy in en/de/vi, for all six states | the `LineSet` type + the i18n catalogs |
 
@@ -256,12 +297,21 @@ reporting nothing at all.
   Harmless while the rail narrates none of them; it becomes visible the moment
   anybody writes the copy.
 - **A multi-call unit reopens its occurrence once per call** ([#2276]).
-  `CompleteStructured` walks the ladder three times, and the lease is announced
-  once and cannot be renewed.
-- **The projection refuses a write into a live attempt.** `applyStateChangeSQL`
-  guards with strict `>` on `(attempt, rank)`, so an equal-tuple event updates
-  nothing. A lease REFRESH and per-step progress TICKS are both impossible
-  without changing the projection.
+  A task whose unit of work spans several LOGICAL calls under one correlation
+  id settles after each and reopens at the next call's attempt. Within one
+  logical call the occurrence is stable: `CompleteStructured` walks the ladder
+  up to three times under one start, and the lease is renewed before every
+  model call after the first.
+- **The projection admits exactly one write into a live attempt: a longer
+  lease.** `applyStateChangeSQL` guards with strict `>` on `(attempt, rank)`,
+  and beside it takes an equal-tuple event in the same live state whose
+  `stale_after` is later than the row's. That is the lease renewal the router
+  makes per model call, and it is what lets each lease be sized for ONE call —
+  `CallCeiling` plus the flush — rather than for the whole logical call, which
+  used to be forty-five minutes of a dead process displayed as working. A
+  redelivery carries an equal instant and a late renewal an earlier one, so the
+  branch refuses both; a settled row has no `stale_after`, so it refuses those
+  too. Per-step progress TICKS remain impossible without a further change.
 - **The contract has no word for two real states.** Site read's `deferred`
   ("waiting on budget, retry at `next_attempt_at`" — not `queued`, since nothing
   will pick it up, and not settled) and `cancelled` (terminal, but `done` and
@@ -269,11 +319,14 @@ reporting nothing at all.
   mapping. Two things already fit exactly: `site_read.stopped_reason` is a closed
   vocabulary that drops straight into `degrade_reason`, and `partial` →
   `degraded`.
-- **`subject_type` / `subject_id` are carried and stored but never read.** The
-  event envelope has both, `ai_task_run` has both columns, and exactly one
-  emitter populates them (`document_extract` → `attachment`). Nothing selects
-  them, and the wire contract does not expose them. **This is not a to-do.** A
-  subject-scoped read was designed and declined: it would replace an
+- **`subject_type` / `subject_id` are forwarded, never filtered on.** The
+  event envelope has both, `ai_task_run` has both columns, and the feed ships
+  them beside `subject_label` so the rail can make the name a link to the
+  record (a company or a person; a document or a meeting has no page and stays
+  text). They travel on the same ground as the label — the source emitted them
+  only where the actor is the person the record was already shown to — and
+  the read stays keyed on the person alone. **A subject-scoped read is not a
+  to-do.** It was designed and declined: it would replace an
   authorization that holds by construction — another person's feed cannot be
   expressed — with one that holds because a gate ran, and `auth.EnsureVisible`
   alone is not that gate (it checks no object grant, and for an identity table
@@ -304,6 +357,7 @@ reporting nothing at all.
 | The wire | `AiActivity` / `AiActivityKind` / `AiActivityItem` + `GET /me/ai-activity` (`backend/api/crm.yaml`) |
 | What is drawn, and what is not | `frontend/src/app/ai-activity-lines.ts` |
 | The rail component + poll | `frontend/src/app/agentrail.tsx`, `ai-activity.ts` |
+| The ask: which routes count, and the count | `x-waits-on-model` in `backend/api/crm.yaml`, `MODEL_ROUTES` in `frontend/src/api/client.ts`, `frontend/src/api/model-inflight.ts` |
 | The census gate | `backend/gates/aiactivitycatalogparity_test.go` |
 
 **Related:** [ai-runtime.md](ai-runtime.md) (the task contract and the Router

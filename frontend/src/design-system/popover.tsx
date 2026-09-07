@@ -68,6 +68,9 @@ export function Popover({
   children: ReactNode;
 }>) {
   const [open, setOpen] = useState(false);
+  // How the panel came to be open. A press is a reader asking for it, and
+  // focus follows; a passing pointer is not, and focus stays where it was.
+  const [openedBy, setOpenedBy] = useState<"press" | "hover">("press");
   const trigger = useRef<HTMLButtonElement | null>(null);
   const panel = useRef<HTMLElement | null>(null);
   const panelId = useId();
@@ -82,19 +85,28 @@ export function Popover({
   // the failure this prevents; a panel of prose has no stops at all and takes
   // no focus, so the reader stays on the trigger they pressed.
   useEffect(() => {
-    if (!open || onHover) {
+    if (!open || openedBy === "hover") {
       return;
     }
     // Never on a hover-opened panel: the pointer is somewhere else on the page
     // and taking focus off what the reader was doing to put it in a panel they
-    // merely passed over is the page grabbing at them.
+    // merely passed over is the page grabbing at them. A panel that ALSO opens
+    // on hover still hands focus over when a key or a click opened it: the
+    // control in it has to be reachable by the reader who asked for it.
     panel.current?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
-  }, [open, onHover]);
+  }, [open, openedBy]);
 
   const hover = useHoverIntent(
-    () => setOpen(true),
+    () => {
+      setOpenedBy("hover");
+      setOpen(true);
+    },
     () => setOpen(false),
   );
+  const press = () => {
+    setOpenedBy("press");
+    setOpen((was) => !was);
+  };
 
   useEffect(() => {
     if (!open) {
@@ -144,7 +156,7 @@ export function Popover({
           }
           aria-expanded={open}
           aria-controls={panelId}
-          onClick={() => setOpen((was) => !was)}
+          onClick={press}
           {...(onHover ? hover : {})}
         >
           {label}
@@ -159,7 +171,7 @@ export function Popover({
           }
           aria-expanded={open}
           aria-controls={panelId}
-          onClick={() => setOpen((was) => !was)}
+          onClick={press}
           {...(onHover ? hover : {})}
         >
           {label}

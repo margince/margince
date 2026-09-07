@@ -36,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -60,6 +61,34 @@ func visibilityFor(ownerScoped bool) string {
 		return visibilityOwner
 	}
 	return visibilityWorkspace
+}
+
+// bornOwnerScoped answers whether the ACTOR behind a typed create makes the new
+// contact its owner's rather than the workspace's.
+//
+// A human typing a contact into the UI, the REST API or a CSV import is
+// publishing it on purpose, and that decision stands. An AGENT minting one from
+// a tool call is not that decision: create_record is auto_execute, so it runs
+// without a human seeing the row first — and a contact an agent invented while
+// answering a question about one seat's meeting became readable by every account
+// in the installation.
+//
+// AGENTS ONLY, deliberately. The other two non-human types must not be swept in:
+//
+//   - a CONNECTOR path that mints a capture-private contact already says so for
+//     itself, through PersonSpec.Visibility (people's own ensurer takes
+//     OwnerScoped as an argument). Deciding it here as well would overrule the
+//     paths that legitimately create a workspace contact under a connector
+//     principal — public booking mints the person who booked the meeting, and
+//     hiding them would leave a booking nobody but one seat can see.
+//   - the SYSTEM principal carries no human owner at all, so an 'owner' row it
+//     created would have a NULL owner_id and be readable by nobody.
+func bornOwnerScoped(ctx context.Context) bool {
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		return false
+	}
+	return actor.Type == principal.PrincipalAgent
 }
 
 // ownerFromUUID adapts the storage-level owner id the capture and triage paths

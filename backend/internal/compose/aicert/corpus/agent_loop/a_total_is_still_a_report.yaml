@@ -22,6 +22,8 @@ expect:
     for it here would hand back a page of deals and leave the arithmetic to be
     done on whatever fraction of them fitted in the page — a wrong total that
     looks like a right one.
+  near_misses:
+    - query_workspace
   bands:
     certified_min: 70
     degraded_min: 50

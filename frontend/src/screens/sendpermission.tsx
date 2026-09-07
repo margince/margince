@@ -176,6 +176,8 @@ function reasonKey(recipient: Recipient | undefined) {
       return "sendPermission.reason.withdrawn" as const;
     case "processing_restricted":
       return "sendPermission.reason.restricted" as const;
+    case "subject_request":
+      return "sendPermission.reason.askedUsToStop" as const;
     case "hard_bounce":
       return "sendPermission.reason.bounced" as const;
     case "frequency_cap_reached":

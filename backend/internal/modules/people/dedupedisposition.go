@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 // ensurePairWritable narrows the pair's read gate to the authority a decision
@@ -100,19 +101,24 @@ func (s *Store) DisposeDedupeCandidate(ctx context.Context, id ids.UUID, disposi
 	return s.GetDedupeCandidate(ctx, id)
 }
 
-// disposeMerge is the merge arm: validate the winner, mark first (a CAS on
-// open, so a concurrent decision cannot double-merge), then run the ONE merge
-// verb in its own transaction. A merge the verb REFUSES re-opens the row.
+// disposeMerge is the merge arm: validate the winner, then mark and merge in
+// ONE transaction — the CAS on open (so a concurrent decision cannot
+// double-merge) and the merge itself commit together or not at all.
 //
-// That compensation is not a guarantee, and saying so is the point: the mark
-// and the merge are separate transactions, so a reopen that itself fails — or
-// a process that stops between the two — leaves the candidate at 'merged' with
-// no merge behind it, suppressed for the whole workspace. errors.Join reports
-// it and nothing repairs it. Dismiss and undo do not have this shape; they
-// commit their probe and their write together through writePairDecision. The
-// merge arm cannot yet, because the merge verbs are Store methods that open
-// their own transactions rather than joining a caller's. Tracked as its own
-// issue (#1970); do not read the compensation as atomicity.
+// It used to be three transactions: mark, merge, and a compensating re-open on
+// failure. That compensation was not a guarantee. A re-open that itself failed
+// — or a process that stopped between the mark and the merge — left the
+// candidate at 'merged' with no merge behind it, suppressed for the whole
+// workspace, invisible in every queue, with nothing to repair it. errors.Join
+// reported it to the caller and that was the end of it (#1970).
+//
+// Now it has the shape dismiss and undo already had: the probe and the write in
+// one commit. A merge the verb refuses takes the mark down with it because the
+// mark was never committed, rather than because a second write put it back.
+//
+// The RBAC verb and the active-column read stay OUTSIDE the transaction, which
+// is where the exported merge verbs do them too — they need no transaction, and
+// holding the pair lock across them would widen the lock for nothing.
 func (s *Store) disposeMerge(ctx context.Context, id ids.UUID, row DedupeCandidateRow, winnerID *ids.UUID, by ids.UUID) error {
 	if winnerID == nil || (*winnerID != row.LeftID && *winnerID != row.RightID) {
 		return &DedupeInputError{Field: "winner_id", Msg: "must be one of the pair"}
@@ -121,44 +127,51 @@ func (s *Store) disposeMerge(ctx context.Context, id ids.UUID, row DedupeCandida
 	if loser == *winnerID {
 		loser = row.RightID
 	}
-	if err := s.setDedupeDisposition(ctx, id, dispositionMerged, by); err != nil {
+	if err := auth.Require(ctx, row.EntityType, principal.ActionUpdate); err != nil {
 		return err
 	}
-	if err := s.executeDedupeMerge(ctx, row.EntityType, loser, *winnerID); err != nil {
-		if reopenErr := s.reopenDedupeCandidate(ctx, id); reopenErr != nil {
-			return errors.Join(err, reopenErr)
+	active, err := s.activeColumns(ctx, row.EntityType)
+	if err != nil {
+		return err
+	}
+	capturedBy, err := storekit.CapturedBy(ctx)
+	if err != nil {
+		return err
+	}
+	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := setDedupeDispositionTx(ctx, tx, id, dispositionMerged, by); err != nil {
+			return err
 		}
-		return err
-	}
-	return nil
+		return s.executeDedupeMergeTx(ctx, tx, row.EntityType, loser, *winnerID, active, capturedBy)
+	})
 }
 
-// executeDedupeMerge runs the ONE merge implementation for the pair's type.
-func (s *Store) executeDedupeMerge(ctx context.Context, entityType string, loser, winner ids.UUID) error {
+// executeDedupeMergeTx runs the ONE merge implementation for the pair's type,
+// inside the caller's transaction.
+//
+// The transaction-scoped spellings rather than the exported verbs: those open
+// their own transaction, which is exactly what kept the mark and the merge
+// apart. Their pre-transaction guards are hoisted to disposeMerge above so
+// nothing is skipped by taking this route — the self-merge check is not among
+// them because the loser is derived as the OTHER end of the pair and cannot
+// equal the winner.
+func (s *Store) executeDedupeMergeTx(
+	ctx context.Context, tx pgx.Tx, entityType string, loser, winner ids.UUID,
+	active []fieldcatalog.Column, capturedBy string,
+) error {
 	switch entityType {
 	case entityPerson:
-		_, err := s.MergePerson(ctx, ids.From[ids.PersonKind](loser), ids.From[ids.PersonKind](winner))
+		_, err := s.mergePersonTx(ctx, tx, ids.From[ids.PersonKind](loser), ids.From[ids.PersonKind](winner), active)
 		return err
 	case entityOrganization:
-		_, err := s.MergeOrganization(ctx, ids.From[ids.OrganizationKind](loser), ids.From[ids.OrganizationKind](winner))
+		_, err := mergeOrganizationTx(ctx, tx, ids.From[ids.OrganizationKind](loser), ids.From[ids.OrganizationKind](winner), active)
 		return err
 	case entityLead:
-		_, err := s.MergeLead(ctx, ids.From[ids.LeadKind](loser), ids.From[ids.LeadKind](winner))
+		_, err := mergeLeadTx(ctx, tx, ids.From[ids.LeadKind](loser), ids.From[ids.LeadKind](winner), active, capturedBy)
 		return err
 	default:
 		return fmt.Errorf("people: unmergeable entity type %q", entityType)
 	}
-}
-
-// setDedupeDisposition is the CAS open→disposed; losing the race answers
-// conflict, never a second merge. The audit row rides the same commit;
-// dedupe_candidate is not a §4.1 stream entity, so the disposition has no
-// bus event — the audit ledger is the record (the merge arm's
-// person.merged/organization.merged carries the bus-visible fact).
-func (s *Store) setDedupeDisposition(ctx context.Context, id ids.UUID, disposition string, by ids.UUID) error {
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		return setDedupeDispositionTx(ctx, tx, id, disposition, by)
-	})
 }
 
 // writePairDecision commits a human's verdict on a pair under the authority
@@ -196,12 +209,6 @@ func setDedupeDispositionTx(ctx context.Context, tx pgx.Tx, id ids.UUID, disposi
 		map[string]any{auditKeyDisposition: dispositionOpen},
 		map[string]any{auditKeyDisposition: disposition})
 	return err
-}
-
-func (s *Store) reopenDedupeCandidate(ctx context.Context, id ids.UUID) error {
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		return reopenDedupeCandidateTx(ctx, tx, id)
-	})
 }
 
 func reopenDedupeCandidateTx(ctx context.Context, tx pgx.Tx, id ids.UUID) error {

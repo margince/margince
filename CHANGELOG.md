@@ -23,6 +23,30 @@ numbers appear here when releases start.
 
 ### Changed
 
+- **Opening a meeting brief lights the AI-activity rail while it is written.**
+  The brief is generated on every open, and the chrome reported an agent at rest
+  for the whole of it because the client counted only a POST to a hand-kept
+  list of paths as the agent working. Which routes hold a model call open is now
+  the contract's to say (`x-waits-on-model: always | on-miss` on the operation),
+  the client mirrors that set by method and path, and a gate holds the two
+  together. Every generation a person waits on now reaches the rail the moment
+  its request leaves — the meeting brief, the intro drafts, the role proposals,
+  the onboarding conversation, and the cache-backed readings (the dossier, the
+  person brief, the deal status) once they have run longer than a stored answer
+  takes. A stored reading still never lights the orb.
+
+- **An email address anywhere in the product opens Margince's composer.** The
+  address on a contact's or a lead's header, in the contact rail's details, and
+  on the people cards of an account page used to be a `mailto:` link, which
+  handed the address to whatever mail client the browser had — the message left
+  outside the product, nothing was filed on the record, no consent was asked,
+  and the thread on the record had a hole where the reply arrived. Each address
+  is now a button into the same composer the header's Email verb opens, on the
+  record the address belongs to and with the address already in the To line —
+  for a reader who has connected a mailbox for Margince to send from. Without
+  one the address stays a `mailto:`, because the composer could only refuse.
+  Phone numbers still dial through `tel:`.
+
 - **The relationship brief is written by a model, and reads what people actually
   wrote.** The person page's standing brief has always been a deterministic
   composition; it now runs on the `summarize` lane as the invocation site
@@ -572,6 +596,19 @@ numbers appear here when releases start.
   screen, which does not exist yet.
 
 ### Fixed
+
+- **A record page no longer offers a write the server will refuse.** A rep
+  holding the deal grant opened a colleague's deal, was offered Edit, the
+  upload, New offer, the stakeholder edges and the stage move, and learned from
+  a 403 after filling the form in that the record was never theirs to change.
+  The server has always said so per row (`writable`); the deal, contact, lead
+  and company pages now read it — with the object grant and the seat — through
+  one shared answer, print one sentence for why the record takes no changes,
+  and refuse every verb that writes the record from that sentence, the way the
+  project page already did. The relationships panel and the standing activity
+  composer ask the same before they draw, wherever they are mounted. The
+  "belongs to someone else" wording is gone: the one sentence now covers a
+  missing grant and a read seat as well, and tells the reader whom to ask.
 
 - **A replayed body re-checks every record it names, not only the one it
   replays by.** `POST /people/quick-capture` answers the person created plus the

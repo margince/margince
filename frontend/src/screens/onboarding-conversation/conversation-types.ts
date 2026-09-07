@@ -163,6 +163,12 @@ export type ConversationState = {
   /** How the last voice build ended: failed may be retried, deferred
    * resumes on its own and its later events re-enter vo.building. */
   lastBuildStatus: BuildTerminalStatus | null;
+  /** What the server said about that ending, in its own words (the build
+   * row's status_detail). It is the whole difference between "no provider is
+   * configured" and "the model answered badly", and dropping it left one
+   * fixed sentence standing in for every cause. Null when the server had
+   * none, and cleared whenever a new build starts. */
+  lastBuildDetail: string | null;
   /** LinkedIn's own resolution on the connect screen, independent of mail:
    * "pending" admits LINKEDIN_SAVED/LINKEDIN_SKIPPED exactly once; either
    * resolves it, and neither ever gates CONNECT_DONE. */
@@ -245,7 +251,16 @@ export type ConversationEvent =
   | { type: "SPEAKER_NEEDED"; question: ConversationQuestion }
   | { type: "BUILD_STARTED"; buildId: string }
   | { type: "BUILD_STAGE"; buildId: string; stage: BuildStage }
-  | { type: "BUILD_TERMINAL"; buildId: string; status: BuildTerminalStatus }
+  // detail is the build row's own status_detail: safe operator guidance the
+  // server composed for exactly this outcome, and the only thing that tells a
+  // broken build apart from another broken build. Null when the server had
+  // none, which every headline below reads correctly without.
+  | {
+      type: "BUILD_TERMINAL";
+      buildId: string;
+      status: BuildTerminalStatus;
+      detail: string | null;
+    }
   // Leaving the voice act, built or skipped, lands straight on connect.
   | { type: "VOICE_DONE" }
   // A succeeded build the reader does not recognise as their own: back to

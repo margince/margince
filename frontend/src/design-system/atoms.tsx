@@ -47,6 +47,14 @@ import "./atoms.css";
  * so a reader learns one colour for "Margince did this" rather than one per
  * surface, and it never marks importance: a destructive verb an agent performs
  * is still danger.
+ *
+ * `link` is the quietest rung: the text affordance `.link-button` already draws
+ * for an `<a>` or a hand-rolled `<button>`, reached through this component by a
+ * verb that also needs what only this component gives — the refusal contract
+ * and the `pending` one. It wears that same class rather than a look of its
+ * own, so the two spellings of a link affordance cannot drift apart. `small`
+ * and `iconOnly` say nothing here: the class has no fill, no width floor and no
+ * control height for either to shrink.
  */
 export type ButtonVariant =
   | "primary"
@@ -54,7 +62,8 @@ export type ButtonVariant =
   | "danger"
   | "federated"
   | "ai"
-  | "aiQuiet";
+  | "aiQuiet"
+  | "link";
 
 /**
  * The turning mark a control shows while a write it started is in flight.
@@ -908,9 +917,13 @@ export function StatCard({
   detail?: ReactNode;
   // The way OUT of the reading: the tab that holds what it was read from.
   // Both or neither, like `basis` — a labelled door with nothing behind it is
-  // worse than no door. A LINK at the card's foot rather than a pressable
-  // card, because the card already holds a control (the basis) and a control
-  // inside a control is a press whose target the reader has to guess at.
+  // worse than no door.
+  //
+  // The whole CARD is this button's target: the words at the foot say where the
+  // door goes, and the tile answers the pointer aimed anywhere on it (atoms.css
+  // stretches the button over the card). ONE control and not two — the basis
+  // chip is layered above that target and keeps its own press, so asking what a
+  // figure rests on never also leaves the page.
   openLabel?: string;
   onOpen?: () => void;
   // How far along this reading is, as the two numbers it is made of. Drawn as

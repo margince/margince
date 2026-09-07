@@ -1,0 +1,48 @@
+name: a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade
+task: capture_confidentiality_verdict
+site: thread
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5.1
+fixture:
+  subject: "Your ticket for LogistikForum 2026 - order LF26-11884"
+  attachments:
+    - Ticket_LF26_11884.pdf
+  body: |
+    Hello Tobias Weidner,
+
+    Thank you for registering for LogistikForum 2026 in Hamburg, 14-15 October.
+
+    Delegate pass (1)     EUR 890.00
+    Total paid            EUR 890.00
+
+    Paid by personal card; your invoice is attached for reimbursement by your
+    employer. Your badge lists you as Weidner Handels GmbH and you are speaking
+    on the Thursday panel on regional distribution. Send us your slides by
+    30 September so we can load them.
+
+    See you in Hamburg,
+    Delegate Services
+expect:
+  outcome: accepted
+  answer: ordinary
+  rubric: >
+    A conference registration in the mailbox owner's own name, paid by him, for
+    an event he is speaking at on the company's behalf. The receipt names a
+    person; the activity is the company's.
+    Whose ACTIVITY the money is for decides, not whose name the receipt carries.
+    A business trip, a work tool and a trade-fair ticket are the company's trade
+    however they were paid, and the team needs to see the panel, the date and
+    the slide deadline. "ordinary" scores high.
+    "personal" is the failure this scenario exists to catch and scores zero at
+    any confidence. It is the overreach that the household-bill rule invites: an
+    invoice addressed to a person, an amount he paid himself, a reimbursement to
+    come — the same surface as a private phone bill. If a classifier holds this,
+    the fix for the privacy defect has started hiding ordinary business, and the
+    speaking commitment disappears from the CRM of the company being
+    represented.
+    Read the purpose. The badge, the panel and the slides are the company's
+    work, and nothing here concerns the owner's household.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

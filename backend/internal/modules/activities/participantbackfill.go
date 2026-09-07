@@ -132,9 +132,9 @@ func backfillParticipants(ctx context.Context, tx pgx.Tx, limit int) (int, error
 		            LIMIT 1
 		      ) o ON true
 		     WHERE a.archived_at IS NULL
-		       		       -- The same set live stamping and hand-logging accept, rendered
-		       -- from one definition so the three cannot drift apart.
-		       AND a.kind IN (`+relstrength.InteractionKindSQLList()+`)
+		       -- The same set every other writer of a participant row accepts,
+		       -- rendered from one definition so the four cannot drift apart.
+		       AND a.kind IN (`+relstrength.ParticipantKindSQLList()+`)
 		       AND NOT EXISTS (
 		           SELECT 1 FROM activity_participant p WHERE p.activity_id = a.id)
 		     ORDER BY a.id

@@ -94,7 +94,7 @@ describe("the opening sentence", () => {
       // A key that renders no row title, for the case where no sentence was
       // composed at all: the assertion is about what the sentence does NOT
       // name, and a missing sentence names nothing either.
-      t(sentence?.key ?? "home.glance.intro", sentence?.values),
+      t(sentence?.key ?? "brief.glance.intro", sentence?.values),
     ).not.toContain("Confirm the close date");
   });
 

@@ -60,7 +60,7 @@ while IFS= read -r f; do
 # craftsmanship gate tooling with its own tests, out of this gate's scope.
 done < <(find backend -name '*_test.go' 2>/dev/null | sort)
 
-if [ "$violations" -ne 0 ]; then
+if [[ "$violations" -ne 0 ]]; then
   echo "FAIL: test-lanes — real-infra tests must carry //go:build integration."
   exit 1
 fi

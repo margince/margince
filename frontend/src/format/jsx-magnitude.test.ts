@@ -16,6 +16,8 @@ import { describe, expect, it } from "vitest";
 import {
   extensionFrontendFiles,
   filesUnder,
+  parseSource,
+  sourceFileAt,
 } from "../../scripts/lib/source-tree";
 
 // A number reaching a reader has been written in SOME notation, and the only
@@ -95,7 +97,7 @@ import {
 //     extension tier — a new one under `src/` fails.
 //   - A prop declared `number`. The ruling belongs where the component renders
 //     it, not where a caller passes it, and that render site is itself in
-//     scope — which is how `home.rail.tsx`'s `DigestCount` is caught once, at
+//     scope — which is how `brief.rail.tsx`'s `DigestCount` is caught once, at
 //     the `<span>{value}</span>` that is actually wrong, rather than four times
 //     at callers doing nothing wrong.
 
@@ -129,13 +131,7 @@ function blindStringifiers(): Set<string> {
     if (!/^lib\..*\.d\.ts$/.test(file)) {
       continue;
     }
-    const parsed = ts.createSourceFile(
-      file,
-      ts.sys.readFile(join(libDir, file)) ?? "",
-      ts.ScriptTarget.Latest,
-      true,
-      ts.ScriptKind.TS,
-    );
+    const parsed = sourceFileAt(join(libDir, file));
     const walk = (node: ts.Node): void => {
       if (ts.isInterfaceDeclaration(node) && node.name.text === "Number") {
         for (const member of node.members) {
@@ -186,13 +182,7 @@ function svgGeometry(): Set<string> {
     "react",
     "index.d.ts",
   );
-  const parsed = ts.createSourceFile(
-    declarations,
-    ts.sys.readFile(declarations) ?? "",
-    ts.ScriptTarget.Latest,
-    true,
-    ts.ScriptKind.TS,
-  );
+  const parsed = sourceFileAt(declarations);
   const found = new Set<string>();
   const walk = (node: ts.Node): void => {
     if (ts.isInterfaceDeclaration(node) && node.name.text === "SVGAttributes") {
@@ -756,7 +746,7 @@ function plant(
   const readReal = host.getSourceFile.bind(host);
   host.getSourceFile = (name, version, onError, shouldCreate) =>
     name === fixtureName
-      ? ts.createSourceFile(name, source, version, true, ts.ScriptKind.TSX)
+      ? parseSource(name, source)
       : readReal(name, version, onError, shouldCreate);
   host.fileExists = (name) => name === fixtureName || ts.sys.fileExists(name);
   host.readFile = (name) =>

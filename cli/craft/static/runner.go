@@ -311,12 +311,28 @@ func (fc *fileContext) waiverHygiene() []Finding {
 	return out
 }
 
+// countLines answers the line count `wc -l` answers: a terminating newline ENDS
+// the last line rather than opening another, and an unterminated tail is still a
+// line. That is how the rubric states its ceilings and how a reader measures the
+// file in front of them, so a gate counting any other way fails files the rubric
+// admits.
+//
+// scripts/check-go-file-length.sh holds the same 500-line cap over the same Go
+// files and counts with `wc -l` itself. The two cannot share a helper across bash
+// and Go, so each names the other: a file at exactly the cap must pass both, and
+// that is only true while both count alike.
 func countLines(src []byte) int {
-	n := 1
+	if len(src) == 0 {
+		return 0
+	}
+	n := 0
 	for _, b := range src {
 		if b == '\n' {
 			n++
 		}
+	}
+	if src[len(src)-1] != '\n' {
+		n++
 	}
 	return n
 }

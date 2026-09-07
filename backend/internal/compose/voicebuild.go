@@ -337,6 +337,13 @@ func (w *voiceBuildWorker) fail(ctx context.Context, buildID ids.UUID, claimedAt
 // missing or unbound model lane is model_unavailable, malformed or
 // unverifiable model output is invalid_output, everything else is internal.
 func failureStatusCode(err error) string {
+	// By sentinel and FIRST, because the fake's rejection is also a rejection:
+	// its text matches the invalid_output markers below, and classifying an
+	// installation with no provider as bad model output is what makes the row
+	// say "try again" to somebody whose every retry is already failing.
+	if errors.Is(err, ai.ErrUnconfiguredModel) {
+		return "model_unavailable"
+	}
 	text := err.Error()
 	for _, marker := range []string{"no model path", "no bound", "not bound", "unbound"} {
 		if strings.Contains(text, marker) {

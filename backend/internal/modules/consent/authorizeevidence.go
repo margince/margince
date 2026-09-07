@@ -73,6 +73,50 @@ func repliesToTheSubject(ctx context.Context, tx pgx.Tx, anchor ids.UUID, subjec
 	return found, nil
 }
 
+// wroteIntoThread is repliesToTheSubject asked by THREAD KEY rather than by
+// anchor message.
+//
+// The two are one question: repliesToTheSubject's first step is to resolve its
+// anchor to a thread_key, and this is that same query given the key directly.
+// It exists because the transmit phase has no anchor — communication_decision
+// records none — but comms_outbound carries thread_key on the delivery row, so
+// the same evidence is still reachable one phase later. Without it a reply is
+// authorized at staging and refused at transmit, which reads to a rep as a
+// refusal rather than as a gap.
+//
+// Two writers of one invariant either share a helper or say why they do not:
+// the authorship test is the shared authorIsTheSubject spelling, so the only
+// difference between the two functions is how the thread is named.
+//
+// ONE RESTRICTION IS DELIBERATELY ABSENT. repliesToTheSubject requires the
+// ANCHOR to be unarchived, because a caller pointing at an archived message is
+// pointing at something withdrawn from the timeline. Here there is no anchor to
+// check, and archiving the message a reply was staged against does not unsay
+// what the subject wrote: the evidence is their own inbound mail, and that row
+// carries its own archived_at test in both queries. So a delivery authorized at
+// staging still transmits after its anchor is archived, which is the intended
+// reading — the thread's evidence is what the basis rests on, not the anchor.
+func wroteIntoThread(ctx context.Context, tx pgx.Tx, threadKey string, subject subjectRef) (bool, error) {
+	if threadKey == "" {
+		return false, nil
+	}
+	var found bool
+	err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1
+			  FROM activity a
+			  JOIN activity_participant p ON p.activity_id = a.id
+			 WHERE a.direction = 'inbound'
+			   AND a.archived_at IS NULL
+			   AND a.thread_key = $4
+			   AND `+authorIsTheSubject+`
+		)`, subject.Kind, subject.ID, subject.Address, threadKey).Scan(&found)
+	if err != nil {
+		return false, fmt.Errorf("consent: read the thread this message answers: %w", err)
+	}
+	return found, nil
+}
+
 // wroteToUsWithin reports whether the subject SENT us something inside the
 // window, on any thread.
 //

@@ -188,7 +188,19 @@ func (r *callRuntime) ingressAuthority(ctx context.Context, on extension.UserID)
 // id, which is what makes the sink's own "a connector cannot claim to be
 // another one" check pass by construction rather than by the unit getting it
 // right.
-
+//
+// WithProviderAttestedParticipants is deliberately NOT called, which leaves the
+// roster un-attested and keeps the mail rule over it: capture may resolve a
+// party to a contact the installation already holds, and may never bind a
+// colleague's user_id from one. A unit's roster is a remote system's text —
+// openchannel's edge is a signed URL anybody holding the secret may post to — so
+// a roster that bound a seat would let a sender name our own CEO as present and
+// manufacture the interaction edge that then names them the warmest route to the
+// sender's own contact. That is the Cc-line forgery the mail rule refuses, in a
+// second vocabulary.
+//
+// The absence is written down because the zero value is doing the work: reaching
+// for that setter here means deleting this paragraph first.
 func (r *callRuntime) normalized(rec extension.Record, declared extension.IngressSource) connector.NormalizedRecord {
 	return connector.NormalizedRecord{
 		EntityType: datasource.EntityActivity,
@@ -210,7 +222,33 @@ func (r *callRuntime) normalized(rec extension.Record, declared extension.Ingres
 		Addresses:    rec.Addresses,
 		Raw:          rec.Raw,
 		Counterparty: counterpartyOf(rec.Counterparty, declared),
+		Participants: participantsOf(rec.Participants),
 	}
+}
+
+// participantsOf maps the published roster onto the core's.
+//
+// Record.Validate has already refused an over-cap roster and a party with no
+// identity by the time this runs, so CapParticipants here is belt and braces
+// rather than the decision: it is the core's own bound, applied where the core
+// can see it, for a record that reached this function some other way. Said
+// plainly because the alternative is a reader assuming this line is what stops
+// a sixty-person group — it is not, and the refusal a unit reads comes from the
+// door.
+func participantsOf(parties []extension.Participant) []connector.MessageParticipant {
+	if len(parties) == 0 {
+		return nil
+	}
+	mapped := make([]connector.MessageParticipant, 0, len(parties))
+	for _, p := range parties {
+		mapped = append(mapped, connector.MessageParticipant{
+			Email:         p.Email,
+			ChannelUserID: p.Account,
+			DisplayName:   p.Name,
+			Role:          p.Role,
+		})
+	}
+	return connector.CapParticipants(mapped)
 }
 
 // counterpartyOf maps the published counterparty onto the core's and stamps what

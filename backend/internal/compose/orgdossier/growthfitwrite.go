@@ -127,7 +127,7 @@ var growthFitDimensions = map[string]bool{
 // reading the reader already has.
 func keepSubScores(
 	in []GrowthFitSubScore,
-	known map[claims.Evidence]bool,
+	known map[claims.Evidence]string,
 ) []GrowthFitSubScore {
 	var out []GrowthFitSubScore
 	seen := map[string]bool{}
@@ -235,7 +235,7 @@ var (
 // hold. An unlabelled sentence is read as a fact, which is the strictest
 // reading — it is the one nature that promises the reader a record says so, so
 // a mislabelled judgment is dropped rather than promoted.
-func keepNatures(in []claims.Sentence, known map[claims.Evidence]bool, allowed map[string]bool) []claims.Sentence {
+func keepNatures(in []claims.Sentence, known map[claims.Evidence]string, allowed map[string]bool) []claims.Sentence {
 	grounded := claims.Keep(in, known, knownNature, natureFact)
 	out := make([]claims.Sentence, 0, len(grounded))
 	for _, sentence := range grounded {

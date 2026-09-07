@@ -1,0 +1,10 @@
+{
+  "scenario": "case1_log_it",
+  "criteria": [
+    8,
+    14
+  ],
+  "passed": 3,
+  "runs": 3,
+  "pass_at": 2
+}

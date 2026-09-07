@@ -28,6 +28,17 @@ type Handlers struct {
 // supplies the activities store's own reader, and a nil one leaves every email
 // hit rendering the generic way.
 func NewHandlers(db *database.DB, tagReach TagReachCounter, emailRows EmailSummaryReader) Handlers {
+	// THE CEILING RIDES THE HANDLE THE CALLER PASSES, and compose passes a
+	// bounded one (server.go). It is not armed here, and that is deliberate:
+	// the ceiling is a statement about who is WAITING, and the same constructor
+	// would otherwise impose a request-path budget on any surface that reuses
+	// it. Arming it at the wiring site puts it where every other seam of this
+	// server is chosen, and lets a caller that answers nobody say so.
+	//
+	// Riding the HANDLE rather than one call site is what reaches both lanes
+	// this surface opens — the lexical ranking, and the vector one through the
+	// retriever. A ceiling armed at a single Query would leave the other lane as
+	// unbounded as it was before anybody thought about it.
 	store := NewStore(db).WithTagReach(tagReach).WithEmailSummaries(emailRows)
 	// Embedder is nil, and stays nil: the only thing this retriever serves is
 	// AssembleContext, which walks the context graph and never embeds. The

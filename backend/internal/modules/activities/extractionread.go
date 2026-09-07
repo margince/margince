@@ -99,6 +99,27 @@ func (r ExtractionRead) Live() bool {
 	return r.Status == ExtractionReadQueued || r.Status == ExtractionReadRunning
 }
 
+// liveSince is the instant the current attempt began to age: a running
+// reading from its claim, a queued one from when this attempt was queued. It
+// is the origin the AI-activity rail ages the reading by, and the one the
+// door's re-arm and the worker's reclaim read in SQL, so all three agree on
+// when a reading stopped being believable.
+func (r ExtractionRead) liveSince() time.Time {
+	if r.Status == ExtractionReadRunning && r.StartedAt != nil {
+		return *r.StartedAt
+	}
+	return r.AttemptAt
+}
+
+// Abandoned reports a live reading nobody is working: its attempt has aged
+// past the lease, so the worker that held it was killed, timed out, or never
+// claimed it. It is what the poll reports as stalled, and the reason the
+// panel then offers a fresh read where it showed "reading…" with nothing to
+// press — the only surface a rep has from which to reach the re-arm.
+func (r ExtractionRead) Abandoned(now time.Time) bool {
+	return r.Live() && now.Sub(r.liveSince()) > ExtractionReadLease
+}
+
 const extractionReadColumns = `id, attachment_id, status, status_detail, fields,
 	requested_by, started_at, finished_at, created_at, attempt, attempt_at`
 
@@ -217,13 +238,18 @@ func (s *Store) rearmIfAbandonedExtraction(
 	// attempts, or lost with the queue — and it strands exactly as hard, because
 	// the in-flight index makes the corpse block every new reading of the
 	// document while `rearm` is the only thing that could clear it.
+	//
+	// A queued row ages from attempt_at, not created_at: a reading released or
+	// re-armed a moment ago and dated by its creation would be re-armed again
+	// on the very next press, under a rising attempt, for as long as it waited.
+	// The predicate is ExtractionRead.Abandoned spelled in SQL.
 	rearmed, err := scanExtractionRead(tx.QueryRow(ctx, `
 		UPDATE attachment_extraction
 		   SET status = 'queued', started_at = NULL, status_detail = NULL,
 		       attempt = attempt + 1, attempt_at = now()
 		 WHERE id = $1
 		   AND status IN ('queued','running')
-		   AND COALESCE(started_at, created_at) < now() - ($2 * interval '1 microsecond')
+		   AND COALESCE(started_at, attempt_at) < now() - ($2 * interval '1 microsecond')
 		RETURNING `+extractionReadColumns, read.ID, ExtractionReadLease.Microseconds()))
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Inside its lease: a real worker holds it, and joining is correct.

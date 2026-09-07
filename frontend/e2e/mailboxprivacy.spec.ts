@@ -69,7 +69,9 @@ test("AC-mailbox-2: narrowing the posture offers to narrow the history too", asy
 test("AC-mailbox-3: the admin opt-in states what turning it on asserts", async ({
   page,
 }) => {
-  await page.goto("/#/settings/connections");
+  // The switch that binds the whole workspace is CHANGED on Capture rules;
+  // the reader's own Connections page only states the rule it sets.
+  await page.goto("/#/settings/capture");
   const toggle = page.getByTestId("shared-posture-allowed-toggle");
   await expect(toggle).toBeVisible();
   await expect(toggle).toHaveAttribute("aria-checked", "false");

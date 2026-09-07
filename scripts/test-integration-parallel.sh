@@ -159,6 +159,13 @@ done > "$CANDIDATES"
 CONSTRAINT_SCOPE="$(mktemp)" LANE_PKGS="$(mktemp)" WORK="$(mktemp)"
 DISCOVERY="$(mktemp)" ASSIGNED="$(mktemp)" RAN="$(mktemp)" UNTAGGED="$(mktemp)"
 TIMING="$(mktemp)" WALLCLOCK="$(mktemp)" FAILED_PKGS="$(mktemp)"
+# The packages go test KILLED for exceeding the budget. Kept apart from
+# FAILED_PKGS because a timeout explains something no other failure does: every
+# one of that package's assigned tests is missing from the run, and the
+# reconciliation below would otherwise report all of them as a discovery
+# divergence — the loudest thing in the output, naming the sharding mechanism
+# rather than the clock.
+TIMEDOUT="$(mktemp)"
 # When the lane started, so each package can record WHEN it ran and not only how
 # long its tests took. The per-package cost report deliberately prices tests
 # alone; that leaves everything around them — clone provisioning, compiling a
@@ -508,6 +515,14 @@ for base in $(cd "$OUTDIR" && ls -1 -- *.log 2>/dev/null | sort -n); do
   if ! grep -q "^EXIT 0$" "$log"; then
     fail=1
     printf '%s\n' "$d|$rel|$base" >> "$FAILED_PKGS"
+    # go test's own words for the two ways it kills a package over time: the
+    # panic it raises itself, and the "*** Test killed" a -timeout kill prints.
+    # Matched on the log rather than inferred from a missing test count, because
+    # a package that died for any other reason is also missing its tests and
+    # must NOT be excused from the reconciliation.
+    if lane_timed_out "$log"; then
+      printf '%s\n' "$d|$rel" >> "$TIMEDOUT"
+    fi
   fi
   # Top-level results only (subtest lines are indented): "rel|TestName" per
   # the package this log belongs to, for the ran==assigned check below.
@@ -552,8 +567,16 @@ if [[ -s "$TIMING" ]]; then
     | LC_ALL=C sort -t'|' -k4 -rn \
     | awk -F'|' -v budget="${IT_TIMEOUT%s}" '
         { total += $2; tests += $3
-          printf "  %-44s %8.2fs  %5d tests  %7.1f ms/test  %5.1f%% of budget\n", $1, $2, $3, $4, (budget ? $2 * 100 / budget : 0) }
-        END { if (tests) printf "  %-44s %8.2fs  %5d tests  %7.1f ms/test\n", "TOTAL (sum of packages)", total, tests, total * 1000 / tests }
+          share = (budget ? $2 * 100 / budget : 0)
+          # A package past half its budget is the signal that it needs splitting,
+          # and it is the signal that would have made the class visible BEFORE a
+          # package became unpassable rather than after. Still advisory — this is
+          # the number already being printed, with a threshold on it, not the raw
+          # wall-clock ceiling the comment above rules out.
+          if (share >= 50) { over[++n] = sprintf("  %s is at %.1f%% of the %ss budget — split it before it crosses", $1, share, budget) }
+          printf "  %-44s %8.2fs  %5d tests  %7.1f ms/test  %5.1f%% of budget\n", $1, $2, $3, $4, share }
+        END { if (tests) printf "  %-44s %8.2fs  %5d tests  %7.1f ms/test\n", "TOTAL (sum of packages)", total, tests, total * 1000 / tests
+              for (i = 1; i <= n; i++) print over[i] }
       '
 fi
 
@@ -633,14 +656,35 @@ fi
 # vice versa) reads as red here, not as a quietly thinner lane. These bind in
 # BOTH modes — unsharded runs are confined by the same -run union, so a test
 # discovery failed to see would otherwise be silently dropped rather than run.
+# A timeout is reported BEFORE the reconciliation and in the clock's own words.
+# Whoever reads this output first has to be told which thing broke, and hundreds
+# of "assigned but not run" lines describe the sharding rather than the budget
+# they crossed.
+if [[ -s "$TIMEDOUT" ]]; then
+  while IFS='|' read -r _ rel; do
+    echo "FAIL: $rel exceeded its ${IT_TIMEOUT} budget — go test killed it, so none of its tests reported"
+  done < "$TIMEDOUT"
+fi
+
 LC_ALL=C sort -o "$RAN" "$RAN"
 if ! diff "$ASSIGNED" "$RAN" > /dev/null; then
-  if (( SHARD_TOTAL > 0 )); then
-    echo "FAIL: shard ${SHARD_IDX}/${SHARD_TOTAL} ran a different test set than assigned:"
-  else
-    echo "FAIL: the lane ran a different test set than discovery assigned:"
+  DIVERGENCE="$(mktemp)"
+  diff "$ASSIGNED" "$RAN" | sed -n 's/^< /  assigned but not run: /p; s/^> /  ran but not assigned: /p' > "$DIVERGENCE" || true
+  # A timed-out package's every missing test has ONE cause, already named above.
+  # Only ITS lines are dropped: a genuine discovery divergence in another package
+  # of the same run has a different cause and must not be buried by this one.
+  lane_drop_timed_out "$DIVERGENCE" "$TIMEDOUT"
+  # Suppressed to empty means the timeout accounted for all of it, and the
+  # header alone would be a finding with no evidence under it.
+  if [[ -s "$DIVERGENCE" ]]; then
+    if (( SHARD_TOTAL > 0 )); then
+      echo "FAIL: shard ${SHARD_IDX}/${SHARD_TOTAL} ran a different test set than assigned:"
+    else
+      echo "FAIL: the lane ran a different test set than discovery assigned:"
+    fi
+    cat "$DIVERGENCE"
   fi
-  diff "$ASSIGNED" "$RAN" | sed -n 's/^< /  assigned but not run: /p; s/^> /  ran but not assigned: /p' || true
+  rm -f "$DIVERGENCE"
   fail=1
 fi
 

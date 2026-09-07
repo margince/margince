@@ -7150,6 +7150,9 @@
                     "returned_with_activity_at"
                   ]
                 },
+                "previous_rank": {
+                  "type": "integer"
+                },
                 "rank": {
                   "type": "integer"
                 },
@@ -7182,6 +7185,9 @@
             }
           },
           "local_day": {
+            "type": "string"
+          },
+          "previous_local_day": {
             "type": "string"
           }
         },

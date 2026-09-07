@@ -6,6 +6,7 @@ import { useEffect, useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
+import { useCanWrite } from "../app/capability";
 import type { EntityKind } from "../app/entity";
 import { isOption } from "../app/options";
 import {
@@ -358,7 +359,14 @@ function invalidateAfterEdge(
 // filtering here).
 function AddRelationshipAction({
   scope,
-}: Readonly<{ scope: RelationshipScope }>) {
+  refusedReasonId,
+}: Readonly<{
+  scope: RelationshipScope;
+  // The id of the anchor page's sentence about why its record takes no
+  // changes. An edge is written through the anchor's own write gate on the
+  // server, so a deal this caller cannot write takes no stakeholder from them.
+  refusedReasonId?: string;
+}>) {
   const t = useT();
   const queryClient = useQueryClient();
   const headingId = useId();
@@ -475,6 +483,7 @@ function AddRelationshipAction({
     <>
       <Button
         small
+        reasonId={refusedReasonId}
         onClick={() => setOpen(true)}
         data-testid="add-relationship"
       >
@@ -620,11 +629,25 @@ function orNull(value: unknown): string | null {
 
 export function RelationshipsTab({
   scope,
-}: Readonly<{ scope: RelationshipScope }>) {
+  refusedReasonId,
+}: Readonly<{
+  scope: RelationshipScope;
+  // See AddRelationshipAction: the anchor page's one read-only sentence,
+  // which every write here points at when the anchor refuses changes.
+  refusedReasonId?: string;
+}>) {
   const t = useT();
   const queryClient = useQueryClient();
   const headingId = useId();
   const copy = scopeCopy(scope);
+  // The object half of each verb's gate, asked as the server asks it
+  // (relationship:create on an add, :update on an edit, :delete on a
+  // removal). A verb the role holds no grant for is withheld outright — there
+  // is no fact about the record to report — where the anchor's refusal above
+  // keeps the verb and says why.
+  const canCreate = useCanWrite("relationship", "create");
+  const canUpdate = useCanWrite("relationship", "update");
+  const canDelete = useCanWrite("relationship", "delete");
   const query = useQuery({
     queryKey: scopeQueryKey(scope),
     queryFn: () => fetchRelationships(scope),
@@ -655,7 +678,14 @@ export function RelationshipsTab({
   return (
     <Card
       title={t(copy.title)}
-      actions={<AddRelationshipAction scope={scope} />}
+      actions={
+        canCreate ? (
+          <AddRelationshipAction
+            scope={scope}
+            refusedReasonId={refusedReasonId}
+          />
+        ) : undefined
+      }
     >
       <QueryGate query={query} pendingLabel={t(copy.title)}>
         {(rows) =>
@@ -703,48 +733,54 @@ export function RelationshipsTab({
                   header: "",
                   render: (rel: Relationship) => (
                     <div style={{ display: "flex", gap: "var(--space-2)" }}>
-                      <EditAction
-                        label={t("record.edit")}
-                        savedMessage={t("rel.saveDone")}
-                        fields={relationshipEditFields}
-                        record={{
-                          id: rel.id,
-                          version: rel.version,
-                          role: rel.role ?? "",
-                          started_at: rel.started_at ?? "",
-                          ended_at: rel.ended_at ?? "",
-                        }}
-                        update={async (values, _rows, opened) => {
-                          const { data, error } = await api.PATCH(
-                            "/relationships/{id}",
-                            {
-                              params: {
-                                path: { id: rel.id },
-                                ...ifMatch(requireVersion(opened?.version)),
+                      {canUpdate && (
+                        <EditAction
+                          disabledReasonId={refusedReasonId}
+                          label={t("record.edit")}
+                          savedMessage={t("rel.saveDone")}
+                          fields={relationshipEditFields}
+                          record={{
+                            id: rel.id,
+                            version: rel.version,
+                            role: rel.role ?? "",
+                            started_at: rel.started_at ?? "",
+                            ended_at: rel.ended_at ?? "",
+                          }}
+                          update={async (values, _rows, opened) => {
+                            const { data, error } = await api.PATCH(
+                              "/relationships/{id}",
+                              {
+                                params: {
+                                  path: { id: rel.id },
+                                  ...ifMatch(requireVersion(opened?.version)),
+                                },
+                                body: {
+                                  role: orNull(values.role),
+                                  started_at: orNull(values.started_at),
+                                  ended_at: orNull(values.ended_at),
+                                },
                               },
-                              body: {
-                                role: orNull(values.role),
-                                started_at: orNull(values.started_at),
-                                ended_at: orNull(values.ended_at),
-                              },
-                            },
-                          );
-                          if (error) {
-                            throwProblem(error);
-                          }
-                          return data;
-                        }}
-                        invalidate="relationships"
-                        recordKey="relationship"
-                      />
-                      <Button
-                        small
-                        variant="danger"
-                        onClick={() => setRemoving(rel)}
-                        data-testid="remove-relationship"
-                      >
-                        {t("rel.remove")}
-                      </Button>
+                            );
+                            if (error) {
+                              throwProblem(error);
+                            }
+                            return data;
+                          }}
+                          invalidate="relationships"
+                          recordKey="relationship"
+                        />
+                      )}
+                      {canDelete && (
+                        <Button
+                          small
+                          variant="danger"
+                          reasonId={refusedReasonId}
+                          onClick={() => setRemoving(rel)}
+                          data-testid="remove-relationship"
+                        >
+                          {t("rel.remove")}
+                        </Button>
+                      )}
                     </div>
                   ),
                 },

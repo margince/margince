@@ -6,6 +6,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import { parseSource } from "../../scripts/lib/source-tree";
 import { FALLBACK_RECORD_ZONE } from "./timezone";
 
 // A screen that names a zone has decided something, and the decision is the
@@ -110,14 +111,7 @@ function sourceFiles(dir: string): string[] {
 // under it at the wrong place — a gate that names the wrong line sends the next
 // reader to innocent code.
 function code(path: string, source: string): string {
-  const parsed = ts.createSourceFile(
-    path,
-    source,
-    ts.ScriptTarget.Latest,
-    // Parent pointers, so the walk below can ask a node for its child tokens.
-    true,
-    path.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
-  );
+  const parsed = parseSource(path, source);
   const chars = source.split("");
   const blank = ({ pos, end }: ts.CommentRange): void => {
     for (let index = pos; index < end; index++) {
@@ -148,11 +142,27 @@ function code(path: string, source: string): string {
 // output moved with the machine it ran on would assert nothing.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "screens/taskduedate.test.tsx",
+    why: "The picker's day and the instant it sends are asserted across a zone boundary, so the record zone has to be a NAMED one the fixture also computes its expectation from: the case is that a deadline reads as the day it was agreed on for a colleague elsewhere, and a zone taken off the runner would make the assertion true wherever the suite happened to run. It is provided through RecordZoneProvider, the seam the product itself reads.",
+  },
+  {
+    file: "screens/taskduedate.guard.test.ts",
+    why: "The guard's subject is dueInstant, which now TAKES the zone a deadline is resolved in — so a call to it cannot be written without naming one. UTC would prove nothing here: the case that matters is a day's last second landing before midnight on the very clock that minted it, and a zero offset makes the wire value and the wall clock identical whichever rule ran.",
+  },
+  {
+    file: "screens/working-hours.test.tsx",
+    why: "The stub answers /me/working-hours with the SERVER's answer, and a person who has chosen no zone is answered with the installation's — so the fixture has to name one, exactly as settings.testkit.tsx below does. The card renders the name it is given and no case asserts a rendered instant; reading the runner's zone would make the fixture describe whichever machine ran it.",
+  },
+  {
+    file: "screens/settings.testkit.tsx",
+    why: "The stub answers /me/working-hours with the SERVER's answer, and a person who has chosen no zone is answered with the installation's — so the fixture has to name one, the way the analytics frames above do. Reading the runner's zone would make the fixture describe whichever machine ran it, and the card under it renders the name it is given.",
+  },
+  {
     file: "screens/worklist.when.test.tsx",
     why: "The rule under test is which SIDE of the reader's own day a moment falls on — today's meeting shows a bare time, another day's shows the date too. Deciding that needs a zone whose offset is not zero: in UTC the fixture's instants land on the same calendar day under either rule, so every case would pass whichever branch ran. The zone is injected by mocking viewerZone, which is the module this gate points callers at; naming it is what makes the expectation ('14:30', not '12:30') checkable at all.",
   },
   {
-    file: "screens/home.weekly.test.tsx",
+    file: "screens/brief.weekly.test.tsx",
     why: "The case asserts that the weekly's 'written at' renders in the INSTALLATION's zone, so it provides one through RecordZoneProvider and formats its expectation against the same name. The alternative is naming FALLBACK_RECORD_ZONE, which the arm below forbids and rightly: the component reads that same constant, so the assertion would hold however wrong the zone decision was.",
   },
   {
@@ -170,6 +180,10 @@ const pinnedZones: { file: string; why: string }[] = [
   {
     file: "screens/recordconversations.test.tsx",
     why: "The component takes the zone as a required prop and these cases assert which GROUPS render and which badges they carry — no date rendering is asserted. The zone is the shape being satisfied, not a rendering under test.",
+  },
+  {
+    file: "design-system/composed.thread.test.tsx",
+    why: "The gutter case asserts that a row's time is drawn in the RECORD's zone rather than the instant's — '14:22' for a 12:22Z instant — which needs a zone whose offset is not zero, and the component takes it as a required prop. The other cases pass UTC as the shape being satisfied and assert who wrote what, not a rendering of the clock.",
   },
   {
     file: "screens/historyreversalrow.stories.tsx",

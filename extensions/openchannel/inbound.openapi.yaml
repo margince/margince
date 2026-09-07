@@ -139,6 +139,27 @@ paths:
                     account: "member-1c02"
                     email: "rep@installation.example"
                     name: "Alex Chen"
+              group:
+                summary: >-
+                  A group conversation — the roster says who else was in the
+                  room, and grants none of them anything.
+                value:
+                  message_id: "msg-482911"
+                  thread_id: "conv-77"
+                  occurred_at: "2026-08-28T14:07:00Z"
+                  body: "Adding legal so we're all on the same page."
+                  from:
+                    account: "acct-93af"
+                    name: "Jordan Rivers"
+                  to:
+                    account: "member-1c02"
+                    name: "Alex Chen"
+                  participants:
+                    - account: "acct-51bd"
+                      name: "Sam Okonkwo"
+                    - account: "acct-77e0"
+                      email: "legal@example.net"
+                      name: "Priya Raman"
       responses:
         "202":
           description: >-
@@ -214,6 +235,37 @@ components:
         to:
           $ref: "#/components/schemas/InboundParty"
           description: The member, as the sending system addresses them.
+        participants:
+          type: array
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/InboundParty"
+          description: >-
+            Who ELSE was in the conversation — the roster of a group, the
+            people who are neither end of the exchange. Omit it for a
+            two-party message; `from` and `to` already name both ends and
+            repeating them here changes nothing.
+
+            It records WHO WAS PRESENT and grants nobody a read. Each party
+            is recorded on the captured message and resolved to a contact
+            the installation already holds; a party is NEVER resolved to one
+            of the installation's own members. This edge is anonymous —
+            whoever holds the signing secret writes this document — so a
+            roster naming somebody's colleague is a claim by a stranger, and
+            the core treats it as one.
+
+            A party with neither an account nor an email is dropped: there
+            is nothing to identify them by, and the message still lands.
+            More than 50 parties is a broadcast list rather than a
+            conversation, and the whole REQUEST is refused rather than
+            trimmed — half a broadcast list reads exactly like a small
+            group, so a sender is told rather than left believing a
+            sixty-person conversation landed whole.
+
+            Addresses named here do NOT join the message's address set. That
+            set is what decides whether a message was purely internal, and
+            it is the SENDER's address alone that decides whether there is a
+            set at all.
       example:
         message_id: "msg-482910"
         thread_id: "conv-77"
@@ -228,6 +280,12 @@ components:
           account: "member-1c02"
           email: "rep@installation.example"
           name: "Alex Chen"
+        participants:
+          - account: "acct-51bd"
+            name: "Sam Okonkwo"
+          - account: "acct-77e0"
+            email: "legal@example.net"
+            name: "Priya Raman"
     InboundParty:
       type: object
       description: >-

@@ -3,6 +3,8 @@
 
 import type { components } from "../api/schema";
 import type { MessageKey } from "../i18n/en";
+import { ENTITY, isEntityKind } from "./entity";
+import type { Route } from "./router";
 
 type ActivityKind = components["schemas"]["AiActivityItem"]["kind"];
 type ActivityState = components["schemas"]["AiActivityItem"]["state"];
@@ -123,6 +125,19 @@ export const ACTIVITY_LINE: Readonly<
     degraded: "agent.activity.summarize.degraded",
     failed: "agent.activity.summarize.failed",
   },
+  // Narrated although the account page draws the read live too, for the
+  // reason the site read is NOT: the page's pending row is where a reader
+  // who stayed sees it, and the rail is where the reader who opened three
+  // accounts and moved on finds out which one is ready. The scan is that
+  // reader's own work item — filed under them, named for the account.
+  account_scan: {
+    queued: "agent.activity.accountScan.queued",
+    running: "agent.activity.accountScan.running",
+    stalled: "agent.activity.accountScan.stalled",
+    done: "agent.activity.accountScan.done",
+    degraded: "agent.activity.accountScan.degraded",
+    failed: "agent.activity.accountScan.failed",
+  },
   draft_reply: {
     queued: "agent.activity.draftReply.queued",
     running: "agent.activity.draftReply.running",
@@ -175,6 +190,7 @@ export const ACTIVITY_LINE: Readonly<
   ),
   rate_extract: SYSTEM_SWEEP,
   signal_extract: SYSTEM_SWEEP,
+  stage_evidence_extract: SYSTEM_SWEEP,
   site_extract: SITE_READ_WATCHED_WHERE_IT_RUNS,
   site_fact_extract: SITE_READ_WATCHED_WHERE_IT_RUNS,
   site_triage: SITE_READ_WATCHED_WHERE_IT_RUNS,
@@ -226,6 +242,14 @@ export const PANEL_HEADING: Readonly<Record<"running", MessageKey>> = {
  * true.
  */
 export const NAMED_LINE: Readonly<Partial<Record<ActivityKind, LineSet>>> = {
+  account_scan: {
+    queued: "agent.activity.accountScanNamed.queued",
+    running: "agent.activity.accountScanNamed.running",
+    stalled: "agent.activity.accountScanNamed.stalled",
+    done: "agent.activity.accountScanNamed.done",
+    degraded: "agent.activity.accountScanNamed.degraded",
+    failed: "agent.activity.accountScanNamed.failed",
+  },
   document_extract: {
     queued: "agent.activity.documentExtractNamed.queued",
     running: "agent.activity.documentExtractNamed.running",
@@ -260,6 +284,37 @@ export const NAMED_LINE: Readonly<Partial<Record<ActivityKind, LineSet>>> = {
 };
 
 /**
+ * One line as the rail says it: the words, and where the record's name sits in
+ * them.
+ *
+ * Three pieces rather than one string because the name is not only a word in
+ * the sentence — it is the way to the record, and a link can only be drawn
+ * around a part the caller can still tell from the rest. `before` alone is
+ * the whole line when it names no record.
+ */
+export type SpokenLine = Readonly<{
+  before: string;
+  /**
+   * The record the line is about, with its page when this build has one for
+   * that kind of record. A name with no route is drawn as text: a document or
+   * a meeting has no page of its own, and so does a kind a newer server named
+   * that this tab has never heard of.
+   */
+  subject: Readonly<{ name: string; route: Route | null }> | null;
+  after: string;
+}>;
+
+/** A line that names no record: words and nothing else. */
+export function plain(words: string): SpokenLine {
+  return { before: words, subject: null, after: "" };
+}
+
+/** The line as one string, for a surface that draws no link. */
+export function spokenText(line: SpokenLine): string {
+  return `${line.before}${line.subject?.name ?? ""}${line.after}`;
+}
+
+/**
  * What to say about one item, or nothing at all.
  *
  * The existence check is not optional and `t()` cannot do it: translate() falls
@@ -280,14 +335,16 @@ export const NAMED_LINE: Readonly<Partial<Record<ActivityKind, LineSet>>> = {
  * narrowly, that case could only be written with a cast, and a test that casts
  * is asserting against its own escape hatch instead of against the function.
  */
-export function lineFor(
+export function speak(
   item: Readonly<{
     kind: string;
     state: string;
     subject_label?: string | null;
+    subject_type?: string | null;
+    subject_id?: string | null;
   }>,
   t: (key: MessageKey, params?: Record<string, string>) => string,
-): string | null {
+): SpokenLine | null {
   if (!isActivityKind(item.kind)) {
     return null;
   }
@@ -305,12 +362,65 @@ export function lineFor(
       NAMED_LINE[item.kind] ?? {};
     const namedKey = named[item.state];
     if (namedKey !== undefined) {
-      return t(namedKey, { name });
+      return aroundTheName(t(namedKey), name, subjectRoute(item));
     }
   }
   const byState: Readonly<Partial<Record<string, MessageKey>>> = entry;
   const key = byState[item.state];
-  return key === undefined ? null : t(key);
+  return key === undefined ? null : plain(t(key));
+}
+
+/**
+ * The placeholder a named line is written around, in every locale.
+ *
+ * Held to exactly this spelling by ai-activity-lines.test.ts, which is what
+ * lets the sentence be split here rather than interpolated: translate() would
+ * put the name IN the words, and a name already in the words cannot be told
+ * from them again — a company called "I" would link the wrong word.
+ */
+const NAME_PLACEHOLDER = "{name}";
+
+/**
+ * The translated template with the name set in its own slot.
+ *
+ * A template without the slot is one the copy gate does not admit, so the
+ * branch is a guard against a fake translator rather than a case the catalog
+ * can reach; it keeps the words and drops nothing.
+ */
+function aroundTheName(
+  template: string,
+  name: string,
+  route: Route | null,
+): SpokenLine {
+  const at = template.indexOf(NAME_PLACEHOLDER);
+  if (at < 0) {
+    return plain(template);
+  }
+  return {
+    before: template.slice(0, at),
+    subject: { name, route },
+    after: template.slice(at + NAME_PLACEHOLDER.length),
+  };
+}
+
+/**
+ * The page the occurrence's record has, or null when it has none.
+ *
+ * `isEntityKind` is the same question every other link in the app asks before
+ * it links: the wire's type is free text — a document is `attachment`, a
+ * meeting is `activity`, a newer server may say something this build has never
+ * seen — and only the kinds with a record page become a route. Both halves have
+ * to be present; a type with no id is nowhere to go.
+ */
+function subjectRoute(
+  item: Readonly<{ subject_type?: string | null; subject_id?: string | null }>,
+): Route | null {
+  const type = item.subject_type ?? "";
+  const id = item.subject_id ?? "";
+  if (id === "" || !isEntityKind(type)) {
+    return null;
+  }
+  return ENTITY[type].route(id);
 }
 
 /**
@@ -318,7 +428,7 @@ export function lineFor(
  *
  * An own-key check rather than a cast, so the narrowing is something the
  * runtime actually did: a newer server's kind is not in the map, and saying so
- * is the whole answer lineFor gives for it.
+ * is the whole answer speak gives for it.
  */
 function isActivityKind(kind: string): kind is ActivityKind {
   return Object.hasOwn(ACTIVITY_LINE, kind);

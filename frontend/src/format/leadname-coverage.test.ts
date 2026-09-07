@@ -6,7 +6,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
-import { filesUnder, scriptKindFor } from "../../scripts/lib/source-tree";
+import { filesUnder, parseSource } from "../../scripts/lib/source-tree";
 
 // Fitness function for a screen that works out for itself what a lead is
 // called.
@@ -118,19 +118,7 @@ function fieldRead(expression: ts.Expression): FieldRead | null {
 
 /** `<file>:<line>` for every hand-spelled lead name in one file. */
 function fallbacksIn(fileName: string, text: string): string[] {
-  const source = ts.createSourceFile(
-    fileName,
-    text,
-    ts.ScriptTarget.Latest,
-    true,
-    // The file's OWN kind, from the one place this tree decides that. Under
-    // `TSX` a plain `.ts` generic arrow — `<T>(value: T) => value` — parses as
-    // an unclosed JSX element, and everything after it is parse recovery
-    // rather than the tree this scan means to walk. A census that reads a
-    // smaller tree reports PASS and nothing fails, which is the one way a gate
-    // must not break.
-    scriptKindFor(fileName),
-  );
+  const source = parseSource(fileName, text);
   const found: string[] = [];
   const visit = (node: ts.Node) => {
     if (

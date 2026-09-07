@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -91,7 +92,10 @@ func (s *Service) RedeemInTx(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, 
 	if tag.RowsAffected() != 1 {
 		return 0, false, fmt.Errorf("approval already redeemed: %w", apperrors.ErrApprovalTokenInvalid)
 	}
-	if _, err := s.audit(ctx, tx, p, "update", id.UUID, map[string]any{approvalKeyKind: a.Kind, "redeemed": true}); err != nil {
+	if _, err := storekit.AuditWithEvidence(ctx, tx, "update", entityApproval, id.UUID,
+		map[string]any{approvalKeyRedeemed: false},
+		map[string]any{approvalKeyRedeemed: true},
+		map[string]any{approvalKeyKind: a.Kind}); err != nil {
 		return 0, false, err
 	}
 	if a.TargetVersion == nil {

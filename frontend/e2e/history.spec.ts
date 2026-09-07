@@ -79,7 +79,7 @@ test("turning several dials does not bury the way out", async ({ page }) => {
   // Each dial REPLACES the entry rather than pushing one. Back is the one key
   // that exists for getting out of things, and a reader who narrowed a list
   // four ways must not have to press it five times to leave.
-  await page.goto("/#/home");
+  await page.goto("/#/brief");
   await page.goto("/#/companies");
 
   await page.getByRole("searchbox", { name: "Suchen" }).fill("brandt");
@@ -94,7 +94,7 @@ test("turning several dials does not bury the way out", async ({ page }) => {
   );
 
   await page.goBack();
-  await expect(page).toHaveURL(/#\/home$/);
+  await expect(page).toHaveURL(/#\/brief$/);
 });
 
 test("Forward returns to the list Back left", async ({ page }) => {

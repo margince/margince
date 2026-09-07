@@ -15,6 +15,7 @@ package aicert
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"sort"
 	"strings"
@@ -90,6 +91,12 @@ type Standing struct {
 	// Moved names the scenarios whose stamp changed under this record — the
 	// cases a re-run has to cover, and nothing more.
 	Moved []string
+	// MovedParts says, per moved scenario, WHICH half of the stamp moved. A
+	// stale record used to name a scenario and leave the reader to guess between
+	// "somebody rewrote the test" and "the product now sends something else" —
+	// two situations that call for opposite responses, and the second of which
+	// is a change nobody attributed.
+	MovedParts map[string]StampParts
 	// Dropped names scenarios the record measured that the corpus no longer
 	// holds. They do not make it stale — it is not wrong about what ships — but
 	// they are not coverage either, because nobody can re-run them.
@@ -99,6 +106,65 @@ type Standing struct {
 	// staleness names no scenario. Such a record reports no counts, exactly as
 	// it did before per-scenario stamps landed.
 	TaskStampOnly bool
+}
+
+// StampParts says which of a scenario stamp's three digests moved. A stamp is
+// the scenario digested WHOLE, then the request its site builds, then the
+// grader's request — three fixed-width hex digests concatenated
+// (ScenarioStamps), so which one differs is readable rather than inferred.
+type StampParts struct {
+	// Case is true when the test itself changed: its fixture, its expected
+	// answer, its rubric or its bands. Re-running measures a different question.
+	Case bool
+	// Prompt is true when the request this build sends changed while the test
+	// stayed put. The band that follows describes the NEW prompt, and a drop is
+	// a consequence of a product change rather than of the model.
+	Prompt bool
+	// Grader is true when the judge's request changed. A band can move with
+	// neither the test nor the product touched, which reads as a model
+	// regression and is not one.
+	Grader bool
+}
+
+// Describe names the moved halves in the order a reader acts on them.
+func (p StampParts) Describe() string {
+	var moved []string
+	if p.Case {
+		moved = append(moved, "the case")
+	}
+	if p.Prompt {
+		moved = append(moved, "the prompt this build sends")
+	}
+	if p.Grader {
+		moved = append(moved, "the grader")
+	}
+	if len(moved) == 0 {
+		// A stamp this build cannot split — one written before the three-part
+		// layout, or a length it does not recognise. Saying so beats naming a
+		// half on a guess.
+		return "something this build cannot attribute"
+	}
+	return strings.Join(moved, " and ")
+}
+
+// stampSegment is the width of each digest in a scenario stamp, and three of
+// them is the whole stamp. Derived from sha256's hex width rather than written
+// as 64, so a digest change cannot leave this reading the wrong slice.
+const stampSegment = sha256.Size * 2
+
+// splitStampChange compares two stamps segment by segment. An unrecognised
+// length yields the zero value, whose Describe says it could not attribute the
+// change — under-reporting here is the one failure that must not look like an
+// answer.
+func splitStampChange(was, now string) StampParts {
+	if len(was) != stampSegment*3 || len(now) != stampSegment*3 {
+		return StampParts{}
+	}
+	return StampParts{
+		Case:   was[:stampSegment] != now[:stampSegment],
+		Prompt: was[stampSegment:stampSegment*2] != now[stampSegment:stampSegment*2],
+		Grader: was[stampSegment*2:] != now[stampSegment*2:],
+	}
 }
 
 // Reason states why the record is no longer current, in the terms a reader
@@ -113,16 +179,32 @@ func (s Standing) Reason() string {
 	case s.TaskStampOnly:
 		reason = "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
 	case len(s.Moved) == 1:
-		reason = "scenario " + s.Moved[0] + " — or the prompt this build now builds from it — has changed since the record scored it"
+		reason = fmt.Sprintf("%s changed under scenario %s since the record scored it",
+			s.MovedParts[s.Moved[0]].Describe(), s.Moved[0])
 	default:
-		reason = fmt.Sprintf("%d scenarios it scored have changed since, or the prompts built from them have: %s",
-			len(s.Moved), namesUpTo(s.Moved, movedNamesShown))
+		reason = fmt.Sprintf("%d scenarios it scored have changed since (%s): %s",
+			len(s.Moved), s.movedCauses(), namesUpTo(s.Moved, movedNamesShown))
 	}
 	if len(s.Dropped) > 0 {
 		reason += fmt.Sprintf(" (it also scored %s, which the corpus no longer holds)",
 			namesUpTo(s.Dropped, movedNamesShown))
 	}
 	return reason
+}
+
+// movedCauses summarises what moved across every moved scenario. The causes
+// rather than a count, because a row where the CASES moved is re-certified as a
+// matter of course and one where the PROMPT moved is a product change somebody
+// should be told about.
+func (s Standing) movedCauses() string {
+	var all StampParts
+	for _, name := range s.Moved {
+		p := s.MovedParts[name]
+		all.Case = all.Case || p.Case
+		all.Prompt = all.Prompt || p.Prompt
+		all.Grader = all.Grader || p.Grader
+	}
+	return all.Describe()
 }
 
 // movedNamesShown is how many scenario names a reason spells before it counts
@@ -302,6 +384,10 @@ func scenarioStanding(rec Record, variant string, current map[string]string, tas
 		case want != stamp:
 			standing.Stale = true
 			standing.Moved = append(standing.Moved, name)
+			if standing.MovedParts == nil {
+				standing.MovedParts = map[string]StampParts{}
+			}
+			standing.MovedParts[name] = splitStampChange(stamp, want)
 		default:
 			standing.Measured++
 		}

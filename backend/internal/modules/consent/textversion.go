@@ -51,6 +51,34 @@ func WordingDigest(subject, body string) [sha256.Size]byte {
 	return sha256.Sum256([]byte(subject + "\x00" + body))
 }
 
+// SendingDigest is the digest over everything a RECIPIENT can read: the
+// subject, the plain-text alternative, and the markup one.
+//
+// The markup is in it because a mail carries two bodies and the tree says so
+// itself — a client rendering markup can show something the plain part never
+// mentioned. A fingerprint over the plain body alone would let the half most
+// recipients actually read be rewritten between the decision and the send while
+// the record went on claiming the message was unchanged.
+//
+// NUL-separated, and three fields rather than two so a sentence moved from one
+// to another is a different digest.
+//
+// IT IS NOT WordingDigest WITH AN EMPTY THIRD ARGUMENT, and that is deliberate
+// rather than a missed simplification. Appending a separator changes the hash
+// of every plain-text message: `S\x00B` and `S\x00B\x00` are different digests.
+// Folding the two would silently invalidate every consent_text_version row
+// already published — bootstrap re-publishes the controller templates and would
+// find unchanged wording conflicting, which fails startup — and would park
+// every delivery staged before the deploy, because its stored fingerprint would
+// no longer match its own unchanged body.
+//
+// So the two-field digest keeps its exact bytes and this is a separate
+// question: what a RECIPIENT can read, which a stored wording has no markup
+// half of. The wordingdigest gate holds that neither grows a third spelling.
+func SendingDigest(subject, body, htmlBody string) [sha256.Size]byte {
+	return sha256.Sum256([]byte(subject + "\x00" + body + "\x00" + htmlBody))
+}
+
 // ContentHashOf renders the digest as the hex text consent_text_version stores.
 func ContentHashOf(subject, body string) string {
 	sum := WordingDigest(subject, body)

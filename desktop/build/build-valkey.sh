@@ -29,14 +29,14 @@ log() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 
 fetch() {
   local url="$1" dest="$2" want="$3"
-  if [ ! -f "$dest" ]; then
+  if [[ ! -f "$dest" ]]; then
     log "downloading $(basename "$dest")"
     curl -fSL --retry 3 --max-time 600 "$url" -o "$dest.part"
     mv "$dest.part" "$dest"
   fi
   local got
   got="$(shasum -a 256 "$dest" | awk '{print $1}')"
-  if [ "$got" != "$want" ]; then
+  if [[ "$got" != "$want" ]]; then
     echo "checksum mismatch for $dest" >&2
     echo "  expected $want" >&2
     echo "  actual   $got" >&2
@@ -57,7 +57,7 @@ verify() {
     esac
   done < <(otool -L "$OUT/valkey-server" | tail -n +2 | awk '{print $1}')
 
-  if [ "$offenders" -gt 0 ]; then
+  if [[ "$offenders" -gt 0 ]]; then
     echo "FAIL: valkey-server links against a package-manager prefix" >&2
     exit 1
   fi

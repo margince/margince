@@ -168,6 +168,7 @@ func TestEveryAbsoluteReasonIsClassifiedDeliberately(t *testing.T) {
 		// The subject's own act. Nothing lifts these.
 		ReasonObjection:        LevelSubject,
 		ReasonRestricted:       LevelSubject,
+		ReasonSubjectRequest:   LevelSubject,
 		ReasonConsentWithdrawn: LevelSubject,
 		// Absolute, but nobody's decision — each names a fact a human corrects.
 		ReasonHardBounce:          LevelMachine,

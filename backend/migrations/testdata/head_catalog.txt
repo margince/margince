@@ -8,10 +8,10 @@ public.activity.activity_direction_check CHECK (((direction IS NULL) OR (directi
 public.activity.activity_done_at CHECK (((is_done = false) OR (done_at IS NOT NULL)))
 public.activity.activity_host_user_id_fkey FOREIGN KEY (host_user_id) REFERENCES app_user(id) ON DELETE SET NULL (host_user_id)
 public.activity.activity_kind_fkey FOREIGN KEY (kind) REFERENCES activity_kind(kind)
-public.activity.activity_language_check CHECK (((language IS NULL) OR (language = ANY (ARRAY['de'::text, 'en'::text]))))
+public.activity.activity_language_check CHECK (((language IS NULL) OR (language = ANY (ARRAY['de'::text, 'en'::text, 'vi'::text]))))
 public.activity.activity_last_activity CREATE TRIGGER activity_last_activity AFTER UPDATE OF occurred_at, archived_at, audience, origin ON public.activity FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at) OR (old.audience IS DISTINCT FROM new.audience) OR (old.origin IS DISTINCT FROM new.origin))) EXECUTE FUNCTION trg_activity_last_activity()
 public.activity.activity_meeting_host CHECK (((host_user_id IS NULL) OR (kind = 'meeting'::text)))
-public.activity.activity_meeting_no_overlap EXCLUDE USING gist (host_user_id WITH =, tsrange(timezone('UTC'::text, occurred_at), (timezone('UTC'::text, occurred_at) + '01:00:00'::interval)) WITH &&) WHERE (((kind = 'meeting'::text) AND (host_user_id IS NOT NULL) AND (archived_at IS NULL)))
+public.activity.activity_meeting_no_overlap EXCLUDE USING gist (host_user_id WITH =, tsrange(timezone('UTC'::text, occurred_at), (timezone('UTC'::text, occurred_at) + '01:00:00'::interval)) WITH &&) WHERE (((kind = 'meeting'::text) AND (host_user_id IS NOT NULL) AND (archived_at IS NULL) AND (source_system IS NULL)))
 public.activity.activity_meeting_status_check CHECK (((meeting_status IS NULL) OR (meeting_status = ANY (ARRAY['booked'::text, 'held'::text, 'no_show'::text, 'canceled'::text]))))
 public.activity.activity_message_has_provider CHECK (((kind = 'message'::text) = (channel_provider IS NOT NULL)))
 public.activity.activity_no_company_meeting_on_rekind CREATE TRIGGER activity_no_company_meeting_on_rekind BEFORE UPDATE OF kind ON public.activity FOR EACH ROW EXECUTE FUNCTION activity_refuses_becoming_a_company_meeting()
@@ -174,6 +174,14 @@ BEGIN
     RETURN NEW;
 END;
 
+public.activity_meeting_attendee_repair acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.activity_meeting_attendee_repair.activity_id uuid NOT NULL gen=- def=-
+public.activity_meeting_attendee_repair.activity_meeting_attendee_repair_activity_fk FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.activity_meeting_attendee_repair.activity_meeting_attendee_repair_outcome_check CHECK ((outcome = ANY (ARRAY['attendees'::text, 'none'::text, 'unreadable'::text])))
+public.activity_meeting_attendee_repair.activity_meeting_attendee_repair_pkey PRIMARY KEY (activity_id)
+public.activity_meeting_attendee_repair.outcome text NOT NULL gen=- def=-
+public.activity_meeting_attendee_repair.repaired_at timestamp with time zone NOT NULL gen=- def=now()
+public.activity_meeting_attendee_repair_pkey CREATE UNIQUE INDEX activity_meeting_attendee_repair_pkey ON public.activity_meeting_attendee_repair USING btree (activity_id)
 public.activity_meeting_history acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_meeting_history.activity_id uuid NOT NULL gen=- def=-
 public.activity_meeting_history.activity_meeting_history_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
@@ -193,16 +201,17 @@ public.activity_meeting_history_by_activity CREATE INDEX activity_meeting_histor
 public.activity_meeting_history_by_status_time CREATE INDEX activity_meeting_history_by_status_time ON public.activity_meeting_history USING btree (status, effective_at)
 public.activity_meeting_history_pkey CREATE UNIQUE INDEX activity_meeting_history_pkey ON public.activity_meeting_history USING btree (id)
 public.activity_meeting_history_source_once CREATE UNIQUE INDEX activity_meeting_history_source_once ON public.activity_meeting_history USING btree (source_system, source_id, status) WHERE (source_system IS NOT NULL)
-public.activity_meeting_no_overlap CREATE INDEX activity_meeting_no_overlap ON public.activity USING gist (host_user_id, tsrange(timezone('UTC'::text, occurred_at), (timezone('UTC'::text, occurred_at) + '01:00:00'::interval))) WHERE ((kind = 'meeting'::text) AND (host_user_id IS NOT NULL) AND (archived_at IS NULL))
+public.activity_meeting_no_overlap CREATE INDEX activity_meeting_no_overlap ON public.activity USING gist (host_user_id, tsrange(timezone('UTC'::text, occurred_at), (timezone('UTC'::text, occurred_at) + '01:00:00'::interval))) WHERE ((kind = 'meeting'::text) AND (host_user_id IS NOT NULL) AND (archived_at IS NULL) AND (source_system IS NULL))
 public.activity_participant acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_participant.activity_id uuid NOT NULL gen=- def=-
 public.activity_participant.activity_participant_activity_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
-public.activity_participant.activity_participant_identity CHECK (((user_id IS NOT NULL) OR (person_id IS NOT NULL) OR (address IS NOT NULL)))
+public.activity_participant.activity_participant_identity CHECK (((user_id IS NOT NULL) OR (person_id IS NOT NULL) OR (address IS NOT NULL) OR (channel_user_id IS NOT NULL)))
 public.activity_participant.activity_participant_person_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
 public.activity_participant.activity_participant_pkey PRIMARY KEY (id)
 public.activity_participant.activity_participant_role_check CHECK ((role = ANY (ARRAY['from'::text, 'to'::text, 'cc'::text, 'bcc'::text, 'attendee'::text, 'organizer'::text])))
 public.activity_participant.activity_participant_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.activity_participant.address text gen=- def=-
+public.activity_participant.channel_user_id text gen=- def=-
 public.activity_participant.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.activity_participant.display_name text gen=- def=-
 public.activity_participant.id uuid NOT NULL gen=- def=uuidv7()
@@ -426,6 +435,7 @@ public.agent_run.agent_run_attempt_check CHECK ((attempt >= 1))
 public.agent_run.agent_run_awaiting_shape CHECK (((status <> 'awaiting_approval'::text) OR ((approval_id IS NOT NULL) AND (pending IS NOT NULL))))
 public.agent_run.agent_run_passport_fkey FOREIGN KEY (passport_id) REFERENCES passport(id) ON DELETE SET NULL (passport_id)
 public.agent_run.agent_run_pkey PRIMARY KEY (id)
+public.agent_run.agent_run_settled_shape CHECK (((status <> ALL (ARRAY['completed'::text, 'degraded'::text, 'failed'::text])) OR (finished_at IS NOT NULL)))
 public.agent_run.agent_run_status_check CHECK ((status = ANY (ARRAY['running'::text, 'awaiting_approval'::text, 'completed'::text, 'degraded'::text, 'failed'::text])))
 public.agent_run.agent_run_trigger_unique UNIQUE (trigger_ref)
 public.agent_run.agent_spec text NOT NULL gen=- def=-
@@ -703,6 +713,10 @@ public.app_user.app_user_pkey PRIMARY KEY (id)
 public.app_user.app_user_seat_type_check CHECK ((seat_type = ANY (ARRAY['read'::text, 'full'::text])))
 public.app_user.app_user_status_check CHECK ((status = ANY (ARRAY['invited'::text, 'active'::text, 'suspended'::text, 'deactivated'::text])))
 public.app_user.app_user_weekly_delivery_check CHECK (((weekly_delivery IS NULL) OR (weekly_delivery = ANY (ARRAY['none'::text, 'email'::text]))))
+public.app_user.app_user_work_days_are_weekdays CHECK (((work_days IS NULL) OR (((array_length(work_days, 1) >= 1) AND (array_length(work_days, 1) <= 7)) AND (work_days <@ ARRAY[(1)::smallint, (2)::smallint, (3)::smallint, (4)::smallint, (5)::smallint, (6)::smallint, (7)::smallint]))))
+public.app_user.app_user_work_end_minute_of_day CHECK (((work_end_minute IS NULL) OR ((work_end_minute >= 1) AND (work_end_minute <= 1440))))
+public.app_user.app_user_work_range_is_a_range CHECK ((((work_start_minute IS NULL) = (work_end_minute IS NULL)) AND ((work_start_minute IS NULL) OR (work_start_minute < work_end_minute))))
+public.app_user.app_user_work_start_minute_of_day CHECK (((work_start_minute IS NULL) OR ((work_start_minute >= 0) AND (work_start_minute <= 1439))))
 public.app_user.archived_at timestamp with time zone gen=- def=-
 public.app_user.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.app_user.delivery_hour_local integer gen=- def=-
@@ -719,10 +733,13 @@ public.app_user.password_hash text gen=- def=-
 public.app_user.quiet_day_notice boolean gen=- def=-
 public.app_user.seat_type text NOT NULL gen=- def='full'::text
 public.app_user.status text NOT NULL gen=- def='active'::text
-public.app_user.timezone text NOT NULL gen=- def='UTC'::text
+public.app_user.timezone text gen=- def=-
 public.app_user.trg_app_user_updated CREATE TRIGGER trg_app_user_updated BEFORE UPDATE ON public.app_user FOR EACH ROW EXECUTE FUNCTION set_updated_at()
 public.app_user.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.app_user.weekly_delivery text gen=- def=-
+public.app_user.work_days smallint[] gen=- def=-
+public.app_user.work_end_minute smallint gen=- def=-
+public.app_user.work_start_minute smallint gen=- def=-
 public.app_user_pkey CREATE UNIQUE INDEX app_user_pkey ON public.app_user USING btree (id)
 public.approval acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.approval.approval_co_target_whole CHECK ((((co_target_entity_type IS NULL) AND (co_target_entity_id IS NULL) AND (co_target_version IS NULL)) OR ((co_target_entity_type IS NOT NULL) AND (co_target_entity_id IS NOT NULL) AND (co_target_version IS NOT NULL))))
@@ -2177,8 +2194,45 @@ public.deal_room_thread.state text NOT NULL gen=- def='open'::text
 public.deal_room_thread.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.deal_room_thread.version bigint NOT NULL gen=- def=1
 public.deal_room_thread_pkey CREATE UNIQUE INDEX deal_room_thread_pkey ON public.deal_room_thread USING btree (id)
+public.deal_stage_evidence acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.deal_stage_evidence.author_side text NOT NULL gen=- def=-
+public.deal_stage_evidence.commitment text NOT NULL gen=- def=-
+public.deal_stage_evidence.confidence numeric(3,2) gen=- def=-
+public.deal_stage_evidence.contradicted_by uuid gen=- def=-
+public.deal_stage_evidence.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.deal_stage_evidence.criterion_id uuid NOT NULL gen=- def=-
+public.deal_stage_evidence.deal_id uuid NOT NULL gen=- def=-
+public.deal_stage_evidence.deal_stage_evidence_author_side_check CHECK ((author_side = ANY (ARRAY['buyer'::text, 'seller'::text, 'unknown'::text])))
+public.deal_stage_evidence.deal_stage_evidence_commitment_check CHECK ((commitment = ANY (ARRAY['agreed'::text, 'proposed'::text, 'none'::text])))
+public.deal_stage_evidence.deal_stage_evidence_confidence_range CHECK (((confidence IS NULL) OR ((confidence >= (0)::numeric) AND (confidence <= (1)::numeric))))
+public.deal_stage_evidence.deal_stage_evidence_contradicted_fkey FOREIGN KEY (contradicted_by) REFERENCES deal_stage_evidence(id) ON DELETE SET NULL
+public.deal_stage_evidence.deal_stage_evidence_criterion_fkey FOREIGN KEY (criterion_id) REFERENCES stage_exit_criterion(id) ON DELETE RESTRICT
+public.deal_stage_evidence.deal_stage_evidence_deal_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
+public.deal_stage_evidence.deal_stage_evidence_deterministic_is_certain CHECK (((extracted_by <> 'deterministic'::text) OR (confidence IS NULL)))
+public.deal_stage_evidence.deal_stage_evidence_pkey PRIMARY KEY (id)
+public.deal_stage_evidence.deal_stage_evidence_refutation_whole CHECK (((refuted_at IS NULL) = (refuted_by IS NULL)))
+public.deal_stage_evidence.deal_stage_evidence_refuted_by_fkey FOREIGN KEY (refuted_by) REFERENCES app_user(id) ON DELETE SET NULL
+public.deal_stage_evidence.deal_stage_evidence_snippet_len CHECK (((snippet IS NULL) OR (length(snippet) <= 500)))
+public.deal_stage_evidence.deal_stage_evidence_source_type_check CHECK ((source_type = ANY (ARRAY['activity'::text, 'contract'::text])))
+public.deal_stage_evidence.extracted_by text NOT NULL gen=- def=-
+public.deal_stage_evidence.id uuid NOT NULL gen=- def=uuidv7()
+public.deal_stage_evidence.met boolean NOT NULL gen=- def=-
+public.deal_stage_evidence.observed_at timestamp with time zone NOT NULL gen=- def=-
+public.deal_stage_evidence.refuted_at timestamp with time zone gen=- def=-
+public.deal_stage_evidence.refuted_by uuid gen=- def=-
+public.deal_stage_evidence.snippet text gen=- def=-
+public.deal_stage_evidence.source_id uuid NOT NULL gen=- def=-
+public.deal_stage_evidence.source_lines integer[] gen=- def=-
+public.deal_stage_evidence.source_type text NOT NULL gen=- def=-
+public.deal_stage_evidence.trg_deal_stage_evidence_updated CREATE TRIGGER trg_deal_stage_evidence_updated BEFORE UPDATE ON public.deal_stage_evidence FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
+public.deal_stage_evidence.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.deal_stage_evidence.version bigint NOT NULL gen=- def=1
+public.deal_stage_evidence_deal_ix CREATE INDEX deal_stage_evidence_deal_ix ON public.deal_stage_evidence USING btree (deal_id, criterion_id) WHERE (refuted_at IS NULL)
+public.deal_stage_evidence_one_per_source_ux CREATE UNIQUE INDEX deal_stage_evidence_one_per_source_ux ON public.deal_stage_evidence USING btree (deal_id, criterion_id, source_type, source_id, extracted_by)
+public.deal_stage_evidence_pkey CREATE UNIQUE INDEX deal_stage_evidence_pkey ON public.deal_stage_evidence USING btree (id)
 public.deal_stage_history acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.deal_stage_history.amount_minor_at_change bigint gen=- def=-
+public.deal_stage_history.approval_id uuid gen=- def=-
 public.deal_stage_history.changed_at timestamp with time zone NOT NULL gen=- def=now()
 public.deal_stage_history.changed_by text NOT NULL gen=- def=-
 public.deal_stage_history.currency_at_change character(3) gen=- def=-
@@ -2186,10 +2240,12 @@ public.deal_stage_history.deal_id uuid NOT NULL gen=- def=-
 public.deal_stage_history.deal_stage_history_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
 public.deal_stage_history.deal_stage_history_from_stage_id_fkey FOREIGN KEY (from_stage_id) REFERENCES stage(id) ON DELETE SET NULL (from_stage_id)
 public.deal_stage_history.deal_stage_history_pkey PRIMARY KEY (id)
+public.deal_stage_history.deal_stage_history_reversal_fkey FOREIGN KEY (reversal_of) REFERENCES deal_stage_history(id) ON DELETE SET NULL
 public.deal_stage_history.deal_stage_history_to_stage_id_fkey FOREIGN KEY (to_stage_id) REFERENCES stage(id) ON DELETE RESTRICT
 public.deal_stage_history.deal_stage_history_win_probability_at_change_check CHECK (((win_probability_at_change IS NULL) OR ((win_probability_at_change >= 0) AND (win_probability_at_change <= 100))))
 public.deal_stage_history.from_stage_id uuid gen=- def=-
 public.deal_stage_history.id uuid NOT NULL gen=- def=uuidv7()
+public.deal_stage_history.reversal_of uuid gen=- def=-
 public.deal_stage_history.to_stage_id uuid NOT NULL gen=- def=-
 public.deal_stage_history.win_probability_at_change smallint gen=- def=-
 public.deal_stage_history_pkey CREATE UNIQUE INDEX deal_stage_history_pkey ON public.deal_stage_history USING btree (id)
@@ -2876,6 +2932,8 @@ public.idx_sigres_signal CREATE INDEX idx_sigres_signal ON public.signal_resolut
 public.idx_site_read_org CREATE INDEX idx_site_read_org ON public.site_read USING btree (organization_id, created_at DESC)
 public.idx_site_read_retry_due CREATE INDEX idx_site_read_retry_due ON public.site_read USING btree (next_attempt_at, id) WHERE ((status = ANY (ARRAY['deferred'::text, 'failed'::text])) AND (next_attempt_at IS NOT NULL))
 public.idx_stage_pipeline CREATE INDEX idx_stage_pipeline ON public.stage USING btree (pipeline_id) WHERE (archived_at IS NULL)
+public.idx_stage_progression_outcome_deal_target CREATE INDEX idx_stage_progression_outcome_deal_target ON public.stage_progression_outcome USING btree (deal_id, to_stage_id, decided_at DESC)
+public.idx_stage_progression_outcome_transition CREATE INDEX idx_stage_progression_outcome_transition ON public.stage_progression_outcome USING btree (pipeline_id, from_stage_id, to_stage_id, decided_at DESC)
 public.idx_system_log_action CREATE INDEX idx_system_log_action ON public.system_log USING btree (action, occurred_at DESC)
 public.idx_system_log_actor CREATE INDEX idx_system_log_actor ON public.system_log USING btree (actor_id, occurred_at DESC)
 public.idx_system_log_mirror_conflict_class CREATE INDEX idx_system_log_mirror_conflict_class ON public.system_log USING btree (((detail ->> 'object_class'::text)), occurred_at DESC) WHERE (action = 'mirror.conflict'::text)
@@ -3614,6 +3672,37 @@ public.org_growth_fit.payload jsonb NOT NULL gen=- def=-
 public.org_growth_fit.user_id uuid NOT NULL gen=- def=-
 public.org_growth_fit_organization_ix CREATE INDEX org_growth_fit_organization_ix ON public.org_growth_fit USING btree (organization_id)
 public.org_growth_fit_pkey CREATE UNIQUE INDEX org_growth_fit_pkey ON public.org_growth_fit USING btree (user_id, organization_id)
+public.org_scan acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.org_scan.attempt integer NOT NULL gen=- def=1
+public.org_scan.degrade_reason text gen=- def=-
+public.org_scan.findings jsonb NOT NULL gen=- def='[]'::jsonb
+public.org_scan.fingerprint text gen=- def=-
+public.org_scan.finished_at timestamp with time zone gen=- def=-
+public.org_scan.generated_at timestamp with time zone gen=- def=-
+public.org_scan.generated_by text gen=- def=-
+public.org_scan.id uuid NOT NULL gen=- def=uuidv7()
+public.org_scan.next_attempt_at timestamp with time zone gen=- def=-
+public.org_scan.org_scan_attempt_check CHECK ((attempt >= 1))
+public.org_scan.org_scan_generated_by_check CHECK (((generated_by IS NULL) OR (generated_by = ANY (ARRAY['model'::text, 'deterministic'::text]))))
+public.org_scan.org_scan_org_fkey FOREIGN KEY (organization_id) REFERENCES organization(id) ON DELETE CASCADE
+public.org_scan.org_scan_pkey PRIMARY KEY (id)
+public.org_scan.org_scan_read_deals_check CHECK (((read_deals IS NULL) OR (read_deals >= 0)))
+public.org_scan.org_scan_read_exchanges_check CHECK (((read_exchanges IS NULL) OR (read_exchanges >= 0)))
+public.org_scan.org_scan_running_has_started CHECK (((status <> 'running'::text) OR (started_at IS NOT NULL)))
+public.org_scan.org_scan_settled_has_finish CHECK (((status = ANY (ARRAY['done'::text, 'degraded'::text, 'failed'::text])) = (finished_at IS NOT NULL)))
+public.org_scan.org_scan_status_check CHECK ((status = ANY (ARRAY['queued'::text, 'running'::text, 'done'::text, 'degraded'::text, 'failed'::text])))
+public.org_scan.org_scan_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.org_scan.org_scan_user_id_organization_id_key UNIQUE (user_id, organization_id)
+public.org_scan.organization_id uuid NOT NULL gen=- def=-
+public.org_scan.read_deals integer gen=- def=-
+public.org_scan.read_exchanges integer gen=- def=-
+public.org_scan.requested_at timestamp with time zone NOT NULL gen=- def=now()
+public.org_scan.started_at timestamp with time zone gen=- def=-
+public.org_scan.status text NOT NULL gen=- def=-
+public.org_scan.user_id uuid NOT NULL gen=- def=-
+public.org_scan_organization_ix CREATE INDEX org_scan_organization_ix ON public.org_scan USING btree (organization_id)
+public.org_scan_pkey CREATE UNIQUE INDEX org_scan_pkey ON public.org_scan USING btree (id)
+public.org_scan_user_id_organization_id_key CREATE UNIQUE INDEX org_scan_user_id_organization_id_key ON public.org_scan USING btree (user_id, organization_id)
 public.organization acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.organization.address_city text gen=- def=-
 public.organization.address_country text gen=- def=-
@@ -3801,37 +3890,95 @@ BEGIN
   RETURN NEW;
 END;
 
-public.organization_open_pipeline_rollup acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.organization_open_pipeline_rollup opts=security_invoker=true  SELECT d.organization_id,
-        CASE
-            WHEN ((sum(conv.minor_base) >= ('-9223372036854775808'::bigint)::numeric) AND (sum(conv.minor_base) <= ('9223372036854775807'::bigint)::numeric)) THEN sum(conv.minor_base)
-            ELSE NULL::numeric
-        END AS open_pipeline_minor_base,
+public.organization_open_pipeline_rollup(as_of date) secdef=false cfg=- acl==X/margince_owner,margince_owner=X/margince_owner,margince_app=X/margince_owner 
+ SELECT d.organization_id,
+    -- The SUM is bounded too, and separately from its summands. sum(bigint)
+    -- answers in numeric, so a set of individually representable deals can add
+    -- to a figure no bigint holds — and the reader scans this column into an
+    -- int64. Guarding one deal and not the total would have moved the same
+    -- failure one level up: the record unreadable because the deals are large
+    -- rather than because one of them is.
+    --
+    -- Out of range answers NULL, which the caller already knows how to report:
+    -- the deals were priced, the total cannot be stated, and a figure nobody
+    -- can represent is not a figure to publish.
+    CASE
+      WHEN sum(conv.minor_base)
+           BETWEEN -9223372036854775808 AND 9223372036854775807
+        THEN sum(conv.minor_base)
+      ELSE NULL
+    END AS open_pipeline_minor_base,
     count(*) AS open_deal_count,
-    count(*) FILTER (WHERE (conv.minor_base IS NOT NULL)) AS priced_deal_count
-   FROM (((((deal d
-     LEFT JOIN LATERAL ( SELECT (setting.value #>> '{}'::text[]) AS code
-           FROM setting
-          WHERE (setting.key = 'installation.base_currency'::text)) base ON (true))
-     LEFT JOIN LATERAL ( SELECT r.rate
-           FROM fx_rate r
-          WHERE (((d.currency)::text IS DISTINCT FROM base.code) AND (r.from_currency = d.currency) AND ((r.to_currency)::text = base.code) AND (r.rate_date <= CURRENT_DATE))
-          ORDER BY r.rate_date DESC
-         LIMIT 1) live ON (true))
-     LEFT JOIN currency_minor_digits deal_digits ON ((deal_digits.currency = d.currency)))
-     LEFT JOIN currency_minor_digits base_digits ON (((base_digits.currency)::text = base.code)))
-     LEFT JOIN LATERAL ( SELECT
-                CASE
-                    WHEN ((d.currency)::text = base.code) THEN d.amount_minor
-                    WHEN ((live.rate IS NOT NULL) AND ((round(((((d.amount_minor)::numeric * live.rate) * power((10)::numeric, (COALESCE((base_digits.digits)::integer, 2))::numeric)) / power((10)::numeric, (COALESCE((deal_digits.digits)::integer, 2))::numeric))) >= ('-9223372036854775808'::bigint)::numeric) AND (round(((((d.amount_minor)::numeric * live.rate) * power((10)::numeric, (COALESCE((base_digits.digits)::integer, 2))::numeric)) / power((10)::numeric, (COALESCE((deal_digits.digits)::integer, 2))::numeric))) <= ('9223372036854775807'::bigint)::numeric))) THEN (round(((((d.amount_minor)::numeric * live.rate) * power((10)::numeric, (COALESCE((base_digits.digits)::integer, 2))::numeric)) / power((10)::numeric, (COALESCE((deal_digits.digits)::integer, 2))::numeric))))::bigint
-                    ELSE NULL::bigint
-                END AS minor_base) conv ON (true))
+    -- How many deals actually reached the sum. SUM ignores a null summand
+    -- silently, so without this a total covering one of two deals is
+    -- indistinguishable from one covering both — a confident figure that is
+    -- quietly short, which is worse than the "not computable" it replaces.
+    --
+    -- It counts the CONVERSION rather than restating when one is possible: a
+    -- deal with no rate and a deal whose converted amount does not fit are both
+    -- deals the sum did not reach, and one predicate answers for both.
+    count(*) FILTER (WHERE conv.minor_base IS NOT NULL) AS priced_deal_count
+   FROM deal d
+   -- LEFT, not CROSS: an installation whose base-currency row is somehow absent
+   -- must still report its open_deal_count. A cross join would return no row at
+   -- all for the organization, which reads as "no open deals" — the one answer
+   -- that is definitely wrong. With no base currency nothing converts, every
+   -- deal contributes null, and the sum is null: not computable, honestly.
+   LEFT JOIN LATERAL (
+     SELECT (value #>> '{}')::text AS code
+       FROM setting
+      WHERE key = 'installation.base_currency'
+   ) base ON true
+   LEFT JOIN LATERAL (
+     SELECT r.rate
+       FROM fx_rate r
+      WHERE d.currency IS DISTINCT FROM base.code
+        AND r.from_currency = d.currency
+        AND r.to_currency = base.code
+        AND r.rate_date <= as_of
+      ORDER BY r.rate_date DESC
+      LIMIT 1
+   ) live ON true
+   -- Both currencies' minor-unit scales, each absent for an ordinary two-digit
+   -- code and coalesced to ISO's default below. LEFT so a code the table does
+   -- not name still converts, at two digits, rather than dropping the deal out
+   -- of the sum — an unnamed exception renders wrong for that code, where a
+   -- dropped deal silently shortens a total for every code.
+   LEFT JOIN currency_minor_digits deal_digits ON deal_digits.currency = d.currency
+   LEFT JOIN currency_minor_digits base_digits ON base_digits.currency = base.code
+   -- What this deal contributes to the total, or NULL when it contributes
+   -- nothing. Three cases, and the bound is written once here so the count
+   -- predicate below reads the same answer the sum does.
+   LEFT JOIN LATERAL (
+     SELECT CASE
+       -- Already in the installation's own currency: no rate needed, no scale
+       -- to cross, and none should be looked for. This is the ordinary deal.
+       WHEN d.currency = base.code THEN d.amount_minor
+       -- Converted, and only when the result is a number the column can hold.
+       -- The comparison runs in numeric, where the product already is, so it
+       -- decides the question BEFORE a cast can raise it.
+       --
+       -- amount × rate × 10^digits(base) ÷ 10^digits(deal), as ONE expression
+       -- so the single round() is the only rounding. numeric is exact, so the
+       -- intermediate carries no error to accumulate.
+       WHEN live.rate IS NOT NULL
+        AND round(d.amount_minor * live.rate
+                    * power(10::numeric, coalesce(base_digits.digits, 2))
+                    / power(10::numeric, coalesce(deal_digits.digits, 2)))
+            BETWEEN -9223372036854775808 AND 9223372036854775807
+         THEN round(d.amount_minor * live.rate
+                      * power(10::numeric, coalesce(base_digits.digits, 2))
+                      / power(10::numeric, coalesce(deal_digits.digits, 2)))::bigint
+       -- No usable rate, or a result too large to represent. Nothing is ever
+       -- converted at an invented rate of 1 — that would report ¥5,000,000 as
+       -- €5,000,000 — and nothing is ever clamped to the biggest number that
+       -- fits, which is the same lie with more digits.
+       ELSE NULL
+     END AS minor_base
+   ) conv ON true
   WHERE ((d.status = 'open'::text) AND (d.organization_id IS NOT NULL) AND (d.archived_at IS NULL))
   GROUP BY d.organization_id;
-public.organization_open_pipeline_rollup.open_deal_count bigint gen=- def=-
-public.organization_open_pipeline_rollup.open_pipeline_minor_base numeric gen=- def=-
-public.organization_open_pipeline_rollup.organization_id uuid gen=- def=-
-public.organization_open_pipeline_rollup.priced_deal_count bigint gen=- def=-
+
 public.organization_pkey CREATE UNIQUE INDEX organization_pkey ON public.organization USING btree (id)
 public.organization_profile_field acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.organization_profile_field.captured_at timestamp with time zone NOT NULL gen=- def=now()
@@ -5064,8 +5211,62 @@ public.stage.trg_stage_updated CREATE TRIGGER trg_stage_updated BEFORE UPDATE ON
 public.stage.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.stage.version bigint NOT NULL gen=- def=1
 public.stage.win_probability smallint NOT NULL gen=- def=0
+public.stage_exit_criterion acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.stage_exit_criterion.archived_at timestamp with time zone gen=- def=-
+public.stage_exit_criterion.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.stage_exit_criterion.hint text gen=- def=-
+public.stage_exit_criterion.id uuid NOT NULL gen=- def=uuidv7()
+public.stage_exit_criterion.key text NOT NULL gen=- def=-
+public.stage_exit_criterion.kind text NOT NULL gen=- def=-
+public.stage_exit_criterion.label text NOT NULL gen=- def=-
+public.stage_exit_criterion.position integer NOT NULL gen=- def=-
+public.stage_exit_criterion.required boolean NOT NULL gen=- def=true
+public.stage_exit_criterion.stage_exit_criterion_hint_len CHECK (((hint IS NULL) OR (length(hint) <= 500)))
+public.stage_exit_criterion.stage_exit_criterion_key_shape CHECK ((key ~ '^[a-z][a-z0-9_]{0,63}$'::text))
+public.stage_exit_criterion.stage_exit_criterion_kind_check CHECK ((kind = ANY (ARRAY['buyer_confirmed'::text, 'event_held'::text, 'document_signed'::text, 'role_identified'::text, 'terms_accepted'::text, 'custom'::text])))
+public.stage_exit_criterion.stage_exit_criterion_label_len CHECK (((length(label) >= 1) AND (length(label) <= 120)))
+public.stage_exit_criterion.stage_exit_criterion_pkey PRIMARY KEY (id)
+public.stage_exit_criterion.stage_exit_criterion_position_check CHECK (("position" >= 0))
+public.stage_exit_criterion.stage_exit_criterion_stage_fkey FOREIGN KEY (stage_id) REFERENCES stage(id) ON DELETE CASCADE
+public.stage_exit_criterion.stage_id uuid NOT NULL gen=- def=-
+public.stage_exit_criterion.trg_stage_exit_criterion_updated CREATE TRIGGER trg_stage_exit_criterion_updated BEFORE UPDATE ON public.stage_exit_criterion FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
+public.stage_exit_criterion.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.stage_exit_criterion.version bigint NOT NULL gen=- def=1
+public.stage_exit_criterion_pkey CREATE UNIQUE INDEX stage_exit_criterion_pkey ON public.stage_exit_criterion USING btree (id)
+public.stage_exit_criterion_stage_ix CREATE INDEX stage_exit_criterion_stage_ix ON public.stage_exit_criterion USING btree (stage_id)
+public.stage_exit_criterion_stage_key_live_ux CREATE UNIQUE INDEX stage_exit_criterion_stage_key_live_ux ON public.stage_exit_criterion USING btree (stage_id, key) WHERE (archived_at IS NULL)
 public.stage_id_pipeline_unique CREATE UNIQUE INDEX stage_id_pipeline_unique ON public.stage USING btree (id, pipeline_id)
 public.stage_pkey CREATE UNIQUE INDEX stage_pkey ON public.stage USING btree (id)
+public.stage_progression_outcome acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.stage_progression_outcome.approval_id uuid NOT NULL gen=- def=-
+public.stage_progression_outcome.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.stage_progression_outcome.deal_id uuid NOT NULL gen=- def=-
+public.stage_progression_outcome.decided_at timestamp with time zone NOT NULL gen=- def=now()
+public.stage_progression_outcome.decided_by_system boolean NOT NULL gen=- def=false
+public.stage_progression_outcome.evidence_corrected boolean NOT NULL gen=- def=false
+public.stage_progression_outcome.evidence_kinds text[] NOT NULL gen=- def='{}'::text[]
+public.stage_progression_outcome.from_stage_id uuid NOT NULL gen=- def=-
+public.stage_progression_outcome.id uuid NOT NULL gen=- def=uuidv7()
+public.stage_progression_outcome.outcome text NOT NULL gen=- def=-
+public.stage_progression_outcome.pipeline_id uuid NOT NULL gen=- def=-
+public.stage_progression_outcome.rejection_reason text gen=- def=-
+public.stage_progression_outcome.reversed_at timestamp with time zone gen=- def=-
+public.stage_progression_outcome.reversed_by uuid gen=- def=-
+public.stage_progression_outcome.stage_progression_outcome_deal_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
+public.stage_progression_outcome.stage_progression_outcome_from_stage_fkey FOREIGN KEY (from_stage_id) REFERENCES stage(id) ON DELETE CASCADE
+public.stage_progression_outcome.stage_progression_outcome_kind CHECK ((outcome = ANY (ARRAY['proposed'::text, 'approved_clean'::text, 'approved_edited'::text, 'rejected'::text, 'auto_applied'::text, 'reversed'::text, 'expired'::text, 'superseded'::text])))
+public.stage_progression_outcome.stage_progression_outcome_pipeline_fkey FOREIGN KEY (pipeline_id) REFERENCES pipeline(id) ON DELETE CASCADE
+public.stage_progression_outcome.stage_progression_outcome_pkey PRIMARY KEY (id)
+public.stage_progression_outcome.stage_progression_outcome_reason_is_a_rejections CHECK (((rejection_reason IS NULL) OR (outcome = 'rejected'::text)))
+public.stage_progression_outcome.stage_progression_outcome_reversal_is_timed CHECK (((reversed_by IS NULL) OR (reversed_at IS NOT NULL)))
+public.stage_progression_outcome.stage_progression_outcome_reversed_by_fkey FOREIGN KEY (reversed_by) REFERENCES app_user(id) ON DELETE SET NULL
+public.stage_progression_outcome.stage_progression_outcome_to_stage_fkey FOREIGN KEY (to_stage_id) REFERENCES stage(id) ON DELETE CASCADE
+public.stage_progression_outcome.to_stage_id uuid NOT NULL gen=- def=-
+public.stage_progression_outcome.trg_stage_progression_outcome_updated CREATE TRIGGER trg_stage_progression_outcome_updated BEFORE UPDATE ON public.stage_progression_outcome FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
+public.stage_progression_outcome.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.stage_progression_outcome.version bigint NOT NULL gen=- def=1
+public.stage_progression_outcome_approval_ux CREATE UNIQUE INDEX stage_progression_outcome_approval_ux ON public.stage_progression_outcome USING btree (approval_id)
+public.stage_progression_outcome_pkey CREATE UNIQUE INDEX stage_progression_outcome_pkey ON public.stage_progression_outcome USING btree (id)
 public.suggestion_dismissal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.suggestion_dismissal.fingerprint text NOT NULL gen=- def=-
 public.suggestion_dismissal.id uuid NOT NULL gen=- def=uuidv7()
@@ -5106,7 +5307,7 @@ public.tag.description text gen=- def=-
 public.tag.id uuid NOT NULL gen=- def=uuidv7()
 public.tag.name text NOT NULL gen=- def=-
 public.tag.search_tsv tsvector gen=s def=(setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(name, ''::text))), 'A'::"char"))
-public.tag.tag_color_check CHECK (((color IS NULL) OR (color = ANY (ARRAY['teal'::text, 'amber'::text, 'rose'::text, 'slate'::text]))))
+public.tag.tag_color_check CHECK (((color IS NULL) OR (color = ANY (ARRAY['teal'::text, 'amber'::text, 'rose'::text, 'slate'::text, 'sky'::text, 'violet'::text, 'lime'::text, 'orange'::text]))))
 public.tag.tag_pkey PRIMARY KEY (id)
 public.tag.trg_tag_updated CREATE TRIGGER trg_tag_updated BEFORE UPDATE ON public.tag FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.tag.updated_at timestamp with time zone NOT NULL gen=- def=now()
@@ -5314,7 +5515,7 @@ END;
 
 public.uq_activity_link CREATE UNIQUE INDEX uq_activity_link ON public.activity_link USING btree (activity_id, entity_type, COALESCE(person_id, organization_id, deal_id, lead_id, project_id))
 public.uq_activity_link_project CREATE UNIQUE INDEX uq_activity_link_project ON public.activity_link USING btree (activity_id) WHERE (entity_type = 'project'::text)
-public.uq_activity_participant CREATE UNIQUE INDEX uq_activity_participant ON public.activity_participant USING btree (activity_id, role, COALESCE(user_id, '00000000-0000-0000-0000-000000000000'::uuid), COALESCE(person_id, '00000000-0000-0000-0000-000000000000'::uuid), COALESCE(address, ''::text))
+public.uq_activity_participant CREATE UNIQUE INDEX uq_activity_participant ON public.activity_participant USING btree (activity_id, role, COALESCE(user_id, '00000000-0000-0000-0000-000000000000'::uuid), COALESCE(person_id, '00000000-0000-0000-0000-000000000000'::uuid), COALESCE(address, ''::text), COALESCE(channel_user_id, ''::text))
 public.uq_activity_retention_evidence CREATE UNIQUE INDEX uq_activity_retention_evidence ON public.activity_retention_evidence USING btree (activity_id, deal_id, deal_name, project_id, project_name, basis) NULLS NOT DISTINCT WHERE (basis <> 'controller_pin'::text)
 public.uq_activity_source CREATE UNIQUE INDEX uq_activity_source ON public.activity USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))
 public.uq_agent_standing_grant_user_spec CREATE UNIQUE INDEX uq_agent_standing_grant_user_spec ON public.agent_standing_grant USING btree (user_id, agent_spec)

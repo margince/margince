@@ -9,17 +9,19 @@ that decides which jobs run, and how coverage flows into SonarCloud.
 tenant-isolation and GDPR-erasure fitness tests (`//go:build integration`,
 they need a real Postgres) never blocked a PR locally. CI runs **both** lanes,
 plus the craftsmanship gate, the license gate and the frontend lane, as required
-checks — so a migration that forgets `FORCE RLS`, an erasure that misses a PII
+checks — so a migration that widens a tenant boundary, an erasure that misses a PII
 table, a denied dependency license, a swallowed error, or a UI regression fails
 the merge instead of shipping.
 
 Two lanes run but deliberately do **not** block: `vuln` and the SonarCloud scan.
 Both were traded off the required set for merge speed during heavy development,
 and both are re-checked daily on `main` by `scheduled.yml` — see below for why a
-non-blocking gate needs that backstop to stay honest. `uat` and `live-boot` are
-likewise advisory. Promoting the three of them is deliberate future work rather
-than an oversight; the reason it is not bundled with the merge queue is in
-[The `ci` aggregate](#the-ci-aggregate-is-the-only-required-context).
+non-blocking gate needs that backstop to stay honest. `live-boot` is likewise
+advisory. Promoting the two of them is deliberate future work rather than an
+oversight; the reason it is not bundled with the merge queue is in
+[The `ci` aggregate](#the-ci-aggregate-is-the-only-required-context). `uat` was
+advisory on the same argument until it let two screen regressions onto `main`
+under a red lane nobody was stopped by; it gates the merge now.
 
 ## Triggers
 
@@ -154,7 +156,7 @@ would report a documentation PR as a broken integration lane.
 |---|---|---|
 | `backend_db` | `backend/**`, `infra/**/!(*.md)`, `go.work`, `go.work.sum`, `Makefile`, `scripts/**`, `extensions/**`, `fixtures/**`, `composition/**`, `.github/workflows/ci.yml`, `.github/workflows/_lane-*.yml` (the caller plus every lane it invokes — globbed so a lane added later is covered the day it lands), `.github/actions/**`, `sonar-project.properties`, `frontend/src/mcp-apps/forbidden.json` | the integration shards and the `integration` fan-in — every lane that opens a database |
 | `backend` | `backend_db` (by YAML anchor, so the two cannot drift) plus the agent rulebooks `AGENTS.md` and `CLAUDE.md` | Go build/gate, extension reference, craftsmanship, unit coverage, vuln |
-| `frontend` | `frontend/**`, `backend/api/**` (the contract drives FE types), plus the composition inputs the lane now typechecks against — `extensions/**`, `fixtures/**`, `composition/**`, `backend/tools/gen-composition/**`, `Makefile` — and the install inputs `pnpm-lock.yaml` and `pnpm-workspace.yaml`, which decide *which* dependency the SPA builds on and which one `openapi-typescript` parses the contract with (`overrides` lives in the workspace file, so it resolves versions the lockfile then merely records) | frontend lane, UAT |
+| `frontend` | `frontend/**`, `backend/api/**` (the contract drives FE types), plus the composition inputs the lane now typechecks against — `extensions/**`, `fixtures/**`, `composition/**`, `backend/tools/gen-composition/**`, `Makefile` — and the install inputs `pnpm-lock.yaml`, `pnpm-workspace.yaml` and the root `package.json`, which decide *which* dependency the SPA builds on and which one `openapi-typescript` parses the contract with (`overrides` lives in the workspace file, so it resolves versions the lockfile then merely records; `packageManager` lives in the manifest and decides which pnpm reads both) | frontend lane, UAT |
 | `e2e` | `backend/**`, `frontend/**`, `infra/**/!(*.md)`, `extensions/**`, `fixtures/**`, `composition/**` | full-stack live-boot |
 | `deps` | `go.work`, `go.work.sum`, `**/go.mod`, `**/go.sum`, `**/package.json`, `**/pnpm-lock.yaml`, `pnpm-workspace.yaml` (`overrides` lives there, so it decides resolved versions the way a manifest does), `.syft.yaml`, `.grant.yaml`, `sbom-schemas/**`, `Makefile`, `.github/workflows/**` (syft catalogs a `uses:` as a package, so any workflow gaining a reference changes what the gate judges — a pinned remote action brings its license, a local reusable workflow brings none), `.github/actions/**` | the license gate |
 
@@ -174,16 +176,27 @@ Consequences:
   queue closes it: the docs-only entry is gated against the full tree it is
   merging into.
 - A **Dockerfile-only PR** (the root `Dockerfile`, `.dockerignore`,
-  `docker-bake.hcl`) also matches no scope, and **nothing else builds the role
-  images either**. `ci.yml` dropped its `docker images (api + web + worker)` job
-  on the reasoning that `release.yml` baked the images on every push to `main`,
-  so a break surfaced within a commit. That reasoning expired when `release.yml`
-  became dispatch-only: the images are now built only when somebody cuts a
-  release, so a broken `Dockerfile` can sit on `main` indefinitely and the person
-  who finds it is whoever tries to release next. Stated plainly because it is a
-  real regression in coverage, not a trade that still balances — restoring a
-  build-only, push-nothing image job scoped to those three paths is
-  https://github.com/margince/margince/issues/1965.
+  `docker-bake.hcl`) matches the `images` scope and runs the **`images (build
+  only)`** job: a `docker buildx bake` of the default group — the three roles —
+  that pushes nothing. No registry credentials, no digest, no release side
+  effect. It answers "does it still build", which for a while nothing asked.
+
+  That gap was real and is worth remembering. `ci.yml` dropped its `docker
+  images (api + web + worker)` job on the reasoning that `release.yml` baked on
+  every push to `main`, so a break surfaced within a commit of landing. The
+  reasoning expired when `release.yml` became dispatch-only — right on its own
+  terms, to stop ~400 release runs a week competing for the org-wide runner
+  ceiling, and it removed the net the earlier trade depended on. Between the two
+  changes the first person to notice a broken image was whoever cut the next
+  release, with the offending commit arbitrarily far back.
+
+  **The scope is those three paths and not `backend/**` or `frontend/**`**, and
+  that is a deliberate trade rather than an oversight. The images copy build
+  output, so a source change *can* break one without touching any of the three —
+  but a three-role bake on every backend PR is most of the cost the release
+  cleanup was removing, and the compile that catches nearly all of that class
+  already runs in `deterministic-gates`. What is left uncovered is a source
+  change that builds and then fails to package, which the release still finds.
 - A **backend-only PR** skips the frontend + UAT lanes; a **frontend-only PR**
   skips the Go build/gate + the integration lane — except for
   `frontend/src/mcp-apps/forbidden.json`, which is authored under `frontend/`
@@ -217,10 +230,11 @@ changes ──┬─> deterministic-gates ──> craftsmanship
           ├─> extension-reference ──────────────────────────────┐   │
           ├─> vuln                                              │   │
           ├─> license gate  (`deps` scope)                      │   │
-          ├─> frontend  →  _lane-frontend.yml ──> uat           │   │
+          ├─> frontend  →  _lane-frontend.yml                  │   │
           │                  fe-quality ┐                       │   │
           │                  fe-unit    ├─> fan-in              │   │
           │                  fe-bundle  ┘                       │   │
+          ├─> uat  (`frontend` scope, beside the lane)          │   │
           ├─> live-boot                                         │   │
           v                                                     v   v
  deterministic-gates + integration + extension-reference + frontend ──> sonarcloud
@@ -229,8 +243,8 @@ changes ──┬─> deterministic-gates ──> craftsmanship
 
   ci  ── the ONE required context. needs: deterministic-gates,
          craftsmanship, craft-residue, secret-scan, extension-reference,
-         integration, frontend, license-gate   (eight — vuln, live-boot and uat
-         stay advisory and are NOT in the fan-in)
+         integration, frontend, uat, license-gate, images   (ten — vuln and
+         live-boot stay advisory and are NOT in the fan-in)
 ```
 
 ### Two lanes are called, not inlined
@@ -270,12 +284,18 @@ events gate differently. That is the "two hand-maintained copies of one list"
 shape this repository refuses everywhere else, and it would be guarding the one
 check everything depends on.
 
-Two deliberate shapes here. The Playwright `uat` lane is **fail-fast**: it
-starts only after the cheaper `frontend` gate (biome + vitest + tsc + build)
-passes. The real-Postgres integration lane is the opposite — it runs **beside**
-`deterministic-gates`, not behind it: it is the longest lane in the pipeline,
-so serializing the two slowest jobs dominated PR wall-clock, and a broken
-build is still caught by `deterministic-gates` itself. And the lane is
+Two deliberate shapes here. The Playwright `uat` lane runs **beside**
+`frontend`, not behind it. It builds the SPA itself and shares no artefact with
+the lane, so the old fail-fast order (start only once biome, vitest and tsc were
+green) bought nothing but latency: nine minutes queued behind a seventeen-minute
+unit job, a broken screen reported twenty-six minutes after the push, and once
+it gates the merge that sequence would have been the aggregate's wall clock on
+every frontend change. What the order saved was this lane's runner minutes on a
+change `fe-quality` would have refused — one frontend run in seven — which is
+cheaper than the wait. The real-Postgres integration lane runs **beside**
+`deterministic-gates` for the same reason: it is the longest lane in the
+pipeline, so serializing the two slowest jobs dominated PR wall-clock, and a
+broken build is still caught by `deterministic-gates` itself. And the lane is
 **sharded**: six matrix runners each execute a deterministic per-test slice
 (package-level splitting would floor at the heaviest package,
 `compose/integration`), and the `integration` fan-in reassembles them into the
@@ -307,13 +327,13 @@ and the queue lane covers the remainder.
 upstream job reports a **green** required check, which is the same failure wearing
 a different hat.
 
-**`needs` is exactly the nine contexts the ruleset required before the aggregate
-replaced them**, and that equality is the point: this change moved where the
-verdict is computed, not what it covers. Widening the gate in the same step would
-mean a red merge queue with two candidate explanations, during the week the queue
-itself is on trial.
+**`needs` began as exactly the nine contexts the ruleset required before the
+aggregate replaced them**, because that change moved where the verdict is
+computed, not what it covers. A lane joins the list as its own change, so a red
+aggregate has one candidate explanation; `license-gate`, `images` and `uat` each
+joined that way, on their own evidence.
 
-Ten jobs are deliberately **not** in `needs`:
+Nine jobs are deliberately **not** in `needs`:
 
 - `changes` — the classifier produces no verdict.
 - `fe-quality`, `fe-unit`, `fe-bundle` — absorbed by the `frontend` fan-in.
@@ -321,15 +341,23 @@ Ten jobs are deliberately **not** in `needs`:
   `integration` fan-in, which already asserts on their results.
 - `sonarcloud` — non-blocking by decision; listing it here would make it required
   by the back door.
-- `vuln`, `live-boot`, `uat` — advisory, and left that way **on purpose**. They
-  are the obvious additions: each runs on every qualifying change and a red one
-  does not stop a merge, which is not a state worth keeping. What argues for
-  waiting is the batching. A flaky job under a merge queue does not cost one
-  re-run; it fails the whole group it was checked in and every entry in that group
-  is re-queued, and nothing has ever exercised these three under a gate that
-  blocks. Promote them once the queue
-  has a measured baseline, as their own change, so a regression has exactly one
-  explanation.
+- `vuln`, `live-boot` — advisory, and left that way **on purpose**. They are
+  the obvious additions: each runs on every qualifying change and a red one does
+  not stop a merge, which is not a state worth keeping. What argues for waiting
+  is the batching. A flaky job under a merge queue does not cost one re-run; it
+  fails the whole group it was checked in and every entry in that group is
+  re-queued, and nothing has ever exercised these two under a gate that blocks.
+  Promote them once the queue has a measured baseline, as their own change, so a
+  regression has exactly one explanation.
+
+`uat` was on that list and is in the aggregate now. The queue argument assumed a
+queue, and none has run since 2026-08-20; meanwhile the lane's record over
+fifty-two pull-request runs was no flake at all — every red was one of three
+deterministic screen regressions that had already landed on `main`, seen by
+eleven pull requests in a row and stopping none of them. It reads no clock
+(PERF-1 holds a request and asserts the heading did not wait on it; the
+record-open budget is `make bench-mobile`'s), so a busy runner cannot redden it,
+which is the one property a blocking Playwright lane has to have.
 
 Six rather than twelve because the per-test slice is the cheap half of a shard.
 Measured on a green run, one shard spent ~146s restoring the build cache and
@@ -712,9 +740,11 @@ beside the gate, deliberately outside it:
   the runner is ephemeral: `CACHE=gha` exports the layer cache per role
   (its durable win is the dependency-download layer, which busts only on a
   module-pin change), and buildkit-cache-dance + actions/cache carry the
-  BuildKit cache-mount contents (Go compile cache, pnpm store, Corepack's
-  pnpm download, tsc `.tsbuildinfo`) across runs — mounts are not layers, so no layer cache
-  covers them. Both live in the repo's 10 GB Actions cache, which the CI
+  BuildKit cache-mount contents (Go compile cache, pnpm store, tsc
+  `.tsbuildinfo`) across runs — mounts are not layers, so no layer cache
+  covers them. Corepack's download is deliberately not among them: the image
+  bakes the pinned pnpm into a layer, and a mount over Corepack's home would
+  hide it. Both live in the repo's 10 GB Actions cache, which the CI
   lanes' Go caches keep near the cap, so entries older than a few hours are
   routinely LRU-evicted: the caches bridge releases that land close
   together — the busy-day case where they matter — and a release after a

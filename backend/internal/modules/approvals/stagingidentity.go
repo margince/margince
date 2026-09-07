@@ -21,6 +21,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -173,10 +174,6 @@ func (s *Service) HasPendingKind(ctx context.Context, kind string, targetID ids.
 // a human answered is not the caller's to take back, and a caller that acts on
 // the retraction needs to know the retraction happened.
 func (s *Service) WithdrawInTx(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, reason string) (bool, error) {
-	p, ok := principal.Actor(ctx)
-	if !ok {
-		return false, errors.New("crmapprovals: no actor bound to context")
-	}
 	// The same row lock decideInTx takes, for the same reason: a decision landing
 	// concurrently has to be ordered against this write rather than interleaved
 	// with it. A human who wins the lock leaves the row decided and this reports
@@ -204,9 +201,10 @@ func (s *Service) WithdrawInTx(ctx context.Context, tx pgx.Tx, id ids.ApprovalID
 	if tag.RowsAffected() == 0 {
 		return false, nil
 	}
-	if _, err := s.audit(ctx, tx, p, "update", id.UUID, map[string]any{
-		"withdrawn": true, "reason": reason,
-	}); err != nil {
+	if _, err := storekit.AuditWithEvidence(ctx, tx, "update", entityApproval, id.UUID,
+		map[string]any{approvalKeyStatus: StatusPending},
+		map[string]any{approvalKeyStatus: StatusExpired},
+		map[string]any{approvalKeyReason: reason}); err != nil {
 		return false, fmt.Errorf("audit withdrawn approval: %w", err)
 	}
 	return true, nil

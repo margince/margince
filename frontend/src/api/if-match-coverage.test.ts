@@ -3,6 +3,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import { sourceFileAt } from "../../scripts/lib/source-tree";
 
 // Fitness function for the lost update: a write to an endpoint that takes an
 // `If-Match` precondition, sent without one.
@@ -60,15 +61,6 @@ const UNPINNED_WRITES: readonly string[] = [
   "screens/extension-access.tsx PATCH /roles/{key}/objects/{object}",
   "screens/settings.tsx DELETE /stages/{id}",
   "screens/share.tsx DELETE /record-grants/{id}",
-  // The two activity writes stay for the reason the FACT writes above do:
-  // Activity carries no version on the wire, so no caller can pin one. The
-  // server honours the precondition when one arrives
-  // (activities/handlers_lifecycle.go), so what is missing is the client's
-  // ability to KNOW the version — and closing that means putting it on the
-  // entity for every caller at once, rather than threading ETag reads through
-  // one screen.
-  "screens/taskactions.tsx PATCH /activities/{id}",
-  "screens/worklist.queries.ts PATCH /activities/{id}",
   "screens/voice-dna.tsx DELETE /voice-profiles/{id}/sources/{sourceId}",
   "screens/voice-dna.tsx PATCH /voice-profiles/{id}",
 ];
@@ -81,13 +73,7 @@ const HTTP_METHODS: readonly string[] = [
   "delete",
 ];
 
-const schemaSource = ts.createSourceFile(
-  "schema.d.ts",
-  readFileSync(join(apiDir, "schema.d.ts"), "utf8"),
-  ts.ScriptTarget.Latest,
-  true,
-  ts.ScriptKind.TS,
-);
+const schemaSource = sourceFileAt(join(apiDir, "schema.d.ts"));
 
 function declaration(name: string): ts.InterfaceDeclaration {
   let found: ts.InterfaceDeclaration | undefined;
@@ -254,13 +240,7 @@ function callsIfMatch(node: ts.Node): boolean {
 
 /** `<file> METHOD /path` for every call in one file that sends no precondition. */
 function unpinnedIn(file: string, conditional: ReadonlySet<string>): string[] {
-  const source = ts.createSourceFile(
-    file,
-    readFileSync(file, "utf8"),
-    ts.ScriptTarget.Latest,
-    true,
-    ts.ScriptKind.TSX,
-  );
+  const source = sourceFileAt(file);
   const found: string[] = [];
   const visit = (node: ts.Node) => {
     const endpoint = calledEndpoint(node);

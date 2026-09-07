@@ -41,12 +41,19 @@ import (
 //     table name is invisible unless the text has been unquoted — which is what
 //     LiteralText is for, and what TableReads does.
 //
+// An OPENING PAREN counts as a delimiter, because a set-returning function in a
+// FROM clause is a read of the relation it names: `FROM rollup($1)` reads the
+// rollup exactly as `FROM rollup` did. Without it, turning a view into a
+// function to take a parameter makes every census over that relation report a
+// clean tree — the readers are still there and the pattern has stopped seeing
+// them, which is under-recognition rather than a finding.
+//
 // The table name is quoted into the pattern rather than interpolated raw: a
 // caller naming a table with a regex metacharacter would otherwise silently
 // widen or break its own census, and a census that matches the wrong thing
 // reads exactly like a clean tree.
 func TableReadPattern(table string) *regexp.Regexp {
-	return regexp.MustCompile(`(?i)\b(FROM|JOIN)\s+` + regexp.QuoteMeta(table) + `(\s|$|[,;)])`)
+	return regexp.MustCompile(`(?i)\b(FROM|JOIN)\s+` + regexp.QuoteMeta(table) + `(\s|$|[,;()])`)
 }
 
 // LiteralText is a string literal's content without its quoting.

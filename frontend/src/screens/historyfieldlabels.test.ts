@@ -1,8 +1,8 @@
-import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import { sourceFileAt } from "../../scripts/lib/source-tree";
 import { en } from "../i18n/en";
 import {
   historyFieldLabel,
@@ -33,13 +33,7 @@ const schemaPath = join(
 );
 
 function schemaSource(): ts.SourceFile {
-  return ts.createSourceFile(
-    "schema.d.ts",
-    readFileSync(schemaPath, "utf8"),
-    ts.ScriptTarget.Latest,
-    true,
-    ts.ScriptKind.TS,
-  );
+  return sourceFileAt(schemaPath);
 }
 
 // The property of one named type in the contract, wherever it is declared.

@@ -22,8 +22,9 @@ ROOT_SCRIPT_GATES := check-craft-doc craft-test test-dev-isolation \
   make-target-parity contract-breaking-check contract-frontend-drift \
   test-contract-frontend-drift migration-versions test-migration-versions \
   test-lanes env-reads gofmt lint-modules go-file-length rls-store-path \
-  no-jurisdiction one-spelling test-one-spelling money-scale test-money-scale \
-  test-selfdir pkg-freeze test-desktop-launcher changelog-sections \
+  check-extension-modules \
+  no-jurisdiction test-no-jurisdiction \
+  pkg-freeze test-desktop-launcher changelog-sections \
   test-changelog-sections test-dev-postgres-container test-e2e-llm-check
 
 # How wide the gate fan-out runs: the machine's online core count, so a 4-core
@@ -99,7 +100,7 @@ SEED_STACK = set -e; . scripts/lib-devstate.sh; \
     seed_dsn="postgres://margince_owner:dev@localhost:15432/$$seed_db"; \
   fi;
 
-.PHONY: help install dev-fresh check check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-demo verify-demo seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-clock-drift fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows fitness-jurisdiction storybook fe-uat craft-static craft-test craft-residue check-craft-doc test-golangci-guard test-scheduled-report test-ci-verdict test-merge-verdict test-laneorder secret-scan test-secret-scan test-dev-dsn test-dev-isolation test-dev-cleanup test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length rls-store-path no-jurisdiction one-spelling test-one-spelling money-scale test-money-scale test-selfdir pkg-freeze changelog-sections test-changelog-sections test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check sbom-gate
+.PHONY: help install dev-fresh check check-all check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-demo verify-demo seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-clock-drift fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows fitness-jurisdiction storybook fe-uat craft-static craft-test craft-residue check-craft-doc test-golangci-guard test-scheduled-report test-ci-verdict test-merge-verdict test-laneorder secret-scan test-secret-scan test-dev-dsn test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations check-extension-modules contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze changelog-sections test-changelog-sections test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check sbom-gate
 
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
@@ -152,9 +153,9 @@ install: fe-install tools hooks
 ## them is a reader — each either walks the tree and judges what it finds, or
 ## builds its fixtures under mktemp — so nothing but the list itself ever
 ## ordered them, and serially they were 191 s of this target (measured, 8-core
-## darwin, warm caches). Four alone were 130 s of that: money-scale,
-## test-money-scale, one-spelling and test-one-spelling each re-walk the whole
-## tree, and the two `test-` halves re-walk a synthesized copy of it on top.
+## darwin, warm caches). Four alone were 130 s of that, and those four are gone:
+## the money-scale and one-spelling censuses are Go and TypeScript tests now,
+## walking the tree once inside a lane that was already walking it.
 ##
 ## Named in ROOT_SCRIPT_GATES rather than left as prerequisites here, because a
 ## prerequisite list AND a sub-make over the same names would run each gate
@@ -188,6 +189,31 @@ check:
 	@bash scripts/phase-timer.sh reset
 	@PHASE_TIMER_OWNED=1 $(MAKE) check-backend
 	@PHASE_TIMER_OWNED=1 $(MAKE) check-fe
+	@bash scripts/phase-timer.sh report
+
+## check-all — `check` plus the integration lane, which is what a change touching
+## backend Go actually has to pass. `check` reaches the integration lane NOT AT
+## ALL: its `test` target is `go test ./...`, and every integration file carries
+## `//go:build integration`, so the lane's packages compile into nothing and a
+## green `check` says nothing about them.
+##
+## Its own target rather than folding the lane into `check`, because `check` is
+## what a docs or frontend change runs and that is most changes: the lane takes
+## minutes and needs Postgres up, so paying it on a README edit would train
+## everybody to skip the gate that also holds the security cases.
+##
+## Not in the pre-push hook either, and the reason is this machine rather than
+## principle: parallel sessions share one test template, so a hook running the
+## lane on every push would have them rebuilding each other's schema mid-run —
+## failures that are schema-shaped and look nothing like their cause. The hook
+## keeps the checks that are fast, need nothing running, and cannot collide.
+check-all:
+	@bash scripts/phase-timer.sh reset
+	@PHASE_TIMER_OWNED=1 $(MAKE) check-backend
+	@PHASE_TIMER_OWNED=1 $(MAKE) check-fe
+	@bash scripts/phase-timer.sh start "backend: integration lane (real Postgres)"
+	@PHASE_TIMER_OWNED=1 $(MAKE) -C backend test-integration
+	@bash scripts/phase-timer.sh stop
 	@bash scripts/phase-timer.sh report
 
 ## check-q — quiet `make check`: the full log lands in .tmp/check.log and only an
@@ -247,6 +273,12 @@ dev:
 ## and boots the installation a first customer gets (organization + admin,
 ## no records). Use it when the last session left data behind; plain
 ## `make dev` keeps whatever is there.
+##
+## Also the cure for a migration-ledger desync: a boot failing with
+## `river migrate up: relation "river_migration" already exists` is the shared
+## dev database's ledger disagreeing with its schema, not anything the branch
+## did. Rebuild it rather than hand-repairing the ledger — the same rule the
+## integration lane states for the test database, for the same reason.
 dev-fresh:
 	@bash scripts/dev.sh up "$(DEV_SLUG)" --fresh
 
@@ -866,6 +898,21 @@ test-api-entrypoint:
 test-dev-dsn:
 	@./scripts/test-dev-dsn.sh
 
+## test-testdb-redis — prove `make test-it` and scripts/test-integration-one.sh
+## settle on ONE Redis address, and that REDIS_PORT reaches both.
+##
+## The failure it replaces: the script route left MARGINCE_TEST_REDIS unset, so
+## every Redis-using test in the package failed naming Redis and telling the
+## reader to run `make db-up` — on a machine where Redis was already up.
+test-testdb-redis:
+	@./scripts/test-testdb-redis.sh
+
+## test-lane-timeout-report — prove a package killed for exceeding its budget is
+## reported as a TIMEOUT rather than as hundreds of "assigned but not run" lines,
+## and that it does not bury a divergence it did not cause.
+test-lane-timeout-report:
+	@./scripts/test-lane-timeout-report.sh
+
 ## test-dev-isolation — prove two worktrees get two stacks: the slug comes from
 ## the worktree, the Redis database and the port pair are CLAIMED from one
 ## machine-global registry rather than hashed, and the object bucket is
@@ -1024,24 +1071,13 @@ test-golangci-guard:
 go-file-length:
 	@./scripts/check-go-file-length.sh
 
-## rls-store-path — DB-free floor under the RLS runtime proof: no
-## internal/modules statement may address the superuser pool directly
-## (bypassing FORCE RLS); per-workspace work runs inside WithWorkspaceTx.
+## rls-store-path — DB-free floor under the row-scope runtime proof: no
+## internal/modules statement may address the superuser pool directly, where
+## the database applies no per-workspace filter of its own; per-workspace work
+## runs inside WithWorkspaceTx, which is what bounds it.
 ## A genuinely cross-workspace query carries a `// rls-exempt: <reason>` line.
 rls-store-path:
 	@./scripts/check-rls-store-path.sh
-
-## one-spelling — choke-point gate: SQLSTATEs are named in storekit, a CHECK
-## breach is answered by httperr's constraint net rather than a module's copy
-## of it, and the ISO-4217 shape is values.ValidCurrency.
-one-spelling:
-	@./scripts/check-one-spelling.sh
-
-## test-one-spelling — prove that gate fires on each defect it names and stays
-## silent on the lookalikes, by planting each in the scanned tree. A scanner
-## nobody has watched fail is a scanner nobody knows the shape of.
-test-one-spelling:
-	@./scripts/test-check-one-spelling.sh
 
 ## test-e2e-llm-check — prove the e2e-llm checker tells a failed use case apart
 ## from a run that never reached the model: a refused credential is named as
@@ -1067,32 +1103,23 @@ changelog-sections:
 test-changelog-sections:
 	@./scripts/test-check-changelog-sections.sh
 
-## money-scale — an amount in minor units is converted by the ONE owner of the
-## ISO minor-unit table (Go: shared/kernel/values; TypeScript:
-## src/format/minorunits), never by a hard-coded power of ten. The only gate
-## that reads both languages, because the scale is a contract between them.
-money-scale:
-	@./scripts/check-money-scale.sh
-
-## test-money-scale — prove that gate fires in each language, refuses only
-## money, and honours a line-scoped waiver.
-test-money-scale:
-	@./scripts/test-check-money-scale.sh
-
-## test-selfdir — the two gates each resolve $$0 through its symlinks before
-## deriving their directory, and that block cannot be shared: finding a library
-## needs the answer it produces. So it is duplicated deliberately, and this
-## asserts the copies are byte-identical — which is what makes deliberate
-## duplication safe rather than merely explained.
-test-selfdir:
-	@./scripts/test-selfdir-identical.sh
-
 ## no-jurisdiction — pack-boundary fitness gate: no country-specific
 ## regulatory identifier (XRechnung/ZUGFeRD/DATEV/…) or ISO-3166 code appears
-## in core CODE, only in the jurisdiction seam (internal/modules/de,
-## internal/shared/ports/jurisdiction). Comments citing a statute are allowed.
+## in core CODE — Go AND SQL — only in the jurisdiction seam
+## (internal/shared/ports/jurisdiction). Comments citing a statute are allowed
+## in both languages. check-no-jurisdiction.test.sh runs beside it because the
+## gate read only *.go while claiming to guard core, so a leak in a migration
+## reported OK: under-recognition leaves no failing assertion to notice, and the
+## reach is now asserted rather than trusted.
 no-jurisdiction:
 	@./scripts/check-no-jurisdiction.sh
+
+## test-no-jurisdiction — the jurisdiction gate's own test. It is a SEPARATE
+## target like every other gate-plus-test pair here (migration-versions,
+## changelog-sections) so the fan-out runs them side by side and a reader can
+## see from the list that this gate is tested.
+test-no-jurisdiction:
+	@./scripts/check-no-jurisdiction.test.sh
 
 ## check-ext-migrations — the extension migration gate (ADR-0069): apply every
 ## enabled unit's migrations as its restricted ext_<name> role against a
@@ -1110,6 +1137,17 @@ no-jurisdiction:
 ## `make check-ext-migrations` — after `make db-up`.
 check-ext-migrations:
 	@./scripts/check-ext-migrations.sh
+
+## check-extension-modules — prove a dependency bump can reach an extension
+## module unattended: `go mod tidy` runs there, and it changes nothing.
+##
+## Without a local replace for the backend, tidy does not fail — it resolves
+## pkg/extension from the NETWORK and pins a pseudo-version of whatever commit
+## was pushed, so the unit compiles against a different backend than it ships
+## with. That is how a Renovate bump left one module's go.sum on the old version
+## with nothing in the tree noticing (#2003).
+check-extension-modules:
+	@./scripts/check-extension-modules.sh
 
 ## pkg-freeze — published-surface freeze gate (ADR-0069 §3, EXT-P3): apidiff
 ## on every backend/pkg package vs the merge target (origin/$GITHUB_BASE_REF

@@ -71,11 +71,15 @@ const openTask = {
   assignee_id: null,
   linked_deal_id: null,
   linked_person_id: null,
+  // The version the row's tick writes with. The 360 sends one for every task it
+  // lists, and a fixture without it describes a payload the read cannot produce
+  // — the write under test would refuse rather than run.
+  version: 1,
 };
 
 // The same task as the ACTIVITY read the detail modal fires when a row is
-// expanded — the composite's summary shape carries no version or done flag, so
-// the modal reads the record itself.
+// expanded — the composite's summary carries no done flag, so the modal reads
+// the record itself.
 const openTaskActivity = {
   id: openTask.activity_id,
   organization_id: "o-1",
@@ -122,10 +126,12 @@ const org360WithRecommendedStep = {
 };
 
 // A due date that falls on a DIFFERENT calendar day in the two zones this page
-// could read it in. `dueInstant` mints a due date as the end of the picked day
-// in the BROWSER's zone, so this is what a writer in Los Angeles picking 21
-// August actually stores: 23:59:59 there, and already the 22nd in Berlin.
-const STRADDLING_DUE_AT = "2026-08-22T06:59:59Z";
+// could read it in. `dueInstant` mints the end of the picked day on the
+// RECORD's clock, so this is what picking 21 August against a Berlin
+// installation stores: 23:59:59 there, and still the 21st at 14:59 for a reader
+// in Los Angeles — who must be shown the day the deadline was agreed on, not
+// their own reading of it.
+const STRADDLING_DUE_AT = "2026-08-21T21:59:59.000Z";
 const WRITERS_ZONE = "America/Los_Angeles";
 const PICKED_DAY = "Due 21/08/2026";
 const DAY_AFTER = "Due 22/08/2026";
@@ -180,13 +186,13 @@ describe("CompanyScreen — the Tasks tab", () => {
     await waitFor(() => expect(patched).toEqual({ is_done: true }));
   });
 
-  it("dates a task's deadline on the reader's own clock, the same day on the row and in the detail", async () => {
-    // A due date is not a fact about the record the way an occurrence is: the
-    // stored instant is minted as the end of the picked day in the BROWSER's
-    // zone, so it already carries the picker's clock. Read on the
-    // organization's clock it names the day AFTER the one the picker chose for
-    // everybody outside that zone — and the row and the modal disagreed with
-    // each other about which of the two it was.
+  it("dates a task's deadline on the record's clock, the same day on the row and in the detail", async () => {
+    // A deadline IS a fact about the record: the stored instant is minted as
+    // the end of the picked day on the organization's clock, and every
+    // colleague reads back the day that was agreed. Reading it on the viewer's
+    // clock instead named a different day for everyone outside that zone —
+    // which is how a proposal approved for 9 September became a task due the
+    // 10th. The reader here sits nine hours west and must still see the 21st.
     const user = userEvent.setup();
     pretendViewerZone(WRITERS_ZONE);
     stubFetch(

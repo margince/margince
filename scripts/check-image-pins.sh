@@ -17,7 +17,7 @@ workflow_dir=".github/workflows"
 actions_dir=".github/actions"
 compose_files="infra/docker-compose.dev.yml"
 
-if [ ! -d "$workflow_dir" ]; then
+if [[ ! -d "$workflow_dir" ]]; then
   echo "No $workflow_dir directory found — skipping image-pin check"
   exit 0
 fi
@@ -28,7 +28,7 @@ fi
 # actions it calls. A composite action pulls those into CI exactly as a workflow
 # does, so an unpinned `uses:` one level down would otherwise ride in unread.
 scan_dirs=("$workflow_dir")
-[ -d "$actions_dir" ] && scan_dirs+=("$actions_dir")
+[[ -d "$actions_dir" ]] && scan_dirs+=("$actions_dir")
 
 # --- Workflow `uses:` actions: pinned to a commit SHA or digest ---
 while IFS= read -r line; do
@@ -38,7 +38,7 @@ while IFS= read -r line; do
     ./*) continue ;; # local composite action: versioned with the repo itself
   esac
   ref="${pin##*@}"
-  if [ "$ref" = "$pin" ] || ! grep -qE '^([0-9a-f]{40}|[0-9a-f]{64}|sha256:[0-9a-f]{64})$' <<<"$ref"; then
+  if [[ "$ref" = "$pin" ]] || ! grep -qE '^([0-9a-f]{40}|[0-9a-f]{64}|sha256:[0-9a-f]{64})$' <<<"$ref"; then
     echo "UNPINNED REF: $line" >&2
     fail=1
   fi
@@ -68,7 +68,7 @@ while IFS= read -r line; do
 done < <(grep -rnE --include='*.yml' --include='*.yaml' \
   '^[[:space:]]*(-[[:space:]]+)?image:' "${scan_dirs[@]}" $compose_files 2>/dev/null || true)
 
-if [ "$fail" -eq 0 ]; then
+if [[ "$fail" -eq 0 ]]; then
   echo "image pins OK"
 fi
 exit "$fail"

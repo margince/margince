@@ -38,7 +38,7 @@ export function ClientSurfaceScreen() {
   return (
     <div className="client-chrome">
       <header className="client-bar">
-        <a href="#/home" className="client-back">
+        <a href="#/brief" className="client-back">
           <ArrowLeft aria-hidden size={15} />
           {t("client.back")}
         </a>

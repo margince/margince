@@ -42,7 +42,8 @@ import (
 // that stops building a Job cannot leave its permission behind for whatever is
 // written there next.
 var buildsAJobLegitimately = gatekit.Waive(map[string]string{
-	"internal/compose/runnerservice.go":      "the two production paths, each carrying a spec's own allowlist",
+	"internal/compose/runnerservice.go":      "the scheduled path, carrying the spec's own allowlist",
+	"internal/compose/runnerresume.go":       "the resumed path, carrying the CURRENT catalog entry's allowlist rather than the one staged with the call — a run parked across a catalog change resumes under what the entry says now",
 	"internal/compose/certcase_agentloop.go": "the certification lane, whose fixture is the offered surface",
 })
 

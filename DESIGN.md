@@ -204,7 +204,7 @@ Three families, which is the ceiling `check-font-lock.sh` holds.
 
 | Role | Family | Where |
 |---|---|---|
-| Display | **Outfit** 600 | A record's name at 24px (`-0.025em`), the home greeting at 30px, a zone's title at 16px, the agent's verdict word at 19px, a reading's word at 17px. |
+| Display | **Outfit** 600 | A record's name at 24px (`-0.025em`), the Brief greeting at 30px, a zone's title at 16px, the agent's verdict word at 19px, a reading's word at 17px. |
 | Body and UI | **Geist** | 13px 400 for everything, 500 for a row's lead and a control, 12px in `--ink3` for meta and labels. Prose at 14px on 1.65, 72ch (§5). |
 | Figures | **Geist Mono** 500, tabular | A reading's figure at 22px (`-0.03em`), and every amount, count, date and identifier in a row or a cell. |
 
@@ -312,9 +312,12 @@ scrolls inside itself.
   Pipeline, Projects; Intelligence — Reports, Ask Margince. No badges: the
   queues that used to badge (approvals, tasks) are lanes of the Worklist, which
   reports its counts on the page. Settings is not a row; it opens from the
-  account menu and publishes its own second level (You / Admin settings) as a
-  210px column on the same glass, which the sidebar becomes while a settings
-  route is open. The agent's orb stays at the foot.
+  account menu and publishes its own second level (Overview, then the subject
+  groups) on the same glass, which the sidebar becomes while a settings route is
+  open — at the sidebar's own width and under the sidebar's own head, because it
+  is the same column showing a different list rather than a second panel. The
+  level names itself with the heading over its first group, and the way out of it
+  reads "Back to app". The agent's orb stays at the foot.
 - **Top bar**: 48px, glass, a hairline under it. The breadcrumb on the left,
   the command field in the middle (`⌘K`), the reader's monogram on the right.
   It is the application's one bar and every screen has it. Nothing that
@@ -814,7 +817,7 @@ inventory. The structure above holds; these are the facts it now carries.
   and the next task. A lead carries no agent suggestions; the "Ready to
   qualify" row on this page is a proposal, derived from the same evidence the
   qualify dialog derives its reason from.
-- **Home draws five fixed readings**: Customer waiting, Meetings ahead,
+- **The Brief draws five fixed readings**: Customer waiting, Meetings ahead,
   Promises due, Lead response, Quota pace. Two of them say what they cannot
   answer ("promises are not tracked yet", "no target is set") rather than
   showing a zero, and the floor line under the row says when a source was read

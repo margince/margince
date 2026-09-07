@@ -25,6 +25,10 @@ expect:
     fields and not its history, search_records finds the account the grounding
     has already found, and run_report answers a number rather than a narrative —
     a turn taking any of those did more work for a worse answer.
+  near_misses:
+    - read_record
+    - search_records
+    - run_report
   bands:
     certified_min: 70
     degraded_min: 50

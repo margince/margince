@@ -172,7 +172,7 @@ export function ManualCompanySetup() {
     },
     onSuccess: (profile) => {
       queryClient.setQueryData(["company"], profile);
-      navigate({ screen: "home" });
+      navigate({ screen: "brief" });
     },
   });
   return (

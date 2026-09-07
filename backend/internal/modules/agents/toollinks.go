@@ -41,6 +41,35 @@ func requireAddressee(to []string) error {
 		"`to` is empty; a send with no addressee reaches nobody and would be refused after approval")}
 }
 
+// requireParsableEvidence refuses an evidence id that is not a record id,
+// BEFORE the call is staged.
+//
+// Same reason as requireAddressee above: a send floored to confirm-first is
+// staged, put in front of a human, and redeemed — and redemption consumes the
+// one-shot approval before the send door parses anything. A malformed id would
+// therefore burn an approval a person granted and fail afterwards, which reads
+// as the system losing their decision.
+//
+// It only asks whether the string IS an id. Whether the record exists, supports
+// the category, or may be read by this caller are the engine's questions, asked
+// where the answer can be recorded.
+func requireParsableEvidence(e SendEvidenceArgs) error {
+	for _, named := range []struct{ field, raw string }{
+		{"invoice_id", e.InvoiceID},
+		{"contract_id", e.ContractID},
+		{"deal_id", e.DealID},
+	} {
+		if named.raw == "" {
+			continue
+		}
+		if _, err := ids.Parse(named.raw); err != nil {
+			return &BadArgsError{Cause: fmt.Errorf(
+				"`evidence.%s` is not a record id; it would be refused after approval", named.field)}
+		}
+	}
+	return nil
+}
+
 // maxRecordLinks bounds how many records one call may attach to.
 //
 // This is a REQUEST BOUND, not a modelling opinion. Each link costs its own

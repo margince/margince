@@ -1,0 +1,37 @@
+name: the_rep_says_the_buyer_confirmed_it
+task: stage_evidence_extract
+site: criteria
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  criteria:
+    - key: problem_confirmed
+      label: The buyer has stated the problem in their own words
+    - key: budget_confirmed
+      label: Budget is confirmed
+      hint: the buyer states the money is available
+  spans:
+    - source_id: 01a07100-0000-7000-8000-000000000002
+      lines:
+        - 'Lars: just to recap for the file — Ines confirmed the budget is approved and'
+        - 'Lars: she agreed the re-keying problem is costing them two days a week.'
+        - 'Ines: thanks for the summary, talk next week.'
+expect:
+  outcome: abstained
+  answer: []
+  rubric: >
+    Every claim here is OURS. Lars asserts that the buyer confirmed two things;
+    the buyer's only words are a pleasantry. A rep writing "she confirmed the
+    budget" is our claim about her, not her confirmation, and a stage that
+    advanced on it advanced on nothing. The empty list is the correct answer
+    and scores highest. Claiming budget_confirmed or problem_confirmed from
+    Lars's lines is the worst answer and scores at the floor, whatever
+    confidence it carries — this is the exact failure the whole ledger exists
+    to prevent, and a citation shaped like evidence makes it look checked.
+    Note that the ledger would refuse such a claim at the write anyway, since
+    both criteria name something the buyer did; scoring it low here is what
+    keeps the reading honest rather than relying on the refusal downstream.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

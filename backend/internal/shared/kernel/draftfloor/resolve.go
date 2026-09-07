@@ -26,6 +26,15 @@ type Sender interface {
 // Clock is the current time, injected rather than read, per the house pattern.
 type Clock func() time.Time
 
+// BaseLanguage answers the installation's own configured language.
+//
+// It is the tier BELOW the correspondence and above the hard default: a thread
+// too short to detect is still being written by a team who told us which
+// language they work in, and answering English to a German installation is a
+// worse guess than the one they configured. Injected as a function because it
+// lives in identity, and this package is reached by every drafting surface.
+type BaseLanguage func(ctx context.Context) string
+
 // Resolver assembles the envelope every drafting surface is handed.
 //
 // It is one type rather than a method on each service because the fallbacks are
@@ -35,6 +44,7 @@ type Clock func() time.Time
 // failure is fatal, and the drafting screen would break on one surface only.
 type Resolver struct {
 	sender Sender
+	base   BaseLanguage
 	now    Clock
 	logger *slog.Logger
 }
@@ -45,6 +55,13 @@ func NewResolver() *Resolver { return &Resolver{now: time.Now} }
 // WithSender binds the identity lookup. Without one, every draft is unsigned.
 func (r *Resolver) WithSender(sender Sender) *Resolver {
 	r.sender = sender
+	return r
+}
+
+// WithBaseLanguage binds the installation's configured language, the tier
+// between the correspondence's own text and the hard default.
+func (r *Resolver) WithBaseLanguage(base BaseLanguage) *Resolver {
+	r.base = base
 	return r
 }
 
@@ -71,22 +88,71 @@ func (r *Resolver) Now() time.Time {
 	return r.now()
 }
 
-// Resolve assembles the envelope from the correspondence's own text and where
-// it stands.
+// Written is what a draft is being written INTO: the correspondence it answers,
+// and whatever the message itself already records about its language.
 //
-// Neither half can fail the draft. An unresolvable language falls back to the
-// default (DRAFT-AC-E-2), and an unresolvable sender leaves the draft unsigned
-// (DRAFT-AC-E-6) — a drafting screen that errors because it could not work out
-// a greeting is worse than a draft the rep edits.
-func (r *Resolver) Resolve(ctx context.Context, correspondence string, state convstate.State) Envelope {
+// Separate fields rather than one blob because they are not equally good
+// evidence. Stored is a fact somebody wrote down at capture; Body and Subject
+// are text to read; and the subject is the weaker of the two, being a line
+// people often leave in the sender's language on a reply they wrote in theirs.
+type Written struct {
+	// Stored is the language recorded on the message, empty when none is.
+	// It outranks detection: the same message read twice must not answer two
+	// languages because a quoted chain grew underneath it.
+	Stored string
+	// Body is the correspondence itself, quoted history included.
+	Body string
+	// Subject is the fallback text, read only when the body says nothing.
+	Subject string
+}
+
+// Resolve assembles the envelope from what the draft is written into and where
+// the conversation stands.
+//
+// Nothing here can fail the draft. An unresolvable language falls through the
+// ladder to the default (DRAFT-AC-E-2), and an unresolvable sender leaves the
+// draft unsigned (DRAFT-AC-E-6) — a drafting screen that errors because it
+// could not work out a greeting is worse than a draft the rep edits.
+//
+// The ladder is stored, then the text, then the installation's own language,
+// then English. The base-language tier is what answers a first message, which
+// has no correspondence at all to read: its only text is the rep's typed
+// intent, far too short to clear the detector's bar.
+func (r *Resolver) Resolve(ctx context.Context, written Written, state convstate.State) Envelope {
 	now := r.Now()
 	name, email := r.actor(ctx)
 	// The register is read from the WHOLE correspondence, quoted history
 	// included: which register two people are on is a property of the
 	// relationship, and a single reply may contain neither form while the
 	// exchange behind it is unmistakably du.
-	return NewEnvelopeWithRegister(textlang.Detect(correspondence),
-		textlang.DetectRegister(correspondence), state, now, name, email)
+	//
+	// Language first, and passed IN rather than fixed up afterwards: the
+	// envelope carries a register only for a German draft, so a language
+	// corrected after construction would leave a German register on an English
+	// envelope, or drop one the other way.
+	return NewEnvelopeWithRegister(r.language(ctx, written),
+		textlang.DetectRegister(written.Body), state, now, name, email)
+}
+
+// language walks the ladder, taking the first tier that names a language this
+// product actually speaks.
+//
+// An unsupported stored or configured value is skipped rather than trusted: it
+// would reach the prompt as an instruction to write in a language nothing else
+// in the product can render.
+func (r *Resolver) language(ctx context.Context, written Written) textlang.Lang {
+	// The stored label is above the ladder rather than in it: it is a fact
+	// somebody recorded, where every tier below is evidence being read now.
+	if textlang.Known(written.Stored) {
+		return textlang.Lang(written.Stored)
+	}
+	var base string
+	if r != nil && r.base != nil {
+		base = r.base(ctx)
+	}
+	// The same ladder the footer under a sent message walks. Shared, so a
+	// draft and the footer beneath it cannot pick two languages for one mail.
+	return textlang.FirstKnown([]string{written.Body, written.Subject}, base)
 }
 
 // actor names the acting human, or nobody.

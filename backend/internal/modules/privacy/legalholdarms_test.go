@@ -37,6 +37,8 @@ func activityHoldSelectors() map[string]string {
 		"erasure embeddings delete":         subjectActivityEmbeddingsDelete,
 		"erasure participants delete":       subjectParticipantsDelete,
 		"erasure participants blank":        subjectParticipantsBlank,
+		"retention participants delete":     sweptParticipantsDelete,
+		"retention participants blank":      sweptParticipantsBlank,
 		"restriction notHeldThroughAnyLink": notHeldThroughAnyLink("x.id"),
 		"retention activity/":               retentionSelectors["activity/"],
 		"retention activity/transcript":     retentionSelectors["activity/transcript"],
@@ -52,7 +54,7 @@ func armOf(selector, table string) holdArm { return holdArm(selector + " / " + t
 var waivedHoldArms = gatekit.Waive(personArmWaivers(
 	"erasure notTransitivelyHeld", "erasure subjectOnlyActivities", "erasure unlinkedSubjectMail",
 	"erasure unlinkedSubjectChannel", "erasure embeddings delete", "erasure participants delete",
-	"erasure participants blank",
+	"erasure participants blank", "retention participants delete", "retention participants blank",
 ))
 
 // personArmWaivers states the one cost once for every erasure statement built

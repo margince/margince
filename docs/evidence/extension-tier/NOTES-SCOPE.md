@@ -138,7 +138,7 @@ slice adds a **fall-through**: unmatched screen → look up the composed extensi
 
 ## 4. Acceptance — the click-through
 
-This is the UAT attached to the PR, per `.tmp/TEMPLATE.md`:
+This is the UAT attached to the PR:
 
 1. `make composition && make run` with `notes` present → boot inventory lists it
 2. Navigate `#/ext/notes` → screen renders, "not connected"

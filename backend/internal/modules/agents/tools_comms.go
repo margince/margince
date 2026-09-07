@@ -93,6 +93,26 @@ type SendContextArgs struct {
 	CommunicationContext string `json:"communication_context,omitempty"`
 	MarketingPurpose     string `json:"marketing_purpose,omitempty"`
 	OperatorReason       string `json:"operator_reason,omitempty"`
+	// Evidence names the record that bears the category out. A claim without
+	// it is not refused — the engine decides that — but three of the categories
+	// this surface admits cannot be allowed without one.
+	Evidence SendEvidenceArgs `json:"evidence,omitempty"`
+}
+
+// SendEvidenceArgs is the record a category is borne out by, in the tool
+// surface's own shape. It mirrors the HTTP contract's CommunicationEvidence
+// field for field: an agent proposing a send and a human posting one name the
+// same records, or the two doors would answer differently about one message.
+// THE THREE THE ENGINE READS, and no more. commsauthz.Evidence also carries an
+// ActivityID, a ConsentEventID and a BasisID; no validator reads any of them,
+// and the thread a reply answers reaches the engine as Request.AnchorActivityID
+// — derived from the send's own origin, never named by a caller. Offering them
+// here would spend the catalog budget on fields that do nothing and teach a
+// model that naming one buys something.
+type SendEvidenceArgs struct {
+	InvoiceID  string `json:"invoice_id,omitempty"`
+	ContractID string `json:"contract_id,omitempty"`
+	DealID     string `json:"deal_id,omitempty"`
 }
 
 // SendMessageArgs is one channel reply. It carries no subject and no
@@ -255,14 +275,24 @@ type sendEmailTool struct {
 // sendContextProperties is the context arguments, spelled once for the three
 // send tools. One question asked one way, and one place to change it.
 //
-// There is deliberately no `evidence` here. The HTTP contract has one, and
-// nothing in the engine reads it yet — the validators that will resolve a
-// category FROM the named records land with the jurisdiction packs. A tool
-// description is text a model reads and reasons about, so advertising a check
-// the system does not perform teaches it something false, and the next author
-// to wire evidence up would read it and skip writing the validation. It also
-// costs the catalog budget on every step of every run that carries one of
-// these tools.
+// `evidence` IS here, and the reason it was once absent is worth keeping: this
+// text is written into the system prompt of every step of every run, so
+// advertising a check the system does not perform teaches a model something
+// false. That was the honest answer while nothing read the field.
+//
+// It is no longer. validateInvoice, validateContract and validateQuote resolve a
+// category FROM the named record (authorizevalidators.go), and three of the
+// categories this tool may claim — invoice_or_payment, contract_notice,
+// precontract_quote — cannot be borne out without one. An agent claiming one
+// with no evidence to offer resolved to `review` and parked, which reads to a
+// rep as the tool being broken rather than as the model having named a
+// category it could not support.
+//
+// NOT active_deal_followup, though a deal id is offered. That category has no
+// validator: it is supported by arm 2 of resolveCategory, which reads a live
+// deal from the message's own LINKS, and evidence never reaches Links. The deal
+// id here is read only by validateQuote. Saying otherwise in the description
+// below would teach a model that naming one buys something it does not.
 //
 // Held by: TestTheToolSurfaceSpellsTheSendContextOnce
 // (backend/gates/sendcontextvalidation_test.go)
@@ -278,7 +308,11 @@ const sendContextProperties = `,
 	`"contract_notice","invoice_or_payment","marketing"],` +
 	`"description":"What kind of message this is. Omit to let the server resolve it from the thread; the claim is recorded and grants nothing."},
 	"marketing_purpose":{"type":"string","description":"For marketing, the purpose key naming the topic"},
-	"operator_reason":{"type":"string","maxLength":500,"description":"Why this first message is being sent. Recorded; grants nothing."}`
+	"operator_reason":{"type":"string","maxLength":500,"description":"Why this first message is being sent. Recorded; grants nothing."},
+	"evidence":{"type":"object","description":"The record that bears out the category: required for invoice_or_payment, contract_notice and precontract_quote, which cannot be allowed without one","properties":{
+		"invoice_id":{"type":"string","format":"uuid"},
+		"contract_id":{"type":"string","format":"uuid"},
+		"deal_id":{"type":"string","format":"uuid"}},"additionalProperties":false}`
 
 func (t sendEmailTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
@@ -345,6 +379,9 @@ func (t sendEmailTool) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 	if err := requireAddressee(args.To); err != nil {
 		return nil, err
 	}
+	if err := requireParsableEvidence(args.Evidence); err != nil {
+		return nil, err
+	}
 	if err := (&anchoredRecord{records: t.p, entityType: datasource.EntityActivity}).refuse(ctx, args.ActivityID); err != nil {
 		return nil, err
 	}
@@ -407,6 +444,9 @@ func (t sendMessageTool) Handle(ctx context.Context, in json.RawMessage) (json.R
 	// Same reason as its mail twin above: the anchor's authority is checked on
 	// the door that sends, not only on the one that staged.
 	if err := (&anchoredRecord{records: t.p, entityType: datasource.EntityActivity}).refuse(ctx, args.ActivityID); err != nil {
+		return nil, err
+	}
+	if err := requireParsableEvidence(args.Evidence); err != nil {
 		return nil, err
 	}
 	// NOT carried over from the resolver's Guards: CanSendOnProvider, which

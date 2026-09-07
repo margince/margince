@@ -74,7 +74,7 @@ expect() {
 	set -e
 	got="$(paste -sd, - <"$ACTION_LOG")"
 
-	if [ "$status" -ne 0 ] || [ "$got" != "$want" ]; then
+	if [[ "$status" -ne 0 ]] || [[ "$got" != "$want" ]]; then
 		echo "FAIL: $name"
 		echo "  exit    want 0 got $status"
 		echo "  actions want '$want' got '$got'"
@@ -105,7 +105,7 @@ expect_llm() {
 	set -e
 	got="$(paste -sd, - <"$ACTION_LOG")"
 
-	if [ "$status" -ne 0 ] || [ "$got" != "create $want_title" ]; then
+	if [[ "$status" -ne 0 ]] || [[ "$got" != "create $want_title" ]]; then
 		echo "FAIL: $name"
 		echo "  exit    want 0 got $status"
 		echo "  actions want 'create $want_title' got '$got'"
@@ -199,7 +199,7 @@ expect_health() {
 	got="$(paste -sd, - <"$ACTION_LOG")"
 	body="$(cat "$BODY_LOG" 2>/dev/null || true)"
 
-	if [ "$status" -ne 0 ] || [ "$got" != "$want" ]; then
+	if [[ "$status" -ne 0 ]] || [[ "$got" != "$want" ]]; then
 		echo "FAIL: $name"
 		echo "  exit    want 0 got $status"
 		echo "  actions want '$want' got '$got'"
@@ -207,7 +207,7 @@ expect_health() {
 		failures=$((failures + 1))
 		return
 	fi
-	if [ -n "$suspects" ] && ! grep -qF -- "deadbeef" <<<"$body"; then
+	if [[ -n "$suspects" ]] && ! grep -qF -- "deadbeef" <<<"$body"; then
 		echo "FAIL: $name — the issue was filed but the suspect range never reached its body"
 		failures=$((failures + 1))
 		return
@@ -216,12 +216,12 @@ expect_health() {
 	# Without this the no-range cases pass for free: an arm that dropped the
 	# fallback would still file, and "a red lane with no range still files"
 	# would go on reporting ok over a body that says nothing about the window.
-	if [ -z "$suspects" ] && ! grep -qF -- "no suspect range was computed" <<<"$body"; then
+	if [[ -z "$suspects" ]] && ! grep -qF -- "no suspect range was computed" <<<"$body"; then
 		echo "FAIL: $name — filed without saying the suspect range is unknown"
 		failures=$((failures + 1))
 		return
 	fi
-	if [ -n "$suspects" ]; then
+	if [[ -n "$suspects" ]]; then
 		covered_with_range="$covered_with_range $lane"
 	else
 		covered_no_range="$covered_no_range $lane"
@@ -302,7 +302,7 @@ expect_merge() {
 	got="$(paste -sd, - <"$ACTION_LOG")"
 	body="$(cat "$BODY_LOG" 2>/dev/null || true)"
 
-	if [ "$status" -ne 0 ] || [ "$got" != "create $want_title" ]; then
+	if [[ "$status" -ne 0 ]] || [[ "$got" != "create $want_title" ]]; then
 		echo "FAIL: $name"
 		echo "  exit    want 0 got $status"
 		echo "  actions want 'create $want_title' got '$got'"
@@ -371,7 +371,7 @@ expect_merge "a merge with no pull request is titled for what it found" \
 lanes="$(grep -oE '^if \[\[ "\$\{MAIN_[A-Z0-9_]+_RESULT:-\}" = "failure" \]\]' \
 	"$root/scripts/scheduled-report.sh" |
 	grep -oE 'MAIN_[A-Z0-9_]+_RESULT' | sort -u || true)"
-if [ -z "$lanes" ]; then
+if [[ -z "$lanes" ]]; then
 	echo "FAIL: the census found no MAIN_*_RESULT arm in the reporter — the pattern stopped matching, it did not stop mattering"
 	failures=$((failures + 1))
 fi
@@ -492,7 +492,7 @@ health="$root/.github/workflows/main-health.yml"
 # recognise never ends the slice, so the slice swallows it and that job's wiring
 # can satisfy the census on the report job's behalf.
 report_job="$(awk '/^  report:/{inside=1} inside&&/^  [A-Za-z_][A-Za-z0-9_-]*:/&&!/^  report:/{exit} inside' "$health")"
-if [ -z "$report_job" ]; then
+if [[ -z "$report_job" ]]; then
 	echo "FAIL: no 'report' job found in main-health.yml — the wiring checks below would pass by scanning nothing"
 	failures=$((failures + 1))
 fi
@@ -509,7 +509,7 @@ for lane in $lanes; do
 	fi
 done
 
-if [ "$failures" -ne 0 ]; then
+if [[ "$failures" -ne 0 ]]; then
 	echo "FAIL: $failures case(s)" >&2
 	exit 1
 fi

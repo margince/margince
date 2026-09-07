@@ -25,6 +25,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -146,7 +147,7 @@ func (s *Store) OpenCommitmentsForOrganization(
 		         SELECT 1 FROM relationship r
 		          WHERE r.person_id = pr.id AND r.kind = 'employment'
 		            AND r.organization_id = $%[1]d
-		            AND `+EmploymentIsCurrentSQL("r.ended_at")+` AND r.archived_at IS NULL
+		            AND `+employment.IsCurrentSQL("r.ended_at")+` AND r.archived_at IS NULL
 		            AND (%[4]s))
 		   AND (%[3]s) AND (%[2]s)
 		 ORDER BY (c.due_at IS NOT NULL AND c.due_at < now()) DESC,
@@ -212,7 +213,7 @@ func countOrgCommitments(ctx context.Context, tx pgx.Tx, orgID ids.UUID) (int, e
 		         SELECT 1 FROM relationship r
 		          WHERE r.person_id = pr.id AND r.kind = 'employment'
 		            AND r.organization_id = $1
-		            AND `+EmploymentIsCurrentSQL("r.ended_at")+` AND r.archived_at IS NULL)`,
+		            AND `+employment.IsCurrentSQL("r.ended_at")+` AND r.archived_at IS NULL)`,
 		orgID).Scan(&total)
 	if err != nil {
 		return 0, fmt.Errorf("count the account's open commitments: %w", err)

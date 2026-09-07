@@ -82,13 +82,13 @@ export function fixtureSection(activeId?: string): NavSection {
     activeId,
     groups: [
       {
-        headingKey: "settings.group.you",
+        headingKey: "settings.group.me",
         items: [
           { id: "account", labelKey: "settings.tab.account", icon: UserRound },
         ],
       },
       {
-        headingKey: "settings.group.admin",
+        headingKey: "settings.group.governance",
         items: [
           {
             // The child level is SYNTHETIC: no settings entry publishes children,

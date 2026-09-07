@@ -155,6 +155,52 @@ func Detect(text string) Lang {
 	return winner(scoreStopwords(reply, lead))
 }
 
+// DetectFirst reports the language of the first text that yields one.
+//
+// The texts are the SAME message's, in descending order of how much evidence
+// each carries — a body before its subject, never one message before another.
+// Detect is deliberately biased toward Unknown (it wants three stopword hits
+// and a clear margin), so a two-line note falls through to the shorter text
+// rather than being guessed at, and a caller with nothing left decides for
+// itself what an unresolved language means.
+//
+// One helper rather than a ladder spelled per caller: the footer, the capture
+// writer and the drafting envelope all ask this same question, and three
+// copies of "body, then subject" is three chances to order them differently.
+func DetectFirst(texts ...string) Lang {
+	for _, text := range texts {
+		if lang := Detect(text); lang != Unknown {
+			return lang
+		}
+	}
+	return Unknown
+}
+
+// FirstKnown is the ladder every caller that must end up with a language walks:
+// the texts in order, then whatever fallbacks the caller can offer, then
+// English.
+//
+// One helper rather than a copy per caller. The footer under a sent mail, the
+// language a draft is written in and the label capture records all ask the same
+// question in the same order, and three spellings of "body, then subject, then
+// what the installation said" are three chances to answer it differently — the
+// footer of a message would then disagree with the message above it.
+//
+// A fallback that names no language the product ships is skipped rather than
+// trusted: it would otherwise reach a prompt as an instruction to write in a
+// language nothing else can render.
+func FirstKnown(texts []string, fallbacks ...string) Lang {
+	if lang := DetectFirst(texts...); lang != Unknown {
+		return lang
+	}
+	for _, fallback := range fallbacks {
+		if Known(fallback) {
+			return Lang(fallback)
+		}
+	}
+	return English
+}
+
 // score is one language's evidence, counted two ways because the two bars ask
 // different questions. Hits asks "is there enough evidence to speak at all",
 // so every hit counts once wherever it sits. Weighted asks "which language is

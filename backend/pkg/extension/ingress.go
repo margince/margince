@@ -222,6 +222,17 @@ const (
 	// (the identity binding is unique per provider and account) and it is
 	// remote-party text like every other bound here.
 	MaxChannelUserIDLength = 256
+	// MaxParticipants caps a record's roster, and it is a SHAPE guard rather
+	// than a performance one: a message naming more people than this is a
+	// broadcast list, and every name on it is evidence of a list membership
+	// rather than of a conversation.
+	//
+	// Past it Record.Validate refuses the whole record, so a unit is TOLD
+	// rather than left believing a sixty-person group landed as one. A fitness
+	// test outside this package holds the number equal to the core's own bound,
+	// so a unit that checks itself against this and a core that applies its own
+	// cannot answer differently about the same group.
+	MaxParticipants = 50
 )
 
 // Record is one provider record on its way into the CRM.
@@ -293,8 +304,77 @@ type Record struct {
 	// honestly, and a refusal it can see beats a gate it cannot.
 	Addresses []string
 
+	// Participants is everyone else the record names — the roster of a group
+	// conversation, the people neither end of the exchange.
+	//
+	// It answers "who was in the room", and that is ALL it answers. A party here
+	// is recorded on the timeline and resolved to a contact the installation
+	// already holds; none of it grants anybody a read. A unit cannot make a
+	// colleague a reader by naming them, and it should not try: a roster is a
+	// remote system's text, and the core keeps the mail rule over it — the same
+	// rule that refuses to bind a colleague from a Cc line a sender typed.
+	//
+	// Optional and bounded by MaxParticipants. Past the cap the RECORD is
+	// refused, not silently trimmed: a message naming a hundred people is a
+	// broadcast list, half of one reads like a small conversation, and a unit
+	// that reads the refusal can decide what its provider actually sent.
+	Participants []Participant
+
 	// Raw is the provider's record as received, kept as evidence.
 	Raw []byte
+}
+
+// Participant is one further party to a record: someone in the conversation who
+// is neither the connected member nor the counterparty.
+//
+// A unit fills every field its provider gives it. Account is what a chat has and
+// mail does not — the provider's own id for the human — and Email is what mail
+// has and a chat usually does not. Naming only one of them is the ordinary case,
+// naming neither is a party with no identity and is dropped.
+type Participant struct {
+	// Account is the provider's account id for this party, on the transport the
+	// record itself names (ActivityFields.ChannelProvider). It carries no
+	// provider of its own: a party to THIS message is on the channel that
+	// carried it, and a second spelling of that is one that can disagree.
+	Account string
+	// Email is this party's address where the provider gives one.
+	Email string
+	// Name is what the provider says the human calls themselves. Untrusted
+	// text, bounded and stripped by the core before it is stored, and never
+	// used to identify anybody.
+	Name string
+	// Role is where this party stood — one of the ParticipantRole constants. A
+	// group chat's roster is ParticipantRoleAttendee: present, without being
+	// either end of the exchange.
+	Role string
+}
+
+// The roles a further party may hold, published because the set is closed at
+// the core's own database and a unit spelling one blind would land a refusal
+// rather than a record.
+//
+// They name a POSITION, not a direction. The two ends of an exchange are
+// assigned from Counterparty and the member's own connection, never from here.
+const (
+	ParticipantRoleTo        = "to"
+	ParticipantRoleCC        = "cc"
+	ParticipantRoleAttendee  = "attendee"
+	ParticipantRoleOrganizer = "organizer"
+)
+
+// ParticipantRoles is the published set as a list, so the validator, a unit's
+// own checks and the fitness test that holds these equal to the core's all read
+// ONE enumeration. A constant added above and left out here is a role the
+// validator would refuse for being spelled correctly.
+//
+// `bcc` is deliberately absent though the core admits it: a bcc line exists
+// only on the SENDER's own copy of a message, and a unit hands over a record it
+// received. Publishing it would offer a position no unit can honestly report.
+var ParticipantRoles = []string{
+	ParticipantRoleTo,
+	ParticipantRoleCC,
+	ParticipantRoleAttendee,
+	ParticipantRoleOrganizer,
 }
 
 // Disposition is what became of an ingested record. It exists because a row is

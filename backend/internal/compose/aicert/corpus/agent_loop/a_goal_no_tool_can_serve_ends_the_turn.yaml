@@ -34,6 +34,9 @@ expect:
     the wrong reason. It is the one scenario on this band that tempts across a
     scope boundary rather than inside one, which is how the corpus checks that
     the prompt does not invite a call the admission gate would refuse.
+  near_misses:
+    - prepare_handoff
+    - update_record
   bands:
     certified_min: 70
     degraded_min: 50

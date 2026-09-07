@@ -46,7 +46,7 @@ import {
   identifierNumber,
 } from "../format/format";
 import { viewerZone, zoneNameAndOffset } from "../format/timezone";
-import { type Locale, useLocale, useT } from "../i18n";
+import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { entityTimelineKeys } from "./activitykeys";
 import {
@@ -441,7 +441,9 @@ async function draftFromActivity({
       body: intent.trim() ? { intent: intent.trim() } : {},
     },
   );
-  if (response.status === 501) return { available: false as const };
+  if (response.status === 501) {
+    return { available: false as const, reason: "no_model" as const };
+  }
   // Success is the real 2xx WITH a draft body, never merely the absence of an
   // error: openapi-fetch reports a falsy `error` (and undefined `data`) for a
   // bodiless non-2xx (a gateway 502/503/504), which would otherwise fall
@@ -575,7 +577,10 @@ function useLatestMessage(
  * caller only ever fills an EMPTY field from it, so a reader who typed their
  * own recipient keeps it.
  */
-function useReplyRecipient(anchor: string | undefined): string | undefined {
+function useReplyRecipient(anchor: string | undefined): {
+  address: string | undefined;
+  mailboxes: string[] | undefined;
+} {
   const query = useQuery({
     queryKey: ["compose-reply-recipient", anchor],
     queryFn: async () => {
@@ -590,7 +595,14 @@ function useReplyRecipient(anchor: string | undefined): string | undefined {
     },
     enabled: anchor !== undefined,
   });
-  return query.data?.address === "" ? undefined : query.data?.address;
+  return {
+    address: query.data?.address === "" ? undefined : query.data?.address,
+    // Undefined until this ANCHOR's own answer arrives — the query is keyed on
+    // it, so a previous thread's settled answer is never served here. That
+    // matters: undefined means "not answered yet", which is a different fact
+    // from an empty list, and only the empty list says nobody's mailbox.
+    mailboxes: query.data?.mailbox_user_ids,
+  };
 }
 
 /**
@@ -743,7 +755,51 @@ async function draftFromLead({
     params: { path: { id: entityId } },
     body: intent.trim() ? { intent: intent.trim() } : {},
   });
-  if (response.status === 501) return { available: false as const };
+  if (response.status === 501) {
+    return { available: false as const, reason: "no_model" as const };
+  }
+  if (!response.ok || !data) {
+    throwProblem(error || { title: t("compose.actionFailed") });
+  }
+  return {
+    available: true as const,
+    draft: data,
+    reasoning: data.reasoning,
+    scope: data.scope,
+  };
+}
+
+// The person-started draft: the composer's "Write email" on a contact.
+//
+// The mirror of the account path, and simpler for one reason — the record in
+// the path is the recipient, so there is nobody to name. It takes the project
+// when the rep attributed the message to one, exactly as the account path does,
+// so the grounding read drops correspondence filed under the others.
+//
+// Answers the same `{available, draft}` shape as the three beside it, so the
+// fill cannot tell the origins apart and they cannot drift into different
+// clobber rules.
+async function draftFromPerson({
+  entityId,
+  projectId,
+  intent,
+  t,
+}: Readonly<{
+  entityId: string;
+  projectId: string;
+  intent: string;
+  t: ReturnType<typeof useT>;
+}>): Promise<DraftResult> {
+  const { data, error, response } = await api.POST("/people/{id}/draft-email", {
+    params: { path: { id: entityId } },
+    body: {
+      ...(projectId ? { project_id: projectId } : {}),
+      ...(intent.trim() ? { intent: intent.trim() } : {}),
+    },
+  });
+  if (response.status === 501) {
+    return { available: false as const, reason: "no_model" as const };
+  }
   if (!response.ok || !data) {
     throwProblem(error || { title: t("compose.actionFailed") });
   }
@@ -787,11 +843,21 @@ async function draftFromAccount({
   if (entityType === "lead") {
     return draftFromLead({ entityId, intent, t });
   }
+  // A PERSON grounds its own, and the contract says so: /people/{id}/draft-email
+  // is the account path's mirror — written from the caller's own person 360 and
+  // taking nothing but optional steering, because the record in the path IS the
+  // recipient. This arm was missing, so the page fell through to the refusal
+  // below and told the rep the model was not configured while making no request
+  // at all, on a deployment answering every other AI call on the same screen.
+  if (entityType === "person") {
+    return draftFromPerson({ entityId, projectId, intent, t });
+  }
   // A company page has to be told which contact, because an account has many.
-  // A person or a deal grounds nothing here: writing to a contact from whatever
-  // account sits nearby would be a conversation the rep never chose.
+  // A deal grounds nothing here: writing to a contact from whatever account
+  // sits nearby would be a conversation the rep never chose, and no deal-side
+  // route exists to answer it.
   if (entityType !== "organization" || !recipientId) {
-    return { available: false as const };
+    return { available: false as const, reason: "unsupported_origin" as const };
   }
   const { data, error, response } = await api.POST(
     "/organizations/{id}/draft-email",
@@ -808,7 +874,9 @@ async function draftFromAccount({
       },
     },
   );
-  if (response.status === 501) return { available: false as const };
+  if (response.status === 501) {
+    return { available: false as const, reason: "no_model" as const };
+  }
   if (!response.ok || !data) {
     throwProblem(error || { title: t("compose.actionFailed") });
   }
@@ -827,8 +895,18 @@ async function draftFromAccount({
 // reads and nothing else. Intersecting the two contract types instead would
 // make every optional field of one optional on both, and the fill would stop
 // noticing when a required field went missing.
+
+// Why a draft is not on offer. The two are not the same fact and the reader
+// cannot act on them alike: "no model" is the deployment's answer and there is
+// nothing to do about it here, while "not from this page" is ours and the rep
+// can still reach a draft from the account. They shared one sentence — "the
+// model is not configured" — and a rehearsal spent an afternoon looking for a
+// missing provider that was never missing: the person page simply made no
+// request at all.
+type DraftUnavailable = "no_model" | "unsupported_origin";
+
 type DraftResult =
-  | { available: false }
+  | { available: false; reason: DraftUnavailable }
   | {
       available: true;
       draft: Pick<EmailDraft, "subject" | "body" | "to"> &
@@ -1140,7 +1218,7 @@ function DraftOffer({
   intent: string;
   onIntentChange: (next: string) => void;
   draft: PendingAction;
-  unavailable: boolean;
+  unavailable: DraftUnavailable | null;
 }>) {
   const t = useT();
   return (
@@ -1174,7 +1252,11 @@ function DraftOffer({
         </Button>
       </div>
       {unavailable && (
-        <p className="t-caption">{t("compose.draftUnavailable")}</p>
+        <p className="t-caption">
+          {unavailable === "no_model"
+            ? t("compose.draftUnavailable")
+            : t("compose.draftUnsupportedHere")}
+        </p>
       )}
       {/* The failure appears without any navigation, so it is announced rather
           than merely coloured: a rep who cannot see the line has to be told
@@ -1643,7 +1725,7 @@ function MailOnlyFields({
   intent: string;
   onIntentChange: (next: string) => void;
   draft: PendingAction;
-  draftUnavailable: boolean;
+  draftUnavailable: DraftUnavailable | null;
   provenance: DraftProvenance | null;
   voiceMaturity: VoiceProfile["maturity"] | undefined;
   reasons: components["schemas"]["AccountDraftReason"][];
@@ -1801,7 +1883,7 @@ function useDraftMutation({
   entityType: RelinkKind;
   entityId: string;
   intent: string;
-  onUnavailable: () => void;
+  onUnavailable: (reason: DraftUnavailable) => void;
   onDrafted: (
     result: Extract<DraftResult, { available: true }>,
     ask: DraftAsk,
@@ -1831,7 +1913,7 @@ function useDraftMutation({
     },
     onSuccess: (result, ask) => {
       if (!result.available) {
-        onUnavailable();
+        onUnavailable(result.reason);
         return;
       }
       onDrafted(result, ask);
@@ -2374,7 +2456,8 @@ export function ComposeModal({
   const [servedBody, setServedBody] = useState("");
   // Two honest non-error outcomes, kept OUT of react-query's error channel so
   // the form stays usable: the model / mailer simply isn't configured (501).
-  const [draftUnavailable, setDraftUnavailable] = useState(false);
+  const [draftUnavailable, setDraftUnavailable] =
+    useState<DraftUnavailable | null>(null);
   const [sendUnavailable, setSendUnavailable] = useState(false);
   // Retiring the previous pair's draft is the composer's job, not the
   // grounding hook's: the body, the recipients, the reference and the
@@ -2437,9 +2520,8 @@ export function ComposeModal({
     (offeringThreads ? chosen : latest.activity?.id);
   // Addressing the reply before a draft is asked for. A channel reply resolves
   // its recipient server-side and shows no To field, so it asks nothing.
-  const replyRecipient = useReplyRecipient(
-    open && !isChannelReply ? answering : undefined,
-  );
+  const { address: replyRecipient, mailboxes: replyMailboxes } =
+    useReplyRecipient(open && !isChannelReply ? answering : undefined);
   // What the composer offers as the recipient: the thread's counterparty where
   // there is a thread, and otherwise the record's own address.
   //
@@ -2547,6 +2629,26 @@ export function ComposeModal({
   );
   const nameOf = (linkType: string, linkId: string) =>
     linkType === "user" ? colleagues.get(linkId) : records(linkType, linkId);
+  const plural = usePlural();
+  // Whose conversation this is. A thread delivered only to colleagues' mailboxes
+  // is theirs, and the reply still goes out from the reader's own mailbox under
+  // the reader's own name — which is the sentence the notice below says.
+  //
+  // Silent unless BOTH are settled. An unresolved viewer would make every thread
+  // read as somebody else's, and an unanswered mailbox list is not the same fact
+  // as an empty one.
+  const colleagueMailboxes =
+    replyMailboxes === undefined || viewerId === undefined
+      ? []
+      : replyMailboxes.filter((seat) => seat !== viewerId);
+  // The reader's OWN mailbox took delivery, so this thread reached them however
+  // else it was addressed. Their own copy is not somebody else's conversation.
+  const ownMailboxTookIt =
+    replyMailboxes !== undefined &&
+    viewerId !== undefined &&
+    replyMailboxes.includes(viewerId);
+  const answeringColleaguesMail =
+    colleagueMailboxes.length > 0 && !ownMailboxTookIt;
   // The anchor as a ROW, in the same order `answering` resolves it: a channel
   // the reader picked answers its own conversation, and reading only the
   // caller's or the picked thread left a dial-chosen channel with no anchor row
@@ -2757,13 +2859,33 @@ export function ComposeModal({
     setHtml(paragraphsFrom(drafted));
   };
 
+  // The drafted words, brought back under the reader's eyes.
+  //
+  // A draft does not only fill the body — it raises the disclosure band above
+  // it, and that band (the Art. 50 sentence, what the draft was based on, the
+  // voice version) is several times the height of the bar the rep pressed. The
+  // head below it grows too, because the same answer fills To and the subject.
+  // So the press that asks for words pushes those words down past the fold, and
+  // the rep is left reading a notice about a draft they cannot see.
+  //
+  // `block: "nearest"` rather than "start": when the body already fits, this
+  // moves nothing — which is what a rewrite wants, since the band is already
+  // standing and only the words underneath changed.
+  const revealDraftedBody = () => {
+    // After the paint that raised the band, or the body is still where it was.
+    globalThis.requestAnimationFrame(() => {
+      // jsdom has no scrollIntoView; the browser always does.
+      document.getElementById(bodyId)?.scrollIntoView?.({ block: "nearest" });
+    });
+  };
+
   const draft = useDraftMutation({
     activityId: answering,
     entityType,
     entityId,
     intent,
-    onUnavailable: () => setDraftUnavailable(true),
-    onDrafted: (result, ask) =>
+    onUnavailable: (reason: DraftUnavailable) => setDraftUnavailable(reason),
+    onDrafted: (result, ask) => {
       fillFromDraft(result, {
         subject,
         body,
@@ -2777,8 +2899,10 @@ export function ComposeModal({
         setProvenance,
         setReasoning: account.setReasoning,
         setScope: account.setScope,
-      }),
-    resetUnavailable: () => setDraftUnavailable(false),
+      });
+      revealDraftedBody();
+    },
+    resetUnavailable: () => setDraftUnavailable(null),
     t,
   });
 
@@ -3200,6 +3324,26 @@ export function ComposeModal({
             {staleThread && (
               <Callout tone="warn" live="status">
                 {t("compose.threadGone")}
+              </Callout>
+            )}
+            {/* Whose conversation this is. Not a warning and not a refusal —
+            covering for a colleague is ordinary work — so it states the fact
+            and lets the reader decide. Info rather than warn for that reason,
+            and no live region: it renders with the drawer rather than in
+            answer to anything the reader just did. */}
+            {answeringColleaguesMail && (
+              <Callout tone="info">
+                {plural("compose.colleagueMailbox", colleagueMailboxes.length, {
+                  names: new Intl.ListFormat(INTL_LOCALE[locale], {
+                    style: "long",
+                    type: "conjunction",
+                  }).format(
+                    colleagueMailboxes.map(
+                      (seat) =>
+                        nameOf("user", seat) ?? t("compose.colleagueUnnamed"),
+                    ),
+                  ),
+                })}
               </Callout>
             )}
             {/* Every message says where it files. Mail ASKS — its answer travels

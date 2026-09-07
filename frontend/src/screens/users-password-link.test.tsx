@@ -64,6 +64,21 @@ function backend(opts: {
         roles: ["admin"],
         teams: [],
         admin_password_link: opts.adminPasswordLink,
+        // Grants, not the role name: the card asks `user_admin` verb by verb
+        // and folds the seat ceiling, so a snapshot carrying a role alone
+        // refuses every control these cases are about.
+        authorization: {
+          objects: {
+            user_admin: {
+              read: true,
+              create: true,
+              update: true,
+              delete: true,
+            },
+          },
+          seat_type: "full",
+          row_scope: "all",
+        },
       });
     }
     if (req.url.includes("/password-link")) {
@@ -290,6 +305,18 @@ describe("admin-issued set-password link", () => {
             user: { email: "admin@acme.test" },
             roles: ["admin"],
             teams: [],
+            authorization: {
+              objects: {
+                user_admin: {
+                  read: true,
+                  create: true,
+                  update: true,
+                  delete: true,
+                },
+              },
+              seat_type: "full",
+              row_scope: "all",
+            },
             admin_password_link: true,
           });
         }
@@ -328,6 +355,18 @@ describe("admin-issued set-password link", () => {
             user: { email: "admin@acme.test" },
             roles: ["admin"],
             teams: [],
+            authorization: {
+              objects: {
+                user_admin: {
+                  read: true,
+                  create: true,
+                  update: true,
+                  delete: true,
+                },
+              },
+              seat_type: "full",
+              row_scope: "all",
+            },
             admin_password_link: true,
           });
         }

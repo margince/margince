@@ -1,0 +1,34 @@
+name: warmth_with_no_facts_in_it
+task: stage_evidence_extract
+site: criteria
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  criteria:
+    - key: problem_confirmed
+      label: The buyer has stated the problem in their own words
+    - key: pilot_scheduled
+      label: A pilot date is agreed
+  spans:
+    - source_id: 01a07100-0000-7000-8000-000000000008
+      lines:
+        - 'Ines: really enjoyed the session yesterday, the team came away positive.'
+        - 'Lars: glad to hear it. It was a good conversation.'
+        - 'Ines: speak soon.'
+expect:
+  outcome: abstained
+  answer: []
+  rubric: >
+    Warm, encouraging, and empty of anything a criterion could rest on. "The
+    team came away positive" is a mood, not a stated problem and not a date.
+    The empty list scores highest. The trap here is that the tone reads like
+    progress: a reader that converts enthusiasm into problem_confirmed met=true
+    has invented the buyer's words, and scores at the floor. This is the most
+    common shape of conversation in a real pipeline, which is why abstaining on
+    it matters more than any single positive reading — a site that settles a
+    criterion on warmth will settle criteria constantly, and every one of them
+    will look cited.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

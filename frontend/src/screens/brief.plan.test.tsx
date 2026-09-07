@@ -11,7 +11,7 @@ import {
   render,
   stubApi,
   writes,
-} from "./home.testkit";
+} from "./brief.testkit";
 import type { WeeklyPlan, WeeklyPlanCommitment } from "./weeklyplan.queries";
 
 // The week ahead. Everything this panel writes is staged first, so the tests

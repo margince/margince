@@ -15,10 +15,13 @@ const (
 	ghost  = "019fd000-0000-7000-8000-0000000000ff"
 )
 
-func supplied() map[Evidence]bool {
-	return map[Evidence]bool{
-		{EntityType: "organization", EntityID: orgID}: true,
-		{EntityType: "deal", EntityID: dealID}:        true,
+// supplied is what the assembler put in front of the model: the records, and
+// what each of them said. The texts carry the facts the sentences below state,
+// so these cases stay about CITATION — the extractive half has its own tests.
+func supplied() map[Evidence]string {
+	return map[Evidence]string{
+		{EntityType: "organization", EntityID: orgID}: `{"name":"Glazed Frog GmbH","country":"Germany"}`,
+		{EntityType: "deal", EntityID: dealID}:        `{"name":"Renewal","amount":"1200.00","currency":"EUR"}`,
 	}
 }
 

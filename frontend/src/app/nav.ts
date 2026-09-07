@@ -40,7 +40,7 @@ export {
   navLevelRoute,
 } from "./subnav";
 
-// The primary nav. Order is normative and rail.test.tsx pins it. Home stands
+// The primary nav. Order is normative and rail.test.tsx pins it. Brief stands
 // alone above three labeled groups; the groups are the expanded sidebar's own
 // structure and collapse to hairline rules at 56px, so the collapsed rail is the
 // flat list WDS-NAV-1 describes.
@@ -70,7 +70,7 @@ export type NavGroup = {
 };
 
 export const NAV_GROUPS: readonly NavGroup[] = [
-  { items: [{ screen: "home", labelKey: "nav.home", icon: Home }] },
+  { items: [{ screen: "brief", labelKey: "nav.brief", icon: Home }] },
   {
     headingKey: "nav.group.records",
     items: [
@@ -145,7 +145,7 @@ export const BADGE_SCREENS: ReadonlySet<Screen> = new Set();
 // is the same distance every destination this list omits already is, and what
 // the centre cell buys instead is the agent reachable without opening anything.
 export const MOBILE_PRIMARY: ReadonlySet<Screen> = new Set([
-  "home",
+  "brief",
   "contacts",
   "deals",
 ]);
@@ -171,12 +171,12 @@ export const GRIDDED_RECORD_SCREENS: ReadonlySet<Screen> = new Set([
 ]);
 
 // Screens that keep the same reading column with NO id, because they are not
-// records and never carry one. Home is here for the reason the two records
+// records and never carry one. Brief is here for the reason the two records
 // above it are: it reads down — a briefing in sentences beside a rail of
 // context — and its decision cards carry the drafted prose somebody has to read
 // before they can decide. Uncapped, those cards ran the full width of a wide
 // display with the text hugging the left edge.
-export const GRIDDED_SCREENS: ReadonlySet<Screen> = new Set(["home"]);
+export const GRIDDED_SCREENS: ReadonlySet<Screen> = new Set(["brief"]);
 
 // Documented rail-less exceptions (AC-shell layout exception): onboarding,
 // the public booking page, the extension client surfaces, and the OAuth

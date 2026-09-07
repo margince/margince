@@ -23,6 +23,8 @@ import (
 // may be filed under at most 25 records. Spelled again rather than imported
 // because a module never imports a sibling — capture.maxDerivedMeetingLinks is
 // the third spelling, for the same reason and against the same number.
+//
+// Held by: TestTheLinkCeilingHasOneValue (backend/gates/linkceilingparity_test.go)
 const maxMeetingLinksPerActivity = 25
 
 // linkAttendedMeetings files a meeting under a person who was IN it.

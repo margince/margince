@@ -81,6 +81,11 @@ func fieldHistoryEntryToWire(e FieldHistoryEntry) crmcontracts.FieldHistoryEntry
 		ChangedAt:  e.ChangedAt,
 		ActorType:  crmcontracts.FieldHistoryEntryActorType(e.ActorType),
 		ActorId:    e.ActorID,
+		// Nil passes through as nil rather than as an empty string: a member
+		// who is gone has no name, and "" would render as one that is blank
+		// instead of one that is absent.
+		ActorName:      e.ActorName,
+		OnBehalfOfName: e.OnBehalfOfName,
 	}
 	if e.PassportID != nil {
 		id := openapi_types.UUID(*e.PassportID)
