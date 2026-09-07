@@ -108,7 +108,7 @@ async function fetchWithDeadline(request: Request): Promise<Response> {
   try {
     return withGatewayProblem(
       await globalThis.fetch(request, { signal: deadline.signal }),
-      request.url,
+      request,
     );
   } finally {
     // Whatever the outcome. A cleared timer is what keeps a settled request
@@ -122,51 +122,105 @@ async function fetchWithDeadline(request: Request): Promise<Response> {
 // rather than the app refusing something.
 const GATEWAY_STATUSES = new Set([502, 503, 504]);
 
-// The routes whose handler calls a model and waits.
+// The routes whose handler calls a model and waits, and whether they do so on
+// every call.
 //
-// ONE list, TWO readers, and they want the same routes for the same reason.
-// `withGatewayProblem` gives only these a "the work may still be running"
-// sentence when a proxy gives up, and the narrowness is the point: a bodiless
-// 5xx from any other endpoint is an ordinary server fault, and the app has
-// surfaces that read it as one: the composer branches on a bare 501, the
-// connector screens on a bodiless 503. Rewriting every one of those would be
-// false about a mailer that is simply not wired. `model-inflight.ts` counts a
-// request to one of these as the agent working, so the chrome reports the ask
-// at the moment it is made rather than at the next poll of the activity feed.
+// A MIRROR of the contract, never a second opinion: each entry is an operation
+// `backend/api/crm.yaml` marks `x-waits-on-model`, spelled as the contract
+// spells it, and `backend/gates/modelroutes_test.go` fails when the two
+// disagree in either direction. Read the handler before you mark an operation
+// there; the entry here then follows. The list used to be nine path suffixes
+// checked for POST only, and it was one edit behind the contract for a long
+// time in both directions: it named a route that calls a data provider and no
+// model, and it missed the intro drafts, the role proposals, the onboarding
+// conversation — and every GET that generates, which is how the meeting brief
+// came to run two model calls with the chrome at rest.
 //
-// What makes these routes different is duration: a model call runs for tens of
-// seconds, so a proxy giving up on one really does leave work in flight and
-// really does make a retry a second call rather than a repeat, and a person who
-// pressed the button really is waiting on the agent for that whole time.
+// TWO readers want this set, for the same reason: duration. A model call runs
+// for tens of seconds, so a proxy giving up on one really does leave work in
+// flight and really does make a retry a second call rather than a repeat
+// (`withGatewayProblem`), and a person who pressed the button really is waiting
+// on the agent for that whole time (`model-inflight.ts`, which is what lights
+// the AI-activity rail the instant the request leaves rather than at its next
+// poll of the feed).
 //
-// Suffixes, so one entry covers a route the contract spells for a person, an
-// organization and an activity alike. The COUNT reads them for POST only: the
-// dossier and the growth-fit reading are also READ at these paths, and a panel
-// fetching the last reading is the reader's own click, not the agent at work.
-// A route that ENQUEUES model work rather
-// than waiting for it does not belong here in either reader's sense: it answers
-// at once, so there is no long request for a proxy to cut and nothing for this
-// tab to wait on, and its occurrence reaches the chrome the way every
-// background run does, through the feed. The deep read, the document
-// extraction, the transcript proposals and the technical enrich are all that
-// shape and all deliberately absent.
+// `always` is a handler that generates on every call. `on-miss` is one that
+// serves a stored reading and generates only when it has none: the dossier, the
+// growth-fit band, the person brief, the deal status, the morning brief. Those
+// answer from the store in well under a second and from the model in many, and
+// the two are told apart by nothing the client can see at the moment the
+// request leaves. So an `on-miss` call is counted as the agent working only
+// once it has outlived CACHE_ANSWER_GRACE_MS — a stored answer never lights the
+// orb, which is the reader's own click, and a generation does, a moment late.
 //
-// The list read three routes for a long time while the contract had nine, which
-// was invisible in both directions: the extra six could have their connection
-// cut and say nothing about it, and the whole of a corpus answer or an offer
-// rewrite ran with the chrome at rest. A suffix here is a claim about a
-// handler, so check the handler before adding one.
-const MODEL_ROUTE_SUFFIXES = [
-  "/ask",
-  "/coldstart",
-  "/coldstart/preview",
-  "/draft-email",
-  "/dossier",
-  "/enrich",
-  "/growth-fit",
-  "/regenerate",
-  "/research",
-];
+// A route that ENQUEUES model work rather than waiting for it does not belong
+// here in either reader's sense: it answers at once, so there is no long
+// request for a proxy to cut and nothing for this tab to wait on, and its
+// occurrence reaches the chrome the way every background run does, through the
+// feed. The deep read, the document extraction, the account scan, the
+// transcript proposals and the technical enrich are all that shape.
+type ModelWait = "always" | "on-miss";
+
+const MODEL_ROUTES: Readonly<Record<string, ModelWait>> = {
+  "GET /activities/{id}/meeting-brief": "always",
+  "GET /deals/{id}/status": "on-miss",
+  "GET /organizations/{id}/brief": "on-miss",
+  "GET /organizations/{id}/dossier": "on-miss",
+  "GET /organizations/{id}/growth-fit": "on-miss",
+  "GET /people/{id}/brief": "on-miss",
+  "POST /activities/{id}/draft-email": "always",
+  "POST /brief": "on-miss",
+  "POST /coldstart": "always",
+  "POST /coldstart/preview": "always",
+  "POST /company/site-reads/{readId}/messages": "always",
+  "POST /deals/{id}/role-proposals": "always",
+  "POST /knowledge/corpora/{id}/ask": "always",
+  "POST /leads/{id}/draft-email": "always",
+  "POST /offers/{id}/regenerate": "always",
+  "POST /onboarding/company/messages": "always",
+  "POST /organizations/{id}/ask": "always",
+  "POST /organizations/{id}/brief": "always",
+  "POST /organizations/{id}/dossier": "always",
+  "POST /organizations/{id}/draft-email": "always",
+  "POST /organizations/{id}/enrich": "always",
+  "POST /organizations/{id}/growth-fit": "always",
+  "POST /organizations/{id}/intro-request-draft": "always",
+  "POST /people/{id}/brief": "always",
+  "POST /people/{id}/draft-email": "always",
+  "POST /people/{id}/intro-note-draft": "always",
+};
+
+// How long an `on-miss` request may stay open before it counts as the agent
+// working.
+//
+// Above what a stored reading costs to serve — a row read and a response, a
+// few hundred milliseconds at the far end of a slow link — and well below the
+// shortest model call a cloud provider answers. A cached answer therefore never
+// lights the orb, and a generation lights it a second late rather than not at
+// all, which was the alternative: a first open of a company dossier ran twenty
+// seconds with the chrome reporting an agent at rest.
+export const CACHE_ANSWER_GRACE_MS = 1_000;
+
+// One compiled matcher per contract path, built once from the table: a path
+// parameter matches one segment, and the template is anchored at the END so
+// the client's `/v1` mount — or any other prefix a deployment serves under —
+// needs no spelling here.
+const MODEL_ROUTE_MATCHERS: readonly (readonly [
+  method: string,
+  path: RegExp,
+  wait: ModelWait,
+])[] = Object.entries(MODEL_ROUTES).map(([route, wait]) => {
+  const [method, template] = route.split(" ", 2);
+  const pattern = template
+    .split("/")
+    .map((segment) =>
+      /^\{[^}]+\}$/.test(segment)
+        ? "[^/]+"
+        : segment.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+    )
+    .join("/");
+  return [method, new RegExp(`${pattern}$`), wait] as const;
+});
 
 /**
  * Give a proxy's failure ON A SLOW AI ROUTE a problem body, so the reader is
@@ -182,8 +236,8 @@ const MODEL_ROUTE_SUFFIXES = [
  * of the real cases. Anything the app itself answered is problem+json and
  * passes through untouched — the server's own sentence is always better.
  */
-function withGatewayProblem(response: Response, url: string): Response {
-  if (!GATEWAY_STATUSES.has(response.status) || !callsAModel(url)) {
+function withGatewayProblem(response: Response, request: Request): Response {
+  if (!GATEWAY_STATUSES.has(response.status) || modelWaitOf(request) === null) {
     return response;
   }
   const contentType = response.headers.get("Content-Type") ?? "";
@@ -206,17 +260,46 @@ function withGatewayProblem(response: Response, url: string): Response {
   );
 }
 
-function callsAModel(url: string): boolean {
-  const path = URL.canParse(url) ? new URL(url).pathname : url;
-  return MODEL_ROUTE_SUFFIXES.some((suffix) => path.endsWith(suffix));
+// Whether THIS request holds a model call open, and on which terms: by method
+// AND path, because the dossier is read and refreshed at one path and only the
+// refresh is the agent at work on every call. Null for every other request —
+// the reader's own click, which the rail must not narrate in the agent's voice.
+function modelWaitOf(request: Request): ModelWait | null {
+  const path = URL.canParse(request.url)
+    ? new URL(request.url).pathname
+    : request.url;
+  for (const [method, pattern, wait] of MODEL_ROUTE_MATCHERS) {
+    if (request.method === method && pattern.test(path)) {
+      return wait;
+    }
+  }
+  return null;
 }
 
-// Whether THIS request is the agent at work: a POST to a model route. The
-// reads that share those paths are the reader's own, and the gateway reader
-// above keeps its wider view — a cut connection on either is still a request
-// the server did not finish.
-function asksAModel(request: Request): boolean {
-  return request.method === "POST" && callsAModel(request.url);
+// A request counted as the agent working for as long as it is open, from the
+// moment it leaves.
+function fetchCountedAtOnce(request: Request): Promise<Response> {
+  beginModelCall();
+  return fetchWithDeadline(request).finally(endModelCall);
+}
+
+// A request counted as the agent working only once it has outlived the time a
+// stored answer takes — see CACHE_ANSWER_GRACE_MS. Ended in the same `finally`
+// as the eager count, so a refusal and a stall release it as surely as an
+// answer does, and a request that answered inside the grace releases nothing
+// because it counted nothing.
+function fetchCountedAfterGrace(request: Request): Promise<Response> {
+  let counted = false;
+  const grace = globalThis.setTimeout(() => {
+    counted = true;
+    beginModelCall();
+  }, CACHE_ANSWER_GRACE_MS);
+  return fetchWithDeadline(request).finally(() => {
+    globalThis.clearTimeout(grace);
+    if (counted) {
+      endModelCall();
+    }
+  });
 }
 
 export const api = createClient<paths>({
@@ -233,15 +316,16 @@ export const api = createClient<paths>({
     if (language && !request.headers.has("Accept-Language")) {
       request.headers.set("Accept-Language", language);
     }
-    if (!asksAModel(request)) {
-      return fetchWithDeadline(request);
-    }
     // The chrome learns the agent is working HERE, where it is already known,
-    // rather than on the next poll of the activity feed seconds later. Counted
-    // in a `finally` so a refusal and a stall end the call as surely as an
-    // answer does.
-    beginModelCall();
-    return fetchWithDeadline(request).finally(endModelCall);
+    // rather than on the next poll of the activity feed seconds later.
+    switch (modelWaitOf(request)) {
+      case "always":
+        return fetchCountedAtOnce(request);
+      case "on-miss":
+        return fetchCountedAfterGrace(request);
+      case null:
+        return fetchWithDeadline(request);
+    }
   },
 });
 

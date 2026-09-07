@@ -10,16 +10,16 @@
   "totals": {
     "tools": 73,
     "resources": 12,
-    "tool_catalog_bytes": 209251,
+    "tool_catalog_bytes": 210379,
     "resource_catalog_bytes": 4584,
-    "approx_wire_tokens_total": 53458,
+    "approx_wire_tokens_total": 53740,
     "largest_tool_bytes": 8980,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
       "description_bytes": 51079,
-      "input_schema_bytes": 43519,
+      "input_schema_bytes": 44647,
       "output_schema_bytes": 98901,
-      "description_plus_input_schema_bytes": 94598
+      "description_plus_input_schema_bytes": 95726
     }
   },
   "tools": {
@@ -12287,6 +12287,25 @@
               "description": "Purpose key the recipients must have granted",
               "type": "string"
             },
+            "evidence": {
+              "additionalProperties": false,
+              "description": "The record that bears out the category: required for invoice_or_payment, contract_notice and precontract_quote, which cannot be allowed without one",
+              "properties": {
+                "contract_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "deal_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "invoice_id": {
+                  "format": "uuid",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
             "idempotency_key": {
               "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
               "maxLength": 255,
@@ -12514,6 +12533,25 @@
               "description": "Purpose key the recipients must have granted",
               "type": "string"
             },
+            "evidence": {
+              "additionalProperties": false,
+              "description": "The record that bears out the category: required for invoice_or_payment, contract_notice and precontract_quote, which cannot be allowed without one",
+              "properties": {
+                "contract_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "deal_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "invoice_id": {
+                  "format": "uuid",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
             "idempotency_key": {
               "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
               "maxLength": 255,
@@ -12705,6 +12743,25 @@
             "consent_purpose": {
               "description": "Purpose key the recipient must have granted",
               "type": "string"
+            },
+            "evidence": {
+              "additionalProperties": false,
+              "description": "The record that bears out the category: required for invoice_or_payment, contract_notice and precontract_quote, which cannot be allowed without one",
+              "properties": {
+                "contract_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "deal_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "invoice_id": {
+                  "format": "uuid",
+                  "type": "string"
+                }
+              },
+              "type": "object"
             },
             "idempotency_key": {
               "description": "Optional. Same key, same result; a key reused with other arguments is refused.",

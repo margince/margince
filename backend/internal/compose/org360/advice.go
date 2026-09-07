@@ -82,6 +82,14 @@ func (s *Service) UndismissedAdvice(
 // KeepUndismissed drops from found whatever this caller has already judged,
 // for advice another writer raised. The fingerprints asked about are the ones
 // in hand, never the caller's whole history.
+//
+// The SAME account gate UndismissedAdvice above opens with, for the same
+// reason. Both read one ledger, both key it on an organization id the caller
+// supplies, and both answer whether this reader has judged advice about that
+// account — so an account the caller cannot see must answer not-found to both.
+// This one is reached only behind two of those checks today, which is why the
+// gap was invisible: the protection was the call site's rather than the read's,
+// and a second call site would not have inherited it.
 func (s *Service) KeepUndismissed(
 	ctx context.Context, orgID ids.OrganizationID, found []crmcontracts.Organization360Suggestion,
 ) ([]crmcontracts.Organization360Suggestion, error) {
@@ -90,6 +98,9 @@ func (s *Service) KeepUndismissed(
 	}
 	var kept []crmcontracts.Organization360Suggestion
 	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+		if err := auth.EnsureVisible(ctx, tx, "organization", orgID.UUID); err != nil {
+			return err
+		}
 		var err error
 		kept, err = s.withoutDismissed(ctx, tx, orgID, found)
 		return err

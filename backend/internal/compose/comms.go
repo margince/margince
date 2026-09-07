@@ -291,6 +291,11 @@ func sendContextOf(in agents.SendContextArgs) activities.SendContextInput {
 		Context:          in.CommunicationContext,
 		MarketingPurpose: in.MarketingPurpose,
 		OperatorReason:   in.OperatorReason,
+		Evidence: activities.SendEvidenceInput{
+			InvoiceID:  in.Evidence.InvoiceID,
+			ContractID: in.Evidence.ContractID,
+			DealID:     in.Evidence.DealID,
+		},
 	}
 }
 

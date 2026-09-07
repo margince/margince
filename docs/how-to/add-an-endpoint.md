@@ -19,6 +19,15 @@ the store mechanics step 3 relies on, see
 
    The generator **fails** on a mutating op with neither, so an un-tiered endpoint cannot ship.
 
+   If the handler **calls a model and holds the request open** for the answer — a draft, a brief,
+   an ask — mark the operation `x-waits-on-model: always`, or `on-miss` when it serves a stored
+   reading and generates only when it has none. Then add the same `METHOD /path` to `MODEL_ROUTES`
+   in `frontend/src/api/client.ts`; `backend/gates/modelroutes_test.go` fails until the two agree.
+   That marker is what lights the AI-activity rail the moment the request leaves rather than at its
+   next poll. An operation that enqueues the work and answers 202 stays unmarked — its run reaches
+   the rail through the feed. See
+   [explanation/ai-activity-rail.md → The ask](../explanation/ai-activity-rail.md#the-ask-what-this-tab-knows-before-the-feed-does).
+
    `tier` and `scope` answer different questions, and one cannot stand in for the other: the tier
    says whether a human confirms the act, the scope says whether the act was ever delegable. Pick
    the scope by what the act's PURPOSE spends — `send` delivers to a counterparty, `enrich` pulls

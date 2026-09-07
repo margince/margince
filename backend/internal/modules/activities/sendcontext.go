@@ -185,7 +185,20 @@ type SendContextInput struct {
 	Context          string
 	MarketingPurpose string
 	OperatorReason   string
-	Evidence         commsauthz.Evidence
+	Evidence         SendEvidenceInput
+}
+
+// SendEvidenceInput is a non-HTTP caller's evidence, as STRINGS.
+//
+// Unparsed on purpose: the HTTP door hands the shared validator typed uuids
+// that its own decoder already refused a malformed one for, and a tool caller
+// has had no such pass. Parsing here means one spelling of "that is not a
+// record id" for both doors instead of a tool surface that accepts a
+// nonsense id and a validator that later cannot find it.
+type SendEvidenceInput struct {
+	InvoiceID  string
+	ContractID string
+	DealID     string
 }
 
 // ApplyContext validates a non-HTTP caller's claim and puts it on the send
@@ -226,11 +239,50 @@ func decodeSendContext(claim SendContextInput) (sendContext, error) {
 	if err != nil {
 		return sendContext{}, err
 	}
-	// Evidence arrives already typed on this path, so it is carried rather than
-	// re-flattened. Nothing about it is trusted here either: the engine reads
-	// each named record and asks whether it supports the category.
-	decoded.evidence = claim.Evidence
+	// Parsed HERE, so a malformed id is refused at the door rather than
+	// resolving to the zero uuid and failing later as "no such record". The
+	// HTTP door's decoder has already done this for its own callers; this is
+	// the same refusal for the ones that never passed through it.
+	//
+	// Nothing about the evidence is TRUSTED by parsing it. The engine still
+	// reads each named record and asks whether it supports the category —
+	// naming one widens nothing.
+	evidence, err := decodeSendEvidence(claim.Evidence)
+	if err != nil {
+		return sendContext{}, err
+	}
+	decoded.evidence = evidence
 	return decoded, nil
+}
+
+// decodeSendEvidence parses a non-HTTP caller's record ids.
+func decodeSendEvidence(in SendEvidenceInput) (commsauthz.Evidence, error) {
+	var out commsauthz.Evidence
+	for _, field := range []struct {
+		name string
+		raw  string
+		onto *ids.UUID
+	}{
+		{"invoice_id", in.InvoiceID, &out.InvoiceID},
+		{"contract_id", in.ContractID, &out.ContractID},
+		{"deal_id", in.DealID, &out.DealID},
+	} {
+		if field.raw == "" {
+			continue
+		}
+		parsed, err := ids.Parse(field.raw)
+		if err != nil {
+			return commsauthz.Evidence{}, &CommunicationContextError{
+				// The FIELD too, not only the sentence. FieldFault defaults to
+				// communication_context, so a caller who mistyped an evidence id
+				// would be pointed at a field they got right.
+				field:  "evidence." + field.name,
+				Reason: "evidence." + field.name + " is not a record id",
+			}
+		}
+		*field.onto = parsed
+	}
+	return out, nil
 }
 
 // legacyPurposeOf reads the deprecated purpose key a caller may still send.
