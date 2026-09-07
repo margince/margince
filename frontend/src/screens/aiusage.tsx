@@ -102,6 +102,8 @@ function aggregate(days: AiUsage["days"]): UsageTask[] {
         (current.cached_hits ?? 0) + (task.cached_hits ?? 0);
       current.tokens_in += task.tokens_in;
       current.tokens_out += task.tokens_out;
+      current.unpriced_calls =
+        (current.unpriced_calls ?? 0) + (task.unpriced_calls ?? 0);
       if (task.cost_est_minor !== undefined) {
         current.cost_est_minor =
           (current.cost_est_minor ?? 0) + task.cost_est_minor;
@@ -205,6 +207,15 @@ function AiUsageBody({
     () => rows.reduce((sum, row) => sum + (row.cost_est_minor ?? 0), 0),
     [rows],
   );
+  // Calls that carried usage and no rate. Their spend is in the token columns
+  // and not in the total beside them, so the total is SHORT — and a money
+  // number that is short without saying so is the one a reader acts on: it is
+  // always the smaller figure, and nobody investigates a bill that looks
+  // cheaper than expected until it does not.
+  const unpricedCalls = useMemo(
+    () => rows.reduce((sum, row) => sum + (row.unpriced_calls ?? 0), 0),
+    [rows],
+  );
 
   return (
     <SettingList>
@@ -267,6 +278,14 @@ function AiUsageBody({
           showCost ? (
             <>
               {t("aiusage.costNote")} {formatMoney(totalCost, currency, locale)}
+              {unpricedCalls > 0 ? (
+                <>
+                  {" "}
+                  {t("aiusage.costPartial", {
+                    calls: formatNumber(unpricedCalls, locale),
+                  })}
+                </>
+              ) : null}
             </>
           ) : undefined
         }

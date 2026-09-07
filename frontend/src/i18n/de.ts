@@ -7062,6 +7062,8 @@ export const de = {
   "aiusage.col.tokensOut": "Tokens aus",
   "aiusage.col.cost": "Geschätzte Kosten",
   "aiusage.costNote": "Kosten sind Schätzungen zu den konfigurierten Tarifen.",
+  "aiusage.costPartial":
+    "Diese Summe deckt nur die berechneten Aufrufe ab: {calls} weitere hatten keinen konfigurierten Tarif, ihr Verbrauch steht in den Token-Zahlen.",
   "aiusage.monthLabel": "Monat",
   "aiusage.spendLabel": "Verbrauch nach Aufgabe",
   "aiusage.days.show": "Tage anzeigen",

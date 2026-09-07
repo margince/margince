@@ -16377,7 +16377,7 @@ export interface components {
             /** @description The window's middle latency, which tells a slow lane from a dead one. */
             median_latency_ms: number;
         };
-        /** @description AI usage + budget (AIRT-WIRE-1): the AIRT-PARAM-33 meter aggregated per day × task × tier, plus the budget band. Token-denominated; cost_est_minor is computed on read from the workspace's ai_model_rate price sheet as of each call's day (ADR-0067, price-on-read) — omitted, never a fabricated 0, when a task line's window carries no priced call. */
+        /** @description AI usage + budget (AIRT-WIRE-1): the AIRT-PARAM-33 meter aggregated per day × task × tier, plus the budget band. Token-denominated; cost_est_minor is computed on read from the workspace's ai_model_rate price sheet as of each call's day (ADR-0067, price-on-read) — omitted, never a fabricated 0, when a task line's window carries no priced call, and accompanied by unpriced_calls when it is a partial total. */
         AiUsage: {
             days: {
                 /** Format: date */
@@ -16393,6 +16393,8 @@ export interface components {
                     tokens_out: number;
                     /** @description USD minor units (cents), estimated on read from ai_model_rate at each call's day (ADR-0067). Omitted, not 0, when none of this line's calls priced. */
                     cost_est_minor?: number;
+                    /** @description Calls on this line that carried usage and no effective rate, so their spend is in the token columns and NOT in cost_est_minor. Present so a reader can tell a partial dollar figure from a whole one: a line with some priced calls reports a real total that is missing this many calls'' worth, and a money number that is short without saying so is worse than one that is absent. */
+                    unpriced_calls?: number;
                 }[];
             }[];
             budget: {

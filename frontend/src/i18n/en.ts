@@ -7171,6 +7171,8 @@ export const en = {
   "aiusage.col.tokensOut": "Tokens out",
   "aiusage.col.cost": "Est. cost",
   "aiusage.costNote": "Costs are estimates at configured rates.",
+  "aiusage.costPartial":
+    "This total covers the priced calls only: {calls} more had no configured rate, and their spend is in the token counts.",
   "aiusage.monthLabel": "Month",
   "aiusage.spendLabel": "Spend by task",
   "aiusage.days.show": "Show days",
