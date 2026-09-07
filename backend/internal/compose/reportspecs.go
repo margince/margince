@@ -122,6 +122,11 @@ var prebuiltReports = map[string]reportSpec{
 		},
 		baseWhere: whereArchivedNull + " AND t.status = 'open'",
 		basePlain: "live (unarchived) open deals, aged from the last time each entered its current stage",
+		// Reachable only through the generic run_report/analysis door — no
+		// personal screen frames "how long has MY stage been sitting" as a
+		// question — so this is an install-wide aging analysis, same shape as
+		// reportpopulation.go's "how many projects are in delivery" precedent.
+		population: measureEveryReadableRow,
 		dimensions: map[string]string{
 			fieldStageID:    colStageID,
 			fieldPipelineID: colPipelineID,

@@ -21,6 +21,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // Terminal leads are counted, and counted under their own status.
@@ -67,6 +68,46 @@ func TestLeadsByStatusCountsTheTerminalLeadsEveryOtherReadHides(t *testing.T) {
 			t.Errorf("leads-by-status counted %d %s, want %d — the two terminal statuses are the ones this report exists for",
 				counts[status], status, want)
 		}
+	}
+}
+
+// An unowned lead is the ordinary shape of a fresh, unrouted one — and it
+// must count on a rep's own board the same way it counts on their unscoped
+// list. This is margince#4205's own literal reproduction: before the fix,
+// `owner_id = $me` matched nothing against a NULL owner_id, and the Leads
+// board's terminal-status columns silently dropped a lead the panel's own
+// list still showed one click below.
+func TestLeadsByStatusCountsAnUnownedLeadForARep(t *testing.T) {
+	e := integration.Setup(t)
+	seedLeadAt(t, e, "new", false)
+	e.WsExec(t, `INSERT INTO lead (id, full_name, status, source, captured_by, owner_id, archived_at)
+		VALUES ($1, 'Owned Fixture', 'disqualified', 'inbound', 'human:x', $2, now())`, ids.NewV7(), e.Rep1)
+
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
+		Objects: map[string]principal.ObjectGrant{
+			"lead":                  {Read: true},
+			"installation_settings": {Read: true},
+		},
+		RowScope: principal.RowScopeOwn,
+	})
+	req := httptest.NewRequest(http.MethodPost, "/v1/reports/leads-by-status",
+		strings.NewReader(`{}`)).WithContext(rep)
+	rec := httptest.NewRecorder()
+	reportHandlers{engine: newReportEngine(e.Pool)}.RunReport(rec, req, "leads-by-status")
+
+	var result reportResultWire
+	decodeWire(t, rec, http.StatusOK, &result)
+	counts := map[string]int64{}
+	for _, row := range result.Rows {
+		counts[row["status"].(string)] = wireInt(t, row, "leads")
+	}
+	if counts["new"] != 1 {
+		t.Errorf(`a rep's own population counted %d "new" leads, want 1 — `+
+			"an unowned lead must not silently drop out", counts["new"])
+	}
+	if counts["disqualified"] != 1 {
+		t.Errorf(`a rep's own population counted %d "disqualified" leads, want 1 (their own)`,
+			counts["disqualified"])
 	}
 }
 

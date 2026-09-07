@@ -20,6 +20,9 @@ package compose
 import (
 	"encoding/json"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // wireFloat reads a cell that is legitimately fractional. A percentile
@@ -722,5 +725,24 @@ func TestWinLossFiltersToOneLostReason(t *testing.T) {
 	}
 	if got := wireInt(t, row, "amount_minor_sum"); got != 50000 {
 		t.Errorf("amount = %d, want 50000 — a filtered-out deal reached the sum", got)
+	}
+}
+
+// win-loss is an install-wide analysis question (margince#4224) — a
+// cross-team comparison is exactly what a win-rate report is FOR, so a team
+// manager must see a won/lost deal closed by a seat on a different team, not
+// just their own team's outcomes.
+func TestWinLossIsNotNarrowedToATeamManagersOwnTeams(t *testing.T) {
+	e := setupForecast(t)
+	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, owner_id, amount_minor, currency, status, closed_at, lost_reason, fx_rate_to_base, source, captured_by)
+		VALUES ($1, 'Cross-team win', $2, $3, $4, 50000, 'EUR', 'won', '2026-01-15T10:00:00Z'::timestamptz, NULL, 1.0, 'manual', 'human:x')`,
+		e.pipeline, e.stages[60], e.Rep3)
+
+	manager := e.dealReadCtx(ids.NewV7(), []ids.UUID{e.Team1}, principal.RowScopeTeam)
+	result := e.runReport(manager, t, "win-loss",
+		`{"group_by":["status"],"aggregates":[{"fn":"count","as":"deals"}]}`)
+	if len(result.Rows) == 0 {
+		t.Fatal("a Team1 manager read no won/lost deals, want Rep3's Team2 " +
+			"win to still count — win-loss answers a cross-team question")
 	}
 }

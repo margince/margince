@@ -18,6 +18,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/forecasting"
@@ -199,6 +200,34 @@ func TestNamingYourselfIsAlwaysWithinYourOwnLens(t *testing.T) {
 	}
 	if got.Kind != ScopeKindOwner || got.ID == nil || *got.ID != me {
 		t.Fatalf("naming yourself resolved to %q/%v", got.Kind, got.ID)
+	}
+}
+
+// A manager's default population clause must also admit a row nobody owns
+// yet: an unrouted lead or an unassigned deal is on the SAME worklist row
+// scope already hands a team manager, so a population clause that excludes it
+// would disagree with the manager's own list about a row that is in both.
+//
+// arg is a no-op collector here — the assertion is on the RENDERED SQL shape,
+// not on a live query — because this is the ManagedTeams path, the one kind
+// labelScope never touches a database for (analyticsUserLabel/analyticsTeamLabel
+// both need one), so this stays a pure policy test like its neighbours.
+func TestManagedTeamsPopulationTreatsAnUnownedRowAsShared(t *testing.T) {
+	team := ids.NewV7()
+	actor := actorWithScope(principal.RowScopeTeam, team)
+	ctx := principal.WithActor(context.Background(), actor)
+
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	resolved, clause, err := AnalyticsPopulationClause(ctx, nil, RequestedScope{}, "t", arg)
+	if err != nil {
+		t.Fatalf("rendering a manager's default population clause: %v", err)
+	}
+	if resolved.Kind != ScopeKindManagedTeams {
+		t.Fatalf("resolved to %q, want %q", resolved.Kind, ScopeKindManagedTeams)
+	}
+	if !strings.Contains(clause, "t.owner_id IS NULL") {
+		t.Errorf("clause %q does not admit an unowned row", clause)
 	}
 }
 

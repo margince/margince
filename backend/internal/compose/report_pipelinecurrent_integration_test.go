@@ -22,7 +22,29 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
+
+// pipeline-current keeps the caller's own/team lens (a team manager's own
+// pipeline composition, the same shape deals-by-stage answers — proved by
+// TestATypedQueryAnswersTheAskersOwnPopulation-adjacent cases in
+// analyticsmcpquestions_integration_test.go's G01/G02/M04). What margince#4207
+// actually needed was the unowned-row fix: an unrouted, unassigned deal must
+// still count toward a manager's own pipeline, the same way it counts toward
+// deals-by-stage (report_dealsbystage_integration_test.go).
+func TestPipelineCurrentCountsAnUnownedDealForATeamManager(t *testing.T) {
+	e := setupForecast(t)
+	e.seedOpenDeal(t, "Unowned", 60, nil, int64p(10000), stringp("commit"))
+
+	manager := e.dealReadCtx(ids.NewV7(), []ids.UUID{e.Team1}, principal.RowScopeTeam)
+	result := e.runReport(manager, t, "pipeline-current", pipelineCurrentPlan)
+	if result.TotalRows == 0 {
+		t.Fatal("a Team1 manager read an empty pipeline-current, want the " +
+			"unowned deal to still count toward their own managed-teams population")
+	}
+}
 
 const pipelineCurrentPlan = `{"group_by":["stage_id"],"aggregates":[` +
 	`{"fn":"count","as":"deals"},` +

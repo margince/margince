@@ -107,6 +107,10 @@ func projectsByPhaseSpec() reportSpec {
 		table:     tableProject,
 		baseWhere: whereArchivedNull,
 		basePlain: "live (unarchived) projects, with each project's open and won deal value in the installation's base currency",
+		// The motivating case reportpopulation.go's own measureEveryReadableRow
+		// doc names: "how many projects are in delivery" is asking about the
+		// installation, not about the asker.
+		population: measureEveryReadableRow,
 		dimensions: map[string]string{
 			fieldPhase:          colPhase,
 			fieldOrganizationID: colProjectCustomer,
@@ -141,10 +145,12 @@ func projectsByPhaseSpec() reportSpec {
 // on which body of work.
 func projectCommitmentsSpec() reportSpec {
 	return reportSpec{
-		entity:     datasource.EntityProject,
-		table:      tableProject,
-		baseWhere:  whereArchivedNull,
-		basePlain:  "live (unarchived) projects, each with the open tasks filed under it (overdue: due date already past)",
+		entity:    datasource.EntityProject,
+		table:     tableProject,
+		baseWhere: whereArchivedNull,
+		basePlain: "live (unarchived) projects, each with the open tasks filed under it (overdue: due date already past)",
+		// Same install-wide question as projectsByPhaseSpec, same precedent.
+		population: measureEveryReadableRow,
 		dimensions: projectRowDimensions(),
 		measures: map[string]string{
 			measureOpenCommitments: openCommitmentsExpr,
@@ -178,10 +184,14 @@ func projectsGoneQuietSpec() reportSpec {
 	dimensions[fieldLastActivityAt] = colLastActivity
 	dimensions[fieldQuietSince] = projects.ProjectQuietAnchorSQL("t")
 	return reportSpec{
-		entity:     datasource.EntityProject,
-		table:      tableProject,
-		baseWhere:  whereArchivedNull + " AND " + projects.ProjectInFlightSQL("t"),
-		basePlain:  "live projects being pursued or delivered that nothing has been filed against for at least `days` days (a project with no activity at all is measured from its creation)",
+		entity:    datasource.EntityProject,
+		table:     tableProject,
+		baseWhere: whereArchivedNull + " AND " + projects.ProjectInFlightSQL("t"),
+		basePlain: "live projects being pursued or delivered that nothing has been filed against for at least `days` days (a project with no activity at all is measured from its creation)",
+		// Same install-wide question as projectsByPhaseSpec, same precedent —
+		// and this signal is meant to surface every quiet project, not just
+		// the ones a caller's own lens happens to cover.
+		population: measureEveryReadableRow,
 		dimensions: dimensions,
 		measures:   map[string]string{},
 		filters: map[string]string{
