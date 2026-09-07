@@ -10824,10 +10824,11 @@ export interface paths {
         put?: never;
         /**
          * Admit a named person to the room.
-         * @description HUMAN-ONLY. Records the person and mints one credential for them. Whether that
-         *     credential is delivered depends on the installation having outbound mail
-         *     configured; the participant and the invitation are recorded either way, so a
-         *     mail failure never leaves a half-admitted person.
+         * @description HUMAN-ONLY. Records the person and mints one credential for them. Whether a mail
+         *     relay took the credential is reported as `queued` — it is false when the
+         *     installation has no outbound mail configured and when the relay refused the
+         *     message. The participant and the invitation are recorded either way, so a mail
+         *     failure never leaves a half-admitted person.
          *
          *     One live seat per address: inviting an address that already holds one is
          *     rejected (409 `deal_room_participant_already_invited`). Re-inviting an address
@@ -29034,12 +29035,18 @@ export interface components {
             /** Format: date-time */
             credential_expires_at: string;
             /**
-             * @description Whether the invitation was handed to a mail relay. False when the
-             *     installation has no outbound mail configured — the participant and the
-             *     credential are still recorded, and the caller is expected to deliver the
-             *     link itself rather than being told the invitation failed.
+             * @description Whether a mail relay accepted the invitation for sending. False when the
+             *     installation has no outbound mail configured, or the relay refused it — the
+             *     participant and the credential are recorded either way, and the caller is
+             *     expected to pass the link on themselves rather than being told the
+             *     invitation failed.
+             *
+             *     Deliberately not `delivered`: a relay accepting a message is not a mailbox
+             *     receiving it, and an address that hard-bounces a second later was `queued`
+             *     all the same. The one attempt is stamped onto the invitation, which the
+             *     roster reports; nothing revises it afterwards.
              */
-            delivered: boolean;
+            queued: boolean;
         };
         DealRoomPreviewIssued: {
             /** @description The one-time `mdr_` credential. Shown once; the server keeps only its digest. */

@@ -1066,11 +1066,12 @@ export const vi = {
   "access.emailLabel": "Địa chỉ email",
   "access.capabilityLegend": "Họ được làm gì?",
   "access.inviteNote":
-    "Bạn sẽ nhận được liên kết để sao chép. Nếu đã cấu hình gửi thư, liên kết cũng được gửi cho họ.",
+    "Bạn sẽ nhận được liên kết để sao chép. Nếu đã cấu hình gửi thư, chúng tôi cũng thử gửi cho họ.",
   "access.issued.title": "Liên kết cho {name}",
   "access.issued.mailed":
     "Đã gửi tới {email}. Bạn cũng có thể sao chép bên dưới.",
-  "access.issued.notMailed": "Chưa gửi thư. Hãy sao chép liên kết và tự gửi.",
+  "access.issued.notMailed":
+    "Liên kết chưa được gửi qua thư. Hãy sao chép và tự gửi.",
   "access.issued.linkLabel": "Liên kết của họ",
   "access.issued.copy": "Sao chép liên kết",
   "access.issued.copied": "Đã sao chép",

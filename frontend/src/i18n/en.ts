@@ -1159,11 +1159,11 @@ export const en = {
   "access.emailLabel": "Email",
   "access.capabilityLegend": "What may they do?",
   "access.inviteNote":
-    "You will get the link to copy. If a mail relay is configured it is also sent to them.",
+    "You will get the link to copy. If a mail relay is configured we also try to send it to them.",
   "access.issued.title": "Link for {name}",
   "access.issued.mailed": "Sent to {email}. You can also copy it below.",
   "access.issued.notMailed":
-    "No mail was sent. Copy the link and send it yourself.",
+    "The link was not mailed. Copy it and send it yourself.",
   "access.issued.linkLabel": "Their link",
   "access.issued.copy": "Copy link",
   "access.issued.copied": "Copied",

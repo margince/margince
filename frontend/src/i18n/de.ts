@@ -1079,12 +1079,12 @@ export const de = {
   "access.emailLabel": "E-Mail",
   "access.capabilityLegend": "Was darf die Person tun?",
   "access.inviteNote":
-    "Sie erhalten den Link zum Kopieren. Ist ein Mail-Relay konfiguriert, wird er zusätzlich versandt.",
+    "Sie erhalten den Link zum Kopieren. Ist ein Mail-Relay konfiguriert, versuchen wir zusätzlich, ihn zu versenden.",
   "access.issued.title": "Link für {name}",
   "access.issued.mailed":
     "An {email} gesendet. Sie können ihn unten auch kopieren.",
   "access.issued.notMailed":
-    "Es wurde keine Mail gesendet. Kopieren Sie den Link und senden Sie ihn selbst.",
+    "Der Link wurde nicht per Mail versendet. Kopieren Sie ihn und senden Sie ihn selbst.",
   "access.issued.linkLabel": "Der Link",
   "access.issued.copy": "Link kopieren",
   "access.issued.copied": "Kopiert",

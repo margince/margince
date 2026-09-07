@@ -22552,15 +22552,21 @@ type DealRoomInvitationIssued struct {
 	Credential          string    `json:"credential"`
 	CredentialExpiresAt time.Time `json:"credential_expires_at"`
 
-	// Delivered Whether the invitation was handed to a mail relay. False when the
-	// installation has no outbound mail configured — the participant and the
-	// credential are still recorded, and the caller is expected to deliver the
-	// link itself rather than being told the invitation failed.
-	Delivered bool `json:"delivered"`
-
 	// Participant One named person admitted to one room. Not an app_user: a participant consumes
 	// no licence, holds no CRM authority, and their whole reach is this one room.
 	Participant DealRoomParticipant `json:"participant"`
+
+	// Queued Whether a mail relay accepted the invitation for sending. False when the
+	// installation has no outbound mail configured, or the relay refused it — the
+	// participant and the credential are recorded either way, and the caller is
+	// expected to pass the link on themselves rather than being told the
+	// invitation failed.
+	//
+	// Deliberately not `delivered`: a relay accepting a message is not a mailbox
+	// receiving it, and an address that hard-bounces a second later was `queued`
+	// all the same. The one attempt is stamped onto the invitation, which the
+	// roster reports; nothing revises it afterwards.
+	Queued bool `json:"queued"`
 }
 
 // DealRoomLinkRequest defines model for DealRoomLinkRequest.

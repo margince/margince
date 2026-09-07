@@ -390,8 +390,18 @@ func passwordResetOptions(ctx context.Context, deployCfg deployconfig.Config, po
 	}
 	_, _ = fmt.Fprintln(stdout, "api operator mail enabled (password reset, invites)")
 	// The link base rides compose.WithPublicBaseURL, assembled with the base
-	// options — this option carries the transport alone.
-	return []compose.Option{compose.WithOperatorMail(m)}, nil
+	// options — these options carry the transport alone.
+	//
+	// BOTH options, because they wire different handler sets off the same
+	// relay: WithOperatorMail reaches password reset and the controller lane,
+	// and the Deal Room invitation is its own handler set. Wiring only the
+	// first left an installation whose banner said "invites" mailing none of
+	// them — every invitation came back queued=false and every seller was told
+	// to pass the link on by hand.
+	return []compose.Option{
+		compose.WithOperatorMail(m),
+		compose.WithDealRoomInviteMail(m),
+	}, nil
 }
 
 // blobstoreOptions wires the attachment endpoints (and their /readyz probe +

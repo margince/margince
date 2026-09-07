@@ -31,6 +31,11 @@ type buyerRoom struct {
 	roomID     string
 	credential string
 	email      string
+	// queued is what the invitation said about its own mail: whether a relay
+	// accepted it, never that a mailbox received it. Carried here so the suite
+	// asserting that distinction shares this helper rather than growing a
+	// second copy of the same three requests.
+	queued bool
 }
 
 // openRoomWithABuyer creates a room and invites one buyer into it. There is no
@@ -58,7 +63,15 @@ func openRoomWithABuyer(t *testing.T, e *apptest.AppEnv) buyerRoom {
 	if credential == "" {
 		t.Fatalf("invite returned no credential: %v", issued)
 	}
-	return buyerRoom{roomID: roomID, credential: credential, email: "laura@buyer.example"}
+	// Asserted rather than defaulted: `queued` is a required response property,
+	// and reading a missing one as false would let the two tests that expect
+	// false pass against a response that had dropped the field entirely.
+	queued, present := issued["queued"].(bool)
+	if !present {
+		t.Fatalf("the issued invitation carries no boolean `queued`, so nothing says whether the "+
+			"seller must pass the link on by hand: %v", issued)
+	}
+	return buyerRoom{roomID: roomID, credential: credential, email: "laura@buyer.example", queued: queued}
 }
 
 func bearer(token string) map[string]string {
