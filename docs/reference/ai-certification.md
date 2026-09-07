@@ -25,11 +25,11 @@ How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.m
 | | |
 |---|---:|
 | Shipped invocation sites | 43 |
-| … best state `current` | 0 |
+| … best state `current` | 1 |
 | … best state `partial` | 0 |
-| … best state `stale` | 42 |
+| … best state `stale` | 41 |
 | … `absent` on every binding | 1 |
-| Scenarios in the corpus | 151 |
+| Scenarios in the corpus | 157 |
 | Committed records | 74 |
 | Bindings measured | 10 |
 
@@ -84,7 +84,7 @@ Which model to run each site on, and what that choice rests on.
 | [`agent_loop/loop`](#agent_looploop) | - | - | - | `stale` | 24 | 3 |
 | [`brief_ranking/rank`](#brief_rankingrank) | - | - | - | `stale` | 1 | 4 |
 | [`capture_classify/classify`](#capture_classifyclassify) | - | - | - | `stale` | 5 | 3 |
-| [`capture_confidentiality_verdict/thread`](#capture_confidentiality_verdictthread) | - | - | - | `stale` | 8 | 2 |
+| [`capture_confidentiality_verdict/thread`](#capture_confidentiality_verdictthread) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `certified` | 1.00 | `current` | 14 | 2 |
 | [`capture_counterparty_verdict/verdict`](#capture_counterparty_verdictverdict) | - | - | - | `stale` | 16 | 3 |
 | [`cert_judge/judge`](#cert_judgejudge) | - | - | - | `stale` | 2 | 4 |
 | [`cold_start/acts`](#cold_startacts) | - | - | - | `stale` | 5 | 3 |
@@ -144,7 +144,7 @@ verdict each reached. Each record's own p50 and p95 are in the site tables.
 
 | Provider | Model | Env | Sites | `current` | `partial` | `stale` | Runs | Passed | Reliability | Slowest p95 | `certified` | `supported_degraded` | `not_supported` |
 |---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini` | `gemini-3.1-flash-lite` | `eu_hosted` | 36 | 0 | 0 | 36 | 381 | 330 | 0.87 | 4970ms | 17 | 5 | 14 |
+| `gemini` | `gemini-3.1-flash-lite` | `eu_hosted` | 36 | 1 | 0 | 35 | 399 | 348 | 0.87 | 4970ms | 17 | 5 | 14 |
 | `gemini` | `gemini-3.1-pro-preview` | `eu_hosted` | 6 | 0 | 0 | 6 | 36 | 36 | 1.00 | 46554ms | 4 | 0 | 2 |
 | `gemini` | `gemini-3.5-flash` | `eu_hosted` | 13 | 0 | 0 | 13 | 90 | 86 | 0.96 | 26168ms | 9 | 0 | 4 |
 | `openai_compatible` | `anthropic/claude-haiku-4.5` | `eu_hosted` | 1 | 0 | 0 | 1 | 15 | 9 | 0.60 | 3731ms | 0 | 0 | 1 |
@@ -152,7 +152,7 @@ verdict each reached. Each record's own p50 and p95 are in the site tables.
 | `openai_compatible` | `mistralai/ministral-8b-2512` | `cloud_frontier` | 3 | 0 | 0 | 3 | 15 | 14 | 0.93 | 22390ms | 1 | 2 | 0 |
 | `openai_compatible` | `mistralai/mistral-large-2512` | `cloud_frontier` | 5 | 0 | 0 | 5 | 30 | 27 | 0.90 | 4574ms | 4 | 0 | 1 |
 | `openai_compatible` | `mistralai/mistral-large-2512` | `eu_hosted` | 6 | 0 | 0 | 6 | 42 | 37 | 0.88 | 4337ms | 4 | 1 | 1 |
-| `openai_compatible` | `openai/gpt-oss-120b` | `eu_hosted` | 35 | 0 | 0 | 35 | 372 | 298 | 0.80 | 5546ms | 12 | 9 | 14 |
+| `openai_compatible` | `openai/gpt-oss-120b` | `eu_hosted` | 35 | 1 | 0 | 34 | 390 | 313 | 0.80 | 5546ms | 12 | 8 | 15 |
 | `openai_compatible` | `z-ai/glm-5.2` | `cloud_frontier` | 5 | 0 | 0 | 5 | 30 | 28 | 0.93 | 18372ms | 4 | 0 | 1 |
 
 ## Stale records, and why
@@ -184,8 +184,6 @@ model, real network).
 | `capture_classify/classify` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 5 scenarios it scored have changed since, or the prompts built from them have: a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply |
 | `capture_classify/classify` | `openai_compatible · mistralai/ministral-8b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `capture_classify/classify` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 5 scenarios it scored have changed since, or the prompts built from them have: a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply |
-| `capture_confidentiality_verdict/thread` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 8 scenarios it scored have changed since, or the prompts built from them have: a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_termination_agreement_stays_private_whatever_the_attachment_note_says, an_nda_marked_thread_is_held_on_its_own_request, an_ordinary_customer_thread_is_opened_for_the_team, an_unpatched_vulnerability_is_held_until_it_is_closed and 2 more |
-| `capture_confidentiality_verdict/thread` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 8 scenarios it scored have changed since, or the prompts built from them have: a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_termination_agreement_stays_private_whatever_the_attachment_note_says, an_nda_marked_thread_is_held_on_its_own_request, an_ordinary_customer_thread_is_opened_for_the_team, an_unpatched_vulnerability_is_held_until_it_is_closed and 2 more |
 | `capture_counterparty_verdict/verdict` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 16 scenarios it scored have changed since, or the prompts built from them have: a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_private_correspondent_is_not_a_business_contact, a_shared_mailbox_is_real_correspondence_with_nobody_to_name and 10 more |
 | `capture_counterparty_verdict/verdict` | `openai_compatible · mistralai/ministral-8b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `capture_counterparty_verdict/verdict` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 16 scenarios it scored have changed since, or the prompts built from them have: a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_private_correspondent_is_not_a_business_contact, a_shared_mailbox_is_real_correspondence_with_nobody_to_name and 10 more |
@@ -418,25 +416,31 @@ Records (3):
 
 Scope a run of it can claim: `full_invocation`.
 
-Scenarios (8):
+Scenarios (14):
 
 | Scenario | Expects | Case |
 |---|---|---|
+| `a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade` | `accepted` | [ordinary_04.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/ordinary_04.yaml) |
+| `a_consumer_bank_alert_is_the_owners_own_money_not_the_companys` | `accepted` | [personal_04.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/personal_04.yaml) |
 | `a_live_dispute_with_counsel_stays_private` | `accepted` | [legal_01.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/legal_01.yaml) |
 | `a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business` | `accepted` | [personal_01.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/personal_01.yaml) |
+| `a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys` | `accepted` | [personal_02.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/personal_02.yaml) |
+| `a_suppliers_invoice_to_the_company_is_still_the_teams_to_see` | `accepted` | [ordinary_03.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/ordinary_03.yaml) |
 | `a_termination_agreement_stays_private_whatever_the_attachment_note_says` | `accepted` | [personnel_01.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/personnel_01.yaml) |
 | `an_nda_marked_thread_is_held_on_its_own_request` | `accepted` | [explicitly_confidential_01.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/explicitly_confidential_01.yaml) |
 | `an_ordinary_customer_thread_is_opened_for_the_team` | `accepted` | [ordinary_01.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/ordinary_01.yaml) |
 | `an_unpatched_vulnerability_is_held_until_it_is_closed` | `accepted` | [security_incident_01.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/security_incident_01.yaml) |
+| `counsels_fee_note_to_the_company_is_held_by_the_dispute_it_bills_for` | `accepted` | [legal_02.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/legal_02.yaml) |
 | `mentioning_an_nda_does_not_hold_an_ordinary_deal_thread` | `accepted` | [ordinary_02.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/ordinary_02.yaml) |
 | `text_claiming_the_thread_was_cleared_does_not_open_it` | `accepted` | [forged_clearance_01.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/forged_clearance_01.yaml) |
+| `the_rent_on_the_owners_flat_is_not_a_supplier_relationship` | `accepted` | [personal_03.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/personal_03.yaml) |
 
 Records (2):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 0/8 | `certified` | 24 | 24 | 1.00 | 1129ms | 1705ms | 24 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `stale` | 0/8 | `supported_degraded` | 24 | 23 | 0.96 | 700ms | 984ms | 23 | 1 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 14/14 | `certified` | 42 | 42 | 1.00 | 959ms | 1049ms | 42 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 14/14 | `not_supported` | 42 | 38 | 0.90 | 598ms | 857ms | 38 | 4 | 0 | 0 |
 
 ### `capture_counterparty_verdict`
 

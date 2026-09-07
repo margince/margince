@@ -1,0 +1,47 @@
+name: a_consumer_bank_alert_is_the_owners_own_money_not_the_companys
+task: capture_confidentiality_verdict
+site: thread
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5.1
+fixture:
+  subject: "Security alert: first sign-in to mobile banking"
+  attachments: []
+  body: |
+    Dear NGUYEN VAN WEIDNER,
+
+    We noticed a first-time sign-in to your mobile banking app for the account
+    ending 4471.
+
+    Device: Pixel 9
+    Time: 26 August 2026, 21:14 (GMT+7)
+
+    If this was you, no action is needed. If it was not, call our 24-hour
+    hotline immediately and do not share your OTP with anyone, including staff.
+
+    Customer Care
+expect:
+  outcome: accepted
+  answer: personal
+  rubric: >
+    A retail bank telling the mailbox owner that someone signed in to his
+    personal mobile banking for the first time. It is his own consumer account
+    and his own money.
+    A person's private bank is their household, not the company's finances.
+    "personal" scores high.
+    "ordinary" is the failure this scenario exists to catch and scores zero at
+    any confidence: it hands every colleague the founder's bank, the last four
+    digits of his account and his device. Two other kinds score in the middle
+    because they hold the thread, and both are reasonable misreadings worth
+    naming. "financial_corporate" is the COMPANY's banking, and this is not the
+    company's account. "security_incident" is a breach, an intrusion or leaked
+    credentials in the company's systems; a routine first-login notice on a
+    private account is none of those, and the mail itself says no action is
+    needed.
+    The trap is vocabulary. "Security alert", "sign-in", "device", "OTP" all
+    belong to the language of a corporate incident, so a classifier reading the
+    words rather than whose account it is answers "security_incident" — or,
+    worse, reads "bank" and answers "ordinary".
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

@@ -1,11 +1,11 @@
 {
   "totals": {
     "sites": 43,
-    "sites_best_current": 0,
+    "sites_best_current": 1,
     "sites_best_partial": 0,
-    "sites_best_stale": 42,
+    "sites_best_stale": 41,
     "sites_absent": 1,
-    "scenarios": 151,
+    "scenarios": 157,
     "records": 74,
     "bindings": 10
   },
@@ -17,12 +17,12 @@
         "env": "eu_hosted"
       },
       "sites": 36,
-      "sites_current": 0,
+      "sites_current": 1,
       "sites_partial": 0,
-      "sites_stale": 36,
-      "runs": 381,
-      "passed": 330,
-      "reliability": 0.8661417322834646,
+      "sites_stale": 35,
+      "runs": 399,
+      "passed": 348,
+      "reliability": 0.8721804511278195,
       "slowest_p95_ms": 4970,
       "bands": {
         "certified": 17,
@@ -177,17 +177,17 @@
         "env": "eu_hosted"
       },
       "sites": 35,
-      "sites_current": 0,
+      "sites_current": 1,
       "sites_partial": 0,
-      "sites_stale": 35,
-      "runs": 372,
-      "passed": 298,
-      "reliability": 0.8010752688172043,
+      "sites_stale": 34,
+      "runs": 390,
+      "passed": 313,
+      "reliability": 0.8025641025641026,
       "slowest_p95_ms": 5546,
       "bands": {
         "certified": 12,
-        "supported_degraded": 9,
-        "not_supported": 14
+        "supported_degraded": 8,
+        "not_supported": 15
       }
     },
     {
@@ -713,9 +713,28 @@
       "key": "capture_confidentiality_verdict/thread",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "gemini",
+          "model": "gemini-3.1-flash-lite",
+          "env": "eu_hosted"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
       "scenarios": [
+        {
+          "name": "a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/ordinary_04.yaml"
+        },
+        {
+          "name": "a_consumer_bank_alert_is_the_owners_own_money_not_the_companys",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/personal_04.yaml"
+        },
         {
           "name": "a_live_dispute_with_counsel_stays_private",
           "expects": "accepted",
@@ -725,6 +744,16 @@
           "name": "a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business",
           "expects": "accepted",
           "file": "backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/personal_01.yaml"
+        },
+        {
+          "name": "a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/personal_02.yaml"
+        },
+        {
+          "name": "a_suppliers_invoice_to_the_company_is_still_the_teams_to_see",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/ordinary_03.yaml"
         },
         {
           "name": "a_termination_agreement_stays_private_whatever_the_attachment_note_says",
@@ -747,6 +776,11 @@
           "file": "backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/security_incident_01.yaml"
         },
         {
+          "name": "counsels_fee_note_to_the_company_is_held_by_the_dispute_it_bills_for",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/legal_02.yaml"
+        },
+        {
           "name": "mentioning_an_nda_does_not_hold_an_ordinary_deal_thread",
           "expects": "accepted",
           "file": "backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/ordinary_02.yaml"
@@ -755,6 +789,11 @@
           "name": "text_claiming_the_thread_was_cleared_does_not_open_it",
           "expects": "accepted",
           "file": "backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/forged_clearance_01.yaml"
+        },
+        {
+          "name": "the_rent_on_the_owners_flat_is_not_a_supplier_relationship",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/personal_03.yaml"
         }
       ],
       "records": [
@@ -764,22 +803,22 @@
             "model": "gemini-3.1-flash-lite",
             "env": "eu_hosted"
           },
-          "state": "stale",
+          "state": "current",
           "band": "certified",
-          "scenarios_measured": 0,
-          "scenarios_total": 8,
-          "runs": 24,
-          "passed": 24,
+          "scenarios_measured": 14,
+          "scenarios_total": 14,
+          "runs": 42,
+          "passed": 42,
           "reliability": 1,
-          "latency_p50_ms": 1129,
-          "latency_p95_ms": 1705,
+          "latency_p50_ms": 959,
+          "latency_p95_ms": 1049,
           "reported": {
-            "accepted": 24,
+            "accepted": 42,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "8 scenarios it scored have changed since, or the prompts built from them have: a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_termination_agreement_stays_private_whatever_the_attachment_note_says, an_nda_marked_thread_is_held_on_its_own_request, an_ordinary_customer_thread_is_opened_for_the_team, an_unpatched_vulnerability_is_held_until_it_is_closed and 2 more"
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -787,22 +826,22 @@
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
-          "state": "stale",
-          "band": "supported_degraded",
-          "scenarios_measured": 0,
-          "scenarios_total": 8,
-          "runs": 24,
-          "passed": 23,
-          "reliability": 0.9583333333333334,
-          "latency_p50_ms": 700,
-          "latency_p95_ms": 984,
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 14,
+          "scenarios_total": 14,
+          "runs": 42,
+          "passed": 38,
+          "reliability": 0.9047619047619048,
+          "latency_p50_ms": 598,
+          "latency_p95_ms": 857,
           "reported": {
-            "accepted": 23,
-            "wrong_answer": 1,
+            "accepted": 38,
+            "wrong_answer": 4,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "8 scenarios it scored have changed since, or the prompts built from them have: a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_termination_agreement_stays_private_whatever_the_attachment_note_says, an_nda_marked_thread_is_held_on_its_own_request, an_ordinary_customer_thread_is_opened_for_the_team, an_unpatched_vulnerability_is_held_until_it_is_closed and 2 more"
+          "stale_reason": ""
         }
       ]
     },

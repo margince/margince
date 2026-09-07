@@ -1,0 +1,47 @@
+name: a_suppliers_invoice_to_the_company_is_still_the_teams_to_see
+task: capture_confidentiality_verdict
+site: thread
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5.1
+fixture:
+  subject: "Rechnung 2026-3391 - Wartung Netzwerktechnik KW34"
+  attachments:
+    - Rechnung_2026_3391.pdf
+  body: |
+    Sehr geehrte Damen und Herren,
+
+    anbei unsere Rechnung fuer die Wartung der Netzwerktechnik in KW34.
+
+    Rechnungsempfaenger: Weidner Handels GmbH, USt-IdNr. DE288114907
+    Nettobetrag       1.840,00 EUR
+    Umsatzsteuer 19%    349,60 EUR
+    Gesamt            2.189,60 EUR
+
+    Zahlbar innerhalb von 14 Tagen ohne Abzug. Bei Rueckfragen zur Position 3
+    melden Sie sich gern.
+
+    Mit freundlichen Gruessen
+    Buchhaltung
+expect:
+  outcome: accepted
+  answer: ordinary
+  rubric: >
+    A supplier invoicing the company for maintenance work, addressed to the
+    company by its registered name and VAT number, with a net amount, VAT and
+    payment terms. This is the everyday business of the company and the team
+    that pays it must be able to see it.
+    "ordinary" scores high. This scenario is the counter-case to the household
+    bills in the corpus: those are held because the money is the mailbox owner's
+    own, and this one must NOT be caught by the same rule. The distinction is
+    whose life the money belongs to, never the presence of an invoice, an amount
+    or a due date — all three appear here and in every private bill beside it.
+    "personal" is the failure this scenario exists to catch and scores zero at
+    any confidence. A CRM that hides supplier invoices from the people who
+    procure and pay them has stopped being a CRM, and the failure is silent: the
+    thread simply is not there. Other holding kinds score low for the same
+    reason, though a hold on a mail asking about a disputed line item would be a
+    narrower mistake.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

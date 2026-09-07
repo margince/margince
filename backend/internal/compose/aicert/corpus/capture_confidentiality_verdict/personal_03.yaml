@@ -1,0 +1,48 @@
+name: the_rent_on_the_owners_flat_is_not_a_supplier_relationship
+task: capture_confidentiality_verdict
+site: thread
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5.1
+fixture:
+  subject: "Invoice HR-2026-0841 - Room 12B, Jalan Kemuning Residences"
+  attachments:
+    - Invoice_HR_2026_0841.pdf
+  body: |
+    Dear Mr Weidner,
+
+    Please find your monthly invoice for Room 12B for the period 1-30 September
+    2026.
+
+    Room licence fee      SGD 2,180.00
+    Utilities             SGD    96.50
+    Total due             SGD 2,276.50
+
+    Payment is due by 28 August. Your licence renews automatically unless you
+    give thirty days' notice.
+
+    Warm regards,
+    Resident Services
+expect:
+  outcome: accepted
+  answer: personal
+  rubric: >
+    A co-living operator invoicing the mailbox owner for the rent on the room he
+    lives in. It is addressed to him by name, it names the room he sleeps in, and
+    the money is his own.
+    Rent on a person's home is that person's household, not a supplier
+    relationship of the company. A landlord is not a vendor the team deals with,
+    and where the founder lives is not the workspace's business. "personal"
+    scores high.
+    "ordinary" is the failure this scenario exists to catch and scores zero at
+    any confidence: it puts a founder's home address and what he pays for it on
+    every colleague's screen. "financial_corporate" scores in the middle — it
+    holds the thread, which is the outcome that matters, though it names the
+    COMPANY's own money and this is the owner's.
+    The trap is the form. This has everything a genuine trade invoice has: an
+    invoice number, line items, a currency, a total, payment terms and a renewal
+    clause. Only the question of WHOSE life the money belongs to separates it
+    from a supplier bill the team should see.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
