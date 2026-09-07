@@ -14,6 +14,7 @@ import { meFixture } from "../app/mefixture";
 import { RecordZoneProvider } from "../app/recordzone";
 import { pickOption } from "../design-system/select-testing";
 import { calendarDay } from "../format/calendarday";
+import { hourInZone } from "../format/format";
 import { LocaleProvider } from "../i18n";
 import { LogActivity } from "./logactivity";
 import { PersonScreen } from "./people";
@@ -562,7 +563,7 @@ describe("log activity from a 360", () => {
     expect(screen.getByLabelText<HTMLInputElement>("Due date").max).toBe("");
   });
 
-  it("posts a task's due_at as the END of the picked day in the writer's own zone", async () => {
+  it("posts a task's due_at as the END of the picked day on the record's clock", async () => {
     const captured: Captured[] = [];
     stubApi({ "POST /activities": createdActivity }, captured);
     render(<LogActivity entityType="organization" entityId="o1" />);
@@ -586,12 +587,15 @@ describe("log activity from a 360", () => {
     });
     if (!post) throw new Error("expected a POST /activities to be captured");
     const dueAt = new Date(postedDueAt(post.body));
-    // The instant has to fall on the day the writer picked, read where the
-    // writer is — the bare `yyyy-mm-dd` handed to `new Date` is UTC midnight,
-    // which is the previous calendar day for every writer west of UTC.
-    expect(calendarDay(dueAt, READER_ZONE)).toBe(PICKED_DAY);
+    // The instant has to fall on the day the writer picked, read on the
+    // RECORD's clock: a deadline is a fact about the record, and two
+    // colleagues quoting one task must quote the same day whichever zone each
+    // sits in. Read on the browser's clock instead, the same instant is a
+    // different hour on every machine that runs this suite.
+    expect(calendarDay(dueAt, INSTALLATION_ZONE)).toBe(PICKED_DAY);
     // And at that day's END, because a task picked for today is due all day.
-    expect(dueAt.getHours()).toBe(23);
+    // The minute needs no zone: the installation's offset is a whole hour.
+    expect(hourInZone(dueAt, INSTALLATION_ZONE)).toBe(23);
     expect(dueAt.getMinutes()).toBe(59);
   });
 
