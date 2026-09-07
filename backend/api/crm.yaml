@@ -5840,6 +5840,11 @@ paths:
 
         Sending still requires `to` on the send request and gates consent
         independently; this only saves typing an address the record already holds.
+
+        `mailbox_user_ids` answers a different question from the three name fields:
+        not who the reply goes TO, but whose mailbox the message being answered
+        arrived in. A composer shows it so a reply into a colleague's conversation
+        says so before it is sent.
       responses:
         '200':
           description: The recipient a reply would go to, with empty fields where unknown.
@@ -31270,8 +31275,27 @@ components:
 
         One person rather than a list. A reply is written to somebody, and a group
         thread degrades to the most likely counterparty rather than to nobody.
-      required: [full_name, first_name, address]
+      required: [full_name, first_name, address, mailbox_user_ids]
       properties:
+        mailbox_user_ids:
+          type: array
+          uniqueItems: true
+          items: { type: string, format: uuid }
+          description: >-
+            Every member of this organization whose OWN mailbox this message was
+            delivered to, in the order the imports were recorded. It says whose
+            conversation a reply would be joining: a thread that reached only a
+            colleague's mailbox is theirs, and a reply still goes out from the
+            caller's own mailbox under the caller's own name.
+
+            A label of where the message arrived, never a grant. It is answered
+            only to a caller who may already read the message's content, and a
+            seat named here is named because their credential delivered the row.
+
+            Empty is an answer: a hand-logged activity was typed rather than
+            delivered, and a row whose recorded provenance names no seat this
+            organization still holds resolves to nobody. Always an array, never
+            null.
         full_name:
           type: string
           description: The name as recorded, empty when no readable person is on the message.

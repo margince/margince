@@ -575,7 +575,10 @@ function useLatestMessage(
  * caller only ever fills an EMPTY field from it, so a reader who typed their
  * own recipient keeps it.
  */
-function useReplyRecipient(anchor: string | undefined): string | undefined {
+function useReplyRecipient(anchor: string | undefined): {
+  address: string | undefined;
+  mailboxes: string[] | undefined;
+} {
   const query = useQuery({
     queryKey: ["compose-reply-recipient", anchor],
     queryFn: async () => {
@@ -590,7 +593,14 @@ function useReplyRecipient(anchor: string | undefined): string | undefined {
     },
     enabled: anchor !== undefined,
   });
-  return query.data?.address === "" ? undefined : query.data?.address;
+  return {
+    address: query.data?.address === "" ? undefined : query.data?.address,
+    // Undefined until this ANCHOR's own answer arrives — the query is keyed on
+    // it, so a previous thread's settled answer is never served here. That
+    // matters: undefined means "not answered yet", which is a different fact
+    // from an empty list, and only the empty list says nobody's mailbox.
+    mailboxes: query.data?.mailbox_user_ids,
+  };
 }
 
 /**
@@ -2437,9 +2447,8 @@ export function ComposeModal({
     (offeringThreads ? chosen : latest.activity?.id);
   // Addressing the reply before a draft is asked for. A channel reply resolves
   // its recipient server-side and shows no To field, so it asks nothing.
-  const replyRecipient = useReplyRecipient(
-    open && !isChannelReply ? answering : undefined,
-  );
+  const { address: replyRecipient, mailboxes: replyMailboxes } =
+    useReplyRecipient(open && !isChannelReply ? answering : undefined);
   // What the composer offers as the recipient: the thread's counterparty where
   // there is a thread, and otherwise the record's own address.
   //
@@ -2547,6 +2556,25 @@ export function ComposeModal({
   );
   const nameOf = (linkType: string, linkId: string) =>
     linkType === "user" ? colleagues.get(linkId) : records(linkType, linkId);
+  // Whose conversation this is. A thread delivered only to colleagues' mailboxes
+  // is theirs, and the reply still goes out from the reader's own mailbox under
+  // the reader's own name — which is the sentence the notice below says.
+  //
+  // Silent unless BOTH are settled. An unresolved viewer would make every thread
+  // read as somebody else's, and an unanswered mailbox list is not the same fact
+  // as an empty one.
+  const colleagueMailboxes =
+    replyMailboxes === undefined || viewerId === undefined
+      ? []
+      : replyMailboxes.filter((seat) => seat !== viewerId);
+  // The reader's OWN mailbox took delivery, so this thread reached them however
+  // else it was addressed. Their own copy is not somebody else's conversation.
+  const ownMailboxTookIt =
+    replyMailboxes !== undefined &&
+    viewerId !== undefined &&
+    replyMailboxes.includes(viewerId);
+  const answeringColleaguesMail =
+    colleagueMailboxes.length > 0 && !ownMailboxTookIt;
   // The anchor as a ROW, in the same order `answering` resolves it: a channel
   // the reader picked answers its own conversation, and reading only the
   // caller's or the picked thread left a dial-chosen channel with no anchor row
@@ -3222,6 +3250,31 @@ export function ComposeModal({
             {staleThread && (
               <Callout tone="warn" live="status">
                 {t("compose.threadGone")}
+              </Callout>
+            )}
+            {/* Whose conversation this is. Not a warning and not a refusal —
+            covering for a colleague is ordinary work — so it states the fact
+            and lets the reader decide. Info rather than warn for that reason,
+            and no live region: it renders with the drawer rather than in
+            answer to anything the reader just did. */}
+            {answeringColleaguesMail && (
+              <Callout tone="info">
+                {t(
+                  colleagueMailboxes.length === 1
+                    ? "compose.colleagueMailbox"
+                    : "compose.colleagueMailboxes",
+                  {
+                    names: new Intl.ListFormat(INTL_LOCALE[locale], {
+                      style: "long",
+                      type: "conjunction",
+                    }).format(
+                      colleagueMailboxes.map(
+                        (seat) =>
+                          nameOf("user", seat) ?? t("compose.colleagueUnnamed"),
+                      ),
+                    ),
+                  },
+                )}
               </Callout>
             )}
             {/* Every message says where it files. Mail ASKS — its answer travels

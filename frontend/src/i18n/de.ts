@@ -3317,6 +3317,11 @@ export const de = {
     "Die genannten Empfänger sehen diese Adressen nicht — und sehen auch nicht, dass überhaupt jemand in Kopie ist.",
   "compose.threadGone":
     "Diese Unterhaltung lässt sich nicht mehr beantworten, deshalb ist der übliche Weg geöffnet. Prüfen Sie den Empfänger vor dem Senden.",
+  "compose.colleagueMailbox":
+    "Diese Nachricht ging im Postfach von {names} ein. Ihre Antwort geht aus Ihrem eigenen Postfach und unter Ihrem Namen raus.",
+  "compose.colleagueMailboxes":
+    "Diese Nachricht ging in den Postfächern von {names} ein. Ihre Antwort geht aus Ihrem eigenen Postfach und unter Ihrem Namen raus.",
+  "compose.colleagueUnnamed": "eine Kollegin oder ein Kollege",
   "compose.attach": "Anhängen",
   "compose.filesOnRecord": "Auf diesem Datensatz",
   "compose.filesLoading": "Dateien des Datensatzes werden gelesen…",

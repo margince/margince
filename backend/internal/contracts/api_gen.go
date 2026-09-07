@@ -31337,6 +31337,11 @@ type ReplyRecipient struct {
 
 	// FullName The name as recorded, empty when no readable person is on the message.
 	FullName string `json:"full_name"`
+
+	// MailboxUserIds Every member of this organization whose OWN mailbox this message was delivered to, in the order the imports were recorded. It says whose conversation a reply would be joining: a thread that reached only a colleague's mailbox is theirs, and a reply still goes out from the caller's own mailbox under the caller's own name.
+	// A label of where the message arrived, never a grant. It is answered only to a caller who may already read the message's content, and a seat named here is named because their credential delivered the row.
+	// Empty is an answer: a hand-logged activity was typed rather than delivered, and a row whose recorded provenance names no seat this organization still holds resolves to nobody. Always an array, never null.
+	MailboxUserIds []openapi_types.UUID `json:"mailbox_user_ids"`
 }
 
 // ReportBlock One element of a report. What fields are legal is decided by `kind`.

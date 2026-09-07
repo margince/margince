@@ -106,10 +106,22 @@ func (h Handlers) GetReplyRecipient(w http.ResponseWriter, r *http.Request, id c
 		writeStoreErr(w, r, err)
 		return
 	}
+	// Whose mailbox this arrived in, which is a different question from who a
+	// reply goes to: the names above are the counterparty, this is our own side.
+	mailboxes, err := h.store.MailboxesFor(ctx, anchor)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	seats := make([]openapi_types.UUID, 0, len(mailboxes))
+	for _, seat := range mailboxes {
+		seats = append(seats, openapi_types.UUID(seat))
+	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ReplyRecipient{
-		FullName:  recipient.FullName,
-		FirstName: recipient.FirstName,
-		Address:   address,
+		FullName:       recipient.FullName,
+		FirstName:      recipient.FirstName,
+		Address:        address,
+		MailboxUserIds: seats,
 	})
 }
 
