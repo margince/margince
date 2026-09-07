@@ -9827,7 +9827,9 @@ export interface paths {
          * List workspace members (roster) — cursor-paginated. Read-only.
          * @description The workspace member roster: id + display name + email + seat/status. Any authenticated member
          *     may read it (needed to pick a record-share subject and to resolve subject/granter names). Excludes
-         *     archived users. Row-scoped by workspace RLS. `User.roles` rides the row only for an admin caller,
+         *     archived users. Bounded by authenticated membership: every seat may read who else works here,
+         *     because a share or assignee picker only some seats could read would be a broken feature.
+         *     `User.roles` rides the row only for a caller holding the `user_admin` grant,
          *     who is the only one who can act on it.
          */
         get: operations["listUsers"];
@@ -10165,7 +10167,7 @@ export interface paths {
         /**
          * List workspace teams — cursor-paginated. Read-only.
          * @description Teams available as record-share subjects, with a member count. Any authenticated member may read.
-         *     Excludes archived teams. Row-scoped by workspace RLS.
+         *     Excludes archived teams. Bounded by authenticated membership, like the member roster beside it.
          */
         get: operations["listTeams"];
         put?: never;
@@ -22741,6 +22743,14 @@ export interface components {
              */
             status: "queued" | "running" | "done" | "failed";
             /**
+             * @description true when a live reading has aged past the lease its worker holds: the worker
+             *     died, timed out, or never claimed it, and nothing will move the reading on its
+             *     own. Derived at read time, never stored. Asking for the file to be read again
+             *     then starts a fresh attempt instead of joining this one. Always false once the
+             *     reading is done or failed.
+             */
+            stalled: boolean;
+            /**
              * @description Why the reading ended as it did, in words a rep can act on. Always present on
              *     `failed`, and on a `done` reading that grounded nothing — an empty result that
              *     does not explain itself reads as a broken feature.
@@ -26451,7 +26461,7 @@ export interface components {
          *     edits one.
          * @enum {string}
          */
-        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "site_read" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review" | "weekly_learnings" | "propose_roles" | "owed_verdict" | "account_scan";
+        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "site_read" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review" | "weekly_learnings" | "propose_roles" | "owed_verdict" | "account_scan";
         AiActivityItem: {
             /** Format: uuid */
             id: string;

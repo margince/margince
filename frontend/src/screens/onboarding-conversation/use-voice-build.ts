@@ -128,7 +128,12 @@ export function useVoiceBuild({ dispatch, machine }: UseVoiceBuildArgs) {
     queue.push(events);
     const terminal = terminalOf(next.status);
     if (flushed && terminal !== null) {
-      dispatch({ type: "BUILD_TERMINAL", buildId: next.id, status: terminal });
+      dispatch({
+        type: "BUILD_TERMINAL",
+        buildId: next.id,
+        status: terminal,
+        detail: next.status_detail,
+      });
     }
   }, [poll.data, queue, dispatch]);
 
@@ -157,7 +162,14 @@ export function useVoiceBuild({ dispatch, machine }: UseVoiceBuildArgs) {
         i18nKey: "ob.conv.voice.buildPollFailed",
       },
     });
-    dispatch({ type: "BUILD_TERMINAL", buildId, status: "failed" });
+    // A poll that never recovered: the server's guidance is exactly what
+    // this branch could not fetch, so it says nothing rather than inventing.
+    dispatch({
+      type: "BUILD_TERMINAL",
+      buildId,
+      status: "failed",
+      detail: null,
+    });
   }, [poll.isError, buildId, machine, queue, dispatch]);
 
   // What the finished build produced: the just-built version carries the

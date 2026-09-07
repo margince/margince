@@ -1,0 +1,37 @@
+name: a_date_floated_is_not_a_date_agreed
+task: stage_evidence_extract
+site: criteria
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  criteria:
+    - key: pilot_scheduled
+      label: A pilot date is agreed
+      hint: both sides have settled on a date, not merely raised one
+  spans:
+    - source_id: 01a07100-0000-7000-8000-000000000003
+      lines:
+        - 'Lars: we could start the pilot the week of the fourteenth if that suits.'
+        - 'Ines: possibly. I would need to check with the warehouse leads first.'
+        - 'Ines: let me come back to you once I have spoken to them.'
+expect:
+  outcome: accepted
+  answer:
+    - criterion_key: pilot_scheduled
+      met: false
+      settled_by: check with the warehouse leads
+  rubric: >
+    A date was raised and explicitly not settled — "possibly", "I would need to
+    check", "let me come back to you". The correct reading is pilot_scheduled
+    met=false: the text states the thing has NOT happened, which is a real
+    observation and not the same as silence. Claiming met=true scores at the
+    floor. A reply claiming met=false with commitment "proposed" reads the
+    conversation most precisely and should score highest, because it records
+    that a date was floated without being agreed — which is exactly what a
+    reader needs to know. Omitting the criterion scores in the middle: it is
+    not wrong, since a criterion nobody settled stays open either way, but it
+    loses the fact that the pilot was actively discussed and deferred.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

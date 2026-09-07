@@ -224,7 +224,16 @@ nothing for a role whose deal cell reads ----.
 
 ### Hiding individual fields
 
-The permission document has a slot for masking single fields from a role. No
-seeded role uses it and the server does not act on it, so nothing on this page
-says "this role sees the record but not the amount on it".
+A role can withhold single fields from the records it may otherwise read. The
+server enforces it — platform/auth renders the predicate and refuses a sort or
+filter over a withheld column — but only the DEAL read applies a role's mask
+today, and no SEEDED role carries one, so nothing on this page says "this role
+sees the record but not the amount on it". The last seeded mask, a rep's
+withheld deal amount, was dropped in a later migration; the machinery stayed,
+because an operator may still author a mask on a custom role.
+
+The project read also reports masked_fields, and it is a DIFFERENT mechanism:
+it withholds a reference to a company the reader may not see, which follows
+from that company's own visibility rather than from anything a role document
+says. A mask authored on a custom role does not reach it.
 `

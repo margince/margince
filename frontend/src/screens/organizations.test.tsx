@@ -740,7 +740,11 @@ describe("CompanyScreen — edit domains round-trip (B7)", () => {
 
     await userEvent.click(await openRecordMenu("edit-record"));
     await screen.findByLabelText("Industry");
-    await userEvent.click(screen.getByText("Add domain"));
+    // The modal's own row-adder: the rail's details grid now offers an inline
+    // "Add domain" to a seat holding the grant, and this is about the form.
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByText("Add domain"),
+    );
     await userEvent.type(screen.getByLabelText("Domain *"), "brandt.example");
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
@@ -996,6 +1000,9 @@ describe("CompanyScreen — overlay mode write affordances", () => {
       user: { id: "u1", email: "me@brandt.example", locale: "en-US" },
       roles: ["admin"],
       teams: [],
+      authorization: meFixture({
+        allow: { organization: ["read", "update", "delete"] },
+      }).authorization,
       system_of_record: { mode: "overlay" },
     });
   }

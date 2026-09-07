@@ -294,6 +294,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  /* Fills the row like the segment beside it. Its wrapper centres rather than
+   * stretches, so without this the button is as tall as its glyph — 15px, under
+   * the 24px a pointer target owes — and the ratio below squares THAT. */
+  height: 100%;
   /* Square by construction, not by arithmetic. The row stretches this segment
    * to its own inner height; the ratio turns that into the width, so the "⋮"
    * cannot become a rectangle when the row's height or its border moves. A

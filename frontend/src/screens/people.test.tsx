@@ -13,6 +13,7 @@ import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { meFixture } from "../app/mefixture";
 import { activityTimeline } from "../design-system/activitytimeline";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
@@ -250,7 +251,27 @@ function stubFetch(
         sections: [],
       });
     }
-    return responder(request.url, request.method, request);
+    const answer = await responder(request.url, request.method, request);
+    // The record's verbs and the relationships panel ask the grant before
+    // they draw, so a responder that never named a session gets one holding
+    // what a rep working their own contacts holds. A spec that answers /me
+    // itself — overlay mode, a refusal — is passed through untouched.
+    if (pathname.endsWith("/me") && answer.ok) {
+      const body: unknown = await answer.clone().json();
+      if (typeof body === "object" && body !== null && "user" in body) {
+        return answer;
+      }
+      return jsonResponse(
+        meFixture({
+          allow: {
+            person: ["read", "create", "update", "delete"],
+            relationship: ["read", "create", "update", "delete"],
+            activity: ["read", "create"],
+          },
+        }),
+      );
+    }
+    return answer;
   });
   vi.stubGlobal("fetch", fetchMock);
   return { fetchMock, urls };

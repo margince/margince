@@ -173,13 +173,18 @@ function graph(over: Partial<PersonGraph> = {}): PersonGraph {
 
 // The tab reads two endpoints, and a story that routed only one would render
 // the other's loading state under a name claiming something else.
+// Hoisted rather than written inline as a default: a literal in the parameter
+// list is a fresh object on every call, and every story that takes the default
+// would get one of its own.
+const READS_AND_ASKS: Parameters<typeof meRoute>[0] = {
+  person: ["read"],
+  introduction: ["read", "create"],
+};
+
 function stub(
   payload: PersonGraph,
   asks: IntroRequest[] = [],
-  allow: Parameters<typeof meRoute>[0] = {
-    person: ["read"],
-    introduction: ["read", "create"],
-  },
+  allow: Parameters<typeof meRoute>[0] = READS_AND_ASKS,
 ) {
   installFetchStub({
     "GET /me": meRoute(allow),

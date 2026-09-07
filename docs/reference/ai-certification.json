@@ -1,11 +1,11 @@
 {
   "totals": {
-    "sites": 42,
+    "sites": 43,
     "sites_best_current": 0,
     "sites_best_partial": 0,
     "sites_best_stale": 42,
-    "sites_absent": 0,
-    "scenarios": 142,
+    "sites_absent": 1,
+    "scenarios": 151,
     "records": 74,
     "bindings": 10
   },
@@ -3477,6 +3477,63 @@
           "stale_reason": "5 scenarios it scored have changed since, or the prompts built from them have: a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder, a_mailbox_vendor_is_not_the_senders_employer, a_one_person_consultancy_is_still_a_company, a_parked_domain_identifies_nobody, a_personal_domain_is_not_a_company"
         }
       ]
+    },
+    {
+      "task": "stage_evidence_extract",
+      "site": "criteria",
+      "key": "stage_evidence_extract/criteria",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "absent",
+      "recommended": null,
+      "scenarios": [
+        {
+          "name": "a_conversation_about_something_else",
+          "expects": "abstained",
+          "file": "backend/internal/compose/aicert/corpus/stage_evidence_extract/silence_is_not_lost_01.yaml"
+        },
+        {
+          "name": "a_correspondent_tries_to_settle_their_own_criteria",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/stage_evidence_extract/injection_01.yaml"
+        },
+        {
+          "name": "a_date_floated_is_not_a_date_agreed",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/stage_evidence_extract/proposed_not_agreed_01.yaml"
+        },
+        {
+          "name": "a_settled_fact_no_criterion_asks_about",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/stage_evidence_extract/unknown_criterion_key_01.yaml"
+        },
+        {
+          "name": "talking_about_signing_is_not_signing",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/stage_evidence_extract/contract_talk_is_not_signed_01.yaml"
+        },
+        {
+          "name": "the_buyer_names_who_signs",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/stage_evidence_extract/economic_buyer_named_01.yaml"
+        },
+        {
+          "name": "the_buyer_states_the_problem_in_their_own_words",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/stage_evidence_extract/buyer_confirms_problem_01.yaml"
+        },
+        {
+          "name": "the_rep_says_the_buyer_confirmed_it",
+          "expects": "abstained",
+          "file": "backend/internal/compose/aicert/corpus/stage_evidence_extract/rep_asserts_it_for_them_01.yaml"
+        },
+        {
+          "name": "warmth_with_no_facts_in_it",
+          "expects": "abstained",
+          "file": "backend/internal/compose/aicert/corpus/stage_evidence_extract/nothing_groundable_01.yaml"
+        }
+      ],
+      "records": []
     },
     {
       "task": "summarize",

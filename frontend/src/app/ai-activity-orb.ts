@@ -40,6 +40,7 @@ export const ACTIVITY_LANE: Readonly<Record<ActivityKind, AgentLane>> = {
   enrich: "ingest",
   rate_extract: "ingest",
   signal_extract: "ingest",
+  stage_evidence_extract: "ingest",
   site_extract: "ingest",
   site_fact_extract: "ingest",
   // The crawl itself, as one occurrence: the three site lanes above are the

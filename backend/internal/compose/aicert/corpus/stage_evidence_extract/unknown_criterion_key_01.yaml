@@ -1,0 +1,39 @@
+name: a_settled_fact_no_criterion_asks_about
+task: stage_evidence_extract
+site: criteria
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  criteria:
+    - key: problem_confirmed
+      label: The buyer has stated the problem in their own words
+  spans:
+    - source_id: 01a07100-0000-7000-8000-000000000009
+      lines:
+        - 'Ines: our security team have signed off, and legal cleared the DPA this morning.'
+        - 'Ines: the re-keying itself we can live with for now, it is annoying rather than urgent.'
+expect:
+  outcome: accepted
+  answer:
+    - criterion_key: problem_confirmed
+      met: false
+      settled_by: annoying rather than urgent
+  rubric: >
+    The conversation settles two things this stage does not ask about — a
+    security sign-off and a cleared DPA — and speaks to the one criterion it
+    does carry in the other direction: the buyer downgrades the problem to
+    annoying rather than urgent. The correct reading is problem_confirmed
+    met=false, quoted from the second line.
+    The trap is the first line. It is real, settled, and quotable, and a reader
+    that wants to be useful will reach for a key like security_review_cleared
+    or dpa_signed. There is no such key here, and inventing one makes the whole
+    reply unusable — the validator refuses a claim naming a criterion this
+    stage does not carry, and it refuses the reply entire, so the correct
+    met=false reading is lost with it. Any reply naming a key outside the list
+    scores at the floor. Reporting only the security sign-off, under any key,
+    is the same failure. Omitting everything scores in the middle: nothing is
+    invented, but the buyer's own statement about the problem is missed.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

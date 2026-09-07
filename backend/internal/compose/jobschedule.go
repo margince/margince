@@ -179,6 +179,7 @@ func configDependencies(cfg JobRunnerConfig) map[string]bool {
 		"SendDelivery":               cfg.SendDelivery != nil,
 		"SendRegistry":               cfg.SendRegistry != nil,
 		"TranscriptProposeBrain":     cfg.TranscriptProposeBrain != nil,
+		"StageEvidenceBrain":         cfg.StageEvidenceBrain != nil,
 		"Geocoder":                   cfg.Geocoder != nil,
 		"VatChecker":                 cfg.VatChecker != nil,
 		"TechnicalEnricher":          cfg.TechnicalEnricher != nil,

@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../api/client";
+import { useCanWrite } from "../app/capability";
 import type { EntityKind } from "../app/entity";
 import { useRecordZone } from "../app/recordzone";
 import {
@@ -22,7 +23,7 @@ import { viewerZone } from "../format/timezone";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { entityTimelineKeys, taskWriteKeys } from "./activitykeys";
-import { problemMessageOf, throwProblem, useSorMode } from "./common";
+import { problemMessageOf, throwProblem, useMe, useSorMode } from "./common";
 
 // Log a note or task from a 360 (person/company/deal/lead): the contract's
 // logActivity POST, linked to the record being viewed, occurred_at stamped
@@ -491,6 +492,18 @@ export function LogActivity({
   askedKind?: OpeningKind;
 }>) {
   const t = useT();
+  // useCanWrite, not useCan: the form issues a POST, and a read seat is
+  // refused before RBAC is consulted — the same rule the header verbs on
+  // personpage.tsx state for the identical write. The card stays and says so
+  // rather than vanishing: a rep whose role may not log a call needs to learn
+  // that from the page, not from the absence of a form the product has.
+  //
+  // Refused only once /me has ANSWERED. Claiming a refusal the server has not
+  // decided is worse than a form that is briefly quiet — the same rule the
+  // header verbs hold with their own pending state.
+  const me = useMe();
+  const canLog = useCanWrite("activity", "create");
+  const logRefused = me.data?.authorization !== undefined && !canLog;
   // Logging an activity writes to a mirrored record; in overlay every write
   // answers unsupported_by_sor, so the form would only fail on submit. Guarded
   // to render nothing rather than an affordance that can't work (P1/A107,
@@ -498,6 +511,13 @@ export function LogActivity({
   const overlay = useSorMode() === "overlay";
   if (overlay) {
     return null;
+  }
+  if (logRefused) {
+    return (
+      <Card className="card-stack" title={t("log.title")} sub={t("log.sub")}>
+        <p className="t-caption">{t("record.logActivityRefused")}</p>
+      </Card>
+    );
   }
   return (
     <Card className="card-stack" title={t("log.title")} sub={t("log.sub")}>

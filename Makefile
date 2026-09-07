@@ -1065,9 +1065,9 @@ test-golangci-guard:
 go-file-length:
 	@./scripts/check-go-file-length.sh
 
-## rls-store-path — DB-free floor under the RLS runtime proof: no
+## rls-store-path — DB-free floor under the isolation runtime proof: no
 ## internal/modules statement may address the superuser pool directly
-## (bypassing FORCE RLS); per-workspace work runs inside WithWorkspaceTx.
+## (which no grant constrains); per-workspace work runs inside WithWorkspaceTx.
 ## A genuinely cross-workspace query carries a `// rls-exempt: <reason>` line.
 rls-store-path:
 	@./scripts/check-rls-store-path.sh

@@ -12,6 +12,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { RelationshipsTab } from "./relationships";
 
@@ -55,6 +56,16 @@ function stubFetch(
     "fetch",
     vi.fn(async (request: Request) => {
       const { method, url } = request;
+      // The panel asks for the relationship grants before it draws a verb,
+      // so the seat here holds them — what the specs below exercise is the
+      // edge, not the grant.
+      if (url.endsWith("/v1/me")) {
+        return json(
+          meFixture({
+            allow: { relationship: ["read", "create", "update", "delete"] },
+          }),
+        );
+      }
       if (method === "POST") {
         onPost(JSON.parse(await request.text()));
         return json({ ...stakeholder, id: "rel-new" }, 201);

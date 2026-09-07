@@ -1436,6 +1436,28 @@ kinds:
       forever; registered it fails with a message that says the installation has
       no model configured.
 
+  stage_evidence_read:
+    role: worker
+    go_type: StageEvidenceReadArgs
+    queue: transcript_read
+    timeout: 4m
+    opts_owner: caller
+    registration: {when: [StageEvidenceBrain], absent: registers_nothing}
+    args:
+      Workspace: id
+      DealID: id
+      ActivityID: id
+    reason: >-
+      Four minutes is one model call with the structured lane's
+      retry-and-escalate headroom, plus the ledger writes — the same wall the
+      transcript reading takes, for the same shape of work.
+
+      SKIPPED without a model lane, unlike the transcript reading beside it.
+      Nobody asked for this reading: it is enqueued by an activity landing on a
+      deal, so there is no human watching a queued row wondering why it has not
+      moved. An installation with no model configured simply reads no criteria,
+      and its stages keep the deterministic evidence the ledger already writes.
+
   document_extract:
     role: worker
     go_type: DocumentExtractArgs

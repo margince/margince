@@ -180,7 +180,7 @@ jobs:
   # union complete + disjoint) and merges every binary coverage pod (shards +
   # unit) into the one text profile the sonarcloud job consumes.
   integration:
-    name: integration (RLS + erasure + HTTP e2e)
+    name: integration (isolation + erasure + HTTP e2e)
     timeout-minutes: 20
     needs: [integration-shards, integration-unit-coverage]
     # always(), and not !cancelled(): the latter is false for every job once a

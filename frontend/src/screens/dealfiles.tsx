@@ -3,7 +3,7 @@ import { EyeOff, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
+import { useCanWriteRecord } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, OverflowMenu } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
@@ -28,6 +28,7 @@ import "./dealfiles.css";
 // company library. The copy on the hide confirm says exactly that, because
 // "Delete" beside "Hide" is the first thing a rep will ask about.
 
+type Deal = components["schemas"]["Deal"];
 type DealDocument = components["schemas"]["DealDocument"];
 type Category = NonNullable<DealDocument["attachment"]["category"]>;
 
@@ -47,9 +48,14 @@ export function dealDocumentsKey(dealId: string, includeHidden: boolean) {
   return ["deal-documents", dealId, includeHidden] as const;
 }
 
-export function DealFiles({ dealId }: Readonly<{ dealId: string }>) {
+export function DealFiles({ deal }: Readonly<{ deal: Deal }>) {
   const t = useT();
-  const mayWrite = useCanWrite("deal", "update");
+  const dealId = deal.id;
+  // useCanWriteRecord, not useCanWrite: every write here — the upload, a
+  // removal, hiding a captured file — runs through the DEAL's own write gate
+  // on the server, so the object grant alone offered Add file on a colleague's
+  // deal and refused the upload once the bytes were chosen.
+  const mayWrite = useCanWriteRecord("deal", deal);
   const [adding, setAdding] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
   const query = useQuery({

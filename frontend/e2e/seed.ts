@@ -21,6 +21,18 @@ const MEETING_ACTIVITY = "3f7c1a90-0000-4000-8000-00000000a001";
 // this list forgot fails loudly here, which is how the omission gets noticed.
 // Extend it when a new AC needs a new object.
 const E2E_ADMIN_GRANTS: GrantSpec = {
+  // The four records the specs WRITE: the deal edit and its project pick, the
+  // lead's edit, ladder, inline rows and promotion, the project a spec creates
+  // and moves through its phases, and the note the lead page's composer logs.
+  // Every record page's write verbs ask the object grant alongside the row's
+  // own `writable` before they draw, so a fixture that held none would sweep
+  // pages whose controls are refused with a reason — the read-only posture,
+  // not the seat the specs drive. Read is not enough for any of them; no spec
+  // disqualifies or archives, so the deletes stay unclaimed.
+  deal: ["read", "create", "update"],
+  lead: ["read", "create", "update"],
+  project: ["read", "create", "update"],
+  activity: ["read", "create"],
   automation: ["create", "read", "update", "delete"],
   overlay_connection: ["create", "read", "update", "delete"],
   pipeline: ["create", "read", "update", "delete"],
@@ -206,6 +218,10 @@ export const seededLead = {
   status: "contacted",
   score: 46,
   owner_id: "u1",
+  // The signed-in seat owns this lead, so the server sends writable: true.
+  // Stated on every record a spec writes to: absent means NOT writable per the
+  // contract, and the page would rightly refuse the controls the specs press.
+  writable: true,
   captured_by: "human:u1",
   source: "inbound",
   version: 3,
@@ -219,6 +235,7 @@ export const anna = {
   full_name: "Anna Weber",
   title: "Head of Procurement",
   emails: [{ id: "e1", email: "anna.weber@brandt.example", is_primary: true }],
+  writable: true,
   captured_by: "connector:gmail",
   source: "gmail",
   version: 1,
@@ -233,6 +250,7 @@ export const brandt = {
   industry: "Automotive",
   size_band: "201-500",
   classification: "customer",
+  writable: true,
   captured_by: "human:u1",
   source: "manual",
   version: 1,
@@ -252,6 +270,7 @@ export const deals = [
     organization_id: "o-brandt",
     project_id: null as string | null,
     status: "open",
+    writable: true,
     stalled: true,
     // Every mutable record carries its row version, because the advance and the
     // patch send it back as their precondition. A fixture without one lets a
@@ -274,6 +293,7 @@ export const deals = [
     organization_id: "o-brandt",
     project_id: null as string | null,
     status: "open",
+    writable: true,
     stalled: false,
     version: 5,
     source: "manual",

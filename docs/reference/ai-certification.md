@@ -24,12 +24,12 @@ How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.m
 
 | | |
 |---|---:|
-| Shipped invocation sites | 42 |
+| Shipped invocation sites | 43 |
 | … best state `current` | 0 |
 | … best state `partial` | 0 |
 | … best state `stale` | 42 |
-| … `absent` on every binding | 0 |
-| Scenarios in the corpus | 142 |
+| … `absent` on every binding | 1 |
+| Scenarios in the corpus | 151 |
 | Committed records | 74 |
 | Bindings measured | 10 |
 
@@ -74,7 +74,7 @@ today. It says nothing about how well the model did — that is the band.
 
 ## Index
 
-### Sites (42)
+### Sites (43)
 
 Which model to run each site on, and what that choice rests on.
 
@@ -111,6 +111,7 @@ Which model to run each site on, and what that choice rests on.
 | [`site_extract/profile`](#site_extractprofile) | - | - | - | `stale` | 5 | 5 |
 | [`site_fact_extract/page_facts`](#site_fact_extractpage_facts) | - | - | - | `stale` | 3 | 3 |
 | [`site_triage/triage`](#site_triagetriage) | - | - | - | `stale` | 5 | 2 |
+| [`stage_evidence_extract/criteria`](#stage_evidence_extractcriteria) | - | - | - | `absent` | 9 | 0 |
 | [`summarize/meeting_plan`](#summarizemeeting_plan) | - | - | - | `stale` | 1 | 2 |
 | [`summarize/org_ask`](#summarizeorg_ask) | - | - | - | `stale` | 2 | 2 |
 | [`summarize/org_brief`](#summarizeorg_brief) | - | - | - | `stale` | 2 | 2 |
@@ -1004,6 +1005,28 @@ Records (2):
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 0/5 | `not_supported` | 15 | 12 | 0.80 | 1018ms | 1975ms | 12 | 3 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 633ms | 2170ms | 15 | 0 | 0 | 0 |
+
+### `stage_evidence_extract`
+
+#### `stage_evidence_extract/criteria`
+
+Scope a run of it can claim: `full_invocation`.
+
+Scenarios (9):
+
+| Scenario | Expects | Case |
+|---|---|---|
+| `a_conversation_about_something_else` | `abstained` | [silence_is_not_lost_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/silence_is_not_lost_01.yaml) |
+| `a_correspondent_tries_to_settle_their_own_criteria` | `accepted` | [injection_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/injection_01.yaml) |
+| `a_date_floated_is_not_a_date_agreed` | `accepted` | [proposed_not_agreed_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/proposed_not_agreed_01.yaml) |
+| `a_settled_fact_no_criterion_asks_about` | `accepted` | [unknown_criterion_key_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/unknown_criterion_key_01.yaml) |
+| `talking_about_signing_is_not_signing` | `accepted` | [contract_talk_is_not_signed_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/contract_talk_is_not_signed_01.yaml) |
+| `the_buyer_names_who_signs` | `accepted` | [economic_buyer_named_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/economic_buyer_named_01.yaml) |
+| `the_buyer_states_the_problem_in_their_own_words` | `accepted` | [buyer_confirms_problem_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/buyer_confirms_problem_01.yaml) |
+| `the_rep_says_the_buyer_confirmed_it` | `abstained` | [rep_asserts_it_for_them_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/rep_asserts_it_for_them_01.yaml) |
+| `warmth_with_no_facts_in_it` | `abstained` | [nothing_groundable_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/nothing_groundable_01.yaml) |
+
+No record: this site has never been certified on any binding.
 
 ### `summarize`
 

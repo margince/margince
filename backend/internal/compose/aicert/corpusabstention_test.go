@@ -108,6 +108,34 @@ func TestEachAbstentionScenarioCatchesTheFabricationItTargets(t *testing.T) {
 			wantFabricated: aitasks.OutcomeInvalid,
 			wantDetail:     "Consulting services",
 		},
+		{
+			// The failure the whole evidence ledger exists to prevent: a rep
+			// asserting the buyer confirmed something. The quote is REAL — Lars
+			// wrote that sentence — so the citation gate passes it and the record
+			// would read as an abstention's opposite without the scenario's own
+			// negative claim. Only "the reply settles X, which the conversation
+			// does not" catches it.
+			scenario: "the_rep_says_the_buyer_confirmed_it",
+			correct:  `{"claims":[]}`,
+			fabricated: stageEvidenceClaimJSON("budget_confirmed",
+				"01a07100-0000-7000-8000-000000000002", 1,
+				"Ines confirmed the budget is approved"),
+			wantFabricated: aitasks.OutcomeWrongAnswer,
+			wantDetail:     "budget_confirmed",
+		},
+		{
+			// The other shape: a quote nobody wrote. Warmth converted into a
+			// stated problem, cited at a line that does not carry it — the
+			// grounding check refuses it and nothing survives, which must not be
+			// scored as the abstention it superficially resembles.
+			scenario: "warmth_with_no_facts_in_it",
+			correct:  `{"claims":[]}`,
+			fabricated: stageEvidenceClaimJSON("problem_confirmed",
+				"01a07100-0000-7000-8000-000000000008", 1,
+				"the re-keying is costing us two days a week"),
+			wantFabricated: aitasks.OutcomeInvalid,
+			wantDetail:     "not in the lines it cites",
+		},
 	}
 
 	scenarios := loadShippedCorpus(t)
@@ -197,4 +225,23 @@ func profileReplyJSON(claims ...string) string {
 func offerDraftLineJSON(description, evidence, sourceID string) string {
 	return `{"lines":[{"description":"` + description + `","quantity":"1","tax_rate":"19.00",` +
 		`"evidence_snippet":"` + evidence + `","source_id":"` + sourceID + `"}]}`
+}
+
+// stageEvidenceClaimJSON renders one claim as the stage_evidence_extract site's
+// reply shape, so a proof above states the fabrication rather than a blob.
+func stageEvidenceClaimJSON(criterionKey, sourceID string, line int, quote string) string {
+	claim := map[string]any{
+		"criterion_key": criterionKey,
+		"source_id":     sourceID,
+		"source_lines":  []int{line},
+		"quote":         quote,
+		"met":           "true",
+		"commitment":    "agreed",
+		"confidence":    0.9,
+	}
+	rendered, err := json.Marshal(map[string]any{"claims": []any{claim}})
+	if err != nil {
+		panic(err)
+	}
+	return string(rendered)
 }

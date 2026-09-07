@@ -129,6 +129,17 @@ tasks:
     no_payload: true
     doc: "SIG-F-3: read the material events out of a settled thread — contract_ended, new_opportunity, commitment_made — each citing the message it came from. Floor 0.7; below it the event is dropped, never guessed. An event is an OBSERVATION and is written directly; what follows from one is a structural claim and stages for a human."
 
+  stage_evidence_extract:
+    display_name: "Stage evidence extraction"
+    ladder: [cheap_cloud, premium]
+    execution_mode: background
+    on_budget_exhausted: queue
+    status: shipped
+    sites: [criteria]
+    company_context: none
+    no_payload: true
+    doc: "Read a deal's stage exit criteria against what the buyer actually wrote or said, each claim citing the span it was read from. Floor 0.7; below it the claim is dropped, never guessed. The reply names a CRITERION and never a stage: what follows from a settled criterion is the policy function's call, not the reader's. A claim our own side authored can never settle a criterion about what the buyer did — the ledger refuses it at the write — and terms_accepted has no deterministic writer at all, so this site is its only source."
+
   transcript_propose:
     display_name: "Meeting follow-up extraction"
     ladder: [cheap_cloud, premium]

@@ -282,6 +282,7 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, cap
 		// disagreeing about whether this installation can send at all.
 		BriefMail:              compose.BriefMailConfig(weeklyMail),
 		TranscriptProposeBrain: modelPath.TranscriptPropose,
+		StageEvidenceBrain:     modelPath.StageEvidenceExtract,
 		// The account scan registers regardless too: a queued scan on a
 		// brainless worker settles on the rules' floor with a reason.
 		AccountScanBrain:          modelPath.AccountScan,

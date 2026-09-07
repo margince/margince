@@ -224,6 +224,10 @@ type JobRunnerConfig struct {
 	// weekly uses — an operator configures outbound mail once. A zero value
 	// mails nothing, and the brief is on Home either way.
 	BriefMail BriefMailConfig
+	// StageEvidenceBrain is the lane a queued criteria reading runs on. NIL
+	// registers nothing: no human is waiting on the row, so an installation
+	// without a model keeps the deterministic evidence and reads no prose.
+	StageEvidenceBrain completer
 	// TranscriptProposeBrain is the lane a queued transcript reading runs on.
 	// Nil = no AI configured, and the kind registers anyway so the reading
 	// FAILS with a message the rep can see rather than sitting queued behind a

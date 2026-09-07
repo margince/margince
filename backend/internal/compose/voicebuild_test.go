@@ -6,6 +6,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -25,6 +26,14 @@ func TestFailureStatusCodeClassifiesErrorFamilies(t *testing.T) {
 		"fabricated evidence":     {errors.New(`voice build cited unknown sample "s-9"`), "invalid_output"},
 		"non-verbatim quote":      {errors.New(`voice build signature move quote is not verbatim in sample "s-1"`), "invalid_output"},
 		"anything else is opaque": {errors.New("connection reset by peer"), "internal"},
+		// The stand-in's rejection carries the invalid_output words AND the
+		// sentinel. It is the sentinel that decides, because the row's code is
+		// what tells an operator whether to retry or to open a setting.
+		"the offline stand-in answered": {
+			fmt.Errorf("voice build model call: %w: %w: voice build returned invalid JSON: unexpected end",
+				ai.ErrUnconfiguredModel, ai.ErrOutputRejected),
+			"model_unavailable",
+		},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {

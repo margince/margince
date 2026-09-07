@@ -46,6 +46,7 @@ it can be answered for.
 | `site_extract` | `premium` | no | no | shipped |
 | `site_fact_extract` | `cheap_cloud` → `premium` | no | no | shipped |
 | `site_triage` | `cheap_cloud` → `premium` | no | no | shipped |
+| `stage_evidence_extract` | `cheap_cloud` → `premium` | no | yes | shipped |
 | `summarize` | `cheap_cloud` → `premium` | no | no | shipped |
 | `transcript` | `cheap_cloud` → `premium` | no | no | planned |
 | `transcript_propose` | `cheap_cloud` → `premium` | no | no | shipped |

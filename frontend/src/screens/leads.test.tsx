@@ -12,6 +12,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { meFixture } from "../app/mefixture";
 import { RecordShell } from "../app/testing/recordshell.testkit";
 import { pickOption } from "../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
@@ -104,6 +105,13 @@ function render(ui: ReactNode) {
   );
 }
 
+// The grants a rep working their own leads holds, spelled once for every
+// /me this file serves.
+const LEAD_GRANTS = {
+  lead: ["read", "create", "update", "delete"],
+  activity: ["read", "create"],
+} as const;
+
 const anna = {
   id: "p-1",
   full_name: "Anna Weber",
@@ -121,6 +129,9 @@ const lead = {
   score: 72,
   captured_by: "human:u-1",
   source: "manual",
+  // The caller's own lead: absent means NOT writable per the contract, and
+  // a fixture that omits it describes a reader every write here refuses.
+  writable: true,
   version: 1,
   created_at: "2026-06-01T08:00:00Z",
   updated_at: "2026-06-20T08:00:00Z",
@@ -158,6 +169,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
             user: { id: "u-9", display_name: "Me" },
             roles: ["rep"],
             teams: [],
+            authorization: meFixture({ allow: LEAD_GRANTS }).authorization,
           });
         }
         if (request.url.includes("/users")) {
@@ -267,6 +279,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
               user: { id: "u-9", display_name: "Me" },
               roles: ["rep"],
               teams: [],
+              authorization: meFixture({ allow: LEAD_GRANTS }).authorization,
             })
           : jsonResponse({ data: [lead], page: { next_cursor: null } }),
       ),
@@ -481,6 +494,9 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
             sections: [],
           });
         }
+        if (new URL(url).pathname.endsWith("/me")) {
+          return jsonResponse(meFixture({ allow: LEAD_GRANTS }));
+        }
         if (method === "GET" && url.endsWith("/v1/connectors")) {
           return jsonResponse({ data: [] });
         }
@@ -626,6 +642,37 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     ).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: "Change Company" })).toBeNull();
     expect(screen.queryByDisplayValue("Nordwind Logistik")).toBeNull();
+  });
+
+  // `writable` is what the server's write gate would answer on a mutation. A
+  // rep holding lead.update on the OBJECT was offered Edit, Promote and the
+  // inline rows on a colleague's lead, and learned from the 403 after filling
+  // the form in that it was never theirs to save.
+  it("refuses every write on a live lead this caller may not change, from the one sentence it prints", async () => {
+    stubFetch(async () =>
+      jsonResponse({ ...lead, owner_id: "u-other", writable: false }),
+    );
+    render(<LeadScreen id="l-1" />);
+
+    const sentence =
+      "You cannot change this lead. Ask its owner to share it with you, or your administrator for the right to edit it.";
+    // The band says it once for the page; the inline rows each carry the same
+    // sentence beside their own value, as they do on a closed lead.
+    expect((await screen.findAllByText(sentence)).length).toBeGreaterThan(0);
+    // Each verb is refused in place, and the id it describes itself by
+    // resolves to that one sentence — a disabled button whose reason is
+    // nowhere on the page is a dead button.
+    for (const testId of ["edit-record", "lead-qualify", "lead-disqualify"]) {
+      const control = await screen.findByTestId(testId);
+      expect(control.hasAttribute("disabled")).toBe(true);
+      expect(
+        document.getElementById(control.getAttribute("aria-describedby") ?? "")
+          ?.textContent,
+      ).toBe(sentence);
+    }
+    // The inline rows read as text with no control to press, the same shape a
+    // closed lead takes.
+    expect(screen.queryByRole("button", { name: "Change Company" })).toBeNull();
   });
 
   it("a promoted lead keeps its page and says what the promotion did", async () => {
@@ -1024,6 +1071,7 @@ function stubFetch(
         user: { id: "u-9", display_name: "Me" },
         roles: ["rep"],
         teams: [],
+        authorization: meFixture({ allow: LEAD_GRANTS }).authorization,
       });
     }
     if (request.method === "GET" && request.url.includes("/manual-signals")) {
@@ -1561,6 +1609,7 @@ describe("LeadScreen — overlay mode write affordances", () => {
       user: { id: "u1", email: "me@nordwind.example", locale: "en-US" },
       roles: ["admin"],
       teams: [],
+      authorization: meFixture({ allow: LEAD_GRANTS }).authorization,
       system_of_record: { mode: "overlay" },
     });
   }
@@ -1793,6 +1842,7 @@ function stubFetchWithMe(
           user: { id: meId, display_name: "Me" },
           roles: ["rep"],
           teams: [],
+          authorization: meFixture({ allow: LEAD_GRANTS }).authorization,
         });
       }
       if (new URL(request.url).pathname.endsWith("/context")) {

@@ -26,7 +26,28 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+type Deal = components["schemas"]["Deal"];
 type DealDocument = components["schemas"]["DealDocument"];
+
+// The deal the files hang off, as the server sends it to a caller who owns
+// it: `writable` is what every write here is gated on, so the fixture states
+// it rather than leaving the panel to fail closed on an absent flag.
+function dealOf(overrides: Partial<Deal> = {}): Deal {
+  return {
+    id: "deal-1",
+    name: "Fleet retrofit",
+    pipeline_id: "pl",
+    stage_id: "s1",
+    status: "open",
+    source: "manual",
+    captured_by: "human:u1",
+    writable: true,
+    version: 1,
+    created_at: "2026-08-01T00:00:00Z",
+    updated_at: "2026-08-01T00:00:00Z",
+    ...overrides,
+  } as Deal;
+}
 
 const render = (ui: ReactNode) => {
   const client = new QueryClient({
@@ -135,7 +156,7 @@ function stubApi(
 
 it("tells a captured file from an upload and says where it came from", async () => {
   stubApi([upload(), captured()]);
-  render(<DealFiles dealId="deal-1" />);
+  render(<DealFiles deal={dealOf()} />);
 
   expect(await screen.findByText("MSA-redline.docx")).toBeInTheDocument();
   expect(
@@ -147,7 +168,7 @@ it("tells a captured file from an upload and says where it came from", async () 
 it("hides a captured file through the deal's own hide route, never the file", async () => {
   const { calls } = stubApi([captured()]);
   const user = userEvent.setup();
-  render(<DealFiles dealId="deal-1" />);
+  render(<DealFiles deal={dealOf()} />);
 
   await user.click(
     await screen.findByRole("button", { name: /Actions for MSA-redline/ }),
@@ -170,7 +191,7 @@ it("hides a captured file through the deal's own hide route, never the file", as
 it("offers Delete on an upload and no Hide", async () => {
   stubApi([upload()]);
   const user = userEvent.setup();
-  render(<DealFiles dealId="deal-1" />);
+  render(<DealFiles deal={dealOf()} />);
 
   await user.click(
     await screen.findByRole("button", { name: /Actions for pricing/ }),
@@ -188,7 +209,7 @@ it("offers Delete on an upload and no Hide", async () => {
 it("puts a hidden file back through the Undo the confirmation carries", async () => {
   const { calls } = stubApi([captured()]);
   const user = userEvent.setup();
-  render(<DealFiles dealId="deal-1" />);
+  render(<DealFiles deal={dealOf()} />);
 
   await user.click(
     await screen.findByRole("button", { name: /Actions for MSA-redline/ }),
@@ -222,7 +243,7 @@ it("says so when the Undo is refused, rather than letting it fail quietly", asyn
   // believing the file came back.
   stubApi([captured()], (request) => request.method === "DELETE");
   const user = userEvent.setup();
-  render(<DealFiles dealId="deal-1" />);
+  render(<DealFiles deal={dealOf()} />);
 
   await user.click(
     await screen.findByRole("button", { name: /Actions for MSA-redline/ }),
@@ -242,4 +263,19 @@ it("says so when the Undo is refused, rather than letting it fail quietly", asyn
   expect(
     await screen.findByText("the message was deleted"),
   ).toBeInTheDocument();
+});
+
+// `writable` is the server's per-row answer, and it is what the upload and
+// every row verb are gated on: a rep holding deal.update on the OBJECT was
+// offered Add file on a colleague's deal and refused once the bytes were
+// chosen.
+it("withholds the upload and the row verbs on a deal this caller may not write", async () => {
+  stubApi([upload(), captured()]);
+  render(<DealFiles deal={dealOf({ owner_id: "u-other", writable: false })} />);
+
+  expect(await screen.findByText("MSA-redline.docx")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Add a document" })).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: /Actions for MSA-redline/ }),
+  ).toBeNull();
 });

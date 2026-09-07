@@ -31,12 +31,59 @@ func TestAReaderWhoNeverAskedGetsARead(t *testing.T) {
 	}
 }
 
+// liveRow is a read whose current attempt began `ago` before ensureNow: a
+// running one from its claim, a queued one from its request. A running read's
+// request is ancient on purpose — it ages from its claim, and a fixture that
+// dated both alike could not tell a read judged by the wrong instant.
+func liveRow(status string, ago time.Duration) *row {
+	at := ensureNow.Add(-ago)
+	if status == StatusRunning {
+		return &row{Status: status, RequestedAt: ensureNow.Add(-2 * time.Hour), StartedAt: &at}
+	}
+	return &row{Status: status, RequestedAt: at}
+}
+
 func TestAReadInFlightIsNeverStartedTwice(t *testing.T) {
 	for _, status := range []string{StatusQueued, StatusRunning} {
-		live := &row{Status: status}
+		live := liveRow(status, ScanLease-time.Second)
 		if got := decide(live, "fp", ensureNow, true); got != serveCurrent {
 			t.Errorf("a %s read was started again (force or not): %v", status, got)
 		}
+	}
+}
+
+// A live read past its lease has no worker behind it: it was killed, timed
+// out, or never claimed. Left alone the page would poll it forever and the
+// rail would call it stalled forever, so opening the account is what starts
+// it again — whether or not the reader forced.
+func TestAReadNobodyIsWorkingAnyMoreIsReadAgain(t *testing.T) {
+	for _, status := range []string{StatusQueued, StatusRunning} {
+		for _, force := range []bool{false, true} {
+			dead := liveRow(status, ScanLease+time.Second)
+			if got := decide(dead, "fp", ensureNow, force); got != queueRead {
+				t.Errorf("a %s read past its lease (force=%v) was served as in flight: %v", status, force, got)
+			}
+		}
+	}
+}
+
+// A deferred read ages from the instant it resumes, not from the request an
+// hour before it: a budget window parks a read for as long as the window is,
+// and a park that counted as abandonment would re-queue it into the same
+// window.
+func TestADeferredReadIsNotAbandonedUntilItsResumeHasAged(t *testing.T) {
+	resumes := ensureNow.Add(-time.Second)
+	parked := &row{Status: StatusQueued, RequestedAt: ensureNow.Add(-2 * time.Hour), NextAttemptAt: &resumes}
+	if parked.abandoned(ensureNow) {
+		t.Error("a read parked two hours ago that resumed a second ago counts as abandoned")
+	}
+	if got := decide(parked, "fp", ensureNow, false); got != serveCurrent {
+		t.Errorf("decide = %v, want the parked read served as in flight", got)
+	}
+	resumedLongAgo := ensureNow.Add(-ScanLease - time.Second)
+	long := &row{Status: StatusQueued, RequestedAt: ensureNow.Add(-2 * time.Hour), NextAttemptAt: &resumedLongAgo}
+	if !long.abandoned(ensureNow) {
+		t.Error("a read whose resume passed a whole lease ago is still in flight")
 	}
 }
 

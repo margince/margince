@@ -14262,7 +14262,9 @@ paths:
       description: |
         The workspace member roster: id + display name + email + seat/status. Any authenticated member
         may read it (needed to pick a record-share subject and to resolve subject/granter names). Excludes
-        archived users. Row-scoped by workspace RLS. `User.roles` rides the row only for an admin caller,
+        archived users. Bounded by authenticated membership: every seat may read who else works here,
+        because a share or assignee picker only some seats could read would be a broken feature.
+        `User.roles` rides the row only for a caller holding the `user_admin` grant,
         who is the only one who can act on it.
       x-mcp-tool: { verb: list_colleagues, record_type: app_user, tier: auto_execute, scope: read }
       parameters:
@@ -14747,7 +14749,7 @@ paths:
       summary: List workspace teams — cursor-paginated. Read-only.
       description: |
         Teams available as record-share subjects, with a member count. Any authenticated member may read.
-        Excludes archived teams. Row-scoped by workspace RLS.
+        Excludes archived teams. Bounded by authenticated membership, like the member roster beside it.
       # NO annotation, and that is the fix rather than an omission. It said
       # x-mcp-tool search_records/team, and search_records has never served
       # `team` — the parity gate checks only that the named VERB is registered,
@@ -31362,13 +31364,21 @@ components:
         honestly omitted. A reading that is still running carries empty lists; that is not
         the same answer as a finished reading that grounded nothing, which is why `status`
         is required rather than inferable from the lists (RD-AC-N-2).
-      required: [id, status, fields, omitted, created_at]
+      required: [id, status, stalled, fields, omitted, created_at]
       properties:
         id: { type: string, format: uuid, description: This reading's own id. }
         status:
           type: string
           enum: [queued, running, done, failed]
           description: queued/running are live; done and failed are terminal. `done` with zero grounded fields is a correct answer, not a failure.
+        stalled:
+          type: boolean
+          description: |
+            true when a live reading has aged past the lease its worker holds: the worker
+            died, timed out, or never claimed it, and nothing will move the reading on its
+            own. Derived at read time, never stored. Asking for the file to be read again
+            then starts a fresh attempt instead of joining this one. Always false once the
+            reading is done or failed.
         status_detail:
           type: [string, 'null']
           description: |
@@ -36114,7 +36124,7 @@ components:
          capture_counterparty_verdict, cert_judge,
          cold_start, deal_health, draft_reply, enrich, growth_fit, nl_search,
          offer_draft, rate_extract, signal_extract, site_extract, site_fact_extract,
-         site_triage, summarize, transcript, transcript_propose, voice_build,
+         site_triage, stage_evidence_extract, summarize, transcript, transcript_propose, voice_build,
          corpus_ask, weekly_review, weekly_learnings, propose_roles, owed_verdict,
          account_scan]
       description: |

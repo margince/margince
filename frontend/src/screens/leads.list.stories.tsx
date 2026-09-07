@@ -59,11 +59,16 @@ const ROSTER = {
 // the roster, the custom fields, the SoR posture — falls through to the stub's
 // own empty page, which is a legitimate answer for each of them and keeps the
 // story about the queue rather than about its chrome.
+// Hoisted rather than written inline as a default: a literal in the parameter
+// list is a fresh object on every call, and the stories that pass nothing would
+// each get one of their own.
+const MANAGER: { roles?: string[]; seat?: "full" | "read" } = {
+  roles: ["manager"],
+};
+
 function leads(
   rows: Lead[],
-  identity: { roles?: string[]; seat?: "full" | "read" } = {
-    roles: ["manager"],
-  },
+  identity: { roles?: string[]; seat?: "full" | "read" } = MANAGER,
 ) {
   return () => {
     installFetchStub({

@@ -235,7 +235,7 @@ async function fetchGrants(
 // recordType arrives as the raw 3rd URL segment (App.tsx passes it straight
 // through). Guard it before rendering the screen: an unknown kind gets an
 // honest empty state, never a share form wired to a record type the contract
-// and RLS can't resolve. useT() is the only hook here, so the early return is
+// cannot resolve. useT() is the only hook here, so the early return is
 // rules-of-hooks-safe; all the query/mutation hooks live in ShareScreenBody,
 // which mounts only for a valid kind.
 export function ShareScreen({
