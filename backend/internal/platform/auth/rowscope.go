@@ -55,6 +55,13 @@ func OwnerPredicate(p principal.Principal, arg func(any) int) func(alias string)
 // workspace's to see. A WRITE does not: a row nobody owns is nobody's to
 // change until somebody claims it — an ownerless customer record that every
 // seat could rewrite is how two teams edit one company past each other.
+//
+// compose.unownedPopulation (analyticsscope.go) mirrors this same split one
+// layer up, for a POPULATION rather than a row-scope predicate: a report
+// reads what is on a caller's radar, so it takes the READ answer; a standing
+// forecast is a commitment number, so it takes the WRITE answer instead
+// (nobody has committed to a deal nobody has claimed). A reader changing
+// what "unowned" means on either side should check the other.
 type unownedRows bool
 
 const (

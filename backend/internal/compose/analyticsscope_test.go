@@ -217,9 +217,9 @@ func TestManagedTeamsPopulationTreatsAnUnownedRowAsShared(t *testing.T) {
 	actor := actorWithScope(principal.RowScopeTeam, team)
 	ctx := principal.WithActor(context.Background(), actor)
 
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	resolved, clause, err := AnalyticsPopulationClause(ctx, nil, RequestedScope{}, "t", arg)
+	n := 0
+	arg := func(any) int { n++; return n }
+	resolved, clause, err := AnalyticsPopulationClause(ctx, nil, RequestedScope{}, "t", arg, unownedIsPartOfDefault)
 	if err != nil {
 		t.Fatalf("rendering a manager's default population clause: %v", err)
 	}

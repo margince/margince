@@ -122,11 +122,13 @@ var prebuiltReports = map[string]reportSpec{
 		},
 		baseWhere: whereArchivedNull + " AND t.status = 'open'",
 		basePlain: "live (unarchived) open deals, aged from the last time each entered its current stage",
-		// Reachable only through the generic run_report/analysis door — no
-		// personal screen frames "how long has MY stage been sitting" as a
-		// question — so this is an install-wide aging analysis, same shape as
-		// reportpopulation.go's "how many projects are in delivery" precedent.
-		population: measureEveryReadableRow,
+		// Stays on the caller's own/team default: owner_id is both a
+		// dimension and a filter here, and `deal` is an identity table (row
+		// scope renders unconditionally TRUE), so declaring
+		// measureEveryReadableRow would remove the only narrowing between a
+		// rep and a named colleague's exact stage-aging figures. The
+		// unowned-row arm (analyticsscope.go) still reaches this report's own
+		// default population.
 		dimensions: map[string]string{
 			fieldStageID:    colStageID,
 			fieldPipelineID: colPipelineID,

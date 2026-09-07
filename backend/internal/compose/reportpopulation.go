@@ -64,6 +64,6 @@ func callersOwnPopulation() RequestedScope { return RequestedScope{} }
 func reportPopulationClause(
 	ctx context.Context, tx pgx.Tx, requested RequestedScope, arg func(any) int,
 ) (string, error) {
-	_, clause, err := AnalyticsPopulationClause(ctx, tx, requested, "t", arg)
+	_, clause, err := AnalyticsPopulationClause(ctx, tx, requested, "t", arg, unownedIsPartOfDefault)
 	return clause, err
 }

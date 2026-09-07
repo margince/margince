@@ -92,6 +92,28 @@ func ResolveAnalyticsScope(
 // AnalyticsPopulationClause resolves a requested scope against the caller's
 // lens and renders the SQL that narrows to it.
 //
+// unownedPopulation says whether an owner/team CALLER's default population
+// (never an explicitly named one — see the ScopeKindOwner/ScopeKindTeam
+// split in AnalyticsPopulationClause) admits a row nobody owns yet.
+//
+// A REPORT and a STANDING FORECAST answer this differently for the same
+// reason they answer row-scope's identical question differently
+// (platform/auth/rowscope.go's unownedRows, unownedIsShared/unownedIsNobodys):
+// a report reads what is on a caller's radar, and an unrouted lead sitting in
+// their worklist belongs on their board too. A forecast is a commitment
+// number, and nobody has committed to a deal nobody has claimed — widening it
+// would make a manager's team total stop reconciling with the sum of naming
+// each member by id, the one thing a standing forecast promises never to do.
+type unownedPopulation bool
+
+const (
+	unownedIsPartOfDefault unownedPopulation = true
+	unownedIsExcluded      unownedPopulation = false
+)
+
+// AnalyticsPopulationClause resolves a requested scope against the caller's
+// lens and renders the SQL that narrows to it.
+//
 // The returned clause is a bare predicate WITHOUT a leading AND, so a caller
 // composes it the way they compose any other; an empty string means the
 // population is the whole workspace and nothing needs adding.
@@ -100,6 +122,7 @@ func ResolveAnalyticsScope(
 // calling spec, never a name off a request.
 func AnalyticsPopulationClause(
 	ctx context.Context, tx pgx.Tx, requested RequestedScope, alias string, arg func(any) int,
+	unowned unownedPopulation,
 ) (ResolvedScope, string, error) {
 	resolved, err := ResolveAnalyticsScope(ctx, tx, requested)
 	if err != nil {
@@ -118,25 +141,28 @@ func AnalyticsPopulationClause(
 	switch resolved.Kind {
 	case ScopeKindOwner:
 		clause := fmt.Sprintf("%s = $%d", col, arg(*resolved.ID))
-		if *resolved.ID == p.UserID {
+		if unowned == unownedIsPartOfDefault && *resolved.ID == p.UserID {
 			// Measuring MYSELF — whether I asked for that by name or asked for
 			// nothing — is the one case `platform/auth.OwnerPredicate` already
-			// answers for reads: "a row nobody owns is the workspace's to see"
-			// (rowscope.go's unownedIsShared). A population predicate narrows
-			// what a READ already permitted, so an unowned row that is on my
-			// worklist has to be on my population too, or a rep's own board
-			// disagrees with a rep's own list about a lead sitting in both.
+			// answers for reads: "a row nobody owns is the workspace's to see."
+			// A population predicate narrows what a READ already permitted, so
+			// an unowned row that is on my worklist has to be on my population
+			// too, or a rep's own board disagrees with a rep's own list about a
+			// lead sitting in both.
 			//
-			// Naming somebody ELSE by id does not get this arm: that is a
-			// standing forecast asking what a NAMED colleague specifically
-			// committed to, and an unclaimed deal is nobody's commitment yet.
+			// Naming somebody ELSE by id does not get this arm even when the
+			// caller admits unowned rows for their own default: that is a
+			// standing forecast or report asking what a NAMED colleague
+			// specifically committed to, and an unclaimed deal is nobody's
+			// commitment yet.
 			clause = ownedOrUnowned(col, clause)
 		}
 		return resolved, clause, nil
 	case ScopeKindTeam:
 		// An EXPLICITLY named team (never the default — see ScopeKindManagedTeams
 		// below) is the same "somebody specific" accountability ask ScopeKindOwner
-		// makes for a named colleague, so it stays exact for the same reason.
+		// makes for a named colleague, so it stays exact for the same reason,
+		// regardless of unowned.
 		return resolved, fmt.Sprintf(
 			"%s IN (%s)", col, liveTeamMembersSQL(arg(*resolved.ID), "= $%d")), nil
 	case ScopeKindManagedTeams:
@@ -150,10 +176,14 @@ func AnalyticsPopulationClause(
 		clause := fmt.Sprintf(
 			"(%s = $%d OR %s IN (%s))",
 			col, me, col, liveTeamMembersSQL(teams, "= ANY($%d)"))
-		// Always the caller's own default population (never requestable by
-		// name, see ScopeKindManagedTeams's own doc), so the same unowned-is-
-		// shared arm as the self-named ScopeKindOwner case above applies.
-		return resolved, ownedOrUnowned(col, clause), nil
+		if unowned == unownedIsPartOfDefault {
+			// Always the caller's own default population (never requestable by
+			// name, see ScopeKindManagedTeams's own doc), so the same
+			// unowned-is-shared arm as the self-named ScopeKindOwner case above
+			// applies.
+			clause = ownedOrUnowned(col, clause)
+		}
+		return resolved, clause, nil
 	default:
 		return resolved, "", nil
 	}

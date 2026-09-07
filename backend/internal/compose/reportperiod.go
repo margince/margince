@@ -285,11 +285,15 @@ func winLossSpec() reportSpec {
 		baseWhere: "t.archived_at IS NULL AND t.status IN ('won','lost')",
 		basePlain: "live (unarchived) deals that have been won or lost, bucketed by when they closed " +
 			"in the installation's reporting timezone (an open deal is absent from this report, not a zero in it)",
-		// Reachable only through the generic run_report/analysis door — a win
-		// rate scoped to one team is systematically incomplete for the
-		// cross-team comparison the question asks, and a won or lost deal
-		// stays a fact about the business regardless of who carried it.
-		population: measureEveryReadableRow,
+		// Stays on the caller's own/team default (measureCallersOwn, the zero
+		// value): owner_id is both a dimension and a filter here, and `deal`
+		// is an identity table (row scope renders unconditionally TRUE), so a
+		// declared measureEveryReadableRow would remove the ONLY narrowing
+		// standing between a rep and a named colleague's exact closed-deal
+		// revenue — filtering to one owner_id, or grouping by it, would answer
+		// a question this door refuses everywhere else it is asked. The
+		// unowned-row arm (analyticsscope.go) still reaches this report's own
+		// default population.
 		dimensions: dimensions,
 		// Money in both denominations, and how long the deal took.
 		//

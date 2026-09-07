@@ -527,6 +527,37 @@ func TestATypedQueryNamingAColleagueExcludesAnUnownedRow(t *testing.T) {
 	}
 }
 
+// The same exclusion holds for an explicitly named TEAM (ScopeKindTeam),
+// never the caller's own managed-teams default: an unowned deal must not
+// count toward a specific team's named commitment either.
+func TestATypedQueryNamingATeamExcludesAnUnownedRow(t *testing.T) {
+	e := setupForecast(t)
+	amount := int64(100_000)
+	// Five of Team1's own (Rep1), clearing analyticsquery.DefaultFloor, plus
+	// one unowned deal that must not be counted as Team1's.
+	for i := 0; i < 5; i++ {
+		e.seedOpenDeal(t, "Rep1's own", 20, &e.Rep1, &amount, nil)
+	}
+	e.seedOpenDeal(t, "Unowned", 20, nil, &amount, nil)
+
+	answer, err := e.askAnalytics(e.wideLensCtx(e.Rep3), t, analyticsquery.Query{
+		Entity:    "open-deals-per-company",
+		ScopeKind: ScopeKindTeam,
+		ScopeID:   e.Team1.String(),
+		Measures:  []analyticsquery.Measure{{Fn: analyticsquery.CountAll, As: "deals"}},
+	})
+	if err != nil {
+		t.Fatalf("naming a team by id was refused: %v", err)
+	}
+	if len(answer.Rows) != 1 {
+		t.Fatalf("an ungrouped query answered %d rows: %+v", len(answer.Rows), answer.Rows)
+	}
+	if got := answer.Rows[0]["deals"]; got != float64(5) && got != int64(5) {
+		t.Errorf("Team1's named count is %v, want exactly its own 5 — the unowned "+
+			"deal must not be counted as a named team's commitment", got)
+	}
+}
+
 // wideLensCtx is a REAL seat that may measure the whole workspace.
 //
 // A real one because saving a run records who asked, and report_run carries a

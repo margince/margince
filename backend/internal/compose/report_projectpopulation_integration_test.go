@@ -5,12 +5,15 @@
 
 package compose
 
-// projects-by-phase, project-commitments and projects-gone-quiet are the
-// exact case reportpopulation.go's own comment names as the motivating
-// example for measureEveryReadableRow: "how many projects are in delivery"
-// is a question about the installation, not about the asker. A team manager
-// must see a project owned by a seat on a different team, not a silently
-// narrowed slice of their own team's work.
+// projects-by-phase, project-commitments and projects-gone-quiet keep the
+// caller's own/team lens: owner_id is a dimension (projects-by-phase) or
+// part of defaultBy (the other two) over `project`, an identity table with
+// no other narrowing — a wider population would let a rep read a named
+// colleague's exact delivery figures (projects-by-phase's aggregates are
+// money) or workload (the other two) by filtering or grouping on their id.
+// An unowned project — one nobody has claimed — must still count toward a
+// team manager's own managed-teams population, the same unowned-row fix
+// every report in this cluster takes.
 
 import (
 	"context"
@@ -24,17 +27,17 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// seedCrossTeamProject plants one live project owned by Rep3 (Team2), the
-// same fixture every case in this file measures a Team1 manager against.
-func seedCrossTeamProject(t *testing.T, e *integration.Env) ids.UUID {
+// seedUnownedProject plants one live, unowned project — the same fixture
+// every case in this file measures a Team1 manager against.
+func seedUnownedProject(t *testing.T, e *integration.Env) ids.UUID {
 	t.Helper()
 	orgID := ids.NewV7()
 	e.WsExec(t, `INSERT INTO organization (id, display_name, source, captured_by)
-		VALUES ($1, 'Cross-team Co', 'manual', 'human:x')`, orgID)
+		VALUES ($1, 'Unowned Co', 'manual', 'human:x')`, orgID)
 	projectID := ids.NewV7()
-	e.WsExec(t, `INSERT INTO project (id, name, organization_id, owner_id, phase, source, captured_by)
-		VALUES ($1, 'Cross-team Delivery', $2, $3, 'delivering', 'manual', 'human:x')`,
-		projectID, orgID, e.Rep3)
+	e.WsExec(t, `INSERT INTO project (id, name, organization_id, phase, source, captured_by)
+		VALUES ($1, 'Unowned Delivery', $2, 'delivering', 'manual', 'human:x')`,
+		projectID, orgID)
 	return projectID
 }
 
@@ -62,34 +65,34 @@ func runProjectReport(ctx context.Context, t *testing.T, e *integration.Env, rep
 	return result
 }
 
-func TestProjectsByPhaseIsNotNarrowedToATeamManagersOwnTeams(t *testing.T) {
+func TestProjectsByPhaseCountsAnUnownedProjectForATeamManager(t *testing.T) {
 	e := integration.Setup(t)
-	seedCrossTeamProject(t, e)
+	seedUnownedProject(t, e)
 
 	manager := managerScopedTo(e, []ids.UUID{e.Team1})
 	result := runProjectReport(manager, t, e, "projects-by-phase",
 		`{"group_by":["phase"],"aggregates":[{"fn":"count","as":"projects"}]}`)
 	if len(result.Rows) == 0 {
-		t.Fatal("a Team1 manager read no projects-by-phase rows, want Rep3's " +
-			"Team2 project to still count — this is the installation's own delivery question")
+		t.Fatal("a Team1 manager read no projects-by-phase rows, want the " +
+			"unowned project to still count toward their own managed-teams population")
 	}
 }
 
-func TestProjectCommitmentsIsNotNarrowedToATeamManagersOwnTeams(t *testing.T) {
+func TestProjectCommitmentsCountsAnUnownedProjectForATeamManager(t *testing.T) {
 	e := integration.Setup(t)
-	seedCrossTeamProject(t, e)
+	seedUnownedProject(t, e)
 
 	manager := managerScopedTo(e, []ids.UUID{e.Team1}, "activity")
 	result := runProjectReport(manager, t, e, "project-commitments", `{}`)
 	if len(result.Rows) == 0 {
-		t.Fatal("a Team1 manager read no project-commitments rows, want Rep3's " +
-			"Team2 project to still count")
+		t.Fatal("a Team1 manager read no project-commitments rows, want the " +
+			"unowned project to still count")
 	}
 }
 
-func TestProjectsGoneQuietIsNotNarrowedToATeamManagersOwnTeams(t *testing.T) {
+func TestProjectsGoneQuietCountsAnUnownedProjectForATeamManager(t *testing.T) {
 	e := integration.Setup(t)
-	projectID := seedCrossTeamProject(t, e)
+	projectID := seedUnownedProject(t, e)
 	// Backdated well past the default 30-day quiet threshold, with no activity
 	// at all, so the report's own "measured from creation" fallback applies.
 	e.WsExec(t, `UPDATE project SET created_at = now() - interval '90 days' WHERE id = $1`, projectID)
@@ -97,7 +100,7 @@ func TestProjectsGoneQuietIsNotNarrowedToATeamManagersOwnTeams(t *testing.T) {
 	manager := managerScopedTo(e, []ids.UUID{e.Team1})
 	result := runProjectReport(manager, t, e, "projects-gone-quiet", `{}`)
 	if len(result.Rows) == 0 {
-		t.Fatal("a Team1 manager read no projects-gone-quiet rows, want Rep3's " +
-			"quiet Team2 project to still count")
+		t.Fatal("a Team1 manager read no projects-gone-quiet rows, want the " +
+			"quiet, unowned project to still count")
 	}
 }

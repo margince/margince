@@ -142,7 +142,10 @@ func sharedVisibilityClause(ctx context.Context, tx pgx.Tx, arg func(any) int) (
 	//
 	// Requested is deliberately EMPTY: the recipient asked for nothing, so this
 	// resolves to their own default, which is the most they may see.
-	_, population, err := AnalyticsPopulationClause(ctx, tx, RequestedScope{}, "d", arg)
+	// Excludes unowned rows even from the recipient's own default — a shared
+	// snapshot is a forecast commitment number, the same reasoning
+	// forecastseam.go's ForecastDeals carries.
+	_, population, err := AnalyticsPopulationClause(ctx, tx, RequestedScope{}, "d", arg, unownedIsExcluded)
 	if err != nil {
 		return "", err
 	}

@@ -5,9 +5,12 @@
 
 package compose
 
-// stage-age is reachable only through the generic run_report/Analytics door,
-// with no personal-work screen framing "how long has MY stage been sitting"
-// — an aging-analysis question about the installation, not about the caller.
+// stage-age keeps the caller's own/team lens (owner_id is both a dimension
+// and a filter here, over an identity table with no other narrowing — a
+// wider population would let a rep pull a named colleague's exact
+// stage-aging figures by filtering to their id). An unowned deal — one
+// nobody has claimed — must still count toward a team manager's own
+// managed-teams population.
 
 import (
 	"testing"
@@ -16,18 +19,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// A deal owned by a seat on a different team must still count toward a team
-// manager's stage-age reading: this report answers for the whole
-// installation and must not narrow to the caller's own teams.
-func TestStageAgeIsNotNarrowedToATeamManagersOwnTeams(t *testing.T) {
+func TestStageAgeCountsAnUnownedDealForATeamManager(t *testing.T) {
 	e := setupForecast(t)
-	e.seedOpenDeal(t, "Cross-team", 60, &e.Rep3, int64p(10000), stringp("commit"))
+	e.seedOpenDeal(t, "Unowned", 60, nil, int64p(10000), stringp("commit"))
 
 	manager := e.dealReadCtx(ids.NewV7(), []ids.UUID{e.Team1}, principal.RowScopeTeam)
 	result := e.runReport(manager, t, "stage-age",
 		`{"group_by":["stage_id"],"aggregates":[{"fn":"count","as":"deals"}]}`)
 	if len(result.Rows) == 0 {
-		t.Fatal("a Team1 manager read no stage-age rows, want Rep3's Team2 " +
-			"deal to still count — stage-age answers for the whole installation")
+		t.Fatal("a Team1 manager read no stage-age rows, want the unowned " +
+			"deal to still count toward their own managed-teams population")
 	}
 }
