@@ -22066,6 +22066,13 @@ export interface components {
             channel_provider?: components["schemas"]["ProviderRef"] | null;
             subject?: string | null;
             body?: string | null;
+            /**
+             * @description What language this message is written in, read from its own text when it was captured. Null on a message whose text was too short to tell, on anything hand-logged, and on every row captured before this was recorded — all of which mean "not known", never "not any of these".
+             *     A detector's observation, not a declaration by its author, and it describes the message rather than the person: the same contact writes in two languages and each message says which it is. A drafted reply follows it, so that a reply to an English thread is written in English whatever language its sender's own writing samples happen to be in.
+             *     Withheld with the rest of the content: it is derived from the body, so a caller who may discover the row without reading it is not told this either.
+             * @enum {string|null}
+             */
+            readonly language?: "de" | "en" | "vi" | null;
             /** Format: date-time */
             occurred_at: string;
             /**
