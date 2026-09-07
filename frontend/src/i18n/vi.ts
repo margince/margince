@@ -3132,6 +3132,8 @@ export const vi = {
     "Không gửi được tệp này để đọc. Không có gì bị thay đổi.",
   "extraction.loading": "Đang kiểm tra xem tệp này đã được đọc chưa…",
   "extraction.reading": "Đang đọc tệp này…",
+  "extraction.stalled":
+    "Việc đọc tệp này kéo dài bất thường. Có thể nó đã dừng.",
   "extraction.failed": "Không đọc được tệp này.",
   "extraction.groundedNothing":
     "AI đã đọc tệp này và tệp không nêu trường nào của deal.",
@@ -3734,7 +3736,7 @@ export const vi = {
     "Tài liệu của bạn đang chờ được đọc.",
   "agent.activity.documentExtract.running": "Tôi đang đọc tài liệu của bạn.",
   "agent.activity.documentExtract.stalled":
-    "Việc đọc tài liệu của bạn kéo dài bất thường. Có thể nó đã dừng.",
+    "Việc đọc tài liệu của bạn kéo dài bất thường. Có thể nó đã dừng. Mở tệp và yêu cầu đọc lại.",
   "agent.activity.documentExtract.done": "Tôi đã đọc xong tài liệu của bạn.",
   "agent.activity.documentExtract.degraded":
     "Tôi mới đọc được một phần tài liệu của bạn rồi dừng.",
@@ -3743,7 +3745,7 @@ export const vi = {
   "agent.activity.documentExtractNamed.queued": "{name} đang chờ được đọc.",
   "agent.activity.documentExtractNamed.running": "Tôi đang đọc {name}.",
   "agent.activity.documentExtractNamed.stalled":
-    "Việc đọc {name} kéo dài bất thường. Có thể nó đã dừng.",
+    "Việc đọc {name} kéo dài bất thường. Có thể nó đã dừng. Mở tệp và yêu cầu đọc lại.",
   "agent.activity.documentExtractNamed.done": "Tôi đã đọc xong {name}.",
   "agent.activity.documentExtractNamed.degraded":
     "Tôi mới đọc được một phần {name} rồi dừng.",
@@ -3752,7 +3754,7 @@ export const vi = {
   "agent.activity.accountScan.running":
     "Tôi đang đọc các trao đổi và giao dịch của một tài khoản.",
   "agent.activity.accountScan.stalled":
-    "Việc đọc một tài khoản kéo dài bất thường. Có thể nó đã dừng.",
+    "Việc đọc một tài khoản kéo dài bất thường. Có thể nó đã dừng. Mở lại tài khoản để bắt đầu đọc lại từ đầu.",
   "agent.activity.accountScan.done": "Những gì một tài khoản cần đã sẵn sàng.",
   "agent.activity.accountScan.degraded":
     "Tôi đã đọc một tài khoản đến mức các bản ghi cho phép rồi dừng.",
@@ -3762,7 +3764,7 @@ export const vi = {
   "agent.activity.accountScanNamed.running":
     "Tôi đang đọc các trao đổi và giao dịch của {name}.",
   "agent.activity.accountScanNamed.stalled":
-    "Việc đọc {name} kéo dài bất thường. Có thể nó đã dừng.",
+    "Việc đọc {name} kéo dài bất thường. Có thể nó đã dừng. Mở lại tài khoản để bắt đầu đọc lại từ đầu.",
   "agent.activity.accountScanNamed.done": "Những gì {name} cần đã sẵn sàng.",
   "agent.activity.accountScanNamed.degraded":
     "Tôi đã đọc {name} đến mức các bản ghi cho phép rồi dừng.",

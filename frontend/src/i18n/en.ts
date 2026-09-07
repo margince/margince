@@ -3251,6 +3251,8 @@ export const en = {
     "That file could not be sent for reading. Nothing was changed.",
   "extraction.loading": "Checking whether this file has been read…",
   "extraction.reading": "Reading this file…",
+  "extraction.stalled":
+    "Reading this file has taken unusually long. It may have stopped.",
   "extraction.failed": "This file could not be read.",
   "extraction.groundedNothing":
     "AI read this file and it states none of the deal fields.",
@@ -3867,7 +3869,7 @@ export const en = {
     "Your document is queued to be read.",
   "agent.activity.documentExtract.running": "I'm reading your document.",
   "agent.activity.documentExtract.stalled":
-    "Reading your document has taken unusually long. It may have stopped.",
+    "Reading your document has taken unusually long. It may have stopped. Open the file and ask for it to be read again.",
   "agent.activity.documentExtract.done": "I've read your document.",
   "agent.activity.documentExtract.degraded":
     "I got partway through your document and stopped.",
@@ -3880,7 +3882,7 @@ export const en = {
   "agent.activity.documentExtractNamed.queued": "{name} is queued to be read.",
   "agent.activity.documentExtractNamed.running": "I'm reading {name}.",
   "agent.activity.documentExtractNamed.stalled":
-    "Reading {name} has taken unusually long. It may have stopped.",
+    "Reading {name} has taken unusually long. It may have stopped. Open the file and ask for it to be read again.",
   "agent.activity.documentExtractNamed.done": "I've read {name}.",
   "agent.activity.documentExtractNamed.degraded":
     "I got partway through {name} and stopped.",
@@ -3917,7 +3919,7 @@ export const en = {
   "agent.activity.accountScan.running":
     "I'm reading an account's exchanges and deals.",
   "agent.activity.accountScan.stalled":
-    "Reading an account has taken unusually long. It may have stopped.",
+    "Reading an account has taken unusually long. It may have stopped. Opening the account again starts a fresh read.",
   "agent.activity.accountScan.done": "What an account needs is ready.",
   "agent.activity.accountScan.degraded":
     "I read an account as far as the records let me and stopped.",
@@ -3926,7 +3928,7 @@ export const en = {
   "agent.activity.accountScanNamed.running":
     "I'm reading {name}'s exchanges and deals.",
   "agent.activity.accountScanNamed.stalled":
-    "Reading {name} has taken unusually long. It may have stopped.",
+    "Reading {name} has taken unusually long. It may have stopped. Opening the account again starts a fresh read.",
   "agent.activity.accountScanNamed.done": "What {name} needs is ready.",
   "agent.activity.accountScanNamed.degraded":
     "I read {name} as far as the records let me and stopped.",

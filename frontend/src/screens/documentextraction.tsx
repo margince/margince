@@ -326,6 +326,18 @@ function ExtractionBody({
   const { locale } = useLocale();
 
   if (extraction.status === "queued" || extraction.status === "running") {
+    // A live reading past its lease has no worker behind it — the server says
+    // so, so the panel never has to know the lease — and a line with nothing
+    // to press would leave the file unreadable for good: the fresh read the
+    // button starts is the one path back.
+    if (extraction.stalled) {
+      return (
+        <div className="staging-card">
+          <p className="t-caption">{t("extraction.stalled")}</p>
+          <Button onClick={onReadAgain}>{t("extraction.readAgain")}</Button>
+        </div>
+      );
+    }
     return <p className="t-caption">{t("extraction.reading")}</p>;
   }
   if (extraction.status === "failed") {

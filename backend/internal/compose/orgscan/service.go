@@ -164,14 +164,23 @@ const (
 )
 
 // decide is the ensure rule, pure so a test can hold every branch: a live
-// read is never started twice; a matching fingerprint is served; a changed
-// account is read again only past the floor, unless forced. stored is nil
-// for a reader who has never asked.
+// read is never started twice, unless nobody is working it any more; a
+// matching fingerprint is served; a changed account is read again only past
+// the floor, unless forced. stored is nil for a reader who has never asked.
+//
+// The abandoned arm is the reader's only way out of a read whose worker
+// died: the page polls a live row for as long as it stays live, the rail
+// calls it stalled past the lease, and neither could start anything until
+// this did. Opening the account again is what a person tries unprompted, so
+// it is what re-arms the read.
 func decide(stored *row, fingerprint string, now time.Time, force bool) decision {
 	if stored == nil {
 		return queueRead
 	}
 	if stored.live() {
+		if stored.abandoned(now) {
+			return queueRead
+		}
 		return serveCurrent
 	}
 	if !stored.settled() {
@@ -188,17 +197,19 @@ func decide(stored *row, fingerprint string, now time.Time, force bool) decision
 
 // queue writes the row and the job together, or — with no runner on this
 // role — settles the floor in the same transaction, so the reader is never
-// left polling a read nothing will pick up.
+// left polling a read nothing will pick up. A row the write left as it
+// stands — a read a worker claimed between the decision and this — is served
+// as it now stands, with nothing queued behind it.
 func (s *Service) queue(ctx context.Context, userID ids.UserID, orgID ids.OrganizationID) (*row, error) {
 	var out *row
 	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		queued, err := queue(ctx, tx, userID, orgID)
-		if err != nil {
+		queued, rearmed, err := queue(ctx, tx, userID, orgID)
+		if err != nil || !rearmed {
 			return err
 		}
 		out = &queued
 		if s.enqueue == nil {
-			return settle(ctx, tx, queued.ID, outcome{
+			return settle(ctx, tx, queued.ID, nil, outcome{
 				Status: StatusDegraded, GeneratedBy: crmcontracts.Deterministic,
 				DegradeReason: "No worker runs account scans in this deployment, so the rules' own advice stands alone.",
 			})
@@ -208,7 +219,7 @@ func (s *Service) queue(ctx context.Context, userID ids.UserID, orgID ids.Organi
 	if err != nil {
 		return nil, err
 	}
-	if s.enqueue == nil {
+	if out == nil || s.enqueue == nil {
 		return s.load(ctx, userID, orgID)
 	}
 	return out, nil
@@ -224,18 +235,19 @@ func (s *Service) Run(ctx context.Context, scanID ids.UUID, orgID ids.Organizati
 	if err != nil || !ok {
 		return err
 	}
+	h := claimed.claim()
 	in, fingerprint, err := s.assemble(ctx, orgID)
 	if err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrNotFound) {
-			return s.fail(ctx, claimed.ID, "The account could not be opened for this reader, so it was not read.")
+			return s.fail(ctx, h, "The account could not be opened for this reader, so it was not read.")
 		}
-		return s.fail(ctx, claimed.ID, "The account could not be read. Try again later.")
+		return s.fail(ctx, h, "The account could not be read. Try again later.")
 	}
 	lang := identity.BaseLanguageForPrompt(ctx, s.pool)
 	findings, by, err := Read(ctx, s.lane, orgID, in, lang)
 	var deferral *ai.BudgetDeferralError
 	if errors.As(err, &deferral) {
-		if deferErr := s.deferBudget(ctx, claimed.ID, deferral.NextAttemptAt); deferErr != nil {
+		if deferErr := s.deferBudget(ctx, h, deferral.NextAttemptAt); deferErr != nil {
 			return errors.Join(err, deferErr)
 		}
 		return err
@@ -255,14 +267,14 @@ func (s *Service) Run(ctx context.Context, scanID ids.UUID, orgID ids.Organizati
 		// The row is claimed: left running it would be served as a read in
 		// flight for as long as it sat there. It closes with the reason the
 		// reader can act on, and the cause goes back to the carrier.
-		return errors.Join(err, s.fail(ctx, claimed.ID, "The account could not be read. Try again later."))
+		return errors.Join(err, s.fail(ctx, h, "The account could not be read. Try again later."))
 	case s.lane == nil:
 		out.Status, out.DegradeReason = StatusDegraded, "No model lane is configured, so the rules' own advice stands alone."
 	case len(in.Messages) == 0:
 		out.Status, out.DegradeReason = StatusDegraded, "There are no exchanges this reader may read, so there was nothing to read the account from."
 	}
 	return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		return settle(ctx, tx, claimed.ID, out)
+		return settle(ctx, tx, h.ID, &h.ClaimedAt, out)
 	})
 }
 
@@ -424,9 +436,9 @@ func (s *Service) claim(ctx context.Context, scanID ids.UUID) (row, bool, error)
 	return r, ok, err
 }
 
-func (s *Service) deferBudget(ctx context.Context, scanID ids.UUID, next time.Time) error {
+func (s *Service) deferBudget(ctx context.Context, h held, next time.Time) error {
 	return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		return deferBudget(ctx, tx, scanID, next)
+		return deferBudget(ctx, tx, h, next)
 	})
 }
 
@@ -434,11 +446,11 @@ func (s *Service) deferBudget(ctx context.Context, scanID ids.UUID, next time.Ti
 // read's own cancellation, bounded so a dead database cannot hold the worker:
 // the one failure a cancelled read must still record is that it was
 // cancelled, and the row's update and the rail's announcement both ride it.
-func (s *Service) fail(ctx context.Context, scanID ids.UUID, reason string) error {
+func (s *Service) fail(ctx context.Context, h held, reason string) error {
 	recordCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), failWriteTimeout)
 	defer cancel()
 	return database.WithWorkspaceTx(recordCtx, s.pool, func(tx pgx.Tx) error {
-		return fail(recordCtx, tx, scanID, reason)
+		return fail(recordCtx, tx, h, reason)
 	})
 }
 

@@ -3169,6 +3169,8 @@ export const de = {
     "Diese Datei konnte nicht zum Lesen übergeben werden. Es wurde nichts geändert.",
   "extraction.loading": "Prüfe, ob diese Datei bereits gelesen wurde…",
   "extraction.reading": "Diese Datei wird gelesen…",
+  "extraction.stalled":
+    "Das Lesen dieser Datei dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
   "extraction.failed": "Diese Datei konnte nicht gelesen werden.",
   "extraction.groundedNothing":
     "Die KI hat diese Datei gelesen — sie nennt keines der Deal-Felder.",
@@ -3777,7 +3779,7 @@ export const de = {
     "Dein Dokument steht zum Lesen in der Warteschlange.",
   "agent.activity.documentExtract.running": "Ich lese dein Dokument.",
   "agent.activity.documentExtract.stalled":
-    "Das Lesen deines Dokuments dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
+    "Das Lesen deines Dokuments dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen. Öffne die Datei und lass sie erneut lesen.",
   "agent.activity.documentExtract.done": "Ich habe dein Dokument gelesen.",
   "agent.activity.documentExtract.degraded":
     "Ich bin bei deinem Dokument nur teilweise durchgekommen und habe gestoppt.",
@@ -3787,7 +3789,7 @@ export const de = {
     "{name} steht zum Lesen in der Warteschlange.",
   "agent.activity.documentExtractNamed.running": "Ich lese {name}.",
   "agent.activity.documentExtractNamed.stalled":
-    "Das Lesen von {name} dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
+    "Das Lesen von {name} dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen. Öffne die Datei und lass sie erneut lesen.",
   "agent.activity.documentExtractNamed.done": "Ich habe {name} gelesen.",
   "agent.activity.documentExtractNamed.degraded":
     "Ich bin bei {name} nur teilweise durchgekommen und habe gestoppt.",
@@ -3798,7 +3800,7 @@ export const de = {
   "agent.activity.accountScan.running":
     "Ich lese die Korrespondenz und die Deals eines Accounts.",
   "agent.activity.accountScan.stalled":
-    "Das Lesen eines Accounts dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
+    "Das Lesen eines Accounts dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen. Öffne den Account erneut, damit er neu gelesen wird.",
   "agent.activity.accountScan.done": "Was ein Account braucht, ist fertig.",
   "agent.activity.accountScan.degraded":
     "Ich habe einen Account so weit gelesen, wie die Datensätze es zuließen, und dann aufgehört.",
@@ -3809,7 +3811,7 @@ export const de = {
   "agent.activity.accountScanNamed.running":
     "Ich lese die Korrespondenz und die Deals von {name}.",
   "agent.activity.accountScanNamed.stalled":
-    "Das Lesen von {name} dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
+    "Das Lesen von {name} dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen. Öffne den Account erneut, damit er neu gelesen wird.",
   "agent.activity.accountScanNamed.done": "Was {name} braucht, ist fertig.",
   "agent.activity.accountScanNamed.degraded":
     "Ich habe {name} so weit gelesen, wie die Datensätze es zuließen, und dann aufgehört.",
