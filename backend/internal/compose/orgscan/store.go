@@ -25,6 +25,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/briefevidence"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -294,6 +295,11 @@ func settle(ctx context.Context, tx pgx.Tx, scanID ids.UUID, claimedAt *time.Tim
 	if findings == nil {
 		findings = []crmcontracts.Organization360Suggestion{}
 	}
+	// The second lock on the one reader-scoped field a finding could carry.
+	// The reader-side wire attaches summaries and this path never sees them —
+	// but a settled row is read back by everyone with the account, so a
+	// summary stored here would hand one reader's mail access to all of them.
+	briefevidence.Strip(briefevidence.FromSuggestions(findings))
 	encoded, err := json.Marshal(findings)
 	if err != nil {
 		return fmt.Errorf("orgscan: encode the findings: %w", err)

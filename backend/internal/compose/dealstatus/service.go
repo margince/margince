@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/briefevidence"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -132,28 +133,74 @@ func (s *Service) Get(ctx context.Context, dealID ids.DealID, refresh bool) (crm
 	// from a CACHE keyed on the user, and an admission that lives only in the
 	// path that fills the cache is one refactor away from being skipped by
 	// the path that reads it.
+	//
+	// It stays HERE, on the public entry point, rather than moving down into
+	// get with the rest of the body: this is the door, and the reason above is
+	// about the door being asked rather than about where the work happens.
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return crmcontracts.DealStatusCard{}, err
 	}
-	userID, err := actingUser(ctx)
+	card, timeline, err := s.cardAndTimeline(ctx, dealID, refresh)
 	if err != nil {
 		return crmcontracts.DealStatusCard{}, err
+	}
+	// After the write, never before it, and out of rows the caller already
+	// holds. The card is FILED on the deal and read by whoever opens it, while
+	// an email summary is assembled out of one reader's own audience and
+	// content grants — so a stored card carrying one would hand the writer's
+	// access to every later reader. The timeline was gathered under this
+	// caller's own scope moments ago and carries the canonical summary they are
+	// entitled to, so opening the cited messages costs no further read.
+	if err := briefevidence.Attach(ctx, briefevidence.FromActivities(timeline), cardEvidence(&card)); err != nil {
+		return crmcontracts.DealStatusCard{}, err
+	}
+	return card, nil
+}
+
+// cardEvidence collects the card's citations that could name a message: the
+// three prose sections, the verdict's reasons, and the recommended move's own
+// basis — which is a different wire shape carrying the same activity.
+func cardEvidence(card *crmcontracts.DealStatusCard) []briefevidence.Target {
+	targets := briefevidence.FromSentences(card.Story.Sentences)
+	for _, section := range []*crmcontracts.DealStatusCardSection{card.Blocker, card.Buyer} {
+		if section != nil {
+			targets = append(targets, briefevidence.FromSentences(section.Sentences)...)
+		}
+	}
+	if card.Verdict != nil {
+		targets = append(targets, briefevidence.FromSentences(card.Verdict.Because.Sentences)...)
+	}
+	if card.Next != nil {
+		targets = append(targets, briefevidence.FromDealMove(card.Next.Evidence)...)
+	}
+	return targets
+}
+
+// cardAndTimeline is the card itself, and the rows it was gathered from. The
+// two travel together because the caller enriches from the second — reading the
+// deal's messages again would ask the same gate the same question.
+func (s *Service) cardAndTimeline(
+	ctx context.Context, dealID ids.DealID, refresh bool,
+) (crmcontracts.DealStatusCard, []crmcontracts.Activity, error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return crmcontracts.DealStatusCard{}, nil, err
 	}
 	// Gathered FIRST, and under the caller's row scope: a deal they cannot
 	// read refuses here, before any cache is consulted.
 	f, err := s.gather(ctx, dealID)
 	if err != nil {
-		return crmcontracts.DealStatusCard{}, err
+		return crmcontracts.DealStatusCard{}, nil, err
 	}
 	mv := decideMove(f)
 	in := project(f, mv)
 	fingerprint, err := Fingerprint(in, userID.UUID, s.routingVersion, f.now, f.lang)
 	if err != nil {
-		return crmcontracts.DealStatusCard{}, err
+		return crmcontracts.DealStatusCard{}, nil, err
 	}
 	verdict := s.decideFromCache(ctx, userID, dealID, fingerprint, refresh, f.now)
 	if verdict.serve {
-		return verdict.card, nil
+		return verdict.card, f.timeline, nil
 	}
 	card, laneFailed := s.write(ctx, f, mv, in, verdict.askModel)
 	if laneFailed {
@@ -168,7 +215,7 @@ func (s *Service) Get(ctx context.Context, dealID ids.DealID, refresh bool) (crm
 		// the fingerprint now, so an installation that switches to German mints
 		// a new key, and a lane that happens to be down while it does would
 		// freeze the ENGLISH floor as that installation's German card.
-		return card, nil
+		return card, f.timeline, nil
 	}
 	if err := s.save(ctx, userID, dealID, stored{
 		Fingerprint: fingerprint,
@@ -176,9 +223,9 @@ func (s *Service) Get(ctx context.Context, dealID ids.DealID, refresh bool) (crm
 		GeneratedBy: card.GeneratedBy,
 		Card:        card,
 	}); err != nil {
-		return crmcontracts.DealStatusCard{}, err
+		return crmcontracts.DealStatusCard{}, nil, err
 	}
-	return card, nil
+	return card, f.timeline, nil
 }
 
 // cacheVerdict says what to do with the stored card.
@@ -363,6 +410,11 @@ func (s *Service) cached(ctx context.Context, userID ids.UserID, dealID ids.Deal
 }
 
 func (s *Service) save(ctx context.Context, userID ids.UserID, dealID ids.DealID, card stored) error {
+	// The second lock on the one reader-scoped field this row could carry.
+	// Get attaches summaries only after this call, so nothing should reach
+	// here holding one — and a later writer that reorders the two would
+	// otherwise file one reader's access as everybody's, silently.
+	briefevidence.Strip(cardEvidence(&card.Card))
 	payload, err := json.Marshal(card)
 	if err != nil {
 		return fmt.Errorf("encode the deal status payload: %w", err)

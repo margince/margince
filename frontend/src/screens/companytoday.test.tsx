@@ -546,3 +546,67 @@ describe("the account scan on the needs list", () => {
     expect(screen.queryByText("Written by Margince")).toBeNull();
   });
 });
+
+// The account offers ONE way to write to somebody, not two that disagree.
+//
+// The generic row picks the account's strongest contact; a `draft_reply`
+// suggestion names the person actually waiting on an answer. On the demo
+// account those are two different people, so drawing both told a rep to write
+// to Sarah while the advice above said to answer Frédéric.
+describe("the generic draft row", () => {
+  const RECIPIENT = {
+    person_id: "p-strongest",
+    full_name: "Sarah Cole",
+    strength: {
+      score: 40,
+      bucket: "moderate" as const,
+      factors: { recency: 0, frequency: 0, reciprocity: 0, direction: 0 },
+    },
+    deal_roles: [],
+    consent: {},
+  };
+  const withRecipient = {
+    ...BASE,
+    people: {
+      data: [RECIPIENT],
+      page: { has_more: false, next_cursor: null },
+    },
+  } satisfies Organization360;
+
+  it("stands on its own when no advice names a message to answer", () => {
+    show(withRecipient, { onDraftTo: vi.fn() });
+
+    // The admit case. Without it the absence below would pass over a row that
+    // never renders at all.
+    expect(screen.getByText(en["today.draft.new"])).toBeTruthy();
+  });
+
+  it("gives way to a suggestion that names the message to answer", () => {
+    show(
+      {
+        ...withRecipient,
+        suggestions: [
+          {
+            kind: "no_reply",
+            fingerprint: "f-reply",
+            reason: "Frédéric asked about fallbacks and nobody answered.",
+            evidence: [],
+            action: { kind: "draft_reply", activity_id: "act-1" },
+          },
+        ],
+      },
+      { onDraftTo: vi.fn() },
+    );
+
+    expect(screen.queryByText(en["today.draft.new"])).toBeNull();
+    expect(screen.getByText(/nobody answered/)).toBeTruthy();
+  });
+
+  it("links the recipient's name to their own page", () => {
+    show(withRecipient, { onDraftTo: vi.fn() });
+
+    // The name used to be plain text inside the row's label, so a reader who
+    // wanted to know who Sarah Cole is had nowhere to press.
+    expect(screen.getByRole("button", { name: "Sarah Cole" })).toBeTruthy();
+  });
+});

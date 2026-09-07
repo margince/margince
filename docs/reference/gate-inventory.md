@@ -117,7 +117,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 | `worklistverdictstandings_test.go` | H2 | The queue's verdict standings ARE the deal card's, and this derives them from the card rather than keeping a second list of them. |
 
-## Census (125)
+## Census (126)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -140,6 +140,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `audittraildoor_test.go` | H2 | The audit trail is a SECOND door onto an activity's content, and every reader of it says what it does about a held one. |
 | `basecurrencyguard_test.go` | H2 | The base-currency lock as a fitness function. |
 | `bootcomposition_test.go` | H2 | The fitness gate on the boot sequence: a process role that composes extensions also records what it composed. |
+| `briefevidencestrip_test.go` | H2 | "Never persist an email summary" is spelled once, and every writer that caches evidence says it that way. |
 | `briefsectioncensus_test.go` | H2 | Every worklist category reaches a section of the morning. |
 | `capturecontainers_test.go` | H2 | Every mail connector tells the sink where the provider FILED a message. |
 | `catalogoptionsreaders_test.go` | H2 | Who may read a custom field's OPTIONS. |

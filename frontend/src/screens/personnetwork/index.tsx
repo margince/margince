@@ -52,7 +52,15 @@ type RouteCandidate = components["schemas"]["PersonGraphRouteCandidate"];
 export function PersonNetworkTab({
   personId,
   view,
-}: Readonly<{ personId: string; view?: RelationshipMoments }>) {
+  onOpenEmail,
+}: Readonly<{
+  personId: string;
+  view?: RelationshipMoments;
+  // Opens a cited message in the person page's own email drawer. The graph
+  // names the messages a count was read from, and the reader checks the count
+  // by reading one.
+  onOpenEmail?: (activityId: string) => void;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const graph = usePersonGraph(personId);
@@ -123,6 +131,7 @@ export function PersonNetworkTab({
           targetName={read.targetName}
           blocked={availabilityLabel(read.lead.availability, t)}
           onAsk={setAsking}
+          onOpenEmail={onOpenEmail}
         />
       ) : null}
 
@@ -208,6 +217,7 @@ export function PersonNetworkTab({
               graph={data}
               nodeId={read.focused}
               anchorId={read.anchor.id}
+              onOpenEmail={onOpenEmail}
             />
           ) : null
         }

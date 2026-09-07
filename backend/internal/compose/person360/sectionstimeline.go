@@ -68,7 +68,8 @@ func activityDiscoverScope(ctx context.Context, arg func(any) int) (string, erro
 }
 
 func activityScopeUnder(ctx context.Context, arg func(any) int,
-	gate func(context.Context, string, func(any) int) (string, error)) (string, error) {
+	gate func(context.Context, string, func(any) int) (string, error),
+) (string, error) {
 	clause, err := gate(ctx, "a", arg)
 	if err != nil {
 		return "", err

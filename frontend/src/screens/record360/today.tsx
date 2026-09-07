@@ -185,7 +185,12 @@ export function FoundMove({
   const t = useT();
   return (
     <PanelRow className="co-move">
-      <span className="co-move-body">
+      {/* A div, not a span, and the basis under it too. The row's grounds may
+          be an EmailEntry — a block row with a subject, a sender and a preview
+          — and a block inside a span is invalid HTML the browser silently
+          reflows. CSS can make it LOOK right; it cannot make the document
+          tree the one the styles were written against. */}
+      <div className="co-move-body">
         {suggested && (
           <span className="co-move-by">
             <Sparkles aria-hidden="true" className="co-move-spark" />
@@ -196,12 +201,12 @@ export function FoundMove({
         <span className="co-move-ask">{title}</span>
         {why && <span className="co-move-reason t-sub">{why}</span>}
         {basis && (
-          <span className="co-move-basis">
+          <div className="co-move-basis">
             <span className="co-move-basis-head t-eyebrow">
               {t("co.suggest.basedOn")}
             </span>
             {basis}
-          </span>
+          </div>
         )}
         {(action || defer) && (
           <span className="co-move-do">
@@ -220,7 +225,7 @@ export function FoundMove({
             </span>
           </span>
         )}
-      </span>
+      </div>
     </PanelRow>
   );
 }

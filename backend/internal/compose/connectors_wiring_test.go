@@ -129,7 +129,6 @@ func TestCallbackRequiresMatchingCSRFCookie(t *testing.T) {
 	if !oauth.exchanged {
 		t.Fatal("a matching nonce cookie should let the flow reach the token exchange")
 	}
-
 }
 
 func TestGmailConfigGating(t *testing.T) {

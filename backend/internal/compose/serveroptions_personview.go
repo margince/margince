@@ -44,7 +44,8 @@ func WithPersonBrief(brain completer, routingVersion string) Option {
 			return
 		}
 		s.personBriefHandlers = personbrief.NewHandlers(
-			personbrief.NewService(pool, s.person360Svc, brain, routingVersion, time.Now),
+			personbrief.NewService(pool, s.person360Svc, brain, routingVersion, time.Now).
+				WithEmailSummaries(emailRows(pool)),
 			s.sorDispatch.isOverlay,
 		)
 	}
@@ -66,6 +67,7 @@ func WithPersonDraft(brain completer) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		svc := persondraft.NewService(s.person360Svc, brain).
 			WithEnvelope(draftEnvelope(pool, s.log)).
+			WithEmailSummaries(emailRows(pool)).
 			WithVoice(ai.NewVoiceStore(InstallationDB(pool)), s.log)
 		s.personDraftHandlers = persondraft.NewHandlers(svc, s.sorDispatch.isOverlay)
 	}

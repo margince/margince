@@ -3830,12 +3830,16 @@ function DealLead({
   overlay,
   pulse,
   spine,
+  onOpenEmail,
 }: Readonly<{
   dealId: string;
   dealName: string;
   overlay: boolean;
   pulse: ReactNode | undefined;
   spine: ReactNode;
+  // Opens a cited message in the page's own email drawer — the same one the
+  // timeline below opens into.
+  onOpenEmail?: (activityId: string) => void;
 }>) {
   if (overlay) {
     return null;
@@ -3846,6 +3850,7 @@ function DealLead({
       dealName={dealName}
       pulse={pulse}
       spine={spine}
+      onOpenEmail={onOpenEmail}
     />
   );
 }
@@ -3892,6 +3897,7 @@ function DealOverviewPane({
   spine,
   coverage,
   onOpenHistory,
+  onOpenEmail,
 }: Readonly<{
   deal: Deal;
   stages: Stage[];
@@ -3929,6 +3935,8 @@ function DealOverviewPane({
   // Where the momentum reading's door goes: the history tab, which the page
   // owns.
   onOpenHistory: () => void;
+  // Opens a cited message in the page's own email drawer; see `Citations`.
+  onOpenEmail?: (activityId: string) => void;
 }>) {
   const t = useT();
   return (
@@ -3986,6 +3994,7 @@ function DealOverviewPane({
           overlay={overlay}
           pulse={pulse}
           spine={spine}
+          onOpenEmail={onOpenEmail}
         />
         <DealApprovals approvals={dealApprovals} decide={onDecide} />
         <RecordReadingPair>
@@ -4319,6 +4328,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 <div className="record-stack">
                   <DealOverviewPane
                     deal={deal}
+                    onOpenEmail={setOpenEmail}
                     stages={stages}
                     dealApprovals={dealApprovals}
                     onDecide={(input) => decide.mutate(input)}

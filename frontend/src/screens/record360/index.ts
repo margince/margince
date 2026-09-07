@@ -17,6 +17,11 @@ export {
   WrittenBy,
   type WrittenByWriter,
 } from "./citations";
+export {
+  EvidenceSources,
+  fromCitations,
+  fromDealMove,
+} from "./evidencesources";
 export { incompleteGraph } from "./graphcompleteness";
 export {
   dealRoleLabel,

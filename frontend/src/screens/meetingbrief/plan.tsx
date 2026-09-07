@@ -21,13 +21,29 @@ type BriefSentence = components["schemas"]["OrganizationBriefSentence"];
 
 type OpenRecord = (entityType: string, entityId: string) => void;
 
+// Opens a cited message in the host's own email drawer. Threaded beside
+// onOpenRecord for the same reason: the brief cites the conversations it was
+// written from, and a citation that names a message should open it.
+type OpenEmail = (activityId: string) => void;
+
 // One cited claim, with its receipts. The brief's own renderer rather than a
 // second spelling of a citation.
 function Claim({
   sentence,
   onOpenRecord,
-}: Readonly<{ sentence: BriefSentence; onOpenRecord: OpenRecord }>) {
-  return <SentenceList sentences={[sentence]} onOpenRecord={onOpenRecord} />;
+  onOpenEmail,
+}: Readonly<{
+  sentence: BriefSentence;
+  onOpenRecord: OpenRecord;
+  onOpenEmail?: OpenEmail;
+}>) {
+  return (
+    <SentenceList
+      sentences={[sentence]}
+      onOpenRecord={onOpenRecord}
+      onOpenEmail={onOpenEmail}
+    />
+  );
 }
 
 // The outcome to earn, and the reminder not to force it. The lead panel, tinted
@@ -36,7 +52,12 @@ function Claim({
 export function ObjectivePanel({
   plan,
   onOpenRecord,
-}: Readonly<{ plan: MeetingPlan; onOpenRecord: OpenRecord }>) {
+  onOpenEmail,
+}: Readonly<{
+  plan: MeetingPlan;
+  onOpenRecord: OpenRecord;
+  onOpenEmail?: OpenEmail;
+}>) {
   const t = useT();
   if (!plan.objective) {
     return null;
@@ -54,6 +75,7 @@ export function ObjectivePanel({
             <Claim
               sentence={plan.objective.sentence}
               onOpenRecord={onOpenRecord}
+              onOpenEmail={onOpenEmail}
             />
             <p className="mb-caveat">{plan.objective.caveat}</p>
           </div>
@@ -61,7 +83,11 @@ export function ObjectivePanel({
         {plan.opening && (
           <div className="mb-open">
             <Eyebrow as="h4">{t("person.meeting.openWith")}</Eyebrow>
-            <Claim sentence={plan.opening} onOpenRecord={onOpenRecord} />
+            <Claim
+              sentence={plan.opening}
+              onOpenRecord={onOpenRecord}
+              onOpenEmail={onOpenEmail}
+            />
           </div>
         )}
       </PanelBody>
@@ -73,10 +99,12 @@ export function ObjectivePanel({
 export function AccountArc({
   plan,
   onOpenRecord,
+  onOpenEmail,
   formatDay,
 }: Readonly<{
   plan: MeetingPlan;
   onOpenRecord: OpenRecord;
+  onOpenEmail?: OpenEmail;
   formatDay: (utcIso: string) => string;
 }>) {
   const t = useT();
@@ -97,7 +125,11 @@ export function AccountArc({
             </time>
             <div>
               {moment.title && <strong>{moment.title}</strong>}
-              <Claim sentence={moment.summary} onOpenRecord={onOpenRecord} />
+              <Claim
+                sentence={moment.summary}
+                onOpenRecord={onOpenRecord}
+                onOpenEmail={onOpenEmail}
+              />
             </div>
           </div>
         </PanelRow>
@@ -111,7 +143,12 @@ export function AccountArc({
 export function AdvancePanel({
   plan,
   onOpenRecord,
-}: Readonly<{ plan: MeetingPlan; onOpenRecord: OpenRecord }>) {
+  onOpenEmail,
+}: Readonly<{
+  plan: MeetingPlan;
+  onOpenRecord: OpenRecord;
+  onOpenEmail?: OpenEmail;
+}>) {
   const t = useT();
   const legs = [
     { key: "minimum", sentence: plan.advance.minimum },
@@ -127,7 +164,11 @@ export function AdvancePanel({
               <Eyebrow as="h4">
                 {t(`person.meeting.advance.${leg.key}`)}
               </Eyebrow>
-              <Claim sentence={leg.sentence} onOpenRecord={onOpenRecord} />
+              <Claim
+                sentence={leg.sentence}
+                onOpenRecord={onOpenRecord}
+                onOpenEmail={onOpenEmail}
+              />
             </div>
           ))}
         </div>
@@ -165,7 +206,12 @@ export function Unknowns({ plan }: Readonly<{ plan: MeetingPlan }>) {
 export function LikelyAsks({
   plan,
   onOpenRecord,
-}: Readonly<{ plan: MeetingPlan; onOpenRecord: OpenRecord }>) {
+  onOpenEmail,
+}: Readonly<{
+  plan: MeetingPlan;
+  onOpenRecord: OpenRecord;
+  onOpenEmail?: OpenEmail;
+}>) {
   const t = useT();
   if (plan.likely_asks.length === 0) {
     return null;
@@ -181,7 +227,11 @@ export function LikelyAsks({
                 {t(`person.meeting.relevance.${ask.relevance}`)}
               </Badge>
             </div>
-            <Claim sentence={ask.basis} onOpenRecord={onOpenRecord} />
+            <Claim
+              sentence={ask.basis}
+              onOpenRecord={onOpenRecord}
+              onOpenEmail={onOpenEmail}
+            />
             <p className="mb-ask-prepare">{ask.prepare}</p>
           </div>
         </PanelRow>
@@ -194,7 +244,12 @@ export function LikelyAsks({
 export function TopRisk({
   plan,
   onOpenRecord,
-}: Readonly<{ plan: MeetingPlan; onOpenRecord: OpenRecord }>) {
+  onOpenEmail,
+}: Readonly<{
+  plan: MeetingPlan;
+  onOpenRecord: OpenRecord;
+  onOpenEmail?: OpenEmail;
+}>) {
   const t = useT();
   if (!plan.top_risk) {
     return null;
@@ -204,7 +259,11 @@ export function TopRisk({
     <section className="mb-risks">
       <h3 className="mb-section-title">{t("person.meeting.beReady")}</h3>
       <Callout tone="warn" icon={AlertTriangle}>
-        <Claim sentence={plan.top_risk.text} onOpenRecord={onOpenRecord} />
+        <Claim
+          sentence={plan.top_risk.text}
+          onOpenRecord={onOpenRecord}
+          onOpenEmail={onOpenEmail}
+        />
         <FactList
           facts={[
             { key: "say", term: t("person.meeting.say"), value: response.say },

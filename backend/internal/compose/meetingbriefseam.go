@@ -120,5 +120,6 @@ func newMeetingBriefService(db *database.DB) *meetingbrief.Service {
 		consent.NewStore(db),
 		comms.NewStore(db, time.Now, activities.NewStore(db)),
 		ai.NewFeedbackStore(db), time.Now)
-	return meetingbrief.NewService(pool, view, peopleStore, time.Now)
+	return meetingbrief.NewService(pool, view, peopleStore, time.Now).
+		WithEmailSummaries(activities.NewStore(db))
 }

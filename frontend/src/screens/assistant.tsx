@@ -23,11 +23,14 @@ export function AssistantPanel({
   orgId,
   enabled,
   onOpenRecord,
+  onOpenEmail,
   projects,
 }: Readonly<{
   orgId: string;
   enabled: boolean;
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  // Opens a cited message in the page's email drawer; see `Citations`.
+  onOpenEmail?: (activityId: string) => void;
   // The account's projects, for the question to be asked about one of them.
   projects?: readonly PickableProject[];
 }>) {
@@ -49,6 +52,7 @@ export function AssistantPanel({
           orgId={orgId}
           enabled={enabled}
           onOpenRecord={onOpenRecord}
+          onOpenEmail={onOpenEmail}
           projects={projects}
         />
       </PanelBody>

@@ -1725,15 +1725,6 @@ function useCitedReceipt() {
     entityId: string,
     siblings?: readonly CitedRecord[],
   ) => {
-    // An activity opens the message itself. It used to fall through both
-    // branches below and land nowhere — the account's commitment rows have
-    // been passing `source_activity_id` into a button that did nothing since
-    // the day they were written, because an activity had no detail route.
-    // It has one now.
-    if (citationOpensEmail(entityType)) {
-      setEmail(entityId);
-      return;
-    }
     if (citationOpensRecord(entityType)) {
       openCitation(entityType, entityId);
       return;
@@ -1763,6 +1754,11 @@ function useCitedReceipt() {
     cited,
     email,
     open,
+    // The message door, on its own. `open` routes a citation by its KIND, and a
+    // message is not a kind the citation renderer hands back — it decides per
+    // row whether a summary is openable and calls this directly, so the host
+    // passes it as `onOpenEmail` beside `onOpenRecord`.
+    openEmail: setEmail,
     close: () => setCited(null),
     closeEmail: () => setEmail(null),
     step: list.length > 1 ? step : undefined,
@@ -2183,6 +2179,7 @@ function CompanyRecordBody({
             onOpenHistory={onOpenHistory}
             onOpenTab={onTab}
             onOpenRecord={receipt.open}
+            onOpenEmail={receipt.openEmail}
             onOpenTasks={() => onTab("tasks")}
             onPrepareMeeting={setPreparing}
             onDraftTo={(id) => onCompose({ kind: "account", id })}
@@ -2195,6 +2192,7 @@ function CompanyRecordBody({
         open={preparing !== null}
         onClose={() => setPreparing(null)}
         projects={liveProjects(view?.projects)}
+        onOpenEmail={receipt.openEmail}
       />
       {/* Deals and Tasks, pulled off the overview: a reader who came for the
           commercial picture or the open work should not scroll past the
@@ -2382,6 +2380,7 @@ function CompanyOverviewStack({
   onAllDeals,
   onOpenHistory,
   onOpenRecord,
+  onOpenEmail,
   onOpenTasks,
   onPrepareMeeting,
   onDraftTo,
@@ -2403,6 +2402,10 @@ function CompanyOverviewStack({
   // the same records and two owners would mean two receipts open over each
   // other.
   onOpenRecord: (entityType: string, entityId: string) => void;
+  // Where a cited MESSAGE leads: the page's own email drawer. Beside
+  // onOpenRecord and owned by the same page, for the same reason — two drawers
+  // over one page would open over each other.
+  onOpenEmail: (activityId: string) => void;
   onOpenTasks: () => void;
   // Opens the meeting brief for the day's meeting — not the composer.
   onPrepareMeeting: (activityId: string) => void;
@@ -2440,6 +2443,7 @@ function CompanyOverviewStack({
     onPrepareMeeting,
     onDraftTo,
     onOpenRecord,
+    onOpenEmail,
     onPerform,
     scan,
   });
@@ -2515,6 +2519,7 @@ function CompanyOverviewStack({
               readOnly={readOnly}
               onAllDeals={onAllDeals}
               onOpenRecord={onOpenRecord}
+              onOpenEmail={onOpenEmail}
               // The verbs ride with the WORK rather than with the figures:
               // this is the pane that names every open deal, so it is where a
               // reader is standing when they notice one is missing. Each is
@@ -2536,6 +2541,7 @@ function CompanyOverviewStack({
                 orgId={org.id}
                 enabled={!overlay}
                 onOpenRecord={onOpenRecord}
+                onOpenEmail={onOpenEmail}
                 projects={view?.projects}
               />
             </div>
@@ -2547,6 +2553,7 @@ function CompanyOverviewStack({
               enabled
               nameOf={records}
               onOpenRecord={onOpenRecord}
+              onOpenEmail={onOpenEmail}
             />
             {/* Is this an account we should be selling to at all — the
                 question an account with nothing in flight is actually asking.
@@ -2558,6 +2565,7 @@ function CompanyOverviewStack({
                 orgId={org.id}
                 enabled={!overlay}
                 onOpenRecord={onOpenRecord}
+                onOpenEmail={onOpenEmail}
               />
             )}
             {/* What Margince noticed on this account that nobody asked it to
@@ -2803,15 +2811,6 @@ function citationOpensRecord(entityType: string): boolean {
 
 // An activity opens the MESSAGE, in the account page's own email drawer.
 //
-// Its own named decision rather than a bare comparison inside the hook, so the
-// rule can be asserted without mounting the page: the account's commitment rows
-// have passed `source_activity_id` into a button since the day they were
-// written, and it did nothing because an activity fell through both branches
-// above. A rule with no name is a rule with no test.
-export function citationOpensEmail(entityType: string): boolean {
-  return entityType === "activity";
-}
-
 // The kinds a receipt can be written for. Narrowing HERE rather than asserting
 // at the fetch is what keeps the modal's contract honest: a kind that grows a
 // receipt upstream fails to compile until this decision learns about it.

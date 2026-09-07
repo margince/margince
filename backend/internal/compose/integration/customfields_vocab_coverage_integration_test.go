@@ -156,7 +156,6 @@ func TestCustomFieldVocab_FilterByCurrencyDateEquality(t *testing.T) {
 		got, _ := f.listDealIDs(t, deals.ListDealsInput{CustomFilters: map[string]string{renewal: "2026-07-11"}})
 		assertIDOrder(t, got, []ids.UUID{match}, "date equality")
 	})
-
 }
 
 // TestCustomFieldVocab_SortByOwnerIDWithCursor: owner_id is the one core

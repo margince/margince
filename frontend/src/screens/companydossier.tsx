@@ -40,11 +40,14 @@ export function DossierPanel({
   orgId,
   enabled,
   onOpenRecord,
+  onOpenEmail,
   nameOf,
 }: Readonly<{
   orgId: string;
   enabled: boolean;
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  // Opens a cited message in the page's email drawer; see `Citations`.
+  onOpenEmail?: (activityId: string) => void;
   // The account's own names for the records this prose cites, from the page
   // that already holds them. The writer names what it had at hand; this is how
   // "contact" becomes the contact.
@@ -164,6 +167,7 @@ export function DossierPanel({
               (section) => section.sentences,
             )}
             onOpenRecord={onOpenRecord}
+            onOpenEmail={onOpenEmail}
             citations="collected"
             // The block's own read leads it. The facts underneath are already
             // on the cards above, so what this block ADDS is what Margince

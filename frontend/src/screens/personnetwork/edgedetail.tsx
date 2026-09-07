@@ -32,7 +32,14 @@ export function EdgeDetail({
   graph,
   nodeId,
   anchorId,
-}: Readonly<{ graph: Graph; nodeId: string; anchorId: string }>) {
+  onOpenEmail,
+}: Readonly<{
+  graph: Graph;
+  nodeId: string;
+  anchorId: string;
+  // Opens one of the cited messages in the person page's email drawer.
+  onOpenEmail?: (activityId: string) => void;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const node = graph.nodes?.find((n) => n.id === nodeId);
@@ -77,7 +84,7 @@ export function EdgeDetail({
               })}
             </p>
             {receipts.length > 0 ? (
-              <ReceiptList receipts={receipts} />
+              <ReceiptList receipts={receipts} onOpenEmail={onOpenEmail} />
             ) : (
               <p className="pn-counts t-sub">{t("person.graph.countsOnly")}</p>
             )}

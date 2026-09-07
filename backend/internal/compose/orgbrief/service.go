@@ -26,6 +26,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/briefevidence"
 	"github.com/margince/margince/backend/internal/compose/org360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -67,6 +68,35 @@ type Service struct {
 	// re-pointing the lane rewrites briefs rather than leaving text
 	// attributed to a model that no longer writes it.
 	routingVersion string
+	// emailRows opens the messages the brief cites. Held rather than read
+	// inline because the brief is CACHED: the sentences are one reader's to
+	// keep, and the summary behind a citation is another reader's to receive,
+	// so it is attached to the wire value on the way out and never to the row
+	// that gets saved.
+	emailRows briefevidence.Reader
+}
+
+// WithEmailSummaries binds the reader that opens a cited message.
+func (s *Service) WithEmailSummaries(reader briefevidence.Reader) *Service {
+	s.emailRows = reader
+	return s
+}
+
+// enrich attaches the canonical email row behind every citation in a finished
+// brief or answer, in one read.
+//
+// It takes the wire value rather than the stored one, and runs after the save,
+// because a cached summary would serve the writer's own access to whoever reads
+// the cache next.
+func (s *Service) enrich(ctx context.Context, out crmcontracts.OrganizationBrief) (crmcontracts.OrganizationBrief, error) {
+	var targets []briefevidence.Target
+	for i := range out.Sections {
+		targets = append(targets, briefevidence.FromSentences(out.Sections[i].Sentences)...)
+	}
+	if err := briefevidence.Attach(ctx, s.emailRows, targets); err != nil {
+		return crmcontracts.OrganizationBrief{}, err
+	}
+	return out, nil
 }
 
 // NewService binds the brief to the composite read it is written from and
@@ -157,7 +187,7 @@ func (s *Service) GetScoped(
 	// had sections unmarshals cleanly into an envelope with none, and serving
 	// it would render an account nobody could say anything about.
 	if found && !force && cached.Version == storedVersion && cached.Fingerprint == fingerprint {
-		return cached.wire(orgID, scope), nil
+		return s.enrich(ctx, cached.wire(orgID, scope))
 	}
 
 	// The account is NAMED to the rail here, where the assembled input holds
@@ -181,7 +211,7 @@ func (s *Service) GetScoped(
 	if err := s.save(ctx, userID, orgID, written); err != nil {
 		return crmcontracts.OrganizationBrief{}, err
 	}
-	return written.wire(orgID, scope), nil
+	return s.enrich(ctx, written.wire(orgID, scope))
 }
 
 // Ask answers one prepared question about the account.
@@ -221,14 +251,18 @@ func (s *Service) AskScoped(
 	if err != nil {
 		return crmcontracts.OrganizationAnswer{}, err
 	}
-	return crmcontracts.OrganizationAnswer{
+	out := crmcontracts.OrganizationAnswer{
 		OrganizationId: openapi_types.UUID(orgID.UUID),
 		Question:       question,
 		GeneratedAt:    s.now().UTC(),
 		GeneratedBy:    by,
 		Scope:          scope,
 		Sentences:      wireSentences(withEvidenceNames(sentences, in)),
-	}, nil
+	}
+	if err := briefevidence.Attach(ctx, s.emailRows, briefevidence.FromSentences(out.Sentences)); err != nil {
+		return crmcontracts.OrganizationAnswer{}, err
+	}
+	return out, nil
 }
 
 // storedVersion is the cached payload's shape version. A row written before

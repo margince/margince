@@ -38,6 +38,7 @@ import {
   formatNumber,
 } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
+import { Citations } from "./record360";
 // The row shapes this card draws — `co-rowlink`, `co-row-meta` — are the
 // record page's, defined in company360.css. Imported here rather than left to
 // whichever screen happens to mount the card: without it the card renders
@@ -64,6 +65,7 @@ export function CompanyWorkCard({
   view,
   loading = false,
   onOpenRecord,
+  onOpenEmail,
   bare = false,
   verbs,
 }: Readonly<{
@@ -74,6 +76,8 @@ export function CompanyWorkCard({
   // receipt is cited from several cards and two owners would mean two
   // receipts open over each other.
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  // Opens a cited message in the page's email drawer; see `Citations`.
+  onOpenEmail?: (activityId: string) => void;
   // Render the sections without this card's own Panel, for a caller that
   // holds the chrome. The Company 360 card does: this is one reading of the
   // account among four, and a card inside a card is two borders around one
@@ -108,6 +112,7 @@ export function CompanyWorkCard({
             key={deal.deal_id}
             deal={deal}
             onOpenRecord={onOpenRecord}
+            onOpenEmail={onOpenEmail}
           />
         ))}
       </WorkGroup>
@@ -363,15 +368,22 @@ function WorkCount({ view }: Readonly<{ view?: Organization360 }>) {
 function DealLine({
   deal,
   onOpenRecord,
+  onOpenEmail,
 }: Readonly<{
   deal: WorkDeal;
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  // Opens a cited message in the page's email drawer; see `Citations`.
+  onOpenEmail?: (activityId: string) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = useRecordZone();
   const status = deal.attention ? (
-    <AttentionLine attention={deal.attention} onOpenRecord={onOpenRecord} />
+    <AttentionLine
+      attention={deal.attention}
+      onOpenRecord={onOpenRecord}
+      onOpenEmail={onOpenEmail}
+    />
   ) : (
     deal.stalled && <StatusLine>{t("co.work.stalled")}</StatusLine>
   );
@@ -430,9 +442,13 @@ function DealLine({
 function AttentionLine({
   attention,
   onOpenRecord,
+  onOpenEmail,
 }: Readonly<{
   attention: Attention;
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  // Opens the conversation the claim was read from, when it is a message this
+  // reader may open; see `Citations`.
+  onOpenEmail?: (activityId: string) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -459,21 +475,37 @@ function AttentionLine({
   const sentence = attention.who
     ? t("co.work.owesUs", { who: attention.who, body: attention.title })
     : t("co.work.owesUsUnnamed", { body: attention.title });
-  const source = attention.source_activity_id;
+  // The claim, with its receipt.
+  //
+  // The receipt is the shared citation, which decides for itself whether it
+  // opens: a message this reader may read opens the drawer, and anything else
+  // renders as what it is. The sentence stays prose beside it — it used to BE
+  // the button, and pressing it called onOpenRecord("activity", ...), a kind
+  // that routes nowhere, so the control had never once opened anything since
+  // the row was written.
+  //
+  // A server that sends no `source_evidence` renders the claim and no receipt.
+  // It cannot fall back to the old link: the account page's router deliberately
+  // stopped handling `activity` when a cited message learned to open, so that
+  // button is now guaranteed to do nothing. Drawing nothing is the honest
+  // answer, and the row still says what was promised and when it was due.
+  if (!attention.source_evidence) {
+    return (
+      <StatusLine tone={attention.due_at ? "warn" : undefined}>
+        {sentence}
+        {due && ` ${t("co.work.wasDue", { date: due })}`}
+      </StatusLine>
+    );
+  }
   return (
     <StatusLine tone={attention.due_at ? "warn" : undefined}>
-      {source && onOpenRecord ? (
-        <button
-          type="button"
-          className="co-rowlink"
-          onClick={() => onOpenRecord("activity", source)}
-        >
-          {sentence}
-        </button>
-      ) : (
-        sentence
-      )}
+      {sentence}
       {due && ` ${t("co.work.wasDue", { date: due })}`}
+      <Citations
+        evidence={[attention.source_evidence]}
+        onOpenRecord={onOpenRecord}
+        onOpenEmail={onOpenEmail}
+      />
     </StatusLine>
   );
 }

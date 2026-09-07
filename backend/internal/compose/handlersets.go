@@ -113,7 +113,8 @@ func (s *Server) wirePerson360(pool *pgxpool.Pool) {
 	// that wires none serves the deterministic floor and says so in
 	// generated_by, rather than 501-ing on a workspace without a model.
 	s.personBriefHandlers = personbrief.NewHandlers(
-		personbrief.NewService(pool, s.person360Svc, nil, "", time.Now),
+		personbrief.NewService(pool, s.person360Svc, nil, "", time.Now).
+			WithEmailSummaries(emailRows(pool)),
 		s.sorDispatch.isOverlay,
 	)
 	// The pre-meeting brief shares that composite read and adds the claim
@@ -126,6 +127,7 @@ func (s *Server) wirePerson360(pool *pgxpool.Pool) {
 	// One edge, one answer — two derivations would drift, and the pair that
 	// drifts is exactly those two.
 	s.meetingBriefSvc = meetingbrief.NewService(pool, s.person360Svc, s.peopleStore, time.Now).
+		WithEmailSummaries(emailRows(pool)).
 		WithTeammates(newTeammatesSeam(pool))
 	s.meetingBriefHandlers = meetingbrief.NewHandlers(s.meetingBriefSvc, s.sorDispatch.isOverlay)
 	// The deal's status card reads the deal, its health, timeline, tasks and
@@ -147,6 +149,7 @@ func (s *Server) wirePerson360(pool *pgxpool.Pool) {
 	// answers from its deterministic floor rather than 501-ing.
 	s.personDraftHandlers = persondraft.NewHandlers(
 		persondraft.NewService(s.person360Svc, nil).
+			WithEmailSummaries(emailRows(pool)).
 			WithEnvelope(draftEnvelope(pool, s.log)), s.sorDispatch.isOverlay)
 	// The lead-side draft, on the same terms: nil lane, so a deployment with no
 	// model answers from persondraft's deterministic floor rather than 501-ing,

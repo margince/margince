@@ -3084,7 +3084,7 @@ export const vi = {
   "today.source.standing": "phía nào cần hành động và các tín hiệu",
   "today.source.activities": "những gì đã trao đổi",
   "today.silence.days": "không hồi âm trong {count} ngày",
-  "today.draft.to": "Soạn thư theo dõi gửi {name}",
+  "today.draft.new": "Bắt đầu email mới",
   "today.draft.act": "Soạn thảo",
 
   "evidence.mark": "đã đọc",

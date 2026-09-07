@@ -22478,8 +22478,12 @@ type DealListResponse struct {
 // DealNextBestActionEvidence defines model for DealNextBestActionEvidence.
 type DealNextBestActionEvidence struct {
 	ActivityId *openapi_types.UUID `json:"activity_id,omitempty"`
-	OccurredAt *time.Time          `json:"occurred_at,omitempty"`
-	Text       string              `json:"text"`
+
+	// EmailSummary The canonical email row behind `activity_id`, when that activity is an email this reader may receive a summary of. The move's basis then opens the message it rests on instead of only naming it.
+	// Carried on this shape as well as on `OrganizationBriefEvidence` because the deal card's basis is its own wire type, and a reader that could open a cited message on the brief but not on the move would be the same citation behaving differently on two pages. Same rules as there: withheld carries no words, absence proves nothing, never stored.
+	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
+	OccurredAt   *time.Time    `json:"occurred_at,omitempty"`
+	Text         string        `json:"text"`
 }
 
 // DealRoleProposalResult defines model for DealRoleProposalResult.
@@ -27819,6 +27823,10 @@ type Organization360WorkAttention struct {
 	// SourceActivityId The captured conversation the claim was read from — the receipt a reader opens to check it.
 	SourceActivityId *openapi_types.UUID `json:"source_activity_id,omitempty"`
 
+	// SourceEvidence The same receipt as `source_activity_id`, in the shape every other cited record on this page has — so the card renders it through the one citation path and an email among them opens as a message.
+	// Both are sent: `source_activity_id` is the durable field, and a client that has one and not the other still draws the older link. Null when the claim was read from nothing, and on a server that predates this field.
+	SourceEvidence *OrganizationBriefEvidence `json:"source_evidence,omitempty"`
+
 	// Title The task's subject, or the claim's body verbatim. Never a paraphrase.
 	Title string `json:"title"`
 
@@ -27906,9 +27914,13 @@ type OrganizationBriefEvidence struct {
 	// the deal was last worked, when the signal was read. The client
 	// prints it in the reader's own calendar. Absent for a record with no
 	// date of its own.
-	At         *time.Time                          `json:"at,omitempty"`
-	EntityId   openapi_types.UUID                  `json:"entity_id"`
-	EntityType OrganizationBriefEvidenceEntityType `json:"entity_type"`
+	At *time.Time `json:"at,omitempty"`
+
+	// EmailSummary The canonical email row, present when this citation resolves to an email this reader may receive a summary of. It is what lets a cited message be opened as the exact message rather than quoted at: the reader gets the same row the timeline draws, and the same drawer behind it.
+	// A `withheld` summary carries no subject, preview or counterparty — the citation still names a message, and the words stay the audience's. Absence never proves the activity is not an email: an older server sends none, and a reader outside `activity:read` gets none either. Never stored, because it is assembled per reader: a cached brief that carried one would serve the first reader's access to the second.
+	EmailSummary *EmailSummary                       `json:"email_summary,omitempty"`
+	EntityId     openapi_types.UUID                  `json:"entity_id"`
+	EntityType   OrganizationBriefEvidenceEntityType `json:"entity_type"`
 
 	// Name The record's own display name, when the writer had it at hand — a
 	// deal's name, an activity's subject. Absent for evidence kinds with

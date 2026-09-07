@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/briefevidence"
 	"github.com/margince/margince/backend/internal/compose/claims"
 	"github.com/margince/margince/backend/internal/compose/person360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -69,6 +70,16 @@ type Service struct {
 	// the room, which is half the coaching rule. Nil is a composition that
 	// wired no coaching, and projects none.
 	teammates Teammates
+	// emailRows opens the messages the brief cites. Nothing here is stored, so
+	// this is only the one read — but it is injected all the same, because the
+	// service holds no transaction to lend.
+	emailRows briefevidence.Reader
+}
+
+// WithEmailSummaries binds the reader that opens a cited message.
+func (s *Service) WithEmailSummaries(reader briefevidence.Reader) *Service {
+	s.emailRows = reader
+	return s
 }
 
 // NewService binds the brief to the reads it is written from.
@@ -181,7 +192,7 @@ func (s *Service) assembleFiled(ctx context.Context, activityID ids.UUID, reques
 		}
 		filed = &id
 	}
-	return crmcontracts.MeetingBrief{
+	out := crmcontracts.MeetingBrief{
 		ActivityId: openapi_types.UUID(activityID),
 		// Always the instant of the read. Nothing is stored, so there is no
 		// older instant this could honestly report.
@@ -191,7 +202,11 @@ func (s *Service) assembleFiled(ctx context.Context, activityID ids.UUID, reques
 		Sections:    wireSections(written.sections),
 		Omitted:     omissions(in),
 		Plan:        &plan,
-	}, filed, nil
+	}
+	if err := briefevidence.Attach(ctx, s.emailRows, meetingEvidence(&out)); err != nil {
+		return crmcontracts.MeetingBrief{}, nil, err
+	}
+	return out, filed, nil
 }
 
 // omissions names what this reader's own grants kept out of the brief.
