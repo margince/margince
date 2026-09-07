@@ -151,7 +151,7 @@ func SeedRoutingIfUnset(ctx context.Context, pool *pgxpool.Pool, declared yaml.N
 		// it fails the boot there, where somebody is watching, and repeating it
 		// on every later start would turn one loud failure into a recurring
 		// one nobody can act on differently.
-		return nil
+		return nil //nolint:nilerr // the bootstrap already refused this seed loudly
 	}
 	ws, err := singletonWorkspace(ctx, pool)
 	if err != nil || ws == (ids.UUID{}) {
