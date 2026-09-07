@@ -393,3 +393,74 @@ func TestAPartyDescribedWithAndWithoutTheirAccountIsOneRow(t *testing.T) {
 		t.Errorf("the folded row's name is %v — the account-less description was dropped rather than folded in", name)
 	}
 }
+
+// The address a party gains on a SECOND description names them on a third. An
+// account-only entry opens the row, a repeat carrying the address fills it, and
+// a bare-address entry after that must find that row rather than open its own.
+// The fold by address is what closes the gap, and it can only close it if
+// filling a row also indexes it under the address just filled — the ordering
+// that reaches the fill through the account and the address index through
+// nothing at all.
+func TestAnAddressFilledInLaterStillNamesTheSameRow(t *testing.T) {
+	e := Setup(t)
+	activity := seedChatMessage(t)
+
+	stampRoster(t, e, activity, false,
+		connector.MessageParticipant{ChannelUserID: "acct-77", Role: connector.ParticipantRoleAttendee},
+		connector.MessageParticipant{ChannelUserID: "acct-77", Email: "legal@example.net", Role: connector.ParticipantRoleAttendee},
+		connector.MessageParticipant{Email: "legal@example.net", DisplayName: "Priya Raman", Role: connector.ParticipantRoleAttendee})
+
+	var rows int
+	if err := OwnerConn(t).QueryRow(context.Background(),
+		`SELECT count(*) FROM activity_participant WHERE activity_id = $1`, activity).Scan(&rows); err != nil {
+		t.Fatalf("counting: %v", err)
+	}
+	if rows != 1 {
+		t.Fatalf("one human described three ways left %d row(s), want 1 — the bare address opened a second row because the fill did not index the one it had just given an address", rows)
+	}
+	// The row is still the account's, and it carries every field the three
+	// descriptions between them named.
+	var account, address, name *string
+	if err := OwnerConn(t).QueryRow(context.Background(), `
+		SELECT channel_user_id, address, display_name FROM activity_participant
+		 WHERE activity_id = $1`, activity).Scan(&account, &address, &name); err != nil {
+		t.Fatalf("reading the single row: %v", err)
+	}
+	if account == nil || *account != "acct-77" {
+		t.Errorf("the row's account is %v, want acct-77 — the stronger identity did not survive the fold", account)
+	}
+	if address == nil || *address != "legal@example.net" {
+		t.Errorf("the row's address is %v — the second description was dropped", address)
+	}
+	if name == nil || *name != "Priya Raman" {
+		t.Errorf("the row's name is %v — the third description folded in without its name", name)
+	}
+}
+
+// An account that is only whitespace is an ABSENT account, not a stored one.
+// The published door admits the entry — its address is a real identity, so
+// refusing the whole record would lose a party over a stray space — and the
+// stamp is what decides the account is not one. Were the space to reach the
+// column, every reader that pairs an account with its transport would hold an
+// id attributable to nobody, which is the state the identity CHECK exists to
+// keep out.
+func TestAWhitespaceAccountIsStoredAsNoAccount(t *testing.T) {
+	e := Setup(t)
+	activity := seedChatMessage(t)
+
+	stampRoster(t, e, activity, false,
+		connector.MessageParticipant{ChannelUserID: " ", Email: "legal@example.net", Role: connector.ParticipantRoleAttendee})
+
+	var account, address *string
+	if err := OwnerConn(t).QueryRow(context.Background(), `
+		SELECT channel_user_id, address FROM activity_participant WHERE activity_id = $1`,
+		activity).Scan(&account, &address); err != nil {
+		t.Fatalf("reading the row: %v", err)
+	}
+	if account != nil {
+		t.Errorf("the row's account is %q, want NULL — whitespace reached the column as an id nothing can attribute", *account)
+	}
+	if address == nil || *address != "legal@example.net" {
+		t.Errorf("the row's address is %v, want legal@example.net — the party was lost over a stray space", address)
+	}
+}

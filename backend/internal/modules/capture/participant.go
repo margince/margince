@@ -280,6 +280,15 @@ func StampFurtherParticipants(
 			// not a correction.
 			if addresses[at] == "" {
 				addresses[at] = address
+				// The row becomes reachable BY THAT ADDRESS the moment it
+				// gains one. A party named first by account alone and later
+				// by the bare address would otherwise find no row on the
+				// second look and open a second one for the same human —
+				// exactly the split this index exists to prevent, reached
+				// through the fill rather than through a fresh row.
+				if _, named := rowOfAddress[address]; address != "" && !named {
+					rowOfAddress[address] = at
+				}
 			}
 			if names[at] == "" {
 				names[at] = name
