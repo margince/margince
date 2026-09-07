@@ -686,3 +686,52 @@ func TestTheSQLReaderStepsOverWhatIsNotSQL(t *testing.T) {
 		})
 	}
 }
+
+// sarStatementNaming reports the SAR statement that selects a withheld column
+// from the given table, or "" when none does.
+//
+// It reads the SELECT list only. A withheld column is free to appear in a WHERE
+// or a JOIN — `WHERE person_id = $1` is how the section finds the subject's own
+// rows, and `expires_at <= now()` is how the outcome is derived — because
+// neither puts a value in the package. What must never happen is the column
+// reaching the output, so the question is what is being returned.
+//
+// The column is matched as a whole identifier, optionally qualified by a table
+// alias, so `token_hash` and `ct.token_hash` both count while a longer name
+// merely containing it does not.
+func sarStatementNaming(statements []string, table, column string) string {
+	needle := regexp.MustCompile(`(?i)(?:^|[\s,(])(?:[a-z_][a-z0-9_]*\.)?` +
+		regexp.QuoteMeta(strings.ToLower(column)) + `\b`)
+	for _, stmt := range statements {
+		// The statement has to read THIS table, for the reason its sibling
+		// above re-checks its own: a helper that is only correct because the
+		// caller grouped first is one the next caller gets wrong.
+		readsTable := false
+		for _, m := range fromJoinRe.FindAllStringSubmatch(stmt, -1) {
+			readsTable = readsTable || m[1] == table
+		}
+		if !readsTable {
+			continue
+		}
+		if needle.MatchString(selectList(stmt)) {
+			return stmt
+		}
+	}
+	return ""
+}
+
+// selectList returns what a statement RETURNS — the text between its first
+// SELECT and the FROM that closes it. Everything after that FROM is how the
+// rows were found, which is not what a withholding is about.
+func selectList(stmt string) string {
+	lower := strings.ToLower(stmt)
+	start := strings.Index(lower, "select")
+	if start < 0 {
+		return ""
+	}
+	rest := stmt[start+len("select"):]
+	if end := regexp.MustCompile(`(?is)\bfrom\b`).FindStringIndex(rest); end != nil {
+		return rest[:end[0]]
+	}
+	return rest
+}

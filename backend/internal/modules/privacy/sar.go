@@ -57,6 +57,15 @@ type SARPackage struct {
 	// Why this contact exists: the answer to Art. 15(1)(g).
 	AcquisitionEvidence []map[string]any `json:"acquisition_evidence"`
 	NoticeCases         []map[string]any `json:"notice_cases"`
+	// Every confirm link the workspace mailed this subject, and what became of
+	// it: issued, opened, answered, or left to expire. The mail carrying the
+	// link is already in Activities; this says what the link itself did, which
+	// is the half that decides whether a grant on file is one the subject
+	// actually completed.
+	//
+	// Neither the token nor the address it went to appears here — see
+	// sarConsentLinkSections for why each is withheld.
+	ConsentLinks []map[string]any `json:"consent_links"`
 	// What the subject themselves sent through their confirm link — a
 	// correction they typed, or a request to be removed. The one part of this
 	// package the subject authored rather than the workspace, which is exactly

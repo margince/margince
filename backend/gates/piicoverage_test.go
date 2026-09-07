@@ -75,6 +75,29 @@ type piiHandling struct {
 	// it wherever the row holds something an Art. 15 package must not carry —
 	// a live credential, say — and the gate fails the moment SAR touches it.
 	sarForbidden bool
+	// sarWithholds: SAR reads this table, but these COLUMNS must never appear
+	// in the export statement. The middle case sarRead and sarForbidden cannot
+	// express between them, and the one confirm_token needs: the row's timing
+	// and outcome are the subject's own history and belong in the package,
+	// while the token that opens their record and the address it was sent to
+	// do not.
+	//
+	// Table-level flags forced that row to be all-or-nothing, so protecting
+	// two columns meant withholding the whole lifecycle — and a later author
+	// wanting the lifecycle would have had to drop the protection on the
+	// credential to get it. Naming the columns keeps both true at once, and
+	// keeps the reason attached to the thing it is about.
+	//
+	// THIS CHECK IS THE CHEAP HALF, and it is a name deny-list: it fails a
+	// statement that SELECTs the column by name. Four ordinary spellings walk
+	// past it — `t.*`, `to_jsonb(t)`, `row_to_json(t)` and `t::text` all carry
+	// the withheld columns without naming them. privacy's
+	// TestNoWithheldColumnReachesTheAssembledExport is the half that closes
+	// them: it PREPAREs each assembled section against the real schema and
+	// reads the result columns, which is what the export actually returns.
+	// Registering a column here without that runtime check in place would be a
+	// withholding an author could bypass by accident.
+	sarWithholds []string
 }
 
 // piiTables is the registry of every table holding data about a subject.
@@ -348,13 +371,29 @@ var piiTables = map[string]piiHandling{
 	"preference_token": {erasureWrite: true, sarForbidden: true},
 
 	// The confirm-details link: a live bearer credential that opens the
-	// subject's own record. Registered for the same two reasons preference_token
-	// is. Erasure must retire it explicitly, because anonymize-in-place leaves
-	// the person row standing so the schema's ON DELETE CASCADE never fires. The
-	// export side is sarFORBIDDEN because the row holds a working credential and
-	// the address it went to, and an Art. 15 package assembled by an admin must
-	// carry neither — the subject already has their own copy, in the mail.
-	"confirm_token": {erasureWrite: true, sarForbidden: true},
+	// subject's own record. Erasure must retire it explicitly, because
+	// anonymize-in-place leaves the person row standing so the schema's
+	// ON DELETE CASCADE never fires.
+	//
+	// The export side is read WITH TWO COLUMNS WITHHELD, where it used to be
+	// forbidden outright. The row holds two things an Art. 15 package must not
+	// carry — a working credential, and the address the workspace chose to send
+	// it to — but it also holds when the subject was asked and what became of
+	// the asking, which is their own history and exactly what Art. 15 is for.
+	// Forbidding the table protected the first pair by withholding the second,
+	// so a subject could be told a marketing consent was held for them without
+	// being able to see the round trip it rests on.
+	//
+	// token_hash: not exported even hashed. The package is assembled by an
+	// admin and handed on through a channel they choose, and a credential that
+	// widens with every copy has no business in it.
+	// delivered_to: the subject's own addresses are already exported in full in
+	// their own section, so repeating the chosen one here adds nothing they do
+	// not know while putting a live address in a second place in the package.
+	"confirm_token": {
+		erasureWrite: true, sarRead: true,
+		sarWithholds: []string{"token_hash", "delivered_to"},
+	},
 	// And what came back through it: a correction the subject typed, or their
 	// request to be removed. sarREAD rather than forbidden, and it is the one
 	// part of the package the subject authored — an export that handed back
@@ -366,11 +405,18 @@ var piiTables = map[string]piiHandling{
 // sarAssemblyFiles are the files whose SQL literals make up the Art. 15
 // package. Listed rather than globbed: the gate asks what the EXPORT reads, and
 // a glob over the package would read erasure's DELETE statements as disclosures.
-// A new file carrying SAR sections joins this list; the section-count assertion
-// below is what fails if one is forgotten.
+// A new file carrying SAR sections joins this list, and a forgotten one reads
+// here as a table the export never touches.
+//
+// What this list CANNOT see is whether a written section is an ASSEMBLED one:
+// it reads the literals, so deleting the append that adds a chapter to
+// sarSections leaves the text in place and every table in it still counted.
+// privacy's own TestEveryPromisedTableIsActuallyAssembled asks that half, from
+// the only package that can call sarSections.
 var sarAssemblyFiles = []string{
 	"internal/modules/privacy/sar.go",
 	"internal/modules/privacy/sarsections.go",
+	"internal/modules/privacy/sarconsentlinks.go",
 	"internal/modules/privacy/sarmessages.go",
 }
 
@@ -437,10 +483,12 @@ func TestErasureAndSARReachEveryPIITable(t *testing.T) {
 	// the whole package sweeps in erasure's own DELETE ... FROM statements,
 	// which fromJoinRe cannot tell from a SELECT.
 	reads := map[string]bool{}
+	sarStatements := map[string][]string{}
 	for _, path := range sarAssemblyFiles {
 		for _, lit := range sqlLiterals(t, path) {
 			for _, m := range fromJoinRe.FindAllStringSubmatch(lit, -1) {
 				reads[m[1]] = true
+				sarStatements[m[1]] = append(sarStatements[m[1]], lit)
 			}
 		}
 	}
@@ -524,6 +572,27 @@ func TestErasureAndSARReachEveryPIITable(t *testing.T) {
 		if h.sarRead && h.sarForbidden {
 			missing = append(missing, "PII table "+table+
 				" is registered both sarRead and sarForbidden — the export cannot both require and refuse it")
+		}
+		if h.sarForbidden && len(h.sarWithholds) > 0 {
+			missing = append(missing, "PII table "+table+
+				" is registered sarForbidden AND names withheld columns — a table SAR must not read at all"+
+				" has no columns to withhold; drop one of the two")
+		}
+		for _, column := range h.sarWithholds {
+			if !reads[table] {
+				missing = append(missing, "PII table "+table+" names `"+column+
+					"` as withheld from the Art. 15 export, but SAR does not read the table at all —"+
+					" a withholding nothing enforces is a claim, not a control. Add the section or"+
+					" register the table sarForbidden")
+				break
+			}
+			if where := sarStatementNaming(sarStatements[table], table, column); where != "" {
+				missing = append(missing, "the Art. 15 export now selects `"+column+"` from PII table "+
+					table+" (`"+where+"`), which is registered as deliberately WITHHELD. Read the reason"+
+					" beside the registration before changing it: these columns are withheld because the"+
+					" package is assembled by an admin and handed on, not because the subject may not"+
+					" know them")
+			}
 		}
 	}
 	sort.Strings(missing)

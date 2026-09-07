@@ -23,6 +23,7 @@ func sarSections(pkg *SARPackage, personID ids.PersonID, emails []string, leads 
 	sections = append(sections, sarRecordSections(pkg)...)
 	sections = append(sections, sarMessagingSections(pkg, personID, emails, leads)...)
 	sections = append(sections, sarConsentSections(pkg)...)
+	sections = append(sections, sarConsentLinkSections(pkg)...)
 	sections = append(sections, sarCommunicationSections(pkg, personID, leads)...)
 	return append(sections, sarProvenanceSections(pkg)...)
 }
@@ -235,10 +236,6 @@ func sarConsentSections(pkg *SARPackage) []sarSection {
 		{&pkg.ConsentQualifyingEvents, `SELECT kind, occurred_at, source_entity_type, created_at AS captured_at
 		   FROM consent_qualifying_event
 		   WHERE person_id = $1`, nil},
-		// The token row itself is deliberately NOT read: it is a live
-		// credential, and the subject already holds their own copy in the mail
-		// that delivered it. Registered sarForbidden so a future section over
-		// it fails the coverage gate rather than shipping.
 		{&pkg.ConfirmSubmissions, `SELECT kind, field, proposed_value, submitted_at, resolution, resolved_at
 		   FROM person_confirm_submission
 		   WHERE person_id = $1`, nil},
