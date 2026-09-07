@@ -67,7 +67,11 @@ func writableContract(ctx context.Context, tx pgx.Tx, id ids.ContractID, asOf ti
 // authoritative.
 func ensureAnchorWritable(ctx context.Context, tx pgx.Tx, contract crmcontracts.Contract) error {
 	if contract.DealId != nil {
-		return auth.EnsureWritable(ctx, tx, "deal", ids.UUID(*contract.DealId))
+		return auth.EnsureWritable(ctx, tx, dealTable, ids.UUID(*contract.DealId))
 	}
-	return auth.EnsureWritable(ctx, tx, "organization", ids.UUID(contract.OrganizationId))
+	anchor, err := anchorOf(contract)
+	if err != nil {
+		return err
+	}
+	return auth.EnsureWritable(ctx, tx, organizationTable, anchor)
 }

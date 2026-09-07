@@ -160,7 +160,7 @@ func applyStatusTx(ctx context.Context, tx pgx.Tx, id ids.ContractID, existing c
 	changed := crmcontracts.PublicEventContractStatusChanged{
 		FromStatus:     statusOf(existing),
 		ToStatus:       to,
-		OrganizationId: &existing.OrganizationId,
+		OrganizationId: existing.OrganizationId,
 	}
 	if supersededBy != nil {
 		successor := openapi_types.UUID(supersededBy.UUID)
@@ -169,7 +169,7 @@ func applyStatusTx(ctx context.Context, tx pgx.Tx, id ids.ContractID, existing c
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, changed); err != nil {
 		return crmcontracts.Contract{}, fmt.Errorf("emit contract.status_changed: %w", err)
 	}
-	return readContract(ctx, tx, id, asOf)
+	return readContractForCaller(ctx, tx, id, asOf)
 }
 
 // frozenRate is what activation stamps: the conversion and the day it is the
@@ -242,7 +242,7 @@ func (s *Store) Cancel(ctx context.Context, id ids.ContractID, noticeOn, effecti
 		if err := applyContractUpdate(ctx, tx, id, patch, ifVersion, "contract cancellation"); err != nil {
 			return err
 		}
-		out, err = readContract(ctx, tx, id, s.today())
+		out, err = readContractForCaller(ctx, tx, id, s.today())
 		return err
 	})
 	return out, err
@@ -276,7 +276,11 @@ func (s *Store) Renew(ctx context.Context, id ids.ContractID, successor CreateCo
 		// The successor inherits the predecessor's counterparty rather than
 		// taking one from the request: a renewal that changed companies would
 		// be a different agreement wearing this one's history.
-		successor.OrganizationID = ids.OrganizationID{UUID: ids.UUID(predecessor.OrganizationId)}
+		anchor, err := anchorOf(predecessor)
+		if err != nil {
+			return err
+		}
+		successor.OrganizationID = ids.OrganizationID{UUID: anchor}
 
 		created, err := createContractTx(ctx, tx, successor, by, s.today())
 		if err != nil {

@@ -1298,6 +1298,8 @@ export const en = {
   "contracts.renew.dealHint":
     "The opportunity that won this term, if there was one — never the predecessor's own.",
   "contracts.renew.dealNone": "No deal",
+  "contracts.renew.dealWithheldCompany":
+    "You cannot open this agreement's company, so its deals cannot be listed. The renewal keeps the same counterparty and records no deal.",
   "contracts.renew.submit": "Renew",
   "contracts.deal": "Deal",
   "contracts.statusChange.title": "Change status",

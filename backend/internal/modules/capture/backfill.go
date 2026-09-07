@@ -176,6 +176,16 @@ func (r *Registry) StartBackfill(ctx context.Context, provider string, userID id
 		if err != nil {
 			return err
 		}
+		// The connection row first, before anything reads capture_backfill.
+		// uq_capture_backfill_live is what stops a second live run, and the
+		// violation it raises is answerable HERE (ErrBackfillRunning) and not on
+		// the other path that can create one: reviveTruncatedBackfillTx runs
+		// inside a successful sync's own transaction, where a failed statement
+		// takes the sync down with it. Serializing on the connection is what
+		// keeps that from being a race somebody loses.
+		if err := lockConnectionTx(ctx, tx, connID); err != nil {
+			return err
+		}
 		// Widen-only protects a mailbox from re-importing a window narrower than
 		// one it already has: the narrower run would look like a fresh import and
 		// end with less history than before. That reasoning is about the ACCOUNT,
