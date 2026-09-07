@@ -36,7 +36,7 @@ its own.**
 You should not have to type into a CRM what you already wrote in an email.
 
 Connect your mailbox and your calendar, and Margince files what arrives against
-the right people, companies, deals and projects — by exact rules, not by
+the right contacts, companies, deals and projects — by exact rules, not by
 guesswork. Where the rules cannot decide, it asks you rather than picking.
 
 [How conversations get in →](capture.md)

@@ -34,7 +34,7 @@ most CRMs, on purpose.
 | Lead → Company | **There is none.** A lead carries a company *name* as free text. |
 | Deal → Pipeline and stage | **Required.** |
 | Deal → Company | **Optional.** |
-| Deal → Contact | **Optional.** People sit on a deal as stakeholders. |
+| Deal → Contact | **Optional.** Contacts sit on a deal as stakeholders. |
 | Deal → Project | Optional, at most one, and both must name the same company. |
 | Project → Company | **Required — at least one, always.** |
 | Activity → any record | Optional. An activity with no links is shared with everyone. |
@@ -107,7 +107,7 @@ Five statuses. The first three are open, the last two are terminal.
 | **New** | Nothing has happened yet |
 | **Contacted** | We reached out |
 | **Engaged** | They answered, or a meeting is booked or held |
-| **Qualified** | A contact now exists for this person |
+| **Qualified** | A contact now exists for this lead |
 | **Disqualified** | Closed, with a reason |
 
 Contacted and engaged are set automatically from captured activity, and can also
@@ -137,7 +137,7 @@ and the lead is marked qualified and archived. You can preview which of the two
 will happen before you confirm.
 
 One caution on that preview: if the matching contact is one you are not allowed
-to see, the preview still says "merge" but does not show you the person. **An
+to see, the preview still says "merge" but does not show you the contact. **An
 absent contact never means "no match".**
 
 You can open a deal in the same step. The deal takes the lead's owner and is left

@@ -146,9 +146,9 @@ own effect. So:
 The most common way a card reaches your inbox without an agent being involved.
 Every step here is one you take yourself.
 
-1. Open the **contact** who was in the meeting. Start from the person, not from
-   the company: a meeting is with a person, and a company page will ask you who
-   was there before it can log one.
+1. Open the **contact** who was in the meeting — not the company: a meeting is
+   with a person, and a company page will ask you who was there before it can
+   log one.
 2. **Log activity**, and choose **Meeting**.
 3. Give it a subject you will recognise later, then tick **This text is a
    transcript** and paste the transcript into the body. The tick matters: it

@@ -168,8 +168,8 @@ See [Seats, roles and who can see what](seats-roles-and-access.md).
 
 What the installation is wired to, as opposed to what one person connected.
 
-- **Contact data** — a licensed person-data provider, and its budget and refresh
-  policy.
+- **Contact data** — a licensed provider of contact data, and its budget and
+  refresh policy.
 - **Webhooks** — "Outbound subscriptions that receive signed HTTP POSTs for
   chosen events." Deliveries can be inspected and replayed.
 - **HubSpot mirror** — connecting an existing HubSpot portal in read-and-sync
@@ -217,7 +217,7 @@ any mailbox.
 **Enrichment.** Whether captured companies are enriched automatically.
 
 **Consumer mail domains.** Which domains count as personal mailboxes. "Mail from
-a consumer mailbox still creates the person — it just never creates a company."
+a consumer mailbox still creates the contact — it just never creates a company."
 
 **Refused domains.** Which domains this installation refuses a company, and what
 decided each one — a model verdict, a heuristic, or a person. "Letting a domain

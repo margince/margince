@@ -2,7 +2,7 @@
 
 Nobody should have to copy an email into a CRM by hand. **Capture** is the part
 of Margince that connects to your mailbox, your calendar and your chat, and
-files what arrives against the right people, companies, deals and projects.
+files what arrives against the right contacts, companies, deals and projects.
 
 This page explains what connects, what happens to a message, how it finds its
 place, and — just as important — what capture refuses to store.
@@ -132,7 +132,7 @@ call.
 
 **Is it a personal mail domain?** Margince ships with a long list of known
 consumer-mail domains, and the Capture settings screen prints the current count.
-If it is one of those, create the person, but no company.
+If it is one of those, create the contact, but no company.
 
 **Nobody knows who this is.** Create nothing yet. Write down the question.
 
@@ -224,8 +224,8 @@ Restricted records page with the project's name as the reason.
 
 ## Fixing a mistake: Relink
 
-Any message on any timeline has a **Relink** action. The dialog searches people,
-companies, deals, leads and projects, and offers two choices:
+Any message on any timeline has a **Relink** action. The dialog searches
+contacts, companies, deals, leads and projects, and offers two choices:
 
 - **Move instead of also-link** — "Replaces the existing link of the same type
   rather than adding another."
@@ -270,8 +270,8 @@ one bot: a second one would not add a channel, it would remove the ability to
 reply on either.
 
 **A reply that could only fail is not offered.** If Margince cannot reach a
-person on a channel, or the person has blocked the bot, there is no reply
-button. And a send without consent for that purpose is blocked outright, with a
+contact on a channel, or they have blocked the bot, there is no reply button.
+And a send without consent for that purpose is blocked outright, with a
 **Review consent** link rather than a silent failure.
 
 **The capture trace names the sender and keeps a bounded subject** — one address
@@ -299,7 +299,7 @@ change one of those. Takes effect from the next message; messages already
 captured stay.
 
 **Consumer mail domains** — which domains count as personal mailboxes. "Mail
-from a consumer mailbox still creates the person — it just never creates a
+from a consumer mailbox still creates the contact — it just never creates a
 company."
 
 **Refused domains** — which domains this installation refuses a company, and
