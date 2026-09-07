@@ -177,6 +177,25 @@ func boundFaultText(s string) string {
 	return s[:cut] + "…"
 }
 
+// messageFaultStatus is the status a message-carrying refusal asked for.
+//
+// The sentinel registry is the one place a status is decided, so a fault that
+// unwraps into it is answered by it — and 422 is what remains for a refusal
+// that named no sentinel, which is most of them: a module saying "this input
+// cannot be processed" and nothing more.
+//
+// Only the STATUS is taken. The code and the detail stay the module's own,
+// because they are the half it knows better than the registry does: "conflict"
+// says less than "this deal already has an active Deal Room".
+func messageFaultStatus(err error) int {
+	for _, m := range mapping {
+		if errors.Is(err, m.sentinel) {
+			return m.status
+		}
+	}
+	return http.StatusUnprocessableEntity
+}
+
 func moduleDeclaredFault(err error) (error, bool) {
 	// The plural first: a type that names several bad inputs has nothing
 	// useful to say as a single field, so asking it for one would discard the
@@ -214,7 +233,14 @@ func moduleDeclaredFault(err error) (error, bool) {
 	if errors.As(err, &messageFault) {
 		code, message := messageFault.MessageFault()
 		return &DetailedError{
-			Status: http.StatusUnprocessableEntity,
+			// 422 is the DEFAULT and not the answer: a refusal that also
+			// unwraps to a sentinel has already said which status it wants,
+			// and reading the message first made that unreachable. Every Deal
+			// Room state refusal unwraps to ErrConflict and answered 422 while
+			// the contract declares 409 — the code and the detail correct, the
+			// status wrong, and a caller branching on status told the wrong
+			// thing about whether retrying could ever help (#2269).
+			Status: messageFaultStatus(err),
 			Code:   boundFaultText(code),
 			Detail: boundFaultText(message),
 		}, true
