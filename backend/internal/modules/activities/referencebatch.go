@@ -108,5 +108,52 @@ func ReferencesByID(
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("activities: naming the activities behind a score: %w", err)
 	}
+	// The canonical email row for the rows that are emails, from the reader
+	// beside this one. Its own gate is the CONTENT gate, so it answers for
+	// exactly the messages whose subject travelled above — a summary it
+	// withholds is one this projection already marked withheld.
+	//
+	// Rows must be closed first: this runs a second statement on the same
+	// transaction.
+	rows.Close()
+	if err := attachEmailSummaries(ctx, tx, out); err != nil {
+		return nil, err
+	}
 	return out, nil
+}
+
+// attachEmailSummaries fills in the canonical row behind every reference that
+// is an email, in one further read over the whole set.
+//
+// Asked only for the emails: a note has no email row, and asking would spend
+// the statement on ids that can only come back absent — the same filtering the
+// waiting lane does before its own call.
+func attachEmailSummaries(
+	ctx context.Context, tx pgx.Tx, refs map[ids.UUID]crmcontracts.ActivityReference,
+) error {
+	var emails []ids.UUID
+	for id, ref := range refs {
+		if ref.Kind == crmcontracts.ActivityReferenceKindEmail {
+			emails = append(emails, id)
+		}
+	}
+	if len(emails) == 0 {
+		return nil
+	}
+	summaries, err := EmailSummariesByIDBatch(ctx, tx, emails)
+	if err != nil {
+		return err
+	}
+	for id, summary := range summaries {
+		ref, ok := refs[id]
+		if !ok {
+			continue
+		}
+		// Copied into a local before its address is taken: the range variable
+		// is reused, and every row would otherwise point at the last summary.
+		held := summary
+		ref.EmailSummary = &held
+		refs[id] = ref
+	}
+	return nil
 }

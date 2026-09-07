@@ -4,6 +4,7 @@
 package compose
 
 import (
+	"context"
 	"testing"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -47,5 +48,24 @@ func TestAnEmptyIdListAsksForNothing(t *testing.T) {
 	t.Parallel()
 	if got := activityIDsOf(nil); len(got) != 0 {
 		t.Errorf("an empty score produced %d ids to read", len(got))
+	}
+}
+
+// A score with no activities answers an empty LIST, not a null.
+//
+// The caller stores a pointer to what comes back, so a nil slice reaches the
+// wire as `null` — which the contract's array does not allow and a strict
+// client rejects. A dormant relationship is the common case, not an edge.
+func TestAScoreWithNoActivitiesNamesAnEmptyList(t *testing.T) {
+	t.Parallel()
+	got, err := nameActivities(context.Background(), nil, nil)
+	if err != nil {
+		t.Fatalf("naming nothing: %v", err)
+	}
+	if got == nil {
+		t.Fatal("an empty score answered nil, which serializes as null")
+	}
+	if len(got) != 0 {
+		t.Errorf("an empty score named %d activities", len(got))
 	}
 }

@@ -35,8 +35,13 @@ import (
 func nameActivities(
 	ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID,
 ) ([]crmcontracts.ActivityReference, error) {
+	// An empty slice, never nil. The caller stores a POINTER to what comes
+	// back, and a nil slice serializes as `null` — which the contract's array
+	// does not allow, and a strict client rejects. A score with no activities
+	// is a real and common answer, so it arrives shaped like the empty list it
+	// is.
 	if len(activityIDs) == 0 {
-		return nil, nil
+		return []crmcontracts.ActivityReference{}, nil
 	}
 	// Deduped for the read and kept whole for the answer: one activity counted
 	// twice is one row to fetch and, if the producer listed it twice, two

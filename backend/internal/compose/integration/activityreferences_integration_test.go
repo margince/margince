@@ -73,6 +73,52 @@ func TestAReceiptCarriesItsSubjectForAReaderWhoMayReadIt(t *testing.T) {
 	if ref.Kind != crmcontracts.ActivityReferenceKindEmail {
 		t.Errorf("kind = %q, want email", ref.Kind)
 	}
+	// The canonical email row, which the contract promises whenever the
+	// activity is an email this reader may receive a summary of. Without it a
+	// client cannot draw the row the way every other cited message is drawn,
+	// and the receipt opens nothing.
+	if ref.EmailSummary == nil {
+		t.Fatal("a readable email receipt carries no email row, so it cannot be opened")
+	}
+	if ref.EmailSummary.ActivityId != logged.Id {
+		t.Errorf("the email row names %v, want the receipt's own activity %v",
+			ref.EmailSummary.ActivityId, logged.Id)
+	}
+}
+
+// A receipt that is not an email carries no email row. The reader's own kind
+// clause decides, and asking for one would spend the statement on a row that
+// can only come back absent.
+func TestANonEmailReceiptCarriesNoEmailRow(t *testing.T) {
+	e := Setup(t)
+	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
+	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+
+	subject := "Rang about the retrofit"
+	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
+		Kind: "call", Subject: &subject,
+		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: contact}},
+	})
+	if err != nil {
+		t.Fatalf("log: %v", err)
+	}
+	id := ids.UUID(logged.Id)
+
+	ref, ok := namedFor(author, t, e, []ids.UUID{id})[id]
+	if !ok {
+		t.Fatal("the author's own call was not named")
+	}
+	if ref.Kind != crmcontracts.ActivityReferenceKindCall {
+		t.Errorf("kind = %q, want call", ref.Kind)
+	}
+	if ref.EmailSummary != nil {
+		t.Error("a call carries an email row")
+	}
+	// It is still NAMED: the row a reader recognises is the subject, and a
+	// call with no email row is not a call with no receipt.
+	if ref.Subject == nil || *ref.Subject != subject {
+		t.Errorf("subject = %v, want the call's own %q", ref.Subject, subject)
+	}
 }
 
 // A colleague outside a limited message's audience keeps the ROW and loses the
