@@ -133,10 +133,11 @@ func TestEveryContractKindHasSomethingThatProducesIt(t *testing.T) {
 // a string a strict client rejects; a smaller one truncates below what the
 // contract promised a reader would get.
 //
-// The corpus is EVERY property the contract caps, read from the contract, and
-// the read has to name a bound for each: a list of the properties somebody
-// remembered would pass while a newly capped one shipped unheld — which is how
-// subject_label shipped, cap published and nothing holding it.
+// The corpus comes from the contract — each property that publishes a
+// maxLength — and the read has to name a bound for each: a list of the
+// properties somebody remembered would pass while a newly capped one shipped
+// unheld, which is how subject_label shipped, cap published and nothing
+// holding it.
 func TestTheReadsTextCapsAreTheOnesTheContractPublishes(t *testing.T) {
 	t.Parallel()
 	held := map[string]int{
