@@ -249,6 +249,15 @@ func TestTheSinglePurposeGuardsRefuseWhatExecutionWouldRefuse(t *testing.T) {
 			"not genuine engagement",
 		},
 		{
+			// The reason is the whole point of the verb's audit trail, so a
+			// demotion that states none is refused before a human is asked to
+			// release one — not after, on the retry that carries their approval.
+			"a demotion that says why nothing",
+			NewDemoteLeadCall(oneRecord(datasource.EntityLead, id, `{}`, 1),
+				DemoteLeadCommand{LeadID: id, Reason: "   "}),
+			"a demotion states why",
+		},
+		{
 			"a phase outside the ladder",
 			NewAdvanceProjectPhaseCall(oneRecord(datasource.EntityProject, id, `{}`, 1),
 				AdvanceProjectPhaseCommand{ProjectID: id, ToPhase: "shipped"}),

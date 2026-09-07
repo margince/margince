@@ -313,6 +313,30 @@ func (g disqualifierGuard) DisqualifyLead(ctx context.Context, id ids.UUID) (jso
 	return g.inner.DisqualifyLead(ctx, id)
 }
 
+// nativeOnlyDemoter guards demote_lead, for the reason nativeOnlyDisqualifier
+// states about its own verb: the reversal writes the mirrored `lead` type
+// through the people store directly, which is the entry point the route calls
+// and therefore the one that passes no overlay middleware.
+func nativeOnlyDemoter(mode overlayModeChecker, demoter agents.LeadDemoter) demoterGuard {
+	return demoterGuard{mode: mode, inner: demoter}
+}
+
+type demoterGuard struct {
+	mode  overlayModeChecker
+	inner agents.LeadDemoter
+}
+
+func (g demoterGuard) DemoteLead(ctx context.Context, id ids.UUID, reason string) (json.RawMessage, error) {
+	overlay, err := g.mode.isOverlayUncached(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if overlay {
+		return nil, apperrors.ErrUnsupportedBySoR
+	}
+	return g.inner.DemoteLead(ctx, id, reason)
+}
+
 // nativeOnlyResolver guards resolve_entities. The match ladder reads the native
 // person and organization tables, and an overlay workspace's records are not in
 // them — so unguarded it would answer `unresolved` for every candidate. That is

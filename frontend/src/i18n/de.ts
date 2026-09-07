@@ -1409,6 +1409,7 @@ export const de = {
   "approval.kind.fx_rate_proposal": "Wechselkurse aktualisieren",
   "approval.kind.ai_model_rate_proposal": "Modellpreise aktualisieren",
   "approval.kind.disqualify_lead": "Lead disqualifizieren",
+  "approval.kind.demote_lead": "Lead-Überführung rückgängig machen",
   "approval.kind.advance_project_phase": "Projekt in die nächste Phase bringen",
   "approval.kind.assign_owner": "Datensatz übergeben",
   "approval.kind.commit_import": "Import übernehmen",

@@ -11,11 +11,11 @@ receives it. This page is rendered from that file.
 
 | | |
 |---|---:|
-| Tools | 73 |
+| Tools | 74 |
 | Resources | 12 |
-| Tool catalog | 205.6 KB |
+| Tool catalog | 207.9 KB |
 | Resource catalog | 4.5 KB |
-| Approx. wire tokens | 53783 |
+| Approx. wire tokens | 54380 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 96.6 KB | 46% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 49.9 KB | 24% | Yes, every step |
-| Input schemas | 43.8 KB | 21% | Yes, every step |
-| _Names, annotations, punctuation_ | 15.4 KB | 7% | Partly |
-| **Description + input schema** | **93.6 KB** | **45%** | **the recurring cost** |
+| Output schemas | 97.4 KB | 46% | **No** — a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 50.6 KB | 24% | Yes, every step |
+| Input schemas | 44.4 KB | 21% | Yes, every step |
+| _Names, annotations, punctuation_ | 15.6 KB | 7% | Partly |
+| **Description + input schema** | **94.9 KB** | **45%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -60,7 +60,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 - [`ui://margince/pipeline-review.html`](#pipeline_review_view) — Pipeline review
 - [`ui://margince/geo-probe.html`](#geo_probe_view) — Location check
 
-### Tools (73)
+### Tools (74)
 
 | Tool | What it is for | Read-only | View | Size |
 |---|---|:-:|---|---:|
@@ -83,6 +83,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`data_coverage`](#data_coverage) | How current the sources are | yes |  | 1.7 KB |
 | [`decide_approval`](#decide_approval) | Approve or reject one staged action |  |  | 2.9 KB |
 | [`decide_approval_bundle`](#decide_approval_bundle) | Approve or reject one act's proposals together |  |  | 2.9 KB |
+| [`demote_lead`](#demote_lead) | Reverse a lead promotion |  |  | 2.3 KB |
 | [`describe_query_vocabulary`](#describe_query_vocabulary) | Describe the query vocabulary | yes |  | 2.1 KB |
 | [`describe_report_blocks`](#describe_report_blocks) | Describe the report block grammar | yes |  | 2.0 KB |
 | [`describe_report_vocabulary`](#describe_report_vocabulary) | Describe the report vocabulary | yes |  | 2.4 KB |
@@ -3645,6 +3646,151 @@ Answer every still-waiting proposal that one act staged together — the overnig
       },
       "required": [
         "members"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+### demote_lead
+
+**Reverse a lead promotion**
+
+Reverse a promotion that should not have happened, putting the lead back on the open ladder. It blocks rather than orphans: a promotion whose person now owns a deal is refused, and activities captured since the promotion stay on the person's timeline — they are real history. A promotion that merged into an existing person leaves that person untouched and only clears the lineage. Use disqualify_lead when the lead is real but going nowhere; demotion says the promotion itself was wrong. A person approves this call before it runs; do not report the lead as demoted until the retry carrying their approval has answered. (Governance: runs immediately; requires passport scope "write".)
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "properties": {
+    "approval_id": {
+      "description": "Set on approved retry",
+      "format": "uuid",
+      "type": "string"
+    },
+    "idempotency_key": {
+      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "maxLength": 255,
+      "type": "string"
+    },
+    "lead_id": {
+      "description": "The lead whose promotion is being reversed",
+      "format": "uuid",
+      "type": "string"
+    },
+    "reason": {
+      "description": "Why the promotion is being reversed; recorded in the audit trail, because an undo nobody explained is indistinguishable later from a mistake",
+      "minLength": 1,
+      "type": "string"
+    }
+  },
+  "required": [
+    "lead_id",
+    "reason"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "lead": {
+          "type": "object"
+        },
+        "unwind": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "lead",
+        "unwind"
       ],
       "type": "object"
     },

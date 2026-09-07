@@ -201,6 +201,10 @@ func (seamProbeLifecycle) DisqualifyLead(context.Context, ids.UUID) (json.RawMes
 	return nil, errSeamReached
 }
 
+func (seamProbeLifecycle) DemoteLead(context.Context, ids.UUID, string) (json.RawMessage, error) {
+	return nil, errSeamReached
+}
+
 func (seamProbeLifecycle) AdvanceProjectPhase(context.Context, ids.UUID, string, *string, *int64) (json.RawMessage, error) {
 	return nil, errSeamReached
 }
@@ -292,7 +296,7 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	// a rule with no exceptions to remember.
 	RegisterGeoProbeTool(r)
 	RegisterLifecycleTools(r, seamProbeProvider{},
-		seamProbeLifecycle{}, seamProbeLifecycle{}, seamProbeLifecycle{})
+		seamProbeLifecycle{}, seamProbeLifecycle{}, seamProbeLifecycle{}, seamProbeLifecycle{})
 	RegisterEnrichTool(r, seamProbeProvider{}, seamProbeLifecycle{})
 	RegisterQueryTool(r, seamProbeProvider{}, func(context.Context, json.RawMessage) (QueryAnswer, error) {
 		return QueryAnswer{}, errSeamReached

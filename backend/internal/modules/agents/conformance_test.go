@@ -207,7 +207,7 @@ func fullRegistry(t *testing.T) *Registry {
 		func(context.Context) (AtRiskReport, error) { return AtRiskReport{}, nil })
 	RegisterCommsTools(r, &recordingComms{}, &multiLinkProvider{})
 	RegisterGeoProbeTool(r)
-	RegisterLifecycleTools(r, nil, inertLifecycle{}, inertLifecycle{}, inertLifecycle{})
+	RegisterLifecycleTools(r, nil, inertLifecycle{}, inertLifecycle{}, inertLifecycle{}, inertLifecycle{})
 	RegisterEnrichTool(r, nil, inertLifecycle{})
 	RegisterQueryTool(r, nil, func(context.Context, json.RawMessage) (QueryAnswer, error) {
 		return QueryAnswer{Coverage: CoverageCompleteExact}, nil
@@ -251,6 +251,10 @@ func (inertLifecycle) RelinkActivities(context.Context, []ids.UUID, string, ids.
 }
 
 func (inertLifecycle) DisqualifyLead(context.Context, ids.UUID) (json.RawMessage, error) {
+	return nil, nil
+}
+
+func (inertLifecycle) DemoteLead(context.Context, ids.UUID, string) (json.RawMessage, error) {
 	return nil, nil
 }
 

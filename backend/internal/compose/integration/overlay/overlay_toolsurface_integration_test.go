@@ -47,8 +47,8 @@ import (
 // context intents, the pipeline-risk scan and its draft sibling, the two
 // relationship-graph reads, the pipeline configuration read, the query-plan
 // executor — and one WRITE,
-// disqualify_lead, whose tool calls the people store directly and so misses the
-// REST-only write guard that refuses the same verb for a mirrored type. None
+// disqualify_lead and demote_lead, whose tools call the people store directly and so miss the
+// REST-only write guard that refuses the same verbs for a mirrored type. None
 // has a mirror projection to serve, so each owes an honest refusal in overlay
 // mode.
 // The args only have to be well-formed — the refusal must land before any
@@ -126,6 +126,7 @@ func nativeOnlyAgentTools(anchor ids.UUID) map[string]string {
 		// it needs a decorator (nativeOnlyDisqualifier) where the other
 		// unservable writes inherit the provider's own refusal.
 		"disqualify_lead": fmt.Sprintf(`{"lead_id":%q}`, anchor),
+		"demote_lead":     fmt.Sprintf(`{"lead_id":%q,"reason":"promoted by mistake"}`, anchor),
 	}
 }
 

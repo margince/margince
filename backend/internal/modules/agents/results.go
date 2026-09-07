@@ -216,6 +216,22 @@ type PromoteLeadResult struct {
 	Person wireRecord `json:"person"`
 }
 
+// DemoteLeadResult is the GUARANTEED SUBSET of what demote_lead answers, on
+// the same terms PassthroughEntityResult states: the handler answers with the
+// people module's whole DemoteLeadResponse, and re-marshalling it here would
+// drop whatever that response carries.
+//
+// Unwind is named alongside the lead because the two outcomes are not the same
+// event to a caller: `reversed` means the person the promotion created is
+// archived and the lead is back on the ladder, while `merge_lineage_only`
+// means a pre-existing person was left exactly as it was and only the lineage
+// pointers were cleared. A caller told merely "demoted" would have to read the
+// person back to learn which.
+type DemoteLeadResult struct {
+	Lead   json.RawMessage `json:"lead"`
+	Unwind string          `json:"unwind"`
+}
+
 // MergeRecordsResult is what merge_records answers: which record survived.
 type MergeRecordsResult struct {
 	Merged     bool                  `json:"merged"`

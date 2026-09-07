@@ -51,6 +51,7 @@ const (
 	toolAdvanceDeal    = "advance_deal"
 	toolMergeRecords   = "merge_records"
 	toolPromoteLead    = "promote_lead"
+	toolDemoteLead     = "demote_lead"
 	toolLogActivity    = "log_activity"
 )
 
@@ -74,7 +75,7 @@ var overlayWriteVerbs = map[string]overlay.WriteVerb{
 var overlayRecordWriteTools = map[string]bool{
 	toolCreateRecord: true, toolUpdateRecord: true, toolArchiveRecord: true,
 	toolLogActivity: true, toolAdvanceDeal: true, toolMergeRecords: true,
-	toolPromoteLead: true, toolDisqualifyLead: true,
+	toolPromoteLead: true, toolDisqualifyLead: true, toolDemoteLead: true,
 }
 
 // overlayModeChecker resolves whether the request's workspace is in overlay

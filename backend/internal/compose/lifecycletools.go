@@ -164,8 +164,23 @@ func (c companyEnricher) EnrichCompany(
 }
 
 // lifecycleSeams builds the three adapters over one pool.
-func lifecycleSeams(pool *pgxpool.Pool) (activityRelinker, leadDisqualifier, projectPhaseAdvancer) {
+func lifecycleSeams(pool *pgxpool.Pool) (activityRelinker, leadDisqualifier, leadDemoter, projectPhaseAdvancer) {
+	peopleStore := people.NewStore(InstallationDB(pool))
 	return activityRelinker{store: activities.NewStore(InstallationDB(pool))},
-		leadDisqualifier{store: people.NewStore(InstallationDB(pool))},
+		leadDisqualifier{store: peopleStore},
+		leadDemoter{store: peopleStore},
 		projectPhaseAdvancer{store: ProjectsStore(pool)}
+}
+
+// leadDemoter is the tool door's reach onto the reversal the REST handler
+// calls, and it hands the module's own answer through untouched — the shape
+// DemoteLeadResult declares a subset of.
+type leadDemoter struct{ store *people.Store }
+
+func (l leadDemoter) DemoteLead(ctx context.Context, id ids.UUID, reason string) (json.RawMessage, error) {
+	out, err := l.store.DemoteLead(ctx, ids.From[ids.LeadKind](id), reason)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(out)
 }
