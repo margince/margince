@@ -23,7 +23,7 @@ import (
 	// containers that ship no zoneinfo.
 	_ "time/tzdata"
 
-	// The composed extension set (ADR-0069): the generated module under
+	// The composed extension set (ADR-0120): the generated module under
 	// build/composition/ in a composed build, the committed vanilla stub
 	// in a bare one — same import path either way.
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -117,7 +117,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 
-	// What this binary composed (ADR-0069 §5); pre-bootstrap the inventory half
+	// What this binary composed (ADR-0120 §5); pre-bootstrap the inventory half
 	// skips — the api records the first observation once it has bootstrapped
 	// the installation. The worker composes the same units the api does and
 	// runs the send path, so it registers the same channel vocabulary and
@@ -227,7 +227,7 @@ func releaseSkewRefusal(refused <-chan error) error {
 }
 
 // registerComposedExtensions registers the composed extension set before
-// anything else runs; a failing registration aborts the boot (ADR-0069 EXT-P4).
+// anything else runs; a failing registration aborts the boot (ADR-0120 EXT-P4).
 //
 // It returns the SAME snapshot it registered, because run hands that value on
 // to the boot inventory: taking a second snapshot there would let the two

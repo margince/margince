@@ -97,7 +97,7 @@ var (
 // that EnsureSchema's emptiness proof has to make an exception for.
 //
 // ext is in scope for exactly the reason public is. Since 0202 every extension
-// unit's tables live there (ADR-0069), applied by the same lane, and an ext_
+// unit's tables live there (ADR-0120), applied by the same lane, and an ext_
 // table left out of this fragment is one no reset ever empties: the rows an
 // integration test writes through a unit survive into every later test in the
 // process, and the failure surfaces somewhere else entirely as a flake. The

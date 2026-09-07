@@ -114,7 +114,7 @@ func TestRegisterExtensionsPreflightsDuplicateJurisdictions(t *testing.T) {
 }
 
 // TestRegisterExtensionsRejectsAnUnknownRetentionClass: the class set is
-// closed (vocabulary registration is deferred, ADR-0069 §13) — a typo'd
+// closed (vocabulary registration is deferred, ADR-0120 §13) — a typo'd
 // or invented class would be a statutory floor that looks registered
 // while no engine ever consults it, so the boot refuses it.
 func TestRegisterExtensionsRejectsAnUnknownRetentionClass(t *testing.T) {

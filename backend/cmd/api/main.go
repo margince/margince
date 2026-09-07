@@ -23,7 +23,7 @@ import (
 	// containers that ship no zoneinfo.
 	_ "time/tzdata"
 
-	// The composed extension set (ADR-0069): the generated module under
+	// The composed extension set (ADR-0120): the generated module under
 	// build/composition/ in a composed build, the committed vanilla stub
 	// in a bare one — same import path either way.
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -63,7 +63,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	}
 
 	// Register the composed extension set before anything serves; a
-	// failing registration aborts the boot (ADR-0069 EXT-P4). ONE
+	// failing registration aborts the boot (ADR-0120 EXT-P4). ONE
 	// snapshot serves registration and the boot inventory below, so both
 	// observe the same declarations.
 	extensions := composition.Extensions()

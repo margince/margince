@@ -192,7 +192,7 @@ jobs:
             frontend:
               - 'frontend/**'
               - 'backend/api/**'
-              # The frontend job runs BOTH SPA lanes (ADR-0069), and the
+              # The frontend job runs BOTH SPA lanes (ADR-0120), and the
               # composed one is derived from inputs that live nowhere near
               # frontend/. A unit's api/ fragment is the ONLY thing that changes
               # the composed registry and the merged contract the typed client
@@ -236,7 +236,7 @@ jobs:
               - 'frontend/**'
               # Same cut as the backend scope: the compose stack, not the prose.
               - 'infra/**/!(*.md)'
-              # live-boot boots COMPOSED (ADR-0069): the enabled extension
+              # live-boot boots COMPOSED (ADR-0120): the enabled extension
               # tree and the composition inputs shape the binary under test.
               - 'extensions/**'
               - 'fixtures/**'
@@ -406,7 +406,7 @@ jobs:
           MIGRATION_VERSIONS_BASELINE_RESET: "1"
         run: make check-backend
 
-  # The composed-build lane (ADR-0069): materialize the walking-skeleton
+  # The composed-build lane (ADR-0120): materialize the walking-skeleton
   # reference extension into extensions/, compose, and run the backend
   # build + unit lane against the composed workspace — the continuous
   # proof that an enabled extension composes without touching an
@@ -985,7 +985,7 @@ jobs:
         env:
           MARGINCE_ENV: dev
         run: |
-          # Composed boot (ADR-0069): a plain `go run` would resolve the
+          # Composed boot (ADR-0120): a plain `go run` would resolve the
           # vanilla composition stub and this lane would never boot with
           # the enabled extensions (extensions/de ships by default). The
           # generator itself pins the ROOT workspace (the tool is its own

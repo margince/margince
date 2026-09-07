@@ -19,7 +19,7 @@ import (
 	"github.com/margince/margince/backend/pkg/extension/messaging"
 )
 
-// New returns the unit's declaration (the ADR-0069 §4 constructor contract the
+// New returns the unit's declaration (the ADR-0120 §4 constructor contract the
 // generated composition calls).
 func New() extension.Extension {
 	return extension.Extension{

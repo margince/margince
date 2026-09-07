@@ -8,7 +8,7 @@
 # This repo's seam is internal/shared/ports/jurisdiction (the Tier-0 port,
 # aliasing the published pkg/extension/jurisdiction contract); the packs
 # themselves live OUTSIDE core as stable-tier extensions (extensions/de, the
-# ADR-0069 pilot), which this gate does not scan — an extension is
+# ADR-0120 pilot), which this gate does not scan — an extension is
 # jurisdiction-specific by design. Everything else under internal/ is core and
 # must stay country-neutral. Generated contract code (*_gen.go / *.gen.go) and
 # tests (which legitimately exercise pack behavior) are out of scope — this

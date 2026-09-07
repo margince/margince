@@ -67,7 +67,7 @@ func TestEveryDeclaredToolVerbIsRegistered(t *testing.T) {
 // by the verbs the policy table cannot see.
 //
 // A composed EXTENSION tool is the third legitimate case, and it is declared —
-// just not here. Its authority comes from its unit's manifest (ADR-0069), which
+// just not here. Its authority comes from its unit's manifest (ADR-0120), which
 // is why an installation can add a verb without editing the contract, and the
 // composed set is what a reviewer reads instead of the policy table. Skipping it
 // by name rather than by "not in the table" keeps the sweep absolute for

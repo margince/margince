@@ -30,7 +30,7 @@ var ErrSecretNotFound = errors.New("extension: no secret is stored under that ke
 // UserID names one member of the workspace the call is running in, in the
 // canonical hyphenated UUID text form ("0195d3f2-...").
 //
-// The published surface is stdlib-only (ADR-0069 §3), so this cannot be the
+// The published surface is stdlib-only (ADR-0120 §3), so this cannot be the
 // core's typed id — an extension would then bind the core's kernel as frozen
 // published API. It is a distinct named type rather than a bare string so a
 // key and a user cannot be swapped at a call site: PutUser(key, userID, ...)

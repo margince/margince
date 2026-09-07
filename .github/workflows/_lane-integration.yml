@@ -221,7 +221,7 @@ jobs:
           path: backend/coverage.out
           if-no-files-found: ignore
           retention-days: 1
-      # The extension migration gate (ADR-0069) — the ONE gate in the tier that
+      # The extension migration gate (ADR-0120) — the ONE gate in the tier that
       # is not textual: it applies each unit's migrations as that unit's own
       # restricted ext_<name> role against a throwaway database and checks the
       # resulting catalog against the allowlist.

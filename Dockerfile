@@ -18,7 +18,7 @@
 # and exports the layer cache (cache-to/cache-from type=gha, wired in
 # docker-bake.hcl). A plain local build ignores all of that and still works.
 
-# ── Go builder base (composed workspace, ADR-0069) ───────────────────────────
+# ── Go builder base (composed workspace, ADR-0120) ───────────────────────────
 # The build is NOT a plain `go build`: gen-composition must run first to
 # materialize build/composition/go.work (the composed workspace that folds in
 # the enabled extensions/* packs); the Go binaries build under that workspace

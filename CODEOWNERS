@@ -6,7 +6,7 @@
 # requests no reviewer at all.
 *                                   @margince/margince
 
-# The extension tier (ADR-0069) and every seam that defines it.
+# The extension tier (ADR-0120) and every seam that defines it.
 /extensions/                        @lstrojny
 /backend/pkg/                       @lstrojny
 /composition/                       @lstrojny

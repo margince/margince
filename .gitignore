@@ -10,7 +10,7 @@ coverage-extensions.out
 .build/
 .DS_Store
 
-# ADR-0069 stable extension tier: build/composition/ is the ONE ignored
+# ADR-0120 stable extension tier: build/composition/ is the ONE ignored
 # root for installation-dependent generated output (digest-gated by its
 # composition.json, never committed — anchored to the composition root so
 # an unrelated future /build asset is never silently hidden), and

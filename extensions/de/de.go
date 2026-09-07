@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package de is the German jurisdiction pack (ADR-0042) as a stable-tier
-// extension — the ADR-0069 migration pilot: the first first-party unit
+// extension — the ADR-0120 migration pilot: the first first-party unit
 // shipping enabled-by-default in the vanilla tree (its directory under
 // extensions/ IS the enablement). V1 ships the GoBD statutory retention
 // classes; further obligations (the XRechnung/ZUGFeRD fiscal formats,
@@ -21,7 +21,7 @@ import (
 	"github.com/margince/margince/backend/pkg/extension/messaging"
 )
 
-// New returns the unit's declaration (the ADR-0069 §4 constructor
+// New returns the unit's declaration (the ADR-0120 §4 constructor
 // contract the generated composition calls).
 func New() extension.Extension {
 	return extension.Extension{

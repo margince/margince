@@ -1011,7 +1011,14 @@ reachable until the jobs slice.
 
 ## 8. The ADR
 
-**The number problem is real and unresolved.** Verified against the decision index:
+> **Resolved since this was written: the extension tier is ADR-0120.** The rest of
+> this section is kept as the record of how the collision arose and what was
+> checked, because the tree carried the draft number in around sixty places and
+> somebody chasing one of them needs to find the explanation. What is no longer
+> true is the heading below: the number is settled, and the citations have been
+> swept to it.
+
+**The number problem was real.** Verified against the decision index:
 **ADR-0069** is taken (`ADR-0069-configured-embed-width-and-deployment-reindex.md`), and so are
 **A115** (embed width), **A116** (outbound webhook payloads) and **A117** (overlay→native cutover) — all
 unrelated, all ratified. The extensions ADR still sits at 0069 on the unpushed

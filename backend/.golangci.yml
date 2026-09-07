@@ -101,7 +101,7 @@ linters:
           # Default-deny: the shared layer (kernel + apperrors + ports) is
           # stdlib + each other + the published extension surface (which
           # sits BELOW shared: ports alias published seam types so a core
-          # module and an extension register the same type, ADR-0069 §3) —
+          # module and an extension register the same type, ADR-0120 §3) —
           # a new shared package pulling a third-party dep fails HERE, not
           # only in the arch fitness test.
           list-mode: strict
@@ -109,7 +109,7 @@ linters:
             - $gostd
             - github.com/margince/margince/backend/internal/shared
             - github.com/margince/margince/backend/pkg
-        # The published extension surface (backend/pkg, ADR-0069 §3) is the
+        # The published extension surface (backend/pkg, ADR-0120 §3) is the
         # outermost Tier-0 leaf: stdlib + itself, nothing else — anything
         # else it imported would become transitively-frozen published API.
         pkg-purity:

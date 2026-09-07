@@ -1,7 +1,7 @@
 # Thin delegator: the real Makefile lives in backend/ (the Go module root).
 # `make check` is the merge gate; `make dev` boots everything.
 # The frontend lane is separate (`make frontend-check`) — it needs node+pnpm,
-# which not every backend machine has; CI runs both. Since ADR-0069's composed
+# which not every backend machine has; CI runs both. Since ADR-0120's composed
 # SPA lane the dependency runs BOTH ways: `make check-fe` also needs a Go
 # toolchain, because the composed registry the frontend typechecks against is
 # produced by gen-composition and nothing else can produce it. A machine that
@@ -562,7 +562,7 @@ fe-install:
 fe-typecheck:
 	cd frontend && pnpm install --frozen-lockfile && pnpm exec tsc -b
 
-## fe-typecheck-composed — the COMPOSED frontend lane (ADR-0069): typecheck the
+## fe-typecheck-composed — the COMPOSED frontend lane (ADR-0120): typecheck the
 ## same sources against the generated registry under build/composition/frontend/
 ## instead of the committed empty-tree stub. The TypeScript mirror of building
 ## the backend under GOWORK=build/composition/go.work — one program, two
@@ -1040,7 +1040,7 @@ no-jurisdiction:
 test-no-jurisdiction:
 	@./scripts/check-no-jurisdiction.test.sh
 
-## check-ext-migrations — the extension migration gate (ADR-0069): apply every
+## check-ext-migrations — the extension migration gate (ADR-0120): apply every
 ## enabled unit's migrations as its restricted ext_<name> role against a
 ## throwaway clone and assert the resulting catalog against the allowlist. The
 ## one gate in the tier that is the DATABASE refusing rather than a scanner
@@ -1068,7 +1068,7 @@ check-ext-migrations:
 check-extension-modules:
 	@./scripts/check-extension-modules.sh
 
-## pkg-freeze — published-surface freeze gate (ADR-0069 §3, EXT-P3): apidiff
+## pkg-freeze — published-surface freeze gate (ADR-0120 §3, EXT-P3): apidiff
 ## on every backend/pkg package vs the merge target (origin/$GITHUB_BASE_REF
 ## in CI; locally the extensions integration branch, else origin/main).
 ## ADVISORY before the first v1+ release tag (the surface is design-fluid:

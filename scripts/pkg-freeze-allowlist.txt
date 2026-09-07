@@ -10,4 +10,4 @@
 # different commit, so an entry can never license a recurring same-text
 # finding or pre-authorize a future break; superseded entries warn
 # until removed. Package removals are never allowlistable
-# (deprecate-then-major cycle, ADR-0069 §3).
+# (deprecate-then-major cycle, ADR-0120 §3).

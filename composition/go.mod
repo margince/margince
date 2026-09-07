@@ -1,4 +1,4 @@
-// The committed vanilla composition stub (ADR-0069): bare go builds
+// The committed vanilla composition stub (ADR-0120): bare go builds
 // resolve this module through backend/go.mod's replace; make lanes
 // override it with the generated module under build/composition/. The
 // sibling go.sum is EMPTY by construction — the single require is a
