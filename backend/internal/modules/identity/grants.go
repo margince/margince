@@ -128,6 +128,36 @@ type CreateGrantInput struct {
 	ExpiresAt   *time.Time
 }
 
+// refuseAnExpiryAlreadyPast refuses a grant that would be dead on arrival.
+//
+// Both predicates that read this column test `expires_at IS NULL OR expires_at
+// > now()`, so a back-dated grant is inert from the instant it is written. Inert
+// is not harmless, because the ROW IS THERE: the share list names somebody who
+// in fact has no access, and a human scanning who can see a record is told the
+// opposite of the truth. Nothing sweeps the table either — expiry is evaluated
+// live and no writer deletes an expired row — so the mistake accumulates.
+//
+// And it looked like success. No refusal, no field error, nothing to tell the
+// caller their date was wrong, which is what makes this a validation gap rather
+// than a quirk (#2139).
+//
+// The same refusal covers the RE-ASSERT, which shares this function: shortening
+// a live grant's expiry to a past instant is a revoke wearing an expiry's
+// clothes, and the product has an explicit revoke for that. A caller who means
+// to end access now says so, and the audit records what they meant.
+//
+// Equal to now is refused with the past. The predicates are strict — `>` — so
+// an expiry landing exactly on the instant it is written is already spent.
+func refuseAnExpiryAlreadyPast(expiresAt *time.Time, now time.Time) error {
+	if expiresAt == nil || expiresAt.After(now) {
+		return nil
+	}
+	return httperr.Validation("expires_at", "not_in_future",
+		"expires_at must be in the future: a grant that has already expired is stored and "+
+			"immediately inert, and it lists as an active share while granting nothing. "+
+			"To end an existing share now, revoke it")
+}
+
 func (s *Service) CreateRecordGrant(ctx context.Context, in CreateGrantInput) (grantRow, error) {
 	// Both ids, and both before anything else: a grant is a triple of record,
 	// subject and access, and each id is required by the contract — a claim only
@@ -143,6 +173,9 @@ func (s *Service) CreateRecordGrant(ctx context.Context, in CreateGrantInput) (g
 	}
 	if !shareableRecordTypes[in.RecordType] {
 		return grantRow{}, &InvalidScopeError{Scope: "record_type " + in.RecordType}
+	}
+	if err := refuseAnExpiryAlreadyPast(in.ExpiresAt, s.now()); err != nil {
+		return grantRow{}, err
 	}
 	// Sharing widens who sees the record — the grantor needs the
 	// record's own write grant (the spec's manage_sharing permission,
