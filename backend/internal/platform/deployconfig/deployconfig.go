@@ -382,8 +382,16 @@ func (b BootstrapAdmin) validate() error {
 	if b.DisplayName == "" {
 		return errors.New("deployconfig: bootstrap_admin.display_name is required")
 	}
-	if b.PasswordFile == "" {
-		return errors.New("deployconfig: bootstrap_admin.password_file is required (secrets are file references, never inline values)")
+	// EITHER spelling, and the same sentence ResolvePassword gives when neither
+	// is set. Checking password_file alone refused a deployment that wrote the
+	// key this file's own doc comment says to prefer, and told the operator to
+	// use the legacy one instead — so the natural read was that the reference
+	// form is unsupported, at first boot, with nothing to correct it.
+	//
+	// It also made the validator and the resolver two different contracts for
+	// one field: Parse refused a document ResolvePassword handles perfectly.
+	if !b.Password.Configured() && b.PasswordFile == "" {
+		return errors.New("deployconfig: bootstrap_admin names no password — set bootstrap_admin.password to ${file:/run/secrets/admin-password} or ${env:MARGINCE_ADMIN_PASSWORD}")
 	}
 	return nil
 }

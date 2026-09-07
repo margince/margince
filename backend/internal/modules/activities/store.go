@@ -33,6 +33,11 @@ type Store struct {
 	// the write is what the caller asked for, the reading is what this
 	// installation can offer (WithTranscriptEnqueue).
 	transcriptEnqueue TranscriptReadEnqueue
+	// workingHours answers when a host is bookable. Nil in a deployment that
+	// has not wired it, and then every host keeps the fallback hours in UTC —
+	// see hoursOf, which degrades rather than refusing because the public
+	// booking page reaches that path (WithWorkingHours).
+	workingHours WorkingHoursResolver
 	// blob backs the attachment endpoints; nil in a role that stores no
 	// objects, in which case the attachment handlers answer 501 rather than
 	// nil-deref (WithBlobstore is how a role opts in).
@@ -164,5 +169,13 @@ func workspaceID(ctx context.Context) ids.WorkspaceID {
 // WithTranscriptEnqueue wires the reading a landed transcript starts.
 func (s *Store) WithTranscriptEnqueue(enqueue TranscriptReadEnqueue) *Store {
 	s.transcriptEnqueue = enqueue
+	return s
+}
+
+// WithWorkingHours binds the resolver that answers when a host is bookable.
+// Identity owns the setting and this module may not import it, so compose
+// injects the edge.
+func (s *Store) WithWorkingHours(resolve WorkingHoursResolver) *Store {
+	s.workingHours = resolve
 	return s
 }

@@ -160,6 +160,7 @@ import { parseTagIDs, parseTagMode, tagQueryParams } from "./tagfilter";
 import { TagsPanel } from "./tagspanel";
 import { TimelineActions } from "./timelineactions";
 import { groupChronology } from "./timelinegroups";
+import { WON_REASON_LABELS, WON_REASONS, type WonReason } from "./winreason";
 
 // Deal surfaces (B-EP09.11a/b/c): the five-stage Kanban with drag-to-advance
 // (terminal stages are a 🟡 confirm, AC-deal-6), the board↔table segmented
@@ -1543,39 +1544,6 @@ function dealColumns(
     },
   ];
 }
-
-/**
- * The closed vocabulary for winning a deal with no contract behind it.
- *
- * The type comes from the generated contract, and the labels are a Record over
- * it, so adding a member to `crm.yaml` stops this file compiling until the new
- * member has a label — rather than leaving a choice the server accepts and no
- * screen offers.
- */
-type WonReason = NonNullable<
-  NonNullable<
-    components["schemas"]["AdvanceDealRequest"]["won_without_contract_reason"]
-  >
->;
-
-const WON_REASON_LABELS: Record<WonReason, MessageKey> = {
-  purchase_order: "deals.winReasonPurchaseOrder",
-  verbal: "deals.winReasonVerbal",
-  renewal_by_email: "deals.winReasonRenewalByEmail",
-  imported: "deals.winReasonImported",
-  other: "deals.winReasonOther",
-};
-
-// Display order — deliberately not the contract's, which is a storage list.
-// This one puts the answers a rep reaches for first. The Record above is what
-// guarantees the set is complete; this only decides the sequence.
-const WON_REASONS: readonly WonReason[] = [
-  "purchase_order",
-  "verbal",
-  "renewal_by_email",
-  "imported",
-  "other",
-];
 
 // Narrows the Select's plain string back to the vocabulary. The control is
 // built from WON_REASONS, so this never rejects in practice — but a cast would

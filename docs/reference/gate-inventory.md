@@ -243,7 +243,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `worklistdestination_test.go` | H2 | Every source the worklist can emit has one screen it belongs on. |
 | `worklistreasonkinds_test.go` | H2 | Every reason a row gives is one the contract declares and a client can render. |
 
-## Reachability (16)
+## Reachability (17)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -257,6 +257,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `orgrenamerecheck_test.go` | H2 | A company's NAME is the axis on which two records of one company converge, so every rename has to ask whether it just created a duplicate. |
 | `personscrub_test.go` | H2 | Erasing a person and anonymizing one are the same act with one difference: the erased subject goes on a suppression list, and the anonymized subject may lawfully return. |
 | `rbacgate_test.go` | H2 | The store-entry-point admission rule as a fitness function: every exported method on a module's \*Store or \*Service — the seam both the HTTP handlers and the MCP tool surface call through — references the platform auth gate (object RBAC and/or the row-scope spellings), directly or through a same-package helper. |
+| `relaywiring_test.go` | H2 | Every option that wires the mail relay is wired by a role binary. |
 | `replayscope_test.go` | H2 | API-CC-8 as a fitness function: a replay is a read, so every operation the idempotency middleware can replay must either re-probe the row scope of the record its recorded body carries, or say in writing that the body carries no such record. |
 | `resetflushscope_test.go` | H2 | The reset's cache flush has two entry points on purpose, and the split is a security boundary rather than a style choice. |
 | `versionguard_test.go` | H2 | A version pin is only real if the pinned table's version actually moves. |
@@ -370,7 +371,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `rulebooklength_test.go` | H3 | A rulebook is read in full by every session and, for its Craftsmanship section, by every gate prompt — so its length is a running cost rather than a matter of taste. |
 | `workflowtimeouts_test.go` | H3 | Every workflow job carries a wall-clock ceiling. |
 
-## Falsification (11)
+## Falsification (12)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -384,4 +385,5 @@ The eight shapes, what each is for, and how each one silently passes:
 | `triggerwrittencolumncases_test.go` | H2 | The trigger-written-column reader driven with SYNTHETIC statements, for the reason retainedcolumncases\_test.go gives for its own: the tree is supposed to pass, so a reader proven only by "nothing in the tree trips it" is one that keeps passing after it stops working. |
 | `txseamreach_test.go` | H2 | Following a call one hop further than the name it is spelled with. |
 | `updateguardcases_test.go` | H2 | What the concurrency-guard census judges a function on, driven with SYNTHETIC source rather than the tree — the same reason retainedcolumncases\_test.go gives for its own cases. |
+| `writeauthorityplanted_test.go` | H2 | The defect the reach census exists for, planted and run. |
 | `writelivenesscases_test.go` | H2 | What the liveness census judges, and what it credits, driven with SYNTHETIC source rather than the tree — the same reason updateguardcases\_test.go gives for its own. |

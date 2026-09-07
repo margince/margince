@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 type AdvanceDealInput struct {
@@ -34,6 +35,13 @@ type AdvanceDealInput struct {
 	// it — a win that claims nothing and offers no reason is what gets refused.
 	WonWithoutContractReason *string
 	WonWithoutContractDetail *string
+	// ApprovalID names the card a human decided, when this move came from one.
+	//
+	// It is what tells an accepted proposal from a move a rep made by hand,
+	// and readProtection reads it: accepting a card is agreeing with the
+	// product, not overruling it, so a move made THROUGH one must not protect
+	// the deal against the next proposal. Nil for an ordinary advance.
+	ApprovalID *ids.UUID
 }
 
 // StagePipelineMismatchError maps to 422: the target stage exists but
@@ -68,17 +76,58 @@ func (s *Store) AdvanceDeal(ctx context.Context, id ids.DealID, in AdvanceDealIn
 	if err := auth.Require(ctx, "deal", principal.ActionUpdate); err != nil {
 		return crmcontracts.Deal{}, err
 	}
-	by, err := storekit.CapturedBy(ctx)
+	// The custom-field catalog is fetched BEFORE the transaction opens: it
+	// reads through its own connection, and a second connection inside a
+	// transaction commits separately and can deadlock undetectably against a
+	// lock that transaction holds.
+	active, err := s.activeColumns(ctx)
 	if err != nil {
 		return crmcontracts.Deal{}, err
 	}
-	active, err := s.activeColumns(ctx)
+	var out crmcontracts.Deal
+	err = s.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		out, err = s.advanceOnTx(ctx, tx, id, in, active)
+		return err
+	})
+	return out, err
+}
+
+// AdvanceDealTx is AdvanceDeal inside a transaction the CALLER owns.
+//
+// It exists for the approval path: redeeming a staged stage move and
+// performing it must be one transaction, or the approval is spent on a move
+// that then fails and nothing can drive it again. The object gate is the
+// caller's to apply — AdvanceDeal applies it above, and the approvals service
+// applies the kind's own grant before any effect runs.
+//
+// THE CATALOG IS THE CALLER'S TO RESOLVE, through ActiveDealColumns, before
+// the transaction opens. Reading it here would open a connection inside
+// somebody else's transaction — a second connection commits separately and can
+// deadlock undetectably against a lock that transaction holds.
+func (s *Store) AdvanceDealTx(
+	ctx context.Context, tx pgx.Tx, id ids.DealID, in AdvanceDealInput,
+	active CustomColumns,
+) (crmcontracts.Deal, error) {
+	return s.advanceOnTx(ctx, tx, id, in, active.cols)
+}
+
+// advanceOnTx is the move itself, over a transaction and a catalog its caller
+// has already resolved.
+func (s *Store) advanceOnTx(
+	ctx context.Context, tx pgx.Tx, id ids.DealID, in AdvanceDealInput,
+	active []fieldcatalog.Column,
+) (crmcontracts.Deal, error) {
+	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return crmcontracts.Deal{}, err
 	}
 
 	var out crmcontracts.Deal
-	err = s.Tx(ctx, func(tx pgx.Tx) error {
+	// A closure rather than the body inline: fourteen early returns below say
+	// `return err`, and unwrapping them into `return crmcontracts.Deal{}, err`
+	// would be fourteen chances to return a half-built deal beside an error.
+	err = func() error {
 		if err := auth.EnsureWritable(ctx, tx, dealTable, id.UUID); err != nil {
 			return err
 		}
@@ -126,62 +175,24 @@ func (s *Store) AdvanceDeal(ctx context.Context, id ids.DealID, in AdvanceDealIn
 		// rationale). Won/lost stages carry their semantic 100/0 in the same
 		// column, so terminal moves snapshot too.
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO deal_stage_history (deal_id, from_stage_id, to_stage_id, changed_by, amount_minor_at_change, currency_at_change, win_probability_at_change)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+			`INSERT INTO deal_stage_history (deal_id, from_stage_id, to_stage_id, changed_by, amount_minor_at_change, currency_at_change, win_probability_at_change, approval_id)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
 			id, ids.UUID(*current.StageId), in.ToStageID, by,
-			current.AmountMinor, current.Currency, winProbability); err != nil {
+			current.AmountMinor, current.Currency, winProbability, in.ApprovalID); err != nil {
 			return fmt.Errorf("record stage history: %w", err)
 		}
 
-		auditID, err := storekit.Audit(ctx, tx, "advance_stage", "deal", id.UUID, p.Before(), p.After())
-		if err != nil {
-			return fmt.Errorf("audit stage advance: %w", err)
+		if err := announceStageAdvance(ctx, tx, id, in, current, p, status, winProbability); err != nil {
+			return err
 		}
-		// The §5.3 payload carries the amount snapshot so as-of-date
-		// pipeline reports and the overnight stalled/forecast sweep react
-		// without a read-back; to_status records the 🟡 won/lost class.
-		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID,
-			dealStageChangedPayload(current, in.ToStageID, status, winProbability, frozenFxFromPatch(p, current))); err != nil {
-			return fmt.Errorf("emit deal.stage_changed: %w", err)
-		}
-		// Winning the deal turns the correspondence filed against it into
-		// Handelsbriefe (A165/ADR-0114). Stamped here, in the transaction that
-		// won it: a stamp that landed later would leave a window in which an
-		// erasure sees unclassified correspondence and destroys it. Reopening
-		// the deal never unstamps — the classification is monotonic because
-		// over-retention is arguable and destruction is not.
-		if DealStatus(status) == DealWon {
-			if err := s.stampCorrespondence(ctx, tx, id, BasisDealWon); err != nil {
-				return fmt.Errorf("stamp won deal's correspondence: %w", err)
-			}
-			// And a deal that BECOMES won starts the delivery it was sold for,
-			// in the same transaction, so a won deal and a project still
-			// reading as "pursuing" can never be observed together. See
-			// project_delivery.go for which projects this moves and which it
-			// deliberately leaves alone.
-			//
-			// Gated on the transition, not on the resulting status, and that
-			// is a security boundary rather than an optimization. The stamp
-			// above may re-run freely because it is monotonic; this is not. A
-			// caller who re-asserts the won stage on an already-won deal must
-			// not thereby drive the project — which they may have no authority
-			// to see, let alone write — back to `delivering` after somebody
-			// deliberately moved it elsewhere.
-			//
-			// The patch is what says whether the status actually moved:
-			// stageTransitionPatch sets the column only when it differs from
-			// what the deal already had, so its presence IS the transition.
-			if _, becameWon := p.After()["status"]; becameWon {
-				if err := s.startDeliveryForWonDeal(ctx, tx, id, by); err != nil {
-					return fmt.Errorf("start delivery on the won deal's project: %w", err)
-				}
-			}
+		if err := s.onDealWon(ctx, tx, id, status, by, p); err != nil {
+			return err
 		}
 		if out, err = readDealForCaller(ctx, tx, id, storekit.LiveOnly, active); err != nil {
 			return fmt.Errorf("read advanced deal: %w", err)
 		}
 		return nil
-	})
+	}()
 	return out, err
 }
 
@@ -207,6 +218,71 @@ func dealStageChangedPayload(current crmcontracts.Deal, toStageID ids.StageID, t
 		payload.PartnerAttribution = &attribution
 	}
 	return payload
+}
+
+// announceStageAdvance writes the move's audit row and the event that carries
+// it, linked to each other.
+//
+// The §5.3 payload carries the amount snapshot so as-of-date pipeline reports
+// and the overnight stalled/forecast sweep react without a read-back;
+// to_status records the won/lost class.
+func announceStageAdvance(
+	ctx context.Context, tx pgx.Tx, id ids.DealID, in AdvanceDealInput,
+	current crmcontracts.Deal, p *storekit.Patch, status string, winProbability int,
+) error {
+	auditID, err := storekit.Audit(ctx, tx, "advance_stage", "deal", id.UUID, p.Before(), p.After())
+	if err != nil {
+		return fmt.Errorf("audit stage advance: %w", err)
+	}
+	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID,
+		dealStageChangedPayload(current, in.ToStageID, status, winProbability,
+			frozenFxFromPatch(p, current))); err != nil {
+		return fmt.Errorf("emit deal.stage_changed: %w", err)
+	}
+	return nil
+}
+
+// onDealWon does what winning a deal sets off, in the transaction that won it.
+//
+// Winning turns the correspondence filed against the deal into Handelsbriefe
+// (A165/ADR-0114). Stamped HERE rather than afterwards: a stamp that landed
+// later would leave a window in which an erasure sees unclassified
+// correspondence and destroys it. Reopening the deal never unstamps — the
+// classification is monotonic, because over-retention is arguable and
+// destruction is not.
+//
+// A deal that BECOMES won also starts the delivery it was sold for, so a won
+// deal and a project still reading as "pursuing" can never be observed
+// together. See project_delivery.go for which projects this moves and which it
+// deliberately leaves alone.
+//
+// That second half is gated on the TRANSITION rather than the resulting
+// status, and the difference is a security boundary rather than an
+// optimization. The stamp may re-run freely because it is monotonic; this may
+// not. A caller who re-asserts the won stage on an already-won deal must not
+// thereby drive the project — which they may have no authority to see, let
+// alone write — back to `delivering` after somebody deliberately moved it
+// elsewhere.
+//
+// The patch is what says whether the status actually moved:
+// stageTransitionPatch sets the column only when it differs from what the deal
+// already had, so its presence IS the transition.
+func (s *Store) onDealWon(
+	ctx context.Context, tx pgx.Tx, id ids.DealID, status, by string, p *storekit.Patch,
+) error {
+	if DealStatus(status) != DealWon {
+		return nil
+	}
+	if err := s.stampCorrespondence(ctx, tx, id, BasisDealWon); err != nil {
+		return fmt.Errorf("stamp won deal's correspondence: %w", err)
+	}
+	if _, becameWon := p.After()["status"]; !becameWon {
+		return nil
+	}
+	if err := s.startDeliveryForWonDeal(ctx, tx, id, by); err != nil {
+		return fmt.Errorf("start delivery on the won deal's project: %w", err)
+	}
+	return nil
 }
 
 // frozenFxFromPatch reads the rate this transition froze out of the patch that

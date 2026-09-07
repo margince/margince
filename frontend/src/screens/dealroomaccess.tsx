@@ -311,8 +311,8 @@ function IssuedLink({ issued }: Readonly<{ issued: Issued }>) {
   };
   return (
     <div className="access-issued">
-      <Callout tone={issued.delivered ? "success" : "info"}>
-        {issued.delivered
+      <Callout tone={issued.queued ? "success" : "info"}>
+        {issued.queued
           ? t("access.issued.mailed", { email: issued.participant.email })
           : t("access.issued.notMailed")}
       </Callout>

@@ -1079,12 +1079,12 @@ export const de = {
   "access.emailLabel": "E-Mail",
   "access.capabilityLegend": "Was darf die Person tun?",
   "access.inviteNote":
-    "Sie erhalten den Link zum Kopieren. Ist ein Mail-Relay konfiguriert, wird er zusätzlich versandt.",
+    "Sie erhalten den Link zum Kopieren. Ist ein Mail-Relay konfiguriert, versuchen wir zusätzlich, ihn zu versenden.",
   "access.issued.title": "Link für {name}",
   "access.issued.mailed":
     "An {email} gesendet. Sie können ihn unten auch kopieren.",
   "access.issued.notMailed":
-    "Es wurde keine Mail gesendet. Kopieren Sie den Link und senden Sie ihn selbst.",
+    "Der Link wurde nicht per Mail versendet. Kopieren Sie ihn und senden Sie ihn selbst.",
   "access.issued.linkLabel": "Der Link",
   "access.issued.copy": "Link kopieren",
   "access.issued.copied": "Kopiert",
@@ -1398,6 +1398,10 @@ export const de = {
   "approval.kind.org_name_promotion": "Account umbenennen",
   "approval.kind.vcard_create": "Person aus einer Visitenkarte anlegen",
   "approval.kind.lifecycle_change": "Account-Phase",
+  "approval.kind.stage_progression": "Deal in die nächste Phase bewegen",
+  "approval.field.because": "Begründung",
+  "approval.field.from_stage": "Von",
+  "approval.field.to_stage": "Nach",
   "approval.kind.transcript_proposal":
     "Nächsten Schritt aus einem Transkript übernehmen",
   "approval.kind.fx_rate_proposal": "Wechselkurse aktualisieren",
@@ -1414,7 +1418,6 @@ export const de = {
   "approval.kind.send_account_email": "E-Mail an ein Unternehmen senden",
   "approval.kind.send_message": "Nachricht senden",
   "approval.field.basis": "Warum",
-  "approval.field.because": "Warum",
   "approval.field.step": "Der Schritt",
   "approval.field.intent": "Warum das entworfen wurde",
   "approval.field.evidence_snippet": "Was auf der Seite stand",
@@ -7329,6 +7332,28 @@ export const de = {
   "aiRouting.saving": "Bindung wird gespeichert…",
   "aiRouting.saved": "Routing gespeichert. Jeder Prozess bedient es jetzt.",
   "aiRouting.adminOnly": "Nur Admin oder Ops können das Modell-Routing ändern.",
+  "workingHours.title": "Wann du buchbar bist",
+  "workingHours.sub":
+    "Nur deine Sache. Niemand stellt das für dich ein, und du stellst es für niemanden ein.",
+  "workingHours.unset":
+    "Du hast noch nichts gewählt, deshalb bekommen Kundinnen und Kunden 09:00–17:00 Uhr, Montag bis Freitag, auf der Uhr der Installation angeboten.",
+  "workingHours.start": "Tag beginnt",
+  "workingHours.end": "Tag endet",
+  "workingHours.days": "Tage, an denen du arbeitest",
+  "workingHours.timezone": "Deine Zeitzone",
+  "workingHours.timezoneHelp":
+    "Die Uhr, auf der diese beiden Zeiten gelesen werden. Aus diesem Browser vorausgefüllt.",
+  "workingHours.narrowed":
+    "Du bist jetzt für weniger von der Woche buchbar als vorher, also finden weniger Kundinnen und Kunden einen Termin. Das ist die Änderung, kein Fehler.",
+  "workingHours.saveFailed": "Diese Zeiten wurden nicht gespeichert.",
+  "workingHours.save": "Arbeitszeiten speichern",
+  "workingHours.day.1": "Montag",
+  "workingHours.day.2": "Dienstag",
+  "workingHours.day.3": "Mittwoch",
+  "workingHours.day.4": "Donnerstag",
+  "workingHours.day.5": "Freitag",
+  "workingHours.day.6": "Samstag",
+  "workingHours.day.7": "Sonntag",
   "autonomy.title": "Was sich von selbst erledigt",
   "autonomy.sub":
     "Kleine Korrekturen, die du bisher von Hand bestätigt hast. Schalte eine ein, und sie wird sofort übernommen – die Änderung und ein Rückgängig warten auf deinem Tag.",

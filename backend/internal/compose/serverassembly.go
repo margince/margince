@@ -96,7 +96,11 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 		// Which domains are our own, for the waiting queue's colleague rule.
 		// capture owns workspace_email_domain and the rule for which entries
 		// count as vouched-for, so the edge is injected rather than restated.
-		WithOwnDomains(ownDomainReader{store: capture.NewOwnDomainStore(InstallationDB(pool))})
+		WithOwnDomains(ownDomainReader{store: capture.NewOwnDomainStore(InstallationDB(pool))}).
+		// When a host is bookable. identity owns the setting because it is a
+		// fact about a person; this transport asks for it rather than holding
+		// a pair of numbers for everybody (docs/explanation/scheduling.md).
+		WithWorkingHours(workingHoursResolver(pool))
 }
 
 // ownDomainReader adapts capture's own-domain store to the seam the waiting

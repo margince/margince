@@ -10,7 +10,7 @@ import {
 } from "../api/model-inflight";
 import type { components } from "../api/schema";
 import { useAiActivity, watchStartedAiRun } from "./ai-activity";
-import { displayedKinds, lineFor } from "./ai-activity-lines";
+import { displayedKinds, speak } from "./ai-activity-lines";
 
 // What the rail asks the runner, and how often. Three things here can only be
 // wrong invisibly, which is why each has its own case: a poll left running for
@@ -403,7 +403,7 @@ describe("the kinds filter", () => {
     await advance(0);
 
     for (const kind of new URL(urls[0]).searchParams.getAll("kinds")) {
-      expect(lineFor({ kind, state: "done" }, (key) => key)).not.toBeNull();
+      expect(speak({ kind, state: "done" }, (key) => key)).not.toBeNull();
     }
   });
 });

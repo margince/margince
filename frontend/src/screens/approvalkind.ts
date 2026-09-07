@@ -1,6 +1,7 @@
 import { formatDate } from "../format/format";
 import type { Locale, Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { WON_REASON_LABELS, WON_REASONS } from "./winreason";
 
 // What a staged proposal is, in words a reader recognises.
 //
@@ -59,6 +60,7 @@ export const KIND_LABEL: Readonly<Record<string, MessageKey>> = {
   vcard_create: "approval.kind.vcard_create",
   lifecycle_change: "approval.kind.lifecycle_change",
   transcript_proposal: "approval.kind.transcript_proposal",
+  stage_progression: "approval.kind.stage_progression",
   fx_rate_proposal: "approval.kind.fx_rate_proposal",
   ai_model_rate_proposal: "approval.kind.ai_model_rate_proposal",
   disqualify_lead: "approval.kind.disqualify_lead",
@@ -206,6 +208,34 @@ export const EDITABLE_FIELDS: Readonly<
   // back. An edit to any of them would silently do nothing, so none is
   // offered rather than each looking like a live field that quietly is not.
   vcard_create: [],
+  // The ONE thing on a stage card a rep may change, and only when the move
+  // lands on a won stage with no signed agreement: why this deal was won
+  // without paper. The proposer cannot answer it — no reading of a mailbox
+  // establishes why there is no contract — so the card carries the question,
+  // and the server refuses the move until it is answered.
+  //
+  // Everything else in the payload is what the question is ABOUT: which deal,
+  // which stages, which criteria were met and what they rest on. A reader who
+  // disagrees with any of that says no rather than editing it into a different
+  // move.
+  //
+  // The vocabulary and its labels come from deals.tsx rather than a second copy
+  // here: both are derived from the generated contract type, so a reason added
+  // to crm.yaml stops this file compiling until it has a label.
+  stage_progression: [
+    {
+      field: "won_without_contract_reason",
+      as: "choice",
+      label: "deals.winReason",
+      options: WON_REASONS,
+      optionLabels: WON_REASON_LABELS,
+    },
+    {
+      field: "won_without_contract_detail",
+      as: "text",
+      label: "deals.winReasonDetail",
+    },
+  ],
 };
 
 // What a reader SEES of a proposal, per kind — the read-side counterpart of
@@ -418,6 +448,23 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
         label: "approval.field.output_per_mtok",
         as: "text",
       },
+    ],
+    // A proposed stage move. `because` leads, because a rep deciding needs
+    // the reason before the checklist: the criteria say WHAT is settled and
+    // the sentence says why that adds up to a move.
+    stage_progression: [
+      {
+        field: "because",
+        label: "approval.field.because",
+        as: "prose",
+        lead: true,
+      },
+      {
+        field: "from_stage_name",
+        label: "approval.field.from_stage",
+        as: "text",
+      },
+      { field: "to_stage_name", label: "approval.field.to_stage", as: "text" },
     ],
     // Read out of a call transcript. The step is the proposal; the evidence
     // chips beneath carry the quoted lines it was read from.

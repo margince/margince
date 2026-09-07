@@ -95,10 +95,19 @@ func ResolveRouting(ctx context.Context, pool *pgxpool.Pool, routingPath string,
 	if routingPath != "" {
 		warnRoutingFileIgnored(ctx, routingPath, stored.Unconfigured(), log)
 	}
+	// Sealing runs BEFORE the unconfigured return, and the order is the whole
+	// point. A credential moving out of the process environment and into the
+	// vault has nothing to do with which vendor answers which tier: below the
+	// return, the only installation that never sealed was the fresh one, whose
+	// admin then opened Settings -> AI to bind a tier and was told the vendor
+	// they were about to bind was unkeyed. The key was in the environment the
+	// whole time. `configured` on /ai/provider-keys reads the sealed ref, so an
+	// unsealed key is indistinguishable from an absent one on the one screen
+	// that could have fixed it.
+	lookup, credentials := sealedKeys(ctx, pool, ws, keys, log)
 	if stored.Unconfigured() {
 		return ai.RoutingConfig{}, nil
 	}
-	lookup, credentials := sealedKeys(ctx, pool, ws, keys, log)
 	cfg, err := ai.FromStored(stored, lookup)
 	if err != nil {
 		return ai.RoutingConfig{}, err

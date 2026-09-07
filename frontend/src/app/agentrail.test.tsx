@@ -775,13 +775,13 @@ describe("AgentRail", () => {
     stubAgentRailApi();
     const { container } = render(ROUTE);
     expect(document.querySelector(".arloose")).toBeNull();
-    const trigger = container.querySelector(".arhit");
+    const trigger = container.querySelector(".artoggle");
     expect(trigger?.getAttribute("aria-expanded")).toBe("false");
 
     await openPanel(user, container);
     expect(document.querySelector(".arloose")).not.toBeNull();
     expect(
-      container.querySelector(".arhit")?.getAttribute("aria-expanded"),
+      container.querySelector(".artoggle")?.getAttribute("aria-expanded"),
     ).toBe("true");
   });
 
@@ -889,7 +889,7 @@ describe("AgentRail", () => {
       LABELS.spend,
     );
     expect(
-      container.querySelector(".arhit")?.getAttribute("aria-label"),
+      container.querySelector(".artoggle")?.getAttribute("aria-label"),
     ).not.toContain(LABELS.spend);
     // Withheld at the source, not only at the paint: a figure the seat may not
     // see is a figure the client never asks for.
@@ -1070,6 +1070,94 @@ describe("AgentRail", () => {
       container,
       "I'm pulling together what I know about Acme.",
     );
+  });
+
+  // The name is the way to the record. A company's name goes to the company,
+  // a person's to the contact, through the same address every other link in
+  // the app uses for that record — and following it is leaving for the
+  // record, not opening the panel.
+  it.each([
+    ["organization", "Acme", "#/companies/"],
+    ["person", "Ana Roth", "#/contacts/"],
+  ])(
+    "links the %s a summary is about to its record",
+    async (subjectType, name, page) => {
+      const id = "019f7e65-fbf7-7114-b114-40af4af63a77";
+      withRuns(
+        RUN({
+          kind: "summarize",
+          subject_label: name,
+          subject_type: subjectType,
+          subject_id: id,
+        }),
+      );
+      const user = userEvent.setup();
+      const { container } = render(ROUTE);
+      await settlesOnLine(
+        container,
+        `I'm pulling together what I know about ${name}.`,
+      );
+      const link = container.querySelector(".arline a");
+      expect(link?.textContent).toBe(name);
+      expect(link?.getAttribute("href")).toBe(`${page}${id}`);
+      if (!link) throw new Error("no record link in the line");
+      await user.click(link);
+      expect(document.querySelector(".arloose")).toBeNull();
+    },
+  );
+
+  // A record with no page of its own — a meeting is an activity, and the
+  // timeline has no screen for one — keeps its name as a word. So does a
+  // kind this build has never heard of, which is what an older tab gets from
+  // a newer server: the sentence is still true, and it points nowhere rather
+  // than somewhere wrong.
+  it.each([
+    ["a meeting", "activity"],
+    ["a kind this build does not know", "constellation"],
+  ])("names %s as text rather than a link", async (_what, subjectType) => {
+    withRuns(
+      RUN({
+        kind: "summarize",
+        subject_label: "the cutover review",
+        subject_type: subjectType,
+        subject_id: "019f7e65-fbf7-7114-b114-40af4af63a77",
+      }),
+    );
+    const { container } = render(ROUTE);
+    await settlesOnLine(
+      container,
+      "I'm pulling together what I know about the cutover review.",
+    );
+    expect(container.querySelector(".arline a")).toBeNull();
+  });
+
+  // The panel restates the line and lists the live runs, and the name is the
+  // way to the record there too: a reader who opened the panel to see which
+  // account is ready should not have to go back to the rail to reach it.
+  it("links the record in the panel's head and in its list of live runs", async () => {
+    const id = "019f7e65-fbf7-7114-b114-40af4af63a77";
+    withRuns(
+      RUN({
+        kind: "account_scan",
+        subject_label: "Brandt Automotive",
+        subject_type: "organization",
+        subject_id: id,
+      }),
+    );
+    const user = userEvent.setup();
+    const { container } = render(ROUTE);
+    await settlesOnLine(
+      container,
+      "I'm reading Brandt Automotive's exchanges and deals.",
+    );
+    await openPanel(user, container);
+    const links = [...panel().querySelectorAll("a")].filter(
+      (a) => a.getAttribute("href") === `#/companies/${id}`,
+    );
+    expect(links.map((a) => a.textContent)).toEqual([
+      "Brandt Automotive",
+      "Brandt Automotive",
+    ]);
   });
 
   // An occurrence that arrived without a name — an older server, or a record

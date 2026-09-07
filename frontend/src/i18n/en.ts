@@ -1159,11 +1159,11 @@ export const en = {
   "access.emailLabel": "Email",
   "access.capabilityLegend": "What may they do?",
   "access.inviteNote":
-    "You will get the link to copy. If a mail relay is configured it is also sent to them.",
+    "You will get the link to copy. If a mail relay is configured we also try to send it to them.",
   "access.issued.title": "Link for {name}",
   "access.issued.mailed": "Sent to {email}. You can also copy it below.",
   "access.issued.notMailed":
-    "No mail was sent. Copy the link and send it yourself.",
+    "The link was not mailed. Copy it and send it yourself.",
   "access.issued.linkLabel": "Their link",
   "access.issued.copy": "Copy link",
   "access.issued.copied": "Copied",
@@ -1479,6 +1479,10 @@ export const en = {
   "approval.kind.org_name_promotion": "Rename an account",
   "approval.kind.vcard_create": "Create a person from a card",
   "approval.kind.lifecycle_change": "Account stage",
+  "approval.kind.stage_progression": "Move a deal to the next stage",
+  "approval.field.because": "Why",
+  "approval.field.from_stage": "From",
+  "approval.field.to_stage": "To",
   "approval.kind.transcript_proposal": "Add a next step from a transcript",
   "approval.kind.fx_rate_proposal": "Refresh exchange rates",
   "approval.kind.ai_model_rate_proposal": "Refresh model prices",
@@ -1497,7 +1501,6 @@ export const en = {
   // back to the payload's JSON keys, and a business question reads as a
   // database row.
   "approval.field.basis": "Why",
-  "approval.field.because": "Why",
   "approval.field.step": "The step",
   "approval.field.intent": "Why this was drafted",
   "approval.field.evidence_snippet": "What the page said",
@@ -7437,6 +7440,28 @@ export const en = {
   "aiRouting.saving": "Saving the binding…",
   "aiRouting.saved": "Routing saved. Every process is now serving it.",
   "aiRouting.adminOnly": "Only an admin or ops can change model routing.",
+  "workingHours.title": "When you are bookable",
+  "workingHours.sub":
+    "Yours alone. Nobody sets these for you, and you set them for nobody else.",
+  "workingHours.unset":
+    "You have not chosen yet, so customers are offered 09:00–17:00, Monday to Friday, on the installation's clock.",
+  "workingHours.start": "Day starts",
+  "workingHours.end": "Day ends",
+  "workingHours.days": "Days you work",
+  "workingHours.timezone": "Your timezone",
+  "workingHours.timezoneHelp":
+    "The clock those two times are read on. Pre-filled from this browser.",
+  "workingHours.narrowed":
+    "You are bookable for less of the week than before, so fewer customers will find a time. That is the change, not a fault.",
+  "workingHours.saveFailed": "Those hours were not saved.",
+  "workingHours.save": "Save working hours",
+  "workingHours.day.1": "Monday",
+  "workingHours.day.2": "Tuesday",
+  "workingHours.day.3": "Wednesday",
+  "workingHours.day.4": "Thursday",
+  "workingHours.day.5": "Friday",
+  "workingHours.day.6": "Saturday",
+  "workingHours.day.7": "Sunday",
   "autonomy.title": "What answers itself",
   "autonomy.sub":
     "Small corrections you have been confirming by hand. Switch one on and it applies as soon as it comes up, with the change and an Undo waiting on your day.",

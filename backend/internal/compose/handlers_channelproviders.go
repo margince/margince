@@ -155,14 +155,17 @@ func publishedChannelProviders(registered []channelProviderFacts, sending map[st
 // room besides.
 //
 // The field stays dropped anyway, and the honest reason is smaller than the
-// budget was: NO SCHEDULED AGENT ATTACHES A CHANNEL TOOL, so today nothing on
-// this surface would read the field. The parked-delivery path that teaches an
-// agent the bounds is the REST and human send path, not one either shipped
-// agent can reach.
+// budget was and firmer than "no agent is wired for it": THE CHANNEL SEND TOOL
+// CARRIES NO FILES. `send_message` takes an activity, a body and a consent
+// purpose, and there is no attachment argument on it or on any other verb this
+// surface offers — so `max_files` and `max_bytes_per_file` would state a bound
+// on something an agent cannot do.
 //
-// So this is currently a question about a capability nobody exercises. Adding
-// the field back is answerable on its own merits the moment an agent attaches a
-// channel tool — see #1985, whose budget premise this supersedes.
+// That is a stronger reason than the scheduled-agent menus, and it is stated
+// this way on purpose: an author who attached a channel tool to a scheduled
+// agent would satisfy the weaker reason and still be adding a field nothing can
+// read. The question becomes answerable when the send verb learns to carry a
+// file — see #1985, whose budget premise this supersedes.
 //
 // IT ALSO DROPS `capture_sources`, for the same reason and with the same shape
 // of consequence: a passport reading REST resolves a unit's `ext:` provenance and

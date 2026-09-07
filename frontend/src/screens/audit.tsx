@@ -105,16 +105,18 @@ function actorAttribution(
   if (entry.actor_type === "system") {
     return { labelKey: "audit.system" };
   }
-  // A Deal Room participant. The read path resolves actor_name from app_user
-  // for humans only, and a buyer holds no seat, so no name arrives today and
-  // this renders the kind rather than inventing one. Naming the participant
-  // means resolving actor_id against deal_room_participant on the read path —
-  // when that lands, the name replaces the label here.
+  // A Deal Room participant, named the way a member is. The read path resolves
+  // actor_name from deal_room_participant for a buyer, so "who confirmed v5?"
+  // answers with the person rather than with their kind.
+  //
+  // The kind still stands in when the name is absent, and absent is a real
+  // state rather than a gap: a revoked participant, an archived room, or a
+  // subject erasure that scrubbed the name all leave the audit row behind
+  // without one. An invented name would be worse than the label.
   if (entry.actor_type === "buyer") {
-    return {
-      labelKey: "audit.unknownBuyer",
-      qualifierKey: "audit.viaDealRoom",
-    };
+    return entry.actor_name
+      ? { name: entry.actor_name, qualifierKey: "audit.viaDealRoom" }
+      : { labelKey: "audit.unknownBuyer", qualifierKey: "audit.viaDealRoom" };
   }
 
   const qualifierKey = MACHINE_QUALIFIER[entry.actor_type];

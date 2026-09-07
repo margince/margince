@@ -97,14 +97,15 @@ var tableOwners = map[string]string{
 	// DH-DDL-1: the pair verdicts live with the ONE dedupe implementation.
 	"dedupe_candidate": "internal/modules/people",
 	// deals (incl. the E03 offer engine: rate-card + versioned offers)
-	"commission_entry":     "internal/modules/commissions",
-	"contract":             "internal/modules/contracts",
-	"deal":                 "internal/modules/deals",
-	"pipeline":             "internal/modules/deals",
-	"stage":                "internal/modules/deals",
-	"stage_exit_criterion": "internal/modules/deals",
-	"deal_stage_evidence":  "internal/modules/deals",
-	"deal_stage_history":   "internal/modules/deals",
+	"commission_entry":          "internal/modules/commissions",
+	"contract":                  "internal/modules/contracts",
+	"deal":                      "internal/modules/deals",
+	"pipeline":                  "internal/modules/deals",
+	"stage":                     "internal/modules/deals",
+	"stage_exit_criterion":      "internal/modules/deals",
+	"deal_stage_evidence":       "internal/modules/deals",
+	"stage_progression_outcome": "internal/modules/deals",
+	"deal_stage_history":        "internal/modules/deals",
 	// The Deal Room is its own capability rather than a corner of deals: it
 	// owns an external audience, its own credentials and an immutable
 	// publication history, none of which the deal spine has a place for.

@@ -82,10 +82,14 @@ func newEvidenceTriggerEnv(t *testing.T, domains ...string) *evidenceTriggerEnv 
 
 	return &evidenceTriggerEnv{
 		Env: e,
-		// A nil reading enqueuer: these tests are about the DETERMINISTIC half,
-		// and a nil one is the composition an installation with no model lane
-		// runs. TestTheReadingIsQueuedForEveryActivityOnADeal covers the other.
-		trigger: NewStageEvidenceTrigger(e.Pool, e.Deals, staticDomains(domains), nil, slog.Default()),
+		// A nil reading enqueuer AND a nil proposer: these tests are about the
+		// DETERMINISTIC half, and both nils are the composition an installation
+		// with no model lane runs. TestTheReadingIsQueuedForEveryActivityOnADeal
+		// covers the reading; the proposing half is covered end to end by
+		// compose/integration/stageprogression_e2e_integration_test.go, which
+		// drives the real proposer rather than a stand-in.
+		trigger: NewStageEvidenceTrigger(
+			e.Pool, e.Deals, staticDomains(domains), nil, nil, slog.Default()),
 		dealID:  ids.From[ids.DealKind](dealID),
 		stageID: stageID,
 	}

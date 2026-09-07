@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 73 |
 | Resources | 12 |
-| Tool catalog | 205.4 KB |
+| Tool catalog | 205.6 KB |
 | Resource catalog | 4.5 KB |
-| Approx. wire tokens | 53740 |
+| Approx. wire tokens | 53783 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 96.6 KB | 47% | **No** — a result's shape, never listed to a model |
+| Output schemas | 96.6 KB | 46% | **No** — a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 49.9 KB | 24% | Yes, every step |
-| Input schemas | 43.6 KB | 21% | Yes, every step |
+| Input schemas | 43.8 KB | 21% | Yes, every step |
 | _Names, annotations, punctuation_ | 15.4 KB | 7% | Partly |
-| **Description + input schema** | **93.5 KB** | **45%** | **the recurring cost** |
+| **Description + input schema** | **93.6 KB** | **45%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -103,7 +103,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`list_pipelines`](#list_pipelines) | List pipelines and their stages | yes |  | 2.3 KB |
 | [`list_records`](#list_records) | List records | yes |  | 3.3 KB |
 | [`list_tags`](#list_tags) | List tags | yes |  | 1.6 KB |
-| [`log_activity`](#log_activity) | Log an activity |  |  | 3.8 KB |
+| [`log_activity`](#log_activity) | Log an activity |  |  | 3.9 KB |
 | [`merge_records`](#merge_records) | Merge two records |  |  | 2.4 KB |
 | [`merge_tags`](#merge_tags) | Fold one tag into another |  |  | 2.0 KB |
 | [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 8.7 KB |
@@ -6999,7 +6999,7 @@ Record something that happened — a call, a meeting, a note, a message — on t
       "type": "string"
     },
     "links": {
-      "description": "Every record this was about, ALL OF THEM in this call. A meeting or a call is with a PERSON and reaches their company through them — linking one to a company is REFUSED, so name the person who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval a human must decide before it takes effect.",
+      "description": "Every record this was about, ALL OF THEM in this call — EXCEPT a project, which this verb REFUSES: filing under a project writes a write-once retention mark, so it is made through relink_activity, which a person approves. A meeting or a call is with a PERSON and reaches their company through them — linking one to a company is REFUSED, so name the person who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval a human must decide before it takes effect.",
       "items": {
         "additionalProperties": false,
         "properties": {

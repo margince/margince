@@ -69,8 +69,12 @@ export async function readCorpusFile(file: File): Promise<string | null> {
 async function pdfText(bytes: ArrayBuffer): Promise<string> {
   const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
   pdfjs.GlobalWorkerOptions.workerSrc ||= pdfWorkerUrl;
-  const document = await pdfjs.getDocument({ data: new Uint8Array(bytes) })
-    .promise;
+  // The LOADING TASK is what gets destroyed, not the document: pdf.js moved
+  // destroy() onto the task in 6.x, and it is the better handle anyway — it
+  // aborts the read AND tears down the worker this function just pointed at a
+  // bundled asset, which a one-shot extraction has no further use for.
+  const task = pdfjs.getDocument({ data: new Uint8Array(bytes) });
+  const document = await task.promise;
   try {
     const pages: string[] = [];
     for (let number = 1; number <= document.numPages; number++) {
@@ -86,7 +90,7 @@ async function pdfText(bytes: ArrayBuffer): Promise<string> {
     }
     return pages.join("\n\n");
   } finally {
-    await document.destroy();
+    await task.destroy();
   }
 }
 

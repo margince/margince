@@ -27,6 +27,17 @@ import (
 // the client an enum member its generated type has no constant for.
 var evidenceSourceTypes = map[string]bool{
 	"activity": true, "deal": true, "signal": true, "relationship": true, "page": true,
+	// A contract is evidence a stage move rests on: the row turning active is
+	// what says a document was signed, and a reviewer checking that claim
+	// opens the agreement rather than a message about it.
+	"contract": true,
+}
+
+// EvidenceSourceTypeKnown answers whether a source type is one this module
+// will accept, so a caller assembling citations can drop an unknown one rather
+// than have the whole staging refused for it.
+func EvidenceSourceTypeKnown(sourceType string) bool {
+	return evidenceSourceTypes[sourceType]
 }
 
 // MaxEvidenceSnippet bounds one quoted fragment. Evidence is a pointer back to

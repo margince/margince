@@ -94,7 +94,7 @@ func TestAnAbsentProjectedLinkColumnReadsAsAbsent(t *testing.T) {
 // agree on arity here, or the other reader breaks at runtime on a query nothing
 // in this package exercises without a database.
 func TestTheAuditProjectionScansEveryColumnItSelects(t *testing.T) {
-	selected := len(strings.Split(strings.TrimSpace(recordAuditColumns), ","))
+	selected := topLevelColumns(recordAuditColumns)
 	counted := &countingScanner{}
 	if err := scanRecordAuditRow(counted, &recordAuditRow{}); err != nil {
 		t.Fatalf("scanning the projection: %v", err)
@@ -102,6 +102,28 @@ func TestTheAuditProjectionScansEveryColumnItSelects(t *testing.T) {
 	if counted.dests != selected {
 		t.Errorf("recordAuditColumns selects %d columns, scanRecordAuditRow reads %d", selected, counted.dests)
 	}
+}
+
+// topLevelColumns counts the select list's own commas, not the ones inside an
+// expression. A naive split read COALESCE(a, b) as two columns and reported the
+// scanner one short — a failure about the column list's arity that was really
+// about the counter's, which is the sort of finding that gets a real one
+// dismissed next to it.
+func topLevelColumns(list string) int {
+	depth, columns := 0, 1
+	for _, r := range strings.TrimSpace(list) {
+		switch r {
+		case '(':
+			depth++
+		case ')':
+			depth--
+		case ',':
+			if depth == 0 {
+				columns++
+			}
+		}
+	}
+	return columns
 }
 
 type countingScanner struct{ dests int }

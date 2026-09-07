@@ -434,6 +434,7 @@ var crossPackageKinds = map[string]string{
 	"approvals.KindScheduledSendHeld": approvals.KindScheduledSendHeld,
 	"deals.CloseDateCorrectionKind":   deals.CloseDateCorrectionKind,
 	"deals.FollowUpReconcileKind":     deals.FollowUpReconcileKind,
+	"deals.StageProgressionKind":      deals.StageProgressionKind,
 }
 
 // isPackageQualifier reports whether an identifier names an imported package
