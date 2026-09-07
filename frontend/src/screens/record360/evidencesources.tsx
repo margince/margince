@@ -97,10 +97,20 @@ export function EvidenceSources({
   sources,
   onOpenEmail,
   onOpenRecord,
+  nameOf,
 }: Readonly<{
   sources: readonly Source[];
   onOpenEmail?: (activityId: string) => void;
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  /**
+   * The record's own name, from a page that already holds it — passed straight
+   * through to the citations this component falls back to. A message needs
+   * none: its subject IS its name, and the server sent it.
+   */
+  nameOf?: (
+    entityType: Cited["entity_type"],
+    entityId: string,
+  ) => string | undefined;
 }>) {
   const { locale } = useLocale();
   const recordZone = useRecordZone();
@@ -148,6 +158,7 @@ export function EvidenceSources({
       {cited.length > 0 && (
         <Citations
           evidence={cited}
+          nameOf={nameOf}
           onOpenRecord={onOpenRecord}
           onOpenEmail={onOpenEmail}
         />

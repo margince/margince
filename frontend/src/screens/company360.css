@@ -398,6 +398,13 @@
 .co-move-basis > .co-brief-cites {
   margin-inline-start: 0;
 }
+/* A basis holding message ROWS stacks instead of wrapping inline: an email
+   entry carries a subject, a sender and a preview, and two of those side by
+   side is the chip run this block exists not to be. */
+.co-move-basis:has(.co-evidence-sources) {
+  flex-direction: column;
+  align-items: stretch;
+}
 
 /* The basis under an action, where the reader's next act is to READ the
    message. Rows stack rather than wrapping inline: an EmailEntry carries a

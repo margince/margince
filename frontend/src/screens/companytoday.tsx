@@ -122,6 +122,9 @@ type TodayReadingInputs = Readonly<{
   // account and its recipient.
   onDraftTo?: (personId: string) => void;
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  // Opens a cited message in the page's email drawer. A suggestion resting on
+  // an unanswered mail names that mail, and reading it is the reader's move.
+  onOpenEmail?: (activityId: string) => void;
   // Performing a suggestion's own action. The composer, the deal and the
   // task form all live above this brief.
   onPerform?: (action: SuggestionAction) => void;
@@ -139,6 +142,7 @@ export function useTodayReading({
   onPrepareMeeting,
   onDraftTo,
   onOpenRecord,
+  onOpenEmail,
   onPerform,
   scan,
 }: TodayReadingInputs): TodayReading {
@@ -153,6 +157,7 @@ export function useTodayReading({
     orgId,
     view,
     onOpenRecord,
+    onOpenEmail,
     onPerform,
     advice: scan
       ? { findings: scan.findings, dropped: scan.findings_dropped }

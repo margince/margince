@@ -45,7 +45,13 @@ import "./company360.css";
 import { FactList } from "../design-system/factlist";
 import { HEALTH_DIMENSION_LABEL, HEALTH_RATING_LABEL } from "./companylookups";
 import { EntityRef } from "./entityref";
-import { Citations, FoundMove, SentenceList, WrittenBy } from "./record360";
+import {
+  EvidenceSources,
+  FoundMove,
+  fromCitations,
+  SentenceList,
+  WrittenBy,
+} from "./record360";
 import { TaskCompleteCheck, type useTaskUpdate } from "./taskactions";
 
 // The company view's data layer and its right-rail cards.
@@ -1723,6 +1729,7 @@ export function useSuggestionsBody({
   orgId,
   view,
   onOpenRecord,
+  onOpenEmail,
   onPerform,
   advice,
   keep,
@@ -1730,6 +1737,10 @@ export function useSuggestionsBody({
   orgId: string;
   view?: Organization360;
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  // Opens a cited message in the page's email drawer. A rule that fired on an
+  // unanswered mail names that mail as its grounds, and the reader's next act
+  // is to read it.
+  onOpenEmail?: (activityId: string) => void;
   // Opening a surface is the page's job, not this section's: the composer and
   // the deal page both live above it. Writing the prepared step is this
   // section's own verb and needs no caller — see `performable`.
@@ -1879,11 +1890,15 @@ export function useSuggestionsBody({
       title={suggestion.title ?? t(`co.suggest.kind.${suggestion.kind}`)}
       // The WHY, and behind it the records the rule fired on.
       why={suggestion.reason}
+      // The WHY's grounds, as rows rather than chips: a suggestion says what to
+      // do and its basis is the message the reader acts on, so the message gets
+      // its subject, its sender and its preview instead of a kind word.
       basis={
-        <Citations
-          evidence={suggestion.evidence}
+        <EvidenceSources
+          sources={fromCitations(suggestion.evidence)}
           nameOf={nameOf}
           onOpenRecord={onOpenRecord}
+          onOpenEmail={onOpenEmail}
         />
       }
       // What performing the advice means, named by the server. A rule that
@@ -1936,15 +1951,18 @@ export function ProposedNextSteps({
   orgId,
   view,
   onOpenRecord,
+  onOpenEmail,
 }: Readonly<{
   orgId: string;
   view?: Organization360;
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  onOpenEmail?: (activityId: string) => void;
 }>) {
   const body = useSuggestionsBody({
     orgId,
     view,
     onOpenRecord,
+    onOpenEmail,
     keep: proposesAStep,
   });
   if (!body.ready) {
@@ -1970,12 +1988,14 @@ export function SuggestionsSection({
   orgId,
   view,
   onOpenRecord,
+  onOpenEmail,
   onPerform,
   onOpenTasks,
 }: Readonly<{
   orgId: string;
   view?: Organization360;
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  onOpenEmail?: (activityId: string) => void;
   onPerform?: (action: SuggestionAction) => void;
   // Where the footer's commitment reading leads. Absent for a caller with no
   // Tasks tab of its own (the stories file).
@@ -1983,7 +2003,13 @@ export function SuggestionsSection({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const body = useSuggestionsBody({ orgId, view, onOpenRecord, onPerform });
+  const body = useSuggestionsBody({
+    orgId,
+    view,
+    onOpenRecord,
+    onOpenEmail,
+    onPerform,
+  });
   if (!body.ready) {
     return null;
   }

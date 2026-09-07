@@ -2179,6 +2179,7 @@ function CompanyRecordBody({
             onOpenHistory={onOpenHistory}
             onOpenTab={onTab}
             onOpenRecord={receipt.open}
+            onOpenEmail={receipt.openEmail}
             onOpenTasks={() => onTab("tasks")}
             onPrepareMeeting={setPreparing}
             onDraftTo={(id) => onCompose({ kind: "account", id })}
@@ -2378,6 +2379,7 @@ function CompanyOverviewStack({
   onAllDeals,
   onOpenHistory,
   onOpenRecord,
+  onOpenEmail,
   onOpenTasks,
   onPrepareMeeting,
   onDraftTo,
@@ -2399,6 +2401,10 @@ function CompanyOverviewStack({
   // the same records and two owners would mean two receipts open over each
   // other.
   onOpenRecord: (entityType: string, entityId: string) => void;
+  // Where a cited MESSAGE leads: the page's own email drawer. Beside
+  // onOpenRecord and owned by the same page, for the same reason — two drawers
+  // over one page would open over each other.
+  onOpenEmail: (activityId: string) => void;
   onOpenTasks: () => void;
   // Opens the meeting brief for the day's meeting — not the composer.
   onPrepareMeeting: (activityId: string) => void;
@@ -2436,6 +2442,7 @@ function CompanyOverviewStack({
     onPrepareMeeting,
     onDraftTo,
     onOpenRecord,
+    onOpenEmail,
     onPerform,
     scan,
   });
