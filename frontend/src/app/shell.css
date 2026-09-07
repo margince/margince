@@ -1773,7 +1773,7 @@
   margin-bottom: var(--space-4);
 }
 
-/* A record reads wider than a settings page or the home screen: it carries a
+/* A record reads wider than a settings page or the Brief: it carries a
    header, a tab strip and two columns under them, where the others are one
    column of prose-width cards. */
 .main-record .wrap {

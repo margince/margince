@@ -39,16 +39,16 @@ export function SchedulePanel({
   const zone = viewerZone();
   const meetings = rowsFrom(day, MEETING);
   return (
-    <section id="home-schedule" aria-label={t("home.panel.schedule")}>
-      <Panel title={t("home.panel.schedule")} className="rail-panel">
+    <section id="brief-schedule" aria-label={t("brief.panel.schedule")}>
+      <Panel title={t("brief.panel.schedule")} className="rail-panel">
         {/* The rows are `PanelRow`s and carry the panel's own gutter, so they
             sit in the Panel directly — inside a `PanelBody` they would be
             padded twice and read as an indented block against every other
             panel in the rail. `SurfaceState` draws its sentence either way. */}
         <SurfaceState
-          loadingLabel={t("home.panel.schedule")}
+          loadingLabel={t("brief.panel.schedule")}
           state={state === "ready" && meetings.length === 0 ? "empty" : state}
-          emptyLabel={t("home.schedule.clear")}
+          emptyLabel={t("brief.schedule.clear")}
         >
           {meetings.map((item) => (
             <PanelRow key={item.id} className="rail-schedule-row">
@@ -84,12 +84,12 @@ export function PromisesPanel({
   const t = useT();
   const tasks = rowsFrom(day, TASK);
   return (
-    <section id="home-promises" aria-label={t("home.panel.promises")}>
-      <Panel title={t("home.panel.promises")} className="rail-panel">
+    <section id="brief-promises" aria-label={t("brief.panel.promises")}>
+      <Panel title={t("brief.panel.promises")} className="rail-panel">
         <SurfaceState
-          loadingLabel={t("home.panel.promises")}
+          loadingLabel={t("brief.panel.promises")}
           state={state === "ready" && tasks.length === 0 ? "empty" : state}
-          emptyLabel={t("home.promises.clear")}
+          emptyLabel={t("brief.promises.clear")}
         >
           {tasks.map((item) => (
             <PanelRow key={item.id} className="rail-promise-row">
@@ -103,7 +103,7 @@ export function PromisesPanel({
             outstanding" — which is exactly the claim nothing here can make. */}
         <PanelBody>
           <p className="t-caption rail-promise-note">
-            {t("home.promises.untracked")}
+            {t("brief.promises.untracked")}
           </p>
         </PanelBody>
       </Panel>

@@ -130,7 +130,7 @@ export const RESET_ROUTE = "reset-password";
 // (app/router.tsx), but the bare route survives until this runs.
 // Left in place, it would make LoginForm's "restore the originally requested
 // route" check see a non-empty hash and skip the post-login redirect to
-// home, stranding a completed reset on a screen this app never routes to.
+// the Brief, stranding a completed reset on a screen this app never routes to.
 // Guarded on the route so it is safe to call from every "back to login" exit,
 // including the ones that never touched the reset flow.
 function clearResetHash(): void {
@@ -659,10 +659,10 @@ function LoginForm({
     onSuccess: () => {
       onPhase("success");
       // Restore the originally requested route (§8.5): a deep link the
-      // user followed stays; only a bare entry lands on home.
+      // user followed stays; only a bare entry lands on the Brief.
       const hash = globalThis.location?.hash ?? "";
       if (!hash || hash === "#" || hash === "#/") {
-        navigate({ screen: "home" });
+        navigate({ screen: "brief" });
       }
     },
     onError: (error) => {

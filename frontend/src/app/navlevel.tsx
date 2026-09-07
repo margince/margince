@@ -50,14 +50,14 @@ const BACK_TIP_KEY = "rail-level-back";
 // Where a reader who never walked into the section is sent when they walk out
 // of it: a deep link carries no origin, and an invented one would be a claim
 // about where they had been.
-const HOME: Route = { screen: "home" };
+const BRIEF: Route = { screen: "brief" };
 
 // What a walk between levels needs to remember, and both halves of it outlive
 // the panel — because they have to. A section route swaps one rail component for
 // the other (shell.tsx), so the rail is REMOUNTED in the middle of a walk: the
 // panel that asks the question is never the panel that answers it. The shell
 // holds this and hands it down; a rail rendered without one — a story, the
-// component workbench — has only its own lifetime, and walks out to home.
+// component workbench — has only its own lifetime, and walks out to the Brief.
 type NavWalk = {
   // The last route that showed no level at all. Nothing about `#/settings/admin/privacy`
   // says which screen was open before it, so it is remembered as the reader
@@ -90,7 +90,7 @@ export function useNavWalk(
   route: Route,
   remembers: boolean,
 ): RefObject<NavWalk> {
-  const walk = useRef<NavWalk>({ origin: HOME });
+  const walk = useRef<NavWalk>({ origin: BRIEF });
   useEffect(() => {
     if (remembers) {
       walk.current.origin = route;
@@ -132,7 +132,7 @@ export function useNavLevel(
   const parent = depth > 0 ? trail[depth - 1] : undefined;
   // With no shell above it the panel is all there is, so it keeps the walk's
   // memory itself — one lifetime, and no history before it.
-  const own = useRef<NavWalk>({ origin: HOME });
+  const own = useRef<NavWalk>({ origin: BRIEF });
   const walk = useContext(NavWalkMemory) ?? own;
 
   // Walking between levels replaces every row in the panel, and an unmounted

@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { en } from "../i18n/en";
 import { PlanContract } from "./brief.plan.contract";
-import { jsonResponse, render, stubApi, writes } from "./home.testkit";
+import { jsonResponse, render, stubApi, writes } from "./brief.testkit";
 import type { WeeklyPlan } from "./weeklyplan.queries";
 
 // The contract's three states are the whole subject. `null` is a rep who has

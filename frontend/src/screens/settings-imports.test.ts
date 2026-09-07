@@ -147,7 +147,7 @@ function pathTo(entry: string, target: string): string[] | null {
  * Two trees qualify. `src/app/**` is the always-loaded shell. `src/screens/**`
  * is every other screen: a screen that only wants an ADDRESS must not drag the
  * settings cards into its own chunk, which is what `worklist.copy.ts` did —
- * putting the whole settings screen behind Home, the default landing page.
+ * putting the whole settings screen behind Brief, the default landing page.
  *
  * Tests, stories and the testkit are excluded on purpose: they ask this module
  * for both halves, that is what they are for, and they ship in no chunk.

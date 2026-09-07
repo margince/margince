@@ -20,7 +20,7 @@ import "./brief.feed.css";
 
 // The morning, as ONE ordered feed.
 //
-// What this replaces is the defect the whole redesign starts from: Home drew
+// What this replaces is the defect the whole redesign starts from: Brief drew
 // "Do next" (the head of the ranked worklist) and "Focus" (the overnight
 // opportunity queue) as two panels, one above the other, each with its own
 // ordering. Two ranking systems gave two answers to "what first", and the rep

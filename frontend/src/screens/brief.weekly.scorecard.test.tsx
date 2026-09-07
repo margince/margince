@@ -2,8 +2,8 @@
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { en } from "../i18n/en";
-import { render } from "./home.testkit";
-import { ScorecardPanel } from "./home.weekly.scorecard";
+import { render } from "./brief.testkit";
+import { ScorecardPanel } from "./brief.weekly.scorecard";
 
 // The scorecard's whole design is that ABSENT is not ZERO, and every case here
 // is a way of asking whether the panel still honours that. A block of zeros
@@ -46,14 +46,14 @@ describe("the weekly scorecard", () => {
     render(<ScorecardPanel scorecard={{ deal: dealBlock }} />);
     expect(
       screen.queryByRole("region", {
-        name: en["home.weekly.scorecard.leadBlock"],
+        name: en["brief.weekly.scorecard.leadBlock"],
       }),
     ).toBeNull();
     // The deal block it DID send is still drawn: this is an omission, not a
     // panel that gave up.
     expect(
       screen.getByRole("region", {
-        name: en["home.weekly.scorecard.dealBlock"],
+        name: en["brief.weekly.scorecard.dealBlock"],
       }),
     ).toBeTruthy();
   });
@@ -62,12 +62,12 @@ describe("the weekly scorecard", () => {
     render(<ScorecardPanel scorecard={{ lead: leadBlock }} />);
     expect(
       screen.queryByRole("region", {
-        name: en["home.weekly.scorecard.dealBlock"],
+        name: en["brief.weekly.scorecard.dealBlock"],
       }),
     ).toBeNull();
     expect(
       screen.getByRole("region", {
-        name: en["home.weekly.scorecard.leadBlock"],
+        name: en["brief.weekly.scorecard.leadBlock"],
       }),
     ).toBeTruthy();
   });
@@ -82,7 +82,9 @@ describe("the weekly scorecard", () => {
     );
     // Present and zero: the rep HAD leads and moved none, which the panel must
     // say rather than hide.
-    expect(screen.getByText(en["home.weekly.scorecard.advanced"])).toBeTruthy();
+    expect(
+      screen.getByText(en["brief.weekly.scorecard.advanced"]),
+    ).toBeTruthy();
   });
 
   it("omits the median when no deal changed stage, never drawing it as zero days", () => {
@@ -92,14 +94,14 @@ describe("the weekly scorecard", () => {
       />,
     );
     expect(
-      screen.queryByText(en["home.weekly.scorecard.medianDaysInStage"]),
+      screen.queryByText(en["brief.weekly.scorecard.medianDaysInStage"]),
     ).toBeNull();
   });
 
   it("draws the median when there is one", () => {
     render(<ScorecardPanel scorecard={{ deal: dealBlock }} />);
     expect(
-      screen.getByText(en["home.weekly.scorecard.medianDaysInStage"]),
+      screen.getByText(en["brief.weekly.scorecard.medianDaysInStage"]),
     ).toBeTruthy();
   });
 
@@ -109,7 +111,7 @@ describe("the weekly scorecard", () => {
     // denominator, which is why the server sends counts and not a rate.
     expect(
       screen.getAllByText(
-        en["home.weekly.scorecard.ofOpen"].replace("{total}", "5"),
+        en["brief.weekly.scorecard.ofOpen"].replace("{total}", "5"),
       ).length,
     ).toBeGreaterThan(0);
   });
@@ -117,7 +119,7 @@ describe("the weekly scorecard", () => {
   it("says the meeting counts are a floor only when history is actually missing", () => {
     render(<ScorecardPanel scorecard={{ lead: leadBlock }} />);
     expect(
-      screen.queryByText(en["home.weekly.scorecard.partialHistory"]),
+      screen.queryByText(en["brief.weekly.scorecard.partialHistory"]),
     ).toBeNull();
 
     cleanup();
@@ -127,7 +129,7 @@ describe("the weekly scorecard", () => {
       />,
     );
     expect(
-      screen.getByText(en["home.weekly.scorecard.partialHistory"]),
+      screen.getByText(en["brief.weekly.scorecard.partialHistory"]),
     ).toBeTruthy();
   });
 });

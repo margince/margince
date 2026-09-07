@@ -12,7 +12,7 @@ import type { components } from "../api/schema";
 import { throwProblem } from "./common";
 import { worklistKey } from "./worklist.queries";
 
-// Home's reads, in one place. The screen fans out to five of them and each is
+// Brief's reads, in one place. The screen fans out to five of them and each is
 // gated on its own, deliberately: a transient failure in the decisions queue
 // must never hide a healthy brief, and one combined "my day" payload does not
 // exist on the server.
@@ -108,8 +108,8 @@ export function usePipelineValue(): UseQueryResult<PipelineReading> {
   return useQuery({
     // Under ["deals"] so the invalidation every deal mutation already fires
     // reaches this too. Keyed apart, the headline went on naming yesterday's
-    // pipeline after a rep won something and came back to Home.
-    queryKey: ["deals", "home-pipeline-value"],
+    // pipeline after a rep won something and came back to Brief.
+    queryKey: ["deals", "brief-pipeline-value"],
     queryFn: async (): Promise<PipelineReading> => {
       const { data, error } = await api.POST("/reports/{report}", {
         params: { path: { report: "deals-by-stage" } },
@@ -154,13 +154,13 @@ export function usePipelineValue(): UseQueryResult<PipelineReading> {
 }
 
 /** One page of deals, and whether the list ended there. */
-export type HomeDeals = Readonly<{ rows: Deal[]; more: boolean }>;
+export type BriefDeals = Readonly<{ rows: Deal[]; more: boolean }>;
 
-/** How many deals Home reads in one go. */
-const HOME_DEALS_PAGE = 100;
+/** How many deals Brief reads in one go. */
+const BRIEF_DEALS_PAGE = 100;
 
 /**
- * The deals page Home reads twice over: the quiet ones it lists, and the count
+ * The deals page Brief reads twice over: the quiet ones it lists, and the count
  * of open ones its readings strip reports.
  *
  * One query rather than two because there is no server-side "stalled" filter to
@@ -173,12 +173,12 @@ const HOME_DEALS_PAGE = 100;
  * stopped rising is the failure this repo cares about most — the same words, a
  * smaller number, and nothing failing.
  */
-export function useHomeDeals(): UseQueryResult<HomeDeals> {
+export function useBriefDeals(): UseQueryResult<BriefDeals> {
   return useQuery({
     queryKey: ["deals"],
-    queryFn: async (): Promise<HomeDeals> => {
+    queryFn: async (): Promise<BriefDeals> => {
       const { data, error } = await api.GET("/deals", {
-        params: { query: { limit: HOME_DEALS_PAGE } },
+        params: { query: { limit: BRIEF_DEALS_PAGE } },
       });
       if (error) {
         throwProblem(error);
@@ -306,7 +306,7 @@ export function useWeeklyReview(
       }
       // A payload that is not a review reads as no review, not as one with
       // undefined fields. The panel formats local_week_start straight away, so
-      // a half-shaped answer would take Home's whole render down rather than
+      // a half-shaped answer would take Brief's whole render down rather than
       // drawing the honest "no review yet" state.
       return data?.local_week_start === undefined ? null : data;
     },
@@ -325,7 +325,7 @@ export function useWeeklyReviewIndex(): UseQueryResult<readonly string[]> {
       // Never undefined out of this hook. React Query refuses an undefined
       // result, and a payload without the field is a server that answered
       // something else — which must read as "no weeks", not as a crash that
-      // takes Home's whole render with it.
+      // takes Brief's whole render with it.
       return data?.weeks ?? [];
     },
   });

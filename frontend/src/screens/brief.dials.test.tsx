@@ -5,9 +5,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { formatTimeOfDay } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { en } from "../i18n/en";
-import { HomeScreen } from "./home";
-import { readingsDay, waitingRow } from "./home.fixtures";
-import { jsonResponse, render, stubApi } from "./home.testkit";
+import { BriefScreen } from "./brief";
+import { readingsDay, waitingRow } from "./brief.fixtures";
+import { jsonResponse, render, stubApi } from "./brief.testkit";
 import type { Worklist } from "./worklist.queries";
 
 // The dials, on the rendered page.
@@ -22,7 +22,7 @@ afterEach(() => {
 });
 
 beforeEach(() => {
-  globalThis.location.hash = "#/home";
+  globalThis.location.hash = "#/brief";
 });
 
 // One waiting customer, under the scopes this case is about. Built on the shared
@@ -35,7 +35,7 @@ function worklist(scopeOptions: Worklist["scope_options"]) {
 }
 
 /** Stub every read the Brief fans out to, for a reader with the given scopes. */
-function stubHome(scopeOptions: Worklist["scope_options"]) {
+function stubBrief(scopeOptions: Worklist["scope_options"]) {
   return stubApi({
     "GET /worklist": () => jsonResponse(worklist(scopeOptions)),
     "GET /worklist/team": () =>
@@ -58,8 +58,8 @@ describe("the Brief's dials", () => {
   // A rep has one scope, so the control would have one option — which asks them
   // to confirm what they cannot change.
   it("draws no scope dial for a reader whose scope reaches no team", async () => {
-    stubHome(["mine"]);
-    render(<HomeScreen />);
+    stubBrief(["mine"]);
+    render(<BriefScreen />);
 
     await screen.findByRole("group", { name: en["brief.view.label"] });
     expect(
@@ -68,8 +68,8 @@ describe("the Brief's dials", () => {
   });
 
   it("draws both dials for a reader whose scope reaches a team", async () => {
-    stubHome(["mine", "team"]);
-    render(<HomeScreen />);
+    stubBrief(["mine", "team"]);
+    render(<BriefScreen />);
 
     // findBy, not getBy: the scope dial appears only once the worklist read
     // lands, because whether this reader HAS a second scope is that read's
@@ -85,8 +85,8 @@ describe("the Brief's dials", () => {
 
   // The dial writes the address, so a reader can send what they are looking at.
   it("puts the chosen view in the address", async () => {
-    stubHome(["mine"]);
-    render(<HomeScreen />);
+    stubBrief(["mine"]);
+    render(<BriefScreen />);
 
     await userEvent.click(
       await screen.findByRole("button", { name: en["brief.view.weekly"] }),
@@ -109,8 +109,8 @@ describe("the Brief's dials", () => {
   // location.hash directly would satisfy every other assertion in this file
   // while quietly pushing an entry per press.
   it("turns a dial without adding a history entry to press Back through", async () => {
-    stubHome(["mine", "team"]);
-    render(<HomeScreen />);
+    stubBrief(["mine", "team"]);
+    render(<BriefScreen />);
 
     const before = globalThis.history.length;
     await userEvent.click(
@@ -139,16 +139,16 @@ describe("the Brief's dials", () => {
   // The work column already switches on the view. The rail did not, because it
   // is drawn once outside that branch and nothing asserted otherwise.
   it("leaves the morning's rail off the weekly", async () => {
-    globalThis.location.hash = "#/home?view=weekly";
-    stubHome(["mine"]);
-    render(<HomeScreen />);
+    globalThis.location.hash = "#/brief?view=weekly";
+    stubBrief(["mine"]);
+    render(<BriefScreen />);
 
     await screen.findByRole("group", { name: en["brief.view.label"] });
     await waitFor(() =>
-      expect(document.querySelector("#home-weekly")).not.toBeNull(),
+      expect(document.querySelector("#brief-weekly")).not.toBeNull(),
     );
-    expect(document.querySelector("#home-schedule")).toBeNull();
-    expect(document.querySelector("#home-watch")).toBeNull();
+    expect(document.querySelector("#brief-schedule")).toBeNull();
+    expect(document.querySelector("#brief-watch")).toBeNull();
     // And the TRACK is gone with them. The <aside> element is gated on having
     // content, but the grid template is on the wrapper and driven by `shape` —
     // so dropping only the contents leaves the weekly at seventy per cent
@@ -161,11 +161,11 @@ describe("the Brief's dials", () => {
   // And it is still there on the morning, or the assertion above passes over a
   // rail that was deleted rather than placed.
   it("keeps the rail on the morning", async () => {
-    stubHome(["mine"]);
-    render(<HomeScreen />);
+    stubBrief(["mine"]);
+    render(<BriefScreen />);
 
     await waitFor(() =>
-      expect(document.querySelector("#home-schedule")).not.toBeNull(),
+      expect(document.querySelector("#brief-schedule")).not.toBeNull(),
     );
     expect(document.querySelector(".page-zones-aside")).not.toBeNull();
   });
@@ -176,18 +176,18 @@ describe("the Brief's dials", () => {
   // address resolved.
   it("draws a surface under every combination it offers", async () => {
     for (const hash of [
-      "#/home",
-      "#/home?view=weekly",
-      "#/home?scope=team",
-      "#/home?scope=team&view=weekly",
+      "#/brief",
+      "#/brief?view=weekly",
+      "#/brief?scope=team",
+      "#/brief?scope=team&view=weekly",
     ]) {
       globalThis.location.hash = hash;
-      stubHome(["mine", "team"]);
-      const view = render(<HomeScreen />);
+      stubBrief(["mine", "team"]);
+      const view = render(<BriefScreen />);
 
       await screen.findByRole("group", { name: en["brief.view.label"] });
       await waitFor(() => {
-        const main = view.container.querySelector(".home-main");
+        const main = view.container.querySelector(".brief-main");
         expect(
           main?.querySelectorAll("section, .panel").length ?? 0,
         ).toBeGreaterThan(0);
@@ -201,8 +201,8 @@ describe("the Brief's dials", () => {
   // from the ranked queue — what waits TODAY — so over the weekly it would be
   // describing this morning under a heading about the week that closed.
   it("names the view in the eyebrow, and keeps the sentence to the morning", async () => {
-    stubHome(["mine"]);
-    render(<HomeScreen />);
+    stubBrief(["mine"]);
+    render(<BriefScreen />);
     // The expected time is DERIVED, not written down: the runner's zone is not
     // the fixture's, so a literal "07:00" here passes in Berlin and fails in CI.
     expect(
@@ -220,9 +220,9 @@ describe("the Brief's dials", () => {
 
     cleanup();
     vi.unstubAllGlobals();
-    globalThis.location.hash = "#/home?view=weekly";
-    stubHome(["mine"]);
-    render(<HomeScreen />);
+    globalThis.location.hash = "#/brief?view=weekly";
+    stubBrief(["mine"]);
+    render(<BriefScreen />);
 
     expect(await screen.findByText(en["brief.eyebrow.weekly"])).toBeTruthy();
     // Exact match: the morning's eyebrow now composes the scope with an as-of,
@@ -236,22 +236,22 @@ describe("the Brief's dials", () => {
     // NEVER composes a sentence, so the fallback is the only line under its
     // heading — and the morning's "this is your day" read as the wrong week
     // entirely beneath "YOUR WEEK".
-    expect(screen.getByText(en["home.glance.introWeekly"])).toBeTruthy();
-    expect(screen.queryByText(en["home.glance.intro"])).toBeNull();
+    expect(screen.getByText(en["brief.glance.introWeekly"])).toBeTruthy();
+    expect(screen.queryByText(en["brief.glance.intro"])).toBeNull();
   });
 
   // The morning shows what waits; the weekly shows the week. Neither shows the
   // other, or the dial would not be a dial.
   it("shows the morning's work only on the morning", async () => {
-    stubHome(["mine"]);
-    render(<HomeScreen />);
+    stubBrief(["mine"]);
+    render(<BriefScreen />);
     expect(await screen.findByText(en["brief.feed.title"])).toBeTruthy();
 
     cleanup();
     vi.unstubAllGlobals();
-    globalThis.location.hash = "#/home?view=weekly";
-    stubHome(["mine"]);
-    render(<HomeScreen />);
+    globalThis.location.hash = "#/brief?view=weekly";
+    stubBrief(["mine"]);
+    render(<BriefScreen />);
 
     await screen.findByRole("group", { name: en["brief.view.label"] });
     await waitFor(() =>

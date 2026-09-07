@@ -6,10 +6,10 @@ import { formatDayLong, formatTimeOfDay, hourInZone } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import type { WeeklyReview } from "./brief.queries";
 import { briefSentence } from "./brief.sentence";
 import type { BriefView } from "./brief.view";
 import { weekSentence } from "./brief.weeksentence";
-import type { WeeklyReview } from "./home.queries";
 import type { Worklist } from "./worklist.queries";
 
 // The first thing a reader sees each morning: who they are, what hour it is for
@@ -24,7 +24,7 @@ import type { Worklist } from "./worklist.queries";
 // zero is not.
 //
 // `now` is a prop rather than a call to the clock inside the render. The
-// greeting is the one thing on Home that changes with the hour, so a test that
+// greeting is the one thing on Brief that changes with the hour, so a test that
 // cannot choose the hour cannot test it, and a real clock would make the same
 // test pass at 09:00 and fail at 21:00.
 //
@@ -40,28 +40,28 @@ import type { Worklist } from "./worklist.queries";
 // over is somebody working at an hour nobody should have to.
 function greetingKey(hour: number): MessageKey {
   if (hour >= 5 && hour < 12) {
-    return "home.glance.morning";
+    return "brief.glance.morning";
   }
   if (hour >= 12 && hour < 18) {
-    return "home.glance.afternoon";
+    return "brief.glance.afternoon";
   }
   if (hour >= 18 && hour < 22) {
-    return "home.glance.evening";
+    return "brief.glance.evening";
   }
-  return "home.glance.night";
+  return "brief.glance.night";
 }
 
 function anonGreetingKey(hour: number): MessageKey {
   if (hour >= 5 && hour < 12) {
-    return "home.glance.morningAnon";
+    return "brief.glance.morningAnon";
   }
   if (hour >= 12 && hour < 18) {
-    return "home.glance.afternoonAnon";
+    return "brief.glance.afternoonAnon";
   }
   if (hour >= 18 && hour < 22) {
-    return "home.glance.eveningAnon";
+    return "brief.glance.eveningAnon";
   }
-  return "home.glance.nightAnon";
+  return "brief.glance.nightAnon";
 }
 
 export type GlanceFacts = Readonly<{
@@ -108,7 +108,7 @@ function eyebrowText(
   });
 }
 
-export function HomeGlance({ firstName, now, day, week, view }: GlanceProps) {
+export function BriefGlance({ firstName, now, day, week, view }: GlanceProps) {
   const t = useT();
   const hour = hourInZone(now, viewerZone());
   // No name yet is not a reason to greet nobody: the hour is known either way,
@@ -129,7 +129,7 @@ export function HomeGlance({ firstName, now, day, week, view }: GlanceProps) {
     view === "morning" ? briefSentence(day, t, locale) : weekSentence(week, t);
 
   return (
-    <header className="glance arrive" data-testid="home-glance">
+    <header className="glance arrive" data-testid="brief-glance">
       {/* Scope and date, above the greeting. A span rather than a heading: the
           page has ONE h1 and this is its label, not a level of its own. */}
       <Eyebrow className="glance-eyebrow">
@@ -160,7 +160,9 @@ export function HomeGlance({ firstName, now, day, week, view }: GlanceProps) {
         // the composed one read as the page's opening.
         <p className="glance-sentence">
           {t(
-            view === "weekly" ? "home.glance.introWeekly" : "home.glance.intro",
+            view === "weekly"
+              ? "brief.glance.introWeekly"
+              : "brief.glance.intro",
           )}
         </p>
       )}

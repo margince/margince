@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import { OutlookPanel } from "./home.waterfall";
+import { OutlookPanel } from "./brief.waterfall";
 
 type Review = components["schemas"]["WeeklyReview"];
 type Outlook = NonNullable<Review["outlook"]>[number];
@@ -52,8 +52,8 @@ describe("the frozen outlook", () => {
   it("says no forecast was composed rather than drawing zeros", () => {
     show([]);
 
-    expect(screen.getByText(en["home.weekly.outlook.none"])).toBeTruthy();
-    expect(screen.queryByText(en["home.weekly.outlook.landing"])).toBeNull();
+    expect(screen.getByText(en["brief.weekly.outlook.none"])).toBeTruthy();
+    expect(screen.queryByText(en["brief.weekly.outlook.landing"])).toBeNull();
   });
 
   it("labels best case as inclusive of commit", () => {
@@ -68,7 +68,7 @@ describe("the frozen outlook", () => {
     show([horizon()]);
 
     expect(
-      screen.getByText(en["home.weekly.outlook.measure.commit_evidence"]),
+      screen.getByText(en["brief.weekly.outlook.measure.commit_evidence"]),
     ).toBeTruthy();
   });
 
@@ -78,10 +78,10 @@ describe("the frozen outlook", () => {
     show([horizon({ forward_measure: "weighted" })]);
 
     expect(
-      screen.getByText(en["home.weekly.outlook.measure.weighted"]),
+      screen.getByText(en["brief.weekly.outlook.measure.weighted"]),
     ).toBeTruthy();
     expect(
-      screen.queryByText(en["home.weekly.outlook.measure.commit_evidence"]),
+      screen.queryByText(en["brief.weekly.outlook.measure.commit_evidence"]),
     ).toBeNull();
   });
 });
@@ -95,10 +95,10 @@ describe("the movement bridge", () => {
     // the drawing would be an order half the readers never get.
     const rows = screen.getAllByRole("row").map((row) => row.textContent ?? "");
     const created = rows.findIndex((row) =>
-      row.includes(en["home.weekly.bar.created"]),
+      row.includes(en["brief.weekly.bar.created"]),
     );
     const slipped = rows.findIndex((row) =>
-      row.includes(en["home.weekly.bar.slipped"]),
+      row.includes(en["brief.weekly.bar.slipped"]),
     );
     expect(created).toBeGreaterThanOrEqual(0);
     expect(slipped).toBeGreaterThan(created);
@@ -109,8 +109,8 @@ describe("the movement bridge", () => {
   it("shows 'no Monday snapshot' rather than a zero opening", () => {
     show([horizon({ opening_landing_minor: undefined, movement: [] })]);
 
-    expect(screen.getByText(en["home.weekly.bridge.noOpening"])).toBeTruthy();
-    expect(screen.queryByText(en["home.weekly.bridge.opening"])).toBeNull();
+    expect(screen.getByText(en["brief.weekly.bridge.noOpening"])).toBeTruthy();
+    expect(screen.queryByText(en["brief.weekly.bridge.opening"])).toBeNull();
   });
 
   // The bars are a CLAIM that these causes account for the whole difference.
@@ -125,12 +125,12 @@ describe("the movement bridge", () => {
       }),
     ]);
 
-    expect(screen.getByText(en["home.weekly.bridge.reconcile"])).toBeTruthy();
+    expect(screen.getByText(en["brief.weekly.bridge.reconcile"])).toBeTruthy();
   });
 
   it("draws no warning when the bars do add up", () => {
     show([horizon()]);
 
-    expect(screen.queryByText(en["home.weekly.bridge.reconcile"])).toBeNull();
+    expect(screen.queryByText(en["brief.weekly.bridge.reconcile"])).toBeNull();
   });
 });

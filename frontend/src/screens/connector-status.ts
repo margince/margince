@@ -5,7 +5,7 @@ import type { components } from "../api/schema";
 import type { MessageKey } from "../i18n/en";
 
 // The shared connector-status vocabulary: Settings (the connected-inboxes
-// card) and home's digest both render connector health, and they must never
+// card) and the Brief's digest both render connector health, and they must never
 // describe the same state differently. Seeded by extracting the inline
 // statusTone/statusLabel that shipped with connectors.tsx (RC-8) so the two
 // surfaces stay on one definition rather than two copies drifting apart.
@@ -116,7 +116,7 @@ export function errorClassKey(cls: string | null | undefined): MessageKey {
   }
 }
 
-/** Home surfaces a connector line only when something needs the user's
+/** Brief surfaces a connector line only when something needs the user's
  *  attention: a healthy connector is not news, and a deliberately
  *  disconnected mailbox (the headline disconnect flow's own result) is not
  *  a fault — it is quiet on purpose, matching Settings, which filters

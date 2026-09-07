@@ -12,10 +12,9 @@ import { formatTimeOfDay } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import type { BriefView } from "./brief.view";
-import { HomeScreen } from "./home";
-import { overnightRow, readingsDay } from "./home.fixtures";
-import { HomeGlance } from "./home.glance";
+import { BriefScreen } from "./brief";
+import { overnightRow, readingsDay } from "./brief.fixtures";
+import { BriefGlance } from "./brief.glance";
 import {
   fleetDeal,
   jsonResponse,
@@ -27,7 +26,8 @@ import {
   workOrder,
   writeRoutes,
   writes,
-} from "./home.testkit";
+} from "./brief.testkit";
+import type { BriefView } from "./brief.view";
 import type { Worklist } from "./worklist.queries";
 
 afterEach(() => {
@@ -39,7 +39,7 @@ afterEach(() => {
 
 // ── The deck: staging is local, the commit is the only thing that sends ──
 
-describe("HomeScreen — the deck stages, and only the commit sends", () => {
+describe("BriefScreen — the deck stages, and only the commit sends", () => {
   it("stages three verdicts without a single write, then sends exactly the two that are verdicts", async () => {
     const queue = [
       proposal("ap-1", "Send the Weber follow-up"),
@@ -59,7 +59,7 @@ describe("HomeScreen — the deck stages, and only the commit sends", () => {
       },
     });
     const user = userEvent.setup();
-    render(<HomeScreen />);
+    render(<BriefScreen />);
     // The list is what the Brief opens on now (decisiondeck.tsx says why);
     // this case is about the DECK, so it opens the deck as a reader would.
     await user.click(await screen.findByRole("button", { name: "Deck" }));
@@ -119,7 +119,7 @@ describe("HomeScreen — the deck stages, and only the commit sends", () => {
       },
     });
     const user = userEvent.setup();
-    render(<HomeScreen />);
+    render(<BriefScreen />);
 
     // Three proposals, ONE card. The card is headlined by the member it
     // represents, says how much saying yes decides, and keeps the other two
@@ -183,7 +183,7 @@ describe("HomeScreen — the deck stages, and only the commit sends", () => {
       },
     });
     const user = userEvent.setup();
-    render(<HomeScreen />);
+    render(<BriefScreen />);
 
     await user.click(await screen.findByRole("button", { name: "Accept" }));
     await user.click(
@@ -200,7 +200,7 @@ describe("HomeScreen — the deck stages, and only the commit sends", () => {
       "GET /approvals": () => pendingPage(queue, new Set()),
     });
     const user = userEvent.setup();
-    render(<HomeScreen />);
+    render(<BriefScreen />);
 
     await screen.findByText("Send the Weber follow-up");
     await user.click(screen.getByRole("button", { name: "Edit" }));
@@ -235,7 +235,7 @@ describe("HomeScreen — the deck stages, and only the commit sends", () => {
       },
     });
     const user = userEvent.setup();
-    render(<HomeScreen />);
+    render(<BriefScreen />);
     // The list is what the Brief opens on now (decisiondeck.tsx says why);
     // this case is about the DECK, so it opens the deck as a reader would.
     await user.click(await screen.findByRole("button", { name: "Deck" }));
@@ -271,12 +271,12 @@ describe("HomeScreen — the deck stages, and only the commit sends", () => {
         return jsonResponse({
           ...queue[0],
           status: "approved",
-          approval_token: "example-home-token",
+          approval_token: "example-brief-token",
         });
       },
     });
     const user = userEvent.setup();
-    render(<HomeScreen />);
+    render(<BriefScreen />);
 
     await screen.findByText("Send the Weber follow-up");
     await user.click(screen.getByRole("button", { name: "Accept" }));
@@ -287,13 +287,13 @@ describe("HomeScreen — the deck stages, and only the commit sends", () => {
     await waitFor(() =>
       expect(screen.queryByText("Send the Weber follow-up")).toBeNull(),
     );
-    expect(screen.queryByText("example-home-token")).toBeNull();
+    expect(screen.queryByText("example-brief-token")).toBeNull();
   });
 });
 
 // ── The page's order follows the day ──
 
-describe("HomeScreen — the order of the page follows the day", () => {
+describe("BriefScreen — the order of the page follows the day", () => {
   it("leads with the decisions while any are waiting", async () => {
     stubApi({
       "GET /approvals": () =>
@@ -301,10 +301,10 @@ describe("HomeScreen — the order of the page follows the day", () => {
       "GET /brief": () => jsonResponse(run),
       "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
     });
-    render(<HomeScreen />);
+    render(<BriefScreen />);
 
     await screen.findByText("Send the Weber follow-up");
-    expect(workOrder()).toEqual(["home-decisions", "brief-feed"]);
+    expect(workOrder()).toEqual(["brief-decisions", "brief-feed"]);
   });
 
   it("leads with the ranked queue once the deck is clear", async () => {
@@ -316,22 +316,22 @@ describe("HomeScreen — the order of the page follows the day", () => {
       "GET /worklist": () =>
         jsonResponse(readingsDay({}, [overnightRow("bi-1", "d-1")])),
     });
-    render(<HomeScreen />);
+    render(<BriefScreen />);
 
     await screen.findByRole("region", { name: en["brief.feed.title"] });
-    expect(workOrder()).toEqual(["brief-feed", "home-decisions"]);
+    expect(workOrder()).toEqual(["brief-feed", "brief-decisions"]);
   });
 });
 
 // ── The greeting, on a clock the test owns ──
 
-describe("HomeGlance — the greeting follows the reader's own hour", () => {
+describe("BriefGlance — the greeting follows the reader's own hour", () => {
   // A local-time instant, so the hour the case names is the hour the reader's
   // own zone reports whatever machine this runs on.
   function greetingAt(hour: number, firstName: string | null): string {
     const view = rtlRender(
       <LocaleProvider initial="en">
-        <HomeGlance
+        <BriefGlance
           view="morning"
           firstName={firstName}
           now={new Date(2026, 6, 5, hour, 30, 0)}
@@ -370,7 +370,7 @@ describe("HomeGlance — the greeting follows the reader's own hour", () => {
   it("draws no line for a reading it was not given", () => {
     rtlRender(
       <LocaleProvider initial="en">
-        <HomeGlance
+        <BriefGlance
           view="morning"
           firstName="Ada"
           now={new Date(2026, 6, 5, 9, 0, 0)}
@@ -391,7 +391,7 @@ describe("HomeGlance — the greeting follows the reader's own hour", () => {
 
 // ── The weekly speaks about its own week ──
 
-describe("HomeGlance — the weekly's sentence comes from the closed week", () => {
+describe("BriefGlance — the weekly's sentence comes from the closed week", () => {
   // Only what the sentence reads. A fuller review would let this suite pass
   // over a composer reaching for a figure the weekly does not actually carry.
   const CLOSED_WEEK = {
@@ -415,15 +415,15 @@ describe("HomeGlance — the weekly's sentence comes from the closed week", () =
       meetings_held: 0,
       meetings_with_next_step: 0,
     },
-  } as unknown as Parameters<typeof HomeGlance>[0]["week"];
+  } as unknown as Parameters<typeof BriefGlance>[0]["week"];
 
   function sentenceOf(
     view: BriefView,
-    week: Parameters<typeof HomeGlance>[0]["week"],
+    week: Parameters<typeof BriefGlance>[0]["week"],
   ): string | null {
     const rendered = rtlRender(
       <LocaleProvider initial="en">
-        <HomeGlance
+        <BriefGlance
           view={view}
           firstName="Ada"
           now={new Date(2026, 6, 5, 9, 0, 0)}
@@ -463,11 +463,11 @@ describe("HomeGlance — the weekly's sentence comes from the closed week", () =
 
 // ── The eyebrow dates the morning's reading, and only the morning's ──
 
-describe("HomeGlance — the eyebrow says when the queue was read", () => {
+describe("BriefGlance — the eyebrow says when the queue was read", () => {
   function eyebrowOf(view: BriefView, day: Worklist | undefined): string {
     const rendered = rtlRender(
       <LocaleProvider initial="en">
-        <HomeGlance
+        <BriefGlance
           view={view}
           firstName="Ada"
           now={new Date(2026, 6, 5, 9, 0, 0)}
@@ -477,7 +477,7 @@ describe("HomeGlance — the eyebrow says when the queue was read", () => {
       </LocaleProvider>,
     );
     const text =
-      screen.getByTestId("home-glance").firstChild?.textContent ?? "";
+      screen.getByTestId("brief-glance").firstChild?.textContent ?? "";
     rendered.unmount();
     return text;
   }
@@ -508,7 +508,7 @@ describe("HomeGlance — the eyebrow says when the queue was read", () => {
 
 // ── A bundle's chips are claims about the ACT, not about the drawn member ──
 
-describe("HomeScreen — a bundle says only what its members agree on", () => {
+describe("BriefScreen — a bundle says only what its members agree on", () => {
   // A bundle is drawn from one member, which is right for what the card decides
   // and wrong for what it claims. Two site reads of the same company stage under
   // one bundle — the second joins the first's still-pending rows and moves them
@@ -525,7 +525,7 @@ describe("HomeScreen — a bundle says only what its members agree on", () => {
       }),
     ];
     stubApi({ "GET /approvals": () => pendingPage(queue, new Set<string>()) });
-    render(<HomeScreen />);
+    render(<BriefScreen />);
 
     expect(await screen.findByText("One decision · 2 items")).toBeTruthy();
     // Neither agent's name — and not the unnamed tag either, which would still
@@ -546,19 +546,19 @@ describe("HomeScreen — a bundle says only what its members agree on", () => {
       proposal("apy-2", "Lead: Mira Osei", { bundle_id: "bn-3" }),
     ];
     stubApi({ "GET /approvals": () => pendingPage(queue, new Set<string>()) });
-    render(<HomeScreen />);
+    render(<BriefScreen />);
 
     expect(await screen.findByText("One decision · 2 items")).toBeTruthy();
     expect(screen.getByText("Automated by runner")).toBeTruthy();
   });
 });
 
-describe("HomeScreen — a reading in flight is absent, not zero", () => {
+describe("BriefScreen — a reading in flight is absent, not zero", () => {
   /** The deck's own section, which is where a failed decisions read belongs. */
   function deckSection(): HTMLElement {
-    const section = document.getElementById("home-decisions");
+    const section = document.getElementById("brief-decisions");
     if (!section) {
-      throw new Error("Home rendered no decisions section");
+      throw new Error("Brief rendered no decisions section");
     }
     return section;
   }
@@ -572,13 +572,13 @@ describe("HomeScreen — a reading in flight is absent, not zero", () => {
       "GET /worklist": () =>
         jsonResponse(readingsDay({}, [overnightRow("bi-1", "d-1")])),
     });
-    render(<HomeScreen />);
+    render(<BriefScreen />);
 
     // The other reads land, so the page is drawn and its silence about decisions
     // is a choice rather than a page that has not started. The strip is the
     // witness that the page rendered: it is drawn from the worklist answer, not
     // from the queue this case leaves in flight.
-    await screen.findByTestId("home-readings");
+    await screen.findByTestId("brief-readings");
     expect(screen.queryByText("Nothing is waiting on you.")).toBeNull();
     // The wait belongs to the deck alone. Five independent reads exist so that
     // one of them being slow cannot blank the other four.
@@ -599,9 +599,9 @@ describe("HomeScreen — a reading in flight is absent, not zero", () => {
       "GET /worklist": () =>
         jsonResponse(readingsDay({}, [overnightRow("bi-1", "d-1")])),
     });
-    render(<HomeScreen />);
+    render(<BriefScreen />);
 
-    await screen.findByTestId("home-readings");
+    await screen.findByTestId("brief-readings");
     // Not "nothing is waiting": a queue that could not be read is not an empty
     // one, and the deck says which of the two this is.
     expect(screen.queryByText("Nothing is waiting on you.")).toBeNull();
@@ -615,7 +615,7 @@ describe("HomeScreen — a reading in flight is absent, not zero", () => {
     expect(document.querySelector(".brief-feed-list")).toBeTruthy();
   });
 
-  // Home reads ONE page of deals. Past it every reading taken from those rows is
+  // Brief reads ONE page of deals. Past it every reading taken from those rows is
   // a floor, and the failure this guards is the quiet one: the same words, a
   // smaller number, and nothing failing.
   //
@@ -630,7 +630,7 @@ describe("HomeScreen — a reading in flight is absent, not zero", () => {
           page: { has_more: true },
         }),
     });
-    render(<HomeScreen />);
+    render(<BriefScreen />);
 
     // The panel that LISTS them says the list is part of one, rather than making
     // the "nothing has gone quiet" claim it has no grounds for.
@@ -657,7 +657,7 @@ describe("HomeScreen — a reading in flight is absent, not zero", () => {
         ),
     });
     const user = userEvent.setup();
-    render(<HomeScreen />);
+    render(<BriefScreen />);
     // The list is what the Brief opens on now (decisiondeck.tsx says why);
     // this case is about the DECK, so it opens the deck as a reader would.
     await user.click(await screen.findByRole("button", { name: "Deck" }));
@@ -678,7 +678,7 @@ describe("HomeScreen — a reading in flight is absent, not zero", () => {
     // The expiry the card states is its own countdown, in the reader's zone.
     // The "how many stop waiting today" FIGURE has no surface any more: it
     // existed only for the removed briefing line, and its same-day arithmetic
-    // (home.tsx expiringToday) went with it. Whether the deck should say that
+    // (brief.tsx expiringToday) went with it. Whether the deck should say that
     // across the whole queue is a product question, filed rather than guessed.
     expect(within(deckSection()).getByText(/expires/i)).toBeTruthy();
   });

@@ -33,8 +33,8 @@ export function OutlookPanel({
   // are different facts and zeros would claim the second.
   if (outlook.length === 0) {
     return (
-      <Callout tone="info" title={t("home.weekly.outlook")}>
-        {t("home.weekly.outlook.none")}
+      <Callout tone="info" title={t("brief.weekly.outlook")}>
+        {t("brief.weekly.outlook.none")}
       </Callout>
     );
   }
@@ -47,52 +47,52 @@ export function OutlookPanel({
   return (
     <>
       <SegmentedControl
-        label={t("home.weekly.outlook")}
+        label={t("brief.weekly.outlook")}
         value={shown.period_kind}
         onChange={onHorizon}
         // Only the horizons this review actually froze. Offering one it has no
         // figures for would give the reader a tab that draws nothing.
         options={outlook.map((one) => one.period_kind)}
         labels={{
-          week: t("home.weekly.outlook.week"),
-          month: t("home.weekly.outlook.month"),
-          quarter: t("home.weekly.outlook.quarter"),
+          week: t("brief.weekly.outlook.week"),
+          month: t("brief.weekly.outlook.month"),
+          quarter: t("brief.weekly.outlook.quarter"),
         }}
       />
 
       <StatStrip>
         <StatCard
-          label={t("home.weekly.outlook.won")}
+          label={t("brief.weekly.outlook.won")}
           value={money(shown.won_minor)}
           numeric
         />
         <StatCard
-          label={t("home.weekly.outlook.commit")}
+          label={t("brief.weekly.outlook.commit")}
           value={money(shown.commit_minor)}
           numeric
         />
         {/* The label says "incl. commit" because the figure includes it, and a
             reader adding best case to commit would double-count the overlap. */}
         <StatCard
-          label={t("home.weekly.outlook.bestCase")}
+          label={t("brief.weekly.outlook.bestCase")}
           value={money(shown.best_case_minor)}
           numeric
         />
         <StatCard
-          label={t("home.weekly.outlook.weighted")}
+          label={t("brief.weekly.outlook.weighted")}
           value={money(shown.weighted_minor)}
           numeric
         />
         {shown.closing_landing_minor !== undefined && (
           <StatCard
-            label={t("home.weekly.outlook.landing")}
+            label={t("brief.weekly.outlook.landing")}
             value={money(shown.closing_landing_minor)}
             // Which measure produced it, because the same pipeline reads
             // differently under each and a landing with no basis is a number a
             // reader cannot argue with.
             detail={
               shown.forward_measure
-                ? t(`home.weekly.outlook.measure.${shown.forward_measure}`)
+                ? t(`brief.weekly.outlook.measure.${shown.forward_measure}`)
                 : undefined
             }
             numeric
@@ -121,29 +121,29 @@ function BridgePanel({
     outlook.closing_landing_minor === undefined
   ) {
     return (
-      <Callout tone="info" title={t("home.weekly.bridge")}>
-        {t("home.weekly.bridge.noOpening")}
+      <Callout tone="info" title={t("brief.weekly.bridge")}>
+        {t("brief.weekly.bridge.noOpening")}
       </Callout>
     );
   }
 
   const steps: WaterfallStep[] = outlook.movement.map((bar: Bar) => ({
     key: bar.bar,
-    label: t(`home.weekly.bar.${bar.bar}`),
+    label: t(`brief.weekly.bar.${bar.bar}`),
     value: bar.delta_minor,
     amount: money(bar.delta_minor),
   }));
 
   return (
     <Waterfall
-      label={t("home.weekly.bridge")}
+      label={t("brief.weekly.bridge")}
       opening={{
-        label: t("home.weekly.bridge.opening"),
+        label: t("brief.weekly.bridge.opening"),
         value: outlook.opening_landing_minor,
         amount: money(outlook.opening_landing_minor),
       }}
       closing={{
-        label: t("home.weekly.bridge.closing"),
+        label: t("brief.weekly.bridge.closing"),
         value: outlook.closing_landing_minor,
         amount: money(outlook.closing_landing_minor),
       }}
@@ -151,7 +151,7 @@ function BridgePanel({
       // order, and re-sorting here would tell a different story than the one
       // the review froze.
       steps={steps}
-      reconciliationWarning={t("home.weekly.bridge.reconcile")}
+      reconciliationWarning={t("brief.weekly.bridge.reconcile")}
     />
   );
 }

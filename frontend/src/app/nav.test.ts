@@ -10,7 +10,7 @@ describe("the rail and a composed unit", () => {
   // A unit had a group here once; the composed set is no longer an input to
   // this level at all, which is what the missing argument to railTrail says.
   it("carries only the groups the product names", () => {
-    const [primary] = railTrail({ screen: "home" });
+    const [primary] = railTrail({ screen: "brief" });
     expect(primary.groups.map((group) => group.headingKey)).toEqual([
       undefined,
       "nav.group.records",

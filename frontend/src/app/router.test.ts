@@ -7,8 +7,8 @@ import { parseHash, routeHash, routeIdentity } from "./router";
 
 describe("parseHash", () => {
   it("parses a bare screen with no id", () => {
-    expect(parseHash("#/home")).toEqual({
-      screen: "home",
+    expect(parseHash("#/brief")).toEqual({
+      screen: "brief",
       id: undefined,
       id2: undefined,
     });
@@ -39,9 +39,24 @@ describe("parseHash", () => {
     });
   });
 
-  it("falls back to home when the hash is empty", () => {
-    expect(parseHash("")).toEqual({ screen: "home" });
-    expect(parseHash("#/")).toEqual({ screen: "home" });
+  it("falls back to the Brief when the hash is empty", () => {
+    expect(parseHash("")).toEqual({ screen: "brief" });
+    expect(parseHash("#/")).toEqual({ screen: "brief" });
+  });
+
+  // `#/home` was the Brief's address long enough to reach bookmarks and staging
+  // links, and it answers the same page rather than Not Found.
+  it("answers the Brief's former address with the Brief", () => {
+    expect(parseHash("#/home")).toEqual({
+      screen: "brief",
+      id: undefined,
+      id2: undefined,
+      id3: undefined,
+    });
+  });
+
+  it("round-trips the Brief's own address", () => {
+    expect(routeHash(parseHash("#/brief"))).toBe("#/brief");
   });
 
   // A hash is text a human can type, so a screen name that no longer typechecks
@@ -61,7 +76,7 @@ describe("parseHash", () => {
 
 describe("routeHash", () => {
   it("serializes a bare screen", () => {
-    expect(routeHash({ screen: "home" })).toBe("#/home");
+    expect(routeHash({ screen: "brief" })).toBe("#/brief");
   });
 
   it("serializes a two-segment route", () => {
@@ -165,7 +180,7 @@ describe("routeIdentity", () => {
       "#/contacts/p-1/deals",
       "#/settings/admin/users",
       "#/share/deal/d-1",
-      "#/home",
+      "#/brief",
     ]) {
       const route = parseHash(hash);
       expect(parseHash(routeIdentity(route)).screen).toBe(route.screen);

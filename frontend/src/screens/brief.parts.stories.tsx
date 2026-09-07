@@ -3,10 +3,9 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import { deckItems } from "./brief";
+import { DecisionsSection } from "./brief.decisions";
 import { BriefFeed } from "./brief.feed";
-import { PlanSection } from "./brief.plan";
-import { deckItems } from "./home";
-import { DecisionsSection } from "./home.decisions";
 import {
   bundle,
   deals,
@@ -20,11 +19,12 @@ import {
   report,
   singles,
   type Worklist,
-} from "./home.fixtures";
-import { HomeGlance } from "./home.glance";
-import { OvernightPanel, PositionPanel, WatchPanel } from "./home.rail";
-import { HomeReadingsStrip } from "./home.readings";
-import { PromisesPanel, SchedulePanel } from "./home.schedule";
+} from "./brief.fixtures";
+import { BriefGlance } from "./brief.glance";
+import { PlanSection } from "./brief.plan";
+import { OvernightPanel, PositionPanel, WatchPanel } from "./brief.rail";
+import { BriefReadingsStrip } from "./brief.readings";
+import { PromisesPanel, SchedulePanel } from "./brief.schedule";
 import {
   installFetchStub,
   jsonResponse,
@@ -33,13 +33,13 @@ import {
   StoryProviders,
 } from "./story-utils";
 
-// Home, one part at a time.
+// Brief, one part at a time.
 //
-// `home.stories.tsx` documents the whole morning; this file documents the pieces
+// `brief.stories.tsx` documents the whole morning; this file documents the pieces
 // it is assembled from, because each of them has states the assembled page can
 // only show one of at a time — a briefing whose readings have not all answered,
 // a rail panel whose connector is unhealthy, a ranked queue with no run behind
-// it. Same fixtures as the page (`home.fixtures.ts`), so a part cannot drift
+// it. Same fixtures as the page (`brief.fixtures.ts`), so a part cannot drift
 // from the page it is part of.
 //
 // Read every frame in BOTH themes with the toolbar's Theme control. Nothing here
@@ -110,7 +110,7 @@ function part(node: React.ReactNode, routes: RouteMap = RAIL_ROUTES) {
 }
 
 const meta: Meta = {
-  title: "Shell/Home parts",
+  title: "Shell/Brief parts",
 };
 export default meta;
 type Story = StoryObj;
@@ -150,7 +150,7 @@ const GLANCE_DAY = {
   reach: [],
   sources_unavailable: [],
   summary: { total: 2, urgent: 1 },
-} as unknown as Parameters<typeof HomeGlance>[0]["day"];
+} as unknown as Parameters<typeof BriefGlance>[0]["day"];
 
 // A week that closed with a result and a debt — the two things the weekly's
 // opening sentence is built from.
@@ -182,7 +182,7 @@ const GLANCE_WEEK = {
     lost_minor: 0,
     currency: "EUR",
   },
-} as unknown as Parameters<typeof HomeGlance>[0]["week"];
+} as unknown as Parameters<typeof BriefGlance>[0]["week"];
 
 // The header the Brief opens with: eyebrow, greeting, and ONE composed sentence
 // about the day — not a column of counts. Each fact the old briefing lines
@@ -191,7 +191,7 @@ const GLANCE_WEEK = {
 // Watch panels list what the night found.
 export const Glance: Story = {
   render: part(
-    <HomeGlance
+    <BriefGlance
       view="morning"
       day={GLANCE_DAY}
       week={null}
@@ -206,7 +206,7 @@ export const Glance: Story = {
 // reader a moment after they started reading it.
 export const GlanceUnnamed: Story = {
   render: part(
-    <HomeGlance
+    <BriefGlance
       view="morning"
       day={GLANCE_DAY}
       week={null}
@@ -221,7 +221,7 @@ export const GlanceUnnamed: Story = {
 // THIS morning and would read as the wrong week entirely.
 export const GlanceWeekly: Story = {
   render: part(
-    <HomeGlance
+    <BriefGlance
       view="weekly"
       day={GLANCE_DAY}
       week={GLANCE_WEEK}
@@ -236,7 +236,7 @@ export const GlanceWeekly: Story = {
 // which would tell a rep their week was calm on no evidence.
 export const GlanceWeeklyUnread: Story = {
   render: part(
-    <HomeGlance
+    <BriefGlance
       view="weekly"
       day={GLANCE_DAY}
       week={undefined}
@@ -253,7 +253,7 @@ export const GlanceWeeklyUnread: Story = {
 // is unwired, and quota pace, because targets were retired from the product. A
 // slot that will never fill is not a pending answer.
 export const Readings: Story = {
-  render: part(<HomeReadingsStrip day={readingsDay()} />),
+  render: part(<BriefReadingsStrip day={readingsDay()} />),
 };
 
 // A source ended short of its list, so every figure is a floor. The caveat sits
@@ -261,7 +261,7 @@ export const Readings: Story = {
 // the reading where the other four are exact.
 export const ReadingsCapped: Story = {
   render: part(
-    <HomeReadingsStrip
+    <BriefReadingsStrip
       day={readingsDay({ buyer_replies: 100, more_available: true })}
     />,
   ),
@@ -272,7 +272,7 @@ export const ReadingsCapped: Story = {
 // an answered question — the zeros are the answer.
 export const ReadingsQuiet: Story = {
   render: part(
-    <HomeReadingsStrip
+    <BriefReadingsStrip
       day={readingsDay({ buyer_replies: 0, prospecting: 0 }, [])}
     />,
   ),

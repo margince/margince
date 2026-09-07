@@ -5,8 +5,8 @@ import { formatTimeOfDay } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import { meetingRow, readingsDay } from "./home.fixtures";
-import { PromisesPanel, SchedulePanel } from "./home.schedule";
+import { meetingRow, readingsDay } from "./brief.fixtures";
+import { PromisesPanel, SchedulePanel } from "./brief.schedule";
 import type { WorklistItem } from "./worklist.queries";
 
 // The two rail panels, and what each of them refuses to claim.
@@ -95,7 +95,7 @@ describe("the schedule panel", () => {
   it("says the day is clear rather than drawing an empty panel", () => {
     draw(<SchedulePanel day={readingsDay({}, [])} state="ready" />);
 
-    expect(screen.getByText(en["home.schedule.clear"])).toBeTruthy();
+    expect(screen.getByText(en["brief.schedule.clear"])).toBeTruthy();
   });
 
   // A read that has not landed is not a clear day. Saying so would send a rep
@@ -103,7 +103,7 @@ describe("the schedule panel", () => {
   it("says nothing about the day before the read lands", () => {
     draw(<SchedulePanel day={undefined} state="loading" />);
 
-    expect(screen.queryByText(en["home.schedule.clear"])).toBeNull();
+    expect(screen.queryByText(en["brief.schedule.clear"])).toBeNull();
   });
 });
 
@@ -126,17 +126,17 @@ describe("the promises panel", () => {
   it("says promises are untracked on a busy day and on a quiet one", () => {
     const busy = readingsDay({}, [taskRow("t1", "Call Alice back")]);
     const { unmount } = draw(<PromisesPanel day={busy} state="ready" />);
-    expect(screen.getByText(en["home.promises.untracked"])).toBeTruthy();
+    expect(screen.getByText(en["brief.promises.untracked"])).toBeTruthy();
     unmount();
 
     draw(<PromisesPanel day={readingsDay({}, [])} state="ready" />);
-    expect(screen.getByText(en["home.promises.untracked"])).toBeTruthy();
-    expect(screen.getByText(en["home.promises.clear"])).toBeTruthy();
+    expect(screen.getByText(en["brief.promises.untracked"])).toBeTruthy();
+    expect(screen.getByText(en["brief.promises.clear"])).toBeTruthy();
   });
 
   it("does not claim a clear slate before the read lands", () => {
     draw(<PromisesPanel day={undefined} state="loading" />);
 
-    expect(screen.queryByText(en["home.promises.clear"])).toBeNull();
+    expect(screen.queryByText(en["brief.promises.clear"])).toBeNull();
   });
 });

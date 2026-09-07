@@ -24,19 +24,19 @@ import {
   useWeeklyReview,
   useWeeklyReviewIndex,
   type WeeklyReview,
-} from "./home.queries";
-import { OutlookPanel } from "./home.waterfall";
-import { LearningsPanel } from "./home.weekly.learnings";
-import { ScorecardPanel } from "./home.weekly.scorecard";
+} from "./brief.queries";
+import { OutlookPanel } from "./brief.waterfall";
+import { LearningsPanel } from "./brief.weekly.learnings";
+import { ScorecardPanel } from "./brief.weekly.scorecard";
 
-import "./home.weekly.css";
+import "./brief.weekly.css";
 
 // Derived from the review's own deal shape rather than reached for separately:
 // one import, and the outcome vocabulary cannot drift from the payload the
 // panel actually renders.
 type WeeklyReviewDealOutcome = WeeklyReview["deals"][number]["outcome"];
 
-// The week just gone, on Home.
+// The week just gone, on Brief.
 //
 // NO NAV ENTRY, deliberately. The product's own argument against one is in
 // nav.ts: Today is the single door to the work that waits on a person, and
@@ -58,12 +58,12 @@ export function WeeklySection() {
   const index = useWeeklyReviewIndex();
 
   return (
-    <section id="home-weekly" aria-label={t("home.panel.weekly")}>
+    <section id="brief-weekly" aria-label={t("brief.panel.weekly")}>
       <Panel
-        title={t("home.panel.weekly")}
+        title={t("brief.panel.weekly")}
         sub={
           review.data
-            ? t("home.weekly.weekOf", {
+            ? t("brief.weekly.weekOf", {
                 day: formatDate(
                   review.data.local_week_start,
                   locale,
@@ -75,7 +75,7 @@ export function WeeklySection() {
         // The mark and the way out of the week, in that order.
         //
         // FROZEN is the claim that separates this panel from every other on
-        // Home: the numbers under it were written when the week closed and can
+        // Brief: the numbers under it were written when the week closed and can
         // no longer move, so a rep who acts on Tuesday and re-reads on Thursday
         // is not looking at a stale figure — they are looking at a record. The
         // team weekly has said so since it shipped; the rep's, which is the one
@@ -84,15 +84,15 @@ export function WeeklySection() {
         // Drawn only over a review that exists, so an empty or failed read does
         // not certify a week nobody wrote.
         titleAction={
-          <span className="home-weekly-mark">
+          <span className="brief-weekly-mark">
             {review.data && (
               <>
-                <Badge quiet>{t("home.weekly.frozen")}</Badge>
+                <Badge quiet>{t("brief.weekly.frozen")}</Badge>
                 {/* When it was written, which is what makes the badge a fact
                     rather than a decoration — a reader can tell a week closed
                     an hour ago from one closed on Monday. */}
-                <span className="t-caption home-weekly-written">
-                  {t("home.weekly.written", {
+                <span className="t-caption brief-weekly-written">
+                  {t("brief.weekly.written", {
                     at: formatDateTime(
                       review.data.generated_at,
                       locale,
@@ -104,7 +104,7 @@ export function WeeklySection() {
             )}
             {index.data && index.data.length > 1 && (
               <Select
-                aria-label={t("home.weekly.pickWeek")}
+                aria-label={t("brief.weekly.pickWeek")}
                 value={week ?? index.data[0]}
                 onChange={(next) => setWeek(next)}
                 options={index.data.map((start) => ({
@@ -144,32 +144,32 @@ function WeeklyWorkings({
   const { locale } = useLocale();
   const n = (value: number) => formatNumber(value, locale);
   return (
-    <dl className="home-weekly-workings">
+    <dl className="brief-weekly-workings">
       <Working
-        label={t("home.weekly.tasksDelivered")}
-        value={t("home.weekly.ofDue", {
+        label={t("brief.weekly.tasksDelivered")}
+        value={t("brief.weekly.ofDue", {
           done: n(counts.tasks_done),
           due: n(counts.tasks_due),
         })}
       />
       <Working
-        label={t("home.weekly.dealsMoved")}
+        label={t("brief.weekly.dealsMoved")}
         value={n(counts.deals_moved)}
       />
       <Working
-        label={t("home.weekly.dealsLost")}
+        label={t("brief.weekly.dealsLost")}
         value={n(counts.deals_lost)}
       />
       <Working
-        label={t("home.weekly.decided")}
-        value={t("home.weekly.acceptedRejected", {
+        label={t("brief.weekly.decided")}
+        value={t("brief.weekly.acceptedRejected", {
           accepted: n(counts.proposals_accepted),
           rejected: n(counts.proposals_rejected),
         })}
       />
       <Working
-        label={t("home.weekly.queueWorked")}
-        value={t("home.weekly.actedDismissed", {
+        label={t("brief.weekly.queueWorked")}
+        value={t("brief.weekly.actedDismissed", {
           acted: n(counts.brief_items_acted),
           dismissed: n(counts.brief_items_dismissed),
         })}
@@ -180,7 +180,7 @@ function WeeklyWorkings({
 
 function Working({ label, value }: Readonly<{ label: string; value: string }>) {
   return (
-    <div className="home-weekly-working">
+    <div className="brief-weekly-working">
       <dt className="t-caption">{label}</dt>
       <dd className="t-body">{value}</dd>
     </div>
@@ -204,8 +204,8 @@ function WeeklyNarrative({ review }: Readonly<{ review: WeeklyReview }>) {
   const t = useT();
   if (!review.narrated_at) {
     return (
-      <p className="home-weekly-narrative home-weekly-narrative-absent t-caption">
-        {t("home.weekly.noNarrative")}
+      <p className="brief-weekly-narrative brief-weekly-narrative-absent t-caption">
+        {t("brief.weekly.noNarrative")}
       </p>
     );
   }
@@ -213,7 +213,7 @@ function WeeklyNarrative({ review }: Readonly<{ review: WeeklyReview }>) {
     return null;
   }
   return (
-    <div className="home-weekly-narrative">
+    <div className="brief-weekly-narrative">
       <ProvenanceTag provenance={{ kind: "agent" }} />
       <p>{review.narrative}</p>
     </div>
@@ -229,16 +229,16 @@ function outcomeWord(
 ): string {
   switch (outcome) {
     case "won":
-      return t("home.weekly.outcome.won");
+      return t("brief.weekly.outcome.won");
     case "lost":
-      return t("home.weekly.outcome.lost");
+      return t("brief.weekly.outcome.lost");
     default:
-      return t("home.weekly.outcome.moved");
+      return t("brief.weekly.outcome.moved");
   }
 }
 
 /** What one read says about itself, in the state vocabulary every section
- *  draws from — the same three-way answer Home's other panels give. */
+ *  draws from — the same three-way answer Brief's other panels give. */
 function readState(
   query: Readonly<{ isError: boolean; isPending: boolean }>,
 ): SectionState {
@@ -285,7 +285,7 @@ function wonPace(
   if (before === undefined || before.currency !== pipeline.currency) {
     return value;
   }
-  return t("home.weekly.wonVsPrior", {
+  return t("brief.weekly.wonVsPrior", {
     value,
     delta: formatSignedMoney(
       pipeline.won_minor - before.won_minor,
@@ -310,8 +310,8 @@ function WeeklyBody({
     return (
       <SurfaceState
         state={state}
-        emptyLabel={t("home.weekly.none")}
-        loadingLabel={t("home.panel.weekly")}
+        emptyLabel={t("brief.weekly.none")}
+        loadingLabel={t("brief.panel.weekly")}
       >
         {null}
       </SurfaceState>
@@ -326,8 +326,8 @@ function WeeklyBody({
     return (
       <SurfaceState
         state="empty"
-        emptyLabel={t("home.weekly.none")}
-        loadingLabel={t("home.panel.weekly")}
+        emptyLabel={t("brief.weekly.none")}
+        loadingLabel={t("brief.panel.weekly")}
       >
         {null}
       </SurfaceState>
@@ -345,8 +345,8 @@ function WeeklyBody({
     }
     const delta = now - before;
     return (
-      <span className="home-weekly-delta t-caption">
-        {t("home.weekly.sincePrior", {
+      <span className="brief-weekly-delta t-caption">
+        {t("brief.weekly.sincePrior", {
           delta: formatSignedNumber(delta, locale),
         })}
       </span>
@@ -384,15 +384,15 @@ function WeeklyBody({
           anyone who wants them and no longer compete with the outcomes. */}
       <StatStrip testId="weekly-strip">
         <StatCard
-          label={t("home.weekly.planCommitmentsKept")}
-          value={t("home.weekly.ofDue", {
+          label={t("brief.weekly.planCommitmentsKept")}
+          value={t("brief.weekly.ofDue", {
             done: formatNumber(c.commitments_kept, locale),
             due: formatNumber(c.commitments_due, locale),
           })}
           detail={since(c.commitments_kept, prior?.commitments_kept)}
         />
         <StatCard
-          label={t("home.weekly.dealsWon")}
+          label={t("brief.weekly.dealsWon")}
           value={formatNumber(c.deals_won, locale)}
           // What those wins were WORTH, at each deal's own close-time rate.
           //
@@ -412,8 +412,8 @@ function WeeklyBody({
           }
         />
         <StatCard
-          label={t("home.weekly.leadsAnswered")}
-          value={t("home.weekly.ofRouted", {
+          label={t("brief.weekly.leadsAnswered")}
+          value={t("brief.weekly.ofRouted", {
             answered: formatNumber(c.leads_answered_in_target, locale),
             routed: formatNumber(c.leads_routed, locale),
           })}
@@ -423,22 +423,22 @@ function WeeklyBody({
           )}
         />
         <StatCard
-          label={t("home.weekly.meetingsHeld")}
-          value={t("home.weekly.ofMeetings", {
+          label={t("brief.weekly.meetingsHeld")}
+          value={t("brief.weekly.ofMeetings", {
             withStep: formatNumber(c.meetings_with_next_step, locale),
             held: formatNumber(c.meetings_held, locale),
           })}
           detail={since(c.meetings_held, prior?.meetings_held)}
         />
         <StatCard
-          label={t("home.weekly.carriedOver")}
+          label={t("brief.weekly.carriedOver")}
           value={formatNumber(c.tasks_carried_over, locale)}
           detail={since(c.tasks_carried_over, prior?.tasks_carried_over)}
         />
       </StatStrip>
       <WeeklyWorkings counts={c} />
       {review.deals.length > 0 && (
-        <ul className="home-weekly-deals">
+        <ul className="brief-weekly-deals">
           {review.deals.map((deal) => (
             <li key={`${deal.deal_id}-${deal.occurred_at}`}>
               {/* The LABEL, not a lookup. It was frozen when the review was
@@ -449,17 +449,17 @@ function WeeklyBody({
                   that has since gone answers 404, which is the honest outcome
                   for a week that is over. */}
               <a
-                className="home-weekly-deal-name link-button"
+                className="brief-weekly-deal-name link-button"
                 href={routeHash({ screen: "deals", id: deal.deal_id })}
               >
                 {deal.label}
               </a>
-              <span className="home-weekly-deal-outcome t-caption">
+              <span className="brief-weekly-deal-outcome t-caption">
                 {outcomeWord(t, deal.outcome)}
                 {deal.to_stage_label ? ` · ${deal.to_stage_label}` : ""}
               </span>
               <time
-                className="home-weekly-deal-when t-caption"
+                className="brief-weekly-deal-when t-caption"
                 dateTime={deal.occurred_at}
               >
                 {formatDate(deal.occurred_at, locale, recordZone)}

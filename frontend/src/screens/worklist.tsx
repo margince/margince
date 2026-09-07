@@ -734,7 +734,7 @@ export function WorklistScreen({
     opensOn === UNASSIGNED ? UNASSIGNED : "mine",
   );
   // The one dial of the four that lives in the ADDRESS, and the reason is a
-  // figure on another screen: Home's readings each count one of these lanes,
+  // figure on another screen: Brief's readings each count one of these lanes,
   // and a reading that names a set is the way into it — which it cannot be
   // unless the lane is nameable. `?filter=` is the query half, which
   // `routeIdentity` ignores by design, so this does not disturb the

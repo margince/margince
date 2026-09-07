@@ -13,8 +13,8 @@ import {
   meetingRow,
   readingsDay,
   wholeLeads,
-} from "./home.fixtures";
-import { HomeReadingsStrip } from "./home.readings";
+} from "./brief.fixtures";
+import { BriefReadingsStrip } from "./brief.readings";
 
 // The Brief's readings strip, and the one claim it makes that the Worklist's
 // own strip does not: the row is FIVE slots on every morning, quiet or busy, so
@@ -36,7 +36,7 @@ function draw(...args: Parameters<typeof readingsDay>) {
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <HomeReadingsStrip day={readingsDay(...args)} />
+        <BriefReadingsStrip day={readingsDay(...args)} />
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -46,14 +46,16 @@ function draw(...args: Parameters<typeof readingsDay>) {
 // container would satisfy a child count while drawing one card, and a strip of
 // five empty boxes would satisfy it while drawing none.
 function labels(): string[] {
-  return [...screen.getByTestId("home-readings").querySelectorAll(".stat-card")]
+  return [
+    ...screen.getByTestId("brief-readings").querySelectorAll(".stat-card"),
+  ]
     .map((card) => card.querySelector(".stat-card-label")?.textContent ?? "")
     .filter((text) => text !== "");
 }
 
 function meetingsCard(): HTMLElement {
   const card = screen
-    .getByText(en["home.readings.meetings"])
+    .getByText(en["brief.readings.meetings"])
     .closest(".stat-card");
   if (!(card instanceof HTMLElement)) {
     throw new Error("the meetings reading is not on the page");
@@ -98,11 +100,11 @@ describe("the brief readings strip", () => {
     draw();
 
     expect(labels()).toHaveLength(5);
-    expect(screen.getByText(en["home.readings.urgent"])).toBeTruthy();
-    expect(screen.getByText(en["home.readings.meetings"])).toBeTruthy();
-    expect(screen.getByText(en["home.readings.leads"])).toBeTruthy();
-    expect(screen.getByText(en["home.readings.pipeline"])).toBeTruthy();
-    expect(screen.getByText(en["home.readings.decisions"])).toBeTruthy();
+    expect(screen.getByText(en["brief.readings.urgent"])).toBeTruthy();
+    expect(screen.getByText(en["brief.readings.meetings"])).toBeTruthy();
+    expect(screen.getByText(en["brief.readings.leads"])).toBeTruthy();
+    expect(screen.getByText(en["brief.readings.pipeline"])).toBeTruthy();
+    expect(screen.getByText(en["brief.readings.decisions"])).toBeTruthy();
   });
 
   // The property that can actually regress: on a fully answered morning, no slot
@@ -144,9 +146,9 @@ describe("the brief readings strip", () => {
     // A zero already reads as "none". What the line under it adds is the basis
     // — what the figure was taken over — which is the same on a quiet day as on
     // a busy one, so the row keeps its shape as well as its slot count.
-    expect(screen.getByText(en["home.readings.urgentBasis"])).toBeTruthy();
-    expect(screen.getByText(en["home.readings.leadsBasis"])).toBeTruthy();
-    expect(screen.getByText(en["home.readings.meetingsBasis"])).toBeTruthy();
+    expect(screen.getByText(en["brief.readings.urgentBasis"])).toBeTruthy();
+    expect(screen.getByText(en["brief.readings.leadsBasis"])).toBeTruthy();
+    expect(screen.getByText(en["brief.readings.meetingsBasis"])).toBeTruthy();
   });
 
   it("counts the meetings nothing is prepared for", () => {
@@ -161,7 +163,7 @@ describe("the brief readings strip", () => {
 
     expect(meetingsCard().textContent).toContain("3");
     expect(meetingsCard().textContent).toContain(
-      en["home.readings.needsPrep_other"].replace("{count}", "2"),
+      en["brief.readings.needsPrep_other"].replace("{count}", "2"),
     );
   });
 
@@ -171,7 +173,7 @@ describe("the brief readings strip", () => {
   it("says so when every meeting is prepared", () => {
     draw({}, [meetingRow("m1", true), meetingRow("m2", true)]);
 
-    expect(screen.getByText(en["home.readings.prepared"])).toBeTruthy();
+    expect(screen.getByText(en["brief.readings.prepared"])).toBeTruthy();
     expect(screen.queryByText(/needs prep/)).toBeNull();
   });
 
@@ -184,11 +186,11 @@ describe("the brief readings strip", () => {
     draw({}, [meetingRow("m1", false)], [boundedMeetings(10, 1)]);
 
     expect(meetingsCard().textContent).toContain("10");
-    expect(screen.getByText(en["home.readings.prepUnknown"])).toBeTruthy();
+    expect(screen.getByText(en["brief.readings.prepUnknown"])).toBeTruthy();
     // Not "1 needs prep", and not "all prepared": both are claims about ten
     // meetings made by looking at one.
     expect(screen.queryByText(/needs prep/)).toBeNull();
-    expect(screen.queryByText(en["home.readings.prepared"])).toBeNull();
+    expect(screen.queryByText(en["brief.readings.prepared"])).toBeNull();
   });
 
   // A day whose counts carry no meetings entry at all. That is not an
@@ -198,8 +200,8 @@ describe("the brief readings strip", () => {
     draw({}, [], []);
 
     expect(meetingsCard().textContent).toContain("0");
-    expect(screen.getByText(en["home.readings.meetingsBasis"])).toBeTruthy();
-    expect(screen.queryByText(en["home.readings.prepUnknown"])).toBeNull();
+    expect(screen.getByText(en["brief.readings.meetingsBasis"])).toBeTruthy();
+    expect(screen.queryByText(en["brief.readings.prepUnknown"])).toBeNull();
   });
 
   // Two questions with no source. Drawing a zero would be a false answer, and
@@ -221,7 +223,7 @@ describe("the brief readings strip", () => {
     draw();
 
     expect(
-      await screen.findByText(en["home.readings.pipelineUnread"]),
+      await screen.findByText(en["brief.readings.pipelineUnread"]),
     ).toBeTruthy();
     // ONE em dash, not two. The other belonged to a retired placeholder, and a
     // count that still expected it would pass over a plate that had quietly
@@ -271,7 +273,7 @@ describe("the brief readings strip", () => {
     expect(screen.getByText(/168,000/)).toBeTruthy();
     expect(screen.getByText(/11 of 12 priced/)).toBeTruthy();
     // Never a target word. The quota table was dropped by founder decision.
-    const strip = screen.getByTestId("home-readings");
+    const strip = screen.getByTestId("brief-readings");
     expect(strip.textContent).not.toMatch(/on track|target|attainment|gap/i);
   });
 
@@ -307,7 +309,7 @@ describe("the brief readings strip", () => {
     draw();
 
     expect(
-      await screen.findByText(en["home.readings.pipelineWorkspace"]),
+      await screen.findByText(en["brief.readings.pipelineWorkspace"]),
     ).toBeTruthy();
   });
 
@@ -324,7 +326,7 @@ describe("the brief readings strip", () => {
     draw({ buyer_replies: 3 }, undefined, undefined, { urgent: 4 });
 
     const card = screen
-      .getByText(en["home.readings.urgent"])
+      .getByText(en["brief.readings.urgent"])
       .closest(".stat-card");
     if (!(card instanceof HTMLElement)) {
       throw new Error("the urgent reading is not on the page");
@@ -342,17 +344,17 @@ describe("the brief readings strip", () => {
   it("qualifies the whole row when a source was read to its limit", () => {
     draw({ more_available: true });
 
-    const caveat = screen.getByText(en["home.readings.truncated"]);
+    const caveat = screen.getByText(en["brief.readings.truncated"]);
     expect(caveat).toBeTruthy();
     // Outside the strip, not in a slot. Inside one, it reads as a caveat on that
     // figure alone and invites the reading where the other four are exact.
-    expect(screen.getByTestId("home-readings").contains(caveat)).toBe(false);
+    expect(screen.getByTestId("brief-readings").contains(caveat)).toBe(false);
   });
 
   it("says nothing about limits on a day it read whole", () => {
     draw();
 
-    expect(screen.queryByText(en["home.readings.truncated"])).toBeNull();
+    expect(screen.queryByText(en["brief.readings.truncated"])).toBeNull();
   });
 });
 
@@ -362,7 +364,7 @@ describe("the brief readings strip", () => {
 describe("the leads reading", () => {
   function leadsCard(): HTMLElement {
     const card = screen
-      .getByText(en["home.readings.leads"])
+      .getByText(en["brief.readings.leads"])
       .closest(".stat-card");
     if (!(card instanceof HTMLElement)) {
       throw new Error("the leads reading is not on the page");
@@ -381,7 +383,7 @@ describe("the leads reading", () => {
     // The formatted moment, not the ISO string: the slot renders it in the
     // reader's own zone and this file does not own that format.
     expect(leadsCard().textContent).not.toContain("2026-08-31T15:00:00Z");
-    expect(screen.queryByText(en["home.readings.leadsBasis"])).toBeNull();
+    expect(screen.queryByText(en["brief.readings.leadsBasis"])).toBeNull();
   });
 
   it("names the earliest of several, not the first it meets", () => {
@@ -417,7 +419,7 @@ describe("the leads reading", () => {
     );
 
     expect(leadsCard().textContent).toContain("9");
-    expect(screen.getByText(en["home.readings.leadsBasis"])).toBeTruthy();
+    expect(screen.getByText(en["brief.readings.leadsBasis"])).toBeTruthy();
   });
 
   // Every lead already overdue. There is no NEXT moment to name — they have all
@@ -426,6 +428,6 @@ describe("the leads reading", () => {
     draw({ prospecting: 2 }, [leadRow("l1"), leadRow("l2")], [wholeLeads(2)]);
 
     expect(leadsCard().textContent).toContain("2");
-    expect(screen.getByText(en["home.readings.leadsBasis"])).toBeTruthy();
+    expect(screen.getByText(en["brief.readings.leadsBasis"])).toBeTruthy();
   });
 });

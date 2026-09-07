@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { HomeScreen } from "./home";
+import { BriefScreen } from "./brief";
 import {
   type Approval,
   bundle,
@@ -19,8 +19,8 @@ import {
   WEEK_START,
   type WeeklyReview,
   type Worklist,
-} from "./home.fixtures";
-import type { MorningDigest } from "./home.queries";
+} from "./brief.fixtures";
+import type { MorningDigest } from "./brief.queries";
 import {
   installFetchStub,
   jsonResponse,
@@ -29,7 +29,7 @@ import {
   StoryProviders,
 } from "./story-utils";
 
-// Home — the morning handover, in the states a reader actually arrives at.
+// Brief — the morning handover, in the states a reader actually arrives at.
 //
 // The page has two moods and the order between them is the whole design: while
 // decisions are waiting they LEAD (they are the only thing here with a
@@ -48,7 +48,7 @@ import {
 // day the catalog was opened on, and the two things on this page that read a
 // clock — the greeting band and a proposal's expiry — would then say something
 // different every time somebody looked. The one exception is deliberate and
-// unavoidable: the greeting reads the real hour, because Home passes it its own
+// unavoidable: the greeting reads the real hour, because Brief passes it its own
 // clock. Expiries are therefore either ABSENT (calm, and stable forever) or a
 // fixed instant in the past (the lapsed frame, which stays lapsed).
 
@@ -72,7 +72,7 @@ type Frame = {
    *  stub's fallback, because the fallback is a LIST page — `{data, page}` —
    *  and `/worklist` answers a `Worklist`, whose `queue` the walk reads to
    *  decide whether to ask for a second page. A fallback of the wrong envelope
-   *  therefore did not render an empty Home, it crashed every frame in this
+   *  therefore did not render an empty Brief, it crashed every frame in this
    *  file on `queue.length` of undefined. */
   day?: Worklist;
   /** Extra routes a frame's own play() needs. */
@@ -80,13 +80,13 @@ type Frame = {
 };
 
 /**
- * One Home, with every read it fans out to answered.
+ * One Brief, with every read it fans out to answered.
  *
  * Five independent reads and no combined "my day" endpoint, so each of them is
  * routed on its own here — which is the point rather than bookkeeping: a frame
  * can refuse ONE of them and show that the other four still render.
  */
-function home({
+function brief({
   approvals,
   digest: overnight = digest,
   weekly = narratedWeek,
@@ -142,18 +142,18 @@ function home({
     });
     return (
       <StoryProviders>
-        <HomeScreen />
+        <BriefScreen />
       </StoryProviders>
     );
   };
 }
 
-const meta: Meta<typeof HomeScreen> = {
-  title: "Shell/Home",
-  component: HomeScreen,
+const meta: Meta<typeof BriefScreen> = {
+  title: "Shell/Brief",
+  component: BriefScreen,
 };
 export default meta;
-type Story = StoryObj<typeof HomeScreen>;
+type Story = StoryObj<typeof BriefScreen>;
 
 // ── The deck ────────────────────────────────────────────────────────────────
 
@@ -161,20 +161,20 @@ type Story = StoryObj<typeof HomeScreen>;
 // one act's bundle), a ranked queue under them, and the context rail beside.
 // Decisions LEAD, because they are the only thing here with a deadline.
 export const MorningDeck: Story = {
-  render: home({ approvals: [...singles, ...bundle] }),
+  render: brief({ approvals: [...singles, ...bundle] }),
 };
 
 // The last card. "0 more behind" is drawn rather than hidden: a reader deciding
 // one at a time is owed the size of what is left, including when it is nothing.
 export const LastCard: Story = {
-  render: home({ approvals: [singles[0]] }),
+  render: brief({ approvals: [singles[0]] }),
 };
 
 // The tray, which is the undo the backend does not have: a recorded decision
 // cannot be reversed, so the verdict sits here — locally, nothing sent — until
 // somebody presses commit.
 export const StagedTray: Story = {
-  render: home({ approvals: [...singles] }),
+  render: brief({ approvals: [...singles] }),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
@@ -189,7 +189,7 @@ export const StagedTray: Story = {
 // keeps its card pending, which is what leaves the deck with nothing waiting
 // while the queue still holds something.
 export const DeckCleared: Story = {
-  render: home({ approvals: [singles[0], singles[1]] }),
+  render: brief({ approvals: [singles[0], singles[1]] }),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
@@ -207,14 +207,14 @@ export const DeckCleared: Story = {
 // stands under it saying so. The question has stopped being "what needs me" and
 // become "what do I do first".
 export const RankedQueueLeads: Story = {
-  render: home({ approvals: [] }),
+  render: brief({ approvals: [] }),
 };
 
 // A proposal that ran out of time. The card keeps its place and its content —
 // the reader still needs to know what was proposed — but the Accept control is
 // gone rather than drawn to be refused.
 export const ExpiredCard: Story = {
-  render: home({ approvals: [lapsed] }),
+  render: brief({ approvals: [lapsed] }),
 };
 
 // ── The rail ────────────────────────────────────────────────────────────────
@@ -223,7 +223,7 @@ export const ExpiredCard: Story = {
 // absent rather than a row of zeros: a fabricated count is worse than a missing
 // one, because a reader cannot tell it apart from a real one.
 export const DigestAbsent: Story = {
-  render: home({ approvals: [...singles], digest: null }),
+  render: brief({ approvals: [...singles], digest: null }),
 };
 
 // The one place connector health reaches a reader without visiting Settings. A
@@ -231,7 +231,7 @@ export const DigestAbsent: Story = {
 // fix it — while a healthy one stays silent, as it does in every other frame
 // here: a permanent green row is noise.
 export const ConnectorUnhealthy: Story = {
-  render: home({
+  render: brief({
     approvals: [...singles],
     digest: {
       ...digest,
@@ -254,7 +254,7 @@ export const ConnectorUnhealthy: Story = {
  *  numbers are all there, and the panel says the sentence is missing rather
  *  than letting the reader conclude there was nothing to say. */
 export const WeeklyWithoutItsSentence: Story = {
-  render: home({
+  render: brief({
     approvals: [],
     weekly: { ...narratedWeek, narrative: null, narrated_at: null },
   }),
@@ -263,14 +263,14 @@ export const WeeklyWithoutItsSentence: Story = {
 /** A pass that ran and found the week unremarkable. No sentence and no notice
  *  — the stamp is what makes this different from the state above. */
 export const WeeklyQuietlyNarrated: Story = {
-  render: home({
+  render: brief({
     approvals: [],
     weekly: { ...narratedWeek, narrative: null },
   }),
 };
 
 export const OnePanelRefused: Story = {
-  render: home({
+  render: brief({
     approvals: [...singles],
     pipeline: () =>
       jsonResponse({ title: "Forbidden", code: "forbidden" }, 403),
@@ -281,7 +281,7 @@ export const OnePanelRefused: Story = {
 // rows out of them. Saying so is the difference between a partial answer and a
 // wrong one.
 export const PipelinePartial: Story = {
-  render: home({
+  render: brief({
     approvals: [],
     pipeline: () => report(pipelineRows, 4),
   }),

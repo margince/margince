@@ -5,8 +5,8 @@ import { Card } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import type { WeeklyReview } from "./brief.queries";
 import { EntityRef } from "./entityref";
-import type { WeeklyReview } from "./home.queries";
 
 // What the week taught, beside what it was.
 //
@@ -23,10 +23,10 @@ type Learning = Learnings["items"][number];
 // formatted key: a kind the server adds without a label here would otherwise
 // reach a reader as a raw enum value.
 const KIND_LABEL: Readonly<Record<Learning["kind"], MessageKey>> = {
-  worked: "home.weekly.learnings.worked",
-  did_not_work: "home.weekly.learnings.didNotWork",
-  pattern: "home.weekly.learnings.pattern",
-  experiment: "home.weekly.learnings.experiment",
+  worked: "brief.weekly.learnings.worked",
+  did_not_work: "brief.weekly.learnings.didNotWork",
+  pattern: "brief.weekly.learnings.pattern",
+  experiment: "brief.weekly.learnings.experiment",
 };
 
 export function LearningsPanel({
@@ -38,7 +38,7 @@ export function LearningsPanel({
   if (!learnings) return null;
 
   return (
-    <Panel title={t("home.weekly.learnings.title")}>
+    <Panel title={t("brief.weekly.learnings.title")}>
       <PanelBody>
         {learnings.items.length === 0 ? (
           <EmptyLearnings state={learnings.state} />
@@ -71,8 +71,8 @@ function EmptyLearnings({ state }: Readonly<{ state: Learnings["state"] }>) {
   return (
     <p className="weekly-learnings-empty">
       {state === "not_run"
-        ? t("home.weekly.learnings.notRun")
-        : t("home.weekly.learnings.insufficient")}
+        ? t("brief.weekly.learnings.notRun")
+        : t("brief.weekly.learnings.insufficient")}
     </p>
   );
 }

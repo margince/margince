@@ -1,4 +1,4 @@
-/* Home — the morning handover.
+/* Brief — the morning handover.
  *
  * Three registers, in the order they decay: what is WAITING on a person (it
  * expires), what is PLANNED for today (it is a ranking), and the CONTEXT the
@@ -6,9 +6,9 @@
  * main column; the third is the rail beside them.
  *
  * The grid itself is not here: it is `PageZones` in the design system, the same
- * primitive the record pages use, so Home and a company record fold at the same
+ * primitive the record pages use, so Brief and a company record fold at the same
  * two widths and never disagree about what a rail is. What lives in this sheet
- * is Home's own voice — the briefing block, the readings plate's placement, and
+ * is Brief's own voice — the briefing block, the readings plate's placement, and
  * the shapes inside the rail's panels. */
 
 /* ── The briefing ──────────────────────────────────────────────────────────
@@ -38,7 +38,7 @@
  *
  * Behind the page's content and inert: it is atmosphere, and atmosphere that
  * can be clicked is a control nobody meant to draw. */
-.home-wrap::before {
+.brief-wrap::before {
   content: "";
   position: fixed;
   inset: 0;
@@ -70,40 +70,40 @@
   }
 }
 .arrive,
-.home-readings .stat-card,
-.home-main > *,
-.home-rail > * {
+.brief-readings .stat-card,
+.brief-main > *,
+.brief-rail > * {
   animation: brief-arrive var(--dur-enter) var(--ease-out) both;
 }
-.home-readings .stat-card:nth-child(2) {
+.brief-readings .stat-card:nth-child(2) {
   animation-delay: calc(var(--dur-tap) * 0.5);
 }
-.home-readings .stat-card:nth-child(3) {
+.brief-readings .stat-card:nth-child(3) {
   animation-delay: var(--dur-tap);
 }
-.home-readings .stat-card:nth-child(4) {
+.brief-readings .stat-card:nth-child(4) {
   animation-delay: calc(var(--dur-tap) * 1.5);
 }
-.home-readings .stat-card:nth-child(5) {
+.brief-readings .stat-card:nth-child(5) {
   animation-delay: calc(var(--dur-tap) * 2);
 }
-.home-main > * {
+.brief-main > * {
   animation-delay: var(--dur-move);
 }
-.home-rail > :nth-child(1) {
+.brief-rail > :nth-child(1) {
   animation-delay: var(--dur-move);
 }
-.home-rail > :nth-child(2) {
+.brief-rail > :nth-child(2) {
   animation-delay: calc(var(--dur-move) + var(--dur-tap));
 }
-.home-rail > :nth-child(n + 3) {
+.brief-rail > :nth-child(n + 3) {
   animation-delay: calc(var(--dur-move) + var(--dur-state));
 }
 @media (prefers-reduced-motion: reduce) {
   .arrive,
-  .home-readings .stat-card,
-  .home-main > *,
-  .home-rail > * {
+  .brief-readings .stat-card,
+  .brief-main > *,
+  .brief-rail > * {
     animation: none;
   }
 }
@@ -160,23 +160,23 @@
  * The gap under it is a register change — briefing to work — so it is one rung
  * wider than any gap INSIDE either register. */
 
-.home-readings {
+.brief-readings {
   margin-bottom: var(--space-6);
 }
 
 /* ── The work column ───────────────────────────────────────────────────────
- * Two panels, in the order the day decides (see `home.tsx`): the deck first
+ * Two panels, in the order the day decides (see `brief.tsx`): the deck first
  * while decisions are waiting, the ranked queue first once the deck is clear. */
 
 /* The gap between the two blocks of work is wider than the gap between the
  * cards inside either of them, which is what makes them read as two blocks. */
-.home-main {
+.brief-main {
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
 }
 
-.home-error {
+.brief-error {
   color: var(--danger);
   margin: 0;
 }
@@ -185,7 +185,7 @@
  * One column of `Panel`s, never a grid: a rail that re-columns is a second
  * body rather than a margin. */
 
-.home-rail {
+.brief-rail {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);

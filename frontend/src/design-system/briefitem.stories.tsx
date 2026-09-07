@@ -220,7 +220,7 @@ export const Loading: StoryObj<typeof BriefItemCardPending> = {
   render: () => <BriefItemCardPending label="Reading this morning's brief" />,
 };
 
-// The shape the home queue is: ranked, best first, with the settled ones still
+// The shape the Brief queue is: ranked, best first, with the settled ones still
 // present so the morning reads as progress rather than deletion.
 export const Queue: Story = {
   render: () => (

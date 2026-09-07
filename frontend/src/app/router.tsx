@@ -29,7 +29,7 @@ import { hashWithParams, type UrlParams } from "./urlstate";
 // not be exhausted, and that exhaustiveness is the thing stopping a destination
 // existing in the router and being missing from the dispatch.
 export const SCREENS = [
-  "home",
+  "brief",
   "contacts",
   "companies",
   "partners",
@@ -106,7 +106,7 @@ export function parseHash(hash: string): Route {
     .split("/")
     .filter(Boolean);
   if (parts.length === 0) {
-    return { screen: "home" };
+    return { screen: "brief" };
   }
   const [screen, id, id2, id3] = parts;
   // The day's surface moved from `today` to `worklist`, and a rep's bookmark
@@ -121,6 +121,12 @@ export function parseHash(hash: string): Route {
   // #/reports/forecast lands on the forecast section rather than the default.
   if (screen === "reports") {
     return { screen: "analytics", id, id2, id3 };
+  }
+  // The morning handover is addressed `#/brief`; `#/home` was its address for
+  // long enough to be bookmarked and pasted into staging links, and the page
+  // behind it is the same page, so the segments ride along unchanged.
+  if (screen === "home") {
+    return { screen: "brief", id, id2, id3 };
   }
   if (!isScreen(screen)) {
     // A hash comes out of the URL bar, so its first segment is text a human
@@ -166,7 +172,7 @@ export function routeHash(route: Route): string {
 const WHOLE_ADDRESS = 4;
 
 const IDENTITY_DEPTH: Readonly<Record<Screen, number>> = {
-  home: WHOLE_ADDRESS,
+  brief: WHOLE_ADDRESS,
   // #/contacts/<person>/<tab> — the six person tabs are a view of one person,
   // and they are the reason this table exists.
   contacts: 2,
@@ -178,7 +184,7 @@ const IDENTITY_DEPTH: Readonly<Record<Screen, number>> = {
   leads: 2,
   deals: WHOLE_ADDRESS,
   projects: WHOLE_ADDRESS,
-  // #/worklist/<owner> and #/worklist/unassigned are real addresses the home
+  // #/worklist/<owner> and #/worklist/unassigned are real addresses the Brief
   // team board navigates to, and App.tsx hands that segment to the screen as
   // `opensOn`. The screen reads it in useState INITIALISERS, so the remount is
   // what applies it: lower this and a manager clicking a colleague's name keeps
@@ -252,7 +258,7 @@ export function routeIdentity(route: Route): string {
  * optional because most navigations name a page and nothing about how it is
  * narrowed; it exists because some do, and there was no spelling for it:
  * `useUrlParams` writes the query of the screen the reader is ALREADY on, so a
- * figure on Home offering to open one lane of the Worklist had nowhere to say
+ * figure on Brief offering to open one lane of the Worklist had nowhere to say
  * which lane. Serialised by `hashWithParams`, so an address written here and one
  * written by a dial on the screen itself are the same address.
  */

@@ -331,7 +331,7 @@ export const seededProject: MockProject = {
 };
 
 // One persisted Morning-Brief run over the two seeded deals — the §10.1
-// composite with its factor decomposition, so the home queue's arithmetic
+// composite with its factor decomposition, so the Brief queue's arithmetic
 // reads coherently against the deal amounts above.
 export const briefRun = {
   id: "br-1",
@@ -2574,12 +2574,12 @@ export async function mockApi(
         base_currency: "EUR",
       });
     }
-    // Home's own reading of the same pipeline (home.readings.tsx) and
+    // Brief's own reading of the same pipeline (brief.readings.tsx) and
     // Analytics' forecast tab (analytics.forecast.tsx) share this one query.
     // Without it the catch-all's list envelope reaches
     // formatMoneyCompact(data.open_minor, data.base_currency, locale)
     // unguarded — unlike the weighted figure beside it, which is wrapped in
-    // formatMoneyOrAbsent — so an undefined currency took the whole #/home
+    // formatMoneyOrAbsent — so an undefined currency took the whole #/brief
     // shell down with it.
     if (path === "/forecast") {
       return json({
@@ -2702,7 +2702,7 @@ export async function mockApi(
     if (path.includes("/context")) {
       return json({ anchor: { type: "person", id: "x" }, sections: [] });
     }
-    // The home digest card (CAP-WIRE-6): a MorningDigest, not the list
+    // The Brief digest card (CAP-WIRE-6): a MorningDigest, not the list
     // envelope — the generic fallthrough below would 200 a page shape the
     // card destructures and crashes on.
     if (path === "/digest") {

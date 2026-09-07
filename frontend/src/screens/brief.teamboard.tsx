@@ -10,16 +10,16 @@ import { UNASSIGNED } from "./worklist.queries";
 // The SAME component the Worklist draws, on the same query key — not a second
 // table over the same counts. What differs is only where a row goes: the
 // Worklist can narrow itself in place because the owner is its own state, and
-// Home has no queue to narrow, so a row hands the reader to the queue that does.
+// Brief has no queue to narrow, so a row hands the reader to the queue that does.
 
 /**
- * The team board on Home, for a reader whose scope reaches a team.
+ * The team board on Brief, for a reader whose scope reaches a team.
  *
  * `offered` is read off the worklist's `scope_options` by the caller, which is
  * the same gate the Worklist's own board uses. The board is drawn on the tier
  * the server admits it on, so the control and the refusal cannot disagree.
  */
-export function HomeTeamBoard({ offered }: Readonly<{ offered: boolean }>) {
+export function BriefTeamBoard({ offered }: Readonly<{ offered: boolean }>) {
   if (!offered) {
     return null;
   }

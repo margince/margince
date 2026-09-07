@@ -99,7 +99,7 @@
    * size.
    * Light diverges for the same reason one step removed. --accentLight is an
    * alpha tint, so what sits BEHIND it decides what the text is read against,
-   * and the grounds went grey: the home glance's count chip (--accentText on
+   * and the grounds went grey: the Brief glance's count chip (--accentText on
    * --accentLight, 15px) measured 4.36:1 once the page stopped being white.
    * The fill cannot move either way — #0b7a53 is the brand emerald — so the text
    * does: 5.14:1 on that chip now, and clear of 4.5:1 on every ground in the
@@ -114,7 +114,7 @@
    * every surface in the ladder, and the darkest one it sits on is the rail
    * (--bgSidebar). At #68756e it measured 4.42:1 on the page and 3.98:1 on the
    * rail once those stopped being white — under the 4.5:1 AA needs for text this
-   * size, which axe caught on seven elements of the home glance alone. 4.64:1 at
+   * size, which axe caught on seven elements of the Brief glance alone. 4.64:1 at
    * its worst ground now. A text tone answers to the ground it is read on, so
    * moving one without the other is what breaks it. */
   --textSecondary: #5f6a64;

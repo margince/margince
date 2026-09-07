@@ -17,7 +17,7 @@ import "./briefitem.css";
 //
 // PRESENTATIONAL AND CONTROLLED. It fetches nothing and writes nothing: the
 // verbs are callbacks and the two things that need a locale — a percentage and
-// an instant — arrive as formatters. That is what lets one card serve the home
+// an instant — arrive as formatters. That is what lets one card serve the Brief
 // queue, a story, and a test without any of them standing up a query client.
 //
 // Copy is the caller's, all of it, through `labels`. Nothing here knows a word

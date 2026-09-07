@@ -21,7 +21,7 @@ export type WorklistScope = Worklist["scope"];
 /**
  * The one scope word an ADDRESS carries: `#/worklist/unassigned`.
  *
- * Here rather than on the screen, so Home can name the same pile without
+ * Here rather than on the screen, so Brief can name the same pile without
  * importing the queue, and typed as WorklistScope so a scope renamed in
  * crm.yaml fails to compile instead of leaving an address that silently stops
  * opening what it names.

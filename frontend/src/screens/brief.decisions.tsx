@@ -53,7 +53,7 @@ import {
   useViewerId,
 } from "./common";
 
-// The decisions half of Home: the deck, its tray, and the one act that sends
+// The decisions half of Brief: the deck, its tray, and the one act that sends
 // what is in it.
 //
 // Staging is local and the commit is separate, which is the whole design rather
@@ -96,46 +96,46 @@ function deckLabels(
     reject: t("decision.reject"),
     // The deck is the one surface where "later" is a real answer: it is the top
     // of the pile, not the pile itself, and the full queue is one click away.
-    skip: t("home.deck.later"),
+    skip: t("brief.deck.later"),
     expired: t("decision.expired"),
     draftSubject: t("decision.draftSubject"),
     draftBody: t("decision.draftBody"),
-    showMore: t("home.deck.showMore"),
-    showLess: t("home.deck.showLess"),
+    showMore: t("brief.deck.showMore"),
+    showLess: t("brief.deck.showLess"),
     noContent: t("common.empty"),
-    loading: t("home.panel.decisions"),
+    loading: t("brief.panel.decisions"),
   };
   return {
     card,
-    deckLabel: t("home.panel.decisions"),
-    viewLabel: t("home.deck.view"),
-    viewDeck: t("home.deck.viewDeck"),
-    viewList: t("home.deck.viewList"),
-    keys: t("home.deck.keys"),
+    deckLabel: t("brief.panel.decisions"),
+    viewLabel: t("brief.deck.view"),
+    viewDeck: t("brief.deck.viewDeck"),
+    viewList: t("brief.deck.viewList"),
+    keys: t("brief.deck.keys"),
     behind: (count) =>
-      plural("home.deck.behind", count, {
+      plural("brief.deck.behind", count, {
         count: formatNumber(count, locale),
       }),
     staged: (count) =>
-      plural("home.deck.staged", count, {
+      plural("brief.deck.staged", count, {
         count: formatNumber(count, locale),
       }),
-    commit: t("home.deck.commit"),
-    unstage: t("home.deck.unstage"),
-    clearedTitle: t("home.deck.clearedTitle"),
+    commit: t("brief.deck.commit"),
+    unstage: t("brief.deck.unstage"),
+    clearedTitle: t("brief.deck.clearedTitle"),
     cleared: (count) =>
-      plural("home.deck.cleared", count, {
+      plural("brief.deck.cleared", count, {
         count: formatNumber(count, locale),
       }),
     clearedTime: (atMs) =>
-      t("home.deck.clearedTime", {
+      t("brief.deck.clearedTime", {
         at: formatDateTime(new Date(atMs).toISOString(), locale, viewerZone()),
       }),
-    empty: t("home.deck.empty"),
+    empty: t("brief.deck.empty"),
     bundleSummary: (members) =>
-      t("home.deck.bundleSummary", { count: formatNumber(members, locale) }),
+      t("brief.deck.bundleSummary", { count: formatNumber(members, locale) }),
     bundleMembers: (members) =>
-      t("home.deck.bundleMembers", { count: formatNumber(members, locale) }),
+      t("brief.deck.bundleMembers", { count: formatNumber(members, locale) }),
   };
 }
 
@@ -230,7 +230,7 @@ async function sendBundle(
   // rather than as an error. Reading `false` here regardless — which this did —
   // meant the deck reported a conflict for a single proposal and said nothing
   // about the same conflict inside a bundle. The full per-outcome report is the
-  // Decisions screen's; what Home needs from it is whether anything was already
+  // Decisions screen's; what Brief needs from it is whether anything was already
   // settled.
   const members = data?.data ?? [];
   return {
@@ -357,20 +357,20 @@ export function DecisionsSection({
   const notice = commit.isError ? problemMessageOf(commit.error, t) : failure;
 
   return (
-    <section id="home-decisions" aria-label={t("home.panel.decisions")}>
+    <section id="brief-decisions" aria-label={t("brief.panel.decisions")}>
       {/* The title goes THROUGH the deck: it shares the row the Deck/List
           toggle is on, so the column's first block says what it is on the same
           line that says how it is drawn. */}
       <DecisionDeck
         items={items}
         now={nowMs}
-        title={t("home.panel.decisions")}
+        title={t("brief.panel.decisions")}
         labels={deckLabels(t, plural, locale)}
         state={state}
-        loadingLabel={t("home.panel.decisions")}
+        loadingLabel={t("brief.panel.decisions")}
         commitState={commitState}
         notice={
-          notice ? <p className="home-error t-caption">{notice}</p> : undefined
+          notice ? <p className="brief-error t-caption">{notice}</p> : undefined
         }
         onCommit={(staged) => commit.mutate({ staged, items })}
         // The four facts a reader needs BEFORE they say yes, and none of them

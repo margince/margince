@@ -124,7 +124,7 @@ function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
   // never invented to fill the line.
   if (!installation) {
     return (
-      <a className="ws" href="#/home" aria-label={t("shell.logoAria")}>
+      <a className="ws" href="#/brief" aria-label={t("shell.logoAria")}>
         <span className="ws-chip">
           <Logomark />
         </span>
@@ -149,7 +149,7 @@ function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
     return (
       <a
         className="ws ws-logo"
-        href="#/home"
+        href="#/brief"
         aria-label={t("shell.companyLogoAria", {
           company: installation.display_name,
         })}
@@ -169,7 +169,7 @@ function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
   return (
     <a
       className="ws"
-      href="#/home"
+      href="#/brief"
       aria-label={t("shell.companyLogoAria", {
         company: installation.display_name,
       })}
@@ -693,7 +693,7 @@ export function PageTitle({
   // yielding to a surface that will not name itself either.
   const unitNamesPage =
     route.screen === EXTENSION_SCREEN && findExtension(route.id) !== null;
-  // A screen that heads ITSELF. Home greets the reader by name in its own h1,
+  // A screen that heads ITSELF. Brief greets the reader by name in its own h1,
   // so the shell printing the nav label above it named the page twice at heading
   // level — a document outline with two top-level headings, which is exactly
   // what the branches above exist to prevent for records and units.
@@ -773,7 +773,7 @@ export function PageTitle({
 }
 
 // The work column's own classes. A RECORD reads wider than a settings page or
-// the home screen: it carries a header, a tab strip and two columns under them,
+// the Brief: it carries a header, a tab strip and two columns under them,
 // where the others are one column of prose-width cards. Two widths, and the
 // class is what says which — see --pageColumn / --recordColumn.
 function mainClasses(gridded: boolean, griddedRecord: boolean): string {
@@ -811,7 +811,7 @@ export function Shell({
   const griddedRecord =
     route.id !== undefined && GRIDDED_RECORD_SCREENS.has(route.screen);
   // The id-less half of the same policy: a screen that reads down but is not a
-  // record, so there is no id to key on. Home is the one today.
+  // record, so there is no id to key on. Brief is the one today.
   const griddedScreen = GRIDDED_SCREENS.has(route.screen);
   // A unit is NOT in this family, though it is leveled: the reading column is a
   // claim about the page's own content, and a unit's surface is the unit's to

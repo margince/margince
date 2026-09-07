@@ -65,7 +65,7 @@ vi.mock("@composition/extensions", () => ({
 // destinations with that section's entries, one level at a time, with the way
 // back up in the panel. A few of those cases drive the whole Shell, because
 // where the reader walked down FROM is remembered above the rail and a rail on
-// its own always answers "home".
+// its own always answers "brief".
 //
 // What the shell composes around this panel — the page title, the top bar's
 // mounting, sign-out — is shell.test.tsx's.
@@ -147,27 +147,27 @@ function railDisplay(container: HTMLElement, selector: string): string {
 }
 
 describe("WorkspaceRail (AC-shell-1/2)", () => {
-  it("renders the canonical 13 items in order, logomark → home", () => {
+  it("renders the canonical 13 items in order, logomark → brief", () => {
     render(<WorkspaceRail route={{ screen: "deals" }} />);
     const brand = within(
       screen.getByRole("navigation", { name: "Primary navigation" }),
     ).getByRole("link", {
       name: "Margince",
     });
-    expect(brand.getAttribute("href")).toBe("#/home");
+    expect(brand.getAttribute("href")).toBe("#/brief");
     // The DESTINATIONS are the level's own rows, so they are counted there: the
     // brand above it and the More control below it are neither of them, and each
     // is asserted where it belongs.
     expect(levelLabels()).toEqual(CANONICAL_ORDER);
-    // The mark leads them, which is what "logomark → home" means.
-    const home = screen.getByRole("link", { name: "Brief" });
+    // The mark leads them, which is what "logomark → brief" means.
+    const brief = screen.getByRole("link", { name: "Brief" });
     expect(
-      brand.compareDocumentPosition(home) & Node.DOCUMENT_POSITION_FOLLOWING,
+      brand.compareDocumentPosition(brief) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeGreaterThan(0);
   });
 
   it("groups the items under Records / Work / Intelligence when expanded", () => {
-    render(<WorkspaceRail route={{ screen: "home" }} />);
+    render(<WorkspaceRail route={{ screen: "brief" }} />);
     const headings = screen
       .getAllByRole("heading", { level: 2 })
       .map((heading) => heading.textContent);
@@ -213,7 +213,7 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
   it("draws no badge on the primary level, whatever counts it is given", () => {
     const { container } = render(
       <WorkspaceRail
-        route={{ screen: "home" }}
+        route={{ screen: "brief" }}
         counts={{ today: 4, deals: 13, leads: 7, contacts: 248 }}
       />,
     );
@@ -225,7 +225,7 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
   // appear on keyboard focus (not hover alone) and be dismissible with Escape.
   it("keeps the accessible name when collapsed and shows a dismissible tooltip on focus", async () => {
     const user = userEvent.setup();
-    render(<WorkspaceRail route={{ screen: "home" }} collapsed />);
+    render(<WorkspaceRail route={{ screen: "brief" }} collapsed />);
     const pipeline = screen.getByRole("link", { name: "Pipeline" });
     expect(screen.queryByRole("tooltip")).toBeNull();
 
@@ -251,7 +251,7 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
   // failure would report a defect that is not in the product.
   it("nests the collapsed tooltip inside its own row so hovering it cannot dismiss it", async () => {
     const user = userEvent.setup();
-    render(<WorkspaceRail route={{ screen: "home" }} collapsed />);
+    render(<WorkspaceRail route={{ screen: "brief" }} collapsed />);
     const pipeline = screen.getByRole("link", { name: "Pipeline" });
 
     await user.hover(pipeline);
@@ -302,12 +302,12 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
   // wordmark would be gone exactly where the product is hardest to identify —
   // and this is the one line here a reader may need to read back to us.
   it("names the build at both rail widths", () => {
-    const expanded = render(<WorkspaceRail route={{ screen: "home" }} />);
+    const expanded = render(<WorkspaceRail route={{ screen: "brief" }} />);
     expect(expanded.container.querySelectorAll(".railversion")).toHaveLength(1);
     cleanup();
 
     const collapsed = render(
-      <WorkspaceRail route={{ screen: "home" }} collapsed />,
+      <WorkspaceRail route={{ screen: "brief" }} collapsed />,
     );
     const marker = collapsed.container.querySelector(".railversion");
     expect(marker?.textContent).toBe(displayVersion());
@@ -320,7 +320,7 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
   // the Tab key. What this asserts is that ONE order describes both.
   it("puts the agent in the middle of the phone bar, in the order a thumb reads", () => {
     stubPhoneViewport();
-    const { container } = render(<WorkspaceRail route={{ screen: "home" }} />);
+    const { container } = render(<WorkspaceRail route={{ screen: "brief" }} />);
     const nav = container.querySelector(".rail");
     const cells = [
       ...(nav?.querySelectorAll(".navwrap.primary, .arblock, .railmore") ?? []),
@@ -359,7 +359,7 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
   it("keeps exactly one agent when the sheet takes the bar's place", async () => {
     const user = userEvent.setup();
     stubPhoneViewport();
-    const { container } = render(<WorkspaceRail route={{ screen: "home" }} />);
+    const { container } = render(<WorkspaceRail route={{ screen: "brief" }} />);
     expect(container.querySelectorAll(".arblock")).toHaveLength(1);
 
     await user.click(screen.getByRole("button", { name: "More" }));
@@ -373,7 +373,7 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
   it("opens a sheet of destinations and no second account affordance", async () => {
     const user = userEvent.setup();
     stubPhoneViewport();
-    const { container } = render(<WorkspaceRail route={{ screen: "home" }} />);
+    const { container } = render(<WorkspaceRail route={{ screen: "brief" }} />);
 
     await user.click(screen.getByRole("button", { name: "More" }));
     expect(levelLabels()).toEqual(CANONICAL_ORDER);
@@ -389,7 +389,7 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
   it("hands focus back to More when the sheet is dismissed from inside it", async () => {
     const user = userEvent.setup();
     stubPhoneViewport();
-    render(<WorkspaceRail route={{ screen: "home" }} />);
+    render(<WorkspaceRail route={{ screen: "brief" }} />);
     await user.click(screen.getByRole("button", { name: "More" }));
     expect(document.activeElement).toBe(
       screen.getByRole("link", { name: "Brief" }),
@@ -455,7 +455,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
   it("ignores a section that belongs to another screen", () => {
     render(
       <WorkspaceRail
-        route={{ screen: "home" }}
+        route={{ screen: "brief" }}
         section={fixtureSection("deep")}
       />,
     );
@@ -484,7 +484,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
   // Through the whole SHELL, because that is the only thing that can prove it:
   // the rail on a section route is a different component (SettingsRail), mounted
   // on the way into the level and gone again on the way out, so where the reader
-  // came from is remembered above it. A rail on its own always answers "home",
+  // came from is remembered above it. A rail on its own always answers "brief",
   // which is the case below and would hide this one.
   it("walks out of the section to the route the reader came from", async () => {
     const user = userEvent.setup();
@@ -538,21 +538,21 @@ describe("Rail levels (a section's entries as the second level)", () => {
   });
 
   // A reader who typed the address, or followed a link into it, walked down from
-  // nowhere — there is no origin to return them to, and home is the one place
+  // nowhere — there is no origin to return them to, and the Brief is the one place
   // the app can honestly send them.
-  it("falls back home when the reader deep-linked into the section", async () => {
+  it("falls back to the Brief when the reader deep-linked into the section", async () => {
     const user = userEvent.setup();
     window.location.hash = "#/settings/account";
     render(<Shell onOpenSearch={ignoreSearch}>{null}</Shell>);
     await user.click(
       await screen.findByRole("button", { name: "Back to Destinations" }),
     );
-    expect(window.location.hash).toBe("#/home");
+    expect(window.location.hash).toBe("#/brief");
   });
 
   // The level's rows take the brand's WORDS — the mark alone stands for the
   // product here — and nothing else. The mark stays, and with it the job it
-  // holds: the link home. A head reduced to a dead box would take that with it.
+  // holds: the link to the Brief. A head reduced to a dead box would take that with it.
   it("hides the brand words but keeps the mark while a level is shown", () => {
     shellStyles = mountShellStyles();
     const { container } = render(
@@ -565,7 +565,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
     expect(railDisplay(container, ".ws-chip")).not.toBe("none");
     expect(
       screen.getByRole("link", { name: "Margince" }).getAttribute("href"),
-    ).toBe("#/home");
+    ).toBe("#/brief");
   });
 
   // Whose product this is, above whose product it runs on. Every reader of a
@@ -579,18 +579,18 @@ describe("Rail levels (a section's entries as the second level)", () => {
       display_name: "Demo GmbH",
       logo_url: "/v1/organizations/11111111-1111-4111-8111-111111111111/logo",
     });
-    renderWith(client, <WorkspaceRail route={{ screen: "home" }} />);
-    const home = screen.getByRole("link", {
+    renderWith(client, <WorkspaceRail route={{ screen: "brief" }} />);
+    const brand = screen.getByRole("link", {
       name: "Demo GmbH home, powered by Margince",
     });
-    const logo = within(home).getByRole("img", { name: "Demo GmbH" });
+    const logo = within(brand).getByRole("img", { name: "Demo GmbH" });
     const image = logo.querySelector("img");
     if (!image) throw new Error("the company logo image was not rendered");
     fireEvent.load(image);
     expect(logo.classList.contains("company-logo")).toBe(true);
-    expect(within(home).getByText("Powered by")).toBeTruthy();
-    expect(within(home).getByText("Margince")).toBeTruthy();
-    expect(home.getAttribute("href")).toBe("#/home");
+    expect(within(brand).getByText("Powered by")).toBeTruthy();
+    expect(within(brand).getByText("Margince")).toBeTruthy();
+    expect(brand.getAttribute("href")).toBe("#/brief");
   });
 
   // The settings card writes a chosen mark straight into this cache entry. The
@@ -606,7 +606,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
     client.setQueryData(["company"], profile);
     const { container } = renderWith(
       client,
-      <WorkspaceRail route={{ screen: "home" }} />,
+      <WorkspaceRail route={{ screen: "brief" }} />,
     );
     expect(container.querySelector(".company-logo img")).toBeNull();
 
@@ -635,7 +635,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
     });
     const { container } = renderWith(
       client,
-      <WorkspaceRail route={{ screen: "home" }} />,
+      <WorkspaceRail route={{ screen: "brief" }} />,
     );
     expect(
       container.querySelector(".company-logo img")?.getAttribute("src"),
@@ -653,7 +653,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
     });
     const { container } = renderWith(
       client,
-      <WorkspaceRail route={{ screen: "home" }} />,
+      <WorkspaceRail route={{ screen: "brief" }} />,
     );
     expect(container.querySelector(".ws-chip img")).toBeNull();
     expect(container.querySelector(".ws-chip .avatar")?.textContent).toBe("DG");
@@ -677,7 +677,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
     client.setQueryData(["company"], TWO_MARKS);
     const { container } = renderWith(
       client,
-      <WorkspaceRail route={{ screen: "home" }} collapsed />,
+      <WorkspaceRail route={{ screen: "brief" }} collapsed />,
     );
     expect(
       container.querySelector(".company-logo img")?.getAttribute("src"),
@@ -689,7 +689,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
     client.setQueryData(["company"], TWO_MARKS);
     const { container } = renderWith(
       client,
-      <WorkspaceRail route={{ screen: "home" }} />,
+      <WorkspaceRail route={{ screen: "brief" }} />,
     );
     expect(
       container.querySelector(".company-logo img")?.getAttribute("src"),
@@ -704,7 +704,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
     });
     const { container } = renderWith(
       client,
-      <WorkspaceRail route={{ screen: "home" }} collapsed />,
+      <WorkspaceRail route={{ screen: "brief" }} collapsed />,
     );
     expect(
       container.querySelector(".company-logo img")?.getAttribute("src"),
@@ -716,7 +716,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
   // or by one that hides them nowhere.
   it("keeps the brand words on a route with no level", () => {
     shellStyles = mountShellStyles();
-    const { container } = render(<WorkspaceRail route={{ screen: "home" }} />);
+    const { container } = render(<WorkspaceRail route={{ screen: "brief" }} />);
     expect(railDisplay(container, ".ws-name")).not.toBe("none");
     expect(railDisplay(container, ".ws-chip")).not.toBe("none");
   });

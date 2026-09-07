@@ -4,8 +4,8 @@
 import { describe, expect, it } from "vitest";
 import type { MessageKey } from "../i18n/en";
 import { en } from "../i18n/en";
+import type { WeeklyReview } from "./brief.queries";
 import { weekSentence } from "./brief.weeksentence";
-import type { WeeklyReview } from "./home.queries";
 
 // The catalog's own words, filled the way the app fills them. A second copy of
 // the templates here would let this suite pass over a sentence the product

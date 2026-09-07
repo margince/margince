@@ -4,16 +4,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RecordZoneProvider } from "../app/recordzone";
 import { formatDateTime } from "../format/format";
 import { en } from "../i18n/en";
-import { HomeScreen } from "./home";
-import { fleetDeal, jsonResponse, render, run, stubApi } from "./home.testkit";
+import { BriefScreen } from "./brief";
+import { fleetDeal, jsonResponse, render, run, stubApi } from "./brief.testkit";
 
-// The week just gone, split from home.test.tsx when that file crossed the
+// The week just gone, split from brief.test.tsx when that file crossed the
 // 1000-line ceiling frontend/AGENTS.md sets.
 //
 // One subject, and the seam the file already had: the retrospective and the
 // sentence about it are what a reader opens on a Monday, and they read against
 // a week of runs rather than against this morning's queue. Everything the two
-// suites share is in home.testkit.tsx, so an unrouted read answers the same way
+// suites share is in brief.testkit.tsx, so an unrouted read answers the same way
 // on both sides of the split.
 
 afterEach(() => {
@@ -26,14 +26,14 @@ afterEach(() => {
 // The weekly is a VIEW of the Brief now, not a panel at the foot of the
 // morning. These cases are about what the retrospective says, so each one opens
 // on the address that shows it — the dial itself is tested in
-// home.dials.test.tsx.
+// brief.dials.test.tsx.
 beforeEach(() => {
-  window.location.hash = "#/home?view=weekly";
+  window.location.hash = "#/brief?view=weekly";
 });
 
 // ── The week just gone ──
 
-describe("HomeScreen — the weekly retrospective", () => {
+describe("BriefScreen — the weekly retrospective", () => {
   const review = {
     id: "01a04000-0000-7000-8000-00000000000a",
     local_week_start: "2026-06-29",
@@ -74,13 +74,13 @@ describe("HomeScreen — the weekly retrospective", () => {
       "GET /weekly-reviews": () => jsonResponse({ weeks: ["2026-06-29"] }),
       "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
     });
-    render(<HomeScreen />);
+    render(<BriefScreen />);
 
     // The label is what the deal was CALLED that week, served from the frozen
     // row rather than looked up — which is why it renders although the review's
     // own deal is absent from the deals payload, where only Fleet retrofit is.
     await screen.findByText("Weber Rahmenvertrag");
-    expect(screen.getByText(en["home.weekly.tasksDelivered"])).toBeTruthy();
+    expect(screen.getByText(en["brief.weekly.tasksDelivered"])).toBeTruthy();
   });
 
   // What the wins were WORTH, beside how many there were.
@@ -103,7 +103,7 @@ describe("HomeScreen — the weekly retrospective", () => {
       "GET /weekly-reviews": () => jsonResponse({ weeks: ["2026-06-29"] }),
       "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
     });
-    render(<HomeScreen />);
+    render(<BriefScreen />);
 
     // The review's OWN currency, not the installation's current setting: base
     // currency is operator-mutable, and re-reading it would re-label an old
@@ -138,7 +138,7 @@ describe("HomeScreen — the weekly retrospective", () => {
       "GET /weekly-reviews": () => jsonResponse({ weeks: ["2026-06-29"] }),
       "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
     });
-    render(<HomeScreen />);
+    render(<BriefScreen />);
 
     // +2.500,00 € on 12.500 against 10.000, and the SIGN is always drawn: a
     // bare figure beside last week's leaves the direction to be guessed.
@@ -169,7 +169,7 @@ describe("HomeScreen — the weekly retrospective", () => {
       "GET /weekly-reviews": () => jsonResponse({ weeks: ["2026-06-29"] }),
       "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
     });
-    render(<HomeScreen />);
+    render(<BriefScreen />);
 
     expect(await screen.findByText(/±0,00\s*€|±€0\.00/)).toBeTruthy();
   });
@@ -192,7 +192,7 @@ describe("HomeScreen — the weekly retrospective", () => {
       "GET /weekly-reviews": () => jsonResponse({ weeks: ["2026-06-29"] }),
       "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
     });
-    render(<HomeScreen />);
+    render(<BriefScreen />);
 
     expect(await screen.findByText(/12.500,00\s*€|€12,500\.00/)).toBeTruthy();
     expect(screen.queryByText(/vs prior|zur Vorwoche/)).toBeNull();
@@ -226,7 +226,7 @@ describe("HomeScreen — the weekly retrospective", () => {
       "GET /weekly-reviews": () => jsonResponse({ weeks: ["2026-06-29"] }),
       "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
     });
-    render(<HomeScreen />);
+    render(<BriefScreen />);
 
     expect(await screen.findByText(/12.500,00\s*€|€12,500\.00/)).toBeTruthy();
     expect(screen.queryByText(/vs prior|zur Vorwoche/)).toBeNull();
@@ -243,7 +243,7 @@ describe("HomeScreen — the weekly retrospective", () => {
       "GET /weekly-reviews": () => jsonResponse({ weeks: ["2026-06-29"] }),
       "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
     });
-    render(<HomeScreen />);
+    render(<BriefScreen />);
 
     await screen.findByText("Weber Rahmenvertrag");
     const strip = document.querySelector('[data-testid="weekly-strip"]');
@@ -253,7 +253,7 @@ describe("HomeScreen — the weekly retrospective", () => {
 
   // The panel says its numbers can no longer move.
   //
-  // That claim is what separates the weekly from every other panel on Home. A
+  // That claim is what separates the weekly from every other panel on Brief. A
   // rep who reads it on Tuesday, acts, and re-reads on Thursday is looking at a
   // record rather than a stale figure — and without the mark they have no way
   // to tell those apart. The TEAM weekly has said so since it shipped; the
@@ -275,12 +275,12 @@ describe("HomeScreen — the weekly retrospective", () => {
     const installationZone = "Asia/Ho_Chi_Minh";
     render(
       <RecordZoneProvider zone={installationZone}>
-        <HomeScreen />
+        <BriefScreen />
       </RecordZoneProvider>,
     );
 
-    expect(await screen.findByText(en["home.weekly.frozen"])).toBeTruthy();
-    const written = en["home.weekly.written"].replace(
+    expect(await screen.findByText(en["brief.weekly.frozen"])).toBeTruthy();
+    const written = en["brief.weekly.written"].replace(
       "{at}",
       formatDateTime(review.generated_at, "en", installationZone),
     );
@@ -296,10 +296,10 @@ describe("HomeScreen — the weekly retrospective", () => {
       "GET /weekly-reviews": () => jsonResponse({ weeks: [] }),
       "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
     });
-    render(<HomeScreen />);
+    render(<BriefScreen />);
 
-    await screen.findByText(en["home.weekly.none"]);
-    expect(screen.queryByText(en["home.weekly.frozen"])).toBeNull();
+    await screen.findByText(en["brief.weekly.none"]);
+    expect(screen.queryByText(en["brief.weekly.frozen"])).toBeNull();
   });
 
   it("says there is no review yet rather than drawing a week of zeroes", async () => {
@@ -309,10 +309,10 @@ describe("HomeScreen — the weekly retrospective", () => {
       "GET /weekly-reviews": () => jsonResponse({ weeks: [] }),
       "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
     });
-    render(<HomeScreen />);
+    render(<BriefScreen />);
 
     // A page of zeroes would claim a week that was measured and empty.
-    await screen.findByText(en["home.weekly.none"]);
+    await screen.findByText(en["brief.weekly.none"]);
   });
 
   it("survives a payload that is not a review", async () => {
@@ -326,7 +326,7 @@ describe("HomeScreen — the weekly retrospective", () => {
       "GET /brief": () => jsonResponse(run),
       "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
     });
-    render(<HomeScreen />);
+    render(<BriefScreen />);
 
     // The panel formats local_week_start immediately, so a half-shaped answer
     // used to take the whole render down with it rather than drawing one honest
@@ -340,12 +340,12 @@ describe("HomeScreen — the weekly retrospective", () => {
       await screen.findByRole("group", { name: en["brief.view.label"] }),
     ).toBeTruthy();
     expect(
-      screen.getByRole("heading", { name: en["home.panel.weekly"] }),
+      screen.getByRole("heading", { name: en["brief.panel.weekly"] }),
     ).toBeTruthy();
   });
 });
 
-describe("HomeScreen — the week's sentence", () => {
+describe("BriefScreen — the week's sentence", () => {
   const narrated = {
     id: "01a04000-0000-7000-8000-00000000000a",
     local_week_start: "2026-06-29",
@@ -378,7 +378,7 @@ describe("HomeScreen — the week's sentence", () => {
       "GET /brief": () => jsonResponse(run),
       "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
     });
-    render(<HomeScreen />);
+    render(<BriefScreen />);
 
     await screen.findByText("Weber signed; two promises slipped to this week.");
     // Model-authored prose sitting beside numbers a deterministic pass
@@ -396,11 +396,11 @@ describe("HomeScreen — the week's sentence", () => {
       "GET /brief": () => jsonResponse(run),
       "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
     });
-    render(<HomeScreen />);
+    render(<BriefScreen />);
 
     // Never a blank week, never a silent one: the counts are still the week's,
     // and a rep reading silence would conclude there was nothing to remark on.
-    await screen.findByText(en["home.weekly.noNarrative"]);
+    await screen.findByText(en["brief.weekly.noNarrative"]);
   });
 
   it("stays silent when a pass ran and had nothing to add", async () => {
@@ -415,12 +415,12 @@ describe("HomeScreen — the week's sentence", () => {
       "GET /brief": () => jsonResponse(run),
       "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
     });
-    render(<HomeScreen />);
+    render(<BriefScreen />);
 
-    await screen.findByText(en["home.weekly.tasksDelivered"]);
+    await screen.findByText(en["brief.weekly.tasksDelivered"]);
     // A pass that honestly found nothing is not a pass that never ran, and
     // claiming otherwise would tell the rep their week was never looked at.
-    expect(screen.queryByText(en["home.weekly.noNarrative"])).toBeNull();
+    expect(screen.queryByText(en["brief.weekly.noNarrative"])).toBeNull();
   });
 });
 
@@ -428,7 +428,7 @@ describe("HomeScreen — the week's sentence", () => {
 
 // A count with no bar against it is a fact a rep cannot act on. "12 deals
 // moved" only becomes a review beside the week that came before it.
-describe("HomeScreen — the week against the one before", () => {
+describe("BriefScreen — the week against the one before", () => {
   const counts = {
     tasks_due: 5,
     tasks_done: 4,
@@ -472,7 +472,7 @@ describe("HomeScreen — the week against the one before", () => {
       "GET /weekly-reviews": () => jsonResponse({ weeks: ["2026-06-29"] }),
       "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
     });
-    render(<HomeScreen />);
+    render(<BriefScreen />);
     return screen.findByTestId("weekly-strip");
   };
 
@@ -480,7 +480,7 @@ describe("HomeScreen — the week against the one before", () => {
     const strip = await mount(withPrior);
 
     expect(strip.textContent).toContain(
-      en["home.weekly.sincePrior"].replace("{delta}", "+2"),
+      en["brief.weekly.sincePrior"].replace("{delta}", "+2"),
     );
   });
 
@@ -490,7 +490,7 @@ describe("HomeScreen — the week against the one before", () => {
     const strip = await mount(withPrior);
 
     expect(strip.textContent).toContain(
-      en["home.weekly.sincePrior"].replace("{delta}", "±0"),
+      en["brief.weekly.sincePrior"].replace("{delta}", "±0"),
     );
   });
 
@@ -500,7 +500,7 @@ describe("HomeScreen — the week against the one before", () => {
   it("draws no comparison for a first week", async () => {
     const strip = await mount(review);
 
-    const marker = en["home.weekly.sincePrior"].replace("{delta}", "").trim();
+    const marker = en["brief.weekly.sincePrior"].replace("{delta}", "").trim();
     expect(strip.textContent).not.toContain(marker);
   });
 
@@ -522,11 +522,11 @@ describe("HomeScreen — the week against the one before", () => {
     const strip = await mount(withPrior);
 
     for (const key of [
-      "home.weekly.planCommitmentsKept",
-      "home.weekly.dealsWon",
-      "home.weekly.leadsAnswered",
-      "home.weekly.meetingsHeld",
-      "home.weekly.carriedOver",
+      "brief.weekly.planCommitmentsKept",
+      "brief.weekly.dealsWon",
+      "brief.weekly.leadsAnswered",
+      "brief.weekly.meetingsHeld",
+      "brief.weekly.carriedOver",
     ] as const) {
       expect(within(strip).getByText(en[key])).toBeTruthy();
     }
@@ -536,7 +536,7 @@ describe("HomeScreen — the week against the one before", () => {
   //
   // commitments_* counts what a rep wrote into their weekly PLAN and settled;
   // tasks_* counts tasks that fell due in the week. Both render through
-  // home.weekly.ofDue, so they arrive on one screen in the same "{n} of {m}"
+  // brief.weekly.ofDue, so they arrive on one screen in the same "{n} of {m}"
   // shape six lines apart, and they used to arrive under names one word apart
   // too: "Promises kept" heading the strip, "Promised, delivered" in the list
   // below. On a seat that keeps no weekly plan the first reads 0 of 0 for ever
@@ -550,8 +550,8 @@ describe("HomeScreen — the week against the one before", () => {
   it("names the plan and the task figures apart, and neither as a promise", async () => {
     await mount(withPrior);
 
-    const planned = en["home.weekly.planCommitmentsKept"];
-    const delivered = en["home.weekly.tasksDelivered"];
+    const planned = en["brief.weekly.planCommitmentsKept"];
+    const delivered = en["brief.weekly.tasksDelivered"];
     expect(planned).not.toBe(delivered);
     expect(screen.getByText(planned)).toBeTruthy();
     expect(screen.getByText(delivered)).toBeTruthy();
@@ -559,7 +559,7 @@ describe("HomeScreen — the week against the one before", () => {
     // Asserted rather than assumed: the reservation is what makes "promise"
     // wrong here, so if the rail ever starts tracking them this rule wants
     // rereading instead of quietly continuing to hold.
-    expect(en["home.promises.untracked"]).toContain("not tracked yet");
+    expect(en["brief.promises.untracked"]).toContain("not tracked yet");
     for (const label of [planned, delivered]) {
       expect(label.toLowerCase()).not.toContain("promise");
     }
@@ -573,11 +573,11 @@ describe("HomeScreen — the week against the one before", () => {
     const strip = await mount(withPrior);
 
     for (const key of [
-      "home.weekly.tasksDelivered",
-      "home.weekly.dealsMoved",
-      "home.weekly.dealsLost",
-      "home.weekly.decided",
-      "home.weekly.queueWorked",
+      "brief.weekly.tasksDelivered",
+      "brief.weekly.dealsMoved",
+      "brief.weekly.dealsLost",
+      "brief.weekly.decided",
+      "brief.weekly.queueWorked",
     ] as const) {
       const reading = screen.getByText(en[key]);
       expect(reading).toBeTruthy();

@@ -8,8 +8,8 @@ import {
   narratedWeek,
   PRIOR_WEEK_START,
   WEEK_START,
-} from "./home.fixtures";
-import { WeeklySection } from "./home.weekly";
+} from "./brief.fixtures";
+import { WeeklySection } from "./brief.weekly";
 import {
   installFetchStub,
   jsonResponse,
@@ -19,7 +19,7 @@ import {
 
 // The week just gone, drawn on its own.
 //
-// `home.stories.tsx` documents the whole morning, and the weekly reaches a
+// `brief.stories.tsx` documents the whole morning, and the weekly reaches a
 // reader there only through whichever view the dial is on — so the panel's own
 // states had no frame of their own. They are worth one, because what this panel
 // draws differently is a question of what the review SAYS, and three of those
@@ -63,7 +63,7 @@ function panel(routes: RouteMap) {
 }
 
 const meta: Meta<typeof WeeklySection> = {
-  title: "Shell/Home weekly review",
+  title: "Shell/Brief weekly review",
   component: WeeklySection,
 };
 export default meta;

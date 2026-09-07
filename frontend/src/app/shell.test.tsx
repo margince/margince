@@ -244,11 +244,11 @@ describe("PageTitle", () => {
     expect(container.querySelector(".pagesub")).toBeNull();
   });
 
-  // Home greets the reader by name in its own h1, so the shell adds none: two
+  // Brief greets the reader by name in its own h1, so the shell adds none: two
   // top-level headings is no document outline at all. Same yield-whole rule as
   // a record route below, for the same reason.
   it("renders nothing at all on a screen that heads itself", () => {
-    const { container } = render(<PageTitle route={{ screen: "home" }} />);
+    const { container } = render(<PageTitle route={{ screen: "brief" }} />);
     expect(container.querySelector(".pagetitle")).toBeNull();
     expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
   });
@@ -494,12 +494,12 @@ describe("Shell", () => {
   // thing separating them is the id. The marker is what the stylesheet keys the
   // cap on, so a route landing in the wrong family is a layout regression that
   // nothing else would catch. The sets themselves are GRIDDED_RECORD_SCREENS
-  // (keyed on an id) and GRIDDED_SCREENS (the id-less half, which is Home).
+  // (keyed on an id) and GRIDDED_SCREENS (the id-less half, which is Brief).
   it.each([
     ["#/settings/account", true],
     ["#/companies/o-1", true],
     ["#/contacts/p-1", true],
-    // Home carries no id and is capped anyway: it reads down, and its decision
+    // Brief carries no id and is capped anyway: it reads down, and its decision
     // cards carry drafted prose somebody has to read before deciding.
     ["#/", true],
     ["#/companies", false],

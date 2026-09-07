@@ -2,11 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
-import type { Deal, MorningBrief, MorningDigest } from "./home.queries";
+import type { Deal, MorningBrief, MorningDigest } from "./brief.queries";
 import { jsonResponse } from "./story-utils";
 
-// The fixtures every Home story is built from — the whole page in
-// `home.stories.tsx`, its parts one at a time in `home.parts.stories.tsx`. They
+// The fixtures every Brief story is built from — the whole page in
+// `brief.stories.tsx`, its parts one at a time in `brief.parts.stories.tsx`. They
 // live in their own module because the two catalogs document the SAME morning:
 // a second copy of these proposals would let the parts drift from the page they
 // are parts of, one edited fixture at a time.

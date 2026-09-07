@@ -13,17 +13,17 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import { HomeScreen } from "./home";
-import { readingsDay } from "./home.fixtures";
-import type { Deal } from "./home.queries";
+import { BriefScreen } from "./brief";
+import { readingsDay } from "./brief.fixtures";
+import type { Deal } from "./brief.queries";
 
-// Home's context rail (screens/home.rail.tsx): what the night shift did, what
+// Brief's context rail (screens/brief.rail.tsx): what the night shift did, what
 // the pipeline is worth, and what has gone quiet. Three panels, all of them
 // READ, and each one gated on its OWN query — which is the property these cases
 // exist to hold: a transient failure in one panel must never blank another, and
 // a panel with no answer yet must draw nothing rather than a row of zeros.
 //
-// Split out of home.test.tsx at the 1000-line ceiling (frontend/CLAUDE.md), on
+// Split out of brief.test.tsx at the 1000-line ceiling (frontend/CLAUDE.md), on
 // the seam the screen itself is built along: the work column and its readings
 // are that file, the rail beside them is this one. The stub harness is spelled
 // again here rather than shared, the same way every screen suite in this tree
@@ -61,7 +61,7 @@ type Call = { method: string; path: string; body: unknown };
 
 type Routes = Record<string, (body: unknown) => Response | Promise<Response>>;
 
-// Every read Home fans out to, answered honestly by default so each case
+// Every read Brief fans out to, answered honestly by default so each case
 // declares only the route it is about: a session, no nightly digest, no brief
 // run, and a pipeline report with no rows. The report matters — the fallback
 // empty PAGE carries no `rows`, which the pipeline reading would read as a
@@ -143,8 +143,8 @@ const quietDeal: Deal = {
 
 // ── The context rail ──
 
-describe("HomeScreen — the context rail", () => {
-  // Home used to pass `org: ""` for every card here, so every quiet deal on
+describe("BriefScreen — the context rail", () => {
+  // Brief used to pass `org: ""` for every card here, so every quiet deal on
   // this page claimed to belong to no company at all. The panel resolves the
   // company through the same naming the pipeline board uses.
   it("names the company on a quiet deal", async () => {
@@ -153,7 +153,7 @@ describe("HomeScreen — the context rail", () => {
       "GET /organizations/org-9": () =>
         jsonResponse({ id: "org-9", display_name: "Nordwind Logistik" }),
     });
-    render(<HomeScreen />);
+    render(<BriefScreen />);
 
     const card = await screen.findByText("Ostwind refit");
     const panel = card.closest("a");
@@ -173,7 +173,7 @@ describe("HomeScreen — the context rail", () => {
 
   it("says so when nothing has gone quiet", async () => {
     stubApi({ "GET /deals": () => jsonResponse({ data: [fleetDeal] }) });
-    render(<HomeScreen />);
+    render(<BriefScreen />);
 
     expect(await screen.findByText("Nothing has gone quiet.")).toBeTruthy();
   });
@@ -199,7 +199,7 @@ describe("HomeScreen — the context rail", () => {
       "GET /digest": () => jsonResponse({ ...digestBase, connectors: [] }),
     });
     const user = userEvent.setup();
-    render(<HomeScreen />);
+    render(<BriefScreen />);
 
     // Waited on CONTENT, not on the panel's name: the name is also what the
     // pending state announces now that a wait says what it is waiting for, so
@@ -234,7 +234,7 @@ describe("HomeScreen — the context rail", () => {
           501,
         ),
     });
-    render(<HomeScreen />);
+    render(<BriefScreen />);
 
     await screen.findByRole("region", { name: en["brief.feed.title"] });
     // The rail's own reads settle after the feed's region appears, so this
@@ -250,7 +250,7 @@ describe("HomeScreen — the context rail", () => {
 
   it("renders no overnight panel at all before the first nightly run", async () => {
     stubApi({});
-    render(<HomeScreen />);
+    render(<BriefScreen />);
 
     // The rail's reads must have ANSWERED before absence means anything. The
     // feed's region is drawn on the first paint, so awaiting it proves only
@@ -280,7 +280,7 @@ describe("HomeScreen — the context rail", () => {
         }),
     });
     const user = userEvent.setup();
-    render(<HomeScreen />);
+    render(<BriefScreen />);
 
     expect(await screen.findByText(/rejected our credentials/i)).toBeTruthy();
     await user.click(
@@ -297,7 +297,7 @@ describe("HomeScreen — the context rail", () => {
           connectors: [{ provider: "gmail", status: "connected" }],
         }),
     });
-    render(<HomeScreen />);
+    render(<BriefScreen />);
 
     await screen.findByText("Overnight");
     expect(
@@ -338,7 +338,7 @@ describe("HomeScreen — the context rail", () => {
         }),
     });
     const user = userEvent.setup();
-    render(<HomeScreen />);
+    render(<BriefScreen />);
 
     const moves = await screen.findByLabelText("Phase moves");
     expect(moves.textContent).toContain("Pursuing → Delivering");
@@ -357,7 +357,7 @@ describe("HomeScreen — the context rail", () => {
     stubApi({
       "GET /digest": () => jsonResponse({ ...digestBase, connectors: [] }),
     });
-    render(<HomeScreen />);
+    render(<BriefScreen />);
 
     await screen.findByText("Overnight");
     expect(screen.queryByLabelText("Phase moves")).toBeNull();
@@ -367,7 +367,7 @@ describe("HomeScreen — the context rail", () => {
 // The open pipeline is grouped by currency and rendered one line each rather
 // than summed: adding native minor units across currencies produces a number
 // that is not money.
-describe("HomeScreen — the open pipeline", () => {
+describe("BriefScreen — the open pipeline", () => {
   it("shows the server's raw and weighted totals", async () => {
     stubApi({
       "POST /reports/deals-by-stage": () =>
@@ -385,7 +385,7 @@ describe("HomeScreen — the open pipeline", () => {
           ],
         }),
     });
-    render(<HomeScreen />);
+    render(<BriefScreen />);
 
     expect(await screen.findByText("€99,000.00")).toBeTruthy();
     expect(screen.getByText("€33,000.00 weighted")).toBeTruthy();
@@ -415,7 +415,7 @@ describe("HomeScreen — the open pipeline", () => {
           ],
         }),
     });
-    render(<HomeScreen />);
+    render(<BriefScreen />);
 
     expect(await screen.findByText("€1,000.00")).toBeTruthy();
     expect(screen.getByText("US$2,000.00")).toBeTruthy();
@@ -429,7 +429,7 @@ describe("HomeScreen — the open pipeline", () => {
   // rendered numbers cannot catch that — only the request can.
   it("asks for open deals only, grouped by currency", async () => {
     const calls = stubApi({});
-    render(<HomeScreen />);
+    render(<BriefScreen />);
 
     await waitFor(() =>
       expect(
@@ -458,7 +458,7 @@ describe("HomeScreen — the open pipeline", () => {
       "POST /reports/deals-by-stage": () =>
         jsonResponse({ title: "Forbidden" }, 403),
     });
-    render(<HomeScreen />);
+    render(<BriefScreen />);
 
     expect(
       await screen.findByText("This figure could not be loaded."),
@@ -483,7 +483,7 @@ describe("HomeScreen — the open pipeline", () => {
           ],
         }),
     });
-    render(<HomeScreen />);
+    render(<BriefScreen />);
 
     expect(
       await screen.findByText(
@@ -496,7 +496,7 @@ describe("HomeScreen — the open pipeline", () => {
 
   it("draws no position panel at all when there is no open pipeline", async () => {
     stubApi({});
-    render(<HomeScreen />);
+    render(<BriefScreen />);
 
     // Waits for the reads to answer, for the reason the overnight case above
     // gives: absence proves nothing until the read that would have filled it

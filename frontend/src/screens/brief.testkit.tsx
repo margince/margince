@@ -5,12 +5,12 @@ import { vi } from "vitest";
 import type { components } from "../api/schema";
 import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
-import { readingsDay } from "./home.fixtures";
-import type { Deal, MorningBrief } from "./home.queries";
+import { readingsDay } from "./brief.fixtures";
+import type { Deal, MorningBrief } from "./brief.queries";
 
-// Home's suites share one harness, because they share one screen.
+// Brief's suites share one harness, because they share one screen.
 //
-// Home fans out to several reads on mount, and what a case is ABOUT is one of
+// Brief fans out to several reads on mount, and what a case is ABOUT is one of
 // them; the rest have to be answered honestly or every case declares routes it
 // does not care about. `stubApi` is that answer, and it also RECORDS every
 // call, because what this screen must not do is as load-bearing as what it
@@ -61,7 +61,7 @@ export type Routes = Record<
   (body: unknown) => Response | Promise<Response>
 >;
 
-// Every read Home fans out to, answered honestly by default so each case
+// Every read Brief fans out to, answered honestly by default so each case
 // declares only the route it is about: a session, no nightly digest, no brief
 // run, and a pipeline report with no rows. The report matters — the fallback
 // empty PAGE carries no `rows`, which the pipeline reading would read as a
@@ -175,9 +175,9 @@ export function writeRoutes(calls: readonly Call[]): string[] {
   return writes(calls).map((call) => `${call.method} ${call.path}`);
 }
 
-/** Home's two work sections, in the order the document holds them. */
+/** Brief's two work sections, in the order the document holds them. */
 export function workOrder(): string[] {
-  return [...document.querySelectorAll("#home-decisions, #brief-feed")].map(
+  return [...document.querySelectorAll("#brief-decisions, #brief-feed")].map(
     (section) => section.id,
   );
 }

@@ -9,25 +9,25 @@ import { useT } from "../i18n";
 import { useDecisionSink } from "./approvalrow";
 import { usePendingApprovals } from "./approvals.queries";
 import { ChangedSinceBrief } from "./brief.changed";
+import { DecisionsSection } from "./brief.decisions";
 import { BriefDials } from "./brief.dials";
 import { BriefFeed } from "./brief.feed";
+import { BriefGlance } from "./brief.glance";
 import { PlanSection } from "./brief.plan";
+import { quietDeals, useBriefDeals, useWeeklyReview } from "./brief.queries";
+import { OvernightPanel, PositionPanel, WatchPanel } from "./brief.rail";
+import { BriefReadingsStrip } from "./brief.readings";
+import { PromisesPanel, SchedulePanel } from "./brief.schedule";
+import { BriefTeamBoard } from "./brief.teamboard";
 import { TeamWeeklyPanel } from "./brief.teamweekly";
 import { addressFrom, type BriefAddress, paramsFor } from "./brief.view";
+import { WeeklySection } from "./brief.weekly";
 import { BriefCoverage } from "./briefcoverage";
 import { useMe } from "./common";
-import { DecisionsSection } from "./home.decisions";
-import { HomeGlance } from "./home.glance";
-import { quietDeals, useHomeDeals, useWeeklyReview } from "./home.queries";
-import { OvernightPanel, PositionPanel, WatchPanel } from "./home.rail";
-import { HomeReadingsStrip } from "./home.readings";
-import { PromisesPanel, SchedulePanel } from "./home.schedule";
-import { HomeTeamBoard } from "./home.teamboard";
-import { WeeklySection } from "./home.weekly";
 import { useWorklist, type Worklist } from "./worklist.queries";
-import "./home.css";
+import "./brief.css";
 
-// Home — the morning handover.
+// Brief — the morning handover.
 //
 // The night shift worked while the reader slept. This page is where it hands
 // over: what it could not decide without them (and that expires), what it thinks
@@ -65,7 +65,7 @@ function firstNameOf(displayName: string | undefined): string | null {
  * Wire order is kept. The deck reorders nothing, and a queue whose order the
  * page invents is a queue nobody can predict.
  *
- * Exported for the parts catalog (`home.parts.stories.tsx`), which documents the
+ * Exported for the parts catalog (`brief.parts.stories.tsx`), which documents the
  * decisions section on its own: a story that grouped the fixtures by hand would
  * be a second answer to what a bundle is.
  */
@@ -94,7 +94,7 @@ export function deckItems(approvals: readonly Approval[]): DecisionDeckItem[] {
 
 /**
  * What one read says about itself, in the state vocabulary every section draws
- * from. Three of Home's five reads answer the same question, and answering it
+ * from. Three of Brief's five reads answer the same question, and answering it
  * three times inline is how a page ends up drawing a failure as an empty list on
  * two of them and honestly on the third.
  */
@@ -111,7 +111,7 @@ function readState(
  * The work column, in the order the day sets: a deadline leads until there is no
  * deadline left, and then the plan does.
  */
-function HomeWork({
+function BriefWork({
   items,
   nowMs,
   deckState,
@@ -169,7 +169,7 @@ function HomeWork({
   // composite as a tie-break inside a level, so the page draws that order and
   // adds nothing to it.
   const feed = <BriefFeed key="feed" day={day} state={dayState} />;
-  const board = <HomeTeamBoard key="board" offered={teamOffered} />;
+  const board = <BriefTeamBoard key="board" offered={teamOffered} />;
 
   // ONE VIEW AT A TIME, and every combination the dials offer has a surface
   // behind it — decision 5 of the plan, which is the sequencing defect it
@@ -196,7 +196,7 @@ function HomeWork({
   return items.length > 0 ? [decisions, feed] : [feed, decisions];
 }
 
-export function HomeScreen() {
+export function BriefScreen() {
   const t = useT();
   // One clock for the whole page, ticking by the minute: the deck's countdowns
   // read in days and hours, so a per-second tick would re-render every card on
@@ -205,18 +205,18 @@ export function HomeScreen() {
   const me = useMe();
 
   // Approving can 409 already-decided, and that note must outlive the deck's
-  // re-render on invalidation, so Home uses the same shared sink the Decisions
+  // re-render on invalidation, so Brief uses the same shared sink the Decisions
   // screen does.
   const { onAlreadyDecided, decidedNote } = useDecisionSink();
   const approvalsQuery = usePendingApprovals();
-  const dealsQuery = useHomeDeals();
-  // The ONE ranked order, read here for its coverage. Home has always been
+  const dealsQuery = useBriefDeals();
+  // The ONE ranked order, read here for its coverage. Brief has always been
   // deal-only; what it could not say is which sources it never saw, and that
   // answer lives on the worklist read rather than on any of the five deal
   // reads beside it. Same query key as the Worklist screen, so the two cannot
   // disagree about what was read.
   const worklistPages = useWorklist("mine", "all");
-  // Home reads the day's FIGURES — coverage, readings, scope options — and
+  // Brief reads the day's FIGURES — coverage, readings, scope options — and
   // never its rows, so the first page is the whole of what it needs. Those
   // figures describe the assembled day rather than the page, so paging would
   // not change one of them.
@@ -263,12 +263,12 @@ export function HomeScreen() {
   // six while the deck drew four and its tray sent "4 decisions".
 
   return (
-    <div className="wrap home-wrap">
+    <div className="wrap brief-wrap">
       {/* The greeting and the dials share the page's first line: the dials
           are how the reader changes what the greeting is about, and on a line
           of their own above it they read as a toolbar over an empty page. */}
       <div className="brief-head">
-        <HomeGlance
+        <BriefGlance
           view={address.view}
           day={worklistQuery.data}
           week={weeklyReview.data}
@@ -297,7 +297,7 @@ export function HomeScreen() {
       {worklistQuery.data && <ChangedSinceBrief day={worklistQuery.data} />}
       {/* The strip reads the SAME worklist answer the queue below it reads, so
           the five figures cannot disagree with the rows they summarise. */}
-      {worklistQuery.data && <HomeReadingsStrip day={worklistQuery.data} />}
+      {worklistQuery.data && <BriefReadingsStrip day={worklistQuery.data} />}
       {/* Screen-level so it survives the deck re-rendering under it. */}
       {decidedNote}
       <PageZones
@@ -307,9 +307,9 @@ export function HomeScreen() {
         // seventy per cent width with an empty third beside it — a column that
         // reads as a rail which failed to load.
         shape={address.view === "weekly" ? "single" : "aside"}
-        mainClassName="home-main"
+        mainClassName="brief-main"
         main={
-          <HomeWork
+          <BriefWork
             items={items}
             nowMs={nowMs}
             deckState={deckState}
@@ -324,8 +324,8 @@ export function HomeScreen() {
             onAlreadyDecided={onAlreadyDecided}
           />
         }
-        asideClassName="home-rail"
-        asideLabel={t("home.rail")}
+        asideClassName="brief-rail"
+        asideLabel={t("brief.rail")}
         // THE RAIL BELONGS TO THE VIEW IT IS BESIDE.
         //
         // Every panel below answers a question about TODAY: what the day is
@@ -365,7 +365,7 @@ export function HomeScreen() {
               />
               <OvernightPanel />
               <PositionPanel />
-              <section id="home-watch">
+              <section id="brief-watch">
                 <WatchPanel
                   deals={quiet}
                   more={beyondPage}

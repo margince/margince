@@ -2,9 +2,9 @@
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { en } from "../i18n/en";
-import type { WeeklyReview } from "./home.queries";
-import { render } from "./home.testkit";
-import { LearningsPanel } from "./home.weekly.learnings";
+import type { WeeklyReview } from "./brief.queries";
+import { render } from "./brief.testkit";
+import { LearningsPanel } from "./brief.weekly.learnings";
 
 // The distinction this panel exists to keep: a week NOBODY READ and a week that
 // held NO LESSON are different facts, and only the second is about the week.
@@ -44,9 +44,9 @@ describe("what the week taught", () => {
     render(
       <LearningsPanel learnings={learned({ state: "not_run", items: [] })} />,
     );
-    expect(screen.getByText(en["home.weekly.learnings.notRun"])).toBeTruthy();
+    expect(screen.getByText(en["brief.weekly.learnings.notRun"])).toBeTruthy();
     expect(
-      screen.queryByText(en["home.weekly.learnings.insufficient"]),
+      screen.queryByText(en["brief.weekly.learnings.insufficient"]),
     ).toBeNull();
 
     cleanup();
@@ -56,9 +56,9 @@ describe("what the week taught", () => {
       />,
     );
     expect(
-      screen.getByText(en["home.weekly.learnings.insufficient"]),
+      screen.getByText(en["brief.weekly.learnings.insufficient"]),
     ).toBeTruthy();
-    expect(screen.queryByText(en["home.weekly.learnings.notRun"])).toBeNull();
+    expect(screen.queryByText(en["brief.weekly.learnings.notRun"])).toBeNull();
   });
 
   it("shows what a learning rests on, beside the claim", () => {
@@ -73,7 +73,7 @@ describe("what the week taught", () => {
 
   it("names a learning by its kind rather than a raw enum value", () => {
     render(<LearningsPanel learnings={learned()} />);
-    expect(screen.getByText(en["home.weekly.learnings.worked"])).toBeTruthy();
+    expect(screen.getByText(en["brief.weekly.learnings.worked"])).toBeTruthy();
     expect(screen.queryByText("worked")).toBeNull();
   });
 

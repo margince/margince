@@ -3,10 +3,10 @@ import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
-import { HomeTeamBoard } from "./home.teamboard";
-import { jsonResponse, render, stubApi } from "./home.testkit";
+import { BriefTeamBoard } from "./brief.teamboard";
+import { jsonResponse, render, stubApi } from "./brief.testkit";
 
-// The team board on Home. It is the SAME component the Worklist draws, so what
+// The team board on Brief. It is the SAME component the Worklist draws, so what
 // these tests are about is not the table — it is where a row goes.
 
 afterEach(() => {
@@ -32,18 +32,18 @@ const board = {
 };
 
 async function openBoard() {
-  render(<HomeTeamBoard offered />);
+  render(<BriefTeamBoard offered />);
   // The board sits behind a disclosure: the reader's own day is what they came
   // for, and a table of colleagues above it would push that off the screen.
   await userEvent.click(await screen.findByText(en["worklist.board.title"]));
 }
 
-describe("the team board on Home", () => {
+describe("the team board on Brief", () => {
   // A rep never sees it, and the read is never made. Drawing a control on a
   // tier the server refuses is a control that exists to fail.
   it("draws nothing and asks nothing for a reader whose scope reaches no team", () => {
     const calls = stubApi({});
-    const { container } = render(<HomeTeamBoard offered={false} />);
+    const { container } = render(<BriefTeamBoard offered={false} />);
 
     expect(container.firstChild).toBeNull();
     expect(calls.filter((call) => call.path === "/worklist/team")).toHaveLength(
@@ -76,7 +76,7 @@ describe("the team board on Home", () => {
     expect(globalThis.location.hash).toBe("#/worklist/unassigned");
   });
 
-  // One read, one query key. Home and the Worklist cannot report different
+  // One read, one query key. Brief and the Worklist cannot report different
   // counts for the same morning because they are not two reads.
   it("reads the board through the shared key, not a second endpoint", async () => {
     const calls = stubApi({ "GET /worklist/team": () => jsonResponse(board) });

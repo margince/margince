@@ -16,19 +16,19 @@ import {
 } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { QueryGate } from "./common";
-import { errorClassKey, isUnhealthy } from "./connector-status";
-import { toBoardDeal, useOrgMarks } from "./deals";
-import { EntityRef, rosterOwnerNaming, useRoster } from "./entityref";
 import {
   type Deal,
   type MorningDigest,
   useMorningDigest,
   usePipelineValue,
-} from "./home.queries";
+} from "./brief.queries";
+import { QueryGate } from "./common";
+import { errorClassKey, isUnhealthy } from "./connector-status";
+import { toBoardDeal, useOrgMarks } from "./deals";
+import { EntityRef, rosterOwnerNaming, useRoster } from "./entityref";
 import { isProjectPhase, PHASE_LABEL } from "./projects.form";
 
-// Home's context rail: what happened, what the pipeline is worth, and what has
+// Brief's context rail: what happened, what the pipeline is worth, and what has
 // gone quiet. Three panels, all of them READ — the work is in the main column
 // beside them, and a rail that asks for a move is a second lead.
 //
@@ -99,17 +99,17 @@ function DigestProjectsBlock({
   }
   return (
     <PanelBody className="rail-projects">
-      <span className="t-eyebrow">{t("home.digestProjects")}</span>
+      <span className="t-eyebrow">{t("brief.digestProjects")}</span>
       {moves.length > 0 && (
         <ul
           className="rail-project-list"
-          aria-label={t("home.digestPhaseChanges")}
+          aria-label={t("brief.digestPhaseChanges")}
         >
           {moves.map((change) => (
             <li key={`${change.project_id}-${change.occurred_at}`}>
               <EntityRef kind="project" id={change.project_id} />{" "}
               <span className="t-caption">
-                {t("home.digestPhaseChange", {
+                {t("brief.digestPhaseChange", {
                   from: phaseWord(change.from_phase ?? "", t),
                   to: phaseWord(change.to_phase, t),
                 })}
@@ -121,13 +121,13 @@ function DigestProjectsBlock({
       {new_commitments.length > 0 && (
         <ul
           className="rail-project-list"
-          aria-label={t("home.digestNewCommitments")}
+          aria-label={t("brief.digestNewCommitments")}
         >
           {new_commitments.map((item) => (
             <li key={item.project_id}>
               <EntityRef kind="project" id={item.project_id} />{" "}
               <span className="t-caption">
-                {t("home.digestCommitmentCount", {
+                {t("brief.digestCommitmentCount", {
                   count: formatNumber(item.new_open_commitments, locale),
                 })}
               </span>
@@ -138,13 +138,13 @@ function DigestProjectsBlock({
       {gone_quiet.length > 0 && (
         <ul
           className="rail-project-list"
-          aria-label={t("home.digestGoneQuiet")}
+          aria-label={t("brief.digestGoneQuiet")}
         >
           {gone_quiet.map((item) => (
             <li key={item.project_id}>
               <EntityRef kind="project" id={item.project_id} />{" "}
               <span className="t-caption">
-                {t("home.digestQuietDays", {
+                {t("brief.digestQuietDays", {
                   days: formatNumber(item.days_quiet, locale),
                 })}
               </span>
@@ -172,7 +172,7 @@ export function OvernightPanel() {
   const recordZone = useRecordZone();
   const digestQuery = useMorningDigest();
   return (
-    <QueryGate query={digestQuery} pendingLabel={t("home.panel.overnight")}>
+    <QueryGate query={digestQuery} pendingLabel={t("brief.panel.overnight")}>
       {(digest) => {
         if (digest === null) {
           return null;
@@ -186,14 +186,14 @@ export function OvernightPanel() {
         );
         return (
           <Panel
-            title={t("home.panel.overnight")}
-            sub={t("home.digestFor", {
+            title={t("brief.panel.overnight")}
+            sub={t("brief.digestFor", {
               date: formatDate(digest.date, locale, recordZone),
             })}
             className="rail-panel"
           >
             <DigestCount
-              label={t("home.digestSynced")}
+              label={t("brief.digestSynced")}
               value={capture.messages_synced ?? 0}
             />
             {/* The two counts that name a set of RECORDS, so they open it.
@@ -206,7 +206,7 @@ export function OvernightPanel() {
                 and more besides, not fewer. The messages-synced count above
                 has no list surface at all and keeps no door. */}
             <DigestCount
-              label={t("home.digestPeople")}
+              label={t("brief.digestPeople")}
               value={capture.people_created ?? 0}
               onOpen={() =>
                 navigate(
@@ -216,7 +216,7 @@ export function OvernightPanel() {
               }
             />
             <DigestCount
-              label={t("home.digestOrgs")}
+              label={t("brief.digestOrgs")}
               value={capture.organizations_created ?? 0}
               onOpen={() =>
                 navigate(
@@ -226,13 +226,13 @@ export function OvernightPanel() {
               }
             />
             <DigestCount
-              label={t("home.digestDedupe")}
+              label={t("brief.digestDedupe")}
               value={review.dedupe_open ?? 0}
               onOpen={() => navigate({ screen: "worklist" })}
             />
             <PanelBody>
               <p className="t-caption">
-                {t("home.digestClassify", {
+                {t("brief.digestClassify", {
                   commitments: formatNumber(
                     review.classify?.commitments ?? 0,
                     locale,
@@ -258,7 +258,7 @@ export function OvernightPanel() {
                         navigate({ screen: "settings", id: "connections" })
                       }
                     >
-                      {t("home.overnight.fixConnector")}
+                      {t("brief.overnight.fixConnector")}
                     </Button>
                   }
                 >
@@ -294,9 +294,9 @@ export function PositionPanel() {
   }
   if (query.isError) {
     return (
-      <Panel title={t("home.panel.position")} className="rail-panel">
+      <Panel title={t("brief.panel.position")} className="rail-panel">
         <PanelBody>
-          <p className="t-caption">{t("home.pipelineUnavailable")}</p>
+          <p className="t-caption">{t("brief.pipelineUnavailable")}</p>
         </PanelBody>
       </Panel>
     );
@@ -308,7 +308,7 @@ export function PositionPanel() {
   }
   return (
     <Panel
-      title={t("home.panel.position")}
+      title={t("brief.panel.position")}
       className="rail-panel"
       footer={
         // A mask kept rows out of these sums, so the figures understate the
@@ -316,7 +316,7 @@ export function PositionPanel() {
         // wrong one.
         excluded > 0 ? (
           <span className="t-caption">
-            {t("home.pipelinePartial", {
+            {t("brief.pipelinePartial", {
               count: formatNumber(excluded, locale),
             })}
           </span>
@@ -330,7 +330,7 @@ export function PositionPanel() {
               {formatMoneyOrAbsent(row.rawMinor, row.currency, locale)}
             </span>
             <span className="t-caption">
-              {t("home.pipelineWeighted", {
+              {t("brief.pipelineWeighted", {
                 amount: formatMoneyOrAbsent(
                   row.weightedMinor,
                   row.currency,
@@ -339,7 +339,7 @@ export function PositionPanel() {
               })}
             </span>
             <span className="t-caption">
-              {plural("home.pipelineCount", row.deals, {
+              {plural("brief.pipelineCount", row.deals, {
                 count: formatNumber(row.deals, locale),
               })}
             </span>
@@ -356,7 +356,7 @@ export function PositionPanel() {
  * The company on each card is resolved through the SAME naming the pipeline
  * board uses (`useOrgMarks` + `toBoardDeal`), which is what gives a card its
  * four honest readings — named, withheld, unreadable, or genuinely no company.
- * Home used to pass `org: ""` unconditionally, so every quiet deal on this page
+ * Brief used to pass `org: ""` unconditionally, so every quiet deal on this page
  * claimed to belong to no company at all.
  */
 export function WatchPanel({
@@ -365,7 +365,7 @@ export function WatchPanel({
   state,
 }: Readonly<{
   deals: readonly Deal[];
-  /** Whether Home's one page of deals ended short of the list. A quiet deal
+  /** Whether Brief's one page of deals ended short of the list. A quiet deal
    *  past that page is not on this panel, and `partial` is the state that says
    *  so — "nothing has gone quiet" would be a claim this read cannot make. */
   more: boolean;
@@ -399,12 +399,12 @@ export function WatchPanel({
         ? "empty"
         : state;
   return (
-    <Panel title={t("home.panel.watch")} className="rail-panel">
+    <Panel title={t("brief.panel.watch")} className="rail-panel">
       <PanelBody className={deals.length > 0 ? "rail-watch-list" : undefined}>
         <SurfaceState
           state={resolved}
-          emptyLabel={t("home.watch.clear")}
-          loadingLabel={t("home.panel.watch")}
+          emptyLabel={t("brief.watch.clear")}
+          loadingLabel={t("brief.panel.watch")}
         >
           {deals.map((deal) => (
             <DealCard

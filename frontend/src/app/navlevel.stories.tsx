@@ -21,7 +21,7 @@ import { NavLevelView } from "./navlevel";
 const RESTING = { collapsed: false, tip: null, onTip: () => {} };
 const COLLAPSED = { collapsed: true, tip: null, onTip: () => {} };
 
-const primary = railTrail({ screen: "home" })[0];
+const primary = railTrail({ screen: "brief" })[0];
 const settings = railTrail({ screen: "settings" });
 
 function level(

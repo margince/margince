@@ -71,24 +71,24 @@ function openLane(filter: WorklistFilter): void {
   navigate({ screen: "worklist" }, new Map([[WORKLIST_FILTER_PARAM, filter]]));
 }
 
-export function HomeReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
+export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
   const t = useT();
   const { locale } = useLocale();
   const readings = day.readings;
   const meetings = meetingsReading(day);
   const soonest = soonestLeadDeadline(day);
   return (
-    <section className="home-readings" aria-label={t("home.readings.label")}>
+    <section className="brief-readings" aria-label={t("brief.readings.label")}>
       <StatStrip
-        testId="home-readings"
+        testId="brief-readings"
         hero
         floor={
-          readings.more_available ? t("home.readings.truncated") : undefined
+          readings.more_available ? t("brief.readings.truncated") : undefined
         }
       >
         <StatCard
           numeric
-          label={t("home.readings.urgent")}
+          label={t("brief.readings.urgent")}
           value={formatNumber(day.summary.urgent, locale)}
           tone={day.summary.urgent > 0 ? "warn" : undefined}
           // The SUMMARY's own count, not one lane's. `urgent` is every row at
@@ -99,8 +99,8 @@ export function HomeReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           // The basis line says what the figure was taken over, on every day. A
           // zero already reads as "none"; a line under it repeating that says
           // the same thing twice and drops the one fact it could add.
-          detail={t("home.readings.urgentBasis")}
-          openLabel={t("home.readings.openLane")}
+          detail={t("brief.readings.urgentBasis")}
+          openLabel={t("brief.readings.openLane")}
           onOpen={() => openLane("all")}
         />
         <MeetingsStat
@@ -120,11 +120,11 @@ export function HomeReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
         <PipelineOutlook />
         <StatCard
           numeric
-          label={t("home.readings.decisions")}
+          label={t("brief.readings.decisions")}
           value={formatNumber(readings.review, locale)}
           tone={readings.review > 0 ? "warn" : undefined}
-          detail={t("home.readings.decisionsBasis")}
-          openLabel={t("home.readings.openLane")}
+          detail={t("brief.readings.decisionsBasis")}
+          openLabel={t("brief.readings.openLane")}
           onOpen={() => openLane("decisions")}
         />
       </StatStrip>
@@ -157,11 +157,11 @@ function MeetingsStat({
   return (
     <StatCard
       numeric
-      label={t("home.readings.meetings")}
+      label={t("brief.readings.meetings")}
       value={formatNumber(meetings, locale)}
       tone={unready !== null && unready > 0 ? "warn" : undefined}
       detail={meetingsDetail(meetings, unready, locale, t, plural)}
-      openLabel={t("home.readings.openLane")}
+      openLabel={t("brief.readings.openLane")}
       onOpen={onOpen}
     />
   );
@@ -175,18 +175,18 @@ function meetingsDetail(
   plural: ReturnType<typeof usePlural>,
 ): string {
   if (unready === null) {
-    return t("home.readings.prepUnknown");
+    return t("brief.readings.prepUnknown");
   }
   if (unready > 0) {
-    return plural("home.readings.needsPrep", unready, {
+    return plural("brief.readings.needsPrep", unready, {
       count: formatNumber(unready, locale),
     });
   }
   // "All prepared" is a claim about meetings, and an empty day has none to make
   // it about. The basis line says what was looked at instead.
   return meetings === 0
-    ? t("home.readings.meetingsBasis")
-    : t("home.readings.prepared");
+    ? t("brief.readings.meetingsBasis")
+    : t("brief.readings.prepared");
 }
 
 // How much new business is owed a first answer, and when the nearest one is due.
@@ -214,17 +214,17 @@ function LeadsStat({
   return (
     <StatCard
       numeric
-      label={t("home.readings.leads")}
+      label={t("brief.readings.leads")}
       value={formatNumber(leads, locale)}
       tone={leads > 0 ? "warn" : undefined}
       detail={
         soonest === null
-          ? t("home.readings.leadsBasis")
-          : t("home.readings.leadsDue", {
+          ? t("brief.readings.leadsBasis")
+          : t("brief.readings.leadsDue", {
               value: formatDateTime(soonest, locale, viewerZone()),
             })
       }
-      openLabel={t("home.readings.openLane")}
+      openLabel={t("brief.readings.openLane")}
       onOpen={onOpen}
     />
   );
@@ -360,9 +360,9 @@ function PipelineOutlook() {
     // opposite of the property this plate's fixed slot count defends.
     return (
       <StatCard
-        label={t("home.readings.pipeline")}
+        label={t("brief.readings.pipeline")}
         value="—"
-        detail={t("home.readings.pipelineReading")}
+        detail={t("brief.readings.pipelineReading")}
       />
     );
   }
@@ -372,7 +372,7 @@ function PipelineOutlook() {
   // `base_currency` IS required of this response, and that is exactly why the
   // check is here: a 200 whose shape is not the one the contract promises is
   // another absent read, and reaching into it for the currency threw — taking
-  // the whole of `#/home` down to the app's error boundary, where a reader sees
+  // the whole of `#/brief` down to the app's error boundary, where a reader sees
   // no strip, no feed and no rail rather than one em dash. A server too old to
   // send it, a projection that lost it, or a proxy answering the route with
   // something else all arrive this way.
@@ -382,9 +382,9 @@ function PipelineOutlook() {
     // the one case where that spelling is still true.
     return (
       <StatCard
-        label={t("home.readings.pipeline")}
+        label={t("brief.readings.pipeline")}
         value="—"
-        detail={t("home.readings.pipelineUnread")}
+        detail={t("brief.readings.pipelineUnread")}
       />
     );
   }
@@ -393,8 +393,8 @@ function PipelineOutlook() {
     <StatCard
       label={
         data.scope_kind === "workspace"
-          ? t("home.readings.pipelineWorkspace")
-          : t("home.readings.pipeline")
+          ? t("brief.readings.pipelineWorkspace")
+          : t("brief.readings.pipeline")
       }
       // formatMoneyCompact, not the full amount: its own doc says a strip slot
       // has about 110px and a full euro figure wraps mid-number or clips. Every
@@ -403,7 +403,7 @@ function PipelineOutlook() {
       // The weighted figure and the completeness in one line, because they are
       // read together: a weighted number over a partly priced population is a
       // floor, and a reader who cannot see the second cannot judge the first.
-      detail={t("home.readings.pipelineBasis", {
+      detail={t("brief.readings.pipelineBasis", {
         weighted: formatMoneyOrAbsent(
           data.weighted_minor,
           data.base_currency,

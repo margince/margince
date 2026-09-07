@@ -2,16 +2,16 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { readingsDay } from "./brief.fixtures";
 import { BriefCoverage } from "./briefcoverage";
-import { readingsDay } from "./home.fixtures";
 import { StoryProviders } from "./story-utils";
 import type { Worklist } from "./worklist.queries";
 
-// What Home is NOT showing, per source.
+// What Brief is NOT showing, per source.
 //
 // The panel draws nothing at all on a morning where every source answered and
 // none was bounded, which is the ordinary morning — so it is absent from
-// `home.stories.tsx` and had no frame of its own anywhere. The three days below
+// `brief.stories.tsx` and had no frame of its own anywhere. The three days below
 // are the three it exists for, and they are three DIFFERENT claims: a source
 // the reader may never see, a source the page read only to its bound, and both
 // at once.
@@ -51,7 +51,7 @@ const missingSources: Worklist["sources_unavailable"] = [
 ];
 
 const meta: Meta<typeof BriefCoverage> = {
-  title: "Shell/Home coverage",
+  title: "Shell/Brief coverage",
   component: BriefCoverage,
 };
 export default meta;

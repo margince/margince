@@ -18,10 +18,10 @@ import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { translatePlural, useLocale, useT } from "../i18n";
 import { ApprovalRow } from "./approvalrow";
+import { type BriefMarkRequest, useBriefItemMark } from "./brief.queries";
 import { tomorrowMorning } from "./briefqueue";
 import { problemMessageOf } from "./common";
 import { ChannelReplyAction, RELINK_KINDS, type RelinkKind } from "./compose";
-import { type BriefMarkRequest, useBriefItemMark } from "./home.queries";
 import { hasMoveControl, MoveButton } from "./movebutton";
 import {
   useAutomationRetry,
@@ -831,7 +831,7 @@ function TaskComplete({
 // rep looking at their most important next move had to go and find another
 // screen to make it.
 //
-// It calls the SAME mutation Home's brief queue calls, which already
+// It calls the SAME mutation Brief's brief queue calls, which already
 // invalidates this queue on success — one answer to "what happens to a brief
 // item", not a second one written here.
 //
@@ -891,7 +891,7 @@ function BriefVerbs({ item }: Readonly<{ item: WorklistItem }>) {
           pending={working}
           onClick={() => answer({ itemId: item.id, mark: "act" })}
         >
-          {t("home.act")}
+          {t("brief.act")}
         </Button>
       )}
       {offered("set_aside") && (
@@ -906,7 +906,7 @@ function BriefVerbs({ item }: Readonly<{ item: WorklistItem }>) {
             })
           }
         >
-          {t("home.snooze")}
+          {t("brief.snooze")}
         </Button>
       )}
       {offered("dismiss") && (
@@ -915,7 +915,7 @@ function BriefVerbs({ item }: Readonly<{ item: WorklistItem }>) {
           pending={working}
           onClick={() => answer({ itemId: item.id, mark: "dismiss" })}
         >
-          {t("home.dismiss")}
+          {t("brief.dismiss")}
         </Button>
       )}
     </div>

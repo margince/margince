@@ -16,7 +16,7 @@ import { DateInput, type ISODate, isISODate } from "./dateinput";
 // invents a rule nobody agreed to.
 //
 // The sheet holds no copy. Every word arrives through props, because three
-// surfaces open it — Analytics, Home and the Worklist — and a sheet that spelled
+// surfaces open it — Analytics, Brief and the Worklist — and a sheet that spelled
 // its own labels would give the same answer three names.
 export function ResolveSheet({
   open,

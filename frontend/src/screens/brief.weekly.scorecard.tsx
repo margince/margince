@@ -6,7 +6,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { StatStrip } from "../design-system/statstrip";
 import { formatNumber } from "../format/format";
 import { type Translator, useLocale, useT } from "../i18n";
-import type { WeeklyReview } from "./home.queries";
+import type { WeeklyReview } from "./brief.queries";
 
 // How well the week went, beside what happened in it.
 //
@@ -30,7 +30,7 @@ export function ScorecardPanel({
   if (!lead && !deal) return null;
 
   return (
-    <Panel title={t("home.weekly.scorecard.title")}>
+    <Panel title={t("brief.weekly.scorecard.title")}>
       <PanelBody>
         {lead && <LeadBlockStrip block={lead} t={t} />}
         {deal && <DealBlockStrip block={deal} t={t} />}
@@ -47,28 +47,28 @@ function LeadBlockStrip({
   const n = (value: number) => formatNumber(value, locale);
   return (
     <StatStrip
-      label={t("home.weekly.scorecard.leadBlock")}
+      label={t("brief.weekly.scorecard.leadBlock")}
       testId="scorecard-lead"
     >
       <StatCard
-        label={t("home.weekly.scorecard.advanced")}
+        label={t("brief.weekly.scorecard.advanced")}
         value={n(block.advanced)}
         numeric
-        detail={t("home.weekly.scorecard.advancedBasis")}
+        detail={t("brief.weekly.scorecard.advancedBasis")}
       />
       <StatCard
-        label={t("home.weekly.scorecard.answeredInTarget")}
+        label={t("brief.weekly.scorecard.answeredInTarget")}
         value={n(block.answered_in_target)}
         numeric
-        detail={t("home.weekly.scorecard.breachedDetail", {
+        detail={t("brief.weekly.scorecard.breachedDetail", {
           count: n(block.breached),
         })}
       />
       <StatCard
-        label={t("home.weekly.scorecard.meetingsHeld")}
+        label={t("brief.weekly.scorecard.meetingsHeld")}
         value={n(block.meetings_held)}
         numeric
-        detail={t("home.weekly.scorecard.meetingsBasis", {
+        detail={t("brief.weekly.scorecard.meetingsBasis", {
           booked: n(block.meetings_booked),
           noShow: n(block.meetings_no_show),
         })}
@@ -78,10 +78,10 @@ function LeadBlockStrip({
           asked for; a non-zero is a caveat the reader needs. */}
       {block.meetings_partial_history > 0 && (
         <StatCard
-          label={t("home.weekly.scorecard.partialHistory")}
+          label={t("brief.weekly.scorecard.partialHistory")}
           value={n(block.meetings_partial_history)}
           numeric
-          detail={t("home.weekly.scorecard.partialHistoryBasis")}
+          detail={t("brief.weekly.scorecard.partialHistoryBasis")}
         />
       )}
     </StatStrip>
@@ -96,14 +96,14 @@ function DealBlockStrip({
   const n = (value: number) => formatNumber(value, locale);
   return (
     <StatStrip
-      label={t("home.weekly.scorecard.dealBlock")}
+      label={t("brief.weekly.scorecard.dealBlock")}
       testId="scorecard-deal"
     >
       <StatCard
-        label={t("home.weekly.scorecard.advances")}
+        label={t("brief.weekly.scorecard.advances")}
         value={n(block.advances)}
         numeric
-        detail={t("home.weekly.scorecard.regressionsDetail", {
+        detail={t("brief.weekly.scorecard.regressionsDetail", {
           count: n(block.regressions),
         })}
       />
@@ -111,40 +111,40 @@ function DealBlockStrip({
           days, so the card is omitted rather than drawn as 0. */}
       {block.median_days_in_stage != null && (
         <StatCard
-          label={t("home.weekly.scorecard.medianDaysInStage")}
+          label={t("brief.weekly.scorecard.medianDaysInStage")}
           value={n(block.median_days_in_stage)}
           numeric
-          detail={t("home.weekly.scorecard.medianBasis")}
+          detail={t("brief.weekly.scorecard.medianBasis")}
         />
       )}
       <StatCard
-        label={t("home.weekly.scorecard.withNextStep")}
+        label={t("brief.weekly.scorecard.withNextStep")}
         value={n(block.with_next_step)}
         numeric
         meter={{ filled: block.with_next_step, total: block.open }}
-        detail={t("home.weekly.scorecard.ofOpen", { total: n(block.open) })}
+        detail={t("brief.weekly.scorecard.ofOpen", { total: n(block.open) })}
       />
       <StatCard
-        label={t("home.weekly.scorecard.multiThreaded")}
+        label={t("brief.weekly.scorecard.multiThreaded")}
         value={n(block.multi_threaded)}
         numeric
         meter={{ filled: block.multi_threaded, total: block.open }}
-        detail={t("home.weekly.scorecard.multiThreadedBasis", {
+        detail={t("brief.weekly.scorecard.multiThreadedBasis", {
           total: n(block.open),
         })}
       />
       <StatCard
-        label={t("home.weekly.scorecard.closeDateSound")}
+        label={t("brief.weekly.scorecard.closeDateSound")}
         value={n(block.close_date_sound)}
         numeric
         meter={{ filled: block.close_date_sound, total: block.open }}
-        detail={t("home.weekly.scorecard.ofOpen", { total: n(block.open) })}
+        detail={t("brief.weekly.scorecard.ofOpen", { total: n(block.open) })}
       />
       <StatCard
-        label={t("home.weekly.scorecard.forecastMoves")}
+        label={t("brief.weekly.scorecard.forecastMoves")}
         value={n(block.forecast_up)}
         numeric
-        detail={t("home.weekly.scorecard.forecastMovesBasis", {
+        detail={t("brief.weekly.scorecard.forecastMovesBasis", {
           down: n(block.forecast_down),
         })}
       />

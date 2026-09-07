@@ -12,7 +12,7 @@ type Story = StoryObj;
 
 function installAppStub() {
   globalThis.localStorage.setItem("margince.workspaceSlug", "acme");
-  // Land on a screen with a known-good empty-state story rather than Home,
+  // Land on a screen with a known-good empty-state story rather than Brief,
   // whose dashboard queries need richer fixtures than this shell smoke test cares about.
   globalThis.location.hash = "#/products";
   globalThis.fetch = (async (input: Request | string | URL) => {
