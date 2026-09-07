@@ -309,7 +309,7 @@ export const de = {
   "record.archivedReadOnly":
     "Diese Firma ist archiviert. Stellen Sie sie wieder her, um etwas zu ändern.",
   "record.notYoursToChange":
-    "Diese Firma gehört jemand anderem. Bitten Sie den Inhaber um Freigabe, wenn Sie etwas ändern möchten.",
+    "Du kannst diese Firma nicht ändern. Bitte den Inhaber, sie mit dir zu teilen, oder eine Admin-Person um das Recht, sie zu bearbeiten.",
   "record.logActivityRefused":
     "Sie haben keine Berechtigung, Aktivitäten zu diesem Datensatz zu erfassen.",
   "record.share": "Teilen",
@@ -2112,6 +2112,8 @@ export const de = {
   "lead.detailsUnset": "Nicht gesetzt",
   "lead.terminalReadOnly":
     "Dieser Lead ist abgeschlossen und nimmt keine Änderungen an.",
+  "lead.notYoursToChange":
+    "Du kannst diesen Lead nicht ändern. Bitte den Inhaber, ihn mit dir zu teilen, oder eine Admin-Person um das Recht, ihn zu bearbeiten.",
   "lead.callNotInOverlay":
     "Dieser Lead ist eine Spiegelung des führenden Systems und nimmt von hier aus keine Aktivität an \u2014 erfasse den Anruf dort, wo der Datensatz liegt.",
   "lead.boardCountsUnavailable":
@@ -2392,6 +2394,8 @@ export const de = {
     "Durch das Archivieren wird dieser Deal aus der aktiven Pipeline entfernt. Dies kann in der Oberfläche nicht rückgängig gemacht werden.",
   "deal.archivedReadOnly":
     "Dieser Deal ist archiviert und nimmt keine Änderungen an.",
+  "deal.notYoursToChange":
+    "Du kannst diesen Deal nicht ändern. Bitte den Inhaber, ihn mit dir zu teilen, oder eine Admin-Person um das Recht, ihn zu bearbeiten.",
   "deal.reopen": "Wieder öffnen",
   "deal.reopenPick": "Diesen Deal in eine offene Phase zurücksetzen",
   "deal.reopenConfirm": "Wieder öffnen",
@@ -3169,6 +3173,8 @@ export const de = {
     "Diese Datei konnte nicht zum Lesen übergeben werden. Es wurde nichts geändert.",
   "extraction.loading": "Prüfe, ob diese Datei bereits gelesen wurde…",
   "extraction.reading": "Diese Datei wird gelesen…",
+  "extraction.stalled":
+    "Das Lesen dieser Datei dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
   "extraction.failed": "Diese Datei konnte nicht gelesen werden.",
   "extraction.groundedNothing":
     "Die KI hat diese Datei gelesen — sie nennt keines der Deal-Felder.",
@@ -3784,7 +3790,7 @@ export const de = {
     "Dein Dokument steht zum Lesen in der Warteschlange.",
   "agent.activity.documentExtract.running": "Ich lese dein Dokument.",
   "agent.activity.documentExtract.stalled":
-    "Das Lesen deines Dokuments dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
+    "Das Lesen deines Dokuments dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen. Öffne die Datei und lass sie erneut lesen.",
   "agent.activity.documentExtract.done": "Ich habe dein Dokument gelesen.",
   "agent.activity.documentExtract.degraded":
     "Ich bin bei deinem Dokument nur teilweise durchgekommen und habe gestoppt.",
@@ -3794,7 +3800,7 @@ export const de = {
     "{name} steht zum Lesen in der Warteschlange.",
   "agent.activity.documentExtractNamed.running": "Ich lese {name}.",
   "agent.activity.documentExtractNamed.stalled":
-    "Das Lesen von {name} dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
+    "Das Lesen von {name} dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen. Öffne die Datei und lass sie erneut lesen.",
   "agent.activity.documentExtractNamed.done": "Ich habe {name} gelesen.",
   "agent.activity.documentExtractNamed.degraded":
     "Ich bin bei {name} nur teilweise durchgekommen und habe gestoppt.",
@@ -3805,7 +3811,7 @@ export const de = {
   "agent.activity.accountScan.running":
     "Ich lese die Korrespondenz und die Deals eines Accounts.",
   "agent.activity.accountScan.stalled":
-    "Das Lesen eines Accounts dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
+    "Das Lesen eines Accounts dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen. Öffne den Account erneut, damit er neu gelesen wird.",
   "agent.activity.accountScan.done": "Was ein Account braucht, ist fertig.",
   "agent.activity.accountScan.degraded":
     "Ich habe einen Account so weit gelesen, wie die Datensätze es zuließen, und dann aufgehört.",
@@ -3816,7 +3822,7 @@ export const de = {
   "agent.activity.accountScanNamed.running":
     "Ich lese die Korrespondenz und die Deals von {name}.",
   "agent.activity.accountScanNamed.stalled":
-    "Das Lesen von {name} dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
+    "Das Lesen von {name} dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen. Öffne den Account erneut, damit er neu gelesen wird.",
   "agent.activity.accountScanNamed.done": "Was {name} braucht, ist fertig.",
   "agent.activity.accountScanNamed.degraded":
     "Ich habe {name} so weit gelesen, wie die Datensätze es zuließen, und dann aufgehört.",
@@ -7791,6 +7797,8 @@ export const de = {
   "person.rail.detailsTitle": "Details",
   "person.rail.archivedReadOnly":
     "Diese Person ist archiviert. Stelle sie wieder her, um hier etwas zu ändern.",
+  "person.notYoursToChange":
+    "Du kannst diese Person nicht ändern. Bitte den Inhaber, sie mit dir zu teilen, oder eine Admin-Person um das Recht, sie zu bearbeiten.",
   "person.rail.employmentVersionUnresolved":
     "Die aktuelle Version dieser Zeile konnte nicht zum Speichern zurückgelesen werden. Lade neu und versuche es erneut.",
   "person.rail.employmentTitle": "Unternehmen",
@@ -8379,7 +8387,7 @@ export const de = {
   "project.archivedReadOnly":
     "Dieses Projekt ist archiviert und nimmt keine Änderungen an.",
   "project.notYoursToChange":
-    "Sie können dieses Projekt nicht ändern. Bitten Sie den Inhaber um Freigabe oder Ihre Administration um das Recht zum Bearbeiten.",
+    "Du kannst dieses Projekt nicht ändern. Bitte den Inhaber, es mit dir zu teilen, oder eine Admin-Person um das Recht, es zu bearbeiten.",
   "project.phaseLabel": "Phase",
   "project.filterPhaseAll": "Alle Phasen",
   "project.viewDelivering": "In Umsetzung",

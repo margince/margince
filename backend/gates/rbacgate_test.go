@@ -47,6 +47,7 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -69,7 +70,17 @@ import (
 // So an entry added here is a security decision, and the reason has to survive
 // being read on its own: "a sweep runs it" is not one, "no row leaves this
 // call" is.
-var ungatedEntryPoints = gatekit.Waive(map[string]string{ // #nosec G101 -- waiver rationales for the fitness gate, not credentials
+var ungatedEntryPoints = gatekit.Waive(map[string]string{
+	"internal/modules/people:DecidableForMerge": "answers WHICH of the given rows this caller could merge — a permission map, not data. It deliberately requires no object grant, because a reader whose role lacks the update verb is a legitimate caller whose answer is \"no verb for you\", and refusing the read would cost them the merge card they are entitled to see. WritableSubset omits every row they cannot see, so the map never names a record the caller could not have listed",
+
+	"internal/modules/activities:LabeledCaptureCountSince": "a COUNT and nothing else: it answers how many captured activities carry a label since a date, for the AI-cost arithmetic on the backfill preview. No row, no id and no text leaves it, so there is nothing for a row gate to withhold — and the number is the installation's, not one caller's. Reached from a signed-in human's preview request rather than a worker, which is why the bound is stated as the shape of the answer rather than the principal",
+
+	"internal/modules/capture:CorrespondsWith": "a bool the verdict engine asks itself while deciding whether an address corresponds with us, under the system principal on the capture path. It returns no row and reaches no caller: the answer goes into a verdict that is itself audited, and a human never invokes it",
+
+	"internal/modules/capture:ListMine": "the caller's OWN traffic, and the predicate is the caller: it reads the actor off the context and refuses an invocation naming no member, then selects on that user id. There is no id from the request to gate — a caller can only ever ask about themselves",
+
+	"internal/modules/capture:SweepOlderThan": "a retention sweep that deletes traces past their window and returns a count. Run by the worker under the system principal, on a clock rather than a request; no caller names a row and nothing is disclosed",
+	// #nosec G101 -- waiver rationales for the fitness gate, not credentials
 	"internal/modules/knowledge:ReconcileHandbook":          "brings the shipped handbook corpus in line with the pages THIS BINARY carries, reached from nothing but the api boot step, which runs under a system principal holding no object grants at all \u2014 so there is no human grant a gate here could consult, and adding one would refuse the only caller rather than protect anything. Nothing about its subject is caller-chosen: the pages come from the embedded filesystem compiled into the binary, and every row it touches is found by `managed_source = 'handbook'`, so a corpus or document a person created is unreachable from here by construction \u2014 TestTheReconciliationLeavesAWorkspacesOwnCorpusAlone holds that. The tenant is bound the way every boot write is: bootLedgerScope resolves the installation's workspace and binds the transaction to it, and the boot cannot pick another. It returns a COUNT of pages written, never a row and never any prose",
 	"internal/modules/knowledge:EmbedDocument":              "gives one document's passages their vectors, reached from the ingest worker and from the drift sweep, both of which run under a system principal holding no object grants. There is no human grant to consult and no row a caller chose: it takes a document id the calling job already read from a row, reads only that document's passages, and writes only vectors back onto them. It exposes NOTHING — no text leaves, no row is returned, and the count it answers is a number of rows touched. A gate here would refuse the only two callers and protect no one. Reading what a passage says is the ask's business, and the ask is gated",
 	"internal/modules/knowledge:SweepAbandonedIngests":      "closes the ingests that stopped without saying so \u2014 a document left `running` by a process that died on its LAST attempt, which River cannot rescue because there is no attempt left to run. Reached only from the periodic drift sweep, under the same system principal and the same workspace binding as SweepCorpusDrift beside it, and bounded the same way: the sweep's args declare one workspace and workspaceJobCtx binds the transaction to it. It takes no id and no caller-chosen value \u2014 its subject is derived entirely from the database's own clock against ingest_started_at \u2014 and it returns a count, never a row. A gate here would refuse the only caller and protect nothing; what it protects AGAINST is a corpus permanently unaskable because one upload's worker was killed",
@@ -634,7 +645,7 @@ func packageFunctionIndex(t *testing.T) map[string]gatePkg {
 				}
 				ast.Inspect(fn.Body, func(n ast.Node) bool {
 					if sel, ok := n.(*ast.SelectorExpr); ok {
-						if pkg, ok := sel.X.(*ast.Ident); ok && pkg.Name == "auth" {
+						if pkg, ok := sel.X.(*ast.Ident); ok && pkg.Name == "auth" && isAuthDecision(sel.Sel.Name) {
 							info.auth = true
 						}
 						info.calls[sel.Sel.Name] = true
@@ -652,6 +663,202 @@ func packageFunctionIndex(t *testing.T) map[string]gatePkg {
 		}
 	}
 	return pkgs
+}
+
+// isAuthDecision says whether this name in the auth package REFUSES a caller.
+//
+// The gate used to count any selector on the package, which meant auth.Actor —
+// a read of who is calling — satisfied it, and so did every clause builder. A
+// clause builder is not a gate: auth.ScopeClauseFor renders a row predicate for
+// a caller already admitted, and a method that composes one while asking nobody
+// whether the caller may be there at all is exactly the shape this test claims
+// to catch. Two such reads were found the day this changed.
+//
+// The set is DERIVED from the verb the function's name starts with, not typed
+// out: Require, Ensure, Admit, Hold and Lock are the package's refusal verbs,
+// and a new one inherits the rule by being named like its neighbours. The
+// census below proves the convention still describes the package.
+func isAuthDecision(name string) bool {
+	for _, verb := range authDecisionVerbs {
+		if strings.HasPrefix(name, verb) {
+			return true
+		}
+	}
+	return authDecisionsByRatification[name] != ""
+}
+
+var authDecisionVerbs = []string{"Require", "Ensure", "Admit", "Hold"}
+
+// gatekit:fixture the exported auth names that read like a refusal and are not
+// one, each with what it actually does — a classification of the package, not a
+// cost this gate is paying.
+//
+// authNotDecisions are exported names that READ like a refusal and are not one.
+// Stated rather than left implicit, because the census below cannot tell them
+// apart: each returns ErrNotFound or ErrPermissionDenied for a reason that is
+// about the ROW rather than about the caller, so the sentinel heuristic would
+// keep proposing them.
+var authNotDecisions = map[string]string{
+	"MasksAnyRowOf":   "answers a BOOLEAN about the caller's role and returns no error of its own. The refusal is the caller's: deals turns it into a parse error on a sort over a withheld column",
+	"VisibleSubset":   "OMITS the rows the caller may not see rather than refusing, and answers an empty map for a caller holding no read at all. Its callers use the set to withhold a reference, which is a projection decision made above it",
+	"WritableSubset":  "the write half of the same shape: an empty map for a caller with no update verb, and omission rather than refusal for the rest",
+	"LockSubjectLive": "takes a row lock and refuses a table outside the closed set or a row already archived. It never reads the principal: the authority probe is a separate call the caller makes first, and its own comment says so",
+	"StampWritable":   "stamps a per-row boolean the CLIENT reads to decide what to offer. It removes no row and refuses no caller — its comment separates what the client is told from what the server enforces",
+}
+
+// gatekit:fixture the decisions whose names do not carry a refusal verb, each
+// with the reason it refuses — expected data about the auth package, not costs
+// this gate is paying.
+//
+// authDecisionsByRatification are the decisions whose names do not carry a
+// refusal verb. Each entry says why it refuses, because a name that reads like
+// a query and behaves like a gate is the thing a reader gets wrong.
+var authDecisionsByRatification = map[string]string{
+	"EdgeReadAdmitted": "the relationship-edge admission itself: it answers whether this caller may read an edge, and the readers that compose a clause call it first",
+	"EdgeReadScope":    "calls EdgeReadAdmitted before composing, so a caller it refuses gets an error rather than a predicate",
+	"VisibleTo":        "per-record read admission — it answers about ONE row and its callers act on the refusal",
+	"WritableBy":       "the write half of the same question",
+}
+
+// TestTheAuthDecisionVerbsStillDescribeThePackage holds the convention the gate
+// derives from. A refusal added under a SIXTH verb would be invisible to
+// isAuthDecision, and the gate would go on passing — under-recognition, which
+// reports PASS with nothing to notice.
+func TestTheAuthDecisionVerbsStillDescribeThePackage(t *testing.T) {
+	t.Parallel()
+
+	decisions := 0
+	err := filepath.WalkDir(filepath.Join("internal", "platform", "auth"), func(path string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+			return err
+		}
+		file, parseErr := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+		if parseErr != nil {
+			return parseErr
+		}
+		for _, decl := range file.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok || fn.Recv != nil || !fn.Name.IsExported() {
+				continue
+			}
+			if reason, named := authNotDecisions[fn.Name.Name]; named {
+				if isAuthDecision(fn.Name.Name) {
+					t.Errorf("auth.%s is named a non-decision (%s) but the classifier counts it: "+
+						"one of the two is wrong, and the classifier is what the gate believes", fn.Name.Name, reason)
+				}
+				continue
+			}
+			if isAuthDecision(fn.Name.Name) {
+				decisions++
+				// A counted name that no longer refuses is the regression this
+				// census exists for: it keeps every entry point reaching it
+				// passing. Checked for the counted names too, which is the half
+				// an earlier version of this test skipped.
+				if !refusesSomehow(fn) {
+					t.Errorf("auth.%s is counted as a gate but its body neither refuses nor delegates to something that does: "+
+						"if it stopped refusing, every entry point that reaches it is now ungated and passing", fn.Name.Name)
+				}
+				continue
+			}
+			// A function that is NOT counted must not look like a refusal. The
+			// tell is the sentinel: a gate returns a refusal, a clause builder
+			// returns SQL.
+			if returnsPermissionDenied(fn) {
+				t.Errorf("auth.%s refuses a caller with ErrPermissionDenied but is not counted as a gate: "+
+					"name it with one of %v, ratify it in authDecisionsByRatification with the reason it refuses, "+
+					"or name it in authNotDecisions if the refusal is about the row rather than the caller",
+					fn.Name.Name, authDecisionVerbs)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("reading the auth package: %v", err)
+	}
+	// A parser regression that read no declarations would report a clean
+	// package. The floor is near the real count.
+	if decisions < 25 {
+		t.Fatalf("found only %d decisions in platform/auth — the walk has lost the package "+
+			"and every entry point would now count as ungated", decisions)
+	}
+	for name := range authDecisionsByRatification {
+		if !authPackageDeclares(t, name) {
+			t.Errorf("authDecisionsByRatification names auth.%s, which the package no longer exports: "+
+				"a stale entry silently keeps a renamed gate counted", name)
+		}
+	}
+}
+
+// refusesSomehow reports whether the body can refuse at all — by naming a
+// refusal sentinel itself, or by calling something that does.
+//
+// Deliberately loose. Most gates in this package refuse through an unexported
+// helper (ensureWriteAuthority, refuseBuyer, probeExistsLive) or by returning
+// ErrNotFound so existence stays hidden, so a sentinel-only test would report
+// two thirds of the package as broken. What it catches is the case that matters:
+// a counted name whose body stopped being able to refuse anything.
+func refusesSomehow(fn *ast.FuncDecl) bool {
+	if returnsPermissionDenied(fn) {
+		return true
+	}
+	refuses := false
+	ast.Inspect(fn.Body, func(n ast.Node) bool {
+		switch node := n.(type) {
+		case *ast.SelectorExpr:
+			switch node.Sel.Name {
+			case "ErrNotFound", "ErrPermissionDenied", "ErrConflict":
+				refuses = true
+			}
+		case *ast.Ident:
+			// A call to a sibling gate, exported or not: the unexported
+			// helpers are named for what they do to a caller.
+			if isAuthDecision(node.Name) || strings.HasPrefix(node.Name, "ensure") ||
+				strings.HasPrefix(node.Name, "refuse") || strings.HasPrefix(node.Name, "probe") {
+				refuses = true
+			}
+		}
+		return !refuses
+	})
+	return refuses
+}
+
+// returnsPermissionDenied reports whether the body ever names the refusal
+// sentinel. It is the cheapest tell that a function decides rather than
+// composes, and it is a heuristic in one direction only: a gate that refuses
+// through a helper is missed, which is why the ratification map exists.
+func returnsPermissionDenied(fn *ast.FuncDecl) bool {
+	found := false
+	ast.Inspect(fn.Body, func(n ast.Node) bool {
+		if sel, ok := n.(*ast.SelectorExpr); ok && sel.Sel.Name == "ErrPermissionDenied" {
+			found = true
+		}
+		return !found
+	})
+	return found
+}
+
+func authPackageDeclares(t *testing.T, name string) bool {
+	t.Helper()
+	declared := false
+	err := filepath.WalkDir(filepath.Join("internal", "platform", "auth"), func(path string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+			return err
+		}
+		file, parseErr := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+		if parseErr != nil {
+			return parseErr
+		}
+		for _, decl := range file.Decls {
+			if fn, ok := decl.(*ast.FuncDecl); ok && fn.Recv == nil && fn.Name.Name == name {
+				declared = true
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("reading the auth package: %v", err)
+	}
+	return declared
 }
 
 // reachesAuthGate resolves gatedness transitively over the calls a name can

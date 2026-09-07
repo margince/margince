@@ -356,7 +356,9 @@ export function normalizeUrl(raw: string): {
   s = s
     .replace(/^https?:\/\//i, "")
     .replace(/^www\./i, "")
-    .replace(/\/+$/, "");
+    // Lookbehind: without it a URL ending in a long run of slashes is matched
+    // from every one of them in turn.
+    .replace(/(?<!\/)\/+$/, "");
   const host = s.split("/")[0] ?? "";
   // NOSONAR: rewriting this host check to a linear pattern changes its accept/reject
   // set (dotted-label edge cases); input is a bounded hostname, so backtracking is not a risk.

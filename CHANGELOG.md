@@ -585,6 +585,19 @@ numbers appear here when releases start.
 
 ### Fixed
 
+- **A record page no longer offers a write the server will refuse.** A rep
+  holding the deal grant opened a colleague's deal, was offered Edit, the
+  upload, New offer, the stakeholder edges and the stage move, and learned from
+  a 403 after filling the form in that the record was never theirs to change.
+  The server has always said so per row (`writable`); the deal, contact, lead
+  and company pages now read it — with the object grant and the seat — through
+  one shared answer, print one sentence for why the record takes no changes,
+  and refuse every verb that writes the record from that sentence, the way the
+  project page already did. The relationships panel and the standing activity
+  composer ask the same before they draw, wherever they are mounted. The
+  "belongs to someone else" wording is gone: the one sentence now covers a
+  missing grant and a read seat as well, and tells the reader whom to ask.
+
 - **A replayed body re-checks every record it names, not only the one it
   replays by.** `POST /people/quick-capture` answers the person created plus the
   `organization_id` they were attached to; the replay gate probed the person and

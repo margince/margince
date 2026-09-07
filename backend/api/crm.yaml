@@ -31364,13 +31364,21 @@ components:
         honestly omitted. A reading that is still running carries empty lists; that is not
         the same answer as a finished reading that grounded nothing, which is why `status`
         is required rather than inferable from the lists (RD-AC-N-2).
-      required: [id, status, fields, omitted, created_at]
+      required: [id, status, stalled, fields, omitted, created_at]
       properties:
         id: { type: string, format: uuid, description: This reading's own id. }
         status:
           type: string
           enum: [queued, running, done, failed]
           description: queued/running are live; done and failed are terminal. `done` with zero grounded fields is a correct answer, not a failure.
+        stalled:
+          type: boolean
+          description: |
+            true when a live reading has aged past the lease its worker holds: the worker
+            died, timed out, or never claimed it, and nothing will move the reading on its
+            own. Derived at read time, never stored. Asking for the file to be read again
+            then starts a fresh attempt instead of joining this one. Always false once the
+            reading is done or failed.
         status_detail:
           type: [string, 'null']
           description: |

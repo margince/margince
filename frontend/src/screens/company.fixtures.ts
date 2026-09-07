@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type Mock, vi } from "vitest";
+import { meFixture } from "../app/mefixture";
 
 // What the server answers a company record with, in ONE place.
 //
@@ -255,11 +256,40 @@ export function stubFetch(
   const urls: string[] = [];
   const fetchMock = vi.fn(async (request: Request) => {
     urls.push(request.url);
-    return (
-      backstopAnswer(new URL(request.url).pathname, options) ??
-      responder(request.url, request.method, request)
-    );
+    const pathname = new URL(request.url).pathname;
+    const answer =
+      backstopAnswer(pathname, options) ??
+      (await responder(request.url, request.method, request));
+    return pathname.endsWith("/me") ? withSession(answer) : answer;
   });
   vi.stubGlobal("fetch", fetchMock);
   return { fetchMock, urls };
+}
+
+// The session a responder that never named one gets: a full seat holding
+// the grants a rep working their own accounts holds. Every write control on
+// the page asks the grant before it draws, so a responder that answered /me
+// with the ORG body (the catch-all most specs end in) would otherwise
+// describe a reader every verb is withheld from. A spec about a refusal
+// answers /me itself, with a `user`, and is passed through untouched.
+async function withSession(answer: Response): Promise<Response> {
+  // A refusal is a session too — the 401 the boundary tells apart from an
+  // unavailable server — and stays exactly as the responder answered it.
+  if (!answer.ok) {
+    return answer;
+  }
+  const body: unknown = await answer.clone().json();
+  if (typeof body === "object" && body !== null && "user" in body) {
+    return answer;
+  }
+  return jsonResponse(
+    meFixture({
+      allow: {
+        organization: ["read", "create", "update", "delete"],
+        deal: ["read", "create", "update"],
+        relationship: ["read", "create", "update", "delete"],
+        activity: ["read", "create"],
+      },
+    }),
+  );
 }

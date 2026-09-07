@@ -607,7 +607,7 @@ internal/platform/testdb/river.go#func EnsureRiverSchema
 internal/shared/buildinfo/buildinfo.go#var ReleaseVersion
 internal/shared/gatekit/scope.go#method Scope.normalizedRoots
 internal/shared/kernel/draftfloor/envelope.go#func langOrDefault
-internal/shared/kernel/events/catalog.go#const streamOverlay
+internal/shared/kernel/events/streams.go#const streamOverlay
 internal/shared/kernel/pipelinetrace/registry.go#func FunnelStages
 internal/shared/kernel/principal/principal.go#const HumanIDPrefix
 internal/shared/kernel/promptfence/promptfence.go#func FromMarker

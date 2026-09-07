@@ -967,8 +967,10 @@ function derive(
   }
   // A live run past the lease its own source declared. The server derives it, so
   // a worker that died without saying so cannot go on being displayed as busy,
-  // and amber is right for it: the work may yet land, and there is nothing for
-  // the reader to do but know.
+  // and amber is right for it: the work may yet land. Where a kind has a way
+  // out — opening the account or the document again re-arms its read — the
+  // kind's own line says so, because a warning with no next step is only a
+  // worry.
   const stalled = server.running.find((item) => item.state === "stalled");
   if (stalled) {
     return { state: "warning", cause: stalled, register: "agent" };

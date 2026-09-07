@@ -6,6 +6,7 @@ package compose
 import (
 	"context"
 	"log/slog"
+	"slices"
 	"testing"
 
 	"github.com/riverqueue/river"
@@ -20,6 +21,23 @@ func TestAnAccountScanIsQueuedOnceOnTheTranscriptLane(t *testing.T) {
 	opts := accountScanInsertOpts()
 	if opts.Queue != accountScanQueue || !opts.UniqueOpts.ByArgs {
 		t.Errorf("insert opts = %+v, want the transcript queue, unique by args", opts)
+	}
+}
+
+// Every reading a door re-arms after its worker died queues the replacement
+// under the SAME read id as the job that finished without it. River's default
+// uniqueness window counts finished jobs, so anything wider than the active
+// states swallows the replacement and leaves the re-armed row queued with
+// nothing behind it — the strand the re-arm exists to end.
+func TestARearmableReadingDedupesItsJobOnlyWhileOneIsStillActive(t *testing.T) {
+	for name, opts := range map[string]*river.InsertOpts{
+		"document extract":   documentExtractInsertOpts(),
+		"account scan":       accountScanInsertOpts(),
+		"transcript propose": transcriptProposeInsertOpts(),
+	} {
+		if !opts.UniqueOpts.ByArgs || !slices.Equal(opts.UniqueOpts.ByState, activeSweepStates) {
+			t.Errorf("%s: unique %+v; want by args, over the active states only", name, opts.UniqueOpts)
+		}
 	}
 }
 

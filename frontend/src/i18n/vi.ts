@@ -314,7 +314,7 @@ export const vi = {
   "record.archivedReadOnly":
     "Công ty này đã lưu trữ. Khôi phục để thay đổi bất kỳ thông tin nào.",
   "record.notYoursToChange":
-    "Công ty này thuộc về người khác. Hãy đề nghị chủ sở hữu chia sẻ nếu bạn cần thay đổi.",
+    "Bạn không thể thay đổi công ty này. Hãy đề nghị chủ sở hữu chia sẻ, hoặc quản trị viên cấp quyền chỉnh sửa.",
   "record.logActivityRefused":
     "Bạn không có quyền ghi nhận hoạt động cho hồ sơ này.",
   "record.share": "Chia sẻ",
@@ -2098,6 +2098,8 @@ export const vi = {
   "lead.detailsUnset": "Chưa đặt",
   "lead.terminalReadOnly":
     "Khách hàng tiềm năng này đã đóng và không nhận thay đổi.",
+  "lead.notYoursToChange":
+    "Bạn không thể thay đổi khách hàng tiềm năng này. Hãy đề nghị chủ sở hữu chia sẻ, hoặc quản trị viên cấp quyền chỉnh sửa.",
   "lead.callNotInOverlay":
     "Khách hàng tiềm năng này là bản phản chiếu của hệ thống gốc và không nhận hoạt động từ đây \u2014 hãy ghi cuộc gọi ở nơi lưu bản ghi.",
   "lead.boardCountsUnavailable":
@@ -2370,6 +2372,8 @@ export const vi = {
   "deal.archiveConfirm":
     "Lưu trữ sẽ đưa deal này ra khỏi pipeline đang hoạt động. Không thể hoàn tác từ giao diện.",
   "deal.archivedReadOnly": "Deal này đã lưu trữ và không nhận thay đổi.",
+  "deal.notYoursToChange":
+    "Bạn không thể thay đổi deal này. Hãy đề nghị chủ sở hữu chia sẻ, hoặc quản trị viên cấp quyền chỉnh sửa.",
   "deal.reopen": "Mở lại",
   "deal.reopenPick": "Chuyển deal này về một giai đoạn đang mở",
   "deal.reopenConfirm": "Mở lại",
@@ -3132,6 +3136,8 @@ export const vi = {
     "Không gửi được tệp này để đọc. Không có gì bị thay đổi.",
   "extraction.loading": "Đang kiểm tra xem tệp này đã được đọc chưa…",
   "extraction.reading": "Đang đọc tệp này…",
+  "extraction.stalled":
+    "Việc đọc tệp này kéo dài bất thường. Có thể nó đã dừng.",
   "extraction.failed": "Không đọc được tệp này.",
   "extraction.groundedNothing":
     "AI đã đọc tệp này và tệp không nêu trường nào của deal.",
@@ -3741,7 +3747,7 @@ export const vi = {
     "Tài liệu của bạn đang chờ được đọc.",
   "agent.activity.documentExtract.running": "Tôi đang đọc tài liệu của bạn.",
   "agent.activity.documentExtract.stalled":
-    "Việc đọc tài liệu của bạn kéo dài bất thường. Có thể nó đã dừng.",
+    "Việc đọc tài liệu của bạn kéo dài bất thường. Có thể nó đã dừng. Mở tệp và yêu cầu đọc lại.",
   "agent.activity.documentExtract.done": "Tôi đã đọc xong tài liệu của bạn.",
   "agent.activity.documentExtract.degraded":
     "Tôi mới đọc được một phần tài liệu của bạn rồi dừng.",
@@ -3750,7 +3756,7 @@ export const vi = {
   "agent.activity.documentExtractNamed.queued": "{name} đang chờ được đọc.",
   "agent.activity.documentExtractNamed.running": "Tôi đang đọc {name}.",
   "agent.activity.documentExtractNamed.stalled":
-    "Việc đọc {name} kéo dài bất thường. Có thể nó đã dừng.",
+    "Việc đọc {name} kéo dài bất thường. Có thể nó đã dừng. Mở tệp và yêu cầu đọc lại.",
   "agent.activity.documentExtractNamed.done": "Tôi đã đọc xong {name}.",
   "agent.activity.documentExtractNamed.degraded":
     "Tôi mới đọc được một phần {name} rồi dừng.",
@@ -3759,7 +3765,7 @@ export const vi = {
   "agent.activity.accountScan.running":
     "Tôi đang đọc các trao đổi và giao dịch của một tài khoản.",
   "agent.activity.accountScan.stalled":
-    "Việc đọc một tài khoản kéo dài bất thường. Có thể nó đã dừng.",
+    "Việc đọc một tài khoản kéo dài bất thường. Có thể nó đã dừng. Mở lại tài khoản để bắt đầu đọc lại từ đầu.",
   "agent.activity.accountScan.done": "Những gì một tài khoản cần đã sẵn sàng.",
   "agent.activity.accountScan.degraded":
     "Tôi đã đọc một tài khoản đến mức các bản ghi cho phép rồi dừng.",
@@ -3769,7 +3775,7 @@ export const vi = {
   "agent.activity.accountScanNamed.running":
     "Tôi đang đọc các trao đổi và giao dịch của {name}.",
   "agent.activity.accountScanNamed.stalled":
-    "Việc đọc {name} kéo dài bất thường. Có thể nó đã dừng.",
+    "Việc đọc {name} kéo dài bất thường. Có thể nó đã dừng. Mở lại tài khoản để bắt đầu đọc lại từ đầu.",
   "agent.activity.accountScanNamed.done": "Những gì {name} cần đã sẵn sàng.",
   "agent.activity.accountScanNamed.degraded":
     "Tôi đã đọc {name} đến mức các bản ghi cho phép rồi dừng.",
@@ -7693,6 +7699,8 @@ export const vi = {
   "person.rail.detailsTitle": "Chi tiết",
   "person.rail.archivedReadOnly":
     "Người này đã lưu trữ. Khôi phục để thay đổi bất kỳ thông tin nào tại đây.",
+  "person.notYoursToChange":
+    "Bạn không thể thay đổi người này. Hãy đề nghị chủ sở hữu chia sẻ, hoặc quản trị viên cấp quyền chỉnh sửa.",
   "person.rail.employmentVersionUnresolved":
     "Không đọc lại được phiên bản hiện tại của dòng này để lưu. Hãy tải lại và thử lại.",
   "person.rail.employmentTitle": "Công ty",

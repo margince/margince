@@ -40,7 +40,17 @@ const CATEGORY_LABELS: Record<Category, MessageKey> = {
   other: "docs.category.other",
 };
 
-export function PersonFilesTab({ personId }: Readonly<{ personId: string }>) {
+export function PersonFilesTab({
+  personId,
+  refusedReasonId,
+}: Readonly<{
+  personId: string;
+  // The id of the page's sentence about why this contact takes no changes,
+  // while it does not. The upload hangs a file on the person through the
+  // person's own write gate, so it is refused by the same fact as every
+  // other write on the page.
+  refusedReasonId?: string;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
@@ -108,7 +118,11 @@ export function PersonFilesTab({ personId }: Readonly<{ personId: string }>) {
       // which the primitive documents as a place for verbs a caller renders
       // only once the panel's content is real.
       titleAction={
-        <Button small onClick={() => setAdding(true)}>
+        <Button
+          small
+          reasonId={refusedReasonId}
+          onClick={() => setAdding(true)}
+        >
           {t("docs.add.action")}
         </Button>
       }

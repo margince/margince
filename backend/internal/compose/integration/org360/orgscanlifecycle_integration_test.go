@@ -7,10 +7,11 @@ package org360
 
 // The scan's lifecycle over a real database, branch by branch: an unchanged
 // account is served from what was read, a changed one is marked stale under
-// the floor and read again past it, a deployment with no worker settles on
-// the floor in-request, a lane that breaks or defers leaves the reader with
-// the rules and the row with the truth, and a reader the account refuses —
-// or who is not a person — gets no read at all.
+// the floor and read again past it, a read whose worker died is re-armed by
+// the next open and reclaimed by the worker's own retry, a deployment with no
+// worker settles on the floor in-request, a lane that breaks or defers leaves
+// the reader with the rules and the row with the truth, and a reader the
+// account refuses — or who is not a person — gets no read at all.
 
 import (
 	"context"
@@ -133,12 +134,7 @@ func TestAnUnchangedAccountIsServedFromWhatWasReadAndAChangedOneIsMarkedStale(t 
 	}
 	// The re-armed row is a later attempt of the same occurrence, so the
 	// rail — which takes only a later attempt's transitions — draws it.
-	var attempt int
-	if err := integration.OwnerConn(t).QueryRow(context.Background(),
-		`SELECT attempt FROM org_scan WHERE id = $1`, queued[1].ScanID).Scan(&attempt); err != nil {
-		t.Fatalf("read the attempt: %v", err)
-	}
-	if attempt != 2 {
+	if attempt := scanAttempt(t, queued[1].ScanID); attempt != 2 {
 		t.Errorf("attempt after a forced re-read = %d, want 2", attempt)
 	}
 }
@@ -161,6 +157,111 @@ func TestAChangedAccountPastTheFloorIsReadAgainOnItsOwn(t *testing.T) {
 	}
 	if got.State != crmcontracts.OrganizationScanStateQueued || len(queued) != 2 {
 		t.Errorf("past the floor = %q with %d queued; want a fresh read", got.State, len(queued))
+	}
+}
+
+// killWorker leaves the read as a worker that died mid-read leaves it: running,
+// claimed `ago` before now, with nobody coming back for it.
+func killWorker(t *testing.T, scanID ids.UUID, ago time.Duration) {
+	t.Helper()
+	if _, err := integration.OwnerConn(t).Exec(context.Background(), `
+		UPDATE org_scan SET status = 'running', started_at = now() - ($2 * interval '1 microsecond')
+		 WHERE id = $1`, scanID, ago.Microseconds()); err != nil {
+		t.Fatalf("leave the read running with a dead worker: %v", err)
+	}
+}
+
+func scanAttempt(t *testing.T, scanID ids.UUID) int {
+	t.Helper()
+	var attempt int
+	if err := integration.OwnerConn(t).QueryRow(context.Background(),
+		`SELECT attempt FROM org_scan WHERE id = $1`, scanID).Scan(&attempt); err != nil {
+		t.Fatalf("read the attempt: %v", err)
+	}
+	return attempt
+}
+
+// A worker that dies leaves the row running, and nothing but the reader
+// opening the account again could ever move it: the page polls a live row,
+// the rail calls it stalled past the lease, and neither starts anything.
+// Inside the lease the open joins the read — a real worker may hold it —
+// and past it the open re-arms the same occurrence as a later attempt.
+func TestAReadWhoseWorkerDiedIsReadAgainWhenTheAccountIsOpened(t *testing.T) {
+	e := integration.Setup(t)
+	org := ids.From[ids.OrganizationKind](e.SeedOrg(t, "Nordlicht", &e.Rep1))
+	seedInboundAsk(t, e, org.UUID, "workspace")
+	var queued []orgscan.Queued
+	svc := scanClocked(e, &failingLane{}, &queued, time.Now)
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
+
+	if _, err := svc.Ensure(rep, org, false); err != nil {
+		t.Fatalf("ensure: %v", err)
+	}
+	killWorker(t, queued[0].ScanID, orgscan.ScanLease-time.Minute)
+	held, err := svc.Ensure(rep, org, true)
+	if err != nil {
+		t.Fatalf("ensure inside the lease: %v", err)
+	}
+	if held.State != crmcontracts.OrganizationScanStateRunning || len(queued) != 1 {
+		t.Errorf("inside the lease: %q with %d queued; want the held read served, nothing queued", held.State, len(queued))
+	}
+
+	killWorker(t, queued[0].ScanID, orgscan.ScanLease+time.Second)
+	rearmed, err := svc.Ensure(rep, org, false)
+	if err != nil {
+		t.Fatalf("ensure past the lease: %v", err)
+	}
+	if rearmed.State != crmcontracts.OrganizationScanStateQueued || len(queued) != 2 {
+		t.Errorf("past the lease: %q with %d queued; want the read queued again", rearmed.State, len(queued))
+	}
+	if attempt := scanAttempt(t, queued[0].ScanID); queued[1].ScanID != queued[0].ScanID || attempt != 2 {
+		t.Errorf("re-armed as %s attempt %d; want the same occurrence at attempt 2", queued[1].ScanID, attempt)
+	}
+}
+
+// The worker's own retry finds the row its earlier attempt left running. A
+// holder inside its lease is left alone — reading the account twice bills it
+// twice — and one past it is taken over as a new attempt and read to the end.
+func TestTheWorkerReclaimsAReadItsDeadPredecessorLeftRunning(t *testing.T) {
+	e := integration.Setup(t)
+	org := ids.From[ids.OrganizationKind](e.SeedOrg(t, "Nordlicht", &e.Rep1))
+	message := seedInboundAsk(t, e, org.UUID, "workspace")
+	lane := &quotingLane{messageID: message.String(), quote: "wants to see a sample of the driver reports"}
+	var queued []orgscan.Queued
+	svc := scanClocked(e, lane, &queued, time.Now)
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
+
+	if _, err := svc.Ensure(rep, org, false); err != nil {
+		t.Fatalf("ensure: %v", err)
+	}
+	scanID := queued[0].ScanID
+	worker := principal.WithCorrelationID(rep, scanID)
+
+	killWorker(t, scanID, orgscan.ScanLease-time.Minute)
+	if err := svc.Run(worker, scanID, org); err != nil {
+		t.Fatalf("run against a live holder: %v", err)
+	}
+	held, err := svc.Get(rep, org)
+	if err != nil {
+		t.Fatalf("get while held: %v", err)
+	}
+	if held.State != crmcontracts.OrganizationScanStateRunning || lane.calls != 0 {
+		t.Errorf("a holder inside its lease: %q after %d model calls; want left running, unread", held.State, lane.calls)
+	}
+
+	killWorker(t, scanID, orgscan.ScanLease+time.Second)
+	if err := svc.Run(worker, scanID, org); err != nil {
+		t.Fatalf("run against a dead holder: %v", err)
+	}
+	got, err := svc.Get(rep, org)
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	if got.State != crmcontracts.OrganizationScanStateDone || lane.calls != 1 {
+		t.Errorf("a holder past its lease: %q after %d model calls; want read to done", got.State, lane.calls)
+	}
+	if attempt := scanAttempt(t, scanID); attempt != 2 {
+		t.Errorf("attempt after the reclaim = %d, want 2 so the rail draws the retry", attempt)
 	}
 }
 

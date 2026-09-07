@@ -29,6 +29,20 @@ import (
 // reply this site will not act on is owed a decision.
 var ErrOutputRejected = errors.New("ai: model output rejected by the validator")
 
+// ErrUnconfiguredModel marks a rejection whose text came from the offline fake
+// provider — the stand-in an installation runs on until an operator binds a
+// real vendor. The fake answers every request with a hash string, so it fails
+// the validator on the first attempt and on every retry forever after.
+//
+// It exists because the two rejections need opposite words. A real model that
+// answered badly is worth another attempt and might be the corpus's fault; the
+// fake is neither, and telling its operator that "the model returned something
+// we could not read" sent one to audit their own writing samples while the
+// answer was a two-field settings screen. Carried alongside ErrOutputRejected
+// rather than instead of it, so every caller that classifies a terminal
+// rejection keeps classifying this one the same way.
+var ErrUnconfiguredModel = errors.New("ai: no AI provider is configured, so the offline stand-in model answered")
+
 // Validator judges one completion's text; the returned error is fed
 // back verbatim on the retry so the model sees WHY it failed.
 type Validator func(text string) error
@@ -91,11 +105,22 @@ func (r *Router) CompleteStructured(ctx context.Context, task Task, req model.Re
 	}
 	if finalErr := validate(resp.Text); finalErr != nil {
 		r.forgetCached(ctx, task, escalated)
-		return model.Response{}, info, fmt.Errorf(
-			"%w: %s after retry and escalation: %w", ErrOutputRejected, task, finalErr,
-		)
+		return model.Response{}, info, rejected(task, info, finalErr)
 	}
 	return resp, info, nil
+}
+
+// rejected names what refused the text. The offline fake cannot produce a
+// valid answer for any structured task, so a rejection it served is an
+// unconfigured installation and gets its own sentinel on top of the terminal
+// one — the caller then has the choice between "your model misbehaved" and
+// "you have no model", which is the difference between a retry and a setting.
+func rejected(task Task, info RouteInfo, finalErr error) error {
+	err := fmt.Errorf("%w: %s after retry and escalation: %w", ErrOutputRejected, task, finalErr)
+	if info.Provider == ProviderFake {
+		return fmt.Errorf("%w: %w", ErrUnconfiguredModel, err)
+	}
+	return err
 }
 
 // forgetCached evicts the cached completion for exactly this request: a

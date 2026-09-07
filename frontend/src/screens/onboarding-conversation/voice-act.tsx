@@ -3,11 +3,13 @@ import { useRef } from "react";
 import type { components } from "../../api/schema";
 import { ordinalNumber } from "../../format/format";
 import { useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import { problemMessageOf } from "../common";
 import { useFileDrop } from "../use-file-drop";
 import { parseVoiceInsights } from "../voice-insights";
 import { VOICE_MIN_WORDS } from "../voice-intake-core";
 import type {
+  BuildTerminalStatus,
   ConversationEvent,
   ConversationState,
 } from "./conversation-machine";
@@ -131,6 +133,15 @@ export function VoiceAct({ state, dispatch, initialSummary }: VoiceActProps) {
   );
 }
 
+// The two ways a build ends without a profile. Keyed rather than branched so
+// the rule they share — the server's own detail under a fixed headline — is
+// written once and cannot drift between them. A succeeded build has its own
+// headline above and is absent here on purpose.
+const brokenBuildTitles: Partial<Record<BuildTerminalStatus, MessageKey>> = {
+  failed: "ob.conv.build.failed",
+  deferred: "ob.conv.build.deferred",
+};
+
 /**
  * What the room says this screen is, per phase. THE QUESTION IS THE TITLE
  * while the speaker decision is pending, the same rule the company act's
@@ -174,11 +185,24 @@ function boardHeading(
   // A build that did not finish, or is waiting on budget, is the room's own
   // headline: left under "teach me how you write" the reader takes the dossier
   // below for the result and never learns nothing was built.
-  if (state.phase === "vo.result" && state.lastBuildStatus === "failed") {
-    return { eyebrow, title: t("ob.conv.build.failed") };
-  }
-  if (state.phase === "vo.result" && state.lastBuildStatus === "deferred") {
-    return { eyebrow, title: t("ob.conv.build.deferred") };
+  //
+  // Both take the server's own sentence under that headline, because the
+  // headline alone is the same for every broken build: "no AI provider is
+  // configured" and "the model answered badly" are one line apart on screen
+  // and a settings change apart in life, and the reader who cannot tell them
+  // apart retries forever. Absent detail leaves the headline standing alone
+  // rather than inventing a cause — it reads correctly on its own.
+  const ending = state.lastBuildStatus;
+  const brokenTitle =
+    state.phase === "vo.result" && ending !== null
+      ? brokenBuildTitles[ending]
+      : undefined;
+  if (brokenTitle !== undefined) {
+    return {
+      eyebrow,
+      title: t(brokenTitle),
+      sub: state.lastBuildDetail ?? undefined,
+    };
   }
   return {
     eyebrow,

@@ -14,6 +14,7 @@ package activities
 
 import (
 	"net/http"
+	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -39,17 +40,20 @@ func (h Handlers) GetAttachmentExtraction(w http.ResponseWriter, r *http.Request
 		writeStoreErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, extractionReport(read))
+	httperr.WriteJSON(w, http.StatusOK, extractionReport(read, time.Now()))
 }
 
 // extractionReport maps the run record onto the contract's wire shape,
 // splitting a grounded field (always carrying its evidence) from one the
 // reading honestly could not offer. Both slices stay non-nil even when empty,
-// so the wire body is `[]`, never `null`.
-func extractionReport(read ExtractionRead) crmcontracts.AttachmentExtraction {
+// so the wire body is `[]`, never `null`. Stalled is derived here against
+// `now` and never stored, for the reason the AI-activity rail derives its own:
+// nothing has to remember to mark a reading whose worker died.
+func extractionReport(read ExtractionRead, now time.Time) crmcontracts.AttachmentExtraction {
 	out := crmcontracts.AttachmentExtraction{
 		Id:           openapi_types.UUID(read.ID),
 		Status:       crmcontracts.AttachmentExtractionStatus(read.Status),
+		Stalled:      read.Abandoned(now),
 		StatusDetail: read.StatusDetail,
 		CreatedAt:    read.CreatedAt,
 		FinishedAt:   read.FinishedAt,

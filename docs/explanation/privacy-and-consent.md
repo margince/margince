@@ -1,31 +1,72 @@
 # Privacy, consent & the GDPR engines
 
-How Margince meets data-subject obligations: the **consent suppression gate** that guards every
-outbound send, and the **privacy engines** (erasure, subject-access, retention) that a fulfilled
-request executes. The product refuses scraping-based enrichment in the first place; the legal
+How Margince meets data-subject obligations: the **authorization engine** that decides — and
+records — whether each outbound message may go, and the **privacy engines** (erasure,
+subject-access, retention) that a fulfilled request executes. The product refuses scraping-based enrichment in the first place; the legal
 position behind that, for the EU and Vietnam, is a whitepaper kept with the company's business
-material rather than in this tree. Two modules cooperate — `consent` owns the gate and the case queue, `privacy` owns
+material rather than in this tree. Two modules cooperate — `consent` owns the engine and the case queue, `privacy` owns
 the machinery — and they are stitched together at the composition root, never by a sibling import.
 
-## The default-deny suppression gate (`consent`)
+## The authorization engine (`consent`)
 
-`consent` owns per-purpose consent: the purpose catalog, each person's current state, and an
-**append-only proof log**. The load-bearing piece is the **Gate** — the default-deny check every
-outbound surface consults *before anything leaves the workspace*:
+`consent` owns two things that are easy to confuse. **Consent** is a subject's answer to a question
+about a purpose — the catalog, each person's current state, an **append-only proof log**.
+**Authorization** is whether one particular message may go, which is a different question and usually
+has a different answer: most legitimate mail is not sent on consent at all, but on a contract, a
+reply the subject started, or a legal duty.
 
-- The question is always **per purpose**: a `marketing` grant never authorizes a `profiling` use.
-- **Default-deny in every direction** — an unknown purpose, an address that resolves to no subject,
-  state `unknown`, and state `withdrawn` all block. A double-opt-in purpose additionally requires the
-  confirmed round-trip on the proof log (a granted-but-unconfirmed row does not send). That round
-  trip is completed **only by the data subject**, by spending a single-use link mailed to their own
-  live primary address — there is no operator-held token, because a token an operator can read and
-  hand back proves nothing about the mailbox it was supposed to reach.
-- A refusal answers `ErrConsentNotGranted` and names only the address — it discloses nothing new.
+The engine answers the second. It resolves a **category** from what the send actually is, checks the
+**evidence** that category requires, and records a per-recipient **decision** saying why:
 
-The gate is spelled once (`consent.NewGate`) and **injected into the send path** (activities) at the
-composition root, so consent never becomes an import edge between siblings. Every consent *state* write
-also appends a proof row (Art. 7(1) demonstrability) — a fitness test (`consentproof_test.go`) fails any
-state write that skips its proof.
+- **The category is server-resolved**, not caller-named. A closed vocabulary
+  (`reply_to_inbound`, `invoice_or_payment`, `marketing`, `security_notice`, … in
+  `internal/shared/ports/commsauthz`) is derived from the message's own origin — its anchor thread,
+  the records it links, the template it rides. A caller can propose one; it cannot invent one, and
+  the send doors refuse a claim to any of the five **subject-serving** categories — a security or
+  privacy notice, an opt-out, consent or record confirmation — so only the installation itself
+  writes to somebody on its own behalf.
+- **Basis is evidence, not consent.** A reply is authorized by the thread the subject opened — this
+  recipient on that thread, not merely the message being a reply. An invoice is authorized by a live
+  invoice reaching this recipient through a current employment relationship, which is a real bar:
+  a finance contact nobody linked to the customer record is `review`, not a refusal. Marketing is
+  the case that needs consent, and it stays purpose-specific.
+- **The decision is taken twice and recorded before any provider I/O** — once as the message is
+  staged, once immediately before the provider is handed anything — into `communication_decision`,
+  one row per distinct recipient. The row says the category, the verdict, the reason, the basis and
+  a fingerprint of the wording, so "why did this message go" is a query rather than a
+  reconstruction. (The evidence itself lands in `communication_basis`, not on the decision row.)
+  A message that reaches a provider always has both rows; the second is what catches a withdrawal,
+  a bounce or an edit to the wording landing between the two.
+- **A withdrawal and a suppression are different records, and both bind hard.** Unsubscribing
+  withdraws consent, which the engine reads **by class** — "did they stop this kind of message" —
+  because a category resolved from evidence may carry no purpose key to match.
+  `communication_suppression` records the other stops: an Art. 21 objection, a statutory
+  restriction, a subject's request to stop, a hard bounce. Neither expires on its own, and no
+  rollout mode softens either.
+- **A restriction is not total, and that is deliberate.** Three categories still reach a restricted
+  subject through a registered template — `security_notice`, `privacy_notice` and
+  `optout_confirmation` — because a person is not better off for being unable to hear that their
+  account was breached or that their opt-out was recorded. A hard bounce stops even those: no
+  template makes a dead address deliverable.
+- **Every category ships enforcing.** `consent.authorization_modes` can move one to `observe` or
+  `warn`, which records the engine's answer without binding — an operator's rollback lever, not the
+  shipped posture. The older purpose-key gate decides only where **no** recipient's category is
+  enforced, so flipping one category buys less than it looks. Eight reason codes are absolute
+  (`absoluteDenials` in `commsauthz`) and deny in every mode whatever the setting says: the four
+  above, an unconfirmed double opt-in, a recipient that resolves to no single subject, a consent
+  withdrawal, and a jurisdiction's advertising frequency cap.
+
+Marketing consent still works the way it always did, and the round trip is what proves it: a
+double-opt-in purpose needs a confirmed `consent_event`, completed **only by the data subject**, by
+spending a single-use link mailed to their own live primary address. There is no operator-held
+token, because a token an operator can read and hand back proves nothing about the mailbox it was
+supposed to reach.
+
+A refusal names only the address — it discloses nothing new. The engine is spelled once
+(`consent.NewGate`) and **injected into the send path** (activities) at the composition root, so
+consent never becomes an import edge between siblings. Every consent *state* write also appends a
+proof row (Art. 7(1) demonstrability) — a fitness test (`consentproof_test.go`) fails any state write
+that skips its proof.
 
 ## The privacy engines (`privacy`)
 
@@ -108,7 +149,9 @@ have with a supervisory authority, and destruction is irreversible.
 
 | | |
 |---|---|
-| The suppression gate | `internal/modules/consent/gate.go` (`NewGate`) |
+| The authorization engine | `internal/modules/consent/authorize*.go` (`AuthorizeStagingTx`, `AuthorizeTransmit`) |
+| The shared vocabulary | `internal/shared/ports/commsauthz/` (category, basis, phase, verdict, mode) |
+| Per-recipient decisions | `communication_decision`, `communication_basis`, `communication_suppression` |
 | Consent state + proof log | `internal/modules/consent/` (`consent_purpose`, `person_consent`, `consent_event`) |
 | Art. 17 erasure | `internal/modules/privacy/erasure.go` (`NewEraser`, `ErasePerson`) |
 | Art. 15 SAR | `internal/modules/privacy/sar.go` (`AssembleSAR`) |

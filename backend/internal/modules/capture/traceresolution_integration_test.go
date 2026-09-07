@@ -283,3 +283,48 @@ func entriesByConnector(ctx context.Context, t *testing.T, store *capture.TraceS
 	}
 	return out
 }
+
+// A disposition belongs to the member who raised it, and the join says so.
+//
+// The ledger keeps one question per ADDRESS, and two colleagues corresponding
+// with the same person each raise their own. Joined on the address alone, one
+// member's trace answers with whichever verdict was settled last — including
+// another member's. What the ledger settled about a sender is a fact about that
+// member's own correspondence, which is the one boundary this product does not
+// cross: everyone reads everything EXCEPT mail.
+//
+// The comment on the join used to credit a workspace predicate for keeping
+// these apart. There is no workspace column on either table, so nothing did.
+func TestOneMembersDispositionDoesNotAnswerAnothersTrace(t *testing.T) {
+	ctx, ws, db, store := traceReadWorkspace(t)
+	me, colleague := ids.NewV7(), ids.NewV7()
+	const sender = "shared.sender@client.io"
+
+	// The colleague raises the LATER disposition and settles it DIFFERENTLY, so
+	// an address-only join answers the caller with theirs. Two distinguishable
+	// verdicts are what make this fail rather than pass by luck.
+	seedRecord(memberContext(ctx, ws, me), t, db, me, seededRecord{
+		SourceID: "mine-1", Sender: sender,
+		Outcome: capture.TraceDeferred, Ledger: true, Verdict: "real",
+	})
+	seedRecord(memberContext(ctx, ws, colleague), t, db, colleague, seededRecord{
+		SourceID: "theirs-1", Sender: sender,
+		Outcome: capture.TraceDeferred, Ledger: true, Verdict: "noise",
+	})
+
+	window, err := store.ListMine(memberContext(ctx, ws, me), nil, nil)
+	if err != nil {
+		t.Fatalf("ListMine: %v", err)
+	}
+	if len(window.Entries) != 1 {
+		t.Fatalf("entries = %d, want 1 — the caller seeded one message", len(window.Entries))
+	}
+	got := window.Entries[0].Resolution
+	if got == nil {
+		t.Fatal("the caller's own disposition is absent, so this test would pass for a join that answers nothing")
+	}
+	if got.Status != "real" {
+		t.Errorf("resolution status = %q, want \"real\" — the trace carries a colleague's verdict about the same sender",
+			got.Status)
+	}
+}

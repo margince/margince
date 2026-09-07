@@ -17994,6 +17994,13 @@ type AttachmentExtraction struct {
 	Id      openapi_types.UUID       `json:"id"`
 	Omitted []OmittedExtractionField `json:"omitted"`
 
+	// Stalled true when a live reading has aged past the lease its worker holds: the worker
+	// died, timed out, or never claimed it, and nothing will move the reading on its
+	// own. Derived at read time, never stored. Asking for the file to be read again
+	// then starts a fresh attempt instead of joining this one. Always false once the
+	// reading is done or failed.
+	Stalled bool `json:"stalled"`
+
 	// Status queued/running are live; done and failed are terminal. `done` with zero grounded fields is a correct answer, not a failure.
 	Status AttachmentExtractionStatus `json:"status"`
 

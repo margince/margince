@@ -366,6 +366,13 @@ Each shows as queued, running, done, degraded, failed — or **stalled**.
 The app says exactly that: "Reading your document has taken unusually long. It
 may have stopped."
 
+Where there is a way out, the same line says it. An account whose read stalled
+is read again when you open it again: the open starts a fresh attempt, and the
+stalled one gives way to it. A document whose read stalled offers "Try reading
+it again" where it showed "Reading this file…", and pressing it does the same.
+A read still inside its time is joined rather than restarted, so opening a page
+twice, or pressing twice, never reads anything twice.
+
 It is worked out fresh each time you look, and never written down. That is
 deliberate. Nothing has to remember to mark it, which is what stops a job that
 died halfway from being shown as working forever.

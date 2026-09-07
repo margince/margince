@@ -110,7 +110,21 @@ const documentStats: IngestStats = {
 
 // Build poll rows: only the fields the hook reads; the stub serves them as
 // plain JSON exactly like the server would.
-type BuildRow = { id: string; status: string; stage: string | null };
+// What the server sends when an installation has no AI provider bound: the
+// one sentence that separates "open a setting" from "try again", and the
+// reason a reader retried a build that could never succeed.
+const UNCONFIGURED_DETAIL =
+  "Voice building is unavailable until an AI provider is configured: the offline stand-in model answered instead. Open Settings → AI, bind each tier to a vendor and add that vendor's key under Model provider keys, then build again.";
+
+type BuildRow = {
+  id: string;
+  status: string;
+  stage: string | null;
+  /** The server's own words about a terminal outcome. Optional here exactly
+   * as it is on the wire — absent is what a build with nothing to add sends,
+   * and the screen must read correctly either way. */
+  status_detail?: string;
+};
 
 const candidateVersion = {
   profile_version: 3,
@@ -609,7 +623,14 @@ describe("the conversational voice act", () => {
         preview: documentPreview,
         ingests: [{ stats: documentStats, summary: summaryOf(820) }],
         builds: {
-          [BUILD_IDS[0]]: [{ id: BUILD_IDS[0], status: "failed", stage: null }],
+          [BUILD_IDS[0]]: [
+            {
+              id: BUILD_IDS[0],
+              status: "failed",
+              stage: null,
+              status_detail: UNCONFIGURED_DETAIL,
+            },
+          ],
           [BUILD_IDS[1]]: [
             { id: BUILD_IDS[1], status: "succeeded", stage: null },
           ],
@@ -631,6 +652,11 @@ describe("the conversational voice act", () => {
           },
         ),
       ).toBeTruthy();
+      // The headline is the same for every broken build, so what the reader
+      // acts on is the server's sentence under it. Without this the screen
+      // says only "the build did not finish" and the one actionable fact —
+      // that no provider is configured — never reaches them.
+      expect(await screen.findByText(UNCONFIGURED_DETAIL)).toBeTruthy();
 
       await userEvent.click(
         screen.getByRole("button", { name: /Try the build again/ }),
@@ -768,7 +794,12 @@ describe("the conversational voice act", () => {
     const retried = run(
       [
         { type: "BUILD_STARTED", buildId: BUILD_IDS[0] },
-        { type: "BUILD_TERMINAL", buildId: BUILD_IDS[0], status: "failed" },
+        {
+          type: "BUILD_TERMINAL",
+          buildId: BUILD_IDS[0],
+          status: "failed",
+          detail: null,
+        },
         { type: "BUILD_STARTED", buildId: BUILD_IDS[1] },
       ],
       collectingState(),
@@ -779,6 +810,7 @@ describe("the conversational voice act", () => {
       type: "BUILD_TERMINAL",
       buildId: BUILD_IDS[0],
       status: "succeeded",
+      detail: null,
     });
     expect(afterStale).toBe(retried);
   });

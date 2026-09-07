@@ -430,3 +430,33 @@ func TestABrokerSentenceIsRedactedAndBoundedBeforeItIsLogged(t *testing.T) {
 		t.Fatalf("one logged vendor sentence is bounded; got %d characters", got)
 	}
 }
+
+// An installation that never bound a vendor runs on the offline stand-in, which
+// answers every request with one hash string and so fails the validator on the
+// first attempt and on every retry after. Its operator is told to try again by
+// the generic message, and does — one did, for an hour, while the answer was a
+// two-field settings screen. So this cause gets its own sentence.
+func TestSafeVoiceBuildFailureNamesAnUnconfiguredProvider(t *testing.T) {
+	rejected := fmt.Errorf("%w: voice_build after retry and escalation: voice build returned invalid JSON: invalid character 'k'", ErrOutputRejected)
+	unconfigured := fmt.Errorf("voice build model call: %w: %w", ErrUnconfiguredModel, rejected)
+
+	message := SafeVoiceBuildFailure(unconfigured)
+	if !strings.Contains(message, "Settings") {
+		t.Fatalf("the message names where to fix it: %q", message)
+	}
+	if strings.Contains(strings.ToLower(message), "your samples") {
+		t.Fatalf("nothing blames the corpus for a missing setting: %q", message)
+	}
+
+	// The same wrapped rejection WITHOUT the sentinel still reads as a bad
+	// answer — otherwise the new branch has swallowed the old cause and every
+	// genuinely unreadable reply now sends its operator to a settings screen
+	// where nothing is wrong.
+	answeredBadly := SafeVoiceBuildFailure(fmt.Errorf("voice build model call: %w", rejected))
+	if answeredBadly == message {
+		t.Fatal("an unconfigured installation and a model that answered badly are different failures and read differently")
+	}
+	if strings.Contains(answeredBadly, "Settings") {
+		t.Fatalf("a real model's bad answer is not a settings problem: %q", answeredBadly)
+	}
+}

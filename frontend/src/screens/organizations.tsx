@@ -78,6 +78,7 @@ import {
   CompanyPrimaryActions,
   CompanyRelationshipBadges,
   displayHost,
+  useCompanyVerbRefusal,
 } from "./companyheader";
 import {
   LIFECYCLE_LABELS,
@@ -1838,12 +1839,18 @@ function CompanyPage({
   const queryClient = useQueryClient();
   const recordZone = useRecordZone();
   const archivedParagraphId = useId();
+  // Why this account takes no changes from this reader — archived, or not
+  // theirs to write — said ONCE for the page. The header's verbs, the
+  // document upload and the relationship edges all point at this sentence,
+  // so a rep opening a colleague's account is told once rather than offered
+  // controls whose save the server refuses.
+  const verbRefusal = useCompanyVerbRefusal(org);
   // Only when the paragraph below is actually rendered — the raw `useId()`
   // value is always truthy, so passing IT unconditionally told
   // CompanyActionBadges a sentence was already drawn for every account,
-  // archived or not, and left its own fallback (the "not yours to change"
-  // case) pointing `aria-describedby` at an id nothing on the page carries.
-  const archivedReasonId = org.archived_at ? archivedParagraphId : undefined;
+  // refused or not, and left its own fallback pointing `aria-describedby` at
+  // an id nothing on the page carries.
+  const archivedReasonId = verbRefusal ? archivedParagraphId : undefined;
   // ONE composer, opened two ways. Anchored on a timeline message it answers
   // that message; anchored on a person it starts a new one and grounds on the
   // account instead of a thread (ADR-0087 §1). Two pieces of state would let
@@ -1948,9 +1955,9 @@ function CompanyPage({
               for the same reason, so the reason belongs to the page rather than
               to whichever group is drawing — stated in each, an archived
               account said the same thing twice as soon as the menu opened. */}
-          {org.archived_at && (
+          {verbRefusal && (
             <p className="t-caption" id={archivedParagraphId}>
-              {t("record.archivedReadOnly")}
+              {verbRefusal}
             </p>
           )}
           <CompanyPrimaryActions
@@ -1994,6 +2001,7 @@ function CompanyPage({
         org={org}
         view={view}
         overlay={overlay}
+        refusedReasonId={archivedReasonId}
         loading={loading}
         failed={failed}
         tab={tab}
@@ -2107,6 +2115,7 @@ function CompanyRecordBody({
   onOpenTask,
   taskUpdate,
   onOpenHistory,
+  refusedReasonId,
 }: Readonly<{
   org: Organization;
   view?: Organization360View;
@@ -2130,6 +2139,9 @@ function CompanyRecordBody({
   onOpenTask: (activityId: string | null) => void;
   taskUpdate: ReturnType<typeof useTaskUpdate>;
   onOpenHistory: () => void;
+  // The page's one sentence about why this account takes no changes, by id,
+  // for the profile tab's relationship edges.
+  refusedReasonId?: string;
 }>) {
   // Whether this company is this reader's to change. It used to be
   // `!org.archived_at`, which answered a different question: an archived
@@ -2259,7 +2271,10 @@ function CompanyRecordBody({
               already read on an agreement's own row. Two panels, and no file on
               both of them. */}
           <CompanyContractsCard orgId={org.id} />
-          <CompanyDocumentsCard orgId={org.id} />
+          <CompanyDocumentsCard
+            orgId={org.id}
+            refusedReasonId={refusedReasonId}
+          />
         </div>
       )}
       {/* The decision queue belongs to the OVERVIEW. Leaving it standing over
@@ -2293,6 +2308,7 @@ function CompanyRecordBody({
           org={org}
           offerOnOverview={nothingOnFile(view)}
           onOpenHistory={onOpenHistory}
+          refusedReasonId={refusedReasonId}
           t={t}
         />
       )}
@@ -2835,12 +2851,15 @@ function CompanyProfileTab({
   // Both at once is two buttons that start the same crawl.
   offerOnOverview,
   onOpenHistory,
+  refusedReasonId,
   t,
 }: Readonly<{
   active: boolean;
   org: Organization;
   offerOnOverview: boolean;
   onOpenHistory: () => void;
+  // See ReferenceDisclosures: the page's one read-only sentence, by id.
+  refusedReasonId?: string;
   t: ReturnType<typeof useT>;
 }>) {
   if (!active) {
@@ -2851,6 +2870,7 @@ function CompanyProfileTab({
       org={org}
       offerOnOverview={offerOnOverview}
       onOpenHistory={onOpenHistory}
+      refusedReasonId={refusedReasonId}
       t={t}
     />
   );
@@ -2860,11 +2880,15 @@ function ReferenceDisclosures({
   org,
   offerOnOverview,
   onOpenHistory,
+  refusedReasonId,
   t,
 }: Readonly<{
   org: Organization;
   offerOnOverview: boolean;
   onOpenHistory: () => void;
+  // The page's one sentence about why this account takes no changes, while
+  // it does not: an edge is written through the account's own write gate.
+  refusedReasonId?: string;
   t: ReturnType<typeof useT>;
 }>): ReactNode {
   return (
@@ -2878,7 +2902,10 @@ function ReferenceDisclosures({
               reconcile. */}
           <Panel title={t("co.relationships.title")}>
             <PanelBody>
-              <RelationshipsTab scope={{ organization_id: org.id }} />
+              <RelationshipsTab
+                scope={{ organization_id: org.id }}
+                refusedReasonId={refusedReasonId}
+              />
             </PanelBody>
           </Panel>
           <Panel title={t("co.tools.title")}>

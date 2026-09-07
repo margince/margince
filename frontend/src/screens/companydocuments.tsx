@@ -129,7 +129,16 @@ function supersededBase(shown: boolean): PluralBase {
   return shown ? "docs.superseded.shown" : "docs.superseded.hidden";
 }
 
-export function CompanyDocumentsCard({ orgId }: Readonly<{ orgId: string }>) {
+export function CompanyDocumentsCard({
+  orgId,
+  refusedReasonId,
+}: Readonly<{
+  orgId: string;
+  // The id of the page's sentence about why this account takes no changes,
+  // while it does not. The upload hangs a file on the account through the
+  // account's own write gate, so it is refused by the same fact as Edit.
+  refusedReasonId?: string;
+}>) {
   // Reading a document and writing what it says onto a deal are different
   // authorities: a panel that offered Accept to a seat holding only the first
   // would hand out a button whose every press is a 403. `useCanWrite` is both
@@ -190,7 +199,11 @@ export function CompanyDocumentsCard({ orgId }: Readonly<{ orgId: string }>) {
       // library is the state this verb exists to leave, and hiding it there
       // would withhold the control exactly when it is wanted.
       titleAction={
-        <Button small onClick={() => setAdding(true)}>
+        <Button
+          small
+          reasonId={refusedReasonId}
+          onClick={() => setAdding(true)}
+        >
           {t("docs.add.action")}
         </Button>
       }

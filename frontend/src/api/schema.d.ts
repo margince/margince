@@ -22743,6 +22743,14 @@ export interface components {
              */
             status: "queued" | "running" | "done" | "failed";
             /**
+             * @description true when a live reading has aged past the lease its worker holds: the worker
+             *     died, timed out, or never claimed it, and nothing will move the reading on its
+             *     own. Derived at read time, never stored. Asking for the file to be read again
+             *     then starts a fresh attempt instead of joining this one. Always false once the
+             *     reading is done or failed.
+             */
+            stalled: boolean;
+            /**
              * @description Why the reading ended as it did, in words a rep can act on. Always present on
              *     `failed`, and on a `done` reading that grounded nothing — an empty result that
              *     does not explain itself reads as a broken feature.
