@@ -2433,7 +2433,7 @@ describe("CompanyScreen — the active tab is scoped to the account being read",
 
 describe("CompanyScreen — the Partner tab is scoped to the account being read", () => {
   // An org with a programme carries "partner" in relationship_types
-  // (ADR-0079/A124); one without it must never offer the tab, and must never
+  // (ADR-0079); one without it must never offer the tab, and must never
   // inherit it from whichever account was open before.
   const partnerOrg = { ...org, relationship_types: ["partner"] as const };
   const nonPartnerOrg = { ...org, id: "o-2" };

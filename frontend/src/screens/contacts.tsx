@@ -601,7 +601,7 @@ function PersonActionBadges({
     <>
       <ProvenanceTag provenance={provenanceOf(person.captured_by, viewerId)} />
       {/* Where this contact came from, when it came from a lead
-          (ADR-0119/A170). The pointer runs person → lead and the
+          (ADR-0119). The pointer runs person → lead and the
           lead's page is a terminal record of the promotion, so the
           chip is a link rather than a label: a rep asking "was this
           a merge or a new contact?" reads the answer there. */}

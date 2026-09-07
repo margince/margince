@@ -560,7 +560,7 @@ describe("catalog keys against the surfaces that render them", () => {
 });
 
 /*
- * The tenant is called "organization" to a reader (A107/ADR-0061): one
+ * The tenant is called "organization" to a reader (ADR-0061): one
  * installation serves one organization, and "workspace" is the internal
  * boundary the schema and the RBAC code use. A second noun for one thing reads
  * as two concepts the product does not have.

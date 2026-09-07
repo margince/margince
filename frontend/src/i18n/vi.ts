@@ -5598,7 +5598,7 @@ export const vi = {
   // Labels the password path, not the provider buttons above it: where the
   // installation runs SSO, the form beneath this divider is the fallback door.
   "auth.orDivider": "hoặc",
-  // §7.1 verbatim. The noun is "organization", not "workspace": ADR-0061/A107
+  // §7.1 verbatim. The noun is "organization", not "workspace": ADR-0061
   // keeps `workspace` internal and §7.3 removed it from authentication. And the
   // line states that ACCESS is restricted, never that data is safe, encrypted or
   // compliant — VOICE-RULE-7 rules those out here, because they are outcome

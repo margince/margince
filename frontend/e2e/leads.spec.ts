@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { mockApi } from "./seed";
 
 /**
- * The lead surface end to end (ADR-0118/A169, ADR-0119/A170): the list names
+ * The lead surface end to end (ADR-0118, ADR-0119): the list names
  * the owner and opens the LEAD's own page (never the person's), the page can
  * be worked (a note logged against the lead), and promotion says what it will
  * do before it does it. German chrome, as the app renders it.
@@ -39,7 +39,7 @@ test("AC-leaddetail-work: a note is logged against the lead itself", async ({
       request.url().endsWith("/v1/activities") && request.method() === "POST",
   );
   await page.goto("/#/leads/l-1");
-  // The composer is inline on the lead page (ADR-0118/A169), not behind a
+  // The composer is inline on the lead page (ADR-0118), not behind a
   // button: working the lead is the page's job.
   await page.getByLabel("Betreff *").fill("Rückruf vereinbart");
   await page.getByRole("button", { name: "Erfassen" }).click();
