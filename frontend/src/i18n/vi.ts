@@ -2918,6 +2918,21 @@ export const vi = {
   "transcriptread.proposals_other":
     "{count} bước tiếp theo đang chờ bạn rà soát",
   "transcriptread.proposals_one": "{count} bước tiếp theo đang chờ bạn rà soát",
+  "transcriptread.staged_one": "Đã đề xuất {count} bước tiếp theo",
+  "transcriptread.staged_other": "Đã đề xuất {count} bước tiếp theo",
+  "transcriptread.decided_one": "Đã rà soát {count} đề xuất",
+  "transcriptread.decided_other": "Đã rà soát {count} đề xuất",
+  "transcriptread.decidedDetail": "{accepted} đã nhận, {rejected} đã từ chối",
+  "transcriptread.expired_one": "{count} hết hạn khi chưa quyết định",
+  "transcriptread.expired_other": "{count} hết hạn khi chưa quyết định",
+  "transcriptread.effectFailed_one":
+    "{count} đề xuất đã nhận nhưng chưa tạo được công việc.",
+  "transcriptread.effectFailed_other":
+    "{count} đề xuất đã nhận nhưng chưa tạo được công việc.",
+  "transcriptread.statusUnknown_one":
+    "Không lấy được trạng thái của {count} đề xuất",
+  "transcriptread.statusUnknown_other":
+    "Không lấy được trạng thái của {count} đề xuất",
   "transcriptread.nothingStated":
     "Đã đọc toàn bộ. Cuộc trò chuyện này không nêu bước tiếp theo nào.",
   "transcriptread.failedFallback":

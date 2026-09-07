@@ -275,6 +275,12 @@ export function ApprovalRow({
     },
     onSuccess: (_data, input) => {
       queryClient.invalidateQueries({ queryKey: ["approvals"] });
+      // THIS approval, by id, and not only the lists it appears in. Anything
+      // reading one decision on its own — the transcript card counting what
+      // became of what it staged — otherwise keeps the answer it fetched
+      // before the decision, and says a suggestion is waiting for a review
+      // that has already happened.
+      queryClient.invalidateQueries({ queryKey: ["approval", approval.id] });
       for (const queryKey of extraInvalidateKeys ?? []) {
         queryClient.invalidateQueries({ queryKey });
       }
@@ -285,6 +291,9 @@ export function ApprovalRow({
       if (problem && isAlreadyDecided(problem)) {
         onAlreadyDecided?.();
         queryClient.invalidateQueries({ queryKey: ["approvals", "pending"] });
+        // Somebody else decided it while this row was open, so the single
+        // read is stale for the same reason and in the same way.
+        queryClient.invalidateQueries({ queryKey: ["approval", approval.id] });
       }
     },
   });

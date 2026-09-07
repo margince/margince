@@ -3043,6 +3043,21 @@ export const en = {
   "transcriptread.proposals_other":
     "{count} next steps waiting for your review",
   "transcriptread.proposals_one": "{count} next step waiting for your review",
+  "transcriptread.staged_one": "{count} next step suggested",
+  "transcriptread.staged_other": "{count} next steps suggested",
+  "transcriptread.decided_one": "{count} suggestion reviewed",
+  "transcriptread.decided_other": "{count} suggestions reviewed",
+  "transcriptread.decidedDetail": "{accepted} accepted, {rejected} declined",
+  "transcriptread.expired_one": "{count} expired undecided",
+  "transcriptread.expired_other": "{count} expired undecided",
+  "transcriptread.effectFailed_one":
+    "{count} accepted suggestion did not produce its task.",
+  "transcriptread.effectFailed_other":
+    "{count} accepted suggestions did not produce their tasks.",
+  "transcriptread.statusUnknown_one":
+    "Status unavailable for {count} suggestion",
+  "transcriptread.statusUnknown_other":
+    "Status unavailable for {count} suggestions",
   "transcriptread.nothingStated":
     "Read in full. This conversation states no next steps.",
   "transcriptread.failedFallback":
