@@ -181,9 +181,13 @@ func sectionPage(rows []crmcontracts.Activity, hasMore bool) (crmcontracts.PageI
 // there was no request to have one (margince#3249). This SELECT is a
 // hand-written sibling of activities.activityColumns, which is exactly how
 // it came to be missing a column for a whole slice, twice.
-// TestThePerson360TimelineNamesTheTransportThatCarriedAMessage and
-// TestThePerson360TimelineCarriesTheVersionAWriteNeeds are the guards that
-// say so out loud.
+// TestThePerson360TimelineNamesTheTransportThatCarriedAMessage,
+// TestThePerson360TimelineCarriesTheVersionAWriteNeeds and
+// TestThePerson360TimelineSaysAMeetingCameFromATranscript are the guards
+// that say so out loud. The third is the third instance: source_system was
+// missing, so a meeting logged as a transcript reached the person's history
+// with nothing to say it was one, and the card that offers its reading drew
+// on the company and the deal but not on the person who was in the room.
 func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, personID ids.PersonID, opts AssembleOptions, extra string, order sectionOrder) ([]crmcontracts.Activity, bool, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
@@ -204,7 +208,7 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, personID ids.Pe
 		SELECT a.id, a.kind, a.channel_provider, a.subject, a.body, a.direction,
 		       a.occurred_at, a.due_at, a.is_done, a.assignee_id, a.source, a.captured_by, a.created_at,
 		       a.thread_key, a.bulk_mail_attested, a.audience, a.audience_reason,
-		       a.version, (%s) AS content_available,
+		       a.source_system, a.version, (%s) AS content_available,
 		       EXISTS (SELECT 1 FROM activity_link fl
 		                WHERE fl.activity_id = a.id AND fl.person_id = $%d) AS filed_here
 		FROM activity a
@@ -227,7 +231,7 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, personID ids.Pe
 		if err := rows.Scan(&id, &a.Kind, &a.ChannelProvider, &a.Subject, &a.Body,
 			&a.Direction, &a.OccurredAt, &a.DueAt, &a.IsDone, &a.AssigneeId, &a.Source, &a.CapturedBy,
 			&a.CreatedAt, &threadKey, &bulkMailAttested, &audience, &audienceReason,
-			&version, &contentAvailable, &filedHere); err != nil {
+			&a.SourceSystem, &version, &contentAvailable, &filedHere); err != nil {
 			return nil, false, err
 		}
 		a.Id = openapi_types.UUID(id)

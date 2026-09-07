@@ -12,6 +12,7 @@ import { SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { useOpenEmail } from "./openemail";
 import {
   bandSections,
@@ -342,6 +343,22 @@ function QueueRows({
 // `queue` is every row loaded so far, which grows. Reading rows off `day`
 // would draw only the first page; reading figures off the latest page would
 // describe a slice as though it were the day.
+// Which "there is nothing here" sentence an empty queue earns.
+//
+// A partial read outranks both: a day cannot be reported clear while something
+// that would have filled it was never read. Otherwise the Tasks pill names its
+// HORIZON — this queue is today's, so a task due tomorrow is deliberately
+// absent, and "Nothing is waiting on you" read as "you have no work" to a rep
+// looking at three open tasks on the company page beside it. The other pills
+// keep the unqualified sentence: the full queue carries replies and reviews
+// that have no deadline, so "due today" would be the wrong frame for it.
+function clearMessage(partial: boolean, filter: WorklistFilter): MessageKey {
+  if (partial) {
+    return "worklist.clearOfWhatWasRead";
+  }
+  return filter === "tasks" ? "worklist.clearOfTasksToday" : "worklist.clear";
+}
+
 function WorklistBody({
   day,
   walk,
@@ -524,10 +541,15 @@ function WorklistBody({
         // — a question only worth answering when there IS a page. A wholly
         // clear day has nothing to distinguish, and four headings each saying
         // nothing is under them says less than the sentence that says so once.
+        //
+        // Under the Tasks pill the sentence names its HORIZON. This queue is
+        // today's: the server takes open tasks due before the installation's
+        // midnight, so a task due tomorrow is deliberately absent. "Nothing is
+        // waiting on you" read as "you have no work" to a rep who could see
+        // three tasks on the company beside it, and the page offered nothing
+        // to reconcile the two.
         <p className="t-body worklist-clear">
-          {missing.length > 0
-            ? t("worklist.clearOfWhatWasRead")
-            : t("worklist.clear")}
+          {t(clearMessage(missing.length > 0, filter))}
         </p>
       ) : (
         // The queue, and beside it what the SELECTED row is about.

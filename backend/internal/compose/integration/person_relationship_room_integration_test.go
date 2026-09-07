@@ -945,3 +945,44 @@ func TestThePerson360TimelineCarriesTheVersionAWriteNeeds(t *testing.T) {
 		t.Errorf("version = %d, want 1 for a freshly inserted row", *got.Version)
 	}
 }
+
+// The THIRD instance of the same defect class, and the one a customer met.
+//
+// source_system is what says a meeting was logged as a transcript. The person
+// timeline's hand-written SELECT did not carry it, so a transcript logged
+// against a contact reached that contact's own history as an ordinary meeting:
+// no card offering its reading, no proposal count, nothing to open. The same
+// activity showed all of it on the company and on the deal, which read through
+// activities.activityColumns — so the person who was actually in the room was
+// the one place the reading was invisible.
+//
+// A row-to-payload assertion again, for the reason the siblings give: what
+// regressed is a SELECT list, and a grep for the column name passes on a query
+// that selects it into a variable nobody scans.
+func TestThePerson360TimelineSaysAMeetingCameFromATranscript(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	mine := e.SeedPerson(t, "Transcript Speaker", &e.Rep1)
+
+	meeting := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, body, occurred_at, source_system, source, captured_by)
+		VALUES ($1, 'meeting', 'Quarterly review', 'we agreed a date', '2026-08-01T09:00:00Z',
+		        'transcript', 'manual', 'human:x')`)
+	LinkActivity(t, owner, meeting, "person", mine)
+
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
+	page, err := personRoomService(e).Assemble(rep, ids.From[ids.PersonKind](mine))
+	if err != nil {
+		t.Fatalf("Assemble: %v", err)
+	}
+	if page.Activities == nil || len(page.Activities.Data) != 1 {
+		t.Fatalf("the timeline holds %v rows, want the one logged meeting", page.Activities)
+	}
+	got := page.Activities.Data[0]
+	if got.SourceSystem == nil {
+		t.Fatal("the meeting reached the page with no source system; the timeline cannot tell " +
+			"a transcript from an ordinary meeting, so the card offering its reading is never drawn")
+	}
+	if *got.SourceSystem != "transcript" {
+		t.Errorf("source_system = %q, want transcript", *got.SourceSystem)
+	}
+}

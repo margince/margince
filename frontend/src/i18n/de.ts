@@ -2952,6 +2952,21 @@ export const de = {
     "{count} nächste Schritte warten auf deine Prüfung",
   "transcriptread.proposals_one":
     "{count} nächster Schritt wartet auf deine Prüfung",
+  "transcriptread.staged_one": "{count} nächster Schritt vorgeschlagen",
+  "transcriptread.staged_other": "{count} nächste Schritte vorgeschlagen",
+  "transcriptread.decided_one": "{count} Vorschlag geprüft",
+  "transcriptread.decided_other": "{count} Vorschläge geprüft",
+  "transcriptread.decidedDetail": "{accepted} übernommen, {rejected} abgelehnt",
+  "transcriptread.expired_one": "{count} ohne Entscheidung abgelaufen",
+  "transcriptread.expired_other": "{count} ohne Entscheidung abgelaufen",
+  "transcriptread.effectFailed_one":
+    "{count} übernommener Vorschlag hat seine Aufgabe nicht angelegt.",
+  "transcriptread.effectFailed_other":
+    "{count} übernommene Vorschläge haben ihre Aufgaben nicht angelegt.",
+  "transcriptread.statusUnknown_one":
+    "Status für {count} Vorschlag nicht abrufbar",
+  "transcriptread.statusUnknown_other":
+    "Status für {count} Vorschläge nicht abrufbar",
   "transcriptread.nothingStated":
     "Vollständig gelesen. Dieses Gespräch nennt keine nächsten Schritte.",
   "transcriptread.failedFallback":
@@ -3446,6 +3461,8 @@ export const de = {
   "compose.consentGoto": "Einwilligung prüfen",
   "compose.draftUnavailable":
     "KI-Entwurf ist nicht verfügbar (das Modell ist nicht konfiguriert). Sie können die E-Mail weiterhin selbst schreiben.",
+  "compose.draftUnsupportedHere":
+    "KI-Entwurf wird auf dieser Seite nicht angeboten. Sie können die E-Mail weiterhin selbst schreiben.",
   "compose.sendUnavailable":
     "Versand ist nicht verfügbar (kein Mailer konfiguriert).",
   "compose.mailboxNotSendCapable":
@@ -8497,6 +8514,8 @@ export const de = {
   "worklist.completeness.bounded":
     "{shown} angezeigt · {sources} Quellen haben mehr",
   "worklist.clear": "Nichts wartet auf dich.",
+  "worklist.clearOfTasksToday":
+    "Heute ist keine Aufgabe fällig und nichts ist überfällig. Spätere Aufgaben stehen im Tab „Aufgaben“ des jeweiligen Datensatzes.",
   "worklist.clearOfWhatWasRead":
     "Unter den Quellen, die geantwortet haben, wartet nichts.",
   "worklist.partial": "{sources} — das ist nicht der ganze Tag.",

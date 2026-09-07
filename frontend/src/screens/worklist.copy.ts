@@ -431,11 +431,18 @@ export function dealFactsText(
 // their desk on the morning it matters, and "today" is the frame they are
 // already in. Anything else shows the date, because a bare "09:00" on a row two
 // days out is a time the reader will act on this morning.
+// The two moments are read on DIFFERENT clocks, because they are different
+// kinds of fact. A meeting STARTS at an instant the reader attends, so it is
+// theirs: a 09:00 Berlin call is 14:00 to someone in Bangkok, and telling them
+// 09:00 would send them to it five hours late. A task is DUE on a calendar day
+// the team agreed, so it is the record's: two colleagues quoting one deadline
+// have to quote the same day, which is what `dueInstant` now mints it as.
 export function whenText(
   item: WorklistItem,
   t: T,
   locale: Locale,
-  zone: string,
+  viewer: string,
+  record: string,
   now: Date,
 ): string | null {
   if (!item.due_at) {
@@ -445,6 +452,7 @@ export function whenText(
   if (key === null) {
     return null;
   }
+  const zone = item.source === "task" ? record : viewer;
   return t(key, { when: momentText(item.due_at, locale, zone, now) });
 }
 
