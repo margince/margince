@@ -164,7 +164,12 @@ export function useVoiceBuild({ dispatch, machine }: UseVoiceBuildArgs) {
     });
     // A poll that never recovered: the server's guidance is exactly what
     // this branch could not fetch, so it says nothing rather than inventing.
-    dispatch({ type: "BUILD_TERMINAL", buildId, status: "failed", detail: null });
+    dispatch({
+      type: "BUILD_TERMINAL",
+      buildId,
+      status: "failed",
+      detail: null,
+    });
   }, [poll.isError, buildId, machine, queue, dispatch]);
 
   // What the finished build produced: the just-built version carries the

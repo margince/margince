@@ -794,7 +794,12 @@ describe("the conversational voice act", () => {
     const retried = run(
       [
         { type: "BUILD_STARTED", buildId: BUILD_IDS[0] },
-        { type: "BUILD_TERMINAL", buildId: BUILD_IDS[0], status: "failed", detail: null },
+        {
+          type: "BUILD_TERMINAL",
+          buildId: BUILD_IDS[0],
+          status: "failed",
+          detail: null,
+        },
         { type: "BUILD_STARTED", buildId: BUILD_IDS[1] },
       ],
       collectingState(),
