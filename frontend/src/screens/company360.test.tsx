@@ -1084,7 +1084,7 @@ describe("company view — what is waiting on a decision", () => {
     open.click();
     await waitFor(() =>
       expect(
-        screen.getByText("2 × Add a person found on the site"),
+        screen.getByText("2 × Add a contact found on the site"),
       ).toBeTruthy(),
     );
   });

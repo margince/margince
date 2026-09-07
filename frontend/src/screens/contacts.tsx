@@ -682,7 +682,7 @@ function PersonActionBadges({
       {!overlay && (
         <MergeAction
           disabledReasonId={person.archived_at ? archivedReasonId : undefined}
-          label={t("merge.person")}
+          label={t("merge.contact")}
           sourceId={person.id}
           sourceName={person.full_name}
           searchTargets={searchPeopleTargets}

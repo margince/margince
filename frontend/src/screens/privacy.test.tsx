@@ -783,14 +783,14 @@ describe("PrivacyInboxCard", () => {
 describe("opening a DSR (G-2)", () => {
   // An erasure fulfils by resolving subject_ref to a person id. Free text
   // there means the server refuses (BE-2) — so the form must not offer it.
-  it("requires a picked person for an erasure", async () => {
+  it("requires a picked contact for an erasure", async () => {
     stubRoutes();
     render(<PrivacyInboxCard />);
     await userEvent.click(
       await screen.findByRole("button", { name: /new request/i }),
     );
     await choose(screen.getByLabelText(/kind/i), "erasure");
-    expect(screen.getByLabelText(/person/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/contact/i)).toBeInTheDocument();
     expect(
       screen.queryByLabelText(/subject reference/i),
     ).not.toBeInTheDocument();
@@ -837,7 +837,7 @@ describe("opening a DSR (G-2)", () => {
   // naming a subject the server cannot erase. The form only enforces this by
   // construction (RecordPicker, no text input) — this proves the picked
   // person's uuid, not its display name, is what actually reaches the wire.
-  it("sends the picked person's uuid as subject_ref for an erasure request", async () => {
+  it("sends the picked contact's uuid as subject_ref for an erasure request", async () => {
     // Pinned to a negative-offset zone (not the host machine's own, which
     // this suite never controls): due_at must mint at end-of-day THERE, not
     // at UTC midnight — the two disagree on which calendar day Aug 1 even is.
@@ -873,7 +873,7 @@ describe("opening a DSR (G-2)", () => {
       await screen.findByRole("button", { name: /new request/i }),
     );
     await choose(screen.getByLabelText(/kind/i), "erasure");
-    await userEvent.type(screen.getByLabelText(/person/i), "anna");
+    await userEvent.type(screen.getByLabelText(/contact/i), "anna");
     await userEvent.click(await screen.findByText("Anna Weber"));
     // type="date" only accepts a programmatic value change in jsdom (same
     // limitation tasks.test.tsx works around for its own due-date field).

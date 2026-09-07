@@ -912,7 +912,7 @@ function PeopleGroupSection({
       </div>
       {people.length === 0 ? (
         <p className="ob-triage-people-empty">
-          {t("ob.conv.triage.peopleEmpty")}
+          {t("ob.conv.triage.contactsEmpty")}
         </p>
       ) : (
         <ul className="ob-triage-people-rows">
@@ -1183,8 +1183,8 @@ function GroupBody({
   group: FrozenGroup;
   rowByField: ReadonlyMap<CompanyFieldName, ReviewRow>;
   setField: (field: CompanyFieldName, value: string) => void;
-  /** Null on a proposal-only render, where there is no people section: "no
-   * people found" would be a guess rather than a finding. */
+  /** Null on a proposal-only render, where there is no contacts section: "no
+   * contacts found" would be a guess rather than a finding. */
   read: CompanySiteRead | null;
   facts: readonly SiteFact[];
   factSelection: FactSelection;
@@ -1348,8 +1348,8 @@ export function CompanyConfirmCard(props: CompanyConfirmCardProps) {
           .map((row) => row.field),
       ),
     }));
-    // People join the board only once there is a read to report on: without
-    // one, "no people found" would be a guess rather than a finding. They
+    // Contacts join the board only once there is a read to report on: without
+    // one, "no contacts found" would be a guess rather than a finding. They
     // carry no field order and no outstanding count — nothing here is the
     // human's to resolve, only theirs to see. Facts join once the read
     // actually produced any — an empty facts section would be nothing to

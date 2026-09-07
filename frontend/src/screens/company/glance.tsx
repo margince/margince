@@ -230,7 +230,7 @@ export function MoneyPane({
 
 /**
  * The account's people as cards: the first few with what they do and how to
- * write to them, the rest as one count, and the People tab behind the title.
+ * write to them, the rest as one count, and the Contacts tab behind the title.
  *
  * They were name chips. A chip says somebody exists; a reader deciding which
  * of three to call had to open all three to find out which one buys. The card
@@ -262,7 +262,7 @@ export function PeopleChips({
           <button
             type="button"
             className="link-button"
-            onClick={() => onOpenTab("people")}
+            onClick={() => onOpenTab("contacts")}
           >
             {count != null
               ? t("co.rail.all", { count: formatNumber(count, locale) })

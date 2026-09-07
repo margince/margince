@@ -126,7 +126,7 @@ describe("PersonNetworkCard", () => {
     });
     render(<PersonNetworkCard id="p-1" />);
     expect(
-      await screen.findByText(/nobody here has recorded contact/i),
+      await screen.findByText(/nobody here has been in touch/i),
     ).toBeInTheDocument();
   });
 });

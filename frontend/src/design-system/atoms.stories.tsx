@@ -1201,7 +1201,7 @@ export const Search: Story = {
       <Field label="Find a company">
         {(control) => <SearchField {...control} placeholder="Search…" />}
       </Field>
-      <Field label="Find a person">
+      <Field label="Find a contact">
         {(control) => <SearchField {...control} defaultValue="Anna Brandt" />}
       </Field>
     </div>

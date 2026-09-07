@@ -40,7 +40,7 @@ describe("what a staged proposal is called", () => {
 
   it("names a known kind in words, never its identifier", () => {
     expect(approvalKindLabel("site_lead", t)).toBe(
-      "Add a person found on the site",
+      "Add a contact found on the site",
     );
     expect(approvalKindLabel("fx_rate_proposal", t)).toBe(
       "Refresh exchange rates",

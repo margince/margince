@@ -1031,7 +1031,7 @@ describe("a live contact that is not the viewer's to change", () => {
     person: { ...view.person, owner_id: "u-other", writable: false },
   };
   const sentence =
-    "You cannot change this person. Ask their owner to share them with you, or your administrator for the right to edit them.";
+    "You cannot change this contact. Ask their owner to share them with you, or your administrator for the right to edit them.";
 
   it("says so once, and refuses Share from that sentence", async () => {
     const user = userEvent.setup();

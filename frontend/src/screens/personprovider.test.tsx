@@ -116,7 +116,7 @@ describe("a contact nobody has bought data for", () => {
     const posted = mount(neverRun(), queuedRun);
 
     await user.click(
-      await screen.findByRole("button", { name: /Look this person up/ }),
+      await screen.findByRole("button", { name: /Look this contact up/ }),
     );
 
     // One request, naming a provider. A body without one is refused by the
@@ -146,7 +146,7 @@ describe("a contact nobody has bought data for", () => {
     );
 
     await user.click(
-      await screen.findByRole("button", { name: /Look this person up/ }),
+      await screen.findByRole("button", { name: /Look this contact up/ }),
     );
 
     // The server's own words, not a generic line: a refusal nobody can read is
@@ -181,7 +181,7 @@ describe("a contact whose data was already bought", () => {
       await screen.findByRole("button", { name: /Check again/ }),
     ).toBeDefined();
     expect(
-      screen.queryByRole("button", { name: /Look this person up/ }),
+      screen.queryByRole("button", { name: /Look this contact up/ }),
     ).toBeNull();
   });
 
@@ -257,7 +257,7 @@ describe("two providers connected", () => {
     // button, or a body that named the wrong provider, would buy from whoever
     // happened to be first.
     const buttons = await screen.findAllByRole("button", {
-      name: /Look this person up/,
+      name: /Look this contact up/,
     });
     expect(buttons.length).toBe(2);
     await user.click(buttons[1]);
@@ -296,7 +296,7 @@ describe("which contact a lookup is charged to", () => {
         <PersonProviderSection personId="p-1" profiles={[neverRun()]} />
       </StoryProviders>,
     );
-    await screen.findByRole("button", { name: /Look this person up/ });
+    await screen.findByRole("button", { name: /Look this contact up/ });
 
     // The panel stays mounted across the change of subject: the record page
     // keys its subtree by contact today, and this is the case that breaks the
@@ -307,7 +307,7 @@ describe("which contact a lookup is charged to", () => {
       </StoryProviders>,
     );
     await user.click(
-      await screen.findByRole("button", { name: /Look this person up/ }),
+      await screen.findByRole("button", { name: /Look this contact up/ }),
     );
 
     await expect.poll(() => paths).toEqual(["p-2"]);

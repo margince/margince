@@ -72,7 +72,9 @@ describe("the research drawer with no research provider bound", () => {
     mountWithBoughtData();
 
     expect(
-      await screen.findByText(/never researches a person on its own authority/),
+      await screen.findByText(
+        /never researches a contact on its own authority/,
+      ),
     ).toBeDefined();
   });
 });

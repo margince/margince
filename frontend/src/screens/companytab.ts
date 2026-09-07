@@ -27,7 +27,7 @@ import type { Route } from "../app/router";
 export const COMPANY_TABS = [
   "overview",
   "timeline",
-  "people",
+  "contacts",
   "deals",
   "tasks",
   "finance",

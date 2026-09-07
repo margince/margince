@@ -146,7 +146,7 @@ describe("the stakeholders on a project", () => {
     // person's name too, and picking the row navigates away instead.
     const dialog = within(screen.getByRole("dialog"));
     await user.type(
-      dialog.getByPlaceholderText("Search people by name"),
+      dialog.getByPlaceholderText("Search contacts by name"),
       "mai",
     );
     settleSearch();
@@ -276,7 +276,7 @@ describe("the stakeholders on a project", () => {
     await user.click(screen.getByTestId("add-project-stakeholder"));
     const dialog = within(screen.getByRole("dialog"));
     await user.type(
-      dialog.getByPlaceholderText("Search people by name"),
+      dialog.getByPlaceholderText("Search contacts by name"),
       "mai",
     );
     settleSearch();

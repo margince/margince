@@ -604,10 +604,10 @@ describe("capture activity", () => {
     );
     await openLog();
     await user.click(
-      screen.getByRole("button", { name: /^no person created/i }),
+      screen.getByRole("button", { name: /^no contact created/i }),
     );
     expect(
-      await screen.findByText(/showing 1 of 1 no person created/i),
+      await screen.findByText(/showing 1 of 1 no contact created/i),
     ).toBeInTheDocument();
   });
 

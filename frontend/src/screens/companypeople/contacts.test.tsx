@@ -107,7 +107,7 @@ test("a second press on a column asks for the reverse, and the server accepts it
 
 test("does not let a pasted cursor or limit override the paging it computed", async () => {
   const calls = stubContacts(contactsFixture());
-  window.location.hash = "#/companies/o-1/people?cursor=garbage&limit=1";
+  window.location.hash = "#/companies/o-1/contacts?cursor=garbage&limit=1";
   render(<CompanyPeopleList orgId="o-1" />);
 
   await screen.findByText("Dietmar Rietsch");

@@ -381,7 +381,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     // The page stays (ADR-0119): the outcome is said here, with the contact.
     expect(window.location.hash).toBe("#/leads/l-1");
     expect(
-      await screen.findByText(/Jonas Petersen is now a person:/),
+      await screen.findByText(/Jonas Petersen is now a contact:/),
     ).toBeTruthy();
   });
 
@@ -740,7 +740,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     render(<LeadScreen id="l-1" />);
     await userEvent.click(await screen.findByTestId("lead-qualify"));
     expect(
-      await screen.findByText(/Promoting will merge into the existing person/),
+      await screen.findByText(/Promoting will merge into the existing contact/),
     ).toBeTruthy();
   });
 

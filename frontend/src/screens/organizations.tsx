@@ -1283,9 +1283,9 @@ function companyTabCounts(
     return {};
   }
   const counts: Partial<Record<CompanyTab, number>> = {};
-  const people = wholeCount(view.people);
-  if (people != null) {
-    counts.people = people;
+  const contacts = wholeCount(view.people);
+  if (contacts != null) {
+    counts.contacts = contacts;
   }
   const deals = wholeCount(view.deals);
   if (deals != null) {
@@ -1470,7 +1470,7 @@ function CompanyRecord({
             // `tab.overview`, which four other record types render and none of
             // them is this.
             overview: t("tab.overview"),
-            people: t("tab.contacts"),
+            contacts: t("tab.contacts"),
             deals: t("tab.deals"),
             tasks: t("tab.tasks"),
             timeline: t("tab.timeline"),
@@ -2222,11 +2222,11 @@ function CompanyRecordBody({
           onClose={() => onCompose(null)}
         />
       )}
-      {/* The People tab gives the account team the whole middle column, with
+      {/* The Contacts tab gives the account team the whole middle column, with
           room for the title and the last exchange beside each name. The
           rail's capped summary stands beside it — a top-3 glance is the
           reader's anchor across tabs, not a second copy of the roster. */}
-      {tab === "people" && (
+      {tab === "contacts" && (
         <div className="co-overview-stack">
           {/* The account's people, ranked and paged. One representation, not
               three: the roster card, the connections card and its diagram all
@@ -2447,7 +2447,7 @@ function CompanyOverviewStack({
     <div className="co-overview-stack">
       {/* The readings lead, under the bar that chose this tab: five doors into
           the tabs that hold their rows. They belong to THIS tab rather than to
-          the record — the People tab is a roster and the Documents tab is a
+          the record — the Contacts tab is a roster and the Documents tab is a
           filing cabinet, and a row of account readings over either is a header
           for a page it is not describing. */}
       {!overlay && view && (

@@ -66,7 +66,7 @@ export const SEARCH_HIT_GROUP_KEY: Readonly<Record<SearchHitType, MessageKey>> =
 // settle it by half.
 export const SEARCH_HIT_KIND_KEY: Readonly<Record<SearchHitType, MessageKey>> =
   {
-    person: "search.kind.person",
+    person: "search.kind.contact",
     organization: "search.kind.organization",
     deal: "search.kind.deal",
     project: "search.kind.project",
