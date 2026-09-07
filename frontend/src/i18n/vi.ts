@@ -1405,6 +1405,7 @@ export const vi = {
   "approval.kind.fx_rate_proposal": "Làm mới tỷ giá",
   "approval.kind.ai_model_rate_proposal": "Làm mới giá mô hình",
   "approval.kind.disqualify_lead": "Loại một khách hàng tiềm năng",
+  "approval.kind.demote_lead": "Hoàn tác chuyển đổi lead",
   "approval.kind.advance_project_phase": "Chuyển dự án sang giai đoạn kế tiếp",
   "approval.kind.assign_owner": "Giao bản ghi cho người phụ trách",
   "approval.kind.commit_import": "Xác nhận nhập dữ liệu",

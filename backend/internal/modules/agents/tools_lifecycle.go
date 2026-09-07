@@ -34,12 +34,14 @@ func RegisterLifecycleTools(
 	p datasource.SystemOfRecordProvider,
 	relinker ActivityRelinker,
 	disqualifier LeadDisqualifier,
+	demoter LeadDemoter,
 	advancer ProjectPhaseAdvancer,
 ) {
 	r.Register(relinkActivity{relinker: relinker, p: p})
 	r.Register(relinkThread{relinker: relinker, p: p})
 	r.Register(relinkActivities{relinker: relinker, p: p})
 	r.Register(disqualifyLead{p: p, disqualifier: disqualifier})
+	r.Register(demoteLead{p: p, demoter: demoter})
 	r.Register(advanceProjectPhase{p: p, advancer: advancer})
 }
 
@@ -58,6 +60,14 @@ type ActivityRelinker interface {
 // surviving so it stays fetchable by id.
 type LeadDisqualifier interface {
 	DisqualifyLead(ctx context.Context, id ids.UUID) (json.RawMessage, error)
+}
+
+// LeadDemoter reverses a promotion: the lead returns to the open ladder and
+// the person the promotion created is archived. It answers the reversal's own
+// shape rather than a bare record, because WHICH unwind happened — the person
+// archived, or only the lineage cleared — is the part a caller acts on.
+type LeadDemoter interface {
+	DemoteLead(ctx context.Context, id ids.UUID, reason string) (json.RawMessage, error)
 }
 
 // ProjectPhaseAdvancer steps a project along the phase ladder, recording the
@@ -248,6 +258,61 @@ func (t disqualifyLead) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 	}
 	noteEvidence(ctx, datasource.EntityLead, args.LeadID)
 	return t.disqualifier.DisqualifyLead(ctx, args.LeadID)
+}
+
+// --- demote_lead (🟡 write — reverses a promotion) ---
+
+type demoteLeadArgs struct {
+	LeadID ids.UUID `json:"lead_id"`
+	Reason string   `json:"reason"`
+}
+
+type demoteLead struct {
+	p       datasource.SystemOfRecordProvider
+	demoter LeadDemoter
+}
+
+func (t demoteLead) Spec() mcp.ToolSpec {
+	return mcp.ToolSpec{
+		Name: "demote_lead", Title: "Reverse a lead promotion", Version: toolVersionV1,
+		Description:   demoteLeadCopy.render(),
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
+		OpenAPIOp: "demoteLead",
+		InputSchema: schema(`{"type":"object","required":["lead_id","reason"],"properties":{
+			"lead_id":{"type":"string","format":"uuid","description":"The lead whose promotion is being reversed"},
+			"reason":{"type":"string","minLength":1,
+				"description":"Why the promotion is being reversed; recorded in the audit trail, because an undo nobody explained is indistinguishable later from a mistake"},
+			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
+			"additionalProperties":false}`),
+		OutputSchema: schemaFor[DemoteLeadResult](),
+	}
+}
+
+// StageInfo decodes this door's arguments into the reversal command and
+// delegates: the refusals and the staged subject live in the resolver
+// (commandlifecycle.go), where the REST door reaches the same ones for the
+// same operation.
+func (t demoteLead) StageInfo(ctx context.Context, in json.RawMessage) (StageInfo, error) {
+	var args demoteLeadArgs
+	if err := decodeArgs(in, &args); err != nil {
+		return StageInfo{}, err
+	}
+	return StageSubject(ctx, NewDemoteLeadCall(t.p, DemoteLeadCommand(args)))
+}
+
+func (t demoteLead) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
+	var args demoteLeadArgs
+	if err := decodeArgs(in, &args); err != nil {
+		return nil, err
+	}
+	// Re-asked HERE as well as in Guards, because an approved retry re-enters
+	// through this door without passing staging: a reason the staging refused
+	// must not become one the execution accepts.
+	if err := requireDemotionReason(args.Reason); err != nil {
+		return nil, err
+	}
+	noteEvidence(ctx, datasource.EntityLead, args.LeadID)
+	return t.demoter.DemoteLead(ctx, args.LeadID, args.Reason)
 }
 
 // --- advance_project_phase (🟡 write) ---

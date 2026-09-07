@@ -53,6 +53,28 @@ func disqualifyLeadCommand(_ agentPolicy, deps restCommandDeps, r *http.Request,
 	return agents.NewDisqualifyLeadCall(deps.records, agents.DisqualifyLeadCommand{LeadID: id}), nil
 }
 
+// demoteLeadCommand decodes POST /v1/leads/{id}/demote. The reason travels
+// because the resolver refuses a reversal that states none before a human is
+// asked to release one.
+//
+//nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
+func demoteLeadCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, body []byte) (agents.GovernedCall, error) {
+	id, err := routedID(r)
+	if err != nil {
+		return nil, err
+	}
+	in, err := commandBody[struct {
+		Reason string `json:"reason"`
+	}](body)
+	if err != nil {
+		return nil, err
+	}
+	return agents.NewDemoteLeadCall(deps.records, agents.DemoteLeadCommand{
+		LeadID: id,
+		Reason: in.Reason,
+	}), nil
+}
+
 // advanceProjectPhaseCommand decodes POST /v1/projects/{id}/advance. Both body
 // fields travel: the resolver refuses a phase the ladder does not have, and a
 // close with no reason, before a human is asked about either.

@@ -235,6 +235,15 @@ var bothDoorsFixtures = map[string]bothDoorsFixture{
 		},
 		args: func(primary, _ ids.UUID) string { return `{"lead_id":"` + primary.String() + `"}` },
 	},
+	"demoteLead": {
+		rest: func(primary, _ ids.UUID) (*http.Request, []byte) {
+			return doorRequest(http.MethodPost, "/v1/leads/"+primary.String()+"/demote", primary,
+				`{"reason":"promoted by mistake"}`)
+		},
+		args: func(primary, _ ids.UUID) string {
+			return `{"lead_id":"` + primary.String() + `","reason":"promoted by mistake"}`
+		},
+	},
 	"advanceProjectPhase": {
 		rest: func(primary, _ ids.UUID) (*http.Request, []byte) {
 			return doorRequest(http.MethodPost, "/v1/projects/"+primary.String()+"/advance", primary,
@@ -476,7 +485,7 @@ func bothDoorsRegistry(staging agents.Approvals) *agents.Registry {
 		}))
 	agents.RegisterCoreTools(reg, channelAnchor{}, nil, nil, nil, nil, nil)
 	agents.RegisterEnrichTool(reg, channelAnchor{}, nil)
-	agents.RegisterLifecycleTools(reg, channelAnchor{}, nil, nil, nil)
+	agents.RegisterLifecycleTools(reg, channelAnchor{}, nil, nil, nil, nil)
 	agents.RegisterCommsTools(reg, bothDoorsComms{}, channelAnchor{})
 	agents.RegisterImportTools(reg, bothDoorsImports{})
 	agents.RegisterTagTools(reg, bothDoorsTags{})

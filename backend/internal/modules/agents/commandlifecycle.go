@@ -131,6 +131,70 @@ func (r *disqualifyLeadResolver) Guards(ctx context.Context, cmd DisqualifyLeadC
 	return r.lead.refuse(ctx, cmd.LeadID)
 }
 
+// DemoteLeadCommand is one reversal of a promotion, whichever door asked for
+// it.
+//
+// Reason travels because both questions read it: Guards refuses an empty one
+// before a human is ever asked, and the contract requires it on the wire. It
+// is not in the approval's summary — the line a human reads names the record
+// and the act, and a free-text reason there would be the caller's words
+// standing where the system's should.
+type DemoteLeadCommand struct {
+	LeadID ids.UUID
+	Reason string
+}
+
+// NewDemoteLeadCall binds one reversal to the resolver that answers for it.
+//
+//nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
+func NewDemoteLeadCall(records datasource.SystemOfRecordProvider, cmd DemoteLeadCommand) GovernedCall {
+	return bind[DemoteLeadCommand](&demoteLeadResolver{
+		lead: anchoredRecord{records: records, entityType: datasource.EntityLead},
+	}, cmd)
+}
+
+type demoteLeadResolver struct {
+	lead anchoredRecord
+}
+
+func (r *demoteLeadResolver) Subject(ctx context.Context, cmd DemoteLeadCommand) (StageInfo, error) {
+	rec, err := r.lead.row(ctx, cmd.LeadID)
+	if err != nil {
+		return StageInfo{}, err
+	}
+	return StageInfo{
+		TargetType:    string(datasource.EntityLead),
+		TargetID:      cmd.LeadID,
+		TargetVersion: &rec.Version,
+		Summary:       fmt.Sprintf("Reverse the promotion of lead %s", recordLabel(rec)),
+	}, nil
+}
+
+// Guards refuses a reversal with no reason before it can reach the inbox, and
+// then the lead itself, the same two ways the other lead resolvers do.
+func (r *demoteLeadResolver) Guards(ctx context.Context, cmd DemoteLeadCommand) error {
+	if err := requireDemotionReason(cmd.Reason); err != nil {
+		return err
+	}
+	return r.lead.refuse(ctx, cmd.LeadID)
+}
+
+// requireDemotionReason admits a reversal that says why.
+//
+// One function for both doors, for the reason requireGenuineTrigger states: the
+// staging path asks it through Guards and the execution path through
+// demoteLead.Handle, which an approved retry re-enters without passing Guards.
+// The contract requires the field; asking here is what makes a caller who omits
+// it read a refusal about the reversal rather than a schema complaint from the
+// store.
+func requireDemotionReason(reason string) error {
+	if strings.TrimSpace(reason) != "" {
+		return nil
+	}
+	return &BadArgsError{Cause: errors.New("a demotion states why: an undo nobody explained is " +
+		"indistinguishable later from a mistake")}
+}
+
 // AdvanceProjectPhaseCommand is one project phase transition, whichever door
 // asked for it.
 //

@@ -215,6 +215,20 @@ var disqualifyLeadCopy = toolCopy{
 		"until the retry carrying their approval has answered.",
 }
 
+var demoteLeadCopy = toolCopy{
+	Purpose: "Reverse a promotion that should not have happened, putting the lead back on the " +
+		"open ladder.",
+	Limits: "It blocks rather than orphans: a promotion whose person now owns a deal is refused, " +
+		"and activities captured since the promotion stay on the person's timeline — they are real " +
+		"history. A promotion that merged into an existing person leaves that person untouched and " +
+		"only clears the lineage.",
+	Instead: "Use disqualify_lead when the lead is real but going nowhere; demotion says the " +
+		"promotion itself was wrong.",
+	Retain: "The lead is demoted when this call answers. Where an installation has raised this " +
+		"verb to confirm first, the answer is a staged approval instead — keep its id, and do not " +
+		"report the demotion until the retry carrying it has answered.",
+}
+
 var advanceProjectPhaseCopy = toolCopy{
 	Purpose: "Move a project to another phase — initiative, pursuing, delivering, closed.",
 	Limits: "The four names are fixed but the order is not enforced: a project may go back a " +

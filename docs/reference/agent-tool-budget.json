@@ -4,10 +4,10 @@
   "per_agent_listing_budget": 23210,
   "whole_catalog_floor": 28672,
   "catalog": {
-    "tools": 73,
+    "tools": 74,
     "system_frame_tokens": 353,
-    "tokens": 22009,
-    "median_tool_tokens": 263,
+    "tokens": 22325,
+    "median_tool_tokens": 264,
     "mean_tool_tokens": 301
   },
   "agents": [
@@ -169,6 +169,10 @@
     {
       "name": "prep_for_meeting",
       "tokens": 326
+    },
+    {
+      "name": "demote_lead",
+      "tokens": 316
     },
     {
       "name": "merge_records",

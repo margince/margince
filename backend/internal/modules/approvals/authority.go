@@ -115,6 +115,14 @@ var decisionGrants = map[string][]grantRequirement{
 	// the confirm-first control point sits with someone who could not do the
 	// thing they are releasing.
 	"disqualify_lead": {{tableLead, principal.ActionDelete}},
+	// Demotion reverses a promotion: the lead returns to the open ladder and the
+	// person the promotion created is archived. Both halves are gated where they
+	// are performed (people/demote.go), so deciding takes both — the lead's
+	// update and the person's delete. The person grant is the one that matters:
+	// releasing a demotion is releasing the archival of a contact somebody may
+	// have been working, and an approver who could not archive that person is
+	// not the person to authorise it.
+	"demote_lead": {{tableLead, principal.ActionUpdate}, {tablePerson, principal.ActionDelete}},
 	// A tag merge releases the source's NAME and no later act restores it, which
 	// is why it confirms where a record merge does not: mergePerson archives the
 	// source with `merged_into_id` and audit walks it back, and a tag keeps no

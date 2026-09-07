@@ -7511,10 +7511,7 @@ paths:
     post:
       tags: [Leads]
       operationId: demoteLead
-      # Human-only for now. The spec mints this as a 🟡 `demote_lead` tool; the
-      # governed tool (registry entry, approvals authority, output shape) is an
-      # additive follow-up, tracked as an issue.
-      x-agent-access: human-only
+      x-mcp-tool: { verb: demote_lead, record_type: lead, tier: auto_execute, scope: write }
       summary: Reverse a promotion (formulas §26) — the audited undo ADR-0008 §4 promises.
       description: |
         The documented reverse of POST /leads/{id}/promote, deterministic and conservative:

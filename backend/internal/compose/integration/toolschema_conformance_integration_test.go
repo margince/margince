@@ -244,6 +244,11 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		{"advance_deal", `{"deal_id":"` + deal.String() + `","to_stage_id":"` + open.String() + `"}`},
 		// The confirm-first tools, reachable here because this runs as a human.
 		{"promote_lead", `{"lead_id":"` + promotable.String() + `","trigger":"human_qualify"}`},
+		// Immediately after, on the lead the line above just promoted: a
+		// demotion needs a promotion to reverse, and this is the only one in
+		// the table. Its declared shape is another guaranteed subset, so the
+		// real handler is the only thing that can say whether it holds.
+		{"demote_lead", `{"lead_id":"` + promotable.String() + `","reason":"promoted by mistake"}`},
 		{"archive_record", `{"record_type":"person","id":"` + spare.String() + `"}`},
 		{"merge_records", `{"record_type":"person","source_id":"` + duplicate.String() +
 			`","target_id":"` + person.String() + `"}`},

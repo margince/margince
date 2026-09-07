@@ -108,6 +108,17 @@ func malformedRoutedID(method, collection string) unrunnableCall {
 	}
 }
 
+// demoteLead's route carries a suffix after the id, so it cannot use
+// malformedRoutedID's collection-shaped path: the refusal is the same one, and
+// the URL has to be the operation's own.
+var demoteLeadUnrunnable = unrunnableCall{
+	refusal: hiddenRow("the routed id is not a uuid, so it names no record the handler could act on"),
+	build: func() (*http.Request, []byte) {
+		return routedFixture(http.MethodPost, "/v1/leads/not-a-uuid/demote", "not-a-uuid",
+			`{"reason":"promoted by mistake"}`)
+	},
+}
+
 // routedFixture builds the request with the router's {id} bound, and nothing
 // else bound: every fixture here that needs a SECOND path parameter is a
 // fixture about that parameter being absent.
@@ -152,8 +163,10 @@ var unrunnableCalls = map[string]unrunnableCall{
 	"archiveRelationship":  malformedRoutedID(http.MethodDelete, "/relationships"),
 	"archiveSavedView":     malformedRoutedID(http.MethodDelete, "/views"),
 
-	"approveImportRun":          malformedRoutedID(http.MethodPost, "/imports"),
-	"disqualifyLead":            malformedRoutedID(http.MethodDelete, "/leads"),
+	"approveImportRun": malformedRoutedID(http.MethodPost, "/imports"),
+	"disqualifyLead":   malformedRoutedID(http.MethodDelete, "/leads"),
+	"demoteLead":       demoteLeadUnrunnable,
+
 	"retireCustomField":         malformedRoutedID(http.MethodPost, "/custom-fields"),
 	"updateCustomFieldOptions":  malformedRoutedID(http.MethodPatch, "/custom-fields"),
 	"updateWebhookSubscription": malformedRoutedID(http.MethodPatch, "/webhook-subscriptions"),

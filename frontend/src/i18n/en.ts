@@ -1489,6 +1489,7 @@ export const en = {
   "approval.kind.fx_rate_proposal": "Refresh exchange rates",
   "approval.kind.ai_model_rate_proposal": "Refresh model prices",
   "approval.kind.disqualify_lead": "Disqualify a lead",
+  "approval.kind.demote_lead": "Reverse a lead promotion",
   "approval.kind.advance_project_phase": "Move a project to its next phase",
   "approval.kind.assign_owner": "Hand a record to an owner",
   "approval.kind.commit_import": "Commit an import",
