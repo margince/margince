@@ -25,13 +25,13 @@ import {
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { Avatar, Badge, Button } from "./atoms";
-import { EmailEntry, EmailWords } from "./emailentry";
+import { EmailEntry, EmailVisibility, EmailWords } from "./emailentry";
 import { PageZones, type PageZonesShape } from "./pagezones";
 import { withWhom } from "./participants";
 import { FieldGuard } from "./rbac";
 import { useTooltip, useTruncationTooltip } from "./tooltip";
 import { type Provenance, ProvenanceTag } from "./trust";
-import { type Visibility, VisibilityBadge } from "./visibility";
+import { VisibilityBadge } from "./visibility";
 import "./composed.css";
 
 // Composed surfaces (B-EP09.3b): the pipeline board and the record view — each
@@ -1581,33 +1581,17 @@ function messageLead(
 // and withheld ones. The open default — `team` on a mail, `workspace` on
 // anything else — draws nothing, for the reason TimelineRow gives: a mark on
 // every open row is decoration a reader learns to skip.
-//
-// Answers the state; the badge at the mount below draws it. Reading a
-// message's access word is not drawing the message, and keeping the two apart
-// is what lets that be seen rather than argued: there is no markup here to
-// check.
-function messageVisibilityState(entry: TimelineEntry): Visibility | null {
+function messageVisibility(entry: TimelineEntry): ReactNode {
   if (entry.withheld) {
-    return "withheld";
+    return <VisibilityBadge state="withheld" />;
   }
-  const status = entry.emailSummary?.display_status;
-  if (status && status !== "team") {
-    return status;
+  if (entry.emailSummary) {
+    return <EmailVisibility summary={entry.emailSummary} place="thread" />;
   }
   if (entry.audience && entry.audience !== "workspace") {
-    return entry.audience;
+    return <VisibilityBadge state={entry.audience} />;
   }
   return null;
-}
-
-// Whether a thread's member can be opened, and with what. Only a message drawn
-// from the server's summary opens — its words are one span, where a folded body
-// carries controls of its own that cannot sit inside a button.
-//
-// Its own function on the same terms as messageVisibilityState above: deciding
-// that an entry HAS a message to open reads the summary and draws no part of it.
-function threadMessageOpener(entry: TimelineEntry): (() => void) | undefined {
-  return entry.emailSummary ? entry.onOpenEmail : undefined;
 }
 
 // The mark beside a message: the sender's face on their word, a send mark on
@@ -1637,13 +1621,17 @@ function MessageMark({ entry }: Readonly<{ entry: TimelineEntry }>) {
   );
 }
 
-// What a message in a thread SAYS. A mail with the server's summary draws it
-// through EmailWords — the canonical spelling of a message's words, which is
-// also where the withheld rule lives, so this row cannot answer that question
-// differently from the row beside it. A message without a summary (a chat, or
-// a server that has not caught up) draws its body through the same TimelineText
-// the chronicle uses, with the same fold. A withheld ROW draws the sentence
-// where its words would be, whatever it is handed.
+// What a message in a thread SAYS. A mail with the server's summary hands it
+// to EmailWords — the canonical reading of an email's words, the same one the
+// row draws — and never the raw body beside it, which is the drift the
+// canonical row exists to stop. This used to read `preview` and draw its own
+// span: correct on the day it was written, and one edit away from disagreeing
+// with the row about what a withheld message shows. A message without a
+// summary (a chat, or a server that has not caught up) draws its body through
+// the same TimelineText the chronicle uses, with the same fold. A withheld
+// message draws the sentence where its words would be, whatever it is handed —
+// and EmailWords refuses the words a second time from the server's own
+// `display_status`, which is the half a caller's flag cannot speak for.
 function MessageWords({
   entry,
   t,
@@ -1652,7 +1640,7 @@ function MessageWords({
     return <span className="tl-withheld">{t("timeline.withheld")}</span>;
   }
   if (entry.emailSummary) {
-    return <EmailWords summary={entry.emailSummary} />;
+    return <EmailWords summary={entry.emailSummary} place="thread" />;
   }
   return entry.body ? (
     <TimelineText text={entry.body} email={entry.kind === "email"} />
@@ -1679,8 +1667,6 @@ function ThreadMessage({
   const { locale } = useLocale();
   const t = useT();
   const lead = messageLead(entry, t);
-  const visibility = messageVisibilityState(entry);
-  const onOpen = threadMessageOpener(entry);
   const content = (
     <>
       <MessageMark entry={entry} />
@@ -1688,7 +1674,7 @@ function ThreadMessage({
         <span className="tl-msg-lead">
           <b className="tl-msg-who">{lead.actor}</b>
           {lead.verb && <span className="tl-msg-verb">{lead.verb}</span>}
-          {visibility && <VisibilityBadge state={visibility} />}
+          {messageVisibility(entry)}
         </span>
         <MessageWords entry={entry} t={t} />
       </span>
@@ -1700,6 +1686,7 @@ function ThreadMessage({
       </span>
     </>
   );
+  const onOpen = entry.emailSummary ? entry.onOpenEmail : undefined;
   if (!onOpen) {
     return <div className="tl-msg">{content}</div>;
   }

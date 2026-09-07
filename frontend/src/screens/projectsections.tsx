@@ -19,6 +19,7 @@ import {
   formatDuration,
   formatMoneyOrAbsent,
 } from "../format/format";
+import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { EntityRef } from "./entityref";
@@ -468,16 +469,16 @@ function CommitmentRow({
   locale: ReturnType<typeof useLocale>["locale"];
 }>) {
   const t = useT();
-  // The record's clock, exactly as the tasks screen reads it. A commitment is a
-  // deadline the team agreed, so the day it names cannot depend on where the
-  // reader is sitting.
-  const recordZone = useRecordZone();
   return (
     <PanelRow className="project-row">
       <span>{commitment.subject}</span>
       <span className="project-row-meta t-caption">
+        {/* A due date is a personal deadline, read in the reader's own zone
+            exactly as the tasks screen reads it. */}
         {commitment.due_at && (
-          <span>{formatDateAbbrev(commitment.due_at, locale, recordZone)}</span>
+          <span>
+            {formatDateAbbrev(commitment.due_at, locale, viewerZone())}
+          </span>
         )}
         {commitment.overdue && (
           <Badge tone="danger">{t("project.commitments.overdue")}</Badge>

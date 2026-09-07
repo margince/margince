@@ -105,13 +105,22 @@ var emailRenderers = map[string]bool{
 // the obligation by doing the thing, and is admitted by rendersCanonically.
 // These are the ones that never mount anything: builders, mappers and the
 // surfaces whose only act is to suppress their own title in favour of the row.
+//
+// A key is a FILE, or a `file#function` when only one function in it is the
+// passthrough. The narrower shape exists because the RULE went per-function and
+// this list did not: composed.tsx draws canonical rows in three places and
+// carries one function that reads the carrier to decide a message opens, and a
+// whole-file entry for it would re-admit exactly the miss rendersCanonically
+// was widened to catch — a file discharged by one function while another beside
+// it wrote its own markup. Ratify the function, not the file it lives in.
 var emailPassthroughs = gatekit.Waive(map[string]string{
-	"design-system/activitytimeline.tsx": "maps an Activity onto a TimelineEntry, email_summary included, for composed.tsx to draw; it builds the entry and renders nothing",
-	"screens/openemail.ts":               "the drawer controller: it reads emailSummary only to decide an entry HAS a message to open, and holds no part of one",
-	"screens/recordchronology.tsx":       "wires onOpenEmail onto the entries it hands to the timeline; the rendering is composed.tsx's",
-	"screens/worklist.row.tsx":           "same branch as the focus card, for the list row",
-	"screens/emailaccesseditor.tsx":      "draws the ACCESS block and no part of the message: who may read it, the named members, and the control to change that. No subject, no body, no party, no attachment. It takes the whole presentation because the audience write needs the id and version off it",
-	"app/searchkinds.ts":                 "answers WHERE a search hit goes. It reads email_summary for one thing — an activity carrying one is a message, and a message has a destination — and returns a Route. No markup at all: the file is .ts and holds no component",
+	"design-system/activitytimeline.tsx":       "maps an Activity onto a TimelineEntry, email_summary included, for composed.tsx to draw; it builds the entry and renders nothing",
+	"screens/openemail.ts":                     "the drawer controller: it reads emailSummary only to decide an entry HAS a message to open, and holds no part of one",
+	"design-system/composed.tsx#ThreadMessage": "the same read openemail.ts is ratified for, one tier in: a message inside a thread card is openable exactly when it was drawn from the server's summary, so the carrier is tested for presence and no field of it is touched. The words, the mark and the visibility all come from the canonical components this function wraps",
+	"screens/recordchronology.tsx":             "wires onOpenEmail onto the entries it hands to the timeline; the rendering is composed.tsx's",
+	"screens/worklist.row.tsx":                 "same branch as the focus card, for the list row",
+	"screens/emailaccesseditor.tsx":            "draws the ACCESS block and no part of the message: who may read it, the named members, and the control to change that. No subject, no body, no party, no attachment. It takes the whole presentation because the audience write needs the id and version off it",
+	"app/searchkinds.ts":                       "answers WHERE a search hit goes. It reads email_summary for one thing — an activity carrying one is a message, and a message has a destination — and returns a Route. No markup at all: the file is .ts and holds no component",
 })
 
 // entrySchemas reads the schemas the contract marks as an email.
@@ -331,7 +340,8 @@ func rendersCanonically(t *testing.T, consumer string) bool {
 		t.Fatalf("reading %s: %v", consumer, err)
 	}
 	drew := false
-	for _, body := range topLevelFunctions(string(source)) {
+	for _, fn := range topLevelFunctions(string(source)) {
+		body := fn.body
 		// Only a function that DRAWS is asked to draw canonically. One that
 		// reads a message into a value — a mapper building a row model, a
 		// function returning a title string — renders nothing, and the same
@@ -342,6 +352,12 @@ func rendersCanonically(t *testing.T, consumer string) bool {
 			continue
 		}
 		if !mountsCanonical(body) {
+			// Ratified by name, or a finding. The file-wide key is deliberately
+			// NOT consulted here: a whole-file waiver is the shape that let one
+			// drawing function discharge another.
+			if fn.name != "" && emailPassthroughs.Waived(t, consumer+"#"+fn.name) {
+				continue
+			}
 			return false
 		}
 		drew = true
@@ -377,14 +393,13 @@ func returnsMarkup(body string) bool {
 var emailAccess = regexp.MustCompile(
 	`\b(email_summary|emailSummary|email_reference|emailReference)\b`)
 
-// The canonical set. Widening it is a deliberate act rather than a
-// convenience: a further reading of a message appearing quietly is what this
-// gate exists to stop, so a component belongs here only when it draws a shape
-// the others cannot carry. EmailWords is the words alone, for a host that has
-// already drawn the lead and the time — EmailEntry there would draw both a
-// second time, and EmailReference carries no preview by design.
 func mountsCanonical(text string) bool {
-	for _, component := range []string{"EmailEntry", "EmailReference", "EmailDetail", "EmailWords"} {
+	// EmailWords is here for the same reason as the other three and with the
+	// narrowest claim of them: it draws only an email's WORDS, for a surface
+	// whose subject and counterparty are already placed by the card around it.
+	// A thread message that hands its summary to it has stopped deciding what a
+	// withheld message shows.
+	for _, component := range []string{"EmailEntry", "EmailWords", "EmailVisibility", "EmailReference", "EmailDetail"} {
 		if strings.Contains(text, "<"+component) {
 			return true
 		}
@@ -401,13 +416,35 @@ func mountsCanonical(text string) bool {
 // do is split too FINELY and report a mount and its reader as two separate
 // functions, because that fails a clean file — the direction a census is
 // allowed to be wrong in is never silence.
-func topLevelFunctions(source string) []string {
-	var bodies []string
+// topLevelFunction is a function's name beside its body, so a finding can be
+// attributed to the function rather than only to the file — which is what lets
+// one function be ratified without discharging its neighbours.
+type namedFunction struct {
+	name string
+	body string
+}
+
+// functionName reads the identifier off a top-level function declaration, so a
+// per-function ratification can name its subject. Empty when the line declares
+// no name — an anonymous default export, which cannot be ratified and so is
+// judged on what it draws.
+func declaredFunctionName(line string) string {
+	rest := topLevelFunction.ReplaceAllString(line, "")
+	end := strings.IndexAny(rest, "(<{ ")
+	if end <= 0 {
+		return ""
+	}
+	return rest[:end]
+}
+
+func topLevelFunctions(source string) []namedFunction {
+	var bodies []namedFunction
 	var current []string
+	name := ""
 	started := false
 	flush := func() {
 		if started {
-			bodies = append(bodies, strings.Join(current, "\n"))
+			bodies = append(bodies, namedFunction{name: name, body: strings.Join(current, "\n")})
 		}
 		current, started = nil, false
 	}
@@ -420,6 +457,9 @@ func topLevelFunctions(source string) []string {
 			// EmailSummary` — read as a component's use of one.
 			flush()
 			started = topLevelFunction.MatchString(line)
+			if started {
+				name = declaredFunctionName(line)
+			}
 		}
 		if started {
 			current = append(current, line)

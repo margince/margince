@@ -87,10 +87,74 @@ function rowFields(summary: EmailSummary, t: ReturnType<typeof useT>) {
       ? t("email.withheldSubject")
       : summary.subject?.trim() || t("email.noSubject"),
     who: direction ?? t("email.aMessage"),
-    preview: withheld ? null : summary.preview,
     move: withheld || summary.move === "none" ? null : MOVE_LABEL[summary.move],
     attachments: withheld ? 0 : summary.attachment_count,
   };
+}
+
+/**
+ * The WORDS of an email, and the one place that decides what they are.
+ *
+ * Two surfaces show them: this file's row, and a message inside a thread card
+ * on the record history. They are painted differently on purpose — a row's
+ * preview sits under its subject, a thread message's words ARE the row — but
+ * "which text is this message's words, and is there any" is one question, and
+ * it was being answered twice. The thread card read `preview` and drew its own
+ * span; when the rule here changed, that copy would not have followed.
+ *
+ * The rule: a withheld message has no words to show. The server's
+ * `display_status` is what says so — not a flag a caller passed alongside it,
+ * which can disagree with the summary it travels with. An empty `preview` on a
+ * readable message means the sender wrote nothing, so it draws nothing rather
+ * than a placeholder; the server composes this line, so emptiness is an answer
+ * and not a loading state.
+ *
+ * `place` rather than a className, because a design-system primitive that
+ * takes arbitrary classes is a layout its hosts own. Two places, both named
+ * here.
+ */
+export function EmailWords({
+  summary,
+  place,
+}: Readonly<{
+  summary: EmailSummary;
+  place: "row" | "thread";
+}>) {
+  if (summary.display_status === "withheld" || !summary.preview) {
+    return null;
+  }
+  return (
+    <span className={place === "row" ? "emailentry__preview" : "tl-msg-text"}>
+      {summary.preview}
+    </span>
+  );
+}
+
+/**
+ * WHO MAY READ an email, as a mark, and the one place that decides when the
+ * mark is worth drawing.
+ *
+ * `display_status` is the server's word and `VisibilityBadge`'s vocabulary
+ * contains every value of it, so neither surface re-derives a state. What they
+ * disagreed about was when to draw at all: a row prints it always, and a
+ * message inside a thread prints it only when it is not the open default,
+ * because a mark on every row of a conversation is decoration a reader learns
+ * to skip. Two rules, one question, and they lived in two files.
+ *
+ * `place` names which rule applies, so adding a third surface is a case here
+ * rather than a fourth opinion somewhere else.
+ */
+export function EmailVisibility({
+  summary,
+  place,
+}: Readonly<{
+  summary: EmailSummary;
+  place: "row" | "thread";
+}>) {
+  if (place === "thread" && summary.display_status === "team") {
+    return null;
+  }
+  return <VisibilityBadge state={summary.display_status} />;
 }
 
 /**
@@ -107,35 +171,6 @@ function rowFields(summary: EmailSummary, t: ReturnType<typeof useT>) {
  * exists to make unwritable.
  */
 type NoOpenReason = "noDetail" | "noReader";
-
-/**
- * EmailWords is a message's WORDS and nothing else — the server's own preview
- * line, with the signature and the quoted history already removed.
- *
- * It exists for the one host that has already drawn everything else: a thread
- * card places the conversation on the axis, says what kind it is and prints the
- * sender and the time on each member, so a member row needs the words alone.
- * EmailEntry there would be a second lead line and a second timestamp over the
- * card's own, and EmailReference carries no preview by design, so the words had
- * no canonical spelling and the card wrote its own.
- *
- * The reason it lives HERE rather than in the host is `rowFields`: a withheld
- * message loses its words, and that rule has to be spelled once. The host read
- * `preview` off the summary directly and took its withheld answer from a
- * different field on a different object, so the two could disagree about the
- * same message — which is the drift the canonical row exists to stop, arriving
- * by the one route the row could not cover.
- */
-export function EmailWords({ summary }: Readonly<{ summary: EmailSummary }>) {
-  const t = useT();
-  const { preview } = rowFields(summary, t);
-  // Nothing drawn rather than an empty line: the server composes this, so no
-  // preview means the sender wrote none — not that the row is still loading.
-  if (!preview) {
-    return null;
-  }
-  return <span className="emailentry__words">{preview}</span>;
-}
 
 export function EmailEntry({
   summary,
@@ -177,18 +212,9 @@ export function EmailEntry({
         <span className="emailentry__when">{timestamp}</span>
       </span>
       <span className="emailentry__subject">{row.subject}</span>
-      {/* No preview on a withheld row, and none invented when the message has
-          no text of its own: the server composes this line, so an empty one
-          means the sender wrote nothing rather than that the row is loading. */}
-      {row.preview && (
-        <span className="emailentry__preview">{row.preview}</span>
-      )}
+      <EmailWords summary={summary} place="row" />
       <span className="emailentry__marks">
-        {/* Who may read it, as the one mark the drawer and the contact panel
-            draw too. `display_status` is the server's word and the mark's
-            vocabulary contains every value of it, so the row prints the state
-            it was sent and never re-derives one. */}
-        <VisibilityBadge state={summary.display_status} />
+        <EmailVisibility summary={summary} place="row" />
         {row.move && <span className="emailentry__move">{t(row.move)}</span>}
         {row.attachments > 0 && (
           <span className="emailentry__files">

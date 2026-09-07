@@ -14,7 +14,6 @@ import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { useRecordWriteRefusal } from "../app/capability";
 import { PageAsideToggle, usePageAside } from "../app/pageaside";
-import { useRecordZone } from "../app/recordzone";
 import { navigate, useRoute } from "../app/router";
 import { useUrlParams } from "../app/urlstate";
 import { activityTimeline } from "../design-system/activitytimeline";
@@ -1057,15 +1056,7 @@ function LeadCall({
 // the next task on it. Neither is the agent's move — a lead carries no
 // suggestions — so both draw as to-dos the record already carries. A closed
 // lead is not worked and draws none.
-function leadTodoRows(
-  lead: Lead,
-  t: Translator,
-  locale: Locale,
-  // A task's DEADLINE is the record's day — the team agreed it and every
-  // colleague must quote the same one. The response clocks below stay on the
-  // reader's own: how long a lead has been waiting on them is about them.
-  recordZone: string,
-): ReactNode[] {
+function leadTodoRows(lead: Lead, t: Translator, locale: Locale): ReactNode[] {
   if (lead.archived_at) {
     return [];
   }
@@ -1101,7 +1092,7 @@ function leadTodoRows(
                       when: formatDateAbbrev(
                         lead.next_task_due_at,
                         locale,
-                        recordZone,
+                        zone,
                       ),
                     }),
                 tone: late ? "danger" : undefined,
@@ -1456,7 +1447,6 @@ function LeadOverviewPane({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
   // The verb the reader arrived to perform, named by the address rather than
   // guessed: a caller that sends somebody here to log a call says so, and the
   // composer opens on that kind instead of on a note the reader has to change.
@@ -1503,7 +1493,7 @@ function LeadOverviewPane({
           onOpenEmail={onOpenEmail}
         />
         <TodayPanel onOpenTasks={() => navigate({ screen: "worklist" })}>
-          {leadTodoRows(lead, t, locale, recordZone)}
+          {leadTodoRows(lead, t, locale)}
         </TodayPanel>
         <RecordReadingPair>
           <LeadScoreCard

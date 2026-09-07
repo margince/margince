@@ -19,6 +19,7 @@ import {
 } from "../design-system/recordpicker";
 import { Select } from "../design-system/select";
 import { calendarDay, dueInstant, middayInstant } from "../format/calendarday";
+import { viewerZone } from "../format/timezone";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { entityTimelineKeys, taskWriteKeys } from "./activitykeys";
@@ -71,15 +72,16 @@ type OpeningKind = "note" | "task" | "call";
 // change it instead of being assumed at submit behind an empty box.
 //
 // Which zone that is follows what the day MEANS, the same split the draft's
-// `day` field carries. Every kind this form writes files against the record's
-// clock: a note or meeting lands under a heading on the record's timeline, and
-// a task's due date is a deadline colleagues read back, minted by `dueInstant`
-// in that same zone and rendered there. Offering a day from the browser's zone
-// instead names a day the entry does not land on — an afternoon in Los Angeles
-// is already tomorrow on a Berlin clock, so a writer offered their own today,
-// accepting it, watched the entry file under the day after.
-function todayDay(_kind: ActivityDraft["kind"], recordZone: string): string {
-  return calendarDay(new Date(), recordZone);
+// `day` field carries. A note or meeting files under a heading on the record's
+// timeline, grouped in the record zone, so the day it can be offered is the record's
+// today; a task's day is a personal due date, minted by `dueInstant` in the
+// browser's zone and rendered there, so its today is the writer's own. Offer a
+// day from the other zone and the composer names a day the entry does not land
+// on: an afternoon in Los Angeles is already tomorrow on a Berlin clock, so a
+// writer offered their own today, accepting it, watched the entry file under the
+// day after.
+function todayDay(kind: ActivityDraft["kind"], recordZone: string): string {
+  return calendarDay(new Date(), kind === "task" ? viewerZone() : recordZone);
 }
 
 // Whether a Select's answer is a kind this form writes.
@@ -180,13 +182,14 @@ function activityRequestBody(
     subject: input.subject.trim(),
     body: outgoingBody || null,
     occurred_at: occurredInstant(input, recordZone),
-    // A due date becomes the instant that day ENDS on the RECORD's clock
-    // (format/calendarday), which is the same zone the worklist buckets
-    // overdue in and the same one the task detail renders. Minting it in the
-    // writer's own zone instead is what let an approved 9 September come back
-    // as a task due the 10th for a colleague sitting further east.
+    // A due date becomes the instant that day ENDS in the writer's
+    // own zone (format/calendarday). Handing the bare `yyyy-mm-dd` to
+    // `new Date` reads it as UTC midnight instead, which is neither the
+    // end of the day nor, west of UTC, the day the writer picked: the task
+    // arrived already overdue, and the tasks list — which buckets in the
+    // reader's zone — filed it under yesterday.
     ...(input.kind === "task" && input.day
-      ? { due_at: dueInstant(input.day, recordZone) }
+      ? { due_at: dueInstant(input.day) }
       : {}),
     // Held: a hand-logged meeting already took place (the date caps at
     // today), and held is what the lead ladder reads as engagement.
