@@ -51,8 +51,13 @@ func ForecastDeals(
 	// unset scope means they named nothing, which is a rep's own records and a
 	// manager's teams — never the installation, which is what this read
 	// answered before and why a rep's forecast was somebody else's.
+	//
+	// Excludes unowned rows even from the caller's own default: a forecast is
+	// a commitment number, and nobody has committed to a deal nobody has
+	// claimed. Widening it would make a manager's team total stop reconciling
+	// with the sum of naming each member by id.
 	resolved, populationClause, err := AnalyticsPopulationClause(
-		ctx, tx, requestedFromForecastScope(scope), "d", arg)
+		ctx, tx, requestedFromForecastScope(scope), "d", arg, unownedIsExcluded)
 	if err != nil {
 		return nil, forecasting.Scope{}, false, err
 	}

@@ -194,8 +194,10 @@ func forecastHistoryClauses(
 	if scopeClause == "" {
 		scopeClause = sqlUnnarrowed
 	}
+	// Excludes unowned rows even from the caller's own default — the same
+	// forecast-is-a-commitment reasoning ForecastDeals carries (forecastseam.go).
 	_, populationClause, err := AnalyticsPopulationClause(
-		ctx, tx, requestedFromForecastScope(scope), "d", arg)
+		ctx, tx, requestedFromForecastScope(scope), "d", arg, unownedIsExcluded)
 	if err != nil {
 		return "", "", err
 	}

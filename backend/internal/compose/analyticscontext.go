@@ -86,7 +86,8 @@ func analyticsContextFor(ctx context.Context, tx pgx.Tx, now time.Time) (crmcont
 		return crmcontracts.AnalyticsContext{}, errors.New("compose: no actor bound to context")
 	}
 
-	def, defClause, err := AnalyticsPopulationClause(ctx, tx, RequestedScope{}, "", func(any) int { return 0 })
+	def, defClause, err := AnalyticsPopulationClause(
+		ctx, tx, RequestedScope{}, "", func(any) int { return 0 }, unownedIsPartOfDefault)
 	if err != nil {
 		return crmcontracts.AnalyticsContext{}, err
 	}

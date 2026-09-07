@@ -134,6 +134,59 @@ func TestDealsByStageMeasuresTheReadersOwnPopulation(t *testing.T) {
 	}
 }
 
+// An unowned deal — the ordinary shape of one nobody has claimed yet — must
+// count toward a rep's own population the same way it counts toward their
+// ordinary, unscoped deal list: `owner_id = $me` matches nothing against a
+// NULL owner_id under ordinary SQL null semantics, so without an explicit
+// unowned-is-shared arm the deal would silently vanish from the rep's own
+// board while still sitting on their worklist one click away.
+func TestDealsByStageCountsAnUnownedDealForARep(t *testing.T) {
+	e := setupForecast(t)
+	e.seedOpenDeal(t, "Unowned", 60, nil, int64p(10000), stringp("commit"))
+	e.seedOpenDeal(t, "Mine", 60, &e.Rep1, int64p(5000), stringp("commit"))
+
+	rep := e.dealReadCtx(e.Rep1, nil, principal.RowScopeOwn)
+	result := e.runReport(rep, t, "deals-by-stage",
+		`{"group_by":["stage_id","currency"],"aggregates":[{"fn":"count","as":"deals"}]}`)
+	row := dealsByStageRow(t, result, e.stages[60].String())
+	if got := wireInt(t, row, "deals"); got != 2 {
+		t.Fatalf("deals = %d, want 2 (the rep's own deal AND the unowned one) — "+
+			"an unowned deal must not silently drop out of a rep's own population", got)
+	}
+}
+
+// The same unowned deal must count toward a TEAM manager's default
+// (ScopeKindManagedTeams) population too, for the identical reason.
+func TestDealsByStageCountsAnUnownedDealForATeamManager(t *testing.T) {
+	e := setupForecast(t)
+	e.seedOpenDeal(t, "Unowned", 60, nil, int64p(10000), stringp("commit"))
+
+	manager := e.dealReadCtx(ids.NewV7(), []ids.UUID{e.Team1}, principal.RowScopeTeam)
+	result := e.runReport(manager, t, "deals-by-stage",
+		`{"group_by":["stage_id","currency"],"aggregates":[{"fn":"count","as":"deals"}]}`)
+	row := dealsByStageRow(t, result, e.stages[60].String())
+	if got := wireInt(t, row, "deals"); got != 1 {
+		t.Fatalf("deals = %d, want 1 (the unowned deal) — a team manager's "+
+			"managed-teams population must also admit an unowned row", got)
+	}
+}
+
+// A deal owned by a real seat who shares none of the caller's teams stays
+// OUT of a team manager's population — the fix above widens for UNOWNED rows
+// only, never for somebody else's specifically-claimed work.
+func TestDealsByStageStillExcludesAnUnrelatedSeatsDealForATeamManager(t *testing.T) {
+	e := setupForecast(t)
+	e.seedOpenDeal(t, "Theirs", 60, &e.Rep3, int64p(20000), stringp("commit"))
+
+	manager := e.dealReadCtx(ids.NewV7(), []ids.UUID{e.Team1}, principal.RowScopeTeam)
+	result := e.runReport(manager, t, "deals-by-stage",
+		`{"group_by":["stage_id","currency"],"aggregates":[{"fn":"count","as":"deals"}]}`)
+	if len(result.Rows) != 0 {
+		t.Fatalf("Team1 manager saw %d rows, want 0 — Rep3's Team2 deal must stay "+
+			"outside Team1's population", len(result.Rows))
+	}
+}
+
 // The board's per-column totals need deals-by-stage to accept
 // every filter dial the board itself exposes, and to split a stage's total
 // by currency so a mixed-currency column can still decline to sum (the same
