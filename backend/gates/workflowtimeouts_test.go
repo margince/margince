@@ -28,6 +28,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"gopkg.in/yaml.v3"
@@ -43,17 +44,24 @@ const workflowDir = "../.github/workflows"
 type workflowJobs struct {
 	Jobs map[string]struct {
 		//nolint:tagliatelle // GitHub names this key, not us.
-		TimeoutMinutes int         `yaml:"timeout-minutes"`
-		Uses           string      `yaml:"uses"`
-		Steps          []yaml.Node `yaml:"steps"`
+		TimeoutMinutes int    `yaml:"timeout-minutes"`
+		Uses           string `yaml:"uses"`
+		Steps          []struct {
+			Name string `yaml:"name"`
+			Run  string `yaml:"run"`
+			//nolint:tagliatelle // GitHub names this key, not us.
+			TimeoutMinutes int `yaml:"timeout-minutes"`
+		} `yaml:"steps"`
 	} `yaml:"jobs"`
 }
 
-func TestEveryWorkflowJobCarriesATimeoutCeiling(t *testing.T) {
-	t.Parallel()
-	// Both extensions, because GitHub Actions honours both. Globbing one would
-	// leave the gate blind to a whole class of workflow — the precise hole a
-	// derived check exists to not have.
+// workflowFiles lists every workflow this repository runs.
+//
+// Both extensions, because GitHub Actions honours both. Globbing one would
+// leave a caller blind to a whole class of workflow — the precise hole a
+// derived check exists to not have.
+func workflowFiles(t *testing.T) []string {
+	t.Helper()
 	var files []string
 	for _, ext := range []string{"*.yml", "*.yaml"} {
 		found, err := filepath.Glob(filepath.Join(workflowDir, ext))
@@ -62,25 +70,38 @@ func TestEveryWorkflowJobCarriesATimeoutCeiling(t *testing.T) {
 		}
 		files = append(files, found...)
 	}
-	// A gate that scanned nothing would report exactly like a clean tree, which
-	// is the failure mode every derived check here has to close explicitly.
+	// A scan over nothing reports exactly like a clean tree, which is the
+	// failure mode every derived check here has to close explicitly.
 	if len(files) == 0 {
-		t.Fatalf("no workflows found under %s; this gate would pass vacuously", workflowDir)
+		t.Fatalf("no workflows found under %s; a gate reading them would pass vacuously", workflowDir)
 	}
+	return files
+}
 
-	for _, path := range files {
-		raw, err := os.ReadFile(path) // #nosec G304 -- a repo-relative workflow path from the glob above
-		if err != nil {
-			t.Fatalf("reading %s: %v", path, err)
-		}
-		var wf workflowJobs
-		if err := yaml.Unmarshal(raw, &wf); err != nil {
-			t.Fatalf("%s: %v", path, err)
-		}
-		if len(wf.Jobs) == 0 {
-			t.Errorf("%s declares no jobs; either it is not a workflow or this gate cannot see its jobs", filepath.Base(path))
-			continue
-		}
+// readWorkflowJobs decodes one workflow down to the jobs and steps THIS gate
+// judges. Five other gates in this package decode a workflow too, each to the
+// fields it reads and no further; the shared name is the reader, not the shape.
+func readWorkflowJobs(t *testing.T, path string) workflowJobs {
+	t.Helper()
+	raw, err := os.ReadFile(path) // #nosec G304 -- a repo-relative workflow path from the glob above
+	if err != nil {
+		t.Fatalf("reading %s: %v", path, err)
+	}
+	var wf workflowJobs
+	if err := yaml.Unmarshal(raw, &wf); err != nil {
+		t.Fatalf("%s: %v", path, err)
+	}
+	if len(wf.Jobs) == 0 {
+		t.Fatalf("%s declares no jobs; either it is not a workflow or these gates cannot see its jobs",
+			filepath.Base(path))
+	}
+	return wf
+}
+
+func TestEveryWorkflowJobCarriesATimeoutCeiling(t *testing.T) {
+	t.Parallel()
+	for _, path := range workflowFiles(t) {
+		wf := readWorkflowJobs(t, path)
 		for _, name := range slices.Sorted(maps.Keys(wf.Jobs)) {
 			job := wf.Jobs[name]
 			// A job that only CALLS a reusable workflow cannot carry a timeout
@@ -94,6 +115,68 @@ func TestEveryWorkflowJobCarriesATimeoutCeiling(t *testing.T) {
 					"a hang there holds a required check for a working day while reading as a queue backlog",
 					filepath.Base(path), name)
 			}
+		}
+	}
+}
+
+// The one command in this tree that installs from a package repository the
+// runner image does not pin. `--with-deps` shells out to apt inside the runner,
+// so it depends on a mirror nobody here controls, and a slow one hangs with no
+// output at all.
+const unpinnedInstall = "playwright install --with-deps"
+
+// A job ceiling bounds the damage; a step ceiling says WHERE.
+//
+// Without one, a stalled mirror spends the job's whole budget and reports
+// "the job was cancelled" — which reads as the lane being slow, and sends the
+// next person to the change under review. The change under review is never the
+// cause, because this step runs before a single test does.
+func TestTheUnpinnedInstallIsBoundedWhereverItRuns(t *testing.T) {
+	t.Parallel()
+
+	found := 0
+	for _, path := range workflowFiles(t) {
+		wf := readWorkflowJobs(t, path)
+		for _, name := range slices.Sorted(maps.Keys(wf.Jobs)) {
+			for _, step := range wf.Jobs[name].Steps {
+				if !strings.Contains(step.Run, unpinnedInstall) {
+					continue
+				}
+				found++
+				if step.TimeoutMinutes == 0 {
+					t.Errorf("%s: job %q, step %q installs from an unpinned package repository with no "+
+						"timeout-minutes of its own, so a stalled mirror spends the job's whole budget and "+
+						"reports as the lane timing out rather than as the install hanging",
+						filepath.Base(path), name, step.Name)
+				}
+			}
+		}
+	}
+	if found == 0 {
+		t.Errorf("no step in the workflow tree runs %q. Either it is gone — delete this gate with it — "+
+			"or the scan stopped matching, which reads exactly like a clean tree", unpinnedInstall)
+	}
+}
+
+// What the scan above cannot see is a step that reaches the same mirror by
+// another spelling, so the matcher is asserted in both directions on the
+// spellings it must and must not answer to.
+func TestTheInstallScanMatchesTheCommandAndNotItsNeighbours(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		run   string
+		bound bool
+	}{
+		{"pnpm exec playwright install --with-deps chromium", true},
+		{"pnpm install --frozen-lockfile\npnpm exec playwright install --with-deps chromium", true},
+		{"npx playwright install --with-deps", true},
+		{"pnpm exec playwright install chromium", false},
+		{"pnpm install --frozen-lockfile --ignore-scripts", false},
+		{"make frontend-e2e", false},
+	} {
+		if got := strings.Contains(tc.run, unpinnedInstall); got != tc.bound {
+			t.Errorf("%q: matched=%v, want %v", tc.run, got, tc.bound)
 		}
 	}
 }
