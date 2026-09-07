@@ -444,3 +444,124 @@ func TestCensusFillIsDeterministic(t *testing.T) {
 		}
 	}
 }
+
+// The census the abstention exists for: one printed name against two
+// registrations, stated across the locales of one site.
+//
+// A sighting that printed only an address contradicts nothing, so it accepted
+// the first registration to come along and then stood as the fold target for
+// the second. Two registry identities became one row carrying NEITHER number,
+// and the settled census that followed offered a human a company whose
+// registered identity was assembled from two.
+//
+// Across LOCALES, because within one page the sightings complete each other
+// (fillLegalDetailsFrom) and the anchor stops being numberless after the
+// first fold. Nothing completes a sighting across pages — an entity cites one
+// snippet, and a number borrowed from another page would be published quoting
+// a passage that never printed it.
+func TestOneNameAgainstTwoRegistrationsStaysTwoEntities(t *testing.T) {
+	entities := []corpusLegalEntity{
+		{Name: "Acme GmbH", RegisteredAddress: "Weg 1 11111 Ort", SourceURL: seedURL + "/impressum"},
+		{Name: "Acme GmbH", RegisterNumber: "HRB 111", SourceURL: seedURL + "/de/impressum"},
+		{Name: "Acme GmbH", RegisterNumber: "HRB 222", SourceURL: seedURL + "/en/imprint"},
+	}
+	got := dedupeLegalEntities(entities)
+	if len(got) < 2 {
+		t.Fatalf("two registry identities folded into one company: %+v", got)
+	}
+	registers := map[string]bool{}
+	for _, entity := range got {
+		registers[entity.RegisterNumber] = true
+	}
+	for _, want := range []string{"HRB 111", "HRB 222"} {
+		if !registers[want] {
+			t.Errorf("%s is gone from the census; the abstention can only refuse what it can see: %+v", want, got)
+		}
+	}
+	if abstention := legalAbstentionOf(got, false); abstention != legalAbstentionMultipleEntities {
+		t.Errorf("abstention = %q, want %q — this is the census that must not be answered without a human",
+			abstention, legalAbstentionMultipleEntities)
+	}
+}
+
+// The same shape one authority weaker. A page that prints tax identifiers and
+// no register entries has to reach the same verdict, or the guard is about the
+// column it was written against rather than about the identity.
+func TestOneNameAgainstTwoVatIdentifiersStaysTwoEntities(t *testing.T) {
+	entities := []corpusLegalEntity{
+		{Name: "Acme GmbH", RegisteredAddress: "Weg 1 11111 Ort", SourceURL: seedURL + "/impressum"},
+		{Name: "Acme GmbH", VatNumber: "DE111111111", SourceURL: seedURL + "/de/impressum"},
+		{Name: "Acme GmbH", VatNumber: "DE222222222", SourceURL: seedURL + "/en/imprint"},
+	}
+	got := dedupeLegalEntities(entities)
+	if len(got) < 2 {
+		t.Fatalf("two tax identities folded into one company: %+v", got)
+	}
+	if abstention := legalAbstentionOf(got, false); abstention != legalAbstentionMultipleEntities {
+		t.Errorf("abstention = %q, want %q", abstention, legalAbstentionMultipleEntities)
+	}
+}
+
+// The abstention counts entities. Two rows that survived dedupe under one
+// name are the case it is for, and counting names answered "one company" to
+// exactly that census.
+func TestTheAbstentionCountsEntitiesRatherThanNames(t *testing.T) {
+	sameName := []corpusLegalEntity{
+		{Name: "Acme GmbH", RegisterNumber: "HRB 111", SourceURL: seedURL + "/impressum"},
+		{Name: "Acme GmbH", RegisterNumber: "HRB 222", SourceURL: seedURL + "/impressum"},
+	}
+	if got := legalAbstentionOf(sameName, false); got != legalAbstentionMultipleEntities {
+		t.Errorf("two registrations printed under one name gave %q, want %q", got, legalAbstentionMultipleEntities)
+	}
+}
+
+// And the whole path, because the abstention is only worth having if the trio
+// it guards is actually withheld: applyLegalGate must strip the legal fields
+// on this census rather than publish one company's address as the other's.
+func TestTheLegalTrioIsWithheldWhenOneNameCarriesTwoRegistrations(t *testing.T) {
+	entities := dedupeLegalEntities([]corpusLegalEntity{
+		{Name: "Acme GmbH", RegisteredAddress: "Weg 1 11111 Ort", SourceURL: seedURL + "/impressum"},
+		{Name: "Acme GmbH", RegisterNumber: "HRB 111", SourceURL: seedURL + "/de/impressum"},
+		{Name: "Acme GmbH", RegisterNumber: "HRB 222", SourceURL: seedURL + "/en/imprint"},
+	})
+	fields := []evidencedField{
+		{Field: fieldRegisteredAddress, Value: "Weg 1 11111 Ort", SourceURL: seedURL + "/impressum"},
+	}
+	kinds := map[string]crmcontracts.SiteReadPageKind{
+		seedURL + "/impressum": crmcontracts.SiteReadPageKindImpressum,
+	}
+	kept, abstained, dropped := applyLegalGate(fields, entities, kinds, false)
+	if !abstained {
+		t.Fatalf("the gate answered a contested census without abstaining: %+v", entities)
+	}
+	if len(kept) != 0 {
+		t.Errorf("a legal field survived a contested census: %+v", kept)
+	}
+	if len(dropped) == 0 || dropped[0].Reason != string(legalAbstentionMultipleEntities) {
+		t.Errorf("the withheld field must name the cause that fired: %+v", dropped)
+	}
+}
+
+// The guard must not split a company that simply appears twice. Over-
+// correction here returns a census of duplicates and abstains on every
+// multi-locale imprint, which is the shape of guard that gets turned off.
+func TestARepeatedSightingWithNoIdentifierStillFolds(t *testing.T) {
+	entities := []corpusLegalEntity{
+		{Name: "Acme GmbH", RegisterNumber: "HRB 111", SourceURL: seedURL + "/impressum"},
+		{Name: "Acme GmbH", RegisterNumber: "HRB 222", SourceURL: seedURL + "/en/imprint"},
+		// A market heading repeated under both blocks, printing no identity.
+		{Name: "Acme Deutschland", SourceURL: seedURL + "/impressum"},
+		{Name: "Acme Deutschland", SourceURL: seedURL + "/de/impressum"},
+	}
+	got := dedupeLegalEntities(entities)
+	headings := 0
+	for _, entity := range got {
+		if legalEntityNameKey(entity.Name) == legalEntityNameKey("Acme Deutschland") {
+			headings++
+		}
+	}
+	if headings != 1 {
+		t.Errorf("a repeated heading became %d entities; sightings carrying nothing to tell apart fold: %+v",
+			headings, got)
+	}
+}
