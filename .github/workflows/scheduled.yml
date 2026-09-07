@@ -517,8 +517,11 @@ jobs:
       # The browser only. `make bench-mobile-check` runs the install and the
       # build itself, so doing them here as well would install twice and leave
       # two spellings of the lane's setup to drift apart.
+      # Bounded because `--with-deps` shells out to apt inside the runner, and
+      # an unresponsive mirror hangs with no output.
       - name: Install the Playwright Chromium browser
         working-directory: frontend
+        timeout-minutes: 6
         run: pnpm exec playwright install --with-deps chromium
       # The step separates "the budget breached" from "the lane could not run",
       # exactly as perf-budgets does and for the same reason: a failed install,

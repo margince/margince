@@ -1058,13 +1058,20 @@ jobs:
           node-version: 24
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
-      - name: Install deps and the Playwright Chromium browser
+      - name: Install deps
         working-directory: frontend
         # --ignore-scripts (githubactions:S6505): no lifecycle scripts run at
         # install; esbuild ships prebuilt platform binaries as optional deps.
-        run: |
-          pnpm install --frozen-lockfile --ignore-scripts
-          pnpm exec playwright install --with-deps chromium
+        timeout-minutes: 5
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      # SEPARATE from the install above, and bounded, because `--with-deps`
+      # shells out to apt inside the runner: an unresponsive mirror hangs with
+      # no output, and a hang folded into the previous step reaches a reader as
+      # "the lane timed out" rather than "the package repository did".
+      - name: Install the Playwright Chromium browser
+        working-directory: frontend
+        timeout-minutes: 6
+        run: pnpm exec playwright install --with-deps chromium
       - name: Screen-acceptance UAT (build → preview → AC + axe)
         run: make frontend-e2e
 
