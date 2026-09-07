@@ -63,8 +63,15 @@ const (
 
 	// StageVerdict.
 	ReasonAwaitingVerdict Reason = "awaiting_verdict"
-	ReasonVerdictReached  Reason = "verdict_reached"
 	ReasonNoOpenQuestion  Reason = "no_open_question"
+	// The verdict itself, one reason per answer. A single `verdict_reached`
+	// told a member that the one fact they opened the panel for exists, and
+	// not what it was — the same failure StatusNotReported's four kinds exist
+	// to avoid, on the rung a person came to read.
+	ReasonJudgedReal       Reason = "judged_real"
+	ReasonJudgedNoise      Reason = "judged_noise"
+	ReasonJudgedRejected   Reason = "judged_rejected"
+	ReasonJudgedSuppressed Reason = "judged_suppressed"
 
 	// StageAttentionLabel. Five ways the backlog excludes a message, because a
 	// ladder that says "reads email only" about an ARCHIVED email gives a wrong

@@ -15,6 +15,7 @@ import type { MessageKey } from "../i18n/en";
 import { useThreadAudience } from "./audienceservice";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 import { useOpenEmail } from "./openemail";
+import { VerdictPassNote } from "./verdictpass";
 
 // What this mailbox is holding back from the team, and the one press that
 // releases a thread.
@@ -69,6 +70,16 @@ export function HeldThreadsCard() {
             ) : (
               <>
                 <BacklogCallout rows={list.data} />
+                {/* Only where a row is actually waiting on the pass. A thread
+                    held because the model judged it personnel is not waiting
+                    for anything, and telling its owner when the next pass runs
+                    would promise a change that is not coming. */}
+                {list.data.some((row) => row.pending) && (
+                  <VerdictPassNote
+                    clock={list.thread_verdict}
+                    subject="threads"
+                  />
+                )}
                 <HeldThreadTable rows={list.data} />
               </>
             )

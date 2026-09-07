@@ -7,6 +7,7 @@ package compose
 // and how they overrule it.
 
 import (
+	"log/slog"
 	"net/http"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -22,6 +23,11 @@ import (
 type captureSenderHandlers struct {
 	db    *database.DB
 	store *capture.SenderOverrideStore
+	// threadPass answers when the confidentiality verdict next runs — what a
+	// `pending` row on this list is waiting for. Nil where the deployment
+	// composed no queue to ask, which answers with no time rather than a
+	// wrong one.
+	threadPass capture.VerdictPass
 }
 
 // ListCaptureSenders answers every decision made about the caller's senders.
@@ -56,6 +62,16 @@ func (h captureSenderHandlers) ListHeldThreads(w http.ResponseWriter, r *http.Re
 	}
 	for _, t := range threads {
 		out.Data = append(out.Data, toContractHeldThread(t))
+	}
+	if h.threadPass != nil {
+		pass, err := h.threadPass(r.Context())
+		if err != nil {
+			// The list is the answer; the clock is what makes waiting legible.
+			// A queue this read could not ask still leaves a page that works.
+			slog.WarnContext(r.Context(), "capture: reading the thread verdict schedule", "error", err)
+		} else {
+			out.ThreadVerdict = capture.VerdictClockResponse(pass)
+		}
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
 }

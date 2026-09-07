@@ -157,6 +157,48 @@ func TestTheAttentionRungCarriesTheReasonActivitiesGaveIt(t *testing.T) {
 	}
 }
 
+// Each settled ledger status renders as the verdict it IS, and carries the
+// moment it was reached.
+//
+// The rung used to report only that a verdict existed, which is the one fact a
+// member opening this panel already had. A status mapped to the wrong sentence
+// is invisible to the vocabulary gate — that holds the SET of statuses the fold
+// names, not which answer each is — so the pairing is asserted here.
+func TestASettledVerdictNamesWhichVerdictItWas(t *testing.T) {
+	reached := time.Date(2026, 8, 16, 10, 30, 0, 0, time.UTC)
+	for status, want := range map[string]trace.Reason{
+		capture.PendingStatusReal:       trace.ReasonJudgedReal,
+		capture.PendingStatusNoise:      trace.ReasonJudgedNoise,
+		capture.PendingStatusRejected:   trace.ReasonJudgedRejected,
+		capture.PendingStatusSuppressed: trace.ReasonJudgedSuppressed,
+	} {
+		stored := ladderWith(row(trace.StageTierLadder, "deferred", ""))
+		stored.Rungs[0].Resolution = &capture.TraceResolution{Status: status, ResolvedAt: &reached}
+		got := (&Assembler{}).rung(reg(t, trace.StageVerdict),
+			view{stored: stored, owned: true}, nil)
+		if got.Status != trace.StatusDone || got.Reason != want {
+			t.Errorf("a %q verdict rendered as %q/%q, want %q/%q",
+				status, got.Status, got.Reason, trace.StatusDone, want)
+		}
+		if got.At == nil || !got.At.Equal(reached) {
+			t.Errorf("a %q verdict reports %v as the moment it was reached, want %v", status, got.At, reached)
+		}
+	}
+}
+
+// An OPEN status is still a wait, and says so rather than naming a verdict.
+func TestAnOpenQuestionIsReportedAsAWaitAndNotAsAVerdict(t *testing.T) {
+	for _, status := range []string{capture.PendingStatusPending, capture.PendingStatusUnsure} {
+		stored := ladderWith(row(trace.StageTierLadder, "deferred", ""))
+		stored.Rungs[0].Resolution = &capture.TraceResolution{Status: status}
+		got := (&Assembler{}).rung(reg(t, trace.StageVerdict),
+			view{stored: stored, owned: true}, nil)
+		if got.Status != trace.StatusPending || got.Reason != trace.ReasonAwaitingVerdict {
+			t.Errorf("a %q question rendered as %q/%q, want the wait", status, got.Status, got.Reason)
+		}
+	}
+}
+
 func TestAnUnrecognisedVerdictIsNotReadAsAReachedOne(t *testing.T) {
 	// A ledger status a newer binary writes. Reporting it as a reached verdict
 	// would tell a member their sender was judged when they were not.

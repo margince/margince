@@ -180,10 +180,12 @@ func verdictRung(out Rung, v view) Rung {
 	switch {
 	case trace.IsOpenDisposition(resolution.Status):
 		out.Status, out.Reason = trace.StatusPending, trace.ReasonAwaitingVerdict
-	case isSettledDisposition(resolution.Status):
-		out.Status, out.Reason = trace.StatusDone, trace.ReasonVerdictReached
 	default:
-		return unavailable(out)
+		judged, settled := settledVerdictReason(resolution.Status)
+		if !settled {
+			return unavailable(out)
+		}
+		out.Status, out.Reason = trace.StatusDone, judged
 	}
 	if resolution.ResolvedAt != nil {
 		out.At = stamp(*resolution.ResolvedAt)
@@ -266,22 +268,32 @@ func unavailable(out Rung) Rung {
 	return out
 }
 
-// isSettledDisposition names the ledger states that ARE an answer.
+// settledVerdictReason names the ledger states that ARE an answer, and says
+// WHICH answer each one is.
 //
 // It reads capture's own constants rather than restating them: the ledger owns
 // this vocabulary, and a literal copy here is the drift the trace exists to
 // expose, reproduced inside the trace.
 //
 // Listed rather than derived as "not open", so a status added to the ledger
-// reaches the default branch and reports that we cannot tell, instead of being
-// read as a verdict nobody reached.
-func isSettledDisposition(status string) bool {
+// falls through and reports that we cannot tell, instead of being read as a
+// verdict nobody reached.
+//
+// One reason per verdict rather than one for all four: the rung used to say a
+// verdict had been reached and stop there, which is the one fact a member
+// opening this panel already knew.
+func settledVerdictReason(status string) (trace.Reason, bool) {
 	switch status {
-	case capture.PendingStatusReal, capture.PendingStatusNoise,
-		capture.PendingStatusRejected, capture.PendingStatusSuppressed:
-		return true
+	case capture.PendingStatusReal:
+		return trace.ReasonJudgedReal, true
+	case capture.PendingStatusNoise:
+		return trace.ReasonJudgedNoise, true
+	case capture.PendingStatusRejected:
+		return trace.ReasonJudgedRejected, true
+	case capture.PendingStatusSuppressed:
+		return trace.ReasonJudgedSuppressed, true
 	default:
-		return false
+		return "", false
 	}
 }
 

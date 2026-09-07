@@ -16,6 +16,8 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
+import { formatDateTime } from "../format/format";
+import { viewerZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { CaptureActivityTab } from "./capture-activity";
 
@@ -27,6 +29,11 @@ const ROW = {
   id: "01930000-0000-7000-8000-00000000c001",
   connector: "gmail",
   outcome: "internal",
+  // The bucket the server counts this row under, and what the screen filters
+  // on. Equal to `outcome` for every message whose sender raised no question;
+  // the two differ only where a verdict has since settled one, which is what
+  // the cases about the fold say for themselves.
+  outcome_now: "internal",
   reason: "internal_only",
   activity_id: null,
   resolution: null,
@@ -265,7 +272,14 @@ describe("capture activity", () => {
   it("explains a reason that changes what the outcome means", async () => {
     renderTab(
       windowBody({
-        data: [{ ...ROW, outcome: "deferred", reason: "deferral_capped" }],
+        data: [
+          {
+            ...ROW,
+            outcome: "deferred",
+            outcome_now: "deferred",
+            reason: "deferral_capped",
+          },
+        ],
       }),
     );
     // "Waiting on a verdict" alone would tell the reader to wait for an answer
@@ -299,7 +313,12 @@ describe("capture activity", () => {
     renderTab(
       windowBody({
         data: [
-          { ...ROW, outcome: "suppressed", reason: "transactional_infra" },
+          {
+            ...ROW,
+            outcome: "suppressed",
+            outcome_now: "suppressed",
+            reason: "transactional_infra",
+          },
         ],
       }),
     );
@@ -312,7 +331,14 @@ describe("capture activity", () => {
     // identifier; the honest answer is that this screen does not know.
     renderTab(
       windowBody({
-        data: [{ ...ROW, outcome: "captured", reason: "teleported" }],
+        data: [
+          {
+            ...ROW,
+            outcome: "captured",
+            outcome_now: "captured",
+            reason: "teleported",
+          },
+        ],
       }),
     );
     await openLog();
@@ -325,7 +351,14 @@ describe("capture activity", () => {
     // coming" is the screen contradicting itself.
     renderTab(
       windowBody({
-        data: [{ ...ROW, outcome: "deferred", reason: "deferral_capped" }],
+        data: [
+          {
+            ...ROW,
+            outcome: "deferred",
+            outcome_now: "deferred",
+            reason: "deferral_capped",
+          },
+        ],
       }),
     );
     const row = within(await screen.findByRole("list"));
@@ -333,17 +366,29 @@ describe("capture activity", () => {
     expect(row.queryByText(/waiting on a verdict/i)).not.toBeInTheDocument();
   });
 
-  it("labels the deferred bucket with what every message in it has in common", async () => {
-    // A bucket is one number over both the settled and the still-waiting, so a
-    // tense in its label is a claim it cannot support. "Waiting on a verdict"
-    // over a strip whose rows each say the verdict landed is the same
-    // contradiction the row avoids, one level up.
+  it("keeps the deferred bucket's tense, because the count is only the waiting", async () => {
+    // The bucket used to be one number over both the settled and the
+    // still-waiting, so a tense in its label was a claim it could not support
+    // and it read "Sent for a verdict" instead. The server now counts a judged
+    // sender's message under the answer, so `deferred` IS the waiting — and the
+    // label a person opens this page for is the one it could not say before.
     renderTab(
       windowBody({
+        funnel: {
+          captured: 1,
+          internal: 0,
+          suppressed: 0,
+          deferred: 1,
+          fault: 0,
+        },
         data: [
           {
             ...ROW,
             outcome: "deferred",
+            // Judged real: the pipeline deferred it, the verdict settled it,
+            // and the server counts it under `captured` rather than leaving it
+            // in a bucket labelled as waiting.
+            outcome_now: "captured",
             reason: null,
             resolution: {
               status: "real",
@@ -355,8 +400,215 @@ describe("capture activity", () => {
       }),
     );
     const funnel = within(await screen.findByTestId("capture-activity-funnel"));
-    expect(funnel.getByText(/sent for a verdict/i)).toBeInTheDocument();
-    expect(funnel.queryByText(/waiting on a verdict/i)).not.toBeInTheDocument();
+    expect(
+      funnel.getByText(/waiting on a sender verdict/i),
+    ).toBeInTheDocument();
+    expect(funnel.queryByText(/sent for a verdict/i)).not.toBeInTheDocument();
+  });
+
+  it("says when the sender pass runs while messages are waiting on it", async () => {
+    // The complaint this answers: a freshly connected mailbox shows every
+    // message waiting, and nothing on the screen says when that changes — so
+    // the only readings available are "broken" and "slow", and the pipeline is
+    // neither. The cadence comes off the wire, from the job's own declaration,
+    // rather than being written down beside the screen where it would drift
+    // from the clock the worker actually keeps.
+    renderTab(
+      windowBody({
+        funnel: {
+          captured: 0,
+          internal: 0,
+          suppressed: 0,
+          deferred: 3,
+          fault: 0,
+        },
+        sender_verdict: {
+          every_seconds: 3600,
+          running: false,
+          queued: false,
+          next_pass_at: "2026-08-15T22:21:00Z",
+        },
+      }),
+    );
+    const note = await screen.findByTestId("verdict-pass-senders");
+    expect(note).toHaveTextContent(/every 60 minutes/i);
+    // The TIME itself, not only the label around it: a note that dropped the
+    // timestamp, or printed a raw ISO string, would satisfy "next pass" and
+    // tell the reader nothing.
+    //
+    // Computed through the same formatter rather than written out, because a
+    // literal would be a claim about the runner's zone — the reader's own is
+    // what the component renders in, and a test that pinned one would pass in
+    // CI and fail on a laptop east of UTC.
+    expect(note).toHaveTextContent(
+      formatDateTime("2026-08-15T22:21:00Z", "en", viewerZone()),
+    );
+  });
+
+  it("says a pass is running rather than naming a time it is already past", async () => {
+    renderTab(
+      windowBody({
+        funnel: {
+          captured: 0,
+          internal: 0,
+          suppressed: 0,
+          deferred: 3,
+          fault: 0,
+        },
+        sender_verdict: {
+          every_seconds: 3600,
+          running: true,
+          queued: false,
+          next_pass_at: "2026-08-15T22:21:00Z",
+        },
+      }),
+    );
+    const note = await screen.findByTestId("verdict-pass-senders");
+    expect(note).toHaveTextContent(/a pass is running now/i);
+    expect(note).not.toHaveTextContent(/next pass/i);
+  });
+
+  it("says a pass is due rather than naming a moment that has gone", async () => {
+    // A run River has made runnable carries a scheduled_at in the PAST, so the
+    // honest answer is that it is due — not a time, and not "running", which
+    // would claim a worker has it. It is also what tells a slow installation
+    // from a stopped one: work sitting queued is a worker that is not running.
+    renderTab(
+      windowBody({
+        funnel: {
+          captured: 0,
+          internal: 0,
+          suppressed: 0,
+          deferred: 3,
+          fault: 0,
+        },
+        sender_verdict: {
+          every_seconds: 3600,
+          running: false,
+          queued: true,
+          next_pass_at: null,
+        },
+      }),
+    );
+    const note = await screen.findByTestId("verdict-pass-senders");
+    expect(note).toHaveTextContent(/due and waiting/i);
+    expect(note).not.toHaveTextContent(/next pass/i);
+  });
+
+  it("prints the cadence alone when the next moment is not knowable", async () => {
+    // A deployment that has never run this pass has no row to schedule from and
+    // no last run to project off, so there is no next moment to name — but how
+    // often it runs is still known, and it is the half the reader is asking for.
+    // Dropping the whole note here would make a fresh install the one place that
+    // says nothing about the wait it is longest in.
+    renderTab(
+      windowBody({
+        funnel: {
+          captured: 0,
+          internal: 0,
+          suppressed: 0,
+          deferred: 3,
+          fault: 0,
+        },
+        sender_verdict: {
+          every_seconds: 3600,
+          running: false,
+          queued: false,
+          next_pass_at: null,
+        },
+      }),
+    );
+    const note = await screen.findByTestId("verdict-pass-senders");
+    expect(note).toHaveTextContent(/every 60 minutes/i);
+    expect(note).not.toHaveTextContent(/next pass/i);
+    expect(note).not.toHaveTextContent(/running now/i);
+    expect(note).not.toHaveTextContent(/due and waiting/i);
+  });
+
+  it("says nothing about a pass when nothing is waiting on it", async () => {
+    // The note is the exception, not the furniture. A cadence over a window
+    // with nothing outstanding is a line a reader learns to skip, and the day
+    // it matters they skip it then too.
+    renderTab(
+      windowBody({
+        funnel: {
+          captured: 4,
+          internal: 0,
+          suppressed: 0,
+          deferred: 0,
+          fault: 0,
+        },
+        sender_verdict: {
+          every_seconds: 3600,
+          running: false,
+          queued: false,
+          next_pass_at: "2026-08-15T22:21:00Z",
+        },
+      }),
+    );
+    await screen.findByTestId("capture-activity-funnel");
+    expect(
+      screen.queryByTestId("verdict-pass-senders"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("says nothing about a pass this deployment cannot time", async () => {
+    // A server too old to send the clock, or one that composed no queue to ask.
+    // Silence is the honest answer; an invented time is worse than none.
+    renderTab(
+      windowBody({
+        funnel: {
+          captured: 0,
+          internal: 0,
+          suppressed: 0,
+          deferred: 3,
+          fault: 0,
+        },
+      }),
+    );
+    await screen.findByTestId("capture-activity-funnel");
+    expect(
+      screen.queryByTestId("verdict-pass-senders"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("filters on the bucket the counters use, not on what was recorded", async () => {
+    // The filter label reads "Showing N of M <outcome>", with N from the rows
+    // and M from the tiles. Counting the two different ways is what put
+    // "Showing 49 of 49 Waiting on a verdict" over forty-nine rows each
+    // reading "judged noise".
+    const user = userEvent.setup();
+    renderTab(
+      windowBody({
+        funnel: {
+          captured: 0,
+          internal: 0,
+          suppressed: 1,
+          deferred: 0,
+          fault: 0,
+        },
+        data: [
+          {
+            ...ROW,
+            outcome: "deferred",
+            outcome_now: "suppressed",
+            reason: null,
+            resolution: {
+              status: "noise",
+              kind: "newsletter",
+              resolved_at: "2026-08-15T09:13:00Z",
+            },
+          },
+        ],
+      }),
+    );
+    await openLog();
+    await user.click(
+      screen.getByRole("button", { name: /^no person created/i }),
+    );
+    expect(
+      await screen.findByText(/showing 1 of 1 no person created/i),
+    ).toBeInTheDocument();
   });
 
   it("does not say a settled deferral is still waiting for its verdict", async () => {
@@ -369,6 +621,7 @@ describe("capture activity", () => {
           {
             ...ROW,
             outcome: "deferred",
+            outcome_now: "deferred",
             reason: null,
             resolution: {
               status: "real",
@@ -394,6 +647,7 @@ describe("capture activity", () => {
           {
             ...ROW,
             outcome: "deferred",
+            outcome_now: "deferred",
             reason: null,
             resolution: { status: "pending", kind: null, resolved_at: null },
           },
@@ -401,7 +655,9 @@ describe("capture activity", () => {
       }),
     );
     const row = within(await screen.findByRole("list"));
-    expect(row.getByText(/waiting on a verdict/i)).toBeInTheDocument();
+    // And it names WHICH verdict. Two run on this pipeline, ten minutes and an
+    // hour apart, and "waiting on a verdict" named neither.
+    expect(row.getByText(/waiting on a sender verdict/i)).toBeInTheDocument();
   });
 
   // What a rep meets on this page, in order. The block list is the one control
@@ -476,6 +732,7 @@ describe("the pipeline drill-down", () => {
             ...ROW,
             id: "01930000-0000-7000-8000-00000000c002",
             outcome: "captured",
+            outcome_now: "captured",
             reason: null,
           },
         ],
@@ -544,6 +801,7 @@ describe("the pipeline drill-down", () => {
           {
             ...ROW,
             outcome: "captured",
+            outcome_now: "captured",
             reason: null,
             activity_id: "01930000-0000-7000-8000-00000000d001",
             counterparty: "dana@acme.test",
@@ -582,6 +840,7 @@ describe("the pipeline drill-down", () => {
           {
             ...ROW,
             outcome: "captured",
+            outcome_now: "captured",
             reason: null,
             activity_id: null,
             counterparty: "dana@acme.test",
