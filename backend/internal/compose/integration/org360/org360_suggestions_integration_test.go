@@ -19,12 +19,14 @@ package org360
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -363,8 +365,14 @@ func TestBothReadersOfTheDismissalLedgerGateOnTheAccount(t *testing.T) {
 	// The premise: this seat holds organization:read and still cannot see THIS
 	// account. Without it the assertions below prove only that a caller holding
 	// nothing is refused.
-	if _, err := svc.UndismissedAdvice(stranger, org); err == nil {
-		t.Fatal("the reader can see the account, so neither arm below is a test of the gate")
+	//
+	// NOT-FOUND specifically, in both arms. An account the caller may not see
+	// must not answer "denied" — that tells them it exists — and asserting only
+	// that SOME error came back would pass for a transaction that failed, a
+	// grant checked with the wrong verb, or a gate that refuses everybody.
+	if _, err := svc.UndismissedAdvice(stranger, org); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("UndismissedAdvice = %v, want not-found — the reader can see the account, "+
+			"so neither arm below is a test of the gate", err)
 	}
 
 	// One suggestion in hand, as a caller would pass it. Its content does not
@@ -374,8 +382,24 @@ func TestBothReadersOfTheDismissalLedgerGateOnTheAccount(t *testing.T) {
 		Kind:        "stalled_deal",
 		Fingerprint: "stalled_deal:" + org.String(),
 	}}
-	if _, err := svc.KeepUndismissed(stranger, org, found); err == nil {
-		t.Error("KeepUndismissed answered about an account the caller cannot see, " +
-			"while UndismissedAdvice beside it refused the same reader")
+	if _, err := svc.KeepUndismissed(stranger, org, found); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("KeepUndismissed = %v, want not-found — it answered about an account the caller "+
+			"cannot see, while UndismissedAdvice beside it refused the same reader", err)
+	}
+
+	// The positive control. The SAME reader, once the account is no longer
+	// private, gets an answer from both — so the refusal above is about
+	// visibility and not a gate that turns everyone away.
+	e.WsExec(t, `UPDATE organization SET visibility = 'workspace' WHERE id = $1`, org.UUID)
+	if _, err := svc.UndismissedAdvice(stranger, org); err != nil {
+		t.Fatalf("UndismissedAdvice on a visible account: %v", err)
+	}
+	kept, err := svc.KeepUndismissed(stranger, org, found)
+	if err != nil {
+		t.Fatalf("KeepUndismissed on a visible account: %v", err)
+	}
+	if len(kept) != 1 {
+		t.Errorf("kept %d of 1 suggestions on a visible account — nothing was dismissed, "+
+			"so the filter must return what it was given", len(kept))
 	}
 }
