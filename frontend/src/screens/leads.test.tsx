@@ -24,6 +24,7 @@ import {
   scoreTone,
   terminalBadge,
 } from "./leads";
+import { WriteToHost } from "./writeto";
 
 // The status/score-override/assign-to-me controls (Phase 4) resolve the
 // session principal via /v1/me, which needs a workspace slug before it will
@@ -91,7 +92,11 @@ function render(ui: ReactNode) {
         {/* The region is the shell's in the running app (`main.tsx`); a suite whose
           subject is what a write SAYS mounts it the same way. */}
         <ToastProvider>
-          <RecordShell>{ui}</RecordShell>
+          {/* The composer host is the shell's too (`App.tsx`): the header's
+              address is a button into it. */}
+          <WriteToHost>
+            <RecordShell>{ui}</RecordShell>
+          </WriteToHost>
           <ToastRegion />
         </ToastProvider>
       </LocaleProvider>
@@ -2412,5 +2417,25 @@ describe("LeadScreen — the header's Email verb", () => {
     const verb = await screen.findByRole("button", { name: "Email" });
     expect(verb.querySelector(".lucide-mail")).toBeTruthy();
     expect(verb.hasAttribute("disabled")).toBe(false);
+  });
+
+  it("opens the composer on the lead from the header's address, already addressed", async () => {
+    // The address is a BUTTON into the product's composer and not a link
+    // for the reader's mail client: a message that left through `mailto:`
+    // was never filed on the lead.
+    stubFetchWithMe(async () => jsonResponse(lead));
+    render(<LeadScreen id="l-1" />);
+    const address = await screen.findByRole("button", {
+      name: "jonas@nordwind.example",
+    });
+    expect(address.hasAttribute("href")).toBe(false);
+    await userEvent.click(address);
+
+    const dialog = await screen.findByRole("dialog", { name: /Draft email/ });
+    expect(
+      await within(dialog).findByRole("button", {
+        name: "Remove jonas@nordwind.example",
+      }),
+    ).toBeTruthy();
   });
 });

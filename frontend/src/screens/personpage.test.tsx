@@ -307,6 +307,28 @@ describe("a moment action that opens the composer", () => {
     // inherit the reason the last rung left behind.
     expect(await intentValue()).toBe("");
   });
+
+  it("opens the same drawer from the address in the header, never a mail client", async () => {
+    // A third door, the same room. The address is a button into this page's
+    // own composer: a `mailto:` would have handed the address to the reader's
+    // mail client and the product would never have seen the message, and the
+    // shell's composer beside this page's would be the two drawers the page
+    // replaced.
+    const user = userEvent.setup();
+    mount("overview", { ...view, moment: quietMoment }, [mailAllowed]);
+
+    const header = await recordHeader();
+    const address = within(header).getByRole("button", {
+      name: "dana@brandt.example",
+    });
+    expect(address.hasAttribute("href")).toBe(false);
+    await user.click(address);
+
+    expect(
+      await screen.findByRole("dialog", { name: /Draft email/ }),
+    ).toBeTruthy();
+    expect(screen.getAllByRole("dialog").length).toBe(1);
+  });
 });
 
 // The reachability the record carries, and the conversation a reply would

@@ -33,6 +33,7 @@ import {
   companyEditFields,
   mapOrgUpdate,
 } from "./organizations";
+import { WriteToHost } from "./writeto";
 
 // The same P-14/15/16/1 shared-block wiring as contacts
 // (people.test.tsx) — search/sort/pagination, the rich create modal
@@ -57,7 +58,11 @@ function render(ui: ReactNode) {
   return rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <RecordShell>{ui}</RecordShell>
+        {/* The composer host is the shell's in the running app (`App.tsx`);
+            the people cards' addresses are buttons into it. */}
+        <WriteToHost>
+          <RecordShell>{ui}</RecordShell>
+        </WriteToHost>
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -2184,14 +2189,13 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     );
 
     // The address is its own control, a sibling of the name rather than
-    // nested inside it: a link inside a link is a press whose destination
-    // nobody can predict.
-    const write = screen.getAllByRole("link", {
+    // nested inside it: a control inside a link is a press whose destination
+    // nobody can predict. A button, into the product's composer, and never
+    // a link the reader's own mail client would take.
+    const write = screen.getAllByRole("button", {
       name: "anna.brandt@brandt-automotive.de",
     })[0];
-    expect(write.getAttribute("href")).toBe(
-      "mailto:anna.brandt@brandt-automotive.de",
-    );
+    expect(write.hasAttribute("href")).toBe(false);
     expect(name.contains(write)).toBe(false);
   });
 

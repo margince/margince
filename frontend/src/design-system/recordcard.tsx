@@ -17,7 +17,7 @@
  * readable, and `EntityRef` stays the shape there.
  *
  * The card is NOT the link. The name is, and so is each handle beside it —
- * a card-wide anchor with a `mailto:` inside it is a control inside a control,
+ * a card-wide anchor with a button inside it is a control inside a control,
  * which `nested-interactive` fails and which leaves a reader unable to say
  * which of the two a press will take. So the mark and the name share one
  * generous target, and every other affordance is its own.
@@ -47,11 +47,12 @@ export function RecordCard({
   // The record's own page.
   href: string;
   /**
-   * What the mark's tint is derived from, when a stable id is at hand. Passed
-   * through to `Avatar`, which explains why a name is the poor key: renaming a
-   * record moves it to another colour on every screen at once.
+   * The record's own id. It keys the mark's tint through `Avatar`, which
+   * explains why a name is the poor key: renaming a record moves it to another
+   * colour on every screen at once. It is also what a message to the card's
+   * address is filed under, which is why it is not optional.
    */
-  identity?: string;
+  identity: string;
   /**
    * What this record is to the one listing it — a job title, what somebody
    * was at a former employer. A node rather than a string because the value
@@ -91,7 +92,11 @@ export function RecordCard({
           {position && <p className="record-card-position">{position}</p>}
           {email && (
             <p className="record-card-handles">
-              <ContactLink kind="email" value={email} />
+              <ContactLink
+                kind="email"
+                value={email}
+                record={{ entityType: kind, entityId: identity }}
+              />
             </p>
           )}
         </div>
