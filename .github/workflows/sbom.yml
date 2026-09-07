@@ -103,7 +103,18 @@ jobs:
           path: sboms/
       - name: Sign SBOMs (keyless cosign)
         run: make sbom-sign
+      # Runs after a CANCELLED sign too, and that is the point. `make sbom-sign`
+      # writes a permanent Rekor entry before the bundle reaches disk, and this
+      # step publishes what reached it — so a job cancelled between the two
+      # would otherwise leave an entry in a public append-only log with no
+      # artifact referencing it. Nothing can un-write a Rekor entry; what is
+      # recoverable is whether a bundle exists to tie it back to.
+      #
+      # `success() || cancelled()`, not `always()`: a sign that genuinely FAILED
+      # has its own error, and an upload that then fails on `if-no-files-found`
+      # would put a second red mark on one cause.
       - name: Publish signatures
+        if: ${{ success() || cancelled() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: sbom-signatures
