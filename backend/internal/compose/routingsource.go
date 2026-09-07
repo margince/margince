@@ -316,8 +316,13 @@ func readStoredRouting(ctx context.Context, pool *pgxpool.Pool) (ai.RoutingConfi
 	return settings.Get(ctx, NewSettingsStore(pool), ai.Routing)
 }
 
-// singletonWorkspace resolves the one live workspace this installation is
-// (A107/ADR-0061), or the zero id when it has not been provisioned yet.
+// singletonWorkspace resolves the one live workspace this installation is, or
+// the zero id when it has not been provisioned yet.
+//
+// One installation is exactly one workspace. That is the rule every boot-time
+// read here rests on: the deployment file describes a single organization, so
+// "which workspace" has one answer or the installation is not one this code
+// can serve. ADR-0061.
 //
 // A multi-workspace database is refused at boot by EnsureInstallation, which
 // runs before this; taking the first here would be picking one of two answers
