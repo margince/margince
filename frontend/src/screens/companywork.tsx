@@ -477,45 +477,35 @@ function AttentionLine({
     : t("co.work.owesUsUnnamed", { body: attention.title });
   // The claim, with its receipt.
   //
-  // The receipt is the shared citation when the server sent one, and it
-  // decides for itself whether it opens: a message this reader may read opens
-  // the drawer, and anything else renders as what it is. The sentence stays
-  // prose beside it — it used to BE the button, and pressing it called
-  // onOpenRecord("activity", …), a kind that routes nowhere, so the control
-  // had never once opened anything since the row was written.
+  // The receipt is the shared citation, which decides for itself whether it
+  // opens: a message this reader may read opens the drawer, and anything else
+  // renders as what it is. The sentence stays prose beside it — it used to BE
+  // the button, and pressing it called onOpenRecord("activity", ...), a kind
+  // that routes nowhere, so the control had never once opened anything since
+  // the row was written.
   //
-  // Without `source_evidence` this draws exactly what it drew before, for a
-  // server that predates the field. Still the same dead control on that path,
-  // and deliberately: changing what an old server renders is not this change's
-  // to make.
-  const source = attention.source_activity_id;
-  if (attention.source_evidence) {
+  // A server that sends no `source_evidence` renders the claim and no receipt.
+  // It cannot fall back to the old link: the account page's router deliberately
+  // stopped handling `activity` when a cited message learned to open, so that
+  // button is now guaranteed to do nothing. Drawing nothing is the honest
+  // answer, and the row still says what was promised and when it was due.
+  if (!attention.source_evidence) {
     return (
       <StatusLine tone={attention.due_at ? "warn" : undefined}>
         {sentence}
         {due && ` ${t("co.work.wasDue", { date: due })}`}
-        <Citations
-          evidence={[attention.source_evidence]}
-          onOpenRecord={onOpenRecord}
-          onOpenEmail={onOpenEmail}
-        />
       </StatusLine>
     );
   }
   return (
     <StatusLine tone={attention.due_at ? "warn" : undefined}>
-      {source && onOpenRecord ? (
-        <button
-          type="button"
-          className="co-rowlink"
-          onClick={() => onOpenRecord("activity", source)}
-        >
-          {sentence}
-        </button>
-      ) : (
-        sentence
-      )}
+      {sentence}
       {due && ` ${t("co.work.wasDue", { date: due })}`}
+      <Citations
+        evidence={[attention.source_evidence]}
+        onOpenRecord={onOpenRecord}
+        onOpenEmail={onOpenEmail}
+      />
     </StatusLine>
   );
 }

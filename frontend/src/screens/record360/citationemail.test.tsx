@@ -192,3 +192,29 @@ describe("a citation that is not a message", () => {
     expect(screen.queryByRole("button")).toBeNull();
   });
 });
+
+describe("one message cited twice", () => {
+  it("is drawn once, like every other repeated citation", () => {
+    // The chips have deduplicated by record since they were written; the
+    // message path was added beside them and did not. A brief resting four
+    // sentences on one thread drew the thread four times — and, because the
+    // key is the activity id, drew it four times under one React key.
+    renderCitations([citedEmail(), citedEmail()], { onOpenEmail: vi.fn() });
+
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+  });
+
+  it("still draws two DIFFERENT messages", () => {
+    // The guard on the guard: deduplicating on the wrong key would collapse
+    // these two as well, and the count above would not notice.
+    renderCitations(
+      [
+        citedEmail(),
+        citedEmail({ activity_id: "act-2", subject: "Second thread" }),
+      ],
+      { onOpenEmail: vi.fn() },
+    );
+
+    expect(screen.getAllByRole("button")).toHaveLength(2);
+  });
+});

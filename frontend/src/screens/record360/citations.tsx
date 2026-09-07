@@ -272,6 +272,24 @@ function dedupeCited(evidence: readonly Cited[]): CitedSibling[] {
   return out;
 }
 
+// The cited messages, once each, in the order the sentence names them.
+//
+// A message keeps whichever citation the server named FIRST: they are two
+// mentions of one activity, so the summary behind them is the same row read
+// once, and the later mention adds nothing to drop the earlier one for.
+function dedupeMessages(evidence: readonly Cited[]): Cited[] {
+  const seen = new Set<string>();
+  const out: Cited[] = [];
+  for (const cited of evidence) {
+    if (!emailOf(cited) || seen.has(cited.entity_id)) {
+      continue;
+    }
+    seen.add(cited.entity_id);
+    out.push(cited);
+  }
+  return out;
+}
+
 /**
  * What one chip says — the same answer whether or not it can be opened, which
  * is why it is decided once here.
@@ -353,7 +371,11 @@ export function Citations({
   // and never folded into the chip run. The chips speak in record kinds — "deal",
   // "3 activities" — and a message has a subject and a date the reader checks
   // the claim against, which a kind word cannot carry.
-  const messages = named.filter((cited) => emailOf(cited));
+  // Deduplicated the way the chips are, and for the same reason: the same
+  // record cited twice is one source. A brief resting four sentences on one
+  // thread would otherwise draw the message four times — and, because the key
+  // is the activity id, draw it four times under one React key.
+  const messages = dedupeMessages(named);
   const chips = citationChips(
     named.filter((cited) => !emailOf(cited)),
     (cited) =>

@@ -64,10 +64,18 @@ const project = {
   quiet: false,
 } as const;
 
-function draw(three60: Organization360, onOpenRecord: OpenRecord = () => {}) {
+function draw(
+  three60: Organization360,
+  onOpenRecord: OpenRecord = () => {},
+  onOpenEmail?: (activityId: string) => void,
+) {
   rtlRender(
     <LocaleProvider initial="en">
-      <CompanyWorkCard view={three60} onOpenRecord={onOpenRecord} />
+      <CompanyWorkCard
+        view={three60}
+        onOpenRecord={onOpenRecord}
+        onOpenEmail={onOpenEmail}
+      />
     </LocaleProvider>,
   );
 }
@@ -201,13 +209,66 @@ describe("the account's work in flight", () => {
     ).toBeTruthy();
   });
 
-  // The commitment's source is a MESSAGE, and pressing it must reach the
-  // handler as an activity. This button has existed since the row was written
-  // and did nothing: an activity had no detail route, so `useCitedReceipt`
-  // dropped it through both its branches. The email drawer is that route now,
-  // and this is the claim that says the button arrives.
-  it("routes a commitment's source to the message it came from", async () => {
-    const opened: Array<[string, string]> = [];
+  // The commitment's source is a MESSAGE, and the row must reach the drawer
+  // that opens it.
+  //
+  // A button here has existed since the row was written and did nothing: it
+  // called onOpenRecord("activity", ...), and an activity had no route, so
+  // `useCitedReceipt` dropped it through every branch. The route is the email
+  // drawer now, and the receipt reaches it through the shared citation — which
+  // needs the server's own email row to know the message can be opened at all.
+  it("opens the message a commitment was read from", async () => {
+    const opened: string[] = [];
+    draw(
+      view({
+        deals: {
+          data: [
+            {
+              ...deal,
+              attention: {
+                kind: "commitment_theirs",
+                title: "we'll confirm the depot slot once facilities sign off",
+                who: "Ida Keller",
+                due_at: null,
+                source_activity_id: "a-1",
+                source_evidence: {
+                  entity_type: "activity",
+                  entity_id: "a-1",
+                  email_summary: {
+                    activity_id: "a-1",
+                    subject: "Depot slot",
+                    preview: "we'll confirm once facilities sign off",
+                    occurred_at: "2026-08-01T09:00:00Z",
+                    direction: "inbound",
+                    counterparty: "Ida Keller",
+                    attachment_count: 0,
+                    move: "needs_reply",
+                    display_status: "team",
+                    version: 1,
+                  },
+                },
+              },
+            },
+          ],
+          page,
+          won_lifetime: { amount_minor: 0, currency: "EUR" },
+          lost_count: 0,
+        },
+      }),
+      () => {},
+      (activityId) => opened.push(activityId),
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: /Depot slot/ }));
+
+    expect(opened).toEqual(["a-1"]);
+  });
+
+  // An older server sends the id and no email row, and the client cannot tell
+  // an unreadable message from one this build simply was not told about. It
+  // draws the claim and no control — never the old button, which now routes
+  // nowhere and would teach a reader that receipts do not work.
+  it("offers nothing to press when the server sent no receipt", () => {
     draw(
       view({
         deals: {
@@ -228,14 +289,12 @@ describe("the account's work in flight", () => {
           lost_count: 0,
         },
       }),
-      (entityType, entityId) => opened.push([entityType, entityId]),
     );
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Ida Keller said/ }),
-    );
-
-    expect(opened).toEqual([["activity", "a-1"]]);
+    expect(screen.getByText(/Ida Keller said/)).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: /Ida Keller said/ }),
+    ).toBeNull();
   });
 
   it("shows the stall only when there is no reason that explains it", () => {
