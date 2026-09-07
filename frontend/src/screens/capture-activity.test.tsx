@@ -495,6 +495,36 @@ describe("capture activity", () => {
     expect(note).not.toHaveTextContent(/next pass/i);
   });
 
+  it("prints the cadence alone when the next moment is not knowable", async () => {
+    // A deployment that has never run this pass has no row to schedule from and
+    // no last run to project off, so there is no next moment to name — but how
+    // often it runs is still known, and it is the half the reader is asking for.
+    // Dropping the whole note here would make a fresh install the one place that
+    // says nothing about the wait it is longest in.
+    renderTab(
+      windowBody({
+        funnel: {
+          captured: 0,
+          internal: 0,
+          suppressed: 0,
+          deferred: 3,
+          fault: 0,
+        },
+        sender_verdict: {
+          every_seconds: 3600,
+          running: false,
+          queued: false,
+          next_pass_at: null,
+        },
+      }),
+    );
+    const note = await screen.findByTestId("verdict-pass-senders");
+    expect(note).toHaveTextContent(/every 60 minutes/i);
+    expect(note).not.toHaveTextContent(/next pass/i);
+    expect(note).not.toHaveTextContent(/running now/i);
+    expect(note).not.toHaveTextContent(/due and waiting/i);
+  });
+
   it("says nothing about a pass when nothing is waiting on it", async () => {
     // The note is the exception, not the furniture. A cadence over a window
     // with nothing outstanding is a line a reader learns to skip, and the day

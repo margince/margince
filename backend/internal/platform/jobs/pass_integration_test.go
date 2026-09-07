@@ -14,6 +14,8 @@ package jobs_test
 // prove the fixture rather than the query.
 
 import (
+	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -176,5 +178,29 @@ func TestAnUndeclaredKindHasNoCadence(t *testing.T) {
 	}
 	if pass.Every != 0 {
 		t.Errorf("cadence = %v for a kind api/jobs.yaml never declared", pass.Every)
+	}
+}
+
+// A READ THAT FAILED IS AN ERROR, not an answer.
+//
+// Both callers render what this returns, and a zero Pass renders as "no clock
+// runs this pass" — a sentence about the deployment, from a read that never
+// reached the table. The kind is in the message because two surfaces ask about
+// different ones and a log line that names neither cannot say which stopped.
+func TestAFailedReadIsAnErrorRatherThanASilentAbsenceOfAClock(t *testing.T) {
+	_, pool := migratedAppPool(t)
+	stopped, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	pass, err := jobs.PassFor(stopped, pool, aScheduledKind)
+	if err == nil {
+		t.Fatalf("a read on a cancelled context answered %+v and no error", pass)
+	}
+	if !strings.Contains(err.Error(), aScheduledKind) {
+		t.Errorf("error = %q, want the kind named so a log line says which pass could not be read", err)
+	}
+	if pass != (jobs.Pass{}) {
+		t.Errorf("pass = %+v beside an error, want the zero value — a caller that renders half a "+
+			"failed read prints the cadence of a pass nobody asked the queue about", pass)
 	}
 }

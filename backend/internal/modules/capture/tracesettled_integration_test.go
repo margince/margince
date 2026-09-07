@@ -16,6 +16,7 @@ package capture_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -162,6 +163,34 @@ func TestAnAnswerWithNoQueueReaderCarriesNoSchedule(t *testing.T) {
 	if body.SenderVerdict != nil {
 		t.Error("a deployment that composed no queue reader reported a schedule anyway — " +
 			"an invented next pass is worse than none")
+	}
+}
+
+// A QUEUE THIS READ COULD NOT ASK STILL LEAVES A SCREEN THAT WORKS.
+//
+// The window is the answer and the clock is decoration on it, so a schedule
+// read that fails must cost the reader the sentence and not the page. Failing
+// the whole read instead would take the counters away over a field nobody
+// asked for, and on the deployment where the queue is the thing that is broken
+// that is the screen an operator is trying to look at.
+func TestAScheduleReadThatFailsStillAnswersWithTheWindow(t *testing.T) {
+	ctx, ws, db, _ := traceReadWorkspace(t)
+	me := ids.NewV7()
+	memberCtx := memberContext(ctx, ws, me)
+	seedTrace(memberCtx, t, db, me, "unreadable-clock", 0)
+
+	refused := func(context.Context) (capture.VerdictClock, error) {
+		return capture.VerdictClock{}, errors.New("the queue is not readable from here")
+	}
+	body := readActivity(memberCtx, t, capture.NewTraceHandlers(capture.NewTraceStore(db), false, refused))
+
+	if body.SenderVerdict != nil {
+		t.Errorf("a failed schedule read reported %+v — a clock nothing answered for",
+			*body.SenderVerdict)
+	}
+	if len(body.Data) != 1 {
+		t.Errorf("the window carries %d rows, want the one seeded: the counters are the answer "+
+			"and a schedule nobody asked for must not take them away", len(body.Data))
 	}
 }
 
