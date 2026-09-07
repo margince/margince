@@ -102,6 +102,10 @@ export const PIPELINE_ADMIN: GrantSpec = {
 const ADMIN_GRANTS: GrantSpec = {
   ...PIPELINE_ADMIN,
   custom_field: ["read", "create", "update"],
+  // A seeded admin holds all four verbs on their own voice profile. It was
+  // absent while nothing asked — Writing voice opened for everybody — and its
+  // absence made this fixture describe an account the product never issues.
+  voice_profile: ["read", "create", "update", "delete"],
   // The consent registry's own gate (consent/store.go demands person:read),
   // which every seeded role holds. It is the floor a fixture standing in for a
   // real principal carries — but it no longer OPENS Privacy: that page asks

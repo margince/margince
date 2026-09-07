@@ -6138,6 +6138,22 @@ export const de = {
   // Überschrift wiederholt, benennt nichts.
   "settings.home": "Einstellungen-Start",
   "settings.home.yours": "Ihre Einstellungen",
+  "settings.home.manage": "Was Sie \u00e4ndern k\u00f6nnen",
+  "settings.home.manageSub":
+    "Einstellungen, f\u00fcr die Sie die Berechtigung haben.",
+  "settings.home.lookUp": "Was Sie nachschlagen k\u00f6nnen",
+  "settings.home.lookUpSub":
+    "Sie k\u00f6nnen diese lesen; das \u00c4ndern geh\u00f6rt nicht zu Ihrer Rolle.",
+  "settings.home.rolesLabel": "Ihre Rolle",
+  "settings.home.seatLabel": "Ihr Sitzplatz",
+  "settings.home.seat.full":
+    "Voller Sitzplatz \u2014 Sie k\u00f6nnen \u00c4nderungen vornehmen",
+  "settings.home.seat.read":
+    "Nur-Lese-Sitzplatz \u2014 Sie k\u00f6nnen sehen, nicht \u00e4ndern",
+  "settings.home.reachLabel": "Datens\u00e4tze, die Sie erreichen",
+  "settings.home.reach.own": "Ihre eigenen Datens\u00e4tze",
+  "settings.home.reach.team": "Die Datens\u00e4tze Ihres Teams",
+  "settings.home.reach.all": "Jeden Datensatz in der Organisation",
   "settings.home.access": "Ihr Zugriff",
   "settings.boundary.deniedTitle":
     "Diese Einstellungsseite steht Ihnen nicht offen",
@@ -6210,6 +6226,8 @@ export const de = {
   "settings.scopeAria": "Wen diese Seite betrifft: {scope}",
   "settings.scopeAriaMixed":
     "Diese Seite enth\u00e4lt Einstellungen, die unterschiedliche Personen betreffen \u2014 jede sagt es selbst.",
+  "settings.readOnlyPage":
+    "Sie k\u00f6nnen diese Einstellungen sehen, aber nicht \u00e4ndern \u2014 das \u00c4ndern geh\u00f6rt nicht zu Ihrer Rolle.",
   "settings.search.label": "Einstellungen durchsuchen",
   "settings.search.placeholder": "Einstellungen suchen",
   "settings.search.none": "Keine Einstellungsseite passt dazu.",

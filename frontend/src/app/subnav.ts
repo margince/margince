@@ -108,6 +108,14 @@ export type NavSection = {
   // below, because the trail is what the rail actually renders: a slot added to
   // one alone is a field nothing draws.
   lead?: ReactNode;
+  // The same thing for a host that must close itself once the lead has moved
+  // the reader — the phone-width section drawer, which is a full-screen sheet
+  // and would otherwise stay open over the page just opened.
+  //
+  // A second field rather than making `lead` a function: the rail has nothing
+  // to dismiss and would have to invent an empty callback, and `navTrail`
+  // carries `lead` down to a level that never wants this one.
+  leadFor?: (onPick: () => void) => ReactNode;
 };
 
 // The attention counts the rail badges. They ride the level rather than being

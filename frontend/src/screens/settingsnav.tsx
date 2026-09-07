@@ -39,6 +39,8 @@ import {
   SETTINGS_GROUPS as CATALOG_GROUPS,
   type SettingsPage,
   type SettingsPageId,
+  type SettingsReach,
+  settingsReach,
   visibleSettingsPages,
 } from "./settingscatalog";
 import { settingsRouteTarget } from "./settingsrouting";
@@ -528,12 +530,45 @@ export const SETTINGS_HOME_ID = "home";
  * above them already carries: "Settings / Your settings / …" said it twice in a
  * 200px column.
  */
+/** One rail row for a page, with everything the chrome reads off it. */
+function navEntry(page: SettingsPage): NavLevelEntry {
+  return {
+    id: page.id,
+    labelKey: `settings.tab.${page.id}`,
+    // One line under the page's heading, saying what the label cannot: which
+    // state it changes and whose. Composed from the id like the label above it,
+    // and NOT cast — the field's own MessageKey type is what narrows the
+    // template literal, so a page whose `.sub` key is missing from the catalogs
+    // is a compile error rather than a subtitle that silently translates to
+    // nothing.
+    subKey: `settings.page.${page.id}.sub`,
+    // Whose state the page changes, from the catalog's own `scope` rather than a
+    // second table: the catalog already declares it for every page, and it had
+    // no reader until now. Same MessageKey narrowing as the subtitle above — a
+    // missing scope label is a compile error, not a silent blank.
+    scopeKey: `settings.scope.${page.scope}`,
+    icon: PAGE_ICONS[page.id],
+  };
+}
+
 export function useSettingsSection(route: Route): NavSection {
-  const pages = useVisibleSettingsPages();
+  // The rail carries what this reader can ACT on. A page they may open and
+  // cannot change is still theirs to reach — it answers its address, appears in
+  // search and is listed on the settings home under a heading that says so —
+  // but it is not furniture they navigate past every day. `reach.acts` and
+  // `reach.looksUp` partition exactly the pages `useVisibleSettingsPages`
+  // returns, so nothing leaves the product by being left out here.
+  const reach = useSettingsReach();
+  const pages = reach.acts;
+  // Everything this reader may open, rail or not. The two below need it: a page
+  // reached from the settings home or from a search hit is a real destination
+  // and has to be recognised as the current one, and the search box must offer
+  // every page the reader can open rather than only the ones they can change.
+  const openable = [...reach.acts, ...reach.looksUp];
   const target = settingsRouteTarget(route);
   const named =
     target.kind === "page"
-      ? pages.find((page) => page.id === target.page)
+      ? openable.find((page) => page.id === target.page)
       : undefined;
   // Both message keys are composed from the ids, and both annotations are what
   // make them KEYS: a template literal narrows to the catalog's union only where
@@ -549,30 +584,26 @@ export function useSettingsSection(route: Route): NavSection {
   const groups = CATALOG_GROUPS.map(
     (group): NavLevelGroup => ({
       headingKey: `settings.group.${group}`,
-      items: pages
-        .filter((page) => page.group === group)
-        .map(
-          (page): NavLevelEntry => ({
-            id: page.id,
-            labelKey: `settings.tab.${page.id}`,
-            // One line under the page's heading, saying what the label cannot:
-            // which state it changes and whose. Composed from the id like the
-            // label above it, and NOT cast — the field's own MessageKey type is
-            // what narrows the template literal, so a page whose `.sub` key is
-            // missing from the catalogs is a compile error rather than a
-            // subtitle that silently translates to nothing.
-            subKey: `settings.page.${page.id}.sub`,
-            // Whose state the page changes, from the catalog's own `scope`
-            // rather than a second table: the catalog already declares it for
-            // every page, and it had no reader until now. Same MessageKey
-            // narrowing as the subtitle above — a missing scope label is a
-            // compile error, not a silent blank.
-            scopeKey: `settings.scope.${page.scope}`,
-            icon: PAGE_ICONS[page.id],
-          }),
-        ),
+      items: pages.filter((page) => page.group === group).map(navEntry),
     }),
   ).filter((group) => group.items.length > 0);
+  // The page the reader is ON, when it is one the rail does not carry.
+  //
+  // The chrome resolves the current page by searching the rendered rows —
+  // `sectionHead` in app/pagemeta.ts does — so a page that is only on the
+  // settings home would publish an `activeId` no row matches, and the heading,
+  // the breadcrumb, the subtitle, the scope badge and the phone switcher would
+  // all fall back to the section's own name. Reaching a page from search or
+  // from the home would land the reader somewhere that says "Settings".
+  //
+  // So it joins the rail for exactly as long as it is open, in its own group.
+  // Its own rather than its catalog group's: the group heading would then
+  // appear for one page the reader cannot act on, which is the clutter the
+  // partition exists to remove.
+  const openedOffRail =
+    named !== undefined && !pages.some((page) => page.id === named.id)
+      ? [{ items: [navEntry(named)] } satisfies NavLevelGroup]
+      : [];
   // Settings home, above the seven groups and in a headingless group of its
   // own. Not a member of one: it belongs to no topic, and a group that owned it
   // would take it away on the day that group had no other visible page.
@@ -594,10 +625,14 @@ export function useSettingsSection(route: Route): NavSection {
   return {
     screen: SETTINGS_SCREEN,
     titleKey: "nav.settings",
-    // The search stands above the rows and searches exactly the pages below it
-    // — the same `pages` this function grouped, so a hit can never name a page
-    // the rail did not draw.
-    lead: <SettingsSearchBox pages={pages} />,
+    // The search stands above the rows and reaches FURTHER than they do: every
+    // page this reader may open, including the ones the rail leaves out because
+    // they cannot change them. Narrowing it to the rail's own list would make a
+    // readable page unfindable by the one affordance built to find it.
+    lead: <SettingsSearchBox pages={openable} />,
+    // The same box for the phone drawer, which has to dismiss itself once the
+    // box has moved the reader — see NavSection.leadFor.
+    leadFor: (onPick) => <SettingsSearchBox pages={openable} onPick={onPick} />,
     // No row is current on a route that is not one of the tabs. An extension
     // unit's page keeps this level in the sidebar — it is reached from here and
     // its trail says so — but it is not a settings tab, and `settingsRouteTab`
@@ -618,7 +653,7 @@ export function useSettingsSection(route: Route): NavSection {
         : target.kind === "home"
           ? SETTINGS_HOME_ID
           : (named?.id ?? ""),
-    groups: [home, ...groups],
+    groups: [home, ...groups, ...openedOffRail],
   };
 }
 
@@ -637,6 +672,22 @@ export function useVisibleSettingsPages(): readonly SettingsPage[] {
     // `@composition/screens`, and importing it there would drag React and a
     // build alias into a module whose whole purpose is being importable from
     // anywhere. The catalog takes the answer instead of fetching it.
+    composedUnitScopes:
+      unitsForSecretScope("workspace").length > 0 ? ["workspace"] : [],
+  });
+}
+
+/**
+ * The same pages, split into the ones this reader can act on and the ones they
+ * can only consult.
+ *
+ * The hook half of `settingsReach`, taking the same two facts as the visibility
+ * hook above so the rail, the settings home and the read-only banner resolve one
+ * partition rather than each deciding "can this person act?" for itself.
+ */
+export function useSettingsReach(): SettingsReach {
+  const snapshot = useMe().data;
+  return settingsReach(snapshot, {
     composedUnitScopes:
       unitsForSecretScope("workspace").length > 0 ? ["workspace"] : [],
   });

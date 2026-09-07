@@ -608,6 +608,11 @@ function SectionSwitcher({
         <h2 id={titleId} className="t-h2">
           {t(section.titleKey)}
         </h2>
+        {/* Above the rows, exactly where the rail puts it. Without this the
+            search was unreachable at phone width — the one width where the
+            navigation is hardest to scan, since the rail is gone and the whole
+            list is behind this button. */}
+        {section.leadFor?.(close)}
         <div className="sectionpick">
           {section.groups.map((group, index) => (
             <SectionPickGroup

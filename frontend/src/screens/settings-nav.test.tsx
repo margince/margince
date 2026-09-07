@@ -13,7 +13,9 @@ import {
   jsonResponse,
   readOn,
   render,
+  renderHome,
   renderNav,
+  renderSettings,
   settingsBackend,
 } from "./settings.testkit";
 import {
@@ -56,6 +58,8 @@ describe("SettingsScreen page layout", () => {
   });
 
   it("groups the nav by subject, Account current by default", async () => {
+    // The RAIL, at a page address: this case is about the sidebar's own shape
+    // and its current row, which the home address has no answer for.
     renderNav();
     // ONE navigation landmark in the chrome: the level names itself with a
     // heading rather than opening a second `nav` beside the sidebar's own.
@@ -195,22 +199,35 @@ function settingsNavBackend(opts: {
   });
 }
 
-// The settings pages currently in the nav, in render order. Asserting the WHOLE
-// list rather than one membership is the point: a requirement wired to the wrong
-// object shows up as an extra or a missing row, where a single getBy would pass
-// regardless.
-function navPages(): string[] {
-  return screen
-    .getAllByRole("link")
-    .filter((link) => {
-      const href = link.getAttribute("href") ?? "";
-      // `#/settings` exactly is Settings home — a row of this level whose
-      // address is the level itself. The trailing slash alone would drop it,
-      // which is how a helper quietly stops seeing the row it was meant to
-      // prove is there.
-      return href === "#/settings" || href.startsWith("#/settings/");
-    })
-    .map((link) => link.textContent ?? "");
+/**
+ * Every page this render OFFERS, rail and home together, de-duplicated and in
+ * catalog order.
+ *
+ * The rail alone stopped being the list of pages a reader may open: it carries
+ * `changes` now — the pages they can act on — and a page they may read and
+ * cannot change is deliberately absent from it while still answering its
+ * address, appearing in search, and being listed on the settings home under a
+ * heading that says which it is.
+ *
+ * So a case whose claim is "this grant opens that page" reads BOTH surfaces.
+ * Reading only the rail would turn every such case into a claim about
+ * prominence, which is a different question and one most of them never meant
+ * to ask.
+ */
+function offeredPages(): string[] {
+  const seen = new Set(
+    screen
+      .getAllByRole("link")
+      .map((link) => link.getAttribute("href") ?? "")
+      .filter((href) => href.startsWith("#/settings/"))
+      .map((href) => href.slice("#/settings/".length)),
+  );
+  return [
+    translate("en", "settings.home"),
+    ...SETTINGS_PAGES.filter((page) => seen.has(page.id)).map((page) =>
+      labelOf(page.id),
+    ),
+  ];
 }
 
 // The rows under ONE group heading. Each group renders its heading and its own
@@ -288,7 +305,7 @@ const floorPlus = (...ids: readonly SettingsPageId[]) =>
  * Assert the nav settles to exactly these rows, once `/me` has actually
  * answered.
  *
- * A bare `waitFor(() => expect(navPages()).toEqual(floorPlus()))` is VACUOUS
+ * A bare `waitFor(() => expect(offeredPages()).toEqual(floorPlus()))` is VACUOUS
  * for a case about an absence. Every capability predicate reads false while the
  * snapshot is in flight, so the loading nav renders precisely the ungated floor
  * — the same rows a resolved snapshot granting nothing renders. `waitFor`
@@ -304,8 +321,26 @@ const floorPlus = (...ids: readonly SettingsPageId[]) =>
  * read, and is unrelated to every requirement these cases move.
  */
 async function expectNavSettlesTo(expected: readonly string[]) {
-  await screen.findByRole("link", { name: labelOf("pipelines") });
-  await expect.poll(() => navPages()).toEqual(expected);
+  await expectSnapshotResolved();
+  await expect.poll(() => offeredPages()).toEqual(expected);
+}
+
+/**
+ * Wait until `/me` has actually answered AND rendered.
+ *
+ * The witness is the settings home's seat row, which draws only when
+ * `authorization` is present on the snapshot — it is absent while the request
+ * is in flight, and the panel renders nothing rather than guessing a seat.
+ *
+ * A page row cannot do this job any more. The old witness was Pipelines, which
+ * worked only for a fixture that granted `pipeline:read`; a case about a lone
+ * `seat_usage` reader has no such row to wait for, and waiting for one that
+ * never comes fails a case whose subject is somewhere else entirely. The seat
+ * row is on every resolved snapshot regardless of grants, which is what a
+ * positive control has to be.
+ */
+async function expectSnapshotResolved() {
+  await screen.findByText(translate("en", "settings.home.seat.full"));
 }
 
 // Every page open at once: one grant apiece for the pages that follow an
@@ -323,32 +358,44 @@ async function expectNavSettlesTo(expected: readonly string[]) {
 // changes it, because the read is one every seat holds. Granting the read here
 // would leave this "every page" fixture four pages short.
 const EVERY_PAGE_GRANTED: GrantSpec = {
+  // Writing voice, whose card asks the WRITE. It needed no entry while the page
+  // was ungated; now that the rail carries what a reader can act on, an admin
+  // without this grant would consult their own voice profile rather than own it.
+  voice_profile: ["read", "create", "update"],
   installation_settings: ["read", "update"],
   // Sign-in & apps, whose card reads the narrow projection.
   authentication_policy: ["read"],
   license: ["read"],
-  pipeline: ["read"],
-  custom_field: ["read"],
-  tag: ["read"],
-  product: ["read"],
-  capture_settings: ["read"],
+  // The sales vocabulary, with its WRITES. Reads alone opened every one of these
+  // pages and still do — but the rail carries what a reader can act on, and a
+  // fixture standing for "every page at once" has to be able to act on them or
+  // the whole Sales heading is legitimately absent.
+  pipeline: ["read", "create", "update"],
+  custom_field: ["read", "create", "update"],
+  tag: ["read", "create", "update"],
+  product: ["read", "create", "update"],
+  capture_settings: ["read", "update"],
   webhook_subscription: ["read", "create", "update"],
-  knowledge_corpus: ["read"],
-  import_run: ["read"],
-  ai_routing: ["read"],
+  knowledge_corpus: ["read", "create"],
+  import_run: ["read", "create", "update"],
+  ai_routing: ["read", "update"],
   automation: ["read", "create", "update"],
   ai_diagnostics: ["read"],
+  // What ModelCostsCard writes. AI usage opens on `ai_diagnostics` and is ACTED
+  // on through the rate table beside it, so a fixture meaning "every page" needs
+  // both.
+  ai_model_rate: ["read", "create", "update"],
   person: ["read"],
   // What opens Privacy & audit now that `person:read` does not.
-  retention_policy: ["read"],
+  retention_policy: ["read", "create", "update"],
   audit_log: ["read"],
   job_health: ["read"],
-  embedding_reindex: ["read"],
+  embedding_reindex: ["read", "update"],
   extension_access: ["read"],
   // Extensions is TWO reads: the unit inventory on `extension_access` and every
   // role's grant on every object on `role_admin` (identity/roles.go ListRoles).
   // The card fires both behind one flag, so the page needs both.
-  role_admin: ["read"],
+  role_admin: ["read", "update"],
   // The roster and team pages, which follow their own objects now rather than
   // opening for every authenticated reader.
   user_admin: ["read", "create", "update", "delete"],
@@ -516,8 +563,8 @@ describe("SettingsScreen page visibility", () => {
         dataResetAvailable: true,
       }),
     );
-    renderNav();
-    await waitFor(() => expect(navPages()).toEqual(EVERY_PAGE));
+    renderHome();
+    await waitFor(() => expect(offeredPages()).toEqual(EVERY_PAGE));
     // And each page is under the heading that claims it: the flat order above
     // would read the same if a page were declared in the wrong group.
     const nav = screen.getByRole("navigation", { name: /primary navigation/i });
@@ -584,8 +631,8 @@ describe("SettingsScreen page visibility", () => {
         "fetch",
         settingsNavBackend({ roles: [role], allow: SEEDED_READS }),
       );
-      renderNav();
-      await waitFor(() => expect(navPages()).toEqual(SEEDED_READ_PAGES));
+      renderHome();
+      await waitFor(() => expect(offeredPages()).toEqual(SEEDED_READ_PAGES));
     },
   );
 
@@ -604,7 +651,7 @@ describe("SettingsScreen page visibility", () => {
         allow: { custom_field: ["create", "update"], pipeline: ["read"] },
       }),
     );
-    renderNav();
+    renderHome();
     await expectNavSettlesTo(floorPlus("pipelines"));
   });
 
@@ -613,11 +660,11 @@ describe("SettingsScreen page visibility", () => {
     async ({ object, opens }) => {
       const allow = readOn(object);
       vi.stubGlobal("fetch", settingsNavBackend({ roles: ["ops"], allow }));
-      renderNav();
+      renderHome();
       // `readOn` carries `person:read` with it as a floor, so a case about ONE
       // object stays about one object. It no longer opens Privacy: that page
       // asks the two governance objects nobody below admin and ops holds.
-      await waitFor(() => expect(navPages()).toEqual(floorPlus(...opens)));
+      await waitFor(() => expect(offeredPages()).toEqual(floorPlus(...opens)));
     },
   );
 
@@ -641,7 +688,7 @@ describe("SettingsScreen page visibility", () => {
           allow: { ...readOn(object), pipeline: ["read"] },
         }),
       );
-      const { unmount } = renderNav();
+      const { unmount } = renderHome();
       await expectNavSettlesTo(floorPlus("pipelines"));
       unmount();
 
@@ -652,9 +699,9 @@ describe("SettingsScreen page visibility", () => {
           allow: { ...readOn(object), [object]: ["read", "update"] },
         }),
       );
-      renderNav();
+      renderHome();
       await waitFor(() =>
-        expect(navPages()).toEqual(floorPlus("integrations")),
+        expect(offeredPages()).toEqual(floorPlus("integrations")),
       );
     },
   );
@@ -669,11 +716,11 @@ describe("SettingsScreen page visibility", () => {
         allow: readOn("authentication_policy"),
       }),
     );
-    renderNav();
+    renderHome();
     // `privacy` rides the floor here: meFixture grants `person:read`, which is
     // one of that page's union terms — the consent registry's own server gate.
     await waitFor(() =>
-      expect(navPages()).toEqual(floorPlus("authentication")),
+      expect(offeredPages()).toEqual(floorPlus("authentication")),
     );
   });
 
@@ -695,7 +742,7 @@ describe("SettingsScreen page visibility", () => {
         allow: { ...readOn("installation_settings"), pipeline: ["read"] },
       }),
     );
-    const { unmount } = renderNav();
+    const { unmount } = renderHome();
     await expectNavSettlesTo(floorPlus("pipelines"));
     unmount();
 
@@ -709,8 +756,8 @@ describe("SettingsScreen page visibility", () => {
         },
       }),
     );
-    renderNav();
-    await waitFor(() => expect(navPages()).toEqual(floorPlus("company")));
+    renderHome();
+    await waitFor(() => expect(offeredPages()).toEqual(floorPlus("company")));
   });
 
   it("opens Seats & license for a lone license read", async () => {
@@ -722,8 +769,8 @@ describe("SettingsScreen page visibility", () => {
       "fetch",
       settingsNavBackend({ roles: ["ops"], allow: readOn("license") }),
     );
-    renderNav();
-    await waitFor(() => expect(navPages()).toEqual(floorPlus("seats")));
+    renderHome();
+    await waitFor(() => expect(offeredPages()).toEqual(floorPlus("seats")));
   });
 
   it("opens Seats & license for a lone seat_usage read", async () => {
@@ -736,8 +783,8 @@ describe("SettingsScreen page visibility", () => {
       "fetch",
       settingsNavBackend({ roles: ["ops"], allow: readOn("seat_usage") }),
     );
-    renderNav();
-    await waitFor(() => expect(navPages()).toEqual(floorPlus("seats")));
+    renderHome();
+    await waitFor(() => expect(offeredPages()).toEqual(floorPlus("seats")));
     cleanup();
 
     // The other half, or the assertion above would pass against a page that
@@ -749,7 +796,7 @@ describe("SettingsScreen page visibility", () => {
         allow: { ...readOn("person"), pipeline: ["read"] },
       }),
     );
-    renderNav();
+    renderHome();
     await expectNavSettlesTo(floorPlus("pipelines"));
   });
 
@@ -762,8 +809,8 @@ describe("SettingsScreen page visibility", () => {
       "fetch",
       settingsNavBackend({ roles: ["ops"], allow: readOn("capture_settings") }),
     );
-    renderNav();
-    await waitFor(() => expect(navPages()).toEqual(floorPlus("capture")));
+    renderHome();
+    await waitFor(() => expect(offeredPages()).toEqual(floorPlus("capture")));
   });
 
   it("opens System health for a lone embedding_reindex read, for a principal who is no admin", async () => {
@@ -779,8 +826,10 @@ describe("SettingsScreen page visibility", () => {
         allow: readOn("embedding_reindex"),
       }),
     );
-    renderNav();
-    await waitFor(() => expect(navPages()).toEqual(floorPlus("system-health")));
+    renderHome();
+    await waitFor(() =>
+      expect(offeredPages()).toEqual(floorPlus("system-health")),
+    );
   });
 
   it("opens System health for a lone job_health read", async () => {
@@ -794,8 +843,10 @@ describe("SettingsScreen page visibility", () => {
       "fetch",
       settingsNavBackend({ roles: ["ops"], allow: readOn("job_health") }),
     );
-    renderNav();
-    await waitFor(() => expect(navPages()).toEqual(floorPlus("system-health")));
+    renderHome();
+    await waitFor(() =>
+      expect(offeredPages()).toEqual(floorPlus("system-health")),
+    );
     cleanup();
 
     // And a seat holding neither term still does not reach it, or the case
@@ -807,7 +858,7 @@ describe("SettingsScreen page visibility", () => {
         allow: { ...readOn("person"), pipeline: ["read"] },
       }),
     );
-    renderNav();
+    renderHome();
     await expectNavSettlesTo(floorPlus("pipelines"));
   });
 
@@ -833,8 +884,10 @@ describe("SettingsScreen page visibility", () => {
         },
       }),
     );
-    renderNav();
-    await waitFor(() => expect(navPages()).toEqual(floorPlus("extensions")));
+    renderHome();
+    await waitFor(() =>
+      expect(offeredPages()).toEqual(floorPlus("extensions")),
+    );
     cleanup();
 
     // The inventory read ALONE is not the page. The card makes a second request
@@ -848,7 +901,7 @@ describe("SettingsScreen page visibility", () => {
         allow: { ...readOn("extension_access"), pipeline: ["read"] },
       }),
     );
-    renderNav();
+    renderHome();
     await expectNavSettlesTo(floorPlus("pipelines"));
     cleanup();
 
@@ -869,7 +922,7 @@ describe("SettingsScreen page visibility", () => {
         },
       }),
     );
-    renderNav();
+    renderHome();
     await expectNavSettlesTo(floorPlus("pipelines"));
   });
 
@@ -887,7 +940,7 @@ describe("SettingsScreen page visibility", () => {
         dataResetAvailable: true,
       }),
     );
-    renderNav();
+    renderHome();
     await expectNavSettlesTo(floorPlus("pipelines"));
     cleanup();
 
@@ -899,8 +952,8 @@ describe("SettingsScreen page visibility", () => {
         dataResetAvailable: true,
       }),
     );
-    renderNav();
-    await waitFor(() => expect(navPages()).toEqual(floorPlus("reset")));
+    renderHome();
+    await waitFor(() => expect(offeredPages()).toEqual(floorPlus("reset")));
     cleanup();
 
     // And the deployment's own consent, which is not a permission: the same
@@ -921,7 +974,7 @@ describe("SettingsScreen page visibility", () => {
         },
       }),
     );
-    renderNav();
+    renderHome();
     await expectNavSettlesTo(floorPlus("pipelines"));
   });
 
@@ -933,8 +986,8 @@ describe("SettingsScreen page visibility", () => {
       "fetch",
       settingsNavBackend({ roles: ["ops"], allow: readOn("fx_rate") }),
     );
-    renderNav();
-    await waitFor(() => expect(navPages()).toEqual(floorPlus("company")));
+    renderHome();
+    await waitFor(() => expect(offeredPages()).toEqual(floorPlus("company")));
   });
 
   it("opens AI usage for a lone ai_model_rate read", async () => {
@@ -945,8 +998,8 @@ describe("SettingsScreen page visibility", () => {
       "fetch",
       settingsNavBackend({ roles: ["ops"], allow: readOn("ai_model_rate") }),
     );
-    renderNav();
-    await waitFor(() => expect(navPages()).toEqual(floorPlus("usage")));
+    renderHome();
+    await waitFor(() => expect(offeredPages()).toEqual(floorPlus("usage")));
   });
 
   it("opens both AI diagnostics pages for a lone ai_diagnostics read", async () => {
@@ -967,9 +1020,11 @@ describe("SettingsScreen page visibility", () => {
       "fetch",
       settingsNavBackend({ roles: ["ops"], allow: readOn("ai_diagnostics") }),
     );
-    renderNav();
+    renderHome();
     await waitFor(() =>
-      expect(navPages()).toEqual(floorPlus("models", "usage", "model-calls")),
+      expect(offeredPages()).toEqual(
+        floorPlus("models", "usage", "model-calls"),
+      ),
     );
   });
 
@@ -986,12 +1041,14 @@ describe("SettingsScreen page visibility", () => {
         allow: { person: ["read"], automation: ["update"] },
       }),
     );
-    renderNav();
+    renderHome();
     // `automations` is OPEN here, and naming it is the point: this fixture holds
     // `automation:update`, which is exactly what that page asks now. The claim
     // under test is about the three AI diagnostics pages staying shut, and
     // asserting the whole row keeps the two facts from being confused.
-    await waitFor(() => expect(navPages()).toEqual(floorPlus("automations")));
+    await waitFor(() =>
+      expect(offeredPages()).toEqual(floorPlus("automations")),
+    );
   });
 
   it.each(["retention_policy", "privacy_request"] as const)(
@@ -1007,8 +1064,8 @@ describe("SettingsScreen page visibility", () => {
       const allow: GrantSpec = {};
       allow[object] = ["read"];
       vi.stubGlobal("fetch", settingsNavBackend({ roles: ["rep"], allow }));
-      renderNav();
-      await waitFor(() => expect(navPages()).toEqual(floorPlus("privacy")));
+      renderHome();
+      await waitFor(() => expect(offeredPages()).toEqual(floorPlus("privacy")));
     },
   );
 
@@ -1026,7 +1083,7 @@ describe("SettingsScreen page visibility", () => {
         allow: { person: ["read"], pipeline: ["read"] },
       }),
     );
-    renderNav();
+    renderHome();
     await expectNavSettlesTo(floorPlus("pipelines"));
   });
 
@@ -1040,7 +1097,7 @@ describe("SettingsScreen page visibility", () => {
         allow: { consent_config: ["read", "create"], pipeline: ["read"] },
       }),
     );
-    renderNav();
+    renderHome();
     await expectNavSettlesTo(floorPlus("pipelines"));
   });
 
@@ -1061,8 +1118,8 @@ describe("SettingsScreen page visibility", () => {
         allow: { audit_log: ["read"] },
       }),
     );
-    renderNav();
-    await waitFor(() => expect(navPages()).toEqual(floorPlus("audit")));
+    renderHome();
+    await waitFor(() => expect(offeredPages()).toEqual(floorPlus("audit")));
   });
 
   it("opens Audit log for a delegated audit_log holder who is no admin", async () => {
@@ -1077,8 +1134,8 @@ describe("SettingsScreen page visibility", () => {
         allow: { audit_log: ["read"] },
       }),
     );
-    renderNav();
-    await waitFor(() => expect(navPages()).toEqual(floorPlus("audit")));
+    renderHome();
+    await waitFor(() => expect(offeredPages()).toEqual(floorPlus("audit")));
     cleanup();
 
     // And a management seat WITHOUT the read still does not reach it, or the
@@ -1092,7 +1149,7 @@ describe("SettingsScreen page visibility", () => {
         allow: { pipeline: ["read"] },
       }),
     );
-    renderNav();
+    renderHome();
     await expectNavSettlesTo(floorPlus("pipelines"));
   });
 
@@ -1115,8 +1172,8 @@ describe("SettingsScreen page visibility", () => {
         allow: SEEDED_OPS_READS,
       }),
     );
-    renderNav();
-    await waitFor(() => expect(navPages()).toEqual(SEEDED_OPS_PAGES));
+    renderHome();
+    await waitFor(() => expect(offeredPages()).toEqual(SEEDED_OPS_PAGES));
   });
 
   it("withholds the seats and system-health pages from a principal holding only the shared reads", async () => {
@@ -1128,8 +1185,8 @@ describe("SettingsScreen page visibility", () => {
       "fetch",
       settingsNavBackend({ roles: ["ops"], allow: SEEDED_READS }),
     );
-    renderNav();
-    await waitFor(() => expect(navPages()).toEqual(SEEDED_READ_PAGES));
+    renderHome();
+    await waitFor(() => expect(offeredPages()).toEqual(SEEDED_READ_PAGES));
     for (const page of ["seats", "system-health"] as const) {
       expect(screen.queryByRole("link", { name: labelOf(page) })).toBeNull();
     }
@@ -1144,8 +1201,8 @@ describe("SettingsScreen page visibility", () => {
       "fetch",
       settingsNavBackend({ roles: ["ops"], allow: SEEDED_OPS_READS }),
     );
-    renderNav();
-    await waitFor(() => expect(navPages()).toEqual(SEEDED_OPS_PAGES));
+    renderHome();
+    await waitFor(() => expect(offeredPages()).toEqual(SEEDED_OPS_PAGES));
   });
 
   // An EDITED role, which is the case a seat gate would swallow. This admin
@@ -1163,9 +1220,9 @@ describe("SettingsScreen page visibility", () => {
         dataResetAvailable: true,
       }),
     );
-    renderNav();
+    renderHome();
     await waitFor(() =>
-      expect(navPages()).toEqual(
+      expect(offeredPages()).toEqual(
         EVERY_PAGE.filter((label) => label !== labelOf("seats")),
       ),
     );
@@ -1180,7 +1237,7 @@ describe("SettingsScreen page visibility", () => {
         companyReadEnabled: true,
       }),
     );
-    renderNav();
+    renderHome();
     expect(
       await screen.findByRole("link", { name: labelOf("company") }),
     ).toBeTruthy();
@@ -1216,7 +1273,7 @@ describe("SettingsScreen page visibility", () => {
         companyReadEnabled: false,
       }),
     );
-    renderNav();
+    renderHome();
 
     await expectNavSettlesTo(floorPlus("pipelines"));
     expect(screen.queryByRole("link", { name: labelOf("company") })).toBeNull();
@@ -1251,7 +1308,7 @@ describe("SettingsScreen page visibility", () => {
         omitAvailability: true,
       }),
     );
-    renderNav();
+    renderHome();
 
     await expectNavSettlesTo(floorPlus("pipelines"));
     expect(screen.queryByRole("link", { name: labelOf("company") })).toBeNull();
@@ -1424,5 +1481,102 @@ describe("the settings access boundary", () => {
     expect(
       screen.getByText(translate("en", "settings.tab.audit")),
     ).toBeTruthy();
+  });
+});
+
+// The whole life of a page the rail does not carry, in one case.
+//
+// Each half was covered separately and the sequence was not, which is how a
+// tidier rail could quietly become a permission change: the rail's own tests
+// pass when a page is absent, and the reachability tests pass when it is
+// present, so nothing failed if "absent from the rail" ever turned into
+// "absent". A rep holding `pipeline:read` and no pipeline write is the case —
+// they consult the pipeline vocabulary and cannot edit it.
+describe("a page the rail does not carry is still the reader's to reach", () => {
+  // Not `as const`: that freezes `roles` to a readonly tuple, which the fixture's
+  // own `string[]` will not take. Vitest transpiles without typechecking, so
+  // this only ever fails in `tsc -b` — which is the gate, not the test run.
+  const consultingRep = { roles: ["rep"], allow: readOn("pipeline") };
+
+  it("leaves it out of the rail", async () => {
+    vi.stubGlobal("fetch", settingsNavBackend(consultingRep));
+    renderNav();
+    await screen.findByRole("link", { name: labelOf("account") });
+    // Waited on a row a resolved snapshot draws, so this absence is about the
+    // grant rather than about a rail that has not loaded.
+    expect(
+      screen.queryByRole("link", { name: labelOf("pipelines") }),
+    ).toBeNull();
+  });
+
+  it("lists it on the settings home, under what you can look up", async () => {
+    vi.stubGlobal("fetch", settingsNavBackend(consultingRep));
+    renderHome();
+    await expectSnapshotResolved();
+    const heading = await screen.findByRole("heading", {
+      name: translate("en", "settings.home.lookUp"),
+    });
+    const panel = heading.closest("section") ?? heading.parentElement;
+    if (!panel) {
+      throw new Error("the look-up panel has no container");
+    }
+    // The home row names the page, its scope and its subtitle in one accessible
+    // name — that is the whole point of the row, so the match is on the label it
+    // starts with rather than on the label alone.
+    expect(
+      within(panel).getByRole("link", {
+        name: new RegExp(`^${labelOf("pipelines")}`),
+      }),
+    ).toBeTruthy();
+  });
+
+  it("finds it in the search", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", settingsNavBackend(consultingRep));
+    renderNav();
+    await screen.findByRole("link", { name: labelOf("account") });
+    await user.type(screen.getByRole("combobox"), "pipeline");
+    expect(
+      screen.getAllByRole("option").map((option) => option.textContent),
+    ).toEqual([expect.stringContaining(labelOf("pipelines"))]);
+  });
+
+  it("opens on its own address, with its own heading and no boundary", async () => {
+    vi.stubGlobal("fetch", settingsNavBackend(consultingRep));
+    renderSettings("pipelines");
+    // The page's own name in the chrome, not the section's. The heading comes
+    // from the rail's rows, and this page has none — so a regression here reads
+    // as a page called "Settings" rather than as a missing page.
+    expect(
+      await screen.findByRole("heading", { name: labelOf("pipelines") }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(translate("en", "settings.boundary.deniedTitle")),
+    ).toBeNull();
+  });
+
+  it("says once that it is theirs to read and not to change", async () => {
+    vi.stubGlobal("fetch", settingsNavBackend(consultingRep));
+    renderSettings("pipelines");
+    expect(
+      await screen.findByText(translate("en", "settings.readOnlyPage")),
+    ).toBeTruthy();
+  });
+
+  // The control for the case above: the same page, one grant apart. Without it
+  // the banner assertion would pass against a page that always shows it.
+  it("says nothing of the kind to a reader who can change it", async () => {
+    vi.stubGlobal(
+      "fetch",
+      settingsNavBackend({
+        roles: ["rep"],
+        allow: { pipeline: ["read", "create", "update"] },
+      }),
+    );
+    renderSettings("pipelines");
+    await screen.findByRole("heading", { name: labelOf("pipelines") });
+    expect(
+      screen.queryByText(translate("en", "settings.readOnlyPage")),
+    ).toBeNull();
   });
 });

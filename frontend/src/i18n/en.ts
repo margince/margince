@@ -6275,6 +6275,19 @@ export const en = {
   // is why it had to be ungated to keep a rep's own mailbox reachable.
   "settings.home": "Settings home",
   "settings.home.yours": "Your settings",
+  "settings.home.manage": "What you can change",
+  "settings.home.manageSub": "Settings you have the permission to edit.",
+  "settings.home.lookUp": "What you can look up",
+  "settings.home.lookUpSub":
+    "You can read these; changing them is not part of your role.",
+  "settings.home.rolesLabel": "Your role",
+  "settings.home.seatLabel": "Your seat",
+  "settings.home.seat.full": "Full seat \u2014 you can make changes",
+  "settings.home.seat.read": "Read-only seat \u2014 you can look, not change",
+  "settings.home.reachLabel": "Records you reach",
+  "settings.home.reach.own": "Your own records",
+  "settings.home.reach.team": "Your team\u2019s records",
+  "settings.home.reach.all": "Every record in the organization",
   "settings.home.access": "Your access",
   "settings.boundary.deniedTitle": "This settings page is not yours to open",
   "settings.boundary.deniedBody":
@@ -6342,6 +6355,8 @@ export const en = {
   "settings.scopeAria": "Who this page affects: {scope}",
   "settings.scopeAriaMixed":
     "This page holds settings that affect different people \u2014 each one says which.",
+  "settings.readOnlyPage":
+    "You can see these settings but not change them \u2014 changing them is not part of your role.",
   "settings.search.label": "Search settings",
   "settings.search.placeholder": "Search settings",
   "settings.search.none": "No settings page matches that.",

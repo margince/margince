@@ -384,7 +384,12 @@ describe("SettingsScreen restructured pages", () => {
           // What opens Privacy now. `person:read` still reaches the purposes
           // list — that endpoint's gate is unchanged — but it no longer opens
           // the page, because every seeded role holds it.
-          retention_policy: ["read"],
+          //
+          // Every verb, because this case reaches the page through its rail row
+          // and the rail carries what a reader can act on. A seeded admin holds
+          // all four here — RetentionCard offers the delete too — so anything
+          // short of them described an account the product does not issue.
+          retention_policy: ["read", "create", "update", "delete"],
           audit_log: ["read"],
         },
       }),

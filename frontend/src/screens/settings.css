@@ -391,3 +391,74 @@ p.settings-panel-sub {
   flex-direction: column;
   gap: var(--space-1);
 }
+
+/* The settings home's page rows.
+
+   A row, not a link chip. The home used to render each page as a bare
+   `.link-button` carrying only its name, which made it a second copy of the
+   sidebar — the reader who could not tell two pages apart in the rail could not
+   tell them apart here either. The subtitle and the scope were in the catalog
+   the whole time and were being thrown away, so a row now carries all three:
+   what it is called, whose state it changes, and what it is for. */
+.settings-home-links {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.settings-home-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border-radius: var(--r-sm);
+  color: inherit;
+  text-decoration: none;
+}
+.settings-home-row:hover {
+  background: var(--bgHover);
+}
+/* The name and its scope badge on one line, baseline-aligned so the badge sits
+   with the word rather than centred on a taller box. `flex-wrap` so a long page
+   name in a narrow column drops the badge rather than squeezing the name. */
+.settings-home-rowhead {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.settings-home-rowname {
+  font-weight: var(--fw-medium);
+}
+/* One group's heading inside a panel that holds several. Quieter than the
+   panel's own title, because the panel already said whether these are pages the
+   reader can change or only read, and this only says which part of the product
+   they belong to. */
+.settings-home-group + .settings-home-group {
+  margin-top: var(--space-4);
+}
+.settings-home-groupname {
+  margin: 0 0 var(--space-2);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+}
+/* Who the reader is here: role, seat, record reach. A definition list because
+   each row is a term and its answer, and none of them is operable — the way to
+   change any of it is to ask somebody, not to click here. */
+.settings-home-access {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+}
+.settings-home-access dt {
+  color: var(--textMuted);
+}
+.settings-home-access dd {
+  margin: 0;
+}
+.settings-home-roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}

@@ -6071,6 +6071,24 @@ export const vi = {
   // từ đó, và một dòng lặp lại tiêu đề của chính nó thì không gọi tên được gì.
   "settings.home": "Trang ch\u00ednh c\u00e0i \u0111\u1eb7t",
   "settings.home.yours": "C\u00e0i \u0111\u1eb7t c\u1ee7a b\u1ea1n",
+  "settings.home.manage":
+    "Nh\u1eefng g\u00ec b\u1ea1n c\u00f3 th\u1ec3 thay \u0111\u1ed5i",
+  "settings.home.manageSub":
+    "C\u00e1c c\u00e0i \u0111\u1eb7t b\u1ea1n c\u00f3 quy\u1ec1n ch\u1ec9nh s\u1eeda.",
+  "settings.home.lookUp":
+    "Nh\u1eefng g\u00ec b\u1ea1n c\u00f3 th\u1ec3 tra c\u1ee9u",
+  "settings.home.lookUpSub":
+    "B\u1ea1n c\u00f3 th\u1ec3 \u0111\u1ecdc; vi\u1ec7c thay \u0111\u1ed5i kh\u00f4ng thu\u1ed9c vai tr\u00f2 c\u1ee7a b\u1ea1n.",
+  "settings.home.rolesLabel": "Vai tr\u00f2 c\u1ee7a b\u1ea1n",
+  "settings.home.seatLabel": "Ch\u1ed7 ng\u1ed3i c\u1ee7a b\u1ea1n",
+  "settings.home.seat.full":
+    "Ch\u1ed7 \u0111\u1ea7y \u0111\u1ee7 \u2014 b\u1ea1n c\u00f3 th\u1ec3 thay \u0111\u1ed5i",
+  "settings.home.seat.read":
+    "Ch\u1ed7 ch\u1ec9 \u0111\u1ecdc \u2014 b\u1ea1n c\u00f3 th\u1ec3 xem, kh\u00f4ng th\u1ec3 thay \u0111\u1ed5i",
+  "settings.home.reachLabel": "B\u1ea3n ghi b\u1ea1n ti\u1ebfp c\u1eadn",
+  "settings.home.reach.own": "B\u1ea3n ghi c\u1ee7a ri\u00eang b\u1ea1n",
+  "settings.home.reach.team": "B\u1ea3n ghi c\u1ee7a nh\u00f3m b\u1ea1n",
+  "settings.home.reach.all": "M\u1ecdi b\u1ea3n ghi trong t\u1ed5 ch\u1ee9c",
   "settings.home.access": "Quy\u1ec1n truy c\u1eadp c\u1ee7a b\u1ea1n",
   "settings.boundary.deniedTitle":
     "Trang c\u00e0i \u0111\u1eb7t n\u00e0y kh\u00f4ng m\u1edf cho b\u1ea1n",
@@ -6145,6 +6163,8 @@ export const vi = {
     "Trang n\u00e0y \u1ea3nh h\u01b0\u1edfng \u0111\u1ebfn ai: {scope}",
   "settings.scopeAriaMixed":
     "Trang n\u00e0y c\u00f3 c\u00e1c c\u00e0i \u0111\u1eb7t \u1ea3nh h\u01b0\u1edfng \u0111\u1ebfn nh\u1eefng ng\u01b0\u1eddi kh\u00e1c nhau \u2014 m\u1ed7i c\u00e0i \u0111\u1eb7t t\u1ef1 n\u00f3i r\u00f5.",
+  "settings.readOnlyPage":
+    "B\u1ea1n c\u00f3 th\u1ec3 xem c\u00e1c c\u00e0i \u0111\u1eb7t n\u00e0y nh\u01b0ng kh\u00f4ng th\u1ec3 thay \u0111\u1ed5i \u2014 vi\u1ec7c thay \u0111\u1ed5i kh\u00f4ng thu\u1ed9c vai tr\u00f2 c\u1ee7a b\u1ea1n.",
   "settings.search.label": "T\u00ecm trong c\u00e0i \u0111\u1eb7t",
   "settings.search.placeholder": "T\u00ecm c\u00e0i \u0111\u1eb7t",
   "settings.search.none":

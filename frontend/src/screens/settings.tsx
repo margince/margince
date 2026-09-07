@@ -144,6 +144,7 @@ import {
   settingsAddress,
   settingsRouteTab,
   useSettingsEntryVisibility,
+  useSettingsReach,
   useSettingsSection,
   useVisibleSettingsPages,
 } from "./settingsnav";
@@ -470,8 +471,13 @@ function IntegrationsTab() {
  * address the product minted, rewriting it once on arrival.
  */
 export function SettingsScreen({ route }: Readonly<{ route: Route }>) {
+  const t = useT();
   const target = settingsRouteTarget(route);
   const visible = useVisibleSettingsPages();
+  // The same pages, partitioned. `visible` still decides the BOUNDARY — may
+  // this reader open the address at all — and the partition decides only how
+  // the page presents itself once opened.
+  const reach = useSettingsReach();
   // The page the address names, if this reader may open it.
   const named =
     target.kind === "page"
@@ -499,6 +505,10 @@ export function SettingsScreen({ route }: Readonly<{ route: Route }>) {
   // address they may not open is a boundary, and rewriting it would replace the
   // address they need to quote with one that is not theirs either.
   const legacy = target.kind === "page" && target.legacy && named !== undefined;
+  // Whether this page is one the reader consults rather than one they work in.
+  // Read off the same partition the rail is built from, so a page that left the
+  // rail for being read-only is the page that explains itself here.
+  const readOnlyPage = reach.looksUp.some((page) => page.id === active?.id);
   // A legacy admin address is answered AND rewritten: the reader gets the page
   // they asked for, and the URL bar then says where that page lives, so the
   // link they copy from it is the current one. Replaced rather than pushed, or
@@ -528,7 +538,7 @@ export function SettingsScreen({ route }: Readonly<{ route: Route }>) {
   if (target.kind === "home") {
     return (
       <div className="wrap">
-        <SettingsHome pages={visible} />
+        <SettingsHome reach={reach} />
       </div>
     );
   }
@@ -550,7 +560,20 @@ export function SettingsScreen({ route }: Readonly<{ route: Route }>) {
           moment the reader clicked Contacts. The cards below claim through
           `useUnsavedGuard` and need to know nothing about where the answer is
           asked. */}
-      <div className="settings-stack arrive-stack">{tabContent(active.id)}</div>
+      <div className="settings-stack arrive-stack">
+        {/* Said ONCE, at the top, and only when the whole page is a read. A
+            reader who can change nothing here would otherwise have to infer it
+            from a screenful of disabled controls, one card at a time.
+
+            Only for a page with no open control at all: a page where SOME
+            surface is theirs says nothing here, because a banner claiming the
+            page is read-only above a control that works is worse than
+            silence. That is exactly the `looksUp` half of the partition. */}
+        {readOnlyPage && (
+          <Callout tone="info">{t("settings.readOnlyPage")}</Callout>
+        )}
+        {tabContent(active.id)}
+      </div>
     </div>
   );
 }

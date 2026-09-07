@@ -3,11 +3,14 @@ import type { RbacAction, RbacObject } from "../app/capability";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { translate } from "../i18n";
 import {
+  type CapabilityExpression,
   holds,
+  readingIsTheAct,
   SETTINGS_GROUPS,
   SETTINGS_PAGES,
   type SettingsPageId,
   type SettingsScope,
+  settingsReach,
   visibleSettingsPages,
 } from "./settingscatalog";
 
@@ -128,6 +131,173 @@ describe("the scope each page declares", () => {
     expect(Object.keys(DECLARED_SCOPE).sort()).toEqual(
       SETTINGS_PAGES.map((page) => page.id).sort(),
     );
+  });
+});
+
+// `changes` decides PROMINENCE, not permission: the rail carries what a reader
+// can act on, and everything else they may open stays on the settings home and
+// in search. A wrong value here does not lock anybody out — it puts a page a
+// reader cannot use in the furniture they navigate every day, or drops a page
+// they work in out of it.
+//
+// A census, for the reason the scope census exists: naming three pages per
+// value and letting twenty ride is how six wrong scopes shipped and four of
+// them passed. Each entry says which card it was read off.
+describe("what each page lets a reader change", () => {
+  // `changes` decides PROMINENCE, not permission: the rail carries what a reader
+  // can act on, and everything else they may open stays on the settings home and
+  // in search. A wrong value does not lock anybody out — it puts a page a reader
+  // cannot use in the furniture they navigate every day, or drops a page they
+  // work in out of it.
+  //
+  // The census renders the WHOLE expression, not the object names in it. An
+  // earlier version flattened to names and every one of these passed it: Import
+  // asking create-OR-update where its card needs both, the missing delete verbs
+  // on webhooks and overlays, Authentication missing the OAuth cards' own grant,
+  // and the absent seat ceiling. Verbs, AND-versus-OR and the ceiling are
+  // exactly where the defects were, so they are exactly what it has to compare.
+  function render(expression: CapabilityExpression): string {
+    switch (expression.kind) {
+      case "always":
+        return "always";
+      case "seat":
+        return "full-seat";
+      case "reading-is-the-act":
+        return "same-as-requires";
+      case "grant":
+        return `${expression.object}:${expression.action}`;
+      case "availability":
+        return `available:${expression.key}`;
+      case "flag":
+        return `flag:${expression.flag}`;
+      case "units":
+        return `units:${expression.scope}`;
+      case "any":
+        return `any(${expression.of.map(render).join(", ")})`;
+      case "all":
+        return `all(${expression.of.map(render).join(", ")})`;
+    }
+  }
+
+  // Every page, with the reason its shape is what it is. `all(full-seat, ...)`
+  // is a mutating page: the seat ceiling above the grants, exactly as
+  // `useCanWrite` folds it for the controls themselves.
+  const DECLARED_CHANGES: Record<SettingsPageId, string> = {
+    // The reader's own rows, with no grant between them and the control.
+    account: "always",
+    agents: "always",
+    connections: "always",
+    "capture-activity": "always",
+    // Under the reader's own heading and still a grant: voice-dna.tsx asks the
+    // write, so a read-only seat consults this page.
+    voice:
+      "all(full-seat, any(any(voice_profile:update, voice_profile:create)))",
+
+    company:
+      "all(full-seat, any(any(installation_settings:update), all(any(organization:update, organization:create), available:company_context), any(fx_rate:update, fx_rate:create)))",
+    // The OAuth cards save through `capture_settings`, a different grant from
+    // the sign-in card's.
+    authentication:
+      "all(full-seat, any(any(installation_settings:update), any(capture_settings:update)))",
+
+    members:
+      "all(full-seat, any(any(user_admin:update, user_admin:create), user_admin:delete))",
+    teams: "all(full-seat, any(any(team_admin:update, team_admin:create)))",
+    seats: "same-as-requires",
+
+    pipelines:
+      "all(full-seat, any(any(pipeline:update, pipeline:create), pipeline:delete))",
+    leads:
+      "all(full-seat, any(any(custom_field:update, custom_field:create), custom_field:delete))",
+    fields:
+      "all(full-seat, any(any(custom_field:update, custom_field:create)))",
+    tags: "all(full-seat, any(any(tag:update, tag:create), tag:delete))",
+    products:
+      "all(full-seat, any(any(product:update, product:create), product:delete, any(offer_template:update, offer_template:create), offer_template:delete))",
+
+    capture:
+      "all(full-seat, any(any(capture_settings:update), any(organization:update)))",
+    // Delete included on both, and the composed-unit arm outside the ceiling:
+    // ExtensionUnitsCard's Open link asks for no grant at all.
+    integrations:
+      "any(all(full-seat, any(any(integrations:update, integrations:create), integrations:delete, any(webhook_subscription:update, webhook_subscription:create), webhook_subscription:delete, any(overlay_connection:update, overlay_connection:create), overlay_connection:delete)), units:workspace)",
+    knowledge: "all(full-seat, any(any(knowledge_corpus:create)))",
+    // BOTH verbs: ImportCard's own gate is `mayCreate && mayAdvance`.
+    import:
+      "all(full-seat, any(all(any(import_run:create), any(import_run:update))))",
+
+    models: "all(full-seat, any(any(ai_routing:update)))",
+    automations:
+      "all(full-seat, any(any(automation:update, automation:create), automation:delete))",
+    usage:
+      "all(full-seat, any(any(ai_model_rate:update, ai_model_rate:create)))",
+    "model-calls": "same-as-requires",
+
+    privacy:
+      "all(full-seat, any(any(consent_config:create), any(retention_policy:update, retention_policy:create), retention_policy:delete, any(privacy_request:update), any(person:update)))",
+    audit: "same-as-requires",
+    // The reindex takes the seat; watching the queue beside it is a read, and
+    // watching a stalled queue is an operator acting.
+    "system-health":
+      "any(all(full-seat, any(any(embedding_reindex:update))), job_health:read)",
+    extensions: "all(full-seat, any(any(role_admin:update)))",
+    reset: "all(full-seat, system_reset:delete, flag:data_reset_available)",
+  };
+
+  it("declares the expression this census names, for every page", () => {
+    for (const page of SETTINGS_PAGES) {
+      expect(`${page.id}: ${render(page.changes)}`).toBe(
+        `${page.id}: ${DECLARED_CHANGES[page.id]}`,
+      );
+    }
+  });
+
+  // The other direction: a page added with no entry fails, and an entry for a
+  // page that no longer exists fails too.
+  it("names every page in the catalog and nothing else", () => {
+    expect(Object.keys(DECLARED_CHANGES).sort()).toEqual(
+      SETTINGS_PAGES.map((page) => page.id).sort(),
+    );
+  });
+
+  // Every mutating page folds the seat, and no page's `requires` does. The
+  // second half matters as much: `requires` decides who may OPEN a page, and a
+  // read seat may open everything its grants open — folding the ceiling there
+  // would be a permission change wearing the clothes of a tidier rail.
+  it("puts the seat ceiling on what a page changes and never on what opens it", () => {
+    for (const page of SETTINGS_PAGES) {
+      expect(render(page.requires)).not.toContain("full-seat");
+    }
+    const mutating = SETTINGS_PAGES.filter(
+      (page) =>
+        page.changes.kind !== "always" &&
+        page.changes.kind !== "reading-is-the-act",
+    );
+    for (const page of mutating) {
+      expect(`${page.id}: ${render(page.changes)}`).toContain("full-seat");
+    }
+  });
+
+  // The sentinel is only ever a `changes`, and `holds` must refuse it rather
+  // than guess: it names the page's own requirement, which no expression can
+  // carry. Anything evaluating it directly has skipped `settingsReach`.
+  it("refuses to resolve the reading-is-the-act sentinel on its own", () => {
+    expect(holds(readingIsTheAct, meFixture({ roles: ["admin"] }))).toBe(false);
+  });
+
+  // A page whose `requires` is a mutation must not use the sentinel: the
+  // sentinel resolves to `requires`, which carries no seat ceiling, so a read
+  // seat holding the grant would be told the page is theirs to work in.
+  // Automations and Reset were both written that way and both were wrong.
+  it("never resolves the sentinel to a requirement that mutates", () => {
+    for (const page of SETTINGS_PAGES) {
+      if (page.changes.kind !== "reading-is-the-act") {
+        continue;
+      }
+      expect(`${page.id}: ${render(page.requires)}`).not.toMatch(
+        /:(create|update|delete)/,
+      );
+    }
   });
 });
 
@@ -667,5 +837,122 @@ describe("requirements that are not permissions — the composed units", () => {
         meFixture({ allow: { webhook_subscription: ["read", "create"] } }),
       ).some((p) => p.id === "integrations"),
     ).toBe(true);
+  });
+});
+
+// What a page's `changes` buys a real reader: which pages reach the rail, and
+// which stay reachable from the settings home and search without cluttering it.
+//
+// Built on the SEEDED rep's grants rather than a hand-picked few. A partial
+// fixture would answer a question about a fixture — the point of this case is
+// what the product actually shows the role Lars ships, so a policy change that
+// widens a rep shows up here as a failing list rather than silently.
+describe("what the rail carries and what it leaves behind", () => {
+  const seededRep = meFixture({
+    roles: ["rep"],
+    allow: {
+      activity: ["create", "read", "update"],
+      automation: ["read"],
+      capture_settings: ["create", "read"],
+      channel_connection: ["read"],
+      commission: ["read"],
+      computed_field: ["read"],
+      contract: ["create", "read", "update"],
+      custom_field: ["read"],
+      deal: ["create", "read", "update"],
+      deal_room: ["create", "read", "update"],
+      finance: ["read"],
+      forecast: ["read"],
+      installation_settings: ["read"],
+      integrations: ["read"],
+      introduction: ["create", "read", "update"],
+      knowledge_corpus: ["read"],
+      knowledge_document: ["read"],
+      lead: ["create", "read", "update", "delete"],
+      list: ["create", "read", "update"],
+      offer: ["create", "read", "update"],
+      offer_template: ["create", "read", "update"],
+      organization: ["create", "read", "update"],
+      overlay_connection: ["read"],
+      partner: ["read"],
+      person: ["create", "read", "update"],
+      pipeline: ["read"],
+      product: ["create", "read", "update"],
+      project: ["create", "read", "update"],
+      relationship: ["create", "read", "update"],
+      saved_view: ["create", "read", "update", "delete"],
+      signal: ["create", "read", "update"],
+      tag: ["read"],
+      voice_profile: ["create", "read", "update"],
+      webhook_subscription: ["read"],
+      weekly_plan: ["create", "read", "update"],
+    },
+  });
+
+  it("gives a rep the pages they work in, and only those", () => {
+    const reach = settingsReach(seededRep);
+    expect(reach.acts.map((page) => page.id)).toEqual([
+      // Their own five, minus Voice — a rep holds voice_profile create and
+      // update, so Voice IS theirs; it is here for that reason and not because
+      // the page sits under their own heading.
+      "account",
+      "voice",
+      "agents",
+      "connections",
+      "capture-activity",
+      // The company profile the AI reads: a rep holds `organization` create and
+      // update, which is what CompanyContextCard asks. Existing behaviour that
+      // the rail is only now reporting — the card was always editable by them.
+      "company",
+      // Products and offer templates: a rep authors both.
+      "products",
+      // Capture rules, because a rep holds `organization:update` and
+      // BlockedDomainsCard writes it. If a rep editing the company's blocked
+      // domains is not wanted, that CARD's grant is the thing to change — the
+      // rail is only reporting what the card already allows.
+      "capture",
+    ]);
+  });
+
+  it("leaves the pages a rep can only read out of the rail, not out of reach", () => {
+    const reach = settingsReach(seededRep);
+    expect(reach.looksUp.map((page) => page.id)).toEqual([
+      "pipelines",
+      "leads",
+      "fields",
+      "tags",
+      "knowledge",
+    ]);
+    // Integrations and Automations are absent from BOTH halves, and that is
+    // #4650's doing rather than this change's: their `requires` asks the write,
+    // so a rep never opens them at all. A page has to be visible before the
+    // partition has anything to say about it.
+    // Still openable, every one of them: the partition decides prominence, and
+    // a page in `looksUp` answers its address, appears in search and is listed
+    // on the settings home. Losing that distinction would turn a tidier rail
+    // into a permission change nobody asked for.
+    const openable = visibleSettingsPages(seededRep).map((page) => page.id);
+    for (const page of reach.looksUp) {
+      expect(openable).toContain(page.id);
+    }
+  });
+
+  // The partition is exhaustive and disjoint — every visible page in exactly
+  // one half. Without this a page could fall out of both and vanish from the
+  // rail AND the home while still answering its address, which is the one
+  // shape of this bug nobody would report.
+  it("puts every page a reader may open in exactly one half", () => {
+    for (const snapshot of [seededRep, meFixture({ roles: ["admin"] })]) {
+      const reach = settingsReach(snapshot);
+      const partitioned = [...reach.acts, ...reach.looksUp]
+        .map((page) => page.id)
+        .sort();
+      expect(partitioned).toEqual(
+        visibleSettingsPages(snapshot)
+          .map((page) => page.id)
+          .sort(),
+      );
+      expect(new Set(partitioned).size).toBe(partitioned.length);
+    }
   });
 });
