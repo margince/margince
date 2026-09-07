@@ -5,10 +5,12 @@ package compose
 
 // The daily reading of how far apart the two outbound authorities are.
 //
-// The engine has run in observe mode since it shipped: it decides, records, and
-// the old purpose gate rules. Ending that is a decision somebody has to make on
-// evidence, and this pass is what puts the evidence in front of them without
-// anybody remembering to ask.
+// The engine decides every category the shipped posture enforces, which is all
+// fourteen — and the legacy purpose gate's answer is still recorded beside its
+// own on every TRANSMIT row (staging records no legacy verdict; it never asked
+// that gate). The two still disagree, so the reading outlived the rollout it
+// was written for: it is now how somebody notices a category enforcing against
+// mail the old gate would have allowed.
 //
 // It exists because the same reading as a typed subcommand was one nobody would
 // ever run. The number that decides a rollout is not one an operator thinks to
@@ -18,8 +20,7 @@ package compose
 //
 // It DECIDES nothing and writes no domain row. Enforcement is a setting a human
 // changes after reading this; a pass that flipped a category itself would be a
-// second authority over what may be sent, and the whole point of the observe
-// period is that there is exactly one until somebody decides otherwise.
+// second authority over what may be sent, and there is exactly one.
 
 import (
 	"context"
