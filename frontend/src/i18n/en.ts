@@ -7527,7 +7527,7 @@ export const en = {
   "captureExclusions.scope.workspace": "Whole organization",
   "captureExclusions.kind.address": "Address",
   "captureExclusions.kind.domain": "Domain",
-  "captureExclusions.kind.container": "Label or folder",
+  "captureExclusions.kind.container": "Label, folder or mailbox",
   "captureExclusions.scopeLabel": "Applies to",
   "captureExclusions.kindLabel": "Kind",
   "captureExclusions.addLabel": "Exclude an address or a domain",

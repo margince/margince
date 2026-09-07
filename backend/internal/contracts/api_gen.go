@@ -19667,7 +19667,7 @@ type CaptureExclusion struct {
 	// Scope Whose rule it is — the installation's, or the caller's own for the mailbox they connected.
 	Scope CaptureExclusionScope `json:"scope"`
 
-	// Value The folded address or domain.
+	// Value The folded address or domain, or a provider-qualified container (`gmail:Label_12`, `graph:<folderId>`, `imap:INBOX/Family`) kept exactly as the provider spells it.
 	Value string `json:"value"`
 }
 

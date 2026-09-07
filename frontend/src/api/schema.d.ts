@@ -15745,7 +15745,7 @@ export interface components {
             id: string;
             scope: components["schemas"]["CaptureExclusionScope"];
             kind: components["schemas"]["CaptureExclusionKind"];
-            /** @description The folded address or domain. */
+            /** @description The folded address or domain, or a provider-qualified container (`gmail:Label_12`, `graph:<folderId>`, `imap:INBOX/Family`) kept exactly as the provider spells it. */
             value: string;
             /** Format: date-time */
             created_at: string;

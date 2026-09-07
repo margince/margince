@@ -22995,7 +22995,11 @@ components:
         id: { type: string, format: uuid }
         scope: { $ref: '#/components/schemas/CaptureExclusionScope' }
         kind: { $ref: '#/components/schemas/CaptureExclusionKind' }
-        value: { type: string, description: 'The folded address or domain.' }
+        value:
+          type: string
+          description: >-
+            The folded address or domain, or a provider-qualified container (`gmail:Label_12`,
+            `graph:<folderId>`, `imap:INBOX/Family`) kept exactly as the provider spells it.
         created_at: { type: string, format: date-time }
     CaptureExclusionScope:
       type: string
