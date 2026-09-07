@@ -37,6 +37,8 @@ const progressionEntity = "stage_progression_outcome"
 const (
 	progressionOutcomeKey = "outcome"
 	progressionDealKey    = "deal_id"
+	progressionFromKey    = "from_stage_id"
+	progressionToKey      = "to_stage_id"
 )
 
 // The outcome vocabulary, mirroring stage_progression_outcome.outcome.

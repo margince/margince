@@ -5273,6 +5273,37 @@ public.stage_progression_outcome.updated_at timestamp with time zone NOT NULL ge
 public.stage_progression_outcome.version bigint NOT NULL gen=- def=1
 public.stage_progression_outcome_approval_ux CREATE UNIQUE INDEX stage_progression_outcome_approval_ux ON public.stage_progression_outcome USING btree (approval_id)
 public.stage_progression_outcome_pkey CREATE UNIQUE INDEX stage_progression_outcome_pkey ON public.stage_progression_outcome USING btree (id)
+public.stage_progression_policy acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.stage_progression_policy.clean_acceptance_threshold numeric(4,3) NOT NULL gen=- def=0.950
+public.stage_progression_policy.correction_reversal_threshold numeric(4,3) NOT NULL gen=- def=0.010
+public.stage_progression_policy.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.stage_progression_policy.enabled_at timestamp with time zone gen=- def=-
+public.stage_progression_policy.enabled_by uuid gen=- def=-
+public.stage_progression_policy.from_stage_id uuid NOT NULL gen=- def=-
+public.stage_progression_policy.id uuid NOT NULL gen=- def=uuidv7()
+public.stage_progression_policy.min_observation_days integer NOT NULL gen=- def=28
+public.stage_progression_policy.min_reviewed integer NOT NULL gen=- def=200
+public.stage_progression_policy.mode text NOT NULL gen=- def='propose'::text
+public.stage_progression_policy.pipeline_id uuid NOT NULL gen=- def=-
+public.stage_progression_policy.stage_progression_policy_enabled_by_fkey FOREIGN KEY (enabled_by) REFERENCES app_user(id) ON DELETE SET NULL
+public.stage_progression_policy.stage_progression_policy_enabling_is_timed CHECK (((enabled_by IS NULL) OR (enabled_at IS NOT NULL)))
+public.stage_progression_policy.stage_progression_policy_from_stage_fkey FOREIGN KEY (from_stage_id) REFERENCES stage(id) ON DELETE CASCADE
+public.stage_progression_policy.stage_progression_policy_mode CHECK ((mode = ANY (ARRAY['propose'::text, 'auto'::text])))
+public.stage_progression_policy.stage_progression_policy_pipeline_fkey FOREIGN KEY (pipeline_id) REFERENCES pipeline(id) ON DELETE CASCADE
+public.stage_progression_policy.stage_progression_policy_pkey PRIMARY KEY (id)
+public.stage_progression_policy.stage_progression_policy_suspension_whole CHECK (((suspended_at IS NULL) = (suspended_reason IS NULL)))
+public.stage_progression_policy.stage_progression_policy_thresholds_are_shares CHECK (((clean_acceptance_threshold >= (0)::numeric) AND (clean_acceptance_threshold <= (1)::numeric) AND (correction_reversal_threshold >= (0)::numeric) AND (correction_reversal_threshold <= (1)::numeric)))
+public.stage_progression_policy.stage_progression_policy_to_stage_fkey FOREIGN KEY (to_stage_id) REFERENCES stage(id) ON DELETE CASCADE
+public.stage_progression_policy.stage_progression_policy_volume_is_a_bar CHECK (((min_reviewed > 0) AND (min_observation_days > 0) AND (window_days > 0) AND (undo_window_hours > 0)))
+public.stage_progression_policy.suspended_at timestamp with time zone gen=- def=-
+public.stage_progression_policy.suspended_reason text gen=- def=-
+public.stage_progression_policy.to_stage_id uuid NOT NULL gen=- def=-
+public.stage_progression_policy.undo_window_hours integer NOT NULL gen=- def=72
+public.stage_progression_policy.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.stage_progression_policy.version bigint NOT NULL gen=- def=1
+public.stage_progression_policy.window_days integer NOT NULL gen=- def=30
+public.stage_progression_policy_pkey CREATE UNIQUE INDEX stage_progression_policy_pkey ON public.stage_progression_policy USING btree (id)
+public.stage_progression_policy_transition_key CREATE UNIQUE INDEX stage_progression_policy_transition_key ON public.stage_progression_policy USING btree (pipeline_id, from_stage_id, to_stage_id)
 public.suggestion_dismissal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.suggestion_dismissal.fingerprint text NOT NULL gen=- def=-
 public.suggestion_dismissal.id uuid NOT NULL gen=- def=uuidv7()

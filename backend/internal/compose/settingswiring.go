@@ -50,6 +50,7 @@ var settingsDefinitions = sync.OnceValue(func() []settings.Definition {
 	defs = append(defs, ai.Definitions()...)
 	defs = append(defs, capture.Definitions()...)
 	defs = append(defs, consent.Definitions()...)
+	defs = append(defs, deals.Definitions()...)
 	defs = append(defs, identity.Definitions()...)
 	defs = append(defs, integrations.Definitions()...)
 	defs = append(defs, people.Definitions()...)
