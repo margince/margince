@@ -145,7 +145,18 @@ func (r *Registry) recordSyncSuccess(ctx context.Context, connectionID ids.UUID)
 //     admits one live run per connection, and this write runs inside the sync's
 //     own transaction — so a second live run would not merely fail the revival,
 //     it would fail the sync that triggered it and take a working mailbox down.
+//
+// The last guard is a predicate, and a predicate alone does not hold it. A
+// human pressing Import while this sync commits passes its own NOT EXISTS at
+// the same instant, and the loser of that race takes the unique violation —
+// which StartBackfill answers with ErrBackfillRunning and this path cannot
+// answer at all, because the statement that fails is inside somebody's
+// successful sync. So both paths take the connection row first, in that order,
+// and the race becomes a wait.
 func reviveTruncatedBackfillTx(ctx context.Context, tx pgx.Tx, connectionID ids.UUID) error {
+	if err := lockConnectionTx(ctx, tx, connectionID); err != nil {
+		return err
+	}
 	_, err := tx.Exec(ctx, `
 		UPDATE capture_backfill SET status = 'queued', completed_at = NULL`+resetInflightProgress+`
 		 WHERE id = (
@@ -162,6 +173,30 @@ func reviveTruncatedBackfillTx(ctx context.Context, tx pgx.Tx, connectionID ids.
 		connectionID, string(classAuth))
 	if err != nil {
 		return fmt.Errorf("capture: reviving a truncated backfill: %w", err)
+	}
+	return nil
+}
+
+// lockConnectionTx takes the connection row for the rest of the transaction, so
+// that two paths deciding whether this connection may have a live backfill
+// decide one at a time.
+//
+// The connection rather than the runs: there is no row to lock for a run that
+// does not exist yet, which is exactly the case the insert and the revival can
+// collide on. Both take it BEFORE reading capture_backfill, so the order is the
+// same on both paths and neither can wait on the other.
+//
+// A connection that is gone locks nothing and the caller proceeds: the writes
+// behind this are all keyed on the connection id, so they simply match no rows.
+func lockConnectionTx(ctx context.Context, tx pgx.Tx, connectionID ids.UUID) error {
+	var locked int
+	err := tx.QueryRow(ctx,
+		`SELECT 1 FROM capture_connection WHERE id = $1 FOR UPDATE`, connectionID).Scan(&locked)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("capture: locking the connection: %w", err)
 	}
 	return nil
 }
