@@ -84,6 +84,16 @@ inside it declined to claim. Giving it a role and a tab stop, which is what the
 rule asks for, would announce a control that does not exist and put a stop in
 the tab order that leads nowhere.
 
+**A widened hit area is not a second control either (`S6848`).** The same
+reading, for the `<div className="arhit">` in `app/agentrail.tsx`. The control
+is the `<button>` inside it — that is what carries the accessible name and the
+expanded state — and the div exists so a pointer can also press the words and
+the chevron beside it. The keyboard already reaches the button, whose Enter and
+Space arrive at the div as the same click. A role here would announce a control
+that is not one and put a tab stop in front of the one that is. Two
+`biome-ignore` lines beside it say the same thing; this entry is the third
+reader being told.
+
 **The menus use a roving tabindex (`S6852`, two sites).** The rule wants the
 `role="menu"` container focusable. In both menus focus lives on the items —
 each `menuitem` carries `tabIndex={active ? 0 : -1}` — which is the WAI-ARIA
