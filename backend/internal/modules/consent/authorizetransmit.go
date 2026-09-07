@@ -115,6 +115,25 @@ func (g *Gate) AuthorizeTransmit(ctx context.Context, req commsauthz.TransmitReq
 		}
 		ticket.Allowed = set.Effective(modeFor, legacyAllowed)
 		ticket.Reason = refusalReason(set, legacyAllowed)
+		// The message that goes must be the message that was authorized.
+		//
+		// Asked LAST, and only of a send the engine would otherwise allow: a
+		// delivery already refused is parked with a reason about the recipient,
+		// and replacing that with "the wording changed" would tell an operator
+		// to re-approve a message somebody had objected to. A changed body on
+		// an allowed send is its own refusal, and it parks rather than denying
+		// forever — the wording is a thing a human can look at and re-send.
+		if ticket.Allowed {
+			changed, err := g.wordingDiffersFromStaging(ctx, tx, req)
+			if err != nil {
+				return err
+			}
+			if changed {
+				ticket.Allowed = false
+				ticket.Reason = "this message was edited after it was authorized, so the wording that " +
+					"was checked is not the wording that would go"
+			}
+		}
 		return nil
 	})
 	if err != nil {
@@ -316,7 +335,7 @@ func refusalReason(set commsauthz.DecisionSet, legacyAllowed bool) string {
 // message that was authorized, and storing the words themselves would make the
 // decision a second copy of the mail.
 func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.TransmitRequest, setID ids.UUID, set commsauthz.DecisionSet) error {
-	sum := WordingDigest(req.Subject, req.Body)
+	sum := SendingDigest(req.Subject, req.Body, req.HTMLBody)
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return err

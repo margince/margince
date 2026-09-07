@@ -262,6 +262,7 @@ func (d *Dispatcher) gateConsent(ctx context.Context, del Delivery) (commsauthz.
 		PurposeKey: del.ConsentPurpose,
 		Subject:    del.Subject,
 		Body:       del.Body,
+		HTMLBody:   del.HTMLBody,
 	})
 	if terr != nil {
 		// The question could not be asked. A consent service that is merely
