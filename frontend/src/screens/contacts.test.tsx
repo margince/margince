@@ -169,6 +169,42 @@ describe("ContactsScreen (B-EP09.10a)", () => {
     expect(bruno?.textContent).not.toContain("—");
   });
 
+  // The row opens the CONTACT; the company cell opens the COMPANY. Two
+  // destinations in one row, and the reader picks.
+  //
+  // The company used to be plain text, on the reasoning that the row is
+  // already a link — but it is a link to the person, so a reader scanning who
+  // works for whom had to open a contact to reach the account behind them.
+  it("sends the row and the company to different records", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [
+            {
+              ...anna,
+              employer: {
+                organization_id: "o-1",
+                organization_name: "Brandt AG",
+              },
+            },
+          ],
+          page: { next_cursor: null },
+        }),
+      ),
+    );
+    render(<ContactsScreen />);
+
+    const company = await screen.findByRole("link", { name: "Brandt AG" });
+    expect(company.getAttribute("href")).toBe("#/companies/o-1");
+    // The row's own identity link still goes to the person. Asserting BOTH is
+    // what says these are two destinations rather than one of them having
+    // quietly taken the other's place.
+    const links = await screen.findAllByRole("link");
+    const hrefs = links.map((each) => each.getAttribute("href"));
+    expect(hrefs).toContain("#/contacts/p-1");
+  });
+
   it("renders the honest error state with the RFC7807 detail", async () => {
     vi.stubGlobal(
       "fetch",

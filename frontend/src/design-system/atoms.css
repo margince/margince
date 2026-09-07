@@ -713,7 +713,13 @@
 }
 
 /* A cross-record reference rendered inline as a text link (EntityRef): the
-   accent colour + hover underline read as navigable, with no button chrome. */
+   accent colour + hover underline read as navigable, with no button chrome.
+
+   It is an ANCHOR, so the record opens the ways a link does — a new tab, a
+   bookmark, the keyboard. The resets below cover both shapes: the border and
+   background belong to the button this used to be, and text-decoration to the
+   anchor it is, because the underline is the hover state rather than the
+   resting one. */
 .entity-link {
   padding: 0;
   border: 0;
@@ -722,6 +728,7 @@
   font: inherit;
   cursor: pointer;
   text-align: left;
+  text-decoration: none;
 }
 .entity-link:hover {
   text-decoration: underline;
