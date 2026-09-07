@@ -5327,7 +5327,8 @@ export interface paths {
          *     per person; `is_current_primary` is decided here only when you OMIT it — an
          *     employment for somebody with no other current one then becomes their primary
          *     — and an employment that has already ended never takes the flag. Send the
-         *     field to decide it yourself; a later PATCH always wins over both.
+         *     field to decide it yourself. A later PATCH can change it on the same terms,
+         *     the ended-employment rule included: see `updateRelationship`.
          */
         post: operations["createRelationship"];
         delete?: never;
@@ -5353,7 +5354,21 @@ export interface paths {
         delete: operations["archiveRelationship"];
         options?: never;
         head?: never;
-        /** Update a relationship (role, primary flag, dates). */
+        /**
+         * Update a relationship (role, primary flag, dates).
+         * @description Only the fields you send change. An employment somebody has LEFT is not
+         *     their current primary one, whichever half of the patch makes it so: an
+         *     `ended_at` that has already arrived clears `is_current_primary`, and
+         *     sending `is_current_primary: true` for an employment that is already over
+         *     does NOT take. Neither is an error — the response is 200 carrying the row
+         *     as it stands, with the flag false, so read the response rather than
+         *     retrying.
+         *
+         *     A notice period is not a departure: an `ended_at` still in the future
+         *     leaves the flag alone. Granting it to an employment that is still current
+         *     demotes the person's existing primary one in the same transaction, so the
+         *     one-primary-per-person rule holds without a 409.
+         */
         patch: operations["updateRelationship"];
         trace?: never;
     };
