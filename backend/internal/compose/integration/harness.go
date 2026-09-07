@@ -343,44 +343,6 @@ func (e *Env) AgentCtxWithPassport(passportID ids.UUID) context.Context {
 	})
 }
 
-// WsExec runs one setup statement in a workspace-bound transaction (RLS is
-// FORCED, so the GUC must be set even for the owner-less test pool).
-func (e *Env) WsExec(t *testing.T, sql string, args ...any) {
-	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, sql, args...)
-		return err
-	}); err != nil {
-		t.Fatalf("setup exec: %v", err)
-	}
-}
-
-// WsExecErr is WsExec for a statement the estate is EXPECTED to refuse: it
-// hands the error back rather than failing the test on it, so a suite can
-// assert which rule refused and not merely that something did.
-func (e *Env) WsExecErr(t *testing.T, sql string, args ...any) error {
-	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	return database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, sql, args...)
-		return err
-	})
-}
-
-// WsCount returns a scalar count in a workspace-bound transaction.
-func (e *Env) WsCount(t *testing.T, sql string, args ...any) int {
-	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	var n int
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, sql, args...).Scan(&n)
-	}); err != nil {
-		t.Fatalf("count query: %v", err)
-	}
-	return n
-}
-
 // AgentWithOrgRead binds an agent principal holding the same object grants
 // the rep does, unbounded, and CARRYING the granting human's user id — the
 // shape identity/passport.go actually mints, where OnBehalfOf becomes
