@@ -241,10 +241,9 @@ func wireIntroRequest(
 		AiGenerated: &aiWritten,
 		Reasoning:   introReasons(facts),
 	}
-	if aiWritten {
-		disclosure := draftfloor.AIDisclosure(facts.lang)
-		out.AiDisclosure = &disclosure
-	}
+	// The DRAFT's language, not the server's: a German draft owes a German
+	// disclosure.
+	out.AiDisclosure = draftfloor.AIDisclosureFor(aiWritten, facts.lang)
 	return out
 }
 

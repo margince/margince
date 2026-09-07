@@ -218,13 +218,9 @@ func wire(draft Draft, by crmcontracts.WrittenBy, voiceDegraded bool, lang strin
 		}
 		out.To = &to
 	}
-	if aiWritten {
-		// The DRAFT's language, not the server's: this line used to be an
-		// English constant, so a German draft carried an English legal
-		// sentence. draftfloor holds the one spelling, in all three.
-		disclosure := draftfloor.AIDisclosure(textlang.Lang(lang))
-		out.AiDisclosure = &disclosure
-	}
+	// The DRAFT's language, not the server's: a German draft owes a German
+	// disclosure.
+	out.AiDisclosure = draftfloor.AIDisclosureFor(aiWritten, textlang.Lang(lang))
 	return out
 }
 

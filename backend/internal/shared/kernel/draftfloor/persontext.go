@@ -174,3 +174,20 @@ func AIDisclosure(lang textlang.Lang) string {
 		return "This message was drafted with AI assistance (EU AI Act Art. 50 disclosure)."
 	}
 }
+
+// AIDisclosureFor answers the contract's optional disclosure field: the Art. 50
+// line in the draft's own language when a model wrote it, and nil when a person
+// did.
+//
+// The pointer is why this exists beside AIDisclosure rather than at each
+// composer. Four of them stamp the field under the same condition, and the
+// failure mode is not a wrong sentence but an ABSENT one — a nil field is a
+// draft that discloses nothing, which reads to every test around it exactly
+// like a draft a person wrote.
+func AIDisclosureFor(aiWritten bool, lang textlang.Lang) *string {
+	if !aiWritten {
+		return nil
+	}
+	line := AIDisclosure(lang)
+	return &line
+}

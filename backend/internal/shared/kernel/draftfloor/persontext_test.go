@@ -235,3 +235,22 @@ func TestAnUnknownLanguageStillCarriesADisclosure(t *testing.T) {
 			"a disclosure may not be", got)
 	}
 }
+
+// The optional field the composers stamp, in both directions. An absent
+// disclosure on a model-written draft is the failure Art. 50 names, and a
+// disclosure on a draft a person wrote is a claim about them that is not true.
+func TestTheDisclosureFieldIsStampedOnlyForAModelWrittenDraft(t *testing.T) {
+	t.Parallel()
+
+	written := AIDisclosureFor(true, textlang.German)
+	if written == nil {
+		t.Fatal("a model-written draft carried no disclosure field at all — nil reads to every " +
+			"caller exactly like a draft a person wrote")
+	}
+	if *written != AIDisclosure(textlang.German) {
+		t.Errorf("the stamped line is %q, want the German disclosure", *written)
+	}
+	if AIDisclosureFor(false, textlang.German) != nil {
+		t.Error("a draft a person wrote was stamped as AI-assisted")
+	}
+}
