@@ -435,6 +435,7 @@ public.agent_run.agent_run_attempt_check CHECK ((attempt >= 1))
 public.agent_run.agent_run_awaiting_shape CHECK (((status <> 'awaiting_approval'::text) OR ((approval_id IS NOT NULL) AND (pending IS NOT NULL))))
 public.agent_run.agent_run_passport_fkey FOREIGN KEY (passport_id) REFERENCES passport(id) ON DELETE SET NULL (passport_id)
 public.agent_run.agent_run_pkey PRIMARY KEY (id)
+public.agent_run.agent_run_settled_shape CHECK (((status <> ALL (ARRAY['completed'::text, 'degraded'::text, 'failed'::text])) OR (finished_at IS NOT NULL)))
 public.agent_run.agent_run_status_check CHECK ((status = ANY (ARRAY['running'::text, 'awaiting_approval'::text, 'completed'::text, 'degraded'::text, 'failed'::text])))
 public.agent_run.agent_run_trigger_unique UNIQUE (trigger_ref)
 public.agent_run.agent_spec text NOT NULL gen=- def=-
