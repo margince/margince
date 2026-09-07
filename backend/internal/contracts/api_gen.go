@@ -430,6 +430,54 @@ func (e ActivityLinkInputEntityType) Valid() bool {
 	}
 }
 
+// Defines values for ActivityReferenceContentState.
+const (
+	ActivityReferenceContentStateAvailable ActivityReferenceContentState = "available"
+	ActivityReferenceContentStateWithheld  ActivityReferenceContentState = "withheld"
+)
+
+// Valid indicates whether the value is a known member of the ActivityReferenceContentState enum.
+func (e ActivityReferenceContentState) Valid() bool {
+	switch e {
+	case ActivityReferenceContentStateAvailable:
+		return true
+	case ActivityReferenceContentStateWithheld:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ActivityReferenceKind.
+const (
+	ActivityReferenceKindCall    ActivityReferenceKind = "call"
+	ActivityReferenceKindEmail   ActivityReferenceKind = "email"
+	ActivityReferenceKindMeeting ActivityReferenceKind = "meeting"
+	ActivityReferenceKindMessage ActivityReferenceKind = "message"
+	ActivityReferenceKindNote    ActivityReferenceKind = "note"
+	ActivityReferenceKindTask    ActivityReferenceKind = "task"
+)
+
+// Valid indicates whether the value is a known member of the ActivityReferenceKind enum.
+func (e ActivityReferenceKind) Valid() bool {
+	switch e {
+	case ActivityReferenceKindCall:
+		return true
+	case ActivityReferenceKindEmail:
+		return true
+	case ActivityReferenceKindMeeting:
+		return true
+	case ActivityReferenceKindMessage:
+		return true
+	case ActivityReferenceKindNote:
+		return true
+	case ActivityReferenceKindTask:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AddConsumerMailDomainRequestKind.
 const (
 	AddConsumerMailDomainRequestKindExtra AddConsumerMailDomainRequestKind = "extra"
@@ -13623,22 +13671,22 @@ func (e VoiceProfileEvaluationRepeatsPerPrompt) Valid() bool {
 
 // Defines values for VoiceProfileVersionReason.
 const (
-	Automatic  VoiceProfileVersionReason = "automatic"
-	Manual     VoiceProfileVersionReason = "manual"
-	Onboarding VoiceProfileVersionReason = "onboarding"
-	Rollback   VoiceProfileVersionReason = "rollback"
+	VoiceProfileVersionReasonAutomatic  VoiceProfileVersionReason = "automatic"
+	VoiceProfileVersionReasonManual     VoiceProfileVersionReason = "manual"
+	VoiceProfileVersionReasonOnboarding VoiceProfileVersionReason = "onboarding"
+	VoiceProfileVersionReasonRollback   VoiceProfileVersionReason = "rollback"
 )
 
 // Valid indicates whether the value is a known member of the VoiceProfileVersionReason enum.
 func (e VoiceProfileVersionReason) Valid() bool {
 	switch e {
-	case Automatic:
+	case VoiceProfileVersionReasonAutomatic:
 		return true
-	case Manual:
+	case VoiceProfileVersionReasonManual:
 		return true
-	case Onboarding:
+	case VoiceProfileVersionReasonOnboarding:
 		return true
-	case Rollback:
+	case VoiceProfileVersionReasonRollback:
 		return true
 	default:
 		return false
@@ -17009,6 +17057,43 @@ type ActivityListResponse struct {
 	Data []Activity `json:"data"`
 	Page PageInfo   `json:"page"`
 }
+
+// ActivityReference One activity a derived number was computed from, named well enough to be
+// recognised and opened.
+//
+// A count of receipts is not a receipt. "12 activities" is a claim a reader
+// cannot check: they cannot tell whether it counts the exchange they
+// remember, and they cannot open any of it. This is the same list with
+// each row named — a subject, a date, and the canonical email row where
+// the activity is an email this reader may receive a summary of.
+//
+// A row this reader may know exists but not read carries
+// `content_state: withheld` and no subject: the same word and the same
+// rule the activity's own access block uses. The count it came from stays
+// the id array's length either way, so a withheld row narrows what can be
+// SHOWN and never what is claimed.
+type ActivityReference struct {
+	ActivityId openapi_types.UUID `json:"activity_id"`
+
+	// ContentState Whether this reader may read what the activity says. The same vocabulary `ActivityAccess.content_state` uses, because it is the same question about the same row.
+	ContentState ActivityReferenceContentState `json:"content_state"`
+
+	// EmailSummary The canonical email row, present exactly when this activity is an email this reader may receive a summary of. A client renders it the way every other surface renders a cited message, and opens the same drawer.
+	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
+
+	// Kind What KIND of activity it is, so a client dispatches on it: an email opens the drawer, a task opens the task detail, anything else opens the activity itself.
+	Kind       ActivityReferenceKind `json:"kind"`
+	OccurredAt time.Time             `json:"occurred_at"`
+
+	// Subject The activity's own subject line. Null when it has none, and when the content is not this reader's — the two are told apart by `content_state`, never by this field being empty.
+	Subject *string `json:"subject,omitempty"`
+}
+
+// ActivityReferenceContentState Whether this reader may read what the activity says. The same vocabulary `ActivityAccess.content_state` uses, because it is the same question about the same row.
+type ActivityReferenceContentState string
+
+// ActivityReferenceKind What KIND of activity it is, so a client dispatches on it: an email opens the drawer, a task opens the task detail, anything else opens the activity itself.
+type ActivityReferenceKind string
 
 // AddConsumerMailDomainRequest defines model for AddConsumerMailDomainRequest.
 type AddConsumerMailDomainRequest struct {
@@ -28831,6 +28916,9 @@ type OrganizationStrength struct {
 	// ContactCount How many current contacts of this account the caller can see and the score was chosen from.
 	ContactCount int `json:"contact_count"`
 
+	// ContributingActivities The same receipts, named. In the order they were counted, and omitting an id this reader cannot discover at all — so the list can be SHORTER than `contributing_activity_ids`, which stays the count. A number that shrank to what one reader may open would tell two readers different things about one score.
+	ContributingActivities *[]ActivityReference `json:"contributing_activities,omitempty"`
+
 	// ContributingActivityIds The activities the score was computed from (the receipts behind the number).
 	ContributingActivityIds *[]openapi_types.UUID `json:"contributing_activity_ids,omitempty"`
 
@@ -31527,6 +31615,9 @@ type RelationshipStrength struct {
 
 	// ComputedAt When this value was last recomputed (fixed-clock reproducible).
 	ComputedAt *time.Time `json:"computed_at,omitempty"`
+
+	// ContributingActivities The same receipts, named. In the order they were counted, and omitting an id this reader cannot discover at all — so the list can be SHORTER than `contributing_activity_ids`, which stays the count. A number that shrank to what one reader may open would tell two readers different things about one score.
+	ContributingActivities *[]ActivityReference `json:"contributing_activities,omitempty"`
 
 	// ContributingActivityIds The activities the score was computed from (the receipts behind the number).
 	ContributingActivityIds *[]openapi_types.UUID `json:"contributing_activity_ids,omitempty"`

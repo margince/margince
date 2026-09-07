@@ -17229,6 +17229,8 @@ export interface components {
             };
             /** @description The activities the score was computed from (the receipts behind the number). */
             contributing_activity_ids?: string[];
+            /** @description The same receipts, named. In the order they were counted, and omitting an id this reader cannot discover at all — so the list can be SHORTER than `contributing_activity_ids`, which stays the count. A number that shrank to what one reader may open would tell two readers different things about one score. */
+            readonly contributing_activities?: components["schemas"]["ActivityReference"][];
             /**
              * Format: date-time
              * @description When this value was last recomputed (fixed-clock reproducible).
@@ -17243,6 +17245,42 @@ export interface components {
             inbound_90d?: number;
             /** @description Count of qualifying outbound interactions in the trailing 90-day window. */
             outbound_90d?: number;
+        };
+        /**
+         * @description One activity a derived number was computed from, named well enough to be
+         *     recognised and opened.
+         *
+         *     A count of receipts is not a receipt. "12 activities" is a claim a reader
+         *     cannot check: they cannot tell whether it counts the exchange they
+         *     remember, and they cannot open any of it. This is the same list with
+         *     each row named — a subject, a date, and the canonical email row where
+         *     the activity is an email this reader may receive a summary of.
+         *
+         *     A row this reader may know exists but not read carries
+         *     `content_state: withheld` and no subject: the same word and the same
+         *     rule the activity's own access block uses. The count it came from stays
+         *     the id array's length either way, so a withheld row narrows what can be
+         *     SHOWN and never what is claimed.
+         */
+        ActivityReference: {
+            /** Format: uuid */
+            activity_id: string;
+            /**
+             * @description What KIND of activity it is, so a client dispatches on it: an email opens the drawer, a task opens the task detail, anything else opens the activity itself.
+             * @enum {string}
+             */
+            kind: "email" | "call" | "meeting" | "note" | "task" | "message";
+            /** @description The activity's own subject line. Null when it has none, and when the content is not this reader's — the two are told apart by `content_state`, never by this field being empty. */
+            subject?: string | null;
+            /** Format: date-time */
+            occurred_at: string;
+            /**
+             * @description Whether this reader may read what the activity says. The same vocabulary `ActivityAccess.content_state` uses, because it is the same question about the same row.
+             * @enum {string}
+             */
+            content_state: "available" | "withheld";
+            /** @description The canonical email row, present exactly when this activity is an email this reader may receive a summary of. A client renders it the way every other surface renders a cited message, and opens the same drawer. */
+            readonly email_summary?: components["schemas"]["EmailSummary"] | null;
         };
         /**
          * @description A licensed data provider registered in THIS installation; the domain/run contract

@@ -234,7 +234,9 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// 409 after it.
 		Reads:             NewPersonGraphReads(pool, InstallationDB(pool)),
 		orgRollupHandlers: orgRollupHandlers{pool: pool, now: time.Now},
-		strengthHandlers:  strengthHandlers{people: people.NewStore(InstallationDB(pool)), now: time.Now},
+		strengthHandlers: strengthHandlers{
+			people: people.NewStore(InstallationDB(pool)), pool: pool, now: time.Now,
+		},
 		// The schema-change pool is boot-optional; nil
 		// here means Create/SetOptions stay their generated 501 until the
 		// api role's WithSchemaPool rebuilds this over the real pool.
