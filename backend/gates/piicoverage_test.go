@@ -144,6 +144,10 @@ var piiTables = map[string]piiHandling{
 			// about what was in it, and a sweep that stopped writing it would
 			// leave the old subject line standing.
 			"subject = $2",
+			// Read FROM the words being emptied, so it describes erased text
+			// rather than the row. Same ruling as reply_verdict on the sibling
+			// eraser: a conclusion drawn from content does not outlive it.
+			"language = NULL",
 		},
 		// Columns a sibling eraser clears and the sweep deliberately does not.
 		// counterparty_email and the channel identity are the same ruling: the

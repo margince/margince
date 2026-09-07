@@ -21,8 +21,10 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestACapturedMessageRecordsTheLanguageItIsWrittenIn(t *testing.T) {
@@ -127,6 +129,47 @@ func emailWith(msgID, subject, body string) []byte {
 		body,
 		"",
 	}, "\r\n"))
+}
+
+// The label is read from the text, so editing the text retires it.
+//
+// A stored language that outlived the words it described would send a reply in
+// the language the message USED to be in — which is the same defect as the
+// corpus deciding, arriving by a slower route.
+func TestEditingAMessageRetiresItsRecordedLanguage(t *testing.T) {
+	env := newCaptureEnv(t)
+	e, sync := env.e, env.sync
+	sync(t, emailWith("lang-edit@acme.example", "Outstanding invoice",
+		"Hello, I am writing about the invoice that has been outstanding since December."))
+	activityID := newestActivity(t, e)
+	if got := languageOf(t, e, activityID); got != "en" {
+		t.Fatalf("the fixture needs an English message, got %q", got)
+	}
+
+	store := activities.NewStore(e.DB())
+	german := "Guten Tag, ich melde mich wegen der Rechnung, die seit Dezember offen ist."
+	if _, err := store.UpdateActivity(writerCtx(e, e.Rep1),
+		ids.From[ids.ActivityKind](activityID),
+		activities.UpdateActivityInput{Body: &german}); err != nil {
+		t.Fatalf("editing the message: %v", err)
+	}
+	if got := languageOf(t, e, activityID); got != "" {
+		t.Errorf("the edited message still records %q, which describes text that is gone", got)
+	}
+}
+
+// writerCtx is one seat editing correspondence they may write.
+func writerCtx(e *integration.SearchEnv, user ids.UUID) context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
+		SeatType: principal.SeatFull,
+		Permissions: principal.Permissions{
+			Objects:  map[string]principal.ObjectGrant{"activity": {Read: true, Update: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
 }
 
 // languageOf reads what one activity records about its own language, with the

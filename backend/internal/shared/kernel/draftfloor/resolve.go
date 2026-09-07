@@ -141,18 +141,18 @@ func (r *Resolver) Resolve(ctx context.Context, written Written, state convstate
 // would reach the prompt as an instruction to write in a language nothing else
 // in the product can render.
 func (r *Resolver) language(ctx context.Context, written Written) textlang.Lang {
+	// The stored label is above the ladder rather than in it: it is a fact
+	// somebody recorded, where every tier below is evidence being read now.
 	if textlang.Known(written.Stored) {
 		return textlang.Lang(written.Stored)
 	}
-	if lang := textlang.DetectFirst(written.Body, written.Subject); lang != textlang.Unknown {
-		return lang
-	}
+	var base string
 	if r != nil && r.base != nil {
-		if base := r.base(ctx); textlang.Known(base) {
-			return textlang.Lang(base)
-		}
+		base = r.base(ctx)
 	}
-	return DefaultLang
+	// The same ladder the footer under a sent message walks. Shared, so a
+	// draft and the footer beneath it cannot pick two languages for one mail.
+	return textlang.FirstKnown([]string{written.Body, written.Subject}, base)
 }
 
 // actor names the acting human, or nobody.

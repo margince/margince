@@ -150,8 +150,11 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 	recipient, surname := d.recipientName(ctx, ids.From[ids.ActivityKind](anchor))
 
 	fallbackSubject, fallbackBody := activities.DeterministicEmailDraft(activities.DraftContext{
-		Topic:     topic,
-		Body:      body,
+		Topic: topic,
+		Body:  body,
+		// The SAME language the model was told, so a model failure changes who
+		// wrote the draft and not what language it is in.
+		Language:  envelope.Lang(),
 		Band:      state.Band,
 		Threaded:  threaded,
 		Recipient: recipient,

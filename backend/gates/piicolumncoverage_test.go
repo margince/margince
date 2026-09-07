@@ -103,7 +103,6 @@ var erasureColumnBaseline = map[string][]string{
 		"channel_provider",
 		"direction",
 		"kind",
-		"language",
 		"meeting_status",
 		// Who caused the row to exist — human, agent, or the product's own
 		// remediation work. A closed enum about the WRITER, never about the

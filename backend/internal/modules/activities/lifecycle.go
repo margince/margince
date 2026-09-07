@@ -96,6 +96,14 @@ func updateActivityInTx(
 		  assignee_id = coalesce($%[7]d, assignee_id),
 		  is_done = coalesce($%[8]d, is_done),
 		  meeting_status = coalesce($%[9]d, meeting_status),
+		  -- The language was READ from the text, so an edit to the text retires
+		  -- it. Cleared rather than recomputed: detection lives in Go, and a
+		  -- label that outlived the words it described would send a reply in
+		  -- the language the message used to be in. Cleared, the drafting
+		  -- ladder reads the new text instead, which is the honest answer.
+		  language = CASE
+		    WHEN $%[3]d IS NOT NULL OR $%[2]d IS NOT NULL THEN NULL
+		    ELSE language END,
 		  done_at = CASE
 		    WHEN $%[8]d IS TRUE AND NOT is_done THEN now()
 		    WHEN $%[8]d IS FALSE THEN NULL

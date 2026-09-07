@@ -176,6 +176,31 @@ func DetectFirst(texts ...string) Lang {
 	return Unknown
 }
 
+// FirstKnown is the ladder every caller that must end up with a language walks:
+// the texts in order, then whatever fallbacks the caller can offer, then
+// English.
+//
+// One helper rather than a copy per caller. The footer under a sent mail, the
+// language a draft is written in and the label capture records all ask the same
+// question in the same order, and three spellings of "body, then subject, then
+// what the installation said" are three chances to answer it differently — the
+// footer of a message would then disagree with the message above it.
+//
+// A fallback that names no language the product ships is skipped rather than
+// trusted: it would otherwise reach a prompt as an instruction to write in a
+// language nothing else can render.
+func FirstKnown(texts []string, fallbacks ...string) Lang {
+	if lang := DetectFirst(texts...); lang != Unknown {
+		return lang
+	}
+	for _, fallback := range fallbacks {
+		if Known(fallback) {
+			return Lang(fallback)
+		}
+	}
+	return English
+}
+
 // score is one language's evidence, counted two ways because the two bars ask
 // different questions. Hits asks "is there enough evidence to speak at all",
 // so every hit counts once wherever it sits. Weighted asks "which language is

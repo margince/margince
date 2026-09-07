@@ -118,6 +118,10 @@ func redactSubjectTimeline(ctx context.Context, tx pgx.Tx, personID ids.PersonID
 		  -- them, derived from text this same statement is emptying, and leaving
 		  -- it would keep the conclusion after destroying the evidence.
 		  reply_verdict = NULL, reply_verdict_at = NULL, reply_verdict_by = NULL,
+		  -- Same reason, one step smaller: the language was READ from the words
+		  -- being emptied here, so it is a fact about erased text rather than
+		  -- about the row.
+		  language = NULL,
 		  source_id = CASE WHEN a.source_system || ':' || split_part(coalesce(a.thread_key, ''), ':', 3) = ANY($6)
 		                   THEN NULL ELSE a.source_id END,
 		  thread_key = CASE WHEN a.source_system || ':' || split_part(coalesce(a.thread_key, ''), ':', 3) = ANY($6)

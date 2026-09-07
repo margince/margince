@@ -57,19 +57,22 @@ func (d replyDrafter) DraftFirstEmail(ctx context.Context, intent string) (strin
 	// a model draft and its fallback describing the correspondence differently
 	// would make which writer answered visible in the prose.
 	state := convstate.State{Band: convstate.BandFresh}
+	// Resolved BEFORE the fallback, so both writers describe the message in one
+	// language. A first message answers nothing, so there is no correspondence
+	// to read: the rep's typed intent is the only text, and it is far too short
+	// to clear the detector's bar. The base-language tier is what actually
+	// decides this surface.
+	envelope := d.envelope.Resolve(ctx, draftfloor.Written{Body: intent}, state)
 	fallbackSubject, fallbackBody := activities.DeterministicEmailDraft(activities.DraftContext{
 		Band:     state.Band,
 		Threaded: false,
+		Language: envelope.Lang(),
 	}, intent)
 	if d.brain == nil {
 		return fallbackSubject, fallbackBody, nil
 	}
 	data := replyActivityData{
-		// A first message answers nothing, so there is no correspondence to
-		// read: the rep's typed intent is the only text, and it is far too
-		// short to clear the detector's bar. The base-language tier is what
-		// actually decides this surface.
-		Envelope: d.envelope.Resolve(ctx, draftfloor.Written{Body: intent}, state),
+		Envelope: envelope,
 		// Threaded is FALSE and the subject and body are empty, which is what
 		// makes this a first message rather than a reply with the evidence
 		// missing: nothing is being answered, so nothing may carry "Re:".

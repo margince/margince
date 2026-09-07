@@ -165,7 +165,10 @@ func (s *RetentionService) apply(ctx context.Context, pol retentionPolicy, id id
 // kind of difference was once carried in prose and went short.
 func (s *RetentionService) eraseActivityContent(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	_, err := tx.Exec(ctx,
-		`UPDATE activity SET body = NULL, raw = NULL, subject = $2, archived_at = coalesce(archived_at, now()) WHERE id = $1`,
+		// language goes with the text: it was read from the body this statement
+		// is emptying, so keeping it would answer one question about content
+		// that no longer exists.
+		`UPDATE activity SET body = NULL, raw = NULL, subject = $2, language = NULL, archived_at = coalesce(archived_at, now()) WHERE id = $1`,
 		id, erasedActivitySubject)
 	if err == nil {
 		// Everything the text left behind — the verbatim provider original, the
