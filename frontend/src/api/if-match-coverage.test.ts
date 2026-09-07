@@ -45,9 +45,9 @@ const UNPINNED_WRITES: readonly string[] = [
   // version through six screens is its own change with its own proof; what
   // matters here is that the class is now visible and the count can only fall.
   "screens/companyheader.tsx DELETE /organizations/{id}",
+  "screens/contacts.tsx DELETE /people/{id}",
   "screens/dealbulk.tsx DELETE /deals/{id}",
   "screens/deals.tsx DELETE /deals/{id}",
-  "screens/people.tsx DELETE /people/{id}",
   "screens/personrail.tsx DELETE /relationships/{id}",
   "screens/relationships.tsx DELETE /relationships/{id}",
   "screens/contractform.tsx PATCH /contracts/{id}",

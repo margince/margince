@@ -27,11 +27,11 @@ const meta: Meta<typeof RecordTabs> = {
 export default meta;
 type Story = StoryObj<typeof RecordTabs>;
 
-type Body = "overview" | "people" | "activity" | "brief";
+type Body = "overview" | "contacts" | "activity" | "brief";
 
 const LABELS: Record<Body, string> = {
   overview: "Overview",
-  people: "People",
+  contacts: "Contacts",
   activity: "Activity",
   brief: "Brief",
 };
@@ -42,11 +42,11 @@ function Live(props: Readonly<{ initial: Body }>) {
   return (
     <RecordTabs
       label="Record"
-      options={["overview", "people", "activity", "brief"]}
+      options={["overview", "contacts", "activity", "brief"]}
       value={value}
       onChange={setValue}
       labels={LABELS}
-      counts={{ people: 10, activity: 27 }}
+      counts={{ contacts: 10, activity: 27 }}
       marks={{ brief: true }}
     />
   );
@@ -73,11 +73,11 @@ export const WithTrailingControl: Story = {
   render: () => (
     <RecordTabs
       label="Record"
-      options={["overview", "people", "activity", "brief"]}
+      options={["overview", "contacts", "activity", "brief"]}
       value="overview"
       onChange={() => undefined}
       labels={LABELS}
-      counts={{ people: 10, activity: 27 }}
+      counts={{ contacts: 10, activity: 27 }}
       trailing={
         <Button small aria-pressed={false}>
           Details

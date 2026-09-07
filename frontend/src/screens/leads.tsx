@@ -111,7 +111,7 @@ import "./leads.css";
 // lead-local; the ≥60 / 40–59 / <40 colour thresholds are pinned by test.
 // Search/filter/sort/pagination (P-14), the rich create modal (P-15), the
 // If-Match edit form (P-1), and the dedupe view-existing link (P-16) are
-// wired in here the same way as contacts (people.tsx) — the Promote button
+// wired in here the same way as contacts (contacts.tsx) — the Promote button
 // and score/status/company badges on the lead 360 stay exactly as they
 // were. Status-change and score-override are Phase 4, not surfaced here.
 

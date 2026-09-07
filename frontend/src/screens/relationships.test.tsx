@@ -13,7 +13,7 @@ type Relationship = components["schemas"]["Relationship"];
 // rel_*_shape CHECK constraints (migration 0007). These pure-function specs
 // pin that mapping so the UI can never offer a (scope, kind) it can't satisfy
 // — the mismatch that used to reach the server as a "endpoint shape is
-// required" 422. Interactive coverage of the picker lives in people.test.tsx
+// required" 422. Interactive coverage of the picker lives in contacts.test.tsx
 // / organizations.test.tsx; this file is the invariant itself.
 
 const personScope: RelationshipScope = { person_id: "p-1" };

@@ -109,7 +109,7 @@ export function TagResultScreen({ tagID }: Readonly<{ tagID?: string }>) {
         <div className="tagresult-groups">
           <ResultGroup
             kind="person"
-            title={t("tagResult.people")}
+            title={t("tagResult.contacts")}
             icon={Contact}
             count={usage.people}
             tagID={tagID}

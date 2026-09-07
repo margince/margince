@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
-import { ContactsScreen, PersonScreen } from "./people";
+import { ContactsScreen, PersonScreen } from "./contacts";
 import {
   installFetchStub,
   jsonResponse,
@@ -14,11 +14,11 @@ import {
 type Person = components["schemas"]["Person"];
 
 // ContactsScreen (list) and PersonScreen (360 Overview) both read through
-// the api client on mount — fixtures mirror people.test.tsx's `anna` +
+// the api client on mount — fixtures mirror contacts.test.tsx's `anna` +
 // dormant-strength default (the Overview tab fires the strength GET
 // unconditionally).
 const meta: Meta = {
-  title: "Records/People",
+  title: "Records/Contacts",
   parameters: { layout: "padded" },
 };
 export default meta;
@@ -154,7 +154,7 @@ export const ContactsListMorePages: Story = {
 };
 
 // A row whose archived_at is set: the warn badge next to the name
-// (people.tsx's name column) renders off the row's own field, independent
+// (contacts.tsx's name column) renders off the row's own field, independent
 // of the includeArchived toggle's checked state. The checkbox itself starts
 // unchecked every render (useListQuery seeds includeArchived: false with no
 // prop to override it) and only flips on click, so this story shows the

@@ -56,12 +56,16 @@ export {
 // rows of their own, because three sidebar entries for one question ("what
 // needs me?") read as three separate piles.
 //
-// `screen` is the route id and never changes with a label: `deals` presents as
-// Pipeline, because it routes to the pipeline surface.
+// `screen` is the route id and never changes with a label. The id is the
+// address a reader bookmarked and the word every test and every `#/` link
+// spells, so a row is free to be renamed without moving anything.
 export type NavItem = {
   screen: Screen;
   labelKey: MessageKey;
   icon: LucideIcon;
+  // Words this destination is also known by, for the palette: a reader who
+  // learned one of them must still find the row by typing it.
+  aliases?: readonly string[];
 };
 
 export type NavGroup = {
@@ -74,21 +78,29 @@ export const NAV_GROUPS: readonly NavGroup[] = [
   {
     headingKey: "nav.group.records",
     items: [
-      { screen: "contacts", labelKey: "nav.contacts", icon: Users },
+      {
+        screen: "contacts",
+        labelKey: "nav.contacts",
+        icon: Users,
+        aliases: ["people"],
+      },
       { screen: "companies", labelKey: "nav.companies", icon: Building2 },
       { screen: "leads", labelKey: "nav.leads", icon: UserPlus },
-      // Slicing the records above it: a filter authored here becomes a dynamic
-      // list, a saved view or an export, and each of those selects from the
-      // record types this group names. So it belongs with them rather than under
-      // Intelligence — nothing on this screen aggregates, it answers "which
-      // records", which is the question the rows above it each answer with one
-      // fixed set. It reuses the screen's own title rather than a `nav.*` label,
-      // because a surface named twice gets renamed once.
+      // A deal is one of the records this group names: it is created, owned,
+      // listed, opened and reported on exactly as the three rows above it are,
+      // and the board this route draws is a VIEW of that record type rather
+      // than a fourth kind of thing. So it closes the group it belongs to.
       //
-      // A funnel is the glyph every CRM draws a sales pipeline with, and
-      // Pipeline is already a row on this list; a filtered list says what this
-      // surface produces and cannot be read as a second door to the board.
-      { screen: "filters", labelKey: "filters.title", icon: ListFilter },
+      // The board, not a bullseye: this route opens a column per stage with the
+      // deals standing in them, and `Target` drew a goal rather than a board. A
+      // reader scanning five glyphs on a phone bar with no labels under them
+      // has only the shape to go on.
+      {
+        screen: "deals",
+        labelKey: "nav.deals",
+        icon: Kanban,
+        aliases: ["pipeline"],
+      },
     ],
   },
   {
@@ -99,15 +111,22 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       // lanes inside it. It leads the group because it is what a reader opens
       // when the question is "what needs me?".
       { screen: "worklist", labelKey: "nav.today", icon: Sun },
-      // The board, not a bullseye: this route opens a column per stage with
-      // the deals standing in them, and `Target` drew a goal rather than a
-      // board. A reader scanning five glyphs on a phone bar with no labels
-      // under them has only the shape to go on.
-      { screen: "deals", labelKey: "nav.deals", icon: Kanban },
       // The body of work a deal is about. It starts during the deal and
-      // outlives close-won, so it sits beside the pipeline rather than under
-      // it: a project in delivery has no deal column to stand in.
+      // outlives close-won, so what it belongs to is the work rather than the
+      // record of the sale: a project in delivery has no deal column to stand
+      // in.
       { screen: "projects", labelKey: "nav.projects", icon: Briefcase },
+      // Closes the group as the AUTHORING surface over lists: a filter written
+      // here becomes a dynamic list, a saved view or an export, and writing one
+      // is work somebody does rather than a record they keep. Nothing on this
+      // screen aggregates, so it is not Intelligence either. It reuses the
+      // screen's own title rather than a `nav.*` label, because a surface named
+      // twice gets renamed once.
+      //
+      // A funnel is the glyph every CRM draws a sales pipeline with, and the
+      // deals board is a row on this list; a filtered list says what this
+      // surface produces and cannot be read as a second door to that board.
+      { screen: "filters", labelKey: "filters.title", icon: ListFilter },
     ],
   },
   {

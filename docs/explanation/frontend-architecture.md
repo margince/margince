@@ -266,7 +266,7 @@ The older primitives survive in two places, both deliberate:
   (`screens/onboarding-conversation/confirm-card.tsx`,
   `screens/onboarding-company-form.tsx`), the Company-context settings screen,
   and the record surfaces that show a single provenance line
-  (`people.tsx`, `leads.tsx`, `consent.tsx`, `history.tsx`).
+  (`contacts.tsx`, `leads.tsx`, `consent.tsx`, `history.tsx`).
   `StagedProposal`/`FieldDiff`/`ApprovalGate` are the composed forms of the same
   vocabulary.
 

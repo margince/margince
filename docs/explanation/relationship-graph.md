@@ -426,7 +426,7 @@ see [authorization.md](authorization.md) and [privacy-and-consent.md](privacy-an
 | The tables | `activity_participant` (`migrations/core/0157_*`), `graph_interaction_edge` (`0158_*`), `linkedin_connection` (`0159_*`), `linkedin_account` (`0160_*`) |
 | The REST contract | `backend/api/crm.yaml` (`getPersonNetwork`, `getDealCoverage`) |
 | The job contract (cadence, fan-out, batch sizes) | `backend/api/jobs.yaml` (`graph_edge_reconcile`, `participant_backfill`, `linkedin_rematch`) |
-| The two cards | `frontend/src/screens/network.tsx` (rendered from `people.tsx` and `deals.tsx`) |
+| The two cards | `frontend/src/screens/network.tsx` (rendered from `contacts.tsx` and `deals.tsx`) |
 
 ## Where to go next
 

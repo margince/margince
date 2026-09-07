@@ -17,7 +17,7 @@ import { meFixture } from "../app/mefixture";
 import { activityTimeline } from "../design-system/activitytimeline";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import { ContactsScreen, PersonScreen } from "./people";
+import { ContactsScreen, PersonScreen } from "./contacts";
 
 // B-EP09.10a acceptance: per-row provenance chips, row→360 navigation, and
 // the honest error state. Lead-specific acceptance (score thresholds,

@@ -276,7 +276,7 @@ describe("locale switch", () => {
       </QueryClientProvider>,
     );
     // English default: once the session resolves, the rail carries English labels
-    expect(await screen.findByRole("link", { name: "People" })).toBeTruthy();
+    expect(await screen.findByRole("link", { name: "Contacts" })).toBeTruthy();
     // The language is a preference of this person rather than a destination, so
     // it lives on Settings → Account and reaching it is a navigation. Which is
     // also what makes this an app-level claim: the choice is made on one route
@@ -296,9 +296,9 @@ describe("locale switch", () => {
 
     window.location.hash = "#/brief";
     await waitFor(() =>
-      expect(screen.getByRole("link", { name: "Personen" })).toBeTruthy(),
+      expect(screen.getByRole("link", { name: "Kontakte" })).toBeTruthy(),
     );
-    expect(screen.queryByRole("link", { name: "People" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Contacts" })).toBeNull();
   });
 });
 
@@ -860,7 +860,7 @@ describe("onboarding gate", () => {
     // into the hash on arrival, so contacts settles at `#/contacts?sort=…` a
     // moment after the shell renders; an equality against the bare address
     // holds only while that write is still pending. Where the gate left the
-    // reader is this test's claim — how the list is sorted is people.tsx's.
+    // reader is this test's claim — how the list is sorted is contacts.tsx's.
     expect(routeHash(parseHash(window.location.hash))).toBe("#/contacts");
   });
 

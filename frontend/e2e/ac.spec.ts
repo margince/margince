@@ -242,18 +242,18 @@ function accountTrigger(page: Page) {
 
 // The canonical ten, in order: Brief alone, then records / work / intelligence.
 // Not upstream's set: Automations is not a destination here (it is set-and-forget
-// configuration on Settings → AI). One label differs from its route id on
-// purpose — `deals` presents as Pipeline — so this asserts what a person reads,
-// not what the router matches.
+// configuration on Settings → AI). These are the TRANSLATED words a person
+// reads rather than the route ids the router matches — `home` presents as
+// Briefing, and no row here may be satisfied by its slug.
 //
 // The count and the list are both spelled out on purpose. NAV_GROUPS in
 // src/app/nav.ts is the source of the rail; deriving this from it would assert
 // only that the rail renders itself, so a destination added there is meant to
 // fail here until somebody says what a person now reads and where.
 //
-// Heute LEADS the work group and is the only door to the work that waits on a
-// person: decisions to answer, tasks to finish and duplicates to merge are lanes
-// inside it rather than rows of their own.
+// Arbeitsliste LEADS the work group and is the only door to the work that waits
+// on a person: decisions to answer, tasks to finish and duplicates to merge are
+// lanes inside it rather than rows of their own.
 test("AC-shell-1: the rail renders the canonical 10 items in order", async ({
   page,
 }) => {
@@ -271,13 +271,13 @@ test("AC-shell-1: the rail renders the canonical 10 items in order", async ({
     );
   expect(labels).toEqual([
     "Briefing",
-    "Personen",
+    "Kontakte",
     "Firmen",
     "Leads",
-    "Filter & Ansichten",
+    "Deals",
     "Arbeitsliste",
-    "Pipeline",
     "Projekte",
+    "Filter & Ansichten",
     "Analytics",
     "Margince fragen",
   ]);
@@ -290,7 +290,7 @@ test("AC-shell-2: exactly one rail item is active and tracks the route", async (
   await expect(page.locator("nav.rail a.navitem.active")).toHaveCount(1);
   await expect(page.locator("nav.rail a.navitem.active")).toHaveAttribute(
     "aria-label",
-    "Pipeline",
+    "Deals",
   );
   await page.locator('nav.rail a[aria-label="Analytics"]').click();
   await expect(page.locator("nav.rail a.navitem.active")).toHaveAttribute(
@@ -309,7 +309,7 @@ test("AC-shell-1k: one h1 per railed page, and on a record it is the record's ow
   page,
 }) => {
   await page.goto("/#/contacts");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Personen");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Kontakte");
 
   await page.goto("/#/contacts/p-anna");
   const heading = page.getByRole("heading", { level: 1 });
@@ -318,7 +318,7 @@ test("AC-shell-1k: one h1 per railed page, and on a record it is the record's ow
   await expect(page.locator(".record-head h1")).toHaveText("Anna Weber");
   // The trail that leads back to the list stands in the top bar, where it is
   // true of the page rather than part of the document the reader is reading.
-  await expect(page.locator(".topbar .crumbs a").last()).toHaveText("Personen");
+  await expect(page.locator(".topbar .crumbs a").last()).toHaveText("Kontakte");
   await expect(page.locator('.topbar [aria-current="page"]')).toHaveText(
     "Anna Weber",
   );
@@ -346,10 +346,10 @@ test("AC-shell-3/4/5: ⌘K opens focused+empty, filters, Enter navigates", async
   await page.keyboard.press("ControlOrMeta+k");
   const input = page.getByRole("searchbox", { name: "Befehlspalette" });
   await expect(input).toBeFocused();
-  // "Deals" is the route id, not the label the rail shows (Pipeline) — typing the
-  // domain word still has to land on the screen, or a relabeled destination
-  // becomes unreachable for everyone who knows it by its old name.
-  await input.fill("Deals");
+  // "Pipeline" is the word this row used to print, kept as its alias — typing it
+  // still has to land on the screen, or a relabeled destination becomes
+  // unreachable for everyone who knows it by its old name.
+  await input.fill("Pipeline");
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/#\/deals$/);
 });
@@ -412,7 +412,7 @@ test("features/10 §7: the locale switch flips the chrome DE↔EN", async ({
   page,
 }) => {
   await page.goto("/#/brief");
-  await expect(page.locator('nav.rail a[aria-label="Personen"]')).toBeVisible();
+  await expect(page.locator('nav.rail a[aria-label="Kontakte"]')).toBeVisible();
   // The language is a preference of this person rather than a destination, so it
   // lives on Settings → Account; the account block at the sidebar foot carries
   // the three places it can take you and nothing that changes a setting. Three
@@ -2865,18 +2865,17 @@ test.describe("filters and views", () => {
       objects.getByRole("button", { name: "Geschäfte", pressed: true }),
     ).toBeVisible();
 
-    // "Personen": `filters.tab.contacts` is a different KEY from the nav's,
-    // which is why it was read as out of the People ruling's reach — but the
-    // key is not the word, and the catalog moved this one too. The tab says
+    // "Kontakte": `filters.tab.contacts` is a different KEY from the nav's, and
+    // a key is not a word — the catalog moved this one with it. The tab says
     // what every other surface says.
-    await objects.getByRole("button", { name: "Personen" }).click();
+    await objects.getByRole("button", { name: "Kontakte" }).click();
     await expect(page).toHaveURL(/#\/filters\/contacts$/);
 
     // Reloaded, not just navigated: the tab is where you ARE, so a shared link
     // and a refresh have to land on the same object.
     await page.reload();
     await expect(
-      objects.getByRole("button", { name: "Personen", pressed: true }),
+      objects.getByRole("button", { name: "Kontakte", pressed: true }),
     ).toBeVisible();
   });
 });

@@ -36,7 +36,7 @@ import {
 import { WriteToHost } from "./writeto";
 
 // The same P-14/15/16/1 shared-block wiring as contacts
-// (people.test.tsx) — search/sort/pagination, the rich create modal
+// (contacts.test.tsx) — search/sort/pagination, the rich create modal
 // (display_name/legal_name/industry/size_band/domains), the company-360
 // If-Match edit, and the duplicate_domain dedupe link.
 
@@ -85,7 +85,7 @@ async function openRecordMenu(testId: string): Promise<HTMLElement> {
 }
 
 // openHistory switches to the tab the account's chronology now lives on. The
-// timeline left the overview when the page gained People and History tabs, so
+// timeline left the overview when the page gained Contacts and History tabs, so
 // a test about the timeline has to go there first.
 async function openHistory() {
   await userEvent.click(await screen.findByRole("button", { name: "History" }));

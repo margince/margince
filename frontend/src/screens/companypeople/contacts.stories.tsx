@@ -84,7 +84,7 @@ function stub(rows: OrganizationContact[]) {
 }
 
 const meta = {
-  title: "Records/Company 360/People/Contact list",
+  title: "Records/Company 360/Contacts/Contact list",
   component: CompanyPeopleList,
   parameters: { layout: "padded" },
 } satisfies Meta<typeof CompanyPeopleList>;

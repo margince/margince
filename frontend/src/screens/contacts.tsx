@@ -905,7 +905,7 @@ export function PersonScreen({ id }: Readonly<{ id: string }>) {
             rail={view ? <IdentityRail view={view} /> : undefined}
             aside={<PersonAside view={view} overlay={overlay} />}
           >
-            <div style={{ marginBottom: 16 }}>
+            <div style={{ marginBottom: "var(--space-4)" }}>
               <SegmentedControl
                 options={PERSON_TABS}
                 value={tab}

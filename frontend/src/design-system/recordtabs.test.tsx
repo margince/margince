@@ -9,14 +9,17 @@ import { RecordTabs } from "./recordtabs";
 
 afterEach(cleanup);
 
-type Body = "overview" | "people";
-const LABELS: Record<Body, string> = { overview: "Overview", people: "People" };
+type Body = "overview" | "contacts";
+const LABELS: Record<Body, string> = {
+  overview: "Overview",
+  contacts: "Contacts",
+};
 
 function strip(trailing?: React.ReactNode) {
   return render(
     <LocaleProvider initial="en">
       <RecordTabs
-        options={["overview", "people"]}
+        options={["overview", "contacts"]}
         value="overview"
         onChange={() => undefined}
         labels={LABELS}

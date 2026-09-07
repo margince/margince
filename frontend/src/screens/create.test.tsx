@@ -13,6 +13,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { ContactsScreen } from "./contacts";
 import {
   type CreateField,
   CreateRecordModal,
@@ -21,7 +22,6 @@ import {
   visibleFields,
 } from "./create";
 import { DealsScreen } from "./deals";
-import { ContactsScreen } from "./people";
 
 // Create flows (the "you can actually add a record" acceptance): the list
 // screens open a create modal, the POST body carries the server's shape

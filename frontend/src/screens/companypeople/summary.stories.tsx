@@ -45,7 +45,7 @@ function stub(body: Coverage) {
 }
 
 const meta = {
-  title: "Records/Company 360/People/Coverage band",
+  title: "Records/Company 360/Contacts/Coverage band",
   component: CoverageBand,
   parameters: { layout: "padded" },
 } satisfies Meta<typeof CoverageBand>;

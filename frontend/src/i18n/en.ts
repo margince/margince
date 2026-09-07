@@ -163,10 +163,10 @@ export const en = {
   "autonomy.confirm": "confirm-first",
 
   "nav.brief": "Brief",
-  "nav.contacts": "People",
+  "nav.contacts": "Contacts",
   "nav.companies": "Companies",
   "nav.leads": "Leads",
-  "nav.deals": "Pipeline",
+  "nav.deals": "Deals",
   "nav.today": "Worklist",
   // The decision lane, one at a time: how far through the reader is, and the
   // cleared plate the whole surface is built to reach.
@@ -242,7 +242,7 @@ export const en = {
     "Search people, companies, deals, projects, products, activities, leads…",
   "search.prompt": "Type what you are looking for.",
   "search.empty": "No matches for “{q}”.",
-  "search.group.person": "People",
+  "search.group.person": "Contacts",
   "search.group.organization": "Organizations",
   "search.group.deal": "Deals",
   "search.group.project": "Projects",
@@ -655,7 +655,7 @@ export const en = {
   "table.none": "No {unit} yet.",
   "table.actions": "Actions",
   "table.rangeLoaded": "{first}–{last} of {count} {unit} loaded so far",
-  "unit.contacts": "people",
+  "unit.contacts": "contacts",
   "unit.companies": "companies",
   "unit.deals": "deals",
   "unit.leads": "leads",
@@ -875,7 +875,7 @@ export const en = {
   "org.name": "Company",
   "org.description": "What they do",
   "org.website": "Website",
-  "org.contactCount": "People",
+  "org.contactCount": "Contacts",
   "org.openDealCount": "Open deals",
   // Offered only where there is no partner programme yet: the tab that holds
   // the form appears once one exists, so this is how the first one is made.
@@ -1013,7 +1013,7 @@ export const en = {
   "timeline.filters.to": "To",
   "timeline.filters.searchOmitsLimited":
     "Conversations whose content you may not open are left out of a search.",
-  "tab.people": "People",
+  "tab.contacts": "Contacts",
   "tab.deals": "Deals",
   "tab.tasks": "Tasks",
   "tab.timeline": "History",
@@ -2072,7 +2072,7 @@ export const en = {
   "tagResult.gone":
     "This tag no longer exists. It may have been merged into another.",
   "tagResult.totalVisible": "{count} visible assignments",
-  "tagResult.people": "People",
+  "tagResult.contacts": "Contacts",
   "tagResult.companies": "Companies",
   "tagResult.deals": "Deals",
   "tagResult.viewAll": "View all {count} {kind}",
@@ -2344,7 +2344,7 @@ export const en = {
   "lead.trigger.humanQualify": "Human qualified",
   "lead.evidenceNote": "Evidence note (optional)",
   "lead.segregation":
-    "Leads are kept apart from People. A lead becomes a person only when you qualify it.",
+    "Leads are kept apart from Contacts. A lead becomes a contact only when you qualify it.",
   "lead.segregationDismiss": "Got it",
   "list.emptyMine": "You own no {unit}.",
   "list.showAll": "Show all",
@@ -2898,7 +2898,7 @@ export const en = {
 
   "brief.digestFor": "digest for {date}",
   "brief.digestSynced": "Emails synced",
-  "brief.digestPeople": "People created",
+  "brief.digestContacts": "Contacts created",
   "brief.digestOrgs": "Companies created",
   "brief.digestDedupe": "Duplicates to review",
   "brief.digestClassify":
@@ -4083,7 +4083,7 @@ export const en = {
   "import.objectLabel": "What the rows are",
   "import.object.lead": "Prospects",
   "import.object.organization": "Companies",
-  "import.object.person": "People",
+  "import.object.person": "Contacts",
   "import.objectHint.lead":
     "An unworked list lands as leads for a human to qualify before anyone treats them as people.",
   "import.objectHint.organization":
@@ -4789,7 +4789,7 @@ export const en = {
   "backfill.progressLabel": "Import progress",
   "backfill.countScanned": "Messages scanned",
   "backfill.statEmails": "Emails captured",
-  "backfill.statPeople": "People",
+  "backfill.statContacts": "Contacts",
   // The count is domains this run raised a company question for, not
   // companies created — a domain becomes one only if its site says so.
   "backfill.statCompanies": "Companies to check",
@@ -5369,7 +5369,7 @@ export const en = {
   "ob.conv.triage.looksSolid": "Looks solid · {count}",
   "ob.conv.triage.companyWebsite": "Website",
   "ob.conv.triage.sourceCount": "{count} src",
-  "ob.conv.triage.peopleLabel": "People",
+  "ob.conv.triage.contactsLabel": "Contacts",
   "ob.conv.triage.peopleCount": "{count} found",
   "ob.conv.triage.peopleEmpty": "No people found on your site.",
   "ob.conv.triage.factsLabel": "Facts",
@@ -6959,7 +6959,7 @@ export const en = {
   "users.access.read": "read",
   "users.access.write": "write",
   "users.access.delete": "delete",
-  "users.access.object.person": "People",
+  "users.access.object.person": "Contacts",
   "users.access.object.organization": "Companies",
   "users.access.object.lead": "Leads",
   "users.access.object.deal": "Deals",
@@ -8438,7 +8438,7 @@ export const en = {
   "filters.subtitle":
     "Build a filter, watch what it selects, and save it as a view.",
   "filters.objectLabel": "Which records to filter",
-  "filters.tab.contacts": "People",
+  "filters.tab.contacts": "Contacts",
   "filters.tab.companies": "Companies",
   "filters.tab.deals": "Deals",
   "filters.builderTitle": "Filter",
@@ -8981,7 +8981,7 @@ export const en = {
   "worklist.untitled.dsr": "An open privacy request",
   "worklist.untitled.notice_case": "A disclosure this person is owed",
   "worklist.untitled.sync_health": "The CRM sync needs attention",
-  "worklist.sync.class.contacts": "people",
+  "worklist.sync.class.contacts": "contacts",
   "worklist.sync.class.companies": "companies",
   "worklist.sync.class.deals": "deals",
   "worklist.sync.class.leads": "prospects",
@@ -9116,7 +9116,7 @@ export const en = {
   "ob.digest.section.customer": "Who they sell to",
   "ob.digest.section.sales": "How they write",
   "ob.digest.facts": "Proof",
-  "ob.digest.people": "People",
+  "ob.digest.contacts": "Contacts",
   "ob.digest.sources": "References",
   "ob.digest.blank": "not written yet",
   "ob.digest.notWritten": "not written down",

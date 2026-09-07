@@ -205,7 +205,7 @@ describe("BriefScreen — the context rail", () => {
     // pending state announces now that a wait says what it is waiting for, so
     // finding it proves the panel exists rather than that the digest arrived.
     await screen.findByText("Emails synced");
-    expect(screen.getByText("People created")).toBeTruthy();
+    expect(screen.getByText("Contacts created")).toBeTruthy();
     expect(screen.getByText("Companies created")).toBeTruthy();
     expect(
       screen.getByText(

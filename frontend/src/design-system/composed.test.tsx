@@ -551,7 +551,7 @@ describe("TimelineText on a mail row", () => {
   it("keeps the correspondents' addresses above the message", () => {
     // The preamble says who wrote to whom, which is part of reading a mail on
     // a record. It is the row TITLE that must not lead with it — see the
-    // timelineTitle rule in people.tsx — not the message body.
+    // timelineTitle rule in contacts.tsx — not the message body.
     render(<RecordView name="Acme" zone="UTC" timeline={mailRow(SIGNED)} />);
     const body = document.querySelector(".tl-text-clamp")?.textContent ?? "";
     expect(body).toContain("anna@kunde.de");

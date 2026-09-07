@@ -360,7 +360,7 @@ describe("ConsentSection", () => {
     });
   });
 
-  // Preserves people.test.tsx's former "shows Grant for a non-granted purpose"
+  // Preserves contacts.test.tsx's former "shows Grant for a non-granted purpose"
   // coverage: a plain (non-DOI) grant must send no token key either, and this
   // exercises the ternary badge's `granted` branch for what the fixture's p1
   // otherwise never reaches (it starts already granted).

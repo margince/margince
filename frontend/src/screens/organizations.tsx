@@ -162,7 +162,7 @@ import { invalidateRecord } from "./recordwritekeys";
 // evidence-or-omit: a field with no stored value is absent, never guessed.
 // Search/filter/sort/pagination (P-14), the rich create modal (P-15), the
 // If-Match edit form (P-1), and the dedupe view-existing link (P-16) are
-// wired in here the same way as contacts (people.tsx) — the enrich flow,
+// wired in here the same way as contacts (contacts.tsx) — the enrich flow,
 // firmographics card, and timeline stay exactly as they were.
 
 type Organization = components["schemas"]["Organization"];
@@ -225,7 +225,7 @@ function stringField(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
-// Merge-target search (P-2): mirrors searchPeopleTargets (people.tsx) — the
+// Merge-target search (P-2): mirrors searchPeopleTargets (contacts.tsx) — the
 // caller filters out the source row.
 export async function searchOrgTargets(
   q: string,
@@ -1470,7 +1470,7 @@ function CompanyRecord({
             // `tab.overview`, which four other record types render and none of
             // them is this.
             overview: t("tab.overview"),
-            people: t("tab.people"),
+            people: t("tab.contacts"),
             deals: t("tab.deals"),
             tasks: t("tab.tasks"),
             timeline: t("tab.timeline"),

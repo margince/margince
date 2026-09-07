@@ -59,8 +59,8 @@ const render = (ui: ReactNode) => {
 const commands: Command[] = [
   {
     id: "screen:deals",
-    label: "Pipeline",
-    keywords: ["deals"],
+    label: "Deals",
+    keywords: ["pipeline"],
     type: "screen",
     route: { screen: "deals" },
   },
@@ -109,19 +109,20 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
   it("shows the default command list with type tags, focuses the input", () => {
     render(<CommandPalette open onClose={() => {}} commands={commands} />);
     expect(document.activeElement).toBe(screen.getByRole("searchbox"));
-    expect(screen.getByText("Pipeline")).toBeTruthy();
+    expect(screen.getByText("Deals")).toBeTruthy();
     expect(screen.getByText("Record")).toBeTruthy(); // type tag rendered
   });
 
-  // A nav label is a presentation choice; the domain word outlives it. Typing
-  // "deals" has to reach Pipeline, or renaming a destination quietly removes it
-  // from the palette for everyone who knows it by its older name.
+  // A nav label is a presentation choice; the word a reader already learned
+  // outlives it. Typing "pipeline" has to reach the Deals row, or relabelling a
+  // destination quietly removes it from the palette for everyone who knows it by
+  // its older name.
   it("matches a keyword the row does not display, without showing it", async () => {
     render(<CommandPalette open onClose={() => {}} commands={commands} />);
-    await userEvent.type(screen.getByRole("searchbox"), "deals");
+    await userEvent.type(screen.getByRole("searchbox"), "pipeline");
     const rows = screen.getAllByRole("button");
-    expect(rows[0].textContent).toContain("Pipeline");
-    expect(rows[0].textContent).not.toContain("deals");
+    expect(rows[0].textContent).toContain("Deals");
+    expect(rows[0].textContent).not.toContain("pipeline");
     await userEvent.keyboard("{Enter}");
     expect(window.location.hash).toBe("#/deals");
   });
@@ -186,7 +187,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     const user = userEvent.setup();
     // Where the arrow keys put a reader — and where Escape used to do nothing,
     // because the handler belonged to the input this focus has left.
-    const row = screen.getByRole("button", { name: /Pipeline/ });
+    const row = screen.getByRole("button", { name: /Deals/ });
     row.focus();
     expect(document.activeElement).toBe(row);
     await user.keyboard("{Escape}");
@@ -283,11 +284,11 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     // failed RECORD search leaves the command list working, not that it leaves
     // the previous query matching something it never matched.
     await userEvent.clear(screen.getByRole("searchbox"));
-    await userEvent.type(screen.getByRole("searchbox"), "Pipeline");
+    await userEvent.type(screen.getByRole("searchbox"), "Deals");
     expect(
       screen
         .getAllByRole("button")
-        .some((row) => row.textContent?.includes("Pipeline")),
+        .some((row) => row.textContent?.includes("Deals")),
     ).toBe(true);
   });
 
@@ -492,6 +493,26 @@ describe("useBuiltinCommands", () => {
       expect(screen.queryByText("Company profile")).toBeNull();
     });
   });
+
+  // The two destinations that carry a word the rail no longer prints. A reader
+  // who learned "People" or "Pipeline" types it, and the row it named must be
+  // what answers — against the REAL rail rows, because the alias lives on the
+  // nav item and a fixture command list would only prove the fixture.
+  it.each([
+    ["people", "Contacts", "#/contacts"],
+    ["pipeline", "Deals", "#/deals"],
+  ])(
+    "reaches %s's destination by the name it used to print",
+    async (typed, label, hash) => {
+      const user = userEvent.setup();
+      renderProbe();
+      await user.type(screen.getByRole("searchbox"), typed);
+      const rows = screen.getAllByRole("button");
+      expect(rows[0].textContent).toContain(label);
+      await user.keyboard("{Enter}");
+      expect(window.location.hash).toBe(hash);
+    },
+  );
 
   it("reaches the filter builder by the name the screen prints", async () => {
     const user = userEvent.setup();

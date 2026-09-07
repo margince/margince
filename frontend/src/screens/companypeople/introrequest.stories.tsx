@@ -17,7 +17,7 @@ import { IntroRequestModal } from "./introrequest";
 // their time in, which is why the draft is editable rather than read-only.
 
 const meta = {
-  title: "Records/Company 360/People/Intro request",
+  title: "Records/Company 360/Contacts/Intro request",
   component: IntroRequestModal,
   parameters: { layout: "padded" },
 } satisfies Meta<typeof IntroRequestModal>;

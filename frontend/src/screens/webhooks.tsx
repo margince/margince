@@ -253,7 +253,7 @@ function updateWebhookSubscription(
 }
 
 // Archive stops all delivery (DELETE, no If-Match — mirrors products.tsx/
-// people.tsx's ArchiveAction usage: archiving isn't a concurrent-edit hazard
+// contacts.tsx's ArchiveAction usage: archiving isn't a concurrent-edit hazard
 // the way a field patch is).
 async function archiveWebhookSubscription(
   subscription: WebhookSubscription,

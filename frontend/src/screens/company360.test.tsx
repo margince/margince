@@ -148,7 +148,7 @@ function stub(
       if (pathname.endsWith("/360")) {
         return jsonResponse(three60, status);
       }
-      // The People tab's list, served from the SAME people section the 360
+      // The Contacts tab's list, served from the SAME people section the 360
       // fixture carries: a test that seeds a contact sees it on the tab
       // without seeding it twice in two shapes that could disagree.
       if (pathname.endsWith("/contacts")) {
@@ -1204,10 +1204,10 @@ describe("company view — Partner is not a permanent tab", () => {
     renderCompany();
     await screen.findByRole("complementary", { name: "Context" });
 
-    // 360, People and History belong to every account. Partner is a form
+    // 360, Contacts and History belong to every account. Partner is a form
     // about a commercial arrangement almost none of them have.
     expect(screen.getByRole("button", { name: "Overview" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: /^People/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^Contacts/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: "History" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Partner" })).toBeNull();
   });
@@ -1807,7 +1807,7 @@ describe("company view — where the record came from", () => {
 });
 
 describe("company view — the account's own tabs", () => {
-  it("keeps the rail summary beside the People tab", async () => {
+  it("keeps the rail summary beside the Contacts tab", async () => {
     stub(
       view({
         people: {
@@ -1840,7 +1840,7 @@ describe("company view — the account's own tabs", () => {
     renderCompany();
     await screen.findByRole("complementary", { name: "Context" });
 
-    await userEvent.click(screen.getByRole("button", { name: /^People/ }));
+    await userEvent.click(screen.getByRole("button", { name: /^Contacts/ }));
     // TWICE, deliberately: the tab is the roster in full and the rail's
     // capped summary stands beside it as the reader's anchor across tabs —
     // both checked independently, so the test still fails if either goes
@@ -1857,7 +1857,7 @@ describe("company view — the account's own tabs", () => {
 
     // An account with no partner programme still gets all four: Partner is
     // the only conditional tab.
-    for (const name of ["Overview", /^People/, "History", "Documents"]) {
+    for (const name of ["Overview", /^Contacts/, "History", "Documents"]) {
       expect(screen.getByRole("button", { name })).toBeTruthy();
     }
     expect(screen.queryByRole("button", { name: "Partner" })).toBeNull();

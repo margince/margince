@@ -80,7 +80,7 @@ describe("a list claims no ordering its endpoint cannot give", () => {
   it("finds the list screens rather than trusting a list written here", () => {
     // The census IS the directory. A hand-kept list would be the thing that
     // went stale, which is the failure this test exists to prevent.
-    expect(listScreens()).toContain("people.tsx");
+    expect(listScreens()).toContain("contacts.tsx");
     expect(listScreens()).toContain("partners.tsx");
     expect(listScreens().length).toBeGreaterThanOrEqual(6);
   });

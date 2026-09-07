@@ -3,11 +3,20 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { RelationshipsTab } from "./relationships";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
+import { jsonResponse, StoryProviders, stubWithSession } from "./story-utils";
 
 // RelationshipsTab reads GET /relationships?person_id=… (there is no
 // GET /relationships/{id} in the contract — every row is hydrated straight
-// off the list read). The fixture mirrors people.test.tsx's employmentRel.
+// off the list read). The fixture mirrors contacts.test.tsx's employmentRel.
+//
+// The panel is a WORK surface: it gates Add, Edit and Remove on
+// `relationship` create/update/delete, so every story here holds all three.
+// A story that left the session unrouted would draw the same rows with no
+// verbs on them, which is the read-only panel under another name.
+const MAY_WRITE_RELATIONSHIPS = {
+  relationship: ["create", "update", "delete"],
+} as const;
+
 const meta: Meta = {
   title: "Records/Relationships",
   parameters: { layout: "padded" },
@@ -42,13 +51,16 @@ const partnerOfRel = {
 
 export const WithRelationships: Story = {
   render: () => {
-    installFetchStub({
-      "GET /relationships": () =>
-        jsonResponse({
-          data: [employmentRel, partnerOfRel],
-          page: { next_cursor: null, has_more: false },
-        }),
-    });
+    stubWithSession(
+      {
+        "GET /relationships": () =>
+          jsonResponse({
+            data: [employmentRel, partnerOfRel],
+            page: { next_cursor: null, has_more: false },
+          }),
+      },
+      MAY_WRITE_RELATIONSHIPS,
+    );
     return (
       <StoryProviders>
         <RelationshipsTab scope={{ person_id: "p-1" }} />
@@ -59,13 +71,16 @@ export const WithRelationships: Story = {
 
 export const Empty: Story = {
   render: () => {
-    installFetchStub({
-      "GET /relationships": () =>
-        jsonResponse({
-          data: [],
-          page: { next_cursor: null, has_more: false },
-        }),
-    });
+    stubWithSession(
+      {
+        "GET /relationships": () =>
+          jsonResponse({
+            data: [],
+            page: { next_cursor: null, has_more: false },
+          }),
+      },
+      MAY_WRITE_RELATIONSHIPS,
+    );
     return (
       <StoryProviders>
         <RelationshipsTab scope={{ person_id: "p-1" }} />
@@ -89,16 +104,19 @@ const stakeholderRel = {
 // with a single answer.
 export const DealStakeholders: Story = {
   render: () => {
-    installFetchStub({
-      "GET /relationships": () =>
-        jsonResponse({
-          data: [
-            stakeholderRel,
-            { ...stakeholderRel, id: "rel-4", role: "economic_buyer" },
-          ],
-          page: { next_cursor: null, has_more: false },
-        }),
-    });
+    stubWithSession(
+      {
+        "GET /relationships": () =>
+          jsonResponse({
+            data: [
+              stakeholderRel,
+              { ...stakeholderRel, id: "rel-4", role: "economic_buyer" },
+            ],
+            page: { next_cursor: null, has_more: false },
+          }),
+      },
+      MAY_WRITE_RELATIONSHIPS,
+    );
     return (
       <StoryProviders>
         <RelationshipsTab scope={{ deal_id: "d-1" }} />
@@ -109,13 +127,16 @@ export const DealStakeholders: Story = {
 
 export const DealStakeholdersEmpty: Story = {
   render: () => {
-    installFetchStub({
-      "GET /relationships": () =>
-        jsonResponse({
-          data: [],
-          page: { next_cursor: null, has_more: false },
-        }),
-    });
+    stubWithSession(
+      {
+        "GET /relationships": () =>
+          jsonResponse({
+            data: [],
+            page: { next_cursor: null, has_more: false },
+          }),
+      },
+      MAY_WRITE_RELATIONSHIPS,
+    );
     return (
       <StoryProviders>
         <RelationshipsTab scope={{ deal_id: "d-1" }} />

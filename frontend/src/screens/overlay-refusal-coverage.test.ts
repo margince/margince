@@ -150,7 +150,7 @@ describe("what counts as distance", () => {
 describe("overlay refusal copy — translator coverage", () => {
   it("create-person (POST /people)", () => {
     assertTranslatedRefusal(
-      "people.tsx",
+      "contacts.tsx",
       'api.POST("/people", {',
       "create-person",
     );
@@ -158,7 +158,7 @@ describe("overlay refusal copy — translator coverage", () => {
 
   it("merge-person (POST /people/{id}/merge)", () => {
     assertTranslatedRefusal(
-      "people.tsx",
+      "contacts.tsx",
       '"/people/{id}/merge"',
       "merge-person",
     );
