@@ -41,7 +41,7 @@ which actions wait by default.
 
 **Filing**
 - Refile an activity · Refile a conversation · Refile several activities
-- Add someone from your mail · Add a person found on the site
+- Add someone from your mail · Add a contact found on the site
 - Commit an import
 
 **Learning about an account**
@@ -127,7 +127,7 @@ goes stale sooner than the same proposal about one closing next quarter.
 ## Bundles: several proposals from one act
 
 Sometimes one action produces several proposals at once. Reading a company's
-website, for example, can produce facts about the company *and* people found on
+website, for example, can produce facts about the company *and* contacts found on
 it. Those arrive as a **bundle** and can be decided together.
 
 A bundle is a grouping, not a second thing to have permission over. Each member

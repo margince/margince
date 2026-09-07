@@ -18,7 +18,7 @@ These are the defaults. All six are editable.
 | Leads that never converted | 365 days | Anonymise |
 | All captured activity | 1095 days (3 years) | Archive |
 | Call transcripts | 365 days | Erase |
-| People with no consent and no deal | 730 days (2 years) | Anonymise |
+| Contacts with no consent and no deal | 730 days (2 years) | Anonymise |
 | Lost deals | 1825 days (5 years) | Archive |
 | AI call payloads | 365 days | Erase |
 
