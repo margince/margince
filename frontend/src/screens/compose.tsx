@@ -441,7 +441,9 @@ async function draftFromActivity({
       body: intent.trim() ? { intent: intent.trim() } : {},
     },
   );
-  if (response.status === 501) return { available: false as const };
+  if (response.status === 501) {
+    return { available: false as const, reason: "no_model" as const };
+  }
   // Success is the real 2xx WITH a draft body, never merely the absence of an
   // error: openapi-fetch reports a falsy `error` (and undefined `data`) for a
   // bodiless non-2xx (a gateway 502/503/504), which would otherwise fall
@@ -753,7 +755,51 @@ async function draftFromLead({
     params: { path: { id: entityId } },
     body: intent.trim() ? { intent: intent.trim() } : {},
   });
-  if (response.status === 501) return { available: false as const };
+  if (response.status === 501) {
+    return { available: false as const, reason: "no_model" as const };
+  }
+  if (!response.ok || !data) {
+    throwProblem(error || { title: t("compose.actionFailed") });
+  }
+  return {
+    available: true as const,
+    draft: data,
+    reasoning: data.reasoning,
+    scope: data.scope,
+  };
+}
+
+// The person-started draft: the composer's "Write email" on a contact.
+//
+// The mirror of the account path, and simpler for one reason — the record in
+// the path is the recipient, so there is nobody to name. It takes the project
+// when the rep attributed the message to one, exactly as the account path does,
+// so the grounding read drops correspondence filed under the others.
+//
+// Answers the same `{available, draft}` shape as the three beside it, so the
+// fill cannot tell the origins apart and they cannot drift into different
+// clobber rules.
+async function draftFromPerson({
+  entityId,
+  projectId,
+  intent,
+  t,
+}: Readonly<{
+  entityId: string;
+  projectId: string;
+  intent: string;
+  t: ReturnType<typeof useT>;
+}>): Promise<DraftResult> {
+  const { data, error, response } = await api.POST("/people/{id}/draft-email", {
+    params: { path: { id: entityId } },
+    body: {
+      ...(projectId ? { project_id: projectId } : {}),
+      ...(intent.trim() ? { intent: intent.trim() } : {}),
+    },
+  });
+  if (response.status === 501) {
+    return { available: false as const, reason: "no_model" as const };
+  }
   if (!response.ok || !data) {
     throwProblem(error || { title: t("compose.actionFailed") });
   }
@@ -797,11 +843,21 @@ async function draftFromAccount({
   if (entityType === "lead") {
     return draftFromLead({ entityId, intent, t });
   }
+  // A PERSON grounds its own, and the contract says so: /people/{id}/draft-email
+  // is the account path's mirror — written from the caller's own person 360 and
+  // taking nothing but optional steering, because the record in the path IS the
+  // recipient. This arm was missing, so the page fell through to the refusal
+  // below and told the rep the model was not configured while making no request
+  // at all, on a deployment answering every other AI call on the same screen.
+  if (entityType === "person") {
+    return draftFromPerson({ entityId, projectId, intent, t });
+  }
   // A company page has to be told which contact, because an account has many.
-  // A person or a deal grounds nothing here: writing to a contact from whatever
-  // account sits nearby would be a conversation the rep never chose.
+  // A deal grounds nothing here: writing to a contact from whatever account
+  // sits nearby would be a conversation the rep never chose, and no deal-side
+  // route exists to answer it.
   if (entityType !== "organization" || !recipientId) {
-    return { available: false as const };
+    return { available: false as const, reason: "unsupported_origin" as const };
   }
   const { data, error, response } = await api.POST(
     "/organizations/{id}/draft-email",
@@ -818,7 +874,9 @@ async function draftFromAccount({
       },
     },
   );
-  if (response.status === 501) return { available: false as const };
+  if (response.status === 501) {
+    return { available: false as const, reason: "no_model" as const };
+  }
   if (!response.ok || !data) {
     throwProblem(error || { title: t("compose.actionFailed") });
   }
@@ -837,8 +895,18 @@ async function draftFromAccount({
 // reads and nothing else. Intersecting the two contract types instead would
 // make every optional field of one optional on both, and the fill would stop
 // noticing when a required field went missing.
+
+// Why a draft is not on offer. The two are not the same fact and the reader
+// cannot act on them alike: "no model" is the deployment's answer and there is
+// nothing to do about it here, while "not from this page" is ours and the rep
+// can still reach a draft from the account. They shared one sentence — "the
+// model is not configured" — and a rehearsal spent an afternoon looking for a
+// missing provider that was never missing: the person page simply made no
+// request at all.
+type DraftUnavailable = "no_model" | "unsupported_origin";
+
 type DraftResult =
-  | { available: false }
+  | { available: false; reason: DraftUnavailable }
   | {
       available: true;
       draft: Pick<EmailDraft, "subject" | "body" | "to"> &
@@ -1150,7 +1218,7 @@ function DraftOffer({
   intent: string;
   onIntentChange: (next: string) => void;
   draft: PendingAction;
-  unavailable: boolean;
+  unavailable: DraftUnavailable | null;
 }>) {
   const t = useT();
   return (
@@ -1184,7 +1252,11 @@ function DraftOffer({
         </Button>
       </div>
       {unavailable && (
-        <p className="t-caption">{t("compose.draftUnavailable")}</p>
+        <p className="t-caption">
+          {unavailable === "no_model"
+            ? t("compose.draftUnavailable")
+            : t("compose.draftUnsupportedHere")}
+        </p>
       )}
       {/* The failure appears without any navigation, so it is announced rather
           than merely coloured: a rep who cannot see the line has to be told
@@ -1653,7 +1725,7 @@ function MailOnlyFields({
   intent: string;
   onIntentChange: (next: string) => void;
   draft: PendingAction;
-  draftUnavailable: boolean;
+  draftUnavailable: DraftUnavailable | null;
   provenance: DraftProvenance | null;
   voiceMaturity: VoiceProfile["maturity"] | undefined;
   reasons: components["schemas"]["AccountDraftReason"][];
@@ -1811,7 +1883,7 @@ function useDraftMutation({
   entityType: RelinkKind;
   entityId: string;
   intent: string;
-  onUnavailable: () => void;
+  onUnavailable: (reason: DraftUnavailable) => void;
   onDrafted: (
     result: Extract<DraftResult, { available: true }>,
     ask: DraftAsk,
@@ -1841,7 +1913,7 @@ function useDraftMutation({
     },
     onSuccess: (result, ask) => {
       if (!result.available) {
-        onUnavailable();
+        onUnavailable(result.reason);
         return;
       }
       onDrafted(result, ask);
@@ -2384,7 +2456,8 @@ export function ComposeModal({
   const [servedBody, setServedBody] = useState("");
   // Two honest non-error outcomes, kept OUT of react-query's error channel so
   // the form stays usable: the model / mailer simply isn't configured (501).
-  const [draftUnavailable, setDraftUnavailable] = useState(false);
+  const [draftUnavailable, setDraftUnavailable] =
+    useState<DraftUnavailable | null>(null);
   const [sendUnavailable, setSendUnavailable] = useState(false);
   // Retiring the previous pair's draft is the composer's job, not the
   // grounding hook's: the body, the recipients, the reference and the
@@ -2811,7 +2884,7 @@ export function ComposeModal({
     entityType,
     entityId,
     intent,
-    onUnavailable: () => setDraftUnavailable(true),
+    onUnavailable: (reason: DraftUnavailable) => setDraftUnavailable(reason),
     onDrafted: (result, ask) => {
       fillFromDraft(result, {
         subject,
@@ -2829,7 +2902,7 @@ export function ComposeModal({
       });
       revealDraftedBody();
     },
-    resetUnavailable: () => setDraftUnavailable(false),
+    resetUnavailable: () => setDraftUnavailable(null),
     t,
   });
 

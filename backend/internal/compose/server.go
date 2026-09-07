@@ -100,9 +100,14 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// they share its singleton cache and its clock.
 	mux := operationalMux(srv, pool, log, identitySvc, api)
 
+	// noStoreOnCredentialPaths wraps the MUX, not the /v1 mount inside it.
+	// ServeMux answers a path needing canonicalization ("//token", "a/../b")
+	// with its own 307 before any registered handler runs, and that redirect
+	// echoes the cleaned path — credential segment and all — into a Location
+	// header. Mounted deeper, the middleware never saw those answers.
 	return httpserver.RecoverPanics(log,
 		httpserver.LimitBodies(bodyCeilingFor(uploadCeilings(srv.uploadLimits)),
-			httpserver.SecureHeaders(mux)))
+			httpserver.SecureHeaders(noStoreOnCredentialPaths(mux))))
 }
 
 // newServer assembles the module handler sets. Every cross-module edge is

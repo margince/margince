@@ -137,7 +137,7 @@ test("MOBILE-AC-2: record open holds the 300ms perceived budget on Fast-3G at 39
     `perfbench [fast-3g/390px]: record_open_perceived p95=${measured}ms ` +
       `(budget ${PERCEIVED_BUDGET_MS}ms, ${SAMPLES} samples)`,
   );
-  // The SHAPE as well as the verdict, because this lane can report two breaches
+  // The SHAPE as well as the verdict, because this lane can report breaches
   // that need opposite answers and a lone p95 does not separate them: a
   // distribution that has moved is a regression to bisect, a tight one behind a
   // single straggler is a runner that was busy. Whoever reads the breach reads
@@ -147,6 +147,18 @@ test("MOBILE-AC-2: record open holds the 300ms perceived budget on Fast-3G at 39
       `p50=${nearestRank(samples, 0.5)}ms p99=${nearestRank(samples, 0.99)}ms ` +
       `min=${Math.min(...samples)}ms max=${Math.max(...samples)}ms ` +
       `samples=${JSON.stringify([...samples].sort((a, b) => a - b))}`,
+  );
+  // And in the order they were MEASURED, which is the one question the sorted
+  // line cannot answer. A third shape reaches this lane: a tight fast body with
+  // several stragglers behind a clean gap, which is neither a moved
+  // distribution nor one unlucky sample. Where those stragglers sit separates
+  // its causes — bunched at the front is something still warming past the
+  // discarded open, evenly spaced is something expiring on a clock, scattered
+  // is the runner. Sorting threw exactly that away, and a reader could not get
+  // it back without another weekly run.
+  console.log(
+    `perfbench [fast-3g/390px]: record_open_perceived ` +
+      `in_order=${JSON.stringify(samples)}`,
   );
   // Written BEFORE the assertion, deliberately: a breach is the run whose
   // number a reader most wants to see, and recording afterwards would leave

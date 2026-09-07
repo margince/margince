@@ -108,6 +108,35 @@ function rowFields(summary: EmailSummary, t: ReturnType<typeof useT>) {
  */
 type NoOpenReason = "noDetail" | "noReader";
 
+/**
+ * EmailWords is a message's WORDS and nothing else — the server's own preview
+ * line, with the signature and the quoted history already removed.
+ *
+ * It exists for the one host that has already drawn everything else: a thread
+ * card places the conversation on the axis, says what kind it is and prints the
+ * sender and the time on each member, so a member row needs the words alone.
+ * EmailEntry there would be a second lead line and a second timestamp over the
+ * card's own, and EmailReference carries no preview by design, so the words had
+ * no canonical spelling and the card wrote its own.
+ *
+ * The reason it lives HERE rather than in the host is `rowFields`: a withheld
+ * message loses its words, and that rule has to be spelled once. The host read
+ * `preview` off the summary directly and took its withheld answer from a
+ * different field on a different object, so the two could disagree about the
+ * same message — which is the drift the canonical row exists to stop, arriving
+ * by the one route the row could not cover.
+ */
+export function EmailWords({ summary }: Readonly<{ summary: EmailSummary }>) {
+  const t = useT();
+  const { preview } = rowFields(summary, t);
+  // Nothing drawn rather than an empty line: the server composes this, so no
+  // preview means the sender wrote none — not that the row is still loading.
+  if (!preview) {
+    return null;
+  }
+  return <span className="emailentry__words">{preview}</span>;
+}
+
 export function EmailEntry({
   summary,
   timestamp,
