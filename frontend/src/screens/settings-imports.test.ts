@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import { sourceFileAt } from "../../scripts/lib/source-tree";
 
 // The settings catalog is split in two so the shell can ask where a settings
 // entry lives without paying to draw it. `settingsnav.tsx` answers the address
@@ -62,12 +63,7 @@ function resolveSpecifier(fromFile: string, specifier: string): string | null {
  * same edge would not show up as a new dependency in review.
  */
 function importsOf(file: string): string[] {
-  const source = ts.createSourceFile(
-    file,
-    readFileSync(file, "utf8"),
-    ts.ScriptTarget.Latest,
-    true,
-  );
+  const source = sourceFileAt(file);
   const out: string[] = [];
   const visit = (node: ts.Node) => {
     if (

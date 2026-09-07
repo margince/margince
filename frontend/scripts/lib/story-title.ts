@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import ts from "typescript";
+import { parseSource } from "./source-tree";
 
 /**
  * The Storybook sidebar path a story file claims, or null.
@@ -19,13 +20,7 @@ import ts from "typescript";
  * which stories exist.
  */
 export function storyTitle(path: string, text: string): string | null {
-  const source = ts.createSourceFile(
-    path,
-    text,
-    ts.ScriptTarget.Latest,
-    true,
-    ts.ScriptKind.TSX,
-  );
+  const source = parseSource(path, text);
   const exported = source.statements.find(ts.isExportAssignment);
   if (!exported) return null;
   const named = unwrap(exported.expression);

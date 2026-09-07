@@ -9,7 +9,8 @@ import { describe, expect, it } from "vitest";
 import {
   extensionFrontendFiles,
   filesUnder,
-  scriptKindFor,
+  parseSource,
+  sourceFileAt,
 } from "../../scripts/lib/source-tree";
 import { INTL_LOCALE } from "./format";
 
@@ -143,13 +144,7 @@ function localeMethods(): Map<string, number> {
     if (!/^lib\..*\.d\.ts$/.test(file)) {
       continue;
     }
-    const parsed = ts.createSourceFile(
-      file,
-      readFileSync(join(libDir, file), "utf8"),
-      ts.ScriptTarget.Latest,
-      true,
-      ts.ScriptKind.TS,
-    );
+    const parsed = sourceFileAt(join(libDir, file));
     const walk = (node: ts.Node): void => {
       if (
         ts.isInterfaceDeclaration(node) &&
@@ -443,13 +438,7 @@ function findingsIn(
   formatters: readonly string[],
   methods: ReadonlyMap<string, number>,
 ): Finding[] {
-  const parsed = ts.createSourceFile(
-    path,
-    source,
-    ts.ScriptTarget.Latest,
-    true,
-    scriptKindFor(path),
-  );
+  const parsed = parseSource(path, source);
   const rel = relative(srcRoot, path).split("\\").join("/");
   const imported = importsTheMapping(parsed);
   const aliases = intlAliases(parsed, formatters);

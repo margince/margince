@@ -58,7 +58,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { basename, join, relative, resolve } from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
-import { filesUnder, scriptKindFor } from "../../scripts/lib/source-tree";
+import { filesUnder, parseSource } from "../../scripts/lib/source-tree";
 import { storyTitle } from "../../scripts/lib/story-title";
 
 const frontendRoot = resolve(__dirname, "..", "..");
@@ -121,13 +121,7 @@ function tableRows(section: string): string[][] {
 // The PUBLIC name is the one the catalog has to carry, because it is what a
 // caller imports and therefore what a reader greps for.
 function componentsIn(path: string, text: string): string[] {
-  const source = ts.createSourceFile(
-    path,
-    text,
-    ts.ScriptTarget.Latest,
-    true,
-    scriptKindFor(path),
-  );
+  const source = parseSource(path, text);
   const declarations = new Map<string, ts.Node>();
   const published: [string, string][] = [];
   for (const statement of source.statements) {

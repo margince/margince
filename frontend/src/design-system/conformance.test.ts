@@ -8,6 +8,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import { parseSource, sourceFileAt } from "../../scripts/lib/source-tree";
 
 // The two source-wide design gates from B-EP09.1, derived from the tree so a
 // new file is enrolled the moment it exists:
@@ -136,14 +137,7 @@ function scannableSource(file: string, text: string): string {
       file.endsWith(".css") ? /\/\*[\s\S]*?\*\//g : /<!--[\s\S]*?-->/g,
     );
   }
-  const parsed = ts.createSourceFile(
-    file,
-    text,
-    ts.ScriptTarget.Latest,
-    // Parent pointers, so the walk below can ask a node for its child tokens.
-    true,
-    file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
-  );
+  const parsed = parseSource(file, text);
   const chars = text.split("");
   const blank = ({ pos, end }: ts.CommentRange): void => {
     for (let index = pos; index < end; index++) {
@@ -299,13 +293,7 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
       ) {
         continue;
       }
-      const source = ts.createSourceFile(
-        file,
-        readFileSync(file, "utf8"),
-        ts.ScriptTarget.ES2022,
-        true,
-        ts.ScriptKind.TSX,
-      );
+      const source = sourceFileAt(file);
       const visit = (node: ts.Node) => {
         if (ts.isJsxText(node) && hasWords(node.text)) {
           const { line } = source.getLineAndCharacterOfPosition(
@@ -351,13 +339,7 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
       ) {
         continue;
       }
-      const source = ts.createSourceFile(
-        file,
-        readFileSync(file, "utf8"),
-        ts.ScriptTarget.ES2022,
-        true,
-        file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
-      );
+      const source = sourceFileAt(file);
       const visit = (node: ts.Node) => {
         const isText =
           ts.isStringLiteral(node) ||
@@ -461,13 +443,7 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
       if (!file.endsWith(".tsx") || file.endsWith("design-system/atoms.tsx")) {
         continue;
       }
-      const source = ts.createSourceFile(
-        file,
-        readFileSync(file, "utf8"),
-        ts.ScriptTarget.ES2022,
-        true,
-        ts.ScriptKind.TSX,
-      );
+      const source = sourceFileAt(file);
       const visit = (node: ts.Node) => {
         if (ts.isJsxAttribute(node) && node.name.getText() === "className") {
           const element = node.parent.parent;
@@ -536,13 +512,7 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
       if (!file.endsWith(".tsx") || file.endsWith("design-system/atoms.tsx")) {
         continue;
       }
-      const source = ts.createSourceFile(
-        file,
-        readFileSync(file, "utf8"),
-        ts.ScriptTarget.ES2022,
-        true,
-        ts.ScriptKind.TSX,
-      );
+      const source = sourceFileAt(file);
       const visit = (node: ts.Node) => {
         if (ts.isJsxAttribute(node) && node.name.getText() === "className") {
           const element = node.parent.parent;

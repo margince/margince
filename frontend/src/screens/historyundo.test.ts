@@ -1,8 +1,8 @@
-import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import { sourceFileAt } from "../../scripts/lib/source-tree";
 import { en } from "../i18n/en";
 import { undoRefusalKey, undoRefusalsNamed } from "./historyundo";
 
@@ -22,13 +22,7 @@ const schemaPath = join(
 // The `reason` members `Undoability` declares. Read off the generated types,
 // which openapi-typescript writes as a union of string literals plus null.
 function refusalsInContract(): string[] {
-  const source = ts.createSourceFile(
-    "schema.d.ts",
-    readFileSync(schemaPath, "utf8"),
-    ts.ScriptTarget.Latest,
-    true,
-    ts.ScriptKind.TS,
-  );
+  const source = sourceFileAt(schemaPath);
   let members: string[] = [];
   const walk = (node: ts.Node) => {
     if (

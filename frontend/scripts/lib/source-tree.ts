@@ -19,7 +19,13 @@
 // There is ONE set here, and it is the wide one.
 
 import type { Dirent } from "node:fs";
-import { existsSync, readdirSync, realpathSync, statSync } from "node:fs";
+import {
+  existsSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  statSync,
+} from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
 
@@ -144,4 +150,47 @@ export function extensionFrontendFiles(extensionsDir: string): string[] {
   // with `1` where a Set belongs. The compiler catches it; the shape is worth
   // naming because the point-free version is the one that looks tidier.
   return extensionLayers(extensionsDir).flatMap((layer) => filesUnder(layer));
+}
+
+// parseSource is the ONE way this tree turns source text into a syntax tree.
+//
+// Every source-wide gate used to call `ts.createSourceFile` itself, and the
+// calls disagreed in the two arguments that change what a walk sees: the
+// language target and the script kind. One gate read a `.ts` file as TSX, where
+// a generic arrow is an unclosed element and everything after it is parse
+// recovery; another read it as TS. Both reported PASS over trees they had read
+// differently. The dialect comes from `scriptKindFor`, the target is the newest
+// the compiler knows, and parent pointers are always set, because a walk that
+// asks a node for its parent gets `undefined` and a silent non-match otherwise.
+//
+// `path` names the file for diagnostics and the dialect; `text` is what is
+// parsed, so a fixture or a prefiltered read can be handed in directly.
+export function parseSource(path: string, text: string): ts.SourceFile {
+  return ts.createSourceFile(
+    path,
+    text,
+    ts.ScriptTarget.Latest,
+    true,
+    scriptKindFor(path),
+  );
+}
+
+// sourceFileAt reads and parses the module at `path` ONCE for the run, and
+// hands every later caller the same tree.
+//
+// A gate that walks the corpus several times — one pass per rule — re-parsed
+// every file on every pass, and a gate that walks the import graph from many
+// entry points re-parsed the shared subgraph once per entry. The tree does not
+// change while a suite runs, so the second parse can only agree with the first;
+// what it costs is the whole runner for the tail of the run. The cache is per
+// worker: vitest isolates test files from one another, so one file's reads are
+// never another's stale view.
+const parsedSources = new Map<string, ts.SourceFile>();
+
+export function sourceFileAt(path: string): ts.SourceFile {
+  const known = parsedSources.get(path);
+  if (known) return known;
+  const parsed = parseSource(path, readFileSync(path, "utf8"));
+  parsedSources.set(path, parsed);
+  return parsed;
 }

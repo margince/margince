@@ -3,6 +3,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import { sourceFileAt } from "../../scripts/lib/source-tree";
 
 // Fitness function for the lost update: a write to an endpoint that takes an
 // `If-Match` precondition, sent without one.
@@ -72,13 +73,7 @@ const HTTP_METHODS: readonly string[] = [
   "delete",
 ];
 
-const schemaSource = ts.createSourceFile(
-  "schema.d.ts",
-  readFileSync(join(apiDir, "schema.d.ts"), "utf8"),
-  ts.ScriptTarget.Latest,
-  true,
-  ts.ScriptKind.TS,
-);
+const schemaSource = sourceFileAt(join(apiDir, "schema.d.ts"));
 
 function declaration(name: string): ts.InterfaceDeclaration {
   let found: ts.InterfaceDeclaration | undefined;
@@ -245,13 +240,7 @@ function callsIfMatch(node: ts.Node): boolean {
 
 /** `<file> METHOD /path` for every call in one file that sends no precondition. */
 function unpinnedIn(file: string, conditional: ReadonlySet<string>): string[] {
-  const source = ts.createSourceFile(
-    file,
-    readFileSync(file, "utf8"),
-    ts.ScriptTarget.Latest,
-    true,
-    ts.ScriptKind.TSX,
-  );
+  const source = sourceFileAt(file);
   const found: string[] = [];
   const visit = (node: ts.Node) => {
     const endpoint = calledEndpoint(node);

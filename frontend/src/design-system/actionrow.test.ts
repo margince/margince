@@ -47,7 +47,7 @@ import {
   extensionLayers,
   filesMatching,
   filesUnder,
-  scriptKindFor,
+  parseSource,
 } from "../../scripts/lib/source-tree";
 
 const frontendRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -232,13 +232,7 @@ function actionRows(
   text: string,
   gaps: Map<string, Set<string>>,
 ): readonly Row[] {
-  const source = ts.createSourceFile(
-    file,
-    text,
-    ts.ScriptTarget.Latest,
-    true,
-    scriptKindFor(file),
-  );
+  const source = parseSource(file, text);
   const rows: Row[] = [];
 
   const visit = (node: ts.Node): void => {

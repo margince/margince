@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import { parseSource } from "../../scripts/lib/source-tree";
 
 // The TypeScript half of the money-scale census: an amount already in minor
 // units, scaled by a hard-coded power of ten.
@@ -65,13 +66,7 @@ function scaleFindings(
   path: string,
   source: string,
 ): { findings: Finding[]; unreadable: boolean } {
-  const file = ts.createSourceFile(
-    path,
-    source,
-    ts.ScriptTarget.Latest,
-    true,
-    scriptKind(path),
-  );
+  const file = parseSource(path, source);
   if (unfinished(file)) return { findings: [], unreadable: true };
   const waived = waivedLines(source, file);
   const findings: Finding[] = [];
@@ -93,10 +88,6 @@ function scaleFindings(
   };
   ts.forEachChild(file, visit);
   return { findings, unreadable: false };
-}
-
-function scriptKind(path: string): ts.ScriptKind {
-  return path.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
 }
 
 // unfinished reports a file the scanner could not finish reading, which is a

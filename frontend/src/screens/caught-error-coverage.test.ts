@@ -6,6 +6,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import { parseSource } from "../../scripts/lib/source-tree";
 
 // Fitness function for a caught failure reaching the screen in the SERVER's
 // words instead of the reader's.
@@ -88,13 +89,7 @@ function unwrap(node: ts.Expression): ts.Expression {
 
 /** A rendered read of one caught binding: `<arm> <file>:<line>`. */
 function disclosuresIn(fileName: string, text: string): string[] {
-  const source = ts.createSourceFile(
-    fileName,
-    text,
-    ts.ScriptTarget.Latest,
-    true,
-    ts.ScriptKind.TSX,
-  );
+  const source = parseSource(fileName, text);
   const found: string[] = [];
 
   const visitCatch = (clause: ts.CatchClause) => {

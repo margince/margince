@@ -6,6 +6,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import { parseSource } from "../../scripts/lib/source-tree";
 
 // Fitness function for the one way a mutation can refuse work the screen was
 // plainly offering: a `mutationFn` that reads the value it needs out of its
@@ -117,13 +118,7 @@ function refuses(statement: ts.Node): boolean {
 
 function findingsIn(file: string): string[] {
   const text = readFileSync(file, "utf8");
-  const source = ts.createSourceFile(
-    file,
-    text,
-    ts.ScriptTarget.Latest,
-    true,
-    ts.ScriptKind.TSX,
-  );
+  const source = parseSource(file, text);
   const findings: string[] = [];
 
   const visit = (node: ts.Node) => {

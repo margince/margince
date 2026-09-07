@@ -6,6 +6,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import { parseSource } from "../../scripts/lib/source-tree";
 import { FALLBACK_RECORD_ZONE } from "./timezone";
 
 // A screen that names a zone has decided something, and the decision is the
@@ -110,14 +111,7 @@ function sourceFiles(dir: string): string[] {
 // under it at the wrong place — a gate that names the wrong line sends the next
 // reader to innocent code.
 function code(path: string, source: string): string {
-  const parsed = ts.createSourceFile(
-    path,
-    source,
-    ts.ScriptTarget.Latest,
-    // Parent pointers, so the walk below can ask a node for its child tokens.
-    true,
-    path.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
-  );
+  const parsed = parseSource(path, source);
   const chars = source.split("");
   const blank = ({ pos, end }: ts.CommentRange): void => {
     for (let index = pos; index < end; index++) {

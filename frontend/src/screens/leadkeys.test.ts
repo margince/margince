@@ -6,6 +6,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import { parseSource } from "../../scripts/lib/source-tree";
 import {
   LEAD_LIST_KEY,
   leadKey,
@@ -114,13 +115,7 @@ function isQueryKeyPosition(node: ts.ArrayLiteralExpression): boolean {
 
 /** `<file>:<line> <literal>` for every hand-spelled lead query key in one file. */
 function spelledIn(fileName: string, text: string): string[] {
-  const source = ts.createSourceFile(
-    fileName,
-    text,
-    ts.ScriptTarget.Latest,
-    true,
-    ts.ScriptKind.TSX,
-  );
+  const source = parseSource(fileName, text);
   const found: string[] = [];
   const visit = (node: ts.Node) => {
     if (ts.isArrayLiteralExpression(node) && node.elements.length > 0) {

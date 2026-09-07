@@ -6,6 +6,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import { parseSource } from "../../scripts/lib/source-tree";
 
 // A calendar day cut out of an ISO string is UTC's day, whoever is reading.
 //
@@ -137,13 +138,7 @@ function isIsoSlice(node: ts.Node): node is ts.CallExpression {
 }
 
 function isoSliceSites(path: string, source: string): Finding[] {
-  const parsed = ts.createSourceFile(
-    path,
-    source,
-    ts.ScriptTarget.Latest,
-    true,
-    path.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
-  );
+  const parsed = parseSource(path, source);
   const found: Finding[] = [];
   const visit = (node: ts.Node): void => {
     if (isIsoSlice(node)) {

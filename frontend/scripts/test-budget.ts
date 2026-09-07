@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import ts from "typescript";
 import { ASYNC_UTIL_TIMEOUT_MS } from "../vitest.budget";
+import { parseSource } from "./lib/source-tree";
 
 // Reads a test file and works out, for every test in it, how long that test is
 // ALLOWED to spend waiting — the sum of the budgets of the waiters it runs in
@@ -141,12 +142,7 @@ function declaredConsts(
 }
 
 function parse(file: string): ts.SourceFile {
-  return ts.createSourceFile(
-    file,
-    readFileSync(file, "utf8"),
-    ts.ScriptTarget.Latest,
-    true,
-  );
+  return parseSource(file, readFileSync(file, "utf8"));
 }
 
 /**

@@ -6,6 +6,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import { parseSource } from "../../scripts/lib/source-tree";
 
 // Fitness function for a screen that decides for itself what a currency is.
 //
@@ -133,13 +134,7 @@ function isFunctionScope(node: ts.Node): node is FunctionScope {
 
 /** `<kind> <file>:<line>` for every per-currency table in one file. */
 function tablesIn(fileName: string, text: string): string[] {
-  const source = ts.createSourceFile(
-    fileName,
-    text,
-    ts.ScriptTarget.Latest,
-    true,
-    ts.ScriptKind.TSX,
-  );
+  const source = parseSource(fileName, text);
   const found: string[] = [];
   const at = (node: ts.Node) =>
     `${fileName}:${source.getLineAndCharacterOfPosition(node.getStart()).line + 1}`;
