@@ -91,9 +91,7 @@ describe("a cited message", () => {
   it("names the message rather than its record kind", () => {
     renderCitations([citedEmail()], { onOpenEmail: vi.fn() });
 
-    expect(
-      screen.getByText("Translation fallback decision"),
-    ).toBeTruthy();
+    expect(screen.getByText("Translation fallback decision")).toBeTruthy();
     // The bare kind word is what the citation used to render for every
     // activity on the page — the run of identical labels a subject replaces.
     expect(screen.queryByText("activity")).toBeNull();
@@ -104,15 +102,19 @@ describe("a message this reader may not read", () => {
   it("says a message is there and offers nothing to press", () => {
     const onOpenEmail = vi.fn();
     renderCitations(
-      [citedEmail({ display_status: "withheld", subject: null, preview: null })],
+      [
+        citedEmail({
+          display_status: "withheld",
+          subject: null,
+          preview: null,
+        }),
+      ],
       { onOpenEmail },
     );
 
     // The row stays: drawing nothing would say the exchange never happened.
     expect(screen.queryByRole("button")).toBeNull();
-    expect(
-      screen.queryByText("Translation fallback decision"),
-    ).toBeNull();
+    expect(screen.queryByText("Translation fallback decision")).toBeNull();
   });
 });
 
@@ -122,9 +124,7 @@ describe("a host that mounts no email drawer", () => {
 
     expect(screen.queryByRole("button")).toBeNull();
     // Still named, so the reader knows which message the claim rests on.
-    expect(
-      screen.getByText("Translation fallback decision"),
-    ).toBeTruthy();
+    expect(screen.getByText("Translation fallback decision")).toBeTruthy();
   });
 });
 
@@ -175,7 +175,9 @@ describe("a citation that is not a message", () => {
       { onOpenRecord, onOpenEmail: vi.fn() },
     );
 
-    await userEvent.click(screen.getByRole("button", { name: /Translation pilot/ }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /Translation pilot/ }),
+    );
 
     expect(onOpenRecord).toHaveBeenCalledWith("deal", "deal-1", []);
   });

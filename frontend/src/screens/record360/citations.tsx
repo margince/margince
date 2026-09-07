@@ -234,7 +234,9 @@ const ROUTABLE_CITATIONS = new Set(["deal", "person", "fact", "profile_field"]);
  * control — because drawing nothing would say the message did not happen.
  */
 function emailOf(cited: Cited): Cited["email_summary"] | undefined {
-  return cited.entity_type === "activity" ? (cited.email_summary ?? undefined) : undefined;
+  return cited.entity_type === "activity"
+    ? (cited.email_summary ?? undefined)
+    : undefined;
 }
 
 // Whether the HOST can open a message at all. The other half of the question —
@@ -384,9 +386,7 @@ export function Citations({
             occurredAt={formatDateTime(summary.occurred_at, locale, recordZone)}
             withheld={withheld}
             onOpen={
-              onOpenEmail
-                ? () => onOpenEmail(summary.activity_id)
-                : undefined
+              onOpenEmail ? () => onOpenEmail(summary.activity_id) : undefined
             }
           />
         );

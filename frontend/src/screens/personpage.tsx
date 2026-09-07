@@ -199,7 +199,13 @@ function PersonTabPanel({
         />
       );
     case "network":
-      return <PersonNetworkTab personId={personId} view={view} />;
+      return (
+        <PersonNetworkTab
+          personId={personId}
+          view={view}
+          onOpenEmail={onOpenEmail}
+        />
+      );
     case "deals":
       return <PersonDealsTab view={view} />;
     case "meetings":

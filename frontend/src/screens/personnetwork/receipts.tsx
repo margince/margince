@@ -25,7 +25,19 @@ type Receipt = components["schemas"]["PersonGraphReceipt"];
  */
 export function ReceiptList({
   receipts,
-}: Readonly<{ receipts: readonly Receipt[] }>) {
+  onOpenEmail,
+}: Readonly<{
+  receipts: readonly Receipt[];
+  /**
+   * Opens one of these messages in the person page's email drawer.
+   *
+   * No withheld flag travels with it: a graph receipt is already checked row by
+   * row before it reaches this list, so a row that is here is one this reader
+   * may open. Passing a withheld state the shape does not carry would be
+   * inventing an answer to a question already settled upstream.
+   */
+  onOpenEmail?: (activityId: string) => void;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
@@ -37,6 +49,9 @@ export function ReceiptList({
             <EmailReference
               subject={r.subject}
               occurredAt={formatDate(r.occurred_at, locale, recordZone)}
+              onOpen={
+                onOpenEmail ? () => onOpenEmail(r.activity_id) : undefined
+              }
             />
           ) : (
             <>

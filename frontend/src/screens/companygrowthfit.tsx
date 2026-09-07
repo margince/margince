@@ -179,10 +179,10 @@ export function GrowthFitPanel({
         <>
           <GrowthFitVerdict fit={readable} />
           <GrowthFitReasons
-              fit={readable}
-              onOpenRecord={onOpenRecord}
-              onOpenEmail={onOpenEmail}
-            />
+            fit={readable}
+            onOpenRecord={onOpenRecord}
+            onOpenEmail={onOpenEmail}
+          />
         </>
       )}
       {reassess.error && (

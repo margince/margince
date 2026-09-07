@@ -42,9 +42,12 @@ export function LeadPanel({
   targetName,
   blocked,
   onAsk,
+  onOpenEmail,
 }: Readonly<{
   route: RouteCandidate;
   targetName: string;
+  // Opens one of the cited messages in the person page's email drawer.
+  onOpenEmail?: (activityId: string) => void;
   // Why the ask cannot be made, when it cannot. A panel that offered a button
   // answering 409 would be a control that exists to fail.
   blocked: string | null;
@@ -133,7 +136,12 @@ export function LeadPanel({
           )}
         </div>
 
-        <EvidencePlate route={route} targetName={targetName} mine={mine} />
+        <EvidencePlate
+          route={route}
+          targetName={targetName}
+          mine={mine}
+          onOpenEmail={onOpenEmail}
+        />
       </div>
     </Panel>
   );
@@ -189,7 +197,14 @@ function EvidencePlate({
   route,
   targetName,
   mine,
-}: Readonly<{ route: RouteCandidate; targetName: string; mine: boolean }>) {
+  onOpenEmail,
+}: Readonly<{
+  route: RouteCandidate;
+  targetName: string;
+  mine: boolean;
+  // Opens one of the cited messages in the person page's email drawer.
+  onOpenEmail?: (activityId: string) => void;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const ev = route.evidence;
@@ -227,7 +242,7 @@ function EvidencePlate({
               count: formatNumber(receipts.length, locale),
             })}
           </Eyebrow>
-          <ReceiptList receipts={receipts} />
+          <ReceiptList receipts={receipts} onOpenEmail={onOpenEmail} />
         </div>
       ) : (
         <p className="pn-counts t-sub">{t("person.graph.countsOnly")}</p>

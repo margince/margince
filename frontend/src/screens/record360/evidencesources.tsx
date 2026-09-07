@@ -27,7 +27,7 @@ import { useRecordZone } from "../../app/recordzone";
 import { EmailEntry } from "../../design-system/emailentry";
 import { formatDateTime } from "../../format/format";
 import { useLocale } from "../../i18n";
-import { type Cited, Citations } from "./citations";
+import { Citations, type Cited } from "./citations";
 // The basis block is styled beside the citation chips it falls back to, in the
 // stylesheet those rules already live in.
 import "../company360.css";
@@ -49,10 +49,15 @@ type Source =
 /** The shared citation shape as sources. */
 export function fromCitations(evidence: readonly Cited[]): Source[] {
   return evidence.map((cited, index) => {
-    const summary = cited.entity_type === "activity" ? cited.email_summary : null;
+    const summary =
+      cited.entity_type === "activity" ? cited.email_summary : null;
     return summary
       ? { kind: "email", key: `email:${summary.activity_id}`, summary }
-      : { kind: "cited", key: `cited:${cited.entity_type}:${cited.entity_id}:${index}`, cited };
+      : {
+          kind: "cited",
+          key: `cited:${cited.entity_type}:${cited.entity_id}:${index}`,
+          cited,
+        };
   });
 }
 

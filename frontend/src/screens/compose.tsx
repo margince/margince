@@ -11,6 +11,7 @@ import {
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
+import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import {
   Badge,
@@ -23,6 +24,7 @@ import { Calendar, type ISODay, isoDay } from "../design-system/calendar";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Eyebrow } from "../design-system/eyebrow";
+import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Popover } from "../design-system/popover";
 import {
   liveProjects,
@@ -82,6 +84,7 @@ import {
   useThreadMessages,
 } from "./composethread";
 import { useRoster } from "./entityref";
+import { useOpenEmail } from "./openemail";
 import { usePerson360 } from "./person360";
 import type { Transport } from "./persontransports";
 import {
@@ -91,6 +94,7 @@ import {
   useProjectRecord,
   withSubjectTag,
 } from "./projectrecord";
+import { Citations } from "./record360";
 import { SCHEDULED_SCREEN } from "./scheduledsends";
 import { SendPermission } from "./sendpermission";
 import { useSendPermission } from "./usesendpermission";
@@ -1147,9 +1151,12 @@ function openCited(entityType: string, entityId: string) {
 function DraftReasons({
   reasons,
   onOpenRecord,
+  onOpenEmail,
 }: Readonly<{
   reasons: readonly components["schemas"]["AccountDraftReason"][];
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  // Opens the message a reason rests on, in this modal's own drawer.
+  onOpenEmail?: (activityId: string) => void;
 }>) {
   const t = useT();
   if (reasons.length === 0) {
@@ -1166,21 +1173,20 @@ function DraftReasons({
       <ul className="chips">
         {reasons.map((reason) => (
           <li key={`${reason.kind}:${reason.label}`}>
-            {reason.evidence_ref && onOpenRecord ? (
-              <button
-                type="button"
-                className="link-button"
-                onClick={() =>
-                  onOpenRecord(
-                    reason.evidence_ref?.entity_type ?? "",
-                    reason.evidence_ref?.entity_id ?? "",
-                  )
-                }
-              >
-                {reason.label}
-              </button>
-            ) : (
-              reason.label
+            {reason.label}
+            {/* The record behind the reason, through the one citation
+                renderer. It used to be a link-button wrapping the LABEL and
+                calling onOpenRecord with whatever kind the reason carried —
+                so a reason grounded in a conversation offered a control that
+                routed nowhere, and a reason grounded in nothing at all still
+                looked pressable because the guard only asked whether a
+                handler existed. The citation asks what the record IS. */}
+            {reason.evidence_ref && (
+              <Citations
+                evidence={[reason.evidence_ref]}
+                onOpenRecord={onOpenRecord}
+                onOpenEmail={onOpenEmail}
+              />
             )}
           </li>
         ))}
@@ -1584,6 +1590,11 @@ function DraftBand({
   children: ReactNode;
 }>) {
   const t = useT();
+  // The band's own drawer, mounted beside the reasons that open it. One per
+  // band rather than one per reason: a drawer per row would be several
+  // dialogs racing to be the one on top.
+  const [openEmail, setOpenEmail] = useOpenEmail();
+  const zone = useRecordZone();
   if (!provenance.ai_generated) {
     return null;
   }
@@ -1593,7 +1604,16 @@ function DraftBand({
       <p className="t-body">
         {provenance.ai_disclosure || t("compose.aiDisclosureFallback")}
       </p>
-      <DraftReasons reasons={reasons} onOpenRecord={openCited} />
+      <DraftReasons
+        reasons={reasons}
+        onOpenRecord={openCited}
+        onOpenEmail={setOpenEmail}
+      />
+      <OpenEmailDrawer
+        activityId={openEmail}
+        zone={zone}
+        onClose={() => setOpenEmail(null)}
+      />
       {provenance.voice_degraded && (
         // The one loss a sender cannot see in the text: their own voice is
         // the register nobody proofreads for.
