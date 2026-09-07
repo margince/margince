@@ -1161,8 +1161,6 @@ paths:
     get:
       tags: [People]
       operationId: getPerson360
-      x-agent-access: human-only
-      security: [{ cookieAuth: [] }]
       summary: The whole person record page in one round trip — identity, employments, buying roles, strength, who-knows-them, timeline, consent, provenance.
       description: |
         The person half of the one-composite-read doctrine (PO-EXT-3), assembled inside ONE
@@ -1752,8 +1750,6 @@ paths:
     get:
       tags: [People]
       operationId: getPersonGraph
-      x-agent-access: human-only
-      security: [{ cookieAuth: [] }]
       summary: Who around this contact could open a door, and through whom.
       description: |
         The local graph answers one question a rep actually asks: *who here can introduce me,

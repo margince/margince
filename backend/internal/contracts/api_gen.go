@@ -72576,6 +72576,8 @@ func (siw *ServerInterfaceWrapper) GetPerson360(w http.ResponseWriter, r *http.R
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -73141,6 +73143,8 @@ func (siw *ServerInterfaceWrapper) GetPersonGraph(w http.ResponseWriter, r *http
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
