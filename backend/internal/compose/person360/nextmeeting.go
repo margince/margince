@@ -59,6 +59,19 @@ func (s *Service) nextMeetingSection(ctx context.Context, tx pgx.Tx, personID id
 	if participantScope == "" {
 		participantScope = scopeAll
 	}
+	// The linked deal is a REFERENCE, and it is served as a link the reader is
+	// invited to open — so it carries the deal's own scope, exactly as the
+	// participants beside it carry the person's. Without it a rep who may see
+	// the meeting is handed the id of a deal whose own read refuses them: a
+	// well-formed answer naming a record they cannot open, which is the whole
+	// failure this pairing exists to prevent.
+	dealScope, err := auth.ScopeClauseFor(ctx, "deal", "d", arg)
+	if err != nil {
+		return err
+	}
+	if dealScope == "" {
+		dealScope = scopeAll
+	}
 
 	var meeting crmcontracts.Person360NextMeeting
 	var activityID ids.UUID
@@ -68,7 +81,8 @@ func (s *Service) nextMeetingSection(ctx context.Context, tx pgx.Tx, personID id
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
 		SELECT a.id, a.occurred_at, a.subject,
 		       (SELECT dl.deal_id FROM activity_link dl
-		         WHERE dl.activity_id = a.id AND dl.deal_id IS NOT NULL LIMIT 1),
+		          JOIN deal d ON d.id = dl.deal_id AND d.archived_at IS NULL
+		         WHERE dl.activity_id = a.id AND (%s) LIMIT 1),
 		       COALESCE((
 		         SELECT json_agg(json_build_object('person_id', p.id, 'full_name', p.full_name)
 		                         ORDER BY p.full_name, p.id)
@@ -87,7 +101,7 @@ func (s *Service) nextMeetingSection(ctx context.Context, tx pgx.Tx, personID id
 		  AND `+fmt.Sprintf(personReachesActivity, linkPos)+`
 		  AND (%s)%s
 		ORDER BY a.occurred_at, a.id
-		LIMIT 1`, participantScope, nowPos, scope, projectScope(opts, arg)), args...).
+		LIMIT 1`, dealScope, participantScope, nowPos, scope, projectScope(opts, arg)), args...).
 		Scan(&activityID, &meeting.StartsAt, &subject, &dealID, &participants)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Nothing booked. That IS the answer, and the strip renders "None".
