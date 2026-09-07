@@ -81,10 +81,21 @@ func NewStore(db *database.DB) *Store {
 // terminal. An equal (attempt, rank) redelivery matches no row and updates
 // nothing, which is what makes the at-least-once bus harmless here.
 //
+// The one write admitted at an EQUAL tuple is a lease renewal: the same attempt
+// in the same live state, believable for longer than the row already says. A
+// source whose work spans several model calls announces once and then renews
+// before each further call, so no single lease has to be sized for the longest
+// work it could ever cover — and a lease sized that way is, by construction,
+// how long a dead process is believed. The comparison on stale_after keeps the
+// bus harmless in this branch too: an exact redelivery carries an equal
+// instant, a renewal delivered out of order carries an earlier one, and a
+// settled row carries none at all, and every one of those compares false.
+//
 // Every column is written from EXCLUDED rather than merged: a reopened
 // occurrence must LOSE the previous attempt's finished_at, degrade_reason and
 // summary, and a partial update is how a row ends up reading as live and failed
-// at once.
+// at once. A renewal therefore carries the whole claim it extends, not only the
+// new lease.
 const applyStateChangeSQL = `
 INSERT INTO ai_task_run (
   source, occurrence_key, kind, ai_task, attempt,
@@ -108,6 +119,9 @@ ON CONFLICT (source, occurrence_key) DO UPDATE SET
   seq = nextval('ai_task_run_seq')
 WHERE (EXCLUDED.attempt, ai_task_run_state_rank(EXCLUDED.state))
     > (ai_task_run.attempt, ai_task_run_state_rank(ai_task_run.state))
+   OR (EXCLUDED.attempt = ai_task_run.attempt
+       AND EXCLUDED.state = ai_task_run.state
+       AND EXCLUDED.stale_after > ai_task_run.stale_after)
 RETURNING seq`
 
 // ApplyStateChange projects one change and reports whether it landed.

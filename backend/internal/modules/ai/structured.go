@@ -61,12 +61,14 @@ type Validator func(text string) error
 // maxLadderWalks is how many times CompleteStructured can walk the ladder for
 // ONE logical call: the first try, the schema-invalid retry, and the escalation.
 //
-// It is a constant here rather than a comment because railLease depends on it —
-// the rail announces a start ONCE and can never extend the lease, so the lease
-// must cover the whole logical call and not one walk of it. A fourth walk added
-// below without changing this would leave a healthy call rendering stalled
-// before it finished, which is why TestStructuredWalksTheLadderNoMoreThanTheLeaseAssumes
-// counts the walks rather than trusting this number.
+// It is a constant here rather than a comment because RouteWriteDeadline depends
+// on it — a handler that calls a model gets one write deadline for the whole
+// logical call, and it is set once on the connection where nothing can extend
+// it. A fourth walk added below without changing this would cut a healthy call
+// mid-response, which is why
+// TestStructuredWalksTheLadderNoMoreThanTheRouteDeadlineAssumes counts the walks
+// rather than trusting this number. The rail's lease does NOT depend on it: that
+// lease covers one model call and is renewed before each further one.
 const maxLadderWalks = 3
 
 func (r *Router) CompleteStructured(ctx context.Context, task Task, req model.Request, validate Validator) (model.Response, RouteInfo, error) {

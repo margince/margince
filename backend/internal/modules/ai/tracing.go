@@ -169,6 +169,8 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 	var lastErr error
 	var lastTier Tier
 	for i, t := range boundRungs {
+		// The rail's lease covers one model call, and this is the next one.
+		lc.renewRailLease(ctx)
 		out, callErr := b.clients[t].Complete(ctx, req)
 		if callErr != nil {
 			lastErr, lastTier = callErr, t

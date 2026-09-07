@@ -257,12 +257,21 @@ reporting nothing at all.
   Harmless while the rail narrates none of them; it becomes visible the moment
   anybody writes the copy.
 - **A multi-call unit reopens its occurrence once per call** ([#2276]).
-  `CompleteStructured` walks the ladder three times, and the lease is announced
-  once and cannot be renewed.
-- **The projection refuses a write into a live attempt.** `applyStateChangeSQL`
-  guards with strict `>` on `(attempt, rank)`, so an equal-tuple event updates
-  nothing. A lease REFRESH and per-step progress TICKS are both impossible
-  without changing the projection.
+  A task whose unit of work spans several LOGICAL calls under one correlation
+  id settles after each and reopens at the next call's attempt. Within one
+  logical call the occurrence is stable: `CompleteStructured` walks the ladder
+  up to three times under one start, and the lease is renewed before every
+  model call after the first.
+- **The projection admits exactly one write into a live attempt: a longer
+  lease.** `applyStateChangeSQL` guards with strict `>` on `(attempt, rank)`,
+  and beside it takes an equal-tuple event in the same live state whose
+  `stale_after` is later than the row's. That is the lease renewal the router
+  makes per model call, and it is what lets each lease be sized for ONE call —
+  `CallCeiling` plus the flush — rather than for the whole logical call, which
+  used to be forty-five minutes of a dead process displayed as working. A
+  redelivery carries an equal instant and a late renewal an earlier one, so the
+  branch refuses both; a settled row has no `stale_after`, so it refuses those
+  too. Per-step progress TICKS remain impossible without a further change.
 - **The contract has no word for two real states.** Site read's `deferred`
   ("waiting on budget, retry at `next_attempt_at`" — not `queued`, since nothing
   will pick it up, and not settled) and `cancelled` (terminal, but `done` and
