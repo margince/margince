@@ -34553,6 +34553,19 @@ components:
             this.
         subject_kind: { type: string, enum: [deal, signal, offer, contract] }
         subject_id: { type: string, format: uuid }
+        subject:
+          allOf: [{ $ref: '#/components/schemas/AttentionSubject' }]
+          readOnly: true
+          nullable: true
+          description: >-
+            The record this finding is about, named and addressed — the same shape the
+            Worklist carries, so a client routes it through the one registry rather
+            than mapping `subject_kind` onto a screen a second time.
+
+            `subject_kind` and `subject_id` stay: they are the durable fields, and a
+            client that has them and not this still draws today's label. Null when the
+            read that found this exception could not name the record — which today
+            means it is not a deal, since only a deal's findings are returned at all.
         severity: { type: string, enum: [low, medium, high] }
         affected_minor:
           type: integer

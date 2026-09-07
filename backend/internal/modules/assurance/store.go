@@ -450,4 +450,13 @@ type Exception struct {
 	Observed      []byte
 	FirstSeenAt   time.Time
 	LastSeenAt    time.Time
+	// SubjectLabel is the subject's own display name, when the read that found
+	// this exception could see it. The surface read joins the deal already, so
+	// the name arrives under the caller's own scope rather than through a
+	// second, differently-gated lookup.
+	//
+	// Empty where a reader did not ask for it — the bundling pass does not,
+	// because it decides what to group and never draws a row — and the wire
+	// then names the subject by id alone, which is what it did before.
+	SubjectLabel string
 }

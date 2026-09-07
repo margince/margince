@@ -25388,6 +25388,11 @@ export interface components {
             subject_kind: "deal" | "signal" | "offer" | "contract";
             /** Format: uuid */
             subject_id: string;
+            /**
+             * @description The record this finding is about, named and addressed — the same shape the Worklist carries, so a client routes it through the one registry rather than mapping `subject_kind` onto a screen a second time.
+             *     `subject_kind` and `subject_id` stay: they are the durable fields, and a client that has them and not this still draws today's label. Null when the read that found this exception could not name the record — which today means it is not a deal, since only a deal's findings are returned at all.
+             */
+            readonly subject?: components["schemas"]["AttentionSubject"] | null;
             /** @enum {string} */
             severity: "low" | "medium" | "high";
             /**

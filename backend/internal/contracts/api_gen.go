@@ -24635,12 +24635,16 @@ type InputCheck struct {
 	LastSeenAt time.Time `json:"last_seen_at"`
 
 	// Observed What the check found, as structured values only.
-	Observed    *map[string]interface{} `json:"observed,omitempty"`
-	OwnerId     *openapi_types.UUID     `json:"owner_id,omitempty"`
-	Severity    InputCheckSeverity      `json:"severity"`
-	Status      InputCheckStatus        `json:"status"`
-	SubjectId   openapi_types.UUID      `json:"subject_id"`
-	SubjectKind InputCheckSubjectKind   `json:"subject_kind"`
+	Observed *map[string]interface{} `json:"observed,omitempty"`
+	OwnerId  *openapi_types.UUID     `json:"owner_id,omitempty"`
+	Severity InputCheckSeverity      `json:"severity"`
+	Status   InputCheckStatus        `json:"status"`
+
+	// Subject The record this finding is about, named and addressed — the same shape the Worklist carries, so a client routes it through the one registry rather than mapping `subject_kind` onto a screen a second time.
+	// `subject_kind` and `subject_id` stay: they are the durable fields, and a client that has them and not this still draws today's label. Null when the read that found this exception could not name the record — which today means it is not a deal, since only a deal's findings are returned at all.
+	Subject     *AttentionSubject     `json:"subject,omitempty"`
+	SubjectId   openapi_types.UUID    `json:"subject_id"`
+	SubjectKind InputCheckSubjectKind `json:"subject_kind"`
 
 	// Type Which question noticed it. The key set in `claim` and `observed` depends on this.
 	Type string `json:"type"`

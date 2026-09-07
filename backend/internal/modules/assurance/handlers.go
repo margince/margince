@@ -57,6 +57,36 @@ func (h Handlers) ListInputChecks(w http.ResponseWriter, r *http.Request) {
 	}{Data: exceptionsToWire(found)})
 }
 
+// subjectOf names the record a finding is about, so the row can open it.
+//
+// Only a NAMED subject becomes one: the label comes from the surface read's own
+// join, under the caller's own deal scope, so an empty one means the reader was
+// never shown the name and a row carrying the id alone is the honest answer.
+//
+// The kind is mapped rather than cast. `subject_kind` and AttentionSubject's
+// vocabulary overlap on `deal` and nowhere else — an offer, a contract and a
+// signal are not screens a subject routes to — so a kind this map does not know
+// yields no subject rather than a link that opens nothing.
+func subjectOf(e Exception) *crmcontracts.AttentionSubject {
+	kind, ok := subjectKinds[e.SubjectKind]
+	if !ok || e.SubjectLabel == "" {
+		return nil
+	}
+	label := e.SubjectLabel
+	return &crmcontracts.AttentionSubject{
+		Type:  kind,
+		Id:    openapi_types.UUID(e.SubjectID),
+		Label: &label,
+	}
+}
+
+// subjectKinds maps a finding's subject onto the contract's subject vocabulary.
+// Today the surface read returns deal findings only; the map is what makes a
+// second kind arriving later a deliberate act rather than a silent link.
+var subjectKinds = map[string]crmcontracts.AttentionSubjectType{
+	"deal": crmcontracts.AttentionSubjectTypeDeal,
+}
+
 func exceptionsToWire(in []Exception) []crmcontracts.InputCheck {
 	// Empty, never nil. "Nothing to check" is a real answer and arrives shaped
 	// like the array it is; null reads as "unknown", which on this surface
@@ -82,6 +112,7 @@ func exceptionsToWire(in []Exception) []crmcontracts.InputCheck {
 			owner := openapi_types.UUID(*e.OwnerID)
 			wire.OwnerId = &owner
 		}
+		wire.Subject = subjectOf(e)
 		// The structured values travel as they were stored. Decoding and
 		// re-encoding them here would make this the second place that knows
 		// what each exception type's keys are.

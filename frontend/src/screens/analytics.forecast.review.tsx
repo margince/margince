@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { isEntityKind } from "../app/entity";
 import { Badge, Button } from "../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import {
@@ -12,6 +13,7 @@ import {
 import { formatMoneyOrAbsent } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import { QueryGate, throwProblem } from "./common";
+import { EntityRef } from "./entityref";
 
 type InputCheck = components["schemas"]["InputCheck"];
 type Assurance = components["schemas"]["ForecastAssurance"];
@@ -236,6 +238,19 @@ function CheckRow({
     <>
       <PanelRow>
         <span>{t(checkLabel(check.type))}</span>
+        {/* WHICH deal. The row named the check and the money and left the
+            record to a uuid on the wire, so a manager reading the review
+            before a call knew something was wrong and not what it was wrong
+            about. An older server sends no subject and the row reads as it
+            did, and so does a subject kind the registry has no screen for —
+            the same guard the Worklist's own rows apply. */}
+        {check.subject && isEntityKind(check.subject.type) && (
+          <EntityRef
+            kind={check.subject.type}
+            id={check.subject.id}
+            name={check.subject.label}
+          />
+        )}
         <span className="num">
           {formatMoneyOrAbsent(
             check.affected_minor ?? null,

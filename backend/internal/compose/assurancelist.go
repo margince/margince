@@ -55,7 +55,7 @@ func AssuranceExceptions(ctx context.Context, tx pgx.Tx) ([]assurance.Exception,
 	// visibility decision having been made about it. A LEFT join would let
 	// exactly the rows nobody can gate through.
 	sql := fmt.Sprintf(`
-		SELECT `+exceptionColumns+`
+		SELECT `+exceptionColumns+`, d.name
 		FROM assurance_exception e
 		JOIN deal d ON d.id = e.subject_id
 		WHERE e.status = 'open'
@@ -76,7 +76,7 @@ func AssuranceExceptions(ctx context.Context, tx pgx.Tx) ([]assurance.Exception,
 	}
 	defer rows.Close()
 
-	return pgx.CollectRows(rows, scanException)
+	return pgx.CollectRows(rows, scanLabelledException)
 }
 
 // exceptionColumns is the select list every read of a finding shares, aliased
@@ -88,6 +88,17 @@ const exceptionColumns = `e.id, e.type, e.subject_kind, e.subject_id, e.severity
 	       e.affected_minor, e.currency, e.owner_id, e.status,
 	       e.claim, e.observed, e.first_seen_at, e.last_seen_at`
 
+// scanLabelledException reads one row of exceptionColumns plus the subject's
+// own name, which only this reader selects.
+//
+// The name is appended rather than added to exceptionColumns because that list
+// is shared with bundleableFindings and bound POSITIONALLY: a column inserted
+// there would be read into a neighbouring field by the other scanner, silently.
+func scanLabelledException(row pgx.CollectableRow) (assurance.Exception, error) {
+	out, err := scanExceptionInto(row, true)
+	return out, err
+}
+
 // scanException reads one row of exceptionColumns.
 //
 // The nullable columns are read through pointers and folded in afterwards
@@ -95,14 +106,26 @@ const exceptionColumns = `e.id, e.type, e.subject_kind, e.subject_id, e.severity
 // there is "no money was named", which is a different fact from the empty
 // string only in that nothing may print it as a currency.
 func scanException(row pgx.CollectableRow) (assurance.Exception, error) {
+	return scanExceptionInto(row, false)
+}
+
+// scanExceptionInto is both scanners' body; labelled says whether the row
+// carries the trailing subject name.
+func scanExceptionInto(row pgx.CollectableRow, labelled bool) (assurance.Exception, error) {
 	var out assurance.Exception
 	var id, subjectID ids.UUID
 	var owner *ids.UUID
 	var currency *string
 	var firstSeen, lastSeen time.Time
-	err := row.Scan(&id, &out.Type, &out.SubjectKind, &subjectID, &out.Severity,
+	targets := []any{
+		&id, &out.Type, &out.SubjectKind, &subjectID, &out.Severity,
 		&out.AffectedMinor, &currency, &owner, &out.Status,
-		&out.Claim, &out.Observed, &firstSeen, &lastSeen)
+		&out.Claim, &out.Observed, &firstSeen, &lastSeen,
+	}
+	if labelled {
+		targets = append(targets, &out.SubjectLabel)
+	}
+	err := row.Scan(targets...)
 	out.ID = id
 	out.SubjectID = subjectID
 	out.FirstSeenAt = firstSeen
