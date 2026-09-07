@@ -1273,12 +1273,13 @@ public.capture_digest.user_id uuid NOT NULL gen=- def=-
 public.capture_digest_pkey CREATE UNIQUE INDEX capture_digest_pkey ON public.capture_digest USING btree (id)
 public.capture_digest_user_id_digest_date_key CREATE UNIQUE INDEX capture_digest_user_id_digest_date_key ON public.capture_digest USING btree (user_id, digest_date)
 public.capture_exclusion acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.capture_exclusion.capture_exclusion_kind_check CHECK ((kind = ANY (ARRAY['address'::text, 'domain'::text])))
+public.capture_exclusion.capture_exclusion_container_is_personal CHECK (((kind <> 'container'::text) OR (scope = 'user'::text)))
+public.capture_exclusion.capture_exclusion_kind_check CHECK ((kind = ANY (ARRAY['address'::text, 'domain'::text, 'container'::text])))
 public.capture_exclusion.capture_exclusion_pkey PRIMARY KEY (id)
 public.capture_exclusion.capture_exclusion_scope_check CHECK ((scope = ANY (ARRAY['workspace'::text, 'user'::text])))
 public.capture_exclusion.capture_exclusion_scope_user CHECK (((scope = 'user'::text) = (user_id IS NOT NULL)))
 public.capture_exclusion.capture_exclusion_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
-public.capture_exclusion.capture_exclusion_value_check CHECK (((value = lower(value)) AND (value <> ''::text)))
+public.capture_exclusion.capture_exclusion_value_check CHECK (((value <> ''::text) AND ((kind = 'container'::text) OR (value = lower(value)))))
 public.capture_exclusion.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_exclusion.created_by text NOT NULL gen=- def=-
 public.capture_exclusion.id uuid NOT NULL gen=- def=uuidv7()

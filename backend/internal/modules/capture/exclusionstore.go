@@ -16,6 +16,7 @@ import (
 	"errors"
 	"fmt"
 	"net/mail"
+	"slices"
 	"strings"
 	"time"
 
@@ -27,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // The exclusion vocabulary, the Go spelling of the table's CHECKs.
@@ -35,7 +37,14 @@ const (
 	ExclusionScopeUser      = "user"
 	ExclusionKindAddress    = "address"
 	ExclusionKindDomain     = "domain"
+	ExclusionKindContainer  = "container"
 )
+
+// containerProviders are the provider prefixes a container rule may carry, and
+// the namespaces its value belongs to. Named rather than open-ended: an
+// unrecognised prefix is a rule that can never match anything, and a person who
+// typed one would see mail keep arriving with nothing saying why.
+var containerProviders = []string{"gmail", "graph", "imap"}
 
 // auditKeyExclusion is the audit-image key naming which rule a change was
 // about; the value is the folded address or domain, which is what the trail
@@ -117,6 +126,16 @@ func (s *ExclusionStore) Add(ctx context.Context, scope, kind, raw string) (Excl
 		userID = &me
 	default:
 		return Exclusion{}, &InvalidExclusionError{Field: "scope", Reason: "scope is workspace or user"}
+	}
+	// The database refuses this too, and a constraint violation is a 500. A
+	// container lives in ONE person's mailbox: a workspace rule naming a label
+	// id would bind every colleague's connection to a place that does not exist
+	// there, and silently match nothing forever.
+	if kind == ExclusionKindContainer && scope != ExclusionScopeUser {
+		return Exclusion{}, &InvalidExclusionError{
+			Field:  "scope",
+			Reason: "a label or folder rule is your own: only the mailbox's owner has that list",
+		}
 	}
 	value, err := ValidExclusionValue(kind, raw)
 	if err != nil {
@@ -212,8 +231,27 @@ func ValidExclusionValue(kind, raw string) (string, error) {
 			return "", &InvalidExclusionError{Field: "value", Reason: err.Error()}
 		}
 		return domain, nil
+	case ExclusionKindContainer:
+		return validContainer(raw)
 	}
-	return "", &InvalidExclusionError{Field: "kind", Reason: "kind is address or domain"}
+	return "", &InvalidExclusionError{Field: "kind", Reason: "kind is address, domain or container"}
+}
+
+// validContainer vets a provider-qualified container and returns its stored
+// form. The prefix is folded and checked; what follows is kept exactly as
+// given, because it is the provider's own token and not ours to normalize — a
+// Graph folder id differs by case, and an IMAP mailbox name is case-sensitive
+// except for INBOX.
+func validContainer(raw string) (string, error) {
+	provider, container, qualified := strings.Cut(strings.TrimSpace(raw), ":")
+	provider = strings.ToLower(strings.TrimSpace(provider))
+	if !qualified || container == "" || !slices.Contains(containerProviders, provider) {
+		return "", &InvalidExclusionError{
+			Field:  "value",
+			Reason: "name the provider and the container it belongs to, for example gmail:Private (" + strings.Join(containerProviders, ", ") + ")",
+		}
+	}
+	return connector.Container(provider, container), nil
 }
 
 // InvalidExclusionError is a malformed rule; it answers 422 naming the field.

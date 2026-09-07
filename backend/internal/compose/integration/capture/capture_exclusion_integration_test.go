@@ -7,6 +7,7 @@ package capture
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -109,5 +110,85 @@ func TestAnExclusionKeepsAMessageOutBeforeAnythingIsStored(t *testing.T) {
 	}
 	if _, err := store.Add(owner, capture.ExclusionScopeWorkspace, capture.ExclusionKindDomain, "x.example"); err == nil {
 		t.Error("a rep without the capture-settings grant added a workspace rule")
+	}
+}
+
+// A container rule keeps out the mail a provider FILED somewhere the owner
+// rules out — a Gmail label, a Graph folder, an IMAP mailbox — and does it on
+// the same pre-store path an address rule does.
+//
+// The case it exists for is the one an address rule cannot reach: mail that has
+// nothing in common but where it was put. A "Family" label holds messages from
+// a dozen senders on a dozen domains, and naming them one at a time is a list
+// nobody finishes.
+func TestAContainerRuleKeepsOutMailFiledWhereTheOwnerRulesOut(t *testing.T) {
+	env := newCaptureEnv(t)
+	e, syncInContainer := env.e, env.syncInContainer
+	store := capture.NewExclusionStore(e.DB())
+	owner := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead, principal.ScopeWrite})
+
+	if _, err := store.Add(owner, capture.ExclusionScopeUser, capture.ExclusionKindContainer, "gmail:Label_7"); err != nil {
+		t.Fatalf("container rule: %v", err)
+	}
+
+	syncInContainer(t, map[string][]string{
+		"c-1@mid.example": {"gmail:INBOX", "gmail:Label_7"},
+		"c-2@mid.example": {"gmail:INBOX", "gmail:Label_9"},
+	},
+		email("aunt@family.example", "Aunt", captureOwner, "c-1@mid.example", ""),
+		email("dana@acme.example", "Dana Buyer", captureOwner, "c-2@mid.example", ""),
+	)
+
+	if n := countRows(t, e, `SELECT count(*) FROM activity WHERE source_id = 'c-1@mid.example'`); n != 0 {
+		t.Errorf("%d activity rows for a message filed under the excluded label, want 0", n)
+	}
+	if n := countRows(t, e, `SELECT count(*) FROM raw_capture WHERE source_id = 'c-1@mid.example'`); n != 0 {
+		t.Errorf("%d raw_capture rows for the excluded message, want 0 — a container rule drops before the raw store, like every other rule", n)
+	}
+	// A message carrying OTHER labels is untouched. Without this the assertion
+	// above would pass against a rule that excluded everything.
+	if n := countRows(t, e, `SELECT count(*) FROM activity WHERE source_id = 'c-2@mid.example'`); n != 1 {
+		t.Errorf("the message in another label did not land (%d rows)", n)
+	}
+	if n := countRows(t, e, `SELECT count(*) FROM capture_trace WHERE reason = 'excluded_container'`); n != 1 {
+		t.Errorf("%d container-exclusion trace rows, want 1", n)
+	}
+	// The label is what the rule keeps out, so it does not travel into the
+	// trace or the breadcrumb as the evidence for its own suppression.
+	if n := countRows(t, e, `
+		SELECT count(*) FROM capture_trace WHERE reason = 'excluded_container'
+		   AND (counterparty IS NOT NULL OR subject IS NOT NULL)`); n != 0 {
+		t.Error("the container-exclusion trace carries the counterparty or subject")
+	}
+	if n := countRows(t, e, `SELECT count(*) FROM system_log WHERE action = 'capture_excluded' AND detail::text ILIKE '%Label_7%'`); n != 0 {
+		t.Error("the exclusion breadcrumb names the container it matched")
+	}
+}
+
+// A container belongs to one mailbox, so a container rule is one person's.
+// The database refuses a workspace one too; this is the refusal a human gets,
+// which names the field and says why rather than answering 500.
+func TestAContainerRuleIsTheMailboxOwnersAlone(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	store := capture.NewExclusionStore(e.DB())
+	admin := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + e.Rep3.String(), UserID: e.Rep3,
+		Permissions: principal.Permissions{
+			Objects:  map[string]principal.ObjectGrant{"capture_settings": {Read: true, Update: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+	_, err := store.Add(admin, capture.ExclusionScopeWorkspace, capture.ExclusionKindContainer, "gmail:Label_7")
+	var invalid *capture.InvalidExclusionError
+	if !errors.As(err, &invalid) || invalid.Field != "scope" {
+		t.Fatalf("a workspace container rule = %v, want a refusal naming the scope — a label id means "+
+			"nothing in a colleague's mailbox, so the rule would bind their connections to a place "+
+			"that does not exist there", err)
+	}
+	// The same admin may still set a workspace ADDRESS rule, so the refusal is
+	// about the kind rather than about this caller.
+	if _, err := store.Add(admin, capture.ExclusionScopeWorkspace, capture.ExclusionKindDomain, "payroll.example"); err != nil {
+		t.Errorf("the same caller setting a workspace domain rule: %v", err)
 	}
 }

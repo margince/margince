@@ -28,6 +28,12 @@ type Scope = components["schemas"]["CaptureExclusionScope"];
 type Kind = components["schemas"]["CaptureExclusionKind"];
 
 const SCOPES: readonly Scope[] = ["user", "workspace"];
+// The kinds this card OFFERS, which is not every kind a rule can have.
+// `container` is missing on purpose: a container rule names a provider's own
+// token — a Gmail label id, a Graph folder id — and asking somebody to type one
+// would be asking them to look it up. It arrives here as a picker once a
+// connector can hand over the list of names to choose from. A container rule
+// that already exists still renders, labelled like any other.
 const KINDS: readonly Kind[] = ["address", "domain"];
 
 /** The organization-wide rules, which are the ones a plain seat may not touch. */
@@ -98,6 +104,7 @@ function useRuleWords() {
   const kind: Record<Kind, string> = {
     address: t("captureExclusions.kind.address"),
     domain: t("captureExclusions.kind.domain"),
+    container: t("captureExclusions.kind.container"),
   };
   return { scope, kind };
 }

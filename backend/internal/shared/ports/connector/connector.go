@@ -13,6 +13,7 @@ package connector
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -189,6 +190,23 @@ type NormalizedRecord struct {
 	// empty value is the safe answer and the common one; a connector that
 	// cannot make the judgement leaves it empty rather than guessing.
 	DeliveredTo string
+
+	// Containers are the provider's own filing places for this message, each
+	// qualified by the provider whose namespace it belongs to:
+	// "gmail:<labelId>", "graph:<folderId>", "imap:<mailbox>". A message can
+	// sit in several (Gmail applies many labels to one message), and a
+	// connector that has no such notion leaves this empty.
+	//
+	// Qualified rather than bare because a label id means nothing without the
+	// provider it came from, and one person may have connected two mailboxes on
+	// different providers — an unqualified "inbox" would then be one rule
+	// matching two unrelated places.
+	//
+	// The values are NOT folded to lower case. A Graph folder id is base64url,
+	// where two distinct folders can differ only in case, and an IMAP mailbox
+	// name is case-sensitive except for INBOX. Only the provider prefix is
+	// fixed, and it is written lower case by every connector.
+	Containers []string
 
 	// Counterparty is the human on the other side of a captured message —
 	// the auto-create pipeline's input (ADR-0063). Zero for records that
@@ -442,4 +460,17 @@ func (r BackfillReporter) Observed(ctx context.Context, scanned, captured, skipp
 func BackfillProgressFrom(ctx context.Context) BackfillReporter {
 	p, _ := ctx.Value(backfillProgressKey{}).(BackfillProgress)
 	return BackfillReporter{to: p}
+}
+
+// Container qualifies one provider container for NormalizedRecord.Containers
+// and for a capture exclusion's stored value. Both sides call it, because a
+// rule and the record it is matched against have to agree on the spelling
+// character for character — the match is an equality.
+//
+// The provider is folded and the container is not: the prefix is ours and
+// fixed, and what follows is the provider's own token — a Graph folder id is
+// base64url, where two distinct folders can differ only in case, and an IMAP
+// mailbox name is case-sensitive except for INBOX.
+func Container(provider, container string) string {
+	return strings.ToLower(provider) + ":" + container
 }

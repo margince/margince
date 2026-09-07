@@ -61,7 +61,7 @@ func (h captureOwnerIdentityHandlers) DeleteCaptureOwnerIdentity(w http.Response
 func toContractOwnerIdentity(identity capture.OwnerIdentity) crmcontracts.CaptureOwnerIdentity {
 	return crmcontracts.CaptureOwnerIdentity{
 		Id:        openapi_types.UUID(identity.ID),
-		Kind:      crmcontracts.CaptureExclusionKind(identity.Kind),
+		Kind:      crmcontracts.CaptureOwnerIdentityKind(identity.Kind),
 		Value:     identity.Value,
 		Source:    crmcontracts.CaptureOwnerIdentitySource(identity.Source),
 		CreatedAt: identity.CreatedAt,

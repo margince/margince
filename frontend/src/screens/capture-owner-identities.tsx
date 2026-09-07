@@ -31,7 +31,7 @@ import { problemMessageOf, QueryGate, throwProblem } from "./common";
 // list exists to protect.
 
 type OwnerIdentity = components["schemas"]["CaptureOwnerIdentity"];
-type Kind = components["schemas"]["CaptureExclusionKind"];
+type Kind = components["schemas"]["CaptureOwnerIdentityKind"];
 
 const KINDS: readonly Kind[] = ["address", "domain"];
 
