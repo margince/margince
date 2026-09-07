@@ -16,6 +16,12 @@
 name: case5_before_the_meeting
 criteria: [1, 2, 5]
 
+# WRITES: nothing — this case only reads. Said out loud because a scenario that
+# does not say is refused: an absent or misspelled field used to arrive as the
+# value that skips work, so a forgotten declaration and a deliberate one were the
+# same silence.
+writes: false
+
 prompt: |
   Hey. Tomorrow I'm meeting, uh, finally, Vietnam partner. Could check in my
   calendar. Can you prep me for the meeting? Check in the CRM.

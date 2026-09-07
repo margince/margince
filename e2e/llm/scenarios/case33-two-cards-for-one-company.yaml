@@ -1,0 +1,127 @@
+# CASE 33 — Two cards for one company, and one that is gone.
+#
+# Housekeeping, and the whole case is the pair of neighbours the tool
+# descriptions spend their words separating:
+#
+#   merge_records  — the duplicate has history on it. Folding it into the
+#                    survivor moves that history; archiving it instead leaves
+#                    every email stranded on a record nobody opens, which is the
+#                    exact loss archive_record's own description warns about
+#                    ("an archived duplicate still holds the activities and
+#                    deals that were logged against it").
+#
+#   archive_record — the closed company has no twin. There is nothing to fold it
+#                    into and nothing worth keeping, and merge_records is not a
+#                    way to make a record disappear.
+#
+# Two subjects, two verbs, one errand. They are not mutually exclusive — they
+# act on different records, and picking the wrong one for either is the failure.
+#
+#   list_colleagues — and this one is required for a reason worth stating,
+#                     because whoami and list_colleagues are otherwise called
+#                     unprompted on almost every run and requiring them tests
+#                     the model's habit rather than the product.
+#
+#                     The errand ends by putting the surviving account on a named
+#                     colleague's book. owner_id takes a user_id, and a user_id
+#                     for Lena Fischer exists in exactly one place: the roster.
+#                     search_records finds a CUSTOMER contact, not a colleague.
+#                     who_knows answers colleagues WITH a user_id — which is why
+#                     the fixture gives Lena no logged interaction with anything:
+#                     who_knows reports relationships the workspace can evidence
+#                     from its own recorded interactions, and hers is not one, so
+#                     that route cannot produce her id. This case fails without
+#                     the roster call, which is the bar a must_call has to clear.
+#
+# whoami is NOT required anywhere in this case or any other one added with it.
+# Nothing here needs the acting user's own identity, and a goal invented to need
+# it would be "who am I" — a question whose answer is a tick rather than a test.
+#
+# THE PROMPT AUTHORISES THE WRITES EXPLICITLY. Both verbs are consequential and
+# a careful assistant in a one-shot session may otherwise describe the plan and
+# stop, which would fail must_call for being careful rather than for being
+# wrong. What is being measured is which verb goes on which record, so the
+# permission is given and the reporting obligation is kept.
+name: case33_two_cards_for_one_company
+criteria: [1, 2, 3]
+
+# WRITES: the author's own statement that this case changes the world. It is not
+# what decides the reset — the runner rebuilds whenever the LAST run dirtied the
+# world, because the assistant is offered the whole server and any run can write
+# regardless of what its file says. TestEveryWritingScenarioDeclaresThatItWrites
+# holds this line against the tools the case names.
+writes: true
+
+prompt: |
+  Two bits of housekeeping, please go ahead and do both.
+
+  We have Ostfriesen Kranbau in the CRM twice — somebody made a second card and
+  has been logging emails onto it. Put it back to one record without losing any
+  of that correspondence, and tell me in your answer which of the two you kept.
+
+  And Sauerland Kunststoff went insolvent last year and shut down. Nobody should
+  be working it and there is nothing on it we want. Get it out of the day-to-day
+  lists.
+
+  Whatever survives of the Ostfriesen one goes onto Lena Fischer's book — she is
+  taking that account from now on.
+
+must_call:
+  - merge_records
+  - archive_record
+  - list_colleagues
+
+# record_type on both write verbs. Both serve several record types from one
+# door, and this prompt names people as well as companies — Lena Fischer, who
+# takes the account — so the tool name alone passes a merge or an archive aimed
+# at a person of that name. The type is what says the errand landed on the
+# company.
+#
+# The ids are not pinned because the fixture mints them at seed time. Which
+# record survives is therefore judged from the answer, which is also where the
+# user asked for it.
+must_call_with:
+  - merge_records.record_type=organization
+  - archive_record.record_type=organization
+
+may_call:
+  - search_records
+  - read_record
+  - query_workspace
+  - list_records
+  - update_record
+  - resolve_entities
+  - catch_me_up_on
+  - who_knows
+  - whoami
+
+must_mention:
+  # Criterion 1: the surviving record is NAMED. "GmbH" is what separates it from
+  # "Ostfriesen Kranbau Gesellschaft mbH", the duplicate — the fixture spells the
+  # two apart on purpose, because check.py matches case-insensitively and a
+  # duplicate whose name contained the survivor's could not be told from it.
+  - "Ostfriesen Kranbau GmbH"
+  # Criterion 1: and the direction is stated rather than left to the reader.
+  # Both orders, because an answer may lead with either record.
+  - "Ostfriesen Kranbau GmbH[^.]{0,120}(?:surviv|kept|keeping|remains|stays|wins|the one I|target)|(?:surviv|kept|keeping|merged into|folded into|onto)[^.]{0,120}Ostfriesen Kranbau GmbH"
+  # Criterion 2: the closed company was retired, and it is the closed company
+  # that was retired. Anchored to Sauerland both ways round — an unanchored
+  # "archived" is true of the merge's own source record and would green an
+  # answer that never touched Sauerland at all.
+  - "Sauerland[^.]{0,110}(?:archiv|retir|out of|off (?:the |your )?(?:day-to-day |active )?list)|(?:archiv|retir)\w*[^.]{0,110}Sauerland"
+  # Criterion 3: the account went to the colleague the user named.
+  - "Lena Fischer"
+
+must_not_mention:
+  # The correspondence is what the merge exists to save, so an answer that
+  # reports it lost has done the wrong thing or described the right thing
+  # wrongly. Affirmative only: "archiving does not delete anything" is a correct
+  # sentence and a pattern that forbade the word "delete" near a company name
+  # would red it.
+  - "(?:I|we) (?:have )?(?:deleted|purged|discarded)[^.]{0,40}(?:Ostfriesen|Sauerland|the (?:duplicate|emails))|emails were (?:lost|deleted|discarded)"
+  # The capability denial, in the family case 7 guards: a product that merges
+  # and archives must not be reported as one that cannot.
+  - "cannot (?:be )?merge(?:d)?[^.]{0,25}record|no way to (?:merge|combine) (?:two )?(?:records|companies)|(?:CRM|workspace) (?:does not|doesn't) support (?:merging|archiving)"
+
+runs: 3
+pass_at: 2

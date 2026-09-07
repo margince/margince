@@ -8,6 +8,13 @@
 name: case3_spreadsheet
 criteria: [1, 6]
 
+# WRITES: the author's own statement that this case changes the world. It is not
+# what decides the reset — the runner rebuilds whenever the LAST run dirtied the
+# world, because the assistant is offered the whole server and any run can write
+# regardless of what its file says. TestEveryWritingScenarioDeclaresThatItWrites
+# holds this line against the tools the case names.
+writes: true
+
 prompt: |
   Got this list from the trade fair. Can you get it into the CRM?
 

@@ -1,0 +1,125 @@
+# CASE 30 — A word for the ones from the fair.
+#
+# The vocabulary half of the surface: three tools, one errand.
+#
+#   list_tags     — the user asks for "K5" and the workspace holds "K5
+#                   Conference 2026". apply_tag REFUSES a name the workspace
+#                   does not have and never creates one, so "k5" is a refusal
+#                   and there is no second guess that works. The exact spelling
+#                   lives in exactly one place: the tag list. The fixture
+#                   deliberately leaves that word applied to NOTHING, so it
+#                   cannot be picked up off a record row either — an
+#                   organization row carries the tags it holds, and a K5 already
+#                   on an account would hand the spelling over for free.
+#
+#   create_tag    — "Revisit Q1" does not exist and apply_tag will not coin it.
+#                   Without this call the second half of the errand is a write
+#                   that was refused, and an answer that reports both accounts
+#                   tagged is reporting something that did not happen.
+#
+#   apply_tag     — the words have to land on the records. Nothing else puts one
+#                   on.
+#
+# The two halves are the SAME direction — put words on records — which is why
+# they belong in one case. A removal is the opposite errand and lives in case 31.
+#
+# The failure this is shaped around is the one create_tag's own description
+# names: a workspace with "Key Account" does not want "key accounts" beside it.
+# The cheap path here is to skip the list, be refused, and coin "K5" — which
+# leaves the vocabulary split and every record filed under a word nobody else
+# uses.
+name: case30_a_word_for_it
+criteria: [1, 2]
+
+# WRITES: the author's own statement that this case changes the world. It is not
+# what decides the reset — the runner rebuilds whenever the LAST run dirtied the
+# world, because the assistant is offered the whole server and any run can write
+# regardless of what its file says. TestEveryWritingScenarioDeclaresThatItWrites
+# holds this line against the tools the case names.
+writes: true
+
+prompt: |
+  Back from K5 in Cologne. Three accounts came out of it — Dom Digital,
+  Rheinufer and Vorort Systeme. Mark all three as coming from that conference.
+  We already have a word for K5 in the CRM, use that one — I do not want a
+  second spelling of it floating around.
+
+  And Dom Digital and Rheinufer are both worth going back to early next year.
+  Start a new word for that, call it Revisit Q1, and put it on those two.
+
+must_call:
+  - list_tags
+  - create_tag
+  - apply_tag
+
+# The tool name alone would pass on a create_tag that coined a SECOND K5 word
+# and never touched the one the user asked for. Pinning the name is what says
+# the coinage was the intended one: "Revisit Q1" is the word the prompt names,
+# in the spelling it names it, and any other coinage is the split vocabulary
+# this case exists to catch.
+#
+# Nothing pins apply_tag's arguments. tag_id and record_id are uuids the fixture
+# does not know, and tag_name is optional — a run that resolves ids from
+# list_tags and applies by id is the BETTER path, and a must_call_with on
+# tag_name would score it as a failure.
+must_call_with:
+  - create_tag.name=Revisit Q1
+
+may_call:
+  - search_records
+  - list_records
+  - query_workspace
+  - read_record
+  - get_record_tags
+  - get_tag
+  - resolve_entities
+  # Called unprompted on most runs, and no part of this errand needs either.
+  - whoami
+  - list_colleagues
+
+must_mention:
+  # Criterion 1: it read the vocabulary and used the word that was there. The
+  # full spelling is the evidence — the user typed "K5" and only the tag list
+  # carries "K5 Conference 2026".
+  - "K5 Conference 2026"
+  # Criterion 2: the coined word, reported by the name it was coined under.
+  - "Revisit Q1"
+  # The account that carries both words, so a report that names no record at
+  # all does not pass. Not a roll call of all three: "tagged all three Cologne
+  # accounts" is a good answer and demanding the other two names would judge
+  # the prose rather than the finding.
+  - "Dom Digital"
+
+must_not_mention:
+  # THE SPLIT VOCABULARY. Affirmative constructions only — "I created a new tag
+  # for K5" is the defect, and "I did not create a new K5 tag" is a correct
+  # answer saying so. An unanchored "creat.*tag.*K5" cannot tell them apart and
+  # would red the run that got it right.
+  #
+  # K5 HAS TO BE THE NAME OF THE THING CREATED, not a word further along the
+  # sentence. The right answer reports both halves of the errand in one breath —
+  # "I created the new tag Revisit Q1 and applied K5 Conference 2026" — and a
+  # loose gap between "tag" and "K5" reads that as the coinage it is warning
+  # about. So the gap is a naming distance ("tag called K5", "a second K5 tag")
+  # and the reverse order is spelled out rather than bought with a wider window.
+  # A semicolon ends that distance as a full stop does: "I created Revisit Q1 as
+  # a new tag; K5 Conference 2026 was already there" is two clauses.
+  #
+  # AND THE COINED WORD IS THE BARE ONE. K5 followed by "Conference" is the word
+  # the workspace already had, so no sentence applying it can be the coinage —
+  # which also reaches the shape a list answer takes, "New tags created: K5,
+  # Revisit Q1", where no verb of creation stands next to the name at all.
+  - "(?:I|we) (?:have |just )?(?:created|coined|added)[^.;\n]{0,20}(?:new |second |another |separate )?(?:tag|word)[^.;\n]{0,12}(?:called |named |for |\")?K5\b(?!\s+Conference)|(?:I|we) (?:have |just )?(?:created|coined|added)[^.;\n]{0,20}(?:new |second |another |separate )?[\"']?K5\b(?!\s+Conference)[^.;\n]{0,20}(?:tag|word)|(?:new |second )?tags? (?:created|coined|added)[^.\n]{0,20}\bK5\b(?!\s+Conference)"
+  # And it must not report the existing word as absent. Being refused "k5" says
+  # nothing about what the workspace holds — the same false conclusion case 7
+  # guards, in the vocabulary the tag tools publish.
+  #
+  # ABSENT FROM THE VOCABULARY, which is the claim that is false. The fixture
+  # leaves the word applied to NOTHING, so "no existing K5 tag is on any account
+  # yet" is simply true and a correct answer may write it; the alternatives
+  # therefore each need an existence or a vocabulary anchor — in the workspace,
+  # in the tag list, "does not exist" — before they fire.
+  - "(?:no|not any) (?:existing )?K5 (?:tag|word)[^.\n]{0,30}(?:exists?|in the (?:CRM|workspace|vocabulary|tag list|system)|available|set up|to use)|(?:workspace|CRM|vocabulary|tag list)[^.\n]{0,25}(?:has|had|holds|contains) no (?:existing )?K5|K5[^.]{0,30}(?:does not exist|is not in the (?:vocabulary|workspace|tag list|CRM)|no such tag|had to be created)"
+
+runs: 3
+pass_at: 2

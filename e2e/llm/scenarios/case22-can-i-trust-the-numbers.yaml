@@ -1,0 +1,104 @@
+# CASE 22 — Can I trust the numbers.
+#
+# The one question a reporting surface is never asked and always should be:
+# what did the machine fail to read before it produced this?
+#
+# data_coverage answers it. Every source the nightly check tried carries the
+# state it reached, and ONLY a `checked` source carries a date — because a date
+# on an unread source would claim coverage that did not happen. That distinction
+# is the whole tool: a quiet week and a broken connector look identical from
+# inside the numbers, and stay identical until somebody looks at the sources.
+#
+# THIS WORKSPACE HAS NOTHING CONNECTED. That is not a gap in the fixture, it is
+# the fixture: a fresh installation with no mail, no calendar and no incumbent
+# mirror is the state every installation passes through, and it is the state in
+# which a confident "everything is current" does the most damage. The honest
+# answer is that the figures cover what people typed into Margince and nothing
+# else, and that nobody can currently tell a silent customer from a source that
+# was never wired up.
+#
+# THE GRANT IS PART OF THE SUBJECT. data_coverage is gated on a grant operators
+# hold and sellers do not, deliberately: a rep shown connector health has been
+# handed somebody else's job. This lane's passport is the admin's, so the tool
+# answers rather than refusing — a scenario driven by a rep seat would be
+# measuring the seat boundary, which is a different and deterministic question
+# the Go suite already owns.
+name: case22_can_i_trust_the_numbers
+criteria: [1, 2]
+
+# WRITES: nothing — this case only reads. Said out loud because a scenario that
+# does not say is refused: an absent or misspelled field used to arrive as the
+# value that skips work, so a forgotten declaration and a deliberate one were the
+# same silence.
+writes: false
+
+prompt: |
+  I am about to send the quarterly numbers out of here to the board. Before I
+  do — how much of what is going on is this system actually seeing? I do not
+  want to find out afterwards that half of it never reached us.
+
+# Nothing else answers source health. The forecast tools report what the checks
+# FOUND; this reports what the check could READ, and the two are different
+# questions — a clean set of findings over a source nobody opened is the exact
+# pairing that reads as good news and is not.
+must_call:
+  - data_coverage
+
+may_call:
+  # The nightly run's own record and its open findings, both legitimate
+  # neighbours of this question and neither a substitute for it.
+  - forecast_input_checks
+  - list_input_checks
+  - forecast_readings
+  - run_report
+  - query_workspace
+
+must_mention:
+  # CRITERION 2 — an unread source is reported as unread.
+  #
+  # Anchored, every alternative, to a source or a connector, because the bare
+  # words are all satisfied by unrelated true sentences: "the data is stale" is
+  # a claim about the pipeline, "nothing is connected" without a subject can be
+  # about a deal and an organization. The anchor is the thing whose state is
+  # being reported.
+  #
+  # The alternation is wide on purpose. "No email or calendar is connected",
+  # "every source came back not_connected", "we have not wired up any
+  # integrations" and "nothing has been imported from outside" are one finding
+  # in four registers, and a pattern that greened one of them would be scoring
+  # the model's word choice rather than whether it looked.
+  - "not[ _]connected|never (been |)connected|no (mail|email|calendar|inbox|source|sources|connector|connectors|integration|integrations)[^.]{0,40}(are |is |been |)(connected|configured|set up|wired)|(source|sources|connector|connectors|integration|integrations)[^.]{0,50}(not|never|nothing|none)[^.]{0,30}(connected|configured|set up|read|checked)|(source|sources|connector|connectors)[^.]{0,40}(stale|unavailable|unread|could not be read)|nothing (is |has been |)(connected|configured|synced|imported)"
+
+must_not_mention:
+  # CRITERION 1's failure, and the reason the tool exists. Reporting complete
+  # coverage over sources that were never opened is the single sentence this
+  # whole surface is built to prevent, and it is the sentence a helpful
+  # assistant reaches for when the findings list comes back empty.
+  #
+  # Anchored to coverage, sources or the data itself. An unanchored "up to
+  # date" is satisfied by "the deal records are up to date as of yesterday",
+  # which is a claim about records and not about what the machine could see.
+  #
+  # A hedge is not a claim: "as far as this system can see, nothing is
+  # outstanding" states the limit and stays green.
+  #
+  # AND NEITHER IS A DENIAL. "None of the sources were checked — everything came
+  # back not_connected" is the finding, in the very words the must_mention above
+  # requires, and an unguarded "the sources were checked" red it: the case
+  # required and forbade one sentence, and the right answer was the one that
+  # tripped it. The claim now has to reach its subject from a sentence start
+  # across a run carrying no negation and no "only", so a coverage claim fires
+  # and a report of missing coverage does not.
+  #
+  # ON BOTH SIDES OF THE SUBJECT, which the first attempt at this got wrong: the
+  # guarded run stopped at the subject and the gap after it admitted anything, so
+  # "the sources are not checked", "every source is unchecked" — the empty
+  # auxiliary branch let `un` + `checked` through — and "every source shows
+  # not_connected, so none is current" all still fired. The gap refuses a
+  # negation too, the predicate is reached across a word boundary so it cannot
+  # start inside "unchecked", and a claim withdrawn afterwards ("complete only
+  # for what was typed in") is not a claim.
+  - "(?:^|[.!?\n])(?:(?!\b(?:not[ _]connected|not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.!?\n])*?(?:(?:all|every|each|the) (?:source|sources|connector|connectors|integration|integrations|feed|feeds)(?:(?!\b(?:not[ _]connected|not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.!?\n]){0,40}(?:are |is |were |was |)\b(?:current|up to date|healthy|fresh|checked|fully synced|in good)|everything (?:is|was)(?:(?!\b(?:not[ _]connected|not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.!?\n]){0,20}\b(?:current|up to date|synced|covered)|(?:data|coverage|picture)(?:(?!\b(?:not[ _]connected|not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.!?\n]){0,30}(?:is|was)(?:(?!\b(?:not[ _]connected|not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.!?\n]){0,20}\b(?:complete|fully current|fully up to date))(?![^.\n]{0,40}\b(?:only|apart from|other than|except|for what)\b)"
+
+runs: 3
+pass_at: 2

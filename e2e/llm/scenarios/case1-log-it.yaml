@@ -17,6 +17,13 @@
 name: case1_log_it
 criteria: [8, 14]
 
+# WRITES: the author's own statement that this case changes the world. It is not
+# what decides the reset — the runner rebuilds whenever the LAST run dirtied the
+# world, because the assistant is offered the whole server and any run can write
+# regardless of what its file says. TestEveryWritingScenarioDeclaresThatItWrites
+# holds this line against the tools the case names.
+writes: true
+
 prompt: |
   Just left Kugellager-online. Met Matthias Ortner, went well, they want to move
   forward. Here is the transcript from Plaud, put it all in the CRM:

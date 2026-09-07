@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 #
-# e2e-llm.sh — drive the six use cases with a REAL assistant and check what it
-# said.
+# e2e-llm.sh — drive every use case in e2e/llm/scenarios with a REAL assistant
+# and check what it said.
+#
+# The scenario directory is the list; nothing here counts them. It stood at six
+# when this was written and is several times that now, and a number in this
+# sentence would only ever be the number on the day somebody last read it.
 #
 # This is the half the Go suite cannot answer. Those tests pin what is
 # deterministic — the payloads, the refusals, the legibility fields. This asks
@@ -45,10 +49,10 @@ ONLY="${SCENARIO:-}"
 # the model a real user gets.
 #
 # NOTE for anyone comparing numbers: every result recorded before 2026-08-27 —
-# the 5-of-6 sweep and the case 6 finding in MCP Testing/findings/
-# ACCEPTANCE-CRITERIA.md — was measured on claude-fable-5, because nothing
-# pinned this then. Those numbers describe a different model and are not a
-# baseline for these. The first Opus sweep sets the new one.
+# the sweep that stood at five of six, and the case 6 finding written up with
+# it — was measured on claude-fable-5, because nothing pinned this then. Those
+# numbers describe a different model and are not a baseline for these. The first
+# Opus sweep sets the new one.
 #
 # Override to measure a different model deliberately — that is a different
 # question, honestly asked.
@@ -115,11 +119,16 @@ trap cleanup EXIT
 
 # --- the stack ---------------------------------------------------------------
 #
-# --fresh per RUN would be the cleanest isolation, but a boot is tens of seconds
-# and six scenarios times three runs is eighteen of them. The compromise: one
-# fresh boot for the lane, and the write scenarios (1, 2, 3) get a fresh
-# database between their own runs — they are the only ones whose second run
-# would see the first one's records.
+# One fresh boot here, and a fresh DATABASE before every run that follows a run
+# — the WORLD_DIRTY loop below, whose own comment says why the cheaper rules
+# that preceded it were wrong. What this section buys is the boot: the stack
+# comes up once and only its database is rebuilt.
+#
+# So every scenario is measured against the same world: the one this seeding
+# produces and nothing a previous run added to it. That is what makes a case
+# free to assert the absence of something — which the ordering could not
+# otherwise support, since scenarios are driven in the order the glob below
+# yields, filename order and not case number, with case10 second and case9 last.
 echo "==> booting the $SLUG stack (never :8080)"
 # A previous run that was interrupted leaves its api holding :18081, and
 # dev-fresh refuses rather than attaching to the wrong stack. Stopping this
@@ -282,6 +291,30 @@ else:
   fi
 }
 
+# WORLD_DIRTY says whether any run has written since the last fresh database.
+# It starts clean: the lane boots a fresh stack and seeds it before the first
+# scenario, so the first run of the first case has the world the seed built.
+WORLD_DIRTY=0
+
+# EVERY DECLARATION IS CHECKED BEFORE THE FIRST TOKEN IS SPENT.
+#
+# The per-scenario check below runs inside the loop, which is the right place to
+# USE the value and the wrong place to discover it is missing: a typo in the last
+# scenario would abort the lane after every earlier case had been paid for. This
+# lane bills real money, so the whole corpus is validated while it is still free.
+for scenario in "$SCENARIO_DIR"/*.yaml; do
+  declared="$(python3 "$ROOT/e2e/llm/check.py" --field writes "$scenario")"
+  case "$declared" in
+    true|false) ;;
+    *)
+      echo "$(basename "$scenario") declares writes=${declared:-<absent>}; it must be exactly" >&2
+      echo "true or false. An absent field arrives as the value that SKIPS the database reset," >&2
+      echo "and a wrong-world run is a run rather than an error." >&2
+      exit 1
+      ;;
+  esac
+done
+
 PASSED=0
 FAILED=0
 mkdir -p "$RECORD_DIR"
@@ -294,6 +327,27 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
 
   runs="$(python3 "$ROOT/e2e/llm/check.py" --field runs "$scenario")"
   pass_at="$(python3 "$ROOT/e2e/llm/check.py" --field pass_at "$scenario")"
+  # Whether this case WRITES, declared by the scenario itself rather than kept
+  # here as a list of names. The list this replaced read `case1_*|case2_*|case3_*`
+  # and could only fail one way: a writing case nobody added ran its second and
+  # third attempts against its first one's world, silently, because a wrong-world
+  # run is a run and not an error. The declaration sits in the file whose author
+  # knows the answer, and TestEveryWritingScenarioDeclaresThatItWrites derives the
+  # same fact from the tools the case names and fails when the two disagree.
+  writes="$(python3 "$ROOT/e2e/llm/check.py" --field writes "$scenario")"
+  # AN ABSENT FIELD MUST NOT READ AS "does not write". `--field` answers an
+  # unknown key with an empty line and exit 0, so a scenario that forgot the
+  # declaration, or spelled it `write:`, or wrote `yes`/`True`/`1`, would all
+  # arrive here as the value that skips the reset — and a wrong-world run is a
+  # run, not an error. That is the one direction this must not fail in, so the
+  # value is checked rather than compared.
+  case "$writes" in
+    true|false) ;;
+    *)
+      echo "$name declares writes=${writes:-<absent>}; it must be exactly true or false" >&2
+      exit 1
+      ;;
+  esac
   python3 "$ROOT/e2e/llm/check.py" --field prompt "$scenario" > "$WORK/prompt.txt"
 
   echo "==> $name ($runs runs, passes at $pass_at)"
@@ -302,23 +356,43 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
   : > "$results"
 
   for i in $(seq 1 "$runs"); do
-    # The write scenarios see their own earlier runs otherwise. Cases 1, 2 and 3
-    # create records; a second run against them is testing a different world.
-    case "$name" in
-      case1_*|case2_*|case3_*)
-        if [[ "$i" -gt 1 ]]; then
-          # dev-stop FIRST. dev-fresh refuses to boot over a port its own
-          # stack is already holding — "port :18081 already in use" — so
-          # calling it on the running stack killed the lane after case 1
-          # run 1 on the first real outing of this script.
-          (cd "$ROOT" && make dev-stop DEV_SLUG="$SLUG" >/dev/null 2>&1) || true
-          (cd "$ROOT" && make dev-fresh DEV_SLUG="$SLUG" >/dev/null)
-          seed_everything
-          # The rebuild took the passport row with the old database.
-          mint_passport
-        fi
-        ;;
-    esac
+    # RESET WHEN THE WORLD IS DIRTY, not when this case is the one that dirtied
+    # it. Two things were wrong with keying the reset on `$i -gt 1`.
+    #
+    # The scenarios run in one shared installation, in filename order, and only a
+    # case's OWN later runs were reset. So run 1 of every case was measured
+    # against everything the preceding cases wrote, and a read-only case was
+    # never reset at all — with fourteen writers interleaved through twenty-one
+    # files, cases 5, 6 and 7 sit downstream of eleven of them and not one of
+    # their runs was clean. A pass_at of 2-of-3 then quietly means "2 of the 2
+    # comparable runs", which nobody reading the verdict can see.
+    #
+    # And the surface the assistant is offered is the WHOLE server
+    # (--allowedTools below), not the tools its scenario names, so any run can
+    # write whatever it likes. `writes:` is the case author's statement of
+    # intent and the right thing to hold a declaration against; it is not a
+    # bound on what a model actually did. Trusting it to decide the reset would
+    # be trusting the wrong half.
+    #
+    # So: a run dirties the world, and the next run starts from a fresh one.
+    # More boots, and the number they buy is one a reader can trust.
+    if [[ "$WORLD_DIRTY" = "1" ]]; then
+      # dev-stop FIRST. dev-fresh refuses to boot over a port its own stack is
+      # already holding — "port :18081 already in use" — so calling it on the
+      # running stack killed the lane after case 1 run 1 on the first real
+      # outing of this script.
+      (cd "$ROOT" && make dev-stop DEV_SLUG="$SLUG" >/dev/null 2>&1) || true
+      (cd "$ROOT" && make dev-fresh DEV_SLUG="$SLUG" >/dev/null)
+      seed_everything
+      # The rebuild took the passport row with the old database.
+      mint_passport
+      WORLD_DIRTY=0
+    fi
+
+    # Dirty BEFORE the run rather than after it. A run that dies mid-way has
+    # still written whatever it wrote up to that point, and a failure path that
+    # left the flag clean would hand the next run that debris.
+    WORLD_DIRTY=1
 
     transcript="$WORK/$name.run$i.jsonl"
     if ! run_once "$WORK/prompt.txt" "$transcript"; then

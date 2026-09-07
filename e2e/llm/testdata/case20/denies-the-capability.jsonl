@@ -1,0 +1,4 @@
+{"type": "system", "subtype": "init", "tools": ["mcp__margince__run_analytics_query", "mcp__margince__compose_analytics_report"]}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__run_analytics_query", "input": {"save": true}}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__compose_analytics_report", "input": {}}]}}
+{"type": "result", "subtype": "success", "is_error": false, "result": "Open pipeline is EUR 4.2m across 37 open deals.\n\nReport generation is not available, so I have pasted the numbers here instead of composing the section."}

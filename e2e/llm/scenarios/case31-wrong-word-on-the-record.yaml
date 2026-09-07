@@ -1,0 +1,107 @@
+# CASE 31 — The word that should not be on this one.
+#
+# The opposite direction from case 30, and a separate case for that reason: a
+# goal that required apply_tag and remove_tag at once would be asking for a
+# tagging and its undo in the same breath.
+#
+#   get_record_tags — THE RECORD ROW LIES BY OMISSION. An organization row
+#                     carries its live tags and drops the archived ones ("a
+#                     retired word is not drawn on a list"), so an answer built
+#                     from read_record or a list row reports the retired word as
+#                     not there. get_record_tags is the only read where a
+#                     retired word still shows, and the fixture puts one on this
+#                     record precisely so the two reads disagree.
+#
+#   remove_tag      — nothing else takes an assignment off a record. Its
+#                     neighbour is the trap: archive_record on a TAG retires the
+#                     word for the whole workspace, which is what the user
+#                     explicitly does not want, and three other accounts carry
+#                     it honestly.
+#
+# What this case CANNOT see, stated rather than papered over: check.py has no
+# must_not_call, so a run that removes the tagging AND also retires the word
+# would be caught only if it said so. The positive assertion below — that the
+# word survives for the other accounts — is the whole guard, and a silent
+# retirement passes it. Reaching that needs the database read back after the
+# run, which this lane does not do.
+name: case31_wrong_word_on_the_record
+criteria: [1, 2]
+
+# WRITES: the author's own statement that this case changes the world. It is not
+# what decides the reset — the runner rebuilds whenever the LAST run dirtied the
+# world, because the assistant is offered the whole server and any run can write
+# regardless of what its file says. TestEveryWritingScenarioDeclaresThatItWrites
+# holds this line against the tools the case names.
+writes: true
+
+prompt: |
+  Vorort Systeme KG is not a strategic account any more — the sponsor who made
+  them one has left. Take that off them.
+
+  Before you do: tell me everything that is actually sitting on that record,
+  including anything from a list we have since retired. Somebody mentioned an
+  old conference tag on it and I cannot see one.
+
+  And to be clear I mean that one account only. Plenty of others genuinely are
+  strategic accounts and that word stays.
+
+must_call:
+  - get_record_tags
+  - remove_tag
+
+# record_type is pinned on both. The tool name alone passes on a read or a
+# removal aimed at a PERSON of the same name — get_record_tags serves three
+# record types and remove_tag five, and this errand is about a company.
+must_call_with:
+  - get_record_tags.record_type=organization
+  - remove_tag.record_type=organization
+
+may_call:
+  - search_records
+  - read_record
+  - list_records
+  - list_tags
+  - get_tag
+  - query_workspace
+  - whoami
+  - list_colleagues
+
+must_mention:
+  # Criterion 1: the retired word, which only get_record_tags could have shown.
+  # This is the whole point of the case — the user says they cannot see one,
+  # and the record row agrees with them.
+  - "K5 Conference 2025"
+  # Criterion 2, first half: the tagging came off THIS account. Anchored to the
+  # account both ways round, because an answer may lead with either.
+  - "Vorort[^.]{0,100}(?:remov|took off|taken off|no longer)|(?:remov|took off|taken off)\w*[^.]{0,100}Vorort"
+  # Criterion 2, second half: the word itself survived. Asserted POSITIVELY
+  # rather than by forbidding a retirement, because "I did not retire the word"
+  # is the correct answer and every pattern that forbids the phrase reds it.
+  - "(?:word|tag|Strategic Account)[^.]{0,80}(?:remains|stays|still (?:exists|in use|available|applies|on))|left (?:it |the (?:word|tag) )?(?:in place|alone|untouched)|other (?:accounts|companies|records)[^.]{0,40}still"
+
+must_not_mention:
+  # The answer the record row alone produces: nothing retired here. It is a
+  # claim about the record, and this caller — an admin who can read the whole
+  # vocabulary — has no honest way to make it.
+  #
+  # AN EXCEPTION CLAUSE IS NOT THAT CLAIM. After the removal, "no other tags
+  # remain on Vorort apart from the retired K5 Conference 2025" is literally
+  # true and names the very word this case exists to surface — so a bare "no
+  # other tags" red the answer that found it. A following "apart from", "other
+  # than", "except" or the retired word itself withdraws the claim, and the
+  # guard withdraws with it — in front of the claim as well as behind it, since
+  # "Besides the retired K5 Conference 2025, no other tags remain" says the same
+  # thing in the other order.
+  #
+  # AND `no other tags` IS GONE from this half. It was never the claim this case
+  # is about — that claim is "nothing retired here" — and after the removal it is
+  # a true roll-call of a record whose only remaining word IS the retired one. An
+  # answer that never saw the retired word fails the required half above by name,
+  # so nothing is lost by not forbidding a sentence that can be honest.
+  - "(?:^|[.;!?\n])(?:(?!\b(?:not[ _]connected|not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;!?\n])*?(?:no (?:retired|archived|old) tags?\b|nothing (?:retired|archived)|no (?:retired|archived|old) (?:word|words))(?![^.\n]{0,60}(?:apart from|other than|besides|except|aside from|but the|save for|K5))"
+  # And the capability denial, the family case 7 guards: a refusal is not a
+  # missing feature.
+  - "cannot remove (?:a |the )?tag|no way to (?:remove|take off) a tag"
+
+runs: 3
+pass_at: 2

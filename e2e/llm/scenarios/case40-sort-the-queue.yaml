@@ -1,0 +1,145 @@
+# CASE 40 — Sort the lead queue.
+#
+# The three lead verbs — qualify_lead, promote_lead, disqualify_lead — were
+# never tried by a model on this surface. They are MUTUALLY EXCLUSIVE outcomes
+# for one lead: a lead is qualified, promoted or disqualified, and a case that
+# asked for two of them on one record would be asking for something incoherent.
+# So the fixture seeds THREE leads, one per outcome, and the prompt names none
+# of them.
+#
+# WHAT THE PROMPT DOES NOT DO is say which lead gets which verb, or name a tool.
+# It states the three policies a rep already holds in their head — engaged
+# becomes a contact, dead end gets closed off, half-filled gets what the record
+# itself implies — and the DATA decides which lead each one lands on. Working
+# that out is the case. Compare case 4, where "nearby" has to be worked out to
+# be a distance search; the earlier scripted wording of that case handed over
+# the answer and tested something materially easier.
+#
+# The three leads, and what makes each unambiguous in the data:
+#
+#   Ines Waldner  — status engaged, an INBOUND reply in the timeline asking for
+#                   a call. promote_lead, and its `trigger` argument has an
+#                   honest value to name.
+#   Piet Brandsma — status new, company_name and title EMPTY, no activity at
+#                   all. qualify_lead fills company_name from the mail domain
+#                   (brandsma-koeltechniek.test -> "Brandsma Koeltechniek") and
+#                   reports `title` as the remaining gap. Nothing else fills it:
+#                   enrich reaches outside the workspace and needs approval,
+#                   and update_record would be inventing a value.
+#   Bruno Kellner — status contacted, one outbound in March and a note recording
+#                   that the address bounced. disqualify_lead.
+#
+# The three leads are seeded in e2e/llm/seed-llm-fixtures.sh.
+name: case40_sort_the_queue
+criteria: [1, 2, 3]
+
+# WRITES: the author's own statement that this case changes the world. It is not
+# what decides the reset — the runner rebuilds whenever the LAST run dirtied the
+# world, because the assistant is offered the whole server and any run can write
+# regardless of what its file says. TestEveryWritingScenarioDeclaresThatItWrites
+# holds this line against the tools the case names.
+writes: true
+
+prompt: |
+  Can you go through my lead queue in the CRM and sort it out for me? Whoever is
+  actually engaged should become a proper contact. Whoever is a dead end should
+  be closed off so it stops showing up as live work. And for anyone in between,
+  fill in whatever the record itself already tells us and say what is still
+  missing.
+
+# All three, because the ask has three halves and no other tool performs any of
+# them. There is no second door onto promotion or onto a lead's terminal state,
+# and "fill in whatever the record itself already tells us" is qualify_lead's
+# whole contract — a value typed in through update_record would be the assistant
+# inventing one, which is the opposite of what was asked.
+must_call:
+  - qualify_lead
+  - promote_lead
+  - disqualify_lead
+may_call:
+  - list_records
+  - search_records
+  - read_record
+  - query_workspace
+  - catch_me_up_on
+  - whoami
+
+# `promote_lead.trigger` is deliberately NOT pinned, for the reason case 7 does
+# not pin `group_by`: more than one value is honest here. Ines replied, so
+# `inbound_reply` is the obvious read of the record — and a rep who says "make
+# her a contact" is also a human's decision, which is `human_qualify`. Pinning
+# one would score an honest answer as a failure. What must not happen instead —
+# the verb landing on the WRONG lead — is caught below, by name.
+
+# HOW THE NAME ANCHORS ARE BUILT, because the patterns below are unreadable
+# otherwise. check.py matches ONE flat regex over the whole answer and cannot
+# see where one lead's sentence ends and the next one's begins, so an answer
+# listing all three — which is what a good answer looks like — puts every verb
+# within a few characters of every name. `(?:(?!Bruno|Piet)[^\n]){0,60}` is the
+# gap between a verb and the name it is anchored to, and it REFUSES to step over
+# either of the other two names: the run from "promoted" to "Ines" cannot cross
+# a "Bruno", so a bullet about Bruno can never satisfy Ines's assertion.
+#
+# The two halves are shaped differently ON PURPOSE.
+#
+#   must_mention is WIDE — the gap admits any character but a newline, so
+#   "Bruno Kellner: the address bounced in March. I closed him off" is
+#   recognised across the sentence break. Under-recognition is the direction
+#   that must not happen, because it reports PASS with nothing failing.
+#
+#   must_not_mention is TIGHT — the gap also stops at "." and ";", so a verb
+#   already spent on one lead cannot reach the next name ("Bruno has been
+#   disqualified. Piet is not a dead end" is a correct answer and stays green),
+#   and it names ACTS only. "dead end", "no longer live" and "is a contact" are
+#   deliberately absent from this half: they appear in true NEGATIVE sentences a
+#   right answer writes, and forbidding them would fail it for being explicit.
+#
+#   AND A NEGATED VERB IS NOT AN ACT. The header above says a right answer
+#   writes "Piet was not written off" and "I did not promote Bruno" — spelling
+#   out that it read the record rather than clearing the queue — and both fired
+#   the guard, because the negation sat where nothing was looking for it. It can
+#   stand in either place, before the verb or between the verb and the name, so
+#   both the run into the clause and the gap inside it refuse to cross one.
+#
+#   AND AN ACT GETS REPORTED IN THE FLAT PRESENT. "Bruno is now a contact" claims
+#   the promotion without a verb of promoting anywhere in it, which is the same
+#   write and was matching nothing.
+
+must_mention:
+  # Ines is the one who gets promoted. Anchored to her name in both directions,
+  # because an unanchored "promoted" is satisfied by a sentence about somebody
+  # else, and judged on the FINDING rather than the word: "converted her to a
+  # contact" and "promoted the lead" are the same answer.
+  - "(?:promot\w*|convert\w*|turn(?:ed|ing)?(?:(?!Bruno|Piet)[^\n]){0,20}into a (?:person|contact)|(?:made|is|are|now)(?:(?!Bruno|Piet)[^\n]){0,15}(?:a )?(?:proper )?(?:contact|person)(?: record)?)(?:(?!Bruno|Piet)[^\n]){0,60}Ines|Ines(?:(?!Bruno|Piet)[^\n]){0,90}(?:promot\w*|convert\w*|turn(?:ed|ing)?(?:(?!Bruno|Piet)[^\n]){0,20}into a (?:person|contact)|(?:made|is|are|now)(?:(?!Bruno|Piet)[^\n]){0,15}(?:a )?(?:proper )?(?:contact|person)(?: record)?)"
+  # Bruno is the dead end. Same shape, same reason — and "closed off", "dead
+  # end" and "no longer live" are the same finding as "disqualified".
+  - "(?:disqualif\w*|clos(?:ed|ing)?(?:(?!Ines|Piet)[^\n]){0,15}(?:off|out)|wrote(?:(?!Ines|Piet)[^\n]){0,10}off|written off|dead end|not going anywhere|no longer (?:live|active|in the queue))(?:(?!Ines|Piet)[^\n]){0,60}Bruno|Bruno(?:(?!Ines|Piet)[^\n]){0,90}(?:disqualif\w*|clos(?:ed|ing)?(?:(?!Ines|Piet)[^\n]){0,15}(?:off|out)|wrote(?:(?!Ines|Piet)[^\n]){0,10}off|written off|dead end|not going anywhere|no longer (?:live|active|in the queue))"
+  # The value qualify_lead DERIVED, which is the evidence the fill actually
+  # landed rather than being described. The tool titles the registrable label of
+  # the mail domain, so this exact string is what the record now holds.
+  - "Brandsma Koeltechniek"
+  # And the gap it reports. `title` is the one qualification field neither the
+  # record nor the domain can supply, so an honest answer says a human still has
+  # to. Anchored both ways so a bare "title" somewhere in the prose is not
+  # mistaken for the finding.
+  - "(?:title|job title|role|position)[^\n]{0,50}(?:missing|empty|blank|unknown|still needed|to fill|gap|not (?:set|filled|recorded))|(?:missing|empty|blank|still|unknown|gap|no|without a)[^\n]{0,50}(?:title|job title|role|position)"
+
+must_not_mention:
+  # THE VERB ON THE WRONG LEAD. must_call sees the tool name and not its subject,
+  # and a lead_id is a uuid nothing in this file can pin — so the guard is on
+  # what the answer says it did. Promoting the bounced address, or writing off
+  # the one who replied, is the failure that would otherwise score green.
+  - "(?:^|[.;\n])(?:(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;\n])*?(?:(?:promot\w*|convert\w*|turn(?:ed|ing)?(?:(?!Ines|Piet)(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;\n]){0,20}into a (?:person|contact))(?:(?!Ines|Piet)(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;\n]){0,40}Bruno|Bruno(?:(?!Ines|Piet)(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;\n]){0,25}(?:is|are|'?s) now (?:a )?(?:proper )?(?:contact|person)|Bruno(?:(?!Ines|Piet)(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;\n]){0,40}(?:promot\w*|convert\w*|turn(?:ed|ing)?(?:(?!Ines|Piet)(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;\n]){0,20}into a (?:person|contact)))"
+  - "(?:^|[.;\n])(?:(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;\n])*?(?:(?:disqualif\w*|clos(?:ed|ing)?(?:(?!Bruno|Piet)(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;\n]){0,15}(?:off|out)|wrote(?:(?!Bruno|Piet)(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;\n]){0,10}off|written off)(?:(?!Bruno|Piet)(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;\n]){0,40}Ines|Ines(?:(?!Bruno|Piet)(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;\n]){0,40}(?:disqualif\w*|clos(?:ed|ing)?(?:(?!Bruno|Piet)(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;\n]){0,15}(?:off|out)|wrote(?:(?!Bruno|Piet)(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;\n]){0,10}off|written off))"
+  # Piet is INCOMPLETE, not dead. The tool copy draws that line explicitly
+  # ("qualify_lead when the lead is only missing information"), and an assistant
+  # that clears the queue by writing him off has followed the shape of the ask
+  # rather than the record.
+  - "(?:^|[.;\n])(?:(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;\n])*?(?:(?:disqualif\w*|clos(?:ed|ing)?(?:(?!Ines|Bruno)(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;\n]){0,15}(?:off|out)|wrote(?:(?!Ines|Bruno)(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;\n]){0,10}off|written off)(?:(?!Ines|Bruno)(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;\n]){0,40}Piet|Piet(?:(?!Ines|Bruno)(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;\n]){0,40}(?:disqualif\w*|clos(?:ed|ing)?(?:(?!Ines|Bruno)(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;\n]){0,15}(?:off|out)|wrote(?:(?!Ines|Bruno)(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;\n]){0,10}off|written off))"
+  # And the case-7 shape: a refusal or a gap reported as a missing capability.
+  # A lead the assistant could not act on is an honest answer; "the CRM has no
+  # way to do this" is a conclusion that stops the person asking.
+  - "no way to (?:promote|disqualify|qualify)|(?:cannot|can't|does not|doesn't) (?:promote|disqualify|qualify) leads|(?:CRM|Margince|workspace) (?:has no|does not have a) lead"
+
+runs: 3
+pass_at: 2

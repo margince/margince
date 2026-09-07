@@ -1,0 +1,96 @@
+# CASE 21 — What are we closing.
+#
+# The forecast read, and the number beside the number.
+#
+# forecast_readings answers four money figures for a period, and its own
+# contract says what a caller must do before quoting any of them: read
+# `eligible_count` against `priced_count`. An unpriced deal is REAL pipeline
+# contributing zero money — it is in the count and absent from the total — so a
+# total quoted flat is arithmetically correct and tells the reader something
+# false about how much pipeline it covers.
+#
+# That is the same defect case 6 is built around, in a different subsystem: the
+# product hands over both facts, and the assistant chooses whether the reader
+# gets one of them or both. Nothing deterministic can ask this, because every
+# field arrives correctly either way.
+#
+# The seed makes the gap real rather than hypothetical: seven open deals in the
+# current period, six of them priced and one with no amount at all. A deal with
+# no number on it is not a fixture contrivance — it is the single commonest
+# state of a deal somebody created in a hurry after a call.
+#
+# THE PROMPT NAMES NO TOOL and no period boundary. "This quarter" is the
+# installation's own financial quarter, which need not start in January, and
+# working that out is the forecast's job rather than the model's arithmetic.
+name: case21_what_are_we_closing
+criteria: [1, 4]
+
+# WRITES: nothing — this case only reads. Said out loud because a scenario that
+# does not say is refused: an absent or misspelled field used to arrive as the
+# value that skips work, so a forgotten declaration and a deliberate one were the
+# same silence.
+writes: false
+
+prompt: |
+  Board call is Thursday and they will ask what we are bringing in this
+  quarter. What does our pipeline actually say — and how much of that would you
+  put your name to?
+
+# The only tool that answers what a PERIOD is expected to close. run_report's
+# forecast report and a hand-summed query_workspace both produce a number, and
+# neither is the forecast: the readings apply the fiscal calendar, the base
+# currency conversion and the weighting, and a total assembled beside them is a
+# second answer to the same question.
+must_call:
+  - forecast_readings
+
+may_call:
+  # The readiness verdict and the open findings. Genuinely optional: this
+  # workspace's nightly check ran before any deal existed, so neither has
+  # anything to add here — and a run that opens them anyway has done the
+  # careful thing rather than the wrong one.
+  - forecast_input_checks
+  - list_input_checks
+  - data_coverage
+  - run_report
+  - run_analytics_query
+  - list_records
+  - query_workspace
+  - read_record
+
+must_mention:
+  # It came back with money, not with a description of the forecast.
+  - "[0-9]"
+  # CRITERION 4 — the unpriced deal is named as absent from the total.
+  #
+  # Judged on the FINDING, not the wording. "One deal carries no amount, so it
+  # is in the count and not in the money" and "the total covers six of the seven
+  # — one has no value on it yet" are the same answer, and a pattern greening
+  # only the first would be measuring vocabulary.
+  #
+  # EVERY alternative is anchored to its own subject, because `re.search` looks
+  # anywhere in the whole answer. An unanchored "missing" is satisfied by "the
+  # close date is missing from my note above"; an unanchored "not included" is
+  # satisfied by a sentence about the per-rep split nobody asked for. The anchor
+  # is a word the observation cannot be made without: a deal, an amount, a
+  # value, a price, or the total the deal is absent from.
+  - "unpriced|(deal|deals|opportunit\w+|one|1|Weserbund)[^.]{0,60}(no|without|missing|lacks?|not)[^.]{0,25}(amount|value|price|figure|number|priced)|(amount|value|price)[^.]{0,40}(is |are |)(missing|absent|blank|empty|not (set|recorded|entered|filled))|(has|have|had|with|carries) no (amount|value|price|figure|number)|(not|never|n['’]t) (been )?priced|(excluded|left out|not counted|not included|does not (count|include)|outside)[^.]{0,45}(total|forecast|figure|number|sum)|(eligible|counted)[^.]{0,30}(vs\.?|versus|against|but only)[^.]{0,30}priced|(six|6) of (the |)(seven|7)|(seven|7)[^.]{0,40}(six|6)[^.]{0,30}(priced|amount|value)"
+
+must_not_mention:
+  # `(?:not |un)` AND NOT `(not|un)`, which is what this said and is a false
+  # green rather than a false red: with no space, the alternation matches
+  # "unavailable" and never "not available" — and "Forecasting is not available"
+  # is how the denial actually gets written. A capability guard that lets the
+  # exact sentence it exists for through reports PASS with nothing failing.
+  #
+  # THE CAPABILITY DENIAL, the same failure case 7 guards. The forecast is
+  # right there; concluding the workspace has none is worse than saying nothing,
+  # because the person reading it stops asking.
+  #
+  # Each alternative claims something about the PRODUCT. A hedge about the
+  # answer — "I would not put much weight on this with so little history" — is
+  # honest, is exactly what the prompt asked for, and must stay green.
+  - "no forecast[^.]{0,25}(available|in (the|this) (CRM|system|workspace))|cannot (produce|give|calculate|generate|compute) (a |the |any )?forecast|(the CRM|this workspace|Margince) (does not|doesn'?t) (do |support |have )?forecast|forecasting is (?:not |un)(?:available|supported|configured|possible)|no forecasting (capability|feature|data)"
+
+runs: 3
+pass_at: 2

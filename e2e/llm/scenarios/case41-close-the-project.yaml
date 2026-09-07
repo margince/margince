@@ -1,0 +1,114 @@
+# CASE 41 — Close the project out.
+#
+# read_project_360 and advance_project_phase, neither of which a model had ever
+# been asked for on this surface.
+#
+# WHY read_project_360 IS GENUINELY REQUIRED and not merely convenient. The
+# prompt asks how the project MOVED — phase by phase — and the phase history is
+# the one thing no other tool answers. read_record carries the current phase
+# alone; catch_me_up_on carries recent activity; prepare_handoff carries the
+# delivery gaps. A project sitting in `delivering` looks identical through all
+# three, and only the 360's phase history says it came through `initiative` and
+# `pursuing` to get there. That is also what the must_mention below rests on.
+#
+# WHY THE PHASE VOCABULARY IS THE SUBJECT. advance_project_phase's own copy says
+# it: "Use advance_deal for a deal's pipeline stages; a project's phases are a
+# different vocabulary on a different record." An assistant that reaches for a
+# deal here has answered a different question on a record this fixture does not
+# have.
+#
+# CLOSING REQUIRES A REASON — 422 closed_reason_required otherwise — so the
+# assistant has to supply one rather than sending the bare transition. That is
+# not asserted directly: `reason` is free text and any regex over it would be
+# judging wording. It is asserted through the fact that the call has to succeed
+# for the answer to report the close at all.
+#
+# ON APPROVAL, and it is a REAL DISCREPANCY rather than a note to self: the
+# tool DESCRIPTION says "a person approves the move before it runs", while the
+# contract's own policy row for this operation is `auto_execute`
+# (backend/internal/compose/agentpolicy_gen.go). One of the two is wrong and
+# whichever it is belongs to the product, not to this file. Which of them the
+# running stack does is therefore not this scenario's question, and nothing
+# here asserts either — no assertion depends on the write having landed, only
+# on the call having been made with the right phase and on what the assistant
+# read before making it.
+name: case41_close_the_project
+criteria: [1, 2]
+
+# WRITES: the author's own statement that this case changes the world. It is not
+# what decides the reset — the runner rebuilds whenever the LAST run dirtied the
+# world, because the assistant is offered the whole server and any run can write
+# regardless of what its file says. TestEveryWritingScenarioDeclaresThatItWrites
+# holds this line against the tools the case names.
+writes: true
+
+prompt: |
+  The Elbwerk rollout is done — we handed it over to their team last week.
+  Before I sign it off in the CRM, walk me through how it actually moved along,
+  phase by phase, and tell me whether anything is still hanging on it. Then
+  close it out.
+
+must_call:
+  - read_project_360
+  - advance_project_phase
+may_call:
+  - list_records
+  - search_records
+  - read_record
+  - review_commitments
+  - catch_me_up_on
+  - prepare_handoff
+  - query_workspace
+
+# The tool name alone would pass on a call that moved the project BACK to
+# `pursuing`, or forward to `delivering` it is already in — the wrong phase on
+# the right record, with prose about closing beside it. The phase is the whole
+# act, so the phase is pinned.
+must_call_with:
+  - advance_project_phase.to_phase=closed
+
+must_mention:
+  # The project it acted on.
+  - "Elbwerk"
+  # THE PHASE HISTORY. The project stands in `delivering`; `initiative` and
+  # `pursuing` are behind it and appear nowhere but the history read_project_360
+  # returns. Two entries rather than one alternation, because an answer that
+  # walks the ladder names both and an answer that recites the enum from the
+  # tool schema is not what was asked for.
+  - "initiative"
+  - "pursuing"
+  # What is still hanging on it. The fixture leaves one overdue task filed
+  # against the project, and reporting it BEFORE closing is the half of this
+  # case a deterministic test cannot reach — a project closed over an open
+  # commitment nobody mentioned is a loss the reader cannot see.
+  - "Abnahmeprotokoll|acceptance (?:protocol|certificate|report|document)|handover document"
+
+must_not_mention:
+  # The fixture HAS an open commitment, so this claim is false however
+  # confidently it reads. Anchored to the commitment rather than left bare:
+  # "nothing else to do now that it is closed" is a fair closing sentence and
+  # must stay green.
+  #
+  # An EXCEPTION is not the claim either, in either position: "apart from the
+  # Abnahmeprotokoll, there are no open tasks" names the finding and then
+  # reports the rest of the queue honestly, and a bare pattern reds the answer
+  # that did the job. The claim has to stand alone on both sides.
+  #
+  # The same false all-clear also gets written the positive way round — "all
+  # tasks are done, nothing left hanging" — which named no absence and so
+  # matched nothing here.
+  - "(?:^|[.;\n])(?:(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;\n])*?(?:no (?:open|outstanding|pending) (?:commitments?|tasks?|items?)|(?:all|every) (?:tasks?|commitments?|items?)[^.;\n]{0,20}(?:are|is|were|have been)[^.;\n]{0,15}(?:done|closed|complete|completed|clear)|nothing (?:left|still)[^.;\n]{0,15}(?:hanging|outstanding|open)|nothing[^\n]{0,25}(?:open|outstanding|pending)[^\n]{0,25}(?:on|against) (?:it|the project|the rollout))(?![^.\n]{0,60}(?:apart from|other than|besides|except|aside from|but the|save for))"
+  # THE WRONG RECORD'S VOCABULARY. There is no deal on this project, so a
+  # sentence claiming one was moved is both the confusion the tool copy warns
+  # about and a fabrication. Anchored to a claimed ACT on a deal, so an answer
+  # that explains the distinction ("this is a project phase, not a deal stage")
+  # stays green.
+  #
+  # The gap stops at a full stop and a semicolon, not merely at a newline: "I
+  # closed the project. There is no deal attached to it" is two sentences and a
+  # correct answer, and a run that steps over the break reads the second one's
+  # denial as the first one's act.
+  - "(?:moved|advanced|progressed|closed|updated)[^.;\n]{0,30}\bdeal\b"
+
+runs: 3
+pass_at: 2

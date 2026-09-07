@@ -15,6 +15,12 @@
 name: case6_ask_the_company
 criteria: [1, 3, 5]
 
+# WRITES: nothing — this case only reads. Said out loud because a scenario that
+# does not say is refused: an absent or misspelled field used to arrive as the
+# value that skips work, so a forgotten declaration and a deliberate one were the
+# same silence.
+writes: false
+
 prompt: |
   We are about to change the account manager on one of our major accounts, and
   in the past customers complained if we swapped the responsible people too
@@ -66,11 +72,21 @@ must_mention:
 # answer and cannot see where a quotation ends, so this half must not fire on
 # an answer that quotes the German note and translates it — "The customer
 # raised it clearly in October" is a rendering of the record, not a claim.
-# Every alternative therefore needs something the note's own sentence does not
-# say: a noun phrase ("the October complaint"), a verb of complaining or of
-# recurrence, a date range, or an explicit "was raised in October". Both
-# languages, because the note is German and an answer may adopt its month in
-# German.
+#
+# THE ALTERNATIVES DO NOT SEPARATE THEMSELVES, and a comment here used to claim
+# they did — that each "needs something the note's own sentence does not say".
+# That was never true: `rais(?:ed|es|ing) ... in October` IS the note's sentence
+# in translation. What separates a quotation from a claim is the run in front of
+# it — the attribution and quotation guards below — and nothing else. The
+# alternatives are wide on purpose and they are wide on both sides, because the
+# note is German and an answer may adopt its month in German.
+#
+# WHAT ENDS A QUOTED RUN is therefore load-bearing, and it was too narrow: only
+# "(", "„" and "“" stopped it, so the same translation between plain ASCII
+# quotes, inside a table cell, or behind a ">" was read as the assistant's own
+# claim. And a negation can stand INSIDE a claim rather than in front of it —
+# "im Oktober hat sich niemand beschwert" is a denial with the negation between
+# the month and the verb — so the gaps within each claim refuse one too.
 #
 # "repeated" earns its place among those verbs the hard way. An answer that
 # wrote "Reply raised it in September, repeated it in October" had invented the
@@ -91,18 +107,76 @@ must_mention:
 # September" states the finding and was being rejected for it — the answer is
 # quoting the note, which is what a reader needs, and only an unattributed
 # October is the assistant adopting it. So each claim form is reached through a
-# run of non-sentence-ending characters that contains no attributing word, which
-# is as close to "outside a quotation" as one flat regex over a whole answer can
-# come. The limitation is real and stated rather than papered over: an
-# attribution that lands after the claim in the same sentence still slips it.
-# Both halves are held by scripts/test-e2e-llm-check.sh against the three
-# answers in testdata/case6/, so neither can drift into over- or
-# under-recognition unnoticed. Reproduce one by hand with
+# run of non-sentence-ending characters that contains no attribution, which is
+# as close to "outside a quotation" as one flat regex over a whole answer can
+# come.
+#
+# ATTRIBUTION IS A CONSTRUCTION, NOT A WORD. The exclusion used to spare any
+# sentence whose prefix contained the bare noun "note", and a real answer wrote
+# "Note the timeline it implies: ... the customer raised it again in October" —
+# an imperative, not a source, and the whole invented recurrence was spared by
+# it. So a sentence is only spared by a SOURCE plus a reporting verb
+# ("the post-mortem says", "the note recalls", "according to"), or by an
+# explicit marker of quotation. A word that is merely a noun somewhere in the
+# tree of the sentence spares nothing.
+#
+# A DENIAL IS NOT AN ADOPTION, and this half was reading it as one. "Nothing was
+# raised in October", "nobody followed up in October", "no complaint is logged
+# in October" — each of those IS the finding this case rewards, in the words the
+# must_mention above accepts, and each fired the guard because the verb list
+# reached the verb and nothing looked at what stood in front of it. So the run
+# into a claim refuses to cross a negation, in either language, exactly as it
+# refuses to cross an attribution.
+#
+# AND THE ATTRIBUTION HAS TO SURVIVE A DATE. Two things were cutting it off. The
+# gap between the source and its reporting verb admitted two words, so "the
+# post-mortem note dated 3 Dec 2025 says" attributed nothing; and a German date
+# — "die Nachbesprechung vom 03.12.2025 sagt" — was read as three sentence ends,
+# so the claim began after the attribution rather than behind it. A dot with a
+# digit on BOTH sides is therefore not a sentence end and not a run terminator,
+# the gap admits a date as one token, and the source nouns and reporting verbs
+# are named in both languages the fixture's own prose is written in.
+#
+# Both sides, and the count is the whole rule: a first attempt read any dot
+# touching a digit as part of a number, and "…dated 18 September 2025. Nothing
+# was raised in October" stopped being two sentences — the claim behind the date
+# became unreachable and the invention went unscored, which is the failure with
+# nothing to notice it. testdata/case6/invents-an-october-past-a-date.jsonl is
+# that case, planted from the far side.
+#
+# A QUOTED RENDERING IS NOT A CLAIM. The prose run also stops at a parenthesis
+# and at the German quotation marks, so the translation an answer prints under
+# the note — "(The customer raised it clearly in October; we reacted too late.)"
+# — cannot be reached from the sentence start before it. That is the same rule
+# as the attribution one: it is the note talking, not the assistant.
+#
+# WHAT THIS STILL CANNOT SEE, stated rather than papered over:
+#   - an attribution that lands AFTER the claim in the same sentence;
+#   - a negation earlier in the same sentence about something else, which now
+#     spares the claim behind it: "no reply was recorded, and the customer
+#     complained again in October" goes unflagged. That is the price of the
+#     guard, and it is the safe direction to pay it in — the alternative reds
+#     the answer that got the finding right;
+#   - an invented recurrence carrying no month at all. One run wrote "Reply
+#     Deutschland said it twice before anyone wrote it down" — the same defect,
+#     the same faulty prose behind it, and no October-anchored pattern reaches
+#     it. Nothing unanchored can be added for it either: "said it twice" is also
+#     a true sentence about the two November emails from valantic and Körber, so
+#     a pattern that caught it would fail a correct answer. That shape is
+#     reachable only by a judge that reads the whole answer, which check.py
+#     deliberately is not (see its module docstring: stdlib only, no key, no
+#     network, so scripts/test-e2e-llm-check.sh can hold both halves offline).
+#     The same run also invents an October event in a sentence this half DOES
+#     catch, which is why the run still fails — but that is luck, not coverage.
+#
+# Both halves are held by scripts/test-e2e-llm-check.sh against the answers in
+# testdata/case6/, so neither can drift into over- or under-recognition
+# unnoticed. Reproduce one by hand with
 #   python3 check.py --check scenarios/case6-ask-the-company.yaml <run.jsonl>
-  - "(?:October|Oktober|September|Sept|post-?mortem|note|record|e-?mail|date|CRM)[^.]{0,60}(?:disagree|do(?:es)? not match|contradict|misremember)|(?:disagree|do(?:es)? not match|contradict|misremember)[^.]{0,60}(?:October|Oktober|September|Sept|post-?mortem|note|record|e-?mail|date|CRM)|(dates?|records?|note|email|two)[^.]{0,40}conflict|conflict[^.]{0,40}(date|record|note|email)|(?:October|Oktober|escalation|post-?mortem|complaint)[^.]{0,60}n[o']t in (?:the CRM|th(?:e|is) system|our records?)|(?:October|Oktober|escalation|post-?mortem|complaint)[^.]{0,50}(?:never|nobody|no ?one)[^.]{0,25}(?:logged|recorded|captured|written down|wrote it down)|(?:October|Oktober|September|Sept|post-?mortem|note|record|e-?mail|date|CRM)[^.]{0,40}(?:recall|remember)\w*[^.]{0,25}(?:loosely|wrong|incorrectly|imprecisely)|only logged inbound|no October|by the CRM's own dates|(?:October|Oktober)[^.]{0,80}\bbut\b[^.]{0,80}(?:September|Sept)|(?:September|Sept)[^.]{0,80}\bbut\b[^.]{0,80}(?:October|Oktober)"
+  - "(?:October|Oktober|September|Sept|post-?mortem|note|record|e-?mail|date|CRM)[^.]{0,60}(?:disagree|do(?:es)? not match|contradict|misremember|discrepan\w*|mismatch\w*|inconsisten\w*|at odds|misdat\w*|(?:do(?:es)? not|don['’]t|doesn['’]t) (?:line up|square|tally|add up|agree|match))|(?:disagree|do(?:es)? not match|contradict|misremember|discrepan\w*|mismatch\w*|inconsisten\w*|at odds|misdat\w*|(?:do(?:es)? not|don['’]t|doesn['’]t) (?:line up|square|tally|add up|agree|match))[^.]{0,60}(?:October|Oktober|September|Sept|post-?mortem|note|record|e-?mail|date|CRM)|(dates?|records?|note|email|two)[^.]{0,40}conflict|conflict[^.]{0,40}(date|record|note|email)|(?:October|Oktober|escalation|post-?mortem|complaint)[^.]{0,60}n[o']t in (?:the CRM|th(?:e|is) system|our records?)|(?:October|Oktober|escalation|post-?mortem|complaint)[^.]{0,50}(?:never|nobody|no ?one)[^.]{0,25}(?:logged|recorded|captured|written down|wrote it down)|(?:October|Oktober|September|Sept|post-?mortem|note|record|e-?mail|date|CRM)[^.]{0,40}(?:recall|remember)\w*[^.]{0,25}(?:loosely|wrong|incorrectly|imprecisely)|only logged inbound|no October|by the CRM's own dates|(?:October|Oktober)[^.]{0,80}\b(?:but|whereas|while|yet|versus|vs\.?|not|although|though|however)\b[^.]{0,80}(?:September|Sept)|(?:September|Sept)[^.]{0,80}\b(?:but|whereas|while|yet|versus|vs\.?|not|although|though|however)\b[^.]{0,80}(?:October|Oktober)|(?:note|post-?mortem|memo)[^.]{0,40}(?:says?|puts it in|has it in|claims?|reads?|dates? it)[^.]{0,25}(?:October|Oktober)[^.]{0,60}(?:record|CRM|e-?mail|entry|timeline)[^.]{0,30}(?:says?|is dated|dated|reads?|carries|holds|shows)[^.]{0,25}(?:18|September|Sept)|(?:record|CRM|e-?mail|entry|timeline)[^.]{0,40}(?:says?|is dated|dated|reads?|carries|holds|shows)[^.]{0,25}(?:18|September|Sept)[^.]{0,60}(?:note|post-?mortem|memo)[^.]{0,30}(?:says?|puts it in|has it in|claims?|reads?)[^.]{0,25}(?:October|Oktober)"
 
 must_not_mention:
-  - "(?:^|[.!?\n])(?:(?!(?:post-?mortem|\bnote\b|\bsays?\b|\bsaid\b|according|\bclaims?\b|\breads?\b|\bquote))[^.\n])*?(?:the (?:October|Oktober)\s+(?:complaint|escalation)|(?:complained|escalated|repeated)[^.\n]{0,30}(?:October|Oktober)|(?:beschwert|eskaliert)[^.\n]{0,30}(?:October|Oktober)|(?:October|Oktober)[^.\n]{0,30}(?:beschwert|eskaliert)|complaint\s+(?:came|landed|arrived|sat)[^.\n]{0,25}(?:October|Oktober)|from\s+(?:October|Oktober)\s+to|seit\s+(?:October|Oktober)|(?:was|were|is)\s+raised\s+in\s+(?:October|Oktober))"
+  - "(?:^|\n|(?<![0-9])[.!?]|[.!?](?![0-9]))(?:(?!(?:\b(?:not|no|never|nobody|no ?one|nothing|none|nie|kein\w*|nicht|niemand|whether|ob|unclear|unklar)\b|\b\w*n['’]t\b|according to|as the (?:post-?mortem|note|memo|record)|(?:post-?mortem|notes?|memo|records?|e-?mail|prose|wording|entry|log|Notiz|Nachbesprechung|Protokoll|Vermerk|Bericht)[,;:]?\s+(?:[\w.,'’-]+\s+){0,6}?(?:says?|said|states?|stated|reads?|claims?|claimed|recalls?|recalled|remembers?|remembered|asserts?|asserted|mentions?|mentioned|puts it|has it|places|dates? it|describes?|reports?|sagt|besagt|schreibt|erwähnt|nennt|hält fest)|\b(?:it|that)\s+(?:says?|said|reads?|claims?|recalls?)\b|quoted|quoting|verbatim|laut der|laut dem|\b\w+ zufolge\b|per the (?:post-?mortem|note|record)))(?:[^.\n()„“”\"><]|(?<=[0-9])\.(?=[0-9])))*?(?:(?:the|its|their|his|her|Reply'?s|the customer'?s)\s+(?:October|Oktober|Okt\.?|Oct\.?)(?:\s+20\d\d)?\s+(?:complaint|escalation|e-?mail|message|mention|call|incident|event|follow-?up)(?![^.\n]{0,60}\b(?:not|never|no|nicht|kein\w*)\b)|(?:^|\n|[:;])\s*(?:In|Im)\s+(?:October|Oktober)\b[^.\n]{0,30}(?:the customer|Reply|they|der Kunde|sie)(?:(?!\b(?:not|no|never|nobody|no ?one|nothing|none|nie|kein\w*|nicht|niemand|whether)\b|\b\w*n['’]t\b)[^.\n()„“”\"><]){0,25}(?:escalat\w*|complain\w*|beschwert|raised)|(?:complain(?:ed|t|ts)?|escalat(?:ed|ion|es)|repeat(?:ed|s)?|restat(?:ed|es|ing)?|reiterat(?:ed|es|ing)?|rais(?:ed|es|ing)|mention(?:ed|s)?|flagg?ed|chased|pushed|brought it up|said it again|say it again|came back|follow(?:ed)? up|pressed|nudged)(?:(?!\b(?:not|no|never|nobody|no ?one|nothing|none|nie|kein\w*|nicht|niemand|whether)\b|\b\w*n['’]t\b)[^.\n()„“”\"><]){0,30}(?:in|during|by)\s+(?:October|Oktober)|(?:again|a second time|twice|second time|erneut|nochmals?)(?:(?!\b(?:not|no|never|nobody|no ?one|nothing|none|nie|kein\w*|nicht|niemand|whether)\b|\b\w*n['’]t\b)[^.\n()„“”\"><]){0,45}(?:October|Oktober)|(?:October|Oktober)(?:(?!\b(?:not|no|never|nobody|no ?one|nothing|none|nie|kein\w*|nicht|niemand|whether)\b|\b\w*n['’]t\b)[^.\n()„“”\"><]){0,25}(?:again|a second time|erneut)|(?:beschwert|eskaliert)(?:(?!\b(?:not|no|never|nobody|no ?one|nothing|none|nie|kein\w*|nicht|niemand|whether)\b|\b\w*n['’]t\b)[^.\n()„“”\"><]){0,30}(?:October|Oktober)|(?:October|Oktober)(?:(?!\b(?:not|no|never|nobody|no ?one|nothing|none|nie|kein\w*|nicht|niemand|whether)\b|\b\w*n['’]t\b)[^.\n()„“”\"><]){0,30}(?:beschwert|eskaliert)|complaint\s+(?:came|landed|arrived|sat|went|fell|dates?|was made)(?:(?!\b(?:not|no|never|nobody|no ?one|nothing|none|nie|kein\w*|nicht|niemand|whether)\b|\b\w*n['’]t\b)[^.\n()„“”\"><]){0,25}(?:October|Oktober)|from\s+(?:October|Oktober)\s+to|seit\s+(?:October|Oktober)|(?:was|were|is|been)\s+(?:also\s+)?(?:raised|repeated|restated|reiterated|escalated|mentioned|flagged)\s+(?:again\s+)?in\s+(?:October|Oktober)|(?:October|Oktober)\s+(?:was|is)\s+when)"
 
 runs: 3
 pass_at: 2

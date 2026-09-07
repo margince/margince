@@ -1,0 +1,109 @@
+# CASE 42 — Can I answer her on WhatsApp?
+#
+# list_channel_providers, which no model had been asked for on this surface.
+#
+# WHY THE TOOL IS GENUINELY REQUIRED, and not merely the tidy route. The
+# provider VALUE is guessable — `whatsapp` is the obvious spelling and it
+# happens to be right — so a case that only logged the message would be scoring
+# a guess. What is not guessable is `supplies_transport`: this installation
+# registers `whatsapp` by migration so a hand-logged WhatsApp conversation can
+# say what carried it, with no connector behind it, and telegram is the only
+# core transport a reply can actually leave on. Nothing but this tool says so.
+# The prompt therefore asks the question whose answer IS that flag.
+#
+# THE FAILURE IT EXISTS FOR is the same shape case 7 guards: an assistant that
+# turns "we cannot send on this transport" into "Margince does not do WhatsApp",
+# or — worse — reports a reply as gone when nothing left the building. Both are
+# forbidden below.
+#
+# The prompt ASKS rather than instructs on the reply half ("can a reply go out",
+# not "reply to her"). That is deliberate: send_message needs passport scope
+# "send", which this lane's passport does not carry, so an assistant that tried
+# to send would meet a scope refusal and might report THAT instead of the
+# transport finding — a true sentence about the credential in place of the
+# finding about the product.
+name: case42_can_i_answer_on_whatsapp
+criteria: [1, 2]
+
+# WRITES: the author's own statement that this case changes the world. It is not
+# what decides the reset — the runner rebuilds whenever the LAST run dirtied the
+# world, because the assistant is offered the whole server and any run can write
+# regardless of what its file says. TestEveryWritingScenarioDeclaresThatItWrites
+# holds this line against the tools the case names.
+writes: true
+
+prompt: |
+  Nuria Sanz messaged me on WhatsApp this morning — she wants the maintenance
+  schedule for the two Valencia sites before Friday. Get that into the CRM
+  against her. And before I write back: can a reply actually go out from
+  Margince on WhatsApp, or does that have to happen on my phone?
+
+must_call:
+  - list_channel_providers
+  - log_activity
+may_call:
+  - resolve_entities
+  - search_records
+  - read_record
+  - create_task
+  - query_workspace
+  - whoami
+
+# Both halves of the log, because either alone passes a wrong write.
+#
+# `kind` alone would pass a note that merely mentions WhatsApp in its prose —
+# which files the conversation as something it was not, and leaves it out of
+# every channel-filtered read. `channel_provider` alone cannot be sent without
+# kind=message (the contract refuses it on any other kind), but pinning only it
+# would still green a call that named a provider this installation does not
+# hold: the value has to be the one the directory carries, verbatim, or the
+# write dies on a foreign key.
+must_call_with:
+  - log_activity.kind=message
+  - log_activity.channel_provider=whatsapp
+
+must_mention:
+  # Whose conversation it filed.
+  - "Nuria Sanz"
+  # The transport itself, named.
+  - "WhatsApp"
+  # THE FINDING: a reply cannot leave this installation on WhatsApp. Judged on
+  # the finding and not the vocabulary — "no outbound", "capture only",
+  # "supplies_transport is false" and "you will have to answer from your phone"
+  # are the same answer. Anchored to WhatsApp in both directions, because an
+  # unanchored "cannot send" is satisfied by a sentence about something else
+  # entirely, and under-recognition is the one direction a scenario must not
+  # fail in.
+  - "WhatsApp[^\n]{0,110}(?:can(?:no|')?t|cannot|unable|not able|no(?:t)? (?:possible|supported|available)|does not|doesn't|won't|no (?:outbound|transport)|read[- ]only|receive[- ]only|capture[- ]only|log(?:ging)?[- ]only|from your (?:own )?phone|on your (?:own )?phone|supplies_transport)|(?:can(?:no|')?t|cannot|unable|not able|no (?:outbound|transport)|read[- ]only|receive[- ]only|capture[- ]only|log(?:ging)?[- ]only|supplies_transport)[^\n]{0,110}WhatsApp"
+
+must_not_mention:
+  # A REPLY REPORTED AS GONE. Nothing can leave on this transport, so any
+  # sentence claiming one did is false — and it is the expensive failure,
+  # because the person stops watching for an answer that was never sent.
+  #
+  # THE SENDER HAS TO BE THE ASSISTANT AND THE THING SENT HAS TO BE THE REPLY.
+  # Nuria's own message arrived on WhatsApp, and saying so is what a correct
+  # answer does: "logged the inbound message from Nuria Sanz, sent via WhatsApp
+  # this morning" is the write reported accurately. An optional "I", or a bare
+  # "message was sent", reds that sentence for describing the thing it just
+  # filed — so the act needs the assistant's voice, and the passive half is
+  # narrowed to a reply, a response or an answer, none of which exists here.
+  # "I have not sent a reply on WhatsApp" stays green on its own: the negation
+  # sits between the pronoun and the verb, and the run does not step over it.
+  #
+  # AND A DENIED SEND IS NOT A SEND. "No reply has been sent; WhatsApp is
+  # capture-only here" is the most natural correct sentence there is for this
+  # half, and the passive branch read straight past the "No" in front of it. The
+  # claim is reached from a clause start across a run carrying no negation, which
+  # covers that and "a reply cannot be sent on WhatsApp" with it. The other
+  # direction was thin as well: a bullet reads "Reply sent via WhatsApp" with no
+  # auxiliary at all, and "I've messaged her" was a verb this did not know.
+  - "(?:^|[.;!?\n])(?:(?!\b(?:not[ _]connected|not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;!?\n])*?(?:\b(?:I|we)(?:'ve| have| just| already)? ?(?:sent|replied|answered|responded|messaged|wrote back|written back)(?:(?!\b(?:not[ _]connected|not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^\n]){0,40}(?:on|via|through|over) WhatsApp|(?:your |the |my |a )?(?:reply|response|answer)(?:(?!\b(?:not[ _]connected|not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^\n]){0,30}(?:has been |have been |was |is |)(?:sent|delivered|on its way|gone out|dispatched))"
+  # THE CASE-7 SHAPE. Being unable to SEND says nothing about whether the
+  # conversation can be captured, filed or read, and the whole point of the
+  # registered provider is that it can. An assistant that turns one into the
+  # other has told the reader the product cannot do something it just did.
+  - "(?:can(?:no|')?t|cannot|unable to|no way to|not possible to)[^\n]{0,50}(?:log|record|file|capture)[^\n]{0,50}WhatsApp|WhatsApp[^\n]{0,50}(?:can(?:no|')?t|cannot) be (?:logged|recorded|filed|captured)|(?:CRM|Margince|workspace)[^\n]{0,40}(?:does not|doesn't) support WhatsApp"
+
+runs: 3
+pass_at: 2

@@ -37,6 +37,12 @@
 name: case7_ask_for_a_number
 criteria: [1, 3]
 
+# WRITES: nothing — this case only reads. Said out loud because a scenario that
+# does not say is refused: an absent or misspelled field used to arrive as the
+# value that skips work, so a forgotten declaration and a deliberate one were the
+# same silence.
+writes: false
+
 prompt: |
   Roughly how much of what we have logged in the CRM is us reaching out versus
   them coming to us? I want the counts, not the individual records.

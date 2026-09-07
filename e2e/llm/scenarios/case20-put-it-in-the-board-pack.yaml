@@ -1,0 +1,115 @@
+# CASE 20 — Put it in the board pack.
+#
+# The analytics pair, and the rule that makes the pair worth having:
+# compose_analytics_report writes NO number of its own. Every figure in the
+# document names a saved run and a cell inside it, and a block carrying a
+# literal figure is refused EVEN WHEN a valid handle sits beside it — because
+# the literal is what renders, the two can disagree, and no reader of the page
+# could tell it shows a number the database never computed.
+#
+# So the chain is not optional and not decorative: run_analytics_query with
+# `save`, then compose_analytics_report citing the run id it answered with.
+# There is no other way to produce this document. An assistant that reads the
+# numbers and types them into block text is refused, and what it does NEXT is
+# the case.
+#
+# THE FAILURE THIS EXISTS FOR is the case 7 failure wearing different clothes.
+# The refusal is honest and specific; the wrong conclusion drawn from it is
+# "this CRM cannot produce a report". A person told that stops asking, and the
+# tool that would have done it sat one correctly-shaped call away.
+#
+# THE PROMPT ASKS FOR HEADLINE TOTALS, NOT A BREAKDOWN, and that is a fixture
+# decision rather than a stylistic one. The analytics engine withholds any group
+# covering fewer than five rows, and withholds the smallest remaining group and
+# the total along with it, so a suppression cannot be undone by subtraction. The
+# seed puts every deal in ONE stage, one owner and one currency precisely so a
+# single-dimension grouping still clears the floor — but a two-dimension plan
+# over seven deals would legitimately come back withheld, and this case must not
+# be a coin toss on how the model chose to slice it. Asking for the headline is
+# also what a board pack actually asks for.
+name: case20_put_it_in_the_board_pack
+criteria: [1, 3]
+
+# WRITES: the author's own statement that this case changes the world. It is not
+# what decides the reset — the runner rebuilds whenever the LAST run dirtied the
+# world, because the assistant is offered the whole server and any run can write
+# regardless of what its file says. TestEveryWritingScenarioDeclaresThatItWrites
+# holds this line against the tools the case names.
+writes: true
+
+prompt: |
+  I need a short written pipeline section for Thursday's board pack — the
+  headline open pipeline and what we have won so far, in a couple of sentences
+  with the figures in it. No per-rep breakdown, they do not want that. Put it
+  together as one document I can paste.
+
+# Both are required and neither substitutes for the other. run_analytics_query
+# alone answers a number and composes nothing; compose_analytics_report alone
+# has nothing to cite and is refused.
+must_call:
+  - run_analytics_query
+  - compose_analytics_report
+
+# `save` is the pin, and it is the honest one available here.
+#
+# Pinning `entity` would be over-recognition dressed as rigour: more than one
+# population answers "open pipeline and what we have won" — pipeline-current,
+# deals-by-stage and win-loss are all defensible, and failing two of the three
+# would measure which report the model happened to like.
+#
+# `save` is different. A document cites a saved run or it does not exist, so a
+# run without it is a query that could not have fed the report — which is
+# exactly the shape of the failure where the model queries, reads the numbers,
+# and composes from its own memory of them.
+must_call_with:
+  - run_analytics_query.save=true
+
+may_call:
+  # The block grammar, for a caller that wants the kinds before composing. NOT
+  # required, and deliberately: the tool's own contract says an unknown block
+  # kind is refused BY NAME with the whole set, so composing straight away and
+  # reading the refusal is the cheaper correct path. Requiring the lookup would
+  # score the better route as a failure.
+  - describe_report_blocks
+  - describe_report_vocabulary
+  - run_report
+  - query_workspace
+  - list_pipelines
+  - search_records
+
+must_mention:
+  # The figures came back and reached the reader. A "report" containing no digit
+  # is the shape a run takes when it described the tool instead of using it.
+  #
+  # A DIGIT ALONE IS NOT A FIGURE: "composed on 3 March 2026" satisfies a bare
+  # [0-9], so a run that described the tool and dated its answer scores this
+  # criterion. What a board number actually looks like is money, a grouped
+  # thousand, or a count of deals — and each of those shapes is spelled out
+  # here, so a date cannot pass for one.
+  - "(?:€|EUR|\$)\s?[0-9]|[0-9][0-9.,]*\s?(?:€|EUR|k\b|m\b|million|Mio)|\b[0-9]+\s+(?:open |won |lost )?deals?\b|\b[0-9]{1,3}(?:[.,][0-9]{3})+\b"
+  # And they are figures about the thing that was asked for, rather than a count
+  # of blocks or a description of the document's structure.
+  - "pipeline|open deals|deal value|won|total"
+
+must_not_mention:
+  # CRITERION 3, and the whole reason this case is worth three runs. Every
+  # alternative is a claim about the PRODUCT's capability, not a hedge about
+  # this particular answer: "I could not fit it into two sentences" is honest
+  # and must stay green, while "this CRM has no way to build a report" is the
+  # false conclusion drawn from a correct refusal.
+  #
+  # Anchored to the report/document being composed, because an unanchored
+  # "cannot produce" is satisfied by "I cannot produce a per-rep split, you said
+  # you did not want one" — a true sentence in a correct answer.
+  #
+  # And the last alternative is `(?:not |un)`, with the space. Written as
+  # `(not|un)(available)` it matched "unavailable" and never "not available",
+  # so the guard read as armed and let the plainest form of the denial through.
+  - "cannot (compose|produce|generate|build|create|assemble) (a |the |any )?(analytics |written |board )?(report|document|summary)|no (way|means|tool|support) to (compose|produce|generate|build) (a |the )?(report|document)|(does not|doesn'?t) support (composing|producing|building|generating) (a |)(report|document)|report (composition|building|generation) is (?:not |un)(?:available|supported|possible)"
+  # And it must not report the block grammar instead of the report: a run that
+  # spends its turn on describe_report_blocks and hands back the kinds has
+  # answered a question nobody asked.
+  - "the available block (kinds|types) are|here are the block (kinds|types)"
+
+runs: 3
+pass_at: 2

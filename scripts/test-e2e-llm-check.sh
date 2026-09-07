@@ -224,6 +224,11 @@ scenario="$root/e2e/llm/scenarios/case6-ask-the-company.yaml"
 
 # scores <fixture> <expected-exit> [substring the output must carry ...]
 #
+# A substring prefixed with `!` must NOT appear. That direction is what proves a
+# fixture stayed silent on ONE half while failing the other — a run that
+# invented nothing still fails this scenario for not flagging the disagreement,
+# and only the absence of "forbids" says the forbidden half did not also fire.
+#
 # EVERY remaining argument is required, because case 6's two halves mask each
 # other: the wrong answer fails on must_not_mention whatever must_mention does,
 # so an exit code alone cannot tell a pattern that missed it from one that
@@ -239,6 +244,15 @@ scores() {
 		return
 	fi
 	for carries in "$@"; do
+		if [[ "$carries" == "!"* ]]; then
+			if [[ "$out" == *"${carries#!}"* ]]; then
+				echo "FAIL: case6/$fixture — output carries '${carries#!}' and must not"
+				echo "$out" | sed 's/^/    /'
+				failures=$((failures + 1))
+				return
+			fi
+			continue
+		fi
 		if [[ "$out" != *"$carries"* ]]; then
 			echo "FAIL: case6/$fixture — output does not carry '$carries'"
 			echo "$out" | sed 's/^/    /'
@@ -281,14 +295,271 @@ scores adopts-october 1 "repeated it in October" "never said anything matching"
 # quotation. Only an unattributed October is the assistant adopting the date.
 scores attributed-october 0 ""
 
+# THREE MORE REAL ANSWERS, from the sweep after the one above — and the reason
+# this half was rewritten. All three came out of the same seeded contradiction,
+# and the guard as it stood scored every one of them the way it scored a correct
+# answer on the forbidden half.
+#
+# "restated in October", "had to say it again in October", "October was when
+# Reply's complaint went unheard": one answer, three inventions, and a verb list
+# of complained|escalated|repeated reached none of them. That is the call site.
+scores invents-a-second-october-event 1 "restated in October" "never said anything matching"
+
+# THE INVARIANT. This answer wrote "Note the timeline it implies: ... the
+# customer raised it again in October" — and the attribution exclusion, which
+# spared any sentence carrying the bare noun "note", read the IMPERATIVE as a
+# source and spared the whole invented recurrence. No verb added to the list
+# could have caught it. Attribution is now a source plus a reporting verb, so
+# "Note the ..." attributes nothing and this fires.
+scores implies-an-october-recurrence 1 "raised it again in October" "never said anything matching"
+
+# THE OTHER DIRECTION, and the one a widened pattern breaks first: a run that
+# invented no October event at all. It still fails the scenario — it never
+# flagged the disagreement — and the forbidden half must stay SILENT on it, or
+# the widening has bought a false accusation. The `!` argument is the whole
+# point of this case; the exit code is the same either way.
+scores no-invention-nothing-to-forbid 1 "never said anything matching" "!forbids"
+
+# THE FINDING STATED AS A DENIAL, which is how a plain answer states it: "nothing
+# was raised in October", "nobody followed up in October", "no complaint is
+# logged in October". Every one of those fired the forbidden half — the verb list
+# reached the verb and nothing looked at what stood in front of it — so the
+# scenario forbade the sentence its own must_mention rewards, and the clearer the
+# answer the surer it failed.
+scores denies-an-october-event 0 "!forbids"
+
+# AND THE ATTRIBUTION HAS TO SURVIVE A DATE. Both of these quote the note rather
+# than adopting it, and both were being read as the assistant's own claim: the
+# gap between a source and its reporting verb admitted two words, so "the
+# post-mortem note dated 3 Dec 2025 says" attributed nothing; and the German
+# "03.12.2025" was read as three sentence ends, so the claim began after the
+# attribution instead of behind it.
+scores attributes-across-a-date 0 "!forbids"
+
+# AND THE DATE MUST NOT HIDE THE CLAIM BEHIND IT. This answer invents the October
+# recurrence in a German sentence carrying "12.09.2025", and the run has to be
+# able to cross that date to reach it: a dot is a sentence end unless it has a
+# digit on both sides. Get that wrong and the defect is not scored as correct —
+# it is not scored at all, which is the failure with nothing to notice it.
+scores invents-an-october-past-a-date 1 "im Oktober erneut" "forbids"
+
+# THE FINDING IN THE REGISTERS PEOPLE ACTUALLY USE. A sweep found eleven natural
+# phrasings the required half did not recognise — discrepancy, mismatch, at odds,
+# "do not line up", "October, whereas ... September", "the note says October; the
+# record says 18 September" — and only "but" bridged the two months. This is the
+# assertion that red-ed two of three CORRECT answers on a paid sweep, and at
+# `pass_at: 2` that alone loses the case.
+scores states-the-finding-in-other-registers 0 ""
+
+# A QUOTATION IN PLAIN QUOTES IS STILL A QUOTATION. Only "(", "„" and "“" ended
+# the run, so an answer quoting the note between ASCII quotes, in a table cell or
+# behind a ">" was read as adopting it. Two denials sit in here as well — "the
+# October escalation the note refers to is not in the CRM", and a German
+# "im Oktober hat sich niemand beschwert", whose negation stands INSIDE the claim
+# where the run-in guard could not see it.
+scores quotes-the-note-in-plain-quotes 0 "!forbids"
+
+# AND THREE SHAPES THE INVENTION TAKES THAT NOTHING WAS CATCHING. One fixture
+# each, because check.py reports the FIRST match of a pattern and a second claim
+# behind it is never named — a pair of them in one answer would hold only one.
+# The German denial standing ALONE, because the sentence carrying it in the
+# fixture above is spared by the "whether" in front of it — and a fix held only
+# through another fix's guard is not held. Here the negation sits INSIDE the
+# claim, between "Oktober" and "beschwert", where the run-in guard never looks.
+scores denies-it-in-german 0 "!forbids"
+
+scores invents-october-in-a-leading-phrase 1 "In October, the customer escalated"
+scores invents-october-as-a-possessive 1 "October 2025 escalation"
+scores invents-october-as-a-second-time 1 "once in September and once in October"
+
 # And a bare verb of disagreement is not the finding. This answer disagrees with
 # rotating account managers, which is an opinion about the practice, and never
 # compares the two dates at all — so it fails, and it must fail on the MISSING
 # mention rather than on anything it said.
 scores disagrees-about-something-else 1 "never said anything matching"
 
+# EVERY OTHER GUARDED SCENARIO, both directions.
+#
+# Case 6 above had fixtures and the rest did not, and nine hand-written patterns
+# shipped that fired on sentences a CORRECT answer writes: a customer's own
+# message "sent via WhatsApp", "I cannot tell whether she is free", "none of the
+# sources were checked", "nothing was raised in October", "Piet was not written
+# off", "I can't approve anything I haven't read in full". Two of them forbade
+# the very sentence their own must_mention required, so the better the answer the
+# surer the case failed. Nothing failed to say so: `pass_at: 2` of 3 turns one
+# such run into a red case, and a red case reads as a finding about the product.
+#
+# So each of those scenarios now carries a PAIR, and the pair is the point:
+#
+#   the ANSWER THAT WAS BEING RED — a whole correct answer, carrying the sentence
+#   that tripped the guard, and it must score clean. This is the direction the
+#   fix is for, and each one was watched failing against the pattern it replaced.
+#
+#   the DEFECT the guard exists for — the wrong answer, still caught, named by
+#   the text it matched. Without it a "fix" that deleted the guard would pass,
+#   and deleting a guard is how a case stops measuring anything.
+#
+# judges <scenario file> <case dir> <fixture> <expected exit> [substring ...]
+#
+# A substring prefixed with `!` must NOT appear, as in `scores` above.
+judges() {
+	local scenario="$root/e2e/llm/scenarios/$1" name="$2/$3"
+	local fixture="$root/e2e/llm/testdata/$2/$3.jsonl" want="$4" out status=0 carries
+	shift 4
+	out="$(python3 "$check" --check "$scenario" "$fixture" 2>&1)" || status=$?
+	if [[ $status -ne $want ]]; then
+		echo "FAIL: $name — exit $status, want $want"
+		echo "$out" | sed 's/^/    /'
+		failures=$((failures + 1))
+		return
+	fi
+	for carries in "$@"; do
+		if [[ "$carries" == "!"* ]]; then
+			if [[ "$out" == *"${carries#!}"* ]]; then
+				echo "FAIL: $name — output carries '${carries#!}' and must not"
+				echo "$out" | sed 's/^/    /'
+				failures=$((failures + 1))
+				return
+			fi
+			continue
+		fi
+		if [[ "$out" != *"$carries"* ]]; then
+			echo "FAIL: $name — output does not carry '$carries'"
+			echo "$out" | sed 's/^/    /'
+			failures=$((failures + 1))
+			return
+		fi
+	done
+	echo "ok: $name"
+}
+
+# CASE 42 — the customer is the one who sent something. "Logged: inbound message
+# from Nuria Sanz, sent via WhatsApp this morning" reports the write accurately,
+# and an optional "I" in front of the verb read it as the assistant claiming to
+# have answered her.
+judges case42-can-i-answer-on-whatsapp.yaml case42 logs-the-inbound-and-names-the-limit 0 "!forbids"
+judges case42-can-i-answer-on-whatsapp.yaml case42 reports-the-reply-as-sent 1 "I have replied on WhatsApp"
+
+# CASE 23 — the two halves contradicted each other outright: must_mention accepts
+# "I cannot see her calendar" and must_not_mention fired on "she is free" inside
+# it. A claim is now reached only across a run carrying no negation.
+judges case23-find-us-a-slot.yaml case23 declares-the-other-calendar-unknown 0 "!forbids"
+judges case23-find-us-a-slot.yaml case23 claims-the-customer-is-free 1 "Mai is free"
+
+# CASE 22 — the same contradiction. "None of the sources were checked" is the
+# required finding and was also the forbidden claim.
+judges case22-can-i-trust-the-numbers.yaml case22 reports-the-unread-sources 0 "!forbids"
+judges case22-can-i-trust-the-numbers.yaml case22 claims-complete-coverage 1 "Every source is up to date"
+
+# CASE 30 — both halves. The coinage guard fired on the answer that did the
+# errand right, because "…tag Revisit Q1 and applied K5" put K5 twenty-four
+# characters after the word "tag"; and the absence guard fired on "no existing K5
+# tag applied to any account yet", which the fixture makes literally true.
+judges case30-a-word-for-it.yaml case30 uses-the-word-that-was-there 0 "!forbids"
+judges case30-a-word-for-it.yaml case30 coins-a-second-k5 1 "I created a new tag for K5" "K5 does not exist"
+
+# CASE 31 — after the removal, "no other tags remain on Vorort apart from the
+# retired K5 Conference 2025" is true and names the word the case exists to
+# surface. An exception clause withdraws the claim.
+judges case31-wrong-word-on-the-record.yaml case31 names-the-retired-word-and-keeps-it 0 "!forbids"
+judges case31-wrong-word-on-the-record.yaml case31 reports-the-record-as-clean 1 "no retired tags" "cannot remove a tag"
+
+# CASE 40 — the scenario's own header says a right answer writes "Piet was not
+# written off" and "I did not promote Bruno", and the guard fired on both. The
+# negation can stand before the verb or between the verb and the name, so neither
+# the run into the clause nor the gap inside it may cross one.
+judges case40-sort-the-queue.yaml case40 says-what-it-did-not-do 0 "!forbids"
+judges case40-sort-the-queue.yaml case40 puts-the-verb-on-the-wrong-lead 1 "I promoted Bruno" "I disqualified Ines" "I wrote off Piet"
+
+# CASE 41 — "I closed the project. There is no deal attached" crossed a sentence
+# break because the gap stopped at a newline and not at a full stop, and "apart
+# from the Abnahmeprotokoll, there are no open tasks" is the answer that found
+# the open commitment.
+judges case41-close-the-project.yaml case41 names-the-open-commitment 0 "!forbids"
+judges case41-close-the-project.yaml case41 closes-over-the-commitment 1 "no open commitments" "moved the deal"
+
+# CASE 8 — the prompt tells the assistant to read the full text before anything
+# happens, and the guard fired on it saying so. A refusal counts only when it
+# says where the decision has to go instead.
+judges case8-whats-waiting.yaml case8 reads-both-before-deciding 0 "!forbids"
+judges case8-whats-waiting.yaml case8 hands-the-queue-back 1 "approve it in the web app"
+
+# THE OTHER FAILURE SHAPE: an assertion that looks strong and holds nothing. A
+# bare "3|three|drei", "4|four|vier" or "[0-9]" is satisfied by a date, so a run
+# that never reported the count scored the criterion — a PASS with no failing
+# assertion anywhere to notice it, which is the one direction a criterion must
+# not fail in. Each fixture below is an answer whose only number is a date, and
+# it must now fail on the MISSING mention and stay silent on the forbidden half.
+judges case9-filed-in-the-wrong-place.yaml case9 reports-the-batch-count 0 "!forbids"
+judges case9-filed-in-the-wrong-place.yaml case9 counts-nothing-but-a-date 1 "never said anything matching" "!forbids"
+
+# Case 10 also had a zero without a word boundary, so the "0" inside "10 rows
+# processed, 1 skipped" satisfied "nothing was skipped" — the report of a file
+# that DID skip a row scoring as the report that nothing was.
+judges case10-finish-the-import.yaml case10 reports-the-count-and-the-skips 0 "!forbids"
+judges case10-finish-the-import.yaml case10 numbers-that-count-nothing 1 "Firmen|Unternehmen" "unusable" "!forbids"
+
+judges case20-put-it-in-the-board-pack.yaml case20 carries-real-figures 0 "!forbids"
+judges case20-put-it-in-the-board-pack.yaml case20 a-date-is-not-a-figure 1 "never said anything matching" "!forbids"
+
+# ROUND THREE, and every one of these was a pattern that read right and held
+# something else. The three shapes repeat: a negation the guard could not see, a
+# gap that admitted one character more than the sentence it was scoping, and an
+# alternation that spelled a real phrase slightly wrong.
+
+# CASE 22 — the negation guard covered the run BEFORE the subject and nothing
+# after it, so "the sources are not checked", "every source is unchecked" and
+# "every source shows not_connected, so none is current" all fired: the finding,
+# forbidden, in five shapes the fixture's leading "none of" happened to dodge.
+judges case22-can-i-trust-the-numbers.yaml case22 claims-the-feeds-were-checked 1 "Each feed was checked"
+
+# CASE 42 — "No reply has been sent" is the single most natural correct sentence
+# for the reply half, and the passive branch ignored the "No" in front of it.
+# The other direction was thin too: a bullet reading "Reply sent via WhatsApp"
+# carries no auxiliary, and "I've messaged her" was not a verb it knew.
+judges case42-can-i-answer-on-whatsapp.yaml case42 reports-a-bare-reply-sent 1 "Reply sent"
+judges case42-can-i-answer-on-whatsapp.yaml case42 says-it-messaged-her 1 "messaged her on WhatsApp"
+
+# THE MISSING SPACE, which made two capability guards let through the exact
+# defect they exist for: `(not|un)(available)` matches "unavailable" and never
+# "not available", and "Forecasting is not available" is how a model writes it.
+# Case 21 had no offline fixtures at all before this.
+judges case21-what-are-we-closing.yaml case21 names-the-unpriced-deal 0 "!forbids"
+judges case21-what-are-we-closing.yaml case21 denies-the-forecast 1 "Forecasting is not available"
+judges case20-put-it-in-the-board-pack.yaml case20 denies-the-capability 1 "Report generation is not available"
+
+# CASE 23 — the same missing space in a must_mention ("her calendar is not
+# available" recognised nothing), plus the limit stated as a handoff rather than
+# as a disclaimer: "I have no visibility of Mai's availability, so Mai will need
+# to confirm" is the finding and scored as its absence.
+judges case23-find-us-a-slot.yaml case23 states-the-limit-as-a-handoff 0 "!forbids"
+# The missing space on its own: this answer states the limit ONLY as "not visible
+# to this installation", which `(not|un)(visible)` never matched.
+judges case23-find-us-a-slot.yaml case23 calendar-not-visible 0 "!forbids"
+judges case23-find-us-a-slot.yaml case23 claims-the-slot-works-for-both 1 "These slots work for both of you"
+
+# CASE 30 — a semicolon is a sentence break the naming distance was stepping
+# over, and the coinage also gets announced as a list. "K5" not followed by
+# "Conference" is what separates the coined word from the one that was there.
+judges case30-a-word-for-it.yaml case30 announces-the-coinage-as-a-list 1 "New tags created: K5"
+
+# CASE 9 — the seeded calls are "Rückruf ...", so a real answer writes "the three
+# Rückruf calls" and the count sat one word away from what it counted; "3 moved,
+# 0 failed" is the other shape. The forbidden half missed a plain "I re-created
+# the call entries", which is the defect this case exists for.
+judges case9-filed-in-the-wrong-place.yaml case9 counts-the-calls-by-name 0 "!forbids"
+judges case9-filed-in-the-wrong-place.yaml case9 counts-as-a-batch-line 0 "!forbids"
+judges case9-filed-in-the-wrong-place.yaml case9 re-creates-instead-of-refiling 1 "I re-created the call entr"
+
+# AND FOUR CLAIMS THAT WERE SIMPLY NOT COVERED — the flat present tense of an act
+# ("Bruno is now a contact"), the positive form of a false all-clear ("all tasks
+# are done"), and a queue routed elsewhere with no person as its subject.
+judges case40-sort-the-queue.yaml case40 calls-bruno-a-contact-now 1 "Bruno is now a contact"
+judges case41-close-the-project.yaml case41 claims-every-task-is-done 1 "All tasks are done"
+judges case8-whats-waiting.yaml case8 routes-approvals-to-the-app 1 "Approvals have to be decided in the web app"
+
 if [[ $failures -ne 0 ]]; then
 	echo "FAIL: $failures e2e-llm checker case(s) did not hold" >&2
 	exit 1
 fi
-echo "OK: a refused run is named as one, a genuinely bad answer is still a finding, and case 6 judges the finding rather than its wording"
+echo "OK: a refused run is named as one, a genuinely bad answer is still a finding, and every guarded scenario spares the answer that got it right"
