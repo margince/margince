@@ -122,6 +122,19 @@ func TestUnsubscribeAllStopsAPurposeGrantedWhileItWasRunning(t *testing.T) {
 // press for a pool connection.
 func waitUntilBlockedBy(t *testing.T, holder *pgx.Conn) {
 	t.Helper()
+	waitUntilNBlockedBy(t, holder, 1)
+}
+
+// waitUntilNBlockedBy is the same wait for a known NUMBER of waiters.
+//
+// One is the common case and reads better as its own name. A caller arranging
+// an interleaving needs more: with two dispatches meant to meet on one lock,
+// waiting for "somebody is blocked" returns on the FIRST of them and releases
+// the lock while the second may not have run a statement yet — so the two race
+// exactly as the test was written to prevent. Asking for the count is what makes
+// the arrangement observed rather than assumed.
+func waitUntilNBlockedBy(t *testing.T, holder *pgx.Conn, want int) {
+	t.Helper()
 	ctx := context.Background()
 	var holderPID int
 	if err := holder.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&holderPID); err != nil {
@@ -129,19 +142,26 @@ func waitUntilBlockedBy(t *testing.T, holder *pgx.Conn) {
 	}
 	deadline := time.Now().Add(30 * time.Second)
 	for {
+		// pg_stat_activity is materialized once per transaction and cached
+		// until it ends, so a probe that did not clear it cannot see a backend
+		// that dialled after the snapshot was taken — the wait then runs to its
+		// deadline over contention that is really there.
+		if _, err := holder.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
+			t.Fatalf("clearing the stats snapshot before probing: %v", err)
+		}
 		var waiting int
 		if err := holder.QueryRow(ctx,
 			`SELECT count(*) FROM pg_stat_activity WHERE $1 = ANY(pg_blocking_pids(pid))`,
 			holderPID).Scan(&waiting); err != nil {
 			t.Fatalf("reading who this connection is blocking: %v", err)
 		}
-		if waiting > 0 {
+		if waiting >= want {
 			return
 		}
 		if time.Now().After(deadline) {
-			t.Fatal("nothing ever waited on the lock this connection holds: the press did not " +
-				"reach it, so this case interleaved nothing and would pass over the defect it " +
-				"is named for")
+			t.Fatalf("%d backend(s) ever waited on the lock this connection holds, want %d: the "+
+				"press did not reach it, so this case interleaved nothing and would pass over "+
+				"the defect it is named for", waiting, want)
 		}
 		//craft:ignore test-sleep the wait IS on the condition — pg_blocking_pids, asked in the loop above. This paces the asking so the poll does not compete with the press for a pool connection, which CodeRabbit raised on #4631; removing it makes the test flakier, not less.
 		time.Sleep(20 * time.Millisecond)

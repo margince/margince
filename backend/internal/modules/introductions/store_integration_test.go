@@ -341,6 +341,13 @@ func waitForLockOn(t *testing.T, e *introEnv, id ids.UUID) {
 	t.Helper()
 	deadline := time.Now().Add(10 * time.Second)
 	for time.Now().Before(deadline) {
+		// pg_stat_activity is materialized once per transaction and cached
+		// until it ends, so a probe that did not clear it cannot see a backend
+		// that dialled after the snapshot was taken.
+		if _, err := e.owner.Exec(context.Background(),
+			`SELECT pg_stat_clear_snapshot()`); err != nil {
+			t.Fatalf("clearing the stats snapshot before probing: %v", err)
+		}
 		var waiting bool
 		// A backend blocked on a row lock in THIS database, while the ask still
 		// exists. pg_blocking_pids is the direct question — "is somebody stuck
