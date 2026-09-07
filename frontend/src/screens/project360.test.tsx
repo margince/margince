@@ -13,8 +13,10 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { meFixture } from "../app/mefixture";
 import { RecordShell } from "../app/testing/recordshell.testkit";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { jsonResponse } from "./company.fixtures";
 import { ProjectScreen } from "./project360";
 import { project, project360 } from "./projects.fixtures";
@@ -337,5 +339,96 @@ describe("ProjectScreen", () => {
     await screen.findByRole("heading", { name: "CRM rollout" });
 
     expect(screen.getByText(/You cannot change this project/)).toBeTruthy();
+  });
+});
+
+// A task's verbs answer to the TASK's permission, not the project's.
+//
+// They are different questions with different answers. The modal's verbs PATCH
+// /activities/{id}, which asks activity:update and the activity's own row
+// authority; the project asks whether this record takes changes. Deriving one
+// from the other offers verbs the server refuses to a reader who may write the
+// project and not its activities — and hides valid ones from a task's own
+// author whenever the project is read-only.
+describe("a commitment's task detail", () => {
+  const commitment = {
+    activity_id: "a-1",
+    subject: "Confirm the depot slot",
+    due_at: null,
+    assignee_id: null,
+    assignee_name: null,
+    overdue: false,
+  };
+
+  const TASK = {
+    id: commitment.activity_id,
+    kind: "task" as const,
+    subject: commitment.subject,
+    is_done: false,
+    version: 1,
+    source: "manual" as const,
+    captured_by: "u-me",
+    created_at: "2026-09-01T09:00:00Z",
+    updated_at: "2026-09-01T09:00:00Z",
+    occurred_at: "2026-09-01T09:00:00Z",
+  };
+
+  function showCommitments(activityActions: ("update" | "delete")[]) {
+    projectsBackend({
+      view: project360({
+        commitments: { data: [commitment], page: { has_more: false } },
+      }),
+      respond: async (url) => {
+        if (url.endsWith("/v1/me")) {
+          return jsonResponse(
+            meFixture({
+              allow: {
+                // Writable PROJECT throughout, so the only thing that moves
+                // between the two cases is the activity grant.
+                project: ["read", "create", "update", "delete"],
+                activity: ["read", ...activityActions],
+              },
+            }),
+          );
+        }
+        return url.includes(`/v1/activities/${commitment.activity_id}`)
+          ? jsonResponse(TASK)
+          : null;
+      },
+    });
+  }
+
+  it("offers no task verbs to a reader who may write the project but not its activities", async () => {
+    showCommitments([]);
+    render(<ProjectScreen id={project().id} />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: commitment.subject }),
+    );
+
+    // The task opened — the refusal below is about the VERBS, not about the
+    // reader being unable to look. The subject appears twice by design: the
+    // row it was opened from, and the modal's own heading.
+    expect(
+      await screen.findByRole("heading", { name: commitment.subject }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: en["tasks.complete"] }),
+    ).toBeNull();
+  });
+
+  // The admit case. Without it the refusal above passes against a modal that
+  // shows no verbs to anyone — including the reader who may use them.
+  it("offers them to a reader who may write activities", async () => {
+    showCommitments(["update"]);
+    render(<ProjectScreen id={project().id} />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: commitment.subject }),
+    );
+
+    expect(
+      await screen.findByRole("button", { name: en["tasks.complete"] }),
+    ).toBeTruthy();
   });
 });

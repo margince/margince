@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useId, useState } from "react";
 import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
-import { useRecordWriteRefusal } from "../app/capability";
+import { useCan, useRecordWriteRefusal } from "../app/capability";
 import { PageAsideToggle, usePageAside } from "../app/pageaside";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
@@ -127,6 +127,14 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   // The same arrangement the account page uses for its own step rows.
   const [openTask, setOpenTask] = useState<string | null>(null);
   const taskUpdate = useTaskUpdate(taskWriteKeys("project", project.id));
+  // The TASK's own permission, not the project's. They are different questions
+  // with different answers: the modal's verbs PATCH /activities/{id}, which
+  // asks activity:update and the activity's own row authority — author,
+  // assignee, host, or a writable linked record. Deriving this from the
+  // project's writability would offer verbs the server refuses to a reader who
+  // may write the project and not its activities, and hide valid ones from a
+  // task's own author whenever the project is read-only.
+  const canUpdateTask = useCan("activity", "update");
   return (
     <RecordView
       // WHO is on this work comes first, then the paperwork. The column used
@@ -247,7 +255,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
       {openTask && (
         <TaskDetailModal
           activityId={openTask}
-          readOnly={readOnly}
+          readOnly={!canUpdateTask}
           onClose={() => setOpenTask(null)}
           update={taskUpdate}
         />
