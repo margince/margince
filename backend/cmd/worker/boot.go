@@ -80,6 +80,7 @@ func workerModelPathSpec(cfg workerConfig, deployCfg deployconfig.Config) modelP
 	return modelPathSpec{
 		routingPath:     cfg.routingPath,
 		fake:            cfg.fakeBrain,
+		routingSeed:     deployCfg.Seeds.AIRouting,
 		capturePayloads: deployCfg.AI.CapturePayloads,
 	}
 }

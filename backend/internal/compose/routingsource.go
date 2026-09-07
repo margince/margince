@@ -37,7 +37,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"gopkg.in/yaml.v3"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/config"
@@ -113,6 +115,69 @@ func ResolveRouting(ctx context.Context, pool *pgxpool.Pool, routingPath string,
 		return ai.RoutingConfig{}, err
 	}
 	return cfg.WithCredentialVersion(credentials), nil
+}
+
+// SeedRoutingIfUnset plants the deployment's declared binding on an
+// installation that holds none, and does nothing to one that does.
+//
+// WHY THIS EXISTS AT BOOT and not only at organization creation. The seed used
+// to be applied by a boot that found the setting unset; it was narrowed to the
+// creating transaction so that two files — the `--ai-routing` file and
+// `seeds.ai_routing` — could not both plant one installation's binding with
+// nothing deciding between them. The routing FILE no longer seeds anything at
+// all, so that competitor is gone and the narrowing now only costs.
+//
+// What it costs is every installation that exists before its operator chooses a
+// provider, and the desktop bundles are all of them: they ship a database, so
+// the organization was created on the build machine and the recipient's
+// `seeds.ai_routing` is read by nothing. They set a key, and their AI surfaces
+// answer from the offline fake — plausibly, in canned text — with the one
+// screen that looks like the fix naming the file that was already ignored.
+//
+// INSERT-ONLY, through the same settings.SeedValue the bootstrap uses, so this
+// can run on every boot of every role: an installation that has a binding keeps
+// it, and an admin's later change is never reverted by a file. That is also why
+// it takes no decision about WHICH binding wins — there is no contest. Either
+// the row is absent and the file is the only answer anybody has given, or the
+// row is present and the file is not consulted.
+//
+// An unprovisioned installation is left alone: it has no workspace to attribute
+// the write to, and the bootstrap that creates it seeds the same value inside
+// its own transaction.
+func SeedRoutingIfUnset(ctx context.Context, pool *pgxpool.Pool, declared yaml.Node, log *slog.Logger) error {
+	cfg, declaredAny, err := routingSeedFrom(declared)
+	if err != nil || !declaredAny {
+		// A malformed seed is the bootstrap's error to report, not this one's:
+		// it fails the boot there, where somebody is watching, and repeating it
+		// on every later start would turn one loud failure into a recurring
+		// one nobody can act on differently.
+		return nil
+	}
+	ws, err := singletonWorkspace(ctx, pool)
+	if err != nil || ws == (ids.UUID{}) {
+		return err
+	}
+	ctx = routingCtx(ctx, ws)
+
+	var planted bool
+	if err := NewSettingsStore(pool).WriteTx(ctx, func(tx pgx.Tx) error {
+		planted, err = settings.SeedValue(ctx, tx, ai.Routing, cfg)
+		return err
+	}); err != nil {
+		// Not fatal. The installation still boots and still resolves whatever it
+		// holds — which is what it did before this function existed. A boot that
+		// cannot write its settings has larger problems, and they will be
+		// reported by whatever needs that write to succeed.
+		log.WarnContext(ctx, "cannot plant the declared model binding; this installation keeps whatever it holds", "error", err)
+		return nil
+	}
+	if planted {
+		// Said out loud, because a binding appearing without anybody pressing
+		// anything is the kind of change an operator should be able to find in
+		// a log afterwards.
+		log.InfoContext(ctx, "planted the model binding declared under seeds.ai_routing; this installation held none")
+	}
+	return nil
 }
 
 // warnRoutingFileIgnored says a `--ai-routing` was passed and did nothing.

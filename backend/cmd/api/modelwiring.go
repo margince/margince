@@ -9,6 +9,7 @@ import (
 	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"gopkg.in/yaml.v3"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -46,8 +47,12 @@ func routingVersionOf(cfg ai.RoutingConfig) string { return cfg.RoutingVersion()
 // modelPathSpec names the boot knobs resolveModelPath switches on, so a call
 // site labels each flag instead of passing anonymous booleans.
 type modelPathSpec struct {
-	routingPath     string
-	fakeBrain       bool
+	routingPath string
+	fakeBrain   bool
+	// The binding this DEPLOYMENT declares, carried so a boot can plant it on an
+	// installation that holds none. Not a second source of routing: it is
+	// insert-only, so it answers only where nobody has answered yet.
+	routingSeed     yaml.Node
 	capturePayloads bool
 }
 
@@ -58,6 +63,7 @@ func modelPathSpecFrom(cfg apiConfig, deployCfg deployconfig.Config) modelPathSp
 	return modelPathSpec{
 		routingPath:     cfg.routingPath,
 		fakeBrain:       cfg.fakeBrain,
+		routingSeed:     deployCfg.Seeds.AIRouting,
 		capturePayloads: deployCfg.AI.CapturePayloads,
 	}
 }
@@ -68,6 +74,13 @@ func resolveModelPath(ctx context.Context, spec modelPathSpec, pool *pgxpool.Poo
 	// a question about this process. They are separated so the second stays
 	// answerable without a database — the wiring switch is what a unit test can
 	// pin, and it is where a silently-picked default would hide.
+	// BEFORE the resolve, so an installation that holds no binding comes up on
+	// the one its deployment declares rather than on the fake. Insert-only: an
+	// installation that has one is untouched, and an admin's later change is
+	// never reverted by a file.
+	if err := compose.SeedRoutingIfUnset(ctx, pool, spec.routingSeed, log); err != nil {
+		return nil, "", ai.PublicProfile{}, "", err
+	}
 	cfg, err := compose.ResolveRouting(ctx, pool, spec.routingPath, config.FromOS, log)
 	if err != nil {
 		return nil, "", ai.PublicProfile{}, "", err

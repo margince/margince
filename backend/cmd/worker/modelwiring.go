@@ -9,6 +9,7 @@ import (
 	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"gopkg.in/yaml.v3"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -18,8 +19,11 @@ import (
 // modelPathSpec names the boot knobs selectModelPath switches on, so a call
 // site labels each flag instead of passing anonymous booleans.
 type modelPathSpec struct {
-	routingPath     string
-	fake            bool
+	routingPath string
+	fake        bool
+	// The binding this DEPLOYMENT declares. See the api's spec: insert-only, so
+	// it answers only where nobody has answered yet.
+	routingSeed     yaml.Node
 	capturePayloads bool
 }
 
@@ -32,6 +36,13 @@ func selectModelPath(ctx context.Context, spec modelPathSpec, pool *pgxpool.Pool
 	// has none yet. Resolved before the switch rather than inside an arm,
 	// because "is a model bound" is now a question about the installation and
 	// not about whether this process was handed a --ai-routing path.
+	// BEFORE the resolve, for the reason the api does it: an installation that
+	// holds no binding comes up on the one its deployment declares rather than
+	// on nothing. Both roles do it because either may be the first to boot, and
+	// the write is insert-only so the second finds it done.
+	if err := compose.SeedRoutingIfUnset(ctx, pool, spec.routingSeed, log); err != nil {
+		return compose.ModelPath{}, nil, err
+	}
 	cfg, err := compose.ResolveRouting(ctx, pool, spec.routingPath, config.FromOS, log)
 	if err != nil {
 		return compose.ModelPath{}, nil, err
