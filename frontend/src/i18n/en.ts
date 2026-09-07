@@ -7420,8 +7420,11 @@ export const en = {
     "Model lists come from the price sheet, which is not yours to read. Any id your provider serves works — type it.",
   "aiRouting.sub":
     "Which model serves each tier. Changes take effect without a restart, and every process picks them up within a minute.",
-  "aiRouting.unbound":
-    "This installation has no models bound, so its AI features are off. A deployment declares its first binding under seeds.ai_routing in margince.yaml.",
+  "aiRouting.unboundUnkeyed":
+    "This installation has no models bound, so its AI features are off. Add a model provider key below, then bind the tiers here. A deployment can also declare its first binding under seeds.ai_routing in margince.yaml, which is read once when the organization is created.",
+  "aiRouting.unboundKeyed":
+    "This installation has no models bound, so its AI features are off. Start from a keyed provider's defaults, adjust anything you like, then save.",
+  "aiRouting.unboundStart": "Start from {provider}",
   "aiRouting.profile.card": "Deployment profile",
   "aiRouting.profile.label": "Location",
   "aiRouting.profile.help":

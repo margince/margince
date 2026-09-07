@@ -7315,8 +7315,11 @@ export const de = {
     "Die Modelllisten stammen aus der Preisliste, die Sie nicht einsehen dürfen. Jede ID, die Ihr Anbieter bedient, funktioniert — einfach eintippen.",
   "aiRouting.sub":
     "Welches Modell welche Stufe bedient. Änderungen wirken ohne Neustart; jeder Prozess übernimmt sie innerhalb einer Minute.",
-  "aiRouting.unbound":
-    "Diese Installation hat keine Modelle gebunden, daher sind ihre KI-Funktionen aus. Die erste Bindung deklariert eine Bereitstellung unter seeds.ai_routing in margince.yaml.",
+  "aiRouting.unboundUnkeyed":
+    "Diese Installation hat keine Modelle gebunden, daher sind ihre KI-Funktionen aus. Hinterlegen Sie unten einen Modellanbieter-Schlüssel und binden Sie die Stufen anschließend hier. Eine Bereitstellung kann die erste Bindung auch unter seeds.ai_routing in margince.yaml deklarieren; diese wird einmalig beim Anlegen der Organisation gelesen.",
+  "aiRouting.unboundKeyed":
+    "Diese Installation hat keine Modelle gebunden, daher sind ihre KI-Funktionen aus. Beginnen Sie mit den Vorgaben eines hinterlegten Anbieters, passen Sie sie an und speichern Sie.",
+  "aiRouting.unboundStart": "Mit {provider} beginnen",
   "aiRouting.profile.card": "Bereitstellungsprofil",
   "aiRouting.profile.label": "Standort",
   "aiRouting.profile.help":

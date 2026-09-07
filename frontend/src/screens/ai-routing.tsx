@@ -31,6 +31,7 @@ import {
 import { useProviderKeys } from "./ai-provider-keys";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 import { RefreshFromSources } from "./rate-refresh";
+import { SETUP_PROVIDERS } from "./setup-providers";
 import "./ai-settings.css";
 
 // Which vendor this installation's text is sent to (ai-operational-spec §1.4).
@@ -234,11 +235,51 @@ function RoutingForm({
   // dies on is the one an error path or an older server produces.
   const tiers = orderedTiers(draft.tiers);
   if (tiers.length === 0) {
-    // Not an error and not an empty form: this installation binds nothing, and
-    // the way to give it a first binding is the deployment file's seed, which
-    // is where a deployment declares one. Saying so beats a form whose every
-    // field is blank and whose Save cannot produce a valid document.
-    return <Callout tone="info">{t("aiRouting.unbound")}</Callout>;
+    // An installation that binds nothing needs a FIRST binding, and for a long
+    // time this said only that a deployment declares one under
+    // `seeds.ai_routing`. True of a deployment, false for everybody else: the
+    // seed is consumed once, at organization creation, so an installation that
+    // ALREADY EXISTS can never take one. The desktop bundles make it concrete —
+    // they ship a database, so their organization was created on the build
+    // machine, and their recipient met this callout with no way forward but
+    // curl or deleting the demo data they were given.
+    //
+    // The old reasoning was "a form whose every field is blank has a Save that
+    // cannot produce a valid document". Right about the blank form, wrong about
+    // the conclusion: the defaults are not unknown. A keyed provider names the
+    // preset the app's own onboarding would have offered, so the form can open
+    // on a document that is already valid and the reader adjusts it.
+    //
+    // Nothing is written until Save — this seeds the DRAFT, so the binding
+    // stays their decision and goes through the same validation as every later
+    // change.
+    const startable = startableProviders(keys.data?.providers);
+    if (startable.length === 0) {
+      // No key, so nothing to bind TO. The seed sentence is still right for a
+      // deployment; the other half — add a key first — is the part a reader of
+      // THIS screen can act on.
+      return <Callout tone="info">{t("aiRouting.unboundUnkeyed")}</Callout>;
+    }
+    return (
+      <Callout tone="info">
+        {t("aiRouting.unboundKeyed")}
+        <div className="ai-routing-start">
+          {startable.map(({ id, label }) => (
+            <Button
+              key={id}
+              // `dirty` is derived — draft against the document it was seeded
+              // from — so replacing the draft is what marks it unsaved. There
+              // is no setter to call, and the re-seed effect above leaves a
+              // dirty form alone, so this survives another role's save.
+              onClick={() => setDraft(firstBinding(id))}
+              disabled={!canManage}
+            >
+              {t("aiRouting.unboundStart", { provider: label })}
+            </Button>
+          ))}
+        </div>
+      </Callout>
+    );
   }
 
   const setTier = (tier: string, next: TierBinding) =>
@@ -715,6 +756,52 @@ function EmbeddingWidthField({
 // Null is not "none". A list that has not arrived, or one a reader may not have,
 // must not draw a row as keyed: a lane that fails closed at call time and reads
 // as fine here is the exact thing the pill exists to prevent.
+// The providers this installation could bind RIGHT NOW: keyed, and named by a
+// preset so the binding opens on real model ids rather than blank fields.
+//
+// Deliberately the onboarding list rather than every keyed vendor. Those two
+// are the vendors that serve chat AND embeddings from one key, and a routing
+// document REQUIRES an embeddings binding — offering a third here would open a
+// form its reader cannot complete, which is the failure this branch exists to
+// end rather than repeat.
+function startableProviders(
+  providers: readonly { provider: string; configured: boolean }[] | undefined,
+): readonly { id: keyof typeof SETUP_PROVIDERS; label: string }[] {
+  const keyed = new Set(
+    (providers ?? []).filter((p) => p.configured).map((p) => p.provider),
+  );
+  return (
+    Object.keys(SETUP_PROVIDERS) as (keyof typeof SETUP_PROVIDERS)[]
+  ).flatMap((id) => {
+    const preset = SETUP_PROVIDERS[id];
+    return keyed.has(preset.provider) ? [{ id, label: preset.label }] : [];
+  });
+}
+
+// A complete, valid document on one provider's presets: every tier the contract
+// declares, plus the embeddings binding without which the document is refused.
+//
+// TIER_ORDER is the tier list for the same reason the form reads it — a tier
+// added to the contract has to appear here too, or a first binding silently
+// omits the lane and its tasks keep answering from the fake.
+function firstBinding(id: keyof typeof SETUP_PROVIDERS): Routing {
+  const p = SETUP_PROVIDERS[id];
+  const lane = {
+    provider: p.provider,
+    model: p.chatModel,
+    ...(p.baseUrl ? { base_url: p.baseUrl } : {}),
+  };
+  return {
+    profile: "cloud_frontier",
+    tiers: Object.fromEntries(TIER_ORDER.map((t) => [t, { ...lane }])),
+    embeddings: {
+      provider: p.provider,
+      model: p.embedModel,
+      ...(p.baseUrl ? { base_url: p.baseUrl } : {}),
+    },
+  } as Routing;
+}
+
 function unkeyedProviders(
   providers: readonly { provider: string; configured: boolean }[] | undefined,
 ): ReadonlySet<string> | null {

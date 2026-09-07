@@ -7236,8 +7236,11 @@ export const vi = {
     "Danh sách mô hình lấy từ bảng giá, mà bạn không có quyền đọc. Mọi ID nhà cung cấp của bạn phục vụ đều dùng được — cứ gõ vào.",
   "aiRouting.sub":
     "Mô hình nào phục vụ từng bậc. Thay đổi có hiệu lực mà không cần khởi động lại; mọi tiến trình sẽ nhận trong vòng một phút.",
-  "aiRouting.unbound":
-    "Cài đặt này chưa ràng buộc mô hình nào nên các tính năng AI đang tắt. Bản triển khai khai báo ràng buộc đầu tiên tại seeds.ai_routing trong margince.yaml.",
+  "aiRouting.unboundUnkeyed":
+    "Cài đặt này chưa ràng buộc mô hình nào nên các tính năng AI đang tắt. Hãy thêm khóa nhà cung cấp mô hình bên dưới, rồi ràng buộc các tầng tại đây. Bản triển khai cũng có thể khai báo ràng buộc đầu tiên tại seeds.ai_routing trong margince.yaml; mục này chỉ được đọc một lần khi tạo tổ chức.",
+  "aiRouting.unboundKeyed":
+    "Cài đặt này chưa ràng buộc mô hình nào nên các tính năng AI đang tắt. Hãy bắt đầu với mặc định của nhà cung cấp đã có khóa, chỉnh sửa tùy ý rồi lưu.",
+  "aiRouting.unboundStart": "Bắt đầu với {provider}",
   "aiRouting.profile.card": "Hồ sơ triển khai",
   "aiRouting.profile.label": "Vị trí",
   "aiRouting.profile.help":

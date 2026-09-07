@@ -92,6 +92,14 @@ const BOUND = {
   embeddings: { provider: "gemini", model: "gemini-embedding-001" },
 };
 
+// What an installation that has bound nothing answers: an empty tier map, not
+// null — the contract is explicit that it says so with `{}`.
+const UNBOUND = {
+  profile: "",
+  tiers: {},
+  embeddings: { provider: "", model: "" },
+};
+
 const VENDOR_MODELS: Record<string, unknown> = {
   gemini: {
     provider: "gemini",
@@ -116,7 +124,17 @@ const VENDOR_MODELS: Record<string, unknown> = {
 function backendFor(
   allow: GrantSpec,
   routing: unknown = BOUND,
-  { sheetStatus = 200 }: { sheetStatus?: number } = {},
+  {
+    sheetStatus = 200,
+    providerKeys = PROVIDER_KEYS,
+  }: {
+    sheetStatus?: number;
+    providerKeys?: readonly {
+      provider: string;
+      configured: boolean;
+      env_var: string;
+    }[];
+  } = {},
 ) {
   let stored = routing;
   // Typed as the document this endpoint takes, so an assertion can read a field
@@ -142,7 +160,7 @@ function backendFor(
         );
       }
       if (req.url.includes("/ai/provider-keys")) {
-        return jsonResponse({ providers: PROVIDER_KEYS });
+        return jsonResponse({ providers: providerKeys });
       }
       if (req.url.includes("/ai-model-rates")) {
         return sheetStatus === 200
@@ -192,6 +210,88 @@ afterEach(() => {
 });
 
 describe("AiRoutingCard", () => {
+  // ── the FIRST binding ──────────────────────────────────────────────────
+  //
+  // An installation with no tiers used to get a sentence and nothing else: "a
+  // deployment declares its first binding under seeds.ai_routing". True of a
+  // deployment and false for everyone else — that seed is consumed once, at
+  // organization creation, so an installation that ALREADY EXISTS can never
+  // take one. The desktop bundles ship a database, so their organization was
+  // created on the build machine, and their recipient reached this screen with
+  // no way forward but curl or deleting the demo data they were given.
+  it("offers a first binding from a keyed provider when nothing is bound", async () => {
+    const backend = backendFor(ROUTING_EDITOR, UNBOUND);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+
+    const start = await screen.findByRole("button", {
+      name: /start from google gemini/i,
+    });
+    // Only the vendor that HOLDS a key. Binding a lane at a vendor with no
+    // credential fails closed at the first call, which is a state this screen
+    // exists to make visible rather than to create.
+    expect(
+      screen.queryByRole("button", { name: /start from.*anthropic/i }),
+    ).toBeNull();
+
+    await userEvent.click(start);
+
+    // The form arrives complete: every tier the contract declares plus the
+    // embeddings binding, because a document missing either is refused and the
+    // reader would be exactly where they started.
+    await userEvent.click(
+      await screen.findByRole("button", { name: /save routing/i }),
+    );
+    await waitFor(() => expect(backend.getCapturedPut()).not.toBeNull());
+    const sent = backend.getCapturedPut() as CapturedRouting;
+    expect(Object.keys(sent.tiers).sort()).toEqual([
+      "cheap_cloud",
+      "frontier",
+      "local_large",
+      "local_small",
+      "premium",
+    ]);
+    expect(sent.embeddings.model).toBe("gemini-embedding-001");
+    expect(sent.tiers.premium.provider).toBe("gemini");
+  });
+
+  // Nothing to bind TO. The seed sentence is still right for a deployment, and
+  // the half a reader of THIS screen can act on is "add a key first" — so the
+  // callout says that and offers no button that could only fail.
+  it("asks for a key first when no provider has one", async () => {
+    const backend = backendFor(ROUTING_EDITOR, UNBOUND, {
+      providerKeys: [
+        { provider: "gemini", configured: false, env_var: "GEMINI_API_KEY" },
+        {
+          provider: "anthropic",
+          configured: false,
+          env_var: "ANTHROPIC_API_KEY",
+        },
+      ],
+    });
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+
+    expect(await screen.findByText(/add a model provider key/i)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /start from/i })).toBeNull();
+  });
+
+  // A reader who may not change the binding still SEES why it is absent — the
+  // same rule the save button follows here: disabled, never hidden.
+  it("shows the first-binding offer disabled to a reader who cannot save", async () => {
+    const backend = backendFor(ROUTING_READER, UNBOUND);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+
+    expect(
+      (
+        (await screen.findByRole("button", {
+          name: /start from google gemini/i,
+        })) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
+  });
+
   it("shows the bound model for each tier", async () => {
     vi.stubGlobal("fetch", backendFor(ROUTING_EDITOR).fetchMock);
     render(<AiRoutingCard />);
