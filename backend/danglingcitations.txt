@@ -45,7 +45,6 @@ backend/gates/auditcoherence_test.go migration 0226
 backend/gates/capturedbytyping_test.go migration 0262
 backend/gates/piicoverage_test.go core 0244
 backend/gates/piicoverage_test.go core 0245
-backend/gates/rbacgate_test.go core 0217
 backend/gates/rlsclaims_test.go core 0217
 backend/gates/tableownerregistry_test.go migration 0219
 backend/gates/tableownershipwaivers_test.go core 0245

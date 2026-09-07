@@ -38,10 +38,11 @@ import (
 func TestRosterReadDisclosesRoleKeysOnlyToAMemberAdministrator(t *testing.T) {
 	e := setupRevocationEnv(t, "roster-role-keys")
 
-	withheld, _, err := e.svc.ListUsers(e.wsCtx(e.member), ListUsersInput{})
+	member, err := e.svc.ListUsers(e.wsCtx(e.member), ListUsersInput{})
 	if err != nil {
 		t.Fatalf("list as a member: %v", err)
 	}
+	withheld := member.Users
 	if len(withheld) == 0 {
 		t.Fatal("roster is empty; the assertions below would hold vacuously")
 	}
@@ -56,10 +57,11 @@ func TestRosterReadDisclosesRoleKeysOnlyToAMemberAdministrator(t *testing.T) {
 	// The SAME call, by a caller holding user_admin. Nothing in the input
 	// changes: the grant is the whole difference, which is the property under
 	// test — a caller cannot ask its way into the management view.
-	asked, _, err := e.svc.ListUsers(e.wsCtx(e.admin), ListUsersInput{})
+	administrator, err := e.svc.ListUsers(e.wsCtx(e.admin), ListUsersInput{})
 	if err != nil {
 		t.Fatalf("list as an administrator: %v", err)
 	}
+	asked := administrator.Users
 	var adminRow, memberRow *userRow
 	for i := range asked {
 		switch asked[i].ID {

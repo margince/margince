@@ -151,8 +151,16 @@ const getUserQuery = `SELECT ` + userColumns + ` FROM app_user
 // unconditionally, which is the management view. The handlers that call it
 // admit on the same grant first; this is the check that survives the next
 // caller, who will not remember to.
+//
+// ANY verb on that object, not read specifically, because this is the tail of
+// every member-administration write and the verbs are grantable apart. A role
+// carrying user_admin.delete without user_admin.read may deactivate a seat, so
+// demanding read here would commit the deactivation and then answer 403 — the
+// account changed and the response says it did not.
 func (s *Service) GetUser(ctx context.Context, userID ids.UserID) (userRow, error) {
-	if err := auth.Require(ctx, objectUserAdmin, principal.ActionRead); err != nil {
+	if err := auth.RequireAny(ctx, objectUserAdmin,
+		principal.ActionRead, principal.ActionCreate,
+		principal.ActionUpdate, principal.ActionDelete); err != nil {
 		return userRow{}, err
 	}
 	var u userRow
@@ -184,22 +192,40 @@ func (s *Service) GetUser(ctx context.Context, userID ids.UserID) (userRow, erro
 //
 // A grant and not the literal admin role, so an installation that delegates
 // member administration gets the view that goes with it.
-func (s *Service) ListUsers(ctx context.Context, in ListUsersInput) ([]userRow, storekit.Page, error) {
+func (s *Service) ListUsers(ctx context.Context, in ListUsersInput) (RosterPage, error) {
 	if err := auth.RequireMember(ctx); err != nil {
-		return nil, storekit.Page{}, err
+		return RosterPage{}, err
 	}
 	mayManage := auth.Require(ctx, objectUserAdmin, principal.ActionRead) == nil
 	plain, filtered := listUsersQuery, listUsersFilteredQuery
 	if mayManage && in.IncludeInactive {
 		plain, filtered = listUsersAllQuery, listUsersAllFilteredQuery
 	}
-	return listRosterPage(ctx, s.db, in.Q, in.Cursor, in.Limit, rosterQuery[userRow]{
+	rows, page, err := listRosterPage(ctx, s.db, in.Q, in.Cursor, in.Limit, rosterQuery[userRow]{
 		plain:     plain,
 		filtered:  filtered,
 		leadArgs:  []any{mayManage},
 		scan:      scanUser,
 		cursorKey: func(u userRow) (time.Time, ids.UUID) { return u.CreatedAt, u.ID },
 	})
+	return RosterPage{Users: rows, Page: page, Management: mayManage}, err
+}
+
+// RosterPage is one roster read: the rows, the keyset position, and WHICH VIEW
+// the service served.
+//
+// Management rides along because the wire mapping has to agree with the SQL,
+// and the caller cannot re-derive the answer reliably. The HTTP handler asks
+// through a human Identity, which an agent request does not carry, so an agent
+// holding its granting human's user_admin read got the widened rows and the
+// narrow mapping — inactive seats disclosed, role keys stripped, neither view
+// whole. One decision, taken where the query is chosen, and reported.
+type RosterPage struct {
+	Users []userRow
+	Page  storekit.Page
+	// Management is true when this page is the administration view: it carries
+	// role keys, team memberships, and seats that are no longer active.
+	Management bool
 }
 
 // ListTeamsInput narrows and pages the team list; Q is a case-insensitive

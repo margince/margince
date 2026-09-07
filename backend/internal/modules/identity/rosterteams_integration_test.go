@@ -16,6 +16,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -99,11 +100,11 @@ func TestAnArchivedTeamLeavesTheRoster(t *testing.T) {
 // here asserts about a user it just created.
 func findRosterUser(t *testing.T, e *revocationEnv, actor Identity, includeInactive bool, subject ids.UUID) userRow {
 	t.Helper()
-	rows, _, err := e.svc.ListUsers(e.wsCtx(actor), ListUsersInput{IncludeInactive: includeInactive})
+	roster, err := e.svc.ListUsers(e.wsCtx(actor), ListUsersInput{IncludeInactive: includeInactive})
 	if err != nil {
 		t.Fatalf("reading the roster: %v", err)
 	}
-	for _, row := range rows {
+	for _, row := range roster.Users {
 		if row.ID == subject {
 			return row
 		}
@@ -136,7 +137,7 @@ func TestTheRosterRefusesACallerWhoIsNotAMember(t *testing.T) {
 		{"a Deal Room buyer", buyerCtx},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			if _, _, err := e.svc.ListUsers(tc.ctx, ListUsersInput{}); err == nil {
+			if _, err := e.svc.ListUsers(tc.ctx, ListUsersInput{}); err == nil {
 				t.Error("ListUsers served the member roster")
 			}
 			if _, _, err := e.svc.ListTeams(tc.ctx, ListTeamsInput{}); err == nil {
@@ -164,7 +165,7 @@ func TestTheRosterRefusesACallerWhoIsNotAMember(t *testing.T) {
 func TestTheSingleMemberReadIsForMemberAdministratorsOnly(t *testing.T) {
 	e := setupRevocationEnv(t, "roster-single-read")
 
-	if _, _, err := e.svc.ListUsers(e.wsCtx(e.member), ListUsersInput{}); err != nil {
+	if _, err := e.svc.ListUsers(e.wsCtx(e.member), ListUsersInput{}); err != nil {
 		t.Fatalf("a member was refused the roster every seat may read: %v", err)
 	}
 	if _, err := e.svc.GetUser(e.wsCtx(e.member), e.admin.UserID); err == nil {
@@ -186,27 +187,42 @@ func TestTheSingleMemberReadIsForMemberAdministratorsOnly(t *testing.T) {
 func TestAskingToIncludeInactiveDoesNotWidenAMembersRoster(t *testing.T) {
 	e := setupRevocationEnv(t, "roster-include-inactive")
 
-	// The admin is the one seat here holding user_admin, so the MEMBER is the
-	// seat that can be deactivated and still leave a caller to read as.
+	// A THIRD seat is deactivated, so e.member survives as a caller who holds no
+	// user_admin grant. Deactivating e.member itself would leave nobody to read
+	// as, and the test would prove only that an administrator sees the row.
+	gone, _, err := e.svc.InviteUser(e.wsCtx(e.admin), e.admin, InviteUserInput{
+		Email: "left-the-company@" + e.slug + ".test", DisplayName: "Left The Company", Role: "rep",
+	})
+	if err != nil {
+		t.Fatalf("seeding the seat this test deactivates: %v", err)
+	}
 	if err := e.svc.DeactivateUser(e.wsCtx(e.admin), e.admin,
-		DeactivateUserInput{UserID: e.member.UserID}); err != nil {
-		t.Fatalf("deactivating the seat this test is about: %v", err)
+		DeactivateUserInput{UserID: gone}); err != nil {
+		t.Fatalf("deactivating it through the real writer: %v", err)
 	}
 
-	asAdmin, _, err := e.svc.ListUsers(e.wsCtx(e.admin), ListUsersInput{IncludeInactive: true})
+	asAdmin, err := e.svc.ListUsers(e.wsCtx(e.admin), ListUsersInput{IncludeInactive: true})
 	if err != nil {
 		t.Fatalf("administrator's widened roster: %v", err)
 	}
-	if !carriesUser(asAdmin, e.member.UserID.UUID) {
+	if !carriesUser(asAdmin.Users, gone.UUID) {
 		t.Fatal("the deactivated seat is absent from the administrator's widened roster, so the arm below proves nothing")
 	}
-
-	narrowed, _, err := e.svc.ListUsers(e.wsCtx(e.admin), ListUsersInput{})
-	if err != nil {
-		t.Fatalf("administrator's default roster: %v", err)
+	if !asAdmin.Management {
+		t.Error("the administrator's page does not report itself as the management view")
 	}
-	if carriesUser(narrowed, e.member.UserID.UUID) {
-		t.Error("the default roster carries a deactivated seat, so IncludeInactive selects nothing")
+
+	// The same request by a seat that may not administer members. Same flag,
+	// same URL, and the inactive seat must not appear.
+	asMember, err := e.svc.ListUsers(e.wsCtx(e.member), ListUsersInput{IncludeInactive: true})
+	if err != nil {
+		t.Fatalf("member's roster: %v", err)
+	}
+	if carriesUser(asMember.Users, gone.UUID) {
+		t.Error("a member asked for inactive seats and was given them")
+	}
+	if asMember.Management {
+		t.Error("a member's page reports itself as the management view, so the wire mapping would disclose role keys")
 	}
 }
 
@@ -217,4 +233,38 @@ func carriesUser(rows []userRow, id ids.UUID) bool {
 		}
 	}
 	return false
+}
+
+// A delegated member administrator holding a WRITE verb and not read still gets
+// the row back after the write.
+//
+// The verbs on user_admin are grantable apart, and the writes admit on them
+// separately: DeactivateUser asks for delete, ChangeUserRole for update. The
+// read that every one of those writes returns through is the same read, so
+// demanding user_admin.read there would let the deactivation commit and then
+// answer 403 — the seat is locked out and the response says the request failed.
+//
+// The role is edited through the real editor rather than an UPDATE, so the
+// grant is one an operator can actually produce.
+func TestTheMemberReadFollowsAnyAdministrationVerbNotReadAlone(t *testing.T) {
+	e := setupRevocationEnv(t, "roster-write-verb-read")
+
+	if _, err := e.svc.SetRoleObjectGrant(e.wsCtx(e.admin), e.admin, "ops", objectUserAdmin,
+		storedGrant{Delete: true}, nil); err != nil {
+		t.Fatalf("granting ops user_admin.delete and nothing else: %v", err)
+	}
+	deleter := e.admin
+	deleter.Roles = []string{"ops"}
+	deleter.Permissions = principal.Permissions{
+		RoleKeys: []string{"ops"},
+		Objects:  map[string]principal.ObjectGrant{objectUserAdmin: {Delete: true}},
+	}
+
+	// The premise: this seat may NOT read the object it may delete on.
+	if err := auth.Require(e.wsCtx(deleter), objectUserAdmin, principal.ActionRead); err == nil {
+		t.Fatal("the fixture holds user_admin.read, so the assertion below proves nothing")
+	}
+	if _, err := e.svc.GetUser(e.wsCtx(deleter), e.member.UserID); err != nil {
+		t.Errorf("a holder of user_admin.delete cannot read back the seat it just wrote: %v", err)
+	}
 }
