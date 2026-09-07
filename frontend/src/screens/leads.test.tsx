@@ -194,8 +194,9 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
           if (request.url.endsWith("/v1/me")) {
             return jsonResponse({
               user: { id: "u-9", display_name: "Me" },
-              // Deliberately the role that USED to decide this, set opposite to
-              // the row scope under test wherever the two could disagree.
+              // Deliberately the role that USED to decide this. It says "open
+              // wide" in every case below, so the two narrow arms fail if
+              // anything still reads the role instead of the scope.
               roles: ["admin"],
               teams: [],
               ...(authorization ? { authorization } : {}),
@@ -229,6 +230,15 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
       const url = await leadRequestFor({
         seat_type: "full",
         row_scope: "team",
+        objects,
+      });
+      expect(url).not.toContain("owner_id=");
+    });
+
+    it("a seat scoped to the whole installation asks for every lead", async () => {
+      const url = await leadRequestFor({
+        seat_type: "full",
+        row_scope: "all",
         objects,
       });
       expect(url).not.toContain("owner_id=");

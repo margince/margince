@@ -197,14 +197,17 @@ export function LeadsScreen() {
         {(session) => (
           <LeadsWorkbench
             viewerId={session.user.id}
-            // A seat that reads beyond its own records opens on every lead —
-            // they run the queue; a seat scoped to its own opens on those.
+            // A seat scoped past its own records opens on every lead — they run
+            // the queue; a seat scoped to its own opens on those.
             //
-            // The ROW SCOPE the server computed, not the role keys it came
-            // from. Those keys were a second reading of the same policy, and a
-            // custom role — or a seeded one whose scope an operator edits, which
-            // the role editor allows — would open the wrong view while the
-            // server answered correctly.
+            // The opening FILTER, not a permission: every seat holding the lead
+            // grant may read any lead (auth/tableclass.go), so this decides
+            // which view the queue starts in and nothing about what it may
+            // fetch. The row scope the server computed, though, rather than the
+            // role keys it came from — those were a second reading of the same
+            // policy, and a custom role, or a seeded role whose grants an
+            // operator edits, opens the wrong view while the server answers
+            // correctly.
             //
             // Written as the POSITIVE test, so an absent authorization block
             // opens on "mine". `!== "own"` would read a missing answer as
