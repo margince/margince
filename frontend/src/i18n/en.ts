@@ -3786,6 +3786,10 @@ export const en = {
   "settings.appearance": "Appearance",
   "settings.appearanceHelp":
     "Light, dark, or whatever this device is set to. The account menu changes it too.",
+  "settings.displayName": "Your name",
+  "settings.displayNameHelp":
+    "How colleagues see you \u2014 on records you touch, in pickers, and in the trail.",
+  "settings.displayNameSave": "Save",
   "settings.languageHelp": "Lasts for this session.",
   "role.admin": "Admin",
   "role.management": "Management",

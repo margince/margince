@@ -3699,6 +3699,10 @@ export const de = {
   "settings.appearance": "Darstellung",
   "settings.appearanceHelp":
     "Hell, dunkel oder was dieses Ger\u00e4t eingestellt hat. Das Kontomen\u00fc \u00e4ndert es ebenfalls.",
+  "settings.displayName": "Ihr Name",
+  "settings.displayNameHelp":
+    "Wie Kolleginnen und Kollegen Sie sehen \u2014 an Datens\u00e4tzen, in Auswahllisten und im Protokoll.",
+  "settings.displayNameSave": "Speichern",
   "settings.languageHelp": "Gilt für diese Sitzung.",
   "role.admin": "Admin",
   "role.management": "Geschäftsleitung",

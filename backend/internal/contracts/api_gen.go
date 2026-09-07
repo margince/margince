@@ -31872,6 +31872,14 @@ type SaveLinkedInAccountRequest struct {
 	ProfileUrl *string `json:"profile_url,omitempty"`
 }
 
+// SaveMyDisplayNameRequest defines model for SaveMyDisplayNameRequest.
+type SaveMyDisplayNameRequest struct {
+	// DisplayName The name colleagues see. Surrounding whitespace is trimmed and a name
+	// that is only whitespace is refused — the same bounds the invite form
+	// applies, because this writes the same column.
+	DisplayName string `json:"display_name"`
+}
+
 // SaveMyLocaleRequest defines model for SaveMyLocaleRequest.
 type SaveMyLocaleRequest struct {
 	// Locale The language to render this person's own interface in. One of the
@@ -41793,6 +41801,9 @@ type SetMyAgentGrantJSONRequestBody = SetMyAgentGrantRequest
 // SaveMyBriefDeliveryJSONRequestBody defines body for SaveMyBriefDelivery for application/json ContentType.
 type SaveMyBriefDeliveryJSONRequestBody = BriefDelivery
 
+// SaveMyDisplayNameJSONRequestBody defines body for SaveMyDisplayName for application/json ContentType.
+type SaveMyDisplayNameJSONRequestBody = SaveMyDisplayNameRequest
+
 // SaveMyEmailSignatureJSONRequestBody defines body for SaveMyEmailSignature for application/json ContentType.
 type SaveMyEmailSignatureJSONRequestBody = SaveEmailSignatureRequest
 
@@ -50882,6 +50893,9 @@ type ServerInterface interface {
 	// Choose what the product may send you.
 	// (PUT /me/brief-delivery)
 	SaveMyBriefDelivery(w http.ResponseWriter, r *http.Request)
+	// Change the name colleagues see you by.
+	// (PUT /me/display-name)
+	SaveMyDisplayName(w http.ResponseWriter, r *http.Request)
 	// The sign-off appended to mail you send.
 	// (GET /me/email-signature)
 	GetMyEmailSignature(w http.ResponseWriter, r *http.Request)
@@ -53627,6 +53641,12 @@ func (_ Unimplemented) GetMyBriefDelivery(w http.ResponseWriter, r *http.Request
 // Choose what the product may send you.
 // (PUT /me/brief-delivery)
 func (_ Unimplemented) SaveMyBriefDelivery(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Change the name colleagues see you by.
+// (PUT /me/display-name)
+func (_ Unimplemented) SaveMyDisplayName(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -67539,6 +67559,26 @@ func (siw *ServerInterfaceWrapper) SaveMyBriefDelivery(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SaveMyBriefDelivery(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SaveMyDisplayName operation middleware
+func (siw *ServerInterfaceWrapper) SaveMyDisplayName(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SaveMyDisplayName(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -82367,6 +82407,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/me/brief-delivery", wrapper.SaveMyBriefDelivery)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/me/display-name", wrapper.SaveMyDisplayName)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me/email-signature", wrapper.GetMyEmailSignature)

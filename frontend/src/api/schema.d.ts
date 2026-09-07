@@ -13117,6 +13117,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/display-name": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Change the name colleagues see you by.
+         * @description Always the CALLER's own, never anybody else's. An admin changing a
+         *     colleague's name is a different act with a different audience, and this
+         *     API does not offer it — there is no id to pass.
+         *
+         *     The name was written once, when the seat was invited or the installation
+         *     was created, and nothing could change it afterwards. A person who married,
+         *     was invited as "j.smith" or was simply typed wrong had no way to correct
+         *     the name their colleagues see beside every record they touch.
+         *
+         *     The name is read from `app_user` wherever it is shown — the roster, the
+         *     share pickers, the audit trail — so one write reaches every surface.
+         */
+        put: operations["saveMyDisplayName"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/ai-activity": {
         parameters: {
             query?: never;
@@ -20471,6 +20501,14 @@ export interface components {
              *     is a document riding on every message.
              */
             body: string;
+        };
+        SaveMyDisplayNameRequest: {
+            /**
+             * @description The name colleagues see. Surrounding whitespace is trimmed and a name
+             *     that is only whitespace is refused — the same bounds the invite form
+             *     applies, because this writes the same column.
+             */
+            display_name: string;
         };
         SaveMyLocaleRequest: {
             /**
@@ -52632,6 +52670,32 @@ export interface operations {
         };
         responses: {
             /** @description The caller's seat, with the chosen locale. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    saveMyDisplayName: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveMyDisplayNameRequest"];
+            };
+        };
+        responses: {
+            /** @description The caller's seat, with the new name. */
             200: {
                 headers: {
                     [name: string]: unknown;
