@@ -707,6 +707,14 @@ export type TimelineEntry = {
    */
   counterparts?: string;
   /**
+   * The same people, one name each, before they were joined into the phrase
+   * above. A thread lists everyone it was with and draws each sender's face,
+   * and both need a person, not a phrase: a set of phrases lists "Ida Keller"
+   * and "Ida Keller, Marc Dubois" as two entries, and a monogram of a phrase
+   * is nobody's. Absent where nothing resolved a name, exactly as the phrase.
+   */
+  counterpartNames?: readonly string[];
+  /**
    * The server's own row model for an email, present exactly when `kind` is
    * `email`. It is what EmailEntry draws, so the timeline hands the canonical
    * row its data rather than re-deriving a reading of the message here — the
@@ -1506,9 +1514,25 @@ function otherSideOf(entry: TimelineEntry): string | undefined {
   return entry.emailSummary?.counterparty?.trim() || entry.counterparts;
 }
 
-// Who a thread was with, as one phrase: the other side's names, each once.
-// Our own seats are not listed — every thread on this record is with us,
-// and a name that appears on all of them tells a reader nothing.
+// The same people one at a time, for a set and for a face. The resolved
+// names when the adapter had any; otherwise the one phrase the row shows,
+// which is then the best name there is. Nothing on a withheld row, as above.
+function otherSideNames(entry: TimelineEntry): readonly string[] {
+  if (entry.withheld) {
+    return [];
+  }
+  if (entry.counterpartNames?.length) {
+    return entry.counterpartNames;
+  }
+  const who = otherSideOf(entry);
+  return who ? [who] : [];
+}
+
+// Who a thread was with, as one phrase: the other side's names, each once,
+// joined ONCE at the end — joining per message and then collecting the
+// phrases listed one person under two spellings. Our own seats are not
+// listed: every thread on this record is with us, and a name that appears
+// on all of them tells a reader nothing.
 function threadParticipants(
   entries: readonly TimelineEntry[],
   t: ReturnType<typeof useT>,
@@ -1516,9 +1540,8 @@ function threadParticipants(
 ): string | undefined {
   const names = new Set<string>();
   for (const entry of entries) {
-    const who = otherSideOf(entry);
-    if (who) {
-      names.add(who);
+    for (const name of otherSideNames(entry)) {
+      names.add(name);
     }
   }
   return withWhom([...names], t, locale);
@@ -1576,10 +1599,7 @@ function messageVisibility(entry: TimelineEntry): ReactNode {
 // ours, a lock on one the reader may not open, and the kind's own icon where
 // nobody is named. A monogram of "We" or of "Them" would be a face nobody
 // has.
-function MessageMark({
-  entry,
-  actor,
-}: Readonly<{ entry: TimelineEntry; actor: string }>) {
+function MessageMark({ entry }: Readonly<{ entry: TimelineEntry }>) {
   if (entry.withheld) {
     return (
       <span className="tl-msg-mark">
@@ -1587,8 +1607,11 @@ function MessageMark({
       </span>
     );
   }
-  if (entry.direction === "inbound" && otherSideOf(entry)) {
-    return <Avatar name={actor} size="xs" />;
+  // The face is ONE person's — the first named on the other side — never
+  // the phrase the lead line shows, whose monogram would be nobody's.
+  const [face] = otherSideNames(entry);
+  if (entry.direction === "inbound" && face) {
+    return <Avatar name={face} size="xs" />;
   }
   const Icon =
     entry.direction === "outbound" ? Send : TIMELINE_ICON[entry.kind];
@@ -1646,7 +1669,7 @@ function ThreadMessage({
   const lead = messageLead(entry, t);
   const content = (
     <>
-      <MessageMark entry={entry} actor={lead.actor} />
+      <MessageMark entry={entry} />
       <span className="tl-msg-body">
         <span className="tl-msg-lead">
           <b className="tl-msg-who">{lead.actor}</b>

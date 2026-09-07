@@ -120,6 +120,39 @@ describe("a thread's card", () => {
     expect(document.querySelectorAll(".tl-msg-mark")).toHaveLength(2);
   });
 
+  it("counts each person once across messages, and gives a face to one person", () => {
+    render(
+      <GroupedTimelineList
+        zone="UTC"
+        groups={[
+          thread([
+            entry({
+              id: "m2",
+              direction: "inbound",
+              counterparts: "Ida Keller, Marc Dubois",
+              counterpartNames: ["Ida Keller", "Marc Dubois"],
+            }),
+            entry({
+              id: "m1",
+              atIso: "2026-07-01T10:00:00Z",
+              direction: "inbound",
+              counterparts: "Ida Keller",
+              counterpartNames: ["Ida Keller"],
+            }),
+          ]),
+        ]}
+      />,
+    );
+    // The head names the people, not the phrases: "Ida Keller" and
+    // "Ida Keller, Marc Dubois" are two people, not three entries. Once in
+    // the head, once as the two-person message's own lead.
+    expect(screen.getAllByText("Ida Keller, Marc Dubois")).toHaveLength(2);
+    expect(screen.queryByText(/Ida Keller, Ida Keller/)).toBeNull();
+    // The face on the two-person message is the first person's, never a
+    // monogram of the phrase.
+    expect(screen.getAllByText("IK")).toHaveLength(2);
+  });
+
   it("prefers the server's own counterparty to the resolved links", () => {
     render(
       <GroupedTimelineList
