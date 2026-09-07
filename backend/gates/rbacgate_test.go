@@ -71,6 +71,8 @@ import (
 // being read on its own: "a sweep runs it" is not one, "no row leaves this
 // call" is.
 var ungatedEntryPoints = gatekit.Waive(map[string]string{
+	"internal/modules/people:DecidableForMerge": "answers WHICH of the given rows this caller could merge — a permission map, not data. It deliberately requires no object grant, because a reader whose role lacks the update verb is a legitimate caller whose answer is \"no verb for you\", and refusing the read would cost them the merge card they are entitled to see. WritableSubset omits every row they cannot see, so the map never names a record the caller could not have listed",
+
 	"internal/modules/activities:LabeledCaptureCountSince": "a COUNT and nothing else: it answers how many captured activities carry a label since a date, for the AI-cost arithmetic on the backfill preview. No row, no id and no text leaves it, so there is nothing for a row gate to withhold — and the number is the installation's, not one caller's. Reached from a signed-in human's preview request rather than a worker, which is why the bound is stated as the shape of the answer rather than the principal",
 
 	"internal/modules/capture:CorrespondsWith": "a bool the verdict engine asks itself while deciding whether an address corresponds with us, under the system principal on the capture path. It returns no row and reaches no caller: the answer goes into a verdict that is itself audited, and a human never invokes it",
@@ -685,7 +687,24 @@ func isAuthDecision(name string) bool {
 	return authDecisionsByRatification[name] != ""
 }
 
-var authDecisionVerbs = []string{"Require", "Ensure", "Admit", "Hold", "Lock"}
+var authDecisionVerbs = []string{"Require", "Ensure", "Admit", "Hold"}
+
+// gatekit:fixture the exported auth names that read like a refusal and are not
+// one, each with what it actually does — a classification of the package, not a
+// cost this gate is paying.
+//
+// authNotDecisions are exported names that READ like a refusal and are not one.
+// Stated rather than left implicit, because the census below cannot tell them
+// apart: each returns ErrNotFound or ErrPermissionDenied for a reason that is
+// about the ROW rather than about the caller, so the sentinel heuristic would
+// keep proposing them.
+var authNotDecisions = map[string]string{
+	"MasksAnyRowOf":   "answers a BOOLEAN about the caller's role and returns no error of its own. The refusal is the caller's: deals turns it into a parse error on a sort over a withheld column",
+	"VisibleSubset":   "OMITS the rows the caller may not see rather than refusing, and answers an empty map for a caller holding no read at all. Its callers use the set to withhold a reference, which is a projection decision made above it",
+	"WritableSubset":  "the write half of the same shape: an empty map for a caller with no update verb, and omission rather than refusal for the rest",
+	"LockSubjectLive": "takes a row lock and refuses a table outside the closed set or a row already archived. It never reads the principal: the authority probe is a separate call the caller makes first, and its own comment says so",
+	"StampWritable":   "stamps a per-row boolean the CLIENT reads to decide what to offer. It removes no row and refuses no caller — its comment separates what the client is told from what the server enforces",
+}
 
 // gatekit:fixture the decisions whose names do not carry a refusal verb, each
 // with the reason it refuses — expected data about the auth package, not costs
@@ -699,10 +718,6 @@ var authDecisionsByRatification = map[string]string{
 	"EdgeReadScope":    "calls EdgeReadAdmitted before composing, so a caller it refuses gets an error rather than a predicate",
 	"VisibleTo":        "per-record read admission — it answers about ONE row and its callers act on the refusal",
 	"WritableBy":       "the write half of the same question",
-	"VisibleSubset":    "the batched form of VisibleTo: the rows it omits are the rows it refused",
-	"WritableSubset":   "the batched form of WritableBy",
-	"StampWritable":    "resolves writability per row and stamps the answer the client acts on",
-	"MasksAnyRowOf":    "refuses a sort or filter over a column the caller's role withholds, which is a refusal and not a projection",
 }
 
 // TestTheAuthDecisionVerbsStillDescribeThePackage holds the convention the gate
@@ -726,16 +741,32 @@ func TestTheAuthDecisionVerbsStillDescribeThePackage(t *testing.T) {
 			if !ok || fn.Recv != nil || !fn.Name.IsExported() {
 				continue
 			}
+			if reason, named := authNotDecisions[fn.Name.Name]; named {
+				if isAuthDecision(fn.Name.Name) {
+					t.Errorf("auth.%s is named a non-decision (%s) but the classifier counts it: "+
+						"one of the two is wrong, and the classifier is what the gate believes", fn.Name.Name, reason)
+				}
+				continue
+			}
 			if isAuthDecision(fn.Name.Name) {
 				decisions++
+				// A counted name that no longer refuses is the regression this
+				// census exists for: it keeps every entry point reaching it
+				// passing. Checked for the counted names too, which is the half
+				// an earlier version of this test skipped.
+				if !refusesSomehow(fn) {
+					t.Errorf("auth.%s is counted as a gate but its body neither refuses nor delegates to something that does: "+
+						"if it stopped refusing, every entry point that reaches it is now ungated and passing", fn.Name.Name)
+				}
 				continue
 			}
 			// A function that is NOT counted must not look like a refusal. The
-			// tell is the sentinel: a gate returns ErrPermissionDenied, and a
-			// clause builder returns SQL.
+			// tell is the sentinel: a gate returns a refusal, a clause builder
+			// returns SQL.
 			if returnsPermissionDenied(fn) {
 				t.Errorf("auth.%s refuses a caller with ErrPermissionDenied but is not counted as a gate: "+
-					"name it with one of %v, or ratify it in authDecisionsByRatification with the reason it refuses",
+					"name it with one of %v, ratify it in authDecisionsByRatification with the reason it refuses, "+
+					"or name it in authNotDecisions if the refusal is about the row rather than the caller",
 					fn.Name.Name, authDecisionVerbs)
 			}
 		}
@@ -756,6 +787,39 @@ func TestTheAuthDecisionVerbsStillDescribeThePackage(t *testing.T) {
 				"a stale entry silently keeps a renamed gate counted", name)
 		}
 	}
+}
+
+// refusesSomehow reports whether the body can refuse at all — by naming a
+// refusal sentinel itself, or by calling something that does.
+//
+// Deliberately loose. Most gates in this package refuse through an unexported
+// helper (ensureWriteAuthority, refuseBuyer, probeExistsLive) or by returning
+// ErrNotFound so existence stays hidden, so a sentinel-only test would report
+// two thirds of the package as broken. What it catches is the case that matters:
+// a counted name whose body stopped being able to refuse anything.
+func refusesSomehow(fn *ast.FuncDecl) bool {
+	if returnsPermissionDenied(fn) {
+		return true
+	}
+	refuses := false
+	ast.Inspect(fn.Body, func(n ast.Node) bool {
+		switch node := n.(type) {
+		case *ast.SelectorExpr:
+			switch node.Sel.Name {
+			case "ErrNotFound", "ErrPermissionDenied", "ErrConflict":
+				refuses = true
+			}
+		case *ast.Ident:
+			// A call to a sibling gate, exported or not: the unexported
+			// helpers are named for what they do to a caller.
+			if isAuthDecision(node.Name) || strings.HasPrefix(node.Name, "ensure") ||
+				strings.HasPrefix(node.Name, "refuse") || strings.HasPrefix(node.Name, "probe") {
+				refuses = true
+			}
+		}
+		return !refuses
+	})
+	return refuses
 }
 
 // returnsPermissionDenied reports whether the body ever names the refusal
