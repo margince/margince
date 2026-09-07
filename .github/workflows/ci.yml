@@ -1077,7 +1077,7 @@ jobs:
   #   sonarcloud                 — advisory, for merge speed during heavy
   #                                development. Listing it here would make it
   #                                blocking by the back door.
-  #   vuln, live-boot, uat       — advisory today, and deliberately still
+  #   vuln, live-boot            — advisory today, and deliberately still
   #                                advisory here. See below.
   #
   # WHAT THE REPOSITORY ACTUALLY REQUIRES, said once and only here so the file
@@ -1095,21 +1095,19 @@ jobs:
   # part of it. It is not: #2543's keyserver hang cancelled that job and the pull
   # request stayed mergeable, because this aggregate alone decides.
   #
-  # This list is EXACTLY the contexts the ruleset required before the
-  # aggregate replaced them, and that equality is the point: this change moves
-  # where the verdict is computed, not what the verdict covers. Adding a lane and
-  # collapsing the contexts in one step would mean a red merge queue with two
-  # candidate explanations, during the week we are establishing whether the queue
-  # itself works.
+  # This list began as EXACTLY the contexts the ruleset required before the
+  # aggregate replaced them, because that change moved where the verdict is
+  # computed, not what the verdict covers. A lane joins it as its own change, so
+  # a red aggregate has one candidate explanation. `uat`, `license-gate` and
+  # `images` joined that way, each on its own evidence.
   #
-  # vuln, live-boot and uat are the tempting additions — they run on every
-  # qualifying change and a red one does not stop a merge, which is not a state
-  # worth keeping. The reason to wait is the batching: a flaky job under a merge
-  # queue does not cost one re-run, it fails the whole group it was checked in and
+  # vuln and live-boot are the tempting additions — they run on every qualifying
+  # change and a red one does not stop a merge, which is not a state worth
+  # keeping. The reason to wait is the batching: a flaky job under a merge queue
+  # does not cost one re-run, it fails the whole group it was checked in and
   # every entry in that group is re-queued, and nothing has ever exercised these
-  # three under a gate that blocks.
-  # Promote them once the queue has a measured baseline, as their own change, so a
-  # regression has one explanation.
+  # two under a gate that blocks. Promote them once the queue has a measured
+  # baseline, as their own change, so a regression has one explanation.
   # The role images BUILD on a PR that changes what they are.
   #
   # Nothing built them between two correct changes. ci.yml's old

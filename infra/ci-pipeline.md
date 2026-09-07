@@ -327,13 +327,13 @@ and the queue lane covers the remainder.
 upstream job reports a **green** required check, which is the same failure wearing
 a different hat.
 
-**`needs` is exactly the nine contexts the ruleset required before the aggregate
-replaced them**, and that equality is the point: this change moved where the
-verdict is computed, not what it covers. Widening the gate in the same step would
-mean a red merge queue with two candidate explanations, during the week the queue
-itself is on trial.
+**`needs` began as exactly the nine contexts the ruleset required before the
+aggregate replaced them**, because that change moved where the verdict is
+computed, not what it covers. A lane joins the list as its own change, so a red
+aggregate has one candidate explanation; `license-gate`, `images` and `uat` each
+joined that way, on their own evidence.
 
-Ten jobs are deliberately **not** in `needs`:
+Nine jobs are deliberately **not** in `needs`:
 
 - `changes` — the classifier produces no verdict.
 - `fe-quality`, `fe-unit`, `fe-bundle` — absorbed by the `frontend` fan-in.
@@ -349,14 +349,15 @@ Ten jobs are deliberately **not** in `needs`:
   re-queued, and nothing has ever exercised these two under a gate that blocks.
   Promote them once the queue has a measured baseline, as their own change, so a
   regression has exactly one explanation.
-- `uat` was on that list and is in the aggregate now. The queue argument assumed
-  a queue, and none has run since 2026-08-20; meanwhile the lane's record over
-  fifty-two pull-request runs was no flake at all — every red was one of three
-  deterministic screen regressions that had already landed on `main`, seen by
-  eleven pull requests in a row and stopping none of them. It reads no clock
-  (PERF-1 holds a request and asserts the heading did not wait on it; the
-  record-open budget is `make bench-mobile`'s), so a busy runner cannot redden
-  it, which is the one property a blocking Playwright lane has to have.
+
+`uat` was on that list and is in the aggregate now. The queue argument assumed a
+queue, and none has run since 2026-08-20; meanwhile the lane's record over
+fifty-two pull-request runs was no flake at all — every red was one of three
+deterministic screen regressions that had already landed on `main`, seen by
+eleven pull requests in a row and stopping none of them. It reads no clock
+(PERF-1 holds a request and asserts the heading did not wait on it; the
+record-open budget is `make bench-mobile`'s), so a busy runner cannot redden it,
+which is the one property a blocking Playwright lane has to have.
 
 Six rather than twelve because the per-test slice is the cheap half of a shard.
 Measured on a green run, one shard spent ~146s restoring the build cache and
