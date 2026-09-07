@@ -15,9 +15,14 @@ package integration
 
 import (
 	"errors"
+	"fmt"
+	"sync"
 	"testing"
 	"time"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -341,5 +346,76 @@ func TestARenewalCannotNameAnotherCompanysDeal(t *testing.T) {
 	}
 	if predecessor.Status == nil || string(*predecessor.Status) != contracts.StatusActive {
 		t.Errorf("predecessor status = %v after a refused renewal, want it still active", predecessor.Status)
+	}
+}
+
+// Two renewals of one agreement, at the same time, and only one may land.
+//
+// The read that decides — is this predecessor still renewable — used to happen
+// before any lock, and the lock arrived only when the patch was applied. So
+// both calls read `active`, both minted a successor, and then they serialised:
+// the second overwrote `superseded_by_id`, both successors committed, and the
+// chain this module calls single-headed had two heads with one orphaned. No
+// caller saw an error, and nothing downstream can tell which successor is the
+// agreement.
+//
+// The verdict is the same whichever goroutine wins, which is what makes this a
+// test rather than a coin toss: exactly one renewal succeeds, the other is
+// refused as a transition out of `superseded`, and the predecessor points at
+// one successor.
+func TestTwoConcurrentRenewalsLeaveOneSuccessor(t *testing.T) {
+	e := Setup(t)
+	org := e.SeedOrg(t, "Acme", nil)
+	predecessorID := anActiveContract(t, e, org, "MSA 2026")
+
+	const racers = 2
+	results := make([]crmcontracts.Contract, racers)
+	errs := make([]error, racers)
+	var wg sync.WaitGroup
+	for i := range racers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			results[i], errs[i] = e.Contracts.Renew(e.Admin(), predecessorID, contracts.CreateContractInput{
+				Title: fmt.Sprintf("MSA 2027 (%d)", i), ValueBasis: contracts.BasisTotal, Source: "manual",
+			}, nil)
+		}()
+	}
+	wg.Wait()
+
+	won := 0
+	for i, err := range errs {
+		var transition *contracts.InvalidStatusTransitionError
+		switch {
+		case err == nil:
+			won++
+		case errors.As(err, &transition), errors.Is(err, apperrors.ErrConflict):
+		default:
+			t.Errorf("renewal %d answered an unexpected error class: %v", i, err)
+		}
+	}
+	if won != 1 {
+		t.Fatalf("%d renewals landed, want exactly 1 — the loser must be refused rather than "+
+			"minting a second head: %v", won, errs)
+	}
+
+	// The chain, read from the database rather than from either caller: a
+	// successor nobody points at is the orphan this guards against.
+	successors := e.WsCount(t, `SELECT count(*) FROM contract WHERE title LIKE 'MSA 2027%'`)
+	if successors != 1 {
+		t.Errorf("%d successors exist, want 1 — the losing renewal committed one nothing points at",
+			successors)
+	}
+	pointed := e.WsCount(t, `
+		SELECT count(*) FROM contract predecessor
+		JOIN contract successor ON successor.id = predecessor.superseded_by_id
+		WHERE predecessor.id = $1 AND successor.title LIKE 'MSA 2027%'`, predecessorID)
+	if pointed != 1 {
+		t.Errorf("the predecessor points at %d successors, want 1", pointed)
+	}
+	for i, res := range results {
+		if errs[i] == nil && res.Id == (openapi_types.UUID{}) {
+			t.Errorf("renewal %d succeeded with no successor id", i)
+		}
 	}
 }

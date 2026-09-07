@@ -29,6 +29,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -39,7 +40,33 @@ import (
 // The read comes first and keeps its 404, so a caller who cannot see the
 // contract still cannot learn it exists by trying to change it; only a caller
 // who has been shown the row is answered ErrPermissionDenied.
+//
+// It then LOCKS and reads AGAIN, and the second read is the one the write uses.
+// Every caller here decides something from what it read — a renewal refuses a
+// predecessor that is already superseded, a transition validates against the
+// status it saw, and every patch takes its audit "before" image from it — while
+// the row lock arrived only at ApplyGuarded, after all of that. So two
+// concurrent renewals both read `active`, both minted a successor and then
+// serialised on the late lock: the second overwrote superseded_by_id, both
+// successors committed, and the chain this module calls single-headed had two
+// heads with one orphaned.
+//
+// The lock includes ARCHIVED rows on purpose. readContract does not filter the
+// contract's own archived_at — its clause is about the ANCHOR's — so LiveOnly
+// here would refuse a write this module admits today, which is a different
+// change from the ordering one.
+//
+// The first read still guards existence. LockRow carries no visibility clause,
+// so a caller who cannot see the row takes the lock and is then answered 404 by
+// the read under it — the same answer, for the transaction's lifetime, which is
+// what LockPair's own note says about resolving ids before locking them.
 func writableContract(ctx context.Context, tx pgx.Tx, id ids.ContractID, asOf time.Time) (crmcontracts.Contract, error) {
+	if _, err := readContract(ctx, tx, id, asOf); err != nil {
+		return crmcontracts.Contract{}, err
+	}
+	if _, err := storekit.LockRow(ctx, tx, contractTable, id.UUID, storekit.IncludeArchived); err != nil {
+		return crmcontracts.Contract{}, err
+	}
 	existing, err := readContract(ctx, tx, id, asOf)
 	if err != nil {
 		return crmcontracts.Contract{}, err
