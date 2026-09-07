@@ -25,9 +25,9 @@ How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.m
 | | |
 |---|---:|
 | Shipped invocation sites | 42 |
-| … best state `current` | 41 |
+| … best state `current` | 37 |
 | … best state `partial` | 0 |
-| … best state `stale` | 1 |
+| … best state `stale` | 5 |
 | … `absent` on every binding | 0 |
 | Scenarios in the corpus | 142 |
 | Committed records | 74 |
@@ -94,12 +94,12 @@ Which model to run each site on, and what that choice rests on.
 | [`corpus_ask/corpus_ask`](#corpus_askcorpus_ask) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `certified` | 1.00 | `current` | 3 | 3 |
 | [`deal_health/deal_status`](#deal_healthdeal_status) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `certified` | 1.00 | `current` | 3 | 2 |
 | [`document_extract/fields`](#document_extractfields) | `gemini · gemini-3.5-flash · eu_hosted` | `certified` | 1.00 | `current` | 4 | 1 |
-| [`draft_reply/account`](#draft_replyaccount) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `certified` | 1.00 | `current` | 1 | 4 |
-| [`draft_reply/first`](#draft_replyfirst) | `gemini · gemini-3.5-flash · eu_hosted` | `certified` | 1.00 | `current` | 1 | 4 |
+| [`draft_reply/account`](#draft_replyaccount) | - | - | - | `stale` | 1 | 4 |
+| [`draft_reply/first`](#draft_replyfirst) | - | - | - | `stale` | 1 | 4 |
 | [`draft_reply/intro`](#draft_replyintro) | `gemini · gemini-3.1-pro-preview · eu_hosted` | `certified` | 1.00 | `current` | 2 | 4 |
 | [`draft_reply/intro_note`](#draft_replyintro_note) | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `not_supported` | 1.00 | `current` | 3 | 4 |
-| [`draft_reply/person`](#draft_replyperson) | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `certified` | 1.00 | `current` | 1 | 4 |
-| [`draft_reply/reply`](#draft_replyreply) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `supported_degraded` | 1.00 | `current` | 4 | 5 |
+| [`draft_reply/person`](#draft_replyperson) | - | - | - | `stale` | 1 | 4 |
+| [`draft_reply/reply`](#draft_replyreply) | - | - | - | `stale` | 4 | 5 |
 | [`enrich/signature`](#enrichsignature) | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `certified` | 1.00 | `current` | 1 | 3 |
 | [`growth_fit/growth_fit`](#growth_fitgrowth_fit) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `not_supported` | 0.33 | `current` | 1 | 2 |
 | [`offer_draft/draft`](#offer_draftdraft) | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `not_supported` | 0.73 | `current` | 5 | 3 |
@@ -143,15 +143,15 @@ verdict each reached. Each record's own p50 and p95 are in the site tables.
 
 | Provider | Model | Env | Sites | `current` | `partial` | `stale` | Runs | Passed | Reliability | Slowest p95 | `certified` | `supported_degraded` | `not_supported` |
 |---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini` | `gemini-3.1-flash-lite` | `eu_hosted` | 36 | 35 | 0 | 1 | 381 | 330 | 0.87 | 4970ms | 17 | 5 | 14 |
-| `gemini` | `gemini-3.1-pro-preview` | `eu_hosted` | 6 | 6 | 0 | 0 | 36 | 36 | 1.00 | 46554ms | 4 | 0 | 2 |
-| `gemini` | `gemini-3.5-flash` | `eu_hosted` | 13 | 13 | 0 | 0 | 90 | 86 | 0.96 | 26168ms | 9 | 0 | 4 |
+| `gemini` | `gemini-3.1-flash-lite` | `eu_hosted` | 36 | 31 | 0 | 5 | 381 | 330 | 0.87 | 4970ms | 17 | 5 | 14 |
+| `gemini` | `gemini-3.1-pro-preview` | `eu_hosted` | 6 | 2 | 0 | 4 | 36 | 36 | 1.00 | 46554ms | 4 | 0 | 2 |
+| `gemini` | `gemini-3.5-flash` | `eu_hosted` | 13 | 9 | 0 | 4 | 90 | 86 | 0.96 | 26168ms | 9 | 0 | 4 |
 | `openai_compatible` | `anthropic/claude-haiku-4.5` | `eu_hosted` | 1 | 1 | 0 | 0 | 15 | 9 | 0.60 | 3731ms | 0 | 0 | 1 |
 | `openai_compatible` | `mistralai/ministral-14b-2512` | `cloud_frontier` | 11 | 0 | 0 | 11 | 160 | 113 | 0.71 | 20620ms | 8 | 0 | 3 |
 | `openai_compatible` | `mistralai/ministral-8b-2512` | `cloud_frontier` | 3 | 0 | 0 | 3 | 15 | 14 | 0.93 | 22390ms | 1 | 2 | 0 |
 | `openai_compatible` | `mistralai/mistral-large-2512` | `cloud_frontier` | 5 | 4 | 0 | 1 | 30 | 27 | 0.90 | 4574ms | 4 | 0 | 1 |
 | `openai_compatible` | `mistralai/mistral-large-2512` | `eu_hosted` | 6 | 6 | 0 | 0 | 42 | 37 | 0.88 | 4337ms | 4 | 1 | 1 |
-| `openai_compatible` | `openai/gpt-oss-120b` | `eu_hosted` | 35 | 34 | 0 | 1 | 372 | 298 | 0.80 | 5546ms | 12 | 9 | 14 |
+| `openai_compatible` | `openai/gpt-oss-120b` | `eu_hosted` | 35 | 30 | 0 | 5 | 372 | 298 | 0.80 | 5546ms | 12 | 9 | 14 |
 | `openai_compatible` | `z-ai/glm-5.2` | `cloud_frontier` | 5 | 4 | 0 | 1 | 30 | 28 | 0.93 | 18372ms | 4 | 0 | 1 |
 
 ## Stale records, and why
@@ -180,7 +180,23 @@ model, real network).
 | `cold_start/company_message` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `cold_start/field_extract` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `cold_start/sitereadmessage` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
+| `draft_reply/account` | `gemini · gemini-3.1-flash-lite · eu_hosted` | scenario account_first_touch_with_a_deal_in_flight — or the prompt this build now builds from it — has changed since the record scored it |
+| `draft_reply/account` | `gemini · gemini-3.1-pro-preview · eu_hosted` | scenario account_first_touch_with_a_deal_in_flight — or the prompt this build now builds from it — has changed since the record scored it |
+| `draft_reply/account` | `gemini · gemini-3.5-flash · eu_hosted` | scenario account_first_touch_with_a_deal_in_flight — or the prompt this build now builds from it — has changed since the record scored it |
+| `draft_reply/account` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | scenario account_first_touch_with_a_deal_in_flight — or the prompt this build now builds from it — has changed since the record scored it |
+| `draft_reply/first` | `gemini · gemini-3.1-flash-lite · eu_hosted` | scenario first_message_from_an_intent_alone — or the prompt this build now builds from it — has changed since the record scored it |
+| `draft_reply/first` | `gemini · gemini-3.1-pro-preview · eu_hosted` | scenario first_message_from_an_intent_alone — or the prompt this build now builds from it — has changed since the record scored it |
+| `draft_reply/first` | `gemini · gemini-3.5-flash · eu_hosted` | scenario first_message_from_an_intent_alone — or the prompt this build now builds from it — has changed since the record scored it |
+| `draft_reply/first` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | scenario first_message_from_an_intent_alone — or the prompt this build now builds from it — has changed since the record scored it |
+| `draft_reply/person` | `gemini · gemini-3.1-flash-lite · eu_hosted` | scenario person_first_touch_in_german — or the prompt this build now builds from it — has changed since the record scored it |
+| `draft_reply/person` | `gemini · gemini-3.1-pro-preview · eu_hosted` | scenario person_first_touch_in_german — or the prompt this build now builds from it — has changed since the record scored it |
+| `draft_reply/person` | `gemini · gemini-3.5-flash · eu_hosted` | scenario person_first_touch_in_german — or the prompt this build now builds from it — has changed since the record scored it |
+| `draft_reply/person` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | scenario person_first_touch_in_german — or the prompt this build now builds from it — has changed since the record scored it |
+| `draft_reply/reply` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 4 scenarios it scored have changed since, or the prompts built from them have: german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask |
+| `draft_reply/reply` | `gemini · gemini-3.1-pro-preview · eu_hosted` | 4 scenarios it scored have changed since, or the prompts built from them have: german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask |
+| `draft_reply/reply` | `gemini · gemini-3.5-flash · eu_hosted` | 4 scenarios it scored have changed since, or the prompts built from them have: german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask |
 | `draft_reply/reply` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
+| `draft_reply/reply` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 4 scenarios it scored have changed since, or the prompts built from them have: german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask |
 | `enrich/signature` | `openai_compatible · mistralai/ministral-8b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `offer_draft/draft` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `site_extract/profile` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
@@ -552,10 +568,10 @@ Records (4):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 1354ms | 3477ms | 3 | 0 | 0 | 0 |
-| `gemini · gemini-3.1-pro-preview · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 24063ms | 46554ms | 3 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 10016ms | 26168ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1223ms | 2663ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 1354ms | 3477ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-pro-preview · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 24063ms | 46554ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 10016ms | 26168ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 1223ms | 2663ms | 3 | 0 | 0 | 0 |
 
 #### `draft_reply/first`
 
@@ -571,10 +587,10 @@ Records (4):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 1/1 | `not_supported` | 3 | 3 | 1.00 | 1354ms | 3477ms | 3 | 0 | 0 | 0 |
-| `gemini · gemini-3.1-pro-preview · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 24063ms | 46554ms | 3 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 10016ms | 26168ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1223ms | 2663ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 0/1 | `not_supported` | 3 | 3 | 1.00 | 1354ms | 3477ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-pro-preview · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 24063ms | 46554ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 10016ms | 26168ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 1223ms | 2663ms | 3 | 0 | 0 | 0 |
 
 #### `draft_reply/intro`
 
@@ -631,10 +647,10 @@ Records (4):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1354ms | 3477ms | 3 | 0 | 0 | 0 |
-| `gemini · gemini-3.1-pro-preview · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 24063ms | 46554ms | 3 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 10016ms | 26168ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 1223ms | 2663ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 1354ms | 3477ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-pro-preview · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 24063ms | 46554ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 10016ms | 26168ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 1223ms | 2663ms | 3 | 0 | 0 | 0 |
 
 #### `draft_reply/reply`
 
@@ -653,11 +669,11 @@ Records (5):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 4/4 | `supported_degraded` | 12 | 12 | 1.00 | 1354ms | 3477ms | 12 | 0 | 0 | 0 |
-| `gemini · gemini-3.1-pro-preview · eu_hosted` | `current` | 4/4 | `not_supported` | 12 | 12 | 1.00 | 24063ms | 46554ms | 12 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · eu_hosted` | `current` | 4/4 | `not_supported` | 12 | 12 | 1.00 | 10016ms | 26168ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 0/4 | `supported_degraded` | 12 | 12 | 1.00 | 1354ms | 3477ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-pro-preview · eu_hosted` | `stale` | 0/4 | `not_supported` | 12 | 12 | 1.00 | 24063ms | 46554ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · eu_hosted` | `stale` | 0/4 | `not_supported` | 12 | 12 | 1.00 | 10016ms | 26168ms | 12 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `certified` | 3 | 3 | 1.00 | 2508ms | 2685ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 4/4 | `not_supported` | 12 | 12 | 1.00 | 1223ms | 2663ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `stale` | 0/4 | `not_supported` | 12 | 12 | 1.00 | 1223ms | 2663ms | 12 | 0 | 0 | 0 |
 
 ### `enrich`
 

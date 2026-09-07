@@ -1,9 +1,9 @@
 {
   "totals": {
     "sites": 42,
-    "sites_best_current": 41,
+    "sites_best_current": 37,
     "sites_best_partial": 0,
-    "sites_best_stale": 1,
+    "sites_best_stale": 5,
     "sites_absent": 0,
     "scenarios": 142,
     "records": 74,
@@ -17,9 +17,9 @@
         "env": "eu_hosted"
       },
       "sites": 36,
-      "sites_current": 35,
+      "sites_current": 31,
       "sites_partial": 0,
-      "sites_stale": 1,
+      "sites_stale": 5,
       "runs": 381,
       "passed": 330,
       "reliability": 0.8661417322834646,
@@ -37,9 +37,9 @@
         "env": "eu_hosted"
       },
       "sites": 6,
-      "sites_current": 6,
+      "sites_current": 2,
       "sites_partial": 0,
-      "sites_stale": 0,
+      "sites_stale": 4,
       "runs": 36,
       "passed": 36,
       "reliability": 1,
@@ -57,9 +57,9 @@
         "env": "eu_hosted"
       },
       "sites": 13,
-      "sites_current": 13,
+      "sites_current": 9,
       "sites_partial": 0,
-      "sites_stale": 0,
+      "sites_stale": 4,
       "runs": 90,
       "passed": 86,
       "reliability": 0.9555555555555556,
@@ -177,9 +177,9 @@
         "env": "eu_hosted"
       },
       "sites": 35,
-      "sites_current": 34,
+      "sites_current": 30,
       "sites_partial": 0,
-      "sites_stale": 1,
+      "sites_stale": 5,
       "runs": 372,
       "passed": 298,
       "reliability": 0.8010752688172043,
@@ -1811,17 +1811,8 @@
         "proof",
         "market"
       ],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
-          "env": "eu_hosted"
-        },
-        "band": "certified",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "account_first_touch_with_a_deal_in_flight",
@@ -1836,9 +1827,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
@@ -1851,7 +1842,7 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "scenario account_first_touch_with_a_deal_in_flight — or the prompt this build now builds from it — has changed since the record scored it"
         },
         {
           "binding": {
@@ -1859,9 +1850,9 @@
             "model": "gemini-3.1-pro-preview",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
@@ -1874,7 +1865,7 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "scenario account_first_touch_with_a_deal_in_flight — or the prompt this build now builds from it — has changed since the record scored it"
         },
         {
           "binding": {
@@ -1882,9 +1873,9 @@
             "model": "gemini-3.5-flash",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
@@ -1897,7 +1888,7 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "scenario account_first_touch_with_a_deal_in_flight — or the prompt this build now builds from it — has changed since the record scored it"
         },
         {
           "binding": {
@@ -1905,9 +1896,9 @@
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
@@ -1920,7 +1911,7 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "scenario account_first_touch_with_a_deal_in_flight — or the prompt this build now builds from it — has changed since the record scored it"
         }
       ]
     },
@@ -1935,17 +1926,8 @@
         "proof",
         "market"
       ],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.5-flash",
-          "env": "eu_hosted"
-        },
-        "band": "certified",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "first_message_from_an_intent_alone",
@@ -1960,9 +1942,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
@@ -1975,7 +1957,7 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "scenario first_message_from_an_intent_alone — or the prompt this build now builds from it — has changed since the record scored it"
         },
         {
           "binding": {
@@ -1983,9 +1965,9 @@
             "model": "gemini-3.1-pro-preview",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
@@ -1998,7 +1980,7 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "scenario first_message_from_an_intent_alone — or the prompt this build now builds from it — has changed since the record scored it"
         },
         {
           "binding": {
@@ -2006,9 +1988,9 @@
             "model": "gemini-3.5-flash",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
@@ -2021,7 +2003,7 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "scenario first_message_from_an_intent_alone — or the prompt this build now builds from it — has changed since the record scored it"
         },
         {
           "binding": {
@@ -2029,9 +2011,9 @@
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
@@ -2044,7 +2026,7 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "scenario first_message_from_an_intent_alone — or the prompt this build now builds from it — has changed since the record scored it"
         }
       ]
     },
@@ -2322,17 +2304,8 @@
         "proof",
         "market"
       ],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "openai_compatible",
-          "model": "openai/gpt-oss-120b",
-          "env": "eu_hosted"
-        },
-        "band": "certified",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "person_first_touch_in_german",
@@ -2347,9 +2320,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
@@ -2362,7 +2335,7 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "scenario person_first_touch_in_german — or the prompt this build now builds from it — has changed since the record scored it"
         },
         {
           "binding": {
@@ -2370,9 +2343,9 @@
             "model": "gemini-3.1-pro-preview",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
@@ -2385,7 +2358,7 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "scenario person_first_touch_in_german — or the prompt this build now builds from it — has changed since the record scored it"
         },
         {
           "binding": {
@@ -2393,9 +2366,9 @@
             "model": "gemini-3.5-flash",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
@@ -2408,7 +2381,7 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "scenario person_first_touch_in_german — or the prompt this build now builds from it — has changed since the record scored it"
         },
         {
           "binding": {
@@ -2416,9 +2389,9 @@
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
@@ -2431,7 +2404,7 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "scenario person_first_touch_in_german — or the prompt this build now builds from it — has changed since the record scored it"
         }
       ]
     },
@@ -2446,17 +2419,8 @@
         "proof",
         "market"
       ],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
-          "env": "eu_hosted"
-        },
-        "band": "supported_degraded",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "german_thread_with_an_introduction_in_it",
@@ -2486,9 +2450,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 4,
+          "scenarios_measured": 0,
           "scenarios_total": 4,
           "runs": 12,
           "passed": 12,
@@ -2501,7 +2465,7 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since, or the prompts built from them have: german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask"
         },
         {
           "binding": {
@@ -2509,9 +2473,9 @@
             "model": "gemini-3.1-pro-preview",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 4,
+          "scenarios_measured": 0,
           "scenarios_total": 4,
           "runs": 12,
           "passed": 12,
@@ -2524,7 +2488,7 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since, or the prompts built from them have: german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask"
         },
         {
           "binding": {
@@ -2532,9 +2496,9 @@
             "model": "gemini-3.5-flash",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 4,
+          "scenarios_measured": 0,
           "scenarios_total": 4,
           "runs": 12,
           "passed": 12,
@@ -2547,7 +2511,7 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since, or the prompts built from them have: german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask"
         },
         {
           "binding": {
@@ -2578,9 +2542,9 @@
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 4,
+          "scenarios_measured": 0,
           "scenarios_total": 4,
           "runs": 12,
           "passed": 12,
@@ -2593,7 +2557,7 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since, or the prompts built from them have: german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask"
         }
       ]
     },

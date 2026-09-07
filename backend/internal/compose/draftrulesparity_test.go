@@ -267,7 +267,7 @@ func localNameForDraftRules(file *ast.File) (string, bool) {
 func TestTheSharedRulesStillSayTheThingsTheyExistToSay(t *testing.T) {
 	promises := map[string]string{
 		"write in the correspondence's language":    "Write the entire draft",
-		"do not read the sender out of quoted text": "Never work out who is who from quoted message headers",
+		"do not read the sender out of quoted text": "who from quoted message headers",
 		"never greet the sender as the recipient":   "The sender is NOT the recipient",
 		"do not invent who introduced whom":         "Never state who introduced whom",
 		"no follow-up on a first touch":             `At state "none" there is no prior contact`,

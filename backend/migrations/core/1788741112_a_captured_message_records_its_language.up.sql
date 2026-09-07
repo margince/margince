@@ -21,6 +21,11 @@
 -- one — so the scan finds nothing, but it is a scan and not a metadata-only
 -- change.
 
+-- A bounded wait: the ALTER takes a lock that blocks writers on activity, and
+-- an open transaction holding a conflicting one would otherwise stall every
+-- write to the table for as long as this migration is willing to queue.
+SET LOCAL lock_timeout = '3s';
+
 ALTER TABLE activity DROP CONSTRAINT activity_language_check;
 
 ALTER TABLE activity ADD CONSTRAINT activity_language_check

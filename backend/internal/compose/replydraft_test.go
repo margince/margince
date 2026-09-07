@@ -323,7 +323,8 @@ func TestAVoicedDraftIsToldTheGreetingRuleToo(t *testing.T) {
 // nothing about what a live model would write.
 func TestAnEnglishThreadIsDraftedInEnglishUnderAGermanVoice(t *testing.T) {
 	brain := &replyBrainStub{response: model.Response{
-		Text: `{"subject":"Re: Invoice","body":"Hello,\n\nI have the invoice in front of me.\n\nBest"}`}}
+		Text: `{"subject":"Re: Invoice","body":"Hello,\n\nI have the invoice in front of me.\n\nBest"}`,
+	}}
 	drafter := replyDrafter{brain: brain}
 
 	// A voice block of the shape a German-only corpus produces: every exemplar

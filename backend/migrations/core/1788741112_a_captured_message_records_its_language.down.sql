@@ -6,6 +6,11 @@
 -- dictionary, and a rollback that silently changes what lexical search finds is
 -- worse than one that stops and says so.
 
+-- A bounded wait: the ALTER takes a lock that blocks writers on activity, and
+-- an open transaction holding a conflicting one would otherwise stall every
+-- write to the table for as long as this migration is willing to queue.
+SET LOCAL lock_timeout = '3s';
+
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM activity WHERE language = 'vi') THEN
