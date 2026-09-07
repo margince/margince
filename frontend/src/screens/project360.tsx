@@ -21,6 +21,7 @@ import { SurfaceState, sectionState } from "../design-system/surfacestate";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { formatDate } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { taskWriteKeys } from "./activitykeys";
 import { ArchiveAction } from "./archive";
 import { QueryGate, throwProblem, useMe, useSorMode } from "./common";
 import { NewDealAction } from "./companyactions";
@@ -61,6 +62,7 @@ import {
 } from "./recordchronology";
 import { RecordEmailVerb } from "./recordemail";
 import { ShareAction } from "./share";
+import { TaskDetailModal, useTaskUpdate } from "./taskactions";
 import { TimelineActions } from "./timelineactions";
 import { groupChronology } from "./timelinegroups";
 import "./projects.css";
@@ -120,6 +122,11 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   // describes itself by pointing at the same explanation.
   const readOnlyReason = useProjectVerbRefusal(project);
   const readOnly = Boolean(readOnlyReason);
+  // The commitments card's task detail, owned HERE rather than by the card:
+  // one modal per page, so two cards cannot both put a dialog on the screen.
+  // The same arrangement the account page uses for its own step rows.
+  const [openTask, setOpenTask] = useState<string | null>(null);
+  const taskUpdate = useTaskUpdate(taskWriteKeys("project", project.id));
   return (
     <RecordView
       // WHO is on this work comes first, then the paperwork. The column used
@@ -228,7 +235,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
           />
         </div>
         <div id={PROJECT_COMMITMENTS_ANCHOR}>
-          <CommitmentsCard view={view} />
+          <CommitmentsCard view={view} onOpenTask={setOpenTask} />
         </div>
       </div>
       <AdvanceProjectModal
@@ -237,6 +244,14 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
         to={moveTo}
         onClose={() => setMoveTo(null)}
       />
+      {openTask && (
+        <TaskDetailModal
+          activityId={openTask}
+          readOnly={readOnly}
+          onClose={() => setOpenTask(null)}
+          update={taskUpdate}
+        />
+      )}
     </RecordView>
   );
 }
