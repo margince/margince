@@ -4913,6 +4913,33 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  # ------------------------ /deals/{id}/stage-evidence ------------------------
+  /deals/{id}/stage-evidence:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Deals]
+      operationId: listStageEvidence
+      summary: What has been observed about this deal against its stage's criteria.
+      description: |
+        The evidence ledger for one deal, newest observation first.
+
+        Refuted claims are INCLUDED and carry `refuted_at`. A reader asking what
+        a stage move rested on needs the claim that was withdrawn as much as the
+        ones that stood.
+
+        `author_side` is the column to read before trusting a claim: evidence for
+        a criterion naming something the buyer did is only good when the buyer
+        authored it.
+      responses:
+        '200':
+          description: The deal's evidence.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StageEvidenceListResponse' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   # ------------------------ /stages/{id}/exit-criteria ------------------------
   /stages/{id}/exit-criteria:
     parameters:
@@ -30391,6 +30418,99 @@ components:
         position: { type: integer }
         semantic: { type: string, enum: [open, won, lost] }
         win_probability: { type: integer, minimum: 0, maximum: 100 }
+
+    StageEvidence:
+      type: object
+      description: |
+        One observation about a deal against one of its stage's exit criteria.
+        Mirrors `deal_stage_evidence`. Configuration says what a stage requires;
+        this says what was seen, and where.
+      required:
+        [id, deal_id, criterion_id, source_type, source_id, author_side,
+         commitment, met, observed_at, extracted_by]
+      properties:
+        id: { type: string, format: uuid }
+        deal_id: { type: string, format: uuid }
+        criterion_id: { type: string, format: uuid }
+        source_type: { $ref: '#/components/schemas/StageEvidenceSource' }
+        source_id:
+          type: string
+          format: uuid
+          description: |
+            The activity, contract or deal-room decision this was read from.
+        source_lines:
+          type: [array, 'null']
+          items: { type: integer }
+          description: |
+            1-based transcript lines, when the claim quotes one.
+        snippet:
+          type: [string, 'null']
+          description: The cited words, at most 500 characters.
+        author_side: { $ref: '#/components/schemas/StageEvidenceAuthorSide' }
+        commitment: { $ref: '#/components/schemas/StageEvidenceCommitment' }
+        met:
+          type: boolean
+          description: Whether the criterion was satisfied, not merely discussed.
+        confidence:
+          type: [number, 'null']
+          minimum: 0
+          maximum: 1
+          description: |
+            How sure the reader was. Absent for a deterministic writer: a record
+            either states the fact or it does not.
+        observed_at: { type: string, format: date-time }
+        extracted_by:
+          type: string
+          description: |
+            Which writer made the claim — `deterministic`, or the model task that read it.
+        refuted_at:
+          type: [string, 'null']
+          format: date-time
+          description: |
+            When a human marked this claim incorrect. The row survives: why a
+            stage move was reversed is a question asked later.
+        refuted_by: { type: [string, 'null'], format: uuid }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        version: { type: integer, format: int64 }
+
+    StageEvidenceSource:
+      type: string
+      description: What kind of record the observation was read from.
+      enum: [activity, contract]
+
+    StageEvidenceAuthorSide:
+      type: string
+      description: |
+        Who authored the cited thing. Computed by the engine from the activity's
+        direction, its participants and the installation's own email domains —
+        never claimed by a model.
+
+        It settles the criteria that turn on WHOSE WORD something is:
+        `buyer_confirmed` and `terms_accepted` take `buyer`-authored evidence
+        and nothing else, because a message our own side wrote saying they
+        confirmed something is our claim about them, not theirs.
+
+        The other kinds turn on a recorded fact instead. A meeting either took
+        place or it did not, and both sides sign a contract, so `event_held` and
+        `document_signed` are judged on the record — a meeting's transcript or
+        its status, a contract turning active — and this field rides along as
+        the trail's account of who spoke rather than as the test.
+      enum: [buyer, seller, unknown]
+
+    StageEvidenceCommitment:
+      type: string
+      description: |
+        Whether the cited text agreed to the thing or merely floated it. "We
+        could meet Thursday" is `proposed`; "Thursday works" is `agreed`.
+      enum: [agreed, proposed, none]
+
+    StageEvidenceListResponse:
+      type: object
+      required: [data, page]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/StageEvidence' } }
+        page: { $ref: '#/components/schemas/PageInfo' }
 
     StageExitCriterion:
       type: object

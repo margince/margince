@@ -12040,6 +12040,66 @@ func (e StageCriterionKind) Valid() bool {
 	}
 }
 
+// Defines values for StageEvidenceAuthorSide.
+const (
+	StageEvidenceAuthorSideBuyer   StageEvidenceAuthorSide = "buyer"
+	StageEvidenceAuthorSideSeller  StageEvidenceAuthorSide = "seller"
+	StageEvidenceAuthorSideUnknown StageEvidenceAuthorSide = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the StageEvidenceAuthorSide enum.
+func (e StageEvidenceAuthorSide) Valid() bool {
+	switch e {
+	case StageEvidenceAuthorSideBuyer:
+		return true
+	case StageEvidenceAuthorSideSeller:
+		return true
+	case StageEvidenceAuthorSideUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StageEvidenceCommitment.
+const (
+	StageEvidenceCommitmentAgreed   StageEvidenceCommitment = "agreed"
+	StageEvidenceCommitmentNone     StageEvidenceCommitment = "none"
+	StageEvidenceCommitmentProposed StageEvidenceCommitment = "proposed"
+)
+
+// Valid indicates whether the value is a known member of the StageEvidenceCommitment enum.
+func (e StageEvidenceCommitment) Valid() bool {
+	switch e {
+	case StageEvidenceCommitmentAgreed:
+		return true
+	case StageEvidenceCommitmentNone:
+		return true
+	case StageEvidenceCommitmentProposed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StageEvidenceSource.
+const (
+	StageEvidenceSourceActivity StageEvidenceSource = "activity"
+	StageEvidenceSourceContract StageEvidenceSource = "contract"
+)
+
+// Valid indicates whether the value is a known member of the StageEvidenceSource enum.
+func (e StageEvidenceSource) Valid() bool {
+	switch e {
+	case StageEvidenceSourceActivity:
+		return true
+	case StageEvidenceSourceContract:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for StartBackfillRequestWindow.
 const (
 	StartBackfillRequestWindowN12m StartBackfillRequestWindow = "12m"
@@ -12105,34 +12165,34 @@ func (e TagColor) Valid() bool {
 
 // Defines values for TagDetailColor.
 const (
-	Amber  TagDetailColor = "amber"
-	Lime   TagDetailColor = "lime"
-	Orange TagDetailColor = "orange"
-	Rose   TagDetailColor = "rose"
-	Sky    TagDetailColor = "sky"
-	Slate  TagDetailColor = "slate"
-	Teal   TagDetailColor = "teal"
-	Violet TagDetailColor = "violet"
+	TagDetailColorAmber  TagDetailColor = "amber"
+	TagDetailColorLime   TagDetailColor = "lime"
+	TagDetailColorOrange TagDetailColor = "orange"
+	TagDetailColorRose   TagDetailColor = "rose"
+	TagDetailColorSky    TagDetailColor = "sky"
+	TagDetailColorSlate  TagDetailColor = "slate"
+	TagDetailColorTeal   TagDetailColor = "teal"
+	TagDetailColorViolet TagDetailColor = "violet"
 )
 
 // Valid indicates whether the value is a known member of the TagDetailColor enum.
 func (e TagDetailColor) Valid() bool {
 	switch e {
-	case Amber:
+	case TagDetailColorAmber:
 		return true
-	case Lime:
+	case TagDetailColorLime:
 		return true
-	case Orange:
+	case TagDetailColorOrange:
 		return true
-	case Rose:
+	case TagDetailColorRose:
 		return true
-	case Sky:
+	case TagDetailColorSky:
 		return true
-	case Slate:
+	case TagDetailColorSlate:
 		return true
-	case Teal:
+	case TagDetailColorTeal:
 		return true
-	case Violet:
+	case TagDetailColorViolet:
 		return true
 	default:
 		return false
@@ -13170,16 +13230,16 @@ func (e VoiceBuildStatusCode) Valid() bool {
 
 // Defines values for VoiceCorpusPreviewRequestFormat.
 const (
-	VoiceCorpusPreviewRequestFormatText       VoiceCorpusPreviewRequestFormat = "text"
-	VoiceCorpusPreviewRequestFormatTranscript VoiceCorpusPreviewRequestFormat = "transcript"
+	Text       VoiceCorpusPreviewRequestFormat = "text"
+	Transcript VoiceCorpusPreviewRequestFormat = "transcript"
 )
 
 // Valid indicates whether the value is a known member of the VoiceCorpusPreviewRequestFormat enum.
 func (e VoiceCorpusPreviewRequestFormat) Valid() bool {
 	switch e {
-	case VoiceCorpusPreviewRequestFormatText:
+	case Text:
 		return true
-	case VoiceCorpusPreviewRequestFormatTranscript:
+	case Transcript:
 		return true
 	default:
 		return false
@@ -16491,34 +16551,34 @@ func (e GetWorklistParamsScope) Valid() bool {
 
 // Defines values for GetWorklistParamsFilter.
 const (
-	GetWorklistParamsFilterAll             GetWorklistParamsFilter = "all"
-	GetWorklistParamsFilterCustomerWaiting GetWorklistParamsFilter = "customer_waiting"
-	GetWorklistParamsFilterDealsAtRisk     GetWorklistParamsFilter = "deals_at_risk"
-	GetWorklistParamsFilterDecisions       GetWorklistParamsFilter = "decisions"
-	GetWorklistParamsFilterLeads           GetWorklistParamsFilter = "leads"
-	GetWorklistParamsFilterMeetings        GetWorklistParamsFilter = "meetings"
-	GetWorklistParamsFilterSystem          GetWorklistParamsFilter = "system"
-	GetWorklistParamsFilterTasks           GetWorklistParamsFilter = "tasks"
+	All             GetWorklistParamsFilter = "all"
+	CustomerWaiting GetWorklistParamsFilter = "customer_waiting"
+	DealsAtRisk     GetWorklistParamsFilter = "deals_at_risk"
+	Decisions       GetWorklistParamsFilter = "decisions"
+	Leads           GetWorklistParamsFilter = "leads"
+	Meetings        GetWorklistParamsFilter = "meetings"
+	System          GetWorklistParamsFilter = "system"
+	Tasks           GetWorklistParamsFilter = "tasks"
 )
 
 // Valid indicates whether the value is a known member of the GetWorklistParamsFilter enum.
 func (e GetWorklistParamsFilter) Valid() bool {
 	switch e {
-	case GetWorklistParamsFilterAll:
+	case All:
 		return true
-	case GetWorklistParamsFilterCustomerWaiting:
+	case CustomerWaiting:
 		return true
-	case GetWorklistParamsFilterDealsAtRisk:
+	case DealsAtRisk:
 		return true
-	case GetWorklistParamsFilterDecisions:
+	case Decisions:
 		return true
-	case GetWorklistParamsFilterLeads:
+	case Leads:
 		return true
-	case GetWorklistParamsFilterMeetings:
+	case Meetings:
 		return true
-	case GetWorklistParamsFilterSystem:
+	case System:
 		return true
-	case GetWorklistParamsFilterTasks:
+	case Tasks:
 		return true
 	default:
 		return false
@@ -33049,6 +33109,94 @@ type StageSemantic string
 // `event_held`, `document_signed` and `terms_accepted` each name something the
 // BUYER did, so a seller's own message can never settle one.
 type StageCriterionKind string
+
+// StageEvidence One observation about a deal against one of its stage's exit criteria.
+// Mirrors `deal_stage_evidence`. Configuration says what a stage requires;
+// this says what was seen, and where.
+type StageEvidence struct {
+	// AuthorSide Who authored the cited thing. Computed by the engine from the activity's
+	// direction, its participants and the installation's own email domains —
+	// never claimed by a model.
+	//
+	// It settles the criteria that turn on WHOSE WORD something is:
+	// `buyer_confirmed` and `terms_accepted` take `buyer`-authored evidence
+	// and nothing else, because a message our own side wrote saying they
+	// confirmed something is our claim about them, not theirs.
+	//
+	// The other kinds turn on a recorded fact instead. A meeting either took
+	// place or it did not, and both sides sign a contract, so `event_held` and
+	// `document_signed` are judged on the record — a meeting's transcript or
+	// its status, a contract turning active — and this field rides along as
+	// the trail's account of who spoke rather than as the test.
+	AuthorSide StageEvidenceAuthorSide `json:"author_side"`
+
+	// Commitment Whether the cited text agreed to the thing or merely floated it. "We
+	// could meet Thursday" is `proposed`; "Thursday works" is `agreed`.
+	Commitment StageEvidenceCommitment `json:"commitment"`
+
+	// Confidence How sure the reader was. Absent for a deterministic writer: a record
+	// either states the fact or it does not.
+	Confidence  *float32           `json:"confidence,omitempty"`
+	CreatedAt   *time.Time         `json:"created_at,omitempty"`
+	CriterionId openapi_types.UUID `json:"criterion_id"`
+	DealId      openapi_types.UUID `json:"deal_id"`
+
+	// ExtractedBy Which writer made the claim — `deterministic`, or the model task that read it.
+	ExtractedBy string             `json:"extracted_by"`
+	Id          openapi_types.UUID `json:"id"`
+
+	// Met Whether the criterion was satisfied, not merely discussed.
+	Met        bool      `json:"met"`
+	ObservedAt time.Time `json:"observed_at"`
+
+	// RefutedAt When a human marked this claim incorrect. The row survives: why a
+	// stage move was reversed is a question asked later.
+	RefutedAt *time.Time          `json:"refuted_at,omitempty"`
+	RefutedBy *openapi_types.UUID `json:"refuted_by,omitempty"`
+
+	// Snippet The cited words, at most 500 characters.
+	Snippet *string `json:"snippet,omitempty"`
+
+	// SourceId The activity, contract or deal-room decision this was read from.
+	SourceId openapi_types.UUID `json:"source_id"`
+
+	// SourceLines 1-based transcript lines, when the claim quotes one.
+	SourceLines *[]int `json:"source_lines,omitempty"`
+
+	// SourceType What kind of record the observation was read from.
+	SourceType StageEvidenceSource `json:"source_type"`
+	UpdatedAt  *time.Time          `json:"updated_at,omitempty"`
+	Version    *int64              `json:"version,omitempty"`
+}
+
+// StageEvidenceAuthorSide Who authored the cited thing. Computed by the engine from the activity's
+// direction, its participants and the installation's own email domains —
+// never claimed by a model.
+//
+// It settles the criteria that turn on WHOSE WORD something is:
+// `buyer_confirmed` and `terms_accepted` take `buyer`-authored evidence
+// and nothing else, because a message our own side wrote saying they
+// confirmed something is our claim about them, not theirs.
+//
+// The other kinds turn on a recorded fact instead. A meeting either took
+// place or it did not, and both sides sign a contract, so `event_held` and
+// `document_signed` are judged on the record — a meeting's transcript or
+// its status, a contract turning active — and this field rides along as
+// the trail's account of who spoke rather than as the test.
+type StageEvidenceAuthorSide string
+
+// StageEvidenceCommitment Whether the cited text agreed to the thing or merely floated it. "We
+// could meet Thursday" is `proposed`; "Thursday works" is `agreed`.
+type StageEvidenceCommitment string
+
+// StageEvidenceListResponse defines model for StageEvidenceListResponse.
+type StageEvidenceListResponse struct {
+	Data []StageEvidence `json:"data"`
+	Page PageInfo        `json:"page"`
+}
+
+// StageEvidenceSource What kind of record the observation was read from.
+type StageEvidenceSource string
 
 // StageExitCriterion One thing that must be true of a deal before it leaves a stage. Mirrors the
 // `stage_exit_criterion` table. Configuration, not observation: whether a
@@ -50458,6 +50606,9 @@ type ServerInterface interface {
 	// Read the buying roles out of what this deal's contacts have written.
 	// (POST /deals/{id}/role-proposals)
 	ProposeDealRoles(w http.ResponseWriter, r *http.Request, id Id)
+	// What has been observed about this deal against its stage's criteria.
+	// (GET /deals/{id}/stage-evidence)
+	ListStageEvidence(w http.ResponseWriter, r *http.Request, id Id)
 	// List a deal's stakeholders (deal↔person relationships).
 	// (GET /deals/{id}/stakeholders)
 	ListDealStakeholders(w http.ResponseWriter, r *http.Request, id Id)
@@ -52924,6 +53075,12 @@ func (_ Unimplemented) CreateOffer(w http.ResponseWriter, r *http.Request, id Id
 // Read the buying roles out of what this deal's contacts have written.
 // (POST /deals/{id}/role-proposals)
 func (_ Unimplemented) ProposeDealRoles(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What has been observed about this deal against its stage's criteria.
+// (GET /deals/{id}/stage-evidence)
+func (_ Unimplemented) ListStageEvidence(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -63987,6 +64144,40 @@ func (siw *ServerInterfaceWrapper) ProposeDealRoles(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ProposeDealRoles(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListStageEvidence operation middleware
+func (siw *ServerInterfaceWrapper) ListStageEvidence(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListStageEvidence(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -81900,6 +82091,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/deals/{id}/role-proposals", wrapper.ProposeDealRoles)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/deals/{id}/stage-evidence", wrapper.ListStageEvidence)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deals/{id}/stakeholders", wrapper.ListDealStakeholders)
