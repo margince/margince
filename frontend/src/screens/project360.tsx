@@ -155,7 +155,12 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
       name={project.name}
       subtitle={<ProjectSubtitle view={view} />}
       zone={recordZone}
-      badges={
+      // The phase and the key read beside the name, not at the far end of
+      // the header among the verbs: both are tags ON the record — where it
+      // stands and what a human calls it in a subject line — and a reader
+      // looking at the name was finding them across the page, above the
+      // buttons that act on it.
+      nameBadge={
         <>
           <PhaseBadge phase={project.phase} />
           {project.key && <ProjectKeyChip projectKey={project.key} />}

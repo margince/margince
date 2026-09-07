@@ -285,10 +285,10 @@ export type SettingsScope =
   | "workspace"
   | "installation"
   // A page whose surfaces do not agree. My connections is the case: most of its
-  // nine cards are the reader's own mailboxes and network, and two are not —
-  // MailSharingCard writes `capture_settings`, the whole installation's
-  // mail-sharing rule, and ConnectorsCard carries the workspace's Telegram bot
-  // beside the reader's own mailboxes.
+  // cards are the reader's own mailboxes and network, and one is not —
+  // ConnectorsCard's second panel is the workspace's Telegram bot, connected
+  // once for everybody, sitting beside the mailboxes each reader connects for
+  // themselves.
   //
   // Its own value rather than picking the wider of the two, because "Company"
   // over a page that is mostly personal is as wrong as "Only you" over a
@@ -352,18 +352,30 @@ export const SETTINGS_PAGES = [
     // Passports, connected agents and the autonomy choice are all this reader's.
     changes: always,
   },
-  // MIXED, not self: six of its cards are the reader's own, and MailSharingCard
-  // writes `capture_settings` — the installation's rule about whether captured
-  // mail is shared with colleagues. A page-level "Only you" over that switch
-  // would tell a reader a company-wide setting is private to them.
+  // MIXED, not self: most of its cards are the reader's own, and ConnectorsCard
+  // carries the workspace's Telegram bot beside them. A page-level "Only you"
+  // over that panel would tell a reader a shared connection is private to them.
+  //
+  // The mail-sharing SWITCH left this page for Capture rules, where the rest of
+  // the installation's capture posture lives. What stays is a value-only row
+  // saying what the rule currently is, which claims nothing about who may
+  // change it.
   {
     id: "connections",
     group: "me",
     scope: "mixed",
     requires: always,
-    // Acting, not consulting: the mailbox, sender and LinkedIn controls are
-    // the reader's own and need no grant. The one card that is not theirs
-    // withholds itself — MailSharingCard asks `capture_settings:update`.
+    // Acting, not consulting: the mailbox, sender and LinkedIn controls are the
+    // reader's own and need no grant, and the mail-sharing row states a value
+    // and offers no control at all.
+    //
+    // The Telegram panel is the exception and it is NOT gated — connectors.tsx
+    // asks no capability question, so its Connect, Edit and Disconnect are
+    // offered to every reader and refused by the server (`channel_connection`
+    // is admin/ops to mutate). That is a pre-existing gap in that card rather
+    // than something this field can fix: `changes` decides which pages reach
+    // the rail, and it cannot withhold one control on a page whose other nine
+    // surfaces are genuinely the reader's.
     changes: always,
   },
   // MIXED for the same reason as `connections`, one page along:
@@ -569,9 +581,10 @@ export const SETTINGS_PAGES = [
     group: "data",
     scope: "workspace",
     requires: reads("capture_settings"),
-    // Four cards and, after the mail-sharing move, five. Three write
-    // `capture_settings:update`; BlockedDomainsCard writes `organization:update`,
-    // which every seeded sales role holds — so a rep keeps this page in the rail.
+    // Five cards. Four write `capture_settings:update` — the sharing rule, the
+    // posture, the own-domain list and the consumer-mailbox list; the fifth,
+    // BlockedDomainsCard, writes `organization:update`, which every seeded sales
+    // role holds — so a rep keeps this page in the rail.
     changes: acts(
       writes("capture_settings", ["update"]),
       writes("organization", ["update"]),

@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { LocaleProvider } from "../i18n";
+import { WriteToProvider } from "../screens/writeto";
 import { Badge } from "./atoms";
 import { AvatarStack } from "./avatarstack";
 import { RecordCard } from "./recordcard";
@@ -17,9 +18,14 @@ const meta: Meta<typeof RecordCard> = {
   decorators: [
     (Story) => (
       <LocaleProvider initial="en">
-        <div style={{ maxWidth: 420 }}>
-          <Story />
-        </div>
+        {/* The shell's composer host, stood in for by a provider that opens
+            nothing: without one the address would be the reader's own mail
+            client's link. */}
+        <WriteToProvider writeTo={() => {}}>
+          <div style={{ maxWidth: 420 }}>
+            <Story />
+          </div>
+        </WriteToProvider>
       </LocaleProvider>
     ),
   ],
@@ -77,10 +83,11 @@ export const NameOnly: Story = {
 
 /**
  * An address `contacturi` REFUSES — this one carries a comma, which separates
- * two mailboxes in a `mailto:` and so may never reach one. The fact stays and
- * only the link is dropped, and it truncates like any other handle: refused it
- * is plain text the paragraph cuts, accepted it is a flex line that cuts
- * itself, and both have to hold or a long one overflows the card.
+ * two mailboxes in an address list and so may never reach the composer as one.
+ * The fact stays and only the action is dropped, and it truncates like any
+ * other handle: refused it is plain text the paragraph cuts, accepted it is a
+ * button that cuts itself, and both have to hold or a long one overflows the
+ * card.
  */
 export const RefusedAddress: Story = {
   render: () => (

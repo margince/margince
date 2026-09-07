@@ -81,7 +81,9 @@ export const Buttons: Story = {
         </div>
       </div>
       {/* The text affordance, beside a real Button so the thing it must not
-          out-shout is in the same picture. Its focus ring is a SOLID outline,
+          out-shout is in the same picture. Applied as a CLASS to an `<a>` or a
+          plain `<button>`, and as `variant="link"` where the verb needs
+          Button's refusal and busy contracts too. Its focus ring is a SOLID outline,
           not the low-alpha shadow the filled controls use: with no fill of its
           own there is nothing for that ring to read against, and on an
           elevated surface it disappears. Tab through this row to see it. */}
@@ -103,6 +105,14 @@ export const Buttons: Story = {
             <Plus aria-hidden />
             Add another
           </button>
+          {/* The same affordance reached through Button, for a verb that also
+              needs what only the component gives — here the write in flight.
+              One appearance, one declaration: `.btn.btn-link` rides along on
+              the class's own rules rather than declaring a look of its own. */}
+          <Button variant="link">Make private</Button>
+          <Button variant="link" pending>
+            Make private
+          </Button>
         </div>
       </div>
       <div style={stack}>

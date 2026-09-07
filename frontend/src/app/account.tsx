@@ -37,7 +37,7 @@ type SessionUser = components["schemas"]["MeResponse"]["user"];
 const SETTINGS_HREF = routeHash({ screen: SETTINGS_SCREEN });
 
 /** The appearance choices, in the order the submenu shows them, named. */
-const THEME_LABEL_KEYS = {
+export const THEME_LABEL_KEYS = {
   light: "theme.light",
   dark: "theme.dark",
   system: "theme.system",

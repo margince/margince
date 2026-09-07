@@ -15,11 +15,13 @@ import {
 } from "react";
 import { api, FIRST_PAGE } from "../api/client";
 import type { components, operations } from "../api/schema";
+import { THEME_LABEL_KEYS } from "../app/account";
 import { dotTier } from "../app/autonomy";
 import { useCan, useCanWrite } from "../app/capability";
 import { isEntityKind } from "../app/entity";
 import { useRecordZone } from "../app/recordzone";
 import { navigate, navigateReplacing, type Route } from "../app/router";
+import { setThemeChoice, THEME_CHOICES, useThemeChoice } from "../app/theme";
 import { useUnsavedGuard } from "../app/unsaved";
 import {
   Avatar,
@@ -107,7 +109,7 @@ import { LicenseCard } from "./license";
 import { LinkedInImportCard } from "./linkedin-import";
 import { LinkedInReachCard } from "./linkedin-reach";
 import { SEARCH_DEBOUNCE_MS } from "./listquery";
-import { MailSharingCard } from "./mail-sharing";
+import { MailSharingCard, MailSharingPostureRow } from "./mail-sharing";
 import { OAuthAppCard } from "./oauth-app";
 import { OfferTemplatesAdmin } from "./offertemplates";
 import { OverlayCard } from "./overlay";
@@ -176,16 +178,7 @@ export function tabContent(id: SettingsPageId): ReactNode {
   switch (id) {
     // ---- me ----
     case "account":
-      return (
-        <>
-          <AccountCard />
-          {/* Under the identity because it is a statement about this reader
-              rather than about the workspace: which kinds of proposal stop
-              asking them. No admin card belongs on this page, and this one is
-              not an exception — nobody else sets it. */}
-          <AutonomySettingsCard />
-        </>
-      );
+      return <AccountCard />;
     case "voice":
       return <VoiceDnaCard />;
     case "agents":
@@ -265,9 +258,14 @@ export function tabContent(id: SettingsPageId): ReactNode {
     case "capture":
       return (
         <>
-          {/* Which domains are OURS, then what to do with mail from the rest,
-              then which of the rest are consumer mailboxes — the posture, then
-              the two judgements that read it. */}
+          {/* The sharing rule first, because it is the widest thing on the page:
+              whether captured mail is one seat's or the whole workspace's. It
+              used to sit on the reader's own Connections page, where "Only you"
+              was written over a switch that binds everybody. */}
+          <MailSharingCard />
+          {/* Then which domains are OURS, then what to do with mail from the
+              rest, then which of the rest are consumer mailboxes — the posture,
+              then the two judgements that read it. */}
           <OwnDomainsCard />
           <CaptureSettingsCard />
           <ConsumerMailDomainsCard />
@@ -378,15 +376,17 @@ export function tabContent(id: SettingsPageId): ReactNode {
 // not say so.
 //
 // It is not WHOLLY personal, which is why the catalog marks it `mixed`:
-// MailSharingCard writes the installation's mail-sharing rule, and
-// ConnectorsCard's second panel is the workspace's Telegram bot.
+// ConnectorsCard's second panel is the workspace's Telegram bot, and the
+// mail-sharing row states a rule that is changed on Capture rules.
 function ConnectionsTab() {
   return (
     <>
       {/* The rule first, then the mailboxes that live under it: sharing is a
-          workspace posture every user works under, not a property of any one
-          connection below. */}
-      <MailSharingCard />
+          posture every user works under, not a property of any one connection
+          below. It is STATED here and CHANGED on Capture rules — this page is
+          the reader's own mailboxes, and the switch that decides whether
+          everybody's captured mail is shared does not belong among them. */}
+      <MailSharingPostureRow />
       <ConnectorsCard />
       {/* Directly under the mailboxes and before what they brought in, because
           it changes what COUNTS as correspondence: an address declared here is
@@ -598,6 +598,12 @@ function AgentsTab() {
       <ConnectedAgentsCard />
       <AgentToolsCard />
       <AutonomyCard />
+      {/* Which kinds of proposal stop asking this reader. It sat on Account,
+          under the identity, because it is a statement about them rather than
+          about the organization — but every other thing on this page is also
+          theirs alone, and this is the page about agents deciding without them.
+          Directly under the tier reference it is written in terms of. */}
+      <AutonomySettingsCard />
     </>
   );
 }
@@ -673,9 +679,11 @@ function AccountCard() {
               whether the other two are reachable at all. The row and its
               three-field form live in passwordcard.tsx, exported as a ROW
               precisely so this page can place it among its own. */}
+          <DisplayNameSettingRow toast={toast} />
           <PasswordSettingRow />
           <SignatureSettingRow toast={toast} />
           <LanguageSettingRow />
+          <AppearanceSettingRow />
           <BriefDeliveryRows />
         </SettingList>
       </PanelBody>
@@ -836,12 +844,143 @@ function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
 /**
  * The language this installation speaks to this reader in.
  *
- * Appearance used to stand beside it and is now picked from the ACCOUNT MENU:
- * it is the setting a reader changes most often and from wherever they happen
- * to be standing, so it lives where they already are rather than three screens
- * away. What is left is one dropdown, which is one row — the locale context is
- * where the answer lives, so nothing here is a second source of truth.
+ * Appearance stands beside it again, in the row below. It is ALSO in the account
+ * menu — the setting a reader changes most often, from wherever they happen to
+ * be standing — and the two are one state rather than two: both read
+ * `useThemeChoice` and write `setThemeChoice`.
+ *
+ * One dropdown here, which is one row: the locale context is where the answer
+ * lives, so nothing here is a second source of truth.
  */
+/**
+ * The appearance choice, in Settings as well as in the account menu.
+ *
+ * ONE state, two faces: both read `useThemeChoice` and write `setThemeChoice`
+ * from app/theme.ts, so changing it in either place moves the other. The menu
+ * keeps its shortcut — appearance is the setting a reader changes most often and
+ * from wherever they are standing — and this is where somebody who came to
+ * Settings looking for it finds it.
+ */
+function AppearanceSettingRow() {
+  const t = useT();
+  const choice = useThemeChoice();
+  return (
+    <SettingRow
+      label={t("settings.appearance")}
+      description={t("settings.appearanceHelp")}
+      control={(control) => (
+        <Select
+          {...control}
+          className="settingrow-measure"
+          value={choice}
+          // `Select` reports a string, narrowed back through the same list the
+          // options were built from — no assertion, and nothing acted on that
+          // the control was never offering.
+          onChange={(next) => {
+            const picked = THEME_CHOICES.find((option) => option === next);
+            if (picked) {
+              setThemeChoice(picked);
+            }
+          }}
+          options={THEME_CHOICES.map((option) => ({
+            value: option,
+            label: t(THEME_LABEL_KEYS[option]),
+          }))}
+        />
+      )}
+    />
+  );
+}
+
+/**
+ * The name colleagues see you by.
+ *
+ * It was written once — by the invite, or by the installation's cold start —
+ * and until now nothing could change it. `display_name` had exactly two
+ * writers in the backend, both INSERTs, so somebody invited as "j.smith", or
+ * married, or simply typed wrong, carried that name beside every record they
+ * touched with no way to correct it.
+ *
+ * The saved answer is read back from `/me` rather than kept here, so the shell's
+ * account chip and the roster agree with this row the moment it lands.
+ */
+function DisplayNameSettingRow({ toast }: Readonly<{ toast: Toast }>) {
+  const t = useT();
+  const me = useMe();
+  const queryClient = useQueryClient();
+  const stored = me.data?.user.display_name ?? "";
+  // null means "not editing" — the row shows the stored name until the reader
+  // types, so a `/me` refetch cannot overwrite what they are in the middle of.
+  const [draft, setDraft] = useState<string | null>(null);
+  const shown = draft ?? stored;
+  const save = useMutation({
+    mutationFn: async (next: string) => {
+      const { data, error } = await api.PUT("/me/display-name", {
+        body: { display_name: next },
+      });
+      if (error) {
+        throwProblem(error, t);
+      }
+      return data;
+    },
+    onSuccess: (saved) => {
+      // The DRAFT holds the saved answer until `/me` catches up. Clearing it
+      // here would fall back to the cached snapshot, which still carries the
+      // old name — the field would visibly revert for as long as the refetch
+      // takes, and stay reverted if the refetch itself fails.
+      setDraft(saved?.display_name ?? null);
+      toast.show(t("settings.saved"));
+      void queryClient.invalidateQueries({ queryKey: ["me"] });
+    },
+  });
+  // Trimmed for the comparison as well as for the send, or a name with a
+  // trailing space reads as a change and the server answers that it is not one.
+  const trimmed = shown.trim();
+  const dirty = trimmed !== stored;
+  // Counted in CHARACTERS, which is what the contract's `maxLength` means and
+  // what the server checks with `utf8.RuneCountInString`. `String.length` would
+  // count UTF-16 units and refuse a name the server admits.
+  const tooLong = [...trimmed].length > 255;
+  return (
+    <SettingRow
+      label={t("settings.displayName")}
+      description={t("settings.displayNameHelp")}
+      layout="stack"
+      control={(control) => (
+        // The catalogued pairing for an input that commits: the field and the
+        // verb stacked at the row's own measure, the same shape the pipeline
+        // rows use.
+        <div className="form-stack settingrow-measure">
+          {/* A refused save says so HERE. The query client's own handler only
+              logs, so without this a rejected name looked exactly like nothing
+              happening — and the server's 422 names this very control. */}
+          {save.isError && (
+            <Callout tone="danger" live="alert">
+              {problemMessageOf(save.error, t)}
+            </Callout>
+          )}
+          <TextInput
+            {...control}
+            value={shown}
+            // No native `maxLength`: it counts UTF-16 code units, so a name of
+            // emoji or other supplementary characters would be cut at about
+            // half the 255 CHARACTERS the contract and the server admit. The
+            // bound is checked below in runes, the same way the server counts.
+            onChange={(event) => setDraft(event.target.value)}
+          />
+          <Button
+            small
+            disabled={!dirty || trimmed === "" || tooLong || save.isPending}
+            onClick={() => save.mutate(trimmed)}
+          >
+            {t("settings.displayNameSave")}
+          </Button>
+        </div>
+      )}
+    />
+  );
+}
+
 function LanguageSettingRow() {
   const t = useT();
   const { locale, setLocale } = useLocale();

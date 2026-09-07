@@ -11,6 +11,7 @@ import { translate } from "../i18n";
 import { SettingsScreen } from "./settings";
 import {
   jsonResponse,
+  keyedEnvelope,
   readOn,
   render,
   renderHome,
@@ -88,7 +89,7 @@ describe("SettingsScreen page layout", () => {
       "Members",
       "Fields",
       "Pipelines",
-      "Privacy & audit",
+      "Privacy & retention",
     ]) {
       expect(screen.getByRole("link", { name: label })).toBeTruthy();
     }
@@ -191,6 +192,13 @@ function settingsNavBackend(opts: {
         ...me,
         data_reset_available: opts.dataResetAvailable ?? false,
       });
+    }
+    // The rail carries the agent at its foot, and the agent reads endpoints that
+    // answer with a KEYED envelope rather than the paged one below — an unrouted
+    // one throws mid-render, which surfaces here as the nav being empty.
+    const keyed = keyedEnvelope(url);
+    if (keyed) {
+      return keyed;
     }
     return jsonResponse({
       data: [],
@@ -386,7 +394,7 @@ const EVERY_PAGE_GRANTED: GrantSpec = {
   // both.
   ai_model_rate: ["read", "create", "update"],
   person: ["read"],
-  // What opens Privacy & audit now that `person:read` does not.
+  // What opens Privacy & retention now that `person:read` does not.
   retention_policy: ["read", "create", "update"],
   audit_log: ["read"],
   job_health: ["read"],

@@ -442,19 +442,21 @@ p.settings-panel-sub {
   text-transform: uppercase;
   letter-spacing: var(--tracking-eyebrow);
 }
-/* Who the reader is here: role, seat, record reach. A definition list because
-   each row is a term and its answer, and none of them is operable — the way to
-   change any of it is to ask somebody, not to click here. */
-.settings-home-access {
+/* A term and its answer, where the answer is a FACT rather than a setting: who
+   the reader is on the settings home, what the mail-sharing rule currently says
+   on their connections page. A definition list because none of it is operable —
+   the way to change any of it is to ask somebody, or to open the page that owns
+   it. */
+.settings-facts {
   display: grid;
   grid-template-columns: auto 1fr;
   gap: var(--space-2) var(--space-4);
   margin: 0;
 }
-.settings-home-access dt {
+.settings-facts dt {
   color: var(--textMuted);
 }
-.settings-home-access dd {
+.settings-facts dd {
   margin: 0;
 }
 .settings-home-roles {

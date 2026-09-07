@@ -73,6 +73,16 @@ func Groups() []Group {
 		// where deal.stage_changed carries both the win and the reopen that
 		// reverses one.
 		{Name: "cg:commissions", Streams: forEntities(dealStreamEntity)},
+		// Turning records that already settle something into stage evidence: a
+		// contract turning active, a buyer confirming a room version, a held
+		// meeting. Both streams, because contract.* and deal_room.* ride the
+		// deal one and activity.captured rides its own.
+		//
+		// Its own group rather than a handler on cg:commissions: that consumer
+		// accrues money and must never be stalled behind an evidence write,
+		// and evidence must keep flowing when an accrual is wedged. The two
+		// share a stream and nothing else.
+		{Name: "cg:stage-evidence", Streams: forEntities(dealStreamEntity, activityStreamEntity)},
 		// Closing an introduction the contact answered. Its own group because
 		// the evidence is perishable in one direction: `replied` may only be
 		// reached from a captured message, so a lane wedged behind an

@@ -9,7 +9,7 @@ import { SEARCH_DEBOUNCE_MS } from "./listquery";
 import { AuditLogCard } from "./settings";
 import { auditEntry, jsonResponse, render } from "./settings.testkit";
 
-// The audit trail card, read on its own rather than through the Privacy & audit
+// The audit trail card, read on its own rather than through the Privacy & retention
 // entry that hosts it: one card carrying its own filters, the wire as the only
 // honest witness that a typed filter narrowed the question, and a change detail
 // that stays folded away until a reader asks for it.

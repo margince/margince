@@ -35,13 +35,16 @@ export const EveryState: Story = {
 };
 
 /** The mark beside the verb that changes it, as the mail drawer draws it for
- * a captured thread this reader has shared with the organization. */
+ * a captured thread this reader has shared with the organization. The verb
+ * follows the mark rather than taking the far end of the row: on a wide
+ * surface — and this one is 480px of a heading that is wider still — a button
+ * pushed right is a verb the reader has to travel to and back from. */
 export const WithItsVerb: Story = {
   render: () => (
     <div style={{ maxWidth: 480 }}>
       <VisibilityLine
         state="team"
-        action={<Button small>Make private</Button>}
+        action={<Button variant="link">Make private</Button>}
       />
     </div>
   ),
@@ -55,7 +58,7 @@ export const WithAReason: Story = {
       <VisibilityLine
         state="participants"
         marks={<Badge quiet>Marked confidential</Badge>}
-        action={<Button small>Change visibility</Button>}
+        action={<Button variant="link">Change visibility</Button>}
       />
     </div>
   ),

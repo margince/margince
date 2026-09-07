@@ -1831,14 +1831,18 @@ function LeadRecord({
       // reader has to know this is a prospect and not a contact BEFORE they
       // read anything else about them (ADR-0108 §1).
       subtitle={<Badge tone="accent">{t("lead.marker")}</Badge>}
-      // The address is a LINK: a reader who sees one expects to click it,
-      // and a header that showed it and did nothing taught them the record
-      // was a printout.
+      // The address is a way to ACT: a reader who sees one expects to click
+      // it, and a header that showed it and did nothing taught them the
+      // record was a printout. It opens the composer on this lead, as the
+      // Email verb beside it does, and like that verb it is refused on a
+      // closed lead — as text, since the verb already carries the reason.
       pulse={
         lead.email ? (
           <ContactLink
             kind="email"
             value={lead.email}
+            record={{ entityType: "lead", entityId: id }}
+            readOnly={Boolean(lead.archived_at)}
             className="link-button lead-email"
             textClassName="lead-email"
           />

@@ -6,7 +6,7 @@
 #
 # This repo's clone-per-package test-DB shape:
 #   - TWO roles, not one — MARGINCE_TEST_DSN (owner: migrates + seeds) and
-#     MARGINCE_TEST_APP_DSN (the RLS-bound app role the stores connect as). A
+#     MARGINCE_TEST_APP_DSN (the unprivileged app role the stores connect as). A
 #     clone must be reachable by both, so we swap the db segment of each.
 #   - Clones are copied from a migrated template (margince_test), CREATE DATABASE
 #     ... TEMPLATE — a fast file copy. This repo has two kinds of integration

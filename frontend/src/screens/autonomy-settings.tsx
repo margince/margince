@@ -13,9 +13,11 @@ import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
 // Which kinds of proposal answer themselves, for the reader and nobody else.
 //
-// It sits on the account tab rather than beside the admin cards because the
+// It sits on the AGENTS page rather than beside the admin cards because the
 // answer is one person's: an admin does not decide how much of a rep's queue
 // applies without asking, so there is no role gating here and no refusal copy.
+// Under the tier reference it is written in terms of, on the page about agents
+// deciding without you.
 // The only thing that can stop a row is a write already in flight.
 //
 // The contract calls this `autonomy`; the copy calls it what a rep would. The

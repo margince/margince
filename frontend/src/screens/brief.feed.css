@@ -10,11 +10,39 @@
 
 /* The label sits ABOVE its first row rather than beside it, so a reader
    scanning the left edge sees the morning's shape without the badges competing
-   with the rank numbers for the same column. */
+   with the rank numbers for the same column.
+
+   It takes the PANEL'S OWN MARGIN. The list is a direct child of the panel and
+   the rows under it are `PanelRow`s, which carry that margin themselves — so
+   an unpadded label started at the card's edge, 20px left of everything it
+   labels, and read as chrome on the card rather than as a heading over rows.
+
+   The interval is asymmetric because a run-length label binds DOWNWARD: it
+   takes its air from the section it ends, not from the row it names. */
 .brief-feed-section {
-  margin: var(--space-3) 0 var(--space-1);
+  margin: var(--space-4) 0 var(--space-1);
+  padding-inline: var(--padPanel);
 }
 
+/* The first label has the header's hairline above it rather than a row, so it
+   pays for its own interval — the same one the first row would have taken.
+   At zero the badge sat against that line and read as part of the band. */
 .brief-feed-list > li:first-child .brief-feed-section {
-  margin-top: 0;
+  margin-top: var(--space-3);
+}
+
+/* THE RULE BETWEEN TWO ROWS, put back at the boundary it belongs to.
+   `PanelRow` draws its hairline against whatever precedes it and drops it on a
+   panel's first row. Wrapping each row in its own <li> handed that reset to
+   EVERY row, so the queue drew no rule between rows at all — and a labelled
+   row is no longer its item's first child, so the one rule the feed did draw
+   fell between a label and the row it labels, which is the one place panel.css
+   says a rule must never fall. A section boundary takes air and no line, like
+   every other boundary in a card that wants one. */
+.brief-feed-section + .panel-row::before {
+  content: none;
+}
+
+.brief-feed-list > li + li > .panel-row:first-child::before {
+  content: "";
 }

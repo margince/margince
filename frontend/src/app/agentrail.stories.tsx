@@ -81,19 +81,29 @@ function callRow(task: string, minutesAgo: number, index: number) {
   };
 }
 
+// The three feet the block has to look right in, named by the class the shell
+// puts on the rail (app/shell.tsx) — the stylesheet keys the reduction off that
+// state, so a story that dressed itself would be showing a rail this app never
+// renders.
+type RailState = "expanded" | "collapsed" | "leveled";
+
 function Rail({
-  collapsed,
+  state,
   children,
-}: Readonly<{ collapsed?: boolean; children: ReactNode }>) {
+}: Readonly<{ state: RailState; children: ReactNode }>) {
   return (
-    <nav className={collapsed ? "rail collapsed" : "rail expanded"}>
+    <nav className={`rail ${state}`}>
       <div className="grow" />
       <div className="railagent">{children}</div>
     </nav>
   );
 }
 
-function story(answers: Answers, collapsed = false, grants = OPERATOR) {
+function story(
+  answers: Answers,
+  rail: RailState = "expanded",
+  grants = OPERATOR,
+) {
   return () => {
     installFetchStub({
       "GET /me": meRoute(grants),
@@ -157,7 +167,7 @@ function story(answers: Answers, collapsed = false, grants = OPERATOR) {
     });
     return (
       <StoryProviders>
-        <Rail collapsed={collapsed}>
+        <Rail state={rail}>
           <AgentRail route={{ screen: "companies" }} />
         </Rail>
       </StoryProviders>
@@ -266,7 +276,13 @@ export const NothingHasRunYet: Story = {
 /** The collapsed rail: the orb is the whole report at 56px, the words and the
  *  chevron gone. */
 export const CollapsedRail: Story = {
-  render: story(HEALTHY, true),
+  render: story(HEALTHY, "collapsed"),
+};
+
+/** The rail showing one section's entries: the agent keeps its foot, at the size
+ *  that says it is still reporting without leading a list it is not about. */
+export const LeveledRail: Story = {
+  render: story(HEALTHY, "leveled"),
 };
 
 /**
@@ -301,7 +317,7 @@ export const PanelOpen: Story = {
  * that would fail if that ever changed.
  */
 export const LicenceWithheld: Story = {
-  render: story({ ...HEALTHY, licenseState: "absent" }, false, {
+  render: story({ ...HEALTHY, licenseState: "absent" }, "expanded", {
     automation: ["update"],
   }),
 };

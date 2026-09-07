@@ -58,6 +58,7 @@ import {
 import { isPersonTab } from "./screens/persontab";
 import { ReleaseSkewScreen, useSkewedApiRelease } from "./screens/releaseskew";
 import { fetchSetupStatus, SetupClaimScreen } from "./screens/setupclaim";
+import { WriteToHost } from "./screens/writeto";
 
 // Route → screen. The table below is TOTAL over `Screen` (app/router.tsx), so
 // every address the product answers has a view and an address it does not answer
@@ -930,9 +931,13 @@ function AuthedApp({
 
   return (
     <RecordZoneProvider zone={recordZone.zone}>
-      <AuthedShell onOpenSearch={() => setPaletteOpen(true)}>
-        <ScreenView screen={route.screen} id={route.id} id2={route.id2} />
-      </AuthedShell>
+      {/* An address pressed on any screen writes from here: the composer is
+          the product's, not the reader's mail client's. */}
+      <WriteToHost>
+        <AuthedShell onOpenSearch={() => setPaletteOpen(true)}>
+          <ScreenView screen={route.screen} id={route.id} id2={route.id2} />
+        </AuthedShell>
+      </WriteToHost>
       <CommandPalette
         open={paletteOpen}
         onClose={() => setPaletteOpen(false)}

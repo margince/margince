@@ -11,30 +11,23 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // ListUsers serves one keyset page of the workspace member roster.
 func (h Handlers) ListUsers(w http.ResponseWriter, r *http.Request, params crmcontracts.ListUsersParams) {
-	actor, hasActor := identityFrom(r.Context())
-	// The widened management view is honored for a caller who may administer
-	// members; everyone else gets the active-only roster the share/assignee
-	// pickers use. A grant rather than the literal admin role, so an
-	// installation that delegates member administration gets the view that goes
-	// with it — the safe roster stays open to every authenticated caller.
-	mayManage := false
-	if hasActor {
-		ctx, err := admit(r.Context(), actor, objectUserAdmin, principal.ActionRead)
-		mayManage = err == nil
-		r = r.WithContext(ctx)
+	// The caller goes on the context; the SERVICE decides what they may see and
+	// says which view it served. This handler renders that answer and does not
+	// take its own — a second evaluation here disagreed with the service for an
+	// agent request, which reaches the handler with a kernel principal and no
+	// human Identity to ask about.
+	if actor, ok := identityFrom(r.Context()); ok {
+		r = r.WithContext(actorCtx(r.Context(), actor))
 	}
-	includeInactive := mayManage && params.IncludeInactive != nil && *params.IncludeInactive
-	rows, page, err := h.svc.ListUsers(r.Context(), ListUsersInput{
+	roster, err := h.svc.ListUsers(r.Context(), ListUsersInput{
 		Q:               params.Q,
 		Cursor:          params.Cursor,
 		Limit:           params.Limit,
-		IncludeInactive: includeInactive,
-		WithRoles:       mayManage,
+		IncludeInactive: params.IncludeInactive != nil && *params.IncludeInactive,
 	})
 	if err != nil {
 		httperr.Write(w, r, err)
@@ -44,12 +37,13 @@ func (h Handlers) ListUsers(w http.ResponseWriter, r *http.Request, params crmco
 	// role keys and the widened status view, a rep's carries neither. A shared
 	// cache keyed on the URL alone would serve one of them the other's answer.
 	w.Header().Set("Cache-Control", "private, no-store")
-	wire := rosterUserMapping(mayManage)
-	data := make([]crmcontracts.User, 0, len(rows))
-	for _, u := range rows {
+	wire := rosterUserMapping(roster.Management)
+	data := make([]crmcontracts.User, 0, len(roster.Users))
+	for _, u := range roster.Users {
 		data = append(data, wire(u))
 	}
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.UserListResponse{Data: data, Page: pageInfo(page)})
+	httperr.WriteJSON(w, http.StatusOK,
+		crmcontracts.UserListResponse{Data: data, Page: pageInfo(roster.Page)})
 }
 
 // ListTeams serves one keyset page of the workspace teams with their

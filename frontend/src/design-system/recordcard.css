@@ -91,9 +91,14 @@ a.record-card-open:focus-visible {
 }
 
 /* Blocked, which it can be here: a handle on a card carries an address and
-   never an icon beside it. */
+   never an icon beside it. The handle is a button, which sizes to its text and
+   centres it where a line of text would fill the card and start at its edge;
+   the cap and the alignment give it the line back so a long address ellipsises
+   instead of running out of the card. */
 .record-card-handles > .link-button {
   display: block;
+  max-width: 100%;
+  text-align: left;
   overflow: hidden;
   text-overflow: ellipsis;
 }

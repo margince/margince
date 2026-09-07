@@ -326,7 +326,7 @@ describe("Section switcher (the page title at phone width)", () => {
   it("renders no switcher above the phone breakpoint", () => {
     render(<PageTitle route={deepRoute} section={fixtureSection("deep")} />);
     expect(
-      screen.getByRole("heading", { level: 1, name: "Privacy & audit" }),
+      screen.getByRole("heading", { level: 1, name: "Privacy & retention" }),
     ).toBeTruthy();
     expect(screen.queryByRole("button", { name: /change section/ })).toBeNull();
   });
@@ -340,12 +340,12 @@ describe("Section switcher (the page title at phone width)", () => {
     render(<PageTitle route={deepRoute} section={fixtureSection("deep")} />);
     const heading = screen.getByRole("heading", { level: 1 });
     const switcher = screen.getByRole("button", {
-      name: "Privacy & audit — change section",
+      name: "Privacy & retention — change section",
     });
     expect(heading.contains(switcher)).toBe(true);
     // The visible word is the entry, and it is part of the name (WCAG 2.5.3), so
     // a reader driving the app by voice says what they can see.
-    expect(switcher.textContent).toContain("Privacy & audit");
+    expect(switcher.textContent).toContain("Privacy & retention");
     expect(switcher.getAttribute("aria-expanded")).toBe("false");
     // One heading, and the entry's name is in it once — not once in a heading
     // and again in a control under it.
@@ -359,7 +359,9 @@ describe("Section switcher (the page title at phone width)", () => {
     stubPhoneViewport();
     render(<PageTitle route={deepRoute} section={fixtureSection("deep")} />);
     await user.click(
-      screen.getByRole("button", { name: "Privacy & audit — change section" }),
+      screen.getByRole("button", {
+        name: "Privacy & retention — change section",
+      }),
     );
     const dialog = screen.getByRole("dialog");
     // Named by the section, with its groups and every entry it publishes.
@@ -370,7 +372,7 @@ describe("Section switcher (the page title at phone width)", () => {
       within(dialog)
         .getAllByRole("heading", { level: 3 })
         .map((heading) => heading.textContent),
-    ).toEqual(["You", "Admin settings"]);
+    ).toEqual(["You", "Governance"]);
     expect(
       within(dialog)
         .getAllByRole("link")
@@ -388,7 +390,9 @@ describe("Section switcher (the page title at phone width)", () => {
     stubPhoneViewport();
     render(<PageTitle route={deepRoute} section={fixtureSection("deep")} />);
     await user.click(
-      screen.getByRole("button", { name: "Privacy & audit — change section" }),
+      screen.getByRole("button", {
+        name: "Privacy & retention — change section",
+      }),
     );
     await user.click(
       within(screen.getByRole("dialog")).getByRole("link", { name: "Account" }),
@@ -405,7 +409,9 @@ describe("Section switcher (the page title at phone width)", () => {
     stubPhoneViewport();
     render(<PageTitle route={deepRoute} section={fixtureSection("deep")} />);
     await user.click(
-      screen.getByRole("button", { name: "Privacy & audit — change section" }),
+      screen.getByRole("button", {
+        name: "Privacy & retention — change section",
+      }),
     );
     await user.click(
       within(screen.getByRole("dialog")).getByRole("button", { name: "Close" }),
@@ -685,10 +691,13 @@ describe("Shell", () => {
   });
 
   // A sidebar showing a section's entries is navigation inside ONE destination,
-  // and the agent belongs to the whole session — so it is absent there rather
-  // than re-parented under a sub-level. The foot goes with it: an empty box would
-  // leave the band and the rule that divide a reading from the rows above it.
-  it("mounts no agent while the rail shows a section's own entries", async () => {
+  // and the agent belongs to the whole SESSION — so it keeps its foot there
+  // rather than going quiet because a reader walked into settings, which is
+  // where they would go to fix whatever the orb is amber about. Still one block,
+  // reduced by the rail's own state (app/agentrail.css) rather than by a second
+  // component: two Cores reporting one session is the thing that rule exists to
+  // stop, at any size.
+  it("keeps the one agent at the foot while the rail shows a section's own entries", async () => {
     window.location.hash = "#/settings/account";
     const { container } = render(
       <Shell onOpenSearch={ignoreSearch}>{null}</Shell>,
@@ -703,8 +712,11 @@ describe("Shell", () => {
     expect(
       await within(rail).findByRole("link", { name: "Account" }),
     ).toBeTruthy();
-    expect(container.querySelector(".arblock")).toBeNull();
-    expect(container.querySelector(".railagent")).toBeNull();
+    expect(rail.className).toContain("leveled");
+    expect(container.querySelectorAll(".arblock")).toHaveLength(1);
+    expect(
+      container.querySelector(".rail .railagent")?.querySelector(".arblock"),
+    ).not.toBeNull();
   });
 
   it("renders rail-less for the documented exceptions (AC-shell layout exception)", () => {

@@ -75,6 +75,12 @@ import {
 import { RecordReading, RecordReadingPair } from "./record360";
 import { EmailVerb, RecordEmailAside } from "./recordemail";
 import { ShareAction } from "./share";
+import {
+  useMailboxConnected,
+  useWriteTo,
+  type WriteTo,
+  WriteToProvider,
+} from "./writeto";
 import "./person360.css";
 import { buyingRoleLabel } from "./companypeople/summary";
 
@@ -384,184 +390,232 @@ export function PersonPageV2({
 
   return (
     <div className="wrap">
-      <RecordView
-        // The contact's context, in the details pane beside the work: what is
-        // true of the PERSON does not belong to whichever part of them is open,
-        // so it does not move when a tab changes. The same pane, fold and
-        // memory of it as every other record page.
-        aside={
-          details.open ? (
-            <>
-              <PersonRail
-                view={view.data}
-                guard={guard.data}
-                firstName={firstName}
-                onExplain={() => navigate({ screen: "contacts", id })}
-                onOpenEmail={setOpenEmail}
-              />
-              <PersonEmailPanel
-                personId={id}
-                recordAddress={primaryEmail(person.emails)}
-                overlay={overlay}
-                archived={Boolean(person.archived_at)}
-              />
-            </>
-          ) : undefined
-        }
-        name={person.full_name}
-        avatarSrc={null}
-        subtitle={<PersonSubtitle view={view.data} />}
-        pulse={<PersonIdentityLine view={view.data} />}
-        actions={
-          <PersonActions
-            view={view.data}
-            consentAllows={emailAllowed}
-            consentKnown={guard.data !== undefined}
-            personId={id}
-            overlay={overlay}
-            onWrite={() => openComposer("")}
-            onResearch={() => setDrawer("research")}
-            onLogActivity={() => setDrawer("activity_log")}
-            onAddTask={() => setDrawer("activity_task")}
-          />
-        }
-        actionsInline
-        zone={recordZone}
-        tabs={
-          <RecordTabs
-            options={PERSON_TABS}
-            value={tab}
-            onChange={(next) => navigate(personTabRoute(id, next))}
-            // The switch for the details pane, at the end of the tab row: it
-            // chooses what the page shows beside the work, so it stands with
-            // the controls that choose what the work column shows.
-            trailing={<PageAsideToggle />}
-            labels={{
-              overview: t(TAB_LABEL_KEYS.overview),
-              timeline: t(TAB_LABEL_KEYS.timeline),
-              network: t(TAB_LABEL_KEYS.network),
-              deals: t(TAB_LABEL_KEYS.deals),
-              meetings: t(TAB_LABEL_KEYS.meetings),
-              research: t(TAB_LABEL_KEYS.research),
-              documents: t(TAB_LABEL_KEYS.documents),
-            }}
-            // At least one connected provider has never been asked about this
-            // contact, so there is a lookup waiting behind the tab. ANY of them
-            // is enough: the reader still has somebody to ask, even if another
-            // provider already answered. A CANCELLED run reads as never_run
-            // too, and the dot coming back is right — nothing was bought.
-            marks={{
-              research: (view.data.provider_profiles ?? []).some(
-                (profile) => profile.state === "never_run",
-              ),
-            }}
-          />
-        }
-      >
-        {tab === "overview" && (
-          <div className="record-stack">
-            {/* The readings lead the overview, under the strip that chose it —
+      {/* Inside the gutter, not around it: the page's root is what insets it,
+          and everything on the page, the rail included, answers a pressed
+          address with this page's own composer. */}
+      <PersonWriteTo personId={id} onWrite={() => openComposer("")}>
+        <RecordView
+          // The contact's context, in the details pane beside the work: what is
+          // true of the PERSON does not belong to whichever part of them is open,
+          // so it does not move when a tab changes. The same pane, fold and
+          // memory of it as every other record page.
+          aside={
+            details.open ? (
+              <>
+                <PersonRail
+                  view={view.data}
+                  guard={guard.data}
+                  firstName={firstName}
+                  onExplain={() => navigate({ screen: "contacts", id })}
+                  onOpenEmail={setOpenEmail}
+                />
+                <PersonEmailPanel
+                  personId={id}
+                  recordAddress={primaryEmail(person.emails)}
+                  overlay={overlay}
+                  archived={Boolean(person.archived_at)}
+                />
+              </>
+            ) : undefined
+          }
+          name={person.full_name}
+          avatarSrc={null}
+          subtitle={<PersonSubtitle view={view.data} />}
+          pulse={<PersonIdentityLine view={view.data} />}
+          actions={
+            <PersonActions
+              view={view.data}
+              consentAllows={emailAllowed}
+              consentKnown={guard.data !== undefined}
+              personId={id}
+              overlay={overlay}
+              onWrite={() => openComposer("")}
+              onResearch={() => setDrawer("research")}
+              onLogActivity={() => setDrawer("activity_log")}
+              onAddTask={() => setDrawer("activity_task")}
+            />
+          }
+          actionsInline
+          zone={recordZone}
+          tabs={
+            <RecordTabs
+              options={PERSON_TABS}
+              value={tab}
+              onChange={(next) => navigate(personTabRoute(id, next))}
+              // The switch for the details pane, at the end of the tab row: it
+              // chooses what the page shows beside the work, so it stands with
+              // the controls that choose what the work column shows.
+              trailing={<PageAsideToggle />}
+              labels={{
+                overview: t(TAB_LABEL_KEYS.overview),
+                timeline: t(TAB_LABEL_KEYS.timeline),
+                network: t(TAB_LABEL_KEYS.network),
+                deals: t(TAB_LABEL_KEYS.deals),
+                meetings: t(TAB_LABEL_KEYS.meetings),
+                research: t(TAB_LABEL_KEYS.research),
+                documents: t(TAB_LABEL_KEYS.documents),
+              }}
+              // At least one connected provider has never been asked about this
+              // contact, so there is a lookup waiting behind the tab. ANY of them
+              // is enough: the reader still has somebody to ask, even if another
+              // provider already answered. A CANCELLED run reads as never_run
+              // too, and the dot coming back is right — nothing was bought.
+              marks={{
+                research: (view.data.provider_profiles ?? []).some(
+                  (profile) => profile.state === "never_run",
+                ),
+              }}
+            />
+          }
+        >
+          {tab === "overview" && (
+            <div className="record-stack">
+              {/* The readings lead the overview, under the strip that chose it —
                 the same place the account page puts its own. They belong to
                 THIS body rather than to the record: the Deals tab is a list of
                 deals and the Documents tab a filing cabinet, and a row of
                 relationship readings over either is a header for a page it is
                 not describing. */}
-            <PersonReadings
-              view={view.data}
-              onOpenTab={(next) => navigate(personTabRoute(id, next))}
-            />
-            {/* ONE READING, IN PARTS — the shape every record page reads in:
+              <PersonReadings
+                view={view.data}
+                onOpenTab={(next) => navigate(personTabRoute(id, next))}
+              />
+              {/* ONE READING, IN PARTS — the shape every record page reads in:
                 the call with the thread it was read from, the day's work, and
                 under them the two sections a reader consults rather than
                 reads. What was said lately and what is owed are the pair,
                 because the moment above is argued from exactly those two. */}
-            <RecordReading>
-              <PersonToday
-                moment={view.data.moment}
-                name={person.full_name}
-                view={view.data}
-                onAction={runAction}
-                onOpenTasks={() => navigate({ screen: "worklist" })}
-                onOpenEmail={setOpenEmail}
-              />
-              <RecordReadingPair>
-                <PersonMemory view={view.data} onOpenEmail={setOpenEmail} />
-                <PersonCommitmentsCard view={view.data} firstName={firstName} />
-              </RecordReadingPair>
-            </RecordReading>
-            {/* The contact in prose, under the reading of it: the moment
+              <RecordReading>
+                <PersonToday
+                  moment={view.data.moment}
+                  name={person.full_name}
+                  view={view.data}
+                  onAction={runAction}
+                  onOpenTasks={() => navigate({ screen: "worklist" })}
+                  onOpenEmail={setOpenEmail}
+                />
+                <RecordReadingPair>
+                  <PersonMemory view={view.data} onOpenEmail={setOpenEmail} />
+                  <PersonCommitmentsCard
+                    view={view.data}
+                    firstName={firstName}
+                  />
+                </RecordReadingPair>
+              </RecordReading>
+              {/* The contact in prose, under the reading of it: the moment
                 answers what to DO, this answers who they ARE to us, in
                 sentences with their sources under them. */}
-            <PersonBriefCard
-              brief={brief.data}
-              loading={brief.isLoading}
-              view={view.data}
-              onOpenEmail={setOpenEmail}
-            />
-            {(hasCommercial(view.data) || hasMatters(view.data)) && (
-              <RecordReadingPair>
-                {hasCommercial(view.data) && (
-                  <PersonCommercialCard view={view.data} />
-                )}
-                {hasMatters(view.data) && (
-                  <PersonMattersCard view={view.data} firstName={firstName} />
-                )}
-              </RecordReadingPair>
-            )}
-            {/* What this person has agreed to, and the one way to ask them
+              <PersonBriefCard
+                brief={brief.data}
+                loading={brief.isLoading}
+                view={view.data}
+                onOpenEmail={setOpenEmail}
+              />
+              {(hasCommercial(view.data) || hasMatters(view.data)) && (
+                <RecordReadingPair>
+                  {hasCommercial(view.data) && (
+                    <PersonCommercialCard view={view.data} />
+                  )}
+                  {hasMatters(view.data) && (
+                    <PersonMattersCard view={view.data} firstName={firstName} />
+                  )}
+                </RecordReadingPair>
+              )}
+              {/* What this person has agreed to, and the one way to ask them
                 directly. It renders on a thin record too: what you may send is
                 a live fact whether or not anyone has written to them yet. */}
-            <ConsentSection personId={id} person={view.data.person} />
-            {/* The fields Margince read off a signature or a card, and the
+              <ConsentSection personId={id} person={view.data.person} />
+              {/* The fields Margince read off a signature or a card, and the
                 one place a reader can confirm or correct them. */}
-            <EnrichedFields personId={id} view={view.data} />
-          </div>
-        )}
+              <EnrichedFields personId={id} view={view.data} />
+            </div>
+          )}
 
-        <PersonTabPanel
-          tab={tab}
-          personId={id}
-          view={view.data}
-          onBriefMeeting={openBrief}
-          onOpenEmail={setOpenEmail}
-        />
-        {/* One drawer over the record. The timeline's rows and the rail's
+          <PersonTabPanel
+            tab={tab}
+            personId={id}
+            view={view.data}
+            onBriefMeeting={openBrief}
+            onOpenEmail={setOpenEmail}
+          />
+          {/* One drawer over the record. The timeline's rows and the rail's
             citations both open into it, so a reader who finds a message in the
             aside and one who finds it in the body land in the same place. */}
-        <OpenEmailDrawer
-          activityId={openEmail}
-          zone={recordZone}
-          onClose={() => setOpenEmail(null)}
-        />
-        <PersonMailDrawer
-          personId={id}
-          view={view.data}
-          recordAddress={primaryEmail(person.emails)}
-          open={composer.open}
-          intent={composer.intent}
-          threadId={composer.threadId}
-          onClose={composer.close}
-        />
-        <PersonResearchDrawer
-          personId={id}
-          personName={person.full_name}
-          providerProfiles={view.data.provider_profiles}
-          open={drawer === "research"}
-          onClose={() => setDrawer(null)}
-        />
-        <PersonMeetingBrief
-          activityId={briefedMeeting}
-          open={briefedMeeting !== null}
-          onClose={() => openBrief(null)}
-          projects={liveProjects(view.data.projects)}
-        />
-        <PersonActivityDrawer
-          personId={id}
-          drawer={drawer}
-          onClose={() => setDrawer(null)}
-        />
-      </RecordView>
+          <OpenEmailDrawer
+            activityId={openEmail}
+            zone={recordZone}
+            onClose={() => setOpenEmail(null)}
+          />
+          <PersonMailDrawer
+            personId={id}
+            view={view.data}
+            recordAddress={primaryEmail(person.emails)}
+            open={composer.open}
+            intent={composer.intent}
+            threadId={composer.threadId}
+            onClose={composer.close}
+          />
+          <PersonResearchDrawer
+            personId={id}
+            personName={person.full_name}
+            providerProfiles={view.data.provider_profiles}
+            open={drawer === "research"}
+            onClose={() => setDrawer(null)}
+          />
+          <PersonMeetingBrief
+            activityId={briefedMeeting}
+            open={briefedMeeting !== null}
+            onClose={() => openBrief(null)}
+            projects={liveProjects(view.data.projects)}
+          />
+          <PersonActivityDrawer
+            personId={id}
+            drawer={drawer}
+            onClose={() => setDrawer(null)}
+          />
+        </RecordView>
+      </PersonWriteTo>
     </div>
+  );
+}
+
+/**
+ * This page's answer to an address pressed on it: its OWN composer.
+ *
+ * The shell hosts a composer for an address pressed anywhere, but this page
+ * already keeps one — the drawer that also offers the contact's chat
+ * transports — and an address opening the shell's beside it would be the two
+ * composers PersonMailDrawer replaced. The drawer leads with mail whenever the
+ * contact has an address, so an address opens on mail without being told. An
+ * address belonging to some OTHER record still goes to the shell, which is
+ * what it was for.
+ *
+ * Under the shell's own condition: a reader with no connected mailbox gets no
+ * answer from this page either, and the address hands itself to their own
+ * mail client exactly as it would anywhere else.
+ */
+function PersonWriteTo({
+  personId,
+  onWrite,
+  children,
+}: Readonly<{
+  personId: string;
+  onWrite: () => void;
+  children: ReactNode;
+}>) {
+  const shell = useWriteTo();
+  const connected = useMailboxConnected();
+  const writeTo: WriteTo = (target) => {
+    if (target.entityType === "person" && target.entityId === personId) {
+      onWrite();
+      return;
+    }
+    shell?.(target);
+  };
+  return (
+    <WriteToProvider writeTo={connected ? writeTo : null}>
+      {children}
+    </WriteToProvider>
   );
 }
 
@@ -716,15 +770,17 @@ function PersonIdentityLine({
           sentence about her — so the facts stand apart on whitespace instead of
           being strung together on dots. */}
       <IdentityLine separator="space">
-        {/* The address and the number are LINKS: a reader who sees an address
-            expects to click it, and a header that showed one and did nothing
-            taught them the record was a printout. The link hands the value to
-            their own client; the Write verb above stays the way to write on
-            the product's behalf, behind its consent gate. */}
+        {/* The address and the number are ways to ACT: a reader who sees an
+            address expects to click it, and a header that showed one and did
+            nothing taught them the record was a printout. The address opens
+            this page's own composer — the same drawer the Write verb above
+            opens, behind the same consent gate — and the number dials. */}
         {email && (
           <ContactLink
             kind="email"
             value={email}
+            record={{ entityType: "person", entityId: person.id }}
+            readOnly={Boolean(person.archived_at)}
             className="pe-meta-link"
             textClassName="identity-fact"
           >

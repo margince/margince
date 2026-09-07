@@ -64,7 +64,7 @@ const OPS = { organization: ["read", "update"] } as const;
 const READER = { organization: ["read"] } as const;
 
 const meta: Meta<typeof BlockedDomainsCard> = {
-  title: "Settings/Data/Capture/Refused domains",
+  title: "Settings/Data/Capture rules/Refused domains",
   component: BlockedDomainsCard,
 };
 export default meta;

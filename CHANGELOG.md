@@ -23,6 +23,18 @@ numbers appear here when releases start.
 
 ### Changed
 
+- **An email address anywhere in the product opens Margince's composer.** The
+  address on a contact's or a lead's header, in the contact rail's details, and
+  on the people cards of an account page used to be a `mailto:` link, which
+  handed the address to whatever mail client the browser had — the message left
+  outside the product, nothing was filed on the record, no consent was asked,
+  and the thread on the record had a hole where the reply arrived. Each address
+  is now a button into the same composer the header's Email verb opens, on the
+  record the address belongs to and with the address already in the To line —
+  for a reader who has connected a mailbox for Margince to send from. Without
+  one the address stays a `mailto:`, because the composer could only refuse.
+  Phone numbers still dial through `tel:`.
+
 - **The relationship brief is written by a model, and reads what people actually
   wrote.** The person page's standing brief has always been a deterministic
   composition; it now runs on the `summarize` lane as the invocation site

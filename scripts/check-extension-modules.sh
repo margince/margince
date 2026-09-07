@@ -24,7 +24,7 @@ root="$(git rev-parse --show-toplevel)"
 failures=0
 
 for mod in "$root"/extensions/*/go.mod; do
-    [ -e "$mod" ] || continue
+    [[ -e "$mod" ]] || continue
     dir="$(dirname "$mod")"
     unit="$(basename "$dir")"
 
@@ -40,7 +40,7 @@ for mod in "$root"/extensions/*/go.mod; do
 
     before="$(cat "$mod")"
     beforeSum=""
-    [ -f "$dir/go.sum" ] && beforeSum="$(cat "$dir/go.sum")"
+    [[ -f "$dir/go.sum" ]] && beforeSum="$(cat "$dir/go.sum")"
 
     if ! ( cd "$dir" && GOFLAGS=-mod=mod go mod tidy ) 2>/dev/null; then
         printf '  FAIL %s: `go mod tidy` does not run here, so no dependency bump can update it\n' "$unit" >&2
@@ -49,20 +49,20 @@ for mod in "$root"/extensions/*/go.mod; do
     fi
 
     afterSum=""
-    [ -f "$dir/go.sum" ] && afterSum="$(cat "$dir/go.sum")"
-    if [ "$before" != "$(cat "$mod")" ] || [ "$beforeSum" != "$afterSum" ]; then
+    [[ -f "$dir/go.sum" ]] && afterSum="$(cat "$dir/go.sum")"
+    if [[ "$before" != "$(cat "$mod")" ]] || [[ "$beforeSum" != "$afterSum" ]]; then
         printf '  FAIL %s: go.mod/go.sum are not what `go mod tidy` produces — the committed pair\n' "$unit" >&2
         printf '       disagrees with itself, which is the shape a half-applied bump leaves.\n' >&2
         printf '       Run: (cd extensions/%s && go mod tidy) and commit the result.\n' "$unit" >&2
         printf '%s' "$before" > "$mod"
-        if [ -n "$beforeSum" ]; then printf '%s' "$beforeSum" > "$dir/go.sum"; else rm -f "$dir/go.sum"; fi
+        if [[ -n "$beforeSum" ]]; then printf '%s' "$beforeSum" > "$dir/go.sum"; else rm -f "$dir/go.sum"; fi
         failures=$((failures + 1))
         continue
     fi
     printf '  ok   %s: tidy runs and changes nothing\n' "$unit"
 done
 
-if [ "$failures" -ne 0 ]; then
+if [[ "$failures" -ne 0 ]]; then
     echo "FAIL: $failures extension module(s) a dependency bump cannot update unattended" >&2
     exit 1
 fi

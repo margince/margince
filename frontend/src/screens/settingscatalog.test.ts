@@ -76,11 +76,11 @@ describe("the scope each page declares", () => {
     // stay inside one workspace.
     integrations: "mixed",
 
-    // Personal pages carrying one shared card each. A badge reading "Only you"
-    // over either would tell a reader a company-wide switch is private to them.
-    // MailSharingCard PATCHes /capture/settings — whether captured mail is
-    // shared with colleagues; CaptureExclusionsCard's workspace rules keep a
-    // correspondent out of the CRM for everybody.
+    // Personal pages carrying one shared surface each. A badge reading "Only
+    // you" over either would tell a reader a company-wide switch is private to
+    // them. ConnectorsCard's second panel connects the workspace's Telegram
+    // bot; CaptureExclusionsCard's workspace rules keep a correspondent out of
+    // the CRM for everybody.
     connections: "mixed",
     "capture-activity": "mixed",
 

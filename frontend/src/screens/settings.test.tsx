@@ -3,6 +3,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { isValidElement, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { AccountMenu } from "../app/account";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { pickOption } from "../design-system/select-testing";
 import { LOCALES, localeNameKey, translate } from "../i18n";
@@ -98,22 +99,59 @@ describe("SettingsScreen RBAC surfaces", () => {
     expect(screen.queryByText("admin")).toBeNull();
   });
 
-  // Appearance is chosen from the account menu, not from here: it is the
-  // setting a reader changes most often and from wherever they are standing.
-  // Language stays, so the claim is that the account card lost ONE control
-  // rather than that the surface went away — and it is made against the
-  // rendered page, because an import that no longer exists is not evidence
-  // about what a reader sees.
-  it("offers no theme control on the Account tab", async () => {
+  // Appearance is chosen from Settings AND from the account menu. The menu keeps
+  // its shortcut — it is the setting a reader changes most often and from
+  // wherever they are standing — and this is where somebody who came looking for
+  // it in Settings finds it.
+  it("offers the appearance choice on the Account tab", async () => {
     render(<SettingsScreen route={settingsHref("account")} />);
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
 
     expect(screen.getByRole("heading", { name: "Your account" })).toBeTruthy();
     expect(screen.getByRole("combobox", { name: "Language" })).toBeTruthy();
-    for (const name of ["Light", "Dark", "System", "Theme"]) {
-      expect(screen.queryByRole("button", { name })).toBeNull();
-      expect(screen.queryByRole("group", { name })).toBeNull();
-    }
+    // Opened, because a Margince `Select` renders its options in a listbox on
+    // click rather than as children of the control.
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("combobox", { name: "Appearance" }));
+    expect(
+      within(screen.getByRole("listbox"))
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual(["Light", "Dark", "System"]);
+  });
+
+  // ONE state, two faces, and BOTH of them are on screen for this.
+  //
+  // Asserting localStorage alone would pass for a row that writes the key and
+  // never notifies anybody — the menu would sit there stale, which is the exact
+  // failure "one state" is supposed to rule out. So the real account menu is
+  // mounted beside the settings screen, and the assertion is that it followed.
+  it("shares its answer with the account menu", async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <SettingsScreen route={settingsHref("account")} />
+        <AccountMenu />
+      </>,
+    );
+    await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
+
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: "Appearance" }),
+      "Dark",
+    );
+
+    // The menu's own radio, read through the menu rather than through the store
+    // underneath it. `setThemeChoice` publishes to `useSyncExternalStore`
+    // subscribers, and this is one of them.
+    await user.click(screen.getByRole("button", { name: "Account" }));
+    await user.click(screen.getByRole("menuitem", { name: "Theme" }));
+    expect(
+      screen
+        .getByRole("menuitemradio", { name: "Dark" })
+        .getAttribute("aria-checked"),
+    ).toBe("true");
   });
 
   // Identity, credential, sign-off and language are ONE card, not four: a
@@ -150,6 +188,79 @@ describe("SettingsScreen RBAC surfaces", () => {
     // And the four are not four cards: this one has a single title over all of
     // them, which is what fragmenting it again would break.
     expect(within(card).getAllByRole("heading", { level: 2 })).toHaveLength(1);
+  });
+
+  // A member correcting the name their colleagues see them by. Until this row
+  // existed there was no way to: `display_name` was written by the invite and
+  // by nothing else, so a name typed wrong stayed wrong on every record that
+  // person touched.
+  it("saves a corrected name to the caller's own seat", async () => {
+    const user = userEvent.setup();
+    const sent: { path: string; body: unknown }[] = [];
+    const backend = settingsBackend();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const request = input instanceof Request ? input : undefined;
+        const url = String(request ? request.url : input);
+        const method = request?.method ?? init?.method ?? "GET";
+        if (url.includes("/me/display-name") && method === "PUT") {
+          // openapi-fetch passes a Request, so the body is read off it rather
+          // than off `init` — `init.method` is undefined for this client.
+          const raw = request ? await request.text() : String(init?.body ?? "");
+          sent.push({ path: "/me/display-name", body: JSON.parse(raw) });
+          return new Response(JSON.stringify({}), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          });
+        }
+        return backend(input);
+      }),
+    );
+
+    render(<SettingsScreen route={settingsHref("account")} />);
+    await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
+
+    const field = screen.getByRole("textbox", { name: "Your name" });
+    await user.clear(field);
+    await user.type(field, "  Ada Lovelace  ");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    // Trimmed on the way out, so a trailing space is not a change the server
+    // has to refuse. Asserted through the WIRE, because a row that renders the
+    // right value and sends the wrong field reads as "the feature does nothing".
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]).toEqual({
+      path: "/me/display-name",
+      body: { display_name: "Ada Lovelace" },
+    });
+  });
+
+  // The control for the case above: Save is withheld until the name actually
+  // moves. Without it, a row that always enabled Save would pass the case above
+  // and quietly write on every render.
+  it("offers no save until the name changes", async () => {
+    const user = userEvent.setup();
+    render(<SettingsScreen route={settingsHref("account")} />);
+    await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
+
+    const save = screen.getByRole("button", { name: "Save" });
+    expect(save).toHaveProperty("disabled", true);
+
+    // A name of only whitespace is not a name, so it does not enable it either.
+    const field = screen.getByRole("textbox", { name: "Your name" });
+    await user.clear(field);
+    await user.type(field, "   ");
+    expect(screen.getByRole("button", { name: "Save" })).toHaveProperty(
+      "disabled",
+      true,
+    );
+
+    await user.type(field, "Ada");
+    expect(screen.getByRole("button", { name: "Save" })).toHaveProperty(
+      "disabled",
+      false,
+    );
   });
 
   it("switches the language from the Account tab, through the design-system select", async () => {
@@ -398,7 +509,7 @@ describe("SettingsScreen restructured pages", () => {
     await waitFor(() =>
       expect(
         screen
-          .getByRole("link", { name: "Privacy & audit" })
+          .getByRole("link", { name: "Privacy & retention" })
           .getAttribute("aria-current"),
       ).toBe("page"),
     );

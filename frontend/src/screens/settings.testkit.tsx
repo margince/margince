@@ -112,7 +112,7 @@ const ADMIN_GRANTS: GrantSpec = {
   // `retention_policy` or `privacy_request`, neither of which anybody below
   // admin and ops holds.
   person: ["read"],
-  // What actually opens Privacy & audit for this admin fixture. Named here
+  // What actually opens Privacy & retention for this admin fixture. Named here
   // rather than left to `person`, because the page moved off the read every
   // seat holds and a fixture that did not follow would quietly stop rendering
   // the page its cases are about.
@@ -150,9 +150,11 @@ export function readOn(object: RbacObject): GrantSpec {
 // promised, gets undefined, and throws mid-render — which takes the whole entry
 // down and surfaces as its OTHER cards being absent, nowhere near the cause.
 //
-// Shared because this screen has two fetch fakes (`settingsBackend` here and
-// `mergedEntryBackend`, which parameterizes the seat), and a keyed endpoint
-// added to one of them alone leaves the other failing exactly that way.
+// Shared because this screen has several fetch fakes — `settingsBackend` here,
+// `mergedEntryBackend` parameterizing the seat, `settingsNavBackend` the grant
+// map — and a keyed endpoint added to one of them alone leaves the others
+// failing exactly that way. Every fake routes through here for that reason;
+// counting them in this comment is how the sentence goes stale, so it does not.
 export function keyedEnvelope(url: string) {
   // `providers` is required in the contract, so a card is right to index it
   // directly; an empty list is the honest answer for an installation that has
@@ -165,6 +167,16 @@ export function keyedEnvelope(url: string) {
   // no model in the window — which is what a test fixture is.
   if (url.includes("/ai/health")) {
     return jsonResponse({ window_hours: 1, rungs: [] });
+  }
+  // `budget` is required too, and the agent at the foot of the settings rail
+  // indexes it for the currency its spend figure is in. A month with no call is
+  // the honest answer for a fixture, and the figure it draws is then absent
+  // rather than a confident zero (app/agentrail.tsx).
+  if (url.includes("/ai/usage")) {
+    return jsonResponse({
+      days: [],
+      budget: { monthly_tokens: 0, spent_tokens: 0, band: "normal" },
+    });
   }
   return null;
 }

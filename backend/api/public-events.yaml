@@ -115,6 +115,7 @@ components:
         - consent.suppression_lifted
         - email_signature.changed
         - user_locale.changed
+        - user_display_name.changed
         - linkedin_account.changed
         - linkedin_network.imported
         - linkedin_match.decided
@@ -2706,6 +2707,29 @@ components:
             The language now chosen — one of the catalogs the product ships.
             Never empty: this event fires on a choice, and a member who has
             never chosen has no row and produces no event.
+      additionalProperties: false
+
+    PublicEventUserDisplayNameChanged:
+      type: object
+      x-event-type: user_display_name.changed
+      x-entity-type: user
+      x-version: 1
+      description: >-
+        Payload for user_display_name.changed — a member changed the name their
+        colleagues see them by (identity/userdisplayname.go's
+        SaveMyDisplayName). Always their own: this API offers no way to rename
+        somebody else. A subscriber holding a copy of the roster needs it,
+        because the name is read from app_user wherever it is shown and a cached
+        copy would keep addressing the person by a name they have corrected.
+      required:
+        - display_name
+      properties:
+        display_name:
+          type: string
+          description: >-
+            The name now in force, trimmed. Never empty: a name of only
+            whitespace is refused, and a save that moved nothing writes nothing
+            and publishes nothing.
       additionalProperties: false
 
     PublicEventLinkedinAccountChanged:

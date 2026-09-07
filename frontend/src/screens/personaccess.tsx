@@ -88,8 +88,8 @@ export function PersonAccess({ person }: Readonly<{ person: Person }>) {
           action={
             mayChange && (
               <Button
-                small
-                disabled={setVisibility.isPending}
+                variant="link"
+                pending={setVisibility.isPending}
                 onClick={() =>
                   setVisibility.mutate(isPrivate ? "workspace" : "owner")
                 }

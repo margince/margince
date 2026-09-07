@@ -33,6 +33,7 @@ import {
   companyEditFields,
   mapOrgUpdate,
 } from "./organizations";
+import { WriteToHost } from "./writeto";
 
 // The same P-14/15/16/1 shared-block wiring as contacts
 // (people.test.tsx) — search/sort/pagination, the rich create modal
@@ -57,7 +58,11 @@ function render(ui: ReactNode) {
   return rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <RecordShell>{ui}</RecordShell>
+        {/* The composer host is the shell's in the running app (`App.tsx`);
+            the people cards' addresses are buttons into it. */}
+        <WriteToHost>
+          <RecordShell>{ui}</RecordShell>
+        </WriteToHost>
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -2145,6 +2150,13 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
   // which is three round trips spent on a decision the list could have carried.
   it("carries what a listed contact does and how to write to them", async () => {
     stubFetch(companyBackstop, {
+      // The reader has a mailbox to send from, so the address is the
+      // composer's; without one it would be their own mail client's.
+      connectors: {
+        data: [
+          { id: "g1", provider: "gmail", status: "connected", scopes: [] },
+        ],
+      },
       org360: {
         ...org360,
         people: {
@@ -2184,14 +2196,15 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     );
 
     // The address is its own control, a sibling of the name rather than
-    // nested inside it: a link inside a link is a press whose destination
-    // nobody can predict.
-    const write = screen.getAllByRole("link", {
-      name: "anna.brandt@brandt-automotive.de",
-    })[0];
-    expect(write.getAttribute("href")).toBe(
-      "mailto:anna.brandt@brandt-automotive.de",
-    );
+    // nested inside it: a control inside a link is a press whose destination
+    // nobody can predict. A button, into the product's composer, and never
+    // a link the reader's own mail client would take.
+    const write = (
+      await screen.findAllByRole("button", {
+        name: "anna.brandt@brandt-automotive.de",
+      })
+    )[0];
+    expect(write.hasAttribute("href")).toBe(false);
     expect(name.contains(write)).toBe(false);
   });
 

@@ -151,6 +151,10 @@ func (m outboundMessage) authorization(origin SendOrigin) commsauthz.Request {
 		Links:            linkedRecordIDs(m.links),
 		Subject:          m.in.Subject,
 		Body:             m.body,
+		// The markup alternative travels with the plain one: both are the
+		// message, and the fingerprint stamped from this request is what the
+		// transmit phase later compares the wire against.
+		HTMLBody: m.htmlBody,
 	}
 }
 

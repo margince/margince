@@ -39,8 +39,12 @@ func IsCoreObject(object string) bool {
 type Document struct {
 	Objects  map[string]grant   `json:"objects"`
 	RowScope principal.RowScope `json:"row_scope"`
-	// FieldMasks is carried for shape-completeness; enforcement is
-	// B-EP03.4 (field-level masking), not built yet.
+	// FieldMasks is carried for shape-completeness and read by nothing.
+	//
+	// Masking IS enforced — platform/auth/fieldmask.go renders the predicate and
+	// the deal and project reads apply it — but the masks it enforces live in
+	// the `field_mask` table, not in this document. A mask written here would be
+	// stored and ignored, which is why nothing writes one.
 	FieldMasks []string `json:"field_masks,omitempty"`
 }
 

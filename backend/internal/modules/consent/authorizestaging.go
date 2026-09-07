@@ -84,7 +84,7 @@ func (g *Gate) AuthorizeStagingTx(ctx context.Context, tx pgx.Tx, deliveryID ids
 // to. The fingerprint is of the message as staged, so a later reader can tell
 // whether what went out is what was authorized.
 func (g *Gate) recordStagingDecisions(ctx context.Context, tx pgx.Tx, deliveryID, setID ids.UUID, req commsauthz.Request, set commsauthz.DecisionSet) error {
-	sum := WordingDigest(req.Subject, req.Body)
+	sum := SendingDigest(req.Subject, req.Body, req.HTMLBody)
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return err
