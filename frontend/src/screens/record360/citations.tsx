@@ -11,8 +11,9 @@
 import type { components } from "../../api/schema";
 import { useRecordZone } from "../../app/recordzone";
 import { Badge, Button } from "../../design-system/atoms";
+import { EmailReference } from "../../design-system/emailreference";
 import { Popover } from "../../design-system/popover";
-import { formatDate, formatNumber } from "../../format/format";
+import { formatDate, formatDateTime, formatNumber } from "../../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 
@@ -106,7 +107,13 @@ function hasReceipt(cited: Cited): boolean {
  */
 export function citationChips(
   evidence: readonly Cited[],
-  openable: (entityType: CitedKind) => boolean,
+  // Asked about the CITATION, not about its kind. Whether an activity opens
+  // depends on the row: one carrying an email summary this reader may receive
+  // opens the message, and one carrying none opens nothing — same kind, two
+  // answers. A kind-only predicate had to give both rows the same one, so a
+  // sentence resting on a readable message and a withheld one either offered
+  // two dead controls or hid a live one.
+  openable: (cited: Cited) => boolean,
   groupable: (entityType: CitedKind) => boolean = () => false,
 ): CitationChip[] {
   const chips: CitationChip[] = [];
@@ -119,7 +126,7 @@ export function citationChips(
       nameRepeat(chips[already], cited);
       continue;
     }
-    const isOpenable = openable(cited.entity_type);
+    const isOpenable = openable(cited);
     // Its own chip: a record with a page of its own, or one carrying a
     // receipt. A citation with a receipt is never folded into a count — the
     // quote is about ONE record, and a chip for three activities that opened
@@ -202,16 +209,40 @@ function ownChip(cited: Cited, isOpenable: boolean): CitationChip {
 // can be stepped through, because only these render in the drawer.
 const RECEIPT_CITATIONS = new Set(["fact", "profile_field"]);
 
-// The citation kinds a reader can open something for. `deal` and `person` route
-// to their own screens; `fact` and `profile_field` open their receipt instead —
+// The citation kinds that route to a record of their own. `deal` and `person`
+// open their screens; `fact` and `profile_field` open their receipt instead —
 // where the value came from, when it was read, and what could not be recorded.
 //
-// An activity has no detail route of its own (it lives in a timeline) and no
-// receipt either, and the organization citation is usually the page the reader
-// is already on. Both stay flat: a clickable element that does nothing teaches
-// the reader that citations do not work, which costs more than the click it
-// saves.
+// `activity` is not here, and `organization` is not either, for two different
+// reasons. An activity lives in a timeline and has no route; what it CAN open
+// is the message itself, decided per row by `emailOf` below. An organization
+// citation is usually the page the reader is already on.
 const ROUTABLE_CITATIONS = new Set(["deal", "person", "fact", "profile_field"]);
+
+/**
+ * The message behind a citation, when there is one this reader may open.
+ *
+ * Three things have to be true together, which is why the question is asked
+ * here once rather than at each of the eight call sites. The citation has to be
+ * an activity; the server has to have sent the canonical email row for it, which
+ * it does only for an email this reader may receive a summary of; and the host
+ * has to mount a drawer for it to open into. Any of the three missing means the
+ * citation names a message and cannot open one, and then it is prose.
+ *
+ * A `withheld` summary is the interesting case: the row exists and the words are
+ * not this reader's. It still renders — as a reference with no subject and no
+ * control — because drawing nothing would say the message did not happen.
+ */
+function emailOf(cited: Cited): Cited["email_summary"] | undefined {
+  return cited.entity_type === "activity" ? (cited.email_summary ?? undefined) : undefined;
+}
+
+// Whether the HOST can open a message at all. The other half of the question —
+// whether this reader may read THIS one — is EmailReference's own: it takes the
+// withheld state and drops the opener whatever the caller passed, because a
+// privacy rule living in a prop contract is a rule the next caller has to
+// remember. Repeating it here would be a second copy of that decision, and the
+// two would be free to disagree.
 
 /** One steppable citation, in the receipt's own shape. */
 export type CitedSibling = {
@@ -279,6 +310,7 @@ function chipLabel(chip: CitationChip, t: Translator, locale: Locale): string {
 export function Citations({
   evidence,
   onOpenRecord,
+  onOpenEmail,
   nameOf,
 }: Readonly<{
   evidence: readonly Cited[];
@@ -297,16 +329,33 @@ export function Citations({
     entityId: string,
     siblings?: readonly CitedSibling[],
   ) => void;
+  /**
+   * Opens one message in the host's own email drawer.
+   *
+   * Beside `onOpenRecord` rather than folded into it: a message is not a record
+   * with a route, it is a drawer the host already mounts for its timeline, and
+   * a host that mounts none passes nothing here. The citation then renders the
+   * message as prose instead of as a control that does nothing.
+   */
+  onOpenEmail?: (activityId: string) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
+  const named = evidence.map((cited) =>
+    cited.name || !nameOf
+      ? cited
+      : { ...cited, name: nameOf(cited.entity_type, cited.entity_id) },
+  );
+  // A cited message is drawn as a message, by the one component that cites one,
+  // and never folded into the chip run. The chips speak in record kinds — "deal",
+  // "3 activities" — and a message has a subject and a date the reader checks
+  // the claim against, which a kind word cannot carry.
+  const messages = named.filter((cited) => emailOf(cited));
   const chips = citationChips(
-    evidence.map((cited) =>
-      cited.name || !nameOf
-        ? cited
-        : { ...cited, name: nameOf(cited.entity_type, cited.entity_id) },
-    ),
-    (entityType) => Boolean(onOpenRecord) && ROUTABLE_CITATIONS.has(entityType),
+    named.filter((cited) => !emailOf(cited)),
+    (cited) =>
+      Boolean(onOpenRecord) && ROUTABLE_CITATIONS.has(cited.entity_type),
     (entityType) => RECEIPT_CITATIONS.has(entityType),
   );
   // THIS sentence's citations, in the order it cites them, so the receipt's
@@ -317,11 +366,31 @@ export function Citations({
   // citing the same fact twice would leave `findIndex` returning the first
   // occurrence forever, and Next would never move past it.
   const siblings = dedupeCited(evidence);
-  if (chips.length === 0) {
+  if (chips.length === 0 && messages.length === 0) {
     return null;
   }
   return (
     <span className="co-brief-cites">
+      {messages.map((cited) => {
+        const summary = emailOf(cited);
+        if (!summary) {
+          return null;
+        }
+        const withheld = summary.display_status === "withheld";
+        return (
+          <EmailReference
+            key={`activity:${cited.entity_id}`}
+            subject={summary.subject}
+            occurredAt={formatDateTime(summary.occurred_at, locale, recordZone)}
+            withheld={withheld}
+            onOpen={
+              onOpenEmail
+                ? () => onOpenEmail(summary.activity_id)
+                : undefined
+            }
+          />
+        );
+      })}
       {chips.map((chip) => {
         const open = chip.openable
           ? () => onOpenRecord?.(chip.entityType, chip.entityId, siblings)
@@ -421,12 +490,15 @@ const NATURE_LABELS: Record<
 export function SentenceList({
   sentences,
   onOpenRecord,
+  onOpenEmail,
   nameOf,
   citations = "per-sentence",
   leadWithJudgement = false,
 }: Readonly<{
   sentences: BriefSentence[];
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  /** Opens one cited message; see `Citations`. */
+  onOpenEmail?: (activityId: string) => void;
   // The record's own name for a citation the writer could not name — see
   // `Citations`. Passed through rather than resolved here: the names belong to
   // the page holding the record, not to the prose.
@@ -468,6 +540,7 @@ export function SentenceList({
               evidence={lead.evidence}
               nameOf={nameOf}
               onOpenRecord={onOpenRecord}
+              onOpenEmail={onOpenEmail}
             />
           )}
         </p>
@@ -485,6 +558,7 @@ export function SentenceList({
                 evidence={sentence.evidence}
                 nameOf={nameOf}
                 onOpenRecord={onOpenRecord}
+                onOpenEmail={onOpenEmail}
               />
             )}
           </li>
@@ -495,6 +569,7 @@ export function SentenceList({
               evidence={sentences.flatMap((sentence) => sentence.evidence)}
               nameOf={nameOf}
               onOpenRecord={onOpenRecord}
+              onOpenEmail={onOpenEmail}
             />
           </li>
         )}

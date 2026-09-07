@@ -399,6 +399,20 @@
   margin-inline-start: 0;
 }
 
+/* The basis under an action, where the reader's next act is to READ the
+   message. Rows stack rather than wrapping inline: an EmailEntry carries a
+   subject, a sender and a preview, and three of those on one line is the
+   compact chip run this block exists not to be. */
+.co-evidence-sources {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+.co-evidence-sources > .co-brief-cites {
+  margin-inline-start: 0;
+}
+
 /* A chip with a receipt behind it is marked the way every other opening
    claim on the page is — the indigo dotted rule — whether or not its record
    has a page: resting on it opens the words, which is the affordance. */

@@ -100,13 +100,19 @@ function rowFields(summary: EmailSummary, t: ReturnType<typeof useT>) {
  * for several messages, or an entry the server gave no activity id.
  * `noReader` — the surface itself mounts no drawer, so there is nowhere to
  * open INTO. The Brief is the one such surface.
+ * `withheld` — the message exists and its content is not this reader's. The
+ * row keeps its shape and loses its words, which is what `rowFields` already
+ * does to every field the status governs; this makes the OPENER honest about
+ * the same fact. Borrowing `noDetail` here would say there is no message,
+ * and `noReader` would blame the surface for a limit that belongs to the
+ * message — both are the wrong sentence about a row a reader will ask about.
  *
  * Naming the reason is the point. An optional opener could not tell these
  * apart from a surface that simply forgot to pass one, and a forgotten opener
  * renders a full-fidelity preview that does nothing — the defect this union
  * exists to make unwritable.
  */
-type NoOpenReason = "noDetail" | "noReader";
+type NoOpenReason = "noDetail" | "noReader" | "withheld";
 
 /**
  * EmailWords is a message's WORDS and nothing else — the server's own preview

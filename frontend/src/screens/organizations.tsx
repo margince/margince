@@ -1725,15 +1725,6 @@ function useCitedReceipt() {
     entityId: string,
     siblings?: readonly CitedRecord[],
   ) => {
-    // An activity opens the message itself. It used to fall through both
-    // branches below and land nowhere — the account's commitment rows have
-    // been passing `source_activity_id` into a button that did nothing since
-    // the day they were written, because an activity had no detail route.
-    // It has one now.
-    if (citationOpensEmail(entityType)) {
-      setEmail(entityId);
-      return;
-    }
     if (citationOpensRecord(entityType)) {
       openCitation(entityType, entityId);
       return;
@@ -1763,6 +1754,11 @@ function useCitedReceipt() {
     cited,
     email,
     open,
+    // The message door, on its own. `open` routes a citation by its KIND, and a
+    // message is not a kind the citation renderer hands back — it decides per
+    // row whether a summary is openable and calls this directly, so the host
+    // passes it as `onOpenEmail` beside `onOpenRecord`.
+    openEmail: setEmail,
     close: () => setCited(null),
     closeEmail: () => setEmail(null),
     step: list.length > 1 ? step : undefined,
@@ -2803,15 +2799,6 @@ function citationOpensRecord(entityType: string): boolean {
 
 // An activity opens the MESSAGE, in the account page's own email drawer.
 //
-// Its own named decision rather than a bare comparison inside the hook, so the
-// rule can be asserted without mounting the page: the account's commitment rows
-// have passed `source_activity_id` into a button since the day they were
-// written, and it did nothing because an activity fell through both branches
-// above. A rule with no name is a rule with no test.
-export function citationOpensEmail(entityType: string): boolean {
-  return entityType === "activity";
-}
-
 // The kinds a receipt can be written for. Narrowing HERE rather than asserting
 // at the fetch is what keeps the modal's contract honest: a kind that grows a
 // receipt upstream fails to compile until this decision learns about it.
