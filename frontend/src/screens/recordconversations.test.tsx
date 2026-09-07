@@ -120,9 +120,44 @@ describe("whose move a conversation is waiting on", () => {
   });
 });
 
-describe("expanding a conversation", () => {
-  it("reveals the thread's older members, hidden until then", async () => {
+describe("reading a conversation", () => {
+  it("draws the thread open, newest first, and folds the rest behind a count", async () => {
     const user = userEvent.setup();
+    draw([
+      group(
+        "thread-1",
+        [5, 4, 3, 2, 1].map((n) =>
+          entry("email", {
+            id: `m${n}`,
+            title: n === 1 ? "Renewal" : "Re: Renewal",
+            atIso: `2026-07-0${n}T10:00:00Z`,
+            direction: n % 2 === 0 ? "outbound" : "inbound",
+            body: `message ${n} of the thread`,
+          }),
+        ),
+      ),
+    ]);
+
+    // The three newest stand open without a click — the thread is what the
+    // reader came to read — and the two older ones wait behind a count.
+    expect(screen.getByText("message 5 of the thread")).toBeTruthy();
+    expect(screen.getByText("message 3 of the thread")).toBeTruthy();
+    expect(screen.queryByText("message 2 of the thread")).toBeNull();
+    expect(screen.queryByText("message 1 of the thread")).toBeNull();
+
+    await user.click(
+      screen.getByRole("button", { name: "Show 2 earlier messages" }),
+    );
+    expect(await screen.findByText("message 1 of the thread")).toBeTruthy();
+
+    await user.click(
+      screen.getByRole("button", { name: "Hide earlier messages" }),
+    );
+    expect(screen.queryByText("message 1 of the thread")).toBeNull();
+    expect(screen.getByText("message 3 of the thread")).toBeTruthy();
+  });
+
+  it("offers no fold on a thread short enough to stand whole", () => {
     draw([
       group("thread-1", [
         entry("email", {
@@ -137,24 +172,14 @@ describe("expanding a conversation", () => {
           title: "Renewal",
           atIso: "2026-07-01T10:00:00Z",
           direction: "outbound",
-          body: "an older message only the expanded thread carries",
+          body: "the opening message",
         }),
       ]),
     ]);
 
-    // The older member's own body sits inside the group only, never in the
-    // row's one-line preview of the newest message.
-    expect(
-      screen.queryByText("an older message only the expanded thread carries"),
-    ).toBeNull();
-
-    await user.click(screen.getByRole("button", { name: "Open" }));
-
-    expect(
-      await screen.findByText(
-        "an older message only the expanded thread carries",
-      ),
-    ).toBeTruthy();
+    expect(screen.getByText("the newest word in the thread")).toBeTruthy();
+    expect(screen.getByText("the opening message")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /earlier/ })).toBeNull();
   });
 });
 
@@ -186,8 +211,11 @@ describe("a withheld newest message", () => {
       ]),
     ]);
 
-    const row = screen.getByText("Re: Contract terms").closest("li");
+    // The thread is named by the member the reader may read: the withheld
+    // one's title is the kind it was, not the subject it had.
+    const row = screen.getByText("Contract terms").closest("li");
     expect(row).toBeTruthy();
+    expect(screen.queryByText("Re: Contract terms")).toBeNull();
     const badges =
       row &&
       Array.from(row.querySelectorAll(".badge")).map((b) => b.textContent);
@@ -197,8 +225,7 @@ describe("a withheld newest message", () => {
     expect(badges).not.toContain("Waiting on them");
   });
 
-  it("keeps the collapsed preview off the newest message's body", async () => {
-    const user = userEvent.setup();
+  it("keeps the withheld member's words off the card, open as it is", () => {
     draw([
       group("thread-1", [
         entry("email", {
@@ -219,26 +246,42 @@ describe("a withheld newest message", () => {
       ]),
     ]);
 
-    // Withheld or not, the group's own title still names the thread — the
-    // fix is scoped to the body preview, not to whether the row is there.
-    expect(screen.getByText("Re: Renewal terms")).toBeTruthy();
-    expect(
-      screen.queryByText("only participants may read this line"),
-    ).toBeNull();
-
-    // Opened, the newest member draws through the ordinary TimelineRow,
-    // which is where the withheld sentence actually lives — and the member
-    // row keeps the same promise the preview kept: the withheld body never
-    // renders, collapsed or expanded, while the sibling's body still does.
-    await user.click(screen.getByRole("button", { name: "Open" }));
-
-    expect(
-      await screen.findByText("Content for participants only"),
-    ).toBeTruthy();
+    // The card stands, named by the member the reader may read, and the
+    // withheld member keeps its place in it: the sentence where its words
+    // would be, and never the words — while the sibling's body still draws.
+    expect(screen.getByText("Renewal terms")).toBeTruthy();
+    expect(screen.getByText("Content for participants only")).toBeTruthy();
     expect(
       screen.queryByText("only participants may read this line"),
     ).toBeNull();
     expect(screen.getByText("the opening message")).toBeTruthy();
+  });
+
+  it("says so where the subject would go when every member is withheld", () => {
+    draw([
+      group("thread-1", [
+        entry("email", {
+          id: "newest",
+          title: "email",
+          atIso: "2026-07-03T10:00:00Z",
+          direction: "inbound",
+          withheld: true,
+        }),
+        entry("email", {
+          id: "older",
+          title: "email",
+          atIso: "2026-07-01T10:00:00Z",
+          direction: "outbound",
+          withheld: true,
+        }),
+      ]),
+    ]);
+
+    // Once as the thread's subject, once per member.
+    expect(screen.getAllByText("Content for participants only")).toHaveLength(
+      3,
+    );
+    expect(screen.queryByText("email")).toBeNull();
   });
 });
 

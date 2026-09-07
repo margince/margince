@@ -1232,3 +1232,147 @@
 .timeline .tl-body > .emailentry {
   padding: 0;
 }
+
+/* The time under the day in the gutter. Quieter and one step smaller: the
+   day is what the column is scanned by, and the time is what settles the
+   order of two rows on it. */
+.timeline .tl-when-time {
+  display: block;
+  margin-top: var(--space-1);
+  font-size: var(--fs-eyebrow);
+  color: var(--textTertiary);
+}
+
+/* A conversation on the chronology: one card on the body side of the rail,
+   on the record's own pane with a stronger hairline than the row dividers
+   around it, so a thread reads as one event with its messages inside it
+   rather than as three rows that happen to share a subject. */
+.timeline .tl-thread {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4) var(--space-2);
+  border: 1px solid var(--borderStrong);
+  border-radius: var(--r-lg);
+  background: var(--pane);
+}
+
+/* Who the thread was with, beside the count. */
+.tl-thread-with {
+  color: var(--textMeta);
+}
+
+/* The thread's verbs sit at the end of its own head line — Reply belongs to
+   the conversation, and inside its card — rather than in the row's actions
+   column outside it. */
+.tl-thread-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+/* The messages, newest first, each under a hairline of its own. Their list
+   items are NOT rows of the chronology: the grid the timeline gives every li
+   — date gutter, rail, body — is not theirs, and inherited it put each
+   message in the gutter. */
+.tl-thread-messages {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+}
+.timeline .tl-thread-messages > li {
+  display: block;
+  border-block-end: 0;
+  border-top: 1px solid var(--borderSubtle);
+}
+
+/* One message: the mark, the words, and the moment. */
+.tl-msg {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: start;
+  padding: var(--space-3) 0;
+}
+.tl-msg-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-inline-size: 0;
+}
+.tl-msg-lead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-sm);
+  color: var(--textSecondary);
+}
+.tl-msg-who {
+  font-weight: var(--fw-medium);
+  color: var(--textPrimary);
+}
+/* The moment holds its width: it is what tells two replies apart, so it is
+   the last thing that may be squeezed. */
+.tl-msg-when {
+  font-size: var(--fs-meta);
+  color: var(--textMeta);
+  white-space: nowrap;
+}
+/* The mark for a message that is not their word — ours, or one the reader
+   may not open — drawn at the same size as the face beside their word, so
+   the column of marks stays one column. */
+.tl-msg-mark {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--bgElevated);
+  border: 1px solid var(--borderStrong);
+  color: var(--textMeta);
+}
+.tl-msg-mark svg {
+  width: 11px;
+  height: 11px;
+}
+/* The server's preview of a mail in a thread: two lines, then cut. Two rather
+   than one because a message is read here, not scanned past; two rather than
+   more because the whole thread stands open and a message that grew with
+   its text would decide the card's height. */
+.tl-msg-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: var(--textSecondary);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+}
+/* The withheld sentence inside a thread has no title to sit on, so it takes
+   the message's own size. */
+.tl-msg-body > .tl-withheld {
+  font-size: var(--fs-sm);
+}
+/* A message that opens its drawer is the same grid as one that does not;
+   the button chrome goes and the ground answers the pointer, as on the
+   canonical email row. */
+.tl-msg-open {
+  width: 100%;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-state) var(--ease-out);
+}
+.tl-msg-open:hover {
+  background: var(--bgHover);
+}
+.tl-msg-open:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+}
