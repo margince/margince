@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/network"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -320,11 +321,18 @@ func (s *Service) lastTouchSection(ctx context.Context, tx pgx.Tx, personID ids.
 	// a private message narrowed to its participants must not move the date a
 	// colleague outside them reads here, the same rule relationship strength
 	// holds (people/strength.go).
+	// THE TWO DIRECTIONS ASK DIFFERENT QUESTIONS, and only one of them is about
+	// reachability. "You wrote to them" is satisfied by the message reaching
+	// them, which is what an outbound message linked to this person means. "THEY
+	// wrote" is a claim about authorship, and a thread is linked to everybody it
+	// concerns — so reading it off reachability told a reader "they wrote last"
+	// about a message somebody else sent into a conversation this person is on.
 	return tx.QueryRow(ctx, fmt.Sprintf(`
-		SELECT max(a.occurred_at) FILTER (WHERE a.direction = 'inbound'),
+		SELECT max(a.occurred_at) FILTER (WHERE a.direction = 'inbound' AND %s),
 		       max(a.occurred_at) FILTER (WHERE a.direction = 'outbound')
 		FROM activity a
 		WHERE a.archived_at IS NULL AND %s AND (%s)%s%s`,
+		people.SenderPredicate(fmt.Sprintf("$%d", personPos), "a"),
 		fmt.Sprintf(personReachesActivity, personPos), scope, projectScope(opts, arg),
 		auth.AudienceWorkspaceOnly("a")), args...).
 		Scan(&out.LastInboundAt, &out.LastOutboundAt)

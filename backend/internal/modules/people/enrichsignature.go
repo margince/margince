@@ -421,6 +421,9 @@ func (s *Store) SignatureCandidates(ctx context.Context, limit int, defaultEnabl
 				JOIN activity a ON a.id = al.activity_id
 				WHERE al.person_id = p.id AND al.entity_type = 'person'
 				  AND a.kind = 'email' AND a.direction = 'inbound' AND a.archived_at IS NULL
+				  -- THIS PERSON WROTE IT. Reaching them is not writing it, and a
+				  -- signature is only theirs to be read off a message they sent.
+				  AND `+SenderPredicate("p.id", "a")+`
 				  -- A limited message is not signature material. What this pass
 				  -- extracts — a title, a phone, an employer — is written onto a
 				  -- person every seat can read, so mining a message whose

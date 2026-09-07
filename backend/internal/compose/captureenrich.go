@@ -65,7 +65,10 @@ linkedin, org_name, address, website. Emit a field ONLY if the signature lines s
 must appear character-for-character in the supplied text. Ignore quoted replies, legal
 disclaimers, and marketing taglines. Phone numbers verbatim, never normalized.
 Emit address as the single line the signature prints it on. Emit website only for the
-organization's own site; a social profile is never a website, and linkedin carries that one.`
+organization's own site; a social profile is never a website, and linkedin carries that one.
+The signature must be THE NAMED PERSON'S OWN. A block naming somebody else — a colleague,
+a forwarded sender, a correspondent quoted underneath — states nothing about them, so emit
+no fields at all rather than the ones it happens to contain.`
 
 // signatureEnrichSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
 func signatureEnrichSystemFor(fence promptfence.Fence) string {
@@ -154,6 +157,17 @@ func (e *CaptureEnricher) RunWorkspace(ctx context.Context) (filled bool, err er
 	if err != nil {
 		return false, fmt.Errorf("reading the signature-enrichment setting: %w", err)
 	}
+	// The rows an earlier pass wrote off somebody else's signature, taken back
+	// before this one looks for candidates. It runs every pass rather than once
+	// in a migration because the two halves must not be able to disagree: the
+	// same senderPredicate decides what may be written below and what may still
+	// stand here, so a change to one is a change to both.
+	if removed, err := e.store.RetractMisattributedSignatureFields(wsCtx); err != nil {
+		return false, err
+	} else if removed > 0 {
+		e.log.InfoContext(wsCtx, "signature enrich: took back fields read off a message the person did not send",
+			"fields", removed)
+	}
 	candidates, err := e.store.SignatureCandidates(wsCtx, e.limit, defaultEnrich)
 	if err != nil {
 		return false, err
@@ -212,6 +226,11 @@ func unparseableReply(dropped []droppedFinding) bool {
 	return false
 }
 
+// signatureNameTokenMin is the shortest name token allowed to prove a
+// signature belongs to somebody. Below it, particles and initials match
+// unrelated blocks.
+const signatureNameTokenMin = 3
+
 // enrichOne reads one candidate's signature block, gates the model's fields
 // against it, and applies the survivors by recency.
 func (e *CaptureEnricher) enrichOne(ctx context.Context, cand people.SignatureCandidate) error {
@@ -220,6 +239,15 @@ func (e *CaptureEnricher) enrichOne(ctx context.Context, cand people.SignatureCa
 		// Nothing to read in this mail. The read still counts: without the
 		// cursor a person whose latest mail has no signature block would be
 		// selected again every night for the same empty window.
+		return e.store.MarkSignatureRead(ctx, cand.PersonID, cand.ActivityID)
+	}
+	if !signatureNamesPerson(lines, cand) {
+		// Their message, somebody else's signature at the foot of it. Reading
+		// it would repeat the defect the sender predicate closed, one step
+		// further along: grounded text, wrong owner. The read is recorded, so
+		// this mail is not re-offered until they write again.
+		e.log.DebugContext(ctx, "signature enrich: the block names somebody else, so nothing is read from it",
+			"person", cand.PersonID.String(), "reason", dropSignatureNotThisPerson)
 		return e.store.MarkSignatureRead(ctx, cand.PersonID, cand.ActivityID)
 	}
 	req := signatureEnrichRequest(cand, lines)
@@ -421,3 +449,34 @@ func (e *CaptureEnricher) holdThePass(ctx context.Context) (bool, func(), error)
 // enrichUnlockTimeout bounds the release, which runs after the pass is over and
 // must not become the reason a worker hangs.
 const enrichUnlockTimeout = 5 * time.Second
+
+// signatureNamesPerson asks whether the block a field was read from names the
+// person it is about to be written to.
+//
+// The candidate query already requires this person to have SENT the message, so
+// this is the second shape: their own mail whose foot carries somebody else's
+// signature — a forwarded footer, a colleague's block under theirs, a
+// correspondent's details quoted without the ">" that would have excluded them.
+// The value is verbatim in the window in every one of those cases, so the
+// evidence gate passes it and only the NAME can tell whose it is.
+//
+// A token of three characters or more, case-folded, or the address. Three
+// because initials and particles ("de", "van", "Jr") match too much, and a
+// person whose every name token is shorter than that is served by the address
+// arm or by the sender predicate that already admitted the message.
+func signatureNamesPerson(block string, cand people.SignatureCandidate) bool {
+	folded := strings.ToLower(block)
+	if cand.Email != "" && strings.Contains(folded, strings.ToLower(cand.Email)) {
+		return true
+	}
+	for _, token := range strings.Fields(cand.FullName) {
+		token = strings.ToLower(strings.Trim(token, ".,;:()<>\"'"))
+		if len(token) < signatureNameTokenMin {
+			continue
+		}
+		if strings.Contains(folded, token) {
+			return true
+		}
+	}
+	return false
+}

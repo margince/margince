@@ -179,9 +179,17 @@ func seedLinkedActivityAt(t *testing.T, e *integration.Env, person ids.UUID, aud
 			id, "agg-"+id.String(), audience, occurredAt); err != nil {
 			return err
 		}
-		_, err := tx.Exec(context.Background(), `
+		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO activity_link (activity_id, entity_type, person_id)
-			VALUES ($1, 'person', $2)`, id, person)
+			VALUES ($1, 'person', $2)`, id, person); err != nil {
+			return err
+		}
+		// They SENT it, as capture stamps an inbound message's counterparty.
+		// Without this row the mail reaches them with nobody having written it,
+		// and last-inbound is a claim about who wrote.
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO activity_participant (activity_id, person_id, role)
+			VALUES ($1, $2, 'from')`, id, person)
 		return err
 	}); err != nil {
 		t.Fatalf("seeding a linked activity: %v", err)
@@ -248,5 +256,77 @@ func retireUnsure(t *testing.T, e *integration.Env, id ids.UUID) {
 		return err
 	}); err != nil {
 		t.Fatalf("retiring the disposition: %v", err)
+	}
+}
+
+// TestLastInboundNamesTheSenderNotEveryoneOnTheThread drives the same real
+// service through the other half of lastTouchSection.
+//
+// A thread is linked to everybody it concerns, so a message from one
+// participant reaches the rest of them. Reading "they wrote last" off that
+// membership told a rep the counterparty had answered when the message was
+// somebody else's entirely — and the relationship brief repeats the claim in
+// words, which is where a reader meets it.
+func TestLastInboundNamesTheSenderNotEveryoneOnTheThread(t *testing.T) {
+	e := integration.Setup(t)
+	recipient := seedLinkedPerson(t, e, "recipient@example.test")
+	sender := seedLinkedPerson(t, e, "sender@example.test")
+
+	at := time.Now().Add(-time.Hour).Truncate(time.Microsecond)
+	id := ids.NewV7()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		ctx := context.Background()
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO activity (id, kind, subject, body, direction, source_system, source_id,
+			                      source, captured_by, audience, occurred_at)
+			VALUES ($1, 'email', 'Betreff', 'body', 'inbound', 'gmail', $2,
+			        'gmail:'||$2, 'connector:gmail', 'workspace', $3)`,
+			id, "thread-"+id.String(), at); err != nil {
+			return err
+		}
+		// Linked to BOTH, which is what a thread naming two people looks like.
+		for _, p := range []ids.UUID{recipient, sender} {
+			if _, err := tx.Exec(ctx, `
+				INSERT INTO activity_link (activity_id, entity_type, person_id)
+				VALUES ($1, 'person', $2)`, id, p); err != nil {
+				return err
+			}
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO activity_participant (activity_id, person_id, address, role)
+			VALUES ($1, $2, 'sender@example.test', 'from')`, id, sender); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx, `
+			INSERT INTO activity_participant (activity_id, person_id, address, role)
+			VALUES ($1, $2, 'recipient@example.test', 'to')`, id, recipient)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the two-party thread: %v", err)
+	}
+
+	svc := person360.NewService(e.Pool, e.People, e.Deals, e.Projects,
+		consent.NewStore(InstallationDB(e.Pool)),
+		comms.NewStore(InstallationDB(e.Pool), time.Now, activities.NewStore(InstallationDB(e.Pool))),
+		ai.NewFeedbackStore(InstallationDB(e.Pool)), time.Now)
+
+	// The positive control FIRST: without it, a build that answered nil for
+	// everybody would pass the assertion this test exists to make.
+	wrote, err := svc.Assemble(e.Admin(), ids.From[ids.PersonKind](sender))
+	if err != nil {
+		t.Fatalf("assembling the sender's 360: %v", err)
+	}
+	if wrote.LastInboundAt == nil || !wrote.LastInboundAt.Equal(at) {
+		t.Fatalf("the SENDER's last-inbound = %v, want %v — the message is not being read at all, "+
+			"so the assertion below would pass for the wrong reason", wrote.LastInboundAt, at)
+	}
+
+	received, err := svc.Assemble(e.Admin(), ids.From[ids.PersonKind](recipient))
+	if err != nil {
+		t.Fatalf("assembling the recipient's 360: %v", err)
+	}
+	if received.LastInboundAt != nil {
+		t.Errorf("the RECIPIENT's last-inbound = %v, want none: they were written TO, and a brief "+
+			"reading this says they wrote last", received.LastInboundAt)
 	}
 }
