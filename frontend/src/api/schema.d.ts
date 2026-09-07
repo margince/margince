@@ -26514,10 +26514,11 @@ export interface components {
              */
             subject_label?: string | null;
             /**
-             * @description The kind of record `subject_label` names, in the kernel's entity vocabulary
-             *     (`organization`, `person`, `activity`, `attachment`), so a client can make the
-             *     name a way to reach the record rather than a word in a sentence. Present exactly
-             *     when `subject_id` is: a source that named a record identified it too.
+             * @description The kind of record `subject_label` names, as the emitting source spells it:
+             *     `organization`, `person` and `activity` from the kernel's entity kinds, and
+             *     `attachment` from the document reading, which has no kernel kind. It is here so
+             *     a client can make the name a way to reach the record rather than a word in a
+             *     sentence; a client needs both this and `subject_id` before it links.
              *
              *     Admissible on the same ground as the label — it is the reader's own record, already
              *     shown to them on the surface the occurrence came from. A kind the client has no
@@ -26526,7 +26527,7 @@ export interface components {
             subject_type?: string | null;
             /**
              * Format: uuid
-             * @description That record's id, so the name can link to it. Absent with `subject_type`.
+             * @description That record's id, so the name can link to it.
              */
             subject_id?: string | null;
         };

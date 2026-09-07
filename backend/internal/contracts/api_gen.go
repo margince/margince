@@ -17093,7 +17093,7 @@ type AiActivityItem struct {
 	// a row cannot be left stalled by a writer that forgot, because no writer writes it.
 	State AiActivityItemState `json:"state"`
 
-	// SubjectId That record's id, so the name can link to it. Absent with `subject_type`.
+	// SubjectId That record's id, so the name can link to it.
 	SubjectId *openapi_types.UUID `json:"subject_id,omitempty"`
 
 	// SubjectLabel What the occurrence was ABOUT, named: the document that was read, in the words the
@@ -17110,10 +17110,11 @@ type AiActivityItem struct {
 	// words either way — this is the NAME to put in them, never a sentence.
 	SubjectLabel *string `json:"subject_label,omitempty"`
 
-	// SubjectType The kind of record `subject_label` names, in the kernel's entity vocabulary
-	// (`organization`, `person`, `activity`, `attachment`), so a client can make the
-	// name a way to reach the record rather than a word in a sentence. Present exactly
-	// when `subject_id` is: a source that named a record identified it too.
+	// SubjectType The kind of record `subject_label` names, as the emitting source spells it:
+	// `organization`, `person` and `activity` from the kernel's entity kinds, and
+	// `attachment` from the document reading, which has no kernel kind. It is here so
+	// a client can make the name a way to reach the record rather than a word in a
+	// sentence; a client needs both this and `subject_id` before it links.
 	//
 	// Admissible on the same ground as the label — it is the reader's own record, already
 	// shown to them on the surface the occurrence came from. A kind the client has no

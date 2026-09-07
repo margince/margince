@@ -45,12 +45,14 @@ const liveBound = 25
 // fault evict a fault instead.
 const faultBound = 25
 
-// The two free-text columns this read forwards are capped on the way to the
-// wire. Neither is server-authored prose of bounded length: summary can be a
-// model's whole output, and an occurrence a prompt injection reached can
-// inflate it further — and up to recentBound of them ship to every open tab on
-// every poll. A reader needs the first paragraph, not the transcript, so the
-// wire gets a bounded string and the row keeps everything.
+// The free-text columns this read forwards are capped on the way to the wire.
+// None is server-authored prose of bounded length: summary can be a model's
+// whole output, and an occurrence a prompt injection reached can inflate it
+// further — and up to recentBound of them ship to every open tab on every
+// poll. A reader needs the first paragraph, not the transcript, so the wire
+// gets a bounded string and the row keeps everything. subject_type is a kind
+// name every writer spells as a literal today, and it is capped all the same:
+// the contract publishes a cap for it, and a cap nothing holds is a claim.
 const (
 	// Exported so a root-package fitness test can hold them to the maxLength the
 	// contract publishes — the read and the contract are two statements of one
@@ -58,6 +60,7 @@ const (
 	SummaryBound       = 2000
 	DegradeReasonBound = 500
 	SubjectLabelBound  = 120
+	SubjectTypeBound   = 64
 )
 
 // The three arms feedSQL labels its rows with. Named because the statement
@@ -164,7 +167,7 @@ const feedSQL = `
          CASE WHEN stale_after IS NOT NULL AND stale_after < now() THEN 'stalled' ELSE state END,
          COALESCE(started_at, queued_at), finished_at,
          left(degrade_reason, $4), left(summary, $5), left(subject_label, $8),
-         subject_type, subject_id
+         left(subject_type, $10), subject_id
     FROM ai_task_run
    WHERE actor_user_id = $1
      AND state IN ('queued','running')
@@ -177,7 +180,7 @@ UNION ALL
   SELECT 'settled' AS arm, id, kind, state,
          COALESCE(started_at, queued_at), finished_at,
          left(degrade_reason, $4), left(summary, $5), left(subject_label, $8),
-         subject_type, subject_id
+         left(subject_type, $10), subject_id
     FROM ai_task_run
    WHERE actor_user_id = $1
      AND state IN ('done','degraded','failed')
@@ -191,7 +194,7 @@ UNION ALL
   SELECT 'fault' AS arm, id, kind, state,
          COALESCE(started_at, queued_at), finished_at,
          left(degrade_reason, $4), left(summary, $5), left(subject_label, $8),
-         subject_type, subject_id
+         left(subject_type, $10), subject_id
     FROM ai_task_run
    WHERE actor_user_id = $1
      AND state IN ('degraded','failed')
@@ -231,7 +234,7 @@ func (s *Store) Mine(ctx context.Context, startOfToday time.Time, kinds []string
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, txErr := tx.Query(ctx, feedSQL,
 			person, startOfToday, recentBound, DegradeReasonBound, SummaryBound, liveBound, filter,
-			SubjectLabelBound, faultBound)
+			SubjectLabelBound, faultBound, SubjectTypeBound)
 		if txErr != nil {
 			return txErr
 		}

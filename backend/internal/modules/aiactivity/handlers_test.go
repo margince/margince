@@ -137,6 +137,45 @@ func TestTheFeedIsAlwaysReadForTheAuthenticatedCaller(t *testing.T) {
 	}
 }
 
+// The record an occurrence is about reaches the wire as an identity, in the
+// contract's spelling, and an occurrence about no record carries no subject at
+// all — nil stays nil rather than becoming the zero uuid, which would name a
+// record that does not exist.
+func TestTheWireCarriesTheSubjectsIdentityExactlyWhenTheReadHasOne(t *testing.T) {
+	subject := ids.NewV7()
+	subjectType, label := "organization", "Acme"
+	reader := &stubReader{settled: []Item{
+		{ID: ids.NewV7(), Kind: "summarize", State: "done", SubjectLabel: &label, SubjectType: &subjectType, SubjectID: &subject},
+		{ID: ids.NewV7(), Kind: "morning_brief", State: "done"},
+	}}
+	rec := httptest.NewRecorder()
+	NewHandlers(reader, clock()).GetMyAiActivity(rec, request(asHuman(ids.NewV7())), crmcontracts.GetMyAiActivityParams{})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (body %s)", rec.Code, rec.Body.String())
+	}
+	var body struct {
+		Recent []map[string]json.RawMessage `json:"recent"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decoding the body: %v", err)
+	}
+	if len(body.Recent) != 2 {
+		t.Fatalf("recent = %d items, want 2", len(body.Recent))
+	}
+	about, aboutNothing := body.Recent[0], body.Recent[1]
+	if got := string(about["subject_type"]); got != `"organization"` {
+		t.Errorf("subject_type = %s, want the source's own kind name", got)
+	}
+	if got := string(about["subject_id"]); got != `"`+subject.String()+`"` {
+		t.Errorf("subject_id = %s, want %s", got, subject)
+	}
+	for _, field := range []string{"subject_type", "subject_id", "subject_label"} {
+		if raw, present := aboutNothing[field]; present {
+			t.Errorf("an occurrence about no record carries %s=%s, want the field absent", field, raw)
+		}
+	}
+}
+
 // The filter is the client saying which part of the record it draws. Omitted
 // means the complete record — every AI task reports here, and a client that
 // names nothing gets everything rather than the rail's own three kinds, because

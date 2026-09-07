@@ -167,15 +167,16 @@ func toWire(items []Item) []crmcontracts.AiActivityItem {
 			Summary:       item.Summary,
 			SubjectLabel:  item.SubjectLabel,
 			SubjectType:   item.SubjectType,
-			SubjectId:     contractID(item.SubjectID),
+			SubjectId:     contractUUID(item.SubjectID),
 		})
 	}
 	return wire
 }
 
-// contractID is the projection's optional id in the contract's spelling; nil
-// stays nil, so an occurrence about no record carries no subject on the wire.
-func contractID(id *ids.UUID) *openapi_types.UUID {
+// contractUUID is the projection's optional id in the contract's spelling —
+// the inverse of handler.go's derefContractID. nil stays nil, so an occurrence
+// about no record carries no subject on the wire.
+func contractUUID(id *ids.UUID) *openapi_types.UUID {
 	if id == nil {
 		return nil
 	}
