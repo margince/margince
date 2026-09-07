@@ -11,6 +11,7 @@ import { translate } from "../i18n";
 import { SettingsScreen } from "./settings";
 import {
   jsonResponse,
+  keyedEnvelope,
   readOn,
   render,
   renderNav,
@@ -187,6 +188,13 @@ function settingsNavBackend(opts: {
         ...me,
         data_reset_available: opts.dataResetAvailable ?? false,
       });
+    }
+    // The rail carries the agent at its foot, and the agent reads endpoints that
+    // answer with a KEYED envelope rather than the paged one below — an unrouted
+    // one throws mid-render, which surfaces here as the nav being empty.
+    const keyed = keyedEnvelope(url);
+    if (keyed) {
+      return keyed;
     }
     return jsonResponse({
       data: [],

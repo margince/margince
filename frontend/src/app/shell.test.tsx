@@ -685,10 +685,13 @@ describe("Shell", () => {
   });
 
   // A sidebar showing a section's entries is navigation inside ONE destination,
-  // and the agent belongs to the whole session — so it is absent there rather
-  // than re-parented under a sub-level. The foot goes with it: an empty box would
-  // leave the band and the rule that divide a reading from the rows above it.
-  it("mounts no agent while the rail shows a section's own entries", async () => {
+  // and the agent belongs to the whole SESSION — so it keeps its foot there
+  // rather than going quiet because a reader walked into settings, which is
+  // where they would go to fix whatever the orb is amber about. Still one block,
+  // reduced by the rail's own state (app/agentrail.css) rather than by a second
+  // component: two Cores reporting one session is the thing that rule exists to
+  // stop, at any size.
+  it("keeps the one agent at the foot while the rail shows a section's own entries", async () => {
     window.location.hash = "#/settings/account";
     const { container } = render(
       <Shell onOpenSearch={ignoreSearch}>{null}</Shell>,
@@ -703,8 +706,11 @@ describe("Shell", () => {
     expect(
       await within(rail).findByRole("link", { name: "Account" }),
     ).toBeTruthy();
-    expect(container.querySelector(".arblock")).toBeNull();
-    expect(container.querySelector(".railagent")).toBeNull();
+    expect(rail.className).toContain("leveled");
+    expect(container.querySelectorAll(".arblock")).toHaveLength(1);
+    expect(
+      container.querySelector(".rail .railagent")?.querySelector(".arblock"),
+    ).not.toBeNull();
   });
 
   it("renders rail-less for the documented exceptions (AC-shell layout exception)", () => {

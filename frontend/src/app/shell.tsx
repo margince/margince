@@ -447,12 +447,15 @@ export function WorkspaceRail({
             page. What the installation is ENTITLED to used to sit here as its
             own grey row, and it now reaches a reader through the Core instead: a
             licence fault turns the orb amber, which is a thing somebody notices.
-            The whole foot goes on a drilled-in level, element and all: an empty
-            box left behind would still hold the band and the rule that divide a
-            reading from the rows above it. And it goes at phone width, where
-            there is no column to have a foot: the bar's centre cell above is
-            where the agent stands there, and two of these would be two Cores. */}
-        {!leveled && !phone && (
+            It keeps the foot on a drilled-in level, REDUCED rather than removed
+            (app/agentrail.css): the agent belongs to the whole session, so an
+            amber orb has to survive a reader walking into settings — but the
+            column it stands under there is one section's own pages, and the ball
+            at rail size would lead a list it is not about. Same block, same
+            Core, smaller. It still goes at phone width, where there is no column
+            to have a foot: the bar's centre cell above is where the agent stands
+            there, and two of these would be two Cores. */}
+        {!phone && (
           <div className="railagent">
             <AgentRail route={route} />
           </div>
