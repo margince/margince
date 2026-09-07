@@ -112,7 +112,7 @@ const ADMIN_GRANTS: GrantSpec = {
   // `retention_policy` or `privacy_request`, neither of which anybody below
   // admin and ops holds.
   person: ["read"],
-  // What actually opens Privacy & audit for this admin fixture. Named here
+  // What actually opens Privacy & retention for this admin fixture. Named here
   // rather than left to `person`, because the page moved off the read every
   // seat holds and a fixture that did not follow would quietly stop rendering
   // the page its cases are about.

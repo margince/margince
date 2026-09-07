@@ -3,6 +3,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { isValidElement, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { AccountMenu } from "../app/account";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { pickOption } from "../design-system/select-testing";
 import { LOCALES, localeNameKey, translate } from "../i18n";
@@ -98,22 +99,59 @@ describe("SettingsScreen RBAC surfaces", () => {
     expect(screen.queryByText("admin")).toBeNull();
   });
 
-  // Appearance is chosen from the account menu, not from here: it is the
-  // setting a reader changes most often and from wherever they are standing.
-  // Language stays, so the claim is that the account card lost ONE control
-  // rather than that the surface went away — and it is made against the
-  // rendered page, because an import that no longer exists is not evidence
-  // about what a reader sees.
-  it("offers no theme control on the Account tab", async () => {
+  // Appearance is chosen from Settings AND from the account menu. The menu keeps
+  // its shortcut — it is the setting a reader changes most often and from
+  // wherever they are standing — and this is where somebody who came looking for
+  // it in Settings finds it.
+  it("offers the appearance choice on the Account tab", async () => {
     render(<SettingsScreen route={settingsHref("account")} />);
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
 
     expect(screen.getByRole("heading", { name: "Your account" })).toBeTruthy();
     expect(screen.getByRole("combobox", { name: "Language" })).toBeTruthy();
-    for (const name of ["Light", "Dark", "System", "Theme"]) {
-      expect(screen.queryByRole("button", { name })).toBeNull();
-      expect(screen.queryByRole("group", { name })).toBeNull();
-    }
+    // Opened, because a Margince `Select` renders its options in a listbox on
+    // click rather than as children of the control.
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("combobox", { name: "Appearance" }));
+    expect(
+      within(screen.getByRole("listbox"))
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual(["Light", "Dark", "System"]);
+  });
+
+  // ONE state, two faces, and BOTH of them are on screen for this.
+  //
+  // Asserting localStorage alone would pass for a row that writes the key and
+  // never notifies anybody — the menu would sit there stale, which is the exact
+  // failure "one state" is supposed to rule out. So the real account menu is
+  // mounted beside the settings screen, and the assertion is that it followed.
+  it("shares its answer with the account menu", async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <SettingsScreen route={settingsHref("account")} />
+        <AccountMenu />
+      </>,
+    );
+    await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
+
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: "Appearance" }),
+      "Dark",
+    );
+
+    // The menu's own radio, read through the menu rather than through the store
+    // underneath it. `setThemeChoice` publishes to `useSyncExternalStore`
+    // subscribers, and this is one of them.
+    await user.click(screen.getByRole("button", { name: "Account" }));
+    await user.click(screen.getByRole("menuitem", { name: "Theme" }));
+    expect(
+      screen
+        .getByRole("menuitemradio", { name: "Dark" })
+        .getAttribute("aria-checked"),
+    ).toBe("true");
   });
 
   // Identity, credential, sign-off and language are ONE card, not four: a
@@ -398,7 +436,7 @@ describe("SettingsScreen restructured pages", () => {
     await waitFor(() =>
       expect(
         screen
-          .getByRole("link", { name: "Privacy & audit" })
+          .getByRole("link", { name: "Privacy & retention" })
           .getAttribute("aria-current"),
       ).toBe("page"),
     );

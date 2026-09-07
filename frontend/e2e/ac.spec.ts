@@ -331,7 +331,7 @@ test("AC-shell-1k: one h1 per railed page, and on a record it is the record's ow
   await page.goto("/#/settings/privacy");
   const settingsHeading = page.getByRole("heading", { level: 1 });
   await expect(settingsHeading).toHaveCount(1);
-  await expect(settingsHeading).toHaveText("Datenschutz & Audit");
+  await expect(settingsHeading).toHaveText("Datenschutz & Aufbewahrung");
   await expect(page.locator(".rail .navtitle")).toHaveText("Einstellungen");
   await expect(page.locator("main")).not.toContainText("privacy");
 });
@@ -430,23 +430,21 @@ test("features/10 §7: the locale switch flips the chrome DE↔EN", async ({
   await expect(page.getByRole("combobox", { name: "Language" })).toBeVisible();
 });
 
-// Appearance is chosen from the account menu now — it is the setting a reader
-// changes most often, and from wherever they happen to be standing. The account
-// card keeps the preferences that are not appearance, so this asserts what the
-// page LOST rather than that the card went away: the language control beside it
-// has to still be there, or an account card that failed to render would pass.
-test("features/10 §7: Settings → Account keeps language and offers no theme control", async ({
+// Appearance is chosen from Settings AND from the account menu — one setting
+// with two doors, because it is the setting a reader changes most often and from
+// wherever they happen to be standing.
+//
+// The language control beside it has to still be there, or an account card that
+// failed to render entirely would pass this.
+test("features/10 §7: Settings → Account offers language and appearance", async ({
   page,
 }) => {
   await page.goto("/#/settings/account");
   await expect(page.getByRole("heading", { name: "Ihr Konto" })).toBeVisible();
   await expect(page.getByRole("combobox", { name: "Sprache" })).toBeVisible();
-  for (const name of ["Hell", "Dunkel", "System", "Design"]) {
-    await expect(page.getByRole("button", { name, exact: true })).toHaveCount(
-      0,
-    );
-    await expect(page.getByRole("group", { name, exact: true })).toHaveCount(0);
-  }
+  await expect(
+    page.getByRole("combobox", { name: "Darstellung" }),
+  ).toBeVisible();
 });
 
 /**

@@ -93,12 +93,14 @@ const CARDS_THE_REGISTER_REACHED = [
 describe("the split lost no card", () => {
   function renderedComponents(): Set<string> {
     const source = readFileSync(join(here, "settings.tsx"), "utf8");
-    const start = source.indexOf("export function tabContent");
-    const end = source.indexOf("\n}\n", start);
+    // The WHOLE file, not just `tabContent`. Several pages dispatch to a tab
+    // function that renders their cards — `AgentsTab`, `ConnectionsTab` — and
+    // those functions sit below `tabContent`, so a window ending at its closing
+    // brace reports a card missing the moment it moves into one. That is a
+    // scan that fails SHORT: it reads a smaller tree and reports a loss that
+    // did not happen, which is the same shape of wrong as missing a real one.
     return new Set(
-      [...source.slice(start, end).matchAll(/<([A-Z][A-Za-z]+)\b/g)].map(
-        (match) => match[1],
-      ),
+      [...source.matchAll(/<([A-Z][A-Za-z]+)\b/g)].map((match) => match[1]),
     );
   }
 
@@ -108,6 +110,46 @@ describe("the split lost no card", () => {
       (card) => !rendered.has(card),
     );
     expect(lost).toEqual([]);
+  });
+
+  // The scan above proves no card was LOST. It cannot prove where one sits, and
+  // deliberately so — it reads the whole file. So the two cards this change
+  // moved are asserted by page, against the dispatch, because a widened scan
+  // that no longer notices a card sliding back to its old page is exactly the
+  // regression the widening could introduce.
+  it("dispatches the moved cards to the pages they moved to", () => {
+    const source = readFileSync(join(here, "settings.tsx"), "utf8");
+    /** One tab function's body, for a page whose case dispatches to one. */
+    function bodyOf(fn: string): string {
+      const start = source.indexOf(`function ${fn}()`);
+      if (start < 0) {
+        throw new Error(`settings.tsx has no ${fn}`);
+      }
+      return source.slice(start, source.indexOf("\n}\n", start));
+    }
+    function cardsOn(page: string): string {
+      const start = source.indexOf(`case "${page}":`);
+      if (start < 0) {
+        throw new Error(`the dispatch has no case for ${page}`);
+      }
+      const end = source.indexOf('    case "', start + 1);
+      return source.slice(start, end);
+    }
+    // The mail-sharing switch writes the WORKSPACE's posture. It belongs with
+    // the rest of the capture rules, not among the reader's own mailboxes.
+    expect(cardsOn("capture")).toContain("<MailSharingCard />");
+    expect(cardsOn("connections")).not.toContain("<MailSharingCard />");
+    // And the personal autonomy choice belongs on the page about agents
+    // deciding without you, under the tier reference it is written in terms of.
+    // `agents` dispatches to a tab FUNCTION, so the case body names the
+    // function and the cards are inside it — asserting on the case alone would
+    // be satisfied by the card being nowhere at all.
+    expect(cardsOn("account")).not.toContain("<AutonomySettingsCard />");
+    expect(bodyOf("AgentsTab")).toContain("<AutonomySettingsCard />");
+    // The same for the card that left Connections, which is also a tab
+    // function: gone from the tab, not merely gone from the case line.
+    expect(bodyOf("ConnectionsTab")).not.toContain("<MailSharingCard />");
+    expect(bodyOf("ConnectionsTab")).toContain("<MailSharingPostureRow />");
   });
 
   it("names enough cards to make that meaningful", () => {

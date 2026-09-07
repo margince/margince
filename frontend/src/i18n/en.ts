@@ -3783,6 +3783,9 @@ export const en = {
   "delivery.weeklyHelp": "Whether Monday's review also arrives by email.",
   "delivery.byEmail": "By email",
   "delivery.none": "Not by email",
+  "settings.appearance": "Appearance",
+  "settings.appearanceHelp":
+    "Light, dark, or whatever this device is set to. The account menu changes it too.",
   "settings.languageHelp": "Lasts for this session.",
   "role.admin": "Admin",
   "role.management": "Management",
@@ -4868,6 +4871,11 @@ export const en = {
     "Individual messages can be limited afterwards, and addresses or domains excluded up front.",
   "mailSharing.danger":
     "DANGER: Switching off email sharing will make usage of the CRM difficult. New mail will be visible only to the people on each message.",
+  "mailSharing.posture.shared":
+    "Newly captured mail is readable by colleagues who can see the person.",
+  "mailSharing.posture.private":
+    "Newly captured mail is held to the people on the message and the mailbox that captured it.",
+  "mailSharing.posture.where": "Change this on Capture rules",
   "mailSharing.sharedPosture.label": "Allow mailboxes to share on arrival",
   "mailSharing.sharedPosture.help":
     "Lets a colleague put their own mailbox in the shared posture, where a captured message is readable by the team the moment it lands, before anything has judged it. Off by default.",
@@ -6394,7 +6402,7 @@ export const en = {
   "settings.tab.users": "Users & teams",
   "settings.tab.extensions": "Extensions",
   "settings.tab.integrations": "Integrations",
-  "settings.tab.capture": "Capture",
+  "settings.tab.capture": "Capture rules",
   "settings.tab.data-model": "Data model",
   "settings.tab.ai": "AI",
   "settings.tab.knowledge": "Knowledge",
@@ -6453,7 +6461,7 @@ export const en = {
   "knowledge.new.topicHint":
     "Write a sentence, not a label. It is quoted back to whoever asks a question this set does not cover, so it is read at their least patient moment.",
   "knowledge.new.submit": "Create set",
-  "settings.tab.privacy": "Privacy & audit",
+  "settings.tab.privacy": "Privacy & retention",
   "settings.tab.capture-activity": "Capture activity",
   "captureActivity.title": "Capture activity",
   "captureActivity.sub":
@@ -6628,8 +6636,6 @@ export const en = {
     "The license expires on {expiry}. Nothing changes before that date.",
   "license.counting":
     "Full seats that are neither deactivated nor suspended, agents included. Read-only seats are unlimited and never counted. This is the count a new member is admitted against.",
-  "settings.group.you": "You",
-  "settings.group.admin": "Admin settings",
   "settings.rates.fxTitle": "Currency rates",
   "settings.rates.fxIntro":
     "Exchange rates that convert foreign-currency amounts to your base currency. New rates take effect today or later; past rates are never changed.",

@@ -46,7 +46,7 @@ const E2E_ADMIN_GRANTS: GrantSpec = {
   // spec exercises a person write from here and a grant this fixture does not
   // need is a grant it should not claim.
   //
-  // It no longer opens the Privacy & audit ENTRY — every seeded role holds this
+  // It no longer opens the Privacy & retention ENTRY — every seeded role holds this
   // read, so the page moved to `privacy_request`, which this fixture holds
   // below. The card still needs `person`, which is why it stays.
   person: ["read"],

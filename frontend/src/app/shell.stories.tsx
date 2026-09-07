@@ -5,7 +5,6 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Building2,
-  Database,
   KeyRound,
   Mail,
   Mic,
@@ -459,42 +458,43 @@ const SETTINGS_SECTION: NavSection = {
   activeId: "privacy",
   groups: [
     {
-      headingKey: "settings.group.you",
+      headingKey: "settings.group.me",
       items: [
         { id: "account", labelKey: "settings.tab.account", icon: UserRound },
         { id: "voice", labelKey: "settings.tab.voice", icon: Mic },
         { id: "agents", labelKey: "settings.tab.agents", icon: KeyRound },
+        { id: "connections", labelKey: "settings.tab.connections", icon: Plug },
       ],
     },
     {
-      headingKey: "settings.group.admin",
+      headingKey: "settings.group.company",
       items: [
-        { id: "general", labelKey: "settings.tab.general", icon: Building2 },
-        { id: "users", labelKey: "settings.tab.users", icon: UsersRound },
-        { id: "connections", labelKey: "settings.tab.connections", icon: Plug },
-        { id: "capture", labelKey: "settings.tab.capture", icon: Mail },
+        { id: "company", labelKey: "settings.tab.company", icon: Building2 },
+      ],
+    },
+    {
+      headingKey: "settings.group.people",
+      items: [
+        { id: "members", labelKey: "settings.tab.members", icon: UsersRound },
+      ],
+    },
+    {
+      headingKey: "settings.group.data",
+      items: [{ id: "capture", labelKey: "settings.tab.capture", icon: Mail }],
+    },
+    {
+      headingKey: "settings.group.ai",
+      items: [
+        { id: "models", labelKey: "settings.tab.models", icon: Sparkles },
+      ],
+    },
+    {
+      headingKey: "settings.group.governance",
+      items: [
+        { id: "privacy", labelKey: "settings.tab.privacy", icon: ShieldCheck },
         {
-          id: "data-model",
-          labelKey: "settings.tab.data-model",
-          icon: Database,
-        },
-        { id: "ai", labelKey: "settings.tab.ai", icon: Sparkles },
-        {
-          id: "privacy",
-          labelKey: "settings.tab.privacy",
-          icon: ShieldCheck,
-          children: [
-            { id: "users", labelKey: "settings.tab.users", icon: UsersRound },
-            {
-              id: "data-model",
-              labelKey: "settings.tab.data-model",
-              icon: Database,
-            },
-          ],
-        },
-        {
-          id: "maintenance",
-          labelKey: "settings.tab.maintenance",
+          id: "system-health",
+          labelKey: "settings.tab.system-health",
           icon: Wrench,
         },
       ],

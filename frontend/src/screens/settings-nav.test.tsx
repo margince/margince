@@ -89,7 +89,7 @@ describe("SettingsScreen page layout", () => {
       "Members",
       "Fields",
       "Pipelines",
-      "Privacy & audit",
+      "Privacy & retention",
     ]) {
       expect(screen.getByRole("link", { name: label })).toBeTruthy();
     }
@@ -394,7 +394,7 @@ const EVERY_PAGE_GRANTED: GrantSpec = {
   // both.
   ai_model_rate: ["read", "create", "update"],
   person: ["read"],
-  // What opens Privacy & audit now that `person:read` does not.
+  // What opens Privacy & retention now that `person:read` does not.
   retention_policy: ["read", "create", "update"],
   audit_log: ["read"],
   job_health: ["read"],

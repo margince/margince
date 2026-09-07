@@ -115,7 +115,7 @@ describe("SettingsScreen connections and integrations tabs", () => {
   });
 
   // A retired id is what a bookmark still carries: the audit trail was an entry
-  // of its own before it moved onto Privacy & audit, so `#/settings/audit` names
+  // of its own before it moved onto Privacy & retention, so `#/settings/audit` names
   // nothing. It has to land on the first entry this principal can see rather than
   // on a blank screen. The wiring reads are granted so Integrations is genuinely
   // open — a fallback that happens because an entry is hidden proves nothing

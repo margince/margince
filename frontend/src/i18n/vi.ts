@@ -3652,6 +3652,9 @@ export const vi = {
   "delivery.weeklyHelp": "Đánh giá thứ Hai có được gửi qua email hay không.",
   "delivery.byEmail": "Qua email",
   "delivery.none": "Không qua email",
+  "settings.appearance": "Giao di\u1ec7n",
+  "settings.appearanceHelp":
+    "S\u00e1ng, t\u1ed1i, ho\u1eb7c theo thi\u1ebft b\u1ecb n\u00e0y. Menu t\u00e0i kho\u1ea3n c\u0169ng \u0111\u1ed5i \u0111\u01b0\u1ee3c.",
   "settings.languageHelp": "Chỉ giữ trong phiên làm việc.",
   "role.admin": "Quản trị",
   "role.management": "Ban lãnh đạo",
@@ -4708,6 +4711,12 @@ export const vi = {
     "Có thể giới hạn từng tin nhắn sau đó, và loại trừ địa chỉ hoặc tên miền ngay từ đầu.",
   "mailSharing.danger":
     "NGUY HIỂM: Tắt chia sẻ email sẽ khiến việc sử dụng CRM trở nên khó khăn. Email mới chỉ hiển thị với những người trong từng tin nhắn.",
+  "mailSharing.posture.shared":
+    "Th\u01b0 m\u1edbi thu th\u1eadp \u0111\u01b0\u1ee3c \u0111\u1ed3ng nghi\u1ec7p th\u1ea5y \u0111\u01b0\u1ee3c ng\u01b0\u1eddi \u0111\u00f3 \u0111\u1ecdc.",
+  "mailSharing.posture.private":
+    "Th\u01b0 m\u1edbi thu th\u1eadp ch\u1ec9 d\u00e0nh cho ng\u01b0\u1eddi trong th\u01b0 v\u00e0 h\u1ed9p th\u01b0 \u0111\u00e3 thu.",
+  "mailSharing.posture.where":
+    "Thay \u0111\u1ed5i \u1edf Quy t\u1eafc thu th\u1eadp",
   "mailSharing.sharedPosture.label": "Cho phép hộp thư chia sẻ ngay khi nhận",
   "mailSharing.sharedPosture.help":
     "Cho phép đồng nghiệp đặt hộp thư của họ ở chế độ chia sẻ, khi đó thư thu thập được cả nhóm đọc ngay lúc đến, trước khi có bất kỳ đánh giá nào. Mặc định tắt.",
@@ -6203,7 +6212,7 @@ export const vi = {
   "settings.tab.users": "Người dùng & nhóm",
   "settings.tab.extensions": "Tiện ích mở rộng",
   "settings.tab.integrations": "Tích hợp",
-  "settings.tab.capture": "Thu thập",
+  "settings.tab.capture": "Quy tắc thu thập",
   "settings.tab.data-model": "Mô hình dữ liệu",
   "settings.tab.ai": "AI",
   "settings.tab.knowledge": "Tri thức",
@@ -6262,7 +6271,7 @@ export const vi = {
   "knowledge.new.topicHint":
     "Viết một câu, đừng viết nhãn. Câu này được trích lại cho người hỏi điều bộ này không bao gồm — họ đọc nó vào lúc kém kiên nhẫn nhất.",
   "knowledge.new.submit": "Tạo bộ",
-  "settings.tab.privacy": "Quyền riêng tư & kiểm toán",
+  "settings.tab.privacy": "Quyền riêng tư & lưu trữ",
   "settings.tab.capture-activity": "Hoạt động thu thập",
   "captureActivity.title": "Hoạt động thu thập",
   "captureActivity.sub":
@@ -6441,8 +6450,6 @@ export const vi = {
     "Giấy phép hết hạn vào {expiry}. Không có gì thay đổi trước ngày đó.",
   "license.counting":
     "Chỗ đầy đủ chưa bị vô hiệu hoá và chưa bị tạm ngưng, bao gồm cả agent. Chỗ chỉ đọc là không giới hạn và không bao giờ được tính. Thành viên mới được xét theo con số này.",
-  "settings.group.you": "Cá nhân",
-  "settings.group.admin": "Cài đặt quản trị",
   "settings.rates.fxTitle": "Tỷ giá",
   "settings.rates.fxIntro":
     "Tỷ giá quy đổi số tiền ngoại tệ về tiền tệ gốc của bạn. Tỷ giá mới có hiệu lực từ hôm nay trở đi; tỷ giá quá khứ không bao giờ bị sửa.",

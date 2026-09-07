@@ -731,7 +731,7 @@ export function PageTitle({
       <div className="pagetitle-text">
         {/* The heading is named by the PAGE even when a control is all it
             contains. Name-from-content would otherwise reach into the switcher's
-            own `aria-label` — "Privacy & audit — change section" — and put an
+            own `aria-label` — "Privacy & retention — change section" — and put an
             instruction in the document's heading list. The control keeps that
             name; the heading states the page. */}
         {/* The heading and the scope share one ROW: `.pagetitle-text` stacks its

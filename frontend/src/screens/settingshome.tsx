@@ -166,7 +166,7 @@ export function SettingsHome({ reach }: Readonly<{ reach: SettingsReach }>) {
               which requires a control because every row of it is something a
               reader can operate. Nothing here is operable — this panel answers
               "who am I here", and the way to change any of it is to ask. */}
-          <dl className="settings-home-access">
+          <dl className="settings-facts">
             <dt>{t("settings.home.rolesLabel")}</dt>
             <dd>
               {/* The roles as the server resolved them, not as a role name this

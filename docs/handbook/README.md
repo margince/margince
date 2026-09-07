@@ -41,8 +41,8 @@ its own, so you can also come straight to the one you need.
   read seats, the six roles, why reading a customer record ignores row scope,
   teams, sharing one record, inviting and removing people, and what a refusal
   looks like.
-- **[Settings](settings.md)** — every settings page, what is on it, and which
-  role can open it.
+- **[Settings](settings.md)** — every settings page, what is on it, whose state
+  it changes, and which permission opens it.
 
 ## Related reading
 

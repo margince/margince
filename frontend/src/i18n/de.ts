@@ -3696,6 +3696,9 @@ export const de = {
     "Ob der Rückblick am Montag zusätzlich per E-Mail kommt.",
   "delivery.byEmail": "Per E-Mail",
   "delivery.none": "Nicht per E-Mail",
+  "settings.appearance": "Darstellung",
+  "settings.appearanceHelp":
+    "Hell, dunkel oder was dieses Ger\u00e4t eingestellt hat. Das Kontomen\u00fc \u00e4ndert es ebenfalls.",
   "settings.languageHelp": "Gilt für diese Sitzung.",
   "role.admin": "Admin",
   "role.management": "Geschäftsleitung",
@@ -4770,6 +4773,11 @@ export const de = {
     "Einzelne Nachrichten lassen sich nachträglich einschränken, Adressen und Domains vorab ausschließen.",
   "mailSharing.danger":
     "ACHTUNG: E-Mail-Freigabe ausschalten macht die Nutzung des CRM schwierig. Neue E-Mails sind dann nur noch für die Beteiligten der jeweiligen Nachricht sichtbar.",
+  "mailSharing.posture.shared":
+    "Neu erfasste Post ist f\u00fcr Kolleginnen und Kollegen lesbar, die die Person sehen.",
+  "mailSharing.posture.private":
+    "Neu erfasste Post bleibt bei den Beteiligten der Nachricht und dem erfassenden Postfach.",
+  "mailSharing.posture.where": "Dies unter Erfassungsregeln \u00e4ndern",
   "mailSharing.sharedPosture.label": "Postfächern erlauben, sofort zu teilen",
   "mailSharing.sharedPosture.help":
     "Erlaubt Kolleginnen und Kollegen, das eigene Postfach auf „geteilt“ zu stellen — eine erfasste Nachricht ist dann für das Team lesbar, sobald sie ankommt, bevor sie eingestuft wurde. Standardmäßig aus.",
@@ -6265,7 +6273,7 @@ export const de = {
   "settings.tab.users": "Benutzer & Teams",
   "settings.tab.extensions": "Erweiterungen",
   "settings.tab.integrations": "Integrationen",
-  "settings.tab.capture": "Erfassung",
+  "settings.tab.capture": "Erfassungsregeln",
   "settings.tab.data-model": "Datenmodell",
   "settings.tab.ai": "KI",
   "settings.tab.knowledge": "Wissen",
@@ -6326,7 +6334,7 @@ export const de = {
   "knowledge.new.topicHint":
     "Schreiben Sie einen Satz, kein Schlagwort. Er wird demjenigen zitiert, dessen Frage diese Sammlung nicht abdeckt — also im ungeduldigsten Moment gelesen.",
   "knowledge.new.submit": "Sammlung anlegen",
-  "settings.tab.privacy": "Datenschutz & Audit",
+  "settings.tab.privacy": "Datenschutz & Aufbewahrung",
   "settings.tab.capture-activity": "Erfassungsaktivität",
   "captureActivity.title": "Erfassungsaktivität",
   "captureActivity.sub":
@@ -6508,8 +6516,6 @@ export const de = {
     "Die Lizenz läuft am {expiry} ab. Vor diesem Datum ändert sich nichts.",
   "license.counting":
     "Volle Sitzplätze, die weder deaktiviert noch gesperrt sind, Agenten eingeschlossen. Lesende Sitzplätze sind unbegrenzt und werden nie gezählt. Gegen diese Zahl wird ein neues Mitglied zugelassen.",
-  "settings.group.you": "Persönlich",
-  "settings.group.admin": "Admin-Einstellungen",
   "settings.rates.fxTitle": "Währungskurse",
   "settings.rates.fxIntro":
     "Wechselkurse, die Fremdwährungsbeträge in deine Basiswährung umrechnen. Neue Kurse gelten ab heute oder später; vergangene Kurse werden nie geändert.",

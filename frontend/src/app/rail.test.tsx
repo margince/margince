@@ -418,10 +418,10 @@ describe("Rail levels (a section's entries as the second level)", () => {
     // The destinations are GONE, not pushed below a second list: 56px cannot
     // carry two levels and 224px carrying both is a list of twenty places to go.
     expect(screen.queryByRole("link", { name: "Pipeline" })).toBeNull();
-    expect(levelLabels()).toEqual(["Account", "Privacy & audit"]);
+    expect(levelLabels()).toEqual(["Account", "Privacy & retention"]);
     expect(
       screen
-        .getByRole("link", { name: "Privacy & audit" })
+        .getByRole("link", { name: "Privacy & retention" })
         .getAttribute("href"),
     ).toBe("#/settings/deep");
     // Exactly one row claims the current page, and it is the entry the SECTION
@@ -446,7 +446,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
     ).toEqual(["Settings"]);
     expect(
       screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent),
-    ).toEqual(["You", "Admin settings"]);
+    ).toEqual(["You", "Governance"]);
   });
 
   // A section belongs to ONE screen. Without this the fixture's entries would
@@ -736,7 +736,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
     expect(document.querySelectorAll('[aria-current="page"]')).toHaveLength(0);
     expect(
       screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),
-    ).toEqual(["Privacy & audit"]);
+    ).toEqual(["Privacy & retention"]);
   });
 
   it("renders a third level from the data, addressed under the entry that opens it", () => {
@@ -753,7 +753,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
     ).toBe("#/settings/deep/deeper");
     expect(
       screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),
-    ).toEqual(["Privacy & audit"]);
+    ).toEqual(["Privacy & retention"]);
   });
 
   // One step at a time, and the step is an ADDRESS: below the section's own
@@ -784,7 +784,9 @@ describe("Rail levels (a section's entries as the second level)", () => {
       />,
     );
     const account = screen.getByRole("link", { name: "Account" });
-    const privacyEntry = screen.getByRole("link", { name: "Privacy & audit" });
+    const privacyEntry = screen.getByRole("link", {
+      name: "Privacy & retention",
+    });
     expect(screen.queryByRole("tooltip")).toBeNull();
 
     account.focus();
@@ -797,7 +799,9 @@ describe("Rail levels (a section's entries as the second level)", () => {
 
     privacyEntry.focus();
     await waitFor(() =>
-      expect(screen.getByRole("tooltip").textContent).toBe("Privacy & audit"),
+      expect(screen.getByRole("tooltip").textContent).toBe(
+        "Privacy & retention",
+      ),
     );
     expect(screen.getAllByRole("tooltip")).toHaveLength(1);
 
@@ -823,7 +827,9 @@ describe("Rail levels (a section's entries as the second level)", () => {
     expect(levelLabels()).toEqual(CANONICAL_ORDER);
     // No level at all: no entries, no way back up, and no `leveled` arrangement
     // for the bar to be rearranged by.
-    expect(screen.queryByRole("link", { name: "Privacy & audit" })).toBeNull();
+    expect(
+      screen.queryByRole("link", { name: "Privacy & retention" }),
+    ).toBeNull();
     expect(screen.queryByRole("button", { name: /^Back/ })).toBeNull();
     expect(
       screen.getByRole("navigation", { name: "Primary navigation" }).className,
@@ -833,7 +839,9 @@ describe("Rail levels (a section's entries as the second level)", () => {
     // still no entry of the section the reader is standing in.
     await user.click(screen.getByRole("button", { name: "More" }));
     expect(levelLabels()).toEqual(CANONICAL_ORDER);
-    expect(screen.queryByRole("link", { name: "Privacy & audit" })).toBeNull();
+    expect(
+      screen.queryByRole("link", { name: "Privacy & retention" }),
+    ).toBeNull();
   });
 
   // The other half: above the breakpoint the level is exactly what it was. Either
@@ -846,7 +854,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
         section={fixtureSection("account")}
       />,
     );
-    expect(levelLabels()).toEqual(["Account", "Privacy & audit"]);
+    expect(levelLabels()).toEqual(["Account", "Privacy & retention"]);
     expect(
       screen.getByRole("navigation", { name: "Primary navigation" }).className,
     ).toContain("leveled");
