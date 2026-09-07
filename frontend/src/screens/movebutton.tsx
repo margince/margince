@@ -21,10 +21,13 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan } from "../app/capability";
+import { useRecordZone } from "../app/recordzone";
 import { Button } from "../design-system/atoms";
+import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
 import { PersonMeetingBrief } from "./meetingbrief";
+import { useOpenEmail } from "./openemail";
 import { TaskDetailModal, useTaskUpdate } from "./taskactions";
 
 // What a move must carry to be performed. Both producers' shapes satisfy it.
@@ -73,6 +76,11 @@ export function MoveButton({
   const t = useT();
   const queryClient = useQueryClient();
   const [briefOpen, setBriefOpen] = useState(false);
+  // This button's own drawer. Every other host of the meeting brief already
+  // mounts one for its timeline; this one is a lone control on the deal card,
+  // so a message cited in the brief it opens has nowhere else to go.
+  const [openEmail, setOpenEmail] = useOpenEmail();
+  const zone = useRecordZone();
   const [taskOpen, setTaskOpen] = useState(false);
   const canUpdateTask = useCan("activity", "update");
   const taskUpdate = useTaskUpdate([
@@ -173,6 +181,12 @@ export function MoveButton({
             activityId={activityId}
             open={briefOpen}
             onClose={() => setBriefOpen(false)}
+            onOpenEmail={setOpenEmail}
+          />
+          <OpenEmailDrawer
+            activityId={openEmail}
+            zone={zone}
+            onClose={() => setOpenEmail(null)}
           />
         </>
       );

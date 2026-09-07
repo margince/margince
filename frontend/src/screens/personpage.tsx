@@ -604,6 +604,7 @@ export function PersonPageV2({
             open={briefedMeeting !== null}
             onClose={() => openBrief(null)}
             projects={liveProjects(view.data.projects)}
+            onOpenEmail={setOpenEmail}
           />
           <PersonActivityDrawer
             personId={id}

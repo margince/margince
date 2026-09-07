@@ -38,6 +38,11 @@ const BODY_ORDER: SectionKind[] = [
 
 type OpenRecord = (entityType: string, entityId: string) => void;
 
+// Opens a cited message in the host's own email drawer. Threaded beside
+// onOpenRecord for the same reason: the brief cites the conversations it was
+// written from, and a citation that names a message should open it.
+type OpenEmail = (activityId: string) => void;
+
 function find(
   sections: readonly BriefSection[],
   kind: SectionKind,
@@ -51,14 +56,23 @@ function find(
 export function GlanceLine({
   brief,
   onOpenRecord,
-}: Readonly<{ brief: MeetingBrief; onOpenRecord: OpenRecord }>) {
+  onOpenEmail,
+}: Readonly<{
+  brief: MeetingBrief;
+  onOpenRecord: OpenRecord;
+  onOpenEmail?: OpenEmail;
+}>) {
   const header = find(brief.sections, "header");
   if (!header) {
     return null;
   }
   return (
     <section className="mb-glance">
-      <SentenceList sentences={header.sentences} onOpenRecord={onOpenRecord} />
+      <SentenceList
+        sentences={header.sentences}
+        onOpenRecord={onOpenRecord}
+        onOpenEmail={onOpenEmail}
+      />
     </section>
   );
 }
@@ -70,7 +84,12 @@ export function GlanceLine({
 export function GoalPanel({
   brief,
   onOpenRecord,
-}: Readonly<{ brief: MeetingBrief; onOpenRecord: OpenRecord }>) {
+  onOpenEmail,
+}: Readonly<{
+  brief: MeetingBrief;
+  onOpenRecord: OpenRecord;
+  onOpenEmail?: OpenEmail;
+}>) {
   const t = useT();
   const goal = find(brief.sections, "goal");
   if (!goal) {
@@ -86,6 +105,7 @@ export function GoalPanel({
         <SentenceList
           sentences={goal.sentences}
           onOpenRecord={onOpenRecord}
+          onOpenEmail={onOpenEmail}
           leadWithJudgement
         />
       </PanelBody>
@@ -99,7 +119,12 @@ export function GoalPanel({
 export function RiskCallout({
   brief,
   onOpenRecord,
-}: Readonly<{ brief: MeetingBrief; onOpenRecord: OpenRecord }>) {
+  onOpenEmail,
+}: Readonly<{
+  brief: MeetingBrief;
+  onOpenRecord: OpenRecord;
+  onOpenEmail?: OpenEmail;
+}>) {
   const t = useT();
   const risks = find(brief.sections, "risks");
   if (!risks) {
@@ -113,7 +138,11 @@ export function RiskCallout({
     <section className="mb-risks">
       <h3 className="mb-section-title">{t("person.meeting.risks")}</h3>
       <Callout tone="warn" icon={AlertTriangle}>
-        <SentenceList sentences={risks.sentences} onOpenRecord={onOpenRecord} />
+        <SentenceList
+          sentences={risks.sentences}
+          onOpenRecord={onOpenRecord}
+          onOpenEmail={onOpenEmail}
+        />
       </Callout>
     </section>
   );
@@ -124,7 +153,12 @@ export function RiskCallout({
 export function BodyPanels({
   brief,
   onOpenRecord,
-}: Readonly<{ brief: MeetingBrief; onOpenRecord: OpenRecord }>) {
+  onOpenEmail,
+}: Readonly<{
+  brief: MeetingBrief;
+  onOpenRecord: OpenRecord;
+  onOpenEmail?: OpenEmail;
+}>) {
   const t = useT();
   return (
     <>
@@ -139,6 +173,7 @@ export function BodyPanels({
               <SentenceList
                 sentences={section.sentences}
                 onOpenRecord={onOpenRecord}
+                onOpenEmail={onOpenEmail}
               />
             </PanelBody>
           </Panel>
@@ -158,7 +193,12 @@ export function BodyPanels({
 export function Background({
   brief,
   onOpenRecord,
-}: Readonly<{ brief: MeetingBrief; onOpenRecord: OpenRecord }>) {
+  onOpenEmail,
+}: Readonly<{
+  brief: MeetingBrief;
+  onOpenRecord: OpenRecord;
+  onOpenEmail?: OpenEmail;
+}>) {
   const t = useT();
   const context = find(brief.sections, "company_context");
   const omitted = brief.omitted ?? [];
@@ -172,6 +212,7 @@ export function Background({
           <SentenceList
             sentences={context.sentences}
             onOpenRecord={onOpenRecord}
+            onOpenEmail={onOpenEmail}
           />
         )}
         {omitted.map((omission) => (

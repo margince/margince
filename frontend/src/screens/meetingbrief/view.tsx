@@ -65,6 +65,7 @@ export function MeetingBriefView({
   meeting,
   preparedFor,
   onOpenRecord,
+  onOpenEmail,
   titleId,
   onClose,
   scopeSlot,
@@ -75,6 +76,8 @@ export function MeetingBriefView({
   meeting?: MeetingFacts;
   preparedFor?: PreparedFor;
   onOpenRecord: (entityType: string, entityId: string) => void;
+  // Opens a cited message in the host's own email drawer; see `Citations`.
+  onOpenEmail?: (activityId: string) => void;
   titleId: string;
   onClose: () => void;
   // The project picker or the scope line, built by the drawer because only it
@@ -120,7 +123,11 @@ export function MeetingBriefView({
           >
             {brief && (
               <div className="mb-stack">
-                <GlanceLine brief={brief} onOpenRecord={onOpenRecord} />
+                <GlanceLine
+                  brief={brief}
+                  onOpenRecord={onOpenRecord}
+                  onOpenEmail={onOpenEmail}
+                />
                 {/* The plan leads when the server says it is a preparation.
                     An `outline` is added ABOVE the sections rather than in
                     place of them: a half-built plan that hid the risks and
@@ -140,36 +147,63 @@ export function MeetingBriefView({
                     <ObjectivePanel
                       plan={brief.plan}
                       onOpenRecord={onOpenRecord}
+                      onOpenEmail={onOpenEmail}
                     />
-                    <TopRisk plan={brief.plan} onOpenRecord={onOpenRecord} />
-                    <LikelyAsks plan={brief.plan} onOpenRecord={onOpenRecord} />
+                    <TopRisk
+                      plan={brief.plan}
+                      onOpenRecord={onOpenRecord}
+                      onOpenEmail={onOpenEmail}
+                    />
+                    <LikelyAsks
+                      plan={brief.plan}
+                      onOpenRecord={onOpenRecord}
+                      onOpenEmail={onOpenEmail}
+                    />
                     <Scenarios plan={brief.plan} />
                     <AccountArc
                       plan={brief.plan}
                       onOpenRecord={onOpenRecord}
+                      onOpenEmail={onOpenEmail}
                       formatDay={formatDay ?? ((iso) => iso.slice(0, 10))}
                     />
                   </>
                 )}
-                <GoalPanel brief={brief} onOpenRecord={onOpenRecord} />
+                <GoalPanel
+                  brief={brief}
+                  onOpenRecord={onOpenRecord}
+                  onOpenEmail={onOpenEmail}
+                />
                 {/* The sections' risk list, unless the plan carried the one
                     risk that matters with what to do about it — two warn
                     callouts on one surface is no warning at all, and the
                     plan's is the one a reader can act on. */}
                 {!brief.plan?.top_risk && (
-                  <RiskCallout brief={brief} onOpenRecord={onOpenRecord} />
+                  <RiskCallout
+                    brief={brief}
+                    onOpenRecord={onOpenRecord}
+                    onOpenEmail={onOpenEmail}
+                  />
                 )}
-                <BodyPanels brief={brief} onOpenRecord={onOpenRecord} />
+                <BodyPanels
+                  brief={brief}
+                  onOpenRecord={onOpenRecord}
+                  onOpenEmail={onOpenEmail}
+                />
                 {brief.plan && (
                   <>
                     <AdvancePanel
                       plan={brief.plan}
                       onOpenRecord={onOpenRecord}
+                      onOpenEmail={onOpenEmail}
                     />
                     <Unknowns plan={brief.plan} />
                   </>
                 )}
-                <Background brief={brief} onOpenRecord={onOpenRecord} />
+                <Background
+                  brief={brief}
+                  onOpenRecord={onOpenRecord}
+                  onOpenEmail={onOpenEmail}
+                />
               </div>
             )}
           </SurfaceState>

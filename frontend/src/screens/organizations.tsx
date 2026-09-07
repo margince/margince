@@ -2192,6 +2192,7 @@ function CompanyRecordBody({
         open={preparing !== null}
         onClose={() => setPreparing(null)}
         projects={liveProjects(view?.projects)}
+        onOpenEmail={receipt.openEmail}
       />
       {/* Deals and Tasks, pulled off the overview: a reader who came for the
           commercial picture or the open work should not scroll past the
