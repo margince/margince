@@ -17,24 +17,21 @@ import (
 // ListUsers serves one keyset page of the workspace member roster.
 func (h Handlers) ListUsers(w http.ResponseWriter, r *http.Request, params crmcontracts.ListUsersParams) {
 	actor, hasActor := identityFrom(r.Context())
-	// The widened management view is honored for a caller who may administer
-	// members; everyone else gets the active-only roster the share/assignee
-	// pickers use. A grant rather than the literal admin role, so an
-	// installation that delegates member administration gets the view that goes
-	// with it — the safe roster stays open to every authenticated caller.
+	// The caller goes on the context; the SERVICE decides what they may see.
+	// This handler passes the request through and asks the same question again
+	// only to shape the response body, because the widened page and the widened
+	// wire mapping have to agree and the mapping is this layer's.
 	mayManage := false
 	if hasActor {
 		ctx, err := admit(r.Context(), actor, objectUserAdmin, principal.ActionRead)
 		mayManage = err == nil
 		r = r.WithContext(ctx)
 	}
-	includeInactive := mayManage && params.IncludeInactive != nil && *params.IncludeInactive
 	rows, page, err := h.svc.ListUsers(r.Context(), ListUsersInput{
 		Q:               params.Q,
 		Cursor:          params.Cursor,
 		Limit:           params.Limit,
-		IncludeInactive: includeInactive,
-		WithRoles:       mayManage,
+		IncludeInactive: params.IncludeInactive != nil && *params.IncludeInactive,
 	})
 	if err != nil {
 		httperr.Write(w, r, err)

@@ -19,6 +19,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -55,6 +56,13 @@ type Colleague struct {
 // Archived seats are absent: a person who has left is not a colleague, and
 // naming one would offer work to an account that cannot receive it.
 func (s *Service) Colleagues(ctx context.Context, q string) ([]Colleague, bool, error) {
+	// Membership is the whole boundary, so it is asked for here and not left to
+	// the tool gate that happens to be in front of this today. The list names
+	// every seat in the installation; what bounds it is being a seat, and a
+	// context carrying no principal at all is not one.
+	if err := auth.RequireMember(ctx); err != nil {
+		return nil, false, err
+	}
 	trimmed := strings.TrimSpace(q)
 	// `%` and `_` are LIKE metacharacters, and the tool advertises this as a
 	// plain narrowing filter — a caller typing an underscore in a name means

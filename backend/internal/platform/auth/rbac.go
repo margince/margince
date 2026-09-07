@@ -136,6 +136,29 @@ func RequireHuman(ctx context.Context) error {
 	return nil
 }
 
+// RequireMember admits any SEATED principal and refuses everyone else. It is
+// the gate for a read whose whole boundary is membership: the roster and the
+// colleague list answer "who works here", which every seat may ask and nobody
+// outside the installation may.
+//
+// Deliberately weaker than RequireHuman, which refuses an agent. An agent
+// admitted through the tool gate asks the colleague list on its granting
+// human's behalf, so refusing it here would break the tool while protecting
+// nothing — the passport already carries that human's authority.
+//
+// Deliberately stronger than nothing, which is what these reads carried
+// before. Without a gate the read answers a context holding no principal at
+// all, and the caller that reaches it wrongly is served rather than refused.
+// A buyer is refused by the shared helper: an external Deal Room participant
+// is not a member of the installation whose roster this is.
+func RequireMember(ctx context.Context) error {
+	p, err := rbacActor(ctx)
+	if err != nil {
+		return err
+	}
+	return refuseBuyer(p, "member-only operation")
+}
+
 // auditActionGrant maps each audit_log.action verb onto the CRUD grant
 // that authorizes it. Package-level: AuthzRule sits on every write path.
 //

@@ -92,13 +92,14 @@ func TestAnArchivedTeamLeavesTheRoster(t *testing.T) {
 	}
 }
 
-// findRosterUser reads the roster the way the handler does — withRoles is the
-// flag it derives from the caller's admin role — and returns the one row for
-// subject. It fails the test rather than returning a zero row, because every
-// caller here asserts about a user it just created.
-func findRosterUser(t *testing.T, e *revocationEnv, actor Identity, withRoles bool, subject ids.UUID) userRow {
+// findRosterUser reads the roster AS actor and returns the one row for subject.
+// What the row carries is the service's decision from that actor's grants, not
+// this helper's — which is the point: a caller cannot pass a flag that widens
+// it. It fails the test rather than returning a zero row, because every caller
+// here asserts about a user it just created.
+func findRosterUser(t *testing.T, e *revocationEnv, actor Identity, includeInactive bool, subject ids.UUID) userRow {
 	t.Helper()
-	rows, _, err := e.svc.ListUsers(e.wsCtx(actor), ListUsersInput{IncludeInactive: withRoles, WithRoles: withRoles})
+	rows, _, err := e.svc.ListUsers(e.wsCtx(actor), ListUsersInput{IncludeInactive: includeInactive})
 	if err != nil {
 		t.Fatalf("reading the roster: %v", err)
 	}
@@ -109,4 +110,111 @@ func findRosterUser(t *testing.T, e *revocationEnv, actor Identity, withRoles bo
 	}
 	t.Fatalf("the roster does not carry %s", subject)
 	return userRow{}
+}
+
+// A caller with no principal on the context reads nothing, and neither does a
+// Deal Room buyer. Both are refused by the service itself.
+//
+// Before this, all five roster reads carried no gate of their own and were safe
+// only because the HTTP handler in front of them checked first. That is a rule
+// every future caller has to remember, and this is the test that makes the
+// service answer for itself. The buyer arm matters most: a buyer is minted
+// carrying no permissions, so an object gate alone would refuse it by accident
+// rather than on purpose, and one careless constructor would end that.
+func TestTheRosterRefusesACallerWhoIsNotAMember(t *testing.T) {
+	e := setupRevocationEnv(t, "roster-non-member")
+
+	buyerCtx := principal.WithActor(
+		principal.WithWorkspaceID(context.Background(), e.ws.UUID),
+		principal.Principal{Type: principal.PrincipalBuyer, ID: "buyer:room-guest"})
+
+	for _, tc := range []struct {
+		name string
+		ctx  context.Context
+	}{
+		{"no principal at all", principal.WithWorkspaceID(context.Background(), e.ws.UUID)},
+		{"a Deal Room buyer", buyerCtx},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, _, err := e.svc.ListUsers(tc.ctx, ListUsersInput{}); err == nil {
+				t.Error("ListUsers served the member roster")
+			}
+			if _, _, err := e.svc.ListTeams(tc.ctx, ListTeamsInput{}); err == nil {
+				t.Error("ListTeams served the team list")
+			}
+			if _, _, err := e.svc.Colleagues(tc.ctx, ""); err == nil {
+				t.Error("Colleagues served the seat list")
+			}
+			if _, err := e.svc.SeatNames(tc.ctx, []ids.UserID{e.admin.UserID}); err == nil {
+				t.Error("SeatNames named a colleague")
+			}
+			if _, err := e.svc.GetUser(tc.ctx, e.member.UserID); err == nil {
+				t.Error("GetUser served one member")
+			}
+		})
+	}
+}
+
+// A member who may not administer members reads the roster and is refused the
+// single-member read, which always carries role keys and team memberships.
+//
+// The pair is the whole point: the same seat is admitted to one read and
+// refused the other, so a failure here cannot be a seat that was refused
+// everything.
+func TestTheSingleMemberReadIsForMemberAdministratorsOnly(t *testing.T) {
+	e := setupRevocationEnv(t, "roster-single-read")
+
+	if _, _, err := e.svc.ListUsers(e.wsCtx(e.member), ListUsersInput{}); err != nil {
+		t.Fatalf("a member was refused the roster every seat may read: %v", err)
+	}
+	if _, err := e.svc.GetUser(e.wsCtx(e.member), e.admin.UserID); err == nil {
+		t.Error("a member without user_admin read a single member's roles and teams")
+	}
+	if _, err := e.svc.GetUser(e.wsCtx(e.admin), e.member.UserID); err != nil {
+		t.Errorf("a member administrator was refused the read they administer with: %v", err)
+	}
+}
+
+// A caller who may not administer members gets the active-only roster however
+// loudly they ask for the rest.
+//
+// The deactivated seat is what makes the assertion non-vacuous: without one in
+// the fixture, both arms return the same rows and the test would pass for a
+// service that honours the flag for everybody. The seat is deactivated through
+// the real writer rather than an UPDATE, so the row is the one production
+// produces.
+func TestAskingToIncludeInactiveDoesNotWidenAMembersRoster(t *testing.T) {
+	e := setupRevocationEnv(t, "roster-include-inactive")
+
+	// The admin is the one seat here holding user_admin, so the MEMBER is the
+	// seat that can be deactivated and still leave a caller to read as.
+	if err := e.svc.DeactivateUser(e.wsCtx(e.admin), e.admin,
+		DeactivateUserInput{UserID: e.member.UserID}); err != nil {
+		t.Fatalf("deactivating the seat this test is about: %v", err)
+	}
+
+	asAdmin, _, err := e.svc.ListUsers(e.wsCtx(e.admin), ListUsersInput{IncludeInactive: true})
+	if err != nil {
+		t.Fatalf("administrator's widened roster: %v", err)
+	}
+	if !carriesUser(asAdmin, e.member.UserID.UUID) {
+		t.Fatal("the deactivated seat is absent from the administrator's widened roster, so the arm below proves nothing")
+	}
+
+	narrowed, _, err := e.svc.ListUsers(e.wsCtx(e.admin), ListUsersInput{})
+	if err != nil {
+		t.Fatalf("administrator's default roster: %v", err)
+	}
+	if carriesUser(narrowed, e.member.UserID.UUID) {
+		t.Error("the default roster carries a deactivated seat, so IncludeInactive selects nothing")
+	}
+}
+
+func carriesUser(rows []userRow, id ids.UUID) bool {
+	for _, row := range rows {
+		if row.ID == id {
+			return true
+		}
+	}
+	return false
 }

@@ -189,10 +189,17 @@ func setupRevocationEnv(t *testing.T, slug string) *revocationEnv {
 
 // wsCtx binds workspace + acting human + a correlation scope — what the
 // HTTP middleware binds before any service call.
+// wsCtx binds one identity to a context the way admission.go does, MERGED
+// PERMISSIONS INCLUDED. Carrying the grants is not decoration: the reads under
+// test ask the object gate what this seat may do, and a principal built without
+// them is a seat holding nothing — which admits the caller to no management
+// view and would pass an assertion about withholding for the wrong reason.
 func (e *revocationEnv) wsCtx(id Identity) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), id.WorkspaceID.UUID)
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + id.UserID.String(), UserID: id.UserID.UUID,
+		TeamIDs: rawTeamIDs(id.Teams), SeatType: principal.SeatType(id.SeatType),
+		Permissions: id.Permissions,
 	})
 	return principal.WithCorrelationID(ctx, ids.NewV7())
 }
