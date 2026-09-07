@@ -12,9 +12,11 @@ type Story = StoryObj;
 
 function installAppStub() {
   globalThis.localStorage.setItem("margince.workspaceSlug", "acme");
-  // Land on a screen with a known-good empty-state story rather than Brief,
-  // whose dashboard queries need richer fixtures than this shell smoke test cares about.
-  globalThis.location.hash = "#/products";
+  // Land on a list screen whose empty state needs nothing but the page-shaped
+  // fallback below, rather than the Brief, whose dashboard queries want richer
+  // fixtures than this shell smoke test cares about. A screen the router does
+  // not know would draw Not found under the name of this story.
+  globalThis.location.hash = "#/contacts";
   globalThis.fetch = (async (input: Request | string | URL) => {
     const url = String(input instanceof Request ? input.url : input);
     if (url.endsWith("/v1/me")) {
@@ -23,6 +25,21 @@ function installAppStub() {
           user: { email: "ada@acme.test" },
           roles: ["admin"],
           teams: [],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    // The shell's brand block draws the installation's OWN company, read off
+    // GET /company. The list-shaped fallback below answers that read with a
+    // page envelope, which is not a 404 — so the app reads the installation as
+    // described, the block renders it, and the name it draws with is missing.
+    // A story of the authenticated app is a story of a described installation,
+    // so it says which company that is.
+    if (url.endsWith("/v1/company")) {
+      return new Response(
+        JSON.stringify({
+          organization_id: "018f3a1b-0000-7000-8000-0000000000a1",
+          display_name: "Acme Freight",
         }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       );
