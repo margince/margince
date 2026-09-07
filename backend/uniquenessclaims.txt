@@ -667,10 +667,3 @@ tools/gen-composition/scan.go#func coreDigest
 tools/gen-jobs/emitkinds.go#func emitKinds
 tools/gen-payloads/main.go#package main
 tools/gen-payloads/main.go#type payloadVersionEntry
-tools/seed-demo/fx.go#func fxCurrencies
-tools/seed-demo/generated.go#func leadNameRank
-tools/seed-demo/locale.go#type contractWords
-tools/seed-demo/ownership.go#method pipelineRefs.resolveOwners
-tools/seed-demo/pipeline.go#type pipelineRefs.ownerRefByDomain
-tools/seed-demo/profile.go#func pinnedDomains
-tools/seed-demo/stakeholders.go#func ensureStakeholderOn

@@ -51,14 +51,6 @@ var anonymousOutbound = gatekit.Waive(map[string]string{
 	"internal/modules/agents/apps/fetch.go:func Fetch":         "fetches this product's own origin, so the server on the other end is this same process and a name would be it introducing itself to itself",
 	"internal/compose/integration/apptest/appenv.go:func Call": "drives a server the test itself started, in the same process tree, for the length of one test",
 	"internal/compose/integration/apptest/mcp.go:func rpc":     "drives a server the test itself started, in the same process tree, for the length of one test",
-	"tools/seed-demo/apiclient.go:func delete":                 "seeds a demo estate through this product's own API, run by hand against a deployment the operator chose",
-	"tools/seed-demo/apiclient.go:func get":                    "seeds a demo estate through this product's own API, run by hand against a deployment the operator chose",
-	"tools/seed-demo/apiclient.go:func patch":                  "seeds a demo estate through this product's own API, run by hand against a deployment the operator chose",
-	"tools/seed-demo/apiclient.go:func patchGuarded":           "seeds a demo estate through this product's own API, run by hand against a deployment the operator chose",
-	"tools/seed-demo/apiclient.go:func post":                   "seeds a demo estate through this product's own API, run by hand against a deployment the operator chose",
-	"tools/seed-demo/apiclient.go:func postGuarded":            "seeds a demo estate through this product's own API, run by hand against a deployment the operator chose",
-	"tools/seed-demo/apiclient.go:func put":                    "seeds a demo estate through this product's own API, run by hand against a deployment the operator chose",
-	"tools/seed-demo/documents.go:func upload":                 "seeds a demo estate through this product's own API, run by hand against a deployment the operator chose",
 
 	// The model providers. Each call carries the customer's own API key, which
 	// is the account the provider bills, rate-limits and revokes; an agent

@@ -44,29 +44,7 @@ ROOT_SCRIPT_GATES := check-craft-doc craft-test test-dev-isolation \
 # run whose interleaving you need untangled.
 GATE_JOBS ?= $(shell getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)
 
-# Where the demo dataset lives. It is a SEPARATE, private repo (it carries real
-# company names and crawled pages), cloned beside this one by convention. The
-# seeder has the same default; naming it here is what lets `make seed-demo` be
-# the whole command.
-#
-# Resolved against the MAIN worktree rather than $(CURDIR), because a sibling
-# of a worktree under .tmp/worktrees/<name>/ is not a sibling of the clone. A
-# checkout with no git (a tarball, a container copy) falls back to $(CURDIR).
-DATASET_ROOT := $(or $(shell git rev-parse --path-format=absolute --git-common-dir 2>/dev/null | sed 's|/\.git$$||'),$(CURDIR))
-DATASET ?= $(abspath $(DATASET_ROOT)/../margince-demo-database)
-
-# Reaching a stack other than this worktree's. A stack is three things — an API
-# base, a database and an object bucket — so an override is all three or none:
-# SEED_STACK below refuses a partial one rather than sending the API half of a
-# seed to one stack and the SQL half to another, which is the exact defect the
-# resolution underneath it exists to close.
-SEED_DSN ?=
-SEED_API ?=
-SEED_BUCKET ?=
-
-# The dev stack's MinIO port. Same default scripts/dev.sh uses. seed-demo needs
-# it to upload the company logos: without a blobstore the seeder skips them and
-# every company renders as a placeholder initial.
+# The dev stack's MinIO port. Same default scripts/dev.sh uses.
 MINIO_PORT ?= 29000
 
 # The stack THIS worktree runs, in the three places a seed reaches it: the API
@@ -82,25 +60,8 @@ MINIO_PORT ?= 29000
 # that refusal into an empty database name and seed the wrong place anyway. Each
 # answer lands in its own assignment so `set -e` sees the refusal — a helper
 # called inside another command's argument would fail unnoticed.
-# An override is all three or none, and `dev_seed_override` refuses in between
-# before anything here is resolved — `set -e` and the command substitution carry
-# that refusal out. The rule is stated in the library rather than spelled in this
-# recipe, so it has one writer and a gate can reach it without a seeder.
-SEED_STACK = set -e; . scripts/lib-devstate.sh; \
-  seed_override="$$(dev_seed_override "$(SEED_DSN)" "$(SEED_API)" "$(SEED_BUCKET)" "$(SEED_ARGS)")"; \
-  if [ "$$seed_override" = "all" ]; then \
-    seed_api="$(SEED_API)"; \
-    seed_bucket="$(SEED_BUCKET)"; \
-    seed_dsn="$(SEED_DSN)"; \
-  else \
-    seed_api="$$(dev_app_base_url)"; \
-    seed_slug="$$(dev_resolve_slug "$(DEV_SLUG)")"; \
-    seed_bucket="$$(dev_bucket_for_slug "$$seed_slug")"; \
-    seed_db="$$(dev_database_name)"; \
-    seed_dsn="postgres://margince_owner:dev@localhost:15432/$$seed_db"; \
-  fi;
 
-.PHONY: help install dev-fresh check check-all check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-demo verify-demo seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-clock-drift fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows fitness-jurisdiction storybook fe-uat craft-static craft-test craft-residue check-craft-doc test-golangci-guard test-scheduled-report test-ci-verdict test-merge-verdict test-laneorder secret-scan test-secret-scan test-sbom-sign test-dev-dsn test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations check-extension-modules contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze changelog-sections test-changelog-sections test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check sbom-gate
+.PHONY: help install dev-fresh check check-all check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-clock-drift fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows fitness-jurisdiction storybook fe-uat craft-static craft-test craft-residue check-craft-doc test-golangci-guard test-scheduled-report test-ci-verdict test-merge-verdict test-laneorder secret-scan test-secret-scan test-sbom-sign test-dev-dsn test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations check-extension-modules contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze changelog-sections test-changelog-sections test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check sbom-gate
 
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
@@ -467,56 +428,6 @@ ext-imports:
 seed-dev:
 	./scripts/seed-dev.sh
 	$(MAKE) -C backend seed-dev-db
-
-## seed-demo — fill a running stack from the demo dataset: real companies,
-## people and facts, plus the invented commercial half. Stack must be running
-## (make dev). Converges — a second run creates nothing. DATASET= points at the
-## dataset checkout; SEED_ARGS= passes flags through (-dry-run, -limit N).
-## It fills THIS worktree's stack, and refuses a `-api` in SEED_ARGS: that moves
-## the API leg alone and leaves the database and bucket here. To seed another
-## stack, pass SEED_DSN, SEED_API and SEED_BUCKET together.
-# scripts/lib-devstate.sh is bash (`local`, `[[ ]]`), and make's default shell
-# is /bin/sh — dash on most Linux images, where sourcing it fails before the
-# stack is resolved.
-seed-demo: SHELL := /bin/bash
-seed-demo:
-	@test -f "$(DATASET)/datasets/v1/demo.json" || { \
-	  echo "no demo dataset at $(DATASET) — clone margince-demo-database beside this repo, or pass DATASET=<path>" >&2; \
-	  exit 1; }
-	@test -f config/margince-admin-password || { \
-	  echo "no config/margince-admin-password — run make dev first" >&2; exit 1; }
-	@$(SEED_STACK) \
-	MARGINCE_SEED_PASSWORD="$$(cat config/margince-admin-password)" \
-	MARGINCE_SEED_DSN="$$seed_dsn" \
-	MARGINCE_BLOBSTORE_ENDPOINT="localhost:$(MINIO_PORT)" \
-	MARGINCE_BLOBSTORE_ACCESS_KEY=minioadmin \
-	MARGINCE_BLOBSTORE_SECRET_KEY=minioadmin \
-	MARGINCE_BLOBSTORE_BUCKET="$$seed_bucket" \
-	MARGINCE_BLOBSTORE_REGION=us-east-1 \
-	$(MAKE) -C backend seed-demo DATASET="$(DATASET)" \
-	  SEED_ARGS="-api $$seed_api $(SEED_ARGS)"
-
-## verify-demo — re-run the demo seeder's verify pass against a running stack,
-## writing nothing: every row owned, every person employed, every conversation
-## naming somebody, every deal with a committee, every account off `unknown`.
-##
-## It delegates into backend/ rather than re-entering seed-demo here, because
-## the frontend-lane parity gate reads $(MAKE) lines to find the legs it must
-## check and refuses a spelling it cannot parse — `$(MAKE) seed-demo
-## SEED_ARGS="… $(SEED_ARGS)"` is one, and a leg it silently dropped would be
-## a gate that stopped gating.
-# scripts/lib-devstate.sh is bash (`local`, `[[ ]]`), and make's default shell
-# is /bin/sh — dash on most Linux images, where sourcing it fails before the
-# stack is resolved.
-verify-demo: SHELL := /bin/bash
-verify-demo:
-	@test -f config/margince-admin-password || { \
-	  echo "no config/margince-admin-password — run make dev first" >&2; exit 1; }
-	@$(SEED_STACK) \
-	MARGINCE_SEED_PASSWORD="$$(cat config/margince-admin-password)" \
-	MARGINCE_SEED_DSN="$$seed_dsn" \
-	$(MAKE) -C backend seed-demo DATASET="$(DATASET)" \
-	  SEED_ARGS="-api $$seed_api -verify-only"
 
 ## verify-boot — prove a running, seeded stack end to end: seeded-admin
 ## login, seeded people visible over /v1, frontend production build.
