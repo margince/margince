@@ -134,7 +134,7 @@ deriving it the first time.
 | Target | What it does |
 |---|---|
 | `vuln` | govulncheck over all packages. Not part of `check` — it answers against a database that changes daily, so it runs per-PR in `ci.yml` and again daily against `main` in `scheduled.yml`, which is the only lane that can find a vulnerability disclosed after a merge |
-| `hooks` (root) | Point git at `.githooks/` (`core.hooksPath`), arming the diff-scoped pre-push craft gate and the RLS/jurisdiction script gates. Run once after cloning; `make install` does it for you. The backend's own `make -C backend hooks` is a **different** target that installs `scripts/pre-commit` (gofmt + license header) — it does **not** set `core.hooksPath`, so it alone leaves the strict pre-push gate disarmed |
+| `hooks` (root) | Point git at `.githooks/` (`core.hooksPath`), arming the diff-scoped pre-push craft gate and the store-path/jurisdiction script gates. Run once after cloning; `make install` does it for you. The backend's own `make -C backend hooks` is a **different** target that installs `scripts/pre-commit` (gofmt + license header) — it does **not** set `core.hooksPath`, so it alone leaves the strict pre-push gate disarmed |
 | `check-gates` | The meta-gate lane: the waiver census, the obligations derived from the migrations and the contract, and the walk-scope proofs. A dev-loop convenience — deliberately **not** a `check-backend` prerequisite, since `make -C backend check` already runs these tests uncached |
 | `tools` / `tools-go` | Install every gate binary at its pinned version (fresh-machine bootstrap) |
 | `migrate-up` / `migrate-down` | Alias for `migrate` / roll back the last migration(s) (`STEPS=n`) |
