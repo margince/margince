@@ -197,6 +197,9 @@ var replayableOperations = map[string]replayTarget{
 		object: tableLead, table: tableLead, idPath: "lead.id",
 		companions: []companionRef{{table: tablePerson, idPath: companionPersonField}},
 	},
+	// The reopen answers the lead it put back, keyed on the same row the
+	// disqualify it reverses was keyed on.
+	"POST /v1/leads/{id}/reopen":        {object: tableLead, table: tableLead, idPath: "id"},
 	"POST /v1/activities":               {object: tableActivity, table: tableActivity, idPath: "id"},
 	"POST /v1/tasks":                    {object: tableActivity, table: tableActivity, idPath: "id"},
 	"PATCH /v1/activities/{id}":         {object: tableActivity, table: tableActivity, idPath: "id"},

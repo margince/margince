@@ -2227,6 +2227,16 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
       // unreadable, and this is one of the reads.
       "Open leads in this status →",
     ]);
+    // The one WRITE a terminal lead offers, and it is named separately from
+    // the reads above because it is one: reopening is not a change to the
+    // record, it is the undo of the state that makes the record read-only.
+    // Disabling it would leave the page saying "Disqualified: <reason>" with
+    // no way back, which is what forces an operator to re-key the lead and
+    // lose its history and its score with it.
+    //
+    // Its own set rather than an entry in viewControls, so a future reader
+    // cannot mistake it for a control that writes nothing.
+    const closureReversals = new Set(["Reopen"]);
     // The pane's own controls are skipped structurally rather than by label:
     // what folds a disclosure in it is a view control, and "Hide" is too
     // ordinary a word to exempt everywhere it might appear.
@@ -2242,6 +2252,7 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
       // count that changes with the record.
       if (
         viewControls.has(name) ||
+        closureReversals.has(name) ||
         contextColumn?.contains(button) ||
         button.classList.contains("r360-rests-toggle")
       ) {
@@ -2252,6 +2263,46 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
         `"${name}" is still live on a terminal lead`,
       ).toBe(true);
     }
+  });
+
+  // The way back, which is what a disqualified lead's page was missing: it
+  // could say "Disqualified: <reason>" and offer nothing to undo it. Nothing
+  // else in the suite fails if the button quietly stops calling the server —
+  // the read-only sweep above passes with it inert, because an exempt control
+  // is exempt whether or not it works.
+  it("offers Reopen on a disqualified lead, and it calls the reopen endpoint", async () => {
+    const calls: string[] = [];
+    stubFetchWithMe(async (url, method) => {
+      if (method !== "GET") {
+        calls.push(`${method} ${new URL(url, "http://localhost").pathname}`);
+        return jsonResponse({
+          ...lead,
+          status: "contacted",
+          archived_at: null,
+        });
+      }
+      if (url.includes("/score")) {
+        return jsonResponse({ score: 72, explained: false });
+      }
+      return jsonResponse({
+        ...lead,
+        status: "disqualified",
+        archived_at: "2026-07-13T00:00:00Z",
+      });
+    });
+    render(<LeadScreen id="l-1" />);
+
+    const reopen = await screen.findByRole("button", { name: "Reopen" });
+    expect((reopen as HTMLButtonElement).disabled).toBe(false);
+    await userEvent.click(reopen);
+    // The dialog says what reopening does before it is done: the status comes
+    // back, the reason goes, the history stays.
+    expect(screen.getByText(en["lead.reopenExplain"] as string)).toBeTruthy();
+    await userEvent.click(
+      screen.getByRole("button", { name: en["lead.reopenConfirm"] as string }),
+    );
+
+    await waitFor(() => expect(calls).toContain("POST /v1/leads/l-1/reopen"));
   });
 
   it("a disqualified lead keeps its controls DISABLED with the reason, never hidden", async () => {

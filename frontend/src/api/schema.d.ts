@@ -4982,6 +4982,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/leads/{id}/reopen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Put a disqualified lead back on the open ladder.
+         * @description The reverse of `DELETE /leads/{id}`. It clears the archive, the reason and the note,
+         *     and returns the lead to the status it held when it was disqualified — read from that
+         *     act's own audit row rather than guessed at, because the status a lead had reached is
+         *     a fact the trail already holds and re-deriving it would answer about today's data.
+         *
+         *     A row whose audit trail no longer names a status reopens to `engaged`, which is what a
+         *     lead somebody is choosing to pursue again is: `new` would claim nobody had touched it,
+         *     and refusing would leave a lead nothing can reopen because of a record it does not own.
+         *
+         *     Emits `lead.updated`. Reopening a lead that is not disqualified is a **409**: the verb
+         *     answers about a state the lead is not in, and silently succeeding would tell a caller
+         *     it had undone something.
+         */
+        post: operations["reopenLead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/leads/{id}/score": {
         parameters: {
             query?: never;
@@ -41171,6 +41205,58 @@ export interface operations {
             };
             /** @description The promoted person owns a deal — the reversal is refused rather than orphaning it. */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    reopenLead: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The reopened lead. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Lead"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The lead is not disqualified, so there is nothing to reopen. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

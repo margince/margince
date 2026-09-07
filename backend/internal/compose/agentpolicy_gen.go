@@ -503,6 +503,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/leads/{id}/demote":                                         {Op: "demoteLead", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/leads/{id}/draft-email":                                    {Op: "draftLeadEmail", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/leads/{id}/promote":                                        {Op: "promoteLead", Access: "tool", Tool: "promote_lead", RecordType: "lead", Tier: "auto_execute", Scope: "write"},
+	"POST /v1/leads/{id}/reopen":                                         {Op: "reopenLead", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/me/linkedin-connections":                                   {Op: "importLinkedInConnections", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/notices":                                                   {Op: "raiseNotice", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/notices/{id}/read":                                         {Op: "markNoticeRead", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

@@ -2158,6 +2158,11 @@ export const de = {
   "lead.demoteReason": "Grund (wird im Protokoll festgehalten)",
   "lead.demoteReasonRequired": "Bitte zuerst begr\u00fcnden.",
   "lead.demoteConfirm": "Rückgängig machen",
+  "lead.reopen": "Wieder öffnen",
+  "lead.reopenDialog": "Diesen Lead wieder öffnen?",
+  "lead.reopenExplain":
+    "Der Lead kommt mit dem Status zurück, den er beim Disqualifizieren hatte, und der Grund wird gelöscht. Verlauf und Score bleiben erhalten.",
+  "lead.reopenConfirm": "Lead wieder öffnen",
   "lead.promotedOutcomePending":
     "Wird gelesen, was diese Übernahme bewirkt hat …",
   "lead.promotedOutcomeUnavailable":

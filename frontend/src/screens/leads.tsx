@@ -1286,6 +1286,65 @@ function DemoteAction({ id }: Readonly<{ id: string }>) {
 }
 
 /**
+ * ReopenAction puts a disqualified lead back on the open ladder.
+ *
+ * The page could say "Disqualified: <reason>" and could not offer the way
+ * back. A judgement that somebody is not worth pursuing is exactly the kind
+ * that changes — the budget arrives, the champion returns — and with no way
+ * back the operator re-keys the lead, which loses its history and its score
+ * along with its reason.
+ *
+ * No reason field, unlike the demote beside it. The demote asks for one
+ * because it unwinds a person and a reader of that trail needs to know why;
+ * reopening restores a status the trail already holds, and there is nothing a
+ * caller could say that the server does not read for itself.
+ */
+function ReopenAction({ id }: Readonly<{ id: string }>) {
+  const t = useT();
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const reopen = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await api.POST("/leads/{id}/reopen", {
+        params: { path: { id } },
+      });
+      if (error) {
+        throwProblem(error, t);
+      }
+      return data;
+    },
+    onSuccess: () => {
+      for (const key of leadWriteKeys(id)) {
+        queryClient.invalidateQueries({ queryKey: key });
+      }
+      setOpen(false);
+    },
+  });
+  const close = () => {
+    setOpen(false);
+    reopen.reset();
+  };
+  return (
+    <>
+      <Button small onClick={() => setOpen(true)}>
+        {t("lead.reopen")}
+      </Button>
+      <ConfirmModal
+        open={open}
+        onClose={close}
+        title={t("lead.reopenDialog")}
+        confirmLabel={t("lead.reopenConfirm")}
+        onConfirm={() => reopen.mutate()}
+        pending={reopen.isPending}
+        error={reopen.isError ? problemMessageOf(reopen.error, t) : undefined}
+      >
+        <p className="t-body">{t("lead.reopenExplain")}</p>
+      </ConfirmModal>
+    </>
+  );
+}
+
+/**
  * PromotedLeadPanel is what a promoted lead's page is FOR (ADR-0119/A170).
  *
  * The page used to redirect to the person, which told the reader the lead had
@@ -1942,6 +2001,13 @@ function LeadRecord({
                 : writer.readOnlyReason}
             </p>
           )}
+          {/* The way back, beside the sentence that says the lead is closed.
+              Offered only on a disqualification a reader may WRITE: the
+              promoted closure is the demote's to reverse, and a reader who
+              cannot change this lead cannot reopen it either. */}
+          {lead.archived_at &&
+            lead.status === "disqualified" &&
+            lead.writable !== false && <ReopenAction id={id} />}
         </>
       }
       // The same strip every record in the product carries: a place a reader
