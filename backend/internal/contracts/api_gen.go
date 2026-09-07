@@ -40099,7 +40099,7 @@ type ListPeopleParams struct {
 	// Mutually exclusive with `owner_id` and `owner_team_id`; combining them is `422`.
 	Unassigned *bool `form:"unassigned,omitempty" json:"unassigned,omitempty"`
 
-	// Q Full-text query over name/title (tsvector).
+	// Q Full-text query over name/title (tsvector), plus an exact match on the record's own identifier: a contact's email address, an organization's domain. A query containing "@" also tries the part after it against the domain, so pasting a sender finds their company. Identifier matching is exact, never a prefix.
 	Q *string `form:"q,omitempty" json:"q,omitempty"`
 
 	// TagId Narrow to the records carrying these tags. Repeat the parameter for several.

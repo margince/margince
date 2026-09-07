@@ -811,7 +811,11 @@ paths:
         - name: q
           in: query
           schema: { type: string }
-          description: Full-text query over name/title (tsvector).
+          description: >-
+            Full-text query over name/title (tsvector), plus an exact match on the record's
+            own identifier: a contact's email address, an organization's domain. A query
+            containing "@" also tries the part after it against the domain, so pasting a
+            sender finds their company. Identifier matching is exact, never a prefix.
         - name: tag_id
           in: query
           schema:

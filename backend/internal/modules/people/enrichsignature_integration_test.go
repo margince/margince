@@ -74,10 +74,18 @@ func (e *dedupeEnv) seedSignatureCandidateWithAudience(
 			activityID, capturedBy, audience); err != nil {
 			return err
 		}
-		_, err := tx.Exec(ctx, `
+		if _, err := tx.Exec(ctx, `
 			INSERT INTO activity_link (id, activity_id, entity_type, person_id)
 			VALUES ($1, $2, 'person', $3)`,
-			ids.NewV7(), activityID, personID)
+			ids.NewV7(), activityID, personID); err != nil {
+			return err
+		}
+		// THEY sent it. A signature is only theirs to read off a message they
+		// wrote, so the candidate query asks for this row and a mail seeded
+		// without one is a mail nobody wrote.
+		_, err := tx.Exec(ctx, `
+			INSERT INTO activity_participant (activity_id, person_id, role)
+			VALUES ($1, $2, 'from')`, activityID, personID)
 		return err
 	}); err != nil {
 		t.Fatalf("seed the captured mail: %v", err)
