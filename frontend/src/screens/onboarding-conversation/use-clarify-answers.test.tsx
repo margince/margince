@@ -631,9 +631,13 @@ describe("useClarifyAnswers — honest failures", () => {
   });
 
   it("falls back to the shared line when the refusal carried no words for a reader", async () => {
+    // A 500, not a gateway status: the message route holds a model call open,
+    // so the api client gives a bodiless 502/503/504 on it a sentence of its
+    // own ("the server may still be working"), and this is the case where
+    // nothing does — a body with a status and no detail.
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => jsonResponse({ status: 502 }, 502)),
+      vi.fn(async () => jsonResponse({ status: 500 }, 500)),
     );
     const { result } = setupHook([]);
 

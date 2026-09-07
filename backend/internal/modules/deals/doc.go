@@ -10,7 +10,7 @@
 // the deals slice of the datasource provider, flat per ADR-0054 §3.
 //
 // Tables owned: deal, deal_stage_history, deal_forecast_history, pipeline,
-// stage, stage_exit_criterion, fx_rate,
+// stage, stage_exit_criterion, deal_stage_evidence, fx_rate,
 // product, offer, offer_line_item, offer_template (the E03.16-.20 offer
 // engine: rate-card products, versioned deal-bound offers with derived money
 // totals).

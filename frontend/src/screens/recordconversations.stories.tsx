@@ -150,3 +150,33 @@ export const Partial: Story = {
     />
   ),
 };
+
+// A long exchange: the three newest messages stand open and the rest wait
+// behind a count, so a twelve-message thread does not push every other event
+// on the record below the fold. The card's head carries the count and the
+// other side's names; each message says who wrote it, in words the row can
+// stand behind — "Ida Keller wrote", "We sent to Ida Keller".
+export const LongThread: Story = {
+  render: () => (
+    <List
+      groups={[
+        group(
+          "thread-1",
+          [6, 5, 4, 3, 2, 1].map((n) =>
+            entry("email", {
+              id: `renewal-${n}`,
+              title: n === 1 ? "Renewal terms" : "Re: Renewal terms",
+              atIso: `2026-08-${10 + n}T1${n}:15:00Z`,
+              direction: n % 2 === 0 ? "inbound" : "outbound",
+              counterparts: "Ida Keller",
+              body:
+                n % 2 === 0
+                  ? "Two years works for us if the Bremen lane rate holds. Can you send the fixed rate table before Thursday?"
+                  : "Attached is the two-year rate sheet for Hamburg and Bremen as discussed. The Bremen lane is priced flat for both years.",
+            }),
+          ),
+        ),
+      ]}
+    />
+  ),
+};

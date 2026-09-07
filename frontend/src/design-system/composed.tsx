@@ -6,6 +6,7 @@ import {
   MessageCircle,
   PencilLine,
   Phone,
+  Send,
   StickyNote,
 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -26,6 +27,7 @@ import type { MessageKey } from "../i18n/en";
 import { Avatar, Badge, Button } from "./atoms";
 import { EmailEntry } from "./emailentry";
 import { PageZones, type PageZonesShape } from "./pagezones";
+import { withWhom } from "./participants";
 import { FieldGuard } from "./rbac";
 import { useTooltip, useTruncationTooltip } from "./tooltip";
 import { type Provenance, ProvenanceTag } from "./trust";
@@ -704,6 +706,14 @@ export type TimelineEntry = {
    * sent", and the row that does not say which one is a row they have to open.
    */
   counterparts?: string;
+  /**
+   * The same people, one name each, before they were joined into the phrase
+   * above. A thread lists everyone it was with and draws each sender's face,
+   * and both need a person, not a phrase: a set of phrases lists "Ida Keller"
+   * and "Ida Keller, Marc Dubois" as two entries, and a monogram of a phrase
+   * is nobody's. Absent where nothing resolved a name, exactly as the phrase.
+   */
+  counterpartNames?: readonly string[];
   /**
    * The server's own row model for an email, present exactly when `kind` is
    * `email`. It is what EmailEntry draws, so the timeline hands the canonical
@@ -1417,10 +1427,12 @@ function TimelineList({
 /**
  * GroupedTimelineList renders conversations rather than messages.
  *
- * A collapsed group states what it IS before what it says — "5 messages" or
- * "sent to 3 people" — because the reader is scanning for an event, not for a
- * sentence. Expanding shows the same rows the flat list would have shown, from
- * the same component, so the two can never drift.
+ * A thread is one card, open: what it IS — "3 messages", who with, whose
+ * move — over its subject, then the messages themselves. A bulk send is
+ * folded, stating "sent to 3 people" before what it says, because the reader
+ * is scanning for an event rather than for a sentence; expanding it shows the
+ * same rows the flat list would have shown, from the same component, so the
+ * two can never drift.
  *
  * A group that may continue past the page says so. A summary that implied it
  * was whole would be a worse answer than the repetition this replaced.
@@ -1446,16 +1458,366 @@ export function GroupedTimelineList({
             zone={zone}
             flag={<MoveFlag entry={group.entries[0]} />}
           />
-        ) : (
-          <TimelineGroupRow
+        ) : group.kind === "thread" ? (
+          <ThreadRow
             key={group.id}
             group={group}
             zone={zone}
             onOpenThread={onOpenThread}
           />
+        ) : (
+          <BulkGroupRow key={group.id} group={group} zone={zone} />
         ),
       )}
     </ul>
+  );
+}
+
+/**
+ * TimelineWhen is the row's place on the axis: the day, and under it the
+ * time of day. The day alone told a reader two calls happened on the 26th
+ * and not which came first, or whether the reply landed an hour after the
+ * ask or a working day later — the one thing a chronology is opened to
+ * settle. The mono face keeps the column straight whatever each date's
+ * digits are.
+ */
+function TimelineWhen({
+  atIso,
+  zone,
+}: Readonly<{ atIso: string; zone: string }>) {
+  const { locale } = useLocale();
+  return (
+    <span className="tl-when t-mono">
+      {formatDate(atIso, locale, zone)}
+      <span className="tl-when-time">
+        {formatTimeOfDay(atIso, locale, zone)}
+      </span>
+    </span>
+  );
+}
+
+// How many of a thread's messages stand open before the rest fold behind a
+// count. Three is a conversation a reader takes in at a glance — the ask,
+// the answer and the follow-up; a twelve-message thread drawn whole would
+// push every other event on the record below the fold.
+const THREAD_OPEN_MEMBERS = 3;
+
+// Who was on the other side of a message, for the row's lead line and the
+// thread's participant list. The server's own counterparty first — it is the
+// row model EmailEntry draws — then the resolved link names. Never for a
+// withheld row: the name beside a message a reader may not open is the thing
+// the audience limited, and EmailEntry and TimelineRow both drop it there.
+function otherSideOf(entry: TimelineEntry): string | undefined {
+  if (entry.withheld) {
+    return undefined;
+  }
+  return entry.emailSummary?.counterparty?.trim() || entry.counterparts;
+}
+
+// The same people one at a time, for a set and for a face. The resolved
+// names when the adapter had any; otherwise the one phrase the row shows,
+// which is then the best name there is. Nothing on a withheld row, as above.
+function otherSideNames(entry: TimelineEntry): readonly string[] {
+  if (entry.withheld) {
+    return [];
+  }
+  if (entry.counterpartNames?.length) {
+    return entry.counterpartNames;
+  }
+  const who = otherSideOf(entry);
+  return who ? [who] : [];
+}
+
+// Who a thread was with, as one phrase: the other side's names, each once,
+// joined ONCE at the end — joining per message and then collecting the
+// phrases listed one person under two spellings. Our own seats are not
+// listed: every thread on this record is with us, and a name that appears
+// on all of them tells a reader nothing.
+function threadParticipants(
+  entries: readonly TimelineEntry[],
+  t: ReturnType<typeof useT>,
+  locale: Locale,
+): string | undefined {
+  const names = new Set<string>();
+  for (const entry of entries) {
+    for (const name of otherSideNames(entry)) {
+      names.add(name);
+    }
+  }
+  return withWhom([...names], t, locale);
+}
+
+// The lead of a message in a thread: who, and what they did. An inbound
+// message is THEIR word and carries their name; an outbound one is ours, and
+// says "we" unless the reader logged it themselves — a captured mail names
+// the other side, not which seat sent it, and "you" on a colleague's mail
+// would be a claim the row cannot make.
+function messageLead(
+  entry: TimelineEntry,
+  t: ReturnType<typeof useT>,
+): { actor: string; verb?: string } {
+  const who = otherSideOf(entry);
+  if (entry.direction === "inbound") {
+    return {
+      actor: who ?? t("timeline.thread.them"),
+      verb: t("timeline.thread.wrote"),
+    };
+  }
+  if (entry.direction === "outbound") {
+    const self = entry.provenance.kind === "human" && entry.provenance.self;
+    return {
+      actor: self ? t("timeline.thread.you") : t("timeline.thread.we"),
+      verb: who
+        ? t("timeline.thread.sentTo", { who })
+        : t("timeline.thread.sent"),
+    };
+  }
+  // No direction recorded: the row names who it was with, or failing that
+  // what it was, and claims nothing about who spoke.
+  return { actor: who ?? t(TIMELINE_KIND_LABEL[entry.kind]) };
+}
+
+// Who may read a message in a thread, when that is worth a mark: sealed rows
+// and withheld ones. The open default — `team` on a mail, `workspace` on
+// anything else — draws nothing, for the reason TimelineRow gives: a mark on
+// every open row is decoration a reader learns to skip.
+function messageVisibility(entry: TimelineEntry): ReactNode {
+  if (entry.withheld) {
+    return <VisibilityBadge state="withheld" />;
+  }
+  const status = entry.emailSummary?.display_status;
+  if (status && status !== "team") {
+    return <VisibilityBadge state={status} />;
+  }
+  if (entry.audience && entry.audience !== "workspace") {
+    return <VisibilityBadge state={entry.audience} />;
+  }
+  return null;
+}
+
+// The mark beside a message: the sender's face on their word, a send mark on
+// ours, a lock on one the reader may not open, and the kind's own icon where
+// nobody is named. A monogram of "We" or of "Them" would be a face nobody
+// has.
+function MessageMark({ entry }: Readonly<{ entry: TimelineEntry }>) {
+  if (entry.withheld) {
+    return (
+      <span className="tl-msg-mark">
+        <Lock aria-hidden />
+      </span>
+    );
+  }
+  // The face is ONE person's — the first named on the other side — never
+  // the phrase the lead line shows, whose monogram would be nobody's.
+  const [face] = otherSideNames(entry);
+  if (entry.direction === "inbound" && face) {
+    return <Avatar name={face} size="xs" />;
+  }
+  const Icon =
+    entry.direction === "outbound" ? Send : TIMELINE_ICON[entry.kind];
+  return (
+    <span className="tl-msg-mark">
+      <Icon aria-hidden />
+    </span>
+  );
+}
+
+// What a message in a thread SAYS. A mail with the server's summary draws
+// the server's own preview — the sender's line with the signature and the
+// quoted history already removed, the same line EmailEntry draws — and never
+// the raw body beside it, which is the drift the canonical row exists to
+// stop. A message without one (a chat, or a server that has not caught up)
+// draws its body through the same TimelineText the chronicle uses, with the
+// same fold. A withheld message draws the sentence where its words would be,
+// whatever it is handed.
+function MessageWords({
+  entry,
+  t,
+}: Readonly<{ entry: TimelineEntry; t: ReturnType<typeof useT> }>) {
+  if (entry.withheld) {
+    return <span className="tl-withheld">{t("timeline.withheld")}</span>;
+  }
+  if (entry.emailSummary) {
+    return entry.emailSummary.preview ? (
+      <span className="tl-msg-text">{entry.emailSummary.preview}</span>
+    ) : null;
+  }
+  return entry.body ? (
+    <TimelineText text={entry.body} email={entry.kind === "email"} />
+  ) : null;
+}
+
+/**
+ * ThreadMessage is one message inside a thread's card: who wrote it, what it
+ * said, and when. Not TimelineRow — a member of a conversation has no date
+ * gutter, no rail and no kind of its own to announce, because the card has
+ * already placed the conversation on the axis and said what it is.
+ *
+ * Openable exactly when the surface mounted a drawer for it, through the
+ * same opener the canonical row takes: a conversation a reader can read here
+ * and not open is the one place its messages would be a different kind of
+ * object from the mail they are. Only a message drawn from the server's
+ * summary opens — its words are one span, where a folded body carries
+ * controls of its own that cannot sit inside a button.
+ */
+function ThreadMessage({
+  entry,
+  zone,
+}: Readonly<{ entry: TimelineEntry; zone: string }>) {
+  const { locale } = useLocale();
+  const t = useT();
+  const lead = messageLead(entry, t);
+  const content = (
+    <>
+      <MessageMark entry={entry} />
+      <span className="tl-msg-body">
+        <span className="tl-msg-lead">
+          <b className="tl-msg-who">{lead.actor}</b>
+          {lead.verb && <span className="tl-msg-verb">{lead.verb}</span>}
+          {messageVisibility(entry)}
+        </span>
+        <MessageWords entry={entry} t={t} />
+      </span>
+      {/* Day and time both: the card's gutter carries the newest message's
+          day, and an older member may be from another one. */}
+      <span className="tl-msg-when t-mono">
+        {formatDate(entry.atIso, locale, zone)}{" "}
+        {formatTimeOfDay(entry.atIso, locale, zone)}
+      </span>
+    </>
+  );
+  const onOpen = entry.emailSummary ? entry.onOpenEmail : undefined;
+  if (!onOpen) {
+    return <div className="tl-msg">{content}</div>;
+  }
+  return (
+    <button
+      type="button"
+      className="tl-msg tl-msg-open"
+      onClick={onOpen}
+      aria-haspopup="dialog"
+    >
+      {content}
+    </button>
+  );
+}
+
+/**
+ * ThreadRow is a conversation on the chronology, drawn OPEN: one card on the
+ * body side of the rail carrying what the thread is — the kind, how many
+ * messages, who it was with, whose move it is — over its subject, and under
+ * that the messages themselves, newest first.
+ *
+ * Open rather than folded behind a summary of its newest message, because a
+ * thread is the thing a reader came to the history to read: the ask, the
+ * answer and where it stands, in one place, without opening each message in
+ * turn. Past the first few the rest fold behind a count, so a long exchange
+ * does not push the rest of the record's story off the screen.
+ */
+function ThreadRow({
+  group,
+  zone,
+  onOpenThread,
+}: Readonly<{
+  group: TimelineGroup;
+  zone: string;
+  onOpenThread?: (threadKey: string) => void;
+}>) {
+  const { locale } = useLocale();
+  const t = useT();
+  const [allOpen, setAllOpen] = useState(false);
+  const newest = group.entries[0];
+  const Icon = TIMELINE_ICON[newest.kind];
+  const threadKey = newest.threadKey;
+  const participants = threadParticipants(group.entries, t, locale);
+  const folded = group.entries.length - THREAD_OPEN_MEMBERS;
+  const shown = allOpen
+    ? group.entries
+    : group.entries.slice(0, THREAD_OPEN_MEMBERS);
+  // The subject, from a member whose words the reader may read: a withheld
+  // member's title is the kind it was, not the subject it had, and a thread
+  // every member of which is withheld says so where its subject would go.
+  const subject = group.entries.find((entry) => !entry.withheld)?.title;
+  return (
+    <li className={directionClass(newest.direction)}>
+      {/* The same three columns a single row sits on — date, rail, what
+          happened — because a conversation IS a row of the chronology. Its
+          mark is the kind's own icon: a dot would say it was one message. */}
+      <TimelineWhen atIso={newest.atIso} zone={zone} />
+      <span className="tl-rail" aria-hidden="true">
+        <span className="tl-icon">
+          <Icon aria-hidden />
+        </span>
+      </span>
+      <div className="tl-body">
+        <div className="tl-thread">
+          <span className="tl-head">
+            <Badge>{t("timeline.group.kind")}</Badge>
+            <span className="tl-group-count">
+              {groupCountLabel(group, locale)}
+            </span>
+            {participants && (
+              <span className="tl-thread-with">{participants}</span>
+            )}
+            {/* Whose move the conversation waits on, read off its newest
+                message — on the card that stands for it, never on the
+                members inside. */}
+            {conversationDirection(newest) && <MoveFlag entry={newest} />}
+            {/* The newest member's verbs stand for the conversation: Reply
+                answers it, and Relink on it offers to move the rest of the
+                thread. */}
+            {newest.actions && (
+              <span className="tl-thread-actions">{newest.actions}</span>
+            )}
+          </span>
+          {subject ? (
+            <span className="tl-title">{subject}</span>
+          ) : (
+            <span className="tl-title tl-withheld">
+              <Lock aria-hidden />
+              {t("timeline.withheld")}
+            </span>
+          )}
+          <ul className="tl-thread-messages">
+            {shown.map((entry) => (
+              <li key={entry.id}>
+                <ThreadMessage entry={entry} zone={zone} />
+              </li>
+            ))}
+          </ul>
+          <span className="tl-meta">
+            {folded > 0 && (
+              <Button
+                small
+                aria-expanded={allOpen}
+                onClick={() => setAllOpen(!allOpen)}
+              >
+                {allOpen
+                  ? t("timeline.group.hideEarlier")
+                  : translatePlural(locale, "timeline.group.earlier", folded, {
+                      count: formatNumber(folded, locale),
+                    })}
+              </Button>
+            )}
+            <ProvenanceTag provenance={newest.provenance} />
+            {/* A thread cut by the page edge can be completed when the page
+                passed a handler; where it cannot, the notice still stands,
+                because rendering neither would present the cut as the whole
+                of it. */}
+            {group.partial &&
+              (threadKey && onOpenThread ? (
+                <Button small onClick={() => onOpenThread(threadKey)}>
+                  {t("timeline.group.openThread")}
+                </Button>
+              ) : (
+                <span className="t-caption">
+                  {t("timeline.group.mayContinue")}
+                </span>
+              ))}
+          </span>
+        </div>
+      </div>
+    </li>
   );
 }
 
@@ -1472,21 +1834,22 @@ function groupCountLabel(group: TimelineGroup, locale: Locale): string {
   });
 }
 
-function TimelineGroupRow({
+// BulkGroupRow is one send to several people, folded: the newest copy stands
+// for the send while it is closed, and opening it lists every copy through
+// the ordinary row. A THREAD is not drawn here — it is a conversation, and
+// ThreadRow draws it open, as one card of messages.
+function BulkGroupRow({
   group,
   zone,
-  onOpenThread,
 }: Readonly<{
   group: TimelineGroup;
   zone: string;
-  onOpenThread?: (threadKey: string) => void;
 }>) {
   const { locale } = useLocale();
   const t = useT();
   const [open, setOpen] = useState(false);
   const newest = group.entries[0];
   const Icon = TIMELINE_ICON[newest.kind];
-  const threadKey = newest.threadKey;
   return (
     <li className={directionClass(newest.direction)}>
       {/* A group sits on the SAME three columns a single row does — date,
@@ -1494,33 +1857,25 @@ function TimelineGroupRow({
           that stepped out of the axis read as a different list wedged into
           this one. Its mark is the kind's own icon: the whole conversation is
           one thing that happened, and a dot would say it was one message. */}
-      <span className="tl-when t-mono">
-        {formatDate(newest.atIso, locale, zone)}
-      </span>
+      <TimelineWhen atIso={newest.atIso} zone={zone} />
       <span className="tl-rail" aria-hidden="true">
         <span className="tl-icon">
           <Icon aria-hidden />
         </span>
       </span>
       <div className="tl-body">
-        {/* Whose move the conversation waits on, on the row that stands for
-            it. A bulk group is one outbound send with no reply expected, so
-            it carries no claim. */}
-        {group.kind === "thread" && conversationDirection(newest) && (
-          <span className="tl-head">
-            <MoveFlag entry={newest} />
-          </span>
-        )}
-        {/* What the conversation is, while it is closed.
+        {/* What the send is, while it is closed. No whose-move flag: a bulk
+            group is one outbound send with no reply expected, so it carries
+            no claim.
 
-            A thread of emails stands for its newest message, and that message
-            is drawn by the SAME component a lone one is — subject, who, the
-            preview the server composed, the access badge. Writing the summary
-            by hand here was the defect: a company timeline of grouped
-            conversations showed old-style rows beside canonical ones on the
-            same page, because a group never reached EmailEntry.
-            Expanded, the members draw themselves below and a summary above
-            them would say the newest one twice. */}
+            The newest copy stands for the send, and that copy is drawn by
+            the SAME component a lone one is — subject, who, the preview the
+            server composed, the access badge. Writing the summary by hand
+            here was the defect: a company timeline of grouped sends showed
+            old-style rows beside canonical ones on the same page, because a
+            group never reached EmailEntry. Expanded, the members draw
+            themselves below and a summary above them would say the newest
+            one twice. */}
         {open ? (
           <span className="tl-title">{newest.title}</span>
         ) : newest.kind === "email" && newest.emailSummary ? (
@@ -1554,21 +1909,13 @@ function TimelineGroupRow({
           <Button small aria-expanded={open} onClick={() => setOpen(!open)}>
             {open ? t("timeline.group.collapse") : t("timeline.group.expand")}
           </Button>
-          {/* Only a real conversation can be completed: a bulk group is one
-              send with no thread to ask the server for. Where it cannot be
-              completed — a bulk group, or a page that passed no handler — the
-              notice still stands. Rendering neither would present a group cut
-              off by the page edge as the whole of it. */}
-          {group.partial &&
-            (threadKey && onOpenThread ? (
-              <Button small onClick={() => onOpenThread(threadKey)}>
-                {t("timeline.group.openThread")}
-              </Button>
-            ) : (
-              <span className="t-caption">
-                {t("timeline.group.mayContinue")}
-              </span>
-            ))}
+          {/* A bulk send cannot be completed: it has no thread to ask the
+              server for. The notice still stands, because rendering nothing
+              would present a group cut off by the page edge as the whole of
+              it. */}
+          {group.partial && (
+            <span className="t-caption">{t("timeline.group.mayContinue")}</span>
+          )}
         </span>
         {open && (
           <ul className="timeline tl-group-members">
@@ -1578,9 +1925,9 @@ function TimelineGroupRow({
           </ul>
         )}
       </div>
-      {/* The newest member's verbs stand for the conversation: Relink on it
-          offers to move the rest of the thread, so a mis-filed conversation
-          is fixed from its summary row without opening it first. */}
+      {/* The newest copy's verbs stand for the send: Relink on it offers to
+          move the rest, so a mis-filed send is fixed from its summary row
+          without opening it first. */}
       {newest.actions && <span className="tl-actions">{newest.actions}</span>}
     </li>
   );
@@ -1650,9 +1997,7 @@ export function TimelineRow({
   if (entry.kind === "email" && entry.emailSummary) {
     return (
       <li className={rowClass}>
-        <span className="tl-when t-mono">
-          {formatDate(entry.atIso, locale, zone)}
-        </span>
+        <TimelineWhen atIso={entry.atIso} zone={zone} />
         <span className="tl-rail" aria-hidden="true">
           <span className={dotClass(entry)} />
         </span>
@@ -1677,11 +2022,8 @@ export function TimelineRow({
     <li className={rowClass}>
       {/* The date leads the row, in its own gutter. A chronology is read down
           the dates — a reader looking for "what happened in August" scans one
-          column rather than the end of every line — and the mono face keeps
-          that column straight whatever each date's digits are. */}
-      <span className="tl-when t-mono">
-        {formatDate(entry.atIso, locale, zone)}
-      </span>
+          column rather than the end of every line. */}
+      <TimelineWhen atIso={entry.atIso} zone={zone} />
       {/* The axis, and this row's place on it. The rail runs THROUGH the row
           rather than a rule sitting under it: a chronology is one thread, and a
           border per entry drew it as a stack of unrelated cards. Filled for

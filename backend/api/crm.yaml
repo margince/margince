@@ -55,6 +55,16 @@ openapi: 3.1.0
 #     `x-agent-access: auth-bootstrap` — the auth/session machinery itself (workspace bootstrap,
 #     login/logout); the pre-auth endpoints (bootstrap, login) override `security: []` (no prior
 #     credential required); not tier-gated, not an agent tool.
+#   - `x-waits-on-model: always | on-miss` — the handler calls an AI model and HOLDS THE REQUEST
+#     OPEN until the model answers, so the caller is waiting on the agent for the whole of that
+#     time. `always` is a handler that generates on every call (a draft, the meeting brief);
+#     `on-miss` one that serves a stored reading and generates only when it has none (the person
+#     brief, the dossier, the deal status). Absent means the operation answers without a model
+#     or enqueues the work and answers at once (a deep read, a document extraction). The SPA reads
+#     the marked set to light the AI-activity rail the instant such a request leaves rather than
+#     at its next poll of the feed, and `backend/gates/modelroutes_test.go` holds the SPA's copy
+#     to this one in both directions. It is a claim about the handler: read the handler before
+#     you add or remove one.
 #
 # Deferred areas (NOT specified here — see data-model.md §12): sequences/cadences,
 # telephony/click-to-call, the dedicated embedding store, workflow-run records.
@@ -1290,6 +1300,7 @@ paths:
     get:
       tags: [People]
       operationId: getPersonBrief
+      x-waits-on-model: on-miss
       x-agent-access: human-only
       # Session cookie only, matching auth.RequireHuman at runtime.
       security: [{ cookieAuth: [] }]
@@ -1325,6 +1336,7 @@ paths:
     post:
       tags: [People]
       operationId: regeneratePersonBrief
+      x-waits-on-model: always
       x-agent-access: human-only
       security: [{ cookieAuth: [] }]
       summary: Regenerate this person's brief, ignoring the cached one.
@@ -1348,6 +1360,7 @@ paths:
     post:
       tags: [People, AI]
       operationId: draftPersonEmail
+      x-waits-on-model: always
       x-agent-access: human-only
       security: [{ cookieAuth: [] }]
       summary: Draft an email to this person, grounded in their record.
@@ -1651,6 +1664,7 @@ paths:
     post:
       tags: [People, AI]
       operationId: draftIntroNote
+      x-waits-on-model: always
       x-agent-access: human-only
       security: [{ cookieAuth: [] }]
       summary: Draft the forwardable note a colleague can paste into their own introduction.
@@ -2747,6 +2761,7 @@ paths:
     post:
       tags: [Organizations, AI]
       operationId: draftIntroRequest
+      x-waits-on-model: always
       x-agent-access: human-only
       security: [{ cookieAuth: [] }]
       summary: Draft the message asking a colleague to introduce you.
@@ -2953,6 +2968,7 @@ paths:
     get:
       tags: [Organizations]
       operationId: getOrganizationDossier
+      x-waits-on-model: on-miss
       x-agent-access: human-only
       security: [{ cookieAuth: [] }]
       summary: What this company IS — assembled from its own facts, every sentence citing one.
@@ -2993,6 +3009,7 @@ paths:
     post:
       tags: [Organizations]
       operationId: refreshOrganizationDossier
+      x-waits-on-model: always
       x-agent-access: human-only
       security: [{ cookieAuth: [] }]
       summary: Reassemble the dossier now, past a fingerprint that still matches.
@@ -3146,6 +3163,7 @@ paths:
     get:
       tags: [Organizations]
       operationId: getOrganizationGrowthFit
+      x-waits-on-model: on-miss
       x-agent-access: human-only
       security: [{ cookieAuth: [] }]
       summary: How well this company fits what we sell — banded, with both completeness counts.
@@ -3181,6 +3199,7 @@ paths:
     post:
       tags: [Organizations]
       operationId: refreshOrganizationGrowthFit
+      x-waits-on-model: always
       x-agent-access: human-only
       security: [{ cookieAuth: [] }]
       summary: Re-assemble the caller's growth fit now, past a fingerprint that still matches.
@@ -3205,6 +3224,7 @@ paths:
     get:
       tags: [Organizations]
       operationId: getOrganizationBrief
+      x-waits-on-model: on-miss
       # The company record page no longer renders a written account brief: its one
       # card is now the account's work in flight, spelled from the records rather
       # than around them. The operation stays for clients built against it, and
@@ -3256,6 +3276,7 @@ paths:
     post:
       tags: [Organizations]
       operationId: regenerateOrganizationBrief
+      x-waits-on-model: always
       # The company record page no longer renders a written account brief: its one
       # card is now the account's work in flight, spelled from the records rather
       # than around them. The operation stays for clients built against it, and
@@ -3342,6 +3363,7 @@ paths:
     post:
       tags: [Organizations]
       operationId: askAboutOrganization
+      x-waits-on-model: always
       x-agent-access: human-only
       security: [{ cookieAuth: [] }]
       summary: Ask one of the prepared questions about this account.
@@ -3399,6 +3421,7 @@ paths:
     post:
       tags: [Organizations, AI]
       operationId: draftAccountEmail
+      x-waits-on-model: always
       x-agent-access: human-only
       security: [{ cookieAuth: [] }]
       summary: Draft an email to this account, grounded in its records.
@@ -3564,6 +3587,7 @@ paths:
     post:
       tags: [Organizations, AI]
       operationId: scrapeCompany
+      x-waits-on-model: always
       summary: Enrich this organization from its website (evidence-or-omit) — a staged 🟡 proposal.
       description: |
         The `enrich` verb applied to an existing organization (EP05 / ADR-0006 scrape seam). Fetches
@@ -5494,6 +5518,7 @@ paths:
     get:
       tags: [Activities]
       operationId: getMeetingBrief
+      x-waits-on-model: always
       summary: The pre-meeting brief for one booked meeting — goal, commitments, where the deal stands.
       description: |
         The prep dossier for a meeting, in the fixed eight-section order of ADR-0097 D5.
@@ -5808,6 +5833,7 @@ paths:
     post:
       tags: [Activities, AI]
       operationId: draftEmail
+      x-waits-on-model: always
       summary: Draft a reply/follow-up email for context (the `draft_email` MCP verb).
       description: Drafting is 🟢 (never auto-sends). The draft is returned, not sent.
       x-mcp-tool: { verb: draft_email, record_type: activity, tier: auto_execute, scope: draft }
@@ -6665,6 +6691,7 @@ paths:
               schema: { $ref: '#/components/schemas/DealRoomThread' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
         '429':
           description: Rate-limited.
@@ -6693,6 +6720,7 @@ paths:
               schema: { $ref: '#/components/schemas/DealRoomThread' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
         '429':
           description: Rate-limited.
@@ -7533,6 +7561,7 @@ paths:
     post:
       tags: [Leads, AI]
       operationId: draftLeadEmail
+      x-waits-on-model: always
       x-agent-access: human-only
       security: [{ cookieAuth: [] }]
       summary: Draft an email to this lead, grounded in their record.
@@ -9042,6 +9071,7 @@ paths:
     post:
       tags: [AI]
       operationId: coldStartReadback
+      x-waits-on-model: always
       summary: Website cold-start read-back — returns a staged proposal with evidence.
       description: |
         Reads back a structured company profile (ICP, buying center, value proposition, USP, buying
@@ -9114,6 +9144,7 @@ paths:
     post:
       tags: [AI]
       operationId: coldStartPreview
+      x-waits-on-model: always
       summary: Read a company back from a website (or text) to PRE-FILL the company form. Stages nothing.
       description: |
         The same extraction + no-guess gate as POST /coldstart, with no staging: the fields are returned
@@ -9218,6 +9249,7 @@ paths:
     post:
       tags: [Organizations, AI]
       operationId: messageOnboardingCompany
+      x-waits-on-model: always
       summary: Continue the scoped company-setup conversation with or without a website read.
       description: |
         Uses the acting human's resumable onboarding state as the conversation and AI-run scope.
@@ -9659,6 +9691,7 @@ paths:
     post:
       tags: [Organizations, AI]
       operationId: messageCompanySiteRead
+      x-waits-on-model: always
       security: [ { cookieAuth: [] } ]
       x-agent-access: human-only
       summary: Ask Margince about a website read and receive reviewable company-field suggestions.
@@ -16513,6 +16546,7 @@ paths:
     post:
       tags: [Offers]
       operationId: regenerateOffer
+      x-waits-on-model: always
       summary: Mint the next revision as a fresh draft — mechanically, or AI-drafted from captured signal.
       description: |
         Copies the sent offer's header + lines into revision N+1 as a new `draft`, marks the prior revision
@@ -16900,6 +16934,7 @@ paths:
     post:
       tags: [Brief]
       operationId: generateMorningBrief
+      x-waits-on-model: on-miss
       summary: Assemble the acting rep's brief for today if the overnight pass has not already.
       description: |
         The catch-up path. The overnight pass owns generation: it assembles one run per rep per
@@ -18617,6 +18652,7 @@ paths:
     get:
       tags: [Deals]
       operationId: getDealStatus
+      x-waits-on-model: on-miss
       security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
       summary: Where the deal stands, what could lose it, and the one thing to do next.
       x-mcp-tool: { verb: read_record, record_type: deal, tier: auto_execute, scope: read }
@@ -18712,6 +18748,7 @@ paths:
     post:
       tags: [Deals, AI]
       operationId: proposeDealRoles
+      x-waits-on-model: always
       x-agent-access: human-only
       security: [{ cookieAuth: [] }]
       summary: Read the buying roles out of what this deal's contacts have written.
@@ -20704,6 +20741,7 @@ paths:
     post:
       tags: [Knowledge, AI]
       operationId: askCorpus
+      x-waits-on-model: always
       x-agent-access: human-only
       security: [{ cookieAuth: [] }]
       summary: Ask this corpus a question, answered only from its documents.

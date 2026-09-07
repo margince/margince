@@ -268,6 +268,10 @@ export const SAID: Readonly<Record<string, string>> = {
   person360: "Reading everything about this contact",
   personBrief: "Summarising a contact",
   pipelines: "Reading the pipeline",
+  // The brief is written on every open, from the reader's own records, and the
+  // rail's own line follows on its next poll: this is the sentence for the
+  // second before the feed can name the meeting.
+  meetingBrief: "Preparing a meeting brief",
   "record-history": "Reading what changed",
   tasks: "Reading your tasks",
   teams: "Reading the team",
