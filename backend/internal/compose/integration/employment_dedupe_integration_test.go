@@ -118,6 +118,9 @@ func TestAnEndedEmploymentCannotBeMadeTheCurrentPrimaryOne(t *testing.T) {
 	if patched.IsCurrentPrimary {
 		t.Error("an employment that ended in 2021 now reads as the person's current primary employer")
 	}
+	if e.storedPrimary(t, edge) {
+		t.Error("the column took the flag the response refused, so the two answer differently")
+	}
 }
 
 func TestAPersonsOnlyCurrentEmploymentIsTheirPrimaryOne(t *testing.T) {
@@ -446,19 +449,24 @@ func TestEndingAnEmploymentThroughAPatchClearsThePrimaryFlag(t *testing.T) {
 		t.Fatalf("the job they hold → %d primary=%t, want 201 and primary", status, primary)
 	}
 
-	// A last day still ahead is a notice period. They still work there.
+	// A last day still ahead is a notice period. They still work there — in
+	// the patch's own answer, in the list, and in the column, because the
+	// contract promises the response is what to read.
+	var patched struct {
+		IsCurrentPrimary bool `json:"is_current_primary"`
+	}
 	if status := e.Call(t, "PATCH", "/v1/relationships/"+edge,
-		AnyMap{"ended_at": e.dbDate(t, 30)}, nil, nil); status != http.StatusOK {
+		AnyMap{"ended_at": e.dbDate(t, 30)}, nil, &patched); status != http.StatusOK {
 		t.Fatalf("patching a notice period → %d", status)
 	}
-	if !e.isPrimary(t, edge) {
+	if !patched.IsCurrentPrimary {
+		t.Error("the patch that filed a notice period answered as though they had already left")
+	}
+	if !e.isPrimary(t, edge) || !e.storedPrimary(t, edge) {
 		t.Error("a last day 30 days out took the flag off a job they are still doing")
 	}
 
 	// The last day arrives. The patch that says so is the departure.
-	var patched struct {
-		IsCurrentPrimary bool `json:"is_current_primary"`
-	}
 	if status := e.Call(t, "PATCH", "/v1/relationships/"+edge,
 		AnyMap{"ended_at": e.dbDate(t, 0)}, nil, &patched); status != http.StatusOK {
 		t.Fatalf("patching the departure → %d", status)
@@ -466,12 +474,21 @@ func TestEndingAnEmploymentThroughAPatchClearsThePrimaryFlag(t *testing.T) {
 	if patched.IsCurrentPrimary {
 		t.Error("the patch that ended the employment answered with the flag still set")
 	}
-	var stored bool
-	if err := e.Owner.QueryRow(t.Context(),
-		`SELECT is_current_primary FROM relationship WHERE id = $1`, edge).Scan(&stored); err != nil {
-		t.Fatal(err)
-	}
-	if stored {
+	if e.storedPrimary(t, edge) {
 		t.Error("the stored flag survived the departure, so every reader of the column has to derive around it")
 	}
+}
+
+// storedPrimary reads the column itself. The list read beside it goes through
+// the API's own derivation, so a stale flag can hide behind a reader that
+// corrects for it — which is exactly what this rule exists to stop being
+// necessary.
+func (e *relEnv) storedPrimary(t *testing.T, edgeID string) bool {
+	t.Helper()
+	var stored bool
+	if err := e.Owner.QueryRow(t.Context(),
+		`SELECT is_current_primary FROM relationship WHERE id = $1`, edgeID).Scan(&stored); err != nil {
+		t.Fatal(err)
+	}
+	return stored
 }
