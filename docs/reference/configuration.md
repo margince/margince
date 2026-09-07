@@ -61,13 +61,41 @@ Operational endpoints (served next to `/v1`):
   configured; the secret vault when a keyvault is configured; the
   customfields schema pool when `--schema-dsn` is set) must pass within
   2s, else 503 naming the unready dependency.
-- `/metrics` — Prometheus text format: `margince_outbox_unpublished`,
-  `margince_relay_published_total`, `margince_pgxpool_conns{state=…}`, the
-  AI router's counters, the overlay sync-health section, and the
-  **job-runtime section** below. Served openly by default, so an
-  annotation-discovered scraper works with no configuration; set
+- `/metrics` — Prometheus text format: the **HTTP section** below,
+  `margince_outbox_unpublished`, `margince_relay_published_total`,
+  `margince_pgxpool_conns{state=…}`, the AI router's counters, the overlay
+  sync-health section, and the **job-runtime section** below. Served openly by
+  default, so an annotation-discovered scraper works with no configuration; set
   `--metrics-token` to require a Bearer credential where the port itself is not
   already contained.
+
+  The HTTP section covers the `/v1` contract surface:
+
+  | Family | Type | Labels |
+  |---|---|---|
+  | `margince_http_requests_total` | counter | `route`, `method`, `status` |
+  | `margince_http_request_duration_seconds` | histogram | `route`, `method` |
+  | `margince_http_requests_in_flight` | gauge | — |
+
+  **`route` is the matched route TEMPLATE, never the request path** —
+  `/v1/deals/{dealId}`, not `/v1/deals/9f3c…`. The path carries record ids, and
+  a label carrying ids grows one series per record for the life of the process.
+  A request that matched no route is counted under `route="unmatched"`, as one
+  series however many distinct paths it arrived on. The access log is the
+  opposite reading on purpose: it logs the real path, because a log line answers
+  "what did clients ask".
+
+  The measurement sits **outside** the admission gate, the idempotency replay
+  and the overlay guard, so a `403` counts as that route's latency — which is
+  what a client experienced. `p95` over five minutes, per route:
+
+  ```promql
+  histogram_quantile(0.95, sum by (route, le) (
+    rate(margince_http_request_duration_seconds_bucket[5m])))
+  ```
+
+  Mind the scrape interval when choosing that window: a rate needs several
+  points, so a cluster scraping every 5m wants `[30m]` or wider.
 - `GET /v1/admin/job-health` — the per-workspace read of the same job
   table, for an admin rather than a scrape. See
   [Reading the job surfaces](#reading-the-job-surfaces).
