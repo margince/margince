@@ -342,6 +342,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "share.rosterLoading",
     "share.subject",
     "signInMethods.sub",
+    "stageAutomation.reviewedHint",
     "teamweekly.agenda.sub",
     "users.access.title",
     "users.adminOnly",
