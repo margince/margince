@@ -122,7 +122,7 @@ func TestTheBundledTaskIsAssignedToTheDealsOwner(t *testing.T) {
 // the second pass filing its findings onto the first night's task — the first is
 // the duplication the cycle exists to prevent, the second would leave a rep
 // looking at a task whose findings kept changing under them.
-func TestASecondPassOpensItsOwnCycleRatherThanReusingTheFirst(t *testing.T) {
+func TestASecondPassAdoptsTheTaskTheFirstOneLeftOpen(t *testing.T) {
 	e := setupAssuranceJob(t)
 
 	if err := e.run(t); err != nil {
@@ -137,13 +137,107 @@ func TestASecondPassOpensItsOwnCycleRatherThanReusingTheFirst(t *testing.T) {
 		t.Fatalf("the second check: %v", err)
 	}
 	second := e.bundledTasks(t)
-	if len(second) != 2 {
-		t.Fatalf("after two passes there are %d task(s), want 2 — one per pass. "+
-			"Fewer means the second pass bundled onto the first night's task; more "+
-			"means a pass minted two tasks for one deal", len(second))
+	if len(second) != 1 {
+		t.Fatalf("after two passes there are %d open task(s), want 1. The finding is the same "+
+			"one, still unanswered — asking again as a second identical row does not make it "+
+			"more likely to be answered, and five of them is what a rep actually found", len(second))
 	}
-	if second[0].id == second[1].id {
-		t.Error("both passes filed onto the same task id")
+	if second[0].id != first[0].id {
+		t.Errorf("the second pass filed onto task %s, want the first night's %s",
+			second[0].id, first[0].id)
+	}
+}
+
+func TestAFindingStillTrueAfterSomebodyAnsweredItIsAskedAgain(t *testing.T) {
+	e := setupAssuranceJob(t)
+
+	if err := e.run(t); err != nil {
+		t.Fatalf("the first check: %v", err)
+	}
+	first := e.bundledTasks(t)
+	if len(first) != 1 {
+		t.Fatalf("the first pass minted %d task(s), want 1", len(first))
+	}
+	// The rep answers it. The condition is still there — the scan re-observes
+	// it — and that is a new question, not the old one repeated.
+	if _, err := e.Pool.Exec(context.Background(),
+		`UPDATE activity SET is_done = true, done_at = now() WHERE id = $1`, first[0].id); err != nil {
+		t.Fatalf("marking the task done: %v", err)
+	}
+
+	if err := e.run(t); err != nil {
+		t.Fatalf("the second check: %v", err)
+	}
+	second := e.bundledTasks(t)
+	if len(second) != 1 {
+		t.Fatalf("%d open task(s) after the answered one, want 1", len(second))
+	}
+	if second[0].id == first[0].id {
+		t.Error("the pass adopted a task somebody had already completed — a finding that " +
+			"survived being answered is a question nobody has answered yet")
+	}
+}
+
+func TestTheDuplicatesAnEarlierBuildLeftBehindAreSettled(t *testing.T) {
+	e := setupAssuranceJob(t)
+
+	// One real pass, then two more tasks filed under cycles of their own —
+	// which is exactly what the cycle-scoped build left behind, one per night.
+	// The task rows are minted by the real pass so they carry the subject line,
+	// origin and deal link production writes; only their FILING is seeded.
+	if err := e.run(t); err != nil {
+		t.Fatalf("the first check: %v", err)
+	}
+	live := e.bundledTasks(t)
+	if len(live) != 1 {
+		t.Fatalf("the seeding pass left %d task(s), want 1", len(live))
+	}
+	original := live[0]
+
+	for range 2 {
+		if _, err := e.Pool.Exec(context.Background(), `
+			WITH night AS (
+			    INSERT INTO assurance_cycle (id, scope, opened_by, closed_at)
+			    VALUES (gen_random_uuid(), 'seeded:' || gen_random_uuid()::text, 'system:test', now())
+			    RETURNING id
+			), copy AS (
+			    INSERT INTO activity (kind, subject, source, captured_by, origin)
+			    SELECT a.kind, a.subject, a.source, a.captured_by, a.origin
+			      FROM activity a WHERE a.id = $1
+			    RETURNING id
+			), link AS (
+			    INSERT INTO activity_link (activity_id, entity_type, deal_id)
+			    SELECT (SELECT id FROM copy), 'deal', $2
+			)
+			INSERT INTO assurance_task_item
+			       (cycle_id, exception_id, task_activity_id, subject_kind, subject_id, state)
+			SELECT (SELECT id FROM night), i.exception_id, (SELECT id FROM copy),
+			       i.subject_kind, i.subject_id, 'open'
+			  FROM assurance_task_item i WHERE i.task_activity_id = $1 LIMIT 1`,
+			original.id, original.dealID); err != nil {
+			t.Fatalf("seeding an earlier night's task: %v", err)
+		}
+	}
+	if got := e.bundledTasks(t); len(got) != 3 {
+		t.Fatalf("seeded %d open tasks, want 3 — the fixture does not hold the duplicate shape", len(got))
+	}
+
+	if err := e.run(t); err != nil {
+		t.Fatalf("the reconciling check: %v", err)
+	}
+	after := e.bundledTasks(t)
+	if len(after) != 1 {
+		t.Fatalf("%d open task(s) after the sweep met three duplicates, want 1", len(after))
+	}
+
+	// Archived, not deleted: what was asked stays readable.
+	var archived int
+	if err := e.Pool.QueryRow(context.Background(),
+		`SELECT count(*) FROM activity WHERE kind = 'task' AND archived_at IS NOT NULL`).Scan(&archived); err != nil {
+		t.Fatalf("counting the settled duplicates: %v", err)
+	}
+	if archived != 2 {
+		t.Errorf("%d task(s) archived, want 2 — the extras were dropped rather than settled", archived)
 	}
 }
 
@@ -322,7 +416,7 @@ func (e *assuranceJobEnv) bundledTasks(t *testing.T) []bundledTask {
 		  FROM assurance_task_item i
 		  JOIN activity a ON a.id = i.task_activity_id
 		  LEFT JOIN activity_link l ON l.activity_id = a.id
-		 WHERE a.kind = 'task'
+		 WHERE a.kind = 'task' AND a.archived_at IS NULL AND a.is_done = false
 		 GROUP BY a.id, a.subject, a.assignee_id, l.deal_id
 		 ORDER BY a.created_at`)
 	if err != nil {

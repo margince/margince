@@ -43,7 +43,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -215,6 +217,64 @@ func (s *Store) BundleException(ctx context.Context, in BundleInput) (applied bo
 		return nil
 	})
 	return applied, err
+}
+
+// TaskIDsForSubject is every task any cycle has ever raised for one subject,
+// newest first.
+//
+// The cycle is one night's pass, so OpenTaskFor below answers within a night
+// and nothing answered ACROSS them: last night's task was still open, this
+// night minted another, and a deal accumulated one indistinguishable row per
+// run — five on one deal, thirty-five across an installation, each with an
+// empty body and no way to tell which finding it stood for.
+//
+// IDS ONLY, and that is the module boundary rather than an economy. Whether a
+// task is still open is a fact about the activity row, and this module owns the
+// assurance_* tables and not `activity` — so compose reads their state through
+// the activities store and decides. Returning them newest-first is what lets it
+// keep the one a rep has most likely already seen.
+func (s *Store) TaskIDsForSubject(
+	ctx context.Context, subjectKind string, subjectID ids.UUID,
+) ([]ids.UUID, error) {
+	if err := auth.Require(ctx, rbacBundle, principal.ActionRead); err != nil {
+		return nil, err
+	}
+	var tasks []ids.UUID
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `
+			SELECT DISTINCT ON (task_activity_id) task_activity_id, created_at
+			  FROM assurance_task_item
+			 WHERE subject_kind = $1 AND subject_id = $2
+			 ORDER BY task_activity_id, created_at DESC`, subjectKind, subjectID)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		type row struct {
+			id ids.UUID
+			at time.Time
+		}
+		var found []row
+		for rows.Next() {
+			var r row
+			if err := rows.Scan(&r.id, &r.at); err != nil {
+				return err
+			}
+			found = append(found, r)
+		}
+		if err := rows.Err(); err != nil {
+			return err
+		}
+		slices.SortFunc(found, func(a, b row) int { return b.at.Compare(a.at) })
+		for _, r := range found {
+			tasks = append(tasks, r.id)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("assurance: reading the subject's tasks: %w", err)
+	}
+	return tasks, nil
 }
 
 // OpenTaskFor is the task a cycle already has for one subject, if any.
