@@ -20,13 +20,19 @@ afterEach(cleanup);
 const render = (ui: ReactNode) =>
   rtlRender(<LocaleProvider initial="en">{ui}</LocaleProvider>);
 
+// entry stands in for activitytimeline's mapper, and derives the message
+// scalars from the carrier the way it does. A test that set the carrier alone
+// would build a row production never builds, and then assert on it.
 function entry(overrides: Partial<TimelineEntry> = {}): TimelineEntry {
+  const summary = overrides.emailSummary;
   return {
     id: overrides.id ?? "m1",
     kind: "email",
     title: "Re: Renewal",
     atIso: "2026-07-03T10:00:00Z",
     provenance: { kind: "connector", connector: "gmail" },
+    messagePreview: summary ? (summary.preview ?? "") : undefined,
+    messageVisibility: summary?.display_status,
     ...overrides,
   };
 }

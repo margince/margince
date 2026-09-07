@@ -129,6 +129,14 @@ export function activityTimeline(
       // exactly when kind=email, so the row branches on the field and every
       // other kind keeps the reading it had.
       emailSummary: activity.email_summary ?? undefined,
+      // The preview as a scalar beside the carrier, for the thread member that
+      // draws its words inline. Present exactly when the row is a message, so
+      // the branch that used to read the carrier reads this instead and the
+      // contract type stays with the canonical components.
+      messagePreview: activity.email_summary
+        ? (activity.email_summary.preview ?? "")
+        : undefined,
+      messageVisibility: activity.email_summary?.display_status,
       audience: activity.audience,
       withheld: activity.content_state === "withheld",
       threadKey: activity.thread_key,

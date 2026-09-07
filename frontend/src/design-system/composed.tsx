@@ -723,6 +723,23 @@ export type TimelineEntry = {
    */
   emailSummary?: EmailSummary;
   /**
+   * What a THREAD MEMBER draws, as scalars: its preview text, and who may read
+   * it. `messagePreview` is present exactly when the row is a message, and
+   * empty when that message has no preview to show — so it answers "is this a
+   * message?" as well as "what does it say?".
+   *
+   * Duplicates of fields inside `emailSummary` on purpose. A thread member
+   * draws its words inline rather than mounting the canonical row
+   * (ThreadMessage below says why), and a sub-part of this file reaching into
+   * the contract type to draw it is how the canonical components stop being
+   * the one place a message is drawn — a company timeline once showed
+   * old-style rows beside canonical ones on the same page while the census
+   * read clean. EmailReference takes scalars for the same reason: what cannot
+   * hold the type cannot grow a second rendering of it.
+   */
+  messagePreview?: string;
+  messageVisibility?: EmailSummary["display_status"];
+  /**
    * Opens the canonical detail for this message. The caller's, because the
    * drawer is mounted by the screen rather than by the list — absent leaves
    * the row readable and not openable, which is what a surface with nowhere to
@@ -1585,7 +1602,7 @@ function messageVisibility(entry: TimelineEntry): ReactNode {
   if (entry.withheld) {
     return <VisibilityBadge state="withheld" />;
   }
-  const status = entry.emailSummary?.display_status;
+  const status = entry.messageVisibility;
   if (status && status !== "team") {
     return <VisibilityBadge state={status} />;
   }
@@ -1637,9 +1654,9 @@ function MessageWords({
   if (entry.withheld) {
     return <span className="tl-withheld">{t("timeline.withheld")}</span>;
   }
-  if (entry.emailSummary) {
-    return entry.emailSummary.preview ? (
-      <span className="tl-msg-text">{entry.emailSummary.preview}</span>
+  if (entry.messagePreview !== undefined) {
+    return entry.messagePreview ? (
+      <span className="tl-msg-text">{entry.messagePreview}</span>
     ) : null;
   }
   return entry.body ? (
@@ -1686,7 +1703,9 @@ function ThreadMessage({
       </span>
     </>
   );
-  const onOpen = entry.emailSummary ? entry.onOpenEmail : undefined;
+  // A message opens; a note does not. The scalar is what says which, for the
+  // reason messagePreview gives.
+  const onOpen = entry.messagePreview !== undefined ? entry.onOpenEmail : undefined;
   if (!onOpen) {
     return <div className="tl-msg">{content}</div>;
   }
