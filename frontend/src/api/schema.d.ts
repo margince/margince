@@ -9827,7 +9827,9 @@ export interface paths {
          * List workspace members (roster) — cursor-paginated. Read-only.
          * @description The workspace member roster: id + display name + email + seat/status. Any authenticated member
          *     may read it (needed to pick a record-share subject and to resolve subject/granter names). Excludes
-         *     archived users. Row-scoped by workspace RLS. `User.roles` rides the row only for an admin caller,
+         *     archived users. Bounded by authenticated membership: every seat may read who else works here,
+         *     because a share or assignee picker only some seats could read would be a broken feature.
+         *     `User.roles` rides the row only for a caller holding the `user_admin` grant,
          *     who is the only one who can act on it.
          */
         get: operations["listUsers"];
@@ -10165,7 +10167,7 @@ export interface paths {
         /**
          * List workspace teams — cursor-paginated. Read-only.
          * @description Teams available as record-share subjects, with a member count. Any authenticated member may read.
-         *     Excludes archived teams. Row-scoped by workspace RLS.
+         *     Excludes archived teams. Bounded by authenticated membership, like the member roster beside it.
          */
         get: operations["listTeams"];
         put?: never;

@@ -66,7 +66,7 @@ COMPOSE_APP_DSN="postgres://margince_app:margince_app_dev@localhost:15432/margin
 # This stack's connection surface, resolved the way the product resolves it:
 # an explicit argument, else the environment the binaries themselves read, else
 # the compose default. OWNER_DSN runs migrations; APP_DSN is the non-superuser
-# role the api connects as (RLS binds it).
+# role the api connects as (unprivileged: it cannot bypass a grant).
 #
 # MARGINCE_OWNER_DSN / MARGINCE_DSN are consulted because they are what cmd/api,
 # cmd/worker and cmd/migrate read, and this script passes --dsn explicitly, which
@@ -654,8 +654,11 @@ dev_app_url="$(with_database "$APP_DSN" "$db")"
 # carries a password, and argv is world-readable), but it is assigned PER COMMAND
 # below — never exported here. An export would hand the superuser credential to
 # every child this script starts, and the api and worker have no use for it: the
-# api connects as margince_app precisely so FORCE row-level security binds it,
-# which it does not for the superuser margince_owner is in the compose stack.
+# api connects as margince_app precisely because it is UNPRIVILEGED: it owns no
+# table, cannot alter the schema, and cannot bypass a grant, none of which is
+# true of the superuser margince_owner is in the compose stack. Core carries no
+# row-level security, so the role separation is the boundary rather than a
+# backstop behind one.
 
 # psql is NOT a host requirement (hosts need Go + Docker only): every ad-hoc
 # SQL statement runs inside the compose postgres container, the same way

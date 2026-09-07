@@ -76,8 +76,8 @@ classes of table (`platform/auth/tableclass.go`).
 
 ### Reads: customer identity is shared, commercial work is scoped
 
-**Identity tables — `person`, `organization`, `lead`, `deal` — are readable by every seat that
-holds the object grant, whatever its row scope.** The decision behind this (2026-08-19): the model
+**Identity tables — `person`, `organization`, `lead`, `deal`, `project` — are readable by every seat
+that holds the object grant, whatever its row scope.** The decision behind this (2026-08-19): the model
 that hid customer records per team made a rep miss that a company was already a customer of another
 team and contact it again. A rep now finds the company, sees who owns it and when it was last
 touched, and cannot edit it. Deals are in this class deliberately — a workspace-wide deal count was
@@ -90,16 +90,19 @@ Two narrowings survive on identity tables:
 - A **record grant** can still widen an owner-private row (an explicit share by someone who could
   already read it).
 
-**Commercial tables — `project` — keep the classic row scope.** Given the object gate already
-passed:
+`project` joined that class after the same failure appeared in delivery: a consultant working a
+project they neither owned nor had been granted got a 404 on the record they were staffed to
+(`platform/auth/tableclass.go` records the reasoning). Commercial work is scoped by who may CHANGE
+it, not by who may see it.
+
+**The personal tables — `list`, `saved_view`, `automation`, `voice_profile` — keep the classic row
+scope.** They are a seat's own working material rather than a record of the business, so the
+predicate applies to reads as well. Given the object gate already passed:
 
 - **`all`** — no row filter. Sees every row in the workspace. (`Unbounded` — also the system actor.)
 - **`team`** — sees rows they **own**, rows owned by a **teammate** (any member of a team they belong
   to, via `team_membership`), and **ownerless** rows.
 - **`own`** — sees rows they own, and ownerless rows.
-
-The personal tables (`list`, `saved_view`, `automation`, `voice_profile`) keep the owner predicate
-as well.
 
 ### Writes: the owner, an explicit share, or an unbounded seat
 
