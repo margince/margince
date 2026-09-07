@@ -572,3 +572,71 @@ func TestAPredicateOnAnOmittedColumnIsRefusedByName(t *testing.T) {
 		t.Errorf("field = %q, want the offending column named", perr.Field)
 	}
 }
+
+// A stored filter is refused at the WRITE for a picklist value outside the
+// field's set, and the value stays evaluable at read.
+//
+// Through validateSegmentDefinition rather than the refusal function directly:
+// the pair is what the decision is, and the two halves have to be provable on
+// one tree or nothing stops a later change arming the compiler instead. The
+// list URL for the same fact already answers 422 for the same typo, so what
+// this closes is a saved view and a URL disagreeing about the same word.
+func TestStoringASegmentRefusesAPicklistValueTheFieldDoesNotHave(t *testing.T) {
+	store := &Store{}
+	definition := func(value any) map[string]any {
+		return map[string]any{"field": "relationship_type", "op": "eq", "value": value}
+	}
+
+	err := store.validateSegmentDefinition(context.Background(), "organization", definition("custmer"))
+	var refusal *storekit.PredicateError
+	if !errors.As(err, &refusal) || refusal.Code != "filter_value_invalid" {
+		t.Fatalf("storing a mistyped picklist value = %v, want a filter_value_invalid refusal — the "+
+			"list parameter for the same fact answers 422, and a saved view must not disagree", err)
+	}
+	if refusal.Field != "relationship_type" {
+		t.Errorf("refusal names %q, want the field the caller sent", refusal.Field)
+	}
+
+	// A real value still stores, so the refusal is about the VALUE rather than
+	// about picklists having become unfilterable.
+	engine, _, err := store.SegmentEngine(context.Background(), "organization")
+	if err != nil {
+		t.Fatal(err)
+	}
+	known := engine.Fields["relationship_type"].Options
+	if len(known) == 0 {
+		t.Fatal("relationship_type offers no values, so this test cannot tell a refusal from a typo")
+	}
+	if err := store.validateSegmentDefinition(
+		context.Background(), "organization", definition(known[0])); err != nil {
+		t.Errorf("storing %q, one of the field's own values, was refused: %v", known[0], err)
+	}
+}
+
+// A CUSTOM picklist is refused on the same terms, through the real merge.
+//
+// Its values live in the catalogue and arrive per workspace, so this is the one
+// arm that cannot be proved against the static vocabulary — and it is the arm
+// where the sets actually change under a stored filter, which is why evaluation
+// stays permissive.
+func TestStoringASegmentRefusesAValueOutsideACustomPicklist(t *testing.T) {
+	store := (&Store{}).WithFieldCatalog(stubFilterable{cols: map[string][]fieldcatalog.Column{
+		"person": {{
+			Name: "cf_region", Type: fieldcatalog.TypePicklist,
+			Options: []string{"emea", "amer"},
+		}},
+	}})
+	definition := func(value any) map[string]any {
+		return map[string]any{"field": "cf_region", "op": "eq", "value": value}
+	}
+
+	err := store.validateSegmentDefinition(context.Background(), "person", definition("APAC"))
+	var refusal *storekit.PredicateError
+	if !errors.As(err, &refusal) || refusal.Code != "filter_value_invalid" {
+		t.Fatalf("storing a value outside a custom picklist = %v, want filter_value_invalid", err)
+	}
+	if err := store.validateSegmentDefinition(
+		context.Background(), "person", definition("emea")); err != nil {
+		t.Errorf("storing one of the custom field's own values was refused: %v", err)
+	}
+}
