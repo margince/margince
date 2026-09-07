@@ -40,10 +40,17 @@ import (
 var proseRLSClaim = regexp.MustCompile(`(?i)` +
 	`\b(?:row-)?scoped[ -]by[ -](?:workspace[ -])?RLS\b` +
 	`|\bFORCE (?:RLS|ROW LEVEL SECURITY)\b` +
+	`|\bENABLE ROW LEVEL SECURITY\b` +
 	`|\b(?:bound|bounded|scoped|confined|isolated|governed|protected)[ -]by[ -]row.level security\b` +
-	`|\brow.level security[ -](?:scope|bind|bound|confine|isolate|enforce|govern|protect)(?:s|d|es|ed)?\b` +
-	`|\bRLS[ -](?:scope|bind|bound|confine|isolate|enforce|govern|protect|guard)(?:s|d|es|ed)?\b` +
-	`|\bdespite RLS\b`)
+	`|\brow.level security[ -](?:scope|bind|bound|confine|isolate|enforce|govern|protect|applies|appl)(?:s|d|es|ed|y)?\b` +
+	`|\bRLS[ -](?:scope|bind|bound|confine|isolate|enforce|govern|protect|guard|applies|bypass)(?:s|d|es|ed)?\b` +
+	`|\bRLS[ -](?:polic|proof|runtime)\w*\b` +
+	`|\bRLS does bind\b` +
+	`|\bdespite RLS\b` +
+	// A lane, target or heading NAMED after the control: "integration (RLS +
+	// erasure)" tells a reader the lane proves something it does not.
+	`|\bRLS \+` +
+	`|\bthe RLS\b`)
 
 // proseScanned are the extensions a reader actually reads a claim in. `.go` is
 // absent: rlsclaims_test.go owns it, and scanning it twice would report every
@@ -51,6 +58,11 @@ var proseRLSClaim = regexp.MustCompile(`(?i)` +
 var proseScanned = map[string]bool{
 	".md": true, ".yaml": true, ".yml": true, ".sh": true,
 	".sql": true, ".ts": true, ".tsx": true, ".txt": true,
+	// .example because the environment template is the first thing an operator
+	// reads and it described the app role as bounded by a policy that is not
+	// there; Makefile because a target's own help text is what `make help`
+	// prints, and two of them credited the control.
+	".example": true, ".mk": true,
 }
 
 // proseSkippedDirs are trees that are not this repository's prose: vendored
@@ -87,10 +99,21 @@ var proseExempt = gatekit.Waive(map[string]string{
 // wrongly assumed one.
 func deniesTheControl(line string) bool {
 	lowered := strings.ToLower(line)
+	// A line that DENIES the control somewhere and ASSERTS it elsewhere is a
+	// claim, not a correction. Checked first, because the denial phrases below
+	// would otherwise exempt the whole line on the strength of one clause.
+	for _, assertion := range []string{
+		"bound by row-level security", "scoped by rls", "rls binds", "rls scopes",
+		"rls enforces", "protected by rls",
+	} {
+		if strings.Contains(lowered, assertion) {
+			return false
+		}
+	}
 	for _, denial := range []string{
 		"no rls", "no row-level security", "no row level security",
 		"rls=false", "not workspace-scoped", "carries neither",
-		"does not exist", "it does not", "assumed force rls",
+		"assumed force rls", "does not apply to a superuser",
 		"nobypassrls", "rolbypassrls", "rls-exempt", "rls store-path", "rls-store-path",
 	} {
 		if strings.Contains(lowered, denial) {
@@ -126,6 +149,15 @@ func TestNoProseClaimsRLSStillScopesARead(t *testing.T) {
 		"Extension runtime code is bound by row-level security exactly as core code is",
 		"RLS binds the workspace, not the reader.",
 		"despite RLS and the composite same-workspace foreign keys",
+		// Found still standing after the first sweep, in files this gate did
+		// not read and in phrasings its pattern did not have.
+		"[required] Postgres DSN for the application role; row-level security applies.",
+		"MARGINCE_DSN names margince_app, which RLS does bind",
+		"DB-free floor under the RLS runtime proof",
+		"name: integration (RLS + erasure + HTTP e2e)",
+		"addresses the superuser pool directly (RLS bypass)",
+		"ALTER TABLE person ENABLE ROW LEVEL SECURITY;",
+		"Extension runtime code is bound by row-level security exactly as core code is",
 	} {
 		if !proseRLSClaim.MatchString(line) {
 			t.Errorf("the pattern does not catch a claim this gate was written for:\n\t%s", line)
@@ -141,6 +173,10 @@ func TestNoProseClaimsRLSStillScopesARead(t *testing.T) {
 		"An earlier reading of this gap assumed FORCE RLS made the probe blind; it does not exist",
 		"`make rls-store-path` — no module statement addresses the superuser pool",
 		"River persists args verbatim in a table with no workspace column and no RLS",
+		// A denial and an assertion in one line is a CLAIM: the assertion half
+		// is what a reader takes away, and exempting it on the denial half is
+		// how a census under-recognizes.
+		"the owner is a superuser, and FORCE row-level security does not apply to a superuser",
 	} {
 		if proseRLSClaim.MatchString(line) && !deniesTheControl(line) {
 			t.Errorf("the pattern flags a sentence that states the truth:\n\t%s", line)
@@ -159,7 +195,11 @@ func TestNoProseClaimsRLSStillScopesARead(t *testing.T) {
 			}
 			return nil
 		}
-		if !proseScanned[strings.ToLower(filepath.Ext(path))] || !d.Type().IsRegular() {
+		base := filepath.Base(path)
+		if !proseScanned[strings.ToLower(filepath.Ext(path))] && base != "Makefile" {
+			return nil
+		}
+		if !d.Type().IsRegular() {
 			return nil
 		}
 		slashed := filepath.ToSlash(path)
