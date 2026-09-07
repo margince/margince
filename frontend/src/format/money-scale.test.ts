@@ -142,21 +142,32 @@ function isHardCodedScale(node: ts.Expression): boolean {
 }
 
 // enclosing is the span a minor-unit name may be found in: the nearest
-// statement, but never past an object literal.
+// statement, but never past a literal that holds SIBLINGS.
 //
 // The statement alone is too wide. A vector of five fields divides a percentage
 // by 100 in one of them and names a minor-unit base in another, and a rule
 // reading the whole statement calls that money — a census whose escape hatch
 // gets used routinely stops being read.
+//
+// An array is the same shape as an object and was missed: `[valueMinor,
+// seconds * 1000]` walked past the elements to the declaration, read the whole
+// of it, and reported an unrelated power because a NEIGHBOUR named a minor
+// unit. Both stop here, for one reason — an element is its own span, and what
+// sits beside it is not part of what it says.
 function enclosing(node: ts.Node): ts.Node {
   let current: ts.Node = node;
   while (current.parent) {
-    if (ts.isObjectLiteralExpression(current.parent)) return current;
+    if (
+      ts.isObjectLiteralExpression(current.parent) ||
+      ts.isArrayLiteralExpression(current.parent)
+    ) {
+      return current;
+    }
     if (
       ts.isStatement(current.parent) ||
       ts.isVariableDeclaration(current.parent)
     ) {
-      return ts.isStatement(current.parent) ? current.parent : current.parent;
+      return current.parent;
     }
     current = current.parent;
   }
