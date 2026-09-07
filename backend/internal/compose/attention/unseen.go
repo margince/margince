@@ -63,6 +63,7 @@ func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSou
 	// The health and receipt lanes share one bound.
 	atCap("failed_approval", day.DidNotRun, doneCap)
 	atCap("dsr", day.Dsr, doneCap)
+	atCap("notice_case", day.NoticeCases, doneCap)
 	atCap("ai_work_health", day.AiWorkHealth, doneCap)
 	atCap("notice", day.Notices, doneCap)
 	atCap("automation_run", day.AutomationHealth, doneCap)
@@ -111,7 +112,7 @@ func unavailable(day crmcontracts.Attention) []crmcontracts.WorklistSourceUnavai
 		// who has the admin role but lost `person:read`, and that refusal is
 		// real news this list swallows. Telling the two apart needs a reason on
 		// the refusal, which the lane contract does not carry — issue filed.
-		if lane == laneDSR {
+		if lane == laneDSR || lane == laneNoticeCase {
 			continue
 		}
 		out = append(out, crmcontracts.WorklistSourceUnavailable{
@@ -122,6 +123,11 @@ func unavailable(day crmcontracts.Attention) []crmcontracts.WorklistSourceUnavai
 	return out
 }
 
-// laneDSR is the one lane whose withholding is a permanent role fact rather
-// than news about this reader's day.
-const laneDSR = crmcontracts.AttentionLanesOmitted("dsr")
+// laneDSR and laneNoticeCase are the lanes whose withholding is a permanent
+// role fact rather than news about this reader's day. Both are gated on the
+// same privacy_request object, so both are hidden from the same readers for the
+// same reason, and the caveat above applies to each identically.
+const (
+	laneDSR        = crmcontracts.AttentionLanesOmitted("dsr")
+	laneNoticeCase = crmcontracts.AttentionLanesOmitted("notice_case")
+)

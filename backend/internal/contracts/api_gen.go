@@ -1369,6 +1369,7 @@ const (
 	AttentionLanesOmittedMeetings           AttentionLanesOmitted = "meetings"
 	AttentionLanesOmittedMeetingsUnreported AttentionLanesOmitted = "meetings_unreported"
 	AttentionLanesOmittedNeedsYou           AttentionLanesOmitted = "needs_you"
+	AttentionLanesOmittedNoticeCase         AttentionLanesOmitted = "notice_case"
 	AttentionLanesOmittedNotices            AttentionLanesOmitted = "notices"
 	AttentionLanesOmittedPlanned            AttentionLanesOmitted = "planned"
 	AttentionLanesOmittedRelationshipDecay  AttentionLanesOmitted = "relationship_decay"
@@ -1405,6 +1406,8 @@ func (e AttentionLanesOmitted) Valid() bool {
 	case AttentionLanesOmittedMeetingsUnreported:
 		return true
 	case AttentionLanesOmittedNeedsYou:
+		return true
+	case AttentionLanesOmittedNoticeCase:
 		return true
 	case AttentionLanesOmittedNotices:
 		return true
@@ -1508,6 +1511,7 @@ const (
 	AttentionItemSourceMeeting             AttentionItemSource = "meeting"
 	AttentionItemSourceMeetingOutcome      AttentionItemSource = "meeting_outcome"
 	AttentionItemSourceNotice              AttentionItemSource = "notice"
+	AttentionItemSourceNoticeCase          AttentionItemSource = "notice_case"
 	AttentionItemSourceRelationshipDecay   AttentionItemSource = "relationship_decay"
 	AttentionItemSourceSyncHealth          AttentionItemSource = "sync_health"
 	AttentionItemSourceTask                AttentionItemSource = "task"
@@ -1550,6 +1554,8 @@ func (e AttentionItemSource) Valid() bool {
 	case AttentionItemSourceMeetingOutcome:
 		return true
 	case AttentionItemSourceNotice:
+		return true
+	case AttentionItemSourceNoticeCase:
 		return true
 	case AttentionItemSourceRelationshipDecay:
 		return true
@@ -14355,6 +14361,7 @@ const (
 	WorklistItemSourceMeeting             WorklistItemSource = "meeting"
 	WorklistItemSourceMeetingOutcome      WorklistItemSource = "meeting_outcome"
 	WorklistItemSourceNotice              WorklistItemSource = "notice"
+	WorklistItemSourceNoticeCase          WorklistItemSource = "notice_case"
 	WorklistItemSourceRelationshipDecay   WorklistItemSource = "relationship_decay"
 	WorklistItemSourceSyncHealth          WorklistItemSource = "sync_health"
 	WorklistItemSourceTask                WorklistItemSource = "task"
@@ -14399,6 +14406,8 @@ func (e WorklistItemSource) Valid() bool {
 	case WorklistItemSourceMeetingOutcome:
 		return true
 	case WorklistItemSourceNotice:
+		return true
+	case WorklistItemSourceNoticeCase:
 		return true
 	case WorklistItemSourceRelationshipDecay:
 		return true
@@ -14484,6 +14493,7 @@ const (
 	WorklistReachSourceMeeting             WorklistReachSource = "meeting"
 	WorklistReachSourceMeetingOutcome      WorklistReachSource = "meeting_outcome"
 	WorklistReachSourceNotice              WorklistReachSource = "notice"
+	WorklistReachSourceNoticeCase          WorklistReachSource = "notice_case"
 	WorklistReachSourceRelationshipDecay   WorklistReachSource = "relationship_decay"
 	WorklistReachSourceSyncHealth          WorklistReachSource = "sync_health"
 	WorklistReachSourceTask                WorklistReachSource = "task"
@@ -14528,6 +14538,8 @@ func (e WorklistReachSource) Valid() bool {
 	case WorklistReachSourceMeetingOutcome:
 		return true
 	case WorklistReachSourceNotice:
+		return true
+	case WorklistReachSourceNoticeCase:
 		return true
 	case WorklistReachSourceRelationshipDecay:
 		return true
@@ -18145,6 +18157,27 @@ type Attention struct {
 	// NeedsYou Decisions only a person can make, highest-stakes first.
 	NeedsYou []AttentionItem `json:"needs_you"`
 
+	// NoticeCases Disclosure duties nobody has discharged, soonest deadline first — the
+	// Art. 13 and Art. 14 notices a person is owed because of how their
+	// record was obtained. Each card carries which article put it there, by
+	// when the notice is owed, and WHO is owed it — unlike `dsr`, which
+	// names no subject, because a subject request is worked on the case
+	// queue's own screen and a notice case has none. The disclosure is sent
+	// from the person's page, so the card names that person and offers
+	// `open` to reach it.
+	//
+	// The deadline runs from the ACQUISITION, not from when the case was
+	// recorded, so an import carrying last year's business card arrives
+	// already late and the lane says so.
+	//
+	// Withheld — named in `lanes_omitted` — for every reader the case queue
+	// itself refuses, exactly as `dsr` is: both reads are gated on the same
+	// privacy-request object.
+	//
+	// Absent — not empty — on an installation whose feed does not read
+	// the notice queue.
+	NoticeCases *[]AttentionItem `json:"notice_cases,omitempty"`
+
 	// Notices The acting person's UNREAD notices, newest first — the durable
 	// informational line a system flow needed them to see (an automation's
 	// notify firing, a lead-SLA escalation). The card carries the notice's
@@ -18292,6 +18325,9 @@ type AttentionCounts struct {
 	// MeetingsUnreported How many of today's meetings have started with nobody saying how they went — the bounded page, as the other lanes report. Not in `required`: a client reading an installation whose feed does not carry this lane gets no number rather than a zero, which would claim the day is clear.
 	MeetingsUnreported *int `json:"meetings_unreported,omitempty"`
 	NeedsYou           int  `json:"needs_you"`
+
+	// NoticeCases How many undischarged disclosure duties this lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the soonest deadlines, which is the order the lane is in.
+	NoticeCases *int `json:"notice_cases,omitempty"`
 
 	// Notices How many unread notices the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the newest.
 	Notices *int `json:"notices,omitempty"`

@@ -38,6 +38,29 @@ func (d attentionDSRs) OpenDueSoonest(ctx context.Context, limit int) ([]attenti
 	return out, nil
 }
 
+// attentionNoticeCases binds the disclosure-duty lane to the consent module's
+// own thin read. The same DSR-admin gate lives in the store, not here — both
+// queues answer to the privacy_request object, so an installation that
+// delegated its privacy inbox delegated this with it.
+type attentionNoticeCases struct{ store *consent.Store }
+
+func (n attentionNoticeCases) OpenDueSoonest(ctx context.Context, limit int) ([]attention.NoticeCase, error) {
+	owed, err := n.store.OpenNoticeCasesDueSoonest(ctx, limit)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]attention.NoticeCase, 0, len(owed))
+	for _, duty := range owed {
+		// duty.Blocked is deliberately dropped: a blocked case reaches the lane
+		// like any other, and the obstacle is read on the person's own screen.
+		out = append(out, attention.NoticeCase{
+			ID: duty.ID, Rule: string(duty.Rule),
+			PersonID: duty.PersonID.UUID, DueAt: duty.DueAt,
+		})
+	}
+	return out, nil
+}
+
 // attentionSyncHealth binds the sync-health lane to the overlay module's own
 // aggregated read; the mode gate and the every-role read posture live there.
 type attentionSyncHealth struct{ svc *overlay.Service }

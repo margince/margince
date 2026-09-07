@@ -50,6 +50,16 @@ func WithMeetingsAwaitingOutcome(m MeetingsAwaitingOutcome) Option {
 	return func(s *Service) { s.meetingsAwaitingOutcome = m }
 }
 
+// WithNoticeCases binds the lane of disclosure duties nobody has discharged.
+//
+// An Option for the reason above, and one that matters more here than for most
+// lanes: an installation whose feed does not read the notice queue must report
+// the lane ABSENT rather than empty. A duty queue rendered as "nothing owed"
+// when nobody looked is the exact failure this lane exists to end.
+func WithNoticeCases(n NoticeCases) Option {
+	return func(s *Service) { s.noticeCases = n }
+}
+
 // endOfDay is the boundary every due-dated lane stops at, so a promise, a task
 // and a meeting falling on the same afternoon are judged against one instant.
 //

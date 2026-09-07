@@ -238,6 +238,33 @@ type DSRCase struct {
 	DueAt time.Time
 }
 
+// NoticeCases reads the disclosure duties nobody has discharged, soonest
+// deadline first, bounded. Gated exactly as DSRs is — the same
+// privacy_request object — and the lane renders that refusal as withheld.
+type NoticeCases interface {
+	OpenDueSoonest(ctx context.Context, limit int) ([]NoticeCase, error)
+}
+
+// NoticeCase is one disclosure still owed: which article obliges it, and by
+// when the law expects it made.
+//
+// NO blocked flag. The store answers one, and a blocked case reaches this lane
+// like any other — a duty nobody can discharge is the one most worth a reader's
+// attention. Carrying the flag here would be a field the card does not read and
+// the wire does not publish, which is how a reader comes to believe a lane
+// filters on something it never sees.
+type NoticeCase struct {
+	ID   ids.UUID
+	Rule string
+	// PersonID is whose duty this is. Carried where the DSR case carries no
+	// subject at all, and the difference is the reason: a subject request has
+	// its own queue screen to route to, and a notice case has none — the
+	// disclosure is sent from the person's own page. A card without the person
+	// would prompt a reader with nowhere to go.
+	PersonID ids.UUID
+	DueAt    time.Time
+}
+
 // Briefing is the overnight brief's queue for the acting rep, best-ranked
 // first.
 //

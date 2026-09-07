@@ -88,6 +88,7 @@ var destinationOfSource = map[crmcontracts.WorklistItemSource]crmcontracts.Workl
 	crmcontracts.WorklistItemSourceDedupeCandidate:     destinationReview,
 	crmcontracts.WorklistItemSourceIntroductionRequest: destinationReview,
 	crmcontracts.WorklistItemSourceDsr:                 destinationReview,
+	crmcontracts.WorklistItemSourceNoticeCase:          destinationReview,
 
 	// The product reporting on itself. An administrator restores these.
 	crmcontracts.WorklistItemSourceSyncHealth:    destinationSystemHealth,

@@ -8647,6 +8647,7 @@ export const vi = {
   "worklist.untitled.relationship_decay": "Một mối quan hệ đang nguội",
   "worklist.untitled.failed_approval": "Điều bạn duyệt đã không chạy",
   "worklist.untitled.dsr": "Một yêu cầu quyền riêng tư",
+  "worklist.untitled.notice_case": "Một thông báo cần gửi cho người này",
   "worklist.untitled.sync_health": "Đồng bộ CRM cần chú ý",
   "worklist.sync.class.contacts": "người",
   "worklist.sync.class.companies": "công ty",

@@ -8756,6 +8756,8 @@ export const de = {
   "worklist.untitled.relationship_decay": "Eine Beziehung schläft ein",
   "worklist.untitled.failed_approval": "Etwas Zugestimmtes lief nicht",
   "worklist.untitled.dsr": "Eine offene Datenschutzanfrage",
+  "worklist.untitled.notice_case":
+    "Eine Auskunft, die diese Person zu bekommen hat",
   "worklist.untitled.sync_health":
     "Die CRM-Synchronisierung braucht Aufmerksamkeit",
   "worklist.sync.class.contacts": "Personen",

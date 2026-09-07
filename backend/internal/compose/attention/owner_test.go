@@ -199,6 +199,7 @@ func dayOfEveryLane() crmcontracts.Attention {
 		Commitments:        lane(item("promise", "conversation_claim")),
 		DidNotRun:          lane(item("failed", "failed_approval")),
 		Dsr:                lane(item("dsr", "dsr")),
+		NoticeCases:        lane(item("notice_case", "notice_case")),
 		AtRisk:             lane(item("deal", "deal_at_risk")),
 		Planned:            []crmcontracts.AttentionItem{item("task", "task")},
 		Bounces:            lane(item("bounce", "bounce")),

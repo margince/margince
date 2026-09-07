@@ -57,6 +57,11 @@ type IssuedConfirm struct {
 	// DeliveredTo is where the link was posted. Returned rather than taken, so
 	// the mailbox the consent claim rests on is the subject's own.
 	DeliveredTo string
+	// NoticeCasesDischarged is how many disclosure duties this mail settled.
+	//
+	// Zero is the ordinary case: most people are owed nothing, and a case
+	// already discharged inside the cooldown is deliberately not moved again.
+	NoticeCasesDischarged int
 	// Staged reports whether the mail was queued on the durable lane.
 	//
 	// FALSE is a real outcome and not an error: an installation with no relay
@@ -208,6 +213,25 @@ func (s *Store) issueLink(ctx context.Context, personID ids.PersonID, kind strin
 			return err
 		}
 		out.Staged = staged
+		// The mail that discharges a duty is what moves the duty. A
+		// record-confirmation link IS the Art. 14 disclosure route named in
+		// allowed_routes, so sending one settles the cases that named it —
+		// on this transaction, so a rolled-back mail leaves no duty marked
+		// handled by a message nobody sent.
+		//
+		// GATED ON `staged`, which is not the same guarantee as the
+		// transaction. An installation with no lane wired still mints the link
+		// and reports queued=false — a supported outcome, not an error, so it
+		// COMMITS. Discharging there would write an audit row saying a duty was
+		// met by a message that was never staged, and the cooldown would then
+		// suppress the genuine send once an operator fixed the relay.
+		if route, discharges := noticeRouteFor(kind); discharges && staged {
+			moved, err := dischargeNoticeCases(ctx, tx, personID, route, issued)
+			if err != nil {
+				return err
+			}
+			out.NoticeCasesDischarged = moved
+		}
 		return nil
 	})
 	if err != nil {
