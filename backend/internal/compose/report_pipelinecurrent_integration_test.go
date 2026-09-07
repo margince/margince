@@ -28,12 +28,13 @@ import (
 )
 
 // pipeline-current keeps the caller's own/team lens (a team manager's own
-// pipeline composition, the same shape deals-by-stage answers — proved by
-// TestATypedQueryAnswersTheAskersOwnPopulation-adjacent cases in
-// analyticsmcpquestions_integration_test.go's G01/G02/M04). What margince#4207
-// actually needed was the unowned-row fix: an unrouted, unassigned deal must
-// still count toward a manager's own pipeline, the same way it counts toward
-// deals-by-stage (report_dealsbystage_integration_test.go).
+// pipeline composition, the same shape deals-by-stage answers) — proved by
+// analyticsmcpquestions_integration_test.go's G01 (an omitted scope is the
+// rep's own deals) and M04 (one row per stage, the caller's own open deals
+// only). What this report needs instead is the unowned-row fix: an unrouted,
+// unassigned deal must still count toward a manager's own pipeline, the same
+// way it counts toward deals-by-stage
+// (report_dealsbystage_integration_test.go).
 func TestPipelineCurrentCountsAnUnownedDealForATeamManager(t *testing.T) {
 	e := setupForecast(t)
 	e.seedOpenDeal(t, "Unowned", 60, nil, int64p(10000), stringp("commit"))

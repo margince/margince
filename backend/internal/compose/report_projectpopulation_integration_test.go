@@ -5,12 +5,12 @@
 
 package compose
 
-// projects-by-phase, project-commitments and projects-gone-quiet
-// (margince#4225/#4226/#4227) are the exact case reportpopulation.go's own
-// comment names as the motivating example for measureEveryReadableRow: "how
-// many projects are in delivery" is a question about the installation, not
-// about the asker. A team manager must see a project owned by a seat on a
-// different team, not a silently narrowed slice of their own team's work.
+// projects-by-phase, project-commitments and projects-gone-quiet are the
+// exact case reportpopulation.go's own comment names as the motivating
+// example for measureEveryReadableRow: "how many projects are in delivery"
+// is a question about the installation, not about the asker. A team manager
+// must see a project owned by a seat on a different team, not a silently
+// narrowed slice of their own team's work.
 
 import (
 	"context"

@@ -728,10 +728,10 @@ func TestWinLossFiltersToOneLostReason(t *testing.T) {
 	}
 }
 
-// win-loss is an install-wide analysis question (margince#4224) — a
-// cross-team comparison is exactly what a win-rate report is FOR, so a team
-// manager must see a won/lost deal closed by a seat on a different team, not
-// just their own team's outcomes.
+// win-loss is an install-wide analysis question — a cross-team comparison is
+// exactly what a win-rate report is FOR, so a team manager must see a
+// won/lost deal closed by a seat on a different team, not just their own
+// team's outcomes.
 func TestWinLossIsNotNarrowedToATeamManagersOwnTeams(t *testing.T) {
 	e := setupForecast(t)
 	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, owner_id, amount_minor, currency, status, closed_at, lost_reason, fx_rate_to_base, source, captured_by)

@@ -71,12 +71,12 @@ func TestLeadsByStatusCountsTheTerminalLeadsEveryOtherReadHides(t *testing.T) {
 	}
 }
 
-// An unowned lead is the ordinary shape of a fresh, unrouted one — and it
-// must count on a rep's own board the same way it counts on their unscoped
-// list. This is margince#4205's own literal reproduction: before the fix,
-// `owner_id = $me` matched nothing against a NULL owner_id, and the Leads
-// board's terminal-status columns silently dropped a lead the panel's own
-// list still showed one click below.
+// An unowned lead is the ordinary shape of a fresh, unrouted one, and it must
+// count on a rep's own board the same way it counts on their unscoped list:
+// `owner_id = $me` matches nothing against a NULL owner_id under ordinary SQL
+// null semantics, so the Leads board's terminal-status columns would
+// otherwise silently drop a lead the panel's own list still shows one click
+// below.
 func TestLeadsByStatusCountsAnUnownedLeadForARep(t *testing.T) {
 	e := integration.Setup(t)
 	seedLeadAt(t, e, "new", false)
@@ -99,7 +99,11 @@ func TestLeadsByStatusCountsAnUnownedLeadForARep(t *testing.T) {
 	decodeWire(t, rec, http.StatusOK, &result)
 	counts := map[string]int64{}
 	for _, row := range result.Rows {
-		counts[row["status"].(string)] = wireInt(t, row, "leads")
+		status, ok := row["status"].(string)
+		if !ok {
+			t.Fatalf("row %v has no status", row)
+		}
+		counts[status] = wireInt(t, row, "leads")
 	}
 	if counts["new"] != 1 {
 		t.Errorf(`a rep's own population counted %d "new" leads, want 1 — `+

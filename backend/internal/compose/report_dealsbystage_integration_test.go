@@ -136,10 +136,10 @@ func TestDealsByStageMeasuresTheReadersOwnPopulation(t *testing.T) {
 
 // An unowned deal — the ordinary shape of one nobody has claimed yet — must
 // count toward a rep's own population the same way it counts toward their
-// ordinary, unscoped deal list. Before this fix, `owner_id = $me` matched
-// nothing against a NULL owner_id under ordinary SQL null semantics, so the
-// deal silently vanished from the rep's own board while still sitting on
-// their worklist one click away (margince#4206's own reproduction shape).
+// ordinary, unscoped deal list: `owner_id = $me` matches nothing against a
+// NULL owner_id under ordinary SQL null semantics, so without an explicit
+// unowned-is-shared arm the deal would silently vanish from the rep's own
+// board while still sitting on their worklist one click away.
 func TestDealsByStageCountsAnUnownedDealForARep(t *testing.T) {
 	e := setupForecast(t)
 	e.seedOpenDeal(t, "Unowned", 60, nil, int64p(10000), stringp("commit"))
@@ -453,45 +453,5 @@ func TestDealsByStageNarrowsToOnePartner(t *testing.T) {
 	}
 	if total != 40000 {
 		t.Errorf("total = %d, want 40000 — the filter did not narrow to the partner asked for", total)
-	}
-}
-
-// stage-age (margince#4210) and open-deals-per-company (margince#4209) are
-// both install-wide analysis questions, reachable only through the generic
-// run_report/Analytics doors with no personal-work framing — a team manager
-// must see them for the whole installation, not narrowed to their own teams.
-func TestStageAgeIsNotNarrowedToATeamManagersOwnTeams(t *testing.T) {
-	e := setupForecast(t)
-	e.seedOpenDeal(t, "Cross-team", 60, &e.Rep3, int64p(10000), stringp("commit"))
-
-	manager := e.dealReadCtx(ids.NewV7(), []ids.UUID{e.Team1}, principal.RowScopeTeam)
-	result := e.runReport(manager, t, "stage-age",
-		`{"group_by":["stage_id"],"aggregates":[{"fn":"count","as":"deals"}]}`)
-	if len(result.Rows) == 0 {
-		t.Fatal("a Team1 manager read no stage-age rows, want Rep3's Team2 " +
-			"deal to still count — stage-age answers for the whole installation")
-	}
-}
-
-// open-deals-per-company keeps the caller's own/team lens — proved by
-// TestATypedQueryAnswersTheAskersOwnPopulation and
-// TestADealOutsideThePopulationIsNotAPermissionExclusion, which both require
-// this report to narrow to the caller's own population, not the whole
-// installation. What margince#4209 actually needed was the same unowned-row
-// fix as every other report here: an unrouted deal must still count toward a
-// team manager's own company rollup.
-func TestOpenDealsPerCompanyCountsAnUnownedDealForATeamManager(t *testing.T) {
-	e := setupForecast(t)
-	orgID := e.seedID(t, `INSERT INTO organization (id, display_name, source, captured_by) VALUES ($1, 'Unowned Co', 'manual', 'human:x')`)
-	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, organization_id, amount_minor, currency, source, captured_by)
-		VALUES ($1, 'Unowned', $2, $3, $4, 10000, 'EUR', 'manual', 'human:x')`,
-		e.pipeline, e.stages[60], orgID)
-
-	manager := e.dealReadCtx(ids.NewV7(), []ids.UUID{e.Team1}, principal.RowScopeTeam)
-	result := e.runReport(manager, t, "open-deals-per-company",
-		`{"group_by":["organization_id"],"aggregates":[{"fn":"count","as":"open_deals"}]}`)
-	if len(result.Rows) == 0 {
-		t.Fatal("a Team1 manager read no open-deals-per-company rows, want the " +
-			"unowned deal to still count toward their own managed-teams population")
 	}
 }

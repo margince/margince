@@ -19,12 +19,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// seedClosedOwnedDeal writes one won or lost deal OWNED by somebody.
-//
-// seedPricedDeal leaves owner_id NULL, which is right for the currency cases it
-// serves and wrong here: every report in this file measures the caller's own
-// population by default, so an unowned deal is invisible to the manager asking
-// about their team and the fixture would prove nothing.
+// seedClosedOwnedDeal writes one won or lost deal OWNED by somebody, with a
+// chosen `source` — seedPricedDeal takes neither, and every case here is
+// management reading a specific rep's real, attributed contribution, not an
+// unclaimed one.
 func seedClosedOwnedDeal(
 	t *testing.T, e *forecastEnv, name string, amountMinor int64, status, source string, owner ids.UUID,
 ) {
