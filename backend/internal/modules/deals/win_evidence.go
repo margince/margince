@@ -122,6 +122,15 @@ func ensureWinEvidence(ctx context.Context, tx pgx.Tx, dealID ids.DealID, in Adv
 	return nil
 }
 
+// ValidateWonReason is the paperless-win rule, exported so a proposal can be
+// checked BEFORE its approval commits rather than only when the advance runs.
+//
+// The same function the advance calls, not a copy: a card whose precheck and
+// whose effect disagreed would be one a rep could approve and then watch fail.
+func ValidateWonReason(reason string, detail *string) error {
+	return validateWonReason(reason, detail)
+}
+
 func validateWonReason(reason string, detail *string) error {
 	if !slices.Contains(WonWithoutContractReasons, reason) {
 		return &InvalidWonReasonError{Reason: reason}

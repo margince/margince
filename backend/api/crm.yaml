@@ -32889,7 +32889,7 @@ components:
       required: [snippet]
       properties:
         snippet: { type: string }
-        source_type: { type: [string, 'null'], enum: [activity, deal, signal, relationship, page, null] }
+        source_type: { type: [string, 'null'], enum: [activity, deal, signal, relationship, page, contract, null] }
         source_id: { type: [string, 'null'] }
 
     RecordQualifyingEventRequest:
@@ -37488,7 +37488,7 @@ components:
       required: [evidence_snippet]
       properties:
         evidence_snippet: { type: string, description: 'The fragment as it reads in the source, quoted rather than paraphrased.' }
-        source_type: { type: [string, 'null'], enum: [activity, deal, signal, relationship, page, null] }
+        source_type: { type: [string, 'null'], enum: [activity, deal, signal, relationship, page, contract, null] }
         source_id: { type: [string, 'null'], format: uuid }
         source_lines:
           type: array

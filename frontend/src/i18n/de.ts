@@ -1398,6 +1398,10 @@ export const de = {
   "approval.kind.org_name_promotion": "Account umbenennen",
   "approval.kind.vcard_create": "Person aus einer Visitenkarte anlegen",
   "approval.kind.lifecycle_change": "Account-Phase",
+  "approval.kind.stage_progression": "Deal in die nächste Phase bewegen",
+  "approval.field.because": "Begründung",
+  "approval.field.from_stage": "Von",
+  "approval.field.to_stage": "Nach",
   "approval.kind.transcript_proposal":
     "Nächsten Schritt aus einem Transkript übernehmen",
   "approval.kind.fx_rate_proposal": "Wechselkurse aktualisieren",
@@ -1414,7 +1418,6 @@ export const de = {
   "approval.kind.send_account_email": "E-Mail an ein Unternehmen senden",
   "approval.kind.send_message": "Nachricht senden",
   "approval.field.basis": "Warum",
-  "approval.field.because": "Warum",
   "approval.field.step": "Der Schritt",
   "approval.field.intent": "Warum das entworfen wurde",
   "approval.field.evidence_snippet": "Was auf der Seite stand",

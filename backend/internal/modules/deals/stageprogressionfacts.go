@@ -41,6 +41,12 @@ type StageProgressionFacts struct {
 	// Criteria carries the evidence ids behind each met criterion, so the card
 	// can cite what it rests on and a reviewer can open it.
 	Criteria []ProgressionCriterion
+	// NeedsWinReason marks a move onto a WON stage with no signed agreement on
+	// the deal. Such a move is refused unless somebody says why there is no
+	// paper, and nothing the product read can answer that — so the card has to
+	// carry the question to the person deciding it. Without this the proposal
+	// stages a card that fails on every approval, forever.
+	NeedsWinReason bool
 }
 
 // ProgressionCriterion is one criterion as the card shows it: the fact the
@@ -50,6 +56,18 @@ type ProgressionCriterion struct {
 	CriterionID ids.ExitCriterionID
 	Label       string
 	EvidenceIDs []ids.UUID
+	// Sources are the records each claim was read FROM — a contract, a message
+	// — so the card can cite something a reviewer can open. The evidence row's
+	// own id is not that: it points at the ledger entry, not at the material.
+	Sources []EvidenceSource
+}
+
+// EvidenceSource is one claim's pointer back to the record it was read from,
+// with the fragment it rests on.
+type EvidenceSource struct {
+	SourceType string
+	SourceID   ids.UUID
+	Snippet    string
 }
 
 // ErrNoNextStage is the ordinary outcome for a deal already on its pipeline's
@@ -86,9 +104,19 @@ func ReadStageProgressionFacts(
 	}
 	out.Criteria = criteria
 
-	protected, reason, err := readProtection(ctx, tx, dealID, now)
+	protected, reason, err := readProtection(ctx, tx, dealID, next.id, now)
 	if err != nil {
 		return out, err
+	}
+	// Asked only where it can matter. A win with paper behind it, and every
+	// move that is not a win, needs no answer — and the contract read is a
+	// second query this saves on the overwhelming majority of proposals.
+	if next.semantic == SemanticWon {
+		signed, err := hasSignedContract(ctx, tx, dealID)
+		if err != nil {
+			return out, err
+		}
+		out.NeedsWinReason = !signed
 	}
 
 	facts := StageMoveFacts{
@@ -193,7 +221,9 @@ func readProgressionCriteria(
 		SELECT c.id, c.key, c.label, c.required, c.kind,
 		       coalesce(e.met, false), coalesce(e.author_side, ''),
 		       coalesce(e.commitment, ''), e.confidence,
-		       coalesce(e.contradicted, false), coalesce(e.ids, '{}')
+		       coalesce(e.contradicted, false), coalesce(e.ids, '{}'),
+		       coalesce(e.source_types, '{}'), coalesce(e.source_ids, '{}'),
+		       coalesce(e.snippets, '{}')
 		  FROM stage_exit_criterion c
 		  LEFT JOIN LATERAL (
 		      SELECT bool_or(v.met) AS met,
@@ -206,7 +236,19 @@ func readProgressionCriteria(
 		             -- would drop the disagreement exactly when a reader most
 		             -- needs telling that one exists.
 		             bool_or(v.contradicted_by IS NOT NULL) AS contradicted,
-		             array_agg(v.id) AS ids
+		             -- ORDERED, because this list is hashed. The card's
+		             -- diff_hash is what binds a proposal to its payload and
+		             -- what tells one proposal from another; an unordered
+		             -- aggregate lets two readings of the SAME evidence hash
+		             -- differently, so a re-read would supersede its own card
+		             -- with an identical one and the inbox would churn.
+		             array_agg(v.id ORDER BY v.id) AS ids,
+		             -- The records the claims were read FROM, so the card
+		             -- cites material a reviewer can open rather than the
+		             -- ledger row that records the reading.
+		             array_agg(v.source_type ORDER BY v.id) AS source_types,
+		             array_agg(v.source_id ORDER BY v.id) AS source_ids,
+		             array_agg(coalesce(v.snippet, '') ORDER BY v.id) AS snippets
 		        FROM (
 		            SELECT ev.*,
 		                   CASE WHEN ev.author_side = 'buyer' THEN 0 ELSE 1 END AS rank
@@ -226,11 +268,15 @@ func readProgressionCriteria(
 	for rows.Next() {
 		var c ProgressionCriterion
 		var kind, authorSide, commitment string
+		var sourceTypes, snippets []string
+		var sourceIDs []ids.UUID
 		if err := rows.Scan(&c.CriterionID, &c.Key, &c.Label, &c.Required, &kind,
 			&c.Met, &authorSide, &commitment, &c.Confidence,
-			&c.Contradicted, &c.EvidenceIDs); err != nil {
+			&c.Contradicted, &c.EvidenceIDs,
+			&sourceTypes, &sourceIDs, &snippets); err != nil {
 			return nil, fmt.Errorf("scan a criterion's standing: %w", err)
 		}
+		c.Sources = evidenceSources(sourceTypes, sourceIDs, snippets)
 		c.Kind = CriterionKind(kind)
 		c.AuthorSide = AuthorSide(authorSide)
 		c.Commitment = commitment
@@ -247,16 +293,17 @@ func readProgressionCriteria(
 //
 // Each arm is a different sentence to a rep, which is why the reason travels
 // with the boolean rather than being composed at the card: "you moved this
-// yourself" and "this move was undone before" are different things to be told.
+// yourself", "this move was undone before" and "you already said no to this"
+// are three different things to be told.
 //
-// A THIRD arm belongs here and is not built yet: a proposal for this same
-// target already rejected, with no newer evidence since. It reads
-// stage_progression_outcome, which arrives with the writer that fills it —
-// a table nothing writes is a migration shipping dead weight.
+// The third arm is the one that keeps the product from nagging: a proposal for
+// this same target already rejected, with nothing learned since. It reopens on
+// NEW evidence, because the rep said no to what was known then and a claim
+// recorded afterwards is a different question.
 func readProtection(
-	ctx context.Context, tx pgx.Tx, dealID ids.DealID, now time.Time,
+	ctx context.Context, tx pgx.Tx, dealID ids.DealID, toStageID ids.StageID, now time.Time,
 ) (bool, string, error) {
-	var humanMove, reversal bool
+	var humanMove, reversal, refusedAlready bool
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
 		    -- A HUMAN's own move, named positively. captured_by carries the
@@ -281,8 +328,22 @@ func readProtection(
 		),
 		EXISTS (
 		    SELECT 1 FROM deal_stage_history WHERE deal_id = $1 AND reversal_of IS NOT NULL
-		)`, dealID, now.Add(-ProtectionWindow)).
-		Scan(&humanMove, &reversal); err != nil {
+		),
+		EXISTS (
+		    -- A rejection of THIS target that nothing has been learned since.
+		    -- Newer evidence reopens it: the rep said no to what was known
+		    -- then, and a claim recorded afterwards is a different question,
+		    -- so re-asking is the product having something new to say rather
+		    -- than nagging.
+		    SELECT 1 FROM stage_progression_outcome o
+		     WHERE o.deal_id = $1 AND o.to_stage_id = $3 AND o.outcome = 'rejected'
+		       AND NOT EXISTS (
+		           SELECT 1 FROM deal_stage_evidence e
+		            WHERE e.deal_id = $1 AND e.refuted_at IS NULL
+		              AND e.created_at > o.decided_at
+		       )
+		)`, dealID, now.Add(-ProtectionWindow), toStageID).
+		Scan(&humanMove, &reversal, &refusedAlready); err != nil {
 		return false, "", fmt.Errorf("read the deal's recent stage history: %w", err)
 	}
 	switch {
@@ -292,6 +353,28 @@ func readProtection(
 		// A move that was undone once is a move this deal has already had the
 		// argument about. Proposing it again is the product not listening.
 		return true, "a stage move on this deal was undone before", nil
+	case refusedAlready:
+		return true, "you turned this move down, and nothing new has been learned since", nil
 	}
 	return false, "", nil
+}
+
+// evidenceSources zips the three parallel aggregates into one list.
+//
+// All three are aggregated over the same rows in the same order, so they are
+// the same length — but a short one is read as far as it goes rather than
+// panicking, because a card citing fewer sources is a smaller answer while a
+// panic in an unattended proposer is a lane that stops.
+func evidenceSources(types []string, ids []ids.UUID, snippets []string) []EvidenceSource {
+	n := min(len(types), min(len(ids), len(snippets)))
+	if n == 0 {
+		return nil
+	}
+	out := make([]EvidenceSource, 0, n)
+	for i := range n {
+		out = append(out, EvidenceSource{
+			SourceType: types[i], SourceID: ids[i], Snippet: snippets[i],
+		})
+	}
+	return out
 }

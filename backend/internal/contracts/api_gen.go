@@ -1042,6 +1042,7 @@ func (e ApprovalBundleMemberOutcome) Valid() bool {
 // Defines values for ApprovalEvidenceSourceType.
 const (
 	ApprovalEvidenceSourceTypeActivity     ApprovalEvidenceSourceType = "activity"
+	ApprovalEvidenceSourceTypeContract     ApprovalEvidenceSourceType = "contract"
 	ApprovalEvidenceSourceTypeDeal         ApprovalEvidenceSourceType = "deal"
 	ApprovalEvidenceSourceTypePage         ApprovalEvidenceSourceType = "page"
 	ApprovalEvidenceSourceTypeRelationship ApprovalEvidenceSourceType = "relationship"
@@ -1052,6 +1053,8 @@ const (
 func (e ApprovalEvidenceSourceType) Valid() bool {
 	switch e {
 	case ApprovalEvidenceSourceTypeActivity:
+		return true
+	case ApprovalEvidenceSourceTypeContract:
 		return true
 	case ApprovalEvidenceSourceTypeDeal:
 		return true
@@ -11716,6 +11719,7 @@ func (e SignalStatus) Valid() bool {
 // Defines values for SignalEvidenceSourceType.
 const (
 	SignalEvidenceSourceTypeActivity     SignalEvidenceSourceType = "activity"
+	SignalEvidenceSourceTypeContract     SignalEvidenceSourceType = "contract"
 	SignalEvidenceSourceTypeDeal         SignalEvidenceSourceType = "deal"
 	SignalEvidenceSourceTypePage         SignalEvidenceSourceType = "page"
 	SignalEvidenceSourceTypeRelationship SignalEvidenceSourceType = "relationship"
@@ -11726,6 +11730,8 @@ const (
 func (e SignalEvidenceSourceType) Valid() bool {
 	switch e {
 	case SignalEvidenceSourceTypeActivity:
+		return true
+	case SignalEvidenceSourceTypeContract:
 		return true
 	case SignalEvidenceSourceTypeDeal:
 		return true

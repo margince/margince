@@ -283,11 +283,15 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 		"cg:read-model":      all,
 		"cg:audit-stream":    all,
 		"cg:webhooks":        all,
+		// How each proposed stage move was received. The APPROVAL stream: a
+		// verdict rides there, including the `expired` one the sweep writes
+		// when nobody answers a card.
+		"cg:stage-progression-outcome": {"gw:events:crm:approval"},
 	}
 
 	groups := Groups()
 	if len(groups) != len(want) {
-		t.Fatalf("Groups() returned %d groups, want %d — the events.md §4.3 groups, the E10 outbound-webhook fan-out, the ADR-0078 consumers (graph-edge projection, LinkedIn matcher), the ADR-0101 provider-enrichment consumer, the audience-rescope corrector, the captured-cohort repair, the commission accrual, the AI-activity projection, the Deal Room timeline, the signature-enrich trigger, the introduction reply consumer, and the deterministic stage-evidence writers", len(groups), len(want))
+		t.Fatalf("Groups() returned %d groups, want %d — the events.md §4.3 groups, the E10 outbound-webhook fan-out, the ADR-0078 consumers (graph-edge projection, LinkedIn matcher), the ADR-0101 provider-enrichment consumer, the audience-rescope corrector, the captured-cohort repair, the commission accrual, the AI-activity projection, the Deal Room timeline, the signature-enrich trigger, the introduction reply consumer, the deterministic stage-evidence writers, and the stage-progression outcome ledger", len(groups), len(want))
 	}
 	for _, g := range groups {
 		if !reflect.DeepEqual(g.Streams, want[g.Name]) {

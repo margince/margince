@@ -2925,6 +2925,8 @@ public.idx_sigres_signal CREATE INDEX idx_sigres_signal ON public.signal_resolut
 public.idx_site_read_org CREATE INDEX idx_site_read_org ON public.site_read USING btree (organization_id, created_at DESC)
 public.idx_site_read_retry_due CREATE INDEX idx_site_read_retry_due ON public.site_read USING btree (next_attempt_at, id) WHERE ((status = ANY (ARRAY['deferred'::text, 'failed'::text])) AND (next_attempt_at IS NOT NULL))
 public.idx_stage_pipeline CREATE INDEX idx_stage_pipeline ON public.stage USING btree (pipeline_id) WHERE (archived_at IS NULL)
+public.idx_stage_progression_outcome_deal_target CREATE INDEX idx_stage_progression_outcome_deal_target ON public.stage_progression_outcome USING btree (deal_id, to_stage_id, decided_at DESC)
+public.idx_stage_progression_outcome_transition CREATE INDEX idx_stage_progression_outcome_transition ON public.stage_progression_outcome USING btree (pipeline_id, from_stage_id, to_stage_id, decided_at DESC)
 public.idx_system_log_action CREATE INDEX idx_system_log_action ON public.system_log USING btree (action, occurred_at DESC)
 public.idx_system_log_actor CREATE INDEX idx_system_log_actor ON public.system_log USING btree (actor_id, occurred_at DESC)
 public.idx_system_log_mirror_conflict_class CREATE INDEX idx_system_log_mirror_conflict_class ON public.system_log USING btree (((detail ->> 'object_class'::text)), occurred_at DESC) WHERE (action = 'mirror.conflict'::text)
@@ -5228,6 +5230,36 @@ public.stage_exit_criterion_stage_ix CREATE INDEX stage_exit_criterion_stage_ix 
 public.stage_exit_criterion_stage_key_live_ux CREATE UNIQUE INDEX stage_exit_criterion_stage_key_live_ux ON public.stage_exit_criterion USING btree (stage_id, key) WHERE (archived_at IS NULL)
 public.stage_id_pipeline_unique CREATE UNIQUE INDEX stage_id_pipeline_unique ON public.stage USING btree (id, pipeline_id)
 public.stage_pkey CREATE UNIQUE INDEX stage_pkey ON public.stage USING btree (id)
+public.stage_progression_outcome acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.stage_progression_outcome.approval_id uuid NOT NULL gen=- def=-
+public.stage_progression_outcome.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.stage_progression_outcome.deal_id uuid NOT NULL gen=- def=-
+public.stage_progression_outcome.decided_at timestamp with time zone NOT NULL gen=- def=now()
+public.stage_progression_outcome.decided_by_system boolean NOT NULL gen=- def=false
+public.stage_progression_outcome.evidence_corrected boolean NOT NULL gen=- def=false
+public.stage_progression_outcome.evidence_kinds text[] NOT NULL gen=- def='{}'::text[]
+public.stage_progression_outcome.from_stage_id uuid NOT NULL gen=- def=-
+public.stage_progression_outcome.id uuid NOT NULL gen=- def=uuidv7()
+public.stage_progression_outcome.outcome text NOT NULL gen=- def=-
+public.stage_progression_outcome.pipeline_id uuid NOT NULL gen=- def=-
+public.stage_progression_outcome.rejection_reason text gen=- def=-
+public.stage_progression_outcome.reversed_at timestamp with time zone gen=- def=-
+public.stage_progression_outcome.reversed_by uuid gen=- def=-
+public.stage_progression_outcome.stage_progression_outcome_deal_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
+public.stage_progression_outcome.stage_progression_outcome_from_stage_fkey FOREIGN KEY (from_stage_id) REFERENCES stage(id) ON DELETE CASCADE
+public.stage_progression_outcome.stage_progression_outcome_kind CHECK ((outcome = ANY (ARRAY['proposed'::text, 'approved_clean'::text, 'approved_edited'::text, 'rejected'::text, 'auto_applied'::text, 'reversed'::text, 'expired'::text, 'superseded'::text])))
+public.stage_progression_outcome.stage_progression_outcome_pipeline_fkey FOREIGN KEY (pipeline_id) REFERENCES pipeline(id) ON DELETE CASCADE
+public.stage_progression_outcome.stage_progression_outcome_pkey PRIMARY KEY (id)
+public.stage_progression_outcome.stage_progression_outcome_reason_is_a_rejections CHECK (((rejection_reason IS NULL) OR (outcome = 'rejected'::text)))
+public.stage_progression_outcome.stage_progression_outcome_reversal_is_timed CHECK (((reversed_by IS NULL) OR (reversed_at IS NOT NULL)))
+public.stage_progression_outcome.stage_progression_outcome_reversed_by_fkey FOREIGN KEY (reversed_by) REFERENCES app_user(id) ON DELETE SET NULL
+public.stage_progression_outcome.stage_progression_outcome_to_stage_fkey FOREIGN KEY (to_stage_id) REFERENCES stage(id) ON DELETE CASCADE
+public.stage_progression_outcome.to_stage_id uuid NOT NULL gen=- def=-
+public.stage_progression_outcome.trg_stage_progression_outcome_updated CREATE TRIGGER trg_stage_progression_outcome_updated BEFORE UPDATE ON public.stage_progression_outcome FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
+public.stage_progression_outcome.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.stage_progression_outcome.version bigint NOT NULL gen=- def=1
+public.stage_progression_outcome_approval_ux CREATE UNIQUE INDEX stage_progression_outcome_approval_ux ON public.stage_progression_outcome USING btree (approval_id)
+public.stage_progression_outcome_pkey CREATE UNIQUE INDEX stage_progression_outcome_pkey ON public.stage_progression_outcome USING btree (id)
 public.suggestion_dismissal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.suggestion_dismissal.fingerprint text NOT NULL gen=- def=-
 public.suggestion_dismissal.id uuid NOT NULL gen=- def=uuidv7()

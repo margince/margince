@@ -1479,6 +1479,10 @@ export const en = {
   "approval.kind.org_name_promotion": "Rename an account",
   "approval.kind.vcard_create": "Create a person from a card",
   "approval.kind.lifecycle_change": "Account stage",
+  "approval.kind.stage_progression": "Move a deal to the next stage",
+  "approval.field.because": "Why",
+  "approval.field.from_stage": "From",
+  "approval.field.to_stage": "To",
   "approval.kind.transcript_proposal": "Add a next step from a transcript",
   "approval.kind.fx_rate_proposal": "Refresh exchange rates",
   "approval.kind.ai_model_rate_proposal": "Refresh model prices",
@@ -1497,7 +1501,6 @@ export const en = {
   // back to the payload's JSON keys, and a business question reads as a
   // database row.
   "approval.field.basis": "Why",
-  "approval.field.because": "Why",
   "approval.field.step": "The step",
   "approval.field.intent": "Why this was drafted",
   "approval.field.evidence_snippet": "What the page said",

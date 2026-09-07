@@ -24141,7 +24141,7 @@ export interface components {
         SignalEvidence: {
             snippet: string;
             /** @enum {string|null} */
-            source_type?: "activity" | "deal" | "signal" | "relationship" | "page" | null;
+            source_type?: "activity" | "deal" | "signal" | "relationship" | "page" | "contract" | null;
             source_id?: string | null;
         };
         /** @description One exchange that makes ordinary business correspondence lawful. */
@@ -27566,7 +27566,7 @@ export interface components {
             /** @description The fragment as it reads in the source, quoted rather than paraphrased. */
             evidence_snippet: string;
             /** @enum {string|null} */
-            source_type?: "activity" | "deal" | "signal" | "relationship" | "page" | null;
+            source_type?: "activity" | "deal" | "signal" | "relationship" | "page" | "contract" | null;
             /** Format: uuid */
             source_id?: string | null;
             /** @description 1-based line numbers within the source record's body that this claim was read from, for a source whose body is line-addressed (a meeting transcript today, per ADR-0058: line N is the Nth newline-split segment of activity.body). Absent for a source that is not line-addressed. */

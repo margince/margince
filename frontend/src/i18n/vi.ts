@@ -1396,6 +1396,11 @@ export const vi = {
   "approval.kind.org_name_promotion": "Đổi tên một công ty",
   "approval.kind.vcard_create": "Tạo hồ sơ người từ danh thiếp",
   "approval.kind.lifecycle_change": "Giai đoạn công ty",
+  "approval.kind.stage_progression":
+    "Chuyển giao dịch sang giai đoạn tiếp theo",
+  "approval.field.because": "Lý do",
+  "approval.field.from_stage": "Từ",
+  "approval.field.to_stage": "Đến",
   "approval.kind.transcript_proposal":
     "Thêm bước tiếp theo từ bản ghi cuộc trò chuyện",
   "approval.kind.fx_rate_proposal": "Làm mới tỷ giá",
@@ -1412,7 +1417,6 @@ export const vi = {
   "approval.kind.send_account_email": "Gửi email cho một công ty",
   "approval.kind.send_message": "Gửi một tin nhắn",
   "approval.field.basis": "Vì sao",
-  "approval.field.because": "Vì sao",
   "approval.field.step": "Bước cần làm",
   "approval.field.intent": "Vì sao thư này được soạn",
   "approval.field.evidence_snippet": "Trang web viết gì",

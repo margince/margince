@@ -11,6 +11,7 @@ import (
 	"io"
 	"log/slog"
 	"sync"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
@@ -46,7 +47,8 @@ func startStageEvidenceTrigger(ctx context.Context, pool *pgxpool.Pool, rdb *red
 		inserter = built
 	}
 	trigger := compose.NewStageEvidenceTrigger(
-		pool, compose.StageEvidenceDeals(pool), compose.StageEvidenceDomains(pool), inserter, logger)
+		pool, compose.StageEvidenceDeals(pool), compose.StageEvidenceDomains(pool), inserter,
+		compose.StageProgressionProposals(pool, time.Now, logger), logger)
 	_, _ = fmt.Fprintln(stdout, "worker recording stage evidence as records land (cg:stage-evidence)")
 	background.Go(func() { runSubscriber(ctx, rdb, "cg:stage-evidence", trigger.HandleEvent, logger, 0) })
 	return nil
