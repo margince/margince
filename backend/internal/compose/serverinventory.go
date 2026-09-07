@@ -221,7 +221,11 @@ type Server struct {
 	// cannot present a credential needs; a deployment whose network boundary
 	// does not contain that port sets one, because unlike /healthz and /readyz
 	// this endpoint discloses per-workspace job-runtime telemetry (queue
-	// depth, which connectors are configured). See gateMetrics in routes.go.
+	// depth, which connectors are configured). A token set here is checked over
+	// plain HTTP — this process terminates no TLS — so it authenticates a
+	// scraper across a trusted hop, the one the session cookie already takes,
+	// and is not a credential to carry over an untrusted network. See
+	// gateMetrics in routes.go.
 	metricsToken string
 
 	// bootstrapSeeds are the deployment file's `seeds`, carried here so a
