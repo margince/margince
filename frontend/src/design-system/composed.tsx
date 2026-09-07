@@ -31,7 +31,7 @@ import { withWhom } from "./participants";
 import { FieldGuard } from "./rbac";
 import { useTooltip, useTruncationTooltip } from "./tooltip";
 import { type Provenance, ProvenanceTag } from "./trust";
-import { VisibilityBadge } from "./visibility";
+import { type Visibility, VisibilityBadge } from "./visibility";
 import "./composed.css";
 
 // Composed surfaces (B-EP09.3b): the pipeline board and the record view — each
@@ -1581,18 +1581,23 @@ function messageLead(
 // and withheld ones. The open default — `team` on a mail, `workspace` on
 // anything else — draws nothing, for the reason TimelineRow gives: a mark on
 // every open row is decoration a reader learns to skip.
-function messageVisibility(entry: TimelineEntry): ReactNode {
+function messageVisibilityState(entry: TimelineEntry): Visibility | undefined {
   if (entry.withheld) {
-    return <VisibilityBadge state="withheld" />;
+    return "withheld";
   }
   const status = entry.emailSummary?.display_status;
   if (status && status !== "team") {
-    return <VisibilityBadge state={status} />;
+    return status;
   }
   if (entry.audience && entry.audience !== "workspace") {
-    return <VisibilityBadge state={entry.audience} />;
+    return entry.audience;
   }
-  return null;
+  return undefined;
+}
+
+function messageVisibility(entry: TimelineEntry): ReactNode {
+  const state = messageVisibilityState(entry);
+  return state ? <VisibilityBadge state={state} /> : null;
 }
 
 // The mark beside a message: the sender's face on their word, a send mark on
@@ -1622,6 +1627,24 @@ function MessageMark({ entry }: Readonly<{ entry: TimelineEntry }>) {
   );
 }
 
+// WHICH of the three sources holds a thread message's words, decided apart
+// from the drawing: reading the carrier into a value is what keeps MessageWords
+// clear of the email census, the same shape otherSideOf above takes.
+type MessageWordsSource =
+  | { readonly from: "withheld" }
+  | { readonly from: "summary"; readonly preview?: string | null }
+  | { readonly from: "body"; readonly body?: string | null };
+
+function messageWordsOf(entry: TimelineEntry): MessageWordsSource {
+  if (entry.withheld) {
+    return { from: "withheld" };
+  }
+  if (entry.emailSummary) {
+    return { from: "summary", preview: entry.emailSummary.preview };
+  }
+  return { from: "body", body: entry.body };
+}
+
 // What a message in a thread SAYS. A mail with the server's summary draws
 // the server's own preview — the sender's line with the signature and the
 // quoted history already removed, the same line EmailEntry draws — and never
@@ -1634,17 +1657,27 @@ function MessageWords({
   entry,
   t,
 }: Readonly<{ entry: TimelineEntry; t: ReturnType<typeof useT> }>) {
-  if (entry.withheld) {
+  const words = messageWordsOf(entry);
+  if (words.from === "withheld") {
     return <span className="tl-withheld">{t("timeline.withheld")}</span>;
   }
-  if (entry.emailSummary) {
-    return entry.emailSummary.preview ? (
-      <span className="tl-msg-text">{entry.emailSummary.preview}</span>
+  if (words.from === "summary") {
+    return words.preview ? (
+      <span className="tl-msg-text">{words.preview}</span>
     ) : null;
   }
-  return entry.body ? (
-    <TimelineText text={entry.body} email={entry.kind === "email"} />
+  return words.body ? (
+    <TimelineText text={words.body} email={entry.kind === "email"} />
   ) : null;
+}
+
+// Whether a message in a thread opens, and into what. Only one drawn from the
+// server's summary does: its words are one span the drawer can stand behind,
+// where a folded body carries its own reading. Read apart from the drawing for
+// the reason otherSideOf is, and ThreadMessage below draws from what it
+// returns.
+function messageOpener(entry: TimelineEntry): (() => void) | undefined {
+  return entry.emailSummary ? entry.onOpenEmail : undefined;
 }
 
 /**
@@ -1686,7 +1719,7 @@ function ThreadMessage({
       </span>
     </>
   );
-  const onOpen = entry.emailSummary ? entry.onOpenEmail : undefined;
+  const onOpen = messageOpener(entry);
   if (!onOpen) {
     return <div className="tl-msg">{content}</div>;
   }
