@@ -430,3 +430,48 @@ func (e *relEnv) isPrimary(t *testing.T, edgeID string) bool {
 	t.Fatalf("employment %s is not in the person's own list of %d", edgeID, len(listed.Data))
 	return false
 }
+
+// The half of the PATCH rule no test held: ending an employment through the
+// patch itself clears the flag, in the same statement, rather than leaving a
+// stale true for every reader to derive around.
+//
+// Both directions, because the boundary is where a predicate written with the
+// wrong comparison passes one of them and still gets the other backwards — and
+// because the contract now states both, which is what makes them one item.
+func TestEndingAnEmploymentThroughAPatchClearsThePrimaryFlag(t *testing.T) {
+	e := setupRelationships(t)
+
+	status, edge, primary, _ := e.employment(t, e.orgID, AnyMap{"role": "cto"})
+	if status != http.StatusCreated || !primary {
+		t.Fatalf("the job they hold → %d primary=%t, want 201 and primary", status, primary)
+	}
+
+	// A last day still ahead is a notice period. They still work there.
+	if status := e.Call(t, "PATCH", "/v1/relationships/"+edge,
+		AnyMap{"ended_at": e.dbDate(t, 30)}, nil, nil); status != http.StatusOK {
+		t.Fatalf("patching a notice period → %d", status)
+	}
+	if !e.isPrimary(t, edge) {
+		t.Error("a last day 30 days out took the flag off a job they are still doing")
+	}
+
+	// The last day arrives. The patch that says so is the departure.
+	var patched struct {
+		IsCurrentPrimary bool `json:"is_current_primary"`
+	}
+	if status := e.Call(t, "PATCH", "/v1/relationships/"+edge,
+		AnyMap{"ended_at": e.dbDate(t, 0)}, nil, &patched); status != http.StatusOK {
+		t.Fatalf("patching the departure → %d", status)
+	}
+	if patched.IsCurrentPrimary {
+		t.Error("the patch that ended the employment answered with the flag still set")
+	}
+	var stored bool
+	if err := e.Owner.QueryRow(t.Context(),
+		`SELECT is_current_primary FROM relationship WHERE id = $1`, edge).Scan(&stored); err != nil {
+		t.Fatal(err)
+	}
+	if stored {
+		t.Error("the stored flag survived the departure, so every reader of the column has to derive around it")
+	}
+}
