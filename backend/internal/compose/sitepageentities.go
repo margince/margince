@@ -49,7 +49,8 @@ func gatePageEntities(parsed pageFactsReply, page crawlPage, idx snippetIndex, d
 			// across passages), but a DETAIL must come from the entity's own
 			// block or it belongs to a sibling company.
 			blockNorm := ""
-			if block, ok := legalEvidenceBlock(idx, e.E, name); ok {
+			block, refusal := legalEvidenceBlock(idx, e.E, name)
+			if refusal == "" {
 				entity.EvidenceSnippet = block
 				blockNorm = normalizeEvidence(block)
 			}
@@ -71,7 +72,15 @@ func gatePageEntities(parsed pageFactsReply, page crawlPage, idx snippetIndex, d
 				fieldRegisterVat:       e.V,
 			} {
 				if strings.TrimSpace(claimed) != "" && groundedDetail(blockNorm, claimed) == "" {
-					drop(laneLegal, field, claimed, dropValueNotInSnippet)
+					// The block's own refusal when it had one: a detail
+					// printed on the page under a sibling's name is a
+					// different defect from one the page never prints, and
+					// telling them apart is what makes either actionable.
+					reason := refusal
+					if reason == "" {
+						reason = dropValueNotInSnippet
+					}
+					drop(laneLegal, field, claimed, reason)
 				}
 			}
 			out = append(out, entity)
@@ -84,14 +93,38 @@ func gatePageEntities(parsed pageFactsReply, page crawlPage, idx snippetIndex, d
 // block. Addresses and registry lines commonly follow the company name in
 // the next 300-rune passage. Adjacent text joins only while it does not look
 // like a different registered company, preserving the sibling-entity gate.
-func legalEvidenceBlock(idx snippetIndex, id, currentName string) (string, bool) {
+//
+// It answers the drop reason rather than a bare bool, because the two ways a
+// block can be unusable are not the same finding and a reader acts on each
+// differently.
+func legalEvidenceBlock(idx snippetIndex, id, currentName string) (string, string) {
 	ref, ok := idx.resolve(id)
 	if !ok {
-		return "", false
+		return "", dropSnippetIDUnknown
+	}
+	// THE CITED PASSAGE MUST NAME THE ENTITY IT IS TESTIFYING FOR.
+	//
+	// Without this, a reply may name entity A while citing entity B's block,
+	// and B's grounded address and register number attach to A. Both halves
+	// are printed on the page, so nothing downstream can tell — which is the
+	// shape a group imprint listing several subsidiaries produces, and it
+	// lands without human confirmation on the auto-enrichment path.
+	//
+	// It is the CITED passage rather than the joined block: a reply citing a
+	// sibling's block would otherwise pass on a neighbour that happens to
+	// print this entity's name, which is the ordinary layout of exactly the
+	// page this guards.
+	//
+	// A name the layout broke across this boundary therefore loses its
+	// details. That is the safe direction — the entity still stands in the
+	// census, and a human types an address — where the other one prints a
+	// register number that was never this company's.
+	if groundedDetail(ref.norm, currentName) == "" {
+		return "", dropLegalBlockNotThisEntity
 	}
 	var n int
 	if _, err := fmt.Sscanf(id, "s%d", &n); err != nil {
-		return ref.passage, true
+		return ref.passage, ""
 	}
 	parts := []string{ref.passage}
 	for _, adjacent := range []int{n - 1, n + 1} {
@@ -107,7 +140,7 @@ func legalEvidenceBlock(idx snippetIndex, id, currentName string) (string, bool)
 			parts = append(parts, idx.refs[adjacent].passage)
 		}
 	}
-	return strings.Join(parts, " "), true
+	return strings.Join(parts, " "), ""
 }
 
 func looksLikeDifferentLegalEntity(passageNorm, currentName string) bool {
