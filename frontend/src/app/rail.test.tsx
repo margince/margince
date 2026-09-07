@@ -174,6 +174,33 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     expect(headings).toEqual(["Records", "Work", "Intelligence"]);
   });
 
+  // Collapsed, a group heading has no word to show — 56px carries a glyph and
+  // not a label — so it is not drawn, and the break between two groups is what
+  // says where one ends. It stays in the DOCUMENT either way: the outline a
+  // screen reader walks does not depend on how wide the reader left the panel.
+  //
+  // Asserted as a COMPARISON of the two states rather than as one absolute, for
+  // the reason the brand head's own pair gives: two independent expectations
+  // would both pass against a heading that had quietly stopped being drawn in
+  // either state.
+  it("draws the group headings expanded and not collapsed", () => {
+    shellStyles = mountShellStyles();
+    const expanded = render(<WorkspaceRail route={{ screen: "brief" }} />);
+    const collapsed = render(
+      <WorkspaceRail route={{ screen: "brief" }} collapsed />,
+    );
+    expect(railDisplay(expanded.container, ".navheading")).not.toBe("none");
+    expect(railDisplay(collapsed.container, ".navheading")).toBe("none");
+    // Both panels still publish all three, whichever width they are at.
+    for (const rail of [expanded, collapsed]) {
+      expect(
+        [...rail.container.querySelectorAll(".navheading")].map(
+          (heading) => heading.textContent,
+        ),
+      ).toEqual(["Records", "Work", "Intelligence"]);
+    }
+  });
+
   it("marks exactly one item active, matching the route", () => {
     render(<WorkspaceRail route={{ screen: "deals" }} />);
     const active = screen

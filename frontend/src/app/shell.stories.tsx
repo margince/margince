@@ -230,9 +230,9 @@ function SidebarExample({
 
 // Both sidebar states, side by side. Expanded is 252px of 34px rows on a 4px
 // gutter; collapsed is the canonical 56px geometry, where a row IS its target and
-// keeps 44px, the logomark stands alone in the head, and the group headings go
-// transparent and draw a 22px hairline inside the box they kept — so nothing
-// below them re-spaces across the collapse.
+// keeps 44px, the logomark stands alone in the head, and the group headings are
+// not drawn at all — 56px carries a glyph and not a label, and the break between
+// two groups is what says where one ends.
 //
 // What is NOT in either panel: the search and the account block. Both moved to
 // the strip above (app/topbar.tsx), which is why these frames render that strip
@@ -592,8 +592,9 @@ export const SectionLevel: Story = {
 };
 
 // The same level at 56px: icons, the collapsed rail's tooltip on hover or
-// keyboard focus, group headings reduced to hairlines — the level's own name
-// among them — and no search box, which has no icon-sized form.
+// keyboard focus, no group headings — the level's own name among them, since it
+// is one — and no search box, which has no icon-sized form. What is left saying
+// where one group ends is the space between them.
 export const SectionLevelCollapsed: Story = {
   name: "second level — collapsed",
   render: () => (
@@ -690,9 +691,9 @@ export const SectionPhone: Story = {
  *   so this is the only place at this width that says which workspace this is;
  * - the labels themselves, at body size, with each row's glyph on the left and
  *   the whole width as its target;
- * - the group headings, spelled out rather than standing in as the collapsed
- *   rail's hairline, because the sheet is 600px wide whatever the desktop
- *   preference it inherited was left at;
+ * - the group headings, spelled out where the collapsed sidebar draws none,
+ *   because the sheet is 600px wide whatever the desktop preference it
+ *   inherited was left at;
  * - the badge as a TRAILING figure in its row rather than a chip pinned to a
  *   tab — a list row has somewhere to put a number.
  *

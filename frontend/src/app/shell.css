@@ -644,27 +644,19 @@
    sets these small and plain. The group is separated by space, not by a rule:
    a heading and a divider do the same job, and stacking both says it twice. */
 .rail .navheading {
-  position: relative;
   padding: 0 var(--space-2);
   /* It is a label, not a place to go. Sitting in a column of links it inherited
      the text cursor, which offers a selection nobody wants over a word that
      answers no press. */
   cursor: default;
 }
-/* Collapsed: the heading keeps its exact box (same font metrics, same margins)
-   so the rows below never re-space; the text goes transparent and a hairline is
-   drawn inside that space instead. */
+/* Collapsed there is no word to show: 56px carries a glyph and not a label, and
+   a heading standing in for one — as a hairline, or as a box holding its own
+   height with the ink taken out — draws a second divider over the break that
+   already separates the groups. So it is not drawn, and `.rail .navgroup +
+   .navgroup` alone says where one group ends and the next begins. */
 .rail.collapsed .navheading {
-  color: transparent;
-}
-.rail.collapsed .navheading::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 22px;
-  transform: translateX(-50%);
-  border-top: 1px solid var(--borderSubtle);
+  display: none;
 }
 
 .rail .navwrap {
@@ -1576,8 +1568,13 @@
   .rail.sheetopen .ws {
     display: flex;
   }
+  /* Every axis the collapsed sidebar closes this block on, opened again: the
+     sheet inherits `.rail.collapsed` whenever that is what the desktop was left
+     at, and the head is the only thing at this width that says which workspace
+     this is — so a `height` left at 0 would empty it. */
   .rail.sheetopen .ws-name {
     width: auto;
+    height: auto;
     opacity: 1;
   }
   /* The close control keeps its glyph and drops its word: pinned in the corner
@@ -1634,9 +1631,6 @@
     width: 20px;
     height: 20px;
   }
-  .rail.sheetopen .navheading {
-    display: block;
-  }
   .rail.sheetopen .navlabel,
   .rail.sheetopen.collapsed .navlabel,
   .rail.sheetopen .navitem:has(.count) .navlabel {
@@ -1661,15 +1655,13 @@
     position: static;
     margin-left: auto;
   }
+  /* The sheet is 600px wide even when the desktop preference it inherits is the
+     56px rail, which is why this restates `display` at all: the collapsed
+     sidebar draws no heading, and the sheet has room to spell every group name
+     out. Later in the file than that rule and weighing the same, so it wins. */
   .rail.sheetopen .navheading {
     display: block;
-    /* The sheet is 600px wide even when the desktop preference it inherits is
-       the 56px rail, so the group names are spelled out here rather than
-       standing in as the collapsed rail's hairline. */
     color: var(--textMeta);
-  }
-  .rail.sheetopen .navheading::after {
-    display: none;
   }
   /* In the sheet the level is a column again — the sheet is the phone's whole
      sidebar, and a bar's row of tabs is not a list of ten places. The collapsed
@@ -1779,15 +1771,15 @@
  * This one lives in the rail, which is a positioned column of known width, so
  * it hangs off its own wrapper and needs no measuring at all.
  *
- * No horizontal inset: the field's edges are the ROWS' edges. A row is a
- * `.navwrap` spanning the level, and its own inset is inside it — so a padding
- * here would stand the box the reader types in narrower than every box under
- * it, which reads as a field that belongs to something else. The vertical air
- * separates it from the way back up above; the break below it is the first
- * group's, on the same interval every group break takes. */
-.navlead {
-  padding: var(--space-2) 0;
-}
+ * The wrapper takes NO inset, in either axis, and the absence is the decision
+ * rather than an omission. Horizontally the field's edges are the ROWS' edges —
+ * a row is a `.navwrap` spanning the level and carries its own inset inside it,
+ * so a padding here would stand the box the reader types in narrower than every
+ * box under it. Vertically the intervals around it already belong to its
+ * neighbours: the way out of the section carries its own margin below, and the
+ * first group takes the same break from this box that two groups take from each
+ * other (`.rail .navlead + .navgroup`). So `.navlead` has no geometry of its
+ * own — only the one state below, where it stands down. */
 
 /* Absent in the collapsed rail, which is 56px wide: a text field in there is a
    box too narrow to read your own typing in, over a result list narrower still.
