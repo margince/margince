@@ -40,6 +40,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
@@ -227,6 +228,13 @@ type Server struct {
 	// and is not a credential to carry over an untrusted network. See
 	// gateMetrics in routes.go.
 	metricsToken string
+
+	// httpMetrics accumulates the HTTP request families /metrics serves. A
+	// POINTER, and that is load-bearing: contractAPI and operationalMux each
+	// take the Server BY VALUE, so a struct-valued store would give the
+	// middleware and the exposition two separate copies -- requests counted
+	// into one, a scrape reading the other, and both looking correct.
+	httpMetrics *httpserver.HTTPMetrics
 
 	// bootstrapSeeds are the deployment file's `seeds`, carried here so a
 	// CLAIM lays down the same module defaults a configured bootstrap would.

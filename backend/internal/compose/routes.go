@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -84,6 +85,16 @@ func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) 
 			// be recorded under an idempotency key or staged as an agent
 			// approval — the honest unsupported_by_sor, for every principal.
 			overlayWriteGuard(srv.sorDispatch),
+			// Outermost of all, so the measurement covers the admission gate,
+			// the idempotency replay and the overlay guard rather than only the
+			// handler underneath them. A 403 from the gate IS this route's
+			// latency as a client experiences it, and a refusal that cost a
+			// database read is exactly the slow answer worth seeing.
+			//
+			// These are OPERATION middleware: the generated wrapper applies
+			// them after chi has matched, which is what makes chiRoutePattern
+			// able to answer at all.
+			srv.httpMetrics.Measure(chiRoutePattern),
 		},
 		// Keep query/path/header parse failures on the problem+json path:
 		// the generated default writes err.Error() as text/plain, an
@@ -91,6 +102,23 @@ func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) 
 		ErrorHandlerFunc: paramParseError,
 	})
 	return api
+}
+
+// chiRoutePattern reads the route TEMPLATE chi matched -- `/v1/deals/{dealId}`,
+// never `/v1/deals/9f3c…`. That distinction is the whole reason this function
+// exists rather than r.URL.Path being passed: the path carries ids, and a label
+// carrying ids grows a series per record for the life of the process.
+//
+// The generated server applies its Middlewares as OPERATION middleware, after
+// the match, so RouteContext is populated by the time this runs. An empty
+// answer means chi matched nothing, and HTTPMetrics folds that into one bucket
+// rather than substituting the path.
+func chiRoutePattern(r *http.Request) string {
+	rc := chi.RouteContext(r.Context())
+	if rc == nil {
+		return ""
+	}
+	return rc.RoutePattern()
 }
 
 // replayProbes wires the module-owned visibility rules the replay gate borrows
