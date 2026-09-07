@@ -356,6 +356,18 @@ func (e *Env) WsExec(t *testing.T, sql string, args ...any) {
 	}
 }
 
+// WsExecErr is WsExec for a statement the estate is EXPECTED to refuse: it
+// hands the error back rather than failing the test on it, so a suite can
+// assert which rule refused and not merely that something did.
+func (e *Env) WsExecErr(t *testing.T, sql string, args ...any) error {
+	t.Helper()
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	return database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, sql, args...)
+		return err
+	})
+}
+
 // WsCount returns a scalar count in a workspace-bound transaction.
 func (e *Env) WsCount(t *testing.T, sql string, args ...any) int {
 	t.Helper()
