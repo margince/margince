@@ -107,7 +107,9 @@ describe("WorkingHoursCard", () => {
 
     const saturday = await screen.findByLabelText("Saturday");
     await userEvent.click(saturday);
-    await userEvent.click(screen.getByRole("button", { name: /save/i }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /save working hours/i }),
+    );
 
     await waitFor(() => expect(backend.writes()).toHaveLength(1));
     // Ascending: the days are a set, and the server stores them that way, so a
@@ -125,7 +127,9 @@ describe("WorkingHoursCard", () => {
     // week however long each day is.
     const friday = await screen.findByLabelText("Friday");
     await userEvent.click(friday);
-    await userEvent.click(screen.getByRole("button", { name: /save/i }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /save working hours/i }),
+    );
 
     expect(
       await screen.findByText(/bookable for less of the week/i),
@@ -139,7 +143,9 @@ describe("WorkingHoursCard", () => {
 
     const saturday = await screen.findByLabelText("Saturday");
     await userEvent.click(saturday);
-    await userEvent.click(screen.getByRole("button", { name: /save/i }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /save working hours/i }),
+    );
 
     await waitFor(() => expect(backend.writes()).toHaveLength(1));
     // A warning that fires on every save is one a reader learns to skip, and

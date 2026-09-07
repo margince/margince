@@ -7451,7 +7451,7 @@ export const en = {
   "workingHours.narrowed":
     "You are bookable for less of the week than before, so fewer customers will find a time. That is the change, not a fault.",
   "workingHours.saveFailed": "Those hours were not saved.",
-  "workingHours.save": "Save",
+  "workingHours.save": "Save working hours",
   "workingHours.day.1": "Monday",
   "workingHours.day.2": "Tuesday",
   "workingHours.day.3": "Wednesday",

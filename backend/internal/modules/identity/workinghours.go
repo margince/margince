@@ -49,6 +49,10 @@ const (
 	fieldWorkEnd      = "end_time"
 	fieldWorkDays     = "days"
 	fieldWorkTimezone = "timezone"
+	// codeInvalid is the wire code every field refusal in this package answers
+	// with. One spelling, because a settings form keys its per-control message
+	// off it and two spellings would put one control's message somewhere else.
+	codeInvalid = "invalid"
 )
 
 // WorkingHours is one person's bookable window, as minutes past local midnight
@@ -305,7 +309,7 @@ func (e *WorkingHoursError) Error() string { return e.Field + ": " + e.Message }
 
 // FieldFault carries it to a 422 naming the field on every surface.
 func (e *WorkingHoursError) FieldFault() (field, code, message string) {
-	return e.Field, "invalid", e.Message
+	return e.Field, codeInvalid, e.Message
 }
 
 // minuteColumn narrows a minute of the day to the column's width.

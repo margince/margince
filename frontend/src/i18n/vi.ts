@@ -7262,7 +7262,7 @@ export const vi = {
   "workingHours.narrowed":
     "Bạn nhận lịch trong ít thời gian hơn trước, nên sẽ có ít khách tìm được giờ hẹn hơn. Đó là thay đổi bạn vừa lưu, không phải lỗi.",
   "workingHours.saveFailed": "Chưa lưu được khung giờ này.",
-  "workingHours.save": "Lưu",
+  "workingHours.save": "Lưu khung giờ làm việc",
   "workingHours.day.1": "Thứ Hai",
   "workingHours.day.2": "Thứ Ba",
   "workingHours.day.3": "Thứ Tư",

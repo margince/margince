@@ -7343,7 +7343,7 @@ export const de = {
   "workingHours.narrowed":
     "Du bist jetzt für weniger von der Woche buchbar als vorher, also finden weniger Kundinnen und Kunden einen Termin. Das ist die Änderung, kein Fehler.",
   "workingHours.saveFailed": "Diese Zeiten wurden nicht gespeichert.",
-  "workingHours.save": "Speichern",
+  "workingHours.save": "Arbeitszeiten speichern",
   "workingHours.day.1": "Montag",
   "workingHours.day.2": "Dienstag",
   "workingHours.day.3": "Mittwoch",

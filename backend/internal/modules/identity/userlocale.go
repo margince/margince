@@ -143,5 +143,5 @@ func (e *UnknownLocaleError) Error() string {
 
 // FieldFault carries it to a 422 naming `locale` on every surface.
 func (e *UnknownLocaleError) FieldFault() (field, code, message string) {
-	return localeField, "invalid", "a display language is one of en, de, vi"
+	return localeField, codeInvalid, "a display language is one of en, de, vi"
 }
