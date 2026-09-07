@@ -1066,11 +1066,12 @@ export const vi = {
   "access.emailLabel": "Địa chỉ email",
   "access.capabilityLegend": "Họ được làm gì?",
   "access.inviteNote":
-    "Bạn sẽ nhận được liên kết để sao chép. Nếu đã cấu hình gửi thư, liên kết cũng được gửi cho họ.",
+    "Bạn sẽ nhận được liên kết để sao chép. Nếu đã cấu hình gửi thư, chúng tôi cũng thử gửi cho họ.",
   "access.issued.title": "Liên kết cho {name}",
   "access.issued.mailed":
     "Đã gửi tới {email}. Bạn cũng có thể sao chép bên dưới.",
-  "access.issued.notMailed": "Chưa gửi thư. Hãy sao chép liên kết và tự gửi.",
+  "access.issued.notMailed":
+    "Liên kết chưa được gửi qua thư. Hãy sao chép và tự gửi.",
   "access.issued.linkLabel": "Liên kết của họ",
   "access.issued.copy": "Sao chép liên kết",
   "access.issued.copied": "Đã sao chép",
@@ -1396,6 +1397,11 @@ export const vi = {
   "approval.kind.org_name_promotion": "Đổi tên một công ty",
   "approval.kind.vcard_create": "Tạo hồ sơ người từ danh thiếp",
   "approval.kind.lifecycle_change": "Giai đoạn công ty",
+  "approval.kind.stage_progression":
+    "Chuyển giao dịch sang giai đoạn tiếp theo",
+  "approval.field.because": "Lý do",
+  "approval.field.from_stage": "Từ",
+  "approval.field.to_stage": "Đến",
   "approval.kind.transcript_proposal":
     "Thêm bước tiếp theo từ bản ghi cuộc trò chuyện",
   "approval.kind.fx_rate_proposal": "Làm mới tỷ giá",
@@ -1412,7 +1418,6 @@ export const vi = {
   "approval.kind.send_account_email": "Gửi email cho một công ty",
   "approval.kind.send_message": "Gửi một tin nhắn",
   "approval.field.basis": "Vì sao",
-  "approval.field.because": "Vì sao",
   "approval.field.step": "Bước cần làm",
   "approval.field.intent": "Vì sao thư này được soạn",
   "approval.field.evidence_snippet": "Trang web viết gì",
@@ -7248,6 +7253,28 @@ export const vi = {
   "aiRouting.saving": "Đang lưu ràng buộc…",
   "aiRouting.saved": "Đã lưu định tuyến. Mọi tiến trình đang phục vụ theo nó.",
   "aiRouting.adminOnly": "Chỉ admin hoặc ops mới đổi được định tuyến mô hình.",
+  "workingHours.title": "Khi nào bạn nhận lịch hẹn",
+  "workingHours.sub":
+    "Chỉ của riêng bạn. Không ai đặt giúp bạn, và bạn cũng không đặt cho ai.",
+  "workingHours.unset":
+    "Bạn chưa chọn, nên khách được đề nghị 09:00–17:00, thứ Hai đến thứ Sáu, theo đồng hồ của hệ thống.",
+  "workingHours.start": "Bắt đầu ngày",
+  "workingHours.end": "Kết thúc ngày",
+  "workingHours.days": "Những ngày bạn làm việc",
+  "workingHours.timezone": "Múi giờ của bạn",
+  "workingHours.timezoneHelp":
+    "Đồng hồ dùng để đọc hai mốc giờ trên. Điền sẵn từ trình duyệt này.",
+  "workingHours.narrowed":
+    "Bạn nhận lịch trong ít thời gian hơn trước, nên sẽ có ít khách tìm được giờ hẹn hơn. Đó là thay đổi bạn vừa lưu, không phải lỗi.",
+  "workingHours.saveFailed": "Chưa lưu được khung giờ này.",
+  "workingHours.save": "Lưu khung giờ làm việc",
+  "workingHours.day.1": "Thứ Hai",
+  "workingHours.day.2": "Thứ Ba",
+  "workingHours.day.3": "Thứ Tư",
+  "workingHours.day.4": "Thứ Năm",
+  "workingHours.day.5": "Thứ Sáu",
+  "workingHours.day.6": "Thứ Bảy",
+  "workingHours.day.7": "Chủ Nhật",
   "autonomy.title": "Những gì tự xử lý",
   "autonomy.sub":
     "Những chỉnh sửa nhỏ bạn vẫn xác nhận bằng tay. Bật một mục lên và nó sẽ được áp dụng ngay khi xuất hiện, kèm thay đổi và nút Hoàn tác chờ sẵn trong ngày của bạn.",

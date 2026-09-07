@@ -196,6 +196,20 @@ export function settingsBackend() {
         user: { ...me.user, email: "ada@acme.test" },
       });
     }
+    // When this reader is bookable. The Account tab carries the card, and a
+    // page whose card cannot load its own answer renders nothing around it —
+    // which is what every case on this tab would then be measuring.
+    if (url.includes("/me/working-hours")) {
+      return jsonResponse({
+        chosen: false,
+        working_hours: {
+          start_time: "09:00",
+          end_time: "17:00",
+          days: [1, 2, 3, 4, 5],
+          timezone: "Europe/Berlin",
+        },
+      });
+    }
     if (url.includes("/passports")) {
       return jsonResponse({
         data: [

@@ -10824,10 +10824,11 @@ export interface paths {
         put?: never;
         /**
          * Admit a named person to the room.
-         * @description HUMAN-ONLY. Records the person and mints one credential for them. Whether that
-         *     credential is delivered depends on the installation having outbound mail
-         *     configured; the participant and the invitation are recorded either way, so a
-         *     mail failure never leaves a half-admitted person.
+         * @description HUMAN-ONLY. Records the person and mints one credential for them. Whether a mail
+         *     relay took the credential is reported as `queued` — it is false when the
+         *     installation has no outbound mail configured and when the relay refused the
+         *     message. The participant and the invitation are recorded either way, so a mail
+         *     failure never leaves a half-admitted person.
          *
          *     One live seat per address: inviting an address that already holds one is
          *     rejected (409 `deal_room_participant_already_invited`). Re-inviting an address
@@ -13081,6 +13082,42 @@ export interface paths {
          *     saves on every render does not fill the ledger with changes nobody made.
          */
         put: operations["saveMyBriefDelivery"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/working-hours": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * When you are bookable.
+         * @description Always the CALLER's own. A person who has chosen nothing is answered with
+         *     the fallback and `chosen: false`, so a screen can offer it as a starting
+         *     point rather than show it as a decision they made.
+         */
+        get: operations["getMyWorkingHours"];
+        /**
+         * Choose the hours and days you are bookable.
+         * @description Always the CALLER's own, never anybody else's — an admin does not set a
+         *     colleague's working hours through this API, for the reason the setting
+         *     exists at all.
+         *
+         *     The times are read on the timezone sent with them, which is also stored:
+         *     it is the person's own zone and the product had no author for it before
+         *     this. Sending the browser's zone is the expected first write.
+         *
+         *     Narrowing these hours narrows what a customer can book. A screen that
+         *     does not say so at the moment of saving has built a trap rather than a
+         *     setting.
+         */
+        put: operations["saveMyWorkingHours"];
         post?: never;
         delete?: never;
         options?: never;
@@ -20512,6 +20549,49 @@ export interface components {
              */
             display_name: string;
         };
+        /**
+         * @description When one person is bookable, on their own clock.
+         *
+         *     Personal, never installation-wide: people on one team sit in different
+         *     countries, some work part time, and one pair of numbers set by an admin
+         *     is wrong for most of them while the people it fails cannot change it.
+         *     This is the setting a person's display language is: their own, and
+         *     nobody else's to set.
+         *
+         *     One range on every working day rather than a range per day. The two
+         *     cases that prompted it — 8-18 Monday to Saturday, 9-13 Monday to
+         *     Thursday — are both a range plus a set of days, and per-day hours can be
+         *     added on top later without redoing this.
+         */
+        WorkingHours: {
+            /** @description The first minute of the working day, `HH:MM` on the person's own clock. */
+            start_time: string;
+            /**
+             * @description The minute the working day ends, exclusive. `24:00` is the honest
+             *     spelling of "until midnight" and is why this is not the same pattern
+             *     as `start_time`.
+             */
+            end_time: string;
+            /** @description The days worked, as ISO-8601 weekday numbers — 1 is Monday. */
+            days: number[];
+            /**
+             * @description The IANA zone the two times are read on. A person who has never
+             *     chosen one is read on the installation's reporting timezone, which
+             *     is what makes the unset case work rather than scheduling everybody
+             *     on UTC.
+             */
+            timezone: string;
+        };
+        /** @description The caller's own working hours, and whether they are theirs or the fallback. */
+        MyWorkingHoursResponse: {
+            working_hours: components["schemas"]["WorkingHours"];
+            /**
+             * @description False when nobody has chosen: the hours above are then the fallback —
+             *     09:00-17:00, Monday to Friday — and the screen should offer them as a
+             *     starting point rather than present them as a decision somebody made.
+             */
+            chosen: boolean;
+        };
         SaveMyLocaleRequest: {
             /**
              * @description The language to render this person's own interface in. One of the
@@ -24141,7 +24221,7 @@ export interface components {
         SignalEvidence: {
             snippet: string;
             /** @enum {string|null} */
-            source_type?: "activity" | "deal" | "signal" | "relationship" | "page" | null;
+            source_type?: "activity" | "deal" | "signal" | "relationship" | "page" | "contract" | null;
             source_id?: string | null;
         };
         /** @description One exchange that makes ordinary business correspondence lawful. */
@@ -26513,6 +26593,23 @@ export interface components {
              *     words either way — this is the NAME to put in them, never a sentence.
              */
             subject_label?: string | null;
+            /**
+             * @description The kind of record `subject_label` names, as the emitting source spells it:
+             *     `organization`, `person` and `activity` from the kernel's entity kinds, and
+             *     `attachment` from the document reading, which has no kernel kind. It is here so
+             *     a client can make the name a way to reach the record rather than a word in a
+             *     sentence; a client needs both this and `subject_id` before it links.
+             *
+             *     Admissible on the same ground as the label — it is the reader's own record, already
+             *     shown to them on the surface the occurrence came from. A kind the client has no
+             *     page for is drawn as text, which is what an older client does with every kind.
+             */
+            subject_type?: string | null;
+            /**
+             * Format: uuid
+             * @description That record's id, so the name can link to it.
+             */
+            subject_id?: string | null;
         };
         AgentTool: {
             /** @description The tool name (tools/list identity). */
@@ -27549,7 +27646,7 @@ export interface components {
             /** @description The fragment as it reads in the source, quoted rather than paraphrased. */
             evidence_snippet: string;
             /** @enum {string|null} */
-            source_type?: "activity" | "deal" | "signal" | "relationship" | "page" | null;
+            source_type?: "activity" | "deal" | "signal" | "relationship" | "page" | "contract" | null;
             /** Format: uuid */
             source_id?: string | null;
             /** @description 1-based line numbers within the source record's body that this claim was read from, for a source whose body is line-addressed (a meeting transcript today, per ADR-0058: line N is the Nth newline-split segment of activity.body). Absent for a source that is not line-addressed. */
@@ -29017,12 +29114,18 @@ export interface components {
             /** Format: date-time */
             credential_expires_at: string;
             /**
-             * @description Whether the invitation was handed to a mail relay. False when the
-             *     installation has no outbound mail configured — the participant and the
-             *     credential are still recorded, and the caller is expected to deliver the
-             *     link itself rather than being told the invitation failed.
+             * @description Whether a mail relay accepted the invitation for sending. False when the
+             *     installation has no outbound mail configured, or the relay refused it — the
+             *     participant and the credential are recorded either way, and the caller is
+             *     expected to pass the link on themselves rather than being told the
+             *     invitation failed.
+             *
+             *     Deliberately not `delivered`: a relay accepting a message is not a mailbox
+             *     receiving it, and an address that hard-bounces a second later was `queued`
+             *     all the same. The one attempt is stamped onto the invitation, which the
+             *     roster reports; nothing revises it afterwards.
              */
-            delivered: boolean;
+            queued: boolean;
         };
         DealRoomPreviewIssued: {
             /** @description The one-time `mdr_` credential. Shown once; the server keeps only its digest. */
@@ -52665,6 +52768,53 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getMyWorkingHours: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's working hours. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyWorkingHoursResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    saveMyWorkingHours: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkingHours"];
+            };
+        };
+        responses: {
+            /** @description The hours as stored. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyWorkingHoursResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
             422: components["responses"]["ValidationError"];
         };
     };

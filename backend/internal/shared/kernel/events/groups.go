@@ -83,6 +83,17 @@ func Groups() []Group {
 		// and evidence must keep flowing when an accrual is wedged. The two
 		// share a stream and nothing else.
 		{Name: "cg:stage-evidence", Streams: forEntities(dealStreamEntity, activityStreamEntity)},
+		// How each proposed stage move was received, counted on the ledger the
+		// launch gate reads. The APPROVAL stream, because a verdict rides
+		// there — including `expired`, the window closing on a card nobody
+		// answered, which is a real outcome written by the sweep rather than by
+		// any human.
+		//
+		// Its own group rather than a handler on cg:stage-evidence: that
+		// consumer WRITES the evidence a proposal rests on and this one counts
+		// what happened to the proposal, so a wedged extraction must not stop
+		// the measurement that says whether the feature may stay on.
+		{Name: "cg:stage-progression-outcome", Streams: forEntities(approvalStreamEntity)},
 		// Closing an introduction the contact answered. Its own group because
 		// the evidence is perishable in one direction: `replied` may only be
 		// reached from a captured message, so a lane wedged behind an

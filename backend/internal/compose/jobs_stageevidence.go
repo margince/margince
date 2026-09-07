@@ -95,7 +95,8 @@ func newStageEvidenceReadWorker(
 ) *stageEvidenceReadWorker {
 	return &stageEvidenceReadWorker{
 		reader: NewStageEvidenceReader(pool, StageEvidenceDeals(pool),
-			StageEvidenceDomains(pool), brain, time.Now, log),
+			StageEvidenceDomains(pool), brain,
+			StageProgressionProposals(pool, time.Now, log), time.Now, log),
 		log: log,
 	}
 }

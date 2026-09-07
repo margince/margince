@@ -15811,10 +15811,11 @@ paths:
       operationId: inviteDealRoomParticipant
       summary: Admit a named person to the room.
       description: |
-        HUMAN-ONLY. Records the person and mints one credential for them. Whether that
-        credential is delivered depends on the installation having outbound mail
-        configured; the participant and the invitation are recorded either way, so a
-        mail failure never leaves a half-admitted person.
+        HUMAN-ONLY. Records the person and mints one credential for them. Whether a mail
+        relay took the credential is reported as `queued` — it is false when the
+        installation has no outbound mail configured and when the relay refused the
+        message. The participant and the invitation are recorded either way, so a mail
+        failure never leaves a half-admitted person.
 
         One live seat per address: inviting an address that already holds one is
         rejected (409 `deal_room_participant_already_invited`). Re-inviting an address
@@ -19033,6 +19034,56 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /me/working-hours:
+    get:
+      tags: [Identity]
+      operationId: getMyWorkingHours
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: When you are bookable.
+      description: |
+        Always the CALLER's own. A person who has chosen nothing is answered with
+        the fallback and `chosen: false`, so a screen can offer it as a starting
+        point rather than show it as a decision they made.
+      responses:
+        '200':
+          description: The caller's working hours.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MyWorkingHoursResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    put:
+      tags: [Identity]
+      operationId: saveMyWorkingHours
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Choose the hours and days you are bookable.
+      description: |
+        Always the CALLER's own, never anybody else's — an admin does not set a
+        colleague's working hours through this API, for the reason the setting
+        exists at all.
+
+        The times are read on the timezone sent with them, which is also stored:
+        it is the person's own zone and the product had no author for it before
+        this. Sending the browser's zone is the expected first write.
+
+        Narrowing these hours narrows what a customer can book. A screen that
+        does not say so at the moment of saving has built a trap rather than a
+        setting.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WorkingHours' }
+      responses:
+        '200':
+          description: The hours as stored.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MyWorkingHoursResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /me/locale:
     put:
       tags: [Identity]
@@ -29065,6 +29116,62 @@ components:
             that is only whitespace is refused — the same bounds the invite form
             applies, because this writes the same column.
       additionalProperties: false
+    WorkingHours:
+      type: object
+      additionalProperties: false
+      required: [start_time, end_time, days, timezone]
+      description: |
+        When one person is bookable, on their own clock.
+
+        Personal, never installation-wide: people on one team sit in different
+        countries, some work part time, and one pair of numbers set by an admin
+        is wrong for most of them while the people it fails cannot change it.
+        This is the setting a person's display language is: their own, and
+        nobody else's to set.
+
+        One range on every working day rather than a range per day. The two
+        cases that prompted it — 8-18 Monday to Saturday, 9-13 Monday to
+        Thursday — are both a range plus a set of days, and per-day hours can be
+        added on top later without redoing this.
+      properties:
+        start_time:
+          type: string
+          pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+          description: The first minute of the working day, `HH:MM` on the person's own clock.
+        end_time:
+          type: string
+          pattern: '^([01][0-9]|2[0-3]:[0-5][0-9]|24:00)$'
+          description: |
+            The minute the working day ends, exclusive. `24:00` is the honest
+            spelling of "until midnight" and is why this is not the same pattern
+            as `start_time`.
+        days:
+          type: array
+          minItems: 1
+          maxItems: 7
+          items: { type: integer, minimum: 1, maximum: 7 }
+          description: The days worked, as ISO-8601 weekday numbers — 1 is Monday.
+        timezone:
+          type: string
+          description: |
+            The IANA zone the two times are read on. A person who has never
+            chosen one is read on the installation's reporting timezone, which
+            is what makes the unset case work rather than scheduling everybody
+            on UTC.
+
+    MyWorkingHoursResponse:
+      type: object
+      additionalProperties: false
+      required: [working_hours, chosen]
+      description: The caller's own working hours, and whether they are theirs or the fallback.
+      properties:
+        working_hours: { $ref: '#/components/schemas/WorkingHours' }
+        chosen:
+          type: boolean
+          description: |
+            False when nobody has chosen: the hours above are then the fallback —
+            09:00-17:00, Monday to Friday — and the screen should offer them as a
+            starting point rather than present them as a decision somebody made.
 
     SaveMyLocaleRequest:
       type: object
@@ -32889,7 +32996,7 @@ components:
       required: [snippet]
       properties:
         snippet: { type: string }
-        source_type: { type: [string, 'null'], enum: [activity, deal, signal, relationship, page, null] }
+        source_type: { type: [string, 'null'], enum: [activity, deal, signal, relationship, page, contract, null] }
         source_id: { type: [string, 'null'] }
 
     RecordQualifyingEventRequest:
@@ -36243,6 +36350,23 @@ components:
             Absent is the ordinary case, not an error: most kinds are about no single record,
             and a client that has no name draws its generic sentence. The client owns the
             words either way — this is the NAME to put in them, never a sentence.
+        subject_type:
+          type: [string, 'null']
+          maxLength: 64
+          description: |
+            The kind of record `subject_label` names, as the emitting source spells it:
+            `organization`, `person` and `activity` from the kernel's entity kinds, and
+            `attachment` from the document reading, which has no kernel kind. It is here so
+            a client can make the name a way to reach the record rather than a word in a
+            sentence; a client needs both this and `subject_id` before it links.
+
+            Admissible on the same ground as the label — it is the reader's own record, already
+            shown to them on the surface the occurrence came from. A kind the client has no
+            page for is drawn as text, which is what an older client does with every kind.
+        subject_id:
+          type: [string, 'null']
+          format: uuid
+          description: That record's id, so the name can link to it.
     AgentTool:
       type: object
       # title and description are required because registration guarantees
@@ -37471,7 +37595,7 @@ components:
       required: [evidence_snippet]
       properties:
         evidence_snippet: { type: string, description: 'The fragment as it reads in the source, quoted rather than paraphrased.' }
-        source_type: { type: [string, 'null'], enum: [activity, deal, signal, relationship, page, null] }
+        source_type: { type: [string, 'null'], enum: [activity, deal, signal, relationship, page, contract, null] }
         source_id: { type: [string, 'null'], format: uuid }
         source_lines:
           type: array
@@ -38992,20 +39116,26 @@ components:
         `credential` is returned ONCE and never again — only its hash is stored, so it
         cannot be recovered, only replaced by a resend. Treat it as a secret: it admits
         the bearer to everything the room has published.
-      required: [participant, credential, credential_expires_at, delivered]
+      required: [participant, credential, credential_expires_at, queued]
       properties:
         participant: { $ref: '#/components/schemas/DealRoomParticipant' }
         credential:
           type: string
           description: The raw one-time credential. Put it in the link's fragment, never its path.
         credential_expires_at: { type: string, format: date-time }
-        delivered:
+        queued:
           type: boolean
           description: |
-            Whether the invitation was handed to a mail relay. False when the
-            installation has no outbound mail configured — the participant and the
-            credential are still recorded, and the caller is expected to deliver the
-            link itself rather than being told the invitation failed.
+            Whether a mail relay accepted the invitation for sending. False when the
+            installation has no outbound mail configured, or the relay refused it — the
+            participant and the credential are recorded either way, and the caller is
+            expected to pass the link on themselves rather than being told the
+            invitation failed.
+
+            Deliberately not `delivered`: a relay accepting a message is not a mailbox
+            receiving it, and an address that hard-bounces a second later was `queued`
+            all the same. The one attempt is stamped onto the invitation, which the
+            roster reports; nothing revises it afterwards.
       additionalProperties: false
 
     DealRoomPreviewIssued:

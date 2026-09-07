@@ -138,6 +138,11 @@ type aiCertRecord struct {
 	LatencyP95MS      *int64         `json:"latency_p95_ms"`
 	Reported          aiCertOutcomes `json:"reported"`
 	StaleReason       string         `json:"stale_reason"`
+	// StaleCause is the same finding a reader can filter on: which half of the
+	// stamp moved, rather than a sentence they have to parse. A tool asking
+	// "which records went stale because the PRODUCT changed" is asking about
+	// prompt_changed, and the prose answer cannot be queried.
+	StaleCause *staleCause `json:"stale_cause,omitempty"`
 }
 
 type aiCertOutcomes struct {
@@ -238,6 +243,7 @@ func buildAICertRecord(row aicert.ReadinessRow, siteScenarios int) aiCertRecord 
 			Invalid: row.Tally.ReportedInvalid, Abstained: row.Tally.ReportedAbstained,
 		},
 		StaleReason: row.Standing.Reason(),
+		StaleCause:  staleCauseOf(row.Standing),
 	}
 	if row.Standing.Total > 0 {
 		measured := row.Standing.Measured
@@ -443,4 +449,49 @@ func marshalAICertDoc(doc aiCertDoc) ([]byte, error) {
 		return nil, err
 	}
 	return []byte(encoded.String()), nil
+}
+
+// staleCause is the structured half of a stale row: which of the three things a
+// stamp covers moved, and the scenarios each one moved under.
+//
+// Published beside the prose because they answer different questions. The
+// sentence tells a reader what happened; these fields let a script ask "which
+// records went stale because the product changed rather than because somebody
+// rewrote a test" — the question that would have caught a prompt rewrite
+// silently moving a certified task to not_supported.
+type staleCause struct {
+	CaseChanged   []string `json:"case_changed,omitempty"`
+	PromptChanged []string `json:"prompt_changed,omitempty"`
+	GraderChanged []string `json:"grader_changed,omitempty"`
+	// Unattributable names scenarios whose stamp this build cannot split — one
+	// written before the three-part layout. Reported rather than dropped: a
+	// cause list that silently omitted them would read as "nothing moved".
+	Unattributable []string `json:"unattributable,omitempty"`
+}
+
+// staleCauseOf groups a standing's moved scenarios by what moved under them,
+// or nil when the record is current or names no scenario at all.
+func staleCauseOf(s aicert.Standing) *staleCause {
+	if !s.Stale || len(s.Moved) == 0 {
+		return nil
+	}
+	var out staleCause
+	for _, name := range s.Moved {
+		p := s.MovedParts[name]
+		switch {
+		case !p.Case && !p.Prompt && !p.Grader:
+			out.Unattributable = append(out.Unattributable, name)
+		default:
+			if p.Case {
+				out.CaseChanged = append(out.CaseChanged, name)
+			}
+			if p.Prompt {
+				out.PromptChanged = append(out.PromptChanged, name)
+			}
+			if p.Grader {
+				out.GraderChanged = append(out.GraderChanged, name)
+			}
+		}
+	}
+	return &out
 }

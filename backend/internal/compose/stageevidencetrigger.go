@@ -32,6 +32,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -108,17 +109,29 @@ type StageEvidenceTrigger struct {
 	// reading runs in. A seam rather than a call, so a test can drive the
 	// trigger without bootstrapping one.
 	workspace func(context.Context) (ids.WorkspaceID, error)
-	log       *slog.Logger
+	// propose asks whether the evidence just written completes a stage's
+	// checklist. Nil is a legal composition and skips silently, exactly as a
+	// missing model lane does: an installation composing no proposer still gets
+	// a true evidence ledger, and the criteria simply go unread by the policy.
+	propose stageProposer
+	log     *slog.Logger
+}
+
+// stageProposer is the proposing half, as this trigger takes it. An interface
+// rather than the concrete type, so the evidence lane depends on the question
+// being asked and not on how a card gets staged.
+type stageProposer interface {
+	Propose(ctx context.Context, dealID ids.DealID) (bool, error)
 }
 
 // NewStageEvidenceTrigger builds the trigger over an explicit store and
 // domain reader, which is what lets a test drive it with a fixed domain list.
 func NewStageEvidenceTrigger(
 	pool *pgxpool.Pool, store *deals.Store, own deals.OwnDomainReader,
-	read StageEvidenceReadEnqueuer, log *slog.Logger,
+	read StageEvidenceReadEnqueuer, propose stageProposer, log *slog.Logger,
 ) *StageEvidenceTrigger {
 	return &StageEvidenceTrigger{
-		pool: pool, deals: store, own: own, read: read,
+		pool: pool, deals: store, own: own, read: read, propose: propose,
 		workspace: identity.NewService(pool).InstallationWorkspace,
 		log:       log,
 	}
@@ -417,9 +430,38 @@ func (t *StageEvidenceTrigger) write(
 	if err != nil {
 		return err
 	}
-	if written > 0 {
-		t.log.InfoContext(ctx, "stage evidence recorded",
-			"deal", claim.DealID.String(), "kind", string(claim.Kind), "rows", written)
+	if written == 0 {
+		// The claim was already on the ledger. Nothing changed, so the
+		// checklist stands exactly where the last write left it and re-asking
+		// would put the same card up twice.
+		return nil
+	}
+	t.log.InfoContext(ctx, "stage evidence recorded",
+		"deal", claim.DealID.String(), "kind", string(claim.Kind), "rows", written)
+	return t.proposeStageMove(ctx, claim.DealID)
+}
+
+// proposeStageMove asks whether the evidence just written finishes a stage.
+//
+// A FAILURE IS RETURNED, so the bus redelivers. Nothing else would ever come
+// back to it: the evidence is committed, no job is queued for the proposal, and
+// the next claim on this deal may be months away or never — so swallowing the
+// error loses the card for a deal whose criteria are, right now, all met.
+//
+// Redelivery is safe on both halves. The evidence write is ON CONFLICT DO
+// NOTHING and finds its own row; the staging joins the pending card under its
+// identity rather than adding a second. So a redelivered event re-proposes the
+// same move onto the same card.
+func (t *StageEvidenceTrigger) proposeStageMove(ctx context.Context, dealID ids.DealID) error {
+	if t.propose == nil {
+		return nil
+	}
+	staged, err := t.propose.Propose(ctx, dealID)
+	if err != nil {
+		return fmt.Errorf("propose the stage move this evidence completes: %w", err)
+	}
+	if staged {
+		t.log.InfoContext(ctx, "stage move proposed", "deal", dealID.String())
 	}
 	return nil
 }

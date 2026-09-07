@@ -129,6 +129,7 @@ import { TeamsCard } from "./users-access";
 import { UsersAdminCard } from "./users-admin";
 import { VoiceDnaCard } from "./voice-dna";
 import { WebhooksCard } from "./webhooks";
+import { WorkingHoursCard } from "./working-hours";
 import "./settings.css";
 
 import { ProvidersStat, SpendStat } from "./ai-settings";
@@ -178,7 +179,16 @@ export function tabContent(id: SettingsPageId): ReactNode {
   switch (id) {
     // ---- me ----
     case "account":
-      return <AccountCard />;
+      return (
+        <>
+          <AccountCard />
+          {/* When this person is bookable. Under the identity because it is a
+              statement about this reader rather than about the workspace: their
+              own week is theirs to set, and an admin setting it for them is the
+              shape the design refuses. */}
+          <WorkingHoursCard />
+        </>
+      );
     case "voice":
       return <VoiceDnaCard />;
     case "agents":

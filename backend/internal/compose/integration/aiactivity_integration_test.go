@@ -56,6 +56,9 @@ type change struct {
 	attempt       int
 	state         string
 	degradeReason string
+	// staleAfter is the lease's end as the source declared it; nil for a
+	// source that declares none, which is what most cases here are about.
+	staleAfter *time.Time
 }
 
 func (a *aiActivityEnv) build(c change) aiactivity.Change {
@@ -69,6 +72,7 @@ func (a *aiActivityEnv) build(c change) aiactivity.Change {
 		ActorUserID:   a.env.Rep1,
 		State:         c.state,
 		QueuedAt:      a.queuedAt,
+		StaleAfter:    c.staleAfter,
 		DegradeReason: c.degradeReason,
 		EventID:       ids.NewV7(),
 	}
@@ -108,6 +112,7 @@ type projected struct {
 	Attempt       int
 	StartedAt     *time.Time
 	FinishedAt    *time.Time
+	StaleAfter    *time.Time
 	DegradeReason *string
 	Seq           int64
 }
@@ -116,10 +121,10 @@ func (a *aiActivityEnv) read(t *testing.T) projected {
 	t.Helper()
 	var row projected
 	err := a.env.Pool.QueryRow(context.Background(),
-		`SELECT state, attempt, started_at, finished_at, degrade_reason, seq
+		`SELECT state, attempt, started_at, finished_at, stale_after, degrade_reason, seq
 		   FROM ai_task_run WHERE source = $1 AND occurrence_key = $2`,
 		"attachment_extraction", a.occurrenceKey).
-		Scan(&row.State, &row.Attempt, &row.StartedAt, &row.FinishedAt, &row.DegradeReason, &row.Seq)
+		Scan(&row.State, &row.Attempt, &row.StartedAt, &row.FinishedAt, &row.StaleAfter, &row.DegradeReason, &row.Seq)
 	if err != nil {
 		t.Fatalf("reading the projected occurrence: %v", err)
 	}
@@ -209,6 +214,84 @@ func TestAIActivitySeqAdvancesOnlyOnAnAppliedWrite(t *testing.T) {
 	}
 	if got := env.read(t).Seq; got != second {
 		t.Fatalf("a refused change moved seq from %d to %d", second, got)
+	}
+}
+
+// leasedUntil is a stale_after for the cases about renewal, an offset from the
+// same database instant every other timestamp here is derived from.
+func (a *aiActivityEnv) leasedUntil(d time.Duration) *time.Time {
+	until := a.queuedAt.Add(d)
+	return &until
+}
+
+// The ONE write admitted at an equal (attempt, rank): the same live state,
+// believable for longer. A source whose work spans several model calls leases
+// one call at a time and renews before each, so the projection has to take a
+// later stale_after on the row it already holds — refusing it is what forces a
+// lease to be sized for the longest work it could cover, which is exactly how
+// long a dead process then goes on being displayed as working.
+func TestAIActivityARenewalExtendsALiveLease(t *testing.T) {
+	env := newAIActivityEnv(t)
+	env.apply(t, change{attempt: 1, state: "running", staleAfter: env.leasedUntil(5 * time.Minute)})
+	before := env.read(t)
+
+	if !env.applyChange(t, change{attempt: 1, state: "running", staleAfter: env.leasedUntil(10 * time.Minute)}) {
+		t.Fatal("a renewal at the same attempt with a later lease must apply")
+	}
+	after := env.read(t)
+	if after.StaleAfter == nil || !after.StaleAfter.Equal(*env.leasedUntil(10 * time.Minute)) {
+		t.Errorf("stale_after after the renewal = %v, want the renewed %v", after.StaleAfter, env.leasedUntil(10*time.Minute))
+	}
+	if after.State != "running" || after.Attempt != 1 {
+		t.Errorf("state/attempt after the renewal = %s/%d, want running/1 — a renewal extends the row, it does not move it", after.State, after.Attempt)
+	}
+	if after.Seq <= before.Seq {
+		t.Errorf("seq did not advance on an applied renewal: %d then %d", before.Seq, after.Seq)
+	}
+}
+
+// The renewal branch must stay as harmless under the at-least-once bus as the
+// tuple guard is. A renewal delivered late carries an EARLIER lease than the
+// row holds, and an exact redelivery carries an equal one; both must leave the
+// row and its seq alone, or a redelivery would shorten a lease a later renewal
+// had already extended.
+func TestAIActivityARenewalDeliveredLateChangesNothing(t *testing.T) {
+	env := newAIActivityEnv(t)
+	env.apply(t, change{attempt: 1, state: "running", staleAfter: env.leasedUntil(10 * time.Minute)})
+	before := env.read(t)
+
+	if env.applyChange(t, change{attempt: 1, state: "running", staleAfter: env.leasedUntil(5 * time.Minute)}) {
+		t.Fatal("a renewal carrying an earlier lease than the row holds must be refused")
+	}
+	if env.applyChange(t, change{attempt: 1, state: "running", staleAfter: env.leasedUntil(10 * time.Minute)}) {
+		t.Fatal("a redelivered renewal carrying the lease the row already holds must be refused")
+	}
+	after := env.read(t)
+	if after.StaleAfter == nil || !after.StaleAfter.Equal(*before.StaleAfter) {
+		t.Errorf("stale_after moved from %v to %v on a refused renewal", before.StaleAfter, after.StaleAfter)
+	}
+	if after.Seq != before.Seq {
+		t.Errorf("a refused renewal moved seq from %d to %d", before.Seq, after.Seq)
+	}
+}
+
+// A settled occurrence has no lease to renew, and the branch that admits a
+// renewal must not become the way a late running reopens it: the settled row's
+// stale_after is NULL, and nothing compares later than that.
+func TestAIActivityASettledOccurrenceCannotBeRenewedBackToLife(t *testing.T) {
+	env := newAIActivityEnv(t)
+	env.apply(t, change{attempt: 1, state: "running", staleAfter: env.leasedUntil(5 * time.Minute)})
+	env.apply(t, change{attempt: 1, state: "done"})
+
+	if env.applyChange(t, change{attempt: 1, state: "running", staleAfter: env.leasedUntil(time.Hour)}) {
+		t.Fatal("a renewal for a settled attempt must be refused")
+	}
+	row := env.read(t)
+	if row.State != "done" {
+		t.Errorf("state = %s, want done", row.State)
+	}
+	if row.StaleAfter != nil {
+		t.Errorf("a settled row took a lease until %v", row.StaleAfter)
 	}
 }
 

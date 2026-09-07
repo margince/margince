@@ -33,3 +33,4 @@ e0c11716048a939f1f1187d6992754335300ac41 ce200199d82e76fca7c07e5781a7af1a963b496
 98f26a4484760912e7cede9f57715a7be587b6c5 49728224fbaa221da787bacd7a391776d6fc85a4 ratified-worklist-move-carries-the-deal-cards-verbs
 6a7b29a268183069393c39b1931648a5894b6abe 91cc59b5c3855fed8bf8ba020d95894ed60822e4 ratified-the-five-controller-only-categories-leave-the-send-enum-the-door-always-refused-them
 0e10662bd2e43fb3018888323893dd1f3a44fc08 bb87bde2d4a8e3507be239b8d6af8783d0e3f870 ratified-the-installation-writes-through-the-durable-lane-a-confirm-link-is-queued-not-handed-to-a-relay
+7155d6a82570fa939eb5c52afb3a42d3d6071127 f49f227303664d0ddcbab0c55e339c5200998553 ratified-a-deal-room-invitation-is-queued-not-delivered

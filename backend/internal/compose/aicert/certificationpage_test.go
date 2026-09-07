@@ -240,7 +240,7 @@ func assertAICertPageCoversEverything(t *testing.T, page string, doc aiCertDoc) 
 func renderAICertPage(doc aiCertDoc) []byte {
 	var page strings.Builder
 	writeAICertHead(&page)
-	writeAICertTotals(&page, doc.Totals)
+	writeAICertTotals(&page, doc.Totals, doc)
 	writeAICertGlossary(&page)
 	writeAICertIndex(&page, doc.Sites)
 	writeAICertBindings(&page, doc.Bindings)
@@ -302,7 +302,7 @@ func writeAICertGlossary(page *strings.Builder) {
 // writeAICertTotals opens with the numbers a reader wants before any table:
 // how much of what ships is certified at all, and how much corpus and how many
 // records are behind that answer.
-func writeAICertTotals(page *strings.Builder, totals aiCertTotals) {
+func writeAICertTotals(page *strings.Builder, totals aiCertTotals, doc aiCertDoc) {
 	page.WriteString("## Totals\n\n| | |\n|---|---:|\n")
 	fmt.Fprintf(page, "| Shipped invocation sites | %d |\n", totals.Sites)
 	fmt.Fprintf(page, "| … best state `current` | %d |\n", totals.SitesBestCurrent)
@@ -312,9 +312,82 @@ func writeAICertTotals(page *strings.Builder, totals aiCertTotals) {
 	fmt.Fprintf(page, "| Scenarios in the corpus | %d |\n", totals.Scenarios)
 	fmt.Fprintf(page, "| Committed records | %d |\n", totals.Records)
 	fmt.Fprintf(page, "| Bindings measured | %d |\n\n", totals.Bindings)
+	writeStaleCauses(page, doc)
 	page.WriteString("A site's *best* state is the strongest state any of its bindings reached. A\n")
 	page.WriteString("site `current` on one model and `stale` on three is counted once, as\n")
 	page.WriteString("`current`; the per-binding truth is in the tables below.\n\n")
+}
+
+// writeStaleCauses counts stale records by WHAT moved under them, and it is the
+// first thing worth reading when a band has dropped.
+//
+// A record goes stale for one of three reasons, and they call for opposite
+// responses. Somebody rewrote a test: re-certify, the number was measuring a
+// different question. The PRODUCT now sends a different prompt: the band
+// describes the new prompt, so a drop is the cost of a change somebody made and
+// probably did not know they were making. The grader moved: the band shifted
+// with neither the test nor the product touched, which reads as a model
+// regression and is not one.
+//
+// Before this, the page said "scenario X — or the prompt this build now builds
+// from it — has changed", and the reader had to diff two 192-character stamps by
+// hand to tell which. A prompt rewrite moved a certified task to not_supported
+// and nobody connected the two for two days.
+func writeStaleCauses(page *strings.Builder, doc aiCertDoc) {
+	// Counted per (task, binding), NOT per row. A record covers every site its
+	// task ships, so it appears once per site here — summing rows reported 95
+	// case-changed records against a tree holding a fraction of that, which is
+	// the kind of inflated figure this page exists to not print.
+	type recordKey struct{ task, provider, model, env string }
+	cause := map[recordKey]staleCause{}
+	for _, site := range doc.Sites {
+		for _, rec := range site.Records {
+			if rec.StaleCause == nil {
+				continue
+			}
+			key := recordKey{site.Task, rec.Binding.Provider, rec.Binding.Model, rec.Binding.Env}
+			seen := cause[key]
+			seen.CaseChanged = append(seen.CaseChanged, rec.StaleCause.CaseChanged...)
+			seen.PromptChanged = append(seen.PromptChanged, rec.StaleCause.PromptChanged...)
+			seen.GraderChanged = append(seen.GraderChanged, rec.StaleCause.GraderChanged...)
+			seen.Unattributable = append(seen.Unattributable, rec.StaleCause.Unattributable...)
+			cause[key] = seen
+		}
+	}
+	var cases, prompts, graders, unknown int
+	for _, c := range cause {
+		if len(c.CaseChanged) > 0 {
+			cases++
+		}
+		if len(c.PromptChanged) > 0 {
+			prompts++
+		}
+		if len(c.GraderChanged) > 0 {
+			graders++
+		}
+		if len(c.Unattributable) > 0 {
+			unknown++
+		}
+	}
+	if cases+prompts+graders+unknown == 0 {
+		return
+	}
+	page.WriteString("### Why the stale records went stale\n\n")
+	fmt.Fprintf(page, "Counted per record — one (task, binding) pair — over the %d stale record(s) "+
+		"this build can attribute. A record appears on more than one row when a change moved a case "+
+		"and the prompt built from it together.\n\n", len(cause))
+	page.WriteString("| What moved | Records | What it means |\n|---|---:|---|\n")
+	fmt.Fprintf(page, "| the case | %d | Somebody rewrote the test. Re-certify: the old number "+
+		"measured a different question. |\n", cases)
+	fmt.Fprintf(page, "| **the prompt this build sends** | %d | The product changed. The band "+
+		"describes the NEW prompt, so a drop is the cost of that change and not the model. |\n", prompts)
+	fmt.Fprintf(page, "| the grader | %d | The judge's own request moved. A band can shift with "+
+		"neither the test nor the product touched. |\n", graders)
+	if unknown > 0 {
+		fmt.Fprintf(page, "| not attributable | %d | Written before stamps carried three parts, so "+
+			"this build cannot say which moved. |\n", unknown)
+	}
+	page.WriteString("\n")
 }
 
 // writeAICertIndex is the jump table. The page carries a section per site, more

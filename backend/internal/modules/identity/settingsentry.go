@@ -120,7 +120,13 @@ var Timezone = settings.Define[string](
 		}
 		return nil
 	},
-).AsInstallationIdentity()
+).AsInstallationIdentity().
+	// Read ungated when a scheduler needs the clock a person who has chosen none
+	// is bookable on. Disclosure through behaviour IS the feature here: the slots
+	// a public booking page offers are in this zone, and a customer reads them
+	// off the page. Withholding the name while showing every time computed from
+	// it protects nothing and leaves the fallback unable to work.
+	MachineryApplied()
 
 // BaseCurrency is the ISO-4217 currency every money roll-up converts to.
 //

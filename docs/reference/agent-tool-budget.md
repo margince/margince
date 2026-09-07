@@ -31,8 +31,8 @@ alone. A frame that grows a paragraph spends it on every run of every agent.
 | Agent | Tools | Tokens | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 1634 | 4% | 21576 | 6 | 6 |
-| `overnight_at_risk_sweep` | 7 | 2467 | 7% | 20743 | 15 | 10 |
-| _whole served catalog, for scale_ | 73 | 21967 | 67% | — | — | — |
+| `overnight_at_risk_sweep` | 7 | 2509 | 7% | 20701 | 15 | 10 |
+| _whole served catalog, for scale_ | 73 | 22009 | 67% | — | — | — |
 
 ### `morning_brief`
 
@@ -61,7 +61,7 @@ cannot call, so a run may spend a step discovering the refusal:
 
 > Sweep this workspace's open deals for risk: find deals with no activity in 14+ days, stakeholders gone quiet, or missing next steps. Log ONE note activity per at-risk deal summarizing the risk and the evidence (cite the records you read). Do not advance stages, send anything, or archive anything.
 
-Attaches 7 tools for 2467 tokens, leaving 20743 of its budget and 30301 tokens of the
+Attaches 7 tools for 2509 tokens, leaving 20701 of its budget and 30259 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `at_risk_relationships`
@@ -126,7 +126,7 @@ Every scenario in the corpus was read; none was skipped.
 
 ## What each tool costs, largest first
 
-Median 263 tokens, mean 300, across 73 served tools.
+Median 263 tokens, mean 301, across 73 served tools.
 
 **These do not sum to the catalog total.** Each row is one tool rendered alone and
 divided by four, so every row carries its own rounding; the catalog figure divides
@@ -137,9 +137,9 @@ a term in an addition.
 |---|---:|---:|
 | `run_report` | 939 | 3 scenarios |
 | `send_account_email` | 742 | — |
+| `log_activity` | 677 | 1 scenario |
 | `preview_import` | 677 | — |
 | `send_email` | 675 | 1 scenario |
-| `log_activity` | 635 | 1 scenario |
 | `update_record` | 572 | 4 scenarios |
 | `send_message` | 518 | — |
 | `list_records` | 508 | — |

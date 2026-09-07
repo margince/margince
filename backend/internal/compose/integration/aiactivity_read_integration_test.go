@@ -71,6 +71,25 @@ func TestAQueuedReadingIsLiveInItsOwnPersonsFeed(t *testing.T) {
 	}
 }
 
+// The record an occurrence is about reaches the feed as an identity, not only
+// as a name: the rail makes the name a way to open the record, and a label
+// with nothing behind it is a word it can only print.
+func TestTheFeedIdentifiesTheRecordAnOccurrenceIsAbout(t *testing.T) {
+	f := newReadingFixture(t)
+	f.drain(t)
+
+	live := f.feed(t, f.env.AdminUser).Live
+	if len(live) != 1 {
+		t.Fatalf("live = %d occurrences, want the one reading", len(live))
+	}
+	if live[0].SubjectType == nil || *live[0].SubjectType != "attachment" {
+		t.Fatalf("subject type = %v, want the reading's own vocabulary for its document", live[0].SubjectType)
+	}
+	if live[0].SubjectID == nil || *live[0].SubjectID != f.attachment {
+		t.Fatalf("subject id = %v, want the document the reading is about (%s)", live[0].SubjectID, f.attachment)
+	}
+}
+
 // The feed is PERSONAL. Another seat sees none of it, and the separation is the
 // row's own actor rather than anything the caller passes.
 func TestOnePersonsWorkIsNotInAnothersFeed(t *testing.T) {

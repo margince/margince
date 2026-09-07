@@ -23,7 +23,9 @@ package integration
 //     than failing the boot.
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -33,6 +35,8 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -338,5 +342,44 @@ func TestAnIgnoredRoutingPathIsAnnouncedAndSaysWhichSituation(t *testing.T) {
 	}
 	if strings.Contains(bound.String(), "NO stored model binding") {
 		t.Errorf("a bound installation was told its AI lanes are absent: %s", bound.String())
+	}
+}
+
+// A key in the environment is sealed on a boot that has NO binding yet.
+//
+// The regression this closes was silent and self-defeating. Sealing lived
+// BELOW the unconfigured early return, so a fresh installation — the only kind
+// that has no binding — never reached it. `ai.provider_keys` stayed empty,
+// which is the row /ai/provider-keys reports `configured` from, so Settings ->
+// AI told an admin their vendor was unkeyed on the very screen they had opened
+// to bind a tier to it. The key was in the environment the whole time and the
+// api process had it.
+//
+// Sealing does not depend on a binding and never did: one is a credential
+// moving out of the process environment, the other is which vendor answers
+// which tier. Whoever binds first has to be able to see that the credential
+// for it has arrived.
+func TestAKeyIsSealedOnAnInstallationThatHasBoundNothing(t *testing.T) {
+	e := SetupSearch(t)
+	env := config.Static(map[string]string{
+		keyvault.EnvRootKey: base64.StdEncoding.EncodeToString(bytes.Repeat([]byte("k"), 32)),
+		"GEMINI_API_KEY":    "a-gemini-key",
+	})
+
+	cfg, err := compose.ResolveRouting(context.Background(), e.Pool, "", env, discard())
+	if err != nil {
+		t.Fatalf("ResolveRouting on an unbound installation: %v", err)
+	}
+	// Unchanged: nothing here binds anything. The lanes stay absent.
+	if !cfg.Unconfigured() {
+		t.Errorf("resolved %+v, want unconfigured", cfg.Tiers)
+	}
+
+	stored, err := settings.Get(e.adminRoutingCtx(), compose.NewSettingsStore(e.Pool), ai.ProviderKeys)
+	if err != nil {
+		t.Fatalf("reading the recorded refs: %v", err)
+	}
+	if stored["gemini"] == "" {
+		t.Errorf("no ref recorded for gemini: %v — the key stayed in the environment, so Settings -> AI reports it unkeyed", stored)
 	}
 }
