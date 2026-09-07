@@ -5,6 +5,8 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type CSSProperties, useState } from "react";
 import { Field } from "./atoms";
 import { Select, type SelectOption } from "./select";
+import { TAG_TONES } from "./tagpill";
+import "./tagpill.css";
 
 /**
  * The select, which is a button and a portalled listbox rather than a native
@@ -25,6 +27,20 @@ const meta = {
 export default meta;
 
 type Story = StoryObj<typeof meta>;
+
+// The tag palette, read from the array the product itself offers rather than
+// typed out here: a story that restates the list stops showing the real one the
+// first time a tone is added.
+const TONES: readonly SelectOption[] = [
+  { value: "", label: "No colour" },
+  ...TAG_TONES.map((tone) => ({
+    value: tone,
+    label: tone[0].toUpperCase() + tone.slice(1),
+    adornment: (
+      <span className={`tagpill-dot tagpill-dot-${tone}`} aria-hidden />
+    ),
+  })),
+];
 
 const STAGES: readonly SelectOption[] = [
   { value: "qualify", label: "Qualify" },
@@ -254,6 +270,36 @@ export const Dark: Story = {
     <div style={column}>
       <Demo label="Stage" options={STAGES} start="proposal" />
       <Demo label="Time zone" options={ZONES} placeholder="Pick a zone" />
+    </div>
+  ),
+};
+
+/**
+ * An option can carry a mark before its label. The tag picker's colour dots are
+ * the case this exists for, where the swatch IS what a reader picks by and the
+ * label only names it.
+ *
+ * Two renders to look at, because they are two different paths: the mark in the
+ * open list, and the same mark repeated on the CLOSED face, which is what tells
+ * a reader which one they chose once the list is shut. "No colour" carries none,
+ * so a list mixing marked and bare options has to stay legible too.
+ */
+export const WithAdornments: Story = {
+  render: () => (
+    <div style={column}>
+      <Demo label="Colour" options={TONES} start="rose" />
+      <Demo label="Colour" options={TONES} placeholder="Pick a colour" />
+    </div>
+  ),
+};
+
+/** The same list on a dark ground. The tag tones carry their own dark values,
+ * so each dot has to stay tellable from its neighbours in both themes. */
+export const AdornmentsDark: Story = {
+  globals: { theme: "dark" },
+  render: () => (
+    <div style={column}>
+      <Demo label="Colour" options={TONES} start="violet" />
     </div>
   ),
 };
