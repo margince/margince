@@ -6,9 +6,9 @@
   "catalog": {
     "tools": 73,
     "system_frame_tokens": 353,
-    "tokens": 21967,
+    "tokens": 22009,
     "median_tool_tokens": 263,
-    "mean_tool_tokens": 300
+    "mean_tool_tokens": 301
   },
   "agents": [
     {
@@ -46,9 +46,9 @@
         "review_commitments",
         "whats_slipping_this_week"
       ],
-      "tokens": 2467,
+      "tokens": 2509,
       "percent_of_ceiling": 7,
-      "headroom_tokens": 20743,
+      "headroom_tokens": 20701,
       "dangling_cross_references": [
         "at_risk_relationships → account_coverage",
         "at_risk_relationships → intro_path_to",
@@ -79,16 +79,16 @@
       "tokens": 742
     },
     {
+      "name": "log_activity",
+      "tokens": 677
+    },
+    {
       "name": "preview_import",
       "tokens": 677
     },
     {
       "name": "send_email",
       "tokens": 675
-    },
-    {
-      "name": "log_activity",
-      "tokens": 635
     },
     {
       "name": "update_record",

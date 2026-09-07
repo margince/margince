@@ -10,16 +10,16 @@
   "totals": {
     "tools": 73,
     "resources": 12,
-    "tool_catalog_bytes": 210379,
+    "tool_catalog_bytes": 210548,
     "resource_catalog_bytes": 4584,
-    "approx_wire_tokens_total": 53740,
+    "approx_wire_tokens_total": 53783,
     "largest_tool_bytes": 8980,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
       "description_bytes": 51079,
-      "input_schema_bytes": 44647,
+      "input_schema_bytes": 44816,
       "output_schema_bytes": 98901,
-      "description_plus_input_schema_bytes": 95726
+      "description_plus_input_schema_bytes": 95895
     }
   },
   "tools": {
@@ -6293,7 +6293,7 @@
               "type": "string"
             },
             "links": {
-              "description": "Every record this was about, ALL OF THEM in this call. A meeting or a call is with a PERSON and reaches their company through them — linking one to a company is REFUSED, so name the person who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval a human must decide before it takes effect.",
+              "description": "Every record this was about, ALL OF THEM in this call — EXCEPT a project, which this verb REFUSES: filing under a project writes a write-once retention mark, so it is made through relink_activity, which a person approves. A meeting or a call is with a PERSON and reaches their company through them — linking one to a company is REFUSED, so name the person who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval a human must decide before it takes effect.",
               "items": {
                 "additionalProperties": false,
                 "properties": {

@@ -882,11 +882,13 @@
       }
     },
     {
-      "name": "preview_import",
+      "name": "log_activity",
       "tokens": 677,
-      "agents": [],
+      "agents": [
+        "overnight_at_risk_sweep"
+      ],
       "required_by_cases": [
-        "case3_spreadsheet"
+        "case1_log_it"
       ],
       "permitted_in_cases": [],
       "driven": true,
@@ -898,13 +900,11 @@
       }
     },
     {
-      "name": "log_activity",
-      "tokens": 635,
-      "agents": [
-        "overnight_at_risk_sweep"
-      ],
+      "name": "preview_import",
+      "tokens": 677,
+      "agents": [],
       "required_by_cases": [
-        "case1_log_it"
+        "case3_spreadsheet"
       ],
       "permitted_in_cases": [],
       "driven": true,

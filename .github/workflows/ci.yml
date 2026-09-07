@@ -866,7 +866,43 @@ jobs:
         timeout-minutes: 8
         uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f # v8.2.1
         with:
-          args: ${{ github.event_name == 'merge_group' && '-Dsonar.branch.name=main' || '' }}
+          # WHICH BRANCH THIS ANALYSIS IS FILED UNDER, said for every event
+          # rather than for one.
+          #
+          # An analysis carrying no `sonar.branch.name` is filed as the
+          # project's MAIN branch. On a pull request that is right — the action
+          # sets sonar.pullrequest.* itself and the scan decorates the PR — and
+          # on merge_group the ref is the queue's ephemeral one, so `main` is
+          # named outright. Every OTHER event fell through to the same empty
+          # argument, and a workflow_dispatch has no pull-request context: a
+          # run dispatched on a feature branch published that branch's tree as
+          # main's stored verdict, which is the one every scheduled check reads.
+          #
+          # It is not hypothetical and it is not rare. `main`'s two most recent
+          # analyses were `issue-1985-agent-carriage` and
+          # `issue-2381-ast-censuses`, neither revision a commit on main, while
+          # merge_group — the one event this argument covered — has not fired
+          # since 2026-08-20. So the quality gate has been reporting on feature
+          # branches for as long as anyone has been dispatching this workflow,
+          # including a bug already fixed on main and a new-code coverage figure
+          # belonging to somebody's diff.
+          #
+          # `main` when the ref genuinely IS main, so a dispatch there refreshes
+          # the verdict that no merge_group is left to refresh; the branch's own
+          # name otherwise, so a dispatched branch is filed as itself and can
+          # only ever describe itself.
+          # The empty case is LAST on purpose. `&&` here yields its right
+          # operand, and an empty string is falsy, so `pull_request && ''`
+          # would fall straight through the `||` beside it and hand a pull
+          # request the `<number>/merge` ref as a branch name. Ordering the
+          # arms so that only a truthy argument short-circuits is what keeps
+          # the PR arm empty.
+          args: >-
+            ${{ (github.event_name == 'merge_group' || github.ref_name == 'main')
+                && '-Dsonar.branch.name=main'
+             || (github.event_name != 'pull_request'
+                && format('-Dsonar.branch.name={0}', github.ref_name))
+             || '' }}
       - name: No token yet — scan skipped
         if: ${{ env.SONAR_TOKEN == '' }}
         run: echo "SONAR_TOKEN not set; skipping CI scan (Automatic Analysis still active). Add the secret to activate."
