@@ -1781,6 +1781,11 @@
   border-radius: var(--r-lg);
   background: var(--pane);
   min-width: 0;
+  /* The ground the door stretches over (`.stat-card-open::after`). A card
+     WITHOUT a door is positioned too: the alternative is a second `.stat-card`
+     rule that only some readings match, and a tile whose box model depends on
+     whether it happens to carry a foot. */
+  position: relative;
   /* A floor under the shortest card, so a reading carrying only a number still
      keeps the row's line. The row itself stretches every card to the tallest,
      which is what makes them equal; this only stops a lone card from
@@ -1851,8 +1856,8 @@
    follow their own text landed at four different heights across it: the reader
    compares readings across the row, and a line that moves card to card is one
    they have to find again each time. */
-/* The door out, on the reading's own name line opposite the name: the label
-   says what this is and the door says where to go and work on it. */
+/* The door out, in the card's foot: the label says what the reading is and the
+   door says where to go and work on it. */
 .stat-card-open {
   padding: 0;
   border: 0;
@@ -1860,7 +1865,6 @@
   font: inherit;
   color: var(--accent);
   white-space: nowrap;
-  cursor: pointer;
   /* 24px tall, which is the AA target floor (WCAG 2.5.8) — the same rung the
      worklist's rank button takes. A text-only control on a 13px line boxes to
      about 21px, and axe found this one at 20.9px on the project rollups: under
@@ -1873,13 +1877,43 @@
   align-items: center;
   min-height: var(--space-6);
 }
-.stat-card-open:hover {
+
+/* THE DOOR'S TARGET IS THE CARD, not the two words that name it. A reading that
+   offers a way out is one thing to press, and a tile where only the foot
+   answered ignored most of the pointer aimed at it.
+
+   A pseudo-element over the card rather than a handler on the tile: the tile
+   also carries the receipt chip, and a control inside a control is a press
+   whose target a reader has to guess at. The overlay covers the label, the
+   figure, the detail and the meter, so their text cannot be selected — the
+   accepted cost, on a tile whose words are a figure and its one-line basis. */
+.stat-card-open::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+.stat-card:has(.stat-card-open) {
+  cursor: pointer;
+}
+/* Underline and nothing else. `alert` tints the whole tile, and a hover ground
+   would take that judgement off the one card under the pointer. */
+.stat-card:has(.stat-card-open):hover .stat-card-open {
   text-decoration: underline;
 }
-.stat-card-open:focus-visible {
+/* The ring goes round the CARD, because the card is what the press lands on.
+   Around the words alone it drew a keyboard reader a target an inch from the
+   one their Enter would hit. */
+.stat-card:has(.stat-card-open:focus-visible) {
   outline: var(--focus-ring);
   outline-offset: 2px;
-  border-radius: var(--r-sm);
+}
+/* And the words take the TRANSPARENT ring, which is what pairs with the card's:
+   the platform's own outline would otherwise draw a second, off-palette box
+   inside ours, and `none` in its place would leave forced-colors mode — where an
+   outline is repainted in the reader's colours — with no mark on the element
+   that actually holds focus. */
+.stat-card-open:focus-visible {
+  outline: var(--focus-ring-forced);
 }
 
 /* The card's foot: the way out. Pushed to the BOTTOM of the card
@@ -1903,7 +1937,18 @@
    `align-self: center` because the row is baseline-aligned for the label's
    own sake, and a bordered box hung from a text baseline sits low against the
    word beside it. */
-.popover-trigger.stat-card-basis {
+/* `:not(.btn)` is how this beats `.popover-trigger:not(.btn)` (popover.css),
+   which strips a trigger's border and ground for the callers whose face is the
+   line they sit in. At equal specificity the winner was whichever sheet the
+   bundler happened to put last, so the chip kept its outline in the app and
+   lost it in the catalog — the surface built to show what the control looks
+   like. */
+.popover-trigger.stat-card-basis:not(.btn) {
+  /* ABOVE the door's overlay: the chip is the card's second control and the
+     only one the stretched target must not swallow, or asking what a figure
+     rests on would leave the page instead. */
+  position: relative;
+  z-index: 1;
   align-self: center;
   flex-shrink: 0;
   font-size: var(--fs-meta);
@@ -1916,7 +1961,7 @@
   padding: 1px var(--space-1);
   background: var(--bgCard);
 }
-.popover-trigger.stat-card-basis:hover {
+.popover-trigger.stat-card-basis:not(.btn):hover {
   color: var(--textPrimary);
   border-color: var(--borderStrong);
 }

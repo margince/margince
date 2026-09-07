@@ -1,5 +1,8 @@
 /** @vitest-environment jsdom */
 
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
@@ -14,6 +17,7 @@ import {
   PendingBody,
   Radio,
   SegmentedControl,
+  StatCard,
   Textarea,
   TextInput,
 } from "./atoms";
@@ -572,4 +576,88 @@ it("keeps a delayed pending body up while it stays mounted", async () => {
   } finally {
     vi.useRealTimers();
   }
+});
+
+// A reading whose door leads somewhere: the whole tile takes the press, and the
+// receipt chip on the label line keeps its own.
+function Reading({ onOpen }: Readonly<{ onOpen: () => void }>) {
+  return (
+    <StatCard
+      label="The people"
+      value="1 of 3 engaged"
+      detail="a champion is named"
+      openLabel="Open people"
+      onOpen={onOpen}
+      basis={<p>Carol Wagner replied twice this month.</p>}
+    />
+  );
+}
+
+it("opens the tab from the door's own words", async () => {
+  const user = userEvent.setup();
+  const onOpen = vi.fn();
+  render(<Reading onOpen={onOpen} />);
+
+  await user.click(screen.getByRole("button", { name: /Open people/ }));
+
+  expect(onOpen).toHaveBeenCalledTimes(1);
+});
+
+// The one press the stretched target must not swallow. A reader asking what a
+// figure rests on has not asked to leave the page, and a chip that answered
+// with a navigation would make the receipt unusable on exactly the readings
+// that carry one.
+it("answers the receipt chip with the working, never with the door", async () => {
+  const user = userEvent.setup();
+  const onOpen = vi.fn();
+  render(<Reading onOpen={onOpen} />);
+
+  await user.click(screen.getByRole("button", { name: "Evidence" }));
+
+  expect(
+    screen.getByText("Carol Wagner replied twice this month."),
+  ).toBeTruthy();
+  expect(onOpen).not.toHaveBeenCalled();
+});
+
+// The rest of the door's contract is HIT TESTING, and jsdom lays nothing out:
+// a click is dispatched at the element the case names, so no overlay can
+// intercept one and a rendered assertion could not tell a stretched target from
+// a foot-only door. Read from the sheet instead, the way statstrip.test.tsx
+// reads its own. What a real pointer answers is checked by hand on the Brief's
+// readings row.
+const here = dirname(fileURLToPath(import.meta.url));
+
+// Resolve the rule first and fail on its absence: a selector that no longer
+// exists would otherwise hand every assertion below an empty body to not-match.
+function declarations(css: string, selector: string): string {
+  const at = css.indexOf(`${selector} {`);
+  if (at < 0) {
+    throw new Error(`atoms.css declares no rule for ${selector}`);
+  }
+  return css.slice(at, css.indexOf("}", at));
+}
+
+it("stretches the door over the card and rings the card it opens", () => {
+  const css = readFileSync(join(here, "atoms.css"), "utf8");
+
+  // The card is the overlay's containing block. Without it the door stretches
+  // over the nearest positioned ancestor instead, which is the page.
+  expect(declarations(css, ".stat-card")).toMatch(/position:\s*relative/);
+  // Every edge of the card, so no part of the tile misses the pointer.
+  expect(declarations(css, ".stat-card-open::after")).toMatch(/inset:\s*0/);
+  // Above that overlay, or the receipt is a control nothing can reach.
+  expect(
+    declarations(css, ".popover-trigger.stat-card-basis:not(.btn)"),
+  ).toMatch(/z-index:\s*1/);
+  // The ring belongs to the card, because the card is what the press opens.
+  expect(
+    declarations(css, ".stat-card:has(.stat-card-open:focus-visible)"),
+  ).toMatch(/outline:\s*var\(--focus-ring\)/);
+  // And the words draw no second ring beside it — only the transparent one that
+  // keeps the platform's own outline off them and still leaves forced-colors
+  // mode something to repaint on the element that holds focus.
+  const door = declarations(css, ".stat-card-open:focus-visible");
+  expect(door).toMatch(/outline:\s*var\(--focus-ring-forced\)/);
+  expect(door).not.toMatch(/outline:\s*var\(--focus-ring\)/);
 });
