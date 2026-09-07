@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -588,5 +589,124 @@ func TestReactivatingTheAgentSeatRestoresItToActive(t *testing.T) {
 	}
 	if status != "active" {
 		t.Errorf("agent seat restored to %q, want active — it has no password by design and cannot be invited", status)
+	}
+}
+
+// An invite that names teams announces each membership on the same stream an
+// admin's later change uses.
+//
+// A team grants row scope, so who is on one is who-sees-what. A consumer that
+// refreshes that on team.changed would otherwise have to know a SECOND trigger
+// — user.invited.team_ids — and know it only for the invite path. That fails
+// in the direction that matters: a consumer handling team.changed correctly and
+// unaware of the exception is stale, with nothing to tell it so.
+func TestAnInviteNamingTeamsAnnouncesEachMembership(t *testing.T) {
+	e := setupRevocationEnv(t, "invite-teams")
+	ctx := e.wsCtx(e.admin)
+
+	north, err := e.svc.CreateTeam(ctx, e.admin, "North")
+	if err != nil {
+		t.Fatalf("create team: %v", err)
+	}
+	south, err := e.svc.CreateTeam(ctx, e.admin, "South")
+	if err != nil {
+		t.Fatalf("create team: %v", err)
+	}
+
+	userID, _, err := e.svc.InviteUser(ctx, e.admin, InviteUserInput{
+		Email: "joiner@acme.test", DisplayName: "Jo Iner", Role: "rep",
+		TeamIDs: []ids.UUID{north.ID, south.ID, north.ID},
+	})
+	if err != nil {
+		t.Fatalf("invite: %v", err)
+	}
+
+	// One per TEAM, and the repeated team is joined once — the membership write
+	// and its announcement are the same act, so a duplicate mention must not
+	// produce a second event either.
+	for _, team := range []Team{north, south} {
+		envs := e.identityEvents(t, "team.changed", team.ID)
+		var added []events.Envelope
+		for _, env := range envs {
+			var payload struct {
+				TeamID ids.UUID  `json:"team_id"`
+				UserID *ids.UUID `json:"user_id"`
+				Change string    `json:"change"`
+				By     ids.UUID  `json:"by"`
+			}
+			if err := json.Unmarshal(env.Payload, &payload); err != nil {
+				t.Fatal(err)
+			}
+			if payload.Change != "member_added" || payload.UserID == nil || *payload.UserID != userID.UUID {
+				continue
+			}
+			if payload.TeamID != team.ID || payload.By != e.admin.UserID.UUID {
+				t.Errorf("team.changed payload = %+v, want team %v added by the inviting admin", payload, team.ID)
+			}
+			added = append(added, env)
+		}
+		if len(added) != 1 {
+			t.Errorf("team %q announced the invited member's membership %d times, want once", team.Name, len(added))
+		}
+		for _, env := range added {
+			if env.Trace.AuditLogID.IsZero() {
+				t.Error("team.changed carries no audit_log_id — the write shape demands the linked audit row")
+			}
+		}
+	}
+}
+
+// The access read carries the member's own status, because it is the TENSE of
+// everything beside it: a deactivated member's stored grants are exactly what
+// the answer lists, and login refuses them.
+//
+// Carried rather than refused. An admin reviewing who had access to what needs a
+// former member's grants readable, and a 404 would make that impossible — the
+// defect is the tense, not the data.
+func TestTheAccessReadSaysWhetherTheMemberCanStillSignIn(t *testing.T) {
+	e := setupRevocationEnv(t, "access-status")
+	ctx := e.wsCtx(e.admin)
+
+	userID, _, err := e.svc.InviteUser(ctx, e.admin, InviteUserInput{
+		Email: "tense@acme.test", DisplayName: "Ten Se", Role: "rep",
+	})
+	if err != nil {
+		t.Fatalf("invite: %v", err)
+	}
+
+	invited, err := e.svc.UserAccess(ctx, e.admin, userID)
+	if err != nil {
+		t.Fatalf("access of an invited member: %v", err)
+	}
+	if invited.MemberStatus != userStatusInvited {
+		t.Errorf("MemberStatus = %q, want %q", invited.MemberStatus, userStatusInvited)
+	}
+	if invited.Role != "rep" {
+		t.Errorf("Role = %q, want rep — the status must not replace the grants", invited.Role)
+	}
+
+	if err := e.svc.DeactivateUser(ctx, e.admin, DeactivateUserInput{UserID: userID}); err != nil {
+		t.Fatalf("deactivate: %v", err)
+	}
+	gone, err := e.svc.UserAccess(ctx, e.admin, userID)
+	if err != nil {
+		t.Fatalf("access of a deactivated member: %v — the grants stay readable, or an admin "+
+			"reviewing who had access to what cannot ask", err)
+	}
+	if gone.MemberStatus != userStatusDeactivated {
+		t.Errorf("MemberStatus = %q, want %q", gone.MemberStatus, userStatusDeactivated)
+	}
+	if gone.Role != "rep" {
+		t.Errorf("Role = %q, want the grants a deactivated member still holds on paper", gone.Role)
+	}
+
+	// The preview computes access for nobody yet, so it carries no status: an
+	// "active" there would be a claim about a seat that does not exist.
+	preview, err := e.svc.PreviewAccess(ctx, e.admin, "rep", nil)
+	if err != nil {
+		t.Fatalf("preview: %v", err)
+	}
+	if preview.MemberStatus != "" {
+		t.Errorf("the preview carries MemberStatus %q, want none", preview.MemberStatus)
 	}
 }

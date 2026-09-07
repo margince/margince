@@ -14375,7 +14375,7 @@ paths:
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /users/access-preview:
-    post:
+    get:
       tags: [Identity]
       operationId: previewAccess
       x-agent-access: human-only
@@ -14385,11 +14385,26 @@ paths:
         Computed from the evaluated policy — the same role documents, field masks and read
         classes the gates read — so the invite screen shows the truth rather than a second
         interpretation. Admin only.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/AccessPreviewRequest' }
+
+        A GET, and the method is load-bearing: the seat ceiling is method-based, so this read
+        wearing POST was refused to a read-seat admin — a read, denied to the seat whose whole
+        purpose is reading. The parameters are the query rather than a body for that reason.
+      parameters:
+        - name: role
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [admin, management, manager, rep, read_only, ops]
+        - name: team_ids
+          in: query
+          required: false
+          explode: false
+          style: form
+          schema:
+            type: array
+            maxItems: 20
+            items: { type: string, format: uuid }
       responses:
         '200':
           description: The access.
@@ -33778,17 +33793,6 @@ components:
             records; the access preview says what a given role + teams will see before the invite
             is sent.
 
-    AccessPreviewRequest:
-      type: object
-      required: [role]
-      properties:
-        role:
-          type: string
-          enum: [admin, management, manager, rep, read_only, ops]
-        team_ids:
-          type: array
-          maxItems: 20
-          items: { type: string, format: uuid }
     AccessPreview:
       type: object
       description: >-
@@ -33799,6 +33803,18 @@ components:
       required: [role, row_scope, objects, field_masks, teams]
       properties:
         role: { type: string }
+        member_status:
+          type: string
+          enum: [invited, active, suspended, deactivated]
+          description: >-
+            The member's own status, present on `GET /users/{id}/access` and absent on the
+            preview, which computes access for nobody yet.
+
+            It is the TENSE of everything else in this answer. A suspended or deactivated
+            member's stored grants are exactly what is listed here, and login refuses them —
+            so a screen that says "sees" rather than "would see" tells an admin something
+            untrue. Carried rather than refused: an admin reviewing who had access to what
+            needs a former member's grants readable, and a 404 would make that impossible.
         row_scope: { type: string, enum: [own, team, all] }
         identity_read:
           type: string

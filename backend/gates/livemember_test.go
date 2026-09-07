@@ -127,7 +127,6 @@ var deliberatelyNotLiveness = gatekit.Waive(map[string]string{
 // here on a guess — and it stays listed so it reads as open rather than settled.
 var namesTheSeatRatherThanOffersIt = gatekit.Waive(map[string]string{
 	"internal/modules/dealrooms/preview.go":      "renders a steward's name and address on a room that already exists; a departed colleague's name is still the right label on what they did",
-	"internal/modules/identity/access.go":        "UserAccess evaluates an EXISTING member's roles and teams as they stand, which an admin needs precisely when the seat is deactivated",
 	"internal/modules/identity/actoridentity.go": "resolves the display name and address of whoever performed a past action; the actor of an audit row does not stop having a name",
 	"internal/modules/identity/seatnames.go":     "answers \"what is this id called\" for ids the caller already holds; a name that blanks on deactivation makes historical rows unreadable",
 	"internal/modules/identity/userlocale.go":    "reads a seat's locale to format a stored string; the formatting of last month's number does not depend on whether they still work here",
