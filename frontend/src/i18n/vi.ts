@@ -7344,6 +7344,7 @@ export const vi = {
   "captureExclusions.scope.workspace": "Toàn tổ chức",
   "captureExclusions.kind.address": "Địa chỉ",
   "captureExclusions.kind.domain": "Tên miền",
+  "captureExclusions.kind.container": "Nhãn hoặc thư mục",
   "captureExclusions.scopeLabel": "Áp dụng cho",
   "captureExclusions.kindLabel": "Loại",
   "captureExclusions.addLabel": "Loại trừ một địa chỉ hoặc tên miền",

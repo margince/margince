@@ -97,6 +97,11 @@ type Message struct {
 	// wrote it — mailmap composes it with the message's authorship before any
 	// attestation is claimed.
 	FiledAsSent bool
+	// Labels are Gmail's own label IDS for this message, not their display
+	// names: a system label is its name (INBOX, SENT, CATEGORY_PROMOTIONS) and
+	// a user label is an opaque "Label_<n>". They ride the same messages.get
+	// response FiledAsSent is read from, so they cost no extra call.
+	Labels []string
 }
 
 // API is the read-only Gmail surface the connector uses. All calls take a
@@ -298,7 +303,7 @@ func (a *httpAPI) GetRaw(ctx context.Context, accessToken, msgID string) (Messag
 	if err != nil {
 		return Message{}, fmt.Errorf("gmail: decoding raw message %s: %w", msgID, ErrUnreachable)
 	}
-	return Message{RFC822: decoded, FiledAsSent: hasSentLabel(out.LabelIDs)}, nil
+	return Message{RFC822: decoded, FiledAsSent: hasSentLabel(out.LabelIDs), Labels: out.LabelIDs}, nil
 }
 
 // hasSentLabel reports whether Gmail filed this message under SENT — the

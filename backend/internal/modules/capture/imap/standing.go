@@ -208,7 +208,7 @@ func (c *Connector) syncStanding(ctx context.Context, auth connector.Auth, curso
 	// The standing connector is a registry singleton serving every IMAP
 	// connection, so all per-pull state lives on this local, never on c —
 	// concurrent syncs of different mailboxes must not see each other.
-	st := &syncState{owner: creds.Email, contacts: map[string]struct{}{}}
+	st := &syncState{owner: creds.Email, mailbox: creds.Mailbox, contacts: map[string]struct{}{}}
 	if err := netConn.SetDeadline(time.Now().Add(pullDeadline)); err != nil {
 		// Armed for the exchanges before v2 takes the deadline over — see
 		// pullDeadline, which says how much of the phase this really bounds.

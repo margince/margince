@@ -15755,8 +15755,13 @@ export interface components {
          * @enum {string}
          */
         CaptureExclusionScope: "workspace" | "user";
-        /** @enum {string} */
-        CaptureExclusionKind: "address" | "domain";
+        /**
+         * @description What the rule names. `address` and `domain` match the parties a message names; `container` matches where the provider FILED it — a Gmail label, a Graph folder, an IMAP mailbox.
+         *     A container value is `<provider>:<id>`, where the id is the provider's own token and is stored exactly as given: `gmail:Label_12` (a system label is its name, `gmail:CATEGORY_PROMOTIONS`), `graph:<folderId>`, `imap:INBOX/Family`. Qualified because an id means nothing without the namespace it belongs to, and unfolded because a Graph folder id is base64url and an IMAP mailbox name is case-sensitive — folding either would merge two containers into one rule.
+         *     A container rule is `user` scope only: the list belongs to the mailbox's owner, and a workspace rule would bind every colleague's connection to a place that does not exist there.
+         * @enum {string}
+         */
+        CaptureExclusionKind: "address" | "domain" | "container";
         CaptureExclusionListResponse: {
             data: components["schemas"]["CaptureExclusion"][];
         };
@@ -15766,10 +15771,15 @@ export interface components {
             /** @description An email address, or a bare domain. */
             value: string;
         };
+        /**
+         * @description What the identity names. Its own schema rather than the exclusion's, which the two shared while they happened to hold the same two values: an exclusion can now also name a CONTAINER, and a container is not something a mailbox owner can BE.
+         * @enum {string}
+         */
+        CaptureOwnerIdentityKind: "address" | "domain";
         CaptureOwnerIdentity: {
             /** Format: uuid */
             id: string;
-            kind: components["schemas"]["CaptureExclusionKind"];
+            kind: components["schemas"]["CaptureOwnerIdentityKind"];
             /** @description The folded address or domain. */
             value: string;
             source: components["schemas"]["CaptureOwnerIdentitySource"];
@@ -15833,7 +15843,7 @@ export interface components {
             data: components["schemas"]["CaptureOwnerIdentity"][];
         };
         CreateCaptureOwnerIdentityRequest: {
-            kind: components["schemas"]["CaptureExclusionKind"];
+            kind: components["schemas"]["CaptureOwnerIdentityKind"];
             /** @description An email address, or a bare domain. */
             value: string;
         };

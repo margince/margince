@@ -67,6 +67,12 @@ type mailBatchConnector struct {
 	// namespace across all of them, so a suite proving that a rule matches
 	// within ONE medium needs two media sharing a key.
 	kinds map[string]string
+	// containers are the provider's own filing places for a message, by
+	// Message-ID, already provider-qualified. A real connector reads them off
+	// the provider's message resource — Gmail's labelIds, Graph's
+	// parentFolderId, the IMAP mailbox a pull selected — so a fixture that
+	// wants an exclusion to match one has to arrive the same way.
+	containers map[string][]string
 }
 
 func (m *mailBatchConnector) Descriptor() connector.Descriptor {
@@ -104,6 +110,7 @@ func (m *mailBatchConnector) Sync(ctx context.Context, _ connector.Auth, _ conne
 		for _, dealID := range m.deals[msg.ID()] {
 			rec.Links = append(rec.Links, datasource.EntityRef{Type: datasource.EntityDeal, ID: dealID})
 		}
+		rec.Containers = m.containers[msg.ID()]
 		if kind, overridden := m.kinds[msg.ID()]; overridden {
 			fields, ok := rec.Fields.(capturemod.ActivityFields)
 			if !ok {
@@ -293,6 +300,10 @@ type captureEnv struct {
 	// syncAsKind is the same pull with the listed Message-IDs landing as another
 	// activity kind, the way a non-mail connector's records do.
 	syncAsKind func(t *testing.T, kinds map[string]string, raws ...[]byte)
+	// syncInContainer is the same pull with the connector reporting where the
+	// provider filed each listed Message-ID — a Gmail label, a Graph folder, an
+	// IMAP mailbox — already provider-qualified.
+	syncInContainer func(t *testing.T, containers map[string][]string, raws ...[]byte)
 	// registry is the SAME registry the syncs above drive, so a test that
 	// configures a connection and then syncs it is configuring the connection
 	// that sync uses. A second registry would have its own connector set and no
@@ -325,6 +336,7 @@ func newCaptureEnv(t *testing.T) captureEnv {
 	pull := func(t *testing.T, sent map[string]bool, filed map[string][]ids.UUID, kinds map[string]string, raws ...[]byte) {
 		t.Helper()
 		conn.raws, conn.sent, conn.deals, conn.kinds = raws, sent, filed, kinds
+		conn.containers = nil
 		if err := registry.SyncOnce(wsCtx, connID); err != nil {
 			t.Fatalf("SyncOnce: %v", err)
 		}
@@ -346,6 +358,14 @@ func newCaptureEnv(t *testing.T) captureEnv {
 	syncAsKind := func(t *testing.T, kinds map[string]string, raws ...[]byte) {
 		t.Helper()
 		pull(t, nil, nil, kinds, raws...)
+	}
+	syncInContainer := func(t *testing.T, containers map[string][]string, raws ...[]byte) {
+		t.Helper()
+		conn.raws, conn.sent, conn.deals, conn.kinds = raws, nil, nil, nil
+		conn.containers = containers
+		if err := registry.SyncOnce(wsCtx, connID); err != nil {
+			t.Fatalf("SyncOnce: %v", err)
+		}
 	}
 
 	// The installation's own company, as cold start leaves it: a human confirmed
@@ -386,7 +406,7 @@ func newCaptureEnv(t *testing.T) captureEnv {
 	if verified {
 		t.Fatal("a mailbox must not verify its own domain — the company's claim does that")
 	}
-	return captureEnv{e: e, sync: sync, syncSent: syncSent, registry: registry, conn: conn, syncFiledUnderDeal: syncFiledUnderDeal, syncAsKind: syncAsKind}
+	return captureEnv{e: e, sync: sync, syncSent: syncSent, registry: registry, conn: conn, syncFiledUnderDeal: syncFiledUnderDeal, syncAsKind: syncAsKind, syncInContainer: syncInContainer}
 }
 
 // emailCC builds a message that copies a third party — the introduction shape:

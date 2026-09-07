@@ -23003,7 +23003,19 @@ components:
       description: Whose rule it is — the installation's, or the caller's own for the mailbox they connected.
     CaptureExclusionKind:
       type: string
-      enum: [address, domain]
+      enum: [address, domain, container]
+      description: >-
+        What the rule names. `address` and `domain` match the parties a message names; `container`
+        matches where the provider FILED it — a Gmail label, a Graph folder, an IMAP mailbox.
+
+        A container value is `<provider>:<id>`, where the id is the provider's own token and is
+        stored exactly as given: `gmail:Label_12` (a system label is its name, `gmail:CATEGORY_PROMOTIONS`),
+        `graph:<folderId>`, `imap:INBOX/Family`. Qualified because an id means nothing without the
+        namespace it belongs to, and unfolded because a Graph folder id is base64url and an IMAP
+        mailbox name is case-sensitive — folding either would merge two containers into one rule.
+
+        A container rule is `user` scope only: the list belongs to the mailbox's owner, and a
+        workspace rule would bind every colleague's connection to a place that does not exist there.
     CaptureExclusionListResponse:
       type: object
       required: [data]
@@ -23018,12 +23030,19 @@ components:
         scope: { $ref: '#/components/schemas/CaptureExclusionScope' }
         kind: { $ref: '#/components/schemas/CaptureExclusionKind' }
         value: { type: string, maxLength: 320, description: 'An email address, or a bare domain.' }
+    CaptureOwnerIdentityKind:
+      type: string
+      enum: [address, domain]
+      description: >-
+        What the identity names. Its own schema rather than the exclusion's, which the two shared
+        while they happened to hold the same two values: an exclusion can now also name a CONTAINER,
+        and a container is not something a mailbox owner can BE.
     CaptureOwnerIdentity:
       type: object
       required: [id, kind, value, source, created_at]
       properties:
         id: { type: string, format: uuid }
-        kind: { $ref: '#/components/schemas/CaptureExclusionKind' }
+        kind: { $ref: '#/components/schemas/CaptureOwnerIdentityKind' }
         value: { type: string, description: 'The folded address or domain.' }
         source: { $ref: '#/components/schemas/CaptureOwnerIdentitySource' }
         created_at: { type: string, format: date-time }
@@ -23097,7 +23116,7 @@ components:
       type: object
       required: [kind, value]
       properties:
-        kind: { $ref: '#/components/schemas/CaptureExclusionKind' }
+        kind: { $ref: '#/components/schemas/CaptureOwnerIdentityKind' }
         value: { type: string, maxLength: 320, description: 'An email address, or a bare domain.' }
     WorkspaceEmailDomainListResponse:
       type: object

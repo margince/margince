@@ -262,7 +262,14 @@ func captureOne(ctx context.Context, fetched Message, sink connector.Sink, bounc
 		return false, mailmap.RecordIfBounce(ctx, fetched.RFC822, bounces)
 	}
 	msg = msg.AttestSentByOwner(fetched.FiledAsSent)
-	if _, err := sink.Upsert(ctx, msg.ToRecord(connectorName, fetched.RFC822)); err != nil {
+	rec := msg.ToRecord(connectorName, fetched.RFC822)
+	// Where Gmail filed it, so an owner who keeps a label out of the CRM is
+	// answered before the message is stored. Set here rather than in
+	// mailmap.ToRecord because a label is provider metadata off the
+	// messages.get response and not in the RFC822 bytes — which is also why
+	// Normalize, the pure re-parse of those bytes, carries none.
+	rec.Containers = labelContainers(fetched.Labels)
+	if _, err := sink.Upsert(ctx, rec); err != nil {
 		if errors.Is(err, connector.ErrSkip) {
 			return false, nil
 		}
@@ -371,6 +378,18 @@ func scopeStrings(scopes []principal.Scope) []string {
 	out := make([]string, 0, len(scopes))
 	for _, s := range scopes {
 		out = append(out, string(s))
+	}
+	return out
+}
+
+// labelContainers qualifies Gmail's label ids for the exclusion match.
+func labelContainers(labels []string) []string {
+	if len(labels) == 0 {
+		return nil
+	}
+	out := make([]string, 0, len(labels))
+	for _, label := range labels {
+		out = append(out, connector.Container(connectorName, label))
 	}
 	return out
 }

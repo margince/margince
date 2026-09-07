@@ -7421,6 +7421,7 @@ export const de = {
   "captureExclusions.scope.workspace": "Ganze Organisation",
   "captureExclusions.kind.address": "Adresse",
   "captureExclusions.kind.domain": "Domain",
+  "captureExclusions.kind.container": "Label oder Ordner",
   "captureExclusions.scopeLabel": "Gilt für",
   "captureExclusions.kindLabel": "Art",
   "captureExclusions.addLabel": "Adresse oder Domain ausschließen",

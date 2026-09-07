@@ -19,9 +19,10 @@ import (
 // address or domain that matched is exactly what the rule exists to keep out
 // of the CRM, and a trace that repeated it would store it after all.
 const (
-	reasonExcludedAddress = "excluded_address"
-	reasonExcludedDomain  = "excluded_domain"
-	actionCaptureExcluded = "capture_excluded"
+	reasonExcludedAddress   = "excluded_address"
+	reasonExcludedDomain    = "excluded_domain"
+	reasonExcludedContainer = "excluded_container"
+	actionCaptureExcluded   = "capture_excluded"
 )
 
 // dropBeforeStoreTx runs the gates that keep a message out of the CRM
@@ -74,7 +75,10 @@ func (s *Sink) dropBeforeStoreTx(ctx context.Context, tx pgx.Tx, rec connector.N
 // that reaches the raw store has been kept whatever happens next. The answer
 // is the reason to trace, or "" when nothing matched.
 func excludedTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (string, error) {
-	if len(rec.Addresses) == 0 {
+	// A message with no addresses may still have been FILED somewhere the
+	// owner keeps out, so the container arm is asked on its own. The address
+	// arms need the lists below and answer nothing without them.
+	if len(rec.Addresses) == 0 && len(rec.Containers) == 0 {
 		return "", nil
 	}
 	addresses := make([]string, 0, len(rec.Addresses))
@@ -87,6 +91,10 @@ func excludedTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) 
 	}
 	// A domain rule covers its subdomains: an exclusion of acme.com keeps out
 	// mail.acme.com, the way the own-domain matcher reads a domain.
+	//
+	// The container arm compares EXACTLY, where the two address arms fold: a
+	// container value is the provider's own token, and folding it would merge
+	// two Graph folders whose base64url ids differ only in case.
 	var kind string
 	err := tx.QueryRow(ctx, `
 		SELECT kind FROM capture_exclusion e
@@ -94,17 +102,21 @@ func excludedTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) 
 		   AND ((e.kind = 'address' AND e.value = ANY($1::text[]))
 		     OR (e.kind = 'domain' AND EXISTS (
 		           SELECT 1 FROM unnest($2::text[]) d
-		            WHERE d = e.value OR d LIKE '%.' || e.value)))
+		            WHERE d = e.value OR d LIKE '%.' || e.value))
+		     OR (e.kind = 'container' AND e.value = ANY($4::text[])))
 		 ORDER BY e.kind LIMIT 1`,
-		addresses, domains, nilToNull(actorUserID(ctx))).Scan(&kind)
+		addresses, domains, nilToNull(actorUserID(ctx)), rec.Containers).Scan(&kind)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return "", nil
 		}
 		return "", err
 	}
-	if kind == ExclusionKindAddress {
+	switch kind {
+	case ExclusionKindAddress:
 		return reasonExcludedAddress, nil
+	case ExclusionKindContainer:
+		return reasonExcludedContainer, nil
 	}
 	return reasonExcludedDomain, nil
 }
@@ -126,5 +138,9 @@ func withoutParties(rec connector.NormalizedRecord) connector.NormalizedRecord {
 	rec.Participants = nil
 	rec.Addresses = nil
 	rec.Fields = nil
+	// A label's NAME is what a container rule keeps out — "Family", "Private" —
+	// so it goes with the addresses rather than travelling into a trace as the
+	// evidence for its own suppression.
+	rec.Containers = nil
 	return rec
 }

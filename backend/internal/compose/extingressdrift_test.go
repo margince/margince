@@ -62,6 +62,10 @@ var waivedEnvelopeFields = gatekit.Waive(map[string]string{
 		"shape no unit has exercised",
 	"PartDrops": "the breadcrumb for refused attachments, held with Parts for the same reason " +
 		"and landing in the same PR — a drop cannot exist while what it accounts for does not",
+	"Containers": "where the PROVIDER filed a message — a Gmail label, a Graph folder, an IMAP mailbox — which a capture exclusion can name. " +
+		"Held rather than closed: the value is provider-qualified, and the qualifier is an allowlist of the providers whose namespaces the exclusion validator knows (containerProviders in the capture module). " +
+		"A unit's own provider is not on it, so a published field would let a unit state a container no rule can name — a value that travels the whole pre-store path and matches nothing, which reads to its author like a rule that does not work. " +
+		"It lands with the first unit that has containers AND a provider on that list, in the same PR, for the reason Parts is held: a frozen field with no caller freezes a shape no unit has exercised",
 	"Fields": "the envelope's `any`. The published surface is typed instead — Record.Activity — so a unit cannot hand the sink a shape it does not switch on",
 	"DeliveredTo": "the receiving server's own delivery header, and it is a CORE judgement rather than a field to publish: the value is trusted only from a header position a sender could not have authored, which mailmap.TopDeliveredTo decides once. " +
 		"A unit supplying it would be supplying the conclusion instead of the evidence — and the conclusion adds an address to a seat's own self-set, which is the one thing a unit must not be able to assert. Empty from a unit means what it means everywhere: no trustworthy claim, so no alias is learned",

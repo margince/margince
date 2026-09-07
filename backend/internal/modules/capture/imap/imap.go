@@ -129,7 +129,12 @@ type syncState struct {
 	// authenticated owner sent — the T1 correspondence evidence (ADR-0072 §1).
 	// A pull selects exactly one mailbox, so the attestation is per-pull.
 	sentMailbox bool
-	contacts    map[string]struct{}
+	// mailbox is the one this pull selected, kept because it is the only
+	// container an IMAP message has — the server tells us nothing about where
+	// else a copy might live. A pull selects exactly one, so it is per-pull like
+	// the attestation above.
+	mailbox  string
+	contacts map[string]struct{}
 }
 
 // Stats is one pull's outcome tally — internal bookkeeping accumulated on
@@ -221,7 +226,16 @@ func (c *Connector) capture(ctx context.Context, raw []byte, sink connector.Sink
 		return nil
 	}
 	parsed = parsed.AttestSentByOwner(st.sentMailbox)
-	if _, err := sink.Upsert(ctx, parsed.ToRecord(connectorName, raw)); err != nil {
+	rec := parsed.ToRecord(connectorName, raw)
+	// The mailbox this pull selected, so an owner who keeps a container out of
+	// the CRM is answered before the message is stored. Set here rather than in
+	// mailmap.ToRecord because the mailbox is a property of the SESSION and not
+	// of the RFC822 bytes — which is also why Normalize, the pure re-parse of
+	// those bytes, carries none.
+	if st.mailbox != "" {
+		rec.Containers = []string{connector.Container(connectorName, st.mailbox)}
+	}
+	if _, err := sink.Upsert(ctx, rec); err != nil {
 		if errors.Is(err, connector.ErrSkip) {
 			// The Sink dropped it (e.g. an erased subject's suppression list) —
 			// a deliberate skip, counted like any other.

@@ -2394,14 +2394,17 @@ func (e CaptureCounterpartyHoldKind) Valid() bool {
 
 // Defines values for CaptureExclusionKind.
 const (
-	CaptureExclusionKindAddress CaptureExclusionKind = "address"
-	CaptureExclusionKindDomain  CaptureExclusionKind = "domain"
+	CaptureExclusionKindAddress   CaptureExclusionKind = "address"
+	CaptureExclusionKindContainer CaptureExclusionKind = "container"
+	CaptureExclusionKindDomain    CaptureExclusionKind = "domain"
 )
 
 // Valid indicates whether the value is a known member of the CaptureExclusionKind enum.
 func (e CaptureExclusionKind) Valid() bool {
 	switch e {
 	case CaptureExclusionKindAddress:
+		return true
+	case CaptureExclusionKindContainer:
 		return true
 	case CaptureExclusionKindDomain:
 		return true
@@ -2422,6 +2425,24 @@ func (e CaptureExclusionScope) Valid() bool {
 	case CaptureExclusionScopeUser:
 		return true
 	case CaptureExclusionScopeWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CaptureOwnerIdentityKind.
+const (
+	CaptureOwnerIdentityKindAddress CaptureOwnerIdentityKind = "address"
+	CaptureOwnerIdentityKindDomain  CaptureOwnerIdentityKind = "domain"
+)
+
+// Valid indicates whether the value is a known member of the CaptureOwnerIdentityKind enum.
+func (e CaptureOwnerIdentityKind) Valid() bool {
+	switch e {
+	case CaptureOwnerIdentityKindAddress:
+		return true
+	case CaptureOwnerIdentityKindDomain:
 		return true
 	default:
 		return false
@@ -19635,9 +19656,13 @@ type CaptureCounterpartyHoldListResponse struct {
 
 // CaptureExclusion defines model for CaptureExclusion.
 type CaptureExclusion struct {
-	CreatedAt time.Time            `json:"created_at"`
-	Id        openapi_types.UUID   `json:"id"`
-	Kind      CaptureExclusionKind `json:"kind"`
+	CreatedAt time.Time          `json:"created_at"`
+	Id        openapi_types.UUID `json:"id"`
+
+	// Kind What the rule names. `address` and `domain` match the parties a message names; `container` matches where the provider FILED it — a Gmail label, a Graph folder, an IMAP mailbox.
+	// A container value is `<provider>:<id>`, where the id is the provider's own token and is stored exactly as given: `gmail:Label_12` (a system label is its name, `gmail:CATEGORY_PROMOTIONS`), `graph:<folderId>`, `imap:INBOX/Family`. Qualified because an id means nothing without the namespace it belongs to, and unfolded because a Graph folder id is base64url and an IMAP mailbox name is case-sensitive — folding either would merge two containers into one rule.
+	// A container rule is `user` scope only: the list belongs to the mailbox's owner, and a workspace rule would bind every colleague's connection to a place that does not exist there.
+	Kind CaptureExclusionKind `json:"kind"`
 
 	// Scope Whose rule it is — the installation's, or the caller's own for the mailbox they connected.
 	Scope CaptureExclusionScope `json:"scope"`
@@ -19646,7 +19671,9 @@ type CaptureExclusion struct {
 	Value string `json:"value"`
 }
 
-// CaptureExclusionKind defines model for CaptureExclusionKind.
+// CaptureExclusionKind What the rule names. `address` and `domain` match the parties a message names; `container` matches where the provider FILED it — a Gmail label, a Graph folder, an IMAP mailbox.
+// A container value is `<provider>:<id>`, where the id is the provider's own token and is stored exactly as given: `gmail:Label_12` (a system label is its name, `gmail:CATEGORY_PROMOTIONS`), `graph:<folderId>`, `imap:INBOX/Family`. Qualified because an id means nothing without the namespace it belongs to, and unfolded because a Graph folder id is base64url and an IMAP mailbox name is case-sensitive — folding either would merge two containers into one rule.
+// A container rule is `user` scope only: the list belongs to the mailbox's owner, and a workspace rule would bind every colleague's connection to a place that does not exist there.
 type CaptureExclusionKind string
 
 // CaptureExclusionListResponse defines model for CaptureExclusionListResponse.
@@ -19698,9 +19725,11 @@ type CaptureMailboxHealth struct {
 
 // CaptureOwnerIdentity defines model for CaptureOwnerIdentity.
 type CaptureOwnerIdentity struct {
-	CreatedAt time.Time            `json:"created_at"`
-	Id        openapi_types.UUID   `json:"id"`
-	Kind      CaptureExclusionKind `json:"kind"`
+	CreatedAt time.Time          `json:"created_at"`
+	Id        openapi_types.UUID `json:"id"`
+
+	// Kind What the identity names. Its own schema rather than the exclusion's, which the two shared while they happened to hold the same two values: an exclusion can now also name a CONTAINER, and a container is not something a mailbox owner can BE.
+	Kind CaptureOwnerIdentityKind `json:"kind"`
 
 	// Source Where the claim came from. `user` is the seat typing it in. `provider` is an address a mail
 	// provider attests; nothing writes it yet, because reading a provider's send-as list needs a
@@ -19719,6 +19748,9 @@ type CaptureOwnerIdentity struct {
 	// Value The folded address or domain.
 	Value string `json:"value"`
 }
+
+// CaptureOwnerIdentityKind What the identity names. Its own schema rather than the exclusion's, which the two shared while they happened to hold the same two values: an exclusion can now also name a CONTAINER, and a container is not something a mailbox owner can BE.
+type CaptureOwnerIdentityKind string
 
 // CaptureOwnerIdentityListResponse defines model for CaptureOwnerIdentityListResponse.
 type CaptureOwnerIdentityListResponse struct {
@@ -21449,6 +21481,9 @@ type CreateCaptureCounterpartyHoldRequestKind string
 
 // CreateCaptureExclusionRequest defines model for CreateCaptureExclusionRequest.
 type CreateCaptureExclusionRequest struct {
+	// Kind What the rule names. `address` and `domain` match the parties a message names; `container` matches where the provider FILED it — a Gmail label, a Graph folder, an IMAP mailbox.
+	// A container value is `<provider>:<id>`, where the id is the provider's own token and is stored exactly as given: `gmail:Label_12` (a system label is its name, `gmail:CATEGORY_PROMOTIONS`), `graph:<folderId>`, `imap:INBOX/Family`. Qualified because an id means nothing without the namespace it belongs to, and unfolded because a Graph folder id is base64url and an IMAP mailbox name is case-sensitive — folding either would merge two containers into one rule.
+	// A container rule is `user` scope only: the list belongs to the mailbox's owner, and a workspace rule would bind every colleague's connection to a place that does not exist there.
 	Kind CaptureExclusionKind `json:"kind"`
 
 	// Scope Whose rule it is — the installation's, or the caller's own for the mailbox they connected.
@@ -21460,7 +21495,8 @@ type CreateCaptureExclusionRequest struct {
 
 // CreateCaptureOwnerIdentityRequest defines model for CreateCaptureOwnerIdentityRequest.
 type CreateCaptureOwnerIdentityRequest struct {
-	Kind CaptureExclusionKind `json:"kind"`
+	// Kind What the identity names. Its own schema rather than the exclusion's, which the two shared while they happened to hold the same two values: an exclusion can now also name a CONTAINER, and a container is not something a mailbox owner can BE.
+	Kind CaptureOwnerIdentityKind `json:"kind"`
 
 	// Value An email address, or a bare domain.
 	Value string `json:"value"`
