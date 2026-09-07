@@ -454,3 +454,50 @@ func TestAMappedButOpenDealIsClosedOnTheNextPass(t *testing.T) {
 		t.Errorf("deal rows = %d, want exactly the one the interrupted pass landed", n)
 	}
 }
+
+// A resumed run re-offers an association its earlier attempt already landed.
+// That is convergence, and the report must say applied — the edge IS on file.
+//
+// It is asked of the REAL writer rather than of the predicate, because the
+// question the writer has to answer is which uniqueness rule refused it: only
+// a rule keyed on the pair being inserted says the edge is already there. The
+// primary-employer index is keyed on the person alone, and reading its refusal
+// as convergence reported an import as applied while dropping the employment.
+// That refusal is reachable only under a concurrent writer, which is why this
+// case can exercise one side and TestOnlyATupleKeyedRefusalMeansTheEdgeIsAlreadyOnFile
+// holds the other.
+func TestAReplayedEmploymentAssociationConvergesRatherThanFailing(t *testing.T) {
+	f := setupLanding(t)
+
+	if _, err := f.w.Ensure(f.ctx, flipObjectPerson,
+		landingRow("hs-person-emp", map[string]any{"full_name": "Ada Lovelace"})); err != nil {
+		t.Fatalf("landing the person: %v", err)
+	}
+	if _, err := f.w.Ensure(f.ctx, flipObjectOrganization,
+		landingRow("hs-org-emp", map[string]any{"display_name": "Analytical Engines Ltd"})); err != nil {
+		t.Fatalf("landing the organization: %v", err)
+	}
+	edge := migration.Assoc{
+		FromType: flipObjectPerson, FromID: "hs-person-emp",
+		ToType: flipObjectOrganization, ToID: "hs-org-emp", Label: "primary",
+	}
+
+	first, err := f.w.Associate(f.ctx, edge)
+	if err != nil {
+		t.Fatalf("the first association: %v", err)
+	}
+	if !first.Applied {
+		t.Fatalf("the first association reported %+v, want applied", first)
+	}
+
+	second, err := f.w.Associate(f.ctx, edge)
+	if err != nil {
+		t.Fatalf("re-offering an association that already landed: %v — a resumed run must converge", err)
+	}
+	if !second.Applied {
+		t.Errorf("the replay reported %+v, want applied: the edge is on file", second)
+	}
+	if n := f.e.WsCount(t, `SELECT count(*) FROM relationship WHERE kind = 'employment'`); n != 1 {
+		t.Errorf("%d employment rows, want 1 — the replay wrote a second edge", n)
+	}
+}
