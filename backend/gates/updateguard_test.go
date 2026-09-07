@@ -144,6 +144,16 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	// arrives as pgx.ErrNoRows, which the caller handles as the decline it is
 	// rather than as a failure.
 	"internal/modules/people:bindSiteReadLogo": "the bind is conditioned on logo_object_key IS NULL AND archived_at IS NULL, and ErrNoRows means the record already wears a mark or was archived, which releases the parked object instead",
+	// The same shape again, for the same reason, on both halves of one switch.
+	// Suspending is conditioned on suspended_at IS NULL and resuming on IS NOT
+	// NULL, so a second caller racing either one gets ErrNoRows and treats it
+	// as the decline it is: the FIRST suspension's reason stands (it is the one
+	// that stopped the automation, and a later sweep would overwrite it with a
+	// consequence), and one clearing is one clearing. Both send the conditional
+	// UPDATE through QueryRow so the row the write produced is the row the
+	// audit describes.
+	"internal/modules/deals:SuspendTransitionPolicy": "conditioned on suspended_at IS NULL; ErrNoRows means a concurrent pass suspended it first and that reason stands",
+	"internal/modules/deals:ResumeTransitionPolicy":  "conditioned on suspended_at IS NOT NULL; ErrNoRows means a concurrent caller already cleared it",
 
 	// The second of that shape, and the reason it is ratified rather than
 	// taught to the witness: crediting a bare mention of pgx.ErrNoRows would
