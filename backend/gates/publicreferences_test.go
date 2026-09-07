@@ -22,6 +22,13 @@ package gates
 // automatically. There is no exemption list: the one file that could not be
 // cleaned was moved out of this repository instead, and an exemption is a hole
 // somebody eventually widens.
+//
+// WHAT A GREEN RUN HERE DOES NOT MEAN. The rule covers commit messages and PR
+// bodies as well as the tree, and no test can reach either — they are not files
+// this or any checkout holds. That half stays judgement, and it is said here
+// rather than left for a reader to assume: a gate that covers most of a rule
+// and says nothing about the rest is read as covering all of it, which is how
+// the half nobody checks becomes the half nobody thinks about.
 
 import (
 	"errors"
@@ -68,6 +75,11 @@ var forbidden = []struct {
 var scanned = map[string]bool{
 	".go": true, ".md": true, ".yml": true, ".yaml": true,
 	".json": true, ".ts": true, ".tsx": true, ".sh": true, ".sql": true,
+	// .css because prose lives there too: a design-system file explains a
+	// colour decision in a comment, and a comment is where a citation of an
+	// unreachable document goes unnoticed. It was the last extension the
+	// frontend writes in that this gate could not see.
+	".css": true,
 }
 
 func TestPublicTreeCitesNothingPrivate(t *testing.T) {
