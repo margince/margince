@@ -71,11 +71,19 @@ func ReferencesByID(
 		discover,
 	}
 
+	// The content clause is evaluated ONCE, in a subquery, and read twice from
+	// there. Repeating its text would work — a $N placeholder may be referenced
+	// as often as you like — but it would also mean the two copies could drift
+	// apart under an edit, and the row's `content_state` would then disagree
+	// with whether its own subject was blanked.
 	sql := fmt.Sprintf(`
-		SELECT a.id, a.kind, a.occurred_at, (%s) AS readable,
-		       CASE WHEN (%s) THEN a.subject ELSE NULL END
-		  FROM activity a
-		 WHERE %s`, content, content, strings.Join(where, " AND "))
+		SELECT id, kind, occurred_at, readable,
+		       CASE WHEN readable THEN subject ELSE NULL END
+		  FROM (
+		    SELECT a.id, a.kind, a.occurred_at, a.subject, (%s) AS readable
+		      FROM activity a
+		     WHERE %s
+		  ) admitted`, content, strings.Join(where, " AND "))
 	rows, err := tx.Query(ctx, sql, args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: naming the activities behind a score: %w", err)
