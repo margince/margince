@@ -62,7 +62,10 @@ func applyNotify(ctx context.Context, notifier Notifier, action workflow.Action)
 	if err != nil {
 		return err
 	}
-	return notifier.Notify(ctx, in.Recipient, in.Subject, in.Body)
+	// The action's own target, so the notice names the record the firing was
+	// about. "A deal you own changed stage" is true of every deal a rep owns,
+	// and the sentence alone left a reader with nothing to open.
+	return notifier.Notify(ctx, in.Recipient, in.Subject, in.Body, action.Target)
 }
 
 // draftEmailArgs names what draft_email hands to Comms: Target is the

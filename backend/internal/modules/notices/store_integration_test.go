@@ -114,16 +114,22 @@ func (e *noticeEnv) asUser(u ids.UserID) context.Context {
 func TestARepeatAnswersWithTheStoredNoticeRatherThanTheReplay(t *testing.T) {
 	e := setupNotices(t)
 	key := "lead_sla:" + ids.NewV7().String()
+	firstTarget := Target{Type: "deal", ID: ids.NewV7()}
 	stored, err := e.store.insertNotice(e.engineCtx(), NewNotice{
 		Recipient: e.recipient, Kind: "lead_sla", Subject: "SLA breach",
-		Body: "overdue", DedupeKey: key,
+		Body: "overdue", DedupeKey: key, Target: firstTarget,
 	}, nil)
 	if err != nil {
 		t.Fatalf("first insert: %v", err)
 	}
+	// The target differs too, and for the same reason the words do: an event
+	// replayed after its automation was repointed names a different record.
+	// Answering the stored notice's id with THIS call's target would send a
+	// reader to a record the notice they can see says nothing about.
 	replay, err := e.store.insertNotice(e.engineCtx(), NewNotice{
 		Recipient: e.recipient, Kind: "lead_sla_v2", Subject: "Response overdue",
 		Body: "still overdue", DedupeKey: key,
+		Target: Target{Type: "person", ID: ids.NewV7()},
 	}, nil)
 	if err != nil {
 		t.Fatalf("second insert: %v", err)
@@ -131,6 +137,78 @@ func TestARepeatAnswersWithTheStoredNoticeRatherThanTheReplay(t *testing.T) {
 	if replay != stored {
 		t.Errorf("the repeat answered %+v, want the notice that already stands %+v — every field, "+
 			"or a caller renders a line nothing in the database says", replay, stored)
+	}
+	if replay.Target != firstTarget {
+		t.Errorf("the repeat names %+v, want the record the stored notice is about (%+v)",
+			replay.Target, firstTarget)
+	}
+}
+
+// A notice that names a record carries it back out, so the Worklist row can
+// link to the thing the sentence is about.
+func TestANoticeCarriesTheRecordItNames(t *testing.T) {
+	e := setupNotices(t)
+	target := Target{Type: "deal", ID: ids.NewV7()}
+
+	written, err := e.store.insertNotice(e.engineCtx(), NewNotice{
+		Recipient: e.recipient, Kind: "automation",
+		Subject: "A deal you own changed stage", Body: "Fleet retrofit moved.",
+		Target: target,
+	}, nil)
+	if err != nil {
+		t.Fatalf("insert: %v", err)
+	}
+	if written.Target != target {
+		t.Fatalf("the notice names %+v, want %+v", written.Target, target)
+	}
+
+	unread, err := e.store.UnreadFor(e.asUser(e.recipient), 10)
+	if err != nil {
+		t.Fatalf("reading: %v", err)
+	}
+	// Through the READ, not only out of the writer: the row a reader sees is
+	// the one the Worklist draws, and a target that survived the insert and
+	// not the select would link nothing while every write test passed.
+	var found *Notice
+	for i := range unread {
+		if unread[i].ID == written.ID {
+			found = &unread[i]
+		}
+	}
+	if found == nil {
+		t.Fatal("the recipient does not see their own notice")
+	}
+	if found.Target != target {
+		t.Errorf("the read notice names %+v, want %+v", found.Target, target)
+	}
+}
+
+// A notice about no record carries neither half, and the table's paired
+// constraint is what says it cannot carry one.
+func TestANoticeAboutNoRecordCarriesNeitherHalf(t *testing.T) {
+	e := setupNotices(t)
+
+	written, err := e.store.insertNotice(e.engineCtx(), NewNotice{
+		Recipient: e.recipient, Kind: "capture_backlog",
+		Subject: "Your mailbox is behind", Body: "1,200 messages are waiting.",
+	}, nil)
+	if err != nil {
+		t.Fatalf("insert: %v", err)
+	}
+	if written.Target.Named() {
+		t.Errorf("a notice about no record named %+v", written.Target)
+	}
+
+	// Half a target is refused by the table rather than stored and rendered as
+	// a link the client has to guess at.
+	var stored int
+	if err := e.pool.QueryRow(e.engineCtx(), `
+		SELECT count(*) FROM notice
+		 WHERE (target_type IS NULL) <> (target_id IS NULL)`).Scan(&stored); err != nil {
+		t.Fatalf("counting half-targets: %v", err)
+	}
+	if stored != 0 {
+		t.Errorf("%d notice(s) carry half a target; the pair is both or neither", stored)
 	}
 }
 

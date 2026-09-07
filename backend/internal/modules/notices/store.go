@@ -44,8 +44,23 @@ type Notice struct {
 	Kind      string
 	Subject   string
 	Body      string
+	Target    Target
 	CreatedAt time.Time
 }
+
+// Target is the record a notice is about, when it is about one.
+//
+// Both halves or neither, which the table's own constraint holds: a type with
+// no id names a KIND of thing and cannot be opened, and an id with no type
+// cannot be routed to a screen. The zero value is a notice about no record —
+// a capture backlog, a coach's word — and those are the majority.
+type Target struct {
+	Type string
+	ID   ids.UUID
+}
+
+// Named reports whether this notice points at a record.
+func (t Target) Named() bool { return t.Type != "" && !t.ID.IsZero() }
 
 // NewNotice is one notice to record. It is a struct rather than a parameter
 // list because the dedupe key is the fifth thing a caller might say about a
@@ -66,6 +81,10 @@ type NewNotice struct {
 	// honest answer, since an invented key would silently collapse two real
 	// notices into one.
 	DedupeKey string
+	// Target is the record this notice is about, when it is about one. "A deal
+	// you own changed stage" is true of every deal a rep owns, so the sentence
+	// alone left a reader knowing something moved and having to find it.
+	Target Target
 }
 
 // Create records one notice for recipient — the whole of delivery on this
@@ -111,10 +130,18 @@ func (s *Store) insertNotice(ctx context.Context, in NewNotice, evidence map[str
 	subject := truncate(in.Subject, subjectBound)
 	body := truncate(in.Body, bodyBound)
 	id := ids.NewV7()
+	target := in.Target
 	var createdAt time.Time
 	var dedupe *string
 	if in.DedupeKey != "" {
 		dedupe = &in.DedupeKey
+	}
+	// Nil rather than the zero value on both halves, so the table's paired
+	// constraint sees a notice about no record as two NULLs.
+	var targetType *string
+	var targetID *ids.UUID
+	if target.Named() {
+		targetType, targetID = &target.Type, &target.ID
 	}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// The INDEX is the guard, not a read-then-write check: two deliveries
@@ -127,12 +154,13 @@ func (s *Store) insertNotice(ctx context.Context, in NewNotice, evidence map[str
 		// created_at is the column's own default, so the insert returns it
 		// rather than the caller stamping a second clock beside it.
 		row := tx.QueryRow(ctx, `
-			INSERT INTO notice (id, recipient_user_id, kind, subject, body, captured_by, dedupe_key)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)
+			INSERT INTO notice (id, recipient_user_id, kind, subject, body, captured_by,
+			                    dedupe_key, target_type, target_id)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 			ON CONFLICT (recipient_user_id, dedupe_key) WHERE dedupe_key IS NOT NULL
 			DO NOTHING
 			RETURNING created_at`,
-			id, in.Recipient, in.Kind, subject, body, capturedBy, dedupe)
+			id, in.Recipient, in.Kind, subject, body, capturedBy, dedupe, targetType, targetID)
 		switch err := row.Scan(&createdAt); {
 		case errors.Is(err, pgx.ErrNoRows):
 			// Already recorded. Answer the notice that STANDS — all of it, not
@@ -143,10 +171,25 @@ func (s *Store) insertNotice(ctx context.Context, in NewNotice, evidence map[str
 			// later version spells differently. Returning the stored id with
 			// the replay's words would put a notice on screen that the reader
 			// cannot find anywhere, and that nothing in the database says.
-			return tx.QueryRow(ctx, `
-				SELECT id, kind, subject, body, created_at FROM notice
+			// The target comes back with them, for the same reason: a second
+			// delivery can name a different entity — an event replayed after
+			// the automation was repointed — and answering the stored notice's
+			// id with this call's target would send a reader to a record the
+			// notice they can see says nothing about.
+			var storedType *string
+			var storedID *ids.UUID
+			if err := tx.QueryRow(ctx, `
+				SELECT id, kind, subject, body, target_type, target_id, created_at FROM notice
 				 WHERE recipient_user_id = $1 AND dedupe_key = $2`,
-				in.Recipient, in.DedupeKey).Scan(&id, &kind, &subject, &body, &createdAt)
+				in.Recipient, in.DedupeKey,
+			).Scan(&id, &kind, &subject, &body, &storedType, &storedID, &createdAt); err != nil {
+				return err
+			}
+			target = Target{}
+			if storedType != nil && storedID != nil {
+				target = Target{Type: *storedType, ID: *storedID}
+			}
+			return nil
 		case err != nil:
 			return fmt.Errorf("notices: recording the notice: %w", err)
 		}
@@ -165,7 +208,10 @@ func (s *Store) insertNotice(ctx context.Context, in NewNotice, evidence map[str
 	if err != nil {
 		return Notice{}, err
 	}
-	return Notice{ID: id, Kind: kind, Subject: subject, Body: body, CreatedAt: createdAt}, nil
+	return Notice{
+		ID: id, Kind: kind, Subject: subject, Body: body,
+		Target: target, CreatedAt: createdAt,
+	}, nil
 }
 
 // UnreadFor answers the CALLING person's own unread notices, newest first,
@@ -184,7 +230,7 @@ func (s *Store) UnreadFor(ctx context.Context, limit int) ([]Notice, error) {
 	var unread []Notice
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, txErr := tx.Query(ctx, `
-			SELECT id, kind, subject, body, created_at
+			SELECT id, kind, subject, body, target_type, target_id, created_at
 			  FROM notice
 			 WHERE recipient_user_id = $1 AND read_at IS NULL
 			 ORDER BY created_at DESC, id DESC
@@ -196,8 +242,16 @@ func (s *Store) UnreadFor(ctx context.Context, limit int) ([]Notice, error) {
 		unread = []Notice{}
 		for rows.Next() {
 			var n Notice
-			if scanErr := rows.Scan(&n.ID, &n.Kind, &n.Subject, &n.Body, &n.CreatedAt); scanErr != nil {
+			// Both halves are nullable and the table pairs them, so either
+			// arriving alone is a row the constraint should have refused.
+			var targetType *string
+			var targetID *ids.UUID
+			if scanErr := rows.Scan(&n.ID, &n.Kind, &n.Subject, &n.Body,
+				&targetType, &targetID, &n.CreatedAt); scanErr != nil {
 				return scanErr
+			}
+			if targetType != nil && targetID != nil {
+				n.Target = Target{Type: *targetType, ID: *targetID}
 			}
 			unread = append(unread, n)
 		}

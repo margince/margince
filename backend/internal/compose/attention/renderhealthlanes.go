@@ -253,6 +253,14 @@ func automationItem(run TroubledAutomationRun) crmcontracts.AttentionItem {
 // noticeItem draws one unread notice: its own subject as the headline, its
 // body as the supporting line, and acknowledge — the one verb it offers,
 // which routes to the notice's read endpoint and takes it off this lane.
+//
+// The record it is about rides `subject`, which is what makes the row's
+// headline a link. "A deal you own changed stage" is true of every deal a rep
+// owns, so a reader knew something had moved and had to go find it. A notice
+// that names no record — a capture backlog, a coach's word — carries none, and
+// so does one naming a type this feed cannot route to: subjectOf refuses it
+// rather than guessing, because a card pointing at the wrong record is worse
+// than one pointing nowhere.
 func noticeItem(notice UnreadNotice) crmcontracts.AttentionItem {
 	kind := notice.Kind
 	subject := notice.Subject
@@ -264,6 +272,9 @@ func noticeItem(notice UnreadNotice) crmcontracts.AttentionItem {
 		Title:      &subject,
 		OccurredAt: &occurred,
 		Actions:    []crmcontracts.AttentionItemActions{crmcontracts.AttentionItemActions("acknowledge")},
+	}
+	if notice.TargetType != "" {
+		item.Subject = subjectOf(notice.TargetType, notice.TargetID)
 	}
 	if notice.Body != "" {
 		body := notice.Body

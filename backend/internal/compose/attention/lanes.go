@@ -395,11 +395,17 @@ type Notices interface {
 
 // UnreadNotice is one line still waiting to be seen.
 type UnreadNotice struct {
-	ID        ids.UUID
-	Kind      string
-	Subject   string
-	Body      string
-	CreatedAt time.Time
+	ID      ids.UUID
+	Kind    string
+	Subject string
+	Body    string
+	// Target names the record the notice is about, when it names one. Empty
+	// type means it names none — a capture backlog, a coach's word — and the
+	// row then carries no subject, which is what it carried before any notice
+	// stored a target at all.
+	TargetType string
+	TargetID   ids.UUID
+	CreatedAt  time.Time
 }
 
 // Introductions is the asks waiting on THIS reader to answer — a colleague

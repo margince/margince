@@ -3441,9 +3441,12 @@ public.notice.notice_content_bounded CHECK (((length(subject) <= 200) AND (lengt
 public.notice.notice_pkey PRIMARY KEY (id)
 public.notice.notice_recipient_user_id_fkey FOREIGN KEY (recipient_user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.notice.notice_subject_present CHECK ((subject <> ''::text))
+public.notice.notice_target_paired CHECK (((target_type IS NULL) = (target_id IS NULL)))
 public.notice.read_at timestamp with time zone gen=- def=-
 public.notice.recipient_user_id uuid NOT NULL gen=- def=-
 public.notice.subject text NOT NULL gen=- def=-
+public.notice.target_id uuid gen=- def=-
+public.notice.target_type text gen=- def=-
 public.notice_pkey CREATE UNIQUE INDEX notice_pkey ON public.notice USING btree (id)
 public.notice_unread CREATE INDEX notice_unread ON public.notice USING btree (recipient_user_id, created_at DESC) WHERE (read_at IS NULL)
 public.oauth_authorization_code acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
