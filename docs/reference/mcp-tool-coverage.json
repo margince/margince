@@ -5,7 +5,7 @@
     "driven": 7,
     "never_driven": 66,
     "permitted_but_never_required": 13,
-    "tokens_served_but_never_driven": 17745,
+    "tokens_served_but_never_driven": 18006,
     "use_case_cases": 7,
     "cases_with_a_committed_run": 7,
     "acceptance_criteria_named": 6,
@@ -222,7 +222,7 @@
   "tools": [
     {
       "name": "send_account_email",
-      "tokens": 655,
+      "tokens": 742,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [],
@@ -231,7 +231,7 @@
     },
     {
       "name": "send_email",
-      "tokens": 588,
+      "tokens": 675,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [],
@@ -241,6 +241,15 @@
     {
       "name": "update_record",
       "tokens": 572,
+      "agents": [],
+      "required_by_cases": [],
+      "permitted_in_cases": [],
+      "driven": false,
+      "measured": null
+    },
+    {
+      "name": "send_message",
+      "tokens": 518,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [],
@@ -292,15 +301,6 @@
     {
       "name": "advance_deal",
       "tokens": 443,
-      "agents": [],
-      "required_by_cases": [],
-      "permitted_in_cases": [],
-      "driven": false,
-      "measured": null
-    },
-    {
-      "name": "send_message",
-      "tokens": 431,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [],

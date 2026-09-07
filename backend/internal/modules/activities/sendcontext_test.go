@@ -236,11 +236,12 @@ func TestANonHTTPCallerCannotClaimAnUnknownCategory(t *testing.T) {
 // An ordinary claim reaches the input on both doors, or the refusals above
 // would be indistinguishable from a surface that drops everything.
 func TestANonHTTPClaimReachesBothInputs(t *testing.T) {
+	deal := ids.NewV7()
 	claim := SendContextInput{
 		Context:          string(commsauthz.CategoryActiveDealFollowup),
 		MarketingPurpose: "newsletter",
 		OperatorReason:   "they asked at the fair",
-		Evidence:         commsauthz.Evidence{DealID: ids.NewV7()},
+		Evidence:         SendEvidenceInput{DealID: deal.String()},
 	}
 	mail, err := ApplyContext(SendEmailInput{Subject: "Hello"}, claim)
 	if err != nil {
@@ -249,7 +250,7 @@ func TestANonHTTPClaimReachesBothInputs(t *testing.T) {
 	if mail.Context != commsauthz.CategoryActiveDealFollowup || mail.MarketingPurpose != "newsletter" {
 		t.Errorf("the claim did not reach the mail input: %+v", mail)
 	}
-	if mail.Evidence.DealID != claim.Evidence.DealID {
+	if mail.Evidence.DealID != deal {
 		t.Error("named evidence did not reach the mail input")
 	}
 	if mail.Subject != "Hello" {
@@ -263,7 +264,7 @@ func TestANonHTTPClaimReachesBothInputs(t *testing.T) {
 	if channel.Context != commsauthz.CategoryActiveDealFollowup {
 		t.Errorf("the claim did not reach the channel input: %+v", channel)
 	}
-	if channel.Evidence.DealID != claim.Evidence.DealID {
+	if channel.Evidence.DealID != deal {
 		t.Error("named evidence did not reach the channel input")
 	}
 	if channel.Body != "Hi" {
@@ -280,5 +281,42 @@ func TestANonHTTPOperatorReasonIsBounded(t *testing.T) {
 	}
 	if _, err := ApplyChannelContext(SendMessageInput{}, claim); err == nil {
 		t.Error("the channel tool accepted an unbounded operator reason")
+	}
+}
+
+// TestAMalformedEvidenceIdIsRefusedAtTheDoor holds what parsing here buys.
+//
+// A tool caller's ids arrive as strings and have passed no decoder. Left
+// unparsed they would resolve to the zero uuid, match no record, and fail much
+// later as "this category is not supported" — which reads as the engine
+// refusing a legitimate send rather than as the caller having typed nonsense.
+func TestAMalformedEvidenceIdIsRefusedAtTheDoor(t *testing.T) {
+	claim := SendContextInput{
+		Context:  string(commsauthz.CategoryActiveDealFollowup),
+		Evidence: SendEvidenceInput{DealID: "not-a-uuid"},
+	}
+	if _, err := ApplyContext(SendEmailInput{}, claim); err == nil {
+		t.Error("the mail door accepted an evidence id that is not a record id")
+	}
+	// The channel door shares the validator, so a claim refused on one
+	// transport must not become makeable by choosing the other.
+	if _, err := ApplyChannelContext(SendMessageInput{}, claim); err == nil {
+		t.Error("the channel door accepted an evidence id that is not a record id")
+	}
+}
+
+// TestEvidenceOmittedEntirelyIsNotAnError is the other arm.
+//
+// Every evidence field is optional: a caller that can name nothing says
+// nothing, and the engine resolves the send from its origin instead. Refusing
+// an empty claim would make evidence mandatory on every agent send.
+func TestEvidenceOmittedEntirelyIsNotAnError(t *testing.T) {
+	claim := SendContextInput{Context: string(commsauthz.CategoryReplyToInbound)}
+	mail, err := ApplyContext(SendEmailInput{}, claim)
+	if err != nil {
+		t.Fatalf("a claim naming no evidence was refused: %v", err)
+	}
+	if mail.Evidence != (commsauthz.Evidence{}) {
+		t.Errorf("an empty claim invented evidence: %+v", mail.Evidence)
 	}
 }

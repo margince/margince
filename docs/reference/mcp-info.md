@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 73 |
 | Resources | 12 |
-| Tool catalog | 204.3 KB |
+| Tool catalog | 205.4 KB |
 | Resource catalog | 4.5 KB |
-| Approx. wire tokens | 53458 |
+| Approx. wire tokens | 53740 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -31,9 +31,9 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 |---|---:|---:|---|
 | Output schemas | 96.6 KB | 47% | **No** — a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 49.9 KB | 24% | Yes, every step |
-| Input schemas | 42.5 KB | 20% | Yes, every step |
+| Input schemas | 43.6 KB | 21% | Yes, every step |
 | _Names, annotations, punctuation_ | 15.4 KB | 7% | Partly |
-| **Description + input schema** | **92.4 KB** | **45%** | **the recurring cost** |
+| **Description + input schema** | **93.5 KB** | **45%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -129,9 +129,9 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`run_report`](#run_report) | Run a report | yes |  | 5.0 KB |
 | [`search_context`](#search_context) | Search for relevant material | yes |  | 3.1 KB |
 | [`search_records`](#search_records) | Search records | yes |  | 2.8 KB |
-| [`send_account_email`](#send_account_email) | Start an email conversation from a record |  |  | 3.9 KB |
-| [`send_email`](#send_email) | Send an email |  |  | 3.6 KB |
-| [`send_message`](#send_message) | Reply on a channel conversation |  |  | 2.9 KB |
+| [`send_account_email`](#send_account_email) | Start an email conversation from a record |  |  | 4.2 KB |
+| [`send_email`](#send_email) | Send an email |  |  | 3.9 KB |
+| [`send_message`](#send_message) | Reply on a channel conversation |  |  | 3.3 KB |
 | [`update_record`](#update_record) | Update a record |  |  | 3.8 KB |
 | [`update_tag`](#update_tag) | Rename or recolour a tag |  |  | 2.0 KB |
 | [`whats_slipping_this_week`](#whats_slipping_this_week) | What's slipping this week | yes | [`ui://margince/pipeline-review.html`](#pipeline_review_view) | 2.3 KB |
@@ -13232,6 +13232,25 @@ Put a mail on the wire to a real recipient, from this workspace, starting a new 
       "description": "Purpose key the recipients must have granted",
       "type": "string"
     },
+    "evidence": {
+      "additionalProperties": false,
+      "description": "The record that bears out the category: required for invoice_or_payment, contract_notice and precontract_quote, which cannot be allowed without one",
+      "properties": {
+        "contract_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "deal_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "invoice_id": {
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "idempotency_key": {
       "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
@@ -13469,6 +13488,25 @@ Put a mail on the wire to a real recipient, from this workspace, and record it o
       "description": "Purpose key the recipients must have granted",
       "type": "string"
     },
+    "evidence": {
+      "additionalProperties": false,
+      "description": "The record that bears out the category: required for invoice_or_payment, contract_notice and precontract_quote, which cannot be allowed without one",
+      "properties": {
+        "contract_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "deal_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "invoice_id": {
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "idempotency_key": {
       "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
@@ -13670,6 +13708,25 @@ Reply on a captured chat conversation — the channels this workspace has connec
     "consent_purpose": {
       "description": "Purpose key the recipient must have granted",
       "type": "string"
+    },
+    "evidence": {
+      "additionalProperties": false,
+      "description": "The record that bears out the category: required for invoice_or_payment, contract_notice and precontract_quote, which cannot be allowed without one",
+      "properties": {
+        "contract_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "deal_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "invoice_id": {
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "type": "object"
     },
     "idempotency_key": {
       "description": "Optional. Same key, same result; a key reused with other arguments is refused.",

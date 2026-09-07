@@ -121,6 +121,12 @@ func (t sendAccountEmailTool) Handle(ctx context.Context, in json.RawMessage) (j
 	if _, err := readStageableLinks(ctx, t.p, links); err != nil {
 		return nil, err
 	}
+	// And the evidence ids, for the reason stated above applied to argument
+	// shape: a malformed one staged and approved would fail at redemption,
+	// after the approval it consumed.
+	if err := requireParsableEvidence(args.Evidence); err != nil {
+		return nil, err
+	}
 	for _, link := range links {
 		noteEvidence(ctx, datasource.EntityType(link.EntityType), link.EntityID)
 	}

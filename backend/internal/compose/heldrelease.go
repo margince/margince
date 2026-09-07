@@ -246,6 +246,25 @@ func heldDraftPrecheck(
 // The CONTEXT, which the engine actually decides on. Same violation, quieter
 // shape: a purpose reads as a permission and a context reads as a description,
 // so an edit to it looks like a correction to the words.
+//
+// EVIDENCE IS NOT PINNED HERE BECAUSE THE PROPOSAL CARRIES NONE, and that is
+// the honest state rather than a gap — but the reason is an ORDERING, not an
+// absence. An operator CAN configure invoice_or_payment on a draft_email
+// action (draftEmailArgs.CommunicationContext), so a claim needing a named
+// record does reach this path.
+//
+// It cannot outrank the anchor. Both producers set AnchorActivityID, and
+// resolveCategory checks the thread arm before any claim: on a live thread the
+// send resolves to reply_to_inbound whatever was configured, and off one it
+// falls to the claim, finds no invoice, and parks as review. Carrying evidence
+// on the proposal would change neither outcome.
+//
+// If a producer ever stages a draft whose category needs an explicit record,
+// the field has to arrive on the proposal AND be pinned here. Note that the
+// approvals edit scope would already cover it: entityRefs walks the payload at
+// any depth and pins every uuid-shaped string, which is exactly what an
+// evidence id is. The pin below exists for the two fields that are shaped like
+// prose and therefore invisible to that walk.
 // The refusal is approvals' OWN RetargetedEditError, not a new error beside it.
 // This is the same violation the edit scope refuses for entity references, in a
 // field whose shape that check cannot see — so it should read identically to the
