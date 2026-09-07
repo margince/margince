@@ -64,3 +64,41 @@ const (
 	ProposalStaged   ProposalState = "staged"
 	ProposalAccepted ProposalState = "accepted"
 )
+
+// CriterionKind is the Go spelling of the stage_exit_criterion.kind CHECK,
+// kept in sync by the enumsync fitness gate. It is not decoration: the kind
+// decides which evidence sources may settle a criterion, so branching on a
+// raw literal here is how a buyer milestone quietly accepts the seller's own
+// mail as proof of itself.
+//
+// The buyer-milestone kinds are the ones a seller cannot assert on the
+// buyer's behalf. BuyerConfirmed, EventHeld, DocumentSigned and TermsAccepted
+// each name a thing the OTHER side did; RoleIdentified and Custom do not.
+type CriterionKind string
+
+// The criterion kinds, mirroring the stage_exit_criterion.kind CHECK.
+const (
+	CriterionBuyerConfirmed CriterionKind = "buyer_confirmed"
+	CriterionEventHeld      CriterionKind = "event_held"
+	CriterionDocumentSigned CriterionKind = "document_signed"
+	CriterionRoleIdentified CriterionKind = "role_identified"
+	CriterionTermsAccepted  CriterionKind = "terms_accepted"
+	CriterionCustom         CriterionKind = "custom"
+)
+
+// criterionKindField keeps the refusal and the audit image of a criterion
+// write naming one field, as stageSemanticField does for a stage.
+const criterionKindField = "kind"
+
+// ParseCriterionKind is the config seam's membership check.
+func ParseCriterionKind(raw string) (CriterionKind, error) {
+	switch k := CriterionKind(raw); k {
+	case CriterionBuyerConfirmed, CriterionEventHeld, CriterionDocumentSigned,
+		CriterionRoleIdentified, CriterionTermsAccepted, CriterionCustom:
+		return k, nil
+	}
+	return "", &values.ParseError{
+		Field: criterionKindField, Code: "invalid_criterion_kind",
+		Message: "kind is one of buyer_confirmed, event_held, document_signed, role_identified, terms_accepted, custom",
+	}
+}

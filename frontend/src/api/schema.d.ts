@@ -3283,6 +3283,77 @@ export interface paths {
         patch: operations["updateStage"];
         trace?: never;
     };
+    "/stages/{id}/exit-criteria": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * What a deal must satisfy before it leaves this stage.
+         * @description The stage's exit criteria in `position` order. Live rows only unless
+         *     `include_archived` is set — an archived criterion stays readable because
+         *     evidence recorded against it cites it by id, and a reader opening an older
+         *     deal must still see what the stage asked for at the time.
+         *
+         *     A terminal (`won`/`lost`) stage always answers an empty list: there is no
+         *     leaving it, so there is nothing it can require.
+         */
+        get: operations["listStageExitCriteria"];
+        put?: never;
+        /**
+         * Add an exit criterion to a stage.
+         * @description Requires `pipeline:update`, like every other pipeline-shape edit.
+         *
+         *     Two refusals, both `422`. `terminal_stage_has_no_exit_criteria` on a
+         *     `won`/`lost` stage. `criterion_key_taken` when the stage already has a LIVE
+         *     criterion with this key — archiving one frees its key for reuse, and both
+         *     rows survive so the older evidence stays legible.
+         */
+        post: operations["createStageExitCriterion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/stages/{id}/exit-criteria/{criterion_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                criterion_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a criterion from its stage (soft delete; archive is the delete).
+         * @description Requires `pipeline:update`. Archiving rather than deleting is what keeps
+         *     recorded evidence readable — a claim references the criterion it settled.
+         *     The surviving criteria shift down so `position` stays contiguous.
+         */
+        delete: operations["archiveStageExitCriterion"];
+        options?: never;
+        head?: never;
+        /**
+         * Edit a criterion's label, kind, requiredness, hint or position.
+         * @description Requires `pipeline:update`. The `key` is NOT editable: evidence cites a
+         *     criterion by key across an edit, so changing it would silently orphan every
+         *     claim already recorded against it. Archive the criterion and add a new one
+         *     under the new key instead.
+         */
+        patch: operations["updateStageExitCriterion"];
+        trace?: never;
+    };
     "/channel-providers": {
         parameters: {
             query?: never;
@@ -21782,6 +21853,76 @@ export interface components {
             semantic?: "open" | "won" | "lost";
             win_probability?: number;
         };
+        /**
+         * @description One thing that must be true of a deal before it leaves a stage. Mirrors the
+         *     `stage_exit_criterion` table. Configuration, not observation: whether a
+         *     particular deal has met it is evidence recorded elsewhere.
+         */
+        StageExitCriterion: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            stage_id: string;
+            /**
+             * @description The stable machine name an evidence extractor cites. Unique among the
+             *     stage's live criteria and never editable; archiving frees it for reuse.
+             */
+            key: string;
+            /** @description What a human reads. */
+            label: string;
+            kind: components["schemas"]["StageCriterionKind"];
+            /**
+             * @description An optional criterion is gathered and shown but never blocks.
+             * @default true
+             */
+            required: boolean;
+            /** @description Guidance for whoever reviews the evidence. */
+            hint?: string | null;
+            /** @description Order within the stage. */
+            position: number;
+            /** Format: int64 */
+            version?: number;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+            /** Format: date-time */
+            archived_at?: string | null;
+        };
+        /**
+         * @description What KIND of fact settles a criterion. This is not decoration: the kind
+         *     decides which evidence sources may satisfy it. `buyer_confirmed`,
+         *     `event_held`, `document_signed` and `terms_accepted` each name something the
+         *     BUYER did, so a seller's own message can never settle one.
+         * @enum {string}
+         */
+        StageCriterionKind: "buyer_confirmed" | "event_held" | "document_signed" | "role_identified" | "terms_accepted" | "custom";
+        CreateStageExitCriterionRequest: {
+            key: string;
+            label: string;
+            kind: components["schemas"]["StageCriterionKind"];
+            /** @default true */
+            required: boolean;
+            hint?: string;
+        };
+        /**
+         * @description The `key` is absent by design — see the operation description. So is
+         *     `position`: moving one criterion is only half a reorder, because the
+         *     row it displaces is not renumbered, and two criteria sharing a slot
+         *     order arbitrarily. A stage's criteria are appended in the order they
+         *     are added, and closing the gap on an archive is what keeps that order
+         *     contiguous.
+         */
+        UpdateStageExitCriterionRequest: {
+            label?: string;
+            kind?: components["schemas"]["StageCriterionKind"];
+            required?: boolean;
+            hint?: string | null;
+        };
+        StageExitCriterionListResponse: {
+            data: components["schemas"]["StageExitCriterion"][];
+            page: components["schemas"]["PageInfo"];
+        };
         StageListResponse: {
             data: components["schemas"]["Stage"][];
             page: components["schemas"]["PageInfo"];
@@ -37667,6 +37808,158 @@ export interface operations {
                     "application/json": components["schemas"]["Stage"];
                 };
             };
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listStageExitCriteria: {
+        parameters: {
+            query?: {
+                include_archived?: boolean;
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The stage's criteria. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StageExitCriterionListResponse"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createStageExitCriterion: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateStageExitCriterionRequest"];
+            };
+        };
+        responses: {
+            /** @description The created criterion. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StageExitCriterion"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    archiveStageExitCriterion: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                criterion_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Archived. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    updateStageExitCriterion: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                criterion_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateStageExitCriterionRequest"];
+            };
+        };
+        responses: {
+            /** @description The updated criterion. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StageExitCriterion"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];

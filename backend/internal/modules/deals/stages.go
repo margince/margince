@@ -268,6 +268,9 @@ func (s *Store) UpdateStage(ctx context.Context, id ids.StageID, in UpdateStageI
 		if in.IfVersion != nil && *in.IfVersion != current.version {
 			return apperrors.ErrVersionSkew
 		}
+		if err := refuseTerminalWithCriteria(ctx, tx, id, current.semantic, in.Semantic); err != nil {
+			return err
+		}
 		// An update naming no field changes nothing, and an audit row for it
 		// would record a transition that never happened.
 		if patch := stageUpdatePatch(current, in); !patch.Empty() {

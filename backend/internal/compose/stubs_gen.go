@@ -2131,6 +2131,22 @@ func (stubs) UpdateStage(w nethttp.ResponseWriter, r *nethttp.Request, id crmcon
 	httperr.NotImplemented(w, r, "UpdateStage")
 }
 
+func (stubs) ListStageExitCriteria(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ListStageExitCriteriaParams) {
+	httperr.NotImplemented(w, r, "ListStageExitCriteria")
+}
+
+func (stubs) CreateStageExitCriterion(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.CreateStageExitCriterionParams) {
+	httperr.NotImplemented(w, r, "CreateStageExitCriterion")
+}
+
+func (stubs) ArchiveStageExitCriterion(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, criterionId openapi_types.UUID, params crmcontracts.ArchiveStageExitCriterionParams) {
+	httperr.NotImplemented(w, r, "ArchiveStageExitCriterion")
+}
+
+func (stubs) UpdateStageExitCriterion(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, criterionId openapi_types.UUID, params crmcontracts.UpdateStageExitCriterionParams) {
+	httperr.NotImplemented(w, r, "UpdateStageExitCriterion")
+}
+
 func (stubs) ListTags(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListTagsParams) {
 	httperr.NotImplemented(w, r, "ListTags")
 }

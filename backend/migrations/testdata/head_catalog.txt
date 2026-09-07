@@ -5161,6 +5161,30 @@ public.stage.trg_stage_updated CREATE TRIGGER trg_stage_updated BEFORE UPDATE ON
 public.stage.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.stage.version bigint NOT NULL gen=- def=1
 public.stage.win_probability smallint NOT NULL gen=- def=0
+public.stage_exit_criterion acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.stage_exit_criterion.archived_at timestamp with time zone gen=- def=-
+public.stage_exit_criterion.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.stage_exit_criterion.hint text gen=- def=-
+public.stage_exit_criterion.id uuid NOT NULL gen=- def=uuidv7()
+public.stage_exit_criterion.key text NOT NULL gen=- def=-
+public.stage_exit_criterion.kind text NOT NULL gen=- def=-
+public.stage_exit_criterion.label text NOT NULL gen=- def=-
+public.stage_exit_criterion.position integer NOT NULL gen=- def=-
+public.stage_exit_criterion.required boolean NOT NULL gen=- def=true
+public.stage_exit_criterion.stage_exit_criterion_hint_len CHECK (((hint IS NULL) OR (length(hint) <= 500)))
+public.stage_exit_criterion.stage_exit_criterion_key_shape CHECK ((key ~ '^[a-z][a-z0-9_]{0,63}$'::text))
+public.stage_exit_criterion.stage_exit_criterion_kind_check CHECK ((kind = ANY (ARRAY['buyer_confirmed'::text, 'event_held'::text, 'document_signed'::text, 'role_identified'::text, 'terms_accepted'::text, 'custom'::text])))
+public.stage_exit_criterion.stage_exit_criterion_label_len CHECK (((length(label) >= 1) AND (length(label) <= 120)))
+public.stage_exit_criterion.stage_exit_criterion_pkey PRIMARY KEY (id)
+public.stage_exit_criterion.stage_exit_criterion_position_check CHECK (("position" >= 0))
+public.stage_exit_criterion.stage_exit_criterion_stage_fkey FOREIGN KEY (stage_id) REFERENCES stage(id) ON DELETE CASCADE
+public.stage_exit_criterion.stage_id uuid NOT NULL gen=- def=-
+public.stage_exit_criterion.trg_stage_exit_criterion_updated CREATE TRIGGER trg_stage_exit_criterion_updated BEFORE UPDATE ON public.stage_exit_criterion FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
+public.stage_exit_criterion.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.stage_exit_criterion.version bigint NOT NULL gen=- def=1
+public.stage_exit_criterion_pkey CREATE UNIQUE INDEX stage_exit_criterion_pkey ON public.stage_exit_criterion USING btree (id)
+public.stage_exit_criterion_stage_ix CREATE INDEX stage_exit_criterion_stage_ix ON public.stage_exit_criterion USING btree (stage_id)
+public.stage_exit_criterion_stage_key_live_ux CREATE UNIQUE INDEX stage_exit_criterion_stage_key_live_ux ON public.stage_exit_criterion USING btree (stage_id, key) WHERE (archived_at IS NULL)
 public.stage_id_pipeline_unique CREATE UNIQUE INDEX stage_id_pipeline_unique ON public.stage USING btree (id, pipeline_id)
 public.stage_pkey CREATE UNIQUE INDEX stage_pkey ON public.stage USING btree (id)
 public.suggestion_dismissal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false

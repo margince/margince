@@ -45,6 +45,7 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	"stage.semantic":                   {"internal/modules/deals", "StageSemantic"},
 	"person_consent.state":             {"internal/modules/consent", "ConsentState"},
 	"offer_line_item.proposal_state":   {"internal/modules/deals", "ProposalState"},
+	"stage_exit_criterion.kind":        {"internal/modules/deals", "CriterionKind"},
 	"knowledge_document.ingest_status": {"internal/contracts", "KnowledgeDocumentIngestStatus"},
 	// The tag palette is spelled in five places: this CHECK, the contract enum,
 	// the MCP tool schemas, the frontend's TAG_TONES and its dot stylesheet.

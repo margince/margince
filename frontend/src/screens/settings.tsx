@@ -120,6 +120,7 @@ import { ProductsAdmin } from "./products";
 import { FxRatesCard, ModelCostsCard } from "./rates";
 import { RestrictedRecordsCard } from "./restrictedrecords";
 import { RetentionCard } from "./retention";
+import { StageExitCriteria } from "./settings.exitcriteria";
 import { SignInMethodsCard } from "./sign-in-methods";
 import { TagVocabularyCard } from "./tagadmin";
 import { TeamsCard } from "./users-access";
@@ -1998,6 +1999,19 @@ function StageRow({
         )}
         <StageRemove stage={stage} returnFocusTo={returnFocusTo} />
       </span>
+      {/* The criteria sit UNDER the stage's own line rather than beside it:
+          a stage carries three to six of them, each with a label, a key, two
+          badges and two verbs, which is a list and not an answer that fits in
+          a track. */}
+      <div className="stage-criteria">
+        <Disclosure summary={t("stage.criteria.title")}>
+          <StageExitCriteria
+            stageId={stage.id}
+            semantic={stage.semantic}
+            canEdit={canEdit}
+          />
+        </Disclosure>
+      </div>
     </li>
   );
 }

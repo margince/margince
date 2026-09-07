@@ -4252,6 +4252,36 @@ export const de = {
   "stage.removeTitle": "Diese Phase entfernen?",
   "stage.removeBody":
     "„{name}“ verlässt die Pipeline, die nachfolgenden Phasen rücken auf. Frühere Phasenwechsel bleiben lesbar. Deals, die noch darauf stehen, müssen zuerst umziehen.",
+  "stage.criteria.title": "Austrittskriterien",
+  "stage.criteria.sub":
+    "Was zutreffen muss, bevor ein Deal diese Phase verlässt.",
+  "stage.criteria.buyerCallout":
+    "Belege müssen vom Käufer kommen. Eine Nachricht Ihres Teams erfüllt nie ein Kriterium darüber, was der Käufer getan hat.",
+  "stage.criteria.unreadable":
+    "Ich konnte die Kriterien dieser Phase gerade nicht lesen. Laden Sie neu, bevor Sie sie ändern — die Anzeige ist möglicherweise unvollständig.",
+  "stage.criteria.none": "Diese Phase verlangt noch nichts.",
+  "stage.criteria.terminal":
+    "In einer gewonnenen oder verlorenen Phase endet ein Deal, sie verlangt also nichts für den Austritt.",
+  "stage.criteria.add": "Kriterium hinzufügen",
+  "stage.criteria.key": "Schlüssel",
+  "stage.criteria.keyHint":
+    "Der Name, den Belege zitieren. Kleinbuchstaben, Ziffern und Unterstriche. Später nicht änderbar.",
+  "stage.criteria.label": "Bezeichnung",
+  "stage.criteria.kind": "Art",
+  "stage.criteria.required": "Erforderlich",
+  "stage.criteria.optional": "Optional",
+  "stage.criteria.hint": "Hinweis",
+  "stage.criteria.edit": "Kriterium bearbeiten",
+  "stage.criteria.remove": "Entfernen",
+  "stage.criteria.removeTitle": "Dieses Kriterium entfernen?",
+  "stage.criteria.removeBody":
+    "„{name}“ wird nicht mehr verlangt. Bereits erfasste Belege bleiben lesbar.",
+  "stage.criteria.kindBuyerConfirmed": "Käufer bestätigt",
+  "stage.criteria.kindEventHeld": "Termin stattgefunden",
+  "stage.criteria.kindDocumentSigned": "Dokument unterschrieben",
+  "stage.criteria.kindRoleIdentified": "Rolle identifiziert",
+  "stage.criteria.kindTermsAccepted": "Konditionen akzeptiert",
+  "stage.criteria.kindCustom": "Eigenes",
 
   "ob.url": "Website",
   "ob.urlScheme": "https://",

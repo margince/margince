@@ -4345,6 +4345,35 @@ export const en = {
   "stage.removeTitle": "Remove this stage?",
   "stage.removeBody":
     "“{name}” leaves the pipeline and the stages after it move up. Past stage changes stay readable. Deals still sitting on it have to move first.",
+  "stage.criteria.title": "Exit criteria",
+  "stage.criteria.sub": "What must be true before a deal leaves this stage.",
+  "stage.criteria.buyerCallout":
+    "Evidence has to come from the buyer. A message your team wrote never satisfies a criterion about what the buyer did.",
+  "stage.criteria.unreadable":
+    "I could not read this stage's criteria just now. Reload before you change them — what you see may be incomplete.",
+  "stage.criteria.none": "This stage asks for nothing yet.",
+  "stage.criteria.terminal":
+    "A won or lost stage is where a deal stops, so it requires nothing to leave it.",
+  "stage.criteria.add": "Add criterion",
+  "stage.criteria.key": "Key",
+  "stage.criteria.keyHint":
+    "The name evidence cites. Lower-case letters, digits and underscores. It cannot be changed later.",
+  "stage.criteria.label": "Label",
+  "stage.criteria.kind": "Kind",
+  "stage.criteria.required": "Required",
+  "stage.criteria.optional": "Optional",
+  "stage.criteria.hint": "Hint",
+  "stage.criteria.edit": "Edit criterion",
+  "stage.criteria.remove": "Remove",
+  "stage.criteria.removeTitle": "Remove this criterion?",
+  "stage.criteria.removeBody":
+    "“{name}” stops being asked for. Evidence already recorded against it stays readable.",
+  "stage.criteria.kindBuyerConfirmed": "Buyer confirmed",
+  "stage.criteria.kindEventHeld": "Event held",
+  "stage.criteria.kindDocumentSigned": "Document signed",
+  "stage.criteria.kindRoleIdentified": "Role identified",
+  "stage.criteria.kindTermsAccepted": "Terms accepted",
+  "stage.criteria.kindCustom": "Custom",
 
   "ob.url": "Website",
   "ob.urlScheme": "https://",

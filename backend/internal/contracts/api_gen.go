@@ -11983,6 +11983,36 @@ func (e StageSemantic) Valid() bool {
 	}
 }
 
+// Defines values for StageCriterionKind.
+const (
+	BuyerConfirmed StageCriterionKind = "buyer_confirmed"
+	Custom         StageCriterionKind = "custom"
+	DocumentSigned StageCriterionKind = "document_signed"
+	EventHeld      StageCriterionKind = "event_held"
+	RoleIdentified StageCriterionKind = "role_identified"
+	TermsAccepted  StageCriterionKind = "terms_accepted"
+)
+
+// Valid indicates whether the value is a known member of the StageCriterionKind enum.
+func (e StageCriterionKind) Valid() bool {
+	switch e {
+	case BuyerConfirmed:
+		return true
+	case Custom:
+		return true
+	case DocumentSigned:
+		return true
+	case EventHeld:
+		return true
+	case RoleIdentified:
+		return true
+	case TermsAccepted:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for StartBackfillRequestWindow.
 const (
 	StartBackfillRequestWindowN12m StartBackfillRequestWindow = "12m"
@@ -21766,6 +21796,20 @@ type CreateSignalRequestSeverity string
 
 // CreateSignalRequestSourceChannel defines model for CreateSignalRequest.SourceChannel.
 type CreateSignalRequestSourceChannel string
+
+// CreateStageExitCriterionRequest defines model for CreateStageExitCriterionRequest.
+type CreateStageExitCriterionRequest struct {
+	Hint *string `json:"hint,omitempty"`
+	Key  string  `json:"key"`
+
+	// Kind What KIND of fact settles a criterion. This is not decoration: the kind
+	// decides which evidence sources may satisfy it. `buyer_confirmed`,
+	// `event_held`, `document_signed` and `terms_accepted` each name something the
+	// BUYER did, so a seller's own message can never settle one.
+	Kind     StageCriterionKind `json:"kind"`
+	Label    string             `json:"label"`
+	Required *bool              `json:"required,omitempty"`
+}
 
 // CreateStageRequest defines model for CreateStageRequest.
 type CreateStageRequest struct {
@@ -32928,6 +32972,52 @@ type Stage struct {
 // StageSemantic defines model for Stage.Semantic.
 type StageSemantic string
 
+// StageCriterionKind What KIND of fact settles a criterion. This is not decoration: the kind
+// decides which evidence sources may satisfy it. `buyer_confirmed`,
+// `event_held`, `document_signed` and `terms_accepted` each name something the
+// BUYER did, so a seller's own message can never settle one.
+type StageCriterionKind string
+
+// StageExitCriterion One thing that must be true of a deal before it leaves a stage. Mirrors the
+// `stage_exit_criterion` table. Configuration, not observation: whether a
+// particular deal has met it is evidence recorded elsewhere.
+type StageExitCriterion struct {
+	ArchivedAt *time.Time `json:"archived_at,omitempty"`
+	CreatedAt  *time.Time `json:"created_at,omitempty"`
+
+	// Hint Guidance for whoever reviews the evidence.
+	Hint *string            `json:"hint,omitempty"`
+	Id   openapi_types.UUID `json:"id"`
+
+	// Key The stable machine name an evidence extractor cites. Unique among the
+	// stage's live criteria and never editable; archiving frees it for reuse.
+	Key string `json:"key"`
+
+	// Kind What KIND of fact settles a criterion. This is not decoration: the kind
+	// decides which evidence sources may satisfy it. `buyer_confirmed`,
+	// `event_held`, `document_signed` and `terms_accepted` each name something the
+	// BUYER did, so a seller's own message can never settle one.
+	Kind StageCriterionKind `json:"kind"`
+
+	// Label What a human reads.
+	Label string `json:"label"`
+
+	// Position Order within the stage.
+	Position int `json:"position"`
+
+	// Required An optional criterion is gathered and shown but never blocks.
+	Required  bool               `json:"required"`
+	StageId   openapi_types.UUID `json:"stage_id"`
+	UpdatedAt *time.Time         `json:"updated_at,omitempty"`
+	Version   *int64             `json:"version,omitempty"`
+}
+
+// StageExitCriterionListResponse defines model for StageExitCriterionListResponse.
+type StageExitCriterionListResponse struct {
+	Data []StageExitCriterion `json:"data"`
+	Page PageInfo             `json:"page"`
+}
+
 // StageListResponse defines model for StageListResponse.
 type StageListResponse struct {
 	Data []Stage  `json:"data"`
@@ -34030,6 +34120,24 @@ type UpdateSignalRequestSeverity string
 
 // UpdateSignalRequestStatus defines model for UpdateSignalRequest.Status.
 type UpdateSignalRequestStatus string
+
+// UpdateStageExitCriterionRequest The `key` is absent by design — see the operation description. So is
+// `position`: moving one criterion is only half a reorder, because the
+// row it displaces is not renumbered, and two criteria sharing a slot
+// order arbitrarily. A stage's criteria are appended in the order they
+// are added, and closing the gap on an archive is what keeps that order
+// contiguous.
+type UpdateStageExitCriterionRequest struct {
+	Hint *string `json:"hint,omitempty"`
+
+	// Kind What KIND of fact settles a criterion. This is not decoration: the kind
+	// decides which evidence sources may satisfy it. `buyer_confirmed`,
+	// `event_held`, `document_signed` and `terms_accepted` each name something the
+	// BUYER did, so a seller's own message can never settle one.
+	Kind     *StageCriterionKind `json:"kind,omitempty"`
+	Label    *string             `json:"label,omitempty"`
+	Required *bool               `json:"required,omitempty"`
+}
 
 // UpdateStageRequest defines model for UpdateStageRequest.
 type UpdateStageRequest struct {
@@ -40455,6 +40563,50 @@ type UpdateStageParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// ListStageExitCriteriaParams defines parameters for ListStageExitCriteria.
+type ListStageExitCriteriaParams struct {
+	IncludeArchived *bool `form:"include_archived,omitempty" json:"include_archived,omitempty"`
+}
+
+// CreateStageExitCriterionParams defines parameters for CreateStageExitCriterion.
+type CreateStageExitCriterionParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// ArchiveStageExitCriterionParams defines parameters for ArchiveStageExitCriterion.
+type ArchiveStageExitCriterionParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
+// UpdateStageExitCriterionParams defines parameters for UpdateStageExitCriterion.
+type UpdateStageExitCriterionParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
 // ListTagsParams defines parameters for ListTags.
 type ListTagsParams struct {
 	// IncludeArchived Include soft-deleted (archived) rows. Default false.
@@ -41675,6 +41827,12 @@ type CreateStageJSONRequestBody = CreateStageRequest
 
 // UpdateStageJSONRequestBody defines body for UpdateStage for application/json ContentType.
 type UpdateStageJSONRequestBody = UpdateStageRequest
+
+// CreateStageExitCriterionJSONRequestBody defines body for CreateStageExitCriterion for application/json ContentType.
+type CreateStageExitCriterionJSONRequestBody = CreateStageExitCriterionRequest
+
+// UpdateStageExitCriterionJSONRequestBody defines body for UpdateStageExitCriterion for application/json ContentType.
+type UpdateStageExitCriterionJSONRequestBody = UpdateStageExitCriterionRequest
 
 // CreateTagJSONRequestBody defines body for CreateTag for application/json ContentType.
 type CreateTagJSONRequestBody = CreateTagRequest
@@ -51167,6 +51325,18 @@ type ServerInterface interface {
 	// Update a stage (rename / reorder / probability).
 	// (PATCH /stages/{id})
 	UpdateStage(w http.ResponseWriter, r *http.Request, id Id, params UpdateStageParams)
+	// What a deal must satisfy before it leaves this stage.
+	// (GET /stages/{id}/exit-criteria)
+	ListStageExitCriteria(w http.ResponseWriter, r *http.Request, id Id, params ListStageExitCriteriaParams)
+	// Add an exit criterion to a stage.
+	// (POST /stages/{id}/exit-criteria)
+	CreateStageExitCriterion(w http.ResponseWriter, r *http.Request, id Id, params CreateStageExitCriterionParams)
+	// Remove a criterion from its stage (soft delete; archive is the delete).
+	// (DELETE /stages/{id}/exit-criteria/{criterion_id})
+	ArchiveStageExitCriterion(w http.ResponseWriter, r *http.Request, id Id, criterionId openapi_types.UUID, params ArchiveStageExitCriterionParams)
+	// Edit a criterion's label, kind, requiredness, hint or position.
+	// (PATCH /stages/{id}/exit-criteria/{criterion_id})
+	UpdateStageExitCriterion(w http.ResponseWriter, r *http.Request, id Id, criterionId openapi_types.UUID, params UpdateStageExitCriterionParams)
 	// List tags.
 	// (GET /tags)
 	ListTags(w http.ResponseWriter, r *http.Request, params ListTagsParams)
@@ -54560,6 +54730,30 @@ func (_ Unimplemented) GetStage(w http.ResponseWriter, r *http.Request, id Id) {
 // Update a stage (rename / reorder / probability).
 // (PATCH /stages/{id})
 func (_ Unimplemented) UpdateStage(w http.ResponseWriter, r *http.Request, id Id, params UpdateStageParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What a deal must satisfy before it leaves this stage.
+// (GET /stages/{id}/exit-criteria)
+func (_ Unimplemented) ListStageExitCriteria(w http.ResponseWriter, r *http.Request, id Id, params ListStageExitCriteriaParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Add an exit criterion to a stage.
+// (POST /stages/{id}/exit-criteria)
+func (_ Unimplemented) CreateStageExitCriterion(w http.ResponseWriter, r *http.Request, id Id, params CreateStageExitCriterionParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Remove a criterion from its stage (soft delete; archive is the delete).
+// (DELETE /stages/{id}/exit-criteria/{criterion_id})
+func (_ Unimplemented) ArchiveStageExitCriterion(w http.ResponseWriter, r *http.Request, id Id, criterionId openapi_types.UUID, params ArchiveStageExitCriterionParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Edit a criterion's label, kind, requiredness, hint or position.
+// (PATCH /stages/{id}/exit-criteria/{criterion_id})
+func (_ Unimplemented) UpdateStageExitCriterion(w http.ResponseWriter, r *http.Request, id Id, criterionId openapi_types.UUID, params UpdateStageExitCriterionParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -77453,6 +77647,242 @@ func (siw *ServerInterfaceWrapper) UpdateStage(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// ListStageExitCriteria operation middleware
+func (siw *ServerInterfaceWrapper) ListStageExitCriteria(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListStageExitCriteriaParams
+
+	// ------------- Optional query parameter "include_archived" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "include_archived", r.URL.Query(), &params.IncludeArchived, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "include_archived"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "include_archived", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListStageExitCriteria(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateStageExitCriterion operation middleware
+func (siw *ServerInterfaceWrapper) CreateStageExitCriterion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateStageExitCriterionParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateStageExitCriterion(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ArchiveStageExitCriterion operation middleware
+func (siw *ServerInterfaceWrapper) ArchiveStageExitCriterion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "criterion_id" -------------
+	var criterionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "criterion_id", chi.URLParam(r, "criterion_id"), &criterionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "criterion_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ArchiveStageExitCriterionParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ArchiveStageExitCriterion(w, r, id, criterionId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateStageExitCriterion operation middleware
+func (siw *ServerInterfaceWrapper) UpdateStageExitCriterion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "criterion_id" -------------
+	var criterionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "criterion_id", chi.URLParam(r, "criterion_id"), &criterionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "criterion_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UpdateStageExitCriterionParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateStageExitCriterion(w, r, id, criterionId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListTags operation middleware
 func (siw *ServerInterfaceWrapper) ListTags(w http.ResponseWriter, r *http.Request) {
 
@@ -82337,6 +82767,18 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/stages/{id}", wrapper.UpdateStage)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/stages/{id}/exit-criteria", wrapper.ListStageExitCriteria)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/stages/{id}/exit-criteria", wrapper.CreateStageExitCriterion)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/stages/{id}/exit-criteria/{criterion_id}", wrapper.ArchiveStageExitCriterion)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/stages/{id}/exit-criteria/{criterion_id}", wrapper.UpdateStageExitCriterion)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/tags", wrapper.ListTags)

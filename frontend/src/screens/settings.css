@@ -240,6 +240,52 @@ p.settings-panel-sub {
   }
 }
 
+/* The exit criteria hang UNDER their stage's four tracks, so they span every
+   one of them — a criteria list placed in a single cell would be squeezed into
+   whichever track it landed in. */
+.stage-criteria {
+  grid-column: 1 / -1;
+}
+.criterion-rows {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+/* One criterion: its label, the key evidence cites, the kind, whether it
+   blocks, and its verbs. The label takes the remaining width because it is the
+   only free text here; everything after it is a fixed vocabulary. */
+.criterion-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto auto;
+  gap: var(--space-2);
+  align-items: center;
+}
+.criterion-label {
+  overflow-wrap: anywhere;
+}
+.criterion-row > .badge {
+  justify-self: start;
+}
+.criterion-verbs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+/* Same reasoning as .stage-row's phone case: the fixed vocabulary and the
+   verbs are the width, so the label takes a line of its own. */
+@media (max-width: 560px) {
+  .criterion-row {
+    grid-template-columns: auto auto 1fr;
+  }
+  .criterion-label {
+    grid-column: 1 / -1;
+  }
+  .criterion-verbs {
+    justify-self: end;
+  }
+}
+
 /* AuditLogCard. The trail is the control of ONE stacked row, so the rules
    between its entries are its own: a log is a list of records rather than a list
    of settings decisions, and the `SettingList` above it rules between DECISIONS.

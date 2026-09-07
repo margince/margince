@@ -4193,6 +4193,36 @@ export const vi = {
   "stage.removeTitle": "Gỡ giai đoạn này?",
   "stage.removeBody":
     "“{name}” sẽ rời khỏi pipeline và các giai đoạn sau dồn lên. Lịch sử chuyển giai đoạn vẫn đọc được. Các deal còn nằm ở đây phải chuyển đi trước.",
+  "stage.criteria.title": "Tiêu chí rời giai đoạn",
+  "stage.criteria.sub":
+    "Điều gì phải đúng trước khi một thương vụ rời giai đoạn này.",
+  "stage.criteria.buyerCallout":
+    "Bằng chứng phải đến từ bên mua. Tin nhắn do đội của bạn viết không bao giờ thỏa mãn tiêu chí về điều bên mua đã làm.",
+  "stage.criteria.unreadable":
+    "Tôi không đọc được tiêu chí của giai đoạn này lúc này. Hãy tải lại trước khi thay đổi — những gì bạn thấy có thể chưa đầy đủ.",
+  "stage.criteria.none": "Giai đoạn này chưa yêu cầu gì.",
+  "stage.criteria.terminal":
+    "Giai đoạn thắng hoặc thua là nơi thương vụ dừng lại, nên nó không yêu cầu gì để rời đi.",
+  "stage.criteria.add": "Thêm tiêu chí",
+  "stage.criteria.key": "Khóa",
+  "stage.criteria.keyHint":
+    "Tên mà bằng chứng trích dẫn. Chữ thường, chữ số và dấu gạch dưới. Không thể đổi về sau.",
+  "stage.criteria.label": "Nhãn",
+  "stage.criteria.kind": "Loại",
+  "stage.criteria.required": "Bắt buộc",
+  "stage.criteria.optional": "Tùy chọn",
+  "stage.criteria.hint": "Gợi ý",
+  "stage.criteria.edit": "Sửa tiêu chí",
+  "stage.criteria.remove": "Gỡ bỏ",
+  "stage.criteria.removeTitle": "Gỡ tiêu chí này?",
+  "stage.criteria.removeBody":
+    "“{name}” sẽ không còn được yêu cầu. Bằng chứng đã ghi nhận vẫn đọc được.",
+  "stage.criteria.kindBuyerConfirmed": "Bên mua xác nhận",
+  "stage.criteria.kindEventHeld": "Đã diễn ra cuộc gặp",
+  "stage.criteria.kindDocumentSigned": "Đã ký tài liệu",
+  "stage.criteria.kindRoleIdentified": "Đã xác định vai trò",
+  "stage.criteria.kindTermsAccepted": "Đã chấp nhận điều khoản",
+  "stage.criteria.kindCustom": "Tùy chỉnh",
 
   "ob.url": "Website",
   "ob.urlScheme": "https://",
