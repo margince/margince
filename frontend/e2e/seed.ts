@@ -21,15 +21,17 @@ const MEETING_ACTIVITY = "3f7c1a90-0000-4000-8000-00000000a001";
 // this list forgot fails loudly here, which is how the omission gets noticed.
 // Extend it when a new AC needs a new object.
 const E2E_ADMIN_GRANTS: GrantSpec = {
-  // The three records the specs WRITE: the deal edit and its project pick, the
-  // lead's edit, ladder, inline rows and promotion, and the note the lead
-  // page's composer logs. Every record page's write verbs ask the object grant
-  // alongside the row's own `writable` before they draw, so a fixture that
-  // held none would sweep pages whose controls are refused with a reason —
-  // the read-only posture, not the seat the specs drive. Read is not enough
-  // for any of them; no spec disqualifies, so lead delete stays unclaimed.
+  // The four records the specs WRITE: the deal edit and its project pick, the
+  // lead's edit, ladder, inline rows and promotion, the project a spec creates
+  // and moves through its phases, and the note the lead page's composer logs.
+  // Every record page's write verbs ask the object grant alongside the row's
+  // own `writable` before they draw, so a fixture that held none would sweep
+  // pages whose controls are refused with a reason — the read-only posture,
+  // not the seat the specs drive. Read is not enough for any of them; no spec
+  // disqualifies or archives, so the deletes stay unclaimed.
   deal: ["read", "create", "update"],
   lead: ["read", "create", "update"],
+  project: ["read", "create", "update"],
   activity: ["read", "create"],
   automation: ["create", "read", "update", "delete"],
   overlay_connection: ["create", "read", "update", "delete"],
