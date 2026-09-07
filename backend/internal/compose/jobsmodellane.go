@@ -38,6 +38,13 @@ func addModelLaneJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig,
 		newSiteDeepReadWorker(pool, cfg.DeepReadBrain, cfg.DeepReadFactBrain, cfg.DeepReadTriageBrain, log, cfg.DeepReadCaps, cfg.Blobstore),
 		deepReadTimeout(cfg.DeepReadCaps))
 	addDeclaredWorker[TranscriptProposeArgs](reg, newTranscriptProposeWorker(pool, cfg.TranscriptProposeBrain, log))
+	// Registered only WITH a lane, unlike its neighbour: the contract declares
+	// registers_nothing without one, because nobody is waiting on a row this
+	// job would have to fail visibly.
+	if cfg.StageEvidenceBrain != nil {
+		addDeclaredWorker[StageEvidenceReadArgs](reg,
+			newStageEvidenceReadWorker(pool, cfg.StageEvidenceBrain, log))
+	}
 	addDeclaredWorker[AccountScanArgs](reg, newAccountScanWorker(pool, cfg.AccountScanBrain, cfg.AccountScanRoutingVersion, log))
 	addDeclaredWorker[GeocodeOrganizationArgs](reg, newGeocodeWorker(pool, cfg.Geocoder))
 	addDeclaredWorker[CheckOrganizationVatArgs](reg, newVatCheckWorker(pool, cfg.VatChecker, nil))

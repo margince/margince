@@ -615,3 +615,71 @@ func seedTranscribedMeeting(
 type noDomains struct{}
 
 func (noDomains) Domains(context.Context, pgx.Tx) ([]string, error) { return nil, nil }
+
+// A model's reading and the record's own claim are two claims about ONE
+// source, and the record must not be silenced by whichever arrived first.
+//
+// The failure this closes: a queued reading of a booked meeting writes
+// event_held met=false from its body, the meeting is later marked held, and
+// the deterministic writer's insert collides on the source and is dropped. The
+// record said the meeting happened; the ledger said it did not, and nothing
+// failed. Both rows stand now, and a reader can see they disagree.
+func TestAModelReadingDoesNotSilenceTheRecordsOwnClaim(t *testing.T) {
+	e := setupConfigEnv(t)
+	dealID, criterionID := evidenceFixture(t, e, CriterionEventHeld)
+	sourceID := ids.NewV7()
+
+	reading := claim(dealID, criterionID, AuthorBuyer)
+	reading.SourceID = sourceID
+	reading.Met = false
+	confidence := 0.8
+	reading.Confidence = &confidence
+	reading.ExtractedBy = "stage_evidence_extract"
+	if _, err := e.store.RecordStageEvidence(e.asDealWriter(), reading); err != nil {
+		t.Fatalf("recording the model's reading: %v", err)
+	}
+
+	record := claim(dealID, criterionID, AuthorBuyer)
+	record.SourceID = sourceID
+	if _, err := e.store.RecordStageEvidence(e.asDealWriter(), record); err != nil {
+		t.Fatalf("recording the record's own claim: %v", err)
+	}
+
+	all, err := e.store.ListStageEvidence(e.asDealWriter(), dealID)
+	if err != nil {
+		t.Fatalf("listing: %v", err)
+	}
+	if len(all) != 2 {
+		t.Fatalf("the ledger holds %d rows for one source, want both writers' "+
+			"claims; the record's own claim was dropped by the conflict", len(all))
+	}
+	writers := map[string]bool{}
+	for _, row := range all {
+		writers[row.ExtractedBy] = true
+	}
+	if !writers[ExtractedByDeterministic] || !writers["stage_evidence_extract"] {
+		t.Errorf("the ledger holds writers %v, want both the record's and the model's", writers)
+	}
+}
+
+// Idempotency is preserved where it mattered: the SAME writer recording the
+// same source twice still collapses, because the bus is at-least-once and a
+// second row would double-count one fact.
+func TestOneWriterRecordingTwiceStillCollapses(t *testing.T) {
+	e := setupConfigEnv(t)
+	dealID, criterionID := evidenceFixture(t, e, CriterionEventHeld)
+	twice := claim(dealID, criterionID, AuthorBuyer)
+
+	for range 2 {
+		if _, err := e.store.RecordStageEvidence(e.asDealWriter(), twice); err != nil {
+			t.Fatalf("recording: %v", err)
+		}
+	}
+	all, err := e.store.ListStageEvidence(e.asDealWriter(), dealID)
+	if err != nil {
+		t.Fatalf("listing: %v", err)
+	}
+	if len(all) != 1 {
+		t.Fatalf("one writer's redelivery wrote %d rows, want one", len(all))
+	}
+}

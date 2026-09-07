@@ -37,10 +37,12 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/riverqueue/river"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -85,20 +87,41 @@ const (
 // name the kind and a task must not be judged as a meeting.
 const activityKindMeeting = "meeting"
 
+// StageEvidenceReadEnqueuer queues the model's half of the ledger. Exported
+// because cmd/worker decides whether this installation has a lane to read on,
+// and a nil one is the legal composition that says it does not.
+type StageEvidenceReadEnqueuer interface {
+	EnqueueTx(ctx context.Context, tx pgx.Tx, args river.JobArgs, opts *river.InsertOpts) error
+}
+
 // StageEvidenceTrigger writes record-derived evidence as the records land.
 type StageEvidenceTrigger struct {
 	pool  *pgxpool.Pool
 	deals *deals.Store
 	own   deals.OwnDomainReader
-	log   *slog.Logger
+	// read queues the MODEL's half of the ledger — the reading of what was
+	// actually said, against this deal's criteria. Nil is a legal composition
+	// (a deployment with no model lane) and skips silently: the deterministic
+	// evidence below is what such an installation gets, and it is still true.
+	read StageEvidenceReadEnqueuer
+	// workspace answers the installation's own workspace, which the queued
+	// reading runs in. A seam rather than a call, so a test can drive the
+	// trigger without bootstrapping one.
+	workspace func(context.Context) (ids.WorkspaceID, error)
+	log       *slog.Logger
 }
 
 // NewStageEvidenceTrigger builds the trigger over an explicit store and
 // domain reader, which is what lets a test drive it with a fixed domain list.
 func NewStageEvidenceTrigger(
-	pool *pgxpool.Pool, store *deals.Store, own deals.OwnDomainReader, log *slog.Logger,
+	pool *pgxpool.Pool, store *deals.Store, own deals.OwnDomainReader,
+	read StageEvidenceReadEnqueuer, log *slog.Logger,
 ) *StageEvidenceTrigger {
-	return &StageEvidenceTrigger{pool: pool, deals: store, own: own, log: log}
+	return &StageEvidenceTrigger{
+		pool: pool, deals: store, own: own, read: read,
+		workspace: identity.NewService(pool).InstallationWorkspace,
+		log:       log,
+	}
 }
 
 // StageEvidenceDeals and StageEvidenceDomains are the two halves the worker
@@ -154,6 +177,45 @@ func (t *StageEvidenceTrigger) HandleEvent(ctx context.Context, env events.Envel
 	return nil
 }
 
+// queueReading asks the model's half of the ledger to read this activity
+// against the deal's criteria.
+//
+// EVERY activity that reaches a deal, not only the meetings the deterministic
+// arm settles: a criterion like "the buyer stated the problem in their own
+// words" is settled in prose, in an ordinary email, and the deterministic
+// writers have nothing to say about it. The reading dedupes by args, so a
+// redelivered event queues one reading.
+//
+// A failure to queue is returned rather than swallowed. The deterministic
+// evidence has already been written by the time this runs, so a redelivery
+// re-writes nothing — the ledger is idempotent by source — and losing the
+// reading silently would leave a criterion permanently unread for a reason
+// nobody could see.
+func (t *StageEvidenceTrigger) queueReading(
+	ctx context.Context, dealID ids.DealID, activityID ids.UUID,
+) error {
+	if t.read == nil {
+		return nil
+	}
+	// RESOLVED, not read off the context. A bus envelope carries no workspace
+	// and the subscriber binds none, so storekit.MustWorkspace answers the
+	// zero id here — it reports no error for an unbound context — and the
+	// worker would refuse every job this queued. The installation's own
+	// workspace is what every other trigger path binds (InstallationDB), and
+	// it is what the reading must run in.
+	wsID, err := t.workspace(ctx)
+	if err != nil {
+		return err
+	}
+	return pgx.BeginFunc(ctx, t.pool, func(tx pgx.Tx) error {
+		return t.read.EnqueueTx(ctx, tx, StageEvidenceReadArgs{
+			Workspace:  wsID.UUID,
+			DealID:     dealID.UUID,
+			ActivityID: activityID,
+		}, stageEvidenceReadInsertOpts())
+	})
+}
+
 // onContractStatus writes document_signed when a contract turns active.
 //
 // Only the transition INTO active. A contract that expires or is cancelled
@@ -190,49 +252,54 @@ func (t *StageEvidenceTrigger) onContractStatus(ctx context.Context, env events.
 	})
 }
 
-// onActivityCaptured judges a meeting as it lands.
+// onActivityCaptured takes one captured activity through both halves of the
+// ledger.
 //
-// The payload's kind is checked before the row is read: every captured email
-// reaches this consumer, and a query per message to learn what judgeMeeting
-// would refuse anyway is the one cost worth avoiding here. judgeMeeting still
-// checks the row's own kind, which is what makes the payload an optimisation
-// rather than the rule.
+// EVERY kind reaches here, not only meetings. The deterministic half settles
+// nothing on an email — judgeActivity's own kind check refuses it — but the
+// model's half is asked about it, because a criterion like "the buyer stated
+// the problem in their own words" is settled in ordinary prose and no record
+// column says so.
 func (t *StageEvidenceTrigger) onActivityCaptured(ctx context.Context, env events.Envelope) error {
 	var payload crmcontracts.PublicEventActivityCaptured
 	if !t.readPayload(ctx, env, &payload) {
 		return nil
 	}
-	if payload.Kind != activityKindMeeting {
-		return nil
-	}
-	return t.judgeMeeting(ctx, env.Entity.ID)
+	return t.judgeActivity(ctx, env.Entity.ID)
 }
 
-// onActivityUpdated judges a meeting again when its STATUS changes.
+// onActivityUpdated looks again when an edit changed one of the two things
+// that decide what this activity settles.
 //
-// Without this lane the feature is nearly inert. Capture never populates
-// meeting_status — it writes the row from the calendar and leaves the column
-// NULL — so a synced meeting arrives with no proof it took place, and the rep
-// marking it held afterwards is the moment it acquires one. That moment emits
-// activity.updated and nothing else: a consumer listening only for
-// activity.captured would skip the meeting at capture and never look again.
+// A MEETING STATUS change is the first, and without it the feature is nearly
+// inert. Capture never populates meeting_status — it writes the row from the
+// calendar and leaves the column NULL — so a synced meeting arrives with no
+// proof it took place, and the rep marking it held afterwards is the moment it
+// acquires one. That moment emits activity.updated and nothing else.
 //
-// Only when the status is what changed. Every other edit to a meeting —
-// re-subject it, move its time, assign it — leaves the question of whether it
-// happened exactly where it was, and re-judging on each would rewrite the
+// A RELINK is the second. An email captured before anybody attached it to a
+// deal was skipped at capture — it reached no deal, so there were no criteria
+// to read it against — and attaching it later is the moment it acquires some.
+// Without this arm that text is never read at all: capture is over, and no
+// other event will fire for it.
+//
+// Every other edit is ignored. Re-subject a meeting, move its time, assign it,
+// correct a typo in the body — none of those changes whether it happened or
+// which deal's criteria it speaks to, and re-judging on each would rewrite the
 // ledger's observed_at for a fact that did not change.
 func (t *StageEvidenceTrigger) onActivityUpdated(ctx context.Context, env events.Envelope) error {
 	var payload crmcontracts.PublicEventActivityUpdated
 	if !t.readPayload(ctx, env, &payload) {
 		return nil
 	}
-	if payload.ChangedFields.MeetingStatus == nil {
+	if payload.ChangedFields.MeetingStatus == nil && payload.ChangedFields.Relinked == nil {
 		return nil
 	}
-	return t.judgeMeeting(ctx, env.Entity.ID)
+	return t.judgeActivity(ctx, env.Entity.ID)
 }
 
-// judgeMeeting writes event_held when the record shows the meeting took place.
+// judgeActivity queues the model's reading of an activity, and writes
+// event_held where the record itself shows a meeting took place.
 //
 // What settles it is PROOF THE MEETING HAPPENED, judged by MeetingWasHeld: a
 // transcript, or a held status with somebody from their side on it. Not
@@ -242,13 +309,19 @@ func (t *StageEvidenceTrigger) onActivityUpdated(ctx context.Context, env events
 // The author side recorded is the one AuthorSideOf computes. A meeting
 // reaching this point has already proven itself by a rule that does not
 // consult it; it rides along as the trail's account of who called the meeting.
-func (t *StageEvidenceTrigger) judgeMeeting(ctx context.Context, activityID ids.UUID) error {
+func (t *StageEvidenceTrigger) judgeActivity(ctx context.Context, activityID ids.UUID) error {
 	facts, err := t.activityFacts(ctx, activityID)
 	if err != nil {
 		// An activity reaching no deal settles nothing.
 		if errors.Is(err, apperrors.ErrNotFound) {
 			return nil
 		}
+		return err
+	}
+	// The MODEL's half is asked about every activity that reaches a deal,
+	// meeting or not: a criterion settled in prose is settled in an ordinary
+	// email, and the deterministic arm below has nothing to say about one.
+	if err := t.queueReading(ctx, facts.DealID, activityID); err != nil {
 		return err
 	}
 	if facts.Kind != activityKindMeeting {

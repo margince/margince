@@ -188,6 +188,7 @@ export const ACTIVITY_LINE: Readonly<
   ),
   rate_extract: SYSTEM_SWEEP,
   signal_extract: SYSTEM_SWEEP,
+  stage_evidence_extract: SYSTEM_SWEEP,
   site_extract: SITE_READ_WATCHED_WHERE_IT_RUNS,
   site_fact_extract: SITE_READ_WATCHED_WHERE_IT_RUNS,
   site_triage: SITE_READ_WATCHED_WHERE_IT_RUNS,

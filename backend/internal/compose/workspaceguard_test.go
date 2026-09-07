@@ -226,6 +226,11 @@ func idBearingRefusalDrivers() map[string]func(context.Context) error {
 				ctx, &river.Job[TranscriptProposeArgs]{Args: TranscriptProposeArgs{}})
 		},
 
+		StageEvidenceReadArgs{}.Kind(): func(ctx context.Context) error {
+			return (&stageEvidenceReadWorker{log: slog.New(slog.DiscardHandler)}).Work(
+				ctx, &river.Job[StageEvidenceReadArgs]{Args: StageEvidenceReadArgs{}})
+		},
+
 		DocumentExtractArgs{}.Kind(): func(ctx context.Context) error {
 			return (&documentExtractWorker{log: slog.New(slog.DiscardHandler)}).Work(
 				ctx, &river.Job[DocumentExtractArgs]{Args: DocumentExtractArgs{}})

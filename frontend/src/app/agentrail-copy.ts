@@ -47,6 +47,7 @@ export const TASK_SAID: Readonly<Record<string, string>> = {
   offer_draft: "Drafted an offer",
   rate_extract: "Read pricing off a page",
   signal_extract: "Found signals in a thread",
+  stage_evidence_extract: "Checked what a deal still needs",
   site_extract: "Read a company website",
   site_fact_extract: "Pulled facts off a web page",
   site_triage: "Picked which pages to read",

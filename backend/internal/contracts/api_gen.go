@@ -604,6 +604,7 @@ const (
 	AiActivityKindSiteFactExtract               AiActivityKind = "site_fact_extract"
 	AiActivityKindSiteRead                      AiActivityKind = "site_read"
 	AiActivityKindSiteTriage                    AiActivityKind = "site_triage"
+	AiActivityKindStageEvidenceExtract          AiActivityKind = "stage_evidence_extract"
 	AiActivityKindSummarize                     AiActivityKind = "summarize"
 	AiActivityKindTranscript                    AiActivityKind = "transcript"
 	AiActivityKindTranscriptPropose             AiActivityKind = "transcript_propose"
@@ -664,6 +665,8 @@ func (e AiActivityKind) Valid() bool {
 	case AiActivityKindSiteRead:
 		return true
 	case AiActivityKindSiteTriage:
+		return true
+	case AiActivityKindStageEvidenceExtract:
 		return true
 	case AiActivityKindSummarize:
 		return true

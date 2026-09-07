@@ -157,8 +157,9 @@ func evidenceIDFor(ctx context.Context, tx pgx.Tx, in EvidenceInput) (ids.UUID, 
 	var id ids.UUID
 	err := tx.QueryRow(ctx, `
 		SELECT id FROM deal_stage_evidence
-		 WHERE deal_id = $1 AND criterion_id = $2 AND source_type = $3 AND source_id = $4`,
-		in.DealID, in.CriterionID, in.SourceType, in.SourceID).Scan(&id)
+		 WHERE deal_id = $1 AND criterion_id = $2 AND source_type = $3
+		   AND source_id = $4 AND extracted_by = $5`,
+		in.DealID, in.CriterionID, in.SourceType, in.SourceID, in.ExtractedBy).Scan(&id)
 	if err != nil {
 		return id, fmt.Errorf("read the standing evidence for this source: %w", err)
 	}

@@ -78,13 +78,23 @@ type EvidenceInput struct {
 }
 
 // RecordStageEvidence writes one observation, or leaves the existing one
-// standing when this source has already been recorded against this criterion.
+// standing when this WRITER has already recorded this source against this
+// criterion.
 //
-// Idempotent by (deal, criterion, source), because the bus is at-least-once:
-// the same contract turning active is delivered more than once, and a second
-// row would double-count the same fact for every reader that counts met
-// criteria. The unique index is what holds it; this answers the conflict
-// rather than surfacing a 23505.
+// Idempotent by (deal, criterion, source, writer), because the bus is
+// at-least-once: the same contract turning active is delivered more than once,
+// and a second row would double-count the same fact for every reader that
+// counts met criteria.
+//
+// THE WRITER IS PART OF THE KEY. A deterministic claim and a model's reading
+// of the same activity are two different claims about one source, and without
+// the writer in the key whichever arrived first silenced the other — a reading
+// of a booked meeting could hold event_held at met=false and the record's own
+// claim, made when the meeting was marked held, would be dropped by the
+// conflict. Both rows now stand, and a reader can see that they disagree.
+//
+// The unique index is what holds it; this answers the conflict rather than
+// surfacing a 23505.
 func (s *Store) RecordStageEvidence(
 	ctx context.Context, in EvidenceInput,
 ) (crmcontracts.StageEvidence, error) {
@@ -223,7 +233,7 @@ func insertEvidence(
 			deal_id, criterion_id, source_type, source_id, source_lines, snippet,
 			author_side, commitment, met, confidence, observed_at, extracted_by)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-		ON CONFLICT (deal_id, criterion_id, source_type, source_id) DO NOTHING
+		ON CONFLICT (deal_id, criterion_id, source_type, source_id, extracted_by) DO NOTHING
 		RETURNING id`,
 		in.DealID, in.CriterionID, in.SourceType, in.SourceID, in.SourceLines,
 		in.Snippet, string(in.AuthorSide), in.Commitment, in.Met, in.Confidence,

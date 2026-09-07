@@ -1,0 +1,33 @@
+name: a_conversation_about_something_else
+task: stage_evidence_extract
+site: criteria
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  criteria:
+    - key: economic_buyer_identified
+      label: The economic buyer is identified
+    - key: security_review_cleared
+      label: Security review cleared
+  spans:
+    - source_id: 01a07100-0000-7000-8000-000000000005
+      lines:
+        - 'Ines: sorry for the slow reply, we have had a rough fortnight with the stock count.'
+        - 'Ines: I will pick this back up properly once that is behind us.'
+        - 'Lars: no problem at all — shout when you are ready.'
+expect:
+  outcome: abstained
+  answer: []
+  rubric: >
+    Neither criterion is mentioned. Silence about a criterion is not evidence
+    either way, and the correct answer is to omit both — the empty list scores
+    highest. The trap is reading a quiet buyer as a negative signal: claiming
+    security_review_cleared met=false, or economic_buyer_identified met=false,
+    scores at the floor. met=false means the text SAYS the thing has not
+    happened, and nothing here says anything about either. A reader that turns
+    a delay into a stated fact manufactures evidence out of an absence, which
+    is worse than reporting nothing because it looks like a finding.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

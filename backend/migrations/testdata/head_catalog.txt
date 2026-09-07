@@ -2219,7 +2219,7 @@ public.deal_stage_evidence.trg_deal_stage_evidence_updated CREATE TRIGGER trg_de
 public.deal_stage_evidence.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.deal_stage_evidence.version bigint NOT NULL gen=- def=1
 public.deal_stage_evidence_deal_ix CREATE INDEX deal_stage_evidence_deal_ix ON public.deal_stage_evidence USING btree (deal_id, criterion_id) WHERE (refuted_at IS NULL)
-public.deal_stage_evidence_one_per_source_ux CREATE UNIQUE INDEX deal_stage_evidence_one_per_source_ux ON public.deal_stage_evidence USING btree (deal_id, criterion_id, source_type, source_id)
+public.deal_stage_evidence_one_per_source_ux CREATE UNIQUE INDEX deal_stage_evidence_one_per_source_ux ON public.deal_stage_evidence USING btree (deal_id, criterion_id, source_type, source_id, extracted_by)
 public.deal_stage_evidence_pkey CREATE UNIQUE INDEX deal_stage_evidence_pkey ON public.deal_stage_evidence USING btree (id)
 public.deal_stage_history acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.deal_stage_history.amount_minor_at_change bigint gen=- def=-
