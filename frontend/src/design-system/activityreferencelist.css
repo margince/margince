@@ -1,0 +1,28 @@
+/* The receipts behind a number, one per line. Rows rather than a wrapping run:
+   each names a different exchange, and a reader scans them for the one they
+   remember. */
+.activityrefs {
+  list-style: none;
+  margin: var(--space-1) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.activityrefs__other {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: var(--fs-eyebrow);
+  color: var(--textMeta);
+}
+/* The kind carries the row the way an email's envelope icon does: a reader
+   scanning a mixed list needs to know what each one IS before its words. */
+.activityrefs__kind {
+  color: var(--textMeta);
+  text-transform: lowercase;
+}
+.activityrefs__subject {
+  color: var(--textContent);
+  min-width: 0;
+}

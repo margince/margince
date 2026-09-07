@@ -5,7 +5,14 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
-import { Badge, Card, EmptyState, Skeleton } from "../design-system/atoms";
+import { ActivityReferenceList } from "../design-system/activityreferencelist";
+import {
+  Badge,
+  Card,
+  Disclosure,
+  EmptyState,
+  Skeleton,
+} from "../design-system/atoms";
 import { Meter } from "../design-system/readings";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
@@ -66,7 +73,14 @@ function factorPercent(value: number): number {
 export function StrengthCard({
   kind,
   id,
-}: Readonly<{ kind: "person" | "organization"; id: string }>) {
+  onOpenEmail,
+}: Readonly<{
+  kind: "person" | "organization";
+  id: string;
+  // Opens one cited message in the host's own drawer. A host that mounts none
+  // passes nothing, and the receipts render without an opener.
+  onOpenEmail?: (activityId: string) => void;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   // Relationship strength is computed over the native people graph, which the
@@ -101,7 +115,11 @@ export function StrengthCard({
         <EmptyState>{problemMessageOf(query.error, t)}</EmptyState>
       )}
       {!overlay && query.isSuccess && (
-        <StrengthBody strength={query.data} locale={locale} />
+        <StrengthBody
+          strength={query.data}
+          locale={locale}
+          onOpenEmail={onOpenEmail}
+        />
       )}
     </Card>
   );
@@ -110,9 +128,11 @@ export function StrengthCard({
 function StrengthBody({
   strength,
   locale,
+  onOpenEmail,
 }: Readonly<{
   strength: RelationshipStrength;
   locale: ReturnType<typeof useLocale>["locale"];
+  onOpenEmail?: (activityId: string) => void;
 }>) {
   const t = useT();
   const recordZone = useRecordZone();
@@ -137,6 +157,7 @@ function StrengthBody({
     { key: "direction", value: factors.direction },
   ];
   const contributingCount = strength.contributing_activity_ids?.length ?? 0;
+  const named = strength.contributing_activities ?? [];
 
   return (
     <div>
@@ -199,13 +220,36 @@ function StrengthBody({
           })}
         </p>
       )}
-      {contributingCount > 0 && (
-        <p className="t-caption">
-          {t("strength.computedFrom", {
-            count: formatNumber(contributingCount, locale),
-          })}
-        </p>
-      )}
+      {contributingCount > 0 &&
+        (named.length > 0 ? (
+          // The receipts, foldable. The count alone is a claim a reader cannot
+          // check: they cannot tell whether it counts the exchange they
+          // remember, and they cannot open any of it.
+          //
+          // The SUMMARY keeps the count from the id array, never from the
+          // named list. The two can differ — a row this reader cannot discover
+          // is omitted — and a number that shrank to what one reader may open
+          // would tell two readers different things about one score.
+          <Disclosure
+            summary={t("strength.computedFrom", {
+              count: formatNumber(contributingCount, locale),
+            })}
+          >
+            <ActivityReferenceList
+              references={named}
+              onOpenEmail={onOpenEmail}
+              formatWhen={(when) => formatDateTime(when, locale, recordZone)}
+            />
+          </Disclosure>
+        ) : (
+          // An older server names none, and so does a reader whose seat holds
+          // no activity grant. The line reads as it always did.
+          <p className="t-caption">
+            {t("strength.computedFrom", {
+              count: formatNumber(contributingCount, locale),
+            })}
+          </p>
+        ))}
     </div>
   );
 }
