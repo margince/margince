@@ -30,11 +30,17 @@ type workerConfig struct {
 	// armed the destructive reset at all. The worker's only stake is the cache
 	// flush it subscribes to, which exists solely to serve that reset — so an
 	// installation that never armed it holds no subscriber either.
-	allowDataReset       bool
-	ratesFx              string
-	ratesCurrencies      []string
-	ratesModelPricing    map[string]string
-	redisAddr            string
+	allowDataReset    bool
+	ratesFx           string
+	ratesCurrencies   []string
+	ratesModelPricing map[string]string
+	redisAddr         string
+	// redisPassword is the bus credential, empty where the instance requires
+	// none. The bus carries job payloads and therefore CRM data, so an
+	// instance reachable by anything but this deployment has to require one —
+	// the desktop bundle's loopback bus does, and generates it per
+	// installation.
+	redisPassword        string
 	routingPath          string
 	fakeBrain            bool
 	runnerInterval       time.Duration
@@ -101,6 +107,8 @@ func workerFlagSet() (*flag.FlagSet, *cliflags.Env, *workerConfig, error) {
 	env.String(fs, &cfg.configPath, "config", "MARGINCE_CONFIG", "margince.yaml",
 		"path to the deployment configuration file (A107/ADR-0061); read for the ai.capture_payloads posture the Surface-B runner honors and the capture pipeline tuning (capture.freemail_extra). A missing file boots with defaults")
 	env.String(fs, &cfg.redisAddr, "redis", "MARGINCE_REDIS", "localhost:16379", "Redis address (event bus)")
+	env.String(fs, &cfg.redisPassword, "redis-password", "MARGINCE_REDIS_PASSWORD", "",
+		"Event-bus credential, where the instance requires one")
 	env.String(fs, &cfg.routingPath, "ai-routing", "MARGINCE_AI_ROUTING", "", "IGNORED (kept so an existing command line still parses): the model binding is a stored setting, declared for a fresh install under `seeds.ai_routing` in margince.yaml and changed on a running one through Settings -> AI or PUT /v1/ai/routing. Passing it logs a warning naming which of those applies and does nothing else. Nothing reads a routing file any more: the debug lanes take --model or --ai-fake, and the certification runner is told its model outright")
 	fs.BoolVar(&cfg.fakeBrain, "ai-fake", false, "run the Surface-B runner on the offline fake model (dev/test only)")
 	fs.DurationVar(&cfg.runnerInterval, "runner-interval", 30*time.Second, "how often the Surface-B scheduler fans one seed-and-execute pass out per live workspace")

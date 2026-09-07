@@ -288,11 +288,11 @@ func sharedRedisClient(cfg apiConfig, logger *slog.Logger) (*redis.Client, func(
 	// — which parses the same string and DOES refuse — is the one that reports
 	// it. Two hard failures on one typo would be one too many; none would be
 	// silent.
-	redisOpts, err := events.ClientOptions(cfg.redisAddr)
+	redisOpts, err := events.ClientOptions(cfg.redisAddr, cfg.redisPassword)
 	if err != nil {
 		logger.Warn("the redis address names no usable logical database; using its host as given",
 			"addr", cfg.redisAddr, "err", err)
-		redisOpts = &redis.Options{Addr: cfg.redisAddr}
+		redisOpts = &redis.Options{Addr: cfg.redisAddr, Password: cfg.redisPassword}
 	}
 	rdb := redis.NewClient(redisOpts)
 	return rdb, func() {
@@ -342,7 +342,7 @@ func inlineRelayLane(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, log
 		// No inline relay to stop: cmd/worker is running it.
 		return nil, func() {}, nil
 	}
-	busReady, stop, err := startInlineRelay(ctx, pool, cfg.redisAddr, cfg.webhookKey, logger)
+	busReady, stop, err := startInlineRelay(ctx, pool, cfg.redisAddr, cfg.redisPassword, cfg.webhookKey, logger)
 	if err != nil {
 		return nil, nil, err
 	}
