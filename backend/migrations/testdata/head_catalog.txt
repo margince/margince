@@ -3748,6 +3748,7 @@ public.organization.organization_merged_into_id_fkey FOREIGN KEY (merged_into_id
 public.organization.organization_name_source_check CHECK ((name_source = ANY (ARRAY['human'::text, 'dossier'::text, 'signature'::text, 'domain'::text])))
 public.organization.organization_not_own_parent CHECK (((parent_org_id IS NULL) OR (parent_org_id <> id)))
 public.organization.organization_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
+public.organization.organization_owner_private_names_its_owner CHECK (((visibility <> 'owner'::text) OR (owner_id IS NOT NULL)))
 public.organization.organization_parent_org_id_fkey FOREIGN KEY (parent_org_id) REFERENCES organization(id) ON DELETE SET NULL (parent_org_id)
 public.organization.organization_pkey PRIMARY KEY (id)
 public.organization.organization_refuse_anchor_retirement CREATE TRIGGER organization_refuse_anchor_retirement BEFORE INSERT OR UPDATE OF merged_into_id, is_anchor ON public.organization FOR EACH ROW EXECUTE FUNCTION organization_refuse_anchor_retirement()
@@ -4244,6 +4245,7 @@ public.person.owner_id uuid gen=- def=-
 public.person.person_converted_from_lead_id_fkey FOREIGN KEY (converted_from_lead_id) REFERENCES lead(id) ON DELETE SET NULL (converted_from_lead_id)
 public.person.person_merged_into_id_fkey FOREIGN KEY (merged_into_id) REFERENCES person(id) ON DELETE SET NULL (merged_into_id)
 public.person.person_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
+public.person.person_owner_private_names_its_owner CHECK (((visibility <> 'owner'::text) OR (owner_id IS NOT NULL)))
 public.person.person_pkey PRIMARY KEY (id)
 public.person.person_visibility_check CHECK ((visibility = ANY (ARRAY['workspace'::text, 'owner'::text])))
 public.person.photo_object_key text gen=- def=-
