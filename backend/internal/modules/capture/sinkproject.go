@@ -43,8 +43,17 @@ import (
 // Ambiguity is the matcher's to report, not the caller's to reconstruct: two
 // distinct projects named in one subject means the message says nothing
 // reliable, so the matcher answers with no project rather than picking one.
+//
+// It takes the caller's TRANSACTION, the way StampProjectCorrespondence below
+// does and for a sharper reason. An implementation opening its own connection
+// does so while this ladder's transaction is still held, so each caller holds
+// one connection and waits for another: with a small pool, or whenever
+// concurrent captures occupy every connection, they deadlock until the context
+// is cancelled — and a path documented as never failing the capture stalls the
+// sync instead (#2107). The two rungs beside this one already read on the
+// caller's tx; this is the one that did not.
 type ProjectKeyMatcher interface {
-	MatchProjectKey(ctx context.Context, tokens []string) (ids.UUID, error)
+	MatchProjectKey(ctx context.Context, tx pgx.Tx, tokens []string) (ids.UUID, error)
 }
 
 // StampProjectCorrespondence marks the activity just filed under a project as
@@ -176,7 +185,7 @@ func (s *Sink) decideProject(ctx context.Context, tx pgx.Tx, rec connector.Norma
 	for _, rung := range []func() (ids.UUID, error){
 		func() (ids.UUID, error) { return threadProject(ctx, tx, rec, fields, activityID) },
 		func() (ids.UUID, error) { return dealProject(ctx, tx, activityID) },
-		func() (ids.UUID, error) { return s.subjectProject(ctx, fields) },
+		func() (ids.UUID, error) { return s.subjectProject(ctx, tx, fields) },
 	} {
 		projectID, err := rung()
 		if err != nil || !projectID.IsZero() {
@@ -190,12 +199,12 @@ func (s *Sink) decideProject(ctx context.Context, tx pgx.Tx, rec connector.Norma
 // subject carrying none never reaches the seam: the bracket rule rules out
 // almost every message, and asking anyway would be one query per captured
 // message to learn what the tokenizer already knows.
-func (s *Sink) subjectProject(ctx context.Context, fields ActivityFields) (ids.UUID, error) {
+func (s *Sink) subjectProject(ctx context.Context, tx pgx.Tx, fields ActivityFields) (ids.UUID, error) {
 	tokens := projectKeyCandidates(fields.Subject)
 	if len(tokens) == 0 {
 		return ids.Nil, nil
 	}
-	return s.projectKeys.MatchProjectKey(ctx, tokens)
+	return s.projectKeys.MatchProjectKey(ctx, tx, tokens)
 }
 
 // threadProject is the stickiness rung: a conversation is about one body of

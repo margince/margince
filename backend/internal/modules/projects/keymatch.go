@@ -32,7 +32,7 @@ import (
 // Archived projects are excluded because a key is unique among LIVE rows only
 // (uq_project_key): once a project is archived its key can be reused, so
 // matching an archived row could file today's mail under last year's work.
-func (s *Store) MatchProjectKey(ctx context.Context, tokens []string) (ids.UUID, error) {
+func (s *Store) MatchProjectKey(ctx context.Context, tx pgx.Tx, tokens []string) (ids.UUID, error) {
 	if len(tokens) == 0 {
 		return ids.Nil, nil
 	}
@@ -54,18 +54,20 @@ func (s *Store) MatchProjectKey(ctx context.Context, tokens []string) (ids.UUID,
 	if scope != "" {
 		where += " AND " + scope
 	}
-	var matched []ids.UUID
-	err = s.Tx(ctx, func(tx pgx.Tx) error {
-		// LIMIT 2 because the query answers a yes/no/ambiguous question, not a
-		// list: one row is the match, two is enough to know it is ambiguous,
-		// and a third would only be read to be discarded.
-		rows, err := tx.Query(ctx, `SELECT id FROM project WHERE `+where+` LIMIT 2`, args...)
-		if err != nil {
-			return fmt.Errorf("deals: matching a subject's project keys: %w", err)
-		}
-		matched, err = pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
-		return err
-	})
+	// The CALLER'S transaction, not one of this store's own. Opening a second
+	// connection here happens while the attribution ladder's transaction is
+	// still held, so each caller holds one and waits for another — a deadlock
+	// under a small pool, on a path documented as never failing the capture
+	// (#2107).
+	//
+	// LIMIT 2 because the query answers a yes/no/ambiguous question, not a
+	// list: one row is the match, two is enough to know it is ambiguous, and a
+	// third would only be read to be discarded.
+	rows, err := tx.Query(ctx, `SELECT id FROM project WHERE `+where+` LIMIT 2`, args...)
+	if err != nil {
+		return ids.Nil, fmt.Errorf("deals: matching a subject's project keys: %w", err)
+	}
+	matched, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
 	if err != nil {
 		return ids.Nil, err
 	}
