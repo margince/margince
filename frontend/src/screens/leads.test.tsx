@@ -38,7 +38,7 @@ beforeEach(() => {
 // contact graph — the ≥60/40–59/<40 score thresholds, eligibility-gated
 // promote, and a lead row navigating to the LEAD detail (never the person
 // screen). Below that: the same P-14/15/16/1 shared-block wiring as contacts
-// (people.test.tsx) and companies (organizations.test.tsx) — search/sort/
+// (contacts.test.tsx) and companies (organizations.test.tsx) — search/sort/
 // pagination + a status filter, the rich create modal (full_name/email/
 // linkedin_url/company_name), the lead-360 If-Match edit
 // (Promote + badges preserved), and the duplicate_email dedupe link.
@@ -159,8 +159,8 @@ describe("promote eligibility gate", () => {
 describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
   it("names the owner on each row, the way the people and company lists do", async () => {
     // The column this replaced rendered "typed by a person" for every
-    // human-captured row — the bug #1577 fixed on People and Companies while
-    // this list kept its own copy of the column. Same column, same test.
+    // human-captured row. The Contacts and Companies lists were corrected
+    // while this one kept its own copy of the column: same column, same test.
     vi.stubGlobal(
       "fetch",
       vi.fn(async (request: Request) => {

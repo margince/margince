@@ -206,7 +206,7 @@ export function OvernightPanel() {
                 and more besides, not fewer. The messages-synced count above
                 has no list surface at all and keeps no door. */}
             <DigestCount
-              label={t("brief.digestPeople")}
+              label={t("brief.digestContacts")}
               value={capture.people_created ?? 0}
               onOpen={() =>
                 navigate(

@@ -99,9 +99,10 @@ export function useBuiltinCommands(): Command[] {
       id: `screen:${item.screen}`,
       label: t(item.labelKey),
       // The route id is the screen's stable English name and doubles as its
-      // alias, so a relabeled destination stays findable under both words in
-      // both locales without a hand-kept synonym list.
-      keywords: [item.screen],
+      // alias, so a destination stays findable under it in every locale. The
+      // row's own aliases (app/nav.ts) ride alongside it, which is what keeps a
+      // word a reader already learned pointing at the row that carries it.
+      keywords: [item.screen, ...(item.aliases ?? [])],
       type: "screen",
       route: { screen: item.screen },
     }));

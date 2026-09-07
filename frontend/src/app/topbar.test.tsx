@@ -201,7 +201,7 @@ describe("Top bar sidebar toggle", () => {
 describe("Top bar trail", () => {
   it("names the page once on a list route, with nothing to lead back to", () => {
     renderTopBar({ screen: "deals" }, { onToggle: ignoreToggle });
-    expect(stopTexts()).toEqual(["Pipeline"]);
+    expect(stopTexts()).toEqual(["Deals"]);
     // A one-stop trail is the page and nothing else: no link, and no separator
     // leading a stop that is not there.
     expect(within(trail()).queryByRole("link")).toBeNull();
@@ -221,8 +221,8 @@ describe("Top bar trail", () => {
       />,
     );
 
-    expect(stopTexts()).toEqual(["People", "Anna Weber"]);
-    const back = within(trail()).getByRole("link", { name: "People" });
+    expect(stopTexts()).toEqual(["Contacts", "Anna Weber"]);
+    const back = within(trail()).getByRole("link", { name: "Contacts" });
     expect(back.getAttribute("href")).toBe("#/contacts");
     // The record itself is the page: not a link, and the one current claim.
     const stops = within(trail()).getAllByRole("listitem");
@@ -245,7 +245,7 @@ describe("Top bar trail", () => {
       { screen: "contacts", id: "p-anna" },
       { onToggle: ignoreToggle },
     );
-    expect(stopTexts()).toEqual(["People", "p-anna"]);
+    expect(stopTexts()).toEqual(["Contacts", "p-anna"]);
   });
 
   it("leads a section entry back to the section it belongs to", () => {

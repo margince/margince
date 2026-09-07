@@ -219,9 +219,9 @@ describe("the supporting line each source sends", () => {
     {
       what: "stale object classes",
       kind: "objects_stale",
-      detail: "deals, contacts",
-      says: "Out of date here: deals, people.",
-      never: "deals, contacts",
+      detail: "deals, leads",
+      says: "Out of date here: deals, prospects.",
+      never: "deals, leads",
     },
   ])(
     "says $what in the reader's own words",
@@ -241,9 +241,10 @@ describe("the supporting line each source sends", () => {
       ]);
 
       expect(await screen.findByText(says)).toBeTruthy();
-      // The producer's word never reaches the page. `deals, contacts` reads
-      // almost like the sentence, which is exactly why it is asserted: a
-      // renderer that fell back to the raw field would look right at a glance.
+      // The producer's word never reaches the page. Every fixture here picks a
+      // class the reader's word RENAMES — `leads` reads as prospects — so the
+      // raw field still looks almost like the sentence, which is exactly why it
+      // is asserted: a renderer that fell back to it would pass at a glance.
       expect(screen.queryByText(never)).toBeNull();
     },
   );

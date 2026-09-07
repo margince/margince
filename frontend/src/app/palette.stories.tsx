@@ -33,8 +33,8 @@ const COMMANDS: Command[] = [
   },
   {
     id: "screen:deals",
-    label: "Pipeline",
-    keywords: ["deals"],
+    label: "Deals",
+    keywords: ["pipeline"],
     type: "screen",
     route: { screen: "deals" },
   },

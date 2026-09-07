@@ -901,7 +901,7 @@ function PeopleGroupSection({
   return (
     <section id={groupDomId(PEOPLE_KEY)} className="ob-triage-group">
       <div className="ob-triage-group-head">
-        <h3>{t("ob.conv.triage.peopleLabel")}</h3>
+        <h3>{t("ob.conv.triage.contactsLabel")}</h3>
         {people.length > 0 && (
           <span className="t-caption">
             {t("ob.conv.triage.peopleCount", {
@@ -1361,7 +1361,7 @@ export function CompanyConfirmCard(props: CompanyConfirmCardProps) {
     if (readAtMount != null) {
       extra.push({
         key: PEOPLE_KEY,
-        labelKey: "ob.conv.triage.peopleLabel" as const,
+        labelKey: "ob.conv.triage.contactsLabel" as const,
         order: [],
         workCount: 0,
         openByDefault: new Set<CompanyFieldName>(),

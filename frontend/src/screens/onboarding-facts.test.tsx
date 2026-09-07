@@ -1043,7 +1043,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
     evidence_url: "https://gradion.com/team",
   };
 
-  // People are a company fact (who to talk to), the same class of thing as
+  // Contacts are a company fact (who to talk to), the same class of thing as
   // an office or a service line — they belong on the board, in the section
   // nav and the group list, not folded into the tail below it.
   it("promotes people found on the site to their own section on the board", () => {
@@ -1051,17 +1051,17 @@ describe("CompanyConfirmCard as a triage surface", () => {
 
     const nav = screen.getByRole("navigation", { name: "Jump to a section" });
     expect(
-      within(nav).getByRole("button", { name: /^People/ }),
+      within(nav).getByRole("button", { name: /^Contacts/ }),
     ).toBeInTheDocument();
 
-    const heading = screen.getByRole("heading", { name: "People", level: 3 });
+    const heading = screen.getByRole("heading", { name: "Contacts", level: 3 });
     // The section sits in the group list, the same place every field group
     // does — not in the reference tail further down.
     expect(heading.closest(".ob-triage-groups")).not.toBeNull();
     expect(heading.closest(".ob-triage-readmore")).toBeNull();
     const section = heading.closest("section");
     if (section === null) {
-      throw new Error("expected the People section to exist");
+      throw new Error("expected the Contacts section to exist");
     }
     expect(within(section).getByText("Jamie Fox")).toBeInTheDocument();
     expect(within(section).getByText("Co-founder")).toBeInTheDocument();
@@ -1070,10 +1070,10 @@ describe("CompanyConfirmCard as a triage surface", () => {
   it("says plainly when the read found no people, rather than a zero count", () => {
     renderTriage([], readWith([]));
 
-    const heading = screen.getByRole("heading", { name: "People", level: 3 });
+    const heading = screen.getByRole("heading", { name: "Contacts", level: 3 });
     const section = heading.closest("section");
     if (section === null) {
-      throw new Error("expected the People section to exist");
+      throw new Error("expected the Contacts section to exist");
     }
     expect(
       within(section).getByText("No people found on your site."),
@@ -1083,11 +1083,11 @@ describe("CompanyConfirmCard as a triage surface", () => {
     // here is the human's to resolve.
     expect(within(section).queryByText(/^\d+$/)).not.toBeInTheDocument();
     const nav = screen.getByRole("navigation", { name: "Jump to a section" });
-    const peopleLink = within(nav).getByRole("button", { name: /^People/ });
-    expect(within(peopleLink).queryByText(/^\d+$/)).not.toBeInTheDocument();
+    const contactsLink = within(nav).getByRole("button", { name: /^Contacts/ });
+    expect(within(contactsLink).queryByText(/^\d+$/)).not.toBeInTheDocument();
   });
 
-  // The count beside People or Facts means "this is what I found", never
+  // The count beside Contacts or Facts means "this is what I found", never
   // "this needs you" — it must equal the section's own content and must
   // never be mistaken, sighted or not, for an outstanding-work count.
   it("shows how many people the read found in the nav, as a found quantity rather than outstanding work", () => {
@@ -1095,17 +1095,17 @@ describe("CompanyConfirmCard as a triage surface", () => {
     renderTriage([], { ...readWith([]), people: found });
 
     const nav = screen.getByRole("navigation", { name: "Jump to a section" });
-    const peopleLink = within(nav).getByRole("button", {
-      name: /^People.*2 found/,
+    const contactsLink = within(nav).getByRole("button", {
+      name: /^Contacts.*2 found/,
     });
-    expect(within(peopleLink).getByText("2")).toBeInTheDocument();
+    expect(within(contactsLink).getByText("2")).toBeInTheDocument();
     // Never the blocking/advisory pill's own class — a find is not a gap.
-    expect(peopleLink.querySelector(".ob-triage-nav-badge")).toBeNull();
+    expect(contactsLink.querySelector(".ob-triage-nav-badge")).toBeNull();
 
-    const heading = screen.getByRole("heading", { name: "People", level: 3 });
+    const heading = screen.getByRole("heading", { name: "Contacts", level: 3 });
     const section = heading.closest("section");
     if (section === null) {
-      throw new Error("expected the People section to exist");
+      throw new Error("expected the Contacts section to exist");
     }
     expect(within(section).getAllByRole("listitem")).toHaveLength(found.length);
   });

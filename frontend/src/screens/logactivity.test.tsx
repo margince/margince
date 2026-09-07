@@ -16,8 +16,8 @@ import { pickOption } from "../design-system/select-testing";
 import { calendarDay, middayInstant } from "../format/calendarday";
 import { formatTimeOfDay } from "../format/format";
 import { LocaleProvider } from "../i18n";
+import { PersonScreen } from "./contacts";
 import { LogActivity } from "./logactivity";
-import { PersonScreen } from "./people";
 import { groupTask } from "./taskgroup";
 
 // Logging from a 360 (the "you can actually add to the timeline" acceptance):

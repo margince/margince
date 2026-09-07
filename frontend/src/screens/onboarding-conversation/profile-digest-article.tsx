@@ -123,7 +123,7 @@ export function ProfileArticle({
       {people.length === 0 ? null : (
         <section className="pdigest-section">
           <Eyebrow as="h3" className="pdigest-heading">
-            {t("ob.digest.people")}
+            {t("ob.digest.contacts")}
           </Eyebrow>
           {people.map((person) => (
             <PersonLine

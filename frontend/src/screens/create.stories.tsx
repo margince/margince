@@ -31,11 +31,11 @@ export default meta;
 type Story = StoryObj;
 
 // A mix of text + select + a repeatable "emails" field — the contact create
-// form's actual shape (people.tsx's contactCreateFields, trimmed to the
+// form's actual shape (contacts.tsx's contactCreateFields, trimmed to the
 // fields that show every control kind in one screen). Option labels are
 // display-ready strings, not MessageKeys — fieldControl (create.tsx) renders
 // option.label verbatim, so a real screen resolves any translated option
-// text (e.g. people.tsx's email/phone "Type" options) via useT() before
+// text (e.g. contacts.tsx's email/phone "Type" options) via useT() before
 // building its CreateField array; this story's LocaleProvider is pinned to
 // "en", so the English strings stand in for that already-resolved text.
 const contactFields: CreateField[] = [

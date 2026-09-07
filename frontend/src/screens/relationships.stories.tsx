@@ -7,7 +7,7 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // RelationshipsTab reads GET /relationships?person_id=… (there is no
 // GET /relationships/{id} in the contract — every row is hydrated straight
-// off the list read). The fixture mirrors people.test.tsx's employmentRel.
+// off the list read). The fixture mirrors contacts.test.tsx's employmentRel.
 const meta: Meta = {
   title: "Records/Relationships",
   parameters: { layout: "padded" },

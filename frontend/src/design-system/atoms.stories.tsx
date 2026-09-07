@@ -874,18 +874,18 @@ function ToolbarDemo() {
         value={tab}
         onChange={setTab}
         labels={TAB_LABELS}
-        counts={{ people: 6, deals: 0 }}
+        counts={{ contacts: 6, deals: 0 }}
         label="Record section"
       />
     </div>
   );
 }
 
-const TABS = ["overview", "people", "deals"] as const;
+const TABS = ["overview", "contacts", "deals"] as const;
 type Tab = (typeof TABS)[number];
 const TAB_LABELS: Record<Tab, string> = {
   overview: "360",
-  people: "People",
+  contacts: "Contacts",
   deals: "Deals",
 };
 

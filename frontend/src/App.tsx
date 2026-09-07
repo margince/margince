@@ -192,7 +192,7 @@ const PartnersScreen = lazy(
 );
 const ContactsScreen = lazy(
   routed(() =>
-    import("./screens/people").then((m) => ({ default: m.ContactsScreen })),
+    import("./screens/contacts").then((m) => ({ default: m.ContactsScreen })),
   ),
 );
 const PersonPageV2 = lazy(

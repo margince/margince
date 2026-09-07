@@ -73,24 +73,26 @@ describe("the rail and a composed unit", () => {
 // A screen the product ships and this list does not name is reachable only by
 // typing its hash, which is the same to a reader as a screen nobody built.
 describe("the filter builder's address", () => {
-  const recordRows = () => {
+  const workRows = () => {
     const [primary] = railTrail({ screen: "filters" });
-    const records = primary.groups.find(
-      (group) => group.headingKey === "nav.group.records",
+    const work = primary.groups.find(
+      (group) => group.headingKey === "nav.group.work",
     );
-    return records?.items ?? [];
+    return work?.items ?? [];
   };
 
-  // With the record types it slices, not under Intelligence: a filter here
-  // selects records, and nothing on the screen aggregates them.
-  it("stands among the record destinations", () => {
-    expect(recordRows().map((item) => item.id)).toContain("filters");
+  // With the work, not among the record types it slices: writing a filter is
+  // an authoring surface somebody sits down at — it produces a dynamic list, a
+  // saved view or an export — rather than a kind of record the workspace keeps.
+  // Nothing on the screen aggregates either, so it is not Intelligence.
+  it("stands among the work destinations", () => {
+    expect(workRows().map((item) => item.id)).toContain("filters");
   });
 
   // The screen's own title, so the product has one name for this surface. A
   // `nav.*` key of its own would be a fourth spelling to keep in step.
   it("reuses the label the screen already prints", () => {
-    expect(recordRows().find((item) => item.id === "filters")?.labelKey).toBe(
+    expect(workRows().find((item) => item.id === "filters")?.labelKey).toBe(
       "filters.title",
     );
   });

@@ -155,8 +155,8 @@ describe("the tag page names what carries the word", () => {
     );
 
     expect(await screen.findByText("Katrin Hofmann")).toBeInTheDocument();
-    expect(screen.getByText("People (1)")).toBeInTheDocument();
-    expect(screen.queryByText("People (3)")).toBeNull();
+    expect(screen.getByText("Contacts (1)")).toBeInTheDocument();
+    expect(screen.queryByText("Contacts (3)")).toBeNull();
   });
 
   // A request that FAILED is not a permission fact. Reporting one as the other

@@ -167,10 +167,10 @@ export const vi = {
   "autonomy.confirm": "xác nhận trước",
 
   "nav.brief": "Bản tóm tắt",
-  "nav.contacts": "Người",
+  "nav.contacts": "Liên hệ",
   "nav.companies": "Công ty",
   "nav.leads": "Lead",
-  "nav.deals": "Pipeline",
+  "nav.deals": "Deals",
   "nav.today": "Danh sách việc",
   "nav.analytics": "Analytics",
   "nav.ai": "Hỏi Margince",
@@ -227,7 +227,7 @@ export const vi = {
     "Tìm người, công ty, deal, dự án, sản phẩm, hoạt động, lead…",
   "search.prompt": "Nhập nội dung bạn muốn tìm.",
   "search.empty": "Không có kết quả cho “{q}”.",
-  "search.group.person": "Người",
+  "search.group.person": "Liên hệ",
   "search.group.organization": "Tổ chức",
   "search.group.deal": "Deal",
   "search.group.project": "Dự án",
@@ -594,7 +594,7 @@ export const vi = {
   "table.none": "Chưa có {unit} nào.",
   "table.actions": "Thao tác",
   "table.rangeLoaded": "{first}–{last} trong {count} {unit} đã tải",
-  "unit.contacts": "người",
+  "unit.contacts": "liên hệ",
   "unit.companies": "công ty",
   "unit.deals": "thương vụ",
   "unit.leads": "khách hàng tiềm năng",
@@ -806,7 +806,7 @@ export const vi = {
   "org.name": "Công ty",
   "org.description": "Họ làm gì",
   "org.website": "Trang web",
-  "org.contactCount": "Người",
+  "org.contactCount": "Liên hệ",
   "org.openDealCount": "Deal đang mở",
   // Offered only where there is no partner programme yet: the tab that holds
   // the form appears once one exists, so this is how the first one is made.
@@ -929,7 +929,7 @@ export const vi = {
   "timeline.filters.to": "Đến",
   "timeline.filters.searchOmitsLimited":
     "Khi tìm kiếm, những cuộc trò chuyện bạn không được mở nội dung sẽ không xuất hiện.",
-  "tab.people": "Người",
+  "tab.contacts": "Liên hệ",
   "tab.deals": "Deals",
   "tab.tasks": "Công việc",
   "tab.timeline": "Lịch sử",
@@ -1974,7 +1974,7 @@ export const vi = {
   "tagResult.gone":
     "Tag này không còn tồn tại. Có thể nó đã được gộp vào tag khác.",
   "tagResult.totalVisible": "{count} gán hiển thị",
-  "tagResult.people": "Người",
+  "tagResult.contacts": "Liên hệ",
   "tagResult.companies": "Công ty",
   "tagResult.deals": "Deal",
   "tagResult.viewAll": "Xem tất cả {count} {kind}",
@@ -2253,7 +2253,7 @@ export const vi = {
   "lead.trigger.humanQualify": "Người xác nhận đủ điều kiện",
   "lead.evidenceNote": "Ghi chú bằng chứng (không bắt buộc)",
   "lead.segregation":
-    "Khách hàng tiềm năng được giữ tách biệt với Người. Chỉ trở thành người trong CRM khi bạn xác nhận đủ điều kiện.",
+    "Khách hàng tiềm năng được giữ tách biệt với Liên hệ. Chỉ trở thành liên hệ trong CRM khi bạn xác nhận đủ điều kiện.",
   "lead.segregationDismiss": "Đã hiểu",
   "list.emptyMine": "Bạn không có {unit} nào được giao.",
   "list.showAll": "Hiện tất cả",
@@ -2777,7 +2777,7 @@ export const vi = {
 
   "brief.digestFor": "tổng hợp ngày {date}",
   "brief.digestSynced": "Email đã đồng bộ",
-  "brief.digestPeople": "Người đã tạo",
+  "brief.digestContacts": "Liên hệ đã tạo",
   "brief.digestOrgs": "Công ty đã tạo",
   "brief.digestDedupe": "Trùng lặp cần rà",
   "brief.digestClassify":
@@ -3929,7 +3929,7 @@ export const vi = {
   "import.objectLabel": "Các dòng là gì",
   "import.object.lead": "Khách hàng tiềm năng",
   "import.object.organization": "Công ty",
-  "import.object.person": "Người",
+  "import.object.person": "Liên hệ",
   "import.objectHint.lead":
     "Danh sách chưa xử lý vào dạng lead để người thẩm định trước khi được xem là người trong CRM.",
   "import.objectHint.organization":
@@ -4630,7 +4630,7 @@ export const vi = {
   "backfill.progressLabel": "Tiến độ nhập",
   "backfill.countScanned": "Số thư đã quét",
   "backfill.statEmails": "Email đã thu thập",
-  "backfill.statPeople": "Người",
+  "backfill.statContacts": "Liên hệ",
   // The count is domains this run raised a company question for, not
   // companies created — a domain becomes one only if its site says so.
   "backfill.statCompanies": "Công ty cần kiểm tra",
@@ -5194,7 +5194,7 @@ export const vi = {
   "ob.conv.triage.looksSolid": "Trông ổn · {count}",
   "ob.conv.triage.companyWebsite": "Website",
   "ob.conv.triage.sourceCount": "{count} nguồn",
-  "ob.conv.triage.peopleLabel": "Người",
+  "ob.conv.triage.contactsLabel": "Liên hệ",
   "ob.conv.triage.peopleCount": "tìm được {count}",
   "ob.conv.triage.peopleEmpty":
     "Không tìm thấy người nào trên website của bạn.",
@@ -6759,7 +6759,7 @@ export const vi = {
   "users.access.read": "đọc",
   "users.access.write": "ghi",
   "users.access.delete": "xóa",
-  "users.access.object.person": "Người",
+  "users.access.object.person": "Liên hệ",
   "users.access.object.organization": "Công ty",
   "users.access.object.lead": "Lead",
   "users.access.object.deal": "Deal",
@@ -8192,7 +8192,7 @@ export const vi = {
   "filters.subtitle":
     "T\u1ea1o b\u1ed9 l\u1ecdc, xem n\u00f3 ch\u1ecdn nh\u1eefng g\u00ec, r\u1ed3i l\u01b0u th\u00e0nh ch\u1ee7 \u0111\u1ec1.",
   "filters.objectLabel": "L\u1ecdc lo\u1ea1i b\u1ea3n ghi n\u00e0o",
-  "filters.tab.contacts": "Ng\u01b0\u1eddi",
+  "filters.tab.contacts": "Liên hệ",
   "filters.tab.companies": "C\u00f4ng ty",
   "filters.tab.deals": "Th\u01b0\u01a1ng v\u1ee5",
   "filters.builderTitle": "B\u1ed9 l\u1ecdc",
@@ -8725,7 +8725,7 @@ export const vi = {
   "worklist.untitled.dsr": "Một yêu cầu quyền riêng tư",
   "worklist.untitled.notice_case": "Một thông báo cần gửi cho người này",
   "worklist.untitled.sync_health": "Đồng bộ CRM cần chú ý",
-  "worklist.sync.class.contacts": "người",
+  "worklist.sync.class.contacts": "liên hệ",
   "worklist.sync.class.companies": "công ty",
   "worklist.sync.class.deals": "giao dịch",
   "worklist.sync.class.leads": "khách hàng tiềm năng",
@@ -8845,7 +8845,7 @@ export const vi = {
   "ob.digest.section.customer": "Họ bán cho ai",
   "ob.digest.section.sales": "Cách họ viết",
   "ob.digest.facts": "Bằng chứng",
-  "ob.digest.people": "Con người",
+  "ob.digest.contacts": "Liên hệ",
   "ob.digest.sources": "Nguồn tham khảo",
   "ob.digest.blank": "chưa ghi",
   "ob.digest.notWritten": "chưa được ghi",

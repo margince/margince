@@ -89,7 +89,7 @@ test.describe("company record — the glance's page shape", () => {
 
   // The readings are the overview's, under the bar that chose it (DESIGN.md
   // §7): a tab without them moves nothing above itself, and a row of account
-  // readings over the People roster would be a header for a page it is not
+  // readings over the Contacts roster would be a header for a page it is not
   // describing.
   test("the readings row sits under the tab strip, on the overview alone", async ({
     page,
@@ -98,7 +98,7 @@ test.describe("company record — the glance's page shape", () => {
     expect(await topOf(page.locator(".co-tabs"))).toBeLessThan(
       await topOf(page.locator(STRIP)),
     );
-    await page.getByRole("button", { name: "Personen" }).click();
+    await page.getByRole("button", { name: "Kontakte" }).click();
     await expect(page.locator(STRIP)).toHaveCount(0);
   });
 
@@ -138,7 +138,7 @@ test.describe("company record — the glance's page shape", () => {
     expect(sizes.size).toBe(1);
   });
 
-  // Overview · History · People · Deals · Tasks · Finance · Documents · Profile,
+  // Overview · History · Contacts · Deals · Tasks · Finance · Documents · Profile,
   // plus Partner for an account that has a partner programme (companyTabsFor
   // in organizations.tsx gates it on relationship_types, not on a fixed
   // count) — so the expectation follows the fixture's own data rather than
@@ -203,7 +203,7 @@ test.describe("company record — the glance's page shape", () => {
 
   // The needs list asks for a move on the account, so it belongs to the tab a
   // reader opens to be told what to do — not to every tab. Someone who has
-  // gone to People or Documents has already chosen what to read.
+  // gone to Contacts or Documents has already chosen what to read.
   test("the needs list leads the overview, and is not drawn on the other tabs", async ({
     page,
   }) => {
@@ -211,7 +211,7 @@ test.describe("company record — the glance's page shape", () => {
     const needs = page.getByRole("heading", { name: "Was dich jetzt braucht" });
     await expect(needs).toBeVisible();
 
-    await page.getByRole("button", { name: "Personen" }).click();
+    await page.getByRole("button", { name: "Kontakte" }).click();
     await expect(needs).toHaveCount(0);
   });
 

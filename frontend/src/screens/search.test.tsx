@@ -269,10 +269,10 @@ describe("SearchScreen", () => {
     );
     render(<SearchScreen q="acme" />);
     // By ROLE, not by text: the type filter above the results names the same
-    // groups the headings do, so a bare getByText("People") matches the pill —
+    // groups the headings do, so a bare getByText("Contacts") matches the pill —
     // which renders before the read settles, and would wait out nothing.
     await waitFor(() =>
-      expect(screen.getByRole("heading", { name: "People" })).toBeTruthy(),
+      expect(screen.getByRole("heading", { name: "Contacts" })).toBeTruthy(),
     );
     expect(screen.getByRole("heading", { name: "Deals" })).toBeTruthy();
     expect(screen.getByText(/Dana at Acme/)).toBeTruthy();
@@ -459,7 +459,7 @@ describe("SearchScreen", () => {
 // this is the assertion that says so for every member of it.
 describe("SearchScreen — every hit type the contract can return", () => {
   const KINDS = [
-    { type: "person", heading: "People" },
+    { type: "person", heading: "Contacts" },
     { type: "organization", heading: "Organizations" },
     { type: "deal", heading: "Deals" },
     { type: "project", heading: "Projects" },

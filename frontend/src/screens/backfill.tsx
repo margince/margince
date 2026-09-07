@@ -334,7 +334,7 @@ const CAPTURE_STATS: {
   icon: typeof Mail;
 }[] = [
   { key: "captured", label: "backfill.statEmails", icon: Mail },
-  { key: "people_created", label: "backfill.statPeople", icon: Users },
+  { key: "people_created", label: "backfill.statContacts", icon: Users },
   {
     key: "organizations_created",
     label: "backfill.statCompanies",

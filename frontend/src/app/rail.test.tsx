@@ -88,17 +88,19 @@ afterEach(() => {
   window.localStorage.clear();
 });
 
-// The route id never changes with a label: `deals` presents as Pipeline, which
-// names the board this row opens.
+// The words a reader sees, in the order the sidebar shows them: the four record
+// types first, then the surfaces that work over them, then what reads them back.
+// A label is not a route id — `ai` presents as Ask Margince, and no assertion
+// here may be satisfied by a route id that happens to match.
 const CANONICAL_ORDER = [
   "Brief",
-  "People",
+  "Contacts",
   "Companies",
   "Leads",
-  "Filters & views",
+  "Deals",
   "Worklist",
-  "Pipeline",
   "Projects",
+  "Filters & views",
   "Analytics",
   "Ask Margince",
 ];
@@ -207,7 +209,7 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
       .getAllByRole("link")
       .filter((link) => link.getAttribute("aria-current") === "page");
     expect(active).toHaveLength(1);
-    expect(active[0].getAttribute("aria-label")).toBe("Pipeline");
+    expect(active[0].getAttribute("aria-label")).toBe("Deals");
   });
 
   // Settings is not a destination and no longer has a door here, so a route the
@@ -253,17 +255,17 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
   it("keeps the accessible name when collapsed and shows a dismissible tooltip on focus", async () => {
     const user = userEvent.setup();
     render(<WorkspaceRail route={{ screen: "brief" }} collapsed />);
-    const pipeline = screen.getByRole("link", { name: "Pipeline" });
+    const deals = screen.getByRole("link", { name: "Deals" });
     expect(screen.queryByRole("tooltip")).toBeNull();
 
-    pipeline.focus();
+    deals.focus();
     const tip = await screen.findByRole("tooltip");
-    expect(tip.textContent).toBe("Pipeline");
+    expect(tip.textContent).toBe("Deals");
 
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("tooltip")).toBeNull();
     // Escape dismisses the tooltip without moving focus (WCAG 1.4.13).
-    expect(document.activeElement).toBe(pipeline);
+    expect(document.activeElement).toBe(deals);
   });
 
   // WCAG 1.4.13 also requires the tooltip be HOVERABLE: reaching for it must not
@@ -279,12 +281,12 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
   it("nests the collapsed tooltip inside its own row so hovering it cannot dismiss it", async () => {
     const user = userEvent.setup();
     render(<WorkspaceRail route={{ screen: "brief" }} collapsed />);
-    const pipeline = screen.getByRole("link", { name: "Pipeline" });
+    const deals = screen.getByRole("link", { name: "Deals" });
 
-    await user.hover(pipeline);
+    await user.hover(deals);
     const tip = await screen.findByRole("tooltip");
-    expect(pipeline.contains(tip)).toBe(true);
-    expect(tip.parentElement).toBe(pipeline);
+    expect(deals.contains(tip)).toBe(true);
+    expect(tip.parentElement).toBe(deals);
   });
 
   // On a phone the four bar tabs are the only rows rendered, so a route living
@@ -382,7 +384,7 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
           ? "agent"
           : "more",
     );
-    expect(cells).toEqual(["Brief", "People", "agent", "Pipeline", "more"]);
+    expect(cells).toEqual(["Brief", "Contacts", "agent", "Deals", "more"]);
   });
 
   // The Worklist is the destination the bar gave up for that cell. Off the bar
@@ -468,7 +470,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
     );
     // The destinations are GONE, not pushed below a second list: 56px cannot
     // carry two levels and 224px carrying both is a list of twenty places to go.
-    expect(screen.queryByRole("link", { name: "Pipeline" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Deals" })).toBeNull();
     expect(levelLabels()).toEqual(["Account", "Privacy & retention"]);
     expect(
       screen
