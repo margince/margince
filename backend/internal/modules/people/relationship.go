@@ -434,6 +434,13 @@ func (s *Store) archiveRelationshipWithEvidence(ctx context.Context, id ids.UUID
 	}
 	var out relationshipRow
 	err := s.tx(ctx, func(tx pgx.Tx) error {
+		// No per-person employment lock here, deliberately. This path frees the
+		// current-primary slot but never DECIDES anything from a read of it, so
+		// every interleaving with a writer that does lands on a state one of the
+		// two sequential orders also produces: a create that read the incumbent
+		// as live inserts an unpromoted second employment, which is the create-
+		// then-archive order. A person left with an employment and no primary
+		// one is a successor nobody promotes, not a race.
 		current, err := s.visibleRelationship(ctx, tx, id)
 		if err != nil {
 			return err

@@ -22,7 +22,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/modules/people"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -109,7 +108,14 @@ func (w *flipWriters) Associate(ctx context.Context, a migration.Assoc) (migrati
 			// a resumed run replaying its association phase re-offers an
 			// edge that already landed, which is convergence, not a
 			// failure — every other error still stops the run.
-			if errors.Is(err, apperrors.ErrConflict) {
+			//
+			// The store is asked WHICH rule refused, because a second one
+			// answers here: the primary-employer index is keyed on the person
+			// alone, and its refusal means this edge did not land at all.
+			// Reading that as convergence reported an import as applied while
+			// silently dropping the employment it was importing.
+			var conflict *people.RelationshipConflictError
+			if errors.As(err, &conflict) && conflict.AlreadyRecorded() {
 				return migration.AssocResult{Applied: true}, nil
 			}
 			return migration.AssocResult{}, fmt.Errorf("flip import: creating employment %s→%s: %w", a.FromID, a.ToID, err)

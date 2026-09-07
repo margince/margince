@@ -95,52 +95,148 @@ type relationshipWriter struct {
 }
 
 // personRelationshipWriters finds each function whose body contains an INSERT
-// into relationship naming person_id, and whether that same function takes the
-// lock in either of its two spellings.
+// into relationship naming person_id, and whether it takes the lock in either
+// of its two spellings.
+//
+// ONE hop, and only into a helper in the same file. A writer that reads the
+// people it is about through a named helper is still locking them — the
+// candidate read and the insert are one transaction either way — and refusing
+// that would push the query back inline for no reason but this gate's reach.
+// The hop stops there: a lock two calls away is one a reader of the writer
+// cannot see, which is the same blindness the gate exists to close.
 func personRelationshipWriters(file *ast.File) []relationshipWriter {
+	locking := lockingHelpers(file)
 	var found []relationshipWriter
 	for _, decl := range file.Decls {
 		fn, ok := decl.(*ast.FuncDecl)
 		if !ok || fn.Body == nil {
 			continue
 		}
-		inserts, statementLock := false, false
-		ast.Inspect(fn.Body, func(n ast.Node) bool {
-			lit, ok := n.(*ast.BasicLit)
-			if !ok || lit.Kind != token.STRING {
-				return true
-			}
-			sql := gatekit.TextOf(lit)
-			if strings.Contains(sql, "INSERT INTO relationship") && strings.Contains(sql, "person_id") {
-				inserts = true
-			}
-			if strings.Contains(sql, setBasedLock) {
-				statementLock = true
-			}
-			return true
-		})
-		if !inserts {
+		if !insertsPersonRelationship(fn.Body) {
 			continue
 		}
 		found = append(found, relationshipWriter{
 			name:   fn.Name.Name,
-			locked: statementLock || callsLock(fn.Body),
+			locked: takesLock(fn.Body, locking),
 		})
 	}
 	return found
 }
 
-func callsLock(body *ast.BlockStmt) bool {
-	called := false
+func insertsPersonRelationship(body *ast.BlockStmt) bool {
+	inserts := false
 	ast.Inspect(body, func(n ast.Node) bool {
-		call, ok := n.(*ast.CallExpr)
-		if !ok {
+		lit, ok := n.(*ast.BasicLit)
+		if !ok || lit.Kind != token.STRING {
 			return true
 		}
-		if ident, ok := call.Fun.(*ast.Ident); ok && ident.Name == singlePersonLock {
-			called = true
+		sql := gatekit.TextOf(lit)
+		if strings.Contains(sql, "INSERT INTO relationship") && strings.Contains(sql, "person_id") {
+			inserts = true
 		}
 		return true
 	})
-	return called
+	return inserts
+}
+
+// lockingHelpers names the functions in one file that take a person lock
+// themselves, so a writer calling one is recognised as locked.
+func lockingHelpers(file *ast.File) map[string]bool {
+	helpers := map[string]bool{}
+	for _, decl := range file.Decls {
+		if fn, ok := decl.(*ast.FuncDecl); ok && fn.Body != nil && takesLock(fn.Body, nil) {
+			helpers[fn.Name.Name] = true
+		}
+	}
+	return helpers
+}
+
+// takesLock reports whether a body locks the people it writes: in its own
+// statement, by calling the single-person helper, or by calling one of the
+// same file's own locking helpers.
+func takesLock(body *ast.BlockStmt, viaHelper map[string]bool) bool {
+	locked := false
+	ast.Inspect(body, func(n ast.Node) bool {
+		switch node := n.(type) {
+		case *ast.BasicLit:
+			if node.Kind == token.STRING && strings.Contains(gatekit.TextOf(node), setBasedLock) {
+				locked = true
+			}
+		case *ast.CallExpr:
+			ident, ok := node.Fun.(*ast.Ident)
+			if !ok {
+				return true
+			}
+			if ident.Name == singlePersonLock || viaHelper[ident.Name] {
+				locked = true
+			}
+		}
+		return true
+	})
+	return locked
+}
+
+// The reader is asserted against planted files, because the failure this gate
+// must never have is under-recognition: a walk that stopped matching reports
+// the same green as a tree where every writer locks.
+//
+// The hop is asserted in both directions — a writer whose helper locks is
+// clean, and one whose helper does not is not — since a hop that accepted any
+// call at all would pass the whole module.
+func TestTheWriterReaderSeesTheLockAndOnlyTheLock(t *testing.T) {
+	t.Parallel()
+
+	const insert = "`INSERT INTO relationship (kind, person_id) VALUES ($1, $2)`"
+	for _, tc := range []struct {
+		name       string
+		source     string
+		wantWriter bool
+		wantLocked bool
+	}{
+		{
+			name:   "no insert at all",
+			source: "package p\nfunc f() { q(`SELECT 1 FROM relationship`) }",
+		},
+		{
+			name:       "an insert with no lock",
+			source:     "package p\nfunc f() { q(" + insert + ") }",
+			wantWriter: true,
+		},
+		{
+			name:       "the single-person helper",
+			source:     "package p\nfunc f() { lockPersonForAttach(ctx, tx, id); q(" + insert + ") }",
+			wantWriter: true, wantLocked: true,
+		},
+		{
+			name:       "the lock in the statement",
+			source:     "package p\nfunc f() { q(`SELECT id FROM person p FOR UPDATE OF p`); q(" + insert + ") }",
+			wantWriter: true, wantLocked: true,
+		},
+		{
+			name: "a same-file helper that locks",
+			source: "package p\nfunc h() { q(`SELECT id FROM person p FOR UPDATE OF p`) }\n" +
+				"func f() { h(); q(" + insert + ") }",
+			wantWriter: true, wantLocked: true,
+		},
+		{
+			name: "a same-file helper that does NOT lock",
+			source: "package p\nfunc h() { q(`SELECT id FROM person`) }\n" +
+				"func f() { h(); q(" + insert + ") }",
+			wantWriter: true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			file, err := parser.ParseFile(token.NewFileSet(), "planted.go", tc.source, parser.SkipObjectResolution)
+			if err != nil {
+				t.Fatalf("parsing the planted source: %v", err)
+			}
+			writers := personRelationshipWriters(file)
+			if got := len(writers) > 0; got != tc.wantWriter {
+				t.Fatalf("read %d writer(s), want a writer: %t", len(writers), tc.wantWriter)
+			}
+			if tc.wantWriter && writers[0].locked != tc.wantLocked {
+				t.Errorf("locked = %t, want %t", writers[0].locked, tc.wantLocked)
+			}
+		})
+	}
 }

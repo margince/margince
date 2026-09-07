@@ -136,6 +136,24 @@ func (e *RelationshipConflictError) Error() string {
 // ErrConflict to 409 keeps doing so without knowing this type exists.
 func (e *RelationshipConflictError) Is(target error) bool { return target == apperrors.ErrConflict }
 
+// AlreadyRecorded reports whether this refusal means the edge the caller
+// offered is ALREADY on file — the answer an idempotent writer needs before it
+// treats a conflict as convergence.
+//
+// Only the rules keyed on the tuple being inserted qualify. The primary-
+// employer index is keyed on the PERSON alone, so its conflict is with a
+// different company entirely and the offered edge did NOT land: an importer
+// that read every 409 as "already there" would report a row it never wrote,
+// and the person would keep an employer nobody recorded.
+func (e *RelationshipConflictError) AlreadyRecorded() bool {
+	switch e.Constraint {
+	case employmentUnique, projectStakeholderUnique, "uq_rel_deal_person_role", "uq_rel_works_with":
+		return true
+	default:
+		return false
+	}
+}
+
 // mapRelationshipConstraint turns the insert's constraint failures into
 // typed input errors: the rel_* CHECKs are the kind→endpoint shape rules
 // (migration 0007) — bad input, not a fault — and the partial unique
