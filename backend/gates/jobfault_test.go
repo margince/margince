@@ -18,6 +18,7 @@ package gates
 import (
 	"go/ast"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
@@ -26,6 +27,72 @@ import (
 
 // workerFloor guards against a vacuous pass, as in the role gate.
 const workerFloor = 20
+
+// workerHome is where a River worker lives, and the return rule above only
+// holds for workers this gate can see — it walks this one directory.
+//
+// Nothing used to assert that a worker IS here. The two rules leaned on each
+// other with nothing underneath: the return rule assumed the location, and the
+// location was a path constant nobody checked. A worker declared in a module
+// package would be invisible, and invisible the quiet way — the gate stays
+// green while the obligation goes unenforced for exactly that worker.
+const workerHome = "internal/compose"
+
+// workersOutsideTheirHome ratifies each Work method that lives elsewhere.
+//
+// A Work method is not always a River worker: the governed wrapper below
+// declares one to DELEGATE, which is why the exemption is by name and carries
+// what it is rather than being a directory this walk skips.
+var workersOutsideTheirHome = gatekit.Waive(map[string]string{
+	"internal/platform/jobs/govern.go": "the governing wrapper's own Work, which runs no job of its own: it decorates the worker it wraps and returns what that worker returned, so the return rule is satisfied by the wrapped worker and asking it of the wrapper would ask it twice of one value. It lives in platform because it is the seam every compose worker is registered through, and a seam that lived among the workers it governs would be one of them",
+})
+
+// TestEveryRiverWorkerLivesWhereTheFaultGateLooks is the other half of the
+// return rule: it is only an obligation over the workers the walk above reads,
+// so a worker somewhere else is one the rule does not reach.
+//
+// Derived from the tree rather than trusted: the walk is over the whole module,
+// and every Work method it finds outside the home directory has to be named
+// here with what it is. That way the location rule and the return rule hold
+// each other up, instead of one assuming the other.
+func TestEveryRiverWorkerLivesWhereTheFaultGateLooks(t *testing.T) {
+	t.Parallel()
+	defer workersOutsideTheirHome.AssertAllMatched(t)
+
+	fset, files := parseGoFilesUnder(t, "internal")
+	found, outside := 0, 0
+	for _, file := range files {
+		for _, decl := range file.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok || fn.Recv == nil || fn.Name.Name != "Work" || fn.Body == nil {
+				continue
+			}
+			found++
+			rel := filepath.ToSlash(filepath.Dir(fset.Position(fn.Pos()).Filename))
+			if rel == workerHome || strings.HasPrefix(rel, workerHome+"/") {
+				continue
+			}
+			outside++
+			if workersOutsideTheirHome.Waived(t, filepath.ToSlash(fset.Position(fn.Pos()).Filename)) {
+				continue
+			}
+			pos := fset.Position(fn.Pos())
+			t.Errorf("%s:%d: a Work method outside %s is one TestEveryWorkerReturnsThroughJobsFault "+
+				"never reads, so whatever it returns reaches river_job.errors unchecked — a column "+
+				"with no workspace, no RLS and an installation-wide audience.\n"+
+				"  Move it under %s, or name it in workersOutsideTheirHome with what it is.",
+				pos.Filename, pos.Line, workerHome, workerHome)
+		}
+	}
+	// The same vacuity floor the return rule takes, for the same reason: a walk
+	// that stopped recognising Work methods would find nothing outside the home
+	// and report a clean tree.
+	if found < workerFloor {
+		t.Fatalf("this walk found %d Work method(s) across the module and expects at least %d — "+
+			"it has stopped recognising them rather than the tree having lost them", found, workerFloor)
+	}
+	t.Logf("Work methods: %d in all, %d outside %s", found, outside, workerHome)
+}
 
 func TestEveryWorkerReturnsThroughJobsFault(t *testing.T) {
 	t.Parallel()
