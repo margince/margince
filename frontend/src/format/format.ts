@@ -156,6 +156,28 @@ export function formatUsdPerMTok(price: string, locale: Locale): string {
   }).format(value);
 }
 
+/**
+ * A share of a whole where the FRACTION matters: "0.4 %", "12.0 %".
+ *
+ * `formatPercent` rounds to whole numbers, which is right for progress. It is
+ * wrong for a rate held to a threshold below one percent — a transition sitting
+ * at 0.4% undone would print "0%" and read as flawless, which is the rounding
+ * that flatters exactly where flattery is dangerous.
+ *
+ * Zero is still "0 %": nothing went wrong is a whole fact, and "0.0 %" claims a
+ * measurement where there is simply nothing to measure.
+ */
+export function formatFinePercent(fraction: number, locale: Locale): string {
+  if (fraction === 0) {
+    return formatPercent(0, locale);
+  }
+  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+    style: "percent",
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(fraction);
+}
+
 export function formatRate(value: number, locale: Locale): string {
   return new Intl.NumberFormat(INTL_LOCALE[locale], {
     maximumFractionDigits: 10,

@@ -33290,6 +33290,14 @@ type Stage struct {
 // StageSemantic defines model for Stage.Semantic.
 type StageSemantic string
 
+// StageAutomationReport defines model for StageAutomationReport.
+type StageAutomationReport struct {
+	Data []StageTransitionRecord `json:"data"`
+
+	// WindowDays The window the counts were taken over.
+	WindowDays int `json:"window_days"`
+}
+
 // StageCriterionKind What KIND of fact settles a criterion. This is not decoration: the kind
 // decides which evidence sources may satisfy it. `buyer_confirmed`,
 // `event_held`, `document_signed` and `terms_accepted` each name something the
@@ -33428,6 +33436,69 @@ type StageExitCriterionListResponse struct {
 type StageListResponse struct {
 	Data []Stage  `json:"data"`
 	Page PageInfo `json:"page"`
+}
+
+// StageTransitionEvidenceRecord defines model for StageTransitionEvidenceRecord.
+type StageTransitionEvidenceRecord struct {
+	AcceptedClean int    `json:"accepted_clean"`
+	Kind          string `json:"kind"`
+	Reviewed      int    `json:"reviewed"`
+	Unsafe        int    `json:"unsafe"`
+}
+
+// StageTransitionRecord defines model for StageTransitionRecord.
+type StageTransitionRecord struct {
+	// AcceptedClean Approved with nothing changed.
+	AcceptedClean int `json:"accepted_clean"`
+
+	// AcceptedEdited Approved only after the human changed it. Not a clean acceptance:
+	// the question is whether the proposal is right AS IT STANDS.
+	AcceptedEdited int `json:"accepted_edited"`
+
+	// AutoApplied Applied without anybody being asked. Reported apart so a reader can
+	// see how much of a transition's record the autopilot wrote about
+	// itself.
+	AutoApplied         int     `json:"auto_applied"`
+	CleanAcceptanceRate float64 `json:"clean_acceptance_rate"`
+	EditRate            float64 `json:"edit_rate"`
+
+	// EvidenceKinds The same moves cut by the criterion kinds they rested on, so an
+	// installation can see WHICH evidence it accepts rather than only that
+	// it accepts most things.
+	EvidenceKinds []StageTransitionEvidenceRecord `json:"evidence_kinds"`
+
+	// Expired Cards whose window closed with nobody answering. A refusal by
+	// NOBODY, which is why it is neither a rejection nor reviewed.
+	Expired       int                `json:"expired"`
+	FromStageId   openapi_types.UUID `json:"from_stage_id"`
+	FromStageName string             `json:"from_stage_name"`
+
+	// ObservationDays Whole days from the first answered proposal to the last, rounded
+	// down.
+	ObservationDays int                `json:"observation_days"`
+	PipelineId      openapi_types.UUID `json:"pipeline_id"`
+
+	// Proposed Cards still standing, unanswered.
+	Proposed      int     `json:"proposed"`
+	Rejected      int     `json:"rejected"`
+	RejectionRate float64 `json:"rejection_rate"`
+
+	// Reviewed Proposals a human answered. The denominator of every rate here, and
+	// zero means "nobody has answered one yet" rather than "the rates are
+	// bad" — read it before reading any rate below.
+	Reviewed int `json:"reviewed"`
+
+	// Superseded Cards a fresher reading replaced before anyone answered.
+	Superseded  int                `json:"superseded"`
+	ToStageId   openapi_types.UUID `json:"to_stage_id"`
+	ToStageName string             `json:"to_stage_name"`
+
+	// Unsafe Reviewed moves that were reversed OR whose evidence a human
+	// corrected. One outcome counts once even when both are true.
+	Unsafe int `json:"unsafe"`
+
+	// UnsafeRate The safety number, held to a ceiling rather than a floor.
+	UnsafeRate float64 `json:"unsafe_rate"`
 }
 
 // StartBackfillRequest defines model for StartBackfillRequest.
@@ -40961,6 +41032,15 @@ type ResolveSignalParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// GetStageAutomationReportParams defines parameters for GetStageAutomationReport.
+type GetStageAutomationReportParams struct {
+	PipelineId openapi_types.UUID `form:"pipeline_id" json:"pipeline_id"`
+
+	// WindowDays How far back to count, in days. The default matches the launch
+	// gate's own window, so what a reader sees is what the gate reads.
+	WindowDays *int `form:"window_days,omitempty" json:"window_days,omitempty"`
 }
 
 // ListStagesParams defines parameters for ListStages.
@@ -51793,6 +51873,9 @@ type ServerInterface interface {
 	// The warm/cold classification with the full "why warm" evidence (B-E08.3).
 	// (GET /signals/{id}/warmth)
 	GetSignalWarmth(w http.ResponseWriter, r *http.Request, id Id)
+	// What each stage transition has earned.
+	// (GET /stage-automation/report)
+	GetStageAutomationReport(w http.ResponseWriter, r *http.Request, params GetStageAutomationReportParams)
 	// List stages (optionally filtered by pipeline).
 	// (GET /stages)
 	ListStages(w http.ResponseWriter, r *http.Request, params ListStagesParams)
@@ -55213,6 +55296,12 @@ func (_ Unimplemented) ResolveSignal(w http.ResponseWriter, r *http.Request, id 
 // The warm/cold classification with the full "why warm" evidence (B-E08.3).
 // (GET /signals/{id}/warmth)
 func (_ Unimplemented) GetSignalWarmth(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What each stage transition has earned.
+// (GET /stage-automation/report)
+func (_ Unimplemented) GetStageAutomationReport(w http.ResponseWriter, r *http.Request, params GetStageAutomationReportParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -78065,6 +78154,60 @@ func (siw *ServerInterfaceWrapper) GetSignalWarmth(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// GetStageAutomationReport operation middleware
+func (siw *ServerInterfaceWrapper) GetStageAutomationReport(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetStageAutomationReportParams
+
+	// ------------- Required query parameter "pipeline_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "pipeline_id", r.URL.Query(), &params.PipelineId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "pipeline_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pipeline_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "window_days" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "window_days", r.URL.Query(), &params.WindowDays, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "window_days"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "window_days", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetStageAutomationReport(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListStages operation middleware
 func (siw *ServerInterfaceWrapper) ListStages(w http.ResponseWriter, r *http.Request) {
 
@@ -83464,6 +83607,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/signals/{id}/warmth", wrapper.GetSignalWarmth)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/stage-automation/report", wrapper.GetStageAutomationReport)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/stages", wrapper.ListStages)

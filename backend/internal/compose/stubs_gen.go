@@ -2131,6 +2131,10 @@ func (stubs) GetSignalWarmth(w nethttp.ResponseWriter, r *nethttp.Request, id cr
 	httperr.NotImplemented(w, r, "GetSignalWarmth")
 }
 
+func (stubs) GetStageAutomationReport(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetStageAutomationReportParams) {
+	httperr.NotImplemented(w, r, "GetStageAutomationReport")
+}
+
 func (stubs) ListStages(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListStagesParams) {
 	httperr.NotImplemented(w, r, "ListStages")
 }

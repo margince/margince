@@ -6178,6 +6178,8 @@ export const vi = {
     "Ai l\u00e0m vi\u1ec7c c\u00f9ng nhau \u2014 \u0111\u00f3 l\u00e0 c\u0103n c\u1ee9 c\u1ee7a ph\u1ea1m vi h\u00e0ng.",
   "settings.page.seats.sub":
     "Bao nhi\u00eau gh\u1ebf \u0111ang d\u00f9ng so v\u1edbi quy\u1ec1n c\u1ee7a b\u1ea3n tri\u1ec3n khai n\u00e0y.",
+  "settings.page.stageautomation.sub":
+    "Th\u00e0nh t\u00edch c\u1ee7a t\u1eebng b\u01b0\u1edbc chuy\u1ec3n giai \u0111o\u1ea1n, tr\u01b0\u1edbc khi \u0111\u01b0\u1ee3c tin \u0111\u1ec3 t\u1ef1 di chuy\u1ec3n th\u01b0\u01a1ng v\u1ee5.",
   "settings.page.pipelines.sub":
     "C\u00e1c giai \u0111o\u1ea1n m\u1ed9t th\u01b0\u01a1ng v\u1ee5 \u0111i qua, cho to\u00e0n c\u00f4ng ty.",
   "settings.page.leads.sub":
@@ -6234,6 +6236,7 @@ export const vi = {
   "settings.tab.members": "Thành viên",
   "settings.tab.teams": "Nhóm",
   "settings.tab.seats": "Giấy phép & chỗ ngồi",
+  "settings.tab.stageautomation": "T\u1ef1 \u0111\u1ed9ng giai \u0111o\u1ea1n",
   "settings.tab.pipelines": "Quy trình",
   "settings.tab.leads": "Xử lý khách tiềm năng",
   "settings.tab.fields": "Trường",
@@ -9046,4 +9049,35 @@ export const vi = {
   "lead.standing.dueBy": "Chưa ai trả lời. Phản hồi đầu tiên hạn đến {at}.",
   "lead.standing.overdueSince":
     "Chưa ai trả lời. Phản hồi đầu tiên đã đến hạn {at}.",
+  "stageAutomation.title": "T\u1ef1 \u0111\u1ed9ng giai \u0111o\u1ea1n",
+  "stageAutomation.intro":
+    "\u0110i\u1ec1u g\u00ec \u0111\u00e3 x\u1ea3y ra v\u1edbi c\u00e1c b\u01b0\u1edbc chuy\u1ec3n giai \u0111o\u1ea1n m\u00e0 Margince \u0111\u1ec1 xu\u1ea5t. \u1ede \u0111\u00e2y kh\u00f4ng thay \u0111\u1ed5i g\u00ec c\u1ea3.",
+  "stageAutomation.pipeline": "Quy tr\u00ecnh",
+  "stageAutomation.window": "{days} ng\u00e0y qua",
+  "stageAutomation.transition": "B\u01b0\u1edbc chuy\u1ec3n",
+  "stageAutomation.reviewed": "\u0110\u00e3 tr\u1ea3 l\u1eddi",
+  "stageAutomation.reviewedHint":
+    "C\u00e1c \u0111\u1ec1 xu\u1ea5t th\u1ef1c s\u1ef1 c\u00f3 ng\u01b0\u1eddi quy\u1ebft \u0111\u1ecbnh. M\u1ecdi t\u1ef7 l\u1ec7 \u0111\u1ec1u t\u00ednh tr\u00ean con s\u1ed1 n\u00e0y.",
+  "stageAutomation.open": "C\u00f2n m\u1edf",
+  "stageAutomation.expired": "H\u1ebft h\u1ea1n",
+  "stageAutomation.expiredHint":
+    "Kh\u00f4ng ai tr\u1ea3 l\u1eddi tr\u01b0\u1edbc khi h\u1ebft h\u1ea1n. Kh\u00f4ng ph\u1ea3i t\u1eeb ch\u1ed1i \u2014 kh\u00f4ng ai ph\u1ea3n \u0111\u1ed1i, kh\u00f4ng ai xem.",
+  "stageAutomation.cleanAcceptance":
+    "Ch\u1ea5p nh\u1eadn nguy\u00ean tr\u1ea1ng",
+  "stageAutomation.edits": "Ch\u1ea5p nh\u1eadn sau khi s\u1eeda",
+  "stageAutomation.rejections": "T\u1eeb ch\u1ed1i",
+  "stageAutomation.unsafe":
+    "\u0110\u00e3 ho\u00e0n t\u00e1c ho\u1eb7c s\u1eeda",
+  "stageAutomation.unsafeHint":
+    "C\u00e1c b\u01b0\u1edbc chuy\u1ec3n b\u1ecb ho\u00e0n t\u00e1c, ho\u1eb7c c\u00f3 b\u1eb1ng ch\u1ee9ng b\u1ecb \u0111\u00e1nh d\u1ea5u sai. M\u1ed9t b\u01b0\u1edbc ch\u1ec9 t\u00ednh m\u1ed9t l\u1ea7n.",
+  "stageAutomation.observationDays": "S\u1ed1 ng\u00e0y quan s\u00e1t",
+  "stageAutomation.observationHint":
+    "T\u1eeb \u0111\u1ec1 xu\u1ea5t \u0111\u01b0\u1ee3c tr\u1ea3 l\u1eddi \u0111\u1ea7u ti\u00ean \u0111\u1ebfn cu\u1ed1i c\u00f9ng.",
+  "stageAutomation.evidenceKinds": "Theo b\u1eb1ng ch\u1ee9ng",
+  "stageAutomation.empty":
+    "Margince ch\u01b0a \u0111\u1ec1 xu\u1ea5t b\u01b0\u1edbc chuy\u1ec3n n\u00e0o tr\u00ean quy tr\u00ecnh n\u00e0y.",
+  "stageAutomation.noPipelines":
+    "Ch\u01b0a c\u00f3 quy tr\u00ecnh n\u00e0o \u0111\u1ec3 b\u00e1o c\u00e1o.",
+  "stageAutomation.nothingReviewed":
+    "\u0110\u00e3 \u0111\u1ec1 xu\u1ea5t, nh\u01b0ng ch\u01b0a ai tr\u1ea3 l\u1eddi.",
 } as const satisfies Record<MessageKey, string>;

@@ -102,6 +102,7 @@ describe("the scope each page declares", () => {
     members: "workspace",
     teams: "workspace",
     pipelines: "workspace",
+    stageautomation: "workspace",
     leads: "workspace",
     fields: "workspace",
     tags: "workspace",
@@ -207,6 +208,9 @@ describe("what each page lets a reader change", () => {
 
     pipelines:
       "all(full-seat, any(any(pipeline:update, pipeline:create), pipeline:delete))",
+    // Read-only: the report shows what a transition has earned and changes
+    // nothing. Turning automation on is a different page and a different grant.
+    stageautomation: "same-as-requires",
     leads:
       "all(full-seat, any(any(custom_field:update, custom_field:create), custom_field:delete))",
     fields:
@@ -904,6 +908,11 @@ describe("what the rail carries and what it leaves behind", () => {
       // update, which is what CompanyContextCard asks. Existing behaviour that
       // the rail is only now reporting — the card was always editable by them.
       "company",
+      // Stage automation, on `readingIsTheAct`: consulting the record IS what
+      // the page is for, like the audit log and the seat count. It sits here
+      // rather than beside Pipelines in looksUp for that reason — a rep does
+      // not go there to change anything, and there is nothing on it to change.
+      "stageautomation",
       // Products and offer templates: a rep authors both.
       "products",
       // Capture rules, because a rep holds `organization:update` and

@@ -6373,6 +6373,8 @@ export const en = {
     "Who works together, which is what row scope reads.",
   "settings.page.seats.sub":
     "How many seats are in use against what this installation is entitled to.",
+  "settings.page.stageautomation.sub":
+    "The record each stage transition has earned, before it is trusted to move deals by itself.",
   "settings.page.pipelines.sub":
     "The stages a deal moves through, for the whole company.",
   "settings.page.leads.sub":
@@ -6425,6 +6427,7 @@ export const en = {
   "settings.tab.members": "Members",
   "settings.tab.teams": "Teams",
   "settings.tab.seats": "Seats & license",
+  "settings.tab.stageautomation": "Stage automation",
   "settings.tab.pipelines": "Pipelines",
   "settings.tab.leads": "Lead handling",
   "settings.tab.fields": "Fields",
@@ -9294,6 +9297,34 @@ export const en = {
     "Nobody has answered yet. The first response is due by {at}.",
   "lead.standing.overdueSince":
     "Nobody has answered yet. The first response was due {at}.",
+  "stageAutomation.title": "Stage automation",
+  "stageAutomation.intro":
+    "What happened to the stage moves Margince proposed. Nothing here changes anything \u2014 it is the evidence behind letting a transition move deals on its own.",
+  "stageAutomation.pipeline": "Pipeline",
+  "stageAutomation.window": "Last {days} days",
+  "stageAutomation.transition": "Transition",
+  "stageAutomation.reviewed": "Answered",
+  "stageAutomation.reviewedHint":
+    "Proposals someone actually decided. Every rate is a share of this.",
+  "stageAutomation.open": "Still open",
+  "stageAutomation.expired": "Ran out",
+  "stageAutomation.expiredHint":
+    "Nobody answered before the window closed. Not a rejection \u2014 nobody disagreed, nobody looked.",
+  "stageAutomation.cleanAcceptance": "Accepted as proposed",
+  "stageAutomation.edits": "Accepted after edits",
+  "stageAutomation.rejections": "Rejected",
+  "stageAutomation.unsafe": "Undone or corrected",
+  "stageAutomation.unsafeHint":
+    "Moves someone reversed, or whose evidence they marked wrong. One move counts once even when both happened.",
+  "stageAutomation.observationDays": "Days observed",
+  "stageAutomation.observationHint":
+    "From the first answered proposal to the last. A good rate earned in one afternoon is not a record.",
+  "stageAutomation.evidenceKinds": "By evidence",
+  "stageAutomation.empty":
+    "Margince has not proposed a stage move on this pipeline yet.",
+  "stageAutomation.noPipelines": "There is no pipeline to report on yet.",
+  "stageAutomation.nothingReviewed":
+    "Proposed, but nobody has answered one yet.",
 } as const;
 
 export type MessageKey = keyof typeof en;

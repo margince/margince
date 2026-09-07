@@ -532,6 +532,19 @@ export const SETTINGS_PAGES = [
     changes: acts(writes("pipeline"), destroys("pipeline")),
   },
   {
+    id: "stageautomation",
+    group: "sales",
+    scope: "workspace",
+    // The report reads stage_progression_outcome through a pipeline-gated
+    // endpoint, so `pipeline` read is exactly what opens it — the same grant
+    // that shows the stages the transitions are between.
+    requires: reads("pipeline"),
+    // Read-only in this release. The per-transition policy that will turn
+    // automation on is its own page and its own grant; a reader here can see
+    // what a transition has earned and change nothing.
+    changes: readingIsTheAct,
+  },
+  {
     id: "leads",
     group: "sales",
     scope: "workspace",

@@ -6237,6 +6237,8 @@ export const de = {
     "Wer zusammenarbeitet \u2014 daran orientiert sich der Zeilenzugriff.",
   "settings.page.seats.sub":
     "Wie viele Sitzpl\u00e4tze belegt sind, gemessen an dem, was dieser Installation zusteht.",
+  "settings.page.stageautomation.sub":
+    "Was jeder Phasen\u00fcbergang vorzuweisen hat, bevor ihm zugetraut wird, Gesch\u00e4fte selbst zu bewegen.",
   "settings.page.pipelines.sub":
     "Die Phasen, die ein Gesch\u00e4ft durchl\u00e4uft \u2014 f\u00fcr das ganze Unternehmen.",
   "settings.page.leads.sub":
@@ -6291,6 +6293,7 @@ export const de = {
   "settings.tab.members": "Mitglieder",
   "settings.tab.teams": "Teams",
   "settings.tab.seats": "Lizenzen & Plätze",
+  "settings.tab.stageautomation": "Phasen-Automatik",
   "settings.tab.pipelines": "Pipelines",
   "settings.tab.leads": "Lead-Bearbeitung",
   "settings.tab.fields": "Felder",
@@ -9167,4 +9170,33 @@ export const de = {
     "Noch hat niemand geantwortet. Die erste Antwort ist bis {at} fällig.",
   "lead.standing.overdueSince":
     "Noch hat niemand geantwortet. Die erste Antwort war am {at} fällig.",
+  "stageAutomation.title": "Phasen-Automatik",
+  "stageAutomation.intro":
+    "Was aus den Phasenwechseln wurde, die Margince vorgeschlagen hat. Hier \u00e4ndert sich nichts \u2014 das ist die Grundlage daf\u00fcr, einen \u00dcbergang selbst\u00e4ndig arbeiten zu lassen.",
+  "stageAutomation.pipeline": "Pipeline",
+  "stageAutomation.window": "Letzte {days} Tage",
+  "stageAutomation.transition": "\u00dcbergang",
+  "stageAutomation.reviewed": "Beantwortet",
+  "stageAutomation.reviewedHint":
+    "Vorschl\u00e4ge, die jemand tats\u00e4chlich entschieden hat. Jede Quote ist ein Anteil davon.",
+  "stageAutomation.open": "Noch offen",
+  "stageAutomation.expired": "Verfallen",
+  "stageAutomation.expiredHint":
+    "Niemand hat vor Fristende geantwortet. Keine Ablehnung \u2014 niemand war anderer Meinung, niemand hat hingesehen.",
+  "stageAutomation.cleanAcceptance": "Unver\u00e4ndert angenommen",
+  "stageAutomation.edits": "Nach \u00c4nderung angenommen",
+  "stageAutomation.rejections": "Abgelehnt",
+  "stageAutomation.unsafe": "Zur\u00fcckgenommen oder korrigiert",
+  "stageAutomation.unsafeHint":
+    "Wechsel, die jemand r\u00fcckg\u00e4ngig gemacht hat oder deren Beleg als falsch markiert wurde. Ein Wechsel z\u00e4hlt einmal, auch wenn beides zutrifft.",
+  "stageAutomation.observationDays": "Beobachtete Tage",
+  "stageAutomation.observationHint":
+    "Vom ersten beantworteten Vorschlag bis zum letzten. Eine gute Quote an einem Nachmittag ist keine Bilanz.",
+  "stageAutomation.evidenceKinds": "Nach Beleg",
+  "stageAutomation.empty":
+    "Margince hat auf dieser Pipeline noch keinen Phasenwechsel vorgeschlagen.",
+  "stageAutomation.noPipelines":
+    "Es gibt noch keine Pipeline, \u00fcber die berichtet werden k\u00f6nnte.",
+  "stageAutomation.nothingReviewed":
+    "Vorgeschlagen, aber noch nicht beantwortet.",
 } as const satisfies Record<MessageKey, string>;
