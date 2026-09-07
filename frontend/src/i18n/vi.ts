@@ -3409,6 +3409,8 @@ export const vi = {
   "compose.consentGoto": "Xem lại chấp thuận",
   "compose.draftUnavailable":
     "Không dùng được phần soạn nháp bằng AI (chưa cấu hình mô hình). Bạn vẫn tự viết email được.",
+  "compose.draftUnsupportedHere":
+    "Trang này không có chức năng soạn nháp bằng AI. Bạn vẫn tự viết email được.",
   "compose.sendUnavailable": "Không gửi được (chưa cấu hình bộ gửi thư).",
   "compose.mailboxNotSendCapable":
     "Hộp thư của bạn đã kết nối để thu thập nhưng chưa bao giờ được cấp quyền gửi. Hãy kết nối lại và duyệt quyền gửi — hộp thư được kết nối từ trước khi có tính năng gửi thì không nâng cấp tại chỗ được.",

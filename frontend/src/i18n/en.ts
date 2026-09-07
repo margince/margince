@@ -3539,6 +3539,8 @@ export const en = {
   "compose.consentGoto": "Review consent",
   "compose.draftUnavailable":
     "AI drafting is unavailable (the model is not configured). You can still write the email yourself.",
+  "compose.draftUnsupportedHere":
+    "AI drafting is not offered from this page. You can still write the email yourself.",
   "compose.sendUnavailable":
     "Sending is unavailable (no mailer is configured).",
   "compose.mailboxNotSendCapable":

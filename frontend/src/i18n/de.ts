@@ -3446,6 +3446,8 @@ export const de = {
   "compose.consentGoto": "Einwilligung prüfen",
   "compose.draftUnavailable":
     "KI-Entwurf ist nicht verfügbar (das Modell ist nicht konfiguriert). Sie können die E-Mail weiterhin selbst schreiben.",
+  "compose.draftUnsupportedHere":
+    "KI-Entwurf wird auf dieser Seite nicht angeboten. Sie können die E-Mail weiterhin selbst schreiben.",
   "compose.sendUnavailable":
     "Versand ist nicht verfügbar (kein Mailer konfiguriert).",
   "compose.mailboxNotSendCapable":
