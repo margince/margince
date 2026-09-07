@@ -378,42 +378,44 @@
 }
 /* The label is absolutely positioned for the collapse animation, so it does not
    flow around the shortcut cap — it is held clear of it instead. */
-/* head row: the brand alone — the control that collapses this panel stands in
-   the top bar (app/topbar.css), where it does not travel with the panel it
-   opens. Its FLOOR is the strip's height, less the rail's own top padding and
-   plus the strip's rule, so the row under it starts on the line the strip ends
-   on — and a longer installation name is free to take a second line and push the
-   rows down with it rather than being clipped by the box. */
+/* The head: the brand block, then the line that says what it runs on and which
+   build this is. TWO ROWS, so the marker stands beside the attribution instead
+   of at the foot of a column a demo never scrolls to — and the control that
+   collapses this panel is not among them, it stands in the top bar
+   (app/topbar.css) where it does not travel with the panel it opens.
+   Its FLOOR is the strip's height, so a head with nothing to attribute still
+   reaches the line the strip ends on; a head with more to say takes the rows
+   below it down rather than being clipped by the box. */
 .rail .railhead {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  /* A COLUMN: the mark and the name are one lockup, and what runs under them is
+     a line of its own. `stretch` so both rows start at the panel's own left
+     edge — the marker then trails the attribution on the same baseline grid the
+     rows below stand on. */
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-1);
   /* Never shrinks. The panel is a flex COLUMN, and on a window shorter than the
      navigation is tall the default `flex-shrink: 1` took the overflow out of the
      tallest item that could give it — this one, silently, 14px of it. The head
      then stood shorter than the strip it is aligned to and every icon below it
      rode up by that much, so collapsing the panel (which stops scrolling, so
-     stops shrinking) moved the whole column. Both halves of that are wrong: the
-     logomark's axis is the strip's, and the rows hold still. */
+     stops shrinking) moved the whole column, which the rows must not do. */
   flex: none;
-  /* The strip's height as a FLOOR, pulled up out of the rail's own top padding:
-     at one line the head is the strip's own measure, so the logomark reads as
-     standing on the axis the trail and the search stand on across the rule, and
-     the panel's 1px row gap puts the first destination's row on the line under
-     that rule. A head that outgrows the floor — a name that wraps — takes the
-     rows down with it, because the box has to be as tall as the lockup inside
-     it: any less and the product attribution stands outside its own head. */
+  /* The strip's height as a FLOOR, so the head reaches the line the strip ends
+     on however little it has to say and the first destination starts under that
+     line. Never a ceiling: the box has to be as tall as what stands in it, and
+     any less puts the attribution and the marker outside their own head. */
   min-height: var(--topbarH);
-  margin-top: calc(-1 * var(--space-3));
-  /* A breath between the mark and the first destination: with the mark at the
-     head's full height the row under it read as one more item in its stack. */
+  /* A breath between the head and the first destination: with the marker on the
+     head's last line the row under it read as one more item in its stack. */
   margin-bottom: var(--space-3);
 }
-/* Collapsed, the head is the logomark alone, centred: the control that opens
-   and closes this panel now stands in the top bar, where it does not travel
-   with the panel it opens and does not have to be discovered on hover. */
+/* Collapsed the head is the mark and the marker under it, and neither has a
+   text column to stand on: at 56px the axis is the column's own centre, which is
+   the axis every row glyph below them stands on too. */
 .rail.collapsed .railhead {
-  justify-content: center;
+  align-items: center;
 }
 /* brand block */
 .rail .ws {
@@ -423,11 +425,8 @@
   text-decoration: none;
   color: var(--textPrimary);
   border-radius: var(--r-sm);
-  /* More air above than below: the block hangs from the head's top edge rather
-     than sitting in the middle of it, so the mark keeps its distance from the
-     strip's line while the name reads as the start of the column under it. */
-  padding: var(--space-2) var(--space-1) var(--space-1);
-  flex: 1;
+  /* No inset of its own: the head owns the air around both of its rows, and a
+     padding here would indent the mark from the line under it. */
   min-width: 0;
   overflow: hidden;
 }
@@ -469,15 +468,6 @@
   white-space: nowrap;
   font-size: var(--fs-h3);
 }
-.rail .ws-logo-powered {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--space-1);
-  font-size: var(--fs-eyebrow);
-  line-height: 1;
-  text-align: right;
-}
 .rail .ws-logo-product {
   font-family: var(--f-display);
   font-size: var(--fs-meta);
@@ -502,9 +492,6 @@
    centred is the better of the two for that too. */
 .rail.collapsed .ws-logo .company-logo-img {
   object-position: center;
-}
-.rail.collapsed .ws-logo-powered {
-  display: none;
 }
 .rail .ws-chip {
   /* The workspace's mark is the one picture in the chrome, and at 32px it read
@@ -597,20 +584,52 @@
      air the lockup needs is the gap above, which belongs to the block. */
   line-height: 1.1;
 }
-/* The line under the installation's name, and the build marker at the panel's
-   foot. Both are the same voice as the rest of the panel at a smaller size —
-   the mono uppercase kicker this used to draw in was a third type family
-   standing in the corner of every screen, saying nothing the name above it does
-   not. The ellipsis stays: an installation name is user data of unbounded
-   length in a narrow column. */
-.rail .ws-org,
-.rail .railversion {
-  font-size: var(--fs-eyebrow);
-}
+/* The head's second line: what this installation runs on, and which build of it
+   this is. One row for both, because they are one statement — and in the same
+   small voice as the name above them rather than the mono uppercase kicker this
+   used to draw in, which was a third type family standing in the corner of
+   every screen and saying nothing the name did not.
+   It is a SIBLING of the brand anchor and not a child of it: the marker is a
+   fact about the build, and a fact inside a link is a fact a press carries you
+   away from. */
 .rail .ws-org {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--fs-eyebrow);
+  line-height: 1;
+}
+/* The ellipsis is the TEXT's, not the row's: an installation name is user data
+   of unbounded length in a narrow column, and a row that clipped itself would
+   take the marker with it — the one thing on this line that must always be
+   legible. */
+.rail .ws-org-text {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+/* WHICH BUILD THIS IS, as a badge rather than a line of grey type.
+   Filled in the brand's own accent so it reads as a stamp on the product rather
+   than as one more label: the reader it exists for is somebody seeing the
+   product for the first time, and "this is not finished software" is the one
+   thing in this panel they must not miss. --textOnAccentControl and not
+   --textOnAccent, because the fill IS --accent and dark mode lightens it
+   (design-system/tokens.css says so where the two are split). */
+.rail .ws-alpha {
+  flex: none;
+  background: var(--accent);
+  color: var(--textOnAccentControl);
+  font-weight: var(--fw-bold);
+  padding: 1px var(--space-1); /* ds:ignore a cap-height band on a 10.5px label, not spaced content */
+  border-radius: var(--r-xs);
+}
+/* Collapsed there is no room for the attribution and no need for it: the mark
+   above says whose installation this is, and 56px is one glyph wide. The badge
+   stays — it is the whole reason this line survives the collapse — shortened to
+   one letter by release.ts and centred under the mark by the head's own
+   `align-items`. */
+.rail.collapsed .ws-org-text {
+  display: none;
 }
 
 /* groups */
@@ -931,28 +950,6 @@
      the air around it read as rail nobody uses. */
   margin: var(--space-1) calc(-1 * var(--space-2)) 0;
   padding: 0 var(--space-2);
-}
-/* WHICH BUILD THIS IS, at the foot of the column.
-   Centred in both rail states, because it names the whole panel rather than
-   standing on the rows' text column — and at 56px there is no text column to
-   stand on. It reads in the brand block's own small face: the one other line in
-   this panel that is a label about the installation rather than a place to go,
-   which is why the two share a declaration rather than each spelling 9px.
-   `flex: none` for the reason the head and the agent band carry it: on a window
-   shorter than the panel this is the box a flex column would take the overflow
-   out of, and a version that shrank to nothing is a version nobody can read
-   back to us. */
-.rail .railversion {
-  flex: none;
-  margin: var(--space-3) 0 0;
-  text-align: center;
-  color: var(--textMeta);
-  /* One line, whatever the marker says: the collapsed column is 56px and a
-     build name is unbounded, so a wrapping marker was two lines of 9px type
-     under the agent's card. */
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 /* The More control belongs to the phone-width bottom bar only. */
 .rail .railmore {
@@ -1560,7 +1557,11 @@
   .rail.sheetopen .railhead {
     display: flex;
     order: -1;
-    height: auto;
+    /* Both rows flush left, the way the expanded sidebar draws them: the sheet
+       inherits `.rail.collapsed` whenever that is what the desktop was left at,
+       and the centring that column needs would indent the name and the
+       attribution from the rows under them here. */
+    align-items: stretch;
     min-height: 44px;
     margin: 0 0 var(--space-2);
     padding-right: var(--space-12);
@@ -1576,6 +1577,11 @@
     width: auto;
     height: auto;
     opacity: 1;
+  }
+  /* And the attribution beside the marker: the sheet is 600px wide, so the row
+     the 56px rail reduces to one badge is spelled out in full here. */
+  .rail.sheetopen .ws-org-text {
+    display: block;
   }
   /* The close control keeps its glyph and drops its word: pinned in the corner
      there is no room for one, and "Close" is what its `aria-label` says. */

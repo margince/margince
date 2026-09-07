@@ -12,7 +12,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { displayVersion } from "./release";
+import { displayVersion, narrowVersion } from "./release";
 import { navigate, type Route } from "./router";
 import { Shell, WorkspaceRail } from "./shell";
 import {
@@ -324,20 +324,44 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     expect(container.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
   });
 
-  // The half that is easy to break: the version has to survive the collapse. At
-  // 56px the rail drops every label it has, so a build marker that rode the
+  // The half that is easy to break: the marker has to survive the collapse. At
+  // 56px the rail drops every label it has, so a build badge that rode the
   // wordmark would be gone exactly where the product is hardest to identify —
-  // and this is the one line here a reader may need to read back to us.
-  it("names the build at both rail widths", () => {
+  // and it is the one thing here a reader may need to read back to us.
+  //
+  // Read from `release.ts` rather than typed out: the badge and the version are
+  // one answer, and a literal here would go on passing after a release changed
+  // it. The narrow form is the same string with one word abbreviated, so the two
+  // cannot drift into naming different builds.
+  it("stamps the build at both rail widths, one glyph narrower collapsed", () => {
     const expanded = render(<WorkspaceRail route={{ screen: "brief" }} />);
-    expect(expanded.container.querySelectorAll(".railversion")).toHaveLength(1);
+    expect(expanded.container.querySelector(".ws-alpha")?.textContent).toBe(
+      displayVersion(),
+    );
     cleanup();
 
     const collapsed = render(
       <WorkspaceRail route={{ screen: "brief" }} collapsed />,
     );
-    const marker = collapsed.container.querySelector(".railversion");
-    expect(marker?.textContent).toBe(displayVersion());
+    expect(collapsed.container.querySelector(".ws-alpha")?.textContent).toBe(
+      narrowVersion(),
+    );
+    // The abbreviation is what the 56px column buys, said once here so a
+    // `narrowVersion` that stopped abbreviating fails rather than passing
+    // against itself.
+    expect(narrowVersion()).not.toBe(displayVersion());
+  });
+
+  // The badge is not inside the link. A fact about the build sitting in an
+  // anchor is a fact a press carries the reader away from, and the head's one
+  // target is the mark.
+  it("keeps the build badge out of the brand's link", () => {
+    const { container } = render(<WorkspaceRail route={{ screen: "brief" }} />);
+    const badge = container.querySelector(".ws-alpha");
+    expect(badge).toBeTruthy();
+    expect(badge?.closest("a")).toBeNull();
+    // And the marker the foot used to carry is gone with it.
+    expect(container.querySelector(".railversion")).toBeNull();
   });
 
   // The bar is five cells and only three of them are destinations. The agent is
@@ -619,14 +643,15 @@ describe("Rail levels (a section's entries as the second level)", () => {
   });
 
   // The other half of the same head, and the half a real installation actually
-  // wears: the company's own mark with "Powered by Margince" under it. That line
-  // used to go with the brand's words on a level, so the one thing in the chrome
-  // saying what the product IS was absent from every settings address.
+  // wears: the company's own mark with "Powered by Margince" and the build badge
+  // under it. That line used to go with the brand's words on a level, so the one
+  // thing in the chrome saying what the product IS was absent from every
+  // settings address.
   it("draws an installation's own head the same on a level as off one", () => {
     shellStyles = mountShellStyles();
     const client = newClient();
     client.setQueryData(["company"], TWO_MARKS);
-    const parts = [".company-logo", ".ws-logo-powered"];
+    const parts = [".company-logo", ".ws-org-text", ".ws-alpha"];
     const plain = renderWith(
       client,
       <WorkspaceRail route={{ screen: "brief" }} />,
@@ -666,8 +691,12 @@ describe("Rail levels (a section's entries as the second level)", () => {
     if (!image) throw new Error("the company logo image was not rendered");
     fireEvent.load(image);
     expect(logo.classList.contains("company-logo")).toBe(true);
-    expect(within(brand).getByText("Powered by")).toBeTruthy();
-    expect(within(brand).getByText("Margince")).toBeTruthy();
+    // Beside the link rather than inside it: the attribution and the build badge
+    // are one row of the head, and neither is somewhere a press should lead.
+    const attribution = document.querySelector(".ws-org");
+    expect(attribution?.textContent).toContain("Powered by");
+    expect(attribution?.textContent).toContain("Margince");
+    expect(within(brand).queryByText("Powered by")).toBeNull();
     expect(brand.getAttribute("href")).toBe("#/brief");
   });
 
@@ -749,6 +778,32 @@ describe("Rail levels (a section's entries as the second level)", () => {
     logo_icon_url:
       "/v1/organizations/55555555-5555-4555-8555-555555555555/logo/icon",
   };
+
+  // Every brand branch carries it — the product's own mark, an installation's
+  // logo, an installation with only a monogram. The marker is a fact about the
+  // BUILD, so it does not depend on whether there is a company name above it,
+  // and the branch with nothing to attribute is the one a first-run reader sees.
+  it.each([
+    ["the product's own mark", undefined],
+    ["an installation's logo", TWO_MARKS],
+    [
+      "an installation's monogram",
+      { ...TWO_MARKS, logo_url: undefined, logo_icon_url: undefined },
+    ],
+  ])("stamps the build on the head with %s", (_name, company) => {
+    const client = newClient();
+    if (company) {
+      client.setQueryData(["company"], company);
+    }
+    const { container } = renderWith(
+      client,
+      <WorkspaceRail route={{ screen: "brief" }} />,
+    );
+    expect(container.querySelectorAll(".ws-alpha")).toHaveLength(1);
+    expect(container.querySelector(".ws-alpha")?.textContent).toBe(
+      displayVersion(),
+    );
+  });
 
   it("draws the square icon when the panel is collapsed", () => {
     const client = newClient();

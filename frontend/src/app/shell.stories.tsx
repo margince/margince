@@ -230,9 +230,14 @@ function SidebarExample({
 
 // Both sidebar states, side by side. Expanded is 252px of 34px rows on a 4px
 // gutter; collapsed is the canonical 56px geometry, where a row IS its target and
-// keeps 44px, the logomark stands alone in the head, and the group headings are
-// not drawn at all — 56px carries a glyph and not a label, and the break between
-// two groups is what says where one ends.
+// keeps 44px, the head is the mark with the build badge under it, and the group
+// headings are not drawn at all — 56px carries a glyph and not a label, and the
+// break between two groups is what says where one ends.
+//
+// The head is TWO rows either way: the brand block, then what the installation
+// runs on and which build of it this is. Expanded that line reads "Powered by
+// Margince" with the version badge beside it; at 56px the attribution goes and
+// the badge stays, shortened to one glyph.
 //
 // What is NOT in either panel: the search and the account block. Both moved to
 // the strip above (app/topbar.tsx), which is why these frames render that strip

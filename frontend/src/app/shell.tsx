@@ -49,7 +49,7 @@ import {
   sectionHead,
 } from "./pagemeta";
 import { usePopoverDismiss } from "./popover";
-import { displayVersion } from "./release";
+import { displayVersion, narrowVersion } from "./release";
 import { type Route, routeHash, useRoute } from "./router";
 import { useScrollMemory } from "./scrollmemory";
 import { TopBar } from "./topbar";
@@ -108,6 +108,23 @@ function writeStored(key: string, value: string): void {
 // wordmark.
 function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
   const t = useT();
+  /* WHAT BUILD THIS IS, on the brand's own second line.
+   *
+   * It is the alpha marker: a corner ribbon across the mark said the product is
+   * unfinished and nothing else, where a version says that AND which build a
+   * reader is looking at — the thing worth having in front of somebody the first
+   * time they see the product, which is why it stands beside the name rather
+   * than at the foot of a column a demo never scrolls to.
+   *
+   * On every branch, including the one with no installation to attribute: the
+   * marker is a fact about the BUILD, so it does not depend on whether there is
+   * a company name above it. At 56px the word shortens (release.ts) and nothing
+   * else in that column is a label at all. */
+  const marker = (
+    <span className="ws-alpha">
+      {narrow ? narrowVersion() : displayVersion()}
+    </span>
+  );
   // The installation's own organization (A107/ADR-0061: one installation, one
   // organization), OBSERVED on the entry the onboarding gate already filled.
   // A disabled observer: it never fetches, so it cannot re-trigger the gate's
@@ -124,14 +141,19 @@ function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
   // never invented to fill the line.
   if (!installation) {
     return (
-      <a className="ws" href="#/brief" aria-label={t("shell.logoAria")}>
-        <span className="ws-chip">
-          <Logomark />
-        </span>
-        <span className="ws-name">
-          <b>{t("shell.logoAria")}</b>
-        </span>
-      </a>
+      <>
+        <a className="ws" href="#/brief" aria-label={t("shell.logoAria")}>
+          <span className="ws-chip">
+            <Logomark />
+          </span>
+          <span className="ws-name">
+            <b>{t("shell.logoAria")}</b>
+          </span>
+        </a>
+        {/* No attribution line here: the product's own mark is already above it,
+            and a company name is never invented to fill the row. */}
+        <span className="ws-org">{marker}</span>
+      </>
     );
   }
   // Which of the company's two marks this width can carry. Collapsed the panel
@@ -147,51 +169,61 @@ function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
       : installation.logo_url;
   if (mark) {
     return (
+      <>
+        <a
+          className="ws ws-logo"
+          href="#/brief"
+          aria-label={t("shell.companyLogoAria", {
+            company: installation.display_name,
+          })}
+        >
+          <CompanyLogo
+            name={installation.display_name}
+            src={mark}
+            fallback={<b>{installation.display_name}</b>}
+          />
+        </a>
+        <span className="ws-org">
+          <span className="ws-org-text">
+            {t("shell.poweredByPrefix")}{" "}
+            <span className="ws-logo-product">{t("shell.logoAria")}</span>
+          </span>
+          {marker}
+        </span>
+      </>
+    );
+  }
+  return (
+    <>
       <a
-        className="ws ws-logo"
+        className="ws"
         href="#/brief"
         aria-label={t("shell.companyLogoAria", {
           company: installation.display_name,
         })}
       >
-        <CompanyLogo
-          name={installation.display_name}
-          src={mark}
-          fallback={<b>{installation.display_name}</b>}
-        />
-        <span className="ws-org ws-logo-powered">
-          <span>{t("shell.poweredByPrefix")}</span>
-          <span className="ws-logo-product">{t("shell.logoAria")}</span>
+        {/* The mark the onboarding website read resolved from the company's own
+            site, in the slot the product's mark holds otherwise — one slot, so
+            the brand block does not move when onboarding finishes and so the
+            rail's own rules about the mark have one thing to name. Avatar draws
+            its deterministic monogram underneath, and a company whose site
+            declared no icon has a face rather than a gap. */}
+        <span className="ws-chip ws-chip-company">
+          <Avatar
+            identity={installation.organization_id}
+            name={installation.display_name}
+            shape="organization"
+          />
+        </span>
+        <span className="ws-name">
+          <b>{installation.display_name}</b>
         </span>
       </a>
-    );
-  }
-  return (
-    <a
-      className="ws"
-      href="#/brief"
-      aria-label={t("shell.companyLogoAria", {
-        company: installation.display_name,
-      })}
-    >
-      {/* The mark the onboarding website read resolved from the company's own
-          site, in the slot the product's mark holds otherwise — one slot, so the
-          brand block does not move when onboarding finishes and so the rail's
-          own rules about the mark have one thing to name. Avatar draws its
-          deterministic monogram underneath, and a company whose site declared no
-          icon has a face rather than a gap. */}
-      <span className="ws-chip ws-chip-company">
-        <Avatar
-          identity={installation.organization_id}
-          name={installation.display_name}
-          shape="organization"
-        />
+      <span className="ws-org">
+        <span className="ws-org-text">{t("shell.poweredBy")}</span>
+        {marker}
       </span>
-      <span className="ws-name">
-        <b>{installation.display_name}</b>
-        <span className="ws-org">{t("shell.poweredBy")}</span>
-      </span>
-    </a>
+    </>
   );
 }
 
@@ -460,17 +492,6 @@ export function WorkspaceRail({
             <AgentRail route={route} />
           </div>
         )}
-        {/* WHAT BUILD THIS IS, under everything else. It is the alpha marker
-            now: a corner ribbon across the brand said the product is
-            unfinished and nothing else, where a version says that AND which
-            build a reader is looking at — which is the thing worth having in
-            front of somebody the first time they see the product.
-            It stays at 56px, where every label in the panel is gone: the
-            sentence is four characters wide and it is the one line here that a
-            reader may need to read back to us. It goes on a drilled-in level
-            too, because it is a fact about the BUILD rather than about the
-            level, and at phone width there is no column to have a foot. */}
-        {!phone && <p className="railversion">{displayVersion()}</p>}
       </nav>
     </>
   );
