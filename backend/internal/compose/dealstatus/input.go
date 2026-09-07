@@ -156,6 +156,14 @@ func taskIn(t activities.OpenTask, now time.Time) TaskIn {
 	return out
 }
 
+// The two room vocabularies this file reads. Both are plain strings in the
+// contract (DealRoomAuthor.Side, DealRoomThread.State), so they are spelled
+// here rather than imported from dealrooms, which keeps them private.
+const (
+	sideBuyer           = "buyer"
+	threadStateResolved = "resolved"
+)
+
 // roomIn carries the room's state and its conversation. A required-change
 // thread still open is the clearest risk signal a room holds, so it is named
 // rather than left for the model to infer from an opener's wording.
@@ -164,7 +172,31 @@ func roomIn(f facts) *RoomIn {
 		return nil
 	}
 	out := &RoomIn{State: string(f.room.State)}
+	// Counted over EVERY thread, before the cap: how much the buyer has said is
+	// a fact about the room, and taking it from the six threads that fit would
+	// make it a fact about the truncation instead.
 	for _, th := range f.threads {
+		for _, c := range th.Comments {
+			if c.Author.Side == sideBuyer {
+				out.BuyerPosts++
+			}
+		}
+	}
+	// Open threads first. The cap is what the model sees, so filling it with
+	// settled conversation while a live one waits outside would hide the
+	// only thread anybody still has to act on.
+	ordered := make([]crmcontracts.DealRoomThread, 0, len(f.threads))
+	for _, th := range f.threads {
+		if string(th.State) != threadStateResolved {
+			ordered = append(ordered, th)
+		}
+	}
+	for _, th := range f.threads {
+		if string(th.State) == threadStateResolved {
+			ordered = append(ordered, th)
+		}
+	}
+	for _, th := range ordered {
 		if len(out.Threads) == maxThreadRows {
 			break
 		}
@@ -178,6 +210,11 @@ func threadIn(th crmcontracts.DealRoomThread) ThreadIn {
 	out.RequiredChange = th.RequiredChange
 	if len(th.Comments) > 0 {
 		out.Opener = excerpt(th.Comments[0].Body)
+		// The opener's OWN author, not the thread's. They are the same today
+		// and the read costs nothing either way; taking it from the thread
+		// would attribute the words to whoever started the conversation if a
+		// room ever lets somebody else post first.
+		out.OpenerSide = string(th.Comments[0].Author.Side)
 	}
 	return out
 }

@@ -66,9 +66,11 @@ Each of "story", "blocker", "buyer", "verdict.because" and "move_reason" is a li
 
 Every sentence lists the ids it rests on in its own "evidence", from the summary's "id" fields. Ids belong in "evidence" only — never in any "text" or in "opening".
 A named stakeholder is not automatically the author of a timeline entry. Attribute a statement to a person only when that entry names them; otherwise say the customer or the team.
+The room's posts carry "opener_side". A "seller" post is OUR OWN work: it is never customer engagement, never their agreement, and never their confirmation, however warmly it reads. Only a "buyer" post says what the customer thinks, and "buyer_posts": 0 means they have not written in the room at all — say that plainly rather than describing our own activity as theirs.
+KEEP EVERY QUALIFICATION. "The plan looks good, phase 1 is realistic, phase 3 still needs internal clarification" is a conditional yes with an open question in it; writing it as agreement to the plan drops the only part anybody still has to act on. If a message accepts one thing and reserves another, write both or write neither.
 Ground every word in the summary. Never invent a person, a company, a date, a number or an event. If the summary does not say it, do not write it.
 Every timeline entry carries "when": "past" for something that has happened, "scheduled" for something booked and still ahead. A scheduled entry is a plan, never an event — never write that it took place, and never measure silence from it.
-"open_tasks" is work NOBODY HAS DONE YET, whatever its date says. A task there carries "state": "open" or "overdue". Only state "overdue" is late. State "open" is not overdue, regardless of dates, silence or the deal's age. Never write that a task's work happened, was sent, was followed up or was delivered — an overdue task is a promise already broken, not a thing that took place, and it is the strongest reason to act rather than evidence that somebody already did. Completed work is on the timeline instead, as the event it became.
+"open_tasks" is work NOBODY HAS DONE YET, whatever its date says. A task there carries "state": "open" or "overdue". Only state "overdue" is late. State "open" is not overdue, regardless of dates, silence or the deal's age. Never write that a task's work happened, was sent, was followed up or was delivered — an overdue task is a promise already broken, not a thing that took place, and it is the strongest reason to act rather than evidence that somebody already did. A task's own "due" is the only deadline its work has: never urge it for today, by the end of the day, or by any date the record does not carry. Completed work is on the timeline instead, as the event it became.
 "health" scores four things from 0 to 1, where low is bad: activity_recency, stage_velocity, engagement (how many people are actually talking to us) and commitments (promises we have kept). They are signals to reason from, never facts to state — never write a score, a factor name or the word "health" in the card. A low score tells you where to look in "timeline"; the timeline's dates are what you write.
 Never write the same fact in two sections. Each one answers a different question.
 `
@@ -204,14 +206,27 @@ const (
 type RoomIn struct {
 	State   string     `json:"state"`
 	Threads []ThreadIn `json:"threads,omitempty"`
+	// BuyerPosts is how many of the room's posts the BUYER wrote. Zero is the
+	// fact a reader most needs and the one a list of threads hides: a room
+	// nobody on their side has ever written in still reads, thread by thread,
+	// like a conversation.
+	BuyerPosts int `json:"buyer_posts"`
 }
 
 // ThreadIn is one conversation, with whether the buyer flagged it as needing
 // work — an open required-change thread is the clearest risk signal a room
 // carries.
+//
+// Opener carries WHOSE words it is. A room holds both sides' posts in one list,
+// so an opener handed over without its side reads as the room speaking: a card
+// told a reader "the customer remains actively engaged in the deal room" about
+// a room whose every post was our own, because seller prose in a buyer-shaped
+// field is indistinguishable from the buyer having written it.
 type ThreadIn struct {
-	ID             string `json:"id"`
-	Opener         string `json:"opener,omitempty"`
+	ID     string `json:"id"`
+	Opener string `json:"opener,omitempty"`
+	// OpenerSide is "buyer" or "seller" — who wrote the opener above.
+	OpenerSide     string `json:"opener_side,omitempty"`
 	State          string `json:"state"`
 	RequiredChange bool   `json:"required_change,omitempty"`
 }

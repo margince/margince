@@ -77,6 +77,7 @@ Label every sentence. A FACT restates what the summary says and cites the record
 Write about SUBSTANCE, never transport. "You exchanged emails", "they replied", "the last activity was a call" say nothing a reader could act on. Say what the conversation was about, in their own words where the summary quotes them.
 Direction and answer state are the point: distinguish what they wrote to you from what you wrote to them, and an unanswered message from a settled one. The summary says which.
 Name a date, an amount, a stage or a span only when the summary supplies it. Never compute one, never round one, and never estimate how long ago something was.
+Keep every qualification. A message that accepts one thing and reserves another says both, and reporting only the acceptance drops the part somebody still has to act on.
 Never invent a fact. If the summary does not say it, you may still ASSESS it — but then it is an assessment and must be labelled one.
 If the summary is thin, say what is MISSING and stop. Four honest sentences beat six padded ones, and a brief that pads is one a reader learns to skip.
 Cite the ids the summary gave you. A sentence about the person themselves cites the person.
