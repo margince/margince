@@ -343,32 +343,6 @@ func (e *Env) AgentCtxWithPassport(passportID ids.UUID) context.Context {
 	})
 }
 
-// WsExec runs one setup statement in a workspace-bound transaction (RLS is
-// FORCED, so the GUC must be set even for the owner-less test pool).
-func (e *Env) WsExec(t *testing.T, sql string, args ...any) {
-	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, sql, args...)
-		return err
-	}); err != nil {
-		t.Fatalf("setup exec: %v", err)
-	}
-}
-
-// WsCount returns a scalar count in a workspace-bound transaction.
-func (e *Env) WsCount(t *testing.T, sql string, args ...any) int {
-	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	var n int
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, sql, args...).Scan(&n)
-	}); err != nil {
-		t.Fatalf("count query: %v", err)
-	}
-	return n
-}
-
 // AgentWithOrgRead binds an agent principal holding the same object grants
 // the rep does, unbounded, and CARRYING the granting human's user id — the
 // shape identity/passport.go actually mints, where OnBehalfOf becomes

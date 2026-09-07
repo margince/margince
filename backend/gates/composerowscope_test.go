@@ -88,6 +88,19 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	"internal/compose:scanQuietProjects":  "the quiet-project rule's scan, under the same sweep and the same system principal: the organization it names is the account the project's signal is attributed to, handed to signals.RecordDerived and never to a reader",
 	"internal/compose:dueThreads":         "the signal extractor's settled-conversation backlog, under the same sweep and the same system principal: the single organization a thread resolves to is what the extraction is filed against, and the rows go to the model lane rather than to a caller",
 
+	// The organization rollup's tree walk, found by the aliased-column pass:
+	// `parent_org_id` is an FK to organization named for its role, so the
+	// name-derived extractor could not see it at all.
+	//
+	// The reference IS scoped, one call up rather than inside this one. OrgRollup
+	// takes auth.EnsureVisible on the root in the same transaction, and every
+	// node this walk returns then passes through orgReadablePredicate's
+	// auth.ScopeClauseFor over organization — a node the caller cannot read is
+	// pruned before a figure is summed, and a root that fails it answers
+	// ErrNotFound. Scoping the walk itself would ask the same question twice and
+	// lose the tree's shape, which the pruning needs whole.
+	"internal/compose:loadOrgTree": "the rollup's recursive tree walk, whose parent_org_id reference is bounded by the caller: EnsureVisible on the root in this transaction, then orgReadablePredicate's ScopeClauseFor over every node before any figure is summed",
+
 	// The weekly retrospective's frozen deal lines. The id is served beside a
 	// label written when the review was, and NOTHING live is read: the query
 	// joins no deal, no stage and no organization, so there is no current row
@@ -196,14 +209,18 @@ func TestEveryComposeReadOfARecordReferenceAppliesItsRowScope(t *testing.T) {
 	defer unscopedReferenceReads.AssertAllMatched(t)
 
 	tables := rowScopedTables(t)
-	pkgs, sites := referenceSites(t, tables)
+	pkgs, sites := referenceSites(t, referenceVocabulary{
+		tables:  tables,
+		columns: referenceColumns(t, tables),
+		edge:    relationshipEndpointTables(t),
+	})
 	if len(sites) < wantMinimumScopedSites {
 		t.Fatalf("only %d record-reference reads found in %s, want at least %d — the SQL extractor lost its source",
 			len(sites), composeTier, wantMinimumScopedSites)
 	}
 
 	for _, site := range sites {
-		if reachesRowScope(pkgs[site.dir].visibleTo(site.recv), site.fn, map[string]bool{}) {
+		if reachesRowScope(pkgs[site.dir].visibleTo(site.recv), site.fn, site.table, map[string]bool{}) {
 			continue
 		}
 		if unscopedReferenceReads.Waived(t, site.dir+":"+site.fn) {
@@ -330,7 +347,12 @@ func stringConst(expr ast.Expr) (string, bool) {
 // rowScopeFnInfo is what this gate needs about one function: whether its body
 // applies a row scope, and the names it mentions (the resolution edges).
 type rowScopeFnInfo struct {
-	scoped bool
+	// scopes are the tables this function bounds directly, anyTable among them
+	// when a spelling names none. A SET rather than a flag: a function that
+	// probes a deal has not bounded the organization it also projects, and
+	// counting probes instead of matching them is what would have read green
+	// over #1876.
+	scopes map[string]bool
 	calls  map[string]bool
 }
 
@@ -351,7 +373,13 @@ func (p rowScopePkg) visibleTo(recv string) map[string]*rowScopeFnInfo {
 			// Two same-named functions the index cannot tell apart at a call
 			// site: union them into a third value rather than folding one into
 			// the other, which would leak this receiver's edges into the next.
-			merged := &rowScopeFnInfo{scoped: pkgLevel.scoped || info.scoped, calls: map[string]bool{}}
+			merged := &rowScopeFnInfo{scopes: map[string]bool{}, calls: map[string]bool{}}
+			for table := range pkgLevel.scopes {
+				merged.scopes[table] = true
+			}
+			for table := range info.scopes {
+				merged.scopes[table] = true
+			}
 			for _, src := range []*rowScopeFnInfo{pkgLevel, info} {
 				for call := range src.calls {
 					merged.calls[call] = true
@@ -367,7 +395,13 @@ func (p rowScopePkg) visibleTo(recv string) map[string]*rowScopeFnInfo {
 
 // reachesRowScope resolves the obligation transitively over same-package calls;
 // seen breaks recursion cycles.
-func reachesRowScope(fns map[string]*rowScopeFnInfo, name string, seen map[string]bool) bool {
+//
+// The obligation is PER TABLE. A read that projects an organization satisfies
+// nothing by probing a deal — that is #1876 exactly, and a gate that counted
+// probes would have gone green over it and then certified it, because the
+// obvious way to quiet such a gate is to add a probe over whatever table the
+// function already had in hand.
+func reachesRowScope(fns map[string]*rowScopeFnInfo, name, table string, seen map[string]bool) bool {
 	if seen[name] {
 		return false
 	}
@@ -376,11 +410,11 @@ func reachesRowScope(fns map[string]*rowScopeFnInfo, name string, seen map[strin
 	if !indexed {
 		return false
 	}
-	if info.scoped {
+	if info.scopes[table] || info.scopes[anyTable] {
 		return true
 	}
 	for call := range info.calls {
-		if _, indexed := fns[call]; indexed && reachesRowScope(fns, call, seen) {
+		if _, indexed := fns[call]; indexed && reachesRowScope(fns, call, table, seen) {
 			return true
 		}
 	}
@@ -397,7 +431,13 @@ func reachesRowScope(fns map[string]*rowScopeFnInfo, name string, seen map[strin
 // declarations unread would let any query walk out of this census by being
 // promoted, which is the quiet narrowing the extractor floor below exists to
 // refuse.
-func referenceSites(t *testing.T, tables map[string]bool) (map[string]rowScopePkg, []referenceSite) {
+func referenceSites(t *testing.T, vocab referenceVocabulary) (map[string]rowScopePkg, []referenceSite) {
+	return referenceSitesIn(t, composeTier, vocab)
+}
+
+// referenceSitesIn is referenceSites over one named tier, so a second tier can
+// be judged by the same index rather than by a copy of it.
+func referenceSitesIn(t *testing.T, tier string, vocab referenceVocabulary) (map[string]rowScopePkg, []referenceSite) {
 	t.Helper()
 	pkgs := map[string]rowScopePkg{}
 	queryVars := map[string]map[string][]referenceSite{}
@@ -407,14 +447,14 @@ func referenceSites(t *testing.T, tables map[string]bool) (map[string]rowScopePk
 	}
 	var uses []funcUse
 	var sites []referenceSite
-	for _, src := range tierFiles(t, composeTier) {
+	for _, src := range tierFiles(t, tier) {
 		dir := filepath.ToSlash(filepath.Dir(src.Path))
 		if pkgs[dir] == nil {
 			pkgs[dir] = rowScopePkg{}
 		}
 		for _, decl := range src.File.Decls {
 			if gen, ok := decl.(*ast.GenDecl); ok {
-				collectQueryVars(gen, tables, dir, src, queryVars)
+				collectQueryVars(gen, vocab, dir, src, queryVars)
 				continue
 			}
 			fn, ok := decl.(*ast.FuncDecl)
@@ -427,14 +467,14 @@ func referenceSites(t *testing.T, tables map[string]bool) (map[string]rowScopePk
 			}
 			info := pkgs[dir][recv][fn.Name.Name]
 			if info == nil {
-				info = &rowScopeFnInfo{calls: map[string]bool{}}
+				info = &rowScopeFnInfo{scopes: map[string]bool{}, calls: map[string]bool{}}
 				pkgs[dir][recv][fn.Name.Name] = info
 			}
 			// Seeded without a line: every site reports the line of the SQL that
 			// holds the reference, which is what a reader has to go and look at.
 			at := referenceSite{dir: dir, recv: recv, fn: fn.Name.Name}
 			idents := map[string]bool{}
-			sites = append(sites, indexFuncBody(fn, info, tables, at, src, idents)...)
+			sites = append(sites, indexFuncBody(fn, info, vocab, at, src, idents)...)
 			uses = append(uses, funcUse{at: at, idents: idents})
 		}
 	}
@@ -455,7 +495,7 @@ func referenceSites(t *testing.T, tables map[string]bool) (map[string]rowScopePk
 // collectQueryVars records the reference sites held by a package-level string
 // declaration — a query var or const, including one assembled by `+`. The line
 // points into the declaration itself, where the SQL is.
-func collectQueryVars(gen *ast.GenDecl, tables map[string]bool, dir string, src tierFile, into map[string]map[string][]referenceSite) {
+func collectQueryVars(gen *ast.GenDecl, vocab referenceVocabulary, dir string, src tierFile, into map[string]map[string][]referenceSite) {
 	if gen.Tok != token.VAR && gen.Tok != token.CONST {
 		return
 	}
@@ -468,7 +508,7 @@ func collectQueryVars(gen *ast.GenDecl, tables map[string]bool, dir string, src 
 		if !holdsLiteral {
 			continue
 		}
-		for _, ref := range referencedTables(sql, tables) {
+		for _, ref := range referencedTables(sql, vocab) {
 			if into[dir] == nil {
 				into[dir] = map[string][]referenceSite{}
 			}
@@ -481,7 +521,7 @@ func collectQueryVars(gen *ast.GenDecl, tables map[string]bool, dir string, src 
 
 // indexFuncBody records one function's row-scope calls and edges, and returns
 // the reference sites its SQL holds.
-func indexFuncBody(fn *ast.FuncDecl, info *rowScopeFnInfo, tables map[string]bool, at referenceSite, src tierFile, idents map[string]bool) []referenceSite {
+func indexFuncBody(fn *ast.FuncDecl, info *rowScopeFnInfo, vocab referenceVocabulary, at referenceSite, src tierFile, idents map[string]bool) []referenceSite {
 	var sites []referenceSite
 	// A statement assembled by `+` is read as ONE query, and its parts are not
 	// read again on their own. Half a statement is the shape that reads green
@@ -489,7 +529,7 @@ func indexFuncBody(fn *ast.FuncDecl, info *rowScopeFnInfo, tables map[string]boo
 	// predicate that bounds it in the last, so each half alone looks unbounded.
 	joined := map[ast.Node]bool{}
 	record := func(sql string, pos token.Pos) {
-		for _, ref := range referencedTables(sql, tables) {
+		for _, ref := range referencedTables(sql, vocab) {
 			site := at
 			site.table, site.line = ref.table, src.Line(pos)+ref.lineOffset
 			sites = append(sites, site)
@@ -510,7 +550,9 @@ func indexFuncBody(fn *ast.FuncDecl, info *rowScopeFnInfo, tables map[string]boo
 			case *ast.SelectorExpr:
 				if pkg, isPkg := fun.X.(*ast.Ident); isPkg && pkg.Name == "auth" {
 					if rowScopeSpellings[fun.Sel.Name] {
-						info.scoped = true
+						for _, table := range vocab.scopedBy(fun.Sel.Name, node.Args) {
+							info.scopes[table] = true
+						}
 					}
 					return true
 				}
@@ -580,19 +622,116 @@ var fkColumn = regexp.MustCompile(`\b(?:[A-Za-z_][\w]*\.)?([a-z_]+)_id\b`)
 // LISTS hand back. The list, not the whole statement: a `<table>_id` in a WHERE
 // or a JOIN condition is how a query NARROWS, and reading those as disclosures
 // would flag the row-scope clauses themselves.
-func referencedTables(sql string, tables map[string]bool) []tableReference {
+// referenceVocabulary is what a reference IS: the row-scoped tables, and the
+// columns that point at one. The two travel together because neither answers
+// the question alone — a column is a reference because of the table it names,
+// and a table is reachable through columns that do not carry its name.
+type referenceVocabulary struct {
+	tables  map[string]bool
+	columns map[string]string
+	// edge is what the endpoint conjunction bounds — the relationship and every
+	// endpoint table it names — read out of platform/auth rather than restated.
+	edge map[string]bool
+}
+
+// scopedBy is the tables one row-scope call bounds.
+func (v referenceVocabulary) scopedBy(spelling string, args []ast.Expr) []string {
+	table := scopedTable(spelling, args)
+	if table != edgeEndpoints {
+		return []string{table}
+	}
+	tables := make([]string, 0, len(v.edge))
+	for endpoint := range v.edge {
+		tables = append(tables, endpoint)
+	}
+	return tables
+}
+
+func referencedTables(sql string, vocab referenceVocabulary) []tableReference {
 	projected := projectedBytes(sql)
 	var found []tableReference
 	seen := map[string]bool{}
-	for _, at := range fkColumn.FindAllStringSubmatchIndex(sql, -1) {
-		table := sql[at[2]:at[3]]
-		if !projected[at[0]] || !tables[table] || seen[table] || boundToCallerArgument(sql, table) {
-			continue
+	add := func(table string, at int) {
+		if seen[table] {
+			return
 		}
 		seen[table] = true
-		found = append(found, tableReference{table: table, lineOffset: strings.Count(sql[:at[0]], "\n")})
+		found = append(found, tableReference{table: table, lineOffset: strings.Count(sql[:at], "\n")})
+	}
+	counted := countedBytes(sql)
+	for _, at := range fkColumn.FindAllStringSubmatchIndex(sql, -1) {
+		table := sql[at[2]:at[3]]
+		if !projected[at[0]] || counted[at[0]] || !vocab.tables[table] || boundToCallerArgument(sql, table+"_id") {
+			continue
+		}
+		add(table, at[0])
+	}
+	// The columns the name-derived pass above cannot see: an FK named for its
+	// ROLE. The schema says which table each one points at, so a reference is
+	// found by what it REFERS TO rather than by what it is called.
+	for column, table := range vocab.columns {
+		if column == table+"_id" || !vocab.tables[table] || boundToCallerArgument(sql, column) {
+			continue
+		}
+		at := namedColumn(column).FindStringIndex(sql)
+		if at == nil || !projected[at[0]] || counted[at[0]] {
+			continue
+		}
+		add(table, at[0])
 	}
 	return found
+}
+
+// namedColumn matches one column by name, optionally qualified by an alias.
+// Compiled per call rather than cached: the map is small, this runs once per
+// statement, and a cache keyed by column is a second place for the pattern to
+// be wrong.
+func namedColumn(column string) *regexp.Regexp {
+	return regexp.MustCompile(`\b(?:[A-Za-z_][\w]*\.)?` + column + `\b`)
+}
+
+// countedBytes marks the bytes inside a count(), which hands back a NUMBER.
+//
+// count is the whole list, and one entry is the honest length of it. sum and
+// avg over an id are nonsense nobody writes, while min and max over a uuid
+// return an id — so widening this to "aggregates" would start dropping real
+// references. array_agg and json_agg are the case that proves the rule: they
+// wrap ids and hand every one of them back, so they must stay visible here.
+//
+// It exists because an account's stakeholder TOTAL is deliberately counted past
+// the caller's person scope — the difference between that total and the visible
+// set is what "contacts you cannot see" means on the coverage card, and a scope
+// clause there would collapse it to zero and report every account complete.
+func countedBytes(sql string) []bool {
+	counted := make([]bool, len(sql)+1)
+	// Both spellings: the tree writes count() lower-case today, and a mask that
+	// saw one of them would report the other's references and be argued with
+	// rather than read.
+	starts := append(keywordOffsets(sql, "count"), keywordOffsets(sql, "COUNT")...)
+	for _, start := range starts {
+		depth, from := 0, -1
+		for i := start; i < len(sql); i++ {
+			switch sql[i] {
+			case '(':
+				if depth == 0 {
+					from = i
+				}
+				depth++
+			case ')':
+				depth--
+				if depth == 0 {
+					for j := from; j <= i; j++ {
+						counted[j] = true
+					}
+					i = len(sql)
+				}
+			}
+			if depth == 0 && from >= 0 {
+				break
+			}
+		}
+	}
+	return counted
 }
 
 // projectedBytes marks which bytes of a statement sit in a SELECT's projection.
@@ -633,9 +772,9 @@ func projectedBytes(sql string) []bool {
 // CALLER to have scoped the ids it passes down. What it still catches is what
 // both halves of #632 were — a query that DISCOVERS references, keyed on
 // something other than the referenced record itself.
-func boundToCallerArgument(sql, table string) bool {
+func boundToCallerArgument(sql, column string) bool {
 	return regexp.MustCompile(
-		`\b(?:[A-Za-z_][\w]*\.)?` + table + `_id\s*(?:=|IN)\s*(?:ANY\s*\(\s*)?\$\d+`).MatchString(sql)
+		`\b(?:[A-Za-z_][\w]*\.)?` + column + `\s*(?:=|IN)\s*(?:ANY\s*\(\s*)?\$\d+`).MatchString(sql)
 }
 
 // selectSpan locates one SELECT: [from, to) is its projection, and [to, stop)

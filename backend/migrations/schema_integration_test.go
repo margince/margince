@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -292,5 +293,57 @@ func seedLedgerRowsForReversal(t *testing.T, conn *pgx.Conn) {
 		INSERT INTO system_log (actor_type, actor_id, action)
 		VALUES ('system', 'system:reversal-fixture', 'reversal_fixture')`); err != nil {
 		t.Fatalf("seeding the system_log row this reversal must survive: %v", err)
+	}
+}
+
+// Down REFUSES a version whose applied content is not the content this binary
+// holds — driven through dbmigrate.Down rather than against the predicate, so
+// it proves the production revert path actually consults the digest.
+//
+// Up records a content_digest and, before this, nothing read it: the column
+// held the evidence and no code acted on it (#2141). The down half is the
+// sharper one. Running the CURRENT rollback against a schema the OLD
+// up-migration built is a schema CHANGE made on a false premise — it drops
+// what the source names rather than what the database has, then deletes the row
+// that was the only record of what it did apply.
+func TestMigrations_downRefusesAnEditedMigration(t *testing.T) {
+	ownerDSN, _ := dsns(t)
+	conn := connect(t, ownerDSN)
+	resetSchema(t, conn)
+	ctx := context.Background()
+
+	core, err := migrations.Core()
+	if err != nil {
+		t.Fatalf("loading core: %v", err)
+	}
+	if _, err := dbmigrate.Up(ctx, conn, core); err != nil {
+		t.Fatalf("up: %v", err)
+	}
+
+	// The edit a contributor would make: the newest migration's rollback,
+	// changed after this database applied it. Its UP is untouched, so the
+	// database looks current by every other measure the ledger keeps.
+	edited := core
+	edited.Migrations = append([]dbmigrate.Migration(nil), core.Migrations...)
+	last := len(edited.Migrations) - 1
+	edited.Migrations[last].DownSQL += "\n-- an edit made after this was applied\n"
+
+	reverted, err := dbmigrate.Down(ctx, conn, edited, 1)
+	if err == nil {
+		t.Fatal("the revert ran against a database that applied different content — it would drop " +
+			"what the source names rather than what the database has, and then delete the only " +
+			"record of what it applied")
+	}
+	if reverted != 0 {
+		t.Errorf("reverted %d migration(s) before refusing, want 0", reverted)
+	}
+	if !strings.Contains(err.Error(), "applied content does not match the source") {
+		t.Errorf("the revert was refused by something else: %v", err)
+	}
+
+	// And the UNEDITED revert still runs, so the guard refuses an edit rather
+	// than refusing rollbacks.
+	if _, err := dbmigrate.Down(ctx, conn, core, 1); err != nil {
+		t.Errorf("the revert of the content that was applied refused: %v", err)
 	}
 }

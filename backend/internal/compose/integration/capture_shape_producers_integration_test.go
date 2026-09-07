@@ -24,6 +24,7 @@ package integration
 
 import (
 	"log/slog"
+	"strings"
 	"testing"
 	"time"
 
@@ -230,44 +231,38 @@ func TestTheGhostedRuleIsSharedAndQuotesNothing(t *testing.T) {
 }
 
 // A conversation nobody else may read, whose reader cannot be named, is not
-// read at all.
+// read at all — and the state it needs can no longer be built.
 //
-// The visibility decision has two answers and a gap between them. "Shared" and
+// The visibility decision had two answers and a gap between them. "Shared" and
 // "private to this person" are both actionable; "private to nobody in
-// particular" is not — and because a signal that names no owner IS a shared
-// signal, letting the gap fall through resolves it to the widest audience
-// available. That is the one direction this must never fail in.
-func TestAConversationWithNoNameableReaderIsRefusedRatherThanShared(t *testing.T) {
+// particular" was not — and because a signal that names no owner IS a shared
+// signal, letting the gap fall through resolved it to the widest audience
+// available.
+//
+// The gap is closed at the estate now: organization_owner_private_names_its_owner
+// refuses an owner-private account with no owner, so the producer can never be
+// handed one (#2137). This test used to seed that row and assert the producer
+// declined it. It asserts the refusal instead, because the seed is the thing
+// that no longer happens — and a test that quietly stopped being able to build
+// its own premise would keep passing while proving nothing.
+//
+// The producer's own guard is kept. It is unreachable while the constraint
+// stands, which is what defence in depth means rather than an argument against
+// it: the constraint is one migration from being dropped by somebody who did
+// not read this.
+func TestAnAccountPrivateToNobodyInParticularCannotBeBuilt(t *testing.T) {
 	e := Setup(t)
-	// An owner-private ACCOUNT with no owner recorded: the message reaches it
-	// directly, so no contact is involved to supply one.
 	org := e.SeedOrg(t, "Unattributable Co", &e.Rep1)
-	e.WsExec(t, `UPDATE organization SET visibility = 'owner', owner_id = NULL,
-		 lifecycle = 'opportunity' WHERE id = $1`, org)
-	notice := seedUnlinkedMessage(t, e, "thread-nameless", "Renewal for 2027",
-		"We have decided not to renew.", "inbound", captureShapeClock.Add(-48*time.Hour))
-	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, organization_id)
-		VALUES ($1, 'organization', $2)`, notice, org)
 
-	brain := &scriptedBrain{reply: reply(t, "contract_ended", notice,
-		"They wrote that they will not renew.", 0.95)}
-	extractor := compose.NewSignalExtractor(e.Pool, brain,
-		func() time.Time { return captureShapeClock }, slog.Default())
-	pass, err := extractor.RunWorkspace(e.Admin(), ids.From[ids.WorkspaceKind](e.WS))
-	if err != nil {
-		t.Fatalf("signal extract: %v", err)
+	err := e.WsExecErr(t, `UPDATE organization SET visibility = 'owner', owner_id = NULL,
+		 lifecycle = 'opportunity' WHERE id = $1`, org)
+	if err == nil {
+		t.Fatal("an owner-private account with no owner was accepted — a finding on it would have " +
+			"no owner to answer to, and a finding with no owner is a SHARED finding, which is the " +
+			"widest possible answer to a question the producer cannot answer at all")
 	}
-	if pass.Due != 0 {
-		t.Fatalf("the queue offered %d conversations it cannot say the readership of", pass.Due)
-	}
-	if brain.calls != 0 {
-		t.Errorf("the model was asked about %d conversations whose finding would "+
-			"have had no owner to answer to", brain.calls)
-	}
-	if kinds := openSignalKinds(t, e, org); len(kinds) != 0 {
-		t.Fatalf("the account carries %v, want nothing — a finding with no owner is "+
-			"a shared finding, which is the widest possible answer to a question "+
-			"the producer could not answer at all", kinds)
+	if !strings.Contains(err.Error(), "organization_owner_private_names_its_owner") {
+		t.Fatalf("the row was refused by something else: %v", err)
 	}
 }
 

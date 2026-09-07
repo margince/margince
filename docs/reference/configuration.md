@@ -61,13 +61,59 @@ Operational endpoints (served next to `/v1`):
   configured; the secret vault when a keyvault is configured; the
   customfields schema pool when `--schema-dsn` is set) must pass within
   2s, else 503 naming the unready dependency.
-- `/metrics` — Prometheus text format: `margince_outbox_unpublished`,
-  `margince_relay_published_total`, `margince_pgxpool_conns{state=…}`, the
-  AI router's counters, the overlay sync-health section, and the
-  **job-runtime section** below. Served openly by default, so an
-  annotation-discovered scraper works with no configuration; set
+- `/metrics` — Prometheus text format: the **HTTP section** below,
+  `margince_outbox_unpublished`, `margince_relay_published_total`,
+  `margince_pgxpool_conns{state=…}`, the AI router's counters, the overlay
+  sync-health section, and the **job-runtime section** below. Served openly by
+  default, so an annotation-discovered scraper works with no configuration; set
   `--metrics-token` to require a Bearer credential where the port itself is not
   already contained.
+
+  The HTTP section covers the `/v1` contract surface:
+
+  | Family | Type | Labels |
+  |---|---|---|
+  | `margince_http_requests_total` | counter | `route`, `method`, `status` |
+  | `margince_http_request_duration_seconds` | histogram | `route`, `method` |
+  | `margince_http_requests_in_flight` | gauge | — |
+
+  **`route` is the matched route TEMPLATE, never the request path** —
+  `/v1/deals/{id}`, not `/v1/deals/9f3c…`. The path carries record ids, and a
+  label carrying ids grows one series per record for the life of the process.
+  The access log is the opposite reading on purpose: it logs the real path,
+  because a log line answers "what did clients ask".
+
+  **What this section does NOT count, because the measurement sits inside the
+  router rather than in front of it.** It runs as chi *operation* middleware, so
+  it only sees a request that already matched a registered method and path:
+
+  - a **404** for an unrouted path, and a **405** for a method that route does
+    not serve — chi answers both itself, and neither enters a wrapper, so
+    scanner traffic is invisible here;
+  - a **400 from parameter parsing** — the generated wrapper binds path, query
+    and header parameters and calls its error handler *before* the middleware
+    chain, so a `GET /v1/deals/not-a-uuid` is a real client-visible 400 that
+    appears in neither family.
+
+  The access log carries all three. Counting them would mean instrumenting in
+  front of the router, where the route template is not yet known — which is why
+  the store has an `unmatched` bucket it can use, and why nothing on `/v1`
+  currently fills it.
+
+  The measurement sits **outside** the admission gate, the idempotency replay
+  and the overlay guard, so a `403` counts as that route's latency — which is
+  what a client experienced. A handler that **panics** is recorded as `500`,
+  matching what `RecoverPanics` sends the client, and a handler that answered
+  and *then* panicked keeps the status it actually sent. `p95` over five
+  minutes, per route:
+
+  ```promql
+  histogram_quantile(0.95, sum by (route, le) (
+    rate(margince_http_request_duration_seconds_bucket[5m])))
+  ```
+
+  Mind the scrape interval when choosing that window: a rate needs several
+  points, so a cluster scraping every 5m wants `[30m]` or wider.
 - `GET /v1/admin/job-health` — the per-workspace read of the same job
   table, for an admin rather than a scrape. See
   [Reading the job surfaces](#reading-the-job-surfaces).

@@ -124,6 +124,10 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 	// due on one of them.
 	introStore := introductions.NewStore(InstallationDB(pool), time.Now)
 	srv := Server{
+		// Built here rather than behind an option: an endpoint's own request
+		// rate is not a feature a deployment opts into, and every role that
+		// serves /v1 comes through this constructor.
+		httpMetrics:         httpserver.NewHTTPMetrics(),
 		uploadLimits:        limits,
 		authHandlers:        authH,
 		peopleHandlers:      newPeopleHandlers(pool).WithUploadLimit(limits.LinkedInImport),
