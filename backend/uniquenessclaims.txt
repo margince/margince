@@ -571,7 +571,7 @@ internal/platform/database/statementbudget.go#func BoundStatement
 internal/platform/database/storekit/claim.go#func ClaimOwnership
 internal/platform/database/storekit/customcolumns.go#func quoteColumnIdentifier
 internal/platform/database/storekit/patch.go#func PlainDate
-internal/platform/database/storekit/predicate.go#func ReferenceTargets
+internal/platform/database/storekit/predicatefields.go#func ReferenceTargets
 internal/platform/database/storekit/query.go#method Query.CountMatching
 internal/platform/database/storekit/sqlstate.go#const block at const pgUniqueViolation
 internal/platform/database/storekit/sqlstate.go#func pgViolation

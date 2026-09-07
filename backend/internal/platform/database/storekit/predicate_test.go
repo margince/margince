@@ -442,6 +442,7 @@ func operandFor(t FieldType, op string) any { //craft:ignore naked-any mirrors P
 		FieldCurrency: float64(1000),
 		FieldDate:     "2026-08-19",
 		FieldBoolean:  true,
+		FieldDomain:   "acme.example",
 	}[t]
 	if op == OpIn {
 		return []any{scalar}
@@ -496,4 +497,79 @@ func TestALinkedFieldAdvertisesExactlyWhatItCanCompile(t *testing.T) {
 func isOpNotAllowed(err error) bool {
 	var predicateErr *PredicateError
 	return errors.As(err, &predicateErr) && predicateErr.Code == CodeFilterOpNotAllowed
+}
+
+// A domain field does not advertise `contains`, and the reason is the folding
+// rather than a preference.
+//
+// Its operand is normalized to a host before it binds, so `contains: "acme"`
+// would fold a fragment to a domain and then substring-match the result — a
+// question nobody asked, answered confidently. The equality family is what a
+// value the engine rewrote can honestly support.
+//
+// Asserted here rather than left to the operator matrix's shape, because the
+// matrix is a table anybody can add a line to and this is the one entry whose
+// absence carries an argument.
+func TestADomainFieldDoesNotOfferContainsBecauseItsOperandIsFolded(t *testing.T) {
+	t.Parallel()
+	field := Field{Expr: "od.domain", Type: FieldDomain}
+	for _, op := range OperatorsFor(field) {
+		if op == OpContains {
+			t.Fatalf("a domain field offers %q: folding a fragment to a host and matching it as a "+
+				"substring answers a question nobody asked", OpContains)
+		}
+	}
+	// The equality family IS offered, so the assertion above is about
+	// `contains` rather than about the type being unusable.
+	offered := map[string]bool{}
+	for _, op := range OperatorsFor(field) {
+		offered[op] = true
+	}
+	for _, want := range []string{OpEq, OpNeq, OpIn, OpExists} {
+		if !offered[want] {
+			t.Errorf("a domain field does not offer %q", want)
+		}
+	}
+}
+
+// The folding itself, at the seam: what binds is the host, whatever the caller
+// pasted — and a value no domain can be read from is refused rather than folded
+// to empty, which would bind and match nothing while reading like a domain
+// nobody uses.
+func TestADomainOperandBindsTheHostTheColumnHolds(t *testing.T) {
+	t.Parallel()
+	fields := map[string]Field{"domain": {Expr: "t.domain", Type: FieldDomain}}
+	cases := []struct {
+		name, sent, bound string
+	}{
+		{"the bare host", "acme.example", "acme.example"},
+		{"a pasted URL", "https://www.acme.example/careers", "acme.example"},
+		{"case alone", "ACME.Example", "acme.example"},
+		{"a www prefix", "www.acme.example", "acme.example"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			var args []any
+			arg := func(v any) int { args = append(args, v); return len(args) }
+			if _, err := CompilePredicate(leaf("domain", OpEq, tc.sent), fields, arg); err != nil {
+				t.Fatalf("compiling %q: %v", tc.sent, err)
+			}
+			if len(args) != 1 || args[0] != tc.bound {
+				t.Errorf("%q bound %#v, want %q — the column stores the host", tc.sent, args, tc.bound)
+			}
+		})
+	}
+
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	_, err := CompilePredicate(leaf("domain", OpEq, "not a domain at all"), fields, arg)
+	var refusal *PredicateError
+	if !errors.As(err, &refusal) || refusal.Code != CodeFilterValueInvalid {
+		t.Fatalf("a value that is not a domain = %v, want a filter_value_invalid refusal", err)
+	}
+	if len(args) != 0 {
+		t.Errorf("the unusable value still bound %#v — an empty bind matches nothing and reads "+
+			"exactly like a domain nobody has", args)
+	}
 }

@@ -5658,6 +5658,7 @@ const (
 	FilterVocabularyFieldTypeBoolean  FilterVocabularyFieldType = "boolean"
 	FilterVocabularyFieldTypeCurrency FilterVocabularyFieldType = "currency"
 	FilterVocabularyFieldTypeDate     FilterVocabularyFieldType = "date"
+	FilterVocabularyFieldTypeDomain   FilterVocabularyFieldType = "domain"
 	FilterVocabularyFieldTypeId       FilterVocabularyFieldType = "id"
 	FilterVocabularyFieldTypeNumber   FilterVocabularyFieldType = "number"
 	FilterVocabularyFieldTypePicklist FilterVocabularyFieldType = "picklist"
@@ -5672,6 +5673,8 @@ func (e FilterVocabularyFieldType) Valid() bool {
 	case FilterVocabularyFieldTypeCurrency:
 		return true
 	case FilterVocabularyFieldTypeDate:
+		return true
+	case FilterVocabularyFieldTypeDomain:
 		return true
 	case FilterVocabularyFieldTypeId:
 		return true
@@ -23624,8 +23627,16 @@ type FilterVocabularyField struct {
 	// `id`, so only a core field can carry a reference.
 	References *FilterVocabularyFieldReferences `json:"references,omitempty"`
 
-	// Type The six custom-field types plus `id` for a reference to another
-	// record. The type decides the operators, which is why it is here.
+	// Type The six custom-field types, plus `id` for a reference to another record and
+	// `domain` for a host column. The type decides the operators, which is why it is here.
+	//
+	// `domain` also decides what happens to the VALUE, and it is the only type that does:
+	// the operand is folded to the host the column stores, so
+	// `https://www.acme.example/careers`, `WWW.Acme.Example` and `acme.example` are one
+	// filter. A builder can offer a plain text box for it — the server reads the domain out
+	// of whatever the reader pastes, and refuses a value no domain can be read from rather
+	// than matching nothing. `contains` is absent from its operators for the same reason:
+	// a folded value has no fragment to match against.
 	Type FilterVocabularyFieldType `json:"type"`
 }
 
@@ -23643,8 +23654,16 @@ type FilterVocabularyFieldOperators string
 // `id`, so only a core field can carry a reference.
 type FilterVocabularyFieldReferences string
 
-// FilterVocabularyFieldType The six custom-field types plus `id` for a reference to another
-// record. The type decides the operators, which is why it is here.
+// FilterVocabularyFieldType The six custom-field types, plus `id` for a reference to another record and
+// `domain` for a host column. The type decides the operators, which is why it is here.
+//
+// `domain` also decides what happens to the VALUE, and it is the only type that does:
+// the operand is folded to the host the column stores, so
+// `https://www.acme.example/careers`, `WWW.Acme.Example` and `acme.example` are one
+// filter. A builder can offer a plain text box for it — the server reads the domain out
+// of whatever the reader pastes, and refuses a value no domain can be read from rather
+// than matching nothing. `contains` is absent from its operators for the same reason:
+// a folded value has no fragment to match against.
 type FilterVocabularyFieldType string
 
 // FilteredExportRequest A filtered export request. Supply exactly ONE source: an inline `object` (with a required `filter`) or a `view_id` (a saved view whose filter state is exported). The slice is always row-scoped to the caller through the one filter engine.

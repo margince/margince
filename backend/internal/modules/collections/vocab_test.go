@@ -314,10 +314,13 @@ func TestTheDomainLeafExcludesRemovedRows(t *testing.T) {
 	if !strings.Contains(field.Link, "od.organization_id = t.id") {
 		t.Errorf("the domain leaf does not correlate to the account: %q", field.Link)
 	}
-	// Text, not a picklist: there is no enum of domains to compare against, and
-	// a picklist leaf with no Options would refuse every value a caller sent.
-	if field.Type != storekit.FieldText {
-		t.Errorf("the domain leaf is typed %v, want text", field.Type)
+	// Domain, not text: the column stores a host, and the type is what folds a
+	// caller's pasted URL to it. Typed text, this leaf accepted
+	// `https://www.acme.example/careers` and matched nothing, while the list
+	// parameter for the same fact answered the account — one product fact
+	// giving two answers depending on which surface asked.
+	if field.Type != storekit.FieldDomain {
+		t.Errorf("the domain leaf is typed %v, want domain", field.Type)
 	}
 }
 
