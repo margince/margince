@@ -13,6 +13,7 @@ package activities
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
@@ -40,7 +41,13 @@ func (s *Store) MailboxesFor(ctx context.Context, id ids.ActivityID) ([]ids.UUID
 	}
 
 	var out []ids.UUID
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	// REPEATABLE READ, because the answer is composed from two statements and
+	// the first one is the authorization. Under READ COMMITTED a capture
+	// committing between them — a new import row, and the audience recompute
+	// that follows it — would let the second statement answer a seat for a
+	// state the audience check never approved. One snapshot means the gate and
+	// the data it guards are the same instant.
+	err := s.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
 		// The CONTENT gate, not merely the row scope. Which colleague a message
 		// was delivered to is a fact about correspondence, so a caller who may
 		// discover the row without reading it is refused here exactly as they
@@ -66,17 +73,24 @@ func (s *Store) MailboxesFor(ctx context.Context, id ids.ActivityID) ([]ids.UUID
 // whichever sync landed FIRST, so it is the older, weaker source and is read
 // only when no import row does.
 //
-// The fallback joins app_user rather than casting the suffix in place: a row
-// whose provenance is malformed, or names a seat this workspace does not hold,
-// answers empty. Casting it the way the backfill migration did would raise a
-// database error on a text column nobody validated, and a live endpoint owes a
-// caller an answer rather than a 500 about historical data.
+// The fallback matches the WHOLE stamp rather than picking a segment out of it.
+// The seat is the last segment and the segment count varies by connector — a
+// mailbox stamps connector:gmail:<seat>, an extension stamps
+// connector:ext:<unit>:<seat> — so counting segments from the left reads a unit
+// name on one of them and nothing at all on the other.
+//
+// It joins app_user rather than casting the suffix: a row whose provenance is
+// malformed, or names a seat this workspace does not hold, answers empty.
+// Casting it the way the backfill migration did would raise a database error on
+// a text column nobody validated, and a live endpoint owes a caller an answer
+// rather than a 500 about historical data.
 func importingSeats(ctx context.Context, tx pgx.Tx, id ids.ActivityID) ([]ids.UUID, error) {
-	rows, err := tx.Query(ctx, `
+	imports := []any{id.UUID}
+	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT ci.user_id
 		  FROM capture_import ci
-		 WHERE ci.activity_id = $1
-		 ORDER BY ci.imported_at, ci.id`, id.UUID)
+		 WHERE ci.activity_id = $%d
+		 ORDER BY ci.imported_at, ci.id`, len(imports)), imports...)
 	if err != nil {
 		return nil, err
 	}
@@ -88,16 +102,18 @@ func importingSeats(ctx context.Context, tx pgx.Tx, id ids.ActivityID) ([]ids.UU
 		return seats, nil
 	}
 
-	legacy, err := tx.Query(ctx, `
+	legacy := []any{id.UUID}
+	rows, err = tx.Query(ctx, fmt.Sprintf(`
 		SELECT u.id
 		  FROM activity a
-		  JOIN app_user u ON u.id::text = split_part(a.captured_by, ':', 3)
-		 WHERE a.id = $1
-		   AND a.captured_by LIKE 'connector:%:%'`, id.UUID)
+		  JOIN app_user u
+		    ON a.captured_by = left(a.captured_by, length(a.captured_by) - 36) || u.id::text
+		 WHERE a.id = $%d
+		   AND a.captured_by LIKE 'connector:%%'`, len(legacy)), legacy...)
 	if err != nil {
 		return nil, err
 	}
-	return collectSeats(legacy)
+	return collectSeats(rows)
 }
 
 // collectSeats drains a single-column seat query, dropping repeats.

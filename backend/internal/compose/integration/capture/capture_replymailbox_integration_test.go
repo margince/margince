@@ -157,6 +157,18 @@ func TestTheProvenanceStampIsReadOnlyWhenNoImportRowStands(t *testing.T) {
 		t.Fatalf("want the stamped seat %s, got %v", e.Rep1, seats)
 	}
 
+	// An EXTENSION stamps connector:ext:<unit>:<seat>, so the seat is the fourth
+	// segment where a mailbox's is the third. Reading a fixed segment index
+	// answers the unit name for one of these and nothing for the other.
+	setCapturedBy(t, e, activityID, "connector:ext:acme-sync:"+e.Rep1.String())
+	seats, err = store.MailboxesFor(ctx, ids.From[ids.ActivityKind](activityID))
+	if err != nil {
+		t.Fatalf("reading an extension's provenance: %v", err)
+	}
+	if len(seats) != 1 || seats[0] != e.Rep1 {
+		t.Fatalf("want the stamped seat %s behind an extension stamp, got %v", e.Rep1, seats)
+	}
+
 	// Malformed provenance is historical data a live endpoint must survive.
 	// Casting the suffix the way the backfill migration does would raise a
 	// database error here and answer the caller with a 500 about old rows.
@@ -164,6 +176,9 @@ func TestTheProvenanceStampIsReadOnlyWhenNoImportRowStands(t *testing.T) {
 		"connector:gmail:not-a-uuid",
 		"connector:gmail:" + ids.NewV7().String(),
 		"connector:gmail",
+		// A trailing segment after the seat: the uuid is no longer last, so it
+		// names nobody rather than attributing the row to whoever it mentions.
+		"connector:gmail:" + e.Rep1.String() + ":junk",
 	} {
 		setCapturedBy(t, e, activityID, stamp)
 		seats, err := store.MailboxesFor(ctx, ids.From[ids.ActivityKind](activityID))
