@@ -116,7 +116,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 | `worklistverdictstandings_test.go` | H2 | The queue's verdict standings ARE the deal card's, and this derives them from the card rather than keeping a second list of them. |
 
-## Census (122)
+## Census (123)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -136,6 +136,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `audiencereaders_test.go` | H2 | A message's AUDIENCE says who may read its content. |
 | `audienceretractioncallers_test.go` | H3 | activities.RetractDerivedForActivityTx documents that it is not atomic with the narrowing it follows, and the sentence is only true while every caller is an async consumer reacting to a COMMITTED audience change. |
 | `auditbeforeimage_test.go` | H2 | An audited update says what it changed FROM. |
+| `audittraildoor_test.go` | H2 | The audit trail is a SECOND door onto an activity's content, and every reader of it says what it does about a held one. |
 | `basecurrencyguard_test.go` | H2 | The base-currency lock as a fitness function. |
 | `bootcomposition_test.go` | H2 | The fitness gate on the boot sequence: a process role that composes extensions also records what it composed. |
 | `briefsectioncensus_test.go` | H2 | Every worklist category reaches a section of the morning. |
