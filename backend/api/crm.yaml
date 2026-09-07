@@ -36205,6 +36205,22 @@ components:
             Absent is the ordinary case, not an error: most kinds are about no single record,
             and a client that has no name draws its generic sentence. The client owns the
             words either way — this is the NAME to put in them, never a sentence.
+        subject_type:
+          type: [string, 'null']
+          maxLength: 64
+          description: |
+            The kind of record `subject_label` names, in the kernel's entity vocabulary
+            (`organization`, `person`, `activity`, `attachment`), so a client can make the
+            name a way to reach the record rather than a word in a sentence. Present exactly
+            when `subject_id` is: a source that named a record identified it too.
+
+            Admissible on the same ground as the label — it is the reader's own record, already
+            shown to them on the surface the occurrence came from. A kind the client has no
+            page for is drawn as text, which is what an older client does with every kind.
+        subject_id:
+          type: [string, 'null']
+          format: uuid
+          description: That record's id, so the name can link to it. Absent with `subject_type`.
     AgentTool:
       type: object
       # title and description are required because registration guarantees

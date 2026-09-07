@@ -98,6 +98,14 @@ type Item struct {
 	// that line was actually about, and this package has no source table to ask
 	// even if it wanted a fresher answer.
 	SubjectLabel *string
+	// SubjectType and SubjectID identify the record the label names, so the
+	// rail can make the name a way to reach it. Forwarded as stored, on the
+	// same ground as the label: the source emitted them only where the actor
+	// is the person that record was already displayed to. They are NOT a
+	// filter — the read stays keyed on the person alone, and a subject-scoped
+	// read is a different authorization this package declines to hold.
+	SubjectType *string
+	SubjectID   *ids.UUID
 }
 
 // StateStalled is derived at READ time and never stored.
@@ -155,7 +163,8 @@ const feedSQL = `
   SELECT 'live' AS arm, id, kind,
          CASE WHEN stale_after IS NOT NULL AND stale_after < now() THEN 'stalled' ELSE state END,
          COALESCE(started_at, queued_at), finished_at,
-         left(degrade_reason, $4), left(summary, $5), left(subject_label, $8)
+         left(degrade_reason, $4), left(summary, $5), left(subject_label, $8),
+         subject_type, subject_id
     FROM ai_task_run
    WHERE actor_user_id = $1
      AND state IN ('queued','running')
@@ -167,7 +176,8 @@ UNION ALL
 (
   SELECT 'settled' AS arm, id, kind, state,
          COALESCE(started_at, queued_at), finished_at,
-         left(degrade_reason, $4), left(summary, $5), left(subject_label, $8)
+         left(degrade_reason, $4), left(summary, $5), left(subject_label, $8),
+         subject_type, subject_id
     FROM ai_task_run
    WHERE actor_user_id = $1
      AND state IN ('done','degraded','failed')
@@ -180,7 +190,8 @@ UNION ALL
 (
   SELECT 'fault' AS arm, id, kind, state,
          COALESCE(started_at, queued_at), finished_at,
-         left(degrade_reason, $4), left(summary, $5), left(subject_label, $8)
+         left(degrade_reason, $4), left(summary, $5), left(subject_label, $8),
+         subject_type, subject_id
     FROM ai_task_run
    WHERE actor_user_id = $1
      AND state IN ('degraded','failed')
@@ -231,7 +242,7 @@ func (s *Store) Mine(ctx context.Context, startOfToday time.Time, kinds []string
 			var arm string
 			if scanErr := rows.Scan(&arm, &item.ID, &item.Kind, &item.State,
 				&item.StartedAt, &item.FinishedAt, &item.DegradeReason, &item.Summary,
-				&item.SubjectLabel); scanErr != nil {
+				&item.SubjectLabel, &item.SubjectType, &item.SubjectID); scanErr != nil {
 				return scanErr
 			}
 			// An arm the statement cannot produce is a statement this loop has

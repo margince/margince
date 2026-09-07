@@ -18,6 +18,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -165,7 +166,19 @@ func toWire(items []Item) []crmcontracts.AiActivityItem {
 			DegradeReason: item.DegradeReason,
 			Summary:       item.Summary,
 			SubjectLabel:  item.SubjectLabel,
+			SubjectType:   item.SubjectType,
+			SubjectId:     contractID(item.SubjectID),
 		})
 	}
 	return wire
+}
+
+// contractID is the projection's optional id in the contract's spelling; nil
+// stays nil, so an occurrence about no record carries no subject on the wire.
+func contractID(id *ids.UUID) *openapi_types.UUID {
+	if id == nil {
+		return nil
+	}
+	out := openapi_types.UUID(*id)
+	return &out
 }

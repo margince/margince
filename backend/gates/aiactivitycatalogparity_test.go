@@ -128,7 +128,7 @@ func TestEveryContractKindHasSomethingThatProducesIt(t *testing.T) {
 	}
 }
 
-// The read caps two free-text columns on the way to the wire, and the contract
+// The read caps three free-text columns on the way to the wire, and the contract
 // publishes those caps as maxLength. A cap larger than the published one ships
 // a string a strict client rejects; a smaller one truncates below what the
 // contract promised a reader would get.
@@ -140,6 +140,7 @@ func TestTheReadsTextCapsAreTheOnesTheContractPublishes(t *testing.T) {
 	}{
 		{"summary", aiactivity.SummaryBound},
 		{"degrade_reason", aiactivity.DegradeReasonBound},
+		{"subject_label", aiactivity.SubjectLabelBound},
 	} {
 		if got := crmYAMLMaxLength(t, "AiActivityItem", b.property); got != b.cap {
 			t.Errorf("the read caps %s at %d but the contract publishes maxLength %d", b.property, b.cap, got)

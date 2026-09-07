@@ -56,10 +56,12 @@
 
 /* ===== The row =====
  *
- * One button carries the whole block: the click, the accessible name, the
- * expanded state. A div with a click handler is a target no keyboard can reach,
- * and a chevron that were its own control would be a second thing claiming one
- * job.
+ * One hit area carries the whole block, and the orb inside it is the button
+ * with the accessible name and the expanded state. The words stand beside the
+ * button, not in it: the record a line names is a link, and a link inside a
+ * button is a control inside a control. The area's own click is the pointer's
+ * way in (agentrail.tsx `useHit`); the button is the keyboard's, and a chevron
+ * that were its own control would be a second thing claiming one job.
  *
  * The orb LEADS, at a size no destination row could carry. It is the only object
  * in the chrome that is alive, and at nav-row scale it read as one more glyph in
@@ -109,9 +111,22 @@
     transparent 62%
   );
 }
-.arhit:focus-visible {
+/* The button is the orb, so the ring follows the orb: a bare control with
+   nothing of its own to draw but the ball it wraps. */
+.artoggle {
+  display: block;
+  flex: none;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  corner-shape: round;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+.artoggle:focus-visible {
   outline: var(--focus-ring);
-  outline-offset: -2px;
+  outline-offset: 2px;
 }
 
 /* No line, and no frame either.
@@ -438,11 +453,15 @@
       var(--bgElevated);
     box-shadow: var(--shadow-pop);
   }
-  /* Outside the shape rather than inset: this control has an edge of its own
-     here, and a ring drawn inside it lands on the glass instead of around the
-     well. It follows the circle, because `outline` follows `border-radius`. */
-  .rail .arhit:focus-visible {
+  /* Around the well rather than the ball inside it: the well is the control's
+     edge here, and a ring on the ball would land on the glass. It follows the
+     circle, because `outline` follows `border-radius`. */
+  .rail .arhit:has(> .artoggle:focus-visible) {
+    outline: var(--focus-ring);
     outline-offset: 2px;
+  }
+  .rail .artoggle:focus-visible {
+    outline: none;
   }
   /* No line and no figure under it. The bar carries no captions at all
      (app/shell.css drops every `.navlabel`), and a reading under the one cell

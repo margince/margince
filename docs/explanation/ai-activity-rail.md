@@ -270,11 +270,14 @@ reporting nothing at all.
   mapping. Two things already fit exactly: `site_read.stopped_reason` is a closed
   vocabulary that drops straight into `degrade_reason`, and `partial` →
   `degraded`.
-- **`subject_type` / `subject_id` are carried and stored but never read.** The
-  event envelope has both, `ai_task_run` has both columns, and exactly one
-  emitter populates them (`document_extract` → `attachment`). Nothing selects
-  them, and the wire contract does not expose them. **This is not a to-do.** A
-  subject-scoped read was designed and declined: it would replace an
+- **`subject_type` / `subject_id` are forwarded, never filtered on.** The
+  event envelope has both, `ai_task_run` has both columns, and the feed ships
+  them beside `subject_label` so the rail can make the name a link to the
+  record (a company or a person; a document or a meeting has no page and stays
+  text). They travel on the same ground as the label — the source emitted them
+  only where the actor is the person the record was already shown to — and
+  the read stays keyed on the person alone. **A subject-scoped read is not a
+  to-do.** It was designed and declined: it would replace an
   authorization that holds by construction — another person's feed cannot be
   expressed — with one that holds because a gate ran, and `auth.EnsureVisible`
   alone is not that gate (it checks no object grant, and for an identity table

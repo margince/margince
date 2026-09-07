@@ -17093,6 +17093,9 @@ type AiActivityItem struct {
 	// a row cannot be left stalled by a writer that forgot, because no writer writes it.
 	State AiActivityItemState `json:"state"`
 
+	// SubjectId That record's id, so the name can link to it. Absent with `subject_type`.
+	SubjectId *openapi_types.UUID `json:"subject_id,omitempty"`
+
 	// SubjectLabel What the occurrence was ABOUT, named: the document that was read, in the words the
 	// product titles it elsewhere. "I'm reading Q3-offer.pdf" is a sentence about the
 	// reader's afternoon; "I'm reading your document" is a sentence about software.
@@ -17106,6 +17109,16 @@ type AiActivityItem struct {
 	// and a client that has no name draws its generic sentence. The client owns the
 	// words either way — this is the NAME to put in them, never a sentence.
 	SubjectLabel *string `json:"subject_label,omitempty"`
+
+	// SubjectType The kind of record `subject_label` names, in the kernel's entity vocabulary
+	// (`organization`, `person`, `activity`, `attachment`), so a client can make the
+	// name a way to reach the record rather than a word in a sentence. Present exactly
+	// when `subject_id` is: a source that named a record identified it too.
+	//
+	// Admissible on the same ground as the label — it is the reader's own record, already
+	// shown to them on the surface the occurrence came from. A kind the client has no
+	// page for is drawn as text, which is what an older client does with every kind.
+	SubjectType *string `json:"subject_type,omitempty"`
 
 	// Summary The occurrence's own prose when it wrote any, capped on the way to the wire. It is
 	// optional by construction: nothing validates that a finishing occurrence produced one,
