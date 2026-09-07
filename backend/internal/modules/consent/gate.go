@@ -73,13 +73,19 @@ func (g *Gate) RequireGrantedForRecipients(ctx context.Context, recipients []con
 		// The window a qualifying event still supports an unprompted message
 		// within, resolved once for the whole set so two recipients of one
 		// message cannot be judged against different spans.
-		w, err := g.store.windowsFor(ctx, tx)
+		w, err := g.store.packRulesFor(ctx, tx)
 		if err != nil {
 			return err
 		}
 		since := time.Now().Add(-w.reply)
+		// The legacy gate is asked about a purpose key and never about the
+		// message, so it can make no similarity claim — and an exception whose
+		// pack requires similarity therefore refuses here. That is the honest
+		// answer for a caller that cannot say what it advertises, and it is
+		// only reached where the engine defers to this gate.
+		marketing := MarketingContext{Exception: w.marketingException}
 		for _, r := range recipients {
-			granted, err := grantedForRecipient(ctx, tx, r, purpose, since)
+			granted, err := grantedForRecipient(ctx, tx, r, purpose, since, marketing)
 			if err != nil {
 				return err
 			}
@@ -111,7 +117,7 @@ func (g *Gate) RequireGrantedForRecipients(ctx context.Context, recipients []con
 // grant predicate below. A lead carries no qualifying events and no §7(3) flag
 // — those hang off a person — so for a lead the class model has nothing extra
 // to say and the recorded grant IS the whole answer.
-func grantedForRecipient(ctx context.Context, tx pgx.Tx, r connector.Recipient, purpose PurposeRow, since time.Time) (bool, error) {
+func grantedForRecipient(ctx context.Context, tx pgx.Tx, r connector.Recipient, purpose PurposeRow, since time.Time, marketing MarketingContext) (bool, error) {
 	personID, found, err := resolvePerson(ctx, tx, r)
 	if err != nil {
 		return false, err
@@ -119,7 +125,7 @@ func grantedForRecipient(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 	if !found {
 		return grantedForLead(ctx, tx, r, purpose.ID, purpose.RequiresDOI)
 	}
-	verdict, err := VerdictForPerson(ctx, tx, personID, purpose, since)
+	verdict, err := VerdictForPerson(ctx, tx, personID, purpose, since, marketing)
 	if err != nil {
 		return false, err
 	}

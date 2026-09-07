@@ -70,13 +70,18 @@ func (s *Store) PersonConsentGuard(ctx context.Context, personID ids.PersonID) (
 		// The SAME window the send path binds a decision to. A preview that
 		// answered on a different span would tell a rep a send is allowed that
 		// the engine then refuses, which is worse than no preview at all.
-		w, err := s.windowsFor(ctx, tx)
+		w, err := s.packRulesFor(ctx, tx)
 		if err != nil {
 			return err
 		}
 		since := s.now().Add(-w.reply)
+		// A guard reads a PERSON, not a message, so it names nothing advertised
+		// and an exception requiring similarity answers no here. The guard is
+		// advisory; the send path asks the same question with the message in
+		// hand and is what actually decides.
+		marketing := MarketingContext{Exception: w.marketingException}
 		for _, purpose := range purposes {
-			verdict, err := VerdictForPerson(ctx, tx, personID.String(), purpose, since)
+			verdict, err := VerdictForPerson(ctx, tx, personID.String(), purpose, since, marketing)
 			if err != nil {
 				return err
 			}

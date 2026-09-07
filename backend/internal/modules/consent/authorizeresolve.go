@@ -136,7 +136,7 @@ func (g *Gate) resolveFromClaimAndPurpose(ctx context.Context, tx pgx.Tx, req co
 				Reason:    commsauthz.ReasonUnknownPurpose,
 			}, nil
 		}
-		w, err := g.store.windowsFor(ctx, tx)
+		w, err := g.store.packRulesFor(ctx, tx)
 		if err != nil {
 			return resolution{}, err
 		}

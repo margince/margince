@@ -59,7 +59,7 @@ func (g *Gate) resolveAndRecord(ctx context.Context, tx pgx.Tx, req commsauthz.R
 	// still resolved — the decision row records what the message was — but the
 	// ground is not written down.
 	if phase == commsauthz.PhaseStaging && !suppressed {
-		w, err := g.store.windowsFor(ctx, tx)
+		w, err := g.store.packRulesFor(ctx, tx)
 		if err != nil {
 			return resolution{}, err
 		}
@@ -166,11 +166,23 @@ func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, personID, purpos
 	// (the supported arm) is covered only by the first.
 	d.Resolved = resolutionForClass(purpose.Class).Category
 
-	w, err := g.store.windowsFor(ctx, tx)
+	w, err := g.store.packRulesFor(ctx, tx)
 	if err != nil {
 		return commsauthz.Decision{}, err
 	}
-	verdict, err := VerdictForPerson(ctx, tx, personID, purpose, time.Now().Add(-w.reply))
+	// NO Advertises. Nothing on a send names the GOODS it advertises: the
+	// nearest field, Request.MarketingPurpose, is a consent purpose key
+	// ("newsletter"), and similar_goods_note is free text a rep typed about a
+	// sale ("espresso machines"). Comparing the two is not a weak check, it is
+	// a satisfiable one — a rep who types the purpose key into the note field
+	// would hold §7(3) authority for that person forever, which is the hole
+	// this file exists to close, relocated.
+	//
+	// So an exception requiring similarity refuses here, exactly as it does for
+	// the legacy gate and the guard, until a caller can honestly say what a
+	// message advertises.
+	verdict, err := VerdictForPerson(ctx, tx, personID, purpose, time.Now().Add(-w.reply),
+		MarketingContext{Exception: w.marketingException})
 	if err != nil {
 		return commsauthz.Decision{}, err
 	}

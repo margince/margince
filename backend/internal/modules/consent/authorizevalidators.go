@@ -38,7 +38,7 @@ import (
 // It runs only for a claim that reached arm 3 of resolution: no thread and no
 // live deal already answered, so this is the caller saying what the message is
 // and the engine going to look.
-func (g *Gate) validate(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, category commsauthz.Category, w windows) (resolution, error) {
+func (g *Gate) validate(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, category commsauthz.Category, w packRules) (resolution, error) {
 	unsupported := resolution{Category: category, Supported: false, Reason: commsauthz.ReasonNoEvidence}
 	if subject.Kind != entityPerson && category != commsauthz.CategoryReplyToInbound &&
 		category != commsauthz.CategoryRequestedFollowup {
@@ -98,7 +98,7 @@ func (g *Gate) validate(ctx context.Context, tx pgx.Tx, req commsauthz.Request, 
 // trade fair" has recorded the request, and asking them to record it a second
 // time in a different table would be asking them to restate what the CRM
 // already knows.
-func (g *Gate) validateRequestedFollowup(ctx context.Context, tx pgx.Tx, subject subjectRef, w windows, category commsauthz.Category) (resolution, error) {
+func (g *Gate) validateRequestedFollowup(ctx context.Context, tx pgx.Tx, subject subjectRef, w packRules, category commsauthz.Category) (resolution, error) {
 	// AUTHORSHIP, through the shared reader. An earlier version asked
 	// activity_link — a FILING link with no author concept — which read "some
 	// inbound activity is filed under this person". A caller may post an

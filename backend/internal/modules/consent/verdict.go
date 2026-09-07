@@ -26,6 +26,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/pkg/extension/messaging"
 )
 
 // Class decides which question a purpose answers to.
@@ -108,6 +110,15 @@ type PurposeRow struct {
 	RequiresDOI bool
 }
 
+// MarketingContext is what a marketing verdict needs beyond the person and the
+// purpose: the exception this installation's jurisdiction grants.
+//
+// Passed in for the reason `since` is passed in — resolving it needs a settings
+// read, and VerdictForPerson is deliberately free of those.
+type MarketingContext struct {
+	Exception *messaging.MarketingException
+}
+
 // VerdictForPerson is THE decision. Both the guard endpoint and the transmit
 // gate call it, so a preview and a send answer with the same code.
 //
@@ -119,13 +130,13 @@ type PurposeRow struct {
 // suppression.
 //
 // `since` is how far back a qualifying event still supports an UNPROMPTED
-// message — the reply window, resolved by Store.windowsFor so the send path and
+// message — the reply window, resolved by Store.packRulesFor so the send path and
 // the guard endpoint answer on the same span. It is passed rather than computed
 // here because computing it needs the installation's country, and this function
 // is deliberately free of settings reads: a rep holds no settings-read grant
 // and a gated read inside the verdict would fail a send with a 500 rather than
 // an answer about consent.
-func VerdictForPerson(ctx context.Context, tx pgx.Tx, personID string, purpose PurposeRow, since time.Time) (Verdict, error) {
+func VerdictForPerson(ctx context.Context, tx pgx.Tx, personID string, purpose PurposeRow, since time.Time, marketing MarketingContext) (Verdict, error) {
 	suppressed, at, err := objectionStands(ctx, tx, personID, purpose.ID)
 	if err != nil {
 		return Verdict{}, err
@@ -148,7 +159,7 @@ func VerdictForPerson(ctx context.Context, tx pgx.Tx, personID string, purpose P
 		return Verdict{State: VerdictBlocked, Reason: "no call path is configured", Code: BlockNoChannel}, nil
 
 	default:
-		return marketingVerdict(ctx, tx, personID, purpose)
+		return marketingVerdict(ctx, tx, personID, purpose, marketing)
 	}
 }
 
@@ -223,7 +234,7 @@ func correspondenceVerdict(ctx context.Context, tx pgx.Tx, personID string, purp
 // with all four of its conditions on the record. There is no legitimate-interest
 // escape for marketing email, B2C or B2B, and the product does not offer the
 // toggle.
-func marketingVerdict(ctx context.Context, tx pgx.Tx, personID string, purpose PurposeRow) (Verdict, error) {
+func marketingVerdict(ctx context.Context, tx pgx.Tx, personID string, purpose PurposeRow, marketing MarketingContext) (Verdict, error) {
 	state, granted, err := recordedState(ctx, tx, personID, purpose.ID, purpose.RequiresDOI)
 	if err != nil {
 		return Verdict{}, err
@@ -244,12 +255,12 @@ func marketingVerdict(ctx context.Context, tx pgx.Tx, personID string, purpose P
 			Code:   BlockUnconfirmedDOI,
 		}, nil
 	}
-	flagged, err := existingCustomerFlag(ctx, tx, personID)
+	allowed, err := existingCustomerAllows(ctx, tx, personID, marketing.Exception)
 	if err != nil {
 		return Verdict{}, err
 	}
-	if flagged {
-		return Verdict{State: VerdictAllowed, Reason: "existing customer under UWG §7(3), with the sale and opt-out notice on file"}, nil
+	if allowed {
+		return Verdict{State: VerdictAllowed, Reason: "existing customer under the jurisdiction's own exception, with the sale and the opt-out notice on file"}, nil
 	}
 	return Verdict{State: VerdictUnknown, Reason: "no consent recorded"}, nil
 }
@@ -343,20 +354,6 @@ func objectionStands(ctx context.Context, tx pgx.Tx, personID, purposeID string)
 // stay on the proof log as the history they are, and authorize no send.
 func recordedState(ctx context.Context, tx pgx.Tx, personID, purposeID string, requiresDOI bool) (string, bool, error) {
 	return recordedStateFor(ctx, tx, subjectColumnPerson, personID, purposeID, requiresDOI)
-}
-
-// existingCustomerFlag reads the UWG §7(3) flag. The DDL already refuses a row
-// without the opt-out notice, so a live row here IS all four conditions.
-func existingCustomerFlag(ctx context.Context, tx pgx.Tx, personID string) (bool, error) {
-	var exists bool
-	err := tx.QueryRow(ctx, `
-		SELECT EXISTS (
-		  SELECT 1 FROM consent_existing_customer_flag
-		  WHERE person_id = $1 AND revoked_at IS NULL)`, personID).Scan(&exists)
-	if err != nil {
-		return false, fmt.Errorf("read the existing-customer flag: %w", err)
-	}
-	return exists, nil
 }
 
 // PurposesForGuard lists the purposes a guard read reports on, in a fixed order
