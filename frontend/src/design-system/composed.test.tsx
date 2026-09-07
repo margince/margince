@@ -45,6 +45,37 @@ describe("DealCard + PipelineBoard", () => {
     expect(screen.getByRole("link").className).not.toContain("stalled");
   });
 
+  // Two destinations on one card, and the reader picks. The whole card used to
+  // be one anchor to the deal, so a rep looking at a board could not reach the
+  // account behind any deal without opening the deal first.
+  it("opens the deal and the company separately", () => {
+    render(
+      <DealCard
+        deal={{ ...deal, orgHref: "#/companies/o-1" }}
+        href="#/deals/d1"
+        zone="Europe/Berlin"
+      />,
+    );
+
+    const hrefs = screen
+      .getAllByRole("link")
+      .map((each) => each.getAttribute("href"));
+    expect(hrefs).toContain("#/deals/d1");
+    expect(hrefs).toContain("#/companies/o-1");
+  });
+
+  // The refusal case, and the reason the card takes an href rather than an id:
+  // a caller with no address for the company is saying it cannot be linked,
+  // and prose is the honest rendering of that.
+  it("draws the company as prose when the caller gives no address", () => {
+    render(<DealCard deal={deal} href="#/deals/d1" zone="Europe/Berlin" />);
+
+    expect(screen.getByText("Brandt Automotive")).toBeTruthy();
+    expect(
+      screen.getAllByRole("link").map((each) => each.getAttribute("href")),
+    ).toEqual(["#/deals/d1"]);
+  });
+
   // A company has three readings on a card and only one of them is blank. The
   // named one carries its monogram, the withheld one carries the mask every
   // other surface draws over a withheld value, and a deal that names no company

@@ -195,8 +195,11 @@ function stubBackend(opts: {
 
 /** The board card naming `name` — the whole card is one button. */
 async function boardCard(name: string): Promise<HTMLElement> {
-  const card = (await screen.findByText(name)).closest("a");
-  if (!card) {
+  // The card is the element AROUND both its links — the deal's and the
+  // company's. Reaching for the nearest anchor lands on the deal name itself,
+  // which contains neither the company slot nor the flags.
+  const card = (await screen.findByText(name)).closest(".deal-card");
+  if (!(card instanceof HTMLElement)) {
     throw new Error(`no board card around "${name}"`);
   }
   return card;

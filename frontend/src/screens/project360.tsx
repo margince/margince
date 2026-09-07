@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useId, useState } from "react";
 import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
-import { useRecordWriteRefusal } from "../app/capability";
+import { useCan, useRecordWriteRefusal } from "../app/capability";
 import { PageAsideToggle, usePageAside } from "../app/pageaside";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
@@ -21,6 +21,7 @@ import { SurfaceState, sectionState } from "../design-system/surfacestate";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { formatDate } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { taskWriteKeys } from "./activitykeys";
 import { ArchiveAction } from "./archive";
 import { QueryGate, throwProblem, useMe, useSorMode } from "./common";
 import { NewDealAction } from "./companyactions";
@@ -61,6 +62,7 @@ import {
 } from "./recordchronology";
 import { RecordEmailVerb } from "./recordemail";
 import { ShareAction } from "./share";
+import { TaskDetailModal, useTaskUpdate } from "./taskactions";
 import { TimelineActions } from "./timelineactions";
 import { groupChronology } from "./timelinegroups";
 import "./projects.css";
@@ -120,6 +122,19 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   // describes itself by pointing at the same explanation.
   const readOnlyReason = useProjectVerbRefusal(project);
   const readOnly = Boolean(readOnlyReason);
+  // The commitments card's task detail, owned HERE rather than by the card:
+  // one modal per page, so two cards cannot both put a dialog on the screen.
+  // The same arrangement the account page uses for its own step rows.
+  const [openTask, setOpenTask] = useState<string | null>(null);
+  const taskUpdate = useTaskUpdate(taskWriteKeys("project", project.id));
+  // The TASK's own permission, not the project's. They are different questions
+  // with different answers: the modal's verbs PATCH /activities/{id}, which
+  // asks activity:update and the activity's own row authority — author,
+  // assignee, host, or a writable linked record. Deriving this from the
+  // project's writability would offer verbs the server refuses to a reader who
+  // may write the project and not its activities, and hide valid ones from a
+  // task's own author whenever the project is read-only.
+  const canUpdateTask = useCan("activity", "update");
   return (
     <RecordView
       // WHO is on this work comes first, then the paperwork. The column used
@@ -228,7 +243,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
           />
         </div>
         <div id={PROJECT_COMMITMENTS_ANCHOR}>
-          <CommitmentsCard view={view} />
+          <CommitmentsCard view={view} onOpenTask={setOpenTask} />
         </div>
       </div>
       <AdvanceProjectModal
@@ -237,6 +252,14 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
         to={moveTo}
         onClose={() => setMoveTo(null)}
       />
+      {openTask && (
+        <TaskDetailModal
+          activityId={openTask}
+          readOnly={!canUpdateTask}
+          onClose={() => setOpenTask(null)}
+          update={taskUpdate}
+        />
+      )}
     </RecordView>
   );
 }

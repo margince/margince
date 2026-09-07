@@ -240,12 +240,11 @@ export function ProjectsScreen() {
           {
             key: "company",
             header: t("project.company"),
+            // A real link to the customer. The row opens the PROJECT, so a
+            // reader who wanted the account behind it had to open the project
+            // first and come back out.
             cell: (project: Project) => (
-              <EntityRef
-                kind="organization"
-                id={project.organization_id}
-                asText
-              />
+              <EntityRef kind="organization" id={project.organization_id} />
             ),
           },
           {

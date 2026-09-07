@@ -1820,7 +1820,7 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
     render(<DealScreen id="x" />);
 
     expect(
-      await screen.findByRole("button", { name: "VietnamPartner JSC" }),
+      await screen.findByRole("link", { name: "VietnamPartner JSC" }),
     ).toBeTruthy();
     expect(screen.getByText("via")).toBeTruthy();
   });
@@ -1922,7 +1922,7 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
     );
 
     render(<DealScreen id="x" />);
-    await screen.findByRole("button", { name: "Northgate" });
+    await screen.findByRole("link", { name: "Northgate" });
     const line = document.querySelector(".identity-line")?.textContent ?? "";
 
     expect(line).toContain("·");

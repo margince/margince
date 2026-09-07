@@ -156,19 +156,22 @@ describe("BriefScreen — the context rail", () => {
     render(<BriefScreen />);
 
     const card = await screen.findByText("Ostwind refit");
-    const panel = card.closest("a");
-    expect(panel).toBeTruthy();
+    // The card is the element AROUND both its links — the deal's and the
+    // company's. The nearest anchor is the deal name itself, which contains
+    // neither the company slot nor the flags.
+    const panel = card.closest(".deal-card");
+    if (!(panel instanceof HTMLElement)) {
+      throw new Error("no board card around the quiet deal");
+    }
     // Awaited, not read: the company name comes from a second read that the
     // card does not wait for, so it can still be in flight when the deal's own
     // title is already on screen.
-    expect(
-      await within(panel ?? card).findByText("Nordwind Logistik"),
-    ).toBeTruthy();
+    expect(await within(panel).findByText("Nordwind Logistik")).toBeTruthy();
     // The quiet deal is on the page as a CARD rather than as a count. The
     // briefing line that carried "1 has gone quiet" is gone: the panel listing
     // the deal itself says more than a figure above it could, and says it in
     // the one place a reader can act on it.
-    expect(within(panel ?? card).getByText("Ostwind refit")).toBeTruthy();
+    expect(within(panel).getByText("Ostwind refit")).toBeTruthy();
   });
 
   it("says so when nothing has gone quiet", async () => {
@@ -337,7 +340,6 @@ describe("BriefScreen — the context rail", () => {
           },
         }),
     });
-    const user = userEvent.setup();
     render(<BriefScreen />);
 
     const moves = await screen.findByLabelText("Phase moves");
@@ -345,12 +347,13 @@ describe("BriefScreen — the context rail", () => {
     expect(screen.getByLabelText("Gone quiet").textContent).toContain(
       "quiet for 40 days",
     );
-    const links = await screen.findAllByRole("button", {
+    const links = await screen.findAllByRole("link", {
       name: "ERP replacement",
     });
     expect(links.length).toBe(2);
-    await user.click(links[0]);
-    expect(window.location.hash).toBe(`#/projects/${projectId}`);
+    // The href is the destination, and it is also what a new tab and a
+    // middle-click follow — neither of which goes through an onClick.
+    expect(links[0].getAttribute("href")).toBe(`#/projects/${projectId}`);
   });
 
   it("renders no projects block when the digest carries no section", async () => {

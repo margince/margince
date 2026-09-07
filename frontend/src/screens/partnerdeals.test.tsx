@@ -89,10 +89,10 @@ describe("the deals a partner brought", () => {
 
     // The design system routes with a button, not an anchor.
     expect(
-      await within(panel).findByRole("button", { name: "Northgate GmbH" }),
+      await within(panel).findByRole("link", { name: "Northgate GmbH" }),
     ).toBeTruthy();
     expect(
-      within(panel).getByRole("button", { name: "Northgate rollout" }),
+      within(panel).getByRole("link", { name: "Northgate rollout" }),
     ).toBeTruthy();
   });
 

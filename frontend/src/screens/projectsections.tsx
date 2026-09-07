@@ -433,7 +433,15 @@ function DocumentRow({
 /** The open tasks filed under the project, soonest due first. */
 export function CommitmentsCard({
   view,
-}: Readonly<{ view: Project360 | undefined }>) {
+  onOpenTask,
+}: Readonly<{
+  view: Project360 | undefined;
+  // Opens one commitment's task detail. Owned by the screen rather than by
+  // this card, because the modal is one per page: a card that mounted its own
+  // would put a second dialog on a screen that already has one whenever both
+  // are open.
+  onOpenTask?: (activityId: string) => void;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const commitments = view?.commitments?.data ?? [];
@@ -454,6 +462,7 @@ export function CommitmentsCard({
           key={commitment.activity_id}
           commitment={commitment}
           locale={locale}
+          onOpenTask={onOpenTask}
         />
       ))}
     </SectionPanel>
@@ -463,9 +472,11 @@ export function CommitmentsCard({
 function CommitmentRow({
   commitment,
   locale,
+  onOpenTask,
 }: Readonly<{
   commitment: Commitment;
   locale: ReturnType<typeof useLocale>["locale"];
+  onOpenTask?: (activityId: string) => void;
 }>) {
   const t = useT();
   // The record's clock, exactly as the tasks screen reads it. A commitment is a
@@ -474,7 +485,21 @@ function CommitmentRow({
   const recordZone = useRecordZone();
   return (
     <PanelRow className="project-row">
-      <span>{commitment.subject}</span>
+      {/* The subject opens the task, the way this file's other two rows open
+          theirs. It was flat text here, so a reader who wanted the description,
+          the assignee or the verbs behind a commitment had nowhere to press —
+          on the one card that names what the project owes. */}
+      {onOpenTask ? (
+        <button
+          type="button"
+          className="project-rowlink"
+          onClick={() => onOpenTask(commitment.activity_id)}
+        >
+          {commitment.subject}
+        </button>
+      ) : (
+        <span>{commitment.subject}</span>
+      )}
       <span className="project-row-meta t-caption">
         {commitment.due_at && (
           <span>{formatDateAbbrev(commitment.due_at, locale, recordZone)}</span>

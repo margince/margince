@@ -16,6 +16,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // noticeKindAutomation labels a notice an automation's notify action raised.
@@ -41,12 +42,17 @@ type noticesNotifier struct{ store *notices.Store }
 // second line, which is the same behaviour it had before the key existed —
 // closing it means the seam carrying an identity, not this adapter inventing
 // one out of the words.
-func (n noticesNotifier) Notify(ctx context.Context, recipient ids.UUID, subject, body string) error {
+func (n noticesNotifier) Notify(
+	ctx context.Context, recipient ids.UUID, subject, body string, target datasource.EntityRef,
+) error {
 	_, err := n.store.Create(ctx, notices.NewNotice{
 		Recipient: ids.From[ids.UserKind](recipient),
 		Kind:      noticeKindAutomation,
 		Subject:   subject,
 		Body:      body,
+		// A firing that named no record writes no target: the zero EntityRef
+		// carries an empty type, and Target.Named() is what the store asks.
+		Target: notices.Target{Type: string(target.Type), ID: target.ID},
 	})
 	return err
 }

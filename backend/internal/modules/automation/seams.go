@@ -100,7 +100,15 @@ type Comms interface {
 // a composition that forgets the seam surfaces as a visible skipped run,
 // never a silent no-op.
 type Notifier interface {
-	Notify(ctx context.Context, recipient ids.UUID, subject, body string) error
+	// target is the record the notice is about, when the firing named one.
+	// It is the ACTION's target rather than the event's: the two agree today
+	// for the stage-change rule, and a handler that plans a notice about a
+	// different record than the one that moved is planning exactly what the
+	// action's own field is for.
+	//
+	// The zero value is a notice about no record — the honest answer for a
+	// firing with nothing to open — and the transport writes no target at all.
+	Notify(ctx context.Context, recipient ids.UUID, subject, body string, target datasource.EntityRef) error
 }
 
 // ErrNoNotificationTransport is notify's honest answer when no Notifier

@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
 import { ENTITY, type EntityKind } from "../app/entity";
-import { navigate } from "../app/router";
+import { routeHash } from "../app/router";
 import { leadIdentityName } from "../format/leadname";
 import { useT } from "../i18n";
 import { throwProblem } from "./common";
@@ -530,15 +530,28 @@ function RecordRef({
   if (asText) {
     return <span title={id}>{resolved}</span>;
   }
+  // A real anchor, so the record can be opened the ways a link can: a new tab,
+  // a new window, a bookmark, the keyboard. A button carried the same route and
+  // offered none of them — a reader who middle-clicked a company in a list got
+  // nothing, and one who wanted it beside the page they were on had to lose
+  // that page to get there.
+  //
+  // Only the default click is stopped from reaching an enclosing row's own
+  // handler. `navigate` is NOT called beside it: the anchor already performs
+  // the navigation, so doing both would dispatch the same route twice, and
+  // preventing the anchor instead would navigate the current page while the
+  // new tab opens too. This is the identity cell's own arrangement
+  // (design-system/listtable.tsx), which is where a row and a link inside it
+  // were first made to agree.
   return (
-    <button
-      type="button"
+    <a
       className="entity-link"
-      onClick={() => navigate(ENTITY[kind].route(id))}
+      href={routeHash(ENTITY[kind].route(id))}
+      onClick={(event) => event.stopPropagation()}
       title={id}
     >
       {resolved}
-    </button>
+    </a>
   );
 }
 

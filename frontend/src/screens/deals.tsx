@@ -581,7 +581,10 @@ export type CompanyNaming = Readonly<{
 function dealCompany(
   deal: Deal,
   naming: CompanyNaming,
-): Pick<BoardDeal, "org" | "orgLogoUrl" | "orgWithheld" | "orgUnreadable"> {
+): Pick<
+  BoardDeal,
+  "org" | "orgHref" | "orgLogoUrl" | "orgWithheld" | "orgUnreadable"
+> {
   if (deal.masked_fields?.includes("organization_id")) {
     return { org: "", orgWithheld: true };
   }
@@ -591,7 +594,18 @@ function dealCompany(
   const mark = deal.organization_id
     ? naming.marks.get(deal.organization_id)
     : undefined;
-  return { org: mark?.name ?? "", orgLogoUrl: mark?.logoUrl };
+  return {
+    org: mark?.name ?? "",
+    // The company's address, built HERE because this is the tier that holds
+    // routes. A deal with no company, or one whose name has not resolved,
+    // gets none — the card then draws prose, which is what a slot with no
+    // name has to say anyway.
+    orgHref:
+      deal.organization_id && mark?.name
+        ? routeHash({ screen: "companies", id: deal.organization_id })
+        : undefined,
+    orgLogoUrl: mark?.logoUrl,
+  };
 }
 
 export function toBoardDeal(

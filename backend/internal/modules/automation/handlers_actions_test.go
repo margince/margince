@@ -74,19 +74,21 @@ func (f *fakeComms) DraftEmail(_ context.Context, anchor ids.UUID, intent string
 // fakeNotifier is a DB-free stand-in for the Notifier seam: this repo
 // wires none in compose, but the seam must still work once something
 // does, so its wired path gets its own test.
-type fakeNotifier struct {
-	err   error
-	calls []struct {
-		recipient     ids.UUID
-		subject, body string
-	}
+type notifyCall struct {
+	recipient     ids.UUID
+	subject, body string
+	target        datasource.EntityRef
 }
 
-func (f *fakeNotifier) Notify(_ context.Context, recipient ids.UUID, subject, body string) error {
-	f.calls = append(f.calls, struct {
-		recipient     ids.UUID
-		subject, body string
-	}{recipient, subject, body})
+type fakeNotifier struct {
+	err   error
+	calls []notifyCall
+}
+
+func (f *fakeNotifier) Notify(
+	_ context.Context, recipient ids.UUID, subject, body string, target datasource.EntityRef,
+) error {
+	f.calls = append(f.calls, notifyCall{recipient, subject, body, target})
 	return f.err
 }
 

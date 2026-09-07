@@ -216,11 +216,13 @@ func (a attentionNotices) Unread(ctx context.Context, limit int) ([]attention.Un
 	out := make([]attention.UnreadNotice, 0, len(unread))
 	for _, notice := range unread {
 		out = append(out, attention.UnreadNotice{
-			ID:        notice.ID,
-			Kind:      notice.Kind,
-			Subject:   notice.Subject,
-			Body:      notice.Body,
-			CreatedAt: notice.CreatedAt,
+			ID:         notice.ID,
+			Kind:       notice.Kind,
+			Subject:    notice.Subject,
+			Body:       notice.Body,
+			TargetType: notice.Target.Type,
+			TargetID:   notice.Target.ID,
+			CreatedAt:  notice.CreatedAt,
 		})
 	}
 	return out, nil

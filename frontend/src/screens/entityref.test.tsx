@@ -97,7 +97,11 @@ describe("EntityRef", () => {
     );
     render(<EntityRef kind="organization" id="o-1" />);
 
-    const link = await screen.findByRole("button", { name: "Brandt GmbH" });
+    // The href IS the destination. Asserting it rather than a click's effect
+    // is the stronger claim: it is also what a new tab, a bookmark and a
+    // middle-click follow, and none of those goes through an onClick.
+    const link = await screen.findByRole("link", { name: "Brandt GmbH" });
+    expect(link.getAttribute("href")).toBe("#/companies/o-1");
     await userEvent.click(link);
     expect(window.location.hash).toBe("#/companies/o-1");
   });
@@ -116,10 +120,11 @@ describe("EntityRef", () => {
       }),
     );
     const { rerender } = render(<EntityRef kind="person" id="p-1" />);
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Anna Weber" }),
-    );
-    expect(window.location.hash).toBe("#/contacts/p-1");
+    expect(
+      (await screen.findByRole("link", { name: "Anna Weber" })).getAttribute(
+        "href",
+      ),
+    ).toBe("#/contacts/p-1");
 
     rerender(
       <QueryClientProvider client={new QueryClient()}>
@@ -128,10 +133,11 @@ describe("EntityRef", () => {
         </LocaleProvider>
       </QueryClientProvider>,
     );
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Q3 Renewal" }),
-    );
-    expect(window.location.hash).toBe("#/deals/d-1");
+    expect(
+      (await screen.findByRole("link", { name: "Q3 Renewal" })).getAttribute(
+        "href",
+      ),
+    ).toBe("#/deals/d-1");
   });
 
   it("resolves a lead to leads/{id} (P-16: lead joins the ENTITY registry)", async () => {
@@ -145,10 +151,11 @@ describe("EntityRef", () => {
       }),
     );
     render(<EntityRef kind="lead" id="l-1" />);
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Jordan Lee" }),
-    );
-    expect(window.location.hash).toBe("#/leads/l-1");
+    expect(
+      (await screen.findByRole("link", { name: "Jordan Lee" })).getAttribute(
+        "href",
+      ),
+    ).toBe("#/leads/l-1");
   });
 
   it("falls back to the id (no link) once the lookup has settled without a name", async () => {
@@ -344,10 +351,11 @@ describe("EntityRef", () => {
     );
     render(<EntityRef kind="lead" id="l-1" />);
 
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Jonas Keller" }),
-    );
-    expect(window.location.hash).toBe("#/leads/l-1");
+    expect(
+      (await screen.findByRole("link", { name: "Jonas Keller" })).getAttribute(
+        "href",
+      ),
+    ).toBe("#/leads/l-1");
   });
 
   it("uses a caller-supplied user name without reading the roster at all", async () => {
@@ -381,10 +389,10 @@ describe("EntityRef", () => {
     render(<EntityRef kind="organization" id="o-1" name="   " />);
 
     // Whitespace is the caller saying it has nothing, exactly as an empty
-    // string is. Taken at face value it becomes a button with no readable
-    // label — a link a reader can neither read nor find.
+    // string is. Taken at face value it becomes a link with no readable
+    // label — one a reader can neither read nor find.
     expect(
-      await screen.findByRole("button", { name: "Brandt GmbH" }),
+      await screen.findByRole("link", { name: "Brandt GmbH" }),
     ).toBeTruthy();
   });
 

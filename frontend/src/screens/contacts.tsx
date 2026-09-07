@@ -542,14 +542,18 @@ export function ContactsScreen() {
             header: t("create.organization"),
             cell: (person: Person) =>
               person.employer ? (
-                // asText because the row is already the link to the contact: a
-                // control nested inside one is invalid markup. The name comes
-                // with the row, so EntityRef resolves nothing.
+                // A real link to the COMPANY, in a cell that is not the row's
+                // identity cell — so it nests inside no other anchor and the
+                // markup stays valid. It used to be text, on the reasoning that
+                // the row already links somewhere; but the row links to the
+                // CONTACT, and a reader looking at a list of people who works
+                // for whom had no way to reach the company without opening a
+                // person first. The name comes with the row, so this resolves
+                // nothing.
                 <EntityRef
                   kind="organization"
                   id={person.employer.organization_id}
                   name={person.employer.organization_name}
-                  asText
                 />
               ) : null,
           },

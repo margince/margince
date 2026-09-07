@@ -51,6 +51,16 @@ export type BoardDeal = BoardRecord & {
    * deal that names no company, which is the one reading that draws nothing.
    */
   org: string;
+  /**
+   * The company's own address, when the caller has one to give.
+   *
+   * An href and not an id, for the reason the deal's own `href` is one: this
+   * tier holds no routes, and a design-system card that knew how to build
+   * `#/companies/{id}` would be the app's routing table living in two places.
+   * Absent renders the company as prose, which is what a caller that cannot
+   * link it is saying.
+   */
+  orgHref?: string;
   /** The company's resolved mark. Absent leaves the monogram, which is the
    *  floor rather than a fallback. */
   orgLogoUrl?: string | null;
@@ -193,7 +203,17 @@ export type BoardMoneyColumn = BoardColumn<BoardDeal> & {
  * mark and its name. Only a deal that names no company draws nothing, which is
  * the one reading an empty slot states truthfully.
  */
-function DealCardCompany({ deal }: Readonly<{ deal: BoardDeal }>) {
+function DealCardCompany({
+  deal,
+  onOpen,
+}: Readonly<{
+  deal: BoardDeal;
+  // The same press hook the deal's own link takes, for the same reason: a
+  // click that ends a drag is not a click on the company either, and a card
+  // that suppressed one link and not the other would open the account a rep
+  // was only moving.
+  onOpen?: (deal: BoardDeal, event: React.MouseEvent) => void;
+}>) {
   const t = useT();
   if (deal.orgWithheld) {
     return (
@@ -218,7 +238,28 @@ function DealCardCompany({ deal }: Readonly<{ deal: BoardDeal }>) {
       {/* The name needs a box of its own to be truncated in: a bare text node
           has nothing for the ellipsis to apply to, and wraps under its own
           mark instead. */}
-      <span className="deal-org-name">{deal.org}</span>
+      {deal.orgHref ? (
+        // The company's own door, beside the deal's. The whole card used to be
+        // one anchor to the deal, so a rep looking at a board of deals could
+        // not reach the account behind any of them without opening a deal
+        // first.
+        //
+        // stopPropagation keeps the click off the card's stretched anchor.
+        // preventDefault would be wrong: it would leave the card's own
+        // navigation to fire while this link did nothing.
+        <a
+          className="deal-org-name deal-org-link"
+          href={deal.orgHref}
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpen?.(deal, event);
+          }}
+        >
+          {deal.org}
+        </a>
+      ) : (
+        <span className="deal-org-name">{deal.org}</span>
+      )}
     </span>
   );
 }
@@ -344,13 +385,15 @@ export function DealCard({
     .filter(Boolean)
     .join(" ");
   return (
-    <a
-      href={href}
-      className={classes}
-      data-deal={deal.id}
-      onClick={(event) => onOpen?.(deal, event)}
-      {...dragHandlers}
-    >
+    // A div with a STRETCHED anchor inside it, not one anchor around
+    // everything. The card carries a second destination now — the company —
+    // and an anchor inside an anchor is invalid markup the browser silently
+    // unnests, which is how the inner link stops being clickable at all.
+    //
+    // The stretched link keeps every property the outer anchor had: the whole
+    // card is still the deal's click target, still opens in a new tab, still
+    // middle-clicks, and is still one tab stop.
+    <div className={classes} data-deal={deal.id} {...dragHandlers}>
       {/* Read in the order a rep asks (composed.css says why): what needs
           them, on this card, if anything; whose deal it is; what it is worth
           and when it closes; and what it is called. */}
@@ -381,7 +424,7 @@ export function DealCard({
         </span>
       )}
       <span className="deal-head">
-        <DealCardCompany deal={deal} />
+        <DealCardCompany deal={deal} onOpen={onOpen} />
         {deal.owner && <DealOwner name={deal.owner} />}
       </span>
       <span className="deal-figure">
@@ -398,8 +441,21 @@ export function DealCard({
           <span className="deal-closes">{t("deal.undated")}</span>
         )}
       </span>
-      <span className="deal-name">{deal.name}</span>
-    </a>
+      {/* The deal's own door, stretched over the card by CSS. It carries the
+          NAME rather than sitting empty, so the accessible name of the link is
+          the deal a reader is opening — an empty stretched anchor reads to a
+          screen reader as a link with no text. */}
+      <a
+        className="deal-name deal-open"
+        href={href}
+        // The press handler rides the ANCHOR, not the div around it: the div
+        // would also catch the company link's bubbled click, and the drop
+        // guard would then refuse a navigation the reader did ask for.
+        onClick={(event) => onOpen?.(deal, event)}
+      >
+        {deal.name}
+      </a>
+    </div>
   );
 }
 
