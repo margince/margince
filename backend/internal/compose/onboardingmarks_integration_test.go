@@ -17,6 +17,8 @@ import (
 	"log/slog"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -24,8 +26,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/imagenorm"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-
-	"github.com/jackc/pgx/v5"
 )
 
 func TestTheColdStartParksBothMarksAndTheConfirmationBindsEachToItsSlot(t *testing.T) {
