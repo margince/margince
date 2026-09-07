@@ -1,57 +1,102 @@
-# The acceptance criteria the use-case lane scores against.
+# What each use case's acceptance criteria ask.
 #
-# WHY THIS FILE EXISTS: a scenario declares `criteria: [8, 14]`, and until this
-# file those numbers named nothing a reader of this repository could reach. The
-# statements were written down elsewhere, so the lane published grades against
-# criteria a public contributor could not look up — and neither could anyone
-# reading docs/reference/mcp-tool-coverage.md, which is the page a decision gets
-# made from.
+# THE NUMBERS ARE PER CASE, NOT GLOBAL. Case 1 criterion 1 and case 2 criterion 1
+# are different criteria that share a digit. The suites that pin them say so in
+# their own failures — "case 4 criterion 5", never a bare "criterion 5" — and a
+# catalog keyed on the number alone would attribute one case's statement to
+# every other case that happens to use the same digit.
 #
-# Each entry is the ONE sentence saying what the criterion asks of the
-# assistant. It is the summary, not the specification: the case that scores it
-# is the specification, and every criterion here names the cases that do.
+# WHY THIS FILE EXISTS: a scenario declares `criteria: [8, 14]`, and those
+# numbers named nothing a reader of this repository could reach. The statements
+# were written down in a working folder outside this tree, so the lane published
+# grades against criteria a public contributor could not look up — and neither
+# could anyone reading docs/reference/mcp-tool-coverage.md, which is the page a
+# decision gets made from.
 #
-# A number a scenario declares and this file does not carry fails
-# TestEveryDeclaredCriterionIsNamed. Add it here in the change that declares it.
+# Each entry is the ONE sentence saying what that case's criterion asks. It is
+# the summary, not the specification: the case is the specification.
+#
+# A criterion a scenario declares and this file does not carry fails
+# TestEveryDeclaredCriterionIsNamed. Add it in the change that declares it.
 version: 1
-criteria:
-  1:
-    name: A briefing arrives without naming a record
-    statement: >-
-      The request identifies an account by something other than its name, and
-      the assistant finds the record anyway rather than asking which one.
-  2:
-    name: NEEDS A STATEMENT
-    statement: >-
-      Not yet written down in this repository. Declared by case5.
-  3:
-    name: NEEDS A STATEMENT
-    statement: >-
-      Not yet written down in this repository. Declared by case6 and case7.
-  4:
-    name: A possible duplicate is reported, not just filed
-    statement: >-
-      The create's own answer carries the duplicate it queued, and the assistant
-      reads what came back and says so — a queue nobody is told about is a queue
-      nobody reads.
-  5:
-    name: The unkept promise is noticed
-    statement: >-
-      Somebody said they would send something and there is no record it went.
-      Reading across the timeline to spot the gap is the point.
-  6:
-    name: Check with the owner before turning up
-    statement: >-
-      The assistant tells the rep to confirm with the account owner rather than
-      acting on a proximity answer alone.
-  8:
-    name: Promises come back as suggestions
-    statement: >-
-      Only what was actually promised is reported. Listing every topic that was
-      discussed means the reader is reciting what it saw rather than what was
-      committed to.
-  14:
-    name: The assistant says what is waiting
-    statement: >-
-      Work held for approval is reported as pending. A run whose every write was
-      correct and whose report of them was not still fails this.
+cases:
+  case1_log_it:
+    8:
+      name: Promises come back as suggestions
+      statement: >-
+        Only what was actually promised is reported. Listing every topic that was
+        discussed means the reader is reciting what it saw rather than what was
+        committed to.
+    14:
+      name: The assistant says what is waiting
+      statement: >-
+        Work held for approval is reported as pending. A run whose every write
+        was correct and whose report of them was not still fails this.
+  case2_business_card:
+    4:
+      name: A possible duplicate is reported, not just filed
+      statement: >-
+        The create's own answer carries the duplicate it queued, and the
+        assistant reads what came back and says so — a queue nobody is told
+        about is a queue nobody reads.
+  case3_spreadsheet:
+    1:
+      name: NEEDS A STATEMENT
+      statement: >-
+        Not written down in this repository. Case 3's own header describes the
+        case (show the numbers before committing) without naming which criterion
+        that is.
+    6:
+      name: NEEDS A STATEMENT
+      statement: >-
+        Not written down in this repository. Case 3 declares it; only case 4
+        states what ITS criterion 6 asks, and the numbering is per case.
+  case4_use_the_moment:
+    1:
+      name: NEEDS A STATEMENT
+      statement: >-
+        Not written down in this repository. Case 4 declares it.
+    6:
+      name: Check with the owner before turning up
+      statement: >-
+        The assistant tells the rep to confirm with the account owner rather
+        than acting on a proximity answer alone.
+  case5_before_the_meeting:
+    1:
+      name: A briefing arrives without naming a record
+      statement: >-
+        The request identifies an account by something other than its name —
+        "Vietnam partner" is not the account's name — and finding it is the test.
+    2:
+      name: NEEDS A STATEMENT
+      statement: >-
+        Not written down in this repository. Case 5 declares it.
+    5:
+      name: The unkept promise is noticed
+      statement: >-
+        Somebody said they would send something and there is no record it went.
+        Reading across the timeline to spot the gap is the point.
+  case6_ask_the_company:
+    1:
+      name: NEEDS A STATEMENT
+      statement: >-
+        Not written down in this repository. Case 6 declares it.
+    3:
+      name: NEEDS A STATEMENT
+      statement: >-
+        Not written down in this repository. Case 6's header describes the case
+        (the record's date is right and the prose recalling it is wrong) without
+        naming which criterion that is.
+    5:
+      name: NEEDS A STATEMENT
+      statement: >-
+        Not written down in this repository. Case 6 declares it.
+  case7_ask_for_a_number:
+    1:
+      name: NEEDS A STATEMENT
+      statement: >-
+        Not written down in this repository. Case 7 declares it.
+    3:
+      name: NEEDS A STATEMENT
+      statement: >-
+        Not written down in this repository. Case 7 declares it.

@@ -32,7 +32,8 @@ This page does not grade single steps or name a best model per site — that is
 | Prompt tokens spent on tools no case requires | 17745 |
 | Use cases | 7 |
 | … with a committed run | 7 |
-| Acceptance criteria covered | 1, 2, 3, 4, 5, 6, 8, 14 |
+| Acceptance criteria the cases declare | 15 |
+| … with a statement in this repository | 6 |
 
 ## The use cases
 
@@ -40,26 +41,35 @@ This page does not grade single steps or name a best model per site — that is
 |---|---|---:|---:|---|---|---|
 | [case1_log_it](../../e2e/llm/scenarios/case1-log-it.yaml) | pass | 3/3 | 2 | `claude-opus-5` | **8** Promises come back as suggestions<br>**14** The assistant says what is waiting | `create_record`, `log_activity` |
 | [case2_business_card](../../e2e/llm/scenarios/case2-business-card.yaml) | pass | 2/3 | 2 | `claude-opus-5` | **4** A possible duplicate is reported, not just filed | `create_record` |
-| [case3_spreadsheet](../../e2e/llm/scenarios/case3-spreadsheet.yaml) | pass | 3/3 | 2 | `claude-opus-5` | **1** A briefing arrives without naming a record<br>**6** Check with the owner before turning up | `preview_import` |
-| [case4_use_the_moment](../../e2e/llm/scenarios/case4-use-the-moment.yaml) | pass | 3/3 | 2 | `claude-opus-5` | **1** A briefing arrives without naming a record<br>**6** Check with the owner before turning up | `query_workspace` |
+| [case3_spreadsheet](../../e2e/llm/scenarios/case3-spreadsheet.yaml) | pass | 3/3 | 2 | `claude-opus-5` | **1** NEEDS A STATEMENT<br>**6** NEEDS A STATEMENT | `preview_import` |
+| [case4_use_the_moment](../../e2e/llm/scenarios/case4-use-the-moment.yaml) | pass | 3/3 | 2 | `claude-opus-5` | **1** NEEDS A STATEMENT<br>**6** Check with the owner before turning up | `query_workspace` |
 | [case5_before_the_meeting](../../e2e/llm/scenarios/case5-before-the-meeting.yaml) | pass | 3/3 | 2 | `claude-opus-5` | **1** A briefing arrives without naming a record<br>**2** NEEDS A STATEMENT<br>**5** The unkept promise is noticed | `search_records` |
-| [case6_ask_the_company](../../e2e/llm/scenarios/case6-ask-the-company.yaml) | **FAIL** | 0/3 | 2 | `claude-opus-5` | **1** A briefing arrives without naming a record<br>**3** NEEDS A STATEMENT<br>**5** The unkept promise is noticed | `search_context` |
-| [case7_ask_for_a_number](../../e2e/llm/scenarios/case7-ask-for-a-number.yaml) | pass | 3/3 | 2 | `claude-opus-5` | **1** A briefing arrives without naming a record<br>**3** NEEDS A STATEMENT | `run_report` |
+| [case6_ask_the_company](../../e2e/llm/scenarios/case6-ask-the-company.yaml) | **FAIL** | 0/3 | 2 | `claude-opus-5` | **1** NEEDS A STATEMENT<br>**3** NEEDS A STATEMENT<br>**5** NEEDS A STATEMENT | `search_context` |
+| [case7_ask_for_a_number](../../e2e/llm/scenarios/case7-ask-for-a-number.yaml) | pass | 3/3 | 2 | `claude-opus-5` | **1** NEEDS A STATEMENT<br>**3** NEEDS A STATEMENT | `run_report` |
 
 ## What the criteria ask
 
 The numbers in the table above, in words. Source: [`e2e/llm/criteria.yaml`](../../e2e/llm/criteria.yaml).
 
-| # | Criterion | What it asks | Cases |
-|---:|---|---|---|
-| 1 | **A briefing arrives without naming a record** | The request identifies an account by something other than its name, and the assistant finds the record anyway rather than asking which one. | `case3_spreadsheet`, `case4_use_the_moment`, `case5_before_the_meeting`, `case6_ask_the_company`, `case7_ask_for_a_number` |
-| 2 | **NEEDS A STATEMENT** | Not yet written down in this repository. Declared by case5. | `case5_before_the_meeting` |
-| 3 | **NEEDS A STATEMENT** | Not yet written down in this repository. Declared by case6 and case7. | `case6_ask_the_company`, `case7_ask_for_a_number` |
-| 4 | **A possible duplicate is reported, not just filed** | The create's own answer carries the duplicate it queued, and the assistant reads what came back and says so — a queue nobody is told about is a queue nobody reads. | `case2_business_card` |
-| 5 | **The unkept promise is noticed** | Somebody said they would send something and there is no record it went. Reading across the timeline to spot the gap is the point. | `case5_before_the_meeting`, `case6_ask_the_company` |
-| 6 | **Check with the owner before turning up** | The assistant tells the rep to confirm with the account owner rather than acting on a proximity answer alone. | `case3_spreadsheet`, `case4_use_the_moment` |
-| 8 | **Promises come back as suggestions** | Only what was actually promised is reported. Listing every topic that was discussed means the reader is reciting what it saw rather than what was committed to. | `case1_log_it` |
-| 14 | **The assistant says what is waiting** | Work held for approval is reported as pending. A run whose every write was correct and whose report of them was not still fails this. | `case1_log_it` |
+**The numbers are per case.** Case 1 criterion 1 and case 2 criterion 1 are different criteria that share a digit, which is why every row below names its case.
+
+| Case | # | Criterion | What it asks |
+|---|---:|---|---|
+| `case1_log_it` | 8 | **Promises come back as suggestions** | Only what was actually promised is reported. Listing every topic that was discussed means the reader is reciting what it saw rather than what was committed to. |
+| `case1_log_it` | 14 | **The assistant says what is waiting** | Work held for approval is reported as pending. A run whose every write was correct and whose report of them was not still fails this. |
+| `case2_business_card` | 4 | **A possible duplicate is reported, not just filed** | The create's own answer carries the duplicate it queued, and the assistant reads what came back and says so — a queue nobody is told about is a queue nobody reads. |
+| `case3_spreadsheet` | 1 | **NEEDS A STATEMENT** | Not written down in this repository. Case 3's own header describes the case (show the numbers before committing) without naming which criterion that is. |
+| `case3_spreadsheet` | 6 | **NEEDS A STATEMENT** | Not written down in this repository. Case 3 declares it; only case 4 states what ITS criterion 6 asks, and the numbering is per case. |
+| `case4_use_the_moment` | 1 | **NEEDS A STATEMENT** | Not written down in this repository. Case 4 declares it. |
+| `case4_use_the_moment` | 6 | **Check with the owner before turning up** | The assistant tells the rep to confirm with the account owner rather than acting on a proximity answer alone. |
+| `case5_before_the_meeting` | 1 | **A briefing arrives without naming a record** | The request identifies an account by something other than its name — "Vietnam partner" is not the account's name — and finding it is the test. |
+| `case5_before_the_meeting` | 2 | **NEEDS A STATEMENT** | Not written down in this repository. Case 5 declares it. |
+| `case5_before_the_meeting` | 5 | **The unkept promise is noticed** | Somebody said they would send something and there is no record it went. Reading across the timeline to spot the gap is the point. |
+| `case6_ask_the_company` | 1 | **NEEDS A STATEMENT** | Not written down in this repository. Case 6 declares it. |
+| `case6_ask_the_company` | 3 | **NEEDS A STATEMENT** | Not written down in this repository. Case 6's header describes the case (the record's date is right and the prose recalling it is wrong) without naming which criterion that is. |
+| `case6_ask_the_company` | 5 | **NEEDS A STATEMENT** | Not written down in this repository. Case 6 declares it. |
+| `case7_ask_for_a_number` | 1 | **NEEDS A STATEMENT** | Not written down in this repository. Case 7 declares it. |
+| `case7_ask_for_a_number` | 3 | **NEEDS A STATEMENT** | Not written down in this repository. Case 7 declares it. |
 
 ## 1. What you can rely on
 
