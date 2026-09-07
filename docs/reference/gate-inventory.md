@@ -118,7 +118,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 | `worklistverdictstandings_test.go` | H2 | The queue's verdict standings ARE the deal card's, and this derives them from the card rather than keeping a second list of them. |
 
-## Census (126)
+## Census (127)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -227,6 +227,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `restrictedreaders_test.go` | H2 | A record held under a statutory retention obligation is unavailable in EVERY ordinary read path (A165/ADR-0114 §2): lists, timelines, search, exports, embeddings, agent grounding. |
 | `rlsclaimsprose_test.go` | H2 | The prose says what bounds a read, and it is not row-level security. |
 | `rulebookdelegation_test.go` | H3 | AGENTS.md is the rulebook — at the root, and in any directory that needs one of its own. |
+| `safetydefects_test.go` | H2 | Every declared stage-automation safety defect can actually stop a rule. |
 | `satellite_lifecycle_test.go` | H2 | Person-satellite lifecycle reach as a fitness function. |
 | `scrubverbs_test.go` | H2 | Every verb the privacy module writes is judged a scrub or ratified as not one. |
 | `seatfanout_test.go` | H2 | A nightly agent acts FOR A PERSON, and the identity of one night's work has to say which person. |
