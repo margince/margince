@@ -61,7 +61,10 @@ type readingFixture struct {
 	handlers activities.Handlers
 	consumer *aiactivity.Consumer
 	deal     ids.UUID
-	readID   ids.UUID
+	// attachment is the document the fixture's reading is about — the subject
+	// the reading's occurrence names, so a test can check the feed points at it.
+	attachment ids.UUID
+	readID     ids.UUID
 	// delivered is how far the fixture's subscriber has got. Without it drain
 	// replays the WHOLE history on every call, and a replay of the original
 	// human-attributed event papers over anything a later event got wrong —
@@ -94,8 +97,9 @@ func newReadingFixture(t *testing.T) *readingFixture {
 		// refusal is acked away by design, so a test whose logger swallows it
 		// sees only a row that never appeared — which is a failure two steps
 		// away from its cause.
-		consumer: aiactivity.NewConsumer(aiactivity.NewStore(e.DB()), testLogger(t)),
-		readID:   read.ID,
+		consumer:   aiactivity.NewConsumer(aiactivity.NewStore(e.DB()), testLogger(t)),
+		attachment: ids.UUID(att.Id),
+		readID:     read.ID,
 	}
 }
 

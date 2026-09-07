@@ -59,16 +59,23 @@ type StageEvidenceReader struct {
 	deals *deals.Store
 	own   deals.OwnDomainReader
 	brain completer
-	now   func() time.Time
-	log   *slog.Logger
+	// propose asks whether the reading just recorded completes a stage's
+	// checklist. Nil is a legal composition and skips silently, as it does on
+	// the deterministic lane beside this one.
+	propose stageProposer
+	now     func() time.Time
+	log     *slog.Logger
 }
 
 // NewStageEvidenceReader builds the engine over the pool and one model lane.
 func NewStageEvidenceReader(
 	pool *pgxpool.Pool, store *deals.Store, own deals.OwnDomainReader,
-	brain completer, now func() time.Time, log *slog.Logger,
+	brain completer, propose stageProposer, now func() time.Time, log *slog.Logger,
 ) *StageEvidenceReader {
-	return &StageEvidenceReader{pool: pool, deals: store, own: own, brain: brain, now: now, log: log}
+	return &StageEvidenceReader{
+		pool: pool, deals: store, own: own, brain: brain,
+		propose: propose, now: now, log: log,
+	}
 }
 
 // Read asks about one activity against the criteria of the deal it reaches,
@@ -99,7 +106,29 @@ func (r *StageEvidenceReader) Read(
 	if err != nil {
 		return 0, err
 	}
-	return r.record(actorCtx, dealID, facts, claims)
+	written, err := r.record(actorCtx, dealID, facts, claims)
+	if err != nil || written == 0 {
+		// Nothing new landed, so the checklist stands where it did and there is
+		// no fresh answer to propose on. The common case by far: most
+		// conversations settle nothing.
+		return written, err
+	}
+	// A failure to PROPOSE fails the reading, so the job retries.
+	//
+	// It costs a second model call, which is the reason to want to swallow it.
+	// But nothing else ever comes back: the claims are committed, and the next
+	// claim on this deal may be months away or never — so a swallowed error
+	// loses the card on a deal whose criteria are all met right now. The
+	// re-read is idempotent (the claim write finds its own row, the staging
+	// joins the pending card), so the retry costs a call and changes nothing
+	// else.
+	if r.propose != nil {
+		if _, err := r.propose.Propose(actorCtx, dealID); err != nil {
+			return written, fmt.Errorf(
+				"propose the stage move this reading completes: %w", err)
+		}
+	}
+	return written, nil
 }
 
 // errNothingToRead is the ordinary outcome, not a failure: a deal whose stage

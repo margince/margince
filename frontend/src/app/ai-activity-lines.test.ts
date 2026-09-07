@@ -10,9 +10,19 @@ import {
   ACTIVITY_LINE,
   displayedKinds,
   displayedLines,
-  lineFor,
   NAMED_LINE,
+  speak,
+  spokenText,
 } from "./ai-activity-lines";
+
+/** The line as one string, which is what the unnamed cases are about. */
+function lineFor(
+  item: Parameters<typeof speak>[0],
+  t: Parameters<typeof speak>[1],
+): string | null {
+  const line = speak(item, t);
+  return line === null ? null : spokenText(line);
+}
 
 /** Every message key either map names, which is the whole reachable set. */
 function namedKeys(): Set<string> {
@@ -154,7 +164,85 @@ describe("the activity copy set", () => {
   });
 });
 
-describe("lineFor", () => {
+describe("speak", () => {
+  // The whole reason the line is three pieces and not one string: the name
+  // sits in its own slot, with the record's page beside it, so a surface can
+  // draw a link around exactly the name and nothing else.
+  it("sets the record's name in its own slot, with the page it has", () => {
+    const line = speak(
+      {
+        kind: "summarize",
+        state: "done",
+        subject_label: "Acme",
+        subject_type: "organization",
+        subject_id: "019f7e65-fbf7-7114-b114-40af4af63a77",
+      },
+      (key) => en[key],
+    );
+    expect(line).toEqual({
+      before: "What I know about ",
+      subject: {
+        name: "Acme",
+        route: {
+          screen: "companies",
+          id: "019f7e65-fbf7-7114-b114-40af4af63a77",
+        },
+      },
+      after: " is ready.",
+    });
+  });
+
+  // A name that is also a word in the copy must still be the NAME that gets
+  // the link. The split is on the template's placeholder and never on the
+  // interpolated sentence, and this is the case that tells the two apart.
+  it("finds the name by its slot, not by searching the sentence for it", () => {
+    const line = speak(
+      {
+        kind: "summarize",
+        state: "done",
+        subject_label: "I",
+        subject_type: "person",
+        subject_id: "019f7e65-fbf7-7114-b114-40af4af63a77",
+      },
+      (key) => en[key],
+    );
+    expect(line?.before).toBe("What I know about ");
+    expect(line?.subject?.name).toBe("I");
+    expect(line?.subject?.route?.screen).toBe("contacts");
+  });
+
+  // No page, no route — and the name still stands in the sentence. Three ways
+  // to have no page: a kind with no screen (a meeting is an activity), a kind
+  // this build has never heard of, and a name that came with no identity.
+  it.each([
+    [
+      "a meeting",
+      {
+        subject_type: "activity",
+        subject_id: "019f7e65-fbf7-7114-b114-40af4af63a77",
+      },
+    ],
+    [
+      "an unknown kind",
+      {
+        subject_type: "constellation",
+        subject_id: "019f7e65-fbf7-7114-b114-40af4af63a77",
+      },
+    ],
+    ["a name with no id", { subject_type: "organization" }],
+    [
+      "a name with no kind",
+      { subject_id: "019f7e65-fbf7-7114-b114-40af4af63a77" },
+    ],
+  ])("keeps the name as text for %s", (_what, subject) => {
+    const line = speak(
+      { kind: "summarize", state: "done", subject_label: "Acme", ...subject },
+      (key) => en[key],
+    );
+    expect(line?.subject).toEqual({ name: "Acme", route: null });
+    expect(line && spokenText(line)).toBe("What I know about Acme is ready.");
+  });
+
   it("renders the line for a state that has copy", () => {
     expect(
       lineFor({ kind: "morning_brief", state: "running" }, (key) => en[key]),

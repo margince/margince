@@ -29,14 +29,16 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// Business-hours envelope for proposed slots and the assumed length of
-// a meeting whose end the record does not carry (activity has only
-// occurred_at). Both refine when a real calendar connector lands.
-// defaultSlotDuration applies inside Availability when the caller
-// names no duration, so the REST and MCP transports cannot drift.
+// The assumed length of a meeting whose end the record does not carry (activity
+// has only occurred_at); it refines when a real calendar connector lands.
+// defaultSlotDuration applies inside Availability when the caller names no
+// duration, so the REST and MCP transports cannot drift.
+//
+// The business-hours envelope is NOT here any more. Which hours a host is
+// bookable in is a fact about that PERSON — see docs/explanation/scheduling.md —
+// so it arrives through hostHours rather than being a pair of numbers this
+// package holds for everybody.
 const (
-	businessDayStartHour   = 9
-	businessDayEndHour     = 17
 	assumedMeetingDuration = time.Hour
 	maxProposedSlots       = 20
 	maxAvailabilityWindow  = 31 * 24 * time.Hour
@@ -173,8 +175,26 @@ func (s *Store) Availability(ctx context.Context, host ids.UserID, from, to time
 		return nil, false, err
 	}
 
-	slots, truncated := freeSlots(from, to, duration, busy)
+	slots, truncated := freeSlots(from, to, duration, busy, s.hoursOf(ctx, host))
 	return slots, truncated, nil
+}
+
+// hoursOf answers when this host is bookable, degrading to the fallback rather
+// than refusing.
+//
+// A resolver error is the same case as no resolver at all: the public booking
+// page reaches this path, and a customer told "could not read the host's
+// settings" cannot act on it. The refusal that matters — the host being
+// unbookable at the time they pick — is enforced at booking, not here.
+func (s *Store) hoursOf(ctx context.Context, host ids.UserID) WorkingHours {
+	if s.workingHours == nil {
+		return fallbackWorkingHours()
+	}
+	hours, err := s.workingHours(ctx, host)
+	if err != nil || hours.Location == nil || len(hours.Days) == 0 {
+		return fallbackWorkingHours()
+	}
+	return hours
 }
 
 // freeSlots walks the duration-aligned candidate grid inside the window
@@ -186,7 +206,7 @@ func (s *Store) Availability(ctx context.Context, host ids.UserID, from, to time
 // established by finding it, not inferred from hitting the cap. A window holding
 // exactly maxProposedSlots free slots withheld nothing, and saying otherwise
 // would send a caller looking for slots that are not there.
-func freeSlots(from, to time.Time, duration time.Duration, busy []slot) (free []slot, truncated bool) {
+func freeSlots(from, to time.Time, duration time.Duration, busy []slot, hours WorkingHours) (free []slot, truncated bool) {
 	// Empty, never nil: "the host is booked solid" is a real answer and arrives
 	// shaped like the array the contract declares. Normalized here, once, so no
 	// transport can put `null` on the wire — which a model reads as "unknown"
@@ -197,12 +217,7 @@ func freeSlots(from, to time.Time, duration time.Duration, busy []slot) (free []
 		cursor = cursor.Add(duration)
 	}
 	for ; !cursor.Add(duration).After(to.UTC()); cursor = cursor.Add(duration) {
-		end := cursor.Add(duration)
-		endsAtClose := end.Hour() == businessDayEndHour && end.Minute() == 0 && end.Second() == 0
-		if cursor.Hour() < businessDayStartHour ||
-			(!endsAtClose && (end.Hour() > businessDayEndHour || end.Hour() == businessDayEndHour && end.Minute() > 0)) ||
-			end.Hour() < businessDayStartHour ||
-			cursor.Weekday() == time.Saturday || cursor.Weekday() == time.Sunday {
+		if !hours.covers(cursor, cursor.Add(duration)) {
 			continue
 		}
 		candidate := slot{Start: cursor, End: cursor.Add(duration)}
@@ -474,4 +489,11 @@ func consentSubjectLink(w http.ResponseWriter, r *http.Request, links []Activity
 			"recording consent with a booking requires exactly one linked person"))
 		return ids.UUID{}, false
 	}
+}
+
+// WithWorkingHours binds the resolver on the transport too, so the REST and
+// public booking paths read the same hours the seam does.
+func (h Handlers) WithWorkingHours(resolve WorkingHoursResolver) Handlers {
+	h.store = h.store.WithWorkingHours(resolve)
+	return h
 }

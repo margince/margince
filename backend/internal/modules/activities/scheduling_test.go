@@ -33,7 +33,7 @@ func TestASlotWalkStoppedByItsCapSaysSo(t *testing.T) {
 	// A full business day at the minimum slot length offers far more candidates
 	// than the cap admits, so the answer is a prefix. A model handed a prefix
 	// with no marker tells a rep there is no later opening.
-	free, truncated := freeSlots(monday(9), monday(17), minSlotDuration, nil)
+	free, truncated := freeSlots(monday(9), monday(17), minSlotDuration, nil, fallbackWorkingHours())
 	if len(free) != maxProposedSlots {
 		t.Fatalf("a full day at %v yielded %d slots, want the cap %d",
 			minSlotDuration, len(free), maxProposedSlots)
@@ -54,14 +54,14 @@ func TestExactlyTheCapWithNothingLeftIsNotTruncated(t *testing.T) {
 	// arithmetic guess (cap × duration) lands nowhere near the cap, and such a
 	// window would pass this test while proving nothing about the boundary.
 	from := monday(9)
-	wide, wideTruncated := freeSlots(from, from.Add(14*24*time.Hour), time.Hour, nil)
+	wide, wideTruncated := freeSlots(from, from.Add(14*24*time.Hour), time.Hour, nil, fallbackWorkingHours())
 	if len(wide) != maxProposedSlots || !wideTruncated {
 		t.Fatalf("a fortnight yielded %d slots (truncated=%v); this test needs a window that "+
 			"genuinely overruns the cap %d", len(wide), wideTruncated, maxProposedSlots)
 	}
 	// End the window exactly where the last admitted slot ends: the cap is now
 	// reached with nothing left to find.
-	exact, truncated := freeSlots(from, wide[len(wide)-1].End, time.Hour, nil)
+	exact, truncated := freeSlots(from, wide[len(wide)-1].End, time.Hour, nil, fallbackWorkingHours())
 	if len(exact) != maxProposedSlots {
 		t.Fatalf("the derived window yielded %d slots, want exactly the cap %d", len(exact), maxProposedSlots)
 	}
@@ -72,7 +72,7 @@ func TestExactlyTheCapWithNothingLeftIsNotTruncated(t *testing.T) {
 }
 
 func TestASlotWalkThatFinishedTheWindowIsNotTruncated(t *testing.T) {
-	free, truncated := freeSlots(monday(9), monday(10), time.Hour/2, nil)
+	free, truncated := freeSlots(monday(9), monday(10), time.Hour/2, nil, fallbackWorkingHours())
 	if len(free) != 2 {
 		t.Fatalf("a one-hour window at 30m yielded %d slots, want 2", len(free))
 	}
@@ -85,7 +85,7 @@ func TestNoFreeSlotIsAnEmptyArrayNotNull(t *testing.T) {
 	// "Booked solid" is a real answer, and it has to arrive shaped like the array
 	// the contract declares: nil marshals to null, which a model reads as
 	// "unknown" rather than "none free".
-	free, truncated := freeSlots(monday(3), monday(4), time.Hour, nil)
+	free, truncated := freeSlots(monday(3), monday(4), time.Hour, nil, fallbackWorkingHours())
 	if free == nil {
 		t.Error("an empty result is nil, which reaches the wire as null")
 	}

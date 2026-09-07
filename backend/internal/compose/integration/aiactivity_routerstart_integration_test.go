@@ -20,16 +20,29 @@ import (
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
 )
 
-// start announces one call's beginning the way the router does before it serves
-// an attempt. The lease is the caller's, so a test can pin what the projection
-// derives stale_after from rather than restating the router's own arithmetic.
-func (f *routerFixture) start(t *testing.T, task ai.Task, lease time.Duration) {
+// start announces a summarize call's beginning the way the router does before
+// it serves an attempt, and answers the claim it made. The lease is the
+// caller's, so a test can pin what the projection derives stale_after from
+// rather than restating the router's own arithmetic. Summarize because it is a
+// router-reported task every case here reads back; a task the router does not
+// report goes through startCall and the meter directly, and asserts the refusal.
+func (f *routerFixture) start(t *testing.T, lease time.Duration) ai.RailClaim {
 	t.Helper()
-	f.meter.AnnounceRailStart(f.ctx, ai.Call{
+	claim, announced := f.meter.AnnounceRailStart(f.ctx, f.startCall(ai.TaskSummarize), lease)
+	if !announced {
+		t.Fatal("the start of the summarize call was not announced")
+	}
+	return claim
+}
+
+// startCall is the call the router announces a start for: the identity the
+// settle will land on and nothing about the outcome, because there is none yet.
+func (f *routerFixture) startCall(task ai.Task) ai.Call {
+	return ai.Call{
 		LogicalCallID: f.corr,
 		Task:          task,
 		CorrelationID: &f.corr,
-	}, lease)
+	}
 }
 
 // The whole point of the change: a rep who asks for a summary sees the work
@@ -41,7 +54,7 @@ func (f *routerFixture) start(t *testing.T, task ai.Task, lease time.Duration) {
 func TestACallSaysItIsRunningBeforeItSaysWhatItDid(t *testing.T) {
 	f := newRouterFixture(t)
 
-	f.start(t, ai.TaskSummarize, 5*time.Minute)
+	f.start(t, 5*time.Minute)
 	f.drain(t)
 
 	live := f.row(t, ai.TaskSummarize)
@@ -83,7 +96,7 @@ func TestACallSaysItIsRunningBeforeItSaysWhatItDid(t *testing.T) {
 func TestTheStartAndTheSettleAreOneOccurrence(t *testing.T) {
 	f := newRouterFixture(t)
 
-	f.start(t, ai.TaskSummarize, 5*time.Minute)
+	f.start(t, 5*time.Minute)
 	f.call(t, ai.TaskSummarize, nil)
 	f.drain(t)
 
@@ -106,7 +119,7 @@ func TestTheStartAndTheSettleAreOneOccurrence(t *testing.T) {
 func TestASettledOccurrenceKeepsNoLease(t *testing.T) {
 	f := newRouterFixture(t)
 
-	f.start(t, ai.TaskSummarize, 5*time.Minute)
+	f.start(t, 5*time.Minute)
 	f.call(t, ai.TaskSummarize, nil)
 	f.drain(t)
 
@@ -127,7 +140,7 @@ func TestTheProjectionStoresTheLeaseTheRouterDerived(t *testing.T) {
 	f := newRouterFixture(t)
 	const lease = 97 * time.Second
 
-	f.start(t, ai.TaskSummarize, lease)
+	f.start(t, lease)
 	f.drain(t)
 
 	got := f.row(t, ai.TaskSummarize)
@@ -139,6 +152,69 @@ func TestTheProjectionStoresTheLeaseTheRouterDerived(t *testing.T) {
 	}
 }
 
+// A renewal is the same occurrence, believable for longer, and nothing else
+// about it may move. The claim the start answered is what the router repeats
+// before every further model call, and this is the end-to-end proof that
+// repeating it extends the row rather than reopening it: same attempt, same
+// start instant, a later lease — and the settle that follows still closes the
+// attempt the start opened.
+func TestARenewalExtendsTheLeaseAndKeepsTheClaim(t *testing.T) {
+	f := newRouterFixture(t)
+
+	claim := f.start(t, 5*time.Minute)
+	f.drain(t)
+	opened := f.row(t, ai.TaskSummarize)
+
+	f.meter.RenewRailLease(f.ctx, f.startCall(ai.TaskSummarize), claim, 5*time.Minute)
+	f.drain(t)
+
+	renewed := f.row(t, ai.TaskSummarize)
+	if renewed.State != "running" || renewed.Attempt != opened.Attempt {
+		t.Fatalf("state/attempt after the renewal = %s/%d, want running/%d — a renewal that moves either is a new fact, not a longer lease", renewed.State, renewed.Attempt, opened.Attempt)
+	}
+	if renewed.StartedAt == nil || opened.StartedAt == nil || !renewed.StartedAt.Equal(*opened.StartedAt) {
+		t.Errorf("started_at moved from %v to %v on a renewal, so the lease is now aged from an instant the work did not begin at", opened.StartedAt, renewed.StartedAt)
+	}
+	if renewed.StaleAfter == nil || opened.StaleAfter == nil || !renewed.StaleAfter.After(*opened.StaleAfter) {
+		t.Errorf("stale_after after the renewal = %v, not later than the start's %v — the row is no more believable than before", renewed.StaleAfter, opened.StaleAfter)
+	}
+	// The renewal is measured from now, not from the start: a lease of five
+	// minutes must reach at least five minutes past the instant it was made,
+	// which is after the start by however long the two announcements were apart.
+	if held := renewed.StaleAfter.Sub(*renewed.StartedAt); held < 5*time.Minute {
+		t.Errorf("the renewed lease reaches %s past the start, which is less than the %s the renewal itself asked for", held, 5*time.Minute)
+	}
+
+	f.call(t, ai.TaskSummarize, nil)
+	f.drain(t)
+	settled := f.row(t, ai.TaskSummarize)
+	if settled.State != "done" || settled.Attempt != opened.Attempt {
+		t.Errorf("state/attempt after the settle = %s/%d, want done/%d — the settle no longer closes the attempt the start opened", settled.State, settled.Attempt, opened.Attempt)
+	}
+}
+
+// A renewal that reaches the projection after the flush settled the call — the
+// last rung's renewal, delivered late — must not put a finished piece of work
+// back on the rail as running.
+func TestARenewalCannotReopenASettledOccurrence(t *testing.T) {
+	f := newRouterFixture(t)
+
+	claim := f.start(t, 5*time.Minute)
+	f.call(t, ai.TaskSummarize, nil)
+	f.drain(t)
+
+	f.meter.RenewRailLease(f.ctx, f.startCall(ai.TaskSummarize), claim, time.Hour)
+	f.drain(t)
+
+	got := f.row(t, ai.TaskSummarize)
+	if got.State != "done" {
+		t.Errorf("state after a late renewal = %q, want done", got.State)
+	}
+	if got.StaleAfter != nil {
+		t.Errorf("a settled occurrence took a lease until %s from a late renewal", got.StaleAfter)
+	}
+}
+
 // A call outside a correlation scope announces no start, for the same reason it
 // announces no settle: storekit.Emit refuses an envelope without a correlation
 // id, so the occurrence cannot exist. Opening one anyway would be worse than
@@ -147,10 +223,12 @@ func TestTheProjectionStoresTheLeaseTheRouterDerived(t *testing.T) {
 func TestAStartOutsideACorrelationScopeIsNotAnnounced(t *testing.T) {
 	f := newRouterFixture(t)
 
-	f.meter.AnnounceRailStart(f.ctx, ai.Call{
+	if _, announced := f.meter.AnnounceRailStart(f.ctx, ai.Call{
 		LogicalCallID: f.corr,
 		Task:          ai.TaskSummarize,
-	}, 5*time.Minute)
+	}, 5*time.Minute); announced {
+		t.Fatal("a call with no correlation id reported its start as announced")
+	}
 	f.drain(t)
 
 	var rows int
@@ -171,7 +249,7 @@ func TestAStartOutsideACorrelationScopeIsNotAnnounced(t *testing.T) {
 func TestASubSecondLeaseIsStillALease(t *testing.T) {
 	f := newRouterFixture(t)
 
-	f.start(t, ai.TaskSummarize, 500*time.Millisecond)
+	f.start(t, 500*time.Millisecond)
 	f.drain(t)
 
 	got := f.row(t, ai.TaskSummarize)
@@ -190,7 +268,9 @@ func TestASubSecondLeaseIsStillALease(t *testing.T) {
 func TestTheRouterAnnouncesNoStartForACarrierOwnedTask(t *testing.T) {
 	f := newRouterFixture(t)
 
-	f.start(t, ai.TaskAgentLoop, 5*time.Minute)
+	if _, announced := f.meter.AnnounceRailStart(f.ctx, f.startCall(ai.TaskAgentLoop), 5*time.Minute); announced {
+		t.Fatal("the router reported a start as announced for a task the agent runner reports")
+	}
 	f.drain(t)
 
 	var rows int
@@ -244,7 +324,7 @@ func TestAStartNothingSettledIsClosedByTheSweep(t *testing.T) {
 	// A one-second lease and a cutoff past it, rather than a backdated row: the
 	// sweep takes its cutoff from the caller precisely so a test can reach the
 	// real predicate without writing state the real writer never writes.
-	f.start(t, ai.TaskSummarize, time.Second)
+	f.start(t, time.Second)
 	f.drain(t)
 	if got := f.row(t, ai.TaskSummarize); got.State != "running" {
 		t.Fatalf("state before the sweep = %q, want running", got.State)
@@ -275,7 +355,7 @@ func TestAStartNothingSettledIsClosedByTheSweep(t *testing.T) {
 func TestTheSweepLeavesAnOccurrenceInsideItsLease(t *testing.T) {
 	f := newRouterFixture(t)
 
-	f.start(t, ai.TaskSummarize, time.Hour)
+	f.start(t, time.Hour)
 	f.drain(t)
 
 	if closed := f.sweep(t, f.dbNow(t)); closed != 0 {

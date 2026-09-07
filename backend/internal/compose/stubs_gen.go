@@ -1279,6 +1279,14 @@ func (stubs) SaveMyLocale(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "SaveMyLocale")
 }
 
+func (stubs) GetMyWorkingHours(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetMyWorkingHours")
+}
+
+func (stubs) SaveMyWorkingHours(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "SaveMyWorkingHours")
+}
+
 func (stubs) RaiseNotice(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "RaiseNotice")
 }

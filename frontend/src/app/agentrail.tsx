@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ChevronRight } from "lucide-react";
 import {
   type CSSProperties,
+  type MouseEvent,
   type RefObject,
   useCallback,
   useEffect,
@@ -45,9 +46,15 @@ import {
   RUNNING,
   TASK_SAID,
 } from "./agentrail-copy";
+import { RailLine } from "./agentrail-line";
 import { useAgentTicker } from "./agentrail-ticker";
 import { type AiActivity, useAiActivity } from "./ai-activity";
-import { lineFor, PANEL_HEADING } from "./ai-activity-lines";
+import {
+  PANEL_HEADING,
+  plain,
+  type SpokenLine,
+  speak,
+} from "./ai-activity-lines";
 import { laneFor } from "./ai-activity-orb";
 import { useAgentTierMap } from "./autonomy";
 import { useCan, useHoldsAdminRole } from "./capability";
@@ -532,7 +539,7 @@ type AiActivityItem = components["schemas"]["AiActivityItem"];
  * One list of scheduled runs, in the reader's words, under its own heading.
  *
  * A kind or state the copy map has no line for draws NOTHING — not a fallback
- * sentence, not the message key. `lineFor` returning null is the map saying it
+ * sentence, not the message key. `speak` returning null is the map saying it
  * has never heard of this run, and a surface that answers that with an invented
  * sentence is a surface a reader cannot trust about the runs it DOES name. When
  * that empties the section, the section is absent too.
@@ -545,7 +552,7 @@ function RunSection({
   // flatMap rather than map+filter: the empty array drops the run AND narrows
   // the line to a string, where a filtered predicate would only have claimed it.
   const said = items.flatMap((item) => {
-    const line = lineFor(item, t);
+    const line = speak(item, t);
     return line === null ? [] : [{ item, line }];
   });
   if (said.length === 0) {
@@ -557,7 +564,9 @@ function RunSection({
       <ul className="arruns">
         {said.map(({ item, line }) => (
           <li className="arbox arrun" key={item.id}>
-            <span className="arrunline">{line}</span>
+            <span className="arrunline">
+              <RailLine line={line} />
+            </span>
           </li>
         ))}
       </ul>
@@ -610,7 +619,7 @@ function AgentPanel({
 }: Readonly<{
   state: MarginceCoreState;
   /** The same line the card carries, so the two never disagree. */
-  line: string;
+  line: SpokenLine;
   /** The scheduled runs the server reports as live. */
   running: readonly AiActivityItem[];
   signals: Signals;
@@ -650,7 +659,9 @@ function AgentPanel({
           <i aria-hidden="true" />
           {state}
         </span>
-        <p className="arptitle">{line}</p>
+        <p className="arptitle">
+          <RailLine line={line} />
+        </p>
         {spend.allowed && spend.minor !== undefined && (
           <span className="arpmoney">
             <b>{formatMoney(spend.minor, spend.currency, locale)}</b>
@@ -1050,9 +1061,9 @@ function idleLines(
   signals: Signals,
   devLine: string,
   /** The newest run that settled today, or null when there is none to name. */
-  settledLine: string | null,
-): readonly string[] {
-  const said: Partial<Record<IdleKind, string>> = {
+  settledLine: SpokenLine | null,
+): readonly SpokenLine[] {
+  const said: Partial<Record<IdleKind, SpokenLine>> = {
     // What the scheduled runner finished while nobody was looking. It rotates
     // rather than pinning the bar: `recent` is bounded to today, so a line
     // pinned to it would still be announcing this morning's brief at six in the
@@ -1060,16 +1071,16 @@ function idleLines(
     finished: settledLine ?? undefined,
     waiting:
       signals.waiting !== undefined && signals.waiting > 0
-        ? `${signals.waiting} ${LABELS.waiting}`
+        ? plain(`${signals.waiting} ${LABELS.waiting}`)
         : undefined,
     // The development path answers every call with an invention, and a reader who
     // does not know that is being misled by a product that looks like it works.
-    model: signals.ai === "development" ? devLine : undefined,
+    model: signals.ai === "development" ? plain(devLine) : undefined,
   };
   const lines = IDLE_ORDER.map((kind) => said[kind]).filter(
-    (line): line is string => line !== undefined,
+    (line): line is SpokenLine => line !== undefined,
   );
-  return lines.length === 0 ? [LABELS.allClear] : lines;
+  return lines.length === 0 ? [plain(LABELS.allClear)] : lines;
 }
 
 /**
@@ -1081,7 +1092,7 @@ function idleLines(
  */
 const IDLE_HOLD_MS = 5200;
 
-function useIdleLine(lines: readonly string[]): string {
+function useIdleLine(lines: readonly SpokenLine[]): SpokenLine {
   const [at, setAt] = useState(0);
   const count = lines.length;
   useEffect(() => {
@@ -1110,19 +1121,19 @@ function useIdleLine(lines: readonly string[]): string {
 function causeLine(
   cause: AiActivityItem | null,
   t: (key: MessageKey) => string,
-): string | null {
+): SpokenLine | null {
   if (cause === null) {
     return null;
   }
-  const said = lineFor(cause, t);
+  const said = speak(cause, t);
   if (said !== null) {
     return said;
   }
   if (cause.state === "failed") {
-    return LABELS.runFailed;
+    return plain(LABELS.runFailed);
   }
   return cause.state === "degraded" || cause.state === "stalled"
-    ? LABELS.runStopped
+    ? plain(LABELS.runStopped)
     : null;
 }
 
@@ -1140,36 +1151,21 @@ function barLine(
   state: MarginceCoreState,
   signals: Signals,
   devLine: string,
-  agentLine: string | null,
-): string {
-  if (state === "error") {
-    // A deployment with no model bound and a source that stopped answering are
-    // different repairs, and both outrank a run that broke: an agent that cannot
-    // run at all is not a failed run, it is no runs.
-    if (signals.ai === "unconfigured") {
-      return LABELS.noModel;
-    }
-    if (signals.offline.length > 0) {
-      return `${LABELS.cannotReach} ${signals.offline.join(", ")}`;
-    }
-    return agentLine ?? LABELS.runFailed;
-  }
-  if (state === "warning") {
-    // Amber with no occurrence behind it is the licence, and it is the only way
-    // to reach that: derive() ranks a broken run and a stalled one above it, and
-    // both carry a sentence of their own.
-    return agentLine ?? signals.licenseLine;
+  agentLine: SpokenLine | null,
+): SpokenLine {
+  if (state === "error" || state === "warning") {
+    return faultLine(state, signals, agentLine);
   }
   if (state === "working") {
     // The named run outranks the generic word: "Working" is true of an overnight
     // brief and of a one-line summary, and only one of them is news.
-    return agentLine ?? LABELS.working;
+    return agentLine ?? plain(LABELS.working);
   }
   if (state === "ingest") {
-    return agentLine ?? signals.capture?.line ?? LABELS.reading;
+    return agentLine ?? plain(signals.capture?.line ?? LABELS.reading);
   }
   if (signals.waiting !== undefined && signals.waiting > 0) {
-    return `${signals.waiting} ${LABELS.waiting}`;
+    return plain(`${signals.waiting} ${LABELS.waiting}`);
   }
   // A deployment on the development path is not disconnected — it answers — but
   // every answer it gives is invented, and a reader who does not know that is
@@ -1177,9 +1173,37 @@ function barLine(
   // resting line states it calmly rather than raising it as a fault, in the same
   // words the sign-in screen already uses for it.
   if (signals.ai === "development") {
-    return devLine;
+    return plain(devLine);
   }
-  return LABELS.idle;
+  return plain(LABELS.idle);
+}
+
+/**
+ * The line for a fault, red or amber.
+ *
+ * Its own function because the two colours rank their causes differently, and
+ * the ranking is the whole content: a deployment with no model bound and a
+ * source that stopped answering are different repairs, and both outrank a run
+ * that broke — an agent that cannot run at all is not a failed run, it is no
+ * runs. Amber with no occurrence behind it is the licence, and it is the only
+ * way to reach that: derive() ranks a broken run and a stalled one above it,
+ * and both carry a sentence of their own.
+ */
+function faultLine(
+  state: "error" | "warning",
+  signals: Signals,
+  agentLine: SpokenLine | null,
+): SpokenLine {
+  if (state === "warning") {
+    return agentLine ?? plain(signals.licenseLine);
+  }
+  if (signals.ai === "unconfigured") {
+    return plain(LABELS.noModel);
+  }
+  if (signals.offline.length > 0) {
+    return plain(`${LABELS.cannotReach} ${signals.offline.join(", ")}`);
+  }
+  return agentLine ?? plain(LABELS.runFailed);
 }
 
 /**
@@ -1201,6 +1225,43 @@ function importRing(
     return undefined;
   }
   return capture.progress.fraction ?? undefined;
+}
+
+/**
+ * The block's one click, wherever on it a pointer lands.
+ *
+ * The words stand beside the button rather than inside it, because the record
+ * a line names is a link and a link inside a button is a control inside a
+ * control. So the toggle listens on the whole hit area: a click on the orb, on
+ * the words or on the chevron opens the panel, and the button's own Enter and
+ * Space arrive here as the same click. The one exception is the record link
+ * itself — following it is the reader leaving for the record, not asking for
+ * the panel.
+ *
+ * Opening the panel is what acknowledges a broken run: it is the reader turning
+ * to the agent's report, so it is the moment the fault stops needing to be
+ * held. Until then the orb holds it, however many hours it takes them to look.
+ */
+function useHit(
+  open: boolean,
+  setOpen: (next: (current: boolean) => boolean) => void,
+  acknowledge: () => void,
+): (event: MouseEvent<HTMLElement>) => void {
+  return useCallback(
+    (event: MouseEvent<HTMLElement>) => {
+      if (
+        event.target instanceof Element &&
+        event.target.closest("a") !== null
+      ) {
+        return;
+      }
+      if (!open) {
+        acknowledge();
+      }
+      setOpen((current) => !current);
+    },
+    [open, setOpen, acknowledge],
+  );
 }
 
 /**
@@ -1241,6 +1302,9 @@ export function AgentRail({
   const t = useT();
   const [open, setOpen] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
+  // The hit area around the button: on the phone bar it is the round well the
+  // panel is measured from, where the button inside it is only the ball.
+  const well = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLElement>(null);
   const block = useRef<HTMLElement>(null);
   const phone = usePhoneViewport();
@@ -1252,6 +1316,7 @@ export function AgentRail({
   const { locale } = useLocale();
   const { fault, acknowledge } = useAgentFault(server.faults);
   const { state, cause, register } = derive(signals, server, fault);
+  const hit = useHit(open, setOpen, acknowledge);
 
   // What the screen's margins draw, published rather than re-derived: the reads
   // above are all local to this component, so a second consumer calling the same
@@ -1279,7 +1344,7 @@ export function AgentRail({
   }, []);
   usePopoverDismiss(open, panel, dismiss);
 
-  const frame = usePanelFrame(block, trigger, bar, open, phone);
+  const frame = usePanelFrame(block, well, bar, open, phone);
   const money =
     spend.minor === undefined
       ? ""
@@ -1289,7 +1354,7 @@ export function AgentRail({
   // nothing on is still a render it has to make the same calls in.
   // The newest settled run, for the rotation; the newest live one, for the bar.
   // The bar keeps the live run because that is what is true this second.
-  const settledLine = server.recent[0] ? lineFor(server.recent[0], t) : null;
+  const settledLine = server.recent[0] ? speak(server.recent[0], t) : null;
   const resting = useIdleLine(
     idleLines(signals, t("auth.coreDevelopment"), settledLine),
   );
@@ -1326,7 +1391,7 @@ export function AgentRail({
   // about the same thing, and an amber orb captioned "Reading the pipeline"
   // tells a reader the pipeline is the fault.
   const holdsFault = state === "warning" || state === "error";
-  const shown = ticker.length > 0 && !holdsFault ? ticker[0].said : line;
+  const shown = ticker.length > 0 && !holdsFault ? plain(ticker[0].said) : line;
   const ring = importRing(state, signals.capture);
   return (
     <section
@@ -1359,48 +1424,47 @@ export function AgentRail({
           </div>,
           document.body,
         )}
-      {/* One button carries the whole block: the click, the accessible name and
-          the expanded state. A wrapper with a click handler is a target no
-          keyboard can reach, and the CTA underneath keeps its own. */}
-      <button
-        type="button"
-        className="arhit"
-        ref={trigger}
-        aria-expanded={open}
-        // The spend joins the NAME, not only the box.
-        //
-        // An `aria-label` replaces everything inside the button, so the figure
-        // and its scope are drawn for a sighted reader and reach a screen
-        // reader from nowhere at all — and on the collapsed rail the
-        // stylesheet hides `.arwords` too, so there is no second route to it.
-        // A figure somebody is accountable for cannot be the half of this
-        // control that only some readers get.
-        aria-label={hitLabel}
-        // Opening the panel is what acknowledges a broken run: it is the
-        // reader turning to the agent's report, so it is the moment the fault
-        // stops needing to be held. Until then the orb holds it, however many
-        // hours it takes them to look.
-        onClick={() => {
-          if (!open) {
-            acknowledge();
-          }
-          setOpen((current) => !current);
-        }}
-      >
-        <MarginceCoreScene
-          state={state}
-          feed={false}
-          progress={ring}
-          size="md"
-          className="arorb"
-        />
+      {/* One hit area carries the whole block, and the orb inside it is the
+          button: the accessible name and the expanded state. The words stand
+          BESIDE the button rather than in it, because the record a line names
+          is a link, and a link inside a button is a control inside a control
+          (the same reason the CTA underneath keeps its own row). The pointer
+          still gets the whole block through `useHit`; the keyboard gets the
+          button. */}
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: the button inside is the interactive element; this only widens its pointer target to the words and chevron beside it */}
+      {/* biome-ignore lint/a11y/useKeyWithClickEvents: the keyboard's toggle is the button's, whose Enter and Space arrive here as the same click */}
+      <div className="arhit" onClick={hit} ref={well}>
+        <button
+          type="button"
+          className="artoggle"
+          ref={trigger}
+          aria-expanded={open}
+          // The spend joins the NAME, not only the box.
+          //
+          // An `aria-label` replaces everything inside the button, and on the
+          // collapsed rail the stylesheet hides `.arwords` too, so there the
+          // figure and its scope reach a screen reader from nowhere else. A
+          // figure somebody is accountable for cannot be the half of this
+          // control that only some readers get.
+          aria-label={hitLabel}
+        >
+          <MarginceCoreScene
+            state={state}
+            feed={false}
+            progress={ring}
+            size="md"
+            className="arorb"
+          />
+        </button>
         {/* Hidden by the stylesheet on the collapsed rail, where the orb and the
             count are the whole report and the button's name carries the rest. */}
         <span className="arwords">
           {/* The one line: the tool's named read while one is in flight, the
               agent's own sentence otherwise. The panel keeps the agent's line
               regardless, because it is the agent's report. */}
-          <span className="arline">{shown}</span>
+          <span className="arline">
+            <RailLine line={shown} />
+          </span>
           {/* The spend sits in the bar and not only in the panel: it is the one
               figure somebody is accountable for, and a number nobody opens a
               panel to see is a number nobody sees. Absent when this seat may not
@@ -1410,13 +1474,11 @@ export function AgentRail({
             <span className="arspend">
               {money}
               {/* The scope beside the figure, in the slot the stylesheet
-                  already reserved for it (`.arspend > .arscope`, "the money,
-                  and the scope it was spent in, on one line"). It shipped
-                  without one, so the rail carried a bare currency amount naming
-                  nothing — and the button's own aria-label overrides the text
-                  inside it, so no reader got the word from anywhere. The
-                  expanded panel says "Cost this month"; this is the same fact
-                  in the space a rail has, from the same string. */}
+                  reserved for it (`.arspend > .arscope`, "the money, and the
+                  scope it was spent in, on one line"): a bare currency amount
+                  names nothing. The expanded panel says "Cost this month";
+                  this is the same fact in the space a rail has, from the same
+                  string. */}
               <span className="arscope">{LABELS.spendScope}</span>
             </span>
           )}
@@ -1426,7 +1488,7 @@ export function AgentRail({
           className={open ? "archev open" : "archev"}
           aria-hidden="true"
         />
-      </button>
+      </div>
     </section>
   );
 }

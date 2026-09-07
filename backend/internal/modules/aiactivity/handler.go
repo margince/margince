@@ -165,9 +165,9 @@ func derefID(id *ids.UUID) ids.UUID {
 	return *id
 }
 
-// derefContractID crosses the one type boundary between the generated payload
-// and the kernel: both are [16]byte, and the generator names the contract's
-// spelling.
+// derefContractID crosses the type boundary between the generated payload and
+// the kernel: both are [16]byte, and the generator names the contract's
+// spelling. handlers.go's contractUUID is the same crossing outbound.
 func derefContractID(id *openapi_types.UUID) ids.UUID {
 	if id == nil {
 		return ids.Nil

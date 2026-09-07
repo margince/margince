@@ -128,27 +128,48 @@ func TestEveryContractKindHasSomethingThatProducesIt(t *testing.T) {
 	}
 }
 
-// The read caps two free-text columns on the way to the wire, and the contract
+// The read caps its free-text columns on the way to the wire, and the contract
 // publishes those caps as maxLength. A cap larger than the published one ships
 // a string a strict client rejects; a smaller one truncates below what the
 // contract promised a reader would get.
+//
+// The corpus comes from the contract — each property that publishes a
+// maxLength — and the read has to name a bound for each: a list of the
+// properties somebody remembered would pass while a newly capped one shipped
+// unheld, which is how subject_label shipped, cap published and nothing
+// holding it.
 func TestTheReadsTextCapsAreTheOnesTheContractPublishes(t *testing.T) {
 	t.Parallel()
-	for _, b := range []struct {
-		property string
-		cap      int
-	}{
-		{"summary", aiactivity.SummaryBound},
-		{"degrade_reason", aiactivity.DegradeReasonBound},
-	} {
-		if got := crmYAMLMaxLength(t, "AiActivityItem", b.property); got != b.cap {
-			t.Errorf("the read caps %s at %d but the contract publishes maxLength %d", b.property, b.cap, got)
+	held := map[string]int{
+		"summary":        aiactivity.SummaryBound,
+		"degrade_reason": aiactivity.DegradeReasonBound,
+		"subject_label":  aiactivity.SubjectLabelBound,
+		"subject_type":   aiactivity.SubjectTypeBound,
+	}
+	published := crmYAMLMaxLengths(t, "AiActivityItem")
+	if len(published) == 0 {
+		t.Fatal("AiActivityItem publishes no maxLength at all, so this gate would hold nothing")
+	}
+	for property, capped := range published {
+		bound, ok := held[property]
+		if !ok {
+			t.Errorf("the contract caps AiActivityItem.%s at %d and the read declares no bound for it — cap it in the read and name the bound here", property, capped)
+			continue
+		}
+		if bound != capped {
+			t.Errorf("the read caps %s at %d but the contract publishes maxLength %d", property, bound, capped)
+		}
+	}
+	for property := range held {
+		if _, ok := published[property]; !ok {
+			t.Errorf("the read caps %s but the contract publishes no maxLength for it", property)
 		}
 	}
 }
 
-// crmYAMLMaxLength reads one property's maxLength out of the contract.
-func crmYAMLMaxLength(t *testing.T, schema, property string) int {
+// crmYAMLMaxLengths reads every property of one schema that publishes a
+// maxLength, keyed by property name.
+func crmYAMLMaxLengths(t *testing.T, schema string) map[string]int {
 	t.Helper()
 	// `maxLength` is OpenAPI's own spelling, so the tag cannot be snake_case:
 	// the repo's tag rule is about the shapes WE publish, and this decodes a
@@ -170,11 +191,17 @@ func crmYAMLMaxLength(t *testing.T, schema, property string) int {
 	if err := yaml.Unmarshal(raw, &doc); err != nil {
 		t.Fatalf("parsing the contract: %v", err)
 	}
-	prop, ok := doc.Components.Schemas[schema].Properties[property]
-	if !ok || prop.MaxLength == nil {
-		t.Fatalf("%s.%s publishes no maxLength, so the read's cap is unheld", schema, property)
+	shape, ok := doc.Components.Schemas[schema]
+	if !ok {
+		t.Fatalf("the contract has no schema %s", schema)
 	}
-	return *prop.MaxLength
+	out := map[string]int{}
+	for property, prop := range shape.Properties {
+		if prop.MaxLength != nil {
+			out[property] = *prop.MaxLength
+		}
+	}
+	return out
 }
 
 // A spec name that is not a legal message-key segment cannot have copy keyed on

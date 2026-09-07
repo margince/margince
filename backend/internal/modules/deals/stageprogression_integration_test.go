@@ -271,3 +271,178 @@ func TestCreatingADealIsNotAHumanStageMove(t *testing.T) {
 			got.Decision.Outcome, got.Decision.Reason)
 	}
 }
+
+// The ledger records a proposal when it is STAGED, not when it is answered.
+//
+// An expired card is a real outcome — the product asked and the rep did not
+// think it worth answering — and a ledger that only recorded decisions would
+// report a clean-acceptance rate over the subset somebody bothered with.
+func TestAProposalIsOnTheLedgerBeforeAnybodyAnswersIt(t *testing.T) {
+	e := setupConfigEnv(t)
+	dealID, fromID, toID := twoStagePipeline(t, e)
+	approvalID := ids.NewV7()
+
+	proposeOutcome(t, e, dealID, fromID, toID, approvalID)
+	if got := outcomeOf(t, e, approvalID); got != ProgressionProposed {
+		t.Fatalf("a staged proposal reads as %q", got)
+	}
+}
+
+// One row per approval. Staging is at-least-once through JoinPending, and a
+// second row for one proposal would double-count it in every rate the report
+// computes.
+func TestARedeliveredStagingWritesOneLedgerRow(t *testing.T) {
+	e := setupConfigEnv(t)
+	dealID, fromID, toID := twoStagePipeline(t, e)
+	approvalID := ids.NewV7()
+
+	proposeOutcome(t, e, dealID, fromID, toID, approvalID)
+	proposeOutcome(t, e, dealID, fromID, toID, approvalID)
+
+	var rows int
+	if err := e.owner.QueryRow(t.Context(),
+		`SELECT count(*) FROM stage_progression_outcome WHERE approval_id = $1`,
+		approvalID).Scan(&rows); err != nil {
+		t.Fatalf("counting the ledger: %v", err)
+	}
+	if rows != 1 {
+		t.Fatalf("a redelivered staging wrote %d rows", rows)
+	}
+}
+
+// A decision closes the row it opened rather than adding a second one.
+func TestADecisionClosesTheProposalItAnswers(t *testing.T) {
+	e := setupConfigEnv(t)
+	dealID, fromID, toID := twoStagePipeline(t, e)
+	approvalID := ids.NewV7()
+	proposeOutcome(t, e, dealID, fromID, toID, approvalID)
+
+	reason := "not until the pilot is signed off"
+	if err := e.store.RecordProgressionDecided(e.asDealWriter(), approvalID,
+		ProgressionRejected, &reason, false); err != nil {
+		t.Fatalf("recording the rejection: %v", err)
+	}
+	if got := outcomeOf(t, e, approvalID); got != ProgressionRejected {
+		t.Fatalf("the answered proposal reads as %q", got)
+	}
+}
+
+// A REDELIVERED decision must not overwrite the first one, which is the one
+// that happened. The guard is the WHERE clause: only a row still standing at
+// proposed is answerable.
+func TestASecondDecisionLeavesTheFirstStanding(t *testing.T) {
+	e := setupConfigEnv(t)
+	dealID, fromID, toID := twoStagePipeline(t, e)
+	approvalID := ids.NewV7()
+	proposeOutcome(t, e, dealID, fromID, toID, approvalID)
+
+	if err := e.store.RecordProgressionDecided(e.asDealWriter(), approvalID,
+		ProgressionApprovedClean, nil, false); err != nil {
+		t.Fatalf("recording the approval: %v", err)
+	}
+	if err := e.store.RecordProgressionDecided(e.asDealWriter(), approvalID,
+		ProgressionRejected, nil, false); err != nil {
+		t.Fatalf("the second decision errored instead of being skipped: %v", err)
+	}
+	if got := outcomeOf(t, e, approvalID); got != ProgressionApprovedClean {
+		t.Fatalf("a redelivered rejection overwrote the approval that happened, leaving %q", got)
+	}
+}
+
+// The third protection arm: a rep who said no is not asked again until
+// something is learned.
+func TestARejectedMoveIsNotProposedAgainWithoutNewerEvidence(t *testing.T) {
+	e := setupConfigEnv(t)
+	dealID, fromID, toID := twoStagePipeline(t, e)
+	settleEveryCriterion(t, e, dealID, fromID)
+	if got := facts(t, e, dealID); got.Decision.Outcome != OutcomePropose {
+		t.Fatalf("precondition: a settled deal decided %q", got.Decision.Outcome)
+	}
+
+	approvalID := ids.NewV7()
+	proposeOutcome(t, e, dealID, fromID, toID, approvalID)
+	reason := "not yet"
+	if err := e.store.RecordProgressionDecided(e.asDealWriter(), approvalID,
+		ProgressionRejected, &reason, false); err != nil {
+		t.Fatalf("recording the rejection: %v", err)
+	}
+
+	got := facts(t, e, dealID)
+	if got.Decision.Outcome != OutcomeObserve {
+		t.Fatalf("a move the rep turned down decided %q", got.Decision.Outcome)
+	}
+	if got.Decision.Reason == "" {
+		t.Error("the refusal does not say the rep already answered this")
+	}
+}
+
+// NEWER evidence reopens it. The rep said no to what was known then, and a
+// claim recorded afterwards is a different question — re-asking is the product
+// having something new to say rather than nagging.
+func TestNewerEvidenceReopensARejectedMove(t *testing.T) {
+	e := setupConfigEnv(t)
+	dealID, fromID, toID := twoStagePipeline(t, e)
+	criterion := addCriterion(t, e, fromID, "problem_confirmed")
+	criterionID := ids.From[ids.ExitCriterionKind](ids.UUID(criterion.Id))
+	first := claim(dealID, criterionID, AuthorBuyer)
+	if _, err := e.store.RecordStageEvidence(e.asDealWriter(), first); err != nil {
+		t.Fatalf("recording the first claim: %v", err)
+	}
+
+	approvalID := ids.NewV7()
+	proposeOutcome(t, e, dealID, fromID, toID, approvalID)
+	reason := "not yet"
+	if err := e.store.RecordProgressionDecided(e.asDealWriter(), approvalID,
+		ProgressionRejected, &reason, false); err != nil {
+		t.Fatalf("recording the rejection: %v", err)
+	}
+	if got := facts(t, e, dealID); got.Decision.Outcome != OutcomeObserve {
+		t.Fatalf("precondition: the rejection did not protect the deal")
+	}
+
+	// Something new is said, on a different source.
+	newer := claim(dealID, criterionID, AuthorBuyer)
+	newer.SourceID = ids.NewV7()
+	if _, err := e.store.RecordStageEvidence(e.asDealWriter(), newer); err != nil {
+		t.Fatalf("recording the newer claim: %v", err)
+	}
+	if got := facts(t, e, dealID); got.Decision.Outcome != OutcomePropose {
+		t.Fatalf("newer evidence did not reopen the move, deciding %q (%s)",
+			got.Decision.Outcome, got.Decision.Reason)
+	}
+}
+
+// proposeOutcome opens a ledger row for one staged proposal.
+func proposeOutcome(
+	t *testing.T, e *configEnv, dealID ids.DealID,
+	fromID, toID ids.StageID, approvalID ids.UUID,
+) {
+	t.Helper()
+	var pipelineID ids.PipelineID
+	if err := e.owner.QueryRow(t.Context(),
+		`SELECT pipeline_id FROM stage WHERE id = $1`, fromID).Scan(&pipelineID); err != nil {
+		t.Fatalf("reading the pipeline: %v", err)
+	}
+	if err := e.store.Tx(e.asDealWriter(), func(tx pgx.Tx) error {
+		return e.store.RecordProgressionProposed(e.asDealWriter(), tx, ProgressionOutcomeInput{
+			ApprovalID: approvalID, DealID: dealID, PipelineID: pipelineID,
+			FromStageID: fromID, ToStageID: toID,
+			EvidenceKinds: []string{string(CriterionBuyerConfirmed)},
+			Outcome:       ProgressionProposed,
+		})
+	}); err != nil {
+		t.Fatalf("recording the proposal: %v", err)
+	}
+}
+
+// outcomeOf answers the ledger's verdict on one approval.
+func outcomeOf(t *testing.T, e *configEnv, approvalID ids.UUID) string {
+	t.Helper()
+	var out string
+	if err := e.owner.QueryRow(t.Context(),
+		`SELECT outcome FROM stage_progression_outcome WHERE approval_id = $1`,
+		approvalID).Scan(&out); err != nil {
+		t.Fatalf("reading the ledger: %v", err)
+	}
+	return out
+}

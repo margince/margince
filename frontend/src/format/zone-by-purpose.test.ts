@@ -150,6 +150,14 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The guard's subject is dueInstant, which now TAKES the zone a deadline is resolved in — so a call to it cannot be written without naming one. UTC would prove nothing here: the case that matters is a day's last second landing before midnight on the very clock that minted it, and a zero offset makes the wire value and the wall clock identical whichever rule ran.",
   },
   {
+    file: "screens/working-hours.test.tsx",
+    why: "The stub answers /me/working-hours with the SERVER's answer, and a person who has chosen no zone is answered with the installation's — so the fixture has to name one, exactly as settings.testkit.tsx below does. The card renders the name it is given and no case asserts a rendered instant; reading the runner's zone would make the fixture describe whichever machine ran it.",
+  },
+  {
+    file: "screens/settings.testkit.tsx",
+    why: "The stub answers /me/working-hours with the SERVER's answer, and a person who has chosen no zone is answered with the installation's — so the fixture has to name one, the way the analytics frames above do. Reading the runner's zone would make the fixture describe whichever machine ran it, and the card under it renders the name it is given.",
+  },
+  {
     file: "screens/worklist.when.test.tsx",
     why: "The rule under test is which SIDE of the reader's own day a moment falls on — today's meeting shows a bare time, another day's shows the date too. Deciding that needs a zone whose offset is not zero: in UTC the fixture's instants land on the same calendar day under either rule, so every case would pass whichever branch ran. The zone is injected by mocking viewerZone, which is the module this gate points callers at; naming it is what makes the expectation ('14:30', not '12:30') checkable at all.",
   },

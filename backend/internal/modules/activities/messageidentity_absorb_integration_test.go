@@ -20,6 +20,7 @@ package activities
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -539,44 +540,85 @@ func TestFilingUnderAProjectNeedsTheUpdateGrantNotJustCreate(t *testing.T) {
 	}
 }
 
-// THE HOLE log_activity STILL LEAVES, pinned as a test so it is a known
-// measured exposure rather than a thing somebody rediscovers.
+// asAgent is the same seat and grants, held by an AGENT rather than the human
+// it acts for — the passport class the relink tier constrains.
+func (e *sendEnv) asAgent(scope principal.RowScope) context.Context {
+	ctx := e.as(scope)
+	actor, _ := principal.Actor(ctx)
+	actor.Type = principal.PrincipalAgent
+	actor.ID = "agent:" + e.rep.String()
+	actor.OnBehalfOf = e.rep
+	return principal.WithActor(ctx, actor)
+}
+
+// An agent cannot mint the retention mark on the create path.
 //
-// insertActivityLinks requires activity.UPDATE for a project link, which stops
-// the CREATE-only caller. It does NOT stop a caller who holds UPDATE — and
-// log_activity is auto_execute on the agent surface, so a passport with
-// activity:update mints a write-once six-year retention mark per call with no
-// human in the loop. relink_activity was raised to confirm-first for exactly
-// this act; the create door was not, because log_activity is named by the
-// overnight_at_risk_sweep and a dynamic tier there would let a scheduled run
-// suspend while the AI projection still reports it as `running`.
+// Filing under a project classifies an activity as commercial correspondence:
+// write-once, monotonic, and removable only by a named person giving a written
+// reason. relink_activity is confirm-first for a project destination for that
+// reason; the CREATE door reached the same write and five auto-execute tools
+// ride it, so a passport holding activity:update could mint one mark per call
+// with nobody watching (#2266).
 //
-// Closing it needs either a suspended-run state on that projection (with copy
-// in en/de/vi) or the sweep restricted — a product decision, tracked rather
-// than made inside a retention change.
-//
-// This test asserts what is TRUE TODAY. When the hole is closed it will fail,
-// which is the intent: the fix should have to come here and say so.
-func TestLogActivityStillWritesTheMarkOnTheUpdateGrantAlone(t *testing.T) {
+// The refusal is at the write rather than in the five tools, so this asks the
+// store — which is where a sixth tool would arrive.
+func TestAnAgentCannotFileANewActivityUnderAProject(t *testing.T) {
 	e := setupSend(t)
 	project := e.seedProject(t, "Migration")
 
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
 	subject := "Filed by an agent"
+	_, _, err := store.LogActivity(e.asAgent(principal.RowScopeAll), LogActivityInput{
+		Kind: "note", Subject: &subject,
+		Links: []ActivityLinkInput{{EntityType: "project", EntityID: project}},
+	})
+	var refusal *UnattendedProjectFilingError
+	if !errors.As(err, &refusal) {
+		t.Fatalf("an agent filing a new activity under a project: %v, want UnattendedProjectFilingError", err)
+	}
+	// The refusal names the array to change and the verb to use, because one a
+	// caller cannot act on is one they retry unchanged.
+	field, code, message := refusal.FieldFault()
+	if field != "links" || code != "project_filing_needs_approval" {
+		t.Errorf("the fault is (%q, %q), want (\"links\", \"project_filing_needs_approval\")", field, code)
+	}
+	if !strings.Contains(message, "relink_activity") {
+		t.Errorf("the refusal does not name relink_activity, so a caller is told no and not what to do instead: %q", message)
+	}
+
+	// Nothing was written: the refusal comes BEFORE the insert it gates, so
+	// there is no mark to undo and no activity left behind.
+	var marked int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM activity WHERE subject = $1`, subject).Scan(&marked); err != nil {
+		t.Fatalf("counting: %v", err)
+	}
+	if marked != 0 {
+		t.Errorf("the refused call left %d activity/activities behind", marked)
+	}
+}
+
+// And the human path is untouched, which is the whole distinction: a person at
+// a form has already decided, and the mark is theirs to write.
+func TestAHumanStillFilesANewActivityUnderAProject(t *testing.T) {
+	e := setupSend(t)
+	project := e.seedProject(t, "Migration")
+
+	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
+	subject := "Filed by a person"
 	activity, _, err := store.LogActivity(e.as(principal.RowScopeAll), LogActivityInput{
 		Kind: "note", Subject: &subject,
 		Links: []ActivityLinkInput{{EntityType: "project", EntityID: project}},
 	})
 	if err != nil {
-		t.Fatalf("logging an activity filed under a project on the update grant: %v", err)
+		t.Fatalf("a person filing under a project: %v", err)
 	}
-
 	var class *string
 	if err := e.owner.QueryRow(context.Background(),
 		`SELECT retention_class FROM activity WHERE id = $1`, activity.Id).Scan(&class); err != nil {
 		t.Fatalf("reading the class: %v", err)
 	}
 	if class == nil {
-		t.Fatal("the create door no longer writes the mark on the update grant — if that is deliberate, this test has done its job and should be replaced by one asserting the refusal")
+		t.Error("a person filed under a project and no mark was written — the refusal above is too wide")
 	}
 }

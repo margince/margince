@@ -216,10 +216,16 @@ type Server struct {
 	mcpAllowedOrigin string
 
 	// metricsToken gates /metrics, injected by WithMetricsToken from the
-	// deployment's --metrics-token. Unlike /healthz and /readyz it discloses
-	// per-workspace job-runtime telemetry (queue depth, which connectors are
-	// configured), so it stays off — routes.go answers 404 rather than
-	// serving it — until an operator opts in by setting one.
+	// deployment's --metrics-token. Empty — the default — serves the
+	// exposition to whatever reaches the port, which is what a scraper that
+	// cannot present a credential needs; a deployment whose network boundary
+	// does not contain that port sets one, because unlike /healthz and /readyz
+	// this endpoint discloses per-workspace job-runtime telemetry (queue
+	// depth, which connectors are configured). A token set here is checked over
+	// plain HTTP — this process terminates no TLS — so it authenticates a
+	// scraper across a trusted hop, the one the session cookie already takes,
+	// and is not a credential to carry over an untrusted network. See
+	// gateMetrics in routes.go.
 	metricsToken string
 
 	// bootstrapSeeds are the deployment file's `seeds`, carried here so a

@@ -13,7 +13,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { meFixture } from "../app/mefixture";
 import { RecordZoneProvider } from "../app/recordzone";
 import { pickOption } from "../design-system/select-testing";
-import { calendarDay } from "../format/calendarday";
+import { calendarDay, middayInstant } from "../format/calendarday";
+import { formatTimeOfDay } from "../format/format";
 import { LocaleProvider } from "../i18n";
 import { LogActivity } from "./logactivity";
 import { PersonScreen } from "./people";
@@ -91,7 +92,24 @@ type Captured = { key: string; body: unknown };
 // is the day the reader reads", which has to hold on every laptop rather than
 // only on one that runs UTC.
 const PICKED_DAY = "2026-07-10";
-const READER_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
+// Two readers, NAMED — never this machine's own zone.
+//
+// Every instant these tests assert on is anchored to the RECORD zone, so
+// reading one back through `Intl.DateTimeFormat().resolvedOptions().timeZone`
+// asks what the runner's clock says and passes only where the runner happens to
+// sit. This file passed in Asia/Ho_Chi_Minh and failed in UTC, Berlin, Tokyo,
+// Auckland, São Paulo and Los Angeles — one zone green out of seven, and the
+// green one is where it was written.
+//
+// FAR_WEST_READER is exactly twelve hours from the record zone, which is the
+// span `middayInstant` promises a backdated day survives across. It is the edge
+// of that promise rather than a comfortable middle, and Bogotá keeps −05 all
+// year so no DST switch moves it.
+const FAR_WEST_READER = "America/Bogota";
+// And the far east. +14 is the largest offset any zone has, seven hours from
+// the record zone, so the eastern side of the promise is not close to its edge
+// — asserted anyway, because the two directions fail separately.
+const FAR_EAST_READER = "Pacific/Kiritimati";
 
 // The task the form has just logged, as the tasks list receives it — everything
 // but the due date, which is the field under test.
@@ -367,13 +385,14 @@ describe("log activity from a 360", () => {
     );
     const post = captured.find((entry) => entry.key === "POST /activities");
     if (!post) throw new Error("expected a POST /activities to be captured");
-    // The instant lands on the day the writer picked in BOTH zones that
-    // matter: the record pages render timelines in the record zone, and the
-    // writer reads their own wall clock — and a note never carries a due
-    // date, backdated or not.
+    // The instant lands on the day the writer picked in the record zone, where
+    // the record pages render timelines — and still on it for a reader at
+    // either edge of the twelve hours `middayInstant` promises. A note never
+    // carries a due date, backdated or not.
     const occurred = new Date(postedOccurredAt(post.body));
     expect(calendarDay(occurred, INSTALLATION_ZONE)).toBe(PICKED_DAY);
-    expect(calendarDay(occurred, READER_ZONE)).toBe(PICKED_DAY);
+    expect(calendarDay(occurred, FAR_WEST_READER)).toBe(PICKED_DAY);
+    expect(calendarDay(occurred, FAR_EAST_READER)).toBe(PICKED_DAY);
     expect(post.body).not.toHaveProperty("due_at");
   });
 
@@ -562,7 +581,7 @@ describe("log activity from a 360", () => {
     expect(screen.getByLabelText<HTMLInputElement>("Due date").max).toBe("");
   });
 
-  it("posts a task's due_at as the END of the picked day in the writer's own zone", async () => {
+  it("posts a task's due_at as the END of the picked day in the record's zone", async () => {
     const captured: Captured[] = [];
     stubApi({ "POST /activities": createdActivity }, captured);
     render(<LogActivity entityType="organization" entityId="o1" />);
@@ -586,13 +605,18 @@ describe("log activity from a 360", () => {
     });
     if (!post) throw new Error("expected a POST /activities to be captured");
     const dueAt = new Date(postedDueAt(post.body));
-    // The instant has to fall on the day the writer picked, read where the
-    // writer is — the bare `yyyy-mm-dd` handed to `new Date` is UTC midnight,
-    // which is the previous calendar day for every writer west of UTC.
-    expect(calendarDay(dueAt, READER_ZONE)).toBe(PICKED_DAY);
+    // The instant has to fall on the day the writer picked, read in the zone
+    // the deadline is ANCHORED to — the bare `yyyy-mm-dd` handed to `new Date`
+    // is UTC midnight, which is the previous calendar day for every writer west
+    // of UTC.
+    expect(calendarDay(dueAt, INSTALLATION_ZONE)).toBe(PICKED_DAY);
     // And at that day's END, because a task picked for today is due all day.
-    expect(dueAt.getHours()).toBe(23);
-    expect(dueAt.getMinutes()).toBe(59);
+    // Read as a wall clock in that same zone: `getHours()` answers for the
+    // machine running the test, so it agreed only where the record zone and the
+    // runner's zone happened to be the same one.
+    expect(
+      formatTimeOfDay(postedDueAt(post.body), "en", INSTALLATION_ZONE),
+    ).toBe("23:59");
   });
 
   it("posts a due date the tasks list then buckets as today, not as overdue", async () => {
@@ -617,12 +641,19 @@ describe("log activity from a 360", () => {
     // for today at midday must find it under Today — with the day sent as UTC
     // midnight it read as already overdue, which is the state the screen puts
     // in red at the top of the list.
-    const middayOnThePickedDay = new Date(`${PICKED_DAY}T12:00:00`);
+    // Midday of the picked day IN THE RECORD ZONE, and grouped in that zone.
+    // A bare `${PICKED_DAY}T12:00:00` is parsed as the runner's local time, so
+    // the "now" this compares against moved with the machine while the deadline
+    // did not — which read as `upcoming` east of the record zone and `overdue`
+    // west of it.
+    const middayOnThePickedDay = new Date(
+      middayInstant(PICKED_DAY, INSTALLATION_ZONE),
+    );
     expect(
       groupTask(
         { ...LOGGED_TASK, due_at: postedDueAt(post.body) },
         middayOnThePickedDay,
-        READER_ZONE,
+        INSTALLATION_ZONE,
       ),
     ).toBe("today");
   });

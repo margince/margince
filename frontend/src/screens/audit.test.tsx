@@ -91,6 +91,38 @@ describe("ActorTag", () => {
     expect(screen.queryByText(/u-gone/)).toBeNull();
   });
 
+  it("names the Deal Room participant, so a disputed negotiation reads a person", () => {
+    wrap(
+      <ActorTag
+        entry={entry({
+          actor_type: "buyer",
+          actor_id: "buyer:p-1",
+          actor_name: "Laura Buyer",
+        })}
+        meUserId={ME}
+      />,
+    );
+    expect(screen.getByText("Laura Buyer")).toBeTruthy();
+    expect(screen.queryByText(/p-1/)).toBeNull();
+  });
+
+  it("falls back to the kind for a participant the read path could not name", () => {
+    wrap(
+      <ActorTag
+        entry={entry({
+          actor_type: "buyer",
+          actor_id: "buyer:p-gone",
+          actor_name: null,
+        })}
+        meUserId={ME}
+      />,
+    );
+    // Revoked, archived, or scrubbed by a subject erasure: absent is honest
+    // where an invented name is not.
+    expect(screen.getByText("Deal Room participant")).toBeTruthy();
+    expect(screen.queryByText(/p-gone/)).toBeNull();
+  });
+
   it("leads with the granting human and qualifies with the agent, not the reverse", () => {
     wrap(
       <ActorTag

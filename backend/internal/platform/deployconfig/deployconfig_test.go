@@ -460,3 +460,36 @@ func commentedBlock(t *testing.T, doc, start, contains string) string {
 	t.Fatalf("the example no longer documents a commented %s block containing %q", start, contains)
 	return ""
 }
+
+// The reference form the field's own doc comment says to prefer is ACCEPTED.
+//
+// validate checked password_file alone, so a deployment that wrote `password`
+// was refused at first boot with a message naming the legacy spelling — the
+// natural read being that the reference form is unsupported, with nothing to
+// correct it. It also made Parse and ResolvePassword two different contracts
+// for one field: Parse refused a document the resolver handles perfectly.
+func TestParseAcceptsEitherSpellingOfTheAdminPassword(t *testing.T) {
+	both := map[string]string{
+		"the reference form": "version: 1\nbootstrap_admin: { email: a@b.co, display_name: A, password: \"${file:/run/secrets/admin-password}\" }\n",
+		"the env reference":  "version: 1\nbootstrap_admin: { email: a@b.co, display_name: A, password: \"${env:MARGINCE_ADMIN_PASSWORD}\" }\n",
+		"the original file":  "version: 1\nbootstrap_admin: { email: a@b.co, display_name: A, password_file: /run/secrets/admin-password }\n",
+	}
+	for name, doc := range both {
+		if _, err := Parse([]byte(doc)); err != nil {
+			t.Errorf("%s was refused: %v", name, err)
+		}
+	}
+
+	// And the two refusals stay refusals: an INLINE value is still not a
+	// reference, and naming no password at all is still an error. A fix that
+	// widened the check into accepting anything would pass the cases above
+	// while removing what they are a relaxation of.
+	for name, doc := range map[string]string{ // #nosec G101 -- documents that must FAIL, not credentials
+		"an inline password": "version: 1\nbootstrap_admin: { email: a@b.co, display_name: A, password: hunter2hunter2 }\n",
+		"neither spelling":   "version: 1\nbootstrap_admin: { email: a@b.co, display_name: A }\n",
+	} {
+		if _, err := Parse([]byte(doc)); err == nil {
+			t.Errorf("%s parsed without error", name)
+		}
+	}
+}

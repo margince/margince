@@ -18,9 +18,10 @@ import (
 // Handlers is this module's transport.
 type Handlers struct {
 	store *Store
-	// inviteMailer delivers a buyer's invitation. Nil means the installation
-	// has no outbound mail configured: invitations are still recorded and their
-	// credential still returned, and the response says it was not delivered.
+	// inviteMailer carries a buyer's invitation to a relay. Nil means the
+	// installation has no outbound mail configured: invitations are still
+	// recorded and their credential still returned, and the response reports
+	// `queued` false — as it also does when a configured relay refuses.
 	inviteMailer mailer.Mailer
 	// publicBaseURL is the origin a buyer link is built on.
 	publicBaseURL string

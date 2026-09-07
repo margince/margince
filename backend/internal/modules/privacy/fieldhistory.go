@@ -366,7 +366,7 @@ func queryFieldHistoryBatch(ctx context.Context, tx pgx.Tx, f FieldHistoryFilter
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT a.id, a.action, a.actor_type, a.actor_id, a.passport_id, a.evidence,
 		       a.occurred_at, a.before, a.after,
-		       actor_user.display_name, obo.display_name
+		       `+auditActorNameColumn+`, obo.display_name
 		FROM audit_log a`+auditActorNameJoins+`
 		WHERE %s
 		ORDER BY a.occurred_at DESC, a.id DESC

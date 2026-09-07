@@ -282,27 +282,116 @@ type SuspendedRun struct {
 // a second delivery of one that is now reads the same way.
 func (s *Store) ClaimSuspendedByApproval(ctx context.Context, approvalID ids.ApprovalID) (SuspendedRun, bool, error) {
 	var run SuspendedRun
-	var pendingJSON []byte
 	found := false
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		row := tx.QueryRow(ctx, `
+		var err error
+		run, found, err = scanSuspendedRun(tx.QueryRow(ctx, `
 			UPDATE agent_run SET status = 'running', updated_at = now()
 			WHERE approval_id = $1 AND status = 'awaiting_approval'
-			RETURNING id, agent_spec, goal, trigger_ref, passport_id, pending`, approvalID)
-		err := row.Scan(&run.RunID, &run.SpecName, &run.Goal, &run.TriggerRef, &run.PassportID, &pendingJSON)
+			RETURNING id, agent_spec, goal, trigger_ref, passport_id, pending`, approvalID))
+		return err
+	})
+	if err != nil {
+		return SuspendedRun{}, false, fmt.Errorf("runner: claim suspended run: %w", err)
+	}
+	return run, found, nil
+}
+
+// scanSuspendedRun reads one parked run, or reports that there is none.
+//
+// Shared by the claim and the peek because they differ in their STATEMENT and
+// nothing else: what a parked run is, and what "no such run" looks like, must
+// not be two answers depending on which of the two asked.
+func scanSuspendedRun(row pgx.Row) (SuspendedRun, bool, error) {
+	var run SuspendedRun
+	var pendingJSON []byte
+	err := row.Scan(&run.RunID, &run.SpecName, &run.Goal, &run.TriggerRef, &run.PassportID, &pendingJSON)
+	if errors.Is(err, pgx.ErrNoRows) {
+		// Not-found is a normal answer, never an error: most approvals are not
+		// runner stagings, and a second delivery of one that is reads the same.
+		return SuspendedRun{}, false, nil
+	}
+	if err != nil {
+		return SuspendedRun{}, false, err
+	}
+	if err := json.Unmarshal(pendingJSON, &run.Pending); err != nil {
+		return SuspendedRun{}, false, err
+	}
+	return run, true, nil
+}
+
+// PeekSuspendedByApproval reads the parked run WITHOUT claiming it, so the
+// caller can work out whether resuming is even possible before taking a claim
+// it cannot give back.
+//
+// The claim is deliberately one-way, which made every check after it a step
+// that MUST end in a terminal status — and the terminal write is a second
+// transaction, so a connection drop between the two left the row 'running'
+// with nothing to redeliver it: the next delivery finds no awaiting_approval
+// row, correctly declines to start a second loop, and returns nil. Nothing
+// closes the run until the abandoned sweep reaches it half an hour later and
+// records the generic reason instead of the specific one (#2224).
+//
+// Peeking first moves the decision in front of the claim. The peek is not a
+// race the claim then loses: ClaimAndClose and ClaimSuspendedByApproval both
+// still gate on status = 'awaiting_approval', so of two deliveries that both
+// peek, exactly one writes and the other reads not-found — the same answer it
+// gave before.
+func (s *Store) PeekSuspendedByApproval(ctx context.Context, approvalID ids.ApprovalID) (SuspendedRun, bool, error) {
+	var run SuspendedRun
+	found := false
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		run, found, err = scanSuspendedRun(tx.QueryRow(ctx, `
+			SELECT id, agent_spec, goal, trigger_ref, passport_id, pending
+			  FROM agent_run
+			 WHERE approval_id = $1 AND status = 'awaiting_approval'`, approvalID))
+		return err
+	})
+	if err != nil {
+		return SuspendedRun{}, false, fmt.Errorf("runner: peek suspended run: %w", err)
+	}
+	return run, found, nil
+}
+
+// ClaimAndClose takes the claim and records the terminal status in ONE
+// transaction, for a decision the caller has already made: the passport died,
+// the spec left the catalog, the approval was edited but carried no change.
+//
+// One transaction is the whole point. Claiming and then failing in a second
+// left a window where the claim stuck and the reason did not, and the run sat
+// in 'running' until the sweep — which closes it as 'abandoned', losing the
+// reason the first attempt was trying to record. A failure here rolls the claim
+// back with it, so the redelivery genuinely retries rather than finding the work
+// half done and acking.
+//
+// Reports whether it closed a run. False means another delivery got there
+// first, which is the same normal answer the claim gives.
+func (s *Store) ClaimAndClose(ctx context.Context, approvalID ids.ApprovalID, reason FailureReason) (bool, error) {
+	closed := false
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var o occurrence
+		err := tx.QueryRow(ctx, `
+			UPDATE agent_run
+			   SET status = 'failed', degrade_reason = $2, updated_at = now(), finished_at = now()
+			 WHERE approval_id = $1 AND status = 'awaiting_approval'
+			RETURNING agent_spec, trigger_ref, passport_id, created_at, finished_at, degrade_reason, attempt`,
+			approvalID, string(reason)).
+			Scan(&o.spec, &o.triggerRef, &o.passportID, &o.startedAt, &o.finishedAt, &o.degradeReason, &o.attempt)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}
 		if err != nil {
 			return err
 		}
-		found = true
-		return json.Unmarshal(pendingJSON, &run.Pending)
+		closed = true
+		o.state = stateFailed
+		return announceActivity(ctx, tx, o)
 	})
 	if err != nil {
-		return SuspendedRun{}, false, fmt.Errorf("runner: claim suspended run: %w", err)
+		return false, fmt.Errorf("runner: claim and close suspended run: %w", err)
 	}
-	return run, found, nil
+	return closed, nil
 }
 
 // QueuedJob is one claimed queue entry.

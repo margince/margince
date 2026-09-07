@@ -43,8 +43,13 @@ const (
 	// cut a legitimate retry — the same defect one level down from the 30s
 	// server timeout that cut these responses in the first place.
 	//
-	// This is the same derivation railLease makes for its own lease; a round
-	// number here would be a guess that happens to look like a decision.
+	// The rail's lease (railLease) is deliberately NOT derived this way. It
+	// covers one call and is renewed before each further one, because a lease
+	// is how long a dead process is believed and this bound is how long a live
+	// one is allowed — the two questions have opposite costs for being long.
+	// This deadline has no renewal: it is set once on the connection, so it
+	// must cover the whole call. A round number here would be a guess that
+	// happens to look like a decision.
 	RouteWriteDeadline = CallCeiling*maxLadderRungs*maxLadderWalks + writeHeadroom
 
 	// maxLadderRungs is the longest ladder any task binds — cheap_cloud then

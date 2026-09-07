@@ -91,15 +91,22 @@ func (h Handlers) UpdateDealRoomParticipant(w http.ResponseWriter, r *http.Reque
 	httperr.WriteJSON(w, http.StatusOK, participant)
 }
 
-// issuedBody renders a freshly minted credential and delivers it if the
-// installation can send mail.
+// issuedBody renders a freshly minted credential and mails it if the
+// installation can send.
 //
-// Delivery is best-effort and never fails the write: the participant and the
+// Sending is best-effort and never fails the write: the participant and the
 // credential are recorded either way, so a relay outage leaves a seller with a
 // link they can pass on by hand rather than a half-admitted person and an error.
-// `delivered` says which happened, so the caller knows whether to send it.
+// `queued` says which happened, so the caller knows whether to send it.
+//
+// Queued, not delivered. All this knows is that the relay took the message; a
+// mailbox receiving it is a later and separate fact, and an address that
+// hard-bounces a second afterwards was queued all the same. recordSendOutcome
+// stamps that one attempt onto the invitation as sent_at or failed_at, which the
+// roster reads. Nothing revises it afterwards — the invitation carries a
+// delivered_at column that no writer in this tree sets.
 func (h Handlers) issuedBody(r *http.Request, issued IssuedInvitation) crmcontracts.DealRoomInvitationIssued {
-	delivered := false
+	queued := false
 	if h.canSendInvite() {
 		sendErr := h.sendInvite(r, issued)
 		if sendErr != nil {
@@ -109,7 +116,7 @@ func (h Handlers) issuedBody(r *http.Request, issued IssuedInvitation) crmcontra
 			slog.ErrorContext(r.Context(), "deal room invitation email failed",
 				"participant_id", issued.Participant.Id, "err", sendErr)
 		} else {
-			delivered = true
+			queued = true
 		}
 		// Recorded as well as reported, so the roster can answer "did it
 		// arrive?" tomorrow. Without this the delivery state a seller reads
@@ -120,7 +127,7 @@ func (h Handlers) issuedBody(r *http.Request, issued IssuedInvitation) crmcontra
 		Participant:         issued.Participant,
 		Credential:          issued.Credential,
 		CredentialExpiresAt: issued.ExpiresAt,
-		Delivered:           delivered,
+		Queued:              queued,
 	}
 }
 
