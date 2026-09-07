@@ -12,6 +12,7 @@ package capture
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -79,8 +80,9 @@ func backoffDelay(consecutiveFailures int) time.Duration {
 }
 
 // recordSyncSuccess resets the ladder, paces the next sync one interval out,
-// and — the auto-recovery path — flips a degraded connection back to
-// connected. One success heals everything.
+// and — the auto-recovery path — flips a degraded connection back to connected
+// and revives an import this connection's own trouble truncated. One success
+// heals everything.
 func (r *Registry) recordSyncSuccess(ctx context.Context, connectionID ids.UUID) error {
 	return r.db.Tx(ctx, func(tx pgx.Tx) error {
 		now := r.now()
@@ -100,11 +102,68 @@ func (r *Registry) recordSyncSuccess(ctx context.Context, connectionID ids.UUID)
 			connectionID, r.syncInterval.Seconds(), now); err != nil {
 			return err
 		}
-		_, err := tx.Exec(ctx, `
+		if _, err := tx.Exec(ctx, `
 			UPDATE capture_connection SET status = 'connected'
-			WHERE id = $1 AND status = 'error' AND archived_at IS NULL`, connectionID)
-		return err
+			WHERE id = $1 AND status = 'error' AND archived_at IS NULL`, connectionID); err != nil {
+			return err
+		}
+		return reviveTruncatedBackfillTx(ctx, tx, connectionID)
 	})
+}
+
+// reviveTruncatedBackfillTx puts a truncated import back in the queue when the
+// connection it belongs to is working again.
+//
+// A run that ends on a terminal fault keeps its cursor, so the mailbox never has
+// to be re-read from the top — but nothing used that cursor, and the run sat at
+// `error` for good. The commonest cause is a credential the operator then fixes:
+// rotating the connector's client app invalidates the grant mid-import, the human
+// reconnects, mail flows again, and the history import stays dead with nothing
+// saying so. A successful sync is the proof that the cause is gone, which is why
+// the revival hangs off this write rather than a clock.
+//
+// It only moves the row. The reconcile pass already puts a paging job behind
+// every live run and decides nothing about which — so a revived run is a live
+// run, and that pass is what pages it. Nothing here reaches for a scheduler.
+//
+// Three guards, each of which is a way this could otherwise go wrong:
+//
+//   - Only a run the CREDENTIAL ended. `auth` is the one class whose remedy is a
+//     human reconnecting, and a sync succeeding on this connection is the proof
+//     they did — the same evidence, arriving on the same write, that flips the
+//     connection back to connected. That makes the revival self-limiting: while
+//     the grant is still refused no sync succeeds, so nothing revives. Every
+//     other class is left alone, because no reconnection answers it and retrying
+//     it on a two-minute sync interval would be a loop. The transient ladder is
+//     deliberately NOT spent here: a run ended by a revoked grant needs its
+//     human, not a retry, and that ladder measures something else.
+//   - A run with no cursor is left alone. Reviving it would re-page the window
+//     from the top and count the same messages twice, which backfillPageCursor
+//     refuses for that reason. Starting a mailbox over has a cost, so it stays
+//     the operator's decision.
+//   - Exactly one run, and only when no other is live. uq_capture_backfill_live
+//     admits one live run per connection, and this write runs inside the sync's
+//     own transaction — so a second live run would not merely fail the revival,
+//     it would fail the sync that triggered it and take a working mailbox down.
+func reviveTruncatedBackfillTx(ctx context.Context, tx pgx.Tx, connectionID ids.UUID) error {
+	_, err := tx.Exec(ctx, `
+		UPDATE capture_backfill SET status = 'queued', completed_at = NULL`+resetInflightProgress+`
+		 WHERE id = (
+		         SELECT id FROM capture_backfill
+		          WHERE connection_id = $1
+		            AND status = 'error'
+		            AND last_error_class = $2
+		            AND cursor IS NOT NULL
+		          ORDER BY started_at DESC
+		          LIMIT 1)
+		   AND NOT EXISTS (
+		         SELECT 1 FROM capture_backfill
+		          WHERE connection_id = $1 AND status IN ('queued','running'))`,
+		connectionID, string(classAuth))
+	if err != nil {
+		return fmt.Errorf("capture: reviving a truncated backfill: %w", err)
+	}
+	return nil
 }
 
 // recordSyncFailure classifies, schedules the retry, and degrades — never
