@@ -239,7 +239,7 @@ func TestAIActivityARenewalExtendsALiveLease(t *testing.T) {
 		t.Fatal("a renewal at the same attempt with a later lease must apply")
 	}
 	after := env.read(t)
-	if after.StaleAfter == nil || !after.StaleAfter.Equal(*env.leasedUntil(10*time.Minute)) {
+	if after.StaleAfter == nil || !after.StaleAfter.Equal(*env.leasedUntil(10 * time.Minute)) {
 		t.Errorf("stale_after after the renewal = %v, want the renewed %v", after.StaleAfter, env.leasedUntil(10*time.Minute))
 	}
 	if after.State != "running" || after.Attempt != 1 {
