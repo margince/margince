@@ -100,3 +100,58 @@ func TestStructuredExhaustionIsAnHonestError(t *testing.T) {
 		t.Errorf("exhaustion error %q drops the task or the validator's reason", err)
 	}
 }
+
+// An installation with no vendor bound runs on the offline stand-in, whose
+// answer is a hash string no structured task can accept. The rejection is
+// terminal like any other, but its CAUSE is a setting rather than the model or
+// the input — so the router marks it, and a caller can say which of the two it
+// is instead of telling an operator to retry a thing that cannot succeed.
+//
+// Built through the real FakeRoutingConfig rather than a hand-supplied route
+// map, because what carries the provider name into RouteInfo is the config the
+// --ai-fake path actually installs.
+func TestStructuredMarksRejectionFromTheUnconfiguredStandIn(t *testing.T) {
+	r, err := NewLocalRouter(FakeRoutingConfig(), WithoutResultCache())
+	if err != nil {
+		t.Fatalf("building the offline router: %v", err)
+	}
+
+	_, info, err := r.CompleteStructured(wsContext(t), TaskColdStart, structuredReq(), jsonObjectValidator)
+	if err == nil {
+		t.Fatal("the stand-in cannot satisfy a structured validator, so this must fail")
+	}
+	if info.Provider != ProviderFake {
+		t.Fatalf("the route says what served it; got %q", info.Provider)
+	}
+	// Both sentinels: every caller that classifies a terminal rejection keeps
+	// classifying this one, and the one that wants the cause can now ask.
+	if !errors.Is(err, ErrOutputRejected) {
+		t.Fatalf("still a terminal rejection: %v", err)
+	}
+	if !errors.Is(err, ErrUnconfiguredModel) {
+		t.Fatalf("a rejection served by the stand-in is marked as one: %v", err)
+	}
+}
+
+// The counter-case, without which the marker above could be unconditional: a
+// REAL bound model that answers badly is not an unconfigured installation, and
+// sending its operator to a settings screen wastes the one message they get.
+func TestStructuredLeavesARealModelsBadAnswerUnmarked(t *testing.T) {
+	cheap := NewFakeClient().Script("garbage", "still garbage", "garbage again")
+	r := assembleRouter(
+		map[Tier]model.Client{TierCheapCloud: cheap, TierPremium: cheap},
+		NewFakeClient(), ProfileEUHosted, &memMeter{}, DefaultMonthlyTokens, nil,
+		map[Tier]routeMeta{
+			TierCheapCloud: {provider: "anthropic", model: "claude-x"},
+			TierPremium:    {provider: "anthropic", model: "claude-y"},
+		}, false, nil,
+	)
+
+	_, _, err := r.CompleteStructured(wsContext(t), TaskColdStart, structuredReq(), jsonObjectValidator)
+	if !errors.Is(err, ErrOutputRejected) {
+		t.Fatalf("three bad answers are a terminal rejection: %v", err)
+	}
+	if errors.Is(err, ErrUnconfiguredModel) {
+		t.Fatalf("a bound vendor that answered badly is not an unconfigured installation: %v", err)
+	}
+}

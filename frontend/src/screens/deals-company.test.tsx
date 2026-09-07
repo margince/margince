@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import {
   buildColumns,
@@ -59,6 +60,8 @@ function deal(overrides: Partial<Deal>): Deal {
     status: "open",
     source: "manual",
     captured_by: "human:u1",
+    // The caller's own deal: absent means NOT writable per the contract.
+    writable: true,
     version: 4,
     created_at: "2026-06-01T00:00:00Z",
     updated_at: "2026-06-01T00:00:00Z",
@@ -174,6 +177,9 @@ function stubBackend(opts: {
         },
         roles: ["rep"],
         teams: [],
+        authorization: meFixture({
+          allow: { deal: ["read", "create", "update"], project: ["read"] },
+        }).authorization,
         ...(opts.overlay ? { system_of_record: { mode: "overlay" } } : {}),
       });
     }

@@ -26,23 +26,23 @@ import (
 // api is ready on Postgres alone).
 //
 // The returned stop is the ONLY thing that ends these goroutines. They run on a
-// context of their own, rooted at context.Background() below, so neither the ctx
-// passed here nor the process signal cancels them — which is why the caller must
-// stop the lane on EVERY return path and not only the one that served. cmd/api
-// defers it the moment the lane exists; on the served path that lands after the
-// HTTP drain, so late-committing requests usually ship before exit, and anything
+// context of their own, detached from the one passed here, so neither that ctx
+// nor the process signal cancels them — which is why the caller must stop the
+// lane on EVERY return path and not only the one that served. cmd/api defers it
+// the moment the lane exists; on the served path that lands after the HTTP
+// drain, so late-committing requests usually ship before exit, and anything
 // still unshipped waits durably in the outbox for the next boot.
-//
-//nolint:contextcheck // the relay + webhook consumer are process-lifetime lanes, deliberately rooted at context.Background() and stopped by the returned stop(), never by the request ctx.
 func startInlineRelay(ctx context.Context, pool *pgxpool.Pool, redisAddr, webhookKey string, logger *slog.Logger) (compose.Option, func(), error) {
 	rdb, err := events.NewClient(ctx, redisAddr)
 	if err != nil {
 		return nil, nil, err
 	}
-	// The relay/consumer lanes outlive any single request by design — a bus
-	// lane must drain on shutdown, not cancel with an inbound request — so
-	// they run on a fresh cancelable context, not the request ctx.
-	relayCtx, cancel := context.WithCancel(context.Background())
+	// WithoutCancel, the same spelling cmd/api's app-view refresh loop uses:
+	// the relay and consumer lanes outlive any single request by design — a bus
+	// lane must drain on shutdown, not cancel with an inbound request — so what
+	// they run on carries this context's values and none of its cancellation,
+	// and the returned stop is what ends them.
+	relayCtx, cancel := context.WithCancel(context.WithoutCancel(ctx))
 	var relay sync.WaitGroup
 	relay.Go(func() {
 		events.NewRelay(pool, rdb, logger).Run(relayCtx)

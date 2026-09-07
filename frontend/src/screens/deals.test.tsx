@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { meFixture } from "../app/mefixture";
 import { RecordShell } from "../app/testing/recordshell.testkit";
 import { pickOption } from "../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
@@ -123,12 +124,27 @@ function deal(overrides: Partial<Deal>): Deal {
     status: "open",
     source: "manual",
     captured_by: "human:u1",
+    // The caller owns this deal, so the server sends writable: true. Stated
+    // rather than left out: absent means NOT writable per the contract, and a
+    // fixture that omits it describes a reader every write control is
+    // withheld from.
+    writable: true,
     version: 4,
     created_at: "2026-06-01T00:00:00Z",
     updated_at: "2026-06-01T00:00:00Z",
     ...overrides,
   } as Deal;
 }
+
+// The grants a rep working their own pipeline holds, spelled once for every
+// /me this file serves: the deal verbs, the offer the panel starts, the
+// stakeholder edges, and the activity the composer logs.
+const REP_GRANTS = {
+  deal: ["read", "create", "update", "delete"],
+  offer: ["read", "create"],
+  relationship: ["read", "create", "update", "delete"],
+  activity: ["read", "create"],
+} as const;
 
 function offer(overrides: Partial<Offer>): Offer {
   return {
@@ -164,6 +180,9 @@ function stubDealBackend(
     const request = input instanceof Request ? input : null;
     const url = String(request ? request.url : input);
     const method = request ? request.method : (init?.method ?? "GET");
+    if (url.includes("/me")) {
+      return jsonResponse(meFixture({ allow: REP_GRANTS }));
+    }
     if (url.includes("/pipelines")) {
       return jsonResponse({ data: [], page: { next_cursor: null } });
     }
@@ -517,6 +536,7 @@ function stubBackend(
         },
         roles: ["admin"],
         teams: [],
+        authorization: meFixture({ allow: REP_GRANTS }).authorization,
       });
     }
     if (url.includes("/organizations")) {
@@ -1517,6 +1537,7 @@ describe("DealsScreen", () => {
           },
           roles: ["admin"],
           teams: [],
+          authorization: meFixture({ allow: REP_GRANTS }).authorization,
           system_of_record: { mode: "overlay" },
         });
       }
@@ -1566,6 +1587,7 @@ describe("DealsScreen", () => {
           },
           roles: ["admin"],
           teams: [],
+          authorization: meFixture({ allow: REP_GRANTS }).authorization,
           system_of_record: { mode: "overlay" },
         });
       }
@@ -2202,6 +2224,69 @@ describe("DealScreen — an archived deal keeps its verbs, refused", () => {
   });
 });
 
+// `writable` is what the server's write gate would answer on a mutation. A
+// rep holding deal.update on the OBJECT was offered Edit on a colleague's deal
+// and learned from the 403 after filling the form in that it was never theirs
+// to save; the upload, the offer and the stage move failed the same way.
+describe("DealScreen — a live deal that is not the viewer's to change", () => {
+  beforeEach(() => localStorage.setItem("margince.workspaceSlug", "acme"));
+
+  it("refuses Edit, Archive, Share and New offer from the one sentence the page prints", async () => {
+    const notMine = deal({
+      id: "x",
+      owner_id: "u-someone-else",
+      writable: false,
+    });
+    vi.stubGlobal("fetch", stubDealBackend(notMine, []));
+    render(<DealScreen id="x" />);
+
+    const sentence =
+      "You cannot change this deal. Ask its owner to share it with you, or your administrator for the right to edit it.";
+    expect(await screen.findByText(sentence)).toBeTruthy();
+
+    // Edit is refused in place, and the id it describes itself by resolves to
+    // the sentence in the band from the FIRST render — a reason minted inside
+    // the menu would name no element until the menu was opened.
+    const edit = await screen.findByTestId("edit-record");
+    expect(edit.hasAttribute("disabled")).toBe(true);
+    const describedBy = edit.getAttribute("aria-describedby") ?? "";
+    expect(document.getElementById(describedBy)?.textContent).toBe(sentence);
+
+    // The offer is hung off the deal through the deal's own write gate, so it
+    // is refused by the same fact — and points at the same sentence.
+    const newOffer = await screen.findByRole("button", { name: "New offer" });
+    expect(newOffer.hasAttribute("disabled")).toBe(true);
+    expect(
+      document.getElementById(newOffer.getAttribute("aria-describedby") ?? "")
+        ?.textContent,
+    ).toBe(sentence);
+
+    await openHeaderMenu();
+    for (const testId of ["archive-record", "share-record"]) {
+      const control = await screen.findByTestId(testId);
+      expect(control.hasAttribute("disabled")).toBe(true);
+      expect(
+        document.getElementById(control.getAttribute("aria-describedby") ?? "")
+          ?.textContent,
+      ).toBe(sentence);
+    }
+  });
+
+  // Absent is not "unknown", it is "no": a response from a server too old to
+  // send the field must fail closed, or the fix is only as good as the oldest
+  // server a client talks to.
+  it("treats a deal with no writable field as one it may not change", async () => {
+    const withoutWritable = deal({ id: "x", owner_id: "u-someone-else" });
+    delete (withoutWritable as { writable?: boolean }).writable;
+    vi.stubGlobal("fetch", stubDealBackend(withoutWritable, []));
+    render(<DealScreen id="x" />);
+
+    expect(await screen.findByText(/You cannot change this deal/)).toBeTruthy();
+    const edit = await screen.findByTestId("edit-record");
+    expect(edit.hasAttribute("disabled")).toBe(true);
+  });
+});
+
 describe("DealScreen — overlay mode write affordances", () => {
   beforeEach(() => localStorage.setItem("margince.workspaceSlug", "acme"));
 
@@ -2233,6 +2318,7 @@ describe("DealScreen — overlay mode write affordances", () => {
           },
           roles: ["admin"],
           teams: [],
+          authorization: meFixture({ allow: REP_GRANTS }).authorization,
           system_of_record: { mode: "overlay" },
         });
       }

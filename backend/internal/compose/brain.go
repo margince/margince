@@ -137,6 +137,13 @@ type ModelPath struct {
 	// in, this one cites the transcript LINES, which is what makes a proposal
 	// checkable against the text on screen.
 	TranscriptPropose completer
+	// StageEvidenceExtract is the lane that reads a deal's stage exit criteria
+	// against what was actually said. Separate from TranscriptPropose because
+	// the question differs: that site asks what somebody promised to DO, this
+	// one asks whether a named criterion is settled — and its reply names a
+	// criterion and never a stage, so what follows from a settled criterion
+	// stays the policy function's call rather than a reader's.
+	StageEvidenceExtract completer
 	// DocumentExtract is the RD-WIRE-N-1 lane that reads one attached document
 	// for the deal facts it states. It is the only lane whose input may be
 	// BYTES rather than prose, which is why it is typed as a documentCompleter:
@@ -317,6 +324,7 @@ func modelPathForRouter(router *ai.Router, companyContext *companyContextProvide
 		WeeklyReview:                  brain(ai.TaskWeeklyReview),
 		WeeklyLearnings:               brain(ai.TaskWeeklyLearnings),
 		TranscriptPropose:             brain(ai.TaskTranscriptPropose),
+		StageEvidenceExtract:          brain(ai.TaskStageEvidenceExtract),
 		DocumentExtract:               brain(ai.TaskDocumentExtract),
 		Enrich:                        brain(ai.TaskEnrich),
 		VoiceBuild:                    brain(ai.TaskVoiceBuild),

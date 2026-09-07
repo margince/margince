@@ -19,7 +19,7 @@ root="$(git rev-parse --show-toplevel)"
 failures=0
 
 check() { # want got description
-    if [ "$1" = "$2" ]; then
+    if [[ "$1" = "$2" ]]; then
         printf '  ok   %s\n' "$3"
     else
         printf '  FAIL %s\n       want: %s\n       got:  %s\n' "$3" "$1" "$2" >&2
@@ -69,7 +69,7 @@ check "$(from_make 26379)" "$(resolved 26379)" \
 check "present" "${script_default:+present}" \
     "the resolved address is not empty"
 
-if [ "$failures" -ne 0 ]; then
+if [[ "$failures" -ne 0 ]]; then
     echo "FAIL: $failures check(s) failed" >&2
     exit 1
 fi

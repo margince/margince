@@ -9,7 +9,7 @@ that decides which jobs run, and how coverage flows into SonarCloud.
 tenant-isolation and GDPR-erasure fitness tests (`//go:build integration`,
 they need a real Postgres) never blocked a PR locally. CI runs **both** lanes,
 plus the craftsmanship gate, the license gate and the frontend lane, as required
-checks — so a migration that forgets `FORCE RLS`, an erasure that misses a PII
+checks — so a migration that widens a tenant boundary, an erasure that misses a PII
 table, a denied dependency license, a swallowed error, or a UI regression fails
 the merge instead of shipping.
 

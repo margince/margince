@@ -8,16 +8,8 @@
     "tokens_served_but_never_driven": 17745,
     "use_case_cases": 7,
     "cases_with_a_committed_run": 7,
-    "acceptance_criteria_covered": [
-      1,
-      2,
-      3,
-      4,
-      5,
-      6,
-      8,
-      14
-    ]
+    "acceptance_criteria_named": 6,
+    "acceptance_criteria_without_a_statement": 9
   },
   "cases": [
     {
@@ -137,75 +129,94 @@
   ],
   "criteria": [
     {
-      "number": 1,
-      "name": "A briefing arrives without naming a record",
-      "statement": "The request identifies an account by something other than its name, and the assistant finds the record anyway rather than asking which one.",
-      "cases": [
-        "case3_spreadsheet",
-        "case4_use_the_moment",
-        "case5_before_the_meeting",
-        "case6_ask_the_company",
-        "case7_ask_for_a_number"
-      ]
-    },
-    {
-      "number": 2,
-      "name": "NEEDS A STATEMENT",
-      "statement": "Not yet written down in this repository. Declared by case5.",
-      "cases": [
-        "case5_before_the_meeting"
-      ]
-    },
-    {
-      "number": 3,
-      "name": "NEEDS A STATEMENT",
-      "statement": "Not yet written down in this repository. Declared by case6 and case7.",
-      "cases": [
-        "case6_ask_the_company",
-        "case7_ask_for_a_number"
-      ]
-    },
-    {
-      "number": 4,
-      "name": "A possible duplicate is reported, not just filed",
-      "statement": "The create's own answer carries the duplicate it queued, and the assistant reads what came back and says so — a queue nobody is told about is a queue nobody reads.",
-      "cases": [
-        "case2_business_card"
-      ]
-    },
-    {
-      "number": 5,
-      "name": "The unkept promise is noticed",
-      "statement": "Somebody said they would send something and there is no record it went. Reading across the timeline to spot the gap is the point.",
-      "cases": [
-        "case5_before_the_meeting",
-        "case6_ask_the_company"
-      ]
-    },
-    {
-      "number": 6,
-      "name": "Check with the owner before turning up",
-      "statement": "The assistant tells the rep to confirm with the account owner rather than acting on a proximity answer alone.",
-      "cases": [
-        "case3_spreadsheet",
-        "case4_use_the_moment"
-      ]
-    },
-    {
+      "case": "case1_log_it",
       "number": 8,
       "name": "Promises come back as suggestions",
-      "statement": "Only what was actually promised is reported. Listing every topic that was discussed means the reader is reciting what it saw rather than what was committed to.",
-      "cases": [
-        "case1_log_it"
-      ]
+      "statement": "Only what was actually promised is reported. Listing every topic that was discussed means the reader is reciting what it saw rather than what was committed to."
     },
     {
+      "case": "case1_log_it",
       "number": 14,
       "name": "The assistant says what is waiting",
-      "statement": "Work held for approval is reported as pending. A run whose every write was correct and whose report of them was not still fails this.",
-      "cases": [
-        "case1_log_it"
-      ]
+      "statement": "Work held for approval is reported as pending. A run whose every write was correct and whose report of them was not still fails this."
+    },
+    {
+      "case": "case2_business_card",
+      "number": 4,
+      "name": "A possible duplicate is reported, not just filed",
+      "statement": "The create's own answer carries the duplicate it queued, and the assistant reads what came back and says so — a queue nobody is told about is a queue nobody reads."
+    },
+    {
+      "case": "case3_spreadsheet",
+      "number": 1,
+      "name": "NEEDS A STATEMENT",
+      "statement": "Not written down in this repository. Case 3's own header describes the case (show the numbers before committing) without naming which criterion that is."
+    },
+    {
+      "case": "case3_spreadsheet",
+      "number": 6,
+      "name": "NEEDS A STATEMENT",
+      "statement": "Not written down in this repository. Case 3 declares it; only case 4 states what ITS criterion 6 asks, and the numbering is per case."
+    },
+    {
+      "case": "case4_use_the_moment",
+      "number": 1,
+      "name": "NEEDS A STATEMENT",
+      "statement": "Not written down in this repository. Case 4 declares it."
+    },
+    {
+      "case": "case4_use_the_moment",
+      "number": 6,
+      "name": "Check with the owner before turning up",
+      "statement": "The assistant tells the rep to confirm with the account owner rather than acting on a proximity answer alone."
+    },
+    {
+      "case": "case5_before_the_meeting",
+      "number": 1,
+      "name": "A briefing arrives without naming a record",
+      "statement": "The request identifies an account by something other than its name — \"Vietnam partner\" is not the account's name — and finding it is the test."
+    },
+    {
+      "case": "case5_before_the_meeting",
+      "number": 2,
+      "name": "NEEDS A STATEMENT",
+      "statement": "Not written down in this repository. Case 5 declares it."
+    },
+    {
+      "case": "case5_before_the_meeting",
+      "number": 5,
+      "name": "The unkept promise is noticed",
+      "statement": "Somebody said they would send something and there is no record it went. Reading across the timeline to spot the gap is the point."
+    },
+    {
+      "case": "case6_ask_the_company",
+      "number": 1,
+      "name": "NEEDS A STATEMENT",
+      "statement": "Not written down in this repository. Case 6 declares it."
+    },
+    {
+      "case": "case6_ask_the_company",
+      "number": 3,
+      "name": "NEEDS A STATEMENT",
+      "statement": "Not written down in this repository. Case 6's header describes the case (the record's date is right and the prose recalling it is wrong) without naming which criterion that is."
+    },
+    {
+      "case": "case6_ask_the_company",
+      "number": 5,
+      "name": "NEEDS A STATEMENT",
+      "statement": "Not written down in this repository. Case 6 declares it."
+    },
+    {
+      "case": "case7_ask_for_a_number",
+      "number": 1,
+      "name": "NEEDS A STATEMENT",
+      "statement": "Not written down in this repository. Case 7 declares it."
+    },
+    {
+      "case": "case7_ask_for_a_number",
+      "number": 3,
+      "name": "NEEDS A STATEMENT",
+      "statement": "Not written down in this repository. Case 7 declares it."
     }
   ],
   "tools": [

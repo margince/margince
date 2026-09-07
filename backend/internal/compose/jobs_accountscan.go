@@ -49,14 +49,17 @@ func (a AccountScanArgs) WorkspaceID() ids.UUID { return a.Workspace }
 // transcript reading's, for the reason api/jobs.yaml gives.
 const accountScanQueue = "transcript_read"
 
-// accountScanInsertOpts routes the job and deduplicates it by args: the scan
-// row's id is unique per read, so a re-submitted enqueue of the SAME read
-// collapses while a fresh read always queues.
+// accountScanInsertOpts routes the job and deduplicates it by args, only
+// while a job is still active — for the reason documentExtractInsertOpts
+// gives. The scan reaches that trap through a retry inside the lease: it
+// declines the claim and returns, the job completes while the row stays
+// live, and the re-arm's enqueue under the same scan id must not collapse
+// against it.
 func accountScanInsertOpts() *river.InsertOpts {
 	return &river.InsertOpts{
 		Queue:       accountScanQueue,
 		MaxAttempts: sweptJobMaxAttempts,
-		UniqueOpts:  river.UniqueOpts{ByArgs: true},
+		UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
 	}
 }
 

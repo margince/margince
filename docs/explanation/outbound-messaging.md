@@ -180,12 +180,30 @@ retries, so an identity-store outage does not destroy every send in flight. The 
 the channel: the credential lookup moves off the human's account (a bot is bound once for the whole
 workspace), but the seat check does not move at all.
 
-### Consent — default-deny, per purpose, over every subject
+### Authorization — per recipient, per phase, on evidence
 
-`ConsentGate.RequireGrantedForRecipients` is asked about **every subject the delivery reaches**, not
-just the To line: a Cc'd person is owed the same suppression, and this call is the only one that runs
-after they could have withdrawn. One-click unsubscribe writes a per-purpose consent withdrawal, so this
-gate *is* the suppression mechanism.
+The engine is asked about **every subject the delivery reaches**, not just the To line: a Cc'd
+person is owed the same answer, and a recipient list that only counted the visible ones would leave
+a blind copy unasked.
+
+It is asked **twice**, and the second time is the one that matters here. `AuthorizeStagingTx` runs
+in the transaction that writes the delivery row, so a message that may not go is never queued.
+`AuthorizeTransmit` runs immediately before the provider is handed anything — after the message has
+sat in the queue, which is where a withdrawal, an objection, a hard bounce or an edit to the wording
+lands. Both write a row per recipient into `communication_decision`.
+
+One-click unsubscribe writes a per-purpose consent **withdrawal**, which the engine reads **by
+class** rather than by the caller's purpose key — in BOTH phases. The evidence arms resolve a
+category from the record and may carry no purpose key at all, and unsubscribe-all withdraws every
+unlocked purpose rather than one, so the question asked is "did they stop the kind of message this
+is". That is what somebody pressing unsubscribe believes they answered.
+
+`communication_suppression` records the other stops: an Art. 21 objection, a statutory restriction,
+a subject's request to stop, a hard bounce. Neither a withdrawal nor a suppression expires on its
+own, and no rollout mode softens either. A restriction is not total, though — `security_notice`,
+`privacy_notice` and `optout_confirmation` still reach a restricted subject through a registered
+template, because a person is not better off for being unable to hear that their account was
+breached. A hard bounce stops even those.
 
 ### The three destinations one message offers
 
@@ -216,10 +234,20 @@ transports: a channel recipient has no address, so a gate that could only be han
 handed an empty list for every channel delivery — and a default-deny gate asked about nobody refuses
 nobody, so the whole channel would pass a check that never ran.
 
-Default-deny is literal. An unknown purpose, a grant for a *different* purpose, `unknown`, and
-`withdrawn` all block; a purpose declaring `requires_double_opt_in` additionally needs a confirmed
-`consent_event`. The gate must distinguish an **answer** (`apperrors.ErrConsentNotGranted` — park) from
-a **fault** (anything else — retry): getting that backwards silently kills legitimate mail.
+Default-deny is literal, and it is now answered on EVIDENCE rather than on a purpose key the
+caller supplied. The engine resolves a category from what the send actually is — the thread it
+answers, the invoice it concerns, the template it rides — and checks what that category requires. A
+reply is authorized by this recipient being on the thread the subject opened; an invoice by a live
+invoice reaching them through a current employment relationship; marketing is the case that still
+needs consent, and there a `requires_double_opt_in` purpose needs a confirmed
+`consent_event`. A send whose category nothing supports is `review`, not a silent allow.
+
+The engine must distinguish an **answer** (park — a human can act on it) from a **fault** (retry —
+the question could not be asked): getting that backwards silently kills legitimate mail. Every
+category ships **enforcing**; `consent.authorization_modes` can move one to `observe` or `warn`, an
+operator's rollback lever rather than the shipped posture. It buys less than it looks: the older
+purpose-key gate decides only where **no** recipient's category is enforced, and eight reason codes
+deny in every mode whatever the setting says.
 
 ### Confirm-first for agents; a human's own action is its own approval
 
@@ -328,10 +356,10 @@ What differs is only the vocabulary of the transport:
   and the reply transmits through the provider of that same name. `IsChannelKind` lists only what this
   installation can actually transmit through — `whatsapp` is a kind the contract reserves with no
   connector behind it, and admitting it would accept a reply that could only park.
-- **The recipient is resolved, never named by the caller.** `SendMessageRequest` carries `body` and
-  `consent_purpose` and nothing else. A channel identity is an opaque third-party account id, so a
-  caller able to name one could message a human this conversation is not with — and the reply surface
-  has no legitimate use for that. The server reads the anchor's `activity_link` rows, asks the people
+- **The recipient is resolved, never named by the caller.** `SendMessageRequest` carries the body, the
+  attachments and the context the engine is asked about — and no recipient at all. A channel identity is an opaque
+  third-party account id, so a caller able to name one could message a human this conversation is
+  not with, and the reply surface has no legitimate use for that. The server reads the anchor's `activity_link` rows, asks the people
   module which of those people are **reachable** on the provider, and refuses unless the answer is
   exactly one.
 - **Reachability replaces address validity.** `ReachableChannelIdentities` returns live identities with
@@ -441,7 +469,7 @@ Comms depends on interfaces and never on a provider:
 | `ConnectionResolver.Resolve` | Resolves **one human's** mailbox: the send seam, its unsealed credential, and the scopes the provider says the grant holds. |
 | `ConnectionResolver.ResolveChannel` | Resolves the **workspace's** channel binding: seam + credential, no user id (a bot is bound once for the whole workspace) and no scope list (there is nothing to intersect). |
 | `MessageIdentityReconciler` | Re-keys the timeline row when the provider stamped a different identity. A required constructor parameter, because a role that transmits without one files every sent message under an identity that exists nowhere on the wire. |
-| `SeatAuthority` / `ConsentGate` | The two authority answers, each obliged to distinguish an answer from a fault. |
+| `SeatAuthority` / `ConsentGate` | The two authority answers, each obliged to distinguish an answer from a fault. The consent seam is the authorization engine: it answers per recipient, on evidence, and writes the decision it took. |
 | `SendPolicy` (+ optional `SendRecorder`) | The ordered pacing chain; adding a policy is a registration, not a change to the dispatch sequence. |
 
 Three deployment facts are the **only** errors a resolver may report that park a delivery —
@@ -460,7 +488,12 @@ looking live and never sending.
 - **Authority refuses before consent answers.** A caller with no rights learns nothing about a person's
   consent state.
 - **The staging human's seat is re-read at transmit time**, on both transports.
-- **Consent is default-deny, per purpose, over every subject the delivery reaches** — including Cc.
+- **Authorization is default-deny, per recipient, over every subject the delivery reaches** —
+  including Cc, and answered on the evidence the resolved category requires rather than on a purpose
+  key the caller chose.
+- **It is decided twice and recorded both times.** Staging refuses what may never go; transmit
+  catches what changed while the message waited — a withdrawal, a suppression, a hard bounce, an
+  edit to the wording.
 - **Receipt before bookkeeping.** A message the provider accepted may never end up recorded as unsent.
 - **Park only on an answer, never on a failure to get one.**
 - **A seam that cannot detect a prior send marks in-flight first and never retries an unknown outcome.**

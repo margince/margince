@@ -33,7 +33,7 @@ func TestExtractionReportSplitsGroundedFromOmitted(t *testing.T) {
 		},
 	}
 
-	got := extractionReport(read)
+	got := extractionReport(read, created)
 
 	want := crmcontracts.AttachmentExtraction{
 		Id:        openapi_types.UUID(readID),
@@ -63,7 +63,7 @@ func TestExtractionReportKeepsTheTwoOmissionReasonsApart(t *testing.T) {
 			{Field: "currency", Omitted: true, OmittedReason: "not_stated_in_file"},
 			{Field: "amount_minor", Omitted: true, OmittedReason: "not_confidently_stated"},
 		},
-	})
+	}, time.Time{})
 
 	reasons := map[string]string{}
 	for _, o := range got.Omitted {
@@ -81,15 +81,42 @@ func TestExtractionReportKeepsTheTwoOmissionReasonsApart(t *testing.T) {
 // a different answer from a finished reading that grounded none, and the wire
 // has to be able to say so (RD-AC-N-2).
 func TestExtractionReportOfALiveReadingIsEmptyNotNil(t *testing.T) {
-	got := extractionReport(ExtractionRead{Status: ExtractionReadRunning})
-	if got.Status != crmcontracts.AttachmentExtractionStatusRunning {
-		t.Errorf("Status = %q, want running", got.Status)
+	now := time.Date(2026, 9, 5, 12, 0, 0, 0, time.UTC)
+	got := extractionReport(ExtractionRead{Status: ExtractionReadRunning, StartedAt: &now, AttemptAt: now}, now)
+	if got.Status != crmcontracts.AttachmentExtractionStatusRunning || got.Stalled {
+		t.Errorf("Status = %q stalled %v, want running, inside its lease", got.Status, got.Stalled)
 	}
 	if got.Fields == nil || len(got.Fields) != 0 {
 		t.Errorf("Fields = %#v, want a non-nil empty slice", got.Fields)
 	}
 	if got.Omitted == nil || len(got.Omitted) != 0 {
 		t.Errorf("Omitted = %#v, want a non-nil empty slice", got.Omitted)
+	}
+}
+
+// A live reading past its lease has no worker behind it, and the poll says
+// so: a running one ages from its claim, a queued one from when THIS attempt
+// was queued — never from its creation, or a reading re-queued an hour after
+// it was first asked for would be stalled before any worker saw it. A settled
+// reading is never stalled, however old.
+func TestTheStalledReadingIsTheLiveOneWhoseAttemptOutlivedItsLease(t *testing.T) {
+	now := time.Date(2026, 9, 5, 12, 0, 0, 0, time.UTC)
+	fresh, dead := now.Add(-ExtractionReadLease+time.Minute), now.Add(-ExtractionReadLease-time.Second)
+	longAgo := now.Add(-time.Hour)
+	for name, tc := range map[string]struct {
+		read    ExtractionRead
+		stalled bool
+	}{
+		"running inside its lease": {ExtractionRead{Status: ExtractionReadRunning, StartedAt: &fresh, AttemptAt: longAgo}, false},
+		"running past its lease":   {ExtractionRead{Status: ExtractionReadRunning, StartedAt: &dead, AttemptAt: longAgo}, true},
+		"re-queued a moment ago":   {ExtractionRead{Status: ExtractionReadQueued, AttemptAt: fresh, CreatedAt: longAgo}, false},
+		"queued and never claimed": {ExtractionRead{Status: ExtractionReadQueued, AttemptAt: dead, CreatedAt: longAgo}, true},
+		"done, however long ago":   {ExtractionRead{Status: ExtractionReadDone, StartedAt: &longAgo, AttemptAt: longAgo}, false},
+		"failed, however long ago": {ExtractionRead{Status: ExtractionReadFailed, StartedAt: &longAgo, AttemptAt: longAgo}, false},
+	} {
+		if got := extractionReport(tc.read, now).Stalled; got != tc.stalled {
+			t.Errorf("%s: stalled = %v, want %v", name, got, tc.stalled)
+		}
 	}
 }
 

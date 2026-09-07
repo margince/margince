@@ -110,12 +110,15 @@ func TestNoGoSourceClaimsRLSStillScopesARead(t *testing.T) {
 			if d.IsDir() || !strings.HasSuffix(path, ".go") || !d.Type().IsRegular() {
 				return nil
 			}
-			// This file states the banned spellings in order to pin them, so
-			// it is the one file the pattern must not read. The exemption is
-			// by name and nothing else: any OTHER file naming itself the same
-			// way is still scanned, and the pinning test above is what proves
-			// the pattern still bites while this file goes unread.
-			if filepath.ToSlash(path) == gateDir+"/rlsclaims_test.go" {
+			// These two files state the banned spellings in order to pin them,
+			// so they are the ones the pattern must not read: this gate and the
+			// prose gate beside it, which holds the same rule for markdown,
+			// YAML, shell and SQL. The exemption is by name and nothing else:
+			// any OTHER file naming itself the same way is still scanned, and
+			// the pinning test above is what proves the pattern still bites
+			// while these go unread.
+			switch filepath.ToSlash(path) {
+			case gateDir + "/rlsclaims_test.go", gateDir + "/rlsclaimsprose_test.go":
 				return nil
 			}
 			b, err := os.ReadFile(path) // #nosec G304 G122 -- path is a *.go file from walking the trusted source tree

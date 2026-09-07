@@ -53,6 +53,15 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+// The grants the reader holds wherever a spec is about something other than
+// the grant: the record verbs ask `organization.update` before they draw, so a
+// /me with no authorization at all would refuse every Edit these specs open.
+const READER = {
+  authorization: meFixture({
+    allow: { organization: ["read", "update", "delete"] },
+  }).authorization,
+};
+
 // `roster` is what /users answers with, as one complete page — the walk stops on
 // a null cursor. An empty one is the honest shape of an author the roster does
 // not carry, not a broken stub.
@@ -62,7 +71,7 @@ function stub(roster: ReadonlyArray<{ id: string; display_name: string }>) {
     vi.fn(async (request: Request) => {
       const { pathname } = new URL(request.url);
       const body = pathname.endsWith("/me")
-        ? { user: { id: "u-reader", display_name: "The Reader" }, allow: {} }
+        ? { user: { id: "u-reader", display_name: "The Reader" }, ...READER }
         : { data: roster, page: { has_more: false, next_cursor: null } };
       return new Response(JSON.stringify(body), {
         status: 200,
@@ -131,7 +140,7 @@ function stubRosterInFlight(): Array<(response: Response) => void> {
           new Response(
             JSON.stringify({
               user: { id: "u-reader", display_name: "The Reader" },
-              allow: {},
+              ...READER,
             }),
             { status: 200, headers: { "content-type": "application/json" } },
           ),
@@ -155,7 +164,7 @@ function stubRosterRefused() {
         return new Response(
           JSON.stringify({
             user: { id: "u-reader", display_name: "The Reader" },
-            allow: {},
+            ...READER,
           }),
           { status: 200, headers: { "content-type": "application/json" } },
         );

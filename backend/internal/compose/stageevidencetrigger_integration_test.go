@@ -17,11 +17,13 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -79,8 +81,11 @@ func newEvidenceTriggerEnv(t *testing.T, domains ...string) *evidenceTriggerEnv 
 	dealID := e.SeedDeal(t, "Warehouse rollout", pipelineID, stageID, &e.AdminUser)
 
 	return &evidenceTriggerEnv{
-		Env:     e,
-		trigger: NewStageEvidenceTrigger(e.Pool, e.Deals, staticDomains(domains), slog.Default()),
+		Env: e,
+		// A nil reading enqueuer: these tests are about the DETERMINISTIC half,
+		// and a nil one is the composition an installation with no model lane
+		// runs. TestTheReadingIsQueuedForEveryActivityOnADeal covers the other.
+		trigger: NewStageEvidenceTrigger(e.Pool, e.Deals, staticDomains(domains), nil, slog.Default()),
 		dealID:  ids.From[ids.DealKind](dealID),
 		stageID: stageID,
 	}
@@ -403,12 +408,19 @@ func TestAnOldMeetingImportedTodaySettlesNothing(t *testing.T) {
 }
 
 // A mail thread is not an event that was held, whoever was on it.
+//
+// The ROW's kind decides, not the event payload's. The payload is a
+// counterparty-influenced summary of what landed; the column is what the
+// capture path wrote, and a criterion about a meeting having happened must
+// rest on the second.
 func TestAnEmailIsNotAMeeting(t *testing.T) {
 	e := newEvidenceTriggerEnv(t, "acme-sales.example")
-	activityID := e.seedMeeting(t, meetingSeed{linked: true, occurredAt: time.Now().Add(-time.Hour), status: "held"})
+	activityID := e.seedMeeting(t, meetingSeed{
+		linked: true, occurredAt: time.Now().Add(-time.Hour), kind: "message",
+	})
 
 	env := evidenceEnvelope("activity.captured", "activity", activityID,
-		crmcontracts.PublicEventActivityCaptured{Kind: "email"})
+		crmcontracts.PublicEventActivityCaptured{Kind: "message"})
 	if err := e.trigger.HandleEvent(context.Background(), env); err != nil {
 		t.Fatalf("handling an email: %v", err)
 	}
@@ -490,6 +502,10 @@ type meetingSeed struct {
 	status string
 	// transcript is the activity body, with source_system = 'transcript'.
 	transcript string
+	// kind is activity.kind. Empty means meeting, which is what most of these
+	// tests are about; "message" seeds the ordinary mail a criterion settled
+	// in prose arrives on.
+	kind string
 }
 
 // seedMeeting writes a meeting in the shape CAPTURE ACTUALLY PRODUCES.
@@ -513,11 +529,24 @@ func (e *evidenceTriggerEnv) seedMeeting(t *testing.T, seed meetingSeed) ids.UUI
 			marker := deals.TranscriptSourceSystem
 			sourceSystem, body = &marker, &seed.transcript
 		}
+		kind := seed.kind
+		if kind == "" {
+			kind = "meeting"
+		}
+		// activity_message_has_provider: a message row must name its channel,
+		// and a meeting must not.
+		var provider *string
+		if kind == "message" {
+			// One of the two providers the baseline seeds; the column is a
+			// foreign key, so an unseeded name is refused.
+			telegram := "telegram"
+			provider = &telegram
+		}
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO activity (kind, subject, occurred_at, source, captured_by,
-			                      meeting_status, source_system, body)
-			VALUES ('meeting', 'Demo', $1, 'manual', 'human:test', $2, $3, $4)
-			RETURNING id`, seed.occurredAt, status, sourceSystem, body).Scan(&id); err != nil {
+			                      meeting_status, source_system, body, channel_provider)
+			VALUES ($5, 'Demo', $1, 'manual', 'human:test', $2, $3, $4, $6)
+			RETURNING id`, seed.occurredAt, status, sourceSystem, body, kind, provider).Scan(&id); err != nil {
 			return err
 		}
 		// Capture's own convention: the connected seat is stamped `from`.
@@ -641,5 +670,106 @@ func (e *evidenceTriggerEnv) assertClaim(t *testing.T, sourceType, extractedBy s
 	}
 	if confidence != nil {
 		t.Errorf("a deterministic claim carries confidence %v; a record either says the thing or it does not", *confidence)
+	}
+}
+
+// recordingEnqueuer captures what the trigger queued, so a test can assert the
+// reading was asked for without standing a River worker up.
+type recordingEnqueuer struct{ queued []StageEvidenceReadArgs }
+
+func (r *recordingEnqueuer) EnqueueTx(
+	_ context.Context, _ pgx.Tx, args river.JobArgs, _ *river.InsertOpts,
+) error {
+	read, ok := args.(StageEvidenceReadArgs)
+	if !ok {
+		return fmt.Errorf("the trigger queued %T, not a stage evidence reading", args)
+	}
+	r.queued = append(r.queued, read)
+	return nil
+}
+
+// The model's half is asked about EVERY activity that reaches a deal, not only
+// the meetings the deterministic arm settles. A criterion like "the buyer
+// stated the problem in their own words" is settled in an ordinary email, and
+// the deterministic writers have nothing to say about one.
+func TestTheReadingIsQueuedForEveryActivityOnADeal(t *testing.T) {
+	e := newEvidenceTriggerEnv(t, "acme-sales.example")
+	queue := &recordingEnqueuer{}
+	e.trigger.read = queue
+
+	// An ordinary MESSAGE, not a meeting: nothing the deterministic arm can
+	// settle, and the shape a criterion settled in prose actually arrives on.
+	activityID := e.seedMeeting(t, meetingSeed{
+		linked: true, occurredAt: time.Now().Add(-time.Hour), kind: "message",
+	})
+	env := evidenceEnvelope("activity.captured", "activity", activityID,
+		crmcontracts.PublicEventActivityCaptured{Kind: "message"})
+	if err := e.trigger.HandleEvent(context.Background(), env); err != nil {
+		t.Fatalf("handling the activity: %v", err)
+	}
+	if got := e.ledger(t); got != 0 {
+		t.Fatalf("the deterministic arm wrote %d rows for an activity that "+
+			"settles nothing; this test would not be about the reading", got)
+	}
+	if len(queue.queued) != 1 {
+		t.Fatalf("the trigger queued %d readings, want one", len(queue.queued))
+	}
+	if queue.queued[0].ActivityID != activityID {
+		t.Errorf("the reading names activity %s, want %s",
+			queue.queued[0].ActivityID, activityID)
+	}
+	if queue.queued[0].DealID != e.dealID.UUID {
+		t.Errorf("the reading names deal %s, want %s",
+			queue.queued[0].DealID, e.dealID.UUID)
+	}
+	// THE WORKSPACE, asserted because it is the field that was wrong: a bus
+	// envelope carries none and the subscriber binds none, so reading it off
+	// the context answered the zero id — and the worker refuses those before
+	// doing anything. Every reading was silently discarded and every other
+	// assertion here still passed.
+	if queue.queued[0].Workspace != e.WS {
+		t.Errorf("the reading names workspace %s, want %s; a zero id is refused "+
+			"by the worker and the activity is never read",
+			queue.queued[0].Workspace, e.WS)
+	}
+}
+
+// An activity reaching no deal has no criteria to be read against, so nothing
+// is queued — a reading of it would ask about a stage that does not exist.
+func TestNoReadingIsQueuedForAnUnlinkedActivity(t *testing.T) {
+	e := newEvidenceTriggerEnv(t, "acme-sales.example")
+	queue := &recordingEnqueuer{}
+	e.trigger.read = queue
+
+	activityID := e.seedMeeting(t, meetingSeed{occurredAt: time.Now().Add(-time.Hour)})
+	env := evidenceEnvelope("activity.captured", "activity", activityID,
+		crmcontracts.PublicEventActivityCaptured{Kind: "meeting"})
+	if err := e.trigger.HandleEvent(context.Background(), env); err != nil {
+		t.Fatalf("handling an unlinked activity: %v", err)
+	}
+	if len(queue.queued) != 0 {
+		t.Fatalf("the trigger queued %d readings for an activity on no deal", len(queue.queued))
+	}
+}
+
+// An installation with no model lane composes a nil enqueuer, and the
+// deterministic evidence must still be written. River discards a job whose
+// kind no worker claims, so queueing one there would turn every activity into
+// a discarded row.
+func TestWithNoReadingLaneTheDeterministicEvidenceStillLands(t *testing.T) {
+	e := newEvidenceTriggerEnv(t, "acme-sales.example")
+	// The env's own trigger already carries a nil enqueuer, which is the
+	// composition under test.
+	activityID := e.seedMeeting(t, meetingSeed{
+		linked: true, occurredAt: time.Now().Add(-time.Hour), status: "held",
+	})
+	env := evidenceEnvelope("activity.captured", "activity", activityID,
+		crmcontracts.PublicEventActivityCaptured{Kind: "meeting"})
+	if err := e.trigger.HandleEvent(context.Background(), env); err != nil {
+		t.Fatalf("handling a meeting with no reading lane: %v", err)
+	}
+	if got := e.ledger(t); got != 1 {
+		t.Fatalf("a held meeting wrote %d rows without a model lane; the "+
+			"deterministic half does not depend on one", got)
 	}
 }

@@ -320,7 +320,7 @@ describe("voice build", () => {
     run(
       [
         { type: "BUILD_STAGE", buildId: "b1", stage: "snapshot" },
-        { type: "BUILD_TERMINAL", buildId: "b1", status },
+        { type: "BUILD_TERMINAL", buildId: "b1", status, detail: null },
       ],
       building(),
     );
@@ -356,7 +356,7 @@ describe("voice build", () => {
     });
     // A late failure from attempt 1 must never yank attempt 2 to vo.result.
     const stale: ConversationEvent[] = [
-      { type: "BUILD_TERMINAL", buildId: "b1", status: "failed" },
+      { type: "BUILD_TERMINAL", buildId: "b1", status: "failed", detail: null },
       { type: "BUILD_STAGE", buildId: "b1", stage: "activate" },
     ];
     for (const event of stale) {
@@ -366,6 +366,7 @@ describe("voice build", () => {
       type: "BUILD_TERMINAL",
       buildId: "b2",
       status: "succeeded",
+      detail: null,
     });
     expect(done.phase).toBe("vo.result");
   });
@@ -398,6 +399,7 @@ describe("voice build", () => {
         type: "BUILD_TERMINAL",
         buildId: "b1",
         status: "deferred",
+        detail: null,
       }),
     ).toBe(deferred);
     // Another build's events do not resume this one.
@@ -423,6 +425,7 @@ describe("voice build", () => {
       type: "BUILD_TERMINAL",
       buildId: "b1",
       status: "succeeded",
+      detail: null,
     });
     expect(done.phase).toBe("vo.result");
     expect(done.thread.at(-1)).toMatchObject({
@@ -438,6 +441,7 @@ describe("voice build", () => {
       type: "BUILD_TERMINAL",
       buildId: "b1",
       status: "succeeded",
+      detail: null,
     });
     expect(done.phase).toBe("vo.result");
     expect(done.lastBuildStatus).toBe("succeeded");

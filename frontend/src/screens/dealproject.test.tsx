@@ -75,6 +75,8 @@ function deal(overrides: Partial<Deal> = {}): Deal {
     organization_id: "o-1",
     source: "manual",
     captured_by: "u-me",
+    // The caller's own deal: absent means NOT writable per the contract.
+    writable: true,
     version: 7,
     created_at: "2026-06-01T09:00:00Z",
     updated_at: "2026-06-01T09:00:00Z",
@@ -151,7 +153,14 @@ function dealBackend(opts: {
         return jsonResponse(current);
       }
       if (pathname.endsWith("/me")) {
-        return jsonResponse(meFixture());
+        return jsonResponse(
+          meFixture({
+            allow: {
+              deal: ["read", "create", "update"],
+              project: ["read", "create", "update"],
+            },
+          }),
+        );
       }
       if (pathname.endsWith("/pipelines")) {
         return jsonResponse({

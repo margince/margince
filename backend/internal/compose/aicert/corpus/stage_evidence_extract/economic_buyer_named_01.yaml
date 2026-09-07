@@ -1,0 +1,38 @@
+name: the_buyer_names_who_signs
+task: stage_evidence_extract
+site: criteria
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  criteria:
+    - key: economic_buyer_identified
+      label: The economic buyer is identified
+      hint: we know who holds the budget and signs
+    - key: problem_confirmed
+      label: The buyer has stated the problem in their own words
+  spans:
+    - source_id: 01a07100-0000-7000-8000-000000000006
+      lines:
+        - 'Lars: who ultimately signs off on something this size?'
+        - 'Ines: that would be Martin, our COO. I prepare the case, he approves the spend.'
+        - 'Lars: helpful, thank you.'
+expect:
+  outcome: accepted
+  answer:
+    - criterion_key: economic_buyer_identified
+      met: true
+      settled_by: Martin
+  rubric: >
+    The buyer names the person who approves the spend and describes the split
+    between her role and his. economic_buyer_identified is met, cited on the
+    second line where she says it. Note this criterion is one WE may observe as
+    readily as they state it — it names something we learn, not something the
+    buyer does — so a claim here is admissible whichever side said it. That
+    does not make it free: a claim must still quote a passage that names the
+    person. Claiming problem_confirmed scores at the floor; nobody described a
+    problem. Reading Lars's question as the evidence scores low — a question is
+    not an answer, and the citation must point at the line that states the fact.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

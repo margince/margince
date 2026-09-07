@@ -13,7 +13,7 @@ import type { ReactNode } from "react";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
+import { useCanWrite, useRecordWriteRefusal } from "../app/capability";
 import { PageAsideToggle, usePageAside } from "../app/pageaside";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
@@ -176,6 +176,7 @@ function PersonTabPanel({
   personId,
   view,
   onBriefMeeting,
+  refusedReasonId,
 }: Readonly<{
   tab: PersonTab;
   personId: string;
@@ -183,6 +184,9 @@ function PersonTabPanel({
   onBriefMeeting: (activityId: string) => void;
   /** Opens one message in the record's drawer, which the page owns. */
   onOpenEmail?: (activityId: string) => void;
+  // The page's one sentence about why this contact takes no changes, for
+  // the tab whose verb writes the record: the upload on Documents.
+  refusedReasonId?: string;
 }>) {
   switch (tab) {
     case "timeline":
@@ -203,7 +207,9 @@ function PersonTabPanel({
     case "research":
       return <PersonResearchTab view={view} />;
     case "documents":
-      return <PersonFilesTab personId={personId} />;
+      return (
+        <PersonFilesTab personId={personId} refusedReasonId={refusedReasonId} />
+      );
     // Overview is drawn by the page itself, above this component: its stack
     // reads the page's other queries (the brief) and its moment drives the
     // page's own action loop.
@@ -357,6 +363,17 @@ export function PersonPageV2({
   // Read before the loading returns: a hook below an early return renders a
   // different hook count per state, which React rejects.
   const overlay = useSorMode() === "overlay";
+  // Every write affordance on this page that changes the RECORD answers one
+  // question, asked once: an archived contact takes no changes, and one this
+  // caller cannot write takes none from them. The rail's inline fields ask
+  // the same of the same row (personrail.tsx); this is the header's and the
+  // tabs' copy of the answer, and the one sentence both point at.
+  const readOnlyReasonId = useId();
+  const readOnlyReason = useRecordWriteRefusal("person", view.data?.person, {
+    archived: t("person.rail.archivedReadOnly"),
+    notYours: t("person.notYoursToChange"),
+  });
+  const refusedReasonId = readOnlyReason ? readOnlyReasonId : undefined;
 
   if (view.isLoading) {
     return <div className="wrap">{t("person.page.loading")}</div>;
@@ -433,10 +450,23 @@ export function PersonPageV2({
               onResearch={() => setDrawer("research")}
               onLogActivity={() => setDrawer("activity_log")}
               onAddTask={() => setDrawer("activity_task")}
+              refusedReasonId={refusedReasonId}
             />
           }
           actionsInline
           zone={recordZone}
+          // Stated ONCE for the page, where both columns and every tab can see
+          // it. Every control the record refuses points at this element by id.
+          // Absent while the contact takes changes: a line always reserved
+          // would read as a record with something to say about itself and
+          // nothing said.
+          band={
+            readOnlyReason ? (
+              <p id={readOnlyReasonId} className="t-caption">
+                {readOnlyReason}
+              </p>
+            ) : undefined
+          }
           tabs={
             <RecordTabs
               options={PERSON_TABS}
@@ -537,6 +567,7 @@ export function PersonPageV2({
             view={view.data}
             onBriefMeeting={openBrief}
             onOpenEmail={setOpenEmail}
+            refusedReasonId={refusedReasonId}
           />
           {/* One drawer over the record. The timeline's rows and the rail's
             citations both open into it, so a reader who finds a message in the
@@ -1004,6 +1035,7 @@ function PersonActions({
   onResearch,
   onLogActivity,
   onAddTask,
+  refusedReasonId,
 }: Readonly<{
   view: Person360;
   consentAllows: boolean;
@@ -1018,6 +1050,11 @@ function PersonActions({
   onResearch: () => void;
   onLogActivity: () => void;
   onAddTask: () => void;
+  // The page's one sentence about why this contact takes no changes, while
+  // it does not. Only Share writes the RECORD here — a grant is asserted
+  // through the person's own write gate — so it is the one verb refused by
+  // it; logging and mail are activity writes with gates of their own.
+  refusedReasonId?: string;
 }>): ReactNode {
   const t = useT();
   // useCanWrite, not useCan: both this verb and Add task below issue the same
@@ -1129,7 +1166,11 @@ function PersonActions({
         {/* Companies, deals, leads and projects all carry this. A contact did
             not, so the one record type most likely to be private to one seat
             was the one with no way to hand it to a colleague. */}
-        <ShareAction recordType="person" recordId={personId} />
+        <ShareAction
+          recordType="person"
+          recordId={personId}
+          disabledReasonId={refusedReasonId}
+        />
       </OverflowMenu>
     </>
   );

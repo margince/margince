@@ -154,7 +154,7 @@ budget rather than keeping its own list of which pages are generated.
 - [channel-capture-parity.md](explanation/channel-capture-parity.md) — whose correspondence a captured chat is: the rule that a member-bound credential puts it on the mailbox path while a shared one keeps it workspace business, which rungs of the birth ladder each faces, what makes the import row's delivery evidence sound, and a capability-by-capability table of what each side gets.
 - [outbound-messaging.md](explanation/outbound-messaging.md) — the egress twin of capture: the staging row, the transmit-time gates, receipt-before-bookkeeping, and the channel reply.
 - [outbound-webhooks.md](explanation/outbound-webhooks.md) — the governed egress surface: subscription config vs. delivery engine, secret sealing, the contract-first payload pipeline (`api/public-events.yaml` + `gen-payloads` + the typed `EmitEvent` seam) and its additive-only versioning, the retry/dead-letter state machine, the owner-scope fan-out gate (incl. the ratified deferred-delivery exceptions), and the Settings → Integrations UI.
-- [privacy-and-consent.md](explanation/privacy-and-consent.md) — the consent gate and the GDPR engines (erasure / SAR / retention).
+- [privacy-and-consent.md](explanation/privacy-and-consent.md) — the authorization engine that decides whether each message may go, and the GDPR engines (erasure / SAR / retention).
 
 **AI, retrieval and automation**
 

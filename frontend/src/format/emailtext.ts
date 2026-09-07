@@ -120,7 +120,10 @@ function isSignOff(line: string): boolean {
   const normalized = line
     .trim()
     .toLowerCase()
-    .replace(/[,.!]+$/, "");
+    // The lookbehind is what keeps this linear. Without it the engine retries
+    // the trailing run from every position in the line, which is quadratic on a
+    // line that is all punctuation — and an inbound mail body is not ours.
+    .replace(/(?<![,.!])[,.!]+$/, "");
   if (!normalized) {
     return false;
   }

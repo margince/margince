@@ -3,7 +3,7 @@
 # fitness tests — which are `//go:build integration` and need a real
 # Postgres — never blocked a PR. This pipeline runs BOTH lanes plus the
 # pinned vulnerability scan, the deterministic craftsmanship gate, and the
-# frontend lane as required checks, so a migration that forgets FORCE RLS,
+# frontend lane as required checks, so a migration that widens a boundary,
 # an erasure that misses a PII table, a vulnerable dependency, a swallowed
 # error, or a UI regression fails the merge instead of shipping.
 #

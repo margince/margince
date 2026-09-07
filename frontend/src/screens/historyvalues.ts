@@ -47,7 +47,11 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 // A path or URI: at least one "/" separating two non-blank segments. Checked
 // after the timestamp rule (its offset can carry digits and colons but never
 // a slash) so a value never matches both.
-const PATH_LIKE = /^\S*\/\S+$/;
+// The head excludes "/" so the slash this matches is the FIRST one. That is
+// the same accept set — the tail may still hold slashes of its own — reached
+// without the head and the tail competing for every slash in between, which is
+// quadratic on a long path-shaped value.
+const PATH_LIKE = /^[^\s/]*\/\S+$/;
 
 /** A JSON array, or `undefined` when the value does not parse as one. */
 function asJsonArray(value: string): unknown[] | undefined {

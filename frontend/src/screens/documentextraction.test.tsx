@@ -23,6 +23,7 @@ type Extraction = components["schemas"]["AttachmentExtraction"];
 const GROUNDED: Extraction = {
   id: "11111111-1111-1111-1111-111111111111",
   status: "done",
+  stalled: false,
   created_at: "2026-08-15T09:00:00Z",
   fields: [
     {
@@ -59,7 +60,10 @@ function serve(body: unknown, status = 200) {
       const method = request?.method ?? init?.method ?? "GET";
       let sent: unknown;
       if (request && method !== "GET") {
-        sent = JSON.parse(await request.clone().text());
+        // A read request carries no body at all, and parsing "" would throw
+        // inside the stub — recording nothing for the very call under test.
+        const text = await request.clone().text();
+        sent = text === "" ? undefined : JSON.parse(text);
       } else if (init?.body) {
         sent = JSON.parse(String(init.body));
       }
@@ -108,6 +112,31 @@ describe("the three answers a reading can give", () => {
     // The distinction under test: a running reading must not be describable as
     // a document that states nothing.
     expect(screen.queryByText(/states none of the deal fields/i)).toBeNull();
+  });
+
+  it("offers a fresh read of a reading whose worker died, where it showed reading", async () => {
+    const calls = serve({
+      ...GROUNDED,
+      status: "running",
+      stalled: true,
+      fields: [],
+      omitted: [],
+    });
+    show();
+    expect(await screen.findByText(/taken unusually long/i)).toBeTruthy();
+    // A stalled reading is not a reading in progress: the line that says the
+    // file is being read would keep a rep waiting on a worker that is gone.
+    expect(screen.queryByText("Reading this file…")).toBeNull();
+    // The button is the only way back — the server re-arms the reading on
+    // this request — so the press has to reach it.
+    await userEvent.click(
+      screen.getByRole("button", { name: /try reading it again/i }),
+    );
+    await waitFor(() => {
+      expect(
+        calls.some((c) => c.method === "POST" && c.url.endsWith("/extraction")),
+      ).toBe(true);
+    });
   });
 
   it("reports a document that states none of them as an ANSWER, with its reason", async () => {

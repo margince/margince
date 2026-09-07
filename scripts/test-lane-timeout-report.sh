@@ -19,7 +19,7 @@ lane="$root/scripts/test-integration-parallel.sh"
 failures=0
 
 check() { # description; reads $? style via caller
-    if [ "$1" = "yes" ]; then
+    if [[ "$1" = "yes" ]]; then
         printf '  ok   %s\n' "$2"
     else
         printf '  FAIL %s\n' "$2" >&2
@@ -66,7 +66,7 @@ check "$(grep -qF 'exceeded its ${IT_TIMEOUT} budget' "$lane" && echo yes || ech
     "the timeout names the budget it crossed"
 timeout_line="$(grep -n 'exceeded its ${IT_TIMEOUT} budget' "$lane" | head -1 | cut -d: -f1)"
 diverge_line="$(grep -n 'ran a different test set' "$lane" | head -1 | cut -d: -f1)"
-check "$([ -n "$timeout_line" ] && [ -n "$diverge_line" ] && [ "$timeout_line" -lt "$diverge_line" ] && echo yes || echo no)" \
+check "$([[ -n "$timeout_line" ]] && [[ -n "$diverge_line" ]] && [[ "$timeout_line" -lt "$diverge_line" ]] && echo yes || echo no)" \
     "the timeout is reported before the reconciliation diff"
 
 echo "and it does not bury a divergence it did not cause"
@@ -108,7 +108,7 @@ cat > "$tmp/only" <<'EOF'
   assigned but not run: backend|./internal/compose/integration|TestOne
 EOF
 lane_drop_timed_out "$tmp/only" "$tmp/timedout"
-check "$([ -s "$tmp/only" ] && echo no || echo yes)" \
+check "$([[ -s "$tmp/only" ]] && echo no || echo yes)" \
     "a diff explained entirely by the timeout is emptied"
 check "$(grep -qF 'if [[ -s "$DIVERGENCE" ]]; then' "$lane" && echo yes || echo no)" \
     "and the lane prints the header only when something survives"
@@ -125,7 +125,7 @@ echo "a package approaching its budget says so while it is still passing"
 check "$(grep -qF 'split it before it crosses' "$lane" && echo yes || echo no)" \
     "the advisory report warns before a package becomes unpassable"
 
-if [ "$failures" -ne 0 ]; then
+if [[ "$failures" -ne 0 ]]; then
     echo "FAIL: $failures check(s) failed" >&2
     exit 1
 fi

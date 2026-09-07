@@ -95,21 +95,26 @@ type toolMeasurement struct {
 // The statement lives in e2e/llm/criteria.yaml rather than here because it is
 // the lane's to state, not this page's to invent.
 type criterionRow struct {
-	Number    int      `json:"number"`
-	Name      string   `json:"name"`
-	Statement string   `json:"statement"`
-	Cases     []string `json:"cases"`
+	// Case is half of a criterion's identity. The numbers are PER CASE: case 1
+	// criterion 1 and case 2 criterion 1 are different criteria that share a
+	// digit, and the suites that pin them say "case 4 criterion 5" rather than a
+	// bare number for exactly that reason.
+	Case      string `json:"case"`
+	Number    int    `json:"number"`
+	Name      string `json:"name"`
+	Statement string `json:"statement"`
 }
 
 type coverageTotals struct {
-	Tools              int   `json:"tools"`
-	Driven             int   `json:"driven"`
-	NeverDriven        int   `json:"never_driven"`
-	PermittedNotDriven int   `json:"permitted_but_never_required"`
-	UndrivenCost       int   `json:"tokens_served_but_never_driven"`
-	Cases              int   `json:"use_case_cases"`
-	CasesRecorded      int   `json:"cases_with_a_committed_run"`
-	CriteriaCovered    []int `json:"acceptance_criteria_covered"`
+	Tools              int `json:"tools"`
+	Driven             int `json:"driven"`
+	NeverDriven        int `json:"never_driven"`
+	PermittedNotDriven int `json:"permitted_but_never_required"`
+	UndrivenCost       int `json:"tokens_served_but_never_driven"`
+	Cases              int `json:"use_case_cases"`
+	CasesRecorded      int `json:"cases_with_a_committed_run"`
+	CriteriaNamed      int `json:"acceptance_criteria_named"`
+	CriteriaUnnamed    int `json:"acceptance_criteria_without_a_statement"`
 }
 
 type caseRow struct {
@@ -167,37 +172,37 @@ func TestTheMCPToolCoverageIsPublished(t *testing.T) {
 
 	report := mcpToolCoverage{Note: mcpToolCoverageNote, Cases: cases}
 	report.Totals.Cases = len(cases)
-	criteria := map[int]bool{}
 	for _, c := range cases {
 		if c.Recorded {
 			report.Totals.CasesRecorded++
 		}
-		for _, n := range c.Criteria {
-			criteria[n] = true
-		}
-	}
-	for n := range criteria {
-		report.Totals.CriteriaCovered = append(report.Totals.CriteriaCovered, n)
-	}
-	sort.Ints(report.Totals.CriteriaCovered)
-	for _, n := range report.Totals.CriteriaCovered {
-		row, named := catalog[n]
-		if !named {
-			t.Errorf("scenarios declare criterion %d and %s does not name it — a grade against a "+
+		named, ok := catalog[c.Name]
+		if !ok {
+			t.Errorf("case %s declares criteria and %s names none of them — a grade against a "+
 				"number nothing in this repository explains cannot be read by the person it is for",
-				n, e2eLLMCriteriaFile)
+				c.Name, e2eLLMCriteriaFile)
 			continue
 		}
-		for _, c := range cases {
-			for _, declared := range c.Criteria {
-				if declared == n {
-					row.Cases = append(row.Cases, c.Name)
-				}
+		for _, n := range c.Criteria {
+			row, isNamed := named[n]
+			if !isNamed {
+				t.Errorf("case %s declares criterion %d and %s does not name it", c.Name, n, e2eLLMCriteriaFile)
+				continue
 			}
+			report.Criteria = append(report.Criteria, row)
+			if strings.Contains(row.Name, "NEEDS A STATEMENT") {
+				report.Totals.CriteriaUnnamed++
+				continue
+			}
+			report.Totals.CriteriaNamed++
 		}
-		row.Cases = sortedCopy(row.Cases)
-		report.Criteria = append(report.Criteria, row)
 	}
+	sort.Slice(report.Criteria, func(i, j int) bool {
+		if report.Criteria[i].Case != report.Criteria[j].Case {
+			return report.Criteria[i].Case < report.Criteria[j].Case
+		}
+		return report.Criteria[i].Number < report.Criteria[j].Number
+	})
 
 	for _, spec := range specs {
 		row := toolCoverageRow{
@@ -368,27 +373,30 @@ func readE2ELLMVerdicts(dir string) (map[verdictKey]e2eVerdict, error) {
 // Parsed with the YAML decoder this module already depends on, not by hand: a
 // bespoke reader for a folded block is how the first version of this silently
 // published the first line of every statement and dropped the rest.
-func readCriteria(path string) (map[int]criterionRow, error) {
+func readCriteria(path string) (map[string]map[int]criterionRow, error) {
 	body, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 	var file struct {
-		Criteria map[int]struct {
+		Cases map[string]map[int]struct {
 			Name      string `yaml:"name"`
 			Statement string `yaml:"statement"`
-		} `yaml:"criteria"`
+		} `yaml:"cases"`
 	}
 	if err := yaml.Unmarshal(body, &file); err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
-	out := make(map[int]criterionRow, len(file.Criteria))
-	for number, entry := range file.Criteria {
-		out[number] = criterionRow{
-			Number:    number,
-			Name:      entry.Name,
-			Statement: strings.TrimSpace(entry.Statement),
-			Cases:     []string{},
+	out := make(map[string]map[int]criterionRow, len(file.Cases))
+	for name, numbered := range file.Cases {
+		out[name] = make(map[int]criterionRow, len(numbered))
+		for number, entry := range numbered {
+			out[name][number] = criterionRow{
+				Case:      name,
+				Number:    number,
+				Name:      entry.Name,
+				Statement: strings.TrimSpace(entry.Statement),
+			}
 		}
 	}
 	return out, nil
@@ -579,7 +587,8 @@ func writeCoverageTotals(p *strings.Builder, r mcpToolCoverage) {
 	fmt.Fprintf(p, "| Prompt tokens spent on tools no case requires | %d |\n", r.Totals.UndrivenCost)
 	fmt.Fprintf(p, "| Use cases | %d |\n", r.Totals.Cases)
 	fmt.Fprintf(p, "| … with a committed run | %d |\n", r.Totals.CasesRecorded)
-	fmt.Fprintf(p, "| Acceptance criteria covered | %s |\n\n", criteriaList(r.Totals.CriteriaCovered))
+	fmt.Fprintf(p, "| Acceptance criteria the cases declare | %d |\n", r.Totals.CriteriaNamed+r.Totals.CriteriaUnnamed)
+	fmt.Fprintf(p, "| … with a statement in this repository | %d |\n\n", r.Totals.CriteriaNamed)
 	if r.Totals.CasesRecorded < r.Totals.Cases {
 		fmt.Fprintf(p, "> **%d of %d cases have no committed run.** Their rows below say `not run` "+
 			"rather than a rate — nobody has paid for the answer yet.\n\n",
@@ -606,7 +615,7 @@ func writeCoverageCases(p *strings.Builder, r mcpToolCoverage) {
 		}
 		fmt.Fprintf(p, "| [%s](../../e2e/llm/scenarios/%s) | %s | %s | %s | %s | %s | %s |\n",
 			c.Name, c.File, result, passed, bar, model,
-			criteriaNames(c.Criteria, r.Criteria), joinOrDash(c.Requires))
+			criteriaNames(c.Name, c.Criteria, r.Criteria), joinOrDash(c.Requires))
 	}
 	p.WriteString("\n")
 }
@@ -617,10 +626,11 @@ func writeCoverageCriteria(p *strings.Builder, r mcpToolCoverage) {
 	p.WriteString("## What the criteria ask\n\n")
 	p.WriteString("The numbers in the table above, in words. Source: " +
 		"[`e2e/llm/criteria.yaml`](../../e2e/llm/criteria.yaml).\n\n")
-	p.WriteString("| # | Criterion | What it asks | Cases |\n|---:|---|---|---|\n")
+	p.WriteString("**The numbers are per case.** Case 1 criterion 1 and case 2 criterion 1 are " +
+		"different criteria that share a digit, which is why every row below names its case.\n\n")
+	p.WriteString("| Case | # | Criterion | What it asks |\n|---|---:|---|---|\n")
 	for _, c := range r.Criteria {
-		fmt.Fprintf(p, "| %d | **%s** | %s | %s |\n",
-			c.Number, c.Name, c.Statement, joinOrDash(c.Cases))
+		fmt.Fprintf(p, "| `%s` | %d | **%s** | %s |\n", c.Case, c.Number, c.Name, c.Statement)
 	}
 	p.WriteString("\n")
 }
@@ -698,13 +708,15 @@ func writeCoverageUndriven(p *strings.Builder, r mcpToolCoverage) {
 // criteriaNames renders a case's criteria as "8 promises come back as
 // suggestions" rather than "8" — a number is only a reference, and the table it
 // referenced was not in this repository.
-func criteriaNames(numbers []int, catalog []criterionRow) string {
+func criteriaNames(caseName string, numbers []int, catalog []criterionRow) string {
 	if len(numbers) == 0 {
 		return "—"
 	}
 	named := map[int]string{}
 	for _, c := range catalog {
-		named[c.Number] = c.Name
+		if c.Case == caseName {
+			named[c.Number] = c.Name
+		}
 	}
 	out := make([]string, 0, len(numbers))
 	for _, n := range numbers {
@@ -715,19 +727,6 @@ func criteriaNames(numbers []int, catalog []criterionRow) string {
 		out = append(out, fmt.Sprintf("**%d**", n))
 	}
 	return strings.Join(out, "<br>")
-}
-
-// criteriaList renders acceptance-criteria numbers, or a dash when a case
-// declares none — an empty cell reads as a rendering bug rather than as "none".
-func criteriaList(in []int) string {
-	if len(in) == 0 {
-		return "—"
-	}
-	out := make([]string, 0, len(in))
-	for _, n := range in {
-		out = append(out, fmt.Sprintf("%d", n))
-	}
-	return strings.Join(out, ", ")
 }
 
 // joinOrDash renders a list as backticked names, or a dash when it is empty.

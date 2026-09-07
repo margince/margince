@@ -1021,3 +1021,40 @@ describe("PersonPageV2 — the addressed composer", () => {
     );
   });
 });
+
+// `writable` is the server's per-row answer, and every write on this page that
+// changes the RECORD reads it: a rep holding person.update on the OBJECT was
+// offered Share and the upload on a colleague's contact and refused on submit.
+describe("a live contact that is not the viewer's to change", () => {
+  const notMine: Person360 = {
+    ...view,
+    person: { ...view.person, owner_id: "u-other", writable: false },
+  };
+  const sentence =
+    "You cannot change this person. Ask their owner to share them with you, or your administrator for the right to edit them.";
+
+  it("says so once, and refuses Share from that sentence", async () => {
+    const user = userEvent.setup();
+    mount("overview", notMine);
+
+    expect(await screen.findByText(sentence)).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "More actions" }));
+    const share = await screen.findByTestId("share-record");
+    expect(share.hasAttribute("disabled")).toBe(true);
+    expect(
+      document.getElementById(share.getAttribute("aria-describedby") ?? "")
+        ?.textContent,
+    ).toBe(sentence);
+  });
+
+  it("refuses the upload on the Documents tab from the same sentence", async () => {
+    mount("documents", notMine);
+
+    const add = await screen.findByRole("button", { name: "Add a document" });
+    expect(add.hasAttribute("disabled")).toBe(true);
+    expect(
+      document.getElementById(add.getAttribute("aria-describedby") ?? "")
+        ?.textContent,
+    ).toBe(sentence);
+  });
+});

@@ -3,7 +3,11 @@ import { type ReactElement, useId } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { useCanWrite, useCanWriteRecord } from "../app/capability";
+import {
+  useCanWrite,
+  useCanWriteRecord,
+  useRecordWriteRefusal,
+} from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { Badge, Button, OverflowMenu } from "../design-system/atoms";
@@ -477,10 +481,11 @@ export function CompanyOwnerControl({
 // useCompanyVerbRefusal answers why the record's own verbs — edit, merge,
 // archive, share — are refused, or undefined when they are pressable.
 //
-// Two states refuse them, and they read the same to a user: the record is
-// archived, or it is somebody else's. Both are facts about the RECORD, so both
-// take STATE-4a's answer — the verb stays visible and says why, because a
-// missing button reads as a build without the feature.
+// It is the shared record answer: the record is archived, or this caller may
+// not write it — no grant, a read seat, or a row that is somebody else's. Each
+// is a fact about the RECORD as this reader holds it, so each takes STATE-4a's
+// answer: the verb stays visible and says why, because a missing button reads
+// as a build without the feature.
 //
 // Overlay is deliberately NOT one of them, which is why this is its own function
 // rather than useCompanyReadOnlyReason. Overlay's sentence says a write reaches
@@ -488,17 +493,17 @@ export function CompanyOwnerControl({
 // reason it is refused. Disabling these verbs on it would take away edits the
 // mirror does support.
 //
-// An UNOWNED record is not one either. Nobody owns it yet, and the verbs that
-// let a reader take it on stay pressable.
-function useCompanyVerbRefusal(org: Organization): string | undefined {
+// An UNOWNED record is refused like any other the server marks unwritable:
+// the write gate treats an ownerless row as nobody's to change, so Edit on it
+// could only fail. The way IN stays open regardless — the owner control keeps
+// its claim door on its own predicate (CompanyOwnerControl), and that is the
+// verb an unowned account offers.
+export function useCompanyVerbRefusal(org: Organization): string | undefined {
   const t = useT();
-  if (org.archived_at) {
-    return t("record.archivedReadOnly");
-  }
-  if (org.owner_id && !(org.writable ?? false)) {
-    return t("record.notYoursToChange");
-  }
-  return undefined;
+  return useRecordWriteRefusal("organization", org, {
+    archived: t("record.archivedReadOnly"),
+    notYours: t("record.notYoursToChange"),
+  });
 }
 
 // useClaimRecord is the claim door: POST /records/{type}/{id}/claim makes the

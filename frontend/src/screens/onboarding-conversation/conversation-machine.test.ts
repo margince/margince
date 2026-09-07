@@ -114,7 +114,12 @@ describe("conversationReducer happy path", () => {
         { type: "BUILD_STAGE", buildId: "b1", stage: "extract" },
         { type: "BUILD_STAGE", buildId: "b1", stage: "evaluate" },
         { type: "BUILD_STAGE", buildId: "b1", stage: "activate" },
-        { type: "BUILD_TERMINAL", buildId: "b1", status: "succeeded" },
+        {
+          type: "BUILD_TERMINAL",
+          buildId: "b1",
+          status: "succeeded",
+          detail: null,
+        },
       ],
       state,
     );
@@ -216,7 +221,12 @@ describe("conversationReducer happy path", () => {
       { type: "BASIS_DONE" },
       { type: "INVITE_ACCEPTED" },
       { type: "BUILD_STARTED", buildId: "b1" },
-      { type: "BUILD_TERMINAL", buildId: "b1", status: "succeeded" },
+      {
+        type: "BUILD_TERMINAL",
+        buildId: "b1",
+        status: "succeeded",
+        detail: null,
+      },
     ]);
     const revised = conversationReducer(built, { type: "VOICE_REVISE" });
     expect(revised).toMatchObject({ act: "voice", phase: "vo.collecting" });
@@ -228,7 +238,12 @@ describe("conversationReducer happy path", () => {
     const failed = run(
       [
         { type: "BUILD_STARTED", buildId: "b2" },
-        { type: "BUILD_TERMINAL", buildId: "b2", status: "failed" },
+        {
+          type: "BUILD_TERMINAL",
+          buildId: "b2",
+          status: "failed",
+          detail: null,
+        },
       ],
       revised,
     );
@@ -395,7 +410,12 @@ describe("member path", () => {
     state = run(
       [
         { type: "BUILD_STARTED", buildId: "b1" },
-        { type: "BUILD_TERMINAL", buildId: "b1", status: "succeeded" },
+        {
+          type: "BUILD_TERMINAL",
+          buildId: "b1",
+          status: "succeeded",
+          detail: null,
+        },
         { type: "VOICE_DONE" },
       ],
       state,

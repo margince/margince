@@ -12,6 +12,7 @@ import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
+import { useRecordWriteRefusal } from "../app/capability";
 import { PageAsideToggle, usePageAside } from "../app/pageaside";
 import { navigate, useRoute } from "../app/router";
 import { useUrlParams } from "../app/urlstate";
@@ -427,13 +428,16 @@ function LeadOwner({
   meId,
   pending,
   onAssign,
-  terminalReasonId,
+  refusedReasonId,
 }: Readonly<{
   lead: Lead;
   meId: string | undefined;
   pending: boolean;
   onAssign: (ownerId: string) => void;
-  terminalReasonId: string;
+  // The page's one sentence about why this lead takes no changes, while it
+  // does not: assigning writes the owner, so it is refused by the same fact
+  // as every other write here.
+  refusedReasonId?: string;
 }>) {
   const t = useT();
   const pickerId = useId();
@@ -472,7 +476,7 @@ function LeadOwner({
         <Button
           small
           disabled={pending}
-          reasonId={lead.archived_at ? terminalReasonId : undefined}
+          reasonId={refusedReasonId}
           aria-expanded={picking}
           aria-controls={pickerId}
           onClick={() => setPicking(!picking)}
@@ -622,7 +626,7 @@ function LeadScorePanel({
         // action and stands alone.
         <Button
           small
-          reasonId={lead.archived_at ? terminalReasonId : undefined}
+          reasonId={readOnly ? terminalReasonId : undefined}
           onClick={() => setOverriding(true)}
         >
           {t("lead.overrideScore")}
@@ -779,11 +783,16 @@ type LeadWrite = {
 
 function useLeadPatch(lead: Lead, id: string, onChanged: () => void) {
   const t = useT();
-  // A terminal lead takes no writes: the server refuses score, status and
-  // owner on it, so every control here is refused by ONE fact. Derived once
-  // rather than re-tested per control, because the control that gets missed
-  // is the one that had to remember on its own.
-  const readOnly = Boolean(lead.archived_at);
+  // A lead that takes no writes — closed, or not this caller's to change —
+  // refuses every control here by ONE fact, derived once rather than
+  // re-tested per control, because the control that gets missed is the one
+  // that had to remember on its own. The sentence travels with the answer so
+  // each refused control can say which fact it was.
+  const readOnlyReason = useRecordWriteRefusal("lead", lead, {
+    archived: t("lead.terminalReadOnly"),
+    notYours: t("lead.notYoursToChange"),
+  });
+  const readOnly = Boolean(readOnlyReason);
   const patch = useMutation({
     mutationKey: ["lead-edit", id],
     mutationFn: async ({ body, version, archived }: LeadWrite) => {
@@ -827,7 +836,7 @@ function useLeadPatch(lead: Lead, id: string, onChanged: () => void) {
     await patch.mutateAsync(write(body));
   };
 
-  return { patch, readOnly, save, saveField };
+  return { patch, readOnly, readOnlyReason, save, saveField };
 }
 
 /**
@@ -868,11 +877,8 @@ function LeadLadderPanel({
             lead={lead}
             pending={writer.patch.isPending}
             readOnlyReason={
-              readOnly
-                ? t("lead.terminalReadOnly")
-                : overlay
-                  ? t("lead.ladder.overlay")
-                  : undefined
+              writer.readOnlyReason ??
+              (overlay ? t("lead.ladder.overlay") : undefined)
             }
             onStep={(status) => {
               // Same one-write-at-a-time rule as the inline rows: a status
@@ -916,14 +922,14 @@ function LeadRail({
         lead={lead}
         save={writer.saveField}
         saving={writer.patch.isPending}
-        readOnlyReason={readOnly ? t("lead.terminalReadOnly") : undefined}
+        readOnlyReason={writer.readOnlyReason}
       />
       <Panel title={t("lead.railTitle")}>
         <PanelBody>
           <LeadOwner
             lead={lead}
             meId={me.data?.user?.id}
-            terminalReasonId={terminalReasonId}
+            refusedReasonId={readOnly ? terminalReasonId : undefined}
             pending={writer.patch.isPending || readOnly}
             onAssign={(ownerId) => writer.save({ owner_id: ownerId })}
           />
@@ -1503,9 +1509,7 @@ function LeadOverviewPane({
                 // submitted against the next one the reader navigates to.
                 key={id}
                 id={id}
-                readOnlyReason={
-                  writer.readOnly ? t("lead.terminalReadOnly") : undefined
-                }
+                readOnlyReason={writer.readOnlyReason}
               />
             </PanelBody>
           </Panel>
@@ -1568,6 +1572,7 @@ function LeadActions({
   onQualify,
   onDisqualify,
   terminalReasonId,
+  refusedReasonId,
 }: Readonly<{
   lead: Lead;
   id: string;
@@ -1575,10 +1580,15 @@ function LeadActions({
   overlay: boolean;
   onQualify: () => void;
   onDisqualify: () => void;
-  // The id of the ONE sentence this page prints about being closed. Every
-  // refused control points at it rather than repeating it, which is what
-  // stops a terminal lead printing the same line five times.
+  // The id of the ONE sentence this page prints about why the lead takes no
+  // changes. Every refused control points at it rather than repeating it,
+  // which is what stops a terminal lead printing the same line five times.
   terminalReasonId: string;
+  // That same id while the sentence is on the page — the lead is closed, or
+  // not this caller's to change — and undefined while the lead takes writes.
+  // Email is the one verb here that writes no lead row, so it keeps reading
+  // the closure alone.
+  refusedReasonId?: string;
 }>) {
   const t = useT();
   return (
@@ -1591,6 +1601,7 @@ function LeadActions({
         <Button
           variant="primary"
           data-testid="lead-qualify"
+          reasonId={refusedReasonId}
           reason={
             promoteEligible(lead) ? undefined : t("lead.promoteIneligible")
           }
@@ -1616,7 +1627,7 @@ function LeadActions({
           band above names which, so these controls point at that one
           sentence rather than guessing at it. */}
       <EditAction<Lead>
-        disabledReasonId={lead.archived_at ? terminalReasonId : undefined}
+        disabledReasonId={refusedReasonId}
         label={t("record.edit")}
         savedMessage={(saved) =>
           t("record.saveDone", { name: saved.full_name ?? "" })
@@ -1666,8 +1677,7 @@ function LeadActions({
               lead keeps the control, disabled with the page's one reason. */}
           <Button
             data-testid="lead-disqualify"
-            reasonId={lead.archived_at ? terminalReasonId : undefined}
-            reason={lead.archived_at ? t("lead.terminalReadOnly") : undefined}
+            reasonId={refusedReasonId}
             onClick={onDisqualify}
           >
             {t("record.disqualify")}
@@ -1675,7 +1685,7 @@ function LeadActions({
           <ShareAction
             recordType="lead"
             recordId={lead.id}
-            disabledReasonId={lead.archived_at ? terminalReasonId : undefined}
+            disabledReasonId={refusedReasonId}
           />
         </>
       )}
@@ -1855,6 +1865,7 @@ function LeadRecord({
           cf={cf}
           overlay={overlay}
           terminalReasonId={terminalReasonId}
+          refusedReasonId={writer.readOnly ? terminalReasonId : undefined}
           onQualify={() => setDialog("qualify")}
           onDisqualify={() => setDialog("disqualify")}
         />
@@ -1906,16 +1917,19 @@ function LeadRecord({
           {/* Stated ONCE for the page. Every control the closure refuses
               points at this element by id, so a screen reader reaches it from
               each of them without the sentence being printed beside all six. */}
-          {lead.archived_at && (
+          {writer.readOnlyReason && (
             <p id={terminalReasonId} className="t-caption">
               {/* Which closure, not merely THAT it is closed. Both terminal
                   states archive the row, so keying this off archived_at alone
                   told every promoted lead it had been disqualified — invisible
                   until ADR-0119 stopped the page redirecting away before
-                  anyone could read it. */}
-              {lead.status === "promoted"
-                ? t("lead.terminalPromoted")
-                : t("lead.terminalDisqualified")}
+                  anyone could read it. A live lead that is somebody else's
+                  prints the writer's own sentence instead. */}
+              {lead.archived_at
+                ? lead.status === "promoted"
+                  ? t("lead.terminalPromoted")
+                  : t("lead.terminalDisqualified")
+                : writer.readOnlyReason}
             </p>
           )}
         </>
