@@ -78,13 +78,18 @@ func (s *Store) RouteStates(
 	}
 	// A caller with no person behind it has no tab to render, and this read
 	// reports on asks the caller is not party to — so it answers only a
-	// principal that IS somebody.
+	// principal that IS somebody, and only a human.
 	//
-	// This does not exclude an agent: a passport-backed agent carries its
-	// granting human's UserID, so it passes here. What keeps agents off this
-	// read is the route itself — getPersonGraph is annotated human-only, and
-	// the agent gate refuses it before the handler runs. Wiring RouteStates to
-	// any agent-reachable caller would need that decision made again.
+	// The human arm is load-bearing and belongs HERE rather than on the route.
+	// A passport-backed agent carries its granting human's UserID, so an
+	// id-presence check admits one. The REFUSAL arm below is per-requester —
+	// a declined route is reported only to the rep who was declined — so an
+	// agent admitted here reads its human being turned down. This gate used to
+	// be the route's annotation, which made the answer depend on which door the
+	// read came through rather than on what it discloses.
+	if err := auth.RequireHuman(ctx); err != nil {
+		return nil, err
+	}
 	if actor, ok := principal.Actor(ctx); !ok || actor.UserID.IsZero() {
 		return nil, apperrors.ErrPermissionDenied
 	}

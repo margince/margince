@@ -43,9 +43,10 @@ const (
 // reads or writes: the connection is installation-wide configuration that
 // spends the customer's money, so there is no ungated path to it.
 type Store struct {
-	// db knows the installation's singleton workspace (ADR-0061/A107), which
-	// is where the vault seals this connection's credential. The connection
-	// row itself carries no workspace — see doc.go.
+	// db knows the installation's singleton workspace — one installation
+	// serves one workspace, so there is exactly one to bind (ADR-0061) — which
+	// is where the vault seals this connection's credential. The connection row
+	// itself carries no workspace; see doc.go.
 	db *database.DB
 	// vault custodies the API key. The row holds only an opaque handle.
 	vault keyvault.Vault
@@ -58,9 +59,10 @@ type Store struct {
 
 	// The owning domain's callbacks (runs.go). Nil until compose binds them,
 	// and QueueRun refuses rather than guessing at a subject's consent.
-	fence       FenceSubjectFunc
-	cluster     DuplicateClusterFunc
-	identifiers SubjectIdentifiersFunc
+	fence          FenceSubjectFunc
+	cluster        DuplicateClusterFunc
+	identifiers    SubjectIdentifiersFunc
+	requesterHolds RequesterHoldsFunc
 	// holdSubject is the same question as fence, asked while HOLDING the
 	// subject's row. The hand-off uses it and queue time does not: only the
 	// hand-off goes on to write about the subject, and only it therefore has

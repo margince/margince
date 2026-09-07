@@ -70,7 +70,16 @@ func scanRequest(src row, r *Request) error {
 }
 
 // roleOf answers which party the caller is, or "" for anybody else.
+//
+// An agent is nobody here, whatever id it carries. A passport presents its
+// granting human's UserID, so matching on the id alone would make a credential
+// a PARTY to its human's asks — reading the request text, the status and the
+// reason somebody gave for refusing. Being lent authority to act is not the
+// same as being the person whose favour was asked.
 func (s *Store) roleOf(ctx context.Context, r *Request) Actor {
+	if err := auth.RequireHuman(ctx); err != nil {
+		return ""
+	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID.IsZero() {
 		return ""
@@ -109,6 +118,11 @@ func (s *Store) Get(ctx context.Context, id ids.UUID) (*Request, error) {
 // ForPerson lists the asks about one contact, newest first.
 func (s *Store) ForPerson(ctx context.Context, personID ids.UUID, limit int) ([]Request, error) {
 	if err := auth.Require(ctx, "introduction", principal.ActionRead); err != nil {
+		return nil, err
+	}
+	// The same human arm roleOf states: an id match would make a passport a
+	// party to its human's asks.
+	if err := auth.RequireHuman(ctx); err != nil {
 		return nil, err
 	}
 	actor, ok := principal.Actor(ctx)
@@ -163,6 +177,12 @@ func (s *Store) ForPerson(ctx context.Context, personID ids.UUID, limit int) ([]
 // exactly like a refusal, and the difference is whether anybody looked.
 func (s *Store) AwaitingMyAnswer(ctx context.Context, limit int) ([]Request, error) {
 	if err := auth.Require(ctx, "introduction", principal.ActionRead); err != nil {
+		return nil, err
+	}
+	// The paragraph below names the agent case, and an id check does not reach
+	// it: a passport carries its granting human's UserID, so this refused a
+	// caller with NO id and admitted the one the sentence is about.
+	if err := auth.RequireHuman(ctx); err != nil {
 		return nil, err
 	}
 	actor, ok := principal.Actor(ctx)

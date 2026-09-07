@@ -47,6 +47,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/momentaction"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -114,9 +116,20 @@ func (s *Service) momentDismissed(ctx context.Context, tx pgx.Tx, personID ids.P
 	// none to honour. An agent reading through a passport must not consume the
 	// granting human's: it sees every moment. This is a fact about the caller,
 	// not a failure to read.
+	//
+	// The agent arm is the one that needs saying, because a passport carries
+	// its granting human's UserID: a check for a non-zero id admits an agent
+	// and reads the human's dismissals, which is what this paragraph promises
+	// it does not do. auth.RequireHuman is what tells the two apart.
 	viewer, ok := principal.Actor(ctx)
 	if !ok || viewer.UserID == (ids.UUID{}) {
 		return false, nil
+	}
+	if err := auth.RequireHuman(ctx); err != nil {
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			return false, nil
+		}
+		return false, err
 	}
 	var stored string
 	// (user_id, person_id, claim_key) is the table's primary key, so the three

@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
 
@@ -244,17 +245,51 @@ func SubjectIdentifiers(ctx context.Context, tx pgx.Tx, personID string) (provid
 	// identifies a company to a provider far better than a name does, so it
 	// is worth the join; its absence is not, which is why this is a LEFT
 	// JOIN over the domain rather than a second failing query.
-	if err := tx.QueryRow(ctx, `
+	//
+	// Gated on BOTH questions about the account on the far side of the edge.
+	// The employment is the caller's to see; the company is not the same fact.
+	// auth.Require answers whether they may read organizations at all — the
+	// statement asked nothing of the sort, so every workspace-visible employer
+	// came back to a caller holding no organization grant — and the scope
+	// clause answers which ones are theirs.
+	//
+	// A refusal loses the employer and keeps everything else, which is the
+	// shape SubjectNameOnly returns for a caller without the relationship
+	// grant: erring toward FINDABLE, since a name-only answer can only make a
+	// subject look less matchable than they are, while inventing a "cannot be
+	// looked up" out of a permission asserts something false.
+	mayReadEmployer, err := employerReadable(ctx)
+	if err != nil {
+		return provider.PersonIdentifiers{}, err
+	}
+	if mayReadEmployer {
+		var args []any
+		arg := func(v any) int { args = append(args, v); return len(args) }
+		personArg := arg(personID)
+		scope, err := auth.ScopeClauseFor(ctx, "organization", "o", arg)
+		if err != nil {
+			return provider.PersonIdentifiers{}, err
+		}
+		visible := "true"
+		if scope != "" {
+			visible = scope
+		}
+		// CurrentPrimarySQL is an ARGUMENT to SQLf, not part of its format
+		// string: concatenated, a `%` ever appearing in its output would be
+		// read as a verb and corrupt the statement at runtime.
+		if err := tx.QueryRow(ctx, storekit.SQLf(`
 		SELECT coalesce(o.display_name, ''), coalesce(d.domain, '')
 		  FROM relationship r
 		  JOIN organization o ON o.id = r.organization_id
 		  LEFT JOIN organization_domain d
 		    ON d.organization_id = o.id AND d.is_primary AND d.archived_at IS NULL
-		 WHERE r.kind = 'employment' AND r.person_id = $1
-		   AND `+employment.CurrentPrimarySQL("r")+` AND r.archived_at IS NULL
-		 LIMIT 1`, personID).
-		Scan(&id.CompanyName, &id.CompanyDomain); err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return provider.PersonIdentifiers{}, fmt.Errorf("people: reading the subject's employer: %w", err)
+		 WHERE r.kind = 'employment' AND r.person_id = $%d
+		   AND %s AND r.archived_at IS NULL
+		   AND %s
+		 LIMIT 1`, personArg, employment.CurrentPrimarySQL("r"), visible), args...).
+			Scan(&id.CompanyName, &id.CompanyDomain); err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return provider.PersonIdentifiers{}, fmt.Errorf("people: reading the subject's employer: %w", err)
+		}
 	}
 
 	if err := tx.QueryRow(ctx, `
@@ -288,4 +323,21 @@ func derefOr(s *string) string {
 		return ""
 	}
 	return *s
+}
+
+// employerReadable reports whether this caller may read organizations at all.
+//
+// A permission denial is an ANSWER here, not a failure: the employer is one
+// optional half of a provider lookup, and losing it leaves the person's own
+// identifiers intact. Anything else — a missing principal, a broken policy —
+// is a real error and stays one.
+func employerReadable(ctx context.Context) (bool, error) {
+	switch err := auth.Require(ctx, "organization", principal.ActionRead); {
+	case err == nil:
+		return true, nil
+	case errors.Is(err, apperrors.ErrPermissionDenied):
+		return false, nil
+	default:
+		return false, err
+	}
 }

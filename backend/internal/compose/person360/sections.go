@@ -18,7 +18,9 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func (s *Service) strengthSection(ctx context.Context, tx pgx.Tx, personID ids.PersonID, now time.Time, out *crmcontracts.Person360) error {
@@ -128,6 +130,26 @@ func (s *Service) employmentsSection(ctx context.Context, tx pgx.Tx, personID id
 // cannot read is simply absent — the edge still shows, without asserting a
 // company the reader has no grant for.
 func (s *Service) organizationName(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) (string, error) {
+	// The two refusals the paragraph above promises, spelled as the two
+	// questions they actually are. The row-scope miss was the only one the
+	// statement asked — its id-and-archived_at predicate says nothing about
+	// who is reading — so a caller holding no organization grant at all read
+	// employer names through the employment edge. auth.Require answers the
+	// object question and auth.EnsureVisible the row one, and both refuse by
+	// leaving the name absent rather than failing the section, because an
+	// employment the reader may see is still a true edge.
+	if err := auth.Require(ctx, "organization", principal.ActionRead); err != nil {
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			return "", nil
+		}
+		return "", err
+	}
+	if err := auth.EnsureVisible(ctx, tx, "organization", orgID.UUID); err != nil {
+		if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
+			return "", nil
+		}
+		return "", err
+	}
 	var name string
 	err := tx.QueryRow(ctx, `SELECT display_name FROM organization WHERE id = $1 AND archived_at IS NULL`, orgID).Scan(&name)
 	if errors.Is(err, pgx.ErrNoRows) {
