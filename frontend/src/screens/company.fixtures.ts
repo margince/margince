@@ -200,6 +200,10 @@ type BackstopOptions = Readonly<{
   scan?: unknown;
   rollup?: unknown;
   brief?: unknown;
+  // The reader's own mail connections, which decide whether an address on the
+  // page is the composer's or their mail client's. None unless a suite is
+  // about writing to somebody.
+  connectors?: unknown;
 }>;
 
 function backstopAnswer(
@@ -223,6 +227,9 @@ function backstopAnswer(
   }
   if (pathname.endsWith("/brief")) {
     return jsonResponse(options?.brief ?? emptyBrief);
+  }
+  if (pathname.endsWith("/connectors")) {
+    return jsonResponse(options?.connectors ?? { data: [] });
   }
   // The account scan the page asks for on open: `never`, echoing the 360's
   // rows, unless a suite hands in one, so a page test is not also a scan test.

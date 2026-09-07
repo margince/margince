@@ -144,6 +144,14 @@ function mount(
           },
         ],
       }),
+    // The reader's own connected mailbox, which is what makes an address on
+    // the page the composer's rather than their mail client's.
+    "GET /connectors": () =>
+      jsonResponse({
+        data: [
+          { id: "g1", provider: "gmail", status: "connected", scopes: [] },
+        ],
+      }),
     // Last, so a spec that needs to override a read above (e.g. a /me that
     // never resolves, for a pending-grant spec) can.
     ...extraRoutes,
@@ -318,7 +326,7 @@ describe("a moment action that opens the composer", () => {
     mount("overview", { ...view, moment: quietMoment }, [mailAllowed]);
 
     const header = await recordHeader();
-    const address = within(header).getByRole("button", {
+    const address = await within(header).findByRole("button", {
       name: "dana@brandt.example",
     });
     expect(address.hasAttribute("href")).toBe(false);
@@ -328,6 +336,24 @@ describe("a moment action that opens the composer", () => {
       await screen.findByRole("dialog", { name: /Draft email/ }),
     ).toBeTruthy();
     expect(screen.getAllByRole("dialog").length).toBe(1);
+  });
+
+  it("hands the address to the reader's own client when they have no mailbox to send from", async () => {
+    // The composer sends from the reader's own connected mailbox. Without one
+    // it could only refuse, so the address is a `mailto:` — the page's own
+    // drawer is not offered for it either.
+    mount("overview", { ...view, moment: quietMoment }, [mailAllowed], {
+      "GET /connectors": () => jsonResponse({ data: [] }),
+    });
+
+    const header = await recordHeader();
+    const address = await within(header).findByRole("link", {
+      name: "dana@brandt.example",
+    });
+    expect(address.getAttribute("href")).toBe("mailto:dana@brandt.example");
+    expect(
+      within(header).queryByRole("button", { name: "dana@brandt.example" }),
+    ).toBeNull();
   });
 });
 

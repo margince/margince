@@ -30,7 +30,9 @@ numbers appear here when releases start.
   outside the product, nothing was filed on the record, no consent was asked,
   and the thread on the record had a hole where the reply arrived. Each address
   is now a button into the same composer the header's Email verb opens, on the
-  record the address belongs to and with the address already in the To line.
+  record the address belongs to and with the address already in the To line —
+  for a reader who has connected a mailbox for Margince to send from. Without
+  one the address stays a `mailto:`, because the composer could only refuse.
   Phone numbers still dial through `tel:`.
 
 - **The relationship brief is written by a model, and reads what people actually

@@ -69,12 +69,19 @@ describe("ContactLink", () => {
     expect(screen.getByText("dana@brandt.example")).toBeTruthy();
   });
 
-  it("keeps the address as text where nothing hosts a composer", () => {
+  it("hands the address to the reader's own client where nothing writes from the product", () => {
+    // No host, or a reader with no connected mailbox: the same case, and the
+    // `mailto:` is the honest answer to it rather than a press that opens
+    // nothing.
     render(
       <ContactLink kind="email" value="dana@brandt.example" record={dana} />,
     );
     expect(screen.queryByRole("button")).toBeNull();
-    expect(screen.getByText("dana@brandt.example").className).toBe("");
+    expect(
+      screen
+        .getByRole("link", { name: "dana@brandt.example" })
+        .getAttribute("href"),
+    ).toBe("mailto:dana@brandt.example");
   });
 
   it("dresses a refused value only in the class the caller gives the text", () => {

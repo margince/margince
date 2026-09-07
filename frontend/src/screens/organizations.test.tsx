@@ -2150,6 +2150,13 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
   // which is three round trips spent on a decision the list could have carried.
   it("carries what a listed contact does and how to write to them", async () => {
     stubFetch(companyBackstop, {
+      // The reader has a mailbox to send from, so the address is the
+      // composer's; without one it would be their own mail client's.
+      connectors: {
+        data: [
+          { id: "g1", provider: "gmail", status: "connected", scopes: [] },
+        ],
+      },
       org360: {
         ...org360,
         people: {
@@ -2192,9 +2199,11 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     // nested inside it: a control inside a link is a press whose destination
     // nobody can predict. A button, into the product's composer, and never
     // a link the reader's own mail client would take.
-    const write = screen.getAllByRole("button", {
-      name: "anna.brandt@brandt-automotive.de",
-    })[0];
+    const write = (
+      await screen.findAllByRole("button", {
+        name: "anna.brandt@brandt-automotive.de",
+      })
+    )[0];
     expect(write.hasAttribute("href")).toBe(false);
     expect(name.contains(write)).toBe(false);
   });

@@ -3,6 +3,8 @@
 
 import { createContext, type ReactNode, useContext, useState } from "react";
 import { ComposeModal, type RelinkKind } from "./compose";
+import { isMailbox } from "./connectorproviders";
+import { useConnectors } from "./connectors";
 
 /**
  * Writing to an address, from wherever the address is shown.
@@ -21,6 +23,12 @@ import { ComposeModal, type RelinkKind } from "./compose";
  * own — the contact page, whose drawer also offers chat transports — answers
  * the same call with that one through `WriteToProvider`, so its address and
  * its header verb open the same drawer rather than two.
+ *
+ * Only while the reader has a mailbox the product can write from. The composer
+ * sends from the reader's own connected mailbox and can only refuse without
+ * one, so an address is then handed to the reader's own mail client instead:
+ * the message still leaves outside the product, but that is the truth of the
+ * situation rather than a drawer that opens onto a refusal.
  */
 
 /** The record an address belongs to, which a message to it is filed under. */
@@ -42,20 +50,41 @@ export type WriteTo = (target: WriteToTarget) => void;
 const WriteToContext = createContext<WriteTo | null>(null);
 
 /**
- * The way to write to an address from here, or null where nothing hosts a
- * composer. The authenticated shell always does; null is a story or a test
- * that mounted a surface on its own, and a surface answers it by keeping the
- * address as text rather than by promising a press that opens nothing.
+ * The way to write to an address from the product, or null when there is none
+ * from here: the reader has no connected mailbox, or nothing hosts a composer
+ * (a story or a test that mounted a surface on its own). A surface answers
+ * null with the reader's own mail client, never with a press that opens
+ * nothing.
  */
 export function useWriteTo(): WriteTo | null {
   return useContext(WriteToContext);
 }
 
-/** A page's own answer to the call, for one that keeps its own composer. */
+/**
+ * Whether this reader has a mailbox the product can send from: a connected
+ * mail connection, as distinct from a calendar. Read from the roster the
+ * shell already holds for its rail, so a record page rarely meets it
+ * unanswered; unanswered reads as none, because a drawer offered on a guess
+ * would open onto a refusal.
+ */
+export function useMailboxConnected(): boolean {
+  const connectors = useConnectors();
+  return (connectors.data?.data ?? []).some(
+    (connection) =>
+      connection.status === "connected" && isMailbox(connection.provider),
+  );
+}
+
+/**
+ * A page's own answer to the call, for one that keeps its own composer — or
+ * null, the same "nothing writes from here" the host says. Always a provider
+ * and never the bare children: swapping between the two would remount the
+ * page under it the moment the mailbox roster answers.
+ */
 export function WriteToProvider({
   writeTo,
   children,
-}: Readonly<{ writeTo: WriteTo; children: ReactNode }>) {
+}: Readonly<{ writeTo: WriteTo | null; children: ReactNode }>) {
   return (
     <WriteToContext.Provider value={writeTo}>
       {children}
@@ -66,12 +95,14 @@ export function WriteToProvider({
 /**
  * The shell's composer for an address pressed anywhere under it: an
  * account-started mail to the record the address belongs to, in the drawer
- * every other mail leaves from.
+ * every other mail leaves from — while the reader has a mailbox to send it
+ * from, and nothing otherwise.
  */
 export function WriteToHost({ children }: Readonly<{ children: ReactNode }>) {
   const [target, setTarget] = useState<WriteToTarget | null>(null);
+  const connected = useMailboxConnected();
   return (
-    <WriteToContext.Provider value={setTarget}>
+    <WriteToContext.Provider value={connected ? setTarget : null}>
       {children}
       {target && (
         // Keyed by the record, so a press on another record's address while

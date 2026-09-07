@@ -13,13 +13,15 @@ import { useWriteTo, type WriteToRecord } from "../screens/writeto";
 // an address expects to click it, and a page that shows one and does nothing
 // on the click teaches them the record is a read-only printout.
 //
-// An address is a BUTTON into the composer and not a `mailto:` link, because
-// writing on the product's behalf is the composer's: its consent gate, its
-// filing of the message under the record, its thread. A `mailto:` handed the
-// address to the reader's own client and the product never saw the message —
-// the same address, pressed on a header and on a card, then led to two
-// different places. Which record the message is filed under is the caller's to
-// say, because the surface showing the address is the one that knows.
+// An address is a BUTTON into the composer, because writing on the product's
+// behalf is the composer's: its consent gate, its filing of the message under
+// the record, its thread. A `mailto:` handed the address to the reader's own
+// client and the product never saw the message — the same address, pressed on
+// a header and on a card, then led to two different places. Which record the
+// message is filed under is the caller's to say, because the surface showing
+// the address is the one that knows. The `mailto:` remains for the one case
+// the composer cannot serve: a reader with no connected mailbox to send from,
+// whose own client is then the honest answer rather than a refusal.
 //
 // The decision about whether a string may become an action is `contacturi`'s,
 // for the reason `webUrl` owns the same decision for web addresses: a value
@@ -73,11 +75,21 @@ export function ContactLink(props: Contact) {
     );
   }
   const address = mailbox(value);
-  // No host, and a record that takes no writes, are the same case as a refused
-  // value: text, because a control that opens nothing is a promise the reader
-  // cannot collect on.
-  if (!address || !writeTo || props.readOnly) {
+  // A record that takes no writes is the same case as a refused value: text,
+  // because a control that opens nothing is a promise the reader cannot
+  // collect on.
+  if (!address || props.readOnly) {
     return <span className={textClassName}>{body}</span>;
+  }
+  if (!writeTo) {
+    // Nothing writes from the product here, so the reader's own client does.
+    // The address was admitted above, so this carries nothing but it. No
+    // `target="_blank"`, for the reason the `tel:` link gives.
+    return (
+      <a className={className} href={`mailto:${address}`}>
+        {body}
+      </a>
+    );
   }
   return (
     <button

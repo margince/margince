@@ -19,7 +19,8 @@ const meta: Meta<typeof RecordCard> = {
     (Story) => (
       <LocaleProvider initial="en">
         {/* The shell's composer host, stood in for by a provider that opens
-            nothing: without one the address would be drawn as text. */}
+            nothing: without one the address would be the reader's own mail
+            client's link. */}
         <WriteToProvider writeTo={() => {}}>
           <div style={{ maxWidth: 420 }}>
             <Story />

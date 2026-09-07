@@ -75,7 +75,12 @@ import {
 import { RecordReading, RecordReadingPair } from "./record360";
 import { EmailVerb, RecordEmailAside } from "./recordemail";
 import { ShareAction } from "./share";
-import { useWriteTo, type WriteTo, WriteToProvider } from "./writeto";
+import {
+  useMailboxConnected,
+  useWriteTo,
+  type WriteTo,
+  WriteToProvider,
+} from "./writeto";
 import "./person360.css";
 import { buyingRoleLabel } from "./companypeople/summary";
 
@@ -584,6 +589,10 @@ export function PersonPageV2({
  * contact has an address, so an address opens on mail without being told. An
  * address belonging to some OTHER record still goes to the shell, which is
  * what it was for.
+ *
+ * Under the shell's own condition: a reader with no connected mailbox gets no
+ * answer from this page either, and the address hands itself to their own
+ * mail client exactly as it would anywhere else.
  */
 function PersonWriteTo({
   personId,
@@ -595,6 +604,7 @@ function PersonWriteTo({
   children: ReactNode;
 }>) {
   const shell = useWriteTo();
+  const connected = useMailboxConnected();
   const writeTo: WriteTo = (target) => {
     if (target.entityType === "person" && target.entityId === personId) {
       onWrite();
@@ -602,7 +612,11 @@ function PersonWriteTo({
     }
     shell?.(target);
   };
-  return <WriteToProvider writeTo={writeTo}>{children}</WriteToProvider>;
+  return (
+    <WriteToProvider writeTo={connected ? writeTo : null}>
+      {children}
+    </WriteToProvider>
+  );
 }
 
 // Which drawer is open. Null is the ordinary state — the page is the thing the

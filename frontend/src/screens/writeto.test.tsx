@@ -28,10 +28,19 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-function stubRoutes() {
+// The reader's own connected mailbox, which is what the composer sends from.
+const CONNECTED_MAILBOX = {
+  data: [{ id: "g1", provider: "gmail", status: "connected", scopes: [] }],
+};
+
+function stubRoutes(connectors: unknown = CONNECTED_MAILBOX) {
   vi.stubGlobal(
     "fetch",
-    vi.fn(async () => jsonResponse({ data: [] })),
+    vi.fn(async (request: Request) =>
+      new URL(request.url).pathname.endsWith("/connectors")
+        ? jsonResponse(connectors)
+        : jsonResponse({ data: [] }),
+    ),
   );
 }
 
@@ -65,8 +74,10 @@ describe("WriteToHost", () => {
     );
     expect(screen.queryByRole("dialog")).toBeNull();
 
+    // A button once the roster has answered that there is a mailbox to send
+    // from; until then the address is the reader's own client's.
     await userEvent.click(
-      screen.getByRole("button", { name: "dung.ly@newsky.example" }),
+      await screen.findByRole("button", { name: "dung.ly@newsky.example" }),
     );
 
     const dialog = await screen.findByRole("dialog", { name: /Draft email/ });
@@ -79,6 +90,28 @@ describe("WriteToHost", () => {
     ).toBeTruthy();
   });
 
+  it("hands the address to the reader's own client when no mailbox is connected", async () => {
+    // A calendar is a connection and not a mailbox: the composer would have
+    // nothing to send from, so the address is a `mailto:` and no drawer opens.
+    stubRoutes({
+      data: [{ id: "c1", provider: "gcal", status: "connected", scopes: [] }],
+    });
+    render(
+      <ContactLink
+        kind="email"
+        value="dung.ly@newsky.example"
+        record={{ entityType: "lead", entityId: "l-1" }}
+      />,
+    );
+
+    const link = await screen.findByRole("link", {
+      name: "dung.ly@newsky.example",
+    });
+    expect(link.getAttribute("href")).toBe("mailto:dung.ly@newsky.example");
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
   it("closes the composer and leaves the address pressable again", async () => {
     stubRoutes();
     render(
@@ -89,7 +122,7 @@ describe("WriteToHost", () => {
       />,
     );
     await userEvent.click(
-      screen.getByRole("button", { name: "dung.ly@newsky.example" }),
+      await screen.findByRole("button", { name: "dung.ly@newsky.example" }),
     );
     await screen.findByRole("dialog", { name: /Draft email/ });
 

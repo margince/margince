@@ -12,7 +12,7 @@ import { ContactLink } from "./contactlink";
 //
 // The shell's composer host is stood in for by a provider that opens nothing:
 // the story is about the affordance, and without a host the address would be
-// drawn as text.
+// drawn as the reader's own mail client's link.
 const meta: Meta<typeof ContactLink> = {
   title: "Design System/ContactLink",
   component: ContactLink,

@@ -402,6 +402,9 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
             sections: [],
           });
         }
+        if (method === "GET" && url.endsWith("/v1/connectors")) {
+          return jsonResponse({ data: [] });
+        }
         return jsonResponse(lead);
       },
     );
@@ -912,6 +915,11 @@ function stubFetch(
         anchor: { type: "lead", id: "l-1" },
         sections: [],
       });
+    }
+    // The reader's mail connections, which the shell reads for every page:
+    // none here, so the lead's address is the reader's own mail client's.
+    if (request.method === "GET" && request.url.endsWith("/v1/connectors")) {
+      return jsonResponse({ data: [] });
     }
     // The administered vocabularies, as a fresh installation ships them:
     // the screens read their labels and pick lists off these.
@@ -1688,12 +1696,19 @@ function stubFetchWithMe(
     request: Request,
   ) => Promise<Response | undefined>,
   meId = "u-9",
+  // The reader's own mail connections, which the shell reads for every page
+  // and which decide whether the lead's address is the composer's or their
+  // mail client's. None, unless a suite about writing to the lead says so.
+  connectors: unknown = { data: [] },
 ): { urls: string[] } {
   const urls: string[] = [];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (request: Request) => {
       urls.push(request.url);
+      if (request.method === "GET" && request.url.endsWith("/v1/connectors")) {
+        return jsonResponse(connectors);
+      }
       if (request.url.endsWith("/v1/me")) {
         return jsonResponse({
           user: { id: meId, display_name: "Me" },
@@ -2422,8 +2437,11 @@ describe("LeadScreen — the header's Email verb", () => {
   it("opens the composer on the lead from the header's address, already addressed", async () => {
     // The address is a BUTTON into the product's composer and not a link
     // for the reader's mail client: a message that left through `mailto:`
-    // was never filed on the lead.
-    stubFetchWithMe(async () => jsonResponse(lead));
+    // was never filed on the lead. The composer is offered because the reader
+    // has a mailbox to send from.
+    stubFetchWithMe(async () => jsonResponse(lead), "u-9", {
+      data: [{ id: "g1", provider: "gmail", status: "connected", scopes: [] }],
+    });
     render(<LeadScreen id="l-1" />);
     const address = await screen.findByRole("button", {
       name: "jonas@nordwind.example",
