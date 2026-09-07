@@ -3208,6 +3208,7 @@ export const en = {
   "today.source.activities": "what was said",
   "today.silence.days": "no answer in {count} days",
   "today.draft.to": "Draft follow-up to {name}",
+  "today.draft.new": "Start a new email",
   "today.draft.act": "Draft",
 
   "evidence.mark": "read",

@@ -1770,6 +1770,13 @@ export function useSuggestionsBody({
   // number from the same view would be a second answer free to disagree with
   // the one on screen.
   count: number;
+  // Whether any row this section DRAWS offers to answer a specific message.
+  //
+  // Computed from the post-filter list rather than from the raw advice: a
+  // caller that skips its own generic "write to them" row must skip it exactly
+  // when the reader can see the specific one, and a `keep` predicate that
+  // filtered the reply out would otherwise leave the account offering neither.
+  hasDraftReply: boolean;
   // The truncation count and a failed dismissal, additive on top of whatever
   // else the caller's own footer carries.
   footer?: ReactNode;
@@ -1844,7 +1851,7 @@ export function useSuggestionsBody({
   // section gives.
   const suggestions = keep ? all.filter(keep) : all;
   if (state !== "ready" || suggestions.length === 0) {
-    return { ready: false, rows: null, count: 0 };
+    return { ready: false, rows: null, count: 0, hasDraftReply: false };
   }
   // How many the cap dropped that THIS caller should report. The count
   // describes the whole list, so a narrowed caller reports none: "2 more" under
@@ -1928,7 +1935,15 @@ export function useSuggestionsBody({
       }}
     />
   ));
-  return { ready: true, rows, count: suggestions.length, footer };
+  return {
+    ready: true,
+    rows,
+    count: suggestions.length,
+    hasDraftReply: suggestions.some(
+      (suggestion) => suggestion.action?.kind === "draft_reply",
+    ),
+    footer,
+  };
 }
 
 // A suggestion that would BECOME a task. The action is what decides it, not the

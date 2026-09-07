@@ -239,7 +239,13 @@ export function useTodayReading({
         ]
       : []),
     suggestions.rows,
-    ...manualMoveRows({ view, t, onPrepareMeeting, onDraftTo }),
+    ...manualMoveRows({
+      view,
+      t,
+      onPrepareMeeting,
+      onDraftTo,
+      hasDraftReply: suggestions.hasDraftReply,
+    }),
   ];
   return {
     state: "ready",
@@ -514,22 +520,40 @@ function manualMoveRows({
   t,
   onPrepareMeeting,
   onDraftTo,
+  hasDraftReply,
 }: Readonly<{
   view: Organization360;
   t: ReturnType<typeof useT>;
   onPrepareMeeting?: (activityId: string) => void;
   onDraftTo?: (personId: string) => void;
+  // Whether the advice above already offers a reply to a specific message.
+  hasDraftReply: boolean;
 }>): ReactNode[] {
   const recipient = [...(view.people?.data ?? [])].sort(byStrengthThenId)[0];
   const meeting = view.next_meeting;
   const rows: ReactNode[] = [];
-  if (recipient && onDraftTo) {
+  // The generic row is dropped when a suggestion already says "answer THIS
+  // message". Both rows say "write to them" and only one of them knows which
+  // conversation — and the generic one picks the account's strongest contact,
+  // who is frequently not the person waiting on a reply. Two draft rows naming
+  // two different people is the account telling a rep two different things.
+  if (recipient && onDraftTo && !hasDraftReply) {
     rows.push(
       <TodoRow
         key="move:draft"
+        // TodoRow takes a string here, for the avatar it draws. The linked
+        // name goes in `meta` instead: keeping the action phrase separate from
+        // the name is also what stops the label hard-coding English word order
+        // around a React node.
         who={recipient.full_name}
-        title={t("today.draft.to", { name: firstName(recipient.full_name) })}
-        meta={recipient.full_name}
+        title={t("today.draft.new")}
+        meta={
+          <EntityRef
+            kind="person"
+            id={recipient.person_id}
+            name={recipient.full_name}
+          />
+        }
         verb={{
           label: t("today.draft.act"),
           onAct: () => onDraftTo(recipient.person_id),
@@ -567,10 +591,6 @@ function manualMoveRows({
     );
   }
   return rows;
-}
-
-function firstName(fullName: string): string {
-  return fullName.split(" ")[0] || fullName;
 }
 
 function omitted(view: Organization360, section: string): boolean {
