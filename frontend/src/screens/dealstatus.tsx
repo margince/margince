@@ -13,7 +13,9 @@ import { useDealSignals } from "./dealsignals";
 import { hasMoveControl, MoveButton } from "./movebutton";
 import {
   CallCard,
+  EvidenceSources,
   FoundMove,
+  fromDealMove,
   SentenceList,
   SignalStrip,
   type StandingTone,
@@ -98,9 +100,14 @@ export function DealStatusCardPanel({
   dealName,
   pulse,
   spine,
+  onOpenEmail,
 }: Readonly<{
   dealId: string;
   dealName: string;
+  // Opens a cited message in the deal page's own email drawer. The card cites
+  // the conversations the deal was read from, and the page already mounts the
+  // drawer its timeline opens into.
+  onOpenEmail?: (activityId: string) => void;
   // Whose move it is, in one sentence (DealPulse). Under the call rather than
   // in the header: it is a reading of the same status card, and the sentence
   // the standing rests on.
@@ -135,6 +142,7 @@ export function DealStatusCardPanel({
         card={status.data}
         pulse={pulse}
         spine={spine}
+        onOpenEmail={onOpenEmail}
         onRewrite={() => rewrite.mutate()}
         rewriting={rewrite.isPending}
       />
@@ -182,6 +190,7 @@ function Briefing({
   card,
   pulse,
   spine,
+  onOpenEmail,
   onRewrite,
   rewriting,
 }: Readonly<{
@@ -190,6 +199,8 @@ function Briefing({
   card: DealStatusCard;
   pulse?: ReactNode;
   spine?: ReactNode;
+  // Opens a cited message in the deal page's email drawer; see `Citations`.
+  onOpenEmail?: (activityId: string) => void;
   onRewrite: () => void;
   rewriting: boolean;
 }>) {
@@ -224,7 +235,11 @@ function Briefing({
         }
         because={
           because.length > 0 ? (
-            <SentenceList sentences={because.slice(0, 1)} onOpenRecord={open} />
+            <SentenceList
+              sentences={because.slice(0, 1)}
+              onOpenRecord={open}
+              onOpenEmail={onOpenEmail}
+            />
           ) : undefined
         }
       >
@@ -234,7 +249,12 @@ function Briefing({
       </CallCard>
       <TodayPanel onOpenTasks={() => navigate({ screen: "worklist" })}>
         {card.next ? (
-          <Move key="next" dealId={dealId} move={card.next} />
+          <Move
+            key="next"
+            dealId={dealId}
+            move={card.next}
+            onOpenEmail={onOpenEmail}
+          />
         ) : null}
       </TodayPanel>
       {/* The reading, under the call and the work: what has happened and
@@ -259,19 +279,26 @@ function Briefing({
           </div>
         }
       >
-        <Section section={card.story} onOpenRecord={open} lead />
+        <Section
+          section={card.story}
+          onOpenRecord={open}
+          onOpenEmail={onOpenEmail}
+          lead
+        />
         <details className="deal360-fold">
           <summary>{t("deal360.readFull")}</summary>
           <Section
             heading={t("deal360.blocker")}
             section={card.blocker}
             onOpenRecord={open}
+            onOpenEmail={onOpenEmail}
             tone="warn"
           />
           <Section
             heading={t("deal360.buyer")}
             section={card.buyer}
             onOpenRecord={open}
+            onOpenEmail={onOpenEmail}
           />
           {/* The rest of the verdict's reasoning. Its first line is already in
               the call above, so this renders only what the head did not. */}
@@ -279,6 +306,7 @@ function Briefing({
             <Section
               section={{ sentences: because.slice(1) }}
               onOpenRecord={open}
+              onOpenEmail={onOpenEmail}
             />
           ) : null}
         </details>
@@ -294,12 +322,15 @@ function Section({
   heading,
   section,
   onOpenRecord,
+  onOpenEmail,
   tone,
   lead,
 }: Readonly<{
   heading?: string;
   section: DealStatusCardSection | undefined;
   onOpenRecord: (entityType: string, entityId: string) => void;
+  // Opens a cited message; see `Citations`.
+  onOpenEmail?: (activityId: string) => void;
   tone?: "warn";
   // The brief's opening block leads with its judgement, the way every other
   // written reading on a record does.
@@ -318,6 +349,7 @@ function Section({
       <SentenceList
         sentences={section.sentences}
         onOpenRecord={onOpenRecord}
+        onOpenEmail={onOpenEmail}
         leadWithJudgement={lead}
       />
     </PanelBody>
@@ -343,17 +375,35 @@ function verdictLabel(
 function Move({
   dealId,
   move,
-}: Readonly<{ dealId: string; move: DealStatusCardMove }>) {
+  onOpenEmail,
+}: Readonly<{
+  dealId: string;
+  move: DealStatusCardMove;
+  // Opens the message the move rests on. The recommended move is usually
+  // "answer them", and the reader's first act is to read what they said.
+  onOpenEmail?: (activityId: string) => void;
+}>) {
+  // The basis splits by what each line HAS. A line naming a message this
+  // reader may open becomes that message — subject, sender, preview — because
+  // reading it is the move. A line naming no record is the sentence the server
+  // wrote, and stays one: a close date inside the week is a fact about the
+  // deal, not a row to open.
+  const { sources, prose } = fromDealMove(move.evidence);
   return (
     <FoundMove
       title={move.reason}
       basis={
         move.evidence.length > 0 ? (
-          <ul className="deal360-evidence t-caption">
-            {move.evidence.map((row) => (
-              <li key={`${row.activity_id ?? ""}-${row.text}`}>{row.text}</li>
-            ))}
-          </ul>
+          <>
+            {prose.length > 0 && (
+              <ul className="deal360-evidence t-caption">
+                {prose.map((text) => (
+                  <li key={text}>{text}</li>
+                ))}
+              </ul>
+            )}
+            <EvidenceSources sources={sources} onOpenEmail={onOpenEmail} />
+          </>
         ) : undefined
       }
       action={
