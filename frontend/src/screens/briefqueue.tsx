@@ -64,8 +64,8 @@ export function briefLabels(
   recordZone?: string,
 ): BriefItemLabels {
   return {
-    rank: t("brief.brief.rank"),
-    composite: t("brief.brief.composite"),
+    rank: t("brief.rank"),
+    composite: t("brief.composite"),
     factors: {
       winnability: t("brief.factorWinnability"),
       revenue: t("brief.factorRevenue"),
@@ -84,14 +84,14 @@ export function briefLabels(
     acted: t("brief.actedState"),
     dismissed: t("brief.dismissedState"),
     snoozed: t("brief.snoozedState"),
-    resurfaces: t("brief.brief.resurfaces"),
+    resurfaces: t("brief.resurfaces"),
     previouslyDismissed:
       dismissedOn === undefined || recordZone === undefined
         ? ""
-        : t("brief.brief.previouslyDismissed", {
+        : t("brief.previouslyDismissed", {
             day: formatDate(dismissedOn, locale, recordZone),
           }),
-    returnedWith: t("brief.brief.returnedWith"),
+    returnedWith: t("brief.returnedWith"),
   };
 }
 
@@ -166,7 +166,7 @@ export function BriefQueueItem({
       revenueBasisNote={
         revenueBasis === undefined
           ? undefined
-          : t("brief.brief.revenueBasis", { amount: revenueBasis })
+          : t("brief.revenueBasis", { amount: revenueBasis })
       }
       dealName={deals.find((deal) => deal.id === item.deal_id)?.name}
       amount={amountOf(item.deal_id, deals, locale)}

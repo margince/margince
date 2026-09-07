@@ -357,6 +357,248 @@ export const narratedWeek: WeeklyReview = {
   ],
 };
 
+/**
+ * Where the week was landing, frozen at all three horizons.
+ *
+ * Three entries rather than one, because the horizon dial only exists where
+ * there is something to switch BETWEEN — a single-entry outlook draws a control
+ * whose one option is the one already showing. The quarter carries both
+ * landings and its movement bars, so the bridge under the strip has an opening
+ * to have moved from; the week and the month carry the strip alone, which is
+ * the other honest shape and the one that makes the bridge say "no opening".
+ */
+export const weeklyOutlook: NonNullable<WeeklyReview["outlook"]> = [
+  {
+    period_kind: "week",
+    period_start: "2026-06-29",
+    period_end: "2026-07-05",
+    base_currency: "EUR",
+    won_minor: 96_500_00,
+    commit_minor: 42_000_00,
+    best_case_minor: 78_000_00,
+    weighted_minor: 55_400_00,
+    movement: [],
+  },
+  {
+    period_kind: "month",
+    period_start: "2026-07-01",
+    period_end: "2026-07-31",
+    base_currency: "EUR",
+    won_minor: 96_500_00,
+    commit_minor: 214_000_00,
+    best_case_minor: 356_000_00,
+    weighted_minor: 248_200_00,
+    movement: [],
+  },
+  {
+    period_kind: "quarter",
+    period_start: "2026-07-01",
+    period_end: "2026-09-30",
+    base_currency: "EUR",
+    won_minor: 96_500_00,
+    commit_minor: 512_000_00,
+    best_case_minor: 940_000_00,
+    weighted_minor: 604_500_00,
+    opening_landing_minor: 572_000_00,
+    closing_landing_minor: 604_500_00,
+    forward_measure: "commit_evidence",
+    // The bars sum to the move between the two landings, because a bridge that
+    // does not reconcile draws its own warning.
+    movement: [
+      {
+        bar: "created",
+        delta_minor: 84_000_00,
+        drivers: [
+          {
+            deal_id: "01a04000-0000-7000-8000-00000000000e",
+            deal_label: "Hansa Werft — Werkstattsteuerung",
+            delta_minor: 84_000_00,
+          },
+        ],
+      },
+      { bar: "advanced", delta_minor: 26_500_00 },
+      { bar: "slipped", delta_minor: -47_000_00 },
+      { bar: "lost", delta_minor: -31_000_00 },
+    ],
+  },
+];
+
+/**
+ * How well the week went, both blocks answered.
+ *
+ * A block the server did not send is a REP WHO CARRIED NONE of that work, so
+ * every story that means to show one block absent drops it from this value
+ * rather than zeroing its fields.
+ */
+export const weeklyScorecard: NonNullable<WeeklyReview["scorecard"]> = {
+  lead: {
+    advanced: 4,
+    disqualified: 1,
+    promoted: 2,
+    answered_in_target: 7,
+    breached: 2,
+    meetings_booked: 6,
+    meetings_held: 5,
+    meetings_no_show: 1,
+    meetings_partial_history: 0,
+  },
+  deal: {
+    advances: 7,
+    regressions: 2,
+    median_days_in_stage: 11,
+    with_next_step: 3,
+    open: 5,
+    multi_threaded: 2,
+    close_date_sound: 4,
+    forecast_up: 3,
+    forecast_down: 1,
+  },
+};
+
+/**
+ * What the week taught, with what each lesson rests on.
+ *
+ * One of each shape the panel labels, and every one carries a citation: a
+ * learning stored without one is refused, so a fixture without one would
+ * document a row the server cannot produce.
+ */
+export const weeklyLearnings: NonNullable<WeeklyReview["learnings"]> = {
+  state: "synthesized",
+  items: [
+    {
+      kind: "worked",
+      text: "Reaching the sponsor before the technical review won Weber.",
+      citations: [
+        {
+          subject_type: "deal",
+          subject_id: "01a04000-0000-7000-8000-00000000000b",
+          label: "Weber Rahmenvertrag",
+        },
+      ],
+    },
+    {
+      kind: "did_not_work",
+      text: "Aster went quiet after the price list went out with no call behind it.",
+      citations: [
+        {
+          subject_type: "deal",
+          subject_id: "01a04000-0000-7000-8000-00000000000c",
+          label: "Aster Handel — Kassensystem",
+        },
+      ],
+    },
+    {
+      kind: "pattern",
+      text: "Every deal that closed this quarter had a second contact by week two.",
+      citations: [
+        {
+          subject_type: "deal",
+          subject_id: "01a04000-0000-7000-8000-00000000000d",
+          label: "Nordwind Logistik — Depot rollout",
+        },
+      ],
+    },
+    {
+      kind: "experiment",
+      text: "Book the follow-up in the meeting rather than after it.",
+      citations: [
+        {
+          subject_type: "commitment",
+          subject_id: "01a04000-0000-7000-8000-00000000001a",
+          label: "Send the Weber quote",
+        },
+      ],
+    },
+  ],
+};
+
+/** The Monday with every lane answered: figures, landing, scorecard, lessons. */
+export const wholeWeek: WeeklyReview = {
+  ...narratedWeek,
+  outlook: weeklyOutlook,
+  scorecard: weeklyScorecard,
+  learnings: weeklyLearnings,
+};
+
+export type TeamWeeklyReview = components["schemas"]["TeamWeeklyReview"];
+export type Team = components["schemas"]["Team"];
+
+/** The one team a lead reads, for the picker above the team's week. */
+export const team: Team = { id: "t-nord", name: "Nord" };
+
+/**
+ * A team's week as it was measured when the week closed.
+ *
+ * Three reps with three different verdicts, because the agenda is an ORDER over
+ * them and a fixture where everybody had the same week documents no ordering at
+ * all. `agenda` is not optional on the wire, so it is spelled here rather than
+ * left to a default the server never sends.
+ */
+export const teamWeek: TeamWeeklyReview = {
+  id: "01a04000-0000-7000-8000-0000000000f1",
+  team_id: team.id,
+  team_name: team.name,
+  local_week_start: WEEK_START,
+  generated_at: "2026-07-06T06:00:00Z",
+  as_of: "2026-07-06T06:00:00Z",
+  reps_unread: 0,
+  counts: {
+    reps_counted: 3,
+    deals_won: 4,
+    deals_lost: 1,
+    deals_moved: 9,
+    leads_routed: 14,
+    leads_answered_in_target: 13,
+    leads_breached: 1,
+    meetings_held: 12,
+    meetings_with_next_step: 6,
+    commitments_due: 9,
+    commitments_kept: 7,
+  },
+  reps: [
+    {
+      user_id: "u-lena",
+      display_name: "Lena Fischer",
+      deals_won: 2,
+      leads_breached: 0,
+      meetings_held: 5,
+      commitments_due: 3,
+      commitments_kept: 3,
+      help_requested: 0,
+      focus_kind: "strong_week",
+      focus_label: "Fastest first response on the team",
+    },
+    {
+      user_id: "u-tobias",
+      display_name: "Tobias Kern",
+      deals_won: 1,
+      leads_breached: 1,
+      meetings_held: 4,
+      commitments_due: 4,
+      commitments_kept: 2,
+      help_requested: 1,
+      focus_kind: "help_requested",
+      focus_label: "Asked for help on the Hansa renewal",
+    },
+    {
+      user_id: "u-mira",
+      display_name: "Mira Sandoval",
+      deals_won: 1,
+      leads_breached: 0,
+      meetings_held: 3,
+      commitments_due: 2,
+      commitments_kept: 2,
+      help_requested: 0,
+      focus_kind: "meetings_without_next_step",
+      focus_label: "Three meetings closed without a next step",
+    },
+  ],
+  // Who is talked about first: the person who asked for help, then the one
+  // whose meetings ended open, then the week that went well.
+  agenda: ["u-tobias", "u-mira", "u-lena"],
+  outlook: weeklyOutlook,
+};
+
 export type Worklist = components["schemas"]["Worklist"];
 type Readings = components["schemas"]["WorklistReadings"];
 

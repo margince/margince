@@ -37,6 +37,21 @@ function installAppStub() {
         headers: { "Content-Type": "application/json" },
       });
     }
+    // The installation's own company, for the same reason: the brand block
+    // draws a monogram from `display_name`, and the list-shaped fallback is an
+    // OBJECT — truthy, so the shell reads it as a saved profile and then splits
+    // a name that is not there. A 404 is the other real answer here and the
+    // wrong one for this story: it is the signal that nobody has onboarded, and
+    // the gate would send this frame to the wizard.
+    if (url.endsWith("/v1/company")) {
+      return new Response(
+        JSON.stringify({
+          organization_id: "01a00000-0000-7000-8000-0000000000ac",
+          display_name: "Acme Fördertechnik",
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
     return new Response(
       JSON.stringify({
         data: [],

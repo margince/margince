@@ -2,7 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { useState } from "react";
 import { LocaleProvider } from "../i18n";
+import { Button } from "./atoms";
 import { ResolveSheet, type ResolveSheetLabels } from "./resolvesheet";
 
 // Answering a finding from the nightly input check.
@@ -57,16 +59,41 @@ const labels: ResolveSheetLabels = {
 
 const noop = () => {};
 
+/**
+ * The sheet with the control that opens it, the way `atoms.stories.tsx` frames
+ * a dialog.
+ *
+ * The trigger is not decoration: `Modal` portals to the document body, so a
+ * frame whose only content is the sheet leaves the story's own root EMPTY —
+ * which reads to a render gate as a component that drew nothing. It is also
+ * what lets a reader reopen the drawer after dismissing it.
+ */
+function ResolveSheetDemo({
+  pending = false,
+}: Readonly<{ pending?: boolean }>) {
+  const [open, setOpen] = useState(true);
+  return (
+    <>
+      <Button variant="primary" onClick={() => setOpen(true)}>
+        Answer the finding
+      </Button>
+      <ResolveSheet
+        open={open}
+        pending={pending}
+        labels={labels}
+        onSubmit={noop}
+        onClose={() => setOpen(false)}
+      />
+    </>
+  );
+}
+
 export const Open: Story = {
-  render: () => (
-    <ResolveSheet open labels={labels} onSubmit={noop} onClose={noop} />
-  ),
+  render: () => <ResolveSheetDemo />,
 };
 
 // The state a save is in flight from: the control is out of reach rather than
 // gone, so the sheet does not jump under the hand that pressed it.
 export const Saving: Story = {
-  render: () => (
-    <ResolveSheet open pending labels={labels} onSubmit={noop} onClose={noop} />
-  ),
+  render: () => <ResolveSheetDemo pending />,
 };

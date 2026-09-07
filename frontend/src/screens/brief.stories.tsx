@@ -170,6 +170,19 @@ export const LastCard: Story = {
   render: brief({ approvals: [singles[0]] }),
 };
 
+/**
+ * The verb on the card at the FRONT of the deck.
+ *
+ * Every pending card carries the same three verbs, so a singular query for one
+ * of them rejects the moment the deck holds more than one card — which is every
+ * frame these interactions are worth taking. The reader answers the deck from
+ * the front, so the first match is the card they are looking at.
+ */
+async function answerTopCard(canvas: ReturnType<typeof within>, verb: string) {
+  const [front] = await canvas.findAllByRole("button", { name: verb });
+  await userEvent.click(front);
+}
+
 // The tray, which is the undo the backend does not have: a recorded decision
 // cannot be reversed, so the verdict sits here — locally, nothing sent — until
 // somebody presses commit.
@@ -177,9 +190,7 @@ export const StagedTray: Story = {
   render: brief({ approvals: [...singles] }),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(
-      await canvas.findByRole("button", { name: "Accept" }),
-    );
+    await answerTopCard(canvas, "Accept");
     await canvas.findByText("1 decision staged");
   },
 };
@@ -192,10 +203,8 @@ export const DeckCleared: Story = {
   render: brief({ approvals: [singles[0], singles[1]] }),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(
-      await canvas.findByRole("button", { name: "Accept" }),
-    );
-    await userEvent.click(await canvas.findByRole("button", { name: "Later" }));
+    await answerTopCard(canvas, "Accept");
+    await answerTopCard(canvas, "Later");
     await userEvent.click(
       await canvas.findByRole("button", { name: "Send staged decisions" }),
     );

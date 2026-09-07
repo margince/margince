@@ -2976,15 +2976,15 @@ export const en = {
   "brief.deck.empty": "Nothing is waiting on you.",
   "brief.deck.bundleSummary": "One decision · {count} items",
   "brief.deck.bundleMembers": "Show the {count} items",
-  "brief.brief.rank": "Rank",
-  "brief.brief.composite": "Score",
+  "brief.rank": "Rank",
+  "brief.composite": "Score",
   // A deal the rep dismissed, come back. The suppression rule holds a dismissed
   // deal out until a linked activity arrives after the mark, so the sentence
   // states that rule rather than guessing: it can only ever name an activity.
-  "brief.brief.previouslyDismissed": "Flagged {day} — you dismissed it.",
-  "brief.brief.returnedWith": "It came back with activity on",
-  "brief.brief.revenueBasis": "Revenue measured against {amount}",
-  "brief.brief.resurfaces": "Back",
+  "brief.previouslyDismissed": "Flagged {day} — you dismissed it.",
+  "brief.returnedWith": "It came back with activity on",
+  "brief.revenueBasis": "Revenue measured against {amount}",
+  "brief.resurfaces": "Back",
   "brief.evidenceNone": "no evidence recorded",
   "brief.snooze": "Snooze",
   "brief.snoozedState": "snoozed",

@@ -18,6 +18,8 @@ import {
   readingsDay,
   report,
   singles,
+  team,
+  teamWeek,
   type Worklist,
 } from "./brief.fixtures";
 import { BriefGlance } from "./brief.glance";
@@ -25,6 +27,7 @@ import { PlanSection } from "./brief.plan";
 import { OvernightPanel, PositionPanel, WatchPanel } from "./brief.rail";
 import { BriefReadingsStrip } from "./brief.readings";
 import { PromisesPanel, SchedulePanel } from "./brief.schedule";
+import { TeamWeeklyPanel } from "./brief.teamweekly";
 import {
   installFetchStub,
   jsonResponse,
@@ -553,5 +556,43 @@ export const PlanReadOnly: Story = {
   render: part(<PlanSection />, {
     ...PLAN_ROUTES,
     "GET /me": meRoute({ weekly_plan: ["read"] }, { roles: ["read_only"] }),
+  }),
+};
+
+// ── The team's week ─────────────────────────────────────────────────────────
+
+/**
+ * The two reads the team's week makes: which teams exist, and one team's
+ * snapshot.
+ *
+ * One team in the list on purpose — a picker whose only option is the one
+ * already showing asks the reader to confirm what they cannot change, so the
+ * panel reads a single team straight through and draws no control.
+ */
+const TEAM_ROUTES: RouteMap = {
+  "GET /me": meRoute({}),
+  "GET /teams": () =>
+    jsonResponse({
+      data: [team],
+      page: { next_cursor: null, has_more: false },
+    }),
+  "GET /weekly-reviews/team": () => jsonResponse(teamWeek),
+};
+
+// A lead's Monday: the headline against the bar it measured, the coverage, the
+// team's landing, and the agenda in the order the conversation should take.
+export const TeamWeekly: Story = {
+  render: part(<TeamWeeklyPanel offered />, TEAM_ROUTES),
+};
+
+// The reader may open the picker and not the week behind it: a row scope that
+// reaches only their own rows. The panel says which absence this is, because a
+// lead refused and a team whose first week has not closed are different facts
+// and the blank space is identical.
+export const TeamWeeklyForbidden: Story = {
+  render: part(<TeamWeeklyPanel offered />, {
+    ...TEAM_ROUTES,
+    "GET /weekly-reviews/team": () =>
+      jsonResponse({ title: "Forbidden", code: "forbidden" }, 403),
   }),
 };
