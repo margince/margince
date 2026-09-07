@@ -15,19 +15,19 @@ import {
 import { viewerZone } from "../format/timezone";
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf } from "./common";
 import type {
   Deal,
   MorningBrief,
   MorningBriefItem,
   useBriefItemMark,
-} from "./home.queries";
+} from "./brief.queries";
+import { problemMessageOf } from "./common";
 
 // One brief item, drawn and wired — the whole of what a screen needs to show a
 // queue entry and let a reader answer it.
 //
-// It lives here rather than in Home because two surfaces draw this queue now:
-// Home reads it as the morning's narrative, and the Worklist works through it.
+// It lives here rather than in Brief because two surfaces draw this queue now:
+// Brief reads it as the morning's narrative, and the Worklist works through it.
 // The card itself is presentational by design, so everything AROUND it — the
 // thirteen labels, the two locale formatters, the per-item pending and error
 // projection, and the three mutations — is the part a second screen would
@@ -64,34 +64,34 @@ export function briefLabels(
   recordZone?: string,
 ): BriefItemLabels {
   return {
-    rank: t("home.brief.rank"),
-    composite: t("home.brief.composite"),
+    rank: t("brief.rank"),
+    composite: t("brief.composite"),
     factors: {
-      winnability: t("home.factorWinnability"),
-      revenue: t("home.factorRevenue"),
-      timing: t("home.factorTiming"),
-      momentum: t("home.factorMomentum"),
-      warmth: t("home.factorWarmth"),
+      winnability: t("brief.factorWinnability"),
+      revenue: t("brief.factorRevenue"),
+      timing: t("brief.factorTiming"),
+      momentum: t("brief.factorMomentum"),
+      warmth: t("brief.factorWarmth"),
     },
-    evidence: translatePlural(locale, "home.evidence", evidenceCount, {
+    evidence: translatePlural(locale, "brief.evidence", evidenceCount, {
       count: formatNumber(evidenceCount, locale),
     }),
-    evidenceNone: t("home.evidenceNone"),
-    openDeal: t("home.openDeal"),
-    act: t("home.act"),
-    dismiss: t("home.dismiss"),
-    snooze: t("home.snooze"),
-    acted: t("home.actedState"),
-    dismissed: t("home.dismissedState"),
-    snoozed: t("home.snoozedState"),
-    resurfaces: t("home.brief.resurfaces"),
+    evidenceNone: t("brief.evidenceNone"),
+    openDeal: t("brief.openDeal"),
+    act: t("brief.act"),
+    dismiss: t("brief.dismiss"),
+    snooze: t("brief.snooze"),
+    acted: t("brief.actedState"),
+    dismissed: t("brief.dismissedState"),
+    snoozed: t("brief.snoozedState"),
+    resurfaces: t("brief.resurfaces"),
     previouslyDismissed:
       dismissedOn === undefined || recordZone === undefined
         ? ""
-        : t("home.brief.previouslyDismissed", {
+        : t("brief.previouslyDismissed", {
             day: formatDate(dismissedOn, locale, recordZone),
           }),
-    returnedWith: t("home.brief.returnedWith"),
+    returnedWith: t("brief.returnedWith"),
   };
 }
 
@@ -166,12 +166,12 @@ export function BriefQueueItem({
       revenueBasisNote={
         revenueBasis === undefined
           ? undefined
-          : t("home.brief.revenueBasis", { amount: revenueBasis })
+          : t("brief.revenueBasis", { amount: revenueBasis })
       }
       dealName={deals.find((deal) => deal.id === item.deal_id)?.name}
       amount={amountOf(item.deal_id, deals, locale)}
       formatPercent={(fraction) =>
-        t("home.pct", {
+        t("brief.pct", {
           pct: formatNumber(Math.round(fraction * 100), locale),
         })
       }

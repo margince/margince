@@ -16,10 +16,12 @@ the merge instead of shipping.
 Two lanes run but deliberately do **not** block: `vuln` and the SonarCloud scan.
 Both were traded off the required set for merge speed during heavy development,
 and both are re-checked daily on `main` by `scheduled.yml` — see below for why a
-non-blocking gate needs that backstop to stay honest. `uat` and `live-boot` are
-likewise advisory. Promoting the three of them is deliberate future work rather
-than an oversight; the reason it is not bundled with the merge queue is in
-[The `ci` aggregate](#the-ci-aggregate-is-the-only-required-context).
+non-blocking gate needs that backstop to stay honest. `live-boot` is likewise
+advisory. Promoting the two of them is deliberate future work rather than an
+oversight; the reason it is not bundled with the merge queue is in
+[The `ci` aggregate](#the-ci-aggregate-is-the-only-required-context). `uat` was
+advisory on the same argument until it let two screen regressions onto `main`
+under a red lane nobody was stopped by; it gates the merge now.
 
 ## Triggers
 
@@ -228,10 +230,11 @@ changes ──┬─> deterministic-gates ──> craftsmanship
           ├─> extension-reference ──────────────────────────────┐   │
           ├─> vuln                                              │   │
           ├─> license gate  (`deps` scope)                      │   │
-          ├─> frontend  →  _lane-frontend.yml ──> uat           │   │
+          ├─> frontend  →  _lane-frontend.yml                  │   │
           │                  fe-quality ┐                       │   │
           │                  fe-unit    ├─> fan-in              │   │
           │                  fe-bundle  ┘                       │   │
+          ├─> uat  (`frontend` scope, beside the lane)          │   │
           ├─> live-boot                                         │   │
           v                                                     v   v
  deterministic-gates + integration + extension-reference + frontend ──> sonarcloud
@@ -240,8 +243,8 @@ changes ──┬─> deterministic-gates ──> craftsmanship
 
   ci  ── the ONE required context. needs: deterministic-gates,
          craftsmanship, craft-residue, secret-scan, extension-reference,
-         integration, frontend, license-gate   (eight — vuln, live-boot and uat
-         stay advisory and are NOT in the fan-in)
+         integration, frontend, uat, license-gate, images   (ten — vuln and
+         live-boot stay advisory and are NOT in the fan-in)
 ```
 
 ### Two lanes are called, not inlined
@@ -281,12 +284,18 @@ events gate differently. That is the "two hand-maintained copies of one list"
 shape this repository refuses everywhere else, and it would be guarding the one
 check everything depends on.
 
-Two deliberate shapes here. The Playwright `uat` lane is **fail-fast**: it
-starts only after the cheaper `frontend` gate (biome + vitest + tsc + build)
-passes. The real-Postgres integration lane is the opposite — it runs **beside**
-`deterministic-gates`, not behind it: it is the longest lane in the pipeline,
-so serializing the two slowest jobs dominated PR wall-clock, and a broken
-build is still caught by `deterministic-gates` itself. And the lane is
+Two deliberate shapes here. The Playwright `uat` lane runs **beside**
+`frontend`, not behind it. It builds the SPA itself and shares no artefact with
+the lane, so the old fail-fast order (start only once biome, vitest and tsc were
+green) bought nothing but latency: nine minutes queued behind a seventeen-minute
+unit job, a broken screen reported twenty-six minutes after the push, and once
+it gates the merge that sequence would have been the aggregate's wall clock on
+every frontend change. What the order saved was this lane's runner minutes on a
+change `fe-quality` would have refused — one frontend run in seven — which is
+cheaper than the wait. The real-Postgres integration lane runs **beside**
+`deterministic-gates` for the same reason: it is the longest lane in the
+pipeline, so serializing the two slowest jobs dominated PR wall-clock, and a
+broken build is still caught by `deterministic-gates` itself. And the lane is
 **sharded**: six matrix runners each execute a deterministic per-test slice
 (package-level splitting would floor at the heaviest package,
 `compose/integration`), and the `integration` fan-in reassembles them into the
@@ -318,13 +327,13 @@ and the queue lane covers the remainder.
 upstream job reports a **green** required check, which is the same failure wearing
 a different hat.
 
-**`needs` is exactly the nine contexts the ruleset required before the aggregate
-replaced them**, and that equality is the point: this change moved where the
-verdict is computed, not what it covers. Widening the gate in the same step would
-mean a red merge queue with two candidate explanations, during the week the queue
-itself is on trial.
+**`needs` began as exactly the nine contexts the ruleset required before the
+aggregate replaced them**, because that change moved where the verdict is
+computed, not what it covers. A lane joins the list as its own change, so a red
+aggregate has one candidate explanation; `license-gate`, `images` and `uat` each
+joined that way, on their own evidence.
 
-Ten jobs are deliberately **not** in `needs`:
+Nine jobs are deliberately **not** in `needs`:
 
 - `changes` — the classifier produces no verdict.
 - `fe-quality`, `fe-unit`, `fe-bundle` — absorbed by the `frontend` fan-in.
@@ -332,15 +341,23 @@ Ten jobs are deliberately **not** in `needs`:
   `integration` fan-in, which already asserts on their results.
 - `sonarcloud` — non-blocking by decision; listing it here would make it required
   by the back door.
-- `vuln`, `live-boot`, `uat` — advisory, and left that way **on purpose**. They
-  are the obvious additions: each runs on every qualifying change and a red one
-  does not stop a merge, which is not a state worth keeping. What argues for
-  waiting is the batching. A flaky job under a merge queue does not cost one
-  re-run; it fails the whole group it was checked in and every entry in that group
-  is re-queued, and nothing has ever exercised these three under a gate that
-  blocks. Promote them once the queue
-  has a measured baseline, as their own change, so a regression has exactly one
-  explanation.
+- `vuln`, `live-boot` — advisory, and left that way **on purpose**. They are
+  the obvious additions: each runs on every qualifying change and a red one does
+  not stop a merge, which is not a state worth keeping. What argues for waiting
+  is the batching. A flaky job under a merge queue does not cost one re-run; it
+  fails the whole group it was checked in and every entry in that group is
+  re-queued, and nothing has ever exercised these two under a gate that blocks.
+  Promote them once the queue has a measured baseline, as their own change, so a
+  regression has exactly one explanation.
+
+`uat` was on that list and is in the aggregate now. The queue argument assumed a
+queue, and none has run since 2026-08-20; meanwhile the lane's record over
+fifty-two pull-request runs was no flake at all — every red was one of three
+deterministic screen regressions that had already landed on `main`, seen by
+eleven pull requests in a row and stopping none of them. It reads no clock
+(PERF-1 holds a request and asserts the heading did not wait on it; the
+record-open budget is `make bench-mobile`'s), so a busy runner cannot redden it,
+which is the one property a blocking Playwright lane has to have.
 
 Six rather than twelve because the per-test slice is the cheap half of a shard.
 Measured on a green run, one shard spent ~146s restoring the build cache and

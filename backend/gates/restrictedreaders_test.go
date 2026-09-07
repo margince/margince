@@ -23,6 +23,20 @@ package gates
 //
 // A file that reads activity by none of those is waived here with the reason
 // it may — and each waiver names the cost.
+//
+// WHAT A GREEN RUN HERE DOES NOT BUY, because the third marker is weaker than
+// the sentence at the top and a reader could take this census for more than it
+// is. Filtering `archived_at IS NULL` satisfies this gate while disclosing every
+// AUDIENCE-limited subject there is. That is correct for the question actually
+// asked — a statutory hold implies archived, so excluding archived excludes held
+// — and it means this gate was never going to catch an audience defect, which is
+// a different rule with its own gate.
+//
+// And it sees ONE door. An activity's content is also reachable through
+// audit_log.before/.after, keyed by entity_id, so a reader of the trail never
+// names the activity table and is never a subject here — the verdict this
+// census gives such a file is the verdict it would give one that gated nothing.
+// audittraildoor_test.go is the census of that door (#2138).
 
 import (
 	"go/ast"

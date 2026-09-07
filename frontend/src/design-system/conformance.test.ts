@@ -488,7 +488,7 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
   // the 12px radius, one padding, and the inset variant — and a surface that
   // spells `card` by hand keeps whichever of the five were true the day it was
   // written. Thirteen sites had drifted that way across the public booking page,
-  // the extension client, the preference centre, the OAuth consent screen, Home
+  // the extension client, the preference centre, the OAuth consent screen, Brief
   // and one of two adjacent skeletons on the company record — where the OTHER
   // skeleton, forty lines up, was a real Card.
   //

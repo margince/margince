@@ -268,7 +268,7 @@ describe("AuthScreen login", () => {
     expect(alert.textContent).toContain("Margince couldn't be reached");
   });
 
-  it("restores a deep link after login instead of forcing home", async () => {
+  it("restores a deep link after login instead of forcing the Brief", async () => {
     stubApi({ password: true, password_reset: false }, () =>
       ok(200, { user: {}, roles: [], teams: [] }),
     );

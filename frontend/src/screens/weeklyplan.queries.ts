@@ -11,7 +11,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { throwProblem } from "./common";
 
-// The forward half of the weekly. `home.queries.ts` reads the week that closed;
+// The forward half of the weekly. `brief.queries.ts` reads the week that closed;
 // this writes the week running.
 
 export type WeeklyPlan = components["schemas"]["WeeklyPlan"];

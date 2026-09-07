@@ -917,9 +917,13 @@ export function StatCard({
   detail?: ReactNode;
   // The way OUT of the reading: the tab that holds what it was read from.
   // Both or neither, like `basis` — a labelled door with nothing behind it is
-  // worse than no door. A LINK at the card's foot rather than a pressable
-  // card, because the card already holds a control (the basis) and a control
-  // inside a control is a press whose target the reader has to guess at.
+  // worse than no door.
+  //
+  // The whole CARD is this button's target: the words at the foot say where the
+  // door goes, and the tile answers the pointer aimed anywhere on it (atoms.css
+  // stretches the button over the card). ONE control and not two — the basis
+  // chip is layered above that target and keeps its own press, so asking what a
+  // figure rests on never also leaves the page.
   openLabel?: string;
   onOpen?: () => void;
   // How far along this reading is, as the two numbers it is made of. Drawn as

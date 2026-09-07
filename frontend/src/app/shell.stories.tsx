@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Building2,
+  House,
   KeyRound,
   Mail,
   Mic,
@@ -19,6 +20,8 @@ import { type ReactNode, useState } from "react";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { Card } from "../design-system/atoms";
+import { SETTINGS_PAGES } from "../screens/settingscatalog";
+import { SettingsSearchBox } from "../screens/settingssearchbox";
 import {
   installFetchStub,
   jsonResponse,
@@ -227,9 +230,14 @@ function SidebarExample({
 
 // Both sidebar states, side by side. Expanded is 252px of 34px rows on a 4px
 // gutter; collapsed is the canonical 56px geometry, where a row IS its target and
-// keeps 44px, the logomark stands alone in the head, and the group headings go
-// transparent and draw a 22px hairline inside the box they kept — so nothing
-// below them re-spaces across the collapse.
+// keeps 44px, the head is the mark with the build badge under it, and the group
+// headings are not drawn at all — 56px carries a glyph and not a label, and the
+// break between two groups is what says where one ends.
+//
+// The head is TWO rows either way: the brand block, then what the installation
+// runs on and which build of it this is. Expanded that line reads "Powered by
+// Margince" with the version badge beside it; at 56px the attribution goes and
+// the badge stays, shortened to one glyph.
 //
 // What is NOT in either panel: the search and the account block. Both moved to
 // the strip above (app/topbar.tsx), which is why these frames render that strip
@@ -444,9 +452,8 @@ export const RailEntitlementWithoutTheGrant: Story = {
  * screen publishes this shape from live grants (`useSettingsSection`), which
  * would make these stories a picture of a permission matrix rather than of the
  * level. The point here is what the SHELL does with a section — one level at a
- * time, the reduced head with the way back under the mark, the two groups under
- * the section's own name — so the data is held still and the rendering is what
- * varies.
+ * time, the sidebar's own head above it, and the level named by the heading over
+ * its first group — so the data is held still and the rendering is what varies.
  *
  * `privacy` carries children no settings entry really has, which is the one part
  * of the fixture that is not a copy of production: it is how the third level
@@ -456,7 +463,20 @@ const SETTINGS_SECTION: NavSection = {
   screen: "settings",
   titleKey: "nav.settings",
   activeId: "privacy",
+  // The search box the settings screen puts above its rows, so the story shows
+  // the field at the width it is actually drawn at — flush with the rows.
+  lead: <SettingsSearchBox pages={SETTINGS_PAGES} />,
   groups: [
+    // The group that carries the level's NAME, and the Overview row with it.
+    // Production builds this from the catalog (screens/settingsnav.tsx); here it
+    // is spelled out, because a level with no first heading would be a picture
+    // of an unnamed panel.
+    {
+      headingKey: "nav.settings",
+      items: [
+        { id: "home", labelKey: "settings.home", icon: House, level: true },
+      ],
+    },
     {
       headingKey: "settings.group.me",
       items: [
@@ -491,7 +511,21 @@ const SETTINGS_SECTION: NavSection = {
     {
       headingKey: "settings.group.governance",
       items: [
-        { id: "privacy", labelKey: "settings.tab.privacy", icon: ShieldCheck },
+        {
+          id: "privacy",
+          labelKey: "settings.tab.privacy",
+          icon: ShieldCheck,
+          // The children are the synthetic part: no settings entry publishes
+          // any, so without them the third-level story would be a second
+          // picture of the second level.
+          children: [
+            {
+              id: "data-model",
+              labelKey: "settings.tab.fields",
+              icon: Wrench,
+            },
+          ],
+        },
         {
           id: "system-health",
           labelKey: "settings.tab.system-health",
@@ -548,12 +582,11 @@ function LevelStory({ children }: Readonly<{ children: ReactNode }>) {
   );
 }
 
-// The labeled level: the logomark, the way back up, the section's name, then its
-// two groups. The ten destinations are GONE rather than pushed below a second
-// list — 252px carrying both levels reads as a list of twenty places to go —
-// while the head keeps the mark and gives up only the brand's words. The search
-// is not in this panel at any level: it belongs to the strip above, and the way
-// back up is the only control the head adds.
+// The section's level: the sidebar's own head, the way out of the section, the
+// search box, then the groups — the first of them headed with the section's name.
+// The ten destinations are GONE rather than pushed below a second list, since one
+// column carrying both levels reads as a list of twenty places to go, and the
+// head is untouched because this is the same sidebar showing a different list.
 export const SectionLevel: Story = {
   name: "second level — expanded",
   render: () => (
@@ -564,8 +597,9 @@ export const SectionLevel: Story = {
 };
 
 // The same level at 56px: icons, the collapsed rail's tooltip on hover or
-// keyboard focus, group headings reduced to hairlines, and the section's own
-// name clipped for the eye while a screen reader still reads it.
+// keyboard focus, no group headings — the level's own name among them, since it
+// is one — and no search box, which has no icon-sized form. What is left saying
+// where one group ends is the space between them.
 export const SectionLevelCollapsed: Story = {
   name: "second level — collapsed",
   render: () => (
@@ -576,8 +610,8 @@ export const SectionLevelCollapsed: Story = {
 };
 
 // The third level, reached by standing on an entry that has children: the level
-// is named by the entry the reader drilled through, and the back control names
-// the list it leads back to.
+// is named by the entry the reader drilled through — as the heading over its one
+// group — and the back control reads "Back", named for the list it leads to.
 export const ThirdLevel: Story = {
   name: "third level — expanded",
   render: () => (
@@ -662,9 +696,9 @@ export const SectionPhone: Story = {
  *   so this is the only place at this width that says which workspace this is;
  * - the labels themselves, at body size, with each row's glyph on the left and
  *   the whole width as its target;
- * - the group headings, spelled out rather than standing in as the collapsed
- *   rail's hairline, because the sheet is 600px wide whatever the desktop
- *   preference it inherited was left at;
+ * - the group headings, spelled out where the collapsed sidebar draws none,
+ *   because the sheet is 600px wide whatever the desktop preference it
+ *   inherited was left at;
  * - the badge as a TRAILING figure in its row rather than a chip pinned to a
  *   tab — a list row has somewhere to put a number.
  *
@@ -760,7 +794,7 @@ export const PhoneMoreSheet: Story = {
  * grid column alone would have been third to the eye and last to the keyboard.
  */
 function PhoneBarExample() {
-  const route: Route = { screen: "home" };
+  const route: Route = { screen: "brief" };
   const { openSearch, palette } = usePaletteSeam();
   return (
     <div className="app railexpanded">

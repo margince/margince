@@ -15,7 +15,6 @@ import {
 import { useHoverIntent } from "../design-system/hoverintent";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
 import {
   entryLabel,
   type NavCounts,
@@ -34,9 +33,9 @@ import { navigate, type Route, routeHash } from "./router";
 // can never drift into different rows — and a third level costs nothing but the
 // data that describes it.
 //
-// Depth reaches this file only as data: a level carrying a title prints it and
-// pushes its group labels a heading level down, and a level's entries address
-// themselves from its `path`. Nothing here counts levels.
+// Depth reaches this file only as data: a level's entries address themselves
+// from its `path`, and every level names itself the same way — through the
+// heading over its first group. Nothing here counts levels.
 
 // The sidebar shows one tooltip at a time and keys it by the row's own ADDRESS,
 // so two levels' rows cannot collide on a key — and the primary level's rows
@@ -50,14 +49,14 @@ const BACK_TIP_KEY = "rail-level-back";
 // Where a reader who never walked into the section is sent when they walk out
 // of it: a deep link carries no origin, and an invented one would be a claim
 // about where they had been.
-const HOME: Route = { screen: "home" };
+const BRIEF: Route = { screen: "brief" };
 
 // What a walk between levels needs to remember, and both halves of it outlive
 // the panel — because they have to. A section route swaps one rail component for
 // the other (shell.tsx), so the rail is REMOUNTED in the middle of a walk: the
 // panel that asks the question is never the panel that answers it. The shell
 // holds this and hands it down; a rail rendered without one — a story, the
-// component workbench — has only its own lifetime, and walks out to home.
+// component workbench — has only its own lifetime, and walks out to the Brief.
 type NavWalk = {
   // The last route that showed no level at all. Nothing about `#/settings/admin/privacy`
   // says which screen was open before it, so it is remembered as the reader
@@ -90,7 +89,7 @@ export function useNavWalk(
   route: Route,
   remembers: boolean,
 ): RefObject<NavWalk> {
-  const walk = useRef<NavWalk>({ origin: HOME });
+  const walk = useRef<NavWalk>({ origin: BRIEF });
   useEffect(() => {
     if (remembers) {
       walk.current.origin = route;
@@ -132,7 +131,7 @@ export function useNavLevel(
   const parent = depth > 0 ? trail[depth - 1] : undefined;
   // With no shell above it the panel is all there is, so it keeps the walk's
   // memory itself — one lifetime, and no history before it.
-  const own = useRef<NavWalk>({ origin: HOME });
+  const own = useRef<NavWalk>({ origin: BRIEF });
   const walk = useContext(NavWalkMemory) ?? own;
 
   // Walking between levels replaces every row in the panel, and an unmounted
@@ -256,7 +255,6 @@ function NavLevelRow({
 function NavLevelGroupView({
   level,
   group,
-  headingTag: Heading,
   counts,
   state,
   onSelect,
@@ -265,7 +263,6 @@ function NavLevelGroupView({
 }: Readonly<{
   level: NavTrailLevel;
   group: NavLevelGroup;
-  headingTag: "h2" | "h3";
   counts?: NavCounts;
   state: TipState;
   onSelect: (entry: NavLevelEntry) => void;
@@ -279,7 +276,7 @@ function NavLevelGroupView({
           and draws a hairline inside the same space. Swapping it for a shorter
           <hr> re-spaced every group and drifted the icons. */}
       {group.headingKey && (
-        <Heading className="navheading">{t(group.headingKey)}</Heading>
+        <h2 className="navheading">{t(group.headingKey)}</h2>
       )}
       {group.items.map((entry) => (
         <Fragment key={entry.id}>
@@ -309,10 +306,14 @@ function NavLevelGroupView({
   );
 }
 
-// The way back up. It READS "Back" — the reader knows what they walked down
-// from, and the word for it is the same at every depth — while its accessible
-// NAME says where it leads: at the section's own level that is the destinations
-// it stepped aside for, deeper it is the entry the reader drilled through, and a
+// The way back up, and it says where it goes.
+//
+// Out of a section altogether — the parent is the primary level, which has no
+// name of its own — the destination is the app, and the control reads and is
+// named "Back to app": the one word "Back" left a reader who arrived by deep
+// link with no way to tell that the whole product was behind it. Deeper, the
+// target is another level of the same section: the control reads "Back" at every
+// such depth while its accessible NAME says which list it leads to, because a
 // control whose name never changes while its target does is the one a screen
 // reader gets wrong. The visible word is contained in that name, which is what
 // WCAG 2.5.3 asks of a control labelled shorter than it is named.
@@ -326,8 +327,13 @@ function NavLevelBack({
   onWalkUp: () => void;
 }>) {
   const t = useT();
-  const name = parent.titleKey ? t(parent.titleKey) : t("shell.navTop");
-  const label = t("shell.navBackTo", { name });
+  // The primary level is the one with no name of its own, and that is what says
+  // this step leaves the section rather than moving inside it.
+  const above = parent.titleKey;
+  const label =
+    above === undefined
+      ? t("shell.navBackApp")
+      : t("shell.navBackTo", { name: t(above) });
   const hover = useHoverIntent(
     () => state.onTip(BACK_TIP_KEY),
     () => state.onTip(null),
@@ -344,7 +350,9 @@ function NavLevelBack({
       onBlur={() => state.onTip(null)}
     >
       <ChevronLeft aria-hidden />
-      <span className="navlabel">{t("shell.navBack")}</span>
+      <span className="navlabel">
+        {above === undefined ? t("shell.navBackApp") : t("shell.navBack")}
+      </span>
       {state.collapsed && state.tip === BACK_TIP_KEY && (
         <span className="navtip" role="tooltip">
           {label}
@@ -352,15 +360,6 @@ function NavLevelBack({
       )}
     </button>
   );
-}
-
-// What a level is CALLED: its message key, and nothing when it is the primary
-// level (the navigation landmark names that one).
-function levelTitle(
-  level: NavTrailLevel,
-  t: (key: MessageKey) => string,
-): string {
-  return level.titleKey ? t(level.titleKey) : "";
 }
 
 /**
@@ -404,28 +403,20 @@ export function NavLevelView({
   // no middle for a reading to stand in, and the agent keeps its own foot there.
   centre?: ReactNode;
 }>) {
-  const t = useT();
   const centreAfter = centre ? centreAfterId(level) : undefined;
   return (
     <div className={parent ? "navlevel drilled" : "navlevel"}>
       {parent && (
         <NavLevelBack parent={parent} state={state} onWalkUp={onWalkUp} />
       )}
-      {levelTitle(level, t) && (
-        <h2 className="navtitle">{levelTitle(level, t)}</h2>
-      )}
-      {/* Above the rows and below the level's own name: a reader looking for a
-          page reaches for the search before they start reading a list of
-          twenty-eight. */}
+      {/* Above the rows: a reader looking for a page reaches for the search
+          before they start reading a list of twenty-eight. */}
       {level.lead && <div className="navlead">{level.lead}</div>}
       {level.groups.map((group, index) => (
         <NavLevelGroupView
           key={group.headingKey ?? `group-${index}`}
           level={level}
           group={group}
-          // A level that names itself has taken the level-2 heading, so its
-          // groups sit under it rather than beside it in the outline.
-          headingTag={levelTitle(level, t) ? "h3" : "h2"}
           counts={counts}
           state={state}
           onSelect={onSelect}

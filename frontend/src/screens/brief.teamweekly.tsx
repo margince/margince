@@ -13,7 +13,7 @@ import { formatDate, formatMoney, formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { AgendaPanel, AgendaSummary } from "./brief.teamweeklyagenda";
-import { OutlookPanel } from "./home.waterfall";
+import { OutlookPanel } from "./brief.waterfall";
 import {
   type TeamWeeklyReview,
   useTeams,

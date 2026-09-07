@@ -57,7 +57,7 @@ describe("isUnhealthy", () => {
     expect(isUnhealthy("error")).toBe(true);
     expect(isUnhealthy("reauth_required")).toBe(true);
     expect(isUnhealthy("connected")).toBe(false);
-    // A deliberately disconnected mailbox is quiet on home, matching
+    // A deliberately disconnected mailbox is quiet on the Brief, matching
     // Settings, which filters `disconnected` rows out of its list entirely.
     expect(isUnhealthy("disconnected")).toBe(false);
   });

@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { MessageKey } from "../i18n/en";
+import type { WeeklyReview } from "./brief.queries";
 import type { BriefSentence } from "./brief.sentence";
-import type { WeeklyReview } from "./home.queries";
 
 // The weekly Brief's opening sentence, composed from the counts the week was
 // frozen with.

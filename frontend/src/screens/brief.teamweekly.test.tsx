@@ -7,7 +7,7 @@ import {
   TeamWeeklyPanel,
   TeamWeeklySection,
 } from "./brief.teamweekly";
-import { jsonResponse, render, stubApi } from "./home.testkit";
+import { jsonResponse, render, stubApi } from "./brief.testkit";
 import type { TeamWeeklyRep, TeamWeeklyReview } from "./teamweekly.queries";
 
 // A team's frozen week. Every figure came off the snapshot, so the tests that
@@ -396,7 +396,7 @@ describe("the team's landing", () => {
     // Said in WORDS, not drawn as an absence: a team nobody forecast and a
     // team that landed on nothing are different facts, and only the panel can
     // tell the reader which this is.
-    await screen.findByText(en["home.weekly.outlook.none"]);
+    await screen.findByText(en["brief.weekly.outlook.none"]);
   });
 
   it("draws the frozen landing when the snapshot carries one", async () => {
@@ -418,8 +418,8 @@ describe("the team's landing", () => {
     // The horizon control is the rep panel's own, so finding it by its
     // accessible name proves the team page reuses that component rather than
     // having grown a second one.
-    await screen.findByRole("group", { name: en["home.weekly.outlook"] });
+    await screen.findByRole("group", { name: en["brief.weekly.outlook"] });
     // And the "no forecast" line is gone, so the two states are really distinct.
-    expect(screen.queryByText(en["home.weekly.outlook.none"])).toBeNull();
+    expect(screen.queryByText(en["brief.weekly.outlook.none"])).toBeNull();
   });
 });

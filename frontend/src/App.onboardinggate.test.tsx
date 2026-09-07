@@ -47,7 +47,7 @@ function json(body: unknown, status = 200): Response {
 // The addresses the gate and the restore each send the reader to. A hash this
 // app answers that neither of them chose is not part of the disagreement.
 const GATE_TARGET = "#/onboarding/company";
-const HOME = "#/home";
+const BRIEF = "#/brief";
 
 /**
  * An installation whose wizard row says `complete`, with or without the profile
@@ -193,7 +193,7 @@ afterEach(() => {
 // that happens to stop on the right hash is still the defect.
 describe("the onboarding gate and the wizard's restore", () => {
   it("agree on onboarding while the company profile is absent", async () => {
-    const moves = mount({ companySaved: false }, HOME);
+    const moves = mount({ companySaved: false }, BRIEF);
 
     // The company act reopens rather than reporting a completion the profile
     // does not support, so the gate's destination is where the reader stays.
@@ -212,10 +212,10 @@ describe("the onboarding gate and the wizard's restore", () => {
     const moves = mount({ companySaved: true }, GATE_TARGET);
 
     await waitFor(() => {
-      expect(window.location.hash).toBe(HOME);
+      expect(window.location.hash).toBe(BRIEF);
     });
-    expect(moves.filter((hash) => hash === HOME)).toHaveLength(1);
-    expect(moves.at(-1)).toBe(HOME);
+    expect(moves.filter((hash) => hash === BRIEF)).toHaveLength(1);
+    expect(moves.at(-1)).toBe(BRIEF);
   });
 
   it("leave no entry behind for Back to land on", async () => {
@@ -227,9 +227,9 @@ describe("the onboarding gate and the wizard's restore", () => {
     // Measured from the reader's ARRIVAL, not from before it: setting the
     // starting hash is itself an entry, and counting it would leave the
     // assertion satisfied by a gate that pushed.
-    window.location.hash = HOME;
+    window.location.hash = BRIEF;
     const onArrival = window.history.length;
-    mount({ companySaved: false }, HOME);
+    mount({ companySaved: false }, BRIEF);
 
     expect(await screen.findByLabelText(/Your website address/)).toBeTruthy();
     await waitFor(() => {

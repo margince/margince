@@ -26,10 +26,10 @@ type Story = StoryObj<typeof CommandPalette>;
 // are about the PANEL, and the command list is its input.
 const COMMANDS: Command[] = [
   {
-    id: "screen:home",
-    label: "Home",
+    id: "screen:brief",
+    label: "Brief",
     type: "screen",
-    route: { screen: "home" },
+    route: { screen: "brief" },
   },
   {
     id: "screen:deals",

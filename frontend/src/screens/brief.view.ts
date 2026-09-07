@@ -73,7 +73,7 @@ export function addressFrom(params: UrlParams, offered: boolean): BriefAddress {
 /**
  * Write the address, omitting whatever is already the default.
  *
- * `#/home` and `#/home?view=morning&scope=mine` are the same page, and the
+ * `#/brief` and `#/brief?view=morning&scope=mine` are the same page, and the
  * shorter one is what a reader who has changed nothing should be able to copy.
  * The writer sorts its keys (hashWithParams), so the same state is always the
  * same string.

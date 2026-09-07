@@ -4,14 +4,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
+import { useBriefItemMark } from "./brief.queries";
 import { BriefQueueItem } from "./briefqueue";
-import { useBriefItemMark } from "./home.queries";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // One morning-brief entry, drawn and wired: the ranked deal, the five factors
 // behind its score, and the three answers a reader can give it.
 //
-// Two surfaces draw this queue — Home reads it as the morning's narrative, the
+// Two surfaces draw this queue — Brief reads it as the morning's narrative, the
 // Worklist works through it — so the wiring around the presentational card
 // (labels, formatters, the per-item pending and error projection) is what a
 // second screen would otherwise copy. These stories are of that wiring.

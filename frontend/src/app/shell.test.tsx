@@ -1,6 +1,7 @@
 /** @vitest-environment jsdom */
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { House } from "lucide-react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "../App";
 import { en } from "../i18n/en";
@@ -244,11 +245,11 @@ describe("PageTitle", () => {
     expect(container.querySelector(".pagesub")).toBeNull();
   });
 
-  // Home greets the reader by name in its own h1, so the shell adds none: two
+  // Brief greets the reader by name in its own h1, so the shell adds none: two
   // top-level headings is no document outline at all. Same yield-whole rule as
   // a record route below, for the same reason.
   it("renders nothing at all on a screen that heads itself", () => {
-    const { container } = render(<PageTitle route={{ screen: "home" }} />);
+    const { container } = render(<PageTitle route={{ screen: "brief" }} />);
     expect(container.querySelector(".pagetitle")).toBeNull();
     expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
   });
@@ -319,6 +320,14 @@ describe("PageTitle", () => {
 // page's name, never a second name for it.
 describe("Section switcher (the page title at phone width)", () => {
   const deepRoute: Route = { screen: "settings", id: "deep" };
+  // The row a section publishes in the group that carries the section's own
+  // name — settings puts its Overview there (screens/settingsnav.tsx).
+  const OVERVIEW = {
+    id: "home",
+    labelKey: "settings.home",
+    icon: House,
+    level: true,
+  } as const;
 
   // Above the breakpoint the sidebar's level carries the section, so the title
   // names the ENTRY and mints no control at all — a switcher there would be a
@@ -383,6 +392,39 @@ describe("Section switcher (the page title at phone width)", () => {
     const current = document.querySelectorAll('[aria-current="page"]');
     expect(current).toHaveLength(1);
     expect(current[0].getAttribute("href")).toBe("#/settings/deep");
+  });
+
+  // The sidebar names its level with the heading over the level's first group,
+  // so the section publishes a group carrying its own name. This sheet already
+  // says that name at heading level 2, so the group arrives unheaded here —
+  // otherwise the same word stands twice in one view, once as the sheet's title
+  // and once as a label over the first row.
+  it("does not repeat the section's name over the group that carries it", async () => {
+    const user = userEvent.setup();
+    stubPhoneViewport();
+    const section = fixtureSection("deep");
+    const named = {
+      ...section,
+      groups: [
+        { headingKey: section.titleKey, items: [OVERVIEW] },
+        ...section.groups,
+      ],
+    };
+    render(<PageTitle route={deepRoute} section={named} />);
+    await user.click(
+      screen.getByRole("button", {
+        name: "Privacy & retention — change section",
+      }),
+    );
+    const dialog = screen.getByRole("dialog");
+    expect(
+      within(dialog)
+        .getAllByRole("heading")
+        .map((heading) => `${heading.tagName}:${heading.textContent}`),
+    ).toEqual(["H2:Settings", "H3:You", "H3:Governance"]);
+    // The row itself is still in the list — it is the group's HEADING that is
+    // redundant here, not the entry under it.
+    expect(within(dialog).getByRole("link", { name: "Overview" })).toBeTruthy();
   });
 
   it("navigates and closes itself when an entry is picked", async () => {
@@ -494,12 +536,12 @@ describe("Shell", () => {
   // thing separating them is the id. The marker is what the stylesheet keys the
   // cap on, so a route landing in the wrong family is a layout regression that
   // nothing else would catch. The sets themselves are GRIDDED_RECORD_SCREENS
-  // (keyed on an id) and GRIDDED_SCREENS (the id-less half, which is Home).
+  // (keyed on an id) and GRIDDED_SCREENS (the id-less half, which is Brief).
   it.each([
     ["#/settings/account", true],
     ["#/companies/o-1", true],
     ["#/contacts/p-1", true],
-    // Home carries no id and is capped anyway: it reads down, and its decision
+    // Brief carries no id and is capped anyway: it reads down, and its decision
     // cards carry drafted prose somebody has to read before deciding.
     ["#/", true],
     ["#/companies", false],

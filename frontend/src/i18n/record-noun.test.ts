@@ -102,7 +102,7 @@ const ACT_OR_DETAIL_KEYS: Record<string, readonly string[]> = {
     "lead.statusContacted",
     "lead.status.contacted",
     "lead.ladder.new",
-    "home.readings.leads",
+    "brief.readings.leads",
     "vcardImport.whichFile",
     "acctCoverage.noneButPartial",
     "compose.why.requestedFollowup",

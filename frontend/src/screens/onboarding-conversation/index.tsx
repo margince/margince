@@ -252,7 +252,7 @@ function useRestore(
       // `#/onboarding`, and one whose installation is undescribed does not
       // belong anywhere else. Two pushes between those two addresses is a
       // history a reader cannot walk out of.
-      navigateReplacing({ screen: "home" });
+      navigateReplacing({ screen: "brief" });
       return;
     }
     dispatch({
@@ -403,7 +403,7 @@ function CurrentAct({
     // Every journey ends on the same handoff, once the act that closed it has
     // recorded completion.
     case "done":
-      return <BuildScene onDone={() => navigate({ screen: "home" })} />;
+      return <BuildScene onDone={() => navigate({ screen: "brief" })} />;
     case "connect":
       return (
         <ConnectAct

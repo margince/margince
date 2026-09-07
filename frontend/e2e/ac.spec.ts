@@ -93,7 +93,7 @@ test.beforeEach(async ({ page }) => {
 const SWEPT_SETTINGS_PAGES = SETTINGS_PAGES.map((page) => page.id);
 
 const CORE_SCREENS = [
-  "home",
+  "brief",
   "contacts",
   "companies",
   "deals",
@@ -240,7 +240,7 @@ function accountTrigger(page: Page) {
   });
 }
 
-// The canonical ten, in order: Home alone, then records / work / intelligence.
+// The canonical ten, in order: Brief alone, then records / work / intelligence.
 // Not upstream's set: Automations is not a destination here (it is set-and-forget
 // configuration on Settings → AI). One label differs from its route id on
 // purpose — `deals` presents as Pipeline — so this asserts what a person reads,
@@ -257,7 +257,7 @@ function accountTrigger(page: Page) {
 test("AC-shell-1: the rail renders the canonical 10 items in order", async ({
   page,
 }) => {
-  await page.goto("/#/home");
+  await page.goto("/#/brief");
   // evaluateAll never waits — anchor on the rendered count first, or the
   // read races the auth splash and sees an empty rail.
   // Scoped to the level the panel is showing: the DESTINATIONS are its rows,
@@ -325,21 +325,23 @@ test("AC-shell-1k: one h1 per railed page, and on a record it is the record's ow
 
   // An id segment that names no record is the screen's own state, so it is named
   // in WORDS and never as the slug it is addressed by: #/settings/privacy is the
-  // privacy surface, and the sidebar's level beside it carries "Settings" — the
+  // privacy surface, and the heading over the level's first group carries "Settings" — the
   // page said that word twice while naming the surface never. "privacy" itself
   // is a route slug no reader should ever be shown.
   await page.goto("/#/settings/privacy");
   const settingsHeading = page.getByRole("heading", { level: 1 });
   await expect(settingsHeading).toHaveCount(1);
   await expect(settingsHeading).toHaveText("Datenschutz & Aufbewahrung");
-  await expect(page.locator(".rail .navtitle")).toHaveText("Einstellungen");
+  await expect(page.locator(".rail .navheading").first()).toHaveText(
+    "Einstellungen",
+  );
   await expect(page.locator("main")).not.toContainText("privacy");
 });
 
 test("AC-shell-3/4/5: ⌘K opens focused+empty, filters, Enter navigates", async ({
   page,
 }) => {
-  await page.goto("/#/home");
+  await page.goto("/#/brief");
   await page.locator("body").click();
   await page.keyboard.press("ControlOrMeta+k");
   const input = page.getByRole("searchbox", { name: "Befehlspalette" });
@@ -353,7 +355,7 @@ test("AC-shell-3/4/5: ⌘K opens focused+empty, filters, Enter navigates", async
 });
 
 test("AC-shell-7: the top bar's search opens the palette", async ({ page }) => {
-  await page.goto("/#/home");
+  await page.goto("/#/brief");
   const topbar = page.locator(".topbar");
   // One search affordance in the product, and it is the centre of the session
   // strip. A BUTTON, never a field: the palette owns the query, and a second
@@ -380,7 +382,7 @@ test("AC-shell-7: the top bar's search opens the palette", async ({ page }) => {
 test("features/10 §7: the account menu holds the settings door, the appearance choice and the way out", async ({
   page,
 }) => {
-  await page.goto("/#/home");
+  await page.goto("/#/brief");
   await accountTrigger(page).click();
   const menu = page.locator(".topbar [role='menu']").first();
   await expect(
@@ -409,7 +411,7 @@ test("features/10 §7: the account menu holds the settings door, the appearance 
 test("features/10 §7: the locale switch flips the chrome DE↔EN", async ({
   page,
 }) => {
-  await page.goto("/#/home");
+  await page.goto("/#/brief");
   await expect(page.locator('nav.rail a[aria-label="Personen"]')).toBeVisible();
   // The language is a preference of this person rather than a destination, so it
   // lives on Settings → Account; the account block at the sidebar foot carries
@@ -1152,7 +1154,7 @@ test("AC-onboarding-1: onboarding is the rail-less conversational shell", async 
   //
   // That first screen belongs to an installation nobody has described yet.
   // Under the global seed the journey is finished, and a finished reader on
-  // this route is sent home — so this AC layers the unstarted journey on top
+  // this route is sent to the Brief — so this AC layers the unstarted journey on top
   // (the most recently registered route answers first).
   await mockApi(page, { journey: "unstarted" });
   await page.goto("/#/onboarding");
@@ -1224,7 +1226,7 @@ test.describe("B-EP09.23: overlay mode", () => {
     page,
   }) => {
     // The native seed (this file's global beforeEach) never renders it.
-    await page.goto("/#/home");
+    await page.goto("/#/brief");
     await expect(page.locator(".badge-accent")).toHaveCount(0);
 
     // Same route both times, so a plain goto would be a same-document hash
@@ -1566,7 +1568,7 @@ test.describe("§3.8: 390px mobile", () => {
   // 12vh with a 320px list had about two rows left under a software keyboard.
   // Its rows are thumb targets, which is the half a screenshot cannot assert.
   test("the palette is a workable sheet at 390px", async ({ page }) => {
-    await page.goto("/#/home");
+    await page.goto("/#/brief");
     await page.waitForLoadState("networkidle");
     await expectShellRendered(page);
     await page.keyboard.press("ControlOrMeta+k");
@@ -1837,7 +1839,7 @@ test.describe("§3.8: 390px mobile", () => {
   test("the agent's panel opens clear of the bar and fits 390px", async ({
     page,
   }) => {
-    await page.goto("/#/home");
+    await page.goto("/#/brief");
     await page.waitForLoadState("networkidle");
     await expectShellRendered(page);
 
@@ -1857,7 +1859,7 @@ test.describe("§3.8: 390px mobile", () => {
     expect(panelBox.y + panelBox.height).toBeLessThanOrEqual(wellBox.y);
     expect(panelBox.y).toBeGreaterThanOrEqual(0);
     expect(await pageOverflow(page)).toEqual([]);
-    await expectNoAaViolations(page, "home — the agent's panel (390px)");
+    await expectNoAaViolations(page, "brief — the agent's panel (390px)");
   });
 
   // The whole keyboard path this surface has: it opens from the bar, Escape
@@ -1867,7 +1869,7 @@ test.describe("§3.8: 390px mobile", () => {
   test("the agent's panel closes on Escape and hands focus back to the orb", async ({
     page,
   }) => {
-    await page.goto("/#/home");
+    await page.goto("/#/brief");
     await page.waitForLoadState("networkidle");
     await expectShellRendered(page);
 
@@ -1891,13 +1893,13 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe), the agent's panel at 390px in dark"
   test.use({ viewport: { width: 390, height: 844 }, colorScheme: "dark" });
 
   test("no AA violations with the agent's panel open", async ({ page }) => {
-    await page.goto("/#/home");
+    await page.goto("/#/brief");
     await page.waitForLoadState("networkidle");
     await expectShellRendered(page);
     await page.getByRole("button", { name: "Expand the agent panel" }).click();
     await expect(page.locator(".arpanel")).toBeVisible();
     await settleAnimations(page);
-    await expectNoAaViolations(page, "home — the agent's panel (390px, dark)");
+    await expectNoAaViolations(page, "brief — the agent's panel (390px, dark)");
   });
 });
 
@@ -2175,7 +2177,7 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
   // every axe pass above measures a page with the dialog closed, so the
   // surface a reader reaches from any screen in the product was unmeasured.
   test("no AA violations with the command palette open", async ({ page }) => {
-    await page.goto("/#/home");
+    await page.goto("/#/brief");
     await page.waitForLoadState("networkidle");
     await expectShellRendered(page);
     await page.keyboard.press("ControlOrMeta+k");
@@ -2191,7 +2193,7 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
       page.getByRole("button", { name: /Brandt Automotive/ }),
     ).toBeVisible();
     await settleAnimations(page);
-    await expectNoAaViolations(page, "home — the command palette open");
+    await expectNoAaViolations(page, "brief — the command palette open");
   });
 
   // A list header FOLDS its verbs into one overflow menu below 1100px

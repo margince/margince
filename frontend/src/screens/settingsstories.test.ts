@@ -49,10 +49,17 @@ const PAGE_PATHS = new Set(
   ),
 );
 
-// The one story that is ABOUT the tree rather than a card on a page, named
-// exactly. An `if (page === undefined) return` would exempt every two-segment
-// title — `Settings/Nonsense` included — which is a skip-list with no list.
-const TREE_STORY = "Settings/Settings screen";
+// The stories that are ABOUT a settings SURFACE rather than a card on a page,
+// named exactly. Two segments each, because neither names a catalog page: the
+// tree itself, and the settings home together with the boundary the same address
+// answers when its segment names no page this reader can open (`SETTINGS_HOME_ID`
+// is deliberately not a member of SETTINGS_PAGES). An
+// `if (page === undefined) return` would exempt every two-segment title —
+// `Settings/Nonsense` included — which is a skip-list with no list.
+const SURFACE_STORIES = new Set([
+  "Settings/Settings screen",
+  "Settings/Settings home",
+]);
 
 // The one group that is not a catalog group. Two stories put cards from
 // DIFFERENT pages side by side on purpose — the two price sheets an operator
@@ -92,7 +99,7 @@ describe("the settings stories are filed where the product files them", () => {
   // So the count is EXACT and derived from the tree: adding or removing a
   // settings story is a deliberate edit to this number.
   it("reads every settings story, and says how many that is", () => {
-    expect(settingsStories.length).toBe(66);
+    expect(settingsStories.length).toBe(67);
   });
 
   // The filter above drops a file whose title does not resolve. That is the
@@ -106,7 +113,7 @@ describe("the settings stories are filed where the product files them", () => {
   it.each(settingsStories)(
     "files $path at a path the catalog declares",
     ({ title }) => {
-      if (title === TREE_STORY) {
+      if (SURFACE_STORIES.has(title)) {
         return;
       }
       const segments = title.split("/");

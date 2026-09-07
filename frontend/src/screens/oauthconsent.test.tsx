@@ -356,8 +356,8 @@ describe("OAuthConsent — what a refused consent is handed back", () => {
       await screen.findByRole("button", { name: /back to margince/i }),
     );
     // A rail-less screen with no forward action still needs an exit — this
-    // is the app's own "home" route, never the client's callback.
-    expect(globalThis.location.hash).toBe("#/home");
+    // is the app's own "brief" route, never the client's callback.
+    expect(globalThis.location.hash).toBe("#/brief");
   });
 
   it("renders invalid_request even though the consent-request read fails", async () => {

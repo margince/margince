@@ -1229,7 +1229,7 @@ function AiDisclosureBanner({ offer }: Readonly<{ offer: Offer }>) {
 // same unwired-by-omission posture as the attachments seam — which is a
 // deliberate, expected outcome, not an error: it is read off the raw
 // `response.status` (openapi-fetch's third destructured field, the same
-// idiom home.tsx's useMorningBrief uses for its 404) BEFORE the `error`
+// idiom brief.tsx's useMorningBrief uses for its 404) BEFORE the `error`
 // branch, so it never reaches throwProblem/ProblemError. Every other
 // response (401/403/404/409/422) falls through to that verbatim path
 // unchanged. On 200 the full Offer comes back with pdf_asset_ref populated;

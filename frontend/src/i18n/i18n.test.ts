@@ -105,12 +105,12 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // English does — digits then the sign, no space — so the value is identical by
   // agreement rather than by omission. German differs (it takes the space) and
   // carries its own.
-  "home.pct",
+  "brief.pct",
   // Pure punctuation layouts: every word in them is a placeholder, so there is
   // nothing to translate and a "translation" could only reorder the slots.
   // Two phase names and an arrow.
   "project.history.moved",
-  "home.digestPhaseChange",
+  "brief.digestPhaseChange",
   // An em dash standing in for a figure nobody can compute yet. A glyph, not a
   // word — the sentence explaining it is the detail line beside it.
   "co.strip.financeUnknown",

@@ -136,13 +136,26 @@ func TestTheSweepSpendsNoMoreThanTheDayAllows(t *testing.T) {
 	}
 }
 
-// sweepSelects runs the predicate and returns who it chose.
+// sweepSelects runs the coverage predicate and returns who it chose.
+//
+// The ceiling it passes is the whole person table and not sweepTickBudget,
+// which is the difference between asking what the predicate covers and asking
+// what one tick can afford. Every test in this package plants into ONE
+// database and nothing truncates `person`, so the uncovered set only grows as
+// the package runs; under a tick-sized ceiling `ORDER BY p.created_at` answers
+// "is this contact among the 25 longest-waiting", and a test's own freshly
+// planted subject is the last one that could be. What a tick may afford is
+// TestTheSweepSpendsNoMoreThanTheDayAllows' subject.
 func (e *runsEnv) sweepSelects(t *testing.T) map[ids.PersonID]bool {
 	t.Helper()
+	var everyone int
+	if err := e.owner.QueryRow(e.ctx, `SELECT count(*) FROM person`).Scan(&everyone); err != nil {
+		t.Fatal(err)
+	}
 	var chosen []string
 	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
 		var err error
-		chosen, err = e.store.uncoveredSubjects(e.ctx, tx, e.provider, sweepTickBudget)
+		chosen, err = e.store.uncoveredSubjects(e.ctx, tx, e.provider, everyone)
 		return err
 	}); err != nil {
 		t.Fatal(err)

@@ -97,7 +97,7 @@ import {
 //     extension tier — a new one under `src/` fails.
 //   - A prop declared `number`. The ruling belongs where the component renders
 //     it, not where a caller passes it, and that render site is itself in
-//     scope — which is how `home.rail.tsx`'s `DigestCount` is caught once, at
+//     scope — which is how `brief.rail.tsx`'s `DigestCount` is caught once, at
 //     the `<span>{value}</span>` that is actually wrong, rather than four times
 //     at callers doing nothing wrong.
 

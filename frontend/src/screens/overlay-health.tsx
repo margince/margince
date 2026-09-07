@@ -20,7 +20,7 @@ import "./overlay.css";
 // Split out of overlay.tsx solely to keep that file under the 500-line cap
 // and its functions under the cognitive-complexity gate — unlike
 // connector-status.tsx (genuinely reused by both connectors.tsx and
-// home.tsx), this module has exactly one caller (overlay.tsx); the split
+// brief.tsx), this module has exactly one caller (overlay.tsx); the split
 // is a size/complexity boundary, not a reuse seam. Every field here is a
 // server fact, never a claim: `headroom` prints verbatim because the
 // server may answer the `~unknown` sentinel, and a computed substitute

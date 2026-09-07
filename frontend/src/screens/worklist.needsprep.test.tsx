@@ -5,8 +5,8 @@
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
-import { meetingRow } from "./home.fixtures";
-import { render } from "./home.testkit";
+import { meetingRow } from "./brief.fixtures";
+import { render } from "./brief.testkit";
 import { WorklistRow } from "./worklist.row";
 
 // A meeting nothing is prepared for, on the row.

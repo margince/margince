@@ -37,7 +37,7 @@ test.skip(
 
 const SHOTS = process.env.E2E_BRIEF_SHOT_DIR ?? "/tmp/e2e-brief";
 
-// The readings row, by the test id HomeReadingsStrip hands its StatStrip. Not
+// The readings row, by the test id BriefReadingsStrip hands its StatStrip. Not
 // by class: the plate is the shared primitive's, so a class selector would
 // match every other StatStrip in the app.
 /**
@@ -53,13 +53,13 @@ function copy(key: MessageKey): string {
   return de[key];
 }
 
-const STRIP = '[data-testid="home-readings"]';
-const GLANCE = '[data-testid="home-glance"]';
+const STRIP = '[data-testid="brief-readings"]';
+const GLANCE = '[data-testid="brief-glance"]';
 
 /**
  * Open the Brief and wait for the page to have actually settled.
  *
- * THREE waits, and the first two on their own are not enough. Home fans out to
+ * THREE waits, and the first two on their own are not enough. Brief fans out to
  * five independent reads, so a route that has arrived is still a column of
  * skeletons; the glance paints first, so anchoring there measures a page whose
  * work column is empty and whose readings are still fading in. The first
@@ -70,9 +70,9 @@ const GLANCE = '[data-testid="home-glance"]';
  * passed through rather than where it rests.
  */
 async function openBrief(page: Page) {
-  await page.goto("/#/home", { waitUntil: "networkidle" });
+  await page.goto("/#/brief", { waitUntil: "networkidle" });
   await expect(page.locator(GLANCE)).toBeVisible();
-  await expect(page.locator(".home-main section").first()).toBeVisible();
+  await expect(page.locator(".brief-main section").first()).toBeVisible();
   await settled(page);
 }
 
@@ -86,9 +86,9 @@ async function openBrief(page: Page) {
  */
 /** Open the Brief on its weekly view, settled the same way the morning is. */
 async function openWeekly(page: Page) {
-  await page.goto("/#/home?view=weekly", { waitUntil: "networkidle" });
+  await page.goto("/#/brief?view=weekly", { waitUntil: "networkidle" });
   await expect(page.locator(GLANCE)).toBeVisible();
-  await expect(page.locator("#home-weekly")).toBeVisible();
+  await expect(page.locator("#brief-weekly")).toBeVisible();
   await settled(page);
 }
 
@@ -215,7 +215,7 @@ test.describe("the Brief — page shape", () => {
     // is not, and the claim is about the strip sitting above the work, not
     // about which work it is.
     expect(strip).toBeLessThan(
-      await topOf(page.locator(".home-main section").first()),
+      await topOf(page.locator(".brief-main section").first()),
     );
   });
 
@@ -233,7 +233,7 @@ test.describe("the Brief — page shape", () => {
   // only a collapse fails.
   //
   // The sentence under the greeting is NOT compared here. It carries no size of
-  // its own (home.css `.glance-sentence` sets colour, margin and measure) and
+  // its own (brief.css `.glance-sentence` sets colour, margin and measure) and
   // inherits one LARGER than a panel title — the lede treatment the concept
   // asks for. An assertion that it ranks below a section heading would encode
   // the opposite of what the page deliberately does.
@@ -316,7 +316,7 @@ test.describe("the Brief — page shape", () => {
     await openWeekly(page);
     await expectShellRendered(page);
 
-    expect(await topOf(page.locator("#home-weekly"))).toBeLessThan(
+    expect(await topOf(page.locator("#brief-weekly"))).toBeLessThan(
       await topOf(page.locator("#brief-plan")),
     );
   });
@@ -334,8 +334,8 @@ test.describe("the Brief — page shape", () => {
     await openWeekly(page);
     await expectShellRendered(page);
 
-    await expect(page.locator(".home-rail")).toHaveCount(0);
-    const main = await page.locator(".home-main").boundingBox();
+    await expect(page.locator(".brief-rail")).toHaveCount(0);
+    const main = await page.locator(".brief-main").boundingBox();
     const zones = await page.locator(".page-zones-main").boundingBox();
     if (!main || !zones) {
       throw new Error("the weekly drew no work column to measure");
@@ -351,8 +351,8 @@ test.describe("the Brief — page shape", () => {
     await openBrief(page);
     await expectShellRendered(page);
 
-    await expect(page.locator("#home-focus")).toBeVisible();
-    await expect(page.locator("#home-weekly")).toHaveCount(0);
+    await expect(page.locator("#brief-feed")).toBeVisible();
+    await expect(page.locator("#brief-weekly")).toHaveCount(0);
   });
 
   // The page a German reader arrives at is in German, and says what it is.
@@ -385,8 +385,8 @@ test.describe("the Brief — page shape", () => {
 
     await page.getByRole("button", { name: copy("brief.view.weekly") }).click();
 
-    await expect(page.locator("#home-weekly")).toBeVisible();
-    await expect(page.locator("#home-focus")).toHaveCount(0);
+    await expect(page.locator("#brief-weekly")).toBeVisible();
+    await expect(page.locator("#brief-feed")).toHaveCount(0);
     expect(page.url()).toContain("view=weekly");
   });
 
@@ -398,8 +398,8 @@ test.describe("the Brief — page shape", () => {
     await openBrief(page);
     await expectShellRendered(page);
 
-    expect(await leftOf(page.locator(".home-rail"))).toBeGreaterThan(
-      await leftOf(page.locator(".home-main")),
+    expect(await leftOf(page.locator(".brief-rail"))).toBeGreaterThan(
+      await leftOf(page.locator(".brief-main")),
     );
   });
 
@@ -451,8 +451,8 @@ test.describe("the Brief — nothing pans", () => {
     await openBrief(page);
     await expectShellRendered(page);
 
-    expect(await topOf(page.locator(".home-rail"))).toBeGreaterThan(
-      await topOf(page.locator(".home-main")),
+    expect(await topOf(page.locator(".brief-rail"))).toBeGreaterThan(
+      await topOf(page.locator(".brief-main")),
     );
   });
 

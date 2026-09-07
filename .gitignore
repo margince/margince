@@ -204,3 +204,27 @@ e2e/llm/records/
 # snapshot of one machine's test data, so it is neither product nor an artifact
 # anybody regenerates.
 dump.rdb
+
+# A tool built in place. `go build` inside backend/tools/<name>/ writes its
+# output as <name> beside the source, which is how a 19 MB Mach-O came to be
+# committed on a pull request about dropping a database column (#2129).
+#
+# One line per tool rather than a pattern over the directory: the tools hold
+# ordinary Go files with no extension distinguishing them from a binary, and a
+# pattern wide enough to catch the output would hide a source file somebody
+# forgot to add. TestNoCompiledBinaryIsTracked is what actually enforces this —
+# these lines keep the artifact out of `git status` so nobody reaches for -f.
+/backend/tools/contract-overlay/contract-overlay
+/backend/tools/contract-subset/contract-subset
+/backend/tools/extmigrategate/extmigrategate
+/backend/tools/gen-agentpolicy/gen-agentpolicy
+/backend/tools/gen-aitasks/gen-aitasks
+/backend/tools/gen-composition/gen-composition
+/backend/tools/gen-configschema/gen-configschema
+/backend/tools/gen-jobs/gen-jobs
+/backend/tools/gen-payloads/gen-payloads
+/backend/tools/gen-perfdoc/gen-perfdoc
+/backend/tools/gen-recordfields/gen-recordfields
+/backend/tools/gen-stubs/gen-stubs
+/backend/tools/gen-workflow/gen-workflow
+/backend/tools/seed-demo/seed-demo

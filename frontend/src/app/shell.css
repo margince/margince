@@ -79,20 +79,19 @@
      150–200ms). The column also animates a geometric property, so every frame
      re-lays-out the content beside it — a shorter run is cheaper as well as
      better. */
-  /* The reading column, for the pages that want one. Read DOWN — a settings
-     form, a company or contact record with its rail of facts beside prose — and
-     a measured line is the point; a label a monitor away from its control is
-     worse, not wider. Scanned ACROSS — a list, a board, a report — and the cap
-     only ever pushed columns off the right edge of a wide display. Which
-     screens are in which family is decided in ONE place, `GRIDDED_RECORD_SCREENS`
-     in app/nav.ts, because it is a judgement made by opening the page.
+  /* ONE reading column, and every capped page is capped at it — a settings
+     form, the Brief, a company or contact record alike. A page is either read
+     DOWN, where a measured line is the point and a label a monitor away from
+     its control is worse rather than wider, or scanned ACROSS, where a cap only
+     ever pushed columns off the right edge of a wide display. That is the whole
+     decision: which family a screen is in, decided in ONE place
+     (`GRIDDED_RECORD_SCREENS` and `GRIDDED_SCREENS` in app/nav.ts, because it is
+     a judgement made by opening the page) — never how wide its own measure is,
+     because two measures put the same sentence on two line lengths depending on
+     which page a reader opened it from.
      The page head is never capped: full width on every screen, and a capped
      column is centred under it. */
   --pageColumn: 1280px;
-  /* A record's own cap. Wider than --pageColumn because a record page is a
-     header, a tab strip and two columns under them, where a settings page is
-     one column of cards — see .main-record. */
-  --recordColumn: 1400px;
 
   --railW: 56px;
   display: grid;
@@ -127,14 +126,6 @@
 }
 .app.railexpanded {
   --railW: 224px;
-}
-/* A settings route's second level is a narrower column than the destinations:
-   its rows are a section's entries rather than places to go, and 210px holds
-   the longest of them (DESIGN.md §6). Read off the sidebar's own `leveled`
-   class rather than the route, so the shell keeps one opinion about what a
-   level is (app/shell.tsx). */
-.app.railexpanded:has(> .rail.leveled) {
-  --railW: 210px;
 }
 /* Reduce means reduce, not remove: the MOVEMENT goes (the column snaps to its
    new width), while the label's opacity crossfade stays. A fade is not motion,
@@ -252,12 +243,16 @@
      what is left. */
   flex: none;
 }
-/* The pages that keep the reading column — see --pageColumn and
-   GRIDDED_RECORD_SCREENS. Centred in the page: the column is the thing being
-   read, so it sits in the middle of the space it is given rather than hugging
-   one edge of it. The page head above stays full width and is therefore wider
-   than it on a big display — deliberately, since the head is the window's
-   chrome and the column is the document. */
+/* Every page that keeps the reading column, and the ONE place the measure is
+   applied — see --pageColumn, `GRIDDED_SCREENS` and `GRIDDED_RECORD_SCREENS`.
+   A record is in this rule like any other capped page: it carries more parts
+   than a settings page does, which changes what stands inside the column and
+   not how wide the column is.
+   Centred in the page: the column is the thing being read, so it sits in the
+   middle of the space it is given rather than hugging one edge of it. The page
+   head above stays full width and is therefore wider than it on a big display —
+   deliberately, since the head is the window's chrome and the column is the
+   document. */
 .main-gridded .wrap {
   max-width: var(--pageColumn);
   margin: 0 auto;
@@ -383,39 +378,44 @@
 }
 /* The label is absolutely positioned for the collapse animation, so it does not
    flow around the shortcut cap — it is held clear of it instead. */
-/* head row: the brand alone — the control that collapses this panel stands in
-   the top bar (app/topbar.css), where it does not travel with the panel it
-   opens. Its height is the strip's, less the rail's own top padding and plus the
-   strip's rule, so the row under it starts on the line the strip ends on. */
+/* The head: the brand block, then the line that says what it runs on and which
+   build this is. TWO ROWS, so the marker stands beside the attribution instead
+   of at the foot of a column a demo never scrolls to — and the control that
+   collapses this panel is not among them, it stands in the top bar
+   (app/topbar.css) where it does not travel with the panel it opens.
+   Its FLOOR is the strip's height, so a head with nothing to attribute still
+   reaches the line the strip ends on; a head with more to say takes the rows
+   below it down rather than being clipped by the box. */
 .rail .railhead {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  /* A COLUMN: the mark and the name are one lockup, and what runs under them is
+     a line of its own. `stretch` so both rows start at the panel's own left
+     edge — the marker then trails the attribution on the same baseline grid the
+     rows below stand on. */
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-1);
   /* Never shrinks. The panel is a flex COLUMN, and on a window shorter than the
      navigation is tall the default `flex-shrink: 1` took the overflow out of the
      tallest item that could give it — this one, silently, 14px of it. The head
      then stood shorter than the strip it is aligned to and every icon below it
      rode up by that much, so collapsing the panel (which stops scrolling, so
-     stops shrinking) moved the whole column. Both halves of that are wrong: the
-     logomark's axis is the strip's, and the rows hold still. */
+     stops shrinking) moved the whole column, which the rows must not do. */
   flex: none;
-  /* The strip's height exactly, pulled up out of the rail's own top padding: the
-     logomark then sits on the same horizontal axis as the trail and the search
-     across the rule from it, and the panel's 1px row gap still puts the first
-     destination's row on the line under that rule. */
-  height: var(--topbarH);
-  margin-top: calc(-1 * var(--space-3));
-  /* A breath between the mark and the first destination: with the mark at the
-     head's full height the row under it read as one more item in its stack. */
+  /* The strip's height as a FLOOR, so the head reaches the line the strip ends
+     on however little it has to say and the first destination starts under that
+     line. Never a ceiling: the box has to be as tall as what stands in it, and
+     any less puts the attribution and the marker outside their own head. */
+  min-height: var(--topbarH);
+  /* A breath between the head and the first destination: with the marker on the
+     head's last line the row under it read as one more item in its stack. */
   margin-bottom: var(--space-3);
-  /* The release marker below hangs off this box. */
-  position: relative;
 }
-/* Collapsed, the head is the logomark alone, centred: the control that opens
-   and closes this panel now stands in the top bar, where it does not travel
-   with the panel it opens and does not have to be discovered on hover. */
+/* Collapsed the head is the mark and the marker under it, and neither has a
+   text column to stand on: at 56px the axis is the column's own centre, which is
+   the axis every row glyph below them stands on too. */
 .rail.collapsed .railhead {
-  justify-content: center;
+  align-items: center;
 }
 /* brand block */
 .rail .ws {
@@ -425,8 +425,8 @@
   text-decoration: none;
   color: var(--textPrimary);
   border-radius: var(--r-sm);
-  padding: var(--space-1);
-  flex: 1;
+  /* No inset of its own: the head owns the air around both of its rows, and a
+     padding here would indent the mark from the line under it. */
   min-width: 0;
   overflow: hidden;
 }
@@ -435,7 +435,7 @@
    exactly as one lockup. The no-logo path below keeps the compact monogram and
    company name because initials do not identify a company on their own. */
 .rail.expanded .railhead:has(.ws-logo) {
-  height: 80px;
+  min-height: 80px;
   margin-top: 0;
 }
 .rail .ws-logo {
@@ -468,15 +468,6 @@
   white-space: nowrap;
   font-size: var(--fs-h3);
 }
-.rail .ws-logo-powered {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--space-1);
-  font-size: var(--fs-eyebrow);
-  line-height: 1;
-  text-align: right;
-}
 .rail .ws-logo-product {
   font-family: var(--f-display);
   font-size: var(--fs-meta);
@@ -502,10 +493,6 @@
 .rail.collapsed .ws-logo .company-logo-img {
   object-position: center;
 }
-.rail.collapsed .ws-logo-powered,
-.rail.leveled .ws-logo-powered {
-  display: none;
-}
 .rail .ws-chip {
   /* The workspace's mark is the one picture in the chrome, and at 32px it read
      as one more row glyph. 40px is the collapsed column's own width less the
@@ -522,6 +509,17 @@
   color: var(--textOnAccent);
   display: grid;
   place-items: center;
+  /* The mark holds the block's first line, not its middle: beside a name that
+     wraps to two lines a centred chip drifts down the head and off the axis the
+     strip's own glyphs stand on. */
+  align-self: start;
+}
+/* Collapsed there is no first line to hold — the name gives up its box (below)
+   and the mark IS the head, so it takes the axis every glyph in the column
+   below it stands on. The `.ws` inset is zeroed in the same state, so nothing
+   else offsets it. */
+.rail.collapsed .ws-chip {
+  align-self: center;
 }
 /* The same slot holding the COMPANY's mark. The chip's own ground goes: what
    stands here is a logo drawn for its own background, or the monogram Avatar
@@ -546,6 +544,9 @@
 .rail .ws-name {
   display: flex;
   flex-direction: column;
+  /* The two lines are one lockup, not a stack: the name and what it runs on
+     belong together, and set solid they read as one word wrapped. */
+  gap: var(--space-1);
   min-width: 0;
   width: auto;
   opacity: 1;
@@ -563,8 +564,13 @@
     transition: opacity var(--dur-state) var(--ease-in-out);
   }
 }
+/* Collapsed the name is gone in BOTH axes. Width alone left its block height
+   standing — a name that wraps to two lines expanded held that much air open in
+   the 56px column, so the head's height (and every row under it) depended on how
+   long the installation's name is on a rail nobody can read it in. */
 .rail.collapsed .ws-name {
   width: 0;
+  height: 0;
   opacity: 0;
 }
 .rail .ws-name b {
@@ -573,22 +579,57 @@
   font-size: var(--fs-lead);
   font-weight: var(--fw-semibold);
   color: var(--textPrimary);
-  line-height: 1.25;
+  /* Set tight, because a company name is a NAME rather than prose: two lines of
+     it are one object and the reading leading between them pulled it apart. The
+     air the lockup needs is the gap above, which belongs to the block. */
+  line-height: 1.1;
 }
-/* The line under the installation's name, and the build marker at the panel's
-   foot. Both are the same voice as the rest of the panel at a smaller size —
-   the mono uppercase kicker this used to draw in was a third type family
-   standing in the corner of every screen, saying nothing the name above it does
-   not. The ellipsis stays: an installation name is user data of unbounded
-   length in a narrow column. */
-.rail .ws-org,
-.rail .railversion {
-  font-size: var(--fs-eyebrow);
-}
+/* The head's second line: what this installation runs on, and which build of it
+   this is. One row for both, because they are one statement — and in the same
+   small voice as the name above them rather than the mono uppercase kicker this
+   used to draw in, which was a third type family standing in the corner of
+   every screen and saying nothing the name did not.
+   It is a SIBLING of the brand anchor and not a child of it: the marker is a
+   fact about the build, and a fact inside a link is a fact a press carries you
+   away from. */
 .rail .ws-org {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--fs-eyebrow);
+  line-height: 1;
+}
+/* The ellipsis is the TEXT's, not the row's: an installation name is user data
+   of unbounded length in a narrow column, and a row that clipped itself would
+   take the marker with it — the one thing on this line that must always be
+   legible. */
+.rail .ws-org-text {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+/* WHICH BUILD THIS IS, as a badge rather than a line of grey type.
+   Filled in the brand's own accent so it reads as a stamp on the product rather
+   than as one more label: the reader it exists for is somebody seeing the
+   product for the first time, and "this is not finished software" is the one
+   thing in this panel they must not miss. --textOnAccentControl and not
+   --textOnAccent, because the fill IS --accent and dark mode lightens it
+   (design-system/tokens.css says so where the two are split). */
+.rail .ws-alpha {
+  flex: none;
+  background: var(--accent);
+  color: var(--textOnAccentControl);
+  font-weight: var(--fw-bold);
+  padding: 1px var(--space-1); /* ds:ignore a cap-height band on a 10.5px label, not spaced content */
+  border-radius: var(--r-xs);
+}
+/* Collapsed there is no room for the attribution and no need for it: the mark
+   above says whose installation this is, and 56px is one glyph wide. The badge
+   stays — it is the whole reason this line survives the collapse — shortened to
+   one letter by release.ts and centred under the mark by the head's own
+   `align-items`. */
+.rail.collapsed .ws-org-text {
+  display: none;
 }
 
 /* groups */
@@ -603,8 +644,16 @@
   gap: var(--space-1);
 }
 /* A group is a section of the column, and the heading sits IN that space: the
-   air above it belongs to the break, the air under it belongs to its rows. */
-.rail .navgroup + .navgroup {
+   air above it belongs to the break, the air under it belongs to its rows.
+   ONE break, spelled once: whatever a group is separated from — the group before
+   it, or the level's head — the interval is the same, and two of them drifting
+   apart is how a column stops having a rhythm. Without the second selector the
+   level's own name sat against the search field and read as that field's label
+   rather than as the heading over the rows. Collapsed the field is gone and the
+   break is not: the margin belongs to the GROUP, so the way out of the section
+   still stands clear of the icons under it. */
+.rail .navgroup + .navgroup,
+.rail .navlead + .navgroup {
   margin-top: var(--space-5);
 }
 /* A quiet label over a group, not a heading competing with the rows under it:
@@ -614,27 +663,19 @@
    sets these small and plain. The group is separated by space, not by a rule:
    a heading and a divider do the same job, and stacking both says it twice. */
 .rail .navheading {
-  position: relative;
   padding: 0 var(--space-2);
   /* It is a label, not a place to go. Sitting in a column of links it inherited
      the text cursor, which offers a selection nobody wants over a word that
      answers no press. */
   cursor: default;
 }
-/* Collapsed: the heading keeps its exact box (same font metrics, same margins)
-   so the rows below never re-space; the text goes transparent and a hairline is
-   drawn inside that space instead. */
+/* Collapsed there is no word to show: 56px carries a glyph and not a label, and
+   a heading standing in for one — as a hairline, or as a box holding its own
+   height with the ink taken out — draws a second divider over the break that
+   already separates the groups. So it is not drawn, and `.rail .navgroup +
+   .navgroup` alone says where one group ends and the next begins. */
 .rail.collapsed .navheading {
-  color: transparent;
-}
-.rail.collapsed .navheading::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 22px;
-  transform: translateX(-50%);
-  border-top: 1px solid var(--borderSubtle);
+  display: none;
 }
 
 .rail .navwrap {
@@ -839,50 +880,6 @@
     animation: none;
   }
 }
-/* The level's own name, at the head of its rows. It is the page's section, so it
-   sits at heading level 2 and the group labels under it move down to 3 — the
-   outline a screen reader walks says which level these rows belong to.
-   It reads at the lead size: the level is a place, and a name set smaller than
-   the rows under it reads as their caption instead. */
-.rail .navtitle {
-  margin: 0;
-  padding: 0 14px; /* ds:ignore matches .navheading's inset, so the title sits on the rows' own text column */
-  font-family: var(--f-display);
-  font-size: var(--fs-lead);
-  font-weight: var(--fw-semibold);
-  color: var(--textPrimary);
-  /* One line in both states. Left to wrap, a two-word level name set two lines
-     deep expanded and one line deep collapsed, and the rows under it moved on
-     the collapse. The panel clips its own overflow-x expanded; collapsed the
-     name is not drawn at all. */
-  white-space: nowrap;
-}
-/* The header block ends here, and the rule says so — bled out through the title's
-   own inset and the rail's gutter so it meets both edges and divides the SIDEBAR
-   rather than underlining a word. Carried by the title rather than by the first
-   group, so it travels with the thing it belongs to: collapsed, the name gives up
-   its ink and this line is what is left of the level's head. */
-.rail .navtitle::after {
-  content: "";
-  display: block;
-  height: 1px;
-  margin: var(--space-3) calc(-1 * (14px + var(--space-2))) 0; /* ds:ignore reaches the rail's edge through the title's 14px inset */
-  background: var(--borderSubtle);
-}
-/* The rows start clear of that rule rather than against it. */
-.rail .navtitle + .navgroup {
-  margin-top: var(--space-3);
-}
-/* Collapsed there is no room for the name — and it must not leave the document
-   either: the rows below are icons, and this heading is what says which level
-   they are. So it keeps its BOX and gives up only its ink, the same trade
-   `.navheading` makes one level up. Taken out of the flow instead (the `.sr-only`
-   treatment this used to have) it took 37px of the column with it, and every row
-   under it jumped up by that much on the collapse. The rule it carries stays and
-   still divides the level's head from its rows. */
-.rail.collapsed .navtitle {
-  color: transparent;
-}
 /* The way back up: the first control in the level and the only one that leaves
    it, so it is the one thing here that looks like a control. On `.navitem`'s
    geometry — the level's header and its rows stand on one column of icons — with
@@ -927,16 +924,6 @@
     transition: none;
   }
 }
-/* A level takes the brand's WORDS for its own rows: the mark alone already stands
-   for the product here, and it keeps the job it has — the link home — so the head
-   is never a dead box. The level's own name stands a row below, where the words
-   would have been.
-   One selector serves both sidebar widths: nothing more specific than `.rail …`
-   claims `display` on the brand's words, so the 56px rail follows without being
-   named. */
-.rail.leveled .ws-name {
-  display: none;
-}
 /* ===== the foot: what the installation is entitled to =====
  * A reading, not a destination — so it rides the rows' geometry (it stands in
  * their column of icons) without their active treatment, and the rule above it
@@ -963,28 +950,6 @@
      the air around it read as rail nobody uses. */
   margin: var(--space-1) calc(-1 * var(--space-2)) 0;
   padding: 0 var(--space-2);
-}
-/* WHICH BUILD THIS IS, at the foot of the column.
-   Centred in both rail states, because it names the whole panel rather than
-   standing on the rows' text column — and at 56px there is no text column to
-   stand on. It reads in the brand block's own small face: the one other line in
-   this panel that is a label about the installation rather than a place to go,
-   which is why the two share a declaration rather than each spelling 9px.
-   `flex: none` for the reason the head and the agent band carry it: on a window
-   shorter than the panel this is the box a flex column would take the overflow
-   out of, and a version that shrank to nothing is a version nobody can read
-   back to us. */
-.rail .railversion {
-  flex: none;
-  margin: var(--space-3) 0 0;
-  text-align: center;
-  color: var(--textMeta);
-  /* One line, whatever the marker says: the collapsed column is 56px and a
-     build name is unbounded, so a wrapping marker was two lines of 9px type
-     under the agent's card. */
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 /* The More control belongs to the phone-width bottom bar only. */
 .rail .railmore {
@@ -1592,7 +1557,11 @@
   .rail.sheetopen .railhead {
     display: flex;
     order: -1;
-    height: auto;
+    /* Both rows flush left, the way the expanded sidebar draws them: the sheet
+       inherits `.rail.collapsed` whenever that is what the desktop was left at,
+       and the centring that column needs would indent the name and the
+       attribution from the rows under them here. */
+    align-items: stretch;
     min-height: 44px;
     margin: 0 0 var(--space-2);
     padding-right: var(--space-12);
@@ -1600,9 +1569,19 @@
   .rail.sheetopen .ws {
     display: flex;
   }
+  /* Every axis the collapsed sidebar closes this block on, opened again: the
+     sheet inherits `.rail.collapsed` whenever that is what the desktop was left
+     at, and the head is the only thing at this width that says which workspace
+     this is — so a `height` left at 0 would empty it. */
   .rail.sheetopen .ws-name {
     width: auto;
+    height: auto;
     opacity: 1;
+  }
+  /* And the attribution beside the marker: the sheet is 600px wide, so the row
+     the 56px rail reduces to one badge is spelled out in full here. */
+  .rail.sheetopen .ws-org-text {
+    display: block;
   }
   /* The close control keeps its glyph and drops its word: pinned in the corner
      there is no room for one, and "Close" is what its `aria-label` says. */
@@ -1658,9 +1637,6 @@
     width: 20px;
     height: 20px;
   }
-  .rail.sheetopen .navheading {
-    display: block;
-  }
   .rail.sheetopen .navlabel,
   .rail.sheetopen.collapsed .navlabel,
   .rail.sheetopen .navitem:has(.count) .navlabel {
@@ -1685,15 +1661,13 @@
     position: static;
     margin-left: auto;
   }
+  /* The sheet is 600px wide even when the desktop preference it inherits is the
+     56px rail, which is why this restates `display` at all: the collapsed
+     sidebar draws no heading, and the sheet has room to spell every group name
+     out. Later in the file than that rule and weighing the same, so it wins. */
   .rail.sheetopen .navheading {
     display: block;
-    /* The sheet is 600px wide even when the desktop preference it inherits is
-       the 56px rail, so the group names are spelled out here rather than
-       standing in as the collapsed rail's hairline. */
     color: var(--textMeta);
-  }
-  .rail.sheetopen .navheading::after {
-    display: none;
   }
   /* In the sheet the level is a column again — the sheet is the phone's whole
      sidebar, and a bar's row of tabs is not a list of ten places. The collapsed
@@ -1729,11 +1703,11 @@
 }
 
 /* A list screen is one full-height surface: the page itself does not scroll,
- * the table's own body does. It keeps the same 1280px column and the same page
- * gutter as every other screen — it used to opt out of the cap, which read as
- * "a list uses the width it is given" until a 4K window gave it 3000px and a
- * six-column table stretched across a metre of desk with the eye losing the row
- * between name and status.
+ * the table's own body does. It keeps the same reading column (--pageColumn) and
+ * the same page gutter as every other screen — it used to opt out of the cap,
+ * which read as "a list uses the width it is given" until a 4K window gave it
+ * 3000px and a six-column table stretched across a metre of desk with the eye
+ * losing the row between name and status.
  *
  * Keyed off the wrap CARRYING a surface, not on it being the only child. An
  * `:only-child` rule states that the layout depends on the surface having no
@@ -1773,16 +1747,11 @@
   margin-bottom: var(--space-4);
 }
 
-/* A record reads wider than a settings page or the home screen: it carries a
-   header, a tab strip and two columns under them, where the others are one
-   column of prose-width cards. */
-.main-record .wrap {
-  max-width: var(--recordColumn);
-}
 /* A named container, so a block inside the reading column can measure the WORK
-   column it sits in. The record's tab strip needs it: its rules divide the
-   page's chrome from its document and run the full width of the column, while
-   the column itself caps the record at a readable measure.
+   column it sits in — the record page's ONLY reason for a class of its own,
+   since its width is the one every capped page has. The record's tab strip
+   needs it: its rules divide the page's chrome from its document and run the
+   full width of the column, which the column caps at the reading measure.
 
    Nothing else about the layout changes — inline-size containment only lets a
    child ask how wide this is.
@@ -1806,10 +1775,17 @@
  * Not `.suggest-popup`'s geometry, and deliberately: that list is PORTALLED and
  * measured against the viewport because its anchor can sit anywhere in a form.
  * This one lives in the rail, which is a positioned column of known width, so
- * it hangs off its own wrapper and needs no measuring at all. */
-.navlead {
-  padding: var(--space-2) var(--space-3);
-}
+ * it hangs off its own wrapper and needs no measuring at all.
+ *
+ * The wrapper takes NO inset, in either axis, and the absence is the decision
+ * rather than an omission. Horizontally the field's edges are the ROWS' edges —
+ * a row is a `.navwrap` spanning the level and carries its own inset inside it,
+ * so a padding here would stand the box the reader types in narrower than every
+ * box under it. Vertically the intervals around it already belong to its
+ * neighbours: the way out of the section carries its own margin below, and the
+ * first group takes the same break from this box that two groups take from each
+ * other (`.rail .navlead + .navgroup`). So `.navlead` has no geometry of its
+ * own — only the one state below, where it stands down. */
 
 /* Absent in the collapsed rail, which is 56px wide: a text field in there is a
    box too narrow to read your own typing in, over a result list narrower still.

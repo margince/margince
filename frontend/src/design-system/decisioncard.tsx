@@ -38,7 +38,7 @@ import "./decisioncard.css";
 //
 // It holds no mutation, no query and no copy: the verbs arrive as callbacks, the
 // words arrive as `labels`, and the two layouts are one component because a
-// decision that reads one way in a queue and another way on the home screen is
+// decision that reads one way in a queue and another way on the Brief is
 // two decisions to the person answering it.
 
 export type DecisionApproval = components["schemas"]["Approval"];
@@ -175,7 +175,7 @@ export type DecisionStatusLabels = Readonly<{
  * The decision's header chip: a verdict badge once it has been answered, else
  * the live countdown to its deadline.
  *
- * Every decision surface draws this one — the inbox's Decisions row and Home's
+ * Every decision surface draws this one — the inbox's Decisions row and Brief's
  * deck both — because a second countdown is a second answer to one deadline,
  * and the two drift the first time either moves.
  */
