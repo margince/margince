@@ -1015,17 +1015,22 @@ jobs:
 
   # The UAT lane: the AC-<screen>-N screen-acceptance criteria as named
   # Playwright tests, plus the axe WCAG 2.2 AA gate, the 390px
-  # no-horizontal-scroll sweep, and the PERF-1 record-open budget. The suite
-  # mocks the API at the network edge (the coherent seed fixture), so it is
-  # self-contained — no backend needed — and a UI regression that breaks a
-  # named acceptance criterion fails the merge instead of shipping.
+  # no-horizontal-scroll sweep, and PERF-1's held-read claim for a record open.
+  # The suite mocks the API at the network edge (the coherent seed fixture), so
+  # it is self-contained — no backend needed — and it is in the `ci` aggregate
+  # below: a UI regression that breaks a named acceptance criterion fails the
+  # merge instead of shipping. Nothing in it reads a clock — the record-open
+  # BUDGET belongs to `make bench-mobile` — so a slow runner cannot redden it.
   uat:
     name: uat (AC screens + axe WCAG 2.2 AA + 390px, mocked)
     timeout-minutes: 20
-    # Fail fast: the Playwright UAT lane only starts once the cheaper frontend
-    # gate (biome + vitest + tsc + build) is green; both are frontend-gated, so
-    # they skip together on non-frontend PRs.
-    needs: [changes, frontend]
+    # BESIDE the frontend lane, not behind it. This job builds the SPA itself
+    # (`pnpm e2e` is a build and then the run) and shares no artefact with
+    # `frontend`, so an order between them buys nothing but latency — and since
+    # both gate the merge, the sequence would be the aggregate's wall clock on
+    # every frontend change. What the order saved was this job's runner minutes
+    # on a change biome would have refused, which is cheaper than the wait.
+    needs: [changes]
     if: needs.changes.outputs.frontend == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
     permissions:
@@ -1163,6 +1168,13 @@ jobs:
       - extension-reference
       - integration
       - frontend
+      # The screen-acceptance lane gates the merge. It was advisory on the
+      # argument that a flaky job under a merge queue re-queues every entry in
+      # its group; the queue is not in use, and an advisory lane is one a red
+      # verdict never stops anybody on. Its classifier skip is admissible here
+      # for the same reason `frontend`'s is: on a pull request a skip means out
+      # of scope, and on the merge queue every scope is true so it cannot skip.
+      - uat
       - license-gate
       - images
     runs-on: ubuntu-latest
