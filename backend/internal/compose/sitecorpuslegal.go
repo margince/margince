@@ -56,9 +56,10 @@ type corpusLegalEntity struct {
 // count, so a winner-takes-all rule kept whichever came first and dropped
 // the other's number entirely.
 func dedupeLegalEntities(entities []corpusLegalEntity) []corpusLegalEntity {
+	contested := contestedLegalNames(entities)
 	var out []corpusLegalEntity
 	for _, entity := range entities {
-		at := matchingLegalEntity(out, entity)
+		at := matchingLegalEntity(out, entity, contested)
 		if at < 0 {
 			out = append(out, entity)
 			continue
@@ -71,6 +72,49 @@ func dedupeLegalEntities(entities []corpusLegalEntity) []corpusLegalEntity {
 		out[at] = fillLegalDetailsFrom(out[at], entity)
 	}
 	return removeBrandOnlyLegalAliases(out)
+}
+
+// contestedLegalNames names the companies this census cannot tell apart by
+// name alone: one printed name against more than one registry or tax identity.
+//
+// It has to be answered over the WHOLE census before any folding, because the
+// contradiction is invisible pairwise. A sighting that printed only an address
+// contradicts nothing on its own, so it accepts the first registration that
+// comes along and then stands as the fold target for the second — and two
+// registry identities become one row carrying neither number.
+// A register number and a VAT ID are counted APART. One company prints both,
+// and a locale that printed only the tax identifier beside one that printed
+// only the register entry is that company twice — not two of them.
+func contestedLegalNames(entities []corpusLegalEntity) map[string]bool {
+	registers := map[string]map[string]bool{}
+	vats := map[string]map[string]bool{}
+	for _, entity := range entities {
+		name := legalEntityNameKey(entity.Name)
+		if name == "" {
+			continue
+		}
+		noteLegalIdentity(registers, name, normalizeEvidence(entity.RegisterNumber))
+		noteLegalIdentity(vats, name, normalizeEvidence(entity.VatNumber))
+	}
+	contested := map[string]bool{}
+	for _, byName := range []map[string]map[string]bool{registers, vats} {
+		for name, seen := range byName {
+			if len(seen) > 1 {
+				contested[name] = true
+			}
+		}
+	}
+	return contested
+}
+
+func noteLegalIdentity(seen map[string]map[string]bool, name, identity string) {
+	if identity == "" {
+		return
+	}
+	if seen[name] == nil {
+		seen[name] = map[string]bool{}
+	}
+	seen[name][identity] = true
 }
 
 // fillLegalDetailsFrom completes one sighting of an entity from another of
@@ -113,24 +157,52 @@ func fillLegalDetailsFrom(kept, other corpusLegalEntity) corpusLegalEntity {
 // of one entity split under their locale names and could trip the
 // multi-entity abstention, and two different companies printed under one
 // name merged into whichever was seen first.
-func matchingLegalEntity(existing []corpusLegalEntity, candidate corpusLegalEntity) int {
-	candidateName := legalEntityNameKey(candidate.Name)
-	candidateRegister := normalizeEvidence(candidate.RegisterNumber)
-	candidateVat := normalizeEvidence(candidate.VatNumber)
+func matchingLegalEntity(existing []corpusLegalEntity, candidate corpusLegalEntity, contested map[string]bool) int {
 	for i, entity := range existing {
-		name := legalEntityNameKey(entity.Name)
-		register := normalizeEvidence(entity.RegisterNumber)
-		vat := normalizeEvidence(entity.VatNumber)
-		sameRegister := candidateRegister != "" && register != "" && candidateRegister == register
-		sameVat := candidateVat != "" && vat != "" && candidateVat == vat
-		compatibleName := candidateName != "" && candidateName == name &&
-			bothOrEitherEmpty(candidateRegister, register) &&
-			bothOrEitherEmpty(candidateVat, vat)
-		if sameRegister || sameVat || compatibleName {
+		if sameLegalEntity(entity, candidate, contested) {
 			return i
 		}
 	}
 	return -1
+}
+
+// sameLegalEntity answers the pair. A shared identifier is decisive whatever
+// the names say; otherwise the printed name decides, and only while that name
+// stands for ONE identity.
+func sameLegalEntity(entity, candidate corpusLegalEntity, contested map[string]bool) bool {
+	register, candidateRegister := normalizeEvidence(entity.RegisterNumber), normalizeEvidence(candidate.RegisterNumber)
+	vat, candidateVat := normalizeEvidence(entity.VatNumber), normalizeEvidence(candidate.VatNumber)
+	if sameLegalIdentifier(register, candidateRegister) || sameLegalIdentifier(vat, candidateVat) {
+		return true
+	}
+	name := legalEntityNameKey(candidate.Name)
+	if name == "" || name != legalEntityNameKey(entity.Name) {
+		return false
+	}
+	if !bothOrEitherEmpty(register, candidateRegister) || !bothOrEitherEmpty(vat, candidateVat) {
+		return false
+	}
+	// The name is the only evidence left, and under a CONTESTED name it is
+	// not evidence: the site prints that name against more than one identity,
+	// so a sighting carrying one of them could belong to either company.
+	// Attaching it to whichever was seen first is the guess the multi-entity
+	// abstention exists to refuse — and folding it hides the second
+	// registration from that abstention entirely.
+	//
+	// Two sightings that printed NO identifier at all still fold: they carry
+	// nothing to tell apart, and splitting them would invent a company out of
+	// a repeated market heading.
+	if !contested[name] {
+		return true
+	}
+	return register == "" && candidateRegister == "" && vat == "" && candidateVat == ""
+}
+
+// sameLegalIdentifier reports whether two sightings agree on one authority's
+// identifier. An absent one agrees with nothing — it is a page that did not
+// print it, not a company that has none.
+func sameLegalIdentifier(left, right string) bool {
+	return left != "" && left == right
 }
 
 // bothOrEitherEmpty reports whether two identifiers can belong to one
@@ -332,13 +404,13 @@ const (
 // distinct entities is answered first: that holds whether or not another
 // legal page also failed, while an incomplete census says only that this
 // run cannot trust its count.
+// The count is of ENTITIES, not of names. Two rows reach here only when
+// nothing folded them, and two registrations printed under one name is the
+// very case this abstention is for — counting names answers "one company" to
+// the census that most needs a human.
 func legalAbstentionOf(entities []corpusLegalEntity, censusIncomplete bool) legalAbstention {
-	distinct := map[string]bool{}
-	for _, e := range entities {
-		distinct[legalEntityNameKey(e.Name)] = true
-	}
 	switch {
-	case len(distinct) > 1:
+	case len(entities) > 1:
 		return legalAbstentionMultipleEntities
 	case censusIncomplete:
 		return legalAbstentionCensusIncomplete
