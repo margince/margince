@@ -222,9 +222,21 @@ var auditOnlyWrites = gatekit.Waive(map[string]string{
 	// The audit row is the half that could not wait, because it cannot be
 	// written afterwards: an invoice mirrored without one stays permanently
 	// unaccounted for, and the erasure and retention reasoning that reads
-	// audit_log is blind to it. Which finance types the contract should carry is
-	// a product decision, tracked as its own issue; ratifying them replaces
-	// these seven entries with emits at the same call sites.
+	// audit_log is blind to it.
+	//
+	// Audit-only here is SETTLED rather than pending. No finance verb exists in
+	// the closed catalog, no consumer asks for one, and emitting would mean
+	// minting public contract surface speculatively — which is the layering
+	// working rather than a shortcut taken under it. It reads like the
+	// attachment entries above and is their opposite: those skip a type that
+	// could legitimately be declared, this has no type to skip.
+	//
+	// Said plainly because an exemption marked "waiting on a decision" is how a
+	// temporary state becomes permanent with nobody choosing it. The condition
+	// that reopens this one, so the silence has an expiry: a consumer that needs
+	// to learn an invoice arrived. Then the contract declares the type FIRST —
+	// the order a closed catalog requires — and these seven entries become emits
+	// at the same call sites.
 	"internal/modules/finance:insertInvoice":             "the mirror takes in an invoice \u2014 see the note above these seven entries",
 	"internal/modules/finance:updateInvoice":             "the source restated an invoice \u2014 same ground",
 	"internal/modules/finance:insertPayment":             "the mirror takes in a received payment \u2014 same ground",
