@@ -100,7 +100,7 @@ SEED_STACK = set -e; . scripts/lib-devstate.sh; \
     seed_dsn="postgres://margince_owner:dev@localhost:15432/$$seed_db"; \
   fi;
 
-.PHONY: help install dev-fresh check check-all check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-demo verify-demo seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-clock-drift fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows fitness-jurisdiction storybook fe-uat craft-static craft-test craft-residue check-craft-doc test-golangci-guard test-scheduled-report test-ci-verdict test-merge-verdict test-laneorder secret-scan test-secret-scan test-dev-dsn test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations check-extension-modules contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze changelog-sections test-changelog-sections test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check sbom-gate
+.PHONY: help install dev-fresh check check-all check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-demo verify-demo seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-clock-drift fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows fitness-jurisdiction storybook fe-uat craft-static craft-test craft-residue check-craft-doc test-golangci-guard test-scheduled-report test-ci-verdict test-merge-verdict test-laneorder secret-scan test-secret-scan test-sbom-sign test-dev-dsn test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations check-extension-modules contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze changelog-sections test-changelog-sections test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check sbom-gate
 
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
@@ -884,6 +884,14 @@ secret-scan:
 test-secret-scan:
 	@./scripts/test-secret-scan.sh
 
+## test-sbom-sign — prove `sbom-sign` signs what is unsigned and skips what
+## already carries a current bundle. A Rekor entry is permanent, so a second one
+## for the same bytes leaves the first corroborating nothing — and a run that
+## signs everything again looks exactly like a clean one. cosign is stubbed:
+## what is under test is which files reach it.
+test-sbom-sign:
+	@./scripts/test-sbom-sign.sh
+
 ## test-api-entrypoint — prove the container entrypoint writes the bootstrap
 ## credential ONLY onto an unprovisioned installation, retires a spent one, and
 ## refuses to start when it cannot tell which it is. Every failure on that path
@@ -1443,11 +1451,36 @@ sbom-validate:
 ## job's artifact, and running the syft scan under that token is the isolation the SBOM
 ## workflow forbids. Both gates re-check the existing files cheaply and refuse to sign a
 ## stale, un-normalized, or malformed set.
-sbom-sign: sbom-parity sbom-validate
+##
+## Signing is SKIPPED for a file that already carries a bundle at least as new as
+## itself, and that is the recovery path rather than a micro-optimisation. A
+## Rekor entry is permanent and cannot be retracted, so a re-run that signs
+## again does not replace the first entry — it adds a second, and leaves the
+## first as a claim in a public append-only log that no published artifact
+## corroborates. The window is real: the entry is written before the bundle
+## reaches disk and the bundle is published after that, so a job cancelled in
+## between (a maintainer's hand, the runner's own ceiling) lands exactly there.
+## Re-running the same workspace now converges instead of accumulating.
+##
+## The comparison is the SBOM's mtime against its bundle's, not the bundle's
+## mere existence: a regenerated SBOM under an older bundle is a signature over
+## bytes that are gone, and skipping there would publish a bundle that verifies
+## against nothing.
+##
+## The prerequisites are a variable so scripts/test-sbom-sign.sh can drive the
+## skip decision without standing up three pinned validator containers. It is
+## the only override, and overriding it does not weaken CI: the workflow runs
+## the bare target.
+SBOM_SIGN_DEPS ?= sbom-parity sbom-validate
+sbom-sign: $(SBOM_SIGN_DEPS)
 	@mkdir -p $(COSIGN_HOME)
-	@for f in $(SBOM_FILES); do \
+	@set -e; for f in $(SBOM_FILES); do \
+	  if [ -s "$$f.cosign.bundle" ] && [ ! "$$f" -nt "$$f.cosign.bundle" ]; then \
+	    echo "already signed: $$f"; \
+	    continue; \
+	  fi; \
 	  echo "signing $$f"; \
-	  $(COSIGN) sign-blob --yes --bundle "$$f.cosign.bundle" "$$f" || exit 1; \
+	  $(COSIGN) sign-blob --yes --bundle "$$f.cosign.bundle" "$$f"; \
 	done
 	@echo "signed: $(addsuffix .cosign.bundle,$(SBOM_FILES))"
 
