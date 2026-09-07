@@ -19,11 +19,17 @@ import (
 
 // apiConfig is the parsed boot configuration of the api process.
 type apiConfig struct {
-	dsn                   string
-	configPath            string
-	schemaDSN             string
-	addr                  string
-	redisAddr             string
+	dsn        string
+	configPath string
+	schemaDSN  string
+	addr       string
+	redisAddr  string
+	// redisPassword is the bus credential, empty where the instance requires
+	// none. The bus carries job payloads and therefore CRM data, so an
+	// instance reachable by anything but this deployment has to require one —
+	// the desktop bundle's loopback bus does, and generates it per
+	// installation.
+	redisPassword         string
 	inlineRelay           bool
 	routingPath           string
 	fakeBrain             bool
@@ -86,6 +92,8 @@ func apiFlagSet() (*flag.FlagSet, *cliflags.Env, *apiConfig, error) {
 		"Postgres DSN (owner role) for the customfields runtime-DDL pool; unset = the two schema-change operations answer 501")
 	fs.StringVar(&cfg.addr, "addr", ":8080", "listen address")
 	env.String(fs, &cfg.redisAddr, "redis", "MARGINCE_REDIS", "localhost:16379", "Redis address (event bus)")
+	env.String(fs, &cfg.redisPassword, "redis-password", "MARGINCE_REDIS_PASSWORD", "",
+		"Event-bus credential, where the instance requires one")
 	fs.BoolVar(&cfg.inlineRelay, "inline-relay", true, "run the outbox relay in this process (false when cmd/worker runs it)")
 	env.String(fs, &cfg.routingPath, "ai-routing", "MARGINCE_AI_ROUTING", "", "IGNORED (kept so an existing command line still parses): the model binding is a stored setting, declared for a fresh install under `seeds.ai_routing` in margince.yaml and changed on a running one through Settings -> AI or PUT /v1/ai/routing. Passing it logs a warning naming which of those applies and does nothing else. Nothing reads a routing file any more: the debug lanes take --model or --ai-fake, and the certification runner is told its model outright")
 	fs.BoolVar(&cfg.fakeBrain, "ai-fake", false, "drive the AI surfaces with the offline fake model (dev/test only)")

@@ -21,6 +21,11 @@ type eventBus struct {
 	layout layout
 	port   int
 	proc   *child
+	// password is the credential this installation's bus requires, minted on
+	// first start and read back after. Held here so the api and worker are
+	// given the one the bus was actually started with rather than a second
+	// read of the file.
+	password string
 }
 
 func (b *eventBus) addr() string { return fmt.Sprintf("%s:%d", loopbackHost, b.port) }
@@ -32,12 +37,25 @@ func (b *eventBus) addr() string { return fmt.Sprintf("%s:%d", loopbackHost, b.p
 // over a socket would mean changing product code the bundle is meant to run
 // unmodified. The port is ephemeral because nothing outside this installation
 // ever addresses it.
+//
+// AUTHENTICATED, because loopback is not a boundary. The bus carries job
+// payloads and therefore CRM data, so without a credential any local account
+// can MONITOR the stream or publish into it — on a shared machine, a second
+// user reading the first's records. It also left the bus as the weaker of the
+// two local paths in one threat model: the database is reached through a unix
+// socket inside a 0700 directory.
 func (b *eventBus) start(ctx context.Context) error {
 	port, err := freePort()
 	if err != nil {
 		return err
 	}
 	b.port = port
+
+	password, err := b.layout.ensureBusPassword()
+	if err != nil {
+		return err
+	}
+	b.password = password
 
 	dir := filepath.Join(b.layout.data(), "bus")
 	if err := os.MkdirAll(dir, 0o700); err != nil {
@@ -48,11 +66,18 @@ func (b *eventBus) start(ctx context.Context) error {
 	// consumer-group offsets and the events.Dedupe keys live here — losing
 	// them across a restart turns at-least-once delivery into visibly
 	// duplicated work for the user.
+	// The credential is on the bus's OWN argv and cannot be anywhere else: it
+	// takes no environment variable for it, and a config file would be a second
+	// place to keep a secret in step. So this one line is visible in `ps` on
+	// this machine — which the clients' half is not, and which is the residue
+	// this cannot close from here. It still closes what matters: a local
+	// account now needs the credential rather than merely a TCP connection.
 	proc, err := startChild("bus", b.layout.appBin(busBinary), []string{
 		"--port", fmt.Sprintf("%d", port),
 		"--bind", loopbackHost,
 		"--dir", dir,
 		"--appendonly", "yes",
+		"--requirepass", password,
 	}, nil, b.layout.root, b.layout.logs())
 	if err != nil {
 		return err
@@ -178,9 +203,14 @@ func (b *backend) start(ctx context.Context) error {
 	// The owner pool is what makes the custom-fields schema operations answer
 	// rather than 501; a desktop install has no DBA to run them. The worker
 	// below is not given it — it has no schema work to do.
+	// The bus credential travels in the environment, not argv, exactly as the
+	// DSNs beside it do and for the same reason: argv is readable by every
+	// process on this machine, which is the boundary the credential exists to
+	// draw.
 	apiEnv := b.childEnv(
 		"MARGINCE_DSN="+b.pg.appDSN(),
 		"MARGINCE_SCHEMA_DSN="+b.pg.ownerDSN(),
+		"MARGINCE_REDIS_PASSWORD="+b.bus.password,
 	)
 
 	api, err := startChild("api", b.layout.appBin("api"), apiArgs, apiEnv, b.layout.root, b.layout.logs())
@@ -204,7 +234,10 @@ func (b *backend) start(ctx context.Context) error {
 		"--retention-interval", "24h",
 	}, b.aiFlags()...)
 
-	workerEnv := b.childEnv("MARGINCE_DSN=" + b.pg.appDSN())
+	workerEnv := b.childEnv(
+		"MARGINCE_DSN="+b.pg.appDSN(),
+		"MARGINCE_REDIS_PASSWORD="+b.bus.password,
+	)
 	worker, err := startChild("worker", b.layout.appBin("worker"), workerArgs, workerEnv, b.layout.root, b.layout.logs())
 	if err != nil {
 		return err

@@ -128,7 +128,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 
-	rdb, err := events.NewClient(ctx, cfg.redisAddr)
+	rdb, err := events.NewClient(ctx, cfg.redisAddr, cfg.redisPassword)
 	if err != nil {
 		return err
 	}

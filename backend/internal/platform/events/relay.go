@@ -40,8 +40,8 @@ import (
 // stack's event is simply gone, and the symptom — a projection that never
 // runs — is indistinguishable from a broken feature. `make dev` gives each
 // DEV_SLUG its own index for that reason.
-func NewClient(ctx context.Context, addr string) (*redis.Client, error) {
-	opts, err := ClientOptions(addr)
+func NewClient(ctx context.Context, addr, password string) (*redis.Client, error) {
+	opts, err := ClientOptions(addr, password)
 	if err != nil {
 		return nil, err
 	}
@@ -55,24 +55,36 @@ func NewClient(ctx context.Context, addr string) (*redis.Client, error) {
 }
 
 // ClientOptions turns a bus address into Redis options, accepting an optional
-// `/N` logical-database suffix.
+// `/N` logical-database suffix and the credential the instance requires.
 //
 // Spelled once and exported because the api builds a client of its own beside
 // the relay's: two parsers would let one of them keep landing on db 0 while
 // the other honoured the suffix, which is the same event-stealing bug wearing
 // a different hat.
-func ClientOptions(addr string) (*redis.Options, error) {
+//
+// The password is a PARAMETER rather than a field a caller may forget to set.
+// The bus carries job payloads and therefore CRM data, so a client that
+// connected without the credential would not fail — it would connect
+// unauthenticated wherever the instance allows it, and read the stream. Making
+// it part of the signature turns "a site nobody wired" into a build failure.
+//
+// Empty is the ordinary case and not a fallback: an instance with no
+// `requirepass` takes no credential, which is every deployment that reaches its
+// bus over a network only the deployment controls. go-redis sends no AUTH for
+// an empty password, so this is the same connection those deployments already
+// make.
+func ClientOptions(addr, password string) (*redis.Options, error) {
 	// A UNIX SOCKET is an address, not a suffixed host: go-redis reads a
 	// leading slash as one, and every path has slashes in it. Splitting those
 	// would turn /var/run/redis.sock into host "" and database
 	// "var/run/redis.sock" and refuse a deployment that worked before this
 	// parameter existed.
 	if strings.HasPrefix(addr, "/") {
-		return &redis.Options{Network: "unix", Addr: addr}, nil
+		return &redis.Options{Network: "unix", Addr: addr, Password: password}, nil
 	}
 	host, index, found := strings.Cut(addr, "/")
 	if !found {
-		return &redis.Options{Addr: addr}, nil
+		return &redis.Options{Addr: addr, Password: password}, nil
 	}
 	db, err := strconv.Atoi(index)
 	if err != nil || db < 0 || db > maxRedisDB {
@@ -80,7 +92,7 @@ func ClientOptions(addr string) (*redis.Options, error) {
 			"bus: redis address %q names logical database %q, which is not an integer in 0..%d",
 			addr, index, maxRedisDB)
 	}
-	return &redis.Options{Addr: host, DB: db}, nil
+	return &redis.Options{Addr: host, DB: db, Password: password}, nil
 }
 
 // maxRedisDB bounds the index this parser will accept. Redis's own default is

@@ -92,6 +92,12 @@ func (l layout) pgData() string            { return filepath.Join(l.data(), "pg"
 func (l layout) logs() string              { return filepath.Join(l.data(), "logs") }
 func (l layout) adminPasswordPath() string { return filepath.Join(l.data(), "admin-password") }
 
+// busPasswordPath holds the event-bus credential. Beside the admin password
+// rather than inside the bus's own directory: that directory is what the bus
+// process writes, and a credential stored inside the thing it authenticates is
+// one restore-from-backup away from travelling with the data it protects.
+func (l layout) busPasswordPath() string { return filepath.Join(l.data(), "bus-password") }
+
 // blobs is where attachment and logo bytes live. Inside data/ with the database,
 // because it is the same kind of thing: the user's records, not the program —
 // so an update replaces runtime/ and leaves both alone, and a backup that
@@ -342,6 +348,53 @@ func (l layout) ensureAdminPassword() (string, error) {
 			path, info.Mode().Type())
 	}
 	return "", nil
+}
+
+// ensureBusPassword mints the event-bus credential once per installation and
+// reads it back on every later start.
+//
+// It exists because the bus listens on loopback and carries job payloads —
+// therefore CRM data. Unauthenticated, any local account can MONITOR the stream
+// or publish into it, which on a shared machine is a second user reading the
+// first's records. It also left the bus as the weaker of the two local paths in
+// one threat model: the database is reached through a unix socket inside a 0700
+// directory.
+//
+// READ BACK, unlike the admin password beside it, and the difference is the
+// point of each. That one is shown to a human once and never re-disclosed —
+// reading it back would put a live credential on screen for anyone walking
+// past. This one is shown to nobody and needed by three processes on every
+// start, so a launcher that could not read it could not start the installation.
+//
+// It reaches the api and the worker in the child ENVIRONMENT rather than argv,
+// where the DSNs already travel for the same reason: argv is readable by every
+// process on the machine, which is the boundary this closes.
+func (l layout) ensureBusPassword() (string, error) {
+	path := l.busPasswordPath()
+	password, err := generateSecret()
+	if err != nil {
+		return "", fmt.Errorf("generate the event-bus password: %w", err)
+	}
+	if err := writeNewSecret(path, password); err == nil {
+		return password, nil
+	} else if !errors.Is(err, os.ErrExist) {
+		return "", err
+	}
+	// The persisted one is the real one, on ensureAdminPassword's reasoning:
+	// the bus was started with it, so a launcher that used the freshly
+	// generated one instead would authenticate against nothing.
+	//
+	// #nosec G304 -- path is a layout.data() secret file, derived from the installation directory and never from input
+	stored, readErr := os.ReadFile(path)
+	if readErr != nil {
+		return "", fmt.Errorf("%s exists and cannot be read, so the bus credential is unknowable: %w", path, readErr)
+	}
+	secret := strings.TrimSpace(string(stored))
+	if secret == "" {
+		return "", fmt.Errorf(
+			"%s is empty, so no bus credential could be stored there — remove it and start again", path)
+	}
+	return secret, nil
 }
 
 // writeNewSecret creates path and refuses to touch it if it already exists.

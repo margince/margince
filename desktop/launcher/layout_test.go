@@ -216,3 +216,54 @@ func TestConfiguredAdminEmailFallsBackRatherThanFailing(t *testing.T) {
 }
 
 func ptr(s string) *string { return &s }
+
+// The bus credential is minted once and READ BACK on every later start, which
+// is the opposite of the admin password beside it.
+//
+// The difference is the point of each. The admin password is shown to a human
+// once and never re-disclosed; this one is shown to nobody and needed by three
+// processes on every start, so a launcher that could not read it back would
+// start the bus with one credential and the api with another — an installation
+// that boots and then cannot deliver an event.
+func TestEnsureBusPasswordIsMintedOnceAndReadBack(t *testing.T) {
+	l := newTestLayout(t)
+
+	first, err := l.ensureBusPassword()
+	if err != nil {
+		t.Fatalf("first start: %v", err)
+	}
+	if first == "" {
+		t.Fatal("first start minted nothing, so the bus would be started with an empty credential")
+	}
+	onDisk, err := os.ReadFile(l.busPasswordPath())
+	if err != nil {
+		t.Fatalf("read back: %v", err)
+	}
+	if string(onDisk) != first {
+		t.Fatalf("returned %q and stored %q", first, onDisk)
+	}
+
+	second, err := l.ensureBusPassword()
+	if err != nil {
+		t.Fatalf("second start: %v", err)
+	}
+	if second != first {
+		t.Fatalf("the second start answered %q, want the stored %q — the bus would be running on "+
+			"one credential and the api given another", second, first)
+	}
+}
+
+// A credential file that exists and holds nothing is refused, rather than
+// answering empty. Empty would start the bus with no `requirepass` at all and
+// the api with no password, which works — and is exactly the unauthenticated
+// bus this closes, reached by an installation that looks configured.
+func TestAnEmptyBusPasswordFileIsRefused(t *testing.T) {
+	l := newTestLayout(t)
+	if err := os.WriteFile(l.busPasswordPath(), []byte("  \n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := l.ensureBusPassword(); err == nil {
+		t.Fatal("an empty credential file was accepted; the bus would run unauthenticated while " +
+			"the installation looked configured")
+	}
+}

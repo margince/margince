@@ -338,23 +338,18 @@ this properly and is not something the stdlib does; see the known limits.
   This is a workaround for the missing signature, and it is one the signature
   would delete rather than improve — a notarized build reaches none of this
   code, because Gatekeeper never asks.
-- **The event bus accepts unauthenticated local connections.** It listens on
-  loopback at an ephemeral port with no `requirepass`, so any account on the
-  machine can read and write the event stream — which carries job payloads, and
-  therefore CRM data. On a single-user desktop that is the same trust boundary as
-  the user's own files; on a shared machine it is a second account reading the
-  first one's records.
+- **The bus credential is on the bus's own command line.** The event bus now
+  requires a password — minted per installation, stored beside the admin
+  password, and given to the api and the worker in their child environment
+  where the DSNs already travel. What cannot travel that way is the bus's own
+  copy: it takes `--requirepass` and no environment variable for it, and a
+  config file would be a second place to keep one secret in step.
 
-  It is named here rather than fixed because closing it is not a desktop change.
-  `--redis` takes a bare `host:port` and the api builds its client with
-  `redis.Options{Addr: …}` and no `Password`, so a per-installation credential
-  means adding one to the server's own configuration surface — which every
-  deployment then inherits. Worth doing, tracked separately; not something to
-  reach into the server's config for while packaging a folder.
-
-  Note the asymmetry it creates on macOS: the database is reached through a
-  socket in a `0700` directory, so the bus is now the weaker of the two local
-  paths.
+  So that single argument is visible in `ps` on this machine. It is a smaller
+  boundary than the one it replaced — a local account now needs the credential
+  rather than merely a TCP connection — and it is the residue the desktop
+  bundle cannot close on its own: it would take the bus accepting its password
+  from the environment.
 - **Windows file permissions are the folder's, not the file's.** The `0600`
   the launcher asks for sets no DACL there, so the secrets are only as private
   as the directory the user chose. An installation under the user's own
