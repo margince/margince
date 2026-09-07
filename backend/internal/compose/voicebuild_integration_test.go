@@ -767,3 +767,58 @@ func TestVoiceBuildAlwaysReachesATerminalState(t *testing.T) {
 		})
 	}
 }
+
+// An installation with no vendor bound runs the whole voice build on the
+// offline stand-in, whose one answer no validator can accept. The row it
+// leaves is the only thing its operator sees, and it used to say the model
+// "returned something we could not read as a profile … try again" — advice
+// that cannot work, because every retry buys the same stand-in. A first user
+// spent an hour on it.
+//
+// Driven through the REAL offline routing rather than a scripted brain: what
+// carries the cause is the provider name the --ai-fake config installs, so a
+// double that merely returns an error would prove nothing about production.
+func TestVoiceBuildOnAnUnconfiguredInstallationNamesTheSetting(t *testing.T) {
+	env, build := seedVoiceBuild(t, "A quote the stand-in will never cite.", 6)
+	ctx := env.workerCtx(t)
+	path, err := NewLocalModelPath(ai.FakeRoutingConfig())
+	if err != nil {
+		t.Fatalf("building the offline model path: %v", err)
+	}
+	worker := newVoiceBuildWorker(env.e.Pool, path.VoiceBuild, slog.New(slog.DiscardHandler))
+
+	input, claimed, err := env.store.ClaimBuild(ctx, env.profile.ID, build.ID, time.Minute)
+	if err != nil || !claimed {
+		t.Fatalf("claim: %v claimed=%v", err, claimed)
+	}
+	runErr := worker.run(ctx, build.ID, input)
+	if runErr == nil {
+		t.Fatal("the stand-in cannot produce a profile, so the run must fail")
+	}
+	if err := worker.fail(ctx, build.ID, *input.Build.StartedAt,
+		failureStatusCode(runErr), ai.SafeVoiceBuildFailure(runErr)); err != nil {
+		t.Fatalf("recording the failure: %v", err)
+	}
+
+	finished, err := env.store.GetBuild(env.owner, env.profile.ID, build.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// model_unavailable, not invalid_output: the row's code is what tells an
+	// operator whether to retry or to open a setting.
+	if finished.StatusCode == nil {
+		t.Fatal("a failed build always records a status code")
+	}
+	if *finished.StatusCode != "model_unavailable" {
+		t.Fatalf("status code = %s, want model_unavailable", *finished.StatusCode)
+	}
+	if finished.StatusDetail == nil {
+		t.Fatal("a failed build always records the operator's guidance")
+	}
+	if !strings.Contains(*finished.StatusDetail, "Settings") {
+		t.Fatalf("the detail names where to fix it: %s", *finished.StatusDetail)
+	}
+	if strings.Contains(*finished.StatusDetail, "your samples") {
+		t.Fatalf("nothing blames the corpus for a missing setting: %s", *finished.StatusDetail)
+	}
+}
