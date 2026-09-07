@@ -241,6 +241,12 @@ func Down(ctx context.Context, conn *pgx.Conn, ns Namespace, n int) (reverted in
 		if _, isDone := done[m.Version]; !isDone {
 			continue
 		}
+		// After the not-applied skip: a version this database never ran has no
+		// content to disagree about, and reporting one would refuse a rollback
+		// over a migration that is not there.
+		if err := assertContentMatches(ns.Name, done, m); err != nil {
+			return reverted, err
+		}
 		if err := inTx(ctx, conn, func(tx pgx.Tx) error {
 			if _, err := tx.Exec(ctx, m.DownSQL); err != nil {
 				return err
@@ -325,22 +331,36 @@ func trackingTable(ctx context.Context, conn *pgx.Conn, namespace string) (strin
 // database that applied some other migration in that slot — and matching on
 // the version alone makes the two indistinguishable, so the migration actually
 // sitting there is skipped silently and forever.
-func appliedVersions(ctx context.Context, conn *pgx.Conn, table string) (map[string]string, error) {
-	rows, err := conn.Query(ctx, fmt.Sprintf(`SELECT version, name FROM %s`, table))
+func appliedVersions(ctx context.Context, conn *pgx.Conn, table string) (map[string]appliedRow, error) {
+	rows, err := conn.Query(ctx, fmt.Sprintf(`SELECT version, name, content_digest FROM %s`, table))
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	done := map[string]string{}
+	done := map[string]appliedRow{}
 	for rows.Next() {
-		var version, name string
-		if err := rows.Scan(&version, &name); err != nil {
+		var version string
+		var applied appliedRow
+		if err := rows.Scan(&version, &applied.name, &applied.digest); err != nil {
 			return nil, err
 		}
-		done[version] = name
+		done[version] = applied
 	}
 	return done, rows.Err()
+}
+
+// appliedRow is what the ledger recorded for one version: the name it was
+// applied under, and the digest of the content that was applied.
+//
+// The digest is a POINTER because NULL is a real and permanent answer — a row
+// written before the column existed records no fingerprint, and back-filling
+// one would stamp a fingerprint over content nobody can recover, which is the
+// divergence the column exists to expose. Unverifiable is not the same as
+// matching, and the two must never collapse into one another.
+type appliedRow struct {
+	name   string
+	digest *string
 }
 
 // assertLedgerMatches refuses when a version was applied under a different
@@ -353,16 +373,50 @@ func appliedVersions(ctx context.Context, conn *pgx.Conn, table string) (map[str
 // permanently missing whatever the skipped migration created, with no failure
 // to point at it. A renumbered migration cannot be reconciled forward: the
 // database has to be rebuilt (make dev-fresh).
-func assertLedgerMatches(namespace string, done map[string]string, m Migration) error {
+func assertLedgerMatches(namespace string, done map[string]appliedRow, m Migration) error {
 	recorded, ok := done[m.Version]
-	if !ok || recorded == m.Name {
+	if !ok || recorded.name == m.Name {
 		return nil
 	}
 	return fmt.Errorf(
 		"pgmigrate: %s %s: applied as %q, but the source at that version is %q — this database "+
 			"applied a migration that has since been renumbered, so %q would be skipped as done. "+
 			"It cannot be repaired forward; rebuild the database (make dev-fresh)",
-		namespace, m.Version, recorded, m.Name, m.Name)
+		namespace, m.Version, recorded.name, m.Name, m.Name)
+}
+
+// assertContentMatches refuses to REVERT a version whose recorded digest is not
+// the content this binary holds.
+//
+// The down half is the sharper one, which is why it is answered first. Up
+// skipping an edited migration leaves a database missing whatever the edit
+// added — bad, and visible later as an absent object. Down running the CURRENT
+// rollback against a schema the OLD up-migration built is a schema CHANGE made
+// on a false premise: it drops what this version's down names, which is not
+// what that database has, and then deletes the row that was the only record of
+// what it did have. There is nothing left to compare afterwards.
+//
+// A NULL digest is admitted, permanently. It means the row predates the column,
+// so there is no fingerprint to disagree with — refusing there would strand
+// every installation that migrated before #2135 with no way forward, and
+// back-filling one would invent the evidence. Unverifiable is its own answer.
+//
+// Up is deliberately NOT held to this. Whether a live installation should stop
+// migrating at boot over an edited migration — even in whitespace, even in a
+// comment — decides how a deployment fails, which is a product call and is
+// #2141's open half.
+func assertContentMatches(namespace string, done map[string]appliedRow, m Migration) error {
+	recorded, ok := done[m.Version]
+	if !ok || recorded.digest == nil || *recorded.digest == Digest(m) {
+		return nil
+	}
+	return fmt.Errorf(
+		"pgmigrate: %s %s_%s: applied content does not match the source — this database ran a "+
+			"different version of this migration, so its rollback would drop what the source names "+
+			"rather than what the database has, and would then delete the only record of what it "+
+			"applied. Applied core migrations are never edited (CLAUDE.md); rebuild the database "+
+			"(make dev-fresh), or revert the edit to the migration's committed content",
+		namespace, m.Version, m.Name)
 }
 
 func inTx(ctx context.Context, conn *pgx.Conn, fn func(pgx.Tx) error) error {

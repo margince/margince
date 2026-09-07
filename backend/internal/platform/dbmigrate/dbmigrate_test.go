@@ -142,7 +142,7 @@ func TestTrackingTableRefusesUnspellableNamespaces(t *testing.T) {
 // relation at runtime, long after the deploy that caused it.
 func TestALedgerRowNamingADifferentMigrationStopsTheRun(t *testing.T) {
 	t.Parallel()
-	applied := map[string]string{"0209": "drop_workspace_identity_columns"}
+	applied := map[string]appliedRow{"0209": {name: "drop_workspace_identity_columns"}}
 
 	err := assertLedgerMatches("core", applied, Migration{Version: "0209", Name: "person_record_page_v2"})
 	if err == nil {
@@ -160,12 +160,81 @@ func TestALedgerRowNamingADifferentMigrationStopsTheRun(t *testing.T) {
 // trip the guard, or every run would refuse.
 func TestALedgerRowMatchingItsMigrationIsNotARenumber(t *testing.T) {
 	t.Parallel()
-	applied := map[string]string{"0209": "person_record_page_v2"}
+	applied := map[string]appliedRow{"0209": {name: "person_record_page_v2"}}
 
 	if err := assertLedgerMatches("core", applied, Migration{Version: "0209", Name: "person_record_page_v2"}); err != nil {
 		t.Errorf("an exact match refused: %v", err)
 	}
 	if err := assertLedgerMatches("core", applied, Migration{Version: "0210", Name: "consumer_mail_create_grant"}); err != nil {
+		t.Errorf("an unapplied version refused: %v", err)
+	}
+}
+
+// Down reads the digest Up records, which nothing did before: the column held
+// the evidence and no code acted on it (#2141).
+//
+// The down half is the sharper one. Up skipping an edited migration leaves a
+// database missing whatever the edit added — bad, and visible later as an
+// absent object. Down running the CURRENT rollback against a schema the OLD
+// up-migration built is a schema CHANGE made on a false premise: it drops what
+// this version's down names, which is not what that database has, and then
+// deletes the row that was the only record of what it did have.
+func TestARevertRefusesContentTheDatabaseNeverApplied(t *testing.T) {
+	t.Parallel()
+	was := Migration{Version: "0209", Name: "add_thing", UpSQL: "CREATE TABLE thing ()", DownSQL: "DROP TABLE thing"}
+	stamped := Digest(was)
+	applied := map[string]appliedRow{"0209": {name: was.Name, digest: &stamped}}
+
+	// The same content is an ordinary revert.
+	if err := assertContentMatches("core", applied, was); err != nil {
+		t.Errorf("a revert of the content that was applied refused: %v", err)
+	}
+
+	// An edited DOWN is the case with teeth: the up half is identical, so the
+	// database looks current by every other measure, and this rollback would
+	// drop a different object from the one that exists.
+	edited := was
+	edited.DownSQL = "DROP TABLE thing CASCADE"
+	if err := assertContentMatches("core", applied, edited); err == nil {
+		t.Error("a revert whose down SQL was edited after it was applied was admitted — it would drop " +
+			"what the source names rather than what the database has")
+	}
+
+	// An edited UP counts too. The digest covers both halves because a binary
+	// whose up differs built a different schema, whatever its down says.
+	edited = was
+	edited.UpSQL = "CREATE TABLE thing (id int)"
+	if err := assertContentMatches("core", applied, edited); err == nil {
+		t.Error("a revert whose up SQL was edited after it was applied was admitted")
+	}
+}
+
+// A row written before the digest column existed records no fingerprint, and
+// that is a permanent answer rather than a gap to fill.
+//
+// Refusing on NULL would strand every installation that migrated before the
+// column landed, with no way forward. Back-filling one would stamp a
+// fingerprint over content nobody can recover — the exact divergence the column
+// exists to expose.
+func TestARevertOfAnUnverifiableRowIsAdmitted(t *testing.T) {
+	t.Parallel()
+	m := Migration{Version: "0209", Name: "add_thing", UpSQL: "CREATE TABLE thing ()", DownSQL: "DROP TABLE thing"}
+	applied := map[string]appliedRow{"0209": {name: m.Name, digest: nil}}
+
+	edited := m
+	edited.DownSQL = "DROP TABLE thing CASCADE"
+	if err := assertContentMatches("core", applied, edited); err != nil {
+		t.Errorf("a revert of a row with no recorded digest refused: %v — unverifiable is not "+
+			"the same as mismatched, and treating it as one strands every database that migrated "+
+			"before the column existed", err)
+	}
+}
+
+// A version this database never applied has no content to disagree about.
+func TestARevertOfAnUnappliedVersionHasNothingToCompare(t *testing.T) {
+	t.Parallel()
+	m := Migration{Version: "0210", Name: "other", UpSQL: "SELECT 1", DownSQL: "SELECT 1"}
+	if err := assertContentMatches("core", map[string]appliedRow{}, m); err != nil {
 		t.Errorf("an unapplied version refused: %v", err)
 	}
 }
