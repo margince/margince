@@ -2518,6 +2518,7 @@ function CompanyOverviewStack({
               readOnly={readOnly}
               onAllDeals={onAllDeals}
               onOpenRecord={onOpenRecord}
+              onOpenEmail={onOpenEmail}
               // The verbs ride with the WORK rather than with the figures:
               // this is the pane that names every open deal, so it is where a
               // reader is standing when they notice one is missing. Each is
@@ -2539,6 +2540,7 @@ function CompanyOverviewStack({
                 orgId={org.id}
                 enabled={!overlay}
                 onOpenRecord={onOpenRecord}
+                onOpenEmail={onOpenEmail}
                 projects={view?.projects}
               />
             </div>
@@ -2550,6 +2552,7 @@ function CompanyOverviewStack({
               enabled
               nameOf={records}
               onOpenRecord={onOpenRecord}
+              onOpenEmail={onOpenEmail}
             />
             {/* Is this an account we should be selling to at all — the
                 question an account with nothing in flight is actually asking.
@@ -2561,6 +2564,7 @@ function CompanyOverviewStack({
                 orgId={org.id}
                 enabled={!overlay}
                 onOpenRecord={onOpenRecord}
+                onOpenEmail={onOpenEmail}
               />
             )}
             {/* What Margince noticed on this account that nobody asked it to

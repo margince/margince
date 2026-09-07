@@ -65,10 +65,13 @@ export function GrowthFitPanel({
   orgId,
   enabled,
   onOpenRecord,
+  onOpenEmail,
 }: Readonly<{
   orgId: string;
   enabled: boolean;
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  // Opens a cited message in the page's email drawer; see `Citations`.
+  onOpenEmail?: (activityId: string) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -175,7 +178,11 @@ export function GrowthFitPanel({
       ) : (
         <>
           <GrowthFitVerdict fit={readable} />
-          <GrowthFitReasons fit={readable} onOpenRecord={onOpenRecord} />
+          <GrowthFitReasons
+              fit={readable}
+              onOpenRecord={onOpenRecord}
+              onOpenEmail={onOpenEmail}
+            />
         </>
       )}
       {reassess.error && (
@@ -286,9 +293,12 @@ function GrowthFitVerdict({ fit }: Readonly<{ fit: GrowthFit }>) {
 function GrowthFitReasons({
   fit,
   onOpenRecord,
+  onOpenEmail,
 }: Readonly<{
   fit: GrowthFit;
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  // Opens a cited message in the page's email drawer; see `Citations`.
+  onOpenEmail?: (activityId: string) => void;
 }>) {
   const t = useT();
   const missing = fit.data_completeness.missing;
@@ -331,6 +341,7 @@ function GrowthFitReasons({
               <SentenceList
                 sentences={group.sentences ?? []}
                 onOpenRecord={onOpenRecord}
+                onOpenEmail={onOpenEmail}
               />
             </div>
           ))}
@@ -344,6 +355,7 @@ function GrowthFitReasons({
               <SentenceList
                 sentences={group.sentences}
                 onOpenRecord={onOpenRecord}
+                onOpenEmail={onOpenEmail}
               />
             </GrowthFitRow>
           ),

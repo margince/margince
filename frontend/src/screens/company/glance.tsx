@@ -146,6 +146,7 @@ export function MoneyPane({
   readOnly,
   onAllDeals,
   onOpenRecord,
+  onOpenEmail,
   verbs,
 }: Readonly<{
   organizationId: string;
@@ -156,6 +157,8 @@ export function MoneyPane({
   readOnly: boolean;
   onAllDeals: () => void;
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  // Opens a cited message in the page's email drawer; see `Citations`.
+  onOpenEmail?: (activityId: string) => void;
   verbs?: { deal?: ReactNode };
 }>) {
   const t = useT();
@@ -195,6 +198,7 @@ export function MoneyPane({
         view={view}
         loading={loading}
         onOpenRecord={onOpenRecord}
+        onOpenEmail={onOpenEmail}
         bare
         verbs={verbs}
       />

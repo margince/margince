@@ -655,11 +655,14 @@ export function AskSection({
   orgId,
   enabled,
   onOpenRecord,
+  onOpenEmail,
   projects,
 }: Readonly<{
   orgId: string;
   enabled: boolean;
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  // Opens a cited message in the page's email drawer; see `Citations`.
+  onOpenEmail?: (activityId: string) => void;
   // The account's projects, as the page read them. Offered as a picker
   // when any is live, so a question can be asked about one engagement
   // rather than the whole account.
@@ -757,6 +760,7 @@ export function AskSection({
             <SentenceList
               sentences={readable.sentences}
               onOpenRecord={onOpenRecord}
+              onOpenEmail={onOpenEmail}
             />
           )}
           <p className="co-row-meta t-caption">
