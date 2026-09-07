@@ -197,12 +197,23 @@ export function LeadsScreen() {
         {(session) => (
           <LeadsWorkbench
             viewerId={session.user.id}
-            // An admin or manager opens on every lead — they run the queue; a
-            // rep opens on their own.
-            opensOnAll={session.roles.some(
-              (role) =>
-                role === "admin" || role === "manager" || role === "management",
-            )}
+            // A seat that reads beyond its own records opens on every lead —
+            // they run the queue; a seat scoped to its own opens on those.
+            //
+            // The ROW SCOPE the server computed, not the role keys it came
+            // from. Those keys were a second reading of the same policy, and a
+            // custom role — or a seeded one whose scope an operator edits, which
+            // the role editor allows — would open the wrong view while the
+            // server answered correctly.
+            //
+            // Written as the POSITIVE test, so an absent authorization block
+            // opens on "mine". `!== "own"` would read a missing answer as
+            // permission to open on everything, which is the wrong direction to
+            // be wrong in — and the block is optional on this response.
+            opensOnAll={
+              session.authorization?.row_scope === "team" ||
+              session.authorization?.row_scope === "all"
+            }
           />
         )}
       </QueryGate>
