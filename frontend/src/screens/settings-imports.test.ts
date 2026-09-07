@@ -92,6 +92,32 @@ function importsOf(file: string): string[] {
 }
 
 /**
+ * The source files `file` imports, parsed ONCE per file and kept for the run.
+ *
+ * Every entry point below walks the same shared subgraph — the design system,
+ * the api client, i18n — so a module's parse is paid once for the run, not once
+ * per entry that reaches it. Per entry, the walks re-parse that subgraph as many
+ * times as there are entries, and the file's cost grows with the product of the
+ * two rather than their sum.
+ *
+ * The tree does not change while the suite runs, so a parsed edge list is as
+ * true on the last walk as on the first.
+ */
+const resolvedImports = new Map<string, string[]>();
+
+function edgesOf(file: string): string[] {
+  const known = resolvedImports.get(file);
+  if (known) {
+    return known;
+  }
+  const edges = importsOf(file)
+    .map((specifier) => resolveSpecifier(file, specifier))
+    .filter((next): next is string => next !== null);
+  resolvedImports.set(file, edges);
+  return edges;
+}
+
+/**
  * The shortest import path from `entry` to `target`, or null when unreachable.
  * Returning the path rather than a boolean is what makes a failure actionable:
  * the offending edge is usually three hops in and invisible from the entry.
@@ -102,9 +128,8 @@ function pathTo(entry: string, target: string): string[] | null {
   while (queue.length > 0) {
     const trail = queue.shift() as string[];
     const head = trail[trail.length - 1];
-    for (const specifier of importsOf(head)) {
-      const next = resolveSpecifier(head, specifier);
-      if (next === null || seen.has(next)) {
+    for (const next of edgesOf(head)) {
+      if (seen.has(next)) {
         continue;
       }
       if (next === target) {
