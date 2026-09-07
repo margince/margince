@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { DealFiles, dealDocumentsKey } from "./dealfiles";
 import { installFetchStub, jsonResponse } from "./story-utils";
@@ -19,6 +20,24 @@ const meta: Meta<typeof DealFiles> = {
 };
 export default meta;
 type Story = StoryObj<typeof DealFiles>;
+
+type Deal = components["schemas"]["Deal"];
+
+// The deal the files hang off, as served to the rep who owns it: `writable`
+// is what the upload and the row verbs are drawn on.
+const DEAL = {
+  id: "deal-1",
+  name: "Fleet retrofit",
+  pipeline_id: "pl",
+  stage_id: "s1",
+  status: "open",
+  source: "manual",
+  captured_by: "human:u1",
+  writable: true,
+  version: 1,
+  created_at: "2026-08-01T00:00:00Z",
+  updated_at: "2026-08-01T00:00:00Z",
+} as Deal;
 
 const UPLOAD = {
   hidden: false,
@@ -95,7 +114,7 @@ function Served({
 export const Mixed: Story = {
   render: () => (
     <Served docs={[CAPTURED, UPLOAD]}>
-      <DealFiles dealId="deal-1" />
+      <DealFiles deal={DEAL} />
     </Served>
   ),
 };
@@ -104,7 +123,7 @@ export const Mixed: Story = {
 export const Empty: Story = {
   render: () => (
     <Served docs={[]}>
-      <DealFiles dealId="deal-1" />
+      <DealFiles deal={DEAL} />
     </Served>
   ),
 };

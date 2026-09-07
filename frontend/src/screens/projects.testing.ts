@@ -49,7 +49,19 @@ function quietDefault(
   const rows = opts.projects ?? [project()];
   const listPage = { next_cursor: null, has_more: false };
   const exact: Record<string, () => Response> = {
-    "/v1/me": () => jsonResponse(meFixture()),
+    // The page's verbs ask the project grant before they draw, so the seat
+    // here holds what a rep working their own projects holds; the row half
+    // of the answer is the fixture's own `writable`.
+    "/v1/me": () =>
+      jsonResponse(
+        meFixture({
+          allow: {
+            project: ["read", "create", "update", "delete"],
+            deal: ["read", "create"],
+            relationship: ["read", "create", "update", "delete"],
+          },
+        }),
+      ),
     "/v1/organizations": () => jsonResponse({ data: [ORG], page: listPage }),
     [`/v1/organizations/${ORG.id}`]: () => jsonResponse(ORG),
     "/v1/projects": () => jsonResponse({ data: rows, page: listPage }),

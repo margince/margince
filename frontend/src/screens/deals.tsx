@@ -21,7 +21,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { approvalDotTier, useAgentTierMap, verbTier } from "../app/autonomy";
-import { useCanWriteRecord } from "../app/capability";
+import { useCanWriteRecord, useRecordWriteRefusal } from "../app/capability";
 import { PageAsideToggle, usePageAside } from "../app/pageaside";
 import { usePageName } from "../app/pagemeta";
 import { useRecordZone } from "../app/recordzone";
@@ -3252,9 +3252,14 @@ function editProjectFields(
 function DealPeoplePanels({
   dealId,
   overlay,
+  refusedReasonId,
 }: Readonly<{
   dealId: string;
   overlay: boolean;
+  // The page's one sentence about why this deal takes no changes: a seat is
+  // written through the deal's own write gate, so the panel's verbs are
+  // refused by the same fact as Edit.
+  refusedReasonId?: string;
 }>) {
   // Out in overlay mode, where the deal is a mirror with no native row for a
   // relationship to point at. The committee map is not here any more: it is
@@ -3262,7 +3267,12 @@ function DealPeoplePanels({
   if (overlay) {
     return null;
   }
-  return <RelationshipsTab scope={{ deal_id: dealId }} />;
+  return (
+    <RelationshipsTab
+      scope={{ deal_id: dealId }}
+      refusedReasonId={refusedReasonId}
+    />
+  );
 }
 
 // This deal's VERBS — split out of DealScreen's render so the record-view
@@ -3313,16 +3323,17 @@ function DealActions({
   orgs,
   meId,
   openStages,
-  archivedReasonId,
+  refusedReasonId,
 }: Readonly<{
   deal: Deal;
   orgs: { id: string; display_name: string }[];
   meId: string;
   openStages: Stage[];
-  // The id of the page's sentence about this deal being archived. Every verb
-  // the archive refuses points at that one element instead of printing the
-  // same line four times.
-  archivedReasonId: string;
+  // The id of the page's one sentence about why this deal takes no changes —
+  // archived, or not this caller's to write — and undefined while it does.
+  // Every verb the sentence refuses points at that one element instead of
+  // printing the same line four times.
+  refusedReasonId?: string;
 }>) {
   const t = useT();
   const cf = useObjectCustomFields("deal");
@@ -3359,9 +3370,9 @@ function DealActions({
   // has no row in, so the grant 404s — overlay visibility is governed by
   // mirror_visibility, which record_grant does not feed.
   const overlay = useSorMode() === "overlay";
-  // One fact refuses every write below, so it is named once. Undefined while
-  // the deal is live, which is what leaves the verbs pressable.
-  const refusedByArchive = deal.archived_at ? archivedReasonId : undefined;
+  // Email is the one verb here that writes no deal row, so only the archive
+  // refuses it: a colleague's deal still takes a message from this reader.
+  const refusedByArchive = deal.archived_at ? refusedReasonId : undefined;
   // This deal's company, so the picker offers the projects that company is on —
   // as customer, partner or subcontractor. The server decides which; asking for
   // every project and filtering here on organization_id would show only the
@@ -3384,7 +3395,7 @@ function DealActions({
         disabledReasonId={refusedByArchive}
       />
       <EditAction<Deal>
-        disabledReasonId={refusedByArchive}
+        disabledReasonId={refusedReasonId}
         label={t("deal.edit")}
         savedMessage={(saved) => t("record.saveDone", { name: saved.name })}
         notice={overlay ? t("overlay.partialWriteBack") : undefined}
@@ -3455,7 +3466,7 @@ function DealActions({
           them wants a whole line rather than a place in a row. */}
       <OverflowMenu label={t("record.moreActions")}>
         <ArchiveAction
-          disabledReasonId={refusedByArchive}
+          disabledReasonId={refusedReasonId}
           label={t("deal.archive")}
           confirmText={t("deal.archiveConfirm")}
           archivedMessage={t("record.archiveDone", { name: deal.name })}
@@ -3476,7 +3487,7 @@ function DealActions({
           <ShareAction
             recordType="deal"
             recordId={deal.id}
-            disabledReasonId={refusedByArchive}
+            disabledReasonId={refusedReasonId}
           />
         )}
         {/* Reopen answers a CLOSED deal, so an open one has no reason to be
@@ -3487,7 +3498,7 @@ function DealActions({
             dealId={deal.id}
             dealVersion={deal.version}
             openStages={openStages}
-            disabledReasonId={refusedByArchive}
+            disabledReasonId={refusedReasonId}
           />
         )}
       </OverflowMenu>
@@ -3573,6 +3584,7 @@ export function OffersPanel({
   creating,
   locale,
   dealCurrency,
+  refusedReasonId,
   onCreate,
 }: Readonly<{
   offers: Offer[] | undefined;
@@ -3582,6 +3594,10 @@ export function OffersPanel({
   // has nothing to write one in. Null refuses the control and says why rather
   // than creating an offer denominated in a currency the code chose.
   dealCurrency: string | null;
+  // The id of the page's sentence about why the deal takes no changes, when
+  // it does not. The server hangs a new offer off the deal through the deal's
+  // own write gate, so the control is refused by the same fact as Edit.
+  refusedReasonId?: string;
   onCreate: (currency: string) => void;
 }>) {
   const t = useT();
@@ -3608,6 +3624,7 @@ export function OffersPanel({
           // An empty code is as absent as a null one — `formatMoneyOrAbsent`
           // already treats it that way, and Intl throws on it.
           disabled={Boolean(dealCurrency) && creating}
+          reasonId={refusedReasonId}
           reason={dealCurrency ? undefined : t("deal.offerNeedsCurrency")}
           onClick={() => {
             if (dealCurrency) {
@@ -3902,6 +3919,7 @@ function DealOverviewPane({
   onAdvance,
   advancing,
   advanceRefused,
+  refusedReasonId,
   pulse,
   spine,
   coverage,
@@ -3925,9 +3943,14 @@ function DealOverviewPane({
    * send a second write pinned to the same version, and the loser reads as a
    * conflict the reader never caused. */
   advancing: boolean;
-  /** Where this deal cannot be moved at all — archived (restore it first), or
-   * mirrored from an incumbent that refuses the write. */
+  /** Where this deal cannot be moved at all — archived (restore it first),
+   * not this caller's to write, or mirrored from an incumbent that refuses
+   * the write. */
   advanceRefused: boolean;
+  /** The id of the page's sentence about why this deal takes no changes, or
+   * undefined while it does. An offer is hung off the deal, so a deal this
+   * caller cannot write takes no new offer from them either. */
+  refusedReasonId?: string;
   // Whose move it is, in one sentence, drawn under the call inside the
   // reading — it is the sentence the call rests on, not a header fact.
   pulse: ReactNode | undefined;
@@ -4003,6 +4026,7 @@ function DealOverviewPane({
             creating={creatingOffer}
             locale={locale}
             dealCurrency={deal.currency ?? null}
+            refusedReasonId={refusedReasonId}
             onCreate={onCreateOffer}
           />
           <DealCommitteeMap
@@ -4053,21 +4077,23 @@ function dealPulse({
 // answers `undefined` rather than a null-rendering element when there is
 // nothing to say — which is only ever the case in overlay mode, where the
 // readings are assembled from records this installation does not hold.
+// One sentence for why this deal takes no changes, whichever reason applies,
+// so every refused control can point at it. Absent while the deal is live and
+// the reader's: a line always reserved would read as a record with something
+// to say about itself and nothing said.
 function dealBand({
-  deal,
+  reason,
   reasonId,
-  t,
 }: Readonly<{
-  deal: Deal;
+  reason: string | undefined;
   reasonId: string;
-  t: ReturnType<typeof useT>;
 }>): ReactNode | undefined {
-  if (deal.archived_at == null) {
+  if (reason === undefined) {
     return undefined;
   }
   return (
     <p id={reasonId} className="t-caption">
-      {t("deal.archivedReadOnly")}
+      {reason}
     </p>
   );
 }
@@ -4080,7 +4106,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   const queryClient = useQueryClient();
   // Minted here because the band that carries the sentence and the verbs that
   // point at it are two different slots of the same header.
-  const archivedReasonId = useId();
+  const readOnlyReasonId = useId();
   const [tab, setTab] = useState<DealTab>("overview");
   const [pending, setPending] = useState<PendingAdvance | null>(null);
   const advance = useAdvanceDeal();
@@ -4097,6 +4123,19 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
     },
   });
   const pipelineQuery = usePipeline(dealQuery.data?.pipeline_id);
+  // Every write affordance on this page answers ONE question, asked once: an
+  // archived deal takes no changes, and one this caller cannot write takes
+  // none from them. The verbs used to ask only the first half, which offered a
+  // rep Edit on a colleague's deal and refused the save with a 403 after the
+  // form was filled in.
+  const readOnlyReason = useRecordWriteRefusal("deal", dealQuery.data, {
+    archived: t("deal.archivedReadOnly"),
+    notYours: t("deal.notYoursToChange"),
+  });
+  const readOnly = Boolean(readOnlyReason);
+  // The id every refused control points at, or nothing while the deal takes
+  // changes — resolved once here so the render below reads one name.
+  const refusedReasonId = readOnly ? readOnlyReasonId : undefined;
   // One shared singleton read (the ["installation-settings"] key), not a
   // per-deal request: the FX line has to name the base currency it converted
   // into, and nothing on the deal itself carries it.
@@ -4248,10 +4287,13 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                   orgs={orgs.data?.data ?? []}
                   meId={me.data?.user.id ?? ""}
                   openStages={openStages}
-                  archivedReasonId={archivedReasonId}
+                  refusedReasonId={refusedReasonId}
                 />
               }
-              band={dealBand({ deal, reasonId: archivedReasonId, t })}
+              band={dealBand({
+                reason: readOnlyReason,
+                reasonId: readOnlyReasonId,
+              })}
               timeline={timelineEntries}
               timelineGroups={groupChronology(
                 timelineEntries,
@@ -4335,9 +4377,10 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                     }
                     coverage={coverageRead}
                     onOpenHistory={() => setTab("history")}
-                    // An archived deal is not moved through the pipeline, and
-                    // the mirror answers an advance with unsupported_by_sor —
-                    // a control that can only fail is worse than none.
+                    // A deal that takes no changes — archived, or not this
+                    // caller's to write — is not moved through the pipeline,
+                    // and the mirror answers an advance with unsupported_by_sor
+                    // — a control that can only fail is worse than none.
                     //
                     // A CLOSED deal is refused here too, but for a different
                     // reason: reopening is its own deliberate action, with a
@@ -4345,10 +4388,9 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                     // being cleared. A stepper button that reopened silently
                     // would be a second, quieter door to the same write.
                     advanceRefused={
-                      deal.archived_at != null ||
-                      overlay ||
-                      deal.status !== "open"
+                      readOnly || overlay || deal.status !== "open"
                     }
+                    refusedReasonId={refusedReasonId}
                     onAdvance={(toStage) => {
                       // The version this record was drawn from, exactly as the
                       // board pins the version its card was drawn from: the
@@ -4366,10 +4408,14 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                       }
                     }}
                   />
-                  <DealPeoplePanels dealId={deal.id} overlay={overlay} />
+                  <DealPeoplePanels
+                    dealId={deal.id}
+                    overlay={overlay}
+                    refusedReasonId={refusedReasonId}
+                  />
                 </div>
               )}
-              {tab === "files" && !overlay && <DealFiles dealId={deal.id} />}
+              {tab === "files" && !overlay && <DealFiles deal={deal} />}
               {tab === "files" && overlay && <OverlayUnavailable />}
               {tab === "history" && !overlay && (
                 <RecordHistoryTab

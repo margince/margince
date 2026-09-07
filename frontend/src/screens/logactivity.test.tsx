@@ -10,6 +10,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { meFixture } from "../app/mefixture";
 import { RecordZoneProvider } from "../app/recordzone";
 import { pickOption } from "../design-system/select-testing";
 import { calendarDay } from "../format/calendarday";
@@ -164,6 +165,14 @@ function stubApi(
       const handler = routes[key];
       if (handler) {
         return handler(body);
+      }
+      // The composer asks whether this seat may log at all before it draws
+      // the form, so every spec here holds the grant the store behind the
+      // form requires — a spec that needs to withhold it names its own /me.
+      if (key === "GET /me") {
+        return jsonResponse(
+          meFixture({ allow: { activity: ["create"], person: ["read"] } }),
+        );
       }
       if (url.pathname.endsWith("/strength")) {
         return jsonResponse(dormantStrength);

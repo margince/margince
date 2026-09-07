@@ -314,7 +314,7 @@ export const vi = {
   "record.archivedReadOnly":
     "Công ty này đã lưu trữ. Khôi phục để thay đổi bất kỳ thông tin nào.",
   "record.notYoursToChange":
-    "Công ty này thuộc về người khác. Hãy đề nghị chủ sở hữu chia sẻ nếu bạn cần thay đổi.",
+    "Bạn không thể thay đổi công ty này. Hãy đề nghị chủ sở hữu chia sẻ, hoặc quản trị viên cấp quyền chỉnh sửa.",
   "record.logActivityRefused":
     "Bạn không có quyền ghi nhận hoạt động cho hồ sơ này.",
   "record.share": "Chia sẻ",
@@ -2098,6 +2098,8 @@ export const vi = {
   "lead.detailsUnset": "Chưa đặt",
   "lead.terminalReadOnly":
     "Khách hàng tiềm năng này đã đóng và không nhận thay đổi.",
+  "lead.notYoursToChange":
+    "Bạn không thể thay đổi khách hàng tiềm năng này. Hãy đề nghị chủ sở hữu chia sẻ, hoặc quản trị viên cấp quyền chỉnh sửa.",
   "lead.callNotInOverlay":
     "Khách hàng tiềm năng này là bản phản chiếu của hệ thống gốc và không nhận hoạt động từ đây \u2014 hãy ghi cuộc gọi ở nơi lưu bản ghi.",
   "lead.boardCountsUnavailable":
@@ -2370,6 +2372,8 @@ export const vi = {
   "deal.archiveConfirm":
     "Lưu trữ sẽ đưa deal này ra khỏi pipeline đang hoạt động. Không thể hoàn tác từ giao diện.",
   "deal.archivedReadOnly": "Deal này đã lưu trữ và không nhận thay đổi.",
+  "deal.notYoursToChange":
+    "Bạn không thể thay đổi deal này. Hãy đề nghị chủ sở hữu chia sẻ, hoặc quản trị viên cấp quyền chỉnh sửa.",
   "deal.reopen": "Mở lại",
   "deal.reopenPick": "Chuyển deal này về một giai đoạn đang mở",
   "deal.reopenConfirm": "Mở lại",
@@ -7662,6 +7666,8 @@ export const vi = {
   "person.rail.detailsTitle": "Chi tiết",
   "person.rail.archivedReadOnly":
     "Người này đã lưu trữ. Khôi phục để thay đổi bất kỳ thông tin nào tại đây.",
+  "person.notYoursToChange":
+    "Bạn không thể thay đổi người này. Hãy đề nghị chủ sở hữu chia sẻ, hoặc quản trị viên cấp quyền chỉnh sửa.",
   "person.rail.employmentVersionUnresolved":
     "Không đọc lại được phiên bản hiện tại của dòng này để lưu. Hãy tải lại và thử lại.",
   "person.rail.employmentTitle": "Công ty",

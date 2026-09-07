@@ -144,6 +144,57 @@ export function useCanWriteRecord(
 }
 
 /**
+ * A record whose write verbs a page draws: the server's per-row answer and
+ * the lifecycle stamp, which is the pair every refusal below reads.
+ */
+export type WritableRecord = {
+  readonly writable?: boolean;
+  readonly archived_at?: string | null;
+};
+
+/**
+ * Why this caller may not change THIS record, or undefined when they may.
+ *
+ * The one answer a record page's verbs share — edit, archive, share, the
+ * upload, the inline fields — so the page cannot disagree with itself about
+ * whether the record takes changes. Before this each page asked only whether
+ * the record was archived and left the grant, the seat and the row to the
+ * server: a rep opened a colleague's deal, was offered Edit, filled the form
+ * in, and learned from the 403 that it was never theirs to save.
+ *
+ * Archived comes first because it is the reason a reader can act on. The
+ * other sentence covers everything `useCanWriteRecord` refuses — no object
+ * grant, a read seat, a row that is somebody else's — because the reader's
+ * remedy is the same for all three: ask the owner or the administrator. Naming
+ * the axis would also name a fact the snapshot cannot always tell apart from
+ * its neighbour (an extension object misspelled reads as a grant not made).
+ *
+ * The caller supplies the two sentences because they name the record's KIND —
+ * "this deal", "this person" — and a sentence that said "this record" on
+ * every page would be the first line on the page not to know what it was
+ * about.
+ *
+ * UX honesty, never enforcement, like every predicate in this file: the
+ * server refuses whatever this returns.
+ */
+export function useRecordWriteRefusal(
+  object: RbacObject,
+  record: WritableRecord | undefined,
+  reasons: Readonly<{ archived: string; notYours: string }>,
+): string | undefined {
+  // Runs unconditionally: the number of hooks a render performs must not
+  // depend on the record's state.
+  const canWrite = useCanWriteRecord(object, record);
+  if (record?.archived_at) {
+    return reasons.archived;
+  }
+  if (!canWrite) {
+    return reasons.notYours;
+  }
+  return undefined;
+}
+
+/**
  * Both axes, for a control whose request is an UPSERT — one endpoint that
  * inserts or replaces, so which grant it needs is not knowable until the server
  * has read the row.

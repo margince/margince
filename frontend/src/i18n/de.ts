@@ -309,7 +309,7 @@ export const de = {
   "record.archivedReadOnly":
     "Diese Firma ist archiviert. Stellen Sie sie wieder her, um etwas zu ändern.",
   "record.notYoursToChange":
-    "Diese Firma gehört jemand anderem. Bitten Sie den Inhaber um Freigabe, wenn Sie etwas ändern möchten.",
+    "Sie können diese Firma nicht ändern. Bitten Sie den Inhaber um Freigabe oder Ihre Administration um das Recht zum Bearbeiten.",
   "record.logActivityRefused":
     "Sie haben keine Berechtigung, Aktivitäten zu diesem Datensatz zu erfassen.",
   "record.share": "Teilen",
@@ -2112,6 +2112,8 @@ export const de = {
   "lead.detailsUnset": "Nicht gesetzt",
   "lead.terminalReadOnly":
     "Dieser Lead ist abgeschlossen und nimmt keine Änderungen an.",
+  "lead.notYoursToChange":
+    "Sie können diesen Lead nicht ändern. Bitten Sie den Inhaber um Freigabe oder Ihre Administration um das Recht zum Bearbeiten.",
   "lead.callNotInOverlay":
     "Dieser Lead ist eine Spiegelung des führenden Systems und nimmt von hier aus keine Aktivität an \u2014 erfasse den Anruf dort, wo der Datensatz liegt.",
   "lead.boardCountsUnavailable":
@@ -2392,6 +2394,8 @@ export const de = {
     "Durch das Archivieren wird dieser Deal aus der aktiven Pipeline entfernt. Dies kann in der Oberfläche nicht rückgängig gemacht werden.",
   "deal.archivedReadOnly":
     "Dieser Deal ist archiviert und nimmt keine Änderungen an.",
+  "deal.notYoursToChange":
+    "Sie können diesen Deal nicht ändern. Bitten Sie den Inhaber um Freigabe oder Ihre Administration um das Recht zum Bearbeiten.",
   "deal.reopen": "Wieder öffnen",
   "deal.reopenPick": "Diesen Deal in eine offene Phase zurücksetzen",
   "deal.reopenConfirm": "Wieder öffnen",
@@ -7763,6 +7767,8 @@ export const de = {
   "person.rail.detailsTitle": "Details",
   "person.rail.archivedReadOnly":
     "Diese Person ist archiviert. Stelle sie wieder her, um hier etwas zu ändern.",
+  "person.notYoursToChange":
+    "Sie können diese Person nicht ändern. Bitten Sie den Inhaber um Freigabe oder Ihre Administration um das Recht zum Bearbeiten.",
   "person.rail.employmentVersionUnresolved":
     "Die aktuelle Version dieser Zeile konnte nicht zum Speichern zurückgelesen werden. Lade neu und versuche es erneut.",
   "person.rail.employmentTitle": "Unternehmen",

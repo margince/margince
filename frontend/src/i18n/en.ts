@@ -332,7 +332,7 @@ export const en = {
   "record.archivedReadOnly":
     "This company is archived. Restore it to change anything on it.",
   "record.notYoursToChange":
-    "This company belongs to someone else. Ask its owner to share it with you if you need to make changes.",
+    "You cannot change this company. Ask its owner to share it with you, or your administrator for the right to edit it.",
   "record.logActivityRefused":
     "You do not have permission to log activities on this record.",
   "record.share": "Share",
@@ -2186,6 +2186,8 @@ export const en = {
   "lead.railTitle": "Owner",
   "lead.detailsUnset": "Not set",
   "lead.terminalReadOnly": "This lead is closed and takes no changes.",
+  "lead.notYoursToChange":
+    "You cannot change this lead. Ask its owner to share it with you, or your administrator for the right to edit it.",
   "lead.callNotInOverlay":
     "This lead is a mirror of the system of record, which takes no activity from here \u2014 log the call where the record lives.",
   "lead.boardCountsUnavailable":
@@ -2457,6 +2459,8 @@ export const en = {
   "deal.archiveConfirm":
     "Archiving removes this deal from the active pipeline. This cannot be undone from the UI.",
   "deal.archivedReadOnly": "This deal is archived and takes no changes.",
+  "deal.notYoursToChange":
+    "You cannot change this deal. Ask its owner to share it with you, or your administrator for the right to edit it.",
   "deal.reopen": "Reopen",
   "deal.reopenPick": "Move this deal back to an open stage",
   "deal.reopenConfirm": "Reopen",
@@ -7869,6 +7873,8 @@ export const en = {
   "person.rail.detailsTitle": "Details",
   "person.rail.archivedReadOnly":
     "This person is archived. Restore them to change anything here.",
+  "person.notYoursToChange":
+    "You cannot change this person. Ask their owner to share them with you, or your administrator for the right to edit them.",
   // Fired when an employment row's version could not be read back before a
   // write — the row is not saved unpinned, so the reader is told to reload
   // rather than left to think the edit landed.
