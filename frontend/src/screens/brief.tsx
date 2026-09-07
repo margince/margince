@@ -351,10 +351,6 @@ export function BriefScreen() {
                   then what is owed. Both are cuts of the SAME worklist answer
                   the work column is drawn from, so the rail cannot name a
                   meeting the queue has already dropped. */}
-              {/* The day's own shape leads the rail: what it is booked with,
-                  then what is owed. Both are cuts of the SAME worklist answer
-                  the work column is drawn from, so the rail cannot name a
-                  meeting the queue has already dropped. */}
               <SchedulePanel
                 day={worklistQuery.data}
                 state={readState(worklistQuery)}
