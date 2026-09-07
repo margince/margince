@@ -7248,6 +7248,28 @@ export const vi = {
   "aiRouting.saving": "Đang lưu ràng buộc…",
   "aiRouting.saved": "Đã lưu định tuyến. Mọi tiến trình đang phục vụ theo nó.",
   "aiRouting.adminOnly": "Chỉ admin hoặc ops mới đổi được định tuyến mô hình.",
+  "workingHours.title": "Khi nào bạn nhận lịch hẹn",
+  "workingHours.sub":
+    "Chỉ của riêng bạn. Không ai đặt giúp bạn, và bạn cũng không đặt cho ai.",
+  "workingHours.unset":
+    "Bạn chưa chọn, nên khách được đề nghị 09:00–17:00, thứ Hai đến thứ Sáu, theo đồng hồ của hệ thống.",
+  "workingHours.start": "Bắt đầu ngày",
+  "workingHours.end": "Kết thúc ngày",
+  "workingHours.days": "Những ngày bạn làm việc",
+  "workingHours.timezone": "Múi giờ của bạn",
+  "workingHours.timezoneHelp":
+    "Đồng hồ dùng để đọc hai mốc giờ trên. Điền sẵn từ trình duyệt này.",
+  "workingHours.narrowed":
+    "Bạn nhận lịch trong ít thời gian hơn trước, nên sẽ có ít khách tìm được giờ hẹn hơn. Đó là thay đổi bạn vừa lưu, không phải lỗi.",
+  "workingHours.saveFailed": "Chưa lưu được khung giờ này.",
+  "workingHours.save": "Lưu",
+  "workingHours.day.1": "Thứ Hai",
+  "workingHours.day.2": "Thứ Ba",
+  "workingHours.day.3": "Thứ Tư",
+  "workingHours.day.4": "Thứ Năm",
+  "workingHours.day.5": "Thứ Sáu",
+  "workingHours.day.6": "Thứ Bảy",
+  "workingHours.day.7": "Chủ Nhật",
   "autonomy.title": "Những gì tự xử lý",
   "autonomy.sub":
     "Những chỉnh sửa nhỏ bạn vẫn xác nhận bằng tay. Bật một mục lên và nó sẽ được áp dụng ngay khi xuất hiện, kèm thay đổi và nút Hoàn tác chờ sẵn trong ngày của bạn.",

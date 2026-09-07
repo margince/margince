@@ -7329,6 +7329,28 @@ export const de = {
   "aiRouting.saving": "Bindung wird gespeichert…",
   "aiRouting.saved": "Routing gespeichert. Jeder Prozess bedient es jetzt.",
   "aiRouting.adminOnly": "Nur Admin oder Ops können das Modell-Routing ändern.",
+  "workingHours.title": "Wann du buchbar bist",
+  "workingHours.sub":
+    "Nur deine Sache. Niemand stellt das für dich ein, und du stellst es für niemanden ein.",
+  "workingHours.unset":
+    "Du hast noch nichts gewählt, deshalb bekommen Kundinnen und Kunden 09:00–17:00 Uhr, Montag bis Freitag, auf der Uhr der Installation angeboten.",
+  "workingHours.start": "Tag beginnt",
+  "workingHours.end": "Tag endet",
+  "workingHours.days": "Tage, an denen du arbeitest",
+  "workingHours.timezone": "Deine Zeitzone",
+  "workingHours.timezoneHelp":
+    "Die Uhr, auf der diese beiden Zeiten gelesen werden. Aus diesem Browser vorausgefüllt.",
+  "workingHours.narrowed":
+    "Du bist jetzt für weniger von der Woche buchbar als vorher, also finden weniger Kundinnen und Kunden einen Termin. Das ist die Änderung, kein Fehler.",
+  "workingHours.saveFailed": "Diese Zeiten wurden nicht gespeichert.",
+  "workingHours.save": "Speichern",
+  "workingHours.day.1": "Montag",
+  "workingHours.day.2": "Dienstag",
+  "workingHours.day.3": "Mittwoch",
+  "workingHours.day.4": "Donnerstag",
+  "workingHours.day.5": "Freitag",
+  "workingHours.day.6": "Samstag",
+  "workingHours.day.7": "Sonntag",
   "autonomy.title": "Was sich von selbst erledigt",
   "autonomy.sub":
     "Kleine Korrekturen, die du bisher von Hand bestätigt hast. Schalte eine ein, und sie wird sofort übernommen – die Änderung und ein Rückgängig warten auf deinem Tag.",

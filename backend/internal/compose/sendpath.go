@@ -154,6 +154,10 @@ func (s *Server) applySendPath(pool *pgxpool.Pool) {
 		// nothing but the caller's transaction, so a deployment cannot forget
 		// it and leave an account-started send unable to resolve anyone.
 		WithRecipientDirectory(recipientDirectory{}).
+		// When a host is bookable, so the tool surface reads the same hours the
+		// HTTP one does. A rep asking an agent for times and a customer opening
+		// the booking page must be told about the same calendar.
+		WithWorkingHours(workingHoursResolver(pool)).
 		// Unconditional for the same reason, and a sharper one: addressing a
 		// reply must skip a co-worker who has no seat, and a deployment that
 		// forgot to wire this would compose replies to its own staff.
@@ -255,6 +259,10 @@ func sendStore(pool *pgxpool.Pool, send SendPath) *activities.Store {
 		WithSendAuthority(send.SendAuthority).
 		WithChannelReachability(send.ChannelRecipients).
 		WithRecipientDirectory(recipientDirectory{}).
+		// When a host is bookable, so the tool surface reads the same hours the
+		// HTTP one does. A rep asking an agent for times and a customer opening
+		// the booking page must be told about the same calendar.
+		WithWorkingHours(workingHoursResolver(pool)).
 		// The sender's sign-off, wired here for the same reason the unsubscribe
 		// linker is: a human reaching this store through a passport (ADR-0055
 		// makes one a REST credential too) must not lose their signature merely

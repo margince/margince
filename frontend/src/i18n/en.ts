@@ -7437,6 +7437,28 @@ export const en = {
   "aiRouting.saving": "Saving the binding…",
   "aiRouting.saved": "Routing saved. Every process is now serving it.",
   "aiRouting.adminOnly": "Only an admin or ops can change model routing.",
+  "workingHours.title": "When you are bookable",
+  "workingHours.sub":
+    "Yours alone. Nobody sets these for you, and you set them for nobody else.",
+  "workingHours.unset":
+    "You have not chosen yet, so customers are offered 09:00–17:00, Monday to Friday, on the installation's clock.",
+  "workingHours.start": "Day starts",
+  "workingHours.end": "Day ends",
+  "workingHours.days": "Days you work",
+  "workingHours.timezone": "Your timezone",
+  "workingHours.timezoneHelp":
+    "The clock those two times are read on. Pre-filled from this browser.",
+  "workingHours.narrowed":
+    "You are bookable for less of the week than before, so fewer customers will find a time. That is the change, not a fault.",
+  "workingHours.saveFailed": "Those hours were not saved.",
+  "workingHours.save": "Save",
+  "workingHours.day.1": "Monday",
+  "workingHours.day.2": "Tuesday",
+  "workingHours.day.3": "Wednesday",
+  "workingHours.day.4": "Thursday",
+  "workingHours.day.5": "Friday",
+  "workingHours.day.6": "Saturday",
+  "workingHours.day.7": "Sunday",
   "autonomy.title": "What answers itself",
   "autonomy.sub":
     "Small corrections you have been confirming by hand. Switch one on and it applies as soon as it comes up, with the change and an Undo waiting on your day.",

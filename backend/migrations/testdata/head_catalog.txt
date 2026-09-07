@@ -713,6 +713,10 @@ public.app_user.app_user_pkey PRIMARY KEY (id)
 public.app_user.app_user_seat_type_check CHECK ((seat_type = ANY (ARRAY['read'::text, 'full'::text])))
 public.app_user.app_user_status_check CHECK ((status = ANY (ARRAY['invited'::text, 'active'::text, 'suspended'::text, 'deactivated'::text])))
 public.app_user.app_user_weekly_delivery_check CHECK (((weekly_delivery IS NULL) OR (weekly_delivery = ANY (ARRAY['none'::text, 'email'::text]))))
+public.app_user.app_user_work_days_are_weekdays CHECK (((work_days IS NULL) OR (((array_length(work_days, 1) >= 1) AND (array_length(work_days, 1) <= 7)) AND (work_days <@ ARRAY[(1)::smallint, (2)::smallint, (3)::smallint, (4)::smallint, (5)::smallint, (6)::smallint, (7)::smallint]))))
+public.app_user.app_user_work_end_minute_of_day CHECK (((work_end_minute IS NULL) OR ((work_end_minute >= 1) AND (work_end_minute <= 1440))))
+public.app_user.app_user_work_range_is_a_range CHECK ((((work_start_minute IS NULL) = (work_end_minute IS NULL)) AND ((work_start_minute IS NULL) OR (work_start_minute < work_end_minute))))
+public.app_user.app_user_work_start_minute_of_day CHECK (((work_start_minute IS NULL) OR ((work_start_minute >= 0) AND (work_start_minute <= 1439))))
 public.app_user.archived_at timestamp with time zone gen=- def=-
 public.app_user.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.app_user.delivery_hour_local integer gen=- def=-
@@ -729,10 +733,13 @@ public.app_user.password_hash text gen=- def=-
 public.app_user.quiet_day_notice boolean gen=- def=-
 public.app_user.seat_type text NOT NULL gen=- def='full'::text
 public.app_user.status text NOT NULL gen=- def='active'::text
-public.app_user.timezone text NOT NULL gen=- def='UTC'::text
+public.app_user.timezone text gen=- def=-
 public.app_user.trg_app_user_updated CREATE TRIGGER trg_app_user_updated BEFORE UPDATE ON public.app_user FOR EACH ROW EXECUTE FUNCTION set_updated_at()
 public.app_user.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.app_user.weekly_delivery text gen=- def=-
+public.app_user.work_days smallint[] gen=- def=-
+public.app_user.work_end_minute smallint gen=- def=-
+public.app_user.work_start_minute smallint gen=- def=-
 public.app_user_pkey CREATE UNIQUE INDEX app_user_pkey ON public.app_user USING btree (id)
 public.approval acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.approval.approval_co_target_whole CHECK ((((co_target_entity_type IS NULL) AND (co_target_entity_id IS NULL) AND (co_target_version IS NULL)) OR ((co_target_entity_type IS NOT NULL) AND (co_target_entity_id IS NOT NULL) AND (co_target_version IS NOT NULL))))

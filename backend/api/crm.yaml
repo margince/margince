@@ -19033,6 +19033,56 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /me/working-hours:
+    get:
+      tags: [Identity]
+      operationId: getMyWorkingHours
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: When you are bookable.
+      description: |
+        Always the CALLER's own. A person who has chosen nothing is answered with
+        the fallback and `chosen: false`, so a screen can offer it as a starting
+        point rather than show it as a decision they made.
+      responses:
+        '200':
+          description: The caller's working hours.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MyWorkingHoursResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    put:
+      tags: [Identity]
+      operationId: saveMyWorkingHours
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Choose the hours and days you are bookable.
+      description: |
+        Always the CALLER's own, never anybody else's — an admin does not set a
+        colleague's working hours through this API, for the reason the setting
+        exists at all.
+
+        The times are read on the timezone sent with them, which is also stored:
+        it is the person's own zone and the product had no author for it before
+        this. Sending the browser's zone is the expected first write.
+
+        Narrowing these hours narrows what a customer can book. A screen that
+        does not say so at the moment of saving has built a trap rather than a
+        setting.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WorkingHours' }
+      responses:
+        '200':
+          description: The hours as stored.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MyWorkingHoursResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /me/locale:
     put:
       tags: [Identity]
@@ -29065,6 +29115,62 @@ components:
             that is only whitespace is refused — the same bounds the invite form
             applies, because this writes the same column.
       additionalProperties: false
+    WorkingHours:
+      type: object
+      additionalProperties: false
+      required: [start_time, end_time, days, timezone]
+      description: |
+        When one person is bookable, on their own clock.
+
+        Personal, never installation-wide: people on one team sit in different
+        countries, some work part time, and one pair of numbers set by an admin
+        is wrong for most of them while the people it fails cannot change it.
+        This is the setting a person's display language is: their own, and
+        nobody else's to set.
+
+        One range on every working day rather than a range per day. The two
+        cases that prompted it — 8-18 Monday to Saturday, 9-13 Monday to
+        Thursday — are both a range plus a set of days, and per-day hours can be
+        added on top later without redoing this.
+      properties:
+        start_time:
+          type: string
+          pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+          description: The first minute of the working day, `HH:MM` on the person's own clock.
+        end_time:
+          type: string
+          pattern: '^([01][0-9]|2[0-3]:[0-5][0-9]|24:00)$'
+          description: |
+            The minute the working day ends, exclusive. `24:00` is the honest
+            spelling of "until midnight" and is why this is not the same pattern
+            as `start_time`.
+        days:
+          type: array
+          minItems: 1
+          maxItems: 7
+          items: { type: integer, minimum: 1, maximum: 7 }
+          description: The days worked, as ISO-8601 weekday numbers — 1 is Monday.
+        timezone:
+          type: string
+          description: |
+            The IANA zone the two times are read on. A person who has never
+            chosen one is read on the installation's reporting timezone, which
+            is what makes the unset case work rather than scheduling everybody
+            on UTC.
+
+    MyWorkingHoursResponse:
+      type: object
+      additionalProperties: false
+      required: [working_hours, chosen]
+      description: The caller's own working hours, and whether they are theirs or the fallback.
+      properties:
+        working_hours: { $ref: '#/components/schemas/WorkingHours' }
+        chosen:
+          type: boolean
+          description: |
+            False when nobody has chosen: the hours above are then the fallback —
+            09:00-17:00, Monday to Friday — and the screen should offer them as a
+            starting point rather than present them as a decision somebody made.
 
     SaveMyLocaleRequest:
       type: object

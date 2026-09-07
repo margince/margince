@@ -26429,6 +26429,28 @@ type MyAgentGrants struct {
 	Data []MyAgentGrant `json:"data"`
 }
 
+// MyWorkingHoursResponse The caller's own working hours, and whether they are theirs or the fallback.
+type MyWorkingHoursResponse struct {
+	// Chosen False when nobody has chosen: the hours above are then the fallback —
+	// 09:00-17:00, Monday to Friday — and the screen should offer them as a
+	// starting point rather than present them as a decision somebody made.
+	Chosen bool `json:"chosen"`
+
+	// WorkingHours When one person is bookable, on their own clock.
+	//
+	// Personal, never installation-wide: people on one team sit in different
+	// countries, some work part time, and one pair of numbers set by an admin
+	// is wrong for most of them while the people it fails cannot change it.
+	// This is the setting a person's display language is: their own, and
+	// nobody else's to set.
+	//
+	// One range on every working day rather than a range per day. The two
+	// cases that prompted it — 8-18 Monday to Saturday, 9-13 Monday to
+	// Thursday — are both a range plus a set of days, and per-day hours can be
+	// added on top later without redoing this.
+	WorkingHours WorkingHours `json:"working_hours"`
+}
+
 // NewForecastCall defines model for NewForecastCall.
 type NewForecastCall struct {
 	AmountMinor int64 `json:"amount_minor"`
@@ -35429,6 +35451,37 @@ type WeeklyScorecardLeadBlock struct {
 	Promoted               int `json:"promoted"`
 }
 
+// WorkingHours When one person is bookable, on their own clock.
+//
+// Personal, never installation-wide: people on one team sit in different
+// countries, some work part time, and one pair of numbers set by an admin
+// is wrong for most of them while the people it fails cannot change it.
+// This is the setting a person's display language is: their own, and
+// nobody else's to set.
+//
+// One range on every working day rather than a range per day. The two
+// cases that prompted it — 8-18 Monday to Saturday, 9-13 Monday to
+// Thursday — are both a range plus a set of days, and per-day hours can be
+// added on top later without redoing this.
+type WorkingHours struct {
+	// Days The days worked, as ISO-8601 weekday numbers — 1 is Monday.
+	Days []int `json:"days"`
+
+	// EndTime The minute the working day ends, exclusive. `24:00` is the honest
+	// spelling of "until midnight" and is why this is not the same pattern
+	// as `start_time`.
+	EndTime string `json:"end_time"`
+
+	// StartTime The first minute of the working day, `HH:MM` on the person's own clock.
+	StartTime string `json:"start_time"`
+
+	// Timezone The IANA zone the two times are read on. A person who has never
+	// chosen one is read on the installation's reporting timezone, which
+	// is what makes the unset case work rather than scheduling everybody
+	// on UTC.
+	Timezone string `json:"timezone"`
+}
+
 // Worklist The rep's day, ranked. One list rather than fourteen lanes, because a reader
 // cannot compare the position of one lane with another to work out that an item
 // several screens down matters more.
@@ -41839,6 +41892,9 @@ type ImportLinkedInConnectionsMultipartRequestBody ImportLinkedInConnectionsMult
 
 // SaveMyLocaleJSONRequestBody defines body for SaveMyLocale for application/json ContentType.
 type SaveMyLocaleJSONRequestBody = SaveMyLocaleRequest
+
+// SaveMyWorkingHoursJSONRequestBody defines body for SaveMyWorkingHours for application/json ContentType.
+type SaveMyWorkingHoursJSONRequestBody = WorkingHours
 
 // RaiseNoticeJSONRequestBody defines body for RaiseNotice for application/json ContentType.
 type RaiseNoticeJSONRequestBody = RaiseNoticeRequest
@@ -50941,6 +50997,12 @@ type ServerInterface interface {
 	// Choose the language your own interface is in.
 	// (PUT /me/locale)
 	SaveMyLocale(w http.ResponseWriter, r *http.Request)
+	// When you are bookable.
+	// (GET /me/working-hours)
+	GetMyWorkingHours(w http.ResponseWriter, r *http.Request)
+	// Choose the hours and days you are bookable.
+	// (PUT /me/working-hours)
+	SaveMyWorkingHours(w http.ResponseWriter, r *http.Request)
 	// Raise a coaching notice for a colleague. It lands in their Worklist's notices lane.
 	// (POST /notices)
 	RaiseNotice(w http.ResponseWriter, r *http.Request)
@@ -53713,6 +53775,18 @@ func (_ Unimplemented) GetMyLinkedInReach(w http.ResponseWriter, r *http.Request
 // Choose the language your own interface is in.
 // (PUT /me/locale)
 func (_ Unimplemented) SaveMyLocale(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// When you are bookable.
+// (GET /me/working-hours)
+func (_ Unimplemented) GetMyWorkingHours(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Choose the hours and days you are bookable.
+// (PUT /me/working-hours)
+func (_ Unimplemented) SaveMyWorkingHours(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -67762,6 +67836,46 @@ func (siw *ServerInterfaceWrapper) SaveMyLocale(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SaveMyLocale(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMyWorkingHours operation middleware
+func (siw *ServerInterfaceWrapper) GetMyWorkingHours(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMyWorkingHours(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SaveMyWorkingHours operation middleware
+func (siw *ServerInterfaceWrapper) SaveMyWorkingHours(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SaveMyWorkingHours(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -82455,6 +82569,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/me/locale", wrapper.SaveMyLocale)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/me/working-hours", wrapper.GetMyWorkingHours)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/me/working-hours", wrapper.SaveMyWorkingHours)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/notices", wrapper.RaiseNotice)
