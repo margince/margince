@@ -159,8 +159,28 @@ func SeedRoutingIfUnset(ctx context.Context, pool *pgxpool.Pool, declared yaml.N
 	}
 	ctx = routingCtx(ctx, ws)
 
+	plantRouting(ctx, NewSettingsStore(pool), cfg, log)
+	return nil
+}
+
+// settingsWriter is the half of the settings store this write needs, named so
+// the refusal path is reachable from a test.
+//
+// The same split routingSeedFrom already makes and for the same reason — "the
+// half that can refuse is judgeable" — applied to the other half. A boot-time
+// write that swallows its error has to be shown swallowing it, or the claim in
+// the comment is the only evidence that it does.
+type settingsWriter interface {
+	WriteTx(ctx context.Context, fn func(pgx.Tx) error) error
+}
+
+// plantRouting performs the write and reports what happened. It returns
+// nothing: every outcome here is a log line, because none of them is the
+// caller's to act on.
+func plantRouting(ctx context.Context, store settingsWriter, cfg ai.RoutingConfig, log *slog.Logger) {
 	var planted bool
-	if err := NewSettingsStore(pool).WriteTx(ctx, func(tx pgx.Tx) error {
+	if err := store.WriteTx(ctx, func(tx pgx.Tx) error {
+		var err error
 		planted, err = settings.SeedValue(ctx, tx, ai.Routing, cfg)
 		return err
 	}); err != nil {
@@ -169,7 +189,7 @@ func SeedRoutingIfUnset(ctx context.Context, pool *pgxpool.Pool, declared yaml.N
 		// cannot write its settings has larger problems, and they will be
 		// reported by whatever needs that write to succeed.
 		log.WarnContext(ctx, "cannot plant the declared model binding; this installation keeps whatever it holds", "error", err)
-		return nil
+		return
 	}
 	if planted {
 		// Said out loud, because a binding appearing without anybody pressing
@@ -177,7 +197,6 @@ func SeedRoutingIfUnset(ctx context.Context, pool *pgxpool.Pool, declared yaml.N
 		// a log afterwards.
 		log.InfoContext(ctx, "planted the model binding declared under seeds.ai_routing; this installation held none")
 	}
-	return nil
 }
 
 // warnRoutingFileIgnored says a `--ai-routing` was passed and did nothing.
