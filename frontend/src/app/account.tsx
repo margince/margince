@@ -296,6 +296,12 @@ function ThemeSubmenu({
       className="accountsub"
       role="menu"
       aria-label={t("shell.theme")}
+      // -1, not 0: the tab stop belongs to the roving rows below, and a menu
+      // that took one of its own would stand in front of the choices it exists
+      // to offer. What a `menu` role owes the keyboard is to be focusable AT
+      // ALL — it promises somewhere to stand, and a div carrying no tabindex
+      // cannot be focused even programmatically.
+      tabIndex={-1}
       ref={panel}
       onKeyDown={onKeyDown}
     >
@@ -437,6 +443,10 @@ function AccountPanel({
           ? `${t("shell.accountAria")} — ${identity.spoken}`
           : t("shell.accountAria")
       }
+      // Focusable, and only programmatically: the roving tabstop lives on the
+      // rows, and the effect above lands the reader on one of them the moment
+      // this opens. See ThemeSubmenu for why the value is -1 rather than 0.
+      tabIndex={-1}
       ref={panel}
       onKeyDown={onKeyDown}
     >

@@ -98,22 +98,75 @@ export function withSubjectTag(subject: string, tag: string): string {
  * Only key-SHAPED groups go. `[FYI]` is prose to the matcher and prose here.
  */
 export function stripEveryKeyTag(subject: string): string {
-  // A removed tag takes ONE of the spaces that surrounded it with it, so
-  // "Re: [KEY] Hallo" becomes "Re: Hallo" rather than "Re:  Hallo". The rest of
-  // the line is returned byte for byte: this runs over a subject the rep is
-  // typing, and a global whitespace collapse would rewrite their spacing —
-  // eating the second space of "Re:  Kurzer" that they put there on purpose.
-  // Exactly ONE space on each side is eligible to go with the tag — the
-  // separator this module writes. A second space is the rep's own and stays.
-  return subject.replace(/ ?\[[^\]]*\] ?/g, (group) => {
-    const inner = group.trim().slice(1, -1);
-    if (!keyShaped(inner)) {
-      return group;
+  let out = "";
+  let cursor = 0;
+  for (const group of bracketedGroups(subject)) {
+    // A removed tag takes ONE of the spaces that surrounded it with it, so
+    // "Re: [KEY] Hallo" becomes "Re: Hallo" rather than "Re:  Hallo". The rest
+    // of the line is returned byte for byte: this runs over a subject the rep
+    // is typing, and a global whitespace collapse would rewrite their spacing —
+    // eating the second space of "Re:  Kurzer" that they put there on purpose.
+    // Exactly ONE space on each side is eligible — the separator this module
+    // writes. A second space is the rep's own and stays, and a separator the
+    // group before this one already took is gone: two adjacent tags do not
+    // share one.
+    const leading = group.start > cursor && subject[group.start - 1] === " ";
+    const trailing = subject[group.end] === " ";
+    const from = leading ? group.start - 1 : group.start;
+    out += subject.slice(cursor, from);
+    cursor = trailing ? group.end + 1 : group.end;
+    if (!keyShaped(group.inner)) {
+      out += subject.slice(from, cursor);
+      continue;
     }
     // Keep one separator when the tag sat BETWEEN two things; keep none when it
     // sat at either end.
-    return group.startsWith(" ") && group.endsWith(" ") ? " " : "";
-  });
+    if (leading && trailing) {
+      out += " ";
+    }
+  }
+  return out + subject.slice(cursor);
+}
+
+/** One `[...]` group: where it sits in the subject, and what it holds. */
+type BracketGroup = Readonly<{
+  /** Index of the `[`. */
+  start: number;
+  /** Index just past the `]`. */
+  end: number;
+  /** The text between the brackets, untrimmed. */
+  inner: string;
+}>;
+
+/**
+ * Every `[...]` group in `subject`, read the way the capture side's own
+ * tokenizer reads it: from each `[` to the NEXT `]`, non-overlapping, and an
+ * unclosed `[` ends the scan — a subject trailing off mid-marker names no key,
+ * and treating the rest of the line as one would turn a stray `[` into a match.
+ *
+ * A single pass rather than a regular expression, and that is the property to
+ * keep. A bracket matcher of the form ` ?\[[^\]]*\] ?` re-reads the tail of the
+ * line at every `[` it then fails to close, so a subject whose brackets all sit
+ * after its last `]` costs time quadratic in the subject's length — and a
+ * subject is attacker-supplied text, reaching this composer through the reply it
+ * seeds. Two `indexOf` walks reach the end of the line once.
+ */
+function bracketedGroups(subject: string): BracketGroup[] {
+  const groups: BracketGroup[] = [];
+  let open = subject.indexOf("[");
+  while (open >= 0) {
+    const shut = subject.indexOf("]", open + 1);
+    if (shut < 0) {
+      return groups;
+    }
+    groups.push({
+      start: open,
+      end: shut + 1,
+      inner: subject.slice(open + 1, shut),
+    });
+    open = subject.indexOf("[", shut + 1);
+  }
+  return groups;
 }
 
 /**
@@ -146,11 +199,16 @@ function prefixed(body: string, tag: string): string {
 /**
  * Whether one bracketed token could be a project key — the frontend reading of
  * the rule the capture side applies (`project_key_shape`): letter-led, then
- * letters, digits and hyphens, bounded in length. A bare number is deliberately
- * excluded, so `[2026]` and `[4711]` stay prose.
+ * letters, digits, underscores and hyphens, bounded in length. A bare number is
+ * deliberately excluded, so `[2026]` and `[4711]` stay prose.
+ *
+ * The UNDERSCORE is part of that constraint, and a shape narrower here than the
+ * CHECK is what this whole class of divergence costs: a project keyed
+ * `alpha_two` is a key the matcher reads, so leaving its tag standing while ours
+ * goes in beside it hands the message two live keys, and it files under neither.
  */
 function keyShaped(token: string): boolean {
-  return /^[a-z][a-z0-9-]{1,23}$/i.test(token.trim());
+  return /^[a-z][a-z0-9_-]{1,23}$/i.test(token.trim());
 }
 
 /** Where a send files, and what the composer should say about it. */
