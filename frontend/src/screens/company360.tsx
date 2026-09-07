@@ -31,7 +31,6 @@ import {
   formatNumber,
   formatTimeOfDay,
 } from "../format/format";
-import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
@@ -531,6 +530,7 @@ export function NextSteps({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const steps = view.next_steps?.data ?? [];
   const state = sectionState(
     view,
@@ -587,17 +587,13 @@ export function NextSteps({
                 {!step.overdue && step.due_at && (
                   <span>
                     {t("co.next.due", {
-                      // The one viewer-clock reading on this record page, and
-                      // it is not a preference: `dueInstant` mints a due date
-                      // as the end of the picked day in the BROWSER's zone, so
-                      // the stored instant already carries the picker's clock.
-                      // Read in the organization's zone it names a different
-                      // calendar day than the one the picker chose, for every
-                      // reader outside that zone — there is no organization
-                      // reading of it to prefer. The timeline below still reads
-                      // in the record zone, because an activity's occurrence IS a
-                      // fact about the record.
-                      when: formatDate(step.due_at, locale, viewerZone()),
+                      // The record's own clock, like the timeline below it. A
+                      // deadline is a promise colleagues read back, so
+                      // `dueInstant` mints the picked day's end in this same
+                      // zone and it is rendered in it. Reading that last second
+                      // on the browser's clock instead is what showed an
+                      // approved 9 September as a next step due the 10th.
+                      when: formatDate(step.due_at, locale, recordZone),
                     })}
                   </span>
                 )}

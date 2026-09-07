@@ -39,6 +39,30 @@ describe("what the ranked queue tells a reader", () => {
     expect(container.querySelectorAll(".panel")).toHaveLength(0);
   });
 
+  // The queue is TODAY's: the server takes open tasks due before the
+  // installation's midnight, so a task due tomorrow is deliberately absent.
+  // "Nothing is waiting on you" read as "you have no work" to a rep looking at
+  // three tasks on the company beside it, and nothing on the page reconciled
+  // the two — a rehearsal stopped to work out whether an accepted task had been
+  // lost.
+  it("says which horizon an empty Tasks queue is empty of", async () => {
+    const user = userEvent.setup();
+    stub(day());
+    renderWorklist();
+
+    await screen.findByText("Nothing is waiting on you.");
+    await user.click(screen.getByRole("button", { name: /^Tasks/ }));
+
+    expect(
+      await screen.findByText(
+        "No tasks are due today or overdue. Later work is on each record's own Tasks tab.",
+      ),
+    ).toBeTruthy();
+    // The unqualified sentence is the one that misled: it must not be what a
+    // reader under this pill is left with.
+    expect(screen.queryByText("Nothing is waiting on you.")).toBeNull();
+  });
+
   it("names the record when the title alone cannot be told apart", async () => {
     stub(
       day({

@@ -1341,15 +1341,6 @@
    than one because a message is read here, not scanned past; two rather than
    more because the whole thread stands open and a message that grew with
    its text would decide the card's height. */
-.tl-msg-text {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  color: var(--textSecondary);
-  font-size: var(--fs-sm);
-  line-height: 1.45;
-}
 /* The withheld sentence inside a thread has no title to sit on, so it takes
    the message's own size. */
 .tl-msg-body > .tl-withheld {

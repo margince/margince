@@ -35,22 +35,89 @@ describe("calendarDay", () => {
 });
 
 describe("dueInstant", () => {
-  it("files the picked day under that same day in the reader's zone", () => {
-    for (const day of ["2026-01-15", "2026-07-05", "2026-12-31"]) {
-      expect(calendarDay(new Date(dueInstant(day)), readerZone)).toBe(day);
+  it("files the picked day under that same day in the zone it was minted for", () => {
+    for (const zone of [
+      "Europe/Berlin",
+      "Asia/Bangkok",
+      "America/Los_Angeles",
+      "UTC",
+    ]) {
+      for (const day of ["2026-01-15", "2026-07-05", "2026-12-31"]) {
+        expect(calendarDay(new Date(dueInstant(day, zone)), zone)).toBe(day);
+      }
     }
   });
 
+  // The defect this signature exists to end. A transcript proposal for the 9th
+  // was accepted and came back as a task due the 10th: the day's end was
+  // resolved on one clock and read on another, and the last second of the day
+  // needs only a one-second eastward difference to fall into tomorrow.
+  it("names the same day to a reader east of the zone it was minted for", () => {
+    const at = new Date(dueInstant("2026-09-09", "Europe/Berlin"));
+    expect(at.toISOString()).toBe("2026-09-09T21:59:59.000Z");
+    expect(calendarDay(at, "Europe/Berlin")).toBe("2026-09-09");
+    expect(calendarDay(at, "Asia/Bangkok")).toBe("2026-09-10");
+  });
+
   it("lands at the END of the picked day, so a task filed for today is not overdue by breakfast", () => {
-    const at = new Date(dueInstant("2026-07-05"));
-    expect(at.getHours()).toBe(23);
-    expect(at.getMinutes()).toBe(59);
-    expect(at.getSeconds()).toBe(59);
+    const at = new Date(dueInstant("2026-07-05", "Europe/Berlin"));
+    expect(at.toISOString()).toBe("2026-07-05T21:59:59.000Z");
+  });
+
+  // Whole seconds, not the helper's own last millisecond: this is the shape the
+  // task writer has always put on the wire.
+  it("carries no fractional second", () => {
+    expect(dueInstant("2026-07-05", "Europe/Berlin")).toBe(
+      "2026-07-05T21:59:59.000Z",
+    );
+  });
+
+  // Both directions of the Berlin change, and a zone that has none.
+  it("keeps its day across a daylight-saving boundary", () => {
+    for (const day of ["2026-03-29", "2026-10-25"]) {
+      expect(
+        calendarDay(
+          new Date(dueInstant(day, "Europe/Berlin")),
+          "Europe/Berlin",
+        ),
+      ).toBe(day);
+    }
+    expect(dueInstant("2026-03-29", "Europe/Berlin")).toBe(
+      "2026-03-29T21:59:59.000Z",
+    );
+    expect(dueInstant("2026-10-25", "Europe/Berlin")).toBe(
+      "2026-10-25T22:59:59.000Z",
+    );
+    expect(dueInstant("2026-07-05", "Asia/Bangkok")).toBe(
+      "2026-07-05T16:59:59.000Z",
+    );
   });
 
   it("is a UTC instant on the wire whatever zone minted it", () => {
-    expect(dueInstant("2026-07-05")).toMatch(
+    expect(dueInstant("2026-07-05", "Asia/Bangkok")).toMatch(
       /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
+    );
+  });
+
+  it("refuses a day no calendar holds", () => {
+    expect(() => dueInstant("2026-02-30", "Europe/Berlin")).toThrow();
+    expect(() => dueInstant("10000-09-15", "Europe/Berlin")).toThrow();
+  });
+
+  // Date.UTC maps a two-digit year onto 1900-1999, so this would have come
+  // back as 1999 and the caller would never learn the day it asked for was not
+  // the day it got.
+  it("refuses a year the underlying clock would silently move", () => {
+    expect(() => dueInstant("0099-09-09", "UTC")).toThrow();
+  });
+
+  // `% 1000` on a negative instant rounds toward zero, which is the wrong way:
+  // the last second of 31 December 1969 became the first of 1 January 1970 —
+  // the very off-by-one-day this signature exists to end.
+  it("keeps its day before 1970, where the arithmetic changes sign", () => {
+    expect(dueInstant("1969-12-31", "UTC")).toBe("1969-12-31T23:59:59.000Z");
+    expect(calendarDay(new Date(dueInstant("1969-12-31", "UTC")), "UTC")).toBe(
+      "1969-12-31",
     );
   });
 });

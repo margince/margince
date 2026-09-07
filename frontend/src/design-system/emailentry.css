@@ -70,6 +70,19 @@
   white-space: nowrap;
 }
 
+/* The words of a message inside a host that already drew its lead. Two lines
+   rather than the single ellipsised line of .emailentry__preview above: this is
+   read as the message's content, not as a hint of it. */
+.emailentry__words {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--textSecondary);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 .emailentry__marks {
   display: flex;
   flex-wrap: wrap;
