@@ -44,7 +44,7 @@ func (s *Store) ListOrganizationContracts(ctx context.Context, in ListContractsI
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		// Naming the account is a read of it: a caller who cannot see the
 		// company does not learn how many agreements it holds.
-		if err := auth.EnsureLinkTarget(ctx, tx, "organization", in.OrganizationID.UUID); err != nil {
+		if err := auth.EnsureLinkTarget(ctx, tx, organizationTable, in.OrganizationID.UUID); err != nil {
 			return err
 		}
 		var err error
@@ -104,6 +104,9 @@ func listContractsTx(ctx context.Context, tx pgx.Tx, in ListContractsInput, asOf
 	if err := rows.Err(); err != nil {
 		return crmcontracts.ContractListResponse{}, fmt.Errorf("read contract page: %w", err)
 	}
+	if err := maskContracts(ctx, tx, contracts); err != nil {
+		return crmcontracts.ContractListResponse{}, err
+	}
 
 	page := crmcontracts.PageInfo{}
 	// One row beyond the page proves another page exists without a second
@@ -139,7 +142,7 @@ func (s *Store) ListProjectContractsTx(ctx context.Context, tx pgx.Tx, projectID
 	if err := auth.Require(ctx, contractObject, principal.ActionRead); err != nil {
 		return crmcontracts.ContractListResponse{}, err
 	}
-	if err := auth.EnsureLinkTarget(ctx, tx, "project", projectID.UUID); err != nil {
+	if err := auth.EnsureLinkTarget(ctx, tx, projectTable, projectID.UUID); err != nil {
 		return crmcontracts.ContractListResponse{}, err
 	}
 	var args []any
@@ -171,6 +174,9 @@ func (s *Store) ListProjectContractsTx(ctx context.Context, tx pgx.Tx, projectID
 	}
 	if err := rows.Err(); err != nil {
 		return crmcontracts.ContractListResponse{}, fmt.Errorf("read contract page: %w", err)
+	}
+	if err := maskContracts(ctx, tx, contracts); err != nil {
+		return crmcontracts.ContractListResponse{}, err
 	}
 	page := crmcontracts.PageInfo{}
 	if len(contracts) > lim {

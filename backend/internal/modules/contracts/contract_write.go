@@ -67,7 +67,7 @@ func createContractTx(ctx context.Context, tx pgx.Tx, in CreateContractInput, by
 	// Naming the counterparty is a read of it, and naming a deal is a read of
 	// that deal — both are client-supplied references to row-scoped records, so
 	// a caller may not hang an agreement off something it cannot see.
-	if err := auth.EnsureLinkTarget(ctx, tx, "organization", in.OrganizationID.UUID); err != nil {
+	if err := auth.EnsureLinkTarget(ctx, tx, organizationTable, in.OrganizationID.UUID); err != nil {
 		return crmcontracts.Contract{}, err
 	}
 	if err := ensureLinksVisible(ctx, tx, dealRef(in.DealID), projectRef(in.ProjectID)); err != nil {
@@ -116,7 +116,7 @@ func createContractTx(ctx context.Context, tx pgx.Tx, in CreateContractInput, by
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, created); err != nil {
 		return crmcontracts.Contract{}, fmt.Errorf("emit contract.created: %w", err)
 	}
-	return readContract(ctx, tx, id, asOf)
+	return readContractForCaller(ctx, tx, id, asOf)
 }
 
 // UpdateContract applies a partial patch. Status is absent by design: it moves
@@ -140,22 +140,28 @@ func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcon
 		// cannot see — and because the organization arm of the visibility
 		// predicate enforces capture privacy while the deal arm does not,
 		// moving the anchor would strip that boundary from the row for good.
-		if err := ensureLinksVisible(ctx, tx, uuidRef("deal", in.DealId), uuidRef("project", in.ProjectId)); err != nil {
+		if err := ensureLinksVisible(ctx, tx, uuidRef(dealTable, in.DealId), uuidRef(projectTable, in.ProjectId)); err != nil {
 			return err
 		}
-		if err := ensureLinksShareOrganization(ctx, tx, ids.UUID(existing.OrganizationId),
-			uuidRef("deal", in.DealId), uuidRef("project", in.ProjectId)); err != nil {
+		anchor, err := anchorOf(existing)
+		if err != nil {
+			return err
+		}
+		if err := ensureLinksShareOrganization(ctx, tx, anchor,
+			uuidRef(dealTable, in.DealId), uuidRef(projectTable, in.ProjectId)); err != nil {
 			return err
 		}
 		patch := contractPatch(existing, in)
 		if patch.Empty() {
-			out = existing
-			return nil
+			// The unchanged row still leaves the store, so it is masked like
+			// any other answer — `existing` is the write path's pre-image.
+			out, err = maskContractForCaller(ctx, tx, existing)
+			return err
 		}
 		if err := applyContractUpdate(ctx, tx, id, patch, ifVersion, "contract update"); err != nil {
 			return err
 		}
-		out, err = readContract(ctx, tx, id, s.today())
+		out, err = readContractForCaller(ctx, tx, id, s.today())
 		return err
 	})
 	return out, err
@@ -226,8 +232,12 @@ func (s *Store) ArchiveContract(ctx context.Context, id ids.ContractID) error {
 		if err != nil {
 			return fmt.Errorf("audit contract archive: %w", err)
 		}
+		anchor, err := anchorOf(existing)
+		if err != nil {
+			return err
+		}
 		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID,
-			crmcontracts.PublicEventContractArchived{OrganizationId: existing.OrganizationId}); err != nil {
+			crmcontracts.PublicEventContractArchived{OrganizationId: openapi_types.UUID(anchor)}); err != nil {
 			return fmt.Errorf("emit contract.archived: %w", err)
 		}
 		return nil
@@ -291,16 +301,16 @@ type linkRef struct {
 
 func dealRef(id *ids.DealID) linkRef {
 	if id == nil {
-		return linkRef{table: "deal"}
+		return linkRef{table: dealTable}
 	}
-	return linkRef{table: "deal", id: &id.UUID}
+	return linkRef{table: dealTable, id: &id.UUID}
 }
 
 func projectRef(id *ids.ProjectID) linkRef {
 	if id == nil {
-		return linkRef{table: "project"}
+		return linkRef{table: projectTable}
 	}
-	return linkRef{table: "project", id: &id.UUID}
+	return linkRef{table: projectTable, id: &id.UUID}
 }
 
 // uuidRef names a link the patch body carried. An absent field is not a

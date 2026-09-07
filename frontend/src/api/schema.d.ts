@@ -21486,17 +21486,22 @@ export interface components {
         Contract: {
             /** Format: uuid */
             id: string;
+            /** @description The fields of THIS row the caller may not read (a field mask). A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld. */
+            readonly masked_fields?: string[];
             /**
              * Format: uuid
-             * @description The counterparty. An organization holds many contracts.
+             * @description The counterparty. An organization holds many contracts. Every contract has one, so null here always means withheld — a reader admitted through the DEAL may not be able to open the company, and handing the id back would make the agreement an existence oracle over a row their own organization read refuses. `masked_fields` names it.
              */
-            organization_id: string;
+            organization_id?: string | null;
             /**
              * Format: uuid
-             * @description The deal this agreement came from, when there was one. Absent on an import or a renewal that never ran through the pipeline.
+             * @description The deal this agreement came from, when there was one. Absent on an import or a renewal that never ran through the pipeline, and null ALSO when the reader may not open that deal — the two are told apart by `masked_fields`, which names it only in the second case.
              */
             deal_id?: string | null;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description The delivery this agreement funds, when one is attached. Null for no project and for a project the reader may not open; `masked_fields` names it only in the second case.
+             */
             project_id?: string | null;
             /** @description Free text — an imported agreement carries whatever number the counterparty's own system gave it. Duplicates within an account are permitted: two systems reusing a number is their business, not a reason to refuse the row. */
             contract_number?: string | null;

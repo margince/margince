@@ -232,8 +232,17 @@ sees the record but not the amount on it". The last seeded mask, a rep's
 withheld deal amount, was dropped in a later migration; the machinery stayed,
 because an operator may still author a mask on a custom role.
 
-The project read also reports masked_fields, and it is a DIFFERENT mechanism:
-it withholds a reference to a company the reader may not see, which follows
-from that company's own visibility rather than from anything a role document
-says. A mask authored on a custom role does not reach it.
+The deal, project and contract reads also report masked_fields, and it is a
+DIFFERENT mechanism: each withholds a REFERENCE to another record the reader
+may not open — a deal's company, partner and delivery; a project's company; a
+contract's company, deal and delivery. That follows from the referenced
+record's own visibility rather than from anything a role document says, so a
+mask authored on a custom role does not reach it.
+
+Nor is it lifted by write authority, the way a role mask conditioned on
+outside_write_authority is: being allowed to change a contract says nothing
+about being allowed to read the company it names. A contract is admitted by
+its deal OR its organization, and that disjunction decides ADMISSION only — a
+reader let in through the deal is still asked, per reference, whether they
+could open what it points at.
 `

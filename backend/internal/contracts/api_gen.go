@@ -21205,7 +21205,7 @@ type Contract struct {
 	CreatedAt      *time.Time `json:"created_at,omitempty"`
 	Currency       *string    `json:"currency,omitempty"`
 
-	// DealId The deal this agreement came from, when there was one. Absent on an import or a renewal that never ran through the pipeline.
+	// DealId The deal this agreement came from, when there was one. Absent on an import or a renewal that never ran through the pipeline, and null ALSO when the reader may not open that deal — the two are told apart by `masked_fields`, which names it only in the second case.
 	DealId *openapi_types.UUID `json:"deal_id,omitempty"`
 
 	// EndsOn Absent means open-ended.
@@ -21216,13 +21216,18 @@ type Contract struct {
 	FxRateToBase *string            `json:"fx_rate_to_base,omitempty"`
 	Id           openapi_types.UUID `json:"id"`
 
+	// MaskedFields The fields of THIS row the caller may not read (a field mask). A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld.
+	MaskedFields *[]string `json:"masked_fields,omitempty"`
+
 	// NoticePeriodDays Drives the renewal warning, which fires against the notice deadline rather than the renewal date (CONTRACT-FORM-3).
 	NoticePeriodDays *int `json:"notice_period_days,omitempty"`
 
-	// OrganizationId The counterparty. An organization holds many contracts.
-	OrganizationId openapi_types.UUID  `json:"organization_id"`
-	ProjectId      *openapi_types.UUID `json:"project_id,omitempty"`
-	RenewalOn      *openapi_types.Date `json:"renewal_on,omitempty"`
+	// OrganizationId The counterparty. An organization holds many contracts. Every contract has one, so null here always means withheld — a reader admitted through the DEAL may not be able to open the company, and handing the id back would make the agreement an existence oracle over a row their own organization read refuses. `masked_fields` names it.
+	OrganizationId *openapi_types.UUID `json:"organization_id,omitempty"`
+
+	// ProjectId The delivery this agreement funds, when one is attached. Null for no project and for a project the reader may not open; `masked_fields` names it only in the second case.
+	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
+	RenewalOn *openapi_types.Date `json:"renewal_on,omitempty"`
 
 	// SignedOn When a human asserts it was signed. Never derived from a deal close time, and never a signing ceremony — in-product e-signature stays removed (A94).
 	SignedOn *openapi_types.Date `json:"signed_on,omitempty"`
