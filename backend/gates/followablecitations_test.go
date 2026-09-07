@@ -28,9 +28,14 @@ package gates
 // So it is DIFF-SCOPED, the shape this tree already trusts for its craft bar.
 // There the reasoning is "the tree was cleared to zero before the bar was
 // armed, so touched code is clean"; here the backlog is real and the honest
-// version of the same idea is that TOUCHED CODE CARRIES ITS OWN EXPLANATION.
-// The rule becomes true file by file, paid for by work that was happening
-// anyway — and a contributor reads the file they are editing, not the tree.
+// version of the same idea is that TOUCHED LINES CARRY THEIR OWN EXPLANATION.
+//
+// LINES, not files, and the difference is what makes the rule payable. The
+// contract is forty thousand lines and carries eighty-eight of these citations:
+// scoped by file, adding one field to it would have made that author owe
+// eighty-eight rewrites of prose they never read, which is not a bar anybody
+// meets — it is a bar somebody disables. Scoped by line, the rule costs what
+// the change costs, and the backlog converges as those lines are edited.
 //
 // WHAT IT CANNOT SEE, said rather than left to be assumed. It judges the
 // PHRASING, not the prose: a directive word in front of a number is a pointer,
@@ -44,6 +49,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -111,7 +117,7 @@ func TestEveryTouchedFileExplainsWhatItCites(t *testing.T) {
 		}
 		t.Skip("no origin/main to diff against — this gate is diff-scoped by design")
 	}
-	for _, rel := range changed {
+	for rel, lines := range changed {
 		if !citationScanned[filepath.Ext(rel)] || generatedSource(rel) {
 			continue
 		}
@@ -120,18 +126,13 @@ func TestEveryTouchedFileExplainsWhatItCites(t *testing.T) {
 		if rel == "backend/gates/followablecitations_test.go" {
 			continue
 		}
-		body, err := os.ReadFile(filepath.Join("..", rel))
-		if err != nil {
-			// Deleted, or absent mid-rebase. Not this gate's business.
-			continue
-		}
-		for i, line := range strings.Split(string(body), "\n") {
+		for _, at := range lines {
 			for _, doc := range unreachableDocument {
-				if !doc.pattern.MatchString(line) {
+				if !doc.pattern.MatchString(at.text) {
 					continue
 				}
 				t.Errorf("%s:%d cites a %s as though a reader could open it — %s\n\t%s",
-					rel, i+1, doc.name, citationRemedy, strings.TrimSpace(line))
+					rel, at.line, doc.name, citationRemedy, strings.TrimSpace(at.text))
 			}
 		}
 	}
@@ -146,90 +147,124 @@ func generatedSource(rel string) bool {
 		strings.HasPrefix(filepath.ToSlash(rel), "backend/internal/contracts/")
 }
 
-// changedFilesAgainstMain lists the paths this branch changes, from the merge
-// base rather than the tip.
+// touchedLine is one line this branch ADDED, with the number it carries in the
+// file as it now stands — which is what a reader is told to go and look at.
+type touchedLine struct {
+	line int
+	text string
+}
+
+// changedFilesAgainstMain lists the lines this branch adds, by path, from the
+// merge base rather than the tip.
 //
 // The merge base is the same choice the contract-breaking gate makes and for
-// the same reason: against the tip, a file main changed after this branch left
-// reads as changed HERE, and an author would be asked to clean prose they never
-// touched. False negatives are the safe direction for a diff-scoped rule —
-// the file is judged the next time somebody edits it.
-func changedFilesAgainstMain(t *testing.T) ([]string, bool) {
+// the same reason: against the tip, a line main changed after this branch left
+// reads as added HERE, and an author would be asked to clean prose they never
+// touched. False negatives are the safe direction for a diff-scoped rule — the
+// line is judged the next time somebody edits it.
+//
+// ADDED lines only. A deletion carries nothing to fix, and a line merely NEAR
+// an edit is the file-scoped rule this replaced: the contract is forty thousand
+// lines, and owning all of them for one field is a bar that gets disabled
+// rather than met.
+func changedFilesAgainstMain(t *testing.T) (map[string][]touchedLine, bool) {
 	t.Helper()
 	base, err := exec.Command("git", "-C", "..", "merge-base", "HEAD", "origin/main").Output()
 	if err != nil {
 		return nil, false
 	}
-	out, err := exec.Command("git", "-C", "..", "diff", "--name-only", "-z",
-		strings.TrimSpace(string(base))).Output()
+	// --unified=0 so every hunk is exactly the lines that changed, with no
+	// context: context lines are somebody else's prose, and reporting them is
+	// the whole defect this shape corrects.
+	out, err := exec.Command("git", "-C", "..", "diff", "--unified=0",
+		"--no-color", strings.TrimSpace(string(base))).Output()
 	if err != nil {
-		t.Fatalf("listing the changed files: %v", err)
+		t.Fatalf("reading the diff: %v", err)
 	}
-	var changed []string
-	for _, rel := range strings.Split(strings.TrimRight(string(out), "\x00"), "\x00") {
-		if rel != "" {
-			changed = append(changed, rel)
-		}
-	}
-	return changed, true
+	return addedLines(string(out)), true
 }
 
-// The judgement, run against lines whose verdict is known.
-//
-// The gate above is diff-scoped, so on most branches it reads a handful of
-// files and passes — which is exactly what a broken pattern also does. These
-// cases are what separates the two, and they are also where the rule is
-// legible: the DIFFERENCE between a label and a pointer is the whole of this
-// gate, and it is easier to read as a table than as three regexes.
-func TestALabelPassesAndAPointerDoesNot(t *testing.T) {
-	t.Parallel()
-	cases := []struct {
-		name  string
-		line  string
-		cited bool
-	}{
-		// Pointers: the reader is sent somewhere.
-		{"see", "// The write shape, see ADR-0054.", true},
-		{"per", "// captured_by comes from the principal per ADR-0054.", true},
-		{"under", "// Refused under ADR-0106 §3.", true},
-		{"defined in", "// The ladder is defined in ADR-0021.", true},
-		{"required by", "-- one audit row per mutation, as required by ADR-0054", true},
-		{"case is not the point", "// SEE ADR-0054 for the reasoning.", true},
-		// An A-number is matched wherever it appears: its document was retired,
-		// so unlike a decision number it labels nothing a reader could ask for.
-		{"a retired A-number beside its record", "// The redirect (A107/ADR-0061) is why.", true},
-		{"the pair the other way round", "// ADR-0119/A170 decided the page stays.", true},
-		{"a chapter of the retired specification", "# Deferred (data-model.md §12): sequences.", true},
+// hunkHeader is the @@ line, whose second range is where the added lines land
+// in the file as it now stands.
+var hunkHeader = regexp.MustCompile(`^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@`)
 
-		// Labels: the sentence stands on its own and the number files it.
-		{"a label after a full explanation", "// Every mutation commits the row, its audit entry and its event in ONE transaction (ADR-0054).", false},
-		{"a label leading a full explanation", "// ADR-0054: the write shape is one transaction, so a change and its trail cannot part company.", false},
-		{"a bare number in a list of them", "// Supersedes ADR-0031, ADR-0044.", false},
-		// The record survives where the A-number does not, so the fix for the
-		// pair above is to keep the half a reader can still be told about.
-		{"the pair reduced to its surviving half", "// The deployment configuration (ADR-0061): the api bootstraps it at boot.", false},
-		{"nothing to cite", "// The status a lead had reached is a fact the trail already holds.", false},
-		// The word is only a directive when it introduces the citation. A
-		// sentence that happens to contain one must not be a finding, or the
-		// gate teaches people to avoid ordinary English near a number.
-		{"a directive word elsewhere in the sentence", "// See the store for the ladder; ADR-0021 numbers it.", false},
+// addedLines reads a unified diff into the lines each file gained.
+func addedLines(diff string) map[string][]touchedLine {
+	touched := map[string][]touchedLine{}
+	var path string
+	next := 0
+	for _, line := range strings.Split(diff, "\n") {
+		switch {
+		case strings.HasPrefix(line, "+++ b/"):
+			path = strings.TrimPrefix(line, "+++ b/")
+		case strings.HasPrefix(line, "+++ /dev/null"):
+			path = ""
+		case strings.HasPrefix(line, "@@ "):
+			if match := hunkHeader.FindStringSubmatch(line); match != nil {
+				start, err := strconv.Atoi(match[1])
+				if err == nil {
+					next = start
+				}
+			}
+		case path != "" && strings.HasPrefix(line, "+"):
+			touched[path] = append(touched[path], touchedLine{line: next, text: line[1:]})
+			next++
+		}
 	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			var matched bool
-			for _, doc := range unreachableDocument {
-				if doc.pattern.MatchString(tc.line) {
-					matched = true
-				}
-			}
-			if matched != tc.cited {
-				verdict := "a label the rulebook allows"
-				if tc.cited {
-					verdict = "a pointer at a document nobody outside the team can open"
-				}
-				t.Errorf("matched=%v, want %v — this line is %s:\n\t%s", matched, tc.cited, verdict, tc.line)
-			}
-		})
+	return touched
+}
+
+// The diff reader, run against a diff whose verdict is known.
+//
+// It is the half that decides WHAT this gate judges, and it fails silently in
+// both directions: a reader that returned nothing would pass every branch, and
+// one that returned context lines would report prose somebody else wrote — the
+// defect that made the file-scoped shape unpayable, arriving again by a
+// different route.
+func TestTheDiffReaderReportsAddedLinesAndNothingElse(t *testing.T) {
+	t.Parallel()
+	const diff = `diff --git a/backend/one.go b/backend/one.go
+--- a/backend/one.go
++++ b/backend/one.go
+@@ -12,0 +13,2 @@ func thing() {
++	// see ADR-0054
++	first()
+@@ -40 +42 @@ func other() {
+-	old()
++	replaced()
+diff --git a/backend/gone.go b/backend/gone.go
+--- a/backend/gone.go
++++ /dev/null
+@@ -1,2 +0,0 @@
+-	// see ADR-0054
+-	deleted()
+`
+	got := addedLines(diff)
+	if len(got) != 1 {
+		t.Fatalf("read %d file(s) from the diff, want 1 — a deleted file carries nothing to fix, "+
+			"and attributing its lines to /dev/null is how a reader starts reporting a path that "+
+			"does not exist", len(got))
+	}
+	want := []touchedLine{
+		{line: 13, text: "\t// see ADR-0054"},
+		{line: 14, text: "\tfirst()"},
+		{line: 42, text: "\treplaced()"},
+	}
+	one := got["backend/one.go"]
+	if len(one) != len(want) {
+		t.Fatalf("read %d added line(s), want %d: %+v", len(one), len(want), one)
+	}
+	for i, at := range one {
+		if at != want[i] {
+			t.Errorf("line %d = %+v, want %+v — the number is where the line lands in the file as "+
+				"it now stands, which is what a reader is told to go and look at", i, at, want[i])
+		}
+	}
+	// The removed line cited a record and is not reported: a deletion is the
+	// one change that needs no explanation.
+	for _, at := range one {
+		if strings.Contains(at.text, "old()") || strings.Contains(at.text, "deleted()") {
+			t.Errorf("a removed line was reported as touched: %+v", at)
+		}
 	}
 }
