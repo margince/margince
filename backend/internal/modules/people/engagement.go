@@ -19,7 +19,7 @@ package people
 
 import "sort"
 
-// Engagement is one contact's state, in the four values a rep acts on.
+// Engagement is one contact's state, in the five values a rep acts on.
 type Engagement string
 
 const (
@@ -32,6 +32,16 @@ const (
 	// EngagementNoReply — we have written and had nothing back. Following up
 	// again is a decision, not a default.
 	EngagementNoReply Engagement = "no_reply"
+	// EngagementLapsed — they have written or been written to, but not inside
+	// the window. The exchange is over rather than absent, so the honest move is
+	// picking it back up, not opening it.
+	//
+	// It exists because the alternative was a contradiction on one row: the
+	// window-less last-touch date beside them said "They wrote, 1 June" while
+	// the state, folded from 90-day counts, said "Not approached". Both readings
+	// were right about their own input, and a rep reading them together was told
+	// the person had both written and never been in touch.
+	EngagementLapsed Engagement = "lapsed"
 	// EngagementUntried — nobody has written to them at all. Free to approach,
 	// and the most commonly missed opportunity on a stalled account.
 	EngagementUntried Engagement = "untried"
@@ -60,6 +70,10 @@ func EngagementOf(rs RelationshipStrength) Engagement {
 		return EngagementWaiting
 	case rs.Outbound90d > 0:
 		return EngagementNoReply
+	case rs.LastInbound != nil || rs.LastOutbound != nil:
+		// Traffic, but all of it older than the window. Reported as untried this
+		// was a plain falsehood beside the contact's own last-touch date.
+		return EngagementLapsed
 	default:
 		return EngagementUntried
 	}
@@ -73,11 +87,15 @@ func EngagementOf(rs RelationshipStrength) Engagement {
 // quiet, the person nobody has written to is the only move left that is not a
 // fourth follow-up. No-reply comes last — not because those contacts are
 // worthless, but because acting on one is the move that needs a reason.
+// Lapsed sits between untried and no-reply: a conversation that once ran is a
+// warmer opening than a cold approach, and a colder one than a follow-up nobody
+// has answered yet.
 var engagementOrder = map[Engagement]int{
 	EngagementWaiting:  0,
 	EngagementAnswered: 1,
 	EngagementUntried:  2,
-	EngagementNoReply:  3,
+	EngagementLapsed:   3,
+	EngagementNoReply:  4,
 }
 
 // RankContacts sorts a contact set into triage order in place: engagement

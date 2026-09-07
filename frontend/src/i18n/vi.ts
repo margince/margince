@@ -1778,6 +1778,7 @@ export const vi = {
   "co.reach.waiting": "Cần trả lời",
   "co.reach.answered": "Đã trả lời",
   "co.reach.silent": "Chưa có hồi đáp",
+  "co.reach.lapsed": "Đã nguội",
   "co.reach.untried": "Chưa tiếp cận",
   "co.role.champion": "người ủng hộ",
   "co.role.economic_buyer": "người quyết định ngân sách",

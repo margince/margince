@@ -88,6 +88,8 @@ func summarise(all []people.ContactStrength) crmcontracts.OrganizationCoverageSu
 			out.Answered++
 		case people.EngagementNoReply:
 			out.NoReply++
+		case people.EngagementLapsed:
+			out.Lapsed++
 		case people.EngagementUntried:
 			out.Untried++
 		}

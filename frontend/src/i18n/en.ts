@@ -1873,6 +1873,7 @@ export const en = {
   "co.reach.waiting": "Needs reply",
   "co.reach.answered": "Answered",
   "co.reach.silent": "No reply",
+  "co.reach.lapsed": "Went quiet",
   "co.reach.untried": "Not approached",
   "co.role.champion": "champion",
   "co.role.economic_buyer": "economic buyer",

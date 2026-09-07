@@ -1791,6 +1791,7 @@ export const de = {
   "co.reach.waiting": "Antwort fällig",
   "co.reach.answered": "Beantwortet",
   "co.reach.silent": "Keine Antwort",
+  "co.reach.lapsed": "Kontakt eingeschlafen",
   "co.reach.untried": "Nie angesprochen",
   "co.role.champion": "Champion",
   "co.role.economic_buyer": "wirtschaftlicher Entscheider",

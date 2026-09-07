@@ -8,6 +8,7 @@ import {
   render as rtlRender,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
@@ -51,6 +52,22 @@ test("names each engagement state in its own words", async () => {
   expect(screen.getByText("Answered")).not.toBeNull();
   expect(screen.getByText("No reply")).not.toBeNull();
   expect(screen.getByText("Not approached")).not.toBeNull();
+  expect(screen.getByText("Went quiet")).not.toBeNull();
+});
+
+test("a contact who went quiet is never called never approached", async () => {
+  stubContacts(contactsFixture());
+  render(<CompanyPeopleList orgId="o-1" />);
+
+  // The two columns are folded from different windows: the state from 90-day
+  // counts, the last-touch date from the whole history. A contact whose only
+  // mail arrived in June was reported "Not approached" on the same row that
+  // said "They wrote", and a rep cannot act on a row that contradicts itself.
+  const row = (await screen.findByText("Annabelle Malherbe")).closest("tr");
+  expect(row).not.toBeNull();
+  expect(within(row as HTMLElement).getByText("Went quiet")).not.toBeNull();
+  expect(within(row as HTMLElement).queryByText("Not approached")).toBeNull();
+  expect(within(row as HTMLElement).getByText(/They wrote/)).not.toBeNull();
 });
 
 test("says which side the conversation is owed, not just when it moved", async () => {
@@ -58,7 +75,7 @@ test("says which side the conversation is owed, not just when it moved", async (
   render(<CompanyPeopleList orgId="o-1" />);
 
   // A date alone reads the same whoever sent it. The direction is the fact.
-  expect(await screen.findByText(/They wrote/)).not.toBeNull();
+  expect((await screen.findAllByText(/They wrote/)).length).toBeGreaterThan(0);
   expect(screen.getAllByText(/We wrote/).length).toBeGreaterThan(0);
   expect(screen.getByText("No exchange yet")).not.toBeNull();
 });

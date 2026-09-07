@@ -29,6 +29,7 @@ function coverage(over: Partial<Coverage>): Coverage {
       answered: 2,
       no_reply: 1,
       untried: 23,
+      lapsed: 0,
     },
     deals: [{ deal_id: "d-1", name: "Retrofit 2026" }],
     selected_deal_id: "d-1",
@@ -110,6 +111,7 @@ export const NobodyHasAnswered: Story = {
         answered: 0,
         no_reply: 12,
         untried: 0,
+        lapsed: 0,
       },
       committee: {
         seats: [],

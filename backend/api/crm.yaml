@@ -2905,12 +2905,15 @@ paths:
         This is the one ranking, shared with the 360's section — a client that re-sorts
         is answering a different question than the server did.
 
-        **Engagement is four states and they are not degrees of one thing.** `waiting`
+        **Engagement is five states and they are not degrees of one thing.** `waiting`
         means their latest message has no reply from us. `answered` means we replied to
         their latest message, inside the 90-day window. `no_reply` means we wrote and
-        heard nothing. `untried` means nobody has written to them at all. Untried and
-        no-reply look alike in a roster and call for opposite next actions, which is why
-        they are separate values rather than a boolean plus a date.
+        heard nothing. `lapsed` means the exchange is real but older than the window.
+        `untried` means nobody has written to them at all. Untried and no-reply look
+        alike in a roster and call for opposite next actions, which is why they are
+        separate values rather than a boolean plus a date — and lapsed is separate from
+        untried for the same reason, since a row saying "not approached" beside that
+        contact's own "they wrote, 1 June" is telling a rep two contradictory things.
 
         **Row scope, per contact.** The list carries the caller's person scope, so a
         contact they may not read is absent rather than named — the same answer
@@ -29758,7 +29761,7 @@ components:
         completeness: { $ref: '#/components/schemas/OrganizationCoverageCompleteness' }
     OrganizationCoverageSummary:
       type: object
-      required: [contacts_total, waiting, answered, no_reply, untried]
+      required: [contacts_total, waiting, answered, no_reply, lapsed, untried]
       properties:
         contacts_total:
           type: integer
@@ -29767,6 +29770,12 @@ components:
         answered: { type: integer, description: Contacts whose latest message we replied to inside the 90-day window. }
         no_reply: { type: integer, description: Contacts we have written to with nothing back. }
         untried: { type: integer, description: Contacts nobody has written to at all. }
+        lapsed:
+          type: integer
+          description: >-
+            Contacts whose exchange is real but older than the 90-day window. The five
+            counts partition contacts_total, so a reader that ignores this one is short
+            by exactly the contacts who have gone quiet.
     OrganizationCoverageDeal:
       type: object
       required: [deal_id, name]
@@ -29918,7 +29927,7 @@ components:
             empty, because an empty committee and an unreadable one are different facts.
     ContactEngagement:
       type: string
-      enum: [waiting, answered, no_reply, untried]
+      enum: [waiting, answered, no_reply, lapsed, untried]
       description: |
         Where one contact stands with us, over the same 90-day window the relationship
         score uses. What decides between the two conversational states is who wrote
@@ -29929,6 +29938,10 @@ components:
         `answered` — we replied to their latest message. The conversation is current
         from our side; the ball is with them.
         `no_reply` — we have written and had nothing back. Writing again is a decision.
+        `lapsed` — the exchange is real but every message in it predates the window.
+        Picking a conversation back up is a different move from opening one, and
+        reporting it as `untried` contradicted the contact's own last-touch date on
+        the same row.
         `untried` — nobody has written to them at all. Free to approach.
 
         Waiting is deliberately not folded into answered: one inbound mail nobody has

@@ -64,6 +64,21 @@ export function contactsFixture(): OrganizationContact[] {
       },
     },
     {
+      // The row the states were split for: a real exchange, all of it older
+      // than the window. As "untried" it read "Not approached" beside its own
+      // "They wrote", which is two contradictory claims on one line.
+      person_id: "p-annabelle",
+      full_name: "Annabelle Malherbe",
+      title: "Product Owner",
+      engagement: "lapsed",
+      last_inbound_at: "2026-06-01T09:00:00Z",
+      strength: {
+        score: 12,
+        bucket: "weak",
+        factors: { recency: 0.1, frequency: 0.1, reciprocity: 0.2, direction: 1 },
+      },
+    },
+    {
       person_id: "p-philipp",
       full_name: "Philipp Königs",
       title: "CFO",

@@ -56,6 +56,7 @@ export const ENGAGEMENT_TONES: Record<
   waiting: "warn",
   answered: "success",
   no_reply: "warn",
+  lapsed: undefined,
   untried: undefined,
 };
 
@@ -69,11 +70,13 @@ export const ENGAGEMENT_LABELS: Record<
   | "co.reach.waiting"
   | "co.reach.answered"
   | "co.reach.silent"
+  | "co.reach.lapsed"
   | "co.reach.untried"
 > = {
   waiting: "co.reach.waiting",
   answered: "co.reach.answered",
   no_reply: "co.reach.silent",
+  lapsed: "co.reach.lapsed",
   untried: "co.reach.untried",
 };
 
@@ -172,6 +175,7 @@ export function CompanyPeopleList({
               { value: "waiting", label: "co.reach.waiting" },
               { value: "answered", label: "co.reach.answered" },
               { value: "no_reply", label: "co.reach.silent" },
+              { value: "lapsed", label: "co.reach.lapsed" },
               { value: "untried", label: "co.reach.untried" },
             ],
           },
