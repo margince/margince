@@ -25,9 +25,10 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/search"
-	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/testdb"
+	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // setupWithOfferDraft boots the e2e harness with the offer-drafting brain
@@ -161,7 +162,7 @@ func TestOfferRegenerateHTTP_GroundedAIDraftStagesAndDisclosesWithoutMovingTotal
 	if regenerated.AiGenerated == nil || !*regenerated.AiGenerated {
 		t.Fatalf("ai_generated = %v, want true (the candidate grounds)", regenerated.AiGenerated)
 	}
-	if regenerated.AiDisclosure == nil || *regenerated.AiDisclosure != signals.Art50Disclosure {
+	if regenerated.AiDisclosure == nil || *regenerated.AiDisclosure != draftfloor.AIDisclosure(textlang.English) {
 		t.Fatalf("ai_disclosure = %v, want the Art.50 disclosure", regenerated.AiDisclosure)
 	}
 	if regenerated.DiffFromPrevious == nil || len(regenerated.DiffFromPrevious.Added) != 1 ||

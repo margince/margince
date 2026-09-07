@@ -220,7 +220,7 @@ func TestTheCallersOwnIntentIsOutsideTheFence(t *testing.T) {
 func TestDraftingNeverReturnsADraftRef(t *testing.T) {
 	// draft_ref exists so a served draft can be scored later, which is a
 	// write. This operation performs none, so the field stays null.
-	out := wire(Deterministic(sampleInput()), crmcontracts.Deterministic, false)
+	out := wire(Deterministic(sampleInput()), crmcontracts.Deterministic, false, "en")
 	if out.DraftRef != nil {
 		t.Fatalf("draft_ref = %v, want null: recording a served draft is a write", out.DraftRef)
 	}
@@ -230,11 +230,11 @@ func TestDraftingNeverReturnsADraftRef(t *testing.T) {
 // so the degraded flag is pinned here too — in both states, because a client
 // reading an absent field as false must not see "fine" for a lost voice.
 func TestWireCarriesTheVoiceDegradedFlag(t *testing.T) {
-	degraded := wire(Deterministic(sampleInput()), crmcontracts.Deterministic, true)
+	degraded := wire(Deterministic(sampleInput()), crmcontracts.Deterministic, true, "en")
 	if degraded.VoiceDegraded == nil || !*degraded.VoiceDegraded {
 		t.Fatal("a degraded voice load must be stamped on the wire draft")
 	}
-	clean := wire(Deterministic(sampleInput()), crmcontracts.Deterministic, false)
+	clean := wire(Deterministic(sampleInput()), crmcontracts.Deterministic, false, "en")
 	if clean.VoiceDegraded == nil || *clean.VoiceDegraded {
 		t.Fatal("a clean load must stamp voice_degraded=false, not omit it")
 	}

@@ -241,10 +241,7 @@ func wireIntroRequest(
 		AiGenerated: &aiWritten,
 		Reasoning:   introReasons(facts),
 	}
-	if aiWritten {
-		disclosure := draftfloor.AIDisclosure(facts.lang)
-		out.AiDisclosure = &disclosure
-	}
+	out.AiDisclosure = draftfloor.AIDisclosureFor(aiWritten, facts.lang)
 	return out
 }
 

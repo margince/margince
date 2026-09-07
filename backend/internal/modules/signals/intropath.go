@@ -28,14 +28,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
-// Art50Disclosure is the Art. 50 AI-assisted disclosure every proposed
-// draft renders (EU AI Act Art. 50; A33/ADR-0025) — one spelling, machine
-// readable in the payload AND human readable inside the draft body.
-// Exported so every AI-drafted-content surface reuses this one string
-// rather than drafting its own wording (compose/offerdraft.go's
-// ai_disclosure is the other consumer).
-const Art50Disclosure = "This message was drafted with AI assistance (EU AI Act Art. 50 disclosure)."
-
 // IntroPath proposes the warm-intro path for a warm signal: the strongest
 // visible contact at the resolved organization is the route in.
 func (s *Store) IntroPath(ctx context.Context, signalID ids.SignalID, now time.Time) (crmcontracts.SignalIntroPath, error) {
@@ -131,7 +123,7 @@ var introTable = map[textlang.Lang]introPhrases{
 		DirectSubject: "Getting in touch about %s",
 		DirectBody: "Hi %s,\n\nI am writing because of something we picked up about %s: %s. " +
 			"Given that we %s, this felt worth raising with you directly.\n\n%s",
-		Disclosure: Art50Disclosure,
+		Disclosure: draftfloor.AIDisclosure(textlang.English),
 		Relationships: map[crmcontracts.SignalWarmContactRelationshipKind]string{
 			crmcontracts.SignalWarmContactRelationshipKindDealStakeholder: "are working together on a deal",
 			crmcontracts.SignalWarmContactRelationshipKindEmployment:      "know each other through your company",
@@ -144,7 +136,7 @@ var introTable = map[textlang.Lang]introPhrases{
 		DirectSubject: "Kurze Anfrage zu %s",
 		DirectBody: "Hallo %s,\n\nich melde mich, weil wir etwas zu %s aufgenommen haben: %s. " +
 			"Da wir %s, wollte ich das direkt mit Ihnen besprechen.\n\n%s",
-		Disclosure: "Diese Nachricht wurde mit KI-Unterstützung verfasst (Offenlegung nach Art. 50 EU-KI-Verordnung).",
+		Disclosure: draftfloor.AIDisclosure(textlang.German),
 		Relationships: map[crmcontracts.SignalWarmContactRelationshipKind]string{
 			crmcontracts.SignalWarmContactRelationshipKindDealStakeholder: "gemeinsam an einem Vorgang arbeiten",
 			crmcontracts.SignalWarmContactRelationshipKindEmployment:      "über Ihr Unternehmen in Kontakt stehen",
@@ -157,7 +149,7 @@ var introTable = map[textlang.Lang]introPhrases{
 		DirectSubject: "Xin được liên hệ về %s",
 		DirectBody: "Chào %s,\n\ntôi liên hệ vì chúng tôi ghi nhận một việc liên quan đến %s: %s. " +
 			"Vì hai bên %s, tôi muốn trao đổi trực tiếp với anh/chị.\n\n%s",
-		Disclosure: "Thư này được soạn với sự hỗ trợ của AI (công bố theo Điều 50 Đạo luật AI của EU).",
+		Disclosure: draftfloor.AIDisclosure(textlang.Vietnamese),
 		Relationships: map[crmcontracts.SignalWarmContactRelationshipKind]string{
 			crmcontracts.SignalWarmContactRelationshipKindDealStakeholder: "đang cùng làm việc trong một cơ hội",
 			crmcontracts.SignalWarmContactRelationshipKindEmployment:      "có liên hệ qua công ty của anh/chị",

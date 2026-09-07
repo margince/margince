@@ -149,20 +149,47 @@ func wordRune(r rune) bool {
 	return unicode.IsLetter(r) || unicode.IsDigit(r) || unicode.IsMark(r)
 }
 
-// AIDisclosure is the Art. 50 authorship line, in the draft's own language.
+// AIDisclosure is the Art. 50 authorship line, in the draft's own language, and
+// it is the ONLY spelling of it in the tree.
 //
-// Here rather than beside one drafting site because it is a LEGAL obligation
-// with three translations, and the tree already carries several spellings of it
-// that have drifted apart — some naming the article, some not. Every new
-// drafting surface should reach for this one; consolidating the older copies is
-// its own piece of work, filed as issue #3513.
+// Here rather than beside one drafting site because it is a LEGAL obligation:
+// the tree carried five copies that had drifted, some naming the article and
+// some not, so which sentence a customer received depended on which surface
+// wrote their message. That is the shape of defect nobody notices until two
+// emails are compared side by side.
+//
+// It NAMES THE ARTICLE, which is what three of the five did and what the German
+// copy did: consolidating had to pick one, and the citation is the half a reader
+// can act on — it says which obligation the line is discharging rather than
+// leaving them to guess. Nothing that carried it loses it.
+//
+// Held by: TestTheAIDisclosureHasOneSpelling (backend/gates/aidisclosure_test.go)
 func AIDisclosure(lang textlang.Lang) string {
 	switch lang {
 	case textlang.German:
-		return "Diese Nachricht wurde mit KI-Unterstützung verfasst."
+		return "Diese Nachricht wurde mit KI-Unterstützung verfasst (Offenlegung nach Art. 50 EU-KI-Verordnung)."
 	case textlang.Vietnamese:
-		return "Tin nhắn này được soạn với sự hỗ trợ của AI."
+		return "Tin nhắn này được soạn với sự hỗ trợ của AI (công bố theo Điều 50 Đạo luật AI của EU)."
 	default:
-		return "This message was drafted with AI assistance."
+		return "This message was drafted with AI assistance (EU AI Act Art. 50 disclosure)."
 	}
+}
+
+// AIDisclosureFor answers the contract's optional disclosure field: the Art. 50
+// line when a model wrote the draft, and nil when a person did.
+//
+// The DRAFT's language, not the server's — a German draft owes a German
+// disclosure, and the caller passes the language the draft is written in.
+//
+// The pointer is why this exists beside AIDisclosure rather than at each
+// composer. Four of them stamp the field under the same condition, and the
+// failure mode is not a wrong sentence but an ABSENT one — a nil field is a
+// draft that discloses nothing, which reads to every test around it exactly
+// like a draft a person wrote.
+func AIDisclosureFor(aiWritten bool, lang textlang.Lang) *string {
+	if !aiWritten {
+		return nil
+	}
+	line := AIDisclosure(lang)
+	return &line
 }

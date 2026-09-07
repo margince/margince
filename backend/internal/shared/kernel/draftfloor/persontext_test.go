@@ -12,6 +12,8 @@ package draftfloor
 import (
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // A line break is not only "\\n".
@@ -189,5 +191,66 @@ func TestACombiningMarkExtendsTheWord(t *testing.T) {
 	}
 	if !NamesPerson("Grüße Lena, kurz zum Angebot", "Lena") {
 		t.Error("a name beside ordinary punctuation was refused")
+	}
+}
+
+// The Art. 50 line is in the language of the draft it sits under.
+//
+// It used to be one English constant appended to every draft, so a German
+// reply carried an English legal sentence. That is the half of a language drift
+// a READER meets rather than a maintainer — and this particular sentence is the
+// one the regulation requires them to understand.
+//
+// The three languages are named rather than enumerated because textlang
+// declares no set to walk. What holds the completeness claim is
+// backend/gates/languageset_test.go, which fails when the languages the product
+// speaks stop agreeing across the places that declare them; a fourth arriving
+// without a disclosure is caught there and lands here next.
+func TestTheArt50DisclosureIsWrittenInEachLanguageTheProductSpeaks(t *testing.T) {
+	t.Parallel()
+
+	english := AIDisclosure(textlang.English)
+	if english == "" {
+		t.Fatal("English has no disclosure at all")
+	}
+	for _, lang := range []textlang.Lang{textlang.German, textlang.Vietnamese} {
+		got := AIDisclosure(lang)
+		switch got {
+		case "":
+			t.Errorf("%s has no disclosure", lang)
+		case english:
+			t.Errorf("%s falls through to the English disclosure — a reader owed this sentence "+
+				"under Art. 50 is handed one they may not read", lang)
+		}
+	}
+}
+
+// An unknown language still carries a disclosure. Silence is the one answer
+// Art. 50 does not allow, so the fallback is English rather than nothing.
+func TestAnUnknownLanguageStillCarriesADisclosure(t *testing.T) {
+	t.Parallel()
+
+	if got := AIDisclosure(textlang.Lang("kl")); got != AIDisclosure(textlang.English) {
+		t.Errorf("an unknown language answered %q — silence or a guess is the one thing "+
+			"a disclosure may not be", got)
+	}
+}
+
+// The optional field the composers stamp, in both directions. An absent
+// disclosure on a model-written draft is the failure Art. 50 names, and a
+// disclosure on a draft a person wrote is a claim about them that is not true.
+func TestTheDisclosureFieldIsStampedOnlyForAModelWrittenDraft(t *testing.T) {
+	t.Parallel()
+
+	written := AIDisclosureFor(true, textlang.German)
+	if written == nil {
+		t.Fatal("a model-written draft carried no disclosure field at all — nil reads to every " +
+			"caller exactly like a draft a person wrote")
+	}
+	if *written != AIDisclosure(textlang.German) {
+		t.Errorf("the stamped line is %q, want the German disclosure", *written)
+	}
+	if AIDisclosureFor(false, textlang.German) != nil {
+		t.Error("a draft a person wrote was stamped as AI-assisted")
 	}
 }

@@ -310,10 +310,7 @@ func wireIntroNote(
 		AiGenerated: &aiWritten,
 		Reasoning:   noteReasons(facts),
 	}
-	if aiWritten {
-		disclosure := draftfloor.AIDisclosure(noteLang(facts.lang))
-		out.AiDisclosure = &disclosure
-	}
+	out.AiDisclosure = draftfloor.AIDisclosureFor(aiWritten, noteLang(facts.lang))
 	return out
 }
 
