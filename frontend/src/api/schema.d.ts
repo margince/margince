@@ -3283,6 +3283,37 @@ export interface paths {
         patch: operations["updateStage"];
         trace?: never;
     };
+    "/deals/{id}/stage-evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * What has been observed about this deal against its stage's criteria.
+         * @description The evidence ledger for one deal, newest observation first.
+         *
+         *     Refuted claims are INCLUDED and carry `refuted_at`. A reader asking what
+         *     a stage move rested on needs the claim that was withdrawn as much as the
+         *     ones that stood.
+         *
+         *     `author_side` is the column to read before trusting a claim: evidence for
+         *     a criterion naming something the buyer did is only good when the buyer
+         *     authored it.
+         */
+        get: operations["listStageEvidence"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/stages/{id}/exit-criteria": {
         parameters: {
             query?: never;
@@ -13086,6 +13117,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/display-name": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Change the name colleagues see you by.
+         * @description Always the CALLER's own, never anybody else's. An admin changing a
+         *     colleague's name is a different act with a different audience, and this
+         *     API does not offer it — there is no id to pass.
+         *
+         *     The name was written once, when the seat was invited or the installation
+         *     was created, and nothing could change it afterwards. A person who married,
+         *     was invited as "j.smith" or was simply typed wrong had no way to correct
+         *     the name their colleagues see beside every record they touch.
+         *
+         *     The name is read from `app_user` wherever it is shown — the roster, the
+         *     share pickers, the audit trail — so one write reaches every surface.
+         */
+        put: operations["saveMyDisplayName"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/ai-activity": {
         parameters: {
             query?: never;
@@ -20441,6 +20502,14 @@ export interface components {
              */
             body: string;
         };
+        SaveMyDisplayNameRequest: {
+            /**
+             * @description The name colleagues see. Surrounding whitespace is trimmed and a name
+             *     that is only whitespace is refused — the same bounds the invite form
+             *     applies, because this writes the same column.
+             */
+            display_name: string;
+        };
         SaveMyLocaleRequest: {
             /**
              * @description The language to render this person's own interface in. One of the
@@ -21857,6 +21926,89 @@ export interface components {
             /** @enum {string} */
             semantic?: "open" | "won" | "lost";
             win_probability?: number;
+        };
+        /**
+         * @description One observation about a deal against one of its stage's exit criteria.
+         *     Mirrors `deal_stage_evidence`. Configuration says what a stage requires;
+         *     this says what was seen, and where.
+         */
+        StageEvidence: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            deal_id: string;
+            /** Format: uuid */
+            criterion_id: string;
+            source_type: components["schemas"]["StageEvidenceSource"];
+            /**
+             * Format: uuid
+             * @description The activity, contract or deal-room decision this was read from.
+             */
+            source_id: string;
+            /** @description 1-based transcript lines, when the claim quotes one. */
+            source_lines?: number[] | null;
+            /** @description The cited words, at most 500 characters. */
+            snippet?: string | null;
+            author_side: components["schemas"]["StageEvidenceAuthorSide"];
+            commitment: components["schemas"]["StageEvidenceCommitment"];
+            /** @description Whether the criterion was satisfied, not merely discussed. */
+            met: boolean;
+            /**
+             * @description How sure the reader was. Absent for a deterministic writer: a record
+             *     either states the fact or it does not.
+             */
+            confidence?: number | null;
+            /** Format: date-time */
+            observed_at: string;
+            /** @description Which writer made the claim — `deterministic`, or the model task that read it. */
+            extracted_by: string;
+            /**
+             * Format: date-time
+             * @description When a human marked this claim incorrect. The row survives: why a
+             *     stage move was reversed is a question asked later.
+             */
+            refuted_at?: string | null;
+            /** Format: uuid */
+            refuted_by?: string | null;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+            /** Format: int64 */
+            version?: number;
+        };
+        /**
+         * @description What kind of record the observation was read from.
+         * @enum {string}
+         */
+        StageEvidenceSource: "activity" | "contract";
+        /**
+         * @description Who authored the cited thing. Computed by the engine from the activity's
+         *     direction, its participants and the installation's own email domains —
+         *     never claimed by a model.
+         *
+         *     It settles the criteria that turn on WHOSE WORD something is:
+         *     `buyer_confirmed` and `terms_accepted` take `buyer`-authored evidence
+         *     and nothing else, because a message our own side wrote saying they
+         *     confirmed something is our claim about them, not theirs.
+         *
+         *     The other kinds turn on a recorded fact instead. A meeting either took
+         *     place or it did not, and both sides sign a contract, so `event_held` and
+         *     `document_signed` are judged on the record — a meeting's transcript or
+         *     its status, a contract turning active — and this field rides along as
+         *     the trail's account of who spoke rather than as the test.
+         * @enum {string}
+         */
+        StageEvidenceAuthorSide: "buyer" | "seller" | "unknown";
+        /**
+         * @description Whether the cited text agreed to the thing or merely floated it. "We
+         *     could meet Thursday" is `proposed`; "Thursday works" is `agreed`.
+         * @enum {string}
+         */
+        StageEvidenceCommitment: "agreed" | "proposed" | "none";
+        StageEvidenceListResponse: {
+            data: components["schemas"]["StageEvidence"][];
+            page: components["schemas"]["PageInfo"];
         };
         /**
          * @description One thing that must be true of a deal before it leaves a stage. Mirrors the
@@ -37855,6 +38007,31 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    listStageEvidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The deal's evidence. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StageEvidenceListResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     listStageExitCriteria: {
         parameters: {
             query?: {
@@ -52502,6 +52679,34 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    saveMyDisplayName: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveMyDisplayNameRequest"];
+            };
+        };
+        responses: {
+            /** @description The caller's seat, with the new name. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
     };

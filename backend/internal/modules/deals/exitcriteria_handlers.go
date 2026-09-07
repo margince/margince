@@ -112,3 +112,17 @@ func (h Handlers) ArchiveStageExitCriterion(w http.ResponseWriter, r *http.Reque
 func criterionArg(u openapi_types.UUID) ids.ExitCriterionID {
 	return ids.ExitCriterionID{UUID: ids.UUID(u)}
 }
+
+// ListStageEvidence answers what has been observed about this deal against
+// its stage's exit criteria.
+func (h Handlers) ListStageEvidence(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	evidence, err := h.store.ListStageEvidence(r.Context(), pathID[ids.DealKind](id))
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	if evidence == nil {
+		evidence = []crmcontracts.StageEvidence{}
+	}
+	httperr.WriteJSON(w, http.StatusOK, map[string]any{"data": evidence, "page": crmcontracts.PageInfo{}})
+}

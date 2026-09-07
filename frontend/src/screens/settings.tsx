@@ -679,6 +679,7 @@ function AccountCard() {
               whether the other two are reachable at all. The row and its
               three-field form live in passwordcard.tsx, exported as a ROW
               precisely so this page can place it among its own. */}
+          <DisplayNameSettingRow toast={toast} />
           <PasswordSettingRow />
           <SignatureSettingRow toast={toast} />
           <LanguageSettingRow />
@@ -886,6 +887,95 @@ function AppearanceSettingRow() {
             label: t(THEME_LABEL_KEYS[option]),
           }))}
         />
+      )}
+    />
+  );
+}
+
+/**
+ * The name colleagues see you by.
+ *
+ * It was written once — by the invite, or by the installation's cold start —
+ * and until now nothing could change it. `display_name` had exactly two
+ * writers in the backend, both INSERTs, so somebody invited as "j.smith", or
+ * married, or simply typed wrong, carried that name beside every record they
+ * touched with no way to correct it.
+ *
+ * The saved answer is read back from `/me` rather than kept here, so the shell's
+ * account chip and the roster agree with this row the moment it lands.
+ */
+function DisplayNameSettingRow({ toast }: Readonly<{ toast: Toast }>) {
+  const t = useT();
+  const me = useMe();
+  const queryClient = useQueryClient();
+  const stored = me.data?.user.display_name ?? "";
+  // null means "not editing" — the row shows the stored name until the reader
+  // types, so a `/me` refetch cannot overwrite what they are in the middle of.
+  const [draft, setDraft] = useState<string | null>(null);
+  const shown = draft ?? stored;
+  const save = useMutation({
+    mutationFn: async (next: string) => {
+      const { data, error } = await api.PUT("/me/display-name", {
+        body: { display_name: next },
+      });
+      if (error) {
+        throwProblem(error, t);
+      }
+      return data;
+    },
+    onSuccess: (saved) => {
+      // The DRAFT holds the saved answer until `/me` catches up. Clearing it
+      // here would fall back to the cached snapshot, which still carries the
+      // old name — the field would visibly revert for as long as the refetch
+      // takes, and stay reverted if the refetch itself fails.
+      setDraft(saved?.display_name ?? null);
+      toast.show(t("settings.saved"));
+      void queryClient.invalidateQueries({ queryKey: ["me"] });
+    },
+  });
+  // Trimmed for the comparison as well as for the send, or a name with a
+  // trailing space reads as a change and the server answers that it is not one.
+  const trimmed = shown.trim();
+  const dirty = trimmed !== stored;
+  // Counted in CHARACTERS, which is what the contract's `maxLength` means and
+  // what the server checks with `utf8.RuneCountInString`. `String.length` would
+  // count UTF-16 units and refuse a name the server admits.
+  const tooLong = [...trimmed].length > 255;
+  return (
+    <SettingRow
+      label={t("settings.displayName")}
+      description={t("settings.displayNameHelp")}
+      layout="stack"
+      control={(control) => (
+        // The catalogued pairing for an input that commits: the field and the
+        // verb stacked at the row's own measure, the same shape the pipeline
+        // rows use.
+        <div className="form-stack settingrow-measure">
+          {/* A refused save says so HERE. The query client's own handler only
+              logs, so without this a rejected name looked exactly like nothing
+              happening — and the server's 422 names this very control. */}
+          {save.isError && (
+            <Callout tone="danger" live="alert">
+              {problemMessageOf(save.error, t)}
+            </Callout>
+          )}
+          <TextInput
+            {...control}
+            value={shown}
+            // No native `maxLength`: it counts UTF-16 code units, so a name of
+            // emoji or other supplementary characters would be cut at about
+            // half the 255 CHARACTERS the contract and the server admit. The
+            // bound is checked below in runes, the same way the server counts.
+            onChange={(event) => setDraft(event.target.value)}
+          />
+          <Button
+            small
+            disabled={!dirty || trimmed === "" || tooLong || save.isPending}
+            onClick={() => save.mutate(trimmed)}
+          >
+            {t("settings.displayNameSave")}
+          </Button>
+        </div>
       )}
     />
   );

@@ -519,6 +519,7 @@ const (
 	UserActivated                         SubscribableEventType = "user.activated"
 	UserDeactivated                       SubscribableEventType = "user.deactivated"
 	UserDeliveryChanged                   SubscribableEventType = "user_delivery.changed"
+	UserDisplayNameChanged                SubscribableEventType = "user_display_name.changed"
 	UserInvited                           SubscribableEventType = "user.invited"
 	UserLocaleChanged                     SubscribableEventType = "user_locale.changed"
 	UserPasswordLinkIssued                SubscribableEventType = "user.password_link_issued"
@@ -754,6 +755,8 @@ func (e SubscribableEventType) Valid() bool {
 	case UserDeactivated:
 		return true
 	case UserDeliveryChanged:
+		return true
+	case UserDisplayNameChanged:
 		return true
 	case UserInvited:
 		return true
@@ -2166,6 +2169,12 @@ type PublicEventUserDeliveryChanged struct {
 	ChangedFields []string `json:"changed_fields"`
 }
 
+// PublicEventUserDisplayNameChanged Payload for user_display_name.changed — a member changed the name their colleagues see them by (identity/userdisplayname.go's SaveMyDisplayName). Always their own: this API offers no way to rename somebody else. A subscriber holding a copy of the roster needs it, because the name is read from app_user wherever it is shown and a cached copy would keep addressing the person by a name they have corrected.
+type PublicEventUserDisplayNameChanged struct {
+	// DisplayName The name now in force, trimmed. Never empty: a name of only whitespace is refused, and a save that moved nothing writes nothing and publishes nothing.
+	DisplayName string `json:"display_name"`
+}
+
 // PublicEventUserInvited Payload for user.invited — an admin provisioned a new active member with a single-use set-password token (identity/users.go's InviteUser).
 type PublicEventUserInvited struct {
 	// By The admin who issued the invite.
@@ -2825,6 +2834,10 @@ func (PublicEventUserDeliveryChanged) EventType() string { return "user_delivery
 
 func (PublicEventUserDeliveryChanged) EntityType() string { return "user" }
 
+func (PublicEventUserDisplayNameChanged) EventType() string { return "user_display_name.changed" }
+
+func (PublicEventUserDisplayNameChanged) EntityType() string { return "user" }
+
 func (PublicEventUserInvited) EventType() string { return "user.invited" }
 
 func (PublicEventUserInvited) EntityType() string { return "user" }
@@ -2995,6 +3008,7 @@ var PublicEventVersions = map[string]int{
 	"user.password_link_issued":                 1,
 	"user.reactivated":                          1,
 	"user_delivery.changed":                     1,
+	"user_display_name.changed":                 1,
 	"user_locale.changed":                       1,
 	"voice.build_changed":                       1,
 	"voice.corpus_changed":                      1,
