@@ -32,6 +32,8 @@ import (
 	"strings"
 	"testing"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/config"
@@ -381,5 +383,161 @@ func TestAKeyIsSealedOnAnInstallationThatHasBoundNothing(t *testing.T) {
 	}
 	if stored["gemini"] == "" {
 		t.Errorf("no ref recorded for gemini: %v — the key stayed in the environment, so Settings -> AI reports it unkeyed", stored)
+	}
+}
+
+// A declared binding reaches an installation that was created without one.
+//
+// `seeds.ai_routing` used to be consumed only inside the creating transaction.
+// That is every installation EXCEPT the ones that matter here: the desktop
+// bundles ship a database, so their organization was created on the build
+// machine and the recipient's declaration was read by nothing. They set a
+// provider key, and their AI surfaces answered from the offline fake with the
+// one screen that looks like the fix naming the file that was already ignored.
+//
+// Insert-only, so the two halves of the claim are one test: it plants a binding
+// where there is none, and it does not touch one that exists.
+func TestADeclaredBindingReachesAnInstallationCreatedWithoutOne(t *testing.T) {
+	e := SetupSearch(t)
+	ctx := context.Background()
+
+	// Precondition: nothing bound, which is the state a seeded bundle boots in.
+	before, err := compose.ResolveRouting(ctx, e.Pool, "", config.Static(nil), discard())
+	if err != nil {
+		t.Fatalf("ResolveRouting before the seed: %v", err)
+	}
+	if !before.Unconfigured() {
+		t.Fatalf("fixture already bound %+v; this test needs an unbound installation", before.Tiers)
+	}
+
+	if err := compose.SeedRoutingIfUnset(ctx, e.Pool, routingSeedNode(t, offlineRouting), discard()); err != nil {
+		t.Fatalf("planting the declared binding: %v", err)
+	}
+
+	after, err := compose.ResolveRouting(ctx, e.Pool, "", config.Static(nil), discard())
+	if err != nil {
+		t.Fatalf("ResolveRouting after the seed: %v", err)
+	}
+	if after.Unconfigured() {
+		t.Fatal("the declared binding did not reach the installation — its AI surfaces stay on the fake")
+	}
+	if got := after.Tiers["premium"].Model; got != "fake-large" {
+		t.Errorf("premium bound to %q, want the declared fake-large", got)
+	}
+}
+
+// The other half, and the reason this may run on EVERY boot of every role: a
+// binding somebody chose is never reverted by a file. Without insert-only, an
+// admin who re-points a lane in Settings -> AI would find the deployment's
+// value back on the next restart, with nothing saying why.
+func TestPlantingNeverOverwritesABindingTheInstallationAlreadyHas(t *testing.T) {
+	e := SetupSearch(t)
+	ctx := context.Background()
+
+	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), config.Static(nil))
+	if _, err := store.Replace(e.adminRoutingCtx(), parsedRouting(t, "chosen-by-a-human")); err != nil {
+		t.Fatalf("storing the admin's binding: %v", err)
+	}
+
+	if err := compose.SeedRoutingIfUnset(ctx, e.Pool, routingSeedNode(t, offlineRouting), discard()); err != nil {
+		t.Fatalf("SeedRoutingIfUnset over an existing binding: %v", err)
+	}
+
+	after, err := compose.ResolveRouting(ctx, e.Pool, "", config.Static(nil), discard())
+	if err != nil {
+		t.Fatalf("ResolveRouting: %v", err)
+	}
+	if got := after.Tiers["premium"].Model; got != "chosen-by-a-human" {
+		t.Errorf("premium is %q — the deployment's file overwrote a binding somebody chose", got)
+	}
+}
+
+// A deployment that declares nothing is not an error and plants nothing: most
+// installations declare no seed at all, and every one of them boots through
+// this call.
+func TestPlantingIsANoOpWhenTheDeploymentDeclaresNoBinding(t *testing.T) {
+	e := SetupSearch(t)
+	ctx := context.Background()
+
+	if err := compose.SeedRoutingIfUnset(ctx, e.Pool, yaml.Node{}, discard()); err != nil {
+		t.Fatalf("SeedRoutingIfUnset with nothing declared: %v", err)
+	}
+	after, err := compose.ResolveRouting(ctx, e.Pool, "", config.Static(nil), discard())
+	if err != nil {
+		t.Fatalf("ResolveRouting: %v", err)
+	}
+	if !after.Unconfigured() {
+		t.Errorf("an undeclared seed bound %+v", after.Tiers)
+	}
+}
+
+// routingSeedNode parses a routing document into the yaml.Node the deployment
+// config carries it as, so these tests exercise the same decode path a real
+// margince.yaml takes rather than a struct built by hand.
+func routingSeedNode(t *testing.T, body string) yaml.Node {
+	t.Helper()
+	var doc yaml.Node
+	if err := yaml.Unmarshal([]byte(body), &doc); err != nil {
+		t.Fatalf("parsing the seed fixture: %v", err)
+	}
+	// Unmarshal wraps the document in a DocumentNode; the config carries the
+	// mapping itself.
+	if doc.Kind == yaml.DocumentNode && len(doc.Content) == 1 {
+		return *doc.Content[0]
+	}
+	return doc
+}
+
+// An UNPROVISIONED installation is left alone. It has no workspace to attribute
+// a settings write to, and the claim flow that creates one seeds the same value
+// inside its own transaction — so planting here would either fail or write a
+// row the bootstrap is about to write properly.
+func TestPlantingLeavesAnUnprovisionedInstallationAlone(t *testing.T) {
+	e := SetupSearch(t)
+	ctx := context.Background()
+	// Archiving every workspace is what "unprovisioned" IS to this path:
+	// singletonWorkspace enumerates the LIVE ones. Same mechanism the test
+	// above uses.
+	if _, err := e.Owner.Exec(ctx,
+		`UPDATE workspace SET archived_at = now() WHERE archived_at IS NULL`); err != nil {
+		t.Fatalf("clearing the harness organization: %v", err)
+	}
+
+	if err := compose.SeedRoutingIfUnset(ctx, e.Pool, routingSeedNode(t, offlineRouting), discard()); err != nil {
+		t.Fatalf("planting on an unprovisioned installation failed the boot: %v", err)
+	}
+
+	var planted map[string]any
+	if err := e.Owner.QueryRow(ctx,
+		`SELECT value FROM setting WHERE key = $1`, ai.RoutingKey).Scan(&planted); err == nil {
+		t.Errorf("a row was written for an installation with no workspace: %v", planted)
+	}
+}
+
+// A MALFORMED seed is not this call's error to report. The bootstrap refuses it
+// and fails the boot, loudly and once; repeating that on every later start
+// would turn one actionable failure into a recurring one nobody can act on
+// differently. So this plants nothing and lets the boot continue.
+func TestPlantingIsSilentOnASeedTheBootstrapAlreadyRefuses(t *testing.T) {
+	e := SetupSearch(t)
+	ctx := context.Background()
+
+	// A tier the task contract does not declare: refused by the same parser a
+	// stored binding goes through, which is the point of decoding it there.
+	bad := routingSeedNode(t, `profile: eu_hosted
+tiers:
+  not_a_tier: {provider: fake, model: fake-small}
+embeddings: {provider: fake, model: fake-embed, dimensions: 8}
+`)
+
+	if err := compose.SeedRoutingIfUnset(ctx, e.Pool, bad, discard()); err != nil {
+		t.Fatalf("a malformed seed failed the boot here instead of at the bootstrap: %v", err)
+	}
+	after, err := compose.ResolveRouting(ctx, e.Pool, "", config.Static(nil), discard())
+	if err != nil {
+		t.Fatalf("ResolveRouting: %v", err)
+	}
+	if !after.Unconfigured() {
+		t.Errorf("a refused seed still bound %+v", after.Tiers)
 	}
 }

@@ -13,13 +13,17 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/deployconfig"
 )
 
 // modelPathSpec names the boot knobs selectModelPath switches on, so a call
 // site labels each flag instead of passing anonymous booleans.
 type modelPathSpec struct {
-	routingPath     string
-	fake            bool
+	routingPath string
+	fake        bool
+	// What this DEPLOYMENT declares. See the api's spec — including why this is
+	// deployconfig.Seeds and not the yaml.Node inside it.
+	seeds           deployconfig.Seeds
 	capturePayloads bool
 }
 
@@ -32,6 +36,13 @@ func selectModelPath(ctx context.Context, spec modelPathSpec, pool *pgxpool.Pool
 	// has none yet. Resolved before the switch rather than inside an arm,
 	// because "is a model bound" is now a question about the installation and
 	// not about whether this process was handed a --ai-routing path.
+	// BEFORE the resolve, for the reason the api does it: an installation that
+	// holds no binding comes up on the one its deployment declares rather than
+	// on nothing. Both roles do it because either may be the first to boot, and
+	// the write is insert-only so the second finds it done.
+	if err := compose.SeedRoutingIfUnset(ctx, pool, spec.seeds.AIRouting, log); err != nil {
+		return compose.ModelPath{}, nil, err
+	}
 	cfg, err := compose.ResolveRouting(ctx, pool, spec.routingPath, config.FromOS, log)
 	if err != nil {
 		return compose.ModelPath{}, nil, err
