@@ -13,7 +13,11 @@ package events
 // is gone and its projection simply never runs. An address that quietly fell
 // back to db 0 would restore exactly that, while looking configured.
 
-import "testing"
+import (
+	"context"
+	"strings"
+	"testing"
+)
 
 func TestABareAddressKeepsTheDefaultDatabase(t *testing.T) {
 	opts, err := ClientOptions("localhost:16379", "")
@@ -145,5 +149,27 @@ func TestNoCredentialLeavesThePasswordEmpty(t *testing.T) {
 	}
 	if opts.Password != "" {
 		t.Errorf("Password = %q, want empty", opts.Password)
+	}
+}
+
+// NewClient reads the address before it reaches for the network, so an address
+// nobody can parse is refused as a configuration error rather than reported as
+// an unreachable bus. The two read the same to an operator and are fixed in
+// different places.
+func TestAnUnparseableAddressIsRefusedBeforeDialling(t *testing.T) {
+	t.Parallel()
+	// A context already cancelled: a dial attempted despite the parse failure
+	// would fail on it rather than on a timeout, so this test cannot hang and
+	// cannot reach a bus that happens to be listening.
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err := NewClient(ctx, "localhost:16379/notanumber", "secret")
+	if err == nil {
+		t.Fatal("an address naming a logical database that is not a number was accepted")
+	}
+	if !strings.Contains(err.Error(), "not an integer") {
+		t.Errorf("NewClient reported %q, want the parse complaint — an operator told the bus is "+
+			"unreachable looks at the bus, and the address is what is wrong", err)
 	}
 }
