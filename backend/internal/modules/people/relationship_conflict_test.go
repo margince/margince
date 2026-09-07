@@ -126,6 +126,14 @@ func TestOnlyATupleKeyedRefusalMeansTheEdgeIsAlreadyOnFile(t *testing.T) {
 			}
 		})
 	}
+	// uq_rel_works_with is answered by AlreadyRecorded but carries no
+	// caller-facing sentence, so the loop above — which walks the sentences —
+	// never reaches it. Named here, or the classification of a rule the mapper
+	// does return has nothing holding it.
+	if !(&RelationshipConflictError{Constraint: "uq_rel_works_with"}).AlreadyRecorded() {
+		t.Error("uq_rel_works_with is keyed on the pair being inserted, so its refusal does mean the " +
+			"edge is already on file")
+	}
 	// A rule this type has never seen is not evidence that anything landed.
 	if (&RelationshipConflictError{Constraint: "uq_something_new"}).AlreadyRecorded() {
 		t.Error("an unrecognised constraint was read as the edge already being on file")

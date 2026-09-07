@@ -345,11 +345,19 @@ func plantDomainEmployment(ctx context.Context, tx pgx.Tx, domain string, orgID 
 }
 
 // domainEmploymentCandidates names the live people this domain's verdict is
-// about: everybody reachable at it who has no current primary employment yet.
+// about: everybody reachable at it, whatever employments they already hold.
 //
-// It exists so the planter can hold a lock per person before it decides. The
-// order is the person id, which is what keeps two runs over overlapping domains
-// from taking one pair of locks in opposite orders.
+// It exists so the planter can hold a lock per person before it decides, and
+// it deliberately does NOT ask who has a primary employment yet. That question
+// is the decision, and asking it here would answer it from an unlocked read: a
+// person whose only employment ends while this list is being built would be
+// excluded from it, and the insert — which can only reconsider the ids it was
+// handed — would leave them employed once and unmarked. Locking a few people
+// the insert then skips costs nothing; the other way costs the case this lock
+// exists for.
+//
+// The order is the person id, which is what keeps two runs over overlapping
+// domains from taking one pair of locks in opposite orders.
 func domainEmploymentCandidates(ctx context.Context, tx pgx.Tx, domain string) ([]ids.PersonID, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT p.id
@@ -366,9 +374,6 @@ func domainEmploymentCandidates(ctx context.Context, tx pgx.Tx, domain string) (
 			  AND (split_part(pe.email, '@', 2) = $1
 			       -- A literal suffix compare, never LIKE — see PersonsOnDomain.
 			       OR right(split_part(pe.email, '@', 2), length($1) + 1) = '.' || $1))
-		  AND NOT EXISTS (
-			SELECT 1 FROM relationship r
-			WHERE r.person_id = p.id AND `+employment.CurrentPrimarySlotSQL("r")+`)
 		ORDER BY p.id
 		FOR UPDATE OF p`, domain)
 	if err != nil {

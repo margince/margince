@@ -200,3 +200,46 @@ func (e *dedupeEnv) seedUnmarkedIncumbent(ctx context.Context, t *testing.T) ids
 	}
 	return person
 }
+
+// The candidate list is everybody on the domain, and that is the point.
+//
+// Asking who already has a primary employment here would answer the decision
+// from an UNLOCKED read: a person whose only employment ends between this read
+// and the insert would be missing from the list, and the insert can only
+// reconsider the ids it was handed — leaving them employed once and unmarked,
+// which is the state this whole lock exists to prevent.
+func TestTheDomainCandidateListDoesNotPreJudgeWhoNeedsAnEmployment(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	// This person's employment is at another company and IS their primary one,
+	// so a list that pre-judged would leave them out.
+	settled, _ := e.seedEmployedPerson(ctx, t,
+		"Already Employed", "settled@newemployer-race.test", "Incumbent Employer GmbH", "incumbent-race.test")
+	// And one with nothing, who is a candidate under either reading.
+	e.openTriageFirst(ctx, t, "colleague@newemployer-race.test", "A Colleague", "newemployer-race.test")
+
+	var candidates []ids.PersonID
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		candidates, err = domainEmploymentCandidates(ctx, tx, "newemployer-race.test")
+		return err
+	}); err != nil {
+		t.Fatalf("reading the candidates: %v", err)
+	}
+
+	found := false
+	for _, one := range candidates {
+		if one == settled {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("the person who already has a primary employment is not in the candidate list, so "+
+			"the insert could never reconsider them: %v", candidates)
+	}
+	if len(candidates) < 2 {
+		t.Errorf("%d candidate(s) on the domain, want both people — a list this short is one that "+
+			"answered the decision instead of naming who it is about", len(candidates))
+	}
+}
