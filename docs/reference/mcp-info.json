@@ -10,16 +10,16 @@
   "totals": {
     "tools": 74,
     "resources": 12,
-    "tool_catalog_bytes": 212938,
+    "tool_catalog_bytes": 213041,
     "resource_catalog_bytes": 4584,
-    "approx_wire_tokens_total": 54380,
+    "approx_wire_tokens_total": 54406,
     "largest_tool_bytes": 8980,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
-      "description_bytes": 51766,
+      "description_bytes": 51869,
       "input_schema_bytes": 45443,
       "output_schema_bytes": 99775,
-      "description_plus_input_schema_bytes": 97209
+      "description_plus_input_schema_bytes": 97312
     }
   },
   "tools": {
@@ -3232,7 +3232,7 @@
           "readOnlyHint": false,
           "title": "Reverse a lead promotion"
         },
-        "description": "Reverse a promotion that should not have happened, putting the lead back on the open ladder. It blocks rather than orphans: a promotion whose person now owns a deal is refused, and activities captured since the promotion stay on the person's timeline — they are real history. A promotion that merged into an existing person leaves that person untouched and only clears the lineage. Use disqualify_lead when the lead is real but going nowhere; demotion says the promotion itself was wrong. A person approves this call before it runs; do not report the lead as demoted until the retry carrying their approval has answered. (Governance: runs immediately; requires passport scope \"write\".)",
+        "description": "Reverse a promotion that should not have happened, putting the lead back on the open ladder. It blocks rather than orphans: a promotion whose person now owns a deal is refused, and activities captured since the promotion stay on the person's timeline — they are real history. A promotion that merged into an existing person leaves that person untouched and only clears the lineage. Use disqualify_lead when the lead is real but going nowhere; demotion says the promotion itself was wrong. The lead is demoted when this call answers. Where an installation has raised this verb to confirm first, the answer is a staged approval instead — keep its id, and do not report the demotion until the retry carrying it has answered. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {

@@ -5,7 +5,7 @@
     "driven": 7,
     "never_driven": 67,
     "permitted_but_never_required": 13,
-    "tokens_served_but_never_driven": 18296,
+    "tokens_served_but_never_driven": 18322,
     "use_case_cases": 7,
     "cases_with_a_committed_run": 7,
     "acceptance_criteria_named": 6,
@@ -395,8 +395,8 @@
       "measured": null
     },
     {
-      "name": "merge_records",
-      "tokens": 292,
+      "name": "demote_lead",
+      "tokens": 316,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [],
@@ -404,8 +404,8 @@
       "measured": null
     },
     {
-      "name": "demote_lead",
-      "tokens": 290,
+      "name": "merge_records",
+      "tokens": 292,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [],

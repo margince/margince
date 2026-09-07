@@ -224,8 +224,9 @@ var demoteLeadCopy = toolCopy{
 		"only clears the lineage.",
 	Instead: "Use disqualify_lead when the lead is real but going nowhere; demotion says the " +
 		"promotion itself was wrong.",
-	Retain: "A person approves this call before it runs; do not report the lead as demoted until " +
-		"the retry carrying their approval has answered.",
+	Retain: "The lead is demoted when this call answers. Where an installation has raised this " +
+		"verb to confirm first, the answer is a staged approval instead — keep its id, and do not " +
+		"report the demotion until the retry carrying it has answered.",
 }
 
 var advanceProjectPhaseCopy = toolCopy{

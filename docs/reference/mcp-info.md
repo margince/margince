@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 74 |
 | Resources | 12 |
-| Tool catalog | 207.9 KB |
+| Tool catalog | 208.0 KB |
 | Resource catalog | 4.5 KB |
-| Approx. wire tokens | 54380 |
+| Approx. wire tokens | 54406 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -30,10 +30,10 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 97.4 KB | 46% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 50.6 KB | 24% | Yes, every step |
+| Descriptions (incl. governance clause) | 50.7 KB | 24% | Yes, every step |
 | Input schemas | 44.4 KB | 21% | Yes, every step |
 | _Names, annotations, punctuation_ | 15.6 KB | 7% | Partly |
-| **Description + input schema** | **94.9 KB** | **45%** | **the recurring cost** |
+| **Description + input schema** | **95.0 KB** | **45%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -83,7 +83,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`data_coverage`](#data_coverage) | How current the sources are | yes |  | 1.7 KB |
 | [`decide_approval`](#decide_approval) | Approve or reject one staged action |  |  | 2.9 KB |
 | [`decide_approval_bundle`](#decide_approval_bundle) | Approve or reject one act's proposals together |  |  | 2.9 KB |
-| [`demote_lead`](#demote_lead) | Reverse a lead promotion |  |  | 2.3 KB |
+| [`demote_lead`](#demote_lead) | Reverse a lead promotion |  |  | 2.4 KB |
 | [`describe_query_vocabulary`](#describe_query_vocabulary) | Describe the query vocabulary | yes |  | 2.1 KB |
 | [`describe_report_blocks`](#describe_report_blocks) | Describe the report block grammar | yes |  | 2.0 KB |
 | [`describe_report_vocabulary`](#describe_report_vocabulary) | Describe the report vocabulary | yes |  | 2.4 KB |
@@ -3735,7 +3735,7 @@ Answer every still-waiting proposal that one act staged together — the overnig
 
 **Reverse a lead promotion**
 
-Reverse a promotion that should not have happened, putting the lead back on the open ladder. It blocks rather than orphans: a promotion whose person now owns a deal is refused, and activities captured since the promotion stay on the person's timeline — they are real history. A promotion that merged into an existing person leaves that person untouched and only clears the lineage. Use disqualify_lead when the lead is real but going nowhere; demotion says the promotion itself was wrong. A person approves this call before it runs; do not report the lead as demoted until the retry carrying their approval has answered. (Governance: runs immediately; requires passport scope "write".)
+Reverse a promotion that should not have happened, putting the lead back on the open ladder. It blocks rather than orphans: a promotion whose person now owns a deal is refused, and activities captured since the promotion stay on the person's timeline — they are real history. A promotion that merged into an existing person leaves that person untouched and only clears the lineage. Use disqualify_lead when the lead is real but going nowhere; demotion says the promotion itself was wrong. The lead is demoted when this call answers. Where an installation has raised this verb to confirm first, the answer is a staged approval instead — keep its id, and do not report the demotion until the retry carrying it has answered. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 

@@ -6,7 +6,7 @@
   "catalog": {
     "tools": 74,
     "system_frame_tokens": 353,
-    "tokens": 22299,
+    "tokens": 22325,
     "median_tool_tokens": 264,
     "mean_tool_tokens": 301
   },
@@ -171,12 +171,12 @@
       "tokens": 326
     },
     {
-      "name": "merge_records",
-      "tokens": 292
+      "name": "demote_lead",
+      "tokens": 316
     },
     {
-      "name": "demote_lead",
-      "tokens": 290
+      "name": "merge_records",
+      "tokens": 292
     },
     {
       "name": "catch_me_up_on",

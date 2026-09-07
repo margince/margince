@@ -29,7 +29,7 @@ This page does not grade single steps or name a best model per site — that is
 | … some case requires | 7 |
 | … **no case requires** | 67 |
 | … of those, permitted somewhere but never required | 13 |
-| Prompt tokens spent on tools no case requires | 18296 |
+| Prompt tokens spent on tools no case requires | 18322 |
 | Use cases | 7 |
 | … with a committed run | 7 |
 | Acceptance criteria the cases declare | 15 |
@@ -117,8 +117,8 @@ stopped being able to call it. A tool in the `permitted` column is worse than on
 | `describe_report_vocabulary` | 349 | — | — |
 | `forecast_readings` | 349 | — | — |
 | `prep_for_meeting` | 326 | `case5_before_the_meeting` | — |
+| `demote_lead` | 316 | — | — |
 | `merge_records` | 292 | — | — |
-| `demote_lead` | 290 | — | — |
 | `catch_me_up_on` | 280 | `case5_before_the_meeting`, `case6_ask_the_company` | `morning_brief`, `overnight_at_risk_sweep` |
 | `advance_project_phase` | 279 | — | — |
 | `draft_email` | 279 | — | — |
