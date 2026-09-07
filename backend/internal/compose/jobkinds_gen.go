@@ -13,7 +13,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "7a3c1713548210bc273dc5f45d2131f3603e5f335890d59e878cee95ceb4fd8d"
+const jobContractHash = "3c48ae49d7dde393546016f7e7c8645ef499cbe2cc17a2535ee5560bff9d07b7"
 
 // declaredJobArgs is every args type api/jobs.yaml declares, and nothing
 // else. A job kind the file has never heard of cannot satisfy it, so it
