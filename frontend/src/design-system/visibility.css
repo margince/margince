@@ -60,9 +60,13 @@
   color: currentColor;
 }
 
-/* The mark and its verb on one line. The verb keeps to the far end and the
-   whole thing wraps rather than clipping, because the line lives in a drawer
-   that is a full-width sheet on a phone. */
+/* The mark and its verb on one line, the verb immediately AFTER the fact it
+   changes rather than at the far end of the row. An `auto` margin on the slot
+   would put however wide the surface happens to be between the two: on the mail
+   drawer's full-width heading that is a "Make private" a reader travels to and
+   then travels back from to check what it changes, which is the reading this
+   component exists to prevent. The whole thing wraps rather than clipping,
+   because that heading is a full-width sheet on a phone. */
 .visibility-line {
   display: flex;
   /* Top-aligned, not centred: the action can be a button with a caption
@@ -77,5 +81,4 @@
   align-items: center;
   flex-wrap: wrap;
   gap: var(--space-2);
-  margin-left: auto;
 }

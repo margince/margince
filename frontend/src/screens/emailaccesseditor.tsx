@@ -64,7 +64,7 @@ const STATUS_SENTENCE: Partial<Record<EmailAccessStatus, MessageKey>> = {
  * WHO reads this message, and the control to change it when this reader may.
  *
  * One line under the subject: the mark, the reason the message is held when
- * the server gave one, and the verb at the far end — then the sentence and
+ * the server gave one, and the verb right after them — then the sentence and
  * the names under it. The verb sits BESIDE the fact it flips: a button that
  * changes who reads a message belongs next to the word that says who does,
  * not under the body where a reader has to connect the two for themselves.
@@ -198,7 +198,7 @@ function ThreadContribution({
           the current state would read as the opposite of what the press
           does. */}
       <Button
-        small
+        variant="link"
         pending={mutation.isPending}
         onClick={() => {
           setHeld(null);
@@ -263,7 +263,7 @@ function MessageAudience({
   return (
     <span className="emailaccess__change">
       <Button
-        small
+        variant="link"
         onClick={() => {
           setChoice(current);
           setMembers(standing);

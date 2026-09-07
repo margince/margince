@@ -90,8 +90,15 @@ export function VisibilityBadge({ state }: Readonly<{ state: Visibility }>) {
  * further down: "Make private" three lines away from the word it flips is a
  * button a reader has to connect for themselves. `marks` is for a second fact
  * about the same audience — the reason a captured message is held — and stays
- * on the badge's side of the line. `action` is pushed to the far end and wraps
- * under on a narrow surface; absent draws no slot at all.
+ * on the badge's side of the line, between the mark and the verb, because it
+ * explains what the mark says rather than what the press does.
+ *
+ * `action` follows them immediately instead of taking the far end of the row:
+ * the whole claim of this component is that the verb reads AS a change to that
+ * mark, and a gap as wide as the surface is what breaks it. Absent draws no
+ * slot at all. A `.link-button` rather than a filled box, since the fact is
+ * what the line is for and a bordered control beside a badge reads as the
+ * louder of the two.
  */
 export function VisibilityLine({
   state,
