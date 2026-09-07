@@ -38,6 +38,11 @@ const corpusPath = join(
 // of nothing that still passes.
 const FILE_FLOOR = 200;
 
+// How long the whole-tree scan is allowed. Generous on purpose: it parses every
+// hand-written file in src/, and a runner slower than a laptop must fail on a
+// FINDING rather than on a clock.
+const TREE_SCAN_TIMEOUT_MS = 120_000;
+
 const MINOR_UNIT_NAME = /[Mm]inor[A-Za-z_]*|MINOR[A-Z_]*/;
 const HARD_CODED_SCALES = new Set(["10", "100", "1000", "10000"]);
 const WAIVER = "money-scale-exempt:";
@@ -278,24 +283,33 @@ describe("the money-scale census, over the tree", () => {
     expect(files.length).toBeGreaterThanOrEqual(FILE_FLOOR);
   });
 
-  it("finds no amount in minor units scaled by a hard-coded power of ten", () => {
-    const findings: string[] = [];
-    for (const path of files) {
-      // format/minorunits OWNS the conversion — the ISO-4217 digit table is
-      // applied there, mirroring the Go one, and refusing the one
-      // implementation would be refusing the answer.
-      if (path.includes(join("format", "minorunits"))) continue;
-      const source = readFileSync(path, "utf8");
-      const { findings: found, unreadable } = scaleFindings(path, source);
-      expect(unreadable, `${path}: the parser could not finish this file`).toBe(
-        false,
-      );
-      for (const one of found)
-        findings.push(`${path}:${one.line}: ${one.text}`);
-    }
-    expect(
-      findings,
-      "use format/minorunits toMinorUnits / toMajorUnits",
-    ).toEqual([]);
-  });
+  // A census over every hand-written file in the tree, parsed by the real
+  // TypeScript parser. That is not a ten-second unit test on a cold runner, and
+  // the alternative — sampling the tree — is the under-recognition failure a
+  // census must not have.
+  it(
+    "finds no amount in minor units scaled by a hard-coded power of ten",
+    () => {
+      const findings: string[] = [];
+      for (const path of files) {
+        // format/minorunits OWNS the conversion — the ISO-4217 digit table is
+        // applied there, mirroring the Go one, and refusing the one
+        // implementation would be refusing the answer.
+        if (path.includes(join("format", "minorunits"))) continue;
+        const source = readFileSync(path, "utf8");
+        const { findings: found, unreadable } = scaleFindings(path, source);
+        expect(
+          unreadable,
+          `${path}: the parser could not finish this file`,
+        ).toBe(false);
+        for (const one of found)
+          findings.push(`${path}:${one.line}: ${one.text}`);
+      }
+      expect(
+        findings,
+        "use format/minorunits toMinorUnits / toMajorUnits",
+      ).toEqual([]);
+    },
+    TREE_SCAN_TIMEOUT_MS,
+  );
 });
