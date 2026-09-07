@@ -119,6 +119,9 @@ func insertActivityLinks(ctx context.Context, tx pgx.Tx, activityID ids.Activity
 		// first (capture/sinkproject.go), and two doors onto one act must not
 		// disagree about WHEN they ask either.
 		if link.EntityType == linkEntityProject {
+			if err := refuseAnUnattendedFiling(ctx); err != nil {
+				return err
+			}
 			if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
 				return err
 			}
@@ -203,4 +206,59 @@ func (e *InvalidLinkTypeError) Error() string {
 // FieldFault refuses a link to an entity type the timeline does not carry.
 func (e *InvalidLinkTypeError) FieldFault() (field, code, message string) {
 	return fieldLinks, "invalid_entity_type", e.Error()
+}
+
+// refuseAnUnattendedFiling keeps the retention mark off the agent's create
+// path, at the branch that writes it: the stamp below this one is what files
+// an activity as commercial correspondence, and relink — the verb that moves
+// an EXISTING activity — reaches its own writer rather than this one.
+//
+// Filing under a project classifies an activity as commercial correspondence:
+// write-once in the database, monotonic, and removable only by a named person
+// giving a written reason. relink_activity was raised to confirm-first for a
+// project destination for exactly that reason. The create path reaches the same
+// write and five tools ride it — log_activity, create_task, book_meeting,
+// draft_email, send_account_email — every one of them auto-execute. A passport
+// holding activity:update could call any of them in a loop and mint one mark
+// per call with nobody watching (#2266).
+//
+// Refused HERE rather than in each of the five, because five refusals are five
+// chances to add a sixth tool and forget: #2266 exists because the tier fix
+// covered relink and missed the create door beside it. Refusing at the write
+// means a tool added tomorrow inherits the answer.
+//
+// Not by tier, which is the fix that cannot be made: a scheduled agent may only
+// call auto-execute tools, because a run that suspends on a staged approval is
+// still reported as `running` by the AI-activity projection, and
+// overnight_at_risk_sweep logs a note per at-risk deal. Raising these would tell
+// an operator the AI is working while it waits for them.
+//
+// A human at a form, a REST caller, and the capture sink are untouched — none
+// of them is an agent principal, and having a person in the loop is the whole
+// distinction being drawn.
+func refuseAnUnattendedFiling(ctx context.Context) error {
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.Type != principal.PrincipalAgent {
+		return nil
+	}
+	return &UnattendedProjectFilingError{}
+}
+
+// UnattendedProjectFilingError refuses an agent filing a NEW activity under a
+// project on the create path.
+type UnattendedProjectFilingError struct{}
+
+func (e *UnattendedProjectFilingError) Error() string {
+	return "filing an activity under a project marks it as commercial correspondence, which is " +
+		"write-once and removable only by a named person giving a written reason — not a mark this " +
+		"call may write unattended"
+}
+
+// FieldFault names the array to change and the verb that files under a project
+// with a person deciding it, because a refusal a caller cannot act on is one
+// they retry unchanged.
+func (e *UnattendedProjectFilingError) FieldFault() (field, code, message string) {
+	return fieldLinks, "project_filing_needs_approval", e.Error() +
+		". Create it with its other links, then call relink_activity for the project: a person " +
+		"approves that one before it takes effect"
 }

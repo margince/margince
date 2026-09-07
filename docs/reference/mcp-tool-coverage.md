@@ -78,8 +78,8 @@ Every run of every case requiring this tool passed.
 | Tool | Reliability | Runs | Required by |
 |---|---:|---:|---|
 | `run_report` | 1.00 | 3 | `case7_ask_for_a_number` |
-| `preview_import` | 1.00 | 3 | `case3_spreadsheet` |
 | `log_activity` | 1.00 | 3 | `case1_log_it` |
+| `preview_import` | 1.00 | 3 | `case3_spreadsheet` |
 | `query_workspace` | 1.00 | 3 | `case4_use_the_moment` |
 | `search_records` | 1.00 | 3 | `case5_before_the_meeting` |
 
