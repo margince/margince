@@ -140,6 +140,56 @@ func TestWireAiUsageReportsPartialCostWhenSomeCallsAreUnpriced(t *testing.T) {
 	if got == nil || *got != 5 {
 		t.Fatalf("cost_est_minor = %v, want 5 (50_000 microUSD / 10_000) despite 1 unpriced call in the same line", got)
 	}
+	// And the count travels with it. A partial figure that does not say it is
+	// partial is the one a reader acts on: it is always the SMALLER number, so
+	// nobody investigates it until a provider bill disagrees.
+	unpriced := wire.Days[0].Tasks[0].UnpricedCalls
+	if unpriced == nil || *unpriced != 1 {
+		t.Fatalf("unpriced_calls = %v, want 1 — the total is short by that many calls' spend and "+
+			"nothing else on the line says so", unpriced)
+	}
+}
+
+// A whole figure carries no qualifier. Without this the case above passes
+// against a wire that stamps every line as partial, which would teach a reader
+// to ignore the sentence.
+func TestWireAiUsageOmitsTheUnpricedCountWhenEveryCallPriced(t *testing.T) {
+	days := []DayUsage{{
+		Day: time.Date(2026, time.July, 16, 0, 0, 0, 0, time.UTC),
+		Tasks: []TaskUsage{
+			{
+				Task: "summarize", Tier: "premium", Calls: 3, TokensIn: 500, TokensOut: 100,
+				CostEstMicroUSD: 50_000, UnpricedCalls: 0,
+			},
+		},
+	}}
+	wire := wireAiUsage(days, BudgetStatus{})
+	if got := wire.Days[0].Tasks[0].UnpricedCalls; got != nil {
+		t.Fatalf("unpriced_calls = %d on a fully priced line, want omitted", *got)
+	}
+}
+
+// An entirely unpriced line reports the count even though it reports no cost.
+// It is the case where the count matters most: the line contributes nothing to
+// the total, and only this says how much is missing from it.
+func TestWireAiUsageCountsTheUnpricedCallsOfALineItDoesNotPrice(t *testing.T) {
+	days := []DayUsage{{
+		Day: time.Date(2026, time.July, 16, 0, 0, 0, 0, time.UTC),
+		Tasks: []TaskUsage{
+			{
+				Task: "summarize", Tier: "premium", Calls: 3, TokensIn: 500, TokensOut: 100,
+				CostEstMicroUSD: 0, UnpricedCalls: 3,
+			},
+		},
+	}}
+	wire := wireAiUsage(days, BudgetStatus{})
+	line := wire.Days[0].Tasks[0]
+	if line.CostEstMinor != nil {
+		t.Fatalf("cost_est_minor = %d, want omitted", *line.CostEstMinor)
+	}
+	if line.UnpricedCalls == nil || *line.UnpricedCalls != 3 {
+		t.Fatalf("unpriced_calls = %v, want 3", line.UnpricedCalls)
+	}
 }
 
 // TestAttachDayCostAttachesPerTierNotBroadcastAcrossTiers proves the

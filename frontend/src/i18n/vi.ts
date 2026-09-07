@@ -6985,6 +6985,8 @@ export const vi = {
   "aiusage.col.tokensOut": "Token ra",
   "aiusage.col.cost": "Chi phí ước tính",
   "aiusage.costNote": "Chi phí là ước tính theo mức giá đã cấu hình.",
+  "aiusage.costPartial":
+    "Tổng này chỉ gồm các lượt gọi có giá: {calls} lượt khác không có mức giá cấu hình, phần chi tiêu của chúng nằm ở số token.",
   "aiusage.monthLabel": "Tháng",
   "aiusage.spendLabel": "Chi phí theo nhiệm vụ",
   "aiusage.days.show": "Hiện theo ngày",

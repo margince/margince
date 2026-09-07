@@ -121,6 +121,67 @@ it("renders queued and lights up estimated cost only when present", async () => 
   expect(note.textContent).toContain("€1.23");
 });
 
+// A total that is SHORT says so, and one that is whole does not.
+//
+// A call with usage and no configured rate spends real money that lands in the
+// token counts and not in the dollar figure beside them. The two totals look
+// identical — both are a number — and the partial one is always the smaller,
+// which is the direction nobody investigates: an admin budgets from it and an
+// operator reconciling against a provider bill finds a gap the product never
+// mentioned.
+it("says when the cost total covers only the priced calls", async () => {
+  mount({
+    budget: { ...budget, currency: "EUR" },
+    days: [
+      {
+        date: "2026-07-20",
+        tasks: [
+          {
+            task: "enrich",
+            tier: "premium",
+            calls: 4,
+            tokens_in: 10,
+            tokens_out: 2,
+            cost_est_minor: 123,
+            unpriced_calls: 3,
+          },
+        ],
+      },
+    ],
+  });
+  const note = await screen.findByText(/Costs are estimates/);
+  expect(note.textContent).toContain("€1.23");
+  // The count, not merely a caveat: "some calls are unpriced" leaves a reader
+  // unable to tell one stray call from most of the window.
+  expect(note.textContent).toContain("3 more had no configured rate");
+});
+
+// The mirror. Without it the case above passes against a card that stamps every
+// window as partial, which teaches a reader to skip the sentence — and the one
+// window where it is true reads exactly like the rest.
+it("says nothing about unpriced calls when every call was priced", async () => {
+  mount({
+    budget: { ...budget, currency: "EUR" },
+    days: [
+      {
+        date: "2026-07-20",
+        tasks: [
+          {
+            task: "enrich",
+            tier: "premium",
+            calls: 1,
+            tokens_in: 10,
+            tokens_out: 2,
+            cost_est_minor: 123,
+          },
+        ],
+      },
+    ],
+  });
+  const note = await screen.findByText(/Costs are estimates/);
+  expect(note.textContent).not.toContain("no configured rate");
+});
+
 // An empty window and a refused read are different answers, and the card owes
 // each its own: "nothing was spent" is a fact about the month, while a 403 is a
 // fact about the reader. The refusal reads as catalog copy because that is all a

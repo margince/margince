@@ -73,9 +73,10 @@ type aiUsageTask = struct {
 	Task string `json:"task"`
 
 	// Tier local_small, cheap_cloud, premium, frontier, local_large.
-	Tier      string `json:"tier"`
-	TokensIn  int    `json:"tokens_in"`
-	TokensOut int    `json:"tokens_out"`
+	Tier          string `json:"tier"`
+	TokensIn      int    `json:"tokens_in"`
+	TokensOut     int    `json:"tokens_out"`
+	UnpricedCalls *int   `json:"unpriced_calls,omitempty"`
 }
 
 // microUSDPerMinor converts ADR-0067's micro-USD price grain to wire
@@ -110,6 +111,15 @@ func wireAiUsage(days []DayUsage, budget BudgetStatus) crmcontracts.AiUsage {
 			if task.CostEstMicroUSD > 0 || task.UnpricedCalls == 0 {
 				minor := int(task.CostEstMicroUSD / microUSDPerMinor)
 				wireTask.CostEstMinor = &minor
+			}
+			// The count travels with the figure it qualifies. Without it a
+			// reader cannot tell a whole dollar total from one that is short
+			// by some number of calls, and the two look identical: both are a
+			// number, and the partial one is always the smaller. Under-reported
+			// spend is the direction nobody investigates.
+			if task.UnpricedCalls > 0 {
+				unpriced := int(task.UnpricedCalls)
+				wireTask.UnpricedCalls = &unpriced
 			}
 			wireDay.Tasks = append(wireDay.Tasks, wireTask)
 		}
