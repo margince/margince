@@ -20,7 +20,7 @@ import "fmt"
 const recordAuditColumns = `
 		a.id, a.actor_type, a.actor_id, a.on_behalf_of, a.action, a.occurred_at,
 		a.authorization_rule, a.before, a.after, a.passport_id,
-		actor_user.display_name AS actor_display_name,
+		` + auditActorNameColumn + ` AS actor_display_name,
 		obo.display_name AS on_behalf_of_display_name, oc.client_name,
 		` + reversalLinkColumn
 
@@ -31,8 +31,8 @@ const recordAuditColumns = `
 // because two surfaces resolving attribution differently is how a reader ends up
 // trusting one and doubting the other.
 //
-// The audit row is aliased `a`; the caller supplies that alias and selects
-// `actor_user.display_name, obo.display_name` in that order.
+// The audit row is aliased `a`; the caller supplies that alias and selects the
+// coalesced actor name and `obo.display_name` in that order.
 //
 // The actor join builds the prefixed key FROM app_user ('human:' || id) rather
 // than casting actor_id, so a non-uuid actor id (agent:*, connector:*, system)
@@ -40,9 +40,36 @@ const recordAuditColumns = `
 // times, and matching app_user.id (a primary key) both times: a deactivated or
 // deleted member still has audit rows, no name is honest where an invented one
 // would not be, and neither join can duplicate or drop an audit row.
+//
+// A BUYER is the third actor a record can carry, and holds no seat: they appear
+// in no member directory, so the app_user join cannot reach them and their rows
+// arrived nameless. The audit screen then rendered the KIND — "Deal Room
+// participant" — which answers "who confirmed v5?" with "a Deal Room
+// participant did". Better than "System", and not the name (#2235). It resolves
+// against deal_room_participant on the same terms as the human join: keyed by
+// the primary key, built from the row rather than by casting actor_id, and LEFT
+// so a participant who was revoked, whose room was archived, or whose name a
+// subject-erasure scrubbed still leaves an audit row with no name rather than
+// no row.
+//
+// COALESCE and not a second column: the two are the same fact — who acted — and
+// exactly one of them can be non-null for a given row, because actor_type
+// decides which join can match at all. Two columns would make every reader
+// choose, and a reader that chose differently is how one surface comes to name
+// somebody the other does not.
+// auditActorNameColumn answers "who acted". It is shared by the compliance log
+// and the per-record history so the two cannot resolve attribution differently,
+// which is how a reader ends up trusting one surface and doubting the other.
+//
+// Exactly one join can match a given row — actor_type decides which — so the
+// coalesce picks the name that exists rather than choosing between two.
+const auditActorNameColumn = `COALESCE(actor_user.display_name, buyer_participant.full_name)`
+
 const auditActorNameJoins = `
 		LEFT JOIN app_user actor_user
 		  ON a.actor_type = 'human' AND a.actor_id = 'human:' || actor_user.id::text
+		LEFT JOIN deal_room_participant buyer_participant
+		  ON a.actor_type = 'buyer' AND a.actor_id = 'buyer:' || buyer_participant.id::text
 		LEFT JOIN app_user obo ON obo.id = a.on_behalf_of`
 
 // agentClientNameJoin resolves the NAME of the tool a delegated change was
