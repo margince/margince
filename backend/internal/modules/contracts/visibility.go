@@ -58,11 +58,11 @@ import (
 // widening to the company would hand a caller agreements attached to deals
 // they cannot see.
 func VisibleClause(ctx context.Context, alias string, arg func(any) int) (string, error) {
-	dealScope, err := auth.ScopeClauseFor(ctx, "deal", "d", arg)
+	dealScope, err := auth.ScopeClauseFor(ctx, dealTable, "d", arg)
 	if err != nil {
 		return "", err
 	}
-	orgScope, err := auth.ScopeClauseFor(ctx, "organization", "o", arg)
+	orgScope, err := auth.ScopeClauseFor(ctx, organizationTable, "o", arg)
 	if err != nil {
 		return "", err
 	}

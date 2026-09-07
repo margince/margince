@@ -1221,6 +1221,8 @@ export const de = {
   "contracts.renew.dealHint":
     "Der Deal, der diese Laufzeit gewonnen hat, falls es einen gab — nie der des Vorgängers.",
   "contracts.renew.dealNone": "Kein Deal",
+  "contracts.renew.dealWithheldCompany":
+    "Du kannst das Unternehmen dieser Vereinbarung nicht öffnen, deshalb lassen sich seine Deals nicht auflisten. Die Verlängerung behält denselben Vertragspartner und hält keinen Deal fest.",
   "contracts.renew.submit": "Verlängern",
   "contracts.deal": "Deal",
   "contracts.statusChange.title": "Status ändern",

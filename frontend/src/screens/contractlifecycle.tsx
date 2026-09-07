@@ -8,6 +8,7 @@ import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { useInstallationSettings } from "../app/uploadlimit";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
+import { Callout } from "../design-system/callout";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -166,9 +167,15 @@ export function ContractRenewModal({
   const [dealId, setDealId] = useState("");
   const baseCurrency = useInstallationSettings().data?.base_currency;
   const contractCurrency = draft.currency || baseCurrency || "";
+  // The counterparty is withheld from a reader admitted through the DEAL who
+  // cannot open the company (masked_fields names it). They may still renew —
+  // write authority follows the deal — so the modal keeps working and the deal
+  // picker, which can only be filled by listing that company's deals, says why
+  // it is not there rather than showing an empty list that reads as "no deals".
+  const anchor = contract.organization_id;
   const deals = useQuery({
-    ...dealsForOrg(contract.organization_id),
-    enabled: open,
+    ...dealsForOrg(anchor ?? ""),
+    enabled: open && anchor != null,
   });
 
   // Re-seed on open, and when a different row's renewal is what just opened:
@@ -220,26 +227,32 @@ export function ContractRenewModal({
       {/* Never required: the API path this mirrors has always accepted a
           renewal with no deal, and a picker that refused to submit without
           one would refuse an agreement the server has always allowed. */}
-      <Field
-        label={t("contracts.renew.deal")}
-        hint={t("contracts.renew.dealHint")}
-      >
-        {(props) => (
-          <Select
-            {...props}
-            value={dealId}
-            onChange={setDealId}
-            disabled={deals.isPending}
-            options={[
-              { value: "", label: t("contracts.renew.dealNone") },
-              ...(deals.data ?? []).map((deal) => ({
-                value: deal.id,
-                label: deal.name,
-              })),
-            ]}
-          />
-        )}
-      </Field>
+      {anchor == null ? (
+        <Callout tone="info">
+          {t("contracts.renew.dealWithheldCompany")}
+        </Callout>
+      ) : (
+        <Field
+          label={t("contracts.renew.deal")}
+          hint={t("contracts.renew.dealHint")}
+        >
+          {(props) => (
+            <Select
+              {...props}
+              value={dealId}
+              onChange={setDealId}
+              disabled={deals.isPending}
+              options={[
+                { value: "", label: t("contracts.renew.dealNone") },
+                ...(deals.data ?? []).map((deal) => ({
+                  value: deal.id,
+                  label: deal.name,
+                })),
+              ]}
+            />
+          )}
+        </Field>
+      )}
 
       {renew.error && (
         <p className="t-caption" role="alert">

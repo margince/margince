@@ -159,7 +159,7 @@ func TestRenewalChainsRatherThanOverwrites(t *testing.T) {
 	// The successor inherits the counterparty rather than taking one from the
 	// request: a renewal that changed companies would be a different agreement
 	// wearing this one's history.
-	if ids.UUID(successor.OrganizationId) != org {
+	if successor.OrganizationId == nil || ids.UUID(*successor.OrganizationId) != org {
 		t.Error("the successor names a different company than the agreement it renews")
 	}
 }
@@ -304,7 +304,7 @@ func TestARenewalSuccessorKeepsTheDealItNames(t *testing.T) {
 	}
 	// The counterparty is still the predecessor's, which is the one thing a
 	// renewal does inherit.
-	if ids.UUID(successor.OrganizationId) != org {
+	if successor.OrganizationId == nil || ids.UUID(*successor.OrganizationId) != org {
 		t.Errorf("successor organization = %v, want the predecessor's (%v)", successor.OrganizationId, org)
 	}
 }

@@ -41,6 +41,15 @@ const (
 	contractTable  = "contract"
 )
 
+// The tables a contract POINTS AT. The same three spellings bound the write's
+// link check, the read's visibility clause and the read mask, and a table name
+// spelled at each of those is three places for one rename to miss.
+const (
+	organizationTable = "organization"
+	dealTable         = "deal"
+	projectTable      = "project"
+)
+
 // Status values. Asserted by a human or an approved proposal — never derived
 // from a date, here or anywhere (ADR-0109 §2).
 const (
@@ -158,7 +167,7 @@ func scanContract(row pgx.Row) (crmcontracts.Contract, error) {
 		return crmcontracts.Contract{}, err
 	}
 	c.Id = openapi_types.UUID(id)
-	c.OrganizationId = openapi_types.UUID(orgID)
+	c.OrganizationId = uuidPtr(&orgID)
 	c.DealId = uuidPtr(dealID)
 	c.ProjectId = uuidPtr(projectID)
 	c.SupersededById = uuidPtr(supersededBy)
@@ -185,6 +194,20 @@ func datePtr(t *time.Time) *openapi_types.Date {
 	return &openapi_types.Date{Time: *t}
 }
 
+// anchorOf is the counterparty of a contract that a WRITE is about to act on.
+//
+// organization_id left the wire's required set so a reader admitted through the
+// DEAL can be told nothing about a company they may not open. Every write path
+// takes its pre-image from readContract, which does not mask — so a nil anchor
+// here is a masked row that reached a write, not an agreement without a
+// company, and it stops rather than authorizing against a zero uuid.
+func anchorOf(c crmcontracts.Contract) (ids.UUID, error) {
+	if c.OrganizationId == nil {
+		return ids.UUID{}, fmt.Errorf("contracts: a write reached contract %s with its counterparty withheld", ids.UUID(c.Id))
+	}
+	return ids.UUID(*c.OrganizationId), nil
+}
+
 func uuidPtr(id *ids.UUID) *openapi_types.UUID {
 	if id == nil {
 		return nil
@@ -201,7 +224,7 @@ func (s *Store) GetContract(ctx context.Context, id ids.ContractID) (crmcontract
 	var out crmcontracts.Contract
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = readContract(ctx, tx, id, s.today())
+		out, err = readContractForCaller(ctx, tx, id, s.today())
 		return err
 	})
 	return out, err
