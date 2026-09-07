@@ -166,9 +166,9 @@ nothing for a role whose deal cell reads ----.
 ### Hiding individual fields
 
 A role can withhold single fields from the records it may otherwise read. The
-server enforces it — `platform/auth/fieldmask.go` renders the predicate and
-refuses a sort or filter over a withheld column, and the deal and project reads
-apply it — but no SEEDED role carries a mask, so nothing on this page says "this
-role sees the record but not the amount on it". The last seeded mask, a rep's
-withheld deal amount, was dropped in migration `1787449900`; the machinery
-stayed, because an operator may still author a mask on a custom role.
+server enforces it — platform/auth renders the predicate and refuses a sort or
+filter over a withheld column, and the deal and project reads apply it — but no
+SEEDED role carries a mask, so nothing on this page says "this role sees the
+record but not the amount on it". The last seeded mask, a rep's withheld deal
+amount, was dropped in a later migration; the machinery stayed, because an
+operator may still author a mask on a custom role.
