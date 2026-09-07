@@ -174,11 +174,25 @@ function boardHeading(
   // A build that did not finish, or is waiting on budget, is the room's own
   // headline: left under "teach me how you write" the reader takes the dossier
   // below for the result and never learns nothing was built.
+  // The server's own sentence rides under that headline, because the headline
+  // is the same for every broken build: "no AI provider is configured" and
+  // "the model answered badly" are one line apart on screen and a settings
+  // change apart in life, and the reader who cannot tell them apart retries
+  // forever. Absent detail leaves the headline standing alone rather than
+  // inventing a cause — it reads correctly on its own.
   if (state.phase === "vo.result" && state.lastBuildStatus === "failed") {
-    return { eyebrow, title: t("ob.conv.build.failed") };
+    return {
+      eyebrow,
+      title: t("ob.conv.build.failed"),
+      sub: state.lastBuildDetail ?? undefined,
+    };
   }
   if (state.phase === "vo.result" && state.lastBuildStatus === "deferred") {
-    return { eyebrow, title: t("ob.conv.build.deferred") };
+    return {
+      eyebrow,
+      title: t("ob.conv.build.deferred"),
+      sub: state.lastBuildDetail ?? undefined,
+    };
   }
   return {
     eyebrow,
