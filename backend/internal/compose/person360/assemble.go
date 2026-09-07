@@ -118,6 +118,13 @@ func (s *Service) Assemble(ctx context.Context, personID ids.PersonID) (crmcontr
 
 // AssembleScoped is Assemble narrowed by opts.
 func (s *Service) AssembleScoped(ctx context.Context, personID ids.PersonID, opts AssembleOptions) (crmcontracts.Person360, error) {
+	// The person half of the same admission org360.AssembleScoped states, and
+	// for the same reason: GetPersonTx below asks it, and that read is still
+	// what refuses an unreadable contact, but an admission living entirely in
+	// another package is one refactor from living nowhere.
+	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
+		return crmcontracts.Person360{}, err
+	}
 	now := s.now().UTC()
 	out := crmcontracts.Person360{
 		AsOf:            now,

@@ -9,7 +9,6 @@ package attention
 // object where it has none.
 
 import (
-	"context"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -21,7 +20,7 @@ func assembleMorning(t *testing.T, briefing stubBriefing) crmcontracts.Attention
 	t.Helper()
 	svc := NewService(stubApprovals{}, stubDuplicates{}, &stubTasks{},
 		stubReceipts{}, briefing, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -70,7 +69,7 @@ func TestARiskCardCarriesTheDealsFacts(t *testing.T) {
 			StageID: &stage, OwnerID: &owner, AmountMinor: &amount, Currency: &currency,
 		}}}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
 		fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -103,7 +102,7 @@ func TestARiskCardWithNoFactsSendsNoFactsObject(t *testing.T) {
 		stubAtRisk{rows: []RiskyDeal{{DealID: ids.NewV7(), Name: "Bare deal", QuietDays: 5}}},
 		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
 		fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}

@@ -21,6 +21,8 @@ import (
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/overlay"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/retrieval"
@@ -128,7 +130,24 @@ func (s *RunnerService) Tick(ctx context.Context, now time.Time) error {
 	// the write shape — a ledger row and an outbox row, both of which take their
 	// actor from the context. A pass with no actor bound could not write either,
 	// and the rail would silently never learn that the 06:00 brief was queued.
+	//
+	// Refused BEFORE that binding if somebody else is already on the context.
+	// Checking after it would be decoration: schedulerContext overwrites the
+	// actor, so a human, an agent or a buyer handed to Tick would be converted
+	// to the system principal and then admitted by the very check meant to
+	// refuse them. The pass runs on the installation's own authority, and the
+	// only caller entitled to start it is one carrying nobody.
+	if actor, ok := principal.Actor(ctx); ok && actor.Type != principal.PrincipalSystem {
+		return fmt.Errorf("runner: a scheduled pass runs as the system, not as %s: %w",
+			actor.Type, apperrors.ErrPermissionDenied)
+	}
 	ctx = schedulerContext(ctx)
+	// And the binding it just made, stated as a check so the entry-point gate
+	// sees an admission and a future edit to schedulerContext cannot quietly
+	// stop making one.
+	if err := auth.RequireSystem(ctx); err != nil {
+		return err
+	}
 	s.reapAbandonedRuns(ctx)
 	// Seeding failures are collected, NOT returned here. Claiming is what makes
 	// already-queued work run, and it is independent of whether tonight's

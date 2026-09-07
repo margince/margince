@@ -120,7 +120,7 @@ func TestTheZoneIsResolvedOncePerAssembly(t *testing.T) {
 		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
 		WithZone(func(context.Context) (*time.Location, error) { asked++; return loc, nil }),
 	)
-	if _, err := s.Assemble(context.Background()); err != nil {
+	if _, err := s.Assemble(pageReader()); err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
 	if asked != 1 {

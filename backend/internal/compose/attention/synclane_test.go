@@ -37,7 +37,7 @@ func TestASyncConcernCarriesItsConditionAndItsFacts(t *testing.T) {
 		{Kind: "budget_degraded", Band: "shed"},
 		{Kind: "objects_stale", Objects: []string{"deal", "person"}},
 	}})
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -75,7 +75,7 @@ func TestASyncConcernCarriesItsConditionAndItsFacts(t *testing.T) {
 // ABSENT — not empty, and not named as withheld, because nothing was hidden.
 func TestANonOverlayWorkspaceHasNoSyncHealthLane(t *testing.T) {
 	svc := syncLaneService(&stubSyncHealth{err: apperrors.ErrModeNotOverlay})
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -89,7 +89,7 @@ func TestANonOverlayWorkspaceHasNoSyncHealthLane(t *testing.T) {
 
 func TestARefusedSyncHealthReadIsNamedAsWithheld(t *testing.T) {
 	svc := syncLaneService(&stubSyncHealth{err: apperrors.ErrPermissionDenied})
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -105,7 +105,7 @@ func TestARefusedSyncHealthReadIsNamedAsWithheld(t *testing.T) {
 // nothing wrong, which is a promise the absent lane never makes.
 func TestAHealthySyncReadsAsAnEmptyLane(t *testing.T) {
 	svc := syncLaneService(&stubSyncHealth{})
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}

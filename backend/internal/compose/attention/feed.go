@@ -245,16 +245,6 @@ func (s *Service) countingDecisions() *Service {
 	return &deeper
 }
 
-// Assemble reads every lane and returns the day.
-//
-// A lane whose read is REFUSED is omitted and named rather than reported empty.
-// Any other failure is returned: a lane that is broken rather than withheld
-// must not read as a clear day.
-func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) {
-	day, _, err := s.assembleDay(ctx)
-	return day, err
-}
-
 // assembleDay is Assemble, plus everything else the night knows: its finding
 // per deal, its score per deal, and the run's data cutoff.
 //

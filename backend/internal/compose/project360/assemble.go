@@ -18,10 +18,12 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/projects"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // sectionLimit is how many rows of a nested collection one 360 carries.
@@ -89,6 +91,12 @@ func (s *Service) readCatalogs(ctx context.Context) (catalogs, error) {
 // refusal; every other section is attempted, and a section refused for
 // lack of a grant is omitted and named rather than returned empty.
 func (s *Service) Assemble(ctx context.Context, projectID ids.ProjectID) (crmcontracts.Project360, error) {
+	// The object question at the entry point, not only inside GetProjectTx.
+	// This page is reached from an MCP tool as well as a browser, so the seam
+	// that admits the caller is worth being able to read here.
+	if err := auth.Require(ctx, "project", principal.ActionRead); err != nil {
+		return crmcontracts.Project360{}, err
+	}
 	now := s.now().UTC()
 	out := crmcontracts.Project360{AsOf: now, SectionsOmitted: []crmcontracts.Project360Section{}}
 	cats, err := s.readCatalogs(ctx)

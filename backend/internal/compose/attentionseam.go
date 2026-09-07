@@ -13,6 +13,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -35,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/overlay"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/overlaybudget"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -431,6 +433,20 @@ func (a attentionDealStandings) CachedStandings(
 	ctx context.Context, dealIDs []ids.UUID,
 ) (map[ids.UUID]attention.DealStanding, error) {
 	cards, err := a.cards.CachedCards(ctx, dealIDs)
+	// A standing is an ENRICHMENT of a queue row, not the row itself, so a
+	// caller who may not read deals loses the standing and keeps the page —
+	// the same answer attentionNames.Labels gives for a type it may not read.
+	//
+	// The two grants come apart: a role holding activity but not deal is a
+	// grant an administrator can write, and the activity lane puts a task
+	// linked to a deal on that member's queue. Propagating the refusal would
+	// turn their perfectly legitimate worklist into a 403.
+	//
+	// Any other error still propagates: a database that will not answer must
+	// not read as a queue whose rows simply have no standing.
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		return map[ids.UUID]attention.DealStanding{}, nil
+	}
 	if err != nil {
 		return nil, err
 	}

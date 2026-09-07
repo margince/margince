@@ -48,8 +48,10 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // CachedCard is one deal's already-written standing, as much of it as a queue
@@ -80,6 +82,11 @@ func (s *Service) CachedCards(
 	out := make(map[ids.UUID]CachedCard, len(dealIDs))
 	if len(dealIDs) == 0 {
 		return out, nil
+	}
+	// The same admission Get states. This is the cache-only reader — it never
+	// gathers, so nothing else here asks the object question at all.
+	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+		return nil, err
 	}
 	userID, err := actingUser(ctx)
 	if err != nil {

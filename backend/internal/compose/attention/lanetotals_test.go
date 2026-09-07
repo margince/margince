@@ -46,7 +46,7 @@ func TestThePlannedBadgeCountsWhatThereIsNotWhatFits(t *testing.T) {
 		stubApprovals{}, stubDuplicates{}, tasks, stubReceipts{},
 		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 
-	day, err := s.Assemble(context.Background())
+	day, err := s.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -67,7 +67,7 @@ func TestTheCommitmentsBadgeCountsWhatThereIsNotWhatFits(t *testing.T) {
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
 		stubBriefing{}, promises, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 
-	day, err := s.Assemble(context.Background())
+	day, err := s.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -88,7 +88,7 @@ func TestACountThatWillNotAnswerIsNotReplacedByThePageLength(t *testing.T) {
 		stubApprovals{}, stubDuplicates{}, tasks, stubReceipts{},
 		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 
-	if _, err := s.Assemble(context.Background()); err == nil {
+	if _, err := s.Assemble(pageReader()); err == nil {
 		t.Error("the day assembled with a count that failed, so the badge came from somewhere else")
 	}
 }
@@ -105,7 +105,7 @@ func TestACountThisReaderMayNotMakeWithholdsItsLane(t *testing.T) {
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
 		stubBriefing{}, promises, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 
-	day, err := s.Assemble(context.Background())
+	day, err := s.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v — a lane the reader may not count must be withheld, not fatal", err)
 	}

@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/dealrooms"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -125,6 +126,15 @@ type stored struct {
 // cached. A refresh forces the rewrite: the reader asking for a second
 // opinion.
 func (s *Service) Get(ctx context.Context, dealID ids.DealID, refresh bool) (crmcontracts.DealStatusCard, error) {
+	// The object question at the entry point. gather below reaches
+	// deals.GetDeal, which asks it and the row question both, and that is
+	// still what refuses an unreadable deal — but the card is also served
+	// from a CACHE keyed on the user, and an admission that lives only in the
+	// path that fills the cache is one refactor away from being skipped by
+	// the path that reads it.
+	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+		return crmcontracts.DealStatusCard{}, err
+	}
 	userID, err := actingUser(ctx)
 	if err != nil {
 		return crmcontracts.DealStatusCard{}, err

@@ -53,7 +53,7 @@ func TestABoundResolverNamesEveryCardOnce(t *testing.T) {
 		stubAtRisk{rows: []RiskyDeal{{DealID: deal, Name: "Fleet retrofit", QuietDays: 19}}},
 		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, names,
 		fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -83,7 +83,7 @@ func TestARefusedLabelCostsTheNameAndNeverTheReference(t *testing.T) {
 		stubBriefing{rows: []BriefEntry{{ID: ids.NewV7(), DealID: deal, Rank: 1}}}, nil,
 		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, names,
 		fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -105,7 +105,7 @@ func TestAnUnboundFeedSendsSubjectsUnnamed(t *testing.T) {
 		stubBriefing{rows: []BriefEntry{{ID: ids.NewV7(), DealID: ids.NewV7(), Rank: 1}}}, nil,
 		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
 		fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -129,7 +129,7 @@ func TestEveryLanesSubjectsAreNamed(t *testing.T) {
 		&stubDecay{rows: []QuietRelationship{{PersonID: person, Name: "Dana Weiss", QuietDays: 63, LastAt: readInstant}}},
 		nil, nil, nil, nil, nil, nil, nil, nil, nil, names,
 		fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -165,7 +165,7 @@ func TestTwoRecordsOfOneTypeCostOneRead(t *testing.T) {
 		}}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, names,
 		fixedClock)
 
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}

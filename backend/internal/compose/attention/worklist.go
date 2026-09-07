@@ -21,6 +21,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -48,6 +49,12 @@ const worklistMaxPage = 100
 func (s *Service) Worklist(
 	ctx context.Context, scope, filter string, owner ids.UUID, limit int, token string,
 ) (crmcontracts.Worklist, error) {
+	// Membership first, then the scope. resolveScope below already refuses a
+	// scope the reader does not hold, which is the narrower question; this is
+	// the one it assumes — that there is a seat behind the call at all.
+	if err := auth.RequireMember(ctx); err != nil {
+		return crmcontracts.Worklist{}, err
+	}
 	// Resolved BEFORE the day is read: a reader asking for a scope they do not
 	// hold gets a refusal rather than a page assembled and then narrowed, and
 	// the read they were never entitled to make is not made.

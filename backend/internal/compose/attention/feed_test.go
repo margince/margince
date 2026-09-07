@@ -206,7 +206,7 @@ func TestADuplicateOutranksAnApprovalBecauseAMergeCannotBeUndone(t *testing.T) {
 		stubApprovals{rows: []crmcontracts.Approval{approval("Send the Weber follow-up")}},
 		stubDuplicates{pairs: []DuplicatePair{{ID: ids.NewV7(), EntityType: "person", Confidence: 0.9}}, open: 1},
 		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -224,7 +224,7 @@ func TestAWithheldLaneIsNamedRatherThanReportedEmpty(t *testing.T) {
 		stubDuplicates{err: apperrors.ErrPermissionDenied},
 		&stubTasks{rows: []Task{{ID: ids.NewV7(), Subject: "Call Anna"}}},
 		stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("a refused lane must not fail the read: %v", err)
 	}
@@ -246,7 +246,7 @@ func TestABrokenLaneFailsTheReadRatherThanReadingAsQuiet(t *testing.T) {
 	svc := NewService(
 		stubApprovals{err: fmt.Errorf("the database is unreachable")},
 		stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	if _, err := svc.Assemble(context.Background()); err == nil {
+	if _, err := svc.Assemble(pageReader()); err == nil {
 		t.Fatal("a lane that FAILED was reported as an empty day")
 	}
 }
@@ -260,7 +260,7 @@ func TestTheCountReportsTheTotalThoughTheLaneIsBounded(t *testing.T) {
 		stubApprovals{},
 		stubDuplicates{pairs: pairs, open: 40},
 		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -283,7 +283,7 @@ func TestTheCountCoversStagedProposalsToo(t *testing.T) {
 	svc := NewService(
 		stubApprovals{rows: staged, pending: 20},
 		stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -302,7 +302,7 @@ func TestAnOverdueTaskLeadsThePlannedLane(t *testing.T) {
 			{ID: ids.NewV7(), Subject: "Was due yesterday", DueAt: &yesterday},
 		}},
 		stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -333,7 +333,7 @@ func TestATaskCarriesTheRecordItWasRaisedFor(t *testing.T) {
 			LinkType: "lead", LinkID: lead,
 		}}},
 		stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -360,7 +360,7 @@ func TestATaskUnderNoRecordCarriesNoSubject(t *testing.T) {
 			ID: ids.NewV7(), Subject: "Call the accountant", DueAt: &due,
 		}}},
 		stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -377,7 +377,7 @@ func TestAReceiptOffersNoDecision(t *testing.T) {
 			Summary: "Moved the Acme close date to 27 Sep", OccurredAt: readInstant.Add(-time.Hour),
 		}}},
 		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -396,7 +396,7 @@ func TestADuplicateCarriesNoServerWrittenSentence(t *testing.T) {
 		stubApprovals{},
 		stubDuplicates{pairs: []DuplicatePair{{ID: ids.NewV7(), EntityType: "organization", Confidence: 0.92}}, open: 1},
 		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -432,7 +432,7 @@ func TestAFloodOfDuplicatesDoesNotBuryTheStagedDecisions(t *testing.T) {
 		stubApprovals{rows: staged, pending: 79},
 		stubDuplicates{pairs: pairs, open: len(pairs)},
 		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -460,7 +460,7 @@ func TestADuplicateCardNamesBothRecords(t *testing.T) {
 			Evidence: []FieldComparison{{Field: "display_name", Signal: "collide"}},
 		}}},
 		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -485,7 +485,7 @@ func TestAnUnreadableSideCostsTheMergeVerbRatherThanLeakingTheRecord(t *testing.
 			LeftID: ids.NewV7(), RightID: hidden,
 		}}},
 		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("a record this reader may not see must not fail the whole day: %v", err)
 	}
@@ -512,7 +512,7 @@ func TestAPairTheReaderCannotChangeIsShownWithoutAVerb(t *testing.T) {
 			LeftID: ids.NewV7(), RightID: theirs,
 		}}},
 		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -541,7 +541,7 @@ func TestOwningOneSideOfAPairDoesNotOfferTheVerb(t *testing.T) {
 			LeftID: mine, RightID: theirs,
 		}}},
 		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -561,7 +561,7 @@ func TestAPairTheReaderCanChangeStillOffersTheVerb(t *testing.T) {
 			LeftID: ids.NewV7(), RightID: ids.NewV7(),
 		}}},
 		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -593,7 +593,7 @@ func TestEvidenceNeverReachesAReaderAsAColumnName(t *testing.T) {
 			},
 		}}},
 		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -618,7 +618,7 @@ func TestARecordReadThatBrokeIsNotReportedAsWithheld(t *testing.T) {
 			LeftID: ids.NewV7(), RightID: ids.NewV7(),
 		}}},
 		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	if _, err := svc.Assemble(context.Background()); err == nil {
+	if _, err := svc.Assemble(pageReader()); err == nil {
 		t.Fatal("a record read that FAILED was rendered as a pair the reader may not see")
 	}
 }
@@ -639,7 +639,7 @@ func TestAnIdentityConflictKeepsTheOneRowThatExplainsIt(t *testing.T) {
 			},
 		}}},
 		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -659,7 +659,7 @@ func TestTheBriefingLaneIsItsOwnAndNotADecision(t *testing.T) {
 		stubBriefing{rows: []BriefEntry{{ID: ids.NewV7(), DealID: deal, Rank: 1}}}, nil, nil, nil,
 		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
 		fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -691,7 +691,7 @@ func TestAMorningWithNoRunIsEmptyRatherThanWithheld(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
 		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -712,7 +712,7 @@ func TestABriefingLaneRefusedIsNamedRatherThanReportedQuiet(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
 		stubBriefing{err: apperrors.ErrPermissionDenied}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -728,7 +728,7 @@ func TestABrokenBriefingLaneFailsTheReadRatherThanReadingAsQuiet(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
 		stubBriefing{err: errors.New("the brief read fell over")}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	if _, err := svc.Assemble(context.Background()); err == nil {
+	if _, err := svc.Assemble(pageReader()); err == nil {
 		t.Fatal("a broken briefing read was reported as a quiet morning")
 	}
 }
@@ -739,7 +739,7 @@ func TestABriefingItemOffersItsOwnThreeVerbs(t *testing.T) {
 		stubBriefing{rows: []BriefEntry{{ID: ids.NewV7(), DealID: ids.NewV7(), Rank: 1}}}, nil, nil, nil,
 		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
 		fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -778,7 +778,7 @@ func TestEveryLaneIsReadOncePerFeed(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
 		commitments, stubAtRisk{}, decay, meetings, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	if _, err := svc.Assemble(context.Background()); err != nil {
+	if _, err := svc.Assemble(pageReader()); err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
 	if commitments.calls != 1 {
@@ -799,7 +799,7 @@ func TestAWithheldLaneAppearsInLanesOmittedExactlyOneTime(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
 		&stubCommitments{err: apperrors.ErrPermissionDenied}, stubAtRisk{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -831,7 +831,7 @@ func TestAPairTheMergeWouldRefuseOffersNoVerb(t *testing.T) {
 			LeftID: ids.NewV7(), RightID: ids.NewV7(),
 		}}},
 		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -858,7 +858,7 @@ func TestAnUnblockedPairStillOffersTheVerb(t *testing.T) {
 			LeftID: ids.NewV7(), RightID: ids.NewV7(),
 		}}},
 		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}

@@ -159,6 +159,36 @@ func RequireMember(ctx context.Context) error {
 	return refuseBuyer(p, "member-only operation")
 }
 
+// RequireSystem admits ONLY the system principal, and is the admission of a
+// background pass rather than of a request.
+//
+// Scheduled work has no user to authorize: a sweep, an event consumer or a
+// runner tick binds the system principal itself and then reads and writes on
+// the installation's own authority. Asking auth.Require for an object grant
+// there would be theatre — the system principal holds every one — and asking
+// RequireHuman would refuse the scheduler itself, which is what legitimately
+// calls these paths.
+//
+// What it is for is the OPPOSITE direction. These entry points assume they are
+// the system, and until now they only assumed it: a request context reaching
+// one would be served, reading and writing past every object and row gate,
+// because a caller that never asks is never refused. This turns the assumption
+// into a check that fails loudly at the door, and it is what lets the
+// entry-point gate see an admission where it previously saw none.
+//
+// It refuses an agent as firmly as a human: a passport is lent authority, and
+// scheduled work is not something authority can be lent for.
+func RequireSystem(ctx context.Context) error {
+	p, err := rbacActor(ctx)
+	if err != nil {
+		return err
+	}
+	if p.Type != principal.PrincipalSystem {
+		return fmt.Errorf("system-only operation: %w", apperrors.ErrPermissionDenied)
+	}
+	return nil
+}
+
 // auditActionGrant maps each audit_log.action verb onto the CRUD grant
 // that authorizes it. Package-level: AuthzRule sits on every write path.
 //

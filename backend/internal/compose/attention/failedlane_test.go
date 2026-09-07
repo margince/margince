@@ -45,7 +45,7 @@ func TestAFailedDecisionComesBackToItsDecider(t *testing.T) {
 		FailedAt: readInstant,
 	}}})
 
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -79,7 +79,7 @@ func TestAFailureAboutATimelineEntryNamesItWithoutOfferingOpen(t *testing.T) {
 		Sentence: "this was approved, but the work it released did not run",
 		FailedAt: readInstant, TargetType: "activity", TargetID: ids.NewV7(),
 	}}})
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -96,7 +96,7 @@ func TestAFailureAboutATimelineEntryNamesItWithoutOfferingOpen(t *testing.T) {
 // must survive as itself: no reader wired means no lane on the wire, a
 // refusal names the lane, and a clear lane is an empty list.
 func TestTheFailedLaneKeepsAbsentWithheldAndEmptyApart(t *testing.T) {
-	unwired, err := failedLaneService(nil).Assemble(context.Background())
+	unwired, err := failedLaneService(nil).Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling without the reader: %v", err)
 	}
@@ -104,7 +104,7 @@ func TestTheFailedLaneKeepsAbsentWithheldAndEmptyApart(t *testing.T) {
 		t.Error("an installation that reads no failure marks still sent the lane")
 	}
 
-	refused, err := failedLaneService(&stubFailedEffects{err: apperrors.ErrPermissionDenied}).Assemble(context.Background())
+	refused, err := failedLaneService(&stubFailedEffects{err: apperrors.ErrPermissionDenied}).Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling with a refused read: %v", err)
 	}
@@ -112,7 +112,7 @@ func TestTheFailedLaneKeepsAbsentWithheldAndEmptyApart(t *testing.T) {
 		t.Errorf("a refused lane is not named in lanes_omitted: %v", refused.LanesOmitted)
 	}
 
-	clearDay, err := failedLaneService(&stubFailedEffects{}).Assemble(context.Background())
+	clearDay, err := failedLaneService(&stubFailedEffects{}).Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling a clear lane: %v", err)
 	}

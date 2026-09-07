@@ -79,6 +79,11 @@ func (s *Service) CachedMoves(
 	if len(dealIDs) == 0 {
 		return out, nil
 	}
+	// The same admission CachedCards states. This reader shares that cache and
+	// asked the object question no more than it did.
+	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+		return nil, err
+	}
 	userID, err := actingUser(ctx)
 	if err != nil {
 		return nil, err
