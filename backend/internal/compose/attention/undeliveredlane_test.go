@@ -42,7 +42,7 @@ func TestAGivenUpSendNamesItselfAndOpensThePerson(t *testing.T) {
 		{ID: ids.NewV7(), Subject: "Proposal for Weber GmbH", Reason: "the mailbox is no longer send-capable", ParkedAt: abandoned, PersonID: person},
 		{ID: ids.NewV7(), Subject: "Intro", ParkedAt: abandoned},
 	}}
-	out, err := undeliveredLaneService(stub).Assemble(context.Background())
+	out, err := undeliveredLaneService(stub).Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -77,7 +77,7 @@ func TestAGivenUpSendNamesItselfAndOpensThePerson(t *testing.T) {
 }
 
 func TestARefusedUndeliveredReadIsNamedAsWithheld(t *testing.T) {
-	out, err := undeliveredLaneService(&stubUndelivered{err: apperrors.ErrPermissionDenied}).Assemble(context.Background())
+	out, err := undeliveredLaneService(&stubUndelivered{err: apperrors.ErrPermissionDenied}).Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -92,7 +92,7 @@ func TestARefusedUndeliveredReadIsNamedAsWithheld(t *testing.T) {
 // Every send leaving is an EMPTY lane — the feed looked — which the absent
 // lane never promises.
 func TestEverySendThatLeftReadsAsAnEmptyLane(t *testing.T) {
-	out, err := undeliveredLaneService(&stubUndelivered{}).Assemble(context.Background())
+	out, err := undeliveredLaneService(&stubUndelivered{}).Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}

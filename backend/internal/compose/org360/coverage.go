@@ -41,6 +41,13 @@ import (
 func (s *Service) Coverage(
 	ctx context.Context, orgID ids.OrganizationID,
 ) (crmcontracts.OrganizationCoverage, error) {
+	// The account admission its siblings state. Coverage was the fourth org360
+	// read of this shape and the one left behind: its root grant came only from
+	// GetOrganizationTx, one package away, where the entry-point gate cannot
+	// see it.
+	if err := auth.Require(ctx, "organization", principal.ActionRead); err != nil {
+		return crmcontracts.OrganizationCoverage{}, err
+	}
 	now := s.now().UTC()
 	out := crmcontracts.OrganizationCoverage{
 		AsOf:  now,

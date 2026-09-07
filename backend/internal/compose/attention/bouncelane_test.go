@@ -41,7 +41,7 @@ func TestABouncedSendNamesItselfAndOpensThePerson(t *testing.T) {
 		{ID: ids.NewV7(), Subject: "Proposal for Weber GmbH", Reason: "550 5.1.1 user unknown", BouncedAt: reported, PersonID: person},
 		{ID: ids.NewV7(), Subject: "Intro", BouncedAt: reported},
 	}}
-	out, err := bounceLaneService(stub).Assemble(context.Background())
+	out, err := bounceLaneService(stub).Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -73,7 +73,7 @@ func TestABouncedSendNamesItselfAndOpensThePerson(t *testing.T) {
 }
 
 func TestARefusedBounceReadIsNamedAsWithheld(t *testing.T) {
-	out, err := bounceLaneService(&stubBounces{err: apperrors.ErrPermissionDenied}).Assemble(context.Background())
+	out, err := bounceLaneService(&stubBounces{err: apperrors.ErrPermissionDenied}).Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -88,7 +88,7 @@ func TestARefusedBounceReadIsNamedAsWithheld(t *testing.T) {
 // Every send arriving is an EMPTY lane — the feed looked — which the absent
 // lane never promises.
 func TestEveryDeliveredSendReadsAsAnEmptyLane(t *testing.T) {
-	out, err := bounceLaneService(&stubBounces{}).Assemble(context.Background())
+	out, err := bounceLaneService(&stubBounces{}).Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}

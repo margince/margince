@@ -234,7 +234,7 @@ func TestTheReadersOwnScopeReachesTheTaskQuery(t *testing.T) {
 		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
 	)
 
-	if _, err := svc.forReader().Assemble(context.Background()); err != nil {
+	if _, err := svc.forReader().Assemble(pageReader()); err != nil {
 		t.Fatalf("assembling the day: %v", err)
 	}
 
@@ -252,7 +252,7 @@ func TestTheLaneFeedStillReadsEveryVisibleTask(t *testing.T) {
 		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
 	)
 
-	if _, err := svc.Assemble(context.Background()); err != nil {
+	if _, err := svc.Assemble(pageReader()); err != nil {
 		t.Fatalf("assembling the day: %v", err)
 	}
 

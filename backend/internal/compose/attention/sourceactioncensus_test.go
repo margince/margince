@@ -21,7 +21,6 @@ package attention
 // than by somebody remembering to add it.
 
 import (
-	"context"
 	"reflect"
 	"sort"
 	"strings"
@@ -315,7 +314,7 @@ func aDayWithEveryLaneCarryingARow(t *testing.T) crmcontracts.Attention {
 			ID: ids.NewV7(), PersonID: ids.NewV7(),
 			Reason: "they know the buyer", RequestedAt: readInstant, DueAt: readInstant,
 		}}})
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling the day: %v", err)
 	}

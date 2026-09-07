@@ -38,7 +38,7 @@ func TestANoticeCarriesItsOwnWordsAndItsOneVerb(t *testing.T) {
 			Body: "A lead's first response is overdue.", CreatedAt: readInstant,
 		},
 	}})
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -58,7 +58,7 @@ func TestANoticeCarriesItsOwnWordsAndItsOneVerb(t *testing.T) {
 }
 
 func TestARefusedNoticesReadIsNamedAsWithheld(t *testing.T) {
-	out, err := noticesLaneService(&stubNotices{err: apperrors.ErrPermissionDenied}).Assemble(context.Background())
+	out, err := noticesLaneService(&stubNotices{err: apperrors.ErrPermissionDenied}).Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -73,7 +73,7 @@ func TestARefusedNoticesReadIsNamedAsWithheld(t *testing.T) {
 // Everything read is an EMPTY lane — the feed looked — which the absent lane
 // never promises.
 func TestEverythingSeenReadsAsAnEmptyLane(t *testing.T) {
-	out, err := noticesLaneService(&stubNotices{}).Assemble(context.Background())
+	out, err := noticesLaneService(&stubNotices{}).Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}

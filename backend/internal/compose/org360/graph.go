@@ -25,10 +25,12 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/signals"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
@@ -95,6 +97,13 @@ const graphScanCap = 500
 // whole read's refusal; every other group is attempted, and a group refused
 // for lack of a grant is omitted and named rather than returned empty.
 func (s *Service) Graph(ctx context.Context, orgID ids.OrganizationID) (crmcontracts.OrganizationGraph, error) {
+	// The account admission its siblings state. The per-group grants below are
+	// a different question — which parts of the card this caller may see — and
+	// answering those without first asking whether the account is readable at
+	// all would draw a graph around a company they cannot open.
+	if err := auth.Require(ctx, "organization", principal.ActionRead); err != nil {
+		return crmcontracts.OrganizationGraph{}, err
+	}
 	now := s.now().UTC()
 	out := crmcontracts.OrganizationGraph{
 		AsOf:          now,

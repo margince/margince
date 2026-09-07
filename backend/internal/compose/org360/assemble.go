@@ -99,6 +99,15 @@ type AssembleOptions struct {
 
 // AssembleScoped is Assemble narrowed by opts.
 func (s *Service) AssembleScoped(ctx context.Context, orgID ids.OrganizationID, opts AssembleOptions) (crmcontracts.Organization360, error) {
+	// The object question, asked HERE rather than only by the anchor read
+	// below. GetOrganizationTx does ask it, and this page's refusal is still
+	// its refusal — but a composite read whose authorization is entirely
+	// somebody else's is one refactor away from having none, and nothing
+	// would fail. Stated at the entry point, it is readable where the page is
+	// entered and it survives the anchor moving.
+	if err := auth.Require(ctx, "organization", principal.ActionRead); err != nil {
+		return crmcontracts.Organization360{}, err
+	}
 	now := s.now().UTC()
 	out := crmcontracts.Organization360{AsOf: now, SectionsOmitted: []crmcontracts.Organization360SectionsOmitted{}}
 	// The custom-field catalog is read above the transaction, not inside it:

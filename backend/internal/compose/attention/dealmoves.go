@@ -29,10 +29,12 @@ package attention
 
 import (
 	"context"
+	"errors"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -70,6 +72,13 @@ func (s *Service) nameTheStep(ctx context.Context, queue []crmcontracts.Worklist
 		return nil
 	}
 	moves, err := s.dealMoves.CachedMoves(ctx, wanted)
+	// A suggested move is an ENRICHMENT of a queue row: a reader who may not
+	// read deals loses the suggestion and keeps the row, which is the answer
+	// this function's own doc already gives for a move naming a record they
+	// may no longer read. Propagating it would fail the whole page instead.
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		return nil
+	}
 	if err != nil {
 		return err
 	}

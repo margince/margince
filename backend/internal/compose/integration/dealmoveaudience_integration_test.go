@@ -32,10 +32,12 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/dealstatus"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -288,5 +290,55 @@ func seedCachedCard(t *testing.T, e *SearchEnv, userID, deal ids.UUID, move crmc
 		VALUES ($1, $2, 'fixture', now(), 'deterministic', $3)`,
 		userID, deal, payload); err != nil {
 		t.Fatalf("seeding the cached card: %v", err)
+	}
+}
+
+// activityOnlyReader holds activity:read and NOT deal:read — a role an
+// administrator can write, since grants are edited per object.
+//
+// It is a real seat and not a corner case: the worklist's activity lane admits
+// on activity:read alone, so a task linked to a deal reaches this member's
+// queue. What they must not get is a 403 for the whole page because one
+// enrichment column asked a grant they do not hold.
+func activityOnlyReader(e *SearchEnv) context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(),
+		SeatType: principal.SeatFull,
+		Permissions: principal.Permissions{
+			Objects:  map[string]principal.ObjectGrant{"activity": {Read: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+}
+
+// TestTheCachedDealReadersRefuseAMemberWithoutTheDealGrant pins the refusal the
+// worklist's adapters then have to absorb.
+//
+// Both readers serve a per-user cache and neither gathers, so nothing else on
+// their path asks the object question — the entry-point admission is the only
+// thing between a member with no deal grant and another member's card.
+func TestTheCachedDealReadersRefuseAMemberWithoutTheDealGrant(t *testing.T) {
+	e := SetupSearch(t)
+	svc := dealstatus.NewService(e.Pool, nil, nil, nil, nil)
+	deal := ids.NewV7()
+
+	// The control: a reader holding the grant is answered, so the refusals
+	// below are the missing grant and not a service this fixture never wired.
+	granted := dealReader(e)
+	if _, err := svc.CachedMoves(granted, []ids.UUID{deal}); err != nil {
+		t.Fatalf("a reader holding deal:read was refused CachedMoves: %v", err)
+	}
+	if _, err := svc.CachedCards(granted, []ids.UUID{deal}); err != nil {
+		t.Fatalf("a reader holding deal:read was refused CachedCards: %v", err)
+	}
+
+	refused := activityOnlyReader(e)
+	if _, err := svc.CachedMoves(refused, []ids.UUID{deal}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("CachedMoves answered a member holding no deal grant → %v, want ErrPermissionDenied", err)
+	}
+	if _, err := svc.CachedCards(refused, []ids.UUID{deal}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("CachedCards answered a member holding no deal grant → %v, want ErrPermissionDenied", err)
 	}
 }

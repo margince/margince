@@ -27,9 +27,11 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // ContactListQuery is one page request over an account's contacts.
@@ -64,6 +66,12 @@ type contactCursor struct {
 func (s *Service) ContactPage(
 	ctx context.Context, orgID ids.OrganizationID, q ContactListQuery,
 ) (crmcontracts.OrganizationContactListResponse, error) {
+	// The same admission AssembleScoped states, for the same reason: this is
+	// the paging surface behind that page's people section and must not be
+	// readable on weaker terms than the section it pages.
+	if err := auth.Require(ctx, "organization", principal.ActionRead); err != nil {
+		return crmcontracts.OrganizationContactListResponse{}, err
+	}
 	var out crmcontracts.OrganizationContactListResponse
 	now := s.now().UTC()
 	// The custom-field catalog opens a transaction of its own, so it is read

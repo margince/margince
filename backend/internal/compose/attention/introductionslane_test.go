@@ -50,7 +50,7 @@ func TestAnIntroductionAskNamesTheContactAndOffersOneVerb(t *testing.T) {
 		},
 	}})
 
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -92,7 +92,7 @@ func TestAnIntroductionAskNamesTheContactAndOffersOneVerb(t *testing.T) {
 func TestARefusedIntroductionsReadIsNamedAsWithheld(t *testing.T) {
 	svc := introductionsLaneService(&stubIntroductions{err: apperrors.ErrPermissionDenied})
 
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -110,7 +110,7 @@ func TestARefusedIntroductionsReadIsNamedAsWithheld(t *testing.T) {
 // An unbound lane is ABSENT, and a bound-but-empty one is empty. The two are
 // different answers and a colleague acts differently on each.
 func TestAnUnboundIntroductionsLaneIsAbsentAndAnEmptyOneIsEmpty(t *testing.T) {
-	unbound, err := introductionsLaneService(nil).Assemble(context.Background())
+	unbound, err := introductionsLaneService(nil).Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling without the lane: %v", err)
 	}
@@ -118,7 +118,7 @@ func TestAnUnboundIntroductionsLaneIsAbsentAndAnEmptyOneIsEmpty(t *testing.T) {
 		t.Errorf("an unbound lane rendered %v; want absent", unbound.Introductions)
 	}
 
-	empty, err := introductionsLaneService(&stubIntroductions{}).Assemble(context.Background())
+	empty, err := introductionsLaneService(&stubIntroductions{}).Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling with an empty lane: %v", err)
 	}

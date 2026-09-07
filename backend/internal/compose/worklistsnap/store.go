@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -216,6 +217,18 @@ func sweep(ctx context.Context, tx pgx.Tx, reader ids.UUID, now time.Time) error
 // walk to hold: refused rather than written against a zero id, which would be a
 // row every agent shared and a walk any of them could resume into.
 func readerOf(ctx context.Context) (ids.UUID, error) {
+	// auth.RequireHuman first, so the entry-point gate can see an admission
+	// here at all — it refuses a buyer and an agent, which are the two this
+	// walk is most likely to meet.
+	//
+	// It is not sufficient, and the explicit type test below is not a second
+	// spelling of it: RequireHuman ADMITS the system and connector principals,
+	// and a snapshot keyed on their zero user id would be the shared row this
+	// function exists to refuse. Narrowing to PrincipalHuman is the check that
+	// was here before and it stays.
+	if err := auth.RequireHuman(ctx); err != nil {
+		return ids.UUID{}, err
+	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {
 		return ids.UUID{}, apperrors.ErrPermissionDenied

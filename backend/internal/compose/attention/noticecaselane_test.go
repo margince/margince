@@ -49,7 +49,7 @@ func TestAnUndischargedDutyReachesTheAdminWithItsDeadline(t *testing.T) {
 			DueAt: readInstant.Add(72 * time.Hour),
 		},
 	}})
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -85,7 +85,7 @@ func TestAnUndischargedDutyReachesTheAdminWithItsDeadline(t *testing.T) {
 }
 
 func TestTheNoticeCaseLaneKeepsAbsentWithheldAndEmptyApart(t *testing.T) {
-	unwired, err := noticeCaseLaneService(nil).Assemble(context.Background())
+	unwired, err := noticeCaseLaneService(nil).Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling without the reader: %v", err)
 	}
@@ -96,7 +96,7 @@ func TestTheNoticeCaseLaneKeepsAbsentWithheldAndEmptyApart(t *testing.T) {
 	}
 
 	refused, err := noticeCaseLaneService(
-		&stubNoticeCases{err: apperrors.ErrPermissionDenied}).Assemble(context.Background())
+		&stubNoticeCases{err: apperrors.ErrPermissionDenied}).Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling with a refused read: %v", err)
 	}
@@ -105,7 +105,7 @@ func TestTheNoticeCaseLaneKeepsAbsentWithheldAndEmptyApart(t *testing.T) {
 		t.Errorf("a refused lane is not named in lanes_omitted: %v", refused.LanesOmitted)
 	}
 
-	clearDay, err := noticeCaseLaneService(&stubNoticeCases{}).Assemble(context.Background())
+	clearDay, err := noticeCaseLaneService(&stubNoticeCases{}).Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling a clear lane: %v", err)
 	}
