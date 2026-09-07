@@ -273,6 +273,12 @@ dev:
 ## and boots the installation a first customer gets (organization + admin,
 ## no records). Use it when the last session left data behind; plain
 ## `make dev` keeps whatever is there.
+##
+## Also the cure for a migration-ledger desync: a boot failing with
+## `river migrate up: relation "river_migration" already exists` is the shared
+## dev database's ledger disagreeing with its schema, not anything the branch
+## did. Rebuild it rather than hand-repairing the ledger — the same rule the
+## integration lane states for the test database, for the same reason.
 dev-fresh:
 	@bash scripts/dev.sh up "$(DEV_SLUG)" --fresh
 
