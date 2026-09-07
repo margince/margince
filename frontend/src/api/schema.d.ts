@@ -3314,6 +3314,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/stage-automation/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What each stage transition has earned.
+         * @description Every from→to transition in one pipeline, with what happened to the moves
+         *     the product proposed on it. This is the evidence behind letting a
+         *     transition move deals by itself: it reports, and decides nothing.
+         *
+         *     Every rate is a fraction of `reviewed` — proposals a human actually
+         *     answered. A card nobody opened is not evidence that anyone agreed with
+         *     it, so `proposed`, `expired` and `superseded` are counted and reported
+         *     but kept OUT of the denominator. They are reported because their absence
+         *     would hide the case that matters most: a transition whose cards are
+         *     mostly ignored, whose acceptance rate is then computed over the few
+         *     somebody happened to open.
+         *
+         *     `expired` is not `rejected`. Both are refusals, and the product's answer
+         *     to each is opposite — a rejected transition needs a better proposal, an
+         *     expired one needs somebody to look.
+         *
+         *     `unsafe_rate` is a union, not a sum: a move that was reversed AND whose
+         *     evidence a human corrected is one mistake, and counting it twice would
+         *     put a transition over a ceiling it had not crossed.
+         *
+         *     `observation_days` is the span from the first answered proposal to the
+         *     last, rounded DOWN — a fine acceptance rate earned entirely on one
+         *     afternoon has not been observed, however many proposals it saw.
+         */
+        get: operations["getStageAutomationReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/stages/{id}/exit-criteria": {
         parameters: {
             query?: never;
@@ -22237,6 +22279,83 @@ export interface components {
             required?: boolean;
             hint?: string | null;
         };
+        StageAutomationReport: {
+            data: components["schemas"]["StageTransitionRecord"][];
+            /** @description The window the counts were taken over. */
+            window_days: number;
+        };
+        StageTransitionRecord: {
+            /** Format: uuid */
+            pipeline_id: string;
+            /** Format: uuid */
+            from_stage_id: string;
+            /** Format: uuid */
+            to_stage_id: string;
+            from_stage_name: string;
+            to_stage_name: string;
+            /**
+             * @description Proposals a human answered. The denominator of every rate here, and
+             *     zero means "nobody has answered one yet" rather than "the rates are
+             *     bad" — read it before reading any rate below.
+             */
+            reviewed: number;
+            /** @description Cards still standing, unanswered. */
+            proposed: number;
+            /**
+             * @description Cards whose window closed with nobody answering. A refusal by
+             *     NOBODY, which is why it is neither a rejection nor reviewed.
+             */
+            expired: number;
+            /** @description Cards a fresher reading replaced before anyone answered. */
+            superseded: number;
+            /** @description Approved with nothing changed. */
+            accepted_clean: number;
+            /**
+             * @description Approved only after the human changed it. Not a clean acceptance:
+             *     the question is whether the proposal is right AS IT STANDS.
+             */
+            accepted_edited: number;
+            rejected: number;
+            /**
+             * @description Applied without anybody being asked. Reported apart so a reader can
+             *     see how much of a transition's record the autopilot wrote about
+             *     itself.
+             */
+            auto_applied: number;
+            /**
+             * @description Reviewed moves that were reversed OR whose evidence a human
+             *     corrected. One outcome counts once even when both are true.
+             */
+            unsafe: number;
+            /**
+             * @description Whole days from the first answered proposal to the last, rounded
+             *     down.
+             */
+            observation_days: number;
+            /** Format: double */
+            clean_acceptance_rate: number;
+            /** Format: double */
+            edit_rate: number;
+            /** Format: double */
+            rejection_rate: number;
+            /**
+             * Format: double
+             * @description The safety number, held to a ceiling rather than a floor.
+             */
+            unsafe_rate: number;
+            /**
+             * @description The same moves cut by the criterion kinds they rested on, so an
+             *     installation can see WHICH evidence it accepts rather than only that
+             *     it accepts most things.
+             */
+            evidence_kinds: components["schemas"]["StageTransitionEvidenceRecord"][];
+        };
+        StageTransitionEvidenceRecord: {
+            kind: string;
+            reviewed: number;
+            accepted_clean: number;
+            unsafe: number;
+        };
         StageExitCriterionListResponse: {
             data: components["schemas"]["StageExitCriterion"][];
             page: components["schemas"]["PageInfo"];
@@ -38219,6 +38338,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StageEvidenceListResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getStageAutomationReport: {
+        parameters: {
+            query: {
+                pipeline_id: string;
+                /**
+                 * @description How far back to count, in days. The default matches the launch
+                 *     gate's own window, so what a reader sees is what the gate reads.
+                 */
+                window_days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The pipeline's transitions and their record. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StageAutomationReport"];
                 };
             };
             403: components["responses"]["Forbidden"];

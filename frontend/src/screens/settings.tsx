@@ -123,6 +123,7 @@ import { FxRatesCard, ModelCostsCard } from "./rates";
 import { RestrictedRecordsCard } from "./restrictedrecords";
 import { RetentionCard } from "./retention";
 import { StageExitCriteria } from "./settings.exitcriteria";
+import { StageAutomationCard } from "./settings.stageautomation";
 import { SignInMethodsCard } from "./sign-in-methods";
 import { TagVocabularyCard } from "./tagadmin";
 import { TeamsCard } from "./users-access";
@@ -244,6 +245,8 @@ export function tabContent(id: SettingsPageId): ReactNode {
     // ---- sales ----
     case "pipelines":
       return <PipelinesCard />;
+    case "stageautomation":
+      return <StageAutomationCard />;
     case "leads":
       return (
         <>

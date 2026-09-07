@@ -4964,6 +4964,57 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  # ------------------------- /stage-automation/report -------------------------
+  /stage-automation/report:
+    get:
+      tags: [Pipelines]
+      operationId: getStageAutomationReport
+      summary: What each stage transition has earned.
+      description: |
+        Every from→to transition in one pipeline, with what happened to the moves
+        the product proposed on it. This is the evidence behind letting a
+        transition move deals by itself: it reports, and decides nothing.
+
+        Every rate is a fraction of `reviewed` — proposals a human actually
+        answered. A card nobody opened is not evidence that anyone agreed with
+        it, so `proposed`, `expired` and `superseded` are counted and reported
+        but kept OUT of the denominator. They are reported because their absence
+        would hide the case that matters most: a transition whose cards are
+        mostly ignored, whose acceptance rate is then computed over the few
+        somebody happened to open.
+
+        `expired` is not `rejected`. Both are refusals, and the product's answer
+        to each is opposite — a rejected transition needs a better proposal, an
+        expired one needs somebody to look.
+
+        `unsafe_rate` is a union, not a sum: a move that was reversed AND whose
+        evidence a human corrected is one mistake, and counting it twice would
+        put a transition over a ceiling it had not crossed.
+
+        `observation_days` is the span from the first answered proposal to the
+        last, rounded DOWN — a fine acceptance rate earned entirely on one
+        afternoon has not been observed, however many proposals it saw.
+      parameters:
+        - name: pipeline_id
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: window_days
+          in: query
+          required: false
+          description: |
+            How far back to count, in days. The default matches the launch
+            gate's own window, so what a reader sees is what the gate reads.
+          schema: { type: integer, minimum: 1, maximum: 365, default: 30 }
+      responses:
+        '200':
+          description: The pipeline's transitions and their record.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StageAutomationReport' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   # ------------------------ /stages/{id}/exit-criteria ------------------------
   /stages/{id}/exit-criteria:
     parameters:
@@ -30926,6 +30977,98 @@ components:
         kind: { $ref: '#/components/schemas/StageCriterionKind' }
         required: { type: boolean }
         hint: { type: [string, 'null'] }
+
+    StageAutomationReport:
+      type: object
+      required: [data, window_days]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/StageTransitionRecord' }
+        window_days:
+          type: integer
+          description: The window the counts were taken over.
+
+    StageTransitionRecord:
+      type: object
+      required:
+        [pipeline_id, from_stage_id, to_stage_id, from_stage_name, to_stage_name,
+         reviewed, proposed, expired, superseded, accepted_clean, accepted_edited,
+         rejected, auto_applied, unsafe, observation_days, clean_acceptance_rate,
+         edit_rate, rejection_rate, unsafe_rate, evidence_kinds]
+      properties:
+        pipeline_id: { type: string, format: uuid }
+        from_stage_id: { type: string, format: uuid }
+        to_stage_id: { type: string, format: uuid }
+        from_stage_name: { type: string }
+        to_stage_name: { type: string }
+        reviewed:
+          type: integer
+          description: |
+            Proposals a human answered. The denominator of every rate here, and
+            zero means "nobody has answered one yet" rather than "the rates are
+            bad" — read it before reading any rate below.
+        proposed:
+          type: integer
+          description: Cards still standing, unanswered.
+        expired:
+          type: integer
+          description: |
+            Cards whose window closed with nobody answering. A refusal by
+            NOBODY, which is why it is neither a rejection nor reviewed.
+        superseded:
+          type: integer
+          description: Cards a fresher reading replaced before anyone answered.
+        accepted_clean:
+          type: integer
+          description: Approved with nothing changed.
+        accepted_edited:
+          type: integer
+          description: |
+            Approved only after the human changed it. Not a clean acceptance:
+            the question is whether the proposal is right AS IT STANDS.
+        rejected: { type: integer }
+        auto_applied:
+          type: integer
+          description: |
+            Applied without anybody being asked. Reported apart so a reader can
+            see how much of a transition's record the autopilot wrote about
+            itself.
+        unsafe:
+          type: integer
+          description: |
+            Reviewed moves that were reversed OR whose evidence a human
+            corrected. One outcome counts once even when both are true.
+        observation_days:
+          type: integer
+          description: |
+            Whole days from the first answered proposal to the last, rounded
+            down.
+        clean_acceptance_rate: { type: number, format: double, minimum: 0, maximum: 1 }
+        edit_rate: { type: number, format: double, minimum: 0, maximum: 1 }
+        rejection_rate: { type: number, format: double, minimum: 0, maximum: 1 }
+        unsafe_rate:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: The safety number, held to a ceiling rather than a floor.
+        evidence_kinds:
+          type: array
+          description: |
+            The same moves cut by the criterion kinds they rested on, so an
+            installation can see WHICH evidence it accepts rather than only that
+            it accepts most things.
+          items: { $ref: '#/components/schemas/StageTransitionEvidenceRecord' }
+
+    StageTransitionEvidenceRecord:
+      type: object
+      required: [kind, reviewed, accepted_clean, unsafe]
+      properties:
+        kind: { type: string }
+        reviewed: { type: integer }
+        accepted_clean: { type: integer }
+        unsafe: { type: integer }
 
     StageExitCriterionListResponse:
       type: object

@@ -436,7 +436,7 @@ const SALES_READS: readonly {
   readonly opens: readonly SettingsPageId[];
 }[] = [
   { object: "custom_field", opens: ["leads", "fields"] },
-  { object: "pipeline", opens: ["pipelines"] },
+  { object: "pipeline", opens: ["pipelines", "stageautomation"] },
   { object: "product", opens: ["products"] },
   { object: "offer_template", opens: ["products"] },
   { object: "tag", opens: ["tags"] },
@@ -519,6 +519,9 @@ const SEEDED_READ_PAGES = pagesNamed(
   // Nor `members`/`teams`: only the `admin` role is seeded `user_admin` or
   // `team_admin`, so no seeded role below it reaches either page.
   "pipelines",
+  // The same `pipeline:read` that opens Pipelines. The report is read-only, so
+  // a seat that may see the stages may see what their transitions have earned.
+  "stageautomation",
   "leads",
   "fields",
   "products",
@@ -538,6 +541,9 @@ const SEEDED_OPS_PAGES = pagesNamed(
   // ops reads for pickers is answered by the endpoint, not by this page.
   "seats",
   "pipelines",
+  // The same `pipeline:read` that opens Pipelines. The report is read-only, so
+  // a seat that may see the stages may see what their transitions have earned.
+  "stageautomation",
   "leads",
   "fields",
   "products",
@@ -658,14 +664,14 @@ describe("SettingsScreen page visibility", () => {
       "fetch",
       settingsNavBackend({
         roles: ["ops"],
-        // The witness rides along: `pipeline:read` opens Pipelines and nothing
-        // else, so its row proves /me resolved before this asserts that the
-        // WRITES bought no page.
+        // The witness rides along: `pipeline:read` opens Pipelines and Stage
+        // automation and nothing else, so those rows prove /me resolved before
+        // this asserts that the WRITES bought no page.
         allow: { custom_field: ["create", "update"], pipeline: ["read"] },
       }),
     );
     renderHome();
-    await expectNavSettlesTo(floorPlus("pipelines"));
+    await expectNavSettlesTo(floorPlus("pipelines", "stageautomation"));
   });
 
   it.each(SALES_READS)(
@@ -696,13 +702,14 @@ describe("SettingsScreen page visibility", () => {
         settingsNavBackend({
           roles: ["ops"],
           // The witness alongside the object under test: `pipeline` opens
-          // Pipelines and nothing else, so waiting for that row proves the
-          // snapshot resolved before this asserts what is NOT there.
+          // Pipelines and Stage automation and nothing else, so waiting for
+          // those rows proves the snapshot resolved before this asserts what
+          // is NOT there.
           allow: { ...readOn(object), pipeline: ["read"] },
         }),
       );
       const { unmount } = renderHome();
-      await expectNavSettlesTo(floorPlus("pipelines"));
+      await expectNavSettlesTo(floorPlus("pipelines", "stageautomation"));
       unmount();
 
       vi.stubGlobal(
@@ -756,7 +763,7 @@ describe("SettingsScreen page visibility", () => {
       }),
     );
     const { unmount } = renderHome();
-    await expectNavSettlesTo(floorPlus("pipelines"));
+    await expectNavSettlesTo(floorPlus("pipelines", "stageautomation"));
     unmount();
 
     vi.stubGlobal(
@@ -810,7 +817,7 @@ describe("SettingsScreen page visibility", () => {
       }),
     );
     renderHome();
-    await expectNavSettlesTo(floorPlus("pipelines"));
+    await expectNavSettlesTo(floorPlus("pipelines", "stageautomation"));
   });
 
   it("opens Capture for a lone capture_settings read", async () => {
@@ -872,7 +879,7 @@ describe("SettingsScreen page visibility", () => {
       }),
     );
     renderHome();
-    await expectNavSettlesTo(floorPlus("pipelines"));
+    await expectNavSettlesTo(floorPlus("pipelines", "stageautomation"));
   });
 
   it("opens Extensions for a lone extension_access read", async () => {
@@ -915,7 +922,7 @@ describe("SettingsScreen page visibility", () => {
       }),
     );
     renderHome();
-    await expectNavSettlesTo(floorPlus("pipelines"));
+    await expectNavSettlesTo(floorPlus("pipelines", "stageautomation"));
     cleanup();
 
     // And the read is load-bearing rather than decorative: an ADMIN who lost it
@@ -928,7 +935,8 @@ describe("SettingsScreen page visibility", () => {
         allow: {
           person: ["read"],
           system_reset: ["delete"],
-          // The witness: `pipeline` opens Pipelines and nothing else, so
+          // The witness: `pipeline` opens Pipelines and Stage automation and
+          // nothing else, so
           // waiting for that row proves /me resolved before this asserts
           // what is NOT there.
           pipeline: ["read"],
@@ -936,7 +944,7 @@ describe("SettingsScreen page visibility", () => {
       }),
     );
     renderHome();
-    await expectNavSettlesTo(floorPlus("pipelines"));
+    await expectNavSettlesTo(floorPlus("pipelines", "stageautomation"));
   });
 
   it("opens Reset data on the delete verb, and never on a read of the same object", async () => {
@@ -954,7 +962,7 @@ describe("SettingsScreen page visibility", () => {
       }),
     );
     renderHome();
-    await expectNavSettlesTo(floorPlus("pipelines"));
+    await expectNavSettlesTo(floorPlus("pipelines", "stageautomation"));
     cleanup();
 
     vi.stubGlobal(
@@ -980,7 +988,8 @@ describe("SettingsScreen page visibility", () => {
         allow: {
           person: ["read"],
           system_reset: ["delete"],
-          // The witness: `pipeline` opens Pipelines and nothing else, so
+          // The witness: `pipeline` opens Pipelines and Stage automation and
+          // nothing else, so
           // waiting for that row proves /me resolved before this asserts
           // what is NOT there.
           pipeline: ["read"],
@@ -988,7 +997,7 @@ describe("SettingsScreen page visibility", () => {
       }),
     );
     renderHome();
-    await expectNavSettlesTo(floorPlus("pipelines"));
+    await expectNavSettlesTo(floorPlus("pipelines", "stageautomation"));
   });
 
   it("opens Company profile for a lone fx_rate read, and no other page with it", async () => {
@@ -1097,7 +1106,7 @@ describe("SettingsScreen page visibility", () => {
       }),
     );
     renderHome();
-    await expectNavSettlesTo(floorPlus("pipelines"));
+    await expectNavSettlesTo(floorPlus("pipelines", "stageautomation"));
   });
 
   // The term that was dropped, asserted as an absence so nobody adds it back
@@ -1111,7 +1120,7 @@ describe("SettingsScreen page visibility", () => {
       }),
     );
     renderHome();
-    await expectNavSettlesTo(floorPlus("pipelines"));
+    await expectNavSettlesTo(floorPlus("pipelines", "stageautomation"));
   });
 
   it("opens Audit log without opening Privacy, for an admin holding the trail read", async () => {
@@ -1163,7 +1172,7 @@ describe("SettingsScreen page visibility", () => {
       }),
     );
     renderHome();
-    await expectNavSettlesTo(floorPlus("pipelines"));
+    await expectNavSettlesTo(floorPlus("pipelines", "stageautomation"));
   });
 
   // THE LICENSING SEAT, which is a THIRD axis and gates none of this: the server
@@ -1288,7 +1297,7 @@ describe("SettingsScreen page visibility", () => {
     );
     renderHome();
 
-    await expectNavSettlesTo(floorPlus("pipelines"));
+    await expectNavSettlesTo(floorPlus("pipelines", "stageautomation"));
     expect(screen.queryByRole("link", { name: labelOf("company") })).toBeNull();
   });
 
@@ -1323,7 +1332,7 @@ describe("SettingsScreen page visibility", () => {
     );
     renderHome();
 
-    await expectNavSettlesTo(floorPlus("pipelines"));
+    await expectNavSettlesTo(floorPlus("pipelines", "stageautomation"));
     expect(screen.queryByRole("link", { name: labelOf("company") })).toBeNull();
   });
 });
