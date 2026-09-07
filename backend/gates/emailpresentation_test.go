@@ -377,8 +377,14 @@ func returnsMarkup(body string) bool {
 var emailAccess = regexp.MustCompile(
 	`\b(email_summary|emailSummary|email_reference|emailReference)\b`)
 
+// The canonical set. Widening it is a deliberate act rather than a
+// convenience: a further reading of a message appearing quietly is what this
+// gate exists to stop, so a component belongs here only when it draws a shape
+// the others cannot carry. EmailWords is the words alone, for a host that has
+// already drawn the lead and the time — EmailEntry there would draw both a
+// second time, and EmailReference carries no preview by design.
 func mountsCanonical(text string) bool {
-	for _, component := range []string{"EmailEntry", "EmailReference", "EmailDetail"} {
+	for _, component := range []string{"EmailEntry", "EmailReference", "EmailDetail", "EmailWords"} {
 		if strings.Contains(text, "<"+component) {
 			return true
 		}

@@ -12,6 +12,8 @@
 // Both are pure and take their zone (or the reader's own wall clock) as input,
 // so nothing here has to be tested against the machine's own zone.
 
+import { endOfDayInZone } from "./timezone";
+
 // The calendar day an instant falls on, in a named IANA zone, as `yyyy-mm-dd` so
 // two of them compare as strings without a second parse.
 //
@@ -107,17 +109,45 @@ export function calendarMonth(at: Date, zone: string): string {
   return calendarDay(at, zone).slice(0, "yyyy-mm".length);
 }
 
-// The wire instant for a due date the reader picked as a calendar day — the
+// The wire instant for a due date somebody picked as a calendar day — the
 // `yyyy-mm-dd` a date input yields, which every caller has already checked is
 // non-empty.
 //
-// A task stays due until that day ends WHERE THE READER IS, so the instant is
-// the local end of day. Midnight would file a task picked for today as overdue
-// at breakfast, and `new Date(day)` on the bare date reads it as UTC midnight,
-// which does the same thing a whole zone offset earlier — east of UTC that is
-// overdue on waking, west of UTC it is the previous calendar day.
-export function dueInstant(day: string): string {
-  return new Date(`${day}T23:59:59`).toISOString();
+// A deadline is a fact about the RECORD, so the day ends on the installation's
+// clock and every colleague reads back the day that was agreed. Resolving it in
+// the browser's zone instead is what made a transcript proposal for the 9th
+// become a task labelled the 10th: the accept path stamps the day's end in the
+// installation zone, and a reader east of it saw that last second land after
+// midnight. Callers pass the zone from `useRecordZone()`, the same one the task
+// is rendered in.
+//
+// `endOfDayInZone` already resolves a named day's end against a zone's real
+// offset, DST included, and privacy files its deadlines with it. Reuse rather
+// than a second algorithm: it returns the day's last millisecond, so this floors
+// to the whole second the task writer has always sent.
+export function dueInstant(day: string, zone: string): string {
+  // Refused explicitly, because the arithmetic below no longer refuses it on
+  // its own. `new Date("10000-09-15T23:59:59")` threw a RangeError, and that
+  // throw was the only thing standing between a year typo and a due date ten
+  // thousand years out; a zone-resolved instant accepts the same string
+  // happily. HTML permits a year of four OR MORE digits, so this is a value a
+  // real date box reports — `taskduedate.guard.test.ts` measures it.
+  if (!isRealCalendarDay(day)) {
+    throw new RangeError(`not a calendar day: ${day}`);
+  }
+  // Years 0-99 are refused rather than resolved. `endOfDayInZone` reaches
+  // Date.UTC, which maps a two-digit year onto 1900-1999 — so "0099-09-09"
+  // would come back as 1999 and the caller would never know the day it asked
+  // for was not the day it got. isRealCalendarDay admits it on shape, and this
+  // is the one place that can tell the difference.
+  if (Number(day.slice(0, 4)) < 100) {
+    throw new RangeError(`year out of range: ${day}`);
+  }
+  // FLOORED, not truncated toward zero. `% 1000` on a negative instant rounds
+  // the wrong way — a day before 1970 would land on the next day's midnight,
+  // which is the very off-by-one-day this signature exists to end.
+  const lastMs = new Date(endOfDayInZone(day, zone)).getTime();
+  return new Date(Math.floor(lastMs / 1000) * 1000).toISOString();
 }
 
 // The wall-clock value a `datetime-local` input shows for an instant, in the

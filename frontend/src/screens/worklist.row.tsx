@@ -10,6 +10,7 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useId, useRef, useState } from "react";
+import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, Modal } from "../design-system/atoms";
 import { PanelRow } from "../design-system/panel";
 import { useToast } from "../design-system/toast";
@@ -113,6 +114,9 @@ export function WorklistRow({
   const t = useT();
   const { locale } = useLocale();
   const zone = viewerZone();
+  // A task's deadline is the record's day; everything else on this row is a
+  // moment the reader is racing on their own clock.
+  const recordZone = useRecordZone();
   const href = rowHref(item);
   const title = itemTitle(item, t, locale);
   const facts = dealFactsText(item, t, locale, zone);
@@ -120,7 +124,7 @@ export function WorklistRow({
   // The clock this row is racing. A meeting said "starting shortly" whether it
   // began in four minutes or in fifty, and a task said "Overdue" without saying
   // by how long — on the two rows whose whole claim is a moment.
-  const when = whenText(item, t, locale, zone, new Date());
+  const when = whenText(item, t, locale, zone, recordZone, new Date());
   // The supporting line. Every source but one sends a sentence already;
   // sync_health sends its condition's facts in its own vocabulary, so its line
   // is written from `kind` and `detail` together.

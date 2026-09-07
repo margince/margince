@@ -20,7 +20,6 @@ import {
 import { DateInput, isISODate } from "../design-system/dateinput";
 import { calendarDay, dueInstant } from "../format/calendarday";
 import { formatDate, formatDateTime } from "../format/format";
-import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
 import { EntityRef } from "./entityref";
@@ -42,8 +41,6 @@ type TaskPatch = {
   version: number | undefined;
   body: { is_done?: boolean; due_at?: string; remind_at?: string | null };
 };
-
-const ONE_DAY_MS = 86_400_000;
 
 export function useTaskUpdate(invalidateKeys: readonly QueryKey[]) {
   const t = useT();
@@ -77,12 +74,35 @@ export function useTaskUpdate(invalidateKeys: readonly QueryKey[]) {
   });
 }
 
-/** The next due date one snooze away, or null for a task that has no date to move. */
-export function snoozedDueAt(dueAt: string | null | undefined): string | null {
+/**
+ * The next due date one snooze away, or null for a task that has no date to
+ * move.
+ *
+ * A snooze moves the task to the NEXT CALENDAR DAY, which is not the same as
+ * adding twenty-four hours. A local day is not always that long: on Europe's
+ * spring-forward day, adding a day to the 28th at 23:59:59 lands at 00:59:59
+ * on the 30th, so a rep pressing "tomorrow" skips the 29th entirely. The
+ * accept path warns about exactly this arithmetic where it stamps a deadline;
+ * this writer was doing it.
+ *
+ * Read and re-minted through the calendar helpers, in the zone the deadline
+ * belongs to, so a snooze lands on the day it names for every colleague.
+ */
+export function snoozedDueAt(
+  dueAt: string | null | undefined,
+  zone: string,
+): string | null {
   if (!dueAt) {
     return null;
   }
-  return new Date(new Date(dueAt).getTime() + ONE_DAY_MS).toISOString();
+  const today = calendarDay(new Date(dueAt), zone);
+  const [year, month, day] = today.split("-").map(Number);
+  // Through UTC parts, which is a pure calendar step: no zone reading happens
+  // here, so no DST transition can shorten or lengthen the day being counted.
+  const next = new Date(Date.UTC(year, month - 1, day + 1))
+    .toISOString()
+    .slice(0, "yyyy-mm-dd".length);
+  return dueInstant(next, zone);
 }
 
 /**
@@ -169,7 +189,8 @@ export function TaskQuickActions({
   showDuePicker?: boolean;
 }>) {
   const t = useT();
-  const nextDue = snoozedDueAt(dueAt);
+  const recordZone = useRecordZone();
+  const nextDue = snoozedDueAt(dueAt, recordZone);
   const pending = update.isPending && update.variables?.id === activityId;
   return (
     <>
@@ -238,10 +259,11 @@ function TaskDueDatePick({
 }>) {
   const t = useT();
   const pending = update.isPending && update.variables?.id === activityId;
-  // Seeded from the task's own day in the VIEWER's zone, matching what the
-  // meta line above reads it in: a picker opening on a different day than the
-  // one displayed beside it would be two answers to "when is this due".
-  const seeded = dueAt ? calendarDay(new Date(dueAt), viewerZone()) : "";
+  const recordZone = useRecordZone();
+  // Seeded from the task's own day in the INSTALLATION's zone, matching what
+  // the meta line above reads it in: a picker opening on a different day than
+  // the one displayed beside it would be two answers to "when is this due".
+  const seeded = dueAt ? calendarDay(new Date(dueAt), recordZone) : "";
   // Narrowed rather than asserted. calendarDay returns a string, and the
   // control's type says it takes a calendar day or nothing — so a value that
   // is neither opens the picker empty instead of feeding the element something
@@ -274,7 +296,7 @@ function TaskDueDatePick({
             update.mutate({
               id: activityId,
               version,
-              body: { due_at: dueInstant(day) },
+              body: { due_at: dueInstant(day, recordZone) },
             });
           }}
         />
@@ -339,14 +361,13 @@ export function TaskDetailModal({
             {task.due_at ? (
               <span>
                 {t("co.next.due", {
-                  // The one viewer-clock reading on this record surface, and it
-                  // is not a preference: `dueInstant` mints a due date as the
-                  // end of the picked day in the BROWSER's zone, so the stored
-                  // instant already carries the picker's clock. Read in the
-                  // organization's zone it names a different calendar day than
-                  // the one the picker chose, for every reader outside that
-                  // zone — there is no organization reading of it to prefer.
-                  when: formatDate(task.due_at, locale, viewerZone()),
+                  // The record's own clock, like every other date on this
+                  // surface. A deadline is a fact colleagues read back, so the
+                  // day it names cannot depend on where the reader is sitting:
+                  // `dueInstant` mints the picked day's end in this same zone,
+                  // and reading it in the browser's instead is what made an
+                  // approved 9 September arrive as a task due the 10th.
+                  when: formatDate(task.due_at, locale, recordZone),
                 })}
               </span>
             ) : (

@@ -36,16 +36,18 @@
 // page wins: a record surface is ONE clock, so a due date and the activity
 // beside it can never be read in two different zones.
 //
-// "Genuinely both" means both readings are defensible, and that is a claim about
-// the STORED value, not about the screen. An activity's `due_at` is minted by
-// `dueInstant` as the end of the picked day in the BROWSER's zone, so the wire
-// value already carries the picker's clock; the record zone does not read the
-// organization's day out of it, it reads a day the picker never chose, off by
-// one for every reader outside that zone. A value with no record reading has
-// nothing for the page to win against, so `due_at` takes viewerZone() wherever
-// it is shown — the tasks queue, the record's next steps, the task detail —
-// while the activity's `occurred_at` beside it stays on the record zone,
-// because when something happened IS a fact about the record.
+// An activity's `due_at` is one of those sites, and the page wins it. A
+// deadline is a promise colleagues read back — the worklist already buckets
+// overdue on the installation's clock — so `dueInstant` mints the picked day's
+// end in the RECORD's zone and every task date is rendered in it: the tasks
+// queue, the record's next steps, the task detail, the picker that seeds from
+// it. The activity's `occurred_at` beside it is on the same clock, because when
+// something happened is a fact about the record too.
+//
+// It read viewerZone() until a transcript proposal approved for 9 September
+// came back as a task due the 10th. The stamp is the day's LAST SECOND, so a
+// reader one second east of the minting zone already sees tomorrow; nothing
+// about that was a preference to respect.
 
 // The zone a record's dates are read in when the installation's own answer is
 // not on hand. It is the LAST resort, not the value: `useRecordZone` in
