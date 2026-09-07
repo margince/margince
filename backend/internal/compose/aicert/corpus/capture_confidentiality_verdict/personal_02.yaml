@@ -8,6 +8,14 @@ fixture:
   attachments:
     - Rechnung_08_2026.pdf
   body: |
+    Von: t.weidner@weidner-handel.de
+    An: belege@weidner-handel.de
+    Betreff: WG: Ihre Mobilfunkrechnung 08/2026
+
+    Fuer die Spesenabrechnung.
+
+    ---------- Weitergeleitete Nachricht ----------
+
     Kundennummer 41-882-6630
     Rechnungsbetrag: 68,40 EUR, faellig am 02.09.2026
 

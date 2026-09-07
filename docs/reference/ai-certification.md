@@ -152,7 +152,7 @@ verdict each reached. Each record's own p50 and p95 are in the site tables.
 | `openai_compatible` | `mistralai/ministral-8b-2512` | `cloud_frontier` | 3 | 0 | 0 | 3 | 15 | 14 | 0.93 | 22390ms | 1 | 2 | 0 |
 | `openai_compatible` | `mistralai/mistral-large-2512` | `cloud_frontier` | 5 | 0 | 0 | 5 | 30 | 27 | 0.90 | 4574ms | 4 | 0 | 1 |
 | `openai_compatible` | `mistralai/mistral-large-2512` | `eu_hosted` | 6 | 0 | 0 | 6 | 42 | 37 | 0.88 | 4337ms | 4 | 1 | 1 |
-| `openai_compatible` | `openai/gpt-oss-120b` | `eu_hosted` | 35 | 1 | 0 | 34 | 390 | 313 | 0.80 | 5546ms | 12 | 8 | 15 |
+| `openai_compatible` | `openai/gpt-oss-120b` | `eu_hosted` | 35 | 1 | 0 | 34 | 390 | 312 | 0.80 | 5546ms | 12 | 8 | 15 |
 | `openai_compatible` | `z-ai/glm-5.2` | `cloud_frontier` | 5 | 0 | 0 | 5 | 30 | 28 | 0.93 | 18372ms | 4 | 0 | 1 |
 
 ## Stale records, and why
@@ -439,8 +439,8 @@ Records (2):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 14/14 | `certified` | 42 | 42 | 1.00 | 959ms | 1049ms | 42 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 14/14 | `not_supported` | 42 | 38 | 0.90 | 598ms | 857ms | 38 | 4 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 14/14 | `certified` | 42 | 42 | 1.00 | 929ms | 1083ms | 42 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 14/14 | `not_supported` | 42 | 37 | 0.88 | 744ms | 1257ms | 37 | 5 | 0 | 0 |
 
 ### `capture_counterparty_verdict`
 
