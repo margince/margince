@@ -9,7 +9,6 @@ import (
 	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"gopkg.in/yaml.v3"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -49,10 +48,14 @@ func routingVersionOf(cfg ai.RoutingConfig) string { return cfg.RoutingVersion()
 type modelPathSpec struct {
 	routingPath string
 	fakeBrain   bool
-	// The binding this DEPLOYMENT declares, carried so a boot can plant it on an
-	// installation that holds none. Not a second source of routing: it is
-	// insert-only, so it answers only where nobody has answered yet.
-	routingSeed     yaml.Node
+	// What this DEPLOYMENT declares, carried so a boot can plant the binding on
+	// an installation that holds none. Not a second source of routing: the
+	// write is insert-only, so it answers only where nobody has answered yet.
+	//
+	// Held as deployconfig.Seeds rather than the yaml.Node inside it: `cmd` may
+	// not depend on a YAML library (arch-lint), and naming that type here would
+	// make it. The node travels as a value through this field instead.
+	seeds           deployconfig.Seeds
 	capturePayloads bool
 }
 
@@ -63,7 +66,7 @@ func modelPathSpecFrom(cfg apiConfig, deployCfg deployconfig.Config) modelPathSp
 	return modelPathSpec{
 		routingPath:     cfg.routingPath,
 		fakeBrain:       cfg.fakeBrain,
-		routingSeed:     deployCfg.Seeds.AIRouting,
+		seeds:           deployCfg.Seeds,
 		capturePayloads: deployCfg.AI.CapturePayloads,
 	}
 }
@@ -78,7 +81,7 @@ func resolveModelPath(ctx context.Context, spec modelPathSpec, pool *pgxpool.Poo
 	// the one its deployment declares rather than on the fake. Insert-only: an
 	// installation that has one is untouched, and an admin's later change is
 	// never reverted by a file.
-	if err := compose.SeedRoutingIfUnset(ctx, pool, spec.routingSeed, log); err != nil {
+	if err := compose.SeedRoutingIfUnset(ctx, pool, spec.seeds.AIRouting, log); err != nil {
 		return nil, "", ai.PublicProfile{}, "", err
 	}
 	cfg, err := compose.ResolveRouting(ctx, pool, spec.routingPath, config.FromOS, log)
