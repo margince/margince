@@ -121,6 +121,13 @@ const (
 	// (±1 same-page neighbor) does not carry — the reference-evidence
 	// no-guess rule.
 	dropValueNotInSnippet = "value_not_in_snippet"
+	// dropLegalBlockNotThisEntity marks a legal detail refused because the
+	// passage it was cited from never names the entity it is being
+	// attributed to. Both halves are grounded on the page and neither is
+	// invented, which is why this needs its own reason: the defect is the
+	// ATTRIBUTION, and reporting it as an ungrounded value would send a
+	// reader looking for text that is right there.
+	dropLegalBlockNotThisEntity = "legal_block_not_this_entity"
 	// dropParaphraseLowOverlap is WARNING-class, never a refusal: a
 	// paraphrase profile field whose value shares no content word with
 	// its cited passage. Multilingual sites trip it legitimately; the
