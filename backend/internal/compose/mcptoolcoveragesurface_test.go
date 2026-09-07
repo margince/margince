@@ -78,11 +78,8 @@ type unitManifest struct {
 // not a scan that failed.
 func extensionTools(dir string) ([]unitTool, error) {
 	entries, err := os.ReadDir(dir)
-	if os.IsNotExist(err) {
-		return nil, nil
-	}
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("reading the extension tier at %s: %w", dir, err)
 	}
 	var tools []unitTool
 	for _, entry := range entries {
@@ -278,11 +275,8 @@ func TestTheUnitToolCensusReadsTheWholeTier(t *testing.T) {
 // unitManifestCount is how many units published a manifest at all.
 func unitManifestCount(dir string) (int, error) {
 	entries, err := os.ReadDir(dir)
-	if os.IsNotExist(err) {
-		return 0, nil
-	}
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("reading the extension tier at %s: %w", dir, err)
 	}
 	count := 0
 	for _, entry := range entries {
@@ -317,13 +311,15 @@ const corpusDir = "aicert/corpus"
 // this word in this file" should not acquire an opinion about the file's shape,
 // because the day the shape moves is the day this silently returns nothing.
 // Matching a whole word is what keeps `read_record` out of `read_record_tags`.
+// A MISSING CORPUS IS AN ERROR, not an empty one. The path is a fixed location
+// in this repository, so its absence means the corpus moved and this reader did
+// not — and answering "nothing is graded elsewhere" to that would publish the
+// larger untried number with nothing failing. Under-recognition again, and the
+// direction rule 8 names.
 func corpusGradedTools(dir string, names []string) (map[string][]string, error) {
 	tasks, err := os.ReadDir(dir)
-	if os.IsNotExist(err) {
-		return nil, nil
-	}
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("reading the certification corpus at %s: %w", dir, err)
 	}
 	graded := map[string][]string{}
 	for _, task := range tasks {
