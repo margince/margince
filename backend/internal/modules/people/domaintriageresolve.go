@@ -277,36 +277,41 @@ func plantDomainEmployment(ctx context.Context, tx pgx.Tx, domain string, orgID 
 	if err != nil {
 		return 0, err
 	}
-	// The lock is IN the statement here, not beside it: this writer attaches a
-	// SET of people found by domain rather than one named person, so there is
-	// no id to lock before the select that finds it. `FOR UPDATE OF p` at the
-	// bottom locks each person this insert is about to attach, which is the
-	// same guarantee lockPersonForAttach gives the single-person writers — an
-	// archive in flight either commits first and drops the row out of this
-	// select, or waits and sweeps the edge this plants.
+	// The candidate set is read FIRST so each person's employment lock can be
+	// taken before the insert decides anything from a read of their
+	// employments. `FOR UPDATE` gives the same archive guarantee
+	// lockPersonForAttach gives the single-person writers — an archive in
+	// flight either commits first and drops the row out of this read, or waits
+	// and sweeps the edge this plants.
+	candidates, err := domainEmploymentCandidates(ctx, tx, domain)
+	if err != nil {
+		return 0, err
+	}
+	// Then the same per-person lock every other writer of this state takes.
+	// Without it this planter reads "they already have a primary", skips them,
+	// and a patch ending that employment commits beside the read: the person is
+	// left employed once, unmarked. The rows come back in id order, so two runs
+	// over overlapping domains take their locks in one order rather than each
+	// waiting on the other's.
+	for _, personID := range candidates {
+		if err := storekit.LockWriteIdentity(ctx, tx, employmentKind, personID.String()); err != nil {
+			return 0, err
+		}
+	}
+	// The NOT EXISTS is re-asked HERE, under those locks, and that is the whole
+	// point of the split: the candidate read above is a snapshot, and this is
+	// the decision.
 	rows, err := tx.Query(ctx, `
 		INSERT INTO relationship (kind, person_id, organization_id, is_current_primary, source, captured_by)
 		SELECT 'employment', p.id, $1, true, $2, $3
 		FROM person p
-		WHERE p.archived_at IS NULL
-		  AND p.merged_into_id IS NULL
-		  AND EXISTS (
-			SELECT 1 FROM person_email pe
-			WHERE pe.person_id = p.id
-			  -- An address somebody no longer uses must not attach them to a
-			  -- new employer: a former colleague would be re-hired by a domain
-			  -- they left.
-			  AND pe.archived_at IS NULL
-			  AND (split_part(pe.email, '@', 2) = $4
-			       -- A literal suffix compare, never LIKE — see PersonsOnDomain.
-			       OR right(split_part(pe.email, '@', 2), length($4) + 1) = '.' || $4))
+		WHERE p.id = ANY($4)
 		  AND NOT EXISTS (
 			SELECT 1 FROM relationship r
 			WHERE r.person_id = p.id AND `+employment.CurrentPrimarySlotSQL("r")+`)
-		FOR UPDATE OF p
 		ON CONFLICT DO NOTHING
 		RETURNING id, person_id`,
-		orgID, domainTriageSource(domain), by, domain)
+		orgID, domainTriageSource(domain), by, candidates)
 	if err != nil {
 		return 0, fmt.Errorf("people: planting the employment edges for %s: %w", domain, err)
 	}
@@ -337,6 +342,56 @@ func plantDomainEmployment(ctx context.Context, tx pgx.Tx, domain string, orgID 
 		}
 	}
 	return len(made), nil
+}
+
+// domainEmploymentCandidates names the live people this domain's verdict is
+// about: everybody reachable at it, whatever employments they already hold.
+//
+// It exists so the planter can hold a lock per person before it decides, and
+// it deliberately does NOT ask who has a primary employment yet. That question
+// is the decision, and asking it here would answer it from an unlocked read: a
+// person whose only employment ends while this list is being built would be
+// excluded from it, and the insert — which can only reconsider the ids it was
+// handed — would leave them employed once and unmarked. Locking a few people
+// the insert then skips costs nothing; the other way costs the case this lock
+// exists for.
+//
+// The order is the person id, which is what keeps two runs over overlapping
+// domains from taking one pair of locks in opposite orders.
+func domainEmploymentCandidates(ctx context.Context, tx pgx.Tx, domain string) ([]ids.PersonID, error) {
+	rows, err := tx.Query(ctx, `
+		SELECT p.id
+		FROM person p
+		WHERE p.archived_at IS NULL
+		  AND p.merged_into_id IS NULL
+		  AND EXISTS (
+			SELECT 1 FROM person_email pe
+			WHERE pe.person_id = p.id
+			  -- An address somebody no longer uses must not attach them to a
+			  -- new employer: a former colleague would be re-hired by a domain
+			  -- they left.
+			  AND pe.archived_at IS NULL
+			  AND (split_part(pe.email, '@', 2) = $1
+			       -- A literal suffix compare, never LIKE — see PersonsOnDomain.
+			       OR right(split_part(pe.email, '@', 2), length($1) + 1) = '.' || $1))
+		ORDER BY p.id
+		FOR UPDATE OF p`, domain)
+	if err != nil {
+		return nil, fmt.Errorf("people: reading the people on %s: %w", domain, err)
+	}
+	defer rows.Close()
+	var out []ids.PersonID
+	for rows.Next() {
+		var one ids.PersonID
+		if err := rows.Scan(&one); err != nil {
+			return nil, fmt.Errorf("people: reading the people on %s: %w", domain, err)
+		}
+		out = append(out, one)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("people: reading the people on %s: %w", domain, err)
+	}
+	return out, nil
 }
 
 // bindTriageDossier attaches the triage read to the organization it produced.

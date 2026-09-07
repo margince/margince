@@ -76,6 +76,19 @@ func plantEmploymentEdge(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyIn
 	if err := lockPersonForAttach(ctx, tx, personID); err != nil {
 		return err
 	}
+	// And the same per-person lock every other writer of this person's
+	// current-primary employment takes. The person row lock above answers a
+	// different question — is this person still here — and the two writers that
+	// decide the flag WITHOUT one (update, archive) take only this. Without it
+	// capture reads "they already have a primary", plants nothing, and a patch
+	// ending that employment commits beside it: the person is left employed
+	// once, unmarked, which is the state the flag exists to make impossible.
+	//
+	// After the row lock, never before: create takes them in this order too, and
+	// two writers taking one pair of locks in opposite orders is a deadlock.
+	if err := storekit.LockWriteIdentity(ctx, tx, employmentKind, personID.String()); err != nil {
+		return err
+	}
 	var edgeID ids.UUID
 	err := tx.QueryRow(ctx, `
 		INSERT INTO relationship (kind, person_id, organization_id, is_current_primary, source, captured_by)

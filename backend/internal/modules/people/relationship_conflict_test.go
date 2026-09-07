@@ -105,3 +105,37 @@ func TestANonUniquenessErrorIsNotDressedAsAConflict(t *testing.T) {
 		t.Fatal("an unrelated failure was reported as a conflict")
 	}
 }
+
+// AlreadyRecorded is what an idempotent writer asks before it treats a refusal
+// as convergence, and the answer differs by which KEY refused.
+//
+// The rule keyed on the person alone is the one that must answer no: its
+// conflict is with a different company entirely, so the edge the caller offered
+// did not land. An importer reading every 409 as "already there" reported a row
+// it never wrote, and the person kept an employer nobody recorded.
+//
+// The list is derived from the mapper's own vocabulary rather than typed twice,
+// so a rule added there is answered here or names itself.
+func TestOnlyATupleKeyedRefusalMeansTheEdgeIsAlreadyOnFile(t *testing.T) {
+	personKeyed := map[string]bool{"uq_rel_current_primary_employer": true}
+	for constraint := range relationshipConflictDetails {
+		t.Run(constraint, func(t *testing.T) {
+			got := (&RelationshipConflictError{Constraint: constraint}).AlreadyRecorded()
+			if want := !personKeyed[constraint]; got != want {
+				t.Fatalf("AlreadyRecorded() = %t for %s, want %t", got, constraint, want)
+			}
+		})
+	}
+	// uq_rel_works_with is answered by AlreadyRecorded but carries no
+	// caller-facing sentence, so the loop above — which walks the sentences —
+	// never reaches it. Named here, or the classification of a rule the mapper
+	// does return has nothing holding it.
+	if !(&RelationshipConflictError{Constraint: "uq_rel_works_with"}).AlreadyRecorded() {
+		t.Error("uq_rel_works_with is keyed on the pair being inserted, so its refusal does mean the " +
+			"edge is already on file")
+	}
+	// A rule this type has never seen is not evidence that anything landed.
+	if (&RelationshipConflictError{Constraint: "uq_something_new"}).AlreadyRecorded() {
+		t.Error("an unrecognised constraint was read as the edge already being on file")
+	}
+}
