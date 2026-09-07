@@ -137,7 +137,12 @@ func scanTree(root string, fset *token.FileSet) ([]string, error) {
 			return err
 		}
 		if entry.IsDir() {
-			if skipDir(entry.Name()) {
+			// The ROOT is never skipped, whatever it is called. probeTrees
+			// names "." for this module, and skipDir refuses any name starting
+			// with a dot — so consulting it for the root made this gate walk
+			// past the entire backend tree and report a clean PASS over zero
+			// files. It read extensions/ and fixtures/ and looked alive.
+			if path != root && skipDir(entry.Name()) {
 				return filepath.SkipDir
 			}
 			return nil

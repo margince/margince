@@ -702,6 +702,14 @@ func (e *resolveEnv) waitForBlockedWriter(t *testing.T, firing <-chan firingResu
 				got.completed, got.err)
 		default:
 		}
+		// pg_stat_activity is materialized once per transaction and cached
+		// until it ends, so a probe that did not clear it cannot see a backend
+		// that dialled after the snapshot was taken — the wait then runs to its
+		// deadline over a race that really did happen.
+		if _, err := e.owner.Exec(context.Background(),
+			`SELECT pg_stat_clear_snapshot()`); err != nil {
+			t.Fatalf("clearing the stats snapshot before probing: %v", err)
+		}
 		var blocked int
 		// Blocked BY US specifically, through pg_blocking_pids: any other
 		// waiter in this database would otherwise release the wait early and
