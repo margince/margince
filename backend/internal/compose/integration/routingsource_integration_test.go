@@ -487,3 +487,57 @@ func routingSeedNode(t *testing.T, body string) yaml.Node {
 	}
 	return doc
 }
+
+// An UNPROVISIONED installation is left alone. It has no workspace to attribute
+// a settings write to, and the claim flow that creates one seeds the same value
+// inside its own transaction — so planting here would either fail or write a
+// row the bootstrap is about to write properly.
+func TestPlantingLeavesAnUnprovisionedInstallationAlone(t *testing.T) {
+	e := SetupSearch(t)
+	ctx := context.Background()
+	// Archiving every workspace is what "unprovisioned" IS to this path:
+	// singletonWorkspace enumerates the LIVE ones. Same mechanism the test
+	// above uses.
+	if _, err := e.Owner.Exec(ctx,
+		`UPDATE workspace SET archived_at = now() WHERE archived_at IS NULL`); err != nil {
+		t.Fatalf("clearing the harness organization: %v", err)
+	}
+
+	if err := compose.SeedRoutingIfUnset(ctx, e.Pool, routingSeedNode(t, offlineRouting), discard()); err != nil {
+		t.Fatalf("planting on an unprovisioned installation failed the boot: %v", err)
+	}
+
+	var planted map[string]any
+	if err := e.Owner.QueryRow(ctx,
+		`SELECT value FROM setting WHERE key = $1`, ai.RoutingKey).Scan(&planted); err == nil {
+		t.Errorf("a row was written for an installation with no workspace: %v", planted)
+	}
+}
+
+// A MALFORMED seed is not this call's error to report. The bootstrap refuses it
+// and fails the boot, loudly and once; repeating that on every later start
+// would turn one actionable failure into a recurring one nobody can act on
+// differently. So this plants nothing and lets the boot continue.
+func TestPlantingIsSilentOnASeedTheBootstrapAlreadyRefuses(t *testing.T) {
+	e := SetupSearch(t)
+	ctx := context.Background()
+
+	// A tier the task contract does not declare: refused by the same parser a
+	// stored binding goes through, which is the point of decoding it there.
+	bad := routingSeedNode(t, `profile: eu_hosted
+tiers:
+  not_a_tier: {provider: fake, model: fake-small}
+embeddings: {provider: fake, model: fake-embed, dimensions: 8}
+`)
+
+	if err := compose.SeedRoutingIfUnset(ctx, e.Pool, bad, discard()); err != nil {
+		t.Fatalf("a malformed seed failed the boot here instead of at the bootstrap: %v", err)
+	}
+	after, err := compose.ResolveRouting(ctx, e.Pool, "", config.Static(nil), discard())
+	if err != nil {
+		t.Fatalf("ResolveRouting: %v", err)
+	}
+	if !after.Unconfigured() {
+		t.Errorf("a refused seed still bound %+v", after.Tiers)
+	}
+}
