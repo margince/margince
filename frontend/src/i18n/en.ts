@@ -3043,6 +3043,21 @@ export const en = {
   "transcriptread.proposals_other":
     "{count} next steps waiting for your review",
   "transcriptread.proposals_one": "{count} next step waiting for your review",
+  "transcriptread.staged_one": "{count} next step suggested",
+  "transcriptread.staged_other": "{count} next steps suggested",
+  "transcriptread.decided_one": "{count} suggestion reviewed",
+  "transcriptread.decided_other": "{count} suggestions reviewed",
+  "transcriptread.decidedDetail": "{accepted} accepted, {rejected} declined",
+  "transcriptread.expired_one": "{count} expired undecided",
+  "transcriptread.expired_other": "{count} expired undecided",
+  "transcriptread.effectFailed_one":
+    "{count} accepted suggestion did not produce its task.",
+  "transcriptread.effectFailed_other":
+    "{count} accepted suggestions did not produce their tasks.",
+  "transcriptread.statusUnknown_one":
+    "Status unavailable for {count} suggestion",
+  "transcriptread.statusUnknown_other":
+    "Status unavailable for {count} suggestions",
   "transcriptread.nothingStated":
     "Read in full. This conversation states no next steps.",
   "transcriptread.failedFallback":
@@ -3539,6 +3554,8 @@ export const en = {
   "compose.consentGoto": "Review consent",
   "compose.draftUnavailable":
     "AI drafting is unavailable (the model is not configured). You can still write the email yourself.",
+  "compose.draftUnsupportedHere":
+    "AI drafting is not offered from this page. You can still write the email yourself.",
   "compose.sendUnavailable":
     "Sending is unavailable (no mailer is configured).",
   "compose.mailboxNotSendCapable":
@@ -8639,6 +8656,8 @@ export const en = {
   "worklist.completeness.bounded":
     "{shown} shown · {sources} sources have more",
   "worklist.clear": "Nothing is waiting on you.",
+  "worklist.clearOfTasksToday":
+    "No tasks are due today or overdue. Later work is on each record's own Tasks tab.",
   "worklist.clearOfWhatWasRead":
     "Nothing is waiting among the sources that answered.",
   "worklist.partial": "{sources}, so this is not the whole day.",

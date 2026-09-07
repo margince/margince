@@ -18,18 +18,25 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { RecordZoneProvider } from "../app/recordzone";
 import { LocaleProvider } from "../i18n";
 import { TaskQuickActions, useTaskUpdate } from "./taskactions";
 
 const TASK = "01a05500-0000-7000-8000-000000000a01";
 
+// The installation this record belongs to. Named rather than read off the
+// runner, because the rule under test is that a deadline reads as the SAME day
+// for every colleague — a suite that took the machine's own zone would assert
+// nothing when the machine happened to sit in it.
+const RECORD_ZONE = "Europe/Berlin";
+
 // The task's due instant, minted the way the product mints one: the end of a
-// calendar day in the RUNNING machine's zone. A fixed UTC string would name a
-// different calendar day depending on where the suite runs — 23:59:59Z on the
-// 1st is already the 2nd anywhere east of UTC — and the picker reads the day in
-// the viewer's zone, correctly, so the fixture has to speak the same clock.
+// calendar day on the RECORD's clock. Berlin is two hours ahead of UTC in
+// September, so this is 21:59:59Z — a value that names 1 September in Berlin
+// and 2 September in Bangkok, which is exactly the disagreement the record-zone
+// rule exists to settle.
 const DUE_DAY = "2026-09-01";
-const DUE_AT = new Date(`${DUE_DAY}T23:59:59`).toISOString();
+const DUE_AT = "2026-09-01T21:59:59.000Z";
 
 let sent: unknown[] = [];
 
@@ -80,9 +87,11 @@ function renderVerbs(dueAt?: string | null) {
   });
   return render(
     <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">
-        <Harness />
-      </LocaleProvider>
+      <RecordZoneProvider zone={RECORD_ZONE}>
+        <LocaleProvider initial="en">
+          <Harness />
+        </LocaleProvider>
+      </RecordZoneProvider>
     </QueryClientProvider>,
   );
 }
@@ -127,13 +136,12 @@ describe("moving a task to a named day", () => {
     fireEvent.change(picker(container), { target: { value: "2026-09-15" } });
 
     await waitFor(() => expect(sent).toHaveLength(1));
-    // The END of the picked day, so a task due "the 15th" is not overdue at
-    // nine that morning. dueInstant owns that rule; this asserts the row uses
-    // it rather than sending midnight.
+    // The END of the picked day on the RECORD's clock, so a task due "the
+    // 15th" is not overdue at nine that morning and still reads as the 15th to
+    // a colleague in another zone. dueInstant owns that rule; this asserts the
+    // row passes it the record zone rather than the browser's.
     const body = sent[0] as { due_at: string };
-    expect(new Date(body.due_at).getTime()).toBe(
-      new Date("2026-09-15T23:59:59").getTime(),
-    );
+    expect(body.due_at).toBe("2026-09-15T21:59:59.000Z");
   });
 
   it("opens on the day the task is already due", async () => {

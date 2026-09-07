@@ -79,6 +79,13 @@ function stubReads(options: {
   stored?: Report;
   read?: () => Response;
   post?: () => Response;
+  // What became of each staged approval, by id. The card asks the approval
+  // itself what its status is, because the reading's own proposal_ids is a
+  // frozen record of what it STAGED and never learns that one was decided.
+  // Unnamed ids answer "pending", which is the state a freshly staged one is
+  // in.
+  approvals?: Record<string, { status: string; effect_failed_at?: string }>;
+  approvalStatus?: number;
 }) {
   const calls: string[] = [];
   vi.stubGlobal(
@@ -96,6 +103,20 @@ function stubReads(options: {
           options.post ??
           (() => jsonResponse({ read_id: "rd-1", status: "queued" }, 202))
         )();
+      }
+      const approval = /\/approvals\/([^/]+)$/.exec(url.pathname);
+      if (approval) {
+        if (options.approvalStatus) {
+          return jsonResponse({}, options.approvalStatus);
+        }
+        const id = approval[1];
+        return jsonResponse({
+          id,
+          status: options.approvals?.[id]?.status ?? "pending",
+          ...(options.approvals?.[id]?.effect_failed_at
+            ? { effect_failed_at: options.approvals[id].effect_failed_at }
+            : {}),
+        });
       }
       if (url.pathname.endsWith("/transcript-proposals/latest")) {
         return options.stored
@@ -228,6 +249,107 @@ describe("reading a transcript for its next steps", () => {
     expect(
       await screen.findByText("1 next step waiting for your review"),
     ).toBeTruthy();
+  });
+
+  // The defect a rehearsal met: accept the only suggestion, watch the task
+  // appear, come back and the card still says one is waiting. proposal_ids is
+  // written once and never learns a decision was made, so the count was right
+  // and the sentence was about a different fact.
+  it("says a decided suggestion was reviewed, not that it is waiting", async () => {
+    stubReads({
+      stored: report({ proposal_ids: ["ap-1"] }),
+      approvals: { "ap-1": { status: "approved" } },
+    });
+    render(<TranscriptReadCard activityId="a-1" />);
+
+    expect(await screen.findByText("1 suggestion reviewed")).toBeTruthy();
+    expect(screen.getByText("1 accepted, 0 declined")).toBeTruthy();
+    expect(
+      screen.queryByText("1 next step waiting for your review"),
+    ).toBeNull();
+  });
+
+  it("counts only what is still waiting when some of a batch is decided", async () => {
+    stubReads({
+      stored: report({ proposal_ids: ["ap-1", "ap-2", "ap-3"] }),
+      approvals: {
+        "ap-1": { status: "approved" },
+        "ap-2": { status: "rejected" },
+      },
+    });
+    render(<TranscriptReadCard activityId="a-1" />);
+
+    // One of the three is undecided, and that is the number a rep acts on.
+    expect(
+      await screen.findByText("1 next step waiting for your review"),
+    ).toBeTruthy();
+  });
+
+  it("names a rejected suggestion as declined rather than accepted", async () => {
+    stubReads({
+      stored: report({ proposal_ids: ["ap-1"] }),
+      approvals: { "ap-1": { status: "rejected" } },
+    });
+    render(<TranscriptReadCard activityId="a-1" />);
+
+    expect(await screen.findByText("1 suggestion reviewed")).toBeTruthy();
+    expect(screen.getByText("0 accepted, 1 declined")).toBeTruthy();
+  });
+
+  // Expiry is not a review. Counting it as one tells a rep somebody looked at
+  // the suggestion when nobody did.
+  it("keeps an expired suggestion out of the accepted and declined counts", async () => {
+    stubReads({
+      stored: report({ proposal_ids: ["ap-1"] }),
+      approvals: { "ap-1": { status: "expired" } },
+    });
+    render(<TranscriptReadCard activityId="a-1" />);
+
+    expect(await screen.findByText("1 expired undecided")).toBeTruthy();
+    expect(screen.queryByText(/accepted/)).toBeNull();
+    // And not "1 suggestion reviewed" beside it. Counting every staged id as
+    // reviewed put the two claims on the card at once, each contradicting the
+    // other.
+    expect(screen.queryByText("1 suggestion reviewed")).toBeNull();
+  });
+
+  // An approved suggestion whose effect did not run produced NO task. Reading
+  // the status alone would tell a rep the work exists when it does not, which
+  // is the one wrong answer here that costs them a commitment.
+  it("says an accepted suggestion did not produce its task", async () => {
+    stubReads({
+      stored: report({ proposal_ids: ["ap-1"] }),
+      approvals: {
+        "ap-1": {
+          status: "approved",
+          effect_failed_at: "2026-09-07T09:00:00Z",
+        },
+      },
+    });
+    render(<TranscriptReadCard activityId="a-1" />);
+
+    expect(
+      await screen.findByText(
+        "1 accepted suggestion did not produce its task.",
+      ),
+    ).toBeTruthy();
+  });
+
+  // A status nobody could read is not a reviewed one. Claiming everything is
+  // decided on the strength of a failed read is the same lie in the other
+  // direction.
+  it("says a status it could not read is unavailable", async () => {
+    stubReads({
+      stored: report({ proposal_ids: ["ap-1"] }),
+      approvalStatus: 403,
+    });
+    render(<TranscriptReadCard activityId="a-1" />);
+
+    expect(
+      await screen.findByText("Status unavailable for 1 suggestion"),
+    ).toBeTruthy();
+    // A status nobody could read is not a decision somebody made.
+    expect(screen.queryByText("1 suggestion reviewed")).toBeNull();
   });
 
   it("offers a first reading, and no outcome, on a transcript nobody has read", async () => {

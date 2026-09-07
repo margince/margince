@@ -569,6 +569,17 @@ func TestAStatedDeadlineBecomesTheTasksDueDate(t *testing.T) {
 		t.Errorf("the task is due %q, want the end of 8 September in the "+
 			"installation's own zone", due)
 	}
+	// The day the REVIEWER approved, spelled the way the approval card spells
+	// it. The card renders the proposal's `due_date` string with no conversion
+	// at all, so this is literally what the person clicking Accept was looking
+	// at; asserting the task against the same string is what makes "the
+	// approved day survives acceptance" a checkable claim rather than two
+	// separate ones about a stamp and a render. A proposal for the 8th came
+	// back as a task the reader saw as the 9th, and neither half of it was
+	// wrong on its own.
+	if day := strings.SplitN(due, " ", 2)[0]; day != "2026-09-08" {
+		t.Errorf("the approved day was %q and the task landed on %q", "2026-09-08", day)
+	}
 }
 
 // A next step nobody dated carries no date, rather than today's.
