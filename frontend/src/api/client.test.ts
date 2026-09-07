@@ -3,7 +3,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { api, REQUEST_TIMEOUT_MS, RequestTimeoutError } from "./client";
+import {
+  api,
+  CACHE_ANSWER_GRACE_MS,
+  REQUEST_TIMEOUT_MS,
+  RequestTimeoutError,
+} from "./client";
 import { modelCallsInFlight } from "./model-inflight";
 
 // The spec for the client's deadline. The failure it exists for is the one
@@ -258,10 +263,38 @@ describe("the api client's model-call count", () => {
     expect(modelCallsInFlight()).toBe(0);
   });
 
+  // The meeting brief is assembled fresh on every open — nothing is stored, so
+  // every GET is two model calls — and it is a READ. The count used to admit
+  // POST only, so a person opened the brief, waited on the agent for the whole
+  // of it, and the chrome reported an agent at rest: the failure this file
+  // exists for, arriving through the verb rather than the path.
+  it("counts a read whose handler generates on every call", async () => {
+    const seen: number[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        seen.push(modelCallsInFlight());
+        return new Response(JSON.stringify({}), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }),
+    );
+
+    await api.GET("/activities/{id}/meeting-brief", {
+      params: { path: { id: "01a0-4cd2" } },
+    });
+
+    expect(seen).toEqual([1]);
+    expect(modelCallsInFlight()).toBe(0);
+  });
+
   // The dossier and the growth-fit reading are READ at the same paths they are
-  // asked for. A panel loading the last reading is the reader's own click, and
-  // counting it lit the orb for a fetch the agent had nothing to do with.
-  it("does not count a read at a model route's path", async () => {
+  // asked for, and served from the store when a reading exists. A panel loading
+  // the last reading is the reader's own click, and counting it lit the orb for
+  // a fetch the agent had nothing to do with — so a stored answer, which is
+  // back inside the grace, is never counted.
+  it("does not count a stored reading", async () => {
     const seen: number[] = [];
     vi.stubGlobal(
       "fetch",
@@ -279,6 +312,45 @@ describe("the api client's model-call count", () => {
     });
 
     expect(seen).toEqual([0]);
+    expect(modelCallsInFlight()).toBe(0);
+  });
+
+  // The same read with no reading stored is a generation the person waits on,
+  // and the only thing that tells the two apart from here is time: a stored
+  // answer is back in a few hundred milliseconds, a model's in many seconds. So
+  // the count begins once the request has outlived a stored answer, and ends
+  // with the request like any other.
+  it("counts a cache-backed read once it has outlived a stored answer", async () => {
+    vi.useFakeTimers();
+    let answer: (response: Response) => void = () => {
+      throw new Error("the fetch was not opened");
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        () =>
+          new Promise<Response>((resolve) => {
+            answer = resolve;
+          }),
+      ),
+    );
+
+    const pending = api.GET("/organizations/{id}/dossier", {
+      params: { path: { id: "01a0-4cd2" } },
+    });
+    expect(modelCallsInFlight()).toBe(0);
+
+    await vi.advanceTimersByTimeAsync(CACHE_ANSWER_GRACE_MS);
+    expect(modelCallsInFlight()).toBe(1);
+
+    answer(
+      new Response(JSON.stringify({}), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    await pending;
+    expect(modelCallsInFlight()).toBe(0);
   });
 
   // An ordinary read is the reader's own click, not the agent's work. The rail

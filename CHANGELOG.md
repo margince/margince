@@ -23,6 +23,18 @@ numbers appear here when releases start.
 
 ### Changed
 
+- **Opening a meeting brief lights the AI-activity rail while it is written.**
+  The brief is generated on every open, and the chrome reported an agent at rest
+  for the whole of it because the client counted only a POST to a hand-kept
+  list of paths as the agent working. Which routes hold a model call open is now
+  the contract's to say (`x-waits-on-model: always | on-miss` on the operation),
+  the client mirrors that set by method and path, and a gate holds the two
+  together. Every generation a person waits on now reaches the rail the moment
+  its request leaves — the meeting brief, the intro drafts, the role proposals,
+  the onboarding conversation, and the cache-backed readings (the dossier, the
+  person brief, the deal status) once they have run longer than a stored answer
+  takes. A stored reading still never lights the orb.
+
 - **An email address anywhere in the product opens Margince's composer.** The
   address on a contact's or a lead's header, in the contact rail's details, and
   on the people cards of an account page used to be a `mailto:` link, which

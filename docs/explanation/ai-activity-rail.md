@@ -203,6 +203,45 @@ ticker's own `enrich` key names DIFFERENT work — a provider run on a person
 runs `cold_start`, not this task. The deep read rides its own `site-read` ticker
 key, not this one.
 
+### The ask: what this tab knows before the feed does
+
+The feed arrives on a poll, so between a person pressing "Draft with AI" and
+the next read there is a live model call nothing on screen reports. The client
+closes that window from its own end (`frontend/src/api/model-inflight.ts`): it
+counts every request it is holding open to a route whose handler calls a model
+and waits, and the rail treats a non-zero count as `working` — with no kind, no
+state and no sentence, because it knows none of those, and ranked below every
+occurrence the feed carries so the feed names the work the moment it can. The
+count also drops the poll to its live cadence and refetches on both edges of
+the request, so the feed's own line follows within seconds.
+
+**Which routes count is the contract's to say, not the client's.** An operation
+whose handler holds the request open on a model carries
+`x-waits-on-model: always` (a draft, the meeting brief — generated on every
+call) or `x-waits-on-model: on-miss` (the dossier, the person brief, the deal
+status, the morning brief — served from a stored reading and generated only
+when there is none). The client's `MODEL_ROUTES` table (`api/client.ts`) is a
+declared mirror of the marked set, keyed by method AND path because the dossier
+is read and refreshed at one path and only the refresh generates every time;
+`backend/gates/modelroutes_test.go` fails when the two disagree in either
+direction or on the value. The list was nine path suffixes checked for POST
+only before this, and it drifted both ways with nothing failing: it named a
+route that calls a data provider and no model, and it missed every GET that
+generates — which is how the meeting brief ran two model calls per open with
+the chrome at rest.
+
+An `on-miss` route answers from the store in well under a second and from the
+model in many, and nothing the client can see at the moment the request leaves
+tells the two apart. So it is counted only once the request has outlived
+`CACHE_ANSWER_GRACE_MS` (one second): a stored answer never lights the orb —
+that is the reader's own click — and a generation lights it a second late
+rather than not at all.
+
+A route that enqueues model work and answers 202 is deliberately unmarked: it
+holds nothing open, and its occurrence reaches the rail the way every
+background run does, through its carrier and the feed. A surface that starts
+one calls `watchStartedAiRun` instead, which is the other bridge.
+
 ### Two surfaces, one action, no double narration
 
 The taskbar ticker narrates **this tab's own react-query cache**; the rail
@@ -232,6 +271,7 @@ emitters at once.
 | Every contract kind has something that produces it | `TestEveryContractKindHasSomethingThatProducesIt` |
 | The read's text caps are the ones the contract publishes | `TestTheReadsTextCapsAreTheOnesTheContractPublishes` |
 | Every spec name can be a message-key segment | `TestEverySpecNameCanBeAMessageKeySegment` |
+| The client's table of routes that hold a model call open is the contract's `x-waits-on-model` set, in both directions and on the value | `TestTheClientsModelRouteTableIsTheContracts` (`backend/gates/modelroutes_test.go`) |
 | Every contract kind is displayed or carries a written reason | the TypeScript `Record` type — a **compile error**, not a test |
 | Every displayed kind has copy in en/de/vi, for all six states | the `LineSet` type + the i18n catalogs |
 
@@ -305,6 +345,7 @@ reporting nothing at all.
 | The wire | `AiActivity` / `AiActivityKind` / `AiActivityItem` + `GET /me/ai-activity` (`backend/api/crm.yaml`) |
 | What is drawn, and what is not | `frontend/src/app/ai-activity-lines.ts` |
 | The rail component + poll | `frontend/src/app/agentrail.tsx`, `ai-activity.ts` |
+| The ask: which routes count, and the count | `x-waits-on-model` in `backend/api/crm.yaml`, `MODEL_ROUTES` in `frontend/src/api/client.ts`, `frontend/src/api/model-inflight.ts` |
 | The census gate | `backend/gates/aiactivitycatalogparity_test.go` |
 
 **Related:** [ai-runtime.md](ai-runtime.md) (the task contract and the Router
