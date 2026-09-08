@@ -97,6 +97,13 @@ func countWeekMoney(
 
 // baseCurrency is the currency the installation reports in, or empty when it
 // names none.
+//
+// Read from the row rather than through platform/settings, which is the only
+// control this un-RLS'd table has: the currency is an INPUT to a figure the
+// caller is separately authorised for, and a seat that may read its own week
+// must not also need installation_settings:read to see the money in it. What
+// reaches the caller is a converted total over their own rows, never the value.
+// Ratified in backend/gates/settingreaders_test.go.
 func baseCurrency(ctx context.Context, tx pgx.Tx) (string, error) {
 	var code string
 	err := tx.QueryRow(ctx, `
