@@ -268,6 +268,15 @@ func (b txBorrowing) calledNames() []string {
 			// else's object. Following it would walk into this type's method
 			// and report a deadlock in a body that has none, which is the one
 			// thing this walk's case for existing rests on not doing.
+			//
+			// locallyBound over-collects — a name bound ANYWHERE in the body is
+			// bound throughout it — so a method that writes `for _, c := range …`
+			// once loses the follow for every `c.method()` in it. That is a
+			// MISS, and it is the direction chosen on purpose here as it is
+			// there: the alternative to losing a call is accusing a body that
+			// does not have the defect, and a gate that cries wolf gets deleted.
+			// Block scoping would need the type information this walk
+			// deliberately does without.
 			if base, ok := fn.X.(*ast.Ident); ok && b.recvType != "" &&
 				base.Name == b.recv && !bound[b.recv] {
 				names = append(names, b.recvType+"."+fn.Sel.Name)

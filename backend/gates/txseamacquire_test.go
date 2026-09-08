@@ -169,6 +169,18 @@ type txBorrowing struct {
 // name to spell: its methods are promoted onto the receiver.
 const promotedTx = ""
 
+// promotedTxMethods are the acquirer names that belong to pgx.Tx ITSELF, so a
+// call on a receiver embedding one is the borrowed handle rather than a method
+// the embedding type declared.
+//
+// Only Begin, because it is the only name in connectionAcquirers that pgx.Tx
+// has: the rest are the pool's, the bound handle's, or this tree's own catalog
+// reads, and a type embedding a transaction is as free to declare a method
+// called Acquire or activeColumns as any other. Read without this, an
+// embedding receiver made every acquirer on itself invisible — the one shape
+// that looks most like a borrowed handle hiding the defect best.
+var promotedTxMethods = map[string]bool{"Begin": true}
+
 // embedsTx reports whether this body's receiver embeds the transaction rather
 // than naming a field for it.
 func (b txBorrowing) embedsTx() bool {
@@ -421,7 +433,7 @@ func (b txBorrowing) acquires() []string {
 			if _, isAcquirer := connectionAcquirers[fn.Sel.Name]; !isAcquirer {
 				return true
 			}
-			if b.receiverIsTheBorrowedTx(fn.X) {
+			if b.receiverIsTheBorrowedTx(fn.X, fn.Sel.Name) {
 				return true
 			}
 			found = append(found, fn.Sel.Name)
@@ -446,7 +458,7 @@ func (b txBorrowing) acquires() []string {
 // receiverIsTheBorrowedTx reports whether a call's receiver is the transaction
 // this body borrowed: one of its own pgx.Tx parameters, or the field its
 // receiver holds one in.
-func (b txBorrowing) receiverIsTheBorrowedTx(recv ast.Expr) bool {
+func (b txBorrowing) receiverIsTheBorrowedTx(recv ast.Expr, called string) bool {
 	if sel, ok := recv.(*ast.SelectorExpr); ok {
 		return b.isHeldTxField(sel)
 	}
@@ -454,10 +466,13 @@ func (b txBorrowing) receiverIsTheBorrowedTx(recv ast.Expr) bool {
 	if !ok {
 		return false
 	}
-	// A receiver that EMBEDS the transaction reaches it by its own name: the
-	// promoted `c.Begin(…)` is a savepoint on the borrowed handle, not a
-	// connection taken beside it.
-	if b.recv != "" && ident.Name == b.recv && b.embedsTx() {
+	// A receiver that EMBEDS the transaction reaches it by its own name — but
+	// only for pgx.Tx's OWN methods. `c.Begin(…)` on such a receiver is the
+	// promoted savepoint; `c.ActiveColumns(…)` is a method the embedding type
+	// declared, and waving it through because the receiver happens to embed a
+	// transaction would hide the acquire inside the one shape that looks most
+	// like a borrowed handle.
+	if b.recv != "" && ident.Name == b.recv && b.embedsTx() && promotedTxMethods[called] {
 		return true
 	}
 	for _, param := range b.params.List {
@@ -867,4 +882,26 @@ func (c core) Second(ctx context.Context) error {
 `
 	assertHeldTxGateReads(t, embedded, "core.Nested")
 	assertHeldTxGateReads(t, embedded, "core.Second", "Acquire")
+}
+
+// An embedding type's OWN method is not the promoted transaction.
+//
+// `c.Begin(…)` on a receiver embedding pgx.Tx is that transaction's; `c.Tx(…)`
+// or `c.activeColumns(…)` is a method the type declared, and reading it as the
+// borrowed handle because the receiver happens to embed one would hide an
+// acquire inside the shape that looks most like a borrowed handle. Nothing
+// stops a type embedding a transaction from declaring either name.
+func TestTheGateJudgesAnEmbeddingTypesOwnMethodRatherThanPromotingIt(t *testing.T) {
+	t.Parallel()
+	const shadowing = fixtureImports + `
+type core struct {
+	pgx.Tx
+}
+
+func (c core) Read(ctx context.Context) error {
+	_, err := c.activeColumns(ctx, "person")
+	return err
+}
+`
+	assertHeldTxGateReads(t, shadowing, "core.Read", "activeColumns")
 }
