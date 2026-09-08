@@ -198,10 +198,22 @@ button.evidence-chip:hover {
   padding: var(--space-4) var(--space-5);
 }
 
+/* The staged proposal's gate, in its two shapes, which want the same air and
+ * only one of them wants the row.
+ *
+ * The VERDICT shape is an `ActionRow` — Accept alone on the trailing edge, the
+ * verbs that decline as glyphs on the leading one — and it takes this class as
+ * its placement hook, for the margin alone: its own layout, wrap and action
+ * gap are `.action-row`'s, spelled there in the same values. The margin is the
+ * rung `.dcard-verbs` takes, which is the same decision drawn on a card.
+ *
+ * The EDITING shape is a form holding a field and its submit, which
+ * `ActionRow` is explicitly not for, and the flex row below is what lays that
+ * one out. */
 .approval-gate {
   display: flex;
   gap: var(--gapActions);
-  margin-top: 12px;
+  margin-top: var(--space-3);
   flex-wrap: wrap;
 }
 

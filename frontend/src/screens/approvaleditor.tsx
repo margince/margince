@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useId } from "react";
 import { api } from "../api/client";
+import { ActionRow } from "../design-system/actionrow";
 import {
   Button,
   Disclosure,
@@ -440,16 +441,23 @@ export function StagedEditor({
           }
         </Field>
       ))}
-      <div className="approval-gate">
-        {/* The edited approve is the same write as the plain one and was the one
-            path with no gate at all, so a second press sent a second verdict. */}
-        <Button variant="primary" small pending={pending} onClick={onApprove}>
-          {t("decision.approveEdited")}
-        </Button>
+      <ActionRow
+        className="approval-gate"
+        primary={
+          /* The edited approve is the same write as the plain one and was the
+             one path with no gate at all, so a second press sent a second
+             verdict. */
+          <Button variant="primary" small pending={pending} onClick={onApprove}>
+            {t("decision.approveEdited")}
+          </Button>
+        }
+      >
+        {/* Cancel keeps its word: leaving the editor without a verdict is not a
+            verb any glyph says, and an X here would be read as Reject. */}
         <Button small disabled={pending} onClick={onCancel}>
           {t("deals.cancel")}
         </Button>
-      </div>
+      </ActionRow>
     </div>
   );
 }
