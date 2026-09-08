@@ -73,12 +73,22 @@ import (
 type declaredFunc struct {
 	decl    *ast.FuncDecl
 	pgxName string
+	// recv, recvType and heldTx carry the receiver-held shape into the walk, so
+	// a method reached through a chain is judged with the same knowledge as one
+	// reached directly — otherwise a read of its OWN borrowed `c.tx` would be
+	// reported as a second connection the moment something called it.
+	recv     string
+	recvType string
+	heldTx   []string
 }
 
 // funcIndex maps directory → function name → the declarations with that name.
 //
-// Keyed by directory because that is a Go package. It holds only RECEIVER-LESS
-// functions, because a bare identifier is the only call this walk follows and a
+// Keyed by directory because that is a Go package. Receiver-less functions are
+// keyed by their bare name, and a METHOD by `Type.Method` — a key no bare-name
+// lookup can reach, which is what keeps the two vocabularies from colliding.
+//
+// It held only receiver-less functions, because a bare identifier is the only call this walk follows and a
 // bare identifier cannot reach a method: Go requires `s.StageSemantic(…)` for
 // one, never `StageSemantic(…)`. Indexing methods too is not a wider net, it is
 // a wrong one — `deals` has both a `StageSemantic` string type and a
@@ -107,6 +117,7 @@ const indexedFunctionFloor = 2000
 func indexPackageFunctions(t *testing.T, roots []string) funcIndex {
 	t.Helper()
 	tree := moduleRoot(t)
+	holders := txHoldingReceivers(t, roots)
 	idx := funcIndex{}
 	fset := token.NewFileSet()
 	counted := 0
@@ -125,7 +136,8 @@ func indexPackageFunctions(t *testing.T, roots []string) funcIndex {
 				if relErr != nil {
 					return relErr
 				}
-				counted += idx.add(filepath.ToSlash(filepath.Dir(rel)), file)
+				dir := filepath.ToSlash(filepath.Dir(rel))
+				counted += idx.add(dir, file, holders[dir])
 				return nil
 			})
 		if err != nil {
@@ -140,20 +152,41 @@ func indexPackageFunctions(t *testing.T, roots []string) funcIndex {
 	return idx
 }
 
-// add records one file's package-level functions, answering how many.
-func (idx funcIndex) add(dir string, file *ast.File) int {
+// add records one file's package-level functions and the methods of its
+// tx-holding receivers, answering how many.
+func (idx funcIndex) add(dir string, file *ast.File, holders map[string][]string) int {
 	pgxName, _ := pgxLocalName(file)
 	added := 0
 	for _, decl := range file.Decls {
 		fn, ok := decl.(*ast.FuncDecl)
-		if !ok || fn.Body == nil || fn.Recv != nil {
+		if !ok || fn.Body == nil {
 			continue
+		}
+		entry := declaredFunc{decl: fn, pgxName: pgxName}
+		key := fn.Name.Name
+		if fn.Recv != nil {
+			// Only the methods of a receiver that HOLDS a transaction. Every
+			// other method is out of the walk's reach for the reason
+			// calledNames gives at length: a selector call cannot be resolved
+			// to a type without type information, so following one by name is
+			// a different question than the one being asked. A held-tx
+			// receiver is the exception because the type IS known — it is the
+			// caller's own — so `c.helper()` resolves to exactly one entry.
+			recvType := receiverTypeName(fn)
+			fields, held := holders[recvType]
+			if !held {
+				continue
+			}
+			entry.recvType, entry.heldTx = recvType, fields
+			if names := fn.Recv.List[0].Names; len(names) > 0 && names[0].Name != "_" {
+				entry.recv = names[0].Name
+			}
+			key = recvType + "." + fn.Name.Name
 		}
 		if idx[dir] == nil {
 			idx[dir] = map[string][]declaredFunc{}
 		}
-		idx[dir][fn.Name.Name] = append(idx[dir][fn.Name.Name],
-			declaredFunc{decl: fn, pgxName: pgxName})
+		idx[dir][key] = append(idx[dir][key], entry)
 		added++
 	}
 	return added
@@ -172,7 +205,10 @@ func (idx funcIndex) reachesAcquirer(dir, name string, seen map[string]bool) ([]
 	}
 	seen[key] = true
 	for _, fn := range idx[dir][name] {
-		body := txBorrowing{name: name, params: fn.decl.Type.Params, body: fn.decl.Body, pgxName: fn.pgxName}
+		body := txBorrowing{
+			name: name, params: fn.decl.Type.Params, body: fn.decl.Body, pgxName: fn.pgxName,
+			recv: fn.recv, recvType: fn.recvType, heldTx: fn.heldTx,
+		}
 		if found := body.acquires(); len(found) > 0 {
 			return []string{name, found[0]}, true
 		}
@@ -213,8 +249,22 @@ func (b txBorrowing) calledNames() []string {
 		if !ok {
 			return true
 		}
-		if fn, ok := call.Fun.(*ast.Ident); ok && !bound[fn.Name] {
-			names = append(names, fn.Name)
+		switch fn := call.Fun.(type) {
+		case *ast.Ident:
+			if !bound[fn.Name] {
+				names = append(names, fn.Name)
+			}
+		case *ast.SelectorExpr:
+			// The one selector this walk resolves: a call on the receiver of a
+			// method whose receiver holds the transaction. It is not the
+			// excluded case above — that one cannot tell `e.blob.Delete` from
+			// `PolicyStore.Delete` because nothing says what `e.blob` is. Here
+			// the receiver's TYPE is the method's own, so the name resolves to
+			// exactly one entry, keyed `Type.Method`. A field that happens to
+			// hold a function resolves to no entry and costs nothing.
+			if base, ok := fn.X.(*ast.Ident); ok && b.recvType != "" && base.Name == b.recv {
+				names = append(names, b.recvType+"."+fn.Sel.Name)
+			}
 		}
 		return true
 	})
@@ -311,8 +361,18 @@ func moduleRoot(t *testing.T) string {
 func fixtureIndex(t *testing.T, sources ...string) funcIndex {
 	t.Helper()
 	idx := funcIndex{}
+	holders := map[string]map[string][]string{}
+	parsed := make([]*ast.File, 0, len(sources))
 	for _, src := range sources {
-		idx.add("fixture", parseGateFixture(t, src))
+		file := parseGateFixture(t, src)
+		parsed = append(parsed, file)
+		// The holder pass first and over ALL the sources, exactly as the live
+		// index does it: a type declared in one fixture file and given verbs in
+		// another is the arrangement a per-file answer would miss.
+		addTxHolders(holders, "fixture", file)
+	}
+	for _, file := range parsed {
+		idx.add("fixture", file, holders["fixture"])
 	}
 	return idx
 }
@@ -490,4 +550,98 @@ func outer(ctx context.Context, s *Store) error {
 func inner(ctx context.Context, s *Store) error { return s.db.Tx(ctx, nil) }
 `
 	assertReaches(t, fixtureIndex(t, genuine), "outer", "outer", "inner", "Tx")
+}
+
+// A verb on a tx-holding port reaches the pool through a SIBLING METHOD.
+//
+// This is the second half of what the parameter rule could not see. The verb
+// itself takes no connection; the helper beside it does, and both run inside
+// the caller's transaction. Following it is safe here for the reason the bare
+// selector rule is not followed anywhere else: the receiver's type is the
+// method's own, so `c.mode()` resolves to one entry and not to every `mode`
+// in the package.
+func TestTheWalkFollowsASiblingMethodOfATxHoldingReceiver(t *testing.T) {
+	t.Parallel()
+	const port = `package compose
+
+import "github.com/jackc/pgx/v5"
+
+type core struct {
+	tx   pgx.Tx
+	pool *pgxpool.Pool
+}
+
+func (c core) File(ctx context.Context) error {
+	if err := c.mode(ctx); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c core) mode(ctx context.Context) error {
+	conn, err := c.pool.Acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+	return nil
+}
+`
+	assertReaches(t, fixtureIndex(t, port), "core.File", "core.File", "core.mode", "Acquire")
+}
+
+// And the sibling's own read of the HELD transaction is left alone. Without
+// this the case above would pass against a walk that flagged every method it
+// followed, which would make the widening a source of false findings rather
+// than a gate.
+func TestTheWalkLeavesASiblingReadingTheHeldTransactionAlone(t *testing.T) {
+	t.Parallel()
+	const port = `package compose
+
+import "github.com/jackc/pgx/v5"
+
+type core struct {
+	tx pgx.Tx
+}
+
+func (c core) File(ctx context.Context) error {
+	return c.mode(ctx)
+}
+
+func (c core) mode(ctx context.Context) error {
+	_, err := c.tx.Begin(ctx)
+	return err
+}
+`
+	assertReaches(t, fixtureIndex(t, port), "core.File")
+}
+
+// A method on a receiver that holds NO transaction is not followed at all —
+// the excluded selector case, unchanged. `e.blob.Delete` and
+// `PolicyStore.Delete` are still two questions this walk cannot tell apart,
+// and the widening does not pretend otherwise.
+func TestTheWalkStillDoesNotFollowAnOrdinaryReceiversMethod(t *testing.T) {
+	t.Parallel()
+	const ordinary = `package compose
+
+import "github.com/jackc/pgx/v5"
+
+type store struct {
+	pool *pgxpool.Pool
+}
+
+func (s store) WriteTx(ctx context.Context, tx pgx.Tx) error {
+	return s.mode(ctx)
+}
+
+func (s store) mode(ctx context.Context) error {
+	conn, err := s.pool.Acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+	return nil
+}
+`
+	assertReaches(t, fixtureIndex(t, ordinary), "WriteTx")
 }

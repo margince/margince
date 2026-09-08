@@ -39,7 +39,9 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"io/fs"
 	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -89,17 +91,27 @@ func TestATxAcceptingFunctionAcquiresNoConnectionOfItsOwn(t *testing.T) {
 		// owns its own connection is not one.
 	})
 	roots := []string{"internal", "cmd"}
+	holders := txHoldingReceivers(t, roots)
 	scope := gatekit.Scope{
-		Roots:   roots,
-		Subject: func(_ string, file *ast.File) bool { return len(txBorrowingBodies(file)) > 0 },
-		Exempt:  exempt,
+		Roots: roots,
+		// A file holding any tx-borrowing body, by either rule. The parameter
+		// rule alone excluded a port that keeps the caller's transaction in a
+		// FIELD — its methods take no pgx.Tx at all — so `holders` is read
+		// here too, and it is built from a walk of its own rather than from
+		// this scope: the type and its verbs live in the same file today, and
+		// a subject rule that assumed so would report PASS the day somebody
+		// moves them apart.
+		Subject: func(p string, file *ast.File) bool {
+			return len(txBorrowingBodies(file, holders[path.Dir(p)])) > 0
+		},
+		Exempt: exempt,
 	}
 	defer exempt.AssertAllMatched(t)
 
 	index := indexPackageFunctions(t, roots)
 	for _, parsed := range scope.Files(t) {
 		dir := path.Dir(parsed.Path)
-		for _, body := range txBorrowingBodies(parsed.File) {
+		for _, body := range txBorrowingBodies(parsed.File, holders[dir]) {
 			for _, found := range body.acquires() {
 				t.Errorf("%s: %s runs on a caller's pgx.Tx and then %s (%s) — fetch it before the "+
 					"transaction opens and thread the result in, as mergePersonTx and createDealTx do; "+
@@ -139,11 +151,22 @@ type txBorrowing struct {
 	// pgxName is the local name the file imports pgx under, so a seam in a
 	// file that aliases the import is judged rather than skipped.
 	pgxName string
+	// recv and heldTx describe the third shape: a method on a receiver that
+	// HOLDS the caller's transaction in a field. `recv` is the receiver's own
+	// name in this method (`c` in `func (c extensionCore) …`) and heldTx the
+	// fields carrying a pgx.Tx, so a call spelled `c.tx.Query(…)` is read as
+	// running on the borrowed transaction rather than as a second connection.
+	// Both empty for the parameter and callback shapes. recvType names the
+	// receiver's type, which is what lets the reach walk resolve a call on it.
+	recv     string
+	recvType string
+	heldTx   []string
 }
 
 // txBorrowingBodies answers every tx-borrowing body in one file, outermost
-// first.
-func txBorrowingBodies(file *ast.File) []txBorrowing {
+// first. `holders` names the receiver types in this file's PACKAGE that keep a
+// caller's transaction in a field, and the fields that carry it.
+func txBorrowingBodies(file *ast.File, holders map[string][]string) []txBorrowing {
 	pgxName, imported := pgxLocalName(file)
 	if !imported {
 		return nil
@@ -161,7 +184,9 @@ func txBorrowingBodies(file *ast.File) []txBorrowing {
 		if !ok || fn.Body == nil {
 			continue
 		}
-		add(fn.Name.Name, fn.Type.Params, fn.Body)
+		if !add(fn.Name.Name, fn.Type.Params, fn.Body) {
+			addHeldTxMethod(&out, fn, holders, pgxName)
+		}
 		ast.Inspect(fn.Body, func(n ast.Node) bool {
 			lit, ok := n.(*ast.FuncLit)
 			if !ok {
@@ -173,6 +198,121 @@ func txBorrowingBodies(file *ast.File) []txBorrowing {
 		})
 	}
 	return out
+}
+
+// addHeldTxMethod records a method whose RECEIVER holds the caller's
+// transaction, which is the same obligation reached a different way.
+//
+// It exists because a port can keep the transaction instead of passing it:
+// compose/extcore.go's extensionCore does, and every verb on it runs on that
+// field. Judged by the parameter rule alone the whole file was invisible, and
+// it did not stay hypothetical — the first version of that port read the
+// workspace's mode through a second pool acquire inside the caller's open
+// transaction, the exact deadlock this gate refuses, and the gate was green.
+// Review caught it; the class was still uncaught.
+func addHeldTxMethod(out *[]txBorrowing, fn *ast.FuncDecl, holders map[string][]string, pgxName string) {
+	if fn.Recv == nil || len(fn.Recv.List) == 0 {
+		return
+	}
+	fields, holds := holders[receiverTypeName(fn)]
+	if !holds {
+		return
+	}
+	// An unnamed or blank receiver cannot spell `c.tx`, so nothing in the body
+	// can be reading the held transaction and every acquirer found is a second
+	// connection. Judged with no receiver name rather than skipped.
+	var recv string
+	if names := fn.Recv.List[0].Names; len(names) > 0 && names[0].Name != "_" {
+		recv = names[0].Name
+	}
+	*out = append(*out, txBorrowing{
+		name:     receiverTypeName(fn) + "." + fn.Name.Name,
+		params:   fn.Type.Params,
+		body:     fn.Body,
+		pgxName:  pgxName,
+		recv:     recv,
+		recvType: receiverTypeName(fn),
+		heldTx:   fields,
+	})
+}
+
+// txHoldingReceivers indexes, per package directory, the struct types that keep
+// a pgx.Tx in a field and the fields that hold it.
+//
+// It walks the roots itself rather than reading the gate's own scope, and the
+// two reasons are the same reason. The scope is SELECTED by this answer, so
+// deriving it from the scope would be circular; and a type declared in one file
+// and given its verbs in another is the ordinary arrangement, which a per-file
+// answer would report PASS on. A census that can only see the tidy case has
+// already failed.
+func txHoldingReceivers(t *testing.T, roots []string) map[string]map[string][]string {
+	t.Helper()
+	tree := moduleRoot(t)
+	out := map[string]map[string][]string{}
+	fset := token.NewFileSet()
+	for _, root := range roots {
+		err := filepath.WalkDir(filepath.Join(tree, root),
+			func(p string, d fs.DirEntry, err error) error {
+				if err != nil || d.IsDir() || !strings.HasSuffix(p, ".go") ||
+					strings.HasSuffix(p, "_test.go") {
+					return err
+				}
+				file, parseErr := parser.ParseFile(fset, p, nil, 0)
+				if parseErr != nil {
+					return parseErr
+				}
+				rel, relErr := filepath.Rel(tree, p)
+				if relErr != nil {
+					return relErr
+				}
+				addTxHolders(out, filepath.ToSlash(filepath.Dir(rel)), file)
+				return nil
+			})
+		if err != nil {
+			t.Fatalf("indexing %s for tx-holding receivers: %v", root, err)
+		}
+	}
+	return out
+}
+
+// addTxHolders records one file's struct types that hold a pgx.Tx.
+func addTxHolders(out map[string]map[string][]string, dir string, file *ast.File) {
+	pgxName, imported := pgxLocalName(file)
+	if !imported {
+		return
+	}
+	for _, decl := range file.Decls {
+		gen, ok := decl.(*ast.GenDecl)
+		if !ok || gen.Tok != token.TYPE {
+			continue
+		}
+		for _, spec := range gen.Specs {
+			ts, ok := spec.(*ast.TypeSpec)
+			if !ok {
+				continue
+			}
+			st, ok := ts.Type.(*ast.StructType)
+			if !ok || st.Fields == nil {
+				continue
+			}
+			var held []string
+			for _, field := range st.Fields.List {
+				if !isPgxTx(field.Type, pgxName) {
+					continue
+				}
+				for _, name := range field.Names {
+					held = append(held, name.Name)
+				}
+			}
+			if len(held) == 0 {
+				continue
+			}
+			if out[dir] == nil {
+				out[dir] = map[string][]string{}
+			}
+			out[dir][ts.Name.Name] = held
+		}
+	}
 }
 
 // pgxLocalName answers the name this file spells the pgx package under, and
@@ -255,9 +395,13 @@ func (b txBorrowing) acquires() []string {
 	return found
 }
 
-// receiverIsTheBorrowedTx reports whether a call's receiver is one of this
-// body's own pgx.Tx parameters.
+// receiverIsTheBorrowedTx reports whether a call's receiver is the transaction
+// this body borrowed: one of its own pgx.Tx parameters, or the field its
+// receiver holds one in.
 func (b txBorrowing) receiverIsTheBorrowedTx(recv ast.Expr) bool {
+	if sel, ok := recv.(*ast.SelectorExpr); ok {
+		return b.isHeldTxField(sel)
+	}
 	ident, ok := recv.(*ast.Ident)
 	if !ok {
 		return false
@@ -270,6 +414,25 @@ func (b txBorrowing) receiverIsTheBorrowedTx(recv ast.Expr) bool {
 			if name.Name == ident.Name {
 				return true
 			}
+		}
+	}
+	return false
+}
+
+// isHeldTxField reports whether `x.y` names the transaction this method's
+// receiver holds — `c.tx` in a method on extensionCore.
+//
+// Anchored on the RECEIVER's name and not on the field's alone: `other.tx` is a
+// different object's transaction, and reading it as this one's would wave
+// through a call on a handle this body never borrowed.
+func (b txBorrowing) isHeldTxField(sel *ast.SelectorExpr) bool {
+	base, ok := sel.X.(*ast.Ident)
+	if !ok || b.recv == "" || base.Name != b.recv {
+		return false
+	}
+	for _, field := range b.heldTx {
+		if sel.Sel.Name == field {
+			return true
 		}
 	}
 	return false
@@ -377,7 +540,7 @@ import "github.com/jackc/pgx/v5"
 // count.
 func assertGateReads(t *testing.T, src, body string, want ...string) {
 	t.Helper()
-	bodies := txBorrowingBodies(parseGateFixture(t, src))
+	bodies := txBorrowingBodies(parseGateFixture(t, src), nil)
 	for _, b := range bodies {
 		if b.name != body {
 			continue
@@ -406,7 +569,7 @@ func (s *Store) ClaimAndEnqueue(ctx context.Context, enqueue func(tx pgx.Tx) err
 	return s.claim(ctx, enqueue)
 }
 `
-	for _, b := range txBorrowingBodies(parseGateFixture(t, callbackTaker)) {
+	for _, b := range txBorrowingBodies(parseGateFixture(t, callbackTaker), nil) {
 		if b.name == "ClaimAndEnqueue" {
 			t.Fatal("a function whose only pgx.Tx is the type of a callback it accepts was judged as borrowing a transaction")
 		}
@@ -420,4 +583,132 @@ func parseGateFixture(t *testing.T, src string) *ast.File {
 		t.Fatalf("parsing the gate fixture: %v\n%s", err, strings.TrimSpace(src))
 	}
 	return file
+}
+
+// A port that HOLDS the caller's transaction is judged like one that takes it.
+//
+// This is the shape the parameter rule could not see, and it is not a
+// hypothetical one: compose/extcore.go's first version read the workspace's
+// record mode through a second pool acquire inside the caller's open
+// transaction — the deadlock this gate refuses — and the gate was green,
+// because no method on that receiver takes a pgx.Tx.
+func TestTheGateSeesAnAcquireInAMethodOnAReceiverHoldingTheTransaction(t *testing.T) {
+	t.Parallel()
+	const port = fixtureImports + `
+type core struct {
+	tx   pgx.Tx
+	pool *pgxpool.Pool
+}
+
+func (c core) RefuseOverlay(ctx context.Context) error {
+	conn, err := c.pool.Acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+	return readMode(ctx, conn)
+}
+`
+	assertHeldTxGateReads(t, port, "core.RefuseOverlay", "Acquire")
+}
+
+// The repair, one line apart: the same read on the transaction the receiver is
+// already holding. Without this case the one above would pass against a rule
+// that flagged every method on a tx-holding type, which would make the gate
+// unusable and get it waived rather than obeyed.
+func TestTheGateLeavesAMethodThatReadsTheHeldTransactionAlone(t *testing.T) {
+	t.Parallel()
+	const repaired = fixtureImports + `
+type core struct {
+	tx pgx.Tx
+}
+
+func (c core) RefuseOverlay(ctx context.Context) error {
+	return readMode(ctx, c.tx)
+}
+
+func (c core) Nested(ctx context.Context) error {
+	_, err := c.tx.Begin(ctx)
+	return err
+}
+`
+	assertHeldTxGateReads(t, repaired, "core.RefuseOverlay")
+	// `Begin` IS a registered acquirer, and on the borrowed handle it is a
+	// savepoint rather than a second connection — the same reasoning the
+	// parameter rule already applies to `tx.Begin`.
+	assertHeldTxGateReads(t, repaired, "core.Nested")
+}
+
+// Another object's transaction is not this body's to read. A rule keyed on the
+// FIELD name alone would wave `other.tx` through, which is a second connection
+// wearing the borrowed one's spelling.
+func TestTheGateReadsAnotherObjectsTransactionAsAnAcquire(t *testing.T) {
+	t.Parallel()
+	// `other` is a local, so the call reads `other.tx` — an identifier that is
+	// not this method's receiver. It is the shape the anchor exists for: a
+	// rule keyed on the field name alone reads it as the borrowed handle and
+	// waves the second connection through, and it is the ONLY shape that
+	// distinguishes the two rules — `c.other.tx` fails a receiver-name test
+	// for the unrelated reason that its base is not an identifier at all.
+	const foreign = fixtureImports + `
+type core struct {
+	tx pgx.Tx
+}
+
+func (c core) Read(ctx context.Context) error {
+	other := sibling()
+	_, err := other.tx.Begin(ctx)
+	return err
+}
+`
+	assertHeldTxGateReads(t, foreign, "core.Read", "Begin")
+}
+
+// assertHeldTxGateReads is assertGateReads for the receiver-held shape: the
+// holder index is derived from the fixture itself, exactly as the live gate
+// derives it from the package.
+func assertHeldTxGateReads(t *testing.T, src, body string, want ...string) {
+	t.Helper()
+	file := parseGateFixture(t, src)
+	holders := map[string]map[string][]string{}
+	addTxHolders(holders, ".", file)
+	bodies := txBorrowingBodies(file, holders["."])
+	for _, b := range bodies {
+		if b.name != body {
+			continue
+		}
+		got := b.acquires()
+		if len(got) != len(want) {
+			t.Fatalf("the gate read %v from %q, want %v", got, body, want)
+		}
+		for i := range got {
+			if got[i] != want[i] {
+				t.Fatalf("the gate read %v from %q, want %v", got, body, want)
+			}
+		}
+		return
+	}
+	t.Fatalf("the gate found no body named %q in the fixture — it judged %d others", body, len(bodies))
+}
+
+// The rule has a live subject, and says so if it stops having one.
+//
+// Every case above is a fixture, and a widened rule that matches nothing in the
+// tree is a rule nobody is held to: it would report PASS over a tree it had
+// stopped reading, which is the one way a gate must not fail. This names the
+// port the widening was written for.
+func TestTheHeldTransactionRuleHasARealSubject(t *testing.T) {
+	t.Parallel()
+	holders := txHoldingReceivers(t, []string{"internal", "cmd"})
+	compose, ok := holders["internal/compose"]
+	if !ok {
+		t.Fatal("no receiver in internal/compose holds a pgx.Tx — the rule this file widened for reads nothing, and every case proving it is a fixture")
+	}
+	fields, held := compose["extensionCore"]
+	if !held {
+		t.Fatalf("extensionCore no longer holds a transaction; internal/compose holds %d other(s) that do — if the port was renamed, name the new one here", len(compose))
+	}
+	if len(fields) != 1 || fields[0] != "tx" {
+		t.Fatalf("extensionCore holds its transaction in %v, want [tx]", fields)
+	}
 }
