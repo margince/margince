@@ -88,7 +88,10 @@ func writeAuditRow(ctx context.Context, tx pgx.Tx, action, entityType string, en
 		// ADR-0091 §8 phase D reached the ledgers — the last two tables that
 		// carried one — so an audit row now names WHAT happened and WHO did it,
 		// and the installation is the only answer to where.
-		`INSERT INTO audit_log (id, actor_type, actor_id, passport_id, on_behalf_of, action, entity_type, entity_id, before, after, evidence, authorization_rule)
+		// The table name is the constant the fault classifier reads, so a rename
+		// moves both or neither: a stale classifier would report our own broken
+		// audit row to the caller as a value they sent.
+		`INSERT INTO `+TableAudit+` (id, actor_type, actor_id, passport_id, on_behalf_of, action, entity_type, entity_id, before, after, evidence, authorization_rule)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
 		id, string(p.Type), p.ID, UUIDOrNil(p.PassportID), UUIDOrNil(p.OnBehalfOf),
 		action, entityType, entityID, beforeJSON, afterJSON, evidenceJSON,
