@@ -59,6 +59,127 @@ import (
 // tree, so it has one place to be right and one place to be tested.
 var activityReadLiteral = gatekit.TableReadPattern("activity")
 
+// auditImageRead matches a statement that reads the audit trail's before/after
+// images.
+//
+// That trail is a SECOND DOOR onto an activity's content, reached through
+// audit_log.entity_id rather than through the activity table: `before` and
+// `after` carry the activity's subject verbatim, so a reader projecting them is
+// reading activity content while naming no activity table. Three files did
+// exactly that and were never subjects of this gate — one had a real audience
+// defect and two gated correctly by luck, so the verdict on all three was the
+// verdict a file that gates nothing gets.
+//
+// BOTH halves in one pattern, within a bounded window, rather than "mentions
+// audit_log" AND "mentions before" anywhere in the declaration. A declaration
+// carries its error strings too, and this tree writes sentences with the words
+// "before" and "after" in them: asked separately, the two conditions pulled in
+// a person-name repair and a JSON-decode error message as audit-image readers,
+// which is a corpus that has to be ratified reader by reader for reasons that
+// are not true.
+//
+// Both orders, because a projection may sit either side of its FROM.
+var auditImageRead = regexp.MustCompile(
+	`(?is)\b(?:from|join)\s+audit_log\b.{0,300}?\b(?:before|after)\b` +
+		`|\b(?:before|after)\b.{0,300}?\b(?:from|join)\s+audit_log\b`)
+
+// auditImageEntity is a record type a statement pins its audit rows to with a
+// LITERAL, and auditImageEntityMention is any test of that column at all.
+//
+// The trail is one table for every record the product keeps, so an image read
+// is only a second door onto ACTIVITY content when an activity can be behind
+// it. A statement pinned to `entity_type = 'deal'` cannot reach one — no
+// activity row is in its range whatever the caller asks — and demanding the
+// activity gate of it would be asking a deal reader to prove something about a
+// table it never touches. That is how a census earns a waiver list of readers
+// exempt for reasons that are not true, which is a list nobody can audit.
+//
+// TWO patterns because one was not enough. A statement may test the column in a
+// form this cannot read — parameterized, `IN (...)`, `IS NOT NULL` — and a
+// reader that took only the literals would see `entity_type = 'deal' OR
+// entity_type = $1`, find one non-activity literal, and drop a reader whose
+// parameter may be 'activity' on the next call. Every mention has to be a
+// literal before the absence of 'activity' among them means anything.
+var (
+	auditImageEntity        = regexp.MustCompile(`(?is)\bentity_type\s*=\s*'([a-z_]+)'`)
+	auditImageEntityMention = regexp.MustCompile(`(?is)\bentity_type\b\s*(?:=|<>|!=|\bnot\b|\bin\b|\bis\b|\bany\b)`)
+)
+
+// readsAnActivitysAuditImage reports whether a statement reads an audit image
+// an activity can be behind.
+//
+// UNBOUND MEANS YES, in every shape of unbound: no test of entity_type at all,
+// a parameterized one, a form this does not read, or a mixture of those with a
+// literal. Only a statement whose every mention of the column is a literal and
+// none of them 'activity' is out. That asymmetry is deliberate — being wrong
+// here costs a false finding in one direction and a false PASS in the other,
+// and a census that reads a smaller tree and reports clean is the failure with
+// nothing to notice.
+func readsAnActivitysAuditImage(text string) bool {
+	for _, at := range auditImageRead.FindAllStringIndex(text, -1) {
+		if !boundToAnotherRecordType(statementAround(text, at)) {
+			return true
+		}
+	}
+	return false
+}
+
+// auditImageBindingReach is how far past the matched read the record-type
+// binding is looked for.
+//
+// The match itself is not enough, and the reason is asymmetric: when the
+// projection sits BEFORE its FROM — `SELECT before FROM audit_log WHERE ...` —
+// the window ends at the table name and the WHERE that binds the record type
+// is entirely outside it. So the lookup runs on past the match.
+//
+// Forward only. A binding written before the projection is not read, which
+// leaves the reader in the census: that is the safe direction, and reaching
+// backwards would let an entity_type belonging to an earlier query in the same
+// declaration answer for this one.
+const auditImageBindingReach = 300
+
+// statementAround is the matched read plus as much of what follows as still
+// belongs to the same statement.
+//
+// A flat character reach was not enough either. This tree assembles several
+// queries into one declaration, so 300 characters past a read routinely runs
+// into the NEXT one — and an `entity_type = 'deal'` belonging to a query three
+// lines down would then bind a read that has nothing to do with it, dropping an
+// activity-bindable reader from the census. So the reach stops at whichever
+// comes first: a statement terminator, or the start of another audit read.
+func statementAround(text string, at []int) string {
+	reach := text[at[0]:min(at[1]+auditImageBindingReach, len(text))]
+	tail := reach[at[1]-at[0]:]
+	cut := len(tail)
+	if i := strings.Index(tail, ";"); i >= 0 && i < cut {
+		cut = i
+	}
+	if next := auditImageRead.FindStringIndex(tail); next != nil && next[0] < cut {
+		cut = next[0]
+	}
+	return reach[:at[1]-at[0]+cut]
+}
+
+// boundToAnotherRecordType reports whether every record type this statement
+// names is one an activity cannot be.
+func boundToAnotherRecordType(statement string) bool {
+	mentions := auditImageEntityMention.FindAllString(statement, -1)
+	if len(mentions) == 0 {
+		return false
+	}
+	literals := auditImageEntity.FindAllStringSubmatch(statement, -1)
+	// A mention this cannot read as a literal leaves an activity in range.
+	if len(literals) != len(mentions) {
+		return false
+	}
+	for _, match := range literals {
+		if match[1] == "activity" {
+			return false
+		}
+	}
+	return true
+}
+
 // scopeMarkers are the shared gates that carry the availability test: a reader
 // reaching activity through one of them cannot see a held row. They are Go
 // calls rather than SQL, so they are matched on the names a reader reaches
@@ -150,11 +271,32 @@ var restrictedReadersAdmitted = gatekit.Waive(map[string]string{
 	"internal/compose/audiencerescope.go:AudienceRescopeGen.rescope":          "the audience-change consumer reads the thread key (content by the activity policy) and the capture owner of the ONE activity whose audience just moved — deliberately, as a system principal, because both are exactly what narrowing the derived models needs, to NARROW what other readers may see — excluding a held row here would leave a legal-hold conversation's derived signals workspace-visible, the exact disclosure the consumer exists to remove. The cost is that a held activity's thread key and owner id reach this system principal",
 	"internal/modules/privacy/auditaudienceboundary.go:ListAuditLog":          "the compliance read joins activity to evaluate ONE predicate — the audience arm the row's author set — and projects a single boolean from it. No activity column reaches the caller: the join's whole output is content_readable, which can only ever WITHHOLD an audit image, never reveal an activity. A held activity is therefore no more readable through this join than without it. The cost is that the audit IMAGE of a held activity stays readable to the admin, which is a pre-existing property of audit_log rather than of this join — audit_log is append-only and the hold is on the activity — and is filed rather than settled here, because making the compliance trail skip held rows is a decision about A165 and not a fix to the audience gap this join closes",
 	"internal/modules/privacy/erasure_graph.go:subjectNamedOnAParticipantRow": "the identity predicate BOTH participant scrubs share — the Art. 17 eraser's and the retention sweep's — and both are WRITERS. The one thing it reads from activity is channel_provider, a registry key naming a transport: never a subject's content, never projected, and read only because a chat roster names the third human in a group by an account id alone, which is meaningful only against the provider that issued it. Excluding a held activity here would do the opposite of what the hold protects — it would leave the erased subject's account standing on that roster row forever, readable and matchable back to them by the next roster naming it, while every other arm of the same statement removed them. The four statements built on it each carry notTransitivelyHeld, which is the hold exclusion that belongs to this path; the cost is that a held activity's transport decides whether a participant row on it is scrubbed, a fact about the row's own erasability whose effect is always toward removing the subject",
-	"internal/modules/capture/tracestore.go:TraceStore.readRungs":             "the capture trace ladder LEFT JOINs activity to reach one thing — the counterparty email a stored trace row was raised about — and uses it only inside the lateral's WHERE, to pick which disposition verdict applies. Every column it PROJECTS comes from capture_trace and from capture_pending_counterparty; no activity column is scanned, so a held activity is no more readable through this join than without it. Excluding held rows here would instead blank the disposition on a trace row whose message is under hold, which tells an operator the connector did nothing when it did. The cost is that a held activity's counterparty_email decides which verdict a trace row shows — a fact about the trace, never content of the activity",
+
+	// The four below read the trail with entity_type as a PARAMETER, so an
+	// activity's audit image is within their range when a caller names one.
+	// Each is ratified on the same ground the audience boundary above already
+	// states, and the ground is a decision somebody owes rather than a property
+	// of these readers: audit_log is append-only and the statutory hold is on
+	// the ACTIVITY, not on the ledger row that recorded it. Making the
+	// compliance trail skip held rows is an A165 question — a trail with holes
+	// in it is its own defect — and it is filed rather than settled here.
+	//
+	// What this widening buys is that the door is now VISIBLE: before it, these
+	// five readers were not subjects of this gate at all, and the verdict it
+	// gave them was the verdict it gives a file that gates nothing.
+	"internal/compose/magicseam.go:magicUndoJudge.judgeOne":                  "reads ONE audit row to decide whether the change it records can be taken back, and projects a VERDICT: magicOffer carries the audit id the caller already holds, magicRefusal a reason from a closed vocabulary. No image leaves it. The entry is one the caller can already see in that record's history — privacy.HistoryServesEntry is asked before the evaluation, and the target record goes through the seam's own visibility check with the row-scope miss and the object denial kept apart. Cost: an activity's before/after decides whether an undo control is offered beside an entry that reader was already being shown",
+	"internal/compose/recordrestore.go:RestoreSeam.readRow":                  "reads ONE audit row by its own id to decide what restoring it means, entity_type parameterized. The image it reads is the image the caller is already looking at on that record's history — this read reveals nothing the history did not — and the restore it drives writes to the target row rather than disclosing the trail. Cost: an activity's before/after passes through this seam when a caller restores one",
+	"internal/compose/humanprecedence.go:fieldOwnership.HumanOwnedConflicts": "asks which fields of ONE record a human last set, by looking for the field's key in an after-image. It projects no image: the statement's output is the set of field KEYS a human owns, so an activity's content cannot leave through it. Cost: an activity's after-image decides which of its own field names are reported as human-owned",
+	"internal/compose/superseded.go:moneyMovedUnderIt":                       "asks whether a later audit row moved money under the row being judged, reading the after-image to compare one amount. It projects a boolean, never the image. Cost: an activity's after-image is read to answer a question about the row it belongs to",
+	"internal/modules/people/ensurenamefill.go:displayNameSetByHumanTx":      "asks whether a human ever set this record's display name, by looking for the key in an after-image, and projects EXISTS. No image leaves it. Cost: an activity's after-image is read to answer a question about that same record's naming",
+
+	"internal/modules/capture/tracestore.go:TraceStore.readRungs": "the capture trace ladder LEFT JOINs activity to reach one thing — the counterparty email a stored trace row was raised about — and uses it only inside the lateral's WHERE, to pick which disposition verdict applies. Every column it PROJECTS comes from capture_trace and from capture_pending_counterparty; no activity column is scanned, so a held activity is no more readable through this join than without it. Excluding held rows here would instead blank the disposition on a trace row whose message is under hold, which tells an operator the connector did nothing when it did. The cost is that a held activity's counterparty_email decides which verdict a trace row shows — a fact about the trace, never content of the activity",
 })
 
 // activityReaderScope is every non-test, non-generated file under internal/
-// that reads the activity table by name.
+// that reads an activity's content — through the activity table by name, or
+// through the audit trail's before/after images, which carry the same subject
+// and name no activity table.
 var activityReaderScope = gatekit.Scope{
 	Roots:   []string{"internal"},
 	Subject: readsActivityTable,
@@ -162,7 +304,34 @@ var activityReaderScope = gatekit.Scope{
 }
 
 func readsActivityTable(path string, file *ast.File) bool {
-	return gatekit.FileReadsTable(path, file, activityReadLiteral)
+	return gatekit.FileReadsTable(path, file, activityReadLiteral) ||
+		readsTheAuditImage(path, file)
+}
+
+// readsTheAuditImage reports whether the file reads an activity's content
+// through the audit trail rather than through the activity table.
+//
+// A file that reads audit_log and projects no image discloses
+// nothing about an activity, and one that mentions `before` outside a trail
+// read is prose or another table's column.
+func readsTheAuditImage(path string, file *ast.File) bool {
+	return gatekit.FileReadsTable(path, file, auditImageRead)
+}
+
+// readsActivityContent reports whether one declaration's text reads an
+// activity's content, by EITHER door.
+//
+// The file-level subject above and this per-declaration filter have to agree,
+// or widening one alone buys nothing: a file admitted to the corpus for its
+// audit read, whose declarations are then judged only against the activity
+// table, has no declaration that matches and reports no offenders. That is a
+// PASS with nothing examined — precisely the vacuous verdict this widening was
+// written to end, moved one level in.
+func readsAnActivitysContent(text string) bool {
+	if activityReadLiteral.MatchString(text) {
+		return true
+	}
+	return readsAnActivitysAuditImage(text)
 }
 
 // unguardedActivityReaders names each reader in the file that reads the
@@ -199,7 +368,7 @@ func unguardedActivityReaders(graph map[string]*graphFunc, file *ast.File, dim a
 		// matches, and a per-literal walk skips it entirely — the shape that
 		// reports PASS over a content reader.
 		whole := declText(decl)
-		if !activityReadLiteral.MatchString(whole) {
+		if !readsAnActivitysContent(whole) {
 			continue
 		}
 		reads := gatekit.DeclReads(decl, activityReadLiteral)
@@ -536,4 +705,88 @@ func matchesAny(text string, markers []*regexp.Regexp) bool {
 		}
 	}
 	return false
+}
+
+// The audit door's subject filter, as a spec.
+//
+// It is asked of every declaration in the corpus, so both directions cost: too
+// narrow and a content reader is never examined; too wide and the census fills
+// with readers of other records' trails, each needing a waiver written for a
+// reason that is not true. A waiver list nobody can audit is how a census stops
+// being read.
+func TestTheAuditDoorAdmitsOnlyReadsAnActivityCanBeBehind(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct {
+		name string
+		sql  string
+		want bool
+	}{
+		{
+			name: "an image read pinned to activity",
+			sql:  `SELECT after ->> 'subject' FROM audit_log WHERE entity_type = 'activity'`,
+			want: true,
+		},
+		{
+			name: "an image read that binds no record type at all",
+			sql:  `SELECT before, after FROM audit_log WHERE entity_id = $1`,
+			want: true,
+		},
+		{
+			// The safe direction. A value off a variable could be 'activity'
+			// on the next call, so it stays a subject.
+			name: "an image read whose record type is parameterized",
+			sql:  `SELECT before FROM audit_log WHERE entity_type = $1 AND entity_id = $2`,
+			want: true,
+		},
+		{
+			// The mixed form. Taking only the literals here would find one
+			// non-activity value, see no 'activity' among them, and drop a
+			// reader whose parameter may be 'activity' on the next call.
+			name: "an image read that pins one record type and parameterizes another",
+			sql:  `SELECT before FROM audit_log WHERE entity_type = 'deal' OR entity_type = $1`,
+			want: true,
+		},
+		{
+			name: "an image read whose record types are a set this cannot read",
+			sql:  `SELECT after FROM audit_log WHERE entity_type IN ('deal', 'lead')`,
+			want: true,
+		},
+		{
+			// The declaration assembles two queries. The `entity_type = 'deal'`
+			// belongs to the second and must not answer for the first, which
+			// binds nothing and can reach an activity.
+			name: "a binding belonging to the next statement does not bind this read",
+			sql: `SELECT before, after FROM audit_log WHERE id = $1;
+			      SELECT count(*) FROM audit_log au WHERE au.entity_type = 'deal'`,
+			want: true,
+		},
+		{
+			// No activity row is in this statement's range whatever the caller
+			// asks, so demanding the activity gate of it would be asking a deal
+			// reader to prove something about a table it never touches.
+			name: "an image read pinned to another record type",
+			sql:  `SELECT count(*) FROM audit_log au WHERE au.entity_type = 'deal' AND (au.after ->> 'expected_close_date') IS NOT NULL`,
+			want: false,
+		},
+		{
+			name: "a projection sitting before its FROM still counts",
+			sql:  `SELECT a.before ->> 'body' FROM audit_log a WHERE a.entity_id = $1`,
+			want: true,
+		},
+		{
+			// The false positives that made the window bounded in the first
+			// place: prose and error strings carrying the words on their own.
+			name: "a sentence using the words apart from any audit read",
+			sql:  `"the person's name was repaired before the export and after the merge"`,
+			want: false,
+		},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			if got := readsAnActivitysAuditImage(c.sql); got != c.want {
+				t.Errorf("readsAnActivitysAuditImage = %v, want %v for:\n%s", got, c.want, c.sql)
+			}
+		})
+	}
 }
