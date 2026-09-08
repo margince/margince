@@ -26,6 +26,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -50,7 +51,12 @@ const linkedInMatchKind = "linkedin_match"
 // decide it.
 type linkedInMatchProposal struct {
 	ConnectionID ids.UUID `json:"connection_id"`
-	PersonID     ids.UUID `json:"person_id"`
+	// OwnerUserID is the member whose network produced the pair, stamped at
+	// staging from the ghost row. The apply binds on it: without it the write
+	// gated the PERSON and nothing tied the CONNECTION, so a payload naming
+	// another member's connection applied to it.
+	OwnerUserID ids.UUID `json:"owner_user_id"`
+	PersonID    ids.UUID `json:"person_id"`
 	// ConnectionName and ConnectionCompany are the export's own spelling. The
 	// folded forms the matcher compared on are deliberately absent: nobody can
 	// decide "andreas muller · simio".
@@ -166,7 +172,8 @@ func stagePendingLinkedInMatches(
 
 func stageOneLinkedInMatch(ctx context.Context, svc *approvals.Service, m people.PendingLinkedInMatch) (bool, error) {
 	canonical, hash, err := diffhash.Object(map[string]any{
-		"connection_id": m.ConnectionID.String(), "person_id": m.PersonID.String(),
+		"connection_id": m.ConnectionID.String(), "owner_user_id": m.OwnerUserID.String(),
+		"person_id":       m.PersonID.String(),
 		"connection_name": m.ConnectionName, "connection_company": m.ConnectionCompany,
 		"person_name": m.PersonName,
 	})
@@ -213,11 +220,6 @@ func employerOrPlaceholder(s string) string {
 // path performs, released by a human instead of by a string comparison.
 func linkedInMatchAcceptEffect(svc *approvals.Service, store *people.Store) approvals.ApprovedEffect {
 	return func(ctx context.Context, approvalID ids.ApprovalID, proposedChange json.RawMessage, diffHash string) error {
-		// The single-use redemption IS the idempotency claim: whoever consumes
-		// the approval executes, anyone else finds it consumed.
-		if _, _, err := svc.Redeem(ctx, approvalID, linkedInMatchKind, diffHash); err != nil {
-			return err
-		}
 		var p linkedInMatchProposal
 		if err := json.Unmarshal(proposedChange, &p); err != nil {
 			return fmt.Errorf("compose: unreadable LinkedIn match proposal: %w", err)
@@ -225,9 +227,22 @@ func linkedInMatchAcceptEffect(svc *approvals.Service, store *people.Store) appr
 		if _, ok := principal.Actor(ctx); !ok {
 			return fmt.Errorf("compose: LinkedIn match effect without a deciding principal")
 		}
+		// ONE TRANSACTION, which is what RedeemAndApply is for. Redeem-then-apply
+		// was two: the redemption committed, and a failure in the apply left the
+		// approval consumed and the connection never linked — unrecoverable
+		// through the API, because the row is decided and re-deciding answers
+		// 409. Redeem's own doc says callers should use this and have no window
+		// at all, and every other accept effect in compose already does.
+		//
+		// The single-use redemption is still the idempotency claim: whoever
+		// consumes the approval executes, anyone else finds it consumed. What
+		// changes is that a consumed approval now implies the write landed.
+		//
 		// Executed as the DECIDER, not as a machine: a member approving a match
 		// is making the claim themselves, and the write must be gated by their
 		// grants and recorded against them.
-		return store.ApplyLinkedInMatch(ctx, p.ConnectionID, p.PersonID)
+		return svc.RedeemAndApply(ctx, approvalID, linkedInMatchKind, diffHash, func(tx pgx.Tx) error {
+			return people.ApplyLinkedInMatchTx(ctx, tx, p.ConnectionID, p.OwnerUserID, p.PersonID)
+		})
 	}
 }

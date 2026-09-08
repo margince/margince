@@ -29,12 +29,12 @@ func TestTheProposalCarriesTheExportsSpellingAndNotTheFoldedForms(t *testing.T) 
 	// legal-suffix stripped — cannot be judged by anybody and must not travel:
 	// nobody can decide "andreas muller · simio".
 	m := people.PendingLinkedInMatch{
-		ConnectionID: ids.NewV7(), PersonID: ids.NewV7(),
+		ConnectionID: ids.NewV7(), OwnerUserID: ids.NewV7(), PersonID: ids.NewV7(),
 		ConnectionName: "André Schultewolter", ConnectionCompany: "SIMIO GmbH & Co. KG",
 		PersonName: "Andre Schultewolter",
 	}
 	payload, err := json.Marshal(linkedInMatchProposal{
-		ConnectionID: m.ConnectionID, PersonID: m.PersonID,
+		ConnectionID: m.ConnectionID, OwnerUserID: m.OwnerUserID, PersonID: m.PersonID,
 		ConnectionName: m.ConnectionName, ConnectionCompany: m.ConnectionCompany,
 		PersonName: m.PersonName,
 	})
@@ -45,7 +45,14 @@ func TestTheProposalCarriesTheExportsSpellingAndNotTheFoldedForms(t *testing.T) 
 	if err := json.Unmarshal(payload, &fields); err != nil {
 		t.Fatalf("unreadable proposal: %v", err)
 	}
-	want := []string{"connection_id", "person_id", "connection_name", "connection_company", "person_name"}
+	// owner_user_id is on the wire and is NOT a ghost's detail: it names the
+	// member whose network produced the pair, which is what the apply binds on
+	// so a payload cannot land on somebody else's connection. Nothing about the
+	// third party travels with it.
+	want := []string{
+		"connection_id", "owner_user_id", "person_id",
+		"connection_name", "connection_company", "person_name",
+	}
 	for _, key := range want {
 		if _, ok := fields[key]; !ok {
 			t.Errorf("the proposal omits %s — the inbox cannot render the question without it", key)
