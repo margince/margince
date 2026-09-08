@@ -8889,7 +8889,7 @@ export const en = {
   "worklist.readings.prospecting": "Prospecting",
   "worklist.readings.prospecting.detail": "New business owed a first reply",
   "worklist.readings.review": "Review",
-  "worklist.readings.review.detail": "Routine work queued behind a decision",
+  "worklist.readings.review.detail": "Decisions only you can settle",
   "worklist.readings.truncated":
     "There is more work than this could count. These are floors, not totals.",
   "worklist.hidden.title": "What the queue is not showing",
