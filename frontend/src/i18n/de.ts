@@ -2609,7 +2609,7 @@ export const de = {
   "brief.weekly.scorecard.multiThreaded": "Mehr als ein Kontakt",
   "brief.weekly.scorecard.multiThreadedBasis":
     "von {total} offenen Deals, in den letzten 30 Tagen",
-  "brief.weekly.scorecard.closeDateSound": "Bestätigtes Abschlussdatum",
+  "brief.weekly.scorecard.closeDateSound": "Festes Abschlussdatum hinterlegt",
   "brief.weekly.scorecard.forecastMoves": "Forecast hochgestuft",
   "brief.weekly.scorecard.forecastMovesBasis": "{down} herabgestuft",
   // Die kommende Woche. Der eingefrorene Rückblick sagt, was war; dies ist der
