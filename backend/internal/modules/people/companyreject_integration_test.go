@@ -42,7 +42,7 @@ func (e *dedupeEnv) asRejector() context.Context {
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"admin"},
 			Objects: map[string]principal.ObjectGrant{
-				"person":       {Create: true, Read: true, Update: true},
+				"person":  {Create: true, Read: true, Update: true},
 				"company": {Create: true, Read: true, Update: true, Delete: true},
 			},
 			RowScope: principal.RowScopeAll,

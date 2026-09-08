@@ -71,7 +71,7 @@ var rowScopedResponses = map[string]expectedTarget{
 	// no scope of its own: it is the same company's, which is why one
 	// probe covers the body.
 	"RejectCompanyResponse": {table: "company", idPath: "company.id"},
-	"DemoteLeadResponse":         {table: "lead", idPath: "lead.id"},
+	"DemoteLeadResponse":    {table: "lead", idPath: "lead.id"},
 	// The quick-capture result wraps the person it created, alongside the
 	// employer it attached them to. The person is the record a replay hands
 	// back, so it is probed exactly as PromoteLeadResponse above is — the

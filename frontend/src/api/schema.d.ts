@@ -1690,7 +1690,7 @@ export interface paths {
          *
          *     Only the installation's own company wears an icon today: the cold-start website
          *     read resolves one from the site's declared icons when it also found a wide lockup,
-         *     and `uploadCompanyLogoIcon` replaces it — so every other record answers the same
+         *     and `uploadAnchorCompanyLogoIcon` replaces it — so every other record answers the same
          *     404 it answers for a mark it does not have. 404 also when the company is
          *     invisible to the caller or does not exist; a client falls back to the wide mark,
          *     or to the deterministic monogram, for all of them alike. 501 when the deployment
@@ -2410,9 +2410,9 @@ export interface paths {
         get: operations["getPartner"];
         /**
          * Create/update the partner extension on a company (adds `partner` to its relationship types).
-         * @description Promotes a company to a first-class partner (A41/ADR-0032) by upserting its `partner` row and
+         * @description Promotes a company to a first-class partner (ADR-0032) by upserting its `partner` row and
          *     adding `partner` to its `relationship_types`. (`classification` is retired and no longer
-         *     set here — ADR-0079/A124 replaced it, because what a company IS to us is multi-valued.)
+         *     set here — ADR-0079 replaced it, because what a company IS to us is multi-valued.)
          *     Company identity is never duplicated. Admin write, and a HUMAN one.
          *
          *     Human-only for the same reason `decideCommissionEntry` is: `margin_tier` is the rate the
@@ -4283,7 +4283,7 @@ export interface paths {
         put?: never;
         /**
          * Start a new email conversation from a record — runs directly, consent-gated.
-         * @description The account-started twin of `send_email` (ADR-0087/A132). "Write email" from a company,
+         * @description The account-started twin of `send_email` (ADR-0087). "Write email" from a company,
          *     a person or a deal is a NEW conversation: there is no prior message to anchor to, and
          *     the product refuses to fabricate a placeholder activity to obtain one — that would put a
          *     timeline entry on the record for a message nobody has sent yet.
@@ -6427,7 +6427,7 @@ export interface paths {
          *     and it is what onboarding gates on. Distinct from GET /companies/{id}, which reads the
          *     customer records.
          */
-        get: operations["getCompany"];
+        get: operations["getAnchorCompany"];
         /**
          * Save the installation's own company — the human's confirm-first write.
          * @description Creates the anchor company on first save (marking it `is_anchor`) and updates it on every
@@ -6440,7 +6440,7 @@ export interface paths {
          *     own anchor, so a company saved from pasted text or typed by hand works exactly like one read from
          *     a website. Fields omitted from the body are left untouched; fields sent empty are cleared.
          */
-        put: operations["putCompany"];
+        put: operations["putAnchorCompany"];
         post?: never;
         delete?: never;
         options?: never;
@@ -6468,7 +6468,7 @@ export interface paths {
          *     resolving a different mark leaves it alone. `DELETE` gives the field back — the
          *     record returns to its monogram and the next read may resolve a mark again.
          */
-        post: operations["uploadCompanyLogo"];
+        post: operations["uploadAnchorCompanyLogo"];
         /**
          * Take the installation's own company logo off the record.
          * @description The record goes back to its deterministic monogram and the stored object is
@@ -6478,7 +6478,7 @@ export interface paths {
          *     Removing a mark the installation never had is not an error — the outcome the
          *     caller asked for is the outcome they get.
          */
-        delete: operations["deleteCompanyLogo"];
+        delete: operations["deleteAnchorCompanyLogo"];
         options?: never;
         head?: never;
         patch?: never;
@@ -6495,7 +6495,7 @@ export interface paths {
         put?: never;
         /**
          * Replace the installation's own square logo icon with an uploaded image.
-         * @description The companion to `uploadCompanyLogo`. A company is drawn at two widths and one
+         * @description The companion to `uploadAnchorCompanyLogo`. A company is drawn at two widths and one
          *     picture cannot serve both: the wide mark is the lockup an expanded sidebar has
          *     room for, and this one is the square badge a collapsed 56px rail draws, where a
          *     wordmark would be a row of illegible strokes. Upload a square image; the aspect
@@ -6511,7 +6511,7 @@ export interface paths {
          *     installation did before this endpoint existed. An icon a person uploads outranks
          *     the one a website read resolves, exactly as the wide mark does.
          */
-        post: operations["uploadCompanyLogoIcon"];
+        post: operations["uploadAnchorCompanyLogoIcon"];
         /**
          * Take the installation's own square logo icon off the record.
          * @description The stored object is collected and the collapsed rail falls back to the wide mark,
@@ -6521,7 +6521,7 @@ export interface paths {
          *     Removing an icon the installation never had is not an error — the outcome the
          *     caller asked for is the outcome they get.
          */
-        delete: operations["deleteCompanyLogoIcon"];
+        delete: operations["deleteAnchorCompanyLogoIcon"];
         options?: never;
         head?: never;
         patch?: never;
@@ -6538,7 +6538,7 @@ export interface paths {
          * Get the effective server-side company-context rollout capability.
          * @description The UI follows this authenticated response instead of inferring deployment configuration.
          */
-        get: operations["getCompanyContextCapabilities"];
+        get: operations["getAnchorCompanyContextCapabilities"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6562,7 +6562,7 @@ export interface paths {
          *     deterministic so downstream model calls can bind cache entries and traces to the exact
          *     company knowledge they used.
          */
-        get: operations["getCompanyContext"];
+        get: operations["getAnchorCompanyContext"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6586,7 +6586,7 @@ export interface paths {
          *     same transaction. No company, profile field, fact, lead, or domain row is created.
          *     Repeating the same URL while its read is active joins the existing dossier.
          */
-        post: operations["startCompanySiteRead"];
+        post: operations["startAnchorCompanySiteRead"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6603,7 +6603,7 @@ export interface paths {
             cookie?: never;
         };
         /** Read the latest progressive onboarding dossier and its grounded draft findings. */
-        get: operations["getCompanySiteRead"];
+        get: operations["getAnchorCompanySiteRead"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6632,7 +6632,7 @@ export interface paths {
          *     and never third-party markup. 404 when the read resolved no mark or does not exist;
          *     501 when the deployment has no object store configured.
          */
-        get: operations["getCompanySiteReadLogo"];
+        get: operations["getAnchorCompanySiteReadLogo"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6660,7 +6660,7 @@ export interface paths {
          *     present in the dossier. The response carries the cumulative, price-on-read AI runtime for
          *     this read so model identity and estimated provider spend stay visible in context.
          */
-        post: operations["messageCompanySiteRead"];
+        post: operations["messageAnchorCompanySiteRead"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6688,7 +6688,7 @@ export interface paths {
          *     and published people remain separate site-lead proposals rather than becoming contacts or
          *     company-context rows.
          */
-        post: operations["confirmCompanySiteRead"];
+        post: operations["confirmAnchorCompanySiteRead"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8316,7 +8316,7 @@ export interface paths {
         head?: never;
         /**
          * Update the workspace's capture settings (admin/ops).
-         * @description Admin/ops-only. Toggles the captured-company auto-enrich posture (ADR-0072/A118):
+         * @description Admin/ops-only. Toggles the captured-company auto-enrich posture (ADR-0072):
          *     when ON, every company with a primary domain and no dossier gets a governed deep-read
          *     under a daily spend cap — however it was named, since a person creating one is usually
          *     the moment they want it. The installation's own company (the anchor) is excluded: cold
@@ -9926,7 +9926,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Share a contact your mailbox created with the rest of the company.
+         * Share a contact your mailbox created with the rest of the workspace.
          * @description A contact a connector created from a message nothing had judged yet is yours alone until
          *     something judges it. Usually that is the sender classifier. This is the door for when it
          *     never will: the ceiling on open questions refused to ask and the correspondence went quiet,
@@ -16547,7 +16547,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /**
-             * @description A pair is always same-type (ADR-0118/A169 §2): a lead is proposed as a duplicate of a lead or of nothing.
+             * @description A pair is always same-type (ADR-0118 §2): a lead is proposed as a duplicate of a lead or of nothing.
              * @enum {string}
              */
             entity_type: "person" | "company" | "lead";
@@ -18218,7 +18218,7 @@ export interface components {
             id: string;
             display_name: string;
             /**
-             * @description True only for this installation's OWN company (ADR-0065/A111, amended by ADR-0082/A127).
+             * @description True only for this installation's OWN company (ADR-0065, amended by ADR-0082).
              *     It is one ordinary company, reachable by id everywhere, but the surfaces that answer
              *     *which companies are we selling to* exclude it unless `include_anchor` is set, and it
              *     cannot be archived or merged. A caller that offers company actions should tell it apart.
@@ -18259,7 +18259,7 @@ export interface components {
              * @enum {string}
              */
             lifecycle?: "unknown" | "target" | "prospect" | "opportunity" | "customer" | "former_customer" | "disqualified";
-            /** @description WHAT THE COMPANY IS to us (PO-DDL-4b, ADR-0079/A124). Multi-valued, because a company is legitimately several things at once — the partner program is built on companies that are simultaneously partners and customers. A company IS a partner iff it carries `partner` here AND has a `partner` row; removing the type while that row lives is refused (422). */
+            /** @description WHAT THE COMPANY IS to us (PO-DDL-4b, ADR-0079). Multi-valued, because a company is legitimately several things at once — the partner program is built on companies that are simultaneously partners and customers. A company IS a partner iff it carries `partner` here AND has a `partner` row; removing the type while that row lives is refused (422). */
             relationship_types?: ("customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other")[];
             /**
              * @deprecated
@@ -21526,7 +21526,7 @@ export interface components {
          *     holds the two rules this surface cannot: write authority over the project ROW, and the
          *     refusal that keeps a project's last company on it), `project_stakeholder`
          *     (project↔person — the deal-stakeholder shape applied to a body of work), and the partner edges
-         *     (A41/ADR-0032, company↔company via `counterparty_company_id`): `partner_of` (company served by a partner
+         *     (ADR-0032, company↔company via `counterparty_company_id`): `partner_of` (company served by a partner
          *     company), `referred_by` (company referred by a partner company), `co_sell_with` (company co-sold with a partner company).
          *     `works_with` is the one person↔person kind (person_id ↔ counterparty_person_id): two external
          *     contacts a rep asserts work together. Undirected in fact — the two columns carry no order,
@@ -21650,7 +21650,7 @@ export interface components {
             company_id?: string | null;
             /**
              * Format: uuid
-             * @description Deal registration/attribution to a partner company (A38/A41/ADR-0032). The company must have a live `partner` row — naming one that does not is refused 422 (`not_a_partner`), because commission prices from the margin tier on that row, and an attribution without one could never earn anything. Null when the caller may not read that company, in which case `masked_fields` names it.
+             * @description Deal registration/attribution to a partner company (ADR-0032). The company must have a live `partner` row — naming one that does not is refused 422 (`not_a_partner`), because commission prices from the margin tier on that row, and an attribution without one could never earn anything. Null when the caller may not read that company, in which case `masked_fields` names it.
              */
             partner_company_id?: string | null;
             /**
@@ -24880,7 +24880,7 @@ export interface components {
         /**
          * @description A surfaced "something changed / worth attention" item. Mirrors the `signal` table:
          *     company-level and consent-gated by construction — the only mandatory attribution is
-         *     organizational (`resolved_company_id` after resolution); `resolved_person_id` is optional
+         *     to a company (`resolved_company_id` after resolution); `resolved_person_id` is optional
          *     and set only under a recorded consent grant (P12). Unattributable signals are
          *     `dropped`, never retained as a person-level dossier.
          */
@@ -27595,7 +27595,7 @@ export interface components {
              *     never holds a replacement behind an older cached URL. The logo is whichever one the
              *     company is wearing: the one a website
              *     read resolved from its own site, or the one a person uploaded through
-             *     `uploadCompanyLogo`. ABSENT entirely (not null) when the company wears none, which
+             *     `uploadAnchorCompanyLogo`. ABSENT entirely (not null) when the company wears none, which
              *     is never an error: a client draws the deterministic monogram then.
              */
             readonly logo_url?: string | null;
@@ -27605,7 +27605,7 @@ export interface components {
              *     as `logo_url`. This is the badge a collapsed sidebar draws, where the wide mark above
              *     would be unreadable; the two are chosen separately. The cold-start website read fills
              *     this one from the site's declared icons when it also resolved a wide lockup, and
-             *     `uploadCompanyLogoIcon` replaces it. ABSENT entirely (not null) when the company has
+             *     `uploadAnchorCompanyLogoIcon` replaces it. ABSENT entirely (not null) when the company has
              *     no icon, which is never an error: a client falls back to `logo_url`, then to the
              *     deterministic monogram.
              */
@@ -28068,7 +28068,7 @@ export interface components {
         /**
          * @description The deterministic "prepared mapping" snapshot the conversational shell narrates. Everything
          *     here is computed from the persisted read — no model call. `draft_version` and
-         *     `proposal_hash` are the pair ConfirmCompanySiteRead must echo.
+         *     `proposal_hash` are the pair ConfirmAnchorCompanySiteRead must echo.
          */
         OnboardingCompanyProposal: {
             /** @description False while the read is still queued, deferred, or running. */
@@ -28107,7 +28107,7 @@ export interface components {
             pages_read?: number;
             /**
              * @description Where to fetch the mark the read resolved from the company's own site — the
-             *     `getCompanySiteReadLogo` path for this dossier, cookie-authenticated and
+             *     `getAnchorCompanySiteReadLogo` path for this dossier, cookie-authenticated and
              *     same-origin. The mark is the wide lockup the site itself labels as its logo when
              *     one resolved, and otherwise its best square icon, which then serves both widths.
              *     ABSENT when the read resolved none, which a client answers with the deterministic
@@ -44251,7 +44251,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    getCompany: {
+    getAnchorCompany: {
         parameters: {
             query?: never;
             header?: never;
@@ -44281,7 +44281,7 @@ export interface operations {
             };
         };
     };
-    putCompany: {
+    putAnchorCompany: {
         parameters: {
             query?: never;
             header?: never;
@@ -44308,7 +44308,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    uploadCompanyLogo: {
+    uploadAnchorCompanyLogo: {
         parameters: {
             query?: never;
             header?: never;
@@ -44366,7 +44366,7 @@ export interface operations {
             };
         };
     };
-    deleteCompanyLogo: {
+    deleteAnchorCompanyLogo: {
         parameters: {
             query?: never;
             header?: never;
@@ -44397,7 +44397,7 @@ export interface operations {
             };
         };
     };
-    uploadCompanyLogoIcon: {
+    uploadAnchorCompanyLogoIcon: {
         parameters: {
             query?: never;
             header?: never;
@@ -44455,7 +44455,7 @@ export interface operations {
             };
         };
     };
-    deleteCompanyLogoIcon: {
+    deleteAnchorCompanyLogoIcon: {
         parameters: {
             query?: never;
             header?: never;
@@ -44486,7 +44486,7 @@ export interface operations {
             };
         };
     };
-    getCompanyContextCapabilities: {
+    getAnchorCompanyContextCapabilities: {
         parameters: {
             query?: never;
             header?: never;
@@ -44507,7 +44507,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
         };
     };
-    getCompanyContext: {
+    getAnchorCompanyContext: {
         parameters: {
             query?: {
                 /** @description Comma-separated context scopes. Omit for the bounded default set. */
@@ -44534,7 +44534,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    startCompanySiteRead: {
+    startAnchorCompanySiteRead: {
         parameters: {
             query?: never;
             header?: {
@@ -44580,7 +44580,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    getCompanySiteRead: {
+    getAnchorCompanySiteRead: {
         parameters: {
             query?: never;
             header?: never;
@@ -44605,7 +44605,7 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
-    getCompanySiteReadLogo: {
+    getAnchorCompanySiteReadLogo: {
         parameters: {
             query?: never;
             header?: never;
@@ -44639,7 +44639,7 @@ export interface operations {
             };
         };
     };
-    messageCompanySiteRead: {
+    messageAnchorCompanySiteRead: {
         parameters: {
             query?: never;
             header?: never;
@@ -44678,7 +44678,7 @@ export interface operations {
             };
         };
     };
-    confirmCompanySiteRead: {
+    confirmAnchorCompanySiteRead: {
         parameters: {
             query?: never;
             header?: {

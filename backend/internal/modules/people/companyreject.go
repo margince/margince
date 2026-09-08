@@ -39,7 +39,7 @@ import (
 // made the two-call version report a partial write as total failure.
 type Rejection struct {
 	Company crmcontracts.Company
-	Domain       BlockedDomain
+	Domain  BlockedDomain
 }
 
 // RejectCompany archives a company and refuses its domain another, in ONE

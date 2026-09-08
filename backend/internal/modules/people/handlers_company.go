@@ -311,7 +311,7 @@ func (h Handlers) RejectCompany(w http.ResponseWriter, r *http.Request, id crmco
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.RejectCompanyResponse{
 		Company: out.Company,
-		Domain:       ToContractBlockedDomain(out.Domain),
+		Domain:  ToContractBlockedDomain(out.Domain),
 	})
 }
 
