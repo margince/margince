@@ -203,7 +203,7 @@ export const vi = {
   "shell.companyLogoAria": "Trang chủ {company}, vận hành bởi Margince",
   "shell.poweredBy": "Vận hành bởi Margince",
   "shell.poweredByPrefix": "Vận hành bởi",
-  "shell.searchEverything": "Tìm kiếm mọi thứ…",
+  "shell.searchEverything": "Tìm hoặc hỏi Margince",
   "shell.breadcrumbAria": "Đường dẫn",
   "shell.license.none": "Chưa có giấy phép",
   "shell.license.refused": "Giấy phép bị từ chối",
@@ -276,7 +276,7 @@ export const vi = {
   "context.empty": "Chưa có gì liên quan.",
 
   "palette.aria": "Bảng lệnh",
-  "palette.placeholder": "Đi tới, hoặc hỏi bất cứ điều gì…",
+  "palette.placeholder": "Tìm mọi thứ hoặc nhận câu trả lời từ Margince",
   "palette.empty": "Không có kết quả.",
   "palette.askAi": "Hỏi AI: “{query}”",
   "palette.typeScreen": "Màn hình",
@@ -815,6 +815,13 @@ export const vi = {
   "consent.purposesUnavailable":
     "Không tải được danh mục mục đích chấp thuận, nên hiện chưa thể cho biết mục đích nào cần xác nhận kép.",
 
+  "org.reject": "Không phải công ty",
+  "org.rejectConfirm":
+    "Thao tác này lưu trữ “{name}” và từ chối cấp công ty cho {domain}, nên thư tiếp theo từ tên miền đó sẽ không tạo lại nó. Quản trị viên có thể cho tên miền vào lại ở Cài đặt → Thu thập.",
+  "org.rejectReasonLabel": "Vì sao đây không phải công ty?",
+  "org.rejectReasonHint":
+    "Một câu đủ rõ để rà soát lại trong danh sách tên miền bị chặn. Quyết định từ chối tồn tại lâu hơn bản ghi.",
+  "org.rejectDone": "Đã lưu trữ “{name}”, và {domain} sẽ không tạo công ty nữa",
   "org.name": "Công ty",
   "org.description": "Họ làm gì",
   "org.website": "Trang web",
@@ -1653,6 +1660,7 @@ export const vi = {
   "email.detail.from": "Từ",
   "email.detail.to": "Tới",
   "email.detail.cc": "Cc",
+  "email.detail.filedUnder": "Lưu tại",
   "email.detail.when": "Đã gửi",
   "email.detail.bccWithheld":
     "Một số người nhận ở dạng ẩn và không hiển thị với bạn",
@@ -2106,6 +2114,9 @@ export const vi = {
     "\u0110\u00f3ng v\u1edbi l\u00fd do \u201c{reason}\u201d. M\u1ed7i kh\u00e1ch h\u00e0ng ti\u1ec1m n\u0103ng v\u1eabn gi\u1eef h\u1ed3 s\u01a1 ri\u00eang, v\u00e0 kh\u00f4ng c\u00f3 m\u1ed9t b\u01b0\u1edbc n\u00e0o ho\u00e0n t\u00e1c t\u1ea5t c\u1ea3.",
   "lead.bulkFailed": "{count} không áp dụng được —",
   "lead.bulkFailedRow": "không lưu được",
+  "lead.bulkOutcomeConflict": "đã thay đổi trong lúc bạn chọn",
+  "lead.bulkOutcomeForbidden": "không phải của bạn để giao lại",
+  "lead.bulkOutcomeNotFound": "không còn trong danh sách của bạn",
   "lead.bulkSelectRow": "Chọn {name}",
   "lead.unnamed": "Khách hàng tiềm năng chưa có tên",
   "lead.sla.breached": "Quá hạn",
@@ -2123,7 +2134,6 @@ export const vi = {
   "lead.details": "Chi ti\u1ebft",
   "lead.ladder.title":
     "Kh\u00e1ch h\u00e0ng ti\u1ec1m n\u0103ng n\u00e0y \u0111ang \u1edf \u0111\u00e2u",
-  "lead.railTitle": "Người phụ trách",
   "lead.detailsUnset": "Chưa đặt",
   "lead.terminalReadOnly":
     "Khách hàng tiềm năng này đã đóng và không nhận thay đổi.",
@@ -2279,6 +2289,8 @@ export const vi = {
   "lead.assignedAway":
     "{names} đã được giao cho {owner} — không còn trong “Của tôi”.",
   "lead.viewNew": "Mới",
+  "lead.viewNewUnassigned": "Mới & chưa giao",
+  "lead.viewUnassigned": "Hàng chờ chưa giao",
   "lead.viewNeedsFollowUp": "Cần theo dõi",
   "lead.viewEngaged": "Đang trao đổi",
   "lead.ladder": "Trạng thái khách hàng tiềm năng",
@@ -8524,8 +8536,6 @@ export const vi = {
   "worklist.disposition.snoozeForDays_one": "Tạm gác {value} ngày",
   "worklist.disposition.snoozeForDays_other": "Tạm gác {value} ngày",
   "worklist.disposition.snoozeFor": "Trong bao lâu",
-  "worklist.disposition.snoozeDays_one": "{value} ngày",
-  "worklist.disposition.snoozeDays_other": "{value} ngày",
   "worklist.disposition.snoozeUntil.reply": "Đến khi họ trả lời",
   "worklist.disposition.verb.not_mine": "Không phải của tôi",
   "worklist.disposition.verb.not_sales": "Không phải khách hàng",

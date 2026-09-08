@@ -25,8 +25,8 @@
   flex: none;
   padding: 2px 5px;
   border-radius: var(--r-xs);
-  background: var(--bgCard);
-  color: var(--textMeta);
+  background: var(--bgChip);
+  color: var(--textChip);
   font-size: var(--fs-eyebrow);
   font-weight: var(--fw-medium);
   letter-spacing: var(--tracking-eyebrow);

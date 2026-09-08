@@ -99,7 +99,7 @@
   height: 100vh;
   box-sizing: border-box;
   /* The lit ground (DESIGN.md §2): the emerald light behind the sidebar at the
-     top-left, the indigo one at the bottom-right, painted into the page colour.
+     top-left, the indigo one at the top-right, painted into the page colour.
      Declared once in tokens.css, because the buyer's Deal Room stands on the
      same ground from outside this shell. */
   background: var(--groundLit);
@@ -1002,14 +1002,13 @@
   overflow-wrap: anywhere;
 }
 /* The line under the page's name, for a page whose name alone does not say what
-   it is for. Quiet and one step down the type scale: it explains the heading, so
-   reading it must never compete with reading the heading. */
+   it is for. Quiet meta one step down the type scale, which is `t-sub` on the
+   element: it explains the heading, so reading it must never compete with
+   reading the heading. */
 .pagesub {
   margin: 0;
   max-width: 68ch;
-  font-size: var(--fs-sm);
   line-height: var(--lh-normal);
-  color: var(--textSecondary);
 }
 /* The heading IS the switcher at phone width: the h1 carries no type of its own
    there, because the control inside it brings the page's name at the size the
@@ -1203,8 +1202,8 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: var(--tracking-eyebrow);
-  color: var(--textMeta);
-  background: var(--bgCard);
+  color: var(--textChip);
+  background: var(--bgChip);
   border-radius: var(--r-full);
   corner-shape: round;
   padding: 1px var(--space-2); /* ds:ignore a cap-height band on a 10.5px label, not spaced content */

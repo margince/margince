@@ -28,7 +28,7 @@ import (
 // runs several packages at once against ONE server. How many connections that
 // server has is not a fact this file may assume: it is the lane's arithmetic,
 // declared in scripts/lib-testdb.sh and provisioned in
-// infra/docker-compose.dev.yml, and this pool's part in it is the ceiling it is
+// docker-compose.dev.yml, and this pool's part in it is the ceiling it is
 // handed (see PoolMaxConnsEnv). Naming a figure here instead puts a second copy
 // of it in the file a reader opens first.
 

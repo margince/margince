@@ -10,15 +10,15 @@
   "totals": {
     "tools": 74,
     "resources": 12,
-    "tool_catalog_bytes": 213041,
+    "tool_catalog_bytes": 213120,
     "resource_catalog_bytes": 4584,
-    "approx_wire_tokens_total": 54406,
+    "approx_wire_tokens_total": 54426,
     "largest_tool_bytes": 8980,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
       "description_bytes": 51869,
       "input_schema_bytes": 45443,
-      "output_schema_bytes": 99775,
+      "output_schema_bytes": 99854,
       "description_plus_input_schema_bytes": 97312
     }
   },
@@ -9178,6 +9178,12 @@
                 "candidate_count": {
                   "type": "integer"
                 },
+                "factors_omitted": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
                 "generated_at": {
                   "type": "string"
                 },
@@ -9291,6 +9297,7 @@
                 "as_of",
                 "brief_id",
                 "candidate_count",
+                "factors_omitted",
                 "generated_at",
                 "items",
                 "local_day"

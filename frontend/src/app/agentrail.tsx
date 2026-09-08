@@ -20,6 +20,7 @@ import {
   MarginceCoreScene,
   type MarginceCoreState,
 } from "../design-system/margince-core";
+import { usePrefersReducedMotion } from "../design-system/motion";
 import { Switch } from "../design-system/switch";
 import {
   formatMoney,
@@ -54,6 +55,7 @@ import {
   plain,
   type SpokenLine,
   speak,
+  spokenText,
 } from "./ai-activity-lines";
 import { laneFor } from "./ai-activity-orb";
 import { useAgentTierMap } from "./autonomy";
@@ -1285,6 +1287,77 @@ function railHitLabel(
     : name;
 }
 
+/**
+ * The one line under the orb, changing without a cut.
+ *
+ * This slot changes on its own — one reading every `IDLE_HOLD_MS` at rest,
+ * several a second while the agent works — and a sentence replaced in place is
+ * a hard cut in the corner of somebody's eye all day. So the two sentences
+ * overlap: the outgoing one stays for a `--dur-enter`, fading, over the
+ * incoming one fading in. Opacity only, and the outgoing layer is out of the
+ * flow, so the two-line room holds still and nothing under it moves.
+ *
+ * A sentence is the SAME sentence when its words are, not when its object is.
+ * The block re-renders on every read this tab makes, and identity by object
+ * would fade the same four words at a reader several times a second.
+ *
+ * At most one outgoing layer, ever. A change arriving mid-fade drops whatever
+ * was leaving and gives the slot to the sentence that was on screen: the
+ * working state ticks faster than the fade is long, and a queue of them would
+ * still be playing this second's news a minute from now.
+ *
+ * Reduced motion gets the END state, which for a crossfade is the new sentence
+ * by itself: no outgoing layer is mounted at all, so there is none to retire.
+ */
+export function RailSaying({ line }: Readonly<{ line: SpokenLine }>) {
+  const said = spokenText(line);
+  const reduced = usePrefersReducedMotion();
+  const [held, setHeld] = useState({ said, line });
+  const [leaving, setLeaving] = useState<SpokenLine | null>(null);
+  if (held.said !== said) {
+    // Adjusted while rendering rather than in an effect: both layers have to be
+    // in the DOM in the SAME commit, and an effect would paint one frame of the
+    // new sentence alone first — which is the cut this exists to remove.
+    setLeaving(reduced ? null : held.line);
+    setHeld({ said, line });
+  } else if (reduced && leaving !== null) {
+    // The preference turned on WHILE a fade was running, which is a re-render
+    // the words did not change in. What retires the outgoing layer is its own
+    // animation ending, and `@media (prefers-reduced-motion: reduce)` in
+    // agentrail.css has just set `animation: none` on it — so no
+    // `animationend` is ever delivered and the old sentence would stand over
+    // the new one for the rest of the session. Snapping is this preference's
+    // end state, so drop the layer here rather than wait for an event the
+    // stylesheet has cancelled.
+    setLeaving(null);
+  }
+  return (
+    <span className="arswap">
+      {/* Keyed on the words: a new element is what replays the fade, the same
+          way an inserted block arrives in design-system/enter.css. */}
+      <span className="arline" key={said}>
+        <RailLine line={line} />
+      </span>
+      {leaving !== null && (
+        <span
+          className="argone"
+          key={spokenText(leaving)}
+          // Announced once, by the layer underneath. `inert` as well as
+          // `aria-hidden`, because the sentence on its way out can carry the
+          // record's link and a hidden control that still takes Tab is a trap.
+          aria-hidden="true"
+          inert
+          // The fade ending is what retires it, so the duration lives in the
+          // stylesheet alone and no timer here can disagree with it.
+          onAnimationEnd={() => setLeaving(null)}
+        >
+          <RailLine line={leaving} />
+        </span>
+      )}
+    </span>
+  );
+}
+
 export function AgentRail({
   route,
   bar,
@@ -1462,9 +1535,13 @@ export function AgentRail({
           {/* The one line: the tool's named read while one is in flight, the
               agent's own sentence otherwise. The panel keeps the agent's line
               regardless, because it is the agent's report. */}
-          <span className="arline">
-            <RailLine line={shown} />
-          </span>
+          <RailSaying line={shown} />
+        </span>
+        {/* The block's last line, and it exists whether or not there is a figure
+            on it: the chevron reports whether the panel is open, which is a fact
+            about the block rather than about the spend, so a row that came and
+            went with the money would take the disclosure with it. */}
+        <span className="arlast">
           {/* The spend sits in the bar and not only in the panel: it is the one
               figure somebody is accountable for, and a number nobody opens a
               panel to see is a number nobody sees. Absent when this seat may not
@@ -1482,12 +1559,12 @@ export function AgentRail({
               <span className="arscope">{LABELS.spendScope}</span>
             </span>
           )}
+          <ChevronRight
+            size={15}
+            className={open ? "archev open" : "archev"}
+            aria-hidden="true"
+          />
         </span>
-        <ChevronRight
-          size={15}
-          className={open ? "archev open" : "archev"}
-          aria-hidden="true"
-        />
       </div>
     </section>
   );

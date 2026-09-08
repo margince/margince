@@ -393,7 +393,6 @@
 }
 .co-move-basis-head {
   display: block;
-  color: var(--textMeta);
 }
 .co-move-basis > .co-brief-cites {
   margin-inline-start: 0;
@@ -562,7 +561,7 @@
 }
 
 .co-vat dt {
-  color: var(--textSecondary);
+  color: var(--textMeta);
   margin-bottom: var(--space-1);
 }
 
@@ -839,7 +838,8 @@
   }
   .coverage-table td::before {
     content: attr(data-label);
-    color: var(--textSecondary);
+    color: var(--textMeta);
+    /* ds:ignore generated content: no element exists to carry .t-caption */
     font-size: var(--fs-meta);
   }
 }
@@ -1107,12 +1107,13 @@
    ========================================================================= */
 
 /* A card title NAMES its card; it is not competing with the record's name.
-   The shared .section-header h2 is 15px/600 in --textPrimary — the page's
-   loudest voice, spent once per panel. */
+   Demoted by SIZE and WEIGHT, not by ink — the shared .section-header h2 is
+   15px/600 — because a heading that gives up the heading ink stops reading as
+   a heading at all. */
 .co-card .section-header h2 {
   font-size: var(--fs-sm);
   font-weight: var(--fw-medium);
-  color: var(--textContent);
+  color: var(--textPrimary);
 }
 
 /* One radius and one padding for every card on the record, whichever
@@ -1580,8 +1581,6 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: var(--fs-sm);
-  color: var(--textSecondary);
 }
 /* A chip is the trigger for its own aside, so it restates the face that
    `.popover-trigger` strips — that reset exists so a trigger inherits the line
@@ -1589,8 +1588,9 @@
    to out-weigh the reset wherever the two sheets land in the bundle. */
 .co-360-dims .popover-trigger.co-dim {
   gap: var(--space-2);
+  /* ds:ignore .t-sub loses to .popover-trigger:not(.btn)'s font/color reset */
   font-size: var(--fs-sm);
-  color: var(--textSecondary);
+  color: var(--textMeta);
   border-radius: var(--r-sm);
 }
 /* Pressable, and said so before it is pressed: a chip that answers a resting

@@ -159,6 +159,17 @@ func createLeadInTx(ctx context.Context, tx pgx.Tx, in CreateLeadInput, by strin
 			return crmcontracts.Lead{}, false, err
 		}
 	}
+	// A named owner on a create is an assignment, and it is checked here
+	// rather than in readyLeadCreate because the question needs a
+	// transaction. Both entry points reach this body — CreateLead and
+	// CreateLeadTx, the latter being what CSV and mirror imports call — so
+	// this is the one place that sees every created lead. Omitting the owner
+	// stays the unassigned queue's own case and asks nothing.
+	if in.OwnerID != nil {
+		if err := auth.EnsureAssignee(ctx, tx, in.OwnerID.UUID); err != nil {
+			return crmcontracts.Lead{}, false, err
+		}
+	}
 	id, err := insertLeadRow(ctx, tx, in, active, by)
 	if err != nil {
 		return crmcontracts.Lead{}, false, err

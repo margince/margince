@@ -17,6 +17,7 @@ import { ProvenanceTag } from "../design-system/trust";
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { ArchiveAction } from "./archive";
+import { useClaimRecord } from "./claimrecord";
 import {
   provenanceOf,
   throwProblem,
@@ -26,6 +27,7 @@ import {
 } from "./common";
 import { DecisionsChip } from "./companyapprovals";
 import { RELATIONSHIP_TYPE_LABELS, relationshipBadges } from "./companylookups";
+import { CompanyRejectAction } from "./companyreject";
 import { ComposeModal } from "./compose";
 import { joinMultiselectValue } from "./create";
 import { useObjectCustomFields } from "./customfields.form";
@@ -506,32 +508,6 @@ export function useCompanyVerbRefusal(org: Organization): string | undefined {
   });
 }
 
-// useClaimRecord is the claim door: POST /records/{type}/{id}/claim makes the
-// caller the owner of an unowned record (or re-confirms one already theirs)
-// and refreshes what shows it. Used wherever an owner control lets a reader
-// pick themselves on a record nobody owns.
-export function useClaimRecord(
-  recordType: "organization" | "person" | "lead" | "deal",
-  id: string,
-  version: number | undefined,
-) {
-  const queryClient = useQueryClient();
-  return async () => {
-    const { error } = await api.POST("/records/{record_type}/{id}/claim", {
-      params: {
-        path: { record_type: recordType, id },
-        ...ifMatch(requireVersion(version)),
-      },
-    });
-    if (error) {
-      throwProblem(error);
-    }
-    await queryClient.invalidateQueries({ queryKey: [`${recordType}s`] });
-    await queryClient.invalidateQueries({ queryKey: [`${recordType}360`, id] });
-    await queryClient.invalidateQueries({ queryKey: [recordType, id] });
-  };
-}
-
 function CompanyEditAction({
   org,
   overlay,
@@ -815,6 +791,16 @@ export function CompanyActionBadges({
               the account's name. Absent when nothing waits. */}
         {onOpenDecisions && (
           <DecisionsChip view={view} onOpen={onOpenDecisions} />
+        )}
+        {/* Beside Archive because it IS an archive, and separate from it
+            because archiving alone does not settle the question: this record
+            came from mail, so the same domain mints it again next week. Drawn
+            only where there is a domain to refuse and only for a seat holding
+            both halves — CompanyRejectAction decides both, and returns nothing
+            when either says no. Hidden in overlay with the rest of the native
+            verbs; the server refuses it there too. */}
+        {!overlay && (
+          <CompanyRejectAction org={org} disabledReasonId={refusedByState} />
         )}
         {/* Last, and set apart by the panel's own seam (atoms.css). This is
             the one verb here a reader cannot walk back from the header, so it

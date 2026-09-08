@@ -34,7 +34,7 @@
 
 .emailref__when {
   flex: none;
-  color: var(--textSecondary);
+  color: var(--textMeta);
   font-size: var(--fs-meta);
 }
 

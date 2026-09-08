@@ -74,22 +74,22 @@
 .pref-lock-icon {
   width: 14px;
   height: 14px;
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 .pref-lock-badge {
   font-size: var(--fs-eyebrow);
   text-transform: uppercase;
   letter-spacing: var(--tracking-eyebrow);
-  color: var(--textSecondary);
-  background: var(--bgCard);
+  color: var(--textChip);
+  background: var(--bgChip);
   border-radius: var(--r-full);
   corner-shape: round;
   padding: 2px 8px; /* ds:ignore the Badge atom's own box, not rhythm */
 }
 
 .pref-state {
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 .pref-locked-why {
@@ -142,7 +142,7 @@
    like one product rather than two. */
 .unsub-lead {
   margin: 0 0 var(--space-5);
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 .unsub-kind {

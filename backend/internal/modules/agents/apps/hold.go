@@ -40,6 +40,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/shared/buildinfo"
 )
 
@@ -369,30 +370,30 @@ func (p *Provider) originForLog() string {
 // AI counters use, so no seventh argument is added to the handler that already
 // says it has enough.
 func (p *Provider) WriteMetrics(w io.Writer) {
-	_, _ = fmt.Fprintf(w, "# HELP margince_mcp_app_view_held Whether this api is serving each MCP App view document.\n")
-	_, _ = fmt.Fprintf(w, "# TYPE margince_mcp_app_view_held gauge\n")
+	httpserver.WriteLine(w, "# HELP margince_mcp_app_view_held Whether this api is serving each MCP App view document.\n")
+	httpserver.WriteLine(w, "# TYPE margince_mcp_app_view_held gauge\n")
 	for _, v := range catalog {
 		serving := 0
 		if p.Holds(v.uri) {
 			serving = 1
 		}
-		_, _ = fmt.Fprintf(w, "margince_mcp_app_view_held{uri=%q} %d\n", v.uri, serving)
+		httpserver.WriteLine(w, "margince_mcp_app_view_held{uri=%s} %d\n", httpserver.Label(v.uri), serving)
 	}
-	_, _ = fmt.Fprintf(w, "# HELP margince_mcp_app_fetch_failures_total View document fetches that did not arrive.\n")
-	_, _ = fmt.Fprintf(w, "# TYPE margince_mcp_app_fetch_failures_total counter\n")
-	_, _ = fmt.Fprintf(w, "margince_mcp_app_fetch_failures_total %d\n", p.fetchFailures.Load())
-	_, _ = fmt.Fprintf(w, "# HELP margince_mcp_app_admission_failures_total View documents that arrived and were refused.\n")
-	_, _ = fmt.Fprintf(w, "# TYPE margince_mcp_app_admission_failures_total counter\n")
-	_, _ = fmt.Fprintf(w, "margince_mcp_app_admission_failures_total %d\n", p.admissionFailures.Load())
-	_, _ = fmt.Fprintf(w, "# HELP margince_mcp_app_title_mismatches_total Served documents whose title differs from the catalog's.\n")
-	_, _ = fmt.Fprintf(w, "# TYPE margince_mcp_app_title_mismatches_total counter\n")
-	_, _ = fmt.Fprintf(w, "margince_mcp_app_title_mismatches_total %d\n", p.titleMismatches.Load())
+	httpserver.WriteLine(w, "# HELP margince_mcp_app_fetch_failures_total View document fetches that did not arrive.\n")
+	httpserver.WriteLine(w, "# TYPE margince_mcp_app_fetch_failures_total counter\n")
+	httpserver.WriteLine(w, "margince_mcp_app_fetch_failures_total %d\n", p.fetchFailures.Load())
+	httpserver.WriteLine(w, "# HELP margince_mcp_app_admission_failures_total View documents that arrived and were refused.\n")
+	httpserver.WriteLine(w, "# TYPE margince_mcp_app_admission_failures_total counter\n")
+	httpserver.WriteLine(w, "margince_mcp_app_admission_failures_total %d\n", p.admissionFailures.Load())
+	httpserver.WriteLine(w, "# HELP margince_mcp_app_title_mismatches_total Served documents whose title differs from the catalog's.\n")
+	httpserver.WriteLine(w, "# TYPE margince_mcp_app_title_mismatches_total counter\n")
+	httpserver.WriteLine(w, "margince_mcp_app_title_mismatches_total %d\n", p.titleMismatches.Load())
 	// DERIVED from the documents currently held rather than recorded as one
 	// process-wide flag. Skew is per-view — a rollout replaces one document
 	// before the other — and a single reading would be whichever view was read
 	// last, which is a number that changes for reasons nobody can trace.
-	_, _ = fmt.Fprintf(w, "# HELP margince_mcp_app_build_skew The held view was built from a different revision than this api.\n")
-	_, _ = fmt.Fprintf(w, "# TYPE margince_mcp_app_build_skew gauge\n")
+	httpserver.WriteLine(w, "# HELP margince_mcp_app_build_skew The held view was built from a different revision than this api.\n")
+	httpserver.WriteLine(w, "# TYPE margince_mcp_app_build_skew gauge\n")
 	for _, v := range catalog {
 		doc, holding := p.served(v.uri)
 		if !holding {
@@ -402,6 +403,6 @@ func (p *Provider) WriteMetrics(w io.Writer) {
 		if buildinfo.SkewBetween(buildinfo.Revision, documentRevision(doc)) {
 			skewed = 1
 		}
-		_, _ = fmt.Fprintf(w, "margince_mcp_app_build_skew{uri=%q} %d\n", v.uri, skewed)
+		httpserver.WriteLine(w, "margince_mcp_app_build_skew{uri=%s} %d\n", httpserver.Label(v.uri), skewed)
 	}
 }

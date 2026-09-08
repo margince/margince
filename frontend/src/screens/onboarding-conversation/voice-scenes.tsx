@@ -184,7 +184,7 @@ function VoiceCorpusFloorMeter({
         max={VOICE_MIN_WORDS}
         aria-label={t("ob.conv.voice.meterLabel", { min: floor })}
       />
-      <p className="ob-voice-meter-line">
+      <p className="ob-voice-meter-line t-sub">
         {ready
           ? t("ob.conv.voice.meterReady", { words: shown })
           : t("ob.conv.voice.meterProgress", { words: shown, min: floor })}
@@ -722,7 +722,7 @@ function VoiceDimensionGauge({ dim }: Readonly<{ dim: MeasuredDimension }>) {
     <div className="ob-voice-dim">
       <div className="ob-voice-dim-head">
         <span className="ob-voice-dim-name">{dim.name}</span>
-        <span className="ob-voice-dim-value">{dim.value}</span>
+        <span className="t-sub">{dim.value}</span>
       </div>
       <div className="ob-voice-dim-track" aria-hidden>
         <span
@@ -763,7 +763,7 @@ function VoiceDimensionsCard({
         </span>
       </div>
       {(words !== null || sources !== null) && (
-        <p className="ob-voice-dims-meta">
+        <p className="ob-voice-dims-meta t-sub">
           {words !== null &&
             t("voice.insights.statWords", {
               count: formatNumber(words, locale),

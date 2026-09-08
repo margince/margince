@@ -80,7 +80,7 @@ jobs:
         uses: ./.github/actions/go-build-cache
         with:
           flavor: integration
-      # The same compose stack dev machines use (infra/docker-compose.dev.yml:
+      # The same compose stack dev machines use (docker-compose.dev.yml:
       # Postgres + Redis + MinIO, digest-pinned there) plus scripts/db-init.sql
       # for the cluster-level margince_app role — migration 0015 GRANTs to it,
       # and the parallel lane's clones inherit those grants. One stack
@@ -236,7 +236,7 @@ jobs:
       # It ARMS ITSELF off the same condition the script tests, so the first
       # migrations/ layer to land gets the cluster with no workflow edit and
       # nobody having to remember. `make db-up` is the same compose stack the
-      # shards use (infra/docker-compose.dev.yml + scripts/db-init.sql for the
+      # shards use (docker-compose.dev.yml + scripts/db-init.sql for the
       # cluster-level margince_app role migration 0015 GRANTs to), not a
       # hand-mirrored service container. No margince_test template is built:
       # the gate deliberately migrates a FRESH database under the root

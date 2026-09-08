@@ -15,7 +15,7 @@ set -euo pipefail
 fail=0
 workflow_dir=".github/workflows"
 actions_dir=".github/actions"
-compose_files="infra/docker-compose.dev.yml"
+compose_files="docker-compose.dev.yml"
 
 if [[ ! -d "$workflow_dir" ]]; then
   echo "No $workflow_dir directory found — skipping image-pin check"

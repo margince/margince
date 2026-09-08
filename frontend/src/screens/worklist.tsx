@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { useUrlParams } from "../app/urlstate";
@@ -45,6 +46,7 @@ import {
   type WorklistItem,
   type WorklistScope,
   type WorklistWalk,
+  worklistKey,
 } from "./worklist.queries";
 import { WorklistReadings } from "./worklist.readings";
 import { WorklistRow } from "./worklist.row";
@@ -780,6 +782,7 @@ export function WorklistScreen({
     };
   const day = useWorklist(scope, filter, owner === "" ? undefined : owner);
   const refreshWalk = useRefreshWalk();
+  const queryClient = useQueryClient();
   // A failed SHOW MORE is not a failed page. `isError` covers both, and
   // treating them alike would replace a screen of rows the reader is working
   // through with an error panel because one extra page did not arrive. The
@@ -850,10 +853,18 @@ export function WorklistScreen({
       {/* One drawer over the whole queue, at page level rather than inside a
           row: two mounted dialogs would be two `aria-modal` elements, and the
           day stays legible behind the message being read. */}
+      {/* A reply sent from the drawer refreshes the queue, exactly as the
+          row's own Reply does. Without it the message a rep just answered
+          keeps its place in the waiting lane and keeps offering to answer it,
+          which is the one thing this lane exists to stop saying. Invalidated
+          rather than reset: the walk stays where the reader had paged it. */}
       <OpenEmailDrawer
         activityId={openEmail}
         zone={viewerZone()}
         onClose={() => setOpenEmail(null)}
+        onReplySent={() =>
+          void queryClient.invalidateQueries({ queryKey: worklistKey })
+        }
       />
     </div>
   );

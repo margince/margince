@@ -208,7 +208,7 @@ export function PersonToday({
   // nothing a machine says here is unsourced.
   const restsOn = momentGrounding(moment.evidence, t, locale, recordZone);
   const footer = (
-    <div className="pe-today-foot">
+    <div className="pe-today-foot t-caption">
       <span>
         {plural("person.today.source", moment.evidence.length, {
           count: formatNumber(moment.evidence.length, locale),

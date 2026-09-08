@@ -197,7 +197,7 @@ export const de = {
   "shell.companyLogoAria": "{company} Startseite, betrieben mit Margince",
   "shell.poweredBy": "Betrieben mit Margince",
   "shell.poweredByPrefix": "Betrieben mit",
-  "shell.searchEverything": "Alles durchsuchen…",
+  "shell.searchEverything": "Finden oder Margince fragen",
   "shell.breadcrumbAria": "Navigationspfad",
   "shell.license.none": "Keine Lizenz",
   "shell.license.refused": "Lizenz abgelehnt",
@@ -270,7 +270,7 @@ export const de = {
   "context.empty": "Noch nichts Verwandtes.",
 
   "palette.aria": "Befehlspalette",
-  "palette.placeholder": "Wohin? Oder frag einfach etwas…",
+  "palette.placeholder": "Alles finden oder Antworten aus Margince erhalten",
   "palette.empty": "Keine Treffer.",
   "palette.askAi": "KI fragen: „{query}“",
   "palette.typeScreen": "Ansicht",
@@ -829,6 +829,14 @@ export const de = {
   "consent.purposesUnavailable":
     "Der Einwilligungszweck-Katalog konnte nicht geladen werden — welche Zwecke ein Double-Opt-in brauchen, lässt sich gerade nicht anzeigen.",
 
+  "org.reject": "Kein Unternehmen",
+  "org.rejectConfirm":
+    "Damit wird „{name}“ archiviert und {domain} als Unternehmen abgelehnt — die nächste Nachricht von dieser Domain legt es nicht erneut an. Eine Administratorin oder ein Administrator kann die Domain unter Einstellungen → Erfassung wieder zulassen.",
+  "org.rejectReasonLabel": "Warum ist das kein Unternehmen?",
+  "org.rejectReasonHint":
+    "Ein Satz, mit dem jemand die Liste gesperrter Domains prüfen kann. Die Ablehnung überdauert den Datensatz.",
+  "org.rejectDone":
+    "„{name}“ archiviert, und {domain} legt kein Unternehmen mehr an",
   "org.name": "Firma",
   "org.description": "Was sie tun",
   "org.website": "Website",
@@ -1663,6 +1671,7 @@ export const de = {
   "email.detail.from": "Von",
   "email.detail.to": "An",
   "email.detail.cc": "Cc",
+  "email.detail.filedUnder": "Abgelegt bei",
   "email.detail.when": "Gesendet",
   "email.detail.bccWithheld":
     "Einige Empfänger stehen im Blindkopie-Feld und werden Ihnen nicht angezeigt",
@@ -2122,6 +2131,9 @@ export const de = {
     "Geschlossen mit dem Grund \u201e{reason}\u201c. Jeder Lead beh\u00e4lt seinen eigenen Datensatz, und es gibt keinen einzelnen Schritt zur\u00fcck.",
   "lead.bulkFailed": "{count} nicht übernommen –",
   "lead.bulkFailedRow": "konnte nicht gespeichert werden",
+  "lead.bulkOutcomeConflict": "wurde geändert, während Sie ausgewählt haben",
+  "lead.bulkOutcomeForbidden": "nicht Ihrer zu übergeben",
+  "lead.bulkOutcomeNotFound": "nicht mehr in Ihrer Liste",
   "lead.bulkSelectRow": "{name} auswählen",
   "lead.unnamed": "Lead ohne Namen",
   "lead.sla.breached": "Überfällig",
@@ -2138,7 +2150,6 @@ export const de = {
   "lead.filterScoreCool": "Ab 40",
   "lead.details": "Details",
   "lead.ladder.title": "Wo dieser Lead steht",
-  "lead.railTitle": "Verantwortlich",
   "lead.detailsUnset": "Nicht gesetzt",
   "lead.terminalReadOnly":
     "Dieser Lead ist abgeschlossen und nimmt keine Änderungen an.",
@@ -2298,6 +2309,8 @@ export const de = {
   "lead.assignedAway":
     "{names} an {owner} zugewiesen — nicht mehr unter „Meine“.",
   "lead.viewNew": "Neu",
+  "lead.viewNewUnassigned": "Neu & nicht zugewiesen",
+  "lead.viewUnassigned": "Warteschlange",
   "lead.viewNeedsFollowUp": "Nachfassen",
   "lead.viewEngaged": "Im Gespräch",
   "lead.ladder": "Lead-Status",
@@ -8628,8 +8641,6 @@ export const de = {
   "worklist.disposition.snoozeForDays_one": "{value} Tag schlummern",
   "worklist.disposition.snoozeForDays_other": "{value} Tage schlummern",
   "worklist.disposition.snoozeFor": "Für wie lange",
-  "worklist.disposition.snoozeDays_one": "{value} Tag",
-  "worklist.disposition.snoozeDays_other": "{value} Tage",
   "worklist.disposition.snoozeUntil.reply": "Bis sie antworten",
   "worklist.disposition.verb.not_mine": "Nicht meins",
   "worklist.disposition.verb.not_sales": "Kein Kunde",

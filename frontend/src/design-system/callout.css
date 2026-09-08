@@ -38,7 +38,7 @@
   /* Aligns the glyph with the first line of text rather than with the box: a
    * centred icon drifts downward as the body grows. */
   margin-top: 2px;
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 .callout-body {

@@ -218,7 +218,7 @@ export function MeetingBriefView({
         </div>
       </div>
       <div className="drawer-foot">
-        <span className="pe-disclosure">
+        <span className="pe-disclosure t-caption">
           {t("person.meeting.assembledNow")}
         </span>
         <Button onClick={onClose}>{t("person.drawer.close")}</Button>

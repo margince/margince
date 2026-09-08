@@ -203,6 +203,7 @@ export const run: MorningBrief = {
   generated_at: "2026-07-05T05:30:00Z",
   as_of: "2026-07-05T05:00:00Z",
   candidate_count: 1,
+  factors_omitted: [],
   items: [
     {
       id: "bi-1",

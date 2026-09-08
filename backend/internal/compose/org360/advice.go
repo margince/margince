@@ -126,5 +126,8 @@ func (s *Service) suggestionInputsFor(
 	if err != nil {
 		return suggestionInputs{}, err
 	}
-	return gatherSuggestionInputs(ctx, tx, orgID, now, facts, heading, base)
+	// The dismissal path reads the whole account: it answers "which suggestion
+	// is this", not "what should this page advise", so there is no project to
+	// narrow to.
+	return gatherSuggestionInputs(ctx, tx, orgID, now, facts, heading, base, AssembleOptions{})
 }

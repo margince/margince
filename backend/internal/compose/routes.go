@@ -186,12 +186,14 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 	setupLimit := newSetupLimiter()
 	mux.HandleFunc("GET /setup/status", setupStatus(identitySvc, setupLimit))
 	mux.HandleFunc("POST /setup/claim", setupClaim(identitySvc, pool, srv.bootstrapSeeds, setupLimit, log))
-	mux.HandleFunc("/metrics", gateMetrics(srv.metricsToken, httpserver.Metrics(pool,
-		func(ctx context.Context) (int64, error) { return events.OutboxBacklog(ctx, pool) },
-		events.PublishedTotal,
-		srv.writeMetricsSections,
-		jobMetricsSection(func(ctx context.Context) (jobs.Snapshot, error) { return jobs.Stats(ctx, pool) }),
-		overlayMetricsSection(srv, pool))))
+	mux.HandleFunc("/metrics", gateMetrics(srv.metricsToken, httpserver.Metrics(httpserver.MetricsInput{
+		Pool:      pool,
+		Backlog:   func(ctx context.Context) (int64, error) { return events.OutboxBacklog(ctx, pool) },
+		Published: events.PublishedTotal,
+		Extra:     srv.writeMetricsSections,
+		JobStats:  jobMetricsSection(func(ctx context.Context) (jobs.Snapshot, error) { return jobs.Stats(ctx, pool) }),
+		Overlay:   overlayMetricsSection(srv, pool),
+	})))
 	// The anonymous public edges sit between the session middleware (which
 	// lets /v1/public/ through without session or workspace) and the
 	// router: each resolves its own token/slug → tenant, throttles, and

@@ -208,7 +208,7 @@ export const NoProvider: Story = {
 // fill are two greens a step apart; and the spend table separates five columns
 // with nothing but --borderSubtle hairlines. The one to check hardest is
 // .provider-held — a held figure is deliberately quieter than the charge beside
-// it so nobody adds the two together, and "quieter" is a --textSecondary /
+// it so nobody adds the two together, and "quieter" is a --textMeta /
 // --textContent pair that has to stay distinguishable after both re-resolve.
 export const OperatorConnectedDark: Story = {
   globals: { theme: "dark" },

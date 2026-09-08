@@ -107,8 +107,6 @@
   display: inline-block;
   margin-top: var(--space-2);
   font-family: var(--f-mono);
-  font-size: var(--fs-meta);
-  color: var(--textSecondary);
   background: var(--bgElevated);
   border-radius: var(--r-sm);
   padding: var(--space-1) var(--space-2);
@@ -132,8 +130,8 @@
   width: 30px;
   height: 30px;
   border-radius: var(--r-sm);
-  background: var(--bgCard);
-  color: var(--textSecondary);
+  background: var(--bgChip);
+  color: var(--textChip);
   display: grid;
   place-items: center;
   flex: none;
@@ -166,15 +164,16 @@
   color: var(--textMeta);
 }
 
-/* Type chip: a soft pill echoing the mockup's .ftype, with the type glyph. */
+/* Type chip: a soft pill echoing the mockup's .ftype, with the type glyph. The
+   element carries .t-caption for the size; the ink is --textChip and not the
+   utility's --textMeta because the pill draws a chip fill under it. */
 .cf-typechip {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  font-size: var(--fs-meta);
   font-weight: 500;
-  color: var(--textSecondary);
-  background: var(--bgCard);
+  color: var(--textChip);
+  background: var(--bgChip);
   border-radius: var(--r-full);
   corner-shape: round;
   padding: var(--space-1) var(--space-3);

@@ -37,7 +37,7 @@
 }
 
 .vatmark-glyph[data-tone="none"] {
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 .vatmark-panel {
@@ -52,7 +52,7 @@
 }
 
 .vatmark-receipt dt {
-  color: var(--textSecondary);
+  color: var(--textMeta);
   margin-bottom: var(--space-1);
 }
 
@@ -72,7 +72,7 @@
 /* The number moved after the check. Not a warning tone: nothing is wrong, the
    receipt simply answers for a number the record no longer states. */
 .vatmark-stale {
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 /* The read failed. A button rather than the popover's trigger, because there is

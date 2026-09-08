@@ -1539,6 +1539,48 @@ export interface paths {
         patch: operations["updateOrganization"];
         trace?: never;
     };
+    "/organizations/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * This is not a company — archive it and refuse its domain as one (admin/ops).
+         * @description Archiving alone does not settle it: the next message from the same domain mints the
+         *     company again, and the person who deleted it learns nothing about why it came back.
+         *     This does both halves in ONE transaction — the domain is recorded `suppressed` with a
+         *     human admission, and the record is archived — so the outcome is never half a decision.
+         *
+         *     The domain is read HERE, from the company's current primary domain, and is not a field
+         *     on the request. A domain the caller carried is a snapshot: with several domains, a
+         *     primary that changed since the page loaded would suppress the old one while archiving a
+         *     company whose mail still arrives on the new one.
+         *
+         *     Refused for the installation's own company, which cannot be archived at all, and for a
+         *     company with no primary domain — one somebody typed in by hand was never derived from
+         *     mail, so there is nothing to refuse.
+         *
+         *     The admission is a HUMAN one and therefore sticky: no later verdict may re-open the
+         *     domain, and only a person may let it back in through the blocked-domain surface. That
+         *     is why this is human-only, like the rest of the capture posture.
+         *
+         *     Needs both `organization:delete` (the archive) and `organization:update` (the standing
+         *     domain decision). A seat holding only one of them is refused before anything is written.
+         */
+        post: operations["rejectOrganization"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/organizations/{id}/merge": {
         parameters: {
             query?: never;
@@ -2972,8 +3014,10 @@ export interface paths {
          *     `write` share) moves to `to_owner_id`; archived projects and projects the caller cannot
          *     write are left where they are and are not counted. Each moved project gets its own
          *     `update` audit row with the `owner_id` before/after images, so its field history shows
-         *     the move, and its own `project.updated` event. `to_owner_id` must name an active user of
-         *     the workspace, else `422`.
+         *     the move, and its own `project.updated` event. `to_owner_id` must name a seat that can be
+         *     handed work — an active, unarchived human seat that is not read-only, and one inside the
+         *     caller's own row scope — else `422`. The same rule gates `updateProject.owner_id`, so a
+         *     destination refused in bulk is refused one project at a time.
          */
         post: operations["transferProjectOwnership"];
         delete?: never;
@@ -5002,6 +5046,44 @@ export interface paths {
          *     for idempotent re-import.
          */
         post: operations["createLead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/leads/assign-bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Hand a named set of leads to one owner.
+         * @description The explicit-id twin of `updateLead.owner_id`, for a queue a manager works a screenful at
+         *     a time. The caller names up to 500 leads and one destination; each lead is assigned
+         *     exactly as a single `updateLead` would assign it, with its own `audit_log` row and
+         *     `lead.updated` event.
+         *
+         *     PER ROW, not one transaction, and the result says so. A bulk verb over a work queue is a
+         *     selection of independent records, and refusing forty because the fortieth moved under the
+         *     reader would make the screen unworkable — so each lead answers for itself and the result
+         *     names every one that did not move. That is the opposite of `relinkActivities`, which is
+         *     all-or-nothing because its rows are one conversation.
+         *
+         *     The destination is checked ONCE before anything is written, because it is a fact about a
+         *     seat rather than about any lead: an ineligible owner answers `422 owner_not_assignable`
+         *     and nothing moves. It is then re-checked inside each row's transaction, since a seat can
+         *     be suspended midway through a long run.
+         *
+         *     Each `version` is optional and behaves as `If-Match` does on the single write: supply it
+         *     and a lead that moved since the caller read it answers `conflict` rather than overwriting
+         *     somebody's work.
+         */
+        post: operations["assignLeads"];
         delete?: never;
         options?: never;
         head?: never;
@@ -15496,6 +15578,23 @@ export interface components {
             /** @description Why. Required, because a refusal nobody can explain is one nobody can review. */
             reason: string;
         };
+        RejectOrganizationRequest: {
+            /**
+             * @description Why this is not a company. Required: the refusal outlives the record, and the next
+             *     operator to find the domain on the blocked list can only review a decision that
+             *     says something.
+             */
+            reason: string;
+        };
+        /**
+         * @description Both halves of the one decision, because both landed. A caller that showed only the
+         *     archived record would leave the standing domain refusal — the half that stops the
+         *     company coming back — invisible to the person who just made it.
+         */
+        RejectOrganizationResponse: {
+            organization: components["schemas"]["Organization"];
+            domain: components["schemas"]["BlockedDomain"];
+        };
         BlockedDomainListResponse: {
             data: components["schemas"]["BlockedDomain"][];
             /**
@@ -22802,6 +22901,59 @@ export interface components {
             replace_existing_of_type: boolean;
         };
         /**
+         * @description One destination owner, and the leads to hand to them. The owner is checked before any
+         *     lead is touched; the leads answer one at a time.
+         */
+        AssignLeadsRequest: {
+            /**
+             * Format: uuid
+             * @description The seat to hand them to. Must be one that can be handed work — an active, unarchived
+             *     human seat that is not read-only, inside the caller's own row scope — else
+             *     `422 owner_not_assignable` and nothing moves.
+             */
+            owner_id: string;
+            leads: components["schemas"]["AssignLeadsItem"][];
+        };
+        AssignLeadsItem: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: int64
+             * @description The version the caller read. Optional; supplying it makes the row's write conditional
+             *     exactly as `If-Match` does on `updateLead`, so a lead somebody else moved answers
+             *     `conflict` instead of losing their change.
+             */
+            version?: number;
+        };
+        AssignLeadsResult: {
+            results: components["schemas"]["AssignLeadOutcome"][];
+        };
+        /** @description What happened to one named lead. */
+        AssignLeadOutcome: {
+            /** Format: uuid */
+            lead_id: string;
+            outcome: components["schemas"]["AssignLeadOutcomeKind"];
+            /**
+             * Format: int64
+             * @description The lead's version after the write. Present on `assigned`.
+             */
+            version?: number;
+        };
+        /**
+         * @description `assigned` moved the lead — including one already owned by the destination, which still
+         *     takes a version and an audit row rather than being quietly skipped: the writer records
+         *     the assignment as an act, so a re-run says what it did rather than claiming it did
+         *     nothing. `forbidden` is a lead the caller may not hand on. `conflict` is a version that
+         *     no longer holds.
+         *
+         *     `not_found` is a lead the caller cannot see — and also an ARCHIVED one, because the
+         *     write resolves live rows only and a promoted or disqualified lead is no longer among
+         *     them. The two deliberately read alike: which of them it was is a fact about a record the
+         *     caller was not shown, and separating them would answer that a lead exists.
+         * @enum {string}
+         */
+        AssignLeadOutcomeKind: "assigned" | "not_found" | "forbidden" | "conflict";
+        /**
          * @description The destination for a named set of activities. Every id must be one the caller can see and
          *     write, or the whole request is refused and nothing moves.
          */
@@ -23048,9 +23200,23 @@ export interface components {
              *     default, so a connector that never declared carriage reports false rather than
              *     being mistaken for capable. A zero bound means "no limit beyond the contract's
              *     own", never "zero allowed".
+             *
+             *     `max_total_bytes` is the exception to that rule and is never zero: every
+             *     transport has an aggregate, because the product has one whether or not the
+             *     provider declares its own. It is the bound a composer must warn against
+             *     FIRST — `max_files` and `max_bytes_per_file` cannot express it between them,
+             *     so a message of ten files each under the per-file cap can pass both and still
+             *     be ten times what a send may carry.
              */
             attachments: {
                 carries: boolean;
+                /**
+                 * Format: int64
+                 * @description Largest total across every file on one message, in bytes — the smaller of
+                 *     this transport's own aggregate and the product's send budget. Always
+                 *     present and always positive.
+                 */
+                max_total_bytes: number;
                 /** @description Most files in one message. Never more than the contract's own `attachment_ids` cap of 10. */
                 max_files: number;
                 /**
@@ -23631,6 +23797,14 @@ export interface components {
              *     Repeated ids are collapsed — attaching one file twice is not something a message
              *     can mean — and naming more distinct files than `maxItems` is refused with
              *     422 `too_many_attachments`.
+             *
+             *     A file with NO CONTENT is refused with 422 `empty_attachment`, naming the file.
+             *     It is a separate code from the size one on purpose: an empty file is not a file
+             *     that is too big, and a client that reported it as a limit would send somebody
+             *     off to shrink something already as small as it can be. Nothing anywhere can send
+             *     it, so it is refused here rather than by whichever transport happens to carry
+             *     the message — an upload is refused for the same reason, so a file that reaches
+             *     this field with no bytes was captured that way from an inbound message.
              */
             attachment_ids?: string[];
             to: string[];
@@ -24041,6 +24215,14 @@ export interface components {
              *     Repeated ids are collapsed — attaching one file twice is not something a message
              *     can mean — and naming more distinct files than `maxItems` is refused with
              *     422 `too_many_attachments`.
+             *
+             *     A file with NO CONTENT is refused with 422 `empty_attachment`, naming the file.
+             *     It is a separate code from the size one on purpose: an empty file is not a file
+             *     that is too big, and a client that reported it as a limit would send somebody
+             *     off to shrink something already as small as it can be. Nothing anywhere can send
+             *     it, so it is refused here rather than by whichever transport happens to carry
+             *     the message — an upload is refused for the same reason, so a file that reaches
+             *     this field with no bytes was captured that way from an inbound message.
              */
             attachment_ids?: string[];
             /**
@@ -24224,6 +24406,14 @@ export interface components {
              *     Repeated ids are collapsed — attaching one file twice is not something a message
              *     can mean — and naming more distinct files than `maxItems` is refused with
              *     422 `too_many_attachments`.
+             *
+             *     A file with NO CONTENT is refused with 422 `empty_attachment`, naming the file.
+             *     It is a separate code from the size one on purpose: an empty file is not a file
+             *     that is too big, and a client that reported it as a limit would send somebody
+             *     off to shrink something already as small as it can be. Nothing anywhere can send
+             *     it, so it is refused here rather than by whichever transport happens to carry
+             *     the message — an upload is refused for the same reason, so a file that reaches
+             *     this field with no bytes was captured that way from an inbound message.
              *
              *     A messaging channel carries this message's text as a CAPTION, which is bounded
              *     far below a text-only message; `GET /v1/channel-providers` publishes that bound
@@ -24411,7 +24601,19 @@ export interface components {
             score?: number | null;
             /** @description Written reason for the Commercial Judgement override (formulas §3.1). REQUIRED when `score` is set (422 otherwise); the override is sticky — it suppresses recompute until cleared. */
             score_override_reason?: string | null;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Who owns this lead. The destination must be a seat that can be handed work — an
+             *     active, unarchived human seat that is not read-only, and one inside the caller's own
+             *     row scope — else `422 owner_not_assignable`, which names no more than that so the
+             *     refusal does not disclose the roster or the team graph.
+             *
+             *     A lead NOBODY owns is assignable by a caller who could not otherwise write it: that
+             *     is the door out of the unassigned queue, and it admits an ownership-only change. A
+             *     patch carrying any other field alongside `owner_id` is refused unless the caller can
+             *     already write the row. To take an unowned lead for yourself, prefer
+             *     `POST /records/lead/{id}/claim`, which is the same act with a version precondition.
+             */
             owner_id?: string | null;
         } & {
             [key: string]: unknown;
@@ -30389,6 +30591,29 @@ export interface components {
              *     without it, a model that never ran and a night with nothing in it look identical.
              */
             annotated_at?: string | null;
+            /**
+             * @description The ranking factors this run could not read, so a client can say "the order does
+             *     not account for this" instead of presenting a queue as fully ranked. Never
+             *     returned absent, and empty on the ordinary read: empty and withheld are different
+             *     answers, and a factor that floors silently makes a deal rank lower than it is with
+             *     nothing marking why.
+             *
+             *     `warmth` is omitted for a caller with no `relationship` edge grant. Every seat on
+             *     a deal is a `deal_stakeholder` edge, so such a caller runs no stakeholder read at
+             *     all and the factor has no input for ANY deal — which is why this is a property of
+             *     the run and not of an item.
+             *
+             *     A named factor still appears in each item's `feature_vector`, at its floor. The
+             *     decomposition is what the run scored with, and editing it here would leave a
+             *     reader unable to check the `composite` against its parts; this array is what says
+             *     the floor is an absence rather than a reading.
+             *
+             *     Stored with the run. The grant can be given or taken away afterwards, and a queue
+             *     ranked without warmth must not later be read as one that had it. Empty on a run
+             *     assembled before this field existed — a rep has one run per local day, so those
+             *     age out within a day.
+             */
+            factors_omitted: "warmth"[];
         };
         /**
          * @description One ranked queue entry: the §10.1 composite, its per-factor decomposition (no mystery
@@ -36013,6 +36238,64 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    rejectOrganization: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RejectOrganizationRequest"];
+            };
+        };
+        responses: {
+            /** @description The archived company and the domain decision recorded with it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RejectOrganizationResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     mergeOrganization: {
         parameters: {
             query?: never;
@@ -36659,6 +36942,23 @@ export interface operations {
                      *     description for why those two answers differ.
                      */
                     fingerprint: string;
+                    /**
+                     * Format: uuid
+                     * @description The project the page was scoped to when the suggestion was rendered,
+                     *     absent on the whole-account page.
+                     *
+                     *     A suggestion's fingerprint is derived from its EVIDENCE, and a scoped
+                     *     page reasons over one project's activity — so the same advice raised
+                     *     on a scoped page and on the account page are two different
+                     *     fingerprints. This route re-derives the suggestions to check the
+                     *     fingerprint is one the account really raises for this caller, and it
+                     *     can only reproduce a scoped one by narrowing the same way.
+                     *
+                     *     Send the project the reader was looking at. Omit it and a dismissal
+                     *     from a scoped page matches nothing and silently stores nothing, which
+                     *     a reader sees as the card refusing to go away.
+                     */
+                    project_id?: string;
                 };
             };
         };
@@ -41629,6 +41929,33 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    assignLeads: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignLeadsRequest"];
+            };
+        };
+        responses: {
+            /** @description What happened to each named lead. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssignLeadsResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
         };
     };

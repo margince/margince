@@ -77,9 +77,9 @@ func nativeOnlyReportRunner(mode overlayModeChecker, run agents.ReportRunner) ag
 	}
 }
 
-// refuseReportInOverlayMode is the REST half, shared by both report
-// operations. It reports whether it answered the request, so a caller runs
-// the native engine only when the workspace actually has one.
+// refuseInOverlayMode is the REST half of a native-only capability. It
+// reports whether it answered the request, so a caller runs the native
+// engine only when the workspace actually has one.
 //
 // The answer is the ErrUnsupportedBySoR sentinel, not a validation error:
 // run_report is an L1 MCP tool, and the contract binds every one of them to
@@ -89,7 +89,7 @@ func nativeOnlyReportRunner(mode overlayModeChecker, run agents.ReportRunner) ag
 // answer a different machine code than the same verb's tool half. The
 // `unsupported_in_overlay_mode` spelling next door is for refused query
 // DIALS, which genuinely are input.
-func refuseReportInOverlayMode(w http.ResponseWriter, r *http.Request, mode overlayModeChecker) bool {
+func refuseInOverlayMode(w http.ResponseWriter, r *http.Request, mode overlayModeChecker) bool {
 	overlay, err := mode.isOverlayUncached(r.Context())
 	if err != nil {
 		httperr.Write(w, r, err)
@@ -105,7 +105,7 @@ func refuseReportInOverlayMode(w http.ResponseWriter, r *http.Request, mode over
 // RunReport shadows the embedded reportHandlers so the mode guard runs
 // before the native engine ever sees the request.
 func (s Server) RunReport(w http.ResponseWriter, r *http.Request, report string) {
-	if refuseReportInOverlayMode(w, r, s.sorDispatch) {
+	if refuseInOverlayMode(w, r, s.sorDispatch) {
 		return
 	}
 	s.reportHandlers.RunReport(w, r, report)
@@ -117,7 +117,7 @@ func (s Server) RunReport(w http.ResponseWriter, r *http.Request, report string)
 // answer one route over — and the whole argument above is that a hidden
 // screen is not a server-side gate.
 func (s Server) ExplainReport(w http.ResponseWriter, r *http.Request, report string, params crmcontracts.ExplainReportParams) {
-	if refuseReportInOverlayMode(w, r, s.sorDispatch) {
+	if refuseInOverlayMode(w, r, s.sorDispatch) {
 		return
 	}
 	s.reportHandlers.ExplainReport(w, r, report, params)

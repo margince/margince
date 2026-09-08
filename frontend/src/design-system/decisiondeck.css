@@ -334,11 +334,11 @@
   color: var(--textMeta);
 }
 
-/* --textSecondary, not --textTertiary: at 12px the tertiary ink measures
+/* --textMeta, not --textTertiary: at 12px the tertiary ink measures
  * 2.5:1 against the page, and this line is the only place a reader is told the
  * keyboard exists. A legend nobody can read is a legend that is not there. */
 .ddeck-keys {
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 /*
@@ -401,8 +401,8 @@
    it takes the chip ground and not a tone. */
 .ddeck-bundle-count {
   font-size: var(--fs-meta);
-  color: var(--textMeta);
-  background: var(--bgCard);
+  color: var(--textChip);
+  background: var(--bgChip);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-full);
   corner-shape: round;

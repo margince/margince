@@ -30,7 +30,7 @@
 /* A mailbox address is one unbroken token, and it must not be what makes the
    page scroll sideways on a phone. */
 .connector-account {
-  color: var(--textSecondary);
+  color: var(--textMeta);
   font-weight: var(--fw-regular);
   overflow-wrap: anywhere;
 }

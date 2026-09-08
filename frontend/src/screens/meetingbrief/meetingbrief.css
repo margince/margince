@@ -24,8 +24,6 @@
 /* Who the brief is for, under the dialog's title. */
 .mb-prepared-for {
   margin: var(--space-1) 0 0;
-  color: var(--textSecondary);
-  font-size: var(--fs-sm);
 }
 
 .mb-meeting-line {
@@ -43,11 +41,6 @@
 
 .mb-meeting-text strong {
   color: var(--textPrimary);
-}
-
-.mb-meeting-text span {
-  color: var(--textSecondary);
-  font-size: var(--fs-sm);
 }
 
 .mb-badges {
@@ -73,7 +66,7 @@
 
 .mb-failed-detail {
   margin: var(--space-2) 0 0;
-  color: var(--textSecondary);
+  color: var(--textContent);
   font-size: var(--fs-sm);
 }
 
@@ -132,7 +125,7 @@
 
 .mb-caveat {
   margin: var(--space-2) 0 0;
-  color: var(--textSecondary);
+  color: var(--textContent);
   font-size: var(--fs-sm);
 }
 
@@ -214,7 +207,7 @@
 
 .mb-ask-prepare {
   margin: 0;
-  color: var(--textSecondary);
+  color: var(--textContent);
   font-size: var(--fs-sm);
 }
 
@@ -229,7 +222,7 @@
 }
 
 .mb-path-row > span {
-  color: var(--textSecondary);
+  color: var(--textContent);
   font-size: var(--fs-sm);
 }
 
@@ -248,6 +241,6 @@
 
 .mb-coach-mode {
   margin: var(--space-2) 0 var(--space-4);
-  color: var(--textSecondary);
+  color: var(--textContent);
   font-size: var(--fs-sm);
 }

@@ -9,7 +9,7 @@ redistributable, which is not redistributed here.)
 
 It exists for a single audience: one person, one computer, their own CRM. That
 audience is what justifies it. For anyone able to run `docker compose up`,
-[infra/ci-pipeline.md](../../infra/ci-pipeline.md) and
+[ci-pipeline.md](ci-pipeline.md) and
 [deployment.md](../deployment.md) already serve them better, and this build
 would not pay for its own maintenance.
 

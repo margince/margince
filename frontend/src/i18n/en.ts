@@ -204,7 +204,7 @@ export const en = {
   "shell.companyLogoAria": "{company} home, powered by Margince",
   "shell.poweredBy": "Powered by Margince",
   "shell.poweredByPrefix": "Powered by",
-  "shell.searchEverything": "Search everything…",
+  "shell.searchEverything": "Find or ask Margince",
   "shell.breadcrumbAria": "Breadcrumb",
   "shell.license.none": "No license",
   "shell.license.refused": "License refused",
@@ -291,7 +291,7 @@ export const en = {
   "context.empty": "Nothing related yet.",
 
   "palette.aria": "Command palette",
-  "palette.placeholder": "Jump to, or ask anything…",
+  "palette.placeholder": "Find everything or get answers from Margince",
   "palette.empty": "No matches.",
   "palette.askAi": "Ask AI: \u201c{query}\u201d",
   "palette.typeScreen": "Screen",
@@ -885,6 +885,14 @@ export const en = {
   "consent.purposesUnavailable":
     "Couldn't load the consent purpose catalogue, so which purposes need a double opt-in can't be shown right now.",
 
+  "org.reject": "Not a company",
+  "org.rejectConfirm":
+    "This archives “{name}” and refuses {domain} as a company, so the next message from that domain will not create it again. An administrator can let the domain back in from Settings → Capture.",
+  "org.rejectReasonLabel": "Why is this not a company?",
+  "org.rejectReasonHint":
+    "One sentence somebody reviewing the blocked-domain list can act on. The refusal outlives the record.",
+  "org.rejectDone":
+    "“{name}” archived, and {domain} will not create a company again",
   "org.name": "Company",
   "org.description": "What they do",
   "org.website": "Website",
@@ -1748,6 +1756,7 @@ export const en = {
   "email.detail.from": "From",
   "email.detail.to": "To",
   "email.detail.cc": "Cc",
+  "email.detail.filedUnder": "Filed under",
   "email.detail.when": "Sent",
   "email.detail.bccWithheld":
     "Some recipients were blind-copied and are not shown to you",
@@ -2202,6 +2211,9 @@ export const en = {
     "Closed with the reason \u201c{reason}\u201d. Each lead keeps its own record, and there is no one step that puts them back.",
   "lead.bulkFailed": "{count} not applied —",
   "lead.bulkFailedRow": "could not be saved",
+  "lead.bulkOutcomeConflict": "somebody changed it while you were choosing",
+  "lead.bulkOutcomeForbidden": "not yours to hand on",
+  "lead.bulkOutcomeNotFound": "no longer in your list",
   "lead.bulkSelectRow": "Select {name}",
   "lead.unnamed": "Unnamed lead",
   "lead.sla.breached": "Overdue",
@@ -2218,7 +2230,6 @@ export const en = {
   "lead.filterScoreCool": "40 and up",
   "lead.details": "Details",
   "lead.ladder.title": "Where this lead stands",
-  "lead.railTitle": "Owner",
   "lead.detailsUnset": "Not set",
   "lead.terminalReadOnly": "This lead is closed and takes no changes.",
   "lead.notYoursToChange":
@@ -2370,6 +2381,8 @@ export const en = {
   "list.showAll": "Show all",
   "lead.assignedAway": "{names} assigned to {owner} — no longer in Mine.",
   "lead.viewNew": "New",
+  "lead.viewNewUnassigned": "New & unassigned",
+  "lead.viewUnassigned": "Unassigned queue",
   "lead.viewNeedsFollowUp": "Needs follow-up",
   "lead.viewEngaged": "Engaged",
   "lead.ladder": "Lead status",
@@ -8770,8 +8783,6 @@ export const en = {
   "worklist.disposition.snoozeForDays_one": "Snooze for {value} day",
   "worklist.disposition.snoozeForDays_other": "Snooze for {value} days",
   "worklist.disposition.snoozeFor": "For how long",
-  "worklist.disposition.snoozeDays_one": "{value} day",
-  "worklist.disposition.snoozeDays_other": "{value} days",
   "worklist.disposition.snoozeUntil.reply": "Until they reply",
   "worklist.disposition.verb.not_mine": "Not mine",
   "worklist.disposition.verb.not_sales": "Not a customer",

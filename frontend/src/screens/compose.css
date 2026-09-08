@@ -149,7 +149,7 @@
 }
 .schedule-hour[aria-pressed="true"] {
   border-color: var(--borderStrong);
-  background: var(--bgCard);
+  background: var(--bgChip);
   font-weight: var(--fw-semibold);
 }
 

@@ -148,7 +148,7 @@
   margin: 0 0 8px;
   padding-left: 10px;
   border-left: 2px solid var(--borderSubtle);
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 /* Not now. `contentEditable` has no disabled state of its own, so the refusal is

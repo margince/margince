@@ -23,6 +23,7 @@ import {
   type TimelineGroup,
 } from "../design-system/composed";
 import type { ListChip } from "../design-system/listsurface";
+import { CellStrip } from "../design-system/listtable";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { OverlayFallback } from "../design-system/overlayfallback";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -700,19 +701,13 @@ export function CompaniesScreen() {
             // first would make the second look untrue.
             cell: (org: Organization) =>
               org.relationship_types?.length ? (
-                <span
-                  style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: "var(--space-1)",
-                  }}
-                >
+                <CellStrip>
                   {org.relationship_types.map((type) => (
                     <Badge key={type}>
                       {t(RELATIONSHIP_TYPE_LABELS[type])}
                     </Badge>
                   ))}
-                </span>
+                </CellStrip>
               ) : null,
           },
           ownerColumn<Organization>(t),

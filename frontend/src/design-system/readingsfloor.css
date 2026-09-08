@@ -8,6 +8,6 @@
    `typeclass-coverage.test.ts` fails the next one. */
 .readings-floor {
   font-size: var(--fs-meta);
-  color: var(--textSecondary);
+  color: var(--textMeta);
   margin: var(--space-2) 0 0;
 }

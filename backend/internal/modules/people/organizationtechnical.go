@@ -122,8 +122,11 @@ type TechnicalChange struct {
 	ValueKey       string
 	Value          string
 	// Previous is what the record held before, empty when this is the first
-	// time the field was read.
-	Previous string
+	// time the field was read. PreviousKey is that value's stable key, for a
+	// consumer that renders the display label itself rather than repeating
+	// the one the record stored.
+	Previous    string
+	PreviousKey string
 	// Kind says which way it moved.
 	Kind TechnicalChangeKind
 	// Evidence is the record that proves the new state.

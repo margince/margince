@@ -27,6 +27,22 @@
   border-radius: var(--r-sm);
 }
 
+/* A refused text trigger. The shape that draws its own chrome above has to draw
+   its own refusal too: the `.btn` shape takes `.btn:disabled` from base.css and
+   needs nothing here, while this one kept full ink and a pointer cursor and so
+   read as live.
+
+   The house spelling for a refused control that is not a filled button —
+   `.iconbtn:disabled`, `.btn:disabled` — and deliberately not a colour swap:
+   base.css gives the reason where it fades rather than re-grounds a dead
+   button, which is that a swapped ground inverts in dark. A fade is one
+   declaration in both themes, and this trigger's ink is `inherit`, so there is
+   no colour of its own to swap. */
+.popover-trigger:not(.btn):disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Fixed, because it is placed against the trigger's viewport rectangle
    (anchored.ts). Narrow on purpose: what goes in here is read once, and a wide
    panel over the page reads as a second card rather than as an aside to the

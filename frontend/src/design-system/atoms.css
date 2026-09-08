@@ -4,7 +4,7 @@
 .badge {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--space-1);
   font-size: var(--fs-meta);
   /* Medium at 20px: the pill states one standing fact beside a name and must
      not outweigh the name. Semibold at this size reads as a warning. */
@@ -13,8 +13,8 @@
   padding: 0 8px;
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--bgCard);
-  color: var(--textMeta);
+  background: var(--bgChip);
+  color: var(--textChip);
 }
 /* The tone tints are TRANSLUCENT by canon — --successBg, --warnBg and
    --dangerBg all carry an alpha under a fifth — so a badge painted straight
@@ -62,12 +62,13 @@
  * as the label's, so the status is still tellable at a glance; the fill and
  * the pill padding are what go. It overrides the tone tints above, which is
  * why it is declared after them and repeats `background` rather than relying
- * on the cascade of a class the caller may or may not have passed. */
+ * on the cascade of a class the caller may or may not have passed. It sets no
+ * size of its own: a table cell reads the meta rung, and a rung of its own put
+ * the one plain-text status in a row a step above every value beside it. */
 .badge-quiet {
   background: none;
   padding: 0;
   font-weight: 400;
-  font-size: var(--fs-sm);
 }
 .badge-quiet::before {
   content: "";
@@ -391,7 +392,7 @@
 .empty {
   text-align: start;
   padding: var(--space-5) 0;
-  color: var(--textSecondary);
+  color: var(--textMeta);
   font-size: var(--fs-body);
 }
 /* The instructional variant: a heading in the primary ink, a measured
@@ -426,7 +427,7 @@
   margin: 0;
   font-size: var(--fs-sm);
   font-weight: var(--fw-medium);
-  color: var(--textContent);
+  color: var(--textPrimary);
 }
 /* What this kind of thing is FOR, under the line saying there is none of it.
    Held to a measure: a definition set across the full pane width reads as body
@@ -745,7 +746,7 @@
      other surface is meant to look like. A closed option set is exactly the
      thing that CAN take a second line, so it does. */
   flex-wrap: wrap;
-  background: var(--bgCard);
+  background: var(--bgChip);
   border-radius: var(--r-sm);
   padding: 3px;
   gap: 2px;
@@ -755,8 +756,11 @@
   font-size: var(--fs-sm);
   font-weight: 600;
   border: 0;
+  /* Transparent, so an unpressed option is read on the TRACK's --bgChip and
+     takes the chip's ink accordingly. The pressed one below lifts onto its own
+     --bgElevated and answers to that instead. */
   background: transparent;
-  color: var(--textMeta);
+  color: var(--textChip);
   padding: 5px 12px;
   border-radius: var(--r-sm);
   cursor: pointer;
@@ -766,15 +770,18 @@
   color: var(--textPrimary);
   box-shadow: var(--shadow-card);
 }
-/* How much is behind an option, beside its name. It stays --textMeta on the
+/* How much is behind an option, beside its name. It keeps the quiet ink on the
    pressed option too: the label says where you are, and a count that lit up
    with it would read as the selection's own figure rather than as the size of
    what is under it. Lighter weight for the same reason — it qualifies the
-   label, it does not compete with it. */
+   label, it does not compete with it. One ink across both states rather than
+   --textChip on the track and --textMeta on the plate, because a figure that
+   changed tone as the reader moved between options would read as a different
+   figure; --textChip is the darker of the two on either ground. */
 .segmented button > .segmented-count {
   margin-left: 6px;
   font-weight: 400;
-  color: var(--textMeta);
+  color: var(--textChip);
 }
 
 /* Something waits behind this option. An accent dot rather than an indigo one:
@@ -866,8 +873,8 @@
 .kbd {
   font-family: var(--f-mono);
   font-size: var(--fs-eyebrow);
-  color: var(--textMeta);
-  background: var(--bgCard);
+  color: var(--textChip);
+  background: var(--bgChip);
   border: 1px solid var(--borderStrong);
   border-bottom-width: 2px;
   border-radius: var(--r-xs);
@@ -925,7 +932,7 @@
   margin-top: var(--space-2);
   font-size: var(--fs-sm);
   line-height: var(--lh-normal);
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 .section-header h2 {
   /* --fs-lead IS 15px: the same value the raw number held, now named. The
@@ -1872,6 +1879,12 @@
   font: inherit;
   color: var(--accent);
   white-space: nowrap;
+  /* The card's own `cursor` cannot reach this control: the overlay that
+     stretches the door over the tile is the BUTTON's pseudo-element, so what a
+     pointer anywhere on the card resolves against is a button, and a button's
+     platform cursor beats a value the card set. The tile read as a plain arrow
+     over every part of it the door actually answered for. */
+  cursor: pointer;
   /* 24px tall, which is the AA target floor (WCAG 2.5.8) — the same rung the
      worklist's rank button takes. A text-only control on a 13px line boxes to
      about 21px, and axe found this one at 20.9px on the project rollups: under
@@ -1899,6 +1912,9 @@
   position: absolute;
   inset: 0;
 }
+/* And the chip stays a pointer too: it sits ABOVE the door's overlay (z-index
+   on `.stat-card-basis`), so it is the one part of the tile the button's own
+   cursor never covers. */
 .stat-card:has(.stat-card-open) {
   cursor: pointer;
 }
@@ -1962,11 +1978,11 @@
   font-weight: var(--fw-regular);
   letter-spacing: var(--tracking-normal);
   text-transform: none;
-  color: var(--textMeta);
+  color: var(--textChip);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
   padding: 1px var(--space-1);
-  background: var(--bgCard);
+  background: var(--bgChip);
 }
 .popover-trigger.stat-card-basis:not(.btn):hover {
   color: var(--textPrimary);
@@ -1979,9 +1995,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-}
-.stat-card-basis-head {
-  color: var(--textMeta);
 }
 
 /* The proportion, under the words that state it. Its own quiet track so an
@@ -2089,8 +2102,17 @@
     color var(--dur-state) var(--ease-out),
     box-shadow var(--dur-state) var(--ease-out);
 }
+/* The press LIFTS to the selected option's own plate, minus its shadow: the
+   segment shows the reader what releasing would give them, and the shadow is
+   what still tells a settled selection apart from a finger on the way to one.
+   Not a second --bgChip, which is what this was: the button is transparent over
+   a track already painted in that fill, so the two composited and the label on
+   the pressed segment fell to 3.99:1. And not an opaque grey either — the
+   track's colour follows whatever the strip sits on, so a fixed value is a step
+   off one host and invisible on the next. --bgElevated is the one ground in the
+   ladder that is a step off the track on every host. */
 .segmented button:active:not(:disabled) {
-  background-color: var(--bgCard);
+  background-color: var(--bgElevated);
   transition-duration: var(--dur-tap);
 }
 /* The strip's own disabled state, which it did not have: a segment nobody may

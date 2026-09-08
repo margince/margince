@@ -3,7 +3,7 @@
  * company page's completeness readings. */
 .meterbar {
   height: 8px;
-  background: var(--bgCard);
+  background: var(--bgChip);
   border-radius: var(--r-full);
   corner-shape: round;
   overflow: hidden;
@@ -75,7 +75,7 @@
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-1);
   padding: 6px 12px;
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-full);
@@ -89,6 +89,20 @@
 .chip svg {
   color: var(--textMeta);
   flex: none;
+}
+/* dense: a chip that shares a cell with badges, at their geometry. A table
+ * row's name column carries the name, a fact chip and a status pill together,
+ * and the default chip is a rung taller and a rung larger than the badge beside
+ * it — so the fact read as the most important thing in the cell, which the name
+ * is. `.badge`'s four values rather than `.badge` itself: a badge is a status in
+ * a closed tone vocabulary and a chip is a fact that may be a link, so one
+ * shared class would tie the two vocabularies together at the first restyle of
+ * either. */
+.chip-dense {
+  min-block-size: 20px;
+  padding: 0 8px;
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-medium);
 }
 .chip-link {
   text-decoration: none;

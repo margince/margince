@@ -1111,6 +1111,30 @@ func (e ApprovalEvidenceSourceType) Valid() bool {
 	}
 }
 
+// Defines values for AssignLeadOutcomeKind.
+const (
+	AssignLeadOutcomeKindAssigned  AssignLeadOutcomeKind = "assigned"
+	AssignLeadOutcomeKindConflict  AssignLeadOutcomeKind = "conflict"
+	AssignLeadOutcomeKindForbidden AssignLeadOutcomeKind = "forbidden"
+	AssignLeadOutcomeKindNotFound  AssignLeadOutcomeKind = "not_found"
+)
+
+// Valid indicates whether the value is a known member of the AssignLeadOutcomeKind enum.
+func (e AssignLeadOutcomeKind) Valid() bool {
+	switch e {
+	case AssignLeadOutcomeKindAssigned:
+		return true
+	case AssignLeadOutcomeKindConflict:
+		return true
+	case AssignLeadOutcomeKindForbidden:
+		return true
+	case AssignLeadOutcomeKindNotFound:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AssistantConfiguredModelProvider.
 const (
 	AssistantModelProviderAnthropic        AssistantConfiguredModelProvider = "anthropic"
@@ -7261,6 +7285,21 @@ func (e MeetingPlanUnknownKind) Valid() bool {
 	case MeetingPlanUnknownNoOpenDeal:
 		return true
 	case MeetingPlanUnknownNoPriorMeeting:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MorningBriefFactorsOmitted.
+const (
+	Warmth MorningBriefFactorsOmitted = "warmth"
+)
+
+// Valid indicates whether the value is a known member of the MorningBriefFactorsOmitted enum.
+func (e MorningBriefFactorsOmitted) Valid() bool {
+	switch e {
+	case Warmth:
 		return true
 	default:
 		return false
@@ -18108,6 +18147,64 @@ type ApproveRequest struct {
 	EditedPayload *map[string]interface{} `json:"edited_payload,omitempty"`
 }
 
+// AssignLeadOutcome What happened to one named lead.
+type AssignLeadOutcome struct {
+	LeadId openapi_types.UUID `json:"lead_id"`
+
+	// Outcome `assigned` moved the lead — including one already owned by the destination, which still
+	// takes a version and an audit row rather than being quietly skipped: the writer records
+	// the assignment as an act, so a re-run says what it did rather than claiming it did
+	// nothing. `forbidden` is a lead the caller may not hand on. `conflict` is a version that
+	// no longer holds.
+	//
+	// `not_found` is a lead the caller cannot see — and also an ARCHIVED one, because the
+	// write resolves live rows only and a promoted or disqualified lead is no longer among
+	// them. The two deliberately read alike: which of them it was is a fact about a record the
+	// caller was not shown, and separating them would answer that a lead exists.
+	Outcome AssignLeadOutcomeKind `json:"outcome"`
+
+	// Version The lead's version after the write. Present on `assigned`.
+	Version *int64 `json:"version,omitempty"`
+}
+
+// AssignLeadOutcomeKind `assigned` moved the lead — including one already owned by the destination, which still
+// takes a version and an audit row rather than being quietly skipped: the writer records
+// the assignment as an act, so a re-run says what it did rather than claiming it did
+// nothing. `forbidden` is a lead the caller may not hand on. `conflict` is a version that
+// no longer holds.
+//
+// `not_found` is a lead the caller cannot see — and also an ARCHIVED one, because the
+// write resolves live rows only and a promoted or disqualified lead is no longer among
+// them. The two deliberately read alike: which of them it was is a fact about a record the
+// caller was not shown, and separating them would answer that a lead exists.
+type AssignLeadOutcomeKind string
+
+// AssignLeadsItem defines model for AssignLeadsItem.
+type AssignLeadsItem struct {
+	Id openapi_types.UUID `json:"id"`
+
+	// Version The version the caller read. Optional; supplying it makes the row's write conditional
+	// exactly as `If-Match` does on `updateLead`, so a lead somebody else moved answers
+	// `conflict` instead of losing their change.
+	Version *int64 `json:"version,omitempty"`
+}
+
+// AssignLeadsRequest One destination owner, and the leads to hand to them. The owner is checked before any
+// lead is touched; the leads answer one at a time.
+type AssignLeadsRequest struct {
+	Leads []AssignLeadsItem `json:"leads"`
+
+	// OwnerId The seat to hand them to. Must be one that can be handed work — an active, unarchived
+	// human seat that is not read-only, inside the caller's own row scope — else
+	// `422 owner_not_assignable` and nothing moves.
+	OwnerId openapi_types.UUID `json:"owner_id"`
+}
+
+// AssignLeadsResult defines model for AssignLeadsResult.
+type AssignLeadsResult struct {
+	Results []AssignLeadOutcome `json:"results"`
+}
+
 // AssistantConfiguredModel defines model for AssistantConfiguredModel.
 type AssistantConfiguredModel struct {
 	Model    string                           `json:"model"`
@@ -20278,6 +20375,13 @@ type ChannelProviderEntry struct {
 	// default, so a connector that never declared carriage reports false rather than
 	// being mistaken for capable. A zero bound means "no limit beyond the contract's
 	// own", never "zero allowed".
+	//
+	// `max_total_bytes` is the exception to that rule and is never zero: every
+	// transport has an aggregate, because the product has one whether or not the
+	// provider declares its own. It is the bound a composer must warn against
+	// FIRST — `max_files` and `max_bytes_per_file` cannot express it between them,
+	// so a message of ten files each under the per-file cap can pass both and still
+	// be ten times what a send may carry.
 	Attachments struct {
 		Carries bool `json:"carries"`
 
@@ -20291,6 +20395,11 @@ type ChannelProviderEntry struct {
 
 		// MaxFiles Most files in one message. Never more than the contract's own `attachment_ids` cap of 10.
 		MaxFiles int `json:"max_files"`
+
+		// MaxTotalBytes Largest total across every file on one message, in bytes — the smaller of
+		// this transport's own aggregate and the product's send budget. Always
+		// present and always positive.
+		MaxTotalBytes int64 `json:"max_total_bytes"`
 	} `json:"attachments"`
 
 	// CredentialModel How a connection to this transport is credentialed — one shared bot for the
@@ -26516,6 +26625,28 @@ type MorningBrief struct {
 	// CandidateCount Deals that cleared the §10 honest-short bar (may exceed the queue length).
 	CandidateCount int `json:"candidate_count"`
 
+	// FactorsOmitted The ranking factors this run could not read, so a client can say "the order does
+	// not account for this" instead of presenting a queue as fully ranked. Never
+	// returned absent, and empty on the ordinary read: empty and withheld are different
+	// answers, and a factor that floors silently makes a deal rank lower than it is with
+	// nothing marking why.
+	//
+	// `warmth` is omitted for a caller with no `relationship` edge grant. Every seat on
+	// a deal is a `deal_stakeholder` edge, so such a caller runs no stakeholder read at
+	// all and the factor has no input for ANY deal — which is why this is a property of
+	// the run and not of an item.
+	//
+	// A named factor still appears in each item's `feature_vector`, at its floor. The
+	// decomposition is what the run scored with, and editing it here would leave a
+	// reader unable to check the `composite` against its parts; this array is what says
+	// the floor is an absence rather than a reading.
+	//
+	// Stored with the run. The grant can be given or taken away afterwards, and a queue
+	// ranked without warmth must not later be read as one that had it. Empty on a run
+	// assembled before this field existed — a rep has one run per local day, so those
+	// age out within a day.
+	FactorsOmitted []MorningBriefFactorsOmitted `json:"factors_omitted"`
+
 	// GeneratedAt When this run was assembled.
 	GeneratedAt time.Time          `json:"generated_at"`
 	Id          openapi_types.UUID `json:"id"`
@@ -26538,6 +26669,9 @@ type MorningBrief struct {
 	// RevenueNormMinor The workspace-P90 (or fallback) base value the revenue factor normalized against.
 	RevenueNormMinor *int64 `json:"revenue_norm_minor,omitempty"`
 }
+
+// MorningBriefFactorsOmitted defines model for MorningBrief.FactorsOmitted.
+type MorningBriefFactorsOmitted string
 
 // MorningBriefFeatureVector The §10.1 factor decomposition, each normalized 0..1 — the composite reconciles to it.
 type MorningBriefFeatureVector struct {
@@ -31636,6 +31770,27 @@ type RejectOfferRequest struct {
 	Reason *string `json:"reason,omitempty"`
 }
 
+// RejectOrganizationRequest defines model for RejectOrganizationRequest.
+type RejectOrganizationRequest struct {
+	// Reason Why this is not a company. Required: the refusal outlives the record, and the next
+	// operator to find the domain on the blocked list can only review a decision that
+	// says something.
+	Reason string `json:"reason"`
+}
+
+// RejectOrganizationResponse Both halves of the one decision, because both landed. A caller that showed only the
+// archived record would leave the standing domain refusal — the half that stops the
+// company coming back — invisible to the person who just made it.
+type RejectOrganizationResponse struct {
+	// Domain One domain carrying a standing admission decision. `suppressed` refuses it a company —
+	// a vendor or bulk sender the business does not sell to — while `admitted` is a human
+	// deliberately letting one in, which no later verdict may undo.
+	Domain BlockedDomain `json:"domain"`
+
+	// Organization A company. Mirrors the `organization` table.
+	Organization Organization `json:"organization"`
+}
+
 // RejectVoiceDraftRequest defines model for RejectVoiceDraftRequest.
 type RejectVoiceDraftRequest struct {
 	DraftRef string `json:"draft_ref"`
@@ -32507,6 +32662,14 @@ type SendAccountEmailRequest struct {
 	// Repeated ids are collapsed — attaching one file twice is not something a message
 	// can mean — and naming more distinct files than `maxItems` is refused with
 	// 422 `too_many_attachments`.
+	//
+	// A file with NO CONTENT is refused with 422 `empty_attachment`, naming the file.
+	// It is a separate code from the size one on purpose: an empty file is not a file
+	// that is too big, and a client that reported it as a limit would send somebody
+	// off to shrink something already as small as it can be. Nothing anywhere can send
+	// it, so it is refused here rather than by whichever transport happens to carry
+	// the message — an upload is refused for the same reason, so a file that reaches
+	// this field with no bytes was captured that way from an inbound message.
 	AttachmentIds *[]openapi_types.UUID `json:"attachment_ids,omitempty"`
 
 	// Bcc Blind copies. They receive the message and are therefore owed consent
@@ -32768,6 +32931,14 @@ type SendEmailRequest struct {
 	// Repeated ids are collapsed — attaching one file twice is not something a message
 	// can mean — and naming more distinct files than `maxItems` is refused with
 	// 422 `too_many_attachments`.
+	//
+	// A file with NO CONTENT is refused with 422 `empty_attachment`, naming the file.
+	// It is a separate code from the size one on purpose: an empty file is not a file
+	// that is too big, and a client that reported it as a limit would send somebody
+	// off to shrink something already as small as it can be. Nothing anywhere can send
+	// it, so it is refused here rather than by whichever transport happens to carry
+	// the message — an upload is refused for the same reason, so a file that reaches
+	// this field with no bytes was captured that way from an inbound message.
 	AttachmentIds *[]openapi_types.UUID `json:"attachment_ids,omitempty"`
 
 	// Bcc Blind copies. They receive the message and are therefore owed consent
@@ -32905,6 +33076,14 @@ type SendMessageRequest struct {
 	// Repeated ids are collapsed — attaching one file twice is not something a message
 	// can mean — and naming more distinct files than `maxItems` is refused with
 	// 422 `too_many_attachments`.
+	//
+	// A file with NO CONTENT is refused with 422 `empty_attachment`, naming the file.
+	// It is a separate code from the size one on purpose: an empty file is not a file
+	// that is too big, and a client that reported it as a limit would send somebody
+	// off to shrink something already as small as it can be. Nothing anywhere can send
+	// it, so it is refused here rather than by whichever transport happens to carry
+	// the message — an upload is refused for the same reason, so a file that reaches
+	// this field with no bytes was captured that way from an inbound message.
 	//
 	// A messaging channel carries this message's text as a CAPTION, which is bounded
 	// far below a text-only message; `GET /v1/channel-providers` publishes that bound
@@ -34642,7 +34821,18 @@ type UpdateLeadRequest struct {
 	CompanyName     *string              `json:"company_name,omitempty"`
 	Email           *openapi_types.Email `json:"email,omitempty"`
 	FullName        *string              `json:"full_name,omitempty"`
-	OwnerId         *openapi_types.UUID  `json:"owner_id,omitempty"`
+
+	// OwnerId Who owns this lead. The destination must be a seat that can be handed work — an
+	// active, unarchived human seat that is not read-only, and one inside the caller's own
+	// row scope — else `422 owner_not_assignable`, which names no more than that so the
+	// refusal does not disclose the roster or the team graph.
+	//
+	// A lead NOBODY owns is assignable by a caller who could not otherwise write it: that
+	// is the door out of the unassigned queue, and it admits an ownership-only change. A
+	// patch carrying any other field alongside `owner_id` is refused unless the caller can
+	// already write the row. To take an unowned lead for yourself, prefer
+	// `POST /records/lead/{id}/claim`, which is the same act with a version precondition.
+	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// ProjectId The body of work this lead belongs to; carries no same-company guard (a lead has no company).
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
@@ -40146,6 +40336,32 @@ type ConfirmOrganizationProfileFieldParams struct {
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
+// RejectOrganizationParams defines parameters for RejectOrganization.
+type RejectOrganizationParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
 // DismissOrganizationSuggestionJSONBody defines parameters for DismissOrganizationSuggestion.
 type DismissOrganizationSuggestionJSONBody struct {
 	// Fingerprint The `fingerprint` from the suggestion being dismissed, unchanged — a
@@ -40156,6 +40372,21 @@ type DismissOrganizationSuggestionJSONBody struct {
 	// currently raise is a `204` that stores nothing; see this operation's
 	// description for why those two answers differ.
 	Fingerprint string `json:"fingerprint"`
+
+	// ProjectId The project the page was scoped to when the suggestion was rendered,
+	// absent on the whole-account page.
+	//
+	// A suggestion's fingerprint is derived from its EVIDENCE, and a scoped
+	// page reasons over one project's activity — so the same advice raised
+	// on a scoped page and on the account page are two different
+	// fingerprints. This route re-derives the suggestions to check the
+	// fingerprint is one the account really raises for this caller, and it
+	// can only reproduce a scoped one by narrowing the same way.
+	//
+	// Send the project the reader was looking at. Omit it and a dismissal
+	// from a scoped page matches nothing and silently stores nothing, which
+	// a reader sees as the card refusing to go away.
+	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
 }
 
 // ListOverlayUserMapParams defines parameters for ListOverlayUserMap.
@@ -42459,6 +42690,9 @@ type UpdateLeadSourceJSONRequestBody = UpdateLeadSourceRequest
 // CreateLeadJSONRequestBody defines body for CreateLead for application/json ContentType.
 type CreateLeadJSONRequestBody = CreateLeadRequest
 
+// AssignLeadsJSONRequestBody defines body for AssignLeads for application/json ContentType.
+type AssignLeadsJSONRequestBody = AssignLeadsRequest
+
 // UpdateLeadSettingsJSONRequestBody defines body for UpdateLeadSettings for application/json ContentType.
 type UpdateLeadSettingsJSONRequestBody = UpdateLeadSettingsRequest
 
@@ -42566,6 +42800,9 @@ type UpsertPartnerJSONRequestBody = UpsertPartnerRequest
 
 // UpdateOrganizationProfileFieldJSONRequestBody defines body for UpdateOrganizationProfileField for application/json ContentType.
 type UpdateOrganizationProfileFieldJSONRequestBody = UpdateOrganizationProfileFieldRequest
+
+// RejectOrganizationJSONRequestBody defines body for RejectOrganization for application/json ContentType.
+type RejectOrganizationJSONRequestBody = RejectOrganizationRequest
 
 // EnsureOrganizationScanJSONRequestBody defines body for EnsureOrganizationScan for application/json ContentType.
 type EnsureOrganizationScanJSONRequestBody = OrganizationScanRequest
@@ -51527,6 +51764,9 @@ type ServerInterface interface {
 	// Create a lead.
 	// (POST /leads)
 	CreateLead(w http.ResponseWriter, r *http.Request, params CreateLeadParams)
+	// Hand a named set of leads to one owner.
+	// (POST /leads/assign-bulk)
+	AssignLeads(w http.ResponseWriter, r *http.Request)
 	// How this installation handles leads.
 	// (GET /leads/settings)
 	GetLeadSettings(w http.ResponseWriter, r *http.Request)
@@ -51806,6 +52046,9 @@ type ServerInterface interface {
 	// Confirm a profile field without changing its value.
 	// (POST /organizations/{id}/profile-fields/{field}/confirm)
 	ConfirmOrganizationProfileField(w http.ResponseWriter, r *http.Request, id Id, field ProfileFieldKey, params ConfirmOrganizationProfileFieldParams)
+	// This is not a company — archive it and refuse its domain as one (admin/ops).
+	// (POST /organizations/{id}/reject)
+	RejectOrganization(w http.ResponseWriter, r *http.Request, id Id, params RejectOrganizationParams)
 	// What this account needs, as the model last read it for this reader.
 	// (GET /organizations/{id}/scan)
 	GetOrganizationScan(w http.ResponseWriter, r *http.Request, id Id)
@@ -54245,6 +54488,12 @@ func (_ Unimplemented) CreateLead(w http.ResponseWriter, r *http.Request, params
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Hand a named set of leads to one owner.
+// (POST /leads/assign-bulk)
+func (_ Unimplemented) AssignLeads(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // How this installation handles leads.
 // (GET /leads/settings)
 func (_ Unimplemented) GetLeadSettings(w http.ResponseWriter, r *http.Request) {
@@ -54800,6 +55049,12 @@ func (_ Unimplemented) UpdateOrganizationProfileField(w http.ResponseWriter, r *
 // Confirm a profile field without changing its value.
 // (POST /organizations/{id}/profile-fields/{field}/confirm)
 func (_ Unimplemented) ConfirmOrganizationProfileField(w http.ResponseWriter, r *http.Request, id Id, field ProfileFieldKey, params ConfirmOrganizationProfileFieldParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// This is not a company — archive it and refuse its domain as one (admin/ops).
+// (POST /organizations/{id}/reject)
+func (_ Unimplemented) RejectOrganization(w http.ResponseWriter, r *http.Request, id Id, params RejectOrganizationParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -67616,6 +67871,26 @@ func (siw *ServerInterfaceWrapper) CreateLead(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r)
 }
 
+// AssignLeads operation middleware
+func (siw *ServerInterfaceWrapper) AssignLeads(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AssignLeads(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetLeadSettings operation middleware
 func (siw *ServerInterfaceWrapper) GetLeadSettings(w http.ResponseWriter, r *http.Request) {
 
@@ -72112,6 +72387,81 @@ func (siw *ServerInterfaceWrapper) ConfirmOrganizationProfileField(w http.Respon
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ConfirmOrganizationProfileField(w, r, id, field, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RejectOrganization operation middleware
+func (siw *ServerInterfaceWrapper) RejectOrganization(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RejectOrganizationParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RejectOrganization(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -83492,6 +83842,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/leads", wrapper.CreateLead)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/leads/assign-bulk", wrapper.AssignLeads)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/leads/settings", wrapper.GetLeadSettings)
 	})
 	r.Group(func(r chi.Router) {
@@ -83769,6 +84122,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/organizations/{id}/profile-fields/{field}/confirm", wrapper.ConfirmOrganizationProfileField)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/organizations/{id}/reject", wrapper.RejectOrganization)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/organizations/{id}/scan", wrapper.GetOrganizationScan)

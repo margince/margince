@@ -187,7 +187,10 @@ export function DealBulkBar({
       rows: [...deals],
       write: async (deal) => {
         const { error } = await api.DELETE("/deals/{id}", {
-          params: { path: { id: deal.id } },
+          params: {
+            path: { id: deal.id },
+            ...ifMatch(requireVersion(deal.version)),
+          },
         });
         if (error) {
           throwProblem(error, t);

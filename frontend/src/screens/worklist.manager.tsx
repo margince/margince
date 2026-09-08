@@ -13,8 +13,10 @@
 // They are drawn only on a named person's queue. On the reader's own day there
 // is nobody to reassign work to and nobody to coach.
 
+import { UserRoundArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { Button, SegmentedControl } from "../design-system/atoms";
+import { IconAction } from "../design-system/iconaction";
 import { Select } from "../design-system/select";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
@@ -127,10 +129,18 @@ export function ReassignControl({
   const reassign = useReassignTask();
 
   if (!open) {
+    // A GLYPH while it is closed. This control sits in a queue row's one line
+    // of verbs beside a move, an Open, three judgements and the row's own
+    // answer, and the hand-off is the rarest of them — a word for it took the
+    // width the reader needed for the work. `IconAction` keeps the name on
+    // hover and in the accessible tree, which a bare square would not.
     return (
-      <Button variant="ghost" onClick={() => setOpen(true)}>
-        {t("worklist.manager.reassign")}
-      </Button>
+      <IconAction
+        small
+        icon={<UserRoundArrowLeft aria-hidden="true" />}
+        label={t("worklist.manager.reassign")}
+        onClick={() => setOpen(true)}
+      />
     );
   }
   return (

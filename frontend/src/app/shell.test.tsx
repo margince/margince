@@ -536,7 +536,8 @@ describe("Shell", () => {
   // thing separating them is the id. The marker is what the stylesheet keys the
   // cap on, so a route landing in the wrong family is a layout regression that
   // nothing else would catch. The sets themselves are GRIDDED_RECORD_SCREENS
-  // (keyed on an id) and GRIDDED_SCREENS (the id-less half, which is Brief).
+  // (keyed on an id) and GRIDDED_SCREENS (the id-less half: the screens that
+  // read down without ever being a record).
   it.each([
     ["#/settings/account", true],
     ["#/companies/o-1", true],
@@ -544,10 +545,19 @@ describe("Shell", () => {
     // Brief carries no id and is capped anyway: it reads down, and its decision
     // cards carry drafted prose somebody has to read before deciding.
     ["#/", true],
+    // The rest of the id-less half, each read top to bottom rather than
+    // scanned across: a queue of work, a list of saved views, a column of
+    // report sections, and a settings-like page of stacked choices.
+    ["#/worklist", true],
+    ["#/filters", true],
+    ["#/analytics", true],
+    ["#/ai", true],
+    // Analytics' old address parses to the same screen, so it inherits the
+    // same column: a bookmark cannot land on a differently laid-out page.
+    ["#/reports", true],
     ["#/companies", false],
     ["#/contacts", false],
     ["#/deals", false],
-    ["#/reports", false],
     // A composed unit's page keeps the settings LEVEL (below) but not the
     // reading column: the column is a claim about the page's own content, and a
     // unit lays its own surface out.

@@ -255,3 +255,62 @@ func TestAutoEnrichExpireExhausted(t *testing.T) {
 		t.Fatalf("cursor = (%q, %v), want (exhausted, <nil>)", outcome, nextAttempt)
 	}
 }
+
+// A company waiting behind a day's worth of newer arrivals is still reached.
+//
+// The pass takes ONE page, bounded by the daily cap, and queues what it takes —
+// which writes a cursor row that drops that company out of the due set until its
+// next attempt falls due. So the set shrinks by exactly what was worked, and
+// which END the page comes from decides whether it drains.
+//
+// Taking the newest end starves: in a workspace gaining more eligible companies
+// between passes than the cap, arrivals keep landing in front of a company that
+// has never been reached, and it waits forever — not retried, not exhausted, not
+// visible as skipped, so nothing anywhere says it was missed.
+//
+// A page of one against three eligible companies is the same shape as 500
+// against a day's arrivals, and it is the shape the assertion can actually read.
+func TestTheOldestCompanyIsSweptFirstSoNoneWaitsForever(t *testing.T) {
+	e := integration.Setup(t)
+	store := capture.NewAutoEnrichStore(e.DB())
+	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
+
+	// Inserted oldest first. The id is a uuidv7, so this is also id order —
+	// which is what the query sorts on, and why it does.
+	oldest := insertDomainOrg(t, e, "waiting.example")
+	insertDomainOrg(t, e, "newer.example")
+	insertDomainOrg(t, e, "newest.example")
+
+	page, err := store.ListDueOrgs(ctx, 1)
+	if err != nil {
+		t.Fatalf("ListDueOrgs: %v", err)
+	}
+	if len(page) != 1 {
+		t.Fatalf("a page of 1 returned %d companies", len(page))
+	}
+	if page[0].Domain != "waiting.example" {
+		t.Errorf("the pass takes %q, want waiting.example — the company that has been due "+
+			"longest. Taking the newest end leaves it behind every arrival, and nothing "+
+			"retries it or reports it skipped", page[0].Domain)
+	}
+	if page[0].OrganizationID != oldest {
+		t.Errorf("the pass takes org %s, want %s", page[0].OrganizationID, oldest)
+	}
+
+	// And the set really does shrink by what was worked: once the oldest holds a
+	// dossier it leaves, and the next pass takes the one behind it rather than
+	// the same row again. Without this the ordering above would be a queue that
+	// never advances.
+	if _, _, err := e.People.StartSiteRead(ctx, oldest, "https://waiting.example",
+		"human:"+e.Rep1.String()); err != nil {
+		t.Fatalf("seed the oldest company's dossier: %v", err)
+	}
+	next, err := store.ListDueOrgs(ctx, 1)
+	if err != nil {
+		t.Fatalf("ListDueOrgs after the first company was worked: %v", err)
+	}
+	if len(next) != 1 || next[0].Domain != "newer.example" {
+		t.Errorf("the next pass takes %v, want newer.example — the queue has to advance, "+
+			"or oldest-first is a company that blocks every other one", next)
+	}
+}

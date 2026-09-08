@@ -1199,15 +1199,14 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
     expect(screen.getByText("Due soon")).toBeTruthy();
   });
 
-  it("bulk-assigns selected leads one PATCH each, every row with its own If-Match, and names the row that refused", async () => {
-    // A naive fan-out sends one version to every row and 428s/409s on all but
-    // the row it came from. Each row carries the version the list holds; a
-    // row that moved under the reader is reported by name, not swallowed.
-    const patches: Array<{
-      id: string;
-      ifMatch: string | null;
-      body: unknown;
-    }> = [];
+  it("bulk-assigns in ONE request carrying each row's own version, and names the row that refused", async () => {
+    // One request, not one per row: the server owns the rule about who may
+    // receive a lead and answers for each lead in the same breath. Each row
+    // still carries the version the LIST holds — a single shared version would
+    // conflict on every row but the one it came from — and a row that moved
+    // under the reader is reported by name rather than swallowed.
+    let sent: { owner_id?: string; leads?: unknown } | null = null;
+    let patchCount = 0;
     stubFetch(async (url, method, request) => {
       if (url.includes("/users")) {
         return jsonResponse({
@@ -1216,27 +1215,17 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
         });
       }
       if (method === "PATCH") {
-        const id = url.split("/leads/")[1] ?? "";
-        patches.push({
-          id,
-          ifMatch: request.headers.get("If-Match"),
-          body: JSON.parse(await request.text()),
+        patchCount += 1;
+        return jsonResponse(lead);
+      }
+      if (url.includes("/leads/assign-bulk")) {
+        sent = JSON.parse(await request.text());
+        return jsonResponse({
+          results: [
+            { lead_id: "l-1", outcome: "assigned", version: 4 },
+            { lead_id: "l-2", outcome: "conflict" },
+          ],
         });
-        if (id === "l-2") {
-          return new Response(
-            JSON.stringify({
-              title: "Conflict",
-              status: 409,
-              code: "version_skew",
-              detail: "moved",
-            }),
-            {
-              status: 409,
-              headers: { "content-type": "application/problem+json" },
-            },
-          );
-        }
-        return jsonResponse({ ...lead, id, owner_id: "u-9", version: 8 });
       }
       return jsonResponse({
         data: [
@@ -1262,19 +1251,132 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
     );
     await userEvent.click(screen.getByRole("button", { name: "Assign" }));
 
-    await waitFor(() => expect(patches).toHaveLength(2));
-    expect(patches.map((p) => [p.id, p.ifMatch])).toEqual([
-      ["l-1", "3"],
-      ["l-2", "7"],
-    ]);
-    expect(
-      patches.every(
-        (p) => JSON.stringify(p.body) === JSON.stringify({ owner_id: "u-9" }),
-      ),
-    ).toBe(true);
-    // The row that refused is named, with the server's reason.
+    await waitFor(() => expect(sent).not.toBeNull());
+    expect(sent).toEqual({
+      owner_id: "u-9",
+      leads: [
+        { id: "l-1", version: 3 },
+        { id: "l-2", version: 7 },
+      ],
+    });
+    // The old shape is gone, not merely unused: a per-row PATCH here would be
+    // the unvalidated path the bulk endpoint exists to replace.
+    expect(patchCount).toBe(0);
+    // The row that refused is named, with the outcome the server reported.
     expect(await screen.findByText(/1 not applied/)).toBeTruthy();
     expect(screen.getByText(/Otto Fischer: /)).toBeTruthy();
+  });
+
+  it("says so when the whole bulk assign is refused, not just when rows are", async () => {
+    // The per-row list reads outcomes, which only fill on success. A
+    // destination the server refused before touching any lead produces no
+    // outcomes at all, so without its own sentence the reader presses Assign
+    // and watches nothing happen.
+    stubFetch(async (url, _method, _request) => {
+      if (url.includes("/users")) {
+        return jsonResponse({
+          data: [{ id: "u-9", email: "lena@x.test", display_name: "Lena F." }],
+          page: { next_cursor: null },
+        });
+      }
+      if (url.includes("/leads/assign-bulk")) {
+        return new Response(
+          JSON.stringify({
+            title: "Unprocessable",
+            status: 422,
+            code: "owner_not_assignable",
+            detail:
+              "the owner must be an active colleague you may assign work to",
+          }),
+          {
+            status: 422,
+            headers: { "content-type": "application/problem+json" },
+          },
+        );
+      }
+      return jsonResponse({
+        data: [lead],
+        page: { next_cursor: null, has_more: false },
+      });
+    });
+    render(<LeadsScreen />);
+    await waitFor(() =>
+      expect(screen.getByText("Jonas Petersen")).toBeTruthy(),
+    );
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "Select Jonas Petersen" }),
+    );
+    await userEvent.click(screen.getByLabelText("New owner"));
+    await userEvent.click(
+      await screen.findByRole("option", { name: "Lena F." }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Assign" }));
+
+    expect(
+      await screen.findByText(/active colleague you may assign work to/),
+    ).toBeTruthy();
+  });
+
+  it("the Unassigned view asks for ownerless leads, oldest first", async () => {
+    // The queue's whole point is the lead nobody has answered yet, and what
+    // makes one urgent is how long it has waited — so this view sorts against
+    // the others, ascending by arrival.
+    const { urls } = stubFetch(async () =>
+      jsonResponse({
+        data: [lead],
+        page: { next_cursor: null, has_more: false },
+      }),
+    );
+    render(<LeadsScreen />);
+    await waitFor(() =>
+      expect(screen.getByText("Jonas Petersen")).toBeTruthy(),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Unassigned queue" }),
+    );
+
+    // Both dials in the SAME request, and NOT the New & unassigned view's
+    // request, which also asks unassigned=true and also sorts by arrival. An
+    // assertion satisfied by either one is satisfied by the wrong one: the
+    // earlier version of this test stayed green with the sort deleted.
+    await waitFor(() =>
+      expect(
+        urls.some(
+          (url) =>
+            url.includes("unassigned=true") &&
+            !url.includes("status=") &&
+            /[?&]sort=created_at(&|$)/.test(url),
+        ),
+      ).toBe(true),
+    );
+  });
+
+  it("the New & unassigned view composes both dimensions in one ask", async () => {
+    // Status is lifecycle and ownership is ownership: a New lead may already
+    // have an owner, and an older Contacted one may have none. The view that
+    // answers "new work nobody has picked up" has to say both.
+    const { urls } = stubFetch(async () =>
+      jsonResponse({
+        data: [lead],
+        page: { next_cursor: null, has_more: false },
+      }),
+    );
+    render(<LeadsScreen />);
+    await waitFor(() =>
+      expect(screen.getByText("Jonas Petersen")).toBeTruthy(),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "New & unassigned" }),
+    );
+
+    await waitFor(() =>
+      expect(
+        urls.some(
+          (url) =>
+            url.includes("unassigned=true") && url.includes("status=new"),
+        ),
+      ).toBe(true),
+    );
   });
 
   it("fetches the next cursor page when the pager steps past the loaded page", async () => {
@@ -2065,11 +2167,24 @@ describe("LeadScreen — score explain + override (P-10)", () => {
 });
 
 describe("LeadScreen — owner display + assign to me (P-11)", () => {
-  it("shows Unassigned and assigning to yourself PATCHes owner_id to the current user", async () => {
-    let patchBody: unknown = null;
-    stubFetchWithMe(async (url, method, request) => {
+  // The server refuses a PATCH against a lead nobody owns — an ownerless row is
+  // nobody's to change — so the request this asserts is the claim, not the
+  // patch. Asserting the patch is what let the 403 ship: the stub answered a
+  // request the real backend would have rejected.
+  it("shows Unassigned and taking an unowned lead yourself goes through the claim door", async () => {
+    let claimed = false;
+    let patched = false;
+    stubFetchWithMe(async (url, method) => {
+      if (method === "POST" && url.includes("/records/lead/l-1/claim")) {
+        claimed = true;
+        return jsonResponse({
+          record_type: "lead",
+          record_id: "l-1",
+          owner_id: "u-9",
+        });
+      }
       if (method === "PATCH" && url.includes("/leads/l-1")) {
-        patchBody = JSON.parse(await request.text());
+        patched = true;
         return jsonResponse({ ...lead, owner_id: "u-9", version: 2 });
       }
       if (url.includes("/users")) {
@@ -2097,8 +2212,87 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
       await screen.findByRole("option", { name: "Assign to me" }),
     );
 
-    await waitFor(() => expect(patchBody).toBeTruthy());
-    expect(patchBody).toMatchObject({ owner_id: "u-9" });
+    await waitFor(() => expect(claimed).toBe(true));
+    expect(patched).toBe(false);
+  });
+
+  // The fixture above says `writable: true`, which an ownerless lead is NOT:
+  // the write arm refuses a row nobody owns, and the server answers the
+  // read with `writable: false`. A test that only ever renders the writable
+  // fixture cannot see the control being shut, which is how the first fix for
+  // this shipped with the picker still disabled for every ordinary seat.
+  it("offers assignment on an unowned lead the reader may not otherwise write", async () => {
+    stubFetchWithMe(async (url) => {
+      if (url.includes("/leads/l-1")) {
+        return jsonResponse({ ...lead, owner_id: null, writable: false });
+      }
+      if (url.includes("/users")) {
+        return jsonResponse({
+          data: [{ id: "u-9", display_name: "Me" }],
+          page: { next_cursor: null, has_more: false },
+        });
+      }
+      return undefined;
+    }, "u-9");
+    render(<LeadScreen id="l-1" />);
+
+    await waitFor(() => expect(screen.getByText("Unassigned")).toBeTruthy());
+    const assign = await screen.findByRole("button", { name: "Assign" });
+    expect(assign.hasAttribute("disabled")).toBe(false);
+  });
+
+  // Dropping the per-row half of the write answer must not drop the other two.
+  // A read seat cannot be handed work and the server refuses its assignment, so
+  // an enabled control here would only ever fail in the reader's face.
+  it("offers no enabled assignment to a seat that may not write leads", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        if (request.url.endsWith("/v1/connectors")) {
+          return jsonResponse({ data: [] });
+        }
+        if (request.url.endsWith("/v1/me")) {
+          return jsonResponse({
+            user: { id: "u-9", display_name: "Me" },
+            roles: ["read_only"],
+            teams: [],
+            authorization: meFixture({ seat: "read", allow: LEAD_GRANTS })
+              .authorization,
+          });
+        }
+        if (request.url.includes("/leads/l-1")) {
+          return jsonResponse({ ...lead, owner_id: null, writable: false });
+        }
+        return jsonResponse({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+        });
+      }),
+    );
+    render(<LeadScreen id="l-1" />);
+
+    await waitFor(() => expect(screen.getByText("Unassigned")).toBeTruthy());
+    const assign = await screen.findByRole("button", { name: "Assign" });
+    expect(assign.hasAttribute("disabled")).toBe(true);
+  });
+
+  // Ownership lived only in the details pane, which is open by default and
+  // remembers being hidden — so for anyone who had ever collapsed it, the one
+  // control that takes a lead out of the queue sat behind a toggle they had to
+  // remember. It belongs where the reader acts.
+  it("keeps the owner reachable with the details pane collapsed", async () => {
+    stubFetchWithMe(async (url) => {
+      if (url.includes("/leads/l-1")) {
+        return jsonResponse({ ...lead, owner_id: null, writable: false });
+      }
+      return undefined;
+    }, "u-9");
+    render(<LeadScreen id="l-1" />);
+    await waitFor(() => expect(screen.getByText("Unassigned")).toBeTruthy());
+
+    // Collapse the pane the owner used to live in, then look again.
+    await userEvent.click(screen.getByRole("button", { name: "Details" }));
+    expect(screen.getByRole("button", { name: "Assign" })).toBeTruthy();
   });
 
   it("hides Assign to me when the lead is already owned by the current user", async () => {

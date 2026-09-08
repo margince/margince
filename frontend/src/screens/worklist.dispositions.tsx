@@ -14,7 +14,8 @@
 // disappearance needs its way back offered at the moment of the disappearance;
 // finding it again afterwards means knowing which of three judgements you made.
 
-import { createContext, useContext, useState } from "react";
+import { ChevronDown } from "lucide-react";
+import { createContext, useContext, useRef, useState } from "react";
 
 import { useFoldedViewport } from "../app/viewport";
 import { Button, OverflowMenu } from "../design-system/atoms";
@@ -73,6 +74,43 @@ export const SNOOZE_EVENTS = ["reply"] as const satisfies readonly Exclude<
 
 type SnoozeEvent = (typeof SNOOZE_EVENTS)[number];
 
+// WHICH answer a press sent, as opposed to the fact that one is out.
+//
+// The judgements on a row are alternatives, so a band of them needs to tell the
+// control that started a write from the ones merely standing down. The
+// disposition alone cannot: three snooze answers send the same one with
+// different moments behind it, and the moment is what the reader chose.
+type PutDownAnswer = Readonly<{
+  disposition: WorklistDisposition;
+  until?: SnoozeSpan | SnoozeEvent;
+}>;
+
+// The two states one in-flight write puts a band of alternatives into — and
+// never both on one control.
+//
+// The control the reader PRESSED goes `pending`: `Button` refuses the second
+// press through `aria-disabled` while keeping the control focusable, so the
+// reader keeps their place and the wait is announced from where they are
+// standing. Every other answer goes `disabled` — it started nothing and is
+// simply not available until this one settles, which is the same division
+// `DecisionVerbs` draws (design-system/decisioncard.tsx).
+//
+// Never both, because inside the atom `disabled` outranks `pending`: a control
+// handed the pair is natively disabled, and a browser drops focus off a control
+// that disables under the press — the exact loss `pending` exists to prevent.
+function writeState(
+  writing: PutDownAnswer | undefined,
+  answer: PutDownAnswer,
+): { pending?: boolean; disabled?: boolean } {
+  if (writing === undefined) {
+    return {};
+  }
+  return writing.disposition === answer.disposition &&
+    writing.until === answer.until
+    ? { pending: true }
+    : { disabled: true };
+}
+
 // Which undo REACH each judgement takes back.
 //
 // `not_sales` bound the whole workspace, so its undo has to say `thread` or it
@@ -127,6 +165,21 @@ export function usePutDown(item: WorklistItem) {
   const set = useSetDisposition();
   const clear = useClearDisposition();
   const offered = item.dispositions ?? [];
+  // The answer the last press sent. Read only through `writing` below, which is
+  // why nothing clears it: an answer that is not in flight is not consulted,
+  // and every press that puts one in flight records it first.
+  const [pressed, setPressed] = useState<PutDownAnswer | undefined>(undefined);
+  // Whether a write from this row is out, read SYNCHRONOUSLY and at the press.
+  //
+  // `set.isPending` answers the same question for the DRAWING, and has to —
+  // changing a ref renders nothing. It cannot guard the press, because a
+  // handler belongs to the render that made it: `SwipeRow` keeps the staged
+  // action in its own state, so a confirm can run a `put` whose closure was
+  // built before any write started and whose `isPending` is false while a
+  // request is in the air. Two contradictory judgements reached the server for
+  // one message that way, and two undo toasts followed, each offering to clear
+  // what the other had just written.
+  const writeIsOut = useRef(false);
   const put = (
     disposition: WorklistDisposition,
     // A span or an event, never both: the two are alternative answers to "come
@@ -134,8 +187,16 @@ export function usePutDown(item: WorklistItem) {
     // wait for.
     until?: SnoozeSpan | SnoozeEvent,
   ) => {
+    // ONE write per row at a time, held here rather than at each control: the
+    // verbs refuse their own second press, and a swipe confirm does not go
+    // through them.
+    if (writeIsOut.current) {
+      return;
+    }
     const event = typeof until === "string" ? until : undefined;
     const days = typeof until === "number" ? until : undefined;
+    writeIsOut.current = true;
+    setPressed({ disposition, until });
     set.mutate(
       {
         activityId: item.id,
@@ -171,10 +232,24 @@ export function usePutDown(item: WorklistItem) {
           }),
         onError: () =>
           toast.show(t("worklist.disposition.failed"), { mark: false }),
+        // Settled either way, so a refusal releases the row rather than leaving
+        // it unanswerable until the reader reloads.
+        onSettled: () => {
+          writeIsOut.current = false;
+        },
       },
     );
   };
-  return { offered, put, pending: set.isPending, t, locale };
+  return {
+    offered,
+    put,
+    // The answer whose write is out, or nothing while none is. Not a bare
+    // boolean: every control in the band reads the same value, and what each
+    // one needs to know is whether the write out is ITS OWN.
+    writing: set.isPending ? pressed : undefined,
+    t,
+    locale,
+  };
 }
 
 // The whole row, answerable with the thumb where there is no width for verbs.
@@ -268,7 +343,7 @@ type PutDown = ReturnType<typeof usePutDown>;
 function PutDownMenu({
   offered,
   put,
-  pending,
+  writing,
   t,
   locale,
 }: Readonly<{
@@ -279,7 +354,7 @@ function PutDownMenu({
     disposition: WorklistDisposition,
     until?: SnoozeSpan | SnoozeEvent,
   ) => void;
-  pending: boolean;
+  writing: PutDownAnswer | undefined;
   t: T;
   locale: Locale;
 }>) {
@@ -290,21 +365,17 @@ function PutDownMenu({
           key={disposition}
           small
           variant="ghost"
-          // PENDING, never disabled. A disabled control leaves the tab order,
-          // so a keyboard reader who presses one is dropped to the body — the
-          // exact failure this menu exists to fix. The atom refuses the press
-          // through aria-disabled and keeps the control reachable.
-          pending={pending}
+          {...writeState(writing, { disposition })}
           onClick={() => put(disposition)}
         >
           {t(`worklist.disposition.verb.${disposition}` as const)}
         </Button>
       ))}
       {/* The LONGER SPANS, as lines of their own rather than behind a second
-          control. Above the fold they live in a Popover beside the snooze verb,
-          which keeps the common case one press; a popover inside a menu is a
-          second layer over a surface already floating, and a keyboard reader
-          would open two things to say "next week".
+          control. Above the fold they live in the caret half of the snooze
+          control, which keeps the common case one press; a popover inside a
+          menu is a second layer over a surface already floating, and a keyboard
+          reader would open two things to say "next week".
           The verb above still sends the default day, so the fast path is
           unchanged and these are the answers it cannot give. Each carries its
           own sentence — "Snooze for 3 days" — because a bare "3 days" standing
@@ -315,7 +386,7 @@ function PutDownMenu({
             key={days}
             small
             variant="ghost"
-            pending={pending}
+            {...writeState(writing, { disposition: "snooze", until: days })}
             onClick={() => put("snooze", days)}
           >
             {translatePlural(
@@ -335,7 +406,7 @@ function PutDownMenu({
             key={event}
             small
             variant="ghost"
-            pending={pending}
+            {...writeState(writing, { disposition: "snooze", until: event })}
             onClick={() => put("snooze", event)}
           >
             {t(`worklist.disposition.snoozeUntil.${event}` as const)}
@@ -371,7 +442,7 @@ export function DispositionVerbs({ item }: Readonly<{ item: WorklistItem }>) {
   // registration and never a request.
   const shared = useContext(PutDownContext);
   const own = usePutDown(item);
-  const { offered, put, pending, t, locale } = shared ?? own;
+  const { offered, put, writing, t, locale } = shared ?? own;
   if (offered.length === 0) {
     return null;
   }
@@ -383,36 +454,43 @@ export function DispositionVerbs({ item }: Readonly<{ item: WorklistItem }>) {
       <PutDownMenu
         offered={offered}
         put={put}
-        pending={pending}
+        writing={writing}
         t={t}
         locale={locale}
       />
     );
   }
+  // A FRAGMENT, not a box. These verbs are secondaries in the row's one
+  // ActionRow, and a wrapper of their own would be a second group inside the
+  // leading one — spaced by its own rule, wrapping on its own terms, and
+  // holding the snooze apart from the "Open" it reads beside.
   return (
-    <div className="worklist-row-dispositions">
-      {offered.map((disposition) => (
-        <Button
-          key={disposition}
-          small
-          variant="ghost"
-          disabled={pending}
-          onClick={() => put(disposition)}
-        >
-          {t(`worklist.disposition.verb.${disposition}` as const)}
-        </Button>
-      ))}
-      {/* The spans, BESIDE the snooze verb rather than replacing it. A rep
-          reaching for "not today" most often means tomorrow, and making them
-          choose a duration every time would charge the common case for the
-          rare one. */}
-      {offered.includes("snooze") && (
-        <SnoozeSpans
-          pending={pending}
-          onPick={(until) => put("snooze", until)}
-        />
+    <>
+      {offered.map((disposition) =>
+        // The snooze is the one judgement with a SECOND answer behind it: the
+        // press means tomorrow and the caret means "not tomorrow". One control
+        // in two halves rather than two controls, because a caret standing on
+        // its own beside the verb reads as a verb of its own.
+        disposition === "snooze" ? (
+          <SnoozeSplit
+            key={disposition}
+            writing={writing}
+            onSnooze={() => put("snooze")}
+            onPick={(until) => put("snooze", until)}
+          />
+        ) : (
+          <Button
+            key={disposition}
+            small
+            variant="ghost"
+            {...writeState(writing, { disposition })}
+            onClick={() => put(disposition)}
+          >
+            {t(`worklist.disposition.verb.${disposition}` as const)}
+          </Button>
+        ),
       )}
-    </div>
+    </>
   );
 }
 
@@ -448,58 +526,112 @@ export function swipeActions(
 }
 
 /**
- * How long to put a row down for, when a day is not the answer.
+ * Putting a row down, and for how long — ONE control in two halves.
  *
- * The server has always taken any future instant; this file was the thing that
- * only ever sent tomorrow. A rep who knows a customer is away all week pressed
- * the same button seven mornings running, and each press was a row that came
- * back and a count that stayed wrong.
+ * The press is the common case and costs nothing it did not cost before: a rep
+ * reaching for "not today" most often means tomorrow, and charging every one of
+ * them a duration to buy the rare case is the trade this refuses. The caret is
+ * the rare case, and it is the same physical control rather than a second one
+ * standing beside the verb — the split's hairline seam is what says "another
+ * way of doing THIS" where a gap would have said "another verb".
  *
- * A Popover rather than a row of buttons: three more controls on every snoozable
- * row is three more things to read past on a page whose whole argument is that
- * it can be worked to the bottom.
+ * The same `.actions-split` the compose dialog's send menu is built from, and
+ * the same `Popover variant` its caret uses; the panel's chrome is the
+ * popover's own.
+ *
+ * The lines inside are SENTENCES — "Snooze for 3 days" — in the folded menu's
+ * own spelling, because a bare "3 days" standing under a caret is a fragment
+ * whose subject the reader has to reconstruct from the button they pressed.
+ * They read as lines of a list rather than as a stack of pills: what the reader
+ * is doing here is choosing among four answers to one question.
  */
-function SnoozeSpans({
-  pending,
+function SnoozeSplit({
+  writing,
+  onSnooze,
   onPick,
 }: Readonly<{
-  pending: boolean;
+  writing: PutDownAnswer | undefined;
+  onSnooze: () => void;
   onPick: (until: SnoozeSpan | SnoozeEvent) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
   return (
-    <Popover
-      label={t("worklist.disposition.snoozeFor")}
-      className="link-button"
-    >
-      <div className="worklist-snooze-spans">
-        {SNOOZE_SPANS.map((days) => (
-          <Button
-            key={days}
-            small
-            variant="ghost"
-            disabled={pending}
-            onClick={() => onPick(days)}
-          >
-            {translatePlural(locale, "worklist.disposition.snoozeDays", days, {
-              value: formatNumber(days, locale),
-            })}
-          </Button>
-        ))}
-        {SNOOZE_EVENTS.map((event) => (
-          <Button
-            key={event}
-            small
-            variant="ghost"
-            disabled={pending}
-            onClick={() => onPick(event)}
-          >
-            {t(`worklist.disposition.snoozeUntil.${event}` as const)}
-          </Button>
-        ))}
-      </div>
-    </Popover>
+    <span className="actions-split">
+      <Button
+        small
+        variant="ghost"
+        // The default day is an answer of its own, so it is `pending` when the
+        // press was this half's and `disabled` when it was one of the lines' —
+        // the two send the same span and are still two presses, and only the
+        // one the reader made may claim to be mid-write.
+        {...writeState(writing, { disposition: "snooze" })}
+        onClick={onSnooze}
+      >
+        {t("worklist.disposition.verb.snooze")}
+      </Button>
+      <Popover
+        variant="ghost"
+        // The small rung, which `Popover` has no prop for and the split cannot
+        // do without: `.actions-split` stretches its halves to the taller one,
+        // so a default-height caret would draw a 40px control against the 32px
+        // verbs on either side of it. The design system's own size class rather
+        // than a height rule of this screen's, which would be a second author
+        // of one geometry.
+        className="btn-sm"
+        // Refused while ANY answer on this row is being written, its own lines
+        // included: the caret starts no write, so it is the sibling case rather
+        // than the pressed one, and a chooser opened over an in-flight write
+        // reveals four lines that all refuse the press. A panel already open
+        // when the write starts stays open, because the line the reader pressed
+        // is inside it holding their focus — `Popover.disabled` blocks the
+        // opening and never the closing.
+        disabled={writing !== undefined}
+        label={
+          <>
+            <ChevronDown aria-hidden="true" />
+            {/* The caret's whole name, and the one the verb beside it cannot
+                carry: a glyph announces as nothing. */}
+            <span className="sr-only">
+              {t("worklist.disposition.snoozeFor")}
+            </span>
+          </>
+        }
+      >
+        <div className="worklist-snooze-spans">
+          {SNOOZE_SPANS.map((days) => (
+            <Button
+              key={days}
+              small
+              variant="ghost"
+              {...writeState(writing, { disposition: "snooze", until: days })}
+              onClick={() => onPick(days)}
+            >
+              {translatePlural(
+                locale,
+                "worklist.disposition.snoozeForDays",
+                days,
+                { value: formatNumber(days, locale) },
+              )}
+            </Button>
+          ))}
+          {/* The event answers, after the spans: a rep opening this most often
+              still means a duration, and what these add is the case a duration
+              cannot state. */}
+          {SNOOZE_EVENTS.map((event) => (
+            <Button
+              key={event}
+              small
+              variant="ghost"
+              {...writeState(writing, { disposition: "snooze", until: event })}
+              onClick={() => onPick(event)}
+            >
+              {t(`worklist.disposition.snoozeUntil.${event}` as const)}
+            </Button>
+          ))}
+        </div>
+      </Popover>
+    </span>
   );
 }
 

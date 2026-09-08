@@ -25,7 +25,7 @@ Read before touching a stylesheet. Each gate is exact, not fuzzy.
 
 | Gate | What it holds | What the restyle must do |
 |---|---|---|
-| `tokens.test.ts` | Pins ~40 token values (`canonical`), the surface-luminance ladders in both themes, AA contrast of six inks on five grounds, chip composites, `--accent` = `#0b7a53`, `--bgRail` = `#13231d` and absent from dark, the dark `@media` arm byte-equal to `[data-theme="dark"]`, `brand.css` derivation-only | Change `tokens.css` and the `canonical` table in one commit; keep both ladders monotone; re-run the contrast math on the new grounds; keep the two dark arms identical; keep `--bgRail` declared (the rail stops using it, the pin stays) |
+| `tokens.test.ts` | Pins ~40 token values (`canonical`), the surface-luminance ladders in both themes, AA contrast of five inks on five grounds, chip composites, `--accent` = `#0b7a53`, `--bgRail` = `#13231d` and absent from dark, the dark `@media` arm byte-equal to `[data-theme="dark"]`, `brand.css` derivation-only | Change `tokens.css` and the `canonical` table in one commit; keep both ladders monotone; re-run the contrast math on the new grounds; keep the two dark arms identical; keep `--bgRail` declared (the rail stops using it, the pin stays) |
 | `check-ds-purity.sh` + `conformance.test.ts` | No colour literal outside `tokens.css` (one exemption: `provider-mark.tsx`) | Every new colour is a token; glows and panes included |
 | `check-font-lock.sh` + `conformance.test.ts` | Exactly three families: Outfit, Geist, Geist Mono (Outfit kept by decision after the mock's display face was tried in Step 1) | Change the family in **four** places in one PR: the script's strip list, `allowedFamilies` in `conformance.test.ts`, `--f-*` in `tokens.css` (pinned), the Google Fonts link in `index.html` |
 | `check-ds-spacing.sh` | No new raw px in padding/margin/gap under `screens/` and `app/` | Screen sheets use `--space-*`; design-system sheets may keep optical px |
@@ -60,9 +60,9 @@ least risky once the tokens hold.
    `.06`/`.10` light and `.10`/`.20` dark). Re-run the luminance ladder and
    the contrast math; the ladder order is asserted, so pick values that keep
    it, not values that look right in isolation.
-2. **Inks.** `--textPrimary/--textContent/--textSecondary/--textTertiary/
-   --textMuted/--textMeta` take the `--ink…--ink4` values from `DESIGN.md`
-   §3. All six must clear 4.5:1 on all five grounds in both themes.
+2. **Inks.** `--textPrimary/--textContent/--textTertiary/--textMuted/
+   --textMeta` take the `--ink…--ink4` values from `DESIGN.md`
+   §3. All five must clear 4.5:1 on all five grounds in both themes.
 3. **Accent and agent.** `--accent` stays `#0b7a53` (pinned). `--ai` family
    stays; add `--aiBg` (the row tint) and `--aiLine` if the existing
    `--aiLight`/`--aiMed` do not match the mock's values, or map the mock to
@@ -127,7 +127,7 @@ unless a primitive is added (`variant="agent"` is a prop, not a primitive).
 ### Step 4 — The shell (`shell.css`, `shell.tsx`, `topbar.css`, `agentrail.css`, `agent-edge.css`, `navlevel.tsx`)
 
 1. **Ground and glows.** `.app` paints `--bgPage` with the two radial glows
-   (`--glowA` top-left, `--glowB` bottom-right) as a background, not an
+   (`--glowA` top-left, `--glowB` top-right) as a background, not an
    element and not an animation.
 2. **Rail.** Glass (`--bgSidebar` + blur) over the glow, a hairline on the
    right, no dark ground. Collapsed stays **64px** (the 44px touch targets

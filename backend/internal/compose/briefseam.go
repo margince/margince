@@ -97,6 +97,7 @@ func briefRunToTool(run briefs.BriefRun) agents.ReadBriefResult {
 		// it in a shape a model would read as a real morning.
 		PreviousLocalDay: previousDayForTool(run.PreviousDay),
 		CandidateCount:   run.CandidateCount, Items: items,
+		FactorsOmitted: append(make([]string, 0, len(run.FactorsOmitted)), run.FactorsOmitted...),
 	}
 }
 

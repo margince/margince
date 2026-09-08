@@ -5,8 +5,6 @@
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  font-size: var(--fs-sm);
-  color: var(--textSecondary);
   padding: var(--space-2) 0;
 }
 
@@ -51,7 +49,7 @@
 }
 
 .audit-entity {
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 /* The timestamp is the reading an audit trail exists to be checked against, at

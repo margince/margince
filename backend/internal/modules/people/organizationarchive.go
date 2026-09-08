@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 // RefuseArchiveOrganization answers every refusal ArchiveOrganization would
@@ -72,73 +73,94 @@ func (s *Store) ArchiveOrganization(
 		}
 		// The precondition, under the row lock the write takes: a caller that
 		// asked for this write only while nobody had touched the record gets
-		// that answered HERE rather than in a read that already committed.
+		// that answered HERE rather than in a read that already committed. It
+		// stays with THIS verb rather than moving into archiveOrganizationTx:
+		// it is a condition the caller attached to their request, and the
+		// rejection next door attaches none.
 		if err := refuseIfHumanTouched(ctx, tx, "organization", id.UUID, options); err != nil {
 			return err
 		}
-		if err := refuseIfAnchor(ctx, tx, id, "id", "it cannot be archived. Archive a different company, or edit this one on the company page"); err != nil {
-			return err
-		}
-		// The cascade below takes this company off every project it is on. A
-		// project that would be left with none is refused rather than stranded.
-		if err := refuseIfSoleCompanyOnALiveProject(ctx, tx, id); err != nil {
-			return err
-		}
-		if _, err := readOrganization(ctx, tx, id, storekit.LiveOnly, active); err != nil {
-			return err
-		}
-
-		now := time.Now().UTC()
-		// The COMPANY row rides the guarded patch, so an archive a human
-		// released against version 4 lands on version 4 or answers skew.
-		p := storekit.NewPatch()
-		p.Set("archived_at", nil, now)
-		if err := p.ApplyGuarded(ctx, tx, "organization", id.UUID, ifVersion); err != nil {
-			return fmt.Errorf("archive the account: %w", err)
-		}
-		// Everything that answers a list on the account's behalf retires with
-		// it. Every statement here covers a row somebody would otherwise still
-		// find: a live child under an archived parent keeps feeding the list
-		// its own table serves, which is how an archived account goes on
-		// appearing as a partner. They stay plain statements because each is a
-		// cascade off the row above rather than a second decision, and that
-		// row's guard serializes all of them.
-		for _, stmt := range []string{
-			`UPDATE organization_domain SET archived_at = $2 WHERE organization_id = $1 AND archived_at IS NULL`,
-			// ADR-0079's partner invariant runs over LIVE type rows, so the
-			// types retire with their parent.
-			`UPDATE organization_relationship_type SET archived_at = $2 WHERE organization_id = $1 AND archived_at IS NULL`,
-			// The partner PROGRAM row goes with the type that admits it. Left
-			// live, the extension and its type row disagree: the account is no
-			// longer a partner by relationship type while partner.go's own
-			// live-row reads still answer for it.
-			`UPDATE partner SET archived_at = $2 WHERE organization_id = $1 AND archived_at IS NULL`,
-			`UPDATE relationship SET archived_at = $2 WHERE (organization_id = $1 OR counterparty_org_id = $1) AND archived_at IS NULL`,
-		} {
-			if _, err := tx.Exec(ctx, stmt, id, now); err != nil {
-				return fmt.Errorf("retire what hangs off the account: %w", err)
-			}
-		}
-		if _, err := tx.Exec(ctx,
-			`DELETE FROM list_member WHERE entity_type = 'organization' AND entity_id = $1`, id); err != nil {
-			return fmt.Errorf("drop the account's list memberships: %w", err)
-		}
-		if _, err := tx.Exec(ctx,
-			`DELETE FROM taggable WHERE entity_type = 'organization' AND entity_id = $1`, id); err != nil {
-			return fmt.Errorf("drop the account's tags: %w", err)
-		}
-
-		auditID, err := storekit.Audit(ctx, tx, "archive", "organization", id.UUID, nil, nil)
-		if err != nil {
-			return err
-		}
-		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventOrganizationArchived{}); err != nil {
-			return err
-		}
-		out, err = readOrganization(ctx, tx, id, storekit.IncludeArchived, active)
+		var err error
+		out, err = archiveOrganizationTx(ctx, tx, id, ifVersion, active)
 		return err
 	})
 	return out, err
+}
+
+// archiveOrganizationTx is the archive itself, on the caller's transaction: the
+// refusals, the guarded patch, the cascade, the audit and the event.
+//
+// It exists because rejecting a company (organizationreject.go) is this archive
+// AND a standing domain refusal in one commit. Spelled twice, the second copy
+// would be the one that forgets a cascade table — and a live child under an
+// archived parent keeps answering the list its own table feeds, which is
+// exactly the failure the cascade below exists to prevent.
+//
+// The authority gate is NOT here: it is the caller's, because a composite verb
+// asks for more than this one does.
+func archiveOrganizationTx(
+	ctx context.Context, tx pgx.Tx, id ids.OrganizationID, ifVersion *int64, active []fieldcatalog.Column,
+) (crmcontracts.Organization, error) {
+	if err := refuseIfAnchor(ctx, tx, id, "id", "it cannot be archived. Archive a different company, or edit this one on the company page"); err != nil {
+		return crmcontracts.Organization{}, err
+	}
+	// The cascade below takes this company off every project it is on. A
+	// project that would be left with none is refused rather than stranded.
+	if err := refuseIfSoleCompanyOnALiveProject(ctx, tx, id); err != nil {
+		return crmcontracts.Organization{}, err
+	}
+	if _, err := readOrganization(ctx, tx, id, storekit.LiveOnly, active); err != nil {
+		return crmcontracts.Organization{}, err
+	}
+
+	now := time.Now().UTC()
+	// The COMPANY row rides the guarded patch, so an archive a human
+	// released against version 4 lands on version 4 or answers skew.
+	p := storekit.NewPatch()
+	p.Set("archived_at", nil, now)
+	if err := p.ApplyGuarded(ctx, tx, "organization", id.UUID, ifVersion); err != nil {
+		return crmcontracts.Organization{}, fmt.Errorf("archive the account: %w", err)
+	}
+	// Everything that answers a list on the account's behalf retires with
+	// it. Every statement here covers a row somebody would otherwise still
+	// find: a live child under an archived parent keeps feeding the list
+	// its own table serves, which is how an archived account goes on
+	// appearing as a partner. They stay plain statements because each is a
+	// cascade off the row above rather than a second decision, and that
+	// row's guard serializes all of them.
+	for _, stmt := range []string{
+		`UPDATE organization_domain SET archived_at = $2 WHERE organization_id = $1 AND archived_at IS NULL`,
+		// ADR-0079's partner invariant runs over LIVE type rows, so the
+		// types retire with their parent.
+		`UPDATE organization_relationship_type SET archived_at = $2 WHERE organization_id = $1 AND archived_at IS NULL`,
+		// The partner PROGRAM row goes with the type that admits it. Left
+		// live, the extension and its type row disagree: the account is no
+		// longer a partner by relationship type while partner.go's own
+		// live-row reads still answer for it.
+		`UPDATE partner SET archived_at = $2 WHERE organization_id = $1 AND archived_at IS NULL`,
+		`UPDATE relationship SET archived_at = $2 WHERE (organization_id = $1 OR counterparty_org_id = $1) AND archived_at IS NULL`,
+	} {
+		if _, err := tx.Exec(ctx, stmt, id, now); err != nil {
+			return crmcontracts.Organization{}, fmt.Errorf("retire what hangs off the account: %w", err)
+		}
+	}
+	if _, err := tx.Exec(ctx,
+		`DELETE FROM list_member WHERE entity_type = 'organization' AND entity_id = $1`, id); err != nil {
+		return crmcontracts.Organization{}, fmt.Errorf("drop the account's list memberships: %w", err)
+	}
+	if _, err := tx.Exec(ctx,
+		`DELETE FROM taggable WHERE entity_type = 'organization' AND entity_id = $1`, id); err != nil {
+		return crmcontracts.Organization{}, fmt.Errorf("drop the account's tags: %w", err)
+	}
+
+	auditID, err := storekit.Audit(ctx, tx, "archive", "organization", id.UUID, nil, nil)
+	if err != nil {
+		return crmcontracts.Organization{}, err
+	}
+	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventOrganizationArchived{}); err != nil {
+		return crmcontracts.Organization{}, err
+	}
+	return readOrganization(ctx, tx, id, storekit.IncludeArchived, active)
 }
 
 const orgColumns = `id, display_name, legal_name, description, industry, size_band, owner_id, visibility,

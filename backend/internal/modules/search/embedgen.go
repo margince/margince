@@ -31,12 +31,17 @@ func NewEmbedGen(store *Store, embedder Embedder) *EmbedGen {
 // pendingSources (the per-id and set-form views of the same source columns)
 // key off the same identifiers rather than each repeating the literal.
 const (
-	entityPerson        = "person"
-	entityOrganization  = "organization"
-	entityDeal          = "deal"
-	entityLead          = "lead"
-	entityActivity      = "activity"
-	entityProject       = "project"
+	entityPerson       = "person"
+	entityOrganization = "organization"
+	entityDeal         = "deal"
+	entityLead         = "lead"
+	entityActivity     = "activity"
+	entityProject      = "project"
+	// Keyword-searchable but NOT embeddable, and for a different reason than
+	// entityTag below: these two hold plenty of prose, but
+	// `embedding.entity_type` will not accept them (see embedText). Named
+	// here with the rest because branches.go and queryfields.go key off the
+	// same identifiers.
 	entityProduct       = "product"
 	entityOfferTemplate = "offer_template"
 	// Not embeddable — a word has no prose to embed — but named here with the
@@ -62,12 +67,28 @@ var embedText = map[string]string{
 	// at all, and audiencerescope drops the vector when a row narrows.
 	entityActivity: `SELECT concat_ws(' ', subject, body) FROM activity WHERE id = $1 AND archived_at IS NULL AND audience = 'workspace'`,
 	entityProject:  `SELECT concat_ws(' ', name, key, description) FROM project WHERE id = $1 AND archived_at IS NULL`,
-	// Not narrowed on `active`: the lexical branch indexes a discontinued
-	// product too, and a vector lane that dropped it would answer the same
-	// question two different ways depending on which lane ranked first.
-	entityProduct: `SELECT concat_ws(' ', name, sku, description) FROM product WHERE id = $1 AND archived_at IS NULL`,
-	// One column, because one column is all this table holds as prose.
-	entityOfferTemplate: `SELECT name FROM offer_template WHERE id = $1 AND archived_at IS NULL`,
+	// NO product or offer_template ENTRY, and adding one back needs a schema
+	// change first, not just a line here. `embedding.entity_type` carries a
+	// CHECK pinned to datasource.EntityType by
+	// gates/enumsync_test.go's enumBindings, and neither catalog table is in
+	// that vocabulary — so an UpsertEmbedding for one is rejected by the
+	// database, every time. It is not a degraded lane: it is a write that
+	// cannot land.
+	//
+	// The cost of listing them anyway was paid by embed_drift_sweep, which
+	// re-selects whatever has no embedding row: the catalog rows are
+	// permanently pending, so every pass embedded one, was refused by the
+	// CHECK, and returned the error — abandoning the rest of that pass. Map
+	// order is randomised, so each pass healed an arbitrary prefix of the
+	// other types and then died. A per-pass Gemini embedding call was spent
+	// on the row that could never be stored.
+	//
+	// Making the catalog vector-searchable is therefore a domain-vocabulary
+	// decision — EntityTypes() is enumerated by the agent command subjects,
+	// the generated tool schemas and the overlay vocabulary, and a gate
+	// requires the record provider to route every member — and not this
+	// module's to take alone. The lexical branch is unaffected either way:
+	// branches.go indexes both tables and keeps them keyword-searchable.
 }
 
 // HandleEvent maintains embeddings for created/updated/captured

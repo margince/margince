@@ -24,9 +24,10 @@ Review history is in `REVIEW-v1.md`. Demo detail is in `NOTES-SCOPE.md`.
 > [#659](https://github.com/margince/margince/pull/659)). Corrections are made where the claim
 > was, not appended elsewhere; where a correction came from a demonstrated failure the demonstration is
 > named. **Where the ledger and the code disagreed, the code won.** The evidence, in order of
-> authority: the code; `.superpowers/sdd/extension-tier-slices/progress.md` (the ledger — every task,
-> finding, ruling and deferral, in order); then `REVIEW-fable.md`, `REVIEW-codex.md`,
-> `UAT-EVIDENCE-RERUN.md` and the `task-*-report.md` files, all in the same directory.
+> authority: the code; a working ledger of every task, finding, ruling and
+> deferral, in order, kept outside this tree during the build and not shipped
+> with it; then `REVIEW-fable.md`, `REVIEW-codex.md`, `UAT-EVIDENCE-RERUN.md`
+> and the `task-*-report.md` files, all in the same directory as this one.
 >
 > One thing not to lose in the corrections: the four load-bearing properties this design was built
 > around — additive composition, the inert declaration, validate-then-apply, and the empty-tree

@@ -47,6 +47,11 @@ type BriefRanking struct {
 	// the USD in force by then.
 	RevenueNormCurrency string
 	AsOf                time.Time
+	// FactorsOmitted names the ranking factors this run could not read. Empty
+	// is the ordinary answer and is not the same as a factor that scored zero:
+	// a floored factor the reader is not told about makes every deal rank lower
+	// than it is, with nothing marking why.
+	FactorsOmitted []string
 }
 
 // briefStrengthSource is the compose-injected §4 warmth seam —
@@ -99,6 +104,10 @@ type briefFacts struct {
 	// revenueNormCurrency is what that value is in.
 	revenueNorm         int64
 	revenueNormCurrency string
+	// seatsReadable is whether the caller holds the edge grant the stakeholder
+	// read needs. False is NOT "this rep's deals have no stakeholders": it
+	// floors the warmth factor for every deal, which reorders the queue.
+	seatsReadable bool
 }
 
 // gather reads one transaction's worth of ranking facts.
@@ -134,7 +143,8 @@ func (e *BriefEngine) gather(ctx context.Context, now time.Time, userID ids.UUID
 		if err := briefCandidates(ctx, tx, userID, now, base, out.facts, &out.order); err != nil {
 			return err
 		}
-		if err := briefEvidenceRows(ctx, tx, lastView, out.facts, out.order, out.stakeholders); err != nil {
+		out.seatsReadable, err = briefEvidenceRows(ctx, tx, lastView, out.facts, out.order, out.stakeholders)
+		if err != nil {
 			return err
 		}
 		// Why each returning deal is back, for the whole candidate set at once.
@@ -171,7 +181,8 @@ func (e *BriefEngine) Rank(ctx context.Context, now time.Time) (BriefRanking, er
 	stakeholders := gathered.stakeholders
 	lineage := gathered.lineage
 
-	if err := e.resolveWarmth(ctx, now, facts, stakeholders); err != nil {
+	warmthReadable, err := e.resolveWarmth(ctx, now, facts, stakeholders)
+	if err != nil {
 		return BriefRanking{}, err
 	}
 
@@ -216,6 +227,7 @@ func (e *BriefEngine) Rank(ctx context.Context, now time.Time) (BriefRanking, er
 		RevenueNormMinor:    revenueNorm,
 		RevenueNormCurrency: gathered.revenueNormCurrency,
 		AsOf:                now,
+		FactorsOmitted:      omittedFactors(gathered, warmthReadable),
 	}, nil
 }
 
@@ -352,16 +364,22 @@ func briefCandidates(ctx context.Context, tx pgx.Tx, userID ids.UUID, now time.T
 // briefEvidenceRows gathers each candidate's overnight activities (the
 // momentum evidence) and stakeholder persons, after the candidate rows
 // are drained (one connection, one active query).
-func briefEvidenceRows(ctx context.Context, tx pgx.Tx, lastView *time.Time, facts map[ids.UUID]briefDealFacts, order []ids.UUID, stakeholders map[ids.UUID][]ids.UUID) error {
+//
+// It reports whether the seat evidence was READABLE, because that is not the
+// same as a deal having no stakeholders. A refused caller gets a floored warmth
+// factor on every deal, which reorders the queue; the caller has to be told, or
+// they read an order that is wrong rather than one that is short.
+func briefEvidenceRows(
+	ctx context.Context, tx pgx.Tx, lastView *time.Time,
+	facts map[ids.UUID]briefDealFacts, order []ids.UUID, stakeholders map[ids.UUID][]ids.UUID,
+) (seatsReadable bool, err error) {
 	// The seat edge's admission is resolved ONCE, ahead of the loop: it is a
 	// property of the caller, not of the deal being read, and asking per deal
 	// would put a grant lookup inside a per-row loop for an answer that cannot
-	// change. A refused caller runs no stakeholder query at all — the brief
-	// simply carries no seat evidence, which is the same shape as a deal with
-	// no stakeholders on it.
+	// change. A refused caller runs no stakeholder query at all.
 	edgeArgs, edgeBound, mayReadSeats, err := seatEvidenceBound(ctx)
 	if err != nil {
-		return err
+		return false, err
 	}
 	for _, dealID := range order {
 		f := facts[dealID]
@@ -373,7 +391,7 @@ func briefEvidenceRows(ctx context.Context, tx pgx.Tx, lastView *time.Time, fact
 			ORDER BY a.occurred_at DESC, a.id DESC
 			LIMIT $3`, dealID, lastView, briefOvernightEvidenceCap))
 		if err != nil {
-			return err
+			return false, err
 		}
 		f.overnightActivityIDs = overnight
 		facts[dealID] = f
@@ -387,72 +405,11 @@ func briefEvidenceRows(ctx context.Context, tx pgx.Tx, lastView *time.Time, fact
 			  AND (%s)
 			ORDER BY r.person_id`, edgeBound), append([]any{dealID}, edgeArgs...)...))
 		if err != nil {
-			return err
+			return false, err
 		}
 		stakeholders[dealID] = persons
 	}
-	return nil
-}
-
-// seatEvidenceBound resolves the seat edge's admission for the stakeholder
-// evidence read: the arguments its clause binds, the clause itself, and whether
-// the caller may run the read at all.
-//
-// The registrar returns positions offset by one because the statement it feeds
-// already spends $1 on the deal id. Getting that wrong would bind the deal id
-// to a scope predicate, which is why the offset lives here with the statement
-// it belongs to rather than at the call site.
-func seatEvidenceBound(ctx context.Context) (args []any, clause string, admitted bool, err error) {
-	clause, err = auth.EdgeReadScope(ctx, "r", func(v any) int {
-		args = append(args, v)
-		return len(args) + 1
-	})
-	if errors.Is(err, apperrors.ErrPermissionDenied) {
-		return nil, "", false, nil
-	}
-	if err != nil {
-		return nil, "", false, err
-	}
-	if clause == "" {
-		clause = "TRUE"
-	}
-	return args, clause, true, nil
-}
-
-// resolveWarmth fills each deal's warmth from its strongest visible
-// stakeholder through the injected §4 seam. A stakeholder outside the
-// caller's row scope — or a caller with no person grant at all —
-// contributes nothing: the warmth factor floors instead of out-seeing
-// the people list.
-func (e *BriefEngine) resolveWarmth(ctx context.Context, now time.Time, facts map[ids.UUID]briefDealFacts, stakeholders map[ids.UUID][]ids.UUID) error {
-	cache := map[ids.UUID]people.RelationshipStrength{}
-	for dealID, persons := range stakeholders {
-		f := facts[dealID]
-		for _, personID := range persons {
-			st, ok := cache[personID]
-			if !ok {
-				var err error
-				st, err = e.strength.PersonStrength(ctx, ids.From[ids.PersonKind](personID), now)
-				switch {
-				case errors.Is(err, apperrors.ErrNotFound), errors.Is(err, apperrors.ErrPermissionDenied):
-					// Invisible to this caller: no strength to disclose.
-					st = people.RelationshipStrength{}
-				case err != nil:
-					return err
-				}
-				cache[personID] = st
-			}
-			if st.Strength > f.warmthStrength {
-				f.warmthStrength = st.Strength
-				f.warmthEvidence = make([]ids.UUID, len(st.ContributingIDs))
-				for i, activityID := range st.ContributingIDs {
-					f.warmthEvidence[i] = activityID.UUID
-				}
-			}
-		}
-		facts[dealID] = f
-	}
-	return nil
+	return mayReadSeats, nil
 }
 
 // collectIDList drains a single-uuid-column result set (the compose

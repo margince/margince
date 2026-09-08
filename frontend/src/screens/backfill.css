@@ -58,7 +58,7 @@
    are honest states, not errors. */
 .backfill-unsupported,
 .backfill-stale {
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 /* The panel's own trailing verb — skip, or cancel a live run. It used to be a
@@ -123,8 +123,8 @@
   block-size: 32px;
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--bgCard);
-  color: var(--textSecondary);
+  background: var(--bgChip);
+  color: var(--textChip);
   transition:
     background-color var(--dur-move) var(--ease-out),
     color var(--dur-move) var(--ease-out),
@@ -203,7 +203,7 @@
   font-weight: var(--fw-semibold);
   letter-spacing: var(--tracking-eyebrow);
   text-transform: uppercase;
-  /* textContent, not textSecondary — clears AA over the done-state green tint. */
+  /* textContent, not textMeta — clears AA over the done-state green tint. */
   color: var(--textContent);
 }
 
@@ -214,7 +214,7 @@
   margin-top: var(--space-2);
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--bgCard);
+  background: var(--bgChip);
   overflow: hidden;
 }
 .capture-bar-fill {

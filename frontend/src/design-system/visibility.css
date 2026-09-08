@@ -33,13 +33,13 @@
 /* Open: outlined and in the secondary ink, so a column of shared rows reads as
    a column and not as a stripe of pills. */
 .visibility-open {
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 /* Limited: filled and in the primary ink. A sealed thing is the exception in
    any list, and the exception is what a reader is scanning for. */
 .visibility-limited {
-  background: var(--bgCard);
+  background: var(--bgChip);
   border-color: var(--borderStrong);
 }
 

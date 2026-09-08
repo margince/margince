@@ -264,6 +264,11 @@ func applyAutoExecuteAndStageResidue(w http.ResponseWriter, r *http.Request, nex
 		buffered.flushTo(w)
 		return
 	}
+	// From here on this request HAS changed the record, and anything it answers
+	// after this line is a failure rather than a refusal. The idempotency layer
+	// reads this to decide whether the key goes back: released, the retry would
+	// re-run the half that just committed under the same key.
+	markWriteCommitted(r.Context())
 	// UseNumber keeps integers exact: a plain interface{} decode renders
 	// every JSON number as float64, silently truncating any value past
 	// 2^53 on this re-encode path (money-minor fields, version).
@@ -271,9 +276,7 @@ func applyAutoExecuteAndStageResidue(w http.ResponseWriter, r *http.Request, nex
 	dec := json.NewDecoder(bytes.NewReader(buffered.body.Bytes()))
 	dec.UseNumber()
 	if uErr := dec.Decode(&record); uErr != nil {
-		httperr.Write(w, r, fmt.Errorf(
-			"agent gate: %s applied the permitted fields, but its response cannot carry the staging note for the withheld human-edited fields (%s): %w",
-			pol.Op, strings.Join(split.Conflicts, ", "), uErr))
+		httperr.Write(w, r, partiallyApplied(split.Conflicts, uErr))
 		return
 	}
 	// No version pin travels from here, and the residue is still staged against
@@ -299,8 +302,7 @@ func applyAutoExecuteAndStageResidue(w http.ResponseWriter, r *http.Request, nex
 			restSummary(pol, r, split.Staged),
 	})
 	if sErr != nil {
-		httperr.Write(w, r, fmt.Errorf("the other fields were updated, but staging the human-edited fields (%s) failed: %w",
-			strings.Join(split.Conflicts, ", "), sErr))
+		httperr.Write(w, r, partiallyApplied(split.Conflicts, sErr))
 		return
 	}
 	record["staged_approval"] = map[string]any{
@@ -395,4 +397,37 @@ func copyHeaders(w http.ResponseWriter, headers http.Header) {
 	}
 	// The buffered body may be re-encoded; a stale length would truncate.
 	w.Header().Del("Content-Length")
+}
+
+// partiallyApplied is what a caller is told when this door wrote and then could
+// not finish.
+//
+// It is a CLASSIFIED refusal rather than a bare error, and that is the whole of
+// it: an unclassified one reaches httperr.Write's unhandled path, which logs the
+// sentence and answers `{"code":"internal"}` with no detail at all. The message
+// naming the applied half went to the operator's log and the caller — the one
+// party who has to decide what to do next — got nothing. A partial write is
+// precisely the outcome nobody can discover from the outside.
+//
+// It says DO NOT RETRY UNCHANGED, and that is not advice this call can leave
+// out. The idempotency key is recorded rather than released for exactly this
+// answer (settleClaim), so a retry under it meets the claimFailed refusal
+// instead of running the applied half again — and a caller who reads only the
+// status would otherwise take a 5xx as the invitation to retry that it usually
+// is.
+//
+// The cause is WRAPPED rather than carried on the wire: Classify matches the
+// DetailedError first, so the caller reads the sentence above while the
+// operator gets the staging engine's own through the wrapped chain.
+func partiallyApplied(conflicts []string, cause error) error {
+	return fmt.Errorf("%w: staging the withheld fields (%s) failed: %w",
+		&httperr.DetailedError{
+			Status: http.StatusInternalServerError,
+			Code:   "partially_applied",
+			Detail: "the fields this agent may write were updated; the human-edited fields (" +
+				strings.Join(conflicts, ", ") + ") could not be staged for approval and were NOT written. " +
+				"Do not retry this request unchanged — the applied half would run a second time. " +
+				"Read the record back, then send only the withheld fields under a new idempotency key.",
+		},
+		strings.Join(conflicts, ", "), cause)
 }

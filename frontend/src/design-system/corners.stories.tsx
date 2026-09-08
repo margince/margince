@@ -102,7 +102,7 @@ const label: CSSProperties = {
 };
 const note: CSSProperties = {
   fontSize: "var(--fs-sm)",
-  color: "var(--textSecondary)",
+  color: "var(--textMeta)",
 };
 const swatch = (radius: string, shape?: "round"): CSSProperties => ({
   width: "84px",

@@ -49,6 +49,23 @@ export const ClickOpenedButtonTrigger: Story = {
   play: openByClick,
 };
 
+// `disabled`: the trigger refuses to OPEN, and what a canvas can show of it is
+// the refusal — pressed, and still closed. The state is for a caret whose row
+// has stood down while one of its own answers is being written, where revealing
+// a panel of controls that all refuse the press is the thing being prevented.
+export const DisabledRefusesToOpen: Story = {
+  render: () => (
+    <Popover label="Evidence" variant="ghost" disabled>
+      <p>Three emails and one call reference the March renewal date.</p>
+    </Popover>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("button", { name: "Evidence" }));
+    await expect(canvas.queryByText(/Three emails and one call/)).toBeNull();
+  },
+};
+
 // `onHover`: opens once the pointer has SETTLED on the trigger rather than on
 // contact, so this waits for the panel rather than asserting it is open the
 // instant the pointer arrives.
@@ -64,8 +81,15 @@ export const HoverOpened: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.hover(canvas.getByRole("button", { name: "Evidence" }));
+    // Looked for in the BODY, not in the canvas. The panel is portalled out of
+    // the story's root — which is the component's whole point, so a card's
+    // overflow clip cannot cut it off — and an assertion scoped to
+    // `canvasElement` waits out its budget for a panel that opened correctly
+    // somewhere else in the document.
     await waitFor(() =>
-      expect(canvas.getByText(/Three emails and one call/)).toBeVisible(),
+      expect(
+        within(document.body).getByText(/Three emails and one call/),
+      ).toBeVisible(),
     );
   },
 };

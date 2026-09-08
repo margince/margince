@@ -10,7 +10,8 @@ package compose
 // The anchor is excluded; cold start has already read it. Per workspace, when
 // the capture_auto_enrich flag is on, it enqueues a deep read
 // (system:capture_auto_enrich, auto-applied on completion) for each due org —
-// newest first, under an atomically-reserved daily cap. It is the
+// oldest first, under an atomically-reserved daily cap, so a company behind a
+// day's worth of arrivals is still reached (ListDueOrgs says why). It is the
 // self-healing reconciler: the prompt trigger is the organization-event
 // consumer (orgautoenrich.go), which queues this same workspace pass the
 // moment a company appears, and anything that slips through — the worker

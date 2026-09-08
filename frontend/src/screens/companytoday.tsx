@@ -285,7 +285,11 @@ function DimensionChip({ dimension }: Readonly<{ dimension: TodayDimension }>) {
   return (
     <Popover
       onHover
-      className={dimension.tone ? `co-dim co-dim-${dimension.tone}` : "co-dim"}
+      className={
+        dimension.tone
+          ? `co-dim co-dim-${dimension.tone} t-sub`
+          : "co-dim t-sub"
+      }
       label={`${dimension.label} · ${dimension.reading}`}
     >
       <p className="co-dim-means">{dimension.means}</p>
@@ -699,7 +703,7 @@ function MomentRow({
     <PanelRow className="co-move co-move-lead">
       <span className="co-move-body">
         <span className="co-move-by">
-          <span className={`co-dim co-dim-${tone}`}>
+          <span className={`co-dim co-dim-${tone} t-sub`}>
             {t(MOMENT_RULE_LABEL[moment.rule])}
           </span>
         </span>

@@ -12,7 +12,6 @@ package compose
 import (
 	"context"
 	"fmt"
-	"io"
 	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -360,17 +359,6 @@ func (p ModelPath) Router() *ai.Router {
 		return r.router
 	}
 	return nil
-}
-
-// WriteMetrics renders the model path's underlying router's AI call
-// counters (margince_ai_calls_total et al.) for the /metrics endpoint.
-// Nil-safe for a ModelPath built with a nil AgentLoop (no model path
-// configured), so a role that never wired one writes nothing rather than
-// panicking.
-func (p ModelPath) WriteMetrics(w io.Writer) {
-	if r, ok := p.AgentLoop.(agentBrain); ok {
-		r.router.WriteMetrics(w)
-	}
 }
 
 // routerBrain adapts the tiered router into the 2-return completer seam

@@ -59,14 +59,16 @@ jobs:
   # backend-only PR skips the frontend + UAT lanes, and a docs-only PR skips
   # everything. Draft PRs run nothing until marked ready (the swarm pushes many
   # WIP commits). A required job skipped this way counts as passing.
-  #   backend  = Go/DB + the gate inputs (backend, infra, go.work, Makefile,
-  #              scripts, this workflow, AGENTS.md) — gates the Go build/gate,
-  #              craft, integration, vuln. A gate input earns its place by
-  #              being able to change what a gate DOES; prose that merely
-  #              describes one does not, hence the two extglobs below.
+  #   backend  = Go/DB + the gate inputs (backend, the dev compose stack,
+  #              go.work, Makefile, scripts, this workflow, AGENTS.md, docs)
+  #              — gates the Go build/gate, craft, integration, vuln. A gate
+  #              input earns its place by being able to change what a gate
+  #              DOES, which is why the compose stack is in the narrower
+  #              backend_db below and the prose about it is not.
   #   frontend = frontend/ + backend/api (the contract drives FE types) —
   #              gates the frontend lane + UAT
-  #   e2e      = backend/ + frontend/ + infra — gates the full-stack live-boot
+  #   e2e      = backend/ + frontend/ + the dev compose stack — gates the
+  #              full-stack live-boot
   changes:
     name: changes
     timeout-minutes: 20
@@ -105,8 +107,9 @@ jobs:
       # change can break one without touching these — but a three-role bake on
       # every backend PR is most of the cost the release-trigger cleanup was
       # removing, and the compile that would catch nearly all of it already runs
-      # in deterministic-gates. The trade is written down in infra/ci-pipeline.md
-      # rather than left to be inferred from this filter.
+      # in deterministic-gates. The trade is written down in
+      # docs/explanation/ci-pipeline.md rather than left to be inferred from
+      # this filter.
       images: ${{ steps.filter.outputs.images == 'true' || github.event_name == 'merge_group' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -125,9 +128,9 @@ jobs:
             #
             # The split exists because one flag was driving two unrelated
             # things: run the Go unit gates, and boot the Postgres shards.
-            # A rulebook edit needs the first and cannot affect the second —
-            # the same reasoning already applied to `infra/**/!(*.md)` below,
-            # applied to the last two entries as well.
+            # A rulebook edit needs the first and cannot affect the second, so
+            # it belongs in `backend` and not here — the same cut `docs/**`
+            # sits on, the prose documenting this classifier included.
             backend_db: &backend_db
               - 'backend/**'
               # The MCP App admission vocabulary is AUTHORED under frontend/ and
@@ -138,14 +141,8 @@ jobs:
               # "two validators that disagree" outage the shared file exists to
               # make impossible.
               - 'frontend/src/mcp-apps/forbidden.json'
-              # The dev compose stack the DB-backed lanes boot — but not the
-              # prose beside it. Editing infra/ci-pipeline.md, the file that
-              # DOCUMENTS this classifier, must not boot the Postgres
-              # shards. The extglob is one positive pattern on purpose: the
-              # action ORs its patterns, so a `!infra/**/*.md` entry would
-              # match every path OUTSIDE infra/ and fire the filter on
-              # everything.
-              - 'infra/**/!(*.md)'
+              # The dev compose stack the DB-backed lanes boot.
+              - 'docker-compose.dev.yml'
               - 'go.work'
               - 'go.work.sum'
               - 'Makefile'
@@ -234,8 +231,8 @@ jobs:
             e2e:
               - 'backend/**'
               - 'frontend/**'
-              # Same cut as the backend scope: the compose stack, not the prose.
-              - 'infra/**/!(*.md)'
+              # The dev compose stack the live boot runs against.
+              - 'docker-compose.dev.yml'
               # live-boot boots COMPOSED (ADR-0120): the enabled extension
               # tree and the composition inputs shape the binary under test.
               - 'extensions/**'

@@ -1171,6 +1171,10 @@ func (stubs) CreateLead(w nethttp.ResponseWriter, r *nethttp.Request, params crm
 	httperr.NotImplemented(w, r, "CreateLead")
 }
 
+func (stubs) AssignLeads(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "AssignLeads")
+}
+
 func (stubs) GetLeadSettings(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetLeadSettings")
 }
@@ -1541,6 +1545,10 @@ func (stubs) UpdateOrganizationProfileField(w nethttp.ResponseWriter, r *nethttp
 
 func (stubs) ConfirmOrganizationProfileField(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, field crmcontracts.ProfileFieldKey, params crmcontracts.ConfirmOrganizationProfileFieldParams) {
 	httperr.NotImplemented(w, r, "ConfirmOrganizationProfileField")
+}
+
+func (stubs) RejectOrganization(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.RejectOrganizationParams) {
+	httperr.NotImplemented(w, r, "RejectOrganization")
 }
 
 func (stubs) GetOrganizationScan(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {

@@ -186,7 +186,29 @@
      long line runs into the edge of the rail. */
   padding: 0 var(--space-2);
 }
-.arline {
+/* The room the sentence changes inside.
+ *
+ * The line under the orb changes on its own — one reading every IDLE_HOLD_MS at
+ * rest, several a second while the agent works — and swapping the words in place
+ * reads as flicker rather than as news. So the two sentences overlap for one
+ * `--dur-enter`: the outgoing fades out while the incoming fades in, and the
+ * slot is never empty.
+ *
+ * OPACITY ONLY, and the outgoing layer is taken out of the flow. The two-line
+ * room below is what holds this block's height, and a second sentence in the
+ * flow — or a transform on either — would move the figure and the chevron under
+ * it every time a name is long, which is the thing that room exists to prevent.
+ */
+.arswap {
+  position: relative;
+  /* The full column, rather than the width of whichever sentence is showing:
+     both layers are measured against the same box, or the outgoing one re-wraps
+     against the incoming one's width while it fades. The text keeps the
+     alignment it already had from `.arhit`. */
+  width: 100%;
+}
+.arline,
+.argone {
   max-width: 100%;
   font-size: var(--fs-body);
   line-height: 1.3;
@@ -205,6 +227,32 @@
   overflow: hidden;
   align-content: start;
 }
+/* The incoming sentence. It replays because the layer is a new element every
+   time the words change (agentrail.tsx keys it on the words), which is the same
+   thing that makes an inserted block arrive in `design-system/enter.css`. */
+.arline {
+  animation: arsayin var(--dur-enter) var(--ease-out);
+}
+/* The sentence on its way out, over the one arriving. `forwards`, so it holds
+   at nothing for the frames between the fade ending and React taking it away.
+   Nothing to click and nothing to read: the live layer under it is what a
+   screen reader announces, once. */
+.argone {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  animation: arsayout var(--dur-enter) var(--ease-out) forwards;
+}
+@keyframes arsayin {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes arsayout {
+  to {
+    opacity: 0;
+  }
+}
 /* One face on this rail, and it is the body face.
    The rail shipped in mono throughout — the figures, the state word, the chip
    labels and the meta strip — which is the typewriter voice used as decoration
@@ -214,14 +262,33 @@
    delivers the alignment without the voice. Figures here take that pair; a
    button label or a word takes the body face alone. */
 
-/* The money, and the scope it was spent in, on one line: the figure leads
-   because it is the thing being watched. */
-.arspend {
+/* The block's last line: the money, the scope it was spent in and the
+   disclosure, on ONE line. Two pieces of chrome at two heights read as two
+   rows in a column this narrow, so the chevron shares the figure's line and
+   its vertical centre. The row survives the figure — see `.archev` — because
+   whether the panel is open is a fact about the block rather than about the
+   spend. */
+.arlast {
+  position: relative;
+  z-index: 1;
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: center;
   gap: var(--space-1);
   width: 100%;
+  min-width: 0;
+  /* The words' own margin, for the words' own reason: the ball takes the rail's
+     full width and a long line runs into its edge without one. */
+  padding: 0 var(--space-2);
+  margin-top: 1px; /* ds:ignore two lines of one reading, not spaced content */
+}
+/* The figure leads, because it is the thing being watched. Baseline INSIDE the
+   row while the row itself centres: the money and its scope are one reading and
+   sit on one baseline, and the chevron is a glyph rather than a word. */
+.arspend {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-1);
   min-width: 0;
   font-family: var(--f-body);
   font-variant-numeric: tabular-nums;
@@ -248,11 +315,12 @@
   text-overflow: ellipsis;
 }
 
+/* In the flow, at the end of the row it shares with the figure. It is drawn
+   whether or not there is a figure: a seat that may not read the spend, and a
+   month that priced nothing, both still get a block that says whether it is
+   open. */
 .archev {
-  position: absolute;
-  z-index: 1;
-  bottom: var(--space-2);
-  right: var(--space-2);
+  flex: none;
   color: var(--textMeta);
   transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
@@ -317,18 +385,24 @@
     align-items: flex-start;
     padding: 0;
   }
-  .arspend {
-    justify-content: flex-start;
-  }
-  /* The corner belongs to a column. On a row the chevron sits in the flow, or
-     it lands on top of the words. */
-  .archev {
-    position: static;
+  /* Turned on its side with everything else: the line takes the middle and the
+     figure and its disclosure end the row, still on the one line they share.
+     The scope is what gives way when there is no room for all three — the rule
+     `.arspend > .arscope` already declares that the figure never shortens. */
+  .arlast {
+    width: auto;
+    margin-top: 0;
     margin-left: auto;
+    padding: 0;
   }
 }
 @media (max-height: 620px) {
-  .arwords {
+  /* The reading goes and the figure goes with it — they are the same words.
+     The chevron is not a reading: it is the only thing left saying whether the
+     panel is open, and a block that opens with no sign that it does is a block
+     nobody opens. */
+  .arwords,
+  .arspend {
     display: none;
   }
   .arhit {
@@ -344,7 +418,7 @@
  * this width. The button keeps its accessible name, so nothing is lost to a
  * screen reader. */
 .rail.collapsed .arwords,
-.rail.collapsed .archev,
+.rail.collapsed .arlast,
 .rail.collapsed .argo {
   display: none;
 }
@@ -372,7 +446,7 @@
  * lost to a screen reader.
  */
 .rail.leveled .arwords,
-.rail.leveled .archev,
+.rail.leveled .arlast,
 .rail.leveled .argo {
   display: none;
 }
@@ -470,7 +544,7 @@
      name, so nothing is lost to a screen reader, and the panel it opens is where
      the line and the month's spend are said. */
   .rail .arwords,
-  .rail .archev {
+  .rail .arlast {
     display: none;
   }
   .rail .arorb {
@@ -608,9 +682,16 @@
     }
   }
 }
+/* The line snaps to the new sentence, which IS the crossfade's end state. The
+   outgoing layer is not drawn at all under this preference — the component
+   reads it and never mounts one (`usePrefersReducedMotion`) — and `.argone` is
+   still named here so that a preference turned on mid-fade leaves nothing
+   animating. */
 @media (prefers-reduced-motion: reduce) {
   .arpanel,
-  .arloose::after {
+  .arloose::after,
+  .arline,
+  .argone {
     animation: none;
   }
 }

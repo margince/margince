@@ -256,6 +256,13 @@ func candidateOwners(cfg RoutingConfig) []ids.UserID {
 // ownerCapacity answers, for each candidate, whether the user can take
 // work (active, unarchived) and how many open leads they already hold —
 // the cap counts open (new/contacted/engaged), live leads, however they were assigned.
+// The eligibility half here says the same thing auth.EnsureAssignee says on
+// the manual path — a live human seat that can do the work — and the two are
+// deliberately kept in step: a pool that could route to a seat a manager is
+// forbidden to assign to would let the machine place work no person could
+// have placed. The SCOPE half of EnsureAssignee has no meaning here, because
+// routing runs as the system principal and the pool is the configuration's
+// own list.
 func ownerCapacity(ctx context.Context, tx pgx.Tx, candidates []ids.UserID) (active map[ids.UserID]bool, openLoad map[ids.UserID]int, err error) {
 	active = map[ids.UserID]bool{}
 	openLoad = map[ids.UserID]int{}
@@ -268,6 +275,7 @@ func ownerCapacity(ctx context.Context, tx pgx.Tx, candidates []ids.UserID) (act
 		  LEFT JOIN lead l ON l.owner_id = u.id
 		       AND l.status IN ('new','contacted','engaged') AND l.archived_at IS NULL
 		 WHERE u.id = ANY($1) AND u.status = 'active' AND u.archived_at IS NULL
+		       AND NOT u.is_agent AND u.seat_type <> 'read'
 		 GROUP BY u.id`, candidates)
 	if err != nil {
 		return nil, nil, err
@@ -354,7 +362,14 @@ func (w leadRouting) Apply(ctx context.Context, ev workflow.Event, eff workflow.
 		return workflow.RunResult{}, err
 	}
 	if !decision.Assigned {
-		return workflow.RunResult{}, nil
+		// Not a failure and not a silent success: routing looked and placed
+		// nobody, and WHY is the answer a manager needs when they find the
+		// lead still sitting in the unassigned queue. An empty result recorded
+		// a clean run and threw the reason away.
+		//
+		// The reasons are this package's own closed vocabulary, so none of
+		// them can carry a database message to a reader.
+		return workflow.RunResult{}, workflow.Declined(routingDeclineReason(decision.Reason))
 	}
 	return workflow.RunResult{Applied: eff.Actions}, nil
 }
@@ -363,4 +378,26 @@ func (w leadRouting) Apply(ctx context.Context, ev workflow.Event, eff workflow.
 // lead.created must not re-route.
 func (leadRouting) IdempotencyKey(ev workflow.Event) string {
 	return assignLeadOwnerName + ":" + ev.Entity.ID.String()
+}
+
+// routingDeclineReason renders one of RouteLead's decision reasons as the
+// sentence a reader meets on the run.
+//
+// A closed switch rather than the raw reason: the decisions are this package's
+// vocabulary and a reader is not owed "no_capacity". An unrecognised reason
+// falls through to the general sentence rather than being printed, so a reason
+// added later cannot leak an internal spelling by being forgotten here.
+func routingDeclineReason(reason string) string {
+	switch reason {
+	case "no_capacity":
+		return "no eligible owner had capacity for this lead"
+	case "already_owned":
+		return "somebody already owns this lead"
+	case "terminal_status":
+		return "this lead is no longer open"
+	case "lead_gone":
+		return "this lead was archived before routing ran"
+	default:
+		return "routing placed no owner on this lead"
+	}
 }
