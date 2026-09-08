@@ -2853,7 +2853,7 @@ export const vi = {
   "brief.readings.pipeline": "Toàn cảnh pipeline",
   "brief.readings.pipelineWorkspace": "Toàn cảnh pipeline · toàn bộ tổ chức",
   "brief.readings.pipelineBasis":
-    "{weighted} theo trọng số · {priced} trên {eligible} đã định giá",
+    "{period} · {weighted} theo trọng số · {priced} trên {eligible} đã định giá",
   "brief.readings.pipelineUnread": "không đọc được pipeline",
   "brief.readings.pipelineReading": "đang đọc pipeline",
   "brief.readings.openLane": "Mở những mục này",

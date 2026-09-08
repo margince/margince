@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { StatCard } from "../design-system/atoms";
 import { StatStrip } from "../design-system/statstrip";
+import { middayInstant } from "../format/calendarday";
 import {
+  formatDateAbbrev,
   formatDateTime,
   formatMoneyCompact,
   formatMoneyOrAbsent,
@@ -337,6 +340,7 @@ function meetingsReading(day: Worklist): {
 function PipelineOutlook() {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   // The reader's OWN pipeline, under the scope the SERVER names for them.
   //
   // `/analytics/context` answers `default_scope`, which is what Analytics starts
@@ -403,7 +407,22 @@ function PipelineOutlook() {
       // The weighted figure and the completeness in one line, because they are
       // read together: a weighted number over a partly priced population is a
       // floor, and a reader who cannot see the second cannot judge the first.
+      // The PERIOD first, because the money means nothing without it. The
+      // headline reads a quarter's open pipeline, and a reader who cannot see
+      // which quarter cannot reconcile it against the currency totals beside
+      // it — one is a window, the other is everything open.
+      //
+      // The RECORD's zone, and midday rather than midnight. These are date-only
+      // wire values: there is no instant in "2026-07-01" to localize, and read
+      // in the viewer's clock west of UTC they print the day before — a quarter
+      // labelled 30 Jun – 29 Sept. The period is a property of the
+      // installation's calendar, the same for every colleague reading it.
       detail={t("brief.readings.pipelineBasis", {
+        period: `${formatDateAbbrev(
+          middayInstant(data.period_start, recordZone),
+          locale,
+          recordZone,
+        )} – ${formatDateAbbrev(middayInstant(data.period_end, recordZone), locale, recordZone)}`,
         weighted: formatMoneyOrAbsent(
           data.weighted_minor,
           data.base_currency,
