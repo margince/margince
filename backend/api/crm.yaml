@@ -31980,6 +31980,7 @@ components:
             max_total_bytes:
               type: integer
               format: int64
+              minimum: 1
               description: |
                 Largest total across every file on one message, in bytes — the smaller of
                 this transport's own aggregate and the product's send budget. Always
