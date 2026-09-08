@@ -2859,7 +2859,7 @@ export const vi = {
     "{period} · {weighted} theo trọng số · {priced} trên {eligible} đã định giá",
   "brief.readings.pipelineUnread": "không đọc được pipeline",
   "brief.readings.pipelineReading": "đang đọc pipeline",
-  "brief.readings.openLane": "Mở những mục này",
+  "brief.readings.openLaneNamed": "Mở {reading}",
   "brief.readings.meetings": "Cuộc họp hôm nay",
   "brief.readings.meetingsBasis": "trong lịch hôm nay",
   "brief.readings.needsPrep_one": "1 chưa chuẩn bị",

@@ -103,7 +103,9 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           // zero already reads as "none"; a line under it repeating that says
           // the same thing twice and drops the one fact it could add.
           detail={t("brief.readings.urgentBasis")}
-          openLabel={t("brief.readings.openLane")}
+          openLabel={t("brief.readings.openLaneNamed", {
+            reading: t("brief.readings.urgent"),
+          })}
           onOpen={() => openLane("all")}
         />
         <MeetingsStat
@@ -127,7 +129,9 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           value={formatNumber(readings.review, locale)}
           tone={readings.review > 0 ? "warn" : undefined}
           detail={t("brief.readings.decisionsBasis")}
-          openLabel={t("brief.readings.openLane")}
+          openLabel={t("brief.readings.openLaneNamed", {
+            reading: t("brief.readings.decisions"),
+          })}
           onOpen={() => openLane("decisions")}
         />
       </StatStrip>
@@ -164,7 +168,9 @@ function MeetingsStat({
       value={formatNumber(meetings, locale)}
       tone={unready !== null && unready > 0 ? "warn" : undefined}
       detail={meetingsDetail(meetings, unready, locale, t, plural)}
-      openLabel={t("brief.readings.openLane")}
+      openLabel={t("brief.readings.openLaneNamed", {
+        reading: t("brief.readings.meetings"),
+      })}
       onOpen={onOpen}
     />
   );
@@ -227,7 +233,9 @@ function LeadsStat({
               value: formatDateTime(soonest, locale, viewerZone()),
             })
       }
-      openLabel={t("brief.readings.openLane")}
+      openLabel={t("brief.readings.openLaneNamed", {
+        reading: t("brief.readings.leads"),
+      })}
       onOpen={onOpen}
     />
   );

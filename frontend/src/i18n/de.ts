@@ -2891,7 +2891,7 @@ export const de = {
     "{period} · {weighted} gewichtet · {priced} von {eligible} bewertet",
   "brief.readings.pipelineUnread": "die Pipeline war nicht lesbar",
   "brief.readings.pipelineReading": "Pipeline wird gelesen",
-  "brief.readings.openLane": "Diese öffnen",
+  "brief.readings.openLaneNamed": "{reading} öffnen",
   "brief.readings.meetings": "Termine heute",
   "brief.readings.meetingsBasis": "im heutigen Kalender",
   "brief.readings.needsPrep_one": "1 unvorbereitet",

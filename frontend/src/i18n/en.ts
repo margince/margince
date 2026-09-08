@@ -2981,7 +2981,7 @@ export const en = {
     "{period} · {weighted} weighted · {priced} of {eligible} priced",
   "brief.readings.pipelineUnread": "the pipeline could not be read",
   "brief.readings.pipelineReading": "reading the pipeline",
-  "brief.readings.openLane": "Open these",
+  "brief.readings.openLaneNamed": "Open {reading}",
   "brief.readings.meetings": "Meetings ahead",
   "brief.readings.meetingsBasis": "on today's calendar",
   "brief.readings.needsPrep_one": "1 needs prep",
