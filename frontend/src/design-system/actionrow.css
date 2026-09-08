@@ -1,0 +1,31 @@
+/* ActionRow — secondary verbs on the leading edge, one call to action on the
+   trailing one. See actionrow.tsx for when to reach for it. */
+
+/* The gap is on the ROW as well as on each group. Both carry buttons as far as
+   a reader is concerned — the trail is one verb today and two tomorrow — and
+   `actionrow.test.ts` asks whichever container holds them what gap it gets, so
+   a row that declared the role in only one of the three places would be a row
+   the gate could not follow. */
+.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gapActions);
+}
+
+.action-row-lead,
+.action-row-trail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gapActions);
+}
+
+/* What keeps the call to action on the trailing edge once the row has WRAPPED.
+   `space-between` above only separates the two groups while they share a line;
+   at phone width the trail is alone on the second one, where space-between has
+   nothing to push it against and it would sit under the first verb. */
+.action-row-trail {
+  margin-inline-start: auto;
+}

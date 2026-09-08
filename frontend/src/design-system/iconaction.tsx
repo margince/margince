@@ -38,6 +38,7 @@ export function IconAction({
   small,
   reason,
   reasonId,
+  disabled,
   pending,
   pressed,
   onClick,
@@ -56,6 +57,15 @@ export function IconAction({
    * one fact refuses several verbs, as `Button.reasonId` is for.
    */
   reasonId?: string;
+  /**
+   * A precondition this verb is waiting on, with no sentence to go with it —
+   * the third refusal `Button` already draws and the one a glyph most often
+   * needs: a row's quiet verbs held while the write its primary started is out.
+   * `pending` would be the wrong spelling of that (it claims a write THIS
+   * control started) and `reason` the wrong one too (it owes the reader a
+   * sentence, and the fact here is simply "not yet").
+   */
+  disabled?: boolean;
   pending?: boolean;
   /**
    * For a glyph that SETS rather than does — a switch over a region, a filter
@@ -79,6 +89,7 @@ export function IconAction({
         small={small}
         reason={reason}
         reasonId={reasonId}
+        disabled={disabled}
         pending={pending}
         aria-label={label}
         aria-pressed={pressed}
