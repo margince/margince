@@ -75,17 +75,6 @@ func buildRenames() map[string]string {
 	return renames
 }
 
-// asCreated answers what a thing now called name was called in the migration
-// that created it, so a text scan can find the statement that made it.
-func asCreated(name string) string {
-	for old, now := range currentNames() {
-		if now == name {
-			return old
-		}
-	}
-	return name
-}
-
 // withCurrentNames rewrites migration SQL so every renamed identifier reads
 // under the name the database has today. A gate scanning the result sees the
 // schema it is actually judging rather than the one the baseline first built.
