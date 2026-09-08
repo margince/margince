@@ -39,3 +39,20 @@
 .deal360-fold > summary:hover {
   color: var(--textPrimary);
 }
+
+/* The one FREE-TEXT fact on the deal's identity line: how a deal was won when
+   no contract carried it, in the words a person typed.
+   
+   The whole string stays in the DOM and the clamp is visual only. A truncated
+   string with the rest in a `title` reads as solved and is not: a tooltip needs
+   a mouse, so the keyboard, touch and screen-reader readers — including the one
+   checking the words they just typed, which is who this fact exists for — would
+   have been the ones who could not read it. */
+.deal-win-detail {
+  display: inline-block;
+  max-width: 22rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}

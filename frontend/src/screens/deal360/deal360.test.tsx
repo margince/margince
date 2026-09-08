@@ -434,13 +434,13 @@ describe("the identity line says what it is worth, where it is, and whose it is"
     ).not.toBeInTheDocument();
   });
 
-  it("keeps a long hand-written reason from pushing the facts off the line", () => {
-    // The identity line is a row of SHORT facts — the stage, the owner, the
-    // partner. This is the only free text on it, and the contract's 500-char
-    // bound stops a value nobody can read without stopping one that crowds out
-    // its neighbours. The opening rides the line; the whole answer stays
-    // reachable, because the reader most likely to look is the person checking
-    // what they typed.
+  it("keeps a long hand-written reason readable rather than only hoverable", () => {
+    // The identity line is a row of SHORT facts, so this one is bounded — but
+    // VISUALLY, with the whole string in the DOM. An earlier version trimmed it
+    // in TS and put the rest in a `title`, which reads as solved and is not: a
+    // tooltip wants a mouse, is ignored by most screen readers, and never
+    // appears for a keyboard or touch reader. The person most likely to look is
+    // the one checking the words they just typed.
     const long =
       `Renewed on a handshake at the trade fair ${"and again ".repeat(20)}`.trim();
     show(
@@ -457,13 +457,13 @@ describe("the identity line says what it is worth, where it is, and whose it is"
         locale="en"
       />,
     );
-    expect(screen.queryByText(long)).not.toBeInTheDocument();
-    const shown = screen.getByTitle(long);
-    expect(shown.textContent ?? "").toMatch(
-      /^Renewed on a handshake at the trade fair/,
-    );
-    expect((shown.textContent ?? "").length).toBeLessThan(long.length);
-    // The stage is still on the line beside it, which is the point.
+    // Every word of it, reachable by a reader that does not hover.
+    expect(screen.getByText(long)).toBeInTheDocument();
+    // And the stage is still on the line beside it, which is what the clamp is
+    // for. The width itself is CSS and not assertable here; what this pins is
+    // that the fact carries the class the clamp hangs on, so removing it is a
+    // failing test rather than a silently wide line.
+    expect(screen.getByText(long)).toHaveClass("deal-win-detail");
     expect(screen.getByText("Qualified")).toBeInTheDocument();
   });
 

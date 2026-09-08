@@ -28,6 +28,7 @@ import (
 	"slices"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
@@ -84,6 +85,33 @@ func (e *WonReasonDetailRequiredError) FieldFault() (field, code, message string
 	return "won_without_contract_detail", "required", e.Error()
 }
 
+// WonReasonDetailTooLongError reports a detail past what the contract admits.
+type WonReasonDetailTooLongError struct{ Length int }
+
+func (e *WonReasonDetailTooLongError) Error() string {
+	return fmt.Sprintf(
+		"won_without_contract_detail is %d characters and may be at most %d — say what it was in a sentence",
+		e.Length, maxWonReasonDetail)
+}
+
+// FieldFault names the field the caller must shorten.
+func (e *WonReasonDetailTooLongError) FieldFault() (field, code, message string) {
+	return "won_without_contract_detail", "too_long", e.Error()
+}
+
+// maxWonReasonDetail is the contract's `maxLength` on this field, applied here
+// because nothing else does.
+//
+// The generated server does not enforce a string length, so the bound was a
+// promise the schema made and the product did not keep: the column is plain
+// `text`, and its only CHECK is the "other needs a detail" rule. A field with a
+// documented bound nobody applies is worse than an undocumented one — a client
+// trusts it, stops truncating, and the value lands anyway.
+//
+// COUNTED IN RUNES, because the contract's maxLength is: a caller who wrote 200
+// characters of German must not be refused for the bytes their umlauts cost.
+const maxWonReasonDetail = 500
+
 // saysSomething reports whether a detail carries any visible character.
 //
 // TrimSpace alone is not enough: a zero-width space is not whitespace to Go and
@@ -137,6 +165,14 @@ func validateWonReason(reason string, detail *string) error {
 	}
 	if reason == reasonRequiringDetail && !saysSomething(detail) {
 		return &WonReasonDetailRequiredError{}
+	}
+	// Checked for EVERY reason, not only the one that requires a detail: a
+	// caller may send one alongside any reason, and the column takes whatever
+	// arrives.
+	if detail != nil {
+		if n := utf8.RuneCountInString(*detail); n > maxWonReasonDetail {
+			return &WonReasonDetailTooLongError{Length: n}
+		}
 	}
 	return nil
 }

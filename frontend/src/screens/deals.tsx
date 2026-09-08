@@ -3877,33 +3877,21 @@ function WonWithoutContractFact({ deal }: Readonly<{ deal: DealIdentity }>) {
   if (!detail) {
     return <IdentityFact>{label}</IdentityFact>;
   }
-  // Free text on a line of SHORT facts. The contract bounds the value at 500
-  // characters, which stops a stored value nobody can read; it does not stop
-  // one that pushes the stage and the owner off the line beside it. So the line
-  // shows an opening that fits and the full answer rides the title, which is
-  // where a reader checking their own words looks next.
+  // Free text on a line of SHORT facts, so it is bounded — visually, and with
+  // the whole string still in the DOM.
   //
-  // Trimmed in TS rather than by an ellipsis rule, deliberately: a CSS clamp on
-  // a flex row needs min-width and overflow on the fact AND its line, which is
-  // a change to a shared design-system row for one screen's field.
-  const shown =
-    detail.length > WON_DETAIL_INLINE
-      ? `${detail.slice(0, WON_DETAIL_INLINE).trimEnd()}…`
-      : detail;
-  return (
-    <IdentityFact>
-      {/* The title rides a span rather than the fact: IdentityFact draws a
-          plain element and forwards no attributes, so a title handed to it
-          would be dropped without a word. */}
-      <span title={detail}>{shown}</span>
-    </IdentityFact>
-  );
+  // It used to be trimmed in TS with the rest in a `title`. That reads as
+  // solved and is not: a tooltip wants a mouse, is ignored by most screen
+  // readers, and never appears for a keyboard or touch reader — so the people
+  // who could not read the answer would have included the person checking the
+  // words they had just typed, which is who this fact exists for.
+  //
+  // The clamp is a class on this screen's own stylesheet rather than a rule in
+  // the design system: one screen's free-text field is not a shape the shared
+  // identity row owes everybody, and IdentityFact already takes a className for
+  // exactly this.
+  return <IdentityFact className="deal-win-detail">{detail}</IdentityFact>;
 }
-
-// How much of a free-text win reason rides the identity line. Long enough for
-// the answers people actually give ("on a framework agreement signed in March")
-// and short enough to leave the facts beside it readable.
-const WON_DETAIL_INLINE = 60;
 
 // The value, or an em dash when the deal carries none. The masked case is the
 // caller's, because a refusal on this line is written as the field's name
