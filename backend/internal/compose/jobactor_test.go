@@ -21,11 +21,25 @@ package compose
 // also bind an actor. Derived from the tree rather than a hand-kept list,
 // because the next job added is the one nobody remembers to check.
 //
-// Three older workers are waived below rather than fixed. They have the same
-// shape, but whether each one actually reaches a gated write is a question
-// about three other subsystems, and answering it wrongly would either break
-// working jobs or paper over a live defect. Issue #1127 tracks that audit; the
-// waiver is a ratchet — a waived worker that starts binding an actor fails
+// Three older workers were waived here while the question "does this one
+// actually reach a gated write" was open for each. It is answered now, and two
+// of the three were FALSE POSITIVES rather than defects: privacyRetentionWorker
+// binds a system actor through retentionPassProvenance, and timeScanWorker's
+// per-workspace turn binds one through scanLeadSLA — in both cases one call
+// away, which is the only reason this gate could not see it.
+//
+// That is what the one-level follow below exists for. A binder is a helper by
+// nature: it takes a context, returns one with the principal in it, and reads
+// better beside the pass it names than inlined into a Work method. A gate that
+// only looked at the Work body was therefore going to keep producing waivers
+// for correct code, and every one of those is a place a real defect can hide.
+//
+// The third is genuine and stays waived: webhookRetryWorker reaches no gate
+// under its own principal, and the one authority question its path asks is
+// asked under the subscription OWNER's. Its entry says so and names the
+// evidence.
+//
+// The waiver is a ratchet — a waived worker that starts binding an actor fails
 // this test until its entry is removed.
 
 import (
@@ -38,12 +52,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// jobActorUnbound: workers that predate this gate and bind no actor. Each
-// needs its own subsystem checked before it is changed — see #1127.
+// jobActorUnbound: workers that reach a store and bind no actor because they
+// need none. The audit behind the one entry left is in this file's doc.
 var jobActorUnbound = gatekit.Waive(map[string]string{
-	"privacyRetentionWorker": "retention sweep; whether its writes are gated is #1127's question",
-	"timeScanWorker":         "automation time-scan; same audit",
-	"webhookRetryWorker":     "webhook delivery retry; same audit",
+	"webhookRetryWorker": "the retry sweep resolves no principal of its own and reaches no RBAC gate under one. Its path is dueRetries → loadTarget → stillVisible → markVisibilityRevoked → deliverOnce, and none of those asks auth.Require; the two entry points in that store which do (ListDeliveries, requireReplay) are the human dead-letter surfaces this pass never touches. The one authority question it DOES ask — may this subscription's owner still see the record this delivery carries — is asked under the OWNER's principal, resolved per delivery from the row (Deliverer.canSee binds it with principal.WithActor from EffectiveRBAC). An actor bound here would be a second, wrong answer to that question. Held by webhookretry_pass_integration_test.go, whose webhookSweepCtx binds the tenant and nothing else",
 })
 
 // storeBuilders are the handle constructors a store is built on. A Work method
@@ -98,6 +110,7 @@ func TestEveryJobWorkerThatReachesAStoreBindsAnActor(t *testing.T) {
 		t.Fatalf("reading the compose package: %v", err)
 	}
 
+	pkg := packageFunctions(t, files)
 	offenders := map[string]string{}
 	var checked int
 	for _, f := range files {
@@ -117,7 +130,7 @@ func TestEveryJobWorkerThatReachesAStoreBindsAnActor(t *testing.T) {
 			if !storeBuilders.MatchString(body.text) {
 				continue
 			}
-			if actorBinders.MatchString(body.text) {
+			if actorBinders.MatchString(withCalledHelpers(body.text, pkg)) {
 				continue
 			}
 			if jobActorUnbound.Waived(t, body.worker) {
@@ -165,3 +178,87 @@ func workMethodBodies(src string) []workBody {
 	}
 	return out
 }
+
+// packageFunctions maps every top-level function and method in the compose
+// package to its body, so a Work method's own text can be read together with
+// the helpers it calls.
+func packageFunctions(t *testing.T, files []os.DirEntry) map[string]string {
+	t.Helper()
+	out := map[string]string{}
+	for _, f := range files {
+		name := f.Name()
+		if !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+		src, err := os.ReadFile(name)
+		if err != nil {
+			t.Fatalf("reading %s: %v", name, err)
+		}
+		text := string(src)
+		locs := anyFunc.FindAllStringSubmatchIndex(text, -1)
+		for i, loc := range locs {
+			end := len(text)
+			if i+1 < len(locs) {
+				end = locs[i+1][0]
+			}
+			// Unioned rather than overwritten: two files may carry a method of
+			// the same name on different receivers, and this gate asks whether
+			// ANY of the things that name could mean binds an actor. Keeping
+			// only the last would make the answer depend on directory order.
+			out[text[loc[2]:loc[3]]] += text[loc[0]:end]
+		}
+	}
+	return out
+}
+
+// anyFunc captures the NAME of a top-level function or method — the second
+// group, because a method's receiver comes first.
+var anyFunc = regexp.MustCompile(`(?m)^func (?:\([^)]*\) )?(\w+)\(`)
+
+// withCalledHelpers is the Work body plus the bodies of the compose-package
+// functions it calls, one level deep.
+//
+// One level, because a binder is a HELPER by nature — it takes a context,
+// returns one carrying the principal, and reads better beside the pass it names
+// than inlined into a Work method. Two of the three workers waived here for
+// weeks were binding correctly one call away, and a gate that produces waivers
+// for correct code is a gate whose waiver list stops meaning anything.
+//
+// WHAT THIS CANNOT SEE, so nobody has to rediscover it: a helper that binds an
+// actor for its own path leaves this body looking bound, so a SECOND, unbound
+// gated call in the same Work method would pass. That is a narrower hole than
+// the one it closes — every helper-bound worker was invisible before — and it
+// is the shape to plant a case for if this gate is ever extended again. It also
+// follows names, not call graphs: a call into another package (the automation
+// scanner, the webhook deliverer) is not read at all, which is why a worker
+// whose only binding lives in another module still needs an entry above.
+func withCalledHelpers(body string, pkg map[string]string) string {
+	var b strings.Builder
+	b.WriteString(body)
+	for _, call := range callee.FindAllStringSubmatch(afterSignature(body), -1) {
+		if helper, ok := pkg[call[1]]; ok {
+			b.WriteString(helper)
+		}
+	}
+	return b.String()
+}
+
+// afterSignature drops a method's own declaration line, so the method's NAME is
+// not read as a call it makes.
+//
+// It matters because the names here are shared: every worker's entry point is
+// called Work, so reading the signature pulled every other worker's Work body
+// in — and one of those binds an actor, which made this gate answer yes for a
+// worker that binds none. It read as a working follow-one-level and was a
+// self-satisfying lookup.
+func afterSignature(body string) string {
+	if open := strings.Index(body, "{\n"); open >= 0 {
+		return body[open:]
+	}
+	return body
+}
+
+// callee captures a bare call's name. A selector call (`x.Method(`) is
+// deliberately not matched: this gate reads the compose package's own source,
+// and a method on somebody else's type is not in it.
+var callee = regexp.MustCompile(`(?:^|[^.\w])(\w+)\(`)
