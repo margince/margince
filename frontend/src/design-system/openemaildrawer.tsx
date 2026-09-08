@@ -4,6 +4,8 @@
 import { formatDateTime } from "../format/format";
 import { useLocale } from "../i18n";
 import { EmailAccessEditor } from "../screens/emailaccesseditor";
+import { EmailRecordLinks } from "../screens/emailrecords";
+import { EmailReplyAction } from "../screens/emailreply";
 import { EmailDetail } from "./emaildetail";
 
 /**
@@ -18,6 +20,12 @@ import { EmailDetail } from "./emaildetail";
  * drawer gets it. `EmailDetail` takes it as a render prop and never imports it:
  * the editor performs writes and reads the roster, which is screen work, and
  * the catalog component stays something a story can draw with no API behind it.
+ *
+ * The named records and the reply verb are bound here for the same reason and
+ * with the same result: every surface that opens a message — a record page,
+ * the worklist, a search hit, a brief's citation — gets the same drawer, so a
+ * message can be answered and its records reached from wherever it was opened
+ * rather than only from the timeline row a few of those surfaces have.
  */
 export function OpenEmailDrawer({
   activityId,
@@ -40,6 +48,12 @@ export function OpenEmailDrawer({
       formatWhen={(iso) => formatDateTime(iso, locale, zone)}
       renderAccess={(presentation) => (
         <EmailAccessEditor presentation={presentation} />
+      )}
+      renderRecords={(presentation) => (
+        <EmailRecordLinks presentation={presentation} />
+      )}
+      renderReply={(presentation) => (
+        <EmailReplyAction presentation={presentation} />
       )}
     />
   );

@@ -438,6 +438,7 @@ export function EntityRef({
   id,
   name,
   asText = false,
+  newTab = false,
 }: Readonly<{
   kind: EntityRefKind;
   id: string | null | undefined;
@@ -448,6 +449,16 @@ export function EntityRef({
    * already goes.
    */
   asText?: boolean;
+  /**
+   * Open the record in a NEW tab, for a caller the reader must not be
+   * navigated away from: a reference inside a dialog. Following it in place
+   * closes the dialog and loses whatever was open in it — the message being
+   * read, the draft being written — to reach a page the reader could have
+   * opened from behind it anyway.
+   *
+   * A `user`/`team` reference ignores it, having no page to open at all.
+   */
+  newTab?: boolean;
   // The display name, when the CALLER already has it. A composite read that
   // returns its own labels — the company view's connection graph — would
   // otherwise pay one record fetch per reference and show the raw id until each
@@ -466,7 +477,15 @@ export function EntityRef({
   if (kind === "user" || kind === "team") {
     return <RosterRef kind={kind} id={id} name={name} />;
   }
-  return <RecordRef kind={kind} id={id} name={name} asText={asText} />;
+  return (
+    <RecordRef
+      kind={kind}
+      id={id}
+      name={name}
+      asText={asText}
+      newTab={newTab}
+    />
+  );
 }
 
 // A workspace user or team: no 360 exists to send the reader to, so a resolved
@@ -502,11 +521,13 @@ function RecordRef({
   id,
   name,
   asText,
+  newTab,
 }: Readonly<{
   kind: EntityKind;
   id: string;
   name?: string | null;
   asText: boolean;
+  newTab: boolean;
 }>) {
   // A caller-supplied name skips the lookup; a blank one does not, because a
   // blank is the caller saying it has nothing rather than saying the record is
@@ -543,12 +564,17 @@ function RecordRef({
   // new tab opens too. This is the identity cell's own arrangement
   // (design-system/listtable.tsx), which is where a row and a link inside it
   // were first made to agree.
+  //
+  // `newTab` carries `rel` with it, never alone: `target="_blank"` without
+  // `noopener` hands the opened page a live `window.opener` handle back into
+  // this tab. `OffsiteLink` spells the same pair for the same reason.
   return (
     <a
       className="entity-link"
       href={routeHash(ENTITY[kind].route(id))}
       onClick={(event) => event.stopPropagation()}
       title={id}
+      {...(newTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}
     >
       {resolved}
     </a>
