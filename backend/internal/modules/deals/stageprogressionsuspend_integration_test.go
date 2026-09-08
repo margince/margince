@@ -392,7 +392,7 @@ func TestTheSweepHoldsTheRuleItIsJudging(t *testing.T) {
 
 	// The rule is now suspended by the seeding itself, which is the ordinary
 	// path. Resume it so the sweep below has something to decide about.
-	if err := e.store.ResumeTransitionPolicy(e.as(), ref); err != nil {
+	if _, err := e.store.ResumeTransitionPolicy(e.as(), ref); err != nil {
 		t.Fatalf("resuming for the concurrency probe: %v", err)
 	}
 

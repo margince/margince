@@ -70,6 +70,16 @@ func (s *Store) SetTransitionPolicy(
 	if err := auth.Require(ctx, "pipeline", principal.ActionUpdate); err != nil {
 		return TransitionPolicy{}, err
 	}
+	// AND read, because this answers the whole rule — thresholds, who first
+	// enabled it, any suspension and its reason. A caller who may write but
+	// not read would otherwise learn from the response what the GET refuses
+	// them, using a one-field save as a read.
+	//
+	// No seeded role grants update without read today. This is a line of
+	// defence against a custom role that does, not a fix for one that exists.
+	if err := auth.Require(ctx, "pipeline", principal.ActionRead); err != nil {
+		return TransitionPolicy{}, err
+	}
 	if in.Mode != ModePropose && in.Mode != ModeAuto {
 		return TransitionPolicy{}, fmt.Errorf(
 			"deals: %q is not a stage automation mode", in.Mode)
@@ -374,16 +384,27 @@ func suspendTransitionPolicyTx(
 // mode it was in, and if that is auto the thresholds still have to hold in the
 // transaction that would apply — a resumed rule on a record that is still bad
 // simply proposes.
-func (s *Store) ResumeTransitionPolicy(ctx context.Context, in TransitionRef) error {
+func (s *Store) ResumeTransitionPolicy(
+	ctx context.Context, in TransitionRef,
+) (TransitionPolicy, error) {
 	if err := auth.Require(ctx, "pipeline", principal.ActionUpdate); err != nil {
-		return err
+		return TransitionPolicy{}, err
 	}
-	return s.Tx(ctx, func(tx pgx.Tx) error {
+	// Read too, for the reason SetTransitionPolicy states: this answers the
+	// whole rule, so it must not disclose more than the GET would.
+	if err := auth.Require(ctx, "pipeline", principal.ActionRead); err != nil {
+		return TransitionPolicy{}, err
+	}
+	var out TransitionPolicy
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		before, err := lockTransitionPolicy(ctx, tx, in)
 		if err != nil {
 			return err
 		}
 		if !before.Suspended() {
+			// Already running. The row it holds IS the answer — resuming a
+			// rule nobody suspended is a no-op, not an error.
+			out = *before
 			return nil
 		}
 		var after TransitionPolicy
@@ -407,12 +428,23 @@ func (s *Store) ResumeTransitionPolicy(ctx context.Context, in TransitionRef) er
 				// Resumed by a concurrent caller between the read and here.
 				// Two people clearing one suspension is one clearing, and the
 				// second is a decline rather than a failure.
+				//
+				// The row this caller LOCKED is still the honest answer: it
+				// says suspended, which is what was true when this
+				// transaction read it, and the caller's next read gets the
+				// other one's result.
+				out = *before
 				return nil
 			}
 			return fmt.Errorf("resume the transition's automation: %w", err)
 		}
+		out = after
 		return auditPolicySuspension(ctx, tx, *before, after)
 	})
+	if err != nil {
+		return TransitionPolicy{}, err
+	}
+	return out, nil
 }
 
 // auditPolicySuspension records a rule going off or coming back.

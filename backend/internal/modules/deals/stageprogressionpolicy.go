@@ -288,10 +288,14 @@ func (s *Store) ReadTransitionPolicies(
 			return err
 		}
 		rows, err := tx.Query(ctx, `
-			SELECT p.id, pipeline_id, from_stage_id, to_stage_id, mode,
-			       clean_acceptance_threshold, correction_reversal_threshold,
-			       min_reviewed, min_observation_days, window_days, undo_window_hours,
-			       enabled_by, enabled_at, suspended_at, suspended_reason, version
+			-- Every column QUALIFIED. The stage joins below carry a
+			-- pipeline_id of their own, so the bare name is ambiguous and
+			-- Postgres refuses the statement outright.
+			SELECT p.id, p.pipeline_id, p.from_stage_id, p.to_stage_id, p.mode,
+			       p.clean_acceptance_threshold, p.correction_reversal_threshold,
+			       p.min_reviewed, p.min_observation_days, p.window_days,
+			       p.undo_window_hours, p.enabled_by, p.enabled_at,
+			       p.suspended_at, p.suspended_reason, p.version
 			  FROM stage_progression_policy p
 			  LEFT JOIN stage f ON f.id = p.from_stage_id
 			  LEFT JOIN stage t ON t.id = p.to_stage_id
