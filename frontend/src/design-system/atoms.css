@@ -755,8 +755,11 @@
   font-size: var(--fs-sm);
   font-weight: 600;
   border: 0;
+  /* Transparent, so an unpressed option is read on the TRACK's --bgChip and
+     takes the chip's ink accordingly. The pressed one below lifts onto its own
+     --bgElevated and answers to that instead. */
   background: transparent;
-  color: var(--textMeta);
+  color: var(--textChip);
   padding: 5px 12px;
   border-radius: var(--r-sm);
   cursor: pointer;
@@ -766,15 +769,18 @@
   color: var(--textPrimary);
   box-shadow: var(--shadow-card);
 }
-/* How much is behind an option, beside its name. It stays --textMeta on the
+/* How much is behind an option, beside its name. It keeps the quiet ink on the
    pressed option too: the label says where you are, and a count that lit up
    with it would read as the selection's own figure rather than as the size of
    what is under it. Lighter weight for the same reason — it qualifies the
-   label, it does not compete with it. */
+   label, it does not compete with it. One ink across both states rather than
+   --textChip on the track and --textMeta on the plate, because a figure that
+   changed tone as the reader moved between options would read as a different
+   figure; --textChip is the darker of the two on either ground. */
 .segmented button > .segmented-count {
   margin-left: 6px;
   font-weight: 400;
-  color: var(--textMeta);
+  color: var(--textChip);
 }
 
 /* Something waits behind this option. An accent dot rather than an indigo one:
@@ -2098,8 +2104,17 @@
     color var(--dur-state) var(--ease-out),
     box-shadow var(--dur-state) var(--ease-out);
 }
+/* The press LIFTS to the selected option's own plate, minus its shadow: the
+   segment shows the reader what releasing would give them, and the shadow is
+   what still tells a settled selection apart from a finger on the way to one.
+   Not a second --bgChip, which is what this was: the button is transparent over
+   a track already painted in that fill, so the two composited and the label on
+   the pressed segment fell to 3.99:1. And not an opaque grey either — the
+   track's colour follows whatever the strip sits on, so a fixed value is a step
+   off one host and invisible on the next. --bgElevated is the one ground in the
+   ladder that is a step off the track on every host. */
 .segmented button:active:not(:disabled) {
-  background-color: var(--bgChip);
+  background-color: var(--bgElevated);
   transition-duration: var(--dur-tap);
 }
 /* The strip's own disabled state, which it did not have: a segment nobody may

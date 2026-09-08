@@ -581,17 +581,32 @@ describe("the derived brand layer", () => {
 
 // The pairs above are a LIST of what the tree does, and a list of what a tree
 // does is a second copy of it. This derives the corpus instead: every rule under
-// src/ that paints --bgChip, and the ink it sets on the same rule. An unmeasured
-// ink is the failure that matters and the one nothing else would see —
-// --textMeta on the chip fill reads 3.99:1 over --bgCard, which is the defect
-// --textChip exists to prevent and looks like a perfectly ordinary declaration.
+// src/ that paints --bgChip, plus every rule that draws INSIDE one of those —
+// the same element in another state, or a descendant of it — and the ink each
+// sets. An unmeasured ink is the failure that matters and the one nothing else
+// would see: --textMeta on the chip fill reads 3.99:1 over --bgCard, which is
+// the defect --textChip exists to prevent and looks like a perfectly ordinary
+// declaration.
 //
-// What it CANNOT see, stated rather than left for the next reader to discover:
-// a chip that sets no colour of its own and inherits one. Those are the four
-// rules that read their ink from the row they sit in (`.pn-relay-owner`,
-// `.ob-triage-row-provenance` and its two neighbours), and an inherited ink is a
-// property of the caller rather than of the chip, so there is nothing here to
-// match on. Set the ink on the rule if you want this gate to hold it.
+// The subtree half is not a refinement, it is where the defect actually lived.
+// `.segmented` paints the track and sets no ink at all; `.segmented button`
+// sets --textMeta a rule later and renders ON that track, and a scan that read
+// only the painting rule reported PASS while axe failed two routes. So a rule
+// is in scope when ANY compound of its selector carries every class the chip's
+// SUBJECT does — its subject, because `.palette-row .type` paints the chip and
+// not the row, and reading its first compound instead swept in every sibling
+// the row has. That catches `.segmented button`, `.segmented button >
+// .segmented-count`, `.badge:hover` and `button.evidence-chip:hover`, and
+// correctly leaves `.segmented-mark` alone, since a class name is a token and
+// not a prefix. A rule that paints a ground of its OWN is skipped:
+// `[aria-pressed="true"]` stands on --bgElevated and its ink answers to that.
+//
+// What it still cannot see, stated rather than reasoned away: an ink inherited
+// from OUTSIDE the chip's subtree. `.pn-relay-owner` and the two triage chips
+// set no colour anywhere in their own subtree and read whatever the row around
+// them is drawn in, and no amount of reading these sheets says what that is.
+// The axe sweep over the real routes in `e2e/ac.spec.ts` is what covers that
+// shape, and it is the gate that found this one.
 describe("the chip fill's call sites", () => {
   function stylesheets(dir: string): string[] {
     return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -605,33 +620,146 @@ describe("the chip fill's call sites", () => {
     });
   }
 
-  it("paints --bgChip only under an ink the contrast gate measures", () => {
+  type Rule = { file: string; selector: string; body: string };
+
+  function rules(): Rule[] {
     const sheets = stylesheets(join(here, ".."));
     expect(sheets.length).toBeGreaterThan(0);
-    const offenders: string[] = [];
-    let chipRules = 0;
+    const all: Rule[] = [];
     for (const file of sheets) {
       const sheet = readFileSync(file, "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+      // Innermost brace pairs, so a rule nested in an @media is found as
+      // itself and the query around it never matches as a selector.
       for (const [, selector, body] of sheet.matchAll(
         /([^{}]*)\{([^{}]*)\}/g,
       )) {
-        if (!/background(?:-color)?:[^;]*var\(--bgChip\)/.test(body)) continue;
-        chipRules += 1;
-        // `(?:^|[;{\s])` is what keeps this off --*-color: the character before
-        // a longhand's `color:` is always a hyphen.
-        for (const [, ink] of body.matchAll(
-          /(?:^|[;{\s])color:\s*var\((--[\w-]+)\)/g,
-        )) {
+        for (const one of selector.split(",")) {
+          const trimmed = one.trim();
+          if (trimmed) all.push({ file, selector: trimmed, body });
+        }
+      }
+    }
+    return all;
+  }
+
+  // A functional pseudo-class names something OTHER than the element it is
+  // written on, so its argument is not part of that element's classes:
+  // `:not(.btn)` would otherwise make `btn` a class the chip carries, and the
+  // subtree search would then find nothing at all.
+  function classesOf(compound: string): Set<string> {
+    const bare = compound.replace(/:[\w-]+\([^)]*\)/g, "");
+    return new Set([...bare.matchAll(/\.([\w-]+)/g)].map(([, name]) => name));
+  }
+
+  function compounds(selector: string): string[] {
+    return selector.split(/[\s>+~]+/).filter(Boolean);
+  }
+
+  // The SUBJECT of a selector: the compound the rule actually paints, which is
+  // the last one. `.palette-row .type` styles the chip, not the row — reading
+  // its first compound instead put every `.palette-row` descendant inside a
+  // chip it is only a sibling of.
+  function subjectClasses(selector: string): Set<string> {
+    const parts = compounds(selector);
+    return classesOf(parts[parts.length - 1] ?? "");
+  }
+
+  // WCAG 1.4.3 exempts an inactive control, which is the whole point of the
+  // dimmed tone a disabled segment takes; --textTertiary is out of the contrast
+  // corpus above for the same reason and in the same words.
+  function isDisabledState(selector: string): boolean {
+    return /:disabled|\[disabled\]|\[aria-disabled="true"\]/.test(selector);
+  }
+
+  function paintsOwnGround(body: string): boolean {
+    return /background(?:-color)?:(?![^;]*var\(--bgChip\))[^;]*(?:var\(|#|rgb)/.test(
+      body,
+    );
+  }
+
+  function inks(body: string): string[] {
+    // `(?:^|[;{\s])` is what keeps this off --*-color: the character before a
+    // longhand's `color:` is always a hyphen.
+    return [...body.matchAll(/(?:^|[;{\s])color:\s*var\((--[\w-]+)\)/g)].map(
+      ([, ink]) => ink,
+    );
+  }
+
+  it("draws on --bgChip only in inks the contrast gate measures", () => {
+    const all = rules();
+    const chips = all.filter(({ body }) =>
+      /background(?:-color)?:[^;]*var\(--bgChip\)/.test(body),
+    );
+    // A scan that matched nothing would report PASS on an empty corpus.
+    expect(chips.length).toBeGreaterThan(0);
+
+    const offenders: string[] = [];
+    for (const chip of chips) {
+      const wanted = subjectClasses(chip.selector);
+      // A chip whose subject carries no class of its own — `.segmented
+      // button:active` — is reached through the rule that names the track, so
+      // there is nothing here to search on and nothing lost by not searching.
+      if (wanted.size === 0) continue;
+      const subtree = all.filter((rule) => {
+        if (rule === chip) return false;
+        return compounds(rule.selector).some((part) => {
+          const carried = classesOf(part);
+          return [...wanted].every((name) => carried.has(name));
+        });
+      });
+      for (const rule of [chip, ...subtree]) {
+        if (isDisabledState(rule.selector)) continue;
+        if (rule !== chip && paintsOwnGround(rule.body)) continue;
+        for (const ink of inks(rule.body)) {
           if (chipInks.includes(ink)) continue;
           offenders.push(
-            `${relative(join(here, ".."), file)}: ${selector.trim()} ` +
-              `paints --bgChip under ${ink}, which no pair measures`,
+            `${relative(join(here, ".."), rule.file)}: ${rule.selector} ` +
+              `draws on ${chip.selector}'s --bgChip in ${ink}, ` +
+              `which no pair measures`,
           );
         }
       }
     }
-    // A scan that matched nothing would report PASS on an empty corpus.
-    expect(chipRules).toBeGreaterThan(0);
-    expect(offenders.join("\n")).toBe("");
+    expect([...new Set(offenders)].join("\n")).toBe("");
+  });
+
+  // The other way the fill goes wrong, and the one that broke the segmented
+  // strip: --bgChip painted on a DESCENDANT of something already painted in it.
+  // The two composite, the ground goes a step past where the ink was measured,
+  // and every pair above is measuring the wrong colour — --textChip on a
+  // doubled fill is 3.99:1 in light and 3.45:1 in dark. A chip is one step off
+  // its host by construction, so a chip on a chip is never what was meant; the
+  // state that wants to look pressed takes a ground from the ladder instead.
+  it("never paints --bgChip inside something already painted in it", () => {
+    const all = rules();
+    const chips = all.filter(({ body }) =>
+      /background(?:-color)?:[^;]*var\(--bgChip\)/.test(body),
+    );
+    expect(chips.length).toBeGreaterThan(0);
+    const offenders: string[] = [];
+    for (const chip of chips) {
+      const wanted = subjectClasses(chip.selector);
+      if (wanted.size === 0) continue;
+      for (const rule of chips) {
+        // A longer chain is a DESCENDANT; the same length carrying the same
+        // classes is the same element in another state, which REPLACES the
+        // fill rather than stacking on it.
+        if (
+          compounds(rule.selector).length <= compounds(chip.selector).length
+        ) {
+          continue;
+        }
+        const nested = compounds(rule.selector).some((part) => {
+          const carried = classesOf(part);
+          return [...wanted].every((name) => carried.has(name));
+        });
+        if (!nested) continue;
+        offenders.push(
+          `${relative(join(here, ".."), rule.file)}: ${rule.selector} ` +
+            `paints --bgChip inside ${chip.selector}, which already does`,
+        );
+      }
+    }
+    expect([...new Set(offenders)].join("\n")).toBe("");
   });
 });
