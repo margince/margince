@@ -41,6 +41,8 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/buildinfo"
+
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 )
 
 const (
@@ -376,7 +378,7 @@ func (p *Provider) WriteMetrics(w io.Writer) {
 		if p.Holds(v.uri) {
 			serving = 1
 		}
-		_, _ = fmt.Fprintf(w, "margince_mcp_app_view_held{uri=%q} %d\n", v.uri, serving)
+		_, _ = fmt.Fprintf(w, "margince_mcp_app_view_held{uri=%s} %d\n", httpserver.Label(v.uri), serving)
 	}
 	_, _ = fmt.Fprintf(w, "# HELP margince_mcp_app_fetch_failures_total View document fetches that did not arrive.\n")
 	_, _ = fmt.Fprintf(w, "# TYPE margince_mcp_app_fetch_failures_total counter\n")
@@ -402,6 +404,6 @@ func (p *Provider) WriteMetrics(w io.Writer) {
 		if buildinfo.SkewBetween(buildinfo.Revision, documentRevision(doc)) {
 			skewed = 1
 		}
-		_, _ = fmt.Fprintf(w, "margince_mcp_app_build_skew{uri=%q} %d\n", v.uri, skewed)
+		_, _ = fmt.Fprintf(w, "margince_mcp_app_build_skew{uri=%s} %d\n", httpserver.Label(v.uri), skewed)
 	}
 }

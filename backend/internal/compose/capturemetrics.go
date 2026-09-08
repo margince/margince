@@ -16,6 +16,7 @@ import (
 	"sort"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 )
 
 // writeCaptureMetrics renders one counter per traced outcome.
@@ -37,7 +38,7 @@ func writeCaptureMetrics(w io.Writer, totals map[string]uint64) {
 	_, _ = fmt.Fprintf(w, "# HELP margince_capture_outcomes_total What the capture pipeline decided about each message, since process start.\n")
 	_, _ = fmt.Fprintf(w, "# TYPE margince_capture_outcomes_total counter\n")
 	for _, outcome := range outcomes {
-		_, _ = fmt.Fprintf(w, "margince_capture_outcomes_total{outcome=%q} %d\n", outcome, totals[outcome])
+		_, _ = fmt.Fprintf(w, "margince_capture_outcomes_total{outcome=%s} %d\n", httpserver.Label(outcome), totals[outcome])
 	}
 }
 

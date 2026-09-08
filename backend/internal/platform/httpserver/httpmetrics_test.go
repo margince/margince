@@ -431,8 +431,8 @@ func TestLabelValuesUseOnlyPrometheusEscapes(t *testing.T) {
 		"/v1/with\x00null": `"/v1/withnull"`,
 	}
 	for in, want := range cases {
-		if got := label(in); got != want {
-			t.Errorf("label(%q) = %s, want %s", in, got, want)
+		if got := Label(in); got != want {
+			t.Errorf("Label(%q) = %s, want %s", in, got, want)
 		}
 	}
 }

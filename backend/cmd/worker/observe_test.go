@@ -138,11 +138,20 @@ func TestTheWorkerMetricsAreProcessLocalAndReServeNoFleetGauge(t *testing.T) {
 	}
 
 	for _, family := range []string{
-		"margince_process_goroutines",
-		"margince_process_heap_bytes",
-		"margince_process_heap_sys_bytes",
-		"margince_process_gc_cycles_total",
+		// The runtime collectors, which say which PROCESS is wedged.
+		"go_goroutines",
+		"go_memstats_heap_alloc_bytes",
+		"go_gc_duration_seconds",
+		"process_cpu_seconds_total",
 		"margince_relay_published_total",
+		// The AI counters. This role resolves a model path and runs the
+		// briefs, the sweeps and the embedding lane through it, and every
+		// Router in the binary increments one process-wide collector — so a
+		// worker that renders none of it counts its own calls and tells
+		// nobody. That was true until this assertion existed.
+		"margince_ai_calls_total",
+		"margince_ai_call_duration_seconds",
+		"margince_ai_tokens_total",
 	} {
 		if !strings.Contains(body, "# TYPE "+family+" ") {
 			t.Errorf("the worker publishes no %s; it is process-local and served nowhere else\ngot:\n%s", family, body)

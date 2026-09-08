@@ -18,6 +18,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -376,7 +377,7 @@ func modelSurfaceOptions(ctx context.Context, cfg apiConfig, deployCfg deploycon
 	opts = append(opts, offerDraftOptions(pool, modelPath)...)
 	opts = append(opts, compose.WithAssistantProfile(aiState, assistantProfile))
 	if modelPath != nil {
-		opts = append(opts, compose.WithAIMetrics(modelPath.WriteMetrics))
+		opts = append(opts, compose.WithAIMetrics(ai.WriteProcessMetrics))
 		// The retrieval embed lane, on the REQUEST path — the same lane the
 		// reindex job and the drift sweep take. Without it the hybrid arm's
 		// vector half is unreachable from a request and every caller is served a

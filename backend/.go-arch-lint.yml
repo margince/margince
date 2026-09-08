@@ -63,6 +63,11 @@ vendors:
   # The compression the published module arrives in. Confined to the vendored
   # host adapter, which decides the framing from the bytes rather than a name.
   brotli: { in: github.com/andybalholm/** }
+  # The Go runtime and process collectors behind /metrics' go_*/process_*
+  # families, plus the text encoder that renders them into the same exposition
+  # as the hand-rolled margince_* ones. CPU, RSS, GC pause duration, threads
+  # and file descriptors are not reachable from the standard library.
+  prometheus: { in: github.com/prometheus/** }
 
 components:
   # The published extension surface (ADR-0120 §3): the outermost Tier-0
@@ -130,7 +135,7 @@ deps:
     # wazero + brotli: licensecheck's runtime for the bundled validation
     # module, and the compression it is published in.
     # xsyswindows: ownedfile's DACL, the Windows half of an owner-only file.
-    canUse: [pgx, chi, oapi, redis, river, minio, yaml, xnet, ximage, oksvg, wazero, brotli, xsyswindows]
+    canUse: [pgx, chi, oapi, redis, river, minio, yaml, xnet, ximage, oksvg, wazero, brotli, xsyswindows, prometheus]
   # Modules import shared + platform + contracts — NEVER a sibling; every
   # cross-module edge is injected by the composition layer.
   identity:

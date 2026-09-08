@@ -14,11 +14,12 @@
 //
 // So this listener carries only what is PROCESS-LOCAL and therefore differs
 // per target — the Go runtime, this process's own pool, this process's relay
-// counter. It re-serves no job-table gauge, and passes a nil outbox backlog
-// for the same reason: that read is the api's, and a second copy of a
-// fleet-wide number is a worse operator surface than one copy. It carries no
-// workspace id and no tenant data at all, which is what makes it a NARROWER
-// surface than the api's /metrics rather than a second copy of it.
+// counter, and the AI calls this process made. It re-serves no job-table
+// gauge, and passes a nil outbox backlog for the same reason: that read is the
+// api's, and a second copy of a fleet-wide number is a worse operator surface
+// than one copy. It carries no workspace id and no tenant data at all, which
+// is what makes it a NARROWER surface than the api's /metrics rather than a
+// second copy of it.
 package main
 
 import (
@@ -35,6 +36,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/events"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 )
@@ -120,13 +122,27 @@ func startObserveListener(ctx context.Context, cfg workerConfig, pool *pgxpool.P
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", httpserver.Healthz)
 	mux.HandleFunc("/readyz", httpserver.Readyz("", nil, workerReadyChecks(pool, rdb, boot)...))
-	// nil backlog: the outbox backlog is a fleet-wide read the api already
-	// serves. nil jobStats and nil overlay for the same reason — both are
-	// projections of shared tables, not of this process. nil `extra` because
-	// this process now keeps no metric of its own: the extension-job dispatcher
-	// enqueues every live workspace unconditionally, so there is no per-tenant
-	// precondition left for it to count.
-	mux.HandleFunc("/metrics", httpserver.Metrics(pool, nil, events.PublishedTotal, nil, nil, nil))
+	// Backlog, JobStats and Overlay are nil because each is a fleet-wide read
+	// of a shared table the api already serves, and a second copy of one
+	// number is a worse operator surface than one copy.
+	//
+	// Extra is NOT nil, and the reasoning that once left it so was the trap
+	// this listener exists to avoid. It said "this process keeps no metric of
+	// its own" — but this role resolves a model path (main.go), and every
+	// Router in the binary increments ai's process-wide collector, so the
+	// worker's briefs, enrichment and embedding calls were all counted here
+	// and rendered by nobody. Process-local state is exactly what this
+	// listener carries; only shared-table reads belong to the api.
+	//
+	// It is wired unconditionally rather than from the resolved model path,
+	// because this listener starts BEFORE that resolution — deliberately, so a
+	// slow boot is observable — and the counters are the process's, not any
+	// one router's.
+	mux.HandleFunc("/metrics", httpserver.Metrics(httpserver.MetricsInput{
+		Pool:      pool,
+		Published: events.PublishedTotal,
+		Extra:     ai.WriteProcessMetrics,
+	}))
 
 	srv := &http.Server{
 		Addr: cfg.observeAddr,

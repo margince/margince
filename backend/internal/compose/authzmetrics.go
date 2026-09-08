@@ -16,6 +16,7 @@ import (
 	"sort"
 
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 )
 
 // writeAuthzDecisionMetrics renders one counter per label combination seen.
@@ -39,8 +40,9 @@ func writeAuthzDecisionMetrics(w io.Writer, totals map[consent.DecisionCount]uin
 	_, _ = fmt.Fprintf(w, "# TYPE margince_communication_authz_decisions_total counter\n")
 	for _, count := range counts {
 		_, _ = fmt.Fprintf(w,
-			"margince_communication_authz_decisions_total{verdict=%q,category=%q,mode=%q} %d\n",
-			string(count.Verdict), string(count.Category), string(count.Mode), totals[count])
+			"margince_communication_authz_decisions_total{verdict=%s,category=%s,mode=%s} %d\n",
+			httpserver.Label(string(count.Verdict)), httpserver.Label(string(count.Category)),
+			httpserver.Label(string(count.Mode)), totals[count])
 	}
 }
 

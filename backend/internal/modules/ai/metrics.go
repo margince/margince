@@ -4,36 +4,106 @@
 package ai
 
 import (
-	"fmt"
 	"io"
-	"sort"
 	"sync"
+
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 )
 
 // callMetrics is the in-process AI counter set exposed on /metrics. Counters
 // only (monotonic since process start); hand-rolled text like the rest of
 // the metrics surface, so no client_golang dependency. Never labels by
-// content or workspace — cardinality stays bounded by the closed task/tier
-// sets and the small provider list.
+// content or workspace.
+//
+// Cardinality is the product of closed vocabularies — task, tier, provider,
+// error sentinel, finish reason — with ONE exception that is not closed:
+// model. A tier binding's Model is operator-supplied and ValidateTierBinding
+// does not constrain it (an ollama or vLLM identity is genuinely arbitrary),
+// so a rebind mints a new series that lives for the process lifetime. That is
+// affordable because a rebind is an admin action and not traffic, and it is
+// why every label value here goes through httpserver.Label rather than %q:
+// Go quoting emits \xNN escapes the Prometheus text parser rejects, and it
+// rejects the whole scrape rather than the offending line.
 type callMetrics struct {
-	mu     sync.Mutex
-	calls  map[metricKey]uint64
-	errors map[metricKey]uint64
-	// Token totals are int64, not uint64: model usage counts are always
-	// non-negative ints, and widening int→int64 is a lossless conversion
-	// (an int→uint64 cast trips gosec G115 on the sign change for no gain).
-	tokIn         int64
-	tokOut        int64
+	mu      sync.Mutex
+	calls   map[routeKey]uint64
+	errors  map[errorKey]uint64
+	finish  map[finishKey]uint64
+	tokens  map[tokenKey]int64
+	latency map[routeKey]*httpserver.Histogram
+	// attempts counts every ladder rung walked, against calls' one-per-
+	// logical-call terminals: the ratio is what a tier failing over on
+	// every call looks like, and the terminal count alone cannot show it.
+	attempts map[routeKey]uint64
+	degraded map[routeKey]uint64
+	cacheHit map[routeKey]uint64
+
 	contextBytes  map[string]int64
 	contextTokens map[string]int64
 }
 
-type metricKey struct{ task, tier, provider string }
+// routeKey is the identity every AI family is keyed by. Model is what the
+// binding asked for; ServedIdentitySource grades how much the provider's own
+// report about what answered can be trusted, and it is kept HERE rather than
+// as a served-model label because a second model dimension would multiply the
+// series count to say something the source already says in three values.
+type routeKey struct{ task, tier, provider, model, servedIdentitySource string }
+
+type errorKey struct {
+	routeKey
+	sentinel string
+}
+
+type finishKey struct {
+	routeKey
+	reason string
+}
+
+type tokenKey struct {
+	routeKey
+	class string
+}
+
+// Token classes. The four input classes are DISJOINT by construction, which
+// they are not in the Call struct: TokensIn is cache-inclusive (model.Response's
+// pinned contract), already counting both CachedTokens and CacheWriteTokens.
+// Summing the classes as reported would therefore count cached input twice, and
+// it would do so inside sum by (direction) — the query a dashboard writes
+// without thinking. classPrompt is the leftover after both are subtracted,
+// which is exactly PriceCall's uncached bucket; uncachedTokensIn is the one
+// helper both call.
+const (
+	classPrompt     = "prompt"
+	classCachedRead = "cached_read"
+	classCacheWrite = "cache_write"
+	classCompletion = "completion"
+	classReasoning  = "reasoning"
+)
+
+const (
+	directionIn  = "in"
+	directionOut = "out"
+)
+
+// directionOf answers the in/out label a token class rolls up to, so
+// sum by (direction) still answers "prompt versus completion" after the
+// class split. Reasoning tokens are billed as output and roll up with it.
+func directionOf(class string) string {
+	if class == classCompletion || class == classReasoning {
+		return directionOut
+	}
+	return directionIn
+}
 
 func newCallMetrics() *callMetrics {
 	return &callMetrics{
-		calls: map[metricKey]uint64{}, errors: map[metricKey]uint64{},
-		contextBytes: map[string]int64{}, contextTokens: map[string]int64{},
+		calls: map[routeKey]uint64{}, errors: map[errorKey]uint64{},
+		finish: map[finishKey]uint64{}, tokens: map[tokenKey]int64{},
+		latency:  map[routeKey]*httpserver.Histogram{},
+		attempts: map[routeKey]uint64{}, degraded: map[routeKey]uint64{},
+		cacheHit:      map[routeKey]uint64{},
+		contextBytes:  map[string]int64{},
+		contextTokens: map[string]int64{},
 	}
 }
 
@@ -43,47 +113,95 @@ func newCallMetrics() *callMetrics {
 // repeated metric family / duplicate series in one exposition).
 var sharedCallMetrics = newCallMetrics()
 
+// WriteProcessMetrics renders this PROCESS's AI counters into the exposition.
+//
+// Package-level, and named for the process, because that is what the numbers
+// are: every Router in this binary increments sharedCallMetrics, so there is
+// one set no matter how many routers a role builds. It used to be reachable
+// only as a method on Router (and through a ModelPath wrapper above it), which
+// read as "this router's counters" and cost the worker its entire AI surface —
+// that role resolves a model path but wired no renderer, so every job-driven
+// call was counted here and published by nobody.
+func WriteProcessMetrics(w io.Writer) { sharedCallMetrics.WritePrometheus(w) }
+
+// observeAttempt records ONE ladder rung. Every attempt carries tokens the
+// vendor billed and a latency the caller waited, terminal or not, so the
+// histogram and the token counters are fed here rather than from the terminal
+// alone — a retry that burned 4,000 prompt tokens before failing over cost
+// exactly that whether or not its row is the one the caller got back.
+func (m *callMetrics) observeAttempt(c Call) {
+	k := m.keyOf(c)
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.attempts[k]++
+	m.observeLatencyLocked(k, c)
+	m.observeTokensLocked(k, c)
+	if c.CacheHit {
+		m.cacheHit[k]++
+	}
+	if c.Degraded {
+		m.degraded[k]++
+	}
+	if c.ErrorSentinel != "" {
+		m.errors[errorKey{routeKey: k, sentinel: c.ErrorSentinel}]++
+	}
+	if c.FinishReason != "" {
+		m.finish[finishKey{routeKey: k, reason: c.FinishReason}]++
+	}
+}
+
+// observe records the TERMINAL of one logical call: the outcome the caller
+// actually got. It is the denominator for "how much work was asked for",
+// which is a different question from how many rungs answering it took, and
+// keeping the two apart is the whole point of counting both.
 func (m *callMetrics) observe(c Call) {
-	k := metricKey{task: string(c.Task), tier: string(c.Tier), provider: c.Provider}
+	k := m.keyOf(c)
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.calls[k]++
-	if c.ErrorSentinel != "" {
-		m.errors[k]++
-	}
-	m.tokIn += int64(c.TokensIn)
-	m.tokOut += int64(c.TokensOut)
 	m.contextBytes[string(c.Task)] += int64(c.ContextBytes)
 	m.contextTokens[string(c.Task)] += int64(c.ContextTokensEstimate)
 }
 
-func (m *callMetrics) WritePrometheus(w io.Writer) {
-	// Snapshot under the lock, render outside it: w is typically the
-	// /metrics HTTP response, and a slow scrape client must never hold
-	// the mutex every completion's observe() takes — that would let one
-	// stalled scrape block AI calls process-wide.
-	m.mu.Lock()
-	calls := make(map[metricKey]uint64, len(m.calls))
-	for k, v := range m.calls {
-		calls[k] = v
+func (m *callMetrics) keyOf(c Call) routeKey {
+	return routeKey{
+		task: string(c.Task), tier: string(c.Tier), provider: c.Provider,
+		model: c.ModelID, servedIdentitySource: c.ServedIdentitySource,
 	}
-	errs := make(map[metricKey]uint64, len(m.errors))
-	for k, v := range m.errors {
-		errs[k] = v
-	}
-	tokIn, tokOut := m.tokIn, m.tokOut
-	contextBytes := copyTaskCounters(m.contextBytes)
-	contextTokens := copyTaskCounters(m.contextTokens)
-	m.mu.Unlock()
+}
 
-	writeCounterFamily(w, "margince_ai_calls_total", "AI call terminals (completion or embedding) since process start.", calls)
-	writeCounterFamily(w, "margince_ai_call_errors_total", "AI completion failures since process start.", errs)
-	_, _ = fmt.Fprintf(w, "# HELP margince_ai_tokens_total AI tokens billed since process start.\n")
-	_, _ = fmt.Fprintf(w, "# TYPE margince_ai_tokens_total counter\n")
-	_, _ = fmt.Fprintf(w, "margince_ai_tokens_total{direction=\"in\"} %d\n", tokIn)
-	_, _ = fmt.Fprintf(w, "margince_ai_tokens_total{direction=\"out\"} %d\n", tokOut)
-	writeTaskCounterFamily(w, "margince_ai_company_context_bytes_total", "Company-context bytes supplied to AI attempts.", contextBytes)
-	writeTaskCounterFamily(w, "margince_ai_company_context_tokens_estimate_total", "Estimated company-context tokens supplied to AI attempts.", contextTokens)
+// observeLatencyLocked skips a cache hit rather than recording its
+// microseconds: a hit measures this process's map lookup, and mixing those
+// into the same histogram as a provider round trip drags every percentile
+// toward zero — the percentile would then improve as the cache warmed, which
+// is the opposite of what a latency panel is read for.
+func (m *callMetrics) observeLatencyLocked(k routeKey, c Call) {
+	if c.CacheHit {
+		return
+	}
+	h, ok := m.latency[k]
+	if !ok {
+		h = newLatencyHistogram()
+		m.latency[k] = h
+	}
+	h.Observe(float64(c.LatencyMS) / 1000)
+}
+
+// observeTokensLocked splits one attempt's usage into disjoint classes. The
+// int64 widening is lossless (a usage count is a non-negative int) and is
+// preferred over int→uint64, which trips gosec G115 on the sign change.
+func (m *callMetrics) observeTokensLocked(k routeKey, c Call) {
+	for class, n := range map[string]int{
+		classPrompt:     uncachedTokensIn(c.TokensIn, c.CachedTokens, c.CacheWriteTokens),
+		classCachedRead: c.CachedTokens,
+		classCacheWrite: c.CacheWriteTokens,
+		classCompletion: c.TokensOut,
+		classReasoning:  c.ReasoningTokens,
+	} {
+		if n != 0 {
+			m.tokens[tokenKey{routeKey: k, class: class}] += int64(n)
+		}
+	}
 }
 
 func copyTaskCounters(source map[string]int64) map[string]int64 {
@@ -92,37 +210,4 @@ func copyTaskCounters(source map[string]int64) map[string]int64 {
 		out[key] = value
 	}
 	return out
-}
-
-func writeTaskCounterFamily(w io.Writer, name, help string, family map[string]int64) {
-	_, _ = fmt.Fprintf(w, "# HELP %s %s\n# TYPE %s counter\n", name, help, name)
-	tasks := make([]string, 0, len(family))
-	for task := range family {
-		tasks = append(tasks, task)
-	}
-	sort.Strings(tasks)
-	for _, task := range tasks {
-		_, _ = fmt.Fprintf(w, "%s{task=%q} %d\n", name, task, family[task])
-	}
-}
-
-func writeCounterFamily(w io.Writer, name, help string, fam map[metricKey]uint64) {
-	_, _ = fmt.Fprintf(w, "# HELP %s %s\n# TYPE %s counter\n", name, help, name)
-	keys := make([]metricKey, 0, len(fam))
-	for k := range fam {
-		keys = append(keys, k)
-	}
-	// Stable output so scrapes and tests don't flap on map order.
-	sort.Slice(keys, func(i, j int) bool {
-		if keys[i].provider != keys[j].provider {
-			return keys[i].provider < keys[j].provider
-		}
-		if keys[i].task != keys[j].task {
-			return keys[i].task < keys[j].task
-		}
-		return keys[i].tier < keys[j].tier
-	})
-	for _, k := range keys {
-		_, _ = fmt.Fprintf(w, "%s{provider=%q,task=%q,tier=%q} %d\n", name, k.provider, k.task, k.tier, fam[k])
-	}
 }

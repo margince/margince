@@ -55,10 +55,7 @@ type ModelRate struct {
 // intentional — CostReport performs the identical division so a
 // row-by-row sum of PriceCall never drifts from the aggregate SQL.
 func PriceCall(u Usage, r ModelRate) int64 {
-	uncached := int64(u.TokensIn - u.CachedTokens - u.CacheWriteTokens)
-	if uncached < 0 {
-		uncached = 0
-	}
+	uncached := int64(uncachedTokensIn(u.TokensIn, u.CachedTokens, u.CacheWriteTokens))
 	total := uncached*r.InputPerMTokMicroUSD +
 		int64(u.CachedTokens)*r.CacheReadPerMTokMicroUSD +
 		int64(u.CacheWriteTokens)*r.CacheWritePerMTokMicroUSD +
@@ -257,4 +254,25 @@ func localZeroRates(day time.Time) []ModelRate {
 		// resolves to model_id "" (routeMeta.model = cfg.Model, unmodified).
 		rateOn(day, ProviderFake, "", 0, 0, 0, 0),
 	}
+}
+
+// uncachedTokensIn answers the plain prompt bucket: TokensIn is cache-inclusive
+// (model.Response's pinned contract), already counting both a cache READ and a
+// cache CREATE, so the bucket that prices at the ordinary input rate is what is
+// left after subtracting both.
+//
+// It is a function rather than a line inside PriceCall because the exposition
+// splits tokens into the same four disjoint classes, and the two must agree:
+// a metrics split that used TokensIn whole would double-count cached input in
+// sum by (direction) — silently, since both halves are plausible numbers.
+//
+// Floored at 0 so a provider reporting cached tokens above TokensIn — a
+// defensive case, not a contract violation this package should trust blindly —
+// never prices, or counts, a negative number of tokens.
+func uncachedTokensIn(tokensIn, cached, cacheWrite int) int {
+	uncached := tokensIn - cached - cacheWrite
+	if uncached < 0 {
+		return 0
+	}
+	return uncached
 }

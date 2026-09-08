@@ -52,12 +52,12 @@ func TestNothingIsMeasuredForAScrapeThatHasAlreadyGone(t *testing.T) {
 	// it measures anything.
 	w := &hangUp{ResponseWriter: httptest.NewRecorder(), accepts: 1}
 
-	Metrics(nil,
-		func(context.Context) (int64, error) { measured["backlog"] = true; return 0, nil },
-		func() uint64 { return 0 },
-		func(io.Writer) { measured["extra"] = true },
-		func(context.Context, io.Writer) error { measured["jobs"] = true; return nil },
-		&OverlayMetrics{
+	Metrics(MetricsInput{
+		Backlog:   func(context.Context) (int64, error) { measured["backlog"] = true; return 0, nil },
+		Published: func() uint64 { return 0 },
+		Extra:     func(io.Writer) { measured["extra"] = true },
+		JobStats:  func(context.Context, io.Writer) error { measured["jobs"] = true; return nil },
+		Overlay: &OverlayMetrics{
 			SourceLag: func(context.Context) (map[string]time.Duration, error) {
 				measured["overlay"] = true
 				return map[string]time.Duration{}, nil
@@ -66,7 +66,7 @@ func TestNothingIsMeasuredForAScrapeThatHasAlreadyGone(t *testing.T) {
 			ConflictTotal: func() uint64 { return 0 },
 			DeletedTotal:  func() uint64 { return 0 },
 		},
-	)(w, httptest.NewRequest(http.MethodGet, "/metrics", nil))
+	})(w, httptest.NewRequest(http.MethodGet, "/metrics", nil))
 
 	// The runtime section is first and does the refusing, so everything after
 	// it is work for a body that cannot be delivered.
@@ -105,16 +105,15 @@ func TestNoCounterIsReadForAScrapeThatHasAlreadyGone(t *testing.T) {
 	read := map[string]bool{}
 	w := &hangUp{ResponseWriter: httptest.NewRecorder(), accepts: 1}
 
-	Metrics(nil, nil,
-		func() uint64 { read["published"] = true; return 0 },
-		nil, nil,
-		&OverlayMetrics{
+	Metrics(MetricsInput{
+		Published: func() uint64 { read["published"] = true; return 0 },
+		Overlay: &OverlayMetrics{
 			SourceLag:     func(context.Context) (map[string]time.Duration, error) { return map[string]time.Duration{}, nil },
 			SyncedTotal:   func() uint64 { read["synced"] = true; return 0 },
 			ConflictTotal: func() uint64 { read["conflict"] = true; return 0 },
 			DeletedTotal:  func() uint64 { read["deleted"] = true; return 0 },
 		},
-	)(w, httptest.NewRequest(http.MethodGet, "/metrics", nil))
+	})(w, httptest.NewRequest(http.MethodGet, "/metrics", nil))
 
 	for _, supplier := range []string{"published", "synced", "conflict", "deleted"} {
 		if read[supplier] {
