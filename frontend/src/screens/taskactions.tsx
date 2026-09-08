@@ -18,7 +18,6 @@ import {
   PendingBody,
 } from "../design-system/atoms";
 import { DateInput, isISODate } from "../design-system/dateinput";
-import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { calendarDay, dueInstant } from "../format/calendarday";
 import { formatDate, formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
@@ -414,11 +413,72 @@ export function TaskDetailModal({
           )}
         </div>
       )}
-      <OpenEmailDrawer
-        activityId={openSource}
-        zone={recordZone}
-        onClose={() => setOpenSource(null)}
-      />
+      {openSource && (
+        <SourceMeeting
+          activityId={openSource}
+          onClose={() => setOpenSource(null)}
+        />
+      )}
+    </Modal>
+  );
+}
+
+/**
+ * The meeting a task was read out of.
+ *
+ * It asks GET /activities/{id}, not the email presentation: that endpoint
+ * refuses anything whose kind is not `email` — with a 404, so a reader clicking
+ * through to a MEETING would have been told it does not exist. The plain
+ * activity read serves every kind and carries the same row scope, so a reader
+ * who may not see the meeting still gets the refusal that is theirs to get.
+ */
+function SourceMeeting({
+  activityId,
+  onClose,
+}: Readonly<{ activityId: string; onClose: () => void }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const recordZone = useRecordZone();
+  const titleId = useId();
+  const query = useQuery({
+    queryKey: ["activity", activityId],
+    queryFn: async () => {
+      const { data, error } = await api.GET("/activities/{id}", {
+        params: { path: { id: activityId } },
+      });
+      if (error) {
+        throwProblem(error, t);
+      }
+      return data;
+    },
+  });
+  const meeting: Activity | undefined = query.data;
+  return (
+    <Modal open onClose={onClose} labelledBy={titleId}>
+      <h2 id={titleId} className="t-h2 modal-title">
+        {meeting?.subject ?? t("tasks.source")}
+      </h2>
+      {query.isPending && <PendingBody label={t("tasks.detailLoading")} />}
+      {query.isError && (
+        <p className="t-caption form-error">
+          {problemMessageOf(query.error, t)}
+        </p>
+      )}
+      {meeting && (
+        <div className="form-stack">
+          <p className="t-caption">
+            {formatDateTime(meeting.occurred_at, locale, recordZone)}
+          </p>
+          {/* The transcript, as it was captured. `pre-wrap` because a
+              transcript is line-per-turn and reflowing it into a paragraph
+              takes away the one structure it has. */}
+          {meeting.body && (
+            <p className="t-body" style={{ whiteSpace: "pre-wrap" }}>
+              {meeting.body}
+            </p>
+          )}
+        </div>
+      )}
     </Modal>
   );
 }

@@ -3468,6 +3468,7 @@ export const vi = {
   "tasks.snooze": "Hoãn 1 ngày",
   "tasks.moveTo": "Dời sang",
   "tasks.detail": "Công việc",
+  "tasks.source": "Cuộc họp",
   "tasks.openSource": "Mở cuộc họp",
   "tasks.detailLoading": "Đang đọc công việc này…",
   "tasks.isDone": "Đã hoàn thành",

@@ -17,7 +17,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -95,9 +97,9 @@ func (s *Store) RetractMisattributedSignatureFields(ctx context.Context) (int64,
 		// superseded_value is the undo buffer applyObservedField fills, so it
 		// holds whatever stood there before the signature overwrote it, and
 		// NULL when nothing did.
-		tag, err := tx.Exec(ctx, `
+		rows, err := tx.Query(ctx, `
 			WITH wrong AS (
-			    SELECT f.id, f.person_id, f.field, f.superseded_value
+			    SELECT f.id, f.person_id, f.field, f.value, f.superseded_value
 			      FROM person_profile_field f
 			      JOIN activity a ON f.source_ref = 'activity:' || a.id::text
 			     WHERE f.source = $1
@@ -108,19 +110,37 @@ func (s *Store) RetractMisattributedSignatureFields(ctx context.Context) (int64,
 			            AND claim_kind = 'profile_field' AND verdict = 'corrected'
 			            AND claim_key = encode(sha256(('profile_field:' || f.field)::bytea), 'hex'))
 			), restored AS (
+			    -- COMPARE AND SWAP, on the value the sidecar says this pass
+			    -- wrote. A blind restore would undo an edit made AFTER the bad
+			    -- enrichment: the machine writes "Partner", a human corrects it
+			    -- to "CTO" through UpdatePerson — which touches the column and
+			    -- not this table — and a sweep that wrote superseded_value back
+			    -- would take their answer away. Matching on f.value first means
+			    -- a column somebody else has since moved is left exactly where
+			    -- they put it, and the stale sidecar row is still withdrawn.
 			    UPDATE person p SET title = w.superseded_value
 			      FROM wrong w
 			     WHERE p.id = w.person_id AND w.field = $2 AND p.archived_at IS NULL
+			       AND p.title IS NOT DISTINCT FROM w.value
 			)
-			DELETE FROM person_profile_field f USING wrong w WHERE f.id = w.id`,
+			DELETE FROM person_profile_field f USING wrong w WHERE f.id = w.id
+			 RETURNING f.person_id, f.field`,
 			enrichSource, fieldTitle)
 		if err != nil {
 			return fmt.Errorf("people: retracting misattributed signature fields: %w", err)
 		}
-		removed = tag.RowsAffected()
-		if removed == 0 {
-			return nil
+		touched, err := auditRetractions(ctx, tx, rows)
+		if err != nil {
+			return err
 		}
+		removed = touched
+		// The watermark is cleared whether or not a field was deleted, and that
+		// is the whole point of doing it separately. A misattributed message
+		// that yielded NO field still advanced the cursor past itself, so a
+		// person whose valid signature arrived EARLIER would never be offered
+		// again — an empty repair leaving a permanent gap, which is exactly the
+		// under-recognition shape that reports success.
+		//
 		// The watermark said "this person's mail has been read up to here", and
 		// that reading was wrong. Clearing it lets the next pass look again, so
 		// a contact whose only signature was somebody else's can still gain
@@ -134,4 +154,58 @@ func (s *Store) RetractMisattributedSignatureFields(ctx context.Context) (int64,
 		return nil
 	})
 	return removed, err
+}
+
+// auditRetractions writes the write shape for each person the sweep touched.
+//
+// A field this pass wrote landed with an audit row and a person.updated event;
+// taking it back is the same size of change to the same record, and a repair
+// that left no trace would make a title change on its own between two reads of
+// the history. Grouped per person rather than per field, because that is the
+// mutation a reader sees: one person, the fields that were withdrawn from them.
+//
+// NAMED, NOT QUOTED, like the writer it undoes: the values came out of somebody
+// else's message, and audit_log outlives the erasure of the record they came
+// from.
+func auditRetractions(ctx context.Context, tx pgx.Tx, rows pgx.Rows) (int64, error) {
+	byPerson := map[ids.PersonID][]string{}
+	var order []ids.PersonID
+	var removed int64
+	for rows.Next() {
+		var personID ids.PersonID
+		var field string
+		if err := rows.Scan(&personID, &field); err != nil {
+			rows.Close()
+			return 0, fmt.Errorf("people: reading the retracted fields: %w", err)
+		}
+		if _, seen := byPerson[personID]; !seen {
+			order = append(order, personID)
+		}
+		byPerson[personID] = append(byPerson[personID], field)
+		removed++
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return 0, fmt.Errorf("people: reading the retracted fields: %w", err)
+	}
+	for _, personID := range order {
+		fields := byPerson[personID]
+		auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", entityPerson, personID.UUID,
+			map[string]any{}, map[string]any{},
+			map[string]any{
+				auditKeySource: enrichSource,
+				auditKeyFields: fields,
+				fieldKeyReason: "signature read off a message this person did not send",
+			})
+		if err != nil {
+			return 0, err
+		}
+		if err := storekit.EmitEvent(ctx, tx, auditID, personID.UUID,
+			crmcontracts.PublicEventPersonUpdated{
+				ChangedFields: map[string]any{auditKeyFields: fields, auditKeySource: enrichSource},
+			}); err != nil {
+			return 0, err
+		}
+	}
+	return removed, nil
 }

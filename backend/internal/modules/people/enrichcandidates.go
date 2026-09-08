@@ -43,8 +43,8 @@ var signatureCandidateSQL = `
 				  -- the field back. The candidate simply waits for open mail.
 				  AND a.audience = 'workspace'
 				  -- A row held under a statutory obligation is out of reach of
-				  -- every ordinary read (A165/ADR-0114 §2); the model call this
-				  -- feeds is processing, which is what the hold bars.
+				  -- every ordinary read, and the model call this feeds is
+				  -- processing — which is exactly what such a hold bars.
 				  AND a.restricted_at IS NULL
 				ORDER BY a.occurred_at DESC
 				LIMIT 1

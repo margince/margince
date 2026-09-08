@@ -31,40 +31,19 @@ function stubTask(sourceActivityId: string | null) {
         is_done: false,
         source_activity_id: sourceActivityId,
       }),
-    "GET /activities/meeting-9/email-presentation": () =>
+    // The PLAIN activity read, which is what the reader calls. Stubbing the
+    // email presentation instead is what let a 404 ship: that endpoint refuses
+    // any kind but `email`, and a fixture answering it anyway proved only that
+    // the fixture answered.
+    "GET /activities/meeting-9": () =>
       jsonResponse({
         id: "meeting-9",
-        lifecycle: "delivered",
-        occurred_at: "2026-09-08T08:00:00Z",
-        summary: {
-          activity_id: "meeting-9",
-          occurred_at: "2026-09-08T08:00:00Z",
-          version: 1,
-          subject: "Akeneo — Vergleichsblatt",
-          preview: "Lena: Ich mache ein Vergleichsblatt.",
-          display_status: "team",
-          move: "none",
-          attachment_count: 0,
-        },
+        kind: "meeting",
+        subject: "Akeneo — Vergleichsblatt",
         body: "Lena: Ich mache ein Vergleichsblatt mit zwei Produkten.",
-        thread_key: null,
-        from: [],
-        to: [],
-        cc: [],
-        bcc: [],
-        bcc_withheld: false,
-        attachments: [],
-        links: [],
-        thread: { members: [], next_cursor: null },
-        access: {
-          content_state: "available",
-          display_status: "team",
-          audience: "workspace",
-          can_change: false,
-          change_mode: "none",
-        },
-        can_reply: false,
-        can_relink: false,
+        occurred_at: "2026-09-08T08:00:00Z",
+        source: "transcript",
+        captured_by: "human:u-1",
         version: 1,
       }),
   });

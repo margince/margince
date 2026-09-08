@@ -152,3 +152,49 @@ func TestSignatureShapeValidationDoesNotEchoUnboundedModelText(t *testing.T) {
 		t.Fatalf("the validation error is %d bytes — model-chosen text must be clamped before it reaches a log or the next prompt", len(err.Error()))
 	}
 }
+
+func TestASignatureNamingSomebodyElseIsNotReadAsTheirs(t *testing.T) {
+	t.Parallel()
+	ann := people.SignatureCandidate{FullName: "Ann Smith", Email: "ann@example.test"}
+	for name, block := range map[string]string{
+		// The substring trap: "joanne" contains "ann", so a match that is not
+		// word-bounded reads Joanne's title onto Ann.
+		"a longer name containing theirs": "Viele Grüße\nJoanne Brown\nCEO",
+		"a different person entirely":     "Best\nMarcus Greven\nPartner Manager",
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			if signatureNamesPerson(block, ann) {
+				t.Errorf("a block naming somebody else was read as %q's own: %q", ann.FullName, block)
+			}
+		})
+	}
+}
+
+func TestAShortNameStillNamesItsOwnSignature(t *testing.T) {
+	t.Parallel()
+	// Every token under three characters. A minimum length would lock this
+	// person out of enrichment for ever, whatever they sign.
+	li := people.SignatureCandidate{FullName: "Li Bo"}
+	if !signatureNamesPerson("Regards\nLi Bo\nCEO", li) {
+		t.Error("a person whose name is short cannot prove their own signature is theirs")
+	}
+	// And the whole-word rule still holds for them.
+	if signatureNamesPerson("Regards\nLiam Bosch\nCEO", li) {
+		t.Error("a longer name containing theirs was read as their own signature")
+	}
+}
+
+func TestTheirOwnSignatureIsRead(t *testing.T) {
+	t.Parallel()
+	// The positive control: without it, a build refusing everybody would pass
+	// both tests above.
+	cand := people.SignatureCandidate{FullName: "Judith Andresen", Email: "judith@example.test"}
+	if !signatureNamesPerson("Viele Grüße\nJudith Andresen\nGeschäftsführerin", cand) {
+		t.Error("a person's own signature was refused")
+	}
+	// By address alone, for a signature that prints the mail and not the name.
+	if !signatureNamesPerson("Viele Grüße\njudith@example.test", cand) {
+		t.Error("a signature carrying only their address was refused")
+	}
+}

@@ -241,6 +241,60 @@ func TestTheDuplicatesAnEarlierBuildLeftBehindAreSettled(t *testing.T) {
 	}
 }
 
+func TestATaskRelinkedToAnotherDealIsNeitherAdoptedNorArchived(t *testing.T) {
+	e := setupAssuranceJob(t)
+
+	if err := e.run(t); err != nil {
+		t.Fatalf("the first check: %v", err)
+	}
+	first := e.bundledTasks(t)
+	if len(first) != 1 {
+		t.Fatalf("the first pass minted %d task(s), want 1", len(first))
+	}
+
+	// Somebody moves the task to another deal. assurance_task_item still
+	// records where it was FILED; the link is where it lives now.
+	var other ids.UUID
+	if err := e.Pool.QueryRow(context.Background(),
+		`SELECT id FROM deal WHERE id <> $1 ORDER BY created_at LIMIT 1`,
+		*first[0].dealID).Scan(&other); err != nil {
+		t.Fatalf("finding a second deal to move it to: %v", err)
+	}
+	if _, err := e.Pool.Exec(context.Background(),
+		`UPDATE activity_link SET deal_id = $2 WHERE activity_id = $1`, first[0].id, other); err != nil {
+		t.Fatalf("relinking the task: %v", err)
+	}
+
+	if err := e.run(t); err != nil {
+		t.Fatalf("the second check: %v", err)
+	}
+
+	var archived bool
+	if err := e.Pool.QueryRow(context.Background(),
+		`SELECT archived_at IS NOT NULL FROM activity WHERE id = $1`, first[0].id).Scan(&archived); err != nil {
+		t.Fatalf("reading the moved task: %v", err)
+	}
+	if archived {
+		t.Error("the sweep archived a task somebody had moved to another deal — the bundling row " +
+			"says where it was filed, and the link says where it lives")
+	}
+	// This deal is owed a task again, and it must be a NEW one: the old task
+	// belongs to the deal somebody moved it to, and filing this deal's findings
+	// under it would hang them off that deal's row.
+	var mine *bundledTask
+	for _, task := range e.bundledTasks(t) {
+		if task.dealID != nil && *task.dealID == *first[0].dealID {
+			mine = &task
+		}
+	}
+	if mine == nil {
+		t.Fatal("the deal lost its task entirely when the old one was moved away")
+	}
+	if mine.id == first[0].id {
+		t.Error("the sweep adopted a task that now belongs to another deal")
+	}
+}
+
 // Every cycle the pass opens is CLOSED when it finishes.
 //
 // A partial unique index admits one open cycle per scope, and a cycle left open

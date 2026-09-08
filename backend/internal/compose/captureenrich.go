@@ -26,6 +26,7 @@ import (
 	"log/slog"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -225,11 +226,6 @@ func unparseableReply(dropped []droppedFinding) bool {
 	}
 	return false
 }
-
-// signatureNameTokenMin is the shortest name token allowed to prove a
-// signature belongs to somebody. Below it, particles and initials match
-// unrelated blocks.
-const signatureNameTokenMin = 3
 
 // enrichOne reads one candidate's signature block, gates the model's fields
 // against it, and applies the survivors by recency.
@@ -460,21 +456,33 @@ const enrichUnlockTimeout = 5 * time.Second
 // The value is verbatim in the window in every one of those cases, so the
 // evidence gate passes it and only the NAME can tell whose it is.
 //
-// A token of three characters or more, case-folded, or the address. Three
-// because initials and particles ("de", "van", "Jr") match too much, and a
-// person whose every name token is shorter than that is served by the address
-// arm or by the sender predicate that already admitted the message.
+// A WHOLE-WORD match on a name token, or the address.
+//
+// Whole word rather than substring, because a substring is satisfied by an
+// unrelated name that happens to contain one: "Joanne Brown" contains "ann", so
+// a signature naming Joanne would have been read as Ann Smith's own. That is
+// the very defect this function exists to refuse, reached through the check
+// meant to catch it.
+//
+// Every token counts, however short. An earlier version skipped tokens under
+// three characters so particles ("de", "van") could not match — but with the
+// whole-word test a particle only matches a particle, and skipping short ones
+// permanently locked out anybody whose name is short in the first place ("Li
+// Bo" signing "Li Bo\nCEO" is a signature nobody could ever read).
 func signatureNamesPerson(block string, cand people.SignatureCandidate) bool {
 	folded := strings.ToLower(block)
 	if cand.Email != "" && strings.Contains(folded, strings.ToLower(cand.Email)) {
 		return true
 	}
-	for _, token := range strings.Fields(cand.FullName) {
-		token = strings.ToLower(strings.Trim(token, ".,;:()<>\"'"))
-		if len(token) < signatureNameTokenMin {
-			continue
-		}
-		if strings.Contains(folded, token) {
+	words := make(map[string]bool)
+	for _, word := range strings.FieldsFunc(folded, func(r rune) bool {
+		return !unicode.IsLetter(r) && !unicode.IsNumber(r)
+	}) {
+		words[word] = true
+	}
+	for _, token := range strings.Fields(strings.ToLower(cand.FullName)) {
+		token = strings.Trim(token, ".,;:()<>\"'")
+		if token != "" && words[token] {
 			return true
 		}
 	}

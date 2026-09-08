@@ -40,6 +40,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -422,6 +423,14 @@ func adoptOpenTask(
 		if err != nil {
 			return ids.UUID{}, false, fmt.Errorf("compose: reading an earlier task: %w", err)
 		}
+		// THE TASK MUST STILL BE ABOUT THIS SUBJECT. assurance_task_item records
+		// where a task was FILED, and a relink moves where it lives: a task
+		// raised for deal A and since relinked to deal B is B's now, and
+		// adopting it would hang A's findings off B's row — or archive a task
+		// somebody moved on purpose.
+		if !linksToSubject(act, subject) {
+			continue
+		}
 		if act.IsDone != nil && *act.IsDone {
 			continue
 		}
@@ -437,4 +446,19 @@ func adoptOpenTask(
 		}
 	}
 	return open[0], true, nil
+}
+
+// linksToSubject reports whether a task still names the subject it was raised
+// for. A link is a live fact about the task; the bundling row records only
+// where it was filed on the night it was minted.
+func linksToSubject(act crmcontracts.Activity, subject subjectFindings) bool {
+	if act.Links == nil {
+		return false
+	}
+	for _, link := range *act.Links {
+		if string(link.EntityType) == subject.kind && ids.UUID(link.EntityId) == subject.id {
+			return true
+		}
+	}
+	return false
 }

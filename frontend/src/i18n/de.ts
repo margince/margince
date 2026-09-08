@@ -3507,6 +3507,7 @@ export const de = {
   "tasks.snooze": "1 Tag später",
   "tasks.moveTo": "Verschieben auf",
   "tasks.detail": "Aufgabe",
+  "tasks.source": "Das Meeting",
   "tasks.openSource": "Zum Meeting",
   "tasks.detailLoading": "Aufgabe wird gelesen…",
   "tasks.isDone": "Abgeschlossen",
