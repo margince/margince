@@ -152,6 +152,17 @@ var dueThreadsQuery = `
 			       count(DISTINCT a.id) AS message_count,
 			       min(ro.organization_id::text) AS one_org,
 			       count(DISTINCT ro.organization_id) AS org_count,
+			       -- The same question one level down. A thread is read as one
+			       -- conversation about one thing, and the model is shown all of
+			       -- it — so a thread spanning two projects at one client has no
+			       -- single body of work its findings belong to, and whichever
+			       -- project the extractor happened to file them against would be
+			       -- wrong for half the messages (#2287).
+			       --
+			       -- Counted from the link directly rather than through a reach
+			       -- set: a project is named on the activity or it is not, where
+			       -- an organization is also reached through the people on it.
+			       count(DISTINCT pl.project_id) AS project_count,
 			       -- Shared only when EVERY message is: the model is shown the
 			       -- whole conversation, so what it writes is as private as the
 			       -- most private thing it read.
@@ -212,6 +223,11 @@ var dueThreadsQuery = `
 			                      AND t.audience <> 'workspace') AS every_message_open
 			  FROM activity a
 			  LEFT JOIN (` + activities.OrgReachSet() + `) ro ON ro.activity_id = a.id
+			  -- Safe to widen the row set: every aggregate above is DISTINCT,
+			  -- bool_and or min, so a message repeated once per project link
+			  -- contributes the same value it did.
+			  LEFT JOIN activity_link pl
+			    ON pl.activity_id = a.id AND pl.entity_type = 'project'
 			  -- Who may read this message, asked of the records it is filed
 			  -- against. A message is discoverable when ANY of its links is
 			  -- (auth.ActivityDiscoverClause), so one workspace-visible link
@@ -245,6 +261,10 @@ var dueThreadsQuery = `
 		  FROM conversation c
 		  LEFT JOIN signal_thread_scan s ON s.thread_key = c.thread_key
 		 WHERE c.org_count = 1
+		   -- At MOST one, where the organization must be exactly one: most mail
+		   -- carries no project at all, and a thread about no particular body of
+		   -- work is still a thread worth reading. Two is the refusal.
+		   AND c.project_count <= 1
 		   AND c.every_message_open
 		   -- A conversation nobody else may read, whose reader cannot be named,
 		   -- is not offered at all. Reading it would produce a finding with no
