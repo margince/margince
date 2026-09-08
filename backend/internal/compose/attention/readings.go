@@ -77,6 +77,19 @@ func readingsOf(
 			// hundred alike approvals read as a hundred here even where the queue
 			// draws them as one row. The strip says how much work there is; the
 			// queue says how much reading it costs.
+			//
+			// A row this reader cannot settle is not their decision. The verb is
+			// the test, because the producers already resolved authority to
+			// decide whether to offer one: a duplicate pair reaches
+			// duplicateItem with a merge action only when the reader could write
+			// BOTH records, and an approval carries its verbs only where the
+			// inbox admits them. Counting the rest tells somebody a person is
+			// blocked on an answer they are not able to give — the headline read
+			// "10 decisions waiting" over two the rep could take and eight only
+			// an admin could.
+			if len(row.item.Actions) == 0 {
+				continue
+			}
 			out.Review++
 		case crmcontracts.WorklistItemCategoryDealsAtRisk:
 			if !row.hasExpected {

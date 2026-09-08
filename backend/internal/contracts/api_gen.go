@@ -37245,10 +37245,15 @@ type WorklistReadings struct {
 	// error the conversion seam exists to prevent.
 	RevenueCurrency *string `json:"revenue_currency,omitempty"`
 
-	// Review How much routine work is queued behind a decision. Counted before the fold, so
-	// a hundred alike approvals read as a hundred here even where the queue draws
+	// Review How many decisions THIS reader can settle. Counted before the fold, so a
+	// hundred alike approvals read as a hundred here even where the queue draws
 	// them as one row — the strip says how much work there is, and the queue says
 	// how much reading it costs.
+	//
+	// Only rows carrying a verb the reader may press. A duplicate pair whose two
+	// records the reader cannot both write is somebody else's decision, and
+	// counting it here tells them a person is blocked on an answer they are not
+	// able to give.
 	Review int `json:"review"`
 }
 
