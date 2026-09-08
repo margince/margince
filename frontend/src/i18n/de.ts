@@ -1663,6 +1663,7 @@ export const de = {
   "email.detail.from": "Von",
   "email.detail.to": "An",
   "email.detail.cc": "Cc",
+  "email.detail.filedUnder": "Abgelegt bei",
   "email.detail.when": "Gesendet",
   "email.detail.bccWithheld":
     "Einige Empfänger stehen im Blindkopie-Feld und werden Ihnen nicht angezeigt",

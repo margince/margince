@@ -1653,6 +1653,7 @@ export const vi = {
   "email.detail.from": "Từ",
   "email.detail.to": "Tới",
   "email.detail.cc": "Cc",
+  "email.detail.filedUnder": "Lưu tại",
   "email.detail.when": "Đã gửi",
   "email.detail.bccWithheld":
     "Một số người nhận ở dạng ẩn và không hiển thị với bạn",
