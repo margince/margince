@@ -52,7 +52,17 @@ const confirmTokenTTL = 14 * 24 * time.Hour
 // IssuedConfirm carries the plaintext exactly once, with the deadline the mail
 // may show the recipient.
 type IssuedConfirm struct {
-	Token     string
+	// Token is the plaintext, and `json:"-"` is not decoration: this struct
+	// carries a bearer credential over one person's record, and every field of
+	// it is one `WriteJSON(w, issued)` away from a response body. The tag makes
+	// that line publish nothing rather than the whole credential, which is the
+	// defect the operator-held double-opt-in endpoint was retired for.
+	//
+	// It is the belt, not the braces. Nothing may hand this token to a sink at
+	// all, which is what TestThePlaintextConfirmTokenReachesNoSinkButTheMail
+	// (backend/gates/doitokenexposure_test.go) holds — and that gate is what
+	// catches a log line, which a json tag cannot.
+	Token     string `json:"-"`
 	ExpiresAt time.Time
 	// DeliveredTo is where the link was posted. Returned rather than taken, so
 	// the mailbox the consent claim rests on is the subject's own.
@@ -123,6 +133,65 @@ func (s *Store) IssueConsentLink(ctx context.Context, personID ids.PersonID, pur
 	return s.issueLink(ctx, personID, LinkConsentConfirmation, purposeID)
 }
 
+// deliveryAddressTx reads the subject's own live primary address, the same way
+// the confirm card reads it.
+//
+// A person carrying none has no mailbox to prove, so there is nothing the link
+// could evidence: it is refused rather than minted against an address nobody
+// holds.
+func deliveryAddressTx(ctx context.Context, tx pgx.Tx, personID ids.PersonID) (string, error) {
+	var deliveredTo string
+	err := tx.QueryRow(ctx, `
+		SELECT email FROM person_email
+		 WHERE person_id = $1 AND archived_at IS NULL
+		 ORDER BY is_primary DESC, created_at
+		 LIMIT 1`, personID).Scan(&deliveredTo)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", &ValidationError{
+			Field:  personIDKey,
+			Reason: "this contact carries no live email address, so there is no mailbox a confirm link could reach",
+		}
+	}
+	return deliveredTo, err
+}
+
+// requireConfirmablePurposeTx refuses a link minted against a purpose this mail
+// cannot honestly ask about. A record-confirmation link names no purpose and is
+// exempt.
+//
+// TWO refusals, because they fail differently for the reader. An ARCHIVED
+// purpose would mint and mail and then dead-end: consentCardFor resolves only a
+// live purpose, so the subject opens a 404 sent in the installation's name. A
+// purpose that does not REQUIRE double opt-in is a different mistake — the mail
+// would ask somebody to confirm a subscription whose grant never needed
+// confirming, and the answer would be recorded as mailbox-proven evidence
+// nobody asked for. The endpoint's whole subject is the double-opt-in purpose.
+func requireConfirmablePurposeTx(ctx context.Context, tx pgx.Tx, purposeID ids.PurposeID) error {
+	if purposeID.UUID == (ids.UUID{}) {
+		return nil
+	}
+	var requiresDOI bool
+	err := tx.QueryRow(ctx,
+		`SELECT requires_double_opt_in FROM consent_purpose
+		  WHERE id = $1 AND archived_at IS NULL`, purposeID).Scan(&requiresDOI)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return &ValidationError{
+			Field:  purposeIDField,
+			Reason: "this purpose is archived, so a link asking somebody to confirm it could not be answered",
+		}
+	}
+	if err != nil {
+		return err
+	}
+	if !requiresDOI {
+		return &ValidationError{
+			Field:  purposeIDField,
+			Reason: "this purpose is not confirmed by double opt-in, so there is nothing for a mailed link to ask",
+		}
+	}
+	return nil
+}
+
 func (s *Store) issueLink(ctx context.Context, personID ids.PersonID, kind string, purposeID ids.PurposeID) (IssuedConfirm, error) {
 	if err := auth.Require(ctx, "person", principal.ActionUpdate); err != nil {
 		return IssuedConfirm{}, err
@@ -141,22 +210,13 @@ func (s *Store) issueLink(ctx context.Context, personID ids.PersonID, kind strin
 		if err := auth.HoldWritableLive(ctx, tx, "person", personID.UUID); err != nil {
 			return err
 		}
-		// The subject's own live primary address, read the same way the card
-		// reads it. A person carrying none has no mailbox to prove, so there is
-		// nothing this link could evidence and it is refused rather than minted
-		// against an address nobody holds.
-		var deliveredTo string
-		err := tx.QueryRow(ctx, `
-			SELECT email FROM person_email
-			 WHERE person_id = $1 AND archived_at IS NULL
-			 ORDER BY is_primary DESC, created_at
-			 LIMIT 1`, personID).Scan(&deliveredTo)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return &ValidationError{
-				Field:  personIDKey,
-				Reason: "this contact carries no live email address, so there is no mailbox a confirm link could reach",
-			}
+		// A purpose this mail can honestly ask about, checked inside the
+		// transaction that mints against it. The two ways it can fail, and why
+		// neither is caught by the foreign key, are on the function itself.
+		if err := requireConfirmablePurposeTx(ctx, tx, purposeID); err != nil {
+			return err
 		}
+		deliveredTo, err := deliveryAddressTx(ctx, tx, personID)
 		if err != nil {
 			return err
 		}
