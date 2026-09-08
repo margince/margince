@@ -324,6 +324,23 @@ export const DevelopmentModel: Story = {
   render: story({ ...HEALTHY, aiState: "development" }),
 };
 
+/**
+ * The line changing, which is the only motion this block has of its own.
+ *
+ * Two true readings and a queue, so the resting rotation has more than one
+ * thing to say and swaps every `IDLE_HOLD_MS`. Watch the slot rather than the
+ * orb: the outgoing sentence fades out under the incoming one over a single
+ * `--dur-enter`, the two-line room holds still, and nothing under it moves.
+ *
+ * Every story on this page plays the same crossfade once at mount — the
+ * section's own reads are named ones, so the ticker says "Checking what needs
+ * you" and hands the slot back when the read settles (`agentrail-ticker.ts`).
+ * This is the one that keeps doing it.
+ */
+export const IdleRotation: Story = {
+  render: story({ ...HEALTHY, aiState: "development", approvals: 3 }),
+};
+
 /** A fresh installation: a model is bound and nothing has run through it yet. */
 export const NothingHasRunYet: Story = {
   render: story({ ...HEALTHY, calls: [] }),

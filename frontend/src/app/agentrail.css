@@ -186,7 +186,29 @@
      long line runs into the edge of the rail. */
   padding: 0 var(--space-2);
 }
-.arline {
+/* The room the sentence changes inside.
+ *
+ * The line under the orb changes on its own — one reading every IDLE_HOLD_MS at
+ * rest, several a second while the agent works — and swapping the words in place
+ * reads as flicker rather than as news. So the two sentences overlap for one
+ * `--dur-enter`: the outgoing fades out while the incoming fades in, and the
+ * slot is never empty.
+ *
+ * OPACITY ONLY, and the outgoing layer is taken out of the flow. The two-line
+ * room below is what holds this block's height, and a second sentence in the
+ * flow — or a transform on either — would move the figure and the chevron under
+ * it every time a name is long, which is the thing that room exists to prevent.
+ */
+.arswap {
+  position: relative;
+  /* The full column, rather than the width of whichever sentence is showing:
+     both layers are measured against the same box, or the outgoing one re-wraps
+     against the incoming one's width while it fades. The text keeps the
+     alignment it already had from `.arhit`. */
+  width: 100%;
+}
+.arline,
+.argone {
   max-width: 100%;
   font-size: var(--fs-body);
   line-height: 1.3;
@@ -204,6 +226,32 @@
   min-height: 2.6em;
   overflow: hidden;
   align-content: start;
+}
+/* The incoming sentence. It replays because the layer is a new element every
+   time the words change (agentrail.tsx keys it on the words), which is the same
+   thing that makes an inserted block arrive in `design-system/enter.css`. */
+.arline {
+  animation: arsayin var(--dur-enter) var(--ease-out);
+}
+/* The sentence on its way out, over the one arriving. `forwards`, so it holds
+   at nothing for the frames between the fade ending and React taking it away.
+   Nothing to click and nothing to read: the live layer under it is what a
+   screen reader announces, once. */
+.argone {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  animation: arsayout var(--dur-enter) var(--ease-out) forwards;
+}
+@keyframes arsayin {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes arsayout {
+  to {
+    opacity: 0;
+  }
 }
 /* One face on this rail, and it is the body face.
    The rail shipped in mono throughout — the figures, the state word, the chip
@@ -634,9 +682,16 @@
     }
   }
 }
+/* The line snaps to the new sentence, which IS the crossfade's end state. The
+   outgoing layer is not drawn at all under this preference — the component
+   reads it and never mounts one (`usePrefersReducedMotion`) — and `.argone` is
+   still named here so that a preference turned on mid-fade leaves nothing
+   animating. */
 @media (prefers-reduced-motion: reduce) {
   .arpanel,
-  .arloose::after {
+  .arloose::after,
+  .arline,
+  .argone {
     animation: none;
   }
 }
