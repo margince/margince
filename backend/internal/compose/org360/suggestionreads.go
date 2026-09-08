@@ -78,7 +78,7 @@ const excerptRunes = 200
 // the account's timeline uses — one spelling, so they cannot drift. Every
 // candidate still passes the activity row scope, so the reader can open it.
 func newestMessage(
-	ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID,
+	ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, opts AssembleOptions,
 ) (lastMessage, bool, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
@@ -107,7 +107,7 @@ func newestMessage(
 		       CASE WHEN %[3]s THEN left(a.body, %[4]d) END
 		FROM activity a
 		WHERE a.kind IN ('email','message','call','meeting') AND a.archived_at IS NULL AND %[1]s
-		  AND %[2]s
+		  AND %[2]s`+opts.projectScope(arg)+`
 		ORDER BY a.occurred_at DESC, a.id DESC
 		LIMIT 1`, activityScope, activities.OrgLinkedActivityExists(orgPos), audience, excerptRunes), args...).
 		Scan(&found.ID, &direction, &found.At, &found.Kind, &subject, &excerpt)
@@ -146,7 +146,7 @@ func oneLine(text string) string {
 // Reachability is activities.OrgLinkedActivityExists, the same walk
 // nextStepsSection uses.
 func hasOpenTask(
-	ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID,
+	ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, opts AssembleOptions,
 ) (bool, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
@@ -163,7 +163,7 @@ func hasOpenTask(
 		SELECT EXISTS (
 		  SELECT 1 FROM activity a
 		  WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL AND %[1]s
-		    AND %[2]s)`,
+		    AND %[2]s`+opts.projectScope(arg)+`)`,
 		activityScope, activities.OrgLinkedActivityExists(orgPos)), args...).Scan(&scheduled)
 	if err != nil {
 		return false, fmt.Errorf("read whether anything is scheduled on the account: %w", err)
@@ -245,9 +245,14 @@ func granted(ctx context.Context, object string) (bool, error) {
 // contradiction rule reads must be supplied by every caller, or the page and
 // the dismissal that answers it judge different suggestions and a dismissal
 // stores nothing. Required, a caller that omits one does not compile.
+// opts narrows the two activity reads below with the rest of the page. A
+// no-reply suggestion on a page scoped to one project used to be able to cite
+// another project's message, and an open task on other work could suppress the
+// suggestion this page should have made.
 func gatherSuggestionInputs(
 	ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, now time.Time,
 	facts signalFacts, heading organizationHeading, baseCurrency string,
+	opts AssembleOptions,
 ) (suggestionInputs, error) {
 	timeline, err := granted(ctx, "activity")
 	if err != nil {
@@ -270,12 +275,12 @@ func gatherSuggestionInputs(
 		in.contractStrip = strip
 	}
 	if in.timeline {
-		newest, found, err := newestMessage(ctx, tx, orgID)
+		newest, found, err := newestMessage(ctx, tx, orgID, opts)
 		if err != nil {
 			return suggestionInputs{}, err
 		}
 		in.newest, in.hasNewest = newest, found
-		scheduled, err := hasOpenTask(ctx, tx, orgID)
+		scheduled, err := hasOpenTask(ctx, tx, orgID, opts)
 		if err != nil {
 			return suggestionInputs{}, err
 		}

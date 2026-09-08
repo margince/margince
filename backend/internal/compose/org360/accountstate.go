@@ -373,6 +373,11 @@ func (a *assembly) lastMeetingAt() (*time.Time, error) {
 	if activityScope == "" {
 		activityScope = scopeAll
 	}
+	// The body of work, on the same terms as every other activity read on this
+	// page. A page narrowed to one project that dated its health from another
+	// project's meeting would put the right timeline under a number computed
+	// somewhere else.
+	within := a.opts.projectScope(arg)
 	var occurred *time.Time
 	err = a.tx.QueryRow(a.ctx, fmt.Sprintf(`
 		SELECT a.occurred_at
@@ -380,7 +385,7 @@ func (a *assembly) lastMeetingAt() (*time.Time, error) {
 		 WHERE a.kind = 'meeting' AND a.archived_at IS NULL
 		   AND (a.meeting_status IS NULL OR a.meeting_status = 'booked')
 		   AND a.occurred_at <= $%[3]d
-		   AND %[1]s AND %[2]s
+		   AND %[1]s AND %[2]s`+within+`
 		 ORDER BY a.occurred_at DESC, a.id DESC
 		 LIMIT 1`,
 		activityScope, activities.OrgLinkedActivityExists(orgPos), nowPos),

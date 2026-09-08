@@ -61,7 +61,7 @@ func (s *Service) Coverage(
 		if _, err := s.people.GetOrganizationTx(ctx, tx, orgID, storekit.LiveOnly, active); err != nil {
 			return err
 		}
-		all, err := people.StrengthForOrgContacts(ctx, tx, orgID, now)
+		all, err := people.StrengthForOrgContacts(ctx, tx, orgID, now, nil)
 		if err != nil {
 			return err
 		}

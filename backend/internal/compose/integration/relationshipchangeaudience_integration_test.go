@@ -113,7 +113,7 @@ func changesFor(ctx context.Context, t *testing.T, e *Env, person ids.UUID, now 
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		out, err = e.People.PersonRelationshipChangesTx(ctx, tx,
-			ids.From[ids.PersonKind](person), now)
+			ids.From[ids.PersonKind](person), now, nil)
 		return err
 	}); err != nil {
 		t.Fatalf("reading relationship changes: %v", err)

@@ -23,8 +23,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func (s *Service) strengthSection(ctx context.Context, tx pgx.Tx, personID ids.PersonID, now time.Time, out *crmcontracts.Person360) error {
-	rs, err := s.people.PersonStrengthTx(ctx, tx, personID, now)
+// The strength number is narrowed with the rest of the page. A page scoped to
+// one body of work that scored the relationship across every project would put
+// the right timeline under a number computed somewhere else, and cite
+// contributing activity ids the reader cannot see on the page.
+func (s *Service) strengthSection(
+	ctx context.Context, tx pgx.Tx, personID ids.PersonID,
+	now time.Time, within *ids.ProjectID, out *crmcontracts.Person360,
+) error {
+	rs, err := s.people.PersonStrengthTx(ctx, tx, personID, now, within)
 	if err != nil {
 		return err
 	}
@@ -40,8 +47,11 @@ func (s *Service) strengthSection(ctx context.Context, tx pgx.Tx, personID ids.P
 // answer different questions and a caller may hold the grant for one reading
 // and still lose the other to a section fault. Both fold the same §4 curve, so
 // they cannot disagree about the same window.
-func (s *Service) relationshipChangesSection(ctx context.Context, tx pgx.Tx, personID ids.PersonID, now time.Time, out *crmcontracts.Person360) error {
-	changes, err := s.people.PersonRelationshipChangesTx(ctx, tx, personID, now)
+func (s *Service) relationshipChangesSection(
+	ctx context.Context, tx pgx.Tx, personID ids.PersonID,
+	now time.Time, within *ids.ProjectID, out *crmcontracts.Person360,
+) error {
+	changes, err := s.people.PersonRelationshipChangesTx(ctx, tx, personID, now, within)
 	if err != nil {
 		return err
 	}

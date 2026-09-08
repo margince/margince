@@ -246,3 +246,53 @@ func TestAProjectScopeOnTheActivityListAnswers403And404OnTheWire(t *testing.T) {
 		t.Errorf("GET /activities?project_id= with the grant = %d, want 200 — the gate refuses everyone", got)
 	}
 }
+
+// The person page's derived sections narrow with its timeline. Strength is the
+// one that says out loud which activities it rests on, so it is the one a
+// reader can catch disagreeing with the page: a score citing an activity the
+// scope dropped is a number the reader cannot check.
+func TestPerson360ScopedToOneProjectScoresFromOneEngagement(t *testing.T) {
+	e := Setup(t)
+	f := seedTwoEngagementAccount(t, e)
+	svc := personRoomService(e)
+	personID := PersonIDOf(f.person)
+
+	scoped, err := svc.AssembleScoped(e.Admin(), personID, person360.AssembleOptions{ProjectID: &f.erp})
+	if err != nil {
+		t.Fatalf("assemble scoped: %v", err)
+	}
+	wide, err := svc.Assemble(e.Admin(), personID)
+	if err != nil {
+		t.Fatalf("assemble unscoped: %v", err)
+	}
+	if scoped.Strength == nil || wide.Strength == nil {
+		t.Fatal("the strength section was withheld from one of the two reads")
+	}
+
+	if !citedBy(wide.Strength, f.onOther) {
+		t.Fatalf("the unscoped score does not rest on the datacentre migration's mail (%s), so it "+
+			"cannot show that the scoped score dropped it", f.onOther)
+	}
+	if citedBy(scoped.Strength, f.onOther) {
+		t.Errorf("the score on a page scoped to the ERP rollout rests on the datacentre migration's "+
+			"mail (%s), which is not on the page for the reader to check it against", f.onOther)
+	}
+	if !citedBy(scoped.Strength, f.onERP) {
+		t.Errorf("the scoped score rests on nothing from its own engagement (%s) — a scope that "+
+			"empties the read is dropping the section, not narrowing it", f.onERP)
+	}
+}
+
+// citedBy reports whether a score names the given activity among the ones it
+// was folded from.
+func citedBy(strength *crmcontracts.RelationshipStrength, activityID string) bool {
+	if strength.ContributingActivityIds == nil {
+		return false
+	}
+	for _, id := range *strength.ContributingActivityIds {
+		if id.String() == activityID {
+			return true
+		}
+	}
+	return false
+}

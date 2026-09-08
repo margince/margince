@@ -47,6 +47,7 @@ func (s *Store) PersonRelationshipChangesTx(
 	tx pgx.Tx,
 	personID ids.PersonID,
 	now time.Time,
+	within *ids.ProjectID,
 ) ([]relstrength.Change, error) {
 	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
 		return nil, err
@@ -54,7 +55,7 @@ func (s *Store) PersonRelationshipChangesTx(
 	if err := auth.EnsureVisible(ctx, tx, "person", personID.UUID); err != nil {
 		return nil, err
 	}
-	in, err := changeInputs(ctx, tx, personID, now)
+	in, err := changeInputs(ctx, tx, personID, now, within)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +101,7 @@ func (s *Store) RelationshipChangesForPeople(
 	}
 	out := make([]PersonChanges, 0, len(visible))
 	for _, contact := range visible {
-		in, err := changeInputs(ctx, tx, contact.id, now)
+		in, err := changeInputs(ctx, tx, contact.id, now, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -160,8 +161,27 @@ func visibleContactNames(ctx context.Context, tx pgx.Tx, people []ids.PersonID) 
 // changeInputs gathers the present fold, the same fold as it stood one
 // comparison window ago, and the two timestamps a returning reply is measured
 // between.
-func changeInputs(ctx context.Context, tx pgx.Tx, personID ids.PersonID, now time.Time) (relstrength.ChangeInputs, error) {
+func changeInputs(
+	ctx context.Context, tx pgx.Tx, personID ids.PersonID,
+	now time.Time, within *ids.ProjectID,
+) (relstrength.ChangeInputs, error) {
 	asOf := now.AddDate(0, 0, -relstrength.ComparisonDays)
+
+	// BOTH windows and both statements, or the comparison is between two
+	// different questions: the "before" fold would cover every project while
+	// the "after" covered one, and the change it reported would be the
+	// narrowing rather than anything that happened.
+	foldArgs := []any{
+		personID,
+		now.AddDate(0, 0, -relStrengthWindowDays),
+		asOf,
+		asOf.AddDate(0, 0, -relStrengthWindowDays),
+	}
+	foldWithin := ""
+	if within != nil {
+		foldArgs = append(foldArgs, *within)
+		foldWithin = " AND " + activityWithinProject("a", len(foldArgs))
+	}
 
 	var in relstrength.ChangeInputs
 	// One pass over the person's qualifying interactions answers both windows.
@@ -181,11 +201,8 @@ func changeInputs(ctx context.Context, tx pgx.Tx, personID ids.PersonID, now tim
 		  FROM activity a
 		  JOIN activity_link l ON l.activity_id = a.id AND l.person_id = $1
 		 WHERE a.kind IN `+strengthKinds+` AND a.archived_at IS NULL`+
-		auth.AudienceWorkspaceOnly("a"),
-		personID,
-		now.AddDate(0, 0, -relStrengthWindowDays),
-		asOf,
-		asOf.AddDate(0, 0, -relStrengthWindowDays),
+		auth.AudienceWorkspaceOnly("a")+foldWithin,
+		foldArgs...,
 	).Scan(
 		&in.Current.LastInteraction, &in.Current.Count90d, &in.Current.Inbound90d, &in.Current.Outbound90d,
 		&in.Previous.LastInteraction, &in.Previous.Count90d, &in.Previous.Inbound90d, &in.Previous.Outbound90d,
@@ -199,13 +216,19 @@ func changeInputs(ctx context.Context, tx pgx.Tx, personID ids.PersonID, now tim
 	}
 	// The far side of the silence their reply broke. A separate statement
 	// because it is bounded by a value the first one returns.
+	precedingArgs := []any{personID, *in.LatestInbound}
+	precedingWithin := ""
+	if within != nil {
+		precedingArgs = append(precedingArgs, *within)
+		precedingWithin = " AND " + activityWithinProject("a", len(precedingArgs))
+	}
 	if err := tx.QueryRow(ctx, `
 		SELECT max(a.occurred_at)
 		  FROM activity a
 		  JOIN activity_link l ON l.activity_id = a.id AND l.person_id = $1
 		 WHERE a.kind IN `+strengthKinds+` AND a.archived_at IS NULL
-		   AND a.occurred_at < $2`+auth.AudienceWorkspaceOnly("a"),
-		personID, *in.LatestInbound,
+		   AND a.occurred_at < $2`+auth.AudienceWorkspaceOnly("a")+precedingWithin,
+		precedingArgs...,
 	).Scan(&in.PrecedingInteraction); err != nil {
 		return relstrength.ChangeInputs{}, fmt.Errorf("people: reading what preceded a contact's last reply: %w", err)
 	}

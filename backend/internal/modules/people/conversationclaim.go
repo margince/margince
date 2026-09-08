@@ -155,31 +155,35 @@ func claimFingerprint(in ClaimInput) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// claimSourceWithinProject keeps the claims whose source message is filed
-// under ONE project, plus the ones whose source is filed under none: a claim
-// is evidence from a conversation, and a conversation on another engagement
-// is the wrong evidence for this one, while most correspondence on an account
-// carries no project at all and dropping it would empty the card.
+// activityWithinProject keeps the activities filed under ONE project, plus the
+// ones filed under none: a message on another engagement is the wrong evidence
+// for this one, while most correspondence on an account carries no project at
+// all and dropping it would empty the card.
 //
 // activities.ActivityWithinProject and search's projectScope.clause are the
 // same predicate. This is a deliberate copy, not an oversight: a module never
 // imports a sibling (ADR-0054), and the rule is about subject matter rather
 // than authority, so platform/auth is the wrong home for it. Change one,
 // change all three.
-func claimSourceWithinProject(projectPos int) string {
+//
+// The alias is a parameter because this module now asks the question of more
+// than one activity alias in one statement — the strength read scores over `a`
+// and picks its citation over `i`, and both have to be narrowed or the number
+// and the message it cites come from different bodies of work.
+func activityWithinProject(alias string, projectPos int) string {
 	return fmt.Sprintf(`(
 			EXISTS (
 			    SELECT 1 FROM activity_link scoped
-			    WHERE scoped.activity_id = a.id AND scoped.project_id = $%[1]d)
+			    WHERE scoped.activity_id = %[1]s.id AND scoped.project_id = $%[2]d)
 			OR NOT EXISTS (
 			    SELECT 1 FROM activity_link filed
-			    WHERE filed.activity_id = a.id AND filed.project_id IS NOT NULL))`,
-		projectPos)
+			    WHERE filed.activity_id = %[1]s.id AND filed.project_id IS NOT NULL))`,
+		alias, projectPos)
 }
 
 // ClaimsForPerson reads this person's live claims, newest first, optionally
 // narrowed to the claims whose source is filed under one project or under
-// none (claimSourceWithinProject). The caller that narrows owes the project's
+// none (activityWithinProject). The caller that narrows owes the project's
 // own read gate first; this read filters, it does not authorize the filter.
 //
 // The activity join is what keeps a claim from outliving its evidence: a claim
@@ -237,7 +241,7 @@ func (s *Store) readClaims(
 	}
 	filed := sqlAlwaysVisible
 	if within != nil {
-		filed = claimSourceWithinProject(arg(*within))
+		filed = activityWithinProject("a", arg(*within))
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT c.id, c.kind, c.body, c.source_activity_id, c.source_quote,

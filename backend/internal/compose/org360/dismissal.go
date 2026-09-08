@@ -124,7 +124,7 @@ func (s *Service) raisesSuggestion(
 	if err != nil {
 		return false, err
 	}
-	in, err := gatherSuggestionInputs(ctx, tx, orgID, now, facts, heading, base)
+	in, err := gatherSuggestionInputs(ctx, tx, orgID, now, facts, heading, base, AssembleOptions{})
 	if err != nil {
 		return false, err
 	}
