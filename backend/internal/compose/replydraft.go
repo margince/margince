@@ -72,6 +72,11 @@ type replyActivityData struct {
 // Threaded reads the flag back as the bool the checks want.
 func (d replyActivityData) Threaded() bool { return d.Thread == "inbound_mail" }
 
+// Booked is false: a reply folds the anchor message and nothing else, so there
+// is no meeting here for a day to rest on. A reply that needs to name one is
+// answering a message that named it, and that text is the recipient's own.
+func (d replyActivityData) Booked() bool { return false }
+
 type replyDrafter struct {
 	brain completer
 	// envelope answers what language to write in, what time it is and who is

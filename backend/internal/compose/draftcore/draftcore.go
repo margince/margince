@@ -90,7 +90,8 @@ type SubjectOf[D any] func(D) (subject string, threaded bool)
 // second spelling of "what is wrong with a draft" would drift from this one
 // until the two disagreed about a phrase in front of a user.
 func Findings[D any](
-	draft D, lang textlang.Lang, band convstate.Band, textOf TextOf[D], subjectOf SubjectOf[D],
+	draft D, lang textlang.Lang, band convstate.Band, booked bool,
+	textOf TextOf[D], subjectOf SubjectOf[D],
 ) []draftcheck.Finding {
 	body, reasoning := textOf(draft)
 	// Whether this draft answers a real inbound message decides more than the
@@ -101,7 +102,7 @@ func Findings[D any](
 	if subjectOf != nil {
 		subject, threaded = subjectOf(draft)
 	}
-	findings := append(draftcheck.Body(body, lang, band, threaded),
+	findings := append(draftcheck.Body(body, lang, band, threaded, booked),
 		draftcheck.Reasoning(reasoning, lang, band)...)
 	// Shape is asked of the BODY alone. Reasoning chips travel through the same
 	// phrasing rules but are labels, not messages.
@@ -113,11 +114,11 @@ func Findings[D any](
 }
 
 func CorrectOnce[D any](
-	ctx context.Context, lang textlang.Lang, band convstate.Band,
+	ctx context.Context, lang textlang.Lang, band convstate.Band, booked bool,
 	write Writer[D], textOf TextOf[D], subjectOf SubjectOf[D], observe Observer,
 ) (D, error) {
 	check := func(draft D) []draftcheck.Finding {
-		return Findings(draft, lang, band, textOf, subjectOf)
+		return Findings(draft, lang, band, booked, textOf, subjectOf)
 	}
 
 	draft, err := write(ctx, "")

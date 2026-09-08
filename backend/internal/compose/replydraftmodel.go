@@ -175,7 +175,7 @@ func (d replyDrafter) completeWith(ctx context.Context, site draftSystem, activi
 // correction rides the user turn, so a plain draft told to fix a phrase stays a
 // plain draft rather than silently becoming a voiced one.
 func (d replyDrafter) completeChecked(ctx context.Context, site draftSystem, data replyActivityData, voiceBlock voiceBlockFor) (replyDraft, error) {
-	return draftcore.CorrectOnce(ctx, data.Lang(), data.Band(),
+	return draftcore.CorrectOnce(ctx, data.Lang(), data.Band(), data.Booked(),
 		func(ctx context.Context, correction string) (replyDraft, error) {
 			return d.completeWith(ctx, site, data, voiceBlock, correction)
 		},

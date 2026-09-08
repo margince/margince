@@ -178,7 +178,10 @@ func Reasoning(labels []string, lang textlang.Lang, band convstate.Band) []Findi
 		// is. It is the product's own claim about what it wrote from, so a call
 		// named there is asserted by us rather than echoed from the
 		// counterparty's message — the reply surface's ground does not reach it.
-		findings = append(findings, Body(label, lang, band, false)...)
+		// booked=false for the same reason as threaded: a chip explains what the
+		// product wrote from, and a date in one is our own claim rather than
+		// something the record handed the reader.
+		findings = append(findings, Body(label, lang, band, false, false)...)
 	}
 	return findings
 }
@@ -248,7 +251,7 @@ var resolvedEvent = map[textlang.Lang][]string{
 // opening a new conversation has no such ground — whatever it says about a
 // call, it invented. So the world-claim rules run on unthreaded drafts, where
 // the claim cannot be sourced, and stand down on replies, where it can.
-func Body(body string, lang textlang.Lang, band convstate.Band, threaded bool) []Finding {
+func Body(body string, lang textlang.Lang, band convstate.Band, threaded, booked bool) []Finding {
 	lowered := strings.ToLower(body)
 	var findings []Finding
 
@@ -275,6 +278,18 @@ func Body(body string, lang textlang.Lang, band convstate.Band, threaded bool) [
 			"attributed-claim",
 			"the input says what a message was about, never who wrote it — "+
 				"name the topic instead of attributing it to the recipient")...)
+	}
+
+	// A settled appointment, with nothing booked. Gated on the booking rather
+	// than on the thread: neither a reply nor an opener can source an
+	// arrangement the record does not carry. A draft PROPOSING one is
+	// untouched — that is the message this product exists to write.
+	if !booked {
+		findings = append(findings, firstMatch(lowered, scheduledArrangement[lang],
+			"unscheduled-arrangement",
+			"nothing in the input books a meeting with this recipient, so writing about one "+
+				"as already arranged puts an appointment in front of them that nobody made — "+
+				"propose it instead")...)
 	}
 
 	if lang == textlang.German && mixedRegister(body) {

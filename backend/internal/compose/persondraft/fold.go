@@ -395,6 +395,11 @@ func (in Input) Threaded() bool {
 	return len(in.Recent) > 0 && in.Recent[0].Inbound && in.Recent[0].Subject != ""
 }
 
+// Booked is whether this contact has a meeting on file. foldMeeting only
+// carries one this person actually attends, so a non-nil Meeting is a real
+// appointment and a draft may refer to its day.
+func (in Input) Booked() bool { return in.Meeting != nil }
+
 // foldMeeting carries the next meeting this person is actually on.
 //
 // Two conditions, and both are refusals rather than filters. A meeting already
