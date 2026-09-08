@@ -39,7 +39,8 @@ const (
 // all. Off by default: a fresh installation should not open on a list where
 // every lead reads "overdue".
 var FirstResponseEnabled = settings.Define[bool](
-	"people.first_response_enabled", leadVocabularyObject, "update", false, nil)
+	"people.first_response_enabled", leadVocabularyObject, "update", false, nil,
+).MachineryApplied() // every SLA computation applies it to a lead read already gated by lead:read
 
 // FirstResponseTargetMinutes is how long a lead may wait for its first
 // genuine response once its clock starts.
@@ -51,7 +52,8 @@ var FirstResponseTargetMinutes = settings.Define[int](
 			return fmt.Errorf("the target is %d..%d minutes", firstResponseMinMinutes, firstResponseMaxMinutes)
 		}
 		return nil
-	})
+	},
+).MachineryApplied() // the band it produces rides lead rows the caller is separately gated for
 
 // UnassignedEscalationUserID is who answers for a lead nobody owns.
 //
@@ -77,7 +79,8 @@ var UnassignedEscalationUserID = settings.Define[string](
 			return fmt.Errorf("the escalation seat is a user id, or empty for nobody")
 		}
 		return nil
-	})
+	},
+).MachineryApplied() // the SLA sweep applies it to decide who a breach is addressed to
 
 // Definitions is people's contribution to the settings registry; compose
 // concatenates each module's list.
@@ -100,37 +103,39 @@ func (p leadSLAPolicy) atRisk() time.Duration { return p.target / 4 }
 func (p leadSLAPolicy) targetMinutes() int { return int(p.target / time.Minute) }
 
 // loadLeadSLAPolicy reads the two settings inside the caller's transaction,
-// by key, without the settings object gate: the policy is an input to a
-// lead read that is already gated by lead:read, and a connector or agent
-// principal reading leads must not need a settings grant to see them.
+// through settings.ApplyTx and so without the settings object gate: the policy
+// is an input to a lead read already gated by lead:read, and a connector or
+// agent principal reading leads must not need a settings grant to see them.
+//
+// ApplyManyTx and not a raw statement, which is what this was. Both are
+// ungated; only one is CHECKED. The admitted reader refuses any entry not
+// declared MachineryApplied at Define time, so what used to be a sentence a
+// reviewer agreed with is a refusal the store makes — and the next ungated read
+// of some other setting fails at the first test that exercises it rather than
+// needing to be noticed.
+//
+// The BATCHED reader, and that is not a convenience. Two ApplyTx calls take two
+// snapshots under READ COMMITTED, so a write that changes the switch and the
+// target together can commit between them: the policy would then pair an
+// enabled flag with a target from a different version of the settings, which is
+// a policy the operator never configured, running until the next read. One
+// statement is one snapshot, which is what the raw query this replaces already
+// had — enforcement should not have cost it.
 func loadLeadSLAPolicy(ctx context.Context, tx pgx.Tx) (leadSLAPolicy, error) {
 	policy := leadSLAPolicy{target: DefaultFirstResponseTarget}
-	rows, err := tx.Query(ctx, `SELECT key, value FROM setting WHERE key = ANY($1)`,
-		[]string{FirstResponseEnabled.Key(), FirstResponseTargetMinutes.Key()})
+	values, err := settings.ApplyManyTx(ctx, tx, FirstResponseEnabled, FirstResponseTargetMinutes)
 	if err != nil {
 		return policy, fmt.Errorf("load lead sla policy: %w", err)
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var key string
-		var raw json.RawMessage
-		if err := rows.Scan(&key, &raw); err != nil {
-			return policy, err
-		}
-		switch key {
-		case FirstResponseEnabled.Key():
-			if err := json.Unmarshal(raw, &policy.enabled); err != nil {
-				return policy, fmt.Errorf("decode %s: %w", key, err)
-			}
-		case FirstResponseTargetMinutes.Key():
-			var minutes int
-			if err := json.Unmarshal(raw, &minutes); err != nil {
-				return policy, fmt.Errorf("decode %s: %w", key, err)
-			}
-			policy.target = time.Duration(minutes) * time.Minute
-		}
+	if err := json.Unmarshal(values[FirstResponseEnabled.Key()], &policy.enabled); err != nil {
+		return policy, fmt.Errorf("decode %s: %w", FirstResponseEnabled.Key(), err)
 	}
-	return policy, rows.Err()
+	var minutes int
+	if err := json.Unmarshal(values[FirstResponseTargetMinutes.Key()], &minutes); err != nil {
+		return policy, fmt.Errorf("decode %s: %w", FirstResponseTargetMinutes.Key(), err)
+	}
+	policy.target = time.Duration(minutes) * time.Minute
+	return policy, nil
 }
 
 // slaPolicy resolves the policy for a store operation that has not opened
