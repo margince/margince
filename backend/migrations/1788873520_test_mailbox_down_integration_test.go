@@ -15,6 +15,7 @@ package migrations_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -119,7 +120,12 @@ func TestTheTestMailboxDownMigrationStillRefusesALiveConnection(t *testing.T) {
 		t.Fatalf("seeding a live test_mailbox connection: %v", err)
 	}
 
-	if _, err := dbmigrate.Down(ctx, conn, namespaceThroughVersion(t, core, "1788873520"), 1); err == nil {
+	_, err = dbmigrate.Down(ctx, conn, namespaceThroughVersion(t, core, "1788873520"), 1)
+	if err == nil {
 		t.Fatal("down succeeded against a live test_mailbox credential — it must refuse rather than strand the sealed secret")
+	}
+	if !strings.Contains(err.Error(), "cannot roll back") {
+		t.Fatalf("down failed with %v, want the DO block's own refusal (\"cannot roll back\") — "+
+			"an unrelated failure (syntax, lock timeout) would pass this test for the wrong reason", err)
 	}
 }

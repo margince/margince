@@ -31,7 +31,7 @@ import {
   statusLabel,
   statusTone,
 } from "./connector-status";
-import { isMailbox } from "./connectorproviders";
+import { isMailbox, isMailIcon } from "./connectorproviders";
 import { ConnectorContextTagRow } from "./connectors.contexttag";
 import { ImapConnectForm } from "./imap-connect-form";
 import { TelegramConnectForm } from "./telegram-connect-form";
@@ -671,7 +671,7 @@ function ConnectorRow({
         testId={`connector-${conn.provider}`}
         label={
           <ConnectionIdentity
-            icon={mailbox ? Mail : CalendarDays}
+            icon={isMailIcon(conn.provider) ? Mail : CalendarDays}
             name={t(providerLabel[conn.provider])}
             account={conn.account_label}
           />

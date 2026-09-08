@@ -272,12 +272,23 @@ func TestTestMailboxFullLoop(t *testing.T) {
 	}
 
 	// The reconciliation: exactly one activity carries this message's natural
-	// key — the one the SEND created — not two.
+	// key — the one the SEND created — not two. sourceSystem is read off the
+	// send's own row rather than hardcoded to connector.EmailSourceSystem: a
+	// constant that drifted from what the send path actually writes would
+	// otherwise still let count(*) land on 1 for the wrong reason — a lone
+	// echo row the send's own activity never matched at all.
+	var sourceSystem string
+	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT source_system FROM activity WHERE id = $1`, sentActivity).Scan(&sourceSystem)
+	}); err != nil {
+		t.Fatal(err)
+	}
 	var rows int
 	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM activity WHERE source_system = $1 AND source_id = $2`,
-			connector.EmailSourceSystem, messageID).Scan(&rows)
+			sourceSystem, messageID).Scan(&rows)
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -288,7 +299,7 @@ func TestTestMailboxFullLoop(t *testing.T) {
 	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT id FROM activity WHERE source_system = $1 AND source_id = $2`,
-			connector.EmailSourceSystem, messageID).Scan(&survivingID)
+			sourceSystem, messageID).Scan(&survivingID)
 	}); err != nil {
 		t.Fatal(err)
 	}
