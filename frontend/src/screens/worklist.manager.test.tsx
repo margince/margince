@@ -10,6 +10,10 @@
 // in a colleague's queue under their own name — so what has to be held is the
 // WRITE: which endpoint, and what body. A control that renamed the promise and
 // posted nothing looks identical on screen.
+//
+// The dial that chooses whose queue is open is held here too, for the same
+// reason from the other side: what it OFFERS is a promise about where a press
+// lands, and a choice that leads nowhere draws exactly like one that works.
 
 /** @vitest-environment jsdom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -19,7 +23,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import { CoachControl, ReassignControl } from "./worklist.manager";
+import { CoachControl, OwnerPicker, ReassignControl } from "./worklist.manager";
 import { WorklistRow } from "./worklist.row";
 import { jsonResponse, row } from "./worklist.testkit";
 
@@ -426,5 +430,75 @@ describe("the row a rep is standing on", () => {
         name: en["worklist.manager.reassign"],
       }),
     ).toBeTruthy();
+  });
+});
+
+// The roster as the owner picker reads it. `page.next_cursor` is what decides
+// whether the walk reached the end of the workspace, so it is the one thing the
+// two frames below differ in — and each page answers a fresh colleague, because
+// a walk that met the same id ten times would say nothing about a long roster.
+function stubRosterWalk(
+  seats: readonly Record<string, unknown>[],
+  options: { endless?: boolean } = {},
+) {
+  let page = 0;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (!url.includes("/users")) {
+        return jsonResponse({ data: [] });
+      }
+      page += 1;
+      return options.endless
+        ? jsonResponse({
+            data: [{ id: `u-${page}`, display_name: `Colleague ${page}` }],
+            page: { next_cursor: `after-${page}` },
+          })
+        : jsonResponse({ data: seats, page: { next_cursor: null } });
+    }),
+  );
+}
+
+describe("whose queue the page is answering", () => {
+  // An agent seat is an Agent Runner identity rather than a person: it opens no
+  // Worklist of its own, so a lead who chose one would land on a day that comes
+  // back with nothing in it and nothing saying why.
+  it("offers no agent seat as an owner", async () => {
+    stubRosterWalk([
+      { id: MINH, display_name: "Minh Tran" },
+      { id: "u-runner", display_name: "Overnight Runner", is_agent: true },
+    ]);
+    const user = userEvent.setup();
+    renderUnderAToastRegion(<OwnerPicker owner="" onOwner={() => {}} />);
+
+    await user.click(await screen.findByRole("combobox"));
+    expect(screen.getByRole("option", { name: "Minh Tran" })).toBeTruthy();
+    expect(
+      screen.queryByRole("option", { name: "Overnight Runner" }),
+    ).toBeNull();
+  });
+
+  // The walk is bounded, so past its reach this list is part of the workspace
+  // rather than the workspace. Unsaid, a picker missing colleagues reads as a
+  // workspace that has none — on the one control a lead uses to reach somebody.
+  it("admits it when the roster walk stopped short", async () => {
+    stubRosterWalk([], { endless: true });
+    renderUnderAToastRegion(<OwnerPicker owner="" onOwner={() => {}} />);
+
+    expect(await screen.findByText(en["state.partial"])).toBeTruthy();
+  });
+
+  // And says nothing of the kind over a roster it read to the end: a caveat
+  // about a complete list is simply untrue, and one drawn always is one nobody
+  // reads when it matters.
+  it("says nothing about the list when the walk reached the end", async () => {
+    stubRosterWalk([{ id: MINH, display_name: "Minh Tran" }]);
+    const user = userEvent.setup();
+    renderUnderAToastRegion(<OwnerPicker owner="" onOwner={() => {}} />);
+
+    await user.click(await screen.findByRole("combobox"));
+    await screen.findByRole("option", { name: "Minh Tran" });
+    expect(screen.queryByText(en["state.partial"])).toBeNull();
   });
 });

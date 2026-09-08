@@ -18,9 +18,11 @@ import type { Worklist, WorklistScope } from "./worklist.queries";
 // named owner outranks the scope word, and the pair is a 422. The last frame is
 // that state.
 //
-// Read every frame in BOTH themes with the toolbar's Theme control, and at
-// phone width — under 720px the picker takes the row rather than staying capped
-// beside a sentence that has already wrapped.
+// The last frame PINS the dark theme rather than leaving both themes to the
+// toolbar's Theme control: a frame nobody flips is a frame the render gate
+// draws in one theme only. The other three take the control, and every frame is
+// worth a look at phone width — under 720px the dials take the row rather than
+// staying capped beside a sentence that has already wrapped.
 
 const LENA = "00000000-0000-4000-8000-000000000001";
 
@@ -102,4 +104,15 @@ export const BothDials: Story = {
  *  gone and the picker stands alone with the person it chose on its face. */
 export const AColleaguesDay: Story = {
   render: () => frame(["mine", "unassigned", "team", "all"], LENA),
+};
+
+/** Both dials in the dark theme, which is where this strip can go wrong on its
+ *  own. Every colour in it is derived — the switch's selected segment, the
+ *  field labels, the pills' counts and the completeness caption are all a
+ *  `color-mix()` of a canonical token — and the dark accent lift moves them
+ *  independently of the panel ground behind them, so a header that reads as one
+ *  group in light can come apart here. */
+export const BothDialsDark: Story = {
+  globals: { theme: "dark" },
+  render: () => frame(["mine", "unassigned", "team", "all"]),
 };

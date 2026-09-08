@@ -179,6 +179,46 @@ describe("a row's verbs are one line with the lane's answer last", () => {
     expect(filled(drawn)).toEqual([done]);
   });
 
+  // ONE CONTROL PER DESTINATION, whatever the WORDS on the controls.
+  //
+  // An introduction ask carries `decide` and `open`, and both of them reach the
+  // colleague's Network tab — the ask is answered there and nowhere else. Two
+  // links to one page ask the reader to choose between the same thing twice, and
+  // because the two verbs are different words, a rule that told controls apart
+  // by their label would offer both.
+  //
+  // Asserted over the ADDRESSES on the line rather than by naming the survivor:
+  // what has to hold is that no address is offered twice, which stays true when
+  // a verb joins the ask or its wording changes.
+  it("offers one control per destination, whatever the words", async () => {
+    oneRow(
+      row({
+        id: "01a05500-0000-7000-8000-0000000000i1",
+        source: "introduction_request",
+        category: "decisions",
+        level: 5,
+        consequence: "work_blocked",
+        title: "Katrin asked for an introduction",
+        actions: ["decide", "open"],
+        subject: {
+          type: "person",
+          id: "01a05500-0000-7000-8000-0000000000dd",
+          label: "Dana Buyer",
+        },
+      }),
+    );
+
+    const decide = await screen.findByRole("link", {
+      name: en["worklist.verb.decide"],
+    });
+    const addresses = verbsInOrder()
+      .filter(
+        (verb): verb is HTMLAnchorElement => verb instanceof HTMLAnchorElement,
+      )
+      .map((link) => link.getAttribute("href"));
+    expect(addresses).toEqual([decide.getAttribute("href")]);
+  });
+
   // A lane whose verbs are EQUAL has no call to action, and drawing one would
   // be the product claiming an expectation it has not got: held, no-show and
   // cancelled are three records of what already happened. Nothing on the line

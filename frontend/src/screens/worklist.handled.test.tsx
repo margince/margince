@@ -4,7 +4,7 @@
 /** @vitest-environment jsdom */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
@@ -129,6 +129,53 @@ describe("what was handled for the reader", () => {
     expect(screen.queryByText(en["worklist.handled.empty"])).toBeNull();
     expect(screen.queryByRole("table")).toBeNull();
   });
+
+  // A CACHED list outlives the read that failed. The rows stay in the cache
+  // while the refetch errors, so a count taken off the payload alone stood in
+  // the footer band reporting a total beside a body saying the receipts could
+  // not be read — and of those two the number is the one a reader believes.
+  it("withholds the count when a refetch over the cached list fails", async () => {
+    stubHandled({
+      as_of: "2026-09-05T09:00:00Z",
+      truncated: false,
+      receipts: [
+        {
+          id: "01a05500-0000-7000-8000-00000000e004",
+          kind: "email_sent",
+          summary: "Sent the confirmation",
+          occurred_at: "2026-09-05T08:00:00Z",
+        },
+      ],
+    });
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(panel(client));
+    await screen.findByText("1 done for you");
+
+    // Through the panel's OWN query rather than a second render over a failing
+    // stub: what has to be reached is the state where the rows are still in the
+    // cache and the last read failed, which only a refetch produces.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({ title: "The receipts could not be read" }),
+            {
+              status: 502,
+              headers: { "content-type": "application/problem+json" },
+            },
+          ),
+      ),
+    );
+    await act(async () => {
+      await client.refetchQueries();
+    });
+
+    expect(await screen.findByText(en["state.failed"])).toBeTruthy();
+    expect(screen.queryByText(/done for you/)).toBeNull();
+  });
 });
 
 function stubHandled(body: unknown) {
@@ -144,13 +191,14 @@ function stubHandled(body: unknown) {
   );
 }
 
-function panel() {
+// The client is a parameter for the one test that has to reach the panel's own
+// query after it has answered once; every other frame is a first read and does
+// not care which client holds it.
+function panel(
+  client = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+) {
   return (
-    <QueryClientProvider
-      client={
-        new QueryClient({ defaultOptions: { queries: { retry: false } } })
-      }
-    >
+    <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         <HandledForYouPanel />
       </LocaleProvider>

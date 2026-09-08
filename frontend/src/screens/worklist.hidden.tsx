@@ -70,8 +70,14 @@ export function HiddenBacklogPanel({
       // the footer band's own job — and it is a fact about the queue rather
       // than a caveat about this read, so it stays out of the body where the
       // truncation sentence has to come FIRST.
+      //
+      // Only over a read that ANSWERED. The cached backlog outlives the refetch
+      // that failed, so a footer taken off the payload alone reported the last
+      // good figure in this band while the body said the guardrail could not be
+      // read — and a number standing beside an unreadable result is read as the
+      // answer, which is the one failure this panel exists to prevent.
       footer={
-        hidden.data && !hidden.data.clear
+        state === "ready" && hidden.data && !hidden.data.clear
           ? t("worklist.hidden.shown", {
               count: formatNumber(hidden.data.shown, locale),
             })

@@ -98,6 +98,25 @@ export const TheReviewOnAPhone: Story = {
   globals: { viewport: { value: "phone" } },
 };
 
+/**
+ * THE SAME REVIEW IN DARK, which is where the recess changes direction.
+ *
+ * `Card inset` is `--bgCard` and the panel around it is `--bgElevated`, and
+ * those two swap places between the themes: in light the inset is the DARKER of
+ * the pair and reads as a well cut into the card, in dark it is the LIGHTER one
+ * and the two records read as plates lifted off the panel. So the frame worth
+ * checking is not a colour but whether the pair still reads as two candidates
+ * set apart from the verbs under them when the step runs the other way.
+ *
+ * The second thing to look at is the trailing line: "Not the same" is unfilled
+ * on purpose, and dark is the theme where an unfilled ghost has the least
+ * ground to stand on.
+ */
+export const TheReviewInDark: Story = {
+  ...Default,
+  globals: { theme: "dark" },
+};
+
 // A record type that carries no link count — a person, where nothing hangs off
 // either side. The reader decides on the names and the distinguishing line
 // alone, and the row must not draw an empty signal in place of the missing one.

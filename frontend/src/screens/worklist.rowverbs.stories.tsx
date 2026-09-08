@@ -216,6 +216,26 @@ export const EqualVerbsHaveNoAnswer: Story = {
 };
 
 /**
+ * THE SAME LINE IN DARK, where every step this line is built from inverts.
+ *
+ * Every control on it but the answer is a ghost — `--pane` with a
+ * `--borderSubtle` hairline — and the pin is that same box with no word in it.
+ * So what tells one verb from the next, and the whole line from the panel it
+ * stands on, is a hairline and an ink, both derived off a ground that in dark is
+ * no longer the brightest thing on screen. Nothing about the arrangement can
+ * say whether that still holds; only the frame can.
+ *
+ * What to look for: the answer still reads as the answer against the accent's
+ * dark lift, the pin still reads as a control rather than as a mark, and the
+ * hairlines still say where one verb ends and the next begins. The ORDER is the
+ * light frames' business — this one is about whether the line stays legible.
+ */
+export const TheLineInDark: Story = {
+  ...AWaitingRowWithEveryVerb,
+  globals: { theme: "dark" },
+};
+
+/**
  * THE SAME LINE AT 390px, which is a different line.
  *
  * Two things change and neither is the wrapping. The three judgements fold into

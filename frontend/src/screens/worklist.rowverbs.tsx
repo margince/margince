@@ -155,28 +155,25 @@ function RowVerbs({
     destination: string;
   };
   const verbs = item.actions.flatMap<Verb>((action) => {
-    if (action === "decide") {
-      const to = decideDestination(item, href);
-      return to ? [{ action, destination: to }] : [];
-    }
-    const route = VERB_DESTINATION[action];
-    if (!route) {
+    const destination = verbDestination(item, action, href);
+    if (!destination) {
       // A verb this build cannot route draws nothing. A control that looks
       // pressable and goes nowhere is worse than no control.
       return [];
     }
-    const destination = route(href);
-    if (!destination) {
+    // ONE CONTROL PER DESTINATION, and the ADDRESS is the whole key. `open`,
+    // `complete` and `snooze` all reach the record this row is about, and so
+    // does an introduction ask's `decide` — two links to one page ask the reader
+    // to choose between the same thing twice.
+    //
+    // The WORD is no part of that key, because one address arrives under
+    // different words: an ask sends `decide` and `open`, which is "Decide" and
+    // "Open" over one route. Which word survives is the first the SERVER sent,
+    // in the order it ranked them.
+    if (drawn.has(destination)) {
       return [];
     }
-    // One control per DESTINATION. `complete` and `snooze` both open the
-    // record this row is about, and two identical "Open" links side by side
-    // ask the reader to choose between the same thing twice.
-    const key = `${VERB_LABEL[action](t)}|${destination}`;
-    if (drawn.has(key)) {
-      return [];
-    }
-    drawn.add(key);
+    drawn.add(destination);
     return [{ action, destination }];
   });
   if (verbs.length === 0 && !move) {
@@ -203,6 +200,22 @@ function RowVerbs({
       ))}
     </>
   );
+}
+
+// Where one verb goes, or nowhere.
+//
+// ONE entry point, so every verb passes the dedupe above and `decide` is not an
+// exception to it: that verb's route depends on the SOURCE rather than only on
+// the verb, and a route answered beside the dedupe rather than through it puts a
+// second link on an address the row already offers.
+function verbDestination(
+  item: WorklistItem,
+  action: WorklistItem["actions"][number],
+  href: string | undefined,
+): string | undefined {
+  return action === "decide"
+    ? decideDestination(item, href)
+    : VERB_DESTINATION[action]?.(href);
 }
 
 // A verb that NAVIGATES, wearing the same face as the verbs that act.

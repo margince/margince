@@ -3,7 +3,7 @@
 
 /** @vitest-environment jsdom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
@@ -50,13 +50,19 @@ function draw(answer: HiddenBacklog | "fails", enabled = true) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  return render(
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">
-        <HiddenBacklogPanel enabled={enabled} />
-      </LocaleProvider>
-    </QueryClientProvider>,
-  );
+  // The client comes back out for the one case that needs the panel's own read
+  // to answer twice: a reading already in the cache, and then a refetch that
+  // fails under it.
+  return {
+    client,
+    ...render(
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <HiddenBacklogPanel enabled={enabled} />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    ),
+  };
 }
 
 afterEach(() => {
@@ -113,6 +119,31 @@ describe("the hidden-backlog panel", () => {
       expect(screen.getByText(/Could not be loaded/)).toBeTruthy(),
     );
     expect(screen.queryByText(/Nothing is being held back/)).toBeNull();
+  });
+
+  // The same failure from the other side: the READING is gone from the body on
+  // a failed read, but the cached payload outlives it, so the figure in the
+  // footer band went on reporting what the queue carried beside a body saying
+  // the guardrail could not be read. A number standing next to an unreadable
+  // result is taken for the answer.
+  it("withholds the queue's own figure when a refetch fails under it", async () => {
+    const { client } = draw(backlog({ clear: false, past_horizon: 3 }));
+    await waitFor(() =>
+      expect(screen.getByText("The queue itself carries 12.")).toBeTruthy(),
+    );
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("", { status: 503 })),
+    );
+    await act(async () => {
+      await client.refetchQueries();
+    });
+
+    await waitFor(() =>
+      expect(screen.getByText(/Could not be loaded/)).toBeTruthy(),
+    );
+    expect(screen.queryByText(/The queue itself carries/)).toBeNull();
   });
 
   it("says so plainly when nothing is held back", async () => {

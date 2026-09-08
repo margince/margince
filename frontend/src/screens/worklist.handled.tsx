@@ -51,12 +51,20 @@ export function HandledForYouPanel() {
       title={t("worklist.handled.title")}
       // HOW MUCH was done, in the band that belongs to the whole panel.
       //
-      // Only over a read that reached its own end: `truncated` makes the length
-      // a floor, and a receipt surface that printed a floor as a count would
-      // tell a reader they had seen everything — the one thing it must never
-      // cause. The caveat in the body is what they get instead.
+      // Only over a read that ANSWERED, and only over one that reached its own
+      // end. Both halves are the same wrong number in the same direction. A
+      // cached list outlives the refetch that failed, so a count taken off the
+      // rows alone stood in this band while the body said the receipts could
+      // not be read — and of those two the number is the one a reader believes.
+      // `truncated` makes the length a floor for the same reason, and a receipt
+      // surface printing a floor as a count tells a reader they have seen
+      // everything, which is the one thing it must never cause. The caveat in
+      // the body is what they get instead.
+      //
+      // `ready` already means there is a non-empty list, so `receipts` here
+      // narrows the type rather than deciding anything.
       footer={
-        receipts && receipts.length > 0 && !handled.data?.truncated
+        state === "ready" && receipts && !handled.data?.truncated
           ? t("worklist.handled.count", {
               count: formatNumber(receipts.length, locale),
             })

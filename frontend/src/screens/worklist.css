@@ -70,7 +70,20 @@
   min-inline-size: 14rem;
 }
 
+/* BOTH BOXES, and the inner one alone did nothing. `.worklist-header-dials` is
+   a flex ITEM of the header line carrying the default `flex-grow: 0`, so it
+   stands at its content's width however much room the line has — and a
+   `flex-basis: 100%` inside it then resolves against that content width rather
+   than against the page. So the picker came out at its own floor on a
+   colleague's day, where it stands alone, and at whatever the scope switch
+   measured on the lead's own day, where the two share the group — the same
+   capped control the rule below is here to release. A descendant cannot widen
+   the box it sits in. */
 @media (max-width: 720px) {
+  .worklist-header-dials {
+    flex: 1 1 100%;
+  }
+
   .worklist-owner-field {
     flex: 1 1 100%;
     max-width: none;

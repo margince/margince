@@ -70,13 +70,20 @@ function TeamExceptions({
       title={t("worklist.exceptions.title")}
       // HOW MANY need this lead, in the band that belongs to the whole panel.
       //
-      // Only over a read that reached its own end. `truncated` means the server
-      // stopped early, so the length is a floor — and a floor printed as a count
-      // is a wrong number in the one direction this surface must not get wrong:
-      // a lead told "4" over a figure that is really 4-or-more will not go
-      // looking. The caveat in the body is what they get instead.
+      // Only over a read that ANSWERED, and only over one that reached its own
+      // end. `truncated` means the server stopped early, so the length is a
+      // floor — and a floor printed as a count is a wrong number in the one
+      // direction this surface must not get wrong: a lead told "4" over a
+      // figure that is really 4-or-more will not go looking. A failed refetch
+      // over a cached list is the same wrong number, since the rows survive it:
+      // the band went on reporting the last good count beside a body saying the
+      // team could not be read. The caveat in the body is what they get
+      // instead.
+      //
+      // `ready` already means there is a non-empty list, so `rows` here narrows
+      // the type rather than deciding anything.
       footer={
-        rows && rows.length > 0 && !exceptions.data?.truncated
+        state === "ready" && rows && !exceptions.data?.truncated
           ? t("worklist.exceptions.count", {
               count: formatNumber(rows.length, locale),
             })
