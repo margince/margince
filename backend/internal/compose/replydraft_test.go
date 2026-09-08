@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"strings"
 	"testing"
@@ -399,6 +400,21 @@ func TestAFailedVoiceCriticRetryIsLoggedAndTheFirstDraftStands(t *testing.T) {
 	}
 	if !strings.Contains(logged.String(), retryFailed.Error()) {
 		t.Errorf("the retry failure reached no log: %q", logged.String())
+	}
+	// The count too, and derived from the production detector rather than
+	// written down: a hard-coded number would drift the day a floor rule is
+	// added, and a log line that says only "a retry failed" cannot tell a
+	// reader whether the draft it kept was one violation off or twelve.
+	first := replyDraft{
+		Subject: "Re: plan",
+		Body:    "Here's the thing: it's not about tools, but transformation. What do you think?",
+	}
+	wantCount := len(voiceDraftViolations(first))
+	if wantCount == 0 {
+		t.Fatal("the fixture body trips no floor rule, so this case never reaches the retry at all")
+	}
+	if !strings.Contains(logged.String(), fmt.Sprintf("violations=%d", wantCount)) {
+		t.Errorf("the log does not carry violations=%d: %q", wantCount, logged.String())
 	}
 	// The first draft stood, kept its violations, and so took the plain
 	// fallback — which is the behaviour the log exists to make visible.
