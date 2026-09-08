@@ -59,6 +59,30 @@ import (
 // tree, so it has one place to be right and one place to be tested.
 var activityReadLiteral = gatekit.TableReadPattern("activity")
 
+// auditImageRead matches a statement that reads the audit trail's before/after
+// images.
+//
+// That trail is a SECOND DOOR onto an activity's content, reached through
+// audit_log.entity_id rather than through the activity table: `before` and
+// `after` carry the activity's subject verbatim, so a reader projecting them is
+// reading activity content while naming no activity table. Three files did
+// exactly that and were never subjects of this gate — one had a real audience
+// defect and two gated correctly by luck, so the verdict on all three was the
+// verdict a file that gates nothing gets.
+//
+// BOTH halves in one pattern, within a bounded window, rather than "mentions
+// audit_log" AND "mentions before" anywhere in the declaration. A declaration
+// carries its error strings too, and this tree writes sentences with the words
+// "before" and "after" in them: asked separately, the two conditions pulled in
+// a person-name repair and a JSON-decode error message as audit-image readers,
+// which is a corpus that has to be ratified reader by reader for reasons that
+// are not true.
+//
+// Both orders, because a projection may sit either side of its FROM.
+var auditImageRead = regexp.MustCompile(
+	`(?is)\b(?:from|join)\s+audit_log\b.{0,300}?\b(?:before|after)\b` +
+		`|\b(?:before|after)\b.{0,300}?\b(?:from|join)\s+audit_log\b`)
+
 // scopeMarkers are the shared gates that carry the availability test: a reader
 // reaching activity through one of them cannot see a held row. They are Go
 // calls rather than SQL, so they are matched on the names a reader reaches
@@ -150,11 +174,32 @@ var restrictedReadersAdmitted = gatekit.Waive(map[string]string{
 	"internal/compose/audiencerescope.go:AudienceRescopeGen.rescope":          "the audience-change consumer reads the thread key (content by the activity policy) and the capture owner of the ONE activity whose audience just moved — deliberately, as a system principal, because both are exactly what narrowing the derived models needs, to NARROW what other readers may see — excluding a held row here would leave a legal-hold conversation's derived signals workspace-visible, the exact disclosure the consumer exists to remove. The cost is that a held activity's thread key and owner id reach this system principal",
 	"internal/modules/privacy/auditaudienceboundary.go:ListAuditLog":          "the compliance read joins activity to evaluate ONE predicate — the audience arm the row's author set — and projects a single boolean from it. No activity column reaches the caller: the join's whole output is content_readable, which can only ever WITHHOLD an audit image, never reveal an activity. A held activity is therefore no more readable through this join than without it. The cost is that the audit IMAGE of a held activity stays readable to the admin, which is a pre-existing property of audit_log rather than of this join — audit_log is append-only and the hold is on the activity — and is filed rather than settled here, because making the compliance trail skip held rows is a decision about A165 and not a fix to the audience gap this join closes",
 	"internal/modules/privacy/erasure_graph.go:subjectNamedOnAParticipantRow": "the identity predicate BOTH participant scrubs share — the Art. 17 eraser's and the retention sweep's — and both are WRITERS. The one thing it reads from activity is channel_provider, a registry key naming a transport: never a subject's content, never projected, and read only because a chat roster names the third human in a group by an account id alone, which is meaningful only against the provider that issued it. Excluding a held activity here would do the opposite of what the hold protects — it would leave the erased subject's account standing on that roster row forever, readable and matchable back to them by the next roster naming it, while every other arm of the same statement removed them. The four statements built on it each carry notTransitivelyHeld, which is the hold exclusion that belongs to this path; the cost is that a held activity's transport decides whether a participant row on it is scrubbed, a fact about the row's own erasability whose effect is always toward removing the subject",
-	"internal/modules/capture/tracestore.go:TraceStore.readRungs":             "the capture trace ladder LEFT JOINs activity to reach one thing — the counterparty email a stored trace row was raised about — and uses it only inside the lateral's WHERE, to pick which disposition verdict applies. Every column it PROJECTS comes from capture_trace and from capture_pending_counterparty; no activity column is scanned, so a held activity is no more readable through this join than without it. Excluding held rows here would instead blank the disposition on a trace row whose message is under hold, which tells an operator the connector did nothing when it did. The cost is that a held activity's counterparty_email decides which verdict a trace row shows — a fact about the trace, never content of the activity",
+	"internal/compose/displaynamerepair.go:selectStaleDisplayNames":           "reaches the audit trail rather than the activity table, and cannot reach an activity's image at all: its join is bound to the LITERAL `a.entity_type = 'person'`, so no activity row is in the statement's range whatever the caller asks for. It is here because the subject filter now sees the trail as a second door onto activity content, which is right, and this reader is on the far side of it",
+
+	// The four below read the trail with entity_type as a PARAMETER, so an
+	// activity's audit image is within their range when a caller names one.
+	// Each is ratified on the same ground the audience boundary above already
+	// states, and the ground is a decision somebody owes rather than a property
+	// of these readers: audit_log is append-only and the statutory hold is on
+	// the ACTIVITY, not on the ledger row that recorded it. Making the
+	// compliance trail skip held rows is an A165 question — a trail with holes
+	// in it is its own defect — and it is filed rather than settled here.
+	//
+	// What this widening buys is that the door is now VISIBLE: before it, these
+	// five readers were not subjects of this gate at all, and the verdict it
+	// gave them was the verdict it gives a file that gates nothing.
+	"internal/compose/recordrestore.go:RestoreSeam.readRow":                  "reads ONE audit row by its own id to decide what restoring it means, entity_type parameterized. The image it reads is the image the caller is already looking at on that record's history — this read reveals nothing the history did not — and the restore it drives writes to the target row rather than disclosing the trail. Cost: an activity's before/after passes through this seam when a caller restores one",
+	"internal/compose/humanprecedence.go:fieldOwnership.HumanOwnedConflicts": "asks which fields of ONE record a human last set, by looking for the field's key in an after-image. It projects no image: the statement's output is the set of field KEYS a human owns, so an activity's content cannot leave through it. Cost: an activity's after-image decides which of its own field names are reported as human-owned",
+	"internal/compose/superseded.go:moneyMovedUnderIt":                       "asks whether a later audit row moved money under the row being judged, reading the after-image to compare one amount. It projects a boolean, never the image. Cost: an activity's after-image is read to answer a question about the row it belongs to",
+	"internal/modules/people/ensurenamefill.go:displayNameSetByHumanTx":      "asks whether a human ever set this record's display name, by looking for the key in an after-image, and projects EXISTS. No image leaves it. Cost: an activity's after-image is read to answer a question about that same record's naming",
+
+	"internal/modules/capture/tracestore.go:TraceStore.readRungs": "the capture trace ladder LEFT JOINs activity to reach one thing — the counterparty email a stored trace row was raised about — and uses it only inside the lateral's WHERE, to pick which disposition verdict applies. Every column it PROJECTS comes from capture_trace and from capture_pending_counterparty; no activity column is scanned, so a held activity is no more readable through this join than without it. Excluding held rows here would instead blank the disposition on a trace row whose message is under hold, which tells an operator the connector did nothing when it did. The cost is that a held activity's counterparty_email decides which verdict a trace row shows — a fact about the trace, never content of the activity",
 })
 
 // activityReaderScope is every non-test, non-generated file under internal/
-// that reads the activity table by name.
+// that reads an activity's content — through the activity table by name, or
+// through the audit trail's before/after images, which carry the same subject
+// and name no activity table.
 var activityReaderScope = gatekit.Scope{
 	Roots:   []string{"internal"},
 	Subject: readsActivityTable,
@@ -162,7 +207,34 @@ var activityReaderScope = gatekit.Scope{
 }
 
 func readsActivityTable(path string, file *ast.File) bool {
-	return gatekit.FileReadsTable(path, file, activityReadLiteral)
+	return gatekit.FileReadsTable(path, file, activityReadLiteral) ||
+		readsTheAuditImage(path, file)
+}
+
+// readsTheAuditImage reports whether the file reads an activity's content
+// through the audit trail rather than through the activity table.
+//
+// A file that reads audit_log and projects no image discloses
+// nothing about an activity, and one that mentions `before` outside a trail
+// read is prose or another table's column.
+func readsTheAuditImage(path string, file *ast.File) bool {
+	return gatekit.FileReadsTable(path, file, auditImageRead)
+}
+
+// readsActivityContent reports whether one declaration's text reads an
+// activity's content, by EITHER door.
+//
+// The file-level subject above and this per-declaration filter have to agree,
+// or widening one alone buys nothing: a file admitted to the corpus for its
+// audit read, whose declarations are then judged only against the activity
+// table, has no declaration that matches and reports no offenders. That is a
+// PASS with nothing examined — precisely the vacuous verdict this widening was
+// written to end, moved one level in.
+func readsAnActivitysContent(text string) bool {
+	if activityReadLiteral.MatchString(text) {
+		return true
+	}
+	return auditImageRead.MatchString(text)
 }
 
 // unguardedActivityReaders names each reader in the file that reads the
@@ -199,7 +271,7 @@ func unguardedActivityReaders(graph map[string]*graphFunc, file *ast.File, dim a
 		// matches, and a per-literal walk skips it entirely — the shape that
 		// reports PASS over a content reader.
 		whole := declText(decl)
-		if !activityReadLiteral.MatchString(whole) {
+		if !readsAnActivitysContent(whole) {
 			continue
 		}
 		reads := gatekit.DeclReads(decl, activityReadLiteral)
