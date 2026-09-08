@@ -247,6 +247,20 @@ func TestClassify_anUntranslatedConstraintIsTheCallersMistakeNotAServerFault(t *
 			wantDetail: "a value in this request is outside what its field accepts. Check each value against " +
 				"this operation's schema; do not retry unchanged.",
 		},
+		{
+			// A GENERATED tsvector column overflows its 1,048,575-byte output
+			// ceiling at roughly 950 KB of word-dense body — comfortably inside
+			// the chassis's 1 MiB request cap, so the request was legal and the
+			// answer was an unexplained 500. It carries no constraint name at
+			// all, which is why the net has to branch on the SQLSTATE.
+			name:     "a value too large to store or index",
+			sqlstate: "54000", table: "activity", constraint: "",
+			pgMessage: "string is too long for tsvector (1099556 bytes, max 1048575 bytes)",
+			wantCode:  "value_too_large",
+			wantDetail: "a value in this request is too large for the database to store or index. " +
+				"Shorten it — most often this is a long text body — and send it again; " +
+				"the same request will fail the same way.",
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			err := fmt.Errorf("writing the row: %w", &pgconn.PgError{
@@ -276,7 +290,7 @@ func TestClassify_anUntranslatedConstraintIsTheCallersMistakeNotAServerFault(t *
 			// assertion above is the stronger guard anyway — it pins the whole
 			// sentence, so anything riding along fails there first.
 			for _, leak := range []string{tc.constraint, tc.sqlstate, tc.pgMessage} {
-				if strings.Contains(fault.Detail, leak) {
+				if leak != "" && strings.Contains(fault.Detail, leak) {
 					t.Errorf("detail leaks %q: %q", leak, fault.Detail)
 				}
 			}
