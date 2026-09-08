@@ -74,9 +74,11 @@ func (m *callMetrics) WritePrometheus(w io.Writer) {
 		"Estimated company-context tokens supplied to AI attempts."), snap.contextTokens)
 }
 
-// counterHeader writes one family's HELP and TYPE lines and answers its name,
-// so the name is spelled once — at the call, as the literal the census reads —
-// rather than once here and again beside every series.
+// counterHeader writes one family's HELP and TYPE lines and answers its name.
+//
+// Returning it is what lets the caller put the family name at the call site as
+// a literal — which the metric-suffix census reads — and still reach the series
+// lines below without a second copy of the string to keep in step.
 func counterHeader(w io.Writer, name, help string) string {
 	httpserver.WriteLine(w, "# HELP %s %s\n# TYPE %s counter\n", name, help, name)
 	return name
