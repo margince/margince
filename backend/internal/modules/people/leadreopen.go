@@ -53,15 +53,14 @@ const reopenFallbackStatus = string(crmcontracts.LeadStatusEngaged)
 // that act's reverse, and a caller who may not close a lead has no business
 // deciding a closure was wrong.
 //
-// The transaction reads like DisqualifyLead's and is deliberately not shared
-// with it. What the two have in common is the module's own write shape — probe,
-// lock, read, patch, audit, emit, re-read — which every store method here
-// spells and which storekit already owns the halves of. What differs is every
-// decision inside it: the liveness the lock and the reads take (this verb acts
-// only on archived rows, its sibling only on live ones), the guard, the columns,
-// and the audit action. A helper covering both would take those as parameters
-// and be a switch between two verbs wearing one name, which is harder to read
-// than the two and hides that they are opposites.
+// The PROLOGUE it shares with DisqualifyLead is leadWrite: the object gates,
+// the catalog read above the transaction, and the writability probe inside it.
+// Everything after it diverges and deliberately stays here — the liveness the
+// lock and the reads take (this verb acts only on archived rows, its sibling
+// only on live ones), the guard, the columns, the audit action and the event. A
+// helper covering those would take them as parameters and be a switch between
+// two verbs wearing one name, which is harder to read than the two and hides
+// that they are opposites.
 func (s *Store) ReopenLead(ctx context.Context, id ids.LeadID) (crmcontracts.Lead, error) {
 	if err := auth.Require(ctx, "lead", principal.ActionUpdate); err != nil {
 		return crmcontracts.Lead{}, err

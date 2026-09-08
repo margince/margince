@@ -54,7 +54,10 @@ func (s *Store) RefuseArchiveCompany(ctx context.Context, id ids.CompanyID) erro
 // ArchiveCompany retires one company and everything that answers a list on
 // its behalf, conditioned on ifVersion wherever the caller's authority named a
 // version.
-func (s *Store) ArchiveCompany(ctx context.Context, id ids.CompanyID, ifVersion *int64) (crmcontracts.Company, error) {
+func (s *Store) ArchiveCompany(
+	ctx context.Context, id ids.CompanyID, ifVersion *int64, opts ...WriteOption,
+) (crmcontracts.Company, error) {
+	options := collectWriteOptions(opts)
 	if err := auth.Require(ctx, "company", principal.ActionDelete); err != nil {
 		return crmcontracts.Company{}, err
 	}
@@ -65,6 +68,12 @@ func (s *Store) ArchiveCompany(ctx context.Context, id ids.CompanyID, ifVersion 
 	var out crmcontracts.Company
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		if err := auth.EnsureWritable(ctx, tx, "company", id.UUID); err != nil {
+			return err
+		}
+		// The precondition, under the row lock the write takes: a caller that
+		// asked for this write only while nobody had touched the record gets
+		// that answered HERE rather than in a read that already committed.
+		if err := refuseIfHumanTouched(ctx, tx, "company", id.UUID, options); err != nil {
 			return err
 		}
 		if err := refuseIfAnchor(ctx, tx, id, "id", "it cannot be archived. Archive a different company, or edit this one on the company page"); err != nil {

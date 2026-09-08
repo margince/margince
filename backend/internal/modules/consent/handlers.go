@@ -6,15 +6,14 @@ package consent
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
+	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -145,39 +144,47 @@ func (h Handlers) RecordConsent(w http.ResponseWriter, r *http.Request, id crmco
 	httperr.WriteJSON(w, http.StatusOK, wireState(state))
 }
 
-// IssueDoubleOptIn implements (POST /people/{id}/consent/double-opt-in) by
-// refusing, and mints nothing.
+// IssueDoubleOptIn implements (POST /people/{id}/consent/double-opt-in): mint
+// the link for one marketing purpose and queue it to the subject's own address.
 //
-// A double opt-in is evidence only because the data subject completed it from
-// their own mailbox. This endpoint returned the plaintext token to the
-// authenticated operator, who could paste it back into RecordConsent — so the
-// round trip the proof stands on could be closed without the subject's mailbox
-// ever taking part, and the resulting consent_event recorded a confirmation
-// that had not happened. Nothing here delivered the token either: the deliver
-// flag reached an audit payload and no mailer.
-//
-// It refuses rather than being deleted because the operation is in the public
-// contract and a caller deserves an answer that says why. It returns when the
-// confirmation mail has a durable path to the subject; until then marketing
-// opt-in is captured through the confirm-details link, which mails a single-use
-// link to the person's own live primary address.
-func (h Handlers) IssueDoubleOptIn(w http.ResponseWriter, r *http.Request, _ crmcontracts.Id) {
+// The plaintext is deliberately absent from the response. A double opt-in is
+// evidence only because the data subject completed it from their own mailbox,
+// and an endpoint that handed the token back would let one operator close both
+// halves of that round trip — which is what this one used to do.
+func (h Handlers) IssueDoubleOptIn(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	var req crmcontracts.IssueDoubleOptInJSONRequestBody
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	// The body id is still probed before the refusal. A caller who omitted the
-	// purpose has a malformed request whichever way this endpoint answers, and
-	// requiredbodyids holds every required id to a probe — an endpoint that
-	// refuses for its own reasons must not become the one place a missing id
-	// goes unnamed.
+	// Probed here as well as in the store, because requiredbodyids holds every
+	// required id to a probe at the door.
 	if err := httperr.RequireBodyID(purposeIDField, ids.UUID(req.PurposeId)); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.Write(w, r, fmt.Errorf(
-		"a double opt-in link can only be completed by the data subject, and this installation "+
-			"cannot yet mail one: %w", apperrors.ErrConflict))
+	// No expected address: this door names a PERSON, and the mint derives the
+	// mailbox from their record. There is no second address to disagree with.
+	issued, err := h.store.IssueConsentLink(r.Context(),
+		pathID[ids.PersonKind](id), ids.From[ids.PurposeKind](ids.UUID(req.PurposeId)), "")
+	if err != nil {
+		writeConsentErr(w, r, err)
+		return
+	}
+	// The same two facts the confirm-request door reports, and for the same
+	// reason: `queued` says this installation put the message on the lane,
+	// `sendable` says it has a lane at all, and a rep's next move differs.
+	// Neither claims delivery.
+	httperr.WriteJSON(w, http.StatusCreated, struct {
+		DeliveredTo string    `json:"delivered_to"`
+		ExpiresAt   time.Time `json:"expires_at"`
+		Queued      bool      `json:"queued"`
+		Sendable    bool      `json:"sendable"`
+	}{
+		DeliveredTo: issued.DeliveredTo,
+		ExpiresAt:   issued.ExpiresAt,
+		Queued:      issued.Staged,
+		Sendable:    h.store.canSendConfirm(),
+	})
 }
 
 // SuppressPerson serves POST /people/{id}/consent/suppress: a person recording

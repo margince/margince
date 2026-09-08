@@ -150,7 +150,14 @@ func Groups() []Group {
 		// queues a MODEL-backed pass, and a group whose retries spend the
 		// customer's token budget must not share a cursor with a projection
 		// that is cheap to replay.
-		{Name: "cg:capture-enrich", Streams: forEntities(activityStreamEntity)},
+		//
+		// The PERSON stream too, because the pass selects a contact joined to
+		// their own open mail and either half can be what was missing. A sender
+		// nobody had classified has no contact while their mail lands; the
+		// counterparty verdict mints them minutes later, and person.created is
+		// the only notice that their first mail — the one carrying the signature
+		// block — has become readable.
+		{Name: "cg:capture-enrich", Streams: forEntities(activityStreamEntity, personStreamEntity)},
 		// A card attached to captured mail imports itself. Its own group beside
 		// the one above rather than a second handler on it, because the two do
 		// not fail alike: that one queues a MODEL-backed pass and this one

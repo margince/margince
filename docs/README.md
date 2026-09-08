@@ -71,6 +71,7 @@ decision rather than an omission.
 - [add-an-rbac-object.md](how-to/add-an-rbac-object.md) — add a new RBAC object across the policy, the contract enum, the backfill migration, and the published matrix.
 - [create-a-workflow.md](how-to/create-a-workflow.md) — scaffold and wire a new automation starter workflow into the closed catalog.
 - [apply-migrations.md](how-to/apply-migrations.md) — write and apply a database migration.
+- [claim-a-red-main.md](how-to/claim-a-red-main.md) — say you are fixing a red `main` before you start, so parallel sessions do not all diagnose it.
 - [mint-a-passport.md](how-to/mint-a-passport.md) — issue an agent passport token.
 - [connect-an-mcp-client.md](how-to/connect-an-mcp-client.md) — connect a client to the governed MCP tool surface.
 - [run-the-frontend.md](how-to/run-the-frontend.md) — run the SPA in dev.

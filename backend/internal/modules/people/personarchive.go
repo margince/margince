@@ -42,7 +42,10 @@ func (s *Store) RefuseArchivePerson(ctx context.Context, id ids.PersonID) error 
 //
 // ArchivePerson retires one person and their satellites, conditioned on
 // ifVersion wherever the caller's authority named a version.
-func (s *Store) ArchivePerson(ctx context.Context, id ids.PersonID, ifVersion *int64) (crmcontracts.Person, error) {
+func (s *Store) ArchivePerson(
+	ctx context.Context, id ids.PersonID, ifVersion *int64, opts ...WriteOption,
+) (crmcontracts.Person, error) {
+	options := collectWriteOptions(opts)
 	if err := auth.Require(ctx, "person", principal.ActionDelete); err != nil {
 		return crmcontracts.Person{}, err
 	}
@@ -53,6 +56,12 @@ func (s *Store) ArchivePerson(ctx context.Context, id ids.PersonID, ifVersion *i
 	var out crmcontracts.Person
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		if err := auth.EnsureWritable(ctx, tx, "person", id.UUID); err != nil {
+			return err
+		}
+		// The precondition, under the row lock the write takes: a caller that
+		// asked for this write only while nobody had touched the record gets
+		// that answered HERE rather than in a read that already committed.
+		if err := refuseIfHumanTouched(ctx, tx, "person", id.UUID, options); err != nil {
 			return err
 		}
 		// A liveness probe, not a wire read — no custom columns needed.

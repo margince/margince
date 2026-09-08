@@ -135,6 +135,20 @@ func TestThePlaintextConfirmTokenReachesNoSinkButTheMail(t *testing.T) {
 	t.Parallel()
 
 	files := parseConsentPackage(t)
+	// Every function that HANDS BACK the carrier. A local bound from one of
+	// these holds the plaintext without ever naming the field, which is how the
+	// whole struct reaches a sink past a matcher that only knows `.Token`.
+	// Derived from the package rather than listed, so a third minting function
+	// enrols itself.
+	minters := carrierReturningFuncs(files)
+	// Under-recognition is how this arm dies quietly: a minters set that came
+	// back empty would walk no carrier at all and report PASS, exactly as the
+	// taint floor below guards the other half.
+	if len(minters) < carrierMinterFloor {
+		t.Fatalf("found %d functions returning %s, fewer than the %d this package holds — the "+
+			"carrier arm has stopped seeing its subject, and a whole-struct leak would read green",
+			len(minters), carrierType, carrierMinterFloor)
+	}
 	checked, tainted := 0, 0
 	for path, file := range files {
 		checked++
@@ -146,10 +160,23 @@ func TestThePlaintextConfirmTokenReachesNoSinkButTheMail(t *testing.T) {
 				continue
 			}
 			holders := taintedNamesIn(fn)
-			if len(holders) == 0 {
+			carriers := carrierLocalsIn(fn, minters)
+			// A function with no tainted LOCAL can still read the credential:
+			// `issued.Token` straight into a struct literal names nothing, and
+			// skipping on an empty name set let a handler hand the plaintext to
+			// WriteJSON with the walk never entering the function. The field
+			// read is the taint, whether or not a local ever holds it.
+			if len(holders) == 0 && len(carriers) == 0 && !readsTheCarrierField(fn) {
 				continue
 			}
 			tainted++
+			for _, finding := range wholeCarrierUses(fn, carriers) {
+				t.Errorf("%s: %s hands the WHOLE %s to %s. The struct carries the plaintext in a "+
+					"field, so publishing the value publishes the credential — a matcher keyed on "+
+					"the field name cannot see this, because the leak names no field. Pass the "+
+					"fields the caller actually needs.",
+					path, finding.holder, carrierType, finding.call)
+			}
 			for _, finding := range unratifiedUsesOf(fn, holders) {
 				t.Errorf("%s: %s hands the plaintext confirm token to %s, which is not one of "+
 					"the destinations it may reach (%s). The token is a bearer credential "+
@@ -170,6 +197,15 @@ func TestThePlaintextConfirmTokenReachesNoSinkButTheMail(t *testing.T) {
 	}
 }
 
+// carrierMinterFloor is how many carrier-returning functions the package holds:
+// IssueConfirmToken, IssueConsentLink and the shared issueLink beneath them.
+//
+// A floor rather than an exact count, so a fourth does not fail the gate — but
+// a set that lost one, or came back empty because the detector broke, does. Set
+// at what the package actually holds rather than below it: a floor with slack
+// is a floor a loss can hide under, which is the whole failure this guards.
+const carrierMinterFloor = 3
+
 // taintedFunctionFloor is how many functions the walk must still be following.
 // Set below the count the tree holds, so adding a holder does not fail the gate,
 // and far enough above zero that a walk which lost its SUBJECT does — a matcher
@@ -187,6 +223,157 @@ func functionsIn(file *ast.File) []*ast.FuncDecl {
 		}
 	}
 	return out
+}
+
+// carrierReturningFuncs names every function in the package whose results
+// include the carrier, receiver-independent.
+//
+// These are what mint or forward the credential. Deriving the set beats listing
+// it for the reason this file derives everything else: a list goes short
+// silently, and the half that stopped matching still reports PASS.
+func carrierReturningFuncs(files map[string]*ast.File) map[string]bool {
+	out := map[string]bool{}
+	for _, file := range files {
+		for _, fn := range functionsIn(file) {
+			if declaresTheCarrier(fn) {
+				out[fn.Name.Name] = true
+			}
+		}
+	}
+	return out
+}
+
+// carrierLocalsIn names the locals in one function bound from a call that
+// returns the carrier.
+//
+// The struct is the credential, not merely a box around it: it carries the
+// plaintext in a field, so handing the WHOLE value to a log publishes the token
+// as surely as reading the field would. A matcher keyed on the field name
+// cannot see that — the leak names no selector — and this is the arm that does.
+//
+// IssuedConfirm.Token carries `json:"-"`, which stops the JSON sinks on its
+// own. This arm is what covers the ones no tag reaches: slog, fmt, a template.
+func carrierLocalsIn(fn *ast.FuncDecl, minters map[string]bool) map[string]bool {
+	out := map[string]bool{}
+	bind := func(lhs []ast.Expr, rhs []ast.Expr) {
+		if len(rhs) != 1 || len(lhs) == 0 {
+			return
+		}
+		call, isCall := rhs[0].(*ast.CallExpr)
+		if !isCall || !minters[calleeName(call)] {
+			return
+		}
+		if name, isIdent := lhs[0].(*ast.Ident); isIdent && name.Name != "_" {
+			out[name.Name] = true
+		}
+	}
+	ast.Inspect(fn, func(n ast.Node) bool {
+		// BOTH binding forms. `issued, err := mint()` is an AssignStmt and
+		// `var issued, err = mint()` is a ValueSpec, and a walk that knew only
+		// the first left the whole function untracked for anybody who wrote the
+		// second — a spelling difference deciding whether a leak is seen.
+		switch v := n.(type) {
+		case *ast.AssignStmt:
+			bind(v.Lhs, v.Rhs)
+		case *ast.ValueSpec:
+			names := make([]ast.Expr, 0, len(v.Names))
+			for _, name := range v.Names {
+				names = append(names, name)
+			}
+			bind(names, v.Values)
+		}
+		return true
+	})
+	return out
+}
+
+// wholeCarrierUses reports every call handed a carrier value entire.
+//
+// The BARE identifier only. `issued.DeliveredTo` is a field read and publishes
+// nothing — both confirmation doors build their response that way, and treating
+// the local as tainted wherever it appears reported them as leaks, which is the
+// cry-wolf shape this file already learned once.
+func wholeCarrierUses(fn *ast.FuncDecl, carriers map[string]bool) []sinkFinding {
+	var out []sinkFinding
+	if len(carriers) == 0 {
+		return nil
+	}
+	ast.Inspect(fn, func(n ast.Node) bool {
+		call, isCall := n.(*ast.CallExpr)
+		if !isCall {
+			return true
+		}
+		callee := calleeName(call)
+		for _, arg := range call.Args {
+			if !carrierEscapesIn(arg, carriers) {
+				continue
+			}
+			// A minter handing the carrier onward is the value doing its job.
+			if minterReceives(callee) {
+				continue
+			}
+			out = append(out, sinkFinding{holder: fn.Name.Name, call: callee})
+		}
+		return true
+	})
+	return out
+}
+
+// carrierEscapesIn reports whether an argument hands a carrier value out whole,
+// however it is wrapped.
+//
+// The BARE identifier was the first shape and it was too narrow: `[]IssuedConfirm{issued}`
+// and `struct{ C IssuedConfirm }{C: issued}` both publish the value and name no
+// selector, so a matcher looking only at the top-level argument let them past.
+// json:"-" saves the JSON sinks, but a log line is not tag-aware, so the gate
+// has to see the wrapping.
+//
+// A FIELD READ is still not an escape — `issued.DeliveredTo` inside a literal is
+// how both doors legitimately build their response, and treating the local as
+// tainted wherever it appears is the cry-wolf shape this file learned once
+// already. So a selector on the carrier stops the descent.
+func carrierEscapesIn(arg ast.Expr, carriers map[string]bool) bool {
+	found := false
+	ast.Inspect(arg, func(n ast.Node) bool {
+		switch v := n.(type) {
+		case *ast.SelectorExpr:
+			// Reading a field off the carrier publishes that field, not the
+			// credential. Do not descend into the base.
+			if id, isIdent := v.X.(*ast.Ident); isIdent && carriers[id.Name] {
+				return false
+			}
+		case *ast.Ident:
+			if carriers[v.Name] {
+				found = true
+			}
+		}
+		return !found
+	})
+	return found
+}
+
+// minterReceives reports whether a callee legitimately takes the whole carrier.
+// Nothing does today; the hook exists so a future forwarder is ratified here by
+// name rather than by widening the matcher and losing the arm.
+func minterReceives(string) bool { return false }
+
+// readsTheCarrierField reports whether a function reads IssuedConfirm.Token at
+// all, independently of whether it binds the value to a name.
+//
+// The gate walks a function only when it has something to follow, and a name
+// set was the whole of that test until a handler read the field directly into a
+// composite literal — no local, so no holder, so the function was never
+// entered. This is the second way in.
+func readsTheCarrierField(fn *ast.FuncDecl) bool {
+	found := false
+	ast.Inspect(fn, func(n ast.Node) bool {
+		sel, isSel := n.(*ast.SelectorExpr)
+		if isSel && sel.Sel.Name == plaintextField {
+			found = true
+		}
+		return !found
+	})
+	return found
 }
 
 // taintedNamesIn returns the identifiers inside one function that hold a
@@ -300,8 +487,9 @@ type sinkFinding struct{ holder, call string }
 // of the ratified destinations.
 //
 // A composite literal is not a call and is not reported: building the
-// IssuedConfirm the mail path reads is the value's whole purpose, and the
-// struct's own field is followed by carriesPlaintext wherever it is read.
+// IssuedConfirm the mail path reads is the value's whole purpose. The struct's
+// own field is followed by carriesPlaintext wherever it is read — including
+// inside a literal handed to a call, which is how a handler would leak it.
 func unratifiedUsesOf(fn *ast.FuncDecl, names map[string]bool) []sinkFinding {
 	var out []sinkFinding
 	ast.Inspect(fn, func(n ast.Node) bool {

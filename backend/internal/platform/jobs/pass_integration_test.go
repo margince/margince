@@ -22,9 +22,11 @@ import (
 	"github.com/margince/margince/backend/internal/platform/jobs"
 )
 
-// aScheduledKind is a kind api/jobs.yaml declares with a fixed cadence, so the
-// spec lookup answers a real number rather than a zero this test invented.
-const aScheduledKind = "capture_counterparty_verdict"
+// aScheduledKind is a kind api/jobs.yaml declares with a fixed, hourly
+// cadence, so the spec lookup answers a real number rather than a zero this
+// test invented — every arithmetic assertion below is in units of this
+// cadence, so a kind picked here must keep one for as long as this file does.
+const aScheduledKind = "capture_classify"
 
 func TestAScheduledRunIsWhenThePassRuns(t *testing.T) {
 	_, pool := migratedAppPool(t)

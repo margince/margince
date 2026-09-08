@@ -3408,6 +3408,90 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/stage-automation/policies/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * What each transition in this pipeline is allowed to do.
+         * @description One rule per from→to transition an admin has decided about. A transition
+         *     absent from this list has no rule, which is the default state of every
+         *     transition in the product and means it proposes.
+         *
+         *     A rule saying `auto` does NOT mean moves are applying. Asking is not
+         *     being allowed: the thresholds are re-checked in the transaction that
+         *     would apply each move, so a transition can be turned on before it has
+         *     earned the bar and start applying by itself the day its record clears —
+         *     without anybody coming back. Read `/stage-automation/report` to see
+         *     whether it has.
+         *
+         *     `suspended_at` is the product's own act, not an admin's. A rule the
+         *     product turned off went off for a measured reason and comes back only
+         *     through a deliberate resume; the admin's `mode` survives underneath it,
+         *     so resuming returns the transition to what was actually asked for.
+         */
+        get: operations["listTransitionPolicies"];
+        /**
+         * Decide what one transition may do.
+         * @description Records what an admin wants for ONE transition, named in the body rather
+         *     than the path because a pipeline has many and each is decided
+         *     separately.
+         *
+         *     Every threshold is optional and omitting one KEEPS what the rule has,
+         *     or takes the product default on a first write. A caller who only means
+         *     to turn a transition on does not have to restate four thresholds, and
+         *     cannot silently reset them by leaving one out.
+         *
+         *     It does not clear a suspension. A rule the product turned off went off
+         *     for a measured reason, and letting an ordinary save clear it would make
+         *     the safety mechanism a checkbox — `POST .../resume` is the separate,
+         *     deliberate act.
+         */
+        put: operations["setTransitionPolicy"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/stage-automation/policies/{id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Lift a suspension the product put on a transition.
+         * @description A separate verb from saving a rule, so lifting a safety stop is
+         *     something an admin does on purpose rather than a side effect of editing
+         *     a threshold.
+         *
+         *     It does NOT re-enable. The rule comes back to whatever mode it was in,
+         *     and if that is `auto` the thresholds still have to hold in the
+         *     transaction that would apply — a resumed rule on a record that is still
+         *     bad simply proposes. Resuming a rule that is not suspended does
+         *     nothing and is not an error.
+         */
+        post: operations["resumeTransitionPolicy"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/stages/{id}/exit-criteria": {
         parameters: {
             query?: never;
@@ -9717,16 +9801,28 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Double-opt-in issuance — not available until the confirmation mail is durable.
-         * @description Answers `409` and mints nothing. A double opt-in is only evidence when the data subject
-         *     completes it from their own mailbox, and this installation has no durable path to deliver
-         *     that link yet. The earlier behaviour returned the plaintext token to the operator, who could
-         *     paste it straight back into `recordConsent` — a round trip in which the subject's mailbox
-         *     never participated, recorded as though it had.
+         * Mail the subject a single-use link that confirms one marketing purpose.
+         * @description Mints the double-opt-in link for `purpose_id` and stages it to the person's own live
+         *     primary address — `queued` reports whether it reached the lane, and an installation with
+         *     none still mints and answers 201. The purpose must be live and must itself require double
+         *     opt-in; anything else is a 422, because a mailed link asking about a purpose that needs no
+         *     confirmation asks a question the answer does not fit. The plaintext is never returned: this endpoint once handed it to the
+         *     authenticated operator, who could paste it straight back into `recordConsent` — a round
+         *     trip in which the subject's mailbox never participated, recorded as though it had. A double
+         *     opt-in is evidence only because the data subject completed it from their own mailbox, so
+         *     the link is mailed and nothing else.
          *
-         *     Marketing opt-in meanwhile is captured through the confirm-details link
-         *     (`requestDetailsConfirmation`), which mails a single-use link to the person's own live
-         *     primary address and records their answer when they submit it.
+         *     The purpose rides the token rather than the submission, so whoever holds one link cannot
+         *     use it to grant a different purpose.
+         *
+         *     The mail rides the same durable lane as every other outbound message: a delivery row, an
+         *     authorization decision recording why the installation was allowed to send it, and a
+         *     timeline entry — which is what makes it visible to a subject-access export and reachable by
+         *     erasure. `queued` reports that the message was staged in the same transaction that minted
+         *     the link; `sendable` says whether this installation has a lane at all. An installation with
+         *     no lane still mints the token and answers 201, because the write happened and reporting it
+         *     as a failure would invite a second request that mints another token and supersedes the
+         *     first.
          */
         post: operations["issueDoubleOptIn"];
         delete?: never;
@@ -22410,6 +22506,127 @@ export interface components {
             required?: boolean;
             hint?: string | null;
         };
+        /**
+         * @description One transition, named by the stages at its two ends. Both must belong
+         *     to the pipeline in the path — the foreign keys admit a pair from two
+         *     different pipelines, which would be a rule describing a move no deal
+         *     can make.
+         */
+        TransitionRef: {
+            /** Format: uuid */
+            from_stage_id: string;
+            /** Format: uuid */
+            to_stage_id: string;
+        };
+        TransitionPolicyList: {
+            data: components["schemas"]["TransitionPolicy"][];
+        };
+        TransitionPolicy: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            pipeline_id: string;
+            /** Format: uuid */
+            from_stage_id: string;
+            /** Format: uuid */
+            to_stage_id: string;
+            /**
+             * @description What the admin has asked for. `auto` is a request, not a state:
+             *     moves still go to a person until the thresholds below hold in the
+             *     transaction that would apply them.
+             * @enum {string}
+             */
+            mode: "propose" | "auto";
+            /**
+             * Format: double
+             * @description The share of reviewed proposals a person must have accepted
+             *     UNCHANGED. An edit is agreement with a correction, which is a
+             *     weaker claim about the proposal than agreement without one.
+             */
+            clean_acceptance_threshold: number;
+            /**
+             * Format: double
+             * @description The ceiling on moves that were undone or whose evidence was
+             *     corrected. The one threshold that is a maximum rather than a
+             *     minimum, and the one the product suspends a rule for crossing.
+             */
+            correction_reversal_threshold: number;
+            /**
+             * @description How many proposals a person must have answered before the rates
+             *     mean anything. It also bounds suspension: the volume at which a
+             *     record is worth trusting and the volume at which it is worth
+             *     distrusting are one judgement.
+             */
+            min_reviewed: number;
+            /**
+             * @description The span the record must cover. A fine acceptance rate earned
+             *     entirely in one afternoon has not been observed.
+             */
+            min_observation_days: number;
+            /** @description How far back the rates are counted. */
+            window_days: number;
+            /**
+             * @description How long a person has to take an automatic move back. Frozen onto
+             *     each move as it is applied, so editing this governs the next move
+             *     and not the last one.
+             */
+            undo_window_hours: number;
+            /**
+             * Format: uuid
+             * @description Who FIRST trusted this transition with automatic moves. Not
+             *     overwritten by later threshold edits — who first trusted it is a
+             *     different fact from who last adjusted it, and the first is the one
+             *     an auditor asks for.
+             */
+            enabled_by?: string;
+            /** Format: date-time */
+            enabled_at?: string;
+            /**
+             * Format: date-time
+             * @description When the PRODUCT turned this rule off. Absent on a rule that is
+             *     running. It is not an admin's act and an ordinary save does not
+             *     clear it.
+             */
+            suspended_at?: string;
+            /** @description Why the product stopped it, in words an operator can act on. */
+            suspended_reason?: string;
+            /** Format: int64 */
+            version: number;
+        };
+        /**
+         * @description Every threshold is optional. Omitting one KEEPS what the rule has, or
+         *     takes the product default on a first write — so a caller turning a
+         *     transition on cannot silently reset a bar somebody set.
+         */
+        SetTransitionPolicyRequest: {
+            /** Format: uuid */
+            from_stage_id: string;
+            /** Format: uuid */
+            to_stage_id: string;
+            /** @enum {string} */
+            mode: "propose" | "auto";
+            /** Format: double */
+            clean_acceptance_threshold?: number;
+            /** Format: double */
+            correction_reversal_threshold?: number;
+            min_reviewed?: number;
+            min_observation_days?: number;
+            window_days?: number;
+            undo_window_hours?: number;
+            /**
+             * Format: int64
+             * @description The rule's version as the caller read it, refusing the write with
+             *     409 when the row has moved on since.
+             *
+             *     OPTIONAL, and its absence is not a conflict. A first write has no
+             *     row to have read, and an edit that offers no pin is a caller who
+             *     did not read first rather than one holding a stale copy — the same
+             *     bargain the exit-criteria editor makes. A client that wants the
+             *     guarantee sends the version it read; one that does not, does not
+             *     get it.
+             */
+            if_version?: number;
+        };
         StageAutomationReport: {
             data: components["schemas"]["StageTransitionRecord"][];
             /** @description The window the counts were taken over. */
@@ -28617,6 +28834,28 @@ export interface components {
             policy_version: string;
             /** @description The exact wording shown, stored with the consent event for demonstrability. */
             wording?: string | null;
+            /**
+             * @description An affirmative marketing tick the subject made on the same form. It does NOT record a
+             *     grant: the surface mails a single-use confirmation link to the address on the booking
+             *     and the grant exists only once the subject spends it. That is what lets an anonymous
+             *     form carry the question at all — a stranger who knows an address can cause one
+             *     confirmation mail to be sent to its owner, never a subscription in their name.
+             *
+             *     Omit it for a form with no tick, or a tick left unchecked. An unchecked box writes
+             *     nothing and mails nothing.
+             */
+            marketing?: {
+                /**
+                 * Format: uuid
+                 * @description The marketing purpose being asked about. It must require double opt-in; a purpose
+                 *     that does not is refused, because there would be nothing for the mailed link to ask.
+                 */
+                purpose_id: string;
+                /** @description Version id of the marketing wording shown to the subject. */
+                policy_version: string;
+                /** @description The exact marketing wording shown, carried onto the grant the confirmation records. */
+                wording: string;
+            };
         };
         /**
          * @description The buyer-facing preference center's per-purpose view (B-E11.32): each tracked consent purpose
@@ -38601,6 +38840,118 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    listTransitionPolicies: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The pipeline's transition rules. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransitionPolicyList"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    setTransitionPolicy: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetTransitionPolicyRequest"];
+            };
+        };
+        responses: {
+            /** @description The rule as it now stands. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransitionPolicy"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            /** @description No such pipeline, or the stages named are not both in it. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    resumeTransitionPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransitionRef"];
+            };
+        };
+        responses: {
+            /** @description The rule, no longer suspended. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransitionPolicy"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     listStageExitCriteria: {
         parameters: {
             query?: {
@@ -47904,9 +48255,30 @@ export interface operations {
             };
         };
         responses: {
+            /** @description Link issued, and what became of the delivery. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfirmRequestIssued"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            422: components["responses"]["ValidationError"];
+            /**
+             * @description The request named no purpose, named one no `consent_purpose` row holds, or the contact
+             *     carries no live email address — so there is no mailbox a link could reach.
+             */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     publishCapturedPerson: {

@@ -2135,6 +2135,18 @@ func (stubs) GetSignalWarmth(w nethttp.ResponseWriter, r *nethttp.Request, id cr
 	httperr.NotImplemented(w, r, "GetSignalWarmth")
 }
 
+func (stubs) ListTransitionPolicies(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ListTransitionPolicies")
+}
+
+func (stubs) SetTransitionPolicy(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.SetTransitionPolicyParams) {
+	httperr.NotImplemented(w, r, "SetTransitionPolicy")
+}
+
+func (stubs) ResumeTransitionPolicy(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ResumeTransitionPolicy")
+}
+
 func (stubs) GetStageAutomationReport(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetStageAutomationReportParams) {
 	httperr.NotImplemented(w, r, "GetStageAutomationReport")
 }

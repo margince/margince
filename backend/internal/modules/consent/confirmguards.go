@@ -1,0 +1,125 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package consent
+
+// What a confirm link refuses to ask, and of whom.
+//
+// Both guards run inside issueLink's own transaction, after the destination
+// address is derived and before the token row is written, so a refusal mints
+// nothing and mails nothing. They are here rather than beside the mint because
+// they answer a different question from it: the mint knows HOW to make a link,
+// and these decide WHETHER this person should be asked at all.
+
+import (
+	"context"
+	"errors"
+	"strings"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+)
+
+// linkRequest is what the guards need to judge one mint.
+type linkRequest struct {
+	personID        ids.PersonID
+	purposeID       ids.PurposeID
+	expectedAddress string
+}
+
+// admitLinkTx runs every check a mint owes before it writes anything, and
+// returns the address the link must be delivered to.
+//
+// They are one call because they are one decision — may this person be sent
+// this question, and where — and because the ORDER matters. The subject is held
+// live FIRST, before any other row lock: the same ordering the erasure path
+// takes, so an erasure committing after an unheld probe cannot leave the
+// installation posting a link to somebody it was just told to forget. The
+// address is derived before the last two guards because both judge it.
+func admitLinkTx(ctx context.Context, tx pgx.Tx, req linkRequest) (string, error) {
+	if err := auth.HoldWritableLive(ctx, tx, "person", req.personID.UUID); err != nil {
+		return "", err
+	}
+	if err := requireConfirmablePurposeTx(ctx, tx, req.purposeID); err != nil {
+		return "", err
+	}
+	deliveredTo, err := deliveryAddressTx(ctx, tx, req.personID)
+	if err != nil {
+		return "", err
+	}
+	if err := requireExpectedAddress(req.expectedAddress, deliveredTo); err != nil {
+		return "", err
+	}
+	if err := refuseWithdrawnPurposeTx(ctx, tx, req.personID, req.purposeID); err != nil {
+		return "", err
+	}
+	return deliveredTo, nil
+}
+
+// requireExpectedAddress refuses a mint whose destination is not the address the
+// requester named. An empty expectation asks nothing: the caller named a person
+// and never claimed which mailbox that is.
+//
+// The comparison is case-insensitive because the lookup that resolved the person
+// was — an address differing only in case is the SAME mailbox and must not read
+// as a mismatch. Both sides are trimmed. The stored side is written normalized
+// today, so trimming it changes nothing now; a guard that refuses a real match
+// on stray whitespace is the failure that would be hard to recognise later, and
+// it costs nothing to be symmetric.
+//
+// The refusal names neither address. This runs behind an anonymous door, so
+// saying "we will send to v...r@example.com instead" would turn the mint into an
+// oracle for the addresses a person holds.
+func requireExpectedAddress(expected, deliveredTo string) error {
+	if expected == "" || strings.EqualFold(strings.TrimSpace(expected), strings.TrimSpace(deliveredTo)) {
+		return nil
+	}
+	return &ValidationError{
+		Field:  personIDKey,
+		Reason: "this address is on file for a contact whose confirmations go elsewhere, so the link would reach a different mailbox than the one that asked",
+	}
+}
+
+// refuseWithdrawnPurposeTx refuses to ask again about a purpose the subject has
+// already taken back. A record-confirmation link names no purpose and is exempt.
+//
+// It lives HERE rather than at the booking edge because both doors need it and
+// the anonymous one is not the only way to reach a withdrawn subject: an
+// operator can press the double-opt-in verb on the same person just as easily.
+//
+// Nothing downstream stops this mail. The confirmation template's category
+// serves the subject, which is exactly the class the withdrawal validator lets
+// through — rightly, because an unsubscribe acknowledgement must reach somebody
+// who just unsubscribed. A fresh invitation to resubscribe is the opposite
+// message wearing that exemption, so it has to be refused before it is staged.
+//
+// Verified rather than reasoned: before this guard, a booking naming a
+// withdrawn subject answered 201 and minted a link.
+//
+// A withdrawal is not permanent for the SUBJECT — they may re-subscribe through
+// the preference centre, which is their own mailbox and their own choice. What
+// is refused is somebody ELSE restarting the conversation on their behalf.
+func refuseWithdrawnPurposeTx(ctx context.Context, tx pgx.Tx, personID ids.PersonID, purposeID ids.PurposeID) error {
+	if purposeID.UUID == (ids.UUID{}) {
+		return nil
+	}
+	var state string
+	err := tx.QueryRow(ctx,
+		`SELECT state FROM person_consent WHERE person_id = $1 AND purpose_id = $2`,
+		personID, purposeID).Scan(&state)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if ConsentState(state) != StateWithdrawn {
+		return nil
+	}
+	return &ValidationError{
+		Field:  purposeIDField,
+		Reason: "this contact has withdrawn this purpose, so we do not ask them about it again",
+	}
+}

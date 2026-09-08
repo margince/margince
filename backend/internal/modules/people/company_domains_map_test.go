@@ -63,6 +63,83 @@ func TestDedupeDomains(t *testing.T) {
 	}
 }
 
+// A domain set that names no primary is the state the contract admits and no
+// reader can act on, so the election fills it. The cases below are the four
+// answers it has to tell apart; the create path passes "" for current and the
+// edit path passes the live primary.
+func TestElectPrimary(t *testing.T) {
+	primaryOf := func(t *testing.T, got []CompanyDomainInput) string {
+		t.Helper()
+		primary := ""
+		for _, d := range got {
+			if !d.IsPrimary {
+				continue
+			}
+			if primary != "" {
+				t.Fatalf("elected two primaries: %+v", got)
+			}
+			primary = d.Domain
+		}
+		return primary
+	}
+
+	t.Run("silence elects the first domain", func(t *testing.T) {
+		got := electPrimary([]CompanyDomainInput{{Domain: "a.test"}, {Domain: "b.test"}}, "")
+		if p := primaryOf(t, got); p != "a.test" {
+			t.Fatalf("elected %q, want a.test", p)
+		}
+	})
+
+	t.Run("a sole domain is the case the sweep needs", func(t *testing.T) {
+		got := electPrimary([]CompanyDomainInput{{Domain: "acme.test"}}, "")
+		if p := primaryOf(t, got); p != "acme.test" {
+			t.Fatalf("elected %q, want acme.test", p)
+		}
+	})
+
+	t.Run("a caller who named one is obeyed", func(t *testing.T) {
+		got := electPrimary([]CompanyDomainInput{{Domain: "a.test"}, {Domain: "b.test", IsPrimary: true}}, "")
+		if p := primaryOf(t, got); p != "b.test" {
+			t.Fatalf("elected %q, want the caller's b.test", p)
+		}
+	})
+
+	// The edit case, and the reason current is a parameter at all: adding a
+	// domain to a record must not move the primary the record already had.
+	t.Run("the live primary is kept when it survives the edit", func(t *testing.T) {
+		got := electPrimary([]CompanyDomainInput{{Domain: "a.test"}, {Domain: "b.test"}}, "b.test")
+		if p := primaryOf(t, got); p != "b.test" {
+			t.Fatalf("elected %q, want the live b.test", p)
+		}
+	})
+
+	t.Run("a live primary the edit removes falls back to the first", func(t *testing.T) {
+		got := electPrimary([]CompanyDomainInput{{Domain: "a.test"}, {Domain: "b.test"}}, "gone.test")
+		if p := primaryOf(t, got); p != "a.test" {
+			t.Fatalf("elected %q, want a.test", p)
+		}
+	})
+
+	// Clearing every domain is a real answer, and electing into an empty set
+	// would invent a row the caller did not ask for.
+	t.Run("an empty set elects nothing", func(t *testing.T) {
+		if got := electPrimary(nil, ""); len(got) != 0 {
+			t.Fatalf("elected %+v from nothing", got)
+		}
+	})
+
+	// The input is the caller's slice, and the create path hands it one it
+	// still holds. Writing through it would move a primary in the caller's own
+	// copy of the request.
+	t.Run("the caller's slice is not written through", func(t *testing.T) {
+		in := []CompanyDomainInput{{Domain: "a.test"}}
+		electPrimary(in, "")
+		if in[0].IsPrimary {
+			t.Fatal("electPrimary wrote its election back into the caller's slice")
+		}
+	})
+}
+
 func TestSingleDesiredPrimary(t *testing.T) {
 	if p, err := singleDesiredPrimary([]CompanyDomainInput{{Domain: "a.test"}, {Domain: "b.test"}}); err != nil || p != "" {
 		t.Fatalf("no primary → (%q, %v), want ('', nil)", p, err)

@@ -181,14 +181,10 @@ func requiredIDCases(f requiredIDFixtures, absent string) map[string]requiredIDC
 		"IssueDoubleOptInJSONBody.purpose_id": {
 			method: "POST", path: "/v1/people/" + f.person + "/consent/double-opt-in",
 			omitted: AnyMap{}, supplied: AnyMap{"purpose_id": absent}, field: "purpose_id",
-			// This endpoint mints nothing and resolves nothing: it refuses every
-			// caller with a conflict, whatever purpose they name. So it has no row
-			// to hide and no 404 to give — and equally no way to enumerate, since
-			// a visible purpose, an invisible one and one that never existed all
-			// get the identical answer. The omitted half above is still held: a
-			// body-id probe runs ahead of the refusal precisely so this endpoint
-			// does not become the one place a missing id goes unnamed.
-			suppliedStatus: http.StatusConflict,
+			// No exception any more. This endpoint used to refuse every caller
+			// with a conflict, so it had no row to hide; it resolves the purpose
+			// and mints a link now, which puts it back under the rule every other
+			// required body id follows.
 		},
 		"ApplyTagRequest.entity_id": {
 			method: "POST", path: "/v1/tags/" + f.tag + "/apply",

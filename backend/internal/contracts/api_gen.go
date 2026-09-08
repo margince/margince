@@ -11596,6 +11596,24 @@ func (e SetProjectStakeholderRequestRole) Valid() bool {
 	}
 }
 
+// Defines values for SetTransitionPolicyRequestMode.
+const (
+	SetTransitionModeAuto    SetTransitionPolicyRequestMode = "auto"
+	SetTransitionModePropose SetTransitionPolicyRequestMode = "propose"
+)
+
+// Valid indicates whether the value is a known member of the SetTransitionPolicyRequestMode enum.
+func (e SetTransitionPolicyRequestMode) Valid() bool {
+	switch e {
+	case SetTransitionModeAuto:
+		return true
+	case SetTransitionModePropose:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SettleClaimRequestOutcome.
 const (
 	SettleClaimRequestOutcomeDismissed SettleClaimRequestOutcome = "dismissed"
@@ -12481,6 +12499,24 @@ func (e TranscriptReadStartedStatus) Valid() bool {
 	case TranscriptReadStartedStatusQueued:
 		return true
 	case TranscriptReadStartedStatusRunning:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TransitionPolicyMode.
+const (
+	TransitionModeAuto    TransitionPolicyMode = "auto"
+	TransitionModePropose TransitionPolicyMode = "propose"
+)
+
+// Valid indicates whether the value is a known member of the TransitionPolicyMode enum.
+func (e TransitionPolicyMode) Valid() bool {
+	switch e {
+	case TransitionModeAuto:
+		return true
+	case TransitionModePropose:
 		return true
 	default:
 		return false
@@ -19774,6 +19810,26 @@ type CaptureConnectionListResponse struct {
 // (EP07 capture contract, `features/07`; feedback/11 + /14). Names the purpose and the exact
 // wording/version shown, so the resulting grant is demonstrable (Art 7(1)).
 type CaptureConsent struct {
+	// Marketing An affirmative marketing tick the subject made on the same form. It does NOT record a
+	// grant: the surface mails a single-use confirmation link to the address on the booking
+	// and the grant exists only once the subject spends it. That is what lets an anonymous
+	// form carry the question at all — a stranger who knows an address can cause one
+	// confirmation mail to be sent to its owner, never a subscription in their name.
+	//
+	// Omit it for a form with no tick, or a tick left unchecked. An unchecked box writes
+	// nothing and mails nothing.
+	Marketing *struct {
+		// PolicyVersion Version id of the marketing wording shown to the subject.
+		PolicyVersion string `json:"policy_version"`
+
+		// PurposeId The marketing purpose being asked about. It must require double opt-in; a purpose
+		// that does not is refused, because there would be nothing for the mailed link to ask.
+		PurposeId openapi_types.UUID `json:"purpose_id"`
+
+		// Wording The exact marketing wording shown, carried onto the grant the confirmation records.
+		Wording string `json:"wording"`
+	} `json:"marketing,omitempty"`
+
 	// PolicyVersion Version id of the consent wording shown to the subject.
 	PolicyVersion string             `json:"policy_version"`
 	PurposeId     openapi_types.UUID `json:"purpose_id"`
@@ -33113,6 +33169,35 @@ type SetSignatureEnrichmentRequest struct {
 	Enabled *bool `json:"enabled"`
 }
 
+// SetTransitionPolicyRequest Every threshold is optional. Omitting one KEEPS what the rule has, or
+// takes the product default on a first write — so a caller turning a
+// transition on cannot silently reset a bar somebody set.
+type SetTransitionPolicyRequest struct {
+	CleanAcceptanceThreshold    *float64           `json:"clean_acceptance_threshold,omitempty"`
+	CorrectionReversalThreshold *float64           `json:"correction_reversal_threshold,omitempty"`
+	FromStageId                 openapi_types.UUID `json:"from_stage_id"`
+
+	// IfVersion The rule's version as the caller read it, refusing the write with
+	// 409 when the row has moved on since.
+	//
+	// OPTIONAL, and its absence is not a conflict. A first write has no
+	// row to have read, and an edit that offers no pin is a caller who
+	// did not read first rather than one holding a stale copy — the same
+	// bargain the exit-criteria editor makes. A client that wants the
+	// guarantee sends the version it read; one that does not, does not
+	// get it.
+	IfVersion          *int64                         `json:"if_version,omitempty"`
+	MinObservationDays *int                           `json:"min_observation_days,omitempty"`
+	MinReviewed        *int                           `json:"min_reviewed,omitempty"`
+	Mode               SetTransitionPolicyRequestMode `json:"mode"`
+	ToStageId          openapi_types.UUID             `json:"to_stage_id"`
+	UndoWindowHours    *int                           `json:"undo_window_hours,omitempty"`
+	WindowDays         *int                           `json:"window_days,omitempty"`
+}
+
+// SetTransitionPolicyRequestMode defines model for SetTransitionPolicyRequest.Mode.
+type SetTransitionPolicyRequestMode string
+
 // SettingsAvailability Which settings surfaces EXIST in this installation, independently of whether this caller may read them. A surface can be absent for two unrelated reasons — the installation never enabled it, or this caller holds no grant on it — and settings navigation has to tell them apart: the first is not a destination at all, the second is a destination that explains itself.
 // Deployment facts only, never per-caller ones. Nothing here narrows with a role, so it discloses no more than the deployment file already tells every seat. A caller capability belongs beside `admin_password_link` instead, which folds the caller's role into its answer for exactly that reason.
 // Carried on `/me` so navigation, the command palette, settings home and settings search can resolve from ONE cached snapshot. Each of those surfaces has to agree about which pages exist, and a screen-specific probe alongside them is how they came to disagree: the rail asked, the palette did not, and a page appeared in one and not the other.
@@ -34155,6 +34240,81 @@ type TransferProjectOwnershipRequest struct {
 type TransferProjectOwnershipResult struct {
 	// Transferred Live projects the caller could write that moved; archived and unwritable ones are not counted.
 	Transferred int `json:"transferred"`
+}
+
+// TransitionPolicy defines model for TransitionPolicy.
+type TransitionPolicy struct {
+	// CleanAcceptanceThreshold The share of reviewed proposals a person must have accepted
+	// UNCHANGED. An edit is agreement with a correction, which is a
+	// weaker claim about the proposal than agreement without one.
+	CleanAcceptanceThreshold float64 `json:"clean_acceptance_threshold"`
+
+	// CorrectionReversalThreshold The ceiling on moves that were undone or whose evidence was
+	// corrected. The one threshold that is a maximum rather than a
+	// minimum, and the one the product suspends a rule for crossing.
+	CorrectionReversalThreshold float64    `json:"correction_reversal_threshold"`
+	EnabledAt                   *time.Time `json:"enabled_at,omitempty"`
+
+	// EnabledBy Who FIRST trusted this transition with automatic moves. Not
+	// overwritten by later threshold edits — who first trusted it is a
+	// different fact from who last adjusted it, and the first is the one
+	// an auditor asks for.
+	EnabledBy   *openapi_types.UUID `json:"enabled_by,omitempty"`
+	FromStageId openapi_types.UUID  `json:"from_stage_id"`
+	Id          openapi_types.UUID  `json:"id"`
+
+	// MinObservationDays The span the record must cover. A fine acceptance rate earned
+	// entirely in one afternoon has not been observed.
+	MinObservationDays int `json:"min_observation_days"`
+
+	// MinReviewed How many proposals a person must have answered before the rates
+	// mean anything. It also bounds suspension: the volume at which a
+	// record is worth trusting and the volume at which it is worth
+	// distrusting are one judgement.
+	MinReviewed int `json:"min_reviewed"`
+
+	// Mode What the admin has asked for. `auto` is a request, not a state:
+	// moves still go to a person until the thresholds below hold in the
+	// transaction that would apply them.
+	Mode       TransitionPolicyMode `json:"mode"`
+	PipelineId openapi_types.UUID   `json:"pipeline_id"`
+
+	// SuspendedAt When the PRODUCT turned this rule off. Absent on a rule that is
+	// running. It is not an admin's act and an ordinary save does not
+	// clear it.
+	SuspendedAt *time.Time `json:"suspended_at,omitempty"`
+
+	// SuspendedReason Why the product stopped it, in words an operator can act on.
+	SuspendedReason *string            `json:"suspended_reason,omitempty"`
+	ToStageId       openapi_types.UUID `json:"to_stage_id"`
+
+	// UndoWindowHours How long a person has to take an automatic move back. Frozen onto
+	// each move as it is applied, so editing this governs the next move
+	// and not the last one.
+	UndoWindowHours int   `json:"undo_window_hours"`
+	Version         int64 `json:"version"`
+
+	// WindowDays How far back the rates are counted.
+	WindowDays int `json:"window_days"`
+}
+
+// TransitionPolicyMode What the admin has asked for. `auto` is a request, not a state:
+// moves still go to a person until the thresholds below hold in the
+// transaction that would apply them.
+type TransitionPolicyMode string
+
+// TransitionPolicyList defines model for TransitionPolicyList.
+type TransitionPolicyList struct {
+	Data []TransitionPolicy `json:"data"`
+}
+
+// TransitionRef One transition, named by the stages at its two ends. Both must belong
+// to the pipeline in the path — the foreign keys admit a pair from two
+// different pipelines, which would be a rule describing a move no deal
+// can make.
+type TransitionRef struct {
+	FromStageId openapi_types.UUID `json:"from_stage_id"`
+	ToStageId   openapi_types.UUID `json:"to_stage_id"`
 }
 
 // Undoability Whether this history entry can be put back, and if not, why. COMPUTED per read,
@@ -41217,6 +41377,25 @@ type ResolveSignalParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// SetTransitionPolicyParams defines parameters for SetTransitionPolicy.
+type SetTransitionPolicyParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // GetStageAutomationReportParams defines parameters for GetStageAutomationReport.
 type GetStageAutomationReportParams struct {
 	PipelineId openapi_types.UUID `form:"pipeline_id" json:"pipeline_id"`
@@ -42555,6 +42734,12 @@ type CreateSignalJSONRequestBody = CreateSignalRequest
 
 // UpdateSignalJSONRequestBody defines body for UpdateSignal for application/json ContentType.
 type UpdateSignalJSONRequestBody = UpdateSignalRequest
+
+// SetTransitionPolicyJSONRequestBody defines body for SetTransitionPolicy for application/json ContentType.
+type SetTransitionPolicyJSONRequestBody = SetTransitionPolicyRequest
+
+// ResumeTransitionPolicyJSONRequestBody defines body for ResumeTransitionPolicy for application/json ContentType.
+type ResumeTransitionPolicyJSONRequestBody = TransitionRef
 
 // CreateStageJSONRequestBody defines body for CreateStage for application/json ContentType.
 type CreateStageJSONRequestBody = CreateStageRequest
@@ -51741,7 +51926,7 @@ type ServerInterface interface {
 	// Mail this contact a single-use link to see what is held about them, correct it, and answer on marketing.
 	// (POST /people/{id}/consent/confirm-request)
 	RequestDetailsConfirmation(w http.ResponseWriter, r *http.Request, id Id)
-	// Double-opt-in issuance — not available until the confirmation mail is durable.
+	// Mail the subject a single-use link that confirms one marketing purpose.
 	// (POST /people/{id}/consent/double-opt-in)
 	IssueDoubleOptIn(w http.ResponseWriter, r *http.Request, id Id)
 	// May we write to this person right now — per purpose and channel, with the reason.
@@ -52059,6 +52244,15 @@ type ServerInterface interface {
 	// The warm/cold classification with the full "why warm" evidence (B-E08.3).
 	// (GET /signals/{id}/warmth)
 	GetSignalWarmth(w http.ResponseWriter, r *http.Request, id Id)
+	// What each transition in this pipeline is allowed to do.
+	// (GET /stage-automation/policies/{id})
+	ListTransitionPolicies(w http.ResponseWriter, r *http.Request, id Id)
+	// Decide what one transition may do.
+	// (PUT /stage-automation/policies/{id})
+	SetTransitionPolicy(w http.ResponseWriter, r *http.Request, id Id, params SetTransitionPolicyParams)
+	// Lift a suspension the product put on a transition.
+	// (POST /stage-automation/policies/{id}/resume)
+	ResumeTransitionPolicy(w http.ResponseWriter, r *http.Request, id Id)
 	// What each stage transition has earned.
 	// (GET /stage-automation/report)
 	GetStageAutomationReport(w http.ResponseWriter, r *http.Request, params GetStageAutomationReportParams)
@@ -54855,7 +55049,7 @@ func (_ Unimplemented) RequestDetailsConfirmation(w http.ResponseWriter, r *http
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Double-opt-in issuance — not available until the confirmation mail is durable.
+// Mail the subject a single-use link that confirms one marketing purpose.
 // (POST /people/{id}/consent/double-opt-in)
 func (_ Unimplemented) IssueDoubleOptIn(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -55488,6 +55682,24 @@ func (_ Unimplemented) ResolveSignal(w http.ResponseWriter, r *http.Request, id 
 // The warm/cold classification with the full "why warm" evidence (B-E08.3).
 // (GET /signals/{id}/warmth)
 func (_ Unimplemented) GetSignalWarmth(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What each transition in this pipeline is allowed to do.
+// (GET /stage-automation/policies/{id})
+func (_ Unimplemented) ListTransitionPolicies(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Decide what one transition may do.
+// (PUT /stage-automation/policies/{id})
+func (_ Unimplemented) SetTransitionPolicy(w http.ResponseWriter, r *http.Request, id Id, params SetTransitionPolicyParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Lift a suspension the product put on a transition.
+// (POST /stage-automation/policies/{id}/resume)
+func (_ Unimplemented) ResumeTransitionPolicy(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -78413,6 +78625,132 @@ func (siw *ServerInterfaceWrapper) GetSignalWarmth(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// ListTransitionPolicies operation middleware
+func (siw *ServerInterfaceWrapper) ListTransitionPolicies(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListTransitionPolicies(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetTransitionPolicy operation middleware
+func (siw *ServerInterfaceWrapper) SetTransitionPolicy(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SetTransitionPolicyParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetTransitionPolicy(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ResumeTransitionPolicy operation middleware
+func (siw *ServerInterfaceWrapper) ResumeTransitionPolicy(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ResumeTransitionPolicy(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetStageAutomationReport operation middleware
 func (siw *ServerInterfaceWrapper) GetStageAutomationReport(w http.ResponseWriter, r *http.Request) {
 
@@ -83869,6 +84207,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/signals/{id}/warmth", wrapper.GetSignalWarmth)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/stage-automation/policies/{id}", wrapper.ListTransitionPolicies)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/stage-automation/policies/{id}", wrapper.SetTransitionPolicy)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/stage-automation/policies/{id}/resume", wrapper.ResumeTransitionPolicy)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/stage-automation/report", wrapper.GetStageAutomationReport)

@@ -843,3 +843,89 @@ func TestALongThreadIsWalkedToItsStartOnePassAtATime(t *testing.T) {
 			brain.calls)
 	}
 }
+
+// linkToProject files one activity under a project, the way the attribution
+// ladder does — through the owner, because the ladder is what a capture runs
+// and this test is about the READ that follows it.
+func linkToProject(t *testing.T, owner *pgx.Conn, activity, project ids.UUID) {
+	t.Helper()
+	if _, err := owner.Exec(context.Background(),
+		`INSERT INTO activity_link (activity_id, entity_type, project_id)
+		 VALUES ($1, 'project', $2)`, activity, project); err != nil {
+		t.Fatalf("filing the activity under its project: %v", err)
+	}
+}
+
+func seedProjectFor(t *testing.T, owner *pgx.Conn, company ids.UUID, name, key string) ids.UUID {
+	t.Helper()
+	id := ids.NewV7()
+	if _, err := owner.Exec(context.Background(),
+		`INSERT INTO project (id, company_id, name, key, source, captured_by)
+		 VALUES ($1, $2, $3, $4, 'ui', 'human:probe')`, id, company, name, key); err != nil {
+		t.Fatalf("seeding project %s: %v", name, err)
+	}
+	return id
+}
+
+// A conversation spanning two PROJECTS at one account is skipped, for the
+// reason the two-account refusal above gives one level up.
+//
+// The account is unambiguous here — one client, one company — so this thread passes
+// every rule the extractor had. What it has no single answer to is WHICH BODY
+// OF WORK its findings belong to, and the model is shown the whole conversation,
+// so a finding drawn from the migration half would be filed against the rollout
+// half half the time (#2287).
+func TestAThreadSpanningTwoProjectsIsNotRead(t *testing.T) {
+	e := Setup(t)
+	acme := e.SeedCompany(t, "Acme", &e.Rep1)
+	owner := OwnerConn(t)
+	rollout := seedProjectFor(t, owner, acme, "Rollout", "roll")
+	migration := seedProjectFor(t, owner, acme, "Migration", "migr")
+
+	at := extractClock.Add(-48 * time.Hour)
+	contact := employeeOf(t, e, acme, "Ada at Acme")
+	first := seedMessage(t, e, contact, "thread-two-projects", "Both workstreams",
+		"We are ending our side of the arrangement.", "inbound", at)
+	second := seedMessage(t, e, contact, "thread-two-projects", "Both workstreams",
+		"Same for the other one.", "inbound", at.Add(time.Minute))
+	linkToProject(t, owner, first, rollout)
+	linkToProject(t, owner, second, migration)
+
+	brain := &scriptedBrain{reply: `{"events": []}`}
+	if pass := extractPassStats(t, e, brain); pass.Due != 0 {
+		t.Fatalf("the queue offered %d conversation(s), want none spanning two projects", pass.Due)
+	}
+	if brain.calls != 0 {
+		t.Errorf("the model was called %d time(s) on a conversation with no single body of work", brain.calls)
+	}
+}
+
+// ONE project is not ambiguity, and neither is none. Refusing either would take
+// most mail out of the pass — the great majority carries no project link at all
+// — so this is the arm that keeps the rule a refusal rather than a filter.
+func TestAThreadOnOneProjectOrNoneIsStillRead(t *testing.T) {
+	for name, linked := range map[string]bool{"one project": true, "no project": false} {
+		t.Run(name, func(t *testing.T) {
+			e := Setup(t)
+			acme := e.SeedCompany(t, "Acme", &e.Rep1)
+			owner := OwnerConn(t)
+			at := extractClock.Add(-48 * time.Hour)
+			contact := employeeOf(t, e, acme, "Ada at Acme")
+			first := seedMessage(t, e, contact, "thread-one-project", "The workstream",
+				"We are ending our side of the arrangement.", "inbound", at)
+			second := seedMessage(t, e, contact, "thread-one-project", "The workstream",
+				"Confirming.", "inbound", at.Add(time.Minute))
+			if linked {
+				rollout := seedProjectFor(t, owner, acme, "Rollout", "roll")
+				// BOTH messages, which is what one body of work looks like.
+				linkToProject(t, owner, first, rollout)
+				linkToProject(t, owner, second, rollout)
+			}
+
+			brain := &scriptedBrain{reply: `{"events": []}`}
+			if pass := extractPassStats(t, e, brain); pass.Due != 1 {
+				t.Fatalf("the queue offered %d conversation(s) with %s, want 1", pass.Due, name)
+			}
+		})
+	}
+}

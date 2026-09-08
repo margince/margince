@@ -67,7 +67,7 @@ func TestARecordLinkStillCarriesCorrections(t *testing.T) {
 // violation, and it happens before any database work.
 func TestAConsentLinkRefusesWithoutAPurpose(t *testing.T) {
 	_, err := (&Store{}).IssueConsentLink(context.Background(),
-		ids.New[ids.PersonKind](), ids.PurposeID{})
+		ids.New[ids.PersonKind](), ids.PurposeID{}, "")
 	if err == nil {
 		t.Fatal("a consent link with no purpose must be refused before it is minted")
 	}

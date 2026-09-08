@@ -278,7 +278,7 @@ func TestASuspendedRuleStillProposesAndKeepsWhatTheAdminAsked(t *testing.T) {
 	}
 
 	// And resuming brings it back, because the record beneath it is still good.
-	if err := e.store.ResumeTransitionPolicy(e.as(), ref); err != nil {
+	if _, err := e.store.ResumeTransitionPolicy(e.as(), ref); err != nil {
 		t.Fatalf("resuming: %v", err)
 	}
 	if got := verdictFor(t, e, ref); got.Mode != ModeAuto {

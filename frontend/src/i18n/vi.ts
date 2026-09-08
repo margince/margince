@@ -114,8 +114,11 @@ export const vi = {
   "history.field.phones": "S\u1ed1 \u0111i\u1ec7n tho\u1ea1i",
   "history.field.meeting_status": "Kết quả cuộc họp",
   "history.field.candidate_company_key": "Công ty khớp",
+  "history.field.communication_basis": "Căn cứ pháp lý",
   "history.field.company_name": "Tên công ty",
+  "history.field.confirm_submission": "Loại xác nhận",
   "history.field.currency": "Tiền tệ",
+  "history.field.decided_by_level": "Quyết định bởi",
   "history.field.description": "Mô tả",
   "history.field.display_name": "Tên hiển thị",
   "history.field.domains": "Tên miền",
@@ -133,9 +136,13 @@ export const vi = {
   "history.field.last_name": "Họ",
   "history.field.legal_name": "Tên pháp lý",
   "history.field.lifecycle": "Vòng đời",
+  "history.field.lifted_by": "Được gỡ bởi",
+  "history.field.lifted_by_level": "Gỡ ở cấp",
+  "history.field.lifted_suppression": "Lệnh chặn đã gỡ",
   "history.field.linkedin_url": "Đường dẫn LinkedIn",
   "history.field.lost_reason": "Lý do thất bại",
   "history.field.name": "Tên",
+  "history.field.note": "Ghi chú",
   "history.field.occurred_at": "Thời điểm",
   "history.field.company_id": "Công ty",
   "history.field.owner_id": "Người sở hữu",
@@ -144,8 +151,12 @@ export const vi = {
   "history.field.partner_attribution": "Ghi nhận đối tác",
   "history.field.partner_company_id": "Đối tác",
   "history.field.project_id": "Dự án",
+  "history.field.qualifying_event": "Sự kiện đủ điều kiện",
+  "history.field.reason": "Lý do",
+  "history.field.recorded_at_level": "Ghi nhận ở cấp",
   "history.field.relationship_types": "Loại quan hệ",
   "history.field.remind_at": "Nhắc lúc",
+  "history.field.resolved_category": "Nhóm tin nhắn",
   "history.field.score": "Điểm",
   "history.field.score_override_reason": "Lý do chỉnh điểm",
   "history.field.size_band": "Quy mô",
@@ -154,6 +165,8 @@ export const vi = {
   "history.field.started_at": "Bắt đầu",
   "history.field.status": "Trạng thái",
   "history.field.subject": "Tiêu đề",
+  "history.field.submission_id": "Mã xác nhận",
+  "history.field.suppression_kind": "Loại chặn liên hệ",
   "history.field.target_end_date": "Ngày kết thúc mục tiêu",
   "history.field.title": "Chức danh",
   "history.field.wait_until": "Chờ đến",
@@ -9082,6 +9095,24 @@ export const vi = {
     "Margince ch\u01b0a \u0111\u1ec1 xu\u1ea5t b\u01b0\u1edbc chuy\u1ec3n n\u00e0o tr\u00ean quy tr\u00ecnh n\u00e0y.",
   "stageAutomation.noPipelines":
     "Ch\u01b0a c\u00f3 quy tr\u00ecnh n\u00e0o \u0111\u1ec3 b\u00e1o c\u00e1o.",
+  "stageAutomation.readOnly":
+    "Bạn có thể xem mỗi bước chuyển đã đạt được gì. Để thay đổi điều một bước chuyển được phép làm, bạn cần quyền chỉnh sửa quy trình.",
+  "stageAutomation.rules": "Mỗi bước chuyển được phép làm gì",
+  "stageAutomation.rulesIntro":
+    "Bật một bước chuyển không làm nó bắt đầu di chuyển giao dịch. Margince vẫn hỏi cho đến khi hồ sơ ở trên đạt ngưỡng, rồi tự áp dụng — bạn không phải quay lại.",
+  "stageAutomation.modeHint":
+    "Khi bật và hồ sơ đã đạt, Margince chuyển giao dịch rồi báo cho bạn sau.",
+  "stageAutomation.notEarnedYet": "Chưa đạt: {why}",
+  "stageAutomation.suspended": "Margince đã dừng việc này",
+  "stageAutomation.suspendedSince": "Đã dừng {date}",
+  "stageAutomation.resume": "Bắt đầu lại",
+  "stageAutomation.resumeTitle":
+    "Cho bước chuyển này di chuyển giao dịch trở lại?",
+  "stageAutomation.resumeBody":
+    "Margince đã dừng nó vì: {reason}\n\nBắt đầu lại không bỏ qua ngưỡng. Nó trở về đúng điều bạn đã đặt, và vẫn phải đạt hồ sơ ở trên trước khi tự di chuyển bất cứ điều gì.",
+  "stageAutomation.noRules":
+    "Chưa có bước chuyển nào trên quy trình này được quyết định, nên mọi lần di chuyển đều được đề xuất cho một người trả lời.",
+  "stageAutomation.undoWindow": "Hoàn tác trong {hours} giờ",
   "stageAutomation.nothingReviewed":
     "\u0110\u00e3 \u0111\u1ec1 xu\u1ea5t, nh\u01b0ng ch\u01b0a ai tr\u1ea3 l\u1eddi.",
 } as const satisfies Record<MessageKey, string>;

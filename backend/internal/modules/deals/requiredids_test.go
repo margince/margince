@@ -84,6 +84,14 @@ func completeBody(t *testing.T, shape reflect.Type, omit string) map[string]any 
 		case reflect.TypeFor[int]():
 			body[name] = 1
 		default:
+			// A string-backed enum is a required field this probe can fill
+			// without knowing the vocabulary: any value decodes, and what is
+			// under test is the ID refusal rather than the enum's own
+			// validation.
+			if field.Type.Kind() == reflect.String {
+				body[name] = "probe"
+				continue
+			}
 			t.Fatalf("%s.%s is a required %s this probe cannot populate — extend completeBody",
 				shape.Name(), field.Name, field.Type)
 		}
@@ -126,6 +134,39 @@ func TestEveryRequiredBodyIDIsNamedWhenAbsent(t *testing.T) {
 					t.Fatalf("probe body does not decode: %v", err)
 				}
 				_, err := advanceDealInput(req, nil)
+				return err
+			},
+		},
+		{
+			// Both stage ids come off the BODY here rather than the path,
+			// because a pipeline has many transitions and each is decided
+			// separately. Unguarded, an omitted one decodes to the zero UUID
+			// and reaches the stage lookup, which answers that a stage the
+			// caller never named is not in the pipeline.
+			name:  "SetTransitionPolicyRequest",
+			shape: reflect.TypeFor[crmcontracts.SetTransitionPolicyRequest](),
+			call: func(t *testing.T, body []byte) error {
+				t.Helper()
+				var req crmcontracts.SetTransitionPolicyRequest
+				if err := json.Unmarshal(body, &req); err != nil {
+					t.Fatalf("probe body does not decode: %v", err)
+				}
+				_, err := transitionRefFromBody(
+					ids.From[ids.PipelineKind](ids.NewV7()), req.FromStageId, req.ToStageId)
+				return err
+			},
+		},
+		{
+			name:  "TransitionRef",
+			shape: reflect.TypeFor[crmcontracts.TransitionRef](),
+			call: func(t *testing.T, body []byte) error {
+				t.Helper()
+				var req crmcontracts.TransitionRef
+				if err := json.Unmarshal(body, &req); err != nil {
+					t.Fatalf("probe body does not decode: %v", err)
+				}
+				_, err := transitionRefFromBody(
+					ids.From[ids.PipelineKind](ids.NewV7()), req.FromStageId, req.ToStageId)
 				return err
 			},
 		},

@@ -103,6 +103,23 @@
   description: "Unactionable until someone rules on it - 'decide or decline X'"
 
 # ---------------------------------------------------------------------------
+# Claim — a lock one session takes so the others do not race it.
+#
+# The only axis that lives on a PULL REQUEST rather than an issue, and the only
+# one that is about who is working rather than about what the work is. `main`
+# goes red often here on purpose — merging past a red check is a standing
+# decision — and every session that notices reaches for the same fix at the
+# same time. A draft pull request wearing this label is how the first one says
+# so, and the rulebook is what makes the others look before they start.
+#
+# It is not a `status:`: those mark an issue nobody should pick up, and this
+# marks work somebody already did pick up.
+# ---------------------------------------------------------------------------
+- name: "claim: main-red"
+  color: "5319E7"
+  description: "A session is fixing this red on main - check before you start, do not open a second"
+
+# ---------------------------------------------------------------------------
 # Provenance — why the issue exists, which is the one thing nobody can
 # reconstruct later. Additive and independent of the three axes above.
 # ---------------------------------------------------------------------------

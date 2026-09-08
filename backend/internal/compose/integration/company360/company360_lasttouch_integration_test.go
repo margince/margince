@@ -95,9 +95,10 @@ func TestStrengthFoldLeavesTheInboundAnchorEmptyWhenNobodyWroteIn(t *testing.T) 
 // The two are answering different questions. "They last wrote eighteen months
 // ago" is history and stays true however old it gets. The anchor is an action —
 // it is what a Follow up button opens a reply against — and it has to agree
-// with the state the counts report. This contact reads untried, because nothing
-// inside the window says otherwise; offering to answer a thread from last year
-// would contradict the same page's own summary.
+// with the state the counts report. This contact reads lapsed: an exchange
+// that is real, just older than the window, ranks warmer than a cold approach
+// and colder than an unanswered follow-up — offering to answer a thread from
+// last year would still contradict the same page's own summary.
 func TestStrengthFoldDropsAnInboundAnchorOlderThanTheWindow(t *testing.T) {
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
@@ -109,6 +110,7 @@ func TestStrengthFoldDropsAnInboundAnchorOlderThanTheWindow(t *testing.T) {
 	longAgo := company360Clock.AddDate(0, 0, -400)
 	stale := integration.AccountMailDirectedAt(t, owner, e.WS, "Re: 2025 tender", "inbound", longAgo)
 	integration.LinkActivity(t, owner, stale, "person", person)
+	integration.LinkActivitySender(t, owner, stale, person)
 
 	got := foldOneContact(t, e, company, person)
 
@@ -119,8 +121,8 @@ func TestStrengthFoldDropsAnInboundAnchorOlderThanTheWindow(t *testing.T) {
 		t.Fatalf("a reply from %s is outside the 90-day window and must not be offered as a reply anchor, got %s",
 			longAgo.Format("2006-01-02"), got.LastInboundActivity)
 	}
-	if people.EngagementOf(got) != people.EngagementUntried {
-		t.Fatalf("a contact whose only message predates the window reads as %q, want untried",
+	if people.EngagementOf(got) != people.EngagementLapsed {
+		t.Fatalf("a contact whose only message predates the window reads as %q, want lapsed",
 			people.EngagementOf(got))
 	}
 }

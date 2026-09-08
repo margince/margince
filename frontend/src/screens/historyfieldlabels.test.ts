@@ -8,6 +8,7 @@ import {
   historyFieldLabel,
   historyFieldLabelKey,
   historyFieldLabelled,
+  syntheticAuditFieldLabelled,
 } from "./historyfieldlabels";
 
 // The coverage census: every wire name a history entry can show has a word,
@@ -175,6 +176,55 @@ describe("history field labels", () => {
   it("spaces out a column it has no word for", () => {
     expect(historyFieldLabel("cf_renewal_owner", (key) => key)).toBe(
       "cf renewal owner",
+    );
+  });
+});
+
+// Some AuditEvent writers name a fact with no updatable contract column at
+// all, so the contract-derived census above never sees a gap in their own
+// vocabulary — the field would otherwise render raw on a screen a compliance
+// reviewer reads to answer "what happened to this record, and when".
+describe("synthetic AuditEvent field labels", () => {
+  // Never in the contract-derived set, in EITHER direction: not claimed as an
+  // orphan (it will never be written by an Update<Type>Request), and not
+  // required of one either (the same reason it needed its own map).
+  it("stays out of the contract-derived census", () => {
+    const labelled = historyFieldLabelled();
+    for (const field of syntheticAuditFieldLabelled()) {
+      expect(labelled).not.toContain(field);
+    }
+  });
+
+  it("resolves every key to a word that exists in the catalog, not the raw payload key", () => {
+    for (const field of syntheticAuditFieldLabelled()) {
+      const key = historyFieldLabel(field, (k) => k);
+      expect(key, field).not.toBe(field);
+      expect(key in en, `${field} -> ${key}`).toBe(true);
+    }
+  });
+
+  // The literal reproduction: a suppression write's own two payload keys,
+  // rendered the way the History tab actually calls historyFieldLabel.
+  it("names a suppression's own payload keys in plain English", () => {
+    expect(historyFieldLabel("suppression_kind", (k) => en[k])).toBe(
+      "Suppression kind",
+    );
+    expect(historyFieldLabel("decided_by_level", (k) => en[k])).toBe(
+      "Decided by",
+    );
+  });
+
+  // "kind" is deliberately NOT a synthetic key: an activity's own audited
+  // create names its kind that way too, on the same projected entity type,
+  // and this lookup carries no entity context to tell the two apart.
+  it("leaves the bare kind field to whichever writer actually owns it", () => {
+    expect(historyFieldLabel("kind", (k) => k)).toBe("kind");
+  });
+
+  it("names a lifted suppression's own payload keys in plain English", () => {
+    expect(historyFieldLabel("lifted_by", (k) => en[k])).toBe("Lifted by");
+    expect(historyFieldLabel("lifted_by_level", (k) => en[k])).toBe(
+      "Lifted at level",
     );
   });
 });

@@ -60,9 +60,17 @@ type SuppressInput struct {
 // is a fact about a mailbox that only the mail path can observe.
 const suppressibleKind = "subject_request"
 
-// auditFieldKind is the audit payload's kind field, named so the write and the
-// validation message spell it the same way.
+// auditFieldKind is the wire request body's own field name, named so a
+// validation refusal names the field the caller actually sent.
 const auditFieldKind = "kind"
+
+// auditFieldSuppressionKind is a DIFFERENT name from the wire field above,
+// deliberately: the audit payload's key is read back by historyFieldLabel
+// (frontend/src/screens/historyfieldlabels.ts) with no entity context, and
+// "kind" already names activities' own audited create field
+// (backend/internal/modules/activities/activity.go's fieldKind) — the same
+// bare key on two writers would mislabel whichever ships second.
+const auditFieldSuppressionKind = "suppression_kind"
 
 // Suppress records that a subject asked not to be written to.
 //
@@ -178,7 +186,7 @@ func (s *Store) suppressAdmittedTx(
 	// held something before, and Audit refuses an update with no before-image
 	// rather than let one record a change it cannot describe.
 	auditID, err := storekit.AuditEvent(ctx, tx, "update", sub.entityType, sub.id,
-		map[string]any{auditFieldKind: in.Kind, "decided_by_level": string(level)})
+		map[string]any{auditFieldSuppressionKind: in.Kind, "decided_by_level": string(level)})
 	if err != nil {
 		return err
 	}

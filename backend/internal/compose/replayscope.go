@@ -276,7 +276,14 @@ var replayableOperations = map[string]replayTarget{
 	"POST /v1/pipelines":       {object: objectPipeline, rowNote: "pipeline has no owner and is governed by object grants only (auth.EnsureVisible's own note)"},
 	"PATCH /v1/pipelines/{id}": {object: objectPipeline, rowNote: "pipeline config, no owner column"},
 	"POST /v1/stages":          {object: objectPipeline, rowNote: noOwnerStage},
-	"PATCH /v1/stages/{id}":    {object: objectPipeline, rowNote: noOwnerStage},
+	// A transition's automation rule is pipeline config, governed by the
+	// pipeline's object grant and owned by nobody. A retried save must replay:
+	// re-executing would bump the row's version, so an admin's own retry would
+	// make their next if_version write conflict with itself.
+	"PUT /v1/stage-automation/policies/{id}": {
+		object: objectPipeline, rowNote: "a transition rule is pipeline config, no owner column",
+	},
+	"PATCH /v1/stages/{id}": {object: objectPipeline, rowNote: noOwnerStage},
 	// A criterion is stage config one level down, governed by the same
 	// pipeline grant and carrying no owner column of its own.
 	"POST /v1/stages/{id}/exit-criteria": {object: objectPipeline, rowNote: noOwnerStage},
