@@ -18,9 +18,14 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
+	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
 // seamRecord is a record the caller may see, held in OUR system of record —
@@ -211,4 +216,65 @@ func TestAResolvedTargetWithNoRecordTypeIsRefused(t *testing.T) {
 	if rec.Code != http.StatusForbidden {
 		t.Errorf("an untyped concrete target answered %d, want 403", rec.Code)
 	}
+}
+
+// The TOOL door runs the resolver's Guards too, and this is where that is
+// proven in isolation.
+//
+// TestAnArchiveOfAnExternallyHeldRecordStagesNothing above makes the claim for
+// the REST door; TestBothDoorsRefuseOneRecordNeitherCallerCanSee makes it for
+// both at once, but through a row hidden by ROW SCOPE — and that refusal is not
+// Guards' alone. Guards and Subject answer from one memoized read of the row
+// (archiveResolver.target), so a row the caller cannot read fails Subject too,
+// and the test passes whether or not Guards ran at all.
+//
+// An externally-held record is the case that separates them: the read SUCCEEDS
+// and Subject is happy to describe the row, so a refusal can only have come
+// from Guards. Driven through the registry rather than through StageSubject, so
+// what is proven is the door — a tool door that resolved a subject and never
+// asked the guard would stage here and refuses nothing.
+func TestTheToolDoorRefusesAnExternallyHeldRecordItCanRead(t *testing.T) {
+	staging := &capturingApprovals{}
+	// The tier floor is what makes this a test of the STAGING guard: Guards is
+	// asked on the path to staging, so an auto-execute archive would run the
+	// write without ever consulting it. archive_record on a person is the same
+	// (verb, record type) the both-doors gate floors, for the same reason.
+	reg := agents.NewRegistry(staging, auth.NewGate(fullSeat{}),
+		agents.WithTierFloor(func(tool, recordType string) (mcp.RiskTier, bool) {
+			if tool == "archive_record" && recordType == string(recordTypePerson) {
+				return mcp.TierConfirmationRequired, true
+			}
+			return mcp.TierAutoExecute, false
+		}))
+	agents.RegisterCoreTools(reg, mirroredRecord{}, nil, nil, nil, nil, nil)
+
+	_, err := reg.Invoke(anArchivingAgent(), "archive_record",
+		json.RawMessage(`{"record_type":"person","id":"`+ids.NewV7().String()+`"}`))
+
+	var staged *workflow.StagedApprovalError
+	if errors.As(err, &staged) {
+		t.Errorf("the tool door staged approval %s against a record whose authority lives elsewhere — "+
+			"nobody could ever release it, because the decidability probe and the version pin both read "+
+			"tables this record has no row in", staged.ApprovalID)
+	}
+	if staging.last.Tool != "" {
+		t.Errorf("an approval was staged for %q against a record held in another system of record", staging.last.Tool)
+	}
+	if !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
+		t.Errorf("the tool door answered %v, want the external-system-of-record refusal — Subject reads "+
+			"this row happily, so any other answer means Guards was never asked", err)
+	}
+}
+
+// anArchivingAgent is an agent principal holding the scope an archive consumes.
+// Without one the registry refuses on the missing principal, which is a refusal
+// about the CONTEXT rather than about the record — and the assertion above,
+// asking only that Guards' own answer came back, would have been satisfied by a
+// door that never reached the resolver at all.
+func anArchivingAgent() context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalAgent, ID: "agent:archive", OnBehalfOf: ids.NewV7(),
+		Scopes: principal.NewScopeSet(principal.ScopeRead, principal.ScopeWrite),
+	})
 }

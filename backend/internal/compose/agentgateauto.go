@@ -80,7 +80,7 @@ func runAutoExecuted(w http.ResponseWriter, r *http.Request, next http.Handler, 
 	// asserted one — so nothing charges it here.
 	performed := &effectRecorder{ResponseWriter: w}
 	metered := &servedMeter{ResponseWriter: performed, r: r, reg: outcome.registry, mayRefuse: theEffectAlreadyLanded}
-	if !redeemed && outcome.pol.Tool == toolUpdateRecord && !actionShapedUpdateOps[outcome.pol.Op] {
+	if !redeemed && reachesTheHumanOwnedSplit(outcome.pol) {
 		splitHumanOwnedUpdate(metered, r, next,
 			splitUpdateDeps{staging: outcome.staging, commands: outcome.commands, ownership: outcome.ownership},
 			outcome.pol, outcome.body)
@@ -189,4 +189,17 @@ func pinAutoExecutedWrite(w http.ResponseWriter, r *http.Request, redemption tok
 	}
 	r.Header.Set(ifMatchHeader, strconv.FormatInt(admitted, 10))
 	return true
+}
+
+// reachesTheHumanOwnedSplit reports whether an admitted call is the shape the
+// field split governs: a whole-record update_record patch, whose body can mix
+// fields a human owns with fields an agent may write.
+//
+// Named rather than spelled inline because the gate that walks this path
+// (TestEveryWholeRecordPatchRunsItsGuardsBeforeTheAutoExecuteHalf) needs the
+// same answer, and a walk that restated the condition would go on driving the
+// set it was written against after this one moved — passing over a route that
+// had stopped being covered.
+func reachesTheHumanOwnedSplit(pol agentPolicy) bool {
+	return pol.Tool == toolUpdateRecord && !actionShapedUpdateOps[pol.Op]
 }
