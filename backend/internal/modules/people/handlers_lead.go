@@ -207,9 +207,22 @@ func (h Handlers) UpdateLeadSettings(w http.ResponseWriter, r *http.Request) {
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	out, err := h.store.UpdateLeadSettings(r.Context(), UpdateLeadSettingsInput{
+	in := UpdateLeadSettingsInput{
 		FirstResponseEnabled: req.FirstResponseEnabled, FirstResponseTargetMinutes: req.FirstResponseTargetMinutes,
-	})
+	}
+	// A JSON null decodes to a nil pointer and reads as "not supplied", so the
+	// explicit "nobody answers for the queue" is carried by the cleared-fields
+	// list rather than by the value.
+	for _, cleared := range httperr.ClearedFields(r) {
+		if cleared == "unassigned_escalation_user_id" {
+			in.ClearUnassignedEscalation = true
+		}
+	}
+	if req.UnassignedEscalationUserId != nil {
+		seat := ids.From[ids.UserKind](ids.UUID(*req.UnassignedEscalationUserId))
+		in.UnassignedEscalationUserID = &seat
+	}
+	out, err := h.store.UpdateLeadSettings(r.Context(), in)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return

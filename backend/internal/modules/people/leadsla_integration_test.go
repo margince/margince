@@ -12,7 +12,7 @@ package people
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"testing"
 	"time"
 
@@ -482,12 +482,7 @@ func TestAnOwnerlessBreachReachesTheConfiguredIntakeSeat(t *testing.T) {
 	}
 
 	// Configured: the same breach now names the seat that answers for it.
-	if _, err := e.owner.Exec(context.Background(),
-		`INSERT INTO setting (key, value) VALUES ($1, $2)
-		 ON CONFLICT (key) DO UPDATE SET value = excluded.value`,
-		UnassignedEscalationUserID.Key(), fmt.Sprintf("%q", e.user.String())); err != nil {
-		t.Fatal(err)
-	}
+	e.nameIntakeSeat(t, e.user)
 	addressed := e.seedOwnerlessLeadCreatedAt(t, "addressed@example.test", now.Add(-DefaultFirstResponseTarget-time.Hour))
 	if _, err := e.store.ScanLeadSLA(e.ctx, now); err != nil {
 		t.Fatalf("scan with a configured seat: %v", err)
@@ -505,12 +500,7 @@ func TestAnIntakeSeatThatCannotWorkIsTreatedAsUnset(t *testing.T) {
 	e.enableFirstResponseSLA(t)
 	now := time.Now().UTC()
 
-	if _, err := e.owner.Exec(context.Background(),
-		`INSERT INTO setting (key, value) VALUES ($1, $2)
-		 ON CONFLICT (key) DO UPDATE SET value = excluded.value`,
-		UnassignedEscalationUserID.Key(), fmt.Sprintf("%q", e.user.String())); err != nil {
-		t.Fatal(err)
-	}
+	e.nameIntakeSeat(t, e.user)
 	if _, err := e.owner.Exec(context.Background(),
 		`UPDATE app_user SET status = 'suspended' WHERE id = $1`, e.user); err != nil {
 		t.Fatal(err)
@@ -522,5 +512,73 @@ func TestAnIntakeSeatThatCannotWorkIsTreatedAsUnset(t *testing.T) {
 	}
 	if target := e.breachTargetOf(t, lead); target != nil {
 		t.Errorf("a suspended seat was addressed (%q); nobody reads that desk", *target)
+	}
+}
+
+// grantLeadRead gives a seat the one grant the escalation check asks for. The
+// harness seeds no role assignments — every seat it makes is blind to leads —
+// so a test naming an intake seat has to make it a seat that could answer.
+func (e *promoteConsentEnv) grantLeadRead(t *testing.T, seat ids.UUID) {
+	t.Helper()
+	role := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO role (id, key, name, permissions)
+		 VALUES ($1, $2, 'Lead reader', '{"objects":{"lead":{"read":true}}}'::jsonb)`,
+		role, "lead_reader_"+role.String()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO role_assignment (id, role_id, user_id) VALUES ($1, $2, $3)`,
+		ids.NewV7(), role, seat); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// nameIntakeSeat writes the setting the way an operator does — through the
+// real writer, so the test exercises the gate rather than an INSERT that walks
+// around it.
+func (e *promoteConsentEnv) nameIntakeSeat(t *testing.T, seat ids.UUID) {
+	t.Helper()
+	e.grantLeadRead(t, seat)
+	id := ids.From[ids.UserKind](seat)
+	if _, err := e.store.UpdateLeadSettings(e.ctx, UpdateLeadSettingsInput{
+		UnassignedEscalationUserID: &id,
+	}); err != nil {
+		t.Fatalf("naming the intake seat: %v", err)
+	}
+}
+
+// A seat that cannot READ leads is refused as the escalation target, even
+// though it is a perfectly good seat to hand work to.
+//
+// An escalation carries the lead it is about. A colleague holding activity
+// access and no lead grant would receive a task naming a record they cannot
+// open — useless to them, and a disclosure nobody authorised.
+func TestAnIntakeSeatMustBeAbleToReadTheLeadsItAnswersFor(t *testing.T) {
+	e := setupPromoteConsent(t)
+
+	// A live seat with no role assignment at all: assignable, and blind to
+	// leads.
+	blind := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO app_user (id, email, display_name) VALUES ($1, 'blind@example.test', 'No Grants')`,
+		blind); err != nil {
+		t.Fatal(err)
+	}
+	id := ids.From[ids.UserKind](blind)
+	_, err := e.store.UpdateLeadSettings(e.ctx, UpdateLeadSettingsInput{
+		UnassignedEscalationUserID: &id,
+	})
+	if !errors.As(err, new(*EscalationSeatError)) {
+		t.Fatalf("naming a seat that cannot read leads → %v, want EscalationSeatError", err)
+	}
+	var stored int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM setting WHERE key = $1`, UnassignedEscalationUserID.Key()).
+		Scan(&stored); err != nil {
+		t.Fatal(err)
+	}
+	if stored != 0 {
+		t.Errorf("the refused nomination was stored anyway")
 	}
 }
