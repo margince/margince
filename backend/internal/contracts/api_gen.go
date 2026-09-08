@@ -24289,7 +24289,7 @@ type Deal struct {
 	// PartnerAttribution What the partner named by `partner_company_id` did: `sourced` (brought the deal) or `influenced` (helped one we had). Travels with the partner — naming a partner defaults it to `sourced`. Commission accrues on `sourced` only.
 	PartnerAttribution *DealPartnerAttribution `json:"partner_attribution,omitempty"`
 
-	// PartnerCompanyId Deal registration/attribution to a partner company (A38/A41/ADR-0032). The company must have a live `partner` row — naming one that does not is refused 422 (`not_a_partner`), because commission prices from the margin tier on that row, and an attribution without one could never earn anything. Null when the caller may not read that company, in which case `masked_fields` names it.
+	// PartnerCompanyId Deal registration/attribution to a partner company (ADR-0032). The company must have a live `partner` row — naming one that does not is refused 422 (`not_a_partner`), because commission prices from the margin tier on that row, and an attribution without one could never earn anything. Null when the caller may not read that company, in which case `masked_fields` names it.
 	PartnerCompanyId *openapi_types.UUID `json:"partner_company_id,omitempty"`
 
 	// PipelineId Native mode: always a non-null pipeline FK. Overlay mode: NULL — an overlay-mirror deal has no native Margince pipeline row; the incumbent's own pipeline id rides `raw` and the code-declared stage→semantic mapping drives tier resolution (overlay-augmentation OVA-MAP-6). A zero/placeholder UUID here is forbidden (dangling FK).
@@ -24955,7 +24955,7 @@ type DedupeCandidate struct {
 	DisposedAt *time.Time          `json:"disposed_at,omitempty"`
 	DisposedBy *openapi_types.UUID `json:"disposed_by,omitempty"`
 
-	// EntityType A pair is always same-type (ADR-0118/A169 §2): a lead is proposed as a duplicate of a lead or of nothing.
+	// EntityType A pair is always same-type (ADR-0118 §2): a lead is proposed as a duplicate of a lead or of nothing.
 	EntityType DedupeCandidateEntityType `json:"entity_type"`
 
 	// Evidence Per-field agree/collide snapshot captured at detection — what the queue renders (AC-dedupe-2/3); never re-derived against since-edited rows.
@@ -24979,7 +24979,7 @@ type DedupeCandidate struct {
 	Status  DedupeCandidateStatus `json:"status"`
 }
 
-// DedupeCandidateEntityType A pair is always same-type (ADR-0118/A169 §2): a lead is proposed as a duplicate of a lead or of nothing.
+// DedupeCandidateEntityType A pair is always same-type (ADR-0118 §2): a lead is proposed as a duplicate of a lead or of nothing.
 type DedupeCandidateEntityType string
 
 // DedupeCandidateStatus defines model for DedupeCandidate.Status.
@@ -31585,7 +31585,7 @@ type RejectVoiceDraftRequest struct {
 // holds the two rules this surface cannot: write authority over the project ROW, and the
 // refusal that keeps a project's last company on it), `project_stakeholder`
 // (project↔person — the deal-stakeholder shape applied to a body of work), and the partner edges
-// (A41/ADR-0032, company↔company via `counterparty_company_id`): `partner_of` (company served by a partner
+// (ADR-0032, company↔company via `counterparty_company_id`): `partner_of` (company served by a partner
 // company), `referred_by` (company referred by a partner company), `co_sell_with` (company co-sold with a partner company).
 // `works_with` is the one person↔person kind (person_id ↔ counterparty_person_id): two external
 // contacts a rep asserts work together. Undirected in fact — the two columns carry no order,

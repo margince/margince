@@ -16352,7 +16352,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /**
-             * @description A pair is always same-type (ADR-0118/A169 §2): a lead is proposed as a duplicate of a lead or of nothing.
+             * @description A pair is always same-type (ADR-0118 §2): a lead is proposed as a duplicate of a lead or of nothing.
              * @enum {string}
              */
             entity_type: "person" | "company" | "lead";
@@ -18064,7 +18064,7 @@ export interface components {
              * @enum {string}
              */
             lifecycle?: "unknown" | "target" | "prospect" | "opportunity" | "customer" | "former_customer" | "disqualified";
-            /** @description WHAT THE COMPANY IS to us (PO-DDL-4b, ADR-0079). Multi-valued, because a company is legitimately several things at once — the partner program is built on companies that are simultaneously partners and customers. A company IS a partner iff it carries `partner` here AND has a `partner` row; removing the type while that row lives is refused (422). */
+            /** @description WHAT THE COMPANY IS to us (PO-DDL-4b, ADR-0079/A124). Multi-valued, because a company is legitimately several things at once — the partner program is built on companies that are simultaneously partners and customers. A company IS a partner iff it carries `partner` here AND has a `partner` row; removing the type while that row lives is refused (422). */
             relationship_types?: ("customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other")[];
             /**
              * @deprecated
