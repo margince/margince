@@ -705,12 +705,19 @@ func TestADismissalHoldsUntilTheEvidenceMoves(t *testing.T) {
 		t.Fatalf("the dismissed moment %q came back against unchanged evidence", dismissed.ClaimKey)
 	}
 
-	// Now they reply. The evidence the dismissal was held against has moved,
-	// so the page must speak again rather than stay quiet about the new fact.
+	// Now they reply — and the participant row is what says THEY wrote it. The
+	// rung reads authorship, not reachability: a thread is linked to everybody
+	// it concerns, so a reply somebody else sent into this conversation must
+	// not lift a dismissal taken against their silence.
 	inbound := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, body, occurred_at, direction, source, captured_by)
 		VALUES ($1, 'email', 'Re: Following up', 'body', $2,
 		        'inbound', 'manual', 'human:x')`, roomAgo(time.Hour))
 	LinkActivity(t, owner, inbound, "person", mine)
+	if _, err := owner.Exec(t.Context(), `
+		INSERT INTO activity_participant (activity_id, role, person_id)
+		VALUES ($1, 'from', $2)`, inbound, mine); err != nil {
+		t.Fatalf("seeding the sender: %v", err)
+	}
 
 	reArmed, err := svc.Assemble(rep, personID)
 	if err != nil {
