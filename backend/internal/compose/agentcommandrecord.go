@@ -20,6 +20,7 @@ import (
 	"net/http"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -48,6 +49,19 @@ func mergeCommand(pol agentPolicy, deps restCommandDeps, r *http.Request, body [
 		TargetID ids.UUID `json:"target_id"`
 	}](body)
 	if err != nil {
+		return nil, err
+	}
+	// An omitted target is the CALLER'S OWN INPUT, and answers 422 naming it —
+	// the rule advanceDealCommand states at length for `to_stage_id` and the
+	// stakeholder commands follow. Without it the zero id travelled on, the
+	// resolver read it, and an agent got the resolver's existence-hiding 404
+	// where a session on the same route gets the handler's 422: one mistake,
+	// two machine codes, keyed on which credential presented it.
+	//
+	// Existence-hiding wins only where a ROUTED id names a record, because an
+	// agent must not learn from a validation message that an id it guessed is
+	// well-formed and merely invisible. A body field it left out is neither.
+	if err := httperr.RequireBodyID("target_id", in.TargetID); err != nil {
 		return nil, err
 	}
 	return agents.NewMergeCall(deps.records, agents.MergeCommand{

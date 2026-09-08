@@ -214,7 +214,10 @@ func moduleDeclaredFault(err error) (error, bool) {
 		return &DetailedError{
 			Status: http.StatusUnprocessableEntity,
 			Code:   "validation_error",
-			Detail: fieldFaults.Error(),
+			// Bounded like every other value on this path. It was the one that
+			// was not, and it is the value most likely to be long: a type
+			// carrying a list has a sentence naming all of them.
+			Detail: boundFaultText(fieldFaults.Error()),
 			Fields: fields,
 		}, true
 	}
