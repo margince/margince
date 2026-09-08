@@ -81,6 +81,10 @@ type Server struct {
 	// than a decision anybody made.
 	attentionHandlers attention.Handlers
 	magicHandlers     magic.Handlers
+	// magicService is held so wireReversal can bind the undo judge to the SAME
+	// restore seam the reversal route uses — the receipt's offer and the write's
+	// refusal have to be one judgment.
+	magicService *magic.Service
 	// The relationship-graph reads (ADR-0078): who knows this contact, and
 	// how a deal is covered.
 	network.Reads

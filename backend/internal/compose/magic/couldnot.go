@@ -36,6 +36,10 @@ type TroubledRuns interface {
 	TroubledRuns(ctx context.Context, since time.Time, limit int) ([]automation.TroubledAutomationRun, error)
 }
 
+// nothingToUndo is the reason a could-not-complete line carries: the action did
+// not happen, so its absence is not a change to reverse.
+var nothingToUndo = "no_completed_change"
+
 // couldNotComplete reads the work that did not land.
 //
 // A REFUSED read is named to the caller rather than folded into an empty lane:
@@ -101,6 +105,9 @@ func troubledLine(run automation.TroubledAutomationRun) crmcontracts.MagicLine {
 		// A firing that did not happen has nothing to take back. Saying so
 		// explicitly beats leaving the field absent, which a client would have
 		// to guess about.
-		Undo: &crmcontracts.MagicUndo{Undoable: false},
+		// Never undoable, and not for want of asking: this lane is what the
+		// machine could NOT do. A failed run and an undecided approval have no
+		// committed change behind them, so there is nothing to put back.
+		Undo: &crmcontracts.MagicUndo{Undoable: false, Reason: &nothingToUndo},
 	}
 }

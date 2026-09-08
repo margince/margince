@@ -19,6 +19,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/magic"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -222,4 +224,84 @@ func TestConfirmingACardAfterAnUndoDoesNotReapplyIt(t *testing.T) {
 	if after.expectedClose == nil || !after.expectedClose.Equal(wasClosing) {
 		t.Errorf("the deal was re-dated to %v by a card decided after the undo", after.expectedClose)
 	}
+}
+
+// magicReceipt reads the receipt through the REAL judge — the same adapter the
+// server binds — rather than a stub. A stub would prove the seam carries an
+// answer; only this proves the answer is the right one for a correction.
+func (e *closeDateEnv) magicReceipt(t *testing.T, since time.Time) (crmcontracts.MagicReceipt, error) {
+	t.Helper()
+	seam := restoreSeamFor(e.Env)
+	svc := magic.NewService(e.Pool, nil, time.Now).
+		WithUndoJudge(magicUndoJudge{
+			seam:        seam,
+			corrections: deals.NewStore(e.DB(), DealsInstallation()),
+		})
+	return svc.Read(e.Admin(), &since, 50)
+}
+
+// The receipt offers an Undo on a correction the sweep actually made.
+//
+// THIS IS THE JOIN the whole engine exists for, and the one the generic
+// evaluator cannot make on its own: it refuses exactly these rows, because a
+// correction writes close_date_provisional and the ordinary update shape cannot
+// spell that field. Asked only that way, every correction reads "cannot be
+// undone" — which is the hardcoded false this replaced, arrived at by a longer
+// route.
+func TestTheReceiptOffersUndoOnARealCorrection(t *testing.T) {
+	e := setupCloseDate(t)
+	e.seedSweepDeal(t, "Corrected overnight", e.early, nil, intp(-12), 3)
+	if err := e.sweep(); err != nil {
+		t.Fatal(err)
+	}
+
+	since := time.Now().Add(-time.Hour)
+	receipt, err := e.magicReceipt(t, since)
+	if err != nil {
+		t.Fatalf("reading the receipt: %v", err)
+	}
+	line, ok := receiptLineForDeal(receipt, "expected_close_date")
+	if !ok {
+		t.Fatal("the correction the sweep made is not on the receipt's done lane")
+	}
+	if line.Undo == nil || !line.Undo.Undoable {
+		reason := "<nil>"
+		if line.Undo != nil && line.Undo.Reason != nil {
+			reason = *line.Undo.Reason
+		}
+		t.Fatalf("the correction reads not-undoable (%s) — the receipt offers no way back", reason)
+	}
+	if line.Undo.AuditId == nil {
+		t.Error("an undoable line carries no audit id for the control to name")
+	}
+
+	// And once taken back, the same line stops offering it: a second Undo on a
+	// reversed correction is a control that can only refuse.
+	if _, err := e.Deals.RevertCorrection(e.Admin(), e.correctionFor(t, e.firstDealID(t))); err != nil {
+		t.Fatal(err)
+	}
+	after, err := e.magicReceipt(t, since)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reversed, ok := receiptLineForDeal(after, "expected_close_date")
+	if !ok {
+		t.Fatal("the correction left the receipt after being undone")
+	}
+	if reversed.Undo == nil || reversed.Undo.Undoable {
+		t.Error("a correction already taken back still offers an Undo")
+	}
+}
+
+// receiptLineForDeal finds the done line whose change touched one field.
+func receiptLineForDeal(receipt crmcontracts.MagicReceipt, field string) (crmcontracts.MagicLine, bool) {
+	for _, line := range receipt.Done {
+		if line.After == nil {
+			continue
+		}
+		if _, ok := (*line.After)[field]; ok {
+			return line, true
+		}
+	}
+	return crmcontracts.MagicLine{}, false
 }

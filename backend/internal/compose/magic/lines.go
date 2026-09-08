@@ -66,7 +66,8 @@ func lineOf(e entry) (crmcontracts.MagicLine, bool) {
 			Type: crmcontracts.MagicActorType(e.ActorType),
 			Id:   e.ActorID,
 		},
-		Undo: &crmcontracts.MagicUndo{Undoable: false},
+		// Undo is filled by judgeUndoOn once the page is drawn — it needs the
+		// transaction and the record, neither of which this dressing has.
 	}
 	if meaning.consequence != "" {
 		line.Consequence = &meaning.consequence
