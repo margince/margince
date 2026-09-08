@@ -12,7 +12,7 @@ import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { useRecordWriteRefusal } from "../app/capability";
+import { useCanWrite, useRecordWriteRefusal } from "../app/capability";
 import { PageAsideToggle, usePageAside } from "../app/pageaside";
 import { useRecordZone } from "../app/recordzone";
 import { navigate, useRoute } from "../app/router";
@@ -946,6 +946,11 @@ function LeadRail({
 }>) {
   const t = useT();
   const me = useMe();
+  // The object grant and the seat ceiling, without the per-row answer: see the
+  // control below for why the row half is deliberately absent.
+  const mayAssign = useCanWrite("lead", "update");
+  const assignRefusedReasonId =
+    lead.archived_at || !mayAssign ? terminalReasonId : undefined;
   return (
     <div className="record-stack">
       <LeadIdentityFields
@@ -959,18 +964,23 @@ function LeadRail({
           <LeadOwner
             lead={lead}
             meId={me.data?.user?.id}
-            // Assignment asks a DIFFERENT question from editing, so it does
-            // not take the editor's answer. `writable` is false on a lead
-            // nobody owns — that is the write arm being right — and gating
-            // this control on it would shut the only door out of the
+            // Assignment asks a DIFFERENT question from editing, so it drops
+            // the PER-ROW half of the editor's answer and keeps the rest.
+            // `writable` is false on a lead nobody owns — the write arm being
+            // right — and gating on it would shut the only door out of the
             // unassigned queue, which is the bug this whole change is about.
-            // An ARCHIVED lead is still refused: a terminal record is nobody's
-            // to hand on.
-            refusedReasonId={lead.archived_at ? terminalReasonId : undefined}
+            //
+            // The other two axes still bind. useCanWrite is the object grant
+            // AND the seat ceiling: a read seat, or one holding no
+            // `lead.update`, gets no pressable control, because the server
+            // refuses them and a button that only fails is worse than none. An
+            // archived lead is refused too — a terminal record is nobody's to
+            // hand on.
+            refusedReasonId={assignRefusedReasonId}
             pending={
               writer.patch.isPending ||
               writer.claim.isPending ||
-              Boolean(lead.archived_at)
+              Boolean(assignRefusedReasonId)
             }
             // A lead nobody owns is nobody's to change, so the PATCH this
             // control used to send for EVERY pick was refused for the one

@@ -2139,6 +2139,41 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
     expect(assign.hasAttribute("disabled")).toBe(false);
   });
 
+  // Dropping the per-row half of the write answer must not drop the other two.
+  // A read seat cannot be handed work and the server refuses its assignment, so
+  // an enabled control here would only ever fail in the reader's face.
+  it("offers no enabled assignment to a seat that may not write leads", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        if (request.url.endsWith("/v1/connectors")) {
+          return jsonResponse({ data: [] });
+        }
+        if (request.url.endsWith("/v1/me")) {
+          return jsonResponse({
+            user: { id: "u-9", display_name: "Me" },
+            roles: ["read_only"],
+            teams: [],
+            authorization: meFixture({ seat: "read", allow: LEAD_GRANTS })
+              .authorization,
+          });
+        }
+        if (request.url.includes("/leads/l-1")) {
+          return jsonResponse({ ...lead, owner_id: null, writable: false });
+        }
+        return jsonResponse({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+        });
+      }),
+    );
+    render(<LeadScreen id="l-1" />);
+
+    await waitFor(() => expect(screen.getByText("Unassigned")).toBeTruthy());
+    const assign = await screen.findByRole("button", { name: "Assign" });
+    expect(assign.hasAttribute("disabled")).toBe(true);
+  });
+
   it("hides Assign to me when the lead is already owned by the current user", async () => {
     const { urls } = stubFetchWithMe(
       async () => jsonResponse({ ...lead, owner_id: "u-9" }),
