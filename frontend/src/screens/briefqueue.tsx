@@ -177,7 +177,13 @@ export function BriefQueueItem({
       }
       formatInstant={(utcIso) => formatDateTime(utcIso, locale, viewerZone())}
       pending={
-        mark.isPending && mark.variables?.itemId === item.id
+        // The CARD's three verbs only. `unsnooze` shares this mutation but has
+        // no control here — a snoozed item is not on the queue to carry one, so
+        // the take-back is offered from the toast that follows the snooze and
+        // there is no button on this card for it to mark as busy.
+        mark.isPending &&
+        mark.variables?.itemId === item.id &&
+        mark.variables.mark !== "unsnooze"
           ? mark.variables.mark
           : undefined
       }

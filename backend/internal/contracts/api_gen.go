@@ -51273,6 +51273,9 @@ type ServerInterface interface {
 	// Snooze a brief item (A77/AC-home-6) — hidden until `snoozed_until` passes, then it re-surfaces as actionable.
 	// (POST /brief/items/{itemId}/snooze)
 	SnoozeBriefItem(w http.ResponseWriter, r *http.Request, itemId openapi_types.UUID)
+	// Take back a snooze — the item returns to the queue immediately.
+	// (POST /brief/items/{itemId}/unsnooze)
+	UnsnoozeBriefItem(w http.ResponseWriter, r *http.Request, itemId openapi_types.UUID)
 	// What the capture pipeline did with your messages in the last 24 hours.
 	// (GET /capture/activity)
 	ListMyCaptureActivity(w http.ResponseWriter, r *http.Request, params ListMyCaptureActivityParams)
@@ -53418,6 +53421,12 @@ func (_ Unimplemented) MarkBriefItemDismissed(w http.ResponseWriter, r *http.Req
 // Snooze a brief item (A77/AC-home-6) — hidden until `snoozed_until` passes, then it re-surfaces as actionable.
 // (POST /brief/items/{itemId}/snooze)
 func (_ Unimplemented) SnoozeBriefItem(w http.ResponseWriter, r *http.Request, itemId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Take back a snooze — the item returns to the queue immediately.
+// (POST /brief/items/{itemId}/unsnooze)
+func (_ Unimplemented) UnsnoozeBriefItem(w http.ResponseWriter, r *http.Request, itemId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -60315,6 +60324,40 @@ func (siw *ServerInterfaceWrapper) SnoozeBriefItem(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SnoozeBriefItem(w, r, itemId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UnsnoozeBriefItem operation middleware
+func (siw *ServerInterfaceWrapper) UnsnoozeBriefItem(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "itemId" -------------
+	var itemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "itemId", chi.URLParam(r, "itemId"), &itemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "itemId", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UnsnoozeBriefItem(w, r, itemId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -83349,6 +83392,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/brief/items/{itemId}/snooze", wrapper.SnoozeBriefItem)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/brief/items/{itemId}/unsnooze", wrapper.UnsnoozeBriefItem)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/capture/activity", wrapper.ListMyCaptureActivity)

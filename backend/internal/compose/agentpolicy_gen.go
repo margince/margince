@@ -430,6 +430,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/brief/items/{itemId}/act":                                  {Op: "markBriefItemActed", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/brief/items/{itemId}/dismiss":                              {Op: "markBriefItemDismissed", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/brief/items/{itemId}/snooze":                               {Op: "snoozeBriefItem", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/brief/items/{itemId}/unsnooze":                             {Op: "unsnoozeBriefItem", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/capture/consumer-mail-domains":                             {Op: "addConsumerMailDomain", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/capture/counterparty-holds":                                {Op: "createCaptureCounterpartyHold", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/capture/counterparty-holds/share-history":                  {Op: "shareCaptureCounterpartyHoldHistory", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

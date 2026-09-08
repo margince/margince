@@ -2892,6 +2892,8 @@ export const de = {
   "brief.readings.pipelineUnread": "die Pipeline war nicht lesbar",
   "brief.readings.pipelineReading": "Pipeline wird gelesen",
   "brief.readings.openLaneNamed": "{reading} öffnen",
+  "brief.snooze.done": "Zurückgestellt bis {at}",
+  "brief.snooze.undo": "Rückgängig",
   "brief.readings.meetings": "Termine heute",
   "brief.readings.meetingsBasis": "im heutigen Kalender",
   "brief.readings.needsPrep_one": "1 unvorbereitet",
