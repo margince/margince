@@ -154,6 +154,7 @@ it("still opens on a click when it opens on hover", async () => {
 // as well as on the `Button` one below — a prop honoured for one of a
 // component's two shapes is a prop that works until someone drops the variant.
 it("does not open when the trigger is refused", async () => {
+  const user = userEvent.setup();
   render(
     <Popover label="How it stands" disabled>
       Two of three invoices are late.
@@ -162,7 +163,7 @@ it("does not open when the trigger is refused", async () => {
   const trigger = screen.getByRole("button");
   expect(trigger.hasAttribute("disabled")).toBe(true);
 
-  await userEvent.click(trigger);
+  await user.click(trigger);
 
   expect(screen.queryByText("Two of three invoices are late.")).toBeNull();
   expect(trigger.getAttribute("aria-expanded")).toBe("false");
@@ -176,13 +177,16 @@ it("does not open when the trigger is refused", async () => {
 // is up, because both close paths hand focus back to it and `.focus()` on a
 // natively disabled button is a silent no-op.
 it("keeps an open panel, and a focusable trigger, when the caller refuses it", async () => {
+  // One instance for the whole test: it carries the input-device state, so a
+  // second one would forget which buttons and keys the first left held.
+  const user = userEvent.setup();
   const { rerender } = render(
     <Popover label="How it stands" variant="ghost">
       Two of three invoices are late.
     </Popover>,
   );
   const trigger = screen.getByRole("button");
-  await userEvent.click(trigger);
+  await user.click(trigger);
 
   rerender(
     <Popover label="How it stands" variant="ghost" disabled>
@@ -195,7 +199,7 @@ it("keeps an open panel, and a focusable trigger, when the caller refuses it", a
   trigger.focus();
   expect(document.activeElement).toBe(trigger);
 
-  await userEvent.keyboard("{Escape}");
+  await user.keyboard("{Escape}");
 
   // Closed by the reader, and only now refused — so the panel a write has
   // emptied cannot be opened a second time while that write is out.

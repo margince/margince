@@ -15,7 +15,7 @@
 // finding it again afterwards means knowing which of three judgements you made.
 
 import { ChevronDown } from "lucide-react";
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useRef, useState } from "react";
 
 import { useFoldedViewport } from "../app/viewport";
 import { Button, OverflowMenu } from "../design-system/atoms";
@@ -169,6 +169,17 @@ export function usePutDown(item: WorklistItem) {
   // why nothing clears it: an answer that is not in flight is not consulted,
   // and every press that puts one in flight records it first.
   const [pressed, setPressed] = useState<PutDownAnswer | undefined>(undefined);
+  // Whether a write from this row is out, read SYNCHRONOUSLY and at the press.
+  //
+  // `set.isPending` answers the same question for the DRAWING, and has to —
+  // changing a ref renders nothing. It cannot guard the press, because a
+  // handler belongs to the render that made it: `SwipeRow` keeps the staged
+  // action in its own state, so a confirm can run a `put` whose closure was
+  // built before any write started and whose `isPending` is false while a
+  // request is in the air. Two contradictory judgements reached the server for
+  // one message that way, and two undo toasts followed, each offering to clear
+  // what the other had just written.
+  const writeIsOut = useRef(false);
   const put = (
     disposition: WorklistDisposition,
     // A span or an event, never both: the two are alternative answers to "come
@@ -176,8 +187,15 @@ export function usePutDown(item: WorklistItem) {
     // wait for.
     until?: SnoozeSpan | SnoozeEvent,
   ) => {
+    // ONE write per row at a time, held here rather than at each control: the
+    // verbs refuse their own second press, and a swipe confirm does not go
+    // through them.
+    if (writeIsOut.current) {
+      return;
+    }
     const event = typeof until === "string" ? until : undefined;
     const days = typeof until === "number" ? until : undefined;
+    writeIsOut.current = true;
     setPressed({ disposition, until });
     set.mutate(
       {
@@ -214,6 +232,11 @@ export function usePutDown(item: WorklistItem) {
           }),
         onError: () =>
           toast.show(t("worklist.disposition.failed"), { mark: false }),
+        // Settled either way, so a refusal releases the row rather than leaving
+        // it unanswerable until the reader reloads.
+        onSettled: () => {
+          writeIsOut.current = false;
+        },
       },
     );
   };

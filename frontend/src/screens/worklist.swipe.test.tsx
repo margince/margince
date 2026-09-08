@@ -342,6 +342,58 @@ describe("putting a row down below the fold", () => {
     });
   });
 
+  // ONE WRITE PER ROW, even when the gesture is the thing pressing.
+  //
+  // The verbs refuse their own second press, and a swipe confirm does not go
+  // through them: SwipeRow keeps the staged action in its own state, so the
+  // `onAct` a confirm runs can belong to a render made before any write
+  // started. Two confirms therefore filed two contradictory judgements on one
+  // customer's message and raised two undo toasts, each offering to clear what
+  // the other had just written.
+  it("writes once when a second confirm lands before the first settles", async () => {
+    const user = userEvent.setup();
+    atWidth(true);
+    // A write that never answers, so the second confirm really does land while
+    // the first request is in the air.
+    const fetchSpy = vi.fn(() => new Promise<Response>(() => {}));
+    vi.stubGlobal("fetch", fetchSpy);
+    render(rowUnderTest(EVERY_JUDGEMENT));
+
+    swipe(...FORWARD);
+    await user.click(
+      screen.getAllByRole("button", { name: verb("snooze") })[0],
+    );
+    // The OTHER direction, staged and confirmed before the first answer comes
+    // back — two judgements that contradict each other on one message.
+    swipe(...BACK);
+    await user.click(
+      screen.getAllByRole("button", { name: verb("not_mine") })[0],
+    );
+
+    expect(
+      fetchSpy.mock.calls.length,
+      "a second confirm reached the server over a write already out",
+    ).toBe(1);
+    expect((await sentBody(fetchSpy)).disposition).toBe("snooze");
+
+    // And the row still reports the FIRST answer as the one in flight: the
+    // snooze is the busy control, and the judgement whose confirm was refused
+    // is merely standing down rather than claiming a write of its own.
+    await user.click(
+      screen.getByRole("button", { name: en["worklist.disposition.menu"] }),
+    );
+    expect(
+      screen
+        .getByRole("button", { name: verb("snooze") })
+        .getAttribute("aria-busy"),
+    ).toBe("true");
+    expect(
+      screen
+        .getByRole("button", { name: verb("not_mine") })
+        .hasAttribute("disabled"),
+    ).toBe(true);
+  });
+
   // EVERY SPAN SURVIVES THE FOLD, and reaches the wire as itself.
   //
   // The gesture sends the default day and nothing else, so a fold that carried

@@ -81,8 +81,15 @@ export const HoverOpened: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.hover(canvas.getByRole("button", { name: "Evidence" }));
+    // Looked for in the BODY, not in the canvas. The panel is portalled out of
+    // the story's root — which is the component's whole point, so a card's
+    // overflow clip cannot cut it off — and an assertion scoped to
+    // `canvasElement` waits out its budget for a panel that opened correctly
+    // somewhere else in the document.
     await waitFor(() =>
-      expect(canvas.getByText(/Three emails and one call/)).toBeVisible(),
+      expect(
+        within(document.body).getByText(/Three emails and one call/),
+      ).toBeVisible(),
     );
   },
 };
