@@ -63,7 +63,10 @@ const ANSWERED_BY = {
 >;
 
 describe("a row claims no verb it cannot perform", () => {
-  const row = readFileSync(join(SCREENS, "worklist.row.tsx"), "utf8");
+  // The row's VERBS, which are their own module: the row decides how a piece
+  // of work reads and worklist.rowverbs.tsx decides what can be done about it,
+  // so the destination map lives there.
+  const verbs = readFileSync(join(SCREENS, "worklist.rowverbs.tsx"), "utf8");
 
   // The routed verbs, read from VERB_DESTINATION's own body. Read as source
   // rather than imported, because the map is not exported and exporting it to
@@ -73,7 +76,7 @@ describe("a row claims no verb it cannot perform", () => {
   // arrow-valued map from another: VERB_LABEL sits beside it with the same
   // shape, and a census that told them apart by their parameter name would gain
   // members the day somebody renamed one.
-  const map = row.match(/const VERB_DESTINATION\b[\s\S]*?\n};/)?.[0] ?? "";
+  const map = verbs.match(/const VERB_DESTINATION\b[\s\S]*?\n};/)?.[0] ?? "";
   const routed = new Set(
     [...map.matchAll(/^ {2}(\w+): /gm)].map(([, verb]) => verb),
   );

@@ -29,7 +29,7 @@
 516 frontend/src/design-system/margince-workbench.tsx
 513 frontend/src/design-system/relationshipmap.tsx
 516 frontend/src/design-system/richtext.tsx
-616 frontend/src/design-system/select.tsx
+613 frontend/src/design-system/select.tsx
 612 frontend/src/design-system/trust.tsx
 682 frontend/src/format/format.ts
 591 frontend/src/screens/adddocument.tsx
@@ -140,6 +140,6 @@
 857 frontend/src/screens/worklist.copy.ts
 676 frontend/src/screens/worklist.dispositions.tsx
 561 frontend/src/screens/worklist.queries.ts
-1446 frontend/src/screens/worklist.row.tsx
+1208 frontend/src/screens/worklist.row.tsx
 1098 frontend/src/screens/worklist.test.tsx
-871 frontend/src/screens/worklist.tsx
+789 frontend/src/screens/worklist.tsx

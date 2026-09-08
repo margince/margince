@@ -14,6 +14,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
 import { CoachingMoves } from "./worklist.coaching";
+import { AFTER_THE_DAY } from "./worklist.layout";
 import { type TeamBoardMember, useTeamBoard } from "./worklist.queries";
 
 // A row of the board, with the unassigned pile carried as one of them.
@@ -130,7 +131,7 @@ export function TeamBoard({
       ? "unavailable"
       : "ready";
   return (
-    <Panel title={t("worklist.board.title")}>
+    <Panel className={AFTER_THE_DAY} title={t("worklist.board.title")}>
       {/* The table carries its own cell padding but not the panel's inset, so
           it sits in a `PanelBody` with the coaching lines and the floor caveat
           rather than full-bleed against the panel's own edges. */}
@@ -149,59 +150,66 @@ export function TeamBoard({
                   Drawn from board.data, so they add no request and cannot
                   disagree with the rows beneath them. */}
               <CoachingMoves members={board.data.members} onOwner={onOwner} />
-              <DataTable
-                label={t("worklist.board.title")}
-                rows={rowsOf(
-                  board.data.members,
-                  board.data.unassigned,
-                  t("worklist.board.nobody"),
-                )}
-                rowKey={(row) => row.id || "unassigned"}
-                // Every row goes somewhere: a person's row opens their day, and
-                // the unassigned row opens the scope that holds unowned work.
-                //
-                // DataTable draws every row as pressable once onRowClick is set —
-                // it has no per-row opt-out — so a row that led nowhere would look
-                // exactly like one that led somewhere and do nothing when pressed.
-                onRowClick={(row) => {
-                  if (row.id === "") {
-                    onUnassigned();
-                    return;
-                  }
-                  onOwner(row.id);
-                }}
-                columns={[
-                  {
-                    key: "name",
-                    header: t("worklist.board.member"),
-                    render: (row) => row.name,
-                  },
-                  {
-                    key: "waiting",
-                    header: t("worklist.board.waiting"),
-                    render: (row) => count(row.waiting),
-                  },
-                  {
-                    key: "at_risk",
-                    header: t("worklist.board.atRisk"),
-                    render: (row) => count(row.atRisk),
-                  },
-                  {
-                    key: "overdue",
-                    header: t("worklist.board.overdue"),
-                    render: (row) => count(row.overdue),
-                  },
-                  // The column the coaching lines above are drawn from. Without
-                  // it a lead reads "Ana owes 3 promises" with nowhere on the
-                  // page to check it — a suggestion they cannot verify is one
-                  // they stop trusting.
-                  {
-                    key: "promises_due",
-                    header: t("worklist.board.promises"),
-                    render: (row) => count(row.promises),
-                  },
-                ]}
-              />
+              {/* A wrapper the stylesheet can reach, and the reason is the
+                  phone: five uppercase headings each end up narrower than
+                  their own longest word at 390px, and a word wider than its
+                  column breaks mid-word. `DataTable` takes no class, so the
+                  screen's rule needs an element of its own to hang from. */}
+              <div className="worklist-board-table">
+                <DataTable
+                  label={t("worklist.board.title")}
+                  rows={rowsOf(
+                    board.data.members,
+                    board.data.unassigned,
+                    t("worklist.board.nobody"),
+                  )}
+                  rowKey={(row) => row.id || "unassigned"}
+                  // Every row goes somewhere: a person's row opens their day, and
+                  // the unassigned row opens the scope that holds unowned work.
+                  //
+                  // DataTable draws every row as pressable once onRowClick is set —
+                  // it has no per-row opt-out — so a row that led nowhere would look
+                  // exactly like one that led somewhere and do nothing when pressed.
+                  onRowClick={(row) => {
+                    if (row.id === "") {
+                      onUnassigned();
+                      return;
+                    }
+                    onOwner(row.id);
+                  }}
+                  columns={[
+                    {
+                      key: "name",
+                      header: t("worklist.board.member"),
+                      render: (row) => row.name,
+                    },
+                    {
+                      key: "waiting",
+                      header: t("worklist.board.waiting"),
+                      render: (row) => count(row.waiting),
+                    },
+                    {
+                      key: "at_risk",
+                      header: t("worklist.board.atRisk"),
+                      render: (row) => count(row.atRisk),
+                    },
+                    {
+                      key: "overdue",
+                      header: t("worklist.board.overdue"),
+                      render: (row) => count(row.overdue),
+                    },
+                    // The column the coaching lines above are drawn from. Without
+                    // it a lead reads "Ana owes 3 promises" with nowhere on the
+                    // page to check it — a suggestion they cannot verify is one
+                    // they stop trusting.
+                    {
+                      key: "promises_due",
+                      header: t("worklist.board.promises"),
+                      render: (row) => count(row.promises),
+                    },
+                  ]}
+                />
+              </div>
               {/* A count read to its bound is a FLOOR, and saying so is the
                   whole reason the server sends the flag. A lead told "3" over a
                   figure that is really 3-or-more will not go looking, which is

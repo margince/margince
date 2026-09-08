@@ -77,6 +77,16 @@ const ZONES: readonly SelectOption[] = [
   "Europe/Zurich",
 ].map((zone) => ({ value: zone, label: zone }));
 
+// A roster: one short label and the long ones a real workspace carries. The
+// point of the set is the DISTANCE between the two, which is what a list sized
+// to its trigger destroys.
+const PEOPLE: readonly SelectOption[] = [
+  { value: "mine", label: "Mine" },
+  { value: "kr", label: "Dr. Katharina Reinhardt-Vogel" },
+  { value: "jb", label: "Jean-Baptiste Moreau-Lefèvre" },
+  { value: "nn", label: "Nguyễn Thị Minh Khai" },
+];
+
 const column: CSSProperties = {
   display: "flex",
   flexDirection: "column",
@@ -138,6 +148,41 @@ export const WithPlaceholder: Story = {
         required
         hint="A deal has to sit somewhere in the pipeline."
       />
+    </div>
+  ),
+};
+
+/**
+ * A SHORT TRIGGER OVER LONG OPTIONS, which is the case the list's own width
+ * exists for. "Mine" is the chosen value, so the closed face is narrow; every
+ * option behind it is a full name. Sized to the trigger, the list read
+ * "Dr. Kathari…" for all of them and the reader could not tell one colleague
+ * from another in the one place the control is asked to.
+ *
+ * Open it: the face stays narrow — a trigger that grew with its value would
+ * move whatever sits beside it — and the list stands out past the trigger to
+ * the width its longest label needs, capped at 24rem.
+ */
+export const ShortTriggerLongOptions: Story = {
+  render: () => (
+    <div style={{ ...column, maxWidth: "9rem" }}>
+      <Demo label="Viewing" options={PEOPLE} start="mine" />
+    </div>
+  ),
+};
+
+/**
+ * The same list on a control at the TRAILING EDGE of the page, which is where
+ * the Worklist's own dial sits. The list may not run off the screen to reach
+ * its content width, so the cap is the room measured from its leading edge
+ * rather than a fraction of the viewport.
+ */
+export const ContentSizedAtTheEdge: Story = {
+  render: () => (
+    <div style={{ display: "flex", justifyContent: "flex-end" }}>
+      <div style={{ ...column, maxWidth: "9rem" }}>
+        <Demo label="Viewing" options={PEOPLE} start="mine" />
+      </div>
     </div>
   ),
 };

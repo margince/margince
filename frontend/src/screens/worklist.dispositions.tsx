@@ -255,10 +255,10 @@ export function usePutDown(item: WorklistItem) {
 // The whole row, answerable with the thumb where there is no width for verbs.
 //
 // It wraps the ROW rather than the verbs, and that is the difference between a
-// feature and a demo: `.worklist-row` is a flex container and its verbs are one
-// item in it, so a gesture mounted around them would ask a reader to swipe an
-// 83px chip and would draw an empty box on a row whose only judgements are the
-// ones the chip does not carry.
+// feature and a demo: the row's verbs are ONE item of its layout, so a gesture
+// mounted around them would ask a reader to swipe an 83px chip and would draw
+// an empty box on a row whose only judgements are the ones the chip does not
+// carry. What this box costs the row's layout is stated in worklist.row.css.
 //
 // Above the fold it draws the row and nothing else. The buttons are still the
 // row's own, drawn beside the work by DispositionVerbs, and this adds nothing
@@ -460,10 +460,10 @@ export function DispositionVerbs({ item }: Readonly<{ item: WorklistItem }>) {
       />
     );
   }
-  // A FRAGMENT, not a box. These verbs are secondaries in the row's one
-  // ActionRow, and a wrapper of their own would be a second group inside the
-  // leading one — spaced by its own rule, wrapping on its own terms, and
-  // holding the snooze apart from the "Open" it reads beside.
+  // A FRAGMENT, not a box. These verbs stand in the row's own one line of
+  // verbs, and a wrapper of their own would be a group inside it — spaced by
+  // its own rule, wrapping on its own terms, and holding the snooze apart from
+  // the "Open" it reads beside.
   return (
     <>
       {offered.map((disposition) =>

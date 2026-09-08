@@ -15,12 +15,15 @@
 // which of a customer's two records is the real one. Saying they are not the
 // same needs no such choice and settles the pair for everybody, for good.
 
-import { Button } from "../design-system/atoms";
+import { Button, Card } from "../design-system/atoms";
 import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { problemCodeOf } from "./common";
 import { useDedupeDisposition } from "./dedupe.queries";
+// The review's own sheet: the two columns, the recessed cards and the trailing
+// line of verbs. It travels with the component because two hosts draw it.
+import "./worklist.pair.css";
 import { type WorklistItem, worklistKey } from "./worklist.queries";
 
 /**
@@ -110,21 +113,25 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
       },
     );
   return (
-    <div className="worklist-pair">
-      <p className="t-caption worklist-pair-ask">{t("worklist.pair.ask")}</p>
-      <ul className="worklist-pair-sides">
+    <div className="worklist-pair-review">
+      {/* THE QUESTION, as the block's lead line. What follows it is the two
+          records it is about and the one answer that is about neither. */}
+      <p className="t-body worklist-pair-ask">{t("worklist.pair.ask")}</p>
+      <ul className="worklist-pair-cards">
         {[pair.left, pair.right].map((side) => (
-          <li key={side.id} className="worklist-pair-side">
+          // ONE CANDIDATE, on the catalog's recessed card. `Card inset` rather
+          // than `PanelPlate`, which the catalog reserves for context and says
+          // so in as many words — "it holds context, never a control" — and
+          // each of these cards carries the verb that keeps its record.
+          // A list ITEM, so the two stay one list of two: the card is the
+          // chrome and the `<ul>` is still what says there are two of them.
+          <Card as="li" inset key={side.id} className="worklist-pair-card">
             <span className="worklist-pair-name">{side.label}</span>
-            {side.detail && (
-              <span className="t-caption worklist-pair-detail">
-                {side.detail}
-              </span>
-            )}
+            {side.detail && <span className="t-caption">{side.detail}</span>}
             {/* The reader's best single signal for which side is the real
                 one, where the record type carries such a count. */}
             {side.related_count !== undefined && (
-              <span className="t-caption worklist-pair-related">
+              <span className="t-caption">
                 {t("worklist.pair.related", {
                   count: formatNumber(side.related_count, locale),
                 })}
@@ -145,27 +152,40 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
                 is still its prefix, so the spoken name and the seen one do
                 not come apart. */}
             {mayDecide && (
-              <Button
-                small
-                variant="primary"
-                pending={decide.isPending}
-                aria-label={keepLabel(pair, side, t)}
-                onClick={() => answer("merge", side.id)}
-              >
-                {t("worklist.pair.keep", { name: side.label })}
-              </Button>
+              // At the card's own FOOT, on its trailing edge: the verb belongs
+              // to the record above it, and `.card-actions` is the catalog's
+              // trailing row for exactly that — the air above the verbs rides
+              // on the row rather than on whatever body the card has.
+              <div className="card-actions">
+                <Button
+                  small
+                  variant="primary"
+                  pending={decide.isPending}
+                  aria-label={keepLabel(pair, side, t)}
+                  onClick={() => answer("merge", side.id)}
+                >
+                  {t("worklist.pair.keep", { name: side.label })}
+                </Button>
+              </div>
             )}
-          </li>
+          </Card>
         ))}
       </ul>
       {mayDecide ? (
-        <Button
-          small
-          pending={decide.isPending}
-          onClick={() => answer("not_a_duplicate")}
-        >
-          {t("worklist.pair.notDuplicate")}
-        </Button>
+        // ONE LINE UNDER BOTH CARDS, on the trailing edge every other line of
+        // verbs in the queue stands on, and nothing on it is filled: the two
+        // Keep verbs are the answers to the question, and a fill here would
+        // offer "not the same" as the expected one of three.
+        <div className="worklist-pair-actions">
+          <Button
+            small
+            variant="ghost"
+            pending={decide.isPending}
+            onClick={() => answer("not_a_duplicate")}
+          >
+            {t("worklist.pair.notDuplicate")}
+          </Button>
+        </div>
       ) : (
         // Said in words rather than shown as disabled buttons. A greyed-out
         // control asks the reader to work out why it is grey; a sentence tells

@@ -2,18 +2,17 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { useUrlParams } from "../app/urlstate";
-import { Button, SegmentedControl } from "../design-system/atoms";
+import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Eyebrow } from "../design-system/eyebrow";
-import { FilterPills } from "../design-system/filterpills";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { PageZones } from "../design-system/pagezones";
 import { Panel } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { useLocale, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
+import { type Translator, useLocale, useT } from "../i18n";
+import { rosterOwnerNaming, useRoster } from "./entityref";
 import { useOpenEmail } from "./openemail";
 import {
   bandSections,
@@ -21,11 +20,7 @@ import {
   unbandedRows,
 } from "./worklist.bands";
 import { TeamBoard } from "./worklist.board";
-import {
-  completenessText,
-  pillCount,
-  sourceUnavailableText,
-} from "./worklist.copy";
+import { sourceUnavailableText } from "./worklist.copy";
 import {
   reviewShortfall,
   reviewWork,
@@ -33,8 +28,13 @@ import {
 } from "./worklist.destinations";
 import { TeamExceptionsPanel } from "./worklist.exceptions";
 import { HandledForYouPanel } from "./worklist.handled";
+import {
+  WORKLIST_FILTER_PARAM,
+  WorklistHeader,
+  worklistFilterFrom,
+} from "./worklist.header";
 import { HiddenBacklogPanel } from "./worklist.hidden";
-import { CoachControl, OwnerPicker } from "./worklist.manager";
+import { CoachControl } from "./worklist.manager";
 import { hasPane, WorklistPane } from "./worklist.pane";
 import {
   loadedQueue,
@@ -64,34 +64,11 @@ import "./worklist.css";
 // Every row answers the five questions the surface exists for — what happened,
 // why now, what is at stake, what to do, and can I do it here.
 
-// The cuts through the queue. `all` first because it is the default view.
-const FILTERS: readonly WorklistFilter[] = [
-  "all",
-  "customer_waiting",
-  "leads",
-  "deals_at_risk",
-  "meetings",
-  "tasks",
-  "decisions",
-  "system",
-];
-
-/** The dial's name in the address. One spelling, read and written. */
-export const WORKLIST_FILTER_PARAM = "filter";
-
-/**
- * The lane the address asks for, or the default.
- *
- * An unknown value reads as `all` rather than as an error: the vocabulary grows
- * on the server, and a pasted link naming a lane this build has not learnt
- * should show the day rather than an empty screen or a crash.
- */
-export function worklistFilterFrom(
-  params: ReadonlyMap<string, string>,
-): WorklistFilter {
-  const asked = params.get(WORKLIST_FILTER_PARAM);
-  return FILTERS.find((value) => value === asked) ?? "all";
-}
+// The address dial, re-exported from where it lives. It belongs beside the
+// strip that draws the lanes (`worklist.header.tsx`), and it is reachable from
+// the SCREEN because another surface names one of this screen's lanes to open
+// it — a reading in the Brief. One spelling of the parameter, two ways in.
+export { WORKLIST_FILTER_PARAM };
 
 // Which narrowing actually CONTAINS this group's members.
 //
@@ -113,108 +90,6 @@ function reviewFilter(item: WorklistItem): WorklistFilter {
 // One function now, read by both, so they cannot drift apart again.
 function rowIdentity(item: WorklistItem): string {
   return `${item.source}-${item.id}`;
-}
-
-// One row.
-//
-// The rank number leads because the whole promise of the page is an order; the
-// reason line under the title is what makes that order checkable rather than
-// something to trust.
-function WorklistHeader({
-  day,
-  loaded,
-  scope,
-  filter,
-  onScope,
-  onFilter,
-  owner,
-  onOwner,
-}: Readonly<{
-  day: Worklist;
-  // How many rows are on screen, which grows as the reader pages.
-  loaded: number;
-  scope: WorklistScope;
-  filter: WorklistFilter;
-  owner: string;
-  onScope: (next: WorklistScope) => void;
-  onFilter: (next: WorklistFilter) => void;
-  onOwner: (next: string) => void;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const scopes = day.scope_options;
-  const completeness = completenessText(day, filter, t, locale, loaded);
-  return (
-    <div className="worklist-header">
-      {/* The facts line and the scope on one line: what the day holds, and
-          whose day. The scope belongs beside the sentence it changes rather
-          than under it, where it read as a control over the pills below. */}
-      <div className="worklist-header-line">
-        {/* Five figures, ONE scope: the whole assembled day. All five come off
-          `summary`, which the server counts over every candidate it weighed
-          rather than over the page it cut — so the sentence stays still as the
-          reader pages, and a total the browser derived a second way cannot
-          disagree with the bands beside it. */}
-        <p className="t-h3 worklist-lead">
-          {t(
-            // `in_play` is optional, and a server that does not send it has not
-            // said there is none — it has said nothing. Printing 0 for silence
-            // is the under-reporting this line must never do, so the sentence
-            // without the figure is drawn instead.
-            day.summary.in_play === undefined
-              ? "worklist.summary.noMiddle"
-              : "worklist.summary",
-            {
-              urgent: formatNumber(day.summary.urgent, locale),
-              due: formatNumber(day.summary.due, locale),
-              inPlay: formatNumber(day.summary.in_play ?? 0, locale),
-              lower: formatNumber(day.summary.lower_priority, locale),
-              total: formatNumber(day.summary.total, locale),
-            },
-          )}
-        </p>
-        {/* Drawn only when there is a choice: a rep who can see only their own
-          work is never offered a switch that would refuse when pressed. */}
-        {scopes.length > 1 && owner === "" && (
-          <SegmentedControl
-            options={scopes}
-            value={scope}
-            onChange={onScope}
-            label={t("worklist.scope.label")}
-            labels={{
-              mine: t("worklist.scope.mine"),
-              unassigned: t("worklist.scope.unassigned"),
-              team: t("worklist.scope.team"),
-              all: t("worklist.scope.all"),
-            }}
-          />
-        )}
-      </div>
-      {/* Whose queue. Offered on the same tier the server admits a named owner
-          on — `team` in the options means this reader reaches past themselves —
-          so the control and the refusal cannot disagree. It replaces the scope
-          switch rather than sitting beside it: a named owner outranks the scope
-          word, and the pair is a 422. */}
-      {scopes.includes("team") && (
-        <OwnerPicker owner={owner} onOwner={onOwner} />
-      )}
-      <FilterPills
-        pills={FILTERS.map((value) => ({
-          value,
-          label: t(`worklist.filter.${value}` as const),
-          count: pillCount(day, value),
-        }))}
-        value={filter}
-        onChange={onFilter}
-        label={t("worklist.filter.label")}
-      />
-      {/* What the page is NOT showing. Drawn only when there is a difference to
-          report: on a day the queue carries whole, "12 of 12" is noise. */}
-      {completeness !== null && (
-        <p className="t-caption worklist-completeness">{completeness}</p>
-      )}
-    </div>
-  );
 }
 
 /**
@@ -347,18 +222,38 @@ function QueueRows({
 // describe a slice as though it were the day.
 // Which "there is nothing here" sentence an empty queue earns.
 //
-// A partial read outranks both: a day cannot be reported clear while something
-// that would have filled it was never read. Otherwise the Tasks pill names its
-// HORIZON — this queue is today's, so a task due tomorrow is deliberately
+// A partial read outranks the rest: a day cannot be reported clear while
+// something that would have filled it was never read. Then the Tasks pill names
+// its HORIZON — this queue is today's, so a task due tomorrow is deliberately
 // absent, and "Nothing is waiting on you" read as "you have no work" to a rep
 // looking at three open tasks on the company page beside it. The other pills
 // keep the unqualified sentence: the full queue carries replies and reviews
 // that have no deadline, so "due today" would be the wrong frame for it.
-function clearMessage(partial: boolean, filter: WorklistFilter): MessageKey {
+//
+// WHOSE day is clear is the last question, and only the unqualified sentence
+// gets it wrong: it is the one arm that says "on YOU", and on a colleague's
+// queue that named the reader over somebody else's empty day. The other two
+// describe the READ rather than the reader and stay as they are.
+//
+// The name is the roster's, and its absence falls back to the unqualified
+// sentence rather than to an id or a gap: a reader who cannot be named is a
+// question this line does not have to answer, and "Nothing is waiting on
+// 4f3c…" is worse than a sentence one word too general.
+function clearSentence(
+  partial: boolean,
+  filter: WorklistFilter,
+  colleague: string | null,
+  t: Translator,
+): string {
   if (partial) {
-    return "worklist.clearOfWhatWasRead";
+    return t("worklist.clearOfWhatWasRead");
   }
-  return filter === "tasks" ? "worklist.clearOfTasksToday" : "worklist.clear";
+  if (filter === "tasks") {
+    return t("worklist.clearOfTasksToday");
+  }
+  return colleague
+    ? t("worklist.clearFor", { name: colleague })
+    : t("worklist.clear");
 }
 
 function WorklistBody({
@@ -404,6 +299,13 @@ function WorklistBody({
 }>) {
   const t = useT();
   const missing = day.sources_unavailable;
+  // Whose day this is, by name. The same roster read the owner picker above
+  // already makes, under the same key — so this resolves out of that cache and
+  // opens no request of its own, and asks for nothing at all on the reader's
+  // own day. `rosterOwnerNaming` answers null both for nobody and for an id
+  // this roster cannot name, which is the one answer this sentence needs: it
+  // has a wording that names no one.
+  const colleague = rosterOwnerNaming(useRoster("user", owner !== ""))(owner);
   // The pane belongs to the DAY, so only a row in the day can fill it. A review
   // row selected here would draw its context beside the Today panel while the
   // highlighted row sat in the panel below — the two halves of one answer, a
@@ -464,60 +366,14 @@ function WorklistBody({
           block, and with the title and controls above them the first row's
           verb landed 972px down an 844px screen — a rep opened their morning
           and had to scroll before they could do anything. The stylesheet moves
-          this below the queue under 720px; the DOM order stays as it reads,
-          so a screen reader still meets the day's figures before its rows. */}
+          this below the queue under 720px, in PAINT only — worklist.layout.ts
+          holds why the document order does not follow it. */}
       <WorklistReadings day={day} onLane={onFilter} />
-      {/* Who on the team is carrying what.
-          Offered on the SAME tier the server admits the board on, read off
-          scope_options so the control and the refusal cannot disagree — the
-          rule the owner picker beside it already keeps.
-          Drawn only on the reader's OWN day. On a named person's queue the
-          reader has already chosen who to look at, and a board above it would
-          offer them the choice they just made. */}
-      {/* WHAT is going wrong, above WHO is carrying what. A lead opens this
-          page for the first question — the board answers the second, and
-          answering it first asks them to infer the trouble from three counts
-          per teammate. Same tier and same condition as the board: both are the
-          lead's read of a team, and a rep is refused both. */}
-      {owner === "" && day.scope_options.includes("team") && (
-        <TeamExceptionsPanel
-          enabled={day.scope_options.includes("team")}
-          onOwner={onOwner}
-        />
-      )}
-      {owner === "" && day.scope_options.includes("team") && (
-        <TeamBoard
-          onOwner={onOwner}
-          onUnassigned={() => onScope("unassigned")}
-        />
-      )}
-      {/* The verbs a lead has over somebody else's day. Drawn only on a named
-          person's queue: on the reader's own there is nobody to coach. */}
-      {owner !== "" && <CoachControl owner={owner} />}
-      {/* What the queue is NOT showing. Beside the team board because it is the
-          same reader's question — a lead asking whether the day their team sees
-          is the day their team has — and on the same tier for the same reason.
-
-          On the reader's OWN day only. The endpoint takes no owner and no
-          scope: it derives its subject from the authenticated principal, so
-          wherever the queue beside it is about somebody else, this panel is
-          still answering about the reader. "412 hidden from you" stood on a
-          page headed with a colleague's name and read as THEIR backlog — on
-          the one surface whose whole job is to say what a queue is hiding.
-
-          BOTH ways of leaving your own day are guarded, because there are two
-          and they are reached by different controls. `owner` is the drill-down
-          into a named colleague; `scope` is the picker beside it, and the team
-          board's own "show me the unowned pile" moves the scope while leaving
-          the owner empty. Guarding the drill-down alone left the same wrong
-          figure standing under the unassigned and team queues.
-
-          Answering it FOR a colleague is a different feature needing a
-          different endpoint. Until that exists, saying nothing beats saying the
-          wrong person's number under their name. */}
-      {owner === "" && scope === "mine" && (
-        <HiddenBacklogPanel enabled={day.scope_options.includes("team")} />
-      )}
+      {/* THE REASON A LEAD OPENED SOMEBODY ELSE'S DAY, at the head of that day
+          in every state — below it the block moved as its own form opened, and
+          a lead read three panels of somebody else's morning before the way to
+          say anything about it. Only on a named queue. */}
+      {owner !== "" && <CoachControl owner={owner} name={colleague} />}
       {/* What has moved since the reader started paging. An offer to refresh
           rather than a fault: the day on screen is correct, it is simply no
           longer complete. */}
@@ -551,7 +407,7 @@ function WorklistBody({
         // three tasks on the company beside it, and the page offered nothing
         // to reconcile the two.
         <p className="t-body worklist-clear">
-          {t(clearMessage(missing.length > 0, filter))}
+          {clearSentence(missing.length > 0, filter, colleague, t)}
         </p>
       ) : (
         // The queue, and beside it what the SELECTED row is about.
@@ -640,11 +496,64 @@ function WorklistBody({
           Below, and never hidden — this work is somebody's, and a screen that
           swallowed it would be the reason it went undone. */}
       <ReviewPanel items={review} shortfall={reviewMissing} rows={rowProps} />
-      {/* LAST, and folded shut. A reader opens this page to find what to do
-          next; what is already finished answers a different question — worth
-          having, and not worth leading with. It is also the only panel here
-          that asks for nothing: the receipt is why the acts above it are safe
-          to take. */}
+      {/* A LEAD'S READ OF THE TEAM, below the reader's own day.
+
+          Who opens this page decides the order. A rep opens it for their own
+          morning, and every seat on the page is a rep first — a lead reading
+          their team is also somebody with customers waiting on them. So the
+          day comes first for everybody, and the team follows it for the few
+          who can see it. These panels led the page once, which put three
+          panels a rep is refused above the queue they came for and pushed the
+          first row's verb off the fold.
+
+          Within the group: WHAT is going wrong, then WHO is carrying what. A
+          lead reads the exceptions to decide where to intervene; the board
+          answers the second question, and answering it first asks them to
+          infer the trouble from three counts per teammate. Same tier and same
+          condition, read off `scope_options` so the control and the refusal
+          cannot disagree — a rep is refused both. */}
+      {owner === "" && day.scope_options.includes("team") && (
+        <TeamExceptionsPanel
+          enabled={day.scope_options.includes("team")}
+          onOwner={onOwner}
+        />
+      )}
+      {owner === "" && day.scope_options.includes("team") && (
+        <TeamBoard
+          onOwner={onOwner}
+          onUnassigned={() => onScope("unassigned")}
+        />
+      )}
+      {/* What the queue is NOT showing. Beside the team board because it is the
+          same reader's question — a lead asking whether the day their team sees
+          is the day their team has — and on the same tier for the same reason.
+
+          On the reader's OWN day only. The endpoint takes no owner and no
+          scope: it derives its subject from the authenticated principal, so
+          wherever the queue beside it is about somebody else, this panel is
+          still answering about the reader. "412 hidden from you" stood on a
+          page headed with a colleague's name and read as THEIR backlog — on
+          the one surface whose whole job is to say what a queue is hiding.
+
+          BOTH ways of leaving your own day are guarded, because there are two
+          and they are reached by different controls. `owner` is the drill-down
+          into a named colleague; `scope` is the picker beside it, and the team
+          board's own "show me the unowned pile" moves the scope while leaving
+          the owner empty. Guarding the drill-down alone left the same wrong
+          figure standing under the unassigned and team queues.
+
+          Answering it FOR a colleague is a different feature needing a
+          different endpoint. Until that exists, saying nothing beats saying the
+          wrong person's number under their name. */}
+      {owner === "" && scope === "mine" && (
+        <HiddenBacklogPanel enabled={day.scope_options.includes("team")} />
+      )}
+      {/* LAST, and open. A reader opens this page to find what to do next;
+          what is already finished answers a different question — worth having,
+          and not worth leading with, which is what its position says. It is
+          also the only panel here that asks for nothing: the receipt is why the
+          acts above it are safe to take, and a receipt folded shut is one
+          nobody checks. */}
       <HandledForYouPanel />
     </>
   );
@@ -670,22 +579,31 @@ function ReviewPanel({
     return null;
   }
   return (
-    <Panel title={t("worklist.review")}>
+    <Panel
+      title={t("worklist.review")}
+      // What this panel is NOT showing, in the FOOTER band — which is what a
+      // figure belonging to the whole panel gets. It was a bare `<p>` among the
+      // panel's direct children, and a direct child of `Panel` sits in no
+      // padding at all: the rows around it are `PanelRow`s carrying the panel's
+      // own inset, so the sentence started a full `--padPanel` to the left of
+      // every row above it and read as a line that had escaped the card.
+      //
+      // The panel has no cursor of its own — review rows arrive as a side
+      // effect of paging the day — so a reader with an approval past the page
+      // cut sees a panel that looks complete and nothing that says otherwise.
+      // The day's own total is the denominator, never drawn bare: it counts
+      // every candidate the read weighed, so alone it would claim rows this
+      // panel does not hold.
+      footer={
+        shortfall
+          ? t("worklist.review.partial", {
+              loaded: formatNumber(shortfall.loaded, locale),
+              total: formatNumber(shortfall.total, locale),
+            })
+          : undefined
+      }
+    >
       <QueueRows items={items} {...rows} />
-      {/* What this panel is NOT showing. It has no cursor of its own — review
-          rows arrive as a side effect of paging the day — so a reader with an
-          approval past the page cut sees a panel that looks complete and
-          nothing that says otherwise. The day's own total is the denominator,
-          never drawn bare: it counts every candidate the read weighed, so
-          alone it would claim rows this panel does not hold. */}
-      {shortfall && (
-        <p className="t-caption worklist-completeness">
-          {t("worklist.review.partial", {
-            loaded: formatNumber(shortfall.loaded, locale),
-            total: formatNumber(shortfall.total, locale),
-          })}
-        </p>
-      )}
     </Panel>
   );
 }

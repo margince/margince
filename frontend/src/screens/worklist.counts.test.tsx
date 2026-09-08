@@ -171,8 +171,11 @@ describe("what the page says about what it is not showing", () => {
     );
     renderWorklist();
 
+    // ONE bounded source, so the sentence is the singular arm. Waited on the
+    // caveat rather than on the page, so the absence below is asserted over a
+    // sentence that has actually been drawn.
     await waitFor(() => {
-      expect(screen.getByText(/sources have more/)).toBeTruthy();
+      expect(screen.getByText(/1 source has more/)).toBeTruthy();
     });
     // "200 of 200 shown - 1 source has more" contradicts itself in one
     // sentence: the number it divides by is a floor, not a total.
@@ -192,8 +195,39 @@ describe("what the page says about what it is not showing", () => {
     );
     renderWorklist();
 
+    // Exactly the singular. The wording used to be hedged here because one
+    // bounded source drew "1 sources have more" — the count picked no form at
+    // all — and a regexp that accepts both is a test that cannot fail on the
+    // half of the pair that was wrong.
     await waitFor(() => {
-      expect(screen.getByText(/1 source(s)? ha(s|ve) more/)).toBeTruthy();
+      expect(screen.getByText(/1 source has more/)).toBeTruthy();
+    });
+    expect(screen.queryByText(/1 sources/)).toBeNull();
+  });
+
+  // The other arm, which nothing held: the singular alone passes just as well
+  // over a sentence that says "source" whatever the figure is.
+  it("says sources have more where several are bounded", async () => {
+    stub(
+      day([
+        {
+          category: "decisions",
+          considered: 200,
+          shown: 1,
+          more_available: true,
+        },
+        {
+          category: "tasks",
+          considered: 40,
+          shown: 2,
+          more_available: true,
+        },
+      ]),
+    );
+    renderWorklist();
+
+    await waitFor(() => {
+      expect(screen.getByText(/2 sources have more/)).toBeTruthy();
     });
   });
 

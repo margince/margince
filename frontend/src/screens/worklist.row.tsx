@@ -1,20 +1,18 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// One row of the day, and the verbs it offers.
+// One row of the day: how a piece of work reads, and the answers it carries.
 //
 // Split from the screen because they answer different questions. The screen
 // decides WHAT the page shows — whose day, which cut, which headings. A row
-// decides how one piece of work reads and where each of its verbs goes, and
-// that is the half a reader of either question does not need the other for.
+// decides how one piece of work reads, and that is the half a reader of either
+// question does not need the other for. The line of verbs under it is one more
+// step down, in worklist.rowverbs.tsx.
 
 import { useQueryClient } from "@tanstack/react-query";
-import { Pin, PinOff } from "lucide-react";
 import { type ReactNode, useId, useRef, useState } from "react";
 import { useRecordZone } from "../app/recordzone";
-import { ActionRow } from "../design-system/actionrow";
 import { Badge, Button, Modal } from "../design-system/atoms";
-import { IconAction } from "../design-system/iconaction";
 import { PanelRow } from "../design-system/panel";
 import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
@@ -39,27 +37,25 @@ import {
   dealFactsText,
   isUnprepared,
   itemTitle,
-  moveHref,
-  moveLabel,
   phrasedReasons,
   reasonText,
   rowHref,
   whenText,
 } from "./worklist.copy";
-import { DispositionVerbs, PutDownByThumb } from "./worklist.dispositions";
+import { PutDownByThumb } from "./worklist.dispositions";
 import { WaitingEmailLine } from "./worklist.emailtitle";
 import { eyebrowKeyFor } from "./worklist.eyebrow";
-import { ReassignControl } from "./worklist.manager";
 import { PairDecision } from "./worklist.pair";
 import {
   useApproval,
   useNudgeDismissal,
-  usePinRow,
   type WorklistItem,
   worklistKey,
 } from "./worklist.queries";
+import { RowActs } from "./worklist.rowverbs";
 import { syncHealthDetail } from "./worklist.synchealth";
 import { VerdictLine } from "./worklist.verdict";
+import "./worklist.row.css";
 
 /**
  * A grouped row's named members, each ONCE.
@@ -151,14 +147,18 @@ export function WorklistRow({
   // rather than as a flag, so the row cannot be drawn without one — a caller
   // with no drawer keeps the title instead of losing the row's name with it.
   const emailOpener = item.email_summary != null ? onOpenEmail : undefined;
+  // Whether the day put a state on this row — overdue, or a meeting with
+  // nothing prepared. They ride on the title line, which is why it is drawn on
+  // a row that has no title of its own to draw.
+  const badged = item.overdue === true || isUnprepared(item);
   // WHERE this lane's answer sits, and the write a brief item's two placements
   // share. The hook is called on every row and fires on none it is not asked
   // to: `useBriefItemMark` registers a mutation and reads nothing, and holding
-  // it here is what lets "Act" stand on the trailing edge while the two
-  // set-asides stand among the secondaries WITHOUT the row growing a second
-  // mutation. Two of them would each carry their own settled flag, so acting
-  // and then dismissing would answer one item twice — the same reason
-  // PutDownByThumb holds the disposition write for the verbs and the swipe.
+  // it here is what lets "Act" lead the row's verbs while the two set-asides
+  // stand among the quieter ones WITHOUT the row growing a second mutation.
+  // Two of them would each carry their own settled flag, so acting and then
+  // dismissing would answer one item twice — the same reason PutDownByThumb
+  // holds the disposition write for the verbs and the swipe.
   const brief = useBriefAnswer(item);
   const answer = rowAnswer(item, brief);
   return (
@@ -178,17 +178,22 @@ export function WorklistRow({
           selected={selected}
           onSelect={onSelect}
         />
-        {/* WHAT KIND of work, in its own column, so a reader running down the
-            queue reads the kinds as a list without reading a title first — and
-            in the warn tone on the rows the day put first, where the kind is
-            also why it is first. The title line keeps the states that are
-            about this row alone: overdue, unprepared. */}
-        <span
-          className={`t-eyebrow worklist-row-kind${
-            item.band === "now" ? " worklist-row-kind-now" : ""
-          }`}
-        >
-          {t(eyebrowKeyFor(item))}
+        {/* WHAT KIND of work, in its own column at a width that has one, so a
+            reader running down the queue reads the kinds as a list without
+            reading a title first — and in the warn tone on the rows the day
+            put in its first band, where the kind is also why it is there. The
+            title line keeps the states that are about this row alone: overdue,
+            unprepared.
+
+            `Badge quiet` because that is the catalog's answer for a column
+            carrying one per row: the tone survives as a dot and the label as
+            plain text, where a filled pill down a queue reads as decoration a
+            reader learns to skip. The span is PLACEMENT — the grid cell and the
+            width the kinds share — and draws nothing itself. */}
+        <span className="worklist-row-kind">
+          <Badge quiet tone={item.band === "now" ? "warn" : undefined}>
+            {t(eyebrowKeyFor(item))}
+          </Badge>
         </span>
         <div className="worklist-row-text">
           {/* A waiting EMAIL names itself with the canonical row — the same one
@@ -197,26 +202,33 @@ export function WorklistRow({
             the badges below stay on both: they say where the row sits in the
             day, which the email row does not answer. */}
           {emailOpener && <WaitingEmailLine item={item} onOpen={emailOpener} />}
-          <p className="t-body worklist-row-title">
-            {emailOpener ? null : href ? (
-              <a className="entity-link" href={href}>
-                {title}
-              </a>
-            ) : (
-              title
-            )}
-            {item.overdue && (
-              <Badge tone="danger">{t("worklist.overdue")}</Badge>
-            )}
-            {/* A state of the meeting, not a reason among reasons: a rep
-              scanning for the one to open before it starts has to see it
-              without reading the line under the title. Warn rather than
-              danger — an unprepared meeting is work to do, not a deadline
-              already missed. */}
-            {isUnprepared(item) && (
-              <Badge tone="warn">{t("worklist.needsPrep")}</Badge>
-            )}
-          </p>
+          {/* Not drawn EMPTY. An email row is named by the message above, so
+              its title line held nothing at all unless the day had a state to
+              put on it — and an empty line still collects the text column's
+              interval, which is a stranded gap between the message and the
+              facts under it on every waiting row. */}
+          {(!emailOpener || badged) && (
+            <p className="t-body worklist-row-title">
+              {emailOpener ? null : href ? (
+                <a className="entity-link" href={href}>
+                  {title}
+                </a>
+              ) : (
+                title
+              )}
+              {item.overdue && (
+                <Badge tone="danger">{t("worklist.overdue")}</Badge>
+              )}
+              {/* A state of the meeting, not a reason among reasons: a rep
+                scanning for the one to open before it starts has to see it
+                without reading the line under the title. Warn rather than
+                danger — an unprepared meeting is work to do, not a deadline
+                already missed. */}
+              {isUnprepared(item) && (
+                <Badge tone="warn">{t("worklist.needsPrep")}</Badge>
+              )}
+            </p>
+          )}
           {/* The supporting line, from every source that sends PROSE.
 
             It was drawn for `notice` alone, because three sources used this
@@ -255,53 +267,19 @@ export function WorklistRow({
             above={above}
           />
         </div>
-        {/* EVERY VERB ON ONE LINE UNDER THE WORK, not beside it, and ONE call to
-            action at the end of it. Beside the work, seven controls took the
-            width and left the subject, the snippet and the reasons a 160px
-            column that wrapped every line. Under it, the lane's answer used to
-            drop to a SECOND line of its own — so a queue of ten rows drew ten
-            single-button lines, and the thing a reader came to press was the
-            one verb not in the row of verbs. `ActionRow` is the tree's one
-            answer to "these verbs divide": the quiet ones on the leading edge
-            in the order they were drawn — the move, the lane's own verbs, the
-            ways to put the row down, the reader's pin, the hand-off — and the
-            answer held on the trailing one, where the distance between them is
-            what says which is which. */}
-        <ActionRow className="worklist-row-acts" primary={answer.trail}>
-          {item.batch && onReview ? (
-            <BatchVerb onReview={onReview} />
-          ) : (
-            <RowVerbs item={item} href={href} move={moveHref(item)} />
-          )}
-          {/* The LANE's own verbs, where it offers several of equal weight — a
-          meeting's three outcomes, a brief item's two ways down. None of them
-          is the row's call to action, so none of them takes the trailing edge:
-          promoting one would tell a reader that "Held" is the expected answer
-          to a meeting that may equally have been cancelled. They read here,
-          beside the move, because they are what this lane is FOR. */}
-          {answer.lead}
-          {/* The ways this row can be PUT DOWN, as the server declares them. Drawn
-          from `dispositions` rather than inferred from `source`: which rows a
-          rep may judge is a server rule, and a client keeping its own copy
-          draws a verb that 404s or hides one the rep is entitled to. */}
-          <DispositionVerbs item={item} />
-          {/* The reader's own override, on every row that can carry one. It is not
-          a disposition — those put a row DOWN, and this lifts one up — so it is
-          drawn beside them rather than among them. */}
-          <PinVerb item={item} />
-          {/* Only a task carries an assignee, so only a task can be handed on. A
-          group row stands for a pile and names no single activity to move.
-
-          Offered on the reader's OWN queue too: handing work on is not a
-          manager's verb, and gating it on a selected rep left somebody
-          looking at their own list with no way to pass a task along. Who is
-          excluded from the destinations follows the queue rather than this
-          condition — ReassignControl falls back to the reader when no rep is
-          selected, so the current holder is never offered as the new one. */}
-          {item.source === "task" && !item.batch && (
-            <ReassignControl item={item} owner={owner} />
-          )}
-        </ActionRow>
+        {/* EVERY VERB ON ONE RIGHT-ALIGNED LINE, the lane's answer LAST. Under
+            the work where the card has no column to spare for it, beside the
+            work where it has, and on the trailing edge in both — so the answer
+            keeps one x down the whole queue. worklist.rowverbs.tsx states why
+            it is the tail of the line rather than its head. */}
+        <RowActs
+          item={item}
+          href={href}
+          owner={owner}
+          primary={answer.primary}
+          equals={answer.equals}
+          onReview={onReview}
+        />
         {/* An answer that is not a VERB: a duplicate pair, whose two buttons
             each name the record they keep and cannot leave the list that names
             it. It stays a block under the row, where it has the width to show
@@ -330,20 +308,19 @@ export function WorklistRow({
  * The three places an answer can stand, and each lane picks one.
  *
  * A PLACEMENT rather than a node, because "the answer" is not one shape. Most
- * lanes have a single call to action and it belongs on the trailing edge. Some
- * offer several verbs of EQUAL weight, and there the trailing edge is a lie —
- * it would name one of three meeting outcomes as the expected one. And one
- * carries a payload rather than a verb at all.
+ * lanes have a single call to action, and it ends the row's verbs. Some offer
+ * several verbs of EQUAL weight, and there a call to action is a lie — it would
+ * name one of three meeting outcomes as the expected one. And one carries a
+ * payload rather than a verb at all.
  *
- * All three optional, and a lane with nothing to answer returns none of them:
- * a row the server named no verb on is still real work with nothing to press,
- * and `ActionRow` draws no trailing group when there is no primary.
+ * All three optional, and a lane with nothing to answer returns none of them: a
+ * row the server named no verb on is still real work with nothing to press.
  */
 type RowPlacement = Readonly<{
-  /** The lane's one call to action, held on the row's trailing edge. */
-  trail?: ReactNode;
-  /** Verbs of equal weight, among the row's other secondaries. */
-  lead?: ReactNode;
+  /** The lane's one call to action, at the trailing end of the row's verbs. */
+  primary?: ReactNode;
+  /** Verbs of equal weight, among the row's quieter ones. */
+  equals?: ReactNode;
   /** An answer carrying its own layout, under the row rather than in it. */
   below?: ReactNode;
 }>;
@@ -372,30 +349,30 @@ const ANSWER_BY_SOURCE: Partial<
 > = {
   notice: {
     verb: "acknowledge",
-    draw: (item) => ({ trail: <NoticeAcknowledge id={item.id} /> }),
+    draw: (item) => ({ primary: <NoticeAcknowledge id={item.id} /> }),
   },
   automation_run: {
     verb: "retry",
-    draw: (item) => ({ trail: <AutomationRetry id={item.id} /> }),
+    draw: (item) => ({ primary: <AutomationRetry id={item.id} /> }),
   },
   // THREE verbs of equal weight, so the row has no primary. Held, no-show and
-  // cancelled are equally likely records of what already happened, and putting
-  // one of them on the trailing edge would read as the product's expectation
-  // about a meeting it knows nothing about.
+  // cancelled are equally likely records of what already happened, and leading
+  // the row with one of them would read as the product's expectation about a
+  // meeting it knows nothing about.
   meeting_outcome: {
     verb: "decide",
     draw: (item) => ({
-      lead: <MeetingOutcome id={item.id} version={item.version} />,
+      equals: <MeetingOutcome id={item.id} version={item.version} />,
     }),
   },
   conversation_claim: {
     verb: "complete",
-    draw: (item) => ({ trail: <PromiseKept id={item.id} /> }),
+    draw: (item) => ({ primary: <PromiseKept id={item.id} /> }),
   },
   task: {
     verb: "complete",
     draw: (item) => ({
-      trail: <TaskComplete id={item.id} version={item.version} />,
+      primary: <TaskComplete id={item.id} version={item.version} />,
     }),
   },
   // The row's id IS the person's here, which is what the dismissal endpoint
@@ -404,13 +381,13 @@ const ANSWER_BY_SOURCE: Partial<
   // and posts somewhere else, which is why this table is keyed by SOURCE.
   relationship_decay: {
     verb: "dismiss",
-    draw: (item) => ({ trail: <NudgeDismiss personId={item.id} /> }),
+    draw: (item) => ({ primary: <NudgeDismiss personId={item.id} /> }),
   },
 };
 
 function rowAnswer(item: WorklistItem, brief: BriefAnswer): RowPlacement {
   if (decidable(item)) {
-    return { trail: <RowDecision item={item} /> };
+    return { primary: <RowDecision item={item} /> };
   }
   if (item.source === "dedupe_candidate" && item.pair) {
     // UNDER the row, not in it. Each of its two verbs names the record it
@@ -430,17 +407,17 @@ function rowAnswer(item: WorklistItem, brief: BriefAnswer): RowPlacement {
   // travels with it.
   const replyTo = replyTarget(item);
   if (replyTo) {
-    return { trail: <WaitingReply id={item.id} to={replyTo} /> };
+    return { primary: <WaitingReply id={item.id} to={replyTo} /> };
   }
-  // A brief item's three verbs, DIVIDED the way the row divides: acting on the
-  // day's pick is what the reader came for, and setting it aside or dismissing
-  // it are the two ways of declining. All three still share one write.
+  // A brief item's three verbs, RANKED the way the row ranks them: acting on
+  // the day's pick is what the reader came for, and setting it aside or
+  // dismissing it are the two ways of declining. All three share one write.
   if (item.source === "brief_item" && !item.batch) {
     return {
-      trail: brief.offered("act") ? (
+      primary: brief.offered("act") ? (
         <BriefAct item={item} brief={brief} />
       ) : undefined,
-      lead: <BriefSetAsides item={item} brief={brief} />,
+      equals: <BriefSetAsides item={item} brief={brief} />,
     };
   }
   // The one decided step a link cannot take.
@@ -461,7 +438,7 @@ function rowAnswer(item: WorklistItem, brief: BriefAnswer): RowPlacement {
   // and Dismiss with a task button on a row whose own verbs are the point.
   if (item.move?.action === "create_task" && hasMoveControl(item.move)) {
     return {
-      trail: (
+      primary: (
         <MoveButton
           dealId={item.subject?.type === "deal" ? item.subject.id : undefined}
           move={item.move}
@@ -559,31 +536,61 @@ const REASONS_BEFORE_THE_FOLD = 3;
  *
  * The summary NAMES THE COUNT rather than saying "more". A reader deciding
  * whether to spend a tap wants to know if it is one more fact or four.
+ *
+ * WHY THIS ROW BEAT THE ONE BELOW IT is folded here too, and that is the whole
+ * of where it lives now. It is one sentence of the same subject — why this row
+ * is where it is — and it was drawn as a permanent third caption line under
+ * every row on the page, which is a full line of height spent on a comparison
+ * nobody reads until they disagree with the order. Behind this press it is one
+ * tap away from the reader who does. It goes LAST and never into the summary:
+ * the reasons are fragments of a dozen characters and this is a full sentence
+ * with two timestamps in it, so on the line it would take the second line the
+ * fold exists to save. The count covers it, because the count is what a reader
+ * spends the tap on — one that named only the reasons would promise less than
+ * the fold holds.
  */
-function RowReasons({ reasons }: Readonly<{ reasons: readonly string[] }>) {
+function RowWhyHere({
+  reasons,
+  above,
+}: Readonly<{ reasons: readonly string[]; above: string | null }>) {
+  const t = useT();
   const { locale } = useLocale();
-  if (reasons.length === 0) {
-    return null;
-  }
   const said = reasons.slice(0, REASONS_BEFORE_THE_FOLD);
   const folded = reasons.slice(REASONS_BEFORE_THE_FOLD);
-  if (folded.length === 0) {
-    return <p className="t-caption worklist-row-because">{said.join(" · ")}</p>;
+  const behind = folded.length + (above ? 1 : 0);
+  if (behind === 0) {
+    return said.length === 0 ? null : (
+      <p className="t-caption worklist-row-because">{said.join(" · ")}</p>
+    );
   }
   return (
     <details className="worklist-row-because-fold">
       <summary className="t-caption worklist-row-because">
-        {said.join(" · ")}{" "}
-        <span className="worklist-row-because-more">
-          {translatePlural(locale, "worklist.because.more", folded.length, {
-            // The reader's own notation, not String(): a count drawn for a
-            // person goes through the formatter like every other magnitude,
-            // and jsx-magnitude.test.ts holds that for the whole tree.
-            count: formatNumber(folded.length, locale),
-          })}
-        </span>
+        {said.length === 0 ? (
+          // Nothing is said on the line, so there is no "more" to count from
+          // and the fold names itself instead — in the words the product
+          // already has for this question.
+          <span className="worklist-row-because-more">
+            {t("worklist.verdict.rule")}
+          </span>
+        ) : (
+          <>
+            {said.join(" · ")}{" "}
+            <span className="worklist-row-because-more">
+              {translatePlural(locale, "worklist.because.more", behind, {
+                // The reader's own notation, not String(): a count drawn for a
+                // person goes through the formatter like every other magnitude,
+                // and jsx-magnitude.test.ts holds that for the whole tree.
+                count: formatNumber(behind, locale),
+              })}
+            </span>
+          </>
+        )}
       </summary>
-      <p className="t-caption worklist-row-because">{folded.join(" · ")}</p>
+      {folded.length > 0 && (
+        <p className="t-caption worklist-row-because">{folded.join(" · ")}</p>
+      )}
+      {above && <p className="t-caption worklist-row-above">{above}</p>}
     </details>
   );
 }
@@ -592,10 +599,20 @@ function RowReasons({ reasons }: Readonly<{ reasons: readonly string[] }>) {
  * Everything the row says about itself under the title, in the order a reader
  * needs it.
  *
- * When it happens, what it is worth, why it is ranked where it is, what doing
- * nothing costs, and why it beat the row below. Each is absent when the server
- * sent nothing for it — a caption drawn empty is a line of furniture the reader
- * has to look past on every row.
+ * When it happens, what it is worth, why it is ranked where it is, and what
+ * doing nothing costs. Each is absent when the server sent nothing for it — a
+ * caption drawn empty is a line of furniture the reader has to look past on
+ * every row.
+ *
+ * TWO LINES AND NOT FIVE. The row printed the moment, the figures, the reasons,
+ * the consequence and the comparison as five stacked captions, which is five
+ * lines of 12px grey under every title on the page — and a reader scanning a
+ * queue reads the first of them and skips the rest. The facts that are
+ * FRAGMENTS ("due 15:00", "€40k", "waiting 4 days · nobody owns it") now read
+ * as one dot-separated line at every width, in the same order and still as
+ * separate elements, so a screen reader still meets three facts and only the
+ * line breaks between them go. What keeps a line of its own is the sentence a
+ * reader is meant to stop at: what it costs to do nothing.
  *
  * Together in one component because they are one idea — the row's own account
  * of itself — and because the row's function had reached the complexity the
@@ -616,31 +633,19 @@ function RowCaptions({
 }>) {
   return (
     <>
-      {/* When it starts, or when it is due. Above the reasons because it is the
-          fact those reasons are ABOUT: "starting shortly" explains a rank, and
-          this says what time. */}
-      {/* WHEN, WHAT IT IS WORTH and WHY, on one wrapping line rather than
-          three stacked ones. Each is a fragment — "due 15:00", "€40k", "due
-          today · nobody owns it" — and three fragments of a dozen characters
-          each took three full lines of a 390px row, which is 38px of a 176px
-          ceiling spent on whitespace beside three short phrases. They stay
-          separate elements, so a reader still meets them in the same order and
-          a screen reader still reads three facts; only the line breaks between
-          them go. Above that width they stack as before, because a wide row has
-          the height and stacked lines are easier to scan. */}
+      {/* When it starts, or when it is due, FIRST — it is the fact the reasons
+          beside it are about: "starting shortly" explains a rank, and this says
+          what time. */}
       <div className="worklist-row-facts-line">
         {when && <p className="t-caption worklist-row-when">{when}</p>}
         {facts && <p className="t-caption worklist-row-facts">{facts}</p>}
-        <RowReasons reasons={reasons} />
+        <RowWhyHere reasons={reasons} above={above} />
       </div>
       {/* What it costs to do nothing. The question a queue exists to answer,
           and the one the lane feed had no field for. */}
       {consequence && (
         <p className="t-caption worklist-row-consequence">{consequence}</p>
       )}
-      {/* Why this row beat the one below it. Absent on the last row, which has
-          nothing below it to beat. */}
-      {above && <p className="t-caption worklist-row-above">{above}</p>}
     </>
   );
 }
@@ -1011,248 +1016,6 @@ function BriefSetAsides({
         </Button>
       )}
     </>
-  );
-}
-
-// The way into a group.
-//
-// It narrows the queue to decisions rather than opening a screen of its own:
-// that screen is its own piece of work, and a row whose only verb led nowhere
-// would be worse than the pile it replaced.
-//
-// A button, not a link. The dials live in this screen's state today, so an
-// address carrying `?filter=decisions` would be read by nobody and the control
-// would do nothing — which is the defect it exists to avoid. Moving them into
-// the URL is the right shape and is its own change.
-function BatchVerb({ onReview }: Readonly<{ onReview: () => void }>) {
-  const t = useT();
-  return (
-    <Button small onClick={onReview}>
-      {t("worklist.verb.review_batch")}
-    </Button>
-  );
-}
-
-// What this row offers, as the item itself declares it.
-//
-// Every verb is a LINK to the surface that owns it rather than a mutation from
-// here: this queue adds no authority of its own, so deciding an approval goes
-// to the decision surface and merging a pair to the dedupe queue, exactly as
-// they do from any other door. Rendering a button that acted here would be a
-// second place for those rules to live.
-//
-// A verb whose destination this page cannot name draws nothing. A control that
-// looks pressable and goes nowhere is worse than no control.
-function RowVerbs({
-  item,
-  href,
-  move,
-}: Readonly<{
-  item: WorklistItem;
-  href: string | undefined;
-  move: string | undefined;
-}>) {
-  const t = useT();
-  const drawn = new Set<string>();
-  type Verb = {
-    action: WorklistItem["actions"][number];
-    destination: string;
-  };
-  const verbs = item.actions.flatMap<Verb>((action) => {
-    if (action === "decide") {
-      const to = decideDestination(item, href);
-      return to ? [{ action, destination: to }] : [];
-    }
-    const route = VERB_DESTINATION[action];
-    if (!route) {
-      // A verb this build cannot route draws nothing. A control that looks
-      // pressable and goes nowhere is worse than no control.
-      return [];
-    }
-    const destination = route(href);
-    if (!destination) {
-      return [];
-    }
-    // One control per DESTINATION. `complete` and `snooze` both open the
-    // record this row is about, and two identical "Open" links side by side
-    // ask the reader to choose between the same thing twice.
-    const key = `${VERB_LABEL[action](t)}|${destination}`;
-    if (drawn.has(key)) {
-      return [];
-    }
-    drawn.add(key);
-    return [{ action, destination }];
-  });
-  if (verbs.length === 0 && !move) {
-    return null;
-  }
-  return (
-    <>
-      {/* The step the product already worked out, offered where the reader is
-          standing rather than on a screen they have to go and find. */}
-      {move && (
-        <a className={NAVIGATING_VERB} href={move}>
-          {/* THE LABEL MOVES WITH THE ROUTE AND WITH THE VERB. Where the
-              address opens the composer the label is the act; where it only
-              reaches the record it says so. And it names the verb the SERVER
-              chose, so an opening outreach is not offered as a reply to a
-              conversation nobody has had. */}
-          {moveLabel(item, t)}
-        </a>
-      )}
-      {verbs.map(({ action, destination }) => (
-        <a key={action} className={NAVIGATING_VERB} href={destination}>
-          {VERB_LABEL[action](t)}
-        </a>
-      ))}
-    </>
-  );
-}
-
-// A verb that NAVIGATES, wearing the same face as the verbs that act.
-//
-// It stays an anchor, because that is what it is: middle-click, copy-link and
-// the browser's own status bar are the whole difference between a link and a
-// button, and a reader who wants the record in a second tab is a reader this
-// row is for. What changes is the chrome. Drawn as link text among small
-// buttons, "Draft the reply" — the most-pressed control on a waiting row —
-// read as a caption beside the verbs, and the row had two visual grammars for
-// one question.
-//
-// The atom's own classes rather than a face of this screen's: `Button` renders
-// a `<button>` and takes no `href`, so there is no component to reach for, and
-// the alternative is a second spelling of the small ghost button in
-// worklist.css. `screens/client.tsx` reaches the same conclusion the same way.
-const NAVIGATING_VERB = "btn btn-ghost btn-sm";
-
-// Where each verb lives. A total map over the ones this page can route, so a
-// verb the contract adds either gets a destination here or is not drawn —
-// never a button that does nothing.
-const VERB_DESTINATION: Partial<
-  Record<
-    WorklistItem["actions"][number],
-    (href: string | undefined) => string | undefined
-  >
-> = {
-  // `decide` and `merge` are deliberately absent: the surface that answers
-  // them IS this page, so a link would send the reader where they already are.
-  // They come back when the decision card is drawn inline, which is its own
-  // piece of work.
-  //
-  // `acknowledge` is absent too — see NoticeAcknowledge, which draws it
-  // inline instead of through this table.
-  //
-  // Everything routable is the record the row is about.
-  open: (href) => href,
-  complete: (href) => href,
-  snooze: (href) => href,
-};
-
-// The one verb whose routing depends on the SOURCE rather than only the verb.
-//
-// `decide` is answered inline for an approval — the card is right there, so a
-// link would send the reader where they already are. An introduction ask has no
-// inline card: its four answers are the colleague's own, given on the contact's
-// Network tab. Without this the ask row names somebody waiting and offers
-// nothing at all, which is the worst of both.
-function decideDestination(
-  item: WorklistItem,
-  href: string | undefined,
-): string | undefined {
-  return item.source === "introduction_request" ? href : undefined;
-}
-
-// What each routable verb is called. Spelled as a map of functions rather than
-// a composed key, so a verb the contract adds without copy here does not
-// compile — which is the only way this cannot reach a reader as a raw word.
-const VERB_LABEL: Record<
-  WorklistItem["actions"][number],
-  (t: ReturnType<typeof useT>) => string
-> = {
-  decide: (t) => t("worklist.verb.decide"),
-  merge: (t) => t("worklist.verb.merge"),
-  open: (t) => t("worklist.verb.open"),
-  complete: (t) => t("worklist.verb.complete"),
-  snooze: (t) => t("worklist.verb.snooze"),
-  acknowledge: (t) => t("worklist.verb.acknowledge"),
-  // The briefing queue's three verbs. Named here because the map is total over
-  // the contract's actions — they route nowhere from this page yet, so
-  // VERB_DESTINATION does not carry them and no control is drawn.
-  act: (t) => t("worklist.verb.open"),
-  dismiss: (t) => t("worklist.verb.open"),
-  set_aside: (t) => t("worklist.verb.open"),
-  // Named for the same reason: the map is total. `retry` is drawn by
-  // AutomationRetry, which acts in place, so VERB_DESTINATION routes it
-  // nowhere and this label is never the one a reader sees.
-  retry: (t) => t("worklist.verb.retry"),
-  // The composer's own word, not a second one: ChannelReplyAction draws the
-  // button this labels, and two spellings of one act would read as two acts.
-  reply: (t) => t("compose.reply"),
-};
-
-// The day's figures, and the dials that narrow them.
-
-// The reader's own override: this row leads their day, whatever the ranking
-// chose.
-//
-// The ranking has carried a pin level since it was written and, until the store
-// shipped, nothing could set it. Every other control on this page changes what
-// the SERVER thinks — a disposition, a filter, a scope. This is the only one
-// that says "I know, and I want this first anyway", which is the difference
-// between a queue a rep works and a queue a rep argues with.
-//
-// WHAT IT READS to know which way to toggle: the row's own `pinned` reason. The
-// server states it on a pinned row, so the client asks the response rather than
-// keeping a second record of what it pressed — a local flag would disagree with
-// the page the moment the reader pinned from another tab, and the button would
-// offer to pin a row that already leads their day.
-//
-// A BATCH row is skipped. Its id is synthetic and minted by the fold, so a pin
-// on one names a group that will not exist under that key on the next read.
-function PinVerb({ item }: Readonly<{ item: WorklistItem }>) {
-  const t = useT();
-  const toast = useToast();
-  const pin = usePinRow();
-  if (item.batch) {
-    return null;
-  }
-  const pinned = (item.because ?? []).some((why) => why.kind === "pinned");
-  return (
-    <IconAction
-      small
-      // A GLYPH, because the pin already IS the verb: it is the one control on
-      // the row that a reader recognises without reading, and a row that has
-      // grown a move, an Open, three judgements, a hand-off and an answer can
-      // no longer spend a word on it. The name is not lost — `IconAction`
-      // speaks it and shows it on hover from the one `label`.
-      icon={pinned ? <PinOff aria-hidden="true" /> : <Pin aria-hidden="true" />}
-      label={t(pinned ? "worklist.verb.unpin" : "worklist.verb.pin")}
-      // It SETS rather than does, and the two states of one switch look
-      // identical without it: a glyph has no label on screen to carry the
-      // difference, so the pressed state is what tells a reader this row is
-      // already the one they put first.
-      pressed={pinned}
-      pending={pin.isPending}
-      onClick={() =>
-        pin.mutate(
-          { source: item.source, rowId: item.id, pinned },
-          {
-            // A refused write otherwise leaves the button exactly as an
-            // unpressed one looks, and the row keeps the place it had — so
-            // the reader is told nothing and sees nothing change.
-            onError: () =>
-              toast.show(
-                t(
-                  pinned
-                    ? "worklist.verb.unpinFailed"
-                    : "worklist.verb.pinFailed",
-                ),
-                { mark: false },
-              ),
-          },
-        )
-      }
-    />
   );
 }
 

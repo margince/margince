@@ -14,11 +14,14 @@
 // composed its own view of a person would be a second answer to "what do we
 // know about them", and the two would drift.
 
-import { Panel } from "../design-system/panel";
+import { Avatar } from "../design-system/atoms";
+import { type Fact, FactList } from "../design-system/factlist";
+import { Panel, PanelBody } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { type Locale, useLocale, useT } from "../i18n";
+import { type Locale, type Translator, useLocale, useT } from "../i18n";
+import { EntityRef } from "./entityref";
 import { usePerson360 } from "./person360";
 import type { WorklistItem } from "./worklist.queries";
 
@@ -48,6 +51,13 @@ export function hasPane(item: WorklistItem | undefined): boolean {
 }
 
 // One person's context: who they are, and what else is open with them.
+//
+// The TITLE is the person, and it is a link to their record — a pane naming
+// somebody a rep is about to write to had their name as dead text, so the one
+// obvious way to the whole relationship was to go back to the row and find its
+// own link. `EntityRef` is handed the name the row already carried, so the
+// link costs no lookup; the avatar rides beside it because a face is how a rep
+// recognises whose day they are in before they read a word.
 function PersonContext({
   id,
   label,
@@ -59,16 +69,40 @@ function PersonContext({
     : view.isError
       ? "failed"
       : ("ready" as const);
+  // The row's own label first, the record's full name once it lands: the pane
+  // draws its head before the read answers, and a title that changed from a
+  // generic word to a name would move the reader's eye for nothing. A person
+  // with neither is unnameable rather than unlinkable, so the generic title
+  // stands and no link is drawn round it.
+  //
+  // `person` is required on the wire, so an answer without it is version skew
+  // rather than a state the server means — and the honest fallback for a NAME
+  // is the generic title, not a page that stops drawing. The board beside this
+  // reads a missing count the same way and for the same reason.
+  const name = label ?? view.data?.person?.full_name;
   return (
-    <Panel title={label ?? t("worklist.pane.title")}>
-      <SurfaceState
-        state={state}
-        emptyLabel={t("worklist.pane.nothing")}
-        loadingLabel={t("worklist.pane.loading")}
-        detail={{ onRetry: () => void view.refetch() }}
-      >
-        {view.data && <PersonFacts view={view.data} />}
-      </SurfaceState>
+    <Panel
+      title={
+        name ? (
+          <span className="worklist-pane-head">
+            <Avatar name={name} identity={id} />
+            <EntityRef kind="person" id={id} name={name} />
+          </span>
+        ) : (
+          t("worklist.pane.title")
+        )
+      }
+    >
+      <PanelBody>
+        <SurfaceState
+          state={state}
+          emptyLabel={t("worklist.pane.nothing")}
+          loadingLabel={t("worklist.pane.loading")}
+          detail={{ onRetry: () => void view.refetch() }}
+        >
+          {view.data && <PersonFacts view={view.data} />}
+        </SurfaceState>
+      </PanelBody>
     </Panel>
   );
 }
@@ -80,26 +114,68 @@ function PersonContext({
 // has run in BOTH directions. A rep who last wrote yesterday answers
 // differently from one who has not written since March.
 //
+// Who they work for and what they do are the other two, and they are here
+// because the READ already carries them — `person.employer` and
+// `person.title` come with the 360 the pane is drawing anyway, so naming them
+// costs no request. Both are DROPPED when absent rather than drawn blank: an
+// absent employer is not "works nowhere", it is also the answer for a reader
+// with no grant on relationship edges, and a row saying nothing claims we know
+// it and it is empty.
+//
 // A pane that reproduced the record page would be the record page in a
-// narrower column, and the reader who wanted that has a link on the row.
+// narrower column, and the reader who wanted that has the title's own link.
 function PersonFacts({
   view,
 }: Readonly<{ view: NonNullable<ReturnType<typeof usePerson360>["data"]> }>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = viewerZone();
-  return (
-    <dl className="worklist-pane-facts">
-      <dt className="t-label">{t("worklist.pane.lastInbound")}</dt>
-      <dd className="t-body">
-        {spoken(view.last_inbound_at, t, locale, zone)}
-      </dd>
-      <dt className="t-label">{t("worklist.pane.lastOutbound")}</dt>
-      <dd className="t-body">
-        {spoken(view.last_outbound_at, t, locale, zone)}
-      </dd>
-    </dl>
-  );
+  // Both come off `person`, which is required on the wire — so an answer
+  // without it is version skew, and the two facts it carries are simply
+  // absent. Absent is already this list's ordinary case: a row is dropped
+  // rather than drawn blank.
+  const employer = view.person?.employer;
+  const role = view.person?.title;
+  const facts: Fact[] = [
+    {
+      key: "inbound",
+      term: t("worklist.pane.lastInbound"),
+      value: spoken(view.last_inbound_at, t, locale, zone),
+    },
+    {
+      key: "outbound",
+      term: t("worklist.pane.lastOutbound"),
+      value: spoken(view.last_outbound_at, t, locale, zone),
+    },
+    // The company is a LINK, for the reason the person's name is: a rep
+    // deciding how to answer often needs the account rather than the contact,
+    // and the name is already resolved on this read.
+    ...(employer
+      ? [
+          {
+            key: "company",
+            term: t("worklist.pane.company"),
+            value: (
+              <EntityRef
+                kind="organization"
+                id={employer.organization_id}
+                name={employer.organization_name}
+              />
+            ),
+          },
+        ]
+      : []),
+    ...(role
+      ? [
+          {
+            key: "role",
+            term: t("worklist.pane.role"),
+            value: role,
+          },
+        ]
+      : []),
+  ];
+  return <FactList facts={facts} />;
 }
 
 // When somebody last wrote, or that nobody has.
@@ -109,7 +185,7 @@ function PersonFacts({
 // leave the reader to guess whether the fact was missing or the silence real.
 function spoken(
   at: string | null | undefined,
-  t: ReturnType<typeof useT>,
+  t: Translator,
   locale: Locale,
   zone: string,
 ): string {

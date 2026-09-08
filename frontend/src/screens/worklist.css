@@ -1,10 +1,33 @@
 /* The Worklist: one ranked list.
    Spacing comes from the space tokens; nothing here invents a colour. */
+
+/* ONE INTERVAL FOR THE WHOLE PAGE STACK.
+   The shell's default rhythm (app/shell.css) reaches `.card` and `.panel`
+   siblings only, and half of this page's blocks are neither: the readings are a
+   `StatStrip` in a `<section>`, a paned queue is a `.page-zones` grid, the
+   clear day is a paragraph. So the readings met the queue's grid with nothing
+   between them, and that grid met the review panel below it the same way —
+   while two adjacent panels a block later were correctly spaced. A reader saw
+   the page's rhythm break and mend depending on which blocks their day
+   happened to draw.
+   Stated over EVERY adjacent pair rather than over today's list of blocks: the
+   set changes with the scope, with whose day is open, with whether a row is
+   selected and with whether the day is empty, and a rule naming the pairs would
+   be wrong for most of those combinations the day it was written. `--gapCards`
+   is the role between sibling surfaces, so the shell's own rule and this one
+   resolve to the one interval and retune together. */
+.wrap.worklist > * + * {
+  margin-block-start: var(--gapCards);
+}
+
+/* No interval of its own: the stack above owns what follows the head. Carrying
+   both, the header stood a step further from the readings than every other pair
+   on the page — and twice as far below 720px, where the column is flex and the
+   two margins no longer collapse. */
 .worklist-header {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  margin-bottom: var(--space-4);
 }
 
 /* The sentence and the scope share a line: the sentence takes the room, the
@@ -22,16 +45,118 @@
   color: var(--textContent);
 }
 
-/* A manager's control over one row: the picker or the question, then the verbs
-   that answer it, on one line. The class was in the markup from the start and
-   in no stylesheet, so all three of these clusters rendered as a block — the
-   buttons ran together with nothing but a space between them, and the picker
-   sat on its own line above them. */
+/* The two dials over the day, at the trailing end of the sentence they change.
+   They replace each other rather than stacking — a named owner outranks the
+   scope word — so this is a group of one most of the time and wraps as a unit
+   when the sentence takes the line. */
+.worklist-header-dials {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+
+/* A FLOOR AND A CEILING, and neither is the page's width. Full width the picker
+   read as a control over the pills below it rather than as a dial on the day
+   above; the ceiling is what keeps a roster of long names from taking the
+   sentence's line. The FLOOR is the half that was missing: the trigger sizes to
+   the value in it, so with "My own day" chosen the control stood narrower than
+   the names it chooses between, and it changed width every time it was
+   answered — dragging the sentence beside it along. Below the fold it may have
+   the row to itself, because at 390px a capped control beside a wrapped
+   sentence is neither. */
+.worklist-owner-field {
+  max-width: 20rem;
+  min-inline-size: 14rem;
+}
+
+/* BOTH BOXES, and the inner one alone did nothing. `.worklist-header-dials` is
+   a flex ITEM of the header line carrying the default `flex-grow: 0`, so it
+   stands at its content's width however much room the line has — and a
+   `flex-basis: 100%` inside it then resolves against that content width rather
+   than against the page. So the picker came out at its own floor on a
+   colleague's day, where it stands alone, and at whatever the scope switch
+   measured on the lead's own day, where the two share the group — the same
+   capped control the rule below is here to release. A descendant cannot widen
+   the box it sits in. */
+@media (max-width: 720px) {
+  .worklist-header-dials {
+    flex: 1 1 100%;
+  }
+
+  .worklist-owner-field {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+}
+
+/* The cuts through the queue and the sentence about what they left out, as one
+   block: the caption qualifies the pills, so it sits a step under them while
+   the pair keeps the header's own rhythm. On the header's gap it read as a
+   third control in the strip. */
+.worklist-header-cuts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* THE HAND-OFF FORM: the picker, then the two verbs that answer it, on one line
+   ending in the call to action. Laid out as a block it drew a page-wide picker
+   with the confirm and the cancel wrapped underneath, so what the reader opened
+   read as three unrelated controls rather than as one question.
+   WHERE that line sits is the ROW's business and not this rule's — only the row
+   knows what else stands on it, and `.worklist-row-acts >
+   .worklist-manager-control` (worklist.row.css) gives the form its own full
+   line on the verbs' own trailing edge. This owns the inside of the form. */
 .worklist-manager-control {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--gapActions);
+}
+
+/* The picker inside it: content-sized with a floor, for the reason
+   `.worklist-owner-field` carries one — a chooser narrower than the names in it
+   is a chooser nobody can read. Full width it was the whole line and the verbs
+   had nowhere to go but under it. Handed to the control through its own
+   `className` rather than reached for with a descendant selector: a width is
+   the calling form's to state and the trigger's shape is the design
+   system's. */
+.worklist-hand-to {
+  min-inline-size: 14rem;
+  max-width: 20rem;
+}
+
+/* Below the fold the pair splits: the picker takes the line and the two verbs
+   the one under it. At 390px a 14rem control beside two buttons is neither. */
+@media (max-width: 720px) {
+  .worklist-hand-to {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+}
+
+/* TAKING ONE EXCEPTION ON, inside the table's trailing cell. The ask is a
+   caption LINE above its own verbs row rather than a bold sentence beside them:
+   in the cell it took the width the two buttons needed and pushed Cancel onto a
+   third line, so one row of the table stood twice as tall as its neighbours and
+   the verb the reader came for was the one below the fold of the cell.
+   The verbs themselves are `.cell-actions` (the design system's table-cell
+   verbs row) — right-aligned, one line, no top margin. */
+.worklist-take {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* THE NOTE'S OWN VERBS, at the trailing edge of the panel's action band with
+   the call to action last. The band lays its buttons out in a single flow and
+   leads with them, which is right for a panel whose verbs continue the body
+   above; here the reader has already read the body and is answering it, so the
+   answer belongs where every other answer on this page is — the trailing edge.
+   `justify-content` only: the band's interval and its inset stay the panel's. */
+.worklist-coach .panel-actions {
+  justify-content: flex-end;
 }
 
 /* What the page is not showing. Quiet on purpose: this is the surface reporting
@@ -42,9 +167,11 @@
   margin: 0;
 }
 
+/* No interval of its own — it stands in the queue's place in the page's stack,
+   and the stack spaces it. */
 .worklist-clear {
   color: var(--textMeta);
-  margin: var(--space-4) 0;
+  margin: 0;
 }
 
 /* The way into the pane: the rank, made pressable.
@@ -76,23 +203,27 @@
   outline-offset: 2px;
 }
 
-/* The selected row, marked on its edge rather than by a fill. The first row is
-   selected on arrival, so a fill would paint a block of colour across the top of
-   every day rather than answering which row is in hand. */
-.worklist-row-selected {
-  box-shadow: inset 3px 0 0 0 var(--accent);
+/* The person the pane is about: their chip and their name, on one line, as the
+   panel's title. The name is a link, so the pair has to sit on a baseline the
+   heading's own type sets rather than on the chip's. */
+.worklist-pane-head {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
-.worklist-pane-facts {
-  display: grid;
-  gap: var(--space-1) var(--space-3);
-  grid-template-columns: auto 1fr;
-  margin: 0;
-}
-
-.worklist-pane-facts dt,
-.worklist-pane-facts dd {
-  margin: 0;
+/* THE INSET THE PANEL PAYS FOR, on the blocks that are its direct children.
+   `PanelRow` carries the panel's own margin and these do not, so a band
+   heading, an empty band's sentence and the way to the rest of the backlog all
+   began a full --padPanel to the left of every row they stand over — three
+   lines that read as having escaped the card. They stay direct children
+   because a `PanelBody` around them would draw the panel's seam hairline
+   between a heading and the rows it heads, which is the one place panel.css
+   says a rule must never fall. */
+.worklist-band,
+.worklist-band-clear,
+.worklist-more {
+  padding-inline: var(--padPanel);
 }
 
 /* The band heading, above its own <ol>. The page draws one list per band, so
@@ -116,95 +247,6 @@
   margin: 0;
 }
 
-/* Three columns a reader runs down as three lists: the rank, the KIND of work,
-   and the work itself — which takes the whole rest of the row. The kind column
-   is fixed so the titles beside it start at one x whatever the kind says, which
-   is what lets the eye read the kinds alone and then the titles alone. The
-   verbs are NOT a fourth column: seven controls beside the work took the width
-   and left the subject, the snippet and the reasons a strip that wrapped every
-   line. They sit under the work, one wrapping line, and so does anything else
-   the row carries after it — a decision drawn inside the row, an answer. */
-.worklist-row {
-  align-items: flex-start;
-  display: grid;
-  grid-template-columns: auto var(--worklist-kind-w, 7.5rem) minmax(0, 1fr);
-  column-gap: var(--space-4);
-  row-gap: var(--space-2);
-}
-/* The verbs and anything the row carries after them — a duplicate pair drawn
-   inside it — take the full width under the work. Spelled as two selectors
-   rather than one `:nth-child`, because the wide shape below moves ONLY the
-   verbs and needs a selector of equal weight to do it.
-
-   `.worklist-row-acts` names nothing but this PLACEMENT. The row's verbs are an
-   `ActionRow`, which brings its own flow, wrapping, alignment and gap — so a
-   box declared here would be a second author of one row's layout, and which of
-   the two won would be a fact about sheet order. */
-.worklist-row > .worklist-row-acts,
-.worklist-row > :nth-child(n + 5) {
-  grid-column: 3 / -1;
-}
-
-/* A CARD WITH ROOM PUTS THE VERBS BESIDE THE WORK.
-   Under it, they left the card's right-hand half empty — measured at 812px of
-   nothing on a 1358px card, which is what a full-bleed row with all its ink on
-   the left reads as. Beside it, the work is bracketed by what can be done
-   about it and the card is used end to end.
-   The column is CAPPED: a row can carry seven verbs, and uncapped they took
-   the width and squeezed the subject and its reasons into a strip that wrapped
-   every line — which is what put them under the work in the first place. At
-   the cap they wrap among themselves instead, and the work keeps the rest. The
-   cap survives the verbs becoming an `ActionRow` — the row is still the same
-   controls in the same column — and it survives them getting NARROWER: the pin
-   and the hand-off are glyphs now, so 20rem holds more of them than it did.
-   60rem is measured rather than picked: the Brief's work column is narrower
-   than that, and there the verbs stay under the work so the subject and its
-   reasons keep the whole width. Only a queue on a page of its own is wide
-   enough to spend on both.
-   No alignment rule here. `ActionRow` holds the call to action on the trailing
-   edge itself, on every line it wraps to, and a `justify-content` of this
-   screen's would be re-spacing a row that already answers this — the one thing
-   its `className` is documented not to be for. */
-@container (min-width: 60rem) {
-  .worklist-row {
-    grid-template-columns:
-      auto
-      var(--worklist-kind-w, 7.5rem)
-      minmax(0, 1fr)
-      minmax(min-content, var(--worklist-acts-w, 20rem));
-  }
-  .worklist-row > .worklist-row-acts {
-    grid-column: 4;
-  }
-}
-
-/* The kind, as an eyebrow in the muted tone; in the warn tone on a row the day
-   put in its first band, where the kind is also the reason it is there. Wraps
-   rather than elides: "Customer waiting" is two words and both are the fact. */
-.worklist-row-kind {
-  color: var(--textMeta);
-  padding-top: var(--space-1);
-  text-wrap: balance;
-}
-.worklist-row-kind-now {
-  color: var(--warn);
-}
-
-/* On a phone the kind sits above the title rather than beside it: a 390px row
-   has no column to give a second word. */
-@media (max-width: 40rem) {
-  .worklist-row {
-    grid-template-columns: auto minmax(0, 1fr);
-  }
-  .worklist-row-kind {
-    grid-column: 2 / -1;
-    padding-top: 0;
-  }
-  .worklist-row > :nth-child(n + 3) {
-    grid-column: 2 / -1;
-  }
-}
-
 /* The rank reads as a marker beside the row rather than as part of the
    sentence, so it is set in the muted tone at a fixed width: a two-digit
    number must not shift the titles beside it.
@@ -217,116 +259,6 @@
   flex: 0 0 auto;
   min-width: var(--space-6);
   text-align: right;
-}
-
-.worklist-row-text {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  min-width: 0;
-}
-
-/* When, what it is worth, and why — three short fragments that read as one
-   line. It inherits the text column's own arrangement above the fold, so the
-   three keep the stacked shape a wide row has room for; the phone block below
-   is what turns it into a wrapping row. */
-.worklist-row-facts-line {
-  display: contents;
-}
-
-.worklist-row-title {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin: 0;
-}
-
-.worklist-row-detail,
-.worklist-row-verdict,
-.worklist-row-when,
-.worklist-row-facts,
-.worklist-row-sample,
-.worklist-row-because,
-.worklist-row-consequence,
-.worklist-row-above {
-  color: var(--textMeta);
-  margin: 0;
-}
-
-/* The standing line: a badge, who is speaking, and the sentence.
-
-   Laid out as a row rather than as prose so the badge reads as a label on the
-   sentence beside it, and wrapping so a long line falls under the badge rather
-   than pushing the row wide. The "Margince believes" half is dimmed against the
-   sentence itself: it is attribution, and the reader is here for the claim. */
-.worklist-row-verdict {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--space-1);
-}
-
-.worklist-row-verdict-source,
-.worklist-row-verdict-when {
-  color: var(--textTertiary, var(--textMeta));
-}
-
-.worklist-row-verdict-line {
-  color: var(--textPrimary);
-}
-
-/* The reasons past the first few, a tap away rather than gone.
-
-   A native <details>, so the toggle is the summary itself and keyboard and
-   screen-reader behaviour come for free. It carries no chevron and no box: a
-   row is not a section, and furniture around one caption line would cost more
-   height than the fold saves.
-
-   The marker is removed on both spellings — ::marker is the standard one and
-   ::-webkit-details-marker is what Safari still uses — because the "+N more"
-   text IS the affordance, and a triangle beside it says the same thing twice.
-   `display: inline` on the summary is what makes the reasons and the "+N more"
-   read as one sentence rather than a line with a control under it. */
-.worklist-row-because-fold > summary {
-  cursor: pointer;
-  display: inline;
-  list-style: none;
-}
-
-.worklist-row-because-fold > summary::marker,
-.worklist-row-because-fold > summary::-webkit-details-marker {
-  display: none;
-}
-
-/* The count reads as the control, so it takes the accent the rest of the line
-   does not. Underlined on hover rather than always: a caption line that is
-   permanently underlined mid-sentence reads as a broken link. */
-.worklist-row-because-more {
-  color: var(--accentText);
-}
-
-.worklist-row-because-fold > summary:hover .worklist-row-because-more {
-  text-decoration: underline;
-}
-
-/* The opened remainder sits under the line it belongs to, not indented: it is
-   more of the same sentence rather than a nested thing. */
-.worklist-row-because-fold[open] > .worklist-row-because {
-  margin-block-start: var(--space-1);
-}
-
-/* The queue is an ordered list for assistive technology and a plain stack on
-   screen: the rank number is already drawn in the row.
-   It is also the CONTAINER the row measures itself against — see the row's own
-   wide shape below. A media query would read the window, and this same queue is
-   drawn in the Brief's work column and on a page of its own, which are two
-   widths on one screen. */
-.worklist-list {
-  container-type: inline-size;
-  list-style: none;
-  margin: 0;
-  padding: 0;
 }
 
 /* The guardrail over the queue's own hiding rules. A diagnostic behind a
@@ -378,45 +310,25 @@
   grid-column: 2;
 }
 
-.worklist-hidden-shown {
-  color: var(--textMeta);
-  margin: 0;
+/* FIVE UPPERCASE HEADINGS ON A PHONE.
+   At 390px each column of the board is narrower than its own longest word, and
+   a word wider than its column breaks: "Promises due" drew as "PRO" over
+   "DUE". A heading that cannot break makes the table wider than the panel
+   instead, which is the state `TableScroll` exists to answer — it takes the
+   overflow, announces itself as a region and scrolls, and the reader gets the
+   whole heading rather than a clipped one. */
+.worklist-board-table th {
+  white-space: nowrap;
 }
 
-/* A duplicate pair, decided on the row.
-   The two sides sit side by side so a reader compares them rather than
-   scrolling between them; below 720px they stack, because two records at
-   half a phone's width are two records nobody can read. */
-.worklist-pair {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
-}
-.worklist-pair-sides {
+/* The way to the rest of the backlog: the button and, when a page was refused,
+   the line saying so beside it. */
+.worklist-more {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-3);
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.worklist-pair-side {
-  display: flex;
-  flex: 1 1 14rem;
-  flex-direction: column;
-  gap: var(--space-1);
-  align-items: flex-start;
-}
-.worklist-pair-name {
-  font-weight: 600;
-}
-
-/* Where the verbs would have been, for a reader who may not settle the pair.
-   It stands in the buttons' own place so the card still reads as one thought:
-   here are two records, and here is why nothing is being asked of you. */
-.worklist-pair-steward {
-  margin: 0;
+  padding-block: var(--space-3);
 }
 
 /* The spans behind the snooze's caret, as LINES of a list.
@@ -501,10 +413,19 @@
    * are the frame for what follows, and a caveat met after the thing it
    * qualifies is a caveat nobody reads. `order` moves the PAINT, not the tree.
    *
-   * Everything else keeps `order: 0`, so the queue, the team board and the
-   * hidden-backlog panel stay in their written order and only this one block
-   * moves past them. A rule naming each sibling would go stale the day the page
-   * grows another.
+   * THREE tiers rather than two, because the readings have somewhere to BE.
+   * `order: 1` alone put them dead last, behind a lead's read of the team and
+   * behind the receipt of what was handled — past the point a rep scrolls to at
+   * all. They belong directly under the day they describe: after the queue, the
+   * pane and what is left to review, and before everything that is not this
+   * reader's own morning.
+   *
+   * That second group is named by the BLOCKS, through `AFTER_THE_DAY`
+   * (worklist.layout.ts), rather than by a list of selectors here: a sheet
+   * naming today's trailing panels goes stale the day the page grows another,
+   * while a panel that forgets the class paints above the readings — a wrong a
+   * reader can see. Everything in the day itself keeps `order: 0` and stays in
+   * its written order.
    *
    * Held by AC-WORKLIST-SDR-01 in e2e/ac.spec.ts, which measures the first
    * row's verb against the viewport on the real route rather than in a canvas.
@@ -518,53 +439,8 @@
     order: 1;
   }
 
-  .worklist-row {
-    flex-wrap: wrap;
-  }
-
-  /* The text takes what is left of the first line, beside the rank. Wrapping
-     rather than a column direction so the RANK stays on the title's line: a
-     rank stacked above its own row is a number belonging to nothing. */
-  .worklist-row-text {
-    flex: 1 1 100%;
-    min-width: 0;
-  }
-
-  /* THE THREE SHORT FACTS SHARE A LINE at phone width.
-     Each is a fragment of a dozen characters — "due 15:00", "€40k", "due today
-     · nobody owns it" — and stacked they took three 19px lines of a row whose
-     whole ceiling is 176px. That is 38px spent on the space beside three short
-     phrases, on the one screen with none to spare.
-     They wrap when they do not fit, so a long reason still gets its own line
-     rather than being cut, and the separator makes the join readable as three
-     facts rather than one run-on sentence. */
-  .worklist-row-facts-line {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0 var(--space-2);
-    min-width: 0;
-  }
-
-  .worklist-row-facts-line > * + *::before {
-    color: var(--textMeta);
-    content: "·";
-    margin-inline-end: var(--space-2);
-  }
-
-  /* The touch floor. `--control-h-sm` rises only to 36px for a coarse pointer,
-     which is the size these verbs take — short of the 44px the sign-in door
-     and the list rows already keep. A queue worked with a thumb owes the same
-     target: a mis-hit here files somebody else's judgement on a customer's
-     message.
-     Every pressable thing INSIDE a row, not a list of the verb groups: a row
-     also carries the approval's own three decisions, and those were the
-     smallest targets on the page at 32px. A selector naming today's groups is
-     a claim about which controls exist, and it goes stale the day a row grows
-     another one. */
-  .worklist-row button,
-  .worklist-row a.btn,
-  .worklist-row .link-button {
-    min-block-size: 44px;
+  .worklist-after-day {
+    order: 2;
   }
 }
 

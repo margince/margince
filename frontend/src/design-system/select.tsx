@@ -14,6 +14,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import {
+  contentSizedPopupBox,
   type PopupFrame,
   useActiveOptionVisible,
   useAnchoredPopup,
@@ -562,13 +563,9 @@ function SelectPopup({
       // rather than only visible in a browser.
       data-motion={animate ? "in" : "none"}
       data-above={frame.above ? "true" : undefined}
-      style={{
-        left: frame.left,
-        top: frame.top,
-        bottom: frame.bottom,
-        width: frame.width,
-        maxHeight: frame.maxHeight,
-      }}
+      // The trigger's width is the list's FLOOR, not its width — see
+      // `contentSizedPopupBox` and the cap in select.css.
+      style={contentSizedPopupBox(frame)}
     >
       {/* Divs rather than ul/li: `role="listbox"` and `role="option"` are the
           semantics, and a list element that also claims an interactive role is
