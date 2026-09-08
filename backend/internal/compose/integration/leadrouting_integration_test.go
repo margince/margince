@@ -15,6 +15,7 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
@@ -182,5 +183,47 @@ func TestLeadRoutingLeavesHumanAssignmentsAlone(t *testing.T) {
 	})
 	if err != nil || runs != 1 {
 		t.Fatalf("run claim count = %d (%v), want 1", runs, err)
+	}
+}
+
+// An unroutable lead is a SKIP that says why, not a clean run that says
+// nothing.
+//
+// The reason was thrown away: Apply answered an empty result, the engine
+// recorded a successful firing, and a manager who found the lead still sitting
+// in the unassigned queue had the audit trail and nothing else to read. The
+// run row now carries the sentence.
+func TestAnUnroutableLeadRecordsWhyOnItsRun(t *testing.T) {
+	e := setupRouting(t)
+	enableLeadRouting(t, e.SearchEnv, map[string]any{
+		"owners":        []string{e.Rep1.String()},
+		"cap_per_owner": 1,
+	})
+
+	// The first lead takes the only seat's only slot.
+	if _, owner := e.routeNewLead(t, "manual"); owner == nil {
+		t.Fatal("the first lead did not route, so the second proves nothing")
+	}
+	leadID, owner := e.routeNewLead(t, "manual")
+	if owner != nil {
+		t.Fatalf("a lead routed to %v with the pool at capacity", owner)
+	}
+
+	var status string
+	var detail *string
+	// Keyed on the run's own idempotency key, which carries the LEAD and then
+	// the workspace: the engine was handed a synthetic envelope that never
+	// passed through the outbox, so a join to it finds nothing.
+	if err := e.Owner.QueryRow(context.Background(), `
+		SELECT status, detail::text FROM workflow_run
+		 WHERE handler = 'assign_lead_owner' AND idempotency_key LIKE $1`,
+		"assign_lead_owner:"+leadID.String()+"@%").Scan(&status, &detail); err != nil {
+		t.Fatalf("reading the routing run for the unroutable lead: %v", err)
+	}
+	if status != "skipped" {
+		t.Errorf("an unroutable lead's run is %q, want skipped — it neither applied nor failed", status)
+	}
+	if detail == nil || !strings.Contains(*detail, "capacity") {
+		t.Errorf("the run's detail is %v, want the capacity reason a manager reads", detail)
 	}
 }

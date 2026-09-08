@@ -168,12 +168,22 @@ func (e *WorkflowEngine) runOne(ctx context.Context, h workflow.Handler, ev work
 	if recordErr := e.recordApplyOutcome(ctx, h, ev, result, applyErr); recordErr != nil {
 		return errors.Join(applyErr, recordErr)
 	}
-	if applyErr != nil && !errors.Is(applyErr, apperrors.ErrRequiresApproval) && !errors.Is(applyErr, ErrNoNotificationTransport) {
-		// A staged 🟡 is a healthy suspension, and a no-transport notify is
-		// the wiring-defect guard's honest skip (compose wires the durable
-		// notice transport; only a composition that forgot the seam takes
-		// it) — neither is a dispatch failure; a real apply failure still
-		// surfaces after its record committed.
+	var declinedApply *workflow.DeclinedError
+	if applyErr != nil && !errors.Is(applyErr, apperrors.ErrRequiresApproval) &&
+		!errors.Is(applyErr, ErrNoNotificationTransport) && !errors.As(applyErr, &declinedApply) {
+		// A staged 🟡 is a healthy suspension; a no-transport notify is the
+		// wiring-defect guard's honest skip (compose wires the durable notice
+		// transport, so only a composition that forgot the seam takes it); and
+		// a DECLINED apply is the handler saying it looked and there was
+		// nothing to do. None is a dispatch failure.
+		//
+		// The declined arm matters most here: returning it would leave the bus
+		// entry unacked and redelivering forever — no dead-letter store yet —
+		// poisoning every sibling handler dispatched off the same event. That
+		// is the reason the Plan path already swallows its own decline, and
+		// the reason is the same on this side.
+		//
+		// A real apply failure still surfaces, after its record committed.
 		return applyErr
 	}
 	return nil
@@ -228,6 +238,7 @@ func withSendingOwner(ctx context.Context, ev workflow.Event) context.Context {
 func (e *WorkflowEngine) recordApplyOutcome(ctx context.Context, h workflow.Handler, ev workflow.Event, result workflow.RunResult, applyErr error) error {
 	return e.db.Tx(ctx, func(tx pgx.Tx) error {
 		var staged *workflow.StagedApprovalError
+		var declinedApply *workflow.DeclinedError
 		switch {
 		case errors.As(applyErr, &staged):
 			// The staging pointer rides the detail column's approval_id
@@ -273,6 +284,20 @@ func (e *WorkflowEngine) recordApplyOutcome(ctx context.Context, h workflow.Hand
 			// Match/Plan condition-declined skip (recordSkip) and a real
 			// 'failed' — nothing went wrong with the firing itself.
 			detail, err := reasonDetail("no notification transport configured")
+			if err != nil {
+				return err
+			}
+			_, err = tx.Exec(ctx, `
+				UPDATE workflow_run SET status = 'skipped', detail = $3
+				WHERE handler = $1 AND idempotency_key = $2`, h.Spec().Name, runKey(h, ev), detail)
+			return err
+		case errors.As(applyErr, &declinedApply):
+			// The handler looked and found nothing to act on — an unroutable
+			// lead, say, where every eligible owner is at capacity. A skip
+			// with its reason on the run, not a failure: nothing went wrong,
+			// and a reader asking why the lead is still unassigned gets the
+			// answer here rather than an empty successful run.
+			detail, err := reasonDetail(declinedApply.Reason)
 			if err != nil {
 				return err
 			}
