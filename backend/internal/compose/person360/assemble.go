@@ -191,10 +191,10 @@ type section struct {
 func (s *Service) sections(personID ids.PersonID, now time.Time, opts AssembleOptions) []section {
 	return []section{
 		{name: crmcontracts.Person360SectionsOmittedStrength, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
-			return s.strengthSection(ctx, tx, personID, now, out)
+			return s.strengthSection(ctx, tx, personID, now, opts.ProjectID, out)
 		}},
 		{name: crmcontracts.Person360SectionsOmittedRelationshipChanges, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
-			return s.relationshipChangesSection(ctx, tx, personID, now, out)
+			return s.relationshipChangesSection(ctx, tx, personID, now, opts.ProjectID, out)
 		}},
 		{name: crmcontracts.Person360SectionsOmittedEmployments, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
 			return s.employmentsSection(ctx, tx, personID, out)

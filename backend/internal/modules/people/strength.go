@@ -100,7 +100,7 @@ func (s *Store) PersonStrength(ctx context.Context, personID ids.PersonID, now t
 		if err := auth.EnsureVisible(ctx, tx, "person", personID.UUID); err != nil {
 			return err
 		}
-		return strengthInputs(ctx, tx, personID, now, &out)
+		return strengthInputs(ctx, tx, personID, now, nil, &out)
 	})
 	if err != nil {
 		return RelationshipStrength{}, err
@@ -111,7 +111,10 @@ func (s *Store) PersonStrength(ctx context.Context, personID ids.PersonID, now t
 
 // PersonStrengthTx is PersonStrength inside a caller-opened transaction —
 // the composite record read. Same gates in the same order.
-func (s *Store) PersonStrengthTx(ctx context.Context, tx pgx.Tx, personID ids.PersonID, now time.Time) (RelationshipStrength, error) {
+func (s *Store) PersonStrengthTx(
+	ctx context.Context, tx pgx.Tx, personID ids.PersonID,
+	now time.Time, within *ids.ProjectID,
+) (RelationshipStrength, error) {
 	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
 		return RelationshipStrength{}, err
 	}
@@ -119,7 +122,7 @@ func (s *Store) PersonStrengthTx(ctx context.Context, tx pgx.Tx, personID ids.Pe
 		return RelationshipStrength{}, err
 	}
 	var out RelationshipStrength
-	if err := strengthInputs(ctx, tx, personID, now, &out); err != nil {
+	if err := strengthInputs(ctx, tx, personID, now, within, &out); err != nil {
 		return RelationshipStrength{}, err
 	}
 	out.finish(now)
@@ -201,7 +204,10 @@ type ContactStrength struct {
 //
 // The results come back in the order the contacts sort by id, so a page
 // built from them is deterministic.
-func StrengthForOrgContacts(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, now time.Time) ([]ContactStrength, error) {
+func StrengthForOrgContacts(
+	ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID,
+	now time.Time, within *ids.ProjectID,
+) ([]ContactStrength, error) {
 	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
 		return nil, err
 	}
@@ -245,7 +251,7 @@ func StrengthForOrgContacts(ctx context.Context, tx pgx.Tx, orgID ids.Organizati
 	if len(contacts) == 0 {
 		return nil, nil
 	}
-	return contactStrengths(ctx, tx, contacts, now, nil)
+	return contactStrengths(ctx, tx, contacts, now, nil, within)
 }
 
 // personScopePredicate is the caller's person row-scope predicate for a query
@@ -322,7 +328,7 @@ func strengthForPeopleAt(ctx context.Context, tx pgx.Tx, people []ids.PersonID, 
 	if len(visible) == 0 {
 		return nil, nil
 	}
-	return contactStrengths(ctx, tx, visible, now, until)
+	return contactStrengths(ctx, tx, visible, now, until, nil)
 }
 
 // contactStrengths folds the §4 inputs for a whole contact set out of ONE
@@ -330,8 +336,21 @@ func strengthForPeopleAt(ctx context.Context, tx pgx.Tx, people []ids.PersonID, 
 // deliberately NOT collected here: they are the person page's receipts, and
 // carrying up to relStrengthEvidenceCap of them per contact would make an
 // account list payload grow with its history rather than its contact count.
-func contactStrengths(ctx context.Context, tx pgx.Tx, contacts []ids.PersonID, now time.Time, until *time.Time) ([]ContactStrength, error) {
-	windowStart := now.AddDate(0, 0, -relStrengthWindowDays)
+func contactStrengths(
+	ctx context.Context, tx pgx.Tx, contacts []ids.PersonID,
+	now time.Time, until *time.Time, within *ids.ProjectID,
+) ([]ContactStrength, error) {
+	args := []any{contacts, now.AddDate(0, 0, -relStrengthWindowDays), until}
+	// BOTH aliases, or the score and the message it cites answer different
+	// questions: `a` is what the counts are computed over and `i` is the
+	// citation the card shows, so a page narrowed to one project could report a
+	// number from that project beside a message from another.
+	scoreWithin, citedWithin := "", ""
+	if within != nil {
+		args = append(args, *within)
+		scoreWithin = " AND " + activityWithinProject("a", len(args))
+		citedWithin = " AND " + activityWithinProject("i", len(args))
+	}
 	rows, err := tx.Query(ctx, `
 		SELECT l.person_id,
 		       max(a.occurred_at),
@@ -344,7 +363,7 @@ func contactStrengths(ctx context.Context, tx pgx.Tx, contacts []ids.PersonID, n
 		          JOIN activity_link il ON il.activity_id = i.id AND il.person_id = l.person_id
 		         WHERE i.direction = 'inbound' AND i.kind IN `+strengthKinds+`
 		           AND i.archived_at IS NULL AND i.occurred_at >= $2`+auth.AudienceWorkspaceOnly("i")+`
-		           AND ($3::timestamptz IS NULL OR i.occurred_at <= $3)
+		           AND ($3::timestamptz IS NULL OR i.occurred_at <= $3)`+citedWithin+`
 		         ORDER BY i.occurred_at DESC, i.id DESC
 		         LIMIT 1)
 		FROM activity a
@@ -352,8 +371,8 @@ func contactStrengths(ctx context.Context, tx pgx.Tx, contacts []ids.PersonID, n
 		WHERE l.person_id = ANY($1) AND a.kind IN `+strengthKinds+` AND a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a")+`
 		  -- NULL means no upper bound, so the live score is unchanged; an
 		  -- as-of read passes the instant it is asking about.
-		  AND ($3::timestamptz IS NULL OR a.occurred_at <= $3)
-		GROUP BY l.person_id`, contacts, windowStart, until)
+		  AND ($3::timestamptz IS NULL OR a.occurred_at <= $3)`+scoreWithin+`
+		GROUP BY l.person_id`, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -387,8 +406,22 @@ func contactStrengths(ctx context.Context, tx pgx.Tx, contacts []ids.PersonID, n
 	return out, nil
 }
 
-func strengthInputs(ctx context.Context, tx pgx.Tx, personID ids.PersonID, now time.Time, out *RelationshipStrength) error {
+func strengthInputs(
+	ctx context.Context, tx pgx.Tx, personID ids.PersonID,
+	now time.Time, within *ids.ProjectID, out *RelationshipStrength,
+) error {
 	windowStart := now.AddDate(0, 0, -relStrengthWindowDays)
+	foldArgs := []any{personID, windowStart}
+	// Every alias the fold reads, for the reason contactStrengths gives: the
+	// counts, the cited message and the contributing ids are one reading, and
+	// narrowing some of them would report a number over one body of work with
+	// evidence from another.
+	scoreWithin, citedWithin := "", ""
+	if within != nil {
+		foldArgs = append(foldArgs, *within)
+		scoreWithin = " AND " + activityWithinProject("a", len(foldArgs))
+		citedWithin = " AND " + activityWithinProject("i", len(foldArgs))
+	}
 
 	// One pass over the person's qualifying interactions: overall last
 	// touch, the 90-day direction counts, and the contributing ids.
@@ -402,24 +435,30 @@ func strengthInputs(ctx context.Context, tx pgx.Tx, personID ids.PersonID, now t
 		       (SELECT i.id FROM activity i
 		          JOIN activity_link il ON il.activity_id = i.id AND il.person_id = $1
 		         WHERE i.direction = 'inbound' AND i.kind IN `+strengthKinds+`
-		           AND i.archived_at IS NULL AND i.occurred_at >= $2`+auth.AudienceWorkspaceOnly("i")+`
+		           AND i.archived_at IS NULL AND i.occurred_at >= $2`+auth.AudienceWorkspaceOnly("i")+citedWithin+`
 		         ORDER BY i.occurred_at DESC, i.id DESC
 		         LIMIT 1)
 		FROM activity a
 		JOIN activity_link l ON l.activity_id = a.id AND l.person_id = $1
-		WHERE a.kind IN `+strengthKinds+` AND a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a"),
-		personID, windowStart).Scan(&out.LastInteraction, &out.InteractionCount90d,
+		WHERE a.kind IN `+strengthKinds+` AND a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a")+scoreWithin,
+		foldArgs...).Scan(&out.LastInteraction, &out.InteractionCount90d,
 		&out.Inbound90d, &out.Outbound90d, &out.LastInbound, &out.LastOutbound,
 		&out.LastInboundActivity); err != nil {
 		return err
 	}
 
+	citeArgs := []any{personID, windowStart, relStrengthEvidenceCap}
+	contributingWithin := ""
+	if within != nil {
+		citeArgs = append(citeArgs, *within)
+		contributingWithin = " AND " + activityWithinProject("a", len(citeArgs))
+	}
 	rows, err := tx.Query(ctx, `
 		SELECT a.id FROM activity a
 		JOIN activity_link l ON l.activity_id = a.id AND l.person_id = $1
-		WHERE a.kind IN `+strengthKinds+` AND a.archived_at IS NULL AND a.occurred_at >= $2`+auth.AudienceWorkspaceOnly("a")+`
+		WHERE a.kind IN `+strengthKinds+` AND a.archived_at IS NULL AND a.occurred_at >= $2`+auth.AudienceWorkspaceOnly("a")+contributingWithin+`
 		ORDER BY a.occurred_at DESC
-		LIMIT $3`, personID, windowStart, relStrengthEvidenceCap)
+		LIMIT $3`, citeArgs...)
 	if err != nil {
 		return err
 	}

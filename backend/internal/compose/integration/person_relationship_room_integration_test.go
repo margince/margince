@@ -720,7 +720,7 @@ func personChanges(ctx context.Context, t *testing.T, e *Env, personID ids.Perso
 	var out []relstrength.Change
 	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
-		out, err = e.People.PersonRelationshipChangesTx(ctx, tx, personID, roomFixedNow)
+		out, err = e.People.PersonRelationshipChangesTx(ctx, tx, personID, roomFixedNow, nil)
 		return err
 	})
 	return out, err
