@@ -89,6 +89,11 @@ func nativeOnlyAgentTools(anchor ids.UUID) map[string]string {
 		// that run_report is refused here, so a caller taught the filter and
 		// grouping names would write a correct plan and be refused for the verb.
 		"describe_report_vocabulary": `{}`,
+		// The analytics vocabulary, guarded for the same reason with one
+		// difference: its names ARE derived per seat, but what decides the
+		// guard is still the verb — the typed analytics engine is refused
+		// here, so the field list would describe queries nothing can run.
+		"describe_analytics_vocabulary": `{}`,
 		// The ranked sweep: the lexical and vector indexes hold no mirrored
 		// content, so an unguarded call answers an empty page — a believable
 		// "there is nothing like that here" for a workspace full of records.

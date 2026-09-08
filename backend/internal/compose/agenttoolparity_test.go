@@ -193,6 +193,14 @@ var composedIntents = map[string]bool{
 	// returns no records, and the grammar it names is the engine's own
 	// compile-time list, so it names nothing about a workspace at all.
 	"describe_report_blocks": true,
+	// describe_analytics_vocabulary answers the document
+	// margince://schema/analytics publishes, for the same caller and the same
+	// reason as the two doors above. It backs no REST operation:
+	// `runAnalyticsQuery` runs a query, and no operation answers what a query
+	// may SAY. Read-only, and the document is derived per caller, narrowed to
+	// what this principal may already read — so it names nothing a caller
+	// could not reach by asking.
+	"describe_analytics_vocabulary": true,
 	// search_context ranks across record types through the retrieval index,
 	// which no single list operation is: `GET /search` is the lexical half
 	// alone and answers no vector lane, and the records the sweep names are

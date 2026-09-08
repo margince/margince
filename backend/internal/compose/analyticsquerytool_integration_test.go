@@ -13,6 +13,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -81,6 +82,26 @@ func TestTheAnalyticsToolAndTheHTTPEngineServeOneAnswer(t *testing.T) {
 	}
 	if twin.SchemaVersion != got.SchemaVersion {
 		t.Errorf("schema versions differ: tool %q, engine %q", got.SchemaVersion, twin.SchemaVersion)
+	}
+}
+
+// An unknown population is refused WITH the allowed set — the tool's own
+// description promises it, and a tools-only caller has no other route to the
+// names: the schema lives at a resource such a client cannot open, so a
+// refusal that only points there is a dead end.
+func TestAnUnknownPopulationIsRefusedWithTheAllowedSet(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+	run := analyticsQueryToolRunner(e.DB())
+	_, err := run(ctx, json.RawMessage(`{"entity":"deal","measures":[{"fn":"count"}]}`))
+	if err == nil {
+		t.Fatal("a population the schema does not carry was answered")
+	}
+	// The refusal must name at least one population that WOULD work, proved
+	// against the entity the passing tests above ask about.
+	if !strings.Contains(err.Error(), "deals-by-stage") {
+		t.Errorf("the refusal names no allowed population, so a tools-only caller "+
+			"cannot recover from it: %v", err)
 	}
 }
 

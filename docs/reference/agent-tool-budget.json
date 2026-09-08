@@ -4,10 +4,10 @@
   "per_agent_listing_budget": 23210,
   "whole_catalog_floor": 28672,
   "catalog": {
-    "tools": 74,
+    "tools": 75,
     "system_frame_tokens": 353,
-    "tokens": 22333,
-    "median_tool_tokens": 264,
+    "tokens": 22631,
+    "median_tool_tokens": 266,
     "mean_tool_tokens": 301
   },
   "agents": [
@@ -115,12 +115,12 @@
       "tokens": 484
     },
     {
-      "name": "create_record",
-      "tokens": 473
+      "name": "run_analytics_query",
+      "tokens": 476
     },
     {
-      "name": "run_analytics_query",
-      "tokens": 465
+      "name": "create_record",
+      "tokens": 473
     },
     {
       "name": "advance_deal",
@@ -177,6 +177,10 @@
     {
       "name": "merge_records",
       "tokens": 292
+    },
+    {
+      "name": "describe_analytics_vocabulary",
+      "tokens": 286
     },
     {
       "name": "catch_me_up_on",
