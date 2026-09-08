@@ -11,6 +11,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -343,5 +344,98 @@ func TestASubResourcePatchProbesTheRecordItWrites(t *testing.T) {
 	if rec.Code != http.StatusForbidden {
 		t.Errorf("status = %d, want %d (approval_required) — an agent silently overwriting a human-typed "+
 			"to-do is the §2.1 protection this test exists to hold", rec.Code, http.StatusForbidden)
+	}
+}
+
+// failingApprovals is the staging seam refusing after the auto-execute half has
+// already committed — the race the split cannot design away, because approvals
+// resolves its own target version inside the staging transaction and that
+// transaction can only run after the write it is staged against.
+type failingApprovals struct{ capturingApprovals }
+
+var errStagingRefused = errors.New("the record's authority moved between the two writes")
+
+func (failingApprovals) StageCall(context.Context, agents.StageRequest) (ids.ApprovalID, bool, error) {
+	return ids.ApprovalID{}, false, errStagingRefused
+}
+
+// A refusal that follows a committed write says so, so the key is not given
+// back.
+//
+// The split writes the agent-owned fields and then stages the human-owned
+// residue. A staging failure answers a refusal for a request that already
+// wrote, and the idempotency middleware reads every non-2xx the same way: it
+// releases the claim. The retry the caller is entitled to make then runs the
+// applied half a second time under the same key, which is the one thing the key
+// exists to prevent.
+//
+// So the handler reports the write, and this asserts the report — the middleware
+// is a layer up and settleClaim's own case covers what it does with it.
+func TestARefusalAfterTheAppliedHalfReportsThatItWrote(t *testing.T) {
+	orgID := ids.NewV7()
+	pol := agentPolicy{Op: "updateOrganization", Access: accessTool, Tool: "update_record", RecordType: recordTypeOrganization}
+	body := []byte(`{"display_name":"Renamed GmbH","industry":"software"}`)
+	req := patchRequest("/v1/organizations", orgID, body)
+	ctx, effect := withWriteEffect(req.Context())
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+	// The agent-owned half commits, exactly as the real handler does.
+	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		if _, err := w.Write([]byte(`{"id":"` + orgID.String() + `","version":2}`)); err != nil {
+			t.Fatalf("writing the applied half: %v", err)
+		}
+	})
+
+	admitAgentCall(rec, req, next, admissionOutcome{
+		staging: &failingApprovals{}, ownership: mixedHumanOwned{conflict: "display_name"},
+		commands: restCommandDeps{records: seamRecord{}}, pol: pol, body: body,
+		registry: agents.NewRegistry(nil, auth.NewGate(fullSeat{})),
+	})
+
+	if rec.Code >= 200 && rec.Code <= 299 {
+		t.Fatalf("a failed staging answered %d — the caller is told the whole patch landed", rec.Code)
+	}
+	if !effect.committed {
+		t.Error("the refusal did not report that it had written, so the idempotency layer gives the key back " +
+			"and the retry runs the applied half a second time under it")
+	}
+	// And the sentence still names what did land, which is the half a caller
+	// cannot discover any other way.
+	if !strings.Contains(rec.Body.String(), "display_name") {
+		t.Errorf("the refusal reads %q and does not name the withheld fields", rec.Body.String())
+	}
+}
+
+// The control, one outcome apart. Without it the case above would pass against
+// a door that reported a write on every path, which would strand the key of
+// every ordinary refusal — a caller unable to retry a call that changed nothing.
+func TestARefusalBeforeAnythingIsWrittenReportsNoWrite(t *testing.T) {
+	orgID := ids.NewV7()
+	pol := agentPolicy{Op: "updateOrganization", Access: accessTool, Tool: "update_record", RecordType: recordTypeOrganization}
+	body := []byte(`{"display_name":"Renamed GmbH","industry":"software"}`)
+	req := patchRequest("/v1/organizations", orgID, body)
+	ctx, effect := withWriteEffect(req.Context())
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+	next := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		t.Error("the handler ran for a call this door refuses before the write")
+	})
+
+	// An externally-held record: refused by the target resolver, ahead of the
+	// auto-execute half.
+	admitAgentCall(rec, req, next, admissionOutcome{
+		staging: &capturingApprovals{}, ownership: mixedHumanOwned{conflict: "display_name"},
+		commands: restCommandDeps{records: mirroredRecord{}}, pol: pol, body: body,
+		registry: agents.NewRegistry(nil, auth.NewGate(fullSeat{})),
+	})
+
+	if rec.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("status = %d, want 422", rec.Code)
+	}
+	if effect.committed {
+		t.Error("a refusal that wrote nothing reported a write, which strands the caller's idempotency key " +
+			"on a call they are entitled to retry unchanged")
 	}
 }

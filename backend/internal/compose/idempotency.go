@@ -120,12 +120,16 @@ func idempotency(pool *pgxpool.Pool, probes map[string]replayProbe) func(http.Ha
 			}
 
 			rec := &replayRecorder{ResponseWriter: w, status: http.StatusOK}
-			next.ServeHTTP(rec, r)
+			// The handler is given somewhere to say that it wrote before it
+			// refused. Read after it returns, because a refusal that changed
+			// something must not give the key back — see settleClaim.
+			ctx, effect := withWriteEffect(r.Context())
+			next.ServeHTTP(rec, r.WithContext(ctx))
 			// Zero records: this door charges no read bound, so its claims carry
 			// no cost to record (0198).
-			if err := settleClaim(r.Context(), pool, actor.ID, key, endpoint,
-				rec.status, rec.buf.String(), rec.Header().Get("Content-Type"), 0); err != nil {
-				slog.ErrorContext(r.Context(), "idempotency claim settlement failed", "err", err)
+			if err := settleClaim(ctx, pool, actor.ID, key, endpoint,
+				rec.status, rec.buf.String(), rec.Header().Get("Content-Type"), 0, effect.committed); err != nil {
+				slog.ErrorContext(ctx, "idempotency claim settlement failed", "err", err)
 			}
 		})
 	}
@@ -168,13 +172,12 @@ func writeClaimOutcome(w http.ResponseWriter, r *http.Request, pool *pgxpool.Poo
 	case claimFresh:
 		// Unreachable: the caller returns early only for a non-fresh claim.
 	case claimFailed:
-		// The tool surface records a run that produced no result
-		// (agentidempotency.go); this middleware releases the claim instead, so
-		// REST does not write one today. It ANSWERS anyway rather than falling
-		// through: an empty case here returns without writing, and net/http
-		// then sends a bare 200 with no body — a silent success for a call that
-		// failed. The table is shared, so "no door writes this yet" is a fact
-		// about today, not a guarantee.
+		// Reached by two writers now: the tool surface records a run that
+		// produced no result (agentidempotency.go), and this middleware records
+		// a refusal whose handler had already committed (settleClaim). It
+		// ANSWERS rather than falling through: an empty case here returns
+		// without writing, and net/http then sends a bare 200 with no body — a
+		// silent success for a call that failed.
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusConflict,
 			Code:   "idempotency_key_conflict",
@@ -320,9 +323,10 @@ func resolveClaimRow(ctx context.Context, tx pgx.Tx, principalID, key, endpoint,
 	case status == nil:
 		return claimInProgress, storedResponse{}, nil
 	case *status < 200 || *status >= 300:
-		// A RECORDED failure — the attempt reached its handler and produced no
-		// result. Only the tool surface writes one (failClaim); the middleware
-		// releases instead, so a REST row is never in this state. It is not a
+		// A RECORDED failure — the attempt reached its handler and answered a
+		// refusal it could not take back. The tool surface writes one for a run
+		// that produced no result; REST writes one when a handler reported that
+		// it had already committed before refusing (settleClaim). It is not a
 		// replay and not a free key: whether the effect landed is exactly what
 		// the recording could not determine, so the body carries the reason and
 		// the caller decides.
@@ -334,16 +338,37 @@ func resolveClaimRow(ctx context.Context, tx pgx.Tx, principalID, key, endpoint,
 	}
 }
 
-// settleClaim records a 2xx outcome for replay and releases the claim on
-// anything else (see the package comment for why failures are not
-// replayed).
+// settleClaim records a 2xx outcome for replay, and decides what a refusal
+// means from whether the request WROTE before it answered one.
+//
+// A refusal that changed nothing gives the key back: the caller fixes the call
+// and retries, which is the whole point of releasing it. A refusal that changed
+// something must not — the retry would run the applied half a second time under
+// the same key, which is precisely what the key exists to prevent. Such a claim
+// is RECORDED instead, and the next attempt under it meets the claimFailed
+// answer: this request failed after it had already started, check whether it
+// took effect before retrying under a new key. That is the honest sentence,
+// because whether the effect landed is exactly what nobody here can determine.
+//
+// Only one door reports a write today (the per-field split's staging half), so
+// the released path is still what every other refusal takes.
 func settleClaim(ctx context.Context, pool *pgxpool.Pool, principalID, key, endpoint string,
-	status int, body, contentType string, records int,
+	status int, body, contentType string, records int, wrote bool,
 ) error {
-	if status < 200 || status >= 300 {
+	if claimIsReleased(status, wrote) {
 		return releaseClaim(ctx, pool, principalID, key, endpoint)
 	}
 	return recordClaimOutcome(ctx, pool, principalID, key, endpoint, status, body, contentType, records)
+}
+
+// claimIsReleased is the rule a refusal is judged by: a key goes back only for
+// one that changed nothing.
+//
+// A function rather than an inline condition because it is the whole of what
+// settleClaim decides, and a case can then state it without a database — the
+// two arms it chooses between are each already held.
+func claimIsReleased(status int, wrote bool) bool {
+	return (status < 200 || status >= 300) && !wrote
 }
 
 // recordClaimOutcome writes a settled response onto a held claim, whatever that
