@@ -12,6 +12,9 @@
 // Tables owned: deal, deal_stage_history, deal_forecast_history, pipeline,
 // stage, stage_exit_criterion, deal_stage_evidence,
 // stage_progression_outcome, stage_progression_policy, fx_rate,
+// close_date_run, close_date_run_member (the nightly close-date pass and the
+// eligible set frozen at its start, so a pass resumes where it stopped and can
+// say how much of that set it covered),
 // product, offer, offer_line_item, offer_template (the E03.16-.20 offer
 // engine: rate-card products, versioned deal-bound offers with derived money
 // totals).
