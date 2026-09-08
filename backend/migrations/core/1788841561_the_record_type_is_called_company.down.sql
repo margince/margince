@@ -6,6 +6,24 @@
 -- file was found to be in the wrong order.
 SET LOCAL lock_timeout = '3s';
 
+-- 11. the open vocabularies, back
+UPDATE role
+   SET permissions = (permissions - 'company')
+                     || jsonb_build_object('organization', permissions -> 'company')
+ WHERE permissions ? 'company';
+
+UPDATE field_mask SET object = 'organization' WHERE object = 'company';
+
+UPDATE approval SET kind = 'org_name_promotion' WHERE kind = 'company_name_promotion';
+UPDATE approval_autonomy_policy SET kind = 'org_name_promotion' WHERE kind = 'company_name_promotion';
+
+UPDATE webhook_subscription
+   SET event_types = (
+         SELECT array_agg(replace(t, 'company.', 'organization.') ORDER BY t)
+           FROM unnest(event_types) AS t
+       )
+ WHERE EXISTS (SELECT 1 FROM unnest(event_types) AS t WHERE t LIKE 'company.%');
+
 -- 10. the values, the predicate and the two sentences, back.
 --
 -- First here, last in the up file: it names the renamed index and column, which
@@ -20,6 +38,10 @@ CREATE UNIQUE INDEX uq_site_read_company_inflight ON site_read (company_id, seed
 COMMENT ON COLUMN deal.partner_attribution IS
   'What the partner named by partner_org_id did for this deal: sourced (they brought it) or influenced (they helped one we already had). Commission accrues on sourced only.';
 
+-- One thing this does not put back: the comment below loses the retired
+-- specification number the baseline wrote beside the decision record. A new
+-- file may not carry one — the document it names no longer exists, so a
+-- reader meeting it has no move — and the surviving record still labels it.
 COMMENT ON COLUMN company.classification IS
   'RETIRED (ADR-0079) — superseded by organization.lifecycle + organization_relationship_type. Written by nothing; dropped in a follow-up migration.';
 

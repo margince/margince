@@ -73,7 +73,7 @@ func claimStatus(t *testing.T, srv *httptest.Server, body string) int {
 // A claim names what the installation is measured in — the form asks for both,
 // and the server refuses a claim that leaves either out.
 func claimBody(token string) string {
-	return `{"setup_token":"` + token + `","company_name":"Claimed Co","timezone":"Europe/Berlin",` +
+	return `{"setup_token":"` + token + `","workspace_name":"Claimed Co","timezone":"Europe/Berlin",` +
 		`"base_currency":"EUR","base_language":"en",` +
 		`"admin_email":"ops@claimed.test","admin_name":"Ops","admin_password":"a bootstrap password!"}`
 }
@@ -152,7 +152,7 @@ func TestAClaimWithTheWrongTokenIsUnauthorized(t *testing.T) {
 	}
 	// A missing token is the same answer, not a different one: distinguishing
 	// them tells an unauthenticated caller whether guessing is worthwhile.
-	if got := claimStatus(t, srv, `{"company_name":"X"}`); got != http.StatusUnauthorized {
+	if got := claimStatus(t, srv, `{"workspace_name":"X"}`); got != http.StatusUnauthorized {
 		t.Errorf("an absent token answered %d, want 401", got)
 	}
 }
@@ -167,7 +167,7 @@ func TestAWrongTokenIsRefusedBeforeTheBodyIsJudged(t *testing.T) {
 
 	// A body that would fail validation twice over, presented with a token that
 	// does not match. The answer must be about the TOKEN.
-	nonsense := `{"setup_token":"not-the-token","company_name":"X","timezone":"Europe/Berlin",` +
+	nonsense := `{"setup_token":"not-the-token","workspace_name":"X","timezone":"Europe/Berlin",` +
 		`"base_currency":"EURO","base_language":"fr",` +
 		`"admin_email":"ops@x.test","admin_name":"Ops","admin_password":"a bootstrap password!"}`
 	if got := claimStatus(t, srv, nonsense); got != http.StatusUnauthorized {
@@ -186,12 +186,12 @@ func TestAClaimWithoutABasisIsRefused(t *testing.T) {
 	// now asked on the form, so a claim that omits either is a client that
 	// stopped asking — and defaulting it would put this installation
 	// permanently on a currency nobody chose.
-	noLanguage := `{"setup_token":"` + token + `","company_name":"Silent Co","timezone":"Europe/Berlin",` +
+	noLanguage := `{"setup_token":"` + token + `","workspace_name":"Silent Co","timezone":"Europe/Berlin",` +
 		`"base_currency":"EUR","admin_email":"ops@silent.test","admin_name":"Ops","admin_password":"a bootstrap password!"}`
 	if got := claimStatus(t, srv, noLanguage); got != http.StatusUnprocessableEntity {
 		t.Errorf("a claim naming no base language answered %d, want 422", got)
 	}
-	noCurrency := `{"setup_token":"` + token + `","company_name":"Silent Co","timezone":"Europe/Berlin",` +
+	noCurrency := `{"setup_token":"` + token + `","workspace_name":"Silent Co","timezone":"Europe/Berlin",` +
 		`"base_language":"en","admin_email":"ops@silent.test","admin_name":"Ops","admin_password":"a bootstrap password!"}`
 	if got := claimStatus(t, srv, noCurrency); got != http.StatusUnprocessableEntity {
 		t.Errorf("a claim naming no base currency answered %d, want 422", got)
@@ -207,7 +207,7 @@ func TestAClaimWithoutABasisIsRefused(t *testing.T) {
 func TestAClaimedInstallationKeepsTheBasisItWasGiven(t *testing.T) {
 	srv, token, owner := unprovisionedServerWithOwner(t)
 
-	body := `{"setup_token":"` + token + `","company_name":"Zurich Co","timezone":"Europe/Zurich",` +
+	body := `{"setup_token":"` + token + `","workspace_name":"Zurich Co","timezone":"Europe/Zurich",` +
 		`"base_currency":"CHF","base_language":"de",` +
 		`"admin_email":"ops@zurich.test","admin_name":"Ops","admin_password":"a bootstrap password!"}`
 	if got := claimStatus(t, srv, body); got != http.StatusCreated {
@@ -232,7 +232,7 @@ func TestAClaimedInstallationKeepsTheBasisItWasGiven(t *testing.T) {
 func TestAClaimWithAWeakPasswordIsRefusedAsValidation(t *testing.T) {
 	srv, token := unprovisionedServer(t)
 
-	body := `{"setup_token":"` + token + `","company_name":"Weak Co","timezone":"Europe/Berlin",` +
+	body := `{"setup_token":"` + token + `","workspace_name":"Weak Co","timezone":"Europe/Berlin",` +
 		`"base_currency":"EUR","base_language":"en",` +
 		`"admin_email":"ops@weak.test","admin_name":"Ops","admin_password":""}`
 	if got := claimStatus(t, srv, body); got != http.StatusUnprocessableEntity {

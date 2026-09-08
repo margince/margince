@@ -823,3 +823,32 @@ COMMENT ON COLUMN deal.partner_attribution IS
 
 COMMENT ON COLUMN company.classification IS
   'RETIRED (ADR-0079) — superseded by company.lifecycle + company_relationship_type. Written by nothing; dropped in a follow-up migration.';
+
+-- 11. the vocabularies stored WITHOUT a CHECK to enumerate them.
+--
+-- Section 7 found the stored word wherever a CHECK named it. These columns
+-- carry the same word under an OPEN vocabulary — a role's permission map is
+-- keyed by object, and a role map is the one
+-- core owns — so nothing in the schema says 'company' is now among the
+-- values, and nothing would have failed until a grant stopped matching a route.
+
+-- A role's permissions are keyed by object name.
+UPDATE role
+   SET permissions = (permissions - 'organization')
+                     || jsonb_build_object('company', permissions -> 'organization')
+ WHERE permissions ? 'organization';
+
+UPDATE field_mask SET object = 'company' WHERE object = 'organization';
+
+-- The approval and its autonomy policy name the same kind.
+UPDATE approval SET kind = 'company_name_promotion' WHERE kind = 'org_name_promotion';
+UPDATE approval_autonomy_policy SET kind = 'company_name_promotion' WHERE kind = 'org_name_promotion';
+
+-- A subscription names the streams it wants, and the relay now publishes
+-- company.*. Left alone, a subscription would go quiet with nothing reporting it.
+UPDATE webhook_subscription
+   SET event_types = (
+         SELECT array_agg(replace(t, 'organization.', 'company.') ORDER BY t)
+           FROM unnest(event_types) AS t
+       )
+ WHERE EXISTS (SELECT 1 FROM unnest(event_types) AS t WHERE t LIKE 'organization.%');
