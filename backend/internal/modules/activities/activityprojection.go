@@ -92,6 +92,7 @@ var activityProjection = []activityColumn{
 	{"a.source_system", func(s *activityScan) any { return &s.a.SourceSystem }},
 	{"a.source_id", func(s *activityScan) any { return &s.a.SourceId }},
 	{"a.source", func(s *activityScan) any { return &s.a.Source }},
+	{"a.source_activity_id", func(s *activityScan) any { return &s.a.SourceActivityId }},
 	{"a.language", func(s *activityScan) any { return &s.language }},
 	{"a.captured_by", func(s *activityScan) any { return &s.a.CapturedBy }},
 	{"a.version", func(s *activityScan) any { return &s.version }},

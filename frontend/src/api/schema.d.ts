@@ -22649,6 +22649,11 @@ export interface components {
             source_system?: string | null;
             /** @description Provider message/event id — idempotency key part. */
             source_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The activity this one was derived FROM — today, the meeting whose transcript proposed a task. Null on almost every row: a task somebody typed came from nowhere but them. It is a reference, not a grant: opening it goes through the activity read path under the caller's own scope, so a reader who may not see the meeting gets the same answer they would get by asking for it directly.
+             */
+            readonly source_activity_id?: string | null;
             /** @description One activity may link to >1 entity (person + deal). */
             links?: components["schemas"]["ActivityLink"][];
             source: string;

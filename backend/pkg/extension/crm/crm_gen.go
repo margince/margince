@@ -427,6 +427,9 @@ type Activity struct {
 	RemindAt *time.Time `json:"remind_at,omitempty"`
 	Source   string     `json:"source"`
 
+	// SourceActivityId The activity this one was derived FROM — today, the meeting whose transcript proposed a task. Null on almost every row: a task somebody typed came from nowhere but them. It is a reference, not a grant: opening it goes through the activity read path under the caller's own scope, so a reader who may not see the meeting gets the same answer they would get by asking for it directly.
+	SourceActivityId *string `json:"source_activity_id,omitempty"`
+
 	// SourceId Provider message/event id — idempotency key part.
 	SourceId *string `json:"source_id,omitempty"`
 

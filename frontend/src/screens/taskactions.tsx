@@ -4,7 +4,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useId } from "react";
+import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
@@ -18,6 +18,7 @@ import {
   PendingBody,
 } from "../design-system/atoms";
 import { DateInput, isISODate } from "../design-system/dateinput";
+import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { calendarDay, dueInstant } from "../format/calendarday";
 import { formatDate, formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
@@ -330,6 +331,8 @@ export function TaskDetailModal({
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   const titleId = useId();
+  // The meeting the task came from, open in its own reader over this dialog.
+  const [openSource, setOpenSource] = useState<string | null>(null);
   const query = useQuery({
     queryKey: ["activity", activityId],
     queryFn: async () => {
@@ -357,6 +360,22 @@ export function TaskDetailModal({
       {task && (
         <div className="form-stack">
           {task.body && <p className="t-body">{task.body}</p>}
+          {/* The record the promise was read out of. The body names it in
+              words — "committed to this in the meeting transcript (line 6)" —
+              and the sentence alone left the only route back through the
+              record's history and an exact-subject search. The reader below
+              asks the server for the meeting under this seat's own scope, so
+              somebody who may not open it is told so there rather than here. */}
+          {task.source_activity_id && (
+            <div>
+              <Button
+                variant="ghost"
+                onClick={() => setOpenSource(task.source_activity_id ?? null)}
+              >
+                {t("tasks.openSource")}
+              </Button>
+            </div>
+          )}
           <p className="t-caption task-detail-meta">
             {task.due_at ? (
               <span>
@@ -395,6 +414,11 @@ export function TaskDetailModal({
           )}
         </div>
       )}
+      <OpenEmailDrawer
+        activityId={openSource}
+        zone={recordZone}
+        onClose={() => setOpenSource(null)}
+      />
     </Modal>
   );
 }

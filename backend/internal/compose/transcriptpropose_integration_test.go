@@ -232,6 +232,31 @@ func TestConfirmingATranscriptProposalCreatesTheTaskExactlyOnce(t *testing.T) {
 	if !strings.Contains(body, "Priya") || !strings.Contains(body, "line 3") {
 		t.Errorf("the task must carry provenance back to who promised it and where, got %q", body)
 	}
+	// The prose says where the promise came from; this is what lets a rep GO
+	// there. Without it the only route back was the record's history tab and a
+	// search for the meeting's exact subject.
+	source := e.wsString(t, `SELECT coalesce(source_activity_id::text, '') FROM activity
+		 WHERE kind = 'task' ORDER BY created_at DESC LIMIT 1`)
+	if source != e.activity.String() {
+		t.Errorf("the task names %q as the meeting it came from, want the transcript it was read out of (%s)",
+			source, e.activity)
+	}
+}
+
+// A task the rep types names no meeting, and must not borrow one.
+func TestATaskNobodyReadOutOfAMeetingNamesNone(t *testing.T) {
+	e := setupTranscript(t)
+	subject := "Typed by a person"
+	if _, _, err := e.Activities.LogActivity(e.ctx, activities.LogActivityInput{
+		Kind: "task", Subject: &subject, Source: "manual",
+	}); err != nil {
+		t.Fatalf("logging an ordinary task: %v", err)
+	}
+	source := e.wsString(t, `SELECT coalesce(source_activity_id::text, '') FROM activity
+		 WHERE kind = 'task' ORDER BY created_at DESC LIMIT 1`)
+	if source != "" {
+		t.Errorf("a hand-written task names %q as its source; nothing read it out of anything", source)
+	}
 }
 
 func TestRejectingATranscriptProposalCreatesNothing(t *testing.T) {

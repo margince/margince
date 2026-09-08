@@ -3599,6 +3599,7 @@ export const en = {
   "tasks.snooze": "Snooze 1d",
   "tasks.moveTo": "Move to",
   "tasks.detail": "Task",
+  "tasks.openSource": "Open the meeting",
   "tasks.detailLoading": "Reading this task…",
   "tasks.isDone": "Completed",
   "tasks.logged": "Logged",

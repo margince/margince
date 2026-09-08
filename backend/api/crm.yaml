@@ -31463,6 +31463,16 @@ components:
         meeting_status: { type: [string, 'null'], enum: [null, booked, held, no_show, canceled], description: 'Set only when kind=meeting.' }
         source_system: { type: [string, 'null'], description: 'Which system this record came from — `email` for any captured or sent mail (one identity across gmail/outlook/imap), else gcal/outlook/transcript or a caller''s own. Idempotency key part.' }
         source_id: { type: [string, 'null'], description: Provider message/event id — idempotency key part. }
+        source_activity_id:
+          type: [string, 'null']
+          format: uuid
+          readOnly: true
+          description: >-
+            The activity this one was derived FROM — today, the meeting whose transcript
+            proposed a task. Null on almost every row: a task somebody typed came from
+            nowhere but them. It is a reference, not a grant: opening it goes through the
+            activity read path under the caller's own scope, so a reader who may not see
+            the meeting gets the same answer they would get by asking for it directly.
         links:
           type: array
           description: One activity may link to >1 entity (person + deal).

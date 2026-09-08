@@ -67,6 +67,9 @@ type LogActivityInput struct {
 	HostUserID    *ids.UserID
 	SourceSystem  *string
 	SourceID      *string
+	// SourceActivityID is the activity this one was derived FROM — the meeting
+	// whose transcript proposed a task. Nil on almost every activity.
+	SourceActivityID *ids.UUID
 	// ThreadKey files this activity under a conversation. Empty stores NULL.
 	// It is written at insert time or not at all: the (source_system,
 	// source_id) upsert both capture and this path key on does nothing when
@@ -229,14 +232,16 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 	_, err = tx.Exec(ctx,
 		`INSERT INTO activity (id, kind, channel_provider, subject, body, occurred_at, direction, meeting_status,
 		                       due_at, remind_at, assignee_id, host_user_id, source_system, source_id, source, captured_by,
-		                       thread_key, counterparty_email, counterparty_outbound_attested, origin)
+		                       thread_key, counterparty_email, counterparty_outbound_attested, origin,
+		                       source_activity_id)
 		 VALUES ($1, $2, NULLIF($3, ''), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NULLIF($17, ''),
-		         NULLIF($18, ''), $19, $20)`,
+		         NULLIF($18, ''), $19, $20, $21)`,
 		// NULLIF on channel_provider: the column FKs into channel_provider, and
 		// '' names no provider, so anything without a transport stores NULL.
 		id, in.Kind, in.ChannelProvider, in.Subject, in.Body, occurredAt, in.Direction, in.MeetingStatus,
 		in.DueAt, in.RemindAt, assignee, in.HostUserID, in.SourceSystem, in.SourceID, in.Source, by,
-		in.ThreadKey, in.CounterpartyEmail, in.CounterpartyOutboundAttested, origin)
+		in.ThreadKey, in.CounterpartyEmail, in.CounterpartyOutboundAttested, origin,
+		in.SourceActivityID)
 	if err != nil {
 		if storekit.IsUniqueViolation(err) {
 			return crmcontracts.Activity{}, false, apperrors.ErrConflict

@@ -30,6 +30,7 @@ public.activity.activity_restriction_needs_class CHECK (((restricted_at IS NULL)
 public.activity.activity_restriction_window CHECK (((restricted_until IS NULL) OR (restricted_until > restricted_at)))
 public.activity.activity_retention_class_known CHECK (((retention_class IS NULL) OR (retention_class = 'commercial_correspondence'::text)))
 public.activity.activity_retention_class_stamped CHECK (((retention_class IS NULL) = (retention_class_at IS NULL)))
+public.activity.activity_source_activity_id_fkey FOREIGN KEY (source_activity_id) REFERENCES activity(id) ON DELETE SET NULL
 public.activity.activity_task_fields CHECK (((kind = 'task'::text) OR ((due_at IS NULL) AND (assignee_id IS NULL) AND (is_done = false) AND (remind_at IS NULL))))
 public.activity.archived_at timestamp with time zone gen=- def=-
 public.activity.assignee_id uuid gen=- def=-
@@ -72,6 +73,7 @@ public.activity.retention_class text gen=- def=-
 public.activity.retention_class_at timestamp with time zone gen=- def=-
 public.activity.search_tsv tsvector gen=s def=(((setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(subject, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(subject, ''::text))), 'A'::"char")) || setweight(to_tsvector(activity_ts_config(language), f_unaccent(((COALESCE(subject, ''::text) || ' '::text) || COALESCE(body, ''::text)))), 'B'::"char")) || setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(body, ''::text))), 'C'::"char"))
 public.activity.source text NOT NULL gen=- def=-
+public.activity.source_activity_id uuid gen=- def=-
 public.activity.source_id text gen=- def=-
 public.activity.source_system text gen=- def=-
 public.activity.subject text gen=- def=-
@@ -2707,6 +2709,7 @@ public.idx_activity_reminders CREATE INDEX idx_activity_reminders ON public.acti
 public.idx_activity_reply_verdict_history_activity CREATE INDEX idx_activity_reply_verdict_history_activity ON public.activity_reply_verdict_history USING btree (activity_id, decided_at DESC)
 public.idx_activity_restricted_until CREATE INDEX idx_activity_restricted_until ON public.activity USING btree (restricted_until) WHERE (restricted_at IS NOT NULL)
 public.idx_activity_search CREATE INDEX idx_activity_search ON public.activity USING gin (search_tsv)
+public.idx_activity_source_activity CREATE INDEX idx_activity_source_activity ON public.activity USING btree (source_activity_id) WHERE (source_activity_id IS NOT NULL)
 public.idx_activity_tasks CREATE INDEX idx_activity_tasks ON public.activity USING btree (assignee_id, due_at) WHERE ((kind = 'task'::text) AND (is_done = false) AND (archived_at IS NULL))
 public.idx_activity_thread CREATE INDEX idx_activity_thread ON public.activity USING btree (thread_key) WHERE (thread_key IS NOT NULL)
 public.idx_activity_thread_reply_seek CREATE INDEX idx_activity_thread_reply_seek ON public.activity USING btree (thread_key, kind, channel_provider, direction, occurred_at, id) WHERE ((thread_key IS NOT NULL) AND (kind = ANY (ARRAY['email'::text, 'message'::text])) AND (archived_at IS NULL))
