@@ -29,7 +29,7 @@ import (
 // var-checked here rather than left implicit: a signature typo on the method
 // below would otherwise compile clean and simply never match in
 // httperr.Classify, which is a silent 500 nobody would connect to this file.
-var _ apperrors.MessageFault = (*BadArgsError)(nil)
+var _ apperrors.FieldFaults = (*BadArgsError)(nil)
 
 // decodeArgs is the surface's input validation: strict JSON — unknown argument
 // names are errors rather than silent drops, and the arguments are exactly ONE
@@ -104,6 +104,16 @@ const maxBadArgsDetail = 200
 // vocabulary reflected off the contract, chosen by no caller.
 type BadArgsError struct {
 	Cause error
+	// Field is the argument the caller must change, as the contract spells it,
+	// and empty only where no single one is at fault.
+	//
+	// It exists because almost every refusal of this kind DOES name an input —
+	// `to_phase "vibing" is not a project phase` — and saying so only in prose
+	// left the 422's `details.errors` empty on the REST agent door while the
+	// session door answering the identical mistake filled it. A client
+	// branching on the structured list got nothing to branch on, and the
+	// coverage gate had to match a substring instead of a field code.
+	Field string
 	// Guidance is server-authored text appended after the echo, and it is NOT
 	// bounded. Bounding it with the echo is what made the accepted-field list
 	// truncate mid-word on a long unknown key — cutting away the list the
@@ -142,8 +152,25 @@ func (e *BadArgsError) Unwrap() error { return e.Cause }
 // The MCP tool door is untouched by this: Dispatcher.explain matches
 // *BadArgsError by type BEFORE it ever consults httperr.Classify, so this
 // method is never read on that path.
-func (e *BadArgsError) MessageFault() (code, message string) {
-	return "validation_error", e.Error()
+//
+// FieldFaults — the PLURAL — rather than FieldFault or MessageFault, because it
+// is the only one of the three that can answer both shapes from one method. A
+// type implements exactly one, and errors.As matches whichever it finds, so a
+// conditional choice between the singular and the message form is not
+// expressible. The plural returns one entry when a field is named and NONE when
+// it is not, which is precisely the difference: the caller gets a per-field
+// entry to act on, or the same 422 with an empty list this refusal has always
+// answered. Inventing an entry for a refusal that names no input would point a
+// caller at an argument that is not theirs to change.
+func (e *BadArgsError) FieldFaults() []apperrors.FieldRefusal {
+	if e.Field == "" {
+		return nil
+	}
+	// The code REUSES validation_error rather than minting one: crm.yaml
+	// already declares it for exactly this class of caller mistake, and
+	// inventing a second would put an undocumented code in front of a client
+	// that branches on the documented one (P3 — the contract wins).
+	return []apperrors.FieldRefusal{{Field: e.Field, Code: "validation_error", Message: e.Error()}}
 }
 
 // boundDetail caps a message at n bytes, cutting on a rune boundary so the

@@ -124,6 +124,12 @@ func canonicalHeaders(h http.Header, keys idempotencyKeyBinding) map[string]stri
 // canonical form catches an escaped unpaired surrogate (`"\udcff"`), which
 // is valid UTF-8 on the wire and still decodes to U+FFFD, so the byte check
 // cannot see it.
+//
+// That scan runs PER MEMBER rather than over the finished object, because the
+// object is where the three inputs stop being distinguishable: json.Marshal
+// coerces the path, the body and the header values into one string, so a
+// replacement rune from any of them was reported as `body`. A caller told to
+// fix a body that is already clean has been handed a task it cannot perform.
 func canonicalRESTCall(op, path string, headers http.Header, body []byte, keys idempotencyKeyBinding) (json.RawMessage, string, error) {
 	if !utf8.Valid(body) {
 		return nil, "", httperr.Validation("body", "invalid_utf8", "request body must be valid UTF-8")
@@ -142,10 +148,44 @@ func canonicalRESTCall(op, path string, headers http.Header, body []byte, keys i
 	if err != nil {
 		return nil, "", err
 	}
-	if bytes.ContainsRune(canonical, utf8.RuneError) {
-		return nil, "", httperr.Validation("body", "invalid_utf8",
-			"request body contains the Unicode replacement character, which makes two different calls indistinguishable")
+	if err := refuseReplacementRune(path, payload, fields["headers"]); err != nil {
+		return nil, "", err
 	}
 	sum := sha256.Sum256(canonical)
 	return canonical, hex.EncodeToString(sum[:]), nil
+}
+
+// refuseReplacementRune names WHICH caller-supplied member carries U+FFFD.
+//
+// Each is marshalled on its own, because the escaped-unpaired-surrogate case
+// this catches (`"\udcff"`) is valid UTF-8 on the wire and only becomes the
+// replacement rune once encoded — so a scan of the raw input cannot see it, and
+// a scan of the assembled object cannot say where it came from.
+//
+// `operation` is not among them: it is the route's own declared id, supplied by
+// this server, so a caller cannot put anything in it and being told to fix it
+// would be advice about a value they never sent.
+func refuseReplacementRune(path string, body, headers any) error {
+	for _, member := range []struct {
+		field string
+		value any
+	}{
+		{"path", path},
+		{"body", body},
+		{"headers", headers},
+	} {
+		if member.value == nil {
+			continue
+		}
+		encoded, err := json.Marshal(member.value)
+		if err != nil {
+			return err
+		}
+		if bytes.ContainsRune(encoded, utf8.RuneError) {
+			return httperr.Validation(member.field, "invalid_utf8",
+				"the request's "+member.field+" contains the Unicode replacement character, "+
+					"which makes two different calls indistinguishable")
+		}
+	}
+	return nil
 }
