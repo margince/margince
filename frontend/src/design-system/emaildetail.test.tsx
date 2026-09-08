@@ -18,6 +18,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { Button } from "./atoms";
 import { EmailDetail } from "./emaildetail";
 
 afterEach(() => {
@@ -298,7 +299,11 @@ describe("the drawer's reply", () => {
         activityId={ACTIVITY}
         onClose={() => {}}
         formatWhen={(iso) => iso}
-        renderReply={() => <button type="button">Reply</button>}
+        // The catalog's own control, which is what the real host renders: a
+        // native button here would place a shape in the header that no
+        // production caller can produce, and the claim is about where the
+        // header puts the verb it is given.
+        renderReply={() => <Button small>Reply</Button>}
       />,
     );
 
