@@ -470,8 +470,23 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
   # what mcp-tool-coverage.md publishes, so the current answer has to be at a
   # stable path. Git carries what it replaced.
   mkdir -p "$VERDICT_DIR"
+  # The transcripts of this scenario's runs, as an array so an absent glob is an
+  # empty list rather than the literal pattern. A run that died without writing
+  # one is exactly the case runs_measured exists to make visible, so the list is
+  # whatever is actually there and never a name asserted here.
+  shopt -s nullglob
+  transcripts=("$WORK/$name".run*.jsonl)
+  shopt -u nullglob
+
+  # The verdict carries what the answer cost as well as whether it held.
   python3 "$ROOT/e2e/llm/check.py" --record "$scenario" "$ok" "$runs" \
-    > "$VERDICT_DIR/${name}.json"
+    "${transcripts[@]}" > "$VERDICT_DIR/${name}.json"
+
+  # And the same total in prose while the reason for it is still on screen. The
+  # line is formatted by check.py, which owns what a usage total means, rather
+  # than assembled here out of JSON the shell would have to parse.
+  python3 "$ROOT/e2e/llm/check.py" --usage "$runs" "${transcripts[@]}" | tee -a "$REPORT"
+
   cp "$WORK/$name".run*.jsonl "$RECORD_DIR/" 2>/dev/null || true
 done
 
@@ -479,5 +494,14 @@ echo
 echo "================ e2e-llm ================"
 cat "$REPORT"
 echo "scenarios: $PASSED passed, $FAILED failed"
+# The whole sweep's bill, over every transcript the lane wrote. The denominator
+# is the number of transcripts rather than a run count re-summed here: this is a
+# total over what exists, and a second count of what was expected would be a
+# second answer to a question the per-scenario lines above already ask.
+shopt -s nullglob
+all_transcripts=("$WORK"/*.run*.jsonl)
+shopt -u nullglob
+python3 "$ROOT/e2e/llm/check.py" --usage "${#all_transcripts[@]}" "${all_transcripts[@]}" \
+  | sed 's/^  usage:/sweep total:/'
 echo "records:   $RECORD_DIR"
 [[ "$FAILED" -eq 0 ]]

@@ -956,6 +956,63 @@ YAML
 }
 probe_finds_a_false_red
 
+# --- WHAT A SWEEP COST ---------------------------------------------------------
+#
+# The lane reports its own token spend, and the one way that report must not
+# fail is SHORT: a transcript it could not read must never be summed as a run
+# that cost nothing. That direction is silent — the total simply comes out
+# smaller and reads as a cheap sweep — which is the same shape as the coverage
+# page whose count agreed while its sets did not.
+usage_is() {
+	local name="$1" expected="$2" carries="$3"
+	shift 3
+	local out
+	out="$(python3 "$check" --usage "$expected" "$@" 2>&1)" || {
+		echo "FAIL: $name — --usage exited nonzero"
+		echo "$out" | sed 's/^/    /'
+		failures=$((failures + 1))
+		return
+	}
+	if [[ "$out" != *"$carries"* ]]; then
+		echo "FAIL: $name — output does not carry '$carries'"
+		echo "$out" | sed 's/^/    /'
+		failures=$((failures + 1))
+		return
+	fi
+	echo "ok: $name"
+}
+
+cat >"$work/usage.good.jsonl" <<'JSONL'
+{"type":"system","subtype":"init","tools":[]}
+{"type":"result","subtype":"success","is_error":false,"result":"done","total_cost_usd":0.25,"usage":{"input_tokens":10,"output_tokens":20,"cache_creation_input_tokens":1000,"cache_read_input_tokens":5000}}
+JSONL
+
+# A run that died before the terminal event. The lane's own crash path writes
+# exactly this, so it is not a hypothetical shape.
+cat >"$work/usage.truncated.jsonl" <<'JSONL'
+{"type":"system","subtype":"init","tools":[]}
+{"type":"assistant","message":{"content":[{"type":"text","text":"half an answer"}]}}
+JSONL
+
+usage_is "usage/sums the runs it can read" 1 "1/1 runs measured" "$work/usage.good.jsonl"
+usage_is "usage/adds the tokens up" 1 "5,000 cache-read" "$work/usage.good.jsonl"
+usage_is "usage/reports the cost" 1 'cost $0.25' "$work/usage.good.jsonl"
+
+# THE ONE THAT MATTERS. Two transcripts, one unreadable: the total must say so
+# rather than quietly halving. Both halves are asserted — the short count AND
+# the warning — because a denominator nobody prints is a denominator nobody
+# checks.
+usage_is "usage/a transcript it cannot read is not a free run" 2 "1/2 runs measured" \
+	"$work/usage.good.jsonl" "$work/usage.truncated.jsonl"
+usage_is "usage/a short read says so out loud" 2 "1 run(s) unmeasured" \
+	"$work/usage.good.jsonl" "$work/usage.truncated.jsonl"
+
+# A sweep nobody could measure at all must not report itself as free. Zero
+# tokens for zero dollars is the reading that would let an entire unread sweep
+# pass as the cheapest one yet.
+usage_is "usage/an unmeasurable sweep reports no cost, not a free one" 1 "cost unreported" \
+	"$work/usage.truncated.jsonl"
+
 if [[ $failures -ne 0 ]]; then
 	echo "FAIL: $failures e2e-llm checker case(s) did not hold" >&2
 	exit 1

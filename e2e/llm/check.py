@@ -184,6 +184,100 @@ def read_transcript(path):
     return called, "\n".join(said), calls
 
 
+# The usage fields the terminal `result` event carries, and the ONLY ones read.
+# Named rather than summed by iterating whatever the event happens to hold: the
+# CLI's usage object grows fields between versions, and a total over "every
+# integer under usage" would silently start counting a new one — a number whose
+# meaning changed without its name changing, which is the defect this lane was
+# rebuilt around.
+_USAGE_FIELDS = (
+    "input_tokens",
+    "output_tokens",
+    "cache_creation_input_tokens",
+    "cache_read_input_tokens",
+)
+
+
+def read_usage(path):
+    """What one run cost: (usage dict, cost in USD), or None when unmeasurable.
+
+    NONE IS NOT ZERO, and the caller may not treat it as zero. A transcript with
+    no terminal `result` event is a run whose cost this cannot see — a crash, a
+    truncated file, a CLI that changed the event's name — and folding that into
+    a total as 0 would report a cheaper sweep than the one that was paid for.
+    The lane counts how many runs it actually measured and prints both numbers,
+    so an under-read announces itself instead of passing as a low bill.
+    """
+    for line in _open_checked(path):
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if event.get("type") != "result":
+            continue
+        usage = event.get("usage")
+        if not isinstance(usage, dict):
+            return None
+        counted = {field: usage.get(field, 0) for field in _USAGE_FIELDS}
+        if not all(isinstance(value, int) for value in counted.values()):
+            return None
+        cost = event.get("total_cost_usd")
+        return counted, (cost if isinstance(cost, (int, float)) else None)
+    return None
+
+
+def total_usage(paths):
+    """Sum read_usage over several runs, carrying how many were measurable.
+
+    `runs_measured` sits beside the totals rather than being checked here,
+    because this cannot know how many runs the caller expected. The caller
+    knows, and reporting the pair is what makes a short count visible: a total
+    without a denominator is exactly the shape the coverage page failed in.
+    """
+    totals = dict.fromkeys(_USAGE_FIELDS, 0)
+    cost, measured, costed = 0.0, 0, 0
+    for path in paths:
+        read = read_usage(path)
+        if read is None:
+            continue
+        usage, run_cost = read
+        for field in _USAGE_FIELDS:
+            totals[field] += usage[field]
+        measured += 1
+        if run_cost is not None:
+            cost += run_cost
+            costed += 1
+    # The cost is omitted rather than reported as 0.0 when no run carried one:
+    # a lane that reads "cost_usd: 0" would say the sweep was free.
+    return {
+        **totals,
+        "runs_measured": measured,
+        "cost_usd": round(cost, 4) if costed else None,
+    }
+
+
+def usage_line(expected, usage):
+    """The report's one line for a scenario's cost.
+
+    MEASURED OUT OF EXPECTED, always both. A sweep whose transcripts went
+    missing would otherwise print a small total and read as a cheap run rather
+    than an unread one — the same misreading as a coverage page whose count
+    agreed while its sets did not.
+    """
+    measured = usage["runs_measured"]
+    cost = usage["cost_usd"]
+    short = "" if measured == expected else f"  <-- {expected - measured} run(s) unmeasured"
+    return (
+        f"  usage: {measured}/{expected} runs measured, "
+        f"{usage['input_tokens']:,} in, {usage['output_tokens']:,} out, "
+        f"{usage['cache_read_input_tokens']:,} cache-read, "
+        f"cost {'unreported' if cost is None else f'${cost:.2f}'}{short}"
+    )
+
+
 # The failures that mean the model was never reached, rather than that it
 # answered badly. Matched on the message because the transport reports both the
 # same way — `is_error` on the terminal result — and only the message says which
@@ -333,13 +427,34 @@ def main():
 
     if sys.argv[1] == "--record":
         scenario = parse_scenario(sys.argv[2])
-        print(json.dumps({
+        runs = int(sys.argv[4])
+        # The transcripts of THIS scenario's runs, so the committed verdict
+        # carries what the answer cost as well as whether it held. They are
+        # optional: the offline harness records verdicts with no transcripts at
+        # all, and a lane that refused to record without them would make the
+        # cheap path depend on the paid one.
+        usage = total_usage(sys.argv[5:]) if len(sys.argv) > 5 else None
+        record = {
             "scenario": scenario.get("name"),
             "criteria": scenario.get("criteria", []),
             "passed": int(sys.argv[3]),
-            "runs": int(sys.argv[4]),
+            "runs": runs,
             "pass_at": scenario.get("pass_at"),
-        }, indent=2))
+        }
+        if usage is not None:
+            # runs_measured rides WITH the totals into the committed record. A
+            # later reader summing cost across scenarios can then tell a cheap
+            # sweep from one whose transcripts it could not read, which the
+            # totals alone cannot say.
+            record["usage"] = usage
+        print(json.dumps(record, indent=2))
+        return 0
+
+    if sys.argv[1] == "--usage":
+        # One line of prose for the lane's report, formatted here because this
+        # file owns what a usage total means — the shell would otherwise parse
+        # the JSON and spell the same shape a second time.
+        print(usage_line(int(sys.argv[2]), total_usage(sys.argv[3:])))
         return 0
 
     if sys.argv[1] == "--ran":
