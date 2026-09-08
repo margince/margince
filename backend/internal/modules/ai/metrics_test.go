@@ -13,7 +13,8 @@ import (
 func served(mut ...func(*Call)) Call {
 	c := Call{
 		Task: "cold_start", Tier: "cheap_cloud", Provider: "openai",
-		ModelID: "gpt-5-mini", ServedIdentitySource: servedIdentitySourceResponse,
+		ModelID: "gpt-5-mini", ServedModel: "gpt-5-mini",
+		ServedIdentitySource: servedIdentitySourceResponse,
 	}
 	for _, m := range mut {
 		m(&c)
@@ -161,7 +162,7 @@ func TestFinishReasonsAreCounted(t *testing.T) {
 // family in the process off the dashboard at once.
 func TestAHostileModelIdCannotBreakTheWholeScrape(t *testing.T) {
 	m := newCallMetrics()
-	m.observeAttempt(served(func(c *Call) { c.ModelID = "evil\t\x01model\"\\" }))
+	m.observeAttempt(served(func(c *Call) { c.ServedModel = "evil\t\x01model\"\\" }))
 
 	out := render(m)
 	for _, illegal := range []string{`\t`, `\x`, `\u`} {
@@ -178,7 +179,8 @@ func TestEachFamilyHeaderIsRenderedExactlyOnce(t *testing.T) {
 	m := newCallMetrics()
 	m.observeAttempt(served(func(c *Call) { c.TokensIn = 10 }))
 	m.observeAttempt(served(func(c *Call) {
-		c.Task, c.Tier, c.Provider, c.ModelID = "offer_draft", "premium", "anthropic", "claude-opus-4-8"
+		c.Task, c.Tier, c.Provider = "offer_draft", "premium", "anthropic"
+		c.ModelID, c.ServedModel = "claude-opus-4-8", "claude-opus-4-8"
 		c.TokensIn = 20
 	}))
 
@@ -249,4 +251,35 @@ func TestWriteProcessMetricsRendersTheProcessWideCollector(t *testing.T) {
 	if !strings.Contains(b.String(), `task="process_wide_probe"`) {
 		t.Errorf("WriteProcessMetrics did not render the collector every Router increments:\n%s", b.String())
 	}
+}
+
+// A tier bound without an explicit model id — every --ai-fake deployment, and
+// any operator who left the field blank — must not ship a literal model="" on
+// every series it publishes. servedIdentity already resolved the best
+// available identity; the label carries that, and the source grades it.
+func TestABindingWithNoConfiguredModelStillNamesWhatServed(t *testing.T) {
+	m := newCallMetrics()
+	m.observe(served(func(c *Call) {
+		c.Provider, c.ModelID = "fake", ""
+		c.ServedModel, c.ServedIdentitySource = "fake", servedIdentitySourceResponse
+	}))
+
+	out := render(m)
+	if strings.Contains(out, `model=""`) {
+		t.Errorf("an empty model label reached the exposition:\n%s", out)
+	}
+	mustContain(t, out, `provider="fake",model="fake",served_identity_source="response"`)
+}
+
+// The other half of the same rule: an OpenAI-compatible wire only echoes the
+// requested model back, so the label must be graded "echo" rather than passed
+// off as a vendor confirming what ran.
+func TestAnEchoedIdentityIsLabelledAsAnEcho(t *testing.T) {
+	m := newCallMetrics()
+	m.observe(served(func(c *Call) {
+		c.Provider = providerOpenAICompatible
+		c.ServedModel, c.ServedIdentitySource = "llama3.1:70b-q4", servedIdentitySourceEcho
+	}))
+
+	mustContain(t, render(m), `model="llama3.1:70b-q4",served_identity_source="echo"`)
 }

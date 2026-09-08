@@ -42,11 +42,23 @@ type callMetrics struct {
 	contextTokens map[string]int64
 }
 
-// routeKey is the identity every AI family is keyed by. Model is what the
-// binding asked for; ServedIdentitySource grades how much the provider's own
-// report about what answered can be trusted, and it is kept HERE rather than
-// as a served-model label because a second model dimension would multiply the
-// series count to say something the source already says in three values.
+// routeKey is the identity every AI family is keyed by.
+//
+// The model dimension is the SERVED identity, not the configured one, and the
+// two are not interchangeable. Call.ModelID is whatever the tier binding
+// declared, which is empty for any provider bound without an explicit model id
+// — every --ai-fake deployment, and any operator who leaves the field blank —
+// so keying on it ships a literal model="" on every series that installation
+// publishes. Call.ServedModel is already the graded answer: servedIdentity
+// prefers what the provider reported, falls back to the configured binding,
+// and is empty only when a call never reached a provider at all.
+//
+// servedIdentitySource is what makes that safe to read, which is why it is a
+// label rather than a second model dimension: "response" is a vendor
+// confirming what ran, "echo" is an OpenAI-compatible wire reflecting the
+// request back, "configured" is nobody having said. A dashboard that treats
+// an echo as a confirmation is wrong about which model answered, and this
+// label is the only thing that tells it apart.
 type routeKey struct{ task, tier, provider, model, servedIdentitySource string }
 
 type errorKey struct {
@@ -145,7 +157,12 @@ func (m *callMetrics) observeAttempt(c Call) {
 	if c.ErrorSentinel != "" {
 		m.errors[errorKey{routeKey: k, sentinel: c.ErrorSentinel}]++
 	}
-	if c.FinishReason != "" {
+	// A cache hit replays a stored response, so its FinishReason is a
+	// provider's answer from some earlier call. Counting it here would make
+	// finish_reasons_total climb on attempts that consulted no provider, and
+	// the family's whole use is comparing stop reasons against attempts that
+	// did — the same reason the histogram skips a hit.
+	if c.FinishReason != "" && !c.CacheHit {
 		m.finish[finishKey{routeKey: k, reason: c.FinishReason}]++
 	}
 }
@@ -166,7 +183,7 @@ func (m *callMetrics) observe(c Call) {
 func (m *callMetrics) keyOf(c Call) routeKey {
 	return routeKey{
 		task: string(c.Task), tier: string(c.Tier), provider: c.Provider,
-		model: c.ModelID, servedIdentitySource: c.ServedIdentitySource,
+		model: c.ServedModel, servedIdentitySource: c.ServedIdentitySource,
 	}
 }
 
@@ -191,15 +208,20 @@ func (m *callMetrics) observeLatencyLocked(k routeKey, c Call) {
 // int64 widening is lossless (a usage count is a non-negative int) and is
 // preferred over int→uint64, which trips gosec G115 on the sign change.
 func (m *callMetrics) observeTokensLocked(k routeKey, c Call) {
-	for class, n := range map[string]int{
-		classPrompt:     uncachedTokensIn(c.TokensIn, c.CachedTokens, c.CacheWriteTokens),
-		classCachedRead: c.CachedTokens,
-		classCacheWrite: c.CacheWriteTokens,
-		classCompletion: c.TokensOut,
-		classReasoning:  c.ReasoningTokens,
+	// A fixed-size array rather than a map literal: this runs on every
+	// attempt, while the collector's mutex is held.
+	for _, split := range [...]struct {
+		class string
+		n     int
+	}{
+		{classPrompt, uncachedTokensIn(c.TokensIn, c.CachedTokens, c.CacheWriteTokens)},
+		{classCachedRead, c.CachedTokens},
+		{classCacheWrite, c.CacheWriteTokens},
+		{classCompletion, c.TokensOut},
+		{classReasoning, c.ReasoningTokens},
 	} {
-		if n != 0 {
-			m.tokens[tokenKey{routeKey: k, class: class}] += int64(n)
+		if split.n != 0 {
+			m.tokens[tokenKey{routeKey: k, class: split.class}] += int64(split.n)
 		}
 	}
 }

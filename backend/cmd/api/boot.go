@@ -376,8 +376,12 @@ func modelSurfaceOptions(ctx context.Context, cfg apiConfig, deployCfg deploycon
 	opts = append(opts, coldStartOptions(modelPath, routingVersion)...)
 	opts = append(opts, offerDraftOptions(pool, modelPath)...)
 	opts = append(opts, compose.WithAssistantProfile(aiState, assistantProfile))
+	// Unconditional, like the worker's: the counters belong to the PROCESS, not
+	// to any one router, so a role that resolved no model path still publishes
+	// the (empty) families rather than leaving an operator unable to tell "made
+	// no calls" from "renders no counters".
+	opts = append(opts, compose.WithAIMetrics(ai.WriteProcessMetrics))
 	if modelPath != nil {
-		opts = append(opts, compose.WithAIMetrics(ai.WriteProcessMetrics))
 		// The retrieval embed lane, on the REQUEST path — the same lane the
 		// reindex job and the drift sweep take. Without it the hybrid arm's
 		// vector half is unreachable from a request and every caller is served a

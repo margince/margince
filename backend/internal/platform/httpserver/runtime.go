@@ -76,13 +76,18 @@ func writeRuntimeMetrics(ctx context.Context, out *exposition) {
 	}
 	enc := expfmt.NewEncoder(out, expfmt.NewFormat(expfmt.TypeTextPlain))
 	for _, family := range families {
-		// Encode's error is either the exposition's own refused write, which
-		// the writer has already remembered and which every later write
-		// no-ops on, or a malformed family, which cannot arise from a
-		// registry this file is the only writer of. Either way the loop stops
-		// here rather than assembling into a socket that is gone.
-		if err := enc.Encode(family); err != nil {
-			return
+		if err := enc.Encode(family); err == nil {
+			continue
+		} else if !out.gone() {
+			// A refused write is the ordinary case and needs no log — the
+			// exposition already holds it and the handler reports it once. This
+			// branch is the other one: the encoder rejected a family while the
+			// socket was still good, which leaves the runtime section HALF
+			// written, and a half-written section is a process misreporting its
+			// own health rather than one that failed to answer.
+			slog.ErrorContext(ctx, "metrics: a runtime family could not be encoded; the runtime section is incomplete",
+				"family", family.GetName(), "err", err)
 		}
+		return
 	}
 }

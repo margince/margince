@@ -9,9 +9,16 @@ package ai
 // Split from the collector for the file ceiling, and because the two answer
 // different questions — metrics.go decides WHAT is counted and at what
 // cardinality, this file only decides how it is spelled.
+//
+// EVERY FAMILY NAME IS A LITERAL AT ITS HEADER CALL, and that is a constraint
+// rather than a style. backend/gates/metricsuffix_test.go is a census over the
+// names this tree emits and it reads them out of SOURCE: a family whose name
+// reaches its header through a variable is invisible to it, so `_total` would
+// quietly stop meaning counter for exactly the families nobody could see. The
+// header helpers answer the name they wrote, so each is spelled once here and
+// still reaches the series lines below.
 
 import (
-	"fmt"
 	"io"
 	"sort"
 
@@ -43,24 +50,41 @@ func newLatencyHistogram() *httpserver.Histogram {
 func (m *callMetrics) WritePrometheus(w io.Writer) {
 	snap := m.snapshot()
 
-	writeRouteFamily(w, "margince_ai_calls_total",
-		"AI logical calls that reached a terminal outcome since process start.", snap.calls)
-	writeRouteFamily(w, "margince_ai_call_attempts_total",
-		"AI attempts made since process start -- above calls_total by exactly the ladder walking and the retries.", snap.attempts)
-	writeRouteFamily(w, "margince_ai_call_degraded_total",
-		"AI attempts served on a demoted ladder because the budget guardrail forced one, since process start.", snap.degraded)
-	writeRouteFamily(w, "margince_ai_call_cache_hits_total",
-		"AI attempts answered from the result cache without reaching a provider, since process start.", snap.cacheHit)
+	writeRouteFamily(w, counterHeader(w, "margince_ai_calls_total",
+		"AI logical calls that reached a terminal outcome since process start."), snap.calls)
+	writeRouteFamily(w, counterHeader(w, "margince_ai_call_attempts_total",
+		"AI attempts made since process start -- above calls_total by exactly the ladder walking and the retries."), snap.attempts)
+	writeRouteFamily(w, counterHeader(w, "margince_ai_call_degraded_total",
+		"AI attempts served on a demoted ladder because the budget guardrail forced one, since process start."), snap.degraded)
+	writeRouteFamily(w, counterHeader(w, "margince_ai_call_cache_hits_total",
+		"AI attempts answered from the result cache without reaching a provider, since process start."), snap.cacheHit)
 
-	writeErrorFamily(w, snap.errors)
-	writeFinishFamily(w, snap.finish)
-	writeTokenFamily(w, snap.tokens)
-	writeLatencyFamily(w, snap.latency)
+	writeErrorFamily(w, counterHeader(w, "margince_ai_call_errors_total",
+		"AI attempt failures since process start, by the sentinel the router classified them as."), snap.errors)
+	writeFinishFamily(w, counterHeader(w, "margince_ai_call_finish_reasons_total",
+		"Provider-reported stop reasons since process start, counted only for attempts that reached a provider."), snap.finish)
+	writeTokenFamily(w, counterHeader(w, "margince_ai_tokens_total",
+		"AI tokens billed since process start, split into disjoint classes."), snap.tokens)
+	writeLatencyFamily(w, histogramHeader(w, "margince_ai_call_duration_seconds",
+		"Wall time one AI attempt spent at the provider, in seconds. Cache hits are excluded: they measure a map lookup."), snap.latency)
 
-	writeTaskCounterFamily(w, "margince_ai_company_context_bytes_total",
-		"Company-context bytes supplied to AI attempts.", snap.contextBytes)
-	writeTaskCounterFamily(w, "margince_ai_company_context_tokens_estimate_total",
-		"Estimated company-context tokens supplied to AI attempts.", snap.contextTokens)
+	writeTaskCounterFamily(w, counterHeader(w, "margince_ai_company_context_bytes_total",
+		"Company-context bytes supplied to AI attempts."), snap.contextBytes)
+	writeTaskCounterFamily(w, counterHeader(w, "margince_ai_company_context_tokens_estimate_total",
+		"Estimated company-context tokens supplied to AI attempts."), snap.contextTokens)
+}
+
+// counterHeader writes one family's HELP and TYPE lines and answers its name,
+// so the name is spelled once — at the call, as the literal the census reads —
+// rather than once here and again beside every series.
+func counterHeader(w io.Writer, name, help string) string {
+	httpserver.WriteLine(w, "# HELP %s %s\n# TYPE %s counter\n", name, help, name)
+	return name
+}
+
+func histogramHeader(w io.Writer, name, help string) string {
+	httpserver.WriteLine(w, "# HELP %s %s\n# TYPE %s histogram\n", name, help, name)
+	return name
 }
 
 // metricsSnapshot is the detached copy WritePrometheus renders from.
@@ -112,8 +136,9 @@ func copyRouteCounters(source map[routeKey]uint64) map[routeKey]uint64 {
 }
 
 // routeLabels renders the five labels every AI family carries. Every value
-// goes through httpserver.Label, not %q: model is operator-supplied and Go
-// quoting would emit escapes that cost the process its whole scrape.
+// goes through httpserver.Label, not %q: the model identity is provider- or
+// operator-supplied, and Go quoting would emit escapes that cost the process
+// its whole scrape.
 func routeLabels(k routeKey) string {
 	return "provider=" + httpserver.Label(k.provider) +
 		",model=" + httpserver.Label(k.model) +
@@ -122,62 +147,47 @@ func routeLabels(k routeKey) string {
 		",tier=" + httpserver.Label(k.tier)
 }
 
-// sortedRouteKeys orders a family's series. Prometheus does not care, but a
-// human reading a scrape by hand does, and ranging a map would reshuffle the
-// block on every request.
-func sortedRouteKeys[V any](family map[routeKey]V) []routeKey {
-	keys := make([]routeKey, 0, len(family))
+// series is one rendered label set beside the key it came from, so a family's
+// sort renders each label set ONCE instead of rebuilding it inside the
+// comparator on every comparison.
+type series[K comparable] struct {
+	key    K
+	labels string
+}
+
+// sortedSeries orders a family by its rendered labels. Prometheus does not
+// care, but a human reading a scrape by hand does, and ranging a map would
+// reshuffle the block on every request.
+func sortedSeries[K comparable, V any](family map[K]V, labelsOf func(K) string) []series[K] {
+	out := make([]series[K], 0, len(family))
 	for k := range family {
-		keys = append(keys, k)
+		out = append(out, series[K]{key: k, labels: labelsOf(k)})
 	}
-	sort.Slice(keys, func(i, j int) bool { return routeLabels(keys[i]) < routeLabels(keys[j]) })
-	return keys
+	sort.Slice(out, func(i, j int) bool { return out[i].labels < out[j].labels })
+	return out
 }
 
-func writeHeader(w io.Writer, name, help, kind string) {
-	writeLine(w, "# HELP %s %s\n# TYPE %s %s\n", name, help, name, kind)
-}
-
-func writeRouteFamily(w io.Writer, name, help string, family map[routeKey]uint64) {
-	writeHeader(w, name, help, "counter")
-	for _, k := range sortedRouteKeys(family) {
-		writeLine(w, "%s{%s} %d\n", name, routeLabels(k), family[k])
+func writeRouteFamily(w io.Writer, name string, family map[routeKey]uint64) {
+	for _, s := range sortedSeries(family, routeLabels) {
+		httpserver.WriteLine(w, "%s{%s} %d\n", name, s.labels, family[s.key])
 	}
 }
 
-func writeErrorFamily(w io.Writer, family map[errorKey]uint64) {
-	const name = "margince_ai_call_errors_total"
-	writeHeader(w, name, "AI attempt failures since process start, by the sentinel the router classified them as.", "counter")
-	keys := make([]errorKey, 0, len(family))
-	for k := range family {
-		keys = append(keys, k)
+func writeErrorFamily(w io.Writer, name string, family map[errorKey]uint64) {
+	labelsOf := func(k errorKey) string {
+		return routeLabels(k.routeKey) + ",sentinel=" + httpserver.Label(k.sentinel)
 	}
-	sort.Slice(keys, func(i, j int) bool {
-		if keys[i].routeKey != keys[j].routeKey {
-			return routeLabels(keys[i].routeKey) < routeLabels(keys[j].routeKey)
-		}
-		return keys[i].sentinel < keys[j].sentinel
-	})
-	for _, k := range keys {
-		writeLine(w, "%s{%s,sentinel=%s} %d\n", name, routeLabels(k.routeKey), httpserver.Label(k.sentinel), family[k])
+	for _, s := range sortedSeries(family, labelsOf) {
+		httpserver.WriteLine(w, "%s{%s} %d\n", name, s.labels, family[s.key])
 	}
 }
 
-func writeFinishFamily(w io.Writer, family map[finishKey]uint64) {
-	const name = "margince_ai_call_finish_reasons_total"
-	writeHeader(w, name, "AI attempts by the provider's normalized stop reason -- a truncated answer and a complete one are otherwise the same call.", "counter")
-	keys := make([]finishKey, 0, len(family))
-	for k := range family {
-		keys = append(keys, k)
+func writeFinishFamily(w io.Writer, name string, family map[finishKey]uint64) {
+	labelsOf := func(k finishKey) string {
+		return routeLabels(k.routeKey) + ",reason=" + httpserver.Label(k.reason)
 	}
-	sort.Slice(keys, func(i, j int) bool {
-		if keys[i].routeKey != keys[j].routeKey {
-			return routeLabels(keys[i].routeKey) < routeLabels(keys[j].routeKey)
-		}
-		return keys[i].reason < keys[j].reason
-	})
-	for _, k := range keys {
-		writeLine(w, "%s{%s,reason=%s} %d\n", name, routeLabels(k.routeKey), httpserver.Label(k.reason), family[k])
+	for _, s := range sortedSeries(family, labelsOf) {
+		httpserver.WriteLine(w, "%s{%s} %d\n", name, s.labels, family[s.key])
 	}
 }
 
@@ -186,57 +196,31 @@ func writeFinishFamily(w io.Writer, family map[finishKey]uint64) {
 // after the split -- and because the classes are disjoint (metrics.go's
 // uncachedTokensIn), that sum is the honest total rather than one that counts
 // cached input twice.
-func writeTokenFamily(w io.Writer, family map[tokenKey]int64) {
-	const name = "margince_ai_tokens_total"
-	writeHeader(w, name, "AI tokens billed since process start, split into disjoint classes.", "counter")
-	keys := make([]tokenKey, 0, len(family))
-	for k := range family {
-		keys = append(keys, k)
+func writeTokenFamily(w io.Writer, name string, family map[tokenKey]int64) {
+	labelsOf := func(k tokenKey) string {
+		return routeLabels(k.routeKey) +
+			",class=" + httpserver.Label(k.class) +
+			",direction=" + httpserver.Label(directionOf(k.class))
 	}
-	sort.Slice(keys, func(i, j int) bool {
-		if keys[i].routeKey != keys[j].routeKey {
-			return routeLabels(keys[i].routeKey) < routeLabels(keys[j].routeKey)
-		}
-		return keys[i].class < keys[j].class
-	})
-	for _, k := range keys {
-		writeLine(w, "%s{%s,class=%s,direction=%s} %d\n",
-			name, routeLabels(k.routeKey), httpserver.Label(k.class), httpserver.Label(directionOf(k.class)), family[k])
+	for _, s := range sortedSeries(family, labelsOf) {
+		httpserver.WriteLine(w, "%s{%s} %d\n", name, s.labels, family[s.key])
 	}
 }
 
-func writeLatencyFamily(w io.Writer, family map[routeKey]httpserver.Histogram) {
-	const name = "margince_ai_call_duration_seconds"
-	writeHeader(w, name, "Wall time one AI attempt spent at the provider, in seconds. Cache hits are excluded: they measure a map lookup.", "histogram")
-	for _, k := range sortedRouteKeys(family) {
-		h := family[k]
-		h.WriteSeries(w, name, routeLabels(k))
+func writeLatencyFamily(w io.Writer, name string, family map[routeKey]httpserver.Histogram) {
+	for _, s := range sortedSeries(family, routeLabels) {
+		h := family[s.key]
+		h.WriteSeries(w, name, s.labels)
 	}
 }
 
-func writeTaskCounterFamily(w io.Writer, name, help string, family map[string]int64) {
-	writeHeader(w, name, help, "counter")
+func writeTaskCounterFamily(w io.Writer, name string, family map[string]int64) {
 	tasks := make([]string, 0, len(family))
 	for task := range family {
 		tasks = append(tasks, task)
 	}
 	sort.Strings(tasks)
 	for _, task := range tasks {
-		writeLine(w, "%s{task=%s} %d\n", name, httpserver.Label(task), family[task])
+		httpserver.WriteLine(w, "%s{task=%s} %d\n", name, httpserver.Label(task), family[task])
 	}
-}
-
-// writeLine drops the write error deliberately, and it is the ONE place in
-// this file that does so.
-//
-// Every caller's w is httpserver's exposition writer, which remembers the first
-// refused write, turns every write after it into a no-op, and is asked once by
-// the handler at the end of the scrape. A refused write here means the scraper
-// hung up; there is nobody to return an error to, and threading one back
-// through every renderer would add a branch per line to say what the writer
-// already knows.
-//
-//craft:ignore swallowed-errors the exposition writer holds the first error and no-ops after it; the handler asks it once per scrape
-func writeLine(w io.Writer, format string, a ...any) {
-	_, _ = fmt.Fprintf(w, format, a...)
 }

@@ -52,9 +52,6 @@ func NewHistogram(bounds []float64) *Histogram {
 
 // Observe records one sample.
 func (h *Histogram) Observe(value float64) {
-	if h.counts == nil {
-		h.counts = make([]uint64, len(h.bounds)+1)
-	}
 	h.sum += value
 	h.count++
 	// SearchFloat64s finds the first bound the sample does NOT exceed; every
@@ -68,10 +65,8 @@ func (h *Histogram) Observe(value float64) {
 // that the observing path takes on every call.
 func (h *Histogram) Snapshot() Histogram {
 	out := Histogram{bounds: h.bounds, sum: h.sum, count: h.count}
-	if h.counts != nil {
-		out.counts = make([]uint64, len(h.counts))
-		copy(out.counts, h.counts)
-	}
+	out.counts = make([]uint64, len(h.counts))
+	copy(out.counts, h.counts)
 	return out
 }
 
@@ -89,16 +84,12 @@ func (h *Histogram) Snapshot() Histogram {
 // report what the writer already holds, and both callers would discard it.
 func (h Histogram) WriteSeries(w io.Writer, name, labels string) {
 	for i, bound := range h.bounds {
-		var seen uint64
-		if h.counts != nil {
-			seen = h.counts[i]
-		}
-		writeLine(w, "%s_bucket{%sle=%s} %d\n",
-			name, prefix(labels), Label(strconv.FormatFloat(bound, 'g', -1, 64)), seen)
+		WriteLine(w, "%s_bucket{%sle=%s} %d\n",
+			name, prefix(labels), Label(strconv.FormatFloat(bound, 'g', -1, 64)), h.counts[i])
 	}
-	writeLine(w, "%s_bucket{%sle=\"+Inf\"} %d\n", name, prefix(labels), h.count)
-	writeLine(w, "%s_sum{%s} %g\n", name, labels, h.sum)
-	writeLine(w, "%s_count{%s} %d\n", name, labels, h.count)
+	WriteLine(w, "%s_bucket{%sle=\"+Inf\"} %d\n", name, prefix(labels), h.count)
+	WriteLine(w, "%s_sum{%s} %g\n", name, labels, h.sum)
+	WriteLine(w, "%s_count{%s} %d\n", name, labels, h.count)
 }
 
 // prefix answers labels with the separator a further label needs after it, so
@@ -111,12 +102,18 @@ func prefix(labels string) string {
 	return labels + ","
 }
 
-// writeLine is the ONE place this package's hand-rolled families discard a
-// write error, and the exposition writer is why it is sound: it holds the
-// first refusal, no-ops after it, and is asked once per scrape.
+// WriteLine is the ONE place a hand-rolled family in this tree discards a write
+// error, and the exposition writer is why that is sound: it holds the first
+// refusal, no-ops on every write after it, and is asked once by the handler at
+// the end of the scrape.
+//
+// Exported for the same reason Label and Histogram are — the AI renderer is a
+// second surface writing the same exposition, and a private copy there would
+// be a second answer to "what does a refused write mean", with a second waiver
+// to keep in step with this one.
 //
 //craft:ignore swallowed-errors the exposition writer holds the first error and no-ops after it; the handler asks it once per scrape
-func writeLine(w io.Writer, format string, a ...any) {
+func WriteLine(w io.Writer, format string, a ...any) {
 	_, _ = fmt.Fprintf(w, format, a...)
 }
 

@@ -31,13 +31,19 @@ package gates
 // can fail short, so there is none — a writer that must use %q says so in
 // source with a craft:ignore-style reason this gate reads.
 //
+// TWO SHAPES, because the tree writes labels two ways and a gate that saw only
+// one would be blind to the surface it was written for. A format string spells
+// `name=%q`; the AI renderer CONCATENATES, `"model=" + escaper(value)`, which
+// is precisely where the operator-typed model id lands. The concatenated arm
+// is an allowlist rather than a denylist: the fragment must be followed by
+// Label, because there is no way to enumerate every wrong escaper and a new
+// one would otherwise arrive unseen.
+//
 // WHAT IT DOES NOT SEE, stated because a prohibition that overclaims is worse
-// than one that is narrow: it reads the FORMAT VERB beside a label name, so a
-// value pre-formatted into a variable with %q on an earlier line, or
-// concatenated in from a helper this gate cannot follow, is invisible to it.
-// What makes that acceptable is that it stops the shape every offender in this
-// tree actually had — `name=%q` written inline — and that Label is now the
-// only exported escaper, so the alternative has to be reached for deliberately.
+// than one that is narrow: a value formatted with %q into a variable on an
+// earlier line and then concatenated in reaches neither arm. That gap is not
+// rationalised away — it is what the allowlist narrows, since the concatenated
+// arm rejects anything that is not a Label call, including a bare variable.
 
 import (
 	"fmt"
@@ -53,11 +59,32 @@ import (
 // opening brace, after a comma, or at the start of a concatenated fragment.
 var labelWithQuoteVerb = regexp.MustCompile(`[{,"]([a-z_][a-z0-9_]*)=%q`)
 
-// labelWithAnyVerb matches a label pair written with ANY format verb, which is
-// the denominator that keeps this gate honest: if the corpus scan silently
-// stopped matching, both counts would fall to zero together and the
-// prohibition would pass while seeing nothing.
-var labelWithAnyVerb = regexp.MustCompile(`[{,"]([a-z_][a-z0-9_]*)=%[a-z]`)
+// labelByConcatenation matches the other shape: a label pair opened inside a
+// string fragment that ENDS there, with the value appended after it —
+// `"...{model=" + something` or `",tier=" + something`.
+var labelByConcatenation = regexp.MustCompile(`[{,"]([a-z_][a-z0-9_]*)="\s*\+\s*([A-Za-z0-9_.]+)\(`)
+
+// escapers are the calls a concatenated label value may be wrapped in. An
+// allowlist, not a denylist: a wrong escaper nobody has thought of yet must
+// fail rather than pass unrecognised.
+var escapers = map[string]bool{"Label": true, "httpserver.Label": true}
+
+// labelWithAnyVerb matches a label pair written either way. It is the
+// denominator keeping this gate honest: if the corpus scan silently stopped
+// matching, both counts would fall to zero together and the prohibition would
+// pass while seeing nothing.
+var labelWithAnyVerb = regexp.MustCompile(`[{,"]([a-z_][a-z0-9_]*)=(?:%[a-z]|"\s*\+)`)
+
+// declaresAFamily selects the files this gate judges: the ones that name a
+// margince_ family in a string literal, which is what an exposition writer
+// does and a log line or a CLI report does not.
+//
+// Derived from the subject rather than listed, and it cannot fail short in the
+// way a skip-list would: a writer whose family name never appears as a literal
+// is ALREADY forbidden tree-wide, because backend/gates/metricsuffix_test.go
+// reads the same literals to decide whether `_total` means counter. A file
+// invisible here is a file that gate already refuses.
+var declaresAFamily = regexp.MustCompile(`"# (?:HELP|TYPE) margince_|"margince_[a-z0-9_]+[{ ]`)
 
 // expositionWaiver is how a writer that genuinely must format a label value
 // itself says so. It carries a reason, because a reasonless waiver is the
@@ -68,9 +95,11 @@ const expositionWaiver = "//metrics:unescaped"
 // report PASS with no failing assertion, which is the one way this gate must
 // not break: it would read a smaller tree, see no %q, and say so.
 //
-// The tree emits label pairs from the HTTP, job, overlay, AI, MCP-app, license
-// and comms sections. Set well below that, so ordinary movement does not
-// require an edit and a corpus collapse still does.
+// Derived from the sections that must each contribute at least one labelled
+// line — HTTP, jobs, overlay, AI, MCP-app, license, capture, comms — so a
+// collapse to any single section trips it. The floor is that section count
+// rather than the measured total, because a family moving between files must
+// not require editing a gate.
 const minLabelWriters = 8
 
 func TestNoLabelValueIsEscapedWithGoQuoting(t *testing.T) {
@@ -78,17 +107,10 @@ func TestNoLabelValueIsEscapedWithGoQuoting(t *testing.T) {
 
 	writers, offenders := 0, []string{}
 	expositionFiles(t, func(path, code string) {
-		lines := strings.Split(code, "\n")
-		for i, line := range lines {
-			if labelWithAnyVerb.MatchString(line) {
-				writers++
-			}
-			match := labelWithQuoteVerb.FindStringSubmatch(line)
-			if match == nil || waived(lines, i) {
-				continue
-			}
-			offenders = append(offenders,
-				fmt.Sprintf("%s:%d renders %s=%%q", filepath.ToSlash(path), i+1, match[1]))
+		found, seen := scanLabelWrites(code)
+		writers += seen
+		for _, f := range found {
+			offenders = append(offenders, filepath.ToSlash(path)+":"+f)
 		}
 	})
 
@@ -108,6 +130,32 @@ func TestNoLabelValueIsEscapedWithGoQuoting(t *testing.T) {
 	}
 }
 
+// scanLabelWrites answers one file's offending label writes and how many
+// labelled exposition lines it saw at all.
+//
+// A pure function over source text so the gate's own fixtures can drive it:
+// a prohibition nobody has watched fail is a prohibition nobody knows fires.
+func scanLabelWrites(code string) (offenders []string, seen int) {
+	lines := strings.Split(code, "\n")
+	for i, line := range lines {
+		if labelWithAnyVerb.MatchString(line) {
+			seen++
+		}
+		if waived(lines, i) {
+			continue
+		}
+		if match := labelWithQuoteVerb.FindStringSubmatch(line); match != nil {
+			offenders = append(offenders, fmt.Sprintf("%d renders %s=%%q", i+1, match[1]))
+			continue
+		}
+		if match := labelByConcatenation.FindStringSubmatch(line); match != nil && !escapers[match[2]] {
+			offenders = append(offenders,
+				fmt.Sprintf("%d appends %s= with %s(...) rather than Label(...)", i+1, match[1], match[2]))
+		}
+	}
+	return offenders, seen
+}
+
 // waived reports whether the line above carries the waiver marker.
 func waived(lines []string, i int) bool {
 	if i == 0 {
@@ -122,14 +170,14 @@ func waived(lines []string, i int) bool {
 	return strings.TrimSpace(strings.TrimPrefix(above, expositionWaiver)) != ""
 }
 
-// expositionFiles yields every non-test Go file in the backend tree with its
-// source, comments included and nothing excluded.
+// expositionFiles yields every non-test Go file that DECLARES a metric family,
+// with its source, comments included.
 //
 // Stripping comments first would be the obvious move and is the wrong one: the
 // waiver this gate honours IS a comment, so a scan that could not see comments
-// could not see a waiver either. Nothing needs excluding — the forbidden shape
-// requires a brace, comma or quote before the label name, which prose does not
-// produce, and this file's own essay is proof that it does not.
+// could not see a waiver either. No file needs excluding by name — the
+// forbidden shape requires a brace, comma or quote before the label name,
+// which prose does not produce, and this file's own essay is proof of it.
 func expositionFiles(t *testing.T, visit func(path, code string)) {
 	t.Helper()
 	err := filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
@@ -139,10 +187,61 @@ func expositionFiles(t *testing.T, visit func(path, code string)) {
 		if d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return nil
 		}
-		visit(path, readFile(t, path))
+		code := readFile(t, path)
+		if declaresAFamily.MatchString(code) {
+			visit(path, code)
+		}
 		return nil
 	})
 	if err != nil {
 		t.Fatalf("walking the source tree: %v", err)
+	}
+}
+
+// The gate's own falsification. Each case is a shape that has to fail or a
+// shape that has to pass; without them the prohibition above could stop
+// matching and report PASS over a tree full of offenders.
+func TestTheEscapingGateFiresOnEveryShapeItClaims(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name    string
+		code    string
+		offends bool
+	}{
+		{"format verb with %q", `out.printf("margince_x{model=%q} %d\n", m, n)`, true},
+		{"concatenated without an escaper", `w("margince_x{model=" + fmtQ(m) + "} 1")`, true},
+		{"concatenated through Label", `w("margince_x{model=" + Label(m) + "} 1")`, false},
+		{"concatenated through httpserver.Label", `w("margince_x{model=" + httpserver.Label(m) + "} 1")`, false},
+		{"format verb with %s", `out.printf("margince_x{model=%s} %d\n", Label(m), n)`, false},
+		{"a second label after the first", `out.printf("margince_x{a=%s,model=%q} 1\n", Label(a), m)`, true},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			offenders, seen := scanLabelWrites(c.code)
+			if got := len(offenders) > 0; got != c.offends {
+				t.Errorf("offends = %v, want %v for:\n\t%s\n\tfindings: %v", got, c.offends, c.code, offenders)
+			}
+			if seen != 1 {
+				t.Errorf("the denominator counted %d labelled lines, want 1 — it cannot see this shape, "+
+					"so the floor would not notice a corpus collapse:\n\t%s", seen, c.code)
+			}
+		})
+	}
+}
+
+// The waiver exists so a writer that provably cannot carry a hostile value can
+// say so — and a reasonless one is itself a finding, or the escape hatch
+// becomes the second place this census fails short.
+func TestTheWaiverNeedsAReason(t *testing.T) {
+	t.Parallel()
+	withReason := expositionWaiver + " the value is a compile-time literal\n" +
+		`out.printf("margince_x{model=%q} 1\n", m)`
+	if offenders, _ := scanLabelWrites(withReason); len(offenders) != 0 {
+		t.Errorf("a waiver carrying a reason was ignored: %v", offenders)
+	}
+
+	bare := expositionWaiver + "\n" + `out.printf("margince_x{model=%q} 1\n", m)`
+	if offenders, _ := scanLabelWrites(bare); len(offenders) == 0 {
+		t.Error("a reasonless waiver silenced the finding; the escape hatch is now the way through")
 	}
 }

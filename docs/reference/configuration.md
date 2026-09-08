@@ -422,6 +422,21 @@ re-serves no fleet-wide reading:
 | `margince_relay_published_total` | outbox rows *this* relay has shipped since start |
 | `margince_ai_*` | the AI calls *this* process made — every Router in a binary increments one process-wide collector |
 
+The AI families are labelled by `provider`, `model`, `served_identity_source`,
+`task` and `tier`. `model` is the **served** identity, not the configured one: a
+tier binding need not declare a model (no `--ai-fake` deployment does), and
+`served_identity_source` grades what the label is worth — `response` is a vendor
+confirming what ran, `echo` is an OpenAI-compatible wire reflecting the request
+back, `configured` is nobody having said.
+
+Two grains, and reading the wrong one is the easy mistake.
+`margince_ai_calls_total` counts **one per logical call**: the served-or-failed
+decision the caller actually got. `margince_ai_call_attempts_total` counts
+**every ladder rung**, so their ratio is how much failing over a tier is doing.
+`margince_ai_call_errors_total` is per ATTEMPT — it exceeded calls_total the day
+attempts were added, so an `errors / calls` panel now reads above 1 on a tier
+that fails over, and the honest denominator for it is attempts.
+
 The `go_*` and `process_*` families come from client_golang's runtime and
 process collectors, gathered into the same exposition as the hand-rolled
 `margince_*` ones. They replaced four hand-read `margince_process_*` gauges,
