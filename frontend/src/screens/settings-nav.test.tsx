@@ -196,8 +196,8 @@ const SEEDED_READS: GrantSpec = {
 };
 
 // What the matrix adds for ops: the objects it shares with admin alone.
-// `embedding_reindex` is what opens System health, and `license` — which core
-// migration 0261 grants to admin and ops and to nobody else — is what opens
+// `embedding_reindex` is what opens System health, and `license` — which the
+// seeded matrix grants to admin and ops and to nobody else — is what opens
 // Seats & license.
 //
 // `ai_model_rate` opens AI usage and NOT Model calls, which is the two entries

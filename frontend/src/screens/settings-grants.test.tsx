@@ -87,9 +87,9 @@ describe("the grant that opens one settings page", () => {
 
   it("opens Seats & license for a lone license read", async () => {
     // `LicenseCard` calls `/installation/license` and nothing else, so this is
-    // the grant that actually reaches content. Core migration 0261 grants
+    // the grant that actually reaches content. The seeded matrix gives
     // `license` to admin and ops and to nobody else, so it is still a grant an
-    // edited role can hold rather than a role name.
+    // edited role can hold rather than a role name in disguise.
     vi.stubGlobal(
       "fetch",
       settingsNavBackend({ roles: ["ops"], allow: readOn("license") }),
