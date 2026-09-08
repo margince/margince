@@ -132,4 +132,37 @@ describe("the weekly scorecard", () => {
       screen.getByText(en["brief.weekly.scorecard.partialHistory"]),
     ).toBeTruthy();
   });
+
+  // Three states, not two. Zero and absent both draw nothing, but they are
+  // different facts: zero means the week was rebuilt completely, absent means
+  // it was scored before the rebuild existed. Only a real shortfall is drawn,
+  // and drawing it is what stops a reader taking a floor for a total.
+  it("reports deals it could not rebuild, and only when there are some", () => {
+    render(
+      <ScorecardPanel
+        scorecard={{ deal: { ...dealBlock, unreconstructible: 0 } }}
+      />,
+    );
+    expect(
+      screen.queryByText(en["brief.weekly.scorecard.unreconstructible"]),
+    ).toBeNull();
+
+    cleanup();
+    // A week scored before the reconstruction existed sends no field at all.
+    // It must read like the zero case rather than throwing or drawing "0".
+    render(<ScorecardPanel scorecard={{ deal: dealBlock }} />);
+    expect(
+      screen.queryByText(en["brief.weekly.scorecard.unreconstructible"]),
+    ).toBeNull();
+
+    cleanup();
+    render(
+      <ScorecardPanel
+        scorecard={{ deal: { ...dealBlock, unreconstructible: 2 } }}
+      />,
+    );
+    expect(
+      screen.getByText(en["brief.weekly.scorecard.unreconstructible"]),
+    ).toBeTruthy();
+  });
 });

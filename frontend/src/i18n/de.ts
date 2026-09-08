@@ -2612,6 +2612,9 @@ export const de = {
   "brief.weekly.scorecard.closeDateSound": "Festes Abschlussdatum hinterlegt",
   "brief.weekly.scorecard.forecastMoves": "Forecast hochgestuft",
   "brief.weekly.scorecard.forecastMovesBasis": "{down} herabgestuft",
+  "brief.weekly.scorecard.unreconstructible": "Nicht rekonstruierbare Deals",
+  "brief.weekly.scorecard.unreconstructibleBasis":
+    "Ihre Woche liegt hinter einer Löschung, die Zahlen oben sind daher ein Mindestwert",
   // Die kommende Woche. Der eingefrorene Rückblick sagt, was war; dies ist der
   // einzige Teil dieser Seite, den noch jemand ändern kann.
   "plan.title": "Ihre Woche planen",

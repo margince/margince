@@ -2704,6 +2704,9 @@ export const en = {
   "brief.weekly.scorecard.closeDateSound": "Firm close date recorded",
   "brief.weekly.scorecard.forecastMoves": "Forecast upgrades",
   "brief.weekly.scorecard.forecastMovesBasis": "{down} downgraded",
+  "brief.weekly.scorecard.unreconstructible": "Deals we could not rebuild",
+  "brief.weekly.scorecard.unreconstructibleBasis":
+    "Their week sits behind an erasure, so the counts above are a floor",
   // The week ahead. The frozen review says what happened; this is the only part
   // of that page anybody can still change.
   "plan.title": "Plan your week",

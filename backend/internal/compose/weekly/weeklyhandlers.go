@@ -168,6 +168,7 @@ func scorecardToWire(card Scorecard) *crmcontracts.WeeklyReviewScorecard {
 			WithNextStep:      d.WithNextStep, Open: d.Open,
 			MultiThreaded: d.MultiThreaded, CloseDateSound: d.CloseDateSound,
 			ForecastUp: d.ForecastUp, ForecastDown: d.ForecastDown,
+			Unreconstructible: d.Unreconstructible,
 		}
 	}
 	return out

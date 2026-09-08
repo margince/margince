@@ -148,6 +148,19 @@ function DealBlockStrip({
           down: n(block.forecast_down),
         })}
       />
+      {/* Drawn only when non-zero, the same rule the partial-history card
+          follows: a caveat the reader needs, never a reassurance nobody asked
+          for. Absent (rather than zero) means the week was scored before the
+          reconstruction existed, and that draws nothing either — there is no
+          shortfall to report, because the question was never asked of it. */}
+      {block.unreconstructible != null && block.unreconstructible > 0 && (
+        <StatCard
+          label={t("brief.weekly.scorecard.unreconstructible")}
+          value={n(block.unreconstructible)}
+          numeric
+          detail={t("brief.weekly.scorecard.unreconstructibleBasis")}
+        />
+      )}
     </StatStrip>
   );
 }
