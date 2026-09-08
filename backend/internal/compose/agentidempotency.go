@@ -18,10 +18,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -79,13 +81,17 @@ func (c agentClaims) Claim(ctx context.Context, tool, key, digest string) (agent
 	if err != nil {
 		return agents.Claim{}, err
 	}
-	outcome, stored, err := claimKey(ctx, c.pool, holder, key, mcpClaimEndpoint(tool), digest)
+	outcome, hold, stored, err := claimKey(ctx, c.pool, holder, key, mcpClaimEndpoint(tool), digest)
 	if err != nil {
 		return agents.Claim{}, err
 	}
 	switch outcome {
 	case claimFresh:
-		return agents.Claim{State: agents.ClaimFresh}, nil
+		// The attempt token travels back to the caller, which hands it to
+		// whichever settling verb ends the call. Only a FRESH claim carries
+		// one: every other verdict read somebody else's row and has nothing of
+		// its own to settle.
+		return agents.Claim{State: agents.ClaimFresh, Attempt: hold.attempt.String()}, nil
 	case claimInProgress:
 		return agents.Claim{State: agents.ClaimInFlight}, nil
 	case claimMismatch:
@@ -103,35 +109,58 @@ func (c agentClaims) Claim(ctx context.Context, tool, key, digest string) (agent
 
 // Settle records the sealed result, and what it cost the caller's read bound,
 // so a repeat of the same key answers with it at the same price.
-func (c agentClaims) Settle(ctx context.Context, tool, key string, result json.RawMessage, records int) error {
-	holder, err := claimHolder(ctx, "settling")
-	if err != nil {
+func (c agentClaims) Settle(ctx context.Context, tool, key, attempt string, result json.RawMessage, records int) error {
+	hold, err := c.holdFor(ctx, "settling", tool, key, attempt)
+	if err != nil || !hold.holdsClaim() {
 		return err
 	}
-	return recordClaimOutcome(ctx, c.pool, holder, key, mcpClaimEndpoint(tool),
+	return recordClaimOutcome(ctx, c.pool, hold,
 		mcpClaimSucceeded, string(result), mcpClaimContentType, records)
+}
+
+// holdFor rebuilds the hold a settling verb was handed.
+//
+// The attempt is the caller's token from Claim, and an unparseable or absent
+// one answers a hold that owns nothing — which the settling verbs treat as
+// "nothing to settle" rather than falling back to (principal, key, tool). That
+// fallback is the defect: those three do not name an attempt, because a key
+// past its replay window is re-claimed in place under the same three.
+func (c agentClaims) holdFor(ctx context.Context, verb, tool, key, attempt string) (claimHold, error) {
+	holder, err := claimHolder(ctx, verb)
+	if err != nil {
+		return claimHold{}, err
+	}
+	id, err := ids.Parse(attempt)
+	if err != nil {
+		// Not an error to the caller: a settlement naming no attempt has
+		// nothing to land on, and refusing the CALL over its bookkeeping would
+		// turn a lost claim into a lost result.
+		slog.WarnContext(ctx, "an idempotency settlement named no usable attempt; nothing was recorded",
+			"tool", tool, "verb", verb, "err", err)
+		return claimHold{}, nil
+	}
+	return claimHold{principalID: holder, key: key, endpoint: mcpClaimEndpoint(tool), attempt: id}, nil
 }
 
 // Fail records that the tool ran under this key and produced no result. The
 // reason is stored where a result would be, and a later attempt is told it
 // rather than being allowed to run again — see agents.Idempotency for why a
 // failed run is not a free key.
-func (c agentClaims) Fail(ctx context.Context, tool, key, reason string) error {
-	holder, err := claimHolder(ctx, "failing")
-	if err != nil {
+func (c agentClaims) Fail(ctx context.Context, tool, key, attempt, reason string) error {
+	hold, err := c.holdFor(ctx, "failing", tool, key, attempt)
+	if err != nil || !hold.holdsClaim() {
 		return err
 	}
 	// No records: nothing was handed over, so there is nothing a replay of it
 	// could cost — and it will never be replayed in any case.
-	return recordClaimOutcome(ctx, c.pool, holder, key, mcpClaimEndpoint(tool),
-		mcpClaimFailed, reason, mcpClaimContentType, 0)
+	return recordClaimOutcome(ctx, c.pool, hold, mcpClaimFailed, reason, mcpClaimContentType, 0)
 }
 
 // Release gives back a key whose call never ran.
-func (c agentClaims) Release(ctx context.Context, tool, key string) error {
-	holder, err := claimHolder(ctx, "releasing")
-	if err != nil {
+func (c agentClaims) Release(ctx context.Context, tool, key, attempt string) error {
+	hold, err := c.holdFor(ctx, "releasing", tool, key, attempt)
+	if err != nil || !hold.holdsClaim() {
 		return err
 	}
-	return releaseClaim(ctx, c.pool, holder, key, mcpClaimEndpoint(tool))
+	return releaseClaim(ctx, c.pool, hold)
 }
