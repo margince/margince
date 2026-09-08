@@ -82,8 +82,18 @@ func (r *callRuntime) Ingest(ctx context.Context, on extension.UserID, rec exten
 		return extension.Result{}, err
 	}
 	defer r.endIngest()
+	// A record the grammar refuses is a DISPOSITION, not an error. The unit
+	// moves its cursor past it either way — stopping on one malformed message
+	// parks the whole connection — so answering an error class only put the
+	// distinction it needs most, "the core skipped this" versus "I built
+	// something the core cannot use", somewhere it had to match on. The
+	// complaint still travels: a unit that logs the reason gets the same
+	// sentence it used to read off the error.
 	if err := rec.Validate(); err != nil {
-		return extension.Result{}, fmt.Errorf("%w: %s", extension.ErrInvalid, err.Error())
+		return extension.Result{
+			Disposition: extension.DispositionUnrepresentable,
+			Reason:      err.Error(),
+		}, nil
 	}
 	if err := refuseUndeclaredTransport(r.unit, rec.Activity.Kind, rec.Activity.ChannelProvider); err != nil {
 		return extension.Result{}, err
