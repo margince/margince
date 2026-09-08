@@ -30,7 +30,7 @@ func TestSendEmailRefusesAddressesOutsideTheQuarantine(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			c := New(&fakeLedger{})
-			_, err := c.SendEmail(context.Background(), testAuth(t, ids.NewV7().String()), tc.msg)
+			_, err := c.SendEmail(context.Background(), testAuth(t, ids.NewV7()), tc.msg)
 			if !errors.Is(err, connector.ErrRecipientUnreachable) {
 				t.Errorf("SendEmail(%+v) error = %v, want ErrRecipientUnreachable", tc.msg, err)
 			}
@@ -48,7 +48,7 @@ func TestSendEmailAcceptsEveryReservedDomain(t *testing.T) {
 	for _, addr := range reserved {
 		t.Run(addr, func(t *testing.T) {
 			c := New(&fakeLedger{})
-			_, err := c.SendEmail(context.Background(), testAuth(t, ids.NewV7().String()), connector.EmailMessage{MessageID: "x@test.example", To: []string{addr}})
+			_, err := c.SendEmail(context.Background(), testAuth(t, ids.NewV7()), connector.EmailMessage{MessageID: "x@test.example", To: []string{addr}})
 			if err != nil {
 				t.Errorf("SendEmail to reserved address %q = %v, want nil", addr, err)
 			}
@@ -63,7 +63,7 @@ func TestSendEmailRefusesALookalikeDomain(t *testing.T) {
 	for _, addr := range lookalikes {
 		t.Run(addr, func(t *testing.T) {
 			c := New(&fakeLedger{})
-			_, err := c.SendEmail(context.Background(), testAuth(t, ids.NewV7().String()), connector.EmailMessage{MessageID: "x@test.example", To: []string{addr}})
+			_, err := c.SendEmail(context.Background(), testAuth(t, ids.NewV7()), connector.EmailMessage{MessageID: "x@test.example", To: []string{addr}})
 			if !errors.Is(err, connector.ErrRecipientUnreachable) {
 				t.Errorf("SendEmail to lookalike address %q = %v, want ErrRecipientUnreachable", addr, err)
 			}
@@ -73,7 +73,7 @@ func TestSendEmailRefusesALookalikeDomain(t *testing.T) {
 
 func TestSendReceiptIsIdempotentOnMessageID(t *testing.T) {
 	c := New(&fakeLedger{})
-	auth := testAuth(t, ids.NewV7().String())
+	auth := testAuth(t, ids.NewV7())
 	msg := connector.EmailMessage{MessageID: "same@test.example", To: []string{"buyer@example.com"}}
 	r1, err := c.SendEmail(context.Background(), auth, msg)
 	if err != nil {
@@ -93,7 +93,7 @@ func TestSendReceiptIsIdempotentOnMessageID(t *testing.T) {
 
 func TestSendEmailValidatesTheMessageFirst(t *testing.T) {
 	c := New(&fakeLedger{})
-	_, err := c.SendEmail(context.Background(), testAuth(t, ids.NewV7().String()), connector.EmailMessage{MessageID: "not valid", To: []string{"buyer@example.com"}})
+	_, err := c.SendEmail(context.Background(), testAuth(t, ids.NewV7()), connector.EmailMessage{MessageID: "not valid", To: []string{"buyer@example.com"}})
 	if !errors.Is(err, connector.ErrInvalidMessageID) {
 		t.Errorf("SendEmail with an invalid MessageID = %v, want ErrInvalidMessageID", err)
 	}
@@ -103,7 +103,7 @@ func TestSendEmailRecordsTheSendForItsOwnEcho(t *testing.T) {
 	ledger := &fakeLedger{}
 	c := New(ledger)
 	userID := ids.NewV7()
-	if _, err := c.SendEmail(context.Background(), testAuth(t, userID.String()), connector.EmailMessage{
+	if _, err := c.SendEmail(context.Background(), testAuth(t, userID), connector.EmailMessage{
 		MessageID: "recorded@test.example", To: []string{"buyer@example.com"}, Subject: "Hi",
 	}); err != nil {
 		t.Fatalf("SendEmail: %v", err)

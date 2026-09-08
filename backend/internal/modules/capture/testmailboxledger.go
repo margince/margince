@@ -42,10 +42,13 @@ func NewTestMailboxLedger(db *database.DB) *TestMailboxLedger {
 // comms commit re-sends the identical row, which the conflict target
 // discards rather than duplicates.
 func (l *TestMailboxLedger) RecordSent(ctx context.Context, userID ids.UUID, messageID string, to, cc []string, subject string) error {
-	// A nil slice binds as SQL NULL, not the column default — cc_addresses is
-	// NOT NULL, and the overwhelmingly common case is a message with no Cc at
-	// all, so this is not an edge case to special-case away, it is the normal
-	// call shape.
+	// A nil slice binds as SQL NULL, not the column default — both columns
+	// are NOT NULL. Cc-with-no-To is not a shape SendEmail's own quarantine
+	// loop refuses (an empty To passes trivially, nothing to check), so this
+	// is not an edge case to special-case away for either list.
+	if to == nil {
+		to = []string{}
+	}
 	if cc == nil {
 		cc = []string{}
 	}

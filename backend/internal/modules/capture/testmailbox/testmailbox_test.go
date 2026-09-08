@@ -5,7 +5,6 @@ package testmailbox
 
 import (
 	"context"
-	"encoding/json"
 	"slices"
 	"testing"
 
@@ -16,14 +15,17 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
-// testAuth builds the same opaque credential connectTestMailbox mints.
-func testAuth(t *testing.T, userID string) connector.Auth {
+// testAuth builds the same opaque credential connectTestMailbox mints, by
+// calling Credential directly rather than hand-marshalling a second copy of
+// its wire shape — a change to that shape is then tested against the real
+// function every caller in this package uses.
+func testAuth(t *testing.T, userID ids.UUID) connector.Auth {
 	t.Helper()
-	b, err := json.Marshal(authPayload{UserID: userID})
+	auth, err := Credential(userID)
 	if err != nil {
-		t.Fatalf("marshal auth: %v", err)
+		t.Fatalf("Credential: %v", err)
 	}
-	return connector.Auth(b)
+	return auth
 }
 
 // The connector.EmailSender/GrantedScoper/Connector assertions are compile-time

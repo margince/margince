@@ -7,24 +7,26 @@ package integration
 
 // The test_mailbox connector over the real composition: connect through the
 // real endpoint, send through the real dispatcher, echo back through the
-// real sink, and confirm the echo reconciles onto the send's own activity
-// instead of duplicating it. Finally, disconnect and confirm a further send is
-// refused, and confirm the connect endpoint 422s when AllowTestMailbox is unset.
+// real registry sync, and confirm the echo reconciles onto the send's own
+// activity instead of duplicating it. Finally, disconnect and confirm a
+// further send is refused, and confirm the connect endpoint 422s when
+// AllowTestMailbox is unset.
 //
 // This connector never dials a real network, so — unlike
-// comms_send_integration_test.go, which stubs an HTTP Gmail — the store, the
-// gate and the connector here are all production objects with no server to
-// fake. Two seams are still test-built rather than driven through the
-// composed registry: the resolver handed to the dispatcher
-// (testMailboxResolver, not Registry.SenderFor) and the principal Sync runs
-// under (testMailboxConnectorCtx, not Registry.SyncOnce) — both exist because
-// this package has no inline-dispatch seam into the composed registry (see
-// dispatchOnce's own comment), the same gap the Gmail suite works around.
+// comms_send_integration_test.go, which must stub an HTTP Gmail because a
+// real one is unreachable in a test — there is nothing here a stub buys:
+// dispatch resolves the sending connection through a real
+// *capture.Registry's SenderFor (testMailboxResolver only carries the
+// commsResolver-shaped error translation compose.commsResolver applies,
+// unexported and so not importable from this package), and the echo runs
+// through that same registry's SyncOnce against the connection id connect
+// itself returned.
 
 import (
 	"context"
 	"crypto/rand"
 	"errors"
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -35,7 +37,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/capture/testmailbox"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -138,41 +139,42 @@ func (p *preflightEnv) connectTestMailbox(t *testing.T) (status int, connectionI
 	return status, resp.Connection.ID
 }
 
-// testMailboxConnectorCtx is p.connectorCtx's twin for test_mailbox: the
-// capture sink checks the acting principal's connector identity against the
-// record's own CapturedBy, so a context claiming "connector:gmail" (what
-// p.connectorCtx builds, hardcoded to that suite's own drivenProvider)
-// refuses to write a record captured_by "connector:test_mailbox".
-func (p *preflightEnv) testMailboxConnectorCtx(t *testing.T) context.Context {
-	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), p.workspaceID(t))
-	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
-	return principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalConnector, ID: "connector:" + testmailbox.Name,
-		Scopes: principal.NewScopeSet(principal.ScopeRead),
-		Permissions: principal.Permissions{
-			Objects:  map[string]principal.ObjectGrant{"activity": {Create: true, Read: true}},
-			RowScope: principal.RowScopeAll,
-		},
-	})
+// captureRegistry builds a *capture.Registry against this env's own pool and
+// vault, with test_mailbox armed — the same construction compose.WithKeyvault
+// runs at boot (compose/capture.go's NewCaptureRegistry), so SenderFor and
+// SyncOnce here resolve credentials, connections and scopes exactly as the
+// composed server does.
+func (p *preflightEnv) captureRegistry() *capture.Registry {
+	return compose.NewCaptureRegistry(p.Pool, p.Vault, compose.CaptureConfig{AllowTestMailbox: true})
 }
 
-// testMailboxResolver is comms.ConnectionResolver for test_mailbox — its own
-// type rather than the sibling suite's stubMailbox, whose Resolve hardcodes
-// gmailSendScope as the granted-scopes return regardless of its sender field.
-// gateSendAuthority (comms/gates.go) checks THIS return, not
-// capture_connection.provider_scopes, so a resolver answering the wrong scope
-// here parks every send with "not granted the send scope" even though the
-// row itself is correct.
+// testMailboxResolver is comms.ConnectionResolver for test_mailbox, backed by
+// a real *capture.Registry's SenderFor rather than a canned answer — this
+// connector never touches the network, so unlike the Gmail suite's
+// stubMailbox (which must stand in for an unreachable HTTP Gmail) there is
+// nothing here a stub buys. The error translation mirrors
+// compose.commsResolver's, unimportable from this package because it is
+// unexported: only capture's three deployment-fact sentinels become comms
+// parking sentinels, everything else stays a transient failure.
 type testMailboxResolver struct {
-	sender connector.EmailSender
-	auth   connector.Auth
+	registry *capture.Registry
 }
 
 var _ comms.ConnectionResolver = testMailboxResolver{}
 
-func (m testMailboxResolver) Resolve(context.Context, ids.UserID, string) (connector.EmailSender, connector.Auth, []string, error) {
-	return m.sender, m.auth, []string{testmailbox.SendScope}, nil
+func (m testMailboxResolver) Resolve(ctx context.Context, userID ids.UserID, provider string) (connector.EmailSender, connector.Auth, []string, error) {
+	sender, auth, granted, err := m.registry.SenderFor(ctx, userID, provider)
+	switch {
+	case errors.Is(err, capture.ErrNoConnection):
+		return nil, nil, nil, fmt.Errorf("%w: %w", comms.ErrNoMailbox, err)
+	case errors.Is(err, capture.ErrConnectorCannotSend):
+		return nil, nil, nil, fmt.Errorf("%w: %w", comms.ErrCannotSend, err)
+	case errors.Is(err, capture.ErrConnectorNotConfigured):
+		return nil, nil, nil, fmt.Errorf("%w: %w", comms.ErrProviderNotConfigured, err)
+	case err != nil:
+		return nil, nil, nil, err
+	}
+	return sender, auth, granted, nil
 }
 
 func (m testMailboxResolver) ResolveChannel(context.Context, ids.UserID, string) (connector.MessageSender, connector.Auth, error) {
@@ -180,23 +182,14 @@ func (m testMailboxResolver) ResolveChannel(context.Context, ids.UserID, string)
 }
 
 // dispatchTestMailboxOnce drives one real dispatch through the production
-// store/gate/dispatcher, resolving straight to a real testmailbox.Connector —
-// no stub server needed, since this connector never touches the network.
+// store/gate/dispatcher, resolving through a real *capture.Registry — no stub
+// server needed, since this connector never touches the network.
 func (p *preflightEnv) dispatchTestMailboxOnce(t *testing.T, deliveryID ids.UUID) comms.Outcome {
 	t.Helper()
 	db := compose.InstallationDB(p.Pool)
-	ledger := capture.NewTestMailboxLedger(db)
-	userID, err := ids.Parse(p.user)
-	if err != nil {
-		t.Fatalf("parsing the acting human's id: %v", err)
-	}
-	auth, err := testmailbox.Credential(userID)
-	if err != nil {
-		t.Fatalf("building the credential: %v", err)
-	}
 	dispatcher := comms.NewDispatcher(
 		comms.NewStore(db, time.Now, activities.NewStore(db)),
-		testMailboxResolver{sender: testmailbox.New(ledger), auth: auth},
+		testMailboxResolver{registry: p.captureRegistry()},
 		compose.NewSendSeatAuthority(p.Pool),
 		compose.NewSendAttachmentAuthority(p.Pool, nil),
 		consent.NewGate(consent.NewStore(db)),
@@ -253,9 +246,8 @@ func TestTestMailboxFullLoop(t *testing.T) {
 		t.Fatalf("comms_outbound.status = %q, want sent", deliveryStatus)
 	}
 
-	// The echo: test_mailbox's own Sync, run directly (the same registry
-	// pacing Registry.WithSyncInterval would otherwise gate is not the
-	// mechanism under test here — Sync's own correctness is).
+	// The send-side ledger row exists before any sync runs — SyncOnce below
+	// is what drains it, not what writes it.
 	db := compose.InstallationDB(p.Pool)
 	ledger := capture.NewTestMailboxLedger(db)
 	userID, err := ids.Parse(p.user)
@@ -270,14 +262,13 @@ func TestTestMailboxFullLoop(t *testing.T) {
 		t.Fatalf("ledger.Unechoed = %+v, want one row for %q", unechoed, messageID)
 	}
 
-	tmConnector := testmailbox.New(ledger)
-	auth, err := testmailbox.Credential(userID)
+	connID, err := ids.Parse(connectionID)
 	if err != nil {
-		t.Fatalf("building the credential: %v", err)
+		t.Fatalf("parsing the connection id: %v", err)
 	}
-	sink := capture.NewSink(db)
-	if _, err := tmConnector.Sync(p.testMailboxConnectorCtx(t), auth, nil, sink); err != nil {
-		t.Fatalf("Sync: %v", err)
+	syncCtx := principal.WithWorkspaceID(context.Background(), p.workspaceID(t))
+	if err := p.captureRegistry().SyncOnce(syncCtx, connID); err != nil {
+		t.Fatalf("SyncOnce: %v", err)
 	}
 
 	// The reconciliation: exactly one activity carries this message's natural

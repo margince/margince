@@ -7122,8 +7122,11 @@ export interface paths {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
-                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a person can bring one without the other and disconnect either.
@@ -7158,8 +7161,11 @@ export interface paths {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
-                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a person can bring one without the other and disconnect either.
@@ -7193,8 +7199,11 @@ export interface paths {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
-                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a person can bring one without the other and disconnect either.
@@ -7229,8 +7238,11 @@ export interface paths {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
-                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a person can bring one without the other and disconnect either.
@@ -7266,8 +7278,11 @@ export interface paths {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
-                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a person can bring one without the other and disconnect either.
@@ -7310,8 +7325,11 @@ export interface paths {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
-                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a person can bring one without the other and disconnect either.
@@ -7359,8 +7377,11 @@ export interface paths {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
-                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a person can bring one without the other and disconnect either.
@@ -7394,8 +7415,11 @@ export interface paths {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
-                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a person can bring one without the other and disconnect either.
@@ -33483,8 +33507,11 @@ export interface components {
         FactKey: string;
         /**
          * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-         *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
-         *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+         *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+         *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+         *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+         *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+         *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
          *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
          *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
          *     consent each, so a person can bring one without the other and disconnect either.
@@ -44922,8 +44949,11 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
-                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a person can bring one without the other and disconnect either.
@@ -44966,8 +44996,11 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
-                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a person can bring one without the other and disconnect either.
@@ -44996,8 +45029,11 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
-                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a person can bring one without the other and disconnect either.
@@ -45027,8 +45063,11 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
-                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a person can bring one without the other and disconnect either.
@@ -45065,8 +45104,11 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
-                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a person can bring one without the other and disconnect either.
@@ -45104,8 +45146,11 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
-                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a person can bring one without the other and disconnect either.
@@ -45143,8 +45188,11 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
-                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a person can bring one without the other and disconnect either.
@@ -45190,8 +45238,11 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
-                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a person can bring one without the other and disconnect either.
@@ -45223,8 +45274,11 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
-                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a person can bring one without the other and disconnect either.
@@ -45261,8 +45315,11 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
-                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a person can bring one without the other and disconnect either.

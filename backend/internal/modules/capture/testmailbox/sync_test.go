@@ -29,7 +29,7 @@ func TestSyncEchoesEveryUnechoedSendAndMarksItEchoed(t *testing.T) {
 	sink := &fakeSink{}
 	c := New(ledger)
 
-	_, err := c.Sync(context.Background(), testAuth(t, userID.String()), nil, sink)
+	_, err := c.Sync(context.Background(), testAuth(t, userID), nil, sink)
 	if err != nil {
 		t.Fatalf("Sync: %v", err)
 	}
@@ -59,7 +59,7 @@ func TestSyncWithNothingUnechoedUpsertsNothing(t *testing.T) {
 	ledger := &fakeLedger{}
 	sink := &fakeSink{}
 	c := New(ledger)
-	if _, err := c.Sync(context.Background(), testAuth(t, ids.NewV7().String()), nil, sink); err != nil {
+	if _, err := c.Sync(context.Background(), testAuth(t, ids.NewV7()), nil, sink); err != nil {
 		t.Fatalf("Sync: %v", err)
 	}
 	if len(sink.upserted) != 0 {

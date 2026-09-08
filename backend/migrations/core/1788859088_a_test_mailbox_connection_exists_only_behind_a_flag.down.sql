@@ -29,6 +29,17 @@ END $$;
 
 DROP TABLE IF EXISTS capture_test_mailbox_sent;
 
+-- The DO block above only refuses a LIVE credential; a fully disconnected
+-- row (status='disconnected', credential_ref NULL) passes it and would
+-- still fail the narrower CHECK restored below, since Postgres validates a
+-- newly added constraint against every existing row. Deleting it here is
+-- safe on the same terms the refusal above is built on: there is no secret
+-- left to strand (credential_ref is already NULL), and disconnect already
+-- ended the connection this row records — the row itself is the only thing
+-- this feature adds, and rolling the feature back takes it with it.
+DELETE FROM capture_connection
+ WHERE provider = 'test_mailbox' AND status = 'disconnected' AND credential_ref IS NULL;
+
 ALTER TABLE capture_connection DROP CONSTRAINT capture_connection_provider_check;
 
 ALTER TABLE capture_connection
