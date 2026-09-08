@@ -548,7 +548,10 @@
    * scrolls under it. Zero spacing keeps the grid looking the same. */
   border-collapse: separate;
   border-spacing: 0;
-  font-size: var(--fs-body);
+  /* A cell is a scanned fact, not a read sentence: the rung the headers, the
+   * count line and the badges already sit on, so a row reads as one register
+   * rather than a body line with meta-sized pills stuck to it. */
+  font-size: var(--fs-meta);
 }
 
 /* With explicit widths in play a cell clips rather than growing a row: the row
@@ -560,6 +563,32 @@
 .lt-table td {
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+/* `CellStrip` — several pills in one cell, on one line. A strip that grew a
+ * second line would push every row below it down; clipped at the column edge
+ * the reader widens the column instead, which is the answer this table already
+ * gives for a value too long for its share. */
+.lt-strip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-wrap: nowrap;
+  max-inline-size: 100%;
+  overflow: hidden;
+}
+
+/* The floor under a cell's strip. The `nowrap` above governs TEXT, not the
+ * layout of a flex container inside the cell: `.badge` and `.chip` are nowrap
+ * only by flexbox's own default, and a strip that took a second line here would
+ * cost every row below it its place. Stated on the TABLE as well as on
+ * `.rowtags` and `.lt-strip`, so an edit to one of those sheets cannot give it
+ * up in a cell without saying so. */
+.lt-table td .badge,
+.lt-table td .chip,
+.lt-table td .rowtags,
+.lt-table td .lt-strip {
+  flex-wrap: nowrap;
 }
 
 /* The header is a quiet label row in sentence case: a table's headers are

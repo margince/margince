@@ -174,6 +174,24 @@ function IdentityCell<Row>({
   );
 }
 
+/**
+ * Several pills in one cell, on the row's one line.
+ *
+ * It does NOT wrap, which is the whole of why it exists: a cell that grows a
+ * second line pushes every row below it down, and a page of fifty rows stops
+ * being a scannable grid — the reasoning `RowTags` already states for a tag
+ * strip. What does not fit is CLIPPED at the column edge, because the reader's
+ * answer to a strip cut short is to widen the column, which this table offers,
+ * and every other answer costs the rows their rhythm.
+ *
+ * A `<span>`, so a column renderer can return it wherever it returns text.
+ * Offered rather than applied: the table wraps the identity cell and nothing
+ * else, so a column that carries one value keeps whatever layout it returns.
+ */
+export function CellStrip({ children }: Readonly<{ children: ReactNode }>) {
+  return <span className="lt-strip">{children}</span>;
+}
+
 /** The bulk bar over the grid, while anything is selected. */
 function BulkBar<Row>({
   selection,

@@ -84,10 +84,11 @@
   min-width: 0;
 }
 
+/* The body face, both values: an address is words a person reads and a member
+   count is a sentence, and the mono face is for a machine name. */
 .share-subject-note {
   font-size: var(--fs-meta);
   color: var(--textTertiary);
-  font-family: var(--f-mono);
 }
 
 /* Person/team affordance: the kind glyph sits inline before the name, in both

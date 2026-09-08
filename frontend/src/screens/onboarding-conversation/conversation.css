@@ -2907,7 +2907,10 @@
   font-size: var(--fs-sm);
 }
 
-.ob-triage-person-meta {
+/* The URL alone takes the mono face. A profile address is a machine string and
+   reads as one; the person's e-mail beside it is words somebody wrote down, and
+   set in mono a name and a domain read as an identifier. */
+.ob-triage-person-url {
   font-family: var(--f-mono);
 }
 

@@ -871,12 +871,10 @@ function PersonRow({ person }: Readonly<{ person: SitePerson }>) {
       <span className="ob-triage-person-name">{person.name}</span>
       <span className="ob-triage-person-role">{person.role}</span>
       {person.published_email && (
-        <span className="ob-triage-person-meta t-caption">
-          {person.published_email}
-        </span>
+        <span className="t-caption">{person.published_email}</span>
       )}
       {person.linkedin_url && (
-        <span className="ob-triage-person-meta t-caption">
+        <span className="ob-triage-person-url t-caption">
           {person.linkedin_url}
         </span>
       )}

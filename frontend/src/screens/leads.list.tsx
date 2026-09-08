@@ -9,6 +9,7 @@ import { useRecordZone } from "../app/recordzone";
 import { currentParams, useUrlParams } from "../app/urlstate";
 import { Badge, Button, SegmentedControl } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { CellStrip } from "../design-system/listtable";
 import { useToast } from "../design-system/toast";
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { leadIdentityName } from "../format/leadname";
@@ -406,13 +407,7 @@ function LeadsWorkbench({
             key: "score",
             header: t("lead.score"),
             cell: (lead: Lead) => (
-              <span
-                style={{
-                  display: "flex",
-                  gap: "var(--space-1)",
-                  flexWrap: "wrap",
-                }}
-              >
+              <CellStrip>
                 <Badge tone={scoreTone(lead.score)}>
                   {formatNumber(lead.score, locale)}
                 </Badge>
@@ -421,7 +416,7 @@ function LeadsWorkbench({
                     ? scoreFactorLabel(lead.score_reason, t)
                     : t("lead.scoreNoSignals")}
                 </span>
-              </span>
+              </CellStrip>
             ),
             sort: "score",
             numeric: true,
