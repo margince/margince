@@ -83,6 +83,41 @@ var auditImageRead = regexp.MustCompile(
 	`(?is)\b(?:from|join)\s+audit_log\b.{0,300}?\b(?:before|after)\b` +
 		`|\b(?:before|after)\b.{0,300}?\b(?:from|join)\s+audit_log\b`)
 
+// auditImageEntity is the record type a statement binds its audit rows to,
+// when it binds it to a LITERAL at all.
+//
+// The trail is one table for every record the product keeps, so an image read
+// is only a second door onto ACTIVITY content when an activity can be behind
+// it. A statement pinned to `entity_type = 'deal'` cannot reach one — no
+// activity row is in its range whatever the caller asks — and demanding the
+// activity gate of it would be asking a deal reader to prove something about a
+// table it never touches. That is how a census earns a waiver list of readers
+// exempt for reasons that are not true, which is a list nobody can audit.
+var auditImageEntity = regexp.MustCompile(`(?is)\bentity_type\s*=\s*'([a-z_]+)'`)
+
+// readsAnActivitysAuditImage reports whether a statement reads an audit image
+// an activity can be behind.
+//
+// UNBOUND MEANS YES. A parameterized entity_type, or one spelled in a form this
+// does not read — `IN ('deal','lead')`, a value off a variable — leaves an
+// activity in range, so the reader stays a subject. Only a literal naming
+// something else takes it out, which is the one direction where being wrong
+// costs a false PASS rather than a false finding.
+func readsAnActivitysAuditImage(text string) bool {
+	for _, window := range auditImageRead.FindAllString(text, -1) {
+		bound := auditImageEntity.FindAllStringSubmatch(window, -1)
+		if len(bound) == 0 {
+			return true
+		}
+		for _, match := range bound {
+			if match[1] == "activity" {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // scopeMarkers are the shared gates that carry the availability test: a reader
 // reaching activity through one of them cannot see a held row. They are Go
 // calls rather than SQL, so they are matched on the names a reader reaches
@@ -174,7 +209,6 @@ var restrictedReadersAdmitted = gatekit.Waive(map[string]string{
 	"internal/compose/audiencerescope.go:AudienceRescopeGen.rescope":          "the audience-change consumer reads the thread key (content by the activity policy) and the capture owner of the ONE activity whose audience just moved — deliberately, as a system principal, because both are exactly what narrowing the derived models needs, to NARROW what other readers may see — excluding a held row here would leave a legal-hold conversation's derived signals workspace-visible, the exact disclosure the consumer exists to remove. The cost is that a held activity's thread key and owner id reach this system principal",
 	"internal/modules/privacy/auditaudienceboundary.go:ListAuditLog":          "the compliance read joins activity to evaluate ONE predicate — the audience arm the row's author set — and projects a single boolean from it. No activity column reaches the caller: the join's whole output is content_readable, which can only ever WITHHOLD an audit image, never reveal an activity. A held activity is therefore no more readable through this join than without it. The cost is that the audit IMAGE of a held activity stays readable to the admin, which is a pre-existing property of audit_log rather than of this join — audit_log is append-only and the hold is on the activity — and is filed rather than settled here, because making the compliance trail skip held rows is a decision about A165 and not a fix to the audience gap this join closes",
 	"internal/modules/privacy/erasure_graph.go:subjectNamedOnAParticipantRow": "the identity predicate BOTH participant scrubs share — the Art. 17 eraser's and the retention sweep's — and both are WRITERS. The one thing it reads from activity is channel_provider, a registry key naming a transport: never a subject's content, never projected, and read only because a chat roster names the third human in a group by an account id alone, which is meaningful only against the provider that issued it. Excluding a held activity here would do the opposite of what the hold protects — it would leave the erased subject's account standing on that roster row forever, readable and matchable back to them by the next roster naming it, while every other arm of the same statement removed them. The four statements built on it each carry notTransitivelyHeld, which is the hold exclusion that belongs to this path; the cost is that a held activity's transport decides whether a participant row on it is scrubbed, a fact about the row's own erasability whose effect is always toward removing the subject",
-	"internal/compose/displaynamerepair.go:selectStaleDisplayNames":           "reaches the audit trail rather than the activity table, and cannot reach an activity's image at all: its join is bound to the LITERAL `a.entity_type = 'person'`, so no activity row is in the statement's range whatever the caller asks for. It is here because the subject filter now sees the trail as a second door onto activity content, which is right, and this reader is on the far side of it",
 
 	// The four below read the trail with entity_type as a PARAMETER, so an
 	// activity's audit image is within their range when a caller names one.
@@ -234,7 +268,7 @@ func readsAnActivitysContent(text string) bool {
 	if activityReadLiteral.MatchString(text) {
 		return true
 	}
-	return auditImageRead.MatchString(text)
+	return readsAnActivitysAuditImage(text)
 }
 
 // unguardedActivityReaders names each reader in the file that reads the
@@ -608,4 +642,66 @@ func matchesAny(text string, markers []*regexp.Regexp) bool {
 		}
 	}
 	return false
+}
+
+// The audit door's subject filter, as a spec.
+//
+// It is asked of every declaration in the corpus, so both directions cost: too
+// narrow and a content reader is never examined; too wide and the census fills
+// with readers of other records' trails, each needing a waiver written for a
+// reason that is not true. A waiver list nobody can audit is how a census stops
+// being read.
+func TestTheAuditDoorAdmitsOnlyReadsAnActivityCanBeBehind(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct {
+		name string
+		sql  string
+		want bool
+	}{
+		{
+			name: "an image read pinned to activity",
+			sql:  `SELECT after ->> 'subject' FROM audit_log WHERE entity_type = 'activity'`,
+			want: true,
+		},
+		{
+			name: "an image read that binds no record type at all",
+			sql:  `SELECT before, after FROM audit_log WHERE entity_id = $1`,
+			want: true,
+		},
+		{
+			// The safe direction. A value off a variable could be 'activity'
+			// on the next call, so it stays a subject.
+			name: "an image read whose record type is parameterized",
+			sql:  `SELECT before FROM audit_log WHERE entity_type = $1 AND entity_id = $2`,
+			want: true,
+		},
+		{
+			// No activity row is in this statement's range whatever the caller
+			// asks, so demanding the activity gate of it would be asking a deal
+			// reader to prove something about a table it never touches.
+			name: "an image read pinned to another record type",
+			sql:  `SELECT count(*) FROM audit_log au WHERE au.entity_type = 'deal' AND (au.after ->> 'expected_close_date') IS NOT NULL`,
+			want: false,
+		},
+		{
+			name: "a projection sitting before its FROM still counts",
+			sql:  `SELECT a.before ->> 'body' FROM audit_log a WHERE a.entity_id = $1`,
+			want: true,
+		},
+		{
+			// The false positives that made the window bounded in the first
+			// place: prose and error strings carrying the words on their own.
+			name: "a sentence using the words apart from any audit read",
+			sql:  `"the person's name was repaired before the export and after the merge"`,
+			want: false,
+		},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			if got := readsAnActivitysAuditImage(c.sql); got != c.want {
+				t.Errorf("readsAnActivitysAuditImage = %v, want %v for:\n%s", got, c.want, c.sql)
+			}
+		})
+	}
 }
