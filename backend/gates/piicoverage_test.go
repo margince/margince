@@ -197,7 +197,7 @@ var piiTables = map[string]piiHandling{
 	// exists to avoid, so the obligation is held where it can be seen whole:
 	//
 	// Held by: TestTheRetentionSweepDestroysTheProviderOriginalToo and
-	// TestTheEraseActionRefusesWithoutItsPurger
+	// TestAPassMissingItsPurgerRefusesBeforeDestroyingAnything
 	// (backend/internal/compose/integration/retentionrawcapture_integration_test.go)
 	"raw_capture": {erasureWrite: true, sarRead: true},
 	"embedding":   {erasureWrite: true, sarRead: false}, // opaque vector: purged, never exported

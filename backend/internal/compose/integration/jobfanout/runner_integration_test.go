@@ -157,10 +157,11 @@ func setupRunner(t *testing.T) *runnerEnv {
 }
 
 // tick runs ONE workspace's scheduler pass, under the bound context and the
-// clock reading the job worker hands it in production — the fan-out that puts
-// a tenant's pass on its own job row is
-// TestAgentSchedulerFansOutOneJobPerLiveWorkspaceAndFailsOnlyTheFailedTenant's
-// subject, not this suite's.
+// clock reading the job worker hands it in production.
+//
+// There is no fan-out above it to defer to any more: a pass is one row, so
+// what survives is TestAgentSchedulerSeedsAndClaimsWhatIsDue, which asks what
+// one pass does rather than how many rows a tick produces.
 func (re *runnerEnv) tick(t *testing.T) {
 	t.Helper()
 	if err := re.svc.Tick(re.wsCtx, time.Now()); err != nil {

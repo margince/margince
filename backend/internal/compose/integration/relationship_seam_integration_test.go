@@ -172,7 +172,7 @@ func TestAnEmploymentEdgeLivesItsWholeLifeThroughTheToolSurface(t *testing.T) {
 	// ARCHIVE. The caller here is a HUMAN in their own seat, so the 🟡 tier does
 	// not stage — that gate is for agent principals, and the agent half is
 	// proven over REST with a real passport
-	// (TestArchivingAnEdgeStagesForAnAgentAndPinsItsVersion).
+	// (TestAFlooredEdgeArchiveStagesWithItsVersionPinned).
 	if _, err := registry.Invoke(ctx, "archive_record", json.RawMessage(fmt.Sprintf(
 		`{"record_type":"relationship","id":%q}`, edgeID))); err != nil {
 		t.Fatalf("archive_record relationship: %v", err)

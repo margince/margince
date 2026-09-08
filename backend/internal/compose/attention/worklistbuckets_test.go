@@ -80,7 +80,7 @@ func TestAJudgementIsNeverUrgentSellerWork(t *testing.T) {
 	}
 }
 
-// TestAnOverdueSellerRowIsCountedOnceHoldsThePrecedence.
+// TestAnOverdueSellerRowIsCountedOnce holds the precedence.
 //
 // `due` beside it is asked of every row whatever its level, so an overdue
 // promise counts twice there — deliberately. The buckets slice instead, so the

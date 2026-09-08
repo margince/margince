@@ -51,7 +51,9 @@ import (
 //     Target. Those can differ by design (gate.go's target-scoped arm says so),
 //     and no shipped handler produces an activity target that differs from its
 //     trigger today — people/leadrouting.go passes ev.Entity straight through.
-//     TestNoHandlerTargetsAnActivityAwayFromItsTrigger fails when one appears.
+//     Nothing holds that, unlike the sibling below: it is a reading of every
+//     shipped handler at the time of writing, and a handler that diverges
+//     later arrives silently.
 //   - A signal carries activity-derived evidence with its own visibility
 //     (platform/auth's SignalScopeClause), and a signal-subject firing skips
 //     this gate. No human-owned signal workflow is registered

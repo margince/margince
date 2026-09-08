@@ -12,7 +12,7 @@ package integration
 //
 // TestAConfirmFirstFactCallAgainstAnUnseeableOrganizationStagesNothing below
 // is the proof that matters: their restCommands entries make Guards run before
-// anything stages. TestTwoFactKeysOnOneOrganizationStageDistinguishableApprovals
+// anything stages. TestTwoStagedCallsDifferingOnlyInArgumentsAreDistinguishable
 // does NOT prove that — diff_hash and summary are both derived from the
 // concrete request path upstream of the resolver (canonicalRESTCall,
 // restSummary), so it holds whether or not a resolver was consulted at all.

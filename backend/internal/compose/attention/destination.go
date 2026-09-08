@@ -39,7 +39,7 @@ const (
 
 // destinationOfSource is the whole mapping, and the only one.
 //
-// EXHAUSTIVE over the source enum, held by TestEverySourceHasADestination: a
+// EXHAUSTIVE over the source enum, held by TestEveryWorklistSourceHasADestination: a
 // twenty-second source fails that test until somebody decides where it belongs.
 // The failure is the point. A source added without a destination would default
 // to whatever the zero value is, and the reader would find it on a screen

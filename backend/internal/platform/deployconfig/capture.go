@@ -72,7 +72,7 @@ type Capture struct {
 // there is one place the default lives and a nil can never panic at a call
 // site that forgot it.
 //
-// Held by: TestOnlyTheResolverDereferencesTracePayloads (capture_test.go)
+// Held by: TestOnlyTheResolverReadsTheTracePayloadsField (capture_test.go)
 func (c Capture) TracesPayloads() bool {
 	return c.TracePayloadsSetting == nil || *c.TracePayloadsSetting
 }

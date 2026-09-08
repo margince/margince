@@ -58,7 +58,7 @@ func TestACreateStagesItsRecordTypeWithNoTargetID(t *testing.T) {
 
 // A create OUTSIDE create_record's own served vocabulary still stages,
 // through createResolver like every other registered create — the same shape
-// TestAnArchiveOutsideTheToolSchemaStagesTheRowItNames proves for archive.
+// TestAnArchiveOutsideTheToolSchemaStagesItsOwnTypeAndID proves for archive.
 // custom_field is one of the six create routes whose record type
 // create_record's own Handle cannot write, and createResolver.Guards has no
 // opinion on that (command.go); proving it stages successfully through the
@@ -124,7 +124,7 @@ func TestAMalformedPatchIDAnswersNotFound(t *testing.T) {
 // the seam cannot answer. Staged against a provider that fails EVERY read, so
 // a resolver that consulted the seam anyway fails here rather than passing on
 // a lenient stub — the same proof shape as
-// TestAnArchiveOutsideTheToolSchemaStagesTheRowItNames.
+// TestAnArchiveOutsideTheToolSchemaStagesItsOwnTypeAndID.
 func TestAPatchOutsideTheToolSchemaStagesTheRowItNames(t *testing.T) {
 	staging := &capturingApprovals{}
 	pol := agentPolicy{

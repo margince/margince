@@ -257,7 +257,7 @@ func TestTheMergeKeyVocabulariesAgree(t *testing.T) {
 	}
 }
 
-// TestThePublishedActivityTypesMatchTheCoresA published field whose TYPE
+// TestThePublishedActivityTypesMatchTheCores. A published field whose TYPE
 // diverged would compile on both sides and lose meaning in the middle — a
 // string where the core wants a time is the obvious one, and it is the one a
 // hand-written bridge makes possible.

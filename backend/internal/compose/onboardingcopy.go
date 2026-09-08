@@ -12,8 +12,8 @@ package compose
 // Vietnamese product, and the only way to find out was to run it.
 //
 // A table instead, keyed by the language, with the shipped set as the census.
-// TestEveryShippedLanguageHasOnboardingCopy fails when the product gains a
-// language this file has not learned — before a reader does.
+// TestTheOnboardingConversationSpeaksEveryShippedLanguage fails when the
+// product gains a language this file has not learned — before a reader does.
 //
 // The model-written half of the conversation needs none of this: it is
 // instructed through promptlang.Rule, which already answers for every shipped

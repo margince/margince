@@ -13,8 +13,8 @@ package integration
 // mail the rep sent, a message the contact was merely cc'd on, and the years of
 // backfilled correspondence a first mailbox import delivers all at once.
 //
-// The refusals need the admit case beside them, which TestAContactsAnswer
-// provides: without it a consumer that refused everything would pass every
+// The refusals need the admit case beside them, which
+// TestAContactsAnswerClosesTheIntroduction provides: without it a consumer that refused everything would pass every
 // negative test in this file.
 
 import (
