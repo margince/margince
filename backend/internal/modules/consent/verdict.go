@@ -71,6 +71,14 @@ type Verdict struct {
 	// matching on Reason, which is an operator-facing sentence, means an
 	// ordinary copy edit silently reclassifies a legal fact.
 	Code string
+	// Suppression names WHICH communication_suppression kind bound, set only
+	// when Code is BlockSuppressed. blockedReasonCode (authorizetransmit.go)
+	// reads it rather than guessing: the transmit path re-derives the same
+	// answer from the message's own resolved category a moment later
+	// (applySuppression), but a caller that reads Code alone — the only one
+	// today, and any future one — must not get a block reason this function
+	// invented rather than the one the record actually names.
+	Suppression string
 	// QualifyingDerived marks a Qualifying that was READ OFF the timeline
 	// rather than read from a stored row.
 	//
@@ -166,7 +174,7 @@ func VerdictForPerson(ctx context.Context, tx pgx.Tx, personID string, purpose P
 	category := categoryForClass(purpose.Class)
 	for _, kind := range kinds {
 		if suppressionBinds(kind, category) {
-			return Verdict{State: VerdictBlocked, Reason: suppressionReason(kind), Code: BlockSuppressed}, nil
+			return Verdict{State: VerdictBlocked, Reason: suppressionReason(kind), Code: BlockSuppressed, Suppression: kind}, nil
 		}
 	}
 

@@ -180,11 +180,10 @@ describe("history field labels", () => {
   });
 });
 
-// margince#4350: three consent-module AuditEvent writers name a fact with no
-// updatable contract column at all, so the contract-derived census above
-// never sees the gap, and the field rendered raw — "kind", "decided by
-// level" — on a screen a compliance reviewer reads to answer "did somebody
-// record that this person asked us to stop".
+// Some AuditEvent writers name a fact with no updatable contract column at
+// all, so the contract-derived census above never sees a gap in their own
+// vocabulary — the field would otherwise render raw on a screen a compliance
+// reviewer reads to answer "what happened to this record, and when".
 describe("synthetic AuditEvent field labels", () => {
   // Never in the contract-derived set, in EITHER direction: not claimed as an
   // orphan (it will never be written by an Update<Type>Request), and not
@@ -207,9 +206,25 @@ describe("synthetic AuditEvent field labels", () => {
   // The literal reproduction: a suppression write's own two payload keys,
   // rendered the way the History tab actually calls historyFieldLabel.
   it("names a suppression's own payload keys in plain English", () => {
-    expect(historyFieldLabel("kind", (k) => en[k])).toBe("Suppression kind");
+    expect(historyFieldLabel("suppression_kind", (k) => en[k])).toBe(
+      "Suppression kind",
+    );
     expect(historyFieldLabel("decided_by_level", (k) => en[k])).toBe(
       "Decided by",
+    );
+  });
+
+  // "kind" is deliberately NOT a synthetic key: an activity's own audited
+  // create names its kind that way too, on the same projected entity type,
+  // and this lookup carries no entity context to tell the two apart.
+  it("leaves the bare kind field to whichever writer actually owns it", () => {
+    expect(historyFieldLabel("kind", (k) => k)).toBe("kind");
+  });
+
+  it("names a lifted suppression's own payload keys in plain English", () => {
+    expect(historyFieldLabel("lifted_by", (k) => en[k])).toBe("Lifted by");
+    expect(historyFieldLabel("lifted_by_level", (k) => en[k])).toBe(
+      "Lifted at level",
     );
   });
 });

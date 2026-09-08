@@ -76,25 +76,44 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
 
 // Fields a SYNTHETIC AuditEvent payload names — a write with no before/after
 // image of a real column, described instead by its own free-form keys. The
-// three consent-module writers that emit them today:
-// backend/internal/modules/consent/suppress.go (`kind`, `decided_by_level`),
-// qualifyingevent.go (`qualifying_event`, `note`), and authorizebasis.go
-// (`communication_basis`, `resolved_category`).
+// five consent-module writers that emit them today:
+// backend/internal/modules/consent/suppress.go (`suppression_kind`,
+// `decided_by_level`), qualifyingevent.go (`qualifying_event`, `note`),
+// authorizebasis.go (`communication_basis`, `resolved_category`), lift.go
+// (`lifted_suppression`, `recorded_at_level`, `lifted_by_level`,
+// `lifted_by`, `reason`), and confirmsubmit.go (`confirm_submission`,
+// `submission_id`).
+//
+// Every key here is deliberately NOT the bare word a writer's own struct
+// field would suggest (`suppress.go`'s wire request names its kind `kind`,
+// not `suppression_kind`): this lookup carries no entity context, so a key
+// this generic would also answer for an unrelated writer's field of the same
+// name on the SAME projected entity type (`person`) — `kind` already belongs
+// to every activity's own audited create
+// (backend/internal/modules/activities/activity.go), and reusing it here
+// mislabelled every activity in history as a suppression.
 //
 // A SEPARATE map from HISTORY_FIELD_LABELS on purpose: the census below derives
 // that one from what an `Update<Type>Request` actually writes, and its own
 // "no word for an unwritten field" direction would fail the moment a synthetic
 // key appeared there — these never will be one, because nothing here forces
 // upstream to keep it in sync with these Go literals. That absence of a gate is
-// exactly what margince#4350 found: a field named here has no other census to
-// fall back on, so an outgrown or misspelled key would fail only by rotting.
+// tracked (margince#4928) rather than papered over: this list is only as
+// complete as the last writer somebody walked into this file.
 const SYNTHETIC_AUDIT_FIELD_LABELS = new Map<string, MessageKey>([
   ["communication_basis", "history.field.communication_basis"],
+  ["confirm_submission", "history.field.confirm_submission"],
   ["decided_by_level", "history.field.decided_by_level"],
-  ["kind", "history.field.kind"],
+  ["lifted_by", "history.field.lifted_by"],
+  ["lifted_by_level", "history.field.lifted_by_level"],
+  ["lifted_suppression", "history.field.lifted_suppression"],
   ["note", "history.field.note"],
   ["qualifying_event", "history.field.qualifying_event"],
+  ["reason", "history.field.reason"],
+  ["recorded_at_level", "history.field.recorded_at_level"],
   ["resolved_category", "history.field.resolved_category"],
+  ["submission_id", "history.field.submission_id"],
+  ["suppression_kind", "history.field.suppression_kind"],
 ]);
 
 // The label a history row shows for one field.

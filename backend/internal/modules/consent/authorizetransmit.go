@@ -289,6 +289,12 @@ func blockedReasonCode(v Verdict) string {
 		return commsauthz.ReasonConsentWithdrawn
 	case BlockNoChannel:
 		return commsauthz.ReasonNoEvidence
+	case BlockSuppressed:
+		// v.Suppression carries the kind that actually bound, so a caller
+		// reading Code alone gets the record's own reason rather than the
+		// unrelated default below — the same mislabelling this file's own
+		// doc comment exists to prevent.
+		return v.Suppression
 	default:
 		return commsauthz.ReasonObjection
 	}

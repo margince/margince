@@ -7,8 +7,7 @@ package consent
 
 // verdict.go's own answer must not disagree with the transmit gate's: a person
 // who asked to stop must not read as VerdictAllowed a moment after
-// authorizetransmit.go's liveSuppression would refuse the same send. This is
-// the live reproduction of margince#4349.
+// authorizetransmit.go's liveSuppression would refuse the same send.
 
 import (
 	"testing"
@@ -20,12 +19,7 @@ import (
 // what VerdictForPerson reads, not about who may write the row.
 func (e *qualifyingEnv) suppress(t *testing.T, kind string) {
 	t.Helper()
-	if _, err := e.owner.Exec(e.ctx, `
-		INSERT INTO communication_suppression (person_id, kind, source, captured_by, decided_by_level)
-		VALUES ($1, $2, 'phone call', 'human:x', 'subject')`,
-		e.person, kind); err != nil {
-		t.Fatalf("seeding the suppression: %v", err)
-	}
+	seedLiveSuppression(e.ctx, t, e.owner, e.person, kind, "phone call")
 }
 
 func TestASubjectRequestBlocksCorrespondenceTheGuardWouldOtherwiseAllow(t *testing.T) {
@@ -33,7 +27,7 @@ func TestASubjectRequestBlocksCorrespondenceTheGuardWouldOtherwiseAllow(t *testi
 	e.inbound(t, time.Now().Add(-24*time.Hour))
 
 	// Before the suppression: the inbound message is a qualifying event, so
-	// this reads allowed — exactly the state margince#4349 found stale.
+	// this reads allowed.
 	if got := e.verdict(t); got.State != VerdictAllowed {
 		t.Fatalf("before the suppression: state = %q, want %q", got.State, VerdictAllowed)
 	}
@@ -83,19 +77,24 @@ func TestAProcessingRestrictionBlocksCorrespondence(t *testing.T) {
 	}
 }
 
-// A hard bounce binds every category, including a purpose class with no other
-// live suppression check — it is a fact about the mailbox, not about consent.
-func TestAHardBounceBlocksCorrespondence(t *testing.T) {
+// A hard bounce is a fact about a MAILBOX (liveSuppression's own doc comment)
+// and is recorded against the address alone, never a person — this guard
+// answers about the person in general, with no address of its own to check,
+// so a bounce on one of their addresses must not read as "this person is
+// blocked" when another channel might still reach them.
+func TestAnAddressPinnedHardBounceDoesNotBlockThePersonLevelVerdict(t *testing.T) {
 	e := setupQualifying(t)
 	e.inbound(t, time.Now().Add(-24*time.Hour))
-	e.suppress(t, "hard_bounce")
+	if _, err := e.owner.Exec(e.ctx, `
+		INSERT INTO communication_suppression (address, kind, source, captured_by, decided_by_level)
+		VALUES ('dead-mailbox@example.test', 'hard_bounce', 'provider', 'human:x', 'machine')`,
+	); err != nil {
+		t.Fatalf("seeding the address-pinned bounce: %v", err)
+	}
 
 	got := e.verdict(t)
-	if got.State != VerdictBlocked {
-		t.Fatalf("state = %q, want %q — a hard bounce binds every category", got.State, VerdictBlocked)
-	}
-	if got.Reason == "" {
-		t.Error("a blocked verdict must say why")
+	if got.State != VerdictAllowed {
+		t.Fatalf("state = %q, want %q — an address-pinned bounce is not a fact about this person", got.State, VerdictAllowed)
 	}
 }
 

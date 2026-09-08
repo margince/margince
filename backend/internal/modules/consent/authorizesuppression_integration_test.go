@@ -10,24 +10,38 @@ package consent
 // every message refuses mail nobody objected to.
 
 import (
+	"context"
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
+
+// seedLiveSuppression records one live suppression directly, the shape every
+// env in this package that only needs the row to exist (not its id, which
+// lift_integration_test.go's plantSuppression needs for a subsequent lift)
+// shares rather than reimplements.
+//
+// decided_by_level is 'subject' as the machinery writes it: an objection and
+// a restriction are legal facts and a bounce is the provider's answer, so
+// none of the three is a user-level decision.
+func seedLiveSuppression(ctx context.Context, t *testing.T, owner *pgx.Conn, person ids.PersonID, kind, source string) {
+	t.Helper()
+	if _, err := owner.Exec(ctx, `
+		INSERT INTO communication_suppression
+		    (person_id, kind, source, captured_by, decided_by_level)
+		VALUES ($1, $2, $3, 'human:x', 'subject')`, person, kind, source); err != nil {
+		t.Fatalf("recording the %s: %v", kind, err)
+	}
+}
 
 // suppress records one live suppression against the env's person.
 func (e *resolveEnv) suppress(t *testing.T, kind string) {
 	t.Helper()
-	// decided_by_level as the machinery writes it: an objection and a
-	// restriction are legal facts and a bounce is the provider's answer, so
-	// none of the three is a user-level decision.
-	if _, err := e.owner.Exec(e.ctx, `
-		INSERT INTO communication_suppression
-		    (person_id, kind, source, captured_by, decided_by_level)
-		VALUES ($1, $2, 'test', 'human:x', 'subject')`, e.person, kind); err != nil {
-		t.Fatalf("recording the %s: %v", kind, err)
-	}
+	seedLiveSuppression(e.ctx, t, e.owner, e.person, kind, "test")
 }
 
 // AN ART. 21 OBJECTION IS ABOUT MARKETING, AND BINDS MARKETING.
