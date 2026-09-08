@@ -245,21 +245,29 @@ func TestEveryLocalProviderWithAnEndpointIsChecked(t *testing.T) {
 	}
 }
 
-// Every refusal that names a base_url names NO part of its userinfo — the
-// username as much as the password.
+// Every refusal that names a base_url names NOTHING but its scheme and host.
 //
-// url.Redacted() hides only the password, and this test is the reason the code
-// does not use it: a model key pasted into a base_url is at least as likely to
-// arrive as `http://sk-live-…@host` as it is with a colon after it, and that
-// spelling would otherwise be copied verbatim into a boot log. Every exit that
-// shows the value is walked, because one that forgot is one leak.
-func TestARefusalNamesNoPartOfTheUserinfo(t *testing.T) {
+// A credential pasted into a base_url reaches these errors through four
+// different fields, and which one depends only on where the operator's typo
+// landed: userinfo, Opaque (`http:sk-live-...@` parses with no host and the
+// whole payload there), Path, and the query. url.Redacted() covers half of one
+// of them. Each shape below took a different exit through the parser, so a rule
+// that grew back into a denylist fails here on the shape it forgot.
+func TestARefusalNamesNothingButTheSchemeAndHost(t *testing.T) {
 	const secret = "sk-live-stands-in-for-a-token"
 	for name, baseURL := range map[string]string{
 		"as the username":                 "http://" + secret + "@/",
 		"as the password":                 "http://user:" + secret + "@/",
 		"as the username on a bad scheme": "ftp://" + secret + "@example.test/",
 		"as the username with no host":    "http://" + secret + "@",
+		// No host at all, so url.Parse files the payload under Opaque and
+		// nothing about the value is userinfo any more.
+		"as an opaque url": "http:" + secret + "@",
+		"as a path":        "http:///v1/" + secret,
+		// These two reach the scheme exit, which names a value that HAS a host —
+		// the branch a userinfo-shaped rule leaves untouched.
+		"as a query parameter": "ftp://example.test/v1?api_key=" + secret,
+		"as a fragment":        "ftp://example.test/v1#" + secret,
 	} {
 		t.Run(name, func(t *testing.T) {
 			host, err := hostOf(baseURL)
@@ -271,14 +279,14 @@ func TestARefusalNamesNoPartOfTheUserinfo(t *testing.T) {
 			}
 		})
 	}
-	// The rule the exits share, asked of the helper itself: a value carrying
-	// userinfo in either position comes back with neither.
-	parsed, err := url.Parse("https://" + secret + ":" + secret + "@vendor.example/v1")
+	// The rule the exits share, asked of the helper itself: everything but the
+	// scheme and the host is dropped, whichever field carried it.
+	parsed, err := url.Parse("https://" + secret + ":" + secret + "@vendor.example/v1?key=" + secret + "#" + secret)
 	if err != nil {
 		t.Fatalf("parsing the fixture: %v", err)
 	}
-	if shown := withoutUserinfo(parsed); strings.Contains(shown, secret) {
-		t.Errorf("withoutUserinfo kept the credential: %q", shown)
+	if shown := safeToName(parsed); shown != "https://vendor.example" {
+		t.Errorf("safeToName kept more than the scheme and host: %q", shown)
 	}
 	// And the refusal an operator is most likely to trigger with one.
 	err = requireDialableEndpoint("tier premium", providerAnthropic, "https://"+secret+"@vendor.example")

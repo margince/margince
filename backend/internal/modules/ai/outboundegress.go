@@ -185,7 +185,7 @@ func requireDialableEndpoint(label, provider, baseURL string) error {
 func userinfoRefused(label string, parsed *url.URL) error {
 	return fmt.Errorf(
 		"ai: routing config: %s: base_url %q carries userinfo, and a binding never carries a credential — it would be sent to whatever host the value names. Give the host root alone; a model key belongs in the key vault",
-		label, withoutUserinfo(parsed))
+		label, safeToName(parsed))
 }
 
 // unreachableAddressRefused tells the operator which rule they met and what to
