@@ -284,13 +284,18 @@ func recordProgressionDecidedTx(
 	// The transition comes back with the row rather than from a second read:
 	// the sweep below needs it, and the row already carries it.
 	var moved TransitionRef
+	// decided_by_system is derived from the outcome rather than taken as a
+	// second parameter. The two would otherwise be free to disagree, and a row
+	// saying auto_applied with the column false is one the report and the
+	// column would answer differently about the same move.
 	err := tx.QueryRow(ctx, `
 		UPDATE stage_progression_outcome
 		   SET outcome = $2, rejection_reason = $3, evidence_corrected = $4,
-		       decided_at = now()
+		       decided_by_system = ($2 = $6), decided_at = now()
 		 WHERE approval_id = $1 AND outcome = $5
 		RETURNING id, deal_id, pipeline_id, from_stage_id, to_stage_id`,
-		approvalID, outcome, reason, edited, ProgressionProposed).
+		approvalID, outcome, reason, edited, ProgressionProposed,
+		ProgressionAutoApplied).
 		Scan(&id, &dealID, &moved.PipelineID, &moved.FromStageID, &moved.ToStageID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Either nothing was proposed under this approval, or it was already
@@ -323,6 +328,12 @@ func recordProgressionDecidedTx(
 	// the clean approvals that were holding the rate down age out of the
 	// window — so a sweep that only ran on reversals would leave a transition
 	// running automatically on a record that had already failed.
+	//
+	// Including on an automatic apply. The rates it re-counts exclude
+	// auto_applied from their denominator, so the autopilot's own moves cannot
+	// improve or worsen the record they are judged against — but a reversal
+	// that lands while a transition is running automatically must be able to
+	// stop it, and this is the path every decision takes.
 	return suspendIfRecordWentBadTx(ctx, tx, moved, now)
 }
 

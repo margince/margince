@@ -68,9 +68,10 @@ func (o *StageProgressionOutcome) HandleEvent(ctx context.Context, env events.En
 		return nil
 	}
 	var payload struct {
-		Kind    string `json:"kind"`
-		Verdict string `json:"verdict"`
-		Edited  bool   `json:"edited"`
+		Kind            string `json:"kind"`
+		Verdict         string `json:"verdict"`
+		Edited          bool   `json:"edited"`
+		DecidedBySystem bool   `json:"decided_by_system"`
 	}
 	if err := json.Unmarshal(env.Payload, &payload); err != nil {
 		return fmt.Errorf("stage progression outcome: approval.decided payload: %w", err)
@@ -81,7 +82,9 @@ func (o *StageProgressionOutcome) HandleEvent(ctx context.Context, env events.En
 	if payload.Kind != deals.StageProgressionKind {
 		return nil
 	}
-	outcome, ok := progressionOutcomeFor(payload.Verdict, payload.Edited)
+	outcome, ok := progressionOutcomeFor(payload.Verdict, decisionShape{
+		Edited: payload.Edited, BySystem: payload.DecidedBySystem,
+	})
 	if !ok {
 		// A verdict this consumer does not know is not a silent skip: the
 		// ledger is what the launch gate reads, so an unrecognised one would be
@@ -115,6 +118,20 @@ func (o *StageProgressionOutcome) HandleEvent(ctx context.Context, env events.En
 	return o.deals.RecordProgressionDecided(ctx, env.Entity.ID, outcome, nil, false)
 }
 
+// decisionShape is how an approval was reached, as two facts that are easy to
+// swap at a call site and impossible to tell apart once swapped.
+//
+// Named because the pair decides which of three outcomes an approval becomes,
+// and a transposed argument would file every automatic move as a human's edit
+// — the exact confusion the ledger exists to prevent, arriving silently.
+type decisionShape struct {
+	// Edited: the approver changed the payload before releasing it.
+	Edited bool
+	// BySystem: the product applied it under a governing policy, and nobody
+	// was asked.
+	BySystem bool
+}
+
 // progressionOutcomeFor maps a verdict onto what the ledger counts.
 //
 // `expired` is a refusal with no decider, and it is counted as its own outcome
@@ -122,18 +139,24 @@ func (o *StageProgressionOutcome) HandleEvent(ctx context.Context, env events.En
 // asked at a moment nobody was reading, which is a different failure from a rep
 // looking at the evidence and saying no.
 //
-// ProgressionAutoApplied is NOT reachable from here, and deliberately so. An
-// automatic apply is marked by the approval row's decided_by_system column,
-// which approval.decided does not carry — so this consumer cannot tell one from
-// a human's clean approval, and a branch guessing at it would file the
-// autopilot's own moves under the rate that measures whether humans agree with
-// it. Nothing produces one yet either: the proposer reads an empty
-// AutopilotFacts, so every card in this release reaches a person. The autopilot
-// PR owns both halves — widening the event, and this arm.
-func progressionOutcomeFor(verdict string, edited bool) (string, bool) {
+// An APPROVAL SPLITS THREE WAYS, and the split decides whether the launch gate
+// can be trusted. A person agreeing as proposed, a person agreeing after
+// changing something, and the product applying under a governing policy are
+// three different claims, and only the first two are evidence that anybody
+// agreed. Filing an automatic apply as a clean acceptance would let the
+// autopilot vote on whether it should be running: as its volume grew it would
+// report an ever-better record built entirely from its own output.
+//
+// decided_by_system is read from the event rather than the approval row so
+// this stays one decode with no lookup. It is not the complement of a missing
+// decider — `expired` also has none, and it is checked first.
+func progressionOutcomeFor(verdict string, how decisionShape) (string, bool) {
 	switch crmcontracts.PublicEventApprovalDecidedVerdict(verdict) {
 	case crmcontracts.Approved:
-		if edited {
+		if how.BySystem {
+			return deals.ProgressionAutoApplied, true
+		}
+		if how.Edited {
 			return deals.ProgressionApprovedEdited, true
 		}
 		return deals.ProgressionApprovedClean, true

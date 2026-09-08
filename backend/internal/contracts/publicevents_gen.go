@@ -898,6 +898,9 @@ type PublicEventApprovalDecided struct {
 	// DecidedBy The deciding human's user id. ABSENT on the `expired` verdict, and that absence is the payload's own statement that nobody decided this — a zero or placeholder id here would put a phantom user's name on a refusal no person made.
 	DecidedBy *openapi_types.UUID `json:"decided_by,omitempty"`
 
+	// DecidedBySystem True when the product applied this itself under a governing policy rather than putting it to a person. It is NOT the complement of `decided_by`: the `expired` verdict also carries no decider, and those two are opposite facts — one is the product acting, the other is nobody acting. A consumer measuring whether people agree with what is proposed must exclude an automatic apply from its denominator, because the autopilot agreeing with itself is not evidence that anyone agreed.
+	DecidedBySystem *bool `json:"decided_by_system,omitempty"`
+
 	// DiffHash The edited change's freshly computed diff_hash (present only on the modify-then-approve arm).
 	DiffHash *string `json:"diff_hash,omitempty"`
 

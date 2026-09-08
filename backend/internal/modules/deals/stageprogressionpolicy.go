@@ -316,3 +316,55 @@ func (s *Store) ReadTransitionPolicies(
 	})
 	return out, err
 }
+
+// MayAutoApplyStageMove answers whether ONE proposed move may apply without
+// asking, resolving the deal's pipeline and the rule in one transaction.
+//
+// The entry point the auto-applier reaches through its seam. It exists because
+// the applier knows an approval and a payload, not a transition: the pipeline
+// is the DEAL'S, read here rather than taken from the staged card, so a deal
+// moved to another pipeline since the card was raised is judged by the rule
+// that governs where it is now.
+//
+// It answers only. Applying is the caller's, under the caller's authority.
+//
+// GATED on reading the deal, not on the pipeline. The question is about one
+// deal's move, and the caller that asks it is about to write that deal — so a
+// principal who may not see the deal must not learn from this whether its
+// transition is on automatic. The pipeline rule underneath is read through
+// StageAutopilotModeTx, which is reached only after this gate.
+func (s *Store) MayAutoApplyStageMove(
+	ctx context.Context, dealID ids.DealID, fromStage, toStage ids.StageID,
+) (AutopilotVerdict, error) {
+	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+		return refused(), err
+	}
+	var out AutopilotVerdict
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		var pipelineID ids.PipelineID
+		if err := tx.QueryRow(ctx,
+			`SELECT pipeline_id FROM deal WHERE id = $1 AND archived_at IS NULL`,
+			dealID).Scan(&pipelineID); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				// Archived or gone. A move onto a deal that is not there is not
+				// a move this may make, and the card stays for a person to
+				// close.
+				out = refused()
+				return nil
+			}
+			return fmt.Errorf("read the deal's pipeline: %w", err)
+		}
+		verdict, err := StageAutopilotModeTx(ctx, tx, TransitionRef{
+			PipelineID: pipelineID, FromStageID: fromStage, ToStageID: toStage,
+		}, s.clock())
+		if err != nil {
+			return err
+		}
+		out = verdict
+		return nil
+	})
+	if err != nil {
+		return refused(), err
+	}
+	return out, nil
+}
