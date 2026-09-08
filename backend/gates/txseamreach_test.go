@@ -262,7 +262,14 @@ func (b txBorrowing) calledNames() []string {
 			// the receiver's TYPE is the method's own, so the name resolves to
 			// exactly one entry, keyed `Type.Method`. A field that happens to
 			// hold a function resolves to no entry and costs nothing.
-			if base, ok := fn.X.(*ast.Ident); ok && b.recvType != "" && base.Name == b.recv {
+			// `!bound[b.recv]` for the reason the bare-identifier branch
+			// above carries the same guard: a name this body binds itself is a
+			// VALUE, and `c := other` makes `c.mode()` a call on somebody
+			// else's object. Following it would walk into this type's method
+			// and report a deadlock in a body that has none, which is the one
+			// thing this walk's case for existing rests on not doing.
+			if base, ok := fn.X.(*ast.Ident); ok && b.recvType != "" &&
+				base.Name == b.recv && !bound[b.recv] {
 				names = append(names, b.recvType+"."+fn.Sel.Name)
 			}
 		}
@@ -644,4 +651,38 @@ func (s store) mode(ctx context.Context) error {
 }
 `
 	assertReaches(t, fixtureIndex(t, ordinary), "WriteTx")
+}
+
+// A local that SHADOWS the receiver's name is not the receiver.
+//
+// `c := other; c.mode()` is a call on somebody else's object, and following it
+// into this type's method reports a deadlock in a body that has none. The
+// bare-identifier branch has carried that guard since the walk was written; the
+// receiver path needed the same one.
+func TestTheWalkDoesNotFollowAShadowedReceiverName(t *testing.T) {
+	t.Parallel()
+	const shadowed = `package compose
+
+import "github.com/jackc/pgx/v5"
+
+type core struct {
+	tx   pgx.Tx
+	pool *pgxpool.Pool
+}
+
+func (c core) File(ctx context.Context) error {
+	c := somebodyElse()
+	return c.mode(ctx)
+}
+
+func (c core) mode(ctx context.Context) error {
+	conn, err := c.pool.Acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+	return nil
+}
+`
+	assertReaches(t, fixtureIndex(t, shadowed), "core.File")
 }

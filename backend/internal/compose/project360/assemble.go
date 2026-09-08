@@ -72,6 +72,13 @@ func NewService(
 type catalogs struct {
 	project projects.CustomColumns
 	deal    deals.CustomColumns
+	// organization is here for the same reason as the two above and was
+	// missing: the organization section read the catalog itself, from inside
+	// the page's transaction, which is a second connection taken while this
+	// one is held. Under a loaded pool that waits on the connection it is
+	// already inside — a deadlock Postgres cannot break, because it sees two
+	// unrelated sessions rather than one goroutine waiting on itself.
+	organization people.CustomColumns
 }
 
 func (s *Service) readCatalogs(ctx context.Context) (catalogs, error) {
@@ -81,6 +88,9 @@ func (s *Service) readCatalogs(ctx context.Context) (catalogs, error) {
 		return catalogs{}, err
 	}
 	if c.deal, err = s.deals.ActiveDealColumns(ctx); err != nil {
+		return catalogs{}, err
+	}
+	if c.organization, err = s.people.ActiveOrganizationColumns(ctx); err != nil {
 		return catalogs{}, err
 	}
 	return c, nil
