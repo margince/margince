@@ -1465,6 +1465,9 @@ function dealColumns(
       key: "name",
       header: t("people.name"),
       cell: (deal) => deal.name,
+      // Alphabetical, which a list of deals had no way to offer until the
+      // API's sort vocabulary took the columns this list draws.
+      sort: "name",
       fixed: true,
     },
     tagsColumn<Deal>(t),
@@ -1475,7 +1478,8 @@ function dealColumns(
       // apart from a deal nobody has linked.
       //
       // No `sort`, for the reason the partner column below carries none: the
-      // API's sortable vocabulary does not include it, and a header that
+      // company is a JOINED column and the list machinery orders by one column
+      // of the row's own table, so the API cannot offer it yet. A header that
       // looked sortable and refused would be worse than one that never
       // offered.
       key: "company",
@@ -1488,9 +1492,10 @@ function dealColumns(
       // per-row is worse in a list than an empty cell — a column that comes
       // and goes cannot be scanned down.
       //
-      // It carries no `sort`, because the API's sortable vocabulary is a fixed
-      // five-field set that does not include it. That limitation is not this
-      // column's to fix (see the sorting issue), and a header that looked
+      // It carries no `sort` because the partner is a JOINED column: ordering
+      // by it means ordering by the organization's name, and the list
+      // machinery renders one quoted identifier of the row's own table. That
+      // limitation is not this column's to fix, and a header that looked
       // sortable and refused would be worse than one that never offered.
       key: "partner",
       header: t("deal.partnerOrg"),
@@ -1552,6 +1557,12 @@ function dealColumns(
       cell: (deal) => (
         <Badge tone={dealStatusTone(deal.status)}>{deal.status}</Badge>
       ),
+      // By the stored value, so the three groups sit together. Alphabetical
+      // rather than by lifecycle — `lost` before `open` before `won` — because
+      // `deal.status` is a text column and the machinery orders by the column
+      // rather than by a vocabulary this side would have to keep a second copy
+      // of.
+      sort: "status",
     },
   ];
 }
