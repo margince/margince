@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Button } from "./atoms";
+import { Button, Field, TextInput } from "./atoms";
 import { OnboardingStage } from "./onboarding-stage";
 
 // The room, in the three states that are decisions rather than content: unlit
@@ -66,6 +66,47 @@ export const GrowingAndTopAnchored: Story = {
     title: "Reading gradion.com",
     sub: "Following the pages that say what this company does.",
     children: <p className="t-body">Nine pages read, four still to reach.</p>,
+  },
+};
+
+// A question longer than the room it is asked in, which is the state the rail
+// exists for. The BOARD scrolls; the band above it and the rail below it do
+// not, so Continue is on screen from wherever the reader is in the form — and
+// the card itself is capped to the window rather than growing past it, which is
+// what makes that true. Before the cap the room simply grew and the page
+// scrolled, and the verb sat at the bottom of a card several screens tall.
+//
+// Worth checking at a SHORT preview height as well as a tall one: at a height
+// the form fits into there is nothing to scroll and the story shows the
+// ordinary case instead of the one it is here for.
+export const ABoardLongerThanTheRoom: Story = {
+  args: {
+    lit: true,
+    coreScale: "work",
+    anchor: "start",
+    coreStateLabel: "core · at rest",
+    title: "Tell me about the work",
+    sub: "Nothing here is guessed. Every line you leave empty stays empty.",
+    hint: "Answers are saved as you go; leaving is safe.",
+    actions: <Button variant="primary">Continue</Button>,
+    children: (
+      <>
+        {[
+          "What do you sell?",
+          "Who do you sell it to?",
+          "What does a good customer look like?",
+          "Where do most of them come from?",
+          "What do you charge for?",
+          "Who do you lose deals to?",
+          "How long does a deal usually take?",
+          "What has to be true before you send an offer?",
+        ].map((question) => (
+          <Field key={question} label={question}>
+            {(control) => <TextInput {...control} />}
+          </Field>
+        ))}
+      </>
+    ),
   },
 };
 
