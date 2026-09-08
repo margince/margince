@@ -77,6 +77,14 @@ const appFixtureFloor = 4
 // per-fixture count below are what fail if that ever stops being true.
 var fixtureKey = regexp.MustCompile(`^\s*([a-z][A-Za-z0-9_]*)\s*:`)
 
+// fixtureString matches a quoted value, blanked before braces are counted so a
+// `{` inside a message is not read as structure.
+var fixtureString = regexp.MustCompile(`"[^"]*"`)
+
+// dataMemberDepth is the brace depth of the members of the envelope's `data`.
+// The literal opens at depth 0, `data:` sits at 1, and its own members at 2.
+const dataMemberDepth = 2
+
 func TestEveryAppViewFixtureMatchesItsToolsOutputSchema(t *testing.T) {
 	t.Parallel()
 	defer fixtureMemberOnlyInTheView.AssertAllMatched(t)
@@ -122,7 +130,7 @@ func TestEveryAppViewFixtureMatchesItsToolsOutputSchema(t *testing.T) {
 }
 
 // compareFixtureToSchema reports both directions of the drift.
-func compareFixtureToSchema(t *testing.T, tool, dir string, fixture, published, required map[string]bool) {
+func compareFixtureToSchema(t *testing.T, tool, dir string, fixture map[string]int, published, required map[string]bool) {
 	t.Helper()
 	for _, member := range slices.Sorted(maps.Keys(fixture)) {
 		if envelopeMembers[member] || published[member] {
@@ -145,7 +153,13 @@ func compareFixtureToSchema(t *testing.T, tool, dir string, fixture, published, 
 	// that matters under every field a payload may omit. A REQUIRED member
 	// missing means the fixture is not an answer the tool could have sealed.
 	for _, member := range slices.Sorted(maps.Keys(required)) {
-		if fixture[member] || !published[member] {
+		if !published[member] {
+			continue
+		}
+		// AT ITS OWN LEVEL. `required` here is what the tool's shape requires
+		// of the payload root, so a member of the same name nested deeper is a
+		// different member and must not answer for it.
+		if at, carried := fixture[member]; carried && at == dataMemberDepth {
 			continue
 		}
 		t.Errorf("%s REQUIRES %q and %s/fixture.ts does not carry it.\n"+
@@ -262,19 +276,34 @@ func collectRequired(node any, out map[string]bool) {
 	}
 }
 
-// fixtureMembers reads the object-literal keys out of a fixture, comments and
-// string contents excluded — a `//` note naming a member, or a member name
-// inside a quoted value, is prose rather than a key.
-func fixtureMembers(source []byte) map[string]bool {
-	out := map[string]bool{}
+// fixtureMembers reads the object-literal keys out of a fixture, with the brace
+// depth each sits at. Comments and string contents are excluded — a `//` note
+// naming a member, or a member name inside a quoted value, is prose.
+//
+// The DEPTH is what makes the required check mean what it says. Without it both
+// sides are flat name sets, and a required member missing from `data` reads as
+// present because something nested carries the same name — the exact drift this
+// gate exists to catch, hidden by a coincidence of vocabulary. Nesting is
+// counted by braces rather than by indentation: a formatter is free to change
+// how it indents and is not free to change what nests inside what.
+func fixtureMembers(source []byte) map[string]int {
+	out := map[string]int{}
+	depth := 0
 	for _, line := range strings.Split(string(source), "\n") {
 		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, "//") || strings.HasPrefix(trimmed, "*") {
+		if strings.HasPrefix(trimmed, "//") || strings.HasPrefix(trimmed, "*") ||
+			strings.HasPrefix(trimmed, "/*") {
 			continue
 		}
-		if m := fixtureKey.FindStringSubmatch(line); m != nil {
-			out[m[1]] = true
+		code := fixtureString.ReplaceAllString(line, `""`)
+		if m := fixtureKey.FindStringSubmatch(code); m != nil {
+			// The key sits INSIDE the braces open before its line.
+			if prior, seen := out[m[1]]; !seen || depth < prior {
+				out[m[1]] = depth
+			}
 		}
+		depth += strings.Count(code, "{") + strings.Count(code, "[")
+		depth -= strings.Count(code, "}") + strings.Count(code, "]")
 	}
 	return out
 }
