@@ -45,6 +45,11 @@ func normalizeEvidence(s string) string {
 			continue
 		case r == '­': // soft hyphen: a rendering hint, not content
 			continue
+		case formatRune(r):
+			// The same rule one step wider — see formatrunes.go. A bidi
+			// override or a zero-width space between two letters must not
+			// stop a value matching the text that prints it.
+			continue
 		}
 		if space {
 			if b.Len() > 0 {
