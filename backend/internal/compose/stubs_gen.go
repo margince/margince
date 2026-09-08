@@ -1171,6 +1171,10 @@ func (stubs) CreateLead(w nethttp.ResponseWriter, r *nethttp.Request, params crm
 	httperr.NotImplemented(w, r, "CreateLead")
 }
 
+func (stubs) AssignLeads(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "AssignLeads")
+}
+
 func (stubs) GetLeadSettings(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetLeadSettings")
 }

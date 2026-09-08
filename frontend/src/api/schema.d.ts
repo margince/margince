@@ -5052,6 +5052,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/leads/assign-bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Hand a named set of leads to one owner.
+         * @description The explicit-id twin of `updateLead.owner_id`, for a queue a manager works a screenful at
+         *     a time. The caller names up to 500 leads and one destination; each lead is assigned
+         *     exactly as a single `updateLead` would assign it, with its own `audit_log` row and
+         *     `lead.updated` event.
+         *
+         *     PER ROW, not one transaction, and the result says so. A bulk verb over a work queue is a
+         *     selection of independent records, and refusing forty because the fortieth moved under the
+         *     reader would make the screen unworkable — so each lead answers for itself and the result
+         *     names every one that did not move. That is the opposite of `relinkActivities`, which is
+         *     all-or-nothing because its rows are one conversation.
+         *
+         *     The destination is checked ONCE before anything is written, because it is a fact about a
+         *     seat rather than about any lead: an ineligible owner answers `422 owner_not_assignable`
+         *     and nothing moves. It is then re-checked inside each row's transaction, since a seat can
+         *     be suspended midway through a long run.
+         *
+         *     Each `version` is optional and behaves as `If-Match` does on the single write: supply it
+         *     and a lead that moved since the caller read it answers `conflict` rather than overwriting
+         *     somebody's work.
+         */
+        post: operations["assignLeads"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/leads/settings": {
         parameters: {
             query?: never;
@@ -22838,6 +22876,59 @@ export interface components {
              */
             replace_existing_of_type: boolean;
         };
+        /**
+         * @description One destination owner, and the leads to hand to them. The owner is checked before any
+         *     lead is touched; the leads answer one at a time.
+         */
+        AssignLeadsRequest: {
+            /**
+             * Format: uuid
+             * @description The seat to hand them to. Must be one that can be handed work — an active, unarchived
+             *     human seat that is not read-only, inside the caller's own row scope — else
+             *     `422 owner_not_assignable` and nothing moves.
+             */
+            owner_id: string;
+            leads: components["schemas"]["AssignLeadsItem"][];
+        };
+        AssignLeadsItem: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: int64
+             * @description The version the caller read. Optional; supplying it makes the row's write conditional
+             *     exactly as `If-Match` does on `updateLead`, so a lead somebody else moved answers
+             *     `conflict` instead of losing their change.
+             */
+            version?: number;
+        };
+        AssignLeadsResult: {
+            results: components["schemas"]["AssignLeadOutcome"][];
+        };
+        /** @description What happened to one named lead. */
+        AssignLeadOutcome: {
+            /** Format: uuid */
+            lead_id: string;
+            outcome: components["schemas"]["AssignLeadOutcomeKind"];
+            /**
+             * Format: int64
+             * @description The lead's version after the write. Present on `assigned`.
+             */
+            version?: number;
+        };
+        /**
+         * @description `assigned` moved the lead — including one already owned by the destination, which still
+         *     takes a version and an audit row rather than being quietly skipped: the writer records
+         *     the assignment as an act, so a re-run says what it did rather than claiming it did
+         *     nothing. `forbidden` is a lead the caller may not hand on. `conflict` is a version that
+         *     no longer holds.
+         *
+         *     `not_found` is a lead the caller cannot see — and also an ARCHIVED one, because the
+         *     write resolves live rows only and a promoted or disqualified lead is no longer among
+         *     them. The two deliberately read alike: which of them it was is a fact about a record the
+         *     caller was not shown, and separating them would answer that a lead exists.
+         * @enum {string}
+         */
+        AssignLeadOutcomeKind: "assigned" | "not_found" | "forbidden" | "conflict";
         /**
          * @description The destination for a named set of activities. Every id must be one the caller can see and
          *     write, or the whole request is refused and nothing moves.
@@ -41797,6 +41888,33 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    assignLeads: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignLeadsRequest"];
+            };
+        };
+        responses: {
+            /** @description What happened to each named lead. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssignLeadsResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
         };
     };

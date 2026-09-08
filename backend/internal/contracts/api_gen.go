@@ -1111,6 +1111,30 @@ func (e ApprovalEvidenceSourceType) Valid() bool {
 	}
 }
 
+// Defines values for AssignLeadOutcomeKind.
+const (
+	AssignLeadOutcomeKindAssigned  AssignLeadOutcomeKind = "assigned"
+	AssignLeadOutcomeKindConflict  AssignLeadOutcomeKind = "conflict"
+	AssignLeadOutcomeKindForbidden AssignLeadOutcomeKind = "forbidden"
+	AssignLeadOutcomeKindNotFound  AssignLeadOutcomeKind = "not_found"
+)
+
+// Valid indicates whether the value is a known member of the AssignLeadOutcomeKind enum.
+func (e AssignLeadOutcomeKind) Valid() bool {
+	switch e {
+	case AssignLeadOutcomeKindAssigned:
+		return true
+	case AssignLeadOutcomeKindConflict:
+		return true
+	case AssignLeadOutcomeKindForbidden:
+		return true
+	case AssignLeadOutcomeKindNotFound:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AssistantConfiguredModelProvider.
 const (
 	AssistantModelProviderAnthropic        AssistantConfiguredModelProvider = "anthropic"
@@ -18112,6 +18136,64 @@ type ApprovalListResponse struct {
 type ApproveRequest struct {
 	// EditedPayload Optional edits — the edited payload is re-admitted, then it executes (edit-then-send).
 	EditedPayload *map[string]interface{} `json:"edited_payload,omitempty"`
+}
+
+// AssignLeadOutcome What happened to one named lead.
+type AssignLeadOutcome struct {
+	LeadId openapi_types.UUID `json:"lead_id"`
+
+	// Outcome `assigned` moved the lead — including one already owned by the destination, which still
+	// takes a version and an audit row rather than being quietly skipped: the writer records
+	// the assignment as an act, so a re-run says what it did rather than claiming it did
+	// nothing. `forbidden` is a lead the caller may not hand on. `conflict` is a version that
+	// no longer holds.
+	//
+	// `not_found` is a lead the caller cannot see — and also an ARCHIVED one, because the
+	// write resolves live rows only and a promoted or disqualified lead is no longer among
+	// them. The two deliberately read alike: which of them it was is a fact about a record the
+	// caller was not shown, and separating them would answer that a lead exists.
+	Outcome AssignLeadOutcomeKind `json:"outcome"`
+
+	// Version The lead's version after the write. Present on `assigned`.
+	Version *int64 `json:"version,omitempty"`
+}
+
+// AssignLeadOutcomeKind `assigned` moved the lead — including one already owned by the destination, which still
+// takes a version and an audit row rather than being quietly skipped: the writer records
+// the assignment as an act, so a re-run says what it did rather than claiming it did
+// nothing. `forbidden` is a lead the caller may not hand on. `conflict` is a version that
+// no longer holds.
+//
+// `not_found` is a lead the caller cannot see — and also an ARCHIVED one, because the
+// write resolves live rows only and a promoted or disqualified lead is no longer among
+// them. The two deliberately read alike: which of them it was is a fact about a record the
+// caller was not shown, and separating them would answer that a lead exists.
+type AssignLeadOutcomeKind string
+
+// AssignLeadsItem defines model for AssignLeadsItem.
+type AssignLeadsItem struct {
+	Id openapi_types.UUID `json:"id"`
+
+	// Version The version the caller read. Optional; supplying it makes the row's write conditional
+	// exactly as `If-Match` does on `updateLead`, so a lead somebody else moved answers
+	// `conflict` instead of losing their change.
+	Version *int64 `json:"version,omitempty"`
+}
+
+// AssignLeadsRequest One destination owner, and the leads to hand to them. The owner is checked before any
+// lead is touched; the leads answer one at a time.
+type AssignLeadsRequest struct {
+	Leads []AssignLeadsItem `json:"leads"`
+
+	// OwnerId The seat to hand them to. Must be one that can be handed work — an active, unarchived
+	// human seat that is not read-only, inside the caller's own row scope — else
+	// `422 owner_not_assignable` and nothing moves.
+	OwnerId openapi_types.UUID `json:"owner_id"`
+}
+
+// AssignLeadsResult defines model for AssignLeadsResult.
+type AssignLeadsResult struct {
+	Results []AssignLeadOutcome `json:"results"`
 }
 
 // AssistantConfiguredModel defines model for AssistantConfiguredModel.
@@ -42587,6 +42669,9 @@ type UpdateLeadSourceJSONRequestBody = UpdateLeadSourceRequest
 // CreateLeadJSONRequestBody defines body for CreateLead for application/json ContentType.
 type CreateLeadJSONRequestBody = CreateLeadRequest
 
+// AssignLeadsJSONRequestBody defines body for AssignLeads for application/json ContentType.
+type AssignLeadsJSONRequestBody = AssignLeadsRequest
+
 // UpdateLeadSettingsJSONRequestBody defines body for UpdateLeadSettings for application/json ContentType.
 type UpdateLeadSettingsJSONRequestBody = UpdateLeadSettingsRequest
 
@@ -51658,6 +51743,9 @@ type ServerInterface interface {
 	// Create a lead.
 	// (POST /leads)
 	CreateLead(w http.ResponseWriter, r *http.Request, params CreateLeadParams)
+	// Hand a named set of leads to one owner.
+	// (POST /leads/assign-bulk)
+	AssignLeads(w http.ResponseWriter, r *http.Request)
 	// How this installation handles leads.
 	// (GET /leads/settings)
 	GetLeadSettings(w http.ResponseWriter, r *http.Request)
@@ -54376,6 +54464,12 @@ func (_ Unimplemented) ListLeads(w http.ResponseWriter, r *http.Request, params 
 // Create a lead.
 // (POST /leads)
 func (_ Unimplemented) CreateLead(w http.ResponseWriter, r *http.Request, params CreateLeadParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Hand a named set of leads to one owner.
+// (POST /leads/assign-bulk)
+func (_ Unimplemented) AssignLeads(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -67747,6 +67841,26 @@ func (siw *ServerInterfaceWrapper) CreateLead(w http.ResponseWriter, r *http.Req
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateLead(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AssignLeads operation middleware
+func (siw *ServerInterfaceWrapper) AssignLeads(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AssignLeads(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -83705,6 +83819,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/leads", wrapper.CreateLead)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/leads/assign-bulk", wrapper.AssignLeads)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/leads/settings", wrapper.GetLeadSettings)
