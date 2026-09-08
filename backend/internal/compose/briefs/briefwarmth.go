@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // omittedFactors names the ranking factors this run had no input for, as
@@ -95,6 +96,19 @@ func (e *BriefEngine) resolveWarmth(
 	ctx context.Context, now time.Time,
 	facts map[ids.UUID]briefDealFacts, stakeholders map[ids.UUID][]ids.UUID,
 ) (readable bool, err error) {
+	// Asked UP FRONT, the way the seat edge is, and not inferred from the first
+	// refusal. A caller with no person grant whose candidate deals happen to
+	// carry no stakeholders never reaches the read at all — so a run that
+	// inferred the answer would report nothing withheld for a queue whose warmth
+	// factor could not have been read even if there had been someone to score.
+	// The grant is a property of the caller; the seats are a property of the
+	// deals, and only one of those decides whether the factor is readable.
+	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			return false, nil
+		}
+		return false, err
+	}
 	readable = true
 	cache := map[ids.UUID]people.RelationshipStrength{}
 	for dealID, persons := range stakeholders {
@@ -110,9 +124,10 @@ func (e *BriefEngine) resolveWarmth(
 					// and the queue is still ranked on what they may know.
 					st = people.RelationshipStrength{}
 				case errors.Is(err, apperrors.ErrPermissionDenied):
-					// No person grant at all. Every person on every deal answers
-					// the same way, so this is not one deal scoring low — it is
-					// the factor having nothing to read.
+					// The grant was checked above, so this is the seam refusing
+					// for a reason of its own. Still not one deal scoring low:
+					// every person answers the same way, so the factor has
+					// nothing to read for the whole run.
 					readable = false
 					st = people.RelationshipStrength{}
 				case err != nil:

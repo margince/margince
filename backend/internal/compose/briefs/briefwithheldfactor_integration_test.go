@@ -90,15 +90,13 @@ func TestABriefThatReadEveryFactorOmitsNone(t *testing.T) {
 // hidden, and an object denial answers ErrPermissionDenied. Reading them as one
 // thing is what let this case fall through — a stakeholder outside the caller's
 // rows should floor that deal and leave the rest alone.
+//
+// The fixture deliberately seeds NO stakeholder. The grant is a property of the
+// caller and the seats are a property of the deals, so a run whose deals happen
+// to carry nobody must still report the factor withheld — an answer inferred
+// from the first refusal cannot, because there is no read to be refused.
 func TestABriefNamesWarmthWhenItMayReadSeatsButNotPeople(t *testing.T) {
 	b := setupBrief(t)
-
-	// The fixture seeds no seats, and this case only exists once a seat is read
-	// and then cannot be scored — so without one the loop below never runs and
-	// the test passes on an empty map.
-	seat := b.SeedPerson(t, "Ilse Stakeholder", &b.Rep1)
-	b.WsExec(t, `INSERT INTO relationship (kind, deal_id, person_id, source, captured_by)
-		VALUES ('deal_stakeholder', $1, $2, 'manual', 'human:x')`, b.dealA, seat)
 
 	perms := integration.RepPerms
 	perms.Objects = make(map[string]principal.ObjectGrant, len(integration.RepPerms.Objects))
