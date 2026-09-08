@@ -56,9 +56,16 @@ commit provides — so the claim opens before a single line is written, which is
 the whole point of it. Do not talk yourself out of the empty commit and wait
 until you have a fix to show: by then the second session has already started.
 
-It is close to free. Measured on a zero-diff draft: fourteen of the sixteen
-checks skip, because the change classifier sees no files and every lane it gates
-skips with it. Only the `ci` fan-in and the review bot run.
+It is close to free, and for a reason worth knowing: `ci.yml` guards the
+`changes` classifier itself on `draft == false`, so on a draft it never runs and
+every lane gated on its output skips with it. Measured on a zero-diff draft,
+fourteen of sixteen checks skipped and only the `ci` fan-in reported. CodeRabbit
+does not review a draft either — `.coderabbit.yaml` sets `drafts: false`.
+
+**The cheapness comes from being a draft, not from the diff being empty.** That
+is what makes the claim usable once you start work: push your investigation to
+it, and it stays as cheap as it was while it was empty. It gets expensive at the
+moment you mark it ready, which is the moment it should.
 
 An empty commit is also the honest first state — you are claiming the work, not
 reporting a fix.
@@ -85,6 +92,26 @@ otherwise pay to rediscover.
   next session starts from your evidence rather than from nothing.
 - **Not actually broken** — close it and say why the verdict was wrong. A claim
   left open over a green `main` stops somebody looking at a real failure later.
+
+## When two sessions claim the same thing
+
+Listing the open claims and then creating one is not atomic. Two sessions
+reaching the same red within the same few seconds both find nothing and both
+open a claim — the race arriving through the mechanism built to end it.
+
+**The lower pull request number wins.** It is the one that existed first, every
+session can see it, and no clock has to agree. If yours is the higher number and
+its covered tests overlap:
+
+- close yours, with a comment pointing at the winner;
+- if you had already found something, say it on the winner's claim before you
+  go — that is the part they would otherwise pay to rediscover;
+- carry on with your own work.
+
+Overlap is per test, not per pull request. If your claim covers three tests and
+only one is also on the winner's list, drop that one from your body and keep
+going: the other two are still unclaimed, and dropping them would leave them
+owned by nobody.
 
 ## Taking over a stale claim
 

@@ -60,7 +60,14 @@ var ceilings = map[string]int{
 	// live only in `docs/`: a session that has not read the rule has no reason
 	// to go looking for the page, and by the time it would, it has already spent
 	// what the rule saves.
-	"AGENTS.md": 340,
+	//
+	// +2 more for the collision tie-break. Listing claims and then creating one
+	// is not atomic, and two sessions reaching the same red within the same few
+	// seconds both find nothing and both claim it — which is the race the rule
+	// exists to end, arriving through the rule itself. The tie-break has to be
+	// in the rulebook rather than only in the how-to, because the session that
+	// has to stand down is the one that never opened the page.
+	"AGENTS.md": 342,
 	// Raised from 160 for the AI-hue rule: indigo marks agent-authored content,
 	// and a reader who does not know that paints the meaning onto a decoration.
 	// The reasoning lives in the design-system README; what is here is the twelve

@@ -74,7 +74,9 @@ each names the tests it covers. Covered: somebody is on it, so do not diagnose
 it, do not open a second fix, and do not poll it. Your red is inherited; carry on
 with your own work and look again at merge time. Not covered: you are first, even
 while another claim is open for a different cause — open a DRAFT pull request
-labelled `claim: main-red` naming the tests you take, BEFORE you start.
+labelled `claim: main-red` naming the tests you take, BEFORE you start. Listing
+then creating is not atomic, so two claims can cover one test: the LOWER number
+wins and the other session closes its own, pointing at the winner.
 [docs/how-to/claim-a-red-main.md](docs/how-to/claim-a-red-main.md) has stale
 claims, releasing one, and why two half-fixes both stay red.
 
