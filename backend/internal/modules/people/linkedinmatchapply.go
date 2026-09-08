@@ -33,6 +33,7 @@ import (
 const (
 	matchConfirmed = "confirmed"
 	matchRejected  = "rejected"
+	matchSuggested = "suggested"
 	socialLinkedIn = "linkedin"
 	auditKeySocial = "social"
 )
@@ -361,7 +362,18 @@ func touchPerson(ctx context.Context, tx pgx.Tx, personID ids.UUID) error {
 // UPDATE matches nothing, and no audit row is written for a decision nobody
 // made twice.
 func (s *Store) RecordLinkedInMatchRefused(ctx context.Context, connectionID ids.UUID) error {
-	if err := auth.Require(ctx, "person", principal.ActionUpdate); err != nil {
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.UserID == ids.Nil {
+		return apperrors.ErrPermissionDenied
+	}
+	// person:read, the grant its SIBLING WRITER of this column takes.
+	// MatchLinkedInConnections sets match_status to `suggested` under the read
+	// grant, because what these rows are is one member's own imported network
+	// and the authority over them is owning them. person:update is what
+	// ApplyLinkedInMatch takes, and it takes it because it writes to a PERSON —
+	// copying that here would refuse the whole staging pass for a ghost owner
+	// holding read-only person grants, which is most of them.
+	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -371,13 +383,27 @@ func (s *Store) RecordLinkedInMatchRefused(ctx context.Context, connectionID ids
 			   SET match_status = $2, updated_at = now()
 			  FROM linkedin_connection was
 			 WHERE c.id = $1 AND was.id = c.id AND c.tombstoned_at IS NULL
-			   AND c.match_status <> $2
+			   AND c.owner_user_id = $3
+			   AND c.match_status = $4
 			 RETURNING was.match_status`,
-			connectionID, matchRejected).Scan(&wasStatus)
+			connectionID, matchRejected, actor.UserID, matchSuggested).Scan(&wasStatus)
 		if errors.Is(err, pgx.ErrNoRows) {
-			// Already rejected, tombstoned, or gone. All three mean there is
-			// nothing to record and nothing wrong: the sweep re-reaches a
-			// refused row on every pass, which is the whole point of it being
+			// Every way this matches nothing is a no-op and none is wrong.
+			//
+			// SUGGESTED and nothing else, which is the narrow predicate and the
+			// one that matters: the refusal was observed against a snapshot, and
+			// between that read and this write the row may have been confirmed
+			// by the exact-name matcher or reset to unmatched by a re-import.
+			// A refusal is only ever about the suggestion it answered, so a
+			// stale observation must leave a newer state alone rather than
+			// overwrite a link somebody now has.
+			//
+			// The owner clause is the same authority the read had: one member
+			// marking another's connection is not a refusal they made.
+			//
+			// Already rejected, tombstoned or gone are the ordinary cases — the
+			// sweep re-reaches a refused row on every pass until the
+			// enumeration stops covering it, which is the point of it being
 			// cheap to answer.
 			return nil
 		}

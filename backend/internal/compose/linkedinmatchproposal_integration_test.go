@@ -359,3 +359,51 @@ func onlyPendingLinkedInMatch(t *testing.T, e *integration.Env) ids.ApprovalID {
 	}
 	return ids_[0]
 }
+
+// A stale refusal observation leaves a NEWER state alone.
+//
+// The refusal is observed against a snapshot, and between that read and the
+// write the row may have moved: the exact-name matcher confirms a link, or a
+// re-import resets it to unmatched. A refusal is only ever about the suggestion
+// it answered, so a stale observation must not overwrite a link somebody now
+// has — which a predicate of "anything that is not already rejected" would.
+func TestARefusalDoesNotOverwriteAMatchConfirmedSince(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
+	linkedInMatchFixture(ctx, t, e)
+	grantReadPeopleRole(t, e, e.Rep1, "all")
+
+	store := people.NewStore(e.DB())
+	if _, err := store.MatchLinkedInConnections(ctx, e.Rep1); err != nil {
+		t.Fatalf("matching: %v", err)
+	}
+
+	// The row moves on under the observation: confirmed by the other path.
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(),
+			`UPDATE linkedin_connection SET match_status = 'confirmed'`)
+		return err
+	}); err != nil {
+		t.Fatalf("confirming the connection: %v", err)
+	}
+
+	if err := store.RecordLinkedInMatchRefused(ctx, onlyLinkedInConnection(t, e)); err != nil {
+		t.Fatalf("recording a stale refusal: %v", err)
+	}
+	if status := linkedInMatchStatus(t, e); status != "confirmed" {
+		t.Errorf("the connection is %q, want confirmed — a refusal about a suggestion that no longer "+
+			"exists rejected a link the member now has", status)
+	}
+}
+
+// onlyLinkedInConnection is the fixture's single ghost row.
+func onlyLinkedInConnection(t *testing.T, e *integration.Env) ids.UUID {
+	t.Helper()
+	var id ids.UUID
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `SELECT id FROM linkedin_connection`).Scan(&id)
+	}); err != nil {
+		t.Fatalf("reading the connection id: %v", err)
+	}
+	return id
+}
