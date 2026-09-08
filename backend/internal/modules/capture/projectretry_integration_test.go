@@ -12,7 +12,7 @@ package capture_test
 // has no caller, and every later replay of that mailbox found the activity
 // already present and skipped the ladder. The message stayed unfiled forever,
 // and the breadcrumb was the whole record that the question went unanswered
-// (#2108).
+//.
 //
 // Driven through the sink twice with the same record, which is what a mailbox
 // replay is: the first pass fails inside the matcher, the second succeeds.
@@ -167,4 +167,71 @@ func projectLinkCount(t *testing.T, owner *pgx.Conn, _ ids.UUID) int {
 		t.Fatalf("counting project links: %v", err)
 	}
 	return n
+}
+
+// A project link that was never stamped is repaired by the next capture.
+//
+// The stamp is what makes the activity a Handelsbrief the retention floor
+// protects; a link without one leaves a business letter an erasure destroys.
+// Pre-stamp links exist — the migration that added the stamp carries a backfill
+// precisely because they do — so "whoever filed the link also stamped it" is a
+// guarantee nothing enforces.
+//
+// The cheap guard that stops a filed activity re-running the LADDER must
+// therefore not stop it re-running the WRITE. This is the case that tells the
+// two apart: the ladder is skipped (the matcher is never asked again) and the
+// stamp still lands.
+func TestAProjectLinkThatWasNeverStampedIsStampedByTheNextCapture(t *testing.T) {
+	owner, pool := setupCaptureDB(t)
+	ctx := context.Background()
+	ws := ids.NewV7()
+	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, ws); err != nil {
+		t.Fatalf("seeding workspace: %v", err)
+	}
+	project := seedProjectForCapture(t, owner, ws)
+
+	var stamped []ids.UUID
+	matcher := &failingOnceMatcher{project: project, calls: 1} // past its one fault
+	sink := capture.NewSink(database.BindTo(pool, ids.From[ids.WorkspaceKind](ws))).
+		WithProjectAttribution(capture.ProjectAttribution{
+			Keys: matcher,
+			Stamp: func(_ context.Context, _ pgx.Tx, _ ids.ActivityID, on ids.UUID) error {
+				stamped = append(stamped, on)
+				return nil
+			},
+		})
+
+	record := aProjectSubjectRecord()
+	sinkCtx := captureSinkContextFor(ctx, ws)
+	if _, err := sink.Upsert(sinkCtx, record); err != nil {
+		t.Fatalf("the first capture failed: %v", err)
+	}
+	if linked := projectLinkCount(t, owner, ws); linked != 1 {
+		t.Fatalf("the first capture filed %d link(s), want 1 — the rest of this proves nothing without one", linked)
+	}
+	askedAfterFiling := matcher.calls
+	stamped = nil
+
+	// The replay of an activity that is already filed. Nothing to decide, and
+	// still something to write.
+	if _, err := sink.Upsert(sinkCtx, record); err != nil {
+		t.Fatalf("the replay failed: %v", err)
+	}
+	if matcher.calls != askedAfterFiling {
+		t.Errorf("the matcher was asked again (%d → %d) — the ladder must stop on the guard for an "+
+			"activity already filed, which is what keeps the retry cheap",
+			askedAfterFiling, matcher.calls)
+	}
+	if len(stamped) != 1 {
+		t.Fatalf("the replay stamped %d time(s), want 1 — an unstamped project link is a business "+
+			"letter the retention floor cannot see, and no other pass repairs it", len(stamped))
+	}
+	// The project ON the row, not one this call proposed: a human relink landing
+	// between the ladder's read and the insert wins the row, and stamping the
+	// discarded choice would write retention evidence for a project that does
+	// not own the activity.
+	if stamped[0] != project {
+		t.Errorf("the stamp names project %s, want the one the activity is filed under (%s)",
+			stamped[0], project)
+	}
 }

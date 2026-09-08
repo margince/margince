@@ -26,11 +26,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -104,15 +101,27 @@ func (s *Sink) attributeProject(ctx context.Context, rec connector.NormalizedRec
 	if s.projectKeys == nil || s.stampProject == nil {
 		return
 	}
+	// A project is something an ACTIVITY is filed under. decideProject refuses
+	// any other record anyway, but it refuses from inside the transaction this
+	// function opens — so a lead capture paid for a transaction and an indexed
+	// read to be told what its record type already says.
+	if ref.Type != datasource.EntityActivity {
+		return
+	}
 	activityID := ids.From[ids.ActivityKind](ref.ID)
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		filed, err := alreadyFiledUnderAProject(ctx, tx, activityID)
-		if err != nil || filed {
+		if err != nil {
 			return err
 		}
-		projectID, err := s.decideProject(ctx, tx, rec, activityID)
-		if err != nil || projectID.IsZero() {
-			return err
+		// A zero project is "nothing to propose": the activity is already
+		// filed, so the ladder has nothing left to decide and
+		// linkActivityToProject goes straight to the repair below.
+		var projectID ids.UUID
+		if !filed {
+			if projectID, err = s.decideProject(ctx, tx, rec, activityID); err != nil || projectID.IsZero() {
+				return err
+			}
 		}
 		return linkActivityToProject(ctx, tx, activityID, projectID, s.stampProject)
 	})
@@ -121,21 +130,27 @@ func (s *Sink) attributeProject(ctx context.Context, rec connector.NormalizedRec
 	}
 }
 
-// alreadyFiledUnderAProject is what makes the ladder safe to run on a REPLAY,
-// and cheap to.
+// alreadyFiledUnderAProject is what makes the ladder safe to run on a REPLAY, and
+// cheap to.
 //
-// It used to run only when the capture had just created the activity. A
-// transient fault — a SQL error, a matcher failure — logged for a reconcile
-// that has no caller, and every later replay of that mailbox found the
-// activity already present and skipped the ladder. The message stayed unfiled
-// forever, and the breadcrumb was the whole record that the question went
-// unanswered (#2108).
+// The ladder used to run only when the capture had just created the activity. A
+// transient fault — a SQL error, a matcher failure — logged for a reconcile that
+// has no caller, and every later replay of that mailbox found the activity
+// already present and skipped the ladder. The message stayed unfiled forever,
+// and the breadcrumb was the whole record that the question went unanswered.
 //
 // So the ladder runs on every capture of the activity, not only the first.
 // linkActivityToProject was already idempotent — ON CONFLICT DO NOTHING, and it
 // stamps whether or not it inserted — so a second run was always SAFE; what it
-// was not is free, and this is what makes it so. An activity already filed
-// stops here, before the three rungs, on one indexed read.
+// was not is free, and this is what makes it so.
+//
+// It answers yes or no, and its caller still goes through
+// linkActivityToProject with the answer. Skipping straight past would skip the
+// STAMP too, and that is a repair the conflict path exists to make: the
+// migration's own backfill exists because pre-stamp project links do, and a
+// missed stamp leaves a Handelsbrief an erasure destroys. What is skipped here
+// is the three-rung ladder, which has nothing left to decide — not the write
+// that makes the answer durable.
 //
 // Only a project link counts. An activity filed under a person or a deal has
 // not been asked this question yet, and treating any link as an answer would
@@ -342,106 +357,4 @@ func dealProject(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) (ids
 		return ids.Nil, nil
 	}
 	return matched[0], nil
-}
-
-// linkActivityToProject writes the one link the ladder concluded.
-//
-// It REQUIRES activity.update, and that is not belt-and-braces over the
-// activity.create the capture already checked. Filing an activity under a
-// project changes who can reach it and bumps activity.version, which is the pin
-// a staged approval re-checks before it redeems — so this is an update of the
-// activity by every test that matters, and the audit row says so
-// (auditProjectAttribution). A principal that may create captured mail but not
-// change it attributes nothing, which is the honest outcome rather than a
-// silent widening of what create means.
-//
-// Denial is not a fault: a connector role without activity.update is an
-// ordinary configuration, so its mail lands filed under nothing.
-//
-// Then the row-scope check on the target, exactly as every other link writer
-// does: a connector must not plant a link to a row its granting human could not
-// see. That check is narrower than the ladder's own, which already refused an
-// unreadable project — it stays because this function is the write, and a write
-// re-checks its own target rather than trusting the caller to have done it.
-//
-// ON CONFLICT DO NOTHING because uq_activity_link_project admits exactly one
-// project link per activity: a concurrent pass that got there first is the
-// system working, not a collision to report. Nothing is audited or bumped when
-// nothing landed — a no-op writes no audit noise and moves no version.
-func linkActivityToProject(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, projectID ids.UUID, stamp StampProjectCorrespondence) error {
-	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
-		if errors.Is(err, apperrors.ErrPermissionDenied) {
-			return nil
-		}
-		return err
-	}
-	if err := auth.EnsureLinkTarget(ctx, tx, string(datasource.EntityProject), projectID); err != nil {
-		if errors.Is(err, apperrors.ErrNotFound) {
-			return nil
-		}
-		return fmt.Errorf("capture: project link target: %w", err)
-	}
-	tag, err := tx.Exec(ctx, `
-		INSERT INTO activity_link (activity_id, entity_type, project_id)
-		VALUES ($1, 'project', $2)
-		ON CONFLICT DO NOTHING`, activityID, projectID)
-	if err != nil {
-		return fmt.Errorf("capture: filing the activity under its project: %w", err)
-	}
-	if tag.RowsAffected() == 0 {
-		// A link was already there. Stamp anyway before returning: the early
-		// exit used to skip it on the reasoning that whoever filed the link
-		// also stamped it, and that is exactly the guarantee nothing enforces
-		// — the migration's own backfill exists because pre-stamp project
-		// links do. A missed stamp leaves a Handelsbrief an erasure destroys;
-		// a repeated one costs a no-op, because the stamp is idempotent. The
-		// echo path made the same call for the same reason
-		// (activities/messageidentity.go).
-		//
-		// Nothing else runs: no version bump and no audit row, because nothing
-		// changed about where the activity is filed.
-		return stamp(ctx, tx, activityID, projectID)
-	}
-	// Touch the activity ROW, not just its link table, for the reason the
-	// human relink path does it (activities/lifecycle.go): a staged approval
-	// pins activity.version, and that pin is what stands between an approved
-	// "send this on this conversation" and the conversation being repointed
-	// before the approval redeems. Filing changes who the activity reaches, so
-	// it must move the version the pin re-checks. The trigger
-	// (set_updated_at_bump_version) does the bump; this only has to be a
-	// genuine UPDATE of the row.
-	if _, err := tx.Exec(ctx, `UPDATE activity SET updated_at = now() WHERE id = $1`, activityID); err != nil {
-		return fmt.Errorf("capture: bumping the filed activity's version: %w", err)
-	}
-	// The link is what qualifies the correspondence, so the stamp commits with
-	// it (D5).
-	if err := stamp(ctx, tx, activityID, projectID); err != nil {
-		return fmt.Errorf("capture: classifying the filed activity's correspondence: %w", err)
-	}
-	return auditProjectAttribution(ctx, tx, activityID, projectID)
-}
-
-// auditProjectAttribution records the link the ladder just wrote, under the
-// same action the human-driven relink uses: a reader asking "how did this
-// message end up on this project?" must find one answer whether a person or the
-// ladder filed it, and the audit row's principal already says which.
-//
-// activity_relink maps to activity.update in auditActionGrant, and the caller
-// really does require that grant (linkActivityToProject) — so the
-// authorization_rule this row renders names the rule that actually admitted the
-// write. audit_log is append-only, so a verb whose write path never checked the
-// grant it claims would be an uncorrectable lie about who was allowed to do
-// what.
-//
-// No public event rides with it, and that is deliberate rather than an
-// omission. This link is part of landing ONE captured message, which
-// activity.captured already announced in the transaction just before; a second
-// event saying the same message changed would have subscribers reacting twice
-// to one arrival. activity.updated is the activities module's type to mean
-// what it means, and capture does not get to redefine it as "a message
-// arrived, again".
-func auditProjectAttribution(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, projectID ids.UUID) error {
-	_, err := storekit.Audit(ctx, tx, "activity_relink", "activity", activityID.UUID, nil,
-		map[string]any{"entity_type": string(datasource.EntityProject), "entity_id": projectID})
-	return err
 }

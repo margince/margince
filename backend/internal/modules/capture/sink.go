@@ -226,8 +226,8 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 	//
 	// A transient fault used to leave the message unfiled forever: the ladder
 	// ran only on creation, so every later replay found the activity present
-	// and skipped it, and the reconcile the comment promised has no caller
-	// (#2108). Running it again is the retry. It is safe by construction —
+	// and skipped it, and the reconcile the comment promised has no caller.
+	// Running it again is the retry. It is safe by construction —
 	// linkActivityToProject is ON CONFLICT DO NOTHING and stamps either way —
 	// and cheap because an activity already filed under a project stops on one
 	// indexed read before the rungs.
