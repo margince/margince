@@ -195,9 +195,14 @@ func dropEscalationTasksAlreadyOwed(rows []ranked) []ranked {
 // row for a source the page never consulted.
 type leadRead struct {
 	rows []OwedLead
-	// read is false when no lead source is bound, when the installation
-	// measures no first response, or when the read was refused or failed.
+	// read is false when no lead source is bound, or when the read was refused
+	// or failed. NOT when the installation measures no first response: leads
+	// still owe replies there, and reporting none is the defect this lane had.
 	read bool
+	// tracked says whether a first-response target exists. False means every
+	// row's deadline and state are absent — the reply is owed, and nothing
+	// measures when it was owed by.
+	tracked bool
 }
 
 // bounded reports whether the read stopped at its cap, so the page can say
@@ -209,10 +214,15 @@ func (l leadRead) bounded() bool {
 
 // owedLeads reads the leads still owed a first reply, or names why it could not.
 //
-// An installation with no first-response target has no leads that are LATE, so
-// the source is absent from the page entirely. Reporting zero overdue leads
-// where nothing measures overdue would be a number the product cannot stand
-// behind.
+// A lead owing a reply is a fact about the LEAD; whether that reply is late is a
+// fact about the installation's policy. The lane used to conflate them and drop
+// itself entirely where no first-response target was configured — so a rep with
+// five unanswered leads read "0 owed a first answer", which is not a cautious
+// answer but a wrong one.
+//
+// Now the rows come back either way, and only the deadline and its state depend
+// on a policy. `tracked` still rides along so the surface can say a reply is
+// owed without claiming to know when it was owed by.
 func (s *Service) owedLeads(
 	ctx context.Context,
 ) (leadRead, *crmcontracts.WorklistSourceUnavailable) {
@@ -230,9 +240,7 @@ func (s *Service) owedLeads(
 		return leadRead{}, &crmcontracts.WorklistSourceUnavailable{
 			Source: sourceLeadResponse, Reason: crmcontracts.WorklistSourceUnavailableReasonFailed,
 		}
-	case !tracked:
-		return leadRead{}, nil
 	default:
-		return leadRead{rows: owed, read: true}, nil
+		return leadRead{rows: owed, read: true, tracked: tracked}, nil
 	}
 }

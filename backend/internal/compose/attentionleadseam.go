@@ -54,9 +54,6 @@ func (l attentionLeadResponses) Owed(
 	if err != nil {
 		return nil, false, err
 	}
-	if !tracked {
-		return nil, false, nil
-	}
 
 	in := people.ListLeadsInput{Limit: &limit}
 	// Narrowed in the QUERY, the way the task lane is: filtering afterwards
@@ -108,19 +105,33 @@ func (l attentionLeadResponses) Owed(
 	}
 	owed := make([]attention.OwedLead, 0, len(keep))
 	for _, row := range keep {
-		// A lead that has been answered, or that never owed a reply, is not
-		// this lane's work. The store ranks those last rather than dropping
-		// them, because the same queue answers other questions.
-		if row.SlaState == nil {
+		// UNANSWERED is the question, and the SLA state is not it.
+		//
+		// leadSLAFields returns a nil state for every lead when the
+		// installation sets no first-response target — so selecting on the
+		// state dropped the whole lane wherever nobody had configured one, and
+		// the tile read "0 owed a first answer" beside five leads nobody had
+		// replied to. A policy decides whether a reply is LATE; whether one is
+		// owed at all is a property of the lead.
+		//
+		// An archived lead owes nothing, and neither does an answered one.
+		if row.ArchivedAt != nil || row.FirstResponseAt != nil {
 			continue
 		}
-		owed = append(owed, attention.OwedLead{
-			ID:         ids.UUID(row.Id),
-			Name:       leadDisplayName(row),
-			OwnerID:    ownerOfLead(row),
-			DeadlineAt: deadlineOfLead(row),
-			State:      string(*row.SlaState),
-		})
+		lead := attention.OwedLead{
+			ID:      ids.UUID(row.Id),
+			Name:    leadDisplayName(row),
+			OwnerID: ownerOfLead(row),
+		}
+		// The deadline and its state exist only where a policy states one.
+		// Left zero and empty otherwise, which OwedLead declares as the
+		// untracked case: the lane says a reply is owed without inventing a
+		// time it was owed by.
+		if row.SlaState != nil {
+			lead.DeadlineAt = deadlineOfLead(row)
+			lead.State = string(*row.SlaState)
+		}
+		owed = append(owed, lead)
 	}
 	return owed, tracked, nil
 }

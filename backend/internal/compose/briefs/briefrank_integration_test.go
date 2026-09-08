@@ -675,3 +675,43 @@ func TestALaterActRetiresTheDismissalLineage(t *testing.T) {
 		}
 	}
 }
+
+// A future-dated activity is not overnight momentum.
+//
+// The evidence read had a lower bound and no upper one, so a row dated ahead of
+// the brief's own cutoff counted as "the deal moved". A task written days ago
+// and dated next Tuesday therefore lifted momentum from its 0.4 baseline to 1.0
+// on every morning in between — the audit found three of seven selected deals
+// riding evidence dated after the cutoff that produced them.
+//
+// The dismissal filter in the same query already bounds itself this way, and
+// says why: a future-dated activity has not happened. The two reads disagreed.
+func TestAFutureDatedActivityIsNotOvernightMomentum(t *testing.T) {
+	b := setupBrief(t)
+	owner := integration.OwnerConn(t)
+
+	// Dated a week past the clock this run judges against, so it cannot have
+	// happened by the time the queue is built.
+	ahead := briefClock.Add(7 * 24 * time.Hour)
+	scheduled := integration.SeedIDRow(t, owner, `
+		INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
+		VALUES ($1, 'task', 'prepare the renewal deck', $2, 'manual', 'human:x')`,
+		ahead)
+	integration.LinkActivity(t, owner, scheduled, "deal", b.dealB)
+
+	ranking, err := b.engine.Rank(b.repCtx, briefClock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, item := range ranking.Queue {
+		if item.DealID != b.dealB {
+			continue
+		}
+		if item.Features.Momentum != briefMomentumUnchanged {
+			t.Errorf("momentum = %v, want the %v baseline — nothing has happened on this deal yet",
+				item.Features.Momentum, briefMomentumUnchanged)
+		}
+		return
+	}
+	t.Fatal("deal B left the queue entirely; this test can say nothing about its momentum")
+}

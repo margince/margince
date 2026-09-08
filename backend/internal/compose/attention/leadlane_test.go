@@ -173,12 +173,19 @@ func TestAnAtRiskLeadWithNoDeadlineNamesNoMoment(t *testing.T) {
 	}
 }
 
-// The policy question is not a filter. With no target set nothing is late, so
-// the source is ABSENT — a page reporting zero overdue leads would be stating a
-// number nothing measures.
-func TestWithNoFirstResponseTargetTheLaneClaimsNothing(t *testing.T) {
+// A reply is owed whether or not anything measures when it was owed by.
+//
+// The lane used to drop itself entirely with no first-response target set, on
+// the reasoning that nothing is LATE without one. But "owed" and "late" are
+// different questions: a rep with five unanswered leads read "0 owed a first
+// answer", which is not a cautious answer, it is a wrong one. The policy
+// decides the deadline; the lead decides whether a reply is outstanding.
+//
+// So the rows appear, carrying no deadline and no state — the lane says a reply
+// is owed without inventing a time it was owed by.
+func TestLeadsOweAReplyEvenWithNoFirstResponseTarget(t *testing.T) {
 	svc := leadLaneService(&stubLeads{tracked: false, rows: []OwedLead{
-		{ID: ids.NewV7(), Name: "a lead", State: "breached", DeadlineAt: readInstant.Add(-time.Hour)},
+		{ID: ids.NewV7(), Name: "a lead"},
 	}})
 
 	day, err := svc.Worklist(leadReader(), "", "", ids.UUID{}, 25, "")
@@ -186,19 +193,23 @@ func TestWithNoFirstResponseTargetTheLaneClaimsNothing(t *testing.T) {
 		t.Fatalf("worklist: %v", err)
 	}
 
+	var found int
 	for _, row := range day.Queue {
-		if row.Source == sourceLeadResponse {
-			t.Fatalf("a lead row reached the queue with the first-response target switched off")
+		if row.Source != sourceLeadResponse {
+			continue
 		}
+		found++
+		// No invented SLA: the row must not claim a deadline nothing set.
+		if row.DueAt != nil {
+			t.Errorf("the row carries a deadline (%v) with nothing measuring one", *row.DueAt)
+		}
+	}
+	if found != 1 {
+		t.Fatalf("lead rows on the queue = %d, want the one unanswered lead", found)
 	}
 	for _, missing := range day.SourcesUnavailable {
 		if missing.Source == sourceLeadResponse {
 			t.Fatalf("the lane reported itself unavailable; an unmeasured target is not a failed read")
-		}
-	}
-	for _, count := range day.Counts {
-		if count.Category == "leads" && count.Considered > 0 {
-			t.Fatalf("the leads category counted %d rows nothing measured", count.Considered)
 		}
 	}
 }
@@ -241,11 +252,13 @@ func TestANamedOwnersQueueKeepsTheirOwedLeads(t *testing.T) {
 	rowFor(t, day, "their lead")
 }
 
-// With the target switched off the source must be ABSENT, and a reach row is
-// not absence: reachOf emits one for every bounded-source key, so recording the
-// lane unconditionally published a zero-valued entry that reads as "read, and
-// there was nothing".
-func TestAnUntrackedLanePublishesNoReachRow(t *testing.T) {
+// A read that happened and found nothing publishes its reach row.
+//
+// The lane no longer disappears when no first-response target is set — it reads
+// the leads either way — so the reach row is now the honest record of a read
+// that ran: considered zero, shown zero. Suppressing it would put the lane back
+// in the state where "nothing to report" and "nobody looked" are the same page.
+func TestAnUntrackedLaneWithNoLeadsStillReportsItsReach(t *testing.T) {
 	svc := leadLaneService(&stubLeads{tracked: false})
 
 	day, err := svc.Worklist(leadReader(), "", "", ids.UUID{}, 25, "")
@@ -255,10 +268,14 @@ func TestAnUntrackedLanePublishesNoReachRow(t *testing.T) {
 
 	for _, reach := range day.Reach {
 		if reach.Source == sourceLeadResponse {
-			t.Fatalf("the lane published a reach row (considered=%d shown=%d) with nothing measuring first response",
-				reach.Considered, reach.Shown)
+			if reach.Considered != 0 || reach.Shown != 0 {
+				t.Errorf("reach = considered %d shown %d, want an honest empty read",
+					reach.Considered, reach.Shown)
+			}
+			return
 		}
 	}
+	t.Fatal("the lane published no reach row, so the page cannot tell an empty read from an absent one")
 }
 
 // One late reply is ONE row.
