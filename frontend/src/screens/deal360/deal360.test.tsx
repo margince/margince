@@ -3,6 +3,8 @@
 
 /** @vitest-environment jsdom */
 import "@testing-library/jest-dom/vitest";
+import { readFileSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -459,12 +461,48 @@ describe("the identity line says what it is worth, where it is, and whose it is"
     );
     // Every word of it, reachable by a reader that does not hover.
     expect(screen.getByText(long)).toBeInTheDocument();
-    // And the stage is still on the line beside it, which is what the clamp is
-    // for. The width itself is CSS and not assertable here; what this pins is
-    // that the fact carries the class the clamp hangs on, so removing it is a
-    // failing test rather than a silently wide line.
+    // And the stage is still on the line beside it, which is what the bound is
+    // for. What this pins is that the fact carries the class the bound hangs
+    // on, so removing it is a failing test rather than a silently wide line;
+    // that the class does not CLIP is held by the rule itself, below, because
+    // jsdom applies no stylesheet and presence in the DOM proves nothing about
+    // what a reader can see.
     expect(screen.getByText(long)).toHaveClass("deal-win-detail");
     expect(screen.getByText("Qualified")).toBeInTheDocument();
+  });
+
+  // The bound is on WIDTH, never on content — asserted against the stylesheet,
+  // because jsdom applies none and a rendered tree cannot tell a wrapped value
+  // from a clipped one.
+  //
+  // This has been wrong twice in opposite directions, which is why it is held
+  // rather than described. Clipped with the rest in a `title` needs a mouse;
+  // clipped with no `title` is unreadable for everyone. Either way the reader
+  // who loses is the person checking the words they just typed, and the value
+  // exists to be audited.
+  it("bounds the won-reason detail's width and never its content", () => {
+    const css = readFileSync(
+      join(resolve(__dirname, ".."), "dealstatus.css"),
+      "utf8",
+    );
+    const rule = /\.deal-win-detail\s*\{([^}]*)\}/.exec(css);
+    expect(rule, ".deal-win-detail is gone from dealstatus.css").not.toBeNull();
+    const body = rule?.[1] ?? "";
+
+    // A width bound, so the identity line stays a line of short facts.
+    expect(body).toMatch(/max-width:/);
+    // And nothing that hides what does not fit inside it.
+    for (const clip of [
+      /overflow\s*:\s*hidden/,
+      /text-overflow\s*:/,
+      /white-space\s*:\s*nowrap/,
+      /line-clamp\s*:/,
+    ]) {
+      expect(
+        body,
+        `.deal-win-detail clips its content (${clip.source}); the value is what a controller is shown`,
+      ).not.toMatch(clip);
+    }
   });
 
   it("says nothing about paperwork on a won deal a contract carried", () => {

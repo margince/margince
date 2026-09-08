@@ -15,7 +15,7 @@ edit its `//gate:kind` line, then regenerate from the backend directory:
 The eight shapes, what each is for, and how each one silently passes:
 [gate-patterns.md](gate-patterns.md).
 
-## Parity (100)
+## Parity (102)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -26,6 +26,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `airoutingschema_test.go` | H3 | What the EDITOR accepts, checked against what the parser accepts. |
 | `aitaskparity_test.go` | H3 | Every ai\_task an emitter writes into the AI-activity projection must be a task the AI contract declares. |
 | `aitaskrunenum_test.go` | H3 | The ai\_task.state\_changed payload's closed vocabularies must equal the ai\_task\_run column CHECKs they are projected into. |
+| `appviewfixtures_test.go` | H2 | A view's fixture is the tool's answer, and this is what makes that true. |
 | `auditcoherence_test.go` | H3 | The audit\_log enum-coherence gate as a fitness function. |
 | `authwaitparity_test.go` | H3 | How long an in-flight authentication may be held waiting on somebody else's server. |
 | `authzcategories_test.go` | H2 | The outbound category vocabulary is spelled TWICE — once in Go, once as a CHECK constraint on communication\_decision — and the two must agree. |
@@ -47,6 +48,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `contractvocabulary_test.go` | H3 | A membership set built from a generated enum's own constants must hold every member of that enum. |
 | `corepicklistcontract_test.go` | H3 | The core picklist value sets against the contract that owns them. |
 | `dealmoveargument_test.go` | H2 | One rule, read on both sides of a compose seam. |
+| `dealmovemirror_test.go` | H2 | One rule, spelled on both sides of a module boundary, held equal in both directions. |
 | `dedupeevidencefields_test.go` | H1 | The dedupe evidence snapshot is stored as free JSON, so nothing about a field name is checked when it is written. |
 | `deexceptionmirror_test.go` | H3 | The engine's test fixture for the German exception is the pack's declaration, or the tests prove nothing about what ships. |
 | `dsrqueueishumanonly_test.go` | H2 | The subject-request queue is human-only in the contract because it is human-only in the store. |
@@ -310,7 +312,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `writeauthority_test.go` | H2 | The read/write asymmetry of a manual record grant, as a fitness function: a path that CHANGES a shareable record probes for write authority, not for visibility. |
 | `writeliveness_test.go` | H2 | The LIVENESS obligation as a fitness function: a write that targets one standing row of a table which can be archived either REFUSES an archived row, DECLARES that it deliberately reaches one, or is ratified with a reason. |
 
-## Prohibition (52)
+## Prohibition (53)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -319,6 +321,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `authzmetriclabels_test.go` | H2 | The outbound decision counter labels only closed vocabularies, and never the recipient. |
 | `backfillledgerlock_test.go` | H2 | A transaction that writes the backfill creation ledger locks the run row first. |
 | `capabilitypathlog_test.go` | H2 | A request path reaches a log line through capabilitypath.Redact, never raw. |
+| `commentnamedtests_test.go` | H1 | A test named in a comment exists. |
 | `connectoractor_test.go` | H1 | A connector's actor id is DERIVED from the work, never written down. |
 | `constraintnameleak_test.go` | H2 | A constraint's name goes in the operator's log, never in the caller's refusal. |
 | `contentionprobe_test.go` | H2 | A contention probe that cannot see the backend it is waiting for. |
