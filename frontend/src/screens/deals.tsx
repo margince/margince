@@ -50,11 +50,6 @@ import {
   RecordView,
 } from "../design-system/composed";
 import { IconAction } from "../design-system/iconaction";
-import {
-  IdentityFact,
-  IdentityLine,
-  IdentityMeta,
-} from "../design-system/identityline";
 import type { ListChip } from "../design-system/listsurface";
 import type { ListColumn, ListSelection } from "../design-system/listtable";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
@@ -115,6 +110,7 @@ import { useDealRecipientAddress } from "./deal360/usedealrecipient";
 import { DealBulkBar } from "./dealbulk";
 import { DealEmailAside } from "./dealemail";
 import { DealFiles } from "./dealfiles";
+import { DealIdentityLine } from "./dealidentity";
 import {
   DealProjectChip,
   dealProjectFields,
@@ -128,11 +124,9 @@ import { EditAction } from "./edit";
 import {
   EntityRef,
   type OwnerNaming,
-  rosterOwnerName,
   rosterOwnerNaming,
   useEntityName,
   useRoster,
-  useRosterPartial,
 } from "./entityref";
 import { RecordHistoryTab } from "./history";
 import {
@@ -3712,196 +3706,6 @@ function dealStageSteps({
 // doesn't push the render-prop closure over the cognitive-complexity budget.
 // Every prop here is a value already resolved by DealScreen — no new
 // fetches, no behavior change from the pre-tab layout.
-// What the identity line reads off a deal. Every field is optional because
-// every one of them is a fact a deal can lack or a reader can be refused.
-type DealIdentity = Pick<
-  Deal,
-  | "amount_minor"
-  | "currency"
-  | "stage_id"
-  | "owner_id"
-  | "organization_id"
-  | "partner_org_id"
-  | "partner_attribution"
-  | "masked_fields"
-  | "won_without_contract_reason"
-  | "won_without_contract_detail"
-> &
-  // `status` is required on a Deal and optional here, which is the rest of this
-  // type's rule stated for the one field that would otherwise break it: the line
-  // draws the facts it is given, and every story and test that draws it builds
-  // the smallest deck that says something. Absent reads as "not a won deal",
-  // which is what a deck omitting it means.
-  Partial<Pick<Deal, "status">>;
-
-/**
- * The one line of facts under a deal's name: what it is worth, where it sits
- * on the board, whose deal it is, and — when one brought it — which partner.
- *
- * It is the design system's `IdentityLine`, the same row the account and the
- * contact draw under their own names, so the three records read the same way.
- * These facts used to stand in a labelled box beside the verbs instead
- * (`DealFacts`), which made the deal the only record whose head answered "what
- * is this" in a different shape from every other — and cost the verbs the room
- * they need beside a name at the record rung.
- *
- * The partner was editable in the form and rendered nowhere, so a deal that a
- * partner sourced looked identical to one we won alone. That is the fact the
- * commission is computed from, and a figure a partner is paid on has to be
- * visible on the record it came from.
- *
- * Each reference goes through EntityRef, which resolves the name and links to
- * the record — and withholds both when the reader may not open it, which is
- * why the ids are not printed as a fallback. A withheld fact NAMES the field
- * it withholds: on a line of joined facts a bare mask says only "something
- * here is hidden", and the amount, the company and the partner are three
- * different things to be refused.
- */
-export function DealIdentityLine({
-  deal,
-  stages,
-  locale,
-}: Readonly<{
-  // The facts this line draws and no more. A presentational row does not need
-  // a whole `Deal` to say what one is worth, and asking for one makes every
-  // story and test that draws the line assemble a record it does not read.
-  deal: DealIdentity;
-  // The stages the PAGE already sorted for the board, not a second read.
-  stages: readonly { id: string; name: string }[];
-  locale: Locale;
-}>) {
-  const t = useT();
-  // Only asked for when there is an owner to name: an unowned deal needs no
-  // roster read to say so.
-  const roster = useRoster("user", Boolean(deal.owner_id));
-  const partial = useRosterPartial("user", Boolean(deal.owner_id));
-  const masked = deal.masked_fields ?? [];
-  // An em dash rather than the stage id: a deal in overlay mode carries no
-  // native pipeline row, and printing a UUID where a stage name goes reads as
-  // a fault.
-  const stage = stages.find((candidate) => candidate.id === deal.stage_id);
-  return (
-    <IdentityMeta>
-      <IdentityLine>
-        {masked.includes("organization_id") ? (
-          <IdentityFact>
-            {t("create.organization")} <FieldGuard mode="masked" />
-          </IdentityFact>
-        ) : (
-          deal.organization_id && (
-            <IdentityFact>
-              <EntityRef kind="organization" id={deal.organization_id} />
-            </IdentityFact>
-          )
-        )}
-        <IdentityFact>
-          {/* A masked amount NAMES the field, like every other refusal on this
-              line: a lone lock among joined facts says only that something
-              here is hidden, and "no value recorded" and "you may not see the
-              value" are different statements about a deal. */}
-          {masked.includes("amount_minor") ? (
-            <>
-              {t("deals.amount")} <FieldGuard mode="masked" />
-            </>
-          ) : (
-            dealAmount(deal, locale)
-          )}
-        </IdentityFact>
-        <IdentityFact>{stage?.name ?? "—"}</IdentityFact>
-        <IdentityFact quiet>
-          {t("list.owner")}:{" "}
-          {rosterOwnerName(
-            deal.owner_id,
-            roster,
-            partial,
-            t,
-            t("co.pulse.unowned"),
-          )}
-        </IdentityFact>
-        {masked.includes("partner_org_id") ? (
-          // No attribution word here: what the partner did is withheld WITH
-          // the partner, so naming one would decide what a partner nobody
-          // could see is owed.
-          <IdentityFact>
-            {t("deal.partnerOrg")} <FieldGuard mode="masked" />
-          </IdentityFact>
-        ) : (
-          deal.partner_org_id && (
-            <IdentityFact>
-              {/* Sourced and influenced are paid differently, so the line says
-                  which one rather than a neutral "partner: X" that hides the
-                  distinction the commission turns on. */}
-              {t(
-                deal.partner_attribution === "influenced"
-                  ? "deal.partnerInfluenced"
-                  : "deal.partnerSourced",
-              )}{" "}
-              <EntityRef kind="organization" id={deal.partner_org_id} />
-            </IdentityFact>
-          )
-        )}
-        <WonWithoutContractFact deal={deal} />
-      </IdentityLine>
-    </IdentityMeta>
-  );
-}
-
-/**
- * How a won deal was won, when it was won without a contract.
- *
- * The server treats this answer as load-bearing — the whole justification for
- * letting the deal close without paperwork is that the gap becomes countable —
- * and until now no screen read it back. The rep who answered could not check
- * their own answer, and a won deal with paper looked identical to one without.
- *
- * On the identity line rather than in a pane, beside the `won` badge it
- * qualifies: it is a fact about the deal's standing, which is what this line
- * is for, and a reader asking "won on what?" is looking at the badge.
- *
- * Absent, never a placeholder, when the deal is not won or a contract carried
- * it. "Won with a contract" is the ordinary case and needs no sentence; a line
- * saying so on every won deal would bury the ones that need reading.
- */
-function WonWithoutContractFact({ deal }: Readonly<{ deal: DealIdentity }>) {
-  const t = useT();
-  const reason = deal.won_without_contract_reason;
-  if (deal.status !== "won" || !reason) {
-    return null;
-  }
-  const label = t(WON_REASON_LABELS[reason]);
-  // The detail replaces the label for `other`, and does not follow it:
-  // "Something else: renewed on a handshake" says the category twice and
-  // buries the only part written by a person. Every other reason is its own
-  // answer and carries no detail.
-  const detail = reason === "other" ? deal.won_without_contract_detail : null;
-  if (!detail) {
-    return <IdentityFact>{label}</IdentityFact>;
-  }
-  // Free text on a line of SHORT facts, so it is bounded — visually, and with
-  // the whole string still in the DOM.
-  //
-  // It used to be trimmed in TS with the rest in a `title`. That reads as
-  // solved and is not: a tooltip wants a mouse, is ignored by most screen
-  // readers, and never appears for a keyboard or touch reader — so the people
-  // who could not read the answer would have included the person checking the
-  // words they had just typed, which is who this fact exists for.
-  //
-  // The clamp is a class on this screen's own stylesheet rather than a rule in
-  // the design system: one screen's free-text field is not a shape the shared
-  // identity row owes everybody, and IdentityFact already takes a className for
-  // exactly this.
-  return <IdentityFact className="deal-win-detail">{detail}</IdentityFact>;
-}
-
-// The value, or an em dash when the deal carries none. The masked case is the
-// caller's, because a refusal on this line is written as the field's name
-// beside the mark rather than as the mark alone.
-function dealAmount(deal: DealIdentity, locale: Locale): ReactNode {
-  if (deal.amount_minor == null || !deal.currency) {
-    return "—";
-  }
-  return formatMoney(deal.amount_minor, deal.currency, locale);
-}
 
 // Deal360 leads the page. It is absent on an overlay-backed deal: the briefing
 // is written from records this installation holds, and a mirrored deal's

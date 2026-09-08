@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
-import { DealIdentityLine } from "../deals";
+import { DealIdentityLine } from "../dealidentity";
 import { installFetchStub, jsonResponse, StoryProviders } from "../story-utils";
 import { DealPulse } from "./dealpulse";
 import { DealSeats } from "./dealseats";

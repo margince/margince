@@ -9,7 +9,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import { DealIdentityLine } from "../deals";
+import { DealIdentityLine } from "../dealidentity";
 import { DealPulse } from "./dealpulse";
 import { DealSeats } from "./dealseats";
 import { DealStrip } from "./dealstrip";
