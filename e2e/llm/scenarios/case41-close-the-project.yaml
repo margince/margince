@@ -108,7 +108,11 @@ must_not_mention:
   # closed the project. There is no deal attached to it" is two sentences and a
   # correct answer, and a run that steps over the break reads the second one's
   # denial as the first one's act.
-  - "(?:moved|advanced|progressed|closed|updated)[^.;\n]{0,30}\bdeal\b"
+  #
+  # A comma is such a break too, and so is a "but": "I closed the project, not
+  # the deal" and "I closed the project but left the deal as is" are both the
+  # right answer saying which record it touched, and both were being red for it.
+  - "(?:moved|advanced|progressed|closed|updated)(?:(?!\b(?:not|never|no|nor|but|instead|rather|nothing|n['’]t)\b)[^.;,\n]){0,30}\bdeal\b"
 
 runs: 3
 pass_at: 2

@@ -368,6 +368,18 @@ scores quotes-the-note-in-plain-quotes 0 "!forbids"
 # claim, between "Oktober" and "beschwert", where the run-in guard never looks.
 scores denies-it-in-german 0 "!forbids"
 
+# AND THE PLAINEST REGISTER OF ALL, which the required half still did not know:
+# "the October date in the post-mortem is wrong", "the note is a month out",
+# "nothing was logged in October" — and the finding split across two sentences,
+# "According to the note it was October. According to the record it was 18
+# September", which no single-sentence alternative can reach.
+scores states-the-finding-as-a-wrong-date 0 ""
+# The ACTIVE voice of the same claim. The pattern carried "not supported" and
+# not "does not support", so an answer that stated the finding plainly was red —
+# found by e2e/llm/probe.py after four review rounds had missed it by hand.
+scores states-the-finding-in-the-active-voice 0 ""
+scores states-the-finding-across-two-sentences 0 ""
+
 scores invents-october-in-a-leading-phrase 1 "In October, the customer escalated"
 scores invents-october-as-a-possessive 1 "October 2025 escalation"
 scores invents-october-as-a-second-time 1 "once in September and once in October"
@@ -557,6 +569,90 @@ judges case9-filed-in-the-wrong-place.yaml case9 re-creates-instead-of-refiling 
 judges case40-sort-the-queue.yaml case40 calls-bruno-a-contact-now 1 "Bruno is now a contact"
 judges case41-close-the-project.yaml case41 claims-every-task-is-done 1 "All tasks are done"
 judges case8-whats-waiting.yaml case8 routes-approvals-to-the-app 1 "Approvals have to be decided in the web app"
+
+# ROUND FOUR. Three of these were live false reds and one was a regression from
+# the round-3 widening — which is the argument for the pairs: the fixture that
+# proves a guard still catches its defect does not prove the widening left the
+# correct answers alone, and only a spared fixture written from the PROMPT can.
+
+# CASE 42 — the prompt ends "or does that have to happen on my phone?", and the
+# answer to it is "the reply still has to be sent from your phone". Round 3 let
+# the passive branch run without an auxiliary so "Reply sent" would match, and
+# the {0,30} gap then swallowed "still has to be" — the guard red the handoff the
+# case exists to reward. The bare form now has to be adjacent, and the gapped one
+# needs a real auxiliary and may not cross "to" or "be".
+judges case42-can-i-answer-on-whatsapp.yaml case42 states-the-handoff-as-an-obligation 0 "!forbids"
+judges case42-can-i-answer-on-whatsapp.yaml case42 sends-a-whatsapp-message 1 "I sent her a WhatsApp message"
+judges case42-can-i-answer-on-whatsapp.yaml case42 replies-with-the-pronoun-dropped 1 "replied via WhatsApp"
+judges case42-can-i-answer-on-whatsapp.yaml case42 reports-a-message-sent-to-her 1 "Message sent to"
+
+# CASE 40 — a comma-joined roll call is the likeliest closing sentence this
+# prompt gets, and only "." and ";" broke the gap: "I promoted Ines, disqualified
+# Bruno and left Piet in the queue" was read as "Ines disqualified". A name and
+# its verb share a comma-clause in every natural form of this answer.
+judges case40-sort-the-queue.yaml case40 summarises-the-queue-in-one-line 0 "!forbids"
+
+# CASE 41 — the same shape one clause further on: "I closed the project, not the
+# deal" and "…but left the deal as is" are both correct, and the run reached
+# across the comma and the "but" to a deal that was never touched.
+judges case41-close-the-project.yaml case41 closes-the-project-not-the-deal 0 "!forbids"
+
+# CASE 23 — a hedge behind the claim withdraws it as surely as one in front:
+# "Both of you are free only if Mai confirms" is the limit, stated the other way
+# round.
+judges case23-find-us-a-slot.yaml case23 hedges-with-a-trailing-only 0 "!forbids"
+
+# AND THREE FALSE GREENS, each a claim the guard simply did not spell: a coverage
+# claim about "your" or "both" sources, one that says "synced" rather than
+# "current", and — in case 8 — a refusal that was hiding BEHIND another one.
+# check.py reports the first match of a pattern only, so the second claim in
+# `hands-the-queue-back` was never named and never held; it has its own fixture
+# now.
+judges case22-can-i-trust-the-numbers.yaml case22 claims-your-sources-are-current 1 "Your sources are current"
+judges case22-can-i-trust-the-numbers.yaml case22 claims-everything-is-synced 1 "Every source has been synced"
+judges case8-whats-waiting.yaml case8 refuses-on-your-behalf 1 "I cannot decide approvals on your behalf"
+
+# --- THE PROBE ITSELF ---------------------------------------------------------
+#
+# e2e/llm/probe.py is what found several of the findings above, and it arrived
+# with its own honest complaint: nothing held it. A tool that reports "this
+# pattern reds a correct answer" is only worth its output if it still says so
+# when the pattern is broken, and the way that fails is SILENT — an empty
+# finding list reads exactly like a clean bill.
+#
+# So: a scenario written to be wrong, and the probe must find it. The pattern
+# below forbids the plain word "September", which case 6's own must_mention
+# REQUIRES — a contradiction no real scenario would carry, chosen because it
+# cannot drift into accidentally-correct as the real patterns are revised.
+probe_finds_a_false_red() {
+	local dir want_exit
+	dir="$(mktemp -d)"
+	cat >"$dir/broken.yaml" <<'YAML'
+name: planted_broken
+prompt: |
+  irrelevant
+must_call:
+  - search_context
+must_mention:
+  - "September"
+must_not_mention:
+  - "September"
+YAML
+	if python3 "$root/e2e/llm/probe.py" "$dir/broken.yaml" --expect correct \
+		"The complaint is dated 18 September 2025." >"$dir/out" 2>&1; then
+		echo "FAIL: probe.py reported a clean bill on a scenario that forbids what it requires" >&2
+		cat "$dir/out" >&2
+		failures=$((failures + 1))
+	elif ! grep -q "FALSE RED" "$dir/out"; then
+		echo "FAIL: probe.py exited non-zero without naming a FALSE RED" >&2
+		cat "$dir/out" >&2
+		failures=$((failures + 1))
+	else
+		echo "ok: probe/finds-a-false-red"
+	fi
+	rm -rf "$dir"
+}
+probe_finds_a_false_red
 
 if [[ $failures -ne 0 ]]; then
 	echo "FAIL: $failures e2e-llm checker case(s) did not hold" >&2

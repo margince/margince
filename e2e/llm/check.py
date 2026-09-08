@@ -16,6 +16,11 @@ Deliberately NOT judged: wording, tone, length, formatting, the order it did
 things in, or extra correct information. Only whether the facts are right and
 the required things were said.
 
+The patterns themselves are the part of this that nothing else measures — a
+must_mention that misses the finding reports PASS with no failing assertion to
+notice. probe.py beside this file puts one on trial: it judges candidate answers
+through check() itself and names the pattern that decided.
+
 Stdlib only — no PyYAML. The scenario files are a small fixed subset of YAML
 (scalars, block strings, flat lists) and a dependency for that would make the
 lane refuse to run on a fresh checkout.

@@ -83,6 +83,11 @@ must_not_mention:
   # is how the denial actually gets written. A capability guard that lets the
   # exact sentence it exists for through reports PASS with nothing failing.
   #
+  # A MISSING FORECAST VALUE IS NOT A MISSING FORECAST, either: "there is no
+  # forecast value available for Weserbund" is criterion 4 being answered, and it
+  # was firing the capability guard. The denial is about the forecast itself, so
+  # the alternative refuses a "value", "figure", "number" or "amount" behind it.
+  #
   # THE CAPABILITY DENIAL, the same failure case 7 guards. The forecast is
   # right there; concluding the workspace has none is worse than saying nothing,
   # because the person reading it stops asking.
@@ -90,7 +95,7 @@ must_not_mention:
   # Each alternative claims something about the PRODUCT. A hedge about the
   # answer — "I would not put much weight on this with so little history" — is
   # honest, is exactly what the prompt asked for, and must stay green.
-  - "no forecast[^.]{0,25}(available|in (the|this) (CRM|system|workspace))|cannot (produce|give|calculate|generate|compute) (a |the |any )?forecast|(the CRM|this workspace|Margince) (does not|doesn'?t) (do |support |have )?forecast|forecasting is (?:not |un)(?:available|supported|configured|possible)|no forecasting (capability|feature|data)"
+  - "no forecast\b(?!\s+(?:value|figure|number|amount|total))[^.]{0,25}(available|in (the|this) (CRM|system|workspace))|cannot (produce|give|calculate|generate|compute) (a |the |any )?forecast|(the CRM|this workspace|Margince) (does not|doesn'?t) (do |support |have )?forecast|forecasting is (?:not |un)(?:available|supported|configured|possible)|no forecasting (capability|feature|data)"
 
 runs: 3
 pass_at: 2
