@@ -174,6 +174,8 @@ func pinVerdictFor(t *testing.T, typeName string) string {
 }
 
 // toolTypeName is the tool's own Go type, through a pointer receiver.
+//
+//craft:ignore naked-any the registry holds tools by the interface each satisfies, and this asks what CONCRETE type one is — a constrained parameter would name the very thing being read
 func toolTypeName(tool any) string {
 	t := reflect.TypeOf(tool)
 	for t.Kind() == reflect.Pointer {
