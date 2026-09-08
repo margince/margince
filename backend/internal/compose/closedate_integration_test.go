@@ -541,3 +541,226 @@ func TestCloseDateSweepWaitUntilSuppressesDowngradeButNotOverdue(t *testing.T) {
 		t.Errorf("(date, provisional) = (%v, %v) — the past date must be replaced provisionally", swept.expectedClose, swept.provisional)
 	}
 }
+
+// The starvation the frozen membership exists to end.
+//
+// The old candidate query was `ORDER BY created_at, id LIMIT 200` over the live
+// deal table, with no cursor and no record of a pass. A corrected deal stays
+// eligible — the sweep leaves it provisional, and provisional is one of the
+// three conditions that admit a deal — so the same oldest 200 rows re-qualified
+// every night, the LIMIT cut at the same place, and deal 201 was never reached.
+// Not assessed late: not assessed at all, on any night, forever.
+//
+// So the fixture is deliberately shaped like the real failure: 200 healthy deals
+// created FIRST, which the old query would have filled its whole page with, and
+// the overdue one created last so it sorts past the cut. A pass that reaches it
+// is a pass that walked its whole frozen set.
+func TestCloseDateSweepReachesDealsPastTheOldPageLimit(t *testing.T) {
+	e := setupCloseDate(t)
+
+	// Healthy near-term dates: eligible for the pre-filter (inside the stalled
+	// window), flagged by nothing, so each settles as a plain check.
+	healthy := 200
+	for i := range healthy {
+		e.seedSweepDeal(t, fmt.Sprintf("Healthy %03d", i), e.early, nil, intp(30), 3)
+	}
+	// Created last, so it sorts behind every one of them.
+	overdue := e.seedSweepDeal(t, "Overdue behind the old cut", e.early, nil, intp(-12), 3)
+
+	if err := e.sweep(); err != nil {
+		t.Fatal(err)
+	}
+
+	// The deal the old shape could never see now carries its correction.
+	swept := e.readSwept(t, overdue)
+	if swept.expectedClose == nil || !swept.expectedClose.After(today()) {
+		t.Errorf("the deal past the old page limit still claims %v — it was never assessed",
+			swept.expectedClose)
+	}
+	if !swept.provisional {
+		t.Error("its replacement date is an estimate and must be provisional")
+	}
+
+	// And the pass can say so: one run, covering everything it froze.
+	var (
+		eligible, checked int
+		status            string
+	)
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT eligible, checked, status FROM close_date_run ORDER BY started_at DESC LIMIT 1`).
+		Scan(&eligible, &checked, &status); err != nil {
+		t.Fatalf("the pass recorded no run: %v", err)
+	}
+	if eligible != healthy+1 {
+		t.Errorf("froze %d deals, want the %d seeded", eligible, healthy+1)
+	}
+	if checked != eligible {
+		t.Errorf("checked %d of %d — a complete pass settles its whole set", checked, eligible)
+	}
+	if status != deals.CloseDateRunComplete {
+		t.Errorf("run status = %q, want %q", status, deals.CloseDateRunComplete)
+	}
+}
+
+// A pass interrupted part-way resumes where it stopped rather than starting
+// again at the first row — which is what made the worker's 5-minute deadline a
+// permanent cap rather than a pause.
+func TestCloseDateSweepResumesAnUnfinishedPass(t *testing.T) {
+	e := setupCloseDate(t)
+	for i := range 3 {
+		e.seedSweepDeal(t, fmt.Sprintf("Overdue %d", i), e.early, nil, intp(-12), 3)
+	}
+
+	if err := e.sweep(); err != nil {
+		t.Fatal(err)
+	}
+	var runID ids.UUID
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT id FROM close_date_run ORDER BY started_at DESC LIMIT 1`).Scan(&runID); err != nil {
+		t.Fatal(err)
+	}
+
+	// Reopen the finished run with one member unsettled and the cursor behind
+	// it: exactly the state a killed worker leaves.
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE close_date_run SET status = 'running', finished_at = NULL, checked = checked - 1
+		  WHERE id = $1`, runID); err != nil {
+		t.Fatal(err)
+	}
+	var reopened ids.UUID
+	if err := e.owner.QueryRow(context.Background(),
+		`UPDATE close_date_run_member SET outcome = 'pending', settled_at = NULL
+		  WHERE ctid IN (SELECT ctid FROM close_date_run_member
+		                  WHERE run_id = $1 ORDER BY deal_created_at DESC, deal_id DESC LIMIT 1)
+		 RETURNING deal_id`, runID).Scan(&reopened); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := e.sweep(); err != nil {
+		t.Fatal(err)
+	}
+
+	// The SAME run finished — a second one would mean it restarted rather than
+	// resumed, and would have re-corrected every deal it had already handled.
+	var runs int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM close_date_run`).Scan(&runs); err != nil {
+		t.Fatal(err)
+	}
+	if runs != 1 {
+		t.Errorf("close_date_run rows = %d, want 1 — the retry opened a second pass", runs)
+	}
+	var status string
+	var eligible, checked int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT status, eligible, checked FROM close_date_run WHERE id = $1`, runID).
+		Scan(&status, &eligible, &checked); err != nil {
+		t.Fatal(err)
+	}
+	if status != deals.CloseDateRunComplete || checked != eligible {
+		t.Errorf("resumed run: status %q, checked %d of %d — want a completed pass",
+			status, checked, eligible)
+	}
+}
+
+// A deal created after the freeze belongs to the NEXT pass, and one that closes
+// mid-pass keeps its place in the ledger with a reason. Both are what make
+// "checked N of M" reconcile instead of drifting with the live table.
+func TestCloseDateSweepFreezesItsMembershipAtTheStart(t *testing.T) {
+	e := setupCloseDate(t)
+	settled := e.seedSweepDeal(t, "Archived before the sweep runs", e.early, nil, intp(-12), 3)
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE deal SET archived_at = now() WHERE id = $1`, settled); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := e.sweep(); err != nil {
+		t.Fatal(err)
+	}
+
+	// The archived deal never entered the frozen set: the freeze reads live
+	// open deals, so a deal already gone is not owed an outcome.
+	var members int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM close_date_run_member WHERE deal_id = $1`, settled).Scan(&members); err != nil {
+		t.Fatal(err)
+	}
+	if members != 0 {
+		t.Errorf("an archived deal joined the frozen set (%d members)", members)
+	}
+
+	// A deal created now is not retrofitted into the finished pass.
+	fresh := e.seedSweepDeal(t, "Created after the freeze", e.early, nil, intp(-12), 3)
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM close_date_run_member WHERE deal_id = $1`, fresh).Scan(&members); err != nil {
+		t.Fatal(err)
+	}
+	if members != 0 {
+		t.Errorf("a deal created after the freeze joined that pass (%d members)", members)
+	}
+}
+
+// A member that goes away between the freeze and its turn is SKIPPED, not
+// dropped. Losing it from the ledger would quietly shrink the denominator, and
+// "checked 9 of 9" would be true of a set that used to have ten deals in it.
+func TestCloseDateSweepSkipsAMemberArchivedMidPass(t *testing.T) {
+	e := setupCloseDate(t)
+	doomed := e.seedSweepDeal(t, "Archived after the freeze", e.early, nil, intp(-12), 3)
+
+	// Run once so the deal is frozen into a pass, then reopen that pass with
+	// this member unsettled and archive the deal underneath it — the state a
+	// concurrent human archive leaves for the resuming walk.
+	if err := e.sweep(); err != nil {
+		t.Fatal(err)
+	}
+	var runID ids.UUID
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT id FROM close_date_run ORDER BY started_at DESC LIMIT 1`).Scan(&runID); err != nil {
+		t.Fatal(err)
+	}
+	// Zero the tallies with the members, so what the resumed walk records is
+	// the only thing these counters hold.
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE close_date_run
+		    SET status = 'running', finished_at = NULL, checked = 0, corrected = 0, staged = 0
+		  WHERE id = $1`, runID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE close_date_run_member SET outcome = 'pending', settled_at = NULL
+		  WHERE run_id = $1`, runID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE deal SET archived_at = now() WHERE id = $1`, doomed); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := e.sweep(); err != nil {
+		t.Fatal(err)
+	}
+
+	var outcome string
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT outcome FROM close_date_run_member WHERE run_id = $1 AND deal_id = $2`,
+		runID, doomed).Scan(&outcome); err != nil {
+		t.Fatalf("the archived member left the ledger: %v", err)
+	}
+	if outcome != "skipped" {
+		t.Errorf("outcome = %q, want skipped — it was frozen in, so it is owed an answer", outcome)
+	}
+	// And the pass still accounts for it: settled, so the run can finish, while
+	// staying outside the corrected tally.
+	var eligible, checked, corrected int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT eligible, checked, corrected FROM close_date_run WHERE id = $1`, runID).
+		Scan(&eligible, &checked, &corrected); err != nil {
+		t.Fatal(err)
+	}
+	if checked != eligible {
+		t.Errorf("checked %d of %d — a skipped member is still settled", checked, eligible)
+	}
+	if corrected != 0 {
+		t.Errorf("corrected = %d, want 0 — an archived deal is not corrected", corrected)
+	}
+}

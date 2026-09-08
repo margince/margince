@@ -109,82 +109,141 @@ type closeDateCandidate struct {
 	remainingOpen  int
 }
 
+// sweepWorkspace walks one pass's FROZEN membership, page by page, from
+// wherever the last attempt durably reached.
+//
+// The old shape re-read the live deal table each night — the oldest 200 rows the
+// pre-filter admitted — and because a corrected deal stays eligible, that was
+// the same 200 rows every time. A workspace with more eligible deals never
+// reached the rest of them, and nothing recorded that it had not.
+//
+// Now membership is decided once (startRun) and the pass drains it: each page
+// asks for the members that are still unsettled, so settling one is what moves
+// the walk forward. Two consequences the old shape could not offer — a pass
+// interrupted by the worker's 5-minute deadline RESUMES rather than restarting
+// at the first row, and a run can say how much of its own set it covered.
 func (c *CloseDateCorrector) sweepWorkspace(ctx context.Context) error {
-	var tzName string
-	var candidates []closeDateCandidate
 	now := c.now().UTC()
-	err := c.db.Tx(ctx, func(tx pgx.Tx) error {
+	var tzName string
+	var run *CloseDateRun
+
+	if err := c.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
 		if tzName, err = c.installation.Timezone(ctx, tx); err != nil {
 			return fmt.Errorf("read the installation's timezone: %w", err)
 		}
-		// The pre-filter is a deliberate superset of the §11 flags — a
-		// date inside the widest (stalled) window, missing, or still
-		// provisional; anything beyond it cannot be flagged today.
-		rows, err := tx.Query(ctx, `
-			SELECT d.id, d.name, d.created_at, d.last_activity_at, d.wait_until,
-			       d.expected_close_date, d.close_date_provisional, d.forecast_category,
-			       d.pipeline_id, s.win_probability,
-			       (SELECT count(*) FROM stage s2
-			         WHERE s2.pipeline_id = d.pipeline_id AND s2.archived_at IS NULL
-			           AND s2.semantic = 'open' AND s2.position >= s.position)
-			FROM deal d
-			JOIN stage s ON s.id = d.stage_id
-			WHERE d.status = 'open' AND d.archived_at IS NULL
-			  AND (d.expected_close_date IS NULL
-			       OR d.expected_close_date <= (timezone($1, now()))::date + $2::int
-			       OR d.close_date_provisional)
-			ORDER BY d.created_at, d.id
-			LIMIT $3`, tzName, StalledThresholdDays, closeDateBatch)
+		loc, err := installationZone(tzName)
 		if err != nil {
 			return err
 		}
-		defer rows.Close()
-		for rows.Next() {
-			var cand closeDateCandidate
-			if err := rows.Scan(&cand.id, &cand.name, &cand.createdAt, &cand.lastActivityAt,
-				&cand.waitUntil, &cand.expectedClose, &cand.provisional, &cand.forecastCat,
-				&cand.pipelineID, &cand.winProbability, &cand.remainingOpen); err != nil {
-				return err
-			}
-			candidates = append(candidates, cand)
+		asOf := now.In(loc)
+		asOf = time.Date(asOf.Year(), asOf.Month(), asOf.Day(), 0, 0, 0, 0, time.UTC)
+
+		// A pass already open for this local day is resumed, not duplicated:
+		// the retry after a worker deadline is the same pass continuing. No
+		// such pass is the ordinary first run of the day, not a fault.
+		run, err = c.openRun(ctx, tx, asOf)
+		if errors.Is(err, apperrors.ErrNotFound) {
+			run, err = c.startRun(ctx, tx, asOf, tzName)
 		}
-		return rows.Err()
-	})
-	if err != nil {
+		return err
+	}); err != nil {
 		return err
 	}
+
 	loc, err := installationZone(tzName)
 	if err != nil {
 		return err
 	}
 
 	velocities := map[ids.PipelineID]float64{}
-	for _, cand := range candidates {
-		velocity, known := velocities[cand.pipelineID]
-		if !known {
-			if velocity, err = c.stageVelocityDays(ctx, cand.pipelineID); err != nil {
-				return fmt.Errorf("stage velocity for pipeline %s: %w", cand.pipelineID, err)
-			}
-			velocities[cand.pipelineID] = velocity
+	for {
+		var page []closeDateCandidate
+		var members []closeDateMember
+		if err := c.db.Tx(ctx, func(tx pgx.Tx) error {
+			var err error
+			page, members, err = c.nextMembers(ctx, tx, run.ID, closeDateBatch)
+			return err
+		}); err != nil {
+			return err
 		}
-		category := effectiveForecastCategory(cand.forecastCat, cand.winProbability)
-		hygiene := CloseDateAssessment(CloseDateInput{
-			Status:              "open",
-			ExpectedClose:       cand.expectedClose,
-			CreatedAt:           cand.createdAt,
-			LastActivityAt:      cand.lastActivityAt,
-			WaitUntil:           cand.waitUntil,
-			StageWinProbability: cand.winProbability,
-			RemainingOpenStages: cand.remainingOpen,
-			InForecastCommit:    category == forecastCommit || category == forecastBestCase,
-			StageVelocityDays:   velocity,
-		}, now, loc)
-		if err := c.correct(ctx, cand, hygiene, category, now, loc); err != nil {
-			return fmt.Errorf("close-date correction on %s: %w", cand.id, err)
+		if len(members) == 0 {
+			break
+		}
+		live := make(map[ids.DealID]closeDateCandidate, len(page))
+		for _, cand := range page {
+			live[cand.id] = cand
+		}
+		for _, m := range members {
+			outcome, settleErr := c.settleMember(ctx, live, m, velocities, now, loc)
+			if settleErr != nil {
+				// One deal's failure is that deal's outcome, not the end of the
+				// pass. Recording it and walking on is what keeps a single bad
+				// row from starving every deal behind it — the same starvation
+				// in a different disguise. The run ends incomplete, and the
+				// receipt can name what it could not finish.
+				c.log.WarnContext(ctx, "close-date sweep could not settle a deal",
+					"deal_id", m.dealID, "run_id", run.ID, "error", settleErr)
+				outcome = closeDateMemberFailed
+			}
+			if err := c.db.Tx(ctx, func(tx pgx.Tx) error {
+				return c.settle(ctx, tx, run.ID, m, outcome)
+			}); err != nil {
+				return err
+			}
 		}
 	}
-	return nil
+
+	return c.db.Tx(ctx, func(tx pgx.Tx) error {
+		return c.finishRun(ctx, tx, run.ID)
+	})
+}
+
+// settleMember assesses one frozen member and reports the outcome its row
+// should carry. A member whose deal has closed or been archived since the freeze
+// is skipped — it stays in the ledger with a reason rather than vanishing from
+// the denominator.
+func (c *CloseDateCorrector) settleMember(
+	ctx context.Context, live map[ids.DealID]closeDateCandidate, m closeDateMember,
+	velocities map[ids.PipelineID]float64, now time.Time, loc *time.Location,
+) (string, error) {
+	if m.gone {
+		return closeDateMemberSkipped, nil
+	}
+	cand, ok := live[m.dealID]
+	if !ok {
+		return closeDateMemberSkipped, nil
+	}
+	velocity, known := velocities[cand.pipelineID]
+	if !known {
+		var err error
+		if velocity, err = c.stageVelocityDays(ctx, cand.pipelineID); err != nil {
+			return "", fmt.Errorf("stage velocity for pipeline %s: %w", cand.pipelineID, err)
+		}
+		velocities[cand.pipelineID] = velocity
+	}
+	category := effectiveForecastCategory(cand.forecastCat, cand.winProbability)
+	hygiene := CloseDateAssessment(CloseDateInput{
+		Status:              string(DealOpen),
+		ExpectedClose:       cand.expectedClose,
+		CreatedAt:           cand.createdAt,
+		LastActivityAt:      cand.lastActivityAt,
+		WaitUntil:           cand.waitUntil,
+		StageWinProbability: cand.winProbability,
+		RemainingOpenStages: cand.remainingOpen,
+		InForecastCommit:    category == forecastCommit || category == forecastBestCase,
+		StageVelocityDays:   velocity,
+	}, now, loc)
+	if err := c.correct(ctx, cand, hygiene, category, now, loc); err != nil {
+		return "", fmt.Errorf("close-date correction on %s: %w", cand.id, err)
+	}
+	if !hygiene.Flagged {
+		return closeDateMemberChecked, nil
+	}
+	if hygiene.Action == CloseDateActionAutoApply {
+		return closeDateMemberChanged, nil
+	}
+	return closeDateMemberStaged, nil
 }
 
 // stageVelocityDays is §11's experience-informed pace: the workspace

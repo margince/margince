@@ -122,6 +122,11 @@ var tableOwners = map[string]string{
 	// Kept apart from deal_stage_history rather than folded into it: readers
 	// outside this module count that table's rows as stage movements.
 	"deal_forecast_history": "internal/modules/deals",
+	// The nightly close-date pass and the eligible set it froze at the start of
+	// one. Deals-owned rather than folded into assurance's run tables: a module
+	// never writes a sibling's, and the two sweeps answer to different rules.
+	"close_date_run":        "internal/modules/deals",
+	"close_date_run_member": "internal/modules/deals",
 	// The project is its own bounded context, superseding ADR-0073 — see
 	// modules/projects/doc.go. This entry is what makes that a rule rather than
 	// a layout: a statement writing either table from any other package fails

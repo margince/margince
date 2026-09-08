@@ -1478,6 +1478,42 @@ public.channel_provider.provider text NOT NULL gen=- def=-
 public.channel_provider.supplies_transport boolean NOT NULL gen=- def=true
 public.channel_provider.transport text NOT NULL gen=- def=-
 public.channel_provider_pkey CREATE UNIQUE INDEX channel_provider_pkey ON public.channel_provider USING btree (provider)
+public.close_date_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.close_date_run.as_of date NOT NULL gen=- def=-
+public.close_date_run.captured_by text NOT NULL gen=- def=-
+public.close_date_run.checked integer NOT NULL gen=- def=0
+public.close_date_run.close_date_run_counts_are_tallies CHECK (((eligible >= 0) AND (checked >= 0) AND (corrected >= 0) AND (staged >= 0)))
+public.close_date_run.close_date_run_cursor_is_whole CHECK (((cursor_created_at IS NULL) = (cursor_id IS NULL)))
+public.close_date_run.close_date_run_finish_matches_status CHECK (((status = 'running'::text) = (finished_at IS NULL)))
+public.close_date_run.close_date_run_pkey PRIMARY KEY (id)
+public.close_date_run.close_date_run_status_check CHECK ((status = ANY (ARRAY['running'::text, 'complete'::text, 'incomplete'::text])))
+public.close_date_run.corrected integer NOT NULL gen=- def=0
+public.close_date_run.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.close_date_run.cursor_created_at timestamp with time zone gen=- def=-
+public.close_date_run.cursor_id uuid gen=- def=-
+public.close_date_run.eligible integer NOT NULL gen=- def=0
+public.close_date_run.finished_at timestamp with time zone gen=- def=-
+public.close_date_run.id uuid NOT NULL gen=- def=uuidv7()
+public.close_date_run.staged integer NOT NULL gen=- def=0
+public.close_date_run.started_at timestamp with time zone NOT NULL gen=- def=now()
+public.close_date_run.status text NOT NULL gen=- def='running'::text
+public.close_date_run.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.close_date_run.version bigint NOT NULL gen=- def=1
+public.close_date_run_member acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.close_date_run_member.close_date_run_member_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
+public.close_date_run_member.close_date_run_member_outcome_check CHECK ((outcome = ANY (ARRAY['pending'::text, 'checked'::text, 'changed'::text, 'staged'::text, 'skipped'::text, 'failed'::text])))
+public.close_date_run_member.close_date_run_member_pkey PRIMARY KEY (run_id, deal_id)
+public.close_date_run_member.close_date_run_member_run_id_fkey FOREIGN KEY (run_id) REFERENCES close_date_run(id) ON DELETE CASCADE
+public.close_date_run_member.close_date_run_member_settled_matches_outcome CHECK (((outcome = 'pending'::text) = (settled_at IS NULL)))
+public.close_date_run_member.deal_created_at timestamp with time zone NOT NULL gen=- def=-
+public.close_date_run_member.deal_id uuid NOT NULL gen=- def=-
+public.close_date_run_member.outcome text NOT NULL gen=- def='pending'::text
+public.close_date_run_member.run_id uuid NOT NULL gen=- def=-
+public.close_date_run_member.settled_at timestamp with time zone gen=- def=-
+public.close_date_run_member_pkey CREATE UNIQUE INDEX close_date_run_member_pkey ON public.close_date_run_member USING btree (run_id, deal_id)
+public.close_date_run_member_walk CREATE INDEX close_date_run_member_walk ON public.close_date_run_member USING btree (run_id, deal_created_at, deal_id) WHERE (outcome = 'pending'::text)
+public.close_date_run_open CREATE INDEX close_date_run_open ON public.close_date_run USING btree (as_of DESC) WHERE (status = 'running'::text)
+public.close_date_run_pkey CREATE UNIQUE INDEX close_date_run_pkey ON public.close_date_run USING btree (id)
 public.commission_entry acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.commission_entry.amount_minor bigint NOT NULL gen=- def=-
 public.commission_entry.attribution_at_accrual text NOT NULL gen=- def=-
