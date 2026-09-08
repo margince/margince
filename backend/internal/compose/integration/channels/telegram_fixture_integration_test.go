@@ -146,6 +146,14 @@ func (f *fakeTelegramAPI) DeleteWebhook(context.Context, string) error {
 	return nil
 }
 
+// WebhookRegistered: these bots arrive with none, which is the ordinary case.
+// Recorded like every other call, so a suite asserting the provider sequence
+// sees the ask rather than only its consequence.
+func (f *fakeTelegramAPI) WebhookRegistered(context.Context, string) (bool, error) {
+	f.record("getWebhookInfo")
+	return false, nil
+}
+
 // GetUpdates answers the offset contract: everything still held at or above
 // offset, with the batch's highest id, and the acknowledgement of everything
 // below applied first.

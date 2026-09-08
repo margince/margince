@@ -368,11 +368,19 @@ func (w *telegramPollWorker) answerPollFailure(wsCtx context.Context, target cap
 
 // answerRivalConsumer handles Telegram's 409 — something else holds this bot's
 // updates. There are two causes and they need different answers, so this
-// establishes WHICH rather than inferring it: clear the one cause this
-// installation can clear (a registered webhook — pending updates deliberately
-// KEPT, they are the customer's messages), then ask again with NO long-poll
-// interval, so the second answer is a fact about a bot that provably carries no
-// webhook.
+// establishes WHICH rather than inferring it: ASK whether a webhook is
+// registered, clear the one cause this installation can clear (pending updates
+// deliberately KEPT, they are the customer's messages), then ask again with NO
+// long-poll interval, so the second answer is a fact about a bot that provably
+// carries no webhook.
+//
+// The ASK is what makes the report true. deleteWebhook is idempotent and
+// answers ok whether or not anything was there, so a clear followed by a poll
+// that succeeds used to be reported as "cleared a webhook that was blocking
+// this bot" even when no webhook had ever existed and a transient rival had
+// simply stopped. That sends an operator looking for a registration that is not
+// there while the actual rival goes unnamed — and the two causes have opposite
+// remedies, so guessing between them is worse than saying which is unknown.
 //
 // The re-ask uses the SAME offset, so it acknowledges nothing: whatever it comes
 // back with is still held by Telegram and belongs to the next poll. That is what
@@ -383,15 +391,36 @@ func (w *telegramPollWorker) answerPollFailure(wsCtx context.Context, target cap
 // bot on its second attempt meeting a genuinely registered webhook would be parked
 // under a cause that is not true, and recovered only by hand.
 func (w *telegramPollWorker) answerRivalConsumer(wsCtx context.Context, target capture.ChannelPollTarget, token string, err error) error {
+	// Asked BEFORE the clear, because afterwards there is nothing left to ask:
+	// the answer would be "none" whichever cause was true.
+	registered, infoErr := w.api.WebhookRegistered(wsCtx, token)
+	if infoErr != nil {
+		// Not fatal, and not guessed at either. Without this answer the two
+		// causes cannot be told apart, so the report below says so rather than
+		// picking one.
+		w.log.WarnContext(wsCtx, "telegram_poll: could not establish whether a webhook is registered; the cause of the refusal will be reported as unknown",
+			"connection", target.ID.String(), "error", infoErr.Error())
+	}
 	if delErr := w.api.DeleteWebhook(wsCtx, token); delErr != nil {
 		return fmt.Errorf("telegram_poll: connection %s is refused by Telegram and its webhook could not be cleared: %w",
 			target.ID, errors.Join(err, delErr))
 	}
 	_, _, reasked := w.api.GetUpdates(wsCtx, token, target.PollOffset, 0, telegram.AllowedUpdates())
 	if !errors.Is(reasked, telegram.ErrWebhookActive) {
-		// The registration WAS the cause and it is gone. This job's long poll is
-		// over either way, so the failure is returned for River's ladder rather
-		// than the re-ask's answer being consumed here.
+		// The bot polls again. This job's long poll is over either way, so the
+		// failure is returned for River's ladder rather than the re-ask's answer
+		// being consumed here — but WHY it polls again is now known rather than
+		// assumed, and the two readings send an operator to different places.
+		if infoErr == nil && !registered {
+			w.log.WarnContext(wsCtx, "telegram_poll: another consumer was holding this bot's updates and has stopped; no webhook was registered; retrying",
+				"connection", target.ID.String())
+			return fmt.Errorf("telegram_poll: connection %s was refused by a rival consumer that has since stopped: %w", target.ID, err)
+		}
+		if infoErr != nil {
+			w.log.WarnContext(wsCtx, "telegram_poll: polling recovered after clearing any webhook, but whether one was registered could not be established; retrying",
+				"connection", target.ID.String())
+			return fmt.Errorf("telegram_poll: connection %s recovered after a clear, cause unestablished: %w", target.ID, err)
+		}
 		w.log.WarnContext(wsCtx, "telegram_poll: cleared a webhook that was blocking this bot's polling; retrying",
 			"connection", target.ID.String())
 		return fmt.Errorf("telegram_poll: connection %s had a webhook registered, now cleared: %w", target.ID, err)
