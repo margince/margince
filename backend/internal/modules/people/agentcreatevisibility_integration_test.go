@@ -20,8 +20,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/jackc/pgx/v5"
-
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -65,34 +64,35 @@ func TestAContactAHumanCreatesBelongsToTheWorkspace(t *testing.T) {
 	}
 }
 
-// A capture path still keeps its contact to the mailbox owner, and it does so
-// by SAYING so — the spec carries OwnerScoped, so the privacy survives an
-// actor-type rule going away.
-func TestACapturedContactIsStillTheMailboxOwnersAlone(t *testing.T) {
+// Storage is not the claim; being findable is. A row stored `workspace` that
+// a colleague's read still filtered out would satisfy the assertions above and
+// leave the reported symptom exactly where it was — the teammate goes looking
+// and finds nothing.
+//
+// The capture side is deliberately NOT re-asserted here. It is covered end to
+// end by TestAnAdvisorVerdictMakesTheRecordAndKeepsItTheOwnersAlone, which
+// drives the real verdict engine; a second version calling createPerson with a
+// hand-written spec would pass whatever the production wiring did.
+func TestAColleagueCanReadTheContactAnAgentCreated(t *testing.T) {
 	e := setupCapturePrivacy(t)
-	ctx := e.as(e.owner, principal.RowScopeAll)
 
-	var id ids.PersonID
-	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		var err error
-		owner := ids.From[ids.UserKind](e.owner)
-		id, err = createPerson(ctx, tx, PersonResolution{Decision: DecisionNoMatch}, PersonSpec{
-			FullName: "Unjudged Sender",
-			// An owner-scoped row names its owner, or it is readable by nobody
-			// at all — the database refuses the pair outright.
-			Visibility: visibilityFor(true),
-			OwnerID:    &owner,
-			Source:     "capture",
-			CapturedBy: "connector:gmail",
-		})
-		return err
-	}); err != nil {
-		t.Fatalf("minting an owner-scoped capture contact: %v", err)
+	created, err := e.store.CreatePerson(e.asAgent(e.owner), CreatePersonInput{
+		FullName: "Lucy Vo",
+		Emails:   []PersonEmailInput{{Email: "lucy.read@kunde.example", EmailType: "work", IsPrimary: true}},
+		Source:   "manual",
+	})
+	if err != nil {
+		t.Fatalf("creating a person as an agent: %v", err)
 	}
 
-	if got := e.visibilityOf(t, id); got != visibilityOwner {
-		t.Errorf("a capture-minted contact is %q, want owner: a mailbox with a year of history "+
-			"names correspondents the workspace has no business reading", got)
+	id := ids.From[ids.PersonKind](ids.UUID(created.Id))
+	got, err := e.store.GetPerson(e.as(e.teammate, principal.RowScopeOwn), id, storekit.LiveOnly)
+	if err != nil {
+		t.Fatalf("a colleague reading the contact an agent created: %v — the rep was told it "+
+			"exists and their teammate cannot reach it", err)
+	}
+	if got.FullName != "Lucy Vo" {
+		t.Errorf("the colleague read %q, want Lucy Vo", got.FullName)
 	}
 }
 

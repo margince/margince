@@ -300,3 +300,10 @@ company_context:
 #   # not consent to erase what is in it. Not a `setting` row either — an admin
 #   # must not be able to arm their own tenant's purge through the API.
 #   allow_data_reset: true
+#
+#   # Arms the test_mailbox connector: a QC-only, no-network fake mailbox that
+#   # can both capture and send synthetic mail, reachable only through
+#   # POST /connectors/test_mailbox/connect once this is set. Never true on a
+#   # real deployment — a fake send that reads as a real one to a customer is
+#   # a worse failure than the capability merely existing.
+#   allow_test_mailbox: false

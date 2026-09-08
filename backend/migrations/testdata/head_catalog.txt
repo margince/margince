@@ -1227,7 +1227,7 @@ public.capture_connection.archived_at timestamp with time zone gen=- def=-
 public.capture_connection.auth bytea gen=- def=-
 public.capture_connection.capture_connection_context_tag_id_fkey FOREIGN KEY (context_tag_id) REFERENCES tag(id) ON DELETE SET NULL
 public.capture_connection.capture_connection_mail_posture_check CHECK ((mail_posture = ANY (ARRAY['shared'::text, 'classified'::text, 'held'::text])))
-public.capture_connection.capture_connection_provider_check CHECK ((provider = ANY (ARRAY['gmail'::text, 'gcal'::text, 'imap'::text, 'graph'::text, 'graphcal'::text, 'whatsapp'::text, 'telegram'::text, 'offline_demo'::text])))
+public.capture_connection.capture_connection_provider_check CHECK ((provider = ANY (ARRAY['gmail'::text, 'gcal'::text, 'imap'::text, 'graph'::text, 'graphcal'::text, 'whatsapp'::text, 'telegram'::text, 'offline_demo'::text, 'test_mailbox'::text])))
 public.capture_connection.capture_connection_status_check CHECK ((status = ANY (ARRAY['connected'::text, 'disconnected'::text, 'error'::text, 'reauth_required'::text])))
 public.capture_connection.capture_connection_unique UNIQUE (user_id, provider)
 public.capture_connection.capture_connection_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
@@ -1396,6 +1396,20 @@ public.capture_sync_state.next_sync_at timestamp with time zone NOT NULL gen=- d
 public.capture_sync_state.trg_capture_sync_state_updated CREATE TRIGGER trg_capture_sync_state_updated BEFORE UPDATE ON public.capture_sync_state FOR EACH ROW EXECUTE FUNCTION set_updated_at()
 public.capture_sync_state.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_sync_state_pkey CREATE UNIQUE INDEX capture_sync_state_pkey ON public.capture_sync_state USING btree (connection_id)
+public.capture_test_mailbox_sent acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.capture_test_mailbox_sent.capture_test_mailbox_sent_message_id_check CHECK (((length(message_id) > 0) AND (char_length(message_id) <= 512)))
+public.capture_test_mailbox_sent.capture_test_mailbox_sent_pkey PRIMARY KEY (id)
+public.capture_test_mailbox_sent.capture_test_mailbox_sent_user_message_unique UNIQUE (user_id, message_id)
+public.capture_test_mailbox_sent.cc_addresses jsonb NOT NULL gen=- def='[]'::jsonb
+public.capture_test_mailbox_sent.echoed_at timestamp with time zone gen=- def=-
+public.capture_test_mailbox_sent.id uuid NOT NULL gen=- def=uuidv7()
+public.capture_test_mailbox_sent.message_id text NOT NULL gen=- def=-
+public.capture_test_mailbox_sent.sent_at timestamp with time zone NOT NULL gen=- def=now()
+public.capture_test_mailbox_sent.subject text NOT NULL gen=- def=-
+public.capture_test_mailbox_sent.to_addresses jsonb NOT NULL gen=- def=-
+public.capture_test_mailbox_sent.user_id uuid NOT NULL gen=- def=-
+public.capture_test_mailbox_sent_pkey CREATE UNIQUE INDEX capture_test_mailbox_sent_pkey ON public.capture_test_mailbox_sent USING btree (id)
+public.capture_test_mailbox_sent_user_message_unique CREATE UNIQUE INDEX capture_test_mailbox_sent_user_message_unique ON public.capture_test_mailbox_sent USING btree (user_id, message_id)
 public.capture_thread_verdict acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_thread_verdict.attempts integer NOT NULL gen=- def=0
 public.capture_thread_verdict.capture_thread_verdict_first_activity_id_fkey FOREIGN KEY (first_activity_id) REFERENCES activity(id) ON DELETE SET NULL
@@ -3216,6 +3230,7 @@ public.idx_capture_pending_counterparty_live CREATE UNIQUE INDEX idx_capture_pen
 public.idx_capture_pending_counterparty_noise CREATE INDEX idx_capture_pending_counterparty_noise ON public.capture_pending_counterparty USING btree (email) WHERE (status = 'noise'::text)
 public.idx_capture_pending_counterparty_suppressed CREATE UNIQUE INDEX idx_capture_pending_counterparty_suppressed ON public.capture_pending_counterparty USING btree (email) WHERE (status = 'suppressed'::text)
 public.idx_capture_sync_due CREATE INDEX idx_capture_sync_due ON public.capture_sync_state USING btree (next_sync_at)
+public.idx_capture_test_mailbox_sent_unechoed CREATE INDEX idx_capture_test_mailbox_sent_unechoed ON public.capture_test_mailbox_sent USING btree (user_id, sent_at) WHERE (echoed_at IS NULL)
 public.idx_capture_watch_renew CREATE INDEX idx_capture_watch_renew ON public.capture_connection USING btree (watch_expires_at) WHERE ((watch_expires_at IS NOT NULL) AND (status = 'connected'::text))
 public.idx_commission_deal CREATE INDEX idx_commission_deal ON public.commission_entry USING btree (deal_id)
 public.idx_commission_partner CREATE INDEX idx_commission_partner ON public.commission_entry USING btree (partner_company_id, status)
