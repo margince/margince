@@ -8,9 +8,10 @@ SET LOCAL lock_timeout = '3s';
 
 -- 11. the open vocabularies, back
 UPDATE role
-   SET permissions = (permissions - 'company')
-                     || jsonb_build_object('organization', permissions -> 'company')
- WHERE permissions ? 'company';
+   SET permissions = jsonb_set(permissions, '{objects}',
+         ((permissions -> 'objects') - 'company')
+         || jsonb_build_object('organization', permissions -> 'objects' -> 'company'))
+ WHERE permissions -> 'objects' ? 'company';
 
 UPDATE field_mask SET object = 'organization' WHERE object = 'company';
 

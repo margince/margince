@@ -834,9 +834,10 @@ COMMENT ON COLUMN company.classification IS
 
 -- A role's permissions are keyed by object name.
 UPDATE role
-   SET permissions = (permissions - 'organization')
-                     || jsonb_build_object('company', permissions -> 'organization')
- WHERE permissions ? 'organization';
+   SET permissions = jsonb_set(permissions, '{objects}',
+         ((permissions -> 'objects') - 'organization')
+         || jsonb_build_object('company', permissions -> 'objects' -> 'organization'))
+ WHERE permissions -> 'objects' ? 'organization';
 
 UPDATE field_mask SET object = 'company' WHERE object = 'organization';
 
