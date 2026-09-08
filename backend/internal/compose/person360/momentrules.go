@@ -13,6 +13,7 @@ package person360
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -107,10 +108,21 @@ func missingNextStepMoment(_ context.Context, _ time.Time, page *crmcontracts.Pe
 		RuleVersion:         ptr(ruleVersion),
 		EvidenceFingerprint: fingerprintOf(evidence),
 		Headline:            "No next step with them on an open deal",
-		WhyNow:              "The deal is live and nothing is scheduled with the person whose seat decides it.",
-		Confidence:          crmcontracts.PersonMomentConfidenceObservedFact,
-		Evidence:            evidence,
-		RecommendedAction:   bookMeeting(),
+		// The seat this person actually holds, named — not "the person whose
+		// seat decides it", which the record does not say. The rung fires on
+		// ANY recorded stakeholder role, and the vocabulary distinguishes the
+		// ones that decide (economic_buyer, decision_maker) from the ones that
+		// do not (champion, influencer, user). Telling a rep the deal turns on
+		// somebody who is recorded as an influencer is a claim the row refuses.
+		//
+		// The rung is not narrowed to the deciding roles instead, because a
+		// deal with no next step is worth saying whoever the seat belongs to —
+		// what was wrong was the sentence, not the trigger.
+		WhyNow: fmt.Sprintf("The deal is live and nothing is scheduled with them. They are %s on it.",
+			recordedSeat(page.Commercial.Role)),
+		Confidence:        crmcontracts.PersonMomentConfidenceObservedFact,
+		Evidence:          evidence,
+		RecommendedAction: bookMeeting(),
 		SecondaryActions: &[]crmcontracts.PersonMomentAction{{
 			Kind:        crmcontracts.PersonMomentActionKindOpenRecord,
 			Label:       "Open the deal",
@@ -302,3 +314,16 @@ func entityType(v crmcontracts.PersonMomentDestinationEntityType) *crmcontracts.
 
 // prefill lifts the string map the contract carries as an optional object.
 func prefill(v map[string]string) *map[string]string { return &v }
+
+// recordedSeat names this person's seat on the deal as the record spells it,
+// falling back to what is true when no role was recorded.
+//
+// The fallback is the load-bearing half: a stakeholder edge may carry no role
+// at all, and a sentence that named one anyway would be inventing the fact the
+// rung exists to report.
+func recordedSeat(role *string) string {
+	if role == nil || strings.TrimSpace(*role) == "" {
+		return "a stakeholder"
+	}
+	return "the recorded " + strings.ReplaceAll(*role, "_", " ")
+}

@@ -887,3 +887,84 @@ func TestDismissingEveryPromiseReachesTheQuietState(t *testing.T) {
 		t.Errorf("rule = %q, want nothing_needed once every card is dismissed", got.Rule)
 	}
 }
+
+// The re-engagement rung says whose silence it measured.
+//
+// The page carries ONE timestamp per direction, so the only interval derivable
+// from it runs from our most recent outbound to their most recent inbound —
+// which measures how long WE have been silent, not how long they were. The rung
+// used to report it as "They replied after N quiet days".
+//
+// A contact who wrote every week for two months while nobody answered produced
+// exactly that sentence with N = 60: a number specific enough to sound checked,
+// about a quiet period that never happened. This fixture is that contact —
+// their traffic is invisible to the rule by construction, which is the whole
+// reason the old sentence could not be true.
+func TestTheReEngagementRungAttributesTheSilenceToUs(t *testing.T) {
+	page := &crmcontracts.Person360{
+		LastOutboundAt: ptr(at(60)),
+		LastInboundAt:  ptr(at(1)),
+	}
+
+	got := deriveMoment(readerCtx(), now, page)
+
+	if got.Rule != crmcontracts.PersonMomentRuleReEngaged {
+		t.Fatalf("rule = %q, want re_engaged", got.Rule)
+	}
+	if want := "They wrote — we last wrote 59 days before"; got.Headline != want {
+		t.Errorf("headline = %q, want %q", got.Headline, want)
+	}
+	// The claim that could not be checked, gone in both sentences. A reader who
+	// tests one number against the thread and finds it wrong stops believing
+	// the parts that are right.
+	for _, text := range []string{got.Headline, got.WhyNow} {
+		if strings.Contains(text, "quiet days") || strings.Contains(text, "They replied") {
+			t.Errorf("%q still claims the silence was theirs — the page holds no message between the two dates it has", text)
+		}
+	}
+}
+
+// The next-step rung names the seat the record actually holds.
+//
+// It said "the person whose seat decides it" and fired on ANY recorded
+// stakeholder role. The vocabulary distinguishes the seats that decide
+// (economic_buyer, decision_maker) from the ones that do not (champion,
+// influencer, user), so telling a rep the deal turns on somebody recorded as an
+// influencer is a claim the row refuses.
+//
+// The rung is deliberately not narrowed to the deciding roles: a deal with no
+// next step is worth saying whoever the seat belongs to. What was wrong was the
+// sentence.
+func TestTheNextStepRungNamesTheRecordedSeat(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		role *string
+		want string
+	}{
+		{"an influencer", ptr("influencer"), "The deal is live and nothing is scheduled with them. They are the recorded influencer on it."},
+		{"an economic buyer", ptr("economic_buyer"), "The deal is live and nothing is scheduled with them. They are the recorded economic buyer on it."},
+		// A stakeholder edge may carry no role at all, and a sentence naming
+		// one anyway would invent the fact the rung exists to report.
+		{"a seat with no role recorded", nil, "The deal is live and nothing is scheduled with them. They are a stakeholder on it."},
+		{"a seat whose role is blank", ptr("  "), "The deal is live and nothing is scheduled with them. They are a stakeholder on it."},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			page := &crmcontracts.Person360{
+				Commercial: &crmcontracts.Person360Commercial{
+					Deal: &crmcontracts.Person360CommercialDeal{Title: "Expansion"},
+					Role: tc.role,
+				},
+			}
+			got := deriveMoment(readerCtx(), now, page)
+			if got.Rule != crmcontracts.PersonMomentRuleMissingNextStep {
+				t.Fatalf("rule = %q, want missing_next_step", got.Rule)
+			}
+			if got.WhyNow != tc.want {
+				t.Errorf("why now = %q, want %q", got.WhyNow, tc.want)
+			}
+			if strings.Contains(got.WhyNow, "decides it") {
+				t.Error("the sentence still claims this seat decides the deal, which the role vocabulary does not say")
+			}
+		})
+	}
+}
