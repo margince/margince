@@ -4,8 +4,9 @@ import type { Envelope } from "../types";
  * One realistic `prepare_handoff` answer, shaped exactly as the tool seals it.
  *
  * MIRRORED BY HAND from agents.PreparedHandoff — see the account brief's
- * fixture for why that is hand work rather than generated, and issue 808 for the
- * gate that does not exist yet.
+ * fixture for why that is hand work rather than generated. It is HELD to that
+ * struct by backend/gates/appviewfixtures_test.go, which compares every member
+ * here against the tool's own output schema.
  *
  * It is a handover that is NOT ready, which is the case worth drawing: two
  * gaps, an untitled seat, an unpriced won deal beside a priced one, and a

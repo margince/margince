@@ -26,6 +26,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `airoutingschema_test.go` | H3 | What the EDITOR accepts, checked against what the parser accepts. |
 | `aitaskparity_test.go` | H3 | Every ai\_task an emitter writes into the AI-activity projection must be a task the AI contract declares. |
 | `aitaskrunenum_test.go` | H3 | The ai\_task.state\_changed payload's closed vocabularies must equal the ai\_task\_run column CHECKs they are projected into. |
+| `appviewfixtures_test.go` | H2 | A view's fixture is the tool's answer, and this is what makes that true. |
 | `auditcoherence_test.go` | H3 | The audit\_log enum-coherence gate as a fitness function. |
 | `authwaitparity_test.go` | H3 | How long an in-flight authentication may be held waiting on somebody else's server. |
 | `authzcategories_test.go` | H2 | The outbound category vocabulary is spelled TWICE — once in Go, once as a CHECK constraint on communication\_decision — and the two must agree. |
