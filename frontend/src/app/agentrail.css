@@ -215,11 +215,11 @@
    button label or a word takes the body face alone. */
 
 /* The block's last line: the money, the scope it was spent in and the
-   disclosure, on ONE line. The chevron used to hang in the corner on its own
-   baseline, half a line below the figure, and two pieces of chrome at two
-   heights read as two rows in a column this narrow. The row survives the
-   figure — see `.archev` — because whether the panel is open is a fact about
-   the block rather than about the spend. */
+   disclosure, on ONE line. Two pieces of chrome at two heights read as two
+   rows in a column this narrow, so the chevron shares the figure's line and
+   its vertical centre. The row survives the figure — see `.archev` — because
+   whether the panel is open is a fact about the block rather than about the
+   spend. */
 .arlast {
   position: relative;
   z-index: 1;
