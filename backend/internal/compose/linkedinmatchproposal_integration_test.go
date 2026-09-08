@@ -198,14 +198,14 @@ func TestTheSweepStagesALinkedInSuggestionNobodyWasEverAskedAbout(t *testing.T) 
 	onlyPendingLinkedInMatch(t, e)
 }
 
-// Refusing a match leaves the ghost at `suggested` — the reject path writes no
-// row here, by design, because the refusal IS the approval — so the widened
-// enumeration reaches that owner on every sweep from then on. What must not
-// happen is the sweep asking again.
+// Refusing a match must not lead to the question being asked again, and the
+// refusal must land on the GHOST ROW so the sweep stops paying for it.
 //
-// The durable-refusal property is not new, but the widening is what makes it
-// load-bearing: before it, an owner with nothing left but refused suggestions
-// dropped out of the enumeration and was never given the chance to be re-asked.
+// Two properties, and they were not always both true. The durable refusal is
+// the older one: StageUnlessDeclined reads the declined offers and will not
+// re-propose. What is new is the terminal state — the refusal is now recorded
+// on the connection the first time a pass observes it, so the widened
+// enumeration stops reaching a row whose answer can only ever be empty.
 func TestTheSweepNeverReasksALinkedInMatchThatWasRefused(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
@@ -224,8 +224,16 @@ func TestTheSweepNeverReasksALinkedInMatchThatWasRefused(t *testing.T) {
 		t.Fatalf("rejecting: %v", err)
 	}
 
-	// The owner is still enumerated — the refusal is not on the ghost row — so
-	// the sweep runs their whole pass again.
+	// The refusal is observed by the pass that would have re-proposed, which is
+	// what writes it to the row.
+	if _, err := StageLinkedInMatches(ctx, svc, store); err != nil {
+		t.Fatalf("re-staging after the refusal: %v", err)
+	}
+	if status := linkedInMatchStatus(t, e); status != "rejected" {
+		t.Errorf("the refused connection is %q, want rejected — nothing reading the row can tell a "+
+			"finished suggestion from a live one, and the sweep goes on paying for it", status)
+	}
+
 	sweep := newLinkedInRematchWorker(e.Pool, store, identity.NewService(e.Pool),
 		slog.New(slog.DiscardHandler))
 	if _, err := sweep.sweepWorkspace(context.Background(), e.WS); err != nil {
@@ -236,6 +244,26 @@ func TestTheSweepNeverReasksALinkedInMatchThatWasRefused(t *testing.T) {
 		t.Errorf("%d pending proposals after a refused match was swept, want 0 — the sweep is "+
 			"re-asking a question the member already answered", pending)
 	}
+	// And the terminal state survives the sweep: the enumeration no longer
+	// reaches this row, so nothing moves it back.
+	if status := linkedInMatchStatus(t, e); status != "rejected" {
+		t.Errorf("the connection is %q after a sweep, want it to stay rejected", status)
+	}
+}
+
+// linkedInMatchStatus is the fixture connection's own recorded state — the
+// column the sweep enumerates on, which is what makes it the fact that matters
+// rather than the approval beside it.
+func linkedInMatchStatus(t *testing.T, e *integration.Env) string {
+	t.Helper()
+	var status string
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT match_status FROM linkedin_connection`).Scan(&status)
+	}); err != nil {
+		t.Fatalf("reading the connection's match status: %v", err)
+	}
+	return status
 }
 
 // A contact edit must not cancel a LinkedIn match waiting to be decided.

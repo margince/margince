@@ -32,6 +32,7 @@ import (
 // the same string are two places for one typo to orphan a link.
 const (
 	matchConfirmed = "confirmed"
+	matchRejected  = "rejected"
 	socialLinkedIn = "linkedin"
 	auditKeySocial = "social"
 )
@@ -329,4 +330,64 @@ func touchPerson(ctx context.Context, tx pgx.Tx, personID ids.UUID) error {
 		return fmt.Errorf("people: bumping the contact a LinkedIn handle changed: %w", err)
 	}
 	return nil
+}
+
+// RecordLinkedInMatchRefused writes the terminal state a refused suggestion has
+// always had a value for and never a writer.
+//
+// The migration that created the column defines `rejected`; nothing in the tree
+// wrote it. Rejecting a proposal runs no effect — the approvals engine
+// dispatches its effect table on APPROVE only — so a refused connection stayed
+// `suggested` and non-tombstoned for ever, and nothing reading the row could
+// tell a finished suggestion from a live one.
+//
+// The refusal itself was never lost: StageUnlessDeclined reads the declined
+// offers and will not re-propose. What was lost is the cost. The sweep
+// enumerates every connection in (unmatched, suggested), so a refused one paid
+// an RBAC resolve, a whole-network match, a pending read and a staging
+// transaction on every hourly pass and every organization event, for a
+// guaranteed-empty result — a permanent per-pass charge that grows with the
+// size of the imported network, for a state that is supposed to be the cheap
+// one.
+//
+// Written where the refusal is OBSERVED rather than where it is made: the
+// stager already learns it, because StageUnlessDeclined answers "not staged"
+// for exactly this reason. That keeps the whole change on this side of the
+// seam — no reject-side effect table, which would be a new concept in the
+// approvals engine for one caller — and it is self-healing: a connection
+// refused before this shipped is marked the first time a sweep reaches it.
+//
+// Idempotent by predicate. A second pass finds the row already rejected, the
+// UPDATE matches nothing, and no audit row is written for a decision nobody
+// made twice.
+func (s *Store) RecordLinkedInMatchRefused(ctx context.Context, connectionID ids.UUID) error {
+	if err := auth.Require(ctx, "person", principal.ActionUpdate); err != nil {
+		return err
+	}
+	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var wasStatus string
+		err := tx.QueryRow(ctx, `
+			UPDATE linkedin_connection c
+			   SET match_status = $2, updated_at = now()
+			  FROM linkedin_connection was
+			 WHERE c.id = $1 AND was.id = c.id AND c.tombstoned_at IS NULL
+			   AND c.match_status <> $2
+			 RETURNING was.match_status`,
+			connectionID, matchRejected).Scan(&wasStatus)
+		if errors.Is(err, pgx.ErrNoRows) {
+			// Already rejected, tombstoned, or gone. All three mean there is
+			// nothing to record and nothing wrong: the sweep re-reaches a
+			// refused row on every pass, which is the whole point of it being
+			// cheap to answer.
+			return nil
+		}
+		if err != nil {
+			return fmt.Errorf("people: recording a refused LinkedIn match: %w", err)
+		}
+		before, after := storekit.ChangedColumns(
+			map[string]any{"match_status": wasStatus},
+			map[string]any{"match_status": matchRejected})
+		_, err = storekit.Audit(ctx, tx, "update", "linkedin_connection", connectionID, before, after)
+		return err
+	})
 }
