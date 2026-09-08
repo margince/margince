@@ -575,6 +575,25 @@ function LeadsWorkbench({
         dataChips={ownerChips}
         views={[
           ...standardViews(viewerId, { sort: "", mineFirst: !opensOnAll }),
+          // The unassigned queue as a VIEW, not only a chip. It was reachable
+          // by opening the owner dial and picking a value, which is a thing
+          // you find if you already know it is there; a lead nobody owns is
+          // the one a queue exists to surface.
+          //
+          // Oldest first, deliberately against the other views' work-queue
+          // order: what makes an unassigned lead urgent is how long it has sat
+          // there with nobody answering it, and the newest arrival is the one
+          // that can wait.
+          {
+            label: "lead.viewUnassigned",
+            sort: "created_at",
+            filters: { unassigned: "true" },
+          },
+          {
+            label: "lead.viewNewUnassigned",
+            sort: "created_at",
+            filters: { status: "new", unassigned: "true" },
+          },
           { label: "lead.viewNew", sort: "", filters: { status: "new" } },
           {
             label: "lead.viewNeedsFollowUp",

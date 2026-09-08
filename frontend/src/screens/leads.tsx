@@ -927,6 +927,57 @@ function LeadLadderPanel({
   );
 }
 
+// The lead's owner, wherever it is shown: the header where a reader acts, and
+// the details pane where they consult. ONE component, so the two cannot
+// disagree about who owns the lead or about whether the control is pressable.
+function LeadOwnerControl({
+  lead,
+  writer,
+  terminalReasonId,
+}: Readonly<{
+  lead: Lead;
+  writer: LeadWriter;
+  terminalReasonId: string;
+}>) {
+  const me = useMe();
+  // Assignment asks a DIFFERENT question from editing, so it drops the PER-ROW
+  // half of the editor's answer and keeps the rest. `writable` is false on a
+  // lead nobody owns — the write arm being right — and gating on it would shut
+  // the only door out of the unassigned queue.
+  //
+  // The other two axes still bind. useCanWrite is the object grant AND the
+  // seat ceiling: a read seat, or one holding no `lead.update`, gets no
+  // pressable control, because the server refuses them and a button that only
+  // fails is worse than none. An archived lead is refused too — a terminal
+  // record is nobody's to hand on.
+  const mayAssign = useCanWrite("lead", "update");
+  const refusedReasonId =
+    lead.archived_at || !mayAssign ? terminalReasonId : undefined;
+  return (
+    <LeadOwner
+      lead={lead}
+      meId={me.data?.user?.id}
+      refusedReasonId={refusedReasonId}
+      pending={
+        writer.patch.isPending ||
+        writer.claim.isPending ||
+        Boolean(refusedReasonId)
+      }
+      // A lead nobody owns is nobody's to change, so the PATCH this control
+      // used to send for EVERY pick was refused for the one pick a rep makes
+      // most: taking an unassigned lead. Picking yourself on an unowned lead
+      // goes through the claim door, which is the write the server actually
+      // admits; naming a colleague stays a patch, which the assignment gate
+      // answers.
+      onAssign={(ownerId) =>
+        !lead.owner_id && ownerId === me.data?.user?.id
+          ? writer.claim.mutate()
+          : writer.save({ owner_id: ownerId })
+      }
+    />
+  );
+}
+
 /**
  * The rail: the lead's own words, and who owns it.
  *
@@ -938,19 +989,10 @@ function LeadLadderPanel({
 function LeadRail({
   lead,
   writer,
-  terminalReasonId,
 }: Readonly<{
   lead: Lead;
   writer: LeadWriter;
-  terminalReasonId: string;
 }>) {
-  const t = useT();
-  const me = useMe();
-  // The object grant and the seat ceiling, without the per-row answer: see the
-  // control below for why the row half is deliberately absent.
-  const mayAssign = useCanWrite("lead", "update");
-  const assignRefusedReasonId =
-    lead.archived_at || !mayAssign ? terminalReasonId : undefined;
   return (
     <div className="record-stack">
       <LeadIdentityFields
@@ -959,43 +1001,6 @@ function LeadRail({
         saving={writer.patch.isPending}
         readOnlyReason={writer.readOnlyReason}
       />
-      <Panel title={t("lead.railTitle")}>
-        <PanelBody>
-          <LeadOwner
-            lead={lead}
-            meId={me.data?.user?.id}
-            // Assignment asks a DIFFERENT question from editing, so it drops
-            // the PER-ROW half of the editor's answer and keeps the rest.
-            // `writable` is false on a lead nobody owns — the write arm being
-            // right — and gating on it would shut the only door out of the
-            // unassigned queue, which is the bug this whole change is about.
-            //
-            // The other two axes still bind. useCanWrite is the object grant
-            // AND the seat ceiling: a read seat, or one holding no
-            // `lead.update`, gets no pressable control, because the server
-            // refuses them and a button that only fails is worse than none. An
-            // archived lead is refused too — a terminal record is nobody's to
-            // hand on.
-            refusedReasonId={assignRefusedReasonId}
-            pending={
-              writer.patch.isPending ||
-              writer.claim.isPending ||
-              Boolean(assignRefusedReasonId)
-            }
-            // A lead nobody owns is nobody's to change, so the PATCH this
-            // control used to send for EVERY pick was refused for the one
-            // pick a rep makes most: taking an unassigned lead. Picking
-            // yourself on an unowned lead goes through the claim door, which
-            // is the write the server actually admits; naming a colleague
-            // stays a patch, which the assignment gate answers.
-            onAssign={(ownerId) =>
-              !lead.owner_id && ownerId === me.data?.user?.id
-                ? writer.claim.mutate()
-                : writer.save({ owner_id: ownerId })
-            }
-          />
-        </PanelBody>
-      </Panel>
     </div>
   );
 }
@@ -1956,13 +1961,7 @@ function LeadRecord({
       // work and the context does not move when the tab does. The same pane,
       // fold and memory of it as every other record page.
       aside={
-        details.open ? (
-          <LeadRail
-            lead={lead}
-            writer={writer}
-            terminalReasonId={terminalReasonId}
-          />
-        ) : undefined
+        details.open ? <LeadRail lead={lead} writer={writer} /> : undefined
       }
       name={leadIdentityName(lead) || t("lead.unnamed")}
       avatarSrc={null}
@@ -1975,17 +1974,30 @@ function LeadRecord({
       // record was a printout. It opens the composer on this lead, as the
       // Email verb beside it does, and like that verb it is refused on a
       // closed lead — as text, since the verb already carries the reason.
+      // Owner beside the address, because both are things a reader ACTS on.
+      // Ownership lived only in the details pane, which is open by default and
+      // remembers being hidden — so the one control that takes a lead out of
+      // the unassigned queue was, for anyone who had ever collapsed the pane,
+      // behind a toggle they had to remember. The pane keeps its copy: same
+      // component, same data, one answer.
       pulse={
-        lead.email ? (
-          <ContactLink
-            kind="email"
-            value={lead.email}
-            record={{ entityType: "lead", entityId: id }}
-            readOnly={Boolean(lead.archived_at)}
-            className="link-button lead-email"
-            textClassName="lead-email"
+        <>
+          <LeadOwnerControl
+            lead={lead}
+            writer={writer}
+            terminalReasonId={terminalReasonId}
           />
-        ) : null
+          {lead.email ? (
+            <ContactLink
+              kind="email"
+              value={lead.email}
+              record={{ entityType: "lead", entityId: id }}
+              readOnly={Boolean(lead.archived_at)}
+              className="link-button lead-email"
+              textClassName="lead-email"
+            />
+          ) : null}
+        </>
       }
       actions={
         <LeadActions
