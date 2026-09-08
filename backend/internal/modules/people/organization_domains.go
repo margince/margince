@@ -217,6 +217,17 @@ func dedupeDomains(domains []OrgDomainInput) []OrgDomainInput {
 	return out
 }
 
+// livePrimaryDomain answers which domain an organization currently holds as
+// primary, or "" for none.
+//
+// One question, one spelling. The patch path needs it to elect on the slice it
+// audits and reconcileOrgDomains needs it to write, and two SELECTs asking it
+// would be two definitions of "live" to keep in step with the archival column.
+func livePrimaryDomain(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) (string, error) {
+	_, _, primary, err := readLiveDomains(ctx, tx, orgID)
+	return primary, err
+}
+
 // electPrimary makes sure a non-empty domain set names a primary, because an
 // organization with live domains and none primary is not a state any reader of
 // this table can act on.
@@ -289,6 +300,12 @@ func reconcileOrgDomains(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, o
 	// The election happens against the LIVE primary, so an edit that only adds
 	// a domain keeps the one the record already had rather than moving it to
 	// whatever the caller happened to list first.
+	//
+	// The patch path has already elected on the slice it audits, and this
+	// re-elects the same domain from the same inputs — it is not the belt to
+	// that braces. It is what makes the rule hold for a caller that reconciles
+	// WITHOUT staging, and staging is a property of the HTTP patch rather than
+	// of this function.
 	primary, err := singleDesiredPrimary(electPrimary(desired, currentPrimary))
 	if err != nil {
 		return nil, err

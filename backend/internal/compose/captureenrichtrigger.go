@@ -67,13 +67,6 @@ import (
 // delivery lag while excluding any replayed backlog.
 const captureEnrichFreshWindow = time.Hour
 
-// enrichableKind is the one activity kind that can carry a signature block.
-//
-// Its own constant rather than the CSV surface's fieldEmail, which happens to
-// hold the same word for a column header: two unrelated vocabularies sharing one
-// name is how a rename in either silently changes the other.
-const enrichableKind = "email"
-
 // CaptureEnrichTrigger queues one signature-enrich pass per captured email.
 type CaptureEnrichTrigger struct {
 	pool    *pgxpool.Pool
@@ -93,7 +86,7 @@ func NewCaptureEnrichTrigger(pool *pgxpool.Pool, enqueue *jobs.Runner, log *slog
 // malformed body would stop reading every later one.
 func (g *CaptureEnrichTrigger) queues(ctx context.Context, env events.Envelope) bool {
 	switch env.Type {
-	case "activity.captured":
+	case eventActivityCaptured:
 		// EMAIL only, decided before anything is queued. The signature pass
 		// reads a mail's trailing lines and nothing else can carry a signature
 		// block, so a meeting or a call would queue a model-backed pass that has
@@ -105,7 +98,10 @@ func (g *CaptureEnrichTrigger) queues(ctx context.Context, env events.Envelope) 
 				"event", env.EventID.String(), "err", err)
 			return false
 		}
-		return payload.Kind == enrichableKind
+		// The generated enum, not a literal: crm.yaml owns this vocabulary, and
+		// a word hand-typed here would not move when the contract does. The
+		// same comparison the vCard trigger makes on the same field.
+		return payload.Kind == string(crmcontracts.ActivityKindEmail)
 	case personCreatedEvent:
 		// Every new contact, not only the ones a verdict minted. The event does
 		// not say who created the person, and asking would be this consumer
@@ -114,7 +110,7 @@ func (g *CaptureEnrichTrigger) queues(ctx context.Context, env events.Envelope) 
 		// nobody. Narrowing here to the capture-created case would instead mean
 		// two spellings of who is due, and the quieter one wins arguments.
 		return true
-	case "activity.updated":
+	case eventActivityUpdated:
 		// Only an OPENING. The pass reads workspace mail, so a message narrowed
 		// to its participants is not new work — and the derivation emits this
 		// event for a narrowing exactly as it does for a widening, so a

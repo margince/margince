@@ -22,6 +22,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -153,4 +155,78 @@ func TestAnEditThatDropsTheLivePrimaryElectsAnother(t *testing.T) {
 	if got := livePrimaryOf(ctx, t, e, orgID); got != "ostsee-new.test" {
 		t.Fatalf("primary domain is %q, want ostsee-new.test", got)
 	}
+}
+
+// The audit trail has to say what the row says.
+//
+// is_primary is what admits a company to the website read, so the after-image is
+// the record of why that read happened. An election applied to the row but not
+// to the image the patch audits leaves a trail claiming the company has no
+// primary domain — the exact state that would mean no read was due — while the
+// row that triggered one says otherwise.
+func TestTheAuditImageNamesThePrimaryTheRowActuallyCarries(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	org, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+		DisplayName: "Rheinfels Guss", Source: "manual",
+		Domains: []OrgDomainInput{{Domain: "rheinfels-old.test", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatalf("creating the organization: %v", err)
+	}
+	orgID := ids.From[ids.OrganizationKind](ids.UUID(org.Id))
+
+	// A replace-set naming no primary: the election has to fill it, and the
+	// image has to report what it filled.
+	desired := []OrgDomainInput{{Domain: "rheinfels-new.test"}}
+	if _, err := e.store.UpdateOrganization(ctx, orgID, UpdateOrganizationInput{Domains: &desired}); err != nil {
+		t.Fatalf("updating the organization: %v", err)
+	}
+
+	onRow := livePrimaryOf(ctx, t, e, orgID)
+	if onRow != "rheinfels-new.test" {
+		t.Fatalf("primary domain on the row is %q, want rheinfels-new.test", onRow)
+	}
+
+	inTrail := auditedPrimaryDomain(ctx, t, e, orgID)
+	if inTrail != onRow {
+		t.Fatalf("the audit trail names %q as primary and the row carries %q — an auditor replaying the log would conclude no website read was due", inTrail, onRow)
+	}
+}
+
+// auditedPrimaryDomain reads the primary domain the newest organization update
+// recorded in its after-image, or "" when it recorded none.
+func auditedPrimaryDomain(ctx context.Context, t *testing.T, e *dedupeEnv, orgID ids.OrganizationID) string {
+	t.Helper()
+	var after map[string]any
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			SELECT after FROM audit_log
+			 WHERE entity_type = 'organization' AND entity_id = $1 AND action = 'update'
+			 ORDER BY occurred_at DESC, id DESC
+			 LIMIT 1`, orgID).Scan(&after)
+	}); err != nil {
+		t.Fatalf("reading the organization's newest audit image: %v", err)
+	}
+	domains, ok := after["domains"].([]any)
+	if !ok {
+		t.Fatalf("the audit image records no domains at all: %v", after)
+	}
+	primary := ""
+	for _, entry := range domains {
+		row, ok := entry.(map[string]any)
+		if !ok {
+			t.Fatalf("a domain entry is not an object: %v", entry)
+		}
+		if isPrimary, _ := row["is_primary"].(bool); !isPrimary {
+			continue
+		}
+		domain, _ := row["domain"].(string)
+		if primary != "" {
+			t.Fatalf("the audit image names two primaries: %q and %q", primary, domain)
+		}
+		primary = domain
+	}
+	return primary
 }
