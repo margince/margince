@@ -70,11 +70,10 @@ type Namespace struct {
 // read as another: without it a version ending in a digit and a name starting
 // with one would hash the same as the pair that splits them differently.
 //
-// Up STAMPS this and judges nothing. Making the production migrate path REFUSE
-// a version whose recorded digest no longer matches — the way assertLedgerMatches
-// already refuses a renamed one — decides how a live installation fails at boot,
-// which is a product call rather than a test-lane one: #2141 carries it, with
-// Down (running the wrong rollback) as the sharper half.
+// Both directions read it. Up refuses to migrate PAST a version whose recorded
+// digest no longer matches, and Down refuses to revert one — the same answer
+// assertLedgerMatches already gives a renumber, for the same reason: neither
+// can be repaired forward.
 func Digest(m Migration) string {
 	var framed strings.Builder
 	for _, part := range []string{m.Version, m.Name, m.UpSQL, m.DownSQL} {
@@ -188,10 +187,22 @@ func Up(ctx context.Context, conn *pgx.Conn, namespaces ...Namespace) (applied i
 			return applied, err
 		}
 
+		// EVERY migration is judged before ANY is applied. Judged inside the
+		// apply loop, a namespace whose third migration disagrees with the
+		// ledger applies the first two and then stops — so the operator learns
+		// one defect per boot, and each boot moves the database somewhere new
+		// before refusing. The ledger is already in hand; asking it twice costs
+		// nothing and the answer cannot change under the advisory lock.
 		for _, m := range ns.Migrations {
 			if err := assertLedgerMatches(ns.Name, done, m); err != nil {
 				return applied, err
 			}
+			if err := assertContentMatches(ns.Name, done, m); err != nil {
+				return applied, err
+			}
+		}
+
+		for _, m := range ns.Migrations {
 			if _, isDone := done[m.Version]; isDone {
 				continue
 			}
@@ -385,26 +396,35 @@ func assertLedgerMatches(namespace string, done map[string]appliedRow, m Migrati
 		namespace, m.Version, recorded.name, m.Name, m.Name)
 }
 
-// assertContentMatches refuses to REVERT a version whose recorded digest is not
-// the content this binary holds.
+// assertContentMatches refuses a version whose recorded digest is not the
+// content this binary holds. Both directions ask it.
 //
-// The down half is the sharper one, which is why it is answered first. Up
-// skipping an edited migration leaves a database missing whatever the edit
-// added — bad, and visible later as an absent object. Down running the CURRENT
-// rollback against a schema the OLD up-migration built is a schema CHANGE made
-// on a false premise: it drops what this version's down names, which is not
-// what that database has, and then deletes the row that was the only record of
-// what it did have. There is nothing left to compare afterwards.
+// The two consequences differ and both are in the message, because an operator
+// reading it does not yet know which way they were going. Up SKIPS an edited
+// migration as done, so whatever the edit added is absent on this database and
+// present on every fresh installation — and every later migration is then
+// applied on top of a schema the source cannot describe. Down runs the CURRENT
+// rollback against a schema the OLD up-migration built, which is a schema
+// CHANGE made on a false premise: it drops what this version's down names
+// rather than what the database has, then deletes the row that was the only
+// record of what it did have.
+//
+// REFUSING RATHER THAN WARNING, and the objection is real: an edit to a comment
+// stops a live installation at boot. Three things settle it. The rule is that
+// an applied migration is never edited at all (CLAUDE.md), not that it is never
+// edited meaningfully — a digest that forgave comments would have to parse SQL,
+// and a check whose rules are fiddly gets worked around rather than fixed.
+// assertLedgerMatches already refuses a renumber here, which is the same defect
+// with the same "cannot be repaired forward" property, so warning about one and
+// refusing the other would be two answers to one question. And the failure this
+// prevents is the silent one: continuing to migrate compounds the divergence a
+// boot at a time, while stopping is loud and reversible by reverting the edit.
 //
 // A NULL digest is admitted, permanently. It means the row predates the column,
 // so there is no fingerprint to disagree with — refusing there would strand
-// every installation that migrated before #2135 with no way forward, and
-// back-filling one would invent the evidence. Unverifiable is its own answer.
-//
-// Up is deliberately NOT held to this. Whether a live installation should stop
-// migrating at boot over an edited migration — even in whitespace, even in a
-// comment — decides how a deployment fails, which is a product call and is
-// #2141's open half.
+// every installation that migrated before the column existed with no way
+// forward, and back-filling one would invent the evidence. Unverifiable is its
+// own answer.
 func assertContentMatches(namespace string, done map[string]appliedRow, m Migration) error {
 	recorded, ok := done[m.Version]
 	if !ok || recorded.digest == nil || *recorded.digest == Digest(m) {
@@ -412,9 +432,10 @@ func assertContentMatches(namespace string, done map[string]appliedRow, m Migrat
 	}
 	return fmt.Errorf(
 		"pgmigrate: %s %s_%s: applied content does not match the source — this database ran a "+
-			"different version of this migration, so its rollback would drop what the source names "+
-			"rather than what the database has, and would then delete the only record of what it "+
-			"applied. Applied core migrations are never edited (CLAUDE.md); rebuild the database "+
+			"different version of this migration. Migrating past it skips the edit here while "+
+			"every fresh installation gets it; reverting it would drop what the source names "+
+			"rather than what the database has, and delete the only record of what it applied. "+
+			"Applied core migrations are never edited (CLAUDE.md); rebuild the database "+
 			"(make dev-fresh), or revert the edit to the migration's committed content",
 		namespace, m.Version, m.Name)
 }
