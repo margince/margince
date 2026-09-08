@@ -1350,7 +1350,21 @@ function ConsentAndChannels({
   const t = useT();
   const providerLabel = useProviderLabel();
   const entries = guard?.entries ?? [];
-  const correspondence = entries.find((entry) => entry.channel === "email");
+  // WHICH email purpose. The guard answers one verdict per purpose, and taking
+  // the first of them painted the Email row with whichever the server happened
+  // to list first — a bare "Allowed" that the composer then contradicted with
+  // "sending will be refused until Margince has a record", because the two were
+  // answering about different purposes and neither said which.
+  //
+  // Correspondence is the one a rail can speak for: it is the purpose a reply
+  // rides, and the only one an inbound message can flip on its own. The others
+  // get their own rows below, each carrying its name.
+  const correspondence =
+    entries.find((entry) => entry.purpose_class === "business_correspondence") ??
+    entries.find((entry) => entry.channel === "email");
+  const otherPurposes = entries.filter(
+    (entry) => entry.channel === "email" && entry !== correspondence,
+  );
   const phone = entries.find((entry) => entry.channel === "phone");
   const hasEmail = (view.person.emails?.length ?? 0) > 0;
   const channels = view.person.reachability ?? [];
@@ -1359,7 +1373,7 @@ function ConsentAndChannels({
       <PanelBody>
         <ConsentRow
           icon={<Mail size={15} aria-hidden="true" />}
-          label={t("person.rail.email")}
+          label={correspondence?.purpose_label ?? t("person.rail.email")}
           reachable={hasEmail}
           verdict={correspondence?.verdict}
           unreachableWord={t("person.rail.noEmailAddress")}
@@ -1384,6 +1398,22 @@ function ConsentAndChannels({
             unreachableWord={t("person.rail.channelNotDeliverable")}
           />
         ))}
+        {/* Every OTHER purpose, by name. A rep who reads "Allowed" against
+          Email and is then refused at the composer has been told two true
+          things and no way to reconcile them: the grant they have is for
+          correspondence and the send they tried was something else. Naming
+          each purpose is what makes the two answers agree on screen. */}
+        {hasEmail &&
+          otherPurposes.map((entry) => (
+            <ConsentRow
+              key={entry.purpose_key}
+              icon={<Mail size={15} aria-hidden="true" />}
+              label={entry.purpose_label ?? entry.purpose_key}
+              reachable
+              verdict={entry.verdict}
+              unreachableWord={t("person.rail.noEmailAddress")}
+            />
+          ))}
         {/* The REASON, in the reader's words. A verdict a rep cannot explain to
           the person in front of them is not usable — and one explaining a
           verdict no row above shows explains nothing. */}

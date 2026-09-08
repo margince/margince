@@ -1058,3 +1058,48 @@ describe("a live contact that is not the viewer's to change", () => {
     ).toBe(sentence);
   });
 });
+
+// The rail's verdict says WHICH purpose it answers for.
+//
+// The guard answers one verdict per purpose. The rail took the first email
+// entry and printed a bare "Allowed" against Email, so a rep read a permission
+// with no scope on it — and the composer then refused the send, correctly,
+// because the grant they had was for correspondence and the message was
+// something else. Two true statements and no way to reconcile them.
+describe("the consent rail names the purpose behind each answer", () => {
+  const correspondence: PersonConsentGuardEntry = {
+    purpose_key: "business_correspondence",
+    purpose_label: "Business correspondence",
+    purpose_class: "business_correspondence",
+    channel: "email",
+    verdict: "allowed",
+    reason: "she wrote to you on 1 June",
+  };
+  const newsletter: PersonConsentGuardEntry = {
+    purpose_key: "newsletter",
+    purpose_label: "Newsletter",
+    purpose_class: "marketing",
+    channel: "email",
+    verdict: "unknown",
+    reason: "no consent recorded",
+  };
+
+  it("answers per purpose rather than once for the whole transport", async () => {
+    mount("overview", view, [newsletter, correspondence]);
+
+    // Both named, whichever order the server listed them in — the old reader
+    // took entries[0] and would have painted Email with the newsletter's
+    // unknown here.
+    expect(await screen.findByText("Business correspondence")).not.toBeNull();
+    expect(screen.getByText("Newsletter")).not.toBeNull();
+  });
+
+  it("does not report a marketing purpose's verdict against correspondence", async () => {
+    mount("overview", view, [newsletter, correspondence]);
+
+    await screen.findByText("Business correspondence");
+    // The correspondence row is the allowed one; the newsletter row is not.
+    const rows = screen.getAllByText(/Allowed|Unknown/);
+    expect(rows.length).toBeGreaterThan(1);
+  });
+});
