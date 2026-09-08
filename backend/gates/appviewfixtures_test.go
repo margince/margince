@@ -66,6 +66,16 @@ const envelopeDataMember = "data"
 // direction.
 var fixtureMemberOnlyInTheView = gatekit.Waive(map[string]string{})
 
+// viewsWithoutAFixture ratifies a view that models no payload, keyed by the
+// tool that carries it.
+//
+// Declared rather than skipped. A missing fixture is otherwise indistinguishable
+// from a deleted one, and deleting a fixture would drop its view out of this
+// check with nothing to notice — a census counting down in silence.
+var viewsWithoutAFixture = gatekit.Waive(map[string]string{
+	"check_location_support": "the geo probe renders no record and answers no tool's result: it reports whether THIS host lets a view read the device's position, which is a fact about the client rather than a payload. There is no shape for a fixture to model. It is also meant to be deleted once the host matrix is filled in, which its own catalog entry says",
+})
+
 // appFixtureFloor is the number of views the sweep must find. Below it the
 // derivation has stopped reaching the catalog, and a sweep that judges nothing
 // reports PASS.
@@ -77,17 +87,10 @@ const appFixtureFloor = 4
 // per-fixture count below are what fail if that ever stops being true.
 var fixtureKey = regexp.MustCompile(`^\s*([a-z][A-Za-z0-9_]*)\s*:`)
 
-// fixtureString matches a quoted value, blanked before braces are counted so a
-// `{` inside a message is not read as structure.
-var fixtureString = regexp.MustCompile(`"[^"]*"`)
-
-// dataMemberDepth is the brace depth of the members of the envelope's `data`.
-// The literal opens at depth 0, `data:` sits at 1, and its own members at 2.
-const dataMemberDepth = 2
-
 func TestEveryAppViewFixtureMatchesItsToolsOutputSchema(t *testing.T) {
 	t.Parallel()
 	defer fixtureMemberOnlyInTheView.AssertAllMatched(t)
+	defer viewsWithoutAFixture.AssertAllMatched(t)
 
 	checked := 0
 	for _, spec := range compose.NewRegistry(nil, compose.SendPath{}).Specs() {
@@ -98,10 +101,20 @@ func TestEveryAppViewFixtureMatchesItsToolsOutputSchema(t *testing.T) {
 		path := appFixtureDir + "/" + dir + "/fixture.ts"
 		source, err := os.ReadFile(path)
 		if os.IsNotExist(err) {
-			// A view with no fixture is not a finding here: the geo probe
-			// answers no tool's result and renders no record. What would be a
-			// finding is a fixture that disagrees with a schema, and there is
-			// none to disagree.
+			// A FINDING, not a skip. A tool carrying both a view and an output
+			// schema is one whose payload a fixture is supposed to model, and
+			// skipping the missing one means deleting a fixture silently drops
+			// its view out of the check — with the floor still met by the
+			// others, which is a census counting down without saying so.
+			//
+			// The geo probe does not reach here: it declares no output schema
+			// and is excluded above, because it answers no tool's result.
+			if !viewsWithoutAFixture.Waived(t, spec.Name) {
+				t.Errorf("%s carries the view at %s and declares an output schema, but %s does not "+
+					"exist — a view whose payload nothing models is one no test has drawn the real "+
+					"shape of. Add the fixture, or ratify the view in viewsWithoutAFixture[%q]",
+					spec.Name, spec.UI.ResourceURI, path, spec.Name)
+			}
 			continue
 		}
 		if err != nil {
@@ -156,10 +169,7 @@ func compareFixtureToSchema(t *testing.T, tool, dir string, fixture map[string]i
 		if !published[member] {
 			continue
 		}
-		// AT ITS OWN LEVEL. `required` here is what the tool's shape requires
-		// of the payload root, so a member of the same name nested deeper is a
-		// different member and must not answer for it.
-		if at, carried := fixture[member]; carried && at == dataMemberDepth {
+		if _, carried := fixture[member]; carried {
 			continue
 		}
 		t.Errorf("%s REQUIRES %q and %s/fixture.ts does not carry it.\n"+
@@ -215,29 +225,28 @@ func toolShapeMembers(t *testing.T, tool string, raw json.RawMessage) (published
 			"comparing fixtures against the wrong half of it", tool, envelopeDataMember)
 	}
 	published, required = map[string]bool{}, map[string]bool{}
-	collectPublished(shape, published)
-	collectRequired(shape, required)
+	collectPublished(shape, nil, published)
+	collectRequired(shape, nil, required)
 	return published, required
 }
 
 //craft:ignore naked-any a decoded JSON Schema is an arbitrary document, so the node this walks IS any — naming a type here would describe a shape the deriver is free to change
-func collectPublished(node any, out map[string]bool) {
+func collectPublished(node any, at []string, out map[string]bool) {
 	switch n := node.(type) {
 	case map[string]any:
 		if props, isObject := n["properties"].(map[string]any); isObject {
 			for name, child := range props {
-				out[name] = true
-				collectPublished(child, out)
+				here := append(append([]string{}, at...), name)
+				out[strings.Join(here, ".")] = true
+				collectPublished(child, here, out)
 			}
 		}
-		for key, child := range n {
-			if key != "properties" {
-				collectPublished(child, out)
-			}
-		}
+		// An array contributes no segment, matching the fixture side: a row's
+		// members belong to the collection rather than to an index.
+		collectPublished(n["items"], at, out)
 	case []any:
 		for _, child := range n {
-			collectPublished(child, out)
+			collectPublished(child, at, out)
 		}
 	}
 }
@@ -256,54 +265,135 @@ func collectPublished(node any, out map[string]bool) {
 // no longer publishes, and that check is total and reaches every depth.
 //
 //craft:ignore naked-any the same decoded document collectPublished walks, for the same reason
-func collectRequired(node any, out map[string]bool) {
+func collectRequired(node any, at []string, out map[string]bool) {
 	schema, isObject := node.(map[string]any)
 	if !isObject {
 		return
 	}
 	props, _ := schema["properties"].(map[string]any)
-	if names, hasRequired := schema["required"].([]any); hasRequired {
-		for _, name := range names {
-			text, isText := name.(string)
-			if !isText {
-				continue
-			}
-			out[text] = true
-			if child, published := props[text]; published {
-				collectRequired(child, out)
-			}
+	names, hasRequired := schema["required"].([]any)
+	if !hasRequired {
+		return
+	}
+	for _, name := range names {
+		text, isText := name.(string)
+		if !isText {
+			continue
+		}
+		here := append(append([]string{}, at...), text)
+		out[strings.Join(here, ".")] = true
+		if child, published := props[text]; published {
+			collectRequired(child, here, out)
 		}
 	}
 }
 
-// fixtureMembers reads the object-literal keys out of a fixture, with the brace
-// depth each sits at. Comments and string contents are excluded — a `//` note
-// naming a member, or a member name inside a quoted value, is prose.
+// fixtureMembers reads the object-literal keys out of a fixture, each with the
+// PATH it sits at — "items.deal_id" rather than "deal_id".
 //
-// The DEPTH is what makes the required check mean what it says. Without it both
-// sides are flat name sets, and a required member missing from `data` reads as
-// present because something nested carries the same name — the exact drift this
-// gate exists to catch, hidden by a coincidence of vocabulary. Nesting is
-// counted by braces rather than by indentation: a formatter is free to change
-// how it indents and is not free to change what nests inside what.
+// Paths and not names, because a name alone loses which member is meant. The
+// handoff fixture carries a root `name` and a nested `deals[].name`: with names,
+// a schema that dropped the root one while keeping the nested one leaves the
+// stale root field reading as published, which is the drift this gate is for.
+// Arrays contribute no segment — a row's members belong to the collection, and
+// an index would make every fixture's second row a different path.
+//
+// Scanned rather than regex-stripped. A quoted value may contain an escaped
+// quote or a brace, and `"[^"]*"` ends the string at the wrong place for the
+// first and lets the second through — either one corrupts the nesting from that
+// line on and reports valid fixtures as missing required members. Comments are
+// skipped the same way, mid-line ones included.
 func fixtureMembers(source []byte) map[string]int {
 	out := map[string]int{}
-	depth := 0
+	var path []string
 	for _, line := range strings.Split(string(source), "\n") {
-		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, "//") || strings.HasPrefix(trimmed, "*") ||
-			strings.HasPrefix(trimmed, "/*") {
-			continue
-		}
-		code := fixtureString.ReplaceAllString(line, `""`)
-		if m := fixtureKey.FindStringSubmatch(code); m != nil {
-			// The key sits INSIDE the braces open before its line.
-			if prior, seen := out[m[1]]; !seen || depth < prior {
-				out[m[1]] = depth
+		code := fixtureCode(line)
+		if key := fixtureKey.FindStringSubmatch(code); key != nil {
+			if at, under := underData(append(append([]string{}, path...), key[1])); under {
+				out[at] = len(path)
 			}
 		}
-		depth += strings.Count(code, "{") + strings.Count(code, "[")
-		depth -= strings.Count(code, "}") + strings.Count(code, "]")
+		// The key is recorded at the depth it OPENS at, so nesting is updated
+		// after it: `items: [` names items at this level and its rows below.
+		for _, r := range code {
+			switch r {
+			case '{', '[':
+				path = append(path, lastKeyOn(code))
+			case '}', ']':
+				if len(path) > 0 {
+					path = path[:len(path)-1]
+				}
+			}
+		}
 	}
 	return out
+}
+
+// underData answers a fixture path relative to the envelope's `data`, and
+// whether it is under it at all.
+//
+// The fixture models an Envelope, so every path starts inside the literal's
+// outermost brace (an anonymous segment) and then under `data`. The schema side
+// is relative to the tool's own shape, so the two only line up once that prefix
+// is off. A path outside `data` — the envelope's `warnings` — is not the tool's
+// and answers false.
+func underData(path []string) (string, bool) {
+	named := make([]string, 0, len(path))
+	for _, segment := range path {
+		if segment != "" {
+			named = append(named, segment)
+		}
+	}
+	if len(named) == 0 || named[0] != envelopeDataMember {
+		return "", false
+	}
+	return strings.Join(named[1:], "."), len(named) > 1
+}
+
+// lastKeyOn is the member a brace on this line opens under, or "" for an
+// anonymous one — an array's element object, which contributes no segment.
+func lastKeyOn(code string) string {
+	if key := fixtureKey.FindStringSubmatch(code); key != nil {
+		return key[1]
+	}
+	return ""
+}
+
+// fixtureCode is one line with its comments and string CONTENTS removed, so
+// neither can be read as structure or as a key.
+//
+// A hand-rolled scan because the alternatives are wrong in ways that matter
+// here: a regex for a quoted run cannot express "unless the quote is escaped",
+// and a JSON parser cannot read a TypeScript literal at all.
+func fixtureCode(line string) string {
+	var out strings.Builder
+	var quote rune
+	escaped := false
+	runes := []rune(line)
+	for i := 0; i < len(runes); i++ {
+		r := runes[i]
+		switch {
+		case quote != 0 && escaped:
+			escaped = false
+		case quote != 0 && r == '\\':
+			escaped = true
+		case quote != 0 && r == quote:
+			quote = 0
+			out.WriteRune('"')
+		case quote != 0:
+			// Inside a string: contributes nothing, whatever it is.
+		case r == '"' || r == '\'' || r == '`':
+			quote = r
+			out.WriteRune('"')
+		case r == '/' && i+1 < len(runes) && (runes[i+1] == '/' || runes[i+1] == '*'):
+			// A comment starts here and this reader is line-wise, so the rest
+			// of the line is prose. A block comment's later lines carry no
+			// key and no brace this cares about — and if one ever did, the
+			// per-fixture count below is what notices the read going wrong.
+			return out.String()
+		default:
+			out.WriteRune(r)
+		}
+	}
+	return out.String()
 }
