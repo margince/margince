@@ -22,6 +22,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/comms"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -399,5 +400,49 @@ func TestCommsSeatsActiveSeatRefusesWithNoWorkspaceBound(t *testing.T) {
 	}
 	if active {
 		t.Fatal("ActiveSeat reported an active seat with no workspace bound to check it against")
+	}
+}
+
+// A send lands on the queue the contract says it does.
+//
+// comms_send_email is opts_owner: caller, and that ownership level buys no
+// enforcement: api/jobs.yaml's `queue:` is read by the fleet surfaces and by
+// whoever sizes the pool, while the rows themselves go wherever this struct
+// says. The census checks the args-owned kinds against their declarations and
+// the periodic dispatcher supplies spec.Queue directly; a caller-owned kind
+// with a hand-built InsertOpts has neither, so the contract can be moved to a
+// new queue and the sends carry on landing on the old one with every check
+// green.
+//
+// Both sides are read here rather than compared to a literal: the declaration
+// through jobs.Declared, the routing through sendInsertOpts. A queue renamed
+// on one side alone fails.
+func TestSendEmailEnqueuesOnItsDeclaredQueue(t *testing.T) {
+	const kind = "comms_send_email"
+
+	var declared string
+	var found bool
+	for name, spec := range jobs.Declared() {
+		if name == kind {
+			declared, found = spec.Queue, true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("%s is not declared in api/jobs.yaml; this test's subject has been retired or renamed", kind)
+	}
+	if declared == river.QueueDefault {
+		t.Fatalf("%s declares the default queue; the isolation this test guards is gone, so remove it or restore the queue", kind)
+	}
+
+	enqueued := sendInsertOpts().Queue
+	if enqueued == "" {
+		t.Fatalf("sendInsertOpts names no queue, so River inserts on %q while the contract declares %q", river.QueueDefault, declared)
+	}
+	if enqueued != declared {
+		t.Fatalf("sendInsertOpts enqueues on %q but the contract declares %q", enqueued, declared)
+	}
+	if _, pooled := jobs.DeclaredQueues()[declared]; !pooled {
+		t.Fatalf("%s enqueues on %q, which no declared pool works — the rows would sit unclaimed", kind, declared)
 	}
 }

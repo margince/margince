@@ -93,6 +93,23 @@
 # reads the DECLARED queue) with no client to work it.
 queues:
   default: {max_workers: 5}
+  comms_send:
+    max_workers: 3
+    reason: >-
+      A send is long and outbound-bound now that it carries files: the upload's
+      request budget is three minutes, because a 20 MiB album cannot cross the
+      wire in thirty seconds. On the default queue five concurrent sends
+      occupied every worker for minutes at a time, and that queue also carries
+      Telegram polls, capture syncs and close-date jobs — so a burst of large
+      sends made inbound capture late and nothing said why.
+
+      This is the category jobqueues' own posture was written for: the AI
+      capture pool's reason names "delay sends, Telegram polls, and capture
+      syncs" as the thing to avoid, and the send had since become a member of
+      it. THREE rather than deep read's two: unlike a crawl, a send is a
+      message a person pressed a button for and is waiting on, so the pool is
+      wide enough that an ordinary text send is not queued behind two album
+      uploads.
   deep_read:
     max_workers: 2
     reason: >-
@@ -559,7 +576,7 @@ kinds:
   comms_send_email:
     role: worker
     go_type: SendEmailArgs
-    queue: default
+    queue: comms_send
     timeout: 5m
     opts_owner: caller
     registration: {when: [SendRegistry], absent: registers_nothing}
