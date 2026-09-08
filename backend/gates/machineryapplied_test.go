@@ -94,21 +94,31 @@ func TestEverySettingReadThroughApplyIsDeclaredMachineryApplied(t *testing.T) {
 					}
 				}
 			case *ast.CallExpr:
-				if calleeName(node) != "ApplyTx" || len(node.Args) != 3 {
+				// BOTH ungated readers. ApplyManyTx takes the same admission
+				// over a variadic list, so an entry read only through the batch
+				// would otherwise be invisible here — and invisible means the
+				// gate agrees with dropping its declaration while the store
+				// refuses it at runtime, which is the failure this exists to
+				// move forward in time.
+				args := machineryEntryArgs(node)
+				if args == nil {
 					return true
 				}
-				entry := entryName(node.Args[2], pkg, aliases, shadowed[enclosingFunc(file, node.Pos())])
-				if entry == "" {
-					// The other half of the same rule. An entry whose EXPRESSION
-					// this walk cannot name — one handed through a call, an
-					// index, a conversion — was dropped here, and a dropped
-					// entry is one the gate agrees with while ApplyTx refuses it
-					// at runtime. Aliases are resolved above; this is what is
-					// left when the shape itself is unreadable.
-					unreadable = append(unreadable, fset.Position(node.Pos()).String())
-					return true
+				for _, arg := range args {
+					entry := entryName(arg, pkg, aliases, shadowed[enclosingFunc(file, node.Pos())])
+					if entry == "" {
+						// The other half of the same rule. An entry whose
+						// EXPRESSION this walk cannot name — one handed through
+						// a call, an index, a conversion — was dropped here, and
+						// a dropped entry is one the gate agrees with while the
+						// store refuses it at runtime. Aliases are resolved
+						// above; this is what is left when the shape itself is
+						// unreadable.
+						unreadable = append(unreadable, fset.Position(node.Pos()).String())
+						continue
+					}
+					read[entry] = fset.Position(node.Pos()).String()
 				}
-				read[entry] = fset.Position(node.Pos()).String()
 			}
 			return true
 		})
@@ -120,7 +130,7 @@ func TestEverySettingReadThroughApplyIsDeclaredMachineryApplied(t *testing.T) {
 	// one.
 	const readFloor = 4
 	if len(read) < readFloor {
-		t.Fatalf("found %d settings.ApplyTx call site(s), fewer than the %d this gate assumes — "+
+		t.Fatalf("found %d ungated setting read(s), fewer than the %d this gate assumes — "+
 			"the walk stopped matching rather than the tree stopping doing it", len(read), readFloor)
 	}
 	if len(declared) == 0 {
@@ -360,4 +370,23 @@ func parsedByPath(files []*ast.File, fset *token.FileSet, path string) (*ast.Fil
 		}
 	}
 	return nil, false
+}
+
+// machineryEntryArgs answers the ENTRY arguments of an ungated setting read, or
+// nil when this call is not one.
+//
+// Two readers, one admission. ApplyTx takes a single entry as its third
+// argument; ApplyManyTx takes a variadic list from the third onward, and asks
+// the same MachineryApplied question of every one of them. A census that knew
+// only the first would let an entry read solely through the batch lose its
+// declaration without failing anything here — the runtime refusal would still
+// fire, in production, which is exactly the lateness this gate exists to fix.
+func machineryEntryArgs(call *ast.CallExpr) []ast.Expr {
+	switch {
+	case calleeName(call) == "ApplyTx" && len(call.Args) == 3:
+		return call.Args[2:]
+	case calleeName(call) == "ApplyManyTx" && len(call.Args) > 2:
+		return call.Args[2:]
+	}
+	return nil
 }
