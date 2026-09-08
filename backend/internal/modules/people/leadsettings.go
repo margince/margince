@@ -107,27 +107,33 @@ func (p leadSLAPolicy) targetMinutes() int { return int(p.target / time.Minute) 
 // is an input to a lead read already gated by lead:read, and a connector or
 // agent principal reading leads must not need a settings grant to see them.
 //
-// ApplyTx and not a raw statement, which is what this was. Both are ungated;
-// only one is CHECKED. ApplyTx refuses any entry not declared MachineryApplied
-// at Define time, so what used to be a sentence a reviewer agreed with is now a
-// refusal the store makes — and the next ungated read of some other setting
-// fails at the first test that exercises it rather than needing to be noticed.
+// ApplyManyTx and not a raw statement, which is what this was. Both are
+// ungated; only one is CHECKED. The admitted reader refuses any entry not
+// declared MachineryApplied at Define time, so what used to be a sentence a
+// reviewer agreed with is a refusal the store makes — and the next ungated read
+// of some other setting fails at the first test that exercises it rather than
+// needing to be noticed.
 //
-// Two calls where there was one statement, which is two round trips instead of
-// one inside a transaction the caller already holds. That is the price, and it
-// is small against the alternative: a batched read cannot ask the registry
-// whether either key was admitted to it.
+// The BATCHED reader, and that is not a convenience. Two ApplyTx calls take two
+// snapshots under READ COMMITTED, so a write that changes the switch and the
+// target together can commit between them: the policy would then pair an
+// enabled flag with a target from a different version of the settings, which is
+// a policy the operator never configured, running until the next read. One
+// statement is one snapshot, which is what the raw query this replaces already
+// had — enforcement should not have cost it.
 func loadLeadSLAPolicy(ctx context.Context, tx pgx.Tx) (leadSLAPolicy, error) {
 	policy := leadSLAPolicy{target: DefaultFirstResponseTarget}
-	enabled, err := settings.ApplyTx(ctx, tx, FirstResponseEnabled)
+	values, err := settings.ApplyManyTx(ctx, tx, FirstResponseEnabled, FirstResponseTargetMinutes)
 	if err != nil {
 		return policy, fmt.Errorf("load lead sla policy: %w", err)
 	}
-	minutes, err := settings.ApplyTx(ctx, tx, FirstResponseTargetMinutes)
-	if err != nil {
-		return policy, fmt.Errorf("load lead sla policy: %w", err)
+	if err := json.Unmarshal(values[FirstResponseEnabled.Key()], &policy.enabled); err != nil {
+		return policy, fmt.Errorf("decode %s: %w", FirstResponseEnabled.Key(), err)
 	}
-	policy.enabled = enabled
+	var minutes int
+	if err := json.Unmarshal(values[FirstResponseTargetMinutes.Key()], &minutes); err != nil {
+		return policy, fmt.Errorf("decode %s: %w", FirstResponseTargetMinutes.Key(), err)
+	}
 	policy.target = time.Duration(minutes) * time.Minute
 	return policy, nil
 }
