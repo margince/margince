@@ -29,7 +29,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	"github.com/margince/margince/backend/internal/compose/magic"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -353,11 +356,21 @@ type judgeStub struct {
 	asked    int
 }
 
-func (j *judgeStub) JudgeUndo(
-	_ context.Context, _ pgx.Tx, _ ids.UUID, _ string,
-) (bool, string, error) {
-	j.asked++
-	return j.undoable, j.reason, nil
+func (j *judgeStub) JudgeUndoPage(
+	_ context.Context, _ pgx.Tx, subjects []magic.UndoSubject,
+) (map[ids.UUID]*crmcontracts.MagicUndo, error) {
+	out := make(map[ids.UUID]*crmcontracts.MagicUndo, len(subjects))
+	for _, subject := range subjects {
+		j.asked++
+		if j.undoable {
+			id := openapi_types.UUID(subject.AuditID)
+			out[subject.AuditID] = &crmcontracts.MagicUndo{Undoable: true, AuditId: &id}
+			continue
+		}
+		reason := j.reason
+		out[subject.AuditID] = &crmcontracts.MagicUndo{Undoable: false, Reason: &reason}
+	}
+	return out, nil
 }
 
 // The done lane used to hardcode Undoable: false on every row, which was true

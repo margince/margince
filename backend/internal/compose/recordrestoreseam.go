@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -277,5 +278,11 @@ func (s *Server) wireReversal(pool *pgxpool.Pool) {
 	if s.magicService == nil {
 		panic("compose: the receipt must be assembled before its undo judge is bound")
 	}
-	s.magicService.WithUndoJudge(magicUndoJudge{seam: seam})
+	s.magicService.WithUndoJudge(magicUndoJudge{
+		seam: seam,
+		// The corrections store is what lets a machine close-date change read
+		// as undoable at all: the generic evaluator refuses exactly those rows,
+		// because they write a field the ordinary update shape cannot spell.
+		corrections: deals.NewStore(InstallationDB(pool), DealsInstallation()),
+	})
 }

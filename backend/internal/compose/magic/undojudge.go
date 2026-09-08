@@ -21,7 +21,6 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -35,10 +34,20 @@ import (
 // refusal; one that answered no to a reversal the writer would allow hides the
 // feature entirely, which is why this is asked at all rather than defaulted.
 type UndoJudge interface {
-	// JudgeUndo reports whether the entry may be reversed, and why not when it
-	// may not. The reason is compose/undoability's own vocabulary — the same
-	// words the refusal would carry — rather than a second set written here.
-	JudgeUndo(ctx context.Context, tx pgx.Tx, auditID ids.UUID, entityType string) (undoable bool, reason string, err error)
+	// JudgeUndoPage answers for a whole page at once, keyed by audit id.
+	//
+	// The page rather than the line, because the judgment reads more than the
+	// entry: an omitted answer is read as not-evaluated, so a judge may decline
+	// a subject it does not serve without inventing a verdict for it. The
+	// reasons are compose/undoability's own vocabulary rather than a second set
+	// written here.
+	JudgeUndoPage(ctx context.Context, tx pgx.Tx, subjects []UndoSubject) (map[ids.UUID]*crmcontracts.MagicUndo, error)
+}
+
+// UndoSubject is one entry a page asks about.
+type UndoSubject struct {
+	AuditID    ids.UUID
+	EntityType string
 }
 
 // WithUndoJudge binds the undoability read. An option for the reason
@@ -65,27 +74,48 @@ const unwiredUndoReason = "undo_not_evaluated"
 // happened and who did it, which is most of its value, and one unreadable entry
 // must not cost a rep the whole morning's receipt — the same reasoning fieldsOf
 // applies to an unreadable audit blob.
-func (s *Service) judgeUndoOn(ctx context.Context, tx pgx.Tx, lines []crmcontracts.MagicLine) {
-	for i := range lines {
-		lines[i].Undo = s.judgeOne(ctx, tx, lines[i])
+func (s *Service) judgeUndoOn(ctx context.Context, tx pgx.Tx, lines []crmcontracts.MagicLine) error {
+	if s.undo == nil || len(lines) == 0 {
+		for i := range lines {
+			lines[i].Undo = refusedUndo(unwiredUndoReason)
+		}
+		return nil
 	}
+	// ONE call for the page, not one per line. The judgment behind a single
+	// answer reads the record, its history and the installation's own posture,
+	// and asking it a hundred times over is a hundred round trips for a page
+	// that already knows every id it needs. The per-page shape also lets the
+	// judge resolve what is constant — the overlay posture is a property of the
+	// workspace, not of the line — exactly once.
+	answers, err := s.undo.JudgeUndoPage(ctx, tx, entriesOf(lines))
+	if err != nil {
+		return err
+	}
+	for i := range lines {
+		answer, ok := answers[ids.UUID(lines[i].Id)]
+		if !ok {
+			lines[i].Undo = refusedUndo(unwiredUndoReason)
+			continue
+		}
+		lines[i].Undo = answer
+	}
+	return nil
 }
 
-// judgeOne answers for a single line.
-func (s *Service) judgeOne(ctx context.Context, tx pgx.Tx, line crmcontracts.MagicLine) *crmcontracts.MagicUndo {
-	if s.undo == nil || line.Entity == nil {
-		return refusedUndo(unwiredUndoReason)
+// entriesOf names what the page needs judged: the audit entry each line is
+// about, and the record type that entry sits on.
+func entriesOf(lines []crmcontracts.MagicLine) []UndoSubject {
+	out := make([]UndoSubject, 0, len(lines))
+	for _, line := range lines {
+		if line.Entity == nil {
+			continue
+		}
+		out = append(out, UndoSubject{
+			AuditID:    ids.UUID(line.Id),
+			EntityType: line.Entity.Type,
+		})
 	}
-	auditID := ids.UUID(line.Id)
-	undoable, reason, err := s.undo.JudgeUndo(ctx, tx, auditID, line.Entity.Type)
-	if err != nil {
-		return refusedUndo(unwiredUndoReason)
-	}
-	if !undoable {
-		return refusedUndo(reason)
-	}
-	id := openapi_types.UUID(auditID)
-	return &crmcontracts.MagicUndo{Undoable: true, AuditId: &id}
+	return out
 }
 
 // refusedUndo is the shape a client draws as a greyed control with a reason

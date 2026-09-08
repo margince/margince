@@ -17,13 +17,18 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/compose/magic"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/automation"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // newMagicService assembles the receipt's read.
@@ -64,74 +69,164 @@ func (m magicBriefCutoff) CutoffFor(ctx context.Context) (time.Time, bool, error
 	return run.AsOf, true, nil
 }
 
-// magicUndoJudge answers the receipt's "can this be taken back" from the SAME
-// evaluator the restore route itself uses.
+// magicUndoJudge answers the receipt's "can this be taken back".
 //
-// One evaluator, deliberately. The receipt's offer and the write's refusal have
-// to agree — a line promising an Undo the writer then declines is worse than no
-// line at all — and two constructions of the same judgment drift the moment
-// somebody adds a rule to one of them.
+// TWO PATHS, asked in this order, because the product has two reversals and the
+// generic one cannot see the other. A close-date correction is refused by
+// undoability — it writes close_date_provisional, which the ordinary update
+// shape cannot spell — while deals.RevertCorrection restores it perfectly. Ask
+// only the generic evaluator and every correction this receipt exists to
+// surface reads "cannot be undone", which is the exact defect the hardcoded
+// false already was.
+//
+// The generic evaluator is still asked for everything else, from the SAME seam
+// the restore route uses: the line offering an Undo and the write performing it
+// must agree, and two constructions of one judgment drift.
 type magicUndoJudge struct {
 	seam RestoreSeam
+	// corrections answers whether an audit row is a machine correction with its
+	// own reversal. Nil is a real state — an installation wired without it
+	// simply has no corrections to offer.
+	corrections *deals.Store
 }
 
-// JudgeUndo reads the audit row and asks the evaluator in ADVISORY mode.
+// JudgeUndoPage answers a whole page.
 //
-// Advisory because this is a page being drawn, not a change being made: the
-// binding answer is taken again inside the reversal's own transaction, under
-// the row lock, where it can refuse a caller who lost a race this read could
-// not have seen.
-func (j magicUndoJudge) JudgeUndo(
-	ctx context.Context, tx pgx.Tx, auditID ids.UUID, entityType string,
-) (bool, string, error) {
-	if !servesRecordType(entityType) {
-		return false, string(ReasonUnsupportedRecordType), nil
+// The workspace-level questions are asked ONCE here rather than per line: the
+// object grant and the installation's overlay posture are properties of the
+// caller and the workspace, and asking them a hundred times over is a hundred
+// round trips for one answer. isOverlayUncached in particular opens its own
+// transaction, so per-line it would take a second connection while this one
+// holds the page — the deadlock shape every reader here is written to avoid.
+func (j magicUndoJudge) JudgeUndoPage(
+	ctx context.Context, tx pgx.Tx, subjects []magic.UndoSubject,
+) (map[ids.UUID]*crmcontracts.MagicUndo, error) {
+	out := make(map[ids.UUID]*crmcontracts.MagicUndo, len(subjects))
+	if len(subjects) == 0 {
+		return out, nil
 	}
-	// Read IN THE CALLER'S transaction. RestoreSeam.readRow opens its own,
-	// which nested inside the page's would take a second connection while this
-	// one holds locks — the deadlock every reader in this tree is written to
-	// avoid.
+	// The object grant the WRITE takes. Without it a rep who owns the row but
+	// holds no update permission is offered a control that can only 403 —
+	// row authority alone is not the question the writer asks.
+	posture := undoPosture{mayWrite: auth.Require(ctx, "deal", principal.ActionUpdate) == nil}
+	external, err := j.seam.evaluator.ExternallyGoverned(ctx)
+	if err != nil {
+		return nil, err
+	}
+	posture.externallyGoverned = external
+	for _, subject := range subjects {
+		answer, err := j.judgeOne(ctx, tx, subject, posture)
+		if err != nil {
+			return nil, err
+		}
+		if answer != nil {
+			out[subject.AuditID] = answer
+		}
+	}
+	return out, nil
+}
+
+// undoPosture is what the page resolved once for every line on it: facts about
+// the CALLER and the WORKSPACE rather than about any one entry.
+type undoPosture struct {
+	// mayWrite is the object grant the write itself takes. Row authority alone
+	// is not the question: a rep who owns the row but holds no update
+	// permission would be offered a control that can only 403.
+	mayWrite bool
+	// externallyGoverned marks a workspace whose records live in another
+	// system, where no reversal this server makes can reach them.
+	externallyGoverned bool
+}
+
+// judgeOne answers for one entry, or declines to answer at all.
+//
+// A nil answer means "not judged" and the page reads it as not-evaluated. That
+// is deliberate for a subject this path does not serve: inventing a verdict for
+// an entry it never looked at is how a greyed control acquires a reason that is
+// not true.
+func (j magicUndoJudge) judgeOne(
+	ctx context.Context, tx pgx.Tx, subject magic.UndoSubject, posture undoPosture,
+) (*crmcontracts.MagicUndo, error) {
+	if !servesRecordType(subject.EntityType) {
+		return magicRefusal(string(ReasonUnsupportedRecordType)), nil
+	}
+	if posture.externallyGoverned {
+		return magicRefusal(string(ReasonNotRestorableByThisPath)), nil
+	}
+	if !posture.mayWrite {
+		return magicRefusal(string(ReasonNotWritableByCaller)), nil
+	}
 	var row AuditRow
 	err := tx.QueryRow(ctx, `
 		SELECT id, entity_type, entity_id, action, before, after, occurred_at
 		  FROM audit_log
-		 WHERE id = $1`, auditID).
+		 WHERE id = $1`, subject.AuditID).
 		Scan(&row.ID, &row.EntityType, &row.EntityID, &row.Action,
 			&row.Before, &row.After, &row.OccurredAt)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return false, string(ReasonUnsupportedRecordType), nil
+		return magicRefusal(string(ReasonUnsupportedRecordType)), nil
 	}
 	if err != nil {
-		return false, "", err
+		return nil, err
 	}
-	// The same two gates readRow takes, in the same order: the record's own row
-	// scope first, then membership of its history. A line the reader may not
-	// see must not learn it exists from the shape of an undo answer — and the
-	// done lane is already scoped, so this is belt and braces rather than the
-	// only guard.
 	// A scope MISS is an answer — no control for a record this reader cannot
-	// change — while a broken read is not, and the two must not collapse into
-	// the same silent "no". Swallowing both would hide a failing gate behind a
-	// greyed button nobody questions.
+	// change — while a broken read is not. Collapsing both into a silent "no"
+	// would hide a failing gate behind a greyed button nobody questions.
 	if err := j.seam.visible(ctx, tx, row.EntityType, row.EntityID); err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
-			return false, string(ReasonUnsupportedRecordType), nil
+			return magicRefusal(string(ReasonUnsupportedRecordType)), nil
 		}
-		return false, "", err
+		return nil, err
 	}
-	served, err := privacy.HistoryServesEntry(ctx, tx, row.EntityType, row.EntityID, auditID)
+	served, err := privacy.HistoryServesEntry(ctx, tx, row.EntityType, row.EntityID, subject.AuditID)
 	if err != nil {
-		return false, "", err
+		return nil, err
 	}
 	if !served {
-		return false, string(ReasonUnsupportedRecordType), nil
+		return magicRefusal(string(ReasonUnsupportedRecordType)), nil
 	}
-	answer, err := j.seam.evaluator.Evaluate(ctx, tx, row, Advisory)
+	// THE CORRECTION PATH FIRST. A machine correction has its own reversal, and
+	// the generic evaluator refuses exactly those rows — so asking it first
+	// would answer "cannot be undone" for the changes this receipt exists to
+	// show.
+	if answer, decided, err := j.judgeCorrection(ctx, tx, subject.AuditID); err != nil || decided {
+		return answer, err
+	}
+	verdict, err := j.seam.evaluator.Evaluate(ctx, tx, row, Advisory)
 	if err != nil {
-		return false, "", err
+		return nil, err
 	}
-	if answer.Undoable {
-		return true, "", nil
+	if verdict.Undoable {
+		return magicOffer(subject.AuditID), nil
 	}
-	return false, string(answer.Reason), nil
+	return magicRefusal(string(verdict.Reason)), nil
+}
+
+// judgeCorrection answers for a machine correction, and says whether it was one.
+func (j magicUndoJudge) judgeCorrection(
+	ctx context.Context, tx pgx.Tx, auditID ids.UUID,
+) (*crmcontracts.MagicUndo, bool, error) {
+	if j.corrections == nil {
+		return nil, false, nil
+	}
+	correction, err := j.corrections.CorrectionForAudit(ctx, tx, auditID)
+	if errors.Is(err, apperrors.ErrNotFound) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, err
+	}
+	if correction.Reversed() {
+		return magicRefusal(string(ReasonAlreadyUndone)), true, nil
+	}
+	return magicOffer(auditID), true, nil
+}
+
+func magicOffer(auditID ids.UUID) *crmcontracts.MagicUndo {
+	id := openapi_types.UUID(auditID)
+	return &crmcontracts.MagicUndo{Undoable: true, AuditId: &id}
+}
+
+func magicRefusal(reason string) *crmcontracts.MagicUndo {
+	return &crmcontracts.MagicUndo{Undoable: false, Reason: &reason}
 }

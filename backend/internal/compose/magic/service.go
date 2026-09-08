@@ -116,7 +116,9 @@ func (s *Service) Read(
 		// transaction: the judge reads the record each line names, and a
 		// second connection inside this one can deadlock against a lock it
 		// holds.
-		s.judgeUndoOn(ctx, tx, receipt.Done)
+		if err := s.judgeUndoOn(ctx, tx, receipt.Done); err != nil {
+			return err
+		}
 		receipt.NotShown = notShownOf(notShown)
 		failed, refused, err := s.couldNotComplete(ctx, from, limit)
 		if err != nil {
