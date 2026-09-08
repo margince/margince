@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"errors"
 	"strconv"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -168,12 +169,22 @@ func (e *WorkflowEngine) runOne(ctx context.Context, h workflow.Handler, ev work
 	if recordErr := e.recordApplyOutcome(ctx, h, ev, result, applyErr); recordErr != nil {
 		return errors.Join(applyErr, recordErr)
 	}
-	if applyErr != nil && !errors.Is(applyErr, apperrors.ErrRequiresApproval) && !errors.Is(applyErr, ErrNoNotificationTransport) {
-		// A staged 🟡 is a healthy suspension, and a no-transport notify is
-		// the wiring-defect guard's honest skip (compose wires the durable
-		// notice transport; only a composition that forgot the seam takes
-		// it) — neither is a dispatch failure; a real apply failure still
-		// surfaces after its record committed.
+	var declinedApply *workflow.DeclinedError
+	if applyErr != nil && !errors.Is(applyErr, apperrors.ErrRequiresApproval) &&
+		!errors.Is(applyErr, ErrNoNotificationTransport) && !errors.As(applyErr, &declinedApply) {
+		// A staged 🟡 is a healthy suspension; a no-transport notify is the
+		// wiring-defect guard's honest skip (compose wires the durable notice
+		// transport, so only a composition that forgot the seam takes it); and
+		// a DECLINED apply is the handler saying it looked and there was
+		// nothing to do. None is a dispatch failure.
+		//
+		// The declined arm is the new one, and it is a skip rather than an
+		// error for the same reason the Plan path swallows its own decline:
+		// nothing went wrong. Returning it would put a healthy outcome in the
+		// subscriber's failure log, where a reader looking for real breakage
+		// would meet every lead a human claimed before routing ran.
+		//
+		// A real apply failure still surfaces, after its record committed.
 		return applyErr
 	}
 	return nil
@@ -228,6 +239,7 @@ func withSendingOwner(ctx context.Context, ev workflow.Event) context.Context {
 func (e *WorkflowEngine) recordApplyOutcome(ctx context.Context, h workflow.Handler, ev workflow.Event, result workflow.RunResult, applyErr error) error {
 	return e.db.Tx(ctx, func(tx pgx.Tx) error {
 		var staged *workflow.StagedApprovalError
+		var declinedApply *workflow.DeclinedError
 		switch {
 		case errors.As(applyErr, &staged):
 			// The staging pointer rides the detail column's approval_id
@@ -273,6 +285,25 @@ func (e *WorkflowEngine) recordApplyOutcome(ctx context.Context, h workflow.Hand
 			// Match/Plan condition-declined skip (recordSkip) and a real
 			// 'failed' — nothing went wrong with the firing itself.
 			detail, err := reasonDetail("no notification transport configured")
+			if err != nil {
+				return err
+			}
+			_, err = tx.Exec(ctx, `
+				UPDATE workflow_run SET status = 'skipped', detail = $3
+				WHERE handler = $1 AND idempotency_key = $2`, h.Spec().Name, runKey(h, ev), detail)
+			return err
+		case errors.As(applyErr, &declinedApply):
+			// The handler looked and found nothing to act on — an unroutable
+			// lead, say, where every eligible owner is at capacity. A skip
+			// with its reason on the run, not a failure: nothing went wrong,
+			// and a reader asking why the lead is still unassigned gets the
+			// answer here rather than an empty successful run.
+			// Held to the same bar as every other reason reaching this column,
+			// but not through sanitizedReason: that one collapses an unknown
+			// error to a generic phrase, which is right for a FAILURE and
+			// destroys the only thing a decline is for. declinedReason keeps
+			// the sentence and refuses the shapes a leak arrives in.
+			detail, err := reasonDetail(declinedReason(declinedApply.Reason))
 			if err != nil {
 				return err
 			}
@@ -427,3 +458,36 @@ func sanitizedReason(err error) string {
 		return "the action could not be completed"
 	}
 }
+
+// declinedReason bounds what a handler's decline may write to
+// workflow_run.detail.
+//
+// The column is read verbatim by anybody holding automation:read, and
+// workflow.Declined takes a plain string from a module — so this is the one
+// place standing between a handler and that reader. sanitizedReason is the
+// wrong tool: it answers a generic phrase for anything it does not recognise,
+// which is correct for a failure whose text may be a pgx error, and would
+// erase the sentence a decline exists to deliver.
+//
+// So: keep the sentence, refuse the shapes a database internal arrives in. A
+// SQLSTATE, a quoted identifier, or a pgx error's tell means somebody passed an
+// error's message where a written reason belongs, and the generic phrase is the
+// honest answer for that. Length is bounded for the same reason.
+func declinedReason(reason string) string {
+	const generic = "the automation found nothing to do"
+	trimmed := strings.TrimSpace(reason)
+	if trimmed == "" || len(trimmed) > declinedReasonMax {
+		return generic
+	}
+	for _, tell := range []string{"SQLSTATE", "pq:", "pgx:", "ERROR:", `"`, "\n"} {
+		if strings.Contains(trimmed, tell) {
+			return generic
+		}
+	}
+	return trimmed
+}
+
+// declinedReasonMax is a sentence, not a paragraph: a reason longer than this
+// is prose nobody reads on a run row, or a message that came from somewhere
+// other than an author.
+const declinedReasonMax = 160

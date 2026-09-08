@@ -49,7 +49,7 @@ export const BehindAWelcome: Story = {
         <h2 style={{ margin: 0, fontSize: "var(--fs-h2)" }}>
           Welcome to Margince
         </h2>
-        <p style={{ margin: 0, color: "var(--textSecondary)" }}>
+        <p style={{ margin: 0, color: "var(--textMeta)" }}>
           Your agent reads what you already do and stages what it finds.
         </p>
       </div>

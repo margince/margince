@@ -9,6 +9,7 @@ import { useRecordZone } from "../app/recordzone";
 import { currentParams, useUrlParams } from "../app/urlstate";
 import { Badge, Button, SegmentedControl } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { CellStrip } from "../design-system/listtable";
 import { useToast } from "../design-system/toast";
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { leadIdentityName } from "../format/leadname";
@@ -406,13 +407,7 @@ function LeadsWorkbench({
             key: "score",
             header: t("lead.score"),
             cell: (lead: Lead) => (
-              <span
-                style={{
-                  display: "flex",
-                  gap: "var(--space-1)",
-                  flexWrap: "wrap",
-                }}
-              >
+              <CellStrip>
                 <Badge tone={scoreTone(lead.score)}>
                   {formatNumber(lead.score, locale)}
                 </Badge>
@@ -421,7 +416,7 @@ function LeadsWorkbench({
                     ? scoreFactorLabel(lead.score_reason, t)
                     : t("lead.scoreNoSignals")}
                 </span>
-              </span>
+              </CellStrip>
             ),
             sort: "score",
             numeric: true,
@@ -575,6 +570,25 @@ function LeadsWorkbench({
         dataChips={ownerChips}
         views={[
           ...standardViews(viewerId, { sort: "", mineFirst: !opensOnAll }),
+          // The unassigned queue as a VIEW, not only a chip. It was reachable
+          // by opening the owner dial and picking a value, which is a thing
+          // you find if you already know it is there; a lead nobody owns is
+          // the one a queue exists to surface.
+          //
+          // Oldest first, deliberately against the other views' work-queue
+          // order: what makes an unassigned lead urgent is how long it has sat
+          // there with nobody answering it, and the newest arrival is the one
+          // that can wait.
+          {
+            label: "lead.viewUnassigned",
+            sort: "created_at",
+            filters: { unassigned: "true" },
+          },
+          {
+            label: "lead.viewNewUnassigned",
+            sort: "created_at",
+            filters: { status: "new", unassigned: "true" },
+          },
           { label: "lead.viewNew", sort: "", filters: { status: "new" } },
           {
             label: "lead.viewNeedsFollowUp",

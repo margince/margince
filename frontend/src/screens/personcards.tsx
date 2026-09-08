@@ -243,7 +243,7 @@ function SourceChip({
       );
     }
     return (
-      <span className="pe-memory-channel">
+      <span className="pe-memory-channel t-caption">
         {interactionIcon(activity?.kind)}
         {activity
           ? interactionLabel(activity.kind, activity.channel_provider)
@@ -252,7 +252,7 @@ function SourceChip({
     );
   }
   return (
-    <span className="pe-memory-channel">
+    <span className="pe-memory-channel t-caption">
       <FileText size={13} aria-hidden="true" />
       {cited.entity_type === "deal"
         ? t("person.brief.sourceDeal")
@@ -396,7 +396,7 @@ export function PersonCommercialCard({ view }: Readonly<{ view: Person360 }>) {
 
         {commercial.committee.length > 0 && (
           <>
-            <div className="pe-committee-label">
+            <div className="pe-committee-label t-sub">
               {t("person.commercial.committee")}
             </div>
             {commercial.committee.map((member) => (
@@ -405,9 +405,7 @@ export function PersonCommercialCard({ view }: Readonly<{ view: Person360 }>) {
                   <Avatar name={member.full_name} src={member.photo_url} />
                   <span>{member.full_name}</span>
                 </span>
-                <span className="pe-committee-role">
-                  {readableRole(member.role)}
-                </span>
+                <span className="t-sub">{readableRole(member.role)}</span>
               </div>
             ))}
           </>

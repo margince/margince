@@ -794,7 +794,7 @@ export function PageTitle({
             </Badge>
           )}
         </div>
-        {subKey && <p className="pagesub">{t(subKey)}</p>}
+        {subKey && <p className="pagesub t-sub">{t(subKey)}</p>}
       </div>
     </div>
   );

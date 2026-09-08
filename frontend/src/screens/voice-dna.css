@@ -62,7 +62,7 @@
 
 .vdna-works-not,
 .vdna-floornote {
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 /* The distance to the first build, shown only below the floor. */

@@ -2147,7 +2147,6 @@ export const de = {
   "lead.filterScoreCool": "Ab 40",
   "lead.details": "Details",
   "lead.ladder.title": "Wo dieser Lead steht",
-  "lead.railTitle": "Verantwortlich",
   "lead.detailsUnset": "Nicht gesetzt",
   "lead.terminalReadOnly":
     "Dieser Lead ist abgeschlossen und nimmt keine Änderungen an.",
@@ -2307,6 +2306,8 @@ export const de = {
   "lead.assignedAway":
     "{names} an {owner} zugewiesen — nicht mehr unter „Meine“.",
   "lead.viewNew": "Neu",
+  "lead.viewNewUnassigned": "Neu & nicht zugewiesen",
+  "lead.viewUnassigned": "Warteschlange",
   "lead.viewNeedsFollowUp": "Nachfassen",
   "lead.viewEngaged": "Im Gespräch",
   "lead.ladder": "Lead-Status",

@@ -399,7 +399,7 @@ function WebsiteWorkbench(
             >
               <Send aria-hidden />
             </Button>
-            <small>{t("ob.ai.reviewBoundary")}</small>
+            <small className="t-caption">{t("ob.ai.reviewBoundary")}</small>
           </div>
         )}
       </MarginceWorkbench>
@@ -415,7 +415,7 @@ function CompanyArtifact(props: ReadCompanyStepProps) {
       <div className="mw-review-heading">
         <span>{t("ob.ai.liveArtifact")}</span>
         <h2>{t("ob.ai.companyKnowledge")}</h2>
-        <p>
+        <p className="t-caption">
           {t(
             props.mode === "manual"
               ? "ob.ai.companyKnowledgeManualBody"
@@ -426,7 +426,7 @@ function CompanyArtifact(props: ReadCompanyStepProps) {
       {props.read && <ReadEvidence read={props.read} />}
       {props.reviewContent}
       <div className="mw-confirm-company">
-        <p>{t("ob.ai.confirmBoundary")}</p>
+        <p className="t-caption">{t("ob.ai.confirmBoundary")}</p>
         <Button
           variant="primary"
           disabled={props.confirmDisabled || props.confirmPending}
@@ -544,9 +544,11 @@ export function ConversationEntries({
               {keyedSuggestedChanges(entry.reply.proposed_changes).map(
                 ({ change, key }) => (
                   <li key={`${entry.id}:${key}`}>
-                    <span>{coldFieldLabel(change.field, t)}</span>
+                    <span className="t-caption">
+                      {coldFieldLabel(change.field, t)}
+                    </span>
                     <strong>{change.value}</strong>
-                    <small>{change.reason}</small>
+                    <small className="t-caption">{change.reason}</small>
                   </li>
                 ),
               )}
@@ -719,14 +721,14 @@ function ReadActivity({
         </p>
       )}
       <div>
-        <span>
+        <span className="t-caption">
           <b>{formatNumber(read.pages_read ?? 0, locale)}</b>{" "}
           {t("ob.pagesRead")}
         </span>
-        <span>
+        <span className="t-caption">
           <b>{formatNumber(legalCount, locale)}</b> {t("ob.legalEntitiesFound")}
         </span>
-        <span>
+        <span className="t-caption">
           <b>{formatNumber(findingCount, locale)}</b>{" "}
           {plural("ob.ai.finding", findingCount)}
         </span>
@@ -898,7 +900,7 @@ export function ReadEvidence({ read }: Readonly<{ read: CompanySiteRead }>) {
       {legalEntities.length > 0 && (
         <section className="legal-preview">
           <h2>{t("ob.legalFoundTitle")}</h2>
-          <p>{t("ob.legalFoundBody")}</p>
+          <p className="t-caption">{t("ob.legalFoundBody")}</p>
           <div className="legal-preview-grid">
             {legalEntities.map((entity) => (
               <Card
@@ -911,7 +913,7 @@ export function ReadEvidence({ read }: Readonly<{ read: CompanySiteRead }>) {
                 </div>
                 <strong>{entity.name}</strong>
                 {entity.registered_address && (
-                  <span>{entity.registered_address}</span>
+                  <span className="t-caption">{entity.registered_address}</span>
                 )}
                 {entity.register_number && (
                   <small>{entity.register_number}</small>
@@ -924,7 +926,7 @@ export function ReadEvidence({ read }: Readonly<{ read: CompanySiteRead }>) {
       {read.profile_fields.length > 0 && (
         <>
           <h2>{t("ob.coreFindingsTitle")}</h2>
-          <p>{t("ob.coreFindingsBody")}</p>
+          <p className="t-caption">{t("ob.coreFindingsBody")}</p>
           <div className="finding-grid">
             {read.profile_fields.map((field) => (
               <Card
@@ -970,7 +972,7 @@ export function ReadEvidence({ read }: Readonly<{ read: CompanySiteRead }>) {
         </section>
       )}
       {(skippedPages.length > 0 || read.warnings.length > 0) && (
-        <details className="read-coverage">
+        <details className="read-coverage t-caption">
           <summary>
             <Info aria-hidden /> {t("ob.coverageDetails")}
           </summary>

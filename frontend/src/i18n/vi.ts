@@ -2135,7 +2135,6 @@ export const vi = {
   "lead.details": "Chi ti\u1ebft",
   "lead.ladder.title":
     "Kh\u00e1ch h\u00e0ng ti\u1ec1m n\u0103ng n\u00e0y \u0111ang \u1edf \u0111\u00e2u",
-  "lead.railTitle": "Người phụ trách",
   "lead.detailsUnset": "Chưa đặt",
   "lead.terminalReadOnly":
     "Khách hàng tiềm năng này đã đóng và không nhận thay đổi.",
@@ -2291,6 +2290,8 @@ export const vi = {
   "lead.assignedAway":
     "{names} đã được giao cho {owner} — không còn trong “Của tôi”.",
   "lead.viewNew": "Mới",
+  "lead.viewNewUnassigned": "Mới & chưa giao",
+  "lead.viewUnassigned": "Hàng chờ chưa giao",
   "lead.viewNeedsFollowUp": "Cần theo dõi",
   "lead.viewEngaged": "Đang trao đổi",
   "lead.ladder": "Trạng thái khách hàng tiềm năng",

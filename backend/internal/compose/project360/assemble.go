@@ -64,14 +64,16 @@ func NewService(
 // catalogs is what the page reads ABOVE its transaction: each custom-field
 // catalog opens a connection of its own, and the page holds the only
 // connection its sections have for as long as it runs.
-//
-// The company catalog is NOT here: reading it takes company:read,
-// and a refusal above the transaction would fail the whole page for a caller
-// who may read the project but not its company. The company section
-// reads it itself, so that refusal lands as an omission.
 type catalogs struct {
 	project projects.CustomColumns
 	deal    deals.CustomColumns
+	// company is here for the same reason as the two above and was
+	// missing: the company section read the catalog itself, from inside
+	// the page's transaction, which is a second connection taken while this
+	// one is held. Under a loaded pool that waits on the connection it is
+	// already inside — a deadlock Postgres cannot break, because it sees two
+	// unrelated sessions rather than one goroutine waiting on itself.
+	company people.CustomColumns
 }
 
 func (s *Service) readCatalogs(ctx context.Context) (catalogs, error) {
@@ -81,6 +83,23 @@ func (s *Service) readCatalogs(ctx context.Context) (catalogs, error) {
 		return catalogs{}, err
 	}
 	if c.deal, err = s.deals.ActiveDealColumns(ctx); err != nil {
+		return catalogs{}, err
+	}
+	// The company catalog is read HERE like the two above, and a caller
+	// without the company grant is not refused the page for it.
+	//
+	// That read is gated on company:read — the same grant the section
+	// itself is gated on — so a refusal here is not news: readCompany
+	// still asks, still refuses, and the assembly still omits the section and
+	// names it. Propagating it would turn a NARROWED page into a refused one
+	// for every reader who may see the project and not its company.
+	//
+	// Only a denial is swallowed. Any other failure is a real one, and empty
+	// columns handed to a caller who does hold the grant would silently drop
+	// the company's custom fields from the page.
+	switch c.company, err = s.people.ActiveCompanyColumns(ctx); {
+	case err == nil, errors.Is(err, apperrors.ErrPermissionDenied):
+	default:
 		return catalogs{}, err
 	}
 	return c, nil

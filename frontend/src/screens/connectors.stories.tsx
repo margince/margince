@@ -370,7 +370,7 @@ export const TelegramNotConfigured: Story = { render: telegramStory(null) };
 
 // Both panels' rows in dark. The row language puts the answer in the right
 // column against the panel's own ground, and `--textMuted` (the description)
-// against `--textSecondary` (the account label) is the pair most likely to
+// against `--textMeta` (the account label) is the pair most likely to
 // collapse into one grey under the dark accent lift — a mailbox address that
 // reads as help text is the failure to look for.
 export const BothPanelsDark: Story = {

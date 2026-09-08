@@ -366,7 +366,14 @@ func (w leadRouting) Apply(ctx context.Context, ev workflow.Event, eff workflow.
 		return workflow.RunResult{}, err
 	}
 	if !decision.Assigned {
-		return workflow.RunResult{}, nil
+		// Not a failure and not a silent success: routing looked and placed
+		// nobody, and WHY is the answer a manager needs when they find the
+		// lead still sitting in the unassigned queue. An empty result recorded
+		// a clean run and threw the reason away.
+		//
+		// The reasons are this package's own closed vocabulary, so none of
+		// them can carry a database message to a reader.
+		return workflow.RunResult{}, workflow.Declined(routingDeclineReason(decision.Reason))
 	}
 	return workflow.RunResult{Applied: eff.Actions}, nil
 }
@@ -375,4 +382,26 @@ func (w leadRouting) Apply(ctx context.Context, ev workflow.Event, eff workflow.
 // lead.created must not re-route.
 func (leadRouting) IdempotencyKey(ev workflow.Event) string {
 	return assignLeadOwnerName + ":" + ev.Entity.ID.String()
+}
+
+// routingDeclineReason renders one of RouteLead's decision reasons as the
+// sentence a reader meets on the run.
+//
+// A closed switch rather than the raw reason: the decisions are this package's
+// vocabulary and a reader is not owed "no_capacity". An unrecognised reason
+// falls through to the general sentence rather than being printed, so a reason
+// added later cannot leak an internal spelling by being forgotten here.
+func routingDeclineReason(reason string) string {
+	switch reason {
+	case "no_capacity":
+		return "no eligible owner had capacity for this lead"
+	case "already_owned":
+		return "somebody already owns this lead"
+	case "terminal_status":
+		return "this lead is no longer open"
+	case "lead_gone":
+		return "this lead was archived before routing ran"
+	default:
+		return "routing placed no owner on this lead"
+	}
 }

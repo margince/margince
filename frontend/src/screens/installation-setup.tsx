@@ -654,12 +654,12 @@ function GoogleAppHelp() {
         <li>{t("firstRun.google.helpStep3")}</li>
         <li>{t("firstRun.google.helpStep4")}</li>
       </ol>
-      <p className="ob-fr-help-note">
+      <p className="ob-fr-help-note t-sub">
         <OffsiteLink href={GOOGLE_CREDENTIALS_CONSOLE}>
           {t("firstRun.google.helpConsole")}
         </OffsiteLink>
       </p>
-      <p className="ob-fr-help-note">{t("firstRun.google.helpDocs")}</p>
+      <p className="ob-fr-help-note t-sub">{t("firstRun.google.helpDocs")}</p>
     </Disclosure>
   );
 }
@@ -715,12 +715,14 @@ function VendorAppFields({
         <GoogleAppHelp />
       ) : (
         <>
-          <p className="ob-fr-help-note">{t("firstRun.microsoft.note")}</p>
+          <p className="ob-fr-help-note t-sub">
+            {t("firstRun.microsoft.note")}
+          </p>
           {/* The pin below is also the directory sign-in runs on, which the
               Google form has no equivalent of: said here, because an admin
               who leaves it empty gets working mailboxes and no sign-in, and
               nothing else on this screen would say why. */}
-          <p className="ob-fr-help-note">
+          <p className="ob-fr-help-note t-sub">
             {t("firstRun.microsoft.helpSignIn")}
           </p>
         </>
@@ -877,7 +879,7 @@ function PlatformStep({
           />
           {platform === "imap" ? (
             <>
-              <p className="ob-fr-help-note">
+              <p className="ob-fr-help-note t-sub">
                 {t("firstRun.platform.imapNote")}
               </p>
               {/* The same standing connect Settings makes, for the person on

@@ -97,7 +97,7 @@
 }
 
 .pipeline-ladder__reason {
-  color: var(--textSecondary);
+  color: var(--textMeta);
   margin: 0;
 }
 

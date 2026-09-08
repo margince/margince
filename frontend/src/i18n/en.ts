@@ -2229,7 +2229,6 @@ export const en = {
   "lead.filterScoreCool": "40 and up",
   "lead.details": "Details",
   "lead.ladder.title": "Where this lead stands",
-  "lead.railTitle": "Owner",
   "lead.detailsUnset": "Not set",
   "lead.terminalReadOnly": "This lead is closed and takes no changes.",
   "lead.notYoursToChange":
@@ -2381,6 +2380,8 @@ export const en = {
   "list.showAll": "Show all",
   "lead.assignedAway": "{names} assigned to {owner} — no longer in Mine.",
   "lead.viewNew": "New",
+  "lead.viewNewUnassigned": "New & unassigned",
+  "lead.viewUnassigned": "Unassigned queue",
   "lead.viewNeedsFollowUp": "Needs follow-up",
   "lead.viewEngaged": "Engaged",
   "lead.ladder": "Lead status",

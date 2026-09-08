@@ -116,7 +116,7 @@
 }
 .topbar-search:hover {
   border-color: var(--borderStrong);
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 .topbar-search:focus-visible {
   outline: var(--focus-ring);

@@ -516,15 +516,16 @@ export function ContactsScreen() {
           {
             key: "email",
             header: t("people.email"),
-            cell: (person: Person) => (
-              // The shared rule, not a second spelling of it. This column
-              // used to take find(is_primary) ?? [0], which shows a RETIRED
-              // address whenever one sits first — the reader then writes to an
-              // address somebody deliberately took out of service.
-              <span className="t-mono">
-                {primaryEmail(person.emails) ?? ""}
-              </span>
-            ),
+            // The shared rule, not a second spelling of it. This column used
+            // to take find(is_primary) ?? [0], which shows a RETIRED address
+            // whenever one sits first — the reader then writes to an address
+            // somebody deliberately took out of service.
+            //
+            // An address is words a person reads, so it takes the body face
+            // like every other value in the row. The mono face is for a
+            // machine name — a name and a domain set in it read as an
+            // identifier rather than as somebody a reader could write to.
+            cell: (person: Person) => primaryEmail(person.emails) ?? "",
           },
           {
             // Who they work for TODAY, from the row itself: the wire carries

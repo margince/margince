@@ -169,7 +169,7 @@ export function CompanyActArtifact(props: CompanyActArtifactProps) {
         <div className="mw-review-heading">
           <span>{t("ob.ai.liveArtifact")}</span>
           <h2>{t("ob.ai.companyKnowledge")}</h2>
-          <p>
+          <p className="t-caption">
             {t(
               props.manual
                 ? "ob.ai.companyKnowledgeManualBody"
@@ -265,7 +265,7 @@ function ArtifactBody(props: CompanyActArtifactProps) {
           onFieldBlur={persistLater}
         />
         <div className="mw-confirm-company">
-          <p>{t("ob.ai.confirmBoundary")}</p>
+          <p className="t-caption">{t("ob.ai.confirmBoundary")}</p>
           <Button
             variant="primary"
             disabled={props.confirmDisabled || props.confirmPending}

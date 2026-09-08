@@ -108,44 +108,45 @@ export function VCardImport() {
         {t("vcardImport.action")}
       </Button>
       <Modal open={open} onClose={close} labelledBy={titleId}>
-        <h2 id={titleId}>{t("vcardImport.title")}</h2>
-        <div data-testid="vcard-import-file">
-          {/* Withdrawn while an import is running. A second file chosen mid-
-              flight would start a second write, and this dialog holds ONE
-              report — so one set of contact changes would land with nothing on
-              screen saying what happened to it. Taking the control away is
-              honest; leaving it live and dropping the pick would not be. */}
-          {importer.isPending ? (
-            <p className="t-sub">{t("vcardImport.working")}</p>
-          ) : (
-            <FileDropzone
-              label={t("vcardImport.fileLabel")}
-              hint={t("vcardImport.whichFile")}
-              emptyLabel={t("vcardImport.choose")}
-              accept=".vcf,text/vcard"
-              file={picked}
-              onPick={(file) => {
-                setPicked(file);
-                importer.mutate(file);
-              }}
-            />
-          )}
-        </div>
-
-        {importer.isError && (
-          <div data-testid="vcard-import-error">
-            <Callout tone="danger" live="alert">
-              {problemMessageOf(importer.error, t)}
-            </Callout>
+        <h2 id={titleId} className="t-h2 modal-title">
+          {t("vcardImport.title")}
+        </h2>
+        {/* One stack owns every interval in this dialog, so the dropzone, a
+            refusal and the report do not each set a margin of their own — the
+            report is drawn whether or not the refusal above it is. */}
+        <div className="form-stack">
+          <div data-testid="vcard-import-file">
+            {/* Withdrawn while an import is running. A second file chosen mid-
+                flight would start a second write, and this dialog holds ONE
+                report — so one set of contact changes would land with nothing
+                on screen saying what happened to it. Taking the control away is
+                honest; leaving it live and dropping the pick would not be. */}
+            {importer.isPending ? (
+              <p className="t-sub">{t("vcardImport.working")}</p>
+            ) : (
+              <FileDropzone
+                label={t("vcardImport.fileLabel")}
+                hint={t("vcardImport.whichFile")}
+                emptyLabel={t("vcardImport.choose")}
+                accept=".vcf,text/vcard"
+                file={picked}
+                onPick={(file) => {
+                  setPicked(file);
+                  importer.mutate(file);
+                }}
+              />
+            )}
           </div>
-        )}
-        {importer.isSuccess && <ImportReport report={importer.data} />}
-
-        {/* card-actions for the reason the company history drawer takes it: the
-            import report above sets `margin: var(--space-4) 0 0` — a top margin
-            only — so a row bringing none of its own left Done touching the last
-            imported row. */}
-        <div className="card-actions">
+          {importer.isError && (
+            <div data-testid="vcard-import-error">
+              <Callout tone="danger" live="alert">
+                {problemMessageOf(importer.error, t)}
+              </Callout>
+            </div>
+          )}
+          {importer.isSuccess && <ImportReport report={importer.data} />}
+        </div>
+        <div className="actions">
           <Button variant="ghost" onClick={close}>
             {t("vcardImport.done")}
           </Button>

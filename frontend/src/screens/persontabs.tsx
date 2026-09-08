@@ -442,7 +442,10 @@ export function PersonMeetingsTab({
                     </Eyebrow>
                     <div className="pe-chiprow">
                       {next.participants.map((who) => (
-                        <span className="pe-memory-channel" key={who.person_id}>
+                        <span
+                          className="pe-memory-channel t-caption"
+                          key={who.person_id}
+                        >
                           <Avatar
                             name={who.full_name}
                             identity={who.person_id}

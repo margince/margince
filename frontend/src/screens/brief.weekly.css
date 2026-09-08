@@ -18,7 +18,7 @@
 
 .brief-weekly-deal-name {
   font-weight: 500;
-  color: var(--textContent);
+  color: var(--textPrimary);
 }
 
 .brief-weekly-deal-outcome {
@@ -76,7 +76,7 @@
 }
 
 .brief-weekly-working dt {
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 /* The browser's own indent on a `dd` would stagger every pair by 40px. */

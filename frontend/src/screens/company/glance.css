@@ -107,7 +107,7 @@
   line-height: 1.3;
 }
 .co-move-lead .co-move-by {
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 /* The lead's verb ends its row like every other verb in the list: one margin
    for everything a reader can press, whichever row they are on. */

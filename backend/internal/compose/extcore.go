@@ -37,13 +37,14 @@ import (
 // the unit's own row and the core record it writes are in the same transaction,
 // so they commit together or not at all.
 type extensionCore struct {
-	// tx is the CALLER's transaction, held rather than taken as a parameter —
-	// which is also why this file is outside what backend/gates/txseamacquire_test.go
-	// can see. That gate walks functions that TAKE a pgx.Tx; nothing here does,
-	// so a verb added below that reaches for a connection of its own would pass
-	// it green and deadlock under a saturated pool. It happened once already in
-	// this file's own history. Every verb runs on this handle and asks for
-	// nothing else.
+	// tx is the CALLER's transaction, held rather than taken as a parameter.
+	// Every verb runs on this handle and asks for nothing else: a second
+	// connection taken inside somebody's open transaction commits separately
+	// and deadlocks undetectably against a lock that transaction holds. It
+	// happened once in this file's own history, and the field is what
+	// backend/gates/txseamacquire_test.go now reads to judge the verbs below —
+	// it walks a receiver holding a pgx.Tx as well as a function taking one, so
+	// a verb added here that reaches for the pool fails that gate.
 	tx pgx.Tx
 	// authority re-binds the INVOCATION's workspace, actor, correlation and
 	// attribution onto whatever context a verb is handed. It is the Runtime's

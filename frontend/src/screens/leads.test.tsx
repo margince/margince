@@ -1317,6 +1317,68 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
     ).toBeTruthy();
   });
 
+  it("the Unassigned view asks for ownerless leads, oldest first", async () => {
+    // The queue's whole point is the lead nobody has answered yet, and what
+    // makes one urgent is how long it has waited — so this view sorts against
+    // the others, ascending by arrival.
+    const { urls } = stubFetch(async () =>
+      jsonResponse({
+        data: [lead],
+        page: { next_cursor: null, has_more: false },
+      }),
+    );
+    render(<LeadsScreen />);
+    await waitFor(() =>
+      expect(screen.getByText("Jonas Petersen")).toBeTruthy(),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Unassigned queue" }),
+    );
+
+    // Both dials in the SAME request, and NOT the New & unassigned view's
+    // request, which also asks unassigned=true and also sorts by arrival. An
+    // assertion satisfied by either one is satisfied by the wrong one: the
+    // earlier version of this test stayed green with the sort deleted.
+    await waitFor(() =>
+      expect(
+        urls.some(
+          (url) =>
+            url.includes("unassigned=true") &&
+            !url.includes("status=") &&
+            /[?&]sort=created_at(&|$)/.test(url),
+        ),
+      ).toBe(true),
+    );
+  });
+
+  it("the New & unassigned view composes both dimensions in one ask", async () => {
+    // Status is lifecycle and ownership is ownership: a New lead may already
+    // have an owner, and an older Contacted one may have none. The view that
+    // answers "new work nobody has picked up" has to say both.
+    const { urls } = stubFetch(async () =>
+      jsonResponse({
+        data: [lead],
+        page: { next_cursor: null, has_more: false },
+      }),
+    );
+    render(<LeadsScreen />);
+    await waitFor(() =>
+      expect(screen.getByText("Jonas Petersen")).toBeTruthy(),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "New & unassigned" }),
+    );
+
+    await waitFor(() =>
+      expect(
+        urls.some(
+          (url) =>
+            url.includes("unassigned=true") && url.includes("status=new"),
+        ),
+      ).toBe(true),
+    );
+  });
+
   it("fetches the next cursor page when the pager steps past the loaded page", async () => {
     const { urls } = stubFetch(async (url) => {
       if (url.includes("cursor=c1")) {
@@ -2212,6 +2274,25 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
     await waitFor(() => expect(screen.getByText("Unassigned")).toBeTruthy());
     const assign = await screen.findByRole("button", { name: "Assign" });
     expect(assign.hasAttribute("disabled")).toBe(true);
+  });
+
+  // Ownership lived only in the details pane, which is open by default and
+  // remembers being hidden — so for anyone who had ever collapsed it, the one
+  // control that takes a lead out of the queue sat behind a toggle they had to
+  // remember. It belongs where the reader acts.
+  it("keeps the owner reachable with the details pane collapsed", async () => {
+    stubFetchWithMe(async (url) => {
+      if (url.includes("/leads/l-1")) {
+        return jsonResponse({ ...lead, owner_id: null, writable: false });
+      }
+      return undefined;
+    }, "u-9");
+    render(<LeadScreen id="l-1" />);
+    await waitFor(() => expect(screen.getByText("Unassigned")).toBeTruthy());
+
+    // Collapse the pane the owner used to live in, then look again.
+    await userEvent.click(screen.getByRole("button", { name: "Details" }));
+    expect(screen.getByRole("button", { name: "Assign" })).toBeTruthy();
   });
 
   it("hides Assign to me when the lead is already owned by the current user", async () => {

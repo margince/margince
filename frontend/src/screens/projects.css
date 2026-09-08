@@ -2,11 +2,31 @@
    title line, a meta line under it — because a reader moving from an account
    to the project it runs should meet the same row, not a cousin of it. */
 
+/* The list's identity cell: the name, the key chip and the archived badge on
+   the row's ONE line. It does not wrap — a cell that grows a second line pushes
+   every row below it down and a page of rows stops being a grid, and the answer
+   this table already gives for a value too long for its share is that the
+   reader widens the column. */
 .project-name-cell {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  max-inline-size: 100%;
+  overflow: hidden;
+}
+/* The marks keep their size and the NAME is what gives up its tail: a name cut
+   short still reads as the row it belongs to, while a key squeezed out of the
+   cell leaves the reader nothing to search a subject line with. */
+.project-name-cell > * {
+  flex: none;
+}
+.project-name-cell > strong {
+  flex: 0 1 auto;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .project-subtitle {
