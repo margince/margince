@@ -56,6 +56,7 @@ import { leadIdentityName } from "../format/leadname";
 import { viewerZone } from "../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useClaimRecord } from "./claimrecord";
 import {
   LoadMoreButton,
   OverlayUnavailable,
@@ -917,6 +918,7 @@ function LeadRail({
   const { readOnly } = writer;
   const t = useT();
   const me = useMe();
+  const claim = useClaimRecord("lead", lead.id, lead.version);
   return (
     <div className="record-stack">
       <LeadIdentityFields
@@ -932,7 +934,17 @@ function LeadRail({
             meId={me.data?.user?.id}
             refusedReasonId={readOnly ? terminalReasonId : undefined}
             pending={writer.patch.isPending || readOnly}
-            onAssign={(ownerId) => writer.save({ owner_id: ownerId })}
+            // A lead nobody owns is nobody's to change, so the PATCH this
+            // control used to send for EVERY pick was refused for the one
+            // pick a rep makes most: taking an unassigned lead. Picking
+            // yourself on an unowned lead goes through the claim door, which
+            // is the write the server actually admits; naming a colleague
+            // stays a patch, which the assignment gate answers.
+            onAssign={(ownerId) =>
+              !lead.owner_id && ownerId === me.data?.user?.id
+                ? claim()
+                : writer.save({ owner_id: ownerId })
+            }
           />
         </PanelBody>
       </Panel>

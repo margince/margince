@@ -2065,11 +2065,24 @@ describe("LeadScreen — score explain + override (P-10)", () => {
 });
 
 describe("LeadScreen — owner display + assign to me (P-11)", () => {
-  it("shows Unassigned and assigning to yourself PATCHes owner_id to the current user", async () => {
-    let patchBody: unknown = null;
-    stubFetchWithMe(async (url, method, request) => {
+  // The server refuses a PATCH against a lead nobody owns — an ownerless row is
+  // nobody's to change — so the request this asserts is the claim, not the
+  // patch. Asserting the patch is what let the 403 ship: the stub answered a
+  // request the real backend would have rejected.
+  it("shows Unassigned and taking an unowned lead yourself goes through the claim door", async () => {
+    let claimed = false;
+    let patched = false;
+    stubFetchWithMe(async (url, method) => {
+      if (method === "POST" && url.includes("/records/lead/l-1/claim")) {
+        claimed = true;
+        return jsonResponse({
+          record_type: "lead",
+          record_id: "l-1",
+          owner_id: "u-9",
+        });
+      }
       if (method === "PATCH" && url.includes("/leads/l-1")) {
-        patchBody = JSON.parse(await request.text());
+        patched = true;
         return jsonResponse({ ...lead, owner_id: "u-9", version: 2 });
       }
       if (url.includes("/users")) {
@@ -2097,8 +2110,8 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
       await screen.findByRole("option", { name: "Assign to me" }),
     );
 
-    await waitFor(() => expect(patchBody).toBeTruthy());
-    expect(patchBody).toMatchObject({ owner_id: "u-9" });
+    await waitFor(() => expect(claimed).toBe(true));
+    expect(patched).toBe(false);
   });
 
   it("hides Assign to me when the lead is already owned by the current user", async () => {

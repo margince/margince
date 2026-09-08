@@ -256,6 +256,13 @@ func candidateOwners(cfg RoutingConfig) []ids.UserID {
 // ownerCapacity answers, for each candidate, whether the user can take
 // work (active, unarchived) and how many open leads they already hold —
 // the cap counts open (new/contacted/engaged), live leads, however they were assigned.
+// The eligibility half here says the same thing auth.EnsureAssignee says on
+// the manual path — a live human seat that can do the work — and the two are
+// deliberately kept in step: a pool that could route to a seat a manager is
+// forbidden to assign to would let the machine place work no person could
+// have placed. The SCOPE half of EnsureAssignee has no meaning here, because
+// routing runs as the system principal and the pool is the configuration's
+// own list.
 func ownerCapacity(ctx context.Context, tx pgx.Tx, candidates []ids.UserID) (active map[ids.UserID]bool, openLoad map[ids.UserID]int, err error) {
 	active = map[ids.UserID]bool{}
 	openLoad = map[ids.UserID]int{}
@@ -268,6 +275,7 @@ func ownerCapacity(ctx context.Context, tx pgx.Tx, candidates []ids.UserID) (act
 		  LEFT JOIN lead l ON l.owner_id = u.id
 		       AND l.status IN ('new','contacted','engaged') AND l.archived_at IS NULL
 		 WHERE u.id = ANY($1) AND u.status = 'active' AND u.archived_at IS NULL
+		       AND NOT u.is_agent AND u.seat_type <> 'read'
 		 GROUP BY u.id`, candidates)
 	if err != nil {
 		return nil, nil, err
