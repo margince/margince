@@ -111,6 +111,14 @@ type CaptureConfig struct {
 	// drop a separately-assigned keeper, which is a failure with no error and
 	// no missing file to notice.
 	Blob blobstore.Store
+	// AllowTestMailbox is operations.allow_test_mailbox — a deployment-file
+	// kill switch (deployconfig.Operations), not a capture.* tuning knob, so
+	// it is NOT set by CaptureConfigFromDeploy below (which is scoped to
+	// deployconfig.Capture only). Each boot path (cmd/api/main.go,
+	// cmd/worker/main.go) sets it explicitly, right after calling
+	// CaptureConfigFromDeploy. The zero value is false: NewCaptureRegistry
+	// registers the test_mailbox connector only when this is true.
+	AllowTestMailbox bool
 }
 
 // logger is the configured logger, or the process default.

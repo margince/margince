@@ -214,6 +214,10 @@ func declaredSurfaceOptions(ctx context.Context, cfg apiConfig, deployCfg deploy
 	// leaves that worker's caches resident until it restarts. A line in each log
 	// makes the disagreement visible instead of silent.
 	logger.Info("data reset", "armed", allowDataReset)
+	// Same reasoning as the data-reset line above: each role reads its own
+	// --config, and a role that never saw this flag would silently register no
+	// test_mailbox connector while another role's log claims it is armed.
+	logger.Info("test mailbox connector", "armed", deployCfg.Operations.AllowTestMailbox)
 	opts := []compose.Option{
 		compose.WithDataReset(schemaPool, deployCfg.Seeds, allowDataReset),
 		// The same seeds reach the ADR-0105 claim route, so an installation

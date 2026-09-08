@@ -246,6 +246,23 @@ func writeTemp(t *testing.T, doc string) string {
 	return path
 }
 
+func TestAllowTestMailboxGateDefaultsOff(t *testing.T) {
+	cfg, err := Load(writeTemp(t, "version: 1\norganization:\n  name: T\n"), runtimeenv.Production)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Operations.AllowTestMailbox {
+		t.Fatal("AllowTestMailbox must default OFF — a capability that can fake a real send outcome is stated, never assumed")
+	}
+	on, err := Load(writeTemp(t, "version: 1\norganization:\n  name: T\noperations:\n  allow_test_mailbox: true\n"), runtimeenv.Production)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !on.Operations.AllowTestMailbox {
+		t.Fatal("operations.allow_test_mailbox: true must parse")
+	}
+}
+
 func TestMCPConnectorGateDefaultsOff(t *testing.T) {
 	cfg, err := Load(writeTemp(t, "version: 1\norganization:\n  name: T\n"), runtimeenv.Production)
 	if err != nil {

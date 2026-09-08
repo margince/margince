@@ -986,6 +986,30 @@ injects bounded context into declared AI tasks; `onboarding` additionally enable
 the five-step first-run flow. The default is `onboarding`. Moving backward is a
 reversible operational kill switch and never deletes confirmed company data.
 
+### `POST /v1/connectors/test_mailbox/connect` — the QC-only fake mailbox
+
+Gated on `operations.allow_test_mailbox` in `margince.yaml`, compiled default
+**false in every posture, dev included** (armed by `config/margince.dev.yaml`
+for a dev stack, same as `allow_data_reset`). An installation that did not arm
+it gets the same `connector_unsupported` 422 a real unconfigured provider
+returns — the connect endpoint, the connector's registration, and its send
+authority are all conditioned on this one flag.
+
+```yaml
+operations:
+  allow_test_mailbox: true   # dev/test only; omit or false everywhere else
+```
+
+The `test_mailbox` connector implements both capture and send with no real
+network: `SendEmail` refuses any address outside the RFC 2606 reserved
+domains (`example.com`/`.net`/`.org`, `.test`/`.example`/`.invalid`/
+`.localhost`) and never dials out, and its own `Sync` echoes back what it
+sent, reconciling against the outbound activity by RFC822 Message-ID instead
+of duplicating it. It is never offered in the UI (absent from
+`MAIL_PROVIDERS`) — the connect endpoint is the only way a connection is
+created, which is what lets a QC suite create and remove one within a test
+run with no restart.
+
 ### Uploads
 
 The `uploads:` block sets how large a request each route that carries a **file**

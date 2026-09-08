@@ -101,7 +101,12 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 
-	opts, schemaPool, closeSchemaPool, err := baseComposeOptions(ctx, cfg, compose.CaptureConfigFromDeploy(deployCfg.Capture, logger), pool, vault, logger, stdout, license)
+	// AllowTestMailbox is an operations.* kill switch (deployconfig.Operations),
+	// not a capture.* tuning knob, so it is set here rather than folded into
+	// CaptureConfigFromDeploy's own deployconfig.Capture-scoped contract.
+	captureCfg := compose.CaptureConfigFromDeploy(deployCfg.Capture, logger)
+	captureCfg.AllowTestMailbox = deployCfg.Operations.AllowTestMailbox
+	opts, schemaPool, closeSchemaPool, err := baseComposeOptions(ctx, cfg, captureCfg, pool, vault, logger, stdout, license)
 	if err != nil {
 		return err
 	}

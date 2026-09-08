@@ -299,6 +299,9 @@ func configureWorker(args []string, stdout io.Writer) (workerBoot, error) {
 		return workerBoot{}, err
 	}
 	cfg.captureConfig = compose.CaptureConfigFromDeploy(deployCfg.Capture, log)
+	// See cmd/api/main.go's identical comment: AllowTestMailbox is an
+	// operations.* kill switch, not a capture.* tuning knob.
+	cfg.captureConfig.AllowTestMailbox = deployCfg.Operations.AllowTestMailbox
 	return workerBoot{cfg: cfg, deploy: deployCfg, extensions: extensions, log: log}, nil
 }
 

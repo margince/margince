@@ -133,6 +133,7 @@ func startEventLanes(laneCtx context.Context, background *sync.WaitGroup, cfg wo
 	// flush never reaches this process.
 	logger.Info("data reset", "armed", cfg.allowDataReset)
 	startResetLane(laneCtx, cfg.allowDataReset, rdb, modelPath, lanes.background, logger)
+	logger.Info("test mailbox connector", "armed", cfg.captureConfig.AllowTestMailbox)
 
 	blob, blobConfigured, err := blobstore.FromEnv(laneCtx, config.FromOS)
 	if err != nil {

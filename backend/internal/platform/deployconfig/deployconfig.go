@@ -63,6 +63,19 @@ type Operations struct {
 	// was not production. A capability that erases tenant data is stated, never
 	// inferred from what the deployment happens to be called.
 	AllowDataReset bool `yaml:"allow_data_reset"`
+
+	// AllowTestMailbox arms the test_mailbox connector: the QC-only, no-network
+	// fake mailbox that can both capture and send (issue #4974). Same reasoning
+	// as AllowDataReset: a capability that can fake a real send outcome is
+	// stated here, never inferred from what MARGINCE_ENV happens to say a
+	// deployment is — a staging install is not "non-production" for this
+	// purpose either.
+	//
+	// The zero value is false. Even set, the connector is inert until a human
+	// calls POST /connectors/test_mailbox/connect on themselves, and a rep who
+	// also holds a real gmail/graph grant still sends through that one —
+	// SendableMailProvider picks the first alphabetically capable provider.
+	AllowTestMailbox bool `yaml:"allow_test_mailbox"`
 }
 
 // CompanyContextRollout is the ordered deployment capability for company

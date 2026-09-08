@@ -365,6 +365,10 @@
         "allow_data_reset": {
           "description": "AllowDataReset arms POST /v1/admin/reset-data, the two reset lanes that serve it, and the /me flag that offers the action in the UI.",
           "type": "boolean"
+        },
+        "allow_test_mailbox": {
+          "description": "AllowTestMailbox arms the test_mailbox connector: the QC-only, no-network fake mailbox that can both capture and send (issue #4974). Same reasoning as AllowDataReset: a capability that can fake a real send outcome is stated here, never inferred from what MARGINCE_ENV happens to say a deployment is — a staging install is not \"non-production\" for this purpose either.",
+          "type": "boolean"
         }
       }
     },
