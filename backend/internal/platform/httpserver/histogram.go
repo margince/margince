@@ -3,26 +3,20 @@
 
 package httpserver
 
-// The Prometheus histogram this tree writes by hand, and the label escaper
-// every hand-rolled family must use.
+// The Prometheus histogram this tree writes by hand.
 //
-// Both were private to the HTTP section until a second surface needed them.
-// The AI router's call-duration family is the second, and the alternative was
-// a second implementation of bucket arithmetic and a second answer to "how is
-// a label value escaped" — where the second answer is the dangerous one: get
-// it wrong and Prometheus rejects the WHOLE scrape, so every family in the
-// process leaves the dashboard together.
+// It was private to the HTTP section until a second surface needed it. The AI
+// router's call-duration family is the second, and the alternative was a second
+// implementation of bucket arithmetic.
 //
 // Bounds are the caller's, deliberately. A route's latency and a model call's
 // latency do not share a scale, and a shared bucket set would put every model
 // call in the top bucket of one and every route in the bottom of the other.
 
 import (
-	"fmt"
 	"io"
 	"sort"
 	"strconv"
-	"strings"
 )
 
 // Histogram is one hand-rolled Prometheus histogram: cumulative bucket
@@ -71,7 +65,9 @@ func (h *Histogram) Snapshot() Histogram {
 }
 
 // WriteSeries renders this histogram's three series groups under name, with
-// labels already rendered as a `k=v,k=v` fragment (empty for none).
+// labels already rendered as a non-empty `k=v,k=v` fragment. Every histogram in
+// this tree is keyed by something; a family with no labels of its own would
+// need the brace handling this deliberately does not carry.
 //
 // The +Inf bucket is written unconditionally and equals count by definition: a
 // histogram without its terminator is not a histogram, because every quantile
@@ -84,10 +80,10 @@ func (h *Histogram) Snapshot() Histogram {
 // report what the writer already holds, and both callers would discard it.
 func (h Histogram) WriteSeries(w io.Writer, name, labels string) {
 	for i, bound := range h.bounds {
-		WriteLine(w, "%s_bucket{%sle=%s} %d\n",
-			name, prefix(labels), Label(strconv.FormatFloat(bound, 'g', -1, 64)), h.counts[i])
+		WriteLine(w, "%s_bucket{%s,le=%s} %d\n",
+			name, labels, Label(strconv.FormatFloat(bound, 'g', -1, 64)), h.counts[i])
 	}
-	WriteLine(w, "%s_bucket{%sle=\"+Inf\"} %d\n", name, prefix(labels), h.count)
+	WriteLine(w, "%s_bucket{%s,le=\"+Inf\"} %d\n", name, labels, h.count)
 	WriteLine(w, "%s_sum{%s} %g\n", name, labels, h.sum)
 	WriteLine(w, "%s_count{%s} %d\n", name, labels, h.count)
 }
@@ -95,62 +91,3 @@ func (h Histogram) WriteSeries(w io.Writer, name, labels string) {
 // prefix answers labels with the separator a further label needs after it, so
 // a family with no labels of its own still renders `{le="..."}` correctly
 // rather than `{,le="..."}`.
-func prefix(labels string) string {
-	if labels == "" {
-		return ""
-	}
-	return labels + ","
-}
-
-// WriteLine is the ONE place a hand-rolled family in this tree discards a write
-// error, and the exposition writer is why that is sound: it holds the first
-// refusal, no-ops on every write after it, and is asked once by the handler at
-// the end of the scrape.
-//
-// Exported for the same reason Label and Histogram are — the AI renderer is a
-// second surface writing the same exposition, and a private copy there would
-// be a second answer to "what does a refused write mean", with a second waiver
-// to keep in step with this one.
-//
-//craft:ignore swallowed-errors the exposition writer holds the first error and no-ops after it; the handler asks it once per scrape
-func WriteLine(w io.Writer, format string, a ...any) {
-	_, _ = fmt.Fprintf(w, format, a...)
-}
-
-// Label renders a Prometheus label VALUE with only the three escapes the text
-// format defines: backslash, double quote, and newline.
-//
-// Not %q. strconv.Quote is Go's escaping, not Prometheus', and the two agree
-// only by coincidence on ordinary input: %q also emits \t, \r, \xNN and
-// \uNNNN, and Prometheus' parser rejects those as an invalid escape sequence.
-// It rejects the WHOLE SCRAPE when it does, not the offending line — so one
-// stray byte in one label would take every family in this process off the
-// dashboard at once.
-//
-// Exported because the reachable case is no longer hypothetical. Route comes
-// from a compile-time template and method from a closed set, but the AI
-// router labels by a tier binding's model id, which an operator types.
-//
-// Anything else that is not printable is dropped rather than escaped, because
-// a control byte in a label value is not information an operator can use.
-func Label(value string) string {
-	var b strings.Builder
-	b.Grow(len(value) + 2)
-	b.WriteByte('"')
-	for _, r := range value {
-		switch {
-		case r == '\\':
-			b.WriteString(`\\`)
-		case r == '"':
-			b.WriteString(`\"`)
-		case r == '\n':
-			b.WriteString(`\n`)
-		case r < 0x20 || r == 0x7f:
-			// Dropped, per the note above.
-		default:
-			b.WriteRune(r)
-		}
-	}
-	b.WriteByte('"')
-	return b.String()
-}

@@ -11,7 +11,6 @@ package compose
 // message — which from outside looks exactly like nobody sending any.
 
 import (
-	"fmt"
 	"io"
 	"sort"
 
@@ -36,10 +35,10 @@ func writeAuthzDecisionMetrics(w io.Writer, totals map[consent.DecisionCount]uin
 		counts = append(counts, count)
 	}
 	sort.Slice(counts, func(i, j int) bool { return authzLabelKey(counts[i]) < authzLabelKey(counts[j]) })
-	_, _ = fmt.Fprintf(w, "# HELP margince_communication_authz_decisions_total What the outbound engine decided about each recipient at transmit, since process start.\n")
-	_, _ = fmt.Fprintf(w, "# TYPE margince_communication_authz_decisions_total counter\n")
+	httpserver.WriteLine(w, "# HELP margince_communication_authz_decisions_total What the outbound engine decided about each recipient at transmit, since process start.\n")
+	httpserver.WriteLine(w, "# TYPE margince_communication_authz_decisions_total counter\n")
 	for _, count := range counts {
-		_, _ = fmt.Fprintf(w,
+		httpserver.WriteLine(w,
 			"margince_communication_authz_decisions_total{verdict=%s,category=%s,mode=%s} %d\n",
 			httpserver.Label(string(count.Verdict)), httpserver.Label(string(count.Category)),
 			httpserver.Label(string(count.Mode)), totals[count])

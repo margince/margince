@@ -11,7 +11,6 @@ package compose
 // mailbox had been dropped as internal since somebody registered a domain.
 
 import (
-	"fmt"
 	"io"
 	"sort"
 
@@ -35,10 +34,10 @@ func writeCaptureMetrics(w io.Writer, totals map[string]uint64) {
 		outcomes = append(outcomes, outcome)
 	}
 	sort.Strings(outcomes)
-	_, _ = fmt.Fprintf(w, "# HELP margince_capture_outcomes_total What the capture pipeline decided about each message, since process start.\n")
-	_, _ = fmt.Fprintf(w, "# TYPE margince_capture_outcomes_total counter\n")
+	httpserver.WriteLine(w, "# HELP margince_capture_outcomes_total What the capture pipeline decided about each message, since process start.\n")
+	httpserver.WriteLine(w, "# TYPE margince_capture_outcomes_total counter\n")
 	for _, outcome := range outcomes {
-		_, _ = fmt.Fprintf(w, "margince_capture_outcomes_total{outcome=%s} %d\n", httpserver.Label(outcome), totals[outcome])
+		httpserver.WriteLine(w, "margince_capture_outcomes_total{outcome=%s} %d\n", httpserver.Label(outcome), totals[outcome])
 	}
 }
 

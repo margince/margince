@@ -4,6 +4,8 @@
 package ai
 
 import (
+	"os"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -30,10 +32,13 @@ func render(m *callMetrics) string {
 	return b.String()
 }
 
+// mustContain matches each want as a WHOLE line. Without the terminator
+// `...} 1` is satisfied by `...} 100`, and a spec that cannot tell one call
+// from a hundred is pinning nothing.
 func mustContain(t *testing.T, out string, wants ...string) {
 	t.Helper()
 	for _, want := range wants {
-		if !strings.Contains(out, want) {
+		if !strings.Contains(out, want+"\n") {
 			t.Errorf("missing from the exposition:\n\t%s\ngot:\n%s", want, out)
 		}
 	}
@@ -73,9 +78,9 @@ func TestTheTokenClassesAreDisjointSoDirectionDoesNotDoubleCount(t *testing.T) {
 		"margince_ai_tokens_total{"+servedLabels+`,class="prompt",direction="in"} 50`,
 		"margince_ai_tokens_total{"+servedLabels+`,class="cached_read",direction="in"} 30`,
 		"margince_ai_tokens_total{"+servedLabels+`,class="cache_write",direction="in"} 20`,
-		"margince_ai_tokens_total{"+servedLabels+`,class="completion",direction="out"} 40`,
-		// Reasoning is billed as output and must roll up with it, or the
-		// direction split understates what the completion cost.
+		// 40 output of which 15 was reasoning: OutputTokens is
+		// reasoning-inclusive, so the plain completion bucket is 25.
+		"margince_ai_tokens_total{"+servedLabels+`,class="completion",direction="out"} 25`,
 		"margince_ai_tokens_total{"+servedLabels+`,class="reasoning",direction="out"} 15`,
 	)
 	if strings.Contains(out, `class="prompt",direction="in"} 100`) {
@@ -170,7 +175,9 @@ func TestAHostileModelIdCannotBreakTheWholeScrape(t *testing.T) {
 			t.Errorf("the exposition carries %s, which Prometheus refuses as an invalid escape:\n%s", illegal, out)
 		}
 	}
-	mustContain(t, out, `model="evilmodel\"\\"`)
+	if !strings.Contains(out, "model=\"evil\uFFFD\uFFFDmodel\\\"\\\\\"") {
+		t.Errorf("the hostile identity did not survive escaping intact:\n%s", out)
+	}
 }
 
 // Two sources landing on one collector must render each family's header once
@@ -238,18 +245,22 @@ func TestSeparatelyAssembledRoutersShareOneCollector(t *testing.T) {
 	}
 }
 
-// WriteProcessMetrics is what both roles wire, and it must reach the same
-// collector every Router increments — the indirection it replaced (a method on
-// Router, wrapped by one on ModelPath) read as per-router and cost the worker
-// its whole AI surface.
+// WriteProcessMetrics is what both roles wire, and it must render the same
+// collector every Router increments — a renderer bound to one router would let
+// a role wire it and believe the process was covered.
+//
+// Asserted by IDENTITY rather than by observing into the global and reading it
+// back: a probe series written here would outlive this test and make any later
+// assertion over the shared collector depend on run order, which is the trap
+// router_attempts_test.go already sidesteps with a private collector.
 func TestWriteProcessMetricsRendersTheProcessWideCollector(t *testing.T) {
-	sharedCallMetrics.observe(served(func(c *Call) { c.Task = "process_wide_probe" }))
+	var direct, viaExport strings.Builder
+	sharedCallMetrics.WritePrometheus(&direct)
+	WriteProcessMetrics(&viaExport)
 
-	var b strings.Builder
-	WriteProcessMetrics(&b)
-
-	if !strings.Contains(b.String(), `task="process_wide_probe"`) {
-		t.Errorf("WriteProcessMetrics did not render the collector every Router increments:\n%s", b.String())
+	if direct.String() != viaExport.String() {
+		t.Errorf("WriteProcessMetrics rendered something other than the process-wide collector:\n%s",
+			viaExport.String())
 	}
 }
 
@@ -268,7 +279,9 @@ func TestABindingWithNoConfiguredModelStillNamesWhatServed(t *testing.T) {
 	if strings.Contains(out, `model=""`) {
 		t.Errorf("an empty model label reached the exposition:\n%s", out)
 	}
-	mustContain(t, out, `provider="fake",model="fake",served_identity_source="response"`)
+	if !strings.Contains(out, `provider="fake",model="fake",served_identity_source="response"`) {
+		t.Errorf("the served identity did not reach the label:\n%s", out)
+	}
 }
 
 // The other half of the same rule: an OpenAI-compatible wire only echoes the
@@ -281,5 +294,147 @@ func TestAnEchoedIdentityIsLabelledAsAnEcho(t *testing.T) {
 		c.ServedModel, c.ServedIdentitySource = "llama3.1:70b-q4", servedIdentitySourceEcho
 	}))
 
-	mustContain(t, render(m), `model="llama3.1:70b-q4",served_identity_source="echo"`)
+	if !strings.Contains(render(m), `model="llama3.1:70b-q4",served_identity_source="echo"`) {
+		t.Errorf("an echoed identity was not graded as an echo:\n%s", render(m))
+	}
+}
+
+// The model label is PROVIDER WIRE INPUT — every adapter reads it verbatim off
+// the response body — so a broker answering with a fresh identity per call
+// would otherwise mint a key per call, each retained for the process lifetime
+// and re-rendered on every scrape across roughly twenty lines.
+func TestAProviderCannotMintUnboundedSeries(t *testing.T) {
+	m := newCallMetrics()
+	for i := range maxRouteSeries * 3 {
+		m.observeAttempt(served(func(c *Call) { c.ServedModel = "model-" + strconv.Itoa(i) }))
+	}
+
+	if held := len(m.attempts); held > maxRouteSeries+1 {
+		t.Errorf("the collector holds %d label sets after %d distinct model identities; "+
+			"the cap plus its one overflow key is %d", held, maxRouteSeries*3, maxRouteSeries+1)
+	}
+	if !strings.Contains(render(m), overflowLabel) {
+		t.Errorf("nothing folded into the overflow key:\n%s", render(m))
+	}
+}
+
+// The overflow key must be ONE series, not one per task: an overflow bucket
+// that still carries a dimension the wire influences grows exactly as the thing
+// it was meant to bound. httpserver's route histogram learned this twice.
+func TestTheOverflowKeyCannotItselfGrow(t *testing.T) {
+	m := newCallMetrics()
+	for i := range maxRouteSeries * 2 {
+		m.observeAttempt(served(func(c *Call) {
+			c.ServedModel = "model-" + strconv.Itoa(i)
+			c.Task = Task("task-" + strconv.Itoa(i))
+			c.Tier = Tier("tier-" + strconv.Itoa(i))
+		}))
+	}
+
+	overflowed := 0
+	for k := range m.attempts {
+		if k.model == overflowLabel {
+			overflowed++
+		}
+	}
+	if overflowed > 1 {
+		t.Errorf("%d overflow series exist; the bucket past the cap grows with the traffic it bounds", overflowed)
+	}
+}
+
+// A megabyte model identity would be carried back on every scrape, on every
+// line of every family keyed by it, for the life of the process.
+func TestALongModelIdentityIsCutAndSaysSo(t *testing.T) {
+	m := newCallMetrics()
+	m.observeAttempt(served(func(c *Call) { c.ServedModel = strings.Repeat("m", 5000) }))
+
+	out := render(m)
+	if len(out) > 10_000 {
+		t.Errorf("one attempt rendered %d bytes of exposition; the identity was not bounded", len(out))
+	}
+	if !strings.Contains(out, strings.Repeat("m", maxLabelLen)+`..."`) {
+		t.Errorf("the identity was neither cut nor marked as cut:\n%s", out)
+	}
+}
+
+// A provider's stop reason is a string it chooses, so the label folds to a
+// closed set. The raw value stays on the ai_call row, where no series count
+// depends on it.
+func TestAnUnknownFinishReasonFoldsRatherThanMintingASeries(t *testing.T) {
+	m := newCallMetrics()
+	m.observeAttempt(served(func(c *Call) { c.FinishReason = "stop" }))
+	m.observeAttempt(served(func(c *Call) { c.FinishReason = "vendor_specific_novelty" }))
+
+	out := render(m)
+	mustContain(t, out,
+		"margince_ai_call_finish_reasons_total{"+servedLabels+`,reason="stop"} 1`,
+		"margince_ai_call_finish_reasons_total{"+servedLabels+`,reason="other"} 1`,
+	)
+	if strings.Contains(out, "vendor_specific_novelty") {
+		t.Errorf("an unfolded provider stop reason became a label:\n%s", out)
+	}
+}
+
+// The constraint metricsrender.go's header states, held rather than asserted in
+// prose: every family this package emits must also appear as a string LITERAL
+// in the renderer's source.
+//
+// backend/gates/metricsuffix_test.go reads those literals to decide whether
+// `_total` means counter. A name that reached its header through a variable
+// would be invisible there, and the tree-wide floor would still pass — so the
+// families would silently stop being judged, which is precisely the shape the
+// header warns about. Without this test that warning was only a comment.
+func TestEveryEmittedFamilyNameIsALiteralInTheRenderer(t *testing.T) {
+	source, err := os.ReadFile("metricsrender.go")
+	if err != nil {
+		t.Fatalf("reading the renderer: %v", err)
+	}
+
+	var out strings.Builder
+	newCallMetrics().WritePrometheus(&out)
+
+	emitted := 0
+	for _, line := range strings.Split(out.String(), "\n") {
+		name, found := strings.CutPrefix(line, "# TYPE ")
+		if !found {
+			continue
+		}
+		emitted++
+		name = strings.Fields(name)[0]
+		if !strings.Contains(string(source), `"`+name+`"`) {
+			t.Errorf("%s is emitted but never spelled as a literal in metricsrender.go, so the "+
+				"suffix census cannot see it and _total stops meaning counter for it", name)
+		}
+	}
+	if emitted == 0 {
+		t.Fatal("no families were emitted, so this test proves nothing about the ones that are")
+	}
+}
+
+// The output side of the same invariant the prompt class carries.
+// model.Response's OutputTokens is reasoning-INCLUSIVE — gemini.go adds
+// thinking tokens into it so the budget meter charges true spend — so reporting
+// it whole beside the reasoning class counts reasoning twice, inside
+// sum by (direction) on `out`.
+func TestReasoningIsNotCountedTwiceOnTheOutputSide(t *testing.T) {
+	m := newCallMetrics()
+	m.observeAttempt(served(func(c *Call) { c.TokensOut, c.ReasoningTokens = 100, 40 }))
+
+	out := render(m)
+	mustContain(t, out,
+		"margince_ai_tokens_total{"+servedLabels+`,class="completion",direction="out"} 60`,
+		"margince_ai_tokens_total{"+servedLabels+`,class="reasoning",direction="out"} 40`,
+	)
+	if strings.Contains(out, `class="completion",direction="out"} 100`) {
+		t.Error("the completion class reported TokensOut whole; reasoning is counted twice in sum by (direction)")
+	}
+}
+
+func TestAnOverReportedReasoningNeverCountsNegativeCompletionTokens(t *testing.T) {
+	m := newCallMetrics()
+	m.observeAttempt(served(func(c *Call) { c.TokensOut, c.ReasoningTokens = 10, 40 }))
+
+	if strings.Contains(render(m), `class="completion",direction="out"} -`) {
+		t.Errorf("a negative completion-token count reached the exposition:\n%s", render(m))
+	}
 }

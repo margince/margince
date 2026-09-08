@@ -146,7 +146,6 @@ type routeKey struct {
 	method string
 }
 
-// observe records one duration. Cumulative at WRITE time rather than at read
 // time: a bucket counts every observation at or below its bound, so
 // incrementing each bound the sample clears keeps the read a straight walk.
 

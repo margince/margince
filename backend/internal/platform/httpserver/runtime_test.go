@@ -117,16 +117,27 @@ func TestTheCollectorHalfIsPinnedToTheTextFormat(t *testing.T) {
 	}
 }
 
-// A scrape whose reader hung up must not be charged for gathering, and nothing
-// after the runtime section may measure anything.
+// A scrape whose reader hung up must not be charged for gathering, and must not
+// have half a runtime section pushed at it.
+//
+// The assertion is on the BYTES, not on out.gone(): the probe write is what
+// discovers the writer is dead, so gone() is already true before
+// writeRuntimeMetrics is called and a guard on it could never fail whatever the
+// function did. What can fail is the section writing anyway.
 func TestTheRuntimeSectionWritesNothingForAScrapeThatHasAlreadyGone(t *testing.T) {
-	out := &exposition{w: &hangUp{ResponseWriter: httptest.NewRecorder(), accepts: 0}}
+	rec := httptest.NewRecorder()
+	out := &exposition{w: &hangUp{ResponseWriter: rec, accepts: 0}}
 	out.printf("probe\n")
+	if !out.gone() {
+		t.Fatal("the probe did not exhaust the writer, so this test would prove nothing")
+	}
+	delivered := rec.Body.Len()
 
 	writeRuntimeMetrics(context.Background(), out)
 
-	if !out.gone() {
-		t.Fatal("the exposition did not notice its writer was gone")
+	if rec.Body.Len() != delivered {
+		t.Errorf("the runtime section wrote %d further bytes into a socket that is gone:\n%s",
+			rec.Body.Len()-delivered, rec.Body.String()[delivered:])
 	}
 }
 
@@ -163,7 +174,11 @@ func TestTheGoroutineGaugeTracksTheRunningProcess(t *testing.T) {
 	after := countGoroutines(t)
 	close(release)
 
-	if after <= before {
+	// Half the probe count, not all of it: goroutines from earlier tests in this
+	// binary retire on their own schedule and move the baseline down between the
+	// two scrapes. The question is whether the gauge MOVES with the runtime, and
+	// a tolerance says so without inviting a future tightening into a flake.
+	if after-before < goroutineProbeCount/2 {
 		t.Errorf("go_goroutines read %d then %d while %d goroutines were parked; the gauge is not live",
 			before, after, goroutineProbeCount)
 	}

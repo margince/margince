@@ -425,10 +425,12 @@ func TestLabelValuesUseOnlyPrometheusEscapes(t *testing.T) {
 		"/v1/with\"quote":   `"/v1/with\"quote"`,
 		`/v1/with\slash`:    `"/v1/with\\slash"`,
 		"/v1/with\nnewline": `"/v1/with\nnewline"`,
-		// Dropped rather than escaped: %q would have written \t and \x00 here,
-		// and neither is a legal Prometheus escape.
-		"/v1/with\ttab":    `"/v1/withtab"`,
-		"/v1/with\x00null": `"/v1/withnull"`,
+		// Substituted rather than escaped: %q would have written \t and \x00
+		// here, and neither is a legal Prometheus escape. U+FFFD rather than
+		// nothing, so two values differing only in an unrepresentable byte do
+		// not collapse into one series.
+		"/v1/with\ttab":    "\"/v1/with\uFFFDtab\"",
+		"/v1/with\x00null": "\"/v1/with\uFFFDnull\"",
 	}
 	for in, want := range cases {
 		if got := Label(in); got != want {

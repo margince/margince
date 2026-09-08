@@ -76,43 +76,60 @@ var escapers = map[string]bool{"Label": true, "httpserver.Label": true}
 var labelWithAnyVerb = regexp.MustCompile(`[{,"]([a-z_][a-z0-9_]*)=(?:%[a-z]|"\s*\+)`)
 
 // declaresAFamily selects the files this gate judges: the ones that name a
-// margince_ family in a string literal, which is what an exposition writer
-// does and a log line or a CLI report does not.
+// margince_ family in a string literal, which is what an exposition writer does
+// and a log line or a CLI report does not.
 //
-// Derived from the subject rather than listed, and it cannot fail short in the
-// way a skip-list would: a writer whose family name never appears as a literal
-// is ALREADY forbidden tree-wide, because backend/gates/metricsuffix_test.go
-// reads the same literals to decide whether `_total` means counter. A file
-// invisible here is a file that gate already refuses.
-var declaresAFamily = regexp.MustCompile(`"# (?:HELP|TYPE) margince_|"margince_[a-z0-9_]+[{ ]`)
+// It matches the family literal ALONE, with nothing required after it. An
+// earlier spelling demanded a `{` or a space next, on the assumption that a
+// name is always followed by its labels — and that assumption cost the gate the
+// one file it was written for: the AI renderer passes its names as bare
+// arguments to a header helper (`counterHeader(w, "margince_ai_calls_total",`)
+// and writes its series through `"%s{%s}"`, so it matched neither shape and the
+// concatenated arm below matched nothing in the whole tree.
+var declaresAFamily = regexp.MustCompile(`"margince_[a-z0-9_]+`)
 
 // expositionWaiver is how a writer that genuinely must format a label value
 // itself says so. It carries a reason, because a reasonless waiver is the
 // second way a census fails short.
 const expositionWaiver = "//metrics:unescaped"
 
-// minLabelWriters is a floor, not a count. A scan that found nothing would
-// report PASS with no failing assertion, which is the one way this gate must
-// not break: it would read a smaller tree, see no %q, and say so.
+// The floors, and there are TWO because one total cannot tell the arms apart.
 //
-// Derived from the sections that must each contribute at least one labelled
-// line — HTTP, jobs, overlay, AI, MCP-app, license, capture, comms — so a
-// collapse to any single section trips it. The floor is that section count
-// rather than the measured total, because a family moving between files must
-// not require editing a gate.
-const minLabelWriters = 8
+// A scan that found nothing would report PASS with no failing assertion, which
+// is the one way this gate must not break. But a single total hides the failure
+// that actually happened here: the %q-shaped writers alone satisfied a total of
+// 8 while the concatenated arm saw ZERO lines in the entire tree, so the
+// allowlist that arm exists to enforce was vacuous and nobody could tell.
+//
+// minLabelWriters is derived from the sections that must each contribute at
+// least one labelled line — HTTP, jobs, overlay, AI, MCP-app, license, capture,
+// comms — so a collapse to any single section trips it.
+// minConcatenatedWriters is 1 because exactly one surface builds labels that
+// way today; it must never fall to nothing unseen.
+const (
+	minLabelWriters        = 8
+	minConcatenatedWriters = 1
+)
 
 func TestNoLabelValueIsEscapedWithGoQuoting(t *testing.T) {
 	t.Parallel()
 
-	writers, offenders := 0, []string{}
+	writers, concatenated, offenders := 0, 0, []string{}
 	expositionFiles(t, func(path, code string) {
-		found, seen := scanLabelWrites(code)
+		found, seen, appended := scanLabelWrites(code)
 		writers += seen
+		concatenated += appended
 		for _, f := range found {
 			offenders = append(offenders, filepath.ToSlash(path)+":"+f)
 		}
 	})
+
+	if concatenated < minConcatenatedWriters {
+		t.Errorf("this gate saw %d concatenated label writes, below the floor of %d.\n\n"+
+			"The concatenated arm is the one written for the AI renderer's operator- and "+
+			"provider-supplied model label. Seeing none means it is enforcing an allowlist over "+
+			"an empty set — a pass that proves nothing.", concatenated, minConcatenatedWriters)
+	}
 
 	if writers < minLabelWriters {
 		t.Fatalf("this gate found only %d lines writing a Prometheus label, below the floor of %d.\n\n"+
@@ -135,25 +152,29 @@ func TestNoLabelValueIsEscapedWithGoQuoting(t *testing.T) {
 //
 // A pure function over source text so the gate's own fixtures can drive it:
 // a prohibition nobody has watched fail is a prohibition nobody knows fires.
-func scanLabelWrites(code string) (offenders []string, seen int) {
+func scanLabelWrites(code string) (offenders []string, seen, concatenated int) {
 	lines := strings.Split(code, "\n")
 	for i, line := range lines {
 		if labelWithAnyVerb.MatchString(line) {
 			seen++
 		}
+		match := labelByConcatenation.FindStringSubmatch(line)
+		if match != nil {
+			concatenated++
+		}
 		if waived(lines, i) {
 			continue
 		}
-		if match := labelWithQuoteVerb.FindStringSubmatch(line); match != nil {
-			offenders = append(offenders, fmt.Sprintf("%d renders %s=%%q", i+1, match[1]))
+		if quoted := labelWithQuoteVerb.FindStringSubmatch(line); quoted != nil {
+			offenders = append(offenders, fmt.Sprintf("%d renders %s=%%q", i+1, quoted[1]))
 			continue
 		}
-		if match := labelByConcatenation.FindStringSubmatch(line); match != nil && !escapers[match[2]] {
+		if match != nil && !escapers[match[2]] {
 			offenders = append(offenders,
 				fmt.Sprintf("%d appends %s= with %s(...) rather than Label(...)", i+1, match[1], match[2]))
 		}
 	}
-	return offenders, seen
+	return offenders, seen, concatenated
 }
 
 // waived reports whether the line above carries the waiver marker.
@@ -217,7 +238,7 @@ func TestTheEscapingGateFiresOnEveryShapeItClaims(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			offenders, seen := scanLabelWrites(c.code)
+			offenders, seen, _ := scanLabelWrites(c.code)
 			if got := len(offenders) > 0; got != c.offends {
 				t.Errorf("offends = %v, want %v for:\n\t%s\n\tfindings: %v", got, c.offends, c.code, offenders)
 			}
@@ -236,12 +257,12 @@ func TestTheWaiverNeedsAReason(t *testing.T) {
 	t.Parallel()
 	withReason := expositionWaiver + " the value is a compile-time literal\n" +
 		`out.printf("margince_x{model=%q} 1\n", m)`
-	if offenders, _ := scanLabelWrites(withReason); len(offenders) != 0 {
+	if offenders, _, _ := scanLabelWrites(withReason); len(offenders) != 0 {
 		t.Errorf("a waiver carrying a reason was ignored: %v", offenders)
 	}
 
 	bare := expositionWaiver + "\n" + `out.printf("margince_x{model=%q} 1\n", m)`
-	if offenders, _ := scanLabelWrites(bare); len(offenders) == 0 {
+	if offenders, _, _ := scanLabelWrites(bare); len(offenders) == 0 {
 		t.Error("a reasonless waiver silenced the finding; the escape hatch is now the way through")
 	}
 }

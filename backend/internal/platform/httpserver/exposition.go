@@ -6,6 +6,7 @@ package httpserver
 import (
 	"fmt"
 	"io"
+	"strings"
 )
 
 // exposition is the one thing every /readyz and /metrics section writes
@@ -63,4 +64,62 @@ func (e *exposition) printf(format string, a ...any) {
 		return
 	}
 	_, e.err = fmt.Fprintf(e.w, format, a...)
+}
+
+// WriteLine is how every hand-rolled family in this tree writes a line, and the
+// ONE place any of them discards a write error. The exposition writer is why
+// that is sound: it holds the first refusal, no-ops on every write after it,
+// and is asked once by the handler at the end of the scrape.
+//
+// Exported for the same reason Label and Histogram are. Five renderers across
+// three packages had their own `_, _ = fmt.Fprintf`, which is five answers to
+// "what does a refused write mean" and five waivers to keep in step; there is
+// one now, here, with the writer whose contract makes it true.
+//
+//craft:ignore swallowed-errors the exposition writer holds the first error and no-ops after it; the handler asks it once per scrape
+func WriteLine(w io.Writer, format string, a ...any) {
+	_, _ = fmt.Fprintf(w, format, a...)
+}
+
+// Label renders a Prometheus label VALUE with only the three escapes the text
+// format defines: backslash, double quote, and newline.
+//
+// Not %q. strconv.Quote is Go's escaping, not Prometheus', and the two agree
+// only by coincidence on ordinary input: %q also emits \t, \r, \xNN and
+// \uNNNN, and Prometheus' parser rejects those as an invalid escape sequence.
+// It rejects the WHOLE SCRAPE when it does, not the offending line — so one
+// stray byte in one label would take every family in this process off the
+// dashboard at once.
+//
+// Exported because the reachable case is no longer hypothetical. Route comes
+// from a compile-time template and method from a closed set, but the AI
+// router labels by a tier binding's model id, which an operator types.
+//
+// A byte the format cannot carry is SUBSTITUTED, not dropped. Dropping reads
+// better in isolation — a control byte is not information an operator can use —
+// but it maps two distinct values onto one rendered label set, and a family
+// that emits the same label set twice is a duplicate sample Prometheus discards
+// with only a warning. The count on the dashboard would then be wrong with
+// nothing failing. U+FFFD keeps distinct inputs distinct and is what a decoder
+// already yields for invalid UTF-8.
+func Label(value string) string {
+	var b strings.Builder
+	b.Grow(len(value) + 2)
+	b.WriteByte('"')
+	for _, r := range value {
+		switch {
+		case r == '\\':
+			b.WriteString(`\\`)
+		case r == '"':
+			b.WriteString(`\"`)
+		case r == '\n':
+			b.WriteString(`\n`)
+		case r < 0x20 || r == 0x7f:
+			b.WriteRune('\uFFFD')
+		default:
+			b.WriteRune(r)
+		}
+	}
+	b.WriteByte('"')
+	return b.String()
 }

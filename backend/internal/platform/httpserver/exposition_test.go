@@ -144,3 +144,13 @@ func TestReadyzStopsWritingWhenItsReaderHangsUp(t *testing.T) {
 			"is what discovers the reader is gone, and nothing after it should be tried", w.writes)
 	}
 }
+
+// Two distinct values must not render to one label set. Dropping an
+// unrepresentable byte would map them together, and a family emitting the same
+// label set twice is a duplicate sample Prometheus discards with a warning —
+// the number on the dashboard is then wrong with nothing failing.
+func TestDistinctLabelValuesStayDistinctThroughEscaping(t *testing.T) {
+	if Label("gpt-x\x01") == Label("gpt-x") {
+		t.Error("a control byte was dropped rather than substituted, collapsing two model identities into one series")
+	}
+}

@@ -45,10 +45,10 @@ var familyHeader = regexp.MustCompile(`writeFamilyHeader\((?:[a-zA-Z0-9_.]+), "(
 
 // typedHeader matches the AI renderer's header helpers, which take the name as
 // a PARAMETER like writeFamilyHeader above but — unlike it — serve two kinds.
-// The kind is in the helper's own name, so it is judgeable from the call site,
-// and the family name must be a literal there for exactly this reason: ten
-// families reached the exposition invisible to this census the day the AI
-// surface was rewritten to render its headers through a helper.
+// The kind is in the helper's own name, so it is judgeable from the call site.
+// The family name must be a literal there, or the families it renders are
+// invisible to this census and `_total` stops meaning counter for exactly the
+// ones nobody can see.
 var typedHeader = regexp.MustCompile(`(counter|histogram)Header\((?:[a-zA-Z0-9_.]+), "(margince_[a-z0-9_]+)"`)
 
 // minFamilies is a floor, not a count. A census that finds nothing passes while

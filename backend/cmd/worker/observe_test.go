@@ -144,11 +144,10 @@ func TestTheWorkerMetricsAreProcessLocalAndReServeNoFleetGauge(t *testing.T) {
 		"go_gc_duration_seconds",
 		"process_cpu_seconds_total",
 		"margince_relay_published_total",
-		// The AI counters. This role resolves a model path and runs the
-		// briefs, the sweeps and the embedding lane through it, and every
-		// Router in the binary increments one process-wide collector — so a
-		// worker that renders none of it counts its own calls and tells
-		// nobody. That was true until this assertion existed.
+		// The AI counters. This role resolves a model path and runs the briefs,
+		// the sweeps and the embedding lane through it, and every Router in the
+		// binary increments one process-wide collector — so a worker that
+		// renders none of it counts its own calls and tells nobody.
 		"margince_ai_calls_total",
 		"margince_ai_call_duration_seconds",
 		"margince_ai_tokens_total",

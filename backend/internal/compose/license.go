@@ -216,5 +216,5 @@ func (s Server) writeLicenseMetrics(w io.Writer) {
 	// Assembled first and written once, so a refused write cannot leave half a
 	// gauge family in the exposition.
 	//craft:ignore swallowed-errors the renderer httpserver.Metrics takes for this section has no error return; the job section, which does, is a separate parameter that reports its own
-	_, _ = io.WriteString(w, section.String())
+	httpserver.WriteLine(w, "%s", section.String())
 }

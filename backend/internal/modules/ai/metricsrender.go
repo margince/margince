@@ -37,10 +37,6 @@ var callLatencyBounds = []float64{
 	0.1, 0.25, 0.5, 1, 2, 5, 10, 20, 30, 60, 120,
 }
 
-func newLatencyHistogram() *httpserver.Histogram {
-	return httpserver.NewHistogram(callLatencyBounds)
-}
-
 // WritePrometheus renders every AI family.
 //
 // The snapshot is taken under the lock and rendered outside it: w is typically
