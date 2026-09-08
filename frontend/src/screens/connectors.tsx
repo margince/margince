@@ -67,6 +67,7 @@ const providerLabel: Record<Provider, MessageKey> = {
   graph: "connectors.provGraph",
   graphcal: "connectors.provGraphCal",
   imap: "connectors.provImap",
+  test_mailbox: "connectors.provTestMailbox",
 };
 
 // The OAuth providers whose reconnect re-mints a consent URL; imap reconnects
@@ -238,6 +239,7 @@ const PROVIDER_BLURB: Record<Provider, MessageKey> = {
   graph: "connectors.addGraphBrings",
   graphcal: "connectors.addGraphCalBrings",
   imap: "connectors.addImapBrings",
+  test_mailbox: "connectors.addTestMailboxBrings",
 };
 
 // The "Add a connection" affordance (Task 1), as ONE verb and a dialog.

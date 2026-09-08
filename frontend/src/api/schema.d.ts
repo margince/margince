@@ -15529,7 +15529,7 @@ export interface components {
              * @description The mail/calendar provider (A51 email+calendar parity).
              * @enum {string}
              */
-            provider: "gmail" | "gcal" | "graph" | "graphcal" | "imap";
+            provider: "gmail" | "gcal" | "graph" | "graphcal" | "imap" | "test_mailbox";
             /** @description Display-only name of the connected account (e.g. the mailbox address). Null when the connector does not report one. */
             account_label?: string | null;
             /**
@@ -16385,7 +16385,7 @@ export interface components {
             };
             connectors: {
                 /** @enum {string} */
-                provider?: "gmail" | "gcal" | "graph" | "graphcal" | "imap";
+                provider?: "gmail" | "gcal" | "graph" | "graphcal" | "imap" | "test_mailbox";
                 /** @enum {string} */
                 status?: "connected" | "disconnected" | "error" | "reauth_required";
                 /** Format: date-time */
@@ -33490,7 +33490,7 @@ export interface components {
          *     consent each, so a person can bring one without the other and disconnect either.
          *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
          */
-        CaptureProvider: "gmail" | "gcal" | "graph" | "graphcal" | "imap";
+        CaptureProvider: "gmail" | "gcal" | "graph" | "graphcal" | "imap" | "test_mailbox";
         /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
         Id: string;
         /**
