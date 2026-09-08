@@ -270,19 +270,26 @@ func renderTriage(w io.Writer, r compose.SiteReadDebugReport) {
 	}
 }
 
-// renderLogo prints the visual-identity lane: the mark that won, then every
-// candidate and what became of it. The candidate list is the point — a company
-// whose face comes out wrong is diagnosed by seeing which asset was chosen over
-// which.
+// renderLogo prints the visual-identity lane, one slot at a time: the mark
+// that won, then every candidate and what became of it. The candidate list is
+// the point — a company whose face comes out wrong is diagnosed by seeing which
+// asset was chosen over which, and for which slot.
 func renderLogo(w io.Writer, r compose.SiteReadDebugReport) {
+	renderMark(w, "LOGO (wide, the expanded rail and every record card)", r.Logo,
+		"none resolved — the record keeps its monogram")
+	renderMark(w, "LOGO ICON (square badge, the collapsed rail; stored by the cold-start read only)", r.LogoIcon,
+		"none stored — the collapsed rail draws the wide mark")
+}
+
+func renderMark(w io.Writer, heading string, mark compose.DebugLogo, empty string) {
 	p := func(format string, args ...any) { _, _ = fmt.Fprintf(w, format, args...) }
 
-	if r.Logo.SourceURL == "" {
-		p("\nLOGO: none resolved — the record keeps its monogram\n")
+	if mark.SourceURL == "" {
+		p("\n%s: %s\n", heading, empty)
 	} else {
-		p("\nLOGO: %s (source %s, stored %s)\n", r.Logo.SourceURL, r.Logo.SourceSize, byteSize(r.Logo.StoredBytes))
+		p("\n%s: %s (source %s, stored %s)\n", heading, mark.SourceURL, mark.SourceSize, byteSize(mark.StoredBytes))
 	}
-	for _, candidate := range r.Logo.Candidates {
+	for _, candidate := range mark.Candidates {
 		p("  %s\n      %s\n", candidate.URL, candidate.Outcome)
 	}
 }

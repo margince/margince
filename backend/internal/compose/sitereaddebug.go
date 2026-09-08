@@ -63,9 +63,13 @@ type SiteReadDebugReport struct {
 	ModelCalls []DebugModelCall         `json:"model_calls"`
 	Proposal   *people.DeepReadProposal `json:"proposal"`
 	// Logo is what the visual-identity lane made of the seed page's
-	// declarations. The debug run resolves and normalizes exactly as the
-	// worker does but stores nothing — it is DB-less and blob-less.
-	Logo DebugLogo `json:"logo"`
+	// declarations for the WIDE slot, and LogoIcon for the square badge beside
+	// it. The debug run resolves and normalizes exactly as the cold-start
+	// worker does but stores nothing — it is DB-less and blob-less. An
+	// enrichment read of an existing organization stores the wide mark only,
+	// on the terms resolveLogo states.
+	Logo     DebugLogo `json:"logo"`
+	LogoIcon DebugLogo `json:"logo_icon"`
 	// ModelLaneError mirrors the worker's degraded-to-partial path: the
 	// extraction error that stopped the model lane midway, empty when
 	// every page got its passes.
@@ -164,7 +168,9 @@ func siteReadDebugRun(ctx context.Context, opts SiteReadDebugOptions, crawler *s
 		if logoSeed == "" {
 			logoSeed = opts.SeedURL
 		}
-		report.Logo = debugLogo(resolveOrganizationLogo(ctx, logoFetch, logoSeed, crawl.SeedAssets))
+		marks := resolveCompanyMarks(ctx, logoFetch, logoSeed, crawl.SeedAssets)
+		report.Logo = debugLogo(marks.Wide, marks.WideAttempts)
+		report.LogoIcon = debugLogo(marks.Icon, marks.IconAttempts)
 	}
 
 	// Read the cause before the enrichment rewrites the census the gate judged.

@@ -20613,9 +20613,11 @@ type CompanyProfile struct {
 	// LogoIconUrl Where to fetch the installation's own SQUARE logo icon — the `getOrganizationLogoIcon`
 	// path, cookie-authenticated and same-origin, carrying a revision query on the same terms
 	// as `logo_url`. This is the badge a collapsed sidebar draws, where the wide mark above
-	// would be unreadable; the two are chosen separately and only `uploadCompanyLogoIcon`
-	// ever fills this one. ABSENT entirely (not null) when the company has no icon, which is
-	// never an error: a client falls back to `logo_url`, then to the deterministic monogram.
+	// would be unreadable; the two are chosen separately. The cold-start website read fills
+	// this one from the site's declared icons when it also resolved a wide lockup, and
+	// `uploadCompanyLogoIcon` replaces it. ABSENT entirely (not null) when the company has
+	// no icon, which is never an error: a client falls back to `logo_url`, then to the
+	// deterministic monogram.
 	LogoIconUrl *string `json:"logo_icon_url,omitempty"`
 
 	// LogoUrl Where to fetch the installation's own company logo — the same `getOrganizationLogo`
@@ -20751,9 +20753,14 @@ type CompanySiteRead struct {
 
 	// LogoUrl Where to fetch the mark the read resolved from the company's own site — the
 	// `getCompanySiteReadLogo` path for this dossier, cookie-authenticated and
-	// same-origin. ABSENT when the read resolved none, which a client answers with the
-	// deterministic monogram. A confirmation moves the same mark onto the record, where
-	// `CompanyProfile.logo_url` carries it from then on.
+	// same-origin. The mark is the wide lockup the site itself labels as its logo when
+	// one resolved, and otherwise its best square icon, which then serves both widths.
+	// ABSENT when the read resolved none, which a client answers with the deterministic
+	// monogram. A confirmation moves the same mark onto the record, where
+	// `CompanyProfile.logo_url` carries it from then on. Only when a wide lockup
+	// resolved does the read also park a square badge beside it — the dossier does not
+	// serve that one, and the same confirmation moves it to `CompanyProfile.logo_icon_url`;
+	// a read that fell back to its square icon parks no badge and leaves that slot empty.
 	LogoUrl        *string                    `json:"logo_url,omitempty"`
 	NextAttemptAt  *time.Time                 `json:"next_attempt_at"`
 	OrganizationId *openapi_types.UUID        `json:"organization_id,omitempty"`

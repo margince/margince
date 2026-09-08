@@ -412,6 +412,8 @@ resolved during a deep read from the page that read already fetched — its
 third-party logo API and no new egress beyond the asset itself. Candidates are
 tried in a fixed order (at most 8), sized between 32px and 300px on the long
 edge, and rejected past an aspect ratio that says "banner" rather than "mark".
+The chain prefers the square icons a site declares, because this mark is drawn
+as a square avatar on every record card.
 
 Everything stored is **re-encoded once, at store time**: the endpoint always
 answers `image/png`, whatever the source format was, so no third-party markup is
@@ -451,10 +453,38 @@ The icon is a second pair of columns on the same row (`logo_icon_object_key`,
 `logo_icon_origin`), read back as `CompanyProfile.logo_icon_url` and streamed
 from `GET /organizations/{id}/logo/icon` on exactly the terms above — same
 re-encode, same headers, same 404 for absent, invisible and non-existent alike.
-What differs is who writes it: `uploadCompanyLogoIcon` and nothing else. No
-website read resolves a second picture, so this slot has no machine writer to
-hold off and no precedence rule of its own, and every organization but the
-anchor answers 404 for it.
+Two writers reach it: the cold-start website read, and `uploadCompanyLogoIcon`.
+A person's upload outranks the read, under the same provenance check the wide
+mark's writers take, so this slot has a machine writer to hold off and holds it
+off the same way. Every organization but the anchor answers 404 for it.
+
+**The cold-start read resolves both marks.** The onboarding read is the one
+read whose company is drawn at two widths, so it runs two chains over the seed
+page it already fetched. The **lockup** comes from what the page itself calls
+its logo: the schema.org `logo` its JSON-LD declares, then the `<img>` elements
+it labels as one — in the alt text, the class, the id or the file name. That
+harvest deliberately reads the page body, which the icon harvest refuses to,
+because a lockup lives nowhere else and the label is the evidence; the mark is
+shown to the person reviewing the dossier before any record wears it. It is
+stored aspect-preserved at the upload path's edge, so both writers of the wide
+slot store the same shape. The **badge** comes from the chain above — the
+apple-touch-icon, the favicons, `/favicon.ico`, the `og:image` last — and only
+a square result is stored as one. The badge chain runs first, because it is
+the face every installation had before the lockup existed and the lane runs
+under one deadline: a slow lockup fetch must never cost the company the mark
+it used to get.
+
+When no lockup resolves, the badge fills the wide slot and the icon slot stays
+empty — exactly what every installation had before. When the lockup is itself
+square, or the chain's best mark is not, no badge is stored either: the
+collapsed rail falls back to the wide mark on its own, so a second copy would
+be bytes stored for nothing. Both marks wait on the dossier
+(`site_read.logo_object_key`, `site_read.logo_icon_object_key`) and the
+confirmation binds each to its slot on the record, slot by slot under the
+human-precedence rule. Enrichment reads of every other organization keep
+resolving the one square-preferring mark: a wordmark letterboxed into a record
+card's square avatar would be the illegible row of strokes the badge exists to
+avoid. `worker siteread` reports both slots and every candidate each one tried.
 
 The two slots are chosen and cleared separately in settings, and the collapsed
 rail falls back to the wide mark when there is no icon — which is what every
@@ -540,7 +570,7 @@ list, approval, signal) and durably own no business entity. See
 | The brief: model path and its validator | `backend/internal/compose/orgbrief/write.go` |
 | The deterministic floor | `backend/internal/compose/orgbrief/deterministic.go` |
 | The prepared questions | `backend/internal/compose/orgbrief/ask.go` |
-| Logo resolve (candidates, normalize, store) | `backend/internal/compose/{sitelogo,sitelogocandidates}.go` |
+| Logo resolve (candidates, normalize, store; the cold start's lockup and slot decision) | `backend/internal/compose/{sitelogo,sitelogocandidates,sitelockup}.go` |
 | Logo row, provenance precedence, `LogoURL` | `backend/internal/modules/people/organizationlogo.go` |
 | Logo streaming handler | `backend/internal/modules/people/handlers_organization.go` |
 | Contract | `backend/api/crm.yaml` — `/organizations/{id}/{360,graph,brief,ask,view-ack,suggestions/dismiss,scan,logo}` |

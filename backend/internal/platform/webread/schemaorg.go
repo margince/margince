@@ -19,6 +19,7 @@ package webread
 
 import (
 	"encoding/json"
+	"net/url"
 	"slices"
 	"strings"
 
@@ -69,7 +70,7 @@ func linkedDataClaims(rawHTML string) []string {
 			// ships broken markup still has a <head> and a body to read.
 			continue
 		}
-		claims = collectLDClaims(doc, 0, seen, claims)
+		claims = collectLDClaims(doc, seen, claims)
 		if len(claims) >= ldMaxClaims {
 			return claims
 		}
@@ -107,25 +108,16 @@ func linkedDataBlocks(rawHTML string) []string {
 	}
 }
 
-// collectLDClaims walks one decoded document, gathering claims depth-first in
-// document order. seen drops a repeated value: a site declaring its name on
-// every node would otherwise spend the whole budget saying it again per node.
+// collectLDClaims reads the claims off every node of one decoded document,
+// depth-first in document order. seen drops a repeated value: a site declaring
+// its name on every node would otherwise spend the whole budget saying it again
+// per node.
 //
-// nobody declares — schema.org is an open vocabulary and the page chooses which
-// of it to send, so a concrete type here would be this package inventing a
-// contract the input never agreed to. The walk answers only "is this a map, a
-// list, or a string", which is the whole of what json.Unmarshal into `any` can
-// be asked.
-//
-//craft:ignore naked-any the parameter IS a decoded JSON document of a shape
-func collectLDClaims(node any, depth int, seen map[string]bool, into []string) []string {
-	if depth > ldMaxDepth || len(into) >= ldMaxClaims {
-		return into
-	}
-	switch value := node.(type) {
-	case map[string]any:
+//craft:ignore naked-any the parameter IS a decoded JSON document of a shape nobody declares — see walkLinkedData
+func collectLDClaims(doc any, seen map[string]bool, into []string) []string {
+	walkLinkedData(doc, 0, func(node map[string]any) bool {
 		for _, key := range ldClaimKeys {
-			claim, ok := value[key].(string)
+			claim, ok := node[key].(string)
 			if !ok {
 				continue
 			}
@@ -136,22 +128,121 @@ func collectLDClaims(node any, depth int, seen map[string]bool, into []string) [
 			seen[claim] = true
 			into = append(into, truncateRunes(claim, headTextRunes))
 			if len(into) >= ldMaxClaims {
-				return into
+				return true
 			}
 		}
-		// Nested nodes in a stable order, so one page reads the same way twice.
-		// Map iteration is randomized in Go, and a crawl whose prose changed
-		// between two reads of one page would make every downstream dedupe and
-		// evidence match depend on which order this walk happened to take.
+		return false
+	})
+	return into
+}
+
+// ldLogoKey is the schema.org field that names an organization's logo — the
+// one place a page says "this picture is our mark" in so many words, where a
+// <link rel="icon"> only says "this is us at icon size".
+const ldLogoKey = "logo"
+
+// ldImageURLKeys are the fields an ImageObject carries its address in. A logo
+// is declared either as a bare URL string or as such an object; both spellings
+// are common and a reader that took only one would miss half the sites that
+// declared one.
+var ldImageURLKeys = []string{"url", "contentUrl"}
+
+// linkedDataLogos reads the logos a page declares in JSON-LD, absolute and in
+// document order, at most max of them. Like the claims, the type is not
+// filtered: a LocalBusiness subtype's logo is its logo.
+func linkedDataLogos(rawHTML string, base *url.URL, limit int) []string {
+	var logos []string
+	seen := map[string]bool{}
+	for _, block := range linkedDataBlocks(rawHTML) {
+		var doc any
+		if err := json.Unmarshal([]byte(block), &doc); err != nil {
+			continue
+		}
+		walkLinkedData(doc, 0, func(node map[string]any) bool {
+			for _, ref := range ldImageRefs(node[ldLogoKey]) {
+				resolved, ok := resolveAsset(base, ref)
+				if !ok || seen[resolved] {
+					continue
+				}
+				seen[resolved] = true
+				logos = append(logos, resolved)
+				if len(logos) >= limit {
+					return true
+				}
+			}
+			return false
+		})
+		if len(logos) >= limit {
+			return logos
+		}
+	}
+	return logos
+}
+
+// ldImageRefs reads the address(es) one logo value names: a URL string, an
+// ImageObject, or a list of either. Nothing deeper — an ImageObject's own
+// nested nodes describe the picture, they do not name a second one.
+//
+//craft:ignore naked-any the value IS a decoded JSON field of a shape nobody declares, the same reason collectLDClaims gives
+func ldImageRefs(value any) []string {
+	switch typed := value.(type) {
+	case string:
+		return []string{typed}
+	case map[string]any:
+		for _, key := range ldImageURLKeys {
+			if ref, ok := typed[key].(string); ok {
+				return []string{ref}
+			}
+		}
+	case []any:
+		var refs []string
+		for _, item := range typed {
+			refs = append(refs, ldImageRefs(item)...)
+		}
+		return refs
+	}
+	return nil
+}
+
+// walkLinkedData visits every object node of one decoded document, depth-first
+// and bounded, and stops once visit reports it has what it came for.
+//
+// Both readers of a JSON-LD document — the claims and the logos — go through
+// this walk, which keeps the depth bound and the visiting order together
+// rather than in two copies. The order is stable on purpose: map iteration is randomized
+// in Go, and a page whose declarations read differently between two crawls
+// would make every downstream dedupe and evidence match depend on which order
+// this walk happened to take.
+//
+// The node is `any` because it is a decoded JSON document of a shape nobody
+// declares — schema.org is an open vocabulary and the page chooses which of it
+// to send, so a concrete type here would be this package inventing a contract
+// the input never agreed to. The walk answers only "is this a map, a list, or a
+// string", which is the whole of what json.Unmarshal into `any` can be asked.
+//
+//craft:ignore naked-any the parameter IS a decoded JSON document of a shape nobody declares
+func walkLinkedData(node any, depth int, visit func(map[string]any) bool) bool {
+	if depth > ldMaxDepth {
+		return false
+	}
+	switch value := node.(type) {
+	case map[string]any:
+		if visit(value) {
+			return true
+		}
 		for _, key := range sortedKeys(value) {
-			into = collectLDClaims(value[key], depth+1, seen, into)
+			if walkLinkedData(value[key], depth+1, visit) {
+				return true
+			}
 		}
 	case []any:
 		for _, item := range value {
-			into = collectLDClaims(item, depth+1, seen, into)
+			if walkLinkedData(item, depth+1, visit) {
+				return true
+			}
 		}
 	}
-	return into
+	return false
 }
 
 // sortedKeys is the walk's fixed order over a JSON object.

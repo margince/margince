@@ -33,6 +33,12 @@ type Page struct {
 	OGImage string
 	// Icons are the icons the page's <link rel> declared, in document order.
 	Icons []IconRef
+	// Logos are the pictures the page calls its LOGO, absolute and in the order
+	// the page offers them: what its JSON-LD names as one, then the <img>
+	// elements it labels as one. This is the lockup — the wordmark an expanded
+	// sidebar has room for — where Icons and OGImage are the square badge and
+	// the sharing card. Read from the body, deliberately (logoimages.go).
+	Logos []string
 	// Fingerprint is what this page declared about the software serving it,
 	// read from the same response the text above came from.
 	//
@@ -159,6 +165,7 @@ func (f *Fetcher) FetchPage(ctx context.Context, rawURL string) (Page, error) {
 		Bytes:           len(body),
 		OGImage:         head.ogImage,
 		Icons:           head.icons,
+		Logos:           declaredLogos(body, base),
 		Refresh:         head.refresh,
 		HeadText:        append(head.text, linkedDataClaims(body)...),
 		ExternalScripts: external,

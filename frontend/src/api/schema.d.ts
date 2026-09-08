@@ -1646,10 +1646,11 @@ export interface paths {
          *     sidebar draws, normalized once at store time to PNG on exactly the terms
          *     `getOrganizationLogo` describes for the wide mark.
          *
-         *     Only the installation's own company wears an icon today — no website read resolves
-         *     one, and `uploadCompanyLogoIcon` is its one writer — so every other record answers
-         *     the same 404 it answers for a mark it does not have. 404 also when the organization
-         *     is invisible to the caller or does not exist; a client falls back to the wide mark,
+         *     Only the installation's own company wears an icon today: the cold-start website
+         *     read resolves one from the site's declared icons when it also found a wide lockup,
+         *     and `uploadCompanyLogoIcon` replaces it — so every other record answers the same
+         *     404 it answers for a mark it does not have. 404 also when the organization is
+         *     invisible to the caller or does not exist; a client falls back to the wide mark,
          *     or to the deterministic monogram, for all of them alike. 501 when the deployment
          *     has no object store configured.
          */
@@ -6293,7 +6294,8 @@ export interface paths {
          *
          *     `DELETE` takes the icon off. The two slots are independent: a company with only a
          *     wide mark keeps drawing that mark in the collapsed rail, which is what every
-         *     installation did before this endpoint existed.
+         *     installation did before this endpoint existed. An icon a person uploads outranks
+         *     the one a website read resolves, exactly as the wide mark does.
          */
         post: operations["uploadCompanyLogoIcon"];
         /**
@@ -6407,10 +6409,12 @@ export interface paths {
         };
         /**
          * Stream the mark a website read resolved, before anything adopts it.
-         * @description The bytes behind `CompanySiteRead.logo_url`: the company mark the read resolved from
-         *     its own site, parked on the dossier until a confirmation binds it to the record.
-         *     Served here so the review can show the company it is about while the record does not
-         *     exist yet. Normalized like every stored mark, so the response is always `image/png`
+         * @description The bytes behind `CompanySiteRead.logo_url`: the mark the read resolved for the
+         *     company's WIDE slot, parked on the dossier until a confirmation binds it to the record.
+         *     That is the lockup the site labels as its logo when one resolved; when none did, it is
+         *     the read's best square icon, which then serves both widths and leaves the badge slot
+         *     empty. Served here so the review can show the company it is about while the record
+         *     does not exist yet. Normalized like every stored mark, so the response is always `image/png`
          *     and never third-party markup. 404 when the read resolved no mark or does not exist;
          *     501 when the deployment has no object store configured.
          */
@@ -27146,9 +27150,11 @@ export interface components {
              * @description Where to fetch the installation's own SQUARE logo icon — the `getOrganizationLogoIcon`
              *     path, cookie-authenticated and same-origin, carrying a revision query on the same terms
              *     as `logo_url`. This is the badge a collapsed sidebar draws, where the wide mark above
-             *     would be unreadable; the two are chosen separately and only `uploadCompanyLogoIcon`
-             *     ever fills this one. ABSENT entirely (not null) when the company has no icon, which is
-             *     never an error: a client falls back to `logo_url`, then to the deterministic monogram.
+             *     would be unreadable; the two are chosen separately. The cold-start website read fills
+             *     this one from the site's declared icons when it also resolved a wide lockup, and
+             *     `uploadCompanyLogoIcon` replaces it. ABSENT entirely (not null) when the company has
+             *     no icon, which is never an error: a client falls back to `logo_url`, then to the
+             *     deterministic monogram.
              */
             readonly logo_icon_url?: string | null;
             /** @description The registered legal entity, when it differs from display_name. */
@@ -27649,9 +27655,14 @@ export interface components {
             /**
              * @description Where to fetch the mark the read resolved from the company's own site — the
              *     `getCompanySiteReadLogo` path for this dossier, cookie-authenticated and
-             *     same-origin. ABSENT when the read resolved none, which a client answers with the
-             *     deterministic monogram. A confirmation moves the same mark onto the record, where
-             *     `CompanyProfile.logo_url` carries it from then on.
+             *     same-origin. The mark is the wide lockup the site itself labels as its logo when
+             *     one resolved, and otherwise its best square icon, which then serves both widths.
+             *     ABSENT when the read resolved none, which a client answers with the deterministic
+             *     monogram. A confirmation moves the same mark onto the record, where
+             *     `CompanyProfile.logo_url` carries it from then on. Only when a wide lockup
+             *     resolved does the read also park a square badge beside it — the dossier does not
+             *     serve that one, and the same confirmation moves it to `CompanyProfile.logo_icon_url`;
+             *     a read that fell back to its square icon parks no badge and leaves that slot empty.
              */
             readonly logo_url?: string;
             pages: components["schemas"]["CompanySiteReadPage"][];

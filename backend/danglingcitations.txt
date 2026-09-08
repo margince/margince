@@ -139,7 +139,6 @@ backend/internal/modules/people/organization_computed.go core 0217
 backend/internal/modules/people/organization_fact_read.go migration 0099
 backend/internal/modules/people/organizationarchive.go migration 0083
 backend/internal/modules/people/organizationlinkedin_test.go migration 0191
-backend/internal/modules/people/organizationlogo.go core 0217
 backend/internal/modules/people/relationshiperrors.go migration 0007
 backend/internal/modules/people/relationshiperrors.go migration 1787111736
 backend/internal/modules/people/sitereadfinish.go migration 0221

@@ -119,7 +119,7 @@ func (e *deepReadEngine) confirmCompanySiteRead(w http.ResponseWriter, r *http.R
 		httperr.Write(w, r, httperr.Validation("profile.website", "invalid", "website must be a domain or an absolute http(s) URL"))
 		return
 	}
-	company, unadoptedLogo, err := e.people.ConfirmCompanySiteRead(r.Context(), people.ConfirmCompanySiteReadInput{
+	company, unadoptedLogos, err := e.people.ConfirmCompanySiteRead(r.Context(), people.ConfirmCompanySiteReadInput{
 		ReadID: ids.UUID(readID), DraftVersion: req.DraftVersion, ProposalHash: req.ProposalHash,
 		DisplayName: strings.TrimSpace(req.Profile.DisplayName), Website: website,
 		// The object store lives on this side of the seam, so the dossier
@@ -154,7 +154,9 @@ func (e *deepReadEngine) confirmCompanySiteRead(w http.ResponseWriter, r *http.R
 	// transaction that failed behind one would leave the anchor — or the dossier
 	// — pointing at bytes nothing can serve. The committed row no longer names
 	// these, and no record ever did.
-	deleteUnreferencedLogo(r.Context(), e.blob, e.logger(), "read "+ids.UUID(readID).String(), unadoptedLogo)
+	for _, unadopted := range unadoptedLogos {
+		deleteUnreferencedLogo(r.Context(), e.blob, e.logger(), "read "+ids.UUID(readID).String(), &unadopted)
+	}
 	httperr.WriteJSON(w, http.StatusOK, toContractCompany(company))
 }
 

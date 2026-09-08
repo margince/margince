@@ -79,21 +79,21 @@ func SiteReadFactKey(f DeepReadFact) string {
 // separately, and marks the dossier confirmed. A stale or replayed draft
 // changes nothing.
 //
-// It also hands back the storage key of a mark the anchor did NOT adopt,
-// because a logo already holds that field, so the caller collects bytes no
-// record wears. Nil is the ordinary answer: the read parked no mark, the anchor
-// adopted it, or the caller declared no object store to collect it with. Same
-// contract as SetOrganizationLogo and RecordSiteReadLogo — a store reports a
-// collection, it never performs one.
-func (s *Store) ConfirmCompanySiteRead(ctx context.Context, in ConfirmCompanySiteReadInput, stagePeople StageSiteReadPeople) (Company, *string, error) {
+// It also hands back the storage keys of the marks the anchor did NOT adopt,
+// because a person's own mark already holds that slot, so the caller collects
+// bytes no record wears. Empty is the ordinary answer: the read parked no mark,
+// the anchor adopted what it parked, or the caller declared no object store to
+// collect with. Same contract as SetOrganizationLogo and RecordSiteReadLogo — a
+// store reports a collection, it never performs one.
+func (s *Store) ConfirmCompanySiteRead(ctx context.Context, in ConfirmCompanySiteReadInput, stagePeople StageSiteReadPeople) (Company, []string, error) {
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return Company{}, nil, err
 	}
 	var out Company
-	var unadoptedLogo *string
+	var unadoptedLogos []string
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		out, unadoptedLogo, err = s.confirmCompanySiteReadTx(ctx, tx, in, by, stagePeople)
+		out, unadoptedLogos, err = s.confirmCompanySiteReadTx(ctx, tx, in, by, stagePeople)
 		return err
 	})
 	if err != nil {
@@ -102,7 +102,7 @@ func (s *Store) ConfirmCompanySiteRead(ctx context.Context, in ConfirmCompanySit
 		// row is still pointing at.
 		return Company{}, nil, err
 	}
-	return out, unadoptedLogo, nil
+	return out, unadoptedLogos, nil
 }
 
 type siteReadConfirmation struct {
@@ -119,7 +119,7 @@ func (s *Store) confirmCompanySiteReadTx(
 	in ConfirmCompanySiteReadInput,
 	by string,
 	stagePeople StageSiteReadPeople,
-) (Company, *string, error) {
+) (Company, []string, error) {
 	if err := lockCompanyState(ctx, tx); err != nil {
 		return Company{}, nil, err
 	}
@@ -150,20 +150,29 @@ func (s *Store) confirmCompanySiteReadTx(
 	if err := recordSiteReadConfirmation(ctx, tx, read, confirmation); err != nil {
 		return Company{}, nil, err
 	}
-	// The logo lands AFTER the confirmation's own event, never before it. Its
-	// write publishes organization.updated, and the confirmation that mints the
+	// The marks land AFTER the confirmation's own event, never before it. Their
+	// writes publish organization.updated, and the confirmation that mints the
 	// anchor publishes organization.created; the outbox ships a single entity's
 	// rows in insert order, so binding first would hand a consumer an update for
 	// an organization it has not been told about yet.
-	unadoptedLogo, err := bindSiteReadLogo(ctx, tx, read.ID, confirmation.target.id, in.ReclaimUnadoptedLogo)
-	if err != nil {
-		return Company{}, nil, err
+	// Bound from here, slot by slot: the write-authority gate credits a writer
+	// with its DIRECT caller's probe, and a helper between the two would put the
+	// bind one hop past the guard it runs under.
+	var unadoptedLogos []string
+	for _, slot := range logoSlots {
+		unadopted, err := bindSiteReadLogo(ctx, tx, read.ID, confirmation.target.id, slot, in.ReclaimUnadoptedLogo)
+		if err != nil {
+			return Company{}, nil, err
+		}
+		if unadopted != nil && *unadopted != "" {
+			unadoptedLogos = append(unadoptedLogos, *unadopted)
+		}
 	}
 	company, err := readCompany(ctx, tx, confirmation.target.id)
 	if err != nil {
 		return Company{}, nil, err
 	}
-	return company, unadoptedLogo, nil
+	return company, unadoptedLogos, nil
 }
 
 func validateSiteReadConfirmation(read SiteRead, in ConfirmCompanySiteReadInput) error {
