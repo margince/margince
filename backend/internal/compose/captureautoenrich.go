@@ -22,7 +22,10 @@ package compose
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -31,13 +34,14 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// autoEnrichDailyCap is the per-workspace ceiling on auto deep reads started in
+// defaultAutoEnrichDailyCap is the per-workspace ceiling on auto deep reads started in
 // one UTC day. Reserved atomically, so two replicas never both slip past it.
 //
 // It is the THIRD bound on this fan-out, not the only one, and knowing what the
@@ -57,8 +61,53 @@ import (
 // companies at once, and what it is demonstrating is that the CRM fills itself
 // (P5). A ceiling below that arrival rate turns the demonstration into a trickle
 // and teaches the opposite, while a ceiling above it buys nothing the three
-// bounds above do not already give.
-const autoEnrichDailyCap = 500
+// bounds above do not already give. A backfill can still outrun the number — a
+// mailbox that meets more than this many new domains in one UTC day leaves the
+// excess pending until the next day's budget — which is what
+// AutoEnrichDailyCapEnv exists for.
+const defaultAutoEnrichDailyCap = 500
+
+// AutoEnrichDailyCapEnv overrides defaultAutoEnrichDailyCap for a deployment
+// whose backfills outrun it. Exported so the composition roots can declare it
+// as part of their configurable surface without spelling the string a second
+// time. Read by BOTH roles: the worker spends the budget in its sweeps, and the
+// api spends it when an approval accept queues a triage read — a split value
+// would let one role spend what the other believes is left.
+const AutoEnrichDailyCapEnv = "MARGINCE_AUTO_ENRICH_DAILY_CAP"
+
+// AutoEnrichDailyCapFromEnv resolves the daily cap: unset or 0 takes the
+// compiled default, a positive integer replaces it, anything else is an error.
+// Both cmd roles call this at boot so a typo refuses the boot rather than
+// silently pacing at the wrong rate; the constructors below resolve through the
+// same spelling, which is what keeps the two reads one rule.
+func AutoEnrichDailyCapFromEnv(env config.Lookup) (int, error) {
+	v := strings.TrimSpace(env(AutoEnrichDailyCapEnv))
+	if v == "" {
+		return defaultAutoEnrichDailyCap, nil
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil || n < 0 {
+		return 0, fmt.Errorf("invalid %s %q: want a non-negative integer (0 takes the compiled default)", AutoEnrichDailyCapEnv, v)
+	}
+	if n == 0 {
+		return defaultAutoEnrichDailyCap, nil
+	}
+	return n, nil
+}
+
+// autoEnrichDailyCap resolves the cap for a constructor that cannot refuse to
+// boot. Both roles already validated the variable at startup, so an error here
+// means the environment changed under a running process; the compiled default
+// is the safe answer, said out loud.
+func autoEnrichDailyCap(log *slog.Logger) int {
+	n, err := AutoEnrichDailyCapFromEnv(config.FromOS)
+	if err != nil {
+		log.Warn("auto-enrich: unreadable daily cap, using the compiled default",
+			"err", err, "default", defaultAutoEnrichDailyCap)
+		return defaultAutoEnrichDailyCap
+	}
+	return n
+}
 
 // autoEnrichRetryBackoff is how long a triggered read's cursor is armed before
 // the sweep may reconsider the org: long enough that an in-flight or
@@ -92,7 +141,7 @@ func newCaptureAutoEnrichSweepWorker(pool *pgxpool.Pool, log *slog.Logger) *capt
 		people:     people.NewStore(InstallationDB(pool)),
 		settings:   capture.NewSettings(NewSettingsStore(pool)),
 		autoEnrich: capture.NewAutoEnrichStore(InstallationDB(pool)),
-		dailyCap:   autoEnrichDailyCap,
+		dailyCap:   autoEnrichDailyCap(log),
 		log:        log,
 	}
 }
