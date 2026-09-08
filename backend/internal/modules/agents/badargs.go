@@ -132,7 +132,7 @@ func (e *BadArgsError) Error() string {
 }
 func (e *BadArgsError) Unwrap() error { return e.Cause }
 
-// MessageFault lets a BadArgsError classify correctly when it reaches the REST
+// FieldFaults lets a BadArgsError classify correctly when it reaches the REST
 // surface — which the create/patch resolvers' shared Guards are the first
 // callers to do, since every earlier BadArgsError site answered the MCP tool
 // door alone. httperr.Classify has no notion of this package's own error type,
@@ -140,14 +140,6 @@ func (e *BadArgsError) Unwrap() error { return e.Cause }
 // method") is the seam built for exactly that; without it the REST door would
 // answer a caller's own mistake with an opaque 500, which is the one thing
 // clientInputValidation's own doc says must never happen.
-//
-// The code REUSES validation_error rather than minting one: crm.yaml already
-// declares it for exactly this class of caller mistake (httperr.Validation's
-// own code), and inventing a second would put an undocumented code in front
-// of a client that branches on the documented one (P3 — the contract wins).
-// A code this package needs of its own belongs in an upstream contract
-// change, the same rule compose's EmptyReportPlanError.MessageFault states
-// for its own reused code.
 //
 // The MCP tool door is untouched by this: Dispatcher.explain matches
 // *BadArgsError by type BEFORE it ever consults httperr.Classify, so this

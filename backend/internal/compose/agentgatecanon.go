@@ -165,6 +165,8 @@ func canonicalRESTCall(op, path string, headers http.Header, body []byte, keys i
 // `operation` is not among them: it is the route's own declared id, supplied by
 // this server, so a caller cannot put anything in it and being told to fix it
 // would be advice about a value they never sent.
+//
+//craft:ignore naked-any the members ARE arbitrary decoded JSON — the body is open by operation and the headers map is assembled here — so a concrete type would be a claim about payload shape this must not make
 func refuseReplacementRune(path string, body, headers any) error {
 	for _, member := range []struct {
 		field string

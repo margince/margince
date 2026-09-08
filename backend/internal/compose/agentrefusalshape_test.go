@@ -138,3 +138,37 @@ func TestAReplacementRuneNamesTheMemberItCameFrom(t *testing.T) {
 // errProbeBadPhase is a refusal of the shape this file is about: it names an
 // input in its prose, which is exactly the case the field must now carry too.
 var errProbeBadPhase = errors.New(`to_phase "vibing" is not a project phase`)
+
+// The detail a field-fault refusal carries is bounded like every other value
+// on that path.
+//
+// It was the one that was not, and it is the value most likely to be long: a
+// BadArgsError's Guidance is deliberately unbounded — bounding it with the echo
+// truncated the accepted-field list mid-word, deleting the actionable half of a
+// message whose reader had just proved they did not know the vocabulary — and
+// Error() concatenates the two.
+func TestAFieldFaultsDetailIsBounded(t *testing.T) {
+	rec := httptest.NewRecorder()
+	httperr.Write(rec, httptest.NewRequest(http.MethodPost, "/v1/probe", http.NoBody),
+		&agents.BadArgsError{
+			Field:    "fields",
+			Cause:    errProbeBadPhase,
+			Guidance: "accepts " + strings.Repeat("a_long_field_name, ", 80),
+		})
+	var problem struct {
+		Detail string `json:"detail"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &problem); err != nil {
+		t.Fatalf("the refusal is not a problem document: %v", err)
+	}
+	// The bound plus the ellipsis boundFaultText appends, which is what every
+	// other value on this path measures to as well.
+	const ellipsis = len("…")
+	if len(problem.Detail) > httperr.MaxFaultText+ellipsis {
+		t.Errorf("detail is %d bytes, above the %d-byte bound every other value on this path takes",
+			len(problem.Detail), httperr.MaxFaultText)
+	}
+	if !strings.HasSuffix(problem.Detail, "…") {
+		t.Error("the detail was not bounded at all — this case passes on a short message whatever the code does")
+	}
+}
