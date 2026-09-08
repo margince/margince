@@ -249,12 +249,6 @@ var censusedModules = []string{
 	"internal/modules/signals",
 }
 
-// wantMinimumCensusedModuleSites is the floor on what the widened roots find, and it
-// exists for the reason wantMinimumScopedSites does one level up: a root that
-// silently stops being read contributes nothing and reports PASS. It sits below
-// the seven sites these six packages hold today.
-const wantMinimumCensusedModuleSites = 5
-
 func TestEveryComposeReadOfARecordReferenceAppliesItsRowScope(t *testing.T) {
 	t.Parallel()
 	defer unscopedReferenceReads.AssertAllMatched(t)
@@ -269,16 +263,29 @@ func TestEveryComposeReadOfARecordReferenceAppliesItsRowScope(t *testing.T) {
 		t.Fatalf("only %d record-reference reads found in %s, want at least %d — the SQL extractor lost its source",
 			len(sites), composeTier, wantMinimumScopedSites)
 	}
-	inModules := 0
+	// PER ROOT, not a total. An aggregate floor cannot see ONE root going dark:
+	// six roots contributing about one site each stay above any floor low enough
+	// not to be brittle, so the root the extractor stopped reading reports PASS —
+	// which is the failure this is here to catch, wearing the shape of the guard
+	// against it.
+	inModules := map[string]int{}
 	for _, site := range sites {
-		if strings.HasPrefix(site.dir, "internal/modules/") {
-			inModules++
+		for _, root := range censusedModules {
+			if site.dir == root || strings.HasPrefix(site.dir, root+"/") {
+				inModules[root]++
+			}
 		}
 	}
-	if inModules < wantMinimumCensusedModuleSites {
-		t.Fatalf("only %d record-reference reads found across the %d censused module package(s), want at "+
-			"least %d — a widened root that stops being read contributes nothing and reports PASS",
-			inModules, len(censusedModules), wantMinimumCensusedModuleSites)
+	for _, root := range censusedModules {
+		if inModules[root] == 0 {
+			t.Errorf("%s is a censused root and the extractor found no record-reference read in it — "+
+				"either its sites were removed, in which case drop the root and its waivers, or the "+
+				"extractor has stopped reading it and this root is being reported clean without being read",
+				root)
+		}
+	}
+	if total := len(inModules); total < len(censusedModules) {
+		t.Fatalf("only %d of %d censused module roots contributed a site", total, len(censusedModules))
 	}
 
 	for _, site := range sites {
