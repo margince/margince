@@ -1,12 +1,17 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { type RenderResult, render as rtlRender } from "@testing-library/react";
+import {
+  type RenderResult,
+  render as rtlRender,
+  screen,
+} from "@testing-library/react";
 import type { ReactNode } from "react";
-import { vi } from "vitest";
+import { expect, vi } from "vitest";
 import type { RbacObject } from "../app/capability";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { SettingsRail } from "../app/shell";
-import { LocaleProvider } from "../i18n";
+import { LocaleProvider, translate } from "../i18n";
 import { SettingsScreen, settingsAddress } from "./settings";
+import { SETTINGS_PAGES, type SettingsPageId } from "./settingscatalog";
 
 // The render helpers and grant fixtures every `settings*.test.tsx` suite needs,
 // in one place. Settings is ONE route carrying fourteen entries, so its coverage
@@ -262,3 +267,179 @@ export const IDLE_JOB_HEALTH = {
   kinds: [],
   recent_failures: [],
 };
+
+// The nav, driven by exactly the two things the catalog composes: the grant map
+// /me carries, and the company-context rollout flag beside it. Every other
+// endpoint answers empty, so a failure here can only be about visibility.
+export function settingsNavBackend(opts: {
+  roles: string[];
+  allow?: GrantSpec;
+  // The licensing seat, which the catalog deliberately leaves out: a read seat
+  // still READS every page behind these entries, so a case can name the seat and
+  // expect the nav not to narrow.
+  seat?: "full" | "read";
+  companyReadEnabled?: boolean;
+  // A server that predates `settings_availability` answers /me without it.
+  // The catalog has to read that as "the surface does not exist" rather than
+  // as permission, so a case can ask for the field to be absent entirely.
+  omitAvailability?: true;
+  // Whether this DEPLOYMENT permits a data reset. The compiled default is false
+  // everywhere, so the reset page is absent unless a case arms it — which is
+  // the behaviour, not a fixture convenience: the page needs the grant AND the
+  // deployment's own consent.
+  dataResetAvailable?: true;
+}) {
+  return vi.fn(async (input: RequestInfo | URL) => {
+    const url = String(input instanceof Request ? input.url : input);
+    if (url.endsWith("/v1/me")) {
+      const me = meFixture({
+        roles: opts.roles,
+        seat: opts.seat ?? "full",
+        allow: opts.allow ?? {},
+        settingsAvailability: opts.omitAvailability
+          ? null
+          : { company_context: opts.companyReadEnabled ?? false },
+      });
+      return jsonResponse({
+        ...me,
+        data_reset_available: opts.dataResetAvailable ?? false,
+      });
+    }
+    // The rail carries the agent at its foot, and the agent reads endpoints that
+    // answer with a KEYED envelope rather than the paged one below — an unrouted
+    // one throws mid-render, which surfaces here as the nav being empty.
+    const keyed = keyedEnvelope(url);
+    if (keyed) {
+      return keyed;
+    }
+    return jsonResponse({
+      data: [],
+      page: { next_cursor: null, has_more: false },
+    });
+  });
+}
+
+/**
+ * Every page this render OFFERS, rail and home together, de-duplicated and in
+ * catalog order.
+ *
+ * The rail alone stopped being the list of pages a reader may open: it carries
+ * `changes` now — the pages they can act on — and a page they may read and
+ * cannot change is deliberately absent from it while still answering its
+ * address, appearing in search, and being listed on the settings home under a
+ * heading that says which it is.
+ *
+ * So a case whose claim is "this grant opens that page" reads BOTH surfaces.
+ * Reading only the rail would turn every such case into a claim about
+ * prominence, which is a different question and one most of them never meant
+ * to ask.
+ */
+
+export function offeredPages(): string[] {
+  const seen = new Set(
+    screen
+      .getAllByRole("link")
+      .map((link) => link.getAttribute("href") ?? "")
+      .filter((href) => href.startsWith("#/settings/"))
+      .map((href) => href.slice("#/settings/".length)),
+  );
+  return [
+    translate("en", "settings.home"),
+    ...SETTINGS_PAGES.filter((page) => seen.has(page.id)).map((page) =>
+      labelOf(page.id),
+    ),
+  ];
+}
+
+// The expected labels, DERIVED from the catalog rather than restated beside it.
+// A list of labels beside a list of pages is a second source of truth, and
+// nothing updates it: the restated lists this replaces omitted `license` — a
+// fully wired entry with a predicate, content, labels in two locales and a deep
+// link from the sidebar's seat meter — so every assertion in this file,
+// including the ones claiming to walk the whole level, passed while checking one
+// entry fewer than existed.
+export const labelOf = (id: SettingsPageId) =>
+  translate("en", `settings.tab.${id}`);
+
+// The pages a caller reaches by naming a set of page ids, in CATALOG order —
+// so a case states which pages a grant opens and the order comes from the one
+// table that decides it, never from the order the case happened to list them.
+// Settings home leads every list, for every reader. It is not a page and no
+// grant reaches it — it is the address with no page segment — so it belongs in
+// the shared expectation rather than in each case that would otherwise have to
+// remember it.
+export const pagesNamed = (...ids: readonly SettingsPageId[]) => [
+  translate("en", "settings.home"),
+  ...SETTINGS_PAGES.filter((page) => ids.includes(page.id)).map((page) =>
+    labelOf(page.id),
+  ),
+];
+
+// What every reader gets: the personal pages, which carry no requirement at
+// all, and the two People pages that ask for none.
+//
+// `agents` and `connections` are personal because what they carry is the
+// PERSON's: gating `agents` would regress passport minting for every seat that
+// is not an admin, and a mailbox and a LinkedIn network nobody else can see are
+// not the installation's configuration.
+// The pages that ask for nothing: a reader's own five, and nothing else.
+//
+// `members` and `teams` used to sit here. The roster endpoint still answers any
+// authenticated caller — the share and assignee pickers depend on it — but a
+// directory is not an administration page, so the settings ENTRY follows the
+// `user_admin` and `team_admin` verbs while the safe roster stays open
+// underneath it.
+export const UNGATED_IDS = SETTINGS_PAGES.filter(
+  (page) => page.group === "me",
+).map((page) => page.id) as readonly SettingsPageId[];
+
+// The floor plus the pages a grant opens, in CATALOG order. Concatenating the
+// two lists instead would assert an order the catalog does not have: `company`
+// and `authentication` are declared BEFORE `members`, so a page's position
+// comes from the table rather than from which half of the fixture named it.
+export const floorPlus = (...ids: readonly SettingsPageId[]) =>
+  pagesNamed(...UNGATED_IDS, ...ids);
+
+/**
+ * Assert the nav settles to exactly these rows, once `/me` has actually
+ * answered.
+ *
+ * A bare `waitFor(() => expect(offeredPages()).toEqual(floorPlus()))` is VACUOUS
+ * for a case about an absence. Every capability predicate reads false while the
+ * snapshot is in flight, so the loading nav renders precisely the ungated floor
+ * — the same rows a resolved snapshot granting nothing renders. `waitFor`
+ * succeeds on its first tick, before the page under test could have appeared,
+ * and the case passes whatever the requirement says. Granting the very page a
+ * case says is withheld still passed, which is how this was found.
+ *
+ * So every such case needs a POSITIVE CONTROL: one page that only a resolved
+ * snapshot can draw. The caller grants a witness object alongside whatever it
+ * is really testing, this waits for that witness row to appear — which cannot
+ * happen until `/me` has answered AND rendered — and only then asserts the
+ * whole list. `pipeline` is the witness: it opens exactly one page, on a plain
+ * read, and is unrelated to every requirement these cases move.
+ */
+
+export async function expectNavSettlesTo(expected: readonly string[]) {
+  await expectSnapshotResolved();
+  await expect.poll(() => offeredPages()).toEqual(expected);
+}
+
+/**
+ * Wait until `/me` has actually answered AND rendered.
+ *
+ * The witness is the settings home's seat row, which draws only when
+ * `authorization` is present on the snapshot — it is absent while the request
+ * is in flight, and the panel renders nothing rather than guessing a seat.
+ *
+ * A page row cannot do this job any more. The old witness was Pipelines, which
+ * worked only for a fixture that granted `pipeline:read`; a case about a lone
+ * `seat_usage` reader has no such row to wait for, and waiting for one that
+ * never comes fails a case whose subject is somewhere else entirely. The seat
+ * row is on every resolved snapshot regardless of grants, which is what a
+ * positive control has to be.
+ */
+
+export async function expectSnapshotResolved() {
+  await screen.findByText(translate("en", "settings.home.seat.full"));
+}
