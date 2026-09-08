@@ -214,7 +214,7 @@ func keepReadersOwn(ctx context.Context, rows []ranked) []ranked {
 	}
 	kept := make([]ranked, 0, len(rows))
 	for _, row := range rows {
-		if narrowedByItsOwnLane(row) || ownedByReader(row, actor) {
+		if boundToTheActingReader(row) || ownedByReader(row, actor) {
 			kept = append(kept, row)
 		}
 	}
@@ -247,6 +247,14 @@ func keepOwnedBy(rows []ranked, owner ids.UUID) []ranked {
 	for _, row := range rows {
 		if narrowedByItsOwnLane(row) {
 			kept = append(kept, row)
+			continue
+		}
+		// The overnight brief is the ACTING reader's, whoever the page names.
+		// It ranks against that person's own responsibility, so its rows say
+		// nothing about the owner asked for here — and a row that happens to
+		// name them is a coincidence of the deal's owner column, not evidence
+		// the night picked it for them.
+		if row.item.Source == sourceBriefItem {
 			continue
 		}
 		if named, ok := answersTo(row); ok && named == owner {
@@ -285,6 +293,23 @@ func keepOwnedBy(rows []ranked, owner ids.UUID) []ranked {
 func narrowedByItsOwnLane(row ranked) bool {
 	return row.item.Source == sourceTask || row.item.Source == sourceLeadResponse ||
 		row.item.Source == sourceMeeting || row.item.Source == sourceMeetingOutcome
+}
+
+// boundToTheActingReader marks the lanes that narrowed to the person ASKING,
+// as opposed to the ones that narrowed to a named person.
+//
+// The overnight brief is the case that needs the distinction. It ranks against
+// the acting reader's own responsibility — their deal, or one they hold an open
+// assigned task on — so under `mine` a brief row is theirs whatever the deal's
+// owner column says, and judging it by owner drops exactly the assist the
+// ranking admitted.
+//
+// But it is bound to the READER, not to whoever the page names. A manager
+// opening a rep's queue must not inherit their own overnight picks under
+// somebody else's heading, which is the failure keepOwnedBy exists to prevent —
+// so that filter deliberately does not consult this.
+func boundToTheActingReader(row ranked) bool {
+	return narrowedByItsOwnLane(row) || row.item.Source == sourceBriefItem
 }
 
 // keepUnowned keeps the rows that answer to nobody.
