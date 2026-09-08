@@ -7616,8 +7616,17 @@ paths:
       # Session cookie only, matching auth.RequireHuman: putting somebody's name on a customer
       # record is a human's act, in bulk exactly as it is one at a time.
       security: [{ cookieAuth: [] }]
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
+      # NO IdempotencyKey, deliberately. A replay pays the recorded response back without
+      # re-running the write, so the key's holder must be re-probed against the records that
+      # response describes — and the replay probe reads ONE record id from a body, while this
+      # body names up to five hundred. A probe that checked the first lead would gate a
+      # hundredth of the answer while reading as a gate on all of it, so a caller whose row
+      # scope was revoked after the run could replay the key and read every verdict.
+      #
+      # A retry costs nothing to be safe about instead: assignment is idempotent in effect
+      # (assigning a lead to the owner it already has is the same lead with a new version), and
+      # each row carries its own `version`, so a retried request with the versions the caller
+      # still holds answers `conflict` for exactly the rows that moved.
       requestBody:
         required: true
         content:
@@ -31841,20 +31850,22 @@ components:
         version:
           type: integer
           format: int64
-          description: The lead's version after the write. Present on `assigned` and `unchanged`.
+          description: The lead's version after the write. Present on `assigned`.
 
     AssignLeadOutcomeKind:
       type: string
       description: |
-        `assigned` moved the lead. `unchanged` found it already owned by the destination and
-        wrote nothing, which is not a failure. `forbidden` is a lead the caller may not hand on.
-        `conflict` is a version that no longer holds.
+        `assigned` moved the lead — including one already owned by the destination, which still
+        takes a version and an audit row rather than being quietly skipped: the writer records
+        the assignment as an act, so a re-run says what it did rather than claiming it did
+        nothing. `forbidden` is a lead the caller may not hand on. `conflict` is a version that
+        no longer holds.
 
         `not_found` is a lead the caller cannot see — and also an ARCHIVED one, because the
         write resolves live rows only and a promoted or disqualified lead is no longer among
         them. The two deliberately read alike: which of them it was is a fact about a record the
         caller was not shown, and separating them would answer that a lead exists.
-      enum: [assigned, unchanged, not_found, forbidden, conflict]
+      enum: [assigned, not_found, forbidden, conflict]
 
     RelinkActivitiesRequest:
       type: object

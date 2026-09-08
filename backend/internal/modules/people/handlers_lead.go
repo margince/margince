@@ -105,7 +105,7 @@ func (h Handlers) UpdateLead(w http.ResponseWriter, r *http.Request, id crmcontr
 // 200 with per-row outcomes rather than an error for a partly refused run:
 // the refusals ARE the result here, and a 4xx carrying no body would leave the
 // screen unable to say which of forty leads did not move.
-func (h Handlers) AssignLeads(w http.ResponseWriter, r *http.Request, _ crmcontracts.AssignLeadsParams) {
+func (h Handlers) AssignLeads(w http.ResponseWriter, r *http.Request) {
 	var req crmcontracts.AssignLeadsRequest
 	if !httperr.Decode(w, r, &req) {
 		return

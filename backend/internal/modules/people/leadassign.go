@@ -6,16 +6,22 @@ package people
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
+
+// maxBulkAssign is the contract's cap, enforced in the store because nothing
+// between the wire and here reads maxItems.
+const maxBulkAssign = 500
 
 // AssignLeadsInput is one destination and the leads to hand to it.
 type AssignLeadsInput struct {
@@ -52,6 +58,15 @@ type AssignLeadOutcome struct {
 // assignment path that wrote the owner itself would be a second answer to who
 // may hand on a lead, and the two would drift.
 func (s *Store) AssignLeads(ctx context.Context, in AssignLeadsInput) ([]AssignLeadOutcome, error) {
+	// The contract's 1..500 is enforced HERE, not by the schema: this
+	// installation runs no request-validator middleware, so maxItems is
+	// documentation until a handler reads it. RelinkActivities checks its own
+	// cap the same way and for the same reason.
+	if len(in.Leads) == 0 || len(in.Leads) > maxBulkAssign {
+		return nil, httperr.Validation("leads", "out_of_range",
+			fmt.Sprintf("leads names between 1 and %d leads; this request names %d",
+				maxBulkAssign, len(in.Leads)))
+	}
 	if err := auth.Require(ctx, "lead", principal.ActionUpdate); err != nil {
 		return nil, err
 	}
@@ -78,7 +93,15 @@ func (s *Store) AssignLeads(ctx context.Context, in AssignLeadsInput) ([]AssignL
 			OwnerID:   &owner,
 			IfVersion: item.IfVersion,
 		})
-		out = append(out, assignOutcomeOf(item.ID, lead, err))
+		outcome, ok := assignOutcomeOf(item.ID, lead, err)
+		if !ok {
+			// Not a verdict about this lead — the database went away, or the
+			// request was cancelled. Reporting it as "forbidden" would tell the
+			// reader to ask for permission they already have, and would persist
+			// that lie as this request's replayable answer. The run fails.
+			return nil, err
+		}
+		out = append(out, outcome)
 	}
 	return out, nil
 }
@@ -90,20 +113,22 @@ func (s *Store) AssignLeads(ctx context.Context, in AssignLeadsInput) ([]AssignL
 // in the run itself and is not turned into a row outcome, because a result
 // that reports "forbidden" for a database that went away tells the reader to
 // fix the wrong thing.
-func assignOutcomeOf(id ids.LeadID, lead crmcontracts.Lead, err error) AssignLeadOutcome {
+func assignOutcomeOf(id ids.LeadID, lead crmcontracts.Lead, err error) (AssignLeadOutcome, bool) {
 	switch {
 	case err == nil:
 		return AssignLeadOutcome{
 			LeadID:  id,
 			Outcome: crmcontracts.AssignLeadOutcomeKindAssigned,
 			Version: lead.Version,
-		}
+		}, true
 	case errors.Is(err, apperrors.ErrVersionSkew), errors.Is(err, apperrors.ErrConflict):
-		return AssignLeadOutcome{LeadID: id, Outcome: crmcontracts.AssignLeadOutcomeKindConflict}
+		return AssignLeadOutcome{LeadID: id, Outcome: crmcontracts.AssignLeadOutcomeKindConflict}, true
 	case errors.Is(err, apperrors.ErrNotFound):
-		return AssignLeadOutcome{LeadID: id, Outcome: crmcontracts.AssignLeadOutcomeKindNotFound}
+		return AssignLeadOutcome{LeadID: id, Outcome: crmcontracts.AssignLeadOutcomeKindNotFound}, true
+	case errors.Is(err, apperrors.ErrPermissionDenied):
+		return AssignLeadOutcome{LeadID: id, Outcome: crmcontracts.AssignLeadOutcomeKindForbidden}, true
 	default:
-		return AssignLeadOutcome{LeadID: id, Outcome: crmcontracts.AssignLeadOutcomeKindForbidden}
+		return AssignLeadOutcome{}, false
 	}
 }
 

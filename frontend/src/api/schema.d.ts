@@ -22911,14 +22911,16 @@ export interface components {
             outcome: components["schemas"]["AssignLeadOutcomeKind"];
             /**
              * Format: int64
-             * @description The lead's version after the write. Present on `assigned` and `unchanged`.
+             * @description The lead's version after the write. Present on `assigned`.
              */
             version?: number;
         };
         /**
-         * @description `assigned` moved the lead. `unchanged` found it already owned by the destination and
-         *     wrote nothing, which is not a failure. `forbidden` is a lead the caller may not hand on.
-         *     `conflict` is a version that no longer holds.
+         * @description `assigned` moved the lead — including one already owned by the destination, which still
+         *     takes a version and an audit row rather than being quietly skipped: the writer records
+         *     the assignment as an act, so a re-run says what it did rather than claiming it did
+         *     nothing. `forbidden` is a lead the caller may not hand on. `conflict` is a version that
+         *     no longer holds.
          *
          *     `not_found` is a lead the caller cannot see — and also an ARCHIVED one, because the
          *     write resolves live rows only and a promoted or disqualified lead is no longer among
@@ -22926,7 +22928,7 @@ export interface components {
          *     caller was not shown, and separating them would answer that a lead exists.
          * @enum {string}
          */
-        AssignLeadOutcomeKind: "assigned" | "unchanged" | "not_found" | "forbidden" | "conflict";
+        AssignLeadOutcomeKind: "assigned" | "not_found" | "forbidden" | "conflict";
         /**
          * @description The destination for a named set of activities. Every id must be one the caller can see and
          *     write, or the whole request is refused and nothing moves.
@@ -41892,25 +41894,7 @@ export interface operations {
     assignLeads: {
         parameters: {
             query?: never;
-            header?: {
-                /**
-                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
-                 *     create (API-CC-6). **Scope:** the key is unique within
-                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
-                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
-                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
-                 *     attempt already bumped the version.
-                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
-                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
-                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
-                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
-                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
-                 *     to retry blind.
-                 */
-                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };

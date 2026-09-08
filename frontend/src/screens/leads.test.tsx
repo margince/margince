@@ -1267,6 +1267,56 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
     expect(screen.getByText(/Otto Fischer: /)).toBeTruthy();
   });
 
+  it("says so when the whole bulk assign is refused, not just when rows are", async () => {
+    // The per-row list reads outcomes, which only fill on success. A
+    // destination the server refused before touching any lead produces no
+    // outcomes at all, so without its own sentence the reader presses Assign
+    // and watches nothing happen.
+    stubFetch(async (url, _method, _request) => {
+      if (url.includes("/users")) {
+        return jsonResponse({
+          data: [{ id: "u-9", email: "lena@x.test", display_name: "Lena F." }],
+          page: { next_cursor: null },
+        });
+      }
+      if (url.includes("/leads/assign-bulk")) {
+        return new Response(
+          JSON.stringify({
+            title: "Unprocessable",
+            status: 422,
+            code: "owner_not_assignable",
+            detail:
+              "the owner must be an active colleague you may assign work to",
+          }),
+          {
+            status: 422,
+            headers: { "content-type": "application/problem+json" },
+          },
+        );
+      }
+      return jsonResponse({
+        data: [lead],
+        page: { next_cursor: null, has_more: false },
+      });
+    });
+    render(<LeadsScreen />);
+    await waitFor(() =>
+      expect(screen.getByText("Jonas Petersen")).toBeTruthy(),
+    );
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "Select Jonas Petersen" }),
+    );
+    await userEvent.click(screen.getByLabelText("New owner"));
+    await userEvent.click(
+      await screen.findByRole("option", { name: "Lena F." }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Assign" }));
+
+    expect(
+      await screen.findByText(/active colleague you may assign work to/),
+    ).toBeTruthy();
+  });
+
   it("fetches the next cursor page when the pager steps past the loaded page", async () => {
     const { urls } = stubFetch(async (url) => {
       if (url.includes("cursor=c1")) {

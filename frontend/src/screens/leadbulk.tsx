@@ -38,16 +38,15 @@ export type BulkAction = AssignAction | DisqualifyAction;
 // undefined when the lead moved, which is the only outcome that is not a
 // refusal to report.
 //
-// `unchanged` counts as moved: a lead already owned by the destination is
-// where the reader wanted it, and calling that a failure would report forty
-// problems for a re-run that fixed the two rows that mattered.
+// Assigning a lead to the owner it already has is still `assigned`: the writer
+// records the assignment as an act rather than skipping it, so a re-run says
+// what it did instead of claiming it did nothing.
 function assignOutcomeMessage(
   outcome: components["schemas"]["AssignLeadOutcomeKind"],
   t: ReturnType<typeof useT>,
 ): string | undefined {
   switch (outcome) {
     case "assigned":
-    case "unchanged":
       return undefined;
     case "conflict":
       return t("lead.bulkOutcomeConflict");
@@ -325,6 +324,15 @@ export function LeadBulkBar({
           {t("lead.bulkDisqualifyBody", { reason: reasonLabel })}
         </p>
       </ConfirmModal>
+      {/* A run refused as a WHOLE says so on its own. The per-row list below
+          reads `outcomes`, which only fills on success — so a destination the
+          server refused before touching any lead left the reader pressing
+          Assign and watching nothing happen. */}
+      {run.isError && (
+        <span className="t-caption t-danger">
+          {problemMessageOf(run.error, t)}
+        </span>
+      )}
       {failed.length > 0 && (
         <span className="t-caption t-danger">
           {t("lead.bulkFailed", {

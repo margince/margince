@@ -421,3 +421,27 @@ func TestBulkAssignHoldsTheSameRuleAsTheSingleWrite(t *testing.T) {
 		t.Errorf("a rep taking their own lead answered %q, want assigned", outcomes[0].Outcome)
 	}
 }
+
+// The contract says 1..500 and nothing between the wire and the store reads
+// that: this installation runs no request-validator middleware, so a cap
+// declared in the schema alone is a cap on nothing.
+func TestBulkAssignEnforcesItsOwnSizeCap(t *testing.T) {
+	e := Setup(t)
+	owner := ids.From[ids.UserKind](e.Rep1)
+
+	if _, err := e.People.AssignLeads(e.Admin(), people.AssignLeadsInput{
+		OwnerID: owner,
+	}); err == nil {
+		t.Error("a bulk assign naming no leads was accepted, want a refusal")
+	}
+
+	tooMany := make([]people.AssignLeadItem, 501)
+	for i := range tooMany {
+		tooMany[i] = people.AssignLeadItem{ID: ids.New[ids.LeadKind]()}
+	}
+	if _, err := e.People.AssignLeads(e.Admin(), people.AssignLeadsInput{
+		OwnerID: owner, Leads: tooMany,
+	}); err == nil {
+		t.Error("a bulk assign naming 501 leads was accepted, want a refusal")
+	}
+}
