@@ -7,14 +7,30 @@ package integration
 
 import (
 	"context"
+	"net/http"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
-// demoteToRep flips the bootstrap admin's role assignment from admin to rep
-// via the owner connection, so a scenario can prove that an admin-only
-// endpoint refuses the seat that may only read.
+// demoteToRep flips THIS SESSION'S seat from admin to rep via the owner
+// connection, so a scenario can prove that an admin-only endpoint refuses the
+// seat that may only read.
+//
+// The seat is read from the app (`GET /v1/me`), not picked out of app_user.
+// The lookup here used to be `WHERE is_agent = false ORDER BY created_at LIMIT
+// 1` under a comment claiming it demoted the bootstrap admin, and the two agree
+// only while the installation holds exactly one person. Rows inserted in one
+// transaction share now(), so a second person makes the pick arbitrary — and an
+// arbitrary pick fails in the worst direction available: it demotes a seat the
+// session is not using, the session stays admin, and the caller's assertion
+// that an admin-only endpoint answers 403 gets a 200. That is the shape of the
+// flake #1180 recorded, and it is the shape any caller seeding a colleague
+// would meet deterministically.
+//
+// The demotion is then READ BACK, because a helper whose failure mode is "the
+// caller's permission assertion silently inverts" must not be able to fail
+// quietly. A caller that gets past this line is signed in as a rep.
 //
 // Irreversible for the rest of this env — the assignment is replaced rather
 // than stacked — so callers run it last in their scenario.
@@ -28,14 +44,8 @@ func demoteToRep(t *testing.T, e *apptest.AppEnv) {
 	//craft:ignore swallowed-errors error-path safety net only — the Commit below is asserted, after which this rollback is a designed no-op
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	// is_agent = false, not merely the earliest row: what this lookup wants is a
-	// PERSON, and saying so is cheaper than depending on how many kinds of row
-	// the installation happens to hold.
-	var userID, repRoleID string
-	if err := tx.QueryRow(ctx,
-		`SELECT id FROM app_user WHERE is_agent = false ORDER BY created_at LIMIT 1`).Scan(&userID); err != nil {
-		t.Fatalf("admin lookup: %v", err)
-	}
+	var repRoleID string
+	userID := sessionUserID(t, e)
 	if err := tx.QueryRow(ctx,
 		`SELECT id FROM role WHERE key = 'rep'`).Scan(&repRoleID); err != nil {
 		t.Fatalf("rep role lookup: %v", err)
@@ -50,5 +60,114 @@ func demoteToRep(t *testing.T, e *apptest.AppEnv) {
 	}
 	if err := tx.Commit(ctx); err != nil {
 		t.Fatalf("commit: %v", err)
+	}
+	assertSignedInAsRep(t, e)
+}
+
+// sessionUserID is who this session is signed in AS, answered by the app.
+//
+// Read through /me rather than resolved from the table, for the reason
+// AGENTS.md's review-loop rule 6 gives: a fixture that derives production's
+// answer itself is free to derive a different one, and here "different" means
+// demoting somebody the session has never used.
+func sessionUserID(t *testing.T, e *apptest.AppEnv) string {
+	t.Helper()
+	var me struct {
+		User struct {
+			ID string `json:"id"`
+		} `json:"user"`
+	}
+	if status := e.Call(t, "GET", "/v1/me", nil, nil, &me); status != http.StatusOK {
+		t.Fatalf("reading the signed-in seat → %d", status)
+	}
+	if me.User.ID == "" {
+		t.Fatal("/me answered no user id — there is no seat to demote, and demoting an arbitrary one would leave this session an admin")
+	}
+	return me.User.ID
+}
+
+// assertSignedInAsRep proves the demotion reached the seat making the requests.
+//
+// Asserted through /me because that is the same resolution the handlers take —
+// serveAsHuman authenticates every request and loads its grants inside that
+// request's own transaction, so what /me reports now is what the next call will
+// be gated on. Without this the helper's only failure mode is invisible: the
+// caller sees a 200 where it expected a 403 and reads it as a permission bug in
+// the product.
+func assertSignedInAsRep(t *testing.T, e *apptest.AppEnv) {
+	t.Helper()
+	var me struct {
+		Roles []string `json:"roles"`
+	}
+	if status := e.Call(t, "GET", "/v1/me", nil, nil, &me); status != http.StatusOK {
+		t.Fatalf("re-reading the seat after demotion → %d", status)
+	}
+	if len(me.Roles) != 1 || me.Roles[0] != "rep" {
+		t.Fatalf("the session holds %v after demotion, want exactly [rep] — an admin-only endpoint would answer this seat 200 and the caller would read that as the product letting a rep through",
+			me.Roles)
+	}
+}
+
+// The helper's own spec, on an installation that holds more than one person.
+//
+// This is the case the previous lookup could not survive. It chose with
+// `ORDER BY created_at LIMIT 1` over every non-agent row, which pins nothing to
+// the session: a colleague earlier in that order is demoted instead, the seat
+// making the requests keeps its admin role, and the caller's "an admin-only
+// endpoint refuses a rep" assertion comes back 200. Every failure this helper
+// can cause points that way — towards a permission test passing a seat it meant
+// to refuse — which is why it is worth a case rather than a comment.
+//
+// The colleague is given an EARLIER created_at deliberately. In production the
+// two rows would usually share now() and the order between them would be the
+// planner's business; pinning it is what turns "may pick either" into something
+// a test can assert.
+func TestDemoteToRepDemotesTheSeatMakingTheRequests(t *testing.T) {
+	e := apptest.SetupApp(t)
+	apptest.BootstrapWorkspaceSession(t, e, "Demotion", "admin@demote.test", "Admin")
+
+	var invited struct {
+		ID string `json:"id"`
+	}
+	if status := e.Call(t, "POST", "/v1/users", map[string]any{
+		"email": "colleague@demote.test", "display_name": "A Colleague", "role": "admin",
+	}, nil, &invited); status != http.StatusCreated {
+		t.Fatalf("inviting a colleague → %d, want 201", status)
+	}
+	if _, err := e.Owner.Exec(context.Background(),
+		`UPDATE app_user SET created_at = created_at - interval '1 day' WHERE id = $1`,
+		invited.ID); err != nil {
+		t.Fatalf("ageing the colleague's row: %v", err)
+	}
+
+	demoteToRep(t, e)
+
+	// The session is a rep, whatever else the installation holds. Asserted
+	// through an admin-only endpoint rather than through the roles list alone,
+	// because what every caller of this helper depends on is the REFUSAL.
+	var problem struct {
+		Code string `json:"code"`
+	}
+	status := e.Call(t, "GET", "/v1/users", nil, nil, nil)
+	if status != http.StatusOK {
+		t.Fatalf("a rep reading the roster → %d, want 200 — the roster is open to every member", status)
+	}
+	if status := e.Call(t, "POST", "/v1/users", map[string]any{
+		"email": "third@demote.test", "display_name": "Third", "role": "rep",
+	}, nil, &problem); status != http.StatusForbidden {
+		t.Fatalf("a rep inviting a member → %d, want 403 — the demotion landed on somebody else's seat", status)
+	}
+
+	// And the colleague keeps the role they were invited with: the helper takes
+	// one seat, not the earliest one it can find.
+	var roles []string
+	if err := e.Owner.QueryRow(context.Background(), `
+		SELECT array_agg(r.key) FROM role_assignment ra
+		  JOIN role r ON r.id = ra.role_id
+		 WHERE ra.user_id = $1`, invited.ID).Scan(&roles); err != nil {
+		t.Fatalf("reading the colleague's roles: %v", err)
+	}
+	if len(roles) != 1 || roles[0] != "admin" {
+		t.Fatalf("the colleague holds %v, want [admin] — the helper demoted a seat that was not making the requests", roles)
 	}
 }
