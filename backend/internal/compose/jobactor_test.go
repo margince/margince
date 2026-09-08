@@ -43,6 +43,8 @@ package compose
 // this test until its entry is removed.
 
 import (
+	"go/scanner"
+	"go/token"
 	"os"
 	"regexp"
 	"sort"
@@ -278,7 +280,7 @@ func withCalledHelpers(body string, pkg map[string]string) string {
 // alternative is a worker reported as bound by a body it does not reach.
 func namesBoundIn(body string) map[string]bool {
 	bound := map[string]bool{}
-	for _, m := range localBinding.FindAllStringSubmatch(body, -1) {
+	for _, m := range localBinding.FindAllStringSubmatch(codeOnly(body), -1) {
 		for _, part := range strings.Split(m[1], ",") {
 			// The LAST word of each comma-separated part. The capture is
 			// deliberately loose enough to reach a name introduced in a control
@@ -305,6 +307,42 @@ func namesBoundIn(body string) map[string]bool {
 // body it never runs — the exact hole this guard exists to close, in the three
 // places Go lets a name be introduced without a statement of its own.
 var localBinding = regexp.MustCompile(`(?:^|[^\w.])(?:var\s+)?([\w][\w, ]*?)\s*:?=[^=]`)
+
+// codeOnly blanks every comment and every string or rune literal, leaving the
+// body's offsets and therefore the regex's own idea of a word boundary intact.
+//
+// The scanner is here for one reason: a name is bound by Go, not by text that
+// merely looks like Go. `// bindActor := …` in a note, or `"n := 1"` in a
+// message, made namesBoundIn suppress the follow to the package's real helper,
+// and the gate then read a bound worker as unbound and went red. Prose a
+// contributor writes must not be able to decide a gate, least of all in the
+// cry-wolf direction that gets a gate deleted.
+//
+// Blanking rather than deleting because the regex reads what sits either side
+// of a match: closing the gap could join two words that were never adjacent.
+func codeOnly(body string) string {
+	fset := token.NewFileSet()
+	file := fset.AddFile("", fset.Base(), len(body))
+	var sc scanner.Scanner
+	// A nil handler drops scan errors, which is right for a fragment: this
+	// starts mid-declaration and is read for its shape, not compiled.
+	sc.Init(file, []byte(body), nil, scanner.ScanComments)
+	out := []byte(body)
+	for {
+		pos, tok, lit := sc.Scan()
+		if tok == token.EOF {
+			break
+		}
+		if tok != token.COMMENT && tok != token.STRING && tok != token.CHAR {
+			continue
+		}
+		start := fset.Position(pos).Offset
+		for i := start; i < start+len(lit) && i < len(out); i++ {
+			out[i] = ' '
+		}
+	}
+	return string(out)
+}
 
 // afterSignature drops a method's own declaration line, so the method's NAME is
 // not read as a call it makes.
@@ -424,6 +462,48 @@ func bindActor(ctx context.Context) context.Context {
 			indexFunctions(index, pkg)
 			if actorBinders.MatchString(withCalledHelpers(worker, index)) {
 				t.Error("the worker read as binding an actor through a name it had shadowed in a control clause")
+			}
+		})
+	}
+}
+
+// Prose is not a binding. A comment or a string that happens to contain an
+// assignment must not decide this gate.
+//
+// The guard reads text, and text a contributor writes is not Go: a note saying
+// `bindActor := w.transform` and a log line carrying the same words used to
+// suppress the follow to the package's real bindActor, and the worker — which
+// calls it and IS bound — came back unbound. That is the cry-wolf direction,
+// and this file's own prose says what a gate that cries wolf gets: deleted by
+// the next person who sees it red.
+func TestTheFollowIgnoresAnAssignmentInsideACommentOrAString(t *testing.T) {
+	t.Parallel()
+	const pkg = `package compose
+
+func bindActor(ctx context.Context) context.Context {
+	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem})
+	return ctx
+}
+`
+	for _, tc := range []struct {
+		name, line string
+	}{
+		{"a line comment", "\t// A worker may write bindActor := w.transform to swap the pass.\n"},
+		{"a block comment", "\t/* bindActor := w.transform\n\t   is what an older draft did. */\n"},
+		{"a string literal", "\tslog.Info(\"bindActor := w.transform is not supported\")\n"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			worker := "func (w *someWorker) Work(ctx context.Context) error {\n" +
+				"\tdb := database.BindTo(w.pool, ws)\n" + tc.line +
+				"\tctx = bindActor(ctx)\n\treturn run(ctx, db)\n}\n"
+			index := map[string]string{}
+			indexFunctions(index, pkg)
+			if _, indexed := index["bindActor"]; !indexed {
+				t.Fatal("the fixture's package helper was not indexed, so this case proves nothing")
+			}
+			if !actorBinders.MatchString(withCalledHelpers(worker, index)) {
+				t.Error("the worker read as UNBOUND because prose in its body was taken for a binding, " +
+					"so the follow never reached the helper it really calls")
 			}
 		})
 	}
