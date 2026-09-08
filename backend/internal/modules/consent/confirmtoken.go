@@ -171,29 +171,47 @@ func deliveryAddressTx(ctx context.Context, tx pgx.Tx, personID ids.PersonID) (s
 // cannot honestly ask about. A record-confirmation link names no purpose and is
 // exempt.
 //
-// TWO refusals, because they fail differently for the reader. An ARCHIVED
-// purpose would mint and mail and then dead-end: consentCardFor resolves only a
-// live purpose, so the subject opens a 404 sent in the installation's name. A
-// purpose that does not REQUIRE double opt-in is a different mistake — the mail
-// would ask somebody to confirm a subscription whose grant never needed
+// THREE answers, because they fail differently for the reader.
+//
+// A purpose that RESOLVES TO NOTHING — never existed, or belongs to a workspace
+// this caller cannot see — is not found. It is deliberately not a 422 naming
+// the field: every other required body id on this surface answers 404 for an id
+// that names no visible row, so that a caller cannot tell "no such purpose"
+// from "not yours" and read the difference as an enumeration. Claiming such an
+// id was ARCHIVED is also simply untrue, and it sends an operator looking for a
+// purpose to unarchive that nobody ever created.
+//
+// An ARCHIVED purpose exists and is refused with its own sentence: a link
+// minted against it would mail and then dead-end, because consentCardFor
+// resolves only a live purpose, so the subject opens a 404 sent in the
+// installation's own name.
+//
+// A purpose that does not REQUIRE double opt-in is a different mistake — the
+// mail would ask somebody to confirm a subscription whose grant never needed
 // confirming, and the answer would be recorded as mailbox-proven evidence
 // nobody asked for. The endpoint's whole subject is the double-opt-in purpose.
 func requireConfirmablePurposeTx(ctx context.Context, tx pgx.Tx, purposeID ids.PurposeID) error {
 	if purposeID.UUID == (ids.UUID{}) {
 		return nil
 	}
-	var requiresDOI bool
+	var requiresDOI, archived bool
+	// Read WITHOUT the live filter, so absence and archival stay separable. The
+	// filtered read answered no-rows for both and had to guess which; it always
+	// guessed archived.
 	err := tx.QueryRow(ctx,
-		`SELECT requires_double_opt_in FROM consent_purpose
-		  WHERE id = $1 AND archived_at IS NULL`, purposeID).Scan(&requiresDOI)
+		`SELECT requires_double_opt_in, archived_at IS NOT NULL FROM consent_purpose
+		  WHERE id = $1`, purposeID).Scan(&requiresDOI, &archived)
 	if errors.Is(err, pgx.ErrNoRows) {
+		return apperrors.ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+	if archived {
 		return &ValidationError{
 			Field:  purposeIDField,
 			Reason: "this purpose is archived, so a link asking somebody to confirm it could not be answered",
 		}
-	}
-	if err != nil {
-		return err
 	}
 	if !requiresDOI {
 		return &ValidationError{

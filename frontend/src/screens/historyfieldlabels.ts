@@ -74,6 +74,48 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
   ["wait_until", "history.field.wait_until"],
 ]);
 
+// Fields a SYNTHETIC AuditEvent payload names — a write with no before/after
+// image of a real column, described instead by its own free-form keys. The
+// five consent-module writers that emit them today:
+// backend/internal/modules/consent/suppress.go (`suppression_kind`,
+// `decided_by_level`), qualifyingevent.go (`qualifying_event`, `note`),
+// authorizebasis.go (`communication_basis`, `resolved_category`), lift.go
+// (`lifted_suppression`, `recorded_at_level`, `lifted_by_level`,
+// `lifted_by`, `reason`), and confirmsubmit.go (`confirm_submission`,
+// `submission_id`).
+//
+// Every key here is deliberately NOT the bare word a writer's own struct
+// field would suggest (`suppress.go`'s wire request names its kind `kind`,
+// not `suppression_kind`): this lookup carries no entity context, so a key
+// this generic would also answer for an unrelated writer's field of the same
+// name on the SAME projected entity type (`person`) — `kind` already belongs
+// to every activity's own audited create
+// (backend/internal/modules/activities/activity.go), and reusing it here
+// mislabelled every activity in history as a suppression.
+//
+// A SEPARATE map from HISTORY_FIELD_LABELS on purpose: the census below derives
+// that one from what an `Update<Type>Request` actually writes, and its own
+// "no word for an unwritten field" direction would fail the moment a synthetic
+// key appeared there — these never will be one, because nothing here forces
+// upstream to keep it in sync with these Go literals. That absence of a gate is
+// tracked (margince#4928) rather than papered over: this list is only as
+// complete as the last writer somebody walked into this file.
+const SYNTHETIC_AUDIT_FIELD_LABELS = new Map<string, MessageKey>([
+  ["communication_basis", "history.field.communication_basis"],
+  ["confirm_submission", "history.field.confirm_submission"],
+  ["decided_by_level", "history.field.decided_by_level"],
+  ["lifted_by", "history.field.lifted_by"],
+  ["lifted_by_level", "history.field.lifted_by_level"],
+  ["lifted_suppression", "history.field.lifted_suppression"],
+  ["note", "history.field.note"],
+  ["qualifying_event", "history.field.qualifying_event"],
+  ["reason", "history.field.reason"],
+  ["recorded_at_level", "history.field.recorded_at_level"],
+  ["resolved_category", "history.field.resolved_category"],
+  ["submission_id", "history.field.submission_id"],
+  ["suppression_kind", "history.field.suppression_kind"],
+]);
+
 // The label a history row shows for one field.
 //
 // A field with no key falls back to its own name with the underscores spaced
@@ -84,13 +126,21 @@ export function historyFieldLabel(
   field: string,
   t: (key: MessageKey) => string,
 ): string {
-  const key = HISTORY_FIELD_LABELS.get(field);
+  const key =
+    HISTORY_FIELD_LABELS.get(field) ?? SYNTHETIC_AUDIT_FIELD_LABELS.get(field);
   return key ? t(key) : field.replaceAll("_", " ");
 }
 
 // The same map as a lookup, for the census that holds it against the contract.
 export function historyFieldLabelKey(field: string): MessageKey | undefined {
   return HISTORY_FIELD_LABELS.get(field);
+}
+
+// The synthetic map's own keys, for the test that holds each one to an i18n
+// key that actually exists — the one direction a Go-literal vocabulary can
+// still be checked from this side of the contract.
+export function syntheticAuditFieldLabelled(): string[] {
+  return [...SYNTHETIC_AUDIT_FIELD_LABELS.keys()];
 }
 
 // Every field this map claims a word for — the census reads it to hold the

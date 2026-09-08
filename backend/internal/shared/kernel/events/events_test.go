@@ -244,7 +244,7 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 		// cg:person-data's reason: this one spends the customer's token budget,
 		// and a consumer whose retries cost money must not share a cursor with
 		// one whose retries are free.
-		"cg:capture-enrich": {"gw:events:crm:activity"},
+		"cg:capture-enrich": {"gw:events:crm:activity", "gw:events:crm:person"},
 		// A card attached to captured mail imports itself. Its own group beside
 		// the one above: that one needs a model and this one only parses, so
 		// they run in different deployments and must not share a cursor.

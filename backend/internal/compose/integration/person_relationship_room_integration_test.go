@@ -598,6 +598,7 @@ func TestPerson360AssemblesEverySectionFromRealRows(t *testing.T) {
 		VALUES ($1, 'email', 'Re: pricing', 'body', '2026-08-01T09:00:00Z',
 		        'inbound', 'manual', 'human:x')`)
 	LinkActivity(t, owner, inbound, "person", mine)
+	LinkActivitySender(t, owner, inbound, mine)
 	task := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, due_at, is_done, source, captured_by)
 		VALUES ($1, 'task', 'Send the quote', '2026-07-28T09:00:00Z', '2026-07-30T09:00:00Z',
 		        false, 'manual', 'human:x')`)
@@ -700,6 +701,7 @@ func TestADismissalHoldsUntilTheEvidenceMoves(t *testing.T) {
 		VALUES ($1, 'email', 'Re: Following up', 'body', $2,
 		        'inbound', 'manual', 'human:x')`, roomAgo(time.Hour))
 	LinkActivity(t, owner, inbound, "person", mine)
+	LinkActivitySender(t, owner, inbound, mine)
 
 	reArmed, err := svc.Assemble(rep, personID)
 	if err != nil {

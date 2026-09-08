@@ -101,6 +101,20 @@ func LinkActivity(t *testing.T, owner *pgx.Conn, activity ids.UUID, entityType s
 	}
 }
 
+// LinkActivitySender names WHO sent an activity — distinct from LinkActivity,
+// which only says the activity CONCERNS somebody. sender.go's SenderPredicate
+// (backend/internal/modules/people/sender.go) reads this row for "they wrote
+// last" answers, and a thread linked to everybody it concerns says nothing
+// about which of them is its author.
+func LinkActivitySender(t *testing.T, owner *pgx.Conn, activity, person ids.UUID) {
+	t.Helper()
+	if _, err := owner.Exec(context.Background(),
+		`INSERT INTO activity_participant (activity_id, person_id, role) VALUES ($1, $2, 'from')`,
+		activity, person); err != nil {
+		t.Fatal(err)
+	}
+}
+
 // SeedExtraWorkspace mints an additional tenant. archived names a workspace
 // nobody looks at any more, which still holds everything it held the day it was
 // archived — some passes are owed on it and some deliberately skip it, so a
