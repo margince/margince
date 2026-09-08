@@ -126,11 +126,6 @@ func buildsPipeline(item crmcontracts.WorklistItem) bool {
 	return item.Subject != nil && item.Subject.Type == subjectLead
 }
 
-// subjectLead is the subject kind a row filed under a lead carries. Tasks reach
-// it through primaryLink, which ranks a lead first: a task raised for a lead is
-// ABOUT that lead even when the row also names the company it came from.
-const subjectLead = crmcontracts.AttentionSubjectType("lead")
-
 // bandsOf summarizes the headings for one page.
 //
 // Every band, in draw order, even where the page has no rows under it: a reader
