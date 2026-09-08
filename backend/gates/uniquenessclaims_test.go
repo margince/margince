@@ -44,7 +44,7 @@ package gates
 // question about the whole tree, and the tree holds hundreds of them. What it
 // does is make the class stop GROWING, which is the half a test can hold:
 //
-//   - A claim that names its gate is held. `Held by: TestName (path)` in the
+//   - A claim that names its gate is held. `Held by: Test… (path)` in the
 //     same doc comment, and this file checks that test exists.
 //   - Every other claim in the tree today is in `uniquenessclaims.txt`, which
 //     is a DEBT REGISTER and not a permission. It can only shrink: a claim that
@@ -163,7 +163,7 @@ func readRegister(t *testing.T) []string {
 	return keys
 }
 
-// testFunctions returns every `func TestX` in the repo, keyed by name, with the
+// testFunctions returns every `func Test…` in the repo, keyed by name, with the
 // files it is declared in. A `Held by:` is checked against this rather than
 // against a path the author typed, so a rename that leaves the binding behind
 // is a failure rather than a comment nobody reads.
@@ -284,7 +284,7 @@ func declaredInAGateArm(paths []string) (string, bool) {
 // namesTheFile reports whether one of `paths` is the file the binding named.
 //
 // A PATH-SEGMENT suffix, not a string suffix. A bare `strings.HasSuffix`
-// matched inside a FILENAME: `Held by: TestX (claims_test.go)` bound against
+// matched inside a FILENAME: `Held by: Test… (claims_test.go)` bound against
 // `uniquenessclaims_test.go`, a file that does not exist, and `currency_test.go`
 // bound against `employmentcurrency_test.go`. A binding that resolves to a file
 // nobody named is worse than no binding, because it reads as checked.

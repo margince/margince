@@ -30,7 +30,7 @@ import (
 // Under-reporting is the one way this must not fail. A source silently marked
 // complete tells a rep there is no more work of that kind, and there is no
 // failing row to notice — which is why every lane with a bound appears here and
-// `TestEveryBoundedLaneIsNamedInTheBoundsTable` fails when a new one is not.
+// `TestEveryBoundedLaneReportsItsTruncation` fails when a new one does not.
 // The bounds of the lanes whose limit lives behind their seam, where this
 // package cannot reach it. They are MIRRORS: `compose.slippingScanLimit` and
 // `compose.decayCandidateCap` are the real numbers, and

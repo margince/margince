@@ -241,7 +241,7 @@ func auditSubjectsOf(rows []pageRow) (types []string, subjects []ids.UUID) {
 // from the binding evaluator rather than assembled beside it, so a port added
 // to the write is bound here without anyone remembering — which is how the page
 // came to omit ExternallyGoverned and light a restore button the write refuses.
-// Held by TestTheAdvisoryPathBindsEveryPortTheWriteBinds.
+// Held by TestTheAdvisoryPathAnswersFromThePageFacts.
 //
 // The erasure boundary is the one fact a page cannot hold for every row: a
 // LINK's is its endpoints' and not its own (see pageRow), so an edge row keeps

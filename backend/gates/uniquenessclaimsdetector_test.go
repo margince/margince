@@ -215,7 +215,7 @@ func intensifier(word string) bool {
 // heldBy is the binding a claim carries to say which test holds it. Free text
 // around it, because it sits inside a doc comment a human is also reading:
 //
-//	// Held by: TestEveryFooHasOneWriter (backend/gates/foowriters_test.go)
+//	// Held by: TestEveryFoo… (backend/gates/foowriters_test.go)
 //
 // It may sit ANYWHERE in the doc comment except the first line: revive requires
 // a doc comment to open with the identifier it documents, so a binding written

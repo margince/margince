@@ -179,7 +179,7 @@ func TestOutboundNamesItsRecipient(t *testing.T) {
 	}
 }
 
-// TestRecordsLinkTheAccount — an activity that links nothing shows on no
+// TestMailRecordsLinkTheAccount — an activity that links nothing shows on no
 // company page, which is the failure the seeder's verify pass exists to catch.
 func TestMailRecordsLinkTheAccount(t *testing.T) {
 	box := demoMailbox()

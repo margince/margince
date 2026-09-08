@@ -486,7 +486,8 @@ func TestTheUnitPairIgnoresAnUntaggedRowAndAWorkspaceGrainedKind(t *testing.T) {
 	}
 }
 
-// TestARealRiverInsertCarriesTheSweepTagIntoTheColumnTheReadFilterson closes
+// TestARealRiverInsertCarriesTheSweepTagIntoTheColumnTheReadFiltersOn
+// closes
 // the gap every other test in this file leaves open: they seed the tag by
 // hand, so they prove the query and not the pipeline. This one goes through
 // River's own insert path with the tag on InsertOpts, and asserts the sweep

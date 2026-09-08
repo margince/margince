@@ -268,7 +268,7 @@ func (e *promoteConsentEnv) eventReason(t *testing.T, id ids.UUID, status string
 // resets every table before each test — a reader here would be asserting that
 // truncation had not happened, which is a fact about the harness rather than
 // about handoffs. That the migration seeds a usable list is a different claim,
-// and TestTheSeededHandoffReasonsCoverBothTransitions is where it is made.
+// and no test in this tree makes it.
 // The label carries the test's own name because sdr_handoff_reason is a
 // PRESERVED reference table: the migration seeds the system catalogue and the
 // reset leaves it standing, so a fixed label here would collide with the row the

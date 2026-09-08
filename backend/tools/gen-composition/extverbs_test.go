@@ -335,7 +335,7 @@ func TestExtensionVerbRefusals(t *testing.T) {
 	}
 }
 
-// TestASchemaThatMerelySPELLS$refIsNotAReference: the two shapes a
+// TestASchemaThatMerelySpellsRefIsNotAReference: the two shapes a
 // key-anywhere search cannot tell from a reference, and refused.
 //
 // A schema declaring a PROPERTY called `$ref` describes an object with a member
