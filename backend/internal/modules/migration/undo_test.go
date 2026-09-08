@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -63,7 +64,9 @@ type stubUndoWriters struct {
 	err error
 }
 
-func (w stubUndoWriters) Reverse(_ context.Context, _ string, _ ids.UUID) error { return w.err }
+func (w stubUndoWriters) Reverse(_ context.Context, _ string, _ ids.UUID, _ time.Time) error {
+	return w.err
+}
 
 func TestReverseOneRowSplitsKeptReversedAndUnreachable(t *testing.T) {
 	row := mapRow{object: ObjectLead, nativeID: ids.NewV7()}

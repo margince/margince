@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -38,8 +39,16 @@ const undoPageSize = 200
 // a-sibling shape Writers uses. Reverse must be idempotent on the native
 // id — a resumed undo may replay a row a crash left reversed but
 // unrecorded.
+//
+// `importedAt` is when this run created the row, and Reverse carries it so the
+// store can re-ask "has a human touched this since?" INSIDE the transaction
+// that archives. The page-level check below is a filter, not the guard: it and
+// the archive were two transactions, so a human acting in the window between
+// them had their edit reversed anyway. A precondition the write re-asks under
+// its own row lock is what settles it, because the read and the write are then
+// one transaction rather than two.
 type UndoWriters interface {
-	Reverse(ctx context.Context, object string, nativeID ids.UUID) error
+	Reverse(ctx context.Context, object string, nativeID ids.UUID, importedAt time.Time) error
 }
 
 // KeptRow is one import-created row a human touched since import, therefore
@@ -70,6 +79,10 @@ type UndoReport struct {
 type mapRow struct {
 	object   string
 	nativeID ids.UUID
+	// createdAt is when the import landed this row, and it travels because the
+	// reversal re-asks the human-touch question against it under its own row
+	// lock — see UndoWriters.Reverse.
+	createdAt time.Time
 }
 
 // Undo reverses a completed CSV import run: every row it created that
@@ -147,7 +160,7 @@ func reverseOneRow(ctx context.Context, w UndoWriters, r mapRow, touched bool, r
 		rep.Kept = append(rep.Kept, KeptRow{Object: r.object, ID: r.nativeID})
 		return nil
 	}
-	err := w.Reverse(ctx, r.object, r.nativeID)
+	err := w.Reverse(ctx, r.object, r.nativeID, r.createdAt)
 	switch {
 	case err == nil:
 		rep.ReversedCount++
@@ -318,7 +331,7 @@ func (s *RunStore) mapRowsForRun(ctx context.Context, id RunID, skip, limit int)
 	var rows []mapRow
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		r, err := tx.Query(ctx, `
-			SELECT object, native_id
+			SELECT object, native_id, created_at
 			  FROM import_record_map
 			 WHERE import_run_id = $1
 			 ORDER BY created_at, external_id
@@ -329,7 +342,7 @@ func (s *RunStore) mapRowsForRun(ctx context.Context, id RunID, skip, limit int)
 		defer r.Close()
 		for r.Next() {
 			var mr mapRow
-			if err := r.Scan(&mr.object, &mr.nativeID); err != nil {
+			if err := r.Scan(&mr.object, &mr.nativeID, &mr.createdAt); err != nil {
 				return fmt.Errorf("reading import run %s's created rows: %w", id, err)
 			}
 			rows = append(rows, mr)
