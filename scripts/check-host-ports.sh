@@ -18,7 +18,7 @@
 # inside the container's own namespace and is unaffected.
 set -euo pipefail
 
-compose_file="${1:-infra/docker-compose.dev.yml}"
+compose_file="${1:-docker-compose.dev.yml}"
 
 # The kernel's range, read from the host when we can so the gate tracks a tuned
 # runner rather than a number baked in here. Falls back to the documented

@@ -33,7 +33,7 @@ import (
 // Paths are relative to this package, which is three levels under backend/.
 const (
 	laneRunnerPath = "../../../../scripts/test-integration-parallel.sh"
-	composePath    = "../../../../infra/docker-compose.dev.yml"
+	composePath    = "../../../../docker-compose.dev.yml"
 	devScriptPath  = "../../../../scripts/dev.sh"
 )
 

@@ -107,6 +107,7 @@ decision rather than an omission.
 - [ai-certification.md](reference/ai-certification.md) — what the AI certification lane covers: every shipped invocation site, the scenarios it is scored against with a link to each case, an index naming the best model still measured for each site, and a table per (provider, model, env) binding, with `ai-certification.json` beside it carrying the same numbers for a reader who wants to analyse them. Generated from the corpus, the records and the invocation-site census, never hand-edited; a stale record says which scenario moved under it.
 - [mcp-tool-coverage.md](reference/mcp-tool-coverage.md) — which served MCP tools the USE-CASE lane actually drives: per tool, the cases that require it, what those cases scored and on which model, the scheduled agents that attach it, and what it costs. With `mcp-tool-coverage.json` beside it. Generated from the served surface, `e2e/llm/scenarios` and the verdicts that lane commits, never hand-edited. It reads that lane ALONE — single steps are `ai-certification.md`’s question — and it answers what neither page does: a tool can be paid for on every step of every run and be required by no case at all.
 - [supply-chain.md](reference/supply-chain.md) — the source-tree SBOMs, the license gate, keyless signing, and the pinned toolchain.
+- [ci-workflows.md](reference/ci-workflows.md) — the eight workflows that run beside the merge gate rather than inside it: what each triggers on, what it does and does not gate, and what a red one means.
 
 Several reference pages are **generated** and say so in their own first lines —
 `mcp-info`, `agent-tool-budget`, `ai-certification`, `mcp-tool-coverage`, `rbac-matrix`,
@@ -177,6 +178,11 @@ budget rather than keeping its own list of which pages are generated.
 
 - [overlay-augmentation.md](explanation/overlay-augmentation.md) — the two SoR modes, the frozen seam + inner incumbent seam, the mirror-as-cache, fail-closed visibility, and teardown for the HubSpot overlay (branch 1: read + continuous sync).
 - [extensibility.md](explanation/extensibility.md) — the stable extension tier: the inert compile-time declaration, the marker-allowlisted surface, the composition build, the `GOWORK` binding that decides which composition module the compiler links, boot reconciliation, and the fitness functions that hold the boundary.
+
+**Building and merging**
+
+- [ci-pipeline.md](explanation/ci-pipeline.md) — the merge gate as GitHub Actions: the merge queue, the change classifier that decides which jobs run, the job graph, the shared Go build cache, and how coverage reaches SonarCloud.
+
 ### Operate — run it in production
 - [deployment.md](deployment.md) — self-hosting: the container materials, the two-role non-superuser database model the grant wall requires, env-only configuration, one-host routing for `/v1` + `/mcp` + the OAuth flow, health checks, and order of operations.
 - [desktop-distribution.md](explanation/desktop-distribution.md) — the other shape: one folder a non-technical user runs on macOS or Windows with no Docker. Why it must carry its own Postgres (pgvector is not in `contrib`), how relocatability is enforced and verified on each platform, the update contract the folder layout encodes, single-file configuration, the four places the two platforms are forced apart (socket vs. loopback auth, `pg_ctl` vs. a child process, Valkey vs. Redis, signing), and the limits — collation, signing, and the socket-path ceiling.

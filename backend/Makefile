@@ -685,15 +685,15 @@ hooks: ## Install the repo pre-commit hook (gofmt + license-header gate)
 # sessions hand-ran `fable-pg16`/`fable-redis` containers on the same host
 # ports; db-up removes those legacy names so the stack can bind (their data
 # is throwaway — migrate + seed-dev rebuild it).
-COMPOSE ?= docker compose -f ../infra/docker-compose.dev.yml
+COMPOSE ?= docker compose -f ../docker-compose.dev.yml
 
-db-up: ## Start the dev stack (infra/docker-compose.dev.yml) and create the app role
+db-up: ## Start the dev stack (docker-compose.dev.yml) and create the app role
 	@docker rm -f fable-pg16 fable-redis 2>/dev/null || true
 	$(COMPOSE) up -d --wait
 	$(MAKE) db-init
 # Every ad-hoc statement goes through PSQL, which resolves the container from
 # PG_PORT — the port the DSNs above name — rather than from the compose project.
-# infra/docker-compose.dev.yml pins `name: margince`, so every checkout on this
+# docker-compose.dev.yml pins `name: margince`, so every checkout on this
 # machine resolves to the same project and `$(COMPOSE) exec` lands in whichever
 # one brought the stack up first, while the api and the migrator connect through
 # the port. Two ways to name one database: a seed run from a second checkout
