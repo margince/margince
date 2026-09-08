@@ -175,7 +175,7 @@ func TestAHostileModelIdCannotBreakTheWholeScrape(t *testing.T) {
 			t.Errorf("the exposition carries %s, which Prometheus refuses as an invalid escape:\n%s", illegal, out)
 		}
 	}
-	if !strings.Contains(out, "model=\"evil\uFFFD\uFFFDmodel\\\"\\\\\"") {
+	if !strings.Contains(out, "model=\"evil\u2409\u2401model\\\"\\\\\"") {
 		t.Errorf("the hostile identity did not survive escaping intact:\n%s", out)
 	}
 }
@@ -436,5 +436,67 @@ func TestAnOverReportedReasoningNeverCountsNegativeCompletionTokens(t *testing.T
 
 	if strings.Contains(render(m), `class="completion",direction="out"} -`) {
 		t.Errorf("a negative completion-token count reached the exposition:\n%s", render(m))
+	}
+}
+
+// A call that never reached a provider has no served identity and no configured
+// one either. model="" would read on a dashboard as a model whose name went
+// missing, rather than as a call that had none.
+func TestACallThatNamedNoModelSaysSoRatherThanRenderingBlank(t *testing.T) {
+	m := newCallMetrics()
+	m.observe(served(func(c *Call) {
+		c.Provider, c.ModelID, c.ServedModel = "", "", ""
+		c.ServedIdentitySource = servedIdentitySourceConfigured
+	}))
+
+	out := render(m)
+	if strings.Contains(out, `model=""`) {
+		t.Errorf("a blank model label reached the exposition:\n%s", out)
+	}
+	if !strings.Contains(out, `model="`+unidentifiedModel+`"`) {
+		t.Errorf("an unidentified call did not name its absence:\n%s", out)
+	}
+}
+
+// The itemized token counts come off a provider's wire and nothing upstream
+// bounds them. Unclamped, a malformed response makes one class exceed the total
+// it is a part of, and the leftover classes stop keeping sum by (direction)
+// honest.
+func TestAMalformedUsageReportCannotMakeAClassExceedItsTotal(t *testing.T) {
+	m := newCallMetrics()
+	m.observeAttempt(served(func(c *Call) {
+		c.TokensIn, c.CachedTokens, c.CacheWriteTokens = 100, 400, 700
+		c.TokensOut, c.ReasoningTokens = 50, 900
+	}))
+
+	in, out := 0, 0
+	for k, v := range m.tokens {
+		if directionOf(k.class) == directionIn {
+			in += int(v)
+		} else {
+			out += int(v)
+		}
+	}
+	if in > 100 {
+		t.Errorf("the input classes sum to %d against a reported TokensIn of 100", in)
+	}
+	if out > 50 {
+		t.Errorf("the output classes sum to %d against a reported TokensOut of 50", out)
+	}
+}
+
+// A negative itemized count is the other half of the same defensive case: a
+// counter that went backwards reads to Prometheus as a process restart.
+func TestANegativeItemizedCountNeverReachesACounter(t *testing.T) {
+	m := newCallMetrics()
+	m.observeAttempt(served(func(c *Call) {
+		c.TokensIn, c.CachedTokens = 100, -40
+		c.TokensOut, c.ReasoningTokens = 50, -10
+	}))
+
+	for k, v := range m.tokens {
+		if v < 0 {
+			t.Errorf("class %q counted %d", k.class, v)
+		}
 	}
 }

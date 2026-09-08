@@ -127,7 +127,11 @@ func Metrics(in MetricsInput) http.HandlerFunc {
 			}
 		}
 		if in.Overlay != nil && !out.gone() {
-			writeOverlayMetrics(r.Context(), out, in.Overlay)
+			// The deadline-bound ctx, not the request's: this section queries
+			// at scrape time like the job one above it, and the 2s budget
+			// exists so a stalled read cannot hold the handler and its
+			// database work open for as long as the client keeps the socket.
+			writeOverlayMetrics(ctx, out, in.Overlay)
 		}
 		// Asked ONCE, about the whole exposition. A refused write means the
 		// scraper is already gone, so this cannot be answered to the caller —

@@ -145,12 +145,22 @@ func TestReadyzStopsWritingWhenItsReaderHangsUp(t *testing.T) {
 	}
 }
 
-// Two distinct values must not render to one label set. Dropping an
-// unrepresentable byte would map them together, and a family emitting the same
-// label set twice is a duplicate sample Prometheus discards with a warning —
-// the number on the dashboard is then wrong with nothing failing.
+// Two distinct values must not render to one label set. A family emitting the
+// same label set twice is a duplicate sample Prometheus discards with a warning
+// — the number on the dashboard is then wrong with nothing failing — and the AI
+// families are keyed by an identity that comes off a provider's wire.
+//
+// The second pair is the one a single shared replacement rune still collapsed:
+// substitution alone is not enough, it has to be injective.
 func TestDistinctLabelValuesStayDistinctThroughEscaping(t *testing.T) {
-	if Label("gpt-x\x01") == Label("gpt-x") {
-		t.Error("a control byte was dropped rather than substituted, collapsing two model identities into one series")
+	for _, pair := range [][2]string{
+		{"gpt-x\x01", "gpt-x"},
+		{"gpt-x\x01", "gpt-x\x02"},
+		{"gpt-x\t", "gpt-x\x7f"},
+	} {
+		if Label(pair[0]) == Label(pair[1]) {
+			t.Errorf("Label(%q) and Label(%q) both render %s; two model identities collapse into one series",
+				pair[0], pair[1], Label(pair[0]))
+		}
 	}
 }

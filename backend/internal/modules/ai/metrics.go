@@ -140,7 +140,23 @@ const (
 	// is not a value any provider reported, and it is the same in each position
 	// so that the overflow key is ONE series rather than one per task.
 	overflowLabel = "__over_cardinality_limit__"
+	// unidentifiedModel stands where nobody named a model: the provider
+	// reported none AND the tier binding declared none, which in practice is a
+	// call that never reached a provider at all. A blank label would render as
+	// model="" and read on a dashboard as a model whose name is missing rather
+	// than as a call that had none — and the two want different answers.
+	unidentifiedModel = "__unidentified__"
 )
+
+// modelLabel answers the model dimension: the served identity, bounded, or the
+// sentinel when nobody named one. servedIdentitySource still says which of the
+// three ways that came about.
+func modelLabel(servedModel string) string {
+	if servedModel == "" {
+		return unidentifiedModel
+	}
+	return boundedSeriesLabel(servedModel)
+}
 
 // boundedSeriesLabel truncates a wire-supplied value, marking the cut so a
 // reader does not mistake the prefix for a whole model identity.
@@ -155,6 +171,23 @@ func boundedSeriesLabel(value string) string {
 		return value
 	}
 	return string(runes[:maxLabelLen]) + "..."
+}
+
+// clampToTotal holds one itemized count inside the total it is part of, and at
+// or above zero. Both bounds are defensive: a provider is not supposed to
+// report either, and a counter that went backwards would read to Prometheus as
+// a process restart.
+func clampToTotal(part, total int) int {
+	if part < 0 {
+		return 0
+	}
+	if total < 0 {
+		return 0
+	}
+	if part > total {
+		return total
+	}
+	return part
 }
 
 // plainCompletionTokens answers the completion bucket net of reasoning.
@@ -270,7 +303,7 @@ func (m *callMetrics) observe(c Call) {
 func (m *callMetrics) keyOfLocked(c Call) routeKey {
 	k := routeKey{
 		task: string(c.Task), tier: string(c.Tier), provider: c.Provider,
-		model: boundedSeriesLabel(c.ServedModel), servedIdentitySource: c.ServedIdentitySource,
+		model: modelLabel(c.ServedModel), servedIdentitySource: c.ServedIdentitySource,
 	}
 	if _, held := m.attempts[k]; held || len(m.attempts) < maxRouteSeries {
 		return k
@@ -302,17 +335,26 @@ func (m *callMetrics) observeLatencyLocked(k routeKey, c Call) {
 // int64 widening is lossless (a usage count is a non-negative int) and is
 // preferred over int→uint64, which trips gosec G115 on the sign change.
 func (m *callMetrics) observeTokensLocked(k routeKey, c Call) {
+	// The itemized counts come off a provider's wire and nothing upstream
+	// bounds them, so each is clamped to what its own total can hold before it
+	// becomes a class. Otherwise a malformed response makes cached_read exceed
+	// every input token the call reported, and sum by (direction) — which the
+	// leftovers keep honest — stops being a sum of anything.
+	cached := clampToTotal(c.CachedTokens, c.TokensIn)
+	cacheWrite := clampToTotal(c.CacheWriteTokens, c.TokensIn-cached)
+	reasoning := clampToTotal(c.ReasoningTokens, c.TokensOut)
+
 	// A fixed-size array rather than a map literal: this runs on every
 	// attempt, while the collector's mutex is held.
 	for _, split := range [...]struct {
 		class string
 		n     int
 	}{
-		{classPrompt, uncachedTokensIn(c.TokensIn, c.CachedTokens, c.CacheWriteTokens)},
-		{classCachedRead, c.CachedTokens},
-		{classCacheWrite, c.CacheWriteTokens},
-		{classCompletion, plainCompletionTokens(c.TokensOut, c.ReasoningTokens)},
-		{classReasoning, c.ReasoningTokens},
+		{classPrompt, uncachedTokensIn(c.TokensIn, cached, cacheWrite)},
+		{classCachedRead, cached},
+		{classCacheWrite, cacheWrite},
+		{classCompletion, plainCompletionTokens(c.TokensOut, reasoning)},
+		{classReasoning, reasoning},
 	} {
 		if split.n != 0 {
 			m.tokens[tokenKey{routeKey: k, class: split.class}] += int64(split.n)

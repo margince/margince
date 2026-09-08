@@ -81,6 +81,14 @@ func WriteLine(w io.Writer, format string, a ...any) {
 	_, _ = fmt.Fprintf(w, format, a...)
 }
 
+// The Unicode Control Pictures for the bytes Label substitutes: the block
+// begins at U+2400 for NUL and runs in step with the code point it depicts,
+// and DEL has its own picture out of sequence at U+2421.
+const (
+	controlPicture = '\u2400'
+	deletePicture  = '\u2421'
+)
+
 // Label renders a Prometheus label VALUE with only the three escapes the text
 // format defines: backslash, double quote, and newline.
 //
@@ -95,13 +103,24 @@ func WriteLine(w io.Writer, format string, a ...any) {
 // from a compile-time template and method from a closed set, but the AI
 // router labels by a tier binding's model id, which an operator types.
 //
-// A byte the format cannot carry is SUBSTITUTED, not dropped. Dropping reads
-// better in isolation — a control byte is not information an operator can use —
-// but it maps two distinct values onto one rendered label set, and a family
-// that emits the same label set twice is a duplicate sample Prometheus discards
-// with only a warning. The count on the dashboard would then be wrong with
-// nothing failing. U+FFFD keeps distinct inputs distinct and is what a decoder
-// already yields for invalid UTF-8.
+// A control byte is SUBSTITUTED, and substituted INJECTIVELY. Dropping reads
+// best in isolation — a control byte is not information an operator can use —
+// and folding every one onto a single replacement rune reads nearly as well,
+// but both map distinct values onto one rendered label set. A family emitting
+// the same label set twice is a duplicate sample Prometheus discards with only
+// a warning, so the count on the dashboard would be wrong with nothing failing,
+// and the AI families are now keyed by a model identity that comes off a
+// provider's wire.
+//
+// Each control byte therefore becomes its own picture from the Unicode Control
+// Pictures block: U+0000-U+001F map to U+2400-U+241F, and U+007F to U+2421.
+// Printable, valid UTF-8, and distinct for every input this can receive.
+//
+// One aliasing case survives and is left: an input containing a literal Control
+// Pictures character collides with the input containing the byte it depicts.
+// Closing it needs an escape of the escape, which buys nothing here — a value
+// reaching this function is already length- and cardinality-bounded by its
+// caller, so the pair could at worst merge two series a person invented.
 func Label(value string) string {
 	var b strings.Builder
 	b.Grow(len(value) + 2)
@@ -114,8 +133,10 @@ func Label(value string) string {
 			b.WriteString(`\"`)
 		case r == '\n':
 			b.WriteString(`\n`)
-		case r < 0x20 || r == 0x7f:
-			b.WriteRune('\uFFFD')
+		case r < 0x20:
+			b.WriteRune(controlPicture + r)
+		case r == 0x7f:
+			b.WriteRune(deletePicture)
 		default:
 			b.WriteRune(r)
 		}
