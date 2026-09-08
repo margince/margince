@@ -99,7 +99,7 @@ func StageLinkedInMatches(ctx context.Context, svc *approvals.Service, store *pe
 	if err != nil {
 		return 0, err
 	}
-	return stagePendingLinkedInMatches(ctx, svc, pending)
+	return stagePendingLinkedInMatches(ctx, svc, store, pending)
 }
 
 // StageLinkedInMatchesForPerson is the same pass narrowed to the matches about
@@ -115,12 +115,14 @@ func StageLinkedInMatchesForPerson(ctx context.Context, svc *approvals.Service, 
 	if err != nil {
 		return 0, err
 	}
-	return stagePendingLinkedInMatches(ctx, svc, pending)
+	return stagePendingLinkedInMatches(ctx, svc, store, pending)
 }
 
 // stagePendingLinkedInMatches turns the candidates a match produced into
 // proposals — the one place both scopes pass through.
-func stagePendingLinkedInMatches(ctx context.Context, svc *approvals.Service, pending []people.PendingLinkedInMatch) (int, error) {
+func stagePendingLinkedInMatches(
+	ctx context.Context, svc *approvals.Service, store *people.Store, pending []people.PendingLinkedInMatch,
+) (int, error) {
 	// Staged ON BEHALF OF the member whose network produced it, so the audit
 	// trail records whose export raised the question. It grants nothing and
 	// withholds nothing: who may decide is the inbox's ordinary rule — the
@@ -140,6 +142,23 @@ func stagePendingLinkedInMatches(ctx context.Context, svc *approvals.Service, pe
 		}
 		if proposed {
 			staged++
+			continue
+		}
+		// Not staged means one thing here and the engine is precise about it:
+		// StageUnlessDeclined refuses only when a prior offer for this identity
+		// was REJECTED. So this is the moment the refusal becomes observable on
+		// this side of the seam, and the connection is marked terminal.
+		//
+		// Recorded here rather than by a reject-side effect, which the approvals
+		// engine has no notion of — its effect table dispatches on approve only,
+		// and inventing the other half for one caller would put a new concept in
+		// a shared engine to write one column.
+		//
+		// The cost of not doing it is what makes it worth a write: the sweep
+		// enumerates (unmatched, suggested), so a refused row was matched,
+		// read and staged on every hourly pass for ever, always to no effect.
+		if err := store.RecordLinkedInMatchRefused(ctx, m.ConnectionID); err != nil {
+			return staged, err
 		}
 	}
 	return staged, nil
