@@ -182,7 +182,7 @@ func TestAQueuedWebsiteReadIsProjectedAsTheRepsOwnLiveWork(t *testing.T) {
 	if got.StaleAfter == nil {
 		t.Fatal("a queued occurrence carries no stale_after, so a queue nobody drains would render as live forever")
 	}
-	if got.SubjectType == nil || *got.SubjectType != "company" || got.SubjectID == nil || *got.SubjectID != f.org.UUID {
+	if got.SubjectType == nil || *got.SubjectType != "company" || got.SubjectID == nil || *got.SubjectID != f.company.UUID {
 		t.Fatalf("subject = %v/%v, want company/%s", got.SubjectType, got.SubjectID, f.company)
 	}
 	if got.SubjectLabel == nil || *got.SubjectLabel != "Acme Systems" {

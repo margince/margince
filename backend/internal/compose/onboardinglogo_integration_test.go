@@ -228,13 +228,13 @@ func TestOnboardingReadResolvesTheLogoTheConfirmedAnchorWears(t *testing.T) {
 	if boundKey != *key {
 		t.Fatalf("the anchor names %q, want the object the read stored at %q", boundKey, *key)
 	}
-	company, err := e.People.GetCompany(ctx, company.CompanyID, storekit.LiveOnly)
+	readBack, err := e.People.GetCompany(ctx, company.CompanyID, storekit.LiveOnly)
 	if err != nil {
 		t.Fatalf("read the anchor: %v", err)
 	}
 	wantURL := *people.LogoURL(company.CompanyID.UUID, &boundKey, people.LogoWide)
-	if company.LogoUrl == nil || *company.LogoUrl != wantURL {
-		t.Fatalf("logo_url = %v, want %q — the face the SPA renders", company.LogoUrl, wantURL)
+	if readBack.LogoUrl == nil || *readBack.LogoUrl != wantURL {
+		t.Fatalf("logo_url = %v, want %q — the face the SPA renders", readBack.LogoUrl, wantURL)
 	}
 
 	// The same face on the profile the app shell reads. The record screens draw
@@ -394,12 +394,12 @@ func TestConfirmingAnOnboardingReadSurvivesALogoThatNeverResolved(t *testing.T) 
 	if _, err := e.People.CompanyLogoKey(ctx, company.CompanyID, people.LogoWide); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("an anchor with no resolved logo answers %v, want not-found so the monogram renders", err)
 	}
-	company, err := e.People.GetCompany(ctx, company.CompanyID, storekit.LiveOnly)
+	readBack, err := e.People.GetCompany(ctx, company.CompanyID, storekit.LiveOnly)
 	if err != nil {
 		t.Fatalf("read the anchor: %v", err)
 	}
-	if company.LogoUrl != nil {
-		t.Fatalf("logo_url = %q, want none", *company.LogoUrl)
+	if readBack.LogoUrl != nil {
+		t.Fatalf("logo_url = %q, want none", *readBack.LogoUrl)
 	}
 	profile, err := e.People.GetAnchorCompany(ctx)
 	if err != nil {

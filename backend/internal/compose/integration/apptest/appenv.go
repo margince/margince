@@ -273,8 +273,8 @@ func BootstrapWorkspaceSession(t *testing.T, e *AppEnv, companyName, adminEmail,
 		t.Fatal(err)
 	}
 	cfg := deployconfig.Config{
-		Version: 1,
-		Company: deployconfig.Workspace{Name: companyName},
+		Version:   1,
+		Workspace: deployconfig.Workspace{Name: companyName},
 		BootstrapAdmin: &deployconfig.BootstrapAdmin{
 			Email: adminEmail, DisplayName: adminName, PasswordFile: pwFile,
 		},

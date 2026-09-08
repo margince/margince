@@ -324,8 +324,8 @@ func bootstrapWithRetentionPosture(t *testing.T, retention *deployconfig.Retenti
 		t.Fatal(err)
 	}
 	cfg := deployconfig.Config{
-		Version: 1,
-		Company: deployconfig.Workspace{Name: "Regulated Company", BaseCurrency: "EUR", Timezone: "Europe/Berlin"},
+		Version:   1,
+		Workspace: deployconfig.Workspace{Name: "Regulated Company", BaseCurrency: "EUR", Timezone: "Europe/Berlin"},
 		BootstrapAdmin: &deployconfig.BootstrapAdmin{
 			Email: "ops@regulated.test", DisplayName: "Ops", PasswordFile: pwFile,
 		},

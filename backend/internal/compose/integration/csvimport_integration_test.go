@@ -570,12 +570,12 @@ func TestCSVImportLandsCompaniesWithEveryMappedField(t *testing.T) {
 		t.Fatalf("approve → %d, want 202", status)
 	}
 
-	companies := companies(t, e)
-	if len(companies.Data) != before+2 {
-		t.Fatalf("companies = %d, want %d", len(companies.Data), before+2)
+	listed := companies(t, e)
+	if len(listed.Data) != before+2 {
+		t.Fatalf("companies = %d, want %d", len(listed.Data), before+2)
 	}
 	var found bool
-	for _, o := range companies.Data {
+	for _, o := range listed.Data {
 		if o.DisplayName != "Initech" {
 			continue
 		}

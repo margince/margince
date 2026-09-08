@@ -166,7 +166,7 @@ func TestCase6BothTheRecordAndTheProseReachTheCaller(t *testing.T) {
 
 	// The timeline is how an assistant FINDS the two activities.
 	got := s.MCP.CallOK(t, "catch_me_up_on", map[string]any{
-		"record_type": "company", "record_id": c.org.String(),
+		"record_type": "company", "record_id": c.company.String(),
 	})
 	var answer agents.AssembledContextResult
 	got.JSON(t, &answer)
@@ -256,7 +256,7 @@ func TestCase6EveryEventCarriesItsOwnDate(t *testing.T) {
 	c := s.seedContradiction(t)
 
 	got := s.MCP.CallOK(t, "catch_me_up_on", map[string]any{
-		"record_type": "company", "record_id": c.org.String(),
+		"record_type": "company", "record_id": c.company.String(),
 	})
 	var answer agents.AssembledContextResult
 	got.JSON(t, &answer)
@@ -336,7 +336,7 @@ func TestCase6EveryPastCaseReachesTheCallerWithItsHistory(t *testing.T) {
 func (s *scenario) hasComplaintOnTimeline(t *testing.T, account pastCase) bool {
 	t.Helper()
 	got := s.MCP.CallOK(t, "catch_me_up_on", map[string]any{
-		"record_type": "company", "record_id": account.org.String(),
+		"record_type": "company", "record_id": account.company.String(),
 	})
 	var answer agents.AssembledContextResult
 	got.JSON(t, &answer)

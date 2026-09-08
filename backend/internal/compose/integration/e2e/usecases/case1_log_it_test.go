@@ -101,13 +101,13 @@ func (s *scenario) logTheMeeting(t *testing.T) loggedMeeting {
 	s.MCP.CallOK(t, "create_record", map[string]any{
 		"record_type": "relationship",
 		"fields": map[string]any{
-			"kind": "employment", "person_id": m.person.String(), "company_id": m.org.String(),
+			"kind": "employment", "person_id": m.person.String(), "company_id": m.company.String(),
 		},
 	})
 
 	pipeline, stage := s.defaultOpenStage(t)
 	m.deal = s.createRecord(t, "deal", map[string]any{
-		"name": newDealName, "company_id": m.org.String(),
+		"name": newDealName, "company_id": m.company.String(),
 		"pipeline_id": pipeline.String(), "stage_id": stage.String(),
 	})
 
@@ -269,7 +269,7 @@ func TestCase1TheAccountSeesTheMeetingThroughThePersonWhoWasInIt(t *testing.T) {
 	m := s.logTheMeeting(t)
 
 	got := s.MCP.CallOK(t, "catch_me_up_on", map[string]any{
-		"record_type": "company", "record_id": m.org.String(),
+		"record_type": "company", "record_id": m.company.String(),
 	})
 	var answer agents.AssembledContextResult
 	got.JSON(t, &answer)
@@ -299,7 +299,7 @@ func TestCase1FilingTheMeetingAgainstTheCompanyIsRefusedWithSomethingToDo(t *tes
 		"kind": "meeting", "body": meetingTranscript,
 		"links": []map[string]any{
 			{"entity_type": "person", "entity_id": m.person.String()},
-			{"entity_type": "company", "entity_id": m.org.String()},
+			{"entity_type": "company", "entity_id": m.company.String()},
 		},
 	})
 	for _, want := range []string{"with a person", "employer"} {
