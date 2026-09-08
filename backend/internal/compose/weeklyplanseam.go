@@ -99,7 +99,14 @@ func (c weeklyPlanCapacity) ForWeek(
 			  (SELECT count(*) FROM activity m
 			    WHERE m.kind = 'meeting' AND m.archived_at IS NULL
 			      AND m.meeting_status = 'booked'
-			      AND m.captured_by = $3
+			      -- By HOST, falling back to the capturer only where no host is
+			      -- recorded. A meeting a colleague booked or a calendar
+			      -- connector imported is still this rep's time, and reading
+			      -- the capturer alone left it out of the capacity they plan
+			      -- against — the emptier the calendar looks, the more they
+			      -- commit to.
+			      AND (m.host_user_id = $4
+			           OR (m.host_user_id IS NULL AND m.captured_by = $3))
 			      AND m.occurred_at >= $1 AND m.occurred_at < $2),
 			  (SELECT count(*) FROM activity t
 			    WHERE t.kind = 'task' AND t.archived_at IS NULL

@@ -172,13 +172,54 @@ func countWeekLeads(
 // A booking cancelled or no-showed is not a conversation the week can be
 // credited with, so only `held` counts.
 //
-// Attributed by captured_by, because a meeting has no owner: the
-// activity_task_fields CHECK reserves assignee_id for tasks, so filtering
-// meetings by it would match nothing and report every rep as having held none.
+// Attributed by HOST, falling back to the capturer only where no host is
+// recorded.
+//
+// assignee_id is reserved for tasks by the activity_task_fields CHECK, so it
+// cannot answer here — but host_user_id can, and it names the person whose
+// meeting it was rather than the person or connector that filed it. Read by
+// capturer alone, a meeting a colleague minuted or a calendar connector
+// imported counted for whoever recorded it and not for the rep who sat in it,
+// so the same meeting moved between reps depending on how it reached the CRM.
+//
+// The fallback is bounded to rows with NO host: a meeting that names one is
+// that person's, and letting the capturer also claim it would count one meeting
+// twice across two reps' weeks.
 //
 // "Left a next step" is a task raised AFTER the meeting against a record the
-// meeting was also filed under — through the shared record rather than a direct
-// pointer, because there is no meeting_id on a task.
+// meeting was also filed under. Through the SHARED RECORD rather than
+// activity.source_activity_id, which does exist: only some writers populate it
+// — the transcript accept path names the meeting it read, a task typed by hand
+// names nothing — so joining on it would report a rep who writes their own
+// follow-ups as having produced none.
+//
+// Bounded at BOTH ends. A task created months later on the same account is not
+// something the meeting produced, and one created after the week closed belongs
+// to the week it was created in — a frozen review that changed its answer every
+// time somebody added a task would not be frozen.
+//
+// The heuristic is what the data supports, and it is a heuristic: a task raised
+// the Monday after a Friday meeting is plausibly its outcome and is not counted
+// here. Tightening that needs source_activity_id on every writer first.
+// meetingIsTheirsSQL is the one spelling of "this meeting is that rep's":
+// hosted by them, or — where no host was recorded — filed by them.
+//
+// TWO readers ask it, the headline count here and the funnel in
+// weeklyscorecard.go, and they must not disagree: a meeting credited to
+// different people by the two panels is one page contradicting itself about the
+// same week. The caller supplies its own placeholders because the two queries
+// number their arguments differently.
+//
+// The fallback is bounded to rows with NO host on purpose. A meeting naming one
+// is that person's, and letting its recorder also claim it would count one
+// meeting twice across two reps.
+//
+// Held by: TestTheMeetingAttributionHasOneSpelling (meetingattribution_test.go)
+func meetingIsTheirsSQL(hostPos, capturedPos string) string {
+	return fmt.Sprintf("(m.host_user_id = %s OR (m.host_user_id IS NULL AND m.captured_by = %s))",
+		hostPos, capturedPos)
+}
+
 func countWeekMeetings(
 	ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.Time,
 ) (held, withNextStep int, err error) {
@@ -186,12 +227,14 @@ func countWeekMeetings(
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	startPos, endPos := arg(start), arg(end)
 	capturedPos := arg("human:" + userID.String())
+	hostPos := arg(userID)
 	scope, err := auth.ActivityContentClause(ctx, "m", arg)
 	if err != nil {
 		return 0, 0, err
 	}
-	const heldByRep = `m.kind = 'meeting' AND m.archived_at IS NULL
-		      AND m.meeting_status = 'held' AND m.captured_by = $%[3]d
+	heldByRep := `m.kind = 'meeting' AND m.archived_at IS NULL
+		      AND m.meeting_status = 'held'
+		      AND ` + meetingIsTheirsSQL("$%[5]d", "$%[3]d") + `
 		      AND m.occurred_at >= $%[1]d AND m.occurred_at < $%[2]d
 		      AND (%[4]s)`
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
@@ -209,8 +252,9 @@ func countWeekMeetings(
 		          JOIN activity task ON task.id = tl.activity_id
 		         WHERE ml.activity_id = m.id AND task.kind = 'task'
 		           AND task.archived_at IS NULL
-		           AND task.created_at >= m.occurred_at))`,
-		startPos, endPos, capturedPos, scope), args...).
+		           AND task.created_at >= m.occurred_at
+		           AND task.created_at < $%[2]d))`,
+		startPos, endPos, capturedPos, scope, hostPos), args...).
 		Scan(&held, &withNextStep)
 	if err != nil {
 		return 0, 0, fmt.Errorf("weekly: counting the week's meetings: %w", err)
