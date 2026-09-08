@@ -725,6 +725,9 @@ func TestASuggestionDismissedOnAScopedPageStaysDismissed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if wide.Suggestions == nil {
+		t.Fatal("the unscoped page withheld its suggestions, so the two fingerprints cannot be compared")
+	}
 	if slices.Contains(noReplyFingerprints(*wide.Suggestions), scopedPrints[0]) {
 		t.Fatalf("the scoped and unscoped pages raise the SAME no-reply fingerprint, so the " +
 			"dismissal below cannot show that the scope reached it")
@@ -738,6 +741,9 @@ func TestASuggestionDismissedOnAScopedPageStaysDismissed(t *testing.T) {
 	stillThere, err := svc.AssembleScoped(rep, org, scoped)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if stillThere.Suggestions == nil {
+		t.Fatal("the scoped page withheld its suggestions after a dismissal that named no project")
 	}
 	if !slices.Contains(noReplyFingerprints(*stillThere.Suggestions), scopedPrints[0]) {
 		t.Fatalf("a dismissal naming no project silenced a scoped suggestion — then the " +
