@@ -44,13 +44,21 @@ var singlePurposeTools = []string{
 // contractBodies is each route's own minimal request body, as crm.yaml declares
 // it — every required member present and nothing else.
 //
-// They are real bodies rather than nil because the walk below asserts that a
+// They are real bodies rather than nil because the walks below assert that a
 // decoder ACCEPTS the shape its route produces, and commandBody short-circuits
 // an empty body before it decodes anything at all: passing nil would exercise
 // that short-circuit for every route and prove nothing about the structs
 // underneath it. Which routes need an entry is read off the contract rather than
 // stated here — a route that declares a requestBody must have one, and one that
 // declares none must not.
+//
+// ONE map for both walks that decode a synthetic request — the single-purpose
+// walk here and the operand walk in agentcommandoperand_test.go. They ask the
+// same question of the same operations ("what is the minimal body this route
+// declares"), and the two families overlap: advanceDeal and the merges are
+// operand-shaped as well as single-purpose. Two maps answered it twice, and the
+// second held two entries for routes its own walk filtered out — dead fixtures
+// nothing read, which is what a duplicated fixture set decays into.
 //
 // gatekit:fixture the request body crm.yaml declares for each route — expected input the walk decodes, not a waived cost
 var contractBodies = map[string]string{
@@ -85,6 +93,24 @@ var contractBodies = map[string]string{
 	"rejectApproval":        `{"reason":"not this quarter"}`,
 	"approveApprovalBundle": `{"reason":"all six corrections check out"}`,
 	"rejectApprovalBundle":  `{"reason":"the run misread the thread"}`,
+
+	// The operand family's own bodies, on the same rule: every required member
+	// crm.yaml declares, and nothing else.
+	"setProjectStakeholder":          `{"person_id":"019ff000-0000-7000-8000-000000000031","role":"champion"}`,
+	"setProjectCompany":              `{"organization_id":"019ff000-0000-7000-8000-000000000032","role":"partner"}`,
+	"applyTag":                       `{"entity_type":"person","entity_id":"019ff000-0000-7000-8000-000000000033"}`,
+	"removeTag":                      `{"entity_type":"person","entity_id":"019ff000-0000-7000-8000-000000000034"}`,
+	"mergeTags":                      `{"into_tag_id":"019ff000-0000-7000-8000-000000000035"}`,
+	"demoteLead":                     `{"reason":"the account went quiet"}`,
+	"createOffer":                    `{"currency":"EUR","source":"manual"}`,
+	"addOfferLineItem":               `{"quantity":2}`,
+	"updateOfferLineItem":            `{"quantity":3}`,
+	"openDealRoomThread":             `{"body":"can we revisit the delivery date?"}`,
+	"replyDealRoomThread":            `{"body":"yes — moving it a week."}`,
+	"createOrganizationFact":         `{"category":"company","field":"headcount","value":"240"}`,
+	"updateOrganizationFact":         `{"value":"260"}`,
+	"updateOrganizationProfileField": `{"value":"Acme GmbH"}`,
+	"updateCustomFieldOptions":       `{"options":["bronze","silver","gold"]}`,
 }
 
 // What a registration does not say: that the decoder bound to a route can

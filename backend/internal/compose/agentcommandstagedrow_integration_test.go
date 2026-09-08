@@ -121,8 +121,21 @@ func TestBothDoorsStageOneRowForOneOperation(t *testing.T) {
 }
 
 // A record the agent's own row scope hides is refused by BOTH doors, and
-// neither stages anything: the guards each door runs are the same guards,
-// reached through the same resolver.
+// neither stages anything.
+//
+// What this holds is the DOOR-TO-DOOR agreement over a real hidden row: one
+// credential, one answer, through the real provider and the real store's
+// row-scope clause. What it does not hold on its own is that Guards ran.
+// Guards and Subject answer from one memoized read (archiveResolver.target),
+// so a row the caller cannot read fails Subject too, and this test would pass
+// against a door that resolved a subject and never asked the guard.
+//
+// Guards' own contribution — the external-system-of-record refusal, on a row
+// the read SUCCEEDS for — is isolated per door instead, where a stub can hold
+// the read open and vary only that one answer:
+// TestAnArchiveOfAnExternallyHeldRecordStagesNothing for the REST door and
+// TestTheToolDoorRefusesAnExternallyHeldRecordItCanRead for the tool door.
+// Together with this test the claim is whole; neither half states it alone.
 func TestBothDoorsRefuseOneRecordNeitherCallerCanSee(t *testing.T) {
 	e := integration.Setup(t)
 	native := NewProvider(e.Pool)
