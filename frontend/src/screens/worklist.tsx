@@ -366,9 +366,14 @@ function WorklistBody({
           block, and with the title and controls above them the first row's
           verb landed 972px down an 844px screen — a rep opened their morning
           and had to scroll before they could do anything. The stylesheet moves
-          this below the queue under 720px; the DOM order stays as it reads,
-          so a screen reader still meets the day's figures before its rows. */}
+          this below the queue under 720px, in PAINT only — worklist.layout.ts
+          holds why the document order does not follow it. */}
       <WorklistReadings day={day} onLane={onFilter} />
+      {/* THE REASON A LEAD OPENED SOMEBODY ELSE'S DAY, at the head of that day
+          in every state — below it the block moved as its own form opened, and
+          a lead read three panels of somebody else's morning before the way to
+          say anything about it. Only on a named queue. */}
+      {owner !== "" && <CoachControl owner={owner} name={colleague} />}
       {/* What has moved since the reader started paging. An offer to refresh
           rather than a fault: the day on screen is correct, it is simply no
           longer complete. */}
@@ -507,11 +512,6 @@ function WorklistBody({
           infer the trouble from three counts per teammate. Same tier and same
           condition, read off `scope_options` so the control and the refusal
           cannot disagree — a rep is refused both. */}
-      {/* The verbs a lead has over somebody else's day. Drawn only on a named
-          person's queue: on the reader's own there is nobody to coach, and it
-          leads this group there because it is the whole reason a lead opened
-          a colleague's queue. */}
-      {owner !== "" && <CoachControl owner={owner} />}
       {owner === "" && day.scope_options.includes("team") && (
         <TeamExceptionsPanel
           enabled={day.scope_options.includes("team")}

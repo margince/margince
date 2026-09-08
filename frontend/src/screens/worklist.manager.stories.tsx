@@ -80,20 +80,23 @@ export const AColleaguesDay: Story = {
   render: () => frame(<OwnerPicker owner={LENA} onOwner={() => {}} />),
 };
 
-/** Both verbs at rest — one ghost button each, and nothing on screen yet about
- *  the choice behind them. */
+/** Both verbs at rest. The hand-off is a glyph on a row of them; the note is a
+ *  titled panel that says what a note DOES before the reader spends a press
+ *  finding out, with its own verb on the panel's trailing edge. */
 export const TheVerbsAtRest: Story = {
   render: () =>
     frame(
       <>
         <ReassignControl item={aTask} owner={LENA} />
-        <CoachControl owner={LENA} />
+        <CoachControl owner={LENA} name="Lena Fischer" />
       </>,
     ),
 };
 
-/** Handing the task on. The confirm refuses until somebody is picked — a
- *  precondition the reader can meet, which is what `disabled` is for. */
+/** Handing the task on: ONE line ending in the answer — the picker, then
+ *  Cancel, then the confirm on the trailing edge. The confirm refuses until
+ *  somebody is picked, a precondition the reader can meet, which is what
+ *  `disabled` is for. */
 export const HandingItOn: Story = {
   render: () => frame(<ReassignControl item={aTask} owner={LENA} />),
   play: async ({ canvasElement }) => {
@@ -105,10 +108,12 @@ export const HandingItOn: Story = {
   },
 };
 
-/** The note on somebody's day: the kind as a segmented control, the words as a
- *  plain field under it. */
+/** The note on somebody's day, open: the kind as a segmented strip, the words
+ *  as a field under it, and the two verbs in the panel's own action band with
+ *  the answer last. The panel keeps its title and its chrome across both
+ *  states, so pressing the verb does not change the page's shape. */
 export const LeavingANote: Story = {
-  render: () => frame(<CoachControl owner={LENA} />),
+  render: () => frame(<CoachControl owner={LENA} name="Lena Fischer" />),
   play: async ({ canvasElement }) => {
     await userEvent.click(
       within(canvasElement).getByRole("button", {
@@ -116,4 +121,12 @@ export const LeavingANote: Story = {
       }),
     );
   },
+};
+
+/** The same panel where the roster cannot name the recipient — a window on a
+ *  cold cache, and a caller with no roster at all. The title names nobody
+ *  rather than reading "A note for undefined"; the write is addressed by id
+ *  either way. */
+export const ANoteForSomebodyUnnamed: Story = {
+  render: () => frame(<CoachControl owner={LENA} />),
 };

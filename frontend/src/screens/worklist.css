@@ -1,10 +1,33 @@
 /* The Worklist: one ranked list.
    Spacing comes from the space tokens; nothing here invents a colour. */
+
+/* ONE INTERVAL FOR THE WHOLE PAGE STACK.
+   The shell's default rhythm (app/shell.css) reaches `.card` and `.panel`
+   siblings only, and half of this page's blocks are neither: the readings are a
+   `StatStrip` in a `<section>`, a paned queue is a `.page-zones` grid, the
+   clear day is a paragraph. So the readings met the queue's grid with nothing
+   between them, and that grid met the review panel below it the same way —
+   while two adjacent panels a block later were correctly spaced. A reader saw
+   the page's rhythm break and mend depending on which blocks their day
+   happened to draw.
+   Stated over EVERY adjacent pair rather than over today's list of blocks: the
+   set changes with the scope, with whose day is open, with whether a row is
+   selected and with whether the day is empty, and a rule naming the pairs would
+   be wrong for most of those combinations the day it was written. `--gapCards`
+   is the role between sibling surfaces, so the shell's own rule and this one
+   resolve to the one interval and retune together. */
+.wrap.worklist > * + * {
+  margin-block-start: var(--gapCards);
+}
+
+/* No interval of its own: the stack above owns what follows the head. Carrying
+   both, the header stood a step further from the readings than every other pair
+   on the page — and twice as far below 720px, where the column is flex and the
+   two margins no longer collapse. */
 .worklist-header {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  margin-bottom: var(--space-4);
 }
 
 /* The sentence and the scope share a line: the sentence takes the room, the
@@ -33,14 +56,18 @@
   gap: var(--space-3);
 }
 
-/* CONTENT-SIZED, not page-wide. Full width the picker read as a control over
-   the pills below it rather than as a dial on the day above; the ceiling is
-   what keeps a roster of long names from taking the sentence's line. Below the
-   fold it may have the row to itself — at 390px a capped control beside a
-   wrapped sentence is neither. */
+/* A FLOOR AND A CEILING, and neither is the page's width. Full width the picker
+   read as a control over the pills below it rather than as a dial on the day
+   above; the ceiling is what keeps a roster of long names from taking the
+   sentence's line. The FLOOR is the half that was missing: the trigger sizes to
+   the value in it, so with "My own day" chosen the control stood narrower than
+   the names it chooses between, and it changed width every time it was
+   answered — dragging the sentence beside it along. Below the fold it may have
+   the row to itself, because at 390px a capped control beside a wrapped
+   sentence is neither. */
 .worklist-owner-field {
   max-width: 20rem;
-  min-width: 0;
+  min-inline-size: 14rem;
 }
 
 @media (max-width: 720px) {
@@ -60,16 +87,63 @@
   gap: var(--space-1);
 }
 
-/* A manager's control over one row: the picker or the question, then the verbs
-   that answer it, on one line. The class was in the markup from the start and
-   in no stylesheet, so all three of these clusters rendered as a block — the
-   buttons ran together with nothing but a space between them, and the picker
-   sat on its own line above them. */
+/* THE HAND-OFF FORM: the picker, then the two verbs that answer it, on one line
+   ending in the call to action. Laid out as a block it drew a page-wide picker
+   with the confirm and the cancel wrapped underneath, so what the reader opened
+   read as three unrelated controls rather than as one question.
+   WHERE that line sits is the ROW's business and not this rule's — only the row
+   knows what else stands on it, and `.worklist-row-acts >
+   .worklist-manager-control` (worklist.row.css) gives the form its own full
+   line on the verbs' own trailing edge. This owns the inside of the form. */
 .worklist-manager-control {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--gapActions);
+}
+
+/* The picker inside it: content-sized with a floor, for the reason
+   `.worklist-owner-field` carries one — a chooser narrower than the names in it
+   is a chooser nobody can read. Full width it was the whole line and the verbs
+   had nowhere to go but under it. Handed to the control through its own
+   `className` rather than reached for with a descendant selector: a width is
+   the calling form's to state and the trigger's shape is the design
+   system's. */
+.worklist-hand-to {
+  min-inline-size: 14rem;
+  max-width: 20rem;
+}
+
+/* Below the fold the pair splits: the picker takes the line and the two verbs
+   the one under it. At 390px a 14rem control beside two buttons is neither. */
+@media (max-width: 720px) {
+  .worklist-hand-to {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+}
+
+/* TAKING ONE EXCEPTION ON, inside the table's trailing cell. The ask is a
+   caption LINE above its own verbs row rather than a bold sentence beside them:
+   in the cell it took the width the two buttons needed and pushed Cancel onto a
+   third line, so one row of the table stood twice as tall as its neighbours and
+   the verb the reader came for was the one below the fold of the cell.
+   The verbs themselves are `.cell-actions` (the design system's table-cell
+   verbs row) — right-aligned, one line, no top margin. */
+.worklist-take {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* THE NOTE'S OWN VERBS, at the trailing edge of the panel's action band with
+   the call to action last. The band lays its buttons out in a single flow and
+   leads with them, which is right for a panel whose verbs continue the body
+   above; here the reader has already read the body and is answering it, so the
+   answer belongs where every other answer on this page is — the trailing edge.
+   `justify-content` only: the band's interval and its inset stay the panel's. */
+.worklist-coach .panel-actions {
+  justify-content: flex-end;
 }
 
 /* What the page is not showing. Quiet on purpose: this is the surface reporting
@@ -80,9 +154,11 @@
   margin: 0;
 }
 
+/* No interval of its own — it stands in the queue's place in the page's stack,
+   and the stack spaces it. */
 .worklist-clear {
   color: var(--textMeta);
-  margin: var(--space-4) 0;
+  margin: 0;
 }
 
 /* The way into the pane: the rank, made pressable.
@@ -240,42 +316,6 @@
   align-items: center;
   gap: var(--space-3);
   padding-block: var(--space-3);
-}
-
-/* A duplicate pair, decided on the row.
-   The two sides sit side by side so a reader compares them rather than
-   scrolling between them; below 720px they stack, because two records at
-   half a phone's width are two records nobody can read. */
-.worklist-pair {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
-}
-.worklist-pair-sides {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.worklist-pair-side {
-  display: flex;
-  flex: 1 1 14rem;
-  flex-direction: column;
-  gap: var(--space-1);
-  align-items: flex-start;
-}
-.worklist-pair-name {
-  font-weight: 600;
-}
-
-/* Where the verbs would have been, for a reader who may not settle the pair.
-   It stands in the buttons' own place so the card still reads as one thought:
-   here are two records, and here is why nothing is being asked of you. */
-.worklist-pair-steward {
-  margin: 0;
 }
 
 /* The spans behind the snooze's caret, as LINES of a list.

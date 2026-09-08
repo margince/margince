@@ -119,6 +119,28 @@ async function wrote(
   return undefined;
 }
 
+// A refusal in the shape the server sends it: RFC-7807, with the `code`
+// discriminator the screens branch on. A 403 with no code is a different fact
+// — a proxy or a bug rather than a stated refusal — so the two are spelled
+// apart here for the same reason the screen tells them apart.
+function refusal(code?: string) {
+  return new Response(
+    JSON.stringify({
+      title: "Forbidden",
+      status: 403,
+      ...(code ? { code } : {}),
+    }),
+    { status: 403, headers: { "content-type": "application/problem+json" } },
+  );
+}
+
+// The green dot is the toast region's way of saying "that worked". A failure
+// wearing it tells the reader the opposite of what the sentence beside it
+// says, which is why every failure arm on this page passes `{ mark: false }`.
+function completionMark(container: HTMLElement) {
+  return container.ownerDocument.body.querySelector(".dot-auto");
+}
+
 describe("handing a task to somebody else", () => {
   it("AC-WORKLIST-MGR-03: writes the new assignee to the task the row names", async () => {
     const fetched = stubRosterAnd(() => jsonResponse({}));
@@ -176,16 +198,10 @@ describe("handing a task to somebody else", () => {
 
   // A refused handover leaves the work where it was, which looks exactly like a
   // press that did nothing.
-  it("says so when the handover is refused", async () => {
-    stubRosterAnd(
-      () =>
-        new Response(JSON.stringify({ title: "Forbidden", status: 403 }), {
-          status: 403,
-          headers: { "content-type": "application/problem+json" },
-        }),
-    );
+  it("says so when the handover is refused, and does not mark it done", async () => {
+    stubRosterAnd(() => refusal());
     const user = userEvent.setup();
-    renderUnderAToastRegion(
+    const { container } = renderUnderAToastRegion(
       <ReassignControl item={row({ id: "task-1" })} owner={LENA} />,
     );
 
@@ -205,6 +221,7 @@ describe("handing a task to somebody else", () => {
     expect(
       await screen.findByText(en["worklist.manager.reassignFailed"]),
     ).toBeTruthy();
+    expect(completionMark(container)).toBeNull();
   });
 });
 
@@ -235,6 +252,57 @@ describe("leaving a note on somebody's queue", () => {
     });
     expect(
       await screen.findByText(en["worklist.manager.coached"]),
+    ).toBeTruthy();
+  });
+
+  // A NOTE THE READER MAY NOT SEND says why, and never wears the mark that
+  // means it worked.
+  //
+  // The server answers 403 `permission_denied` where the caller may not coach
+  // this person at all. "That note could not be left" invited a retry, and
+  // every press earned the same refusal — a reader pressing four times learnt
+  // nothing the first press could have told them.
+  it("names the refusal a 403 states, with no completion mark", async () => {
+    stubRosterAnd(() => refusal("permission_denied"));
+    const user = userEvent.setup();
+    const { container } = renderUnderAToastRegion(
+      <CoachControl owner={LENA} name="Lena Fischer" />,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: en["worklist.manager.coach"] }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: en["worklist.manager.coachConfirm"],
+      }),
+    );
+
+    expect(
+      await screen.findByText("You may not coach Lena Fischer."),
+    ).toBeTruthy();
+    expect(completionMark(container)).toBeNull();
+  });
+
+  // And the branch is on the SENTINEL, not on the status: a 403 the server sent
+  // with no code is a proxy or a bug rather than a stated refusal, and claiming
+  // "you may not coach her" over one would name a rule nobody wrote.
+  it("falls back to the shared line where no code was stated", async () => {
+    stubRosterAnd(() => refusal());
+    const user = userEvent.setup();
+    renderUnderAToastRegion(<CoachControl owner={LENA} name="Lena Fischer" />);
+
+    await user.click(
+      await screen.findByRole("button", { name: en["worklist.manager.coach"] }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: en["worklist.manager.coachConfirm"],
+      }),
+    );
+
+    expect(
+      await screen.findByText(en["worklist.manager.coachFailed"]),
     ).toBeTruthy();
   });
 

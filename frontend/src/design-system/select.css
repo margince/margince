@@ -65,6 +65,20 @@
 .select-popup {
   position: fixed;
   z-index: 70;
+  /* THE LIST IS AS WIDE AS WHAT IS IN IT, and the trigger is only its floor
+     (`min-width`, handed in by select.tsx). Pinned to the trigger's width, a
+     short closed face truncated every option behind it — "My own d…" over
+     "Dr. Kathari…" — so a reader could not tell the choices apart in the one
+     place the control exists to tell them apart. The FACE still ellipsizes,
+     because a trigger that grew with its value would move the toolbar around
+     it; the list carries no such duty.
+     The cap is a MEASUREMENT rather than a fraction: `--popupRoom` is the space
+     left to the viewport's trailing margin (anchoredpopup.ts), so a control at
+     the right edge draws its list to that edge and no further. The fallback
+     covers a popup rendered by something that mints no room. 24rem is where a
+     dropdown stops being a list and becomes a panel. */
+  width: max-content;
+  max-width: min(24rem, var(--popupRoom, 90vw));
   overflow-y: auto;
   overscroll-behavior: contain;
   background: var(--bgElevated);
