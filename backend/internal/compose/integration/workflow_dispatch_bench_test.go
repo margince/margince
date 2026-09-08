@@ -101,7 +101,7 @@ func TestWorkflowTriggerToDispatchP95HoldsOnTheSeededDataset(t *testing.T) {
 
 	// Warmup: discarded, per the file doc comment's fixed-cost note.
 	for _, leadID := range seedTriggerLeads(t, e, dispatchWarmupSamples) {
-		if err := engine.HandleEvent(context.Background(), leadCreatedEnvelope(e, leadID)); err != nil {
+		if err := engine.HandleEvent(context.Background(), leadCreatedEnvelope(leadID)); err != nil {
 			t.Fatalf("warmup dispatch for lead %s: %v", leadID, err)
 		}
 	}
@@ -109,7 +109,7 @@ func TestWorkflowTriggerToDispatchP95HoldsOnTheSeededDataset(t *testing.T) {
 	sampleIDs := seedTriggerLeads(t, e, dispatchSampleSize)
 	durations := make([]time.Duration, 0, len(sampleIDs))
 	for _, leadID := range sampleIDs {
-		env := leadCreatedEnvelope(e, leadID)
+		env := leadCreatedEnvelope(leadID)
 		start := time.Now()
 		if err := engine.HandleEvent(context.Background(), env); err != nil {
 			t.Fatalf("dispatching lead %s: %v", leadID, err)
@@ -142,7 +142,7 @@ const dispatchWarmupSamples = 5
 // own direct-dispatch suites already build by hand for this package
 // (TestWorkflowRouteLeadAssignsExactlyOnce), reused here rather than
 // re-derived.
-func leadCreatedEnvelope(e *Env, leadID ids.UUID) kevents.Envelope {
+func leadCreatedEnvelope(leadID ids.UUID) kevents.Envelope {
 	return kevents.Envelope{
 		EventID:    ids.NewV7(),
 		Type:       leadCreatedEventType,
