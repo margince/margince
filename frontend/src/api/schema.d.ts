@@ -9717,16 +9717,28 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Double-opt-in issuance — not available until the confirmation mail is durable.
-         * @description Answers `409` and mints nothing. A double opt-in is only evidence when the data subject
-         *     completes it from their own mailbox, and this installation has no durable path to deliver
-         *     that link yet. The earlier behaviour returned the plaintext token to the operator, who could
-         *     paste it straight back into `recordConsent` — a round trip in which the subject's mailbox
-         *     never participated, recorded as though it had.
+         * Mail the subject a single-use link that confirms one marketing purpose.
+         * @description Mints the double-opt-in link for `purpose_id` and stages it to the person's own live
+         *     primary address — `queued` reports whether it reached the lane, and an installation with
+         *     none still mints and answers 201. The purpose must be live and must itself require double
+         *     opt-in; anything else is a 422, because a mailed link asking about a purpose that needs no
+         *     confirmation asks a question the answer does not fit. The plaintext is never returned: this endpoint once handed it to the
+         *     authenticated operator, who could paste it straight back into `recordConsent` — a round
+         *     trip in which the subject's mailbox never participated, recorded as though it had. A double
+         *     opt-in is evidence only because the data subject completed it from their own mailbox, so
+         *     the link is mailed and nothing else.
          *
-         *     Marketing opt-in meanwhile is captured through the confirm-details link
-         *     (`requestDetailsConfirmation`), which mails a single-use link to the person's own live
-         *     primary address and records their answer when they submit it.
+         *     The purpose rides the token rather than the submission, so whoever holds one link cannot
+         *     use it to grant a different purpose.
+         *
+         *     The mail rides the same durable lane as every other outbound message: a delivery row, an
+         *     authorization decision recording why the installation was allowed to send it, and a
+         *     timeline entry — which is what makes it visible to a subject-access export and reachable by
+         *     erasure. `queued` reports that the message was staged in the same transaction that minted
+         *     the link; `sendable` says whether this installation has a lane at all. An installation with
+         *     no lane still mints the token and answers 201, because the write happened and reporting it
+         *     as a failure would invite a second request that mints another token and supersedes the
+         *     first.
          */
         post: operations["issueDoubleOptIn"];
         delete?: never;
@@ -47904,9 +47916,30 @@ export interface operations {
             };
         };
         responses: {
+            /** @description Link issued, and what became of the delivery. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfirmRequestIssued"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            422: components["responses"]["ValidationError"];
+            /**
+             * @description The request named no purpose, named one no `consent_purpose` row holds, or the contact
+             *     carries no live email address — so there is no mailbox a link could reach.
+             */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     publishCapturedPerson: {
