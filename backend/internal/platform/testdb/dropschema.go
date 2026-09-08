@@ -90,7 +90,7 @@ func dropCandidates(ctx context.Context, owner *pgx.Conn, selector string) ([]st
 // `DROP SCHEMA public CASCADE` takes an AccessExclusiveLock on every relation,
 // index, constraint, view, sequence, function and type in the schema and holds
 // all of them to commit: measured on this schema at 4999 locks against the
-// stack's 6400 slots (infra/docker-compose.dev.yml, 64 × 100). One is 78% of the
+// stack's 6400 slots (docker-compose.dev.yml, 64 × 100). One is 78% of the
 // instance. TWO CONCURRENT ONES CANNOT BOTH FIT, and the loser does not wait —
 // the lock table is not a queue, so it fails outright with
 //
@@ -128,7 +128,7 @@ func dropCandidates(ctx context.Context, owner *pgx.Conn, selector string) ([]st
 // this schema, so EnsureSchema stops being the statement that alone cannot share
 // the instance. Sizing the instance for the lane's remaining steady-state demand
 // is a separate matter, and is done where the instance is defined —
-// infra/docker-compose.dev.yml, which CI runs via `make db-up`.
+// docker-compose.dev.yml, which CI runs via `make db-up`.
 //
 // The split is the fix and the ceiling is the headroom, in that order and not the
 // other way round: the arithmetic depends on the schema's size and the lane's

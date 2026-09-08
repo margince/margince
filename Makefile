@@ -889,14 +889,14 @@ test-laneorder:
 	@./scripts/test-laneorder.sh
 
 ## check-image-pins — every `uses:` in .github/workflows/ AND every container
-## `image:` (workflow service containers + infra/docker-compose.dev.yml) is
+## `image:` (workflow service containers + docker-compose.dev.yml) is
 ## pinned to an immutable ref (supply-chain: a floating vN/main tag or image
 ## tag lets a compromised artifact ride into CI unreviewed). Lives at the root
 ## because the workflows do; also a CI step, so a pin can't regress.
 check-image-pins:
 	@./scripts/check-image-pins.sh
 
-## check-host-ports — every host port published by infra/docker-compose.dev.yml
+## check-host-ports — every host port published by docker-compose.dev.yml
 ## sits BELOW the ephemeral floor (32768). A published port inside the kernel's
 ## ephemeral range can be transiently held as some unrelated process's client
 ## port, and `make db-up` then loses the bind and fails the job it was setting
