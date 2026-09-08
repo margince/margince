@@ -3554,7 +3554,7 @@ paths:
       description: |
         Promotes a company to a first-class partner (ADR-0032) by upserting its `partner` row and
         adding `partner` to its `relationship_types`. (`classification` is retired and no longer
-        set here — ADR-0079/A124 replaced it, because what a company IS to us is multi-valued.)
+        set here — ADR-0079 replaced it, because what a company IS to us is multi-valued.)
         Company identity is never duplicated. Admin write, and a HUMAN one.
 
         Human-only for the same reason `decideCommissionEntry` is: `margin_tier` is the rate the
@@ -6180,7 +6180,7 @@ paths:
       operationId: sendAccountEmail
       summary: Start a new email conversation from a record — runs directly, consent-gated.
       description: |
-        The account-started twin of `send_email` (ADR-0087/A132). "Write email" from a company,
+        The account-started twin of `send_email` (ADR-0087). "Write email" from a company,
         a person or a deal is a NEW conversation: there is no prior message to anchor to, and
         the product refuses to fabricate a placeholder activity to obtain one — that would put a
         timeline entry on the record for a message nobody has sent yet.
@@ -25725,7 +25725,7 @@ components:
           type: boolean
           readOnly: true
           description: |
-            True only for this installation's OWN company (ADR-0065/A111, amended by ADR-0082/A127).
+            True only for this installation's OWN company (ADR-0065, amended by ADR-0082).
             It is one ordinary company, reachable by id everywhere, but the surfaces that answer
             *which companies are we selling to* exclude it unless `include_anchor` is set, and it
             cannot be archived or merged. A caller that offers company actions should tell it apart.
@@ -25796,7 +25796,7 @@ components:
           type: array
           items: { type: string, enum: [customer, partner, supplier, investor, portfolio_company, competitor, other] }
           description: >-
-            WHAT THE COMPANY IS to us (PO-DDL-4b, ADR-0079/A124). Multi-valued, because a company is
+            WHAT THE COMPANY IS to us (PO-DDL-4b, ADR-0079). Multi-valued, because a company is
             legitimately several things at once — the partner program is built on companies that are
             simultaneously partners and customers. A company IS a partner iff it carries `partner` here AND
             has a `partner` row; removing the type while that row lives is refused (422).

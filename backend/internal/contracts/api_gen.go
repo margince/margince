@@ -20559,7 +20559,7 @@ type Company struct {
 	Id          openapi_types.UUID `json:"id"`
 	Industry    *string            `json:"industry,omitempty"`
 
-	// IsAnchor True only for this installation's OWN company (ADR-0065/A111, amended by ADR-0082/A127).
+	// IsAnchor True only for this installation's OWN company (ADR-0065, amended by ADR-0082).
 	// It is one ordinary company, reachable by id everywhere, but the surfaces that answer
 	// *which companies are we selling to* exclude it unless `include_anchor` is set, and it
 	// cannot be archived or merged. A caller that offers company actions should tell it apart.
@@ -20602,7 +20602,7 @@ type Company struct {
 	Partner *Partner                `json:"partner,omitempty"`
 	Raw     *map[string]interface{} `json:"raw,omitempty"`
 
-	// RelationshipTypes WHAT THE COMPANY IS to us (PO-DDL-4b, ADR-0079/A124). Multi-valued, because a company is legitimately several things at once — the partner program is built on companies that are simultaneously partners and customers. A company IS a partner iff it carries `partner` here AND has a `partner` row; removing the type while that row lives is refused (422).
+	// RelationshipTypes WHAT THE COMPANY IS to us (PO-DDL-4b, ADR-0079). Multi-valued, because a company is legitimately several things at once — the partner program is built on companies that are simultaneously partners and customers. A company IS a partner iff it carries `partner` here AND has a `partner` row; removing the type while that row lives is refused (422).
 	RelationshipTypes *[]CompanyRelationshipTypes `json:"relationship_types,omitempty"`
 	SizeBand          *CompanySizeBand            `json:"size_band,omitempty"`
 	Source            string                      `json:"source"`
