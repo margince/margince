@@ -28,18 +28,25 @@ import (
 // lane must survive without failing the assembly around it.
 var errRelayRefused = errors.New("the relay refused the envelope")
 
-// seedWorkFor puts one open deal on a rep's plate, so their morning has
-// something in it.
+// seedWorkFor puts one open deal on each named rep's plate, so their morning
+// has something in it.
 //
 // A run with an EMPTY queue is a quiet morning, and a quiet morning is
 // deliberately not mailed to anybody who did not ask to hear about it — so a
 // fixture without this seeds the case where nothing is sent, and every
 // assertion about sending passes vacuously. It did, on the first run of these
 // tests, and the two that then failed were the ones honest enough to say so.
-func seedWorkFor(t *testing.T, e *integration.Env, owner ids.UUID) {
+//
+// The reps share ONE pipeline because DealFixture seeds the installation's
+// pipeline defaults, which refuses a second run — so calling this helper twice
+// in a test fails with a bare "conflict" that names nothing. Take the owners
+// together instead.
+func seedWorkFor(t *testing.T, e *integration.Env, owners ...ids.UUID) {
 	t.Helper()
 	pipeline, open, _ := integration.DealFixture(t, e)
-	e.SeedDeal(t, "Globex Renewal", pipeline, open, &owner)
+	for _, owner := range owners {
+		e.SeedDeal(t, "Globex Renewal", pipeline, open, &owner)
+	}
 }
 
 // withMailer wires this env's worker to a relay that counts.
@@ -70,6 +77,22 @@ func mailAttemptOf(t *testing.T, user ids.UUID, day time.Time) (*time.Time, *str
 		t.Fatal(err)
 	}
 	return at, cause
+}
+
+// waitingItemsOf counts what a rep's run still has to report. A run with
+// nothing waiting is skipped by the mail pass rather than sent, so a test that
+// means to exercise the mail has to establish this and not assume it.
+func waitingItemsOf(t *testing.T, user ids.UUID, day time.Time) int {
+	t.Helper()
+	var waiting int
+	if err := integration.OwnerConn(t).QueryRow(context.Background(),
+		`SELECT count(*) FROM brief_item i
+		   JOIN brief_run r ON r.id = i.brief_run_id
+		  WHERE r.user_id = $1 AND r.local_day = $2 AND i.state = 'new'`,
+		user, day.Format(time.DateOnly)).Scan(&waiting); err != nil {
+		t.Fatal(err)
+	}
+	return waiting
 }
 
 func TestTheMorningBriefIsMailedOncePerRepPerDay(t *testing.T) {
@@ -366,7 +389,13 @@ func TestARepWithNoChosenHourIsMailedByTheAssemblingPass(t *testing.T) {
 func TestADepartedSeatDoesNotCostTheOthersTheirMorning(t *testing.T) {
 	relay := &countingMailer{}
 	b := setupBriefJob(t).withMailer(relay)
-	seedWorkFor(t, b.Env, b.Rep1)
+	// Work for BOTH, each on their own plate. The queue ranks the deals a rep is
+	// responsible for rather than every deal their row scope lets them read, so
+	// a colleague holding nothing of their own has an empty brief — and an empty
+	// brief is not mailed at all unless the rep asked to hear about quiet days.
+	// Seeding one rep would leave this test asserting the departure guard while
+	// actually exercising a quiet morning.
+	seedWorkFor(t, b.Env, b.Rep1, b.Rep2)
 	setDeliveryHour(t, b.Rep1, 9)
 	setDeliveryHour(t, b.Rep2, 9)
 
@@ -375,11 +404,20 @@ func TestADepartedSeatDoesNotCostTheOthersTheirMorning(t *testing.T) {
 	if err := b.run(t); err != nil {
 		t.Fatalf("the seven o'clock pass failed: %v", err)
 	}
-	// The premise: both runs exist and neither has spent its attempt, so the
-	// nine o'clock pass has two to mail rather than one.
+	// The premise, checked rather than assumed: both runs exist, each has
+	// something waiting, and neither has spent its attempt — so the nine
+	// o'clock pass has two to mail rather than one.
+	//
+	// The waiting count is the half that went stale once responsibility replaced
+	// visibility, and it failed silently: a rep with an empty brief is never
+	// mailed, which reads exactly like the departure this test is about.
 	for _, rep := range []ids.UUID{b.Rep1, b.Rep2} {
 		if at, _ := mailAttemptOf(t, rep, morning); at != nil {
 			t.Fatalf("a run was mailed at seven for a rep who asked for nine")
+		}
+		if waiting := waitingItemsOf(t, rep, morning); waiting == 0 {
+			t.Fatalf("the run for %s has nothing waiting, so this pass would skip it as a "+
+				"quiet morning and the departure guard would go untested", rep)
 		}
 	}
 
