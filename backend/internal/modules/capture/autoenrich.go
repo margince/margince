@@ -49,9 +49,9 @@ type AutoEnrichStore struct {
 func NewAutoEnrichStore(db *database.DB) *AutoEnrichStore { return &AutoEnrichStore{db: db} }
 
 // ListDueOrgs returns up to limit captured organizations that need a dossier,
-// newest first (ADR-0072): with a live primary domain, no dossier, and either
-// no cursor row or a due one under the attempt bound. The query's own
-// workspace predicate scopes it to the bound workspace.
+// OLDEST first: with a live primary domain, no dossier, and either no cursor
+// row or a due one under the attempt bound. The query's own workspace predicate
+// scopes it to the bound workspace.
 //
 // The population is every company with a live primary domain and no dossier,
 // however it was named. ADR-0072 scoped this lane to auto-created companies
@@ -76,6 +76,29 @@ func NewAutoEnrichStore(db *database.DB) *AutoEnrichStore { return &AutoEnrichSt
 // refresh compares every proposal against confirmed truth and asks the human to
 // resolve each conflict (ADR-0065 §8); offering it here would write machine
 // values onto the one company the installation IS, outside that comparison.
+//
+// Oldest first, and that ordering is the whole termination argument.
+//
+// It used to take the NEWEST prefix, which starves. A pass queues what it takes
+// — writing a cursor row that drops the company out of this set until its next
+// attempt is due — so the set shrinks by exactly what was worked. Taking the
+// oldest end therefore drains it in arrival order: every company ahead of a
+// given one is consumed before it, and nothing new can be inserted ahead of it
+// because nothing new is older. Taking the NEWEST end reverses that: in a
+// workspace gaining more eligible companies between passes than the daily cap,
+// arrivals keep landing in front of a company that has never been reached, and
+// it waits forever — not retried, not exhausted, not visible as skipped.
+//
+// The order is on the ID rather than created_at because it must be TOTAL: two
+// companies captured in the same statement share an instant, and a tie under a
+// LIMIT is a coin toss that can seat the same row at the boundary every pass.
+// The id is a uuidv7, so ordering by it is ordering by arrival anyway.
+//
+// The org-name sweep pages this same set to exhaustion instead
+// (people/orgnamepromotion.go). It can: its per-candidate work is one in-memory
+// decision. This lane's is a model-backed site read under a daily cap, so a
+// pass takes one page by construction — which is why the ordering has to be the
+// thing that guarantees progress.
 //
 // The site-read clause excludes a company whose dossier exists or is still
 // coming. A read that ended with NO dossier is not one: a failure, and a
@@ -102,7 +125,7 @@ func (s *AutoEnrichStore) ListDueOrgs(ctx context.Context, limit int) ([]DueOrg,
 				s.organization_id IS NULL
 				OR (s.next_attempt_at IS NOT NULL AND s.next_attempt_at <= now()
 				    AND s.attempts < $1))
-			ORDER BY o.created_at DESC
+			ORDER BY o.id
 			LIMIT $2`, autoEnrichMaxAttempts, limit)
 		if err != nil {
 			return err
