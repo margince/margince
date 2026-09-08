@@ -31,7 +31,7 @@ package gates
 //
 // The class is broader than prose, and the sharpest example is one rung more
 // concrete: an e2e spec asserted the relink search box reads "Person,
-// Organisation, Deal, Lead oder Projekt suchen". Projects joined the searchable
+// Firma, Deal, Lead oder Projekt suchen". Projects joined the searchable
 // kinds, the string grew a fifth, and nothing derived either the sentence or
 // the spec's copy of it from the set they both describe. It surfaced five
 // merges later, in an unrelated lane.

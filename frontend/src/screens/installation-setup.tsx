@@ -88,7 +88,7 @@ export function useInstallationSetup() {
 
 /**
  * The steps this screen has a panel for, in the order the server reports
- * them: the model binding, which blocks, and the organisation's OAuth app,
+ * them: the model binding, which blocks, and the company's OAuth app,
  * which does not — held by TestOnlyTheModelBindingBlocksFirstRun.
  *
  * It is read by `outstandingStep` rather than only by the render, and that is

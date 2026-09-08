@@ -556,7 +556,7 @@ more than one api replica needs the endpoint provider, because two machines
 cannot share a directory they do not both mount.
 Company logos ride the same store. With none configured the resolve lane
 returns before fetching, so no logo object is ever written and
-`GET /organizations/{id}/logo` answers 404 — every company renders its
+`GET /companies/{id}/logo` answers 404 — every company renders its
 deterministic monogram instead. (The 501 on that route is the narrower case: a
 record that already names an object on a deployment whose store has since gone
 away.)
@@ -701,16 +701,16 @@ probe.
 migrate <up|down> --dsn <owner-dsn> [--steps n]
 migrate reset-password --dsn <owner-dsn> --email <user-email>
 migrate <recreate-db|drop-db|db-exists> --dsn <owner-maintenance-dsn> --name <db> [--template <db>]
-migrate org-exists --dsn <owner-dsn>
+migrate workspace-exists --dsn <owner-dsn>
 ```
 
-`org-exists` prints `true` or `false`: whether this installation already holds an
-active organization. It takes no `--name` — it asks about the database the DSN
+`workspace-exists` prints `true` or `false`: whether this installation already holds an
+active workspace. It takes no `--name` — it asks about the database the DSN
 names. A deployment asks before the api starts, to know whether a bootstrap
 credential is still needed; `scripts/deploy/api-entrypoint.sh` writes the
 `bootstrap_admin` password file only while the answer is `false`, because
 ADR-0061 §2 consumes bootstrap values exactly once and permits deleting that
-secret once the organization exists. The answer is **printed rather than
+secret once the workspace exists. The answer is **printed rather than
 signalled by exit status**, so a caller can tell "no" from "could not ask"; a
 failed probe exits non-zero and must not be read as "unprovisioned".
 
@@ -778,8 +778,8 @@ Once armed:
    rejected, 403.
 2. **Admin-only** (`auth.RequireAdmin`) — the literal `admin` role; `ops` and
    every other role is rejected, 403.
-3. **Typed confirmation** — the request body `{"confirmation": "<organization
-   name>"}` must equal the workspace's organization name exactly; a mismatch
+3. **Typed confirmation** — the request body `{"confirmation": "<workspace
+   name>"}` must equal the workspace's name exactly; a mismatch
    is `422` (never partially applied — checked before anything is touched).
 
 On success it wipes workspace domain + seeded-config data back to the
@@ -791,7 +791,7 @@ assignments, teams, team memberships, sessions, passports, tokens — so login
 keeps working) and the append-only ledgers `audit_log` / `system_log`.
 The reset itself is recorded as an `audit_log` row (action `reset_data`).
 
-The `workspace` row survives too — it carries the organization — but only its
+The `workspace` row survives too — it carries the installation identity — but only its
 **installation identity** is preserved: the primary key, the name, slug, base
 currency and timezone bootstrap took from `margince.yaml`, and `created_at`.
 (`updated_at` moves, as it does for any write — the reset did write the row.)
@@ -881,7 +881,7 @@ reset lifts it.
 The Redis half is **installation-wide**, from a declared key inventory — the
 stream catalog, the `gw:dedupe:` namespace and `ovb:<workspace>:` — and never
 `FLUSHDB`, so anything else sharing that Redis survives. Installation-wide is
-exact here because one installation serves one organization (A107/ADR-0061).
+exact here because one installation serves one workspace (A107/ADR-0061).
 One consequence worth knowing locally: parallel `DEV_SLUG` stacks share a
 single Redis database, so a reset in one stack clears the other's bus.
 
@@ -905,7 +905,7 @@ the reset is again the recovery.
 
 `GET /v1/me`'s `data_reset_available` field carries the same switch the endpoint
 gates on, so the SPA shows the action only where it will work: Admin settings → *data* tab → Danger
-zone → *Reset data*, which prompts the operator to type the organization name
+zone → *Reset data*, which prompts the operator to type the workspace name
 before calling the endpoint — the server is the sole validator of that string,
 the client-side prompt is only UX.
 
@@ -913,7 +913,7 @@ The **deployment configuration** (`--config`, default `margince.yaml`) is
 seeded the same way for local dev. The annotated reference is
 [`config/margince.example.yaml`](../../config/margince.example.yaml); `make dev`
 copies it to a gitignored `config/margince.yaml` on first run and then
-**leaves it** (create-if-missing / leave-if-exists), so an engineer's edits — organization,
+**leaves it** (create-if-missing / leave-if-exists), so an engineer's edits — workspace,
 `bootstrap_admin`, or the `ai.capture_payloads` posture — persist across
 `make dev-stop` / `make dev` rather than being regenerated each boot. The
 admin `password_file` it references (`config/margince-admin-password`) is

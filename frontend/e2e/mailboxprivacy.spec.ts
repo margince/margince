@@ -33,7 +33,7 @@ test("AC-mailbox-1: a mailbox says who may read it, and refuses shared without t
   // The refusal rides on the ROW, not on the option label: a listbox option
   // ellipsises, and the half that gets cut is the reason a reader needs.
   await expect(row).toContainText(
-    "muss eine Administratorin für diese Organisation erlauben",
+    "muss eine Administratorin für diese Firma erlauben",
   );
 
   await row.getByRole("combobox").click();

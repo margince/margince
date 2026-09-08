@@ -29,10 +29,10 @@ type Page = import("@playwright/test").Page;
 // the guard exists to notice. A sign-off half-typed into a dialog nobody
 // reopened is discarded by design, so it never reaches the guard at all.
 const companyName = (page: Page) =>
-  page.getByRole("textbox", { name: "Name der Organisation" });
+  page.getByRole("textbox", { name: "Name der Firma" });
 
 const editCompanyName = (page: Page) =>
-  page.getByRole("button", { name: "Name der Organisation ändern" });
+  page.getByRole("button", { name: "Name der Firma ändern" });
 
 // Types into the dialog and closes it again, leaving the draft behind on a page
 // with nothing open over it — which is what makes the navigation below possible.
