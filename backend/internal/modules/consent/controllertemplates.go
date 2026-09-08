@@ -23,6 +23,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
@@ -70,11 +71,22 @@ type ConfirmationSender interface {
 type controllerTemplate struct {
 	version  int
 	category commsauthz.Category
-	subject  string
-	// body carries the link placeholder exactly once. comms checks that against
-	// the material it is staged with and refuses a disagreement, which is what
-	// stops a message that was meant to carry a link from going out without one.
-	body string
+	// The three parts of the message, each read from the installation's own
+	// catalog rather than held as a literal here.
+	//
+	// The wording moved to platform/mailcopy because these were the last mail
+	// the product sent in hard-coded English. An installation whose screens are
+	// German asked a stranger, in English, whether it might keep writing to
+	// them — and that is the one message where being understood is the point,
+	// since an unanswered opt-in withholds the permission.
+	//
+	// The rendered body still carries the link placeholder exactly once. comms
+	// checks that against the material it is staged with and refuses a
+	// disagreement, which is what stops a message that was meant to carry a
+	// link from going out without one.
+	subject func(mailcopy.Copy) string
+	intro   func(mailcopy.Copy) string
+	closing func(mailcopy.Copy) string
 }
 
 // controllerTemplates is the closed catalog.
@@ -85,24 +97,18 @@ type controllerTemplate struct {
 // — which is both a deliverability problem and a fair reaction.
 var controllerTemplates = map[string]controllerTemplate{
 	TemplateRecordConfirmation: {
-		version:  1,
+		version:  2,
 		category: commsauthz.CategoryRecordConfirmation,
-		subject:  "Your details, and whether we may stay in touch",
-		body: "You can see what we have on file about you, correct anything that is wrong,\n" +
-			"and tell us whether you want to hear from us.\n\n" +
-			"  " + linkPlaceholder + "\n\n" +
-			"This link is personal to you.\n\n" +
-			"You do not have to do anything. Ignoring this changes nothing.\n",
+		subject:  func(w mailcopy.Copy) string { return w.ConfirmRecordSubject },
+		intro:    func(w mailcopy.Copy) string { return w.ConfirmRecordBody },
+		closing:  func(w mailcopy.Copy) string { return w.ConfirmRecordIgnore },
 	},
 	TemplateConsentConfirmation: {
-		version:  1,
+		version:  2,
 		category: commsauthz.CategoryConsentConfirmation,
-		subject:  "Please confirm you want to hear from us",
-		body: "You asked to hear from us. Confirming below is what turns that into a\n" +
-			"permission we will act on — until you do, we will not write to you about it.\n\n" +
-			"  " + linkPlaceholder + "\n\n" +
-			"This link is personal to you.\n\n" +
-			"If you did not ask for this, ignore it. Nothing happens until you confirm.\n",
+		subject:  func(w mailcopy.Copy) string { return w.ConfirmConsentSubject },
+		intro:    func(w mailcopy.Copy) string { return w.ConfirmConsentBody },
+		closing:  func(w mailcopy.Copy) string { return w.ConfirmConsentIgnore },
 	},
 }
 
@@ -135,15 +141,21 @@ func (templateRegistry) Registered(key string, version int) bool {
 // function. The body carries a placeholder, the material rides the vault, and
 // the two meet in memory at dispatch — so the link is absent from the delivery
 // row, the timeline, the audit entry and the outbox event alike.
-func RenderControllerTemplate(key string, expiresAt time.Time) (Rendered, commsauthz.Category, error) {
+func RenderControllerTemplate(key string, expiresAt time.Time, language string) (Rendered, commsauthz.Category, error) {
 	t, ok := controllerTemplates[key]
 	if !ok {
 		return Rendered{}, "", fmt.Errorf("consent: %q is not a registered controller template", key)
 	}
-	body := t.body
+	words := mailcopy.For(language)
+	var body strings.Builder
+	body.WriteString(t.intro(words) + "\n\n  " + linkPlaceholder + "\n\n" + words.ConfirmPersonal)
 	if !expiresAt.IsZero() {
-		body = strings.Replace(body, "This link is personal to you.",
-			"This link is personal to you and works until "+expiresAt.Format("2 January 2006")+".", 1)
+		// Appended to the personal-link sentence rather than substituted into
+		// it: the shipped English replaced a phrase inside its own body text,
+		// which stops working the moment a language spells that sentence
+		// differently.
+		fmt.Fprintf(&body, words.ConfirmExpiry, expiresAt.Format(mailcopy.DateLayout))
 	}
-	return Rendered{Key: key, Version: t.version, Subject: t.subject, Body: body}, t.category, nil
+	body.WriteString("\n\n" + t.closing(words) + "\n")
+	return Rendered{Key: key, Version: t.version, Subject: t.subject(words), Body: body.String()}, t.category, nil
 }

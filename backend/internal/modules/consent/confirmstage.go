@@ -21,11 +21,13 @@ package consent
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -76,7 +78,8 @@ func (s *Store) stageConfirmMail(ctx context.Context, tx pgx.Tx, in confirmMailI
 	if s.confirmSender == nil || s.vault == nil {
 		return false, nil
 	}
-	rendered, category, err := RenderControllerTemplate(templateForLinkKind(in.kind), in.expiresAt)
+	rendered, category, err := RenderControllerTemplate(
+		templateForLinkKind(in.kind), in.expiresAt, s.mailLanguage(ctx, tx))
 	if err != nil {
 		return false, err
 	}
@@ -154,4 +157,26 @@ func (s *Store) canSendConfirm() bool {
 func (h Handlers) WithConfirmationLane(sender ConfirmationSender, vault ConfirmLinkVault, base string) Handlers {
 	h.store = h.store.WithConfirmationLane(sender, vault, base)
 	return h
+}
+
+// mailLanguage is the language this installation's controller mail is written
+// in, or the fallback when nothing is wired or nothing is set.
+//
+// An unwired reader answers the FALLBACK rather than failing. Refusing to send
+// a confirm link because a settings read failed trades the whole message for a
+// formatting preference, and for the consent link that is worse than it sounds:
+// the permission stays withheld until the person answers a mail that never
+// arrived. mailcopy.For treats an unknown answer the same way, so the two
+// agree without either having to know the other's list.
+func (s *Store) mailLanguage(ctx context.Context, tx pgx.Tx) string {
+	if s.language == nil {
+		return string(mailcopy.Fallback)
+	}
+	language, err := s.language.MailLanguageTx(ctx, tx)
+	if err != nil {
+		slog.WarnContext(ctx, "the installation's mail language could not be read; sending in the fallback",
+			"fallback", mailcopy.Fallback, "cause", err)
+		return string(mailcopy.Fallback)
+	}
+	return language
 }

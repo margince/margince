@@ -19,22 +19,13 @@ package briefs
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 )
 
-// mailDateLayout is how a day is written, in every language.
-//
-// ISO, and that is deliberate: `2 January 2006` puts an English month name in
-// the middle of a German sentence, and a numeric order like 06/01 is read as
-// 6 January by half the world. A reader needs two things from this date — to
-// tell one morning's message from the next, and to know which day.
-const mailDateLayout = time.DateOnly
-
 // MailSubject names the day, so two mornings do not read alike in a list.
 func MailSubject(run BriefRun, words mailcopy.Copy) string {
-	return words.MorningSubject + run.LocalDay.Format(mailDateLayout)
+	return words.MorningSubject + run.LocalDay.Format(mailcopy.DateLayout)
 }
 
 // MailBody renders one run as the message a rep reads before opening the app.
@@ -44,7 +35,7 @@ func MailSubject(run BriefRun, words mailcopy.Copy) string {
 // whose only call to action it is.
 func MailBody(run BriefRun, homeURL string, words mailcopy.Copy) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "%s%s\n\n", words.MorningHeading, run.LocalDay.Format(mailDateLayout))
+	fmt.Fprintf(&b, "%s%s\n\n", words.MorningHeading, run.LocalDay.Format(mailcopy.DateLayout))
 
 	waiting := waitingItems(run)
 	if len(waiting) == 0 {

@@ -37,6 +37,7 @@ func buildCatalog() map[Language]Copy {
 	inviteLines(line)
 	weeklyLines(line)
 	morningLines(line)
+	confirmLines(line)
 
 	return map[Language]Copy{English: *en, German: *de, Vietnamese: *vi}
 }
@@ -250,4 +251,62 @@ func morningLines(line writeLine) {
 		"Open your day:",
 		"Öffne deinen Tag:",
 		"Mở ngày của bạn:")
+}
+
+// confirmLines is the two links the installation sends as itself.
+//
+// The English is the wording that shipped, unchanged: it is pinned by hash and
+// recorded on every consent proof, so moving a word here is a version bump, not
+// a translation.
+//
+// The German and Vietnamese use the formal address (Sie / quý vị), unlike the
+// reset and invite copy above. Those speak to a colleague who works here; these
+// speak to a stranger the installation holds a record about, and about their
+// own rights.
+func confirmLines(line writeLine) {
+	line(func(c *Copy) *string { return &c.ConfirmRecordSubject },
+		"Your details, and whether we may stay in touch",
+		"Ihre Daten, und ob wir in Kontakt bleiben dürfen",
+		"Thông tin của quý vị, và liệu chúng tôi có thể giữ liên lạc")
+	line(func(c *Copy) *string { return &c.ConfirmRecordBody },
+		"You can see what we have on file about you, correct anything that is wrong,\n"+
+			"and tell us whether you want to hear from us.",
+		"Sie können sehen, was wir über Sie gespeichert haben, Falsches korrigieren\n"+
+			"und uns sagen, ob Sie von uns hören möchten.",
+		"Quý vị có thể xem chúng tôi lưu giữ thông tin gì về mình, sửa những gì chưa đúng,\n"+
+			"và cho chúng tôi biết quý vị có muốn nhận tin từ chúng tôi hay không.")
+	line(func(c *Copy) *string { return &c.ConfirmConsentSubject },
+		"Please confirm you want to hear from us",
+		"Bitte bestätigen Sie, dass Sie von uns hören möchten",
+		"Vui lòng xác nhận quý vị muốn nhận tin từ chúng tôi")
+	line(func(c *Copy) *string { return &c.ConfirmConsentBody },
+		"You asked to hear from us. Confirming below is what turns that into a\n"+
+			"permission we will act on — until you do, we will not write to you about it.",
+		"Sie haben darum gebeten, von uns zu hören. Erst Ihre Bestätigung unten macht\n"+
+			"daraus eine Einwilligung, auf die wir uns stützen — bis dahin schreiben wir\n"+
+			"Ihnen dazu nicht.",
+		"Quý vị đã yêu cầu nhận tin từ chúng tôi. Việc xác nhận bên dưới mới biến điều đó\n"+
+			"thành sự đồng ý mà chúng tôi dựa vào — cho đến lúc đó, chúng tôi sẽ không\n"+
+			"viết cho quý vị về việc này.")
+	line(func(c *Copy) *string { return &c.ConfirmPersonal },
+		"This link is personal to you.",
+		"Dieser Link ist persönlich für Sie.",
+		"Liên kết này dành riêng cho quý vị.")
+	// The date arrives ISO-formatted, so each language frames it rather than
+	// inflecting it: German "bis zum" would want an ordinal with a period
+	// ("bis zum 9. März"), which no formatter in this tree produces.
+	line(func(c *Copy) *string { return &c.ConfirmExpiry },
+		" It works until %s.",
+		" Er gilt bis einschließlich %s.",
+		" Liên kết có hiệu lực đến hết ngày %s.")
+	line(func(c *Copy) *string { return &c.ConfirmRecordIgnore },
+		"You do not have to do anything. Ignoring this changes nothing.",
+		"Sie müssen nichts tun. Ignorieren ändert nichts.",
+		"Quý vị không cần làm gì cả. Bỏ qua thư này thì không có gì thay đổi.")
+	line(func(c *Copy) *string { return &c.ConfirmConsentIgnore },
+		"If you did not ask for this, ignore it. Nothing happens until you confirm.",
+		"Falls Sie darum nicht gebeten haben, ignorieren Sie diese E-Mail. Ohne Ihre\n"+
+			"Bestätigung passiert nichts.",
+		"Nếu quý vị không yêu cầu điều này, hãy bỏ qua. Không có gì xảy ra cho đến khi\n"+
+			"quý vị xác nhận.")
 }

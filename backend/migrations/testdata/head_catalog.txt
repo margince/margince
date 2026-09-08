@@ -1817,7 +1817,7 @@ BEGIN
 END;
 
 public.consent_text_version_pkey CREATE UNIQUE INDEX consent_text_version_pkey ON public.consent_text_version USING btree (id)
-public.consent_text_version_published CREATE UNIQUE INDEX consent_text_version_published ON public.consent_text_version USING btree (key, version) WHERE (published_at IS NOT NULL)
+public.consent_text_version_published CREATE UNIQUE INDEX consent_text_version_published ON public.consent_text_version USING btree (key, version, locale) NULLS NOT DISTINCT WHERE (published_at IS NOT NULL)
 public.contract acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.contract.archived_at timestamp with time zone gen=- def=-
 public.contract.auto_renew boolean NOT NULL gen=- def=false

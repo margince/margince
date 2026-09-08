@@ -33,6 +33,9 @@ type Store struct {
 	// under. Injected by compose because the setting lives in identity
 	// (installationcountry.go).
 	country InstallationCountryReader
+	// language is which language the controller mail this store stages is
+	// written in. Nil sends in the fallback rather than refusing.
+	language MailLanguageReader
 	// confirmSender stages the installation's own mail on the durable lane, and
 	// vault holds the one-time link so the plaintext never reaches the delivery
 	// row. Both nil on an installation that has not wired the lane, which

@@ -182,7 +182,7 @@ var BaseLanguage = settings.Define[string](
 		}
 		return nil
 	},
-).AsInstallationIdentity()
+).AsInstallationIdentity().MachineryApplied()
 
 // Country is where this installation is established, as a lower-case ISO
 // 3166-1 alpha-2 code. Empty means unstated, and unstated is the strict answer
@@ -452,4 +452,27 @@ func CountryOf(ctx context.Context, tx pgx.Tx) (jurisdiction.Code, error) {
 		return "", err
 	}
 	return jurisdiction.Code(code), nil
+}
+
+// LanguageOf is the language this installation's controller mail is written in,
+// read on the caller's transaction.
+//
+// MachineryApplied for the reason Country is: the confirm-details and
+// double-opt-in mails are rendered inside the transaction that mints their
+// link, and through the gated reader the language would be refused to any
+// principal without the installation_settings object — a narrow seat asking a
+// contact to confirm their details would silently get English while the
+// installation's own screens are German. A language a narrow principal could
+// not read would simply not apply to what they send, which is the opposite of
+// a setting.
+//
+// Nothing is widened. The value is the installation's own label, chosen by an
+// administrator and shown on a settings screen; it is not tenant data, and the
+// language a message is written in is not a fact about its recipient.
+//
+// An absent row reads as the registered default, which is English — the same
+// answer mailcopy falls back to, so an installation that has never chosen gets
+// what it got before this existed.
+func LanguageOf(ctx context.Context, tx pgx.Tx) (string, error) {
+	return settings.ApplyTx(ctx, tx, BaseLanguage)
 }

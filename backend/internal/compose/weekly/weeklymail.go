@@ -54,19 +54,8 @@ const mailDealCap = 10
 // that already has last week's, and two identical subjects are two messages a
 // reader cannot tell apart in a list.
 func MailSubject(review Review, words mailcopy.Copy) string {
-	return words.WeeklySubject + review.LocalWeekStart.Format(mailDateLayout)
+	return words.WeeklySubject + review.LocalWeekStart.Format(mailcopy.DateLayout)
 }
-
-// mailDateLayout is how a week's start is written, in every language.
-//
-// ISO, and that is the point: `2 January 2006` puts an English month name in
-// the middle of a German sentence, which is the half-translated message this
-// catalog exists to stop, and a numeric order like 06/01 is read as 6 January
-// by half the world. A reader needs two things from this date — to tell one
-// week's message from the next, and to know which week — and 2026-06-01 gives
-// both in any language. The deal lines in the same message already read this
-// way.
-const mailDateLayout = time.DateOnly
 
 // MailBody renders one review as the message a rep reads on Monday.
 //
@@ -75,7 +64,7 @@ const mailDateLayout = time.DateOnly
 // whose only call to action it is.
 func MailBody(review Review, homeURL string, words mailcopy.Copy) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "%s%s\n\n", words.WeeklyHeading, review.LocalWeekStart.Format(mailDateLayout))
+	fmt.Fprintf(&b, "%s%s\n\n", words.WeeklyHeading, review.LocalWeekStart.Format(mailcopy.DateLayout))
 
 	// The sentence first, when a pass wrote one. It is the only part of the
 	// message that reads as a person talking, so it goes above the numbers it

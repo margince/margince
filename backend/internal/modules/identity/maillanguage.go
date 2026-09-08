@@ -21,14 +21,21 @@ import (
 
 // mailCopy resolves what this installation's mail says.
 //
-// The setting row is read DIRECTLY rather than through platform/settings, for
-// the reason Login reads the installation's name the same way: those readers
-// take the installation_settings object gate, and this runs where there is no
-// principal for that gate to judge. `POST /auth/forgot-password` is public — it
-// answers 202 before it knows whether the address maps to an account, and
-// everything after that runs off the request path with nothing bound. Through
-// the gated reader every reset mail would be refused the setting and fall back
-// to English, on exactly the installations this catalog exists for.
+// It reads through LanguageOf, which is the one reader of this setting: the
+// query and the "which principal may ask" decision are spelled once, and a
+// second copy here would be a second place to get either wrong.
+//
+// Held by: TestTheInstallationLanguageHasOneReader
+// (backend/gates/maillanguagereader_test.go)
+//
+// LanguageOf goes through settings.ApplyTx, which skips the entry's read gate.
+// That is what this path needs: those readers take the installation_settings
+// object gate, and this runs where there is no principal for the gate to judge.
+// `POST /auth/forgot-password` is public — it answers 202 before it knows
+// whether the address maps to an account, and everything after that runs off
+// the request path with nothing bound. Through the gated reader every reset
+// mail would be refused the setting and fall back to English, on exactly the
+// installations this catalog exists for.
 //
 // Nothing is widened by it. The value is the installation's own label, chosen
 // by an administrator and shown on a settings screen; it is not tenant data,
@@ -45,10 +52,8 @@ import (
 func (h Handlers) mailCopy(ctx context.Context) mailcopy.Copy {
 	language := string(mailcopy.Fallback)
 	err := h.svc.db.Tx(ctx, func(tx pgx.Tx) error {
-		var stored string
-		if err := tx.QueryRow(ctx,
-			`SELECT coalesce((SELECT value #>> '{}' FROM setting WHERE key = $1), '')`,
-			BaseLanguage.Key()).Scan(&stored); err != nil {
+		stored, err := LanguageOf(ctx, tx)
+		if err != nil {
 			return err
 		}
 		if stored != "" {
