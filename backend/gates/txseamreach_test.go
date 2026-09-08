@@ -80,6 +80,11 @@ type declaredFunc struct {
 	recv     string
 	recvType string
 	heldTx   []string
+	// declares names the methods recvType declares itself. It rides along for
+	// the same reason heldTx does: attachHeldTx's promoted-method exemption
+	// consults it, and a walk that left it nil would answer a different
+	// question about the same body than the direct gate next door does.
+	declares map[string]bool
 }
 
 // funcIndex maps directory → function name → the declarations with that name.
@@ -117,7 +122,7 @@ const indexedFunctionFloor = 2000
 func indexPackageFunctions(t *testing.T, roots []string) funcIndex {
 	t.Helper()
 	tree := moduleRoot(t)
-	holders, _ := txHoldingReceivers(t, roots)
+	holders, declared := txHoldingReceivers(t, roots)
 	idx := funcIndex{}
 	fset := token.NewFileSet()
 	counted := 0
@@ -137,7 +142,7 @@ func indexPackageFunctions(t *testing.T, roots []string) funcIndex {
 					return relErr
 				}
 				dir := filepath.ToSlash(filepath.Dir(rel))
-				counted += idx.add(dir, file, holders[dir])
+				counted += idx.add(dir, file, holders[dir], declared[dir])
 				return nil
 			})
 		if err != nil {
@@ -154,7 +159,9 @@ func indexPackageFunctions(t *testing.T, roots []string) funcIndex {
 
 // add records one file's package-level functions and the methods of its
 // tx-holding receivers, answering how many.
-func (idx funcIndex) add(dir string, file *ast.File, holders map[string][]string) int {
+func (idx funcIndex) add(dir string, file *ast.File,
+	holders map[string][]string, declared map[string]map[string]bool,
+) int {
 	pgxName, _ := pgxLocalName(file)
 	added := 0
 	for _, decl := range file.Decls {
@@ -178,6 +185,7 @@ func (idx funcIndex) add(dir string, file *ast.File, holders map[string][]string
 				continue
 			}
 			entry.recvType, entry.heldTx = recvType, fields
+			entry.declares = declared[recvType]
 			if names := fn.Recv.List[0].Names; len(names) > 0 && names[0].Name != "_" {
 				entry.recv = names[0].Name
 			}
@@ -207,7 +215,7 @@ func (idx funcIndex) reachesAcquirer(dir, name string, seen map[string]bool) ([]
 	for _, fn := range idx[dir][name] {
 		body := txBorrowing{
 			name: name, params: fn.decl.Type.Params, body: fn.decl.Body, pgxName: fn.pgxName,
-			recv: fn.recv, recvType: fn.recvType, heldTx: fn.heldTx,
+			recv: fn.recv, recvType: fn.recvType, heldTx: fn.heldTx, declares: fn.declares,
 		}
 		if found := body.acquires(); len(found) > 0 {
 			return []string{name, found[0]}, true
@@ -378,17 +386,19 @@ func fixtureIndex(t *testing.T, sources ...string) funcIndex {
 	t.Helper()
 	idx := funcIndex{}
 	holders := map[string]map[string][]string{}
+	declared := map[string]map[string]map[string]bool{}
 	parsed := make([]*ast.File, 0, len(sources))
 	for _, src := range sources {
 		file := parseGateFixture(t, src)
 		parsed = append(parsed, file)
-		// The holder pass first and over ALL the sources, exactly as the live
-		// index does it: a type declared in one fixture file and given verbs in
+		// Both passes first and over ALL the sources, exactly as the live index
+		// does it: a type declared in one fixture file and given verbs in
 		// another is the arrangement a per-file answer would miss.
 		addTxHolders(holders, "fixture", file)
+		addTxDeclaredMethods(declared, "fixture", file)
 	}
 	for _, file := range parsed {
-		idx.add("fixture", file, holders["fixture"])
+		idx.add("fixture", file, holders["fixture"], declared["fixture"])
 	}
 	return idx
 }
@@ -630,6 +640,45 @@ func (c core) mode(ctx context.Context) error {
 }
 `
 	assertReaches(t, fixtureIndex(t, port), "core.File")
+}
+
+// An EMBEDDING receiver's promoted `Begin` is the borrowed transaction's own
+// savepoint; a `Begin` the type declared itself is not, and in Go the declared
+// one is what `c.Begin(…)` resolves to.
+//
+// The walk needs the type's declared-method census to tell those apart, and it
+// is here because the walk was built without it: it read every `c.Begin(…)` on
+// an embedding receiver as the promoted savepoint and waved this body through,
+// while the direct gate beside it — judging the same body with the census in
+// hand — reported it. Two answers to one question, and the gate's own fixtures
+// would not have shown the disagreement.
+func TestTheWalkReadsADeclaredBeginOnAnEmbeddingReceiverAsAnAcquire(t *testing.T) {
+	t.Parallel()
+	const declaredBegin = `package compose
+
+import "github.com/jackc/pgx/v5"
+
+type core struct {
+	pgx.Tx
+	pool *pgxpool.Pool
+}
+
+func (c core) File(ctx context.Context) error {
+	return c.open(ctx)
+}
+
+func (c core) open(ctx context.Context) error {
+	_, err := c.Begin(ctx)
+	return err
+}
+
+// Declared, so it shadows the embedded transaction's promoted Begin — and it
+// takes a connection of its own.
+func (c core) Begin(ctx context.Context) (pgx.Tx, error) {
+	return c.pool.Begin(ctx)
+}
+`
+	assertReaches(t, fixtureIndex(t, declaredBegin), "core.File", "core.File", "core.open", "Begin")
 }
 
 // A method on a receiver that holds NO transaction is not followed at all —
