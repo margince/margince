@@ -205,6 +205,26 @@ type RunResult struct {
 	AuditLogID ids.UUID
 }
 
+// DeclinedError is a handler saying it looked and there was nothing to do.
+//
+// A skip, never a failure: nothing went wrong, and a redelivery would meet the
+// same record and reach the same answer. The engine records it on the run with
+// this reason, which is what puts the answer in front of a reader — an Apply
+// that returns an empty result instead reads as a clean success and throws the
+// reason away.
+//
+// The reason is read verbatim by anybody holding automation:read, so it says
+// what the CONDITION was and never carries an error's own message: no SQLSTATE,
+// no table or column name.
+type DeclinedError struct {
+	Reason string
+}
+
+func (e *DeclinedError) Error() string { return e.Reason }
+
+// Declined builds the skip a handler returns to say it acted on nothing.
+func Declined(reason string) error { return &DeclinedError{Reason: reason} }
+
 // StagedApprovalError is the typed form of the "staged as approval"
 // answer: a chat client shows the message, while a programmatic caller
 // (the Surface-B runner) suspends on the id instead of parsing prose.
