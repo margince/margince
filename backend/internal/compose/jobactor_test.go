@@ -250,13 +250,45 @@ var anyFunc = regexp.MustCompile(`(?m)^func (\([^)]*\) )?(\w+)\(`)
 func withCalledHelpers(body string, pkg map[string]string) string {
 	var b strings.Builder
 	b.WriteString(body)
+	bound := namesBoundIn(body)
 	for _, call := range callee.FindAllStringSubmatch(afterSignature(body), -1) {
+		// A name this body binds ITSELF is a value, not the package function
+		// that happens to share its spelling: `bindActor := w.transform` makes
+		// `bindActor(ctx)` a call through a field, and reading the package's
+		// own bindActor for it would report the worker as bound on the strength
+		// of a body it never runs. Over-collecting is the safe direction — a
+		// name bound anywhere counts as bound throughout, which can lose a real
+		// call and cannot invent one.
+		if bound[call[1]] {
+			continue
+		}
 		if helper, ok := pkg[call[1]]; ok {
 			b.WriteString(helper)
 		}
 	}
 	return b.String()
 }
+
+// namesBoundIn collects the names a body declares: short variable
+// declarations, plain assignments and `var` lines.
+//
+// Text rather than syntax, like the rest of this gate. It over-collects — an
+// assignment to a package-level variable of the same name counts too — and that
+// is the direction to over-collect in: the cost is a call not followed, and the
+// alternative is a worker reported as bound by a body it does not reach.
+func namesBoundIn(body string) map[string]bool {
+	bound := map[string]bool{}
+	for _, m := range localBinding.FindAllStringSubmatch(body, -1) {
+		for _, name := range strings.Split(m[1], ",") {
+			bound[strings.TrimSpace(name)] = true
+		}
+	}
+	return bound
+}
+
+// localBinding captures the left-hand side of a declaration or assignment, and
+// of a `var` line.
+var localBinding = regexp.MustCompile(`(?m)^\s*(?:var\s+)?([\w, ]+?)\s*:?=[^=]`)
 
 // afterSignature drops a method's own declaration line, so the method's NAME is
 // not read as a call it makes.
@@ -305,5 +337,41 @@ func (s *Store) mode(ctx context.Context) context.Context {
 	}
 	if actorBinders.MatchString(withCalledHelpers(worker, index)) {
 		t.Error("the worker read as binding an actor on the strength of a method it cannot reach by that name")
+	}
+}
+
+// A Work body that SHADOWS a package helper's name does not borrow its body.
+//
+// `bindActor := w.transform` makes `bindActor(ctx)` a call through a field, and
+// the package's own bindActor is a different function entirely. Reading it
+// anyway reports the worker as bound on the strength of a body it never runs —
+// this gate's own failure direction, and the same shape the receiver-name guard
+// in the tx-seam walk exists for.
+func TestTheFollowDoesNotBorrowAShadowedHelpersBody(t *testing.T) {
+	t.Parallel()
+	// The helper binds in the ASSIGNMENT form actorBinders recognises — a bare
+	// `return principal.WithActor(…)` is not one, and a fixture written that
+	// way would pass whatever the guard did.
+	const pkg = `package compose
+
+func bindActor(ctx context.Context) context.Context {
+	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem})
+	return ctx
+}
+`
+	const worker = `func (w *someWorker) Work(ctx context.Context) error {
+	db := database.BindTo(w.pool, ws)
+	bindActor := w.transform
+	ctx = bindActor(ctx)
+	return run(ctx, db)
+}
+`
+	index := map[string]string{}
+	indexFunctions(index, pkg)
+	if _, indexed := index["bindActor"]; !indexed {
+		t.Fatal("the fixture's package helper was not indexed, so this case proves nothing")
+	}
+	if actorBinders.MatchString(withCalledHelpers(worker, index)) {
+		t.Error("the worker read as binding an actor through a name it had shadowed with a field of its own")
 	}
 }
