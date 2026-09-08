@@ -84,6 +84,22 @@ function draw() {
   return fetch;
 }
 
+// What the panel's line for a span is CALLED.
+//
+// A whole sentence — "Snooze for 3 days" — and not the bare span it used to be.
+// The lines sit behind a caret now rather than under a labelled "For how long"
+// trigger, so a reader who opens the panel from the keyboard hears the line and
+// nothing else: "3 days" alone is a fragment whose verb they have to remember
+// pressing. Read from the catalogue rather than retyped, because a test naming
+// its own copy proves only that it was named.
+function spanLine(days: number): string {
+  const template =
+    days === 1
+      ? en["worklist.disposition.snoozeForDays_one"]
+      : en["worklist.disposition.snoozeForDays_other"];
+  return template.replace("{value}", String(days));
+}
+
 // Days between the frozen now and the instant the client sent.
 function daysSent(body: Record<string, unknown>): number {
   const until = new Date(String(body.snoozed_until));
@@ -135,9 +151,7 @@ describe("how long a row is put down for", () => {
 
       await user.click(screen.getByRole("button", { name: "For how long" }));
       await user.click(
-        await screen.findByRole("button", {
-          name: days === 1 ? "1 day" : `${days} days`,
-        }),
+        await screen.findByRole("button", { name: spanLine(days) }),
       );
 
       await waitFor(async () =>
@@ -230,7 +244,7 @@ describe("how long a row is put down for", () => {
     draw();
 
     await user.click(screen.getByRole("button", { name: "For how long" }));
-    await user.click(await screen.findByRole("button", { name: "7 days" }));
+    await user.click(await screen.findByRole("button", { name: spanLine(7) }));
 
     expect(
       await screen.findByText("Back on your list in 7 days."),
@@ -261,6 +275,8 @@ describe("how long a row is put down for", () => {
 
     await user.click(screen.getByRole("button", { name: "For how long" }));
 
-    expect(await screen.findByRole("button", { name: "1 day" })).toBeTruthy();
+    expect(
+      await screen.findByRole("button", { name: spanLine(1) }),
+    ).toBeTruthy();
   });
 });

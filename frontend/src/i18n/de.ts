@@ -8626,8 +8626,6 @@ export const de = {
   "worklist.disposition.snoozeForDays_one": "{value} Tag schlummern",
   "worklist.disposition.snoozeForDays_other": "{value} Tage schlummern",
   "worklist.disposition.snoozeFor": "Für wie lange",
-  "worklist.disposition.snoozeDays_one": "{value} Tag",
-  "worklist.disposition.snoozeDays_other": "{value} Tage",
   "worklist.disposition.snoozeUntil.reply": "Bis sie antworten",
   "worklist.disposition.verb.not_mine": "Nicht meins",
   "worklist.disposition.verb.not_sales": "Kein Kunde",

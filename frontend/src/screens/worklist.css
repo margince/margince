@@ -131,19 +131,18 @@
   column-gap: var(--space-4);
   row-gap: var(--space-2);
 }
-/* The verbs and anything the row carries after them — a decision drawn inside
-   it, an answer — take the full width under the work. Spelled as two selectors
+/* The verbs and anything the row carries after them — a duplicate pair drawn
+   inside it — take the full width under the work. Spelled as two selectors
    rather than one `:nth-child`, because the wide shape below moves ONLY the
-   verbs and needs a selector of equal weight to do it. */
+   verbs and needs a selector of equal weight to do it.
+
+   `.worklist-row-acts` names nothing but this PLACEMENT. The row's verbs are an
+   `ActionRow`, which brings its own flow, wrapping, alignment and gap — so a
+   box declared here would be a second author of one row's layout, and which of
+   the two won would be a fact about sheet order. */
 .worklist-row > .worklist-row-acts,
 .worklist-row > :nth-child(n + 5) {
   grid-column: 3 / -1;
-}
-.worklist-row-acts {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--gapActions);
 }
 
 /* A CARD WITH ROOM PUTS THE VERBS BESIDE THE WORK.
@@ -154,11 +153,18 @@
    The column is CAPPED: a row can carry seven verbs, and uncapped they took
    the width and squeezed the subject and its reasons into a strip that wrapped
    every line — which is what put them under the work in the first place. At
-   the cap they wrap among themselves instead, and the work keeps the rest.
+   the cap they wrap among themselves instead, and the work keeps the rest. The
+   cap survives the verbs becoming an `ActionRow` — the row is still the same
+   controls in the same column — and it survives them getting NARROWER: the pin
+   and the hand-off are glyphs now, so 20rem holds more of them than it did.
    60rem is measured rather than picked: the Brief's work column is narrower
    than that, and there the verbs stay under the work so the subject and its
    reasons keep the whole width. Only a queue on a page of its own is wide
-   enough to spend on both. */
+   enough to spend on both.
+   No alignment rule here. `ActionRow` holds the call to action on the trailing
+   edge itself, on every line it wraps to, and a `justify-content` of this
+   screen's would be re-spacing a row that already answers this — the one thing
+   its `className` is documented not to be for. */
 @container (min-width: 60rem) {
   .worklist-row {
     grid-template-columns:
@@ -169,7 +175,6 @@
   }
   .worklist-row > .worklist-row-acts {
     grid-column: 4;
-    justify-content: flex-end;
   }
 }
 
@@ -324,17 +329,6 @@
   padding: 0;
 }
 
-.worklist-row-verbs,
-/* The dispositions are laid out like the verbs beside them because they ARE a
-   group of controls beside the verbs. Left as a bare block it filled its line
-   whatever it held, so on a phone it could never share a row with the verbs and
-   the two spent 88px on four small buttons. */
-.worklist-row-dispositions {
-  display: flex;
-  flex: 0 0 auto;
-  gap: var(--gapActions);
-}
-
 /* The guardrail over the queue's own hiding rules. A diagnostic behind a
    disclosure, so it is quiet by default and legible when opened. */
 .worklist-hidden {
@@ -425,13 +419,41 @@
   margin: 0;
 }
 
-/* The snooze spans, stacked inside their popover: three short verbs read as a
-   list of choices rather than as a sentence when they sit on one line. */
+/* The spans behind the snooze's caret, as LINES of a list.
+   Four answers to one question — "come back tomorrow, in three days, next week,
+   when they reply" — so they are read down rather than across, and each takes
+   the panel's full width so the words start at one x and the whole line is the
+   press target. Stretched rather than left-aligned: at `flex-start` each button
+   shrink-wrapped its own sentence, which drew four pills of four different
+   widths and read as four controls instead of four choices. */
 .worklist-snooze-spans {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: stretch;
   gap: var(--space-1);
+}
+
+/* What a LINE is, as opposed to a button: the words start at the panel's
+   leading edge and there is no pill drawn round them. Four bordered fills
+   stacked in a floating panel say "here are four controls" where the reader
+   asked "how long for?", and the four widths a shrink-wrapped sentence takes
+   read as four unrelated things.
+
+   `.overflow-menu-items .btn` says the same thing about the folded menu's rows
+   and this is deliberately NOT that rule reused: it is scoped to `OverflowMenu`'s
+   own panel, and this panel is a `Popover`'s — whose contract is that the
+   caller's content keeps the caller's face, which is why the popover's
+   stylesheet does not touch it. The two are one look with two owners today. If
+   a third surface needs it, the rule belongs in the design system as "a list of
+   choices in a floating panel" rather than copied a third time.
+
+   No inset of its own: `.btn-sm` already carries one, and restating it here
+   would be this sheet inventing a geometry the control tier owns. */
+.worklist-snooze-spans > .btn {
+  justify-content: flex-start;
+  border-color: transparent;
+  background: none;
+  box-shadow: none;
 }
 
 /* The queue on a phone.
@@ -510,24 +532,6 @@
     color: var(--textMeta);
     content: "·";
     margin-inline-end: var(--space-2);
-  }
-
-  /* Every group of verbs below the text, and free to wrap. They are separate
-     elements — the row's own, the ways to put it down, the hand-off — and each
-     has to yield, or the one that does not squeezes the others back onto a
-     sliver.
-
-     They SHARE a line where they fit, and take one each only when they do not.
-     `1 1 100%` gave every group a full-width band of its own, so a row with
-     verbs AND dispositions spent two 44px lines on four small buttons and stood
-     284px tall against a 176px ceiling — measured at 390x844, with no decision
-     card on it. `auto` asks for the width the buttons actually need and the
-     wrap does the rest, which is the same behaviour for a group too wide to
-     share and a shorter row for every group that is not. */
-  .worklist-row-verbs,
-  .worklist-row-dispositions {
-    flex: 1 1 auto;
-    flex-wrap: wrap;
   }
 
   /* The touch floor. `--control-h-sm` rises only to 36px for a coarse pointer,

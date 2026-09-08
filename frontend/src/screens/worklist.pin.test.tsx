@@ -132,6 +132,30 @@ describe("a reader can put a row at the top of their own day", () => {
     });
   });
 
+  // The pin is a GLYPH now, and a glyph has no words on screen to say which way
+  // it is set. `aria-pressed` is the whole difference between "this row leads my
+  // day" and "make this row lead my day" for anybody who is not looking at the
+  // fill, so it is read from the row's own `pinned` reason and asserted in both
+  // directions — a control stuck at one value looks correct in whichever state
+  // the test happened to render.
+  it.each([
+    { pinned: false, verb: "worklist.verb.pin" as const },
+    { pinned: true, verb: "worklist.verb.unpin" as const },
+  ])("says which way it is set when pinned is $pinned", async (state) => {
+    stubbing([
+      row({
+        id: "task-1",
+        source: "task",
+        title: "Send the retrofit quote",
+        because: state.pinned ? [{ kind: "pinned" }] : [],
+      }),
+    ]);
+    renderWorklist();
+
+    const pin = await screen.findByRole("button", { name: en[state.verb] });
+    expect(pin.getAttribute("aria-pressed")).toBe(String(state.pinned));
+  });
+
   it("says so when the write is refused, rather than leaving the row unmoved and silent", async () => {
     const fetched = vi.fn(async (input: RequestInfo | URL) => {
       const request = input instanceof Request ? input : undefined;

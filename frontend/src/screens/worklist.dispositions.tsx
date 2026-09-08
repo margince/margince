@@ -14,6 +14,7 @@
 // disappearance needs its way back offered at the moment of the disappearance;
 // finding it again afterwards means knowing which of three judgements you made.
 
+import { ChevronDown } from "lucide-react";
 import { createContext, useContext, useState } from "react";
 
 import { useFoldedViewport } from "../app/viewport";
@@ -301,10 +302,10 @@ function PutDownMenu({
         </Button>
       ))}
       {/* The LONGER SPANS, as lines of their own rather than behind a second
-          control. Above the fold they live in a Popover beside the snooze verb,
-          which keeps the common case one press; a popover inside a menu is a
-          second layer over a surface already floating, and a keyboard reader
-          would open two things to say "next week".
+          control. Above the fold they live in the caret half of the snooze
+          control, which keeps the common case one press; a popover inside a
+          menu is a second layer over a surface already floating, and a keyboard
+          reader would open two things to say "next week".
           The verb above still sends the default day, so the fast path is
           unchanged and these are the answers it cannot give. Each carries its
           own sentence — "Snooze for 3 days" — because a bare "3 days" standing
@@ -389,30 +390,37 @@ export function DispositionVerbs({ item }: Readonly<{ item: WorklistItem }>) {
       />
     );
   }
+  // A FRAGMENT, not a box. These verbs are secondaries in the row's one
+  // ActionRow, and a wrapper of their own would be a second group inside the
+  // leading one — spaced by its own rule, wrapping on its own terms, and
+  // holding the snooze apart from the "Open" it reads beside.
   return (
-    <div className="worklist-row-dispositions">
-      {offered.map((disposition) => (
-        <Button
-          key={disposition}
-          small
-          variant="ghost"
-          disabled={pending}
-          onClick={() => put(disposition)}
-        >
-          {t(`worklist.disposition.verb.${disposition}` as const)}
-        </Button>
-      ))}
-      {/* The spans, BESIDE the snooze verb rather than replacing it. A rep
-          reaching for "not today" most often means tomorrow, and making them
-          choose a duration every time would charge the common case for the
-          rare one. */}
-      {offered.includes("snooze") && (
-        <SnoozeSpans
-          pending={pending}
-          onPick={(until) => put("snooze", until)}
-        />
+    <>
+      {offered.map((disposition) =>
+        // The snooze is the one judgement with a SECOND answer behind it: the
+        // press means tomorrow and the caret means "not tomorrow". One control
+        // in two halves rather than two controls, because a caret standing on
+        // its own beside the verb reads as a verb of its own.
+        disposition === "snooze" ? (
+          <SnoozeSplit
+            key={disposition}
+            pending={pending}
+            onSnooze={() => put("snooze")}
+            onPick={(until) => put("snooze", until)}
+          />
+        ) : (
+          <Button
+            key={disposition}
+            small
+            variant="ghost"
+            disabled={pending}
+            onClick={() => put(disposition)}
+          >
+            {t(`worklist.disposition.verb.${disposition}` as const)}
+          </Button>
+        ),
       )}
-    </div>
+    </>
   );
 }
 
@@ -448,58 +456,95 @@ export function swipeActions(
 }
 
 /**
- * How long to put a row down for, when a day is not the answer.
+ * Putting a row down, and for how long — ONE control in two halves.
  *
- * The server has always taken any future instant; this file was the thing that
- * only ever sent tomorrow. A rep who knows a customer is away all week pressed
- * the same button seven mornings running, and each press was a row that came
- * back and a count that stayed wrong.
+ * The press is the common case and costs nothing it did not cost before: a rep
+ * reaching for "not today" most often means tomorrow, and charging every one of
+ * them a duration to buy the rare case is the trade this refuses. The caret is
+ * the rare case, and it is the same physical control rather than a second one
+ * standing beside the verb — the split's hairline seam is what says "another
+ * way of doing THIS" where a gap would have said "another verb".
  *
- * A Popover rather than a row of buttons: three more controls on every snoozable
- * row is three more things to read past on a page whose whole argument is that
- * it can be worked to the bottom.
+ * The same `.actions-split` the compose dialog's send menu is built from, and
+ * the same `Popover variant` its caret uses; the panel's chrome is the
+ * popover's own.
+ *
+ * The lines inside are SENTENCES — "Snooze for 3 days" — in the folded menu's
+ * own spelling, because a bare "3 days" standing under a caret is a fragment
+ * whose subject the reader has to reconstruct from the button they pressed.
+ * They read as lines of a list rather than as a stack of pills: what the reader
+ * is doing here is choosing among four answers to one question.
  */
-function SnoozeSpans({
+function SnoozeSplit({
   pending,
+  onSnooze,
   onPick,
 }: Readonly<{
   pending: boolean;
+  onSnooze: () => void;
   onPick: (until: SnoozeSpan | SnoozeEvent) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
   return (
-    <Popover
-      label={t("worklist.disposition.snoozeFor")}
-      className="link-button"
-    >
-      <div className="worklist-snooze-spans">
-        {SNOOZE_SPANS.map((days) => (
-          <Button
-            key={days}
-            small
-            variant="ghost"
-            disabled={pending}
-            onClick={() => onPick(days)}
-          >
-            {translatePlural(locale, "worklist.disposition.snoozeDays", days, {
-              value: formatNumber(days, locale),
-            })}
-          </Button>
-        ))}
-        {SNOOZE_EVENTS.map((event) => (
-          <Button
-            key={event}
-            small
-            variant="ghost"
-            disabled={pending}
-            onClick={() => onPick(event)}
-          >
-            {t(`worklist.disposition.snoozeUntil.${event}` as const)}
-          </Button>
-        ))}
-      </div>
-    </Popover>
+    <span className="actions-split">
+      <Button small variant="ghost" disabled={pending} onClick={onSnooze}>
+        {t("worklist.disposition.verb.snooze")}
+      </Button>
+      <Popover
+        variant="ghost"
+        // The small rung, which `Popover` has no prop for and the split cannot
+        // do without: `.actions-split` stretches its halves to the taller one,
+        // so a default-height caret would draw a 40px control against the 32px
+        // verbs on either side of it. The design system's own size class rather
+        // than a height rule of this screen's, which would be a second author
+        // of one geometry.
+        className="btn-sm"
+        label={
+          <>
+            <ChevronDown aria-hidden="true" />
+            {/* The caret's whole name, and the one the verb beside it cannot
+                carry: a glyph announces as nothing. */}
+            <span className="sr-only">
+              {t("worklist.disposition.snoozeFor")}
+            </span>
+          </>
+        }
+      >
+        <div className="worklist-snooze-spans">
+          {SNOOZE_SPANS.map((days) => (
+            <Button
+              key={days}
+              small
+              variant="ghost"
+              disabled={pending}
+              onClick={() => onPick(days)}
+            >
+              {translatePlural(
+                locale,
+                "worklist.disposition.snoozeForDays",
+                days,
+                { value: formatNumber(days, locale) },
+              )}
+            </Button>
+          ))}
+          {/* The event answers, after the spans: a rep opening this most often
+              still means a duration, and what these add is the case a duration
+              cannot state. */}
+          {SNOOZE_EVENTS.map((event) => (
+            <Button
+              key={event}
+              small
+              variant="ghost"
+              disabled={pending}
+              onClick={() => onPick(event)}
+            >
+              {t(`worklist.disposition.snoozeUntil.${event}` as const)}
+            </Button>
+          ))}
+        </div>
+      </Popover>
+    </span>
   );
 }
 
