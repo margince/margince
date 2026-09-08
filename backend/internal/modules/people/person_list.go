@@ -140,7 +140,7 @@ func (s *Store) ListPeople(ctx context.Context, in ListPeopleInput) ([]crmcontra
 		CustomFilters:   in.CustomFilters,
 		nameColumn:      personNameColumn,
 		identifier: storekit.Identifier{
-			Table: "person_email", FK: "person_id", Column: "email",
+			Table: "person_email", FK: personFK, Column: emailColumn,
 		},
 	}
 	return listPage(ctx, s, in.Sort, in.Limit, listPageSpec[crmcontracts.Person]{

@@ -5,7 +5,18 @@ package people
 
 import "fmt"
 
-// senderPredicate renders "this person WROTE this message", as opposed to the
+// The identifier columns quick-find matches a pasted address or domain
+// against. Named here beside the sender predicate because both answer the same
+// question about a record — which real-world handle names it.
+const (
+	emailColumn  = "email"
+	domainColumn = "domain"
+	// The FK each identifier table names its record by.
+	personFK = "person_id"
+	orgFK    = "organization_id"
+)
+
+// SenderPredicate renders "this person WROTE this message", as opposed to the
 // message merely reaching them.
 //
 // A thread is linked to everybody it concerns, so activity_link membership
@@ -30,13 +41,20 @@ import "fmt"
 //
 // person and activity are SQL expressions the caller supplies: a bind
 // parameter ("$3") or a correlated column ("p.id"), and the activity's alias.
+//
+// A format string rather than a builder function: the census that measures
+// unbounded record references reads one function at a time, and a helper
+// holding this SQL would count as a read of `person` that reaches no row scope
+// — which is true of the fragment and false of every statement it appears in.
 func SenderPredicate(person, activity string) string {
-	return fmt.Sprintf(`EXISTS (
+	return fmt.Sprintf(senderPredicateSQL, person, activity)
+}
+
+const senderPredicateSQL = `EXISTS (
 		SELECT 1 FROM activity_participant ap
 		 WHERE ap.activity_id = %[2]s.id AND ap.role = 'from'
 		   AND CASE WHEN ap.address IS NOT NULL
 		            THEN EXISTS (SELECT 1 FROM person_email pe
 		                          WHERE pe.person_id = %[1]s AND pe.archived_at IS NULL
 		                            AND pe.email = ap.address)
-		            ELSE ap.person_id = %[1]s END)`, person, activity)
-}
+		            ELSE ap.person_id = %[1]s END)`

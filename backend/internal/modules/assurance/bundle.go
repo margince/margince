@@ -219,8 +219,8 @@ func (s *Store) BundleException(ctx context.Context, in BundleInput) (applied bo
 	return applied, err
 }
 
-// TaskIDsForSubject is every task any cycle has ever raised for one subject,
-// newest first.
+// TaskIDsForSubject reads the tasks this module's cycles have raised for one
+// subject, newest first.
 //
 // The cycle is one night's pass, so OpenTaskFor below answers within a night
 // and nothing answered ACROSS them: last night's task was still open, this

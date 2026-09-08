@@ -1906,9 +1906,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the case): deal_status_an_overdue_task_is_not_done_work, deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is",
+          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends): deal_status_an_overdue_task_is_not_done_work, deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is",
           "stale_cause": {
             "case_changed": [
+              "deal_status_an_overdue_task_is_not_done_work",
+              "deal_status_offer_left_hanging",
+              "deal_status_says_nothing_is_wrong_when_nothing_is"
+            ],
+            "prompt_changed": [
               "deal_status_an_overdue_task_is_not_done_work",
               "deal_status_offer_left_hanging",
               "deal_status_says_nothing_is_wrong_when_nothing_is"
@@ -1936,9 +1941,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the case): deal_status_an_overdue_task_is_not_done_work, deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is",
+          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends): deal_status_an_overdue_task_is_not_done_work, deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is",
           "stale_cause": {
             "case_changed": [
+              "deal_status_an_overdue_task_is_not_done_work",
+              "deal_status_offer_left_hanging",
+              "deal_status_says_nothing_is_wrong_when_nothing_is"
+            ],
+            "prompt_changed": [
               "deal_status_an_overdue_task_is_not_done_work",
               "deal_status_offer_left_hanging",
               "deal_status_says_nothing_is_wrong_when_nothing_is"
@@ -2995,9 +3005,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the case changed under scenario contact_fields_from_a_mail_signature since the record scored it",
+          "stale_reason": "the case and the prompt this build sends changed under scenario contact_fields_from_a_mail_signature since the record scored it",
           "stale_cause": {
             "case_changed": [
+              "contact_fields_from_a_mail_signature"
+            ],
+            "prompt_changed": [
               "contact_fields_from_a_mail_signature"
             ]
           }
@@ -3046,9 +3059,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the case changed under scenario contact_fields_from_a_mail_signature since the record scored it",
+          "stale_reason": "the case and the prompt this build sends changed under scenario contact_fields_from_a_mail_signature since the record scored it",
           "stale_cause": {
             "case_changed": [
+              "contact_fields_from_a_mail_signature"
+            ],
+            "prompt_changed": [
               "contact_fields_from_a_mail_signature"
             ]
           }
@@ -4433,9 +4449,13 @@
             "invalid": 0,
             "abstained": 6
           },
-          "stale_reason": "2 scenarios it scored have changed since (the case): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
           "stale_cause": {
             "case_changed": [
+              "brief_names_the_stalled_deal_and_the_last_touch",
+              "brief_stays_silent_about_a_withheld_section"
+            ],
+            "prompt_changed": [
               "brief_names_the_stalled_deal_and_the_last_touch",
               "brief_stays_silent_about_a_withheld_section"
             ]
@@ -4462,9 +4482,13 @@
             "invalid": 0,
             "abstained": 6
           },
-          "stale_reason": "2 scenarios it scored have changed since (the case): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
           "stale_cause": {
             "case_changed": [
+              "brief_names_the_stalled_deal_and_the_last_touch",
+              "brief_stays_silent_about_a_withheld_section"
+            ],
+            "prompt_changed": [
               "brief_names_the_stalled_deal_and_the_last_touch",
               "brief_stays_silent_about_a_withheld_section"
             ]
@@ -4592,9 +4616,13 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the case): person_brief_reads_what_was_said, person_brief_stays_silent_about_what_the_reader_may_not_see",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends): person_brief_reads_what_was_said, person_brief_stays_silent_about_what_the_reader_may_not_see",
           "stale_cause": {
             "case_changed": [
+              "person_brief_reads_what_was_said",
+              "person_brief_stays_silent_about_what_the_reader_may_not_see"
+            ],
+            "prompt_changed": [
               "person_brief_reads_what_was_said",
               "person_brief_stays_silent_about_what_the_reader_may_not_see"
             ]
@@ -4621,9 +4649,13 @@
             "invalid": 0,
             "abstained": 1
           },
-          "stale_reason": "2 scenarios it scored have changed since (the case): person_brief_reads_what_was_said, person_brief_stays_silent_about_what_the_reader_may_not_see",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends): person_brief_reads_what_was_said, person_brief_stays_silent_about_what_the_reader_may_not_see",
           "stale_cause": {
             "case_changed": [
+              "person_brief_reads_what_was_said",
+              "person_brief_stays_silent_about_what_the_reader_may_not_see"
+            ],
+            "prompt_changed": [
               "person_brief_reads_what_was_said",
               "person_brief_stays_silent_about_what_the_reader_may_not_see"
             ]

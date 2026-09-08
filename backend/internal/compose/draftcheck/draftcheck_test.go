@@ -420,13 +420,13 @@ func TestADayIsRefusedWhenNothingIsBooked(t *testing.T) {
 	body := "Hallo Frau Malherbe,\n\nfür unsere geplante Demonstration der " +
 		"Übersetzungsregeln für morgen bräuchte ich zwei Produkte.\n\nViele Grüße"
 	got := draftcheck.Body(body, textlang.German, convstate.BandFresh, false, false)
-	if !hasRule(got, "unscheduled-arrangement") {
+	if !refusedAsUnscheduled(got) {
 		t.Fatalf("a draft naming tomorrow with nothing booked passed: %+v", got)
 	}
 
 	// With a meeting on file the same sentence is the drafter doing its job —
 	// the person prompt asks for exactly this phrasing over a timestamp.
-	if got := draftcheck.Body(body, textlang.German, convstate.BandFresh, false, true); hasRule(got, "unscheduled-arrangement") {
+	if got := draftcheck.Body(body, textlang.German, convstate.BandFresh, false, true); refusedAsUnscheduled(got) {
 		t.Errorf("a booked meeting still refused its own day: %+v", got)
 	}
 }
@@ -439,7 +439,7 @@ func TestTheGermanMorningIsNotTomorrow(t *testing.T) {
 		"Guten Morgen Frau Malherbe,\n\nanbei die Unterlagen.\n\nViele Grüße",
 		"Hallo,\n\nich melde mich morgen früh mit den Zahlen.\n\nViele Grüße",
 	} {
-		if got := draftcheck.Body(body, textlang.German, convstate.BandFresh, false, false); hasRule(got, "unscheduled-arrangement") {
+		if got := draftcheck.Body(body, textlang.German, convstate.BandFresh, false, false); refusedAsUnscheduled(got) {
 			t.Errorf("refused a message that books nothing: %q\n%+v", body, got)
 		}
 	}
@@ -448,15 +448,15 @@ func TestTheGermanMorningIsNotTomorrow(t *testing.T) {
 func TestAnEnglishDayIsRefusedToo(t *testing.T) {
 	t.Parallel()
 	body := "Hi Anna,\n\nlooking forward to our demo tomorrow.\n\nBest"
-	if got := draftcheck.Body(body, textlang.English, convstate.BandFresh, false, false); !hasRule(got, "unscheduled-arrangement") {
+	if got := draftcheck.Body(body, textlang.English, convstate.BandFresh, false, false); !refusedAsUnscheduled(got) {
 		t.Errorf("an English draft naming tomorrow with nothing booked passed: %+v", got)
 	}
 }
 
-// hasRule reports whether any finding carries the given rule name.
-func hasRule(findings []draftcheck.Finding, rule string) bool {
+// refusedAsUnscheduled reports whether the unscheduled-arrangement rule fired.
+func refusedAsUnscheduled(findings []draftcheck.Finding) bool {
 	for _, f := range findings {
-		if f.Rule == rule {
+		if f.Rule == "unscheduled-arrangement" {
 			return true
 		}
 	}

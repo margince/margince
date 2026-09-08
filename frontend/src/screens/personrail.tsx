@@ -1360,8 +1360,9 @@ function ConsentAndChannels({
   // rides, and the only one an inbound message can flip on its own. The others
   // get their own rows below, each carrying its name.
   const correspondence =
-    entries.find((entry) => entry.purpose_class === "business_correspondence") ??
-    entries.find((entry) => entry.channel === "email");
+    entries.find(
+      (entry) => entry.purpose_class === "business_correspondence",
+    ) ?? entries.find((entry) => entry.channel === "email");
   const otherPurposes = entries.filter(
     (entry) => entry.channel === "email" && entry !== correspondence,
   );

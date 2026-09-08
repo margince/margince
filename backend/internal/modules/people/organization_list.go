@@ -150,7 +150,7 @@ func (s *Store) ListOrganizations(ctx context.Context, in ListOrganizationsInput
 		CustomFilters:   in.CustomFilters,
 		nameColumn:      orgNameColumn,
 		identifier: storekit.Identifier{
-			Table: "organization_domain", FK: "organization_id", Column: "domain",
+			Table: "organization_domain", FK: orgFK, Column: domainColumn,
 		},
 	}
 	return listPage(ctx, s, in.Sort, in.Limit, listPageSpec[crmcontracts.Organization]{

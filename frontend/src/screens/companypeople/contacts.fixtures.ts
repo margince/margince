@@ -75,7 +75,12 @@ export function contactsFixture(): OrganizationContact[] {
       strength: {
         score: 12,
         bucket: "weak",
-        factors: { recency: 0.1, frequency: 0.1, reciprocity: 0.2, direction: 1 },
+        factors: {
+          recency: 0.1,
+          frequency: 0.1,
+          reciprocity: 0.2,
+          direction: 1,
+        },
       },
     },
     {
