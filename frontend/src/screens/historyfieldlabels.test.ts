@@ -126,9 +126,9 @@ describe("history field labels", () => {
     const byType = fieldsARecordUpdateWrites();
     expect([...byType.keys()].sort()).toEqual([
       "activity",
+      "company",
       "deal",
       "lead",
-      "company",
       "person",
       "project",
     ]);

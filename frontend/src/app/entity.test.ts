@@ -11,9 +11,9 @@ describe("ENTITY registry", () => {
       "project",
     ]);
     expect(Object.keys(ENTITY).sort()).toEqual([
+      "company",
       "deal",
       "lead",
-      "company",
       "person",
       "project",
     ]);

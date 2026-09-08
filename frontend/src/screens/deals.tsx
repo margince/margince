@@ -1117,7 +1117,7 @@ function companyEditField(
       options: [{ value: "", label: t("deal.companyWithheld") }],
     };
   }
-  const options = opts.orgs.map((company) => ({
+  const options = opts.companies.map((company) => ({
     value: company.id,
     label: company.display_name,
   }));

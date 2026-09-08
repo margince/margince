@@ -248,7 +248,7 @@ describe("a board card's company", () => {
       named,
     );
     expect(columns[0].deals[0].companyWithheld).toBe(true);
-    expect(columns[0].deals[0].org).toBe("");
+    expect(columns[0].deals[0].company).toBe("");
   });
 
   it("names a company it has a mark for, and carries the mark", () => {
@@ -258,7 +258,7 @@ describe("a board card's company", () => {
       new Map(),
       named,
     );
-    expect(columns[0].deals[0].org).toBe("Acme Corp");
+    expect(columns[0].deals[0].company).toBe("Acme Corp");
     expect(columns[0].deals[0].companyLogoUrl).toBe("/acme.png");
     expect(columns[0].deals[0].companyWithheld).toBeFalsy();
   });
@@ -271,7 +271,7 @@ describe("a board card's company", () => {
       new Map(),
       named,
     );
-    expect(columns[0].deals[0].org).toBe("");
+    expect(columns[0].deals[0].company).toBe("");
     expect(columns[0].deals[0].companyWithheld).toBeFalsy();
   });
 
@@ -285,7 +285,7 @@ describe("a board card's company", () => {
       named,
     );
     expect(columns[0].deals[0].companyWithheld).toBe(true);
-    expect(columns[0].deals[0].org).toBe("");
+    expect(columns[0].deals[0].company).toBe("");
   });
 
   // The reading the board used to lose. A read that FAILED is not a deal with
@@ -304,7 +304,7 @@ describe("a board card's company", () => {
       unreadable,
     );
     expect(columns[0].deals[0].companyUnreadable).toBe(true);
-    expect(columns[0].deals[0].org).toBe("");
+    expect(columns[0].deals[0].company).toBe("");
     expect(columns[0].deals[0].companyWithheld).toBeFalsy();
   });
 

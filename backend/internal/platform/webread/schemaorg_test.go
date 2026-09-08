@@ -8,7 +8,7 @@ package webread
 // The case behind these: a Next.js marketing site serves a shell with no body
 // text, so the read judged it "no readable text" and settled the domain as
 // parked — a real company on file as an empty address. The words were in the
-// markup the whole time, in the schema.company block the framework emitted.
+// markup the whole time, in the schema.org block the framework emitted.
 
 import (
 	"context"
@@ -27,7 +27,7 @@ func ldPage(block string) string {
 
 func TestAShellDeclaringAnCompanyIsNotAnEmptyPage(t *testing.T) {
 	got := linkedDataClaims(ldPage(`{
-		"@context":"https://schema.org","@type":"Company",
+		"@context":"https://schema.org","@type":"Organization",
 		"name":"Intouch Sports","description":"Coaching for teams that travel."}`))
 
 	want := []string{"Intouch Sports", "Coaching for teams that travel."}
@@ -54,7 +54,7 @@ func TestAnCompanySubtypeIsReadLikeAnyOther(t *testing.T) {
 func TestAGraphIsWalkedAndTheNamesDeduped(t *testing.T) {
 	got := linkedDataClaims(ldPage(`{"@context":"https://schema.org","@graph":[
 		{"@type":"WebSite","name":"Nordic Works"},
-		{"@type":"Company","name":"Nordic Works","description":"We build boats."}]}`))
+		{"@type":"Organization","name":"Nordic Works","description":"We build boats."}]}`))
 
 	want := []string{"Nordic Works", "We build boats."}
 	if !slices.Equal(got, want) {
@@ -82,7 +82,7 @@ func TestACatalogueIsCutToTheClaimBound(t *testing.T) {
 // A page's own broken JSON is not this crawl's problem to report: the block is
 // one source of prose among several, and the head and the body still read.
 func TestMalformedLinkedDataIsSkippedRatherThanFailing(t *testing.T) {
-	got := linkedDataClaims(ldPage(`{"@type":"Company","name":`))
+	got := linkedDataClaims(ldPage(`{"@type":"Organization","name":`))
 	if len(got) != 0 {
 		t.Errorf("claims = %q, want none from an unparseable block", got)
 	}
@@ -102,7 +102,7 @@ func TestAFetchedShellCarriesWhatItDeclared(t *testing.T) {
 		w.Header().Set("Content-Type", "text/html")
 		_, _ = w.Write([]byte(`<html><head>` +
 			`<meta name="description" content="Coaching for teams that travel.">` +
-			`<script type="application/ld+json">{"@type":"Company","name":"Intouch Sports"}</script>` +
+			`<script type="application/ld+json">{"@type":"Organization","name":"Intouch Sports"}</script>` +
 			`<script type="module" src="/_next/main.js"></script>` +
 			`</head><body><div id="__next"></div></body></html>`))
 	}))

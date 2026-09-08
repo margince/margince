@@ -537,7 +537,7 @@ func (c *telegramEnv) ingestJobs(t *testing.T) int {
 // feed. Nothing is started yet, so a test can arrange before ingress runs.
 //
 // ChannelAPI is the fake: left nil the poller would compose the real Bot API
-// client and this suite would reach api.telegram.org.
+// client and this suite would reach api.telegram.company.
 func newTelegramWorker(t *testing.T, c *telegramEnv, cfg compose.JobRunnerConfig) (*jobs.Runner, <-chan *river.Event) {
 	t.Helper()
 	integration.ApplyRiverSchema(t)

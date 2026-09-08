@@ -7,7 +7,7 @@ package webread
 //
 // A site declares its ICONS in the <head> and its LOCKUP nowhere: the wordmark
 // a company prints on its letterhead is an <img> in the page's header with no
-// rel to name it. Two things do name it. A schema.company block names it in so many
+// rel to name it. Two things do name it. A schema.org block names it in so many
 // words (`logo`, schemaorg.go), and the page's own markup labels the image —
 // in its alt text, its class, its id or the file's name — because that is how
 // the people who built the site found it too.
