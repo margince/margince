@@ -144,6 +144,13 @@ func auditProjectAttribution(ctx context.Context, tx pgx.Tx, activityID ids.Acti
 // link exists per activity (uq_activity_link_project), so there is exactly one
 // answer to read.
 //
+// That divergence is reachable ONLY through that race. The sink's guard reads
+// the filing first, so an already-filed activity proposes nothing and the two
+// cannot disagree; no sequential test can put them at odds. The re-read is
+// therefore what makes the concurrent case correct rather than a branch the
+// suite drives — which is why the read is here, in the one function both
+// callers pass through, rather than at either call site.
+//
 // Nothing else runs: no version bump and no audit row, because nothing changed
 // about where the activity is filed.
 func stampTheProjectOnTheRow(
