@@ -10,10 +10,10 @@ import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 import { rowHref } from "./worklist.copy";
 import type { WorklistItem } from "./worklist.queries";
 import { RowActs } from "./worklist.rowverbs";
-// The line's own sheet. `.worklist-row-acts` is where its flow, its wrapping
-// and its `--gapActions` interval live, so a story without it draws the verbs
-// as a bare inline run with no gap between them — a picture of markup rather
-// than of the row.
+// The line's own sheet. `.worklist-row-acts` is where its trailing alignment,
+// its wrapping and its `--gapActions` interval live, so a story without it
+// draws the verbs as a bare inline run on the leading edge with no gap between
+// them — a picture of markup rather than of the row.
 import "./worklist.row.css";
 
 // THE LINE OF VERBS, on its own.
@@ -23,10 +23,10 @@ import "./worklist.row.css";
 // differ only in WHICH verbs are on the line and in what order, and a picture
 // of a whole row buries that under the rank, the kind, the title and the facts.
 //
-// What every frame is about: the lane's answer comes FIRST, the quiet verbs
-// follow it, and the two glyphs — the reader's pin and the hand-off — stand
-// among the labelled ones rather than at the end, because the end is where the
-// line wraps and a lone glyph on a line of its own reads as a stray mark.
+// What every frame is about: the line stands on the trailing edge, the lane's
+// answer is its LAST control, and the two glyphs — the reader's pin and the
+// hand-off — stand among the labelled ones, because a glyph with no word beside
+// it reads as a stray mark rather than as a verb.
 //
 // Framed as a `PanelRow` and nothing else, so the line gets the width a row
 // gives it without the rank and kind columns standing beside it. The row's own
@@ -151,16 +151,16 @@ function meetingOutcomeRow(): WorklistItem {
 }
 
 /**
- * A TASK: the answer first, then the way to the record, then the two glyphs.
+ * A TASK: the way to the record, the two glyphs, then the answer.
  *
- * Done · Open · pin · hand-off. The fill and the position say the same thing
+ * Open · pin · hand-off · Done. The fill and the position say the same thing
  * here, which is the easy case — and the reason the waiting row below it is the
  * one worth checking: there the answer is a ghost and only its position says so.
  *
  * Only a task carries an assignee, so this is the one lane that draws the
  * hand-off at all.
  */
-export const ATaskAnsweredFirst: Story = {
+export const ATaskAnsweredLast: Story = {
   args: {
     item: taskRow(),
     href: rowHref(taskRow()),
@@ -172,15 +172,14 @@ export const ATaskAnsweredFirst: Story = {
 /**
  * A BUYER WAITING: every verb a row can carry, and the wrap.
  *
- * Reply · Draft the reply · Open · pin · Snooze ▾ · Not mine · Not a customer.
- * The line was two groups once — the quiet verbs on the leading edge, the
- * answer held on the trailing one — and at this count it wrapped, which dropped
- * the answer alone onto a second line: a queue of ten rows then drew ten
- * one-button lines, and the thing a reader came to press was the one control
- * not in the row of controls.
+ * Draft the reply · Open · pin · Snooze ▾ · Not mine · Not a customer · Reply.
+ * Seven controls is where the line WRAPS, which makes this the one frame at
+ * which the order can be seen to hold — and the reason the order is what it is:
+ * the answer is the end of the sentence a reader has just read, at the same x
+ * on every row of the queue.
  *
- * What to look for: the answer at the head, and whatever falls to the second
- * line is a labelled button rather than a glyph.
+ * What to look for: the answer on the trailing edge, and the two glyphs still
+ * among the labelled verbs rather than opening or closing a line.
  */
 export const AWaitingRowWithEveryVerb: Story = {
   args: {
@@ -198,8 +197,8 @@ export const AWaitingRowWithEveryVerb: Story = {
  * Held, no-show and cancelled are three records of what already happened, and
  * promoting one of them would be the product claiming an expectation it has not
  * got about a meeting it knows nothing about. They arrive as `equals` rather
- * than as `primary`, which is the whole difference: no fill, and no head of the
- * line.
+ * than as `primary`, which is the whole difference: no fill, and no claim on
+ * the end of the line.
  */
 export const EqualVerbsHaveNoAnswer: Story = {
   args: {
@@ -221,15 +220,15 @@ export const EqualVerbsHaveNoAnswer: Story = {
  *
  * Two things change and neither is the wrapping. The three judgements fold into
  * ONE put-down menu — one tab stop rather than four 44px controls, which is
- * what kept the row under its height ceiling — so the line is the answer, the
- * move, the way to the record, the pin and that menu. And every control on it
+ * what kept the row under its height ceiling — so the line is the move, the way
+ * to the record, the pin, that menu and the answer. And every control on it
  * rises to a 44px target, because a mis-hit here files somebody else's
  * judgement on a customer's message.
  *
- * What to look for: the answer still at the head, the pin still among the
- * words, and whatever falls to a second line still a labelled button. The
- * thumb's own path to those judgements is the row's story rather than this
- * one — the gesture wraps the whole row, not this line.
+ * What to look for: the answer still last and still on the trailing edge, the
+ * pin still among the words. The thumb's own path to those judgements is the
+ * row's story rather than this one — the gesture wraps the whole row, not this
+ * line.
  *
  * The one frame drawn INSIDE the row's own box, because the target floor is the
  * ROW's rule rather than the line's: without that box the verbs would be drawn

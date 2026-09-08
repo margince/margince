@@ -266,12 +266,11 @@ export function WorklistRow({
             above={above}
           />
         </div>
-        {/* EVERY VERB ON ONE LINE, the lane's answer at its head. Beside the
-            work, seven controls took the width and left the subject, the
-            snippet and the reasons a 160px column that wrapped every line;
-            held on the row's own trailing edge, the answer dropped alone to a
-            second line the moment the line wrapped. worklist.rowverbs.tsx
-            states why leading with it is the shape that survives both. */}
+        {/* EVERY VERB ON ONE RIGHT-ALIGNED LINE, the lane's answer LAST. Under
+            the work where the card has no column to spare for it, beside the
+            work where it has, and on the trailing edge in both — so the answer
+            keeps one x down the whole queue. worklist.rowverbs.tsx states why
+            it is the tail of the line rather than its head. */}
         <RowActs
           item={item}
           href={href}
@@ -308,7 +307,7 @@ export function WorklistRow({
  * The three places an answer can stand, and each lane picks one.
  *
  * A PLACEMENT rather than a node, because "the answer" is not one shape. Most
- * lanes have a single call to action, and it leads the row's verbs. Some offer
+ * lanes have a single call to action, and it ends the row's verbs. Some offer
  * several verbs of EQUAL weight, and there a call to action is a lie — it would
  * name one of three meeting outcomes as the expected one. And one carries a
  * payload rather than a verb at all.
@@ -317,7 +316,7 @@ export function WorklistRow({
  * row the server named no verb on is still real work with nothing to press.
  */
 type RowPlacement = Readonly<{
-  /** The lane's one call to action, at the head of the row's verbs. */
+  /** The lane's one call to action, at the trailing end of the row's verbs. */
   primary?: ReactNode;
   /** Verbs of equal weight, among the row's quieter ones. */
   equals?: ReactNode;

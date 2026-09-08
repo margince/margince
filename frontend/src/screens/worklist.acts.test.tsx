@@ -3,19 +3,18 @@
 
 /** @vitest-environment jsdom */
 
-// One row of verbs, with the lane's answer at its head.
+// One right-aligned row of verbs, with the lane's answer LAST.
 //
-// The row drew its verbs in two groups — the quiet ones on the leading edge and
-// the answer held on the trailing one — which reads well on a row wide enough
-// for the whole line and breaks on every row that is not: once the line
-// wrapped, the trailing group dropped alone to a second line, so a queue of ten
-// rows drew ten one-button lines and the thing a reader came to press was the
-// one control not in the row of controls.
+// A reader runs a row left to right — the rank, the kind, the work — and the
+// verb the lane is asking for is the end of that sentence. Held on the trailing
+// edge it also lands at one x down the whole queue however many quiet verbs the
+// row ahead of it carries, so a rep answering row after row presses in the same
+// place every time.
 //
-// These assert the ORDER, because order is now the whole of what says which
-// verb is the answer on a lane whose answer is a ghost — a filled Done and a
-// ghost Reply are both their lane's call to action, and a screenshot of either
-// looks like a row of verbs. Nothing else on this page reads it.
+// These assert the ORDER, because order is the whole of what says which verb is
+// the answer on a lane whose answer is a ghost — a filled Done and a ghost
+// Reply are both their lane's call to action, and a screenshot of either looks
+// like a row of verbs. Nothing else on this page reads it.
 
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -65,9 +64,9 @@ function waitingRow(): WorklistItem {
 }
 
 // The verbs of one row, in the order they are drawn. Read off the row's own
-// line rather than off the page: every assertion below is about which control
-// comes first in it, and a page-wide query would answer with whatever the
-// screen drew above the queue.
+// line rather than off the page: every assertion below is about WHERE in it a
+// control stands, and a page-wide query would answer with whatever the screen
+// drew above the queue.
 function verbsInOrder(): HTMLElement[] {
   const acts = document.querySelector(".worklist-row-acts");
   expect(acts, "the row drew no line of verbs").not.toBeNull();
@@ -81,34 +80,32 @@ function filled(verbs: readonly HTMLElement[]): HTMLElement[] {
   return verbs.filter((verb) => verb.classList.contains("btn-primary"));
 }
 
-describe("a row's verbs are one line with the lane's answer at its head", () => {
-  it("leads the line with the lane's answer", async () => {
+describe("a row's verbs are one line with the lane's answer last", () => {
+  it("ends the line with the lane's answer", async () => {
     oneRow(waitingRow());
 
     const reply = await screen.findByRole("button", {
       name: en["compose.reply"],
     });
-    expect(verbsInOrder()[0]).toBe(reply);
+    expect(verbsInOrder().at(-1)).toBe(reply);
   });
 
   // THE WHOLE LINE, in order, and every verb on it named — not a sample. The
-  // order IS the layout here: the answer leads, the ways to the record follow
-  // it, the reader's own GLYPH sits among the labelled verbs, and the ways to
-  // put the row down are the tail. A test naming two of six would let the
-  // third be promoted ahead of the call to action, or let the glyph slide back
-  // to the end, with nothing failing.
+  // order IS the layout here: the ways to the record come first, the reader's
+  // own GLYPH sits among the labelled verbs, the ways to put the row down
+  // follow, and the answer is the tail. A test naming two of six would let a
+  // third be promoted past the call to action, or let the glyph slide out to
+  // the end of the line, with nothing failing.
   //
-  // The pin goes before the judgements because the END of this line is where it
-  // wraps: at the tail it went over alone, and a lone 32px glyph on a line of
-  // its own reads as a stray mark rather than as a verb.
-  it("draws the quieter verbs after it, glyph before the tail", async () => {
+  // The pin is among the WORDS on purpose: a lone 32px glyph closing a line has
+  // no label to read as a verb, so it reads as a stray mark.
+  it("draws the quieter verbs before it, glyph among the words", async () => {
     oneRow(waitingRow());
 
     const reply = await screen.findByRole("button", {
       name: en["compose.reply"],
     });
     const inOrder = [
-      reply,
       screen.getByRole("link", { name: en["worklist.verb.open"] }),
       screen.getByRole("button", { name: en["worklist.verb.pin"] }),
       screen.getByRole("button", {
@@ -120,6 +117,7 @@ describe("a row's verbs are one line with the lane's answer at its head", () => 
       screen.getByRole("button", {
         name: en["worklist.disposition.verb.not_mine"],
       }),
+      reply,
     ];
 
     expect(verbsInOrder()).toEqual(inOrder);
@@ -128,10 +126,10 @@ describe("a row's verbs are one line with the lane's answer at its head", () => 
   // The hand-off, on the one lane that carries one. Separate from the case above
   // because it is a task's verb and a waiting message has no assignee to move.
   //
-  // It is a glyph too, so it stands where the pin does — before the judgements
-  // — and for the same reason: a task row carries as many verbs as a waiting
-  // one, so the tail of its line has to be a word as well.
-  it("draws the hand-off beside the pin, before the tail", async () => {
+  // It is a glyph too, so it stands beside the pin and for the same reason:
+  // the two controls with no word on them stay together among the labelled
+  // ones, where a reader meets a name beside them.
+  it("draws the hand-off beside the pin, among the words", async () => {
     oneRow(
       row({
         id: "task-1",
@@ -159,7 +157,7 @@ describe("a row's verbs are one line with the lane's answer at its head", () => 
     );
   });
 
-  // The lane whose answer is FILLED as well as first: finishing a task is the
+  // The lane whose answer is FILLED as well as last: finishing a task is the
   // day's next move, so it wears the fill and every quiet verb beside it does
   // not. Asserted as the WHOLE set of filled controls, because a second fill on
   // the line is two calls to action, which is none.
@@ -177,7 +175,7 @@ describe("a row's verbs are one line with the lane's answer at its head", () => 
       name: en["tasks.complete"],
     });
     const drawn = verbsInOrder();
-    expect(drawn[0]).toBe(done);
+    expect(drawn.at(-1)).toBe(done);
     expect(filled(drawn)).toEqual([done]);
   });
 

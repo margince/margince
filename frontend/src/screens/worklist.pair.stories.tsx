@@ -3,10 +3,11 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import { Panel, PanelRow } from "../design-system/panel";
 import { StoryProviders } from "./story-utils";
 import { PairDecision } from "./worklist.pair";
 
-// The duplicate pair, decided on the row — see worklist.pair.tsx for why the
+// The duplicate pair, reviewed on the row — see worklist.pair.tsx for why the
 // decision belongs here rather than behind a link.
 //
 // The case worth looking at is the pair that is HARD: two records whose names
@@ -14,6 +15,15 @@ import { PairDecision } from "./worklist.pair";
 // a reader which is real is how much hangs off each. That is the row a rep
 // actually has to think about, and the one whose verbs have to name what they
 // keep.
+//
+// WHAT EVERY FRAME IS ABOUT: the question leads, the two records stand side by
+// side on recessed cards with the verb that keeps each one at its own foot, and
+// the one answer about neither of them takes a line under both — on the
+// trailing edge, and unfilled, because the two Keep verbs are the answers.
+//
+// Framed in a `Panel` and a `PanelRow`, which is where the review is drawn. The
+// cards are `Card inset` and read as recessed AGAINST the panel's ground, so a
+// frame on the bare canvas would show two boxes that are not there.
 
 type WorklistItem = components["schemas"]["WorklistItem"];
 
@@ -24,7 +34,11 @@ const meta: Meta<typeof PairDecision> = {
   decorators: [
     (Story) => (
       <StoryProviders>
-        <Story />
+        <Panel>
+          <PanelRow>
+            <Story />
+          </PanelRow>
+        </Panel>
       </StoryProviders>
     ),
   ],
@@ -63,7 +77,26 @@ function pairRow(over: Partial<WorklistItem> = {}): WorklistItem {
 
 // Two companies that read alike. The link counts are the whole of the
 // evidence, and each verb names the record it would keep.
+//
+// THE REVIEW AS A READER MEETS IT: the question, the two candidates side by
+// side, and the trailing line under them. What to look for is that the two Keep
+// verbs sit on ONE baseline — the cards stretch to the taller of the pair, and
+// the verbs are pushed to the foot rather than following the last fact, so the
+// choice between two records does not read as two different controls.
 export const Default: Story = { args: { item: pairRow() } };
+
+// THE SAME REVIEW AT 390px, where the comparison cannot be side by side.
+//
+// Two records at half a phone's width are two records nobody can read, so the
+// cards STACK — and stacked they are read one after the other rather than
+// against each other, which is why the link counts and the distinguishing line
+// have to carry the comparison on their own. Everything else holds: the
+// question leads, each verb keeps its own card's foot, and "Not the same" is
+// one line on the trailing edge.
+export const TheReviewOnAPhone: Story = {
+  ...Default,
+  globals: { viewport: { value: "phone" } },
+};
 
 // A record type that carries no link count — a person, where nothing hangs off
 // either side. The reader decides on the names and the distinguishing line

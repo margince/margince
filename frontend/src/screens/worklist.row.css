@@ -66,10 +66,11 @@
    than that, and there the verbs stay under the work so the subject and its
    reasons keep the whole width. Only a queue on a page of its own is wide
    enough to spend on both.
-   The verbs are NOT pushed to the card's edge. Left in the column they open at
-   one x down the whole queue, so a reader answering row after row presses in
-   the same place every time; flushed right, the answer's x would move with how
-   many quiet verbs the row behind it happened to carry. */
+   THE ANSWER KEEPS THE TRAILING EDGE at both widths. The line is right-aligned
+   wherever it is drawn (see `.worklist-row-acts` below) and the answer is its
+   last control, so it lands on one x down the whole queue whatever quiet verbs
+   the row ahead of it carries — beside the work in this column, and under the
+   work at the widths that have no column for it. */
 @container (min-width: 60rem) {
   .worklist-row {
     grid-template-columns:
@@ -144,19 +145,34 @@
   margin: 0;
 }
 
-/* EVERY VERB ON ONE LINE, the lane's answer at its head.
-   One flow rather than two groups: the answer used to be held on the trailing
-   edge, which reads well on a row wide enough for the whole line and drops the
-   answer alone to a second line on every row that is not — see the note at the
-   top of worklist.rowverbs.tsx. Leading with it cannot do that at any width,
-   because what wraps is then the quiet tail.
+/* EVERY VERB ON ONE RIGHT-ALIGNED LINE, the lane's answer LAST.
+   One flow rather than two groups, and `flex-end` rather than `space-between`:
+   the verbs on a row do not divide — every one of them is about this row — and
+   two groups pushed to opposite edges say which is which only while both edges
+   are on screen. Right-aligned, the answer is at the end of the sentence a
+   reader has just read, at one x down the whole queue. See the note at the top
+   of worklist.rowverbs.tsx.
+   The catalog's `ActionRow` is the DIVIDED row and is deliberately not reached
+   for here: its `space-between` holds a leading group against the trailing one,
+   which is the shape this row is not.
    `--gapActions` is the role for two buttons side by side, so retuning it moves
    this row with every other row of verbs in the product. */
 .worklist-row-acts {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
   gap: var(--gapActions);
+}
+
+/* ROOM FOR AN INLINE FORM. The hand-off opens a picker and two verbs inside
+   this line (`worklist.manager.tsx`), which is a control and a sentence rather
+   than one more verb: sharing the line, it pushes the answer off the trailing
+   edge and reads as four peers. A line of its own under the verbs, on the same
+   edge they stand on, so what the reader opened is a block and not a wrap. */
+.worklist-row-acts > .worklist-manager-control {
+  flex: 1 1 100%;
+  justify-content: flex-end;
 }
 
 /* The standing line: a badge, who is speaking, and the sentence.

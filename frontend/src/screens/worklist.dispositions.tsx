@@ -460,10 +460,10 @@ export function DispositionVerbs({ item }: Readonly<{ item: WorklistItem }>) {
       />
     );
   }
-  // A FRAGMENT, not a box. These verbs are secondaries in the row's one
-  // ActionRow, and a wrapper of their own would be a second group inside the
-  // leading one — spaced by its own rule, wrapping on its own terms, and
-  // holding the snooze apart from the "Open" it reads beside.
+  // A FRAGMENT, not a box. These verbs stand in the row's own one line of
+  // verbs, and a wrapper of their own would be a group inside it — spaced by
+  // its own rule, wrapping on its own terms, and holding the snooze apart from
+  // the "Open" it reads beside.
   return (
     <>
       {offered.map((disposition) =>

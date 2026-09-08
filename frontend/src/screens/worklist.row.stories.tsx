@@ -235,15 +235,14 @@ export const ATaskOnAPhone: Story = {
   play: undefined,
 };
 
-// EVERY VERB A ROW CAN CARRY, on one line, with the answer at its head.
+// EVERY VERB A ROW CAN CARRY, on one right-aligned line, the answer LAST.
 //
 // The row that has the most of them: a buyer waiting on a reply carries the
 // reply itself, the way into the record, the reader's pin and the three
 // judgements the server offers. Drawn because this is the state the layout was
 // rebuilt for and the one a screenshot has to be checked in — seven controls
 // is where the line WRAPS, so it is the only width at which the order can be
-// seen to hold: the answer first, the glyph among the words, and a labelled
-// button wherever the wrap falls.
+// seen to hold: the answer on the trailing edge, the glyphs among the words.
 //
 // The snooze's chooser is OPEN, because the split control is the other half of
 // the change: the press means tomorrow, the caret means "not tomorrow", and a

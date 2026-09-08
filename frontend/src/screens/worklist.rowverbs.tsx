@@ -9,15 +9,16 @@
 // about it and in what order, which is the half a reader of the other question
 // does not need.
 //
-// THE ANSWER COMES FIRST. Every verb sits in one wrapping line with the lane's
-// call to action at its head, and that ordering is the whole layout: the verbs
-// used to divide, quiet ones on the leading edge and the answer held on the
-// trailing one, which reads well on a row wide enough to hold both and breaks
-// on every row that is not. Once the line wrapped, the trailing group dropped
-// alone to a second line — so a queue of ten rows drew ten one-button lines,
-// and the thing a reader came to press was the one control not in the row of
-// controls. Leading the line with it cannot do that at any width: what wraps is
-// the quiet tail, which is what a reader skips anyway.
+// THE ANSWER COMES LAST, and the line stands on the row's trailing edge. That
+// ordering is the whole layout: a reader runs a row left to right — the rank,
+// the kind, the work — and the verb the lane is asking for is the end of that
+// sentence, where the eye and the thumb finish. Right-aligned, it also sits at
+// one x down the whole queue however many quiet verbs the row ahead of it
+// carries, so a rep answering row after row presses in the same place.
+//
+// It is ONE flow rather than two groups, at both of the widths the row is drawn
+// at. The verbs do not DIVIDE here — every one of them is about this row — and
+// two groups held apart say which is which only while both edges are on screen.
 
 import { Pin, PinOff } from "lucide-react";
 import type { ReactNode } from "react";
@@ -31,19 +32,19 @@ import { ReassignControl } from "./worklist.manager";
 import { usePinRow, type WorklistItem } from "./worklist.queries";
 
 /**
- * Every verb a row carries, on one line, the lane's answer at its head.
+ * Every verb a row carries, on one right-aligned line, the lane's answer LAST.
  *
- * The order is the ranking: what this lane asks the reader to DO, then the ways
- * to reach the record, then the reader's own two marks — the pin and the
- * hand-off — then the lane's verbs of equal weight and the ways to put the row
- * down. It is one flow and not two groups — see the note at the top of this
- * file.
+ * The order is the ranking read backwards from the answer: the ways to reach
+ * the record, then the reader's own two marks — the pin and the hand-off — then
+ * the lane's verbs of equal weight, the ways to put the row down, and finally
+ * what the lane is asking for. It is one flow and not two groups — see the note
+ * at the top of this file.
  *
- * NO GLYPH IS LAST, which is what puts the pin and the hand-off in the middle
- * of the ranking rather than at the end of it. The end is where the line wraps:
- * on a seven-verb waiting row the pin went over alone, and a lone 32px glyph on
- * a line of its own reads as a stray mark rather than as a verb. What wraps now
- * is a button with a word on it, which reads as the continuation it is.
+ * THE TWO GLYPHS STAND AMONG THE WORDS, which is what keeps them out of the
+ * middle of a wrap: a lone 32px glyph opening or closing a line of its own
+ * reads as a stray mark rather than as a verb, and the pin and the hand-off are
+ * the only controls here with no word on them. What falls to a second line is a
+ * labelled button, and the tail of the line is the answer itself.
  */
 export function RowActs({
   item,
@@ -57,13 +58,13 @@ export function RowActs({
   href: string | undefined;
   /** Whose queue this row is on — `ReassignControl` resolves an empty one. */
   owner: string;
-  /** The lane's one call to action, drawn first. */
+  /** The lane's one call to action, drawn last and nearest the reader's thumb. */
   primary?: ReactNode;
   /**
    * The lane's verbs of EQUAL weight, drawn among the quiet ones. None of them
-   * is the row's answer, so none of them leads the line: promoting one would
-   * tell a reader that "Held" is the expected outcome of a meeting that may
-   * equally have been cancelled.
+   * is the row's answer, so none of them takes the end of the line: promoting
+   * one would tell a reader that "Held" is the expected outcome of a meeting
+   * that may equally have been cancelled.
    */
   equals?: ReactNode;
   /** Where a grouped row is reviewed, on the surface that has a filter. */
@@ -71,7 +72,6 @@ export function RowActs({
 }>) {
   return (
     <div className="worklist-row-acts">
-      {primary}
       {item.batch && onReview ? (
         <BatchVerb onReview={onReview} />
       ) : (
@@ -92,7 +92,7 @@ export function RowActs({
           the current holder is never offered as the new one.
 
           Beside the pin, because it is the row's other GLYPH — see the doc
-          above: what wraps off the end of this line must be a word. */}
+          above: the two stand together among the labelled verbs. */}
       {item.source === "task" && !item.batch && (
         <ReassignControl item={item} owner={owner} />
       )}
@@ -100,9 +100,12 @@ export function RowActs({
       {/* The ways this row can be PUT DOWN, as the server declares them. Drawn
           from `dispositions` rather than inferred from `source`: which rows a
           rep may judge is a server rule, and a client keeping its own copy
-          draws a verb that 404s or hides one the rep is entitled to. Last, so
-          the line's tail is a labelled button. */}
+          draws a verb that 404s or hides one the rep is entitled to. */}
       <DispositionVerbs item={item} />
+      {/* WHAT THE LANE IS ASKING FOR, at the end of the line and on the row's
+          trailing edge. A reader who has read the work looks here for the move,
+          and finds it at the same x on every row of the queue. */}
+      {primary}
     </div>
   );
 }
