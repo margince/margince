@@ -207,3 +207,63 @@ func TestTheWorkerMetricsOmitThePoolSectionRatherThanZeroingIt(t *testing.T) {
 		t.Errorf("a nil pool produced pool gauges, which read as an idle pool rather than as no pool\ngot:\n%s", body)
 	}
 }
+
+// TestTheWorkerServesItsOwnAICounters — an AI call is routed by ONE process,
+// so its counter is a property of that process and no other role can report
+// it. With this section absent the api's exposition is the only one, and a
+// per-tier error rate computed over it describes api traffic while appearing
+// to describe the installation's: the lanes in this binary do the bulk of the
+// routing, so the denominator is short by most of its calls.
+func TestTheWorkerServesItsOwnAICounters(t *testing.T) {
+	const family = `margince_ai_calls_total{provider="gemini",task="site_extract",tier="premium"} 7`
+	observe, err := startObserveListener(t.Context(), workerConfig{observeAddr: "127.0.0.1:0"},
+		nil, nil, &bootGate{}, quietLog())
+	if err != nil {
+		t.Fatalf("startObserveListener: %v", err)
+	}
+	t.Cleanup(observe.Stop)
+
+	// Published AFTER the listener is already serving, which is the ordering
+	// run() has: the surface comes up before the model path is resolved.
+	observe.PublishAIMetrics(func(w io.Writer) { _, _ = io.WriteString(w, family+"\n") })
+
+	status, body := get(t, "http://"+observe.Addr+"/metrics")
+	if status != http.StatusOK {
+		t.Fatalf("GET /metrics = %d, want 200", status)
+	}
+	if !strings.Contains(body, family) {
+		t.Errorf("the published AI section never reached the exposition\ngot:\n%s", body)
+	}
+	// Additive, not a replacement: the process section this listener exists
+	// for still has to be there beside it.
+	if !strings.Contains(body, "margince_process_heap_sys_bytes") {
+		t.Errorf("the process section went missing once an AI section was published\ngot:\n%s", body)
+	}
+}
+
+// TestTheWorkerMetricsOmitTheAISectionUntilItIsPublished — the same "declared
+// or absent" posture the pool section takes, and it has to hold for the whole
+// boot window: the listener is serving before the model path is resolved, so
+// a scrape landing in between must omit the family rather than serve one
+// reading zero calls, which a rate renders as a healthy tier instead of none.
+func TestTheWorkerMetricsOmitTheAISectionUntilItIsPublished(t *testing.T) {
+	_, body := get(t, startForTest(t)+"/metrics")
+	if strings.Contains(body, "margince_ai_calls_total") {
+		t.Errorf("an unpublished model path produced AI counters, which read as a healthy tier rather than as no tier\ngot:\n%s", body)
+	}
+}
+
+// TestPublishAIMetricsIsSafeWhenTheSurfaceIsOff — off is the default, and
+// run() publishes unconditionally, so a nil seam here would panic every
+// worker that never enabled the listener.
+func TestPublishAIMetricsIsSafeWhenTheSurfaceIsOff(t *testing.T) {
+	observe, err := startObserveListener(t.Context(), workerConfig{}, nil, nil, &bootGate{}, quietLog())
+	if err != nil {
+		t.Fatalf("an empty --observe-addr must be a legitimate configuration, got: %v", err)
+	}
+	t.Cleanup(observe.Stop)
+	if observe.PublishAIMetrics == nil {
+		t.Fatal("no publish seam returned; run() calls it unconditionally and would panic")
+	}
+	observe.PublishAIMetrics(func(io.Writer) { t.Fatal("an off surface must never render a section") })
+}
