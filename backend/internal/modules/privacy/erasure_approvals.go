@@ -239,10 +239,31 @@ func redactStagedApprovals(ctx context.Context, tx pgx.Tx, subject ids.PersonID,
 		return fmt.Errorf("ending the agent runs waiting on the withdrawn approvals: %w", err)
 	}
 
-	// Then the ones somebody already decided: payload gone, verdict intact.
+	// Then the ones somebody already decided: payload gone, verdict intact —
+	// and the redemption authority SPENT.
+	//
+	// Emptying the payload was only half the withdrawal. An agent-minted
+	// staging a human had approved but the agent had not yet redeemed kept a
+	// live token, and redemption validates the untouched diff_hash rather than
+	// the payload — ADR-0055 redemption is "repeat the identical call with the
+	// approval token", and the agent still holds the original arguments. So for
+	// the length of the redemption window after the certificate said the
+	// subject's data was destroyed, that call could still run against them.
+	//
+	// The verdict stays: what a human approved is a fact about that human, and
+	// this does not touch it. What changes is that the token cannot be spent —
+	// consumed_at IS NULL is the guard RedeemInTx takes, and it is the same
+	// terminal marker a real redemption sets, so nothing downstream learns a
+	// new state. coalesce keeps a genuine redemption's own instant.
+	//
+	// The lapse sweep then passes this row over, which is correct rather than a
+	// side effect: it exists to tell an approver that nobody came back for
+	// their decision, and here nobody will — because the subject was erased,
+	// not because an agent neglected it.
 	if _, err := tx.Exec(ctx, `
 		UPDATE approval
-		   SET `+blankStagedProposal+`
+		   SET `+blankStagedProposal+`,
+		       consumed_at = coalesce(consumed_at, now())
 		 WHERE status <> 'pending' AND (`+subjectApprovalMatch+`)`,
 		subject.UUID, leadIDs, addresses); err != nil {
 		return fmt.Errorf("emptying the decided approvals naming the subject: %w", err)

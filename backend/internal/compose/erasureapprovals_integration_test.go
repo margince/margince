@@ -304,3 +304,41 @@ func TestAnAutomationRunIsReachedByAddressAndNothingElse(t *testing.T) {
 		t.Fail()
 	}
 }
+
+// The other half of withdrawing a decided staging: the AUTHORITY, not only the
+// payload.
+//
+// An agent-minted staging a human had approved but the agent had not yet
+// redeemed kept a live token. Redemption validates the untouched diff_hash
+// rather than the payload — ADR-0055 redemption is "repeat the identical call
+// with the approval token" and the agent still holds the original arguments —
+// so for the length of the redemption window after the certificate said the
+// subject's data was destroyed, that call could still run against them.
+func TestErasureSpendsTheTokenOnAnApprovedButUnredeemedStaging(t *testing.T) {
+	e := integration.Setup(t)
+	subject, approvalID := erasureSubject(t, e)
+
+	// Agent-minted, approved, and nobody has come back for it: the exact row
+	// the payload scrub left spendable.
+	passport := e.SeedPassport(t, integration.OwnerConn(t), "erasure redemption probe")
+	e.WsExec(t, `
+		UPDATE approval
+		   SET status = 'approved', decided_at = now(), passport_id = $2, consumed_at = NULL
+		 WHERE id = $1`, approvalID, passport)
+
+	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), subject.UUID, "subject request"); err != nil {
+		t.Fatal(err)
+	}
+
+	// The verdict survives: what a human approved is a fact about that human.
+	if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE id = $1 AND status = 'approved'`,
+		approvalID); n != 1 {
+		t.Error("erasure rewrote a verdict a human had already given")
+	}
+	// The token does not.
+	if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE id = $1 AND consumed_at IS NOT NULL`,
+		approvalID); n != 1 {
+		t.Fatal("the approval is still spendable: an agent holding the original arguments can redeem " +
+			"it and run the call against a subject the certificate says was erased")
+	}
+}
