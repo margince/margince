@@ -12996,6 +12996,39 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/brief/items/{itemId}/unsnooze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A brief_item id belonging to one of the acting rep's runs. */
+                itemId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take back a snooze — the item returns to the queue immediately.
+         * @description Clears `snoozed_until`, `reopen_on` and `reopen_ref` and returns the item to `state=new`,
+         *     which is the only state a snooze can be taken back TO: an item may be snoozed only while it
+         *     is actionable, so `new` is where it came from.
+         *
+         *     Idempotent by refusal rather than by silence. An item that is not snoozed answers 409 —
+         *     there is nothing to take back, and reporting success would tell a rep their click landed
+         *     when the state they were looking at had already moved. A snooze whose condition has already
+         *     lifted is still snoozed as far as this is concerned: taking it back is the same write and
+         *     leaves the same state.
+         *
+         *     Per-rep queue state, like snooze itself. Another rep's item reads as not-found.
+         */
+        post: operations["unsnoozeBriefItem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/attachments": {
         parameters: {
             query?: never;
@@ -53626,6 +53659,47 @@ export interface operations {
             };
             /** @description `snoozed_until` is missing or not in the future. */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    unsnoozeBriefItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A brief_item id belonging to one of the acting rep's runs. */
+                itemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The updated brief item, back in the queue. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MorningBriefItem"];
+                };
+            };
+            /** @description No such item in one of the acting rep's runs (another rep's item reads as not-found). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The item is not snoozed, so there is no snooze to take back. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

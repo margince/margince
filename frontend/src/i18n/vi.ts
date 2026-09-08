@@ -2860,6 +2860,8 @@ export const vi = {
   "brief.readings.pipelineUnread": "không đọc được pipeline",
   "brief.readings.pipelineReading": "đang đọc pipeline",
   "brief.readings.openLaneNamed": "Mở {reading}",
+  "brief.snooze.done": "Đã tạm gác đến {at}",
+  "brief.snooze.undo": "Hoàn tác",
   "brief.readings.meetings": "Cuộc họp hôm nay",
   "brief.readings.meetingsBasis": "trong lịch hôm nay",
   "brief.readings.needsPrep_one": "1 chưa chuẩn bị",

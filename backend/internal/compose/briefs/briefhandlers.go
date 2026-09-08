@@ -134,6 +134,20 @@ func (h Handlers) SnoozeBriefItem(w http.ResponseWriter, r *http.Request, itemID
 	httperr.WriteJSON(w, http.StatusOK, briefItemToWire(item))
 }
 
+// UnsnoozeBriefItem takes back a snooze, returning the item to the queue.
+//
+// No body: there is one thing to say and the path already says it. The engine
+// refuses an item that is not snoozed, which reaches the client as 409 — the
+// same answer a second mark gets, for the same reason.
+func (h Handlers) UnsnoozeBriefItem(w http.ResponseWriter, r *http.Request, itemID openapi_types.UUID) {
+	item, err := h.engine.MarkUnsnoozed(r.Context(), ids.UUID(itemID))
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, briefItemToWire(item))
+}
+
 // AnnotateMorningBrief writes the overnight pass's findings onto the acting
 // rep's own current run.
 //

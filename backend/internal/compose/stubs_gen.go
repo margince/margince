@@ -403,6 +403,10 @@ func (stubs) SnoozeBriefItem(w nethttp.ResponseWriter, r *nethttp.Request, itemI
 	httperr.NotImplemented(w, r, "SnoozeBriefItem")
 }
 
+func (stubs) UnsnoozeBriefItem(w nethttp.ResponseWriter, r *nethttp.Request, itemId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "UnsnoozeBriefItem")
+}
+
 func (stubs) ListMyCaptureActivity(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListMyCaptureActivityParams) {
 	httperr.NotImplemented(w, r, "ListMyCaptureActivity")
 }

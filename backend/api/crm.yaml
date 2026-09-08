@@ -18819,6 +18819,47 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  /brief/items/{itemId}/unsnooze:
+    parameters:
+      - name: itemId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+        description: A brief_item id belonging to one of the acting rep's runs.
+    post:
+      tags: [Brief]
+      operationId: unsnoozeBriefItem
+      summary: Take back a snooze — the item returns to the queue immediately.
+      description: |
+        Clears `snoozed_until`, `reopen_on` and `reopen_ref` and returns the item to `state=new`,
+        which is the only state a snooze can be taken back TO: an item may be snoozed only while it
+        is actionable, so `new` is where it came from.
+
+        Idempotent by refusal rather than by silence. An item that is not snoozed answers 409 —
+        there is nothing to take back, and reporting success would tell a rep their click landed
+        when the state they were looking at had already moved. A snooze whose condition has already
+        lifted is still snoozed as far as this is concerned: taking it back is the same write and
+        leaves the same state.
+
+        Per-rep queue state, like snooze itself. Another rep's item reads as not-found.
+      x-agent-access: human-only
+      responses:
+        '200':
+          description: The updated brief item, back in the queue.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MorningBriefItem' }
+        '404':
+          description: No such item in one of the acting rep's runs (another rep's item reads as not-found).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '409':
+          description: The item is not snoozed, so there is no snooze to take back.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   # =========================================================================
   # =========================================================================
   # NET-NEW V1 RESOURCES (data-model.md §12.5) — first-class, but specified by
