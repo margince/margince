@@ -158,65 +158,87 @@ func (s *Store) ApplyLinkedInMatch(ctx context.Context, connectionID, ownerID, p
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.HoldWritableLive(ctx, tx, entityPerson, personID); err != nil {
-			return err
-		}
-		// And HELD, before the connection row below. person_social is a declared
-		// PII table Art. 17 erasure deletes, so a handle written after that
-		// commit puts the erased person's public profile straight back.
-		//
-		// Taken HERE rather than beside that write, because the erasure goes
-		// person-then-linkedin_connection and this transaction locks the
-		// connection two statements down. Person second would close a cycle
-		// against it — the same ordering the DOI issuer takes, and for the same
-		// reason.
-		// The prior values come from the write itself, through a pre-write
-		// self-join: a separate read would be a different look at the same row,
-		// and the audit row would attest to something other than what this
-		// statement replaced.
-		var wasStatus string
-		var wasPerson *ids.UUID
-		// BOUND to the connection this proposal was staged for, on all three
-		// axes the payload names. The guards above gate the PERSON — the update
-		// grant and the target's visibility — and nothing tied the connection:
-		// an apply would re-point an already-confirmed row to a different
-		// contact, and would land on another member's connection, if the payload
-		// said so.
-		//
-		// owner_user_id, because a member decides about their OWN imported
-		// network and nobody else's. match_status = 'suggested', because a
-		// confirmed row is a link somebody already has and this is not the verb
-		// that moves one. matched_person_id, because the pair is the claim: an
-		// approval released against this contact must not apply to whatever the
-		// row points at now if the matcher moved it.
-		err := tx.QueryRow(ctx, `
-			UPDATE linkedin_connection c
-			   SET match_status = 'confirmed', updated_at = now()
-			  FROM linkedin_connection was
-			 WHERE c.id = $1 AND was.id = c.id AND c.tombstoned_at IS NULL
-			   AND c.owner_user_id = $3
-			   AND c.match_status = 'suggested'
-			   AND c.matched_person_id = $2
-			 RETURNING was.match_status, was.matched_person_id`,
-			connectionID, personID, ownerID).Scan(&wasStatus, &wasPerson)
-		if errors.Is(err, pgx.ErrNoRows) {
-			// Every way the predicate misses is the same answer, and it is the
-			// honest one: this approval does not describe a suggestion that is
-			// still there to confirm. The connection was tombstoned or erased,
-			// or it belongs to another member, or it has already been confirmed,
-			// or the pair it names has moved. Silently succeeding would report a
-			// link that does not exist.
-			return apperrors.ErrNotFound
-		}
-		if err != nil {
-			return fmt.Errorf("people: applying an approved LinkedIn match: %w", err)
-		}
-		wrote, err := writeLinkedInHandle(ctx, tx, connectionID, personID)
-		if err != nil {
-			return err
-		}
-		return auditLinkedInMatch(ctx, tx, connectionID, personID, matchImages(wasStatus, wasPerson, personID), wrote)
+		return applyLinkedInMatchInTx(ctx, tx, connectionID, ownerID, personID)
 	})
+}
+
+// ApplyLinkedInMatchTx is ApplyLinkedInMatch inside a transaction the CALLER
+// owns, for the accept effect.
+//
+// It exists so redeeming the approval and applying it are ONE transaction. They
+// were two: the redemption committed, and a failure in the apply left the
+// approval consumed and the connection never linked — with no way back through
+// the API, because the row is decided and re-deciding answers 409. Redeem's own
+// doc says callers should use RedeemAndApply and have no window at all, which
+// every other accept effect in compose already does.
+//
+// The object gate is the caller's to apply, as it is for every other Tx-shaped
+// entry point here: the approvals service checks the decider's authority before
+// any effect runs, and ApplyLinkedInMatch applies it above for the direct path.
+func ApplyLinkedInMatchTx(ctx context.Context, tx pgx.Tx, connectionID, ownerID, personID ids.UUID) error {
+	return applyLinkedInMatchInTx(ctx, tx, connectionID, ownerID, personID)
+}
+
+// applyLinkedInMatchInTx is the write both entry points land on.
+func applyLinkedInMatchInTx(ctx context.Context, tx pgx.Tx, connectionID, ownerID, personID ids.UUID) error {
+	if err := auth.HoldWritableLive(ctx, tx, entityPerson, personID); err != nil {
+		return err
+	}
+	// And HELD, before the connection row below. person_social is a declared
+	// PII table Art. 17 erasure deletes, so a handle written after that
+	// commit puts the erased person's public profile straight back.
+	//
+	// Taken HERE rather than beside that write, because the erasure goes
+	// person-then-linkedin_connection and this transaction locks the
+	// connection two statements down. Person second would close a cycle
+	// against it — the same ordering the DOI issuer takes, and for the same
+	// reason.
+	// The prior values come from the write itself, through a pre-write
+	// self-join: a separate read would be a different look at the same row,
+	// and the audit row would attest to something other than what this
+	// statement replaced.
+	var wasStatus string
+	var wasPerson *ids.UUID
+	// BOUND to the connection this proposal was staged for, on all three
+	// axes the payload names. The guards above gate the PERSON — the update
+	// grant and the target's visibility — and nothing tied the connection:
+	// an apply would re-point an already-confirmed row to a different
+	// contact, and would land on another member's connection, if the payload
+	// said so.
+	//
+	// owner_user_id, because a member decides about their OWN imported
+	// network and nobody else's. match_status = 'suggested', because a
+	// confirmed row is a link somebody already has and this is not the verb
+	// that moves one. matched_person_id, because the pair is the claim: an
+	// approval released against this contact must not apply to whatever the
+	// row points at now if the matcher moved it.
+	err := tx.QueryRow(ctx, `
+		UPDATE linkedin_connection c
+		   SET match_status = 'confirmed', updated_at = now()
+		  FROM linkedin_connection was
+		 WHERE c.id = $1 AND was.id = c.id AND c.tombstoned_at IS NULL
+		   AND c.owner_user_id = $3
+		   AND c.match_status = 'suggested'
+		   AND c.matched_person_id = $2
+		 RETURNING was.match_status, was.matched_person_id`,
+		connectionID, personID, ownerID).Scan(&wasStatus, &wasPerson)
+	if errors.Is(err, pgx.ErrNoRows) {
+		// Every way the predicate misses is the same answer, and it is the
+		// honest one: this approval does not describe a suggestion that is
+		// still there to confirm. The connection was tombstoned or erased,
+		// or it belongs to another member, or it has already been confirmed,
+		// or the pair it names has moved. Silently succeeding would report a
+		// link that does not exist.
+		return apperrors.ErrNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("people: applying an approved LinkedIn match: %w", err)
+	}
+	wrote, err := writeLinkedInHandle(ctx, tx, connectionID, personID)
+	if err != nil {
+		return err
+	}
+	return auditLinkedInMatch(ctx, tx, connectionID, personID, matchImages(wasStatus, wasPerson, personID), wrote)
 }
 
 // matchImagePair is the connection's own columns on either side of a confirmed

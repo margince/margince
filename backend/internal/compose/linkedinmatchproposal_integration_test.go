@@ -407,3 +407,59 @@ func onlyLinkedInConnection(t *testing.T, e *integration.Env) ids.UUID {
 	}
 	return id
 }
+
+// A FAILED APPLY TAKES THE REDEMPTION WITH IT.
+//
+// The effect redeemed the approval and then applied it in a SECOND
+// transaction. A failure in the apply left the approval consumed and the
+// connection never linked — and unrecoverable through the API, because the row
+// is decided and re-deciding answers 409. Redeem's own doc says callers should
+// use RedeemAndApply and have no window at all.
+//
+// The failure is produced by tombstoning the connection between staging and
+// deciding, which is a thing that actually happens: a re-import supersedes the
+// row a proposal is about. The apply then refuses, and what this pins is that
+// the approval is left UNCONSUMED — so a consumed approval implies the write
+// landed, which is the property the two transactions did not have.
+func TestAFailedLinkedInApplyLeavesTheApprovalUnconsumed(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
+	linkedInMatchFixture(ctx, t, e)
+	grantReadPeopleRole(t, e, e.Rep1, "all")
+
+	store := people.NewStore(e.DB())
+	if _, err := store.MatchLinkedInConnections(ctx, e.Rep1); err != nil {
+		t.Fatalf("matching: %v", err)
+	}
+	svc := approvalsServiceWithEffects(e.Pool)
+	if _, err := StageLinkedInMatches(ctx, svc, store); err != nil {
+		t.Fatalf("staging: %v", err)
+	}
+	approval := onlyPendingLinkedInMatch(t, e)
+
+	// The row the proposal is about goes away, exactly as a re-import would
+	// take it away.
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(),
+			`UPDATE linkedin_connection SET tombstoned_at = now()`)
+		return err
+	}); err != nil {
+		t.Fatalf("tombstoning the connection: %v", err)
+	}
+
+	if _, err := svc.Decide(ctx, approval, true, nil); err == nil {
+		t.Fatal("approving reported success while the connection it names was gone")
+	}
+
+	var consumed *string
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT consumed_at::text FROM approval WHERE id = $1`, approval).Scan(&consumed)
+	}); err != nil {
+		t.Fatalf("reading the approval back: %v", err)
+	}
+	if consumed != nil {
+		t.Errorf("the approval is consumed at %s while its apply failed — the redemption committed "+
+			"on its own, so the member's yes is spent and the connection was never linked", *consumed)
+	}
+}
