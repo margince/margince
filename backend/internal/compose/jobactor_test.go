@@ -279,16 +279,32 @@ func withCalledHelpers(body string, pkg map[string]string) string {
 func namesBoundIn(body string) map[string]bool {
 	bound := map[string]bool{}
 	for _, m := range localBinding.FindAllStringSubmatch(body, -1) {
-		for _, name := range strings.Split(m[1], ",") {
-			bound[strings.TrimSpace(name)] = true
+		for _, part := range strings.Split(m[1], ",") {
+			// The LAST word of each comma-separated part. The capture is
+			// deliberately loose enough to reach a name introduced in a control
+			// clause, which means it also takes the keyword in front of it —
+			// `switch bindActor`, `for _, bindActor` — and the name is what
+			// follows.
+			words := strings.Fields(part)
+			if len(words) == 0 {
+				continue
+			}
+			bound[words[len(words)-1]] = true
 		}
 	}
 	return bound
 }
 
-// localBinding captures the left-hand side of a declaration or assignment, and
-// of a `var` line.
-var localBinding = regexp.MustCompile(`(?m)^\s*(?:var\s+)?([\w, ]+?)\s*:?=[^=]`)
+// localBinding captures the left-hand side of any declaration or assignment,
+// wherever it appears on a line.
+//
+// NOT anchored to the start of a line, which the first version was and which
+// missed every control-clause declaration: `if h := w.bind; …`, `for _, h := range …`,
+// `switch h := w.bind; …`. A helper name shadowed in one of those read as the
+// package's own function, and the worker came back bound on the strength of a
+// body it never runs — the exact hole this guard exists to close, in the three
+// places Go lets a name be introduced without a statement of its own.
+var localBinding = regexp.MustCompile(`(?:^|[^\w.])(?:var\s+)?([\w][\w, ]*?)\s*:?=[^=]`)
 
 // afterSignature drops a method's own declaration line, so the method's NAME is
 // not read as a call it makes.
@@ -373,5 +389,42 @@ func bindActor(ctx context.Context) context.Context {
 	}
 	if actorBinders.MatchString(withCalledHelpers(worker, index)) {
 		t.Error("the worker read as binding an actor through a name it had shadowed with a field of its own")
+	}
+}
+
+// The shadow guard reads a name declared in a control clause.
+//
+// `if`, `for` and `switch` each let a name be introduced without a statement of
+// its own, and a guard anchored to the start of a line sees none of them — so a
+// helper name shadowed in one read as the package's own function and vouched
+// for a worker that binds nothing.
+func TestTheFollowSeesAShadowDeclaredInAControlClause(t *testing.T) {
+	t.Parallel()
+	const pkg = `package compose
+
+func bindActor(ctx context.Context) context.Context {
+	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem})
+	return ctx
+}
+`
+	for _, tc := range []struct {
+		name, body string
+	}{
+		{"an if initializer", "\tif bindActor := w.transform; bindActor != nil {\n\t\tctx = bindActor(ctx)\n\t}\n"},
+		{"a for range", "\tfor _, bindActor := range w.transforms {\n\t\tctx = bindActor(ctx)\n\t}\n"},
+		{"a switch initializer", "\tswitch bindActor := w.transform; {\n\tdefault:\n\t\tctx = bindActor(ctx)\n\t}\n"},
+		// The one that is not at the start of its line, which is why the scan
+		// is not anchored to one.
+		{"an else-if initializer", "\tif w.pool == nil {\n\t\treturn nil\n\t} else if bindActor := w.transform; bindActor != nil {\n\t\tctx = bindActor(ctx)\n\t}\n"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			worker := "func (w *someWorker) Work(ctx context.Context) error {\n" +
+				"\tdb := database.BindTo(w.pool, ws)\n" + tc.body + "\treturn run(ctx, db)\n}\n"
+			index := map[string]string{}
+			indexFunctions(index, pkg)
+			if actorBinders.MatchString(withCalledHelpers(worker, index)) {
+				t.Error("the worker read as binding an actor through a name it had shadowed in a control clause")
+			}
+		})
 	}
 }
