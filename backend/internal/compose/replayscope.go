@@ -170,6 +170,14 @@ var replayableOperations = map[string]replayTarget{
 	"POST /v1/organizations":            {object: tableOrganization, table: tableOrganization, idPath: "id"},
 	"PATCH /v1/organizations/{id}":      {object: tableOrganization, table: tableOrganization, idPath: "id"},
 	"POST /v1/organizations/{id}/merge": {object: tableOrganization, table: tableOrganization, idPath: "id"},
+	// The rejection answers the archived company alongside the domain decision
+	// it recorded, so the replayed record is the organization and the gate
+	// resolves against its own row — the admission carries no authority of its
+	// own, and the same organization grant governs both halves. Replay matters
+	// more here than for an ordinary archive: a retried reject would find the
+	// record already archived and refuse, telling the caller their own retry
+	// had failed while the standing domain refusal was in place all along.
+	"POST /v1/organizations/{id}/reject": {object: tableOrganization, table: tableOrganization, idPath: "organization.id"},
 	// A profile-field or fact write is an assertion ABOUT the organization and
 	// is governed by its grant, so the replay gate resolves against the
 	// organization row — the sidecar carries no independent authority. The

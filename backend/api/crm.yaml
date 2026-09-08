@@ -2501,6 +2501,58 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
 
+  /organizations/{id}/reject:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Organizations]
+      operationId: rejectOrganization
+      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: This is not a company — archive it and refuse its domain as one (admin/ops).
+      description: |
+        Archiving alone does not settle it: the next message from the same domain mints the
+        company again, and the person who deleted it learns nothing about why it came back.
+        This does both halves in ONE transaction — the domain is recorded `suppressed` with a
+        human admission, and the record is archived — so the outcome is never half a decision.
+
+        The domain is read HERE, from the company's current primary domain, and is not a field
+        on the request. A domain the caller carried is a snapshot: with several domains, a
+        primary that changed since the page loaded would suppress the old one while archiving a
+        company whose mail still arrives on the new one.
+
+        Refused for the installation's own company, which cannot be archived at all, and for a
+        company with no primary domain — one somebody typed in by hand was never derived from
+        mail, so there is nothing to refuse.
+
+        The admission is a HUMAN one and therefore sticky: no later verdict may re-open the
+        domain, and only a person may let it back in through the blocked-domain surface. That
+        is why this is human-only, like the rest of the capture posture.
+
+        Needs both `organization:delete` (the archive) and `organization:update` (the standing
+        domain decision). A seat holding only one of them is refused before anything is written.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RejectOrganizationRequest' }
+            examples:
+              aVendor: { value: { reason: 'a tool we use, not a customer' } }
+      responses:
+        '200':
+          description: The archived company and the domain decision recorded with it.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RejectOrganizationResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /organizations/{id}/merge:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -22795,6 +22847,32 @@ components:
           minLength: 1
           maxLength: 500
           description: 'Why. Required, because a refusal nobody can explain is one nobody can review.'
+    RejectOrganizationRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+          # A non-whitespace character, because the handler trims before it
+          # judges: `minLength` alone admits "   ", which is then refused with
+          # a 422 the contract gave no way to predict.
+          pattern: '\S'
+          description: |
+            Why this is not a company. Required: the refusal outlives the record, and the next
+            operator to find the domain on the blocked list can only review a decision that
+            says something.
+    RejectOrganizationResponse:
+      type: object
+      description: |
+        Both halves of the one decision, because both landed. A caller that showed only the
+        archived record would leave the standing domain refusal — the half that stops the
+        company coming back — invisible to the person who just made it.
+      required: [organization, domain]
+      properties:
+        organization: { $ref: '#/components/schemas/Organization' }
+        domain: { $ref: '#/components/schemas/BlockedDomain' }
     BlockedDomainListResponse:
       type: object
       required: [data, total]

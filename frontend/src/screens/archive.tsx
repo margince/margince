@@ -15,14 +15,17 @@ import { problemMessageOf } from "./common";
 // control against them. Mirrors useUpdateRecord/EditAction (edit.tsx): the
 // screen supplies the transport, this stays resource-agnostic.
 
-export function useArchiveRecord<Archived extends { id: string }>({
+export function useArchiveRecord<Archived extends { id: string }, Vars = void>({
   archive,
   invalidate,
   recordKey,
   archivedMessage,
   onDone,
 }: Readonly<{
-  archive: () => Promise<Archived>;
+  // Takes the caller's own variables, so a form's value reaches the request as
+  // an argument rather than through a closure the render decides. A caller with
+  // nothing to pass leaves Vars at void and calls mutate() as before.
+  archive: (vars: Vars) => Promise<Archived>;
   invalidate: string;
   recordKey: string;
   // What the reader is told once it is gone, already translated. REQUIRED, and
@@ -32,10 +35,17 @@ export function useArchiveRecord<Archived extends { id: string }>({
   // stay silent has to say so by writing the sentence, which is a decision
   // somebody makes rather than one that happens by nobody adding a line.
   //
+  // A FUNCTION of the result where the sentence needs a fact only the server
+  // knows. Rejecting a company refuses whichever domain was primary at the
+  // moment of the write, which is deliberately not the one the page was
+  // showing — so a message composed before the call could name the wrong one,
+  // and telling somebody the wrong domain is refused is worse than telling
+  // them nothing.
+  //
   // No `action` here for the same reason the comment at the top of this file
   // gives: the contract has no restore endpoint, and an Undo with nothing
   // behind it is worse than none.
-  archivedMessage: string;
+  archivedMessage: string | ((archived: Archived) => string);
   onDone: (archived: Archived) => void;
 }>) {
   const queryClient = useQueryClient();
@@ -46,7 +56,11 @@ export function useArchiveRecord<Archived extends { id: string }>({
       queryClient.invalidateQueries({ queryKey: [invalidate] });
       queryClient.invalidateQueries({ queryKey: [recordKey, archived.id] });
       onDone(archived);
-      toast.show(archivedMessage);
+      toast.show(
+        typeof archivedMessage === "string"
+          ? archivedMessage
+          : archivedMessage(archived),
+      );
     },
   });
 }

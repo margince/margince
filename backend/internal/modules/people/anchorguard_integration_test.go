@@ -49,15 +49,25 @@ func TestEachAnchorRefusalNamesItsFieldAndAWorkingMove(t *testing.T) {
 	_, archiveErr := env.store.ArchiveOrganization(env.ctx, env.anchorID, nil)
 	_, sourceErr := env.store.MergeOrganization(env.ctx, env.anchorID, other)
 	_, targetErr := env.store.MergeOrganization(env.ctx, other, env.anchorID)
+	// The rejection reaches this guard BEFORE it reads a domain, which is why
+	// the anchor — which carries none — is refused as the anchor here rather
+	// than for having nothing to refuse.
+	_, rejectErr := env.store.RejectOrganization(env.ctx, env.anchorID, "not a customer", nil)
 
 	for _, tc := range []struct {
 		operation string
 		err       error
 		wantField string
+		// wantMove is the verb the advice must name. It is per operation
+		// because the move that works is: every merge direction is refused, so
+		// a merge is told to archive the duplicate instead, while archive and
+		// reject each send the caller at a different company.
+		wantMove string
 	}{
-		{"archiving the anchor", archiveErr, "id"},
-		{"merging the anchor away", sourceErr, "id"},
-		{"merging a company into the anchor", targetErr, "target_id"},
+		{"archiving the anchor", archiveErr, "id", "Archive"},
+		{"merging the anchor away", sourceErr, "id", "Archive"},
+		{"merging a company into the anchor", targetErr, "target_id", "Archive"},
+		{"rejecting the anchor", rejectErr, "id", "Reject"},
 	} {
 		var protected *AnchorProtectedError
 		if !errors.As(tc.err, &protected) {
@@ -76,8 +86,9 @@ func TestEachAnchorRefusalNamesItsFieldAndAWorkingMove(t *testing.T) {
 			t.Errorf("%s: %q says what is refused but not what to do instead", tc.operation, message)
 			continue
 		}
-		if !strings.Contains(advice, "Archive") || strings.Contains(advice, "erge") {
-			t.Errorf("%s advises %q — the only move that works is archiving the duplicate; every merge direction is refused", tc.operation, advice)
+		if !strings.Contains(advice, tc.wantMove) || strings.Contains(advice, "erge") {
+			t.Errorf("%s advises %q, want a move naming %q — no merge direction is open when one side is the anchor",
+				tc.operation, advice, tc.wantMove)
 		}
 	}
 	env.assertCompanyStillReadable(t)

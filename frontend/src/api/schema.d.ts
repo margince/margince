@@ -1539,6 +1539,48 @@ export interface paths {
         patch: operations["updateOrganization"];
         trace?: never;
     };
+    "/organizations/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * This is not a company — archive it and refuse its domain as one (admin/ops).
+         * @description Archiving alone does not settle it: the next message from the same domain mints the
+         *     company again, and the person who deleted it learns nothing about why it came back.
+         *     This does both halves in ONE transaction — the domain is recorded `suppressed` with a
+         *     human admission, and the record is archived — so the outcome is never half a decision.
+         *
+         *     The domain is read HERE, from the company's current primary domain, and is not a field
+         *     on the request. A domain the caller carried is a snapshot: with several domains, a
+         *     primary that changed since the page loaded would suppress the old one while archiving a
+         *     company whose mail still arrives on the new one.
+         *
+         *     Refused for the installation's own company, which cannot be archived at all, and for a
+         *     company with no primary domain — one somebody typed in by hand was never derived from
+         *     mail, so there is nothing to refuse.
+         *
+         *     The admission is a HUMAN one and therefore sticky: no later verdict may re-open the
+         *     domain, and only a person may let it back in through the blocked-domain surface. That
+         *     is why this is human-only, like the rest of the capture posture.
+         *
+         *     Needs both `organization:delete` (the archive) and `organization:update` (the standing
+         *     domain decision). A seat holding only one of them is refused before anything is written.
+         */
+        post: operations["rejectOrganization"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/organizations/{id}/merge": {
         parameters: {
             query?: never;
@@ -15473,6 +15515,23 @@ export interface components {
             admission: "suppressed" | "admitted";
             /** @description Why. Required, because a refusal nobody can explain is one nobody can review. */
             reason: string;
+        };
+        RejectOrganizationRequest: {
+            /**
+             * @description Why this is not a company. Required: the refusal outlives the record, and the next
+             *     operator to find the domain on the blocked list can only review a decision that
+             *     says something.
+             */
+            reason: string;
+        };
+        /**
+         * @description Both halves of the one decision, because both landed. A caller that showed only the
+         *     archived record would leave the standing domain refusal — the half that stops the
+         *     company coming back — invisible to the person who just made it.
+         */
+        RejectOrganizationResponse: {
+            organization: components["schemas"]["Organization"];
+            domain: components["schemas"]["BlockedDomain"];
         };
         BlockedDomainListResponse: {
             data: components["schemas"]["BlockedDomain"][];
@@ -36042,6 +36101,64 @@ export interface operations {
                     "application/json": components["schemas"]["Organization"];
                 };
             };
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    rejectOrganization: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RejectOrganizationRequest"];
+            };
+        };
+        responses: {
+            /** @description The archived company and the domain decision recorded with it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RejectOrganizationResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
