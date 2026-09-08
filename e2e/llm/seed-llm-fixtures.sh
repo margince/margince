@@ -516,8 +516,8 @@ print(len(json.load(sys.stdin).get("data", [])))')"
 
 # --- CASE 9: four activities filed on the wrong record ----------------------
 #
-# One mail on Rheinufer AG that is Dom Digital's, and three calls on Vorort
-# Systeme KG that are Aachener Metallwerke's. Three calls rather than two
+# One mail on Rheinufer AG that is Dom Digital's, and three mails on Vorort
+# Systeme KG that are Aachener Metallwerke's. Three rather than two
 # because the person asks for them to move as ONE act, and a number is what an
 # all-or-nothing answer reports.
 domdigital="$(org_id_by_name "Dom Digital GmbH")"
@@ -526,20 +526,22 @@ vorort="$(org_id_by_name "Vorort Systeme KG")"
 [[ -n "$domdigital" && -n "$rheinufer" && -n "$vorort" ]] || {
   echo "case 9 relinks between the Köln companies and they are not all seeded" >&2; exit 1; }
 
-# A CALL CANNOT BE CREATED AGAINST A COMPANY, but it can be MOVED onto one.
-# activities/activitylinks.go refuses a call or a meeting whose link names an
-# organization — a call is with a person — and that refusal lives on the create
-# door alone: the trigger that held the relink door too was withdrawn by
-# migration 1787570000. So the fixture logs the call unfiled and relinks it,
-# which is also the door case 9 asks the assistant to use.
-file_call_on_company() {
-  local subject="$1" said="$2" when="$3" company="$4" activity body code
-  body="$(printf '{"kind":"call","direction":"outbound","occurred_at":"%s","subject":"%s","body":"%s"}' \
-    "$when" "$subject" "$said")"
-  activity="$(create_or_die "/activities" "$body" "$subject")"
-  body="$(printf '{"entity_type":"organization","entity_id":"%s","replace_existing_of_type":true}' "$company")"
-  code="$(status_of POST "/activities/$activity/relink" "$body")"
-  [[ "$code" = "200" ]] || { echo "filing \"$subject\" on the company answered HTTP $code" >&2; exit 1; }
+# A CALL CANNOT REACH A COMPANY THROUGH EITHER DOOR, so these are mails.
+# Migration 1788000100 restored the rule 1787570000 had withdrawn — a call or a
+# meeting is with a PERSON, and the company is reached through that person's
+# employer — and it holds the relink door as well as the create door. An earlier
+# version of this fixture logged calls unfiled and relinked them onto the
+# company, which the estate answered 422 to before a single scenario ran.
+#
+# `email` is the kind the migration deliberately leaves unrestricted: a mail can
+# legitimately be addressed to an account alias nobody owns personally, which is
+# exactly what a misfiled company mail is. It is filed on the wrong company at
+# CREATE time, so what case 9 asks the assistant to do is still a move.
+file_mail_on_company() {
+  local subject="$1" said="$2" when="$3" company="$4" body
+  body="$(printf '{"kind":"email","direction":"outbound","occurred_at":"%s","subject":"%s","body":"%s","links":[{"entity_type":"organization","entity_id":"%s"}]}' \
+    "$when" "$subject" "$said" "$company")"
+  create_or_die "/activities" "$body" "$subject" >/dev/null
 }
 
 aachen="$(org_id_by_name "Aachener Metallwerke GmbH")"
@@ -555,7 +557,7 @@ if [[ -z "$aachen" ]]; then
   create_or_die "/activities" "$body" "the misfiled Wartungsvertrag mail" >/dev/null
 
   for n in 1 2 3; do
-    file_call_on_company "Rückruf Aachener Metallwerke ($n/3)" \
+    file_mail_on_company "Rückruf Aachener Metallwerke ($n/3)" \
       "Abstimmung zum Angebot für Aachener Metallwerke." "$(days_ago "$n")" "$vorort"
   done
 fi

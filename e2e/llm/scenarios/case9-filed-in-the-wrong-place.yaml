@@ -44,7 +44,7 @@ prompt: |
   nothing to do with them — that one is Dom Digital's. Get it off Rheinufer
   completely, it should not turn up on their timeline any more.
 
-  And the three calls that ended up on Vorort Systeme KG are all Aachener
+  And the three mails that ended up on Vorort Systeme KG are all Aachener
   Metallwerke's. Move all three across in one go — all three or none, I do not
   want half of them landing.
 
@@ -63,7 +63,7 @@ may_call:
   - catch_me_up_on
 
 # THE PLAN, NOT JUST THE VERB. Both verbs default to ADDING the new link beside
-# the existing one, and the person asked for neither mail nor calls to stay
+# the existing one, and the person asked for none of the mails to stay
 # where they are — "get it off Rheinufer", "move all three across". A run that
 # associates rather than moves leaves the wrong company still showing the
 # history, which is half the defect being fixed and reads as a pass on the tool

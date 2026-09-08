@@ -66,7 +66,19 @@ import tempfile
 # `self_judged` rather than hiding it). The recorded verdicts therefore carry
 # the model that produced them, so a corpus judged by one model is never read as
 # another's.
-DEFAULT_MODEL = "claude-opus-5"
+#
+# HAIKU, AND THE COST OF THAT IS PUBLISHED RATHER THAN ARGUED. Scored against the
+# human-authored fixtures, Opus reads these criteria more accurately than Haiku;
+# docs/reference/mcp-tool-coverage.md carries both numbers and names every
+# criterion each model misread, so the trade is a fact on the page instead of an
+# assumption in this comment. It is the cheap judge on purpose: the judge is a
+# small part of a sweep's bill, and the lane drives THREE candidate models, which
+# is what the budget is for.
+#
+# The criteria Haiku misread were sharpened rather than the labels moved to meet
+# it — a criterion a weaker reader gets wrong is usually a criterion that left a
+# case unstated, and the fixtures still discriminate for every model.
+DEFAULT_MODEL = "claude-haiku-4-5-20251001"
 
 # The judge's own reply is one line of JSON. The instruction is the one
 # backend/internal/compose/certjudge.go sends its grader, in this lane's
