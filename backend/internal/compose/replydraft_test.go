@@ -4,8 +4,11 @@
 package compose
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"fmt"
+	"log/slog"
 	"strings"
 	"testing"
 
@@ -95,7 +98,11 @@ func TestWithReplyDraftLeavesFallbackWiringWhenBrainIsAbsent(t *testing.T) {
 // request; extra calls repeat the last response.
 type sequencedBrainStub struct {
 	responses []model.Response
-	requests  []model.Request
+	// errs is parallel to responses and answers instead of the response at
+	// that index when non-nil, so a case can fail ONE call of a sequence —
+	// which is the only way to reach a path that runs between two successes.
+	errs     []error
+	requests []model.Request
 }
 
 func (b *sequencedBrainStub) Complete(_ context.Context, req model.Request) (model.Response, error) {
@@ -103,6 +110,9 @@ func (b *sequencedBrainStub) Complete(_ context.Context, req model.Request) (mod
 	index := len(b.requests) - 1
 	if index >= len(b.responses) {
 		index = len(b.responses) - 1
+	}
+	if index < len(b.errs) && b.errs[index] != nil {
+		return model.Response{}, b.errs[index]
 	}
 	return b.responses[index], nil
 }
@@ -355,5 +365,66 @@ func TestAnEnglishThreadIsDraftedInEnglishUnderAGermanVoice(t *testing.T) {
 	// the language, which is the sentence that counteracts German exemplars.
 	if !strings.Contains(brain.request.System, "never chooses the LANGUAGE") {
 		t.Error("the voice rule does not say the profile leaves the language alone")
+	}
+}
+
+// A critic retry that FAILS is recorded, and the first draft still stands.
+//
+// The retry is the one call in this lane that goes to d.complete rather than
+// completeChecked, so draftRetryLog never sees it. Unlogged, its failure was
+// recorded nowhere at all: the first draft went on to the sanitizer, and a
+// draft whose violations the sanitizer happened to remove was served and fed
+// to the learning panel indistinguishable from one that never violated
+// anything.
+func TestAFailedVoiceCriticRetryIsLoggedAndTheFirstDraftStands(t *testing.T) {
+	// The violation is a canned opener, which the sanitizer does NOT remove —
+	// so the fallback below is reached and the case pins the log rather than
+	// accidentally proving the sanitizer's behaviour.
+	violating := `{"subject":"Re: plan","body":"Here's the thing: it's not about tools, but transformation. What do you think?"}`
+	retryFailed := errors.New("upstream model refused the retry")
+	brain := &sequencedBrainStub{
+		responses: []model.Response{
+			{Text: violating},
+			{},
+			{Text: `{"subject":"Re: plan","body":"A plain professional reply."}`},
+		},
+		errs: []error{nil, retryFailed, nil},
+	}
+	var logged bytes.Buffer
+	drafter := replyDrafter{brain: brain, log: slog.New(slog.NewTextHandler(&logged, nil))}
+
+	draft, version, _, err := drafter.completeVoiced(context.Background(), ids.NewV7(),
+		replyActivityData{Subject: "plan", Thread: "inbound_mail"}, testVoiceContext())
+	if err != nil {
+		t.Fatalf("a failed critic retry must not fail the draft: %v", err)
+	}
+	if !strings.Contains(logged.String(), retryFailed.Error()) {
+		t.Errorf("the retry failure reached no log: %q", logged.String())
+	}
+	// The count too, and derived from the production detector rather than
+	// written down: a hard-coded number would drift the day a floor rule is
+	// added, and a log line that says only "a retry failed" cannot tell a
+	// reader whether the draft it kept was one violation off or twelve.
+	first := replyDraft{
+		Subject: "Re: plan",
+		Body:    "Here's the thing: it's not about tools, but transformation. What do you think?",
+	}
+	wantCount := len(voiceDraftViolations(first))
+	if wantCount == 0 {
+		t.Fatal("the fixture body trips no floor rule, so this case never reaches the retry at all")
+	}
+	if !strings.Contains(logged.String(), fmt.Sprintf("violations=%d", wantCount)) {
+		t.Errorf("the log does not carry violations=%d: %q", wantCount, logged.String())
+	}
+	// The first draft stood, kept its violations, and so took the plain
+	// fallback — which is the behaviour the log exists to make visible.
+	if version != nil {
+		t.Errorf("a fallback draft must not claim a voice version, got %v", version)
+	}
+	if draft.Body != "A plain professional reply." {
+		t.Errorf("draft = %+v, want the plain fallback", draft)
+	}
+	if len(brain.requests) != 3 {
+		t.Errorf("calls = %d, want voice + failed retry + plain", len(brain.requests))
 	}
 }
