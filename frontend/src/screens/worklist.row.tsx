@@ -44,6 +44,7 @@ import {
 } from "./worklist.copy";
 import { PutDownByThumb } from "./worklist.dispositions";
 import { WaitingEmailLine } from "./worklist.emailtitle";
+import { eyebrowKeyFor } from "./worklist.eyebrow";
 import { PairDecision } from "./worklist.pair";
 import {
   useApproval,
@@ -191,7 +192,7 @@ export function WorklistRow({
             width the kinds share — and draws nothing itself. */}
         <span className="worklist-row-kind">
           <Badge quiet tone={item.band === "now" ? "warn" : undefined}>
-            {t(`worklist.category.${item.category}` as const)}
+            {t(eyebrowKeyFor(item))}
           </Badge>
         </span>
         <div className="worklist-row-text">

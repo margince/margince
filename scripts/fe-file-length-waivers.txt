@@ -140,6 +140,6 @@
 857 frontend/src/screens/worklist.copy.ts
 676 frontend/src/screens/worklist.dispositions.tsx
 561 frontend/src/screens/worklist.queries.ts
-1207 frontend/src/screens/worklist.row.tsx
+1208 frontend/src/screens/worklist.row.tsx
 1098 frontend/src/screens/worklist.test.tsx
 789 frontend/src/screens/worklist.tsx
