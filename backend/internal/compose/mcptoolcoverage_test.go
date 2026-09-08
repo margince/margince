@@ -76,9 +76,11 @@ type toolCoverageRow struct {
 	// page that reported the two as one silence would name work undone that is
 	// done, on a different question.
 	GradedBy []string `json:"graded_by_certification_tasks"`
-	// Measured is what the lane saw across the cases that require this tool.
-	// Absent when nothing requires it, or when no run has been committed.
-	Measured *toolMeasurement `json:"measured"`
+	// MeasuredByModel is what the lane saw across the cases that require this
+	// tool, PER MODEL. Empty when nothing requires it, or when no run has been
+	// committed. Keyed by model because reliability is a property of the pair:
+	// one model driving a tool well says nothing about another driving it.
+	MeasuredByModel map[string]*toolMeasurement `json:"measured_by_model"`
 }
 
 // toolMeasurement is how the cases that require one tool actually went.
@@ -120,7 +122,6 @@ type coverageTotals struct {
 	PermittedNotDriven int `json:"permitted_but_never_required"`
 	UndrivenCost       int `json:"tokens_served_but_never_driven"`
 	Cases              int `json:"use_case_cases"`
-	CasesRecorded      int `json:"cases_with_a_committed_run"`
 	CriteriaNamed      int `json:"acceptance_criteria_named"`
 	// UnitTools is what the shipped units add to the SAME registry the core
 	// catalog is served from. They are not in Tools above: this package cannot
@@ -138,16 +139,63 @@ type caseRow struct {
 	File     string   `json:"file"`
 	Criteria []int    `json:"criteria"`
 	Requires []string `json:"requires"`
-	Runs     int      `json:"runs"`
-	Passed   int      `json:"passed"`
-	PassAt   int      `json:"pass_at"`
-	Recorded bool     `json:"recorded"`
-	Model    string   `json:"model"`
+	// ByModel is one entry per model the lane has been run with, because a pass
+	// rate belongs to the model that produced it. It was a scalar while one
+	// model had run, and collapsing several into one would publish whichever
+	// directory sorted first as though it were the answer — a number describing
+	// something other than what it names, which is the defect this page exists
+	// to have stopped doing.
+	ByModel []caseModelRun `json:"by_model"`
+}
+
+// caseModelRun is one model's result on one case.
+type caseModelRun struct {
+	Model  string `json:"model"`
+	Runs   int    `json:"runs"`
+	Passed int    `json:"passed"`
+	PassAt int    `json:"pass_at"`
+	// Held is whether the case reached its own bar for this model. Stated
+	// rather than left to a reader to compute, because pass_at differs per case
+	// and comparing passed/runs across cases without it flatters the easy ones.
+	Held bool `json:"held"`
+}
+
+// modelCoverage is the whole lane as ONE model ran it. Driven/never-driven is
+// not in here on purpose: what a case REQUIRES is a property of the scenario, so
+// the surface a lane exercises is the same whoever drives it. What changes per
+// model is whether the driving SUCCEEDED, and only that is reported per model.
+type modelCoverage struct {
+	Model         string `json:"model"`
+	CasesRecorded int    `json:"cases_with_a_committed_run"`
+	CasesHeld     int    `json:"cases_that_reached_their_bar"`
+	CasesBelowBar int    `json:"cases_below_their_bar"`
+	Runs          int    `json:"runs"`
+	Passed        int    `json:"passed"`
+	// Reliability is Passed/Runs over every committed run. It answers "how often
+	// did this model do the job", which a count of held cases cannot: a case
+	// scraping its bar two runs in three and one passing all three are both held.
+	Reliability float64 `json:"reliability"`
+	// BelowBar names them, because a rate with no names is a number nobody can
+	// act on.
+	BelowBar []string `json:"cases_below_their_bar_named"`
 }
 
 type mcpToolCoverage struct {
-	Note     string            `json:"note"`
-	Totals   coverageTotals    `json:"totals"`
+	Note   string         `json:"note"`
+	Totals coverageTotals `json:"totals"`
+	// Models is the lane per model that has run it. Empty until a paid sweep is
+	// committed, which the page says outright rather than implying nothing works.
+	Models []modelCoverage `json:"models"`
+	// Judges is how well each candidate JUDGE reads the lane's criteria, scored
+	// against human-authored fixtures. It rides on this page rather than its own
+	// because a pass rate and the accuracy of whoever decided it are one fact: a
+	// reader trusting the first without the second is trusting a number whose
+	// error bar nobody showed them.
+	Judges []judgeEvalRow `json:"judges"`
+	// Excluded is what no judge is charged for, carried onto the page so the
+	// exemption is visible beside the scores it changes rather than only in the
+	// source that applies it.
+	Excluded map[string]string `json:"judge_trial_excluded"`
 	Cases    []caseRow         `json:"cases"`
 	Criteria []criterionRow    `json:"criteria"`
 	Tools    []toolCoverageRow `json:"tools"`
@@ -220,10 +268,19 @@ func TestTheMCPToolCoverageIsPublished(t *testing.T) {
 	report := mcpToolCoverage{Note: mcpToolCoverageNote, Cases: cases, UnitTools: units, Agents: agentSurface}
 	report.Totals.UnitTools = len(units)
 	report.Totals.Cases = len(cases)
+	judges, err := readJudgeEvals(t, judgeEvalRecordDir)
+	if err != nil {
+		t.Fatalf("reading the judge eval records at %s: %v", judgeEvalRecordDir, err)
+	}
+	report.Judges = judges
+	report.Excluded = judgeEvalHarnessArtifacts.Reasons()
+	judgeEvalHarnessArtifacts.AssertAllMatched(t)
+
+	ran := modelsThatRan(cases)
+	for _, model := range ran {
+		report.Models = append(report.Models, summariseModel(cases, model))
+	}
 	for _, c := range cases {
-		if c.Recorded {
-			report.Totals.CasesRecorded++
-		}
 		named, ok := catalog[c.Name]
 		if !ok {
 			t.Errorf("case %s declares criteria and %s names none of them — a grade against a "+
@@ -272,7 +329,12 @@ func TestTheMCPToolCoverageIsPublished(t *testing.T) {
 		row.MustCall = sortedCopy(row.MustCall)
 		row.Driven = len(row.MustCall) > 0
 		row.GradedBy = graded[spec.Name]
-		row.Measured = measureCases(cases, row.MustCall)
+		row.MeasuredByModel = map[string]*toolMeasurement{}
+		for _, model := range ran {
+			if m := measureCases(cases, row.MustCall, model); m != nil {
+				row.MeasuredByModel[model] = m
+			}
+		}
 		report.Tools = append(report.Tools, row)
 	}
 	sort.Slice(report.Tools, func(i, j int) bool {
@@ -379,10 +441,7 @@ func readE2ELLMCases(scenarioDir, recordDir string) ([]caseRow, error) {
 			}
 		}
 		row.Requires = sortedCopy(toolsInBlock(e2eMustCallBlock, text))
-		if v, ok := verdictFor(verdicts, row.Name); ok {
-			row.Recorded, row.Runs, row.Passed, row.PassAt = true, v.Runs, v.Passed, v.PassAt
-			row.Model = v.Model
-		}
+		row.ByModel = runsFor(verdicts, row.Name)
 		cases = append(cases, row)
 	}
 	sort.Slice(cases, func(i, j int) bool { return cases[i].File < cases[j].File })
@@ -467,26 +526,28 @@ func readCriteria(path string) (map[string]map[int]criterionRow, error) {
 	return out, nil
 }
 
-// verdictFor picks one model's verdict for a case, by model name in order, so
-// the page is byte-stable and every row on it comes from the same model rather
-// than from whichever directory the filesystem listed first.
+// runsFor is every model's result on one scenario, ordered by model name.
 //
-// It reports the FIRST model alphabetically that ran the case. That is a choice
-// the page states in its own totals, and it is only visible once a second model
-// has run — at which point this wants replacing with a column per model rather
-// than a rule for picking one.
-func verdictFor(verdicts map[verdictKey]e2eVerdict, scenario string) (e2eVerdict, bool) {
-	var chosen e2eVerdict
-	found := false
+// It replaced a chooser that returned ONE verdict per scenario, picking the
+// lowest model name. That was correct while one model had run and silently
+// wrong the moment a second did: the page would have shown one model's pass
+// rate under a heading that named the case, not the model.
+func runsFor(verdicts map[verdictKey]e2eVerdict, scenario string) []caseModelRun {
+	var out []caseModelRun
 	for key, v := range verdicts {
 		if key.scenario != scenario {
 			continue
 		}
-		if !found || key.model < chosen.Model {
-			chosen, found = v, true
-		}
+		out = append(out, caseModelRun{
+			Model:  v.Model,
+			Runs:   v.Runs,
+			Passed: v.Passed,
+			PassAt: v.PassAt,
+			Held:   v.PassAt > 0 && v.Passed >= v.PassAt,
+		})
 	}
-	return chosen, found
+	sort.Slice(out, func(i, j int) bool { return out[i].Model < out[j].Model })
+	return out
 }
 
 func toolsInBlock(block *regexp.Regexp, text string) []string {
@@ -519,20 +580,28 @@ func permittedCases(cases []caseRow, tool string) []string {
 	return sortedCopy(out)
 }
 
-// measureCases folds the committed verdicts of the cases requiring one tool.
-func measureCases(cases []caseRow, names []string) *toolMeasurement {
+// measureCases folds the committed verdicts of the cases requiring one tool,
+// for ONE model. A fold across models would average a strong driver with a weak
+// one and call the result the tool's reliability, which is nobody's experience
+// of it.
+func measureCases(cases []caseRow, names []string, model string) *toolMeasurement {
 	if len(names) == 0 {
 		return nil
 	}
 	m := toolMeasurement{BelowBar: []string{}}
 	for _, c := range cases {
-		if !listHas(names, c.Name) || !c.Recorded {
+		if !listHas(names, c.Name) {
 			continue
 		}
-		m.Runs += c.Runs
-		m.Passed += c.Passed
-		if c.Passed < c.PassAt {
-			m.BelowBar = append(m.BelowBar, c.Name)
+		for _, run := range c.ByModel {
+			if run.Model != model {
+				continue
+			}
+			m.Runs += run.Runs
+			m.Passed += run.Passed
+			if !run.Held {
+				m.BelowBar = append(m.BelowBar, c.Name)
+			}
 		}
 	}
 	if m.Runs == 0 {
@@ -541,6 +610,51 @@ func measureCases(cases []caseRow, names []string) *toolMeasurement {
 	m.Reliability = float64(m.Passed) / float64(m.Runs)
 	sort.Strings(m.BelowBar)
 	return &m
+}
+
+// modelsThatRan is every model name appearing in the committed verdicts, sorted.
+// Derived from the records rather than kept as a list here: a page that carried
+// its own roster would keep publishing a model whose records were deleted, and
+// would silently omit one somebody added.
+func modelsThatRan(cases []caseRow) []string {
+	seen := map[string]bool{}
+	for _, c := range cases {
+		for _, run := range c.ByModel {
+			seen[run.Model] = true
+		}
+	}
+	out := make([]string, 0, len(seen))
+	for model := range seen {
+		out = append(out, model)
+	}
+	sort.Strings(out)
+	return out
+}
+
+// summariseModel folds one model's whole lane for the page's top table.
+func summariseModel(cases []caseRow, model string) modelCoverage {
+	summary := modelCoverage{Model: model, BelowBar: []string{}}
+	for _, c := range cases {
+		for _, run := range c.ByModel {
+			if run.Model != model {
+				continue
+			}
+			summary.CasesRecorded++
+			summary.Runs += run.Runs
+			summary.Passed += run.Passed
+			if run.Held {
+				summary.CasesHeld++
+				continue
+			}
+			summary.CasesBelowBar++
+			summary.BelowBar = append(summary.BelowBar, c.Name)
+		}
+	}
+	if summary.Runs > 0 {
+		summary.Reliability = float64(summary.Passed) / float64(summary.Runs)
+	}
+	sort.Strings(summary.BelowBar)
+	return summary
 }
 
 // listHas reports whether a name is in a list. Named for the question rather
@@ -615,6 +729,7 @@ func renderMCPToolCoveragePage(r mcpToolCoverage) []byte {
 	writeCoverageCriteria(&p, r)
 	writeCoverageReliable(&p, r)
 	writeCoverageFailing(&p, r)
+	writeCoverageJudges(&p, r)
 	writeCoverageUndriven(&p, r)
 	return []byte(p.String())
 }
@@ -652,12 +767,34 @@ func writeCoverageTotals(p *strings.Builder, r mcpToolCoverage) {
 	fmt.Fprintf(p, "| … of those, permitted somewhere but never required | %d |\n", r.Totals.PermittedNotDriven)
 	fmt.Fprintf(p, "| Prompt tokens spent on tools no case requires | %d |\n", r.Totals.UndrivenCost)
 	fmt.Fprintf(p, "| Use cases | %d |\n", r.Totals.Cases)
-	fmt.Fprintf(p, "| … with a committed run | %d |\n", r.Totals.CasesRecorded)
 	fmt.Fprintf(p, "| Acceptance criteria the cases declare, each with a statement | %d |\n\n", r.Totals.CriteriaNamed)
-	if r.Totals.CasesRecorded < r.Totals.Cases {
-		fmt.Fprintf(p, "> **%d of %d cases have no committed run.** Their rows below say `not run` "+
-			"rather than a rate — nobody has paid for the answer yet.\n\n",
-			r.Totals.Cases-r.Totals.CasesRecorded, r.Totals.Cases)
+
+	if len(r.Models) == 0 {
+		p.WriteString("> **No model has a committed run.** Every case below says `not run` rather " +
+			"than a rate — nobody has paid for the answer yet, and an empty lane is not a failing one.\n\n")
+		return
+	}
+
+	p.WriteString("## By model\n\n")
+	p.WriteString("Which model drove the lane, and how it went. The tool columns further down are " +
+		"the same for every model — what a case REQUIRES is the scenario's property, not the " +
+		"driver's — so what changes here is whether the driving succeeded.\n\n")
+	p.WriteString("| Model | Cases run | Reached their bar | Below it | Runs passed | Reliability |\n" +
+		"|---|---:|---:|---:|---:|---:|\n")
+	for _, m := range r.Models {
+		fmt.Fprintf(p, "| `%s` | %d of %d | %d | %d | %d/%d | %.0f%% |\n",
+			m.Model, m.CasesRecorded, r.Totals.Cases, m.CasesHeld, m.CasesBelowBar,
+			m.Passed, m.Runs, 100*m.Reliability)
+	}
+	p.WriteString("\n")
+	for _, m := range r.Models {
+		if m.CasesRecorded < r.Totals.Cases {
+			fmt.Fprintf(p, "> `%s` has no committed run for %d of %d cases.\n\n",
+				m.Model, r.Totals.Cases-m.CasesRecorded, r.Totals.Cases)
+		}
+		if len(m.BelowBar) > 0 {
+			fmt.Fprintf(p, "> `%s` below its bar on: %s\n\n", m.Model, strings.Join(m.BelowBar, ", "))
+		}
 	}
 }
 
@@ -665,22 +802,28 @@ func writeCoverageTotals(p *strings.Builder, r mcpToolCoverage) {
 // how it went. A manager reading only one table should read this one.
 func writeCoverageCases(p *strings.Builder, r mcpToolCoverage) {
 	p.WriteString("## The use cases\n\n")
-	p.WriteString("| Case | Result | Passed | Bar | Model | Criteria | Requires |\n" +
-		"|---|---|---:|---:|---|---|---|\n")
+	p.WriteString("One row per case per model that ran it. A case nobody has run appears once, " +
+		"marked `not run`, rather than being dropped — a case missing from this table would read " +
+		"as a case that does not exist.\n\n")
+	p.WriteString("| Case | Model | Result | Passed | Bar | Criteria | Requires |\n" +
+		"|---|---|---|---:|---:|---|---|\n")
 	for _, c := range r.Cases {
-		result, passed, bar, model := "not run", "—", "—", "—"
-		if c.Recorded {
-			result = "**FAIL**"
-			if c.Passed >= c.PassAt {
+		criteria := criteriaNames(c.Name, c.Criteria, r.Criteria)
+		link := fmt.Sprintf("[%s](../../e2e/llm/scenarios/%s)", c.Name, c.File)
+		if len(c.ByModel) == 0 {
+			fmt.Fprintf(p, "| %s | — | not run | — | — | %s | %s |\n",
+				link, criteria, joinOrDash(c.Requires))
+			continue
+		}
+		for _, run := range c.ByModel {
+			result := "**FAIL**"
+			if run.Held {
 				result = "pass"
 			}
-			passed = fmt.Sprintf("%d/%d", c.Passed, c.Runs)
-			bar = fmt.Sprintf("%d", c.PassAt)
-			model = "`" + c.Model + "`"
+			fmt.Fprintf(p, "| %s | `%s` | %s | %d/%d | %d | %s | %s |\n",
+				link, run.Model, result, run.Passed, run.Runs, run.PassAt,
+				criteria, joinOrDash(c.Requires))
 		}
-		fmt.Fprintf(p, "| [%s](../../e2e/llm/scenarios/%s) | %s | %s | %s | %s | %s | %s |\n",
-			c.Name, c.File, result, passed, bar, model,
-			criteriaNames(c.Name, c.Criteria, r.Criteria), joinOrDash(c.Requires))
 	}
 	p.WriteString("\n")
 }
@@ -702,24 +845,35 @@ func writeCoverageCriteria(p *strings.Builder, r mcpToolCoverage) {
 
 // writeCoverageReliable is the first question: what can I put in front of
 // somebody. Only a tool whose every covering case cleared its own bar with a
-// clean rate qualifies.
+// clean rate qualifies — PER MODEL, because "reliable" is a property of the
+// tool and the model together. A tool one model drives perfectly and another
+// fumbles is not a reliable tool; it is a reliable pair, and a page that folded
+// the two would recommend a combination nobody measured.
 func writeCoverageReliable(p *strings.Builder, r mcpToolCoverage) {
 	p.WriteString("## 1. What you can rely on\n\n")
-	p.WriteString("Every run of every case requiring this tool passed.\n\n")
-	p.WriteString("| Tool | Reliability | Runs | Required by |\n|---|---:|---:|---|\n")
-	rows := 0
-	for _, row := range r.Tools {
-		m := row.Measured
-		if m == nil || m.Reliability < 1 || len(m.BelowBar) > 0 {
-			continue
+	if len(r.Models) == 0 {
+		p.WriteString("_No model has a committed run._\n\n")
+		return
+	}
+	p.WriteString("Every run of every case requiring this tool passed, for the model named.\n\n")
+	for _, m := range r.Models {
+		fmt.Fprintf(p, "### `%s`\n\n", m.Model)
+		p.WriteString("| Tool | Reliability | Runs | Required by |\n|---|---:|---:|---|\n")
+		rows := 0
+		for _, row := range r.Tools {
+			measured := row.MeasuredByModel[m.Model]
+			if measured == nil || measured.Reliability < 1 || len(measured.BelowBar) > 0 {
+				continue
+			}
+			rows++
+			fmt.Fprintf(p, "| `%s` | %.2f | %d | %s |\n",
+				row.Name, measured.Reliability, measured.Runs, joinOrDash(row.MustCall))
 		}
-		rows++
-		fmt.Fprintf(p, "| `%s` | %.2f | %d | %s |\n", row.Name, m.Reliability, m.Runs, joinOrDash(row.MustCall))
+		if rows == 0 {
+			p.WriteString("| _nothing yet_ | - | - | - |\n")
+		}
+		p.WriteString("\n")
 	}
-	if rows == 0 {
-		p.WriteString("| _nothing yet_ | - | - | - |\n")
-	}
-	p.WriteString("\n")
 }
 
 // writeCoverageFailing is the second question: what is wrong today. A tool
@@ -727,22 +881,30 @@ func writeCoverageReliable(p *strings.Builder, r mcpToolCoverage) {
 // that cleared its bar while losing a run, which is a rate worth seeing.
 func writeCoverageFailing(p *strings.Builder, r mcpToolCoverage) {
 	p.WriteString("## 2. What is failing now\n\n")
+	if len(r.Models) == 0 {
+		p.WriteString("_No model has a committed run._\n\n")
+		return
+	}
 	p.WriteString("Driven, and not every run passed. Open the case to see what was asked.\n\n")
-	p.WriteString("| Tool | Reliability | Passed | Below its bar | Required by |\n|---|---:|---:|---|---|\n")
-	rows := 0
-	for _, row := range r.Tools {
-		m := row.Measured
-		if m == nil || (m.Reliability >= 1 && len(m.BelowBar) == 0) {
-			continue
+	for _, m := range r.Models {
+		fmt.Fprintf(p, "### `%s`\n\n", m.Model)
+		p.WriteString("| Tool | Reliability | Passed | Below its bar | Required by |\n" +
+			"|---|---:|---:|---|---|\n")
+		rows := 0
+		for _, row := range r.Tools {
+			measured := row.MeasuredByModel[m.Model]
+			if measured == nil || (measured.Reliability >= 1 && len(measured.BelowBar) == 0) {
+				continue
+			}
+			rows++
+			fmt.Fprintf(p, "| `%s` | %.2f | %d/%d | %s | %s |\n", row.Name, measured.Reliability,
+				measured.Passed, measured.Runs, joinOrDash(measured.BelowBar), joinOrDash(row.MustCall))
 		}
-		rows++
-		fmt.Fprintf(p, "| `%s` | %.2f | %d/%d | %s | %s |\n", row.Name, m.Reliability,
-			m.Passed, m.Runs, joinOrDash(m.BelowBar), joinOrDash(row.MustCall))
+		if rows == 0 {
+			p.WriteString("| _nothing driven is failing_ | - | - | - | - |\n")
+		}
+		p.WriteString("\n")
 	}
-	if rows == 0 {
-		p.WriteString("| _nothing driven is failing_ | - | - | - | - |\n")
-	}
-	p.WriteString("\n")
 }
 
 // writeCoverageUndriven is the third question, and the one this page exists

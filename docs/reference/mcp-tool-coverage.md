@@ -31,10 +31,19 @@ This page does not grade single steps or name a best model per site — that is
 | … of those, permitted somewhere but never required | 19 |
 | Prompt tokens spent on tools no case requires | 12378 |
 | Use cases | 21 |
-| … with a committed run | 7 |
 | Acceptance criteria the cases declare, each with a statement | 48 |
 
-> **14 of 21 cases have no committed run.** Their rows below say `not run` rather than a rate — nobody has paid for the answer yet.
+## By model
+
+Which model drove the lane, and how it went. The tool columns further down are the same for every model — what a case REQUIRES is the scenario's property, not the driver's — so what changes here is whether the driving succeeded.
+
+| Model | Cases run | Reached their bar | Below it | Runs passed | Reliability |
+|---|---:|---:|---:|---:|---:|
+| `claude-opus-5` | 7 of 21 | 6 | 1 | 17/21 | 81% |
+
+> `claude-opus-5` has no committed run for 14 of 21 cases.
+
+> `claude-opus-5` below its bar on: case6_ask_the_company
 
 ## The two surfaces
 
@@ -80,29 +89,31 @@ its passport is not served, and one that tried would fail for a reason that is n
 
 ## The use cases
 
-| Case | Result | Passed | Bar | Model | Criteria | Requires |
-|---|---|---:|---:|---|---|---|
-| [case1_log_it](../../e2e/llm/scenarios/case1-log-it.yaml) | pass | 3/3 | 2 | `claude-opus-5` | **8** Promises come back as suggestions<br>**14** The assistant says what is waiting | `create_record`, `log_activity` |
-| [case10_finish_the_import](../../e2e/llm/scenarios/case10-finish-the-import.yaml) | not run | — | — | — | **1** A pre-authorized import is actually committed<br>**2** What landed is reported from the run's own report | `commit_import`, `preview_import`, `read_import_report` |
-| [case2_business_card](../../e2e/llm/scenarios/case2-business-card.yaml) | pass | 2/3 | 2 | `claude-opus-5` | **4** A possible duplicate is reported, not just filed | `create_record` |
-| [case20_put_it_in_the_board_pack](../../e2e/llm/scenarios/case20-put-it-in-the-board-pack.yaml) | not run | — | — | — | **1** Every figure in the document is the database's<br>**3** A refused literal is not a missing capability | `compose_analytics_report`, `run_analytics_query` |
-| [case21_what_are_we_closing](../../e2e/llm/scenarios/case21-what-are-we-closing.yaml) | not run | — | — | — | **1** The forecast is read, not assembled<br>**4** The deal with no amount is named | `forecast_readings` |
-| [case22_can_i_trust_the_numbers](../../e2e/llm/scenarios/case22-can-i-trust-the-numbers.yaml) | not run | — | — | — | **1** Source health is read rather than assumed<br>**2** An unread source is not reported as a quiet one | `data_coverage` |
-| [case23_find_us_a_slot](../../e2e/llm/scenarios/case23-find-us-a-slot.yaml) | not run | — | — | — | **1** Real openings, from the host's own calendar<br>**2** The other side's calendar is not claimed to be known | `check_availability` |
-| [case3_spreadsheet](../../e2e/llm/scenarios/case3-spreadsheet.yaml) | pass | 3/3 | 2 | `claude-opus-5` | **1** The numbers are shown before anything is committed<br>**6** The row that could not be used is reported | `preview_import` |
-| [case30_a_word_for_it](../../e2e/llm/scenarios/case30-a-word-for-it.yaml) | not run | — | — | — | **1** The word the workspace already has is reused<br>**2** A word that does not exist is coined before it is applied | `apply_tag`, `create_tag`, `list_tags` |
-| [case31_wrong_word_on_the_record](../../e2e/llm/scenarios/case31-wrong-word-on-the-record.yaml) | not run | — | — | — | **1** The retired word on the record is reported<br>**2** One record loses the word and the word survives | `get_record_tags`, `remove_tag` |
-| [case32_two_words_for_one_thing](../../e2e/llm/scenarios/case32-two-words-for-one-thing.yaml) | not run | — | — | — | **1** The surviving word is chosen by what carries it<br>**2** A fold nobody has released is reported as waiting<br>**3** The surviving word is given its meaning | `get_tag`, `list_tags`, `merge_tags`, `update_tag` |
-| [case33_two_cards_for_one_company](../../e2e/llm/scenarios/case33-two-cards-for-one-company.yaml) | not run | — | — | — | **1** The duplicate is merged, and which record survives is said<br>**2** The company that shut down is archived, not merged<br>**3** The account is handed to a named colleague | `archive_record`, `list_colleagues`, `merge_records` |
-| [case4_use_the_moment](../../e2e/llm/scenarios/case4-use-the-moment.yaml) | pass | 3/3 | 2 | `claude-opus-5` | **1** Nearby is worked out to be a distance search<br>**6** Check with the owner before turning up | `query_workspace` |
-| [case40_sort_the_queue](../../e2e/llm/scenarios/case40-sort-the-queue.yaml) | not run | — | — | — | **1** The record decides which verb, not the request<br>**2** What was filled and what is still missing are both reported<br>**3** A terminal verb lands on the lead it belongs to | `disqualify_lead`, `promote_lead`, `qualify_lead` |
-| [case41_close_the_project](../../e2e/llm/scenarios/case41-close-the-project.yaml) | not run | — | — | — | **1** How it moved is a different question from where it stands<br>**2** What is still open is said before the project is closed | `advance_project_phase`, `read_project_360` |
-| [case42_can_i_answer_on_whatsapp](../../e2e/llm/scenarios/case42-can-i-answer-on-whatsapp.yaml) | not run | — | — | — | **1** The transport is named as the installation names it<br>**2** Not being able to send is not the same as not being supported | `list_channel_providers`, `log_activity` |
-| [case5_before_the_meeting](../../e2e/llm/scenarios/case5-before-the-meeting.yaml) | pass | 3/3 | 2 | `claude-opus-5` | **1** A briefing arrives without naming a record<br>**2** The people are named, not their seats<br>**5** The unkept promise is noticed | `search_records` |
-| [case6_ask_the_company](../../e2e/llm/scenarios/case6-ask-the-company.yaml) | **FAIL** | 0/3 | 2 | `claude-opus-5` | **1** The past cases are found without being named<br>**3** The record's date wins over the prose recalling it<br>**5** The disagreement is pointed out, not quietly resolved | `search_context` |
-| [case7_ask_for_a_number](../../e2e/llm/scenarios/case7-ask-for-a-number.yaml) | pass | 3/3 | 2 | `claude-opus-5` | **1** The counts asked for come back as counts<br>**3** A refusal is not reported as a missing capability | `run_report` |
-| [case8_whats_waiting](../../e2e/llm/scenarios/case8-whats-waiting.yaml) | not run | — | — | — | **1** The staged change is read, not just listed<br>**2** Each verdict lands on the item it was given for<br>**3** The decision is taken, not handed back | `decide_approval`, `list_approvals`, `read_approval` |
-| [case9_filed_in_the_wrong_place](../../e2e/llm/scenarios/case9-filed-in-the-wrong-place.yaml) | not run | — | — | — | **1** A misfiled message is moved, not also-linked<br>**2** A picked set moves as one act<br>**3** History is re-filed, never re-written | `relink_activities`, `relink_activity` |
+One row per case per model that ran it. A case nobody has run appears once, marked `not run`, rather than being dropped — a case missing from this table would read as a case that does not exist.
+
+| Case | Model | Result | Passed | Bar | Criteria | Requires |
+|---|---|---|---:|---:|---|---|
+| [case1_log_it](../../e2e/llm/scenarios/case1-log-it.yaml) | `claude-opus-5` | pass | 3/3 | 2 | **8** Promises come back as suggestions<br>**14** The assistant says what is waiting | `create_record`, `log_activity` |
+| [case10_finish_the_import](../../e2e/llm/scenarios/case10-finish-the-import.yaml) | — | not run | — | — | **1** A pre-authorized import is actually committed<br>**2** What landed is reported from the run's own report | `commit_import`, `preview_import`, `read_import_report` |
+| [case2_business_card](../../e2e/llm/scenarios/case2-business-card.yaml) | `claude-opus-5` | pass | 2/3 | 2 | **4** A possible duplicate is reported, not just filed | `create_record` |
+| [case20_put_it_in_the_board_pack](../../e2e/llm/scenarios/case20-put-it-in-the-board-pack.yaml) | — | not run | — | — | **1** Every figure in the document is the database's<br>**3** A refused literal is not a missing capability | `compose_analytics_report`, `run_analytics_query` |
+| [case21_what_are_we_closing](../../e2e/llm/scenarios/case21-what-are-we-closing.yaml) | — | not run | — | — | **1** The forecast is read, not assembled<br>**4** The deal with no amount is named | `forecast_readings` |
+| [case22_can_i_trust_the_numbers](../../e2e/llm/scenarios/case22-can-i-trust-the-numbers.yaml) | — | not run | — | — | **1** Source health is read rather than assumed<br>**2** An unread source is not reported as a quiet one | `data_coverage` |
+| [case23_find_us_a_slot](../../e2e/llm/scenarios/case23-find-us-a-slot.yaml) | — | not run | — | — | **1** Real openings, from the host's own calendar<br>**2** The other side's calendar is not claimed to be known | `check_availability` |
+| [case3_spreadsheet](../../e2e/llm/scenarios/case3-spreadsheet.yaml) | `claude-opus-5` | pass | 3/3 | 2 | **1** The numbers are shown before anything is committed<br>**6** The row that could not be used is reported | `preview_import` |
+| [case30_a_word_for_it](../../e2e/llm/scenarios/case30-a-word-for-it.yaml) | — | not run | — | — | **1** The word the workspace already has is reused<br>**2** A word that does not exist is coined before it is applied | `apply_tag`, `create_tag`, `list_tags` |
+| [case31_wrong_word_on_the_record](../../e2e/llm/scenarios/case31-wrong-word-on-the-record.yaml) | — | not run | — | — | **1** The retired word on the record is reported<br>**2** One record loses the word and the word survives | `get_record_tags`, `remove_tag` |
+| [case32_two_words_for_one_thing](../../e2e/llm/scenarios/case32-two-words-for-one-thing.yaml) | — | not run | — | — | **1** The surviving word is chosen by what carries it<br>**2** A fold nobody has released is reported as waiting<br>**3** The surviving word is given its meaning | `get_tag`, `list_tags`, `merge_tags`, `update_tag` |
+| [case33_two_cards_for_one_company](../../e2e/llm/scenarios/case33-two-cards-for-one-company.yaml) | — | not run | — | — | **1** The duplicate is merged, and which record survives is said<br>**2** The company that shut down is archived, not merged<br>**3** The account is handed to a named colleague | `archive_record`, `list_colleagues`, `merge_records` |
+| [case4_use_the_moment](../../e2e/llm/scenarios/case4-use-the-moment.yaml) | `claude-opus-5` | pass | 3/3 | 2 | **1** Nearby is worked out to be a distance search<br>**6** Check with the owner before turning up | `query_workspace` |
+| [case40_sort_the_queue](../../e2e/llm/scenarios/case40-sort-the-queue.yaml) | — | not run | — | — | **1** The record decides which verb, not the request<br>**2** What was filled and what is still missing are both reported<br>**3** A terminal verb lands on the lead it belongs to | `disqualify_lead`, `promote_lead`, `qualify_lead` |
+| [case41_close_the_project](../../e2e/llm/scenarios/case41-close-the-project.yaml) | — | not run | — | — | **1** How it moved is a different question from where it stands<br>**2** What is still open is said before the project is closed | `advance_project_phase`, `read_project_360` |
+| [case42_can_i_answer_on_whatsapp](../../e2e/llm/scenarios/case42-can-i-answer-on-whatsapp.yaml) | — | not run | — | — | **1** The transport is named as the installation names it<br>**2** Not being able to send is not the same as not being supported | `list_channel_providers`, `log_activity` |
+| [case5_before_the_meeting](../../e2e/llm/scenarios/case5-before-the-meeting.yaml) | `claude-opus-5` | pass | 3/3 | 2 | **1** A briefing arrives without naming a record<br>**2** The people are named, not their seats<br>**5** The unkept promise is noticed | `search_records` |
+| [case6_ask_the_company](../../e2e/llm/scenarios/case6-ask-the-company.yaml) | `claude-opus-5` | **FAIL** | 0/3 | 2 | **1** The past cases are found without being named<br>**3** The record's date wins over the prose recalling it<br>**5** The disagreement is pointed out, not quietly resolved | `search_context` |
+| [case7_ask_for_a_number](../../e2e/llm/scenarios/case7-ask-for-a-number.yaml) | `claude-opus-5` | pass | 3/3 | 2 | **1** The counts asked for come back as counts<br>**3** A refusal is not reported as a missing capability | `run_report` |
+| [case8_whats_waiting](../../e2e/llm/scenarios/case8-whats-waiting.yaml) | — | not run | — | — | **1** The staged change is read, not just listed<br>**2** Each verdict lands on the item it was given for<br>**3** The decision is taken, not handed back | `decide_approval`, `list_approvals`, `read_approval` |
+| [case9_filed_in_the_wrong_place](../../e2e/llm/scenarios/case9-filed-in-the-wrong-place.yaml) | — | not run | — | — | **1** A misfiled message is moved, not also-linked<br>**2** A picked set moves as one act<br>**3** History is re-filed, never re-written | `relink_activities`, `relink_activity` |
 
 ## What the criteria ask
 
@@ -163,7 +174,9 @@ The numbers in the table above, in words. Source: [`e2e/llm/criteria.yaml`](../.
 
 ## 1. What you can rely on
 
-Every run of every case requiring this tool passed.
+Every run of every case requiring this tool passed, for the model named.
+
+### `claude-opus-5`
 
 | Tool | Reliability | Runs | Required by |
 |---|---:|---:|---|
@@ -177,10 +190,34 @@ Every run of every case requiring this tool passed.
 
 Driven, and not every run passed. Open the case to see what was asked.
 
+### `claude-opus-5`
+
 | Tool | Reliability | Passed | Below its bar | Required by |
 |---|---:|---:|---|---|
 | `create_record` | 0.83 | 5/6 | — | `case1_log_it`, `case2_business_card` |
 | `search_context` | 0.00 | 0/3 | `case6_ask_the_company` | `case6_ask_the_company` |
+
+## Who judged it, and how well
+
+The semantic half of each criterion is decided by a model rather than a regex, so the judge is part of the apparatus and its accuracy belongs on the same page as the results it produced. A judge wrong in the quiet direction — passing an answer the criterion fails — turns a missed defect into a green run.
+
+Scored against **human-authored fixtures** under `e2e/llm/testdata/<case>/`, labelled by `scripts/test-e2e-llm-check.sh`. The recorded verdicts under `e2e/llm/testdata/judge/` are deliberately not the reference: they were written by one model, so scoring against them measures resemblance to that model and hands it a free hundred per cent.
+
+| Judge | Accuracy | Scored | Passed | Its own errors |
+|---|---:|---:|---:|---:|
+| `claude-opus-5` | 98.6% | 138 | 136 | 2 |
+| `claude-haiku-4-5-20251001` | 96.4% | 138 | 133 | 5 |
+| `claude-sonnet-5` | 95.7% | 138 | 132 | 6 |
+
+> `claude-opus-5` misread: case22/claims-everything-is-synced, case30/announces-the-coinage-as-a-list
+
+> `claude-haiku-4-5-20251001` misread: case22/claims-the-feeds-were-checked, case32/folds-the-wrong-word-away, case6/disagrees-about-something-else, case6/implies-an-october-recurrence, case6/invents-a-second-october-event
+
+> `claude-sonnet-5` misread: case22/claims-everything-is-synced, case31/reports-the-record-as-clean, case6/adopts-october, case6/implies-an-october-recurrence, case6/invents-a-second-october-event, case6/invents-october-as-a-possessive
+
+Excluded from every judge's score, because it fails for all of them alike and measures how the trial is driven rather than the model:
+
+- `judge/a verdict from another model is a stop` — the case pins a model with no recorded corpus and asserts the replay is refused; an eval drives the suite live, where there is no replay to mismatch, so it fails for every model alike and measures the trial rather than the judge
 
 ## 3. What no use case requires
 

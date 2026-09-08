@@ -7,10 +7,71 @@
     "permitted_but_never_required": 19,
     "tokens_served_but_never_driven": 12378,
     "use_case_cases": 21,
-    "cases_with_a_committed_run": 7,
     "acceptance_criteria_named": 48,
     "tools_added_by_shipped_units": 7,
     "never_driven_but_graded_elsewhere": 19
+  },
+  "models": [
+    {
+      "model": "claude-opus-5",
+      "cases_with_a_committed_run": 7,
+      "cases_that_reached_their_bar": 6,
+      "cases_below_their_bar": 1,
+      "runs": 21,
+      "passed": 17,
+      "reliability": 0.8095238095238095,
+      "cases_below_their_bar_named": [
+        "case6_ask_the_company"
+      ]
+    }
+  ],
+  "judges": [
+    {
+      "model": "claude-opus-5",
+      "scored": 138,
+      "passed": 136,
+      "failed": 2,
+      "harness_artifacts": 1,
+      "accuracy": "98.6%",
+      "errors": [
+        "case22/claims-everything-is-synced",
+        "case30/announces-the-coinage-as-a-list"
+      ]
+    },
+    {
+      "model": "claude-haiku-4-5-20251001",
+      "scored": 138,
+      "passed": 133,
+      "failed": 5,
+      "harness_artifacts": 1,
+      "accuracy": "96.4%",
+      "errors": [
+        "case22/claims-the-feeds-were-checked",
+        "case32/folds-the-wrong-word-away",
+        "case6/disagrees-about-something-else",
+        "case6/implies-an-october-recurrence",
+        "case6/invents-a-second-october-event"
+      ]
+    },
+    {
+      "model": "claude-sonnet-5",
+      "scored": 138,
+      "passed": 132,
+      "failed": 6,
+      "harness_artifacts": 1,
+      "accuracy": "95.7%",
+      "errors": [
+        "case22/claims-everything-is-synced",
+        "case31/reports-the-record-as-clean",
+        "case6/adopts-october",
+        "case6/implies-an-october-recurrence",
+        "case6/invents-a-second-october-event",
+        "case6/invents-october-as-a-possessive"
+      ]
+    }
+  ],
+  "judge_trial_excluded": {
+    "judge/a verdict from another model is a stop": "the case pins a model with no recorded corpus and asserts the replay is refused; an eval drives the suite live, where there is no replay to mismatch, so it fails for every model alike and measures the trial rather than the judge"
   },
   "cases": [
     {
@@ -24,11 +85,15 @@
         "create_record",
         "log_activity"
       ],
-      "runs": 3,
-      "passed": 3,
-      "pass_at": 2,
-      "recorded": true,
-      "model": "claude-opus-5"
+      "by_model": [
+        {
+          "model": "claude-opus-5",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true
+        }
+      ]
     },
     {
       "name": "case10_finish_the_import",
@@ -42,11 +107,7 @@
         "preview_import",
         "read_import_report"
       ],
-      "runs": 0,
-      "passed": 0,
-      "pass_at": 0,
-      "recorded": false,
-      "model": ""
+      "by_model": null
     },
     {
       "name": "case2_business_card",
@@ -57,11 +118,15 @@
       "requires": [
         "create_record"
       ],
-      "runs": 3,
-      "passed": 2,
-      "pass_at": 2,
-      "recorded": true,
-      "model": "claude-opus-5"
+      "by_model": [
+        {
+          "model": "claude-opus-5",
+          "runs": 3,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true
+        }
+      ]
     },
     {
       "name": "case20_put_it_in_the_board_pack",
@@ -74,11 +139,7 @@
         "compose_analytics_report",
         "run_analytics_query"
       ],
-      "runs": 0,
-      "passed": 0,
-      "pass_at": 0,
-      "recorded": false,
-      "model": ""
+      "by_model": null
     },
     {
       "name": "case21_what_are_we_closing",
@@ -90,11 +151,7 @@
       "requires": [
         "forecast_readings"
       ],
-      "runs": 0,
-      "passed": 0,
-      "pass_at": 0,
-      "recorded": false,
-      "model": ""
+      "by_model": null
     },
     {
       "name": "case22_can_i_trust_the_numbers",
@@ -106,11 +163,7 @@
       "requires": [
         "data_coverage"
       ],
-      "runs": 0,
-      "passed": 0,
-      "pass_at": 0,
-      "recorded": false,
-      "model": ""
+      "by_model": null
     },
     {
       "name": "case23_find_us_a_slot",
@@ -122,11 +175,7 @@
       "requires": [
         "check_availability"
       ],
-      "runs": 0,
-      "passed": 0,
-      "pass_at": 0,
-      "recorded": false,
-      "model": ""
+      "by_model": null
     },
     {
       "name": "case3_spreadsheet",
@@ -138,11 +187,15 @@
       "requires": [
         "preview_import"
       ],
-      "runs": 3,
-      "passed": 3,
-      "pass_at": 2,
-      "recorded": true,
-      "model": "claude-opus-5"
+      "by_model": [
+        {
+          "model": "claude-opus-5",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true
+        }
+      ]
     },
     {
       "name": "case30_a_word_for_it",
@@ -156,11 +209,7 @@
         "create_tag",
         "list_tags"
       ],
-      "runs": 0,
-      "passed": 0,
-      "pass_at": 0,
-      "recorded": false,
-      "model": ""
+      "by_model": null
     },
     {
       "name": "case31_wrong_word_on_the_record",
@@ -173,11 +222,7 @@
         "get_record_tags",
         "remove_tag"
       ],
-      "runs": 0,
-      "passed": 0,
-      "pass_at": 0,
-      "recorded": false,
-      "model": ""
+      "by_model": null
     },
     {
       "name": "case32_two_words_for_one_thing",
@@ -193,11 +238,7 @@
         "merge_tags",
         "update_tag"
       ],
-      "runs": 0,
-      "passed": 0,
-      "pass_at": 0,
-      "recorded": false,
-      "model": ""
+      "by_model": null
     },
     {
       "name": "case33_two_cards_for_one_company",
@@ -212,11 +253,7 @@
         "list_colleagues",
         "merge_records"
       ],
-      "runs": 0,
-      "passed": 0,
-      "pass_at": 0,
-      "recorded": false,
-      "model": ""
+      "by_model": null
     },
     {
       "name": "case4_use_the_moment",
@@ -228,11 +265,15 @@
       "requires": [
         "query_workspace"
       ],
-      "runs": 3,
-      "passed": 3,
-      "pass_at": 2,
-      "recorded": true,
-      "model": "claude-opus-5"
+      "by_model": [
+        {
+          "model": "claude-opus-5",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true
+        }
+      ]
     },
     {
       "name": "case40_sort_the_queue",
@@ -247,11 +288,7 @@
         "promote_lead",
         "qualify_lead"
       ],
-      "runs": 0,
-      "passed": 0,
-      "pass_at": 0,
-      "recorded": false,
-      "model": ""
+      "by_model": null
     },
     {
       "name": "case41_close_the_project",
@@ -264,11 +301,7 @@
         "advance_project_phase",
         "read_project_360"
       ],
-      "runs": 0,
-      "passed": 0,
-      "pass_at": 0,
-      "recorded": false,
-      "model": ""
+      "by_model": null
     },
     {
       "name": "case42_can_i_answer_on_whatsapp",
@@ -281,11 +314,7 @@
         "list_channel_providers",
         "log_activity"
       ],
-      "runs": 0,
-      "passed": 0,
-      "pass_at": 0,
-      "recorded": false,
-      "model": ""
+      "by_model": null
     },
     {
       "name": "case5_before_the_meeting",
@@ -298,11 +327,15 @@
       "requires": [
         "search_records"
       ],
-      "runs": 3,
-      "passed": 3,
-      "pass_at": 2,
-      "recorded": true,
-      "model": "claude-opus-5"
+      "by_model": [
+        {
+          "model": "claude-opus-5",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true
+        }
+      ]
     },
     {
       "name": "case6_ask_the_company",
@@ -315,11 +348,15 @@
       "requires": [
         "search_context"
       ],
-      "runs": 3,
-      "passed": 0,
-      "pass_at": 2,
-      "recorded": true,
-      "model": "claude-opus-5"
+      "by_model": [
+        {
+          "model": "claude-opus-5",
+          "runs": 3,
+          "passed": 0,
+          "pass_at": 2,
+          "held": false
+        }
+      ]
     },
     {
       "name": "case7_ask_for_a_number",
@@ -331,11 +368,15 @@
       "requires": [
         "run_report"
       ],
-      "runs": 3,
-      "passed": 3,
-      "pass_at": 2,
-      "recorded": true,
-      "model": "claude-opus-5"
+      "by_model": [
+        {
+          "model": "claude-opus-5",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true
+        }
+      ]
     },
     {
       "name": "case8_whats_waiting",
@@ -350,11 +391,7 @@
         "list_approvals",
         "read_approval"
       ],
-      "runs": 0,
-      "passed": 0,
-      "pass_at": 0,
-      "recorded": false,
-      "model": ""
+      "by_model": null
     },
     {
       "name": "case9_filed_in_the_wrong_place",
@@ -368,11 +405,7 @@
         "relink_activities",
         "relink_activity"
       ],
-      "runs": 0,
-      "passed": 0,
-      "pass_at": 0,
-      "recorded": false,
-      "model": ""
+      "by_model": null
     }
   ],
   "criteria": [
@@ -674,7 +707,7 @@
       "permitted_in_cases": [],
       "driven": false,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "send_email",
@@ -686,7 +719,7 @@
       "graded_by_certification_tasks": [
         "agent_loop"
       ],
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "update_record",
@@ -700,7 +733,7 @@
       "graded_by_certification_tasks": [
         "agent_loop"
       ],
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "send_message",
@@ -710,7 +743,7 @@
       "permitted_in_cases": [],
       "driven": false,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "list_records",
@@ -734,7 +767,7 @@
       ],
       "driven": false,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "progress_deal",
@@ -746,7 +779,7 @@
       "graded_by_certification_tasks": [
         "agent_loop"
       ],
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "resolve_entities",
@@ -765,7 +798,7 @@
       "graded_by_certification_tasks": [
         "agent_loop"
       ],
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "advance_deal",
@@ -777,7 +810,7 @@
       "graded_by_certification_tasks": [
         "agent_loop"
       ],
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "annotate_brief",
@@ -789,7 +822,7 @@
       "permitted_in_cases": [],
       "driven": false,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "review_commitments",
@@ -805,7 +838,7 @@
       "graded_by_certification_tasks": [
         "agent_loop"
       ],
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "book_meeting",
@@ -815,7 +848,7 @@
       "permitted_in_cases": [],
       "driven": false,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "enrich",
@@ -828,7 +861,7 @@
         "agent_loop",
         "enrich"
       ],
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "forecast_movement",
@@ -838,7 +871,7 @@
       "permitted_in_cases": [],
       "driven": false,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "describe_report_vocabulary",
@@ -851,7 +884,7 @@
       ],
       "driven": false,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "prep_for_meeting",
@@ -866,7 +899,7 @@
       "graded_by_certification_tasks": [
         "agent_loop"
       ],
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "demote_lead",
@@ -876,7 +909,7 @@
       "permitted_in_cases": [],
       "driven": false,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "describe_analytics_vocabulary",
@@ -886,7 +919,7 @@
       "permitted_in_cases": [],
       "driven": false,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "catch_me_up_on",
@@ -909,7 +942,7 @@
       "graded_by_certification_tasks": [
         "agent_loop"
       ],
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "draft_email",
@@ -922,7 +955,7 @@
         "agent_loop",
         "draft_reply"
       ],
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "draft_follow_ups_for",
@@ -932,7 +965,7 @@
       "permitted_in_cases": [],
       "driven": false,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "prepare_handoff",
@@ -946,7 +979,7 @@
       "graded_by_certification_tasks": [
         "agent_loop"
       ],
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "describe_query_vocabulary",
@@ -958,7 +991,7 @@
       ],
       "driven": false,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "forecast_input_checks",
@@ -971,7 +1004,7 @@
       ],
       "driven": false,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "account_coverage",
@@ -985,7 +1018,7 @@
       "graded_by_certification_tasks": [
         "agent_loop"
       ],
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "describe_report_blocks",
@@ -997,7 +1030,7 @@
       ],
       "driven": false,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "decide_approval_bundle",
@@ -1007,7 +1040,7 @@
       "permitted_in_cases": [],
       "driven": false,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "create_task",
@@ -1021,7 +1054,7 @@
       "graded_by_certification_tasks": [
         "deal_health"
       ],
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "read_record",
@@ -1055,7 +1088,7 @@
       "graded_by_certification_tasks": [
         "agent_loop"
       ],
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "whats_slipping_this_week",
@@ -1069,7 +1102,7 @@
       "graded_by_certification_tasks": [
         "agent_loop"
       ],
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "at_risk_relationships",
@@ -1083,7 +1116,7 @@
       "graded_by_certification_tasks": [
         "agent_loop"
       ],
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "read_brief",
@@ -1095,7 +1128,7 @@
       "permitted_in_cases": [],
       "driven": false,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "relink_thread",
@@ -1105,7 +1138,7 @@
       "permitted_in_cases": [],
       "driven": false,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "who_knows",
@@ -1120,7 +1153,7 @@
       "graded_by_certification_tasks": [
         "agent_loop"
       ],
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "list_pipelines",
@@ -1135,7 +1168,7 @@
       "graded_by_certification_tasks": [
         "agent_loop"
       ],
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "intro_path_to",
@@ -1147,7 +1180,7 @@
       "graded_by_certification_tasks": [
         "agent_loop"
       ],
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "check_location_support",
@@ -1157,7 +1190,7 @@
       "permitted_in_cases": [],
       "driven": false,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "list_input_checks",
@@ -1170,7 +1203,7 @@
       ],
       "driven": false,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "whoami",
@@ -1187,7 +1220,7 @@
       ],
       "driven": false,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "read_import_run",
@@ -1200,7 +1233,7 @@
       ],
       "driven": false,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "run_report",
@@ -1218,11 +1251,13 @@
       "graded_by_certification_tasks": [
         "agent_loop"
       ],
-      "measured": {
-        "runs": 3,
-        "passed": 3,
-        "reliability": 1,
-        "cases_below_their_bar": []
+      "measured_by_model": {
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
       }
     },
     {
@@ -1240,11 +1275,13 @@
       "graded_by_certification_tasks": [
         "agent_loop"
       ],
-      "measured": {
-        "runs": 3,
-        "passed": 3,
-        "reliability": 1,
-        "cases_below_their_bar": []
+      "measured_by_model": {
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
       }
     },
     {
@@ -1258,11 +1295,13 @@
       "permitted_in_cases": [],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured": {
-        "runs": 3,
-        "passed": 3,
-        "reliability": 1,
-        "cases_below_their_bar": []
+      "measured_by_model": {
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
       }
     },
     {
@@ -1298,11 +1337,13 @@
       "graded_by_certification_tasks": [
         "agent_loop"
       ],
-      "measured": {
-        "runs": 3,
-        "passed": 3,
-        "reliability": 1,
-        "cases_below_their_bar": []
+      "measured_by_model": {
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
       }
     },
     {
@@ -1317,7 +1358,7 @@
       ],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "create_record",
@@ -1332,11 +1373,13 @@
       "graded_by_certification_tasks": [
         "agent_loop"
       ],
-      "measured": {
-        "runs": 6,
-        "passed": 5,
-        "reliability": 0.8333333333333334,
-        "cases_below_their_bar": []
+      "measured_by_model": {
+        "claude-opus-5": {
+          "runs": 6,
+          "passed": 5,
+          "reliability": 0.8333333333333334,
+          "cases_below_their_bar": []
+        }
       }
     },
     {
@@ -1349,7 +1392,7 @@
       "permitted_in_cases": [],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "search_records",
@@ -1382,11 +1425,13 @@
       "graded_by_certification_tasks": [
         "agent_loop"
       ],
-      "measured": {
-        "runs": 3,
-        "passed": 3,
-        "reliability": 1,
-        "cases_below_their_bar": []
+      "measured_by_model": {
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
       }
     },
     {
@@ -1401,7 +1446,7 @@
       ],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "search_context",
@@ -1419,13 +1464,15 @@
       "graded_by_certification_tasks": [
         "agent_loop"
       ],
-      "measured": {
-        "runs": 3,
-        "passed": 0,
-        "reliability": 0,
-        "cases_below_their_bar": [
-          "case6_ask_the_company"
-        ]
+      "measured_by_model": {
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case6_ask_the_company"
+          ]
+        }
       }
     },
     {
@@ -1438,7 +1485,7 @@
       "permitted_in_cases": [],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "advance_project_phase",
@@ -1450,7 +1497,7 @@
       "permitted_in_cases": [],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "relink_activity",
@@ -1462,7 +1509,7 @@
       "permitted_in_cases": [],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "decide_approval",
@@ -1474,7 +1521,7 @@
       "permitted_in_cases": [],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "promote_lead",
@@ -1486,7 +1533,7 @@
       "permitted_in_cases": [],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "list_approvals",
@@ -1501,7 +1548,7 @@
       ],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "check_availability",
@@ -1513,7 +1560,7 @@
       "permitted_in_cases": [],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "archive_record",
@@ -1525,7 +1572,7 @@
       "permitted_in_cases": [],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "qualify_lead",
@@ -1537,7 +1584,7 @@
       "permitted_in_cases": [],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "apply_tag",
@@ -1551,7 +1598,7 @@
       ],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "relink_activities",
@@ -1563,7 +1610,7 @@
       "permitted_in_cases": [],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "update_tag",
@@ -1575,7 +1622,7 @@
       "permitted_in_cases": [],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "merge_tags",
@@ -1587,7 +1634,7 @@
       "permitted_in_cases": [],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "disqualify_lead",
@@ -1599,7 +1646,7 @@
       "permitted_in_cases": [],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "create_tag",
@@ -1611,7 +1658,7 @@
       "permitted_in_cases": [],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "list_channel_providers",
@@ -1623,7 +1670,7 @@
       "permitted_in_cases": [],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "remove_tag",
@@ -1635,7 +1682,7 @@
       "permitted_in_cases": [],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "read_project_360",
@@ -1647,7 +1694,7 @@
       "permitted_in_cases": [],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "read_approval",
@@ -1661,7 +1708,7 @@
       ],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "get_record_tags",
@@ -1676,7 +1723,7 @@
       ],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "list_colleagues",
@@ -1692,7 +1739,7 @@
       ],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "commit_import",
@@ -1704,7 +1751,7 @@
       "permitted_in_cases": [],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "data_coverage",
@@ -1718,7 +1765,7 @@
       ],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "list_tags",
@@ -1733,7 +1780,7 @@
       ],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "get_tag",
@@ -1748,7 +1795,7 @@
       ],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     },
     {
       "name": "read_import_report",
@@ -1762,7 +1809,7 @@
       ],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured": null
+      "measured_by_model": {}
     }
   ],
   "unit_tools": [
