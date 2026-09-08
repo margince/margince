@@ -36632,6 +36632,23 @@ export interface operations {
                      *     description for why those two answers differ.
                      */
                     fingerprint: string;
+                    /**
+                     * Format: uuid
+                     * @description The project the page was scoped to when the suggestion was rendered,
+                     *     absent on the whole-account page.
+                     *
+                     *     A suggestion's fingerprint is derived from its EVIDENCE, and a scoped
+                     *     page reasons over one project's activity — so the same advice raised
+                     *     on a scoped page and on the account page are two different
+                     *     fingerprints. This route re-derives the suggestions to check the
+                     *     fingerprint is one the account really raises for this caller, and it
+                     *     can only reproduce a scoped one by narrowing the same way.
+                     *
+                     *     Send the project the reader was looking at. Omit it and a dismissal
+                     *     from a scoped page matches nothing and silently stores nothing, which
+                     *     a reader sees as the card refusing to go away.
+                     */
+                    project_id?: string;
                 };
             };
         };

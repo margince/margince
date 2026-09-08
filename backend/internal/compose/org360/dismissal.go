@@ -34,6 +34,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -43,7 +44,9 @@ import (
 )
 
 // DismissSuggestion records that this human does not want this advice.
-func (s *Service) DismissSuggestion(ctx context.Context, orgID ids.OrganizationID, fingerprint string) error {
+func (s *Service) DismissSuggestion(
+	ctx context.Context, orgID ids.OrganizationID, fingerprint string, within *ids.ProjectID,
+) error {
 	// An agent has no opinion to record, and consuming a human's dismissal on
 	// their behalf would silence advice they never saw.
 	if err := auth.RequireHuman(ctx); err != nil {
@@ -71,7 +74,16 @@ func (s *Service) DismissSuggestion(ctx context.Context, orgID ids.OrganizationI
 			return httperr.Validation("fingerprint", "malformed",
 				"dismiss a suggestion by the fingerprint it was served with, unchanged")
 		}
-		raises, err := s.raisesSuggestion(ctx, tx, orgID, now, fingerprint)
+		// The SAME gate the scoped page passes before it renders anything. A
+		// dismissal that narrowed to a project the caller cannot open would
+		// answer 204 for a fingerprint they could never have been served, and
+		// the shape of that answer is how you probe for a project's existence.
+		if within != nil {
+			if err := activities.RequireProjectScope(ctx, tx, *within); err != nil {
+				return err
+			}
+		}
+		raises, err := s.raisesSuggestion(ctx, tx, orgID, now, fingerprint, within)
 		if err != nil {
 			return err
 		}
@@ -106,8 +118,15 @@ func (s *Service) DismissSuggestion(ctx context.Context, orgID ids.OrganizationI
 // from, so "a suggestion the rep could have dismissed" has one definition. A
 // second spelling here would drift, and the failure would be silent: a dismissal
 // that stores a row the card never filters.
+//
+// Same function AND same scope. A fingerprint is derived from the suggestion's
+// evidence, so a card raised on a project-scoped page carries a different one
+// from the same advice on the whole account — re-deriving unscoped would match
+// nothing, store nothing, and answer 204, which a reader sees as the card
+// refusing to go away.
 func (s *Service) raisesSuggestion(
 	ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, now time.Time, fingerprint string,
+	within *ids.ProjectID,
 ) (bool, error) {
 	facts, err := readSignalFacts(ctx, tx, orgID)
 	if err != nil {
@@ -124,7 +143,7 @@ func (s *Service) raisesSuggestion(
 	if err != nil {
 		return false, err
 	}
-	in, err := gatherSuggestionInputs(ctx, tx, orgID, now, facts, heading, base, AssembleOptions{})
+	in, err := gatherSuggestionInputs(ctx, tx, orgID, now, facts, heading, base, AssembleOptions{ProjectID: within})
 	if err != nil {
 		return false, err
 	}

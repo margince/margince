@@ -19,15 +19,20 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/org360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // wellFormedFingerprint has the shape the endpoint accepts, so a test about the
@@ -62,7 +67,7 @@ func TestDismissingASuggestionRevealsTheNextOne(t *testing.T) {
 	if len(listed) < 2 {
 		t.Fatalf("only %d stalled suggestions listed, want the card's full complement", len(listed))
 	}
-	if err := svc.DismissSuggestion(rep, org, listed[0]); err != nil {
+	if err := svc.DismissSuggestion(rep, org, listed[0], nil); err != nil {
 		t.Fatalf("dismiss: %v", err)
 	}
 
@@ -131,7 +136,7 @@ func TestNoDismissalIsEverResurrected(t *testing.T) {
 			if judged[fingerprint] {
 				t.Fatalf("round %d re-offered a suggestion this rep already dismissed", round)
 			}
-			if err := svc.DismissSuggestion(rep, org, fingerprint); err != nil {
+			if err := svc.DismissSuggestion(rep, org, fingerprint, nil); err != nil {
 				t.Fatalf("dismiss in round %d: %v", round, err)
 			}
 			judged[fingerprint] = true
@@ -176,7 +181,7 @@ func TestADismissedStallReturnsWhenTheDealStallsAgain(t *testing.T) {
 	if len(first) != 1 {
 		t.Fatalf("got %d stalled suggestions, want the one seeded deal", len(first))
 	}
-	if err := svc.DismissSuggestion(rep, org, first[0]); err != nil {
+	if err := svc.DismissSuggestion(rep, org, first[0], nil); err != nil {
 		t.Fatalf("dismiss: %v", err)
 	}
 	if after, err := svc.Assemble(rep, org); err != nil {
@@ -229,7 +234,7 @@ func TestADeferralNeverResurrectsADismissal(t *testing.T) {
 	if len(dismissed) != 1 {
 		t.Fatalf("got %d stalled suggestions, want the one seeded deal", len(dismissed))
 	}
-	if err := svc.DismissSuggestion(rep, org, dismissed[0]); err != nil {
+	if err := svc.DismissSuggestion(rep, org, dismissed[0], nil); err != nil {
 		t.Fatalf("dismiss: %v", err)
 	}
 
@@ -306,7 +311,7 @@ func TestAdvancingADealReArmsDismissedStallAdvice(t *testing.T) {
 	if len(dismissed) != 1 {
 		t.Fatalf("got %d stalled suggestions, want the one seeded deal", len(dismissed))
 	}
-	if err := svc.DismissSuggestion(rep, org, dismissed[0]); err != nil {
+	if err := svc.DismissSuggestion(rep, org, dismissed[0], nil); err != nil {
 		t.Fatalf("dismiss: %v", err)
 	}
 	if quiet, err := svc.Assemble(rep, org); err != nil {
@@ -343,7 +348,7 @@ func TestAdvancingADealReArmsDismissedStallAdvice(t *testing.T) {
 	// The dismissal has to happen HERE, after the advance: asserting against the
 	// pre-advance fingerprint would hold whether or not the no-op row is counted,
 	// which is a test that cannot fail for the behaviour it names.
-	if err := svc.DismissSuggestion(rep, org, fresh[0]); err != nil {
+	if err := svc.DismissSuggestion(rep, org, fresh[0], nil); err != nil {
 		t.Fatalf("dismiss the post-advance advice: %v", err)
 	}
 	if _, err := e.Deals.AdvanceDeal(e.As(e.Rep1, nil, integration.AdminPerms),
@@ -468,7 +473,7 @@ func TestSuggestionDismissalIsPerUser(t *testing.T) {
 	// per-user-ness of a rule it was not written for.
 	fingerprint := fingerprintOfKind(t, *view.Suggestions, "no_reply")
 
-	if err := svc.DismissSuggestion(rep1, org, fingerprint); err != nil {
+	if err := svc.DismissSuggestion(rep1, org, fingerprint, nil); err != nil {
 		t.Fatalf("dismiss: %v", err)
 	}
 
@@ -515,7 +520,7 @@ func TestSuggestionDismissalReArmsWhenTheEvidenceChanges(t *testing.T) {
 		t.Fatalf("assemble: %v", err)
 	}
 	dismissedFingerprint := fingerprintOfKind(t, *first.Suggestions, "no_reply")
-	if err := svc.DismissSuggestion(rep, org, dismissedFingerprint); err != nil {
+	if err := svc.DismissSuggestion(rep, org, dismissedFingerprint, nil); err != nil {
 		t.Fatalf("dismiss: %v", err)
 	}
 
@@ -554,7 +559,7 @@ func TestSuggestionDismissalRefusesAnInvisibleAccount(t *testing.T) {
 
 	// The record gate runs before anything else, so this is a 404 rather than the
 	// silent success an unmatched fingerprint gets on a visible account.
-	err := svc.DismissSuggestion(rep, org, wellFormedFingerprint)
+	err := svc.DismissSuggestion(rep, org, wellFormedFingerprint, nil)
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("dismiss on an invisible account → %v, want ErrNotFound (existence-hiding)", err)
 	}
@@ -570,7 +575,7 @@ func TestSuggestionDismissalRefusesAnAgent(t *testing.T) {
 	svc := org360Service(e)
 	org := ids.From[ids.OrganizationKind](e.SeedOrg(t, "Acme", &e.Rep1))
 
-	err := svc.DismissSuggestion(integration.AgentWithOrgRead(e), org, wellFormedFingerprint)
+	err := svc.DismissSuggestion(integration.AgentWithOrgRead(e), org, wellFormedFingerprint, nil)
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("agent dismissal → %v, want ErrPermissionDenied", err)
 	}
@@ -591,7 +596,7 @@ func TestSuggestionDismissalStoresNothingForASuggestionTheAccountDoesNotRaise(t 
 
 	// A quiet account raises nothing, so no fingerprint can match.
 	for _, forged := range []string{wellFormedFingerprint, strings.Repeat("a", 64)} {
-		if err := svc.DismissSuggestion(rep, org, forged); err != nil {
+		if err := svc.DismissSuggestion(rep, org, forged, nil); err != nil {
 			t.Errorf("dismiss %q → %v, want success with nothing written", forged, err)
 		}
 	}
@@ -609,7 +614,7 @@ func TestSuggestionDismissalStoresNothingForASuggestionTheAccountDoesNotRaise(t 
 		t.Fatal("suggestions absent")
 	}
 	served := fingerprintOfKind(t, *view.Suggestions, "no_reply")
-	if err := svc.DismissSuggestion(rep, org, served); err != nil {
+	if err := svc.DismissSuggestion(rep, org, served, nil); err != nil {
 		t.Fatalf("dismiss a served suggestion: %v", err)
 	}
 	if count := e.WsCount(t, `SELECT count(*) FROM suggestion_dismissal`); count != 1 {
@@ -629,7 +634,7 @@ func TestSuggestionDismissalRefusesAMalformedFingerprint(t *testing.T) {
 
 	for _, refused := range []string{"", "   ", "not-a-digest", strings.ToUpper(wellFormedFingerprint)} {
 		var detailed *httperr.DetailedError
-		err := svc.DismissSuggestion(rep, org, refused)
+		err := svc.DismissSuggestion(rep, org, refused, nil)
 		if !errors.As(err, &detailed) || detailed.Status != http.StatusUnprocessableEntity {
 			t.Errorf("fingerprint %q → %v, want a 422 validation error", refused, err)
 		}
@@ -637,4 +642,130 @@ func TestSuggestionDismissalRefusesAMalformedFingerprint(t *testing.T) {
 	if count := e.WsCount(t, `SELECT count(*) FROM suggestion_dismissal`); count != 0 {
 		t.Errorf("suggestion_dismissal rows = %d after refused dismissals, want 0", count)
 	}
+}
+
+// A dismissal made on a project-scoped page has to land.
+//
+// A fingerprint is derived from the suggestion's EVIDENCE, so advice whose
+// evidence is an ACTIVITY carries a different fingerprint on a scoped page from
+// the one it carries on the whole account. The dismissal re-derives the
+// suggestions to check the caller was really served the one they name, and
+// re-deriving unscoped matches nothing: it stores nothing and answers 204,
+// which the reader sees as the card refusing to go away.
+//
+// The no-reply rule is the subject rather than the stalled-deal one beside it.
+// A stalled deal is evidenced by the DEAL, which the scope does not narrow, so
+// its fingerprint is the same either way and would prove nothing here.
+//
+// Both halves are asserted: sending the project must make the dismissal stick,
+// and not sending it must leave the card alone — otherwise the first half would
+// pass against a dismissal that fired on any fingerprint at all.
+func TestASuggestionDismissedOnAScopedPageStaysDismissed(t *testing.T) {
+	e := integration.Setup(t)
+	svc := org360Service(e)
+	org := ids.From[ids.OrganizationKind](e.SeedOrg(t, "Acme", &e.Rep1))
+	// AccountRepPerms deliberately carries no project grant, and widening the
+	// shared fixture would make the suites that read it as "a rep who cannot see
+	// a project" pass while proving nothing. A deep copy, because a plain struct
+	// copy shares the Objects map with every one of them.
+	perms := integration.AccountRepPerms
+	perms.Objects = make(map[string]principal.ObjectGrant, len(integration.AccountRepPerms.Objects)+1)
+	for object, grant := range integration.AccountRepPerms.Objects {
+		perms.Objects[object] = grant
+	}
+	perms.Objects["project"] = principal.ObjectGrant{Read: true}
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, perms)
+
+	newProject := func(name string) ids.ProjectID {
+		created, err := e.Projects.CreateProject(e.Admin(), projects.CreateProjectInput{
+			Name: name, OrganizationID: org, Source: "manual",
+		})
+		if err != nil {
+			t.Fatalf("creating %q: %v", name, err)
+		}
+		return ids.From[ids.ProjectKind](ids.UUID(created.Id))
+	}
+	erp, other := newProject("ERP rollout"), newProject("Datacentre migration")
+
+	// One unanswered outbound per engagement, both older than the no-reply
+	// threshold, the other engagement's the more recent — so the account's
+	// newest exchange and the ERP page's newest exchange are different messages,
+	// which is what makes the two fingerprints differ at all.
+	unanswered := func(subject string, within ids.ProjectID, daysAgo int) {
+		at, outbound := org360Clock.AddDate(0, 0, -daysAgo), "outbound"
+		logged, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+			Kind: "email", Direction: &outbound, Subject: &subject, OccurredAt: &at,
+			Links: []activities.ActivityLinkInput{{EntityType: "organization", EntityID: org.UUID}},
+		})
+		if err != nil {
+			t.Fatalf("logging %q: %v", subject, err)
+		}
+		if _, err := e.Activities.RelinkActivity(e.Admin(),
+			ids.From[ids.ActivityKind](ids.UUID(logged.Id)),
+			activities.RelinkActivityInput{EntityType: "project", EntityID: within.UUID}); err != nil {
+			t.Fatalf("filing %q under its project: %v", subject, err)
+		}
+	}
+	unanswered("ERP cutover plan", erp, 30)
+	unanswered("Rack decommissioning", other, 12)
+
+	scoped := org360.AssembleOptions{ProjectID: &erp}
+	before, err := svc.AssembleScoped(rep, org, scoped)
+	if err != nil {
+		t.Fatalf("assemble scoped: %v", err)
+	}
+	if before.Suggestions == nil {
+		t.Fatal("the scoped page carried no suggestions, so there is nothing to dismiss")
+	}
+	scopedPrints := noReplyFingerprints(*before.Suggestions)
+	if len(scopedPrints) == 0 {
+		t.Fatal("the scoped page raised no no-reply suggestion, so this proves nothing about dismissing one")
+	}
+	wide, err := svc.Assemble(rep, org)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if slices.Contains(noReplyFingerprints(*wide.Suggestions), scopedPrints[0]) {
+		t.Fatalf("the scoped and unscoped pages raise the SAME no-reply fingerprint, so the " +
+			"dismissal below cannot show that the scope reached it")
+	}
+
+	// Unscoped first: the dismissal cannot reproduce a scoped fingerprint from
+	// the whole account, so it must store nothing and the card must be unchanged.
+	if err := svc.DismissSuggestion(rep, org, scopedPrints[0], nil); err != nil {
+		t.Fatalf("dismiss without the project: %v", err)
+	}
+	stillThere, err := svc.AssembleScoped(rep, org, scoped)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(noReplyFingerprints(*stillThere.Suggestions), scopedPrints[0]) {
+		t.Fatalf("a dismissal naming no project silenced a scoped suggestion — then the " +
+			"assertion below cannot tell the scope from any dismissal at all")
+	}
+
+	if err := svc.DismissSuggestion(rep, org, scopedPrints[0], &erp); err != nil {
+		t.Fatalf("dismiss on the scoped page: %v", err)
+	}
+	after, err := svc.AssembleScoped(rep, org, scoped)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after.Suggestions != nil &&
+		slices.Contains(noReplyFingerprints(*after.Suggestions), scopedPrints[0]) {
+		t.Errorf("the suggestion the rep dismissed on the ERP page is still on it (%s) — "+
+			"the dismissal re-derived the account unscoped and matched nothing", scopedPrints[0])
+	}
+}
+
+// noReplyFingerprints is stalledFingerprints' sibling for the rule whose
+// evidence the project scope actually narrows.
+func noReplyFingerprints(found []crmcontracts.Organization360Suggestion) []string {
+	out := make([]string, 0, len(found))
+	for _, suggestion := range found {
+		if string(suggestion.Kind) == "no_reply" {
+			out = append(out, suggestion.Fingerprint)
+		}
+	}
+	return out
 }

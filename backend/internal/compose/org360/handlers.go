@@ -244,8 +244,13 @@ func (h Handlers) DismissOrganizationSuggestion(w http.ResponseWriter, r *http.R
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	var within *ids.ProjectID
+	if req.ProjectId != nil {
+		projectID := ids.From[ids.ProjectKind](ids.UUID(*req.ProjectId))
+		within = &projectID
+	}
 	if err := h.svc.DismissSuggestion(r.Context(),
-		ids.From[ids.OrganizationKind](ids.UUID(id)), req.Fingerprint); err != nil {
+		ids.From[ids.OrganizationKind](ids.UUID(id)), req.Fingerprint, within); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
