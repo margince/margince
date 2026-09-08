@@ -758,6 +758,36 @@ func TestAFirstNameAloneDoesNotResolveToAColleague(t *testing.T) {
 	}
 }
 
+// The same for a reading that finds NOTHING to propose, which is the close that
+// used to run outside the lock: it answered ErrConflict for a reading the
+// erasure had deleted, and the job read that as a fault to retry — against a
+// reading that will never come back, on a transcript that no longer exists.
+func TestAReadingThatProposesNothingOverAnErasedTranscriptIsNotARetry(t *testing.T) {
+	e := setupTranscript(t)
+
+	started, _, err := e.Activities.StartTranscriptReadQueued(e.ctx, e.activity, "human:"+e.Rep1.String(), nil)
+	if err != nil {
+		t.Fatalf("starting the reading: %v", err)
+	}
+	quiet := slog.New(slog.NewTextHandler(os.Stderr, nil))
+	// A reply with nothing above the floor, and the erasure landing while it is
+	// out — so the run has neither proposals to stage nor a record to close.
+	brain := erasingBrain{
+		reply: groundedReply(t, 3, 0.1),
+		erase: func() {
+			if _, err := e.owner.Exec(t.Context(),
+				`DELETE FROM transcript_read WHERE activity_id = $1`, e.activity); err != nil {
+				t.Errorf("erasing the reading: %v", err)
+			}
+		},
+	}
+	proposer := NewTranscriptProposer(e.Pool, brain, e.svc, time.Now, quiet)
+	if err := proposer.Read(e.ctx, e.Activities, started.ID, e.activity); err != nil {
+		t.Fatalf("the reading answered %v; a reading that found nothing and whose record is gone is "+
+			"finished, not a fault for the job to retry against the same absence", err)
+	}
+}
+
 // erasingBrain is the erasure landing WHILE the model call is out, which is
 // where it landed in the incident: the reading has loaded the lines and has not
 // staged anything yet, so the citing scrub finds nothing to scrub.

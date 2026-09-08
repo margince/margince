@@ -116,7 +116,7 @@ func (p *TranscriptProposer) Read(ctx context.Context, store transcriptReadStore
 	reading, err := store.ReadTranscript(ctx, activityID)
 	if err != nil {
 		if detail, terminal := unreadableTranscript(err); terminal {
-			return p.fail(ctx, store, readID, detail)
+			return p.fail(ctx, store, readID, activityID, detail)
 		}
 		// Anything else — the database unreachable, a scoped transient fault —
 		// is the JOB's to retry. Closing the reading here would turn a blip
@@ -127,7 +127,7 @@ func (p *TranscriptProposer) Read(ctx context.Context, store transcriptReadStore
 	// between the request and the reading, and a re-normalized transcript is a
 	// different size than the one that was queued.
 	if err := activities.WithinReadingBounds(reading.Lines); err != nil {
-		return p.fail(ctx, store, readID, err.Error())
+		return p.fail(ctx, store, readID, activityID, err.Error())
 	}
 	// The day the activity is FILED under, which is the best available answer
 	// to "when was this conversation". The composer offers it as an editable
@@ -145,20 +145,12 @@ func (p *TranscriptProposer) Read(ctx context.Context, store transcriptReadStore
 		if errors.Is(err, errRefusedTranscript) {
 			p.log.WarnContext(ctx, "transcript reading refused",
 				"transcript_read_id", readID, "activity_id", activityID, "reason", err)
-			return p.fail(ctx, store, readID,
+			return p.fail(ctx, store, readID, activityID,
 				"the model's reading of this transcript could not be used; the transcript is unchanged and can be read again")
 		}
 		return err
 	}
-	kept := aboveFloor(steps)
-	if len(kept) == 0 {
-		return store.FinishTranscriptRead(ctx, readID, activities.TranscriptReadOutcome{
-			Status:    activities.TranscriptReadDone,
-			Detail:    "this transcript states no next steps clearly enough to propose one",
-			LineCount: len(reading.Lines),
-		})
-	}
-	return p.stageAndFinish(ctx, store, readID, kept, reading, activityID)
+	return p.stageAndFinish(ctx, store, readID, aboveFloor(steps), reading, activityID)
 }
 
 // stageAndFinish commits the quotations and the record that produced them as
@@ -187,13 +179,54 @@ func (p *TranscriptProposer) stageAndFinish(
 	reading activities.TranscriptReading,
 	activityID ids.ActivityID,
 ) error {
+	return p.finishUnderLock(ctx, store, readID, activityID,
+		func(tx pgx.Tx) (activities.TranscriptReadOutcome, error) {
+			staged, err := p.stage(ctx, tx, kept, reading, activityID)
+			if err != nil {
+				return activities.TranscriptReadOutcome{}, err
+			}
+			outcome := activities.TranscriptReadOutcome{
+				Status:      activities.TranscriptReadDone,
+				ProposalIDs: staged,
+				LineCount:   len(reading.Lines),
+			}
+			// A run that finishes with nothing and no reason reads exactly like
+			// a broken one, which is the distinction FinishTranscriptRead
+			// refuses to let collapse — and the two ways of finding nothing are
+			// different facts about the meeting.
+			switch {
+			case len(kept) == 0:
+				outcome.Detail = "this transcript states no next steps clearly enough to propose one"
+			case len(staged) == 0:
+				// It found commitments and raised none: every one was already
+				// answered, waiting in the queue or turned down before.
+				outcome.Detail = "every next step this transcript states has already been put to you"
+			}
+			return outcome, nil
+		})
+}
+
+// finishUnderLock closes a run inside the interlock: the lock, the probe, the
+// caller's own way of producing the outcome, and the close — one transaction.
+//
+// EVERY close goes through it, including the failures and the readings that
+// found nothing. A close outside the lock answers ErrConflict for a reading an
+// erasure has deleted, and the job reads that as a fault to retry — against a
+// reading that will never come back, on a transcript that no longer exists.
+func (p *TranscriptProposer) finishUnderLock(
+	ctx context.Context,
+	store transcriptReadStore,
+	readID ids.UUID,
+	activityID ids.ActivityID,
+	produce func(tx pgx.Tx) (activities.TranscriptReadOutcome, error),
+) error {
 	return database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
 		if err := storekit.LockTranscriptBody(ctx, tx, []ids.UUID{activityID.UUID}); err != nil {
 			return err
 		}
-		// Under the lock, before any staging: a reading whose row is gone is a
-		// reading whose transcript was destroyed, and the work of quoting it is
-		// work that must not happen rather than work to roll back.
+		// Under the lock, before anything is produced: a reading whose row is
+		// gone is a reading whose transcript was destroyed, and the work of
+		// quoting it is work that must not happen rather than work to roll back.
 		live, err := readingIsRunning(ctx, tx, readID)
 		if err != nil {
 			return err
@@ -203,23 +236,9 @@ func (p *TranscriptProposer) stageAndFinish(
 				"transcript_read_id", readID, "activity_id", activityID)
 			return nil
 		}
-		staged, err := p.stage(ctx, tx, kept, reading, activityID)
+		outcome, err := produce(tx)
 		if err != nil {
 			return err
-		}
-		outcome := activities.TranscriptReadOutcome{
-			Status:      activities.TranscriptReadDone,
-			ProposalIDs: staged,
-			LineCount:   len(reading.Lines),
-		}
-		if len(staged) == 0 {
-			// The reading found commitments and raised none of them: every one
-			// was already answered, either waiting in the queue or turned down
-			// before. That is a real outcome and it needs saying — a run that
-			// finishes with nothing and no reason reads exactly like a broken
-			// one, which is the distinction FinishTranscriptRead refuses to let
-			// collapse.
-			outcome.Detail = "every next step this transcript states has already been put to you"
 		}
 		return store.FinishTranscriptReadTx(ctx, tx, readID, outcome)
 	})
@@ -264,11 +283,16 @@ func unreadableTranscript(err error) (detail string, terminal bool) {
 
 // fail closes the run with a reason a rep can act on. A failure to record the
 // failure is returned, so a run cannot be left claimed and silent.
-func (p *TranscriptProposer) fail(ctx context.Context, store transcriptReadStore, readID ids.UUID, detail string) error {
-	return store.FinishTranscriptRead(ctx, readID, activities.TranscriptReadOutcome{
-		Status: activities.TranscriptReadFailed,
-		Detail: detail,
-	})
+func (p *TranscriptProposer) fail(
+	ctx context.Context, store transcriptReadStore, readID ids.UUID, activityID ids.ActivityID, detail string,
+) error {
+	return p.finishUnderLock(ctx, store, readID, activityID,
+		func(pgx.Tx) (activities.TranscriptReadOutcome, error) {
+			return activities.TranscriptReadOutcome{
+				Status: activities.TranscriptReadFailed,
+				Detail: detail,
+			}, nil
+		})
 }
 
 // stage files each next step as its own question, under one bundle id.
