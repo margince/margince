@@ -1,10 +1,9 @@
 # Make targets
 
-The real Makefile is `backend/Makefile`; the root Makefile delegates the
-backend targets and adds the frontend lane. In `backend/`, `make` (or `make
-help`) lists targets with descriptions. Every target that listing advertises
-also runs as `make <name>` from the repo root, which `make-target-parity`
-enforces — so a command copied out of here works from either directory.
+The real Makefile is `backend/Makefile`; the root one delegates its targets and
+adds the frontend lane. In `backend/`, `make` (or `make help`) lists targets with
+descriptions, and every one it advertises also runs as `make <name>` from the repo
+root — `make-target-parity` enforces that, so either directory works.
 
 ## Everyday
 
