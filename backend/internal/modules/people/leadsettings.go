@@ -20,6 +20,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -50,10 +51,38 @@ var FirstResponseTargetMinutes = settings.Define[int](
 		return nil
 	})
 
+// UnassignedEscalationUserID is who answers for a lead nobody owns.
+//
+// A breach on an OWNED lead escalates to its owner, which is the desk that owes
+// the answer. A breach on an unowned one had nobody: the task was written
+// assigned to no one and no notice went out at all, so the queue's worst case —
+// a lead nobody picked up, now past its response target — was the one case that
+// reached no human.
+//
+// A SETTING rather than a derived answer, because "who runs the intake queue"
+// is an operator's decision and no column in this installation holds it. The
+// manager role says who may work a team's records; it does not say which of
+// them answers for the leads nobody has taken. Empty is the honest default: an
+// installation that has not said leaves the breach where it was, and the queue
+// view is what surfaces it.
+var UnassignedEscalationUserID = settings.Define[string](
+	"people.unassigned_escalation_user_id", leadVocabularyObject, "update", "",
+	func(raw string) error {
+		if raw == "" {
+			return nil
+		}
+		if _, err := ids.Parse(raw); err != nil {
+			return fmt.Errorf("the escalation seat is a user id, or empty for nobody")
+		}
+		return nil
+	})
+
 // Definitions is people's contribution to the settings registry; compose
 // concatenates each module's list.
 func Definitions() []settings.Definition {
-	return []settings.Definition{FirstResponseEnabled, FirstResponseTargetMinutes}
+	return []settings.Definition{
+		FirstResponseEnabled, FirstResponseTargetMinutes, UnassignedEscalationUserID,
+	}
 }
 
 // leadSLAPolicy is the resolved setting pair every SLA computation reads.

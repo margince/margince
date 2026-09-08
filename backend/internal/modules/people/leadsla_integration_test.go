@@ -12,6 +12,7 @@ package people
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -433,4 +434,93 @@ func TestALateReplyDoesNotRescueTheLead(t *testing.T) {
 	}
 	t.Fatal("a lead answered a minute LATE was not breached — the re-check must be bounded by the " +
 		"deadline, or the target only ever fires for a lead nobody answered at all")
+}
+
+// seedOwnerlessLeadCreatedAt is seedLeadCreatedAt's unowned twin: the queue
+// state a capture or an unroutable arrival leaves behind.
+func (e *promoteConsentEnv) seedOwnerlessLeadCreatedAt(t *testing.T, email string, createdAt time.Time) ids.LeadID {
+	t.Helper()
+	id := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO lead (id, full_name, email, status, source, captured_by, owner_id, created_at)
+		 VALUES ($1, 'Nobody Lead', lower($2), 'new', 'inbound', 'human:x', NULL, $3)`,
+		id, email, createdAt); err != nil {
+		t.Fatal(err)
+	}
+	return ids.From[ids.LeadKind](id)
+}
+
+func (e *promoteConsentEnv) breachTargetOf(t *testing.T, lead ids.LeadID) *string {
+	t.Helper()
+	var target *string
+	if err := e.owner.QueryRow(context.Background(), `
+		SELECT envelope->'payload'->>'escalation_target' FROM event_outbox
+		 WHERE envelope->>'type' = 'lead.sla_breached'
+		   AND envelope->'entity'->>'id' = $1::text`, lead.UUID).Scan(&target); err != nil {
+		t.Fatalf("reading the breach's escalation target: %v", err)
+	}
+	return target
+}
+
+// A lead NOBODY owns is the queue's worst case — past its response target with
+// nobody who has picked it up — and it was the one case the escalation reached
+// nobody at all: the task went out assigned to no one and no notice was
+// addressed. The configured intake seat answers for it.
+func TestAnOwnerlessBreachReachesTheConfiguredIntakeSeat(t *testing.T) {
+	e := setupPromoteConsent(t)
+	e.enableFirstResponseSLA(t)
+	now := time.Now().UTC()
+
+	// Unset: the breach still records, and is addressed to nobody rather than
+	// to somebody who never agreed to answer for it.
+	silent := e.seedOwnerlessLeadCreatedAt(t, "silent@example.test", now.Add(-DefaultFirstResponseTarget-time.Hour))
+	if _, err := e.store.ScanLeadSLA(e.ctx, now); err != nil {
+		t.Fatalf("scan with no configured seat: %v", err)
+	}
+	if target := e.breachTargetOf(t, silent); target != nil {
+		t.Errorf("an unconfigured installation addressed the breach to %q, want nobody", *target)
+	}
+
+	// Configured: the same breach now names the seat that answers for it.
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO setting (key, value) VALUES ($1, $2)
+		 ON CONFLICT (key) DO UPDATE SET value = excluded.value`,
+		UnassignedEscalationUserID.Key(), fmt.Sprintf("%q", e.user.String())); err != nil {
+		t.Fatal(err)
+	}
+	addressed := e.seedOwnerlessLeadCreatedAt(t, "addressed@example.test", now.Add(-DefaultFirstResponseTarget-time.Hour))
+	if _, err := e.store.ScanLeadSLA(e.ctx, now); err != nil {
+		t.Fatalf("scan with a configured seat: %v", err)
+	}
+	target := e.breachTargetOf(t, addressed)
+	if target == nil || *target != e.user.String() {
+		t.Errorf("escalation target = %v, want the configured intake seat %s", target, e.user)
+	}
+}
+
+// A configured seat that has since been suspended is the same silence as no
+// seat at all, wearing a configuration that looks correct.
+func TestAnIntakeSeatThatCannotWorkIsTreatedAsUnset(t *testing.T) {
+	e := setupPromoteConsent(t)
+	e.enableFirstResponseSLA(t)
+	now := time.Now().UTC()
+
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO setting (key, value) VALUES ($1, $2)
+		 ON CONFLICT (key) DO UPDATE SET value = excluded.value`,
+		UnassignedEscalationUserID.Key(), fmt.Sprintf("%q", e.user.String())); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE app_user SET status = 'suspended' WHERE id = $1`, e.user); err != nil {
+		t.Fatal(err)
+	}
+
+	lead := e.seedOwnerlessLeadCreatedAt(t, "suspended@example.test", now.Add(-DefaultFirstResponseTarget-time.Hour))
+	if _, err := e.store.ScanLeadSLA(e.ctx, now); err != nil {
+		t.Fatalf("scan with a suspended seat: %v", err)
+	}
+	if target := e.breachTargetOf(t, lead); target != nil {
+		t.Errorf("a suspended seat was addressed (%q); nobody reads that desk", *target)
+	}
 }

@@ -9,6 +9,8 @@ package people
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -231,13 +233,30 @@ func markBreach(ctx context.Context, tx pgx.Tx, b SLABreach, now time.Time) erro
 		return fmt.Errorf("audit sla breach: %w", err)
 	}
 	payload := crmcontracts.PublicEventLeadSlaBreached{Deadline: b.Deadline}
-	if b.OwnerID != nil {
+	switch {
+	case b.OwnerID != nil:
 		owner := openapi_types.UUID(b.OwnerID.UUID)
 		payload.OwnerId = &owner
-		// Until a team-lead concept exists to resolve the §18 escalation
-		// target through, the owner IS the target: the breach lands on the
-		// desk that owns the lead rather than nowhere.
+		// An owned lead escalates to its OWNER: the desk that owes the answer
+		// is the desk that hears about the miss.
 		payload.EscalationTarget = &owner
+	default:
+		// A lead NOBODY owns is the queue's worst case — past its response
+		// target with no one who has picked it up — and it was the one case
+		// that reached nobody at all: an unassigned task and no notice.
+		//
+		// The configured intake seat answers for it. Unset means the
+		// installation has not said who runs the queue, and the breach stays
+		// where it was rather than being addressed to somebody who did not
+		// agree to it; the unassigned view is what surfaces those.
+		target, configured, err := unassignedEscalationTarget(ctx, tx)
+		if err != nil {
+			return err
+		}
+		if configured {
+			addressed := openapi_types.UUID(target)
+			payload.EscalationTarget = &addressed
+		}
 	}
 	if err := storekit.EmitEvent(ctx, tx, auditID, b.LeadID.UUID, payload); err != nil {
 		return fmt.Errorf("emit lead.sla_breached: %w", err)
@@ -400,4 +419,54 @@ func leadTouchesFor(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, deadline 
 		out = append(out, t)
 	}
 	return out, rows.Err()
+}
+
+// unassignedEscalationTarget reads the configured intake seat.
+//
+// Answers (id, true) when an installation has named a seat that can still work
+// the queue, and (zero, false) for every way it has not: no setting, an empty
+// one, an unparseable one, or a seat that has since been suspended, archived,
+// turned into an agent or dropped to a read seat. A seat nobody reads is the
+// same silence as no seat at all, wearing a configuration that looks correct.
+//
+// Read by key and ungated, the way loadLeadSLAPolicy reads its own pair: this
+// runs inside the SLA sweep under the system principal, and the value is an
+// input to a decision that is already the sweep's to make.
+func unassignedEscalationTarget(ctx context.Context, tx pgx.Tx) (ids.UUID, bool, error) {
+	var raw json.RawMessage
+	err := tx.QueryRow(ctx, `SELECT value FROM setting WHERE key = $1`,
+		UnassignedEscalationUserID.Key()).Scan(&raw)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ids.UUID{}, false, nil
+	}
+	if err != nil {
+		return ids.UUID{}, false, fmt.Errorf("load the unassigned escalation seat: %w", err)
+	}
+	var configured string
+	if err := json.Unmarshal(raw, &configured); err != nil {
+		// Not silence: the setting is written through a validated entry, so a
+		// value that will not decode means somebody wrote the row around it,
+		// and answering "nobody is configured" would hide that behind a queue
+		// that quietly escalates to no one.
+		return ids.UUID{}, false, fmt.Errorf("decode the unassigned escalation seat: %w", err)
+	}
+	if configured == "" {
+		// Empty IS the answer: the documented way to say no seat answers.
+		return ids.UUID{}, false, nil
+	}
+	id, err := ids.Parse(configured)
+	if err != nil {
+		return ids.UUID{}, false, fmt.Errorf("the unassigned escalation seat is not a user id: %w", err)
+	}
+	// auth.EnsureAssignee, not a query of our own: "may this seat be handed
+	// work" already has one spelling, and a third reading of it is a third
+	// answer. Its SCOPE half is vacuous here — the sweep runs as the system
+	// principal — and its eligibility half is exactly the question.
+	if err := auth.EnsureAssignee(ctx, tx, id); err != nil {
+		if errors.As(err, new(*auth.AssigneeNotAllowedError)) {
+			return ids.UUID{}, false, nil
+		}
+		return ids.UUID{}, false, fmt.Errorf("check the unassigned escalation seat: %w", err)
+	}
+	return id, true, nil
 }
