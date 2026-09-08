@@ -56,7 +56,7 @@ export const KIND_LABEL: Readonly<Record<string, MessageKey>> = {
   close_date_correction: "approval.kind.close_date_correction",
   deal_follow_up: "approval.kind.deal_follow_up",
   capture_counterparty: "approval.kind.capture_counterparty",
-  company_name_promotion: "approval.kind.org_name_promotion",
+  company_name_promotion: "approval.kind.company_name_promotion",
   vcard_create: "approval.kind.vcard_create",
   lifecycle_change: "approval.kind.lifecycle_change",
   transcript_proposal: "approval.kind.transcript_proposal",

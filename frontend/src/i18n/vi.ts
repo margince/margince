@@ -1393,7 +1393,7 @@ export const vi = {
   "approval.kind.linkedin_match": "Đối chiếu LinkedIn",
   "approval.kind.site_lead": "Thêm liên hệ tìm thấy trên website",
   "approval.kind.capture_counterparty": "Thêm người từ email của bạn",
-  "approval.kind.org_name_promotion": "Đổi tên một công ty",
+  "approval.kind.company_name_promotion": "Đổi tên một công ty",
   "approval.kind.vcard_create": "Tạo liên hệ từ danh thiếp",
   "approval.kind.lifecycle_change": "Giai đoạn công ty",
   "approval.kind.stage_progression": "Chuyển deal sang giai đoạn tiếp theo",
@@ -7315,8 +7315,8 @@ export const vi = {
   "autonomy.kind.close_date_correction.label": "Ngày chốt",
   "autonomy.kind.close_date_correction.help":
     "Ngày chốt của một deal thay đổi theo những gì được nói trong cuộc gọi hoặc viết trong email.",
-  "autonomy.kind.org_name_promotion.label": "Tên công ty",
-  "autonomy.kind.org_name_promotion.help":
+  "autonomy.kind.company_name_promotion.label": "Tên công ty",
+  "autonomy.kind.company_name_promotion.help":
     "Một công ty được ghi theo tên miền sẽ lấy tên mà chính website của họ công bố.",
   "autonomy.kind.lifecycle_change.label": "Giai đoạn vòng đời",
   "autonomy.kind.lifecycle_change.help":
@@ -7538,7 +7538,7 @@ export const vi = {
   "person.enriched.field.phone": "Điện thoại",
   "person.enriched.field.role": "Vai trò",
   "person.enriched.field.linkedin": "LinkedIn",
-  "person.enriched.field.org_name": "Công ty",
+  "person.enriched.field.company_name": "Công ty",
   "person.enriched.field.address": "Địa chỉ",
   "person.enriched.field.website": "Trang web",
   "person.enriched.readFrom": "Đọc từ {source} vào {when}",

@@ -80,9 +80,9 @@ func matchGhostCompanies(ctx context.Context, tx pgx.Tx) error {
 	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE linkedin_connection g
-		   SET matched_company_id = t.org_id, updated_at = now()
+		   SET matched_company_id = t.company_id, updated_at = now()
 		  FROM unnest($1::uuid[], $2::uuid[]) AS t(ghost_id, company_id)
-		 WHERE g.id = t.ghost_id AND g.matched_company_id IS DISTINCT FROM t.org_id`,
+		 WHERE g.id = t.ghost_id AND g.matched_company_id IS DISTINCT FROM t.company_id`,
 		ghostIDs, companyIDs); err != nil {
 		return fmt.Errorf("people: attaching LinkedIn connections to accounts: %w", err)
 	}

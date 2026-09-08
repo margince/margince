@@ -1477,7 +1477,7 @@ export const en = {
   "approval.kind.linkedin_match": "LinkedIn match",
   "approval.kind.site_lead": "Add a contact found on the site",
   "approval.kind.capture_counterparty": "Add someone from your mail",
-  "approval.kind.org_name_promotion": "Rename an account",
+  "approval.kind.company_name_promotion": "Rename an account",
   "approval.kind.vcard_create": "Create a contact from a card",
   "approval.kind.lifecycle_change": "Account stage",
   "approval.kind.stage_progression": "Move a deal to the next stage",
@@ -7500,8 +7500,8 @@ export const en = {
   "autonomy.kind.close_date_correction.label": "Close dates",
   "autonomy.kind.close_date_correction.help":
     "A deal's close date moved by what was said on a call or written in a mail.",
-  "autonomy.kind.org_name_promotion.label": "Company names",
-  "autonomy.kind.org_name_promotion.help":
+  "autonomy.kind.company_name_promotion.label": "Company names",
+  "autonomy.kind.company_name_promotion.help":
     "A company recorded under its domain takes the name its own website gives.",
   "autonomy.kind.lifecycle_change.label": "Lifecycle stages",
   "autonomy.kind.lifecycle_change.help":
@@ -7720,7 +7720,7 @@ export const en = {
   "person.enriched.field.phone": "Phone",
   "person.enriched.field.role": "Role",
   "person.enriched.field.linkedin": "LinkedIn",
-  "person.enriched.field.org_name": "Company",
+  "person.enriched.field.company_name": "Company",
   "person.enriched.field.address": "Address",
   "person.enriched.field.website": "Website",
   "person.enriched.readFrom": "Read from {source} on {when}",

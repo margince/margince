@@ -244,7 +244,7 @@ var dueThreadsQuery = `
 		       NULLIF(s.last_activity_at, '-infinity'), s.scanned_from, s.scanned_from_id
 		  FROM conversation c
 		  LEFT JOIN signal_thread_scan s ON s.thread_key = c.thread_key
-		 WHERE c.org_count = 1
+		 WHERE c.company_count = 1
 		   AND c.every_message_open
 		   -- A conversation nobody else may read, whose reader cannot be named,
 		   -- is not offered at all. Reading it would produce a finding with no

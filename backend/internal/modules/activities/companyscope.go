@@ -170,11 +170,11 @@ func activityReachesCompany(operand string) string {
 // extractor's one-account rule carries most of the weight, since a contact
 // with two live employers makes their conversations ambiguous and skipped.
 func CompanyReachSet() string {
-	return sprintf(`SELECT DISTINCT l.activity_id, o.org_id AS company_id
+	return sprintf(`SELECT DISTINCT l.activity_id, o.company_id AS company_id
 		    %s
 		    CROSS JOIN LATERAL (VALUES (l.company_id), (d.company_id),
 		                              (r.company_id)) AS o(company_id)
-		    WHERE o.org_id IS NOT NULL`, companyArms)
+		    WHERE o.company_id IS NOT NULL`, companyArms)
 }
 
 // ActivityWithinProject is the ONE spelling of "this activity belongs to the
