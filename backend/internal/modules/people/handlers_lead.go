@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strings"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -95,6 +97,55 @@ func (h Handlers) UpdateLead(w http.ResponseWriter, r *http.Request, id crmcontr
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, lead)
+}
+
+// AssignLeads serves POST /leads/assign-bulk: hand a named set of leads to one
+// owner, each answering for itself.
+//
+// 200 with per-row outcomes rather than an error for a partly refused run:
+// the refusals ARE the result here, and a 4xx carrying no body would leave the
+// screen unable to say which of forty leads did not move.
+func (h Handlers) AssignLeads(w http.ResponseWriter, r *http.Request) {
+	var req crmcontracts.AssignLeadsRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	// An absent required id decodes to the zero UUID with no error, and a zero
+	// UUID reaching the assignment gate would be refused as "not a seat you may
+	// assign to" — a sentence about a colleague the caller never named. Both
+	// ids are refused here instead, naming the field that was missing.
+	if err := httperr.RequireBodyID("owner_id", ids.UUID(req.OwnerId)); err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	in := AssignLeadsInput{
+		OwnerID: ids.From[ids.UserKind](ids.UUID(req.OwnerId)),
+		Leads:   make([]AssignLeadItem, 0, len(req.Leads)),
+	}
+	for _, item := range req.Leads {
+		if err := httperr.RequireBodyID("leads.id", ids.UUID(item.Id)); err != nil {
+			writeStoreErr(w, r, err)
+			return
+		}
+		in.Leads = append(in.Leads, AssignLeadItem{
+			ID:        ids.From[ids.LeadKind](ids.UUID(item.Id)),
+			IfVersion: item.Version,
+		})
+	}
+	outcomes, err := h.store.AssignLeads(r.Context(), in)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	results := make([]crmcontracts.AssignLeadOutcome, 0, len(outcomes))
+	for _, o := range outcomes {
+		results = append(results, crmcontracts.AssignLeadOutcome{
+			LeadId:  openapi_types.UUID(o.LeadID.UUID),
+			Outcome: o.Outcome,
+			Version: o.Version,
+		})
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.AssignLeadsResult{Results: results})
 }
 
 // PromoteLead: POST /leads/{id}/promote — the lead graduates into the

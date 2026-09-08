@@ -14,8 +14,6 @@ import (
 	"net/http"
 	"strings"
 
-	openapi_types "github.com/oapi-codegen/runtime/types"
-
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -50,7 +48,7 @@ func (h blockedDomainHandlers) ListBlockedDomains(w http.ResponseWriter, r *http
 	// Empty answers as [], never null — the contract promises an array.
 	out := make([]crmcontracts.BlockedDomain, 0, len(entries))
 	for _, e := range entries {
-		out = append(out, toContractBlockedDomain(e))
+		out = append(out, people.ToContractBlockedDomain(e))
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.BlockedDomainListResponse{Data: out, Total: total})
 }
@@ -102,20 +100,5 @@ func (h blockedDomainHandlers) SetBlockedDomain(w http.ResponseWriter, r *http.R
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, toContractBlockedDomain(stored))
-}
-
-func toContractBlockedDomain(e people.BlockedDomain) crmcontracts.BlockedDomain {
-	out := crmcontracts.BlockedDomain{
-		Domain:    e.Domain,
-		Admission: crmcontracts.BlockedDomainAdmission(e.Admission),
-		Reason:    e.Reason,
-		Source:    crmcontracts.BlockedDomainSource(e.Source),
-		DecidedAt: e.DecidedAt,
-	}
-	if e.CompanyID != nil {
-		id := openapi_types.UUID(e.CompanyID.UUID)
-		out.CompanyId = &id
-	}
-	return out
+	httperr.WriteJSON(w, http.StatusOK, people.ToContractBlockedDomain(stored))
 }

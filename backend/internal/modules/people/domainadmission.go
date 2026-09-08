@@ -102,59 +102,82 @@ func (s *Store) SetDomainAdmission(ctx context.Context, domain, admission, reaso
 	}
 	var stored BlockedDomain
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// The decision this write replaces comes back FROM the write, because
-		// "who unblocked this, and what was it before" is the question this
-		// surface exists to answer. Without it admission_source says "human"
-		// but never WHICH human, and admission_at is overwritten on every
-		// change.
-		before, applied, err := setDomainAdmissionTx(ctx, tx, base, admission, reason, AdmissionSourceHuman)
-		if err != nil {
-			return err
-		}
-		if !applied {
-			// The sticky rule refuses a MACHINE overwrite of a human decision,
-			// and this path always writes as the human — so a decision that did
-			// not land means the row was never replaced, and the audit row below
-			// would describe a change the table does not carry.
-			return fmt.Errorf("people: the admission of %s was not recorded", base)
-		}
-		if admission == DomainAdmitted {
-			// Unblocking has to RE-ASK, not merely clear a flag. The domain was
-			// already asked and answered — that is why it is on this list — so
-			// nothing would ever ask again on its own, and an admin who unblocked
-			// McKinsey because they became a client would watch nothing happen.
-			//
-			// The owner is stamped from the acting human: triage may not mint
-			// rows for a domain nobody is accountable for, and a
-			// machine-suppressed row has no owner at all. An agent acting for
-			// somebody carries that authority in OnBehalfOf, so the same
-			// resolution capture uses applies here — the row records the human
-			// who is answerable, never the machine that typed it.
-			if err := reopenAdmittedDomainTx(ctx, tx, base, actingHuman(ctx)); err != nil {
-				return err
-			}
-		}
-		stored, err = readDomainAdmissionTx(ctx, tx, base)
-		if err != nil {
-			return err
-		}
-		// Audit-only (EVT-NOEVT-3): capture posture is not a record change the
-		// event stream carries, but it IS a decision somebody must answer for.
-		after := map[string]any{
-			auditKeyDomain: stored.Domain, "admission": stored.Admission,
-			"admission_reason": stored.Reason, "admission_source": stored.Source,
-		}
-		// A first decision replaces nothing: there was no admission, no reason
-		// and nobody answerable for one. A later decision moved all three, and
-		// says what they were — which is the question this surface exists for.
-		if before == nil {
-			_, auditErr := storekit.AuditEvent(ctx, tx, "update", entityCompany, stored.ID, after)
-			return auditErr
-		}
-		_, auditErr := storekit.Audit(ctx, tx, "update", entityCompany, stored.ID, before, after)
-		return auditErr
+		var err error
+		stored, err = recordHumanDomainAdmissionTx(ctx, tx, base, admission, reason)
+		return err
 	})
 	if err != nil {
+		return BlockedDomain{}, err
+	}
+	return stored, nil
+}
+
+// recordHumanDomainAdmissionTx writes one HUMAN admission decision — the row,
+// the re-ask an unblock owes, and the audit — on the caller's transaction.
+//
+// It is on a transaction the caller owns because rejecting a company
+// (companyreject.go) records this decision in the SAME commit that
+// archives the record. Two spellings of it would be two answers to "what does a
+// person deciding about a domain write", and the sticky rule, the re-ask and
+// the audit door are each a place the second copy could differ.
+//
+// The authority gate is the CALLER's: every caller here asks for at least the
+// company update this decision is, and the composite verb asks for more.
+func recordHumanDomainAdmissionTx(
+	ctx context.Context, tx pgx.Tx, domain, admission, reason string,
+) (BlockedDomain, error) {
+	// The decision this write replaces comes back FROM the write, because
+	// "who unblocked this, and what was it before" is the question this
+	// surface exists to answer. Without it admission_source says "human"
+	// but never WHICH human, and admission_at is overwritten on every
+	// change.
+	before, applied, err := setDomainAdmissionTx(ctx, tx, domain, admission, reason, AdmissionSourceHuman)
+	if err != nil {
+		return BlockedDomain{}, err
+	}
+	if !applied {
+		// The sticky rule refuses a MACHINE overwrite of a human decision,
+		// and this path always writes as the human — so a decision that did
+		// not land means the row was never replaced, and the audit row below
+		// would describe a change the table does not carry.
+		return BlockedDomain{}, fmt.Errorf("people: the admission of %s was not recorded", domain)
+	}
+	if admission == DomainAdmitted {
+		// Unblocking has to RE-ASK, not merely clear a flag. The domain was
+		// already asked and answered — that is why it is on this list — so
+		// nothing would ever ask again on its own, and an admin who unblocked
+		// McKinsey because they became a client would watch nothing happen.
+		//
+		// The owner is stamped from the acting human: triage may not mint
+		// rows for a domain nobody is accountable for, and a
+		// machine-suppressed row has no owner at all. An agent acting for
+		// somebody carries that authority in OnBehalfOf, so the same
+		// resolution capture uses applies here — the row records the human
+		// who is answerable, never the machine that typed it.
+		if err := reopenAdmittedDomainTx(ctx, tx, domain, actingHuman(ctx)); err != nil {
+			return BlockedDomain{}, err
+		}
+	}
+	stored, err := readDomainAdmissionTx(ctx, tx, domain)
+	if err != nil {
+		return BlockedDomain{}, err
+	}
+	// Audit-only (EVT-NOEVT-3): capture posture is not a record change the
+	// event stream carries, but it IS a decision somebody must answer for.
+	after := map[string]any{
+		auditKeyDomain: stored.Domain, "admission": stored.Admission,
+		"admission_reason": stored.Reason, "admission_source": stored.Source,
+	}
+	// A first decision replaces nothing: there was no admission, no reason
+	// and nobody answerable for one. A later decision moved all three, and
+	// says what they were — which is the question this surface exists for.
+	if before == nil {
+		if _, err := storekit.AuditEvent(ctx, tx, "update", entityCompany, stored.ID, after); err != nil {
+			return BlockedDomain{}, err
+		}
+		return stored, nil
+	}
+	if _, err := storekit.Audit(ctx, tx, "update", entityCompany, stored.ID, before, after); err != nil {
 		return BlockedDomain{}, err
 	}
 	return stored, nil

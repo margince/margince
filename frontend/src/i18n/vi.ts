@@ -815,6 +815,13 @@ export const vi = {
   "consent.purposesUnavailable":
     "Không tải được danh mục mục đích chấp thuận, nên hiện chưa thể cho biết mục đích nào cần xác nhận kép.",
 
+  "company.reject": "Không phải công ty",
+  "company.rejectConfirm":
+    "Thao tác này lưu trữ “{name}” và từ chối cấp công ty cho {domain}, nên thư tiếp theo từ tên miền đó sẽ không tạo lại nó. Quản trị viên có thể cho tên miền vào lại ở Cài đặt → Thu thập.",
+  "company.rejectReasonLabel": "Vì sao đây không phải công ty?",
+  "company.rejectReasonHint":
+    "Một câu đủ rõ để rà soát lại trong danh sách tên miền bị chặn. Quyết định từ chối tồn tại lâu hơn bản ghi.",
+  "company.rejectDone": "Đã lưu trữ “{name}”, và {domain} sẽ không tạo công ty nữa",
   "company.name": "Công ty",
   "company.description": "Họ làm gì",
   "company.website": "Trang web",
@@ -2107,6 +2114,9 @@ export const vi = {
     "\u0110\u00f3ng v\u1edbi l\u00fd do \u201c{reason}\u201d. M\u1ed7i kh\u00e1ch h\u00e0ng ti\u1ec1m n\u0103ng v\u1eabn gi\u1eef h\u1ed3 s\u01a1 ri\u00eang, v\u00e0 kh\u00f4ng c\u00f3 m\u1ed9t b\u01b0\u1edbc n\u00e0o ho\u00e0n t\u00e1c t\u1ea5t c\u1ea3.",
   "lead.bulkFailed": "{count} không áp dụng được —",
   "lead.bulkFailedRow": "không lưu được",
+  "lead.bulkOutcomeConflict": "đã thay đổi trong lúc bạn chọn",
+  "lead.bulkOutcomeForbidden": "không phải của bạn để giao lại",
+  "lead.bulkOutcomeNotFound": "không còn trong danh sách của bạn",
   "lead.bulkSelectRow": "Chọn {name}",
   "lead.unnamed": "Khách hàng tiềm năng chưa có tên",
   "lead.sla.breached": "Quá hạn",

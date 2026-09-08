@@ -2501,6 +2501,58 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
 
+  /companies/{id}/reject:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Companies]
+      operationId: rejectCompany
+      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: This is not a company — archive it and refuse its domain as one (admin/ops).
+      description: |
+        Archiving alone does not settle it: the next message from the same domain mints the
+        company again, and the person who deleted it learns nothing about why it came back.
+        This does both halves in ONE transaction — the domain is recorded `suppressed` with a
+        human admission, and the record is archived — so the outcome is never half a decision.
+
+        The domain is read HERE, from the company's current primary domain, and is not a field
+        on the request. A domain the caller carried is a snapshot: with several domains, a
+        primary that changed since the page loaded would suppress the old one while archiving a
+        company whose mail still arrives on the new one.
+
+        Refused for the installation's own company, which cannot be archived at all, and for a
+        company with no primary domain — one somebody typed in by hand was never derived from
+        mail, so there is nothing to refuse.
+
+        The admission is a HUMAN one and therefore sticky: no later verdict may re-open the
+        domain, and only a person may let it back in through the blocked-domain surface. That
+        is why this is human-only, like the rest of the capture posture.
+
+        Needs both `company:delete` (the archive) and `company:update` (the standing
+        domain decision). A seat holding only one of them is refused before anything is written.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RejectCompanyRequest' }
+            examples:
+              aVendor: { value: { reason: 'a tool we use, not a customer' } }
+      responses:
+        '200':
+          description: The archived company and the domain decision recorded with it.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RejectCompanyResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /companies/{id}/merge:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -7535,6 +7587,60 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /leads/assign-bulk:
+    post:
+      tags: [Leads]
+      operationId: assignLeads
+      summary: Hand a named set of leads to one owner.
+      description: |
+        The explicit-id twin of `updateLead.owner_id`, for a queue a manager works a screenful at
+        a time. The caller names up to 500 leads and one destination; each lead is assigned
+        exactly as a single `updateLead` would assign it, with its own `audit_log` row and
+        `lead.updated` event.
+
+        PER ROW, not one transaction, and the result says so. A bulk verb over a work queue is a
+        selection of independent records, and refusing forty because the fortieth moved under the
+        reader would make the screen unworkable — so each lead answers for itself and the result
+        names every one that did not move. That is the opposite of `relinkActivities`, which is
+        all-or-nothing because its rows are one conversation.
+
+        The destination is checked ONCE before anything is written, because it is a fact about a
+        seat rather than about any lead: an ineligible owner answers `422 owner_not_assignable`
+        and nothing moves. It is then re-checked inside each row's transaction, since a seat can
+        be suspended midway through a long run.
+
+        Each `version` is optional and behaves as `If-Match` does on the single write: supply it
+        and a lead that moved since the caller read it answers `conflict` rather than overwriting
+        somebody's work.
+      x-agent-access: human-only
+      # Session cookie only, matching auth.RequireHuman: putting somebody's name on a customer
+      # record is a human's act, in bulk exactly as it is one at a time.
+      security: [{ cookieAuth: [] }]
+      # NO IdempotencyKey, deliberately. A replay pays the recorded response back without
+      # re-running the write, so the key's holder must be re-probed against the records that
+      # response describes — and the replay probe reads ONE record id from a body, while this
+      # body names up to five hundred. A probe that checked the first lead would gate a
+      # hundredth of the answer while reading as a gate on all of it, so a caller whose row
+      # scope was revoked after the run could replay the key and read every verdict.
+      #
+      # A retry costs nothing to be safe about instead: assignment is idempotent in effect
+      # (assigning a lead to the owner it already has is the same lead with a new version), and
+      # each row carries its own `version`, so a retried request with the versions the caller
+      # still holds answers `conflict` for exactly the rows that moved.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AssignLeadsRequest' }
+      responses:
+        '200':
+          description: What happened to each named lead.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AssignLeadsResult' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /leads/settings:
     get:
       tags: [Leads]
@@ -22795,6 +22901,32 @@ components:
           minLength: 1
           maxLength: 500
           description: 'Why. Required, because a refusal nobody can explain is one nobody can review.'
+    RejectCompanyRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+          # A non-whitespace character, because the handler trims before it
+          # judges: `minLength` alone admits "   ", which is then refused with
+          # a 422 the contract gave no way to predict.
+          pattern: '\S'
+          description: |
+            Why this is not a company. Required: the refusal outlives the record, and the next
+            operator to find the domain on the blocked list can only review a decision that
+            says something.
+    RejectCompanyResponse:
+      type: object
+      description: |
+        Both halves of the one decision, because both landed. A caller that showed only the
+        archived record would leave the standing domain refusal — the half that stops the
+        company coming back — invisible to the person who just made it.
+      required: [company, domain]
+      properties:
+        company: { $ref: '#/components/schemas/Company' }
+        domain: { $ref: '#/components/schemas/BlockedDomain' }
     BlockedDomainListResponse:
       type: object
       required: [data, total]
@@ -31666,6 +31798,74 @@ components:
           type: boolean
           default: false
           description: When true, replaces each activity's existing link of the same entity_type (move) rather than adding (associate).
+
+    AssignLeadsRequest:
+      type: object
+      description: |
+        One destination owner, and the leads to hand to them. The owner is checked before any
+        lead is touched; the leads answer one at a time.
+      required: [leads, owner_id]
+      properties:
+        owner_id:
+          type: string
+          format: uuid
+          description: |
+            The seat to hand them to. Must be one that can be handed work — an active, unarchived
+            human seat that is not read-only, inside the caller's own row scope — else
+            `422 owner_not_assignable` and nothing moves.
+        leads:
+          type: array
+          minItems: 1
+          maxItems: 500
+          items: { $ref: '#/components/schemas/AssignLeadsItem' }
+
+    AssignLeadsItem:
+      type: object
+      required: [id]
+      properties:
+        id: { type: string, format: uuid }
+        version:
+          type: integer
+          format: int64
+          description: |
+            The version the caller read. Optional; supplying it makes the row's write conditional
+            exactly as `If-Match` does on `updateLead`, so a lead somebody else moved answers
+            `conflict` instead of losing their change.
+
+    AssignLeadsResult:
+      type: object
+      required: [results]
+      properties:
+        results:
+          type: array
+          items: { $ref: '#/components/schemas/AssignLeadOutcome' }
+
+    AssignLeadOutcome:
+      type: object
+      description: What happened to one named lead.
+      required: [lead_id, outcome]
+      properties:
+        lead_id: { type: string, format: uuid }
+        outcome: { $ref: '#/components/schemas/AssignLeadOutcomeKind' }
+        version:
+          type: integer
+          format: int64
+          description: The lead's version after the write. Present on `assigned`.
+
+    AssignLeadOutcomeKind:
+      type: string
+      description: |
+        `assigned` moved the lead — including one already owned by the destination, which still
+        takes a version and an audit row rather than being quietly skipped: the writer records
+        the assignment as an act, so a re-run says what it did rather than claiming it did
+        nothing. `forbidden` is a lead the caller may not hand on. `conflict` is a version that
+        no longer holds.
+
+        `not_found` is a lead the caller cannot see — and also an ARCHIVED one, because the
+        write resolves live rows only and a promoted or disqualified lead is no longer among
+        them. The two deliberately read alike: which of them it was is a fact about a record the
+        caller was not shown, and separating them would answer that a lead exists.
+      enum: [assigned, not_found, forbidden, conflict]
 
     RelinkActivitiesRequest:
       type: object

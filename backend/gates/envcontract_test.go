@@ -358,9 +358,14 @@ type configItemDefault struct {
 	present bool
 }
 
-// docDefaultRow matches one reference-doc table row: the env name in backticks,
-// then the second cell.
+// docDefaultRow matches one reference-doc table row in an `Env | Default`
+// table: the env name in backticks, then the second cell.
 var docDefaultRow = regexp.MustCompile(`(?m)^\|\s*` + "`" + `(MARGINCE_[A-Z0-9_]+)` + "`" + `\s*\|\s*([^|]*?)\s*\|`)
+
+// docFlagDefaultRow matches one row of a `Flag | Env | Default` table, where
+// the env name is the SECOND cell and the default the third. Its first cell is
+// a flag, an em dash, or prose like "— (env-only)".
+var docFlagDefaultRow = regexp.MustCompile(`(?m)^\|[^|]*\|\s*` + "`" + `(MARGINCE_[A-Z0-9_]+)` + "`" + `\s*\|\s*([^|]*?)\s*\|`)
 
 // docDefaultTable matches a table header whose SECOND column is the default.
 // configuration.md also carries tables whose second column is something else
@@ -368,9 +373,26 @@ var docDefaultRow = regexp.MustCompile(`(?m)^\|\s*` + "`" + `(MARGINCE_[A-Z0-9_]
 // those cells as defaults would report prose where no default was ever claimed.
 var docDefaultTable = regexp.MustCompile(`(?mi)^\|\s*Env\s*\|\s*Default\s*\|`)
 
-// docDefaultLiteral pulls the value out of a default cell, which is written in
-// backticks when there is one.
-var docDefaultLiteral = regexp.MustCompile("^`([^`]*)`$")
+// docFlagDefaultTable matches the OTHER default-bearing shape, whose columns
+// are Flag, Env, Default. Most of this document is that shape, and reading only
+// the first left the majority of the tree's declared defaults uncomparable —
+// which is not a quiet gap: the one contradiction this gate exists to catch was
+// sitting in one of these tables, documenting `off` where the code declares
+// `live`, and the gate reported PASS because it could not see the row.
+var docFlagDefaultTable = regexp.MustCompile(`(?mi)^\|\s*Flag\s*\|\s*Env\s*\|\s*Default\s*\|`)
+
+// docDefaultLiteral pulls the value out of a default cell.
+//
+// The value is a backticked literal, optionally followed by a parenthetical
+// gloss saying what it MEANS — "`0` (= built-in 40)". The gloss is for the
+// operator and is not part of the value: a cell reading `0` alone tells them
+// nothing about what zero does, and demanding the bare literal would push that
+// explanation out of the table it belongs in.
+var docDefaultLiteral = regexp.MustCompile("^`([^`]*)`(?:\\s+\\([^)]*\\))?$")
+
+// docDefaultAbsent is the same shape for "no default": an em dash, optionally
+// glossed — "— (required)", "— (off)".
+var docDefaultAbsent = regexp.MustCompile(`^[—-](?:\s+\([^)]*\))?$`)
 
 func TestEveryDeclaredDefaultMatchesTheDocumentedOne(t *testing.T) {
 	t.Parallel()
@@ -383,7 +405,17 @@ func TestEveryDeclaredDefaultMatchesTheDocumentedOne(t *testing.T) {
 	for _, item := range declared {
 		docValue, inDoc := documented[item.name]
 		if !inDoc {
-			continue // obligation 1 already requires the name to be documented
+			// Obligation 1 requires the NAME to appear in the document. It does
+			// not require it to appear where a default can be read, and that is
+			// how nine declarations came to apply a fallback the reference never
+			// showed: an operator found the variable, read its meaning, supplied
+			// nothing, and got a value the document had not mentioned. A default
+			// that is not in a Default column is not documented.
+			if item.present {
+				t.Errorf("%s: %s declares Default %q and %s shows it in no Default column — put it in one, and this comparison gates it from then on",
+					item.pos, item.name, item.value, configurationDoc)
+			}
+			continue
 		}
 		switch {
 		case item.present && docValue != item.value:
@@ -581,10 +613,10 @@ func documentedDefaults(t *testing.T) map[string]string {
 		t.Fatalf("reading %s: %v", configurationDoc, err)
 	}
 	out := map[string]string{}
-	for _, section := range defaultBearingTables(string(b)) {
-		for _, row := range docDefaultRow.FindAllStringSubmatch(section, -1) {
+	for _, table := range defaultBearingTables(string(b)) {
+		for _, row := range table.row.FindAllStringSubmatch(table.body, -1) {
 			cell := strings.TrimSpace(row[2])
-			if cell == "—" || cell == "-" || cell == "" {
+			if cell == "" || docDefaultAbsent.MatchString(cell) {
 				out[row[1]] = ""
 				continue
 			}
@@ -601,16 +633,36 @@ func documentedDefaults(t *testing.T) map[string]string {
 	return out
 }
 
-// defaultBearingTables cuts the document into the table bodies whose second
-// column is a default, so rows from the other tables are never read as one.
-func defaultBearingTables(doc string) []string {
-	var out []string
-	for _, loc := range docDefaultTable.FindAllStringIndex(doc, -1) {
-		body := doc[loc[1]:]
-		if end := strings.Index(body, "\n\n"); end >= 0 {
-			body = body[:end]
+// defaultBearingTable is one table body paired with the row pattern that reads
+// it: which cell holds the env name depends on the header above it.
+type defaultBearingTable struct {
+	body string
+	row  *regexp.Regexp
+}
+
+// defaultBearingTables cuts the document into the table bodies that carry a
+// Default column, so rows from the other tables are never read as one.
+//
+// BOTH shapes, because both are in this document and only one of them was read
+// before. A table whose second column is a role, or a suite, is still skipped —
+// reading those cells as defaults would report prose where no default was ever
+// claimed.
+func defaultBearingTables(doc string) []defaultBearingTable {
+	var out []defaultBearingTable
+	for _, shape := range []struct {
+		header *regexp.Regexp
+		row    *regexp.Regexp
+	}{
+		{docFlagDefaultTable, docFlagDefaultRow},
+		{docDefaultTable, docDefaultRow},
+	} {
+		for _, loc := range shape.header.FindAllStringIndex(doc, -1) {
+			body := doc[loc[1]:]
+			if end := strings.Index(body, "\n\n"); end >= 0 {
+				body = body[:end]
+			}
+			out = append(out, defaultBearingTable{body: body, row: shape.row})
 		}
-		out = append(out, body)
 	}
 	return out
 }

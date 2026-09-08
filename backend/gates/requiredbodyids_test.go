@@ -45,6 +45,7 @@ const generatedContract = "internal/contracts/api_gen.go"
 // name today, proved by TestEveryRequiredBodyIDIsNamedWhenAbsent in the module
 // that owns the mapping.
 var probedRequiredIDBodies = map[string]bool{
+	"AssignLeadsRequest":              true,
 	"CreateDealRequest":               true,
 	"AddDealRoomDocumentRequest":      true,
 	"CreateProjectRequest":            true,

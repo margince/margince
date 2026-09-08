@@ -1111,6 +1111,30 @@ func (e ApprovalEvidenceSourceType) Valid() bool {
 	}
 }
 
+// Defines values for AssignLeadOutcomeKind.
+const (
+	AssignLeadOutcomeKindAssigned  AssignLeadOutcomeKind = "assigned"
+	AssignLeadOutcomeKindConflict  AssignLeadOutcomeKind = "conflict"
+	AssignLeadOutcomeKindForbidden AssignLeadOutcomeKind = "forbidden"
+	AssignLeadOutcomeKindNotFound  AssignLeadOutcomeKind = "not_found"
+)
+
+// Valid indicates whether the value is a known member of the AssignLeadOutcomeKind enum.
+func (e AssignLeadOutcomeKind) Valid() bool {
+	switch e {
+	case AssignLeadOutcomeKindAssigned:
+		return true
+	case AssignLeadOutcomeKindConflict:
+		return true
+	case AssignLeadOutcomeKindForbidden:
+		return true
+	case AssignLeadOutcomeKindNotFound:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AssistantConfiguredModelProvider.
 const (
 	AssistantModelProviderAnthropic        AssistantConfiguredModelProvider = "anthropic"
@@ -18114,6 +18138,64 @@ type ApproveRequest struct {
 	EditedPayload *map[string]interface{} `json:"edited_payload,omitempty"`
 }
 
+// AssignLeadOutcome What happened to one named lead.
+type AssignLeadOutcome struct {
+	LeadId openapi_types.UUID `json:"lead_id"`
+
+	// Outcome `assigned` moved the lead — including one already owned by the destination, which still
+	// takes a version and an audit row rather than being quietly skipped: the writer records
+	// the assignment as an act, so a re-run says what it did rather than claiming it did
+	// nothing. `forbidden` is a lead the caller may not hand on. `conflict` is a version that
+	// no longer holds.
+	//
+	// `not_found` is a lead the caller cannot see — and also an ARCHIVED one, because the
+	// write resolves live rows only and a promoted or disqualified lead is no longer among
+	// them. The two deliberately read alike: which of them it was is a fact about a record the
+	// caller was not shown, and separating them would answer that a lead exists.
+	Outcome AssignLeadOutcomeKind `json:"outcome"`
+
+	// Version The lead's version after the write. Present on `assigned`.
+	Version *int64 `json:"version,omitempty"`
+}
+
+// AssignLeadOutcomeKind `assigned` moved the lead — including one already owned by the destination, which still
+// takes a version and an audit row rather than being quietly skipped: the writer records
+// the assignment as an act, so a re-run says what it did rather than claiming it did
+// nothing. `forbidden` is a lead the caller may not hand on. `conflict` is a version that
+// no longer holds.
+//
+// `not_found` is a lead the caller cannot see — and also an ARCHIVED one, because the
+// write resolves live rows only and a promoted or disqualified lead is no longer among
+// them. The two deliberately read alike: which of them it was is a fact about a record the
+// caller was not shown, and separating them would answer that a lead exists.
+type AssignLeadOutcomeKind string
+
+// AssignLeadsItem defines model for AssignLeadsItem.
+type AssignLeadsItem struct {
+	Id openapi_types.UUID `json:"id"`
+
+	// Version The version the caller read. Optional; supplying it makes the row's write conditional
+	// exactly as `If-Match` does on `updateLead`, so a lead somebody else moved answers
+	// `conflict` instead of losing their change.
+	Version *int64 `json:"version,omitempty"`
+}
+
+// AssignLeadsRequest One destination owner, and the leads to hand to them. The owner is checked before any
+// lead is touched; the leads answer one at a time.
+type AssignLeadsRequest struct {
+	Leads []AssignLeadsItem `json:"leads"`
+
+	// OwnerId The seat to hand them to. Must be one that can be handed work — an active, unarchived
+	// human seat that is not read-only, inside the caller's own row scope — else
+	// `422 owner_not_assignable` and nothing moves.
+	OwnerId openapi_types.UUID `json:"owner_id"`
+}
+
+// AssignLeadsResult defines model for AssignLeadsResult.
+type AssignLeadsResult struct {
+	Results []AssignLeadOutcome `json:"results"`
+}
+
 // AssistantConfiguredModel defines model for AssistantConfiguredModel.
 type AssistantConfiguredModel struct {
 	Model    string                           `json:"model"`
@@ -31664,6 +31746,27 @@ type RefreshAccepted struct {
 // RefreshAcceptedStatus defines model for RefreshAccepted.Status.
 type RefreshAcceptedStatus string
 
+// RejectCompanyRequest defines model for RejectCompanyRequest.
+type RejectCompanyRequest struct {
+	// Reason Why this is not a company. Required: the refusal outlives the record, and the next
+	// operator to find the domain on the blocked list can only review a decision that
+	// says something.
+	Reason string `json:"reason"`
+}
+
+// RejectCompanyResponse Both halves of the one decision, because both landed. A caller that showed only the
+// archived record would leave the standing domain refusal — the half that stops the
+// company coming back — invisible to the person who just made it.
+type RejectCompanyResponse struct {
+	// Company A company. Mirrors the `company` table.
+	Company Company `json:"company"`
+
+	// Domain One domain carrying a standing admission decision. `suppressed` refuses it a company —
+	// a vendor or bulk sender the business does not sell to — while `admitted` is a human
+	// deliberately letting one in, which no later verdict may undo.
+	Domain BlockedDomain `json:"domain"`
+}
+
 // RejectOfferRequest defines model for RejectOfferRequest.
 type RejectOfferRequest struct {
 	// Reason Optional buyer-given decline reason (rides offer.rejected).
@@ -38732,6 +38835,32 @@ type ConfirmCompanyProfileFieldParams struct {
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
+// RejectCompanyParams defines parameters for RejectCompany.
+type RejectCompanyParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
 // DismissCompanySuggestionJSONBody defines parameters for DismissCompanySuggestion.
 type DismissCompanySuggestionJSONBody struct {
 	// Fingerprint The `fingerprint` from the suggestion being dismissed, unchanged — a
@@ -42390,6 +42519,9 @@ type UpsertPartnerJSONRequestBody = UpsertPartnerRequest
 // UpdateCompanyProfileFieldJSONRequestBody defines body for UpdateCompanyProfileField for application/json ContentType.
 type UpdateCompanyProfileFieldJSONRequestBody = UpdateCompanyProfileFieldRequest
 
+// RejectCompanyJSONRequestBody defines body for RejectCompany for application/json ContentType.
+type RejectCompanyJSONRequestBody = RejectCompanyRequest
+
 // EnsureCompanyScanJSONRequestBody defines body for EnsureCompanyScan for application/json ContentType.
 type EnsureCompanyScanJSONRequestBody = CompanyScanRequest
 
@@ -42584,6 +42716,9 @@ type UpdateLeadSourceJSONRequestBody = UpdateLeadSourceRequest
 
 // CreateLeadJSONRequestBody defines body for CreateLead for application/json ContentType.
 type CreateLeadJSONRequestBody = CreateLeadRequest
+
+// AssignLeadsJSONRequestBody defines body for AssignLeads for application/json ContentType.
+type AssignLeadsJSONRequestBody = AssignLeadsRequest
 
 // UpdateLeadSettingsJSONRequestBody defines body for UpdateLeadSettings for application/json ContentType.
 type UpdateLeadSettingsJSONRequestBody = UpdateLeadSettingsRequest
@@ -51272,6 +51407,9 @@ type ServerInterface interface {
 	// Confirm a profile field without changing its value.
 	// (POST /companies/{id}/profile-fields/{field}/confirm)
 	ConfirmCompanyProfileField(w http.ResponseWriter, r *http.Request, id Id, field ProfileFieldKey, params ConfirmCompanyProfileFieldParams)
+	// This is not a company — archive it and refuse its domain as one (admin/ops).
+	// (POST /companies/{id}/reject)
+	RejectCompany(w http.ResponseWriter, r *http.Request, id Id, params RejectCompanyParams)
 	// What this account needs, as the model last read it for this reader.
 	// (GET /companies/{id}/scan)
 	GetCompanyScan(w http.ResponseWriter, r *http.Request, id Id)
@@ -51758,6 +51896,9 @@ type ServerInterface interface {
 	// Create a lead.
 	// (POST /leads)
 	CreateLead(w http.ResponseWriter, r *http.Request, params CreateLeadParams)
+	// Hand a named set of leads to one owner.
+	// (POST /leads/assign-bulk)
+	AssignLeads(w http.ResponseWriter, r *http.Request)
 	// How this installation handles leads.
 	// (GET /leads/settings)
 	GetLeadSettings(w http.ResponseWriter, r *http.Request)
@@ -53651,6 +53792,12 @@ func (_ Unimplemented) ConfirmCompanyProfileField(w http.ResponseWriter, r *http
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// This is not a company — archive it and refuse its domain as one (admin/ops).
+// (POST /companies/{id}/reject)
+func (_ Unimplemented) RejectCompany(w http.ResponseWriter, r *http.Request, id Id, params RejectCompanyParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // What this account needs, as the model last read it for this reader.
 // (GET /companies/{id}/scan)
 func (_ Unimplemented) GetCompanyScan(w http.ResponseWriter, r *http.Request, id Id) {
@@ -54620,6 +54767,12 @@ func (_ Unimplemented) ListLeads(w http.ResponseWriter, r *http.Request, params 
 // Create a lead.
 // (POST /leads)
 func (_ Unimplemented) CreateLead(w http.ResponseWriter, r *http.Request, params CreateLeadParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Hand a named set of leads to one owner.
+// (POST /leads/assign-bulk)
+func (_ Unimplemented) AssignLeads(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -63604,6 +63757,81 @@ func (siw *ServerInterfaceWrapper) ConfirmCompanyProfileField(w http.ResponseWri
 	handler.ServeHTTP(w, r)
 }
 
+// RejectCompany operation middleware
+func (siw *ServerInterfaceWrapper) RejectCompany(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RejectCompanyParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RejectCompany(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetCompanyScan operation middleware
 func (siw *ServerInterfaceWrapper) GetCompanyScan(w http.ResponseWriter, r *http.Request) {
 
@@ -70410,6 +70638,26 @@ func (siw *ServerInterfaceWrapper) CreateLead(w http.ResponseWriter, r *http.Req
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateLead(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AssignLeads operation middleware
+func (siw *ServerInterfaceWrapper) AssignLeads(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AssignLeads(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -83237,6 +83485,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/companies/{id}/profile-fields/{field}/confirm", wrapper.ConfirmCompanyProfileField)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/companies/{id}/reject", wrapper.RejectCompany)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/companies/{id}/scan", wrapper.GetCompanyScan)
 	})
 	r.Group(func(r chi.Router) {
@@ -83721,6 +83972,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/leads", wrapper.CreateLead)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/leads/assign-bulk", wrapper.AssignLeads)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/leads/settings", wrapper.GetLeadSettings)

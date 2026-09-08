@@ -827,6 +827,14 @@ export const de = {
   "consent.purposesUnavailable":
     "Der Einwilligungszweck-Katalog konnte nicht geladen werden — welche Zwecke ein Double-Opt-in brauchen, lässt sich gerade nicht anzeigen.",
 
+  "company.reject": "Kein Unternehmen",
+  "company.rejectConfirm":
+    "Damit wird „{name}“ archiviert und {domain} als Unternehmen abgelehnt — die nächste Nachricht von dieser Domain legt es nicht erneut an. Eine Administratorin oder ein Administrator kann die Domain unter Einstellungen → Erfassung wieder zulassen.",
+  "company.rejectReasonLabel": "Warum ist das kein Unternehmen?",
+  "company.rejectReasonHint":
+    "Ein Satz, mit dem jemand die Liste gesperrter Domains prüfen kann. Die Ablehnung überdauert den Datensatz.",
+  "company.rejectDone":
+    "„{name}“ archiviert, und {domain} legt kein Unternehmen mehr an",
   "company.name": "Firma",
   "company.description": "Was sie tun",
   "company.website": "Website",
@@ -2120,6 +2128,9 @@ export const de = {
     "Geschlossen mit dem Grund \u201e{reason}\u201c. Jeder Lead beh\u00e4lt seinen eigenen Datensatz, und es gibt keinen einzelnen Schritt zur\u00fcck.",
   "lead.bulkFailed": "{count} nicht übernommen –",
   "lead.bulkFailedRow": "konnte nicht gespeichert werden",
+  "lead.bulkOutcomeConflict": "wurde geändert, während Sie ausgewählt haben",
+  "lead.bulkOutcomeForbidden": "nicht Ihrer zu übergeben",
+  "lead.bulkOutcomeNotFound": "nicht mehr in Ihrer Liste",
   "lead.bulkSelectRow": "{name} auswählen",
   "lead.unnamed": "Lead ohne Namen",
   "lead.sla.breached": "Überfällig",

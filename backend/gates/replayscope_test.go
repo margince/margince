@@ -64,7 +64,14 @@ var rowScopedResponses = map[string]expectedTarget{
 	"SavedView":           {table: "saved_view", idPath: "id"},
 	"Automation":          {table: "automation", idPath: "id"},
 	"PromoteLeadResponse": {table: "person", idPath: "person.id"},
-	"DemoteLeadResponse":  {table: "lead", idPath: "lead.id"},
+	// A rejection hands back the archived company alongside the standing domain
+	// decision recorded with it. The COMPANY is the record a replay returns —
+	// its name, its fields, its archived stamp — so it is probed exactly as the
+	// wrapper shapes above are. The admission beside it has no owner column and
+	// no scope of its own: it is the same company's, which is why one
+	// probe covers the body.
+	"RejectCompanyResponse": {table: "company", idPath: "company.id"},
+	"DemoteLeadResponse":         {table: "lead", idPath: "lead.id"},
 	// The quick-capture result wraps the person it created, alongside the
 	// employer it attached them to. The person is the record a replay hands
 	// back, so it is probed exactly as PromoteLeadResponse above is — the

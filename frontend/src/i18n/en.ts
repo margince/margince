@@ -884,6 +884,14 @@ export const en = {
   "consent.purposesUnavailable":
     "Couldn't load the consent purpose catalogue, so which purposes need a double opt-in can't be shown right now.",
 
+  "company.reject": "Not a company",
+  "company.rejectConfirm":
+    "This archives “{name}” and refuses {domain} as a company, so the next message from that domain will not create it again. An administrator can let the domain back in from Settings → Capture.",
+  "company.rejectReasonLabel": "Why is this not a company?",
+  "company.rejectReasonHint":
+    "One sentence somebody reviewing the blocked-domain list can act on. The refusal outlives the record.",
+  "company.rejectDone":
+    "“{name}” archived, and {domain} will not create a company again",
   "company.name": "Company",
   "company.description": "What they do",
   "company.website": "Website",
@@ -2202,6 +2210,9 @@ export const en = {
     "Closed with the reason \u201c{reason}\u201d. Each lead keeps its own record, and there is no one step that puts them back.",
   "lead.bulkFailed": "{count} not applied —",
   "lead.bulkFailedRow": "could not be saved",
+  "lead.bulkOutcomeConflict": "somebody changed it while you were choosing",
+  "lead.bulkOutcomeForbidden": "not yours to hand on",
+  "lead.bulkOutcomeNotFound": "no longer in your list",
   "lead.bulkSelectRow": "Select {name}",
   "lead.unnamed": "Unnamed lead",
   "lead.sla.breached": "Overdue",

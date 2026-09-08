@@ -13,7 +13,9 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -31,6 +33,26 @@ type BlockedDomain struct {
 	Source    string
 	DecidedAt time.Time
 	CompanyID *ids.CompanyID
+}
+
+// ToContractBlockedDomain is the wire shape of one admission decision.
+//
+// It lives beside the type rather than in a transport because two transports
+// serve it now — the blocked-domain list and the company rejection — and a
+// second spelling would be free to disagree about which fields reach a reader.
+func ToContractBlockedDomain(e BlockedDomain) crmcontracts.BlockedDomain {
+	out := crmcontracts.BlockedDomain{
+		Domain:    e.Domain,
+		Admission: crmcontracts.BlockedDomainAdmission(e.Admission),
+		Reason:    e.Reason,
+		Source:    crmcontracts.BlockedDomainSource(e.Source),
+		DecidedAt: e.DecidedAt,
+	}
+	if e.CompanyID != nil {
+		id := openapi_types.UUID(e.CompanyID.UUID)
+		out.CompanyId = &id
+	}
+	return out
 }
 
 // ListDomainAdmissions returns every domain carrying a decision, newest first —

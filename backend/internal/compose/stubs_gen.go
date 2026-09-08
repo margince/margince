@@ -719,6 +719,10 @@ func (stubs) ConfirmCompanyProfileField(w nethttp.ResponseWriter, r *nethttp.Req
 	httperr.NotImplemented(w, r, "ConfirmCompanyProfileField")
 }
 
+func (stubs) RejectCompany(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.RejectCompanyParams) {
+	httperr.NotImplemented(w, r, "RejectCompany")
+}
+
 func (stubs) GetCompanyScan(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "GetCompanyScan")
 }
@@ -1365,6 +1369,10 @@ func (stubs) ListLeads(w nethttp.ResponseWriter, r *nethttp.Request, params crmc
 
 func (stubs) CreateLead(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.CreateLeadParams) {
 	httperr.NotImplemented(w, r, "CreateLead")
+}
+
+func (stubs) AssignLeads(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "AssignLeads")
 }
 
 func (stubs) GetLeadSettings(w nethttp.ResponseWriter, r *nethttp.Request) {
