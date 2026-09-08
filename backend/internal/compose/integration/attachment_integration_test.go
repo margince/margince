@@ -449,3 +449,47 @@ func TestArchiveAttachmentHidesItButKeepsTheObject(t *testing.T) {
 		t.Fatalf("blob health: %v", err)
 	}
 }
+
+// An empty file is refused at the DOOR, not at the transport.
+//
+// A file with no content is not a limit one channel dislikes — no send path
+// anywhere can do anything with it. Left to the connector, the provider's
+// refusal reads like a transient condition and the delivery burns its whole
+// retry ladder on a file that will never have bytes; and the person hears about
+// it long after they stopped looking at the file. Refused on upload, they hear
+// it while they can still pick the right one.
+//
+// Asserted with the ordinary upload beside it, because a check that refused
+// everything would satisfy the empty case on its own.
+func TestAnEmptyFileIsRefusedOnUpload(t *testing.T) {
+	e := Setup(t)
+	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blobstore.NewMemory())
+	ctx := e.Admin()
+	person := e.SeedPerson(t, "Empty Upload", &e.Rep1)
+
+	body, ctype := multipartAttachment(t, "person", person.String(), "scan.pdf", []byte{})
+	req := httptest.NewRequest(http.MethodPost, "/v1/attachments", body).WithContext(ctx)
+	req.Header.Set("Content-Type", ctype)
+	rec := httptest.NewRecorder()
+	h.UploadAttachment(rec, req)
+	if rec.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("uploading an empty file: status %d, want 422; body %s", rec.Code, rec.Body.String())
+	}
+	// The reader has to be told which file and what to do, or the refusal is a
+	// wall. It must NOT read as a size limit — that sends them off to shrink
+	// something that is already as small as it can be.
+	if got := rec.Body.String(); !strings.Contains(got, "scan.pdf") || !strings.Contains(got, "empty") {
+		t.Errorf("the refusal does not name the file or say what is wrong: %s", got)
+	}
+
+	// One byte is enough to be a file, so the rule is about content and not
+	// about a threshold somebody has to guess.
+	okBody, okType := multipartAttachment(t, "person", person.String(), "scan.pdf", []byte{0x25})
+	okReq := httptest.NewRequest(http.MethodPost, "/v1/attachments", okBody).WithContext(ctx)
+	okReq.Header.Set("Content-Type", okType)
+	okRec := httptest.NewRecorder()
+	h.UploadAttachment(okRec, okReq)
+	if okRec.Code != http.StatusCreated {
+		t.Errorf("a one-byte file was refused too: status %d, body %s", okRec.Code, okRec.Body.String())
+	}
+}

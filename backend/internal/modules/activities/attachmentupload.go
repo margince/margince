@@ -13,6 +13,7 @@ package activities
 
 import (
 	"context"
+	"fmt"
 	"io"
 
 	"github.com/jackc/pgx/v5"
@@ -45,6 +46,22 @@ type AttachmentInput struct {
 	// roll-up like the account column beside it, not a second parent: the
 	// primary entity still owns the file's visibility.
 	ContractID *ids.UUID
+}
+
+// EmptyUploadError refuses an upload carrying no bytes. It maps to 422: the
+// caller fixes it by choosing the file they meant.
+//
+// The size is the one COUNTED on the hashing pass, never a declared length —
+// see AttachmentInput.Content for why the two are not allowed to disagree.
+type EmptyUploadError struct{ Filename string }
+
+func (e *EmptyUploadError) Error() string {
+	return fmt.Sprintf("%q is empty, so there is nothing to upload; choose the file again", e.Filename)
+}
+
+// FieldFault names the part of the upload the caller must correct.
+func (e *EmptyUploadError) FieldFault() (field, code, message string) {
+	return "file", "empty_file", e.Error()
 }
 
 // UploadAttachment stores an object and records its metadata row. Authority
@@ -92,6 +109,16 @@ func (s *Store) UploadAttachment(ctx context.Context, in AttachmentInput) (crmco
 	checksum, size, err := blobstore.Digest(in.Content)
 	if err != nil {
 		return crmcontracts.Attachment{}, err
+	}
+	// Refused HERE, where the person still has the file in front of them and can
+	// pick the one they meant. A file with no content is not a limit one
+	// transport dislikes — no send path anywhere can do anything with it — and
+	// the counted size is the only honest witness: a declared length can
+	// disagree with the bytes, which is why nothing declares one.
+	//
+	// Before the object is stored, so an empty upload leaves nothing behind.
+	if size == 0 {
+		return crmcontracts.Attachment{}, &EmptyUploadError{Filename: in.Filename}
 	}
 
 	if err := s.blob.Put(ctx, key, in.Content, size, in.ContentType); err != nil {

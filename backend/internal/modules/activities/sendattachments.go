@@ -84,6 +84,32 @@ func (e *TooManyAttachmentsError) FieldFault() (field, code, message string) {
 	return "attachment_ids", "too_many_attachments", e.Error()
 }
 
+// EmptyAttachmentError refuses a send carrying a file with no content. It maps
+// to 422: the caller fixes it by attaching the file they meant.
+//
+// A file with nothing in it is not a limit one transport dislikes — no send
+// path anywhere can do anything useful with it, and a provider that refuses it
+// answers with a transport error that reads like a transient condition, so the
+// delivery burns its whole retry ladder on a file that will never have bytes.
+// Refused here, where the sender still has the file in front of them.
+//
+// "No recorded size" is refused by the SAME rule rather than admitted as a
+// maybe. The column is nullable while every writer records a real count, so an
+// unmeasured row is not a state the product reaches — and if one ever appears,
+// a send is the wrong place to discover that nobody knows what is in it.
+type EmptyAttachmentError struct{ Filename string }
+
+func (e *EmptyAttachmentError) Error() string {
+	return fmt.Sprintf(
+		"%q has no content, so it cannot be sent; attach the file again, or remove it from this message",
+		e.Filename)
+}
+
+// FieldFault names the field the caller must correct.
+func (e *EmptyAttachmentError) FieldFault() (field, code, message string) {
+	return "attachment_ids", "empty_attachment", e.Error()
+}
+
 // boundAttachmentIDs collapses repeats and refuses a set larger than one
 // message may carry.
 //
@@ -137,11 +163,14 @@ func (s *Store) resolveAttachments(ctx context.Context, attachmentIDs []ids.UUID
 			// without this layer inventing a second vocabulary for it.
 			return nil, fmt.Errorf("resolving an attached file: %w", err)
 		}
+		if meta.ByteSize == nil || *meta.ByteSize <= 0 {
+			return nil, &EmptyAttachmentError{Filename: meta.Filename}
+		}
 		out = append(out, OutboundFile{
 			AttachmentID: id,
 			Filename:     meta.Filename,
 			ContentType:  orEmpty(meta.ContentType),
-			ByteSize:     orZero(meta.ByteSize),
+			ByteSize:     *meta.ByteSize,
 			Checksum:     orEmpty(meta.Checksum),
 		})
 	}
@@ -151,13 +180,6 @@ func (s *Store) resolveAttachments(ctx context.Context, attachmentIDs []ids.UUID
 func orEmpty(value *string) string {
 	if value == nil {
 		return ""
-	}
-	return *value
-}
-
-func orZero(value *int64) int64 {
-	if value == nil {
-		return 0
 	}
 	return *value
 }
