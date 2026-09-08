@@ -2,9 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package testmailbox is the QC-only, no-network connector that both
-// captures and sends synthetic mail (issue #4974) — the outbound twin of
-// offlinedemo, which deliberately CANNOT send (see its own package doc and
-// TestTheConnectorCannotSend, both untouched by this package).
+// captures and sends synthetic mail — the outbound twin of offlinedemo,
+// which deliberately CANNOT send (see its own package doc and
+// TestTheConnectorCannotSend).
 //
 // NEVER REACHABLE ON A REAL DEPLOYMENT. Registration (compose's
 // NewCaptureRegistry), send authority (compose's mailAppConfigured), and the
@@ -43,17 +43,14 @@ const SendScope = "urn:margince:test_mailbox:send"
 // connector holding a *database.DB itself) so the connector stays a pure
 // consumer of one small port, exactly like offlinedemo's Directory.
 //
-// Unechoed returns capture.SentMessage directly rather than a package-local
-// mirror of it: Go requires exact type identity to satisfy an interface
-// method's signature, so a same-shaped-but-distinct testmailbox.SentMessage
-// would NOT be satisfied by capture.TestMailboxLedger's real return type.
-// Importing capture.SentMessage here is the cheap, correct fix — this
-// package already imports capture for ActivityFields, exactly like
-// offlinedemo does, so this adds no new dependency edge.
+// Unechoed returns capture.SentMessage directly: an interface method's
+// signature needs exact type identity, so a testmailbox-local mirror of the
+// same shape would not satisfy it. This package already imports capture for
+// ActivityFields, exactly like offlinedemo does.
 type Ledger interface {
-	RecordSent(ctx context.Context, userID ids.UUID, messageID string, toAddresses []string, subject string) error
+	RecordSent(ctx context.Context, userID ids.UUID, messageID string, to, cc []string, subject string) error
 	Unechoed(ctx context.Context, userID ids.UUID) ([]capture.SentMessage, error)
-	MarkEchoed(ctx context.Context, id ids.UUID) error
+	MarkEchoed(ctx context.Context, userID ids.UUID, id ids.UUID) error
 }
 
 // Connector is the test_mailbox capture+send provider.

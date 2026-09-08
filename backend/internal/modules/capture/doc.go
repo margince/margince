@@ -29,7 +29,8 @@
 // address is — raised at capture, re-raised by the sweep for a contact the
 // ceiling refused, and resolved by the verdict engine), and
 // capture_test_mailbox_sent (what the QC-only test_mailbox connector has
-// sent and whether its own Sync has echoed it back yet — disposable
-// bookkeeping, not audited, like capture_trace).
+// sent and whether its own Sync has echoed it back yet — internal
+// bookkeeping, not audited; rows are retained, unlike capture_trace's own
+// swept 24-hour window).
 // Imports shared + platform only; never a sibling module.
 package capture

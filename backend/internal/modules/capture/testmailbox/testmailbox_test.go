@@ -6,10 +6,12 @@ package testmailbox
 import (
 	"context"
 	"encoding/json"
+	"slices"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -24,18 +26,10 @@ func testAuth(t *testing.T, userID string) connector.Auth {
 	return connector.Auth(b)
 }
 
-func TestImplementsEmailSenderAndGrantedScoper(t *testing.T) {
-	var c any = New(nil)
-	if _, ok := c.(connector.EmailSender); !ok {
-		t.Error("test_mailbox must implement connector.EmailSender — that is the whole reason it exists")
-	}
-	if _, ok := c.(connector.GrantedScoper); !ok {
-		t.Error("test_mailbox must implement connector.GrantedScoper — it has no real OAuth grant to read a scope from, so it declares one itself")
-	}
-	if _, ok := c.(connector.Connector); !ok {
-		t.Error("test_mailbox must implement connector.Connector")
-	}
-}
+// The connector.EmailSender/GrantedScoper/Connector assertions are compile-time
+// (var _ lines in send.go, testmailbox.go, sync.go) — a build that does not
+// satisfy them never reaches a test binary at all, so a runtime re-check here
+// would prove strictly less than the code already guarantees.
 
 func TestDescriptorIsReadOnlyCapture(t *testing.T) {
 	// Mirrors gmail's own descriptor: send authority is granted separately
@@ -47,6 +41,9 @@ func TestDescriptorIsReadOnlyCapture(t *testing.T) {
 	}
 	if d.RiskTier != mcp.TierAutoExecute {
 		t.Errorf("Descriptor().RiskTier = %v, want TierAutoExecute", d.RiskTier)
+	}
+	if !slices.Equal(d.Scopes, []principal.Scope{principal.ScopeRead}) {
+		t.Errorf("Descriptor().Scopes = %v, want exactly [ScopeRead]", d.Scopes)
 	}
 }
 
@@ -71,24 +68,31 @@ func TestHealthCheckAlwaysSucceeds(t *testing.T) {
 type fakeLedger struct {
 	recorded []recordedSend
 	unechoed []capture.SentMessage
-	marked   []ids.UUID
+	marked   []markedEcho
 }
 
 type recordedSend struct {
 	userID    string
 	messageID string
-	to        []string
+	to, cc    []string
 	subject   string
 }
 
-func (f *fakeLedger) RecordSent(_ context.Context, userID ids.UUID, messageID string, to []string, subject string) error {
-	f.recorded = append(f.recorded, recordedSend{userID: userID.String(), messageID: messageID, to: to, subject: subject})
+type markedEcho struct {
+	userID string
+	id     ids.UUID
+}
+
+func (f *fakeLedger) RecordSent(_ context.Context, userID ids.UUID, messageID string, to, cc []string, subject string) error {
+	f.recorded = append(f.recorded, recordedSend{userID: userID.String(), messageID: messageID, to: to, cc: cc, subject: subject})
 	return nil
 }
+
 func (f *fakeLedger) Unechoed(context.Context, ids.UUID) ([]capture.SentMessage, error) {
 	return f.unechoed, nil
 }
-func (f *fakeLedger) MarkEchoed(_ context.Context, id ids.UUID) error {
-	f.marked = append(f.marked, id)
+
+func (f *fakeLedger) MarkEchoed(_ context.Context, userID ids.UUID, id ids.UUID) error {
+	f.marked = append(f.marked, markedEcho{userID: userID.String(), id: id})
 	return nil
 }

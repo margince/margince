@@ -19,6 +19,7 @@ import (
 type echoedRecord struct {
 	MessageID string    `json:"message_id"`
 	To        []string  `json:"to"`
+	Cc        []string  `json:"cc"`
 	Subject   string    `json:"subject"`
 	SentAt    time.Time `json:"sent_at"`
 }
@@ -26,17 +27,15 @@ type echoedRecord struct {
 func (e echoedRecord) record() connector.NormalizedRecord {
 	raw, _ := json.Marshal(e) //nolint:errchkjson // a struct of strings and a time cannot fail to marshal
 
-	// This is a real send test_mailbox itself performed, filed back exactly
-	// like a provider files a copy into Sent — both halves of
-	// WithOwnerAttestation are genuinely true here (Direction independently
-	// names the owner as author, and this Sync IS the provider filing it),
-	// unlike offlinedemo's synthetic correspondence, which nobody actually
-	// sent and so may never attest ownership.
+	// No owner attestation: WithOwnerAttestation may be minted only by
+	// capture/mailmap (TestOnlyTheMailMapperMintsTheOutboundAttestation),
+	// since it is the T1 correspondence gate's only evidence. This echo
+	// therefore reads as correspondence without that evidence, the same
+	// posture offlinedemo's synthetic mail takes.
 	counterparty := connector.Counterparty{Direction: connector.DirectionOutbound}
 	if len(e.To) > 0 {
 		counterparty.Email = e.To[0]
 	}
-	counterparty = counterparty.WithOwnerAttestation(true)
 
 	return connector.NormalizedRecord{
 		EntityType: datasource.EntityActivity,
@@ -54,7 +53,7 @@ func (e echoedRecord) record() connector.NormalizedRecord {
 		CapturedBy:   "connector:" + Name,
 		Raw:          raw,
 		ThreadKey:    e.MessageID,
-		Addresses:    e.To,
+		Addresses:    append(append([]string{}, e.To...), e.Cc...),
 		Counterparty: counterparty,
 	}
 }
@@ -73,12 +72,12 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 	if err != nil {
 		return cursor, fmt.Errorf("test_mailbox: reading unechoed sends: %w", err)
 	}
-	for _, msg := range pending { // msg is a capture.SentMessage
-		rec := echoedRecord{MessageID: msg.MessageID, To: msg.To, Subject: msg.Subject, SentAt: msg.SentAt}.record()
+	for _, msg := range pending {
+		rec := echoedRecord{MessageID: msg.MessageID, To: msg.To, Cc: msg.Cc, Subject: msg.Subject, SentAt: msg.SentAt}.record()
 		if _, err := sink.Upsert(ctx, rec); err != nil {
 			return cursor, fmt.Errorf("test_mailbox: echoing %s: %w", msg.MessageID, err)
 		}
-		if err := c.ledger.MarkEchoed(ctx, msg.ID); err != nil {
+		if err := c.ledger.MarkEchoed(ctx, userID, msg.ID); err != nil {
 			return cursor, fmt.Errorf("test_mailbox: marking %s echoed: %w", msg.MessageID, err)
 		}
 	}

@@ -37,7 +37,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
 	"github.com/margince/margince/backend/internal/modules/capture/graph"
 	"github.com/margince/margince/backend/internal/modules/capture/graphcal"
-	"github.com/margince/margince/backend/internal/modules/capture/testmailbox"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -172,21 +171,7 @@ func (h connectorHandlers) ConnectConnector(w http.ResponseWriter, r *http.Reque
 		h.connectIMAP(w, r)
 		return
 	}
-	if string(provider) == testmailbox.Name {
-		// No deployment-flag field of its own here: whether test_mailbox may be
-		// connected rides the SAME fact that gated its registration
-		// (NewCaptureRegistry, compose/capture.go) — asking the registry
-		// directly means there is exactly one place AllowTestMailbox is read,
-		// not a second copy that could drift from it.
-		if h.registry == nil || !h.hasConnector(testmailbox.Name) {
-			httperr.Write(w, r, &httperr.DetailedError{
-				Status: http.StatusUnprocessableEntity,
-				Code:   "connector_unsupported",
-				Detail: "Only the " + strings.Join(oauthProviders, ", ") + " and imap connectors can be connected here.",
-			})
-			return
-		}
-		h.connectTestMailbox(w, r)
+	if h.dispatchTestMailboxConnect(w, r, string(provider)) {
 		return
 	}
 	if !isOAuthProvider(string(provider)) {
@@ -196,7 +181,7 @@ func (h connectorHandlers) ConnectConnector(w http.ResponseWriter, r *http.Reque
 		}
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusUnprocessableEntity,
-			Code:   "connector_unsupported",
+			Code:   codeConnectorUnsupported,
 			Detail: "Only the " + strings.Join(oauthProviders, ", ") + " and imap connectors can be connected here.",
 		})
 		return

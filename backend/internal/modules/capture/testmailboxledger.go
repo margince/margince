@@ -3,11 +3,11 @@
 
 package capture
 
-// The test_mailbox connector's own bookkeeping (issue #4974): what it sent,
-// and whether its own Sync has echoed it back yet. Modeled on tracestore.go
-// — capture-owned, no workspace_id, disposable rather than audited (the
+// The test_mailbox connector's own bookkeeping: what it sent, and whether
+// its own Sync has echoed it back yet. Capture-owned, no workspace_id — the
 // audited record is the domain activity Sink.Upsert produces from the echo,
-// plus the send-side comms_outbound row; this table is neither).
+// plus the send-side comms_outbound row; this table is neither, and rows
+// are retained (no sweep) until the table itself is dropped.
 
 import (
 	"context"
@@ -24,7 +24,7 @@ import (
 type SentMessage struct {
 	ID        ids.UUID
 	MessageID string
-	To        []string
+	To, Cc    []string
 	Subject   string
 	SentAt    time.Time
 }
@@ -37,13 +37,24 @@ func NewTestMailboxLedger(db *database.DB) *TestMailboxLedger {
 	return &TestMailboxLedger{db: db}
 }
 
-// RecordSent writes one row per successful SendEmail call.
-func (l *TestMailboxLedger) RecordSent(ctx context.Context, userID ids.UUID, messageID string, toAddresses []string, subject string) error {
+// RecordSent writes one row per successful SendEmail call, idempotent on
+// (user_id, message_id): a dispatcher retry between this write and the
+// comms commit re-sends the identical row, which the conflict target
+// discards rather than duplicates.
+func (l *TestMailboxLedger) RecordSent(ctx context.Context, userID ids.UUID, messageID string, to, cc []string, subject string) error {
+	// A nil slice binds as SQL NULL, not the column default — cc_addresses is
+	// NOT NULL, and the overwhelmingly common case is a message with no Cc at
+	// all, so this is not an edge case to special-case away, it is the normal
+	// call shape.
+	if cc == nil {
+		cc = []string{}
+	}
 	return l.db.Tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
-			INSERT INTO capture_test_mailbox_sent (user_id, message_id, to_addresses, subject)
-			VALUES ($1, $2, $3, $4)`,
-			userID, messageID, toAddresses, subject)
+			INSERT INTO capture_test_mailbox_sent (user_id, message_id, to_addresses, cc_addresses, subject)
+			VALUES ($1, $2, $3, $4, $5)
+			ON CONFLICT (user_id, message_id) DO NOTHING`,
+			userID, messageID, to, cc, subject)
 		if err != nil {
 			return fmt.Errorf("test_mailbox: recording a sent message: %w", err)
 		}
@@ -57,7 +68,7 @@ func (l *TestMailboxLedger) Unechoed(ctx context.Context, userID ids.UUID) ([]Se
 	var out []SentMessage
 	err := l.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			SELECT id, message_id, to_addresses, subject, sent_at
+			SELECT id, message_id, to_addresses, cc_addresses, subject, sent_at
 			  FROM capture_test_mailbox_sent
 			 WHERE user_id = $1 AND echoed_at IS NULL
 			 ORDER BY sent_at`,
@@ -68,7 +79,7 @@ func (l *TestMailboxLedger) Unechoed(ctx context.Context, userID ids.UUID) ([]Se
 		defer rows.Close()
 		for rows.Next() {
 			var m SentMessage
-			if err := rows.Scan(&m.ID, &m.MessageID, &m.To, &m.Subject, &m.SentAt); err != nil {
+			if err := rows.Scan(&m.ID, &m.MessageID, &m.To, &m.Cc, &m.Subject, &m.SentAt); err != nil {
 				return err
 			}
 			out = append(out, m)
@@ -82,11 +93,13 @@ func (l *TestMailboxLedger) Unechoed(ctx context.Context, userID ids.UUID) ([]Se
 }
 
 // MarkEchoed records that Sync has already filed this row back, so the next
-// sync does not re-emit it.
-func (l *TestMailboxLedger) MarkEchoed(ctx context.Context, id ids.UUID) error {
+// sync does not re-emit it. Scoped by userID as well as id — the row's only
+// tenancy boundary (this table carries no workspace_id) must hold in the
+// store itself, not rely on every caller already having filtered by it.
+func (l *TestMailboxLedger) MarkEchoed(ctx context.Context, userID ids.UUID, id ids.UUID) error {
 	return l.db.Tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx,
-			`UPDATE capture_test_mailbox_sent SET echoed_at = now() WHERE id = $1`, id)
+			`UPDATE capture_test_mailbox_sent SET echoed_at = now() WHERE id = $1 AND user_id = $2`, id, userID)
 		if err != nil {
 			return fmt.Errorf("test_mailbox: marking a message echoed: %w", err)
 		}

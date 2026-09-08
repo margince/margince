@@ -5,22 +5,25 @@
 
 package integration
 
-// The test_mailbox connector (issue #4974) over the real composition: connect
-// through the real endpoint, send through the real dispatcher (no stub server
-// needed — this connector never touches the network), echo back through the
+// The test_mailbox connector over the real composition: connect through the
+// real endpoint, send through the real dispatcher, echo back through the
 // real sink, and confirm the echo reconciles onto the send's own activity
 // instead of duplicating it. Finally, disconnect and confirm a further send is
 // refused, and confirm the connect endpoint 422s when AllowTestMailbox is unset.
 //
-// The credential resolution is the one seam a real Gmail suite has to stub
-// (comms_send_integration_test.go); test_mailbox needs no such stub, so this
-// suite drives one more inch of REAL code than that one does — everything here
-// is the production object, dispatcher included.
+// This connector never dials a real network, so — unlike
+// comms_send_integration_test.go, which stubs an HTTP Gmail — the store, the
+// gate and the connector here are all production objects with no server to
+// fake. Two seams are still test-built rather than driven through the
+// composed registry: the resolver handed to the dispatcher
+// (testMailboxResolver, not Registry.SenderFor) and the principal Sync runs
+// under (testMailboxConnectorCtx, not Registry.SyncOnce) — both exist because
+// this package has no inline-dispatch seam into the composed registry (see
+// dispatchOnce's own comment), the same gap the Gmail suite works around.
 
 import (
 	"context"
 	"crypto/rand"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"testing"
@@ -58,7 +61,8 @@ func setupTestMailboxEnv(t *testing.T) *preflightEnv {
 	if err != nil {
 		t.Fatalf("building the local vault: %v", err)
 	}
-	e := apptest.SetupAppWithOptions(t,
+	e := apptest.SetupAppWithOptions(
+		t,
 		compose.WithCaptureConfig(compose.CaptureConfig{AllowTestMailbox: true}),
 		compose.WithKeyvault(vault),
 		compose.WithOperatorMail(discardingMailer{}),
@@ -182,15 +186,17 @@ func (p *preflightEnv) dispatchTestMailboxOnce(t *testing.T, deliveryID ids.UUID
 	t.Helper()
 	db := compose.InstallationDB(p.Pool)
 	ledger := capture.NewTestMailboxLedger(db)
-	auth, err := json.Marshal(struct {
-		UserID string `json:"user_id"`
-	}{UserID: p.user})
+	userID, err := ids.Parse(p.user)
 	if err != nil {
-		t.Fatalf("marshal auth: %v", err)
+		t.Fatalf("parsing the acting human's id: %v", err)
+	}
+	auth, err := testmailbox.Credential(userID)
+	if err != nil {
+		t.Fatalf("building the credential: %v", err)
 	}
 	dispatcher := comms.NewDispatcher(
 		comms.NewStore(db, time.Now, activities.NewStore(db)),
-		testMailboxResolver{sender: testmailbox.New(ledger), auth: connector.Auth(auth)},
+		testMailboxResolver{sender: testmailbox.New(ledger), auth: auth},
 		compose.NewSendSeatAuthority(p.Pool),
 		compose.NewSendAttachmentAuthority(p.Pool, nil),
 		consent.NewGate(consent.NewStore(db)),
@@ -265,14 +271,12 @@ func TestTestMailboxFullLoop(t *testing.T) {
 	}
 
 	tmConnector := testmailbox.New(ledger)
-	authBytes, err := json.Marshal(struct {
-		UserID string `json:"user_id"`
-	}{UserID: p.user})
+	auth, err := testmailbox.Credential(userID)
 	if err != nil {
-		t.Fatalf("marshal auth: %v", err)
+		t.Fatalf("building the credential: %v", err)
 	}
 	sink := capture.NewSink(db)
-	if _, err := tmConnector.Sync(p.testMailboxConnectorCtx(t), connector.Auth(authBytes), nil, sink); err != nil {
+	if _, err := tmConnector.Sync(p.testMailboxConnectorCtx(t), auth, nil, sink); err != nil {
 		t.Fatalf("Sync: %v", err)
 	}
 
@@ -306,7 +310,7 @@ func TestTestMailboxFullLoop(t *testing.T) {
 		t.Fatalf("disconnect status = %d, want 204", status)
 	}
 	status2, code, _ := p.send(t)
-	if status2 == http.StatusAccepted {
-		t.Fatalf("send after disconnect → %d %s, want a refusal", status2, code)
+	if status2 != http.StatusUnprocessableEntity || code != "mailbox_not_send_capable" {
+		t.Fatalf("send after disconnect → %d %q, want 422 mailbox_not_send_capable", status2, code)
 	}
 }

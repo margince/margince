@@ -233,8 +233,8 @@ var tableOwners = map[string]string{
 	"capture_pending_counterparty": "internal/modules/capture",
 	"capture_auto_enrich_budget":   "internal/modules/capture",
 	// What the QC-only test_mailbox connector has sent and whether its own
-	// Sync has echoed it back yet (issue #4974) — disposable bookkeeping,
-	// like capture_trace, not audited.
+	// Sync has echoed it back yet — internal bookkeeping, not audited;
+	// rows are retained rather than swept.
 	"capture_test_mailbox_sent": "internal/modules/capture",
 	// What the pipeline decided about each message, for 24 hours. Written by
 	// the sink alone; compose reads it and sweeps it, and the verdict engine

@@ -442,7 +442,8 @@ func watchReleaseSkew(
 ) (context.Context, context.CancelFunc, <-chan error) {
 	ctx, stop := context.WithCancel(ctx)
 	skew := compose.WatchInstallationRelease(
-		ctx, pool, logger, buildinfo.ReleaseVersion, compose.ReleaseRecheckInterval)
+		ctx, pool, logger, buildinfo.ReleaseVersion, compose.ReleaseRecheckInterval,
+	)
 	refused := make(chan error, 1)
 	go func() {
 		err, stopping := <-skew

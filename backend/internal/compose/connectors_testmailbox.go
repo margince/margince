@@ -12,10 +12,10 @@ package compose
 // in connectors.go for the 422 otherwise.
 
 import (
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture/testmailbox"
@@ -24,28 +24,44 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// hasConnector reports whether name is registered on this role's capture
-// registry — the same fact NewCaptureRegistry gated test_mailbox's
-// registration on, asked directly rather than duplicated as a second flag
-// that could drift from it.
-func (h connectorHandlers) hasConnector(name string) bool {
-	for _, d := range h.registry.Connectors() {
-		if d.Name == name {
-			return true
-		}
+// codeConnectorUnsupported marks a provider this transport does not (or, for
+// test_mailbox with the flag unset, currently cannot) speak for at all. Also
+// used by connectors.go's own OAuth-provider branch and
+// backfilltransport.go — kept here rather than there since connectors.go
+// sits at this repo's 500-line file ceiling.
+const codeConnectorUnsupported = "connector_unsupported"
+
+// dispatchTestMailboxConnect handles ConnectConnector's test_mailbox branch,
+// reporting whether it did — false means provider was something else and
+// ConnectConnector's own dispatch continues. Kept in this file (not inlined
+// in connectors.go) so that file stays under this repo's 500-line ceiling.
+func (h connectorHandlers) dispatchTestMailboxConnect(w http.ResponseWriter, r *http.Request, provider string) bool {
+	if provider != testmailbox.Name {
+		return false
 	}
-	return false
+	// No deployment-flag field of its own here: whether test_mailbox may be
+	// connected rides the SAME fact that gated its registration
+	// (NewCaptureRegistry, compose/capture.go) — asking the registry
+	// directly means there is exactly one place AllowTestMailbox is read,
+	// not a second copy that could drift from it.
+	if h.registry == nil || !h.hasConnector(testmailbox.Name) {
+		httperr.Write(w, r, &httperr.DetailedError{
+			Status: http.StatusUnprocessableEntity,
+			Code:   codeConnectorUnsupported,
+			Detail: "Only the " + strings.Join(oauthProviders, ", ") + " and imap connectors can be connected here.",
+		})
+		return true
+	}
+	h.connectTestMailbox(w, r)
+	return true
 }
 
-// connectTestMailbox mints an opaque connection: the "credential" is just
-// the granting human's own user_id, known BEFORE Registry.Connect ever runs
-// — unlike the connection ROW's own id (which upsertConnection's SQL
-// generates), there is no chicken-and-egg here, because
-// capture.TestMailboxLedger keys its bookkeeping on user_id, not on a
-// specific connection row. There is nothing here that carries any real
-// secret, but Registry.Connect still vault-seals it like any other
-// connector's credential, which is what the disconnect/re-connect lifecycle
-// already handles generically.
+// connectTestMailbox mints an opaque connection: the credential is just the
+// granting human's own user_id (testmailbox.Credential), which
+// capture.TestMailboxLedger keys its bookkeeping on. There is nothing here
+// that carries any real secret, but Registry.Connect still vault-seals it
+// like any other connector's credential, which is what the disconnect/
+// re-connect lifecycle already handles generically.
 func (h connectorHandlers) connectTestMailbox(w http.ResponseWriter, r *http.Request) {
 	actor, ok := principal.Actor(r.Context())
 	_, hasWS := principal.WorkspaceID(r.Context())
@@ -62,18 +78,10 @@ func (h connectorHandlers) connectTestMailbox(w http.ResponseWriter, r *http.Req
 	// declared scopes explicitly, from the descriptor itself so grant and
 	// requirement stay coupled at one source.
 	grantor := actor
-	grantor.Scopes = principal.NewScopeSet(testmailbox.New(nil).Descriptor().Scopes...)
+	grantor.Scopes = principal.NewScopeSet(h.connectorDescriptor(testmailbox.Name).Scopes...)
 	ctx := principal.WithActor(r.Context(), grantor)
 
-	// The wire shape (`{"user_id": "<uuid>"}`) matches testmailbox's own
-	// unexported authPayload by convention rather than a shared type —
-	// offlinedemo's authPayload is unexported the same way, and its own
-	// writer (scripts/seed-dev.sql) constructs the equivalent JSON
-	// independently for the same reason: the shape is the connector's
-	// public contract with whatever mints its Auth, not a Go type to share.
-	auth, err := json.Marshal(struct {
-		UserID string `json:"user_id"`
-	}{UserID: actor.UserID.String()})
+	auth, err := testmailbox.Credential(actor.UserID)
 	if err != nil {
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusInternalServerError,

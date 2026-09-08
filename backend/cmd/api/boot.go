@@ -370,7 +370,8 @@ func modelSurfaceOptions(ctx context.Context, cfg apiConfig, deployCfg deploycon
 	// each running their own copy of the declared-routing/--ai-fake/
 	// neither switch (and, with it, their own Router, cache and budget).
 	modelPath, aiState, assistantProfile, routingVersion, err := resolveModelPath(
-		ctx, modelPathSpecFrom(cfg, deployCfg), pool, logger)
+		ctx, modelPathSpecFrom(cfg, deployCfg), pool, logger,
+	)
 	if err != nil {
 		return nil, nil, err
 	}

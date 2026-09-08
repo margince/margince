@@ -10,6 +10,7 @@ import (
 	"go/parser"
 	"go/token"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -38,13 +39,33 @@ func TestSendEmailRefusesAddressesOutsideTheQuarantine(t *testing.T) {
 }
 
 func TestSendEmailAcceptsEveryReservedDomain(t *testing.T) {
-	reserved := []string{"buyer@example.com", "buyer@example.net", "buyer@example.org", "buyer@thing.test", "buyer@thing.example", "buyer@thing.invalid", "buyer@thing.localhost"}
+	reserved := []string{
+		"buyer@example.com", "buyer@example.net", "buyer@example.org",
+		"buyer@thing.test", "buyer@thing.example", "buyer@thing.invalid", "buyer@thing.localhost",
+		// Subdomains of a named reserved domain, not only the bare TLDs.
+		"qa@mail.example.com", "qa@deep.mail.example.org",
+	}
 	for _, addr := range reserved {
 		t.Run(addr, func(t *testing.T) {
 			c := New(&fakeLedger{})
 			_, err := c.SendEmail(context.Background(), testAuth(t, ids.NewV7().String()), connector.EmailMessage{MessageID: "x@test.example", To: []string{addr}})
 			if err != nil {
 				t.Errorf("SendEmail to reserved address %q = %v, want nil", addr, err)
+			}
+		})
+	}
+}
+
+func TestSendEmailRefusesALookalikeDomain(t *testing.T) {
+	// "notexample.com" and "evil-example.com" are not example.com or a
+	// subdomain of it — a naive suffix check would wrongly accept them.
+	lookalikes := []string{"buyer@notexample.com", "buyer@evil-example.com", "buyer@example.com.attacker.net"}
+	for _, addr := range lookalikes {
+		t.Run(addr, func(t *testing.T) {
+			c := New(&fakeLedger{})
+			_, err := c.SendEmail(context.Background(), testAuth(t, ids.NewV7().String()), connector.EmailMessage{MessageID: "x@test.example", To: []string{addr}})
+			if !errors.Is(err, connector.ErrRecipientUnreachable) {
+				t.Errorf("SendEmail to lookalike address %q = %v, want ErrRecipientUnreachable", addr, err)
 			}
 		})
 	}
@@ -99,13 +120,24 @@ func TestSendEmailRecordsTheSendForItsOwnEcho(t *testing.T) {
 // TestPackageNeverImportsTheNetwork is the honest fitness test for "never
 // reaches the network" when there is no HTTP client to inject a spy for:
 // this package's own source must not import net or net/http, structurally.
+//
+// The walk includes IgnoredGoFiles (a file excluded by a build constraint,
+// e.g. a future //go:build integration file in this package — the default
+// build context never activates that tag, so ImportDir alone would silently
+// skip it) and XTestGoFiles (an external `package testmailbox_test` file) —
+// a census over GoFiles+TestGoFiles alone could report PASS on a package
+// that grew a net-importing file nothing here ever looked at.
 func TestPackageNeverImportsTheNetwork(t *testing.T) {
 	fset := token.NewFileSet()
 	pkg, err := build.ImportDir(".", 0)
 	if err != nil {
 		t.Fatalf("build.ImportDir: %v", err)
 	}
-	for _, name := range append(append([]string{}, pkg.GoFiles...), pkg.TestGoFiles...) {
+	files := slices.Concat(pkg.GoFiles, pkg.TestGoFiles, pkg.IgnoredGoFiles, pkg.XTestGoFiles)
+	if len(files) == 0 {
+		t.Fatal("ImportDir found no Go files at all — this census would pass vacuously; it is mis-rooted")
+	}
+	for _, name := range files {
 		f, err := parser.ParseFile(fset, filepath.Join(".", name), nil, parser.ImportsOnly)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", name, err)

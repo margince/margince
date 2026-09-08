@@ -17,34 +17,52 @@ import (
 
 // reservedDomains is test_mailbox's own quarantine (RFC 2606) — independent
 // of offline_demo's dataset addresses, which are a different safety story.
+// Named domains (example.com/.net/.org) admit their subdomains too — a
+// realistic address like qa@mail.example.com belongs in the quarantine as
+// much as buyer@example.com does. The four bare labels (test/example/
+// invalid/localhost) are TLDs: any domain ending in one is reserved by
+// definition, at any depth.
 var reservedDomains = map[string]bool{
 	"example.com": true, "example.net": true, "example.org": true,
 	"test": true, "example": true, "invalid": true, "localhost": true,
 }
 
-// inQuarantine reports whether addr's domain (or, for the four bare TLD
-// entries above, its final label) is inside the reserved set.
+// inQuarantine reports whether addr's domain is inside the reserved set —
+// exactly, or as a subdomain of a reserved name or TLD.
 func inQuarantine(addr string) bool {
 	_, domain, ok := strings.Cut(addr, "@")
-	if !ok {
+	if !ok || domain == "" {
 		return false
 	}
 	domain = strings.ToLower(domain)
-	if reservedDomains[domain] {
-		return true
+	for {
+		if reservedDomains[domain] {
+			return true
+		}
+		i := strings.IndexByte(domain, '.')
+		if i < 0 {
+			return false
+		}
+		domain = domain[i+1:]
 	}
-	if i := strings.LastIndexByte(domain, '.'); i >= 0 {
-		return reservedDomains[domain[i+1:]]
-	}
-	return false
 }
 
-// authPayload carries whose seat this credential names — the connect
-// handler (compose/connectors_testmailbox.go) writes this from the
-// authenticated actor, exactly like offlinedemo.authPayload; there is no
-// real credential to seal.
+// authPayload carries whose seat this credential names. There is no real
+// credential to seal; Credential is the one place this shape is spelled, so
+// the connect handler and every test that needs one call it rather than
+// hand-marshalling the same fields a second time.
 type authPayload struct {
 	UserID string `json:"user_id"`
+}
+
+// Credential mints the opaque Auth bundle naming userID as the connection's
+// owner — what the connect handler seals and what SendEmail/Sync read back.
+func Credential(userID ids.UUID) (connector.Auth, error) {
+	b, err := json.Marshal(authPayload{UserID: userID.String()})
+	if err != nil {
+		return nil, fmt.Errorf("test_mailbox: marshalling a credential for %s: %w", userID, err)
+	}
+	return connector.Auth(b), nil
 }
 
 func readUserID(auth connector.Auth) (ids.UUID, error) {
@@ -52,7 +70,11 @@ func readUserID(auth connector.Auth) (ids.UUID, error) {
 	if err := json.Unmarshal(auth, &payload); err != nil {
 		return ids.Nil, fmt.Errorf("test_mailbox: auth bundle carries no seat id: %w", err)
 	}
-	return ids.Parse(payload.UserID)
+	userID, err := ids.Parse(payload.UserID)
+	if err != nil {
+		return ids.Nil, fmt.Errorf("test_mailbox: auth bundle seat id %q is not a uuid: %w", payload.UserID, err)
+	}
+	return userID, nil
 }
 
 // SendEmail validates, quarantines, records the send for its own echo
@@ -71,7 +93,7 @@ func (c *Connector) SendEmail(ctx context.Context, auth connector.Auth, msg conn
 	if err != nil {
 		return connector.SendReceipt{}, err
 	}
-	if err := c.ledger.RecordSent(ctx, userID, msg.MessageID, msg.To, msg.Subject); err != nil {
+	if err := c.ledger.RecordSent(ctx, userID, msg.MessageID, msg.To, msg.Cc, msg.Subject); err != nil {
 		return connector.SendReceipt{}, fmt.Errorf("test_mailbox: recording the send for its own echo: %w", err)
 	}
 	sum := sha256.Sum256([]byte(msg.MessageID))

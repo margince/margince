@@ -1397,6 +1397,8 @@ public.capture_sync_state_pkey CREATE UNIQUE INDEX capture_sync_state_pkey ON pu
 public.capture_test_mailbox_sent acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_test_mailbox_sent.capture_test_mailbox_sent_message_id_check CHECK (((length(message_id) > 0) AND (char_length(message_id) <= 512)))
 public.capture_test_mailbox_sent.capture_test_mailbox_sent_pkey PRIMARY KEY (id)
+public.capture_test_mailbox_sent.capture_test_mailbox_sent_user_message_unique UNIQUE (user_id, message_id)
+public.capture_test_mailbox_sent.cc_addresses jsonb NOT NULL gen=- def='[]'::jsonb
 public.capture_test_mailbox_sent.echoed_at timestamp with time zone gen=- def=-
 public.capture_test_mailbox_sent.id uuid NOT NULL gen=- def=uuidv7()
 public.capture_test_mailbox_sent.message_id text NOT NULL gen=- def=-
@@ -1405,6 +1407,7 @@ public.capture_test_mailbox_sent.subject text NOT NULL gen=- def=-
 public.capture_test_mailbox_sent.to_addresses jsonb NOT NULL gen=- def=-
 public.capture_test_mailbox_sent.user_id uuid NOT NULL gen=- def=-
 public.capture_test_mailbox_sent_pkey CREATE UNIQUE INDEX capture_test_mailbox_sent_pkey ON public.capture_test_mailbox_sent USING btree (id)
+public.capture_test_mailbox_sent_user_message_unique CREATE UNIQUE INDEX capture_test_mailbox_sent_user_message_unique ON public.capture_test_mailbox_sent USING btree (user_id, message_id)
 public.capture_thread_verdict acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_thread_verdict.attempts integer NOT NULL gen=- def=0
 public.capture_thread_verdict.capture_thread_verdict_first_activity_id_fkey FOREIGN KEY (first_activity_id) REFERENCES activity(id) ON DELETE SET NULL

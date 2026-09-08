@@ -29,7 +29,7 @@ func TestTestMailboxLedgerRecordsAndEchoesOnce(t *testing.T) {
 	ctx, ledger := testMailboxLedgerDB(t)
 	userID := ids.NewV7()
 
-	if err := ledger.RecordSent(ctx, userID, "abc123@test.example", []string{"buyer@example.com"}, "Hello"); err != nil {
+	if err := ledger.RecordSent(ctx, userID, "abc123@test.example", []string{"buyer@example.com"}, []string{"cc@example.com"}, "Hello"); err != nil {
 		t.Fatalf("RecordSent: %v", err)
 	}
 
@@ -43,8 +43,11 @@ func TestTestMailboxLedgerRecordsAndEchoesOnce(t *testing.T) {
 	if len(unechoed[0].To) != 1 || unechoed[0].To[0] != "buyer@example.com" {
 		t.Fatalf("Unechoed[0].To = %v, want [buyer@example.com]", unechoed[0].To)
 	}
+	if len(unechoed[0].Cc) != 1 || unechoed[0].Cc[0] != "cc@example.com" {
+		t.Fatalf("Unechoed[0].Cc = %v, want [cc@example.com]", unechoed[0].Cc)
+	}
 
-	if err := ledger.MarkEchoed(ctx, unechoed[0].ID); err != nil {
+	if err := ledger.MarkEchoed(ctx, userID, unechoed[0].ID); err != nil {
 		t.Fatalf("MarkEchoed: %v", err)
 	}
 
@@ -64,10 +67,10 @@ func TestTestMailboxLedgerIsolatesByUser(t *testing.T) {
 	ctx, ledger := testMailboxLedgerDB(t)
 	me, other := ids.NewV7(), ids.NewV7()
 
-	if err := ledger.RecordSent(ctx, me, "mine@test.example", []string{"buyer@example.com"}, "Mine"); err != nil {
+	if err := ledger.RecordSent(ctx, me, "mine@test.example", []string{"buyer@example.com"}, nil, "Mine"); err != nil {
 		t.Fatalf("RecordSent(me): %v", err)
 	}
-	if err := ledger.RecordSent(ctx, other, "theirs@test.example", []string{"buyer@example.com"}, "Theirs"); err != nil {
+	if err := ledger.RecordSent(ctx, other, "theirs@test.example", []string{"buyer@example.com"}, nil, "Theirs"); err != nil {
 		t.Fatalf("RecordSent(other): %v", err)
 	}
 
@@ -77,5 +80,56 @@ func TestTestMailboxLedgerIsolatesByUser(t *testing.T) {
 	}
 	if len(unechoed) != 1 || unechoed[0].MessageID != "mine@test.example" {
 		t.Fatalf("Unechoed(me) = %+v, want only mine@test.example", unechoed)
+	}
+}
+
+// MarkEchoed must not clear another seat's row even when handed its id — the
+// guard belongs to the store, not to whichever caller happens to have
+// already filtered by user_id.
+func TestMarkEchoedRefusesAnotherUsersRow(t *testing.T) {
+	ctx, ledger := testMailboxLedgerDB(t)
+	owner, attacker := ids.NewV7(), ids.NewV7()
+
+	if err := ledger.RecordSent(ctx, owner, "owned@test.example", []string{"buyer@example.com"}, nil, "Owned"); err != nil {
+		t.Fatalf("RecordSent: %v", err)
+	}
+	unechoed, err := ledger.Unechoed(ctx, owner)
+	if err != nil || len(unechoed) != 1 {
+		t.Fatalf("Unechoed(owner) = %+v, %v", unechoed, err)
+	}
+	rowID := unechoed[0].ID
+
+	if err := ledger.MarkEchoed(ctx, attacker, rowID); err != nil {
+		t.Fatalf("MarkEchoed(attacker, rowID): %v", err)
+	}
+
+	stillUnechoed, err := ledger.Unechoed(ctx, owner)
+	if err != nil {
+		t.Fatalf("Unechoed(owner) after the mismatched mark: %v", err)
+	}
+	if len(stillUnechoed) != 1 {
+		t.Fatalf("owner's row was cleared by another user's MarkEchoed call — Unechoed(owner) = %+v, want the row still pending", stillUnechoed)
+	}
+}
+
+// RecordSent must be idempotent on (user_id, message_id) — a dispatcher
+// retry of the same send must not create a second ledger row, which would
+// echo the same message twice.
+func TestRecordSentIsIdempotentOnMessageID(t *testing.T) {
+	ctx, ledger := testMailboxLedgerDB(t)
+	userID := ids.NewV7()
+
+	for range 2 {
+		if err := ledger.RecordSent(ctx, userID, "retried@test.example", []string{"buyer@example.com"}, nil, "Retry"); err != nil {
+			t.Fatalf("RecordSent: %v", err)
+		}
+	}
+
+	unechoed, err := ledger.Unechoed(ctx, userID)
+	if err != nil {
+		t.Fatalf("Unechoed: %v", err)
+	}
+	if len(unechoed) != 1 {
+		t.Fatalf("Unechoed = %+v, want exactly one row after a retried RecordSent", unechoed)
 	}
 }

@@ -44,11 +44,14 @@ func TestSyncEchoesEveryUnechoedSendAndMarksItEchoed(t *testing.T) {
 	if rec.NaturalKey.SourceID != "sent-1@test.example" {
 		t.Errorf("NaturalKey.SourceID = %q, want the same message_id the send used", rec.NaturalKey.SourceID)
 	}
-	if !rec.Counterparty.SentByOwner() {
-		t.Error("Counterparty.SentByOwner() = false, want true — this connector IS the provider filing back its own real send")
+	// WithOwnerAttestation may be minted only by capture/mailmap
+	// (TestOnlyTheMailMapperMintsTheOutboundAttestation) — the echo must
+	// never claim it, however genuinely sent the message was.
+	if rec.Counterparty.SentByOwner() {
+		t.Error("Counterparty.SentByOwner() = true, want false — test_mailbox must never mint the T1 attestation itself")
 	}
-	if len(ledger.marked) != 1 || ledger.marked[0] != msgID {
-		t.Errorf("MarkEchoed called with %v, want [%v]", ledger.marked, msgID)
+	if len(ledger.marked) != 1 || ledger.marked[0].id != msgID || ledger.marked[0].userID != userID.String() {
+		t.Errorf("MarkEchoed called with %+v, want one entry for (%v, %v)", ledger.marked, userID, msgID)
 	}
 }
 

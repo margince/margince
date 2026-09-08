@@ -65,8 +65,8 @@ type Operations struct {
 	AllowDataReset bool `yaml:"allow_data_reset"`
 
 	// AllowTestMailbox arms the test_mailbox connector: the QC-only, no-network
-	// fake mailbox that can both capture and send (issue #4974). Same reasoning
-	// as AllowDataReset: a capability that can fake a real send outcome is
+	// fake mailbox that can both capture and send. Same reasoning as
+	// AllowDataReset: a capability that can fake a real send outcome is
 	// stated here, never inferred from what MARGINCE_ENV happens to say a
 	// deployment is — a staging install is not "non-production" for this
 	// purpose either.
