@@ -28,10 +28,10 @@ var coreFamilyStreams = []string{
 	"gw:events:crm:audit",
 	"gw:events:crm:capture",
 	"gw:events:crm:coldstart",
+	"gw:events:crm:company",
 	"gw:events:crm:deal",
 	"gw:events:crm:identity",
 	"gw:events:crm:lead",
-	"gw:events:crm:company",
 	"gw:events:crm:overlay",
 	"gw:events:crm:person",
 	"gw:events:crm:voice",
@@ -212,7 +212,7 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 	// TestNoCoreGroupCarriesTheExtensionStream.
 	all := coreFamilyStreams
 	want := map[string][]string{
-		"cg:context-graph": {"gw:events:crm:activity", "gw:events:crm:deal", "gw:events:crm:lead", "gw:events:crm:company", "gw:events:crm:person"},
+		"cg:context-graph": {"gw:events:crm:activity", "gw:events:crm:company", "gw:events:crm:deal", "gw:events:crm:lead", "gw:events:crm:person"},
 		// The interaction-edge projection (ADR-0078): activity events move an
 		// edge, person events (merge, archive, restore) move every edge to
 		// that contact.

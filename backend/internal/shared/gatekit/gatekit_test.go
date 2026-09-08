@@ -176,8 +176,8 @@ func TestSubjectsOfAWaiverSetKeyedByANamedStringTypeAreOrderedToo(t *testing.T) 
 	})
 	for range 8 {
 		got := w.Subjects()
-		if len(got) != 3 || got[0] != "deal" || got[1] != "company" || got[2] != "person" {
-			t.Fatalf("Subjects() = %v, want deal,company,person in every call", got)
+		if len(got) != 3 || got[0] != "company" || got[1] != "deal" || got[2] != "person" {
+			t.Fatalf("Subjects() = %v, want company,deal,person in every call", got)
 		}
 	}
 }
