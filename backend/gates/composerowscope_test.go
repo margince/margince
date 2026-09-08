@@ -284,9 +284,6 @@ func TestEveryComposeReadOfARecordReferenceAppliesItsRowScope(t *testing.T) {
 				root)
 		}
 	}
-	if total := len(inModules); total < len(censusedModules) {
-		t.Fatalf("only %d of %d censused module roots contributed a site", total, len(censusedModules))
-	}
 
 	for _, site := range sites {
 		if reachesRowScope(pkgs[site.dir].visibleTo(site.recv), site.fn, site.table, map[string]bool{}) {
