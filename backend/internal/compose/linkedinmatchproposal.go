@@ -50,7 +50,12 @@ const linkedInMatchKind = "linkedin_match"
 // decide it.
 type linkedInMatchProposal struct {
 	ConnectionID ids.UUID `json:"connection_id"`
-	PersonID     ids.UUID `json:"person_id"`
+	// OwnerUserID is the member whose network produced the pair, stamped at
+	// staging from the ghost row. The apply binds on it: without it the write
+	// gated the PERSON and nothing tied the CONNECTION, so a payload naming
+	// another member's connection applied to it.
+	OwnerUserID ids.UUID `json:"owner_user_id"`
+	PersonID    ids.UUID `json:"person_id"`
 	// ConnectionName and ConnectionCompany are the export's own spelling. The
 	// folded forms the matcher compared on are deliberately absent: nobody can
 	// decide "andreas muller · simio".
@@ -166,7 +171,8 @@ func stagePendingLinkedInMatches(
 
 func stageOneLinkedInMatch(ctx context.Context, svc *approvals.Service, m people.PendingLinkedInMatch) (bool, error) {
 	canonical, hash, err := diffhash.Object(map[string]any{
-		"connection_id": m.ConnectionID.String(), "person_id": m.PersonID.String(),
+		"connection_id": m.ConnectionID.String(), "owner_user_id": m.OwnerUserID.String(),
+		"person_id":       m.PersonID.String(),
 		"connection_name": m.ConnectionName, "connection_company": m.ConnectionCompany,
 		"person_name": m.PersonName,
 	})
@@ -228,6 +234,6 @@ func linkedInMatchAcceptEffect(svc *approvals.Service, store *people.Store) appr
 		// Executed as the DECIDER, not as a machine: a member approving a match
 		// is making the claim themselves, and the write must be gated by their
 		// grants and recorded against them.
-		return store.ApplyLinkedInMatch(ctx, p.ConnectionID, p.PersonID)
+		return store.ApplyLinkedInMatch(ctx, p.ConnectionID, p.OwnerUserID, p.PersonID)
 	}
 }
