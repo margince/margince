@@ -45,15 +45,21 @@ func TestDeepReadOfferingsDedupeOnValueKeyAndTheApplyRespectsHumanPrecedence(t *
 
 	// A human has claimed the service fact. The read must land the product
 	// beside it and leave this row exactly as it is.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		_, err := tx.Exec(context.Background(), `
-			INSERT INTO organization_fact (organization_id, category, field, value, value_key, evidence_snippet, source_url, confidence, source, captured_by)
-			VALUES ($1, 'offering', 'service', 'CRM Rollout (human curated)', 'crm rollout',
-			        'set by hand', '', 1, 'human', $2)`,
-			org, "human:"+e.Rep1.String())
-		return err
-	}); err != nil {
-		t.Fatal(err)
+	//
+	// Seeded through the writer, because the row IS what this case protects:
+	// CreateOrganizationFact mints it human-owned from birth, which is the
+	// property both enrichment upserts consult. The hand INSERT that stood here
+	// made a row the writer cannot — it supplied value_key 'crm rollout' beside
+	// the value "CRM Rollout (human curated)", which the writer's own derivation
+	// keys as 'crm rollout (human curated)'. The precedence rule was therefore
+	// being judged against a precondition no human could have created, and a
+	// drift in captured_by, in source, or in that derivation would have left
+	// this case green while production moved.
+	humanService := people.FactCreateInput{Category: "offering", Field: "service", Value: "CRM Rollout"}
+	if _, err := people.NewStore(e.DB()).CreateOrganizationFact(
+		e.As(e.Rep1, nil, integration.AdminPerms), ids.From[ids.OrganizationKind](org), humanService,
+	); err != nil {
+		t.Fatalf("seeding the human-claimed service fact: %v", err)
 	}
 
 	done, _ := runServicesDeepRead(t, e, org)
@@ -93,7 +99,7 @@ func TestDeepReadOfferingsDedupeOnValueKeyAndTheApplyRespectsHumanPrecedence(t *
 	if factRows != 2 {
 		t.Fatalf("%d organization_fact rows after the read, want 2 (the human's service + the landed product)", factRows)
 	}
-	if serviceValue != "CRM Rollout (human curated)" || serviceCapturedBy != "human:"+e.Rep1.String() {
+	if serviceValue != humanService.Value || serviceCapturedBy != "human:"+e.Rep1.String() {
 		t.Fatalf("service row = %q by %q — the read overwrote a human-claimed fact", serviceValue, serviceCapturedBy)
 	}
 	if productValue != "Margince — our CRM product" {
@@ -176,15 +182,14 @@ func TestAcceptedEmployeeRangeFactFillsSizeBandWhenUnambiguous(t *testing.T) {
 	// upsert refuses the agent's fact, so the column must not contradict the
 	// human's standing statement either.
 	claimed := insertOrg(t, e, e.Rep1, "claimed.example", "")
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		_, err := tx.Exec(context.Background(), `
-			INSERT INTO organization_fact (organization_id, category, field, value, value_key, evidence_snippet, source_url, confidence, source, captured_by)
-			VALUES ($1, 'company', 'employee_range', '11-50', '',
-			        'set by hand', '', 1, 'human', $2)`,
-			claimed, "human:"+e.Rep1.String())
-		return err
-	}); err != nil {
-		t.Fatal(err)
+	// Through the writer, for the reason the offerings case states at length:
+	// the standing statement this promotion must not contradict is a row
+	// CreateOrganizationFact makes, and a fixture that merely resembles one
+	// keeps passing after the writer's shape has moved.
+	if _, err := store.CreateOrganizationFact(ctx, ids.From[ids.OrganizationKind](claimed),
+		people.FactCreateInput{Category: "company", Field: "employee_range", Value: "11-50"},
+	); err != nil {
+		t.Fatalf("seeding the human-claimed employee_range fact: %v", err)
 	}
 	if err := store.ApplyDeepRead(ctx, people.DeepReadProposal{
 		OrganizationID: ids.From[ids.OrganizationKind](claimed),

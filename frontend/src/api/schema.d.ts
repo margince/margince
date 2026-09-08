@@ -24800,10 +24800,31 @@ export interface components {
             first_response_enabled: boolean;
             /** @description How long a lead may wait for its first genuine response once the clock starts (routing, else creation). 15..10080. */
             first_response_target_minutes: number;
+            /**
+             * Format: uuid
+             * @description Who answers when a lead nobody owns misses its target. Null means nobody is
+             *     configured, and an unowned breach is recorded without being addressed. Also reads
+             *     null once the named seat can no longer work the queue — suspended, archived, an
+             *     agent, a read seat — because a desk nobody reads is the same silence as none.
+             */
+            unassigned_escalation_user_id?: string | null;
         };
         UpdateLeadSettingsRequest: {
             first_response_enabled?: boolean;
             first_response_target_minutes?: number;
+            /**
+             * Format: uuid
+             * @description Who answers when a lead NOBODY owns misses its first-response target. An owned
+             *     lead's breach escalates to its owner; without this, an unowned one escalated to
+             *     nobody at all.
+             *
+             *     Must name a seat that can be handed work AND may read leads, else `422` — an
+             *     escalation carries the lead it is about, so a desk that cannot open the record is
+             *     not a desk to send it to. Null clears it, which is the honest default: the breach
+             *     is recorded and left in the unassigned queue rather than addressed to somebody who
+             *     never agreed to answer for it.
+             */
+            unassigned_escalation_user_id?: string | null;
         };
         /** @description Why the lead is closed. Both fields are optional on the wire so an agent's governed disqualify still works; the UI always sends a reason. */
         DisqualifyLeadRequest: {

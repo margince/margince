@@ -182,6 +182,12 @@ type shareFrame struct {
 	TakenAt      time.Time
 }
 
+// The timezone is JOINed from the setting row rather than read through
+// platform/settings, whose gate is this un-RLS'd table's only control: a share
+// link carries no seat at all, so there is no principal to gate against, and
+// the frame is one row that a second statement would turn into a round trip
+// inside the share's transaction. Ratified in
+// backend/gates/settingreaders_test.go.
 func snapshotFrame(ctx context.Context, tx pgx.Tx, id ids.UUID) (shareFrame, error) {
 	var out shareFrame
 	var zoneName string

@@ -132,6 +132,23 @@ services:
     # also the direction that HELPS: a whole-schema reset needs more lock slots,
     # not fewer. Lower max_connections and that product falls with it, and the
     # 53200 the comment above is about comes back.
+    # /dev/shm, which is where this image puts every DYNAMIC shared memory
+    # segment (dynamic_shared_memory_type=posix). Docker's default for it is
+    # 64MB, and that default is not sized for the settings above: a parallel
+    # index build or maintenance pass asks for a 32MB segment in one go, and
+    # against 64MB shared with everything else already mapped there it fails
+    # with `could not resize shared memory segment ... No space left on device
+    # (SQLSTATE 53100)`. The failure lands wherever the lane happens to be —
+    # observed here as `make test-it` dying inside pgmigrate, on a different
+    # migration each run — so it does not name its own cause, which is why it
+    # is written down rather than left in the number.
+    #
+    # 1g is headroom, not a tuned figure: it is far above anything the lane has
+    # been seen to ask for, and /dev/shm is a tmpfs, so an unused gigabyte
+    # costs nothing. Raise it, never lower it — the setting only ever binds
+    # when something needs a segment, and the symptom of it binding is an
+    # unrelated-looking migration failure.
+    shm_size: 1g
     command:
       - postgres
       - -c

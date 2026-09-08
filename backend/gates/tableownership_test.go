@@ -17,7 +17,9 @@ package gates
 // rationale — an entry without a rationale is a finding, not a pass, and a
 // waiver that matches no remaining write is stale and fails too. SELECTs are
 // out of scope: reads are governed by each statement's own workspace predicate
-// and the platform/auth row-scope clauses, not by ownership.
+// and the platform/auth row-scope clauses, not by ownership. Neither of those
+// reaches `setting`, so its reads carry a rail of their own in
+// backend/gates/settingreaders_test.go rather than riding this exemption.
 //
 // That last sentence names two of the three halves of a read's admission and
 // stops. The OBJECT half — may this caller read this KIND of record at all — is

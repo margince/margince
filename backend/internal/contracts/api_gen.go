@@ -25827,6 +25827,12 @@ type LeadSettings struct {
 
 	// FirstResponseTargetMinutes How long a lead may wait for its first genuine response once the clock starts (routing, else creation). 15..10080.
 	FirstResponseTargetMinutes int `json:"first_response_target_minutes"`
+
+	// UnassignedEscalationUserId Who answers when a lead nobody owns misses its target. Null means nobody is
+	// configured, and an unowned breach is recorded without being addressed. Also reads
+	// null once the named seat can no longer work the queue — suspended, archived, an
+	// agent, a read seat — because a desk nobody reads is the same silence as none.
+	UnassignedEscalationUserId *openapi_types.UUID `json:"unassigned_escalation_user_id,omitempty"`
 }
 
 // LeadSource One administered lead source. `key` is the value stored on `lead.source`; `label` is what a user sees.
@@ -34859,6 +34865,17 @@ type UpdateLeadRequestStatus string
 type UpdateLeadSettingsRequest struct {
 	FirstResponseEnabled       *bool `json:"first_response_enabled,omitempty"`
 	FirstResponseTargetMinutes *int  `json:"first_response_target_minutes,omitempty"`
+
+	// UnassignedEscalationUserId Who answers when a lead NOBODY owns misses its first-response target. An owned
+	// lead's breach escalates to its owner; without this, an unowned one escalated to
+	// nobody at all.
+	//
+	// Must name a seat that can be handed work AND may read leads, else `422` — an
+	// escalation carries the lead it is about, so a desk that cannot open the record is
+	// not a desk to send it to. Null clears it, which is the honest default: the breach
+	// is recorded and left in the unassigned queue rather than addressed to somebody who
+	// never agreed to answer for it.
+	UnassignedEscalationUserId *openapi_types.UUID `json:"unassigned_escalation_user_id,omitempty"`
 }
 
 // UpdateLeadSourceRequest defines model for UpdateLeadSourceRequest.

@@ -147,7 +147,7 @@ func setupFinance(t *testing.T) *financeEnv {
 const ledgerSeed = "finance-integration-ledger"
 
 func (e *financeEnv) provider() Provider {
-	return NewOfflineProvider(ledgerSeed, []SourceCustomer{{ExternalID: e.external}})
+	return NewOfflineProvider(ledgerSeed, []SourceCustomer{{ExternalID: e.external}}, offlineEpoch)
 }
 
 // summaryAtEpoch reads the card at a clock pinned to the ledger's own epoch.
