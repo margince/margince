@@ -6,6 +6,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/modules/people"
@@ -27,7 +28,14 @@ var _ migration.UndoWriters = (*csvWriters)(nil)
 // a row whose archive committed but whose checkpoint advance did not, and an
 // already-archived row is left exactly as it is rather than re-archived (or
 // erroring on a live-only read that no longer finds it).
-func (w *csvWriters) Reverse(ctx context.Context, object string, nativeID ids.UUID) error {
+func (w *csvWriters) Reverse(
+	ctx context.Context, object string, nativeID ids.UUID, importedAt time.Time,
+) error {
+	// The precondition each archive re-asks under its own row lock. The undo's
+	// page-level check already skipped the rows it found touched; this is what
+	// puts the question in the same transaction as the write, since that check
+	// and this write are different transactions and a human can act between them.
+	untouched := people.NotTouchedByHumanSince(importedAt)
 	switch object {
 	case migration.ObjectLead:
 		lead, err := w.people.GetLead(ctx, ids.From[ids.LeadKind](nativeID), storekit.IncludeArchived)
@@ -37,7 +45,7 @@ func (w *csvWriters) Reverse(ctx context.Context, object string, nativeID ids.UU
 		if lead.ArchivedAt != nil {
 			return nil
 		}
-		if _, err := w.people.DisqualifyLead(ctx, ids.From[ids.LeadKind](nativeID), people.DisqualifyLeadInput{}); err != nil {
+		if _, err := w.people.DisqualifyLead(ctx, ids.From[ids.LeadKind](nativeID), people.DisqualifyLeadInput{}, untouched); err != nil {
 			return fmt.Errorf("import undo: reversing lead %s: %w", nativeID, err)
 		}
 		return nil
@@ -49,7 +57,7 @@ func (w *csvWriters) Reverse(ctx context.Context, object string, nativeID ids.UU
 		if org.ArchivedAt != nil {
 			return nil
 		}
-		if _, err := w.people.ArchiveOrganization(ctx, ids.From[ids.OrganizationKind](nativeID), nil); err != nil {
+		if _, err := w.people.ArchiveOrganization(ctx, ids.From[ids.OrganizationKind](nativeID), nil, untouched); err != nil {
 			return fmt.Errorf("import undo: reversing organization %s: %w", nativeID, err)
 		}
 		return nil
@@ -63,7 +71,7 @@ func (w *csvWriters) Reverse(ctx context.Context, object string, nativeID ids.UU
 		}
 		// The archive cascades to person_email, person_phone and the person's
 		// relationships, so the child rows this run created go with it.
-		if _, err := w.people.ArchivePerson(ctx, ids.From[ids.PersonKind](nativeID), nil); err != nil {
+		if _, err := w.people.ArchivePerson(ctx, ids.From[ids.PersonKind](nativeID), nil, untouched); err != nil {
 			return fmt.Errorf("import undo: reversing person %s: %w", nativeID, err)
 		}
 		return nil
