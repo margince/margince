@@ -2701,7 +2701,7 @@ export const en = {
   "brief.weekly.scorecard.multiThreaded": "More than one contact",
   "brief.weekly.scorecard.multiThreadedBasis":
     "of {total} open deals, in the last 30 days",
-  "brief.weekly.scorecard.closeDateSound": "Close date holds up",
+  "brief.weekly.scorecard.closeDateSound": "Firm close date recorded",
   "brief.weekly.scorecard.forecastMoves": "Forecast upgrades",
   "brief.weekly.scorecard.forecastMovesBasis": "{down} downgraded",
   // The week ahead. The frozen review says what happened; this is the only part

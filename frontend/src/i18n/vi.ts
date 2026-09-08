@@ -2582,7 +2582,7 @@ export const vi = {
   "brief.weekly.scorecard.multiThreaded": "Nhiều hơn một liên hệ",
   "brief.weekly.scorecard.multiThreadedBasis":
     "trên {total} cơ hội đang mở, trong 30 ngày qua",
-  "brief.weekly.scorecard.closeDateSound": "Ngày chốt đáng tin",
+  "brief.weekly.scorecard.closeDateSound": "Đã ghi ngày chốt cố định",
   "brief.weekly.scorecard.forecastMoves": "Nâng dự báo",
   "brief.weekly.scorecard.forecastMovesBasis": "{down} hạ dự báo",
   // Tuần tới. Bản tổng kết đã đóng băng nói điều đã xảy ra; đây là phần duy nhất
