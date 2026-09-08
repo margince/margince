@@ -68,6 +68,18 @@ written for you as much as for a human. The code is still the authority on
 current behaviour, so check the code before you rely on a doc for anything a
 patch depends on.
 
+**A red `main` is claimed once.** Before diagnosing a failure you did not cause,
+run `gh pr list --state open --label "claim: main-red"` and read the bodies —
+each names the tests it covers. Covered: somebody is on it, so do not diagnose
+it, do not open a second fix, and do not poll it. Your red is inherited; carry on
+with your own work and look again at merge time. Not covered: you are first, even
+while another claim is open for a different cause — open a DRAFT pull request
+labelled `claim: main-red` naming the tests you take, BEFORE you start. Listing
+then creating is not atomic, so two claims can cover one test: the LOWER number
+wins and the other session closes its own, pointing at the winner.
+[docs/how-to/claim-a-red-main.md](docs/how-to/claim-a-red-main.md) has stale
+claims, releasing one, and why two half-fixes both stay red.
+
 **A security hole is never a public issue.** [SECURITY.md](SECURITY.md) routes an
 exploitable weakness to a private advisory. The test: if you can write the
 reproduction, it belongs in an advisory, not here.
