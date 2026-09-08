@@ -328,10 +328,10 @@ func baseComposeOptions(ctx context.Context, cfg apiConfig, capCfg compose.Captu
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("api: %w", err)
 	}
-	// Same refusal for the auto-enrich daily cap: this role spends it too (an
-	// approval accept can queue a domain-triage read), compose resolves the
-	// value where it is spent, and a typo must fail the boot here rather than
-	// silently pace at the compiled default.
+	// The refusal half of the auto-enrich daily cap: this role spends it too
+	// (an approval accept can queue a domain-triage read), so a typo fails the
+	// boot here; compose resolves the value where it is spent, from the same
+	// process environment, which is fixed at exec.
 	if _, err := compose.AutoEnrichDailyCapFromEnv(config.FromOS); err != nil {
 		return nil, nil, nil, fmt.Errorf("api: %w", err)
 	}

@@ -5,7 +5,7 @@ package capture
 
 // The captured-organization auto-enrich sweep's store (CAP-PARAM-7,
 // ADR-0072/A118): the per-org attempt cursor (capture_auto_enrich_state), the
-// per-workspace daily spend cap (capture_auto_enrich_budget), and the due-org
+// installation-wide daily spend cap (capture_auto_enrich_budget), and the due-org
 // candidate read. Compose owns the sweep worker and the deep-read enqueue; this
 // store owns the scheduling state and the atomic cap reservation so the two are
 // one transaction each. The candidate read joins organization / site_read
@@ -174,7 +174,7 @@ func (s *AutoEnrichStore) ExpireExhausted(ctx context.Context) error {
 	return nil
 }
 
-// BudgetSlot is one reservation against a workspace's daily read allowance: the
+// BudgetSlot is one reservation against the installation's daily read allowance: the
 // UTC day it was taken on, and whether it was granted at all. Carry it from the
 // reservation to the refund — the day is what makes a refund land on the row the
 // reservation incremented.
@@ -183,8 +183,9 @@ type BudgetSlot struct {
 	Reserved bool
 }
 
-// ReserveBudget atomically reserves one auto-enrich slot for the current
-// workspace's UTC day, returning false when the daily cap is already spent. The
+// ReserveBudget atomically reserves one auto-enrich slot for the current UTC
+// day, returning false when the daily cap is already spent. The counter is
+// keyed on the date alone, so every workspace pass spends from the one pot. The
 // reservation is the same transaction as the counter read, so two concurrent
 // sweeps (replicas) can never both slip past the cap.
 func (s *AutoEnrichStore) ReserveBudget(ctx context.Context, dailyCap int) (BudgetSlot, error) {

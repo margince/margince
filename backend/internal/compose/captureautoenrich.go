@@ -41,8 +41,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// defaultAutoEnrichDailyCap is the per-workspace ceiling on auto deep reads started in
-// one UTC day. Reserved atomically, so two replicas never both slip past it.
+// defaultAutoEnrichDailyCap is the installation-wide ceiling on auto deep reads
+// started in one UTC day — the counter (capture_auto_enrich_budget) is keyed on
+// the date alone, so every workspace pass spends from the one pot. Reserved
+// atomically, so two replicas never both slip past it.
 //
 // It is the THIRD bound on this fan-out, not the only one, and knowing what the
 // other two already do is what sets the number:
@@ -87,7 +89,7 @@ func AutoEnrichDailyCapFromEnv(env config.Lookup) (int, error) {
 	}
 	n, err := strconv.Atoi(v)
 	if err != nil || n < 0 {
-		return 0, fmt.Errorf("invalid %s %q: want a non-negative integer (0 takes the compiled default)", AutoEnrichDailyCapEnv, v)
+		return 0, fmt.Errorf("invalid %s %q: want a whole number >= 0 (0 takes the compiled default)", AutoEnrichDailyCapEnv, v)
 	}
 	if n == 0 {
 		return defaultAutoEnrichDailyCap, nil
@@ -96,14 +98,13 @@ func AutoEnrichDailyCapFromEnv(env config.Lookup) (int, error) {
 }
 
 // autoEnrichDailyCap resolves the cap for a constructor that cannot refuse to
-// boot. Both roles already validated the variable at startup, so an error here
-// means the environment changed under a running process; the compiled default
-// is the safe answer, said out loud.
-func autoEnrichDailyCap(log *slog.Logger) int {
+// boot. The error branch is unreachable once a role is running — both cmd
+// roles refuse an invalid value before any constructor runs, and a Go
+// process's environment is fixed at exec — but the compiler cannot see that,
+// so it is handled, in the direction that spends less.
+func autoEnrichDailyCap() int {
 	n, err := AutoEnrichDailyCapFromEnv(config.FromOS)
 	if err != nil {
-		log.Warn("auto-enrich: unreadable daily cap, using the compiled default",
-			"err", err, "default", defaultAutoEnrichDailyCap)
 		return defaultAutoEnrichDailyCap
 	}
 	return n
@@ -141,7 +142,7 @@ func newCaptureAutoEnrichSweepWorker(pool *pgxpool.Pool, log *slog.Logger) *capt
 		people:     people.NewStore(InstallationDB(pool)),
 		settings:   capture.NewSettings(NewSettingsStore(pool)),
 		autoEnrich: capture.NewAutoEnrichStore(InstallationDB(pool)),
-		dailyCap:   autoEnrichDailyCap(log),
+		dailyCap:   autoEnrichDailyCap(),
 		log:        log,
 	}
 }

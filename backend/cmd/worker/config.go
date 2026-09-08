@@ -218,9 +218,9 @@ func parseWorkerFlags(args []string) (workerConfig, error) {
 	if err := overlayBackfillLimitFromEnv(&cfg.overlayBackfillLimit); err != nil {
 		return workerConfig{}, err
 	}
-	// The value is resolved again where it is spent (compose reads the
-	// environment through the same helper); this call is only the refusal — a
-	// typo must fail the boot, not silently pace at the compiled default.
+	// The refusal half of the auto-enrich daily cap: a typo fails the boot
+	// here; compose resolves the value where it is spent, from the same
+	// process environment, which is fixed at exec.
 	if _, err := compose.AutoEnrichDailyCapFromEnv(config.FromOS); err != nil {
 		return workerConfig{}, err
 	}
