@@ -71,6 +71,26 @@ func TestSendEmailRefusesALookalikeDomain(t *testing.T) {
 	}
 }
 
+// TestSendEmailRefusesAMalformedAddress covers what a hand-rolled first-"@"
+// cut would get wrong: a domain is the part after the LAST "@", not the
+// first, so an address parser is what has to answer this, not a split.
+func TestSendEmailRefusesAMalformedAddress(t *testing.T) {
+	malformed := []string{
+		"buyer@evil.com@example.com", // a real recipient's own domain is not reserved just because "example.com" trails it
+		"buyer@.example.com",         // no domain label may be empty, reserved-looking suffix or not
+		"not-an-email",
+	}
+	for _, addr := range malformed {
+		t.Run(addr, func(t *testing.T) {
+			c := New(&fakeLedger{})
+			_, err := c.SendEmail(context.Background(), testAuth(t, ids.NewV7()), connector.EmailMessage{MessageID: "x@test.example", To: []string{addr}})
+			if !errors.Is(err, connector.ErrRecipientUnreachable) {
+				t.Errorf("SendEmail to malformed address %q = %v, want ErrRecipientUnreachable", addr, err)
+			}
+		})
+	}
+}
+
 func TestSendReceiptIsIdempotentOnMessageID(t *testing.T) {
 	c := New(&fakeLedger{})
 	auth := testAuth(t, ids.NewV7())

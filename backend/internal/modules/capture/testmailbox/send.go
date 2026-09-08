@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -28,13 +29,19 @@ var reservedDomains = map[string]bool{
 }
 
 // inQuarantine reports whether addr's domain is inside the reserved set —
-// exactly, or as a subdomain of a reserved name or TLD.
+// exactly, or as a subdomain of a reserved name or TLD. addr is parsed
+// through values.ParseEmail rather than cut on "@" by hand: an address with
+// more than one "@" (a quoted local part, RFC 5321) names its domain after
+// the LAST one, and only a real parse gets that right — a raw first-"@" cut
+// would misread the domain for such an address. A malformed addr — anything
+// ParseEmail refuses — is outside the quarantine by construction: nothing
+// here is a real destination for it to reach.
 func inQuarantine(addr string) bool {
-	_, domain, ok := strings.Cut(addr, "@")
-	if !ok || domain == "" {
+	email, err := values.ParseEmail(addr)
+	if err != nil {
 		return false
 	}
-	domain = strings.ToLower(domain)
+	domain := email.Domain()
 	for {
 		if reservedDomains[domain] {
 			return true

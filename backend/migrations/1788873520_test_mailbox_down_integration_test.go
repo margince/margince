@@ -23,6 +23,24 @@ import (
 	"github.com/margince/margince/backend/migrations"
 )
 
+// namespaceThroughVersion returns core truncated so wantVersion is its LAST
+// migration — what lets dbmigrate.Down(..., 1), which only targets "one step
+// from the newest in the list I hand it", revert THIS migration specifically
+// regardless of whatever has landed above it in the real core by the time
+// this test runs. The DB itself is still migrated with the untruncated core
+// (see Up below), so this only narrows what Down is told to walk, never what
+// Up applied.
+func namespaceThroughVersion(t *testing.T, core dbmigrate.Namespace, wantVersion string) dbmigrate.Namespace {
+	t.Helper()
+	for i, m := range core.Migrations {
+		if m.Version == wantVersion {
+			return dbmigrate.Namespace{Name: core.Name, Migrations: core.Migrations[:i+1]}
+		}
+	}
+	t.Fatalf("no core migration carries version %s — was it renamed without updating this test?", wantVersion)
+	return dbmigrate.Namespace{}
+}
+
 // seedAppUserForConnection seeds the row capture_connection.user_id's
 // foreign key requires — a real app_user, not a bare UUID.
 func seedAppUserForConnection(t *testing.T, conn *pgx.Conn, email string) string {
@@ -62,11 +80,7 @@ func TestTheTestMailboxDownMigrationSurvivesADisconnectedConnection(t *testing.T
 		t.Fatalf("seeding a disconnected test_mailbox connection: %v", err)
 	}
 
-	// This migration is the newest in the tree (issue #4974's own), so
-	// reverting exactly one step reverts it — the same shape
-	// TestMigrations_downRefusesAnEditedMigration uses to target the last
-	// migration specifically.
-	if _, err := dbmigrate.Down(ctx, conn, core, 1); err != nil {
+	if _, err := dbmigrate.Down(ctx, conn, namespaceThroughVersion(t, core, "1788873520"), 1); err != nil {
 		t.Fatalf("down: %v — a disconnected test_mailbox connection must not block rolling this migration back", err)
 	}
 
@@ -105,7 +119,7 @@ func TestTheTestMailboxDownMigrationStillRefusesALiveConnection(t *testing.T) {
 		t.Fatalf("seeding a live test_mailbox connection: %v", err)
 	}
 
-	if _, err := dbmigrate.Down(ctx, conn, core, 1); err == nil {
+	if _, err := dbmigrate.Down(ctx, conn, namespaceThroughVersion(t, core, "1788873520"), 1); err == nil {
 		t.Fatal("down succeeded against a live test_mailbox credential — it must refuse rather than strand the sealed secret")
 	}
 }
