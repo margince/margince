@@ -4,15 +4,18 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { ActionRow } from "../design-system/actionrow";
 import { Panel, PanelBody } from "../design-system/panel";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 import { DispositionVerbs } from "./worklist.dispositions";
 // The verbs' own layout: `.worklist-snooze-spans` draws the caret's panel as a
-// list of choices rather than a grid of pills, and the row's `.action-row-*`
-// groups come from the design system. Imported the same way every surface that
-// mounts these verbs picks it up — worklist.tsx and brief.feed.tsx each do.
+// list of choices rather than a grid of pills, and `.worklist-row-acts` is the
+// line the row stands them on. Imported the same way every surface that mounts
+// these verbs picks it up — worklist.tsx and brief.feed.tsx each do.
 import "./worklist.css";
+// And the ROW's own sheet, because `.worklist-row-acts` is the row's line
+// rather than the screen's — a story mounting the verbs without it draws them
+// as a bare inline flow with no gap between them.
+import "./worklist.row.css";
 
 // The ways a row can be PUT DOWN, on their own.
 //
@@ -72,12 +75,12 @@ const meta: Meta<typeof DispositionVerbs> = {
         <Panel title="What to do next">
           <PanelBody>
             {/* The container the row puts them in, so the gap and the wrapping
-                are the ones a reader actually meets. No primary: this band is
-                the row's quieter half, and the lane's call to action is the
-                row's own business. */}
-            <ActionRow className="worklist-row-acts">
+                are the ones a reader actually meets. No call to action beside
+                them: these are the row's quieter half, and the lane's answer
+                leads the line — which is the row's own business. */}
+            <div className="worklist-row-acts">
               <Story />
-            </ActionRow>
+            </div>
           </PanelBody>
         </Panel>
       </StoryProviders>
