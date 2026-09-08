@@ -8844,6 +8844,9 @@ export const vi = {
   // Một thư ĐẦU TIÊN, không phải câu trả lời cho thư đã có.
   "worklist.verb.draft_email": "Mở để viết",
   "worklist.verb.draft_email_now": "Soạn email",
+  // Bản tóm tắt, không phải tin nhắn — chỉ một khóa, vì nút này không bao
+  // giờ mở trình soạn thảo nên không cần tách "ngay bây giờ" như trên.
+  "worklist.verb.open_meeting_brief": "Chuẩn bị cho cuộc họp",
   "worklist.deal.closes": "chốt {date}",
   "worklist.when.starts": "bắt đầu {when}",
   "worklist.when.due": "đến hạn {when}",

@@ -640,6 +640,9 @@ export function moveOpensComposer(item: WorklistItem): boolean {
 // it says so.
 export function moveLabel(item: WorklistItem, t: T): string {
   if (item.move?.action === "open_task") return t("deal360.openTask");
+  if (item.move?.action === "open_meeting_brief") {
+    return t("worklist.verb.open_meeting_brief");
+  }
   const opens = moveOpensComposer(item);
   if (item.move?.action === "draft_email") {
     return t(

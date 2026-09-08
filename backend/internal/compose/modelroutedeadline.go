@@ -17,19 +17,36 @@ import (
 // seconds — measured on a real installation, a reply draft takes 13 to 45 —
 // and the server's WriteTimeout is 30s for every other endpoint's protection.
 //
-// Suffix rather than a full path because each of these is mounted under an
+// Suffix rather than a full path because most of these are mounted under an
 // id-bearing prefix (/activities/{id}/draft-email, /organizations/{id}/dossier),
 // and a list of formatted paths would be a second copy of the router that
-// drifts the day a route moves.
+// drifts the day a route moves. Suffix matching is also method-blind on
+// purpose — the same tradeoff every entry here already makes for its sibling
+// GET (on-miss) and POST (always) — so `/brief` also covers the plain re-read
+// `GET /v1/brief`, which loses nothing by getting a deadline it does not need.
+//
+// `/brief` matches three routes, not one: the caller's own morning brief
+// (`/v1/brief`) and the person's and organization's own brief endpoints
+// (`/people/{id}/brief`, `/organizations/{id}/brief`) — all three call a
+// model and none held this deadline before. `TestTheModelRouteDeadlineSuffixesCoverTheContract`
+// (backend/gates) holds this list to the contract's own `x-waits-on-model`
+// marker, so a route added there without a matching suffix here fails on its
+// own PR rather than waiting for a live 502 to notice.
 var modelRouteSuffixes = []string{
 	"/draft-email",
 	"/dossier",
 	"/growth-fit",
 	"/meeting-brief",
+	"/brief",
 	"/ask",
 	"/intro-note-draft",
 	"/intro-request-draft",
 	"/role-proposals",
+	"/enrich",
+	"/coldstart",
+	"/coldstart/preview",
+	"/messages",
+	"/regenerate",
 }
 
 // extendDeadlineForModelRoutes gives a handler that calls a model long enough
