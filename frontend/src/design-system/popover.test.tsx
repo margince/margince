@@ -149,3 +149,56 @@ it("still opens on a click when it opens on hover", async () => {
 
   expect(screen.getByText("Two of three invoices are late.")).toBeTruthy();
 });
+
+// The text-trigger shape, so the refusal is held on the bare `<button>` branch
+// as well as on the `Button` one below — a prop honoured for one of a
+// component's two shapes is a prop that works until someone drops the variant.
+it("does not open when the trigger is refused", async () => {
+  render(
+    <Popover label="How it stands" disabled>
+      Two of three invoices are late.
+    </Popover>,
+  );
+  const trigger = screen.getByRole("button");
+  expect(trigger.hasAttribute("disabled")).toBe(true);
+
+  await userEvent.click(trigger);
+
+  expect(screen.queryByText("Two of three invoices are late.")).toBeNull();
+  expect(trigger.getAttribute("aria-expanded")).toBe("false");
+});
+
+// `disabled` blocks the OPENING and only that.
+//
+// A panel already open can hold the control that started the write — busy, and
+// holding the reader's focus — so closing it under them is the one thing this
+// state must not do. And the trigger stays focusable for as long as the panel
+// is up, because both close paths hand focus back to it and `.focus()` on a
+// natively disabled button is a silent no-op.
+it("keeps an open panel, and a focusable trigger, when the caller refuses it", async () => {
+  const { rerender } = render(
+    <Popover label="How it stands" variant="ghost">
+      Two of three invoices are late.
+    </Popover>,
+  );
+  const trigger = screen.getByRole("button");
+  await userEvent.click(trigger);
+
+  rerender(
+    <Popover label="How it stands" variant="ghost" disabled>
+      Two of three invoices are late.
+    </Popover>,
+  );
+
+  expect(screen.getByText("Two of three invoices are late.")).toBeTruthy();
+  expect(trigger.hasAttribute("disabled")).toBe(false);
+  trigger.focus();
+  expect(document.activeElement).toBe(trigger);
+
+  await userEvent.keyboard("{Escape}");
+
+  // Closed by the reader, and only now refused — so the panel a write has
+  // emptied cannot be opened a second time while that write is out.
+  expect(screen.queryByText("Two of three invoices are late.")).toBeNull();
+  expect(trigger.hasAttribute("disabled")).toBe(true);
+});

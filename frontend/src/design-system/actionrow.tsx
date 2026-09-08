@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { ReactNode } from "react";
+import { Children, type ReactNode } from "react";
 import "./actionrow.css";
 
 /**
@@ -27,6 +27,13 @@ import "./actionrow.css";
  *
  * No `role` and no label: the buttons name themselves, and a group wrapper
  * announcing itself would put a landmark between the reader and the verb.
+ *
+ * Each group is drawn only when it HAS verbs. An empty leading group is still a
+ * flex item, and the row wraps: at a width that fits the primary but not the
+ * primary plus a gap, a zero-width lead takes the first line and pushes the one
+ * button onto a second, under a line of air holding nothing. `Children.toArray`
+ * rather than `Children.count`, because a caller's `{canDiscard && <Button/>}`
+ * is a child that counts and renders nothing.
  */
 export function ActionRow({
   children,
@@ -40,9 +47,10 @@ export function ActionRow({
   /** The host's own hook for placing the row — never for re-spacing it. */
   className?: string;
 }>) {
+  const secondaries = Children.toArray(children).length > 0;
   return (
     <div className={className ? `action-row ${className}` : "action-row"}>
-      <div className="action-row-lead">{children}</div>
+      {secondaries ? <div className="action-row-lead">{children}</div> : null}
       {primary ? <div className="action-row-trail">{primary}</div> : null}
     </div>
   );

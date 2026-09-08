@@ -456,6 +456,23 @@
   box-shadow: none;
 }
 
+/* And the line the pointer is ON, which the rule above took away: it strips the
+   ghost ground at `.btn-ghost:hover`'s own specificity, and this sheet arrives
+   after the base one, so the four choices answered a hovering pointer with
+   nothing at all. Stated here at a specificity that beats both, because a tie
+   settled by load order is a hover state that comes and goes with the bundler.
+
+   The GROUND is the whole state — the resting ink is untouched above and needs
+   no restating — and it is the same `--bgHover` the folded menu's rows take,
+   which is what keeps these two spellings of a list of choices one look.
+
+   `:not(:disabled)` because a choice stands down while one of the others is
+   being written, and a control that refuses the press must not light up under
+   the pointer as though it would take it. */
+.worklist-snooze-spans > .btn:hover:not(:disabled) {
+  background: var(--bgHover);
+}
+
 /* The queue on a phone.
  *
  * The row is a three-column line — rank, text, verbs — and the verbs are

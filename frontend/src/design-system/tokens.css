@@ -53,9 +53,10 @@
    * an edge and a fill are two different jobs, and one name for both would hide
    * it.
    *
-   * 0.07 and not deeper: --accentText on this fill over --bgCard is 4.57:1, and
-   * an eighth would take it to 4.49:1. The ceiling is what the ink on the chip
-   * can pay for, so the fill is chosen last. */
+   * 0.07 and not deeper: --accentText on this fill over --bgCard — the worst of
+   * the four grounds tokens.test.ts measures a chip over — is 4.57:1, and 0.08
+   * would take it to 4.49:1, under the floor. The ceiling is what the ink on the
+   * chip can pay for, so the fill is chosen last. */
   --bgChip: rgba(16, 26, 21, 0.07);
   --bgHover: #edf0ee;
   /* A RECESS in an elevated surface — the well a board's stage is drawn as.

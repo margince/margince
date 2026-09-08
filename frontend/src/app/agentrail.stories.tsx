@@ -253,6 +253,16 @@ export const SpendReported: Story = {
   render: story({ ...HEALTHY, pricedMinor: 1_240 }, "expanded", SPEND_READER),
 };
 
+/** The same figure in dark, and it is the money that needs looking at rather
+ *  than the block: the figure and the scope beside it are both `--textMeta` at
+ *  eyebrow size, on a rail whose ground is the translucent `--pane` over the
+ *  page's glow — so the smallest type on the surface stands on a composite that
+ *  each theme mixes differently. */
+export const SpendReportedDark: Story = {
+  globals: { theme: "dark" },
+  render: story({ ...HEALTHY, pricedMinor: 1_240 }, "expanded", SPEND_READER),
+};
+
 /** Ingest: evidence arriving. Which half of the live vocabulary a run puts the
  *  orb in comes from the KIND of work (ai-activity-orb.ts), and a document being
  *  read is the plainest case of something coming in. */
@@ -338,6 +348,15 @@ export const DevelopmentModel: Story = {
  * This is the one that keeps doing it.
  */
 export const IdleRotation: Story = {
+  render: story({ ...HEALTHY, aiState: "development", approvals: 3 }),
+};
+
+/** The rotation in dark, where the crossfade is the thing to watch: both layers
+ *  are `--textPrimary` and the outgoing one is drawn OVER the incoming one, so
+ *  a fade whose midpoint reads as two sentences on light can read as one
+ *  smeared sentence on a ground with less contrast to spend. */
+export const IdleRotationDark: Story = {
+  globals: { theme: "dark" },
   render: story({ ...HEALTHY, aiState: "development", approvals: 3 }),
 };
 

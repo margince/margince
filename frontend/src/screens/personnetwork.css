@@ -350,6 +350,16 @@
   font-family: var(--f-mono);
   white-space: nowrap;
 }
+/* The chip's own ink, because the date lands ON the fill above. `.t-caption`
+   carries the size and sets --textMeta with it, which reads 4.07:1 over the
+   chip on --bgCard — the fill spends exactly the headroom --textMeta has not
+   got, and --textChip is the token that exists for it. Both classes rather than
+   one: `.t-caption` sets its colour at a single class of specificity, so a rule
+   naming only `.pn-relay-due` would win or lose on whichever sheet the bundler
+   put last. */
+.pn-relay-owner .pn-relay-due {
+  color: var(--textChip);
+}
 
 /* What moved: a dated list, newest first. A column of dates because it is a
    chronology, and a reader scans it rather than reads it. */

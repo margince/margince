@@ -49,6 +49,23 @@ export const ClickOpenedButtonTrigger: Story = {
   play: openByClick,
 };
 
+// `disabled`: the trigger refuses to OPEN, and what a canvas can show of it is
+// the refusal — pressed, and still closed. The state is for a caret whose row
+// has stood down while one of its own answers is being written, where revealing
+// a panel of controls that all refuse the press is the thing being prevented.
+export const DisabledRefusesToOpen: Story = {
+  render: () => (
+    <Popover label="Evidence" variant="ghost" disabled>
+      <p>Three emails and one call reference the March renewal date.</p>
+    </Popover>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("button", { name: "Evidence" }));
+    await expect(canvas.queryByText(/Three emails and one call/)).toBeNull();
+  },
+};
+
 // `onHover`: opens once the pointer has SETTLED on the trigger rather than on
 // contact, so this waits for the panel rather than asserting it is open the
 // instant the pointer arrives.

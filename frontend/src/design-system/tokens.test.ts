@@ -602,11 +602,12 @@ describe("the derived brand layer", () => {
 // `[aria-pressed="true"]` stands on --bgElevated and its ink answers to that.
 //
 // What it still cannot see, stated rather than reasoned away: an ink inherited
-// from OUTSIDE the chip's subtree. `.pn-relay-owner` and the two triage chips
-// set no colour anywhere in their own subtree and read whatever the row around
-// them is drawn in, and no amount of reading these sheets says what that is.
-// The axe sweep over the real routes in `e2e/ac.spec.ts` is what covers that
-// shape, and it is the gate that found this one.
+// from OUTSIDE the chip's subtree. A chip that declares no colour at all reads
+// whatever the row around it is drawn in — `.pn-relay-owner`'s own sentence is
+// one, its due date having been given an explicit ink and its lead line not —
+// and no amount of reading these sheets says what that ground's ink is. The axe
+// sweep over the real routes in `e2e/ac.spec.ts` is what covers that shape, and
+// it is the gate that found this one.
 describe("the chip fill's call sites", () => {
   function stylesheets(dir: string): string[] {
     return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {

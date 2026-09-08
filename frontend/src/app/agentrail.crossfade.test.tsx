@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 
-import { cleanup, fireEvent, render } from "@testing-library/react";
+import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { RailSaying } from "./agentrail";
 import { plain, type SpokenLine } from "./ai-activity-lines";
@@ -61,6 +61,41 @@ function stubReducedMotion() {
     removeListener: () => undefined,
     dispatchEvent: () => false,
   }));
+}
+
+// The same preference as a SWITCH, for the one case where it changes while a
+// fade is running. The stub above answers a fixed value; this one holds the
+// listener the hook subscribes with, so flipping it delivers the `change` event
+// a system setting would — which is the only way the component sees the
+// preference arrive mid-sentence.
+function reducedMotionSwitch(): { turnOn: () => void } {
+  let on = false;
+  const listeners = new Set<() => void>();
+  vi.stubGlobal("matchMedia", (query: string) => {
+    const watched = query.includes("prefers-reduced-motion");
+    return {
+      get matches() {
+        return watched && on;
+      },
+      media: query,
+      onchange: null,
+      addEventListener: (_: string, listen: () => void) => {
+        if (watched) listeners.add(listen);
+      },
+      removeEventListener: (_: string, listen: () => void) => {
+        listeners.delete(listen);
+      },
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      dispatchEvent: () => false,
+    };
+  });
+  return {
+    turnOn: () => {
+      on = true;
+      for (const listen of listeners) listen();
+    },
+  };
 }
 
 describe("the rail's line changing", () => {
@@ -128,5 +163,22 @@ describe("the rail's line changing", () => {
     rerender(<RailSaying line={plain(READING)} />);
     expect(live(container)?.textContent).toBe(READING);
     expect(leaving(container)).toBeNull();
+  });
+
+  it("retires the outgoing sentence when the preference turns on mid-fade", () => {
+    const preference = reducedMotionSwitch();
+    const { container, rerender } = render(<RailSaying line={plain(IDLE)} />);
+    rerender(<RailSaying line={plain(READING)} />);
+    expect(leaving(container)?.textContent).toBe(IDLE);
+    act(() => {
+      preference.turnOn();
+    });
+    // NOTHING ends this fade: `@media (prefers-reduced-motion: reduce)` in
+    // agentrail.css sets `animation: none` on the outgoing layer, so the
+    // `animationend` that normally retires it is never delivered. No fade is
+    // sent here for that reason — a test that delivered one would prove the
+    // handler works and say nothing about the case.
+    expect(leaving(container)).toBeNull();
+    expect(live(container)?.textContent).toBe(READING);
   });
 });

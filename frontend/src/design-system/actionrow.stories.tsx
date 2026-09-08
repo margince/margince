@@ -67,6 +67,23 @@ export const SecondariesOnly: Story = {
   ),
 };
 
+// One call to action and nothing beside it, which is the shape a panel with a
+// single verb wants. No leading group is drawn at all: an empty one is still a
+// flex item, and at a width that fits the button but not the button plus a gap
+// it would take the first line and push the verb onto a second, under a line of
+// air holding nothing.
+export const PrimaryOnly: Story = {
+  render: () => (
+    <ActionRow
+      primary={
+        <Button variant="primary" small>
+          Save changes
+        </Button>
+      }
+    />
+  ),
+};
+
 /**
  * At 390px, where words on both sides run the row out of line and the trail
  * drops BELOW the secondaries — still on the trailing edge, which is the reason

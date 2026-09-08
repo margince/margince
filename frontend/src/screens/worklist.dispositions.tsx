@@ -74,6 +74,43 @@ export const SNOOZE_EVENTS = ["reply"] as const satisfies readonly Exclude<
 
 type SnoozeEvent = (typeof SNOOZE_EVENTS)[number];
 
+// WHICH answer a press sent, as opposed to the fact that one is out.
+//
+// The judgements on a row are alternatives, so a band of them needs to tell the
+// control that started a write from the ones merely standing down. The
+// disposition alone cannot: three snooze answers send the same one with
+// different moments behind it, and the moment is what the reader chose.
+type PutDownAnswer = Readonly<{
+  disposition: WorklistDisposition;
+  until?: SnoozeSpan | SnoozeEvent;
+}>;
+
+// The two states one in-flight write puts a band of alternatives into — and
+// never both on one control.
+//
+// The control the reader PRESSED goes `pending`: `Button` refuses the second
+// press through `aria-disabled` while keeping the control focusable, so the
+// reader keeps their place and the wait is announced from where they are
+// standing. Every other answer goes `disabled` — it started nothing and is
+// simply not available until this one settles, which is the same division
+// `DecisionVerbs` draws (design-system/decisioncard.tsx).
+//
+// Never both, because inside the atom `disabled` outranks `pending`: a control
+// handed the pair is natively disabled, and a browser drops focus off a control
+// that disables under the press — the exact loss `pending` exists to prevent.
+function writeState(
+  writing: PutDownAnswer | undefined,
+  answer: PutDownAnswer,
+): { pending?: boolean; disabled?: boolean } {
+  if (writing === undefined) {
+    return {};
+  }
+  return writing.disposition === answer.disposition &&
+    writing.until === answer.until
+    ? { pending: true }
+    : { disabled: true };
+}
+
 // Which undo REACH each judgement takes back.
 //
 // `not_sales` bound the whole workspace, so its undo has to say `thread` or it
@@ -128,6 +165,10 @@ export function usePutDown(item: WorklistItem) {
   const set = useSetDisposition();
   const clear = useClearDisposition();
   const offered = item.dispositions ?? [];
+  // The answer the last press sent. Read only through `writing` below, which is
+  // why nothing clears it: an answer that is not in flight is not consulted,
+  // and every press that puts one in flight records it first.
+  const [pressed, setPressed] = useState<PutDownAnswer | undefined>(undefined);
   const put = (
     disposition: WorklistDisposition,
     // A span or an event, never both: the two are alternative answers to "come
@@ -137,6 +178,7 @@ export function usePutDown(item: WorklistItem) {
   ) => {
     const event = typeof until === "string" ? until : undefined;
     const days = typeof until === "number" ? until : undefined;
+    setPressed({ disposition, until });
     set.mutate(
       {
         activityId: item.id,
@@ -175,7 +217,16 @@ export function usePutDown(item: WorklistItem) {
       },
     );
   };
-  return { offered, put, pending: set.isPending, t, locale };
+  return {
+    offered,
+    put,
+    // The answer whose write is out, or nothing while none is. Not a bare
+    // boolean: every control in the band reads the same value, and what each
+    // one needs to know is whether the write out is ITS OWN.
+    writing: set.isPending ? pressed : undefined,
+    t,
+    locale,
+  };
 }
 
 // The whole row, answerable with the thumb where there is no width for verbs.
@@ -269,7 +320,7 @@ type PutDown = ReturnType<typeof usePutDown>;
 function PutDownMenu({
   offered,
   put,
-  pending,
+  writing,
   t,
   locale,
 }: Readonly<{
@@ -280,7 +331,7 @@ function PutDownMenu({
     disposition: WorklistDisposition,
     until?: SnoozeSpan | SnoozeEvent,
   ) => void;
-  pending: boolean;
+  writing: PutDownAnswer | undefined;
   t: T;
   locale: Locale;
 }>) {
@@ -291,11 +342,7 @@ function PutDownMenu({
           key={disposition}
           small
           variant="ghost"
-          // PENDING, never disabled. A disabled control leaves the tab order,
-          // so a keyboard reader who presses one is dropped to the body — the
-          // exact failure this menu exists to fix. The atom refuses the press
-          // through aria-disabled and keeps the control reachable.
-          pending={pending}
+          {...writeState(writing, { disposition })}
           onClick={() => put(disposition)}
         >
           {t(`worklist.disposition.verb.${disposition}` as const)}
@@ -316,7 +363,7 @@ function PutDownMenu({
             key={days}
             small
             variant="ghost"
-            pending={pending}
+            {...writeState(writing, { disposition: "snooze", until: days })}
             onClick={() => put("snooze", days)}
           >
             {translatePlural(
@@ -336,7 +383,7 @@ function PutDownMenu({
             key={event}
             small
             variant="ghost"
-            pending={pending}
+            {...writeState(writing, { disposition: "snooze", until: event })}
             onClick={() => put("snooze", event)}
           >
             {t(`worklist.disposition.snoozeUntil.${event}` as const)}
@@ -372,7 +419,7 @@ export function DispositionVerbs({ item }: Readonly<{ item: WorklistItem }>) {
   // registration and never a request.
   const shared = useContext(PutDownContext);
   const own = usePutDown(item);
-  const { offered, put, pending, t, locale } = shared ?? own;
+  const { offered, put, writing, t, locale } = shared ?? own;
   if (offered.length === 0) {
     return null;
   }
@@ -384,7 +431,7 @@ export function DispositionVerbs({ item }: Readonly<{ item: WorklistItem }>) {
       <PutDownMenu
         offered={offered}
         put={put}
-        pending={pending}
+        writing={writing}
         t={t}
         locale={locale}
       />
@@ -404,7 +451,7 @@ export function DispositionVerbs({ item }: Readonly<{ item: WorklistItem }>) {
         disposition === "snooze" ? (
           <SnoozeSplit
             key={disposition}
-            pending={pending}
+            writing={writing}
             onSnooze={() => put("snooze")}
             onPick={(until) => put("snooze", until)}
           />
@@ -413,7 +460,7 @@ export function DispositionVerbs({ item }: Readonly<{ item: WorklistItem }>) {
             key={disposition}
             small
             variant="ghost"
-            disabled={pending}
+            {...writeState(writing, { disposition })}
             onClick={() => put(disposition)}
           >
             {t(`worklist.disposition.verb.${disposition}` as const)}
@@ -476,11 +523,11 @@ export function swipeActions(
  * is doing here is choosing among four answers to one question.
  */
 function SnoozeSplit({
-  pending,
+  writing,
   onSnooze,
   onPick,
 }: Readonly<{
-  pending: boolean;
+  writing: PutDownAnswer | undefined;
   onSnooze: () => void;
   onPick: (until: SnoozeSpan | SnoozeEvent) => void;
 }>) {
@@ -488,7 +535,16 @@ function SnoozeSplit({
   const { locale } = useLocale();
   return (
     <span className="actions-split">
-      <Button small variant="ghost" disabled={pending} onClick={onSnooze}>
+      <Button
+        small
+        variant="ghost"
+        // The default day is an answer of its own, so it is `pending` when the
+        // press was this half's and `disabled` when it was one of the lines' —
+        // the two send the same span and are still two presses, and only the
+        // one the reader made may claim to be mid-write.
+        {...writeState(writing, { disposition: "snooze" })}
+        onClick={onSnooze}
+      >
         {t("worklist.disposition.verb.snooze")}
       </Button>
       <Popover
@@ -500,6 +556,14 @@ function SnoozeSplit({
         // than a height rule of this screen's, which would be a second author
         // of one geometry.
         className="btn-sm"
+        // Refused while ANY answer on this row is being written, its own lines
+        // included: the caret starts no write, so it is the sibling case rather
+        // than the pressed one, and a chooser opened over an in-flight write
+        // reveals four lines that all refuse the press. A panel already open
+        // when the write starts stays open, because the line the reader pressed
+        // is inside it holding their focus — `Popover.disabled` blocks the
+        // opening and never the closing.
+        disabled={writing !== undefined}
         label={
           <>
             <ChevronDown aria-hidden="true" />
@@ -517,7 +581,7 @@ function SnoozeSplit({
               key={days}
               small
               variant="ghost"
-              disabled={pending}
+              {...writeState(writing, { disposition: "snooze", until: days })}
               onClick={() => onPick(days)}
             >
               {translatePlural(
@@ -536,7 +600,7 @@ function SnoozeSplit({
               key={event}
               small
               variant="ghost"
-              disabled={pending}
+              {...writeState(writing, { disposition: "snooze", until: event })}
               onClick={() => onPick(event)}
             >
               {t(`worklist.disposition.snoozeUntil.${event}` as const)}

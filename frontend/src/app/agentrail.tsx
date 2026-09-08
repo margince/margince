@@ -1320,6 +1320,16 @@ export function RailSaying({ line }: Readonly<{ line: SpokenLine }>) {
     // new sentence alone first — which is the cut this exists to remove.
     setLeaving(reduced ? null : held.line);
     setHeld({ said, line });
+  } else if (reduced && leaving !== null) {
+    // The preference turned on WHILE a fade was running, which is a re-render
+    // the words did not change in. What retires the outgoing layer is its own
+    // animation ending, and `@media (prefers-reduced-motion: reduce)` in
+    // agentrail.css has just set `animation: none` on it — so no
+    // `animationend` is ever delivered and the old sentence would stand over
+    // the new one for the rest of the session. Snapping is this preference's
+    // end state, so drop the layer here rather than wait for an event the
+    // stylesheet has cancelled.
+    setLeaving(null);
   }
   return (
     <span className="arswap">
