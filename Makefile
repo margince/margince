@@ -759,8 +759,14 @@ craft-test:
 ##
 ## GOWORK=off for the reason its go.mod states: inside a workspace that does not
 ## list the module, every package fails to resolve.
+##
+## LAUNCHER_COVER_OUT (optional): also write a coverage profile there. It exists
+## because the product profile CANNOT contain a launcher line — that one is
+## `go test -coverpkg=./...` over the backend module, and this module is not in
+## it — so the number reported for shipped code a user runs was 0% whatever the
+## suite did. A profile of its own is what makes the figure real.
 test-desktop-launcher:
-	GOWORK=off go test -C desktop/launcher -count=1 ./...
+	GOWORK=off go test -C desktop/launcher -count=1 	  $(if $(LAUNCHER_COVER_OUT),-covermode=atomic -coverprofile=$(abspath $(LAUNCHER_COVER_OUT))) ./...
 
 ## craft-residue — fail if any unresolved CRAFT-FIX/CRAFT-DISPUTE marker was
 ## left in the backend tree (the review-loop residue check, ADR-0045). The CI
