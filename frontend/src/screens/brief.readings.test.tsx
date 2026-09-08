@@ -509,4 +509,30 @@ describe("the pipeline period", () => {
     drawInZone("Asia/Tokyo");
     expect(await screen.findByText(/1 Jul 2026 – 30 Sept 2026/)).toBeTruthy();
   });
+  // FOUR DOORS, FOUR NAMES.
+  //
+  // Every open button on this strip used to be called "Open these". Sighted, the
+  // card above each one says which "these" — a screen reader tabbing the strip
+  // hears the same four words four times and cannot tell the lanes apart, so the
+  // one control on each reading is the one thing that does not identify it.
+  //
+  // Asserted as a SET rather than card by card: the defect is duplication, and a
+  // per-card check passes on four buttons that share a name as happily as on
+  // four that do not.
+  it("gives every reading's door its own accessible name", async () => {
+    drawInZone("Europe/Berlin");
+
+    await screen.findByText(en["brief.readings.urgent"]);
+    const names = screen
+      .getAllByRole("button")
+      .map((button) => button.getAttribute("aria-label") ?? button.textContent)
+      .filter((name): name is string => Boolean(name?.startsWith("Open ")));
+
+    // The strip draws four readings and each one has a door, so the filter must
+    // find exactly four. Asserting only that the matches are distinct would
+    // pass on a strip where two doors lost the prefix and fell out of the set
+    // entirely — the filter would then be hiding the very buttons at issue.
+    expect(names).toHaveLength(4);
+    expect(new Set(names).size).toBe(names.length);
+  });
 });

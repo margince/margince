@@ -281,23 +281,34 @@ export function BriefScreen() {
           onChange={(next) => setParams(paramsFor(next))}
         />
       </div>
-      {/* Before the readings, because a strip of numbers a reader cannot trust
-          is worse than one they can qualify — and in the MAIN column rather
-          than the rail, though the rail is where the Brief plan drew it. This
-          is a callout that appears only when a source was withheld, failed or
-          stopped short, so it is a fact about the whole page rather than
-          context beside it, and it qualifies the strip directly under it. In
-          the rail it would be a warning about the queue, filed away from the
-          queue. */}
-      {worklistQuery.data && <BriefCoverage day={worklistQuery.data} />}
-      {/* And what has happened since the night looked, under the coverage line
-          and above the readings: both are facts about the page as a whole
-          rather than about any one row, and a reader takes them before the
-          figures they qualify. */}
-      {worklistQuery.data && <ChangedSinceBrief day={worklistQuery.data} />}
-      {/* The strip reads the SAME worklist answer the queue below it reads, so
-          the five figures cannot disagree with the rows they summarise. */}
-      {worklistQuery.data && <BriefReadingsStrip day={worklistQuery.data} />}
+      {/* ALL THREE BELONG TO THE MORNING, and are drawn inside it rather than
+          above the branch. Each reads the worklist — today's queue — and the
+          worklist is fetched whatever the dial says, so drawn unconditionally
+          they put today's urgent count and today's overnight changes on top of
+          a week that had closed. The rail below carries the same rule and the
+          same reason; these were missed when it was fixed, because nothing
+          asserted them either. */}
+      {address.view !== "weekly" && worklistQuery.data && (
+        <>
+          {/* Before the readings, because a strip of numbers a reader cannot trust
+            is worse than one they can qualify — and in the MAIN column rather
+            than the rail, though the rail is where the Brief plan drew it. This
+            is a callout that appears only when a source was withheld, failed or
+            stopped short, so it is a fact about the whole page rather than
+            context beside it, and it qualifies the strip directly under it. In
+            the rail it would be a warning about the queue, filed away from the
+            queue. */}
+          <BriefCoverage day={worklistQuery.data} />
+          {/* And what has happened since the night looked, under the coverage line
+            and above the readings: both are facts about the page as a whole
+            rather than about any one row, and a reader takes them before the
+            figures they qualify. */}
+          <ChangedSinceBrief day={worklistQuery.data} />
+          {/* The strip reads the SAME worklist answer the queue below it reads, so
+            the five figures cannot disagree with the rows they summarise. */}
+          <BriefReadingsStrip day={worklistQuery.data} />
+        </>
+      )}
       {/* Screen-level so it survives the deck re-rendering under it. */}
       {decidedNote}
       <PageZones
