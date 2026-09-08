@@ -5,6 +5,7 @@ package testmailbox
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -13,9 +14,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-type fakeSink struct{ upserted []connector.NormalizedRecord }
+type fakeSink struct {
+	upserted []connector.NormalizedRecord
+	err      error
+}
 
 func (f *fakeSink) Upsert(_ context.Context, rec connector.NormalizedRecord) (datasource.EntityRef, error) {
+	if f.err != nil {
+		return datasource.EntityRef{}, f.err
+	}
 	f.upserted = append(f.upserted, rec)
 	return datasource.EntityRef{}, nil
 }
@@ -64,6 +71,47 @@ func TestSyncWithNothingUnechoedUpsertsNothing(t *testing.T) {
 	}
 	if len(sink.upserted) != 0 {
 		t.Errorf("sink got %d upserts, want 0", len(sink.upserted))
+	}
+}
+
+func TestSyncRefusesAMalformedAuthBundle(t *testing.T) {
+	c := New(&fakeLedger{})
+	if _, err := c.Sync(context.Background(), connector.Auth("not json"), nil, &fakeSink{}); err == nil {
+		t.Fatal("Sync with an unparseable auth bundle = nil error, want one naming the malformed seat id")
+	}
+}
+
+func TestSyncWrapsAFailureReadingUnechoedSends(t *testing.T) {
+	wantErr := errors.New("ledger unavailable")
+	ledger := &fakeLedger{unechoedErr: wantErr}
+	if _, err := New(ledger).Sync(context.Background(), testAuth(t, ids.NewV7()), nil, &fakeSink{}); !errors.Is(err, wantErr) {
+		t.Errorf("Sync: err = %v, want it to wrap %v", err, wantErr)
+	}
+}
+
+func TestSyncWrapsASinkFailure(t *testing.T) {
+	wantErr := errors.New("sink unavailable")
+	ledger := &fakeLedger{unechoed: []capture.SentMessage{
+		{ID: ids.NewV7(), MessageID: "sent-1@test.example", To: []string{"buyer@example.com"}},
+	}}
+	if _, err := New(ledger).Sync(context.Background(), testAuth(t, ids.NewV7()), nil, &fakeSink{err: wantErr}); !errors.Is(err, wantErr) {
+		t.Errorf("Sync: err = %v, want it to wrap %v", err, wantErr)
+	}
+	if len(ledger.marked) != 0 {
+		t.Errorf("MarkEchoed called %d time(s) after the sink refused the upsert, want 0 — a failed echo must not be marked done", len(ledger.marked))
+	}
+}
+
+func TestSyncWrapsAFailureMarkingEchoed(t *testing.T) {
+	wantErr := errors.New("ledger write refused")
+	ledger := &fakeLedger{
+		unechoed: []capture.SentMessage{
+			{ID: ids.NewV7(), MessageID: "sent-1@test.example", To: []string{"buyer@example.com"}},
+		},
+		markEchoedErr: wantErr,
+	}
+	if _, err := New(ledger).Sync(context.Background(), testAuth(t, ids.NewV7()), nil, &fakeSink{}); !errors.Is(err, wantErr) {
+		t.Errorf("Sync: err = %v, want it to wrap %v", err, wantErr)
 	}
 }
 

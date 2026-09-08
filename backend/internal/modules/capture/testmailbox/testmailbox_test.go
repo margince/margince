@@ -65,12 +65,34 @@ func TestHealthCheckAlwaysSucceeds(t *testing.T) {
 	}
 }
 
+// TestAuthenticateReturnsThePayloadVerbatim: the connect handler's own
+// credential is the only "authentication" this connector ever does — there is
+// no remote to authenticate against, so the request payload IS the answer.
+func TestAuthenticateReturnsThePayloadVerbatim(t *testing.T) {
+	userID := ids.NewV7()
+	want, err := Credential(userID)
+	if err != nil {
+		t.Fatalf("Credential: %v", err)
+	}
+	got, err := New(nil).Authenticate(context.Background(), connector.AuthRequest{Payload: want})
+	if err != nil {
+		t.Fatalf("Authenticate: %v", err)
+	}
+	if string(got) != string(want) {
+		t.Errorf("Authenticate(%s) = %s, want the payload unchanged", want, got)
+	}
+}
+
 // fakeLedger is a stand-in for capture.TestMailboxLedger, used by send_test.go
-// and sync_test.go.
+// and sync_test.go. unechoedErr and markEchoedErr let a test drive Sync's own
+// failure-wrapping branches without a real ledger.
 type fakeLedger struct {
 	recorded []recordedSend
 	unechoed []capture.SentMessage
 	marked   []markedEcho
+
+	unechoedErr   error
+	markEchoedErr error
 }
 
 type recordedSend struct {
@@ -91,10 +113,16 @@ func (f *fakeLedger) RecordSent(_ context.Context, userID ids.UUID, messageID st
 }
 
 func (f *fakeLedger) Unechoed(context.Context, ids.UUID) ([]capture.SentMessage, error) {
+	if f.unechoedErr != nil {
+		return nil, f.unechoedErr
+	}
 	return f.unechoed, nil
 }
 
 func (f *fakeLedger) MarkEchoed(_ context.Context, userID ids.UUID, id ids.UUID) error {
+	if f.markEchoedErr != nil {
+		return f.markEchoedErr
+	}
 	f.marked = append(f.marked, markedEcho{userID: userID.String(), id: id})
 	return nil
 }

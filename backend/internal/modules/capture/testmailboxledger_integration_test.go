@@ -60,6 +60,31 @@ func TestTestMailboxLedgerRecordsAndEchoesOnce(t *testing.T) {
 	}
 }
 
+// RecordSent must accept a nil To and a nil Cc without erroring — both bind
+// as SQL NULL, not the column default, against columns that are NOT NULL.
+func TestRecordSentAcceptsANilToAndCc(t *testing.T) {
+	ctx, ledger := testMailboxLedgerDB(t)
+	userID := ids.NewV7()
+
+	if err := ledger.RecordSent(ctx, userID, "nil-lists@test.example", nil, nil, "No recipients on file"); err != nil {
+		t.Fatalf("RecordSent with nil To and Cc: %v", err)
+	}
+
+	unechoed, err := ledger.Unechoed(ctx, userID)
+	if err != nil {
+		t.Fatalf("Unechoed: %v", err)
+	}
+	if len(unechoed) != 1 {
+		t.Fatalf("Unechoed = %+v, want one row", unechoed)
+	}
+	if unechoed[0].To == nil || len(unechoed[0].To) != 0 {
+		t.Errorf("Unechoed[0].To = %#v, want an empty (non-nil) slice", unechoed[0].To)
+	}
+	if unechoed[0].Cc == nil || len(unechoed[0].Cc) != 0 {
+		t.Errorf("Unechoed[0].Cc = %#v, want an empty (non-nil) slice", unechoed[0].Cc)
+	}
+}
+
 // A second seat's sends must never surface in the first's echo list — the
 // ledger has no workspace_id, so user_id is the only boundary it has, and it
 // has to hold on its own.

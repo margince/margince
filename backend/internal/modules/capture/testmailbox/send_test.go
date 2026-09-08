@@ -91,6 +91,26 @@ func TestSendReceiptIsIdempotentOnMessageID(t *testing.T) {
 	}
 }
 
+func TestSendEmailRefusesAMalformedAuthBundle(t *testing.T) {
+	c := New(&fakeLedger{})
+	_, err := c.SendEmail(context.Background(), connector.Auth("not json"), connector.EmailMessage{
+		MessageID: "x@test.example", To: []string{"buyer@example.com"},
+	})
+	if err == nil {
+		t.Fatal("SendEmail with an unparseable auth bundle = nil error, want one naming the malformed seat id")
+	}
+}
+
+func TestSendEmailRefusesANonUUIDSeatID(t *testing.T) {
+	c := New(&fakeLedger{})
+	_, err := c.SendEmail(context.Background(), connector.Auth(`{"user_id":"not-a-uuid"}`), connector.EmailMessage{
+		MessageID: "x@test.example", To: []string{"buyer@example.com"},
+	})
+	if err == nil {
+		t.Fatal("SendEmail with a non-UUID seat id = nil error, want one refusing it")
+	}
+}
+
 func TestSendEmailValidatesTheMessageFirst(t *testing.T) {
 	c := New(&fakeLedger{})
 	_, err := c.SendEmail(context.Background(), testAuth(t, ids.NewV7()), connector.EmailMessage{MessageID: "not valid", To: []string{"buyer@example.com"}})
