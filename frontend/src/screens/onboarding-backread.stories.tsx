@@ -2,10 +2,15 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { OnboardingBackread } from "./onboarding-backread";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  type RouteMap,
+  StoryProviders,
+} from "./story-utils";
 
 // The backread step for the fe-uat render gate — one story per honest branch:
 // the window pick with its scope, a failed estimate that still allows the read,
@@ -15,10 +20,7 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 type BackfillStatus = components["schemas"]["BackfillStatus"];
 
-function backreadStory(
-  initial: BackfillStatus,
-  routes: Record<string, (body: unknown) => Response> = {},
-) {
+function backreadStory(initial: BackfillStatus, routes: RouteMap = {}) {
   return () => {
     installFetchStub(routes);
     return (
@@ -61,6 +63,24 @@ export const Pick: Story = {
       }),
     },
   ),
+};
+
+// The count is still running. The scope says so and the read is offered
+// anyway: the window is what the reader picked and what bounds the run, so
+// nothing about the start is waiting on the number.
+export const Counting: Story = {
+  render: backreadStory(
+    { state: "none" },
+    // Never settles, which is the steady state this story is about.
+    { "POST /connectors/gmail/backfill/preview": () => new Promise(() => {}) },
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByText(/Counting the messages/i);
+    await expect(
+      canvas.getByRole("button", { name: /Connect and read/i }),
+    ).toBeEnabled();
+  },
 };
 
 // A cold-start workspace has no priced call history, so the estimate is a

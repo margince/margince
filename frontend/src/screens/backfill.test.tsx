@@ -49,6 +49,9 @@ type StubOptions = {
   /** Status rows served per GET, consumed one at a time (last repeats). */
   statuses: BackfillStatus[];
   preview?: BackfillPreview;
+  /** The preview POST's own answer, for the cases that are about an estimate
+   *  which never lands or never comes — where a `preview` row cannot say it. */
+  previewRoute?: () => Response | Promise<Response>;
   /** The status the start POST flips the next GET to. */
   onStart?: BackfillStatus;
 };
@@ -71,7 +74,9 @@ function stubApi(options: StubOptions) {
       const url = new URL(request.url);
       const path = url.pathname;
       if (path.endsWith("/backfill/preview")) {
-        return jsonResponse(options.preview ?? previewOf(400));
+        return options.previewRoute
+          ? options.previewRoute()
+          : jsonResponse(options.preview ?? previewOf(400));
       }
       if (path.endsWith("/backfill") && request.method === "POST") {
         started = true;
@@ -217,6 +222,53 @@ describe("the connect-time backfill payoff", () => {
     render(<BackfillPanel provider="gmail" />);
 
     await screen.findByText(/~400/);
+    await userEvent.click(
+      screen.getByRole("button", { name: /Start the import/ }),
+    );
+
+    await waitFor(() =>
+      expect(requestsTo(calls, "/backfill", "POST").length).toBe(1),
+    );
+  });
+
+  // The estimate describes the window; the window is what the reader picked
+  // and what bounds the run. So the verb stands while the count is still
+  // running — the card used to appear only once an estimate landed, which took
+  // the start off screen for exactly the mailboxes slow enough to count.
+  it("offers the start while the scope is still being counted", async () => {
+    const calls = stubApi({
+      statuses: [statusNone],
+      // Never settles: the case is what the reader can do meanwhile.
+      previewRoute: () => new Promise<Response>(() => {}),
+      onStart: countsStatus("running", { captured: 0 }),
+    });
+    render(<BackfillPanel provider="gmail" />);
+
+    expect(await screen.findByText("Counting your mailbox…")).toBeTruthy();
+    await userEvent.click(
+      screen.getByRole("button", { name: /Start the import/ }),
+    );
+
+    await waitFor(() =>
+      expect(requestsTo(calls, "/backfill", "POST").length).toBe(1),
+    );
+  });
+
+  // An estimator that refused left this card unrendered, so the only way to
+  // import a mailbox whose scope could not be counted was to stop offering to.
+  it("offers the start when the estimate was refused", async () => {
+    const calls = stubApi({
+      statuses: [statusNone],
+      previewRoute: () =>
+        jsonResponse(
+          { code: "internal", detail: "No answer from Gmail." },
+          502,
+        ),
+      onStart: countsStatus("running", { captured: 0 }),
+    });
+    render(<BackfillPanel provider="gmail" />);
+
+    expect(await screen.findByText(/No answer from Gmail\./)).toBeTruthy();
     await userEvent.click(
       screen.getByRole("button", { name: /Start the import/ }),
     );
