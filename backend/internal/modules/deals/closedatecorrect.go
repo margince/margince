@@ -108,17 +108,26 @@ func setForecastCategory(p *storekit.Patch, stored *string, effective, notched s
 	p.Set("forecast_category", stored, notched)
 }
 
-// correct applies one deal's A6 tier. The write runs in its own audited
-// transaction; the 🟡 staging follows it (Stage opens its own) — if the
-// staging fails the provisional row simply re-enters the next sweep.
-func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidate, hygiene CloseDateHygiene, category string, now time.Time, loc *time.Location) error {
+// correct applies one deal's A6 tier and reports WHAT IT DID, not which tier it
+// chose. The write runs in its own audited transaction; the 🟡 staging follows
+// it (Stage opens its own) — if the staging fails the provisional row simply
+// re-enters the next sweep.
+//
+// The returned outcome is the member ledger's entry, and it has to describe the
+// effect because the run's counters are built from it. A tier can decide to
+// correct and then write nothing — maintenance switched off mid-pass, or the
+// deal already holding everything proposed — and a ledger that recorded the
+// INTENTION would let the receipt claim corrections that never reached a deal.
+// That is the same "machine work that changed nothing" defect the no-op guard
+// exists to stop, one layer up.
+func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidate, hygiene CloseDateHygiene, category string, now time.Time, loc *time.Location) (string, error) {
 	if !hygiene.Flagged {
 		if cand.provisional {
 			// The date itself is clean (the sweep set it), but the human
 			// has not confirmed it yet: keep the 🟡 surface alive if the
 			// previous staging expired undecided.
 			//
-			return c.ensureStaged(ctx, cand, 0, CloseDateCorrection{
+			staged, err := c.ensureStaged(ctx, cand, 0, CloseDateCorrection{
 				DealID:              cand.id,
 				ExpectedCloseDate:   cand.expectedClose.Format(time.DateOnly),
 				PreviousCloseDate:   dateString(cand.expectedClose),
@@ -126,8 +135,17 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 				Asking:              AskingIsThisDateRight,
 				Basis:               quietHoldingBasis,
 			})
+			if err != nil {
+				return "", err
+			}
+			if staged {
+				return closeDateMemberStaged, nil
+			}
+			// An unflagged provisional deal whose card is already open: the
+			// sweep looked and left everything as it was.
+			return closeDateMemberChecked, nil
 		}
-		return nil
+		return closeDateMemberChecked, nil
 	}
 
 	proposal := CloseDateCorrection{
@@ -160,20 +178,24 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 		if hygiene.Action == CloseDateActionAutoApply {
 			label = "auto_apply"
 		}
-		version, err := c.apply(ctx, cand, label, func(p *storekit.Patch) {
+		version, wrote, err := c.apply(ctx, cand, label, func(p *storekit.Patch) {
 			setCloseDate(p, cand.expectedClose, *hygiene.ProposedClose)
 			if !cand.provisional {
 				p.Set("close_date_provisional", false, true)
 			}
 		}, map[string]any{correctionFlagsKey: hygiene.Flags, "basis": proposal.Basis})
 		if err != nil {
-			return err
+			return "", err
 		}
-		return c.ensureStaged(ctx, cand, version, proposal)
+		staged, err := c.ensureStaged(ctx, cand, version, proposal)
+		if err != nil {
+			return "", err
+		}
+		return closeDateEffect{wrote: wrote, staged: staged}.outcome(), nil
 
 	case CloseDateActionDowngradeAndReview:
 		notched := forecastDowngrade(category)
-		version, err := c.apply(ctx, cand, "downgrade_and_review", func(p *storekit.Patch) {
+		version, wrote, err := c.apply(ctx, cand, "downgrade_and_review", func(p *storekit.Patch) {
 			setForecastCategory(p, cand.forecastCat, category, notched)
 			if hygiene.Provisional {
 				// Only the invariant forces a date onto a quiet deal —
@@ -185,7 +207,7 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 			}
 		}, map[string]any{correctionFlagsKey: hygiene.Flags, "at_risk": true})
 		if err != nil {
-			return err
+			return "", err
 		}
 		// The 🟡 review: gone quiet — still alive? The proposal keeps the
 		// stage-velocity date the assessment computed, on BOTH branches. It
@@ -197,9 +219,41 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 		// a rep who said this date is fine has not said the deal is still alive.
 		review.Asking = AskingIsThisDealAlive
 		review.Basis = c.quietBasis(ctx, cand.id, now, loc)
-		return c.ensureStaged(ctx, cand, version, review)
+		staged, err := c.ensureStaged(ctx, cand, version, review)
+		if err != nil {
+			return "", err
+		}
+		return closeDateEffect{wrote: wrote, staged: staged}.outcome(), nil
 	}
-	return fmt.Errorf("close-date sweep: no executor for action %q", hygiene.Action)
+	return "", fmt.Errorf("close-date sweep: no executor for action %q", hygiene.Action)
+}
+
+// closeDateEffect is what one member's turn actually produced — the two things
+// a tier can do to a deal, each independently true or not.
+type closeDateEffect struct {
+	// wrote is a committed domain change: the deal's own row moved.
+	wrote bool
+	// staged is a question newly put to a human. An already-open card is not
+	// one, because nobody was asked anything they had not been asked already.
+	staged bool
+}
+
+// outcome names the member ledger's entry for this turn.
+//
+// A change outranks a card because it is the stronger claim: a deal whose date
+// moved AND whose confirm is open reads as changed, and the card is visible on
+// its own surface anyway. What this must never do is report either when neither
+// happened — the tier decided to act, the write found nothing to do or the
+// switch was off, and the ledger says checked.
+func (e closeDateEffect) outcome() string {
+	switch {
+	case e.wrote:
+		return closeDateMemberChanged
+	case e.staged:
+		return closeDateMemberStaged
+	default:
+		return closeDateMemberChecked
+	}
 }
 
 // quietBasis is the reason the quiet review shows: which way the silence runs,
