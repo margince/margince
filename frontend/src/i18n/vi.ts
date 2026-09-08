@@ -5224,7 +5224,6 @@ export const vi = {
   "ob.conv.connect.networkTitle": "Mạng lưới quan hệ của bạn",
   "ob.conv.connect.networkHint":
     "Lưu hồ sơ của bạn để mạng lưới bạn nhập sau này được ghi nhận cho bạn. Việc nhập nằm trong Cài đặt.",
-  "ob.conv.connect.required": "bắt buộc",
   "ob.conv.connect.recommended": "nên có",
   "ob.conv.connect.gmailBrings": "Email được đọc và gửi qua Google",
   "ob.conv.connect.microsoftBrings": "Email được đọc và gửi qua Microsoft",
@@ -5527,6 +5526,7 @@ export const vi = {
   "ob.backread.window12m": "12 tháng — trọn một chu kỳ bán hàng",
   "ob.backread.window24m": "2 năm — cả mối quan hệ, không chỉ deal",
   "ob.backread.window60m": "5 năm — tất cả những gì hộp thư còn giữ",
+  "ob.backread.estimating": "Đang đếm thư trong khoảng thời gian đó…",
   "ob.backread.estimate": "Khoảng {messages} thư trong khoảng thời gian đó.",
   "ob.backread.estimateHeuristic": "Ước tính từ hộp thư, chưa đếm thật.",
   "ob.backread.estimateCost": "Khoảng {cost} tiền gọi mô hình.",
@@ -8845,6 +8845,9 @@ export const vi = {
   // Một thư ĐẦU TIÊN, không phải câu trả lời cho thư đã có.
   "worklist.verb.draft_email": "Mở để viết",
   "worklist.verb.draft_email_now": "Soạn email",
+  // Bản tóm tắt, không phải tin nhắn — chỉ một khóa, vì nút này không bao
+  // giờ mở trình soạn thảo nên không cần tách "ngay bây giờ" như trên.
+  "worklist.verb.open_meeting_brief": "Chuẩn bị cho cuộc họp",
   "worklist.deal.closes": "chốt {date}",
   "worklist.when.starts": "bắt đầu {when}",
   "worklist.when.due": "đến hạn {when}",

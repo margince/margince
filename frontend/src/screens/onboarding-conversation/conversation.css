@@ -1629,12 +1629,8 @@
   text-transform: uppercase;
 }
 
-.ob-connect-pill-required {
-  color: var(--danger);
-}
-
-/* Recommended reads calmly next to required's alarm colour — LinkedIn never
-   gates the act, so its tag must not look like one that does. */
+/* Recommended reads as a quiet aside, never an alarm — LinkedIn does not gate
+   the act, so its tag must not look like one that does. */
 .ob-connect-pill-recommended {
   color: var(--textMeta);
 }

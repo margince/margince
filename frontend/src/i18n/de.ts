@@ -5287,7 +5287,6 @@ export const de = {
   "ob.conv.connect.networkTitle": "Dein Netzwerk",
   "ob.conv.connect.networkHint":
     "Hinterlege dein Profil, damit das Netzwerk, das du später importierst, dir zugeordnet wird. Der Import selbst liegt in den Einstellungen.",
-  "ob.conv.connect.required": "erforderlich",
   "ob.conv.connect.recommended": "empfohlen",
   "ob.conv.connect.gmailBrings": "Mail über Google gelesen und gesendet",
   "ob.conv.connect.microsoftBrings": "Mail über Microsoft gelesen und gesendet",
@@ -5594,6 +5593,7 @@ export const de = {
   "ob.backread.window12m": "12 Monate — ganzer Vertriebszyklus",
   "ob.backread.window24m": "2 Jahre — die Beziehung, nicht nur der Deal",
   "ob.backread.window60m": "5 Jahre — alles, was das Postfach noch hat",
+  "ob.backread.estimating": "Nachrichten in diesem Zeitraum werden gezählt…",
   "ob.backread.estimate": "Etwa {messages} Nachrichten in diesem Zeitraum.",
   "ob.backread.estimateHeuristic":
     "Aus dem Postfach geschätzt, noch nicht gezählt.",
@@ -8968,6 +8968,10 @@ export const de = {
   // Eine ERSTE Nachricht, keine Antwort auf eine bestehende.
   "worklist.verb.draft_email": "Zum Schreiben öffnen",
   "worklist.verb.draft_email_now": "E-Mail entwerfen",
+  // Ein Briefing, keine Nachricht — ein einziger Schlüssel, weil die
+  // Steuerung nie den Editor öffnet und daher die "jetzt"-Aufteilung oben
+  // nicht braucht.
+  "worklist.verb.open_meeting_brief": "Auf das Meeting vorbereiten",
   "worklist.deal.closes": "Abschluss {date}",
   "worklist.when.starts": "beginnt {when}",
   "worklist.when.due": "fällig {when}",

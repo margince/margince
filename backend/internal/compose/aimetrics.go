@@ -38,4 +38,5 @@ func (s Server) writeMetricsSections(w io.Writer) {
 	s.writeMCPAppMetrics(w)
 	s.writeLicenseMetrics(w)
 	s.writeCaptureSection(w)
+	s.writeAuthzSection(w)
 }

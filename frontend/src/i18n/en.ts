@@ -5400,7 +5400,6 @@ export const en = {
   "ob.conv.connect.networkTitle": "Your network",
   "ob.conv.connect.networkHint":
     "Save your profile so the network you import later is attributed to you. The import itself lives in Settings.",
-  "ob.conv.connect.required": "required",
   "ob.conv.connect.recommended": "recommended",
   // Neither grant carries calendar or contacts — those are their own,
   // separate consent (Settings → Calendar) — and neither carries sign-in:
@@ -5712,6 +5711,7 @@ export const en = {
   "ob.backread.window12m": "12 months — full sales cycle",
   "ob.backread.window24m": "2 years — the relationship, not just the deal",
   "ob.backread.window60m": "5 years — everything the mailbox still holds",
+  "ob.backread.estimating": "Counting the messages in that window…",
   "ob.backread.estimate": "About {messages} messages in that window.",
   "ob.backread.estimateHeuristic":
     "Estimated from the mailbox, not counted yet.",
@@ -9101,6 +9101,9 @@ export const en = {
   // conversation that has not happened yet.
   "worklist.verb.draft_email": "Open to write",
   "worklist.verb.draft_email_now": "Draft the email",
+  // A brief, not a message — one key, because the control never opens a
+  // composer and so never needs the reply/write "now" split above.
+  "worklist.verb.open_meeting_brief": "Prepare for the meeting",
   "worklist.deal.closes": "closes {date}",
   "worklist.when.starts": "starts {when}",
   "worklist.when.due": "due {when}",

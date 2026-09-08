@@ -883,6 +883,10 @@ func (stubs) ListStageEvidence(w nethttp.ResponseWriter, r *nethttp.Request, id 
 	httperr.NotImplemented(w, r, "ListStageEvidence")
 }
 
+func (stubs) RevertStageProgression(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, approvalId openapi_types.UUID, params crmcontracts.RevertStageProgressionParams) {
+	httperr.NotImplemented(w, r, "RevertStageProgression")
+}
+
 func (stubs) ListDealStakeholders(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "ListDealStakeholders")
 }
@@ -2129,6 +2133,18 @@ func (stubs) ResolveSignal(w nethttp.ResponseWriter, r *nethttp.Request, id crmc
 
 func (stubs) GetSignalWarmth(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "GetSignalWarmth")
+}
+
+func (stubs) ListTransitionPolicies(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ListTransitionPolicies")
+}
+
+func (stubs) SetTransitionPolicy(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.SetTransitionPolicyParams) {
+	httperr.NotImplemented(w, r, "SetTransitionPolicy")
+}
+
+func (stubs) ResumeTransitionPolicy(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ResumeTransitionPolicy")
 }
 
 func (stubs) GetStageAutomationReport(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetStageAutomationReportParams) {

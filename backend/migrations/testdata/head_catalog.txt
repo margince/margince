@@ -5274,6 +5274,7 @@ public.stage_progression_outcome.stage_progression_outcome_reversed_by_fkey FORE
 public.stage_progression_outcome.stage_progression_outcome_to_stage_fkey FOREIGN KEY (to_stage_id) REFERENCES stage(id) ON DELETE CASCADE
 public.stage_progression_outcome.to_stage_id uuid NOT NULL gen=- def=-
 public.stage_progression_outcome.trg_stage_progression_outcome_updated CREATE TRIGGER trg_stage_progression_outcome_updated BEFORE UPDATE ON public.stage_progression_outcome FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
+public.stage_progression_outcome.undo_window_hours integer gen=- def=-
 public.stage_progression_outcome.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.stage_progression_outcome.version bigint NOT NULL gen=- def=1
 public.stage_progression_outcome_approval_ux CREATE UNIQUE INDEX stage_progression_outcome_approval_ux ON public.stage_progression_outcome USING btree (approval_id)
