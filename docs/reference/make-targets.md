@@ -153,12 +153,14 @@ deriving it the first time.
 | `bench-perf-check` | The same budgets on the **SMB** tier, writing nothing — what the weekly scheduled workflow runs (needs `db-up`) |
 | `bench-record` | PERF-1/PERF-4: record open and save p50/p95/p99, measured over HTTP against the booted app (needs `db-up`) |
 | `bench-capture` | CAP-PARAM-1: capture-to-timeline latency, 60 s p95, over the auto-create path (needs `db-up`) |
+| `bench-dispatch` | AC-W2: workflow trigger→dispatch p95 against the 200 ms budget, over the seeded dataset (needs `db-up`). Writes no record — AC-W2 is not a published budget row — so it is the one `bench-*` target that does not re-render the page |
 | `perfdoc` | Re-render `docs/reference/performance-budgets.md` from the committed benchmark records. Every `bench-*` target runs it as its last step, so the page updates on every measurement; run it alone after editing the published-budget table in `backend/tools/gen-perfdoc` |
 | `tidy` | `go mod tidy` |
 
 ### The `bench` lane — measurements, run by hand
 
-`bench-perf`, `bench-perf-check`, `bench-record` and `bench-capture` all carry
+`bench-perf`, `bench-perf-check`, `bench-record`, `bench-capture` and
+`bench-dispatch` all carry
 `//go:build integration && bench`, so **no MERGE gate runs them**: not `make
 check`, not the integration lane. They report
 the numbers behind the budgets `acceptance-standards.md` publishes rather than
@@ -172,7 +174,8 @@ tidiness — nothing scheduled compiles these files, so without it a renamed hel
 would break them silently and nobody would find out until the next person ran a
 benchmark by hand and had to debug the harness instead of reading a number.
 
-Each target's last step re-renders `docs/reference/performance-budgets.md` from
+Each target that measures a published budget re-renders
+`docs/reference/performance-budgets.md` as its last step, from
 **every** committed record, not just the one it wrote — so a partial run still
 leaves a complete page, with the rows it did not measure keeping their own dates
 and their own machines. A budget no record covers renders as `not measured`
@@ -199,6 +202,18 @@ number stays a human's act — a machine must never write its own numbers into t
 tree. The write-path regression the standing canary once caught by TIMING OUT
 rather than by measuring is held deterministically now, by the `seq_scan` count
 in `lastactivity_integration_test.go`.
+
+`bench-dispatch` is the newest arrival, and it came the same way. AC-W2's
+trigger→dispatch p95 gated the standing integration lane until a `main-health`
+run read p50=13.19 ms — sixteen times inside the 200 ms budget — against a p95
+of 201.63 ms, and filed `main` as broken over the 1.63 ms. Six integration
+shards share one Postgres on that runner, so its p95 is a measurement of the
+runner; raising the sample count from 25 to 200 had already been tried and
+bought one run. Unlike PERF-3/PERF-7, it left NOTHING behind in the lane, and the file says so
+rather than implying otherwise: a deterministic replacement needs an instrument
+that can see work done on the app pool, and `pg_stat_force_next_flush()` reaches
+only the calling backend. The gap is tracked as an issue with that design
+question in it, because a gate that cannot fail is worse than an absent one.
 
 ## Root-only (frontend lane)
 
