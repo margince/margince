@@ -82,6 +82,8 @@ func egressFor(provider string) egressClass { return providerEgress[provider] }
 
 // addressAllowed reports whether class may dial the concrete address ip.
 //
+// Held by: TestTheWriteRuleAndTheDialerAgree (backend/internal/modules/ai/outboundegress_test.go)
+//
 // The single spelling of the rule: the dial-time Control hook and the
 // write-time base_url check both ask it, so a binding accepted at the door
 // cannot be one the first call refuses.

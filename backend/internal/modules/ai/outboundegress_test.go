@@ -5,9 +5,13 @@ package ai
 
 import (
 	"context"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
@@ -108,6 +112,77 @@ func TestWhichAddressesEachLaneMayDial(t *testing.T) {
 		if got := addressAllowed(egressOperatorEndpoint, ip); got != want.operator {
 			t.Errorf("the operator lane may dial %s = %v, want %v", address, got, want.operator)
 		}
+	}
+}
+
+// The write-time rule and the dialer must answer the same question the same way,
+// or a binding is accepted at the door and refused by the first call — the exact
+// failure ValidateTierBinding's own comment says it exists to avoid. This is
+// what makes addressAllowed's "single spelling" a fact rather than a hope: a
+// second copy of the rule in either caller fails here the moment it drifts.
+func TestTheWriteRuleAndTheDialerAgree(t *testing.T) {
+	t.Parallel()
+
+	for _, provider := range KnownProviders() {
+		guard := dialGuard(egressFor(provider))
+		for _, address := range []string{
+			"8.8.8.8", "2606:4700::1111",
+			"127.0.0.1", "::1", "10.4.1.20", "192.168.1.5", "fd00::1", "::ffff:10.0.0.1",
+			"169.254.169.254", "fe80::1", "64:ff9b::a9fe:a9fe", "100.64.0.1", "192.0.2.10",
+			"0.0.0.0", "2002:7f00:1::1", "172.32.0.9",
+		} {
+			hostPort := net.JoinHostPort(address, "8080")
+			atTheWrite := requireDialableEndpoint("tier premium", provider, "http://"+hostPort) == nil
+			atTheSocket := guard("tcp", hostPort, nil) == nil
+			if atTheWrite != atTheSocket {
+				t.Errorf("provider %q, address %s: the write rule says allowed=%v and the dialer says allowed=%v",
+					provider, address, atTheWrite, atTheSocket)
+			}
+		}
+	}
+}
+
+// The guard is only as good as its coverage: an adapter handed a client built
+// anywhere else dials unguarded, and nothing about the call site would look
+// wrong. So the package is allowed exactly one call to newOutboundClient, and it
+// is the one in SelectBrain — read off the syntax tree rather than grepped, so a
+// call spelled across a line break cannot hide from it.
+func TestSelectBrainIsTheOnlyBuilderOfAnOutboundClient(t *testing.T) {
+	t.Parallel()
+
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatalf("reading the package directory: %v", err)
+	}
+	var callers []string
+	for _, entry := range entries {
+		name := entry.Name()
+		if !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+		file, err := parser.ParseFile(token.NewFileSet(), name, nil, 0)
+		if err != nil {
+			t.Fatalf("parsing %s: %v", name, err)
+		}
+		for _, decl := range file.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok {
+				continue
+			}
+			ast.Inspect(fn, func(node ast.Node) bool {
+				call, ok := node.(*ast.CallExpr)
+				if !ok {
+					return true
+				}
+				if ident, ok := call.Fun.(*ast.Ident); ok && ident.Name == "newOutboundClient" {
+					callers = append(callers, name+":"+fn.Name.Name)
+				}
+				return true
+			})
+		}
+	}
+	if len(callers) != 1 || callers[0] != "selectbrain.go:SelectBrain" {
+		t.Errorf("newOutboundClient is called from %v, want only selectbrain.go:SelectBrain — every other builder dials unguarded", callers)
 	}
 }
 

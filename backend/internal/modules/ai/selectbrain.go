@@ -123,13 +123,15 @@ func KnownProviders() []string {
 // "offline fake ↔ API key ↔ local, one line" — swapping providers is a
 // config change, never a code change.
 //
+// Held by: TestSelectBrainIsTheOnlyBuilderOfAnOutboundClient (backend/internal/modules/ai/outboundegress_test.go)
+//
 //nolint:ireturn // one call returns whichever of seven adapters the binding names; the port interface IS the return type
 func SelectBrain(cfg ProviderConfig, keys config.Lookup) (model.Client, error) {
 	// The client is built once, from the binding, and handed to whichever
 	// adapter the switch names: the egress guard it carries is chosen by the
 	// same value the switch dispatches on, so a lane cannot end up guarded as
-	// another. This is the ONLY caller that supplies a guarded client, and the
-	// only one production has.
+	// another. It is the only call to newOutboundClient in the package, which
+	// is what makes the guard cover every adapter rather than most of them.
 	return selectBrainOn(cfg, keys, newOutboundClient(cfg.Provider))
 }
 
