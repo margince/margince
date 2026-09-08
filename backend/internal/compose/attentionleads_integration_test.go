@@ -151,22 +151,50 @@ func TestAnOwedLeadReachesItsOwnersQueueAndNobodyElses(t *testing.T) {
 	}
 }
 
-// The lane claims nothing when the installation measures no first response.
+// With no first-response target the lane still reports what is owed, and claims
+// no deadline for it.
 //
-// Not merely "no rows": an absent source must publish no reach row either, or
-// the page reports a bound on a source it never consulted.
-func TestWithTheTargetOffTheLaneIsAbsentFromThePage(t *testing.T) {
+// Owing a reply is a fact about the LEAD; being LATE is a fact about the
+// installation's policy. The lane used to drop itself entirely when no target
+// was set, which hid the work rather than the deadline — an installation that
+// measures no first response has leads owed replies exactly like any other, and
+// a queue that showed none of them was answering a question nobody asked.
+//
+// Both halves, because they fail in opposite directions. Reporting nothing hides
+// the work; reporting a due date the policy never set would put a deadline on
+// the screen that the record cannot stand behind, which is the failure the old
+// shape was avoiding and the reason it is worth pinning rather than deleting.
+func TestWithNoTargetTheLaneReportsWhatIsOwedAndClaimsNoDeadline(t *testing.T) {
 	e := integration.Setup(t)
 	// Deliberately NOT calling measureFirstResponse: this is the default.
 	seedOwedLead(t, e, "Nobody Is Counting", &e.Rep1, 48*time.Hour)
 
 	page := ownQueue(e.As(e.Rep1, []ids.UUID{e.Team1}, leadRepPerms), t, e)
-	if got := leadRows(page); len(got) != 0 {
-		t.Errorf("the queue carries %v with the target switched off", got)
+	if got := leadRows(page); len(got) != 1 || got[0] != "Nobody Is Counting" {
+		t.Fatalf("the queue carries %v with no first-response target, want the owed lead — the work is owed whether or not anything measures how late it is", got)
 	}
+
+	var seen bool
 	for _, reach := range page.Reach {
 		if string(reach.Source) == "lead_response" {
-			t.Errorf("the page publishes a reach row for a source it never read: %+v", reach)
+			seen = true
+		}
+	}
+	if !seen {
+		t.Error("the page publishes no reach row for lead_response — a source it read and drew from must say what it considered")
+	}
+
+	for _, item := range page.Queue {
+		if string(item.Source) != "lead_response" {
+			continue
+		}
+		if item.DueAt != nil {
+			t.Errorf("the row carries a due date of %v where the installation sets no target — a deadline on the screen the record cannot stand behind", *item.DueAt)
+		}
+		for _, because := range item.Because {
+			if kind := string(because.Kind); kind == "response_overdue" || kind == "response_due_soon" {
+				t.Errorf("the row says %q with no target set — overdue against what?", kind)
+			}
 		}
 	}
 }
