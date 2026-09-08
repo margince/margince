@@ -1872,6 +1872,12 @@
   font: inherit;
   color: var(--accent);
   white-space: nowrap;
+  /* The card's own `cursor` cannot reach this control: the overlay that
+     stretches the door over the tile is the BUTTON's pseudo-element, so what a
+     pointer anywhere on the card resolves against is a button, and a button's
+     platform cursor beats a value the card set. The tile read as a plain arrow
+     over every part of it the door actually answered for. */
+  cursor: pointer;
   /* 24px tall, which is the AA target floor (WCAG 2.5.8) — the same rung the
      worklist's rank button takes. A text-only control on a 13px line boxes to
      about 21px, and axe found this one at 20.9px on the project rollups: under
@@ -1899,6 +1905,9 @@
   position: absolute;
   inset: 0;
 }
+/* And the chip stays a pointer too: it sits ABOVE the door's overlay (z-index
+   on `.stat-card-basis`), so it is the one part of the tile the button's own
+   cursor never covers. */
 .stat-card:has(.stat-card-open) {
   cursor: pointer;
 }

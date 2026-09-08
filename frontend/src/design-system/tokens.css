@@ -71,7 +71,7 @@
   /* One translucent pane per zone (DESIGN.md §5): white over the lit ground
    * with a blur behind it, and a hairline for its edge. The two glows are the
    * chrome — an emerald light at the top-left corner behind the sidebar and an
-   * indigo one at the bottom-right — faint enough that the eye does not find
+   * indigo one at the top-right — faint enough that the eye does not find
    * them; they are atmosphere, not a feature. */
   --pane: rgba(255, 255, 255, 0.72);
   --paneEdge: rgba(16, 26, 21, 0.08);
@@ -87,7 +87,7 @@
    * would drift, and the one a client sees is the one nobody is looking at. */
   --groundLit:
     radial-gradient(900px 620px at 0 0, var(--glowA), transparent 70%) no-repeat,
-    radial-gradient(900px 620px at 100% 100%, var(--glowB), transparent 70%)
+    radial-gradient(900px 620px at 100% 0, var(--glowB), transparent 70%)
     no-repeat,
     var(--bgPage);
 
