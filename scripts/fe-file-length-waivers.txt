@@ -12,8 +12,8 @@
 #
 # The fifteen entries below were re-frozen UPWARD once, by the change that
 # renamed the record type to company. Nothing was added to them: the variable
-# the record sits in went from `org` to `company`, four characters wider, and
-# biome splits the JSX prop lists that no longer fit. Paying them back down is
+# the record sits in got four characters wider, and biome splits the JSX prop
+# lists that no longer fit. Paying them back down is
 # https://github.com/margince/margince/issues/5025 — and re-freezing anything
 # else upward is what the seeder refuses to do for you.
 1035 frontend/src/App.tsx
