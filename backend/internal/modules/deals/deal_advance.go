@@ -167,6 +167,11 @@ func (s *Store) advanceOnTx(
 		if err != nil {
 			return err
 		}
+		// Under the lock resolveAdvanceTarget just took on the target row, and
+		// before anything is written.
+		if err := refuseAMoveTheGateDidNotAdmit(ctx, tx, current, in.ToStageID); err != nil {
+			return err
+		}
 		// Checked inside the transaction that writes the transition, and
 		// checked BEFORE the patch is built, so a refusal costs nothing and a
 		// concurrent archive cannot remove the evidence between the two.
