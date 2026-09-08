@@ -256,7 +256,7 @@ func applyLinkedInMatchInTx(ctx context.Context, tx pgx.Tx, connectionID, ownerI
 	if err != nil {
 		return err
 	}
-	return auditLinkedInMatch(ctx, tx, connectionID, personID, matchImages(wasStatus, wasPerson, personID), wrote)
+	return auditLinkedInMatch(ctx, tx, connectionID, ownerID, personID, matchImages(wasStatus, wasPerson, personID), wrote)
 }
 
 // matchImagePair is the connection's own columns on either side of a confirmed
@@ -285,7 +285,7 @@ func matchImages(wasStatus string, wasPerson *ids.UUID, personID ids.UUID) match
 // records the link; a handle that reached the contact is a second mutation of a
 // second entity and takes its own audit and its own person.updated, so a trace
 // consumer resolves each event to an audit of the entity it describes.
-func auditLinkedInMatch(ctx context.Context, tx pgx.Tx, connectionID, personID ids.UUID, images matchImagePair, wroteURL bool) error {
+func auditLinkedInMatch(ctx context.Context, tx pgx.Tx, connectionID, ownerID, personID ids.UUID, images matchImagePair, wroteURL bool) error {
 	// Whether the profile URL reached the contact is context ABOUT this
 	// decision, not a column on the connection, so it rides the evidence
 	// column rather than the images field history projects.
@@ -294,7 +294,21 @@ func auditLinkedInMatch(ctx context.Context, tx pgx.Tx, connectionID, personID i
 	if err != nil {
 		return err
 	}
-	if err := storekit.EmitEvent(ctx, tx, auditID, connectionID,
+	// The event's subject is the MEMBER whose network produced the match; the
+	// audit row above names the connection because that is the row this
+	// statement changed. Two different questions, and they had one answer by
+	// accident: the event carried the CONNECTION id under a declared entity
+	// type of `user`.
+	//
+	// That made it undeliverable, always. linkedin_match.decided is a self-only
+	// event — a colleague's professional network is theirs — so delivery admits
+	// it only when the subscriber IS the user the id names, and a connection
+	// uuid can never equal a user id. The check could not pass for anybody.
+	//
+	// ownerID is the owner the write above already bound on, so the event names
+	// the same member the statement was predicated on rather than a second
+	// read's answer.
+	if err := storekit.EmitEvent(ctx, tx, auditID, ownerID,
 		crmcontracts.PublicEventLinkedinMatchDecided{ProfileUrlWritten: wroteURL}); err != nil {
 		return err
 	}
