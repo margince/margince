@@ -83,8 +83,8 @@ var auditImageRead = regexp.MustCompile(
 	`(?is)\b(?:from|join)\s+audit_log\b.{0,300}?\b(?:before|after)\b` +
 		`|\b(?:before|after)\b.{0,300}?\b(?:from|join)\s+audit_log\b`)
 
-// auditImageEntity is the record type a statement binds its audit rows to,
-// when it binds it to a LITERAL at all.
+// auditImageEntity is a record type a statement pins its audit rows to with a
+// LITERAL, and auditImageEntityMention is any test of that column at all.
 //
 // The trail is one table for every record the product keeps, so an image read
 // is only a second door onto ACTIVITY content when an activity can be behind
@@ -93,19 +93,31 @@ var auditImageRead = regexp.MustCompile(
 // activity gate of it would be asking a deal reader to prove something about a
 // table it never touches. That is how a census earns a waiver list of readers
 // exempt for reasons that are not true, which is a list nobody can audit.
-var auditImageEntity = regexp.MustCompile(`(?is)\bentity_type\s*=\s*'([a-z_]+)'`)
+//
+// TWO patterns because one was not enough. A statement may test the column in a
+// form this cannot read — parameterized, `IN (...)`, `IS NOT NULL` — and a
+// reader that took only the literals would see `entity_type = 'deal' OR
+// entity_type = $1`, find one non-activity literal, and drop a reader whose
+// parameter may be 'activity' on the next call. Every mention has to be a
+// literal before the absence of 'activity' among them means anything.
+var (
+	auditImageEntity        = regexp.MustCompile(`(?is)\bentity_type\s*=\s*'([a-z_]+)'`)
+	auditImageEntityMention = regexp.MustCompile(`(?is)\bentity_type\b\s*(?:=|<>|!=|\bnot\b|\bin\b|\bis\b|\bany\b)`)
+)
 
 // readsAnActivitysAuditImage reports whether a statement reads an audit image
 // an activity can be behind.
 //
-// UNBOUND MEANS YES. A parameterized entity_type, or one spelled in a form this
-// does not read — `IN ('deal','lead')`, a value off a variable — leaves an
-// activity in range, so the reader stays a subject. Only a literal naming
-// something else takes it out, which is the one direction where being wrong
-// costs a false PASS rather than a false finding.
+// UNBOUND MEANS YES, in every shape of unbound: no test of entity_type at all,
+// a parameterized one, a form this does not read, or a mixture of those with a
+// literal. Only a statement whose every mention of the column is a literal and
+// none of them 'activity' is out. That asymmetry is deliberate — being wrong
+// here costs a false finding in one direction and a false PASS in the other,
+// and a census that reads a smaller tree and reports clean is the failure with
+// nothing to notice.
 func readsAnActivitysAuditImage(text string) bool {
 	for _, at := range auditImageRead.FindAllStringIndex(text, -1) {
-		if !boundToAnotherRecordType(text[at[0]:min(at[1]+auditImageBindingReach, len(text))]) {
+		if !boundToAnotherRecordType(statementAround(text, at)) {
 			return true
 		}
 	}
@@ -118,23 +130,49 @@ func readsAnActivitysAuditImage(text string) bool {
 // The match itself is not enough, and the reason is asymmetric: when the
 // projection sits BEFORE its FROM — `SELECT before FROM audit_log WHERE ...` —
 // the window ends at the table name and the WHERE that binds the record type
-// is entirely outside it. So the lookup runs on from the match rather than
-// within it.
+// is entirely outside it. So the lookup runs on past the match.
 //
 // Forward only. A binding written before the projection is not read, which
 // leaves the reader in the census: that is the safe direction, and reaching
-// backwards would let an `entity_type = 'person'` belonging to some earlier
-// query in the same declaration answer for this one.
+// backwards would let an entity_type belonging to an earlier query in the same
+// declaration answer for this one.
 const auditImageBindingReach = 300
+
+// statementAround is the matched read plus as much of what follows as still
+// belongs to the same statement.
+//
+// A flat character reach was not enough either. This tree assembles several
+// queries into one declaration, so 300 characters past a read routinely runs
+// into the NEXT one — and an `entity_type = 'deal'` belonging to a query three
+// lines down would then bind a read that has nothing to do with it, dropping an
+// activity-bindable reader from the census. So the reach stops at whichever
+// comes first: a statement terminator, or the start of another audit read.
+func statementAround(text string, at []int) string {
+	reach := text[at[0]:min(at[1]+auditImageBindingReach, len(text))]
+	tail := reach[at[1]-at[0]:]
+	cut := len(tail)
+	if i := strings.Index(tail, ";"); i >= 0 && i < cut {
+		cut = i
+	}
+	if next := auditImageRead.FindStringIndex(tail); next != nil && next[0] < cut {
+		cut = next[0]
+	}
+	return reach[:at[1]-at[0]+cut]
+}
 
 // boundToAnotherRecordType reports whether every record type this statement
 // names is one an activity cannot be.
 func boundToAnotherRecordType(statement string) bool {
-	bound := auditImageEntity.FindAllStringSubmatch(statement, -1)
-	if len(bound) == 0 {
+	mentions := auditImageEntityMention.FindAllString(statement, -1)
+	if len(mentions) == 0 {
 		return false
 	}
-	for _, match := range bound {
+	literals := auditImageEntity.FindAllStringSubmatch(statement, -1)
+	// A mention this cannot read as a literal leaves an activity in range.
+	if len(literals) != len(mentions) {
+		return false
+	}
+	for _, match := range literals {
 		if match[1] == "activity" {
 			return false
 		}
@@ -699,6 +737,28 @@ func TestTheAuditDoorAdmitsOnlyReadsAnActivityCanBeBehind(t *testing.T) {
 			// on the next call, so it stays a subject.
 			name: "an image read whose record type is parameterized",
 			sql:  `SELECT before FROM audit_log WHERE entity_type = $1 AND entity_id = $2`,
+			want: true,
+		},
+		{
+			// The mixed form. Taking only the literals here would find one
+			// non-activity value, see no 'activity' among them, and drop a
+			// reader whose parameter may be 'activity' on the next call.
+			name: "an image read that pins one record type and parameterizes another",
+			sql:  `SELECT before FROM audit_log WHERE entity_type = 'deal' OR entity_type = $1`,
+			want: true,
+		},
+		{
+			name: "an image read whose record types are a set this cannot read",
+			sql:  `SELECT after FROM audit_log WHERE entity_type IN ('deal', 'lead')`,
+			want: true,
+		},
+		{
+			// The declaration assembles two queries. The `entity_type = 'deal'`
+			// belongs to the second and must not answer for the first, which
+			// binds nothing and can reach an activity.
+			name: "a binding belonging to the next statement does not bind this read",
+			sql: `SELECT before, after FROM audit_log WHERE id = $1;
+			      SELECT count(*) FROM audit_log au WHERE au.entity_type = 'deal'`,
 			want: true,
 		},
 		{
