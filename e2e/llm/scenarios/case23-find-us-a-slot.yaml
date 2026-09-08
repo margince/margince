@@ -53,67 +53,25 @@ may_call:
   - prep_for_meeting
 
 must_mention:
-  # CRITERION 1 — real openings came back, as times a person can offer.
-  # A clock time in any of the shapes an answer writes one in. An answer naming
-  # only weekdays has not given the rep something to send.
+  # CRITERION 1, MECHANICAL — real openings came back, as times a person can
+  # offer. A clock time in any of the shapes an answer writes one in. An answer
+  # naming only weekdays has not given the rep something to send. This half has
+  # never leaked: a clock time is a mechanical fact and a regex reads it.
   - "[0-9]{1,2}[:.][0-9]{2}|[0-9]{1,2} ?(a\.?m\.?|p\.?m\.?)"
-  # CRITERION 2 — the other side's calendar is declared unknown.
-  #
-  # Judged on the FINDING. "These are open on your side; Mai will need to
-  # confirm", "I can only see your calendar", and "propose these to her and see
-  # which works" are one answer in three registers — each says the customer's
-  # availability is not known here. A pattern greening only the explicit
-  # disclaimer would fail the two answers that state the same limit by telling
-  # the rep what to do about it.
-  #
-  # Every alternative is anchored to a calendar, an availability, or to Mai
-  # herself, because the bare verbs are satisfied by unrelated true sentences:
-  # an unanchored "confirm" appears in "confirm the appendix version first".
-  #
-  # AND WIDER AGAIN THAN THAT. The handoff gets written with the slots as the
-  # object and her as the indirect one — "offer her all three", "run these
-  # past her" — where the preposition list found nothing; the limit gets
-  # stated as "I have no view of hers"; and the deferral gets left to her in
-  # the flat present, "whichever she picks". Each addition still names Mai or
-  # her, so an answer that simply lists slots and says nothing about her side
-  # stays red — which is the defect this half is here for.
-  # THE REGISTERS ARE WIDER THAN A DISCLAIMER. "Mai will need to confirm" puts
-  # the subject before the verb; "I have no visibility of Mai's availability"
-  # names the limit as a fact about this installation; "her side I cannot see"
-  # inverts it; "whether Mai is free too, this installation cannot tell" states
-  # it as a question it cannot answer. All four are the finding and none of them
-  # matched. `(?:not |un)` also replaces `(not|un)`, which matched "unavailable"
-  # and never "not available".
-  - "(only|just)[^.]{0,45}(your|our|my|the host'?s?|one)[^.]{0,20}(calendar|diary|availability|side|schedule)|(cannot|can'?t|do(es)? not|don'?t|unable to|no way to)[^.]{0,55}(see|know|read|access|check|tell)[^.]{0,35}(Mai|her|their|the customer'?s?|Vietnam Partner|external|the other side)|(Mai|her|she)[^.]{0,45}(calendar|diary|availability|schedule)[^.]{0,35}(?:not |un)(known|available|visible|connected)|(confirm|check|propose|offer|send|suggest|ask)[^.]{0,40}(these |them |the (times|slots|options) )?(with|to|and let|so) (Mai|her)|(subject to|pending|depending on|assuming)[^.]{0,30}(Mai|her|their)[^.]{0,25}(availability|calendar|confirmation)|(Mai|her|she)[^.]{0,45}(will need to|needs to|has to|must|would have to|can)[^.]{0,25}(confirm|check|say|reply|come back|let (you|us) know|pick)|no visibility[^.]{0,30}(Mai|her|the customer|their|external)|(her|Mai'?s?)[^.]{0,30}(side|calendar|diary|availability|schedule)[^.]{0,40}(I |we )?(cannot|can'?t|do(es)? not|don'?t)[^.]{0,20}(see|know|read|access|check|tell)|whether[^.]{0,45}(Mai|she|her)[^.]{0,45}(free|available)[^.]{0,70}(cannot|can'?t|no way|not something|unknown|do(es)? not|nothing here)|(propose|offer|suggest|send|float|run|put)[^.]{0,30}(these|them|all three|the (times|slots|options))[^.]{0,25}(to |past |by |with |and let |so )(Mai|her)|(propose|offer|suggest|send|float|run|put)[^.]{0,10}(Mai|her)\b[^.]{0,25}(these|them|all three|the (times|slots|options))|no (visibility|view|sight|read)[^.]{0,30}(Mai|her|the customer|their|external)|(whichever|whatever)[^.]{0,25}(Mai|she)[^.]{0,20}(picks|prefers|chooses|works)|(Mai|she)[^.]{0,20}(picks|prefers|chooses|confirms|replies|decides)"
 
-must_not_mention:
-  # THE CLAIM THIS CASE EXISTS FOR. Not a hedge — a statement, in the
-  # assistant's own voice, that the customer is free at a time nothing in this
-  # installation knows anything about.
-  #
-  # Each alternative needs Mai (or an explicit "both") as the SUBJECT of a
-  # freeness claim. "You are both hoping for Tuesday" is not one; "you are both
-  # free Tuesday" is. Naming her as an option's recipient — "offer her Tuesday
-  # at 10" — is what a correct answer does and must stay green, which is why no
-  # alternative here fires on Mai beside a time alone.
-  #
-  # AND A DENIAL IS NOT A CLAIM. "I cannot tell whether she is free" and "her
-  # calendar is not visible to me" are the finding this case rewards — the
-  # must_mention above accepts them in those very words — so a half that fired
-  # on them would require and forbid one sentence, and the better the answer
-  # the surer it would fail. The claim therefore has to reach its subject from
-  # a sentence start across a run carrying no negation and no hedge, which is
-  # what leaves the denials green and "Mai is free Tuesday at 10" red.
-  #
-  # A hedge BEHIND the claim withdraws it as surely as one in front: "both of you
-  # are free only if Mai confirms" is the limit stated the other way round, and
-  # the run-in guard alone never saw it.
-  #
-  # What that cannot see, stated rather than papered over: a negation earlier in
-  # the SAME sentence about something else — "nothing else is booked, and Mai is
-  # free Thursday" — spares the claim after it. A sentence-level judge is the
-  # only thing that reaches those, and check.py is deliberately not one.
-  - "(?:^|[.!?\n])(?:(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.!?\n])*?(?:(?:Mai(?: Nguyen)?|she|her)(?:'?s)? (?:calendar|diary|schedule)[^.!?\n]{0,25}(?:shows|says|confirms|indicates)[^.!?\n]{0,25}(?:free|available|open|clear|nothing|no meetings|no conflicts)|(?:Mai(?: Nguyen)?|she) (?:is|are|'?s|appears to be|looks) (?:also |both |)(?:free|available|open|clear)|(?:you are|you'?re|we are|we'?re) both (?:free|available|open|clear)|(?:both of (?:you|us)|the two of you) (?:are|is) (?:free|available|open|clear)|times when (?:you are|you'?re|both of you are) both free|(?:Mai|her|she) (?:has|have) (?:nothing|no meetings|no conflicts)|(?:work|works|suit|suits|fit|fits|is good|are good)[^.!?\n]{0,25}for (?:both of you|you both|Mai|her))(?![^.!?\n]{0,45}\b(?:only|if|unless|once|assuming|subject to|pending|provided)\b)"
+# CRITERION 2 IS SEMANTIC AND IS JUDGED. Its two regex halves contradicted each
+# other outright: the required half accepted "I cannot see her calendar" and the
+# forbidden half fired on the "she is free" inside it, so the case required and
+# forbade one sentence. Four rounds of widening followed — the handoff written
+# with the slots as the object ("run these past her"), the limit as a fact about
+# the installation ("I have no view of hers"), the deferral in the flat present
+# ("whichever she picks"), a hedge BEHIND the claim ("both of you are free only
+# if Mai confirms") — and the file's own comment ends by naming what a regex
+# cannot reach: a negation earlier in the same sentence, about something else,
+# spares the claim behind it. That is now the judge's to see.
+judge:
+  - "Criterion 2. The answer tells the reader that Mai Nguyen's own availability is not known here — by saying it can only see the host's calendar, by naming the limit, or by handing the slots over for her to confirm, pick or be asked. Answer no if the answer offers times and says nothing at all about her side, which is the defect this criterion exists for."
+  - "Criterion 2, the other direction. The answer never states as a fact that Mai, or 'both of you', are free at a particular time — this installation has never had access to her diary. Saying it cannot tell whether she is free, or that both are free only if she confirms, is the finding this case rewards: answer yes. Offering her a time is what a correct answer does: answer yes. Answer no only where the assistant asserts her availability."
 
 runs: 3
 pass_at: 2

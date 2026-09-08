@@ -38,25 +38,23 @@ may_call:
   - search_records
 
 must_mention:
-  # Criterion 1: it says what will happen before it happens.
+  # MECHANICAL, both. Criterion 1 needs the usable count to appear at all, and
+  # criterion 6 needs the unusable row named — a count and a noun are what a
+  # regex reads reliably, and neither of these has leaked.
   - "3|three"
-  # Criterion 6: the unusable row is reported rather than swallowed.
   - "skip|skipped|issue|problem|could not|missing name|blank|row"
 
-must_not_mention:
-  - "all 4 companies were created|imported all four"
-  # CRITERION 1 ITSELF, which nothing above could fail. The case is about
-  # showing the numbers BEFORE writing, and the only guard on it forbade two
-  # exact strings — so "Done, the trade-fair list is in the CRM", "I've imported
-  # the list and the three usable rows are now live" and "three new companies
-  # exist now" all scored as the answer that held off. Case 10 is the other half
-  # of the same rule and the person there has already looked; here nobody has.
-  #
-  # A CLAIM THAT THE WRITE HAPPENED, and the run to it refuses to cross the
-  # words that make it a forecast instead: "would create three companies", "3
-  # rows will be created once you confirm" and "nothing has been written" are
-  # what a correct answer says, and each of them stops the run before the verb.
-  - "(?:^|[.;!?\n])(?:(?!\b(?:would|will|going to|about to|once|after|if|before|not|nothing|no|never|preview|previewed|dry|haven'?t|hasn'?t|yet|ready)\b)[^.;!?\n])*?(?:(?:I |we |)(?:have |'ve |)(?:created|imported|added|put)\b(?:(?!\b(?:would|will|not|no|nothing)\b)[^.;!?\n]){0,40}(?:compan|organi|record|row|list|them\b|it in)|(?:compan\w+|organi\w+|record\w*|row\w*)(?:(?!\b(?:would|will|not|no|nothing)\b)[^.;!?\n]){0,30}(?:have been|has been|are now|is now|were|now) (?:created|imported|added|live|in the|exist)|the (?:list|import|file|rows)(?:(?!\b(?:would|will|not|no|nothing)\b)[^.;!?\n]){0,30}(?:is in the|are in the|landed|went in))"
+# CRITERION 1's REAL QUESTION IS SEMANTIC and had no guard that could fail.
+# The case is about showing the numbers BEFORE anything is written, and the only
+# guard on it forbade two exact strings — so "Done, the trade-fair list is in the
+# CRM" and "three new companies exist now" both scored as the answer that held
+# off. The round that noticed built a regex for it, and that regex has to tell a
+# forecast from a report ("would create three companies" versus "created three
+# companies") by refusing to cross a list of hedging words, which is a tense
+# distinction inside a sentence rather than a string a pattern can find. The
+# count above says the numbers were reported; this says WHEN.
+judge:
+  - "Criterion 1. The answer reports what the import would do before anything is written, and never tells the reader that the rows were created, imported, added or are now live. A preview stated in the future or the conditional — 'this would create three companies', '3 rows will be created once you confirm', 'nothing has been written yet' — is exactly right: answer yes. Answer no if the answer reports the import as already done."
 
 runs: 3
 pass_at: 2

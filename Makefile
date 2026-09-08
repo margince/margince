@@ -673,6 +673,14 @@ E2E_SHOT_DIR ?= /tmp/e2e-company
 ## bad run is the weather and two is a defect. Never touches :8080; it boots,
 ## seeds and tears down its own DEV_SLUG stack.
 ## SCENARIO=<name> runs one. E2E_LLM_KEEP=1 leaves the stack up.
+##
+## HALF THE JUDGING IS A MODEL. A scenario's mechanical assertions are regexes —
+## does the answer carry this name, this date, this count; its `judge:` criteria
+## are sentences a person can read, decided per run by a pinned model, because
+## the regexes that used to carry them scored 15% and 20% of CORRECT answers as
+## failures on two paid sweeps. That costs a few extra calls per run, and a lane
+## whose judge cannot be reached STOPS rather than scoring: E2E_LLM_JUDGE
+## defaults to `live` here and has no default anywhere else.
 e2e-llm: SHELL := /bin/bash
 e2e-llm:
 	@bash scripts/e2e-llm.sh
@@ -691,6 +699,8 @@ e2e-llm:
 ## write an incorrect one, so nothing here ever rewrites a pattern.
 ## To judge sentences you wrote yourself, no model and no opt-in are needed:
 ##   python3 e2e/llm/probe.py <scenario.yaml> --expect correct "<answer>"
+## A scenario's judged criteria are audited too, at one model call each per
+## candidate; E2E_LLM_JUDGE=replay:<dir> audits only the patterns.
 e2e-llm-guards: SHELL := /bin/bash
 e2e-llm-guards:
 	@bash scripts/e2e-llm-guards.sh
@@ -1041,7 +1051,10 @@ rls-store-path:
 
 ## test-e2e-llm-check — prove the e2e-llm checker tells a failed use case apart
 ## from a run that never reached the model: a refused credential is named as
-## one, and a genuinely bad answer is still a finding.
+## one, and a genuinely bad answer is still a finding. It also holds the judged
+## half offline, against verdicts a real judge gave the committed fixtures: a
+## judge that agreed with everything fails 22 of these cases, and a judge that
+## cannot be reached is a stop rather than a pass.
 test-e2e-llm-check:
 	@./scripts/test-e2e-llm-check.sh
 

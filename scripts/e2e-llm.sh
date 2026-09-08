@@ -66,6 +66,17 @@ E2E_LLM_MODEL="${E2E_LLM_MODEL:-claude-opus-5}"
 VERDICT_DIR="${E2E_LLM_VERDICTS:-$ROOT/backend/internal/compose/aicert/records/mcp_e2e/$E2E_LLM_MODEL}"
 KEEP="${E2E_LLM_KEEP:-0}"
 
+# THE SEMANTIC HALF OF THE JUDGING IS A MODEL, and this lane spends it live.
+#
+# A scenario's `judge:` entries are criteria in plain words — "did the answer
+# notice that the note and the record disagree" — because the regexes that used
+# to carry them scored 15% and 20% of CORRECT answers as failures on two paid
+# sweeps, which at pass_at 2 of 3 is two cases a sweep failing for a reason that
+# is not the product's. e2e/llm/judge.py has no default backend on purpose: a
+# criterion nobody judged must never read as one that passed, so the value is
+# set here rather than defaulted there.
+export E2E_LLM_JUDGE="${E2E_LLM_JUDGE:-live}"
+
 if [[ "${MARGINCE_E2E_LLM:-0}" != "1" ]]; then
   cat >&2 <<'MSG'
 e2e-llm is opt-in: it drives a real model and bills real tokens.
@@ -124,6 +135,7 @@ APP_BASE="$(DEV_SLUG="$SLUG" dev_app_base_url)"
 echo "==> app at $APP_BASE"
 echo "==> model $E2E_LLM_MODEL"
 echo "==> credential $CREDENTIAL"
+echo "==> judge $E2E_LLM_JUDGE"
 
 seed_everything() {
   (cd "$ROOT" && API_BASE="$APP_BASE" bash e2e/llm/seed-llm-fixtures.sh >/dev/null)
@@ -284,6 +296,12 @@ WORLD_DIRTY=0
 # USE the value and the wrong place to discover it is missing: a typo in the last
 # scenario would abort the lane after every earlier case had been paid for. This
 # lane bills real money, so the whole corpus is validated while it is still free.
+# The judge is one of those declarations. A lane that drives twenty-one cases
+# and then cannot score the judged half of them has spent the whole budget to
+# learn one environment variable was unset, so it is asked before the first
+# token — and only for the scenarios that actually carry a judged criterion.
+python3 "$ROOT/e2e/llm/check.py" --judge-ready "$SCENARIO_DIR"/*.yaml
+
 for scenario in "$SCENARIO_DIR"/*.yaml; do
   declared="$(python3 "$ROOT/e2e/llm/check.py" --field writes "$scenario")"
   case "$declared" in
@@ -410,12 +428,30 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
       fi
       exit 2
     fi
-    if python3 "$ROOT/e2e/llm/check.py" --check "$scenario" "$transcript" >> "$results" 2>&1; then
-      ok=$((ok + 1))
-      echo "  run $i: pass"
-    else
-      echo "  run $i: fail"
-    fi
+    # EXIT 2 IS NOT A FAILED RUN. `--check` answers 1 for a scenario the answer
+    # did badly and 2 for a judge it could not reach, and reading the second as
+    # the first is the shape that once reported an expired credential as six
+    # broken use cases: every remaining run would be unscorable the same way,
+    # each costs a fresh stack, and the answer is the same after eighteen of
+    # them as after one.
+    scored=0
+    python3 "$ROOT/e2e/llm/check.py" --check "$scenario" "$transcript" >> "$results" 2>&1 || scored=$?
+    case "$scored" in
+      0)
+        ok=$((ok + 1))
+        echo "  run $i: pass"
+        ;;
+      1)
+        echo "  run $i: fail"
+        ;;
+      *)
+        echo
+        echo "HARNESS: $name run $i could not be scored:"
+        tail -3 "$results" | sed 's/^/  /'
+        echo "  This is not a use-case failure. Nothing was scored."
+        exit 2
+        ;;
+    esac
   done
 
   if [[ "$ok" -ge "$pass_at" ]]; then

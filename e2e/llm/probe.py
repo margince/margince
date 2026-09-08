@@ -36,6 +36,13 @@ Usage:
     probe.py <scenario.yaml> --jsonl < candidates.jsonl
     probe.py <scenario.yaml> --brief --count 6      # the generation brief
 
+A SCENARIO'S JUDGED CRITERIA ARE JUDGED HERE TOO, because this judges with
+check.check and that is where they live. So auditing a scenario that carries any
+costs tokens per candidate and needs E2E_LLM_JUDGE set — which is the honest
+price of asking whether the whole verdict is sound rather than half of it. A
+judge that cannot be reached raises rather than scoring, so a candidate is never
+reported green on a criterion nobody decided.
+
 Stdlib only, for check.py's own reason: the lane must run on a fresh checkout,
 and a PyYAML dependency in front of a scenario file would make it refuse to.
 """
@@ -112,10 +119,11 @@ def _transcript(scenario, answer):
 def judge(scenario, answer):
     """Run one answer through check.check and attribute each problem to a pattern.
 
-    Returns (missed, fired, unattributed): the must_mention patterns that found
-    nothing, the must_not_mention patterns that fired paired with the text they
-    matched, and anything else check.check said — which should be empty, and is
-    reported rather than swallowed when it is not.
+    Returns (missed, fired, refused, unattributed): the must_mention patterns
+    that found nothing, the must_not_mention patterns that fired paired with the
+    text they matched, the judged criteria the judge answered no to, and
+    anything else check.check said — which should be empty, and is reported
+    rather than swallowed when it is not.
     """
     path = _transcript(scenario, answer)
     try:
@@ -123,7 +131,7 @@ def judge(scenario, answer):
     finally:
         os.unlink(path)
 
-    missed, fired = [], []
+    missed, fired, refused = [], [], []
     for pattern in scenario.get("must_mention", []):
         message = f"never said anything matching /{pattern}/"
         if message in problems:
@@ -135,7 +143,13 @@ def judge(scenario, answer):
         if hit is not None:
             problems.remove(hit)
             fired.append((pattern, hit[len("said ") : -len(suffix)]))
-    return missed, fired, problems
+    # The semantic half. A judged criterion carries its own words, so the
+    # attribution is the criterion itself rather than a pattern head.
+    for problem in list(problems):
+        if problem.startswith(check.JUDGED_NO):
+            problems.remove(problem)
+            refused.append(problem[len(check.JUDGED_NO) :].strip())
+    return missed, fired, refused, problems
 
 
 def _abbreviate(pattern, width=110):
@@ -156,8 +170,8 @@ def _excerpt(answer, width=100):
 
 def report(scenario, answer, expect, full, out=sys.stdout):
     """Print one candidate's verdict and return True when it is a finding."""
-    missed, fired, unattributed = judge(scenario, answer)
-    green = not missed and not fired and not unattributed
+    missed, fired, refused, unattributed = judge(scenario, answer)
+    green = not missed and not fired and not refused and not unattributed
     show = (lambda p: p) if full else _abbreviate
 
     if expect == "correct":
@@ -176,6 +190,8 @@ def report(scenario, answer, expect, full, out=sys.stdout):
     for pattern, matched in fired:
         print(f"    must_not_mention FIRED  /{show(pattern)}/", file=out)
         print(f"      on: {matched}", file=out)
+    for criterion in refused:
+        print(f"    judge SAID NO           {criterion}", file=out)
     for problem in unattributed:
         # Not a prose finding: the transcript this probe built failed a check it
         # was supposed to satisfy. Said out loud, because silently counting it
@@ -216,6 +232,11 @@ def _candidates(args):
 # writes an answer to the case rather than an answer to the regex. A model shown
 # the pattern optimises against it, and candidates written that way would prove
 # only that the pattern matches itself.
+#
+# `judge:` is NOT dropped, and the difference is the point. A judged criterion is
+# the case stated in words — the same thing the comments are — so a model shown
+# it writes an answer to the case. There is no pattern behind it to optimise
+# against.
 _PATTERN_KEYS = ("must_mention", "must_not_mention")
 
 
@@ -308,4 +329,12 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except check.judge.JudgeUnavailable as unavailable:
+        # Exit 2, the probe's own "could not run": a scenario carrying judged
+        # criteria cannot be audited without a judge, and reporting the
+        # candidates green on the half nobody decided would be the finding this
+        # tool exists to prevent, made by the tool itself.
+        print(f"the judge could not be reached: {unavailable}", file=sys.stderr)
+        sys.exit(2)

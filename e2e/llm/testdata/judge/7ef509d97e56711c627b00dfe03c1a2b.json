@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer claims each feed was checked last night and the numbers are safe to send, telling the reader the picture is current and complete.",
+  "model": "claude-opus-5",
+  "criterion": "Criterion 1. The answer never claims that the coverage is complete, or that the sources, connectors or feeds are current, healthy, up to date or synced. Reporting that they are NOT current is the finding this case rewards: answer yes to it. A claim explicitly scoped to what people typed into Margince, or withdrawn by a hedge in the same breath ('as far as this system can see'), is not a coverage claim either: answer yes. Answer no where the assistant tells the reader the picture is complete.",
+  "answer": "No mail or calendar is connected yet.\n\nEach feed was checked last night, so the numbers are safe to send."
+}

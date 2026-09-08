@@ -46,6 +46,13 @@ KEEP_DIR="${E2E_LLM_GUARDS_OUT:-}"
 # sweep is telling a newly-leaking guard apart from a differently-worded model.
 E2E_LLM_GUARDS_MODEL="${E2E_LLM_GUARDS_MODEL:-claude-opus-5}"
 
+# A SCENARIO'S JUDGED CRITERIA ARE AUDITED TOO, and they are not free. probe.py
+# judges with check.check, so a scenario carrying `judge:` entries costs one
+# model call per criterion per candidate on top of the generation — which is the
+# price of auditing the whole verdict rather than the regex half of it. Set to
+# replay:<dir> to audit only the patterns against verdicts already recorded.
+export E2E_LLM_JUDGE="${E2E_LLM_JUDGE:-live}"
+
 if [[ "${MARGINCE_E2E_LLM_GUARDS:-0}" != "1" ]]; then
   cat >&2 <<'MSG'
 e2e-llm-guards is opt-in: it drives a real model and bills real tokens.

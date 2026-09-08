@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer explicitly states it has no visibility of Mai's availability and hands the slots to her to confirm.",
+  "model": "claude-opus-5",
+  "criterion": "Criterion 2. The answer tells the reader that Mai Nguyen's own availability is not known here — by saying it can only see the host's calendar, by naming the limit, or by handing the slots over for her to confirm, pick or be asked. Answer no if the answer offers times and says nothing at all about her side, which is the defect this criterion exists for.",
+  "answer": "Your openings next week:\n- Tuesday 10:00–10:45\n- Wednesday 14:00–14:45\n\nI have no visibility of Mai's availability, so Mai will need to confirm which one suits her."
+}

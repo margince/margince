@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer frames everything as a dry-run preview in the conditional ('would create', 'would skip') and explicitly states nothing has been written yet, awaiting confirmation.",
+  "model": "claude-opus-5",
+  "criterion": "Criterion 1. The answer reports what the import would do before anything is written, and never tells the reader that the rows were created, imported, added or are now live. A preview stated in the future or the conditional — 'this would create three companies', '3 rows will be created once you confirm', 'nothing has been written yet' — is exactly right: answer yes. Answer no if the answer reports the import as already done.",
+  "answer": "I ran this as a dry run first rather than writing anything, so here is what the import would do before it does it.\n\n**Would create (3)**\n- Nordwind Logistik GmbH, Rostock, 51-200\n- Elbmarsch Systeme AG, Hamburg, 11-50\n- Alpenblick Sensorik GmbH, München, 11-50\n\n**Would skip (1)** — the third row has no name at all, only Köln and a size, and the import will not create a company without one.\n\nNothing has been written so far. Say the word and I will commit it."
+}

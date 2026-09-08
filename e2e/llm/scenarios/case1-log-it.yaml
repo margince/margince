@@ -51,32 +51,21 @@ must_mention:
   # Criterion 8: the one stated commitment, not the topic beside it.
   - "Preisliste|price list|pricing"
 
-must_not_mention:
-  # The packaging question was DISCUSSED and nobody promised anything about it.
-  # Reporting it as a commitment is the failure this transcript is shaped for.
-  #
-  # THREE LITERAL PHRASINGS WERE NOT THE CLAIM, they were three ways of writing
-  # it: "committed to sending packaging samples" puts a word between the verb and
-  # the noun, "promised packaging options" never reaches the German spelling, and
-  # "Verpackung: von Lars zugesagt" says it in the language the transcript is in.
-  # The claim is what is forbidden, in either order.
-  #
-  # ONLY A COMMITMENT. Recording that packaging was raised is what logging the
-  # transcript MEANS, and proposing to pick it up next week is a suggestion
-  # rather than a promise — so the verbs here are verbs of undertaking, and the
-  # run to them refuses to cross a negation: "packaging was discussed and nothing
-  # was promised about it" is the answer that got criterion 8 right.
-  - "(?:commit\w*|promis\w*|zusag\w*|zugesagt|agreed[^.;!?\n]{0,15}to|undertook|undertaken|action item|owes?\b)(?:(?!\b(?:not|no|nothing|never|nobody|none|kein\w*|nichts|nie)\b)[^.;!?\n]){0,40}(?:packaging|Verpackung)|(?:packaging|Verpackung)(?:(?!\b(?:not|no|nothing|never|nobody|none|kein\w*|nichts|nie)\b)[^.;!?\n]){0,40}(?:commit\w*|promis\w*|zusag\w*|zugesagt|agreed|undertook|undertaken|action item|owed?\b)"
-  # CRITERION 14, and the sentence the run of 2026-08-25 wrote: "nothing is
-  # pending approval", said into a workspace where two proposals are waiting.
-  # The seed asserts exactly those two before it exits, so this claim is false in
-  # case 1's world whenever it is made.
-  #
-  # A CLAIM ABOUT THE QUEUE, not about this meeting's own writes. Both writes
-  # here execute outright, so "nothing from this transcript needed approval" is
-  # true and stays green: the run to the state verb refuses to cross a word that
-  # scopes it to this errand.
-  - "(?:nothing|none|no items?|no approvals?|no proposals?)(?:(?!\b(?:this|these|that|here|today|from|about|of the meeting|needed|required|need)\b)[^.;!?\n]){0,30}(?:is |are |)(?:currently |still |)(?:pending|awaiting|outstanding|waiting)[^.;!?\n]{0,25}(?:approv|confirm|sign-?off|decision)|(?:approval|decision)s? queue is empty"
+# BOTH [M] CRITERIA ARE SEMANTIC, so both are judged and this case forbids
+# nothing by regex.
+#
+# Criterion 8 asks whether a topic was reported as a promise, which is a
+# question about what the sentence CLAIMS: "committed to sending packaging
+# samples", "agreed to send packaging options" and "Verpackung: von Lars
+# zugesagt" are one claim in three registers and were shipped as three literal
+# strings, then as a verb list with a negation guard so that "packaging was
+# discussed and nothing was promised" — the correct answer — stayed green.
+# Criterion 14 asks whether a denial about the approval queue is a denial about
+# THIS meeting's own writes (true, and correct) or about the workspace (false,
+# and the failure the 2026-08-25 run shipped). Neither distinction is a string.
+judge:
+  - "Criterion 8. The answer reports only what was actually promised in the meeting. The transcript carries one commitment — Lars will send the price list by Friday — and one topic raised with nothing promised about it, packaging. Answer no if the answer reports packaging as a commitment, promise, agreement, undertaking or action item by anyone. Recording that packaging was raised or discussed, or proposing to pick it up next week, is what logging the transcript means and is not a promise: answer yes."
+  - "Criterion 14. The answer never tells the reader that nothing is waiting for approval, that the approval queue is empty, or anything else denying that work is pending in this workspace — two proposals are pending in it. A statement scoped to this meeting's own writes ('nothing from this transcript needed approval', 'both entries were saved outright') is true: answer yes. An answer that says nothing about approvals at all is also a yes; this criterion forbids a false all-clear, it does not require a report."
 
 runs: 3
 pass_at: 2

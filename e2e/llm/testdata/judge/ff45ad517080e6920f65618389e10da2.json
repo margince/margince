@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer attributes the October escalation to the post-mortem note and says the record does not bear it out, never adopting an October event as its own fact nor inventing a second complaint.",
+  "model": "claude-opus-5",
+  "criterion": "Criterion 3. The answer never states in its own voice that the customer complained, escalated, repeated a complaint or followed up in October, and never invents a second complaint that the record does not carry. Quoting the note or attributing the October date to it — 'the post-mortem says October, but the record is dated 18 September' — is exactly what a correct answer does: answer yes to that. Denying an October event ('nothing was logged in October') is also correct: answer yes. Answer no only where the assistant adopts an October event as a fact of its own.",
+  "answer": "Yes — three accounts, all autumn 2025. Reply Deutschland complained on 18 September 2025. The post-mortem note on the Reply Deutschland case puts the escalation in October, which the record does not bear out. valantic AG and Koerber Digital saw the same thing on 4 November 2025."
+}
