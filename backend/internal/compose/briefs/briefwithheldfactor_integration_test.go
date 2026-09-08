@@ -62,9 +62,59 @@ func TestABriefThatReadEveryFactorOmitsNone(t *testing.T) {
 	if err != nil {
 		t.Fatalf("snapshot for a caller holding the edge grant: %v", err)
 	}
+	// Empty AND non-nil, checked separately. len() cannot tell the two apart,
+	// and the distinction is the point: nil marshals to `null` under a field
+	// documented never to be one, so a client would have to decide for itself
+	// whether the server meant "nothing withheld" or "not told".
+	if seeing.FactorsOmitted == nil {
+		t.Error("a run that read everything omits nil, want an empty list — the two are different " +
+			"answers on the wire, and only one of them is the one this run has to give")
+	}
 	if len(seeing.FactorsOmitted) != 0 {
 		t.Errorf("a run that read everything omits %v, want nothing — if this names warmth too, "+
 			"the sibling test proves the caller was refused rather than the factor withheld",
 			seeing.FactorsOmitted)
+	}
+}
+
+// The OTHER way to be refused the warmth factor.
+//
+// Warmth needs two grants, not one: the seat edge to learn who is on the deal,
+// and the person grant to score them. A caller holding the first and not the
+// second reads the stakeholders and then gets the same refusal for every one of
+// them — so the factor floors across the whole queue exactly as it does for an
+// edge-blind caller, and the reader is owed the same sentence.
+//
+// The two refusals are told apart by their SENTINEL, which is the contract the
+// whole tree holds: a row-scope miss answers ErrNotFound so existence stays
+// hidden, and an object denial answers ErrPermissionDenied. Reading them as one
+// thing is what let this case fall through — a stakeholder outside the caller's
+// rows should floor that deal and leave the rest alone.
+func TestABriefNamesWarmthWhenItMayReadSeatsButNotPeople(t *testing.T) {
+	b := setupBrief(t)
+
+	// The fixture seeds no seats, and this case only exists once a seat is read
+	// and then cannot be scored — so without one the loop below never runs and
+	// the test passes on an empty map.
+	seat := b.SeedPerson(t, "Ilse Stakeholder", &b.Rep1)
+	b.WsExec(t, `INSERT INTO relationship (kind, deal_id, person_id, source, captured_by)
+		VALUES ('deal_stakeholder', $1, $2, 'manual', 'human:x')`, b.dealA, seat)
+
+	perms := integration.RepPerms
+	perms.Objects = make(map[string]principal.ObjectGrant, len(integration.RepPerms.Objects))
+	for object, grant := range integration.RepPerms.Objects {
+		if object == "person" {
+			continue
+		}
+		perms.Objects[object] = grant
+	}
+	run, err := b.engine.SnapshotRun(b.As(b.Rep1, []ids.UUID{b.Team1}, perms), briefClock)
+	if err != nil {
+		t.Fatalf("snapshot for a caller who may read seats but not people: %v", err)
+	}
+	if !slices.Contains(run.FactorsOmitted, "warmth") {
+		t.Errorf("the run omits %v, want warmth named — the caller reached every stakeholder and "+
+			"could score none of them, so the factor floored across the whole queue",
+			run.FactorsOmitted)
 	}
 }

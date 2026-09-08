@@ -181,7 +181,8 @@ func (e *BriefEngine) Rank(ctx context.Context, now time.Time) (BriefRanking, er
 	stakeholders := gathered.stakeholders
 	lineage := gathered.lineage
 
-	if err := e.resolveWarmth(ctx, now, facts, stakeholders); err != nil {
+	warmthReadable, err := e.resolveWarmth(ctx, now, facts, stakeholders)
+	if err != nil {
 		return BriefRanking{}, err
 	}
 
@@ -226,7 +227,7 @@ func (e *BriefEngine) Rank(ctx context.Context, now time.Time) (BriefRanking, er
 		RevenueNormMinor:    revenueNorm,
 		RevenueNormCurrency: gathered.revenueNormCurrency,
 		AsOf:                now,
-		FactorsOmitted:      omittedFactors(gathered),
+		FactorsOmitted:      omittedFactors(gathered, warmthReadable),
 	}, nil
 }
 

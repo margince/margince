@@ -96,8 +96,11 @@ type ReadBriefResult struct {
 	// Items is never null on the wire. An agent reading `null` has to decide
 	// whether it means "nothing is queued" or "the queue was not read".
 	Items []BriefItem `json:"items"`
-	// FactorsOmitted names the ranking factors this run had no input for, and
-	// is never null for the same reason Items is not.
+	// FactorsOmitted names the ranking factors this run had no input for. Never
+	// null, and normalized in Handle beside Items rather than trusted from the
+	// reader: the promise is a property of this wire, and a seam returning a
+	// zero-value run would otherwise serve `null` under a field documented
+	// never to be one.
 	//
 	// It is served rather than withheld, unlike the revenue base above: that
 	// one explains a number the agent already has normalized, while this one
@@ -228,6 +231,9 @@ func (t readBrief) Handle(ctx context.Context, in json.RawMessage) (json.RawMess
 	// be one.
 	if result.Items == nil {
 		result.Items = []BriefItem{}
+	}
+	if result.FactorsOmitted == nil {
+		result.FactorsOmitted = []string{}
 	}
 	// The queue is CONTENT built out of material this call did not read the
 	// provenance of — deals, their activities, the relationships behind them,

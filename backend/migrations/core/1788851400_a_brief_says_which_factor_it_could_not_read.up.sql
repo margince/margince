@@ -23,6 +23,10 @@ ALTER TABLE brief_run
 -- silently drops, which is the failure this column exists to end.
 ALTER TABLE brief_run
     DROP CONSTRAINT IF EXISTS brief_run_factors_omitted_vocabulary;
+-- NOT VALID, and validated by the migration after this one. The runner wraps
+-- each file in ONE transaction, so a validating ADD CONSTRAINT here would scan
+-- every brief_run row under the ACCESS EXCLUSIVE that ALTER holds until commit,
+-- and brief writes would queue behind the scan.
 ALTER TABLE brief_run
     ADD CONSTRAINT brief_run_factors_omitted_vocabulary
-        CHECK (factors_omitted <@ ARRAY['warmth']::text[]);
+        CHECK (factors_omitted <@ ARRAY['warmth']::text[]) NOT VALID;

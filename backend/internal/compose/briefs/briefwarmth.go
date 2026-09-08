@@ -28,15 +28,18 @@ import (
 // omittedFactors names the ranking factors this run had no input for, as
 // opposed to the ones that scored low.
 //
-// Only warmth can be withheld today, and it is all-or-nothing: every seat on a
-// deal is a `deal_stakeholder` edge, so a caller without that grant reads no
-// stakeholders for ANY deal. That is why it is a property of the run rather
-// than of an item, and why one refused read omits the factor outright instead
-// of leaving a queue where some deals were scored with it and some without.
+// Only warmth can be withheld today, and it is all-or-nothing whichever of its
+// two reads is refused. Every seat on a deal is a `deal_stakeholder` edge, so a
+// caller without that grant reads no stakeholders for ANY deal; and a caller
+// without the person grant gets the same answer for every stakeholder they do
+// reach. Either way the factor has no input anywhere, which is why this is a
+// property of the run rather than of an item, and why it omits the factor
+// outright instead of leaving a queue where some deals were scored with it and
+// some without.
 // Empty rather than nil: "nothing was withheld" is an ANSWER, and the column
 // storing it is NOT NULL for the same reason the wire field is always present.
-func omittedFactors(gathered briefFacts) []string {
-	if gathered.seatsReadable {
+func omittedFactors(gathered briefFacts, warmthReadable bool) []string {
+	if gathered.seatsReadable && warmthReadable {
 		return []string{}
 	}
 	return []string{string(crmcontracts.Warmth)}
@@ -78,11 +81,21 @@ func seatEvidenceBound(ctx context.Context) (args []any, clause string, admitted
 // the queue is still ranked on what this reader may know, deal by deal, the way
 // every other factor is.
 //
-// A caller refused the seat edge OUTRIGHT is the different case, and it is not
-// answered here: the factor has no input for ANY deal, so the whole queue
-// reorders. That one is named in BriefRanking.FactorsOmitted rather than
-// floored in silence — see omittedFactors.
-func (e *BriefEngine) resolveWarmth(ctx context.Context, now time.Time, facts map[ids.UUID]briefDealFacts, stakeholders map[ids.UUID][]ids.UUID) error {
+// An OUTRIGHT refusal is the different case: the factor then has no input for
+// ANY deal, so the whole queue reorders and the reader is owed the fact. There
+// are two ways to be refused outright and both are reported — the seat edge
+// (seatEvidenceBound, above) and the person grant this read needs, which is
+// what `readable` answers.
+//
+// The two are told apart by their sentinel, which is the contract the whole
+// tree holds: a row-scope miss answers ErrNotFound so existence stays hidden,
+// and an object denial answers ErrPermissionDenied. Reading them as one thing
+// is what let a caller with no person grant get a silently cold queue.
+func (e *BriefEngine) resolveWarmth(
+	ctx context.Context, now time.Time,
+	facts map[ids.UUID]briefDealFacts, stakeholders map[ids.UUID][]ids.UUID,
+) (readable bool, err error) {
+	readable = true
 	cache := map[ids.UUID]people.RelationshipStrength{}
 	for dealID, persons := range stakeholders {
 		f := facts[dealID]
@@ -92,11 +105,18 @@ func (e *BriefEngine) resolveWarmth(ctx context.Context, now time.Time, facts ma
 				var err error
 				st, err = e.strength.PersonStrength(ctx, ids.From[ids.PersonKind](personID), now)
 				switch {
-				case errors.Is(err, apperrors.ErrNotFound), errors.Is(err, apperrors.ErrPermissionDenied):
-					// Invisible to this caller: no strength to disclose.
+				case errors.Is(err, apperrors.ErrNotFound):
+					// Outside this caller's row scope: no strength to disclose,
+					// and the queue is still ranked on what they may know.
+					st = people.RelationshipStrength{}
+				case errors.Is(err, apperrors.ErrPermissionDenied):
+					// No person grant at all. Every person on every deal answers
+					// the same way, so this is not one deal scoring low — it is
+					// the factor having nothing to read.
+					readable = false
 					st = people.RelationshipStrength{}
 				case err != nil:
-					return err
+					return false, err
 				}
 				cache[personID] = st
 			}
@@ -110,5 +130,5 @@ func (e *BriefEngine) resolveWarmth(ctx context.Context, now time.Time, facts ma
 		}
 		facts[dealID] = f
 	}
-	return nil
+	return readable, nil
 }
