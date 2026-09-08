@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 // DisqualifyLeadInput is why the lead is closed. Both fields are optional on
@@ -50,71 +51,63 @@ func (s *Store) DisqualifyLead(
 	ctx context.Context, id ids.LeadID, in DisqualifyLeadInput, opts ...WriteOption,
 ) (crmcontracts.Lead, error) {
 	options := collectWriteOptions(opts)
-	if err := auth.Require(ctx, "lead", principal.ActionDelete); err != nil {
+	if err := auth.Require(ctx, entityLead, principal.ActionDelete); err != nil {
 		return crmcontracts.Lead{}, err
 	}
-	active, err := s.activeColumns(ctx, "lead")
-	if err != nil {
-		return crmcontracts.Lead{}, err
-	}
-	var out crmcontracts.Lead
-	err = s.tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureWritable(ctx, tx, "lead", id.UUID); err != nil {
-			return err
-		}
-		// The row lock makes the status read and the update below one
-		// race-free unit.
-		if _, err := storekit.LockRow(ctx, tx, "lead", id.UUID, storekit.LiveOnly); err != nil {
-			return err
-		}
-		// The precondition, under the row lock the write takes: a caller that
-		// asked for this write only while nobody had touched the record gets
-		// that answered HERE rather than in a read that already committed.
-		if err := refuseIfHumanTouched(ctx, tx, "lead", id.UUID, options); err != nil {
-			return err
-		}
-		current, err := readLead(ctx, tx, id, storekit.LiveOnly, active)
-		if err != nil {
-			return err
-		}
-		if err := ensureDisqualifyReasonIfNamed(ctx, tx, in.ReasonID); err != nil {
-			return err
-		}
-		setBy, err := statusSetByFor(ctx)
-		if err != nil {
-			return err
-		}
-		if _, err := tx.Exec(ctx,
-			`UPDATE lead SET status = 'disqualified', status_set_by = $4, archived_at = now(), disqualify_reason_id = $2, disqualify_note = $3, `+
-				firstResponseSet+` WHERE id = $1 AND archived_at IS NULL`,
-			id, in.ReasonID, in.Note, setBy); err != nil {
-			return err
-		}
-		// A retired record carries no tags, the same rule the company and person
-		// archive paths hold. It matters here because an import files what it
-		// creates under one word: an undone run archives the lead, and a lead
-		// left tagged still answers a filter for the batch that was reversed.
-		if _, err := tx.Exec(ctx,
-			`DELETE FROM taggable WHERE entity_type = 'lead' AND entity_id = $1`, id); err != nil {
-			return fmt.Errorf("drop the lead's tags: %w", err)
-		}
-		after := map[string]any{leadStatusColumn: "disqualified"}
-		if in.ReasonID != nil {
-			after["disqualify_reason_id"] = *in.ReasonID
-		}
-		if in.Note != nil {
-			after["disqualify_note"] = *in.Note
-		}
-		auditID, err := storekit.Audit(ctx, tx, "archive", "lead", id.UUID,
-			map[string]any{leadStatusColumn: current.Status}, after)
-		if err != nil {
-			return err
-		}
-		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventLeadDisqualified{}); err != nil {
-			return err
-		}
-		out, err = readLead(ctx, tx, id, storekit.IncludeArchived, active)
-		return err
-	})
-	return out, err
+	return s.leadWrite(ctx, id,
+		func(tx pgx.Tx, active []fieldcatalog.Column) (crmcontracts.Lead, error) {
+			var out crmcontracts.Lead
+			// The row lock makes the status read and the update below one
+			// race-free unit.
+			if _, err := storekit.LockRow(ctx, tx, entityLead, id.UUID, storekit.LiveOnly); err != nil {
+				return out, err
+			}
+			// The precondition, under the row lock the write takes: a caller that
+			// asked for this write only while nobody had touched the record gets
+			// that answered HERE rather than in a read that already committed.
+			if err := refuseIfHumanTouched(ctx, tx, entityLead, id.UUID, options); err != nil {
+				return out, err
+			}
+			current, err := readLead(ctx, tx, id, storekit.LiveOnly, active)
+			if err != nil {
+				return out, err
+			}
+			if err := ensureDisqualifyReasonIfNamed(ctx, tx, in.ReasonID); err != nil {
+				return out, err
+			}
+			setBy, err := statusSetByFor(ctx)
+			if err != nil {
+				return out, err
+			}
+			if _, err := tx.Exec(ctx,
+				`UPDATE lead SET status = 'disqualified', status_set_by = $4, archived_at = now(), disqualify_reason_id = $2, disqualify_note = $3, `+
+					firstResponseSet+` WHERE id = $1 AND archived_at IS NULL`,
+				id, in.ReasonID, in.Note, setBy); err != nil {
+				return out, err
+			}
+			// A retired record carries no tags, the same rule the company and person
+			// archive paths hold. It matters here because an import files what it
+			// creates under one word: an undone run archives the lead, and a lead
+			// left tagged still answers a filter for the batch that was reversed.
+			if _, err := tx.Exec(ctx,
+				`DELETE FROM taggable WHERE entity_type = 'lead' AND entity_id = $1`, id); err != nil {
+				return out, fmt.Errorf("drop the lead's tags: %w", err)
+			}
+			after := map[string]any{leadStatusColumn: "disqualified"}
+			if in.ReasonID != nil {
+				after["disqualify_reason_id"] = *in.ReasonID
+			}
+			if in.Note != nil {
+				after["disqualify_note"] = *in.Note
+			}
+			auditID, err := storekit.Audit(ctx, tx, "archive", entityLead, id.UUID,
+				map[string]any{leadStatusColumn: current.Status}, after)
+			if err != nil {
+				return out, err
+			}
+			if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventLeadDisqualified{}); err != nil {
+				return out, err
+			}
+			return readLead(ctx, tx, id, storekit.IncludeArchived, active)
+		})
 }
