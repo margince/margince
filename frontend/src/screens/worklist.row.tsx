@@ -48,6 +48,7 @@ import {
 } from "./worklist.copy";
 import { DispositionVerbs, PutDownByThumb } from "./worklist.dispositions";
 import { WaitingEmailLine } from "./worklist.emailtitle";
+import { eyebrowKeyFor } from "./worklist.eyebrow";
 import { ReassignControl } from "./worklist.manager";
 import { PairDecision } from "./worklist.pair";
 import {
@@ -183,13 +184,11 @@ export function WorklistRow({
             also why it is first. The title line keeps the states that are
             about this row alone: overdue, unprepared. */}
         <span
-          className={
-            item.band === "now"
-              ? "t-eyebrow worklist-row-kind worklist-row-kind-now"
-              : "t-eyebrow worklist-row-kind"
-          }
+          className={`t-eyebrow worklist-row-kind${
+            item.band === "now" ? " worklist-row-kind-now" : ""
+          }`}
         >
-          {t(`worklist.category.${item.category}` as const)}
+          {t(eyebrowKeyFor(item))}
         </span>
         <div className="worklist-row-text">
           {/* A waiting EMAIL names itself with the canonical row — the same one
