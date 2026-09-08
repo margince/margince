@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"errors"
 	"strconv"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -177,11 +178,11 @@ func (e *WorkflowEngine) runOne(ctx context.Context, h workflow.Handler, ev work
 		// a DECLINED apply is the handler saying it looked and there was
 		// nothing to do. None is a dispatch failure.
 		//
-		// The declined arm matters most here: returning it would leave the bus
-		// entry unacked and redelivering forever — no dead-letter store yet —
-		// poisoning every sibling handler dispatched off the same event. That
-		// is the reason the Plan path already swallows its own decline, and
-		// the reason is the same on this side.
+		// The declined arm is the new one, and it is a skip rather than an
+		// error for the same reason the Plan path swallows its own decline:
+		// nothing went wrong. Returning it would put a healthy outcome in the
+		// subscriber's failure log, where a reader looking for real breakage
+		// would meet every lead a human claimed before routing ran.
 		//
 		// A real apply failure still surfaces, after its record committed.
 		return applyErr
@@ -297,7 +298,12 @@ func (e *WorkflowEngine) recordApplyOutcome(ctx context.Context, h workflow.Hand
 			// with its reason on the run, not a failure: nothing went wrong,
 			// and a reader asking why the lead is still unassigned gets the
 			// answer here rather than an empty successful run.
-			detail, err := reasonDetail(declinedApply.Reason)
+			// Held to the same bar as every other reason reaching this column,
+			// but not through sanitizedReason: that one collapses an unknown
+			// error to a generic phrase, which is right for a FAILURE and
+			// destroys the only thing a decline is for. declinedReason keeps
+			// the sentence and refuses the shapes a leak arrives in.
+			detail, err := reasonDetail(declinedReason(declinedApply.Reason))
 			if err != nil {
 				return err
 			}
@@ -452,3 +458,36 @@ func sanitizedReason(err error) string {
 		return "the action could not be completed"
 	}
 }
+
+// declinedReason bounds what a handler's decline may write to
+// workflow_run.detail.
+//
+// The column is read verbatim by anybody holding automation:read, and
+// workflow.Declined takes a plain string from a module — so this is the one
+// place standing between a handler and that reader. sanitizedReason is the
+// wrong tool: it answers a generic phrase for anything it does not recognise,
+// which is correct for a failure whose text may be a pgx error, and would
+// erase the sentence a decline exists to deliver.
+//
+// So: keep the sentence, refuse the shapes a database internal arrives in. A
+// SQLSTATE, a quoted identifier, or a pgx error's tell means somebody passed an
+// error's message where a written reason belongs, and the generic phrase is the
+// honest answer for that. Length is bounded for the same reason.
+func declinedReason(reason string) string {
+	const generic = "the automation found nothing to do"
+	trimmed := strings.TrimSpace(reason)
+	if trimmed == "" || len(trimmed) > declinedReasonMax {
+		return generic
+	}
+	for _, tell := range []string{"SQLSTATE", "pq:", "pgx:", "ERROR:", `"`, "\n"} {
+		if strings.Contains(trimmed, tell) {
+			return generic
+		}
+	}
+	return trimmed
+}
+
+// declinedReasonMax is a sentence, not a paragraph: a reason longer than this
+// is prose nobody reads on a run row, or a message that came from somewhere
+// other than an author.
+const declinedReasonMax = 160
