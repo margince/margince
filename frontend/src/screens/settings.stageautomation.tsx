@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import type { ReactElement } from "react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -14,6 +15,7 @@ import {
 import type { Locale, Translator } from "../i18n";
 import { useLocale, useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
+import { StageRulesCard } from "./settings.stagerules";
 
 type TransitionRecord = components["schemas"]["StageTransitionRecord"];
 
@@ -24,12 +26,13 @@ type TransitionRecord = components["schemas"]["StageTransitionRecord"];
 const DEFAULT_WINDOW_DAYS = 30;
 
 /**
- * What each stage transition has earned.
+ * What each stage transition has earned, and what each is allowed to do.
  *
- * READ-ONLY, and that is the whole design. This page exists so a person can
- * decide whether a transition is trustworthy enough to move deals by itself —
- * and a page that both showed the evidence and flipped the switch would invite
- * the flip before the reading.
+ * THE TABLE IS READ-ONLY, and that is the whole design. It exists so a person
+ * can decide whether a transition is trustworthy enough to move deals by
+ * itself, and a control in every row would invite the flip before the reading.
+ * The switches live BELOW it, in their own section, reached after the evidence
+ * rather than beside it.
  *
  * Every rate is a share of ANSWERED proposals, and the answered count is drawn
  * beside them rather than under a tooltip: a transition with a perfect
@@ -77,45 +80,25 @@ export function StageAutomationCard() {
   // or that FAILED means nothing of the kind, and drawing the same words for
   // all three tells somebody to wait for numbers that were refused or never
   // asked for.
-  if (pipelines.isError || report.isError) {
-    return (
-      <Panel title={t("stageAutomation.title")}>
-        <PanelBody>
-          <Callout tone="warn">
-            {problemMessageOf(pipelines.error ?? report.error, t)}
-          </Callout>
-        </PanelBody>
-      </Panel>
-    );
-  }
-  if (pipelines.isPending || (chosen !== "" && report.isPending)) {
-    return (
-      <Panel title={t("stageAutomation.title")}>
-        <PanelBody>
-          <BusyMark />
-        </PanelBody>
-      </Panel>
-    );
-  }
-  if (pipelines.data && pipelines.data.length === 0) {
-    return (
-      <Panel title={t("stageAutomation.title")}>
-        <PanelBody>
-          <EmptyState>{t("stageAutomation.noPipelines")}</EmptyState>
-        </PanelBody>
-      </Panel>
-    );
+  //
+  // Gathered into one helper because they are one question asked three ways —
+  // is there a report to draw — and inlining them put this component over the
+  // complexity ceiling once the rules card joined it.
+  const notYet = beforeTheReport({ pipelines, report, chosen }, t);
+  if (notYet) {
+    return notYet;
   }
 
   const rows = report.data?.data ?? [];
+  // The window the counts actually came over, named once. The rules card needs
+  // it to know whether a rule's own window matches — a rule measured over a
+  // different span cannot be judged from these rows.
+  const windowDays = report.data?.window_days ?? DEFAULT_WINDOW_DAYS;
   return (
     <Panel
       title={t("stageAutomation.title")}
       sub={t("stageAutomation.window", {
-        days: formatNumber(
-          report.data?.window_days ?? DEFAULT_WINDOW_DAYS,
-          locale,
-        ),
+        days: formatNumber(windowDays, locale),
       })}
     >
       <PanelBody>
@@ -156,11 +139,67 @@ export function StageAutomationCard() {
               <dt>{t("stageAutomation.observationDays")}</dt>
               <dd>{t("stageAutomation.observationHint")}</dd>
             </dl>
+            {/* The controls, after the evidence. Given the report's own rows
+                rather than fetching a second list of transitions: the two
+                would otherwise be able to disagree about which transitions
+                this pipeline has. */}
+            <StageRulesCard
+              pipelineId={chosen}
+              transitions={rows}
+              reportWindowDays={report.data?.window_days ?? DEFAULT_WINDOW_DAYS}
+            />
           </>
         )}
       </PanelBody>
     </Panel>
   );
+}
+
+/** The panel to draw when there is no report yet, or null when there is one. */
+function beforeTheReport(
+  state: {
+    pipelines: {
+      isError: boolean;
+      isPending: boolean;
+      error: unknown;
+      data?: unknown[];
+    };
+    report: { isError: boolean; isPending: boolean; error: unknown };
+    chosen: string;
+  },
+  t: Translator,
+): ReactElement | null {
+  const { pipelines, report, chosen } = state;
+  if (pipelines.isError || report.isError) {
+    return (
+      <Panel title={t("stageAutomation.title")}>
+        <PanelBody>
+          <Callout tone="warn">
+            {problemMessageOf(pipelines.error ?? report.error, t)}
+          </Callout>
+        </PanelBody>
+      </Panel>
+    );
+  }
+  if (pipelines.isPending || (chosen !== "" && report.isPending)) {
+    return (
+      <Panel title={t("stageAutomation.title")}>
+        <PanelBody>
+          <BusyMark />
+        </PanelBody>
+      </Panel>
+    );
+  }
+  if (pipelines.data && pipelines.data.length === 0) {
+    return (
+      <Panel title={t("stageAutomation.title")}>
+        <PanelBody>
+          <EmptyState>{t("stageAutomation.noPipelines")}</EmptyState>
+        </PanelBody>
+      </Panel>
+    );
+  }
+  return null;
 }
 
 // A rate, or a dash.
