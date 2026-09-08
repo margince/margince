@@ -2585,6 +2585,9 @@ export const vi = {
   "brief.weekly.scorecard.closeDateSound": "Đã ghi ngày chốt cố định",
   "brief.weekly.scorecard.forecastMoves": "Nâng dự báo",
   "brief.weekly.scorecard.forecastMovesBasis": "{down} hạ dự báo",
+  "brief.weekly.scorecard.unreconstructible": "Giao dịch không dựng lại được",
+  "brief.weekly.scorecard.unreconstructibleBasis":
+    "Tuần của chúng nằm sau một lần xóa, nên các số trên là mức tối thiểu",
   // Tuần tới. Bản tổng kết đã đóng băng nói điều đã xảy ra; đây là phần duy nhất
   // của trang đó mà vẫn còn ai đó thay đổi được.
   "plan.title": "Lập kế hoạch tuần của bạn",

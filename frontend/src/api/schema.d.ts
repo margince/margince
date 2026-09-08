@@ -30973,6 +30973,19 @@ export interface components {
              */
             forecast_up: number;
             forecast_down: number;
+            /**
+             * @description Deals left OUT of the four population counts above because their state at the week's
+             *     closing instant could not be rebuilt: the audit images describing their week sit
+             *     behind an erasure, and the append-only spine means reading them would put back
+             *     exactly what a scrub certified destroyed.
+             *
+             *     Nonzero means `open` and the three coverage counts are a floor rather than a total,
+             *     and a reader must be told so. Zero is the ordinary answer. ABSENT means the week was
+             *     scored before this reconstruction existed, which is a third fact again: those counts
+             *     are the current-state figures they always were, and nothing can retroactively make
+             *     them week-end facts.
+             */
+            unreconstructible?: number;
         };
         /**
          * @description One rep's week, as it was measured when the week closed. Every count is as-of `as_of`,

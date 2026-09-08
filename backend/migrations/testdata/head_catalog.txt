@@ -6259,6 +6259,7 @@ public.weekly_review_scorecard.deal_median_days_in_stage integer gen=- def=-
 public.weekly_review_scorecard.deal_multi_threaded integer gen=- def=-
 public.weekly_review_scorecard.deal_open integer gen=- def=-
 public.weekly_review_scorecard.deal_regressions integer gen=- def=-
+public.weekly_review_scorecard.deal_unreconstructible integer gen=- def=-
 public.weekly_review_scorecard.deal_with_next_step integer gen=- def=-
 public.weekly_review_scorecard.has_deal_block boolean NOT NULL gen=- def=-
 public.weekly_review_scorecard.has_lead_block boolean NOT NULL gen=- def=-

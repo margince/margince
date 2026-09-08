@@ -36166,6 +36166,18 @@ type WeeklyScorecardDealBlock struct {
 	Open        int `json:"open"`
 	Regressions int `json:"regressions"`
 
+	// Unreconstructible Deals left OUT of the four population counts above because their state at the week's
+	// closing instant could not be rebuilt: the audit images describing their week sit
+	// behind an erasure, and the append-only spine means reading them would put back
+	// exactly what a scrub certified destroyed.
+	//
+	// Nonzero means `open` and the three coverage counts are a floor rather than a total,
+	// and a reader must be told so. Zero is the ordinary answer. ABSENT means the week was
+	// scored before this reconstruction existed, which is a third fact again: those counts
+	// are the current-state figures they always were, and nothing can retroactively make
+	// them week-end facts.
+	Unreconstructible *int `json:"unreconstructible,omitempty"`
+
 	// WithNextStep Open deals carrying an open task. A count beside `open`, never a rate.
 	WithNextStep int `json:"with_next_step"`
 }

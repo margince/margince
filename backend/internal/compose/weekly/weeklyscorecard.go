@@ -26,6 +26,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -87,6 +88,20 @@ type DealBlock struct {
 	// Category moves, each deal counted ONCE however many times it was edited.
 	ForecastUp   int
 	ForecastDown int
+
+	// Deals whose state at the closing instant could not be reconstructed,
+	// because the audit images describing their week sit behind an erasure.
+	//
+	// Reported rather than absorbed. These deals are absent from every population
+	// count above, so a reader who is not told would take a smaller Open than the
+	// rep really had for the whole truth. Nonzero means the counts beside it are a
+	// floor, and the panel says so.
+	//
+	// A POINTER, because nil is a third fact and not a zero. A scorecard frozen
+	// before this reconstruction existed cannot say what it failed to rebuild —
+	// its counts are the current-state figures they always were — and folding
+	// that to 0 would claim those old weeks were fully reconstructed.
+	Unreconstructible *int
 }
 
 // multiThreadWindow is how far back a deal's second contact may be and still
@@ -333,87 +348,6 @@ func forecastRank(column string) string {
 		WHEN 'pipeline' THEN 1 WHEN 'omitted' THEN 0 ELSE -1 END`
 }
 
-// dealScoreSQL is the deal block's one statement.
-//
-// One statement rather than ten, because ten counts read at ten moments
-// describe ten slightly different weeks. Lifted out of the function so the
-// arithmetic beside it stays readable at a glance; the format verbs are bound
-// at the single call site below.
-const dealScoreSQL = `
-		WITH mine AS (
-		  SELECT d.id, d.stage_id, d.pipeline_id, d.expected_close_date,
-		         d.close_date_provisional, d.archived_at, d.status
-		    FROM deal d
-		   WHERE d.owner_id = $%[3]d AND (%[8]s)),
-		open_deals AS (SELECT * FROM mine WHERE status = 'open' AND archived_at IS NULL),
-		-- Stage moves inside the window, with both ends' positions resolved.
-		-- A move whose two stages sit in different pipelines resolves to NULL
-		-- on one side and is counted as neither direction.
-		moves AS (
-		  SELECT h.deal_id, h.changed_at, h.from_stage_id,
-		         fs."position" AS from_pos, ts."position" AS to_pos
-		    FROM deal_stage_history h
-		    JOIN mine ON mine.id = h.deal_id
-		    LEFT JOIN stage fs ON fs.id = h.from_stage_id
-		         AND fs.pipeline_id = mine.pipeline_id
-		    LEFT JOIN stage ts ON ts.id = h.to_stage_id
-		         AND ts.pipeline_id = mine.pipeline_id
-		   WHERE h.changed_at >= $%[1]d AND h.changed_at < $%[2]d
-		     AND h.to_stage_id IS DISTINCT FROM h.from_stage_id),
-		-- How long the deal sat in the stage it LEFT: this move's moment less
-		-- the previous move into that stage. A deal whose prior move is outside
-		-- the window still resolves, because the lookup is not windowed.
-		dwell AS (
-		  SELECT m.deal_id,
-		         EXTRACT(epoch FROM m.changed_at - (
-		           SELECT max(p.changed_at) FROM deal_stage_history p
-		            WHERE p.deal_id = m.deal_id AND p.changed_at < m.changed_at
-		         )) / 86400 AS days
-		    FROM moves m
-		   WHERE m.from_stage_id IS NOT NULL),
-		-- Category moves, one row per deal: a rep who corrected a typo three
-		-- times did not downgrade three times. The direction is the deal's
-		-- FIRST and LAST category inside the window, compared once.
-		cat AS (
-		  SELECT a.entity_id,
-		         (array_agg(a.before->>'forecast_category'
-		           ORDER BY a.occurred_at, a.id))[1] AS first_cat,
-		         (array_agg(a.after->>'forecast_category'
-		           ORDER BY a.occurred_at DESC, a.id DESC))[1] AS last_cat
-		    FROM audit_log a
-		    JOIN mine ON mine.id = a.entity_id
-		   WHERE a.entity_type = 'deal'
-		     AND a.occurred_at >= $%[1]d AND a.occurred_at < $%[2]d
-		     AND a.before->>'forecast_category' IS DISTINCT FROM a.after->>'forecast_category'
-		   GROUP BY a.entity_id)
-		SELECT
-		  EXISTS (SELECT 1 FROM open_deals) OR EXISTS (SELECT 1 FROM moves),
-		  (SELECT count(*) FROM moves WHERE from_pos IS NOT NULL AND to_pos > from_pos),
-		  (SELECT count(*) FROM moves WHERE from_pos IS NOT NULL AND to_pos < from_pos),
-		  (SELECT round(percentile_cont(0.5) WITHIN GROUP (ORDER BY days))::int
-		     FROM dwell WHERE days IS NOT NULL),
-		  (SELECT count(*) FROM open_deals o
-		    WHERE EXISTS (
-		      SELECT 1 FROM activity_link tl
-		        JOIN activity task ON task.id = tl.activity_id
-		       WHERE tl.deal_id = o.id AND task.kind = 'task'
-		         AND task.archived_at IS NULL AND NOT task.is_done)),
-		  (SELECT count(*) FROM open_deals),
-		  (SELECT count(*) FROM open_deals o
-		    WHERE (SELECT count(DISTINCT pl.person_id)
-		             FROM activity_link dl
-		             JOIN activity act ON act.id = dl.activity_id
-		             JOIN activity_link pl ON pl.activity_id = dl.activity_id
-		            WHERE dl.deal_id = o.id AND pl.person_id IS NOT NULL
-		              AND act.archived_at IS NULL
-		              AND act.occurred_at >= $%[4]d) >= $%[5]d),
-		  (SELECT count(*) FROM open_deals o
-		    WHERE o.expected_close_date IS NOT NULL
-		      AND NOT o.close_date_provisional
-		      AND o.expected_close_date >= (timezone($%[9]d, $%[2]d))::date),
-		  (SELECT count(*) FROM cat WHERE %[6]s > %[7]s),
-		  (SELECT count(*) FROM cat WHERE %[6]s < %[7]s)`
-
 // scoreDeals reads the pipeline block, or reports it absent.
 //
 // ABSENT means the rep had no open deal AND no stage change in the window —
@@ -441,6 +375,10 @@ func scoreDeals(
 	sincePos := arg(end.Add(-multiThreadWindow))
 	stakeholdersPos := arg(minStakeholders)
 	zonePos := arg(zone)
+	// The erasure boundary's vocabulary, bound once and read by the rewind.
+	// privacy owns the list; a literal here would be a second copy of the one
+	// rule where almost-the-same resurrects what was certified destroyed.
+	verbsPos := arg(privacy.ScrubVerbs())
 	scope, err := auth.ScopeClauseFor(ctx, "deal", "d", arg)
 	if err != nil {
 		return nil, err
@@ -456,10 +394,13 @@ func scoreDeals(
 	var median *int
 	err = tx.QueryRow(ctx, fmt.Sprintf(dealScoreSQL,
 		startPos, endPos, userPos, sincePos, stakeholdersPos,
-		forecastRank("last_cat"), forecastRank("first_cat"), scope, zonePos), args...).
+		forecastRank("last_cat"), forecastRank("first_cat"), scope, zonePos,
+		weekEndDealsSQL(fmt.Sprintf("$%d", endPos), fmt.Sprintf("$%d", verbsPos))),
+		args...).
 		Scan(&present, &block.Advances, &block.Regressions, &median,
 			&block.WithNextStep, &block.Open, &block.MultiThreaded,
-			&block.CloseDateSound, &block.ForecastUp, &block.ForecastDown)
+			&block.CloseDateSound, &block.ForecastUp, &block.ForecastDown,
+			&block.Unreconstructible)
 	if err != nil {
 		return nil, fmt.Errorf("weekly: scoring the week's deals: %w", err)
 	}
