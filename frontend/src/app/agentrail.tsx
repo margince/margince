@@ -1465,6 +1465,12 @@ export function AgentRail({
           <span className="arline">
             <RailLine line={shown} />
           </span>
+        </span>
+        {/* The block's last line, and it exists whether or not there is a figure
+            on it: the chevron reports whether the panel is open, which is a fact
+            about the block rather than about the spend, so a row that came and
+            went with the money would take the disclosure with it. */}
+        <span className="arlast">
           {/* The spend sits in the bar and not only in the panel: it is the one
               figure somebody is accountable for, and a number nobody opens a
               panel to see is a number nobody sees. Absent when this seat may not
@@ -1482,12 +1488,12 @@ export function AgentRail({
               <span className="arscope">{LABELS.spendScope}</span>
             </span>
           )}
+          <ChevronRight
+            size={15}
+            className={open ? "archev open" : "archev"}
+            aria-hidden="true"
+          />
         </span>
-        <ChevronRight
-          size={15}
-          className={open ? "archev open" : "archev"}
-          aria-hidden="true"
-        />
       </div>
     </section>
   );

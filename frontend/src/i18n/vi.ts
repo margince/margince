@@ -203,7 +203,7 @@ export const vi = {
   "shell.companyLogoAria": "Trang chủ {company}, vận hành bởi Margince",
   "shell.poweredBy": "Vận hành bởi Margince",
   "shell.poweredByPrefix": "Vận hành bởi",
-  "shell.searchEverything": "Tìm kiếm mọi thứ…",
+  "shell.searchEverything": "Tìm hoặc hỏi Margince",
   "shell.breadcrumbAria": "Đường dẫn",
   "shell.license.none": "Chưa có giấy phép",
   "shell.license.refused": "Giấy phép bị từ chối",
@@ -276,7 +276,7 @@ export const vi = {
   "context.empty": "Chưa có gì liên quan.",
 
   "palette.aria": "Bảng lệnh",
-  "palette.placeholder": "Đi tới, hoặc hỏi bất cứ điều gì…",
+  "palette.placeholder": "Tìm mọi thứ hoặc nhận câu trả lời từ Margince",
   "palette.empty": "Không có kết quả.",
   "palette.askAi": "Hỏi AI: “{query}”",
   "palette.typeScreen": "Màn hình",

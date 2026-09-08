@@ -204,7 +204,7 @@ export const en = {
   "shell.companyLogoAria": "{company} home, powered by Margince",
   "shell.poweredBy": "Powered by Margince",
   "shell.poweredByPrefix": "Powered by",
-  "shell.searchEverything": "Search everything…",
+  "shell.searchEverything": "Find or ask Margince",
   "shell.breadcrumbAria": "Breadcrumb",
   "shell.license.none": "No license",
   "shell.license.refused": "License refused",
@@ -291,7 +291,7 @@ export const en = {
   "context.empty": "Nothing related yet.",
 
   "palette.aria": "Command palette",
-  "palette.placeholder": "Jump to, or ask anything…",
+  "palette.placeholder": "Find everything or get answers from Margince",
   "palette.empty": "No matches.",
   "palette.askAi": "Ask AI: \u201c{query}\u201d",
   "palette.typeScreen": "Screen",

@@ -1,13 +1,13 @@
 import {
-  BarChart3,
   Briefcase,
   Building2,
+  ChartNoAxesCombined,
+  Handshake,
   Home,
-  Kanban,
-  ListFilter,
+  Layers2,
+  ListTodo,
   type LucideIcon,
   Sparkles,
-  Sun,
   UserPlus,
   Users,
 } from "lucide-react";
@@ -91,14 +91,16 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       // and the board this route draws is a VIEW of that record type rather
       // than a fourth kind of thing. So it closes the group it belongs to.
       //
-      // The board, not a bullseye: this route opens a column per stage with the
-      // deals standing in them, and `Target` drew a goal rather than a board. A
+      // The agreement, not the furniture it is filed in: a deal is a bargain
+      // two parties strike, and a board is one way this screen happens to draw
+      // them. `Handshake` is already the deal glyph where a search result names
+      // one (screens/tagresult.tsx), so the product draws this noun once. A
       // reader scanning five glyphs on a phone bar with no labels under them
       // has only the shape to go on.
       {
         screen: "deals",
         labelKey: "nav.deals",
-        icon: Kanban,
+        icon: Handshake,
         aliases: ["pipeline"],
       },
     ],
@@ -110,7 +112,10 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       // person: decisions to answer, tasks to finish and duplicates to merge are
       // lanes inside it. It leads the group because it is what a reader opens
       // when the question is "what needs me?".
-      { screen: "worklist", labelKey: "nav.today", icon: Sun },
+      // A checklist rather than a sunrise: what this surface holds is the work
+      // that waits on a person, and `Sun` says "morning" — which is the Brief's
+      // claim, not this one.
+      { screen: "worklist", labelKey: "nav.today", icon: ListTodo },
       // The body of work a deal is about. It starts during the deal and
       // outlives close-won, so what it belongs to is the work rather than the
       // record of the sale: a project in delivery has no deal column to stand
@@ -124,15 +129,20 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       // twice gets renamed once.
       //
       // A funnel is the glyph every CRM draws a sales pipeline with, and the
-      // deals board is a row on this list; a filtered list says what this
-      // surface produces and cannot be read as a second door to that board.
-      { screen: "filters", labelKey: "filters.title", icon: ListFilter },
+      // deals board is a row on this list; stacked layers say what this surface
+      // produces — a view laid over a list — and cannot be read as a second
+      // door to that board.
+      { screen: "filters", labelKey: "filters.title", icon: Layers2 },
     ],
   },
   {
     headingKey: "nav.group.intelligence",
     items: [
-      { screen: "analytics", labelKey: "nav.analytics", icon: BarChart3 },
+      {
+        screen: "analytics",
+        labelKey: "nav.analytics",
+        icon: ChartNoAxesCombined,
+      },
       { screen: "ai", labelKey: "nav.ai", icon: Sparkles },
     ],
   },
@@ -190,12 +200,23 @@ export const GRIDDED_RECORD_SCREENS: ReadonlySet<Screen> = new Set([
 ]);
 
 // Screens that keep the same reading column with NO id, because they are not
-// records and never carry one. Brief is here for the reason the two records
-// above it are: it reads down — a briefing in sentences beside a rail of
-// context — and its decision cards carry the drafted prose somebody has to read
-// before they can decide. Uncapped, those cards ran the full width of a wide
-// display with the text hugging the left edge.
-export const GRIDDED_SCREENS: ReadonlySet<Screen> = new Set(["brief"]);
+// records and never carry one. Every one of them reads DOWN: Brief is a
+// briefing in sentences beside a rail of context, with decision cards carrying
+// drafted prose somebody has to read before they can decide; Today is a queue
+// worked top to bottom; Filters is a list of saved views; Analytics is a column
+// of report sections; AI is a settings-like page of stacked choices. Uncapped,
+// each of them ran a line of text the full width of a wide display with the
+// words hugging the left edge, which is the failure the cap exists to prevent.
+//
+// The rest of the app is scanned ACROSS — a list, a board, a table — and the
+// cap only ever pushed columns off the right edge there.
+export const GRIDDED_SCREENS: ReadonlySet<Screen> = new Set([
+  "brief",
+  "worklist",
+  "filters",
+  "analytics",
+  "ai",
+]);
 
 // Documented rail-less exceptions (AC-shell layout exception): onboarding,
 // the public booking page, the extension client surfaces, and the OAuth

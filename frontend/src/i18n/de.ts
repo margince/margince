@@ -197,7 +197,7 @@ export const de = {
   "shell.companyLogoAria": "{company} Startseite, betrieben mit Margince",
   "shell.poweredBy": "Betrieben mit Margince",
   "shell.poweredByPrefix": "Betrieben mit",
-  "shell.searchEverything": "Alles durchsuchen…",
+  "shell.searchEverything": "Finden oder Margince fragen",
   "shell.breadcrumbAria": "Navigationspfad",
   "shell.license.none": "Keine Lizenz",
   "shell.license.refused": "Lizenz abgelehnt",
@@ -270,7 +270,7 @@ export const de = {
   "context.empty": "Noch nichts Verwandtes.",
 
   "palette.aria": "Befehlspalette",
-  "palette.placeholder": "Wohin? Oder frag einfach etwas…",
+  "palette.placeholder": "Alles finden oder Antworten aus Margince erhalten",
   "palette.empty": "Keine Treffer.",
   "palette.askAi": "KI fragen: „{query}“",
   "palette.typeScreen": "Ansicht",

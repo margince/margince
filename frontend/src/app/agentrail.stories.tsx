@@ -36,6 +36,11 @@ type Answers = Readonly<{
   recent?: readonly unknown[];
   /** A mailbox import in flight, as the connections read reports it. */
   importing?: Readonly<{ scanned: number; estimated: number | null }>;
+  /** What the month cost, in minor units, when anything in it was priced.
+   *  Absent is the ordinary case and a real one: a month where nothing carried
+   *  a price prints no figure at all, which is a different statement from
+   *  "this cost nothing". */
+  pricedMinor?: number;
 }>;
 
 /** One occurrence as the wire spells it. */
@@ -59,6 +64,12 @@ const OPERATOR: GrantSpec = {
   license: ["read"],
   automation: ["update"],
 };
+
+// The month's spend is served on `ai_diagnostics:read` and is the
+// administrator's figure, so the story that shows it holds that grant on top of
+// the two above. Kept apart from OPERATOR because every other story here is
+// about an installation posture rather than about what this seat may read.
+const SPEND_READER: GrantSpec = { ...OPERATOR, ai_diagnostics: ["read"] };
 
 const NOW = Date.parse("2026-08-19T10:00:00Z");
 
@@ -156,8 +167,40 @@ function story(
         }),
       "GET /ai/usage": () =>
         jsonResponse({
-          days: [],
-          budget: { monthly_tokens: 0, spent_tokens: 0, band: "normal" },
+          // One priced task and one the server could not price, which is the
+          // shape the month actually arrives in: the total is the priced lines
+          // and the unpriced one adds nothing to it.
+          days:
+            answers.pricedMinor === undefined
+              ? []
+              : [
+                  {
+                    date: "2026-08-01",
+                    tasks: [
+                      {
+                        task: "enrich",
+                        tier: "cheap_cloud",
+                        calls: 2,
+                        tokens_in: 100,
+                        tokens_out: 40,
+                        cost_est_minor: answers.pricedMinor,
+                      },
+                      {
+                        task: "summarize",
+                        tier: "cheap_cloud",
+                        calls: 1,
+                        tokens_in: 30,
+                        tokens_out: 10,
+                      },
+                    ],
+                  },
+                ],
+          budget: {
+            monthly_tokens: 0,
+            spent_tokens: 0,
+            band: "normal",
+            currency: "USD",
+          },
         }),
       "GET /me/ai-activity": () =>
         jsonResponse({
@@ -194,8 +237,21 @@ const meta: Meta<typeof AgentRail> = {
 export default meta;
 type Story = StoryObj<typeof AgentRail>;
 
-/** Idle: every source reachable, nothing waiting, a model bound, a valid licence. */
+/** Idle: every source reachable, nothing waiting, a model bound, a valid licence.
+ *
+ *  It is also the block's last line with no figure on it: this seat holds no
+ *  `ai_diagnostics:read`, so the row carries the chevron alone. The row is what
+ *  makes that state legible — the disclosure keeps its place instead of moving
+ *  up into the corner when there is nothing to spend beside it. */
 export const Idle: Story = { render: story(HEALTHY) };
+
+/** The month's spend, on the block's last line with the chevron that opens the
+ *  panel behind it: one figure, the scope it was spent in, and the disclosure,
+ *  all on one baseline. The seat is an administrator holding
+ *  `ai_diagnostics:read`, which is the only seat the server serves it to. */
+export const SpendReported: Story = {
+  render: story({ ...HEALTHY, pricedMinor: 1_240 }, "expanded", SPEND_READER),
+};
 
 /** Ingest: evidence arriving. Which half of the live vocabulary a run puts the
  *  orb in comes from the KIND of work (ai-activity-orb.ts), and a document being
