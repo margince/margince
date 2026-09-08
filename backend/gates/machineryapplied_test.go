@@ -14,7 +14,8 @@ import (
 	"testing"
 )
 
-// Every setting read through settings.ApplyTx is declared MachineryApplied.
+// Every setting read through an ungated machinery reader — settings.ApplyTx or
+// settings.ApplyManyTx — is declared MachineryApplied.
 //
 // The store enforces this already — ApplyTx refuses an undeclared entry — but it
 // refuses at RUNTIME, inside whatever machinery was applying the posture. That
@@ -138,7 +139,7 @@ func TestEverySettingReadThroughApplyIsDeclaredMachineryApplied(t *testing.T) {
 	}
 
 	for _, where := range unreadable {
-		t.Errorf("%s: this gate cannot name the entry passed to settings.ApplyTx here, so it cannot "+
+		t.Errorf("%s: this gate cannot name an entry passed to an ungated machinery reader here, so it cannot "+
 			"check that entry's declaration — and one it cannot check is one it agrees with. Pass "+
 			"the entry as a plain identifier or a qualified one.", where)
 	}
@@ -151,12 +152,12 @@ func TestEverySettingReadThroughApplyIsDeclaredMachineryApplied(t *testing.T) {
 			// this walk cannot place is one the gate genuinely cannot see —
 			// and accepting it would mean the one shape that hides a missing
 			// declaration is the one shape that passes.
-			t.Errorf("%s reads %s through settings.ApplyTx and this gate cannot find its "+
+			t.Errorf("%s reads %s through an ungated machinery reader and this gate cannot find its "+
 				"declaration. Either the entry is declared outside internal/, or the walk "+
 				"stopped recognising a declaration shape — both leave a MachineryApplied "+
 				"omission unable to fail here, which is what this gate is for.", where, entry)
 		case !isDeclared:
-			t.Errorf("%s reads %s through settings.ApplyTx, which refuses an entry not declared "+
+			t.Errorf("%s reads %s through an ungated machinery reader, which refuses an entry not declared "+
 				"MachineryApplied — at runtime, inside the machinery. Declare it where it is defined, "+
 				"or read it through Get/GetTx and its gate.", where, entry)
 		}
