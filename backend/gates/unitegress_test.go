@@ -29,7 +29,7 @@ package gates
 // resolve. Both defeat a static reader by construction. This is a lint against
 // the shape a unit actually writes — the same posture
 // TestExtensionSQLNamesOnlyTheUnitsOwnTables takes about a unit's SQL, and for
-// reason: the wall is elsewhere and this catches the mistake.
+// the same reason: the wall is elsewhere and this catches the mistake.
 
 import (
 	"go/ast"

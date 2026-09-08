@@ -218,11 +218,11 @@ func TestRunWritesTaskARecordAndSurfacesTaskBsWriteErrorInTheSameCall(t *testing
 
 // TestRunAnUnrunnableBindingJoinsAnErrorPerTaskAndAbortsNone proves the
 // "heard, never swallowed" contract on the error path every task
-// actually reaches: a malformed MODEL= override fails identically for
-// every task in the corpus (each task's own certifyTask call refuses
-// it independently), and Run reports every one of them — via
-// errors.Join, not just the first — rather than stopping at the first
-// failure.
+// actually reaches: a cloud vendor under a sovereign profile is refused
+// identically for every task in the corpus (each task's own certifyTask
+// call refuses it independently), and Run reports every one of them —
+// via errors.Join, not just the first — rather than stopping at the
+// first failure.
 func TestRunAnUnrunnableBindingJoinsAnErrorPerTaskAndAbortsNone(t *testing.T) {
 	dir := t.TempDir()
 	corpusDir := filepath.Join(dir, "corpus")

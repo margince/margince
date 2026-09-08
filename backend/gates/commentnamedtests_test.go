@@ -37,6 +37,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -123,13 +124,34 @@ type commentBlock struct {
 }
 
 // wraps reports whether name is the start of a declared test that the comment
-// broke across a line. The name must be a strict prefix of something declared,
-// and that something must appear in one of the closed-up readings — a prefix
-// alone would excuse any truncation.
+// broke across a line.
+//
+// Three conditions, and the third is the one that keeps this from excusing
+// everything. The name must be a strict prefix of something declared; that
+// something must appear in one of the closed-up readings; and it must NOT
+// appear whole in the comment as written. Without the last, "TestFoo is stale;
+// see TestFooBar" excuses TestFoo — the joined reading contains any longer name
+// the comment mentions at all, so a stale reference standing beside a live one
+// would pass, which is this gate's whole subject.
+//
+// A genuine wrap is exactly the case the third condition admits: the full name
+// was split across the line break, so it is absent from the line-by-line
+// reading and present only once the break is closed up.
 func (c commentBlock) wraps(name string, declared map[string]bool) bool {
-	for _, reading := range []string{c.joined, c.hyphenJoined} {
-		for _, candidate := range commentTestName.FindAllString(reading, -1) {
-			if declared[candidate] && strings.HasPrefix(candidate, name) && candidate != name {
+	for candidate := range declared {
+		if candidate == name || !strings.HasPrefix(candidate, name) {
+			continue
+		}
+		if slices.Contains(c.named, candidate) {
+			continue
+		}
+		for _, reading := range []string{c.joined, c.hyphenJoined} {
+			// Substring, not the name pattern. Closing up a break joins the
+			// halves to whatever preceded them — "which\nTestFooBar" becomes
+			// "whichTestFooBar" — so the leading word boundary the pattern
+			// needs is exactly what the wrap destroyed. Searching for a name
+			// already known to be declared has no such problem.
+			if strings.Contains(reading, candidate) {
 				return true
 			}
 		}
@@ -241,4 +263,40 @@ func goCommentCensus(t *testing.T) (declared, testFuncs map[string]bool, comment
 		}
 	}
 	return declared, testFuncs, comments
+}
+
+// The wrap allowance, as a spec, because it is the one that can turn this gate
+// off without failing.
+//
+// Every allowance here trades a false finding for the risk of a missed one, and
+// this is the loosest of the three: it excuses a name on the evidence of a
+// LONGER name nearby. The case that must not pass is a stale reference standing
+// beside a live one — which is the ordinary way a rename leaves a comment
+// behind, so it is not a contrived input.
+func TestAWrappedNameIsExcusedAndAStaleOneBesideALiveOneIsNot(t *testing.T) {
+	t.Parallel()
+
+	declared := map[string]bool{"TestFooBar": true}
+
+	wrapped := commentBlockFor("The refusals need the admit case, which\nTestFoo\nBar provides.")
+	if !wrapped.wraps("TestFoo", declared) {
+		t.Error("a name the comment broke across a line was reported as stale — the wrap reading is what stops this gate from failing on ordinary prose")
+	}
+
+	beside := commentBlockFor("TestFoo is stale; see TestFooBar.")
+	if beside.wraps("TestFoo", declared) {
+		t.Error("a stale name standing beside a live longer one was excused by it — the joined reading contains any longer name the comment mentions, so a prefix test alone excuses every stale reference with a live sibling")
+	}
+}
+
+// commentBlockFor builds the three readings the way the census does, so a spec
+// exercises the same construction production does rather than its own.
+func commentBlockFor(text string) commentBlock {
+	return commentBlock{
+		rel:          "spec.go",
+		named:        commentTestName.FindAllString(text, -1),
+		text:         text,
+		joined:       strings.ReplaceAll(text, "\n", ""),
+		hyphenJoined: strings.ReplaceAll(strings.ReplaceAll(text, "-\n", ""), "\n", ""),
+	}
 }
