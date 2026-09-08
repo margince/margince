@@ -20284,6 +20284,13 @@ type ChannelProviderEntry struct {
 	// default, so a connector that never declared carriage reports false rather than
 	// being mistaken for capable. A zero bound means "no limit beyond the contract's
 	// own", never "zero allowed".
+	//
+	// `max_total_bytes` is the exception to that rule and is never zero: every
+	// transport has an aggregate, because the product has one whether or not the
+	// provider declares its own. It is the bound a composer must warn against
+	// FIRST — `max_files` and `max_bytes_per_file` cannot express it between them,
+	// so a message of ten files each under the per-file cap can pass both and still
+	// be ten times what a send may carry.
 	Attachments struct {
 		Carries bool `json:"carries"`
 
@@ -20297,6 +20304,11 @@ type ChannelProviderEntry struct {
 
 		// MaxFiles Most files in one message. Never more than the contract's own `attachment_ids` cap of 10.
 		MaxFiles int `json:"max_files"`
+
+		// MaxTotalBytes Largest total across every file on one message, in bytes — the smaller of
+		// this transport's own aggregate and the product's send budget. Always
+		// present and always positive.
+		MaxTotalBytes int64 `json:"max_total_bytes"`
 	} `json:"attachments"`
 
 	// CredentialModel How a connection to this transport is credentialed — one shared bot for the

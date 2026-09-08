@@ -18,6 +18,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -28,8 +29,8 @@ func TestTheAggregateSendBudgetParksInsteadOfRetrying(t *testing.T) {
 		refused bool
 	}{
 		{"an empty message", 0, false},
-		{"exactly at the bound", maxSendBytes, false},
-		{"one byte over", maxSendBytes + 1, true},
+		{"exactly at the bound", comms.MaxSendBytes, false},
+		{"one byte over", comms.MaxSendBytes + 1, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			err := overSendBudget(tc.total)
