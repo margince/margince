@@ -11,10 +11,11 @@
 // one does.
 //
 // The three values a reader might expect to be configuration are pinned
-// constants below. They are not operator choices: the bundled module trusts
-// only the production keyset, so a token from any other issuer could never
-// verify against it whatever this side passed, and a setting for them would be
-// nothing but a way to be wrong.
+// constants below. They are not operator choices: they name the grant this
+// build was written to honor, and a setting for them would be nothing but a way
+// to be wrong. Which AUTHORITY is honored does vary — by deployment posture and
+// still not by setting, because the bundle carries the test authority's keyset
+// alongside the production one's; issuers() is the whole rule.
 package licensecheck
 
 import (
@@ -38,9 +39,10 @@ const (
 	// installation honors.
 	//
 	// It is NOT redundant with the bundled keyset, which is what this file used
-	// to claim. A license minted by the test authority verifies against that
-	// keyset — the keys are shared across environments — so this string is the
-	// only thing that keeps a test license from licensing a customer.
+	// to claim. The bundle files its trusted keys under the authority that owns
+	// them, so this string is what decides which set a token is verified
+	// against — and honoring it alone is what keeps a license minted by the test
+	// authority from licensing a customer.
 	issuer = "margince-license-authority"
 	// product names this product's grant inside the token's product map. A token
 	// that grants other products and not this one is refused.
@@ -217,7 +219,8 @@ func Resolve(ctx context.Context, token string, now time.Time, env runtimeenv.En
 //
 // A production installation honors exactly one, so a license minted by our test
 // or dev licenser can never license a customer — and it could, without this,
-// because those licensers sign with keys the bundled keyset carries.
+// because the bundle carries the test authority's keys alongside the production
+// one's.
 //
 // A non-production installation also honors the two non-production authorities,
 // which is how a developer runs the product on a test license. MARGINCE_ENV is
