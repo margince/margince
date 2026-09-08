@@ -27,6 +27,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -58,12 +59,29 @@ var ownedTables = map[string]string{
 	"organization": "organization",
 }
 
+// kindPolicy answers whether ONE proposal of an admin-governed kind may apply
+// right now, in the transaction that would apply it.
+//
+// A seam rather than a call, because the answer lives in the module that owns
+// the kind — stage automation's thresholds are deals' — and compose may not
+// reach into a module's judgement any more than a module may reach into a
+// sibling's. What compose owns is which seam answers for which kind.
+//
+// It takes the OWNER'S context, the same one the apply runs under, so a policy
+// that reads the acting principal reads the one that will do the writing.
+type kindPolicy func(ctx context.Context, approvalID ids.ApprovalID) (bool, error)
+
 // autoApplier decides and applies proposals that their owner has put on
-// automatic.
+// automatic, or that an admin's governing policy has earned.
 type autoApplier struct {
 	pool  *pgxpool.Pool
 	svc   *approvals.Service
 	users *identity.Service
+	// governed answers for the admin-governed kinds, keyed by kind. A kind in
+	// AdminGovernedAutoKinds with no seam here NEVER applies: an unanswerable
+	// policy is a refusal, because the alternative is applying on the absence
+	// of a judgement.
+	governed map[string]kindPolicy
 }
 
 // Apply runs one pending proposal if its owner has this kind on automatic.
@@ -83,7 +101,11 @@ func (a autoApplier) Apply(ctx context.Context, approvalID ids.ApprovalID) (bool
 	if err != nil {
 		return false, err
 	}
-	if target.kind == "" || !approvals.AutoApplyKinds[target.kind] {
+	if target.kind == "" {
+		return false, nil
+	}
+	admin := approvals.AdminGovernedAutoKinds[target.kind]
+	if !admin && !approvals.AutoApplyKinds[target.kind] {
 		return false, nil
 	}
 	owner, err := a.ownerOf(ctx, target.entityType, target.entityID)
@@ -103,17 +125,43 @@ func (a autoApplier) Apply(ctx context.Context, approvalID ids.ApprovalID) (bool
 	// Read the policy AS the owner, not before becoming them: the policy read
 	// takes its subject from the acting principal, so asking first would ask
 	// about whoever the sweep happened to be running as.
-	mode, err := a.svc.AutoApplyMode(ownerCtx, target.kind)
-	if err != nil {
+	//
+	// WHICH policy depends on the ladder. A rep's own kinds read the rep's own
+	// row; an admin-governed kind reads the rule the admin set for the
+	// transition, through the seam its module supplies. Asking the rep's
+	// ladder about a governed kind would answer 'manual' for every rep who
+	// never opted into a setting they are not offered.
+	may, err := a.mayApply(ownerCtx, target.kind, admin, approvalID)
+	if err != nil || !may {
 		return false, err
-	}
-	if mode != approvals.ModeAuto {
-		return false, nil
 	}
 	if _, err := a.svc.ApplyUnderPolicy(ownerCtx, approvalID); err != nil {
 		return false, err
 	}
 	return true, nil
+}
+
+// mayApply asks the ladder that governs this kind.
+//
+// The two are not interchangeable and neither is a fallback for the other. A
+// governed kind whose seam is missing answers NO — an unwired policy is an
+// unanswered question, and applying on an unanswered question is the one thing
+// this whole path exists to prevent.
+func (a autoApplier) mayApply(
+	ctx context.Context, kind string, admin bool, approvalID ids.ApprovalID,
+) (bool, error) {
+	if !admin {
+		mode, err := a.svc.AutoApplyMode(ctx, kind)
+		if err != nil {
+			return false, err
+		}
+		return mode == approvals.ModeAuto, nil
+	}
+	policy, wired := a.governed[kind]
+	if !wired {
+		return false, nil
+	}
+	return policy(ctx, approvalID)
 }
 
 // proposalTarget is the proposal's kind and what it points at.
@@ -249,9 +297,10 @@ func (a autoApplier) asOwnersAgent(ctx context.Context, owner ids.UUID) (context
 func (a autoApplier) duePending(ctx context.Context, limit int) ([]ids.ApprovalID, error) {
 	var due []ids.ApprovalID
 	err := database.WithWorkspaceTx(ctx, a.pool, func(tx pgx.Tx) error {
-		// The kinds come from the module that owns them, in its order: the scan
-		// must not come to look for a set the applier would then refuse, and the
-		// kinds travel as one parameter, so a map-ordered list would send the
+		// The kinds come from the module that owns them, as the UNION of both
+		// ladders: the scan must not come to look for a set the applier would
+		// then refuse, nor miss one it would accept. They travel as one
+		// parameter in a stable order, so a map-ordered list cannot send the
 		// same set differently on every tick and make two runs incomparable.
 		rows, err := tx.Query(ctx, `
 			SELECT id FROM approval
@@ -259,7 +308,7 @@ func (a autoApplier) duePending(ctx context.Context, limit int) ([]ids.ApprovalI
 			   AND expires_at > now()
 			   AND kind = ANY($1)
 			 ORDER BY created_at
-			 LIMIT $2`, approvals.SortedAutoApplyKinds(), limit)
+			 LIMIT $2`, approvals.AutoAppliableKinds(), limit)
 		if err != nil {
 			return err
 		}
@@ -349,8 +398,9 @@ func refusesThisRow(err error) bool {
 // it is assembled from.
 func SweepAutoApply(ctx context.Context, pool *pgxpool.Pool) (int, error) {
 	return autoApplier{
-		pool:  pool,
-		svc:   approvalsServiceWithEffects(pool),
-		users: identity.NewService(pool),
+		pool:     pool,
+		svc:      approvalsServiceWithEffects(pool),
+		users:    identity.NewService(pool),
+		governed: governedKindPolicies(pool, deals.NewStore(InstallationDB(pool), DealsInstallation())),
 	}.Sweep(ctx)
 }

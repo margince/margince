@@ -346,6 +346,43 @@ func stageProgressionPrecheck() approvals.ReleasePrecheck {
 	}
 }
 
+// refuseAStaleAutomaticMove holds an automatic apply to the rule as it stands
+// NOW, in the transaction that would move the deal.
+//
+// Answers nil for a human decision without asking anything: the question is
+// whether the PRODUCT may still move this by itself, and a person who pressed
+// approve has already answered a different one.
+func refuseAStaleAutomaticMove(
+	ctx context.Context, tx pgx.Tx, change deals.StageProgressionChange,
+) error {
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.Type != principal.PrincipalAgent || actor.ID != autoApplyActorID {
+		return nil
+	}
+	var pipelineID ids.PipelineID
+	if err := tx.QueryRow(ctx,
+		`SELECT pipeline_id FROM deal WHERE id = $1`, change.DealID).Scan(&pipelineID); err != nil {
+		return fmt.Errorf("compose: read the deal's pipeline for an automatic move: %w", err)
+	}
+	verdict, err := deals.StageAutopilotModeTx(ctx, tx, deals.TransitionRef{
+		PipelineID:  pipelineID,
+		FromStageID: change.FromStageID,
+		ToStageID:   change.ToStageID,
+	}, time.Now())
+	if err != nil {
+		return err
+	}
+	if verdict.Mode != deals.ModeAuto {
+		// ErrVersionSkew rather than a bare error: the sweep classifies it as
+		// a refusal of THIS row and carries on, which is right — the rule
+		// changed under a decision that had not landed yet, and every other
+		// card still deserves its pass.
+		return fmt.Errorf("the rule changed before this move landed (%s): %w",
+			verdict.Why, apperrors.ErrVersionSkew)
+	}
+	return nil
+}
+
 // stageProgressionEffect performs an approved move: redeem and advance in ONE
 // transaction, so the approval is spent if and only if the deal moved.
 //
@@ -376,6 +413,23 @@ func stageProgressionEffect(svc *approvals.Service, store *deals.Store) approval
 		}
 		return svc.RedeemAndApply(ctx, approvalID, deals.StageProgressionKind, diffHash,
 			func(tx pgx.Tx) error {
+				// An AUTOMATIC apply re-asks the governing rule here, inside
+				// the transaction that moves the deal.
+				//
+				// The sweep asked before deciding, and that answer is already
+				// stale by the time this runs: an admin can flip the kill
+				// switch, set the transition back to propose, or the product
+				// can suspend the rule in between. Read there and written
+				// here, the move commits on a permission that no longer
+				// exists — which is exactly what StageAutopilotModeTx's own
+				// comment says the transaction is for.
+				//
+				// A HUMAN's approval skips this. A person deciding is the
+				// authority, and re-asking the autopilot's thresholds would
+				// let a suspended rule block a move somebody explicitly made.
+				if err := refuseAStaleAutomaticMove(ctx, tx, change); err != nil {
+					return err
+				}
 				_, err := store.AdvanceDealTx(ctx, tx, change.DealID, deals.AdvanceDealInput{
 					ToStageID: change.ToStageID,
 					// The card this move came from. Without it readProtection
