@@ -67,7 +67,7 @@
   gap: var(--space-1);
   padding: 0 var(--space-1);
   border-radius: var(--r-sm);
-  background: var(--bgCard);
+  background: var(--bgChip);
   color: var(--textContent);
   /* One step down from the field's own type: a token is a value inside a
    * control, not a heading over one. */

@@ -13,8 +13,8 @@
   padding: 0 8px;
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--bgCard);
-  color: var(--textMeta);
+  background: var(--bgChip);
+  color: var(--textChip);
 }
 /* The tone tints are TRANSLUCENT by canon — --successBg, --warnBg and
    --dangerBg all carry an alpha under a fifth — so a badge painted straight
@@ -745,7 +745,7 @@
      other surface is meant to look like. A closed option set is exactly the
      thing that CAN take a second line, so it does. */
   flex-wrap: wrap;
-  background: var(--bgCard);
+  background: var(--bgChip);
   border-radius: var(--r-sm);
   padding: 3px;
   gap: 2px;
@@ -866,8 +866,8 @@
 .kbd {
   font-family: var(--f-mono);
   font-size: var(--fs-eyebrow);
-  color: var(--textMeta);
-  background: var(--bgCard);
+  color: var(--textChip);
+  background: var(--bgChip);
   border: 1px solid var(--borderStrong);
   border-bottom-width: 2px;
   border-radius: var(--r-xs);
@@ -1971,11 +1971,11 @@
   font-weight: var(--fw-regular);
   letter-spacing: var(--tracking-normal);
   text-transform: none;
-  color: var(--textMeta);
+  color: var(--textChip);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
   padding: 1px var(--space-1);
-  background: var(--bgCard);
+  background: var(--bgChip);
 }
 .popover-trigger.stat-card-basis:not(.btn):hover {
   color: var(--textPrimary);
@@ -2099,7 +2099,7 @@
     box-shadow var(--dur-state) var(--ease-out);
 }
 .segmented button:active:not(:disabled) {
-  background-color: var(--bgCard);
+  background-color: var(--bgChip);
   transition-duration: var(--dur-tap);
 }
 /* The strip's own disabled state, which it did not have: a segment nobody may

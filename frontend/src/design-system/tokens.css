@@ -25,7 +25,7 @@
    *
    *   --bgSidebarHover #dde1de  a pointer resting on a rail row
    *   --bgSidebar      #e6eae7  the application's left edge, BELOW the page
-   *   --bgCard         #eaedeb  a well inside a card: a chip, an inset row
+   *   --bgCard         #eaedeb  a well inside a card: an inset row, a plate
    *   --bgHover        #edf0ee  a pointer resting on a row on the page
    *   --bgPage         #f1f5f2  the reading ground
    *   --bgElevated     #fbfcfb  a card, a panel, a menu, and the ACTIVE rail row
@@ -44,6 +44,19 @@
    * --bgPage: one step off BOTH its hosts. The old value was one step off white
    * only, which is invisible once the page stops being white. */
   --bgCard: #eaedeb;
+  /* A small inline fill drawn ON one of these rungs — a badge, a key-cap, a
+   * segmented strip, the trough of a meter. TRANSLUCENT rather than a rung of
+   * its own, because a chip has to read one step deeper than whatever it lands
+   * on, and an opaque value can only be a step off ONE ground: --bgCard on a
+   * --bgCard plate is the same colour, which is a chip nobody can see. The same
+   * ink and nearly the same alpha as --paneEdge, which stays a BORDER token —
+   * an edge and a fill are two different jobs, and one name for both would hide
+   * it.
+   *
+   * 0.07 and not deeper: --accentText on this fill over --bgCard is 4.57:1, and
+   * an eighth would take it to 4.49:1. The ceiling is what the ink on the chip
+   * can pay for, so the fill is chosen last. */
+  --bgChip: rgba(16, 26, 21, 0.07);
   --bgHover: #edf0ee;
   /* A RECESS in an elevated surface — the well a board's stage is drawn as.
    * One hair under --bgElevated (1.03:1), which is what lets the panes inside
@@ -196,6 +209,15 @@
   /* textMeta: the canonical AA small-text role (design §2 contrast law,
    * ADR-0040 amendment) — all 11–13px meta/caption text reads it. */
   --textMeta: #5e6c65;
+  /* The same role, ON --bgChip, and it exists because a translucent ground eats
+   * the headroom --textMeta does not have. --textMeta measures 4.68:1 on
+   * --bgCard — four per cent over the AA floor — so ANY fill laid under it
+   * fails, and a fill faint enough to be safe is fainter than the step it was
+   * introduced to draw. One meaning: meta text sitting on a chip. Same hue and
+   * chroma as --textMeta, one step along in the direction its theme has room
+   * to move, which is why the two are not one token with a tint applied.
+   * The same split, for the same reason, as --accentText and --tealText. */
+  --textChip: #57645e;
 
   /* The one hue that means a MACHINE did this — wrote the draft, read the
    * record, found the thing, or holds the evidence behind a claim. It marks
@@ -610,6 +632,7 @@
   --bgPage: #0c1311;
   --bgElevated: #161d1a;
   --bgCard: #1a211e;
+  --bgChip: rgba(255, 255, 255, 0.09);
   --bgHover: #1f2623;
   /* Under --bgElevated, the way the light well sits under its surface: a
      recess goes away from the lifted ground in both themes. */
@@ -714,6 +737,7 @@
 
   --aiText: #9ba0f0;
   --textMeta: #8fa099;
+  --textChip: #95a69f;
 
   --success: #4ade80;
   /* Dark inverts the problem: the lifted --success IS the readable ink on the
@@ -773,6 +797,7 @@
     --bgPage: #0c1311;
     --bgElevated: #161d1a;
     --bgCard: #1a211e;
+    --bgChip: rgba(255, 255, 255, 0.09);
     --bgHover: #1f2623;
     /* Under --bgElevated, the way the light well sits under its surface: a
        recess goes away from the lifted ground in both themes. */
@@ -829,6 +854,7 @@
 
     --aiText: #9ba0f0;
     --textMeta: #8fa099;
+    --textChip: #95a69f;
 
     --success: #4ade80;
     --successText: #4ade80;

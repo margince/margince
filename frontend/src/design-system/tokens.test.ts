@@ -1,5 +1,5 @@
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { readdirSync, readFileSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
@@ -33,6 +33,21 @@ const tokenDecls = tokensCss.replace(/\/\*[\s\S]*?\*\//g, "");
 // prose. The derivation itself is not re-run here — the assertions that matter
 // are the ordering and the contrast pairs further down, which a wrong tint
 // fails whether or not the arithmetic is repeated.
+// The inks measured ON --bgChip, and the ONE list two gates read: the contrast
+// pairs below pair each of these with the chip fill, and the call-site scan at
+// the foot of this file fails a rule that paints --bgChip under an ink missing
+// here. Kept as one constant because the two halves are one obligation — a list
+// of measured inks that the tree has outgrown is a gate reporting PASS over a
+// case it never looked at.
+const chipInks: readonly string[] = [
+  "--textChip",
+  "--textPrimary",
+  "--textContent",
+  "--tealText",
+  "--accentText",
+  "--aiText",
+];
+
 const canonical: Record<string, string> = {
   "--bgPage": "#f1f5f2",
   "--bgSidebar": "#e6eae7",
@@ -413,6 +428,14 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
         ["--successText", "--successBg"],
         ["--warn", "--warnBg"],
         ["--dangerText", "--dangerBg"],
+        // --bgChip is the NEUTRAL member of that list, and the only one whose
+        // ink its own family does not fix: it is the fill under a badge, a
+        // key-cap, a segmented strip, so it carries whatever the chip's rule
+        // sets, and every role that lands on one is measured over it.
+        // --textChip is why that list needed a token of its own — a neutral
+        // darkening costs what a hued tint does not, and --textMeta had four
+        // per cent of headroom to pay with.
+        ...chipInks.map((ink) => [ink, "--bgChip"]),
       ] as const;
       const grounds = ["--bgPage", "--bgElevated", "--bgCard", "--bgHover"];
       const failures: string[] = [];
@@ -553,5 +576,62 @@ describe("the derived brand layer", () => {
       expect(value, `${name} is not derived`).toMatch(/color-mix\(/);
       expect(value, `${name} mixes no token`).toMatch(/var\(--/);
     }
+  });
+});
+
+// The pairs above are a LIST of what the tree does, and a list of what a tree
+// does is a second copy of it. This derives the corpus instead: every rule under
+// src/ that paints --bgChip, and the ink it sets on the same rule. An unmeasured
+// ink is the failure that matters and the one nothing else would see —
+// --textMeta on the chip fill reads 3.99:1 over --bgCard, which is the defect
+// --textChip exists to prevent and looks like a perfectly ordinary declaration.
+//
+// What it CANNOT see, stated rather than left for the next reader to discover:
+// a chip that sets no colour of its own and inherits one. Those are the four
+// rules that read their ink from the row they sit in (`.pn-relay-owner`,
+// `.ob-triage-row-provenance` and its two neighbours), and an inherited ink is a
+// property of the caller rather than of the chip, so there is nothing here to
+// match on. Set the ink on the rule if you want this gate to hold it.
+describe("the chip fill's call sites", () => {
+  function stylesheets(dir: string): string[] {
+    return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        return entry.name === "node_modules" || entry.name === "dist"
+          ? []
+          : stylesheets(path);
+      }
+      return path.endsWith(".css") ? [path] : [];
+    });
+  }
+
+  it("paints --bgChip only under an ink the contrast gate measures", () => {
+    const sheets = stylesheets(join(here, ".."));
+    expect(sheets.length).toBeGreaterThan(0);
+    const offenders: string[] = [];
+    let chipRules = 0;
+    for (const file of sheets) {
+      const sheet = readFileSync(file, "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+      for (const [, selector, body] of sheet.matchAll(
+        /([^{}]*)\{([^{}]*)\}/g,
+      )) {
+        if (!/background(?:-color)?:[^;]*var\(--bgChip\)/.test(body)) continue;
+        chipRules += 1;
+        // `(?:^|[;{\s])` is what keeps this off --*-color: the character before
+        // a longhand's `color:` is always a hyphen.
+        for (const [, ink] of body.matchAll(
+          /(?:^|[;{\s])color:\s*var\((--[\w-]+)\)/g,
+        )) {
+          if (chipInks.includes(ink)) continue;
+          offenders.push(
+            `${relative(join(here, ".."), file)}: ${selector.trim()} ` +
+              `paints --bgChip under ${ink}, which no pair measures`,
+          );
+        }
+      }
+    }
+    // A scan that matched nothing would report PASS on an empty corpus.
+    expect(chipRules).toBeGreaterThan(0);
+    expect(offenders.join("\n")).toBe("");
   });
 });

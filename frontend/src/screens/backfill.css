@@ -123,8 +123,8 @@
   block-size: 32px;
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--bgCard);
-  color: var(--textSecondary);
+  background: var(--bgChip);
+  color: var(--textChip);
   transition:
     background-color var(--dur-move) var(--ease-out),
     color var(--dur-move) var(--ease-out),
@@ -214,7 +214,7 @@
   margin-top: var(--space-2);
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--bgCard);
+  background: var(--bgChip);
   overflow: hidden;
 }
 .capture-bar-fill {

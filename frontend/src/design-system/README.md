@@ -144,8 +144,8 @@ the stroke says *whether it counts yet*, and those are two facts a reader needs 
 
 **The provenance triad** (`trust.css`) is the rule applied at its smallest:
 `.provenance-agent` is indigo, `.provenance-human` is teal, and
-`.provenance-system` is plain ink on the card ground, because an installation's
-own scheduled housekeeping is neither. `.provenance-unknown` borrows nobody's
+`.provenance-system` is plain ink on the neutral chip fill (`--bgChip`), because
+an installation's own scheduled housekeeping is neither. `.provenance-unknown` borrows nobody's
 colour and reads as the absence it is. A sweep drawn in the AI colour would tell
 a reader a model decided something there.
 

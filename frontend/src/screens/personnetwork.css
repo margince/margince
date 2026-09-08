@@ -342,7 +342,7 @@
   padding: var(--space-2) var(--space-3);
   border-radius: var(--r-control);
   corner-shape: round;
-  background: var(--bgCard);
+  background: var(--bgChip);
   font-size: var(--fs-sm);
 }
 .pn-relay-due {

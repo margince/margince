@@ -168,6 +168,8 @@ edge is `--aiMed`, and status is `--success` / `--warn` / `--danger`.
 | `--glowA` / `--glowB` | `rgba(24,190,120,.06)` / `rgba(91,97,214,.10)` | The emerald light at the top-left corner behind the sidebar; the indigo light at the top-right. Radials of 900×620, the only decoration on the page. |
 | `--pane` / `--paneEdge` | `rgba(255,255,255,.72)` + `blur(12px)` / `rgba(16,26,21,.08)` | A zone, the details panel, a board card, a control at rest. |
 | `--bg2` / `--bg3` | `rgba(255,255,255,.55)` / `rgba(16,26,21,.05)` | The sidebar (glass over the glow, `blur(20px)`); a pill, a keycap, the active sidebar row. |
+| `--bgChip` | `rgba(16,26,21,.07)` | The shipped spelling of `--bg3`'s pill and keycap: the fill under a badge, a key-cap, a segmented strip, the trough of a meter. TRANSLUCENT, so a chip reads one step deeper than whatever ground it lands on — an opaque value can only be a step off one, and on a plate drawn in the same grey it is a chip nobody can see. `.07` and no deeper: an eighth takes `--accentText` on it to 4.49:1. |
+| `--textChip` | `#57645e` | Meta text ON `--bgChip`, and a token rather than `--textMeta` because that fill costs the four per cent of contrast headroom `--textMeta` had — 4.68:1 on `--bgCard`, and anything laid under it fails. The same split, for the same reason, as `--accentText` and `--tealText`. |
 | `--line` / `--line2` | `rgba(16,26,21,.08)` / `.16` | The hairline between rows; a control's outline, the spine's axis. |
 | `--ink` / `--ink2` / `--ink3` / `--ink4` | `#101a15` / `#33403a` / `#66736c` / `#9aa59f` | Names and values / body / labels and meta / placeholders and dates. |
 | `--accent` / `--accentText` / `--accentBg` | `#0b7a53` / `#0a6f4b` / `#e8f3ee` | The one filled verb; a link; a selected row or a done stage. |
@@ -181,7 +183,9 @@ The same room with the lights down: `--bg #0c1311` (a hair above the mock's
 (`.10` / `.20`) because they are the only light, panes at
 `rgba(255,255,255,.045)` with a `.09` edge, ink from `#eef3ef` down to
 `#5c6862`, the accent lifted to `#2bb673` with dark ink on it, the indigo text
-lifted to `#b3b7f5`. The three-state theme pattern (`:root`,
+lifted to `#b3b7f5`. The chip inverts rather than mirrors: `--bgChip` becomes
+`rgba(255,255,255,.09)`, because a chip on a dark ground has only one direction
+to step, and `--textChip` lifts with it to `#95a69f`. The three-state theme pattern (`:root`,
 `prefers-color-scheme` guarded by `:not([data-theme="light"])`,
 `[data-theme="dark"]`) is how they switch.
 

@@ -2705,7 +2705,7 @@
   padding: 1px var(--space-2);
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--bgCard);
+  background: var(--bgChip);
 }
 
 /* The expanded weight: the same card, taller — the value editable in
@@ -2979,7 +2979,7 @@
   padding: 0 var(--space-2);
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--bgCard);
+  background: var(--bgChip);
   font-weight: var(--fw-medium);
 }
 
@@ -3173,7 +3173,7 @@
   block-size: var(--space-2);
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--bgCard);
+  background: var(--bgChip);
   overflow: hidden;
 }
 

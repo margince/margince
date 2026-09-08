@@ -1203,8 +1203,8 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: var(--tracking-eyebrow);
-  color: var(--textMeta);
-  background: var(--bgCard);
+  color: var(--textChip);
+  background: var(--bgChip);
   border-radius: var(--r-full);
   corner-shape: round;
   padding: 1px var(--space-2); /* ds:ignore a cap-height band on a 10.5px label, not spaced content */
