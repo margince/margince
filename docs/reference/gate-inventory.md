@@ -121,7 +121,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 | `worklistverdictstandings_test.go` | H2 | The queue's verdict standings ARE the deal card's, and this derives them from the card rather than keeping a second list of them. |
 
-## Census (132)
+## Census (133)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -159,6 +159,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `dealtargettype_test.go` | H2 | Every deal-scoped staging names its target type through one constant. |
 | `decisioncoverage_test.go` | H2 | A message that reaches the send queue carries a decision saying why, written in the transaction that staged it. |
 | `declaredfilters_test.go` | H2 | A declared narrowing parameter is read by the handler it is declared on, or it is not declared. |
+| `desktopmacosfloor_test.go` | H1 | Every macOS build script pins the bundle's OS floor before it compiles anything. |
 | `directmailbypass_test.go` | H2 | Who may hand a message straight to the SMTP relay, bypassing comms\_outbound. |
 | `docscodepaths_test.go` | H3 | Every source file a prose page names in backticks still exists. |
 | `docslinktargets_test.go` | H3 | Every relative link under docs/ points at a file that exists. |
