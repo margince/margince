@@ -100,7 +100,7 @@ func TestSidecarCommandsRefuseAnUnreadableCompany(t *testing.T) {
 // A company held in another system of record is refused too — the
 // decidability probe and the version pin both read our own tables, which
 // the company has no row in.
-func TestSidecarCommandsRefuseAnCompanyHeldElsewhere(t *testing.T) {
+func TestSidecarCommandsRefuseACompanyHeldElsewhere(t *testing.T) {
 	id := ids.NewV7()
 	cases := []struct {
 		name string

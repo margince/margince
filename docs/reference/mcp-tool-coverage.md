@@ -29,7 +29,7 @@ This page does not grade single steps or name a best model per site — that is
 | … some case requires | 7 |
 | … **no case requires** | 67 |
 | … of those, permitted somewhere but never required | 13 |
-| Prompt tokens spent on tools no case requires | 18322 |
+| Prompt tokens spent on tools no case requires | 18275 |
 | Use cases | 7 |
 | … with a committed run | 7 |
 | Acceptance criteria the cases declare | 15 |
@@ -99,30 +99,30 @@ stopped being able to call it. A tool in the `permitted` column is worse than on
 
 | Tool | Tokens | Permitted in | Attached to |
 |---|---:|---|---|
-| `send_account_email` | 742 | — | — |
+| `send_account_email` | 741 | — | — |
 | `send_email` | 675 | — | — |
-| `update_record` | 572 | — | — |
+| `update_record` | 571 | — | — |
 | `send_message` | 518 | — | — |
-| `list_records` | 508 | — | `morning_brief`, `overnight_at_risk_sweep` |
+| `list_records` | 503 | — | `morning_brief`, `overnight_at_risk_sweep` |
 | `progress_deal` | 501 | — | — |
-| `resolve_entities` | 498 | `case1_log_it`, `case2_business_card` | — |
+| `resolve_entities` | 491 | `case1_log_it`, `case2_business_card` | — |
 | `run_analytics_query` | 465 | — | — |
 | `advance_deal` | 443 | — | — |
 | `annotate_brief` | 418 | — | `morning_brief` |
 | `review_commitments` | 401 | — | `overnight_at_risk_sweep` |
-| `book_meeting` | 393 | — | — |
-| `enrich` | 393 | — | — |
+| `book_meeting` | 391 | — | — |
 | `compose_analytics_report` | 390 | — | — |
+| `enrich` | 385 | — | — |
 | `forecast_movement` | 351 | — | — |
 | `describe_report_vocabulary` | 349 | — | — |
 | `forecast_readings` | 349 | — | — |
-| `prep_for_meeting` | 326 | `case5_before_the_meeting` | — |
+| `prep_for_meeting` | 324 | `case5_before_the_meeting` | — |
 | `demote_lead` | 316 | — | — |
-| `merge_records` | 292 | — | — |
-| `catch_me_up_on` | 280 | `case5_before_the_meeting`, `case6_ask_the_company` | `morning_brief`, `overnight_at_risk_sweep` |
+| `merge_records` | 289 | — | — |
 | `advance_project_phase` | 279 | — | — |
-| `draft_email` | 279 | — | — |
-| `relink_activity` | 277 | — | — |
+| `catch_me_up_on` | 278 | `case5_before_the_meeting`, `case6_ask_the_company` | `morning_brief`, `overnight_at_risk_sweep` |
+| `draft_email` | 278 | — | — |
+| `relink_activity` | 276 | — | — |
 | `draft_follow_ups_for` | 273 | — | — |
 | `decide_approval` | 272 | — | — |
 | `promote_lead` | 270 | — | — |
@@ -130,34 +130,34 @@ stopped being able to call it. A tool in the `permitted` column is worse than on
 | `prepare_handoff` | 267 | — | — |
 | `describe_query_vocabulary` | 266 | `case4_use_the_moment` | — |
 | `check_availability` | 263 | — | — |
-| `archive_record` | 261 | — | — |
+| `archive_record` | 260 | — | — |
 | `forecast_input_checks` | 252 | — | — |
 | `account_coverage` | 245 | `case5_before_the_meeting` | — |
 | `describe_report_blocks` | 245 | — | — |
 | `decide_approval_bundle` | 235 | — | — |
 | `qualify_lead` | 230 | — | — |
-| `apply_tag` | 227 | `case2_business_card` | — |
-| `create_task` | 222 | — | — |
-| `read_record` | 222 | `case1_log_it`, `case2_business_card`, `case4_use_the_moment`, `case5_before_the_meeting`, `case6_ask_the_company` | `morning_brief`, `overnight_at_risk_sweep` |
+| `apply_tag` | 226 | `case2_business_card` | — |
+| `create_task` | 220 | — | — |
+| `read_record` | 220 | `case1_log_it`, `case2_business_card`, `case4_use_the_moment`, `case5_before_the_meeting`, `case6_ask_the_company` | `morning_brief`, `overnight_at_risk_sweep` |
 | `whats_slipping_this_week` | 211 | — | `overnight_at_risk_sweep` |
 | `at_risk_relationships` | 208 | — | `overnight_at_risk_sweep` |
 | `read_brief` | 206 | — | `morning_brief` |
-| `relink_activities` | 206 | — | — |
 | `update_tag` | 205 | — | — |
+| `relink_activities` | 204 | — | — |
 | `merge_tags` | 198 | — | — |
-| `relink_thread` | 197 | — | — |
+| `relink_thread` | 196 | — | — |
 | `who_knows` | 194 | `case5_before_the_meeting` | — |
 | `list_pipelines` | 191 | `case1_log_it` | — |
 | `disqualify_lead` | 190 | — | — |
-| `intro_path_to` | 190 | — | — |
+| `intro_path_to` | 187 | — | — |
 | `create_tag` | 183 | — | — |
 | `list_channel_providers` | 174 | — | — |
-| `remove_tag` | 167 | — | — |
+| `remove_tag` | 166 | — | — |
 | `check_location_support` | 156 | — | — |
 | `read_project_360` | 156 | — | — |
 | `read_approval` | 153 | — | — |
 | `list_input_checks` | 146 | — | — |
-| `get_record_tags` | 142 | — | — |
+| `get_record_tags` | 141 | — | — |
 | `list_colleagues` | 141 | — | — |
 | `whoami` | 128 | — | — |
 | `commit_import` | 118 | `case3_spreadsheet` | — |

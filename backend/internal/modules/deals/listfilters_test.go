@@ -39,7 +39,7 @@ func TestEachDealsEntityIsOfferedItsOwnVocabulary(t *testing.T) {
 		want   []string
 	}{
 		{datasource.EntityDeal, []string{
-			"forecast_category", "company_id", "owner_id", "partner_attribution",
+			"company_id", "forecast_category", "owner_id", "partner_attribution",
 			"partner_company_id", "partner_sourced",
 			"pipeline_id", "project_id", "stage_id", "stalled", "status",
 			"tag_id", "tag_mode",

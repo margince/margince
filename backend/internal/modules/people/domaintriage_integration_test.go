@@ -203,7 +203,7 @@ func TestPersonalVerdictRefusesTheCompanyForGood(t *testing.T) {
 	}
 }
 
-func TestCompanyVerdictAdoptsAnCompanyAHumanCreatedMidTriage(t *testing.T) {
+func TestCompanyVerdictAdoptsACompanyAHumanCreatedMidTriage(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 

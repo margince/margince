@@ -42,8 +42,8 @@ func seedSSOEnv(t *testing.T, slug string) (svc *Service, ownerConn *pgx.Conn, u
 	err := database.WithInfraTx(ctx, pool, func(tx pgx.Tx) error {
 		var err error
 		wsID, err = createInstallation(ctx, tx, InstallationBootstrap{
-			CompanyName: slug,
-			AdminEmail:  "admin@" + slug + ".test", AdminName: "Admin",
+			WorkspaceName: slug,
+			AdminEmail:    "admin@" + slug + ".test", AdminName: "Admin",
 			AdminPassword: bootstrapPassword,
 		}, originConfigured, nil, &[]string{})
 		return err

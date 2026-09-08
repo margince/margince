@@ -368,7 +368,7 @@ func seedActivityWithDeal(t *testing.T, e *Env, deal ids.UUID) ids.UUID {
 // moves it on its own — a file left pointing at the dissolved company is filed
 // under a record that no longer exists, and to a user the contract has simply
 // vanished.
-func TestAnCompanyMergeCarriesTheDocumentsAcross(t *testing.T) {
+func TestACompanyMergeCarriesTheDocumentsAcross(t *testing.T) {
 	e := Setup(t)
 	files := activities.NewStore(e.DB())
 	companies := people.NewStore(e.DB())

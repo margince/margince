@@ -5,7 +5,7 @@
     "driven": 7,
     "never_driven": 67,
     "permitted_but_never_required": 13,
-    "tokens_served_but_never_driven": 18322,
+    "tokens_served_but_never_driven": 18275,
     "use_case_cases": 7,
     "cases_with_a_committed_run": 7,
     "acceptance_criteria_named": 6,
@@ -222,7 +222,7 @@
   "tools": [
     {
       "name": "send_account_email",
-      "tokens": 742,
+      "tokens": 741,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [],
@@ -240,7 +240,7 @@
     },
     {
       "name": "update_record",
-      "tokens": 572,
+      "tokens": 571,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [],
@@ -258,7 +258,7 @@
     },
     {
       "name": "list_records",
-      "tokens": 508,
+      "tokens": 503,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"
@@ -279,7 +279,7 @@
     },
     {
       "name": "resolve_entities",
-      "tokens": 498,
+      "tokens": 491,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [
@@ -331,16 +331,7 @@
     },
     {
       "name": "book_meeting",
-      "tokens": 393,
-      "agents": [],
-      "required_by_cases": [],
-      "permitted_in_cases": [],
-      "driven": false,
-      "measured": null
-    },
-    {
-      "name": "enrich",
-      "tokens": 393,
+      "tokens": 391,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [],
@@ -350,6 +341,15 @@
     {
       "name": "compose_analytics_report",
       "tokens": 390,
+      "agents": [],
+      "required_by_cases": [],
+      "permitted_in_cases": [],
+      "driven": false,
+      "measured": null
+    },
+    {
+      "name": "enrich",
+      "tokens": 385,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [],
@@ -385,7 +385,7 @@
     },
     {
       "name": "prep_for_meeting",
-      "tokens": 326,
+      "tokens": 324,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [
@@ -405,25 +405,10 @@
     },
     {
       "name": "merge_records",
-      "tokens": 292,
+      "tokens": 289,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [],
-      "driven": false,
-      "measured": null
-    },
-    {
-      "name": "catch_me_up_on",
-      "tokens": 280,
-      "agents": [
-        "morning_brief",
-        "overnight_at_risk_sweep"
-      ],
-      "required_by_cases": [],
-      "permitted_in_cases": [
-        "case5_before_the_meeting",
-        "case6_ask_the_company"
-      ],
       "driven": false,
       "measured": null
     },
@@ -437,8 +422,23 @@
       "measured": null
     },
     {
+      "name": "catch_me_up_on",
+      "tokens": 278,
+      "agents": [
+        "morning_brief",
+        "overnight_at_risk_sweep"
+      ],
+      "required_by_cases": [],
+      "permitted_in_cases": [
+        "case5_before_the_meeting",
+        "case6_ask_the_company"
+      ],
+      "driven": false,
+      "measured": null
+    },
+    {
       "name": "draft_email",
-      "tokens": 279,
+      "tokens": 278,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [],
@@ -447,7 +447,7 @@
     },
     {
       "name": "relink_activity",
-      "tokens": 277,
+      "tokens": 276,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [],
@@ -523,7 +523,7 @@
     },
     {
       "name": "archive_record",
-      "tokens": 261,
+      "tokens": 260,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [],
@@ -579,7 +579,7 @@
     },
     {
       "name": "apply_tag",
-      "tokens": 227,
+      "tokens": 226,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [
@@ -590,7 +590,7 @@
     },
     {
       "name": "create_task",
-      "tokens": 222,
+      "tokens": 220,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [],
@@ -599,7 +599,7 @@
     },
     {
       "name": "read_record",
-      "tokens": 222,
+      "tokens": 220,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"
@@ -649,8 +649,8 @@
       "measured": null
     },
     {
-      "name": "relink_activities",
-      "tokens": 206,
+      "name": "update_tag",
+      "tokens": 205,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [],
@@ -658,8 +658,8 @@
       "measured": null
     },
     {
-      "name": "update_tag",
-      "tokens": 205,
+      "name": "relink_activities",
+      "tokens": 204,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [],
@@ -677,7 +677,7 @@
     },
     {
       "name": "relink_thread",
-      "tokens": 197,
+      "tokens": 196,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [],
@@ -717,7 +717,7 @@
     },
     {
       "name": "intro_path_to",
-      "tokens": 190,
+      "tokens": 187,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [],
@@ -744,7 +744,7 @@
     },
     {
       "name": "remove_tag",
-      "tokens": 167,
+      "tokens": 166,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [],
@@ -789,7 +789,7 @@
     },
     {
       "name": "get_record_tags",
-      "tokens": 142,
+      "tokens": 141,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [],
@@ -876,7 +876,7 @@
     },
     {
       "name": "run_report",
-      "tokens": 939,
+      "tokens": 938,
       "agents": [],
       "required_by_cases": [
         "case7_ask_for_a_number"
@@ -892,7 +892,7 @@
     },
     {
       "name": "log_activity",
-      "tokens": 677,
+      "tokens": 676,
       "agents": [
         "overnight_at_risk_sweep"
       ],
@@ -910,7 +910,7 @@
     },
     {
       "name": "preview_import",
-      "tokens": 677,
+      "tokens": 672,
       "agents": [],
       "required_by_cases": [
         "case3_spreadsheet"
@@ -948,7 +948,7 @@
     },
     {
       "name": "create_record",
-      "tokens": 473,
+      "tokens": 470,
       "agents": [],
       "required_by_cases": [
         "case1_log_it",
@@ -965,7 +965,7 @@
     },
     {
       "name": "search_records",
-      "tokens": 385,
+      "tokens": 382,
       "agents": [],
       "required_by_cases": [
         "case5_before_the_meeting"
@@ -987,7 +987,7 @@
     },
     {
       "name": "search_context",
-      "tokens": 345,
+      "tokens": 343,
       "agents": [],
       "required_by_cases": [
         "case6_ask_the_company"

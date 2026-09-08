@@ -171,7 +171,7 @@ func TestARolledBackLandingCachesNothing(t *testing.T) {
 	}
 }
 
-func TestFlipLandsAnCompanyAndItsIdentityInOneTransaction(t *testing.T) {
+func TestFlipLandsACompanyAndItsIdentityInOneTransaction(t *testing.T) {
 	f := setupLanding(t)
 
 	res, err := f.w.Ensure(f.ctx, flipObjectCompany, landingRow("hs-company-1", map[string]any{"display_name": "Analytical Engines"}))

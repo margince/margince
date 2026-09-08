@@ -193,7 +193,7 @@ func TestTheInstallationsOwnCompanyIsNeverSwept(t *testing.T) {
 	}
 }
 
-func TestACancelledReadDoesNotRetireAnCompanyForever(t *testing.T) {
+func TestACancelledReadDoesNotRetireACompanyForever(t *testing.T) {
 	// A read cancelled because the operator had auto-enrich off when the worker
 	// claimed it produced no dossier at all. Turning the setting back on has to
 	// reach that company, or the sweep's self-healing stops at exactly the companies

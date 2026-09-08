@@ -85,7 +85,7 @@ func TestEnsureCounterpartyReusesTheExactIncumbent(t *testing.T) {
 	}
 }
 
-func TestEnsureCounterpartyAttachesToAnCompanyThatAlreadyExists(t *testing.T) {
+func TestEnsureCounterpartyAttachesToACompanyThatAlreadyExists(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 

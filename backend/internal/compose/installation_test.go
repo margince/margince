@@ -20,7 +20,7 @@ func discardLogger() *slog.Logger {
 	return slog.New(slog.NewTextHandler(io.Discard, nil))
 }
 
-func TestEnsureInstallationRefusesAnAdminWithoutAnCompany(t *testing.T) {
+func TestEnsureInstallationRefusesAnAdminWithoutAWorkspace(t *testing.T) {
 	cfg := deployconfig.Config{
 		Version: 1,
 		BootstrapAdmin: &deployconfig.BootstrapAdmin{

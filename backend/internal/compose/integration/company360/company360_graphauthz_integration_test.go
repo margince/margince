@@ -316,13 +316,13 @@ func TestCompanyGraphIntroPathNamesTheWarmRoomsContact(t *testing.T) {
 	}
 }
 
-// TestCompanyGraphCitesAnCompanySubjectSignal: a signal created
+// TestCompanyGraphCitesACompanySubjectSignal: a signal created
 // directly ABOUT the account carries the subject pair and no resolved_company_id at
 // all, so a card that only looked at resolved_company_id would never cite one. The
 // predicate comes from the signals module (signals.OfCompanyWhere), which
 // is what keeps this card and GET /signals agreeing about what belongs to an
 // account.
-func TestCompanyGraphCitesAnCompanySubjectSignal(t *testing.T) {
+func TestCompanyGraphCitesACompanySubjectSignal(t *testing.T) {
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	svc := company360Service(e)

@@ -22,7 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func TestAnCompanyEventQueuesTheEnrichPassNow(t *testing.T) {
+func TestACompanyEventQueuesTheEnrichPassNow(t *testing.T) {
 	e := integration.Setup(t)
 	inserter, err := jobs.NewInserter(e.Pool, slog.Default())
 	if err != nil {

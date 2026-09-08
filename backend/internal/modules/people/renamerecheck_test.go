@@ -151,7 +151,7 @@ func TestAnUpdateOwesTheNameLockThroughEitherChannelThatWritesAName(t *testing.T
 			"display": {DisplayName: &display},
 			"legal":   {LegalName: &legal},
 		} {
-			if !renamesAnCompany(in) {
+			if !renamesACompany(in) {
 				t.Errorf("a supplied %s name owes the lock and was not asked for it", name)
 			}
 		}
@@ -160,7 +160,7 @@ func TestAnUpdateOwesTheNameLockThroughEitherChannelThatWritesAName(t *testing.T
 	t.Run("a cleared name", func(t *testing.T) {
 		names := 0
 		for field, clearable := range clearableCompanyColumns(crmcontracts.Company{}) {
-			owes := renamesAnCompany(UpdateCompanyInput{Clear: []string{field}})
+			owes := renamesACompany(UpdateCompanyInput{Clear: []string{field}})
 			if !companyNameColumns[clearable.Column] {
 				// The other end: the lock is workspace-wide, so a clear that
 				// writes no name must NOT pay for it.
@@ -185,7 +185,7 @@ func TestAnUpdateOwesTheNameLockThroughEitherChannelThatWritesAName(t *testing.T
 
 	t.Run("an edit that touches no name", func(t *testing.T) {
 		owner := "somebody"
-		if renamesAnCompany(UpdateCompanyInput{
+		if renamesACompany(UpdateCompanyInput{
 			Industry: &owner, Clear: []string{"description", "industry"},
 		}) {
 			t.Error("an edit writing no name column took the workspace-wide lock")

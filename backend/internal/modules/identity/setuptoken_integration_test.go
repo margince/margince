@@ -37,7 +37,7 @@ func newSetupService(t *testing.T) *Service {
 // stopped asking rather than an operator who declined to answer.
 func claimInput(company string) InstallationBootstrap {
 	return InstallationBootstrap{
-		CompanyName:   company,
+		WorkspaceName: company,
 		BaseCurrency:  "EUR",
 		BaseLanguage:  "en",
 		Timezone:      "Europe/Berlin",

@@ -151,8 +151,8 @@ func setupRevocationEnv(t *testing.T, slug string) *revocationEnv {
 	err := database.WithInfraTx(ctx, pool, func(tx pgx.Tx) error {
 		var err error
 		wsID, err = createInstallation(ctx, tx, InstallationBootstrap{
-			CompanyName: slug,
-			AdminEmail:  adminEmail, AdminName: "Admin",
+			WorkspaceName: slug,
+			AdminEmail:    adminEmail, AdminName: "Admin",
 			AdminPassword: bootstrapPassword,
 		}, originConfigured, nil, &[]string{})
 		return err

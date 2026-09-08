@@ -118,7 +118,7 @@ func attachmentForm(t *testing.T, e *apptest.AppEnv, content []byte) (*bytes.Buf
 	form := multipart.NewWriter(&buf)
 	for field, value := range map[string]string{
 		"entity_type": "company",
-		"entity_id":   anCompanyID(t, e),
+		"entity_id":   aCompanyID(t, e),
 	} {
 		if err := form.WriteField(field, value); err != nil {
 			t.Fatalf("writing %s: %v", field, err)
@@ -137,9 +137,9 @@ func attachmentForm(t *testing.T, e *apptest.AppEnv, content []byte) (*bytes.Buf
 	return &buf, form.FormDataContentType()
 }
 
-// anCompanyID creates a company over the real endpoint, so the parent an
+// aCompanyID creates a company over the real endpoint, so the parent an
 // upload is filed against is one the product itself made.
-func anCompanyID(t *testing.T, e *apptest.AppEnv) string {
+func aCompanyID(t *testing.T, e *apptest.AppEnv) string {
 	t.Helper()
 	return createdID(t, e, "/v1/companies", AnyMap{"display_name": "Ceiling Test GmbH"})
 }
