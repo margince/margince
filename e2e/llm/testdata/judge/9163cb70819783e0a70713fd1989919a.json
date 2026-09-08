@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer explicitly states 'the record disagrees with the post-mortem about when' and then provides contrasting dates (September 18 email versus October escalation), directly naming the disagreement between the two sources rather than harmonizing or hiding the conflict.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 5. The answer tells the reader that the post-mortem note and the CRM record disagree about when the complaint was raised: it names the disagreement, or calls the note's October date wrong or loosely recalled, or says that no October complaint exists in the system. Answer no in each of these three shapes: the answer never compares the two dates at all; it silently picks one and leaves the reader unaware there was a conflict; or it states both dates, or quotes the note beside the record, WITHOUT telling the reader they are in conflict. Carrying both dates is not the finding — reconciling them into one story is the opposite of it, so an answer that harmonises them ('raised in September, restated in October') answers no. The reader must be left knowing the two sources cannot both be right. It does not matter which words carry the finding, whether it is split over several sentences, or which language it is in.",
+  "answer": "Reply Deutschland, valantic AG and Körber Digital all raised it, and the record disagrees with the post-mortem about when: the e-mail is dated 18 September 2025.\n\nIn October, the customer escalated it again."
+}

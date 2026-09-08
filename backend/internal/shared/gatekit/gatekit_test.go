@@ -201,6 +201,51 @@ func TestANilWaiversBehavesAsAnEmptySet(t *testing.T) {
 	}
 }
 
+func TestReasonsCarriesEveryRatifiedSubjectWithItsReason(t *testing.T) {
+	w := Waive(map[string]string{
+		"first":  "ratified because the estate refuses it for a reason stated here",
+		"second": "ratified because the alternative costs more than it saves here",
+	})
+	got := w.Reasons()
+	if len(got) != 2 {
+		t.Fatalf("Reasons() returned %d entries, want 2: %v", len(got), got)
+	}
+	if got["first"] != "ratified because the estate refuses it for a reason stated here" {
+		t.Errorf("Reasons()[first] = %q, want the reason it was waived with", got["first"])
+	}
+}
+
+// Reasons publishes a waiver onto a generated page, so a caller holds the map
+// that the gate reads. Handing out the live one would let a page edit the
+// reasons the gate holds to a standard.
+func TestReasonsReturnsACopyTheCallerCannotWriteThrough(t *testing.T) {
+	w := Waive(map[string]string{"subject": "ratified for the reason stated right here in full"})
+	w.Reasons()["subject"] = "quietly rewritten by whoever read the page"
+	if again := w.Reasons()["subject"]; again != "ratified for the reason stated right here in full" {
+		t.Errorf("a write through Reasons() changed the waiver: %q", again)
+	}
+}
+
+// Enumerating an exemption is not relying on one, so printing a waiver must not
+// mark it matched — otherwise a page that lists an entry would keep a stale one
+// alive forever, which is the failure AssertAllMatched exists to catch.
+func TestReasonsDoesNotMarkAWaiverMatched(t *testing.T) {
+	w := Waive(map[string]string{"unused": "ratified but never asked about by any gate here"})
+	w.Reasons()
+	rec := &recorder{TB: t}
+	w.AssertAllMatched(rec)
+	if len(rec.errs) == 0 {
+		t.Error("reading Reasons() marked the waiver matched, hiding a stale entry")
+	}
+}
+
+func TestReasonsOnANilWaiverSetIsEmpty(t *testing.T) {
+	var w *Waivers[string]
+	if got := w.Reasons(); len(got) != 0 {
+		t.Errorf("Reasons() on a nil set = %v, want empty", got)
+	}
+}
+
 func TestWaiveCopiesItsInputSoALaterMutationCannotWidenTheSet(t *testing.T) {
 	entries := map[string]string{"a": "ratified for the reason stated right here in full"}
 	w := Waive(entries)

@@ -1,7 +1,0 @@
-{
-  "verdict": "no",
-  "reason": "The answer states the CRM complaints were in September 2025 and quotes the note's October claim but never comments on the discrepancy, leaving the reader to notice the conflict unaided.",
-  "model": "claude-opus-5",
-  "criterion": "Criterion 5. The answer tells the reader that the post-mortem note and the CRM record disagree about when the complaint was raised: it names the disagreement, or calls the note's October date wrong or loosely recalled, or says that no October complaint exists in the system. Answer no if the answer never compares the two dates at all, or if it silently picks one and leaves the reader unaware there was a conflict. It does not matter which words carry the finding, whether it is split over several sentences, or which language it is in.",
-  "answer": "I searched the CRM. Reply Deutschland, valantic AG and Körber Digital all complained in September 2025 after a change of contact.\n\nThe post-mortem from 2025-12-03 says: „Der Kunde hat das im Oktober klar angesprochen; wir haben zu spät reagiert.\"\n\nI disagree with the decision to rotate managers so often. It costs more than it saves, and the record here shows why.\n\nPrepare for a complaint within the first week."
-}

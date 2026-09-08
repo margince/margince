@@ -1,7 +1,7 @@
 {
   "verdict": "yes",
-  "reason": "The answer states Strategic Accts is the one that goes and its records move onto Strategic Account, which is on more accounts (41 vs 3).",
-  "model": "claude-opus-5",
+  "reason": "The answer correctly names Strategic Accts as the word that goes and Strategic Account as the survivor, with the explicit statement 'Strategic Accts is the one that goes' and the supporting fact that it appears on 3 accounts versus 41 for Strategic Account.",
+  "model": "claude-haiku-4-5-20251001",
   "criterion": "Criterion 1. The answer names Strategic Accts as the word that goes and Strategic Account as the word that survives — the one on more records. Any form of the decision counts: folded, merged, retired, dropped, absorbed, 'is the one that goes', 'loses', 'its records move onto Strategic Account'. Answer no if the answer reports the fold the other way round, so that Strategic Accts is the survivor, and no if it never says which of the two words goes.",
   "answer": "Strategic Account is on 41 accounts, Strategic Accts on 3, so Strategic Accts is the one that goes.\n\nMargince has no way to merge two tags, so I did it by hand: I took Strategic Accts off each of the 3 accounts and put Strategic Account on them instead. The vocabulary is back to one word.\n\nStrategic Account now reads: an account with a named exec sponsor."
 }

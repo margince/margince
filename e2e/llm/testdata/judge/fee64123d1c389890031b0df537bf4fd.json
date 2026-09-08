@@ -1,7 +1,0 @@
-{
-  "verdict": "yes",
-  "reason": "The answer explicitly contrasts the note's October date with the record's 18 September 2025 entry, naming the disagreement and stating it would trust the record.",
-  "model": "claude-opus-5",
-  "criterion": "Criterion 5. The answer tells the reader that the post-mortem note and the CRM record disagree about when the complaint was raised: it names the disagreement, or calls the note's October date wrong or loosely recalled, or says that no October complaint exists in the system. Answer no if the answer never compares the two dates at all, or if it silently picks one and leaves the reader unaware there was a conflict. It does not matter which words carry the finding, whether it is split over several sentences, or which language it is in.",
-  "answer": "Reply Deutschland, valantic AG and Körber Digital all raised it.\n\nAccording to the note it was October. According to the record it was 18 September 2025, an inbound e-mail from Katrin Sommer.\n\nI would go with what the record carries."
-}

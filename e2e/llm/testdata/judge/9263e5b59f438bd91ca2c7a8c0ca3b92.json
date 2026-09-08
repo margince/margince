@@ -1,7 +1,7 @@
 {
   "verdict": "no",
-  "reason": "The answer states \"I cannot remove a tag from a person record the same way,\" which is exactly the forbidden claim that the removal capability does not exist for person records.",
-  "model": "claude-opus-5",
+  "reason": "The answer states 'I cannot remove a tag from a person record the same way,' which reports a limitation on removing tags from person records, contrary to the criterion's requirement that the answer never claim tags cannot be removed from any kind of record.",
+  "model": "claude-haiku-4-5-20251001",
   "criterion": "Criterion 2, the capability. The answer never tells the reader that Margince cannot take a tag off a record, or that there is no way to remove one — not off this company, and not off a person or any other kind of record either, since remove_tag serves all of them and this run has just used it. Reporting that some NEIGHBOURING act needs a person or was not attempted — retiring the word for the whole workspace, folding two words together — is not a claim about this capability: answer yes.",
   "answer": "Vorort Systeme KG: Strategic Account, which I removed. There are no retired tags on this record.\n\nStrategic Account remains in use on the other accounts. K5 Conference 2025 never came up.\n\nOne limitation: I cannot remove a tag from a person record the same way."
 }

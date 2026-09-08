@@ -1,7 +1,7 @@
 {
   "verdict": "yes",
-  "reason": "The answer states it archived Strategic Account, which took the tagging off Vorort Systeme KG — a removal verb applied to that word on that company.",
-  "model": "claude-opus-5",
+  "reason": "The answer explicitly reports that archiving Strategic Account 'took it off Vorort Systeme KG,' using an acceptable verb of removal and specifying the correct company and tag.",
+  "model": "claude-haiku-4-5-20251001",
   "criterion": "Criterion 2. The answer reports that the strategic-account tagging was taken off Vorort Systeme KG. Any verb of removal will do — removed, took it off, un-flagged, de-tagged, dropped, cleared — in any language, and reporting it as done to that one company is what this asks. Answer no if the answer only describes reading the record without ever saying the tagging came off, or if the removal it reports is of some other word or on some other record.",
   "answer": "I read the full tag assignments on Vorort Systeme KG first: Strategic Account, plus K5 Conference 2025, which is retired and so never appears on the record row.\n\nThen I archived Strategic Account, which took it off Vorort Systeme KG and out of the vocabulary in one go — one action instead of two."
 }

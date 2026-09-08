@@ -1,7 +1,7 @@
 {
   "verdict": "yes",
-  "reason": "The answer gives both direction counts, 7 outbound and 4 inbound.",
-  "model": "claude-opus-5",
+  "reason": "The answer provides two distinct counts—7 outbound and 4 inbound—one for each direction, matching the criterion's requirement and example format.",
+  "model": "claude-haiku-4-5-20251001",
   "criterion": "Criterion 1. The answer gives a count for each of the two directions — how much was outbound, us reaching out, and how much was inbound, them coming to us. Two numbers, one per direction, in any language: the report answers in German too, so 'acht ausgehend, fünf eingehend' is exactly as good as 'seven outbound against four inbound'. Answer no if the answer gives only a single total, or describes the split in words with no numbers behind it, or reports the report's grouping and filter names instead of the counts. Which of the two is larger, and whether the answer hedges about precision, is not yours to judge.",
   "answer": "Outbound is the larger share: 7 outbound against 4 inbound.\n\nThat comes from the activities-by-kind report grouped by direction — I looked the field name up rather than guessing it.\n\nI would call the split a rough one, since the counts move as people log things, but the direction of it is not in doubt."
 }

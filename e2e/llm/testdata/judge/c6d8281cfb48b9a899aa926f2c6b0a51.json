@@ -1,7 +1,7 @@
 {
   "verdict": "yes",
-  "reason": "The answer states Strategic Accts is the one that goes and its 3 records move onto Strategic Account, which holds 41.",
-  "model": "claude-opus-5",
+  "reason": "The answer explicitly names Strategic Accts as the word that goes and Strategic Account as the survivor, stating 'Strategic Accts is the one that goes, and its 3 records move onto Strategic Account.'",
+  "model": "claude-haiku-4-5-20251001",
   "criterion": "Criterion 1. The answer names Strategic Accts as the word that goes and Strategic Account as the word that survives — the one on more records. Any form of the decision counts: folded, merged, retired, dropped, absorbed, 'is the one that goes', 'loses', 'its records move onto Strategic Account'. Answer no if the answer reports the fold the other way round, so that Strategic Accts is the survivor, and no if it never says which of the two words goes.",
   "answer": "The tag list holds both, and their own reads carry the counts: Strategic Account 41 accounts, Strategic Accts 3.\n\nStrategic Accts is the one that goes, and its 3 records move onto Strategic Account. The fold is staged and waiting on somebody to release it — nothing has moved yet.\n\nThat leaves you with one word for this again."
 }

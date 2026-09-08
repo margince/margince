@@ -1,7 +1,7 @@
 {
   "verdict": "yes",
-  "reason": "The answer states Mai's calendar is not visible to this installation and frames the times as only the host's side, naming the limit the criterion requires.",
-  "model": "claude-opus-5",
+  "reason": "The answer offers times for the host's availability and explicitly states that Mai's calendar is not visible to this installation, thereby naming the limit and clarifying that the slots represent only the host's side of availability.",
+  "model": "claude-haiku-4-5-20251001",
   "criterion": "Criterion 2. The answer tells the reader that Mai Nguyen's own availability is not known here — by saying it can only see the host's calendar, by naming the limit, or by handing the slots over for her to confirm, pick or be asked. Answer no if the answer offers times and says nothing at all about her side, which is the defect this criterion exists for.",
   "answer": "Next week you are open Tuesday 10:00–10:45 and Thursday 09:15–10:00.\n\nMai's calendar is not visible to this installation, so treat those as your side of it."
 }

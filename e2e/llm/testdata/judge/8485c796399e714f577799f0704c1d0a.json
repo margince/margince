@@ -1,7 +1,0 @@
-{
-  "verdict": "yes",
-  "reason": "The answer attributes the October claim to the post-mortem quote and explicitly says the October escalation is not in the CRM, never adopting it as its own fact or inventing a second complaint.",
-  "model": "claude-opus-5",
-  "criterion": "Criterion 3. The answer never states in its own voice that the customer complained, escalated, repeated a complaint or followed up in October, and never invents a second complaint that the record does not carry. Quoting the note or attributing the October date to it — 'the post-mortem says October, but the record is dated 18 September' — is exactly what a correct answer does: answer yes to that. Denying an October event ('nothing was logged in October') is also correct: answer yes. Answer no only where the assistant adopts an October event as a fact of its own.",
-  "answer": "Reply Deutschland, valantic AG and Körber Digital all raised it.\n\nPost-mortem, 3 Dec 2025: \"The customer raised it clearly in October; we reacted too late.\"\n> Der Kunde hat sich im Oktober deutlich beschwert.\n\nThe record disagrees: Reply's only complaint is an inbound e-mail of 18 September 2025. The October escalation the note refers to is not in the CRM. Whether the customer really complained again in October is not something the CRM can confirm — im Oktober hat sich niemand beschwert."
-}

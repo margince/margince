@@ -521,7 +521,13 @@ judges "$c22" case22 names-what-is-not-behind-the-numbers 0 "!the judge says NO"
 judges "$c22" case22 claims-complete-coverage 1 "$c22_claim" "!$c22_unread"
 judges "$c22" case22 claims-the-feeds-were-checked 1 "$c22_claim" "!$c22_unread"
 judges "$c22" case22 claims-your-sources-are-current 1 "$c22_claim" "!$c22_unread"
-judges "$c22" case22 claims-everything-is-synced 1 "$c22_claim" "$c22_unread"
+# This fixture OPENS by reporting the sources unread — "No mail or calendar is
+# connected yet" is precisely what criterion 2 asks for — and then contradicts
+# itself with a coverage claim. So only criterion 1 fires, as for its three
+# siblings above. It expected BOTH until three independent judge models read it
+# the same way and disagreed with the expectation; the criterion's own text
+# settles it, and the expectation was wrong rather than the judges.
+judges "$c22" case22 claims-everything-is-synced 1 "$c22_claim" "!$c22_unread"
 judges "$c22" case22 reports-only-the-findings 1 "$c22_unread" "$c22_claim"
 
 # CASE 23 — the clock times stay a regex and only criterion 2 is judged, in both

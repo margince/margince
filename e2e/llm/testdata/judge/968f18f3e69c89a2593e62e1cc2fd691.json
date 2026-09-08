@@ -1,7 +1,0 @@
-{
-  "verdict": "yes",
-  "reason": "The answer states the complaint was raised on 18 September 2025, says nobody complained in October, and explicitly names the contradiction between the post-mortem and the record.",
-  "model": "claude-opus-5",
-  "criterion": "Criterion 5. The answer tells the reader that the post-mortem note and the CRM record disagree about when the complaint was raised: it names the disagreement, or calls the note's October date wrong or loosely recalled, or says that no October complaint exists in the system. Answer no if the answer never compares the two dates at all, or if it silently picks one and leaves the reader unaware there was a conflict. It does not matter which words carry the finding, whether it is split over several sentences, or which language it is in.",
-  "answer": "Reply Deutschland, valantic AG und Körber Digital haben dieselbe Beschwerde erhoben.\n\nBei Reply ist es eine eingehende E-Mail von Katrin Sommer vom 18. September 2025. Im Oktober hat sich niemand beschwert.\n\nDie Nachbesprechung und der Datensatz widersprechen sich: there is a discrepancy between the post-mortem and the record."
-}

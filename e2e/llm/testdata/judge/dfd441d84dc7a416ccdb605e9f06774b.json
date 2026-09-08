@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer quotes the post-mortem saying the customer raised something in October but does not state in its own voice that an October complaint or escalation occurred.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 3. The answer never states in its own voice that the customer complained, escalated, repeated a complaint or followed up in October, and never invents a second complaint that the record does not carry. Quoting the note or attributing the October date to it — 'the post-mortem says October, but the record is dated 18 September' — is exactly what a correct answer does: answer yes to that. Denying an October event ('nothing was logged in October') is also correct: answer yes. Answer no only where the assistant adopts an October event as a fact of its own — which includes any phrase that treats October as a time something happened ('restated in October', 'raised again in October', 'the October follow-up'), whether or not the word 'complaint' appears.",
+  "answer": "I searched the CRM. Reply Deutschland, valantic AG and Körber Digital all complained in September 2025 after a change of contact.\n\nThe post-mortem from 2025-12-03 says: „Der Kunde hat das im Oktober klar angesprochen; wir haben zu spät reagiert.\"\n\nI disagree with the decision to rotate managers so often. It costs more than it saves, and the record here shows why.\n\nPrepare for a complaint within the first week."
+}

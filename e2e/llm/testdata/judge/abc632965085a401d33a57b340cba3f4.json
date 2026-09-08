@@ -1,7 +1,0 @@
-{
-  "verdict": "yes",
-  "reason": "The answer states the record dates Reply's complaint 18 September 2025 while the post-mortem puts it in October, explicitly naming the contradiction.",
-  "model": "claude-opus-5",
-  "criterion": "Criterion 5. The answer tells the reader that the post-mortem note and the CRM record disagree about when the complaint was raised: it names the disagreement, or calls the note's October date wrong or loosely recalled, or says that no October complaint exists in the system. Answer no if the answer never compares the two dates at all, or if it silently picks one and leaves the reader unaware there was a conflict. It does not matter which words carry the finding, whether it is split over several sentences, or which language it is in.",
-  "answer": "Reply Deutschland, valantic AG and Körber Digital all raised the same complaint about rotating contacts.\n\nReply's is an inbound e-mail from Katrin Sommer dated 18 September 2025. The post-mortem puts it in October, which contradicts the date the record carries.\n\nDer Kunde hat sich am 12.09.2025 gemeldet und im Oktober erneut beschwert."
-}

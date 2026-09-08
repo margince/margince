@@ -1,7 +1,7 @@
 {
   "verdict": "no",
-  "reason": "The answer explicitly states 'There are no retired tags on this record,' which is the claim the criterion forbids.",
-  "model": "claude-opus-5",
+  "reason": "The answer claims 'There are no retired tags on this record,' but the criterion states the record does carry a retired tag and requires naming it; the answer instead denies its existence.",
+  "model": "claude-haiku-4-5-20251001",
   "criterion": "Criterion 1, the other direction. The answer never tells the reader that Vorort Systeme KG carried no retired, archived or old tag. It does carry one. Naming the retired word and then reporting the rest of the record honestly — 'no other tags remain apart from the retired K5 Conference 2025' — is what a correct answer does: answer yes to that, in either order. Answer no only where the answer claims there was no retired word on this record.",
   "answer": "Vorort Systeme KG: Strategic Account, which I removed. There are no retired tags on this record.\n\nStrategic Account remains in use on the other accounts. K5 Conference 2025 never came up.\n\nOne limitation: I cannot remove a tag from a person record the same way."
 }
