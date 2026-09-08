@@ -3,49 +3,55 @@
 
 package compose
 
-// The mode guard in front of the rejection.
+// The rejection's mode guard, as far as a unit test can reach it.
+//
+// What is NOT here is a case for refuseInOverlayMode itself: it is the shared
+// helper, and nativeonlytools_test.go already holds both of its answers. A pair
+// of copies keyed on this verb's name would prove the same two lines twice and
+// go stale in the same breath.
+//
+// What is left is the wiring — that Server.RejectOrganization runs the guard
+// BEFORE the people transport sees the request — and that needs a Dispatcher
+// this package cannot fake: `sorDispatch` is the concrete type, so every write
+// shadow in this tree is in the same position. The wiring is covered where it
+// can be, by compose/integration's own overlay case.
 
 import (
-	"net/http"
-	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 )
 
-// An overlay workspace's native organization table holds none of its records,
-// so a rejection there would answer "not found" about a company the reader is
-// looking at — and record a domain refusal for a capture path that is not the
-// one creating the records. ADR-0018 takes the other answer: a capability that
-// is not served says so with the declared sentinel.
-func TestRejectingACompanyIsRefusedInOverlayMode(t *testing.T) {
-	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/v1/organizations/x/reject", http.NoBody)
-
-	if refused := refuseInOverlayMode(rec, req, overlayMode()); !refused {
-		t.Fatal("an overlay workspace was let through to the native store")
+// The shadow calls the guard. Read from the SOURCE rather than served, because
+// the alternative is a Dispatcher against a live database for a claim that is
+// one line long — and a shadow silently losing its guard is wrong only in
+// overlay mode, which is exactly where nobody looks.
+func TestTheRejectShadowRunsTheModeGuardFirst(t *testing.T) {
+	src := readComposeSource(t, "organizationreject.go")
+	_, shadow, found := strings.Cut(src, "func (s Server) RejectOrganization(")
+	if !found {
+		t.Fatal("the shadow is gone from this file — the router then reaches the people transport directly, unguarded")
 	}
-	if rec.Code != http.StatusUnprocessableEntity {
-		t.Errorf("status = %d, want 422", rec.Code)
-	}
-	// The same machine code every other native-only capability answers: a
-	// caller must not have to know which one it asked for to recognise a
-	// declared gap.
-	if !strings.Contains(rec.Body.String(), "unsupported_by_sor") {
-		t.Errorf("body = %s, want the unsupported_by_sor sentinel", rec.Body.String())
+	guard := strings.Index(shadow, "refuseInOverlayMode(")
+	transport := strings.Index(shadow, "s.peopleHandlers.RejectOrganization(")
+	switch {
+	case guard < 0:
+		t.Fatal("the shadow does not run the mode guard — in overlay mode it reaches a native store " +
+			"holding none of this workspace's records, and answers not-found about a company the reader is looking at")
+	case transport < 0:
+		t.Fatal("the shadow does not reach the people transport, so the verb is unserved")
+	case guard > transport:
+		t.Fatal("the shadow guards AFTER delegating, which is not a guard")
 	}
 }
 
-// The control: a native workspace reaches the transport, and the guard writes
-// nothing on the way. Without it the case above would pass against a guard that
-// refused every workspace, which would take the verb off the product.
-func TestRejectingACompanyReachesTheStoreInNativeMode(t *testing.T) {
-	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/v1/organizations/x/reject", http.NoBody)
-
-	if refused := refuseInOverlayMode(rec, req, nativeMode()); refused {
-		t.Fatal("a native workspace was refused its own rejection")
+// readComposeSource reads one file of this package, so a case can assert about
+// wiring a fake cannot reach.
+func readComposeSource(t *testing.T, name string) string {
+	t.Helper()
+	src, err := os.ReadFile(name)
+	if err != nil {
+		t.Fatalf("reading %s: %v", name, err)
 	}
-	if rec.Body.Len() != 0 {
-		t.Errorf("the guard wrote %s for a native workspace", rec.Body.String())
-	}
+	return string(src)
 }

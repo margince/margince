@@ -3,13 +3,20 @@
 
 package people
 
-// What the rejection transport refuses before the store is reached.
+// What a rejection is refused for before a database is reached.
 //
-// The shape checks are here rather than in the store for the reason every
-// other door in this file gives: a caller learns WHICH field is wrong, and the
-// store's own re-check answers an internal error that tells an admin nothing
-// they can act on. So they need a case that runs without a database, and these
-// are it — the store's half is proven against Postgres next door.
+// TWO owners, and the cases say which is answering. The LENGTH ceiling is the
+// transport's: the contract declares maxLength and the generated type does not
+// enforce it, so unchecked one caller stores a megabyte on the domain and every
+// reader of the blocked list is served it back in full. The REQUIRED reason is
+// the store's, because it holds for every caller rather than only for this
+// door — the transport trims and passes it on, and a copy here would be a
+// second spelling of one refusal.
+//
+// The store's is reachable without Postgres because it answers before it opens
+// a transaction, which is what lets a zero-value Handlers exercise it: what
+// these cases prove is that the refusal reaches the wire naming its field, not
+// which line produced it.
 
 import (
 	"bytes"
@@ -65,11 +72,13 @@ func problemOf(t *testing.T, rec *httptest.ResponseRecorder) struct {
 
 // A reason is required, and whitespace is not one.
 //
-// The contract says minLength 1 and a non-whitespace pattern; the generated
-// type enforces neither, so this door is what makes either true. Both refusals
-// name the field, because a 422 that does not is a caller guessing which of two
-// values it sent was wrong.
-func TestRejectingWithoutAReasonNamesTheField(t *testing.T) {
+// The refusal is the STORE's — it holds for every caller, not only for this
+// door — and what these cases hold is that it arrives at the wire as a 422
+// naming the field rather than as the internal error an unclassified store
+// failure would answer. The contract's own `minLength` and non-whitespace
+// pattern describe the same rule for a client reading the schema; the generated
+// type enforces neither.
+func TestRejectingWithoutAReasonCarriesTheStoresRefusalToTheWire(t *testing.T) {
 	for _, tc := range []struct {
 		name string
 		body string
