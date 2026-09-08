@@ -26493,7 +26493,9 @@ export interface components {
              */
             capacity_note?: string | null;
             /**
-             * @description What next week's calendar already holds, counted rather than authored.
+             * @description What the PLANNED week's calendar already holds, counted rather than authored —
+             *     the same seven days `local_week_start` names, so the figure and the plan cannot
+             *     describe different weeks.
              *
              *     ABSENT when the installation composed no calendar reader. Absent is NOT zero: a
              *     week nobody has looked at is unknown, and drawing it as "nothing booked" would

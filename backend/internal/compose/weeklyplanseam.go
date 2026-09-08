@@ -57,30 +57,32 @@ type weeklyPlanCapacity struct{ pool *pgxpool.Pool }
 
 var _ weeklyplan.Capacity = weeklyPlanCapacity{}
 
-// NextWeek counts booked meetings and open tasks due in NEXT week's local
-// window — the week the plan being written is about, not the one being lived.
+// ForWeek counts booked meetings and open tasks due in ONE named week's local
+// window — the week the plan is about, which the caller names.
 //
-// Booked only, never held: this is a question about a week that has not
-// happened, so a meeting's outcome cannot be known and `held` there would mean
-// somebody backdated it. Canceled and no_show are absent for the same reason.
+// Named rather than derived: this seam used to compute "next week" from the
+// clock, so a plan stored against the current week was priced against the week
+// after it, and the heading, the stored row and this line each answered about a
+// different seven days.
+//
+// Booked only, never held. The question is what is COMMITTED — what a rep must
+// leave room for — and an outcome is not a commitment: a held meeting is time
+// already spent rather than time still owed, and counting it would price a week
+// against work that is finished. Canceled and no_show are absent for the same
+// reason, from the other side.
 //
 // The window is the LOCAL week resolved to instants, through weekly's own
 // WeekStartOf, so the plan and the review beside it agree about which seven
 // days these are.
-func (c weeklyPlanCapacity) NextWeek(
-	ctx context.Context, owner ids.UUID, now time.Time,
+func (c weeklyPlanCapacity) ForWeek(
+	ctx context.Context, owner ids.UUID, weekStart time.Time,
 ) (weeklyplan.Committed, error) {
 	var out weeklyplan.Committed
 	err := database.WithWorkspaceTx(ctx, c.pool, func(tx pgx.Tx) error {
-		thisWeek, err := weekly.WeekStartOf(ctx, tx, now)
-		if err != nil {
-			return err
-		}
 		zone, err := identity.TimezoneOf(ctx, tx)
 		if err != nil {
 			return err
 		}
-		nextWeek := thisWeek.AddDate(0, 0, 7)
 		// A calendar date carried as midnight UTC is the wrong shape for a
 		// range: comparing timestamptz against it measures a week offset by the
 		// installation's UTC offset, and across a DST change a fixed 168 hours
@@ -88,7 +90,7 @@ func (c weeklyPlanCapacity) NextWeek(
 		var start, end time.Time
 		if err := tx.QueryRow(ctx, `
 			SELECT ($1::date)::timestamp AT TIME ZONE $2,
-			       ($1::date + 7)::timestamp AT TIME ZONE $2`, nextWeek, zone).
+			       ($1::date + 7)::timestamp AT TIME ZONE $2`, weekStart, zone).
 			Scan(&start, &end); err != nil {
 			return fmt.Errorf("compose: bounding next week: %w", err)
 		}

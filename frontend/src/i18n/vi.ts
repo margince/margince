@@ -2587,7 +2587,7 @@ export const vi = {
   "brief.weekly.scorecard.forecastMovesBasis": "{down} hạ dự báo",
   // Tuần tới. Bản tổng kết đã đóng băng nói điều đã xảy ra; đây là phần duy nhất
   // của trang đó mà vẫn còn ai đó thay đổi được.
-  "plan.title": "Lập kế hoạch tuần tới",
+  "plan.title": "Lập kế hoạch tuần của bạn",
   // Phần đầu của danh sách đã xếp hạng, trên trang mở đầu tiên — cùng những
   // dòng mà Danh sách công việc hiển thị, theo thứ tự máy chủ đã quyết định.
   // Câu mở đầu của bản tóm tắt, ghép từ chính những dòng trang đang hiển thị —
@@ -2724,8 +2724,8 @@ export const vi = {
   "plan.contract.save": "Lưu",
   "plan.contract.cancel": "Hủy",
   "plan.contract.capacityLine":
-    "Tuần tới đã có {meetings} cuộc họp và {tasks} công việc.",
-  "plan.contract.crowded": "Tuần tới đã kín",
+    "Tuần đó đã có {meetings} cuộc họp và {tasks} công việc.",
+  "plan.contract.crowded": "Tuần đó đã kín",
   "plan.contract.crowdedBody":
     "{committed} việc đã được đặt và bạn đã ghi {commitments} cam kết. Sẽ phải bỏ bớt điều gì đó.",
   "plan.help.ask": "Nhờ giúp đỡ",

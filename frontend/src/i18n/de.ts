@@ -2614,7 +2614,7 @@ export const de = {
   "brief.weekly.scorecard.forecastMovesBasis": "{down} herabgestuft",
   // Die kommende Woche. Der eingefrorene Rückblick sagt, was war; dies ist der
   // einzige Teil dieser Seite, den noch jemand ändern kann.
-  "plan.title": "Nächste Woche planen",
+  "plan.title": "Ihre Woche planen",
   // Der Kopf der sortierten Liste, auf der Seite, die zuerst geöffnet wird —
   // dieselben Zeilen wie in der Arbeitsliste, in der Reihenfolge des Servers.
   // Der Eröffnungssatz des Briefings, aus den Zeilen zusammengesetzt, die die
@@ -2753,8 +2753,8 @@ export const de = {
   "plan.contract.save": "Speichern",
   "plan.contract.cancel": "Abbrechen",
   "plan.contract.capacityLine":
-    "Nächste Woche hält bereits {meetings} Termine und {tasks} Aufgaben.",
-  "plan.contract.crowded": "Nächste Woche ist schon voll",
+    "Diese Woche hält bereits {meetings} Termine und {tasks} Aufgaben.",
+  "plan.contract.crowded": "Diese Woche ist schon voll",
   "plan.contract.crowdedBody":
     "{committed} Dinge sind bereits gebucht und Sie haben {commitments} Vorhaben notiert. Etwas wird weichen müssen.",
   "plan.help.ask": "Um Hilfe bitten",
