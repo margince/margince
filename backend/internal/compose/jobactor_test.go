@@ -194,26 +194,38 @@ func packageFunctions(t *testing.T, files []os.DirEntry) map[string]string {
 		if err != nil {
 			t.Fatalf("reading %s: %v", name, err)
 		}
-		text := string(src)
-		locs := anyFunc.FindAllStringSubmatchIndex(text, -1)
-		for i, loc := range locs {
-			end := len(text)
-			if i+1 < len(locs) {
-				end = locs[i+1][0]
-			}
-			// Unioned rather than overwritten: two files may carry a method of
-			// the same name on different receivers, and this gate asks whether
-			// ANY of the things that name could mean binds an actor. Keeping
-			// only the last would make the answer depend on directory order.
-			out[text[loc[2]:loc[3]]] += text[loc[0]:end]
-		}
+		indexFunctions(out, string(src))
 	}
 	return out
 }
 
-// anyFunc captures the NAME of a top-level function or method — the second
-// group, because a method's receiver comes first.
-var anyFunc = regexp.MustCompile(`(?m)^func (?:\([^)]*\) )?(\w+)\(`)
+// indexFunctions records one file's RECEIVER-LESS functions by name.
+//
+// Receiver-less only, and that is what makes the lookup resolve rather than
+// guess. A bare `foo()` in Go can only reach a package-level function, so
+// indexing methods under the same bare name let an unrelated
+// `(s *Store) mode()` answer for a call to `mode()` — a binder in a body the
+// worker never reaches, reported as the worker's own. Go forbids two
+// package-level functions of one name in a package, so every name that
+// resolves here resolves to exactly one body.
+func indexFunctions(out map[string]string, text string) {
+	locs := anyFunc.FindAllStringSubmatchIndex(text, -1)
+	for i, loc := range locs {
+		if loc[2] >= 0 {
+			continue // a method: unreachable by a bare call
+		}
+		end := len(text)
+		if i+1 < len(locs) {
+			end = locs[i+1][0]
+		}
+		out[text[loc[4]:loc[5]]] = text[loc[0]:end]
+	}
+}
+
+// anyFunc captures a top-level declaration's NAME, and separately whether it
+// had a receiver, so a method can be skipped: the first group is the receiver
+// clause when there is one, the second the name.
+var anyFunc = regexp.MustCompile(`(?m)^func (\([^)]*\) )?(\w+)\(`)
 
 // withCalledHelpers is the Work body plus the bodies of the compose-package
 // functions it calls, one level deep.
@@ -232,6 +244,13 @@ var anyFunc = regexp.MustCompile(`(?m)^func (?:\([^)]*\) )?(\w+)\(`)
 // follows names, not call graphs: a call into another package (the automation
 // scanner, the webhook deliverer) is not read at all, which is why a worker
 // whose only binding lives in another module still needs an entry above.
+//
+// What it does NOT do is guess which body a name means. Only receiver-less
+// functions are indexed, because a bare call can reach nothing else — a method
+// indexed under its bare name would let an unrelated `(s *Store) mode()` answer
+// for a call to `mode()`, and a binder in a body the worker never reaches would
+// read as the worker's own. Go forbids two package-level functions of one name,
+// so every name that resolves here resolves to exactly one body.
 func withCalledHelpers(body string, pkg map[string]string) string {
 	var b strings.Builder
 	b.WriteString(body)
@@ -262,3 +281,34 @@ func afterSignature(body string) string {
 // deliberately not matched: this gate reads the compose package's own source,
 // and a method on somebody else's type is not in it.
 var callee = regexp.MustCompile(`(?:^|[^.\w])(\w+)\(`)
+
+// The follow resolves a name; it does not guess which body the name means.
+//
+// A METHOD indexed under its bare name would answer for a call no worker can
+// make: `mode()` in a Work body cannot reach `(s *Store) mode()`, and letting
+// it would report a worker as bound on the strength of a binder in a body it
+// never runs. That is the gate's own failure direction — a waiver it never
+// asked for, granted silently.
+func TestTheFollowDoesNotResolveABareCallToAMethod(t *testing.T) {
+	t.Parallel()
+	const pkg = `package compose
+
+func (s *Store) mode(ctx context.Context) context.Context {
+	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem})
+	return ctx
+}
+`
+	const worker = `func (w *someWorker) Work(ctx context.Context) error {
+	db := database.BindTo(w.pool, ws)
+	return mode(ctx, db)
+}
+`
+	index := map[string]string{}
+	indexFunctions(index, pkg)
+	if _, indexed := index["mode"]; indexed {
+		t.Fatal("a method was indexed under its bare name, so a call no worker can make answers for one it does")
+	}
+	if actorBinders.MatchString(withCalledHelpers(worker, index)) {
+		t.Error("the worker read as binding an actor on the strength of a method it cannot reach by that name")
+	}
+}
