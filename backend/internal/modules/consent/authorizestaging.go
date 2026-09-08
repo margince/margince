@@ -96,7 +96,17 @@ func (g *Gate) recordStagingDecisions(ctx context.Context, tx pgx.Tx, deliveryID
 			id := d.SubjectID
 			subjectID = &id
 		}
-		if _, err := tx.Exec(ctx, `
+		// NOT COUNTED. See decisioncounter.go: this runs on a transaction this
+		// function does not own, and an enforced refusal is delivered by
+		// rolling that transaction back (compose/commsstager.go refuseAtStaging),
+		// so a staging deny leaves no row. A counter incremented here would
+		// report refusals the record does not hold, and would do it under the
+		// shipped posture rather than in some corner.
+		//
+		// A denial under observe or warn DOES commit, and those rows are real.
+		// They are read from the table, not from a counter that would mean one
+		// thing in one posture and another in the next.
+		_, err := tx.Exec(ctx, `
 			INSERT INTO communication_decision
 			  (delivery_id, attempt, decision_set_id, recipient_address, subject_kind, subject_id,
 			   phase, requested_category, resolved_category, verdict, reason_code, basis, suppression,
@@ -107,7 +117,8 @@ func (g *Gate) recordStagingDecisions(ctx context.Context, tx pgx.Tx, deliveryID
 			subjectKind, subjectID, string(d.Phase), nullableCategory(d.Requested),
 			string(d.Resolved), string(d.Verdict), d.ReasonCode,
 			nullableBasis(d.Basis), nullableText(d.Suppression),
-			sum[:], string(d.Mode), by); err != nil {
+			sum[:], string(d.Mode), by)
+		if err != nil {
 			return fmt.Errorf("consent: record the staging decision: %w", err)
 		}
 	}

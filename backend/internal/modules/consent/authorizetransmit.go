@@ -58,6 +58,12 @@ func (g *Gate) AuthorizeTransmit(ctx context.Context, req commsauthz.TransmitReq
 	}
 	setID := ids.NewV7()
 	ticket := commsauthz.TransmitTicket{DeliveryID: req.DeliveryID, Attempt: req.Attempt, DecisionSetID: setID}
+	// Counted after the commit, not beside the insert. Two arms below return an
+	// error once the decisions are already written — an unanswerable legacy
+	// gate, and the wording comparison — and each rolls the rows back. A
+	// counter incremented inside the transaction would keep those, and report
+	// decisions the record does not hold.
+	var recorded []commsauthz.Decision
 
 	// The legacy gate's answer, recorded beside the engine's on every row so a
 	// disagreement is readable in the record rather than only in a counter that
@@ -92,9 +98,11 @@ func (g *Gate) AuthorizeTransmit(ctx context.Context, req commsauthz.TransmitReq
 		if err != nil {
 			return err
 		}
-		if err := g.recordDecisions(ctx, tx, req, setID, set); err != nil {
+		written, err := g.recordDecisions(ctx, tx, req, setID, set)
+		if err != nil {
 			return err
 		}
+		recorded = written
 		// AN UNANSWERABLE LEGACY GATE IS ONLY FATAL WHERE ITS ANSWER IS USED.
 		//
 		// Effective consults legacyAllowed only when no recipient's category is
@@ -135,6 +143,9 @@ func (g *Gate) AuthorizeTransmit(ctx context.Context, req commsauthz.TransmitReq
 	})
 	if err != nil {
 		return commsauthz.TransmitTicket{}, err
+	}
+	for _, d := range recorded {
+		countDecision(d)
 	}
 	return ticket, nil
 }
@@ -331,11 +342,12 @@ func refusalReason(set commsauthz.DecisionSet, legacyAllowed bool) string {
 // exists so a later reader can tell whether the message that went is the
 // message that was authorized, and storing the words themselves would make the
 // decision a second copy of the mail.
-func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.TransmitRequest, setID ids.UUID, set commsauthz.DecisionSet) error {
+func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.TransmitRequest, setID ids.UUID, set commsauthz.DecisionSet) ([]commsauthz.Decision, error) {
+	var written []commsauthz.Decision
 	sum := SendingDigest(req.Subject, req.Body, req.HTMLBody)
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	for _, d := range set.Decisions {
 		// Both or neither, which the table's own CHECK also demands: a
@@ -346,7 +358,7 @@ func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.Tr
 			id := d.SubjectID
 			subjectID = &id
 		}
-		if _, err := tx.Exec(ctx, `
+		tag, err := tx.Exec(ctx, `
 			INSERT INTO communication_decision
 			  (delivery_id, attempt, decision_set_id, recipient_address, subject_kind, subject_id,
 			   phase, resolved_category, verdict, reason_code, basis, suppression,
@@ -356,11 +368,15 @@ func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.Tr
 			req.DeliveryID, req.Attempt, setID, decisionRecipientKey(d.Recipient),
 			subjectKind, subjectID, string(d.Phase), string(d.Resolved), string(d.Verdict),
 			d.ReasonCode, nullableBasis(d.Basis), nullableText(d.Suppression),
-			sum[:], d.LegacyVerdict, string(d.Mode), by); err != nil {
-			return fmt.Errorf("consent: record the transmit decision: %w", err)
+			sum[:], d.LegacyVerdict, string(d.Mode), by)
+		if err != nil {
+			return nil, fmt.Errorf("consent: record the transmit decision: %w", err)
+		}
+		if tag.RowsAffected() > 0 {
+			written = append(written, d)
 		}
 	}
-	return nil
+	return written, nil
 }
 
 // nullableBasis and nullableText carry the difference between "no value" and
