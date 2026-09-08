@@ -31,12 +31,12 @@ func NewEmbedGen(store *Store, embedder Embedder) *EmbedGen {
 // pendingSources (the per-id and set-form views of the same source columns)
 // key off the same identifiers rather than each repeating the literal.
 const (
-	entityPerson        = "person"
-	entityOrganization  = "organization"
-	entityDeal          = "deal"
-	entityLead          = "lead"
-	entityActivity      = "activity"
-	entityProject       = "project"
+	entityPerson       = "person"
+	entityOrganization = "organization"
+	entityDeal         = "deal"
+	entityLead         = "lead"
+	entityActivity     = "activity"
+	entityProject      = "project"
 	// Keyword-searchable but NOT embeddable, and for a different reason than
 	// entityTag below: these two hold plenty of prose, but
 	// `embedding.entity_type` will not accept them (see embedText). Named
@@ -66,7 +66,7 @@ var embedText = map[string]string{
 	// mail is what pulled them back. A limited activity is therefore not indexed
 	// at all, and audiencerescope drops the vector when a row narrows.
 	entityActivity: `SELECT concat_ws(' ', subject, body) FROM activity WHERE id = $1 AND archived_at IS NULL AND audience = 'workspace'`,
-	entityProject: `SELECT concat_ws(' ', name, key, description) FROM project WHERE id = $1 AND archived_at IS NULL`,
+	entityProject:  `SELECT concat_ws(' ', name, key, description) FROM project WHERE id = $1 AND archived_at IS NULL`,
 	// NO product or offer_template ENTRY, and adding one back needs a schema
 	// change first, not just a line here. `embedding.entity_type` carries a
 	// CHECK pinned to datasource.EntityType by
