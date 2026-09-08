@@ -244,12 +244,7 @@ export function ConnectScene({
       <ConnectGuarantees />
 
       <div className="ob-connect-section-head">
-        <h3>
-          {t("ob.conv.connect.mailboxTitle")}
-          <span className="ob-connect-pill ob-connect-pill-required">
-            {t("ob.conv.connect.required")}
-          </span>
-        </h3>
+        <h3>{t("ob.conv.connect.mailboxTitle")}</h3>
         <p className="t-sub">{t("ob.conv.connect.mailboxHint")}</p>
       </div>
 

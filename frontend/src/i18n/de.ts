@@ -5286,7 +5286,6 @@ export const de = {
   "ob.conv.connect.networkTitle": "Dein Netzwerk",
   "ob.conv.connect.networkHint":
     "Hinterlege dein Profil, damit das Netzwerk, das du später importierst, dir zugeordnet wird. Der Import selbst liegt in den Einstellungen.",
-  "ob.conv.connect.required": "erforderlich",
   "ob.conv.connect.recommended": "empfohlen",
   "ob.conv.connect.gmailBrings": "Mail über Google gelesen und gesendet",
   "ob.conv.connect.microsoftBrings": "Mail über Microsoft gelesen und gesendet",

@@ -5399,7 +5399,6 @@ export const en = {
   "ob.conv.connect.networkTitle": "Your network",
   "ob.conv.connect.networkHint":
     "Save your profile so the network you import later is attributed to you. The import itself lives in Settings.",
-  "ob.conv.connect.required": "required",
   "ob.conv.connect.recommended": "recommended",
   // Neither grant carries calendar or contacts — those are their own,
   // separate consent (Settings → Calendar) — and neither carries sign-in:
