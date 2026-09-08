@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -216,6 +217,46 @@ func dedupeDomains(domains []OrgDomainInput) []OrgDomainInput {
 	return out
 }
 
+// electPrimary makes sure a non-empty domain set names a primary, because an
+// organization with live domains and none primary is not a state any reader of
+// this table can act on.
+//
+// Three readers key on is_primary and each fails differently without one. The
+// auto-enrich sweep INNER JOINs it (capture/autoenrich.go), so such a company is
+// never a candidate and is never enriched — silently, with no job, no error and
+// no state saying so. The company read derives website_url from it, so the page
+// shows no website. Provider enrichment reads it for the employer domain.
+//
+// Nothing else elects one later: there is no path that promotes a sole domain,
+// so a record born this way stays this way. The contract admits the state —
+// is_primary defaults to false and only domain is required — which makes an
+// agent constructing the minimal valid body the ordinary way to reach it.
+//
+// current is the primary already live on the record, and keeping it is what
+// makes an edit that merely adds a domain leave the choice alone. A caller who
+// named a primary is obeyed; only silence is filled in, and it is filled with
+// the first domain because the caller offered nothing else to prefer.
+func electPrimary(desired []OrgDomainInput, current string) []OrgDomainInput {
+	if len(desired) == 0 {
+		return desired
+	}
+	for _, d := range desired {
+		if d.IsPrimary {
+			return desired
+		}
+	}
+	elected := 0
+	for i, d := range desired {
+		if d.Domain == current {
+			elected = i
+			break
+		}
+	}
+	out := slices.Clone(desired)
+	out[elected].IsPrimary = true
+	return out
+}
+
 // singleDesiredPrimary returns the one domain marked primary, or "" for
 // none. uq_org_domain_primary is a single-row invariant, so more than one
 // is the typed 409 up front rather than a constraint failure mid-write.
@@ -245,7 +286,10 @@ func reconcileOrgDomains(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, o
 	if err != nil {
 		return nil, err
 	}
-	primary, err := singleDesiredPrimary(desired)
+	// The election happens against the LIVE primary, so an edit that only adds
+	// a domain keeps the one the record already had rather than moving it to
+	// whatever the caller happened to list first.
+	primary, err := singleDesiredPrimary(electPrimary(desired, currentPrimary))
 	if err != nil {
 		return nil, err
 	}

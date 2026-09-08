@@ -299,7 +299,13 @@ func createOrganization(ctx context.Context, tx pgx.Tx, match OrganizationMatch,
 		args...); err != nil {
 		return ids.OrganizationID{}, fmt.Errorf("insert organization: %w", err)
 	}
-	if err := insertOrgDomains(ctx, tx, id, spec.Source, spec.CapturedBy, spec.Domains); err != nil {
+	// A new organization has no primary yet, so the election has nothing to
+	// preserve and fills the caller's silence. Here rather than in the HTTP
+	// mapping because every producer of a company converges on this call — the
+	// API, the tool surface, CSV import, cold start, domain triage and the
+	// overlay flip — and a rule spelled at one of those doors binds only that
+	// door.
+	if err := insertOrgDomains(ctx, tx, id, spec.Source, spec.CapturedBy, electPrimary(spec.Domains, "")); err != nil {
 		return ids.OrganizationID{}, err
 	}
 	return id, nil
