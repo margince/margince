@@ -3724,7 +3724,15 @@ type DealIdentity = Pick<
   | "partner_org_id"
   | "partner_attribution"
   | "masked_fields"
->;
+  | "won_without_contract_reason"
+  | "won_without_contract_detail"
+> &
+  // `status` is required on a Deal and optional here, which is the rest of this
+  // type's rule stated for the one field that would otherwise break it: the line
+  // draws the facts it is given, and every story and test that draws it builds
+  // the smallest deck that says something. Absent reads as "not a won deal",
+  // which is what a deck omitting it means.
+  Partial<Pick<Deal, "status">>;
 
 /**
  * The one line of facts under a deal's name: what it is worth, where it sits
@@ -3832,8 +3840,45 @@ export function DealIdentityLine({
             </IdentityFact>
           )
         )}
+        <WonWithoutContractFact deal={deal} />
       </IdentityLine>
     </IdentityMeta>
+  );
+}
+
+/**
+ * How a won deal was won, when it was won without a contract.
+ *
+ * The server treats this answer as load-bearing — the whole justification for
+ * letting the deal close without paperwork is that the gap becomes countable —
+ * and until now no screen read it back. The rep who answered could not check
+ * their own answer, and a won deal with paper looked identical to one without.
+ *
+ * On the identity line rather than in a pane, beside the `won` badge it
+ * qualifies: it is a fact about the deal's standing, which is what this line
+ * is for, and a reader asking "won on what?" is looking at the badge.
+ *
+ * Absent, never a placeholder, when the deal is not won or a contract carried
+ * it. "Won with a contract" is the ordinary case and needs no sentence; a line
+ * saying so on every won deal would bury the ones that need reading.
+ */
+function WonWithoutContractFact({ deal }: Readonly<{ deal: DealIdentity }>) {
+  const t = useT();
+  const reason = deal.won_without_contract_reason;
+  if (deal.status !== "won" || !reason) {
+    return null;
+  }
+  const label = t(WON_REASON_LABELS[reason]);
+  return (
+    <IdentityFact>
+      {/* The detail replaces the label for `other`, and does not follow it:
+          "Something else: renewed on a handshake" says the category twice and
+          buries the only part written by a person. Every other reason is its
+          own answer and carries no detail. */}
+      {reason === "other" && deal.won_without_contract_detail
+        ? deal.won_without_contract_detail
+        : label}
+    </IdentityFact>
   );
 }
 

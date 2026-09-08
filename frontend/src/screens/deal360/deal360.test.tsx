@@ -385,6 +385,82 @@ describe("the identity line says what it is worth, where it is, and whose it is"
     expect(screen.queryByText("—")).not.toBeInTheDocument();
   });
 
+  it("says how a won deal was won when no contract carried it", () => {
+    // The server treats this answer as load-bearing — the whole justification
+    // for letting the deal close without paperwork is that the gap becomes
+    // countable — and nothing read it back, so the rep who answered could not
+    // check their own answer.
+    show(
+      <DealIdentityLine
+        deal={{
+          amount_minor: 1000,
+          currency: "EUR",
+          stage_id: "st-1",
+          status: "won",
+          won_without_contract_reason: "purchase_order",
+        }}
+        stages={stages}
+        locale="en"
+      />,
+    );
+    expect(
+      screen.getByText(en["deals.winReasonPurchaseOrder"]),
+    ).toBeInTheDocument();
+  });
+
+  it("prints the words a person wrote rather than the category they chose", () => {
+    // `other` is the only reason carrying a detail, and the detail is the only
+    // part of this answer somebody typed. "Something else: renewed on a
+    // handshake" says the category twice and buries it.
+    show(
+      <DealIdentityLine
+        deal={{
+          amount_minor: 1000,
+          currency: "EUR",
+          stage_id: "st-1",
+          status: "won",
+          won_without_contract_reason: "other",
+          won_without_contract_detail: "Renewed on a handshake at the fair",
+        }}
+        stages={stages}
+        locale="en"
+      />,
+    );
+    expect(
+      screen.getByText("Renewed on a handshake at the fair"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(en["deals.winReasonOther"]),
+    ).not.toBeInTheDocument();
+  });
+
+  it("says nothing about paperwork on a won deal a contract carried", () => {
+    // The ordinary case, and it needs no sentence. A line on every won deal
+    // would bury the ones that need reading — which is the whole point of
+    // showing this at all.
+    show(
+      <DealIdentityLine
+        deal={{
+          amount_minor: 1000,
+          currency: "EUR",
+          stage_id: "st-1",
+          status: "won",
+        }}
+        stages={stages}
+        locale="en"
+      />,
+    );
+    for (const key of [
+      "deals.winReasonPurchaseOrder",
+      "deals.winReasonVerbal",
+      "deals.winReasonRenewalByEmail",
+      "deals.winReasonImported",
+      "deals.winReasonOther",
+    ] as const) {
+      expect(screen.queryByText(en[key])).not.toBeInTheDocument();
+    }
+  });
+
   it("never prints a stage id the pipeline cannot name", () => {
     // The case a null stage_id CANNOT test: an id that is present and does not
     // resolve. An overlay-mirror deal carries the incumbent's own pipeline id,
