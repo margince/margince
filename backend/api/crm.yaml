@@ -96,7 +96,7 @@ servers:
   - url: https://crm.example.com/v1
     description: >
       The installation host (operator-chosen). One installation serves one workspace
-      (A107/ADR-0061): the server resolves its singleton workspace itself — no
+      (ADR-0061): the server resolves its singleton workspace itself — no
       per-workspace subdomain, header, or other request-level tenant selection exists.
       Sessions and bearer credentials are still checked against the bound workspace id
       as defense in depth.
@@ -199,7 +199,7 @@ paths:
         '403': { $ref: '#/components/responses/PasswordChangeRequired' }
 
   # ------------------------------- /auth ------------------------------------
-  # There is NO public tenant-provisioning endpoint (A107/ADR-0061): the workspace and
+  # There is NO public tenant-provisioning endpoint (ADR-0061): the workspace and
   # its first admin are created at API boot from the deployment configuration file
   # (`margince.yaml`), atomically, under the singleton-workspace invariant. The former
   # unauthenticated `POST /workspaces` (ADR-0043 §4) is superseded by ADR-0043 Amendment 2.
@@ -3552,7 +3552,7 @@ paths:
       x-agent-access: human-only
       summary: Create/update the partner extension on a company (adds `partner` to its relationship types).
       description: |
-        Promotes a company to a first-class partner (A41/ADR-0032) by upserting its `partner` row and
+        Promotes a company to a first-class partner (ADR-0032) by upserting its `partner` row and
         adding `partner` to its `relationship_types`. (`classification` is retired and no longer
         set here — ADR-0079/A124 replaced it, because what a company IS to us is multi-valued.)
         Company identity is never duplicated. Admin write, and a HUMAN one.
@@ -11882,7 +11882,7 @@ paths:
       x-agent-access: human-only
       summary: Update the workspace's capture settings (admin/ops).
       description: |
-        Admin/ops-only. Toggles the captured-company auto-enrich posture (ADR-0072/A118):
+        Admin/ops-only. Toggles the captured-company auto-enrich posture (ADR-0072):
         when ON, every company with a primary domain and no dossier gets a governed deep-read
         under a daily spend cap — however it was named, since a person creating one is usually
         the moment they want it. The installation's own company (the anchor) is excluded: cold
@@ -23675,7 +23675,7 @@ components:
       required: [id, entity_type, left_id, right_id, confidence, evidence, status, created_at, can_decide]
       properties:
         id: { type: string, format: uuid }
-        entity_type: { type: string, enum: [person, company, lead], description: 'A pair is always same-type (ADR-0118/A169 §2): a lead is proposed as a duplicate of a lead or of nothing.' }
+        entity_type: { type: string, enum: [person, company, lead], description: 'A pair is always same-type (ADR-0118 §2): a lead is proposed as a duplicate of a lead or of nothing.' }
         left_id: { type: string, format: uuid, description: 'Canonical ordering: left is the lower id — {A,B} and {B,A} are one row.' }
         right_id: { type: string, format: uuid }
         confidence: { type: number, minimum: 0, maximum: 1, description: 'The PO-F-1/PO-F-2 fuzzy score at detection.' }
@@ -30121,7 +30121,7 @@ components:
         holds the two rules this surface cannot: write authority over the project ROW, and the
         refusal that keeps a project's last company on it), `project_stakeholder`
         (project↔person — the deal-stakeholder shape applied to a body of work), and the partner edges
-        (A41/ADR-0032, company↔company via `counterparty_company_id`): `partner_of` (company served by a partner
+        (ADR-0032, company↔company via `counterparty_company_id`): `partner_of` (company served by a partner
         company), `referred_by` (company referred by a partner company), `co_sell_with` (company co-sold with a partner company).
         `works_with` is the one person↔person kind (person_id ↔ counterparty_person_id): two external
         contacts a rep asserts work together. Undirected in fact — the two columns carry no order,
@@ -30218,7 +30218,7 @@ components:
         pipeline_id: { type: [string, 'null'], format: uuid, description: 'Native mode: always a non-null pipeline FK. Overlay mode: NULL — an overlay-mirror deal has no native Margince pipeline row; the incumbent''s own pipeline id rides `raw` and the code-declared stage→semantic mapping drives tier resolution (overlay-augmentation OVA-MAP-6). A zero/placeholder UUID here is forbidden (dangling FK).' }
         stage_id: { type: [string, 'null'], format: uuid, description: 'Native mode: always a non-null stage FK; must belong to pipeline_id. Overlay mode: NULL (see pipeline_id; the incumbent dealstage id rides `raw`, OVA-MAP-6).' }
         company_id: { type: [string, 'null'], format: uuid, description: 'Primary company; never a raw lead. Null when the caller may not read that company, in which case `masked_fields` names it.' }
-        partner_company_id: { type: [string, 'null'], format: uuid, description: 'Deal registration/attribution to a partner company (A38/A41/ADR-0032). The company must have a live `partner` row — naming one that does not is refused 422 (`not_a_partner`), because commission prices from the margin tier on that row, and an attribution without one could never earn anything. Null when the caller may not read that company, in which case `masked_fields` names it.' }
+        partner_company_id: { type: [string, 'null'], format: uuid, description: 'Deal registration/attribution to a partner company (ADR-0032). The company must have a live `partner` row — naming one that does not is refused 422 (`not_a_partner`), because commission prices from the margin tier on that row, and an attribution without one could never earn anything. Null when the caller may not read that company, in which case `masked_fields` names it.' }
         partner_attribution:
           type: [string, 'null']
           enum: [sourced, influenced, null]

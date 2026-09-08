@@ -192,7 +192,7 @@ const (
 	// is no per-rep read surface — the mode-flip and migrate-in screens are
 	// admin surfaces.
 	objImportRun = "import_run"
-	// The company's own identity and reporting calendar (ADR-0090/A135).
+	// The company's own identity and reporting calendar (ADR-0090).
 	// Read is broad — the base currency and the business timezone shape what
 	// every seat sees — and only admin/ops change it.
 	objInstallationSettings = "installation_settings"

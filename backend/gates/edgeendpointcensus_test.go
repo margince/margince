@@ -115,7 +115,7 @@ func endpointColumnsFromShapeConstraints(t *testing.T) ([]string, []string) {
 		if err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}
-		for name, body := range shapeCheckBodies(t, path, string(raw)) {
+		for name, body := range shapeCheckBodies(t, path, withCurrentNames(string(raw))) {
 			bodies[name] = body
 		}
 	}
@@ -426,8 +426,32 @@ func TestTheRelationshipRowScopeTestsEveryEndpointTheTableHas(t *testing.T) {
 // endpointColumnsInScopeVar reads the FIRST string of each element of the
 // package-level relationshipEndpointColumns literal — position is the
 // contract there exactly as it is in the export's list.
+// constValuesInPackage is constValuesIn over every source file in a directory,
+// for a census that must resolve a name wherever its package puts it.
+func constValuesInPackage(t *testing.T, dir string) map[string]string {
+	t.Helper()
+	out := map[string]string{}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("reading %s: %v", dir, err)
+	}
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".go") {
+			continue
+		}
+		for name, value := range constValuesIn(t, filepath.Join(dir, e.Name())) {
+			out[name] = value
+		}
+	}
+	return out
+}
+
 func endpointColumnsInScopeVar(t *testing.T) map[string]bool {
 	t.Helper()
+	// The package's constants, not just this file's: which sibling holds a
+	// shared column name is arbitrary, and a census that reads one file
+	// reports the endpoint it could not resolve as unscoped.
+	consts := constValuesInPackage(t, filepath.Dir(edgeScopeSource))
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, edgeScopeSource, nil, parser.SkipObjectResolution)
 	if err != nil {
@@ -450,15 +474,26 @@ func endpointColumnsInScopeVar(t *testing.T) map[string]bool {
 					if !isPair || len(pair.Elts) == 0 {
 						return true
 					}
-					first, isLit := pair.Elts[0].(*ast.BasicLit)
-					if !isLit || first.Kind != token.STRING {
-						return true
+					switch first := pair.Elts[0].(type) {
+					case *ast.BasicLit:
+						if first.Kind != token.STRING {
+							return true
+						}
+						column, unquoteErr := strconv.Unquote(first.Value)
+						if unquoteErr != nil {
+							t.Fatalf("%s: %s is not a readable string: %v", edgeScopeSource, first.Value, unquoteErr)
+						}
+						out[column] = true
+					case *ast.Ident:
+						// A column that NAMES its value is the same column. A
+						// census reading only literals reports the endpoint it
+						// stopped seeing as unscoped, which is the disclosure
+						// this gate exists to refuse — so it would send an
+						// author to add scoping that is already there.
+						if column, ok := consts[first.Name]; ok {
+							out[column] = true
+						}
 					}
-					column, unquoteErr := strconv.Unquote(first.Value)
-					if unquoteErr != nil {
-						t.Fatalf("%s: %s is not a readable string: %v", edgeScopeSource, first.Value, unquoteErr)
-					}
-					out[column] = true
 					return true
 				})
 			}

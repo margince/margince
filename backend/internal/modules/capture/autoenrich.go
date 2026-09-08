@@ -4,7 +4,7 @@
 package capture
 
 // The captured-company auto-enrich sweep's store (CAP-PARAM-7,
-// ADR-0072/A118): the per-company attempt cursor (capture_auto_enrich_state), the
+// ADR-0072): the per-company attempt cursor (capture_auto_enrich_state), the
 // per-workspace daily spend cap (capture_auto_enrich_budget), and the due-company
 // candidate read. Compose owns the sweep worker and the deep-read enqueue; this
 // store owns the scheduling state and the atomic cap reservation so the two are

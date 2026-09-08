@@ -19,7 +19,7 @@ import { beginModelCall, endModelCall } from "./model-inflight";
 // It is a TYPE-ONLY import, so nothing changes at runtime and no bundler alias
 // is needed: `verbatimModuleSyntax` erases the line entirely.
 //
-// One installation serves one workspace (A107/ADR-0061): the server
+// One installation serves one workspace (ADR-0061): the server
 // resolves its singleton workspace itself — the client sends no tenant
 // selector, only the session cookie.
 

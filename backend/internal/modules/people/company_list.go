@@ -172,7 +172,7 @@ func (s *Store) ListCompanies(ctx context.Context, in ListCompaniesInput) ([]crm
 			}
 			// The installation's own company is not one of the accounts this
 			// list answers about, so it is excluded unless asked for
-			// (ADR-0082/A127). Appended here beside the other company-only
+			// (ADR-0082). Appended here beside the other company-only
 			// filters rather than in the shared set: the anchor is a fact about
 			// companies, and no person or deal has one.
 			if !in.IncludeAnchor {

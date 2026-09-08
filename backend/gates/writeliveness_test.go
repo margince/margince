@@ -221,8 +221,12 @@ func retirableTables(t *testing.T) map[string]bool {
 			if err != nil {
 				return err
 			}
+			// As if the renames had always been there: a table the census keys
+			// on by its CURRENT name is invisible in the statement that created
+			// it under the old one, and the waivers naming its writers then
+			// match nothing.
 			current := ""
-			for _, line := range strings.Split(string(raw), "\n") {
+			for _, line := range strings.Split(withCurrentNames(string(raw)), "\n") {
 				if m := createTableLine.FindStringSubmatch(line); m != nil {
 					current = m[1]
 					continue

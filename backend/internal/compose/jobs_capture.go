@@ -86,7 +86,7 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 	// credential (no deployment-wide OAuth app to gate on), so there is nothing
 	// to check for before wiring it up.
 	addDeclaredWorker[TelegramIngestArgs](reg, newTelegramIngestWorker(pool, cfg.CaptureConfig, log))
-	// The captured-company auto-enrich sweep (ADR-0072/A118): always
+	// The captured-company auto-enrich sweep (ADR-0072): always
 	// registered, it enqueues system deep reads the site worker applies.
 	autoEnrich := newCaptureAutoEnrichSweepWorker(pool, log)
 	addDeclaredWorker[CaptureAutoEnrichSweepArgs](reg, autoEnrich)

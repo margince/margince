@@ -44,7 +44,7 @@ func EscapeLike(value string) string {
 // nothing for one to key on: core 0217 (ADR-0091) retired every isolation
 // policy and core 0255 dropped erasure_suppression.workspace_id outright,
 // so the list is installation-wide by construction. What makes that the
-// right scope is A107/ADR-0061 — one installation serves one workspace,
+// right scope is ADR-0061 — one installation serves one workspace,
 // and the server refuses to start holding more than one live workspace.
 // Naming the guarantee matters here more than most places: this is an
 // erasure gate, and the expensive mistake is a later reader assuming

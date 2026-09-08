@@ -21,7 +21,7 @@ COMMENT ON COLUMN deal.partner_attribution IS
   'What the partner named by partner_org_id did for this deal: sourced (they brought it) or influenced (they helped one we already had). Commission accrues on sourced only.';
 
 COMMENT ON COLUMN company.classification IS
-  'RETIRED (ADR-0079/A124) — superseded by organization.lifecycle + organization_relationship_type. Written by nothing; dropped in a follow-up migration.';
+  'RETIRED (ADR-0079) — superseded by organization.lifecycle + organization_relationship_type. Written by nothing; dropped in a follow-up migration.';
 
 -- 1. tables
 ALTER TABLE company_brief RENAME TO org_brief;

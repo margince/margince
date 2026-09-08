@@ -5,7 +5,7 @@
 
 package compose
 
-// The captured-company auto-enrich lane end to end (ADR-0072/A118): a
+// The captured-company auto-enrich lane end to end (ADR-0072): a
 // system-requested deep read APPLIES its findings directly (fill-empty, no
 // confirm-first proposal) and records the sweep cursor terminal outcome; and
 // the AutoEnrichStore's eligibility read + atomic daily cap behave over a real

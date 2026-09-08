@@ -88,7 +88,7 @@ func tablesWithFrozenRateColumn(t *testing.T) []string {
 			if err != nil {
 				return err
 			}
-			for _, table := range tablesDefiningFrozenRate(string(raw)) {
+			for _, table := range tablesDefiningFrozenRate(withCurrentNames(string(raw))) {
 				found[table] = true
 			}
 			return nil
@@ -202,7 +202,7 @@ func tablesWithArchivedAt(t *testing.T) map[string]bool {
 				return err
 			}
 			subject := ""
-			for _, line := range strings.Split(string(raw), "\n") {
+			for _, line := range strings.Split(withCurrentNames(string(raw)), "\n") {
 				if m := tableStatement.FindStringSubmatch(line); m != nil {
 					subject = m[1]
 				}

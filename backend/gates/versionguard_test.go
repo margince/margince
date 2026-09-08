@@ -183,7 +183,7 @@ func versionBumpingTables(t *testing.T) map[string]bool {
 			if err != nil {
 				return err
 			}
-			applyTriggerStatements(sqlLineComment.ReplaceAllString(string(raw), ""), live)
+			applyTriggerStatements(sqlLineComment.ReplaceAllString(withCurrentNames(string(raw)), ""), live)
 			return nil
 		})
 		if err != nil {

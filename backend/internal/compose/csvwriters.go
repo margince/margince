@@ -411,7 +411,7 @@ func (w *csvWriters) createLead(ctx context.Context, row migration.Row) (migrati
 
 // different input builder, a different store call, a different emptiness to
 // refuse and a different sentence to refuse it with. Folding them together
-// would mean a generic seam whose only caller is this linter.
+// would mean a generic seam that exists to satisfy a linter and nothing else.
 //
 //nolint:dupl // createPerson has the same SHAPE and not the same job: a
 func (w *csvWriters) createCompany(ctx context.Context, row migration.Row) (migration.EnsureResult, error) {

@@ -77,7 +77,10 @@ func lastStatement(t *testing.T, pattern string) string {
 		if err != nil {
 			t.Fatalf("reading %s: %v", file, err)
 		}
-		found = append(found, re.FindAllString(string(body), -1)...)
+		// Read the migrations as if the renames had always been there: a gate
+		// searching for the name a thing has TODAY would otherwise find nothing
+		// in the statement that created it under its old one.
+		found = append(found, re.FindAllString(withCurrentNames(string(body)), -1)...)
 	}
 	if len(found) == 0 {
 		t.Fatalf("no statement in core/ matches %s", pattern)

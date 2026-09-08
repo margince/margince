@@ -30,8 +30,8 @@ import {
 import { PartnerCommissions } from "./partnercommissions";
 import { PartnerDeals } from "./partnerdeals";
 
-// The Partner tab (company 360, P-6): a company IS a partner iff it has a
-// `partner` row (data-model.md §4.3) — GET /companies/{id}/partner's 404
+// The Partner tab on the company 360: a company IS a partner iff it has a
+// `partner` row, and nothing else marks one — GET /companies/{id}/partner's 404
 // means "not a partner yet", not an error, so it renders an honest setup form
 // rather than the shared error state. Both the setup and edit paths PUT the
 // same UpsertPartnerRequest; first creation carries no If-Match (there is no

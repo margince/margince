@@ -2368,7 +2368,7 @@ export interface paths {
         get: operations["getPartner"];
         /**
          * Create/update the partner extension on a company (adds `partner` to its relationship types).
-         * @description Promotes a company to a first-class partner (A41/ADR-0032) by upserting its `partner` row and
+         * @description Promotes a company to a first-class partner (ADR-0032) by upserting its `partner` row and
          *     adding `partner` to its `relationship_types`. (`classification` is retired and no longer
          *     set here — ADR-0079/A124 replaced it, because what a company IS to us is multi-valued.)
          *     Company identity is never duplicated. Admin write, and a HUMAN one.
@@ -8150,7 +8150,7 @@ export interface paths {
         head?: never;
         /**
          * Update the workspace's capture settings (admin/ops).
-         * @description Admin/ops-only. Toggles the captured-company auto-enrich posture (ADR-0072/A118):
+         * @description Admin/ops-only. Toggles the captured-company auto-enrich posture (ADR-0072):
          *     when ON, every company with a primary domain and no dossier gets a governed deep-read
          *     under a daily spend cap — however it was named, since a person creating one is usually
          *     the moment they want it. The installation's own company (the anchor) is excluded: cold
@@ -18064,7 +18064,7 @@ export interface components {
              * @enum {string}
              */
             lifecycle?: "unknown" | "target" | "prospect" | "opportunity" | "customer" | "former_customer" | "disqualified";
-            /** @description WHAT THE COMPANY IS to us (PO-DDL-4b, ADR-0079/A124). Multi-valued, because a company is legitimately several things at once — the partner program is built on companies that are simultaneously partners and customers. A company IS a partner iff it carries `partner` here AND has a `partner` row; removing the type while that row lives is refused (422). */
+            /** @description WHAT THE COMPANY IS to us (PO-DDL-4b, ADR-0079). Multi-valued, because a company is legitimately several things at once — the partner program is built on companies that are simultaneously partners and customers. A company IS a partner iff it carries `partner` here AND has a `partner` row; removing the type while that row lives is refused (422). */
             relationship_types?: ("customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other")[];
             /**
              * @deprecated
@@ -21331,7 +21331,7 @@ export interface components {
          *     holds the two rules this surface cannot: write authority over the project ROW, and the
          *     refusal that keeps a project's last company on it), `project_stakeholder`
          *     (project↔person — the deal-stakeholder shape applied to a body of work), and the partner edges
-         *     (A41/ADR-0032, company↔company via `counterparty_company_id`): `partner_of` (company served by a partner
+         *     (ADR-0032, company↔company via `counterparty_company_id`): `partner_of` (company served by a partner
          *     company), `referred_by` (company referred by a partner company), `co_sell_with` (company co-sold with a partner company).
          *     `works_with` is the one person↔person kind (person_id ↔ counterparty_person_id): two external
          *     contacts a rep asserts work together. Undirected in fact — the two columns carry no order,
@@ -21455,7 +21455,7 @@ export interface components {
             company_id?: string | null;
             /**
              * Format: uuid
-             * @description Deal registration/attribution to a partner company (A38/A41/ADR-0032). The company must have a live `partner` row — naming one that does not is refused 422 (`not_a_partner`), because commission prices from the margin tier on that row, and an attribution without one could never earn anything. Null when the caller may not read that company, in which case `masked_fields` names it.
+             * @description Deal registration/attribution to a partner company (ADR-0032). The company must have a live `partner` row — naming one that does not is refused 422 (`not_a_partner`), because commission prices from the margin tier on that row, and an attribution without one could never earn anything. Null when the caller may not read that company, in which case `masked_fields` names it.
              */
             partner_company_id?: string | null;
             /**

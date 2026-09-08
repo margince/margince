@@ -3,7 +3,7 @@
 
 package compose
 
-// The company-name promotion sweep (PO-F-2a, ADR-0072/A118 phase 3): the follow-on
+// The company-name promotion sweep (PO-F-2a, ADR-0072 phase 3): the follow-on
 // to the signature-enrich pass, and the only consumer of the `company_name`
 // evidence that pass collects.
 //

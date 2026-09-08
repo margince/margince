@@ -10,7 +10,7 @@ import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
-// The company capture-settings card (CAP-WIRE-7, ADR-0072/A118): the
+// The company capture-settings card (CAP-WIRE-7, ADR-0072): the
 // captured-company auto-enrich toggle. Every role reads it; only admin/ops
 // may change it, so the toggle is refused (never hidden) for other roles — a
 // rep still sees whether auto-enrich is on. Mirrors the WebhooksCard gating.

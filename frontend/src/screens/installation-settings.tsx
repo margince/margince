@@ -35,7 +35,7 @@ import {
   throwProblem,
 } from "./common";
 
-// The installation settings surface (ADR-0090/A135): the company's name,
+// The installation settings surface (ADR-0090): the company's name,
 // the IANA zone every reporting period is computed in, the ISO-4217 base
 // currency every roll-up converts to, the language AI writes the shared record
 // in, and the month its business year begins. Every role reads them — a rep reading amounts benefits from

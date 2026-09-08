@@ -3,7 +3,7 @@
 
 package people
 
-// Company display-name derivation (ADR-0072/A118, PO-F-2a). The capture
+// Company display-name derivation (ADR-0072, PO-F-2a). The capture
 // auto-create path must not name a company by its raw mail eSLD —
 // "gitex.com" reads as a defect where "Gitex" reads as a name. This derives a
 // readable, honest name from the domain's registrable label alone; it invents

@@ -822,4 +822,4 @@ COMMENT ON COLUMN deal.partner_attribution IS
   'What the partner named by partner_company_id did for this deal: sourced (they brought it) or influenced (they helped one we already had). Commission accrues on sourced only.';
 
 COMMENT ON COLUMN company.classification IS
-  'RETIRED (ADR-0079/A124) — superseded by company.lifecycle + company_relationship_type. Written by nothing; dropped in a follow-up migration.';
+  'RETIRED (ADR-0079) — superseded by company.lifecycle + company_relationship_type. Written by nothing; dropped in a follow-up migration.';

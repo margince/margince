@@ -122,6 +122,11 @@ func tableCheckSets(t *testing.T) map[string][]string {
 			if err != nil {
 				return err
 			}
+			// Read as if the renames had always been there: a CHECK written
+			// against a table since renamed would otherwise be filed under a
+			// name no caller uses, and the vocabulary derived for the current
+			// one comes back empty.
+			sql := withCurrentNames(string(raw))
 			current, block := "", strings.Builder{}
 			flush := func() {
 				if current == "" {
@@ -131,7 +136,7 @@ func tableCheckSets(t *testing.T) map[string][]string {
 				current = ""
 				block.Reset()
 			}
-			for _, line := range strings.Split(string(raw), "\n") {
+			for _, line := range strings.Split(sql, "\n") {
 				if m := createTableLine.FindStringSubmatch(line); m != nil {
 					flush()
 					current = m[1]
@@ -147,7 +152,7 @@ func tableCheckSets(t *testing.T) map[string][]string {
 				}
 			}
 			flush()
-			for _, stmt := range strings.Split(string(raw), ";") {
+			for _, stmt := range strings.Split(sql, ";") {
 				if alter := alterTableStmt.FindStringSubmatch(stmt); alter != nil {
 					recordChecks(sets, alter[1], stmt)
 				}

@@ -35,6 +35,8 @@ import (
 	"strings"
 	"testing"
 	"unicode/utf8"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // theOtherWord matches the record type's former names. `org` only where it is
@@ -69,7 +71,7 @@ var hostname = regexp.MustCompile(`[a-z0-9][a-z0-9.-]*\.orgs?\b`)
 // exempt names a path and says why the word is right there. The reason is the
 // point: a waiver nobody had to justify is how the second spelling survived
 // review for a year.
-var exempt = map[string]string{
+var exempt = gatekit.Waive(map[string]string{
 	"backend/migrations/core": "shipped migrations are never edited — the SQL that built the " +
 		"old names is the record of how the schema got here",
 	"backend/migrations/testdata/rbac_baseline_era_defaults.json": "pinned byte for byte to the " +
@@ -121,8 +123,11 @@ var exempt = map[string]string{
 	"e2e/llm/testdata": "recorded model output — what a model actually said on a run, which " +
 		"editing would falsify",
 
+	"backend/gates/rlsclaimsprose_test.go": "its waiver keys quote shipped migrations verbatim, " +
+		"and a shipped migration is never edited — the quote has to keep the word the SQL says",
+
 	"backend/gates/companyvocabulary_test.go": "this file names the word in order to refuse it",
-}
+})
 
 func TestTheRecordTypeIsCalledCompany(t *testing.T) {
 	t.Parallel()
@@ -132,10 +137,7 @@ func TestTheRecordTypeIsCalledCompany(t *testing.T) {
 		if f.symlink || !readableAsText(f.path) {
 			continue
 		}
-		if reason, ok := exemptionFor(f.path); ok {
-			if strings.TrimSpace(reason) == "" {
-				t.Errorf("%s is exempt with no reason — say why the word belongs there", f.path)
-			}
+		if exemptionCovers(t, f.path) {
 			continue
 		}
 		// The PATH says the word as loudly as the contents do, and a census
@@ -180,13 +182,16 @@ func namesTheOtherWord(line string) bool {
 	return theOtherWord.MatchString(line)
 }
 
-func exemptionFor(path string) (string, bool) {
-	for prefix, reason := range exempt {
+// exemptionCovers reports whether path, or a directory above it, is ratified.
+// The waiver set holds each reason to a standard and reports the entries that
+// stopped matching, so a path that moves does not leave a standing permission.
+func exemptionCovers(t *testing.T, path string) bool {
+	for _, prefix := range exempt.Subjects() {
 		if path == prefix || strings.HasPrefix(path, prefix+"/") {
-			return reason, true
+			return exempt.Waived(t, prefix)
 		}
 	}
-	return "", false
+	return false
 }
 
 // readableAsText keeps lockfiles out — a lockfile says whatever the registry

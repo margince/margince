@@ -3,7 +3,7 @@
 
 package people
 
-// The partner extension (A41/ADR-0032): a company promoted to a
+// The partner extension (ADR-0032): a company promoted to a
 // first-class partner. Identity is never duplicated — partner is a
 // one-to-one extension row, and upserting it flips the company's
 // classification; the company's own .updated event carries the change.

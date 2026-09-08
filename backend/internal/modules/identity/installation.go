@@ -3,7 +3,7 @@
 
 package identity
 
-// One installation serves one workspace (A107/ADR-0061). The workspace
+// One installation serves one workspace (ADR-0061). The workspace
 // row remains the internal singleton boundary: this file owns its
 // boot-time creation from deployment configuration and its resolution for
 // every request. The invariant is enforced here, at boot and at lookup —
