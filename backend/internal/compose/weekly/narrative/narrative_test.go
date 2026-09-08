@@ -206,3 +206,33 @@ func TestTheQuietWeekExemplarIsOfferedOnlyToAQuietWeek(t *testing.T) {
 		t.Error("a busy week is not told that it was busy")
 	}
 }
+
+// A week of leads and meetings is not a quiet week.
+//
+// The narrative's counts held tasks, deals, proposals and brief interactions —
+// but not the lead and meeting outcomes the scorecard reports on the same page.
+// So a rep who spent the week answering new business and sitting in meetings
+// reached the narrator as a row of zeros, and it wrote that nothing happened,
+// beside a scorecard saying otherwise.
+func TestAWeekOfLeadsAndMeetingsIsNotQuiet(t *testing.T) {
+	cases := []struct {
+		name string
+		in   Counts
+	}{
+		{"leads were routed", Counts{LeadsRouted: 4}},
+		{"leads were answered in time", Counts{LeadsAnsweredInTarget: 2}},
+		{"a lead's target was missed", Counts{LeadsBreached: 1}},
+		{"meetings were held", Counts{MeetingsHeld: 3}},
+		{"a meeting produced a next step", Counts{MeetingsWithNextStep: 1}},
+	}
+	for _, c := range cases {
+		if c.in.quiet() {
+			t.Errorf("%s: the week reads as quiet, so the narrator is told nothing happened", c.name)
+		}
+	}
+	// The genuinely empty week still reads as one — the point is not to make
+	// every week loud, it is to stop calling a busy one silent.
+	if !(Counts{}).quiet() {
+		t.Error("a week with nothing in it no longer reads as quiet")
+	}
+}

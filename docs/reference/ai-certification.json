@@ -5177,9 +5177,19 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the case): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, the_sentence_leads_with_what_changed_not_with_a_count",
+          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, the_sentence_leads_with_what_changed_not_with_a_count",
           "stale_cause": {
             "case_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name",
+              "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
+              "the_sentence_leads_with_what_changed_not_with_a_count"
+            ],
+            "prompt_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name",
+              "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
+              "the_sentence_leads_with_what_changed_not_with_a_count"
+            ],
+            "grader_changed": [
               "a_deal_named_like_an_instruction_is_read_as_a_name",
               "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
               "the_sentence_leads_with_what_changed_not_with_a_count"
@@ -5207,9 +5217,19 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the case): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, the_sentence_leads_with_what_changed_not_with_a_count",
+          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, the_sentence_leads_with_what_changed_not_with_a_count",
           "stale_cause": {
             "case_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name",
+              "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
+              "the_sentence_leads_with_what_changed_not_with_a_count"
+            ],
+            "prompt_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name",
+              "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
+              "the_sentence_leads_with_what_changed_not_with_a_count"
+            ],
+            "grader_changed": [
               "a_deal_named_like_an_instruction_is_read_as_a_name",
               "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
               "the_sentence_leads_with_what_changed_not_with_a_count"

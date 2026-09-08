@@ -59,6 +59,15 @@ type Counts struct {
 	ProposalsRejected   int `json:"proposals_rejected"`
 	BriefItemsActed     int `json:"brief_items_acted"`
 	BriefItemsDismissed int `json:"brief_items_dismissed"`
+	// The lead and meeting outcomes the scorecard already reports. Without
+	// them a week spent answering new business and sitting in meetings — real
+	// work, and often the whole of an SDR's week — reached the narrator as a
+	// row of zeros, and it wrote that nothing happened.
+	LeadsRouted           int `json:"leads_routed"`
+	LeadsAnsweredInTarget int `json:"leads_answered_in_target"`
+	LeadsBreached         int `json:"leads_breached"`
+	MeetingsHeld          int `json:"meetings_held"`
+	MeetingsWithNextStep  int `json:"meetings_with_next_step"`
 }
 
 // quiet reports whether the week did nothing worth a sentence.
@@ -72,7 +81,9 @@ func (c Counts) quiet() bool {
 	return c.TasksDue == 0 && c.TasksDone == 0 && c.TasksCarriedOver == 0 &&
 		c.DealsMoved == 0 && c.DealsWon == 0 && c.DealsLost == 0 &&
 		c.ProposalsAccepted == 0 && c.ProposalsRejected == 0 &&
-		c.BriefItemsActed == 0 && c.BriefItemsDismissed == 0
+		c.BriefItemsActed == 0 && c.BriefItemsDismissed == 0 &&
+		c.LeadsRouted == 0 && c.LeadsAnsweredInTarget == 0 && c.LeadsBreached == 0 &&
+		c.MeetingsHeld == 0 && c.MeetingsWithNextStep == 0
 }
 
 // Deal is one line from the week, by the name it carried then.

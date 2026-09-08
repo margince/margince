@@ -40,8 +40,8 @@ Counted per record — one (task, binding) pair — over the 55 stale record(s) 
 | What moved | Records | What it means |
 |---|---:|---|
 | the case | 55 | Somebody rewrote the test. Re-certify: the old number measured a different question. |
-| **the prompt this build sends** | 12 | The product changed. The band describes the NEW prompt, so a drop is the cost of that change and not the model. |
-| the grader | 0 | The judge's own request moved. A band can shift with neither the test nor the product touched. |
+| **the prompt this build sends** | 14 | The product changed. The band describes the NEW prompt, so a drop is the cost of that change and not the model. |
+| the grader | 2 | The judge's own request moved. A band can shift with neither the test nor the product touched. |
 
 A site's *best* state is the strongest state any of its bindings reached. A
 site `current` on one model and `stale` on three is counted once, as
@@ -299,8 +299,8 @@ model, real network).
 | `voice_build/eval_scores` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | the case changed under scenario judge_ranks_the_author_rhythm_above_generic_ai_prose since the record scored it |
 | `weekly_learnings/learn` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 3 scenarios it scored have changed since (the case): a_deal_named_like_an_instruction_teaches_no_lesson, a_pattern_across_three_deals_is_drawn_and_cited, a_week_that_invites_a_lesson_it_cannot_support_yields_none |
 | `weekly_learnings/learn` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 3 scenarios it scored have changed since (the case): a_deal_named_like_an_instruction_teaches_no_lesson, a_pattern_across_three_deals_is_drawn_and_cited, a_week_that_invites_a_lesson_it_cannot_support_yields_none |
-| `weekly_review/narrative` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 3 scenarios it scored have changed since (the case): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, the_sentence_leads_with_what_changed_not_with_a_count |
-| `weekly_review/narrative` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 3 scenarios it scored have changed since (the case): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, the_sentence_leads_with_what_changed_not_with_a_count |
+| `weekly_review/narrative` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, the_sentence_leads_with_what_changed_not_with_a_count |
+| `weekly_review/narrative` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, the_sentence_leads_with_what_changed_not_with_a_count |
 
 ## Sites, their scenarios and their records
 
