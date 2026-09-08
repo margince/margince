@@ -37,7 +37,8 @@ Eight workflows sit beside the gate, deliberately outside it:
   fixture (`make test-merge-verdict`); a finding is filed as one issue per
   offending pull request through the same reporter the health check uses.
 
-- **`review-coverage.yml`** — on every pull request push. A branch review reads
+- **`review-coverage.yml`** — on `opened`, `reopened`, `synchronize` and
+  `ready_for_review`, and on a submitted review. A branch review reads
   the branch **as it stood when the review was launched**, so the fixes for that
   review's own findings are always outside it: the normal workflow produces an
   unreviewed commit by construction, and it is the one carrying changes a
@@ -49,6 +50,10 @@ Eight workflows sit beside the gate, deliberately outside it:
   naming a commit **the branch no longer has**, which is what a force-push after
   a review leaves behind — the verdict goes on standing against a tree nobody
   compared it to, and nothing else on the pull request says so.
+
+  The review trigger is not decoration: a review is half the comparison, so
+  without it the report would go red on the fix commit and stay red through the
+  re-review that answers it, until somebody happened to push again.
 
   It says nothing about a pull request **nobody has reviewed yet**. That is
   every pull request for most of its life, and it is the same reason

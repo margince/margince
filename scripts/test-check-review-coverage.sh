@@ -14,8 +14,10 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 report="$root/scripts/check-review-coverage.sh"
 failures=0
 
-# The branch, newest first, as `git rev-list` hands it over.
-history=$'ccc3333\nbbb2222\naaa1111'
+# The branch as `git rev-list --parents` hands it over: a commit and its
+# parents, one per line. aaa1111 <- bbb2222 <- ccc3333, with aaa1111's own
+# parent on the base and so outside the range.
+history=$'ccc3333 bbb2222\nbbb2222 aaa1111\naaa1111 base000'
 
 review() { printf '{"reviewer":"%s","sha":"%s","at":"%s"}' "$1" "$2" "$3"; }
 
@@ -79,13 +81,51 @@ case_is "and it says that silence is not coverage" "[]" 0 \
 # which is the one direction with no red to notice.
 unset_out=""
 unset_status=0
-unset_out="$(REVIEW_COVERAGE_HEAD=ccc3333 REVIEW_COVERAGE_HISTORY="$history" "$report" 2>&1)" || unset_status=$?
+# `env -u`, not merely leaving it out of the assignment list: a caller who
+# exports REVIEW_COVERAGE_REVIEWS would otherwise have this case take the `[]`
+# path and pass while proving nothing, which is the one arm whose whole subject
+# is telling unset from empty.
+unset_out="$(env -u REVIEW_COVERAGE_REVIEWS REVIEW_COVERAGE_HEAD=ccc3333 REVIEW_COVERAGE_HISTORY="$history" "$report" 2>&1)" || unset_status=$?
 if [[ "$unset_status" -ne 2 ]] || ! grep -qF "cannot be told from a fetch that failed" <<<"$unset_out"; then
 	echo "FAIL: unset reviews must refuse rather than read as no reviews — got exit $unset_status" >&2
 	printf '%s\n' "$unset_out" >&2
 	failures=$((failures + 1))
 else
 	echo "ok: an unset review list refuses rather than reading as no reviews"
+fi
+
+# The shape the flat listing got wrong. A merge brings in a side branch whose
+# commits are OLDER than the reviewed one, so `rev-list`'s date order sorts them
+# below it and slicing the list read them as already covered — silently, on
+# exactly the pull requests complicated enough to need this report.
+#
+#   aaa1111 (reviewed) ... ccc3333 --- mmm4444 (merge)
+#                          sss0001 --/          (older date, never reviewed)
+merge_history=$'mmm4444 ccc3333 sss0001\nccc3333 bbb2222\nsss0001 aaa1111\nbbb2222 aaa1111\naaa1111 base000'
+merge_out=""
+merge_status=0
+merge_out="$(REVIEW_COVERAGE_HEAD=mmm4444 REVIEW_COVERAGE_HISTORY="$merge_history" \
+	REVIEW_COVERAGE_REVIEWS="[$(review cubic aaa1111 2026-09-01T10:00:00Z)]" "$report" 2>&1)" || merge_status=$?
+if [[ "$merge_status" -ne 1 ]] || ! grep -qF "sss0001" <<<"$merge_out"; then
+	echo "FAIL: a side branch merged in after the review was not reported — it is reachable from the tip and is not an ancestor of what was read, so a re-review has to cover it" >&2
+	printf '%s\n' "$merge_out" >&2
+	failures=$((failures + 1))
+else
+	echo "ok: a side branch older than the review is still reported as uncovered"
+fi
+
+# The other half of ancestry: the reviewed commit's OWN ancestors are covered,
+# whatever their date. A walk that reported them would cry wolf on every merge.
+covered_out=""
+covered_status=0
+covered_out="$(REVIEW_COVERAGE_HEAD=mmm4444 REVIEW_COVERAGE_HISTORY="$merge_history" \
+	REVIEW_COVERAGE_REVIEWS="[$(review cubic mmm4444 2026-09-01T10:00:00Z)]" "$report" 2>&1)" || covered_status=$?
+if [[ "$covered_status" -ne 0 ]] || ! grep -qF "which is the tip" <<<"$covered_out"; then
+	echo "FAIL: a review of the merge itself was reported as behind — everything in the range is an ancestor of it" >&2
+	printf '%s\n' "$covered_out" >&2
+	failures=$((failures + 1))
+else
+	echo "ok: a review of the tip covers every ancestor the merge brought with it"
 fi
 
 if [[ "$failures" -ne 0 ]]; then

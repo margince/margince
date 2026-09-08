@@ -83,15 +83,46 @@ if [[ "$(jq 'length' <<<"$latest")" -eq 0 ]]; then
 	exit 0
 fi
 
-# `git rev-list` order, newest first: the commits above a sha are the ones made
-# after it.
+# ANCESTRY, not order. The history is `git rev-list --parents`, one commit per
+# line followed by its parents, so what a review did not cover can be computed
+# rather than guessed at from the listing order.
+#
+# Slicing the flat list was wrong the moment a pull request carried a merge:
+# `rev-list` sorts by commit date, so a side branch written before the reviewed
+# commit sorts below it and would have been read as already covered — silently,
+# and on exactly the pull requests complicated enough to need this report.
+#
+# commits_after <sha> is everything reachable from the tip that is not the
+# reviewed commit or one of ITS ancestors: reachable(head) minus
+# ancestors(sha), which is the set a re-review would have to read.
+parents_of() {
+	awk -v want="$1" '$1 == want { $1 = ""; print; exit }' <<<"$history"
+}
+
+reachable_from() {
+	local frontier="$1" seen="" next parent
+	while [[ -n "$frontier" ]]; do
+		next=""
+		for parent in $frontier; do
+			grep -qxF "$parent" <<<"$seen" && continue
+			seen+="${parent}"$'\n'
+			next+=" $(parents_of "$parent")"
+		done
+		frontier="$next"
+	done
+	printf '%s' "$seen"
+}
+
 commits_after() {
-	local sha="$1"
-	awk -v want="$sha" '$0 == want { exit } { print }' <<<"$history"
+	local covered
+	covered="$(reachable_from "$1")"
+	# Oldest first is the order the commits were written, which is how the
+	# report lists them; the walk produces no useful order of its own.
+	grep -vxF -f <(printf '%s' "$covered") <<<"$(reachable_from "$head")" || true
 }
 
 in_history() {
-	grep -qxF "$1" <<<"$history"
+	awk -v want="$1" '$1 == want { found = 1; exit } END { exit !found }' <<<"$history"
 }
 
 findings=0
@@ -109,10 +140,9 @@ while read -r reviewer sha at; do
 		continue
 	fi
 
-	count="$(wc -l <<<"$after" | tr -d ' ')"
+	count="$(grep -c . <<<"$after")"
 	echo "BEHIND: ${count} commit(s) landed after ${reviewer} read ${sha}:"
-	# Oldest first, so the list reads in the order the commits were written.
-	tail -r <<<"$after" 2>/dev/null || tac <<<"$after"
+	printf '%s\n' "$after"
 	echo "       Re-review the range, or say on the pull request why it does not need it:"
 	echo "         ${sha}..${head}"
 	findings=$((findings + 1))

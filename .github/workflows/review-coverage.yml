@@ -22,6 +22,13 @@ name: review-coverage
 on:
   pull_request:
     types: [opened, reopened, synchronize, ready_for_review]
+  # A review is half the comparison, so a submission has to refresh it too.
+  # Without this the report goes red on the fix commit and STAYS red through
+  # the re-review that answers it, until somebody happens to push again — a
+  # stale finding that outlives its own cause, which is how a report earns the
+  # habit of being ignored.
+  pull_request_review:
+    types: [submitted]
 
 permissions:
   contents: read
@@ -46,6 +53,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # NAMED, because the two events land somewhere different by default:
+          # a pull_request run checks out the merge ref, a pull_request_review
+          # run checks out the base branch. Neither contains the branch's own
+          # commits reliably, and the walk below is over exactly those.
+          ref: ${{ github.event.pull_request.head.sha }}
           # The branch's own commits, which is what a reviewed sha is looked up
           # in. A shallow clone would make every review older than the fetch
           # depth read as naming a commit the branch does not have — the report
@@ -69,11 +81,17 @@ jobs:
             --jq '[.[] | select(.commit_id != null) | {reviewer: .user.login, sha: .commit_id, at: .submitted_at}]' \
             | jq -s 'add // []')"
 
-          # This branch only. `git rev-list base..head` is the set of commits
-          # the pull request is proposing, which is the set a review of it can
-          # have covered; walking the whole history would let a review of some
-          # ancestor on main read as covering this branch.
-          history="$(git rev-list "${BASE_SHA}..${HEAD_SHA}")"
+          # This branch only, WITH its parent edges. `git rev-list base..head`
+          # is the set of commits the pull request is proposing, which is the
+          # set a review of it can have covered; walking the whole history
+          # would let a review of some ancestor on main read as covering this
+          # branch.
+          #
+          # `--parents` because the report needs ancestry rather than order. A
+          # pull request carrying a merge brings in a side branch whose commits
+          # are older than the reviewed one, and rev-list sorts by date — so
+          # order alone reads them as already covered.
+          history="$(git rev-list --parents "${BASE_SHA}..${HEAD_SHA}")"
 
           # Captured rather than piped into the summary, so the report's own
           # exit status is what fails the step. Through a pipe it would be
