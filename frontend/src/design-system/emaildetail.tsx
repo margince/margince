@@ -468,7 +468,7 @@ function Parties({
           {t("email.detail.bccWithheld")}
         </p>
       )}
-      <FiledUnder>{renderRecords?.(presentation)}</FiledUnder>
+      <FiledUnder presentation={presentation} render={renderRecords} />
     </div>
   );
 }
@@ -480,10 +480,22 @@ function Parties({
  * The label is this component's and the names are the caller's, so a caller
  * that can name nothing — a story, a preview, a host that wired no reader —
  * draws no label over an empty value.
+ *
+ * It asks the PRESENTATION whether there is anything to label, never the node
+ * the caller would return. A render prop hands back an element whose component
+ * has not run yet, so `<Host …/>` is truthy even when `Host` will draw nothing
+ * — testing that put "Filed under" over an empty value on every message filed
+ * against nothing, and only a caller that returned a literal null looked right.
  */
-function FiledUnder({ children }: Readonly<{ children: ReactNode }>) {
+function FiledUnder({
+  presentation,
+  render,
+}: Readonly<{
+  presentation: EmailPresentation;
+  render?: (presentation: EmailPresentation) => ReactNode;
+}>) {
   const t = useT();
-  if (!children) {
+  if (!render || presentation.links.length === 0) {
     return null;
   }
   return (
@@ -491,7 +503,7 @@ function FiledUnder({ children }: Readonly<{ children: ReactNode }>) {
       <span className="emaildetail__partyLabel">
         {t("email.detail.filedUnder")}
       </span>
-      {children}
+      {render(presentation)}
     </p>
   );
 }

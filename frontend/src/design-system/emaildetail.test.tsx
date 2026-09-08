@@ -117,6 +117,7 @@ function open() {
 }
 
 const ANA = "01a05500-0000-7000-8000-0000000000c1";
+const BRANDT = "01a05500-0000-7000-8000-0000000000o1";
 
 describe("the email drawer's attachments", () => {
   it("names each file and downloads it from the attachment endpoint", async () => {
@@ -251,10 +252,28 @@ describe("the drawer's participants", () => {
   });
 });
 
+/**
+ * A host of the shape the real one has: a render prop returns an ELEMENT, and
+ * the component inside it decides whether to draw anything.
+ *
+ * This is the whole point of the case below. `OpenEmailDrawer` returns
+ * `<EmailRecordLinks …/>`, which is a truthy object whatever that component
+ * goes on to render — so a drawer that decided by testing the returned node
+ * drew its label over every message filed against nothing, and a test that
+ * handed back a literal `null` reported it green.
+ */
+function NamesNothing() {
+  return null;
+}
+
 // What the message is filed against, named by the host and labelled here.
 describe("the drawer's filing line", () => {
   it("labels the records the host could name", async () => {
-    stubRead(presentation());
+    stubRead(
+      presentation({
+        links: [{ entity_type: "organization", entity_id: BRANDT }],
+      }),
+    );
     draw(
       <EmailDetail
         activityId={ACTIVITY}
@@ -268,17 +287,21 @@ describe("the drawer's filing line", () => {
     expect(screen.getByText("Brandt Automotive")).toBeTruthy();
   });
 
-  it("draws no label when the host names nothing", async () => {
+  it("draws no label for a message filed against nothing", async () => {
     // A label over an empty value says the message is filed somewhere and the
     // drawer has lost track of where, which is a different claim from a
     // message filed against nothing.
-    stubRead(presentation());
+    //
+    // The host here returns an element, as the real one does. Swap the
+    // drawer's check back to testing that node and this case fails while
+    // everything else stays green — which is what makes it worth having.
+    stubRead(presentation({ links: [] }));
     draw(
       <EmailDetail
         activityId={ACTIVITY}
         onClose={() => {}}
         formatWhen={(iso) => iso}
-        renderRecords={() => null}
+        renderRecords={() => <NamesNothing />}
       />,
     );
 

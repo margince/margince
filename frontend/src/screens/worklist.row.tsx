@@ -1284,8 +1284,13 @@ function WaitingReply({
         kind="email"
         entityType={to.type}
         entityId={to.id}
+        // `worklistKey`, not `[worklistKey]`. The key IS the segment array, so
+        // wrapping it once more asks for a query whose first segment is itself
+        // an array — which nothing in the cache is, so the invalidation matched
+        // nothing and the row a rep had just answered stayed in the waiting
+        // lane until they reloaded the page.
         onSent={() =>
-          queryClient.invalidateQueries({ queryKey: [worklistKey] })
+          void queryClient.invalidateQueries({ queryKey: worklistKey })
         }
       />
     </div>

@@ -31,11 +31,23 @@ export function OpenEmailDrawer({
   activityId,
   zone,
   onClose,
+  onReplySent,
 }: Readonly<{
   activityId: string | null;
   /** The record's timezone, which the page owns. */
   zone: string;
   onClose: () => void;
+  /**
+   * A reply left the drawer, for a host whose own reading of the message the
+   * send changes.
+   *
+   * A record page needs nothing: the composer refreshes the record timelines
+   * it files under. A page listing the UNANSWERED does — the worklist's row
+   * verb already invalidates its queue on send, and a drawer that answered the
+   * same message without doing so left the row still asking for a reply that
+   * had gone.
+   */
+  onReplySent?: () => void;
 }>) {
   const { locale } = useLocale();
   if (!activityId) {
@@ -53,7 +65,7 @@ export function OpenEmailDrawer({
         <EmailRecordLinks presentation={presentation} />
       )}
       renderReply={(presentation) => (
-        <EmailReplyAction presentation={presentation} />
+        <EmailReplyAction presentation={presentation} onSent={onReplySent} />
       )}
     />
   );

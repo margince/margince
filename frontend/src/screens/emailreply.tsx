@@ -76,7 +76,18 @@ export function replyAnchor(
  */
 export function EmailReplyAction({
   presentation,
-}: Readonly<{ presentation: EmailPresentation }>) {
+  onSent,
+}: Readonly<{
+  presentation: EmailPresentation;
+  /**
+   * Told when the message actually went, for a host whose own list the send
+   * changes. `ComposeModal` refreshes the RECORD timelines it knows about, so
+   * a record page needs nothing here; a surface listing the UNANSWERED — the
+   * worklist's waiting lane — is not one of them, and without this its row
+   * goes on saying nobody has replied and goes on offering to reply again.
+   */
+  onSent?: () => void;
+}>) {
   const anchor = presentation.can_reply
     ? replyAnchor(presentation.links)
     : null;
@@ -97,6 +108,7 @@ export function EmailReplyAction({
       // anchor. A second `find` here would be a second answer to the same
       // question, free to disagree with the first the day the order changes.
       personId={anchor.entity_type === "person" ? anchor.entity_id : undefined}
+      onSent={onSent}
     />
   );
 }
