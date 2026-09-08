@@ -206,6 +206,7 @@ func toolShapeMembers(t *testing.T, tool string, raw json.RawMessage) (published
 	return published, required
 }
 
+//craft:ignore naked-any a decoded JSON Schema is an arbitrary document, so the node this walks IS any — naming a type here would describe a shape the deriver is free to change
 func collectPublished(node any, out map[string]bool) {
 	switch n := node.(type) {
 	case map[string]any:
@@ -239,6 +240,8 @@ func collectPublished(node any, out map[string]bool) {
 // Little is lost, because the direction that catches this ticket's defect is the
 // other one: a renamed element member makes the fixture carry a name the schema
 // no longer publishes, and that check is total and reaches every depth.
+//
+//craft:ignore naked-any the same decoded document collectPublished walks, for the same reason
 func collectRequired(node any, out map[string]bool) {
 	schema, isObject := node.(map[string]any)
 	if !isObject {
