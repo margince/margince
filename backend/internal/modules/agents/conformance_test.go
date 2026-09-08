@@ -250,7 +250,7 @@ func (inertLifecycle) RelinkActivities(context.Context, []ids.UUID, string, ids.
 	return nil, nil
 }
 
-func (inertLifecycle) DisqualifyLead(context.Context, ids.UUID) (json.RawMessage, error) {
+func (inertLifecycle) DisqualifyLead(context.Context, ids.UUID, *int64) (json.RawMessage, error) {
 	return nil, nil
 }
 

@@ -127,6 +127,10 @@ var tableOwners = map[string]string{
 	// never writes a sibling's, and the two sweeps answer to different rules.
 	"close_date_run":        "internal/modules/deals",
 	"close_date_run_member": "internal/modules/deals",
+	// One machine correction's lifecycle: what it changed, and whether somebody
+	// has since taken it back. NOT a second audit ledger — the audit row owns
+	// the before/after images and this row points at it.
+	"deal_correction": "internal/modules/deals",
 	// The project is its own bounded context, superseding ADR-0073 — see
 	// modules/projects/doc.go. This entry is what makes that a rule rather than
 	// a layout: a statement writing either table from any other package fails

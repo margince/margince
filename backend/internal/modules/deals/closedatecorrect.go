@@ -120,7 +120,7 @@ func setForecastCategory(p *storekit.Patch, stored *string, effective, notched s
 // INTENTION would let the receipt claim corrections that never reached a deal.
 // That is the same "machine work that changed nothing" defect the no-op guard
 // exists to stop, one layer up.
-func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidate, hygiene CloseDateHygiene, category string, now time.Time, loc *time.Location) (string, error) {
+func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidate, hygiene CloseDateHygiene, category string, now time.Time, loc *time.Location, runID ids.UUID) (string, error) {
 	if !hygiene.Flagged {
 		if cand.provisional {
 			// The date itself is clean (the sweep set it), but the human
@@ -158,6 +158,14 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 		Basis:               pacedBasis(StagesToGo(cand.remainingOpen)),
 	}
 
+	takenBack, err := c.answeredByAReversal(ctx, cand, hygiene, proposal)
+	if err != nil {
+		return "", err
+	}
+	if takenBack {
+		return closeDateMemberChecked, nil
+	}
+
 	switch hygiene.Action {
 	// 🟢 and 🟡 write the SAME THING, and sharing the branch is the point.
 	//
@@ -178,7 +186,7 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 		if hygiene.Action == CloseDateActionAutoApply {
 			label = "auto_apply"
 		}
-		version, wrote, err := c.apply(ctx, cand, label, func(p *storekit.Patch) {
+		version, wrote, err := c.apply(ctx, cand, label, EvidenceOf(proposal, cand.expectedClose), runID, func(p *storekit.Patch) {
 			setCloseDate(p, cand.expectedClose, *hygiene.ProposedClose)
 			if !cand.provisional {
 				p.Set("close_date_provisional", false, true)
@@ -194,38 +202,74 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 		return closeDateEffect{wrote: wrote, staged: staged}.outcome(), nil
 
 	case CloseDateActionDowngradeAndReview:
-		notched := forecastDowngrade(category)
-		version, wrote, err := c.apply(ctx, cand, "downgrade_and_review", func(p *storekit.Patch) {
-			setForecastCategory(p, cand.forecastCat, category, notched)
-			if hygiene.Provisional {
-				// Only the invariant forces a date onto a quiet deal —
-				// never an optimistic re-date on top of the downgrade.
-				setCloseDate(p, cand.expectedClose, *hygiene.ProposedClose)
-				if !cand.provisional {
-					p.Set("close_date_provisional", false, true)
-				}
-			}
-		}, map[string]any{correctionFlagsKey: hygiene.Flags, "at_risk": true})
-		if err != nil {
-			return "", err
-		}
-		// The 🟡 review: gone quiet — still alive? The proposal keeps the
-		// stage-velocity date the assessment computed, on BOTH branches. It
-		// used to be overwritten here with the deal's CURRENT date whenever the
-		// invariant did not force a re-date, which asked a human to confirm the
-		// date the deal already had — a card with nothing in it to approve.
-		review := proposal
-		// A different question from the 🟡 confirm, and the memory keys on which:
-		// a rep who said this date is fine has not said the deal is still alive.
-		review.Asking = AskingIsThisDealAlive
-		review.Basis = c.quietBasis(ctx, cand.id, now, loc)
-		staged, err := c.ensureStaged(ctx, cand, version, review)
-		if err != nil {
-			return "", err
-		}
-		return closeDateEffect{wrote: wrote, staged: staged}.outcome(), nil
+		return c.downgradeAndReview(ctx, cand, hygiene, category, proposal, now, loc, runID)
 	}
 	return "", fmt.Errorf("close-date sweep: no executor for action %q", hygiene.Action)
+}
+
+// downgradeAndReview is the 🔻 tier: a deal nobody has touched drops a forecast
+// notch and its owner is asked whether it is still real.
+func (c *CloseDateCorrector) downgradeAndReview(
+	ctx context.Context, cand closeDateCandidate, hygiene CloseDateHygiene, category string,
+	proposal CloseDateCorrection, now time.Time, loc *time.Location, runID ids.UUID,
+) (string, error) {
+	notched := forecastDowngrade(category)
+	// The 🟡 review: gone quiet — still alive? The proposal keeps the
+	// stage-velocity date the assessment computed, on BOTH branches. It
+	// used to be overwritten here with the deal's CURRENT date whenever the
+	// invariant did not force a re-date, which asked a human to confirm the
+	// date the deal already had — a card with nothing in it to approve.
+	//
+	// Built BEFORE the write, because the correction records the question
+	// it is answering and this branch asks a different one from the confirm
+	// above: a rep who said the date is fine has not said the deal is real.
+	// Recording the confirm's identity here would let one answer suppress
+	// the other.
+	review := proposal
+	review.Asking = AskingIsThisDealAlive
+	version, wrote, err := c.apply(ctx, cand, "downgrade_and_review", EvidenceOf(review, cand.expectedClose), runID, func(p *storekit.Patch) {
+		setForecastCategory(p, cand.forecastCat, category, notched)
+		if hygiene.Provisional {
+			// Only the invariant forces a date onto a quiet deal —
+			// never an optimistic re-date on top of the downgrade.
+			setCloseDate(p, cand.expectedClose, *hygiene.ProposedClose)
+			if !cand.provisional {
+				p.Set("close_date_provisional", false, true)
+			}
+		}
+	}, map[string]any{correctionFlagsKey: hygiene.Flags, "at_risk": true})
+	if err != nil {
+		return "", err
+	}
+	// The reason is read after the write: a failure to READ the
+	// correspondence must not abort a downgrade that has already committed.
+	review.Basis = c.quietBasis(ctx, cand.id, now, loc)
+	staged, err := c.ensureStaged(ctx, cand, version, review)
+	if err != nil {
+		return "", err
+	}
+	return closeDateEffect{wrote: wrote, staged: staged}.outcome(), nil
+}
+
+// answeredByAReversal reports whether somebody has already taken back the
+// correction this tier is about to make.
+//
+// Asked BEFORE any write, not only before the card. Every tier re-dates the deal
+// first and stages second, so a check living only in ensureStaged would let the
+// sweep rewrite the exact value a person had just undone and merely decline to
+// ask about it — the undo would appear to work and be gone by morning.
+//
+// The downgrade branch asks a different question of the same deal ("is this deal
+// still alive" rather than "is this date right"), and the memory keys on which:
+// a rep who said the date was fine has not said the deal is real.
+func (c *CloseDateCorrector) answeredByAReversal(
+	ctx context.Context, cand closeDateCandidate, hygiene CloseDateHygiene, proposal CloseDateCorrection,
+) (bool, error) {
+	asking := EvidenceOf(proposal, cand.expectedClose)
+	if hygiene.Action == CloseDateActionDowngradeAndReview {
+		asking.Asking = AskingIsThisDealAlive
+	}
+	return c.reversedSameQuestion(ctx, cand.id, asking)
 }
 
 // closeDateEffect is what one member's turn actually produced — the two things

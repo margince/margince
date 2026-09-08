@@ -339,8 +339,9 @@ const (
 	// the real count.
 	wantMinimumModuleSites = 60
 	// What the tier holds today. A ratchet: it may only fall, and it has risen
-	// twice. Both rises are system-principal passes with no seat to narrow to,
-	// and both are written out below rather than left as a number.
+	// three times. Every rise is a system-principal pass with no seat to narrow
+	// to, or a read a write-authority probe bounds a line later, and each is
+	// written out below rather than left as a number.
 	//
 	// THE FIRST RISE, and why it is not a widening anybody should copy.
 	// people.RetractMisattributedSignatureFields takes back the profile fields
@@ -374,5 +375,18 @@ const (
 	// the write it feeds re-locks the deal and re-verifies the deal is still
 	// open before touching it. The pass's authority is ratified as a whole in
 	// writeauthorityreach_test.go under SweepWorkspace and settleMember.
-	modulesTierUnscopedCeiling = 97
+	//
+	// THE THIRD RISE, +2, and the same pass again. deals.reversedCorrections
+	// and lockReversibleCorrection read deal_correction rows naming a deal_id:
+	// the first is the nightly sweep asking "has somebody taken this correction
+	// back?", which runs under the same system principal with no seat to narrow
+	// to, and narrowing it would let a correction one rep undid be re-applied to
+	// another rep's deal.
+	//
+	// The second is the Undo path, and it IS bounded — by auth.EnsureWritable on
+	// the deal, taken inside the same transaction immediately after. It reads
+	// unscoped here because the correction row is looked up first, under FOR
+	// UPDATE, so a repeated Undo serializes before either caller can act; the
+	// visibility answer follows it and refuses everything a row scope would.
+	modulesTierUnscopedCeiling = 99
 )

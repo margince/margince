@@ -79,8 +79,9 @@ func relinkBatchWire(out activities.RelinkBatchResult) agents.RelinkBatchResult 
 
 type leadDisqualifier struct{ store *people.Store }
 
-func (l leadDisqualifier) DisqualifyLead(ctx context.Context, id ids.UUID) (json.RawMessage, error) {
-	out, err := l.store.DisqualifyLead(ctx, ids.From[ids.LeadKind](id), people.DisqualifyLeadInput{})
+func (l leadDisqualifier) DisqualifyLead(ctx context.Context, id ids.UUID, ifVersion *int64) (json.RawMessage, error) {
+	out, err := l.store.DisqualifyLead(ctx, ids.From[ids.LeadKind](id), people.DisqualifyLeadInput{},
+		people.OnlyAtVersion(ifVersion))
 	if err != nil {
 		return nil, err
 	}
