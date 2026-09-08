@@ -369,3 +369,32 @@ func TestApplyingAMatchRefusesAConnectionTheProposalDoesNotDescribe(t *testing.T
 			status, person)
 	}
 }
+
+// A proposal staged BEFORE owner_user_id existed still applies.
+//
+// The payload gained the field, and a pending approval minted before this
+// shipped carries none — so its OwnerUserID decodes to the zero value. Binding
+// on that would match no row, the effect would fail, and the member could never
+// decide it: re-deciding a decided row answers 409. So a zero owner is resolved
+// from the connection, which is where staging reads it from anyway.
+//
+// The zero id is passed directly rather than through a stored payload: what is
+// under test is the store's handling of a proposal that names no owner, and
+// building a legacy approval row to carry one there would be asserting against
+// a fixture of the old format rather than against the behaviour.
+func TestAProposalWithNoOwnerStillAppliesAgainstItsConnection(t *testing.T) {
+	e := setupDedupe(t)
+	org := e.seedOrgNamed(t, "Acme GmbH")
+	andreas := e.seedContact(t, "Andreas Muller")
+	e.employ(t, andreas, org)
+	e.importAndMatch(t)
+
+	if err := e.store.ApplyLinkedInMatch(e.as(), e.ghostID(t), ids.Nil, andreas.UUID); err != nil {
+		t.Fatalf("a proposal predating owner_user_id was refused: %v", err)
+	}
+	if status, person := e.ghostStatus(t, suggestedGhost); status != "confirmed" ||
+		person == nil || *person != andreas.UUID {
+		t.Errorf("the connection is %q → %v, want it confirmed to the contact the proposal named",
+			status, person)
+	}
+}

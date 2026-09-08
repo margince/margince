@@ -180,7 +180,25 @@ func ApplyLinkedInMatchTx(ctx context.Context, tx pgx.Tx, connectionID, ownerID,
 }
 
 // applyLinkedInMatchInTx is the write both entry points land on.
+//
+// A ZERO ownerID means the proposal predates the field, and it is resolved from
+// the connection row rather than refused. A pending approval staged before this
+// shipped carries no owner_user_id, so binding on the zero value would match no
+// row — and the member could never decide it: the effect fails, and re-deciding
+// a decided row answers 409. Reading the owner off the row is what staging does
+// anyway, so a legacy payload gets exactly the behaviour it had, and a new one
+// gets the guard. The fallback goes when no pending proposal predates the field.
 func applyLinkedInMatchInTx(ctx context.Context, tx pgx.Tx, connectionID, ownerID, personID ids.UUID) error {
+	if ownerID == ids.Nil {
+		if err := tx.QueryRow(ctx,
+			`SELECT owner_user_id FROM linkedin_connection WHERE id = $1 AND tombstoned_at IS NULL`,
+			connectionID).Scan(&ownerID); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return apperrors.ErrNotFound
+			}
+			return fmt.Errorf("people: reading a legacy proposal's connection owner: %w", err)
+		}
+	}
 	if err := auth.HoldWritableLive(ctx, tx, entityPerson, personID); err != nil {
 		return err
 	}
