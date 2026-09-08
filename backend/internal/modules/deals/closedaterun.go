@@ -73,13 +73,19 @@ func (r CloseDateRun) Remaining() int { return r.Eligible - r.Checked }
 // openRun finds tonight's unfinished pass, so a retry after the worker deadline
 // continues it rather than opening a second one over the same deals.
 //
-// Matched on as_of rather than on "started today": a pass that begins at 23:58
-// and is retried at 00:03 is the same pass, and judging it against a new day
-// would re-freeze a different set halfway through.
-// Returns apperrors.ErrNotFound when there is no such pass, which is the
-// ordinary case on a first run of the day rather than a fault: the caller reads
-// it as "open a new one".
-func (c *CloseDateCorrector) openRun(ctx context.Context, tx pgx.Tx, asOf time.Time) (*CloseDateRun, error) {
+// NOT matched on today's as_of, deliberately. A pass that begins at 23:58 and is
+// retried at 00:03 is the same pass; asking for one whose as_of equals the NEW
+// day would find nothing, freeze a second set, and leave the first running
+// forever with its members owed an outcome nobody would ever give them. An
+// unfinished pass is finished before a new one starts, whatever day it began on.
+//
+// FOR UPDATE SKIP LOCKED is also how a pass is claimed: two workers reaching
+// this at once cannot both take the same run, and the loser sees no unfinished
+// pass rather than walking a set somebody else is already walking.
+//
+// Returns apperrors.ErrNotFound when there is none, which is the ordinary case
+// on a first run rather than a fault: the caller reads it as "open a new one".
+func (c *CloseDateCorrector) openRun(ctx context.Context, tx pgx.Tx) (*CloseDateRun, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionUpdate); err != nil {
 		return nil, err
 	}
@@ -87,9 +93,10 @@ func (c *CloseDateCorrector) openRun(ctx context.Context, tx pgx.Tx, asOf time.T
 	err := tx.QueryRow(ctx, `
 		SELECT id, as_of, status, eligible, checked, corrected, staged, started_at
 		  FROM close_date_run
-		 WHERE status = $1 AND as_of = $2
-		 ORDER BY started_at DESC
-		 LIMIT 1`, CloseDateRunRunning, asOf).
+		 WHERE status = $1
+		 ORDER BY started_at
+		 LIMIT 1
+		   FOR UPDATE SKIP LOCKED`, CloseDateRunRunning).
 		Scan(&run.ID, &run.AsOf, &run.Status, &run.Eligible, &run.Checked,
 			&run.Corrected, &run.Staged, &run.StartedAt)
 	if errors.Is(err, pgx.ErrNoRows) {

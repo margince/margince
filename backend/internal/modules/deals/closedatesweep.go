@@ -142,7 +142,7 @@ func (c *CloseDateCorrector) sweepWorkspace(ctx context.Context) error {
 		// A pass already open for this local day is resumed, not duplicated:
 		// the retry after a worker deadline is the same pass continuing. No
 		// such pass is the ordinary first run of the day, not a fault.
-		run, err = c.openRun(ctx, tx, asOf)
+		run, err = c.openRun(ctx, tx)
 		if errors.Is(err, apperrors.ErrNotFound) {
 			run, err = c.startRun(ctx, tx, asOf, tzName)
 		}
@@ -234,16 +234,15 @@ func (c *CloseDateCorrector) settleMember(
 		InForecastCommit:    category == forecastCommit || category == forecastBestCase,
 		StageVelocityDays:   velocity,
 	}, now, loc)
-	if err := c.correct(ctx, cand, hygiene, category, now, loc); err != nil {
+	// The outcome is whatever correct actually DID — see closeDateOutcome. A
+	// tier that decided to act and then wrote nothing (the switch off, or the
+	// deal already holding what it proposed) settles as checked, so the run's
+	// counters never claim a correction that did not reach a deal.
+	outcome, err := c.correct(ctx, cand, hygiene, category, now, loc)
+	if err != nil {
 		return "", fmt.Errorf("close-date correction on %s: %w", cand.id, err)
 	}
-	if !hygiene.Flagged {
-		return closeDateMemberChecked, nil
-	}
-	if hygiene.Action == CloseDateActionAutoApply {
-		return closeDateMemberChanged, nil
-	}
-	return closeDateMemberStaged, nil
+	return outcome, nil
 }
 
 // stageVelocityDays is §11's experience-informed pace: the workspace
@@ -280,8 +279,12 @@ func (c *CloseDateCorrector) stageVelocityDays(ctx context.Context, pipelineID i
 // diff (the reversibility the 🟢 tier promises), and emit deal.updated —
 // all in one transaction. Returns the row's post-write version so a 🟡
 // staging can bind to exactly what the human will see.
-func (c *CloseDateCorrector) apply(ctx context.Context, cand closeDateCandidate, correction string, build func(*storekit.Patch), extra map[string]any) (int64, error) {
+// Returns the row's post-write version and whether a domain write actually
+// happened — the caller records the latter in the run's ledger, because a tier
+// that decided to correct and then wrote nothing must not be counted as one.
+func (c *CloseDateCorrector) apply(ctx context.Context, cand closeDateCandidate, correction string, build func(*storekit.Patch), extra map[string]any) (int64, bool, error) {
 	var version int64
+	var wrote bool
 	err := c.db.Tx(ctx, func(tx pgx.Tx) error {
 		// The candidate scan and this write are separate transactions:
 		// a deal closed or archived in between must not be re-dated.
@@ -340,9 +343,10 @@ func (c *CloseDateCorrector) apply(ctx context.Context, cand closeDateCandidate,
 		if err := storekit.EmitEvent(ctx, tx, auditID, cand.id.UUID, crmcontracts.PublicEventDealUpdated{ChangedFields: changedFields}); err != nil {
 			return fmt.Errorf("emit %s: %w", correction, err)
 		}
+		wrote = true
 		return nil
 	})
-	return version, err
+	return version, wrote, err
 }
 
 // ensureStaged stages the 🟡 confirm-the-real-date proposal unless one is
@@ -358,21 +362,26 @@ func (c *CloseDateCorrector) apply(ctx context.Context, cand closeDateCandidate,
 //
 // Per date rather than per deal, so one "no" silences the date it was about
 // rather than ending close-date hygiene on that deal for good.
-func (c *CloseDateCorrector) ensureStaged(ctx context.Context, cand closeDateCandidate, targetVersion int64, proposal CloseDateCorrection) error {
+//
+// Reports whether a card was actually RAISED. An already-pending proposal and a
+// refused one both return false, because neither put a new question in front of
+// anybody — and the run's ledger counts questions asked, not questions
+// considered.
+func (c *CloseDateCorrector) ensureStaged(ctx context.Context, cand closeDateCandidate, targetVersion int64, proposal CloseDateCorrection) (bool, error) {
 	dealID, name := cand.id, cand.name
 	pending, err := c.stager.HasPendingCorrection(ctx, dealID.UUID)
 	if err != nil {
-		return err
+		return false, err
 	}
 	if pending {
-		return nil
+		return false, nil
 	}
 	refused, err := c.stager.RefusedCloseDate(ctx, dealID.UUID, ProbeFor(proposal, cand.expectedClose))
 	if err != nil {
-		return err
+		return false, err
 	}
 	if refused {
-		return nil
+		return false, nil
 	}
 	if targetVersion == 0 {
 		// The keep-alive path wrote nothing this pass; bind the staging
@@ -381,11 +390,14 @@ func (c *CloseDateCorrector) ensureStaged(ctx context.Context, cand closeDateCan
 			return tx.QueryRow(ctx, `SELECT version FROM deal WHERE id = $1`, dealID).Scan(&targetVersion)
 		})
 		if err != nil {
-			return err
+			return false, err
 		}
 	}
 	summary := fmt.Sprintf("Confirm the real close date for %q (proposed %s)", name, proposal.ExpectedCloseDate)
-	return c.stager.StageCorrection(ctx, dealID.UUID, targetVersion, summary, proposal)
+	if err := c.stager.StageCorrection(ctx, dealID.UUID, targetVersion, summary, proposal); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 func dateString(t *time.Time) *string {

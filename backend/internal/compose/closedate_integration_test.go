@@ -764,3 +764,56 @@ func TestCloseDateSweepSkipsAMemberArchivedMidPass(t *testing.T) {
 		t.Errorf("corrected = %d, want 0 — an archived deal is not corrected", corrected)
 	}
 }
+
+// The ledger records what the pass DID, not which tier it picked.
+//
+// The outcome used to be read off the chosen action, so a tier that decided to
+// correct and then wrote nothing still counted as a correction. Switching
+// maintenance off is the clearest case: every branch stops writing, and a
+// receipt built from intentions would report a night's worth of corrections
+// that never touched a deal — the same "machine work that changed nothing"
+// this ledger exists to expose.
+func TestCloseDateRunCountsOnlyWritesThatHappened(t *testing.T) {
+	e := setupCloseDate(t)
+	e.seedSweepDeal(t, "Overdue but maintenance is off", e.early, nil, intp(-12), 3)
+
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO setting (key, value, updated_at) VALUES ($1, 'false'::jsonb, now())
+		 ON CONFLICT (key) DO UPDATE SET value = 'false'::jsonb, updated_at = now()`,
+		deals.MaintenanceWritesEnabled.Key()); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := e.sweep(); err != nil {
+		t.Fatal(err)
+	}
+
+	var eligible, checked, corrected int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT eligible, checked, corrected FROM close_date_run ORDER BY started_at DESC LIMIT 1`).
+		Scan(&eligible, &checked, &corrected); err != nil {
+		t.Fatal(err)
+	}
+	if eligible != 1 || checked != 1 {
+		t.Errorf("eligible %d checked %d — the deal is still assessed with writes off", eligible, checked)
+	}
+	if corrected != 0 {
+		t.Errorf("corrected = %d, want 0 — nothing was written, so nothing was corrected", corrected)
+	}
+	// And the deal really is untouched: still claiming its past date.
+	swept := e.readSwept(t, e.firstDealID(t))
+	if swept.expectedClose == nil || !swept.expectedClose.Before(today()) {
+		t.Errorf("the deal was re-dated to %v with maintenance switched off", swept.expectedClose)
+	}
+}
+
+// firstDealID is the only deal these single-deal cases seed.
+func (e *closeDateEnv) firstDealID(t *testing.T) ids.UUID {
+	t.Helper()
+	var id ids.UUID
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT id FROM deal ORDER BY created_at LIMIT 1`).Scan(&id); err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
