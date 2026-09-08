@@ -2064,6 +2064,38 @@ BEGIN
   RETURN OLD;
 END;
 
+public.deal_correction acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.deal_correction.applied_at timestamp with time zone NOT NULL gen=- def=now()
+public.deal_correction.asking text NOT NULL gen=- def=-
+public.deal_correction.audit_log_id uuid NOT NULL gen=- def=-
+public.deal_correction.captured_by text NOT NULL gen=- def=-
+public.deal_correction.correction text NOT NULL gen=- def=-
+public.deal_correction.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.deal_correction.deal_correction_audit_log_id_fkey FOREIGN KEY (audit_log_id) REFERENCES audit_log(id) ON DELETE CASCADE
+public.deal_correction.deal_correction_audit_once UNIQUE (audit_log_id)
+public.deal_correction.deal_correction_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
+public.deal_correction.deal_correction_moves_something CHECK ((cardinality(fields) > 0))
+public.deal_correction.deal_correction_pkey PRIMARY KEY (id)
+public.deal_correction.deal_correction_reversal_audit_id_fkey FOREIGN KEY (reversal_audit_id) REFERENCES audit_log(id) ON DELETE SET NULL
+public.deal_correction.deal_correction_reversal_is_whole CHECK (((reversed_at IS NULL) = (reversed_by IS NULL)))
+public.deal_correction.deal_correction_run_id_fkey FOREIGN KEY (run_id) REFERENCES close_date_run(id) ON DELETE SET NULL
+public.deal_correction.deal_correction_tier_check CHECK ((correction = ANY (ARRAY['auto_apply'::text, 'provisional_confirm'::text, 'downgrade_and_review'::text])))
+public.deal_correction.deal_id uuid NOT NULL gen=- def=-
+public.deal_correction.fields text[] NOT NULL gen=- def=-
+public.deal_correction.id uuid NOT NULL gen=- def=uuidv7()
+public.deal_correction.remaining_open_stages text NOT NULL gen=- def=-
+public.deal_correction.reversal_audit_id uuid gen=- def=-
+public.deal_correction.reversed_at timestamp with time zone gen=- def=-
+public.deal_correction.reversed_by text gen=- def=-
+public.deal_correction.run_id uuid gen=- def=-
+public.deal_correction.standing_close_date text NOT NULL gen=- def=-
+public.deal_correction.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.deal_correction.version bigint NOT NULL gen=- def=1
+public.deal_correction_audit_once CREATE UNIQUE INDEX deal_correction_audit_once ON public.deal_correction USING btree (audit_log_id)
+public.deal_correction_by_audit CREATE INDEX deal_correction_by_audit ON public.deal_correction USING btree (audit_log_id)
+public.deal_correction_live CREATE INDEX deal_correction_live ON public.deal_correction USING btree (deal_id, applied_at DESC) WHERE (reversed_at IS NULL)
+public.deal_correction_pkey CREATE UNIQUE INDEX deal_correction_pkey ON public.deal_correction USING btree (id)
+public.deal_correction_reversed CREATE INDEX deal_correction_reversed ON public.deal_correction USING btree (deal_id, reversed_at DESC) WHERE (reversed_at IS NOT NULL)
 public.deal_document_hide acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.deal_document_hide.attachment_id uuid NOT NULL gen=- def=-
 public.deal_document_hide.deal_document_hide_attachment_fkey FOREIGN KEY (attachment_id) REFERENCES attachment(id) ON DELETE CASCADE

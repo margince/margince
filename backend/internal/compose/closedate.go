@@ -228,6 +228,17 @@ func closeDateConfirmEffect(svc *approvals.Service, store *deals.Store) approval
 		if err != nil {
 			return fmt.Errorf("compose: confirmed close date: %w", err)
 		}
+		// A reversal since this card was staged has already answered its
+		// question, and this door is the unattended one: close_date_correction
+		// is auto-applied for a rep who has turned autonomy on, so a confirm
+		// redeemed after an Undo would silently put back what the Undo removed.
+		blocked, err := store.ReversalBlocksConfirming(ctx, correction, &confirmed)
+		if err != nil {
+			return err
+		}
+		if blocked {
+			return fmt.Errorf("compose: this correction was taken back: %w", apperrors.ErrConflict)
+		}
 		// Redemption validated the pin in ITS transaction and committed; this
 		// write opens another. Carrying the pin into the update puts the
 		// version compare inside the transaction that actually moves the date,

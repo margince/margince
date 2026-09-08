@@ -175,7 +175,7 @@ func (c *CloseDateCorrector) sweepWorkspace(ctx context.Context) error {
 			live[cand.id] = cand
 		}
 		for _, m := range members {
-			outcome, settleErr := c.settleMember(ctx, live, m, velocities, now, loc)
+			outcome, settleErr := c.settleMember(ctx, live, m, velocities, now, loc, run.ID)
 			if settleErr != nil {
 				// One deal's failure is that deal's outcome, not the end of the
 				// pass. Recording it and walking on is what keeps a single bad
@@ -205,7 +205,7 @@ func (c *CloseDateCorrector) sweepWorkspace(ctx context.Context) error {
 // the denominator.
 func (c *CloseDateCorrector) settleMember(
 	ctx context.Context, live map[ids.DealID]closeDateCandidate, m closeDateMember,
-	velocities map[ids.PipelineID]float64, now time.Time, loc *time.Location,
+	velocities map[ids.PipelineID]float64, now time.Time, loc *time.Location, runID ids.UUID,
 ) (string, error) {
 	if m.gone {
 		return closeDateMemberSkipped, nil
@@ -238,7 +238,7 @@ func (c *CloseDateCorrector) settleMember(
 	// tier that decided to act and then wrote nothing (the switch off, or the
 	// deal already holding what it proposed) settles as checked, so the run's
 	// counters never claim a correction that did not reach a deal.
-	outcome, err := c.correct(ctx, cand, hygiene, category, now, loc)
+	outcome, err := c.correct(ctx, cand, hygiene, category, now, loc, runID)
 	if err != nil {
 		return "", fmt.Errorf("close-date correction on %s: %w", cand.id, err)
 	}
@@ -282,7 +282,7 @@ func (c *CloseDateCorrector) stageVelocityDays(ctx context.Context, pipelineID i
 // Returns the row's post-write version and whether a domain write actually
 // happened — the caller records the latter in the run's ledger, because a tier
 // that decided to correct and then wrote nothing must not be counted as one.
-func (c *CloseDateCorrector) apply(ctx context.Context, cand closeDateCandidate, correction string, build func(*storekit.Patch), extra map[string]any) (int64, bool, error) {
+func (c *CloseDateCorrector) apply(ctx context.Context, cand closeDateCandidate, correction string, evidence CorrectionEvidence, runID ids.UUID, build func(*storekit.Patch), extra map[string]any) (int64, bool, error) {
 	var version int64
 	var wrote bool
 	err := c.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -343,6 +343,22 @@ func (c *CloseDateCorrector) apply(ctx context.Context, cand closeDateCandidate,
 		if err := storekit.EmitEvent(ctx, tx, auditID, cand.id.UUID, crmcontracts.PublicEventDealUpdated{ChangedFields: changedFields}); err != nil {
 			return fmt.Errorf("emit %s: %w", correction, err)
 		}
+		// The lifecycle row commits WITH the change it describes. Written in a
+		// second transaction it could be lost to a crash, and then the deal has
+		// moved while nothing records that a correction moved it — which is the
+		// state this row exists to make impossible.
+		if _, err := recordCorrection(ctx, tx, DealCorrection{
+			DealID:     cand.id,
+			AuditLogID: auditID,
+			Correction: correction,
+			// Moved, not After: After holds every column the tier SET, and a
+			// reversal that tried to restore a field which never changed would
+			// be putting back a value that is already there.
+			Fields:   movedFields(patch),
+			Evidence: evidence,
+		}, &runID); err != nil {
+			return err
+		}
 		wrote = true
 		return nil
 	})
@@ -376,11 +392,25 @@ func (c *CloseDateCorrector) ensureStaged(ctx context.Context, cand closeDateCan
 	if pending {
 		return false, nil
 	}
-	refused, err := c.stager.RefusedCloseDate(ctx, dealID.UUID, ProbeFor(proposal, cand.expectedClose))
+	probe := ProbeFor(proposal, cand.expectedClose)
+	refused, err := c.stager.RefusedCloseDate(ctx, dealID.UUID, probe)
 	if err != nil {
 		return false, err
 	}
 	if refused {
+		return false, nil
+	}
+	// A THIRD memory, and the one the other two could not hold. Both of them
+	// read approvals: pending stops a live card multiplying, refused stops a
+	// declined one returning. A reversal writes no approval at all — the rep
+	// undid the change on the record itself — so before this, a correction
+	// somebody took back was re-proposed the very next night and their answer
+	// lasted exactly until the next sweep.
+	reversed, err := c.reversedSameQuestion(ctx, dealID, CorrectionEvidence(probe))
+	if err != nil {
+		return false, err
+	}
+	if reversed {
 		return false, nil
 	}
 	if targetVersion == 0 {
