@@ -69,9 +69,9 @@ echo "  OK: logged in as $ADMIN_EMAIL"
 # finance section is absent by contract on a target or a prospect (FIN-AC-3),
 # so a demo account that is not one cannot show the cards this exists to show.
 echo "== the company =="
-org_id="$(psql_one "SELECT id FROM organization WHERE display_name = '$COMPANY' AND archived_at IS NULL LIMIT 1")"
-if [[ -z "$org_id" ]]; then
-  status="$(api POST /organizations "$(jq -n --arg n "$COMPANY" '{
+company_id="$(psql_one "SELECT id FROM company WHERE display_name = '$COMPANY' AND archived_at IS NULL LIMIT 1")"
+if [[ -z "$company_id" ]]; then
+  status="$(api POST /companies "$(jq -n --arg n "$COMPANY" '{
     display_name: $n,
     lifecycle: "customer",
     website: "https://glazedfrog.example",
@@ -80,12 +80,12 @@ if [[ -z "$org_id" ]]; then
     source: "manual"
   }')")"
   [[ "$status" = "201" ]] || { cat "$workdir/body" >&2; fail "creating $COMPANY returned HTTP $status"; }
-  org_id="$(jq -r .id < "$workdir/body")"
+  company_id="$(jq -r .id < "$workdir/body")"
   echo "  OK: created $COMPANY"
 else
   echo "  OK: $COMPANY already present"
 fi
-echo "  $COMPANY = $org_id"
+echo "  $COMPANY = $company_id"
 
 # ---- the people ------------------------------------------------------------
 # Three named roles, because the relationship-coverage card reads role gaps and
@@ -104,11 +104,11 @@ ensure_person() { # ensure_person <name> <email> <title>
     printf '%s' "$existing"
     return
   fi
-  status="$(api POST /people "$(jq -n --arg n "$name" --arg e "$email" --arg t "$title" --arg o "$org_id" '{
+  status="$(api POST /people "$(jq -n --arg n "$name" --arg e "$email" --arg t "$title" --arg o "$company_id" '{
     full_name: $n,
     job_title: $t,
     emails: [{email: $e, is_primary: true}],
-    organization_id: $o,
+    company_id: $o,
     source: "manual"
   }')")"
   [[ "$status" = "201" ]] || { cat "$workdir/body" >&2; fail "creating $name returned HTTP $status"; }
@@ -139,8 +139,8 @@ ensure_deal() { # ensure_deal <name> <stage-id> <amount-minor> <close-date>
     return
   fi
   status="$(api POST /deals "$(jq -n --arg n "$name" --arg p "$pipeline_id" --arg s "$stage" \
-    --arg o "$org_id" --arg c "$closes" --argjson a "$amount" '{
-      name: $n, pipeline_id: $p, stage_id: $s, organization_id: $o,
+    --arg o "$company_id" --arg c "$closes" --argjson a "$amount" '{
+      name: $n, pipeline_id: $p, stage_id: $s, company_id: $o,
       amount_minor: $a, currency: "EUR", expected_close_date: $c, source: "manual"
     }')")"
   [[ "$status" = "201" ]] || { cat "$workdir/body" >&2; fail "creating deal $name returned HTTP $status"; }
@@ -169,10 +169,10 @@ ensure_activity() { # ensure_activity <source-id> <json-body>
 
 mail() { # mail <key> <subject> <direction> <when> <person-id>
   ensure_activity "$1" "$(jq -n --arg s "$2" --arg d "$3" --arg w "$4" --arg k "$1" \
-    --arg o "$org_id" --arg p "$5" '{
+    --arg o "$company_id" --arg p "$5" '{
       kind: "email", subject: $s, direction: $d, occurred_at: $w,
       source: "manual", source_system: "demo-seed", source_id: $k,
-      links: [{entity_type: "organization", entity_id: $o},
+      links: [{entity_type: "company", entity_id: $o},
               {entity_type: "person", entity_id: $p}]
     }')"
 }
@@ -185,20 +185,20 @@ mail demo-gf-5 "Phased rollout — revised proposal"   outbound "2026-07-21T16:3
 mail demo-gf-6 "Operations handover questions"       inbound  "2026-07-28T10:15:00Z" "$nick_id"
 
 # A meeting on the books, so the Today card has one to prepare for.
-ensure_activity demo-gf-meeting "$(jq -n --arg o "$org_id" --arg p "$sarah_id" '{
+ensure_activity demo-gf-meeting "$(jq -n --arg o "$company_id" --arg p "$sarah_id" '{
   kind: "meeting", subject: "Executive alignment", meeting_status: "booked",
   occurred_at: "2026-08-12T09:00:00Z", duration_seconds: 1800,
   source: "manual", source_system: "demo-seed", source_id: "demo-gf-meeting",
-  links: [{entity_type: "organization", entity_id: $o},
+  links: [{entity_type: "company", entity_id: $o},
           {entity_type: "person", entity_id: $p}]
 }')"
 
 # An open commitment with a due date — the Today card's "next commitment".
-ensure_activity demo-gf-task "$(jq -n --arg o "$org_id" '{
+ensure_activity demo-gf-task "$(jq -n --arg o "$company_id" '{
   kind: "task", subject: "Send revised expansion proposal",
   occurred_at: "2026-08-05T08:00:00Z", due_at: "2026-08-14T16:00:00Z",
   source: "manual", source_system: "demo-seed", source_id: "demo-gf-task",
-  links: [{entity_type: "organization", entity_id: $o}]
+  links: [{entity_type: "company", entity_id: $o}]
 }')"
 
 # ---- the accounting source -------------------------------------------------
@@ -219,11 +219,11 @@ else
   echo "  OK: an accounting source is already connected"
 fi
 
-if [[ -z "$(psql_one "SELECT 1 FROM finance_customer_link WHERE organization_id = '$org_id' AND archived_at IS NULL")" ]]; then
+if [[ -z "$(psql_one "SELECT 1 FROM finance_customer_link WHERE company_id = '$company_id' AND archived_at IS NULL")" ]]; then
   psql_one "INSERT INTO finance_customer_link
-      (connection_id, organization_id, external_customer_id,
+      (connection_id, company_id, external_customer_id,
        sync_hash, source, captured_by)
-    VALUES ('$conn_id', '$org_id', 'GLAZED-FROG', 'seed', 'system', 'system:seed')" >/dev/null
+    VALUES ('$conn_id', '$company_id', 'GLAZED-FROG', 'seed', 'system', 'system:seed')" >/dev/null
   echo "  OK: matched $COMPANY to a customer in the source"
 else
   echo "  OK: $COMPANY is already matched"
@@ -231,7 +231,7 @@ fi
 
 echo ""
 echo "seed-demo-company: DONE"
-echo "  $COMPANY — $API_BASE/#/companies/$org_id"
+echo "  $COMPANY — $API_BASE/#/companies/$company_id"
 echo ""
 echo "  The invoices arrive with the next finance sync, which runs on boot."
 echo "  Restart the stack (make dev) to pull them in now."

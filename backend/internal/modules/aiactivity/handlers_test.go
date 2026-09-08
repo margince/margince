@@ -143,7 +143,7 @@ func TestTheFeedIsAlwaysReadForTheAuthenticatedCaller(t *testing.T) {
 // record that does not exist.
 func TestTheWireCarriesTheSubjectsIdentityExactlyWhenTheReadHasOne(t *testing.T) {
 	subject := ids.NewV7()
-	subjectType, label := "organization", "Acme"
+	subjectType, label := "company", "Acme"
 	reader := &stubReader{settled: []Item{
 		{ID: ids.NewV7(), Kind: "summarize", State: "done", SubjectLabel: &label, SubjectType: &subjectType, SubjectID: &subject},
 		{ID: ids.NewV7(), Kind: "morning_brief", State: "done"},
@@ -163,7 +163,7 @@ func TestTheWireCarriesTheSubjectsIdentityExactlyWhenTheReadHasOne(t *testing.T)
 		t.Fatalf("recent = %d items, want 2", len(body.Recent))
 	}
 	about, aboutNothing := body.Recent[0], body.Recent[1]
-	if got := string(about["subject_type"]); got != `"organization"` {
+	if got := string(about["subject_type"]); got != `"company"` {
 		t.Errorf("subject_type = %s, want the source's own kind name", got)
 	}
 	if got := string(about["subject_id"]); got != `"`+subject.String()+`"` {

@@ -15,13 +15,13 @@ import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, throwProblem } from "./common";
 import "./companyvatmark.css";
 
-type VatCheck = components["schemas"]["OrganizationVatCheck"];
+type VatCheck = components["schemas"]["CompanyVatCheck"];
 type VatStatus = VatCheck["status"];
 
 /** The key every reader of this consultation registers, so the check and the
  * profile field that states the number settle together. */
-export function vatCheckKey(orgId: string) {
-  return ["org-vat-check", orgId] as const;
+export function vatCheckKey(companyId: string) {
+  return ["company-vat-check", companyId] as const;
 }
 
 /** What each verdict is called, which glyph carries it, and how strongly to say
@@ -136,10 +136,14 @@ function markName(
  * click to see.
  */
 export function VatMark({
-  orgId,
+  companyId,
   stated,
   canAsk,
-}: Readonly<{ orgId: string; stated: string; canAsk: boolean }>): ReactNode {
+}: Readonly<{
+  companyId: string;
+  stated: string;
+  canAsk: boolean;
+}>): ReactNode {
   const t = useT();
   const { locale } = useLocale();
   const zone = viewerZone();
@@ -147,11 +151,11 @@ export function VatMark({
   // 404 is the honest "never consulted", and leaves the mark saying so rather
   // than reporting a failure nobody caused.
   const check = useQuery({
-    queryKey: vatCheckKey(orgId),
+    queryKey: vatCheckKey(companyId),
     queryFn: async () => {
       const { data, error, response } = await api.GET(
-        "/organizations/{id}/vat-check",
-        { params: { path: { id: orgId } } },
+        "/companies/{id}/vat-check",
+        { params: { path: { id: companyId } } },
       );
       if (response.status === 404) {
         return null;
@@ -177,7 +181,7 @@ export function VatMark({
   // between pending and settled — which it does on every mount. It also has to
   // outlive the popover: the wait it holds is the reason a closed panel no
   // longer forgets a consultation still running.
-  const ask = useAskTheRegister(orgId, check.data?.recorded_at ?? null);
+  const ask = useAskTheRegister(companyId, check.data?.recorded_at ?? null);
 
   // A read still in flight draws nothing rather than a third state: the mark
   // sits inside a value the reader is already looking at, and a glyph that
@@ -324,16 +328,16 @@ function VatReceipt({
  * product can observe — so without this a stored answer stood forever, and a
  * rep who knew a registration had changed at the registry could not act on it.
  */
-function useAskTheRegister(orgId: string, answeredAt: string | null) {
+function useAskTheRegister(companyId: string, answeredAt: string | null) {
   const queryClient = useQueryClient();
-  // The organization whose answer is outstanding, and what the record said when
+  // The company whose answer is outstanding, and what the record said when
   // the wait began. Null when nothing is in flight.
   //
   // The date is what ENDS the wait: the worker writes a new one when the
   // register replies. Waiting on the poll's own schedule instead would hold the
   // button for the full fifteen seconds after an answer that arrived in two.
   const [waitingFor, setWaitingFor] = useState<{
-    orgId: string;
+    companyId: string;
     since: string | null;
   } | null>(null);
   useEffect(() => {
@@ -343,17 +347,16 @@ function useAskTheRegister(orgId: string, answeredAt: string | null) {
   }, [answeredAt, waitingFor]);
 
   const ask = useMutation({
-    // Both the organization and the BASELINE travel as mutation variables. The
+    // Both the company and the BASELINE travel as mutation variables. The
     // id for the reason every mutationFn here takes one — a click landing
     // before React Query re-arms its options would otherwise run against the
     // previous render's value — and the baseline for a sharper version of the
     // same hazard: closed over, a stale `answeredAt` makes the effect above see
     // a mismatch immediately and clear a wait that had not started.
-    mutationFn: async (asked: { orgId: string; since: string | null }) => {
-      const { error, response } = await api.POST(
-        "/organizations/{id}/vat-check",
-        { params: { path: { id: asked.orgId } } },
-      );
+    mutationFn: async (asked: { companyId: string; since: string | null }) => {
+      const { error, response } = await api.POST("/companies/{id}/vat-check", {
+        params: { path: { id: asked.companyId } },
+      });
       // `response.ok` as well as `error`, and the second is what catches a
       // failure here: this endpoint answers 202 with NO BODY, so a bodiless
       // non-2xx leaves openapi-fetch nothing to parse and `error` comes back
@@ -385,7 +388,7 @@ function useAskTheRegister(orgId: string, answeredAt: string | null) {
         // stale and refetches only where an observer is mounted, and the panel
         // that displays this may be closed while the wait runs on.
         void queryClient.refetchQueries({
-          queryKey: vatCheckKey(waitingFor.orgId),
+          queryKey: vatCheckKey(waitingFor.companyId),
         });
         // The last attempt ends the wait whether or not an answer came. A
         // register that never replies must not leave the button busy forever:
@@ -423,7 +426,7 @@ function useAskTheRegister(orgId: string, answeredAt: string | null) {
         return;
       }
       inFlight.current = true;
-      ask.mutate({ orgId, since: answeredAt });
+      ask.mutate({ companyId, since: answeredAt });
     },
   };
 }
@@ -439,7 +442,7 @@ function AskTheRegister({
   consulted: boolean;
   ask: ReturnType<typeof useAskTheRegister>;
   // The record's own writability, not the role's grant. The server runs
-  // EnsureWritableLive on THIS organization, so a rep holding `organization:
+  // EnsureWritableLive on THIS company, so a rep holding `company:
   // update` who does not own the account was offered a button whose request
   // is refused — a false affordance and a workflow that fails on click.
   //

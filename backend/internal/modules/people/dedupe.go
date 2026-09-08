@@ -22,9 +22,9 @@ import (
 // boundary because a workspace tuning its own match threshold would make
 // "no duplicates" unauditable across installations.
 const (
-	dedupeReviewThreshold = 0.72
-	dedupeNameWeight      = 0.55
-	dedupeOrgDomainWeight = 0.45
+	dedupeReviewThreshold     = 0.72
+	dedupeNameWeight          = 0.55
+	dedupeCompanyDomainWeight = 0.45
 )
 
 // DedupeDecision is the closed outcome set of PO-F-1/PO-F-2. Fuzzy never
@@ -34,7 +34,7 @@ type DedupeDecision string
 
 const (
 	// DecisionExactCollision is a unique-key hit: same email, or same
-	// org domain. Deterministic, no score. The caller's policy decides
+	// company domain. Deterministic, no score. The caller's policy decides
 	// whether that blocks (API) or lands on the incumbent (capture).
 	DecisionExactCollision DedupeDecision = "exact_collision"
 	// DecisionFuzzyReview is a near-match at or above the threshold: a
@@ -79,9 +79,9 @@ type PersonCandidate struct {
 	// would keep dropping the employer agreement an admin has explicitly
 	// asserted.
 	ConsumerMail *freemail.Matcher
-	// CurrentPrimaryOrgID drives org_match = 1.0 when both sides share
+	// CurrentPrimaryCompanyID drives company_match = 1.0 when both sides share
 	// an employer. Nil when the candidate has no known employer yet.
-	CurrentPrimaryOrgID *ids.OrganizationID
+	CurrentPrimaryCompanyID *ids.CompanyID
 	// QueueNameCollisions asks for the name-collision lane, and it is OPT-IN
 	// because the answer it gives is only safe for one kind of caller.
 	//
@@ -169,7 +169,7 @@ func DedupePerson(ctx context.Context, tx pgx.Tx, c PersonCandidate) (PersonReso
 		return res, nil
 	}
 	// A nameless captured contact never fuzzy-matches: with no name there
-	// is nothing to score, and org_match alone would collide every
+	// is nothing to score, and company_match alone would collide every
 	// colleague onto one record.
 	if NormalizePersonName(c.FullName) == "" {
 		return PersonResolution{Decision: DecisionNoMatch}, nil
@@ -254,15 +254,15 @@ func exactPersonByEmail(ctx context.Context, tx pgx.Tx, emails []string) (ids.Pe
 
 // personCandidateRow is one row of the restricted candidate set.
 type personCandidateRow struct {
-	id       ids.PersonID
-	fullName string
-	orgID    *ids.OrganizationID
-	// orgDomain is a domain the incumbent's EMPLOYER is registered under;
+	id        ids.PersonID
+	fullName  string
+	companyID *ids.CompanyID
+	// companyDomain is a domain the incumbent's EMPLOYER is registered under;
 	// mailDomains are the ones their own live addresses sit on. Both say "these
 	// two work at the same place", and the second says it while the employer is
 	// still an open question — which is where a captured counterparty starts.
-	orgDomain   *string
-	mailDomains []string
+	companyDomain *string
+	mailDomains   []string
 }
 
 // fuzzyPerson is PO-F-1 tier 2. The candidate set is restricted to
@@ -295,7 +295,7 @@ type personCandidateRow struct {
 // predicate happening to cover another normalization's output.
 func fuzzyPerson(ctx context.Context, tx pgx.Tx, c PersonCandidate) (PersonResolution, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT p.id, p.full_name, r.organization_id, od.domain,
+		SELECT p.id, p.full_name, r.company_id, od.domain,
 		       -- EVERY live address, not an unordered LIMIT 1: a contact with a
 		       -- work and a personal address has two primaries as far as this
 		       -- query is concerned, and picking either at random would make
@@ -309,13 +309,13 @@ func fuzzyPerson(ctx context.Context, tx pgx.Tx, c PersonCandidate) (PersonResol
 		  LEFT JOIN relationship r
 		    ON r.person_id = p.id AND r.kind = 'employment'
 		   AND `+employment.CurrentPrimarySQL("r")+` AND r.archived_at IS NULL
-		  LEFT JOIN organization_domain od
-		    ON od.organization_id = r.organization_id AND od.archived_at IS NULL
+		  LEFT JOIN company_domain od
+		    ON od.company_id = r.company_id AND od.archived_at IS NULL
 		 WHERE p.archived_at IS NULL
 		   AND (f_fold_apostrophes(lower(p.full_name)) % f_fold_apostrophes(lower($1))
-		        OR ($2::uuid IS NOT NULL AND r.organization_id = $2)
+		        OR ($2::uuid IS NOT NULL AND r.company_id = $2)
 		        OR `+personNameKeySQL("p.full_name")+` = `+personNameKeySQL("$1")+`)`,
-		c.FullName, c.CurrentPrimaryOrgID)
+		c.FullName, c.CurrentPrimaryCompanyID)
 	if err != nil {
 		return PersonResolution{}, fmt.Errorf("dedupe person candidate set: %w", err)
 	}
@@ -331,7 +331,7 @@ func fuzzyPerson(ctx context.Context, tx pgx.Tx, c PersonCandidate) (PersonResol
 	candidateKey := NormalizePersonName(c.FullName)
 	for rows.Next() {
 		var row personCandidateRow
-		if err := rows.Scan(&row.id, &row.fullName, &row.orgID, &row.orgDomain, &row.mailDomains); err != nil {
+		if err := rows.Scan(&row.id, &row.fullName, &row.companyID, &row.companyDomain, &row.mailDomains); err != nil {
 			return PersonResolution{}, fmt.Errorf("scan person candidate: %w", err)
 		}
 		confidence := personConfidence(c, row)
@@ -362,7 +362,7 @@ func fuzzyPerson(ctx context.Context, tx pgx.Tx, c PersonCandidate) (PersonResol
 	// same way are worth a human's glance even when nothing else agrees.
 	//
 	// It is a lane of its own rather than a lower threshold, and the difference
-	// is not cosmetic: the weights are shared with organization matching, so
+	// is not cosmetic: the weights are shared with company matching, so
 	// moving the bar to admit this pair would drag every company comparison down
 	// with it. An exact name is also not a probability — it either is the same
 	// string or it is not — so scoring it and comparing against a fuzzy bar was
@@ -371,7 +371,7 @@ func fuzzyPerson(ctx context.Context, tx pgx.Tx, c PersonCandidate) (PersonResol
 	// WHY IT WAS UNREACHABLE. A perfect name scores 0.55·1.0 and the bar is
 	// 0.72, so the pair could only clear it on employer agreement. But
 	// CreatePersonInput carries no employer at all — the employment edge is a
-	// separate call made after the person exists — so at create time the org
+	// separate call made after the person exists — so at create time the company
 	// term is structurally 0, and a second business card for someone already in
 	// the workspace was created in silence every time.
 	//
@@ -391,24 +391,24 @@ func fuzzyPerson(ctx context.Context, tx pgx.Tx, c PersonCandidate) (PersonResol
 // result is in [0,1] and comparable against the threshold directly.
 func personConfidence(c PersonCandidate, row personCandidateRow) float64 {
 	return dedupeNameWeight*nameSimilarity(c.FullName, row.fullName) +
-		dedupeOrgDomainWeight*orgMatch(c, row)
+		dedupeCompanyDomainWeight*companyMatch(c, row)
 }
 
-// orgMatch is PO-F-1's employer agreement term, most-specific first: a shared
+// companyMatch is PO-F-1's employer agreement term, most-specific first: a shared
 // employer row beats a shared company domain, which beats two addresses simply
 // sitting on the same domain.
 //
 // That last rung is what keeps the term alive for a captured counterparty.
 // Capture creates the person and withholds the company until a site read judges
 // the domain, so for the whole time that question is open there is no employer
-// row and no organization_domain to agree about — and two colleagues at a new
+// row and no company_domain to agree about — and two colleagues at a new
 // customer would stop meeting at the fuzzy tier just when their records are
 // newest and most likely to be twins.
-func orgMatch(c PersonCandidate, row personCandidateRow) float64 {
-	if c.CurrentPrimaryOrgID != nil && row.orgID != nil && *c.CurrentPrimaryOrgID == *row.orgID {
+func companyMatch(c PersonCandidate, row personCandidateRow) float64 {
+	if c.CurrentPrimaryCompanyID != nil && row.companyID != nil && *c.CurrentPrimaryCompanyID == *row.companyID {
 		return 1.0
 	}
-	if row.orgDomain != nil && candidateSharesDomain(c, *row.orgDomain) {
+	if row.companyDomain != nil && candidateSharesDomain(c, *row.companyDomain) {
 		return 0.8
 	}
 	for _, domain := range row.mailDomains {
@@ -443,7 +443,7 @@ func sharedEmployerDomain(c PersonCandidate, domain string) bool {
 var consumerMailBaseline = freemail.New(nil, nil)
 
 // candidateSharesDomain reports whether any candidate email sits on an
-// organization domain the incumbent is mapped to.
+// company domain the incumbent is mapped to.
 func candidateSharesDomain(c PersonCandidate, domain string) bool {
 	for _, e := range c.Emails {
 		if emailDomain(e) == normalizeDomain(domain) {
@@ -457,9 +457,9 @@ func candidateSharesDomain(c PersonCandidate, domain string) bool {
 // path lowercases on write, so the exact tier compares like for like.
 func normalizeEmail(e string) string { return strings.ToLower(strings.TrimSpace(e)) }
 
-// normalizeDomain matches organization_domain's storage contract:
+// normalizeDomain matches company_domain's storage contract:
 // lowercase only — never unaccent, or münich.example would collide with
-// a different organization's munich.example.
+// a different company's munich.example.
 func normalizeDomain(d string) string { return strings.ToLower(strings.TrimSpace(d)) }
 
 // emailDomain returns the lowercased host of an address, or "" when the

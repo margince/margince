@@ -113,8 +113,8 @@ func TestEveryVerbTheFloorTightensNamesItsRecordType(t *testing.T) {
 
 // The floor must not reach an operation the verb does not perform. This is the
 // regression that shipped in this change's first draft: every confirm-first route
-// riding `update_record` for an organization was collapsed onto the pair, so an
-// ordinary organization patch — auto-execute on REST, by `updateOrganization` —
+// riding `update_record` for a company was collapsed onto the pair, so an
+// ordinary company patch — auto-execute on REST, by `updateCompany` —
 // became confirm-first on the tool door. That is #982 pointing the other way, and
 // it is invisible to every gate above, all of which only ask whether the floor
 // knows ENOUGH.

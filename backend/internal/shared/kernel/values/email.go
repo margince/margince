@@ -33,7 +33,7 @@ func ParseEmail(raw string) (Email, error) {
 func (e Email) String() string { return e.s }
 func (e Email) IsZero() bool   { return e.s == "" }
 
-// Domain is the part after the last @ — the org-key derivation input.
+// Domain is the part after the last @ — the company-key derivation input.
 func (e Email) Domain() string {
 	at := strings.LastIndex(e.s, "@")
 	if at < 0 {

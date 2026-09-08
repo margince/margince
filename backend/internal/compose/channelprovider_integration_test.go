@@ -427,7 +427,7 @@ func TestTheBootStepRegistersAComposedUnitTransportWithNoCaptureRegistry(t *test
 }
 
 // Reconcile runs over an infra transaction, never a workspace-bound one: the
-// boot step runs BEFORE the installation is bootstrapped, when no organization
+// boot step runs BEFORE the installation is bootstrapped, when no company
 // exists. A workspace-bound transaction cannot resolve which workspace to bind,
 // which halts every fresh install rather than some corner of one.
 func TestTheBootStepReconcilesBeforeTheInstallationIsBootstrapped(t *testing.T) {
@@ -457,10 +457,10 @@ func TestTheBootStepReconcilesBeforeTheInstallationIsBootstrapped(t *testing.T) 
 	}
 
 	if err := ReconcileChannelProviders(ctx, e.Pool); err != nil {
-		t.Fatalf("the boot step with no organization bootstrapped yet: %v", err)
+		t.Fatalf("the boot step with no company bootstrapped yet: %v", err)
 	}
 	if !activities.CanSendOnProvider("prebootstrap_chat") {
-		t.Error("the boot step did not reconcile with no organization bootstrapped yet")
+		t.Error("the boot step did not reconcile with no company bootstrapped yet")
 	}
 }
 

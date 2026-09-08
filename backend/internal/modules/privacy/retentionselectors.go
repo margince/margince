@@ -28,7 +28,7 @@ var retentionSelectors = map[string]string{
 		  ` + correspondenceFloorPredicate(3, 4) + `
 		  AND NOT EXISTS (SELECT 1 FROM activity_link l
 		        LEFT JOIN person p ON p.id = l.person_id
-		        LEFT JOIN organization o ON o.id = l.organization_id
+		        LEFT JOIN company o ON o.id = l.company_id
 		        LEFT JOIN deal d ON d.id = l.deal_id
 		        LEFT JOIN lead ld ON ld.id = l.lead_id
 		        LEFT JOIN project pj ON pj.id = l.project_id
@@ -42,7 +42,7 @@ var retentionSelectors = map[string]string{
 		  ` + correspondenceFloorPredicate(3, 4) + `
 		  AND NOT EXISTS (SELECT 1 FROM activity_link l
 		        LEFT JOIN person p ON p.id = l.person_id
-		        LEFT JOIN organization o ON o.id = l.organization_id
+		        LEFT JOIN company o ON o.id = l.company_id
 		        LEFT JOIN deal d ON d.id = l.deal_id
 		        LEFT JOIN lead ld ON ld.id = l.lead_id
 		        LEFT JOIN project pj ON pj.id = l.project_id

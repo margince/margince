@@ -64,7 +64,7 @@ const MODELS = {
   ],
 };
 
-// The two sheets no longer share a page — FX rates sit under Organization, next
+// The two sheets no longer share a page — FX rates sit under Company, next
 // to the base currency they convert to, and model prices under AI, next to the
 // runtime they price. They are pictured together here because the fixture that
 // feeds them is one backend, and a reader comparing the two shapes wants both in

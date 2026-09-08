@@ -173,7 +173,7 @@ and a retired kind's copy would sit in three catalogs with nothing to flag it.
 | `morning_brief` | carrier (`agent_runner`) | the scheduled brief |
 | `overnight_at_risk_sweep` | carrier (`agent_runner`) | the scheduled sweep |
 | `document_extract` | carrier (`attachment_extraction`) | reading a document you attached |
-| `account_scan` | carrier (`account_scan`, the `org_scan` row) | "I'm reading Brandt Automotive's exchanges and deals." — named for the account, because the reader who opened three accounts and moved on needs to know which is ready |
+| `account_scan` | carrier (`account_scan`, the `company_scan` row) | "I'm reading Brandt Automotive's exchanges and deals." — named for the account, because the reader who opened three accounts and moved on needs to know which is ready |
 | `site_read` | carrier (`site_read`) | reading a company's website, named for the company |
 | `weekly_review` | router | the weekly retrospective, under the rep's own principal |
 | `summarize` | router | "I'm writing your summary." |
@@ -189,7 +189,7 @@ requires it — not because a producer is missing.
 
 | Reason | Kinds | Why |
 |---|---|---|
-| Watched by the asker | `growth_fit`, `cold_start`, `corpus_ask` | The work lands on the surface that asked and changes it on arrival. `growth_fit` renders the band it returns on the panel that asked. `cold_start` runs behind TWO product surfaces and both need naming (it declares four invocation *sites* in `aitaskregistry.go`, which is a different count and not the one that matters here): onboarding, whose screen is deliberately RAILLESS (`onboarding` is a member of `RAIL_LESS_SCREENS` in `nav.ts`, which `shell.tsx` reads to drop the chrome), and the organization page's Enrich card — `cmd/api/modelwiring.go` wires `WithScrape` with the cold-start brain — where a rail does exist and the card itself renders the proposal. |
+| Watched by the asker | `growth_fit`, `cold_start`, `corpus_ask` | The work lands on the surface that asked and changes it on arrival. `growth_fit` renders the band it returns on the panel that asked. `cold_start` runs behind TWO product surfaces and both need naming (it declares four invocation *sites* in `aitaskregistry.go`, which is a different count and not the one that matters here): onboarding, whose screen is deliberately RAILLESS (`onboarding` is a member of `RAIL_LESS_SCREENS` in `nav.ts`, which `shell.tsx` reads to drop the chrome), and the company page's Enrich card — `cmd/api/modelwiring.go` wires `WithScrape` with the cold-start brain — where a rail does exist and the card itself renders the proposal. |
 | System sweep | `brief_ranking`, `capture_classify`, `capture_confidentiality_verdict`, `capture_counterparty_verdict`, `owed_verdict`, `propose_roles`, `rate_extract`, `signal_extract`, `transcript_propose`, `voice_build` | Background workspace work that belongs to nobody in particular, so it has no personal line to draw. |
 | The read narrates itself | `site_extract`, `site_fact_extract`, `site_triage` | These are the individual model calls a website read makes, and `site_read` above is the read: one occurrence for the whole crawl, announced by the dossier from queued to settled, so a line per call would tell one reading several times over. A grain problem seals it: the occurrence key is correlation+task and a read's correlation is its `site_read` row id, so one read files one occurrence per lane it runs — and only a domain-triage read reaches all three (`site_triage` fires solely for `isDomainTriageRequest`). Attribution is a fact about the READ: a human-requested read carries that person as `on_behalf_of` and IS personal to them; a domain-triage or auto-enrich read names no human and is workspace-scoped. |
 | Reaches nobody, and would not be worth showing | `enrich` | Both halves matter. **Reachability:** its one production site is the signature-enrichment pass, which runs under a system principal with no `on_behalf_of` — so every occurrence is workspace-scoped with a NULL `actor_user_id`, and the personal feed selects on `actor_user_id`. **Worth:** it could not be per-person even if it were reachable. The pass mints ONE correlation id for the whole run (`capture_enrich`, up to 100 candidates in series) and the occurrence key is correlation+task, so every candidate collapses into one row — a per-person subject would make that row flap rather than narrate anybody. What a reader wants from it is what it FOUND, which is durable and already drawn as evidence-or-omit provenance on the person record. |
@@ -198,8 +198,8 @@ requires it — not because a producer is missing.
 
 `enrich` is the one worth reading twice, because it looks visible and is not: the
 ticker's own `enrich` key names DIFFERENT work — a provider run on a person
-(`personprovider.tsx`), and the organization page's Enrich card
-(`organizations.tsx`), which POSTs `/organizations/{id}/enrich` and therefore
+(`personprovider.tsx`), and the company page's Enrich card
+(`companies.tsx`), which POSTs `/companies/{id}/enrich` and therefore
 runs `cold_start`, not this task. The deep read rides its own `site-read` ticker
 key, not this one.
 

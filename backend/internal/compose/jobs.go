@@ -169,7 +169,7 @@ type JobRunnerConfig struct {
 	// ChannelAPI is the Telegram Bot API seam the poller dials out through. Nil
 	// takes the real client, which is what every process role passes; the
 	// acceptance suites substitute a fake, because a poller left on the real
-	// client would reach api.telegram.org from a test run.
+	// client would reach api.telegram.company from a test run.
 	ChannelAPI telegram.API
 	// CaptureConfig is the deployment's capture suppression-list config
 	// (CAP-PARAM-5/6). The Telegram ingest worker needs it to build the
@@ -460,7 +460,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		periodicFor(cfg, CounterpartyVerdictArgs{}),
 		periodicFor(cfg, ConfidentialityVerdictArgs{}),
 		periodicFor(cfg, CaptureTraceSweepArgs{}),
-		periodicFor(cfg, OrgNamePromotionArgs{}),
+		periodicFor(cfg, CompanyNamePromotionArgs{}),
 		periodicFor(cfg, CaptureDigestArgs{}),
 		periodicFor(cfg, CaptureBackfillReconcileArgs{}),
 		periodicFor(cfg, BriefGenerateArgs{}),

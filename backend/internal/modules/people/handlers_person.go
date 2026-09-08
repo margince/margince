@@ -69,7 +69,7 @@ func (h Handlers) ListPeople(w http.ResponseWriter, r *http.Request, params crmc
 	in.OwnerID = idArg[ids.UserKind](params.OwnerId)
 	in.OwnerTeamID = idArg[ids.TeamKind](params.OwnerTeamId)
 	in.Unassigned = params.Unassigned
-	in.OrganizationID = idArg[ids.OrganizationKind](params.OrganizationId)
+	in.CompanyID = idArg[ids.CompanyKind](params.CompanyId)
 
 	people, page, err := h.store.ListPeople(r.Context(), in)
 	if err != nil {
@@ -204,13 +204,13 @@ func (h Handlers) QuickCapturePerson(w http.ResponseWriter, r *http.Request, _ c
 		return
 	}
 	in := QuickCaptureInput{
-		FullName:         req.FullName,
-		Title:            req.Title,
-		OrganizationID:   idArg[ids.OrganizationKind](req.OrganizationId),
-		OrganizationName: req.OrganizationName,
-		Role:             req.Role,
-		ProfileURL:       req.ProfileUrl,
-		Phone:            req.Phone,
+		FullName:    req.FullName,
+		Title:       req.Title,
+		CompanyID:   idArg[ids.CompanyKind](req.CompanyId),
+		CompanyName: req.CompanyName,
+		Role:        req.Role,
+		ProfileURL:  req.ProfileUrl,
+		Phone:       req.Phone,
 	}
 	if req.Email != nil {
 		email := string(*req.Email)
@@ -223,12 +223,12 @@ func (h Handlers) QuickCapturePerson(w http.ResponseWriter, r *http.Request, _ c
 		return
 	}
 	out := crmcontracts.QuickCapturePersonResult{
-		Person:              captured.Person,
-		OrganizationCreated: &captured.OrganizationCreated,
+		Person:         captured.Person,
+		CompanyCreated: &captured.CompanyCreated,
 	}
-	if captured.OrganizationID != nil {
-		orgID := openapi_types.UUID(captured.OrganizationID.UUID)
-		out.OrganizationId = &orgID
+	if captured.CompanyID != nil {
+		companyID := openapi_types.UUID(captured.CompanyID.UUID)
+		out.CompanyId = &companyID
 	}
 	w.Header().Set("Location", "/v1/people/"+captured.Person.Id.String())
 	httperr.WriteJSON(w, http.StatusCreated, out)
@@ -286,7 +286,7 @@ func (h Handlers) ArchivePerson(w http.ResponseWriter, r *http.Request, id crmco
 //
 // No If-Match. The version guards a field edit against a concurrent one; this
 // write is idempotent in the only direction it goes, and a contact the
-// organization can already see answers the same 404 as one that was never the
+// company can already see answers the same 404 as one that was never the
 // caller's — so a stale version could not produce a wrong outcome, only a
 // confusing refusal.
 func (h Handlers) PublishCapturedPerson(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {

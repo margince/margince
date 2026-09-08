@@ -4,7 +4,7 @@
 package auth
 
 // Capture privacy as the predicate SPELLS it. A connector-created person or
-// organization is written visibility='owner' (ADR-0063 §7) and belongs to
+// company is written visibility='owner' (ADR-0063 §7) and belongs to
 // the user whose mailbox produced it until a human promotes it. These tests
 // pin the two properties that make that true:
 //
@@ -38,11 +38,11 @@ func human(scope principal.RowScope) principal.Principal {
 }
 
 func TestCapturePrivacyIsReadOnEveryTableThatCarriesIt(t *testing.T) {
-	// The defect this pins: person and organization have carried a
+	// The defect this pins: person and company have carried a
 	// visibility column since migration 0095, and the predicate never
 	// consulted it — so under team scope an owner-private captured contact
 	// was readable by the whole team.
-	for _, table := range []string{"person", "organization"} {
+	for _, table := range []string{"person", "company"} {
 		for _, scope := range []principal.RowScope{
 			principal.RowScopeOwn, principal.RowScopeTeam, principal.RowScopeAll,
 		} {
@@ -90,7 +90,7 @@ func TestOnlyTheSystemPrincipalReadsCapturePrivateTablesUnfiltered(t *testing.T)
 		Type: principal.PrincipalSystem, ID: "system",
 		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
 	}
-	if !UnboundedFor(system, "person", "organization") {
+	if !UnboundedFor(system, "person", "company") {
 		t.Fatal("the system principal is filtered by capture privacy; " +
 			"provisioning and the relay cannot see the rows they maintain")
 	}

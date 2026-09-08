@@ -33,7 +33,7 @@ type fieldOwnership struct {
 // back to the stricter answer rather than to an identifier built from
 // caller input.
 var precedenceTables = newRecordTypeSet(
-	"person", "organization", "deal", "lead", "activity",
+	"person", "company", "deal", "lead", "activity",
 	"offer", "offer_template", "product", "list", "tag",
 	"relationship", "custom_field", "saved_view", "webhook_subscription",
 )
@@ -79,7 +79,7 @@ func unauditedHolder(table string) string {
 // That second clause is the fail-closed half, and it exists because the
 // create paths do not audit what the human typed. Each of them records a
 // single headline key — {name} for a deal, {full_name} for a person,
-// {display_name} for an organization — while the UPDATE paths record the
+// {display_name} for a company — while the UPDATE paths record the
 // real per-field before/after images. So the premise this file opens with
 // holds for updates and is false for creates, and a deal a human created
 // in the shipped form (which sends name, amount_minor, currency,
@@ -105,11 +105,11 @@ func (f fieldOwnership) HumanOwnedConflicts(ctx context.Context, entityType stri
 	if len(probe) == 0 {
 		return nil, nil
 	}
-	// The partner extension audits on its organization row (the table is
-	// keyed by organization_id and the route's {id} IS the org) — the
+	// The partner extension audits on its company row (the table is
+	// keyed by company_id and the route's {id} IS the company) — the
 	// ownership question reads the trail where those writes actually land.
 	if entityType == "partner" {
-		entityType = "organization"
+		entityType = "company"
 	}
 	// No table to read the current value from means the unaudited half
 	// cannot be narrowed; the empty name makes it fail closed, treating

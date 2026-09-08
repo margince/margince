@@ -9,7 +9,7 @@
 -- no restart, because the admin it logs in as is still there.
 --
 -- IT NO LONGER DELETES THE WORKSPACE. It used to, and the recovery then depended
--- on the API re-bootstrapping the organization from margince.yaml at its NEXT
+-- on the API re-bootstrapping the company from margince.yaml at its NEXT
 -- boot — so a reset against a running stack left seed-dev with no workspace to
 -- seed into and nothing saying why.
 --

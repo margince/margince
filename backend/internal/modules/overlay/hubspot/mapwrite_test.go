@@ -223,16 +223,16 @@ func TestMapWriteLeadPropsW5(t *testing.T) {
 	}
 }
 
-// OVA-MAP-W: organization display_name→name, industry→industry; size_band
+// OVA-MAP-W: company display_name→name, industry→industry; size_band
 // read-only.
-func TestMapWriteOrganization(t *testing.T) {
-	got, err := mapWrite("organization", map[string]any{
+func TestMapWriteCompany(t *testing.T) {
+	got, err := mapWrite("company", map[string]any{
 		"display_name": "Acme",
 		"industry":     "Manufacturing",
 		"size_band":    "51-200",
 	}, false)
 	if err != nil {
-		t.Fatalf("mapWrite organization: %v", err)
+		t.Fatalf("mapWrite company: %v", err)
 	}
 	if got.ObjectClass != objectClassCompanies {
 		t.Errorf("object class = %q, want %q", got.ObjectClass, objectClassCompanies)

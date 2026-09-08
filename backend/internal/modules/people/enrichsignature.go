@@ -15,7 +15,7 @@ package people
 // re-reads it inside the write transaction, so a correction made while the
 // model was thinking still wins.
 //
-// org_name is evidence-only: it NEVER creates or renames an organization (the
+// company_name is evidence-only: it NEVER creates or renames a company (the
 // deterministic domain path owns employer derivation).
 
 import (
@@ -43,7 +43,7 @@ const enrichCapturedBy = "agent:enrich"
 
 // SignatureField is one gated, evidence-carrying extraction.
 type SignatureField struct {
-	Name       string // title | phone | role | linkedin | org_name | address | website
+	Name       string // title | phone | role | linkedin | company_name | address | website
 	Value      string
 	Evidence   string // verbatim snippet — the caller's gate already verified it
 	Confidence float64

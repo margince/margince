@@ -115,12 +115,12 @@ func TestBundleSourceImportsTheEstateInDependencyOrder(t *testing.T) {
 	for i, object := range order {
 		position[object] = i
 	}
-	// Parents before dependents: an organization must exist before the
+	// Parents before dependents: a company must exist before the
 	// person or deal that references it, and activities land last so
 	// every link target is already there.
-	if position[flipObjectOrganization] > position[flipObjectPerson] ||
-		position[flipObjectOrganization] > position[flipObjectDeal] {
-		t.Errorf("order %v puts organizations after their dependents", order)
+	if position[flipObjectCompany] > position[flipObjectPerson] ||
+		position[flipObjectCompany] > position[flipObjectDeal] {
+		t.Errorf("order %v puts companies after their dependents", order)
 	}
 	if position[flipObjectActivity] != len(order)-1 {
 		t.Errorf("order %v does not import activities last", order)
@@ -184,7 +184,7 @@ func TestTheFlipStampsProvenanceInsideTheReservedNamespace(t *testing.T) {
 		t.Errorf("scan prefix %q is not a strict prefix of %q", prefix, stamp)
 	}
 	// Distinct classes never share a prefix, or the repair would bind an
-	// organization's external id to a person.
+	// company's external id to a person.
 	if strings.HasPrefix(w.provenance(flipObjectDeal, "x"), w.provenance(flipObjectPerson, "")) {
 		t.Error("a deal's provenance matched the person scan prefix")
 	}

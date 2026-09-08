@@ -33,28 +33,28 @@ import (
 // about the write.
 var technicalObservedAt = time.Date(2026, 8, 27, 9, 0, 0, 0, time.UTC)
 
-// seedTechnicalOrg creates a company for the lookup to write onto.
-func seedTechnicalOrg(ctx context.Context, t *testing.T, e *dedupeEnv, name, domain string) ids.OrganizationID {
+// seedTechnicalCompany creates a company for the lookup to write onto.
+func seedTechnicalCompany(ctx context.Context, t *testing.T, e *dedupeEnv, name, domain string) ids.CompanyID {
 	t.Helper()
-	org, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: name, Source: "manual",
-		Domains: []OrgDomainInput{{Domain: domain, IsPrimary: true}},
+		Domains: []CompanyDomainInput{{Domain: domain, IsPrimary: true}},
 	})
 	if err != nil {
-		t.Fatalf("seed org %s: %v", name, err)
+		t.Fatalf("seed company %s: %v", name, err)
 	}
-	return ids.From[ids.OrganizationKind](ids.UUID(org.Id))
+	return ids.From[ids.CompanyKind](ids.UUID(company.Id))
 }
 
 // technicalFactsOf reads back what the record holds, keyed field→value_key.
-func technicalFactsOf(ctx context.Context, t *testing.T, e *dedupeEnv, orgID ids.OrganizationID) map[string][]string {
+func technicalFactsOf(ctx context.Context, t *testing.T, e *dedupeEnv, companyID ids.CompanyID) map[string][]string {
 	t.Helper()
 	held := map[string][]string{}
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			SELECT field, value_key FROM organization_fact
-			 WHERE organization_id = $1 AND category = 'signal'
-			 ORDER BY field, value_key`, orgID)
+			SELECT field, value_key FROM company_fact
+			 WHERE company_id = $1 AND category = 'signal'
+			 ORDER BY field, value_key`, companyID)
 		if err != nil {
 			return err
 		}
@@ -91,13 +91,13 @@ func observation(field, valueKey, value string) TechnicalObservation {
 func TestACompletedLaneReplacesItsOwnRows(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	orgID := seedTechnicalOrg(ctx, t, e, "Beispiel GmbH", "beispiel.de")
+	companyID := seedTechnicalCompany(ctx, t, e, "Beispiel GmbH", "beispiel.de")
 
 	first := TechnicalEnrichment{
-		OrganizationID: orgID,
-		Completed:      []TechnicalLane{LaneDNS},
-		Observations:   []TechnicalObservation{observation(FactMailProvider, "google_workspace", "Google Workspace")},
-		ObservedAt:     technicalObservedAt,
+		CompanyID:    companyID,
+		Completed:    []TechnicalLane{LaneDNS},
+		Observations: []TechnicalObservation{observation(FactMailProvider, "google_workspace", "Google Workspace")},
+		ObservedAt:   technicalObservedAt,
 	}
 	if err := e.store.ApplyTechnicalEnrichment(ctx, first, nil); err != nil {
 		t.Fatalf("apply the first reading: %v", err)
@@ -109,7 +109,7 @@ func TestACompletedLaneReplacesItsOwnRows(t *testing.T) {
 		t.Fatalf("apply the reading after the move: %v", err)
 	}
 
-	held := technicalFactsOf(ctx, t, e, orgID)
+	held := technicalFactsOf(ctx, t, e, companyID)
 	providers := held[FactMailProvider]
 	if len(providers) != 1 || providers[0] != "microsoft365" {
 		t.Errorf("the record holds mail providers %v, want exactly [microsoft365] — a company has one "+
@@ -127,13 +127,13 @@ func TestACompletedLaneReplacesItsOwnRows(t *testing.T) {
 func TestAFailedLaneChangesNothing(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	orgID := seedTechnicalOrg(ctx, t, e, "Laden GmbH", "laden.de")
+	companyID := seedTechnicalCompany(ctx, t, e, "Laden GmbH", "laden.de")
 
 	read := TechnicalEnrichment{
-		OrganizationID: orgID,
-		Completed:      []TechnicalLane{LaneCertLog},
-		Observations:   []TechnicalObservation{observation(FactOperatedService, "webshop", "Webshop")},
-		ObservedAt:     technicalObservedAt,
+		CompanyID:    companyID,
+		Completed:    []TechnicalLane{LaneCertLog},
+		Observations: []TechnicalObservation{observation(FactOperatedService, "webshop", "Webshop")},
+		ObservedAt:   technicalObservedAt,
 	}
 	if err := e.store.ApplyTechnicalEnrichment(ctx, read, nil); err != nil {
 		t.Fatalf("apply the first reading: %v", err)
@@ -142,16 +142,16 @@ func TestAFailedLaneChangesNothing(t *testing.T) {
 	// The next run: the certificate log did not answer, so its lane is absent
 	// from Completed and carries no observations.
 	outage := TechnicalEnrichment{
-		OrganizationID: orgID,
-		Completed:      []TechnicalLane{LaneDNS},
-		Observations:   []TechnicalObservation{observation(FactMailProvider, "self_hosted", "Eigener Mailserver")},
-		ObservedAt:     technicalObservedAt.Add(time.Hour),
+		CompanyID:    companyID,
+		Completed:    []TechnicalLane{LaneDNS},
+		Observations: []TechnicalObservation{observation(FactMailProvider, "self_hosted", "Eigener Mailserver")},
+		ObservedAt:   technicalObservedAt.Add(time.Hour),
 	}
 	if err := e.store.ApplyTechnicalEnrichment(ctx, outage, nil); err != nil {
 		t.Fatalf("apply the reading taken during the outage: %v", err)
 	}
 
-	held := technicalFactsOf(ctx, t, e, orgID)
+	held := technicalFactsOf(ctx, t, e, companyID)
 	if len(held[FactOperatedService]) != 1 {
 		t.Errorf("the webshop is gone from the record after a lane that never answered: %v. "+
 			"'The log did not answer' and 'the company has nothing' are different facts", held)
@@ -169,13 +169,13 @@ func TestAFailedLaneChangesNothing(t *testing.T) {
 func TestAHumanCorrectionSurvivesEveryLaterLookup(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	orgID := seedTechnicalOrg(ctx, t, e, "Korrektur GmbH", "korrektur.de")
+	companyID := seedTechnicalCompany(ctx, t, e, "Korrektur GmbH", "korrektur.de")
 
 	read := TechnicalEnrichment{
-		OrganizationID: orgID,
-		Completed:      []TechnicalLane{LaneDNS},
-		Observations:   []TechnicalObservation{observation(FactMailProvider, "other", "Anderer Anbieter")},
-		ObservedAt:     technicalObservedAt,
+		CompanyID:    companyID,
+		Completed:    []TechnicalLane{LaneDNS},
+		Observations: []TechnicalObservation{observation(FactMailProvider, "other", "Anderer Anbieter")},
+		ObservedAt:   technicalObservedAt,
 	}
 	if err := e.store.ApplyTechnicalEnrichment(ctx, read, nil); err != nil {
 		t.Fatalf("apply the machine reading: %v", err)
@@ -186,11 +186,11 @@ func TestAHumanCorrectionSurvivesEveryLaterLookup(t *testing.T) {
 	// by captured_by, the column the precedence guard tests.
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
-			UPDATE organization_fact
+			UPDATE company_fact
 			   SET value = 'Eigener Mailserver',
 			       captured_by = 'human:' || $2, source = 'human'
-			 WHERE organization_id = $1 AND field = $3`,
-			orgID, e.rep.String(), FactMailProvider)
+			 WHERE company_id = $1 AND field = $3`,
+			companyID, e.rep.String(), FactMailProvider)
 		return err
 	}); err != nil {
 		t.Fatalf("record the human's correction: %v", err)
@@ -204,8 +204,8 @@ func TestAHumanCorrectionSurvivesEveryLaterLookup(t *testing.T) {
 	var value, capturedBy string
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
-			SELECT value, captured_by FROM organization_fact
-			 WHERE organization_id = $1 AND field = $2`, orgID, FactMailProvider).Scan(&value, &capturedBy)
+			SELECT value, captured_by FROM company_fact
+			 WHERE company_id = $1 AND field = $2`, companyID, FactMailProvider).Scan(&value, &capturedBy)
 	}); err != nil {
 		t.Fatalf("read back the corrected fact: %v", err)
 	}
@@ -226,21 +226,21 @@ func TestAHumanCorrectionSurvivesEveryLaterLookup(t *testing.T) {
 func TestAHumanHeldRowIsNeverReconciledAway(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	orgID := seedTechnicalOrg(ctx, t, e, "Bestand GmbH", "bestand.de")
+	companyID := seedTechnicalCompany(ctx, t, e, "Bestand GmbH", "bestand.de")
 
 	read := TechnicalEnrichment{
-		OrganizationID: orgID,
-		Completed:      []TechnicalLane{LaneCertLog},
-		Observations:   []TechnicalObservation{observation(FactOperatedService, "careers", "Karriereseite")},
-		ObservedAt:     technicalObservedAt,
+		CompanyID:    companyID,
+		Completed:    []TechnicalLane{LaneCertLog},
+		Observations: []TechnicalObservation{observation(FactOperatedService, "careers", "Karriereseite")},
+		ObservedAt:   technicalObservedAt,
 	}
 	if err := e.store.ApplyTechnicalEnrichment(ctx, read, nil); err != nil {
 		t.Fatalf("apply the first reading: %v", err)
 	}
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
-			UPDATE organization_fact SET captured_by = 'human:' || $2, source = 'human'
-			 WHERE organization_id = $1 AND field = $3`, orgID, e.rep.String(), FactOperatedService)
+			UPDATE company_fact SET captured_by = 'human:' || $2, source = 'human'
+			 WHERE company_id = $1 AND field = $3`, companyID, e.rep.String(), FactOperatedService)
 		return err
 	}); err != nil {
 		t.Fatalf("mark the row as a person's: %v", err)
@@ -254,7 +254,7 @@ func TestAHumanHeldRowIsNeverReconciledAway(t *testing.T) {
 		t.Fatalf("apply the reading that no longer sees it: %v", err)
 	}
 
-	held := technicalFactsOf(ctx, t, e, orgID)
+	held := technicalFactsOf(ctx, t, e, companyID)
 	if len(held[FactOperatedService]) != 1 {
 		t.Error("the reconciliation removed a row a person had claimed — the upsert's precedence " +
 			"guard and the delete's must be the same rule, or a correction survives one pass and not the other")
@@ -269,13 +269,13 @@ func TestAHumanHeldRowIsNeverReconciledAway(t *testing.T) {
 func TestACompletedLaneWithNothingClearsItsRows(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	orgID := seedTechnicalOrg(ctx, t, e, "Leer GmbH", "leer.de")
+	companyID := seedTechnicalCompany(ctx, t, e, "Leer GmbH", "leer.de")
 
 	read := TechnicalEnrichment{
-		OrganizationID: orgID,
-		Completed:      []TechnicalLane{LaneCertLog},
-		Observations:   []TechnicalObservation{observation(FactOperatedService, "webshop", "Webshop")},
-		ObservedAt:     technicalObservedAt,
+		CompanyID:    companyID,
+		Completed:    []TechnicalLane{LaneCertLog},
+		Observations: []TechnicalObservation{observation(FactOperatedService, "webshop", "Webshop")},
+		ObservedAt:   technicalObservedAt,
 	}
 	if err := e.store.ApplyTechnicalEnrichment(ctx, read, nil); err != nil {
 		t.Fatalf("apply the first reading: %v", err)
@@ -288,7 +288,7 @@ func TestACompletedLaneWithNothingClearsItsRows(t *testing.T) {
 		t.Fatalf("apply the authoritative empty reading: %v", err)
 	}
 
-	if held := technicalFactsOf(ctx, t, e, orgID); len(held[FactOperatedService]) != 0 {
+	if held := technicalFactsOf(ctx, t, e, companyID); len(held[FactOperatedService]) != 0 {
 		t.Errorf("the record still claims %v after the source answered that there is none", held)
 	}
 	// A technology LEAVING is a change, and the one a rep most wants to hear
@@ -298,13 +298,13 @@ func TestACompletedLaneWithNothingClearsItsRows(t *testing.T) {
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT count(*) FROM event_outbox
-			 WHERE envelope->>'type' = 'organization.updated'
-			   AND envelope->'entity'->>'id' = $1::text`, orgID.String()).Scan(&events)
+			 WHERE envelope->>'type' = 'company.updated'
+			   AND envelope->'entity'->>'id' = $1::text`, companyID.String()).Scan(&events)
 	}); err != nil {
 		t.Fatalf("read back the events: %v", err)
 	}
 	if events != 2 {
-		t.Errorf("%d organization.updated events for an arrival and a departure, want 2 — a technology leaving is a change", events)
+		t.Errorf("%d company.updated events for an arrival and a departure, want 2 — a technology leaving is a change", events)
 	}
 }
 
@@ -312,13 +312,13 @@ func TestACompletedLaneWithNothingClearsItsRows(t *testing.T) {
 func TestEveryTechnicalWriteCommitsItsAuditAndItsEvent(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	orgID := seedTechnicalOrg(ctx, t, e, "Spur GmbH", "spur.de")
+	companyID := seedTechnicalCompany(ctx, t, e, "Spur GmbH", "spur.de")
 
 	read := TechnicalEnrichment{
-		OrganizationID: orgID,
-		Completed:      []TechnicalLane{LaneDNS},
-		Observations:   []TechnicalObservation{observation(FactMailProvider, "microsoft365", "Microsoft 365")},
-		ObservedAt:     technicalObservedAt,
+		CompanyID:    companyID,
+		Completed:    []TechnicalLane{LaneDNS},
+		Observations: []TechnicalObservation{observation(FactMailProvider, "microsoft365", "Microsoft 365")},
+		ObservedAt:   technicalObservedAt,
 	}
 	if err := e.store.ApplyTechnicalEnrichment(ctx, read, nil); err != nil {
 		t.Fatalf("apply the reading: %v", err)
@@ -328,13 +328,13 @@ func TestEveryTechnicalWriteCommitsItsAuditAndItsEvent(t *testing.T) {
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(ctx, `
 			SELECT count(*) FROM audit_log
-			 WHERE entity_type = 'organization' AND entity_id = $1
-			   AND evidence->>'source' = $2`, orgID, companySourceTechnical).Scan(&audits); err != nil {
+			 WHERE entity_type = 'company' AND entity_id = $1
+			   AND evidence->>'source' = $2`, companyID, companySourceTechnical).Scan(&audits); err != nil {
 			return err
 		}
 		return tx.QueryRow(ctx, `
 			SELECT count(*) FROM event_outbox
-			 WHERE envelope->'entity'->>'id' = $1::text`, orgID.String()).Scan(&events)
+			 WHERE envelope->'entity'->>'id' = $1::text`, companyID.String()).Scan(&events)
 	}); err != nil {
 		t.Fatalf("read back the trail: %v", err)
 	}
@@ -352,7 +352,7 @@ func TestEveryTechnicalWriteCommitsItsAuditAndItsEvent(t *testing.T) {
 // A lane that completed having found nothing is worth an AUDIT row: it is what
 // says when the record was last looked at, and it is what lets a technology the
 // company dropped leave. It is not an update. Nothing was written, nothing was
-// removed, and `organization.updated` announcing an empty delta tells every
+// removed, and `company.updated` announcing an empty delta tells every
 // subscriber a record moved when it did not.
 //
 // Most companies' sites declare no technology this build recognises, so the
@@ -361,12 +361,12 @@ func TestEveryTechnicalWriteCommitsItsAuditAndItsEvent(t *testing.T) {
 func TestALaneThatChangedNothingRecordsItAndAnnouncesNothing(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	orgID := seedTechnicalOrg(ctx, t, e, "Leerlauf GmbH", "leerlauf.de")
+	companyID := seedTechnicalCompany(ctx, t, e, "Leerlauf GmbH", "leerlauf.de")
 
 	empty := TechnicalEnrichment{
-		OrganizationID: orgID,
-		Completed:      []TechnicalLane{LaneHomepage},
-		ObservedAt:     technicalObservedAt,
+		CompanyID:  companyID,
+		Completed:  []TechnicalLane{LaneHomepage},
+		ObservedAt: technicalObservedAt,
 	}
 	if err := e.store.ApplyTechnicalEnrichment(ctx, empty, nil); err != nil {
 		t.Fatalf("apply the empty reading: %v", err)
@@ -376,14 +376,14 @@ func TestALaneThatChangedNothingRecordsItAndAnnouncesNothing(t *testing.T) {
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(ctx, `
 			SELECT count(*) FROM audit_log
-			 WHERE entity_type = 'organization' AND entity_id = $1
-			   AND evidence->>'source' = $2`, orgID, companySourceTechnical).Scan(&audits); err != nil {
+			 WHERE entity_type = 'company' AND entity_id = $1
+			   AND evidence->>'source' = $2`, companyID, companySourceTechnical).Scan(&audits); err != nil {
 			return err
 		}
 		return tx.QueryRow(ctx, `
 			SELECT count(*) FROM event_outbox
-			 WHERE envelope->>'type' = 'organization.updated'
-			   AND envelope->'entity'->>'id' = $1::text`, orgID.String()).Scan(&events)
+			 WHERE envelope->>'type' = 'company.updated'
+			   AND envelope->'entity'->>'id' = $1::text`, companyID.String()).Scan(&events)
 	}); err != nil {
 		t.Fatalf("read back the trail: %v", err)
 	}
@@ -391,7 +391,7 @@ func TestALaneThatChangedNothingRecordsItAndAnnouncesNothing(t *testing.T) {
 		t.Errorf("the lane left %d audit rows, want 1: a completed lane is worth recording even when it found nothing", audits)
 	}
 	if events != 0 {
-		t.Errorf("the lane announced %d organization.updated events having changed nothing — a subscriber acting on one finds an identical record", events)
+		t.Errorf("the lane announced %d company.updated events having changed nothing — a subscriber acting on one finds an identical record", events)
 	}
 }
 
@@ -405,13 +405,13 @@ func TestALaneThatChangedNothingRecordsItAndAnnouncesNothing(t *testing.T) {
 func TestARefreshThatFoundTheSameStackAnnouncesNothing(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	orgID := seedTechnicalOrg(ctx, t, e, "Gleichstand GmbH", "gleichstand.de")
+	companyID := seedTechnicalCompany(ctx, t, e, "Gleichstand GmbH", "gleichstand.de")
 
 	read := TechnicalEnrichment{
-		OrganizationID: orgID,
-		Completed:      []TechnicalLane{LaneDNS},
-		Observations:   []TechnicalObservation{observation(FactMailProvider, "microsoft365", "Microsoft 365")},
-		ObservedAt:     technicalObservedAt,
+		CompanyID:    companyID,
+		Completed:    []TechnicalLane{LaneDNS},
+		Observations: []TechnicalObservation{observation(FactMailProvider, "microsoft365", "Microsoft 365")},
+		ObservedAt:   technicalObservedAt,
 	}
 	if err := e.store.ApplyTechnicalEnrichment(ctx, read, nil); err != nil {
 		t.Fatalf("apply the first reading: %v", err)
@@ -430,14 +430,14 @@ func TestARefreshThatFoundTheSameStackAnnouncesNothing(t *testing.T) {
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(ctx, `
 			SELECT count(*) FROM audit_log
-			 WHERE entity_type = 'organization' AND entity_id = $1
-			   AND evidence->>'source' = $2`, orgID, companySourceTechnical).Scan(&audits); err != nil {
+			 WHERE entity_type = 'company' AND entity_id = $1
+			   AND evidence->>'source' = $2`, companyID, companySourceTechnical).Scan(&audits); err != nil {
 			return err
 		}
 		return tx.QueryRow(ctx, `
 			SELECT count(*) FROM event_outbox
-			 WHERE envelope->>'type' = 'organization.updated'
-			   AND envelope->'entity'->>'id' = $1::text`, orgID.String()).Scan(&events)
+			 WHERE envelope->>'type' = 'company.updated'
+			   AND envelope->'entity'->>'id' = $1::text`, companyID.String()).Scan(&events)
 	}); err != nil {
 		t.Fatalf("read back the trail: %v", err)
 	}
@@ -445,7 +445,7 @@ func TestARefreshThatFoundTheSameStackAnnouncesNothing(t *testing.T) {
 		t.Errorf("the two lanes left %d audit rows, want 2: each one looked, and when it looked is the record", audits)
 	}
 	if events != 1 {
-		t.Errorf("%d organization.updated events for one arrival and one refresh, want 1 — the refresh moved nothing", events)
+		t.Errorf("%d company.updated events for one arrival and one refresh, want 1 — the refresh moved nothing", events)
 	}
 	// And the refresh DID land: the rows carry the later reading, so what this
 	// test proves is that metadata moving is not an update, rather than that
@@ -453,8 +453,8 @@ func TestARefreshThatFoundTheSameStackAnnouncesNothing(t *testing.T) {
 	var retrievedAt time.Time
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
-			SELECT max(retrieved_at) FROM organization_fact
-			 WHERE organization_id = $1 AND field = $2`, orgID, FactMailProvider).Scan(&retrievedAt)
+			SELECT max(retrieved_at) FROM company_fact
+			 WHERE company_id = $1 AND field = $2`, companyID, FactMailProvider).Scan(&retrievedAt)
 	}); err != nil {
 		t.Fatalf("read back the retrieval time: %v", err)
 	}
@@ -470,11 +470,11 @@ func TestARefreshThatFoundTheSameStackAnnouncesNothing(t *testing.T) {
 func TestATechnicalFactMustNameWhatProvedIt(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	orgID := seedTechnicalOrg(ctx, t, e, "Beweis GmbH", "beweis.de")
+	companyID := seedTechnicalCompany(ctx, t, e, "Beweis GmbH", "beweis.de")
 
 	unproven := TechnicalEnrichment{
-		OrganizationID: orgID,
-		Completed:      []TechnicalLane{LaneDNS},
+		CompanyID: companyID,
+		Completed: []TechnicalLane{LaneDNS},
 		Observations: []TechnicalObservation{{
 			Field: FactMailProvider, ValueKey: "microsoft365", Value: "Microsoft 365",
 			// No evidence, no source: exactly what the constraint refuses.
@@ -491,13 +491,13 @@ func TestATechnicalFactMustNameWhatProvedIt(t *testing.T) {
 func TestTheObservationTimeIsWhatTheSourceWasRead(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	orgID := seedTechnicalOrg(ctx, t, e, "Zeit GmbH", "zeit.de")
+	companyID := seedTechnicalCompany(ctx, t, e, "Zeit GmbH", "zeit.de")
 
 	read := TechnicalEnrichment{
-		OrganizationID: orgID,
-		Completed:      []TechnicalLane{LaneDNS},
-		Observations:   []TechnicalObservation{observation(FactMailProvider, "google_workspace", "Google Workspace")},
-		ObservedAt:     technicalObservedAt,
+		CompanyID:    companyID,
+		Completed:    []TechnicalLane{LaneDNS},
+		Observations: []TechnicalObservation{observation(FactMailProvider, "google_workspace", "Google Workspace")},
+		ObservedAt:   technicalObservedAt,
 	}
 	if err := e.store.ApplyTechnicalEnrichment(ctx, read, nil); err != nil {
 		t.Fatalf("apply the reading: %v", err)
@@ -506,8 +506,8 @@ func TestTheObservationTimeIsWhatTheSourceWasRead(t *testing.T) {
 	var retrievedAt *time.Time
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
-			SELECT retrieved_at FROM organization_fact
-			 WHERE organization_id = $1 AND field = $2`, orgID, FactMailProvider).Scan(&retrievedAt)
+			SELECT retrieved_at FROM company_fact
+			 WHERE company_id = $1 AND field = $2`, companyID, FactMailProvider).Scan(&retrievedAt)
 	}); err != nil {
 		t.Fatalf("read back the observation time: %v", err)
 	}
@@ -522,16 +522,16 @@ func TestTheObservationTimeIsWhatTheSourceWasRead(t *testing.T) {
 func TestTheLaneLedgerRecordsEachSourceSeparately(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	orgID := seedTechnicalOrg(ctx, t, e, "Buch GmbH", "buch.de")
+	companyID := seedTechnicalCompany(ctx, t, e, "Buch GmbH", "buch.de")
 
-	if err := e.store.RecordTechnicalLane(ctx, orgID, LaneDNS, TechnicalOutcomeApplied, technicalObservedAt); err != nil {
+	if err := e.store.RecordTechnicalLane(ctx, companyID, LaneDNS, TechnicalOutcomeApplied, technicalObservedAt); err != nil {
 		t.Fatalf("record the DNS lane: %v", err)
 	}
-	if err := e.store.RecordTechnicalLane(ctx, orgID, LaneCertLog, TechnicalOutcomeFailed, technicalObservedAt); err != nil {
+	if err := e.store.RecordTechnicalLane(ctx, companyID, LaneCertLog, TechnicalOutcomeFailed, technicalObservedAt); err != nil {
 		t.Fatalf("record the certificate lane: %v", err)
 	}
 
-	lanes, err := e.store.TechnicalLaneState(ctx, orgID)
+	lanes, err := e.store.TechnicalLaneState(ctx, companyID)
 	if err != nil {
 		t.Fatalf("read the ledger: %v", err)
 	}
@@ -562,23 +562,23 @@ func TestTheLaneLedgerRecordsEachSourceSeparately(t *testing.T) {
 func TestAHumanAnswerSettlesTheWholeSingleValuedField(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	orgID := seedTechnicalOrg(ctx, t, e, "Entschieden GmbH", "entschieden.de")
+	companyID := seedTechnicalCompany(ctx, t, e, "Entschieden GmbH", "entschieden.de")
 
 	read := TechnicalEnrichment{
-		OrganizationID: orgID,
-		Completed:      []TechnicalLane{LaneDNS},
-		Observations:   []TechnicalObservation{observation(FactMailProvider, "google_workspace", "Google Workspace")},
-		ObservedAt:     technicalObservedAt,
+		CompanyID:    companyID,
+		Completed:    []TechnicalLane{LaneDNS},
+		Observations: []TechnicalObservation{observation(FactMailProvider, "google_workspace", "Google Workspace")},
+		ObservedAt:   technicalObservedAt,
 	}
 	if err := e.store.ApplyTechnicalEnrichment(ctx, read, nil); err != nil {
 		t.Fatalf("apply the machine reading: %v", err)
 	}
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
-			UPDATE organization_fact
+			UPDATE company_fact
 			   SET value = 'Eigener Mailserver', captured_by = 'human:' || $2, source = 'human'
-			 WHERE organization_id = $1 AND field = $3`,
-			orgID, e.rep.String(), FactMailProvider)
+			 WHERE company_id = $1 AND field = $3`,
+			companyID, e.rep.String(), FactMailProvider)
 		return err
 	}); err != nil {
 		t.Fatalf("record the human's correction: %v", err)
@@ -593,7 +593,7 @@ func TestAHumanAnswerSettlesTheWholeSingleValuedField(t *testing.T) {
 		t.Fatalf("apply the later reading: %v", err)
 	}
 
-	held := technicalFactsOf(ctx, t, e, orgID)
+	held := technicalFactsOf(ctx, t, e, companyID)
 	if len(held[FactMailProvider]) != 1 {
 		t.Fatalf("the record claims %v mail providers — a company has one, and a person had already "+
 			"said which", held[FactMailProvider])
@@ -601,8 +601,8 @@ func TestAHumanAnswerSettlesTheWholeSingleValuedField(t *testing.T) {
 	var value string
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
-			SELECT value FROM organization_fact
-			 WHERE organization_id = $1 AND field = $2`, orgID, FactMailProvider).Scan(&value)
+			SELECT value FROM company_fact
+			 WHERE company_id = $1 AND field = $2`, companyID, FactMailProvider).Scan(&value)
 	}); err != nil {
 		t.Fatalf("read back the surviving fact: %v", err)
 	}
@@ -620,11 +620,11 @@ func TestAHumanAnswerSettlesTheWholeSingleValuedField(t *testing.T) {
 func TestAPartialDNSReadIsNotAuthoritative(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	orgID := seedTechnicalOrg(ctx, t, e, "Teilweise GmbH", "teilweise.de")
+	companyID := seedTechnicalCompany(ctx, t, e, "Teilweise GmbH", "teilweise.de")
 
 	full := TechnicalEnrichment{
-		OrganizationID: orgID,
-		Completed:      []TechnicalLane{LaneDNS},
+		CompanyID: companyID,
+		Completed: []TechnicalLane{LaneDNS},
 		Observations: []TechnicalObservation{
 			observation(FactMailProvider, "microsoft365", "Microsoft 365"),
 			observation(FactEmailSecurity, "dmarc_reject", "DMARC durchgesetzt"),
@@ -638,15 +638,15 @@ func TestAPartialDNSReadIsNotAuthoritative(t *testing.T) {
 	// The engine reports the lane as NOT completed when a sub-lookup fails, so
 	// the apply reconciles nothing at all.
 	partial := TechnicalEnrichment{
-		OrganizationID: orgID,
-		Completed:      nil,
-		ObservedAt:     technicalObservedAt.Add(time.Hour),
+		CompanyID:  companyID,
+		Completed:  nil,
+		ObservedAt: technicalObservedAt.Add(time.Hour),
 	}
 	if err := e.store.ApplyTechnicalEnrichment(ctx, partial, nil); err != nil {
 		t.Fatalf("apply the partial reading: %v", err)
 	}
 
-	held := technicalFactsOf(ctx, t, e, orgID)
+	held := technicalFactsOf(ctx, t, e, companyID)
 	if len(held[FactEmailSecurity]) != 1 || len(held[FactMailProvider]) != 1 {
 		t.Errorf("a read that could not complete removed what it did not see: %v", held)
 	}

@@ -93,13 +93,13 @@ func wireReadiness(out crmcontracts.MeetingPlan) crmcontracts.MeetingPlanReadine
 // on a string the wire layer will later reject.
 func groundedSentence(
 	sentence Sentence, known map[Evidence]string,
-) (crmcontracts.OrganizationBriefSentence, bool) {
+) (crmcontracts.CompanyBriefSentence, bool) {
 	if !claims.Grounded(sentence, known) {
-		return crmcontracts.OrganizationBriefSentence{}, false
+		return crmcontracts.CompanyBriefSentence{}, false
 	}
 	wired := wireSentences([]Sentence{sentence})
 	if len(wired) == 0 {
-		return crmcontracts.OrganizationBriefSentence{}, false
+		return crmcontracts.CompanyBriefSentence{}, false
 	}
 	return wired[0], true
 }
@@ -108,7 +108,7 @@ func groundedSentence(
 // prose of its own.
 func groundedEvidence(
 	cited []Evidence, known map[Evidence]string,
-) ([]crmcontracts.OrganizationBriefEvidence, bool) {
+) ([]crmcontracts.CompanyBriefEvidence, bool) {
 	for _, one := range cited {
 		if _, ok := known[Evidence{EntityType: one.EntityType, EntityID: one.EntityID}]; !ok {
 			return nil, false
@@ -198,7 +198,7 @@ func wireAdvance(advance Advance, in Input, known map[Evidence]string) crmcontra
 
 func advanceLeg(
 	leg Sentence, in Input, known map[Evidence]string, floor string,
-) crmcontracts.OrganizationBriefSentence {
+) crmcontracts.CompanyBriefSentence {
 	if wired, ok := groundedSentence(leg, known); ok {
 		return wired
 	}
@@ -213,7 +213,7 @@ func advanceLeg(
 		// one: the contract requires three legs, and "cited or dropped" is the
 		// stronger rule of the two — a sentence shown without its receipts is
 		// the one thing this surface must never do.
-		return crmcontracts.OrganizationBriefSentence{}
+		return crmcontracts.CompanyBriefSentence{}
 	}
 	return wired
 }

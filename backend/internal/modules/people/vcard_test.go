@@ -26,7 +26,7 @@ func TestParseVCardsReadsTheCardsExportersWrite(t *testing.T) {
 			card: "BEGIN:VCARD\nVERSION:3.0\nFN:Dana Buyer\nORG:Acme GmbH\nTITLE:VP Finance\n" +
 				"EMAIL;TYPE=WORK:dana@acme.example\nTEL;TYPE=CELL:+49 30 111\nEND:VCARD\n",
 			want: VCardEntry{
-				FullName: "Dana Buyer", Organization: "Acme GmbH", Title: "VP Finance",
+				FullName: "Dana Buyer", Company: "Acme GmbH", Title: "VP Finance",
 				Emails: []VCardChannel{{Value: "dana@acme.example", Kind: "work"}},
 				Phones: []VCardChannel{{Value: "+49 30 111", Kind: "mobile"}},
 			},
@@ -36,7 +36,7 @@ func TestParseVCardsReadsTheCardsExportersWrite(t *testing.T) {
 			// The components after the first are departments, and a department
 			// is not an employer.
 			card: "BEGIN:VCARD\nFN:Sam Rep\nORG:Globex;Sales;EMEA\nEND:VCARD\n",
-			want: VCardEntry{FullName: "Sam Rep", Organization: "Globex"},
+			want: VCardEntry{FullName: "Sam Rep", Company: "Globex"},
 		},
 		{
 			name: "a card with no FN falls back to the structured name",
@@ -74,7 +74,7 @@ func TestParseVCardsReadsTheCardsExportersWrite(t *testing.T) {
 		{
 			name: "escaped punctuation arrives as punctuation",
 			card: `BEGIN:VCARD` + "\n" + `FN:Acme\, Inc.` + "\n" + `ORG:Acme\; Holdings` + "\n" + `END:VCARD` + "\n",
-			want: VCardEntry{FullName: "Acme, Inc.", Organization: "Acme; Holdings"},
+			want: VCardEntry{FullName: "Acme, Inc.", Company: "Acme; Holdings"},
 		},
 		{
 			name: "quoted-printable is decoded",
@@ -229,8 +229,8 @@ func assertVCardEntry(t *testing.T, got, want VCardEntry) {
 	if got.FullName != want.FullName {
 		t.Errorf("full name = %q, want %q", got.FullName, want.FullName)
 	}
-	if got.Organization != want.Organization {
-		t.Errorf("organization = %q, want %q", got.Organization, want.Organization)
+	if got.Company != want.Company {
+		t.Errorf("company = %q, want %q", got.Company, want.Company)
 	}
 	if got.Title != want.Title {
 		t.Errorf("title = %q, want %q", got.Title, want.Title)

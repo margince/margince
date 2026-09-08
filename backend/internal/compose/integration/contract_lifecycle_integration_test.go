@@ -38,13 +38,13 @@ func daysFromToday(days int) time.Time {
 
 func TestContractCreateReadsBackWhatWasWritten(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "Acme", nil)
+	company := e.SeedCompany(t, "Acme", nil)
 
 	created, err := e.Contracts.CreateContract(e.Admin(), contracts.CreateContractInput{
-		OrganizationID: ids.From[ids.OrganizationKind](org),
-		Title:          "MSA 2026",
-		ValueBasis:     contracts.BasisTotal,
-		Source:         "manual",
+		CompanyID:  ids.From[ids.CompanyKind](company),
+		Title:      "MSA 2026",
+		ValueBasis: contracts.BasisTotal,
+		Source:     "manual",
 	})
 	if err != nil {
 		t.Fatalf("creating a contract: %v", err)
@@ -70,18 +70,18 @@ func TestContractCreateReadsBackWhatWasWritten(t *testing.T) {
 // EARLIER of the two dates, and a cancellation never revives a lapsed term.
 func TestUnderContractTakesTheEarlierOfTermEndAndCancellation(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "Acme", nil)
+	company := e.SeedCompany(t, "Acme", nil)
 	admin := e.Admin()
 
 	starts := daysFromToday(-180)
 	ends := daysFromToday(120)
 	created, err := e.Contracts.CreateContract(admin, contracts.CreateContractInput{
-		OrganizationID: ids.From[ids.OrganizationKind](org),
-		Title:          "Cancelled early",
-		ValueBasis:     contracts.BasisTotal,
-		StartsOn:       &starts,
-		EndsOn:         &ends,
-		Source:         "manual",
+		CompanyID:  ids.From[ids.CompanyKind](company),
+		Title:      "Cancelled early",
+		ValueBasis: contracts.BasisTotal,
+		StartsOn:   &starts,
+		EndsOn:     &ends,
+		Source:     "manual",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -118,11 +118,11 @@ func TestUnderContractTakesTheEarlierOfTermEndAndCancellation(t *testing.T) {
 // to the fixture's status vocabulary or its create shape would otherwise have to
 // be made in three places, and the one that was missed would keep passing until
 // it did not.
-func anActiveContract(t *testing.T, e *Env, org ids.UUID, title string) ids.ContractID {
+func anActiveContract(t *testing.T, e *Env, company ids.UUID, title string) ids.ContractID {
 	t.Helper()
 	first, err := e.Contracts.CreateContract(e.Admin(), contracts.CreateContractInput{
-		OrganizationID: ids.From[ids.OrganizationKind](org),
-		Title:          title, ValueBasis: contracts.BasisTotal, Source: "manual",
+		CompanyID: ids.From[ids.CompanyKind](company),
+		Title:     title, ValueBasis: contracts.BasisTotal, Source: "manual",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -139,10 +139,10 @@ func anActiveContract(t *testing.T, e *Env, org ids.UUID, title string) ids.Cont
 // than a row somebody overwrote.
 func TestRenewalChainsRatherThanOverwrites(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "Acme", nil)
+	company := e.SeedCompany(t, "Acme", nil)
 	admin := e.Admin()
 
-	predecessorID := anActiveContract(t, e, org, "MSA 2026")
+	predecessorID := anActiveContract(t, e, company, "MSA 2026")
 
 	successor, err := e.Contracts.Renew(admin, predecessorID, contracts.CreateContractInput{
 		Title: "MSA 2027", ValueBasis: contracts.BasisAnnualized, Source: "renewal",
@@ -164,7 +164,7 @@ func TestRenewalChainsRatherThanOverwrites(t *testing.T) {
 	// The successor inherits the counterparty rather than taking one from the
 	// request: a renewal that changed companies would be a different agreement
 	// wearing this one's history.
-	if successor.OrganizationId == nil || ids.UUID(*successor.OrganizationId) != org {
+	if successor.CompanyId == nil || ids.UUID(*successor.CompanyId) != company {
 		t.Error("the successor names a different company than the agreement it renews")
 	}
 }
@@ -173,12 +173,12 @@ func TestRenewalChainsRatherThanOverwrites(t *testing.T) {
 // record a description of somebody's second thoughts.
 func TestATerminalContractDoesNotReopen(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "Acme", nil)
+	company := e.SeedCompany(t, "Acme", nil)
 	admin := e.Admin()
 
 	created, err := e.Contracts.CreateContract(admin, contracts.CreateContractInput{
-		OrganizationID: ids.From[ids.OrganizationKind](org),
-		Title:          "Expired", ValueBasis: contracts.BasisTotal, Source: "manual",
+		CompanyID: ids.From[ids.CompanyKind](company),
+		Title:     "Expired", ValueBasis: contracts.BasisTotal, Source: "manual",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -202,19 +202,19 @@ func TestATerminalContractDoesNotReopen(t *testing.T) {
 // hand-inserted — a row the real path cannot produce proves nothing about it.
 func TestTheDatabaseRefusesContradictoryTerms(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "Acme", nil)
+	company := e.SeedCompany(t, "Acme", nil)
 	value := int64(100)
 	starts, ends := daysFromToday(0), daysFromToday(-30)
 
 	cases := map[string]contracts.CreateContractInput{
 		"value with no currency": {
-			OrganizationID: ids.From[ids.OrganizationKind](org),
-			Title:          "Half a money pair", ValueBasis: contracts.BasisTotal,
+			CompanyID: ids.From[ids.CompanyKind](company),
+			Title:     "Half a money pair", ValueBasis: contracts.BasisTotal,
 			ValueMinor: &value, Source: "manual",
 		},
 		"a term that ends before it starts": {
-			OrganizationID: ids.From[ids.OrganizationKind](org),
-			Title:          "Backwards", ValueBasis: contracts.BasisTotal,
+			CompanyID: ids.From[ids.CompanyKind](company),
+			Title:     "Backwards", ValueBasis: contracts.BasisTotal,
 			StartsOn: &starts, EndsOn: &ends, Source: "manual",
 		},
 	}
@@ -236,17 +236,17 @@ func TestTheDatabaseRefusesContradictoryTerms(t *testing.T) {
 // A contract the caller cannot see answers NOT FOUND, never a denial: a 403
 // would confirm the agreement exists. A deal is readable by every seat, so
 // the hidden anchor is an account capture-private to Rep1: an
-// organization-anchored contract on it is invisible to Rep3.
+// company-anchored contract on it is invisible to Rep3.
 func TestAnInvisibleContractIsAbsentRatherThanRefused(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "Acme", &e.Rep1)
-	e.MakeCapturePrivate(t, "organization", org, e.Rep1)
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
+	e.MakeCapturePrivate(t, "company", company, e.Rep1)
 
 	rep1 := e.As(e.Rep1, []ids.UUID{e.Team1}, ContractRepPerms)
-	orgID := ids.From[ids.OrganizationKind](org)
+	companyID := ids.From[ids.CompanyKind](company)
 	created, err := e.Contracts.CreateContract(rep1, contracts.CreateContractInput{
-		OrganizationID: orgID,
-		Title:          "Rep1's agreement", ValueBasis: contracts.BasisTotal, Source: "manual",
+		CompanyID: companyID,
+		Title:     "Rep1's agreement", ValueBasis: contracts.BasisTotal, Source: "manual",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -291,18 +291,18 @@ func TestAnInvisibleContractIsAbsentRatherThanRefused(t *testing.T) {
 func TestARenewalSuccessorKeepsTheDealItNames(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
-	org := e.SeedOrg(t, "Acme", nil)
+	company := e.SeedCompany(t, "Acme", nil)
 	pipeline, open, _ := DealFixture(t, e)
-	orgID := ids.From[ids.OrganizationKind](org)
+	companyID := ids.From[ids.CompanyKind](company)
 	renewal, err := e.Deals.CreateDeal(admin, deals.CreateDealInput{
-		Name: "Acme renewal 2027", PipelineID: pipeline, StageID: open, OrganizationID: &orgID,
+		Name: "Acme renewal 2027", PipelineID: pipeline, StageID: open, CompanyID: &companyID,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	dealID := ids.From[ids.DealKind](ids.UUID(renewal.Id))
 
-	predecessorID := anActiveContract(t, e, org, "MSA 2026")
+	predecessorID := anActiveContract(t, e, company, "MSA 2026")
 
 	successor, err := e.Contracts.Renew(admin, predecessorID, contracts.CreateContractInput{
 		Title: "MSA 2027", ValueBasis: contracts.BasisAnnualized, Source: "renewal", DealID: &dealID,
@@ -319,8 +319,8 @@ func TestARenewalSuccessorKeepsTheDealItNames(t *testing.T) {
 	}
 	// The counterparty is still the predecessor's, which is the one thing a
 	// renewal does inherit.
-	if successor.OrganizationId == nil || ids.UUID(*successor.OrganizationId) != org {
-		t.Errorf("successor organization = %v, want the predecessor's (%v)", successor.OrganizationId, org)
+	if successor.CompanyId == nil || ids.UUID(*successor.CompanyId) != company {
+		t.Errorf("successor company = %v, want the predecessor's (%v)", successor.CompanyId, company)
 	}
 }
 
@@ -330,11 +330,11 @@ func TestARenewalSuccessorKeepsTheDealItNames(t *testing.T) {
 func TestARenewalCannotNameAnotherCompanysDeal(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
-	ours, theirs := e.SeedOrg(t, "Acme", nil), e.SeedOrg(t, "Globex", nil)
+	ours, theirs := e.SeedCompany(t, "Acme", nil), e.SeedCompany(t, "Globex", nil)
 	pipeline, open, _ := DealFixture(t, e)
-	theirOrgID := ids.From[ids.OrganizationKind](theirs)
+	theirCompanyID := ids.From[ids.CompanyKind](theirs)
 	elsewhere, err := e.Deals.CreateDeal(admin, deals.CreateDealInput{
-		Name: "Globex renewal", PipelineID: pipeline, StageID: open, OrganizationID: &theirOrgID,
+		Name: "Globex renewal", PipelineID: pipeline, StageID: open, CompanyID: &theirCompanyID,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -375,8 +375,8 @@ func TestARenewalCannotNameAnotherCompanysDeal(t *testing.T) {
 // one successor.
 func TestTwoConcurrentRenewalsLeaveOneSuccessor(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "Acme", nil)
-	predecessorID := anActiveContract(t, e, org, "MSA 2026")
+	company := e.SeedCompany(t, "Acme", nil)
+	predecessorID := anActiveContract(t, e, company, "MSA 2026")
 
 	const racers = 2
 	results := make([]crmcontracts.Contract, racers)

@@ -141,7 +141,7 @@ export function VCardImport() {
         )}
         {importer.isSuccess && <ImportReport report={importer.data} />}
 
-        {/* card-actions for the reason the org history drawer takes it: the
+        {/* card-actions for the reason the company history drawer takes it: the
             import report above sets `margin: var(--space-4) 0 0` — a top margin
             only — so a row bringing none of its own left Done touching the last
             imported row. */}

@@ -105,7 +105,7 @@ describe("an agent's account-started mail", () => {
           proposed_change: {
             to: ["buyer@example.test"],
             links: [
-              { entity_type: "organization", entity_id: "org-1" },
+              { entity_type: "company", entity_id: "company-1" },
               { entity_type: "deal", entity_id: "deal-1" },
             ],
             communication_context: "marketing",
@@ -116,7 +116,7 @@ describe("an agent's account-started mail", () => {
     ).toEqual({
       recipients: ["buyer@example.test"],
       links: [
-        { entity_type: "organization", entity_id: "org-1" },
+        { entity_type: "company", entity_id: "company-1" },
         { entity_type: "deal", entity_id: "deal-1" },
       ],
       context: "marketing",
@@ -135,7 +135,7 @@ describe("an agent's account-started mail", () => {
           proposed_change: {
             to: ["buyer@example.test"],
             links: [
-              { entity_type: "organization", entity_id: "org-1" },
+              { entity_type: "company", entity_id: "company-1" },
               { entity_type: "spaceship", entity_id: "x" },
             ],
           },

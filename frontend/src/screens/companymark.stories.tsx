@@ -26,7 +26,7 @@ type CompanyProfile = components["schemas"]["CompanyProfile"];
 const ORG = "00000000-0000-4000-8000-000000000010";
 
 const WITHOUT_MARK: CompanyProfile = {
-  organization_id: ORG,
+  company_id: ORG,
   display_name: "Brandt Automotive GmbH",
 };
 

@@ -17,10 +17,10 @@ import "./projectpicker.css";
 // same scope line under its output. One control, so "Scoped to ERP-27" reads
 // identically wherever a rep meets it.
 
-// One project as the picker shows it: the fields the Organization360 and
+// One project as the picker shows it: the fields the Company360 and
 // Person360 `projects` sections share.
 export type PickableProject = Pick<
-  components["schemas"]["Organization360Project"],
+  components["schemas"]["Company360Project"],
   "project_id" | "name" | "key" | "phase"
 >;
 

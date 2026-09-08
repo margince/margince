@@ -255,11 +255,11 @@ func insertOnce(
 		return false, fmt.Errorf("bound the project-insert lock wait: %w", err)
 	}
 	cfCols, cfHolders, args := storekit.InsertFragments(active, in.CustomFields, []any{
-		id, in.Name, key, in.OrganizationID, in.OwnerID,
+		id, in.Name, key, in.CompanyID, in.OwnerID,
 		in.Description, in.StartedAt, in.TargetEndDate, in.Source, by,
 	})
 	_, insertErr := sp.Exec(ctx,
-		`INSERT INTO project (id, name, key, organization_id, owner_id,
+		`INSERT INTO project (id, name, key, company_id, owner_id,
 		                      description, started_at, target_end_date, source, captured_by`+cfCols+`)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10`+cfHolders+`)`,
 		args...)
@@ -278,7 +278,7 @@ func insertOnce(
 // insertRefusal maps an insert error that is NOT a key race onto the typed
 // refusal the caller gets, so every create path answers one way.
 func insertRefusal(err error, in CreateProjectInput) error {
-	// Covers the owner FK; the organization target was pre-checked.
+	// Covers the owner FK; the company target was pre-checked.
 	if storekit.IsForeignKeyViolation(err) {
 		return apperrors.ErrNotFound
 	}

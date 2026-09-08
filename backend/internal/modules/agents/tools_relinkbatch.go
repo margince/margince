@@ -54,7 +54,7 @@ func (t relinkThread) Spec() mcp.ToolSpec {
 		OpenAPIOp:    "relinkThread",
 		InputSchema: schema(`{"type":"object","required":["thread_key","entity_type","entity_id"],"properties":{
 			"thread_key":{"type":"string","minLength":1},
-			"entity_type":{"type":"string","enum":["person","organization","deal","lead","project"]},
+			"entity_type":{"type":"string","enum":["person","company","deal","lead","project"]},
 			"entity_id":{"type":"string","format":"uuid"},
 			"replace_existing_of_type":{"type":"boolean","default":false,"description":"Move rather than associate"},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
@@ -111,7 +111,7 @@ func (t relinkActivities) Spec() mcp.ToolSpec {
 		OpenAPIOp:    "relinkActivities",
 		InputSchema: schema(`{"type":"object","required":["activity_ids","entity_type","entity_id"],"properties":{
 			"activity_ids":{"type":"array","minItems":1,"maxItems":500,"items":{"type":"string","format":"uuid"}},
-			"entity_type":{"type":"string","enum":["person","organization","deal","lead","project"]},
+			"entity_type":{"type":"string","enum":["person","company","deal","lead","project"]},
 			"entity_id":{"type":"string","format":"uuid"},
 			"replace_existing_of_type":{"type":"boolean","default":false,"description":"Move rather than associate"},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},

@@ -138,7 +138,7 @@ type privacyFunc struct {
 //
 // The graph itself — receiver-type keying, package-level statements attributed
 // to whoever names them, the unresolvable edges it will not follow — is in
-// callgraph_test.go, shared with the organization rename census. What a
+// callgraph_test.go, shared with the company rename census. What a
 // statement MEANS stays here, because it is not the same question over there.
 func privacyCallGraph(t *testing.T) map[string]*privacyFunc {
 	t.Helper()

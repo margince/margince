@@ -31,7 +31,7 @@ func TestCaptureTierGateSuppressesWhatIsNotACounterparty(t *testing.T) {
 	e, sync := env.e, env.sync
 	t.Run("free-mail defers the person and never names a company", func(t *testing.T) {
 		sync(t, email("bob@gmail.com", "Bob Person", captureOwner, "b1@gmail.com", ""))
-		// A consumer mailbox settles the ORGANIZATION question by itself and
+		// A consumer mailbox settles the COMPANY question by itself and
 		// settles nothing about the person. A customer writing from their
 		// private address and a founder's sister arrive in exactly this shape,
 		// so minting on sight put nineteen private correspondents of one
@@ -41,12 +41,12 @@ func TestCaptureTierGateSuppressesWhatIsNotACounterparty(t *testing.T) {
 			WHERE pe.email = 'bob@gmail.com'`); n != 0 {
 			t.Fatalf("%d persons for a free-mail sender, want 0 — the verdict decides who they are", n)
 		}
-		if n := countRows(t, e, `SELECT count(*) FROM organization WHERE display_name = 'gmail.com'`); n != 0 {
-			t.Fatal("gmail.com must never become an organization")
+		if n := countRows(t, e, `SELECT count(*) FROM company WHERE display_name = 'gmail.com'`); n != 0 {
+			t.Fatal("gmail.com must never become a company")
 		}
 		// The sender goes on the ledger for a verdict, which is safe for the
 		// company question in a way tier order used to be trusted for: the
-		// verdict's own create path reaches deferOrgToTriage, which refuses a
+		// verdict's own create path reaches deferCompanyToTriage, which refuses a
 		// consumer domain there too. Both writers of that refusal are needed —
 		// the ladder never sees a verdict-created record.
 		if n := countRows(t, e, `
@@ -57,7 +57,7 @@ func TestCaptureTierGateSuppressesWhatIsNotACounterparty(t *testing.T) {
 	t.Run("transactional infrastructure keeps the activity, derives no counterparty", func(t *testing.T) {
 		// A DocuSign envelope (exact infra eSLD, no corroboration needed) and a
 		// conference blast on a prefix subdomain WITH a List-Unsubscribe header
-		// (corroborated) both suppress person+org while the timeline row stands
+		// (corroborated) both suppress person+company while the timeline row stands
 		// (ADR-0072/A118, CAP-PARAM-6).
 		sync(
 			t,
@@ -72,8 +72,8 @@ func TestCaptureTierGateSuppressesWhatIsNotACounterparty(t *testing.T) {
 			WHERE pe.email IN ('dse@eu.docusign.net', 'hello@event.gitex.com')`); n != 0 {
 			t.Fatal("transactional infrastructure must derive no person")
 		}
-		if n := countRows(t, e, `SELECT count(*) FROM organization WHERE display_name IN ('Docusign', 'Gitex')`); n != 0 {
-			t.Fatal("transactional infrastructure must derive no organization")
+		if n := countRows(t, e, `SELECT count(*) FROM company WHERE display_name IN ('Docusign', 'Gitex')`); n != 0 {
+			t.Fatal("transactional infrastructure must derive no company")
 		}
 		if n := countRows(t, e, `
 			SELECT count(*) FROM system_log
@@ -221,10 +221,10 @@ func TestCaptureTierGateLetsCorrespondencePrecedeSuppression(t *testing.T) {
 		}
 	})
 	t.Run("a corresponded-with free-mail address is still never a company", func(t *testing.T) {
-		// T1 overrides T2 suppression ONLY. Free-mail's org rule is about what a
+		// T1 overrides T2 suppression ONLY. Free-mail's company rule is about what a
 		// domain can honestly name, not about whether its sender is trusted, so
 		// writing to a gmail.com address buys its owner a person and never an
-		// organization called "Gmail" — the junk this ADR exists to prevent.
+		// company called "Gmail" — the junk this ADR exists to prevent.
 		syncSent(t, map[string]bool{"fm1@myco.example": true},
 			email(captureOwner, "", "carol@gmail.com", "fm1@myco.example", ""))
 		// Carol answers, which is what makes her a contact without a verdict.
@@ -236,8 +236,8 @@ func TestCaptureTierGateLetsCorrespondencePrecedeSuppression(t *testing.T) {
 			WHERE pe.email = 'carol@gmail.com'`); n != 1 {
 			t.Fatalf("%d persons for carol, want 1", n)
 		}
-		if n := countRows(t, e, `SELECT count(*) FROM organization WHERE display_name IN ('Gmail', 'gmail.com')`); n != 0 {
-			t.Fatal("a corresponded-with free-mail address minted an organization")
+		if n := countRows(t, e, `SELECT count(*) FROM company WHERE display_name IN ('Gmail', 'gmail.com')`); n != 0 {
+			t.Fatal("a corresponded-with free-mail address minted a company")
 		}
 	})
 }
@@ -747,11 +747,11 @@ func TestCaptureDoesNotReEnrichACompanyItAlreadyHas(t *testing.T) {
 	// one open company question — not a company invented from the domain label.
 	// NOT is_anchor: the installation's own company is created by cold start,
 	// not derived from a captured domain.
-	if n := countRows(t, e, `SELECT count(*) FROM organization WHERE NOT is_anchor`); n != 0 {
-		t.Fatalf("%d organizations from an unjudged domain, want 0", n)
+	if n := countRows(t, e, `SELECT count(*) FROM company WHERE NOT is_anchor`); n != 0 {
+		t.Fatalf("%d companies from an unjudged domain, want 0", n)
 	}
 	if n := countRows(t, e, `
-		SELECT count(*) FROM organization_domain_disposition
+		SELECT count(*) FROM company_domain_disposition
 		WHERE domain = 'newco.example' AND status = 'pending'`); n != 1 {
 		t.Fatalf("%d open company questions for newco.example, want exactly 1", n)
 	}
@@ -760,7 +760,7 @@ func TestCaptureDoesNotReEnrichACompanyItAlreadyHas(t *testing.T) {
 	// already open — one row, one crawl, however many colleagues write in.
 	sync(t, email("sales@newco.example", "Sales", captureOwner, "in2@newco.example", ""))
 	if n := countRows(t, e, `
-		SELECT count(*) FROM organization_domain_disposition WHERE domain = 'newco.example'`); n != 1 {
+		SELECT count(*) FROM company_domain_disposition WHERE domain = 'newco.example'`); n != 1 {
 		t.Fatalf("%d questions after a second message, want the one that was already open", n)
 	}
 	if n := countRows(t, e, `
@@ -935,7 +935,7 @@ func TestCaptureTierGateNeverMintsAPersonForADecidedRoleMailbox(t *testing.T) {
 // the ladder refused.
 //
 // Deferring is safe because the refusal is not the ladder's alone. The verdict's
-// create path reaches deferOrgToTriage, which asks the same consumer-mail
+// create path reaches deferCompanyToTriage, which asks the same consumer-mail
 // question at the chokepoint every writer passes. This is the test that says so
 // — without it the two writers are one comment apart from disagreeing.
 func TestAVerdictOnAFreeMailSenderMintsThePersonAndNoCompany(t *testing.T) {
@@ -959,20 +959,20 @@ func TestAVerdictOnAFreeMailSenderMintsThePersonAndNoCompany(t *testing.T) {
 	// No company, in either spelling: the name the ladder would have invented,
 	// and the domain row an attach would have written.
 	if n := countRows(t, e, `
-		SELECT count(*) FROM organization WHERE display_name = 'gmail.com'`); n != 0 {
+		SELECT count(*) FROM company WHERE display_name = 'gmail.com'`); n != 0 {
 		t.Fatal("a verdict on a free-mail sender named gmail.com as a company")
 	}
 	if n := countRows(t, e, `
-		SELECT count(*) FROM organization_domain WHERE domain = 'gmail.com'`); n != 0 {
-		t.Fatal("a verdict on a free-mail sender put gmail.com on an organization")
+		SELECT count(*) FROM company_domain WHERE domain = 'gmail.com'`); n != 0 {
+		t.Fatal("a verdict on a free-mail sender put gmail.com on a company")
 	}
 	// And no QUESTION about the domain either, which is the assertion with
-	// teeth. deferOrgToTriage creates nothing by itself — it opens a triage
+	// teeth. deferCompanyToTriage creates nothing by itself — it opens a triage
 	// question, and the crawl behind that question is what would eventually
-	// mint the company. A test that only counted organizations would pass with
+	// mint the company. A test that only counted companies would pass with
 	// the consumer refusal deleted, because the company arrives a crawl later.
 	if n := countRows(t, e, `
-		SELECT count(*) FROM organization_domain_disposition WHERE domain = 'gmail.com'`); n != 0 {
+		SELECT count(*) FROM company_domain_disposition WHERE domain = 'gmail.com'`); n != 0 {
 		t.Fatal("a verdict on a free-mail sender opened a company question about gmail.com")
 	}
 }

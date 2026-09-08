@@ -19,7 +19,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/accountdraft"
-	"github.com/margince/margince/backend/internal/compose/org360"
+	"github.com/margince/margince/backend/internal/compose/company360"
 	"github.com/margince/margince/backend/internal/compose/person360"
 	"github.com/margince/margince/backend/internal/compose/persondraft"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -34,15 +34,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/retrieval"
 )
 
-func orgSurfaceService(e *Env) *org360.Service {
-	return org360.NewService(e.Pool, e.People, e.Deals, e.Projects, approvals.NewService(e.DB()),
+func companySurfaceService(e *Env) *company360.Service {
+	return company360.NewService(e.Pool, e.People, e.Deals, e.Projects, approvals.NewService(e.DB()),
 		func() time.Time { return roomFixedNow })
 }
 
 // projectKeys indexes a page's projects section by the key the server minted,
 // so a test names a project by its key rather than by an id.
-func projectKeys(projects *[]crmcontracts.Organization360Project) map[string]crmcontracts.Organization360Project {
-	out := map[string]crmcontracts.Organization360Project{}
+func projectKeys(projects *[]crmcontracts.Company360Project) map[string]crmcontracts.Company360Project {
+	out := map[string]crmcontracts.Company360Project{}
 	if projects == nil {
 		return out
 	}
@@ -60,23 +60,23 @@ func projectKeys(projects *[]crmcontracts.Organization360Project) map[string]crm
 // employer whose projects are theirs.
 func employAtAccount(t *testing.T, e *Env, f scopeFixture) {
 	t.Helper()
-	personID, orgID := PersonIDOf(f.person), orgIDOf(f.org)
+	personID, companyID := PersonIDOf(f.person), companyIDOf(f.company)
 	primary := true
 	if _, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
-		Kind: "employment", PersonID: &personID, OrganizationID: &orgID, IsCurrentPrimary: &primary,
+		Kind: "employment", PersonID: &personID, CompanyID: &companyID, IsCurrentPrimary: &primary,
 	}); err != nil {
 		t.Fatalf("employing the contact: %v", err)
 	}
 }
 
-func TestOrganization360ListsTheAccountsLiveProjectsWorkInMotionFirst(t *testing.T) {
+func TestCompany360ListsTheAccountsLiveProjectsWorkInMotionFirst(t *testing.T) {
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
 	if _, err := e.Projects.AdvanceProjectPhase(e.Admin(), f.erp, projects.AdvanceProjectPhaseInput{ToPhase: "pursuing"}); err != nil {
 		t.Fatalf("advancing the ERP project: %v", err)
 	}
 
-	page, err := orgSurfaceService(e).Assemble(e.Admin(), orgIDOf(f.org))
+	page, err := companySurfaceService(e).Assemble(e.Admin(), companyIDOf(f.company))
 	if err != nil {
 		t.Fatalf("assemble: %v", err)
 	}
@@ -91,7 +91,7 @@ func TestOrganization360ListsTheAccountsLiveProjectsWorkInMotionFirst(t *testing
 		t.Errorf("first project = %q, want the pursuing %s ahead of the initiative", got, f.erpKey)
 	}
 	byKey := projectKeys(page.Projects)
-	if byKey[f.erpKey].Phase != crmcontracts.Organization360ProjectPhasePursuing {
+	if byKey[f.erpKey].Phase != crmcontracts.Company360ProjectPhasePursuing {
 		t.Errorf("%s phase = %q, want pursuing", f.erpKey, byKey[f.erpKey].Phase)
 	}
 	if byKey[f.otherKey].Name != "Datacentre migration" {
@@ -111,15 +111,15 @@ func TestBothPagesNameTheProjectsSectionWhenTheCallerLacksTheGrant(t *testing.T)
 	employAtAccount(t, e, f)
 	noProjectGrant := e.As(e.Rep1, []ids.UUID{e.Team1}, withoutGrant(roomPerms, "project"))
 
-	orgPage, err := orgSurfaceService(e).Assemble(noProjectGrant, orgIDOf(f.org))
+	companyPage, err := companySurfaceService(e).Assemble(noProjectGrant, companyIDOf(f.company))
 	if err != nil {
 		t.Fatalf("assemble company page: %v", err)
 	}
-	if orgPage.Projects != nil {
+	if companyPage.Projects != nil {
 		t.Error("the company page served projects to a caller with no project grant")
 	}
-	if !containsOrgSection(orgPage.SectionsOmitted, crmcontracts.Organization360SectionsOmittedProjects) {
-		t.Errorf("company page sections_omitted = %v, want projects named", orgPage.SectionsOmitted)
+	if !containsCompanySection(companyPage.SectionsOmitted, crmcontracts.Company360SectionsOmittedProjects) {
+		t.Errorf("company page sections_omitted = %v, want projects named", companyPage.SectionsOmitted)
 	}
 
 	personPage, err := personRoomService(e).Assemble(noProjectGrant, PersonIDOf(f.person))
@@ -134,7 +134,7 @@ func TestBothPagesNameTheProjectsSectionWhenTheCallerLacksTheGrant(t *testing.T)
 	}
 }
 
-func containsOrgSection(names []crmcontracts.Organization360SectionsOmitted, want crmcontracts.Organization360SectionsOmitted) bool {
+func containsCompanySection(names []crmcontracts.Company360SectionsOmitted, want crmcontracts.Company360SectionsOmitted) bool {
 	for _, name := range names {
 		if name == want {
 			return true
@@ -206,10 +206,10 @@ func TestAccountDraftScopedToAProjectGroundsOnItAndNotTheOther(t *testing.T) {
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
 	employAtAccount(t, e, f)
-	svc := orgSurfaceService(e)
+	svc := companySurfaceService(e)
 	req := accountdraft.Request{PersonID: f.person.String(), ProjectID: &f.erp}
 
-	scoped, err := svc.AssembleScoped(e.Admin(), orgIDOf(f.org), org360.AssembleOptions{ProjectID: &f.erp})
+	scoped, err := svc.AssembleScoped(e.Admin(), companyIDOf(f.company), company360.AssembleOptions{ProjectID: &f.erp})
 	if err != nil {
 		t.Fatalf("assemble scoped: %v", err)
 	}
@@ -234,7 +234,7 @@ func TestAccountDraftScopedToAProjectGroundsOnItAndNotTheOther(t *testing.T) {
 		t.Errorf("open commitments = %d, want the ERP task alone — the other engagement's task is out of scope", in.Project.OpenCommitments)
 	}
 
-	wide, err := svc.Assemble(e.Admin(), orgIDOf(f.org))
+	wide, err := svc.Assemble(e.Admin(), companyIDOf(f.company))
 	if err != nil {
 		t.Fatalf("assemble unscoped: %v", err)
 	}
@@ -250,18 +250,18 @@ func TestAccountDraftScopedToAProjectGroundsOnItAndNotTheOther(t *testing.T) {
 	// floor, no model lane) and a project of another company is refused as
 	// a field error rather than grounding this account's draft in it.
 	draft := accountdraft.NewService(svc, nil)
-	if _, err := draft.Draft(e.Admin(), orgIDOf(f.org), req); err != nil {
+	if _, err := draft.Draft(e.Admin(), companyIDOf(f.company), req); err != nil {
 		t.Fatalf("draft scoped to the account's own project: %v", err)
 	}
-	elsewhere := e.SeedOrg(t, "Other GmbH", &e.Rep1)
+	elsewhere := e.SeedCompany(t, "Other GmbH", &e.Rep1)
 	foreign, err := e.Projects.CreateProject(e.Admin(), projects.CreateProjectInput{
-		Name: "Foreign work", OrganizationID: orgIDOf(elsewhere), Source: "manual",
+		Name: "Foreign work", CompanyID: companyIDOf(elsewhere), Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("create the other company's project: %v", err)
 	}
 	foreignID := projectIDOf(ids.UUID(foreign.Id))
-	_, err = draft.Draft(e.Admin(), orgIDOf(f.org), accountdraft.Request{PersonID: f.person.String(), ProjectID: &foreignID})
+	_, err = draft.Draft(e.Admin(), companyIDOf(f.company), accountdraft.Request{PersonID: f.person.String(), ProjectID: &foreignID})
 	var detailed *httperr.DetailedError
 	if !errors.As(err, &detailed) || detailed.Status != 422 {
 		t.Errorf("draft scoped to another company's project: err = %v, want a 422 naming project_id", err)
@@ -327,7 +327,7 @@ func TestAssembledContextOnTheAccountReportsRelatedProjects(t *testing.T) {
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
 	retriever := search.NewRetriever(search.NewStore(harnessDB(e.Pool, e.WS)), nil)
-	anchor := datasource.EntityRef{Type: datasource.EntityOrganization, ID: f.org}
+	anchor := datasource.EntityRef{Type: datasource.EntityCompany, ID: f.company}
 
 	got, err := retriever.AssembleContext(e.Admin(), anchor, retrieval.AssembleOptions{MaxItems: 25})
 	if err != nil {
@@ -411,7 +411,7 @@ func TestPerson360WithholdsTheEmployersProjectWhenTheEmploymentEdgeIsOutOfScope(
 		t.Fatalf("a rep with the employer in scope lists %v, want both projects — the refusal below would prove nothing", admitted.Projects)
 	}
 
-	e.MakeCapturePrivate(t, "organization", f.org, e.Rep3)
+	e.MakeCapturePrivate(t, "company", f.company, e.Rep3)
 	withheld, err := svc.Assemble(rep, PersonIDOf(f.person))
 	if err != nil {
 		t.Fatalf("assemble with the employer out of scope: %v", err)

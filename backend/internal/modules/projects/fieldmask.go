@@ -25,10 +25,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// filterOrganizationIDOnProject is masked_fields' name for the anchor
+// filterCompanyIDOnProject is masked_fields' name for the anchor
 // reference. It is the wire member's own name, which is what a client reads
 // the mask against.
-const filterOrganizationIDOnProject = "organization_id"
+const filterCompanyIDOnProject = "company_id"
 
 // maskProjectForCaller applies the read mask to ONE row about to leave the
 // store.
@@ -45,7 +45,7 @@ func (s *Store) maskProjectForCaller(ctx context.Context, tx pgx.Tx, p crmcontra
 }
 
 // withCompanies fills a single project's company list from the edges, and
-// derives organization_id from it: the customer edge is what that field has
+// derives company_id from it: the customer edge is what that field has
 // always meant, and deriving it here is what keeps the two from disagreeing.
 //
 // Only the single-project reads carry the list. A list page would need one more
@@ -69,17 +69,17 @@ func fillCompanies(
 	var customer *openapi_types.UUID
 	for _, one := range on {
 		listed = append(listed, crmcontracts.ProjectCompany{
-			OrganizationId: openapi_types.UUID(one.OrganizationID.UUID),
-			DisplayName:    one.DisplayName,
-			Role:           one.Role,
+			CompanyId:   openapi_types.UUID(one.CompanyID.UUID),
+			DisplayName: one.DisplayName,
+			Role:        one.Role,
 		})
 		if customer == nil && one.Role == CompanyRoleCustomer {
-			id := openapi_types.UUID(one.OrganizationID.UUID)
+			id := openapi_types.UUID(one.CompanyID.UUID)
 			customer = &id
 		}
 	}
-	p.Organizations = &listed
-	p.OrganizationId = customer
+	p.Companies = &listed
+	p.CompanyId = customer
 	return p, nil
 }
 
@@ -95,26 +95,26 @@ func maskProjects(ctx context.Context, tx pgx.Tx, projects []crmcontracts.Projec
 		func(p *crmcontracts.Project, may bool) { p.Writable = &may }); err != nil {
 		return err
 	}
-	orgIDs := make([]ids.UUID, 0, len(projects))
+	companyIDs := make([]ids.UUID, 0, len(projects))
 	for _, p := range projects {
-		if p.OrganizationId != nil {
-			orgIDs = append(orgIDs, ids.UUID(*p.OrganizationId))
+		if p.CompanyId != nil {
+			companyIDs = append(companyIDs, ids.UUID(*p.CompanyId))
 		}
 	}
 	// VisibleSubset answers an empty list without a round trip, and it checks
-	// the organization object grant as well as the row scope — a seat holding
-	// no `organization.read` learns no company id from a project either.
-	visible, err := auth.VisibleSubset(ctx, tx, "organization", orgIDs)
+	// the company object grant as well as the row scope — a seat holding
+	// no `company.read` learns no company id from a project either.
+	visible, err := auth.VisibleSubset(ctx, tx, "company", companyIDs)
 	if err != nil {
 		return err
 	}
 	for i := range projects {
-		anchor := projects[i].OrganizationId
+		anchor := projects[i].CompanyId
 		if anchor == nil || visible[ids.UUID(*anchor)] {
 			continue
 		}
-		projects[i].OrganizationId = nil
-		named := []string{filterOrganizationIDOnProject}
+		projects[i].CompanyId = nil
+		named := []string{filterCompanyIDOnProject}
 		projects[i].MaskedFields = &named
 	}
 	return nil

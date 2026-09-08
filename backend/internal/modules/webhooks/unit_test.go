@@ -259,7 +259,7 @@ func TestEntityVisibleToClassification(t *testing.T) {
 		// collides with a row-scoped entity name — caught before any probe.
 		{"mirror.conflict over deal object_class", "mirror.conflict", "deal", false},
 		{"mirror.budget_degraded over person object_class", "mirror.budget_degraded", "person", false},
-		{"mirror.deleted over organization object_class", "mirror.deleted", "organization", false},
+		{"mirror.deleted over company object_class", "mirror.deleted", "company", false},
 		{"mirror.write_rejected over lead object_class", "mirror.write_rejected", "lead", false},
 		// retention telemetry subjects are deferred by ENTITY.
 		{"retention.applied over ai_call", "retention.applied", "ai_call", false},
@@ -313,7 +313,7 @@ func TestRowScopedSubjectsRouteToProbes(t *testing.T) {
 	if _, deferred := deferredDeliveryEvents["retention.applied"]; deferred {
 		t.Error("retention.applied must NOT be event-deferred — its person/lead/deal/activity subjects are row-scope probed")
 	}
-	for _, entity := range []string{"person", "organization", "deal", "lead", "activity", "voice_profile", "signal", "offer", "approval"} {
+	for _, entity := range []string{"person", "company", "deal", "lead", "activity", "voice_profile", "signal", "offer", "approval"} {
 		if _, ws := workspaceLevelEntities[entity]; ws {
 			t.Errorf("row-scoped subject %q must not be in workspaceLevelEntities (would fan out to everyone)", entity)
 		}

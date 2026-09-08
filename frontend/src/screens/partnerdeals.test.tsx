@@ -37,7 +37,7 @@ function stubDeals(deals: unknown[]) {
     "fetch",
     vi.fn(async (request: Request) => {
       urls.push(request.url);
-      const body = request.url.includes("/organizations/")
+      const body = request.url.includes("/companies/")
         ? { id: "cust-1", display_name: "Northgate GmbH" }
         : { data: deals, page: { has_more: false } };
       return new Response(JSON.stringify(body), {
@@ -52,8 +52,8 @@ function stubDeals(deals: unknown[]) {
 const sourced = {
   id: "d-1",
   name: "Northgate rollout",
-  organization_id: "cust-1",
-  partner_org_id: "o-1",
+  company_id: "cust-1",
+  partner_company_id: "o-1",
   partner_attribution: "sourced",
   amount_minor: 4800000,
   currency: "EUR",
@@ -69,11 +69,11 @@ describe("the deals a partner brought", () => {
   it("reads only the deals attributed to this partner", async () => {
     const urls = stubDeals([sourced]);
 
-    render(<PartnerDeals organizationId="o-1" />);
+    render(<PartnerDeals companyId="o-1" />);
     await screen.findByTestId("partner-deals");
 
     const listed = urls.find((url) => url.includes("/deals?"));
-    expect(new URL(listed ?? "").searchParams.get("partner_org_id")).toBe(
+    expect(new URL(listed ?? "").searchParams.get("partner_company_id")).toBe(
       "o-1",
     );
   });
@@ -84,7 +84,7 @@ describe("the deals a partner brought", () => {
   it("names the customer the deal was brought for, and links to it", async () => {
     stubDeals([sourced]);
 
-    render(<PartnerDeals organizationId="o-1" />);
+    render(<PartnerDeals companyId="o-1" />);
     const panel = await screen.findByTestId("partner-deals");
 
     // The design system routes with a button, not an anchor.
@@ -97,7 +97,7 @@ describe("the deals a partner brought", () => {
   });
 
   // The customer is the column this panel exists for, and a withheld one is the
-  // reading it could get most wrong: the server sends `organization_id: null`
+  // reading it could get most wrong: the server sends `company_id: null`
   // with the field named in `masked_fields`, and EntityRef draws any null id as
   // an em dash. So a customer this reader may not see used to be spelled exactly
   // like a deal nobody had linked — on a panel where every row means "a partner
@@ -106,12 +106,12 @@ describe("the deals a partner brought", () => {
     stubDeals([
       {
         ...sourced,
-        organization_id: null,
-        masked_fields: ["organization_id"],
+        company_id: null,
+        masked_fields: ["company_id"],
       },
     ]);
 
-    render(<PartnerDeals organizationId="o-1" />);
+    render(<PartnerDeals companyId="o-1" />);
     const panel = await screen.findByTestId("partner-deals");
 
     expect(within(panel).getByLabelText("Masked value")).toBeTruthy();
@@ -121,7 +121,7 @@ describe("the deals a partner brought", () => {
   it("shows the deal value and what the partner's part was", async () => {
     stubDeals([sourced]);
 
-    render(<PartnerDeals organizationId="o-1" />);
+    render(<PartnerDeals companyId="o-1" />);
     const panel = await screen.findByTestId("partner-deals");
     const cells = [...panel.querySelectorAll("tbody tr td")].map(
       (cell) => cell.textContent,
@@ -146,7 +146,7 @@ describe("the deals a partner brought", () => {
       },
     ]);
 
-    render(<PartnerDeals organizationId="o-1" />);
+    render(<PartnerDeals companyId="o-1" />);
     const panel = await screen.findByTestId("partner-deals");
     const rows = [...panel.querySelectorAll("tbody tr")];
 
@@ -167,7 +167,7 @@ describe("the deals a partner brought", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (request: Request) => {
-        if (request.url.includes("/organizations/")) {
+        if (request.url.includes("/companies/")) {
           return new Response(
             JSON.stringify({ id: "cust-1", display_name: "Northgate GmbH" }),
             { status: 200, headers: { "Content-Type": "application/json" } },
@@ -183,7 +183,7 @@ describe("the deals a partner brought", () => {
       }),
     );
 
-    render(<PartnerDeals organizationId="o-1" />);
+    render(<PartnerDeals companyId="o-1" />);
     const panel = await screen.findByTestId("partner-deals");
 
     expect([...panel.querySelectorAll("tbody tr")]).toHaveLength(2);
@@ -193,7 +193,7 @@ describe("the deals a partner brought", () => {
   it("says nothing was brought in rather than showing an empty table", async () => {
     stubDeals([]);
 
-    render(<PartnerDeals organizationId="o-1" />);
+    render(<PartnerDeals companyId="o-1" />);
 
     expect(await screen.findByText("No deals brought in yet")).toBeTruthy();
     expect(screen.queryByTestId("partner-deals")).toBeNull();

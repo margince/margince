@@ -43,7 +43,7 @@ const erasedCommitment = "(erased: the person this named exercised erasure)"
 // weekly plan, in the single erasure transaction.
 //
 // Reachable because weekly_plan_commitment.linked_record_type accepts 'person'
-// alongside deal, lead, organization and project: a rep can commit to an action
+// alongside deal, lead, company and project: a rep can commit to an action
 // about a contact and type a free-text label, a help request and a manager
 // response about them. Nothing else in this cascade can see those rows — the
 // table carries no person FK for a schema cascade to walk, its link is

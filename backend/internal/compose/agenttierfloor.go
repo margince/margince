@@ -33,10 +33,10 @@ type toolRecordType struct{ tool, recordType string }
 // ACTUALLY PERFORMS, per record type.
 //
 // NOT the strictest tier across every route sharing the pair, which is the shape
-// this started as and was wrong in the direction that matters: `updateOrganization`
-// is auto-execute, while `updateOrganizationFact` — a different effect, writing a
+// this started as and was wrong in the direction that matters: `updateCompany`
+// is auto-execute, while `updateCompanyFact` — a different effect, writing a
 // sidecar row `update_record` cannot reach — is confirm-first. Collapsing them made
-// every ordinary organization patch confirm-first on the tool door while REST kept
+// every ordinary company patch confirm-first on the tool door while REST kept
 // it automatic: the same one-credential-two-answers divergence this file exists to
 // close, pointing the other way.
 //
@@ -71,8 +71,8 @@ var contractTierFloors = func() map[toolRecordType]mcp.RiskTier {
 // for.
 //
 // Canonicality exists to pick ONE operation out of several sharing a pair.
-// `update_record`+`organization` is declared by five routes, and only
-// `PATCH /v1/organizations/{id}` is the field patch the verb performs; the rest
+// `update_record`+`company` is declared by five routes, and only
+// `PATCH /v1/companies/{id}` is the field patch the verb performs; the rest
 // write facts, memberships and profile corrections that verb cannot reach. Where
 // a pair is declared by exactly one route, there is nothing to pick — that route
 // IS the operation, whatever shape it has.
@@ -116,7 +116,7 @@ func ambiguousPairs() map[toolRecordType]bool {
 //
 // Read off the route pattern rather than listed, so a sidecar route added later is
 // excluded by being what it is. The deeper shapes this rejects are real and
-// current: `/v1/organizations/{id}/facts/{factKey}` writes a fact row,
+// current: `/v1/companies/{id}/facts/{factKey}` writes a fact row,
 // `/v1/projects/{id}/stakeholders/{person_id}` a membership, and
 // `/v1/custom-fields/{id}/retire` performs an action — none of them a field patch
 // of the routed record, and none of them reachable through `update_record`.

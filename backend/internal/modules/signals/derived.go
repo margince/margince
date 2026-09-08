@@ -41,10 +41,10 @@ const resolutionResolved = "resolved"
 // will see. The producer owns the RULE; this module owns the row.
 type DerivedSignal struct {
 	Kind string
-	// OrganizationID is the account the finding is attributed to
-	// (resolved_org_id): the company page's signal strip and the account's
+	// CompanyID is the account the finding is attributed to
+	// (resolved_company_id): the company page's signal strip and the account's
 	// signal list read a signal through it, whatever the subject below.
-	OrganizationID ids.UUID
+	CompanyID ids.UUID
 	// ProjectID, when set, makes the PROJECT the signal's subject rather than
 	// the account itself — a finding about one body of work at the company,
 	// which still belongs to the company's page because the project does.
@@ -81,7 +81,7 @@ type DerivedSignal struct {
 }
 
 // visibilityOwner marks a signal its owner alone may read, matching the value
-// person and organization carry for the same reason.
+// person and company carry for the same reason.
 const visibilityOwner = "owner"
 
 // visibilityWorkspace marks a signal every seat that can see its subject may
@@ -141,10 +141,10 @@ func RecordDerived(ctx context.Context, tx pgx.Tx, in DerivedSignal, detectedAt 
 	var signalID ids.UUID
 	err = tx.QueryRow(ctx, `
 		INSERT INTO signal
-		  (kind, entity_type, entity_id, resolved_org_id, summary,
+		  (kind, entity_type, entity_id, resolved_company_id, summary,
 		   evidence, fingerprint, source_channel, resolution_state, severity,
 		   status, detected_at, source, captured_by, visibility, owner_id)
-		VALUES (`+arg(in.Kind)+`, `+arg(subjectType)+`, `+arg(subjectID)+`, `+arg(in.OrganizationID)+`, `+arg(in.Summary)+`,
+		VALUES (`+arg(in.Kind)+`, `+arg(subjectType)+`, `+arg(subjectID)+`, `+arg(in.CompanyID)+`, `+arg(in.Summary)+`,
 		        `+arg(evidence)+`, `+arg(in.Fingerprint)+`, `+arg(channel)+`, 'resolved', `+arg(in.Severity)+`,
 		        'open', `+arg(detectedAt)+`, `+arg(source)+`, `+arg(by)+`, `+arg(visibility)+`, `+arg(nullableOwner(in.PrivateTo))+`)
 		ON CONFLICT DO NOTHING
@@ -199,7 +199,7 @@ func (in DerivedSignal) subject() (string, ids.UUID) {
 	if in.ProjectID != (ids.UUID{}) {
 		return "project", in.ProjectID
 	}
-	return "organization", in.OrganizationID
+	return "company", in.CompanyID
 }
 
 // derivedEvidenceRows renders evidence in the per-claim shape SIG-DDL-1 fixes,
@@ -279,7 +279,7 @@ func AcknowledgeTx(ctx context.Context, tx pgx.Tx, signalID ids.UUID) (bool, err
 	return true, nil
 }
 
-// AcknowledgeOpenForOrgTx marks every open signal of one kind on one account
+// AcknowledgeOpenForCompanyTx marks every open signal of one kind on one account
 // acknowledged, and reports how many moved.
 //
 // An account can carry several signals saying the same thing — three
@@ -299,18 +299,18 @@ func AcknowledgeTx(ctx context.Context, tx pgx.Tx, signalID ids.UUID) (bool, err
 // have opened themselves are settled.
 //
 // The two are not the same question, and the account is not the answer to the
-// second. A signal is matched here by resolved_org_id, while signal row scope
-// is inherited from its SUBJECT (auth.SignalScopeClause: person, organization
+// second. A signal is matched here by resolved_company_id, while signal row scope
+// is inherited from its SUBJECT (auth.SignalScopeClause: person, company
 // or deal). Those can differ — a signal resolved to this account whose subject
 // is a deal the decider may not see — so seeing the account is not seeing
 // every signal on it, and a bulk settle keyed on the account alone would
 // mutate rows outside the decider's scope.
-func AcknowledgeOpenForOrgTx(
-	ctx context.Context, decider context.Context, tx pgx.Tx, orgID ids.UUID, kind string,
+func AcknowledgeOpenForCompanyTx(
+	ctx context.Context, decider context.Context, tx pgx.Tx, companyID ids.UUID, kind string,
 ) (int, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	orgPos, kindPos := arg(orgID), arg(kind)
+	companyPos, kindPos := arg(companyID), arg(kind)
 	scope, err := auth.SignalScopeClause(decider, "signal", arg)
 	if err != nil {
 		return 0, err
@@ -321,10 +321,10 @@ func AcknowledgeOpenForOrgTx(
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT id FROM signal
-		 WHERE resolved_org_id = $%d AND kind = $%d
+		 WHERE resolved_company_id = $%d AND kind = $%d
 		   AND status = 'open' AND archived_at IS NULL
 		   AND %s
-		 ORDER BY detected_at`, orgPos, kindPos, scope), args...)
+		 ORDER BY detected_at`, companyPos, kindPos, scope), args...)
 	if err != nil {
 		return 0, fmt.Errorf("list the account's open signals: %w", err)
 	}

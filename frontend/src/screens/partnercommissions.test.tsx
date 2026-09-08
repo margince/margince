@@ -86,7 +86,7 @@ function stubCommissions(entries: unknown[], mayDecide = true) {
 const accrued: CommissionEntry = {
   id: "c-1",
   deal_id: "d-1",
-  partner_org_id: "o-1",
+  partner_company_id: "o-1",
   status: "accrued",
   attribution_at_accrual: "sourced",
   margin_tier_at_accrual: "tier2_20",
@@ -104,10 +104,10 @@ describe("the commission panel", () => {
   it("reads only this partner's entries", async () => {
     const urls = stubCommissions([accrued]);
 
-    render(<PartnerCommissions organizationId="o-1" />);
+    render(<PartnerCommissions companyId="o-1" />);
     await screen.findByTestId("commission-ledger");
 
-    expect(new URL(urls[0] ?? "").searchParams.get("partner_org_id")).toBe(
+    expect(new URL(urls[0] ?? "").searchParams.get("partner_company_id")).toBe(
       "o-1",
     );
   });
@@ -115,7 +115,7 @@ describe("the commission panel", () => {
   it("shows what was earned, on what, and at which rate", async () => {
     stubCommissions([accrued]);
 
-    render(<PartnerCommissions organizationId="o-1" />);
+    render(<PartnerCommissions companyId="o-1" />);
     const ledger = await screen.findByTestId("commission-ledger");
     const cells = [...ledger.querySelectorAll("tbody tr td")].map(
       (c) => c.textContent,
@@ -149,7 +149,7 @@ describe("the commission panel", () => {
       }),
     );
 
-    render(<PartnerCommissions organizationId="o-1" />);
+    render(<PartnerCommissions companyId="o-1" />);
     const ledger = await screen.findByTestId("commission-ledger");
 
     // A cross-record reference is an anchor, so the deal opens the ways a link
@@ -174,7 +174,7 @@ describe("the commission panel", () => {
       },
     ]);
 
-    render(<PartnerCommissions organizationId="o-1" />);
+    render(<PartnerCommissions companyId="o-1" />);
     const ledger = await screen.findByTestId("commission-ledger");
     const rows = [...ledger.querySelectorAll("tbody tr")];
 
@@ -204,7 +204,7 @@ describe("the commission panel", () => {
       }),
     );
 
-    render(<PartnerCommissions organizationId="o-1" />);
+    render(<PartnerCommissions companyId="o-1" />);
     const ledger = await screen.findByTestId("commission-ledger");
     const rows = [...ledger.querySelectorAll("tbody tr")];
 
@@ -215,7 +215,7 @@ describe("the commission panel", () => {
   it("says nothing is earned rather than showing an empty table", async () => {
     stubCommissions([]);
 
-    render(<PartnerCommissions organizationId="o-1" />);
+    render(<PartnerCommissions companyId="o-1" />);
 
     expect(await screen.findByText("Nothing earned yet")).toBeTruthy();
     expect(screen.queryByTestId("commission-ledger")).toBeNull();
@@ -265,7 +265,7 @@ describe("deciding a commission entry", () => {
   it("puts the approve control on an accrued row", async () => {
     stubCommissions([accrued]);
 
-    render(<PartnerCommissions organizationId="o-1" />);
+    render(<PartnerCommissions companyId="o-1" />);
     await screen.findByTestId("commission-ledger");
     // The seat snapshot is its own query, so the verbs appear a tick after
     // the rows do.
@@ -280,7 +280,7 @@ describe("deciding a commission entry", () => {
   it("draws no decision control on a reversed row", async () => {
     stubCommissions([{ ...accrued, status: "void" }]);
 
-    render(<PartnerCommissions organizationId="o-1" />);
+    render(<PartnerCommissions companyId="o-1" />);
     await screen.findByTestId("commission-ledger");
 
     expect(screen.queryByTestId("commission-approve")).toBeNull();
@@ -290,7 +290,7 @@ describe("deciding a commission entry", () => {
   it("confirms before it writes — a money decision never fires on one click", async () => {
     const urls = stubCommissions([accrued]);
 
-    render(<PartnerCommissions organizationId="o-1" />);
+    render(<PartnerCommissions companyId="o-1" />);
     await screen.findByTestId("commission-ledger");
     await screen.findByTestId("commission-approve");
     const before = urls.length;
@@ -334,7 +334,7 @@ describe("the outstanding figure", () => {
   it("draws nothing when every entry is settled", async () => {
     stubCommissions([{ ...accrued, status: "paid" }]);
 
-    render(<PartnerCommissions organizationId="o-1" />);
+    render(<PartnerCommissions companyId="o-1" />);
     await screen.findByTestId("commission-ledger");
 
     // A slot reading "0" spends a slot saying there is nothing to say.
@@ -344,7 +344,7 @@ describe("the outstanding figure", () => {
   it("shows what is owed when something is", async () => {
     stubCommissions([accrued]);
 
-    render(<PartnerCommissions organizationId="o-1" />);
+    render(<PartnerCommissions companyId="o-1" />);
     const strip = await screen.findByTestId("commission-outstanding");
 
     expect(strip.textContent).toContain("€200.00");
@@ -359,7 +359,7 @@ describe("a reader who may not decide", () => {
   it("is told the decision is withheld rather than shown controls that 403", async () => {
     stubCommissions([accrued], false);
 
-    render(<PartnerCommissions organizationId="o-1" />);
+    render(<PartnerCommissions companyId="o-1" />);
     await screen.findByTestId("commission-ledger");
     await screen.findByTestId("commission-withheld");
 
@@ -373,7 +373,7 @@ describe("a reader who may not decide", () => {
     // entry's state and not the reader's grant.
     stubCommissions([{ ...accrued, status: "void" }], false);
 
-    render(<PartnerCommissions organizationId="o-1" />);
+    render(<PartnerCommissions companyId="o-1" />);
     await screen.findByTestId("commission-ledger");
 
     expect(screen.queryByTestId("commission-withheld")).toBeNull();

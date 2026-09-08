@@ -30,7 +30,7 @@ import "./company360.css";
 // sent them. Six states, and five of them look identical if you draw only the
 // numbers — which is why the server sends the state at all.
 
-type FinanceSummary = components["schemas"]["OrganizationFinanceSummary"];
+type FinanceSummary = components["schemas"]["CompanyFinanceSummary"];
 type FinanceState = components["schemas"]["FinanceSummaryState"];
 type FinanceInvoice = components["schemas"]["FinanceInvoice"];
 
@@ -91,10 +91,10 @@ export function hasFinance(lifecycle?: string): boolean {
 }
 
 export function CompanyFinanceCard({
-  orgId,
+  companyId,
   lifecycle,
 }: Readonly<{
-  orgId: string;
+  companyId: string;
   // The account's lifecycle. A target, a prospect or an opportunity has never
   // been invoiced, so the card is ABSENT for them rather than empty (FIN-AC-3)
   // — an empty finance card on a company we have never billed is a question
@@ -104,7 +104,7 @@ export function CompanyFinanceCard({
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
-  const query = useFinanceSummary(orgId);
+  const query = useFinanceSummary(companyId);
 
   if (!hasFinance(lifecycle)) {
     return null;

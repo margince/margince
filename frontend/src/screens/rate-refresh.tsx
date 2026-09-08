@@ -16,7 +16,7 @@ type RefreshPath =
 // Asking the product to go and re-read a price sheet from its sources.
 //
 // Its own module because TWO screens offer it — the currency sheet on the
-// organization page and the model sheet beside the lanes it prices — and a
+// company page and the model sheet beside the lanes it prices — and a
 // screen must not reach into another screen for a control. It is not a
 // design-system primitive either: it owns a mutation, an endpoint and its own
 // copy, and the design system's rule is that no copy lives in a primitive. What

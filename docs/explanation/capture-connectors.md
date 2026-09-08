@@ -23,7 +23,7 @@ idempotency — lives behind the **one** Sink, so it happens in exactly one plac
 ```text
 provider record ──▶ connector.Normalize ──▶ Sink.Upsert  (ONE transaction)
                     (pure mapping, no I/O)     ├─ raw_capture    the re-parseable original
-                                               ├─ domain row     person / organization / activity
+                                               ├─ domain row     person / company / activity
                                                ├─ audit_log      stamped: connector principal
                                                └─ event_outbox   the domain event
 
@@ -106,10 +106,10 @@ One pipeline concern runs *inside* the Sink, before anything is written:
   dedupe chokepoint**: an exact match reuses, a fuzzy match creates-and-records for the review queue. An
   erased address stays dead (A13).
 
-  The **company** is not created here. Capture used to derive an organization from every non-consumer
+  The **company** is not created here. Capture used to derive a company from every non-consumer
   mail domain, which manufactured companies named after people (`sebastian@kestner.example` became
-  "Kestner"). It now records an open question in `organization_domain_disposition` and a `domain_triage`
-  site read answers it: a `company` verdict creates the organization from what the site states, and a
+  "Kestner"). It now records an open question in `company_domain_disposition` and a `domain_triage`
+  site read answers it: a `company` verdict creates the company from what the site states, and a
   `personal` / `provider` verdict refuses one for good. Consumer mail is answered by its own domain and
   asks nothing — the shipped baseline plus the workspace's own `capture_freemail_domain` list.
   The `ThreadKey` (Gmail `threadId` / Graph `conversationId` / the RFC822 `References` root) is the
@@ -446,7 +446,7 @@ The pipeline is live; these were scoped out, not missed:
 | Backfill + digest HTTP surface | `internal/compose/backfilltransport.go` |
 | Gmail push webhook (token + OIDC) | `internal/compose/gmailpush.go`, `capture/push.go` |
 | Background jobs (dispatcher, sync, backfill, watch renewal, digest) | `internal/compose/jobs.go`, `capturejobs.go`; `backend/cmd/worker/main.go` |
-| The tables | `raw_capture, capture_connection, capture_sync_state, capture_backfill, workspace_email_domain, capture_digest, capture_freemail_domain, capture_pending_counterparty, capture_auto_enrich_state` (+ people's `organization_domain_disposition`) |
+| The tables | `raw_capture, capture_connection, capture_sync_state, capture_backfill, workspace_email_domain, capture_digest, capture_freemail_domain, capture_pending_counterparty, capture_auto_enrich_state` (+ people's `company_domain_disposition`) |
 | The REST contract | `backend/api/crm.yaml` (`/connectors*`, `/capture/settings`, `/capture/consumer-mail-domains`, `/digest`) |
 | The connect UI (Settings + onboarding) | `frontend/src/screens/connectors.tsx`, `onboarding-connect-panels.tsx`, `onboarding-conversation/connect-act.tsx`, `backfill.tsx` |
 

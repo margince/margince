@@ -238,9 +238,9 @@ function RoutingForm({
     // An installation that binds nothing needs a FIRST binding, and for a long
     // time this said only that a deployment declares one under
     // `seeds.ai_routing`. True of a deployment, false for everybody else: the
-    // seed is consumed once, at organization creation, so an installation that
+    // seed is consumed once, at company creation, so an installation that
     // ALREADY EXISTS can never take one. The desktop bundles make it concrete —
-    // they ship a database, so their organization was created on the build
+    // they ship a database, so their company was created on the build
     // machine, and their recipient met this callout with no way forward but
     // curl or deleting the demo data they were given.
     //

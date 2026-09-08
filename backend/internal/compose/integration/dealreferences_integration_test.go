@@ -6,7 +6,7 @@
 package integration
 
 // A deal is customer identity: every seat of the workspace reads every deal.
-// The records it POINTS AT are not — an organization can be capture-private to
+// The records it POINTS AT are not — a company can be capture-private to
 // the colleague who captured it, and a project keeps its own own/team scope. So
 // the deal's references are withheld from a reader who could not open them, and
 // named in masked_fields, exactly as the write path already refuses to SET a
@@ -21,14 +21,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// dealReferenceFixture is one deal pointing at a hidden organization pair and
+// dealReferenceFixture is one deal pointing at a hidden company pair and
 // one pointing at an out-of-scope project, both linked through the real writer.
 type dealReferenceFixture struct {
-	hiddenRefs ids.DealID
-	hiddenProj ids.DealID
-	openOrg    ids.UUID
-	privateOrg ids.UUID
-	wonStage   ids.StageID
+	hiddenRefs     ids.DealID
+	hiddenProj     ids.DealID
+	openCompany    ids.UUID
+	privateCompany ids.UUID
+	wonStage       ids.StageID
 }
 
 func seedDealReferenceFixture(t *testing.T, e *Env) dealReferenceFixture {
@@ -39,36 +39,36 @@ func seedDealReferenceFixture(t *testing.T, e *Env) dealReferenceFixture {
 	// Seeded workspace-visible so the admin's link write passes its own
 	// EnsureLinkTarget gate; capture privacy lands afterwards, which is the
 	// order a connector-captured contact reaches this state in anyway.
-	privateOrg := e.SeedOrg(t, "Meridian Labs", &e.Rep3)
-	partnerOrg := e.SeedPartnerOrg(t, "Northgate Partners", nil, &e.Rep3)
-	openOrg := e.SeedOrg(t, "Kestrel Foods", nil)
+	privateCompany := e.SeedCompany(t, "Meridian Labs", &e.Rep3)
+	partnerCompany := e.SeedPartnerCompany(t, "Northgate Partners", nil, &e.Rep3)
+	openCompany := e.SeedCompany(t, "Kestrel Foods", nil)
 
 	hiddenRefs := ids.From[ids.DealKind](e.SeedDeal(t, "Meridian renewal", pipeline, open, &e.Rep1))
-	privateOrgID, partnerOrgID := orgIDOf(privateOrg), orgIDOf(partnerOrg)
+	privateCompanyID, partnerCompanyID := companyIDOf(privateCompany), companyIDOf(partnerCompany)
 	if _, err := e.Deals.UpdateDeal(admin, hiddenRefs, deals.UpdateDealInput{
-		OrganizationID:        &privateOrgID,
-		PartnerOrganizationID: &partnerOrgID,
+		CompanyID:        &privateCompanyID,
+		PartnerCompanyID: &partnerCompanyID,
 	}); err != nil {
-		t.Fatalf("linking the deal to its organizations: %v", err)
+		t.Fatalf("linking the deal to its companies: %v", err)
 	}
-	e.MakeCapturePrivate(t, "organization", privateOrg, e.Rep3)
-	e.MakeCapturePrivate(t, "organization", partnerOrg, e.Rep3)
+	e.MakeCapturePrivate(t, "company", privateCompany, e.Rep3)
+	e.MakeCapturePrivate(t, "company", partnerCompany, e.Rep3)
 
 	// The project is Team2's; a deal and its project must name the same
-	// company, so the anchor org stays workspace-visible and only the project
+	// company, so the anchor company stays workspace-visible and only the project
 	// is out of Rep1's reach.
-	project := seedProject(admin, t, e, "Kestrel rollout", openOrg, &e.Rep3)
+	project := seedProject(admin, t, e, "Kestrel rollout", openCompany, &e.Rep3)
 	hiddenProj := ids.From[ids.DealKind](e.SeedDeal(t, "Kestrel expansion", pipeline, open, &e.Rep1))
-	openOrgID := orgIDOf(openOrg)
+	openCompanyID := companyIDOf(openCompany)
 	if _, err := e.Deals.UpdateDeal(admin, hiddenProj, deals.UpdateDealInput{
-		OrganizationID: &openOrgID,
-		ProjectID:      &project.ID,
+		CompanyID: &openCompanyID,
+		ProjectID: &project.ID,
 	}); err != nil {
 		t.Fatalf("linking the deal to its project: %v", err)
 	}
 	return dealReferenceFixture{
 		hiddenRefs: hiddenRefs, hiddenProj: hiddenProj,
-		openOrg: openOrg, privateOrg: privateOrg, wonStage: won,
+		openCompany: openCompany, privateCompany: privateCompany, wonStage: won,
 	}
 }
 
@@ -77,18 +77,18 @@ func TestADealDoesNotNameRecordsItsReaderCannotRead(t *testing.T) {
 	fx := seedDealReferenceFixture(t, e)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms)
 
-	// The reader can open neither organization, so neither id is handed back.
+	// The reader can open neither company, so neither id is handed back.
 	got, err := e.Deals.GetDeal(rep, fx.hiddenRefs, 0)
 	if err != nil {
-		t.Fatalf("a rep reading a deal whose organizations are private: %v", err)
+		t.Fatalf("a rep reading a deal whose companies are private: %v", err)
 	}
-	if got.OrganizationId != nil {
-		t.Errorf("organization_id = %v, want withheld: it names a capture-private organization the reader cannot open", got.OrganizationId)
+	if got.CompanyId != nil {
+		t.Errorf("company_id = %v, want withheld: it names a capture-private company the reader cannot open", got.CompanyId)
 	}
-	if got.PartnerOrgId != nil {
-		t.Errorf("partner_org_id = %v, want withheld", got.PartnerOrgId)
+	if got.PartnerCompanyId != nil {
+		t.Errorf("partner_company_id = %v, want withheld", got.PartnerCompanyId)
 	}
-	assertMaskNames(t, got, "organization_id", "partner_org_id")
+	assertMaskNames(t, got, "company_id", "partner_company_id")
 
 	// A project is read by every seat HOLDING THE OBJECT GRANT, and this rep
 	// holds no project grant at all (AccountRepPerms). Row scope is not the
@@ -103,8 +103,8 @@ func TestADealDoesNotNameRecordsItsReaderCannotRead(t *testing.T) {
 		t.Errorf("project_id = %v, want withheld: this rep holds no project.read grant",
 			proj.ProjectId)
 	}
-	if proj.OrganizationId == nil || ids.UUID(*proj.OrganizationId) != fx.openOrg {
-		t.Errorf("organization_id = %v, want the workspace-visible company the reader CAN open", proj.OrganizationId)
+	if proj.CompanyId == nil || ids.UUID(*proj.CompanyId) != fx.openCompany {
+		t.Errorf("company_id = %v, want the workspace-visible company the reader CAN open", proj.CompanyId)
 	}
 	assertMaskNames(t, proj, "project_id")
 
@@ -130,8 +130,8 @@ func TestADealDoesNotNameRecordsItsReaderCannotRead(t *testing.T) {
 
 	// A reader who can see all three still receives all three.
 	full, err := e.Deals.GetDeal(e.Admin(), fx.hiddenProj, 0)
-	if err != nil || full.ProjectId == nil || full.OrganizationId == nil || full.MaskedFields != nil {
-		t.Errorf("the admin's read = org %v project %v masked %v (%v), want every reference", full.OrganizationId, full.ProjectId, full.MaskedFields, err)
+	if err != nil || full.ProjectId == nil || full.CompanyId == nil || full.MaskedFields != nil {
+		t.Errorf("the admin's read = company %v project %v masked %v (%v), want every reference", full.CompanyId, full.ProjectId, full.MaskedFields, err)
 	}
 }
 
@@ -152,10 +152,10 @@ func TestTheDealListWithholdsTheSameReferencesAsTheGet(t *testing.T) {
 		seen[ids.UUID(d.Id)] = true
 		switch ids.UUID(d.Id) {
 		case fx.hiddenRefs.UUID:
-			if d.OrganizationId != nil || d.PartnerOrgId != nil {
-				t.Errorf("the list handed out a private organization: org %v partner %v", d.OrganizationId, d.PartnerOrgId)
+			if d.CompanyId != nil || d.PartnerCompanyId != nil {
+				t.Errorf("the list handed out a private company: company %v partner %v", d.CompanyId, d.PartnerCompanyId)
 			}
-			assertMaskNames(t, d, "organization_id", "partner_org_id")
+			assertMaskNames(t, d, "company_id", "partner_company_id")
 		case fx.hiddenProj.UUID:
 			// This rep holds no project.read grant, so the page withholds the
 			// id for the same reason the single-row read does — the list is
@@ -203,7 +203,7 @@ func assertMaskNames(t *testing.T, d crmcontracts.Deal, want ...string) {
 // second door onto the id the GET just refused — and the "it lifts on write
 // authority" argument the amount mask makes is not available here: being
 // allowed to change the DEAL says nothing about being allowed to read the
-// ORGANIZATION it names.
+// COMPANY it names.
 //
 // A table over the entry points rather than one case each, so a sixth deal
 // mutation is a compile-time addition to this list, not a silent omission.
@@ -214,7 +214,7 @@ func TestEveryDealMutationResponseWithholdsTheSameReferences(t *testing.T) {
 	perms := AccountRepPerms
 	perms.Objects = map[string]principal.ObjectGrant{
 		"deal":                  {Create: true, Read: true, Update: true, Delete: true},
-		"organization":          {Read: true},
+		"company":               {Read: true},
 		"pipeline":              {Read: true},
 		"installation_settings": {Read: true},
 	}
@@ -247,11 +247,11 @@ func TestEveryDealMutationResponseWithholdsTheSameReferences(t *testing.T) {
 			if err != nil {
 				t.Fatalf("%s: %v", tc.name, err)
 			}
-			if got.OrganizationId != nil || got.PartnerOrgId != nil {
-				t.Errorf("%s handed back org %v partner %v, want both withheld",
-					tc.name, got.OrganizationId, got.PartnerOrgId)
+			if got.CompanyId != nil || got.PartnerCompanyId != nil {
+				t.Errorf("%s handed back company %v partner %v, want both withheld",
+					tc.name, got.CompanyId, got.PartnerCompanyId)
 			}
-			assertMaskNames(t, got, "organization_id", "partner_org_id")
+			assertMaskNames(t, got, "company_id", "partner_company_id")
 		})
 	}
 }
@@ -259,16 +259,16 @@ func TestEveryDealMutationResponseWithholdsTheSameReferences(t *testing.T) {
 // Filtering by an id is asking whether it is there, so the list must not
 // confirm through its filter what its projection withholds. The answer is the
 // empty page a company with no deals gives — never a 404, which would itself
-// say the organization is real.
+// say the company is real.
 func TestFilteringByAnUnreadableReferenceAnswersTheEmptyPage(t *testing.T) {
 	e := Setup(t)
 	fx := seedDealReferenceFixture(t, e)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms)
 
-	hiddenOrg := ids.From[ids.OrganizationKind](fx.privateOrg)
-	page, _, err := e.Deals.ListDeals(rep, deals.ListDealsInput{OrganizationID: &hiddenOrg})
+	hiddenCompany := ids.From[ids.CompanyKind](fx.privateCompany)
+	page, _, err := e.Deals.ListDeals(rep, deals.ListDealsInput{CompanyID: &hiddenCompany})
 	if err != nil {
-		t.Fatalf("filtering by an organization the caller cannot read: %v", err)
+		t.Fatalf("filtering by a company the caller cannot read: %v", err)
 	}
 	if len(page) != 0 {
 		t.Errorf("the filter returned %d deal(s), want none — an unnarrowed filter confirms the binding the read withholds", len(page))
@@ -276,8 +276,8 @@ func TestFilteringByAnUnreadableReferenceAnswersTheEmptyPage(t *testing.T) {
 
 	// The same filter for a company the reader CAN open still works, or the
 	// fix would have closed the oracle by breaking the feature.
-	openOrg := ids.From[ids.OrganizationKind](fx.openOrg)
-	visible, _, err := e.Deals.ListDeals(rep, deals.ListDealsInput{OrganizationID: &openOrg})
+	openCompany := ids.From[ids.CompanyKind](fx.openCompany)
+	visible, _, err := e.Deals.ListDeals(rep, deals.ListDealsInput{CompanyID: &openCompany})
 	if err != nil {
 		t.Fatal(err)
 	}

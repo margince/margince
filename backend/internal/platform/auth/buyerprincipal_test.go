@@ -24,7 +24,7 @@ import (
 
 // buyerObjects are the objects a buyer would reach for if a gate let it: the
 // deal its room hangs off, and the records that deal names.
-var buyerObjects = []string{"deal", "person", "organization", "activity"}
+var buyerObjects = []string{"deal", "person", "company", "activity"}
 
 // overreachingBuyer is a buyer principal carrying authority no real one is ever
 // minted with. Nothing constructs this in production — it exists so the tests
@@ -95,9 +95,9 @@ func TestHumanOnlyOperationsRefuseABuyerAndStillAdmitAHuman(t *testing.T) {
 func TestBuyerReadsNoIdentityTableInFull(t *testing.T) {
 	// readsEveryRow answers "does this read carry no owner predicate", and its
 	// identity-table arm is true for ANY actor — which for a buyer would mean
-	// every person, organization, lead, deal and project in the installation.
+	// every person, company, lead, deal and project in the installation.
 	// The kind is answered before the table is.
-	for _, table := range []string{"person", "organization", "lead", "deal", "project"} {
+	for _, table := range []string{"person", "company", "lead", "deal", "project"} {
 		if readsEveryRow(overreachingBuyer(), table) {
 			t.Errorf("readsEveryRow(buyer, %s) = true, want false", table)
 		}

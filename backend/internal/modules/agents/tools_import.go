@@ -90,15 +90,15 @@ func RegisterImportTools(r *Registry, imports Imports) {
 // `lead` and `person` are BOTH here and the caller picks per run: a
 // machine-sourced list lands as leads for a human to promote, a file the
 // business already knows lands as people. Neither skips the identity ladder.
-var importObjectEnum = []string{importObjectOrganization, importObjectLead, importObjectPerson}
+var importObjectEnum = []string{importObjectCompany, importObjectLead, importObjectPerson}
 
 // The three things a file's rows may be, spelled once. They mirror the
 // contract's ImportObject enum, and the tool's schema is built from them so
 // the two cannot drift.
 const (
-	importObjectOrganization = "organization"
-	importObjectLead         = "lead"
-	importObjectPerson       = "person"
+	importObjectCompany = "company"
+	importObjectLead    = "lead"
+	importObjectPerson  = "person"
 )
 
 // maxImportCSVBytes caps the pasted file.

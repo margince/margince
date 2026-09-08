@@ -3,7 +3,7 @@
 
 package people
 
-// Writing an accepted read-back value onto the ORGANIZATION column behind it.
+// Writing an accepted read-back value onto the COMPANY column behind it.
 //
 // The evidence row lands for every accepted field; a column moves only where
 // one exists and only under the claim rules below, which is the whole reason
@@ -18,11 +18,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func writeOrgColumn(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, column, value string, overwrite bool) (bool, error) {
+func writeCompanyColumn(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, column, value string, overwrite bool) (bool, error) {
 	if !overwrite {
-		return applyUnclaimedOrgColumn(ctx, tx, orgID, column, value)
+		return applyUnclaimedCompanyColumn(ctx, tx, companyID, column, value)
 	}
-	write, ok := orgColumnWrites[column]
+	write, ok := companyColumnWrites[column]
 	if !ok {
 		return false, fmt.Errorf("people: %q is not a coldstart-writable column", column)
 	}
@@ -31,28 +31,28 @@ func writeOrgColumn(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, co
 	// be filled again by any later read — the record would look answered while
 	// holding nothing, and no enrichment would ever correct it. The human
 	// company form clears to NULL for the same reason (setCompanyColumn).
-	tag, err := tx.Exec(ctx, write.statementFor(replaceStanding), orgID, emptyToNil(value))
+	tag, err := tx.Exec(ctx, write.statementFor(replaceStanding), companyID, emptyToNil(value))
 	if err != nil {
 		return false, fmt.Errorf("replace %s: %w", column, err)
 	}
 	return tag.RowsAffected() == 1, nil
 }
 
-// applyUnclaimedOrgColumn writes a read-back value onto a column nobody has
+// applyUnclaimedCompanyColumn writes a read-back value onto a column nobody has
 // claimed. For legal_name, industry and address that means the column is still
 // empty, which each fill statement enforces. The description is the one column
 // an automated read may also REPLACE, because the site is the authority on what
 // a company sells — so for that one "unclaimed" means no person has authored it,
 // the check is below rather than in the statement, and the statement it then
 // sends is the replacing one.
-func applyUnclaimedOrgColumn(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, column, value string) (bool, error) {
-	write, ok := orgColumnWrites[column]
+func applyUnclaimedCompanyColumn(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, column, value string) (bool, error) {
+	write, ok := companyColumnWrites[column]
 	if !ok {
 		return false, fmt.Errorf("people: %q is not a coldstart-fillable column", column)
 	}
 	authority := fillUnclaimed
 	if column == columnDescription {
-		held, err := descriptionHeldByHuman(ctx, tx, orgID)
+		held, err := descriptionHeldByHuman(ctx, tx, companyID)
 		if err != nil {
 			return false, err
 		}
@@ -67,18 +67,18 @@ func applyUnclaimedOrgColumn(ctx context.Context, tx pgx.Tx, orgID ids.Organizat
 	if value == "" {
 		return false, nil
 	}
-	tag, err := tx.Exec(ctx, write.statementFor(authority), orgID, value)
+	tag, err := tx.Exec(ctx, write.statementFor(authority), companyID, value)
 	if err != nil {
 		return false, fmt.Errorf("fill %s: %w", column, err)
 	}
 	return tag.RowsAffected() == 1, nil
 }
 
-// carriesOrgName reports whether this apply could write a name column, and so
-// whether it owes the organization-name lock.
+// carriesCompanyName reports whether this apply could write a name column, and so
+// whether it owes the company-name lock.
 //
 // Presence of the field is the test, because that is what the loop in
-// applyEvidenceFieldsWithOverwrite acts on: writeOrgColumn's overwrite arm
+// applyEvidenceFieldsWithOverwrite acts on: writeCompanyColumn's overwrite arm
 // matches on IS DISTINCT FROM, so an apply that clears legal_name to "" still
 // writes the row — taking its row lock — and still reaches the re-check, which
 // wants the name lock. Anything narrower than presence lets that apply take the

@@ -45,14 +45,14 @@ import (
 const columnName = "name"
 
 var targetLabelColumns = map[string]string{
-	tablePerson:       "full_name",
-	tableOrganization: "display_name",
-	tableDeal:         columnName,
-	tableLead:         "full_name",
-	tableProject:      columnName,
-	tableList:         columnName,
-	targetProduct:     columnName,
-	targetTag:         columnName,
+	tablePerson:   "full_name",
+	tableCompany:  "display_name",
+	tableDeal:     columnName,
+	tableLead:     "full_name",
+	tableProject:  columnName,
+	tableList:     columnName,
+	targetProduct: columnName,
+	targetTag:     columnName,
 }
 
 // targetLabel reads what the proposal's target is called, at staging time.

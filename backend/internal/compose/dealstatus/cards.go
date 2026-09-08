@@ -157,10 +157,10 @@ func cardFromPayload(payload []byte) (CachedCard, bool) {
 // sentence citing a deal or a person rests on rows the reader already reached —
 // the deal grant is what put this row on their queue — and asking the audience
 // question about a record that has none would refuse every standing.
-func activitiesCitedBy(sentence crmcontracts.OrganizationBriefSentence) []ids.UUID {
+func activitiesCitedBy(sentence crmcontracts.CompanyBriefSentence) []ids.UUID {
 	cited := make([]ids.UUID, 0, len(sentence.Evidence))
 	for _, evidence := range sentence.Evidence {
-		if evidence.EntityType != crmcontracts.OrganizationBriefEvidenceEntityTypeActivity {
+		if evidence.EntityType != crmcontracts.CompanyBriefEvidenceEntityTypeActivity {
 			continue
 		}
 		cited = append(cited, ids.UUID(evidence.EntityId))
@@ -175,13 +175,13 @@ func activitiesCitedBy(sentence crmcontracts.OrganizationBriefSentence) []ids.UU
 // would compose a sentence nobody wrote, in a length the row cannot draw.
 func firstSentence(
 	section crmcontracts.DealStatusCardSection,
-) (crmcontracts.OrganizationBriefSentence, bool) {
+) (crmcontracts.CompanyBriefSentence, bool) {
 	for _, sentence := range section.Sentences {
 		if sentence.Text != "" {
 			return sentence, true
 		}
 	}
-	return crmcontracts.OrganizationBriefSentence{}, false
+	return crmcontracts.CompanyBriefSentence{}, false
 }
 
 // readCachedCards takes the stored cards for these deals, for this reader.

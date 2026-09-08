@@ -10,7 +10,7 @@
 // The two purposes are NOT interchangeable, and each has its own way of being
 // wrong:
 //
-//   useRecordZone() — the organization's own clock, as the installation
+//   useRecordZone() — the company's own clock, as the installation
 //   configured it (`installation.timezone`, served by app/recordzone.tsx). Its
 //   dates belong to the record, not to whoever is looking at it. Following the
 //   reader here MISSTATES the record: a close date, a renewal, an invoice's

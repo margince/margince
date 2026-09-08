@@ -9,7 +9,7 @@ import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { MoneyPane, ThreadFold } from "./glance";
 
-type Organization360 = components["schemas"]["Organization360"];
+type Company360 = components["schemas"]["Company360"];
 type Activity = components["schemas"]["Activity"];
 
 afterEach(cleanup);
@@ -18,7 +18,7 @@ function drawMoney(loading: boolean) {
   return render(
     <LocaleProvider initial="en">
       <MoneyPane
-        organizationId="o-1"
+        companyId="o-1"
         loading={loading}
         readOnly={false}
         onAllDeals={() => undefined}
@@ -85,10 +85,10 @@ describe("the folded thread on the account's 360", () => {
     },
   };
 
-  function threadView(): Organization360 {
+  function threadView(): Company360 {
     return {
       as_of: "2026-08-29T10:00:00Z",
-      organization: {
+      company: {
         id: "o-1",
         name: "Nordwind Logistik",
         display_name: "Nordwind Logistik",

@@ -4,10 +4,10 @@
 package people
 
 // The ONE list page-read for this module's record lists (person,
-// organization): RBAC + row-scope, DM-VOCAB sort validation over core +
+// company): RBAC + row-scope, DM-VOCAB sort validation over core +
 // active cf_ columns, the shared optional-filter chain, keyset
 // pagination with the limit+1 probe, and per-type child attachment.
-// person_list.go / organization_list.go each bind one listPageSpec —
+// person_list.go / company_list.go each bind one listPageSpec —
 // what varies is data (table, vocabulary, scan, attach), not the read.
 
 import (
@@ -123,7 +123,7 @@ func listPage[T any](ctx context.Context, s *Store, sortSpec *string, limitIn *i
 
 // listFilters is the optional-filter set the record lists share; each
 // list's contract input maps onto it, and type-specific extras (e.g. the
-// organization classification) append alongside in the spec's filters.
+// company classification) append alongside in the spec's filters.
 type listFilters struct {
 	IncludeArchived bool
 	OwnerID         *ids.UserID
@@ -239,7 +239,7 @@ func likePrefix(lit string) string {
 // This is deliberately NOT the same question as capturedByKindClause.
 // `captured_by` names who CREATED the row and is never restamped. In the
 // connector path the AI does not create the record, it FILLS one: Gmail capture
-// mints the organization as `connector:gmail`, and then the AI renames it and
+// mints the company as `connector:gmail`, and then the AI renames it and
 // writes its profile. Asking who created it misses exactly the records worth
 // reviewing.
 //
@@ -280,7 +280,7 @@ func aiWrittenClause(want *bool, entity string, arg func(any) int) string {
 		// (entity_type, entity_id) already names one record installation-wide, so
 		// it is the whole bound. The clause carried a tenant leg beside it, which
 		// this list cannot spell any more: it is templated over person,
-		// organization and lead, and ADR-0091 §8 phase D has reached some of
+		// company and lead, and ADR-0091 §8 phase D has reached some of
 		// those and not others.
 		storekit.SQLf(`EXISTS (SELECT 1 FROM audit_log al
 			 WHERE al.entity_type = $%d
@@ -385,14 +385,14 @@ func capturedByKindArg[T ~string](v *T) *string {
 
 // quickFindTerm is what the identifier arm matches on.
 //
-// An organization is identified by its DOMAIN, and the thing a rep has in hand
+// A company is identified by its DOMAIN, and the thing a rep has in hand
 // is usually a person's address at that company. Taking the part after the "@"
 // makes "annabelle@example.com" find the account as readily as "example.com"
 // does, which is what somebody pasting a sender into the company search means.
 // The name arms see the same term; a domain is not a name, so nothing that
 // matched before stops matching.
 func quickFindTerm(q, entity string) string {
-	if entity != entityOrganization {
+	if entity != entityCompany {
 		return q
 	}
 	if _, domain, found := strings.Cut(q, "@"); found && domain != "" {

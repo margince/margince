@@ -82,8 +82,8 @@ func TestTheCompanyViewCasesDeclareTheSitesTheContractDoes(t *testing.T) {
 	if site := (growthFitCases{}).Site(); site.Task != ai.TaskGrowthFit || site.Variant != "growth_fit" {
 		t.Errorf("growth-fit site = %+v, want growth_fit/growth_fit", site)
 	}
-	if site := (orgDossierCases{}).Site(); site.Task != ai.TaskSummarize || site.Variant != "org_dossier" {
-		t.Errorf("dossier site = %+v, want summarize/org_dossier", site)
+	if site := (companyDossierCases{}).Site(); site.Task != ai.TaskSummarize || site.Variant != "company_dossier" {
+		t.Errorf("dossier site = %+v, want summarize/company_dossier", site)
 	}
 }
 
@@ -161,7 +161,7 @@ func TestAReplyProductionWouldDiscardIsReportedAsAnAbstention(t *testing.T) {
 // wording — the whole reason that lane exists is that the same facts read
 // better as prose, and pinning sentences would fail a good dossier.
 func TestTheDossierCaseGradesTheRecordsADescriptionRestsOn(t *testing.T) {
-	prepared, err := (orgDossierCases{}).Prepare(
+	prepared, err := (companyDossierCases{}).Prepare(
 		json.RawMessage(growthFitFixtureJSON), json.RawMessage(`["their_offer"]`))
 	if err != nil {
 		t.Fatalf("prepare: %v", err)
@@ -179,7 +179,7 @@ func TestTheDossierCaseGradesTheRecordsADescriptionRestsOn(t *testing.T) {
 // A dossier that described something else cites nothing of this company, which
 // production shows as the deterministic floor rather than as prose.
 func TestADossierCitingNothingOfThisCompanyAbstains(t *testing.T) {
-	prepared, err := (orgDossierCases{}).Prepare(
+	prepared, err := (companyDossierCases{}).Prepare(
 		json.RawMessage(growthFitFixtureJSON), json.RawMessage(`["their_offer"]`))
 	if err != nil {
 		t.Fatalf("prepare: %v", err)

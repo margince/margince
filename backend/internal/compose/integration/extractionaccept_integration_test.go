@@ -265,8 +265,8 @@ func TestAcceptAttachmentExtractionEditFlipsProvenanceAndCapturedBy(t *testing.T
 func TestAcceptAttachmentExtractionRefusesNonDealAttachment(t *testing.T) {
 	e := Setup(t)
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blobstore.NewMemory())
-	org := e.SeedOrg(t, "Non-Deal Accept Parent", &e.Rep1)
-	att := uploadTestAttachmentForOrg(e.Admin(), t, h, org, "org-notes.pdf", []byte("org bytes"))
+	company := e.SeedCompany(t, "Non-Deal Accept Parent", &e.Rep1)
+	att := uploadTestAttachmentForCompany(e.Admin(), t, h, company, "company-notes.pdf", []byte("company bytes"))
 	reading := seedExtractionReading(e.Admin(), t, e, ids.UUID(att.Id), acceptExtractionFields())
 	engine := compose.NewExtractionAccept(e.Pool)
 

@@ -116,7 +116,7 @@ export function ProfileSidebar({
     },
     {
       // The site under discussion, not a claim it cites — no superscript.
-      labelKey: "org.website",
+      labelKey: "company.website",
       value: hostOf(rootUrl),
       omitWhenAbsent: false,
     },

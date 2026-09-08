@@ -65,9 +65,9 @@ func NewService(
 // catalog opens a connection of its own, and the page holds the only
 // connection its sections have for as long as it runs.
 //
-// The organization catalog is NOT here: reading it takes organization:read,
+// The company catalog is NOT here: reading it takes company:read,
 // and a refusal above the transaction would fail the whole page for a caller
-// who may read the project but not its company. The organization section
+// who may read the project but not its company. The company section
 // reads it itself, so that refusal lands as an omission.
 type catalogs struct {
 	project projects.CustomColumns
@@ -145,7 +145,7 @@ func (a *assembly) sections() error {
 		name crmcontracts.Project360Section
 		read func() error
 	}{
-		{crmcontracts.Project360SectionOrganization, a.readOrganization},
+		{crmcontracts.Project360SectionCompany, a.readCompany},
 		{crmcontracts.Project360SectionPhaseHistory, a.readPhaseHistory},
 		{crmcontracts.Project360SectionDeals, a.readDeals},
 		{crmcontracts.Project360SectionStakeholders, a.readStakeholders},

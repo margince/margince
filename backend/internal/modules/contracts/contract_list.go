@@ -22,7 +22,7 @@ import (
 
 // ListContractsInput selects one account's agreements.
 type ListContractsInput struct {
-	OrganizationID ids.OrganizationID
+	CompanyID ids.CompanyID
 	// Status filters to one asserted status. Nil means every status, which
 	// includes the superseded predecessors that make a renewal chain readable.
 	Status *string
@@ -34,8 +34,8 @@ type ListContractsInput struct {
 	Limit             *int
 }
 
-// ListOrganizationContracts reads one account's agreements, newest term first.
-func (s *Store) ListOrganizationContracts(ctx context.Context, in ListContractsInput) (crmcontracts.ContractListResponse, error) {
+// ListCompanyContracts reads one account's agreements, newest term first.
+func (s *Store) ListCompanyContracts(ctx context.Context, in ListContractsInput) (crmcontracts.ContractListResponse, error) {
 	if err := auth.Require(ctx, contractObject, principal.ActionRead); err != nil {
 		return crmcontracts.ContractListResponse{}, err
 	}
@@ -44,7 +44,7 @@ func (s *Store) ListOrganizationContracts(ctx context.Context, in ListContractsI
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		// Naming the account is a read of it: a caller who cannot see the
 		// company does not learn how many agreements it holds.
-		if err := auth.EnsureLinkTarget(ctx, tx, organizationTable, in.OrganizationID.UUID); err != nil {
+		if err := auth.EnsureLinkTarget(ctx, tx, companyTable, in.CompanyID.UUID); err != nil {
 			return err
 		}
 		var err error
@@ -57,10 +57,10 @@ func (s *Store) ListOrganizationContracts(ctx context.Context, in ListContractsI
 func listContractsTx(ctx context.Context, tx pgx.Tx, in ListContractsInput, asOf time.Time) (crmcontracts.ContractListResponse, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	orgPos := arg(in.OrganizationID)
+	companyPos := arg(in.CompanyID)
 	asOfPos := arg(asOf)
 
-	where := []string{storekit.SQLf("organization_id = $%d", orgPos), "archived_at IS NULL"}
+	where := []string{storekit.SQLf("company_id = $%d", companyPos), "archived_at IS NULL"}
 
 	scope, err := VisibleClause(ctx, "", arg)
 	if err != nil {
@@ -137,7 +137,7 @@ func cursorTime(t *time.Time) time.Time {
 // first, inside a caller-opened transaction — the project page's contracts
 // section. The project itself is the caller's to see before its paper is:
 // naming it is a read of it, the same rule the account list keeps for the
-// organization.
+// company.
 func (s *Store) ListProjectContractsTx(ctx context.Context, tx pgx.Tx, projectID ids.ProjectID, limit *int) (crmcontracts.ContractListResponse, error) {
 	if err := auth.Require(ctx, contractObject, principal.ActionRead); err != nil {
 		return crmcontracts.ContractListResponse{}, err

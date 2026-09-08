@@ -6,13 +6,13 @@ package compose
 // The cold start's second mark. The installation's own company is the one
 // record the chrome draws at two widths — the wide lockup an expanded sidebar
 // has room for, and the square badge a collapsed 56px rail draws — and one
-// picture cannot serve both (people/orglogowrite.go). The chain in sitelogo.go
+// picture cannot serve both (people/companylogowrite.go). The chain in sitelogo.go
 // finds the badge: it prefers the icons a site declares, which are square by
 // construction. This file finds the lockup, from the pictures the page itself
 // calls its logo (webread.Page.Logos), and decides which slot each picture
 // fills.
 //
-// Only the onboarding read runs it. Every other organization is drawn once, as
+// Only the onboarding read runs it. Every other company is drawn once, as
 // a square avatar on a record card, and a wordmark letterboxed into that box
 // would be the illegible row of strokes the badge exists to avoid — so the
 // enrichment read keeps resolving the one square-preferring mark it always has.
@@ -118,7 +118,7 @@ type companyMarks struct {
 // chain needed and leave the company faceless where it used to have a face;
 // run second, a deadline mid-lockup loses only the second picture.
 func resolveCompanyMarks(ctx context.Context, fetch assetFetcher, seedURL string, declared declaredAssets) companyMarks {
-	mark, markAttempts := resolveOrganizationLogo(ctx, fetch, seedURL, declared)
+	mark, markAttempts := resolveCompanyLogo(ctx, fetch, seedURL, declared)
 	lockup, lockupAttempts := resolveLockup(ctx, fetch, declared)
 	return chooseSlots(lockup, lockupAttempts, mark, markAttempts)
 }

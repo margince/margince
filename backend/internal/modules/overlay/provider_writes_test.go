@@ -64,7 +64,7 @@ func TestDecodeCanonicalNilPayloadIsEmptyMap(t *testing.T) {
 
 func TestWriteContractTargetCoversEveryEntity(t *testing.T) {
 	for _, et := range []datasource.EntityType{
-		datasource.EntityPerson, datasource.EntityOrganization, datasource.EntityDeal,
+		datasource.EntityPerson, datasource.EntityCompany, datasource.EntityDeal,
 		datasource.EntityLead, datasource.EntityActivity,
 	} {
 		for _, upd := range []bool{false, true} {
@@ -112,7 +112,7 @@ func TestCompleteWritePatchDealMoneyPair(t *testing.T) {
 // "supported" out of step with the provider's.
 func TestSupportsWriteMatchesTheProviderVerbs(t *testing.T) {
 	mirroredTypes := []datasource.EntityType{
-		datasource.EntityPerson, datasource.EntityOrganization, datasource.EntityDeal,
+		datasource.EntityPerson, datasource.EntityCompany, datasource.EntityDeal,
 		datasource.EntityLead, datasource.EntityActivity,
 	}
 

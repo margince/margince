@@ -40,7 +40,7 @@ import (
 
 // accountCoverageFor runs the reader as one caller.
 func accountCoverageFor(
-	t *testing.T, e *Env, perms principal.Permissions, orgID ids.UUID,
+	t *testing.T, e *Env, perms principal.Permissions, companyID ids.UUID,
 ) network.AccountCoverage {
 	t.Helper()
 	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS),
@@ -51,7 +51,7 @@ func accountCoverageFor(
 	var out network.AccountCoverage
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
-		out, err = network.AccountCoverageFor(ctx, tx, orgID)
+		out, err = network.AccountCoverageFor(ctx, tx, companyID)
 		return err
 	}); err != nil {
 		t.Fatalf("reading account coverage: %v", err)
@@ -101,12 +101,12 @@ func seatOn(t *testing.T, e *Env, person ids.PersonID, deal ids.DealID) {
 // a fact about this reader.
 func TestAnAccountWithHiddenContactsIsUnknownRatherThanSingleThreaded(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "Halden Werke", nil)
-	orgID := ids.From[ids.OrganizationKind](org)
+	company := e.SeedCompany(t, "Halden Werke", nil)
+	companyID := ids.From[ids.CompanyKind](company)
 	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
 	deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
 		Name: "Halden renewal", PipelineID: pipeline, StageID: open,
-		OrganizationID: &orgID, Source: "manual",
+		CompanyID: &companyID, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("creating the deal: %v", err)
@@ -136,7 +136,7 @@ func TestAnAccountWithHiddenContactsIsUnknownRatherThanSingleThreaded(t *testing
 	}
 
 	perms := coverageReaderPerms(true)
-	got := accountCoverageFor(t, e, perms, orgID.UUID)
+	got := accountCoverageFor(t, e, perms, companyID.UUID)
 
 	if len(got.VisibleStakeholders) != 1 {
 		t.Fatalf("the reader sees %d stakeholders, want 1 — the fixture needs exactly one visible "+
@@ -161,12 +161,12 @@ func TestAnAccountWithHiddenContactsIsUnknownRatherThanSingleThreaded(t *testing
 // same green.
 func TestAnAccountWithOneVisibleContactAndNothingHiddenIsSingleThreaded(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "Solo Contact GmbH", nil)
-	orgID := ids.From[ids.OrganizationKind](org)
+	company := e.SeedCompany(t, "Solo Contact GmbH", nil)
+	companyID := ids.From[ids.CompanyKind](company)
 	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
 	deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
 		Name: "Solo renewal", PipelineID: pipeline, StageID: open,
-		OrganizationID: &orgID, Source: "manual",
+		CompanyID: &companyID, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("creating the deal: %v", err)
@@ -174,7 +174,7 @@ func TestAnAccountWithOneVisibleContactAndNothingHiddenIsSingleThreaded(t *testi
 	only := e.SeedPerson(t, "The Only Contact", nil)
 	seatOn(t, e, ids.From[ids.PersonKind](only), ids.From[ids.DealKind](ids.UUID(deal.Id)))
 
-	got := accountCoverageFor(t, e, coverageReaderPerms(true), orgID.UUID)
+	got := accountCoverageFor(t, e, coverageReaderPerms(true), companyID.UUID)
 	if got.CoverageIncomplete {
 		t.Fatal("coverage reads as incomplete; this fixture hides nothing, so the finding below " +
 			"would be reported for the wrong reason")
@@ -190,17 +190,17 @@ func TestAnAccountWithOneVisibleContactAndNothingHiddenIsSingleThreaded(t *testi
 // "one person carries it".
 func TestAnAccountWithNoRecordedContactsSaysSo(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "Untouched AG", nil)
-	orgID := ids.From[ids.OrganizationKind](org)
+	company := e.SeedCompany(t, "Untouched AG", nil)
+	companyID := ids.From[ids.CompanyKind](company)
 	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
 	if _, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
 		Name: "Untouched deal", PipelineID: pipeline, StageID: open,
-		OrganizationID: &orgID, Source: "manual",
+		CompanyID: &companyID, Source: "manual",
 	}); err != nil {
 		t.Fatalf("creating the deal: %v", err)
 	}
 
-	got := accountCoverageFor(t, e, coverageReaderPerms(true), orgID.UUID)
+	got := accountCoverageFor(t, e, coverageReaderPerms(true), companyID.UUID)
 	if got.Threading != network.ThreadingNoContacts {
 		t.Errorf("threading = %q, want %q — an account nobody has recorded a contact on is not "+
 			"an account resting on one relationship", got.Threading, network.ThreadingNoContacts)
@@ -215,12 +215,12 @@ func TestAnAccountWithNoRecordedContactsSaysSo(t *testing.T) {
 // add to a count that already clears the floor.
 func TestEnoughVisibleContactsIsMultiThreadedEvenWithSomethingHidden(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "Broad Coverage SE", nil)
-	orgID := ids.From[ids.OrganizationKind](org)
+	company := e.SeedCompany(t, "Broad Coverage SE", nil)
+	companyID := ids.From[ids.CompanyKind](company)
 	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
 	deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
 		Name: "Broad renewal", PipelineID: pipeline, StageID: open,
-		OrganizationID: &orgID, Source: "manual",
+		CompanyID: &companyID, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("creating the deal: %v", err)
@@ -239,7 +239,7 @@ func TestEnoughVisibleContactsIsMultiThreadedEvenWithSomethingHidden(t *testing.
 	}
 	seatHidden(t, OwnerConn(t), hidden, dealID.UUID, "buyer")
 
-	got := accountCoverageFor(t, e, coverageReaderPerms(true), orgID.UUID)
+	got := accountCoverageFor(t, e, coverageReaderPerms(true), companyID.UUID)
 	if got.Threading != network.ThreadingMultiple {
 		t.Errorf("threading = %q, want %q — two visible contacts already answer the question, and "+
 			"a hidden third can only widen the account", got.Threading, network.ThreadingMultiple)
@@ -254,14 +254,14 @@ func TestEnoughVisibleContactsIsMultiThreadedEvenWithSomethingHidden(t *testing.
 // report an account as broadly covered when one person carries all of it.
 func TestOnePersonOnThreeDealsIsOneRelationship(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "Repeated Seat Ltd", nil)
-	orgID := ids.From[ids.OrganizationKind](org)
+	company := e.SeedCompany(t, "Repeated Seat Ltd", nil)
+	companyID := ids.From[ids.CompanyKind](company)
 	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
 	only := ids.From[ids.PersonKind](e.SeedPerson(t, "Everywhere Contact", nil))
 	for _, name := range []string{"Deal one", "Deal two", "Deal three"} {
 		deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
 			Name: name, PipelineID: pipeline, StageID: open,
-			OrganizationID: &orgID, Source: "manual",
+			CompanyID: &companyID, Source: "manual",
 		})
 		if err != nil {
 			t.Fatalf("creating %s: %v", name, err)
@@ -269,7 +269,7 @@ func TestOnePersonOnThreeDealsIsOneRelationship(t *testing.T) {
 		seatOn(t, e, only, ids.From[ids.DealKind](ids.UUID(deal.Id)))
 	}
 
-	got := accountCoverageFor(t, e, coverageReaderPerms(true), orgID.UUID)
+	got := accountCoverageFor(t, e, coverageReaderPerms(true), companyID.UUID)
 	if len(got.VisibleStakeholders) != 1 {
 		t.Fatalf("counted %d stakeholders, want 1 — one person on three deals is one relationship",
 			len(got.VisibleStakeholders))
@@ -288,10 +288,10 @@ func TestOnePersonOnThreeDealsIsOneRelationship(t *testing.T) {
 // here seeds a project, so the arm could be deleted green.
 func TestAProjectStakeholderCountsTowardTheAccount(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "Delivery Only KG", nil)
-	orgID := ids.From[ids.OrganizationKind](org)
+	company := e.SeedCompany(t, "Delivery Only KG", nil)
+	companyID := ids.From[ids.CompanyKind](company)
 	project, err := e.Projects.CreateProject(e.Admin(), projects.CreateProjectInput{
-		Name: "Rollout", OrganizationID: orgID, Source: "manual",
+		Name: "Rollout", CompanyID: companyID, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("opening the project: %v", err)
@@ -308,7 +308,7 @@ func TestAProjectStakeholderCountsTowardTheAccount(t *testing.T) {
 		}
 	}
 
-	got := accountCoverageFor(t, e, coverageReaderPerms(true), orgID.UUID)
+	got := accountCoverageFor(t, e, coverageReaderPerms(true), companyID.UUID)
 	if len(got.VisibleStakeholders) != 2 {
 		t.Fatalf("counted %d stakeholders, want 2 — a contact known through delivery is still a "+
 			"contact at this account", len(got.VisibleStakeholders))
@@ -320,7 +320,7 @@ func TestAProjectStakeholderCountsTowardTheAccount(t *testing.T) {
 
 // An account the caller may not open is refused, not answered.
 //
-// Without the organization admission this function answers about any id a
+// Without the company admission this function answers about any id a
 // caller can name — and the incompleteness flag then reports something about a
 // company they were never admitted to.
 func TestAnAccountTheReaderCannotOpenIsRefused(t *testing.T) {
@@ -330,7 +330,7 @@ func TestAnAccountTheReaderCannotOpenIsRefused(t *testing.T) {
 			Type: principal.PrincipalHuman, ID: "human:reader", UserID: ids.NewV7(),
 			Permissions: coverageReaderPerms(true),
 		})
-	// An id naming no organization this workspace holds. A caller who guessed
+	// An id naming no company this workspace holds. A caller who guessed
 	// one must learn nothing from the answer.
 	absent := ids.NewV7()
 	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
@@ -347,12 +347,12 @@ func TestAnAccountTheReaderCannotOpenIsRefused(t *testing.T) {
 // an empty account that reads as an uncovered one.
 func TestAccountCoverageIsNamedRatherThanEmptyWithoutTheEdgeGrant(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "Edge Gated NV", nil)
-	orgID := ids.From[ids.OrganizationKind](org)
+	company := e.SeedCompany(t, "Edge Gated NV", nil)
+	companyID := ids.From[ids.CompanyKind](company)
 	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
 	deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
 		Name: "Gated renewal", PipelineID: pipeline, StageID: open,
-		OrganizationID: &orgID, Source: "manual",
+		CompanyID: &companyID, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("creating the deal: %v", err)
@@ -360,14 +360,14 @@ func TestAccountCoverageIsNamedRatherThanEmptyWithoutTheEdgeGrant(t *testing.T) 
 	p := e.SeedPerson(t, "Real Contact", nil)
 	seatOn(t, e, ids.From[ids.PersonKind](p), ids.From[ids.DealKind](ids.UUID(deal.Id)))
 
-	granted := accountCoverageFor(t, e, coverageReaderPerms(true), orgID.UUID)
+	granted := accountCoverageFor(t, e, coverageReaderPerms(true), companyID.UUID)
 	if len(granted.SectionsOmitted) != 0 || len(granted.VisibleStakeholders) != 1 {
 		t.Fatalf("the granted caller sees %d stakeholders and is told %v was omitted; the fixture "+
 			"then proves nothing about the withheld one",
 			len(granted.VisibleStakeholders), granted.SectionsOmitted)
 	}
 
-	withheld := accountCoverageFor(t, e, coverageReaderPerms(false), orgID.UUID)
+	withheld := accountCoverageFor(t, e, coverageReaderPerms(false), companyID.UUID)
 	if len(withheld.SectionsOmitted) == 0 {
 		t.Error("the withheld caller is told nothing was omitted; an empty account with nothing " +
 			"naming it renders as an account nobody has contacts on")

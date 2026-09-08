@@ -6,7 +6,7 @@ package compose
 // Field extraction for the mirror-record → typed-contract assembly
 // (overlaywire.go does the struct-shaping on top of these). The canonical
 // jsonb payload is decoded data, so every reader here — scalar field
-// readers, the person/organization child-collection lookups, and the
+// readers, the person/company child-collection lookups, and the
 // timestamp/integer parsers alike — answers absent rather than erroring on
 // a shape it did not expect: the true value always survives in `raw`, and a
 // body that drops one slot beats a read that fails outright.
@@ -185,20 +185,20 @@ func overlayPersonPhones(parent openapi_types.UUID, fields map[string]any) *[]cr
 	return &out
 }
 
-// overlayOrganizationDomains assembles the contract's domain collection from
+// overlayCompanyDomains assembles the contract's domain collection from
 // the mirrored child rows, as overlayPersonEmails does for a contact's
 // addresses. A row whose domain is missing or blank is skipped rather than
 // published as an empty host — the true payload survives in `raw` either way.
 // The whole collection is published, not its leading row: a mapping that
 // declares a second domain row is a mapping change, not a wire change.
-func overlayOrganizationDomains(parent openapi_types.UUID, fields map[string]any) *[]crmcontracts.OrganizationDomain {
-	var out []crmcontracts.OrganizationDomain
-	for _, row := range overlayChildRows(fields, "organization_domain") {
+func overlayCompanyDomains(parent openapi_types.UUID, fields map[string]any) *[]crmcontracts.CompanyDomain {
+	var out []crmcontracts.CompanyDomain
+	for _, row := range overlayChildRows(fields, "company_domain") {
 		domain := strings.TrimSpace(fieldString(row, "domain"))
 		if domain == "" {
 			continue
 		}
-		out = append(out, crmcontracts.OrganizationDomain{
+		out = append(out, crmcontracts.CompanyDomain{
 			Id:         overlaySyntheticID(parent, childRowPosition(row), domain),
 			Domain:     domain,
 			IsPrimary:  childRowIsPrimary(row),
@@ -221,7 +221,7 @@ func overlayOrganizationDomains(parent openapi_types.UUID, fields map[string]any
 // yields nothing — which domain is the company's is the mapping's assertion,
 // never this reader's to pick by position, and the native path leaves the slot
 // absent on exactly the same rows.
-func overlayWebsiteURL(domains *[]crmcontracts.OrganizationDomain) *string {
+func overlayWebsiteURL(domains *[]crmcontracts.CompanyDomain) *string {
 	if domains == nil {
 		return nil
 	}

@@ -37,7 +37,7 @@ const CAPABILITIES: Capabilities = {
 // A website is what arms the refresh control; without one the button stays
 // disabled and no comparison ever reaches the screen.
 const COMPANY: CompanyProfile = {
-  organization_id: "00000000-0000-4000-8000-000000000010",
+  company_id: "00000000-0000-4000-8000-000000000010",
   display_name: "Acme",
   website: "acme.test",
   offer_summary: "We sell field service software",
@@ -109,7 +109,7 @@ const SITE_READ: SiteRead = {
 // The card scopes its write controls to what /me says the seat holds, so every
 // fixture below has to answer that probe: an unanswered one denies, and the
 // suite would then be driving a card with no controls at all.
-function meResponse(seat: SeatType, organization: Grant): Me {
+function meResponse(seat: SeatType, company: Grant): Me {
   return {
     user: {
       id: "00000000-0000-4000-8000-000000000001",
@@ -126,7 +126,7 @@ function meResponse(seat: SeatType, organization: Grant): Me {
     teams: [],
     authorization: {
       seat_type: seat,
-      objects: { organization },
+      objects: { company },
       row_scope: "own",
     },
   };
@@ -421,7 +421,7 @@ describe("CompanyContextCard refresh review", () => {
 // would claim the installation has no company profile at all.
 describe("CompanyContextCard write posture", () => {
   const READ_ONLY =
-    "Read-only view — changing the company profile needs an organization write.";
+    "Read-only view — changing the company profile needs a company write.";
   const SAVE = "Save company context";
   const REFRESH = "Refresh from website";
   // The row verb, named by the fact it changes rather than by the word "Edit":

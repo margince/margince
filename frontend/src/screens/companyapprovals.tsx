@@ -17,11 +17,11 @@ import { useTargetApprovals } from "./approvals.queries";
 // a deep read of a company website stages one proposal per person it found —
 // twenty-five rows that are one decision to the reader making it.
 
-type Organization360 = components["schemas"]["Organization360"];
+type Company360 = components["schemas"]["Company360"];
 type Approval = components["schemas"]["Approval"];
 
 /** The pending approvals the 360 carries, or none when the section was withheld. */
-export function pendingApprovals(view?: Organization360): Approval[] {
+export function pendingApprovals(view?: Company360): Approval[] {
   return view?.pending_approvals?.data ?? [];
 }
 
@@ -52,7 +52,7 @@ export function groupByKind(approvals: readonly Approval[]): {
 export function DecisionsChip({
   view,
   onOpen,
-}: Readonly<{ view?: Organization360; onOpen: () => void }>) {
+}: Readonly<{ view?: Company360; onOpen: () => void }>) {
   const t = useT();
   const { locale } = useLocale();
   const count = pendingApprovals(view).length;
@@ -70,12 +70,12 @@ export function DecisionsChip({
 }
 
 export function CompanyApprovalsPanel({
-  orgId,
+  companyId,
   view,
   onClose,
 }: Readonly<{
-  orgId: string;
-  view?: Organization360;
+  companyId: string;
+  view?: Company360;
   onClose: () => void;
 }>) {
   const t = useT();
@@ -86,12 +86,12 @@ export function CompanyApprovalsPanel({
   // 360 carries for the chip count, so deciding through it cannot strand the
   // remainder behind a workspace-wide inbox the reader never asked for. The
   // 360's rows paint immediately while that read is in flight.
-  const query = useTargetApprovals("organization", orgId);
+  const query = useTargetApprovals("company", companyId);
   const approvals = query.data?.data ?? pendingApprovals(view);
   const groups = groupByKind(approvals);
   // A decision changes what the page says is waiting, so the composite read
   // behind the chip is re-read alongside the approvals list.
-  const extraInvalidateKeys = [["organization360", orgId]];
+  const extraInvalidateKeys = [["company360", companyId]];
   return (
     <Modal open onClose={onClose} labelledBy={titleId} size="wide">
       <h2 id={titleId} className="t-h2 modal-title">

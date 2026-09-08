@@ -7,28 +7,28 @@ import type { Grounding } from "./record360";
 
 // A leaf for the small lookup tables the company page and its rail both need
 // to draw the same enums the same way. Neither company360.tsx nor
-// organizations.tsx imports from here going the OTHER direction, so both may
+// companies.tsx imports from here going the OTHER direction, so both may
 // import this without a cycle: it is exactly the shared home the two owe each
 // other rather than each keeping its own copy that can drift.
 
-type Organization = components["schemas"]["Organization"];
-type Lifecycle = NonNullable<Organization["lifecycle"]>;
+type Company = components["schemas"]["Company"];
+type Lifecycle = NonNullable<Company["lifecycle"]>;
 
 // Where the account stands with us (PO-DDL-4, ADR-0079/A124), in the words a
 // reader sees rather than the wire enum.
 export const LIFECYCLE_LABELS: Record<Lifecycle, MessageKey> = {
-  unknown: "org.lifecycle.unknown",
-  target: "org.lifecycle.target",
-  prospect: "org.lifecycle.prospect",
-  opportunity: "org.lifecycle.opportunity",
-  customer: "org.lifecycle.customer",
-  former_customer: "org.lifecycle.former_customer",
-  disqualified: "org.lifecycle.disqualified",
+  unknown: "company.lifecycle.unknown",
+  target: "company.lifecycle.target",
+  prospect: "company.lifecycle.prospect",
+  opportunity: "company.lifecycle.opportunity",
+  customer: "company.lifecycle.customer",
+  former_customer: "company.lifecycle.former_customer",
+  disqualified: "company.lifecycle.disqualified",
 };
 
 // Kept in wire order so a picker built off it reads as a progression rather
 // than an alphabet. Shared for the same reason LIFECYCLE_LABELS is: the list
-// and the labels are the two halves of one enum, and organizations.tsx and
+// and the labels are the two halves of one enum, and companies.tsx and
 // the rail's own Details grid (companyraildetails.tsx) both build a
 // lifecycle picker off it — two copies means the two screens can offer
 // different choices for the same field.
@@ -46,20 +46,20 @@ export const LIFECYCLE_OPTIONS = [
 // schema union, so a value added upstream fails the build here rather than
 // reaching a reader as a raw enum.
 export type RelationshipType = NonNullable<
-  Organization["relationship_types"]
+  Company["relationship_types"]
 >[number];
 
 // Beside LIFECYCLE_LABELS because the header draws both vocabularies on one
 // line and they OVERLAP: `customer` is a member of each. Two modules cannot
 // notice that; one can, which is what relationshipBadges below does.
 export const RELATIONSHIP_TYPE_LABELS: Record<RelationshipType, MessageKey> = {
-  customer: "org.relType.customer",
-  partner: "org.relType.partner",
-  supplier: "org.relType.supplier",
-  investor: "org.relType.investor",
-  portfolio_company: "org.relType.portfolio_company",
-  competitor: "org.relType.competitor",
-  other: "org.relType.other",
+  customer: "company.relType.customer",
+  partner: "company.relType.partner",
+  supplier: "company.relType.supplier",
+  investor: "company.relType.investor",
+  portfolio_company: "company.relType.portfolio_company",
+  competitor: "company.relType.competitor",
+  other: "company.relType.other",
 };
 
 /**
@@ -79,14 +79,14 @@ export const RELATIONSHIP_TYPE_LABELS: Record<RelationshipType, MessageKey> = {
  * with nothing in the type system to catch it.
  */
 export function relationshipBadges(
-  org: Pick<Organization, "lifecycle" | "relationship_types">,
+  company: Pick<Company, "lifecycle" | "relationship_types">,
   t: (key: MessageKey) => string,
 ): RelationshipType[] {
-  const standing = t(LIFECYCLE_LABELS[org.lifecycle ?? "unknown"]);
-  return (org.relationship_types ?? []).filter(
+  const standing = t(LIFECYCLE_LABELS[company.lifecycle ?? "unknown"]);
+  return (company.relationship_types ?? []).filter(
     (relType) =>
       t(RELATIONSHIP_TYPE_LABELS[relType]) !== standing &&
-      !spokenFor(relType, org.lifecycle),
+      !spokenFor(relType, company.lifecycle),
   );
 }
 
@@ -101,7 +101,7 @@ export function relationshipBadges(
  */
 function spokenFor(
   relType: RelationshipType,
-  lifecycle: Organization["lifecycle"],
+  lifecycle: Company["lifecycle"],
 ): boolean {
   return lifecycle
     ? (LIFECYCLE_SPEAKS_FOR[relType]?.includes(lifecycle) ?? false)
@@ -178,11 +178,11 @@ export const PAYMENT_LATE_DAYS = 5;
  * Overdue money outranks the median. An account that pays promptly and has
  * money outstanding right now is at risk today, whatever its habit.
  */
-export function usePaymentHealth(orgId?: string) {
+export function usePaymentHealth(companyId?: string) {
   const t = useT();
   const { locale } = useLocale();
-  const { data } = useFinanceSummary(orgId ?? "");
-  if (!orgId || !data) {
+  const { data } = useFinanceSummary(companyId ?? "");
+  if (!companyId || !data) {
     return undefined;
   }
   const overdue = data.overdue?.amount_minor ?? 0;
@@ -255,7 +255,7 @@ export function worstOf(
  * be the card inventing a call it was not given.
  */
 export function useAccountStanding(
-  orgId: string,
+  companyId: string,
   health?: {
     relationship?: { rating: HealthRating; reason: string };
     commercial?: { rating: HealthRating; reason: string };
@@ -267,7 +267,7 @@ export function useAccountStanding(
   restsOn: Grounding[];
 } {
   const t = useT();
-  const payment = usePaymentHealth(orgId);
+  const payment = usePaymentHealth(companyId);
   const dimensions = [
     { key: "relationship" as const, health: health?.relationship },
     { key: "commercial" as const, health: health?.commercial },

@@ -86,8 +86,8 @@ type threadMessage struct {
 // belongs to already resolved — an event about nobody is not an event this
 // product can file.
 type settledThread struct {
-	Key            string
-	OrganizationID ids.UUID
+	Key       string
+	CompanyID ids.UUID
 	// Newest is the instant the watermark advances to, read at the same time
 	// as the messages so a message arriving mid-pass is not skipped: it is
 	// newer than what this pass records, so the next pass picks the thread up.
@@ -150,8 +150,8 @@ var dueThreadsQuery = `
 			            AND b.archived_at IS NULL AND b.captured_by LIKE 'connector:%'
 			       ))::uuid AS oldest_id,
 			       count(DISTINCT a.id) AS message_count,
-			       min(ro.organization_id::text) AS one_org,
-			       count(DISTINCT ro.organization_id) AS org_count,
+			       min(ro.company_id::text) AS one_company,
+			       count(DISTINCT ro.company_id) AS company_count,
 			       -- Shared only when EVERY message is: the model is shown the
 			       -- whole conversation, so what it writes is as private as the
 			       -- most private thing it read.
@@ -211,7 +211,7 @@ var dueThreadsQuery = `
 			                      AND t.archived_at IS NULL
 			                      AND t.audience <> 'workspace') AS every_message_open
 			  FROM activity a
-			  LEFT JOIN (` + activities.OrgReachSet() + `) ro ON ro.activity_id = a.id
+			  LEFT JOIN (` + activities.CompanyReachSet() + `) ro ON ro.activity_id = a.id
 			  -- Who may read this message, asked of the records it is filed
 			  -- against. A message is discoverable when ANY of its links is
 			  -- (auth.ActivityDiscoverClause), so one workspace-visible link
@@ -224,14 +224,14 @@ var dueThreadsQuery = `
 			             AS private_owner
 			      FROM activity_link vl
 			      LEFT JOIN person vp ON vp.id = vl.person_id
-			      LEFT JOIN organization vo ON vo.id = vl.organization_id
+			      LEFT JOIN company vo ON vo.id = vl.company_id
 			     WHERE vl.activity_id = a.id
 			  ) vis ON true
 			 WHERE a.thread_key IS NOT NULL AND a.kind = 'email'
 			   AND a.archived_at IS NULL AND a.captured_by LIKE 'connector:%'
 			 GROUP BY a.thread_key
 		)
-		SELECT c.thread_key, c.one_org::uuid, c.newest, c.message_count,
+		SELECT c.thread_key, c.one_company::uuid, c.newest, c.message_count,
 		       CASE WHEN c.shared THEN NULL ELSE c.private_owner::uuid END,
 		       -- The two ends a previous read reached, so this one can tell new
 		       -- mail from a backfill. Both null on a thread never scanned.
@@ -274,7 +274,7 @@ var dueThreadsQuery = `
 		   AND (s.thread_key IS NULL
 		        OR s.last_activity_at < c.newest
 		        OR s.message_count <> c.message_count
-		        OR s.resolved_org_id IS DISTINCT FROM c.one_org::uuid
+		        OR s.resolved_company_id IS DISTINCT FROM c.one_company::uuid
 		        -- Or there is history left BELOW the cursor. A window is six
 		        -- messages and a thread can be longer, so a pass that read one
 		        -- window and recorded the whole count would otherwise never be
@@ -292,7 +292,7 @@ var dueThreadsQuery = `
 //
 // A conversation's account comes from the three-arm walk (the message's own
 // link, its deal's account, the employer of the contact it is about) rather
-// than a direct organization link. Capture files mail against the PERSON it was
+// than a direct company link. Capture files mail against the PERSON it was
 // with, so a direct match resolves nothing on real correspondence — an account
 // is reached through its people, or not at all.
 //
@@ -309,7 +309,7 @@ var dueThreadsQuery = `
 //   - WHICH account it belongs to is asked only of the messages that reach one;
 //     count(DISTINCT) ignores the NULLs a LEFT join leaves behind.
 //
-// The org resolution is deliberately strict: exactly one organization across
+// The company resolution is deliberately strict: exactly one company across
 // the whole thread. A conversation touching two accounts would have its events
 // filed against whichever the join happened to pick, and a signal on the wrong
 // account is worse than no signal — it is a claim the reader cannot trace back.
@@ -332,7 +332,7 @@ func dueThreads(ctx context.Context, tx pgx.Tx, now time.Time, limit int) ([]set
 	for rows.Next() {
 		var thread settledThread
 		var privateTo *ids.UUID
-		if err := rows.Scan(&thread.Key, &thread.OrganizationID,
+		if err := rows.Scan(&thread.Key, &thread.CompanyID,
 			&thread.Newest, &thread.Count, &privateTo,
 			&thread.ReadTo, &thread.ReadFrom, &thread.ReadFromID); err != nil {
 			return nil, err
@@ -406,7 +406,7 @@ func markThreadScanned(ctx context.Context, tx pgx.Tx, thread settledThread, now
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO signal_thread_scan
 		  (thread_key, last_activity_at, message_count, scanned_at,
-		   resolved_org_id, scanned_from, scanned_from_id)
+		   resolved_company_id, scanned_from, scanned_from_id)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		ON CONFLICT (thread_key) DO UPDATE
 		   SET last_activity_at = greatest(signal_thread_scan.last_activity_at, excluded.last_activity_at),
@@ -437,7 +437,7 @@ func markThreadScanned(ctx context.Context, tx pgx.Tx, thread settledThread, now
 		       -- WHICH account this reading was for. Overwritten, never
 		       -- greatest()-style clamped: the account is not a high-water mark,
 		       -- it is what the walk resolves to now.
-		       resolved_org_id = excluded.resolved_org_id,
+		       resolved_company_id = excluded.resolved_company_id,
 		       -- A reading landed, so the earlier refusals were about a model
 		       -- that could not do it then, not a conversation that cannot be
 		       -- done. Left standing they would park the thread on its next
@@ -445,7 +445,7 @@ func markThreadScanned(ctx context.Context, tx pgx.Tx, thread settledThread, now
 		       refusals = 0,
 		       refused_activity_at = NULL,
 		       refused_message_count = NULL`,
-		thread.Key, thread.Newest, thread.Count, now, thread.OrganizationID,
+		thread.Key, thread.Newest, thread.Count, now, thread.CompanyID,
 		thread.ReadFromNow, thread.ReadFromIDNow); err != nil {
 		return fmt.Errorf("record where the read got to: %w", err)
 	}

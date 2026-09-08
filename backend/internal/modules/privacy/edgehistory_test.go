@@ -32,7 +32,7 @@ import (
 func edgeReaderContext(edgeGrant bool) context.Context {
 	user := ids.NewV7()
 	objects := map[string]principal.ObjectGrant{
-		"person": {Read: true}, "organization": {Read: true},
+		"person": {Read: true}, "company": {Read: true},
 		"deal": {Read: true}, "project": {Read: true},
 	}
 	if edgeGrant {
@@ -91,15 +91,15 @@ func TestAKindThatOccupiesNoEndpointColumnHasNoEdgeBranch(t *testing.T) {
 }
 
 func TestEveryEdgeBranchGatesTheOtherEndsVisibilityAndErasure(t *testing.T) {
-	// The organization anchor is the one with TWO anchor columns, so it renders
+	// The company anchor is the one with TWO anchor columns, so it renders
 	// the most branches and is where a missing gate is most likely to hide.
-	cte, args, err := renderEdgeCTE(edgeReaderContext(true), t, "organization")
+	cte, args, err := renderEdgeCTE(edgeReaderContext(true), t, "company")
 	if err != nil {
-		t.Fatalf("rendering the organization anchor's CTE: %v", err)
+		t.Fatalf("rendering the company anchor's CTE: %v", err)
 	}
 	branches := strings.Split(cte, "UNION ALL")
-	if want := len(edgeAnchorsFor("organization")); len(branches) != want {
-		t.Fatalf("the organization anchor rendered %d branch(es), want one per column it can occupy (%d):\n%s",
+	if want := len(edgeAnchorsFor("company")); len(branches) != want {
+		t.Fatalf("the company anchor rendered %d branch(es), want one per column it can occupy (%d):\n%s",
 			len(branches), want, cte)
 	}
 	for i, branch := range branches {
@@ -133,12 +133,12 @@ func TestTheEdgeBranchesAreDisjointAndSargable(t *testing.T) {
 	// relationship must be the anchor's equality — a second one (a column required
 	// to be null) is an access path the planner will take on a table where that
 	// column usually is null.
-	cte, _, err := renderEdgeCTE(edgeReaderContext(true), t, "organization")
+	cte, _, err := renderEdgeCTE(edgeReaderContext(true), t, "company")
 	if err != nil {
-		t.Fatalf("rendering the organization anchor's CTE: %v", err)
+		t.Fatalf("rendering the company anchor's CTE: %v", err)
 	}
 	branches := strings.Split(cte, "UNION ALL")
-	anchors := edgeAnchorsFor("organization")
+	anchors := edgeAnchorsFor("company")
 	for i, branch := range branches {
 		if got := strings.Count(branch, fmt.Sprintf("r.%s = $1", anchors[i].column)); got != 1 {
 			t.Errorf("branch %d does not key on r.%s exactly once:\n%s", i, anchors[i].column, branch)
@@ -172,12 +172,12 @@ func TestEveryPlaceholderInTheWindowIsDerivedFromTheArgumentList(t *testing.T) {
 	ctx := edgeReaderContext(true)
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	typePos, idPos := arg("organization"), arg(ids.NewV7())
+	typePos, idPos := arg("company"), arg(ids.NewV7())
 	conds := []string{
 		fmt.Sprintf("(a.occurred_at, a.id) >= ($%d, $%d)", arg("boundary-time"), arg(ids.NewV7())),
 		fmt.Sprintf("(a.occurred_at, a.id) < ($%d, $%d)", arg("cursor-time"), arg(ids.NewV7())),
 	}
-	cte, err := edgeSubjectCTE(ctx, "organization", idPos, arg)
+	cte, err := edgeSubjectCTE(ctx, "company", idPos, arg)
 	if err != nil {
 		t.Fatalf("rendering the CTE: %v", err)
 	}

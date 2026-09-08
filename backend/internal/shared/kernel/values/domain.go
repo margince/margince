@@ -11,8 +11,8 @@ import (
 )
 
 // Domain is a normalized registrable host: lowercased, no scheme, no
-// leading www., no port, no path, no trailing dot — the organization
-// domain convention (org_domain_norm), parsed once instead of
+// leading www., no port, no path, no trailing dot — the company
+// domain convention (company_domain_norm), parsed once instead of
 // re-trimmed at every capture surface.
 type Domain struct{ s string }
 
@@ -49,7 +49,7 @@ func ParseDomain(raw string) (Domain, error) {
 }
 
 // validHost checks RFC-1123 label shape and requires a dot (a bare
-// single label is a LAN name, not an organization's domain).
+// single label is a LAN name, not a company's domain).
 func validHost(host string) bool {
 	labels := strings.Split(host, ".")
 	if len(labels) < 2 {

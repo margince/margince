@@ -14,10 +14,10 @@ type Relationship = components["schemas"]["Relationship"];
 // pin that mapping so the UI can never offer a (scope, kind) it can't satisfy
 // — the mismatch that used to reach the server as a "endpoint shape is
 // required" 422. Interactive coverage of the picker lives in contacts.test.tsx
-// / organizations.test.tsx; this file is the invariant itself.
+// / companies.test.tsx; this file is the invariant itself.
 
 const personScope: RelationshipScope = { person_id: "p-1" };
-const orgScope: RelationshipScope = { organization_id: "o-1" };
+const companyScope: RelationshipScope = { company_id: "o-1" };
 const dealScope: RelationshipScope = { deal_id: "d-1" };
 
 function baseRel(over: Partial<Relationship>): Relationship {
@@ -35,9 +35,9 @@ function baseRel(over: Partial<Relationship>): Relationship {
 }
 
 describe("edgeOptions — creatable kinds per scope", () => {
-  it("a person anchors employment (→org) and deal_stakeholder (→deal), nothing org↔org", () => {
+  it("a person anchors employment (→company) and deal_stakeholder (→deal), nothing company↔company", () => {
     expect(edgeOptions(personScope)).toEqual([
-      { kind: "employment", entity: "organization", field: "organization_id" },
+      { kind: "employment", entity: "company", field: "company_id" },
       { kind: "deal_stakeholder", entity: "deal", field: "deal_id" },
     ]);
   });
@@ -51,39 +51,39 @@ describe("edgeOptions — creatable kinds per scope", () => {
     ]);
   });
 
-  it("an org anchors employment (→person) and the three org↔org kinds (→counterparty), never deal_stakeholder", () => {
-    expect(edgeOptions(orgScope)).toEqual([
+  it("a company anchors employment (→person) and the three company↔company kinds (→counterparty), never deal_stakeholder", () => {
+    expect(edgeOptions(companyScope)).toEqual([
       { kind: "employment", entity: "person", field: "person_id" },
       {
         kind: "partner_of",
-        entity: "organization",
-        field: "counterparty_org_id",
+        entity: "company",
+        field: "counterparty_company_id",
       },
       {
         kind: "referred_by",
-        entity: "organization",
-        field: "counterparty_org_id",
+        entity: "company",
+        field: "counterparty_company_id",
       },
       {
         kind: "co_sell_with",
-        entity: "organization",
-        field: "counterparty_org_id",
+        entity: "company",
+        field: "counterparty_company_id",
       },
     ]);
     expect(
-      edgeOptions(orgScope).some((o) => o.kind === "deal_stakeholder"),
+      edgeOptions(companyScope).some((o) => o.kind === "deal_stakeholder"),
     ).toBe(false);
   });
 });
 
 describe("endpointBody — the picked id lands on exactly one field", () => {
   it("maps each field to its own key and no other", () => {
-    expect(endpointBody("organization_id", "x")).toEqual({
-      organization_id: "x",
+    expect(endpointBody("company_id", "x")).toEqual({
+      company_id: "x",
     });
     expect(endpointBody("person_id", "x")).toEqual({ person_id: "x" });
-    expect(endpointBody("counterparty_org_id", "x")).toEqual({
-      counterparty_org_id: "x",
+    expect(endpointBody("counterparty_company_id", "x")).toEqual({
+      counterparty_company_id: "x",
     });
     expect(endpointBody("deal_id", "x")).toEqual({ deal_id: "x" });
   });
@@ -117,28 +117,28 @@ describe("counterpartyRef — the other end of an existing edge, typed for Entit
     expect(counterpartyRef(baseRel({ deal_id: "d-1" }), dealScope)).toBeNull();
   });
 
-  it("an org↔org edge resolves to the counterparty org from the anchor side", () => {
+  it("a company↔company edge resolves to the counterparty company from the anchor side", () => {
     const rel = baseRel({
       kind: "partner_of",
-      organization_id: "o-1",
-      counterparty_org_id: "o-2",
+      company_id: "o-1",
+      counterparty_company_id: "o-2",
     });
-    expect(counterpartyRef(rel, orgScope)).toEqual({
-      kind: "organization",
+    expect(counterpartyRef(rel, companyScope)).toEqual({
+      kind: "company",
       id: "o-2",
     });
   });
 
-  it("resolves to the OTHER org when the same edge is viewed from the counterparty side", () => {
-    // The org list filter matches on either end, so this partner_of edge also
+  it("resolves to the OTHER company when the same edge is viewed from the counterparty side", () => {
+    // The company list filter matches on either end, so this partner_of edge also
     // appears on o-2's tab; the far end there is the anchor o-1, never o-2.
     const rel = baseRel({
       kind: "partner_of",
-      organization_id: "o-1",
-      counterparty_org_id: "o-2",
+      company_id: "o-1",
+      counterparty_company_id: "o-2",
     });
-    expect(counterpartyRef(rel, { organization_id: "o-2" })).toEqual({
-      kind: "organization",
+    expect(counterpartyRef(rel, { company_id: "o-2" })).toEqual({
+      kind: "company",
       id: "o-1",
     });
   });
@@ -147,14 +147,14 @@ describe("counterpartyRef — the other end of an existing edge, typed for Entit
     const rel = baseRel({
       kind: "employment",
       person_id: "p-1",
-      organization_id: "o-1",
+      company_id: "o-1",
     });
-    // From the person's 360 the counterparty is the org; from the org's, the person.
+    // From the person's 360 the counterparty is the company; from the company's, the person.
     expect(counterpartyRef(rel, personScope)).toEqual({
-      kind: "organization",
+      kind: "company",
       id: "o-1",
     });
-    expect(counterpartyRef(rel, orgScope)).toEqual({
+    expect(counterpartyRef(rel, companyScope)).toEqual({
       kind: "person",
       id: "p-1",
     });

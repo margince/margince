@@ -68,7 +68,7 @@ function contractRow(
 ): Contract {
   return {
     id: "c-1",
-    organization_id: "o-1",
+    company_id: "o-1",
     title: "Agreement",
     source: "manual",
     captured_by: "human:00000000-0000-0000-0000-000000000001",

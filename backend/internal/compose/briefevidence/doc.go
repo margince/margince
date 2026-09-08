@@ -4,7 +4,7 @@
 // Package briefevidence attaches the canonical email row to the evidence a
 // response cites, so a cited message can be opened as that message.
 //
-// Every writer in this tree that grounds prose in records — the org brief, the
+// Every writer in this tree that grounds prose in records — the company brief, the
 // dossier, the growth fit, the person brief, the meeting brief, the deal status
 // card, both draft services and the account scan — emits the same citation
 // shape: a record kind and a record id. That is enough to name a message and

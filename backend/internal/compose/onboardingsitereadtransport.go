@@ -33,7 +33,7 @@ const (
 	siteReadWireStatusPartial   = "partial"
 )
 
-func (e *deepReadEngine) startCompanySiteRead(w http.ResponseWriter, r *http.Request) {
+func (e *deepReadEngine) startAnchorCompanySiteRead(w http.ResponseWriter, r *http.Request) {
 	var req crmcontracts.StartCompanySiteReadRequest
 	if !httperr.Decode(w, r, &req) {
 		return
@@ -59,8 +59,8 @@ func (e *deepReadEngine) startCompanySiteRead(w http.ResponseWriter, r *http.Req
 	httperr.WriteJSON(w, http.StatusAccepted, companySiteRead(read, nil, nil))
 }
 
-func (e *deepReadEngine) getCompanySiteRead(w http.ResponseWriter, r *http.Request, readID openapi_types.UUID) {
-	read, comparisons, err := e.people.GetCompanySiteRead(r.Context(), ids.UUID(readID))
+func (e *deepReadEngine) getAnchorCompanySiteRead(w http.ResponseWriter, r *http.Request, readID openapi_types.UUID) {
+	read, comparisons, err := e.people.GetAnchorCompanySiteRead(r.Context(), ids.UUID(readID))
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -92,7 +92,7 @@ func (e *deepReadEngine) companySiteReadRuntime(ctx context.Context, readID ids.
 	return ai.RunSummary{}, false, nil
 }
 
-func (e *deepReadEngine) confirmCompanySiteRead(w http.ResponseWriter, r *http.Request, readID openapi_types.UUID) {
+func (e *deepReadEngine) confirmAnchorCompanySiteRead(w http.ResponseWriter, r *http.Request, readID openapi_types.UUID) {
 	var req crmcontracts.ConfirmCompanySiteReadRequest
 	if !httperr.Decode(w, r, &req) {
 		return
@@ -119,7 +119,7 @@ func (e *deepReadEngine) confirmCompanySiteRead(w http.ResponseWriter, r *http.R
 		httperr.Write(w, r, httperr.Validation("profile.website", "invalid", "website must be a domain or an absolute http(s) URL"))
 		return
 	}
-	company, unadoptedLogos, err := e.people.ConfirmCompanySiteRead(r.Context(), people.ConfirmCompanySiteReadInput{
+	company, unadoptedLogos, err := e.people.ConfirmAnchorCompanySiteRead(r.Context(), people.ConfirmCompanySiteReadInput{
 		ReadID: ids.UUID(readID), DraftVersion: req.DraftVersion, ProposalHash: req.ProposalHash,
 		DisplayName: strings.TrimSpace(req.Profile.DisplayName), Website: website,
 		// The object store lives on this side of the seam, so the dossier
@@ -183,7 +183,7 @@ func siteReadConfirmationRefusal(err error) error {
 	return err
 }
 
-func (e *deepReadEngine) stageOnboardingPeople(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, read people.SiteRead, found []people.SiteReadPerson) ([]ids.UUID, error) {
+func (e *deepReadEngine) stageOnboardingPeople(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, read people.SiteRead, found []people.SiteReadPerson) ([]ids.UUID, error) {
 	decider, ok := principal.Actor(ctx)
 	if !ok {
 		return nil, errors.New("compose: company site-read confirmation has no deciding principal")
@@ -202,7 +202,7 @@ func (e *deepReadEngine) stageOnboardingPeople(ctx context.Context, tx pgx.Tx, o
 	// (created_at, id). Two transactions, one shared set, two orders: whichever
 	// loses the deadlock gets a 500 on a confirmation that was otherwise fine.
 	// Taking the set up front means the loop acquires nothing new from it.
-	if err := e.approvals.LockPendingGroupInTx(execCtx, tx, orgID.UUID, siteLeadProposalKind); err != nil {
+	if err := e.approvals.LockPendingGroupInTx(execCtx, tx, companyID.UUID, siteLeadProposalKind); err != nil {
 		return nil, err
 	}
 	proposalIDs := make([]ids.UUID, 0, len(found))
@@ -228,7 +228,7 @@ func (e *deepReadEngine) stageOnboardingPeople(ctx context.Context, tx pgx.Tx, o
 		if known {
 			continue
 		}
-		in, err := siteLeadStageInput(read.ID, orgID.UUID, read.SeedURL, sitePerson{
+		in, err := siteLeadStageInput(read.ID, companyID.UUID, read.SeedURL, sitePerson{
 			Name: person.Name, Role: person.Role, PublishedEmail: person.PublishedEmail,
 			LinkedinURL: person.LinkedinURL, EvidenceSnippet: person.EvidenceSnippet, SourceURL: person.SourceURL,
 		}, bundleID)
@@ -328,9 +328,9 @@ func attachCompanySiteReadOptionals(out *crmcontracts.CompanySiteRead, read peop
 		code := crmcontracts.CompanySiteReadStatusCode(*read.StatusCode)
 		out.StatusCode = &code
 	}
-	if read.OrganizationID != nil {
-		id := openapi_types.UUID(read.OrganizationID.UUID)
-		out.OrganizationId = &id
+	if read.CompanyID != nil {
+		id := openapi_types.UUID(read.CompanyID.UUID)
+		out.CompanyId = &id
 	}
 	if read.Phase != nil {
 		phase := crmcontracts.CompanySiteReadPhase(*read.Phase)
@@ -427,38 +427,38 @@ func contractSiteReadComparisons(compared []people.SiteReadComparison) []crmcont
 	return out
 }
 
-func (h siteReadHandlers) StartCompanySiteRead(w http.ResponseWriter, r *http.Request, _ crmcontracts.StartCompanySiteReadParams) {
+func (h siteReadHandlers) StartAnchorCompanySiteRead(w http.ResponseWriter, r *http.Request, _ crmcontracts.StartAnchorCompanySiteReadParams) {
 	if !companyContextReadEnabled(h.companyContextRollout) {
-		httperr.NotImplemented(w, r, "startCompanySiteRead (company context read rollout is disabled)")
+		httperr.NotImplemented(w, r, "startAnchorCompanySiteRead (company context read rollout is disabled)")
 		return
 	}
 	if h.engine == nil {
-		httperr.NotImplemented(w, r, "startCompanySiteRead (no crawl runner configured)")
+		httperr.NotImplemented(w, r, "startAnchorCompanySiteRead (no crawl runner configured)")
 		return
 	}
-	h.engine.startCompanySiteRead(w, r)
+	h.engine.startAnchorCompanySiteRead(w, r)
 }
 
-func (h siteReadHandlers) GetCompanySiteRead(w http.ResponseWriter, r *http.Request, readID openapi_types.UUID) {
+func (h siteReadHandlers) GetAnchorCompanySiteRead(w http.ResponseWriter, r *http.Request, readID openapi_types.UUID) {
 	if !companyContextReadEnabled(h.companyContextRollout) {
-		httperr.NotImplemented(w, r, "getCompanySiteRead (company context read rollout is disabled)")
+		httperr.NotImplemented(w, r, "getAnchorCompanySiteRead (company context read rollout is disabled)")
 		return
 	}
 	if h.engine == nil {
-		httperr.NotImplemented(w, r, "getCompanySiteRead (no crawl runner configured)")
+		httperr.NotImplemented(w, r, "getAnchorCompanySiteRead (no crawl runner configured)")
 		return
 	}
-	h.engine.getCompanySiteRead(w, r, readID)
+	h.engine.getAnchorCompanySiteRead(w, r, readID)
 }
 
-func (h siteReadHandlers) ConfirmCompanySiteRead(w http.ResponseWriter, r *http.Request, readID openapi_types.UUID, _ crmcontracts.ConfirmCompanySiteReadParams) {
+func (h siteReadHandlers) ConfirmAnchorCompanySiteRead(w http.ResponseWriter, r *http.Request, readID openapi_types.UUID, _ crmcontracts.ConfirmAnchorCompanySiteReadParams) {
 	if !companyContextReadEnabled(h.companyContextRollout) {
-		httperr.NotImplemented(w, r, "confirmCompanySiteRead (company context read rollout is disabled)")
+		httperr.NotImplemented(w, r, "confirmAnchorCompanySiteRead (company context read rollout is disabled)")
 		return
 	}
 	if h.engine == nil {
-		httperr.NotImplemented(w, r, "confirmCompanySiteRead (no crawl runner configured)")
+		httperr.NotImplemented(w, r, "confirmAnchorCompanySiteRead (no crawl runner configured)")
 		return
 	}
-	h.engine.confirmCompanySiteRead(w, r, readID)
+	h.engine.confirmAnchorCompanySiteRead(w, r, readID)
 }

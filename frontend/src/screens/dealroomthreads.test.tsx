@@ -22,7 +22,7 @@ import {
 } from "./dealroomthreads";
 
 // The board is drawn once for BOTH sides of a Deal Room, and the buyer's half
-// is served to somebody outside the organization entirely. What a refused
+// is served to somebody outside the company entirely. What a refused
 // write says here is therefore read by a party with no seat, no role and no
 // business knowing the shape of the authority model that refused them.
 
@@ -96,7 +96,7 @@ describe("a refused reply", () => {
 
   // The disclosure. `auth.Require` builds a refusal's detail from the RBAC
   // object and the verb, and this board renders to a buyer who is not in the
-  // organization at all.
+  // company at all.
   it("never hands a refused party the RBAC object and verb", async () => {
     const user = userEvent.setup();
     const reply = vi.fn(async () => {

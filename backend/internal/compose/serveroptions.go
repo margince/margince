@@ -131,7 +131,7 @@ func WithBusReady(check func(context.Context) error) Option {
 
 // WithBlobstore wires the object store: it feeds the /readyz probe and
 // backs the attachment handlers, the offer PDF render endpoint, and the
-// organization-logo stream. Without it those endpoints stay their
+// company-logo stream. Without it those endpoints stay their
 // generated/explicit 501, so a role that stores no objects declares that
 // by omission rather than nil-derefing at request time. Several handler
 // sets promote a WithBlobstore method, so s.WithBlobstore itself would be

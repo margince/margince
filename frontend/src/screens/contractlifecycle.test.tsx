@@ -29,7 +29,7 @@ afterEach(() => {
 
 const PREDECESSOR: Contract = {
   id: "c-1",
-  organization_id: "o-1",
+  company_id: "o-1",
   title: "Framework agreement 2024",
   source: "manual",
   captured_by: "human:u-1",
@@ -53,7 +53,7 @@ function show(ui: ReactNode) {
   );
 }
 
-// A predecessor's own organization has exactly one deal on record for these
+// A predecessor's own company has exactly one deal on record for these
 // tests — enough to prove the picker lists it and sends its id, without a
 // second candidate to disambiguate against.
 const ORG_DEAL = { id: "d-1", name: "Renewal — 2025 term" };
@@ -81,7 +81,7 @@ function stubRenewalFetch(onRenewal: (request: Request) => Promise<Response>) {
 
 describe("ContractRenewModal", () => {
   // A reader admitted through the DEAL may not be able to open the company
-  // (#1983): organization_id comes back null and masked_fields names it. They
+  // (#1983): company_id comes back null and masked_fields names it. They
   // may still renew, so the modal keeps working — but the deal picker is filled
   // by listing that company's deals, and an empty picker would read as "this
   // company has no deals" rather than "you cannot see them".
@@ -100,8 +100,8 @@ describe("ContractRenewModal", () => {
       <ContractRenewModal
         contract={{
           ...PREDECESSOR,
-          organization_id: null,
-          masked_fields: ["organization_id"],
+          company_id: null,
+          masked_fields: ["company_id"],
         }}
         open
         onClose={vi.fn()}
@@ -397,7 +397,7 @@ describe("ContractCancelModal", () => {
   // CodeRabbit (PR #4002): the reseed effect keyed on [open, contract] — the
   // OBJECT reference. react-query hands back a new object on every refetch of
   // the same row even when nothing the reader can see changed, so a
-  // background orgContracts refetch while this modal is open (another tab
+  // background companyContracts refetch while this modal is open (another tab
   // editing the same contract, a window-focus refetch) replaced `contract`
   // and re-ran the effect, discarding whatever the reader had already typed.
   // Keying on contract.id instead means a REFETCH of the same row leaves the
@@ -420,7 +420,7 @@ describe("ContractCancelModal", () => {
     );
 
     // The SAME row, refetched: a new object, same id, a version bump — the
-    // exact shape a background orgContracts refetch hands back.
+    // exact shape a background companyContracts refetch hands back.
     const refetched: Contract = { ...PREDECESSOR, version: 4 };
     rerender(
       <QueryClientProvider client={client}>

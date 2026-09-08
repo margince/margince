@@ -24,10 +24,10 @@ type relinkBatchDTO struct {
 func TestRelinkingAThreadOverHTTP(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	org := anchorOrg(t, e, "Stark Industries")
+	company := anchorCompany(t, e, "Stark Industries")
 	var project projectDTO
 	if status := e.Call(t, "POST", "/v1/projects", AnyMap{
-		"name": "Arc reactor", "organization_id": org, "source": "manual",
+		"name": "Arc reactor", "company_id": company, "source": "manual",
 	}, nil, &project); status != http.StatusCreated {
 		t.Fatalf("POST /projects → %d, want 201", status)
 	}
@@ -74,7 +74,7 @@ func TestRelinkingAThreadOverHTTP(t *testing.T) {
 
 	var bulk relinkBatchDTO
 	if status := e.Call(t, "POST", "/v1/activities/relink-bulk", AnyMap{
-		"activity_ids": members[:2], "entity_type": "organization", "entity_id": org,
+		"activity_ids": members[:2], "entity_type": "company", "entity_id": company,
 	}, nil, &bulk); status != http.StatusOK {
 		t.Fatalf("POST /activities/relink-bulk → %d, want 200", status)
 	}
@@ -82,7 +82,7 @@ func TestRelinkingAThreadOverHTTP(t *testing.T) {
 		t.Errorf("bulk relinked = %d, want 2", bulk.Relinked)
 	}
 	if status := e.Call(t, "POST", "/v1/activities/relink-bulk", AnyMap{
-		"activity_ids": []string{ids.NewV7().String()}, "entity_type": "organization", "entity_id": org,
+		"activity_ids": []string{ids.NewV7().String()}, "entity_type": "company", "entity_id": company,
 	}, nil, &problem); status != http.StatusNotFound {
 		t.Errorf("a named id that does not exist → %d, want 404", status)
 	}

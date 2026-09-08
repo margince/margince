@@ -33,7 +33,7 @@ const (
 // RoutableLeadFields mirrors the closed field set the people module's
 // routing engine matches rules on — lead-local columns only
 // (segregation-in-scoring: routing never reads the contact graph).
-var RoutableLeadFields = []string{"source", "company_name", "candidate_org_key"}
+var RoutableLeadFields = []string{"source", "company_name", "candidate_company_key"}
 
 // leadRoutingSchema is the assign_lead_owner params shape (features/03 §3
 // AC-S5): an ordered round-robin pool, an optional per-owner cap, and

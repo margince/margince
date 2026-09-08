@@ -22,14 +22,14 @@ import { CommercialPanel, DealsCard } from "./company360";
 // mount the panels directly: the account page renders them from a composite read
 // whose deals section a stub would have to fake anyway.
 
-type Organization360 = components["schemas"]["Organization360"];
-type Organization360Deal = components["schemas"]["Organization360Deal"];
-type Organization360Deals = components["schemas"]["Organization360Deals"];
+type Company360 = components["schemas"]["Company360"];
+type Company360Deal = components["schemas"]["Company360Deal"];
+type Company360Deals = components["schemas"]["Company360Deals"];
 type Money = components["schemas"]["Money"];
 
 const PAGE = { has_more: false, next_cursor: null };
 
-const ORG: components["schemas"]["Organization"] = {
+const ORG: components["schemas"]["Company"] = {
   id: "o-1",
   display_name: "Brandt Automotive GmbH",
   source: "manual",
@@ -42,7 +42,7 @@ const ORG: components["schemas"]["Organization"] = {
 // is not there. The database pairs the two columns today, which is exactly why
 // the contract's nullable currency is worth pinning — the crash arrives with the
 // first source that does not.
-const UNLABELLED_DEAL: Organization360Deal = {
+const UNLABELLED_DEAL: Company360Deal = {
   deal_id: "d-1",
   name: "Retrofit rollout",
   status: "open",
@@ -52,15 +52,15 @@ const UNLABELLED_DEAL: Organization360Deal = {
 
 function dealsSection(
   wonLifetime: Money,
-  data: Organization360Deal[] = [],
-): Organization360Deals {
+  data: Company360Deal[] = [],
+): Company360Deals {
   return { data, page: PAGE, won_lifetime: wonLifetime, lost_count: 0 };
 }
 
-function view(deals: Organization360Deals): Organization360 {
+function view(deals: Company360Deals): Company360 {
   return {
     as_of: "2026-06-01T09:00:00Z",
-    organization: ORG,
+    company: ORG,
     sections_omitted: [],
     deals,
   };

@@ -25,7 +25,7 @@ expect:
     person voice — and the answer is still company: it offers services, cites a
     client history, and prints a registered legal entity. "company" scores high.
     "personal" scores VERY low: this is the false-refusal direction, where a real
-    customer silently loses their organization record and no one sees it happen.
+    customer silently loses their company record and no one sees it happen.
     This scenario is release-blocking for that reason, in the way false_noise_01
     is for the counterparty verdict.
   bands:

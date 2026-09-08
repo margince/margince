@@ -145,7 +145,7 @@ func (s stubTags) RecordTags(_ context.Context, _ string, _ ids.UUID) (RecordTag
 	}}}, nil
 }
 
-func (s stubTags) RecordTagTypes() []string { return []string{"person", "organization", "deal"} }
+func (s stubTags) RecordTagTypes() []string { return []string{"person", "company", "deal"} }
 
 func (s stubTags) ResolveTag(_ context.Context, name string) (ids.UUID, error) {
 	if s.ensured != nil {
@@ -175,16 +175,16 @@ func (s stubTags) RemoveTag(_ context.Context, tagID ids.UUID, entityType string
 // the shape that made archive_record the only undo: retiring the word for
 // everybody to correct one mistaken tagging.
 func TestApplyAndRemoveReachTheSameTaggingBothWays(t *testing.T) {
-	tag, org := ids.NewV7(), ids.NewV7()
-	args := json.RawMessage(`{"tag_id":"` + tag.String() + `","record_type":"organization",` +
-		`"record_id":"` + org.String() + `"}`)
+	tag, company := ids.NewV7(), ids.NewV7()
+	args := json.RawMessage(`{"tag_id":"` + tag.String() + `","record_type":"company",` +
+		`"record_id":"` + company.String() + `"}`)
 
 	var applied, removed taggingArgs
 	if _, err := (applyTag{tags: stubTags{applied: &applied}}).Handle(context.Background(), args); err != nil {
 		t.Fatalf("applying answered %v", err)
 	}
-	if applied.TagID != tag || applied.RecordType != "organization" || applied.RecordID != org {
-		t.Errorf("apply reached the seam as %+v, want the tag on that organization", applied)
+	if applied.TagID != tag || applied.RecordType != "company" || applied.RecordID != company {
+		t.Errorf("apply reached the seam as %+v, want the tag on that company", applied)
 	}
 	if _, err := (removeTag{tags: stubTags{removed: &removed}}).Handle(context.Background(), args); err != nil {
 		t.Fatalf("removing answered %v", err)
@@ -203,7 +203,7 @@ func TestApplyTagTakesANameAndResolvesTheExistingWord(t *testing.T) {
 	var applied taggingArgs
 	_, err := (applyTag{tags: stubTags{applied: &applied, ensured: &resolved}}).Handle(
 		context.Background(),
-		json.RawMessage(`{"tag_name":"`+knownTagName+`","record_type":"organization",`+
+		json.RawMessage(`{"tag_name":"`+knownTagName+`","record_type":"company",`+
 			`"record_id":"`+ids.NewV7().String()+`"}`))
 	if err != nil {
 		t.Fatalf("applying by name answered %v, want the tag resolved", err)
@@ -225,7 +225,7 @@ func TestApplyTagRefusesAnUnknownNameRatherThanCoiningIt(t *testing.T) {
 	var applied taggingArgs
 	_, err := (applyTag{tags: stubTags{applied: &applied}}).Handle(
 		context.Background(),
-		json.RawMessage(`{"tag_name":"Champoin","record_type":"organization",`+
+		json.RawMessage(`{"tag_name":"Champoin","record_type":"company",`+
 			`"record_id":"`+ids.NewV7().String()+`"}`))
 	if err == nil {
 		t.Fatal("a typo'd name was accepted; want a refusal, because accepting it creates a second tag nobody chose")
@@ -239,7 +239,7 @@ func TestApplyTagRefusesAnUnknownNameRatherThanCoiningIt(t *testing.T) {
 // of the two to send.
 func TestApplyTagRefusesWithNeitherIDNorName(t *testing.T) {
 	_, err := (applyTag{tags: stubTags{}}).Handle(context.Background(),
-		json.RawMessage(`{"record_type":"organization","record_id":"`+ids.NewV7().String()+`"}`))
+		json.RawMessage(`{"record_type":"company","record_id":"`+ids.NewV7().String()+`"}`))
 	var bad *BadArgsError
 	if !errors.As(err, &bad) {
 		t.Fatalf("answered %v, want a BadArgsError naming tag_id or tag_name", err)
@@ -254,7 +254,7 @@ func TestApplyTagRefusesWithNeitherIDNorName(t *testing.T) {
 func TestApplyTagChecksTheRecordBeforeMintingAWord(t *testing.T) {
 	var ensured string
 	_, err := (applyTag{tags: refusingTaggable{ensured: &ensured}}).Handle(context.Background(),
-		json.RawMessage(`{"tag_name":"K5 Conference 2026","record_type":"organization",`+
+		json.RawMessage(`{"tag_name":"K5 Conference 2026","record_type":"company",`+
 			`"record_id":"`+ids.NewV7().String()+`"}`))
 	if err == nil {
 		t.Fatal("applying to an unreachable record answered success, want the refusal")
@@ -300,7 +300,7 @@ func (r refusingTaggable) RecordTags(_ context.Context, _ string, _ ids.UUID) (R
 }
 
 func (r refusingTaggable) RecordTagTypes() []string {
-	return []string{"person", "organization", "deal"}
+	return []string{"person", "company", "deal"}
 }
 
 func (r refusingTaggable) ResolveTag(_ context.Context, name string) (ids.UUID, error) {

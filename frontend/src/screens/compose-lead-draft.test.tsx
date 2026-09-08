@@ -21,7 +21,7 @@ import {
 //
 // A lead is the shape the person drafter's own contract describes: the record
 // IS the recipient, so there is no contact to name and no deal or project to
-// pick. Before this the composer refused every record but an organization, and
+// pick. Before this the composer refused every record but a company, and
 // "Draft with AI" on a lead did nothing at all.
 //
 // These assert which ENDPOINT the button reaches, because that is the whole
@@ -135,14 +135,12 @@ describe("drafting to a lead", () => {
       await screen.findByDisplayValue("Following up on your pricing question"),
     ).toBeTruthy();
     // The endpoint, named. A lead that reached the ACCOUNT endpoint would be
-    // asking the server to ground a message in an organization it has no link
+    // asking the server to ground a message in a company it has no link
     // to, and a lead that reached none would fill nothing at all.
     expect(
       sent.some((call) => call.key === "POST /leads/l-1/draft-email"),
     ).toBe(true);
-    expect(sent.some((call) => call.key.includes("/organizations/"))).toBe(
-      false,
-    );
+    expect(sent.some((call) => call.key.includes("/companies/"))).toBe(false);
   });
 
   it("carries the reader's own steering and nothing else", async () => {

@@ -44,7 +44,7 @@ const UNPINNED_WRITES: readonly string[] = [
   // this gate's subject set rather than inside it and passing. Threading a
   // version through six screens is its own change with its own proof; what
   // matters here is that the class is now visible and the count can only fall.
-  "screens/companyheader.tsx DELETE /organizations/{id}",
+  "screens/companyheader.tsx DELETE /companies/{id}",
   "screens/contacts.tsx DELETE /people/{id}",
   "screens/dealbulk.tsx DELETE /deals/{id}",
   "screens/deals.tsx DELETE /deals/{id}",
@@ -52,12 +52,12 @@ const UNPINNED_WRITES: readonly string[] = [
   "screens/relationships.tsx DELETE /relationships/{id}",
   "screens/contractform.tsx PATCH /contracts/{id}",
   "screens/customfields.tsx PATCH /custom-fields/{id}",
-  // The two FACT writes stay: OrganizationFact carries no version on the wire,
+  // The two FACT writes stay: CompanyFact carries no version on the wire,
   // so no caller can pin one. Its sibling, CompanyProfileField, now does — the
   // profile-field lines that used to sit here are gone because both verbs send
   // the precondition.
-  "screens/evidenceverdict.tsx PATCH /organizations/{id}/facts/{factKey}",
-  "screens/evidenceverdict.tsx POST /organizations/{id}/facts/{factKey}/confirm",
+  "screens/evidenceverdict.tsx PATCH /companies/{id}/facts/{factKey}",
+  "screens/evidenceverdict.tsx POST /companies/{id}/facts/{factKey}/confirm",
   "screens/extension-access.tsx PATCH /roles/{key}/objects/{object}",
   "screens/settings.tsx DELETE /stages/{id}",
   "screens/share.tsx DELETE /record-grants/{id}",

@@ -52,7 +52,7 @@ func (e *promoteConsentEnv) seedLeadActivity(t *testing.T, lead ids.LeadID, subj
 func (e *promoteConsentEnv) linkTargetsOf(t *testing.T, activity ids.UUID) map[string]ids.UUID {
 	t.Helper()
 	rows, err := e.owner.Query(context.Background(),
-		`SELECT entity_type, coalesce(person_id, organization_id, deal_id, lead_id)
+		`SELECT entity_type, coalesce(person_id, company_id, deal_id, lead_id)
 		 FROM activity_link WHERE activity_id = $1`, activity)
 	if err != nil {
 		t.Fatal(err)

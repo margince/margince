@@ -60,7 +60,7 @@ export const NothingDecidedYet: Story = {
   render: story([
     row("close_date_correction", "manual", [0, 0, 0]),
     row("lifecycle_change", "manual", [0, 0, 0]),
-    row("org_name_promotion", "manual", [0, 0, 0]),
+    row("company_name_promotion", "manual", [0, 0, 0]),
   ]),
 };
 
@@ -70,7 +70,7 @@ export const EarnedOnOne: Story = {
   render: story([
     row("close_date_correction", "auto", [14, 1, 0]),
     row("lifecycle_change", "manual", [2, 3, 4]),
-    row("org_name_promotion", "manual", [6, 0, 1]),
+    row("company_name_promotion", "manual", [6, 0, 1]),
   ]),
 };
 
@@ -92,6 +92,6 @@ export const AllOnDark: Story = {
   render: story([
     row("close_date_correction", "auto", [14, 1, 0]),
     row("lifecycle_change", "auto", [9, 0, 0]),
-    row("org_name_promotion", "auto", [21, 2, 1]),
+    row("company_name_promotion", "auto", [21, 2, 1]),
   ]),
 };

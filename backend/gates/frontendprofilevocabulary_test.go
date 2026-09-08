@@ -9,7 +9,7 @@ package gates
 // one of them fails SILENTLY when it falls short.
 //
 // companyprofilevocabulary_test.go holds the Go mirrors against the
-// organization_profile_field CHECK. It cannot read TypeScript, so the five
+// company_profile_field CHECK. It cannot read TypeScript, so the five
 // below were unheld — and all five were genuinely missing three fields while
 // that gate stayed green. What each miss does to a person:
 //
@@ -65,7 +65,7 @@ var profileVocabularyScreens = []struct {
 		why:    "the field renders as its own column name with the underscores spaced out",
 	},
 	{
-		file:   "../frontend/src/screens/organizations.tsx",
+		file:   "../frontend/src/screens/companies.tsx",
 		opens:  "const PROFILE_FIELD_LABELS: Record<string, MessageKey> = {",
 		closes: "};",
 		why:    "the company record draws the field as its own column name",

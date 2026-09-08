@@ -30,7 +30,7 @@ func WithCompanyContextRollout(rollout string) Option {
 // Called after every option has run rather than inside the option above, and
 // that ordering is the whole point. The endpoints do not depend on the option
 // running — an unset rollout means every stage is on, which
-// companyContextReadEnabled says and GetCompanyContextCapabilities re-derives —
+// companyContextReadEnabled says and GetAnchorCompanyContextCapabilities re-derives —
 // while the injected boolean would be the zero value, false. So setting it
 // inside the option made the two agree only for a server that HAD the option,
 // and a server without one advertised the page as absent while serving it.

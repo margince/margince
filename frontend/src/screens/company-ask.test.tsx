@@ -10,8 +10,8 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { CompanyScreen } from "./companies";
 import { companyBackstop, jsonResponse, stubFetch } from "./company.fixtures";
-import { CompanyScreen } from "./organizations";
 
 // "Ask about this account" spent months reachable only from a test file: the
 // panel existed, its round-trip worked, and no route rendered it. So the claim
@@ -37,7 +37,7 @@ function render(ui: ReactNode) {
 }
 
 const answer = {
-  organization_id: "o-1",
+  company_id: "o-1",
   question: "whats_open",
   generated_at: "2026-06-01T09:00:00Z",
   generated_by: "model",
@@ -70,7 +70,7 @@ describe("the company overview carries the ask surface", () => {
     const user = userEvent.setup();
     let asked: unknown;
     stubFetch(async (url, method, request) => {
-      if (method === "POST" && url.endsWith("/organizations/o-1/ask")) {
+      if (method === "POST" && url.endsWith("/companies/o-1/ask")) {
         asked = await request.json();
         return jsonResponse(answer);
       }

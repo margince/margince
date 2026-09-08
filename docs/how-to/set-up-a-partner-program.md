@@ -122,10 +122,10 @@ Agents can READ partners directly. `partner` is a record type the generic tools 
 `search_records(record_type="partner")` returns the partner list. Three things to know about
 the shape:
 
-- **A partner is addressed by its ORGANIZATION's id.** The partner row is that company's terms,
+- **A partner is addressed by its COMPANY's id.** The partner row is that company's terms,
   not a separate record, so you pass the company id you already have.
 - **A partner has no text search, and an untyped sweep skips it.** Every word you would search
-  for lives on the organization, so searching without naming a type finds the company once
+  for lives on the company, so searching without naming a type finds the company once
   rather than twice. Name `record_type=partner` to reach the terms.
 - **The role and certification dials are not on the tool surface yet.** `GET /partners` narrows
   by `partner_role` and `cert_status`, and the store binds both. But `search_records` — the tool
@@ -138,20 +138,20 @@ the shape:
 certification.
 
 That is a statement about the generic tools, not a guarantee that no agent can ever write partner
-state. `PUT /organizations/{id}/partner` carries a write annotation, and a passport is a REST
+state. `PUT /companies/{id}/partner` carries a write annotation, and a passport is a REST
 credential as well as an MCP one, so an agent can reach that route directly. Three things all
 have to be true for it to succeed, and any one of them is where you stop it:
 
 - the passport carries **write** scope,
 - the granting human's seat has **update** on `partner`,
-- and **update** on `organization` as well — becoming a partner stamps the company's
+- and **update** on `company` as well — becoming a partner stamps the company's
   relationship types, so the route needs both.
 
 If you want partner terms to be human-only, that is what to withhold. The tool vocabulary is not
 what decides it.
 
 A deal's partner and what that partner did for it are both readable and writable, through the
-deal's own `partner_org_id` and `partner_attribution` fields — settable when an agent creates a
+deal's own `partner_company_id` and `partner_attribution` fields — settable when an agent creates a
 deal and when it updates one.
 
 ## Changing the value lists themselves

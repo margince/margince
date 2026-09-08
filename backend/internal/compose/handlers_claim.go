@@ -17,7 +17,7 @@ import (
 
 // claimHandlers is the one HTTP door for claiming a customer record. The
 // write lands in the module that owns the table — people for person,
-// organization and lead; deals for deal — so the route dispatches on the
+// company and lead; deals for deal — so the route dispatches on the
 // record type rather than either module reaching into the other's table.
 type claimHandlers struct {
 	people *people.Store

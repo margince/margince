@@ -89,7 +89,7 @@ type extractedField struct {
 // The other direction — a vocabulary value ADDED but not listed here, so it is
 // gate-valid yet never offered to the model and silently never extracted — is
 // held by companyprofilevocabulary_test.go, which derives the whole vocabulary
-// from the organization_profile_field CHECK and fails when this list falls
+// from the company_profile_field CHECK and fails when this list falls
 // short of it.
 var extractionFieldNames = []string{
 	string(crmcontracts.ColdStartFieldFieldDisplayName),

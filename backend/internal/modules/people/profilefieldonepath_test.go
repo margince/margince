@@ -31,7 +31,7 @@ import (
 // no longer existed, which is a failure it would have reported as its own
 // error rather than as a defect.
 //
-// What this does NOT hold: another surface writing organization_profile_field
+// What this does NOT hold: another surface writing company_profile_field
 // with its own SQL. Two do — the company form's bulk save and the cold-start
 // seed — and they are different operations rather than second copies of this
 // one: one writes a whole form at once, the other seeds a profile that has no
@@ -43,7 +43,7 @@ const profileFieldOnePath = "writeProfileField"
 
 // profileFieldTable is what a verb writing around the one path would have to
 // name, and it is how such a verb is found.
-const profileFieldTable = "organization_profile_field"
+const profileFieldTable = "company_profile_field"
 
 func TestBothProfileFieldVerbsWriteThroughTheOnePath(t *testing.T) {
 	home, onePath := declarationOf(t, profileFieldOnePath)
@@ -143,7 +143,7 @@ func importsOf(parsed moduleFile) map[string]string {
 //     error is reported as reaching around the path.
 //   - Anything the one path does not hand the transaction. An effect on the
 //     record is something done to the database, and it needs the tx to do it.
-//     `canonicalOrgColumn` is a closed switch from a field name to a column
+//     `canonicalCompanyColumn` is a closed switch from a field name to a column
 //     name; reserving it tells a verb to move a pure lookup inside a write.
 //
 // The tx test is the honest one available here: this walk has no type

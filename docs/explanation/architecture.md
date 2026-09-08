@@ -201,7 +201,7 @@ envelope, the relay, dedupe — is detailed in
 
 ## Tenancy as structure
 
-An installation holds ONE organization (ADR-0061), so no table carries a
+An installation holds ONE company (ADR-0061), so no table carries a
 row-level policy. Every module statement still goes through the one
 workspace-transaction helper — the auditable boundary a fitness function
 derived from the live tree holds — and row scope is decided by

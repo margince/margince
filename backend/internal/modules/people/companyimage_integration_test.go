@@ -25,15 +25,15 @@ import (
 
 // anchorAuditEvidence reads the evidence of the newest company update row —
 // the half of the write that carries context ABOUT the save.
-func anchorAuditEvidence(ctx context.Context, t *testing.T, s *Store, orgID ids.OrganizationID) map[string]any {
+func anchorAuditEvidence(ctx context.Context, t *testing.T, s *Store, companyID ids.CompanyID) map[string]any {
 	t.Helper()
 	var evidence map[string]any
 	if err := s.tx(ctx, func(tx pgx.Tx) error {
 		var raw []byte
 		if err := tx.QueryRow(ctx,
 			`SELECT evidence FROM audit_log
-			  WHERE entity_type = 'organization' AND entity_id = $1 AND action = 'update'
-			  ORDER BY occurred_at DESC, id DESC LIMIT 1`, orgID).Scan(&raw); err != nil {
+			  WHERE entity_type = 'company' AND entity_id = $1 AND action = 'update'
+			  ORDER BY occurred_at DESC, id DESC LIMIT 1`, companyID).Scan(&raw); err != nil {
 			return err
 		}
 		return json.Unmarshal(raw, &evidence)
@@ -65,7 +65,7 @@ func TestACompanySaveRecordsWhatTheFormReplaced(t *testing.T) {
 		t.Fatalf("the save under test: %v", err)
 	}
 
-	before, after := auditImagesHolding(env.ctx, t, env.store, "organization", env.anchorID.UUID, fieldDisplayName)
+	before, after := auditImagesHolding(env.ctx, t, env.store, "company", env.anchorID.UUID, fieldDisplayName)
 	wantImage(t, before, "before", fieldDisplayName, "Our Company")
 	wantImage(t, after, "after", fieldDisplayName, "Nordwind Systeme GmbH")
 	wantImage(t, before, "before", fieldIndustry, automotive)
@@ -111,7 +111,7 @@ func TestACompanySaveRecordsOnlyTheFieldsThatMoved(t *testing.T) {
 		t.Fatalf("the save under test: %v", err)
 	}
 
-	before, after := auditImagesHolding(env.ctx, t, env.store, "organization", env.anchorID.UUID, fieldIndustry)
+	before, after := auditImagesHolding(env.ctx, t, env.store, "company", env.anchorID.UUID, fieldIndustry)
 	wantImage(t, before, "before", fieldIndustry, automotive)
 	wantImage(t, after, "after", fieldIndustry, renewables)
 	for _, key := range []string{fieldDisplayName, fieldOfferSummary} {

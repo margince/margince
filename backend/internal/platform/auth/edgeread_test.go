@@ -23,7 +23,7 @@ func TestEdgeReadScopeRefusesACallerHoldingOnlyTheEndpointGrants(t *testing.T) {
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"fixture"},
 			Objects: map[string]principal.ObjectGrant{
-				"person": {Read: true}, "organization": {Read: true},
+				"person": {Read: true}, "company": {Read: true},
 				"deal": {Read: true}, "project": {Read: true},
 			},
 			RowScope: principal.RowScopeAll,
@@ -60,7 +60,7 @@ func TestEdgeReadScopeAdmitsTheEdgeGrantAndBoundsItByEveryEndpoint(t *testing.T)
 	// distinguishes this from the single-endpoint scoping the call sites used to
 	// assemble by hand, and a clause missing an arm scopes an edge by its other
 	// end alone.
-	for _, column := range []string{"person_id", "organization_id", "counterparty_org_id", "deal_id", "project_id"} {
+	for _, column := range []string{"person_id", "company_id", "counterparty_company_id", "deal_id", "project_id"} {
 		if !strings.Contains(clause, "r."+column) {
 			t.Errorf("the clause does not bound the %s endpoint: %s", column, clause)
 		}
@@ -68,7 +68,7 @@ func TestEdgeReadScopeAdmitsTheEdgeGrantAndBoundsItByEveryEndpoint(t *testing.T)
 }
 
 // Only the SYSTEM principal reads edges unbounded, and that is a property of
-// capture privacy rather than of row scope: person and organization carry a
+// capture privacy rather than of row scope: person and company carry a
 // visibility column, so even a human at row_scope=all keeps an arm on those two
 // endpoints while deal and project collapse away. Pinned because "" means
 // UNBOUNDED at every call site that interpolates it — a human who slipped into
@@ -81,9 +81,9 @@ func TestOnlyTheSystemPrincipalReadsEdgesUnbounded(t *testing.T) {
 	}
 	if clause == "" {
 		t.Fatal("a human at row_scope=all read edges unbounded: capture privacy on person and " +
-			"organization must still bound the edge")
+			"company must still bound the edge")
 	}
-	for _, endpoint := range []string{"person", "organization"} {
+	for _, endpoint := range []string{"person", "company"} {
 		if !strings.Contains(clause, "FROM "+endpoint+" ep") {
 			t.Errorf("the row_scope=all clause drops the %s arm, so a capture-private endpoint is "+
 				"disclosed through its edge: %s", endpoint, clause)

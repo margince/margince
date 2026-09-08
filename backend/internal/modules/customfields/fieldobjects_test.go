@@ -33,8 +33,8 @@ var carriageShapes = map[string]struct{ create, read reflect.Type }{
 	string(datasource.EntityPerson): {
 		reflect.TypeFor[crmcontracts.CreatePersonRequest](), reflect.TypeFor[crmcontracts.Person](),
 	},
-	string(datasource.EntityOrganization): {
-		reflect.TypeFor[crmcontracts.CreateOrganizationRequest](), reflect.TypeFor[crmcontracts.Organization](),
+	string(datasource.EntityCompany): {
+		reflect.TypeFor[crmcontracts.CreateCompanyRequest](), reflect.TypeFor[crmcontracts.Company](),
 	},
 	string(datasource.EntityDeal): {
 		reflect.TypeFor[crmcontracts.CreateDealRequest](), reflect.TypeFor[crmcontracts.Deal](),

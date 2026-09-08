@@ -82,14 +82,14 @@ export const Default: Story = {
 
 // Live record hits under the commands. The second line names the KIND, in the
 // reader's language — this row printed the raw wire word until #4026, so a
-// German reader met "organization" here.
+// German reader met "company" here.
 export const WithRecordHits: Story = {
   render: () =>
     palette(() =>
       jsonResponse({
         data: [
           { type: "person", id: "p1", title: "Dana Buyer" },
-          { type: "organization", id: "o1", title: "Acme GmbH" },
+          { type: "company", id: "o1", title: "Acme GmbH" },
           { type: "product", id: "pr1", title: "Kärcher floor scrubber" },
           { type: "tag", id: "t1", title: "Key account" },
         ],

@@ -6,7 +6,7 @@
 package integration
 
 // The dedupe review queue over the real wire (DH-EXT-1/2): a manual
-// fuzzy org create leaves the pair in GET /dedupe/candidates, the
+// fuzzy company create leaves the pair in GET /dedupe/candidates, the
 // evidence snapshot rides through verbatim, dismissal/undo/merge answer
 // the DH-EXT-2 contract, and the refusals are typed 422/404/409 — the
 // store's own behaviour is proved in the people package; this suite owns
@@ -42,32 +42,32 @@ type dedupeListDTO struct {
 	} `json:"page"`
 }
 
-// seedOrgPairHTTP creates an incumbent org and a same-stem near-duplicate
+// seedCompanyPairHTTP creates an incumbent company and a same-stem near-duplicate
 // through the real create endpoint; the create records the queue pair.
-func seedOrgPairHTTP(t *testing.T, e *apptest.AppEnv, stem, incumbentDomain, dupDomain string) (incumbentID string) {
+func seedCompanyPairHTTP(t *testing.T, e *apptest.AppEnv, stem, incumbentDomain, dupDomain string) (incumbentID string) {
 	t.Helper()
-	var org struct {
+	var company struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/organizations", AnyMap{
+	if status := e.Call(t, "POST", "/v1/companies", AnyMap{
 		"display_name": stem + " GmbH",
 		"domains":      []AnyMap{{"domain": incumbentDomain, "is_primary": true}},
-	}, nil, &org); status != http.StatusCreated {
+	}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("incumbent create → %d, want 201", status)
 	}
-	if status := e.Call(t, "POST", "/v1/organizations", AnyMap{
+	if status := e.Call(t, "POST", "/v1/companies", AnyMap{
 		"display_name": stem + " Inc",
 		"domains":      []AnyMap{{"domain": dupDomain, "is_primary": true}},
 	}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("fuzzy create must still 201, got %d", status)
 	}
-	return org.ID
+	return company.ID
 }
 
 func TestDedupeQueueOverHTTP(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	incumbentID := seedOrgPairHTTP(t, e, "Umbrella Holdings", "umbrella.example", "umbrella-us.example")
+	incumbentID := seedCompanyPairHTTP(t, e, "Umbrella Holdings", "umbrella.example", "umbrella-us.example")
 
 	var queue dedupeListDTO
 	if status := e.Call(t, "GET", "/v1/dedupe/candidates", nil, nil, &queue); status != http.StatusOK {
@@ -77,8 +77,8 @@ func TestDedupeQueueOverHTTP(t *testing.T) {
 		t.Fatalf("open queue holds %d rows, want the one recorded pair", len(queue.Data))
 	}
 	c := queue.Data[0]
-	if c.EntityType != "organization" || c.Status != "open" {
-		t.Fatalf("candidate = %s/%s, want organization/open", c.EntityType, c.Status)
+	if c.EntityType != "company" || c.Status != "open" {
+		t.Fatalf("candidate = %s/%s, want company/open", c.EntityType, c.Status)
 	}
 	if len(c.Evidence) == 0 || c.Evidence[0].Field != "display_name" {
 		t.Fatalf("evidence %+v does not carry the display_name collision", c.Evidence)
@@ -132,7 +132,7 @@ func TestDedupeQueueOverHTTP(t *testing.T) {
 		t.Fatalf("open list after merge → %d with %d rows, want 200 with 0", status, len(open.Data))
 	}
 	var mergedList dedupeListDTO
-	if status := e.Call(t, "GET", "/v1/dedupe/candidates?status=merged&entity_type=organization", nil, nil, &mergedList); status != http.StatusOK || len(mergedList.Data) != 1 {
+	if status := e.Call(t, "GET", "/v1/dedupe/candidates?status=merged&entity_type=company", nil, nil, &mergedList); status != http.StatusOK || len(mergedList.Data) != 1 {
 		t.Fatalf("merged list → %d with %d rows, want 200 with 1", status, len(mergedList.Data))
 	}
 }
@@ -140,8 +140,8 @@ func TestDedupeQueueOverHTTP(t *testing.T) {
 func TestDedupeQueuePagesOverHTTP(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	seedOrgPairHTTP(t, e, "Vandelay Industries", "vandelay.example", "vandelay-us.example")
-	seedOrgPairHTTP(t, e, "Initech Systems", "initech.example", "initech-us.example")
+	seedCompanyPairHTTP(t, e, "Vandelay Industries", "vandelay.example", "vandelay-us.example")
+	seedCompanyPairHTTP(t, e, "Initech Systems", "initech.example", "initech-us.example")
 
 	var page1 dedupeListDTO
 	if status := e.Call(t, "GET", "/v1/dedupe/candidates?limit=1", nil, nil, &page1); status != http.StatusOK {

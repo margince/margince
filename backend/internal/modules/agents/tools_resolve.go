@@ -86,8 +86,8 @@ const resolveMaxKeysPerCandidate = 10
 // spelled with the seam's own constants so the check and the value that crosses
 // the seam cannot drift apart.
 var resolveKinds = map[string]bool{
-	string(datasource.EntityPerson):       true,
-	string(datasource.EntityOrganization): true,
+	string(datasource.EntityPerson):  true,
+	string(datasource.EntityCompany): true,
 }
 
 // EntityResolver answers which records a batch of payloads already names.
@@ -159,13 +159,13 @@ func (t resolveEntities) Spec() mcp.ToolSpec {
 		InputSchema: schema(`{"type":"object","required":["candidates"],"properties":{
 			"candidates":{"type":"array","minItems":1,"maxItems":20,"items":{
 				"type":"object","required":["kind"],"properties":{
-					"kind":{"type":"string","enum":["person","organization"],"description":"Which record type this payload is asking about. Leads are not resolved."},
+					"kind":{"type":"string","enum":["person","company"],"description":"Which record type this payload is asking about. Leads are not resolved."},
 					"ref":{"type":"string","description":"Your own label for this candidate, echoed back on its answer so a batch can be lined up. Any string; it is never stored."},
 					"name":{"type":"string","description":"Full name for a person, trading name for a company."},
-					"legal_name":{"type":"string","description":"The registered company name, when it differs from the trading name. Read for an organization only."},
-					"emails":{"type":"array","maxItems":10,"items":{"type":"string"},"description":"Every address on the payload, not just the primary one. For an organization each address also contributes its domain, unless it is a consumer mail domain."},
+					"legal_name":{"type":"string","description":"The registered company name, when it differs from the trading name. Read for a company only."},
+					"emails":{"type":"array","maxItems":10,"items":{"type":"string"},"description":"Every address on the payload, not just the primary one. For a company each address also contributes its domain, unless it is a consumer mail domain."},
 					"phones":{"type":"array","maxItems":10,"items":{"type":"string"},"description":"Phone numbers in E.164 form; one that does not normalize is not a key and is ignored."},
-					"domains":{"type":"array","maxItems":10,"items":{"type":"string"},"description":"Company domains claimed by the payload. Read for an organization only."}},
+					"domains":{"type":"array","maxItems":10,"items":{"type":"string"},"description":"Company domains claimed by the payload. Read for a company only."}},
 				"additionalProperties":false}}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[ResolveEntitiesResult](),
@@ -207,7 +207,7 @@ func (t resolveEntities) Handle(ctx context.Context, in json.RawMessage) (json.R
 		// the call.
 		if !resolveKinds[c.Kind] {
 			return nil, &BadArgsError{Cause: fmt.Errorf(
-				"`kind` takes person or organization, not %q; leads are not resolved", c.Kind)}
+				"`kind` takes person or company, not %q; leads are not resolved", c.Kind)}
 		}
 		for field, keys := range map[string][]string{"emails": c.Emails, "phones": c.Phones, "domains": c.Domains} {
 			if len(keys) > resolveMaxKeysPerCandidate {

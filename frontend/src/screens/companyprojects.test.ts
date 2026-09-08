@@ -8,7 +8,7 @@ describe("the roles a company holds on a project", () => {
     // section — creating one attaches its company as the customer — so a
     // company joining afterwards is a partner or a subcontractor. Defaulting to
     // customer hands the project two, which is what the reports group by and
-    // what organization_id resolves to.
+    // what company_id resolves to.
     expect(COMPANY_ROLES[0]).toBe("partner");
     expect(COMPANY_ROLES).toContain("customer");
   });

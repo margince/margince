@@ -25,5 +25,5 @@ export const DONT_IMPORT = "";
 export function identifyingFieldFor(object: ImportObject): string {
   // A person and a lead are both identified by their email: it is the one
   // column that makes a re-import converge on the record it already wrote.
-  return object === "organization" ? "display_name" : "email";
+  return object === "company" ? "display_name" : "email";
 }

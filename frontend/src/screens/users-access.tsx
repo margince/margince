@@ -40,7 +40,7 @@ type Role = operations["previewAccess"]["parameters"]["query"]["role"];
 // The objects worth a line in the preview: the record kinds a rep works.
 const PREVIEW_OBJECTS = [
   "person",
-  "organization",
+  "company",
   "lead",
   "deal",
   "project",

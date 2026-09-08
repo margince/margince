@@ -130,8 +130,8 @@ const granted: View = {
     data: [
       {
         relationship_id: "rel-1",
-        organization_id: "o-1",
-        organization_name: "Brandt Automotive GmbH",
+        company_id: "o-1",
+        company_name: "Brandt Automotive GmbH",
         role: "Head of Fleet",
         is_current_primary: true,
         started_at: "2022-03-01T00:00:00Z",

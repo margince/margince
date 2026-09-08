@@ -76,8 +76,8 @@ const withEmployer: View = {
       {
         id: "em-9",
         person_id: "p-9",
-        organization_id: "o-9",
-        organization_name: "Brandt Logistik",
+        company_id: "o-9",
+        company_name: "Brandt Logistik",
         is_current_primary: true,
       },
     ],

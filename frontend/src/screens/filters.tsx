@@ -52,7 +52,7 @@ type ObjectTab = (typeof OBJECT_TABS)[number];
 
 const RESOURCE_OF: Record<ObjectTab, FilterResource> = {
   contacts: "person",
-  companies: "organization",
+  companies: "company",
   deals: "deal",
 };
 
@@ -86,7 +86,7 @@ const UNIT_LABEL: Record<ObjectTab, MessageKey> = {
  */
 const VIEW_OF: Record<ObjectTab, ViewResource> = {
   contacts: "people",
-  companies: "organizations",
+  companies: "companies",
   deals: "deals",
 };
 

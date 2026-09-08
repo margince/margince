@@ -73,11 +73,11 @@ func writeContractTarget(entityType datasource.EntityType, forUpdate bool) (any,
 			return &crmcontracts.UpdatePersonRequest{}, nil
 		}
 		return &crmcontracts.CreatePersonRequest{}, nil
-	case datasource.EntityOrganization:
+	case datasource.EntityCompany:
 		if forUpdate {
-			return &crmcontracts.UpdateOrganizationRequest{}, nil
+			return &crmcontracts.UpdateCompanyRequest{}, nil
 		}
-		return &crmcontracts.CreateOrganizationRequest{}, nil
+		return &crmcontracts.CreateCompanyRequest{}, nil
 	case datasource.EntityDeal:
 		if forUpdate {
 			return &crmcontracts.UpdateDealRequest{}, nil

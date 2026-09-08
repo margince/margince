@@ -168,14 +168,14 @@ func TestAgentLoopCaseGradesThePinnedArgumentsAndNoOthers(t *testing.T) {
 		{
 			name:       "the call carries more than the scenario pinned",
 			args:       `{"q":"Acme"}`,
-			reply:      `{"tool":"search_records","args":{"q":"Acme","record_type":"organization","limit":5}}`,
+			reply:      `{"tool":"search_records","args":{"q":"Acme","record_type":"company","limit":5}}`,
 			wantResult: aitasks.OutcomeAccepted,
 			wantDetail: `the turn took the step "search_records"`,
 		},
 		{
 			name:       "the call omits the pinned argument",
 			args:       `{"q":"Acme"}`,
-			reply:      `{"tool":"search_records","args":{"record_type":"organization"}}`,
+			reply:      `{"tool":"search_records","args":{"record_type":"company"}}`,
 			wantResult: aitasks.OutcomeWrongAnswer,
 			wantDetail: "q was not passed",
 		},
@@ -247,7 +247,7 @@ func TestAgentLoopCaseComparesPinnedNumbersExactly(t *testing.T) {
 func TestAgentLoopCaseReportsTheWrongStepWithoutItsArguments(t *testing.T) {
 	outcome := runAgentLoopExpectation(t, agentLoopCatalogFixture(),
 		agentLoopArgExpectation(t, agentLoopCatalogRead, `{"q":"Acme"}`),
-		`{"tool":"read_record","args":{"record_type":"organization","id":"018f3a1b-0000-7000-8000-000000000010"}}`)
+		`{"tool":"read_record","args":{"record_type":"company","id":"018f3a1b-0000-7000-8000-000000000010"}}`)
 
 	if outcome.Result != aitasks.OutcomeWrongAnswer {
 		t.Fatalf("Result = %q (%s), want %q", outcome.Result, outcome.Detail, aitasks.OutcomeWrongAnswer)

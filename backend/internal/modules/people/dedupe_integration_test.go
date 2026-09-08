@@ -6,7 +6,7 @@
 package people
 
 // PO-F-1/PO-F-2 over a real migrated Postgres: the exact tier finds a
-// claimed email or org domain deterministically; the fuzzy tier scores
+// claimed email or company domain deterministically; the fuzzy tier scores
 // the spec's own worked examples to the decimal and lands them on the
 // right side of DEDUPE_REVIEW_THRESHOLD; a nameless candidate never
 // fuzzy-matches; and the trigram candidate restriction still admits the
@@ -105,7 +105,7 @@ func (e *dedupeEnv) as() context.Context {
 			RoleKeys: []string{"rep"},
 			Objects: map[string]principal.ObjectGrant{
 				"person":       {Create: true, Read: true, Update: true},
-				"organization": {Create: true, Read: true, Update: true},
+				"company":      {Create: true, Read: true, Update: true},
 				"lead":         {Create: true, Read: true, Update: true},
 				"relationship": {Create: true, Read: true},
 			},
@@ -115,7 +115,7 @@ func (e *dedupeEnv) as() context.Context {
 }
 
 // seedEmployedPerson creates a person with the given email employed at a
-// fresh org that owns domain — the incumbent every case probes against.
+// fresh company that owns domain — the incumbent every case probes against.
 // openSignatureSource is a real inbound message for the apply path to read the
 // audience of.
 //
@@ -159,14 +159,14 @@ func (e *dedupeEnv) agedSignatureSource(ctx context.Context, t *testing.T) ids.U
 	return id
 }
 
-func (e *dedupeEnv) seedEmployedPerson(ctx context.Context, t *testing.T, name, email, orgName, domain string) (ids.PersonID, ids.OrganizationID) {
+func (e *dedupeEnv) seedEmployedPerson(ctx context.Context, t *testing.T, name, email, companyName, domain string) (ids.PersonID, ids.CompanyID) {
 	t.Helper()
-	org, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
-		DisplayName: orgName, Source: "manual",
-		Domains: []OrgDomainInput{{Domain: domain, IsPrimary: true}},
+	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
+		DisplayName: companyName, Source: "manual",
+		Domains: []CompanyDomainInput{{Domain: domain, IsPrimary: true}},
 	})
 	if err != nil {
-		t.Fatalf("seed org %s: %v", orgName, err)
+		t.Fatalf("seed company %s: %v", companyName, err)
 	}
 	person, err := e.store.CreatePerson(ctx, CreatePersonInput{
 		FullName: name, Source: "manual",
@@ -176,18 +176,18 @@ func (e *dedupeEnv) seedEmployedPerson(ctx context.Context, t *testing.T, name, 
 		t.Fatalf("seed person %s: %v", name, err)
 	}
 	personID := ids.From[ids.PersonKind](ids.UUID(person.Id))
-	orgID := ids.From[ids.OrganizationKind](ids.UUID(org.Id))
+	companyID := ids.From[ids.CompanyKind](ids.UUID(company.Id))
 	// Stated, not left to the store's own rule: this seed is about the person
 	// HAVING a current employer, so it says so rather than relying on a
 	// derivation another test could change.
 	primary := true
 	if _, err := e.store.CreateRelationship(ctx, CreateRelationshipInput{
-		Kind: "employment", PersonID: &personID, OrganizationID: &orgID,
+		Kind: "employment", PersonID: &personID, CompanyID: &companyID,
 		IsCurrentPrimary: &primary, Source: "manual",
 	}); err != nil {
 		t.Fatalf("seed employment: %v", err)
 	}
-	return personID, orgID
+	return personID, companyID
 }
 
 // dedupeInTx runs the resolver inside one workspace transaction, the way
@@ -205,15 +205,15 @@ func (e *dedupeEnv) dedupeInTx(ctx context.Context, t *testing.T, c PersonCandid
 	return m
 }
 
-func (e *dedupeEnv) dedupeOrgInTx(ctx context.Context, t *testing.T, c OrganizationCandidate) OrganizationMatch {
+func (e *dedupeEnv) dedupeCompanyInTx(ctx context.Context, t *testing.T, c CompanyCandidate) CompanyMatch {
 	t.Helper()
-	var m OrganizationMatch
+	var m CompanyMatch
 	err := e.store.tx(ctx, func(tx pgx.Tx) (err error) {
-		m, err = DedupeOrganization(ctx, tx, c)
+		m, err = DedupeCompany(ctx, tx, c)
 		return err
 	})
 	if err != nil {
-		t.Fatalf("DedupeOrganization: %v", err)
+		t.Fatalf("DedupeCompany: %v", err)
 	}
 	return m
 }
@@ -245,7 +245,7 @@ func TestDedupePersonFuzzyTierReproducesTheSpecWorkedExamples(t *testing.T) {
 	t.Run("same employer queues for review at 0.982", func(t *testing.T) {
 		m := e.dedupeInTx(ctx, t, PersonCandidate{
 			FullName: "Jon Doe", Emails: []string{"j.doe@other.test"},
-			CurrentPrimaryOrgID: &acmeID,
+			CurrentPrimaryCompanyID: &acmeID,
 		})
 		if m.Decision != DecisionFuzzyReview {
 			t.Fatalf("decision = %s (confidence %.4f), want fuzzy_review", m.Decision, m.Confidence)
@@ -260,7 +260,7 @@ func TestDedupePersonFuzzyTierReproducesTheSpecWorkedExamples(t *testing.T) {
 
 	t.Run("shared email domain scores the 0.8 tier and still queues", func(t *testing.T) {
 		// No employer known for the candidate, but the address sits on
-		// acme.test, which the incumbent's org owns:
+		// acme.test, which the incumbent's company owns:
 		// 0.55·0.9667 + 0.45·0.8 = 0.8917 ≥ 0.72.
 		m := e.dedupeInTx(ctx, t, PersonCandidate{
 			FullName: "Jon Doe", Emails: []string{"jon@acme.test"},
@@ -276,18 +276,18 @@ func TestDedupePersonFuzzyTierReproducesTheSpecWorkedExamples(t *testing.T) {
 	t.Run("different employer creates at 0.532", func(t *testing.T) {
 		// The spec's example: Jon Doe at Globex vs John Doe at Acme, and
 		// nobody else at Globex — an employee there would join the
-		// candidate set with the org_match = 1.0 boost and change the case.
-		globex, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+		// candidate set with the company_match = 1.0 boost and change the case.
+		globex, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 			DisplayName: "Globex AG", Source: "manual",
-			Domains: []OrgDomainInput{{Domain: "globex.test", IsPrimary: true}},
+			Domains: []CompanyDomainInput{{Domain: "globex.test", IsPrimary: true}},
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
-		globexID := ids.From[ids.OrganizationKind](ids.UUID(globex.Id))
+		globexID := ids.From[ids.CompanyKind](ids.UUID(globex.Id))
 		m := e.dedupeInTx(ctx, t, PersonCandidate{
 			FullName: "Jon Doe", Emails: []string{"jon@nowhere.test"},
-			CurrentPrimaryOrgID: &globexID,
+			CurrentPrimaryCompanyID: &globexID,
 		})
 		if m.Decision != DecisionNoMatch {
 			t.Fatalf("decision = %s (confidence %.4f), want no_match — the spec creates here", m.Decision, m.Confidence)
@@ -301,46 +301,46 @@ func TestDedupePersonNamelessCandidateNeverFuzzyMatches(t *testing.T) {
 	_, acmeID := e.seedEmployedPerson(ctx, t, "John Doe", "john@nameless.test", "Nameless GmbH", "nameless.test")
 
 	// PO-F-1 edge case: empty name → fuzzy tier skipped, exact-email only.
-	// Sharing the employer must not conjure a match from org_match alone.
+	// Sharing the employer must not conjure a match from company_match alone.
 	m := e.dedupeInTx(ctx, t, PersonCandidate{
 		FullName: "  ", Emails: []string{"unknown@elsewhere.test"},
-		CurrentPrimaryOrgID: &acmeID,
+		CurrentPrimaryCompanyID: &acmeID,
 	})
 	if m.Decision != DecisionNoMatch {
 		t.Fatalf("decision = %s, want no_match — a nameless captured contact never fuzzy-matches", m.Decision)
 	}
 }
 
-func TestDedupeOrganizationExactTierFindsAClaimedDomain(t *testing.T) {
+func TestDedupeCompanyExactTierFindsAClaimedDomain(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	org, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: "Initech GmbH", Source: "manual",
-		Domains: []OrgDomainInput{{Domain: "initech.test", IsPrimary: true}},
+		Domains: []CompanyDomainInput{{Domain: "initech.test", IsPrimary: true}},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// The capture employer-inference path: a domain hit lands on the
-	// existing org regardless of what the sender calls the company.
-	m := e.dedupeOrgInTx(ctx, t, OrganizationCandidate{
+	// existing company regardless of what the sender calls the company.
+	m := e.dedupeCompanyInTx(ctx, t, CompanyCandidate{
 		DisplayName: "Some Other Spelling", Domains: []string{"INITECH.TEST"},
 	})
 	if m.Decision != DecisionExactCollision {
 		t.Fatalf("decision = %s, want exact_collision", m.Decision)
 	}
-	if ids.UUID(org.Id) != m.OrganizationID.UUID {
-		t.Fatalf("matched %s, want %s", m.OrganizationID, org.Id)
+	if ids.UUID(company.Id) != m.CompanyID.UUID {
+		t.Fatalf("matched %s, want %s", m.CompanyID, company.Id)
 	}
 }
 
-func TestDedupeOrganizationFuzzyTierMeetsAcrossLegalSuffixes(t *testing.T) {
+func TestDedupeCompanyFuzzyTierMeetsAcrossLegalSuffixes(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	org, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: "Wayne Enterprises GmbH", Source: "manual",
-		Domains: []OrgDomainInput{{Domain: "wayne.test", IsPrimary: true}},
+		Domains: []CompanyDomainInput{{Domain: "wayne.test", IsPrimary: true}},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -348,21 +348,21 @@ func TestDedupeOrganizationFuzzyTierMeetsAcrossLegalSuffixes(t *testing.T) {
 
 	// PO-F-2's worked example shape: same name, different legal suffix,
 	// no shared domain → normalize-equal → 1.0 → 🟡 review, never a merge.
-	m := e.dedupeOrgInTx(ctx, t, OrganizationCandidate{
+	m := e.dedupeCompanyInTx(ctx, t, CompanyCandidate{
 		DisplayName: "Wayne Enterprises Inc", Domains: []string{"wayne-us.test"},
 	})
 	if m.Decision != DecisionFuzzyReview {
 		t.Fatalf("decision = %s (confidence %.4f), want fuzzy_review", m.Decision, m.Confidence)
 	}
-	if ids.UUID(org.Id) != m.OrganizationID.UUID {
-		t.Fatalf("matched %s, want %s", m.OrganizationID, org.Id)
+	if ids.UUID(company.Id) != m.CompanyID.UUID {
+		t.Fatalf("matched %s, want %s", m.CompanyID, company.Id)
 	}
 	if m.Confidence != 1 {
 		t.Fatalf("confidence = %.4f, want an exact 1.0 after suffix normalization", m.Confidence)
 	}
 
 	// And a genuinely unrelated name creates.
-	unrelated := e.dedupeOrgInTx(ctx, t, OrganizationCandidate{
+	unrelated := e.dedupeCompanyInTx(ctx, t, CompanyCandidate{
 		DisplayName: "Zorbatron Heavy Industry", Domains: []string{"zorbatron.test"},
 	})
 	if unrelated.Decision != DecisionNoMatch {
@@ -384,7 +384,7 @@ func (e *dedupeEnv) asOther() context.Context {
 			RoleKeys: []string{"rep"},
 			Objects: map[string]principal.ObjectGrant{
 				"person":       {Create: true, Read: true, Update: true},
-				"organization": {Create: true, Read: true, Update: true},
+				"company":      {Create: true, Read: true, Update: true},
 				"lead":         {Create: true, Read: true, Update: true},
 				"relationship": {Create: true, Read: true},
 			},

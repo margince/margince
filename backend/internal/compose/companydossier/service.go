@@ -1,0 +1,419 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package companydossier
+
+// Serving one dossier: read the sidecars as the caller, decide whether the
+// cached assembly still describes them, and write one if it does not.
+//
+// A cached dossier is served only while its fingerprint still matches the
+// inputs it was written from. Facts and profile fields move without touching
+// the company row, so a key derived from that row would serve a dossier
+// describing a company that has since been re-read, indefinitely.
+
+import (
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
+	"github.com/margince/margince/backend/internal/compose/briefevidence"
+	"github.com/margince/margince/backend/internal/compose/claims"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+)
+
+// assemblyVersion identifies the assembly RULES in the fingerprint, and is the
+// half a digest cannot reach: the rules are Go code. Bumping it invalidates
+// every cached dossier, which is the point — a change to how a dossier is
+// written must not leave yesterday's assemblies being served beside today's
+// (DOSS-AC-14).
+const assemblyVersion = "dossier-assembly-v1"
+
+// promptVersion is DERIVED from the prompt as it is SENT — boundary rule
+// included — so editing that wording bumps it whether or not anybody remembers
+// to.
+//
+// Digested at ONE fixed language rather than the installation's, the same way
+// dealstatus does it. The language rides the fingerprint as its own component,
+// so folding it in here would say the same thing twice — and this is a
+// package-level var computed at init, where no installation's setting is
+// readable at all. What it has to capture is the WORDING, which English
+// captures completely: a reword moves the digest whichever language the prompt
+// is later asked for.
+var promptVersion = ai.PromptDigest(func(fence promptfence.Fence) string {
+	return dossierSystemFor(fence, string(textlang.English))
+})
+
+// storedVersion is the payload SHAPE this build writes and can read. A row
+// written by an older shape unmarshals cleanly into a newer envelope with its
+// new fields zeroed, and serving that would render a company nobody could say
+// anything about — so the shape is checked, not assumed.
+const storedVersion = 1
+
+// Service assembles and caches one company's dossier per reader.
+type Service struct {
+	pool  *pgxpool.Pool
+	facts Facts
+	lane  Completer
+	now   func() time.Time
+	// routingVersion identifies the model binding in the fingerprint, so a
+	// re-pointed lane invalidates rather than serving assemblies written
+	// against a model that is no longer wired.
+	routingVersion string
+	// emailRows opens the messages the dossier cites. Held rather than read
+	// inline because the dossier is CACHED: a summary is assembled out of one
+	// reader's own grants, so it is attached to the wire value on the way out
+	// and never to the row that gets saved.
+	emailRows briefevidence.Reader
+}
+
+// WithEmailSummaries binds the reader that opens a cited message.
+func (s *Service) WithEmailSummaries(reader briefevidence.Reader) *Service {
+	s.emailRows = reader
+	return s
+}
+
+// enrich attaches the canonical email row behind every citation in a finished
+// dossier, in one read, after any save.
+func (s *Service) enrich(ctx context.Context, out crmcontracts.CompanyDossier) (crmcontracts.CompanyDossier, error) {
+	var targets []briefevidence.Target
+	for i := range out.Sections {
+		targets = append(targets, briefevidence.FromSentences(out.Sections[i].Sentences)...)
+	}
+	if err := briefevidence.Attach(ctx, s.emailRows, targets); err != nil {
+		return crmcontracts.CompanyDossier{}, err
+	}
+	return out, nil
+}
+
+// NewService binds the dossier to its reads; compose constructs it once per
+// process role.
+// A nil lane is the no-model deployment, which serves the deterministic floor
+// and says so.
+func NewService(pool *pgxpool.Pool, facts Facts, lane Completer,
+	routingVersion string, now func() time.Time,
+) *Service {
+	if now == nil {
+		now = time.Now
+	}
+	return &Service{pool: pool, facts: facts, lane: lane, now: now, routingVersion: routingVersion}
+}
+
+// stored is the cached envelope: the payload plus what it takes to decide
+// whether this build may serve it.
+type stored struct {
+	Fingerprint string    `json:"fingerprint"`
+	Version     int       `json:"version"`
+	GeneratedAt time.Time `json:"generated_at"`
+	GeneratedBy string    `json:"generated_by"`
+	Sections    []Section `json:"sections"`
+	// NewestSourceAt is when the freshest contributing value was last read.
+	// `needs_refresh` is computed from it at render rather than stored, because
+	// staleness arrives with the clock and a stored verdict would keep
+	// answering with whatever was true on the day the row was written.
+	NewestSourceAt time.Time `json:"newest_source_at"`
+}
+
+// usable reports whether this build may still serve a cached dossier. Unlike
+// the growth fit's, it has no expiry: a dossier restates recorded values, and
+// those do not become untrue with the clock — they become OLD, which the
+// surface says out loud beside them instead (DOSS-PARAM-6).
+func (d stored) usable(fingerprint string) bool {
+	return d.Version == storedVersion && d.Fingerprint == fingerprint
+}
+
+// newestSource is when the freshest value this dossier was written from was
+// last read. A company with nothing dated — every value entered by a person —
+// has no source age at all, and reports the zero time rather than "now", which
+// would claim a read nobody performed.
+func newestSource(in Input) time.Time {
+	var newest time.Time
+	consider := func(source string, retrievedAt *time.Time, updatedAt time.Time) {
+		if source == string(crmcontracts.CompanyProfileFieldSourceHuman) {
+			return
+		}
+		read := updatedAt
+		if retrievedAt != nil {
+			read = *retrievedAt
+		}
+		if read.After(newest) {
+			newest = read
+		}
+	}
+	for _, field := range in.ProfileFields {
+		consider(string(field.Source), field.RetrievedAt, field.UpdatedAt)
+	}
+	for _, fact := range in.Facts {
+		consider(string(fact.Source), fact.RetrievedAt, fact.UpdatedAt)
+	}
+	return newest
+}
+
+// Get serves the dossier, reassembling first when the cache no longer describes
+// the company's current facts.
+func (s *Service) Get(ctx context.Context, companyID ids.CompanyID, force bool) (crmcontracts.CompanyDossier, error) {
+	var zero crmcontracts.CompanyDossier
+	// A dossier is a reading aid for a person; an agent reading records through
+	// a passport has the records themselves.
+	if err := auth.RequireHuman(ctx); err != nil {
+		return zero, err
+	}
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return zero, err
+	}
+	// The gates that matter run HERE, in the caller's own reads: a dossier can
+	// only be written from records this caller could already fetch themselves,
+	// and a company they cannot read refuses before any cache is consulted.
+	in, err := BuildInput(ctx, s.facts, companyID)
+	if err != nil {
+		return zero, err
+	}
+	lang := identity.BaseLanguageForPrompt(ctx, s.pool)
+	fingerprint, err := Fingerprint(in, s.routingVersion, lang)
+	if err != nil {
+		return zero, err
+	}
+
+	cached, found, err := s.cached(ctx, userID, companyID)
+	if err != nil {
+		return zero, err
+	}
+	if found && !force && cached.usable(fingerprint) {
+		return s.enrich(ctx, cached.wire(companyID, s.now().UTC()))
+	}
+
+	// The company is NAMED to the rail here, from the same input the dossier
+	// is written from.
+	sections, by, laneFailed := WriteDossier(ai.WithSubject(ctx, companyID.Ref(), in.Name), s.lane, in, lang)
+	if laneFailed && found && cached.usable(fingerprint) {
+		// The floor is a real answer, but it is a plainer one than the model
+		// already wrote for these same facts. A transient outage must not
+		// replace what is cached — stored under the current fingerprint, that
+		// downgrade would read as a cache hit indefinitely.
+		//
+		// The same gate the ordinary read applies: a lane being down is a
+		// reason to keep a good answer, never to serve one written from facts
+		// that have since moved or in a shape this build cannot read.
+		return s.enrich(ctx, cached.wire(companyID, s.now().UTC()))
+	}
+	written := stored{
+		Fingerprint:    fingerprint,
+		Version:        storedVersion,
+		GeneratedAt:    s.now().UTC(),
+		GeneratedBy:    string(by),
+		Sections:       sections,
+		NewestSourceAt: newestSource(in),
+	}
+	// Not cached when the lane failed, for the growth fit's reason: stored under
+	// the current fingerprint, this plainer answer would be served as a hit on
+	// every later read, so one transient outage would outlive itself.
+	if laneFailed {
+		return s.enrich(ctx, written.wire(companyID, s.now().UTC()))
+	}
+	if err := s.save(ctx, userID, companyID, written); err != nil {
+		return zero, err
+	}
+	return s.enrich(ctx, written.wire(companyID, s.now().UTC()))
+}
+
+// keepGrounded runs every assembled sentence past the SHARED filter, whichever
+// writer produced it.
+//
+// The floor is checked too, not just the model. A floor that could bypass the
+// filter would be a second definition of "checkable" — and the day a floor bug
+// cites a row it did not supply, the surface would render it as though it had
+// been verified.
+func keepGrounded(sections []Section, in Input) []Section {
+	known := KnownRecords(in)
+	out := make([]Section, 0, len(sections))
+	for _, section := range sections {
+		kept := claims.Keep(section.Sentences, known, knownNature, natureFact)
+		if len(kept) == 0 {
+			// A section whose sentences all fell out is omitted rather than
+			// rendered empty (DOSS-FORM-1).
+			continue
+		}
+		out = append(out, Section{Kind: section.Kind, Sentences: kept})
+	}
+	return out
+}
+
+// knownNature is every nature the contract declares, derived rather than
+// re-spelled so a rename upstream fails to compile instead of laundering a
+// hand-typed string past the filter.
+var knownNature = map[string]bool{
+	string(crmcontracts.CompanyBriefSentenceNatureFact):           true,
+	string(crmcontracts.CompanyBriefSentenceNatureAssessment):     true,
+	string(crmcontracts.CompanyBriefSentenceNatureRecommendation): true,
+}
+
+// Fingerprint covers everything that could change the content: the assembled
+// factual input, the prompt version and the model routing version
+// (DOSS-PARAM-5).
+// The LANGUAGE is a component of its own, beside the derived prompt version. A
+// dossier is written in it, so an installation that switches language must
+// rewrite every dossier — and nothing else about the company has moved, so
+// every other component of this key is identical. Without it the setting would
+// appear to do nothing until some unrelated fact changed.
+func Fingerprint(in Input, routingVersion, lang string) (string, error) {
+	// json.Marshal orders struct fields by declaration, so the same input
+	// hashes the same way across processes — a map would not.
+	encoded, err := json.Marshal(in)
+	if err != nil {
+		return "", fmt.Errorf("fingerprint the dossier input: %w", err)
+	}
+	sum := sha256.Sum256([]byte(assemblyVersion + "\x00" + promptVersion + "\x00" + routingVersion + "\x00" + lang + "\x00" + string(encoded)))
+	return hex.EncodeToString(sum[:]), nil
+}
+
+func (d stored) wire(companyID ids.CompanyID, now time.Time) crmcontracts.CompanyDossier {
+	sections := make([]crmcontracts.CompanyDossierSection, 0, len(d.Sections))
+	for _, section := range d.Sections {
+		sentences := wireSentences(section.Sentences)
+		if len(sentences) == 0 {
+			// Omitted rather than rendered as a heading over nothing, the same
+			// rule keepGrounded applies at assembly (DOSS-FORM-1).
+			continue
+		}
+		sections = append(sections, crmcontracts.CompanyDossierSection{
+			Kind:      crmcontracts.CompanyDossierSectionKind(section.Kind),
+			Sentences: sentences,
+		})
+	}
+	out := crmcontracts.CompanyDossier{
+		CompanyId:   openapi_types.UUID(companyID.UUID),
+		GeneratedAt: d.GeneratedAt,
+		GeneratedBy: crmcontracts.WrittenBy(d.GeneratedBy),
+		Sections:    sections,
+	}
+	// Said out loud BESIDE the content, never instead of it: a stale dossier is
+	// more useful than none. A company with no dated source is not stale — it
+	// is undated, which is a different claim and gets no badge.
+	if !d.NewestSourceAt.IsZero() && now.Sub(d.NewestSourceAt) > freshness {
+		stale := true
+		out.NeedsRefresh = &stale
+	}
+	return out
+}
+
+// wireSubScores maps the grounded sub-scores onto the contract.
+//
+// A sub-score whose evidence cannot be resolved is DROPPED whole, exactly as a
+// sentence is: keeping the number and losing its receipts would render an
+// unbacked score on the one card whose promise is that the band can be taken
+// apart and checked.
+func wireSubScores(in []GrowthFitSubScore) []crmcontracts.GrowthFitSubScore {
+	out := make([]crmcontracts.GrowthFitSubScore, 0, len(in))
+	for _, sub := range in {
+		evidence, ok := wireEvidence(sub.Evidence)
+		if !ok {
+			continue
+		}
+		out = append(out, crmcontracts.GrowthFitSubScore{
+			Dimension: crmcontracts.GrowthFitSubScoreDimension(sub.Dimension),
+			Score:     sub.Score,
+			Reason:    sub.Reason,
+			Evidence:  &evidence,
+		})
+	}
+	return out
+}
+
+func wireSentences(in []claims.Sentence) []crmcontracts.CompanyBriefSentence {
+	out := make([]crmcontracts.CompanyBriefSentence, 0, len(in))
+	for _, sentence := range in {
+		evidence, ok := wireEvidence(sentence.Evidence)
+		if !ok {
+			// The same verdict the grounding filter reaches on a citation it
+			// cannot resolve: the sentence goes, not the chip. Keeping the prose
+			// and dropping its receipts would render an unbacked claim in the
+			// one place whose whole promise is that every claim is checkable.
+			continue
+		}
+		nature := crmcontracts.CompanyBriefSentenceNature(sentence.Nature)
+		out = append(out, crmcontracts.CompanyBriefSentence{
+			Text:     sentence.Text,
+			Nature:   &nature,
+			Evidence: evidence,
+		})
+	}
+	return out
+}
+
+// wireEvidence converts a sentence's citations, and refuses the whole sentence
+// if any of them names an id no record could carry.
+func wireEvidence(cited []claims.Evidence) ([]crmcontracts.CompanyBriefEvidence, bool) {
+	out := make([]crmcontracts.CompanyBriefEvidence, 0, len(cited))
+	for _, one := range cited {
+		id, err := ids.Parse(one.EntityID)
+		if err != nil {
+			return nil, false
+		}
+		out = append(out, crmcontracts.CompanyBriefEvidence{
+			EntityType: crmcontracts.CompanyBriefEvidenceEntityType(one.EntityType),
+			EntityId:   openapi_types.UUID(id),
+		})
+	}
+	return out, len(out) > 0
+}
+
+// cached reads this READER's dossier out of the shared per-reader cache.
+func (s *Service) cached(ctx context.Context, userID ids.UserID, companyID ids.CompanyID) (stored, bool, error) {
+	row, found, err := dossierCache.load(ctx, s.pool, userID, companyID)
+	if err != nil || !found {
+		return stored{}, false, err
+	}
+	var out stored
+	if err := json.Unmarshal(row.Payload, &out); err != nil {
+		// A payload this build cannot read is a cache MISS, not a failure: the
+		// dossier is derived content, reassembling costs one pass over facts we
+		// already hold, and the new row replaces the unreadable one.
+		//nolint:nilerr // an unreadable cache entry is a miss by design; the caller reassembles
+		return stored{}, false, nil
+	}
+	return out, true, nil
+}
+
+func (s *Service) save(ctx context.Context, userID ids.UserID, companyID ids.CompanyID, dossier stored) error {
+	// The whole envelope, so a later read can tell which shape it is holding.
+	payload, err := json.Marshal(dossier)
+	if err != nil {
+		return fmt.Errorf("encode the dossier payload: %w", err)
+	}
+	return dossierCache.save(ctx, s.pool, userID, companyID, entry{
+		Fingerprint: dossier.Fingerprint,
+		GeneratedAt: dossier.GeneratedAt,
+		GeneratedBy: dossier.GeneratedBy,
+		Payload:     payload,
+	})
+}
+
+// actingUser resolves the human an assembly belongs to. That these assemblies
+// are per-reader IS the security posture, so a principal with no user id gets
+// none rather than a shared one.
+//
+// Both surfaces on this package call it, so the message names neither: a reader
+// sent to the dossier by an error the growth fit raised looks in the wrong place.
+func actingUser(ctx context.Context) (ids.UserID, error) {
+	p, ok := principal.Actor(ctx)
+	if !ok || p.UserID == (ids.UUID{}) {
+		return ids.UserID{}, fmt.Errorf(
+			"this company assembly is written per reader and the call carries no user: %w",
+			apperrors.ErrPermissionDenied)
+	}
+	return ids.From[ids.UserKind](p.UserID), nil
+}

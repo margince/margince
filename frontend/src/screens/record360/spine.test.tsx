@@ -12,7 +12,7 @@ import { RecordSpine } from "./spine";
 // stop is a record or a date, and the ONE stop with neither behind it — the
 // silence — is arithmetic between two dates the payload does carry.
 
-type View = components["schemas"]["Organization360"];
+type View = components["schemas"]["Company360"];
 
 const page = { has_more: false, next_cursor: null };
 
@@ -34,7 +34,7 @@ const TODAY = "Today25 Aug";
 function view(overrides: Record<string, unknown> = {}): View {
   return {
     as_of: AS_OF,
-    organization: {
+    company: {
       id: "o-1",
       display_name: "Kugellager",
       captured_by: "human:u1",

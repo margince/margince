@@ -368,7 +368,7 @@ func TestTheAgentSeatCannotBeGivenARole(t *testing.T) {
 // create it — which is the point. An installation that hand-inserted its agent
 // seat while no product path existed can hold exactly this row already, and a
 // refusal added afterwards reaches no grant that has already happened.
-func TestTheAgentSeatIsNotTheOtherAdminWhoCouldRecoverTheOrganization(t *testing.T) {
+func TestTheAgentSeatIsNotTheOtherAdminWhoCouldRecoverTheCompany(t *testing.T) {
 	e := setupRevocationEnv(t, "agent-lockout")
 	seat, _ := seedAgentSeatIn(t, e)
 	if _, err := e.owner.Exec(context.Background(),
@@ -382,7 +382,7 @@ func TestTheAgentSeatIsNotTheOtherAdminWhoCouldRecoverTheOrganization(t *testing
 	if !errors.Is(err, errLastActiveAdmin) {
 		t.Fatalf("deactivating the only human administrator returned %v, want the last-admin refusal. "+
 			"The agent seat administers nothing — it carries no password and signs in nowhere — so "+
-			"counting it leaves the organization with no way back into user administration at all", err)
+			"counting it leaves the company with no way back into user administration at all", err)
 	}
 }
 

@@ -177,7 +177,7 @@ func SetupAppWithOriginOptions(t *testing.T, opts func(origin string) []compose.
 	return &AppEnv{TS: ts, Client: client, Owner: owner, Pool: pool, Vault: vault}
 }
 
-// BootstrapWorkspace provisions the organization + admin (the A107 boot
+// BootstrapWorkspace provisions the company + admin (the A107 boot
 // path) and leaves the admin session cookie in the client jar — the
 // first step of every e2e scenario.
 func (e *AppEnv) BootstrapWorkspace(t *testing.T) {
@@ -253,15 +253,15 @@ func (e *AppEnv) Call(t *testing.T, method, path string, body any, headers map[s
 	return resp.StatusCode
 }
 
-// BootstrapWorkspaceSession provisions the installation's organization through
+// BootstrapWorkspaceSession provisions the installation's company through
 // the A107 boot path — configuration-driven, exactly what cmd/api runs at
 // startup — and signs its admin in over HTTP. The arrange step every e2e
-// scenario shares. The login also primes the server's singleton-organization
+// scenario shares. The login also primes the server's singleton-workspace
 // resolution before a test seeds any cross-tenant rows directly.
 //
 // It lives here rather than with a suite because BootstrapWorkspace above calls
 // it, and a non-test file cannot reach a helper declared in a _test.go one.
-func BootstrapWorkspaceSession(t *testing.T, e *AppEnv, organizationName, adminEmail, adminName string) {
+func BootstrapWorkspaceSession(t *testing.T, e *AppEnv, companyName, adminEmail, adminName string) {
 	t.Helper()
 	// The password an OPERATOR supplies, which a configured bootstrap flags for
 	// replacement. It is deliberately NOT the one the suites sign in with: the
@@ -273,8 +273,8 @@ func BootstrapWorkspaceSession(t *testing.T, e *AppEnv, organizationName, adminE
 		t.Fatal(err)
 	}
 	cfg := deployconfig.Config{
-		Version:      1,
-		Organization: deployconfig.Organization{Name: organizationName},
+		Version: 1,
+		Company: deployconfig.Workspace{Name: companyName},
 		BootstrapAdmin: &deployconfig.BootstrapAdmin{
 			Email: adminEmail, DisplayName: adminName, PasswordFile: pwFile,
 		},

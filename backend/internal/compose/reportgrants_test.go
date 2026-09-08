@@ -68,13 +68,13 @@ func TestTheVocabularyGateReadsTheCallersFilterKeys(t *testing.T) {
 //     also answers a caller holding the object grant but not that row.
 //   - referenceScopes narrows the ROWS to the referenced records the caller can
 //     open, so a count filtered to a company they cannot see counts nothing.
-//     This is what the deal reports use for organization_id and partner_org_id.
+//     This is what the deal reports use for company_id and partner_company_id.
 //   - The vocabulary grant refuses the NAME, for a field whose record type the
 //     caller may not read at all.
 //
 // The rule is at least one, not a particular one. Demanding filterScopes
 // everywhere would be wrong: a filter over a record type with no row scope has
-// nothing for it to check, and the deal reports' organization filters are
+// nothing for it to check, and the deal reports' company filters are
 // deliberately defended by the row scope instead.
 func TestEveryFilterOverAScopedReferenceIsDefended(t *testing.T) {
 	t.Parallel()

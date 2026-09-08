@@ -218,7 +218,7 @@ export function tabContent(id: SettingsPageId): ReactNode {
       );
     case "authentication":
       // Split from the company profile, which is a different question with a
-      // different reader: what the organization IS, versus who may sign in to
+      // different reader: what the company IS, versus who may sign in to
       // it. The vendor OAuth apps sit with the sign-in methods because the same
       // OAuth client now serves sign-in as well as mailbox connection — filing
       // them under Capture said they belonged to one of the two.
@@ -385,7 +385,7 @@ export function tabContent(id: SettingsPageId): ReactNode {
 // mail connector list is scoped to the calling human server-side (capture is
 // per-user, RC-8), and both LinkedIn surfaces read `/me`. So this belongs to the
 // personal group, and needs no grant: a mailbox nobody else can see is not
-// organization configuration, and the entry that used to hold both kinds could
+// company configuration, and the entry that used to hold both kinds could
 // not say so.
 //
 // It is not WHOLLY personal, which is why the catalog marks it `mixed`:
@@ -445,7 +445,7 @@ function ConnectionsTab() {
 // outbound subscriptions, the incumbent CRM it mirrors, and who each of its users
 // is over there. All four are workspace-wide — a key everybody spends from, a webhook everybody's writes
 // fire, a system-of-record flip that re-points every read — which is why they
-// sit under the organization heading and the personal connections do not.
+// sit under the company heading and the personal connections do not.
 function IntegrationsTab() {
   return (
     <>
@@ -613,7 +613,7 @@ function AgentsTab() {
       <AutonomyCard />
       {/* Which kinds of proposal stop asking this reader. It sat on Account,
           under the identity, because it is a statement about them rather than
-          about the organization — but every other thing on this page is also
+          about the company — but every other thing on this page is also
           theirs alone, and this is the page about agents deciding without them.
           Directly under the tier reference it is written in terms of. */}
       <AutonomySettingsCard />
@@ -1730,7 +1730,7 @@ function ToolRow({
 // object named the verb, and this comment outlived that. A role edited to carry
 // the verb reaches the control and one that lost it does not, which the role
 // name could not say either way. The page above it now asks the same thing, so
-// a reader who gets here can use it. The organization's name
+// a reader who gets here can use it. The company's name
 // is not carried on MeResponse, so this never fetches or compares it
 // client-side: the input just has to be non-empty to enable the confirm
 // button, and the server is the sole judge of whether the typed text actually
@@ -2616,7 +2616,7 @@ function AuditLogRow({
     // inside the one stacked row that holds the whole trail.
     <div className="audit-row">
       <div className="audit-row-head">
-        {/* The organization's clock, the same one the record change history
+        {/* The company's clock, the same one the record change history
             reads on: an audit entry is a fact in the shared book, and on the
             viewer's clock an entry at 18:00Z is 21 August to a reader in Berlin
             and 22 August to one in Ho Chi Minh City — two operators quoting the

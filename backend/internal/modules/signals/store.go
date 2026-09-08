@@ -62,18 +62,18 @@ type NotResolvableError struct{ Reason string }
 func (e *NotResolvableError) Error() string { return e.Reason }
 
 // NoWarmthError answers 422: warmth/intro-path questions only make sense
-// for a signal resolved to an organization (and, for the path, a warm one).
+// for a signal resolved to a company (and, for the path, a warm one).
 type NoWarmthError struct{ Reason string }
 
 func (e *NoWarmthError) Error() string { return e.Reason }
 
 // signalEntityTables is the store-side spelling of the schema's
-// signal_entity_type CHECK: a signal's subject is a deal, organization,
+// signal_entity_type CHECK: a signal's subject is a deal, company,
 // person or project. The client-supplied type flows on to a table-name seam
 // (the link-target probe), so the store pins the set itself instead of
 // leaning on transport enum validation alone.
 // TestSignalEntityTablesMatchTheSchemaCheck holds it to the constraint.
-var signalEntityTables = map[string]bool{"deal": true, "organization": true, "person": true, "project": true}
+var signalEntityTables = map[string]bool{"deal": true, "company": true, "person": true, "project": true}
 
 // SignalEntityTables lists the subject types a signal may carry, sorted —
 // the same set the schema CHECK admits, for a reader that has to spell it.

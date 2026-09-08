@@ -6,7 +6,7 @@
 // support rather than whichever the renderer happened to walk first.
 
 /** What a node stands for, which decides its shape rather than its colour. */
-export type MapNodeKind = "user" | "person" | "organization" | "deal" | "gap";
+export type MapNodeKind = "user" | "person" | "company" | "deal" | "gap";
 
 /**
  * The three bands a ROUTE is shown in.
@@ -70,7 +70,7 @@ export const GUTTER = 72;
 export const NODE_H = {
   user: 40,
   person: 60,
-  organization: 48,
+  company: 48,
   deal: 44,
   gap: 60,
   more: 28,
@@ -156,14 +156,14 @@ export function layout(
   const centreHeight = centreNodes.reduce(
     (total, node, index) =>
       total +
-      NODE_H[byId.get(node.id)?.kind ?? "organization"] +
+      NODE_H[byId.get(node.id)?.kind ?? "company"] +
       (index > 0 ? CENTER_GAP : 0),
     0,
   );
   const tallest = Math.max(columns.left, columns.right, centreHeight + PAD * 2);
   let centreY = Math.max(PAD, (tallest - centreHeight) / 2);
   for (const node of centreNodes) {
-    const kind = byId.get(node.id)?.kind ?? "organization";
+    const kind = byId.get(node.id)?.kind ?? "company";
     const h = NODE_H[kind];
     placed.push({
       id: node.id,
@@ -303,7 +303,7 @@ export function routeFor(
     }
     return { related, route: null };
   }
-  // An organization or a gap relates only to itself: the account is what
+  // A company or a gap relates only to itself: the account is what
   // everything is already about, and a gap is a hole rather than a node with
   // edges.
   return { related: new Set([focusId]), route: null };

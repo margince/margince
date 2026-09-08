@@ -91,7 +91,7 @@ func pdfDrawnText(t *testing.T, pdf []byte) []byte {
 
 func TestRenderOfferPDF_IncludesOfferDataAndStoredTotals(t *testing.T) {
 	o := testRenderOffer(123456, 23456, 146912)
-	buyerBlock := map[string]any{"organization_id": "org-1", "display_name": "Acme GmbH"}
+	buyerBlock := map[string]any{"company_id": "company-1", "display_name": "Acme GmbH"}
 
 	pdf, err := RenderOfferPDF(o, testRenderLines(), buyerBlock, "Margince GmbH", "de-DE", nil)
 	if err != nil {
@@ -237,7 +237,7 @@ func TestRenderOfferPDF_OmitsBuyerSectionWhenBuyerBlockNil(t *testing.T) {
 	// UUID: the id identifies the record to us and nothing to the customer
 	// holding the page.
 	idOnly, err := RenderOfferPDF(o, testRenderLines(),
-		map[string]any{"organization_id": "org-1"}, "Margince GmbH", "de-DE", nil)
+		map[string]any{"company_id": "company-1"}, "Margince GmbH", "de-DE", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -247,16 +247,16 @@ func TestRenderOfferPDF_OmitsBuyerSectionWhenBuyerBlockNil(t *testing.T) {
 	}
 }
 
-// The internal organization id never reaches the page.
+// The internal company id never reaches the page.
 //
 // It used to be the FIRST line of the buyer block, under a hardcoded English
-// "Organization ID: " label on a document translated into the buyer's own
+// "Company ID: " label on a document translated into the buyer's own
 // language. Nothing failed when it was there, so nothing would fail if it came
 // back; this is that test.
-func TestRenderOfferPDF_NeverPrintsTheInternalOrganizationID(t *testing.T) {
+func TestRenderOfferPDF_NeverPrintsTheInternalCompanyID(t *testing.T) {
 	o := testRenderOffer(100000, 19000, 119000)
 	rendered, err := RenderOfferPDF(o, testRenderLines(),
-		map[string]any{"organization_id": "org-1", "display_name": "Acme GmbH"},
+		map[string]any{"company_id": "company-1", "display_name": "Acme GmbH"},
 		"Margince GmbH", "de-DE", nil)
 	if err != nil {
 		t.Fatal(err)
@@ -267,7 +267,7 @@ func TestRenderOfferPDF_NeverPrintsTheInternalOrganizationID(t *testing.T) {
 	if !bytes.Contains(drawn, []byte("Acme GmbH")) {
 		t.Fatalf("the buyer's name must be on the page:\n%s", drawn)
 	}
-	for _, forbidden := range []string{"org-1", "Organization ID"} {
+	for _, forbidden := range []string{"company-1", "Company ID"} {
 		if bytes.Contains(drawn, []byte(forbidden)) {
 			t.Errorf("the offer PDF must not print %q — it identifies the record "+
 				"to us and nothing to the customer:\n%s", forbidden, drawn)

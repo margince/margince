@@ -13,7 +13,7 @@ package activities
 // viewer something about them, which is the disclosure the parent gate exists to
 // prevent (DOC-AC-2).
 //
-// `organization_id` on the row is a READ PATH, not a second parent. It makes the
+// `company_id` on the row is a READ PATH, not a second parent. It makes the
 // roll-up affordable at a hundred documents; it never decides who may see one.
 
 import (
@@ -51,17 +51,17 @@ type DocumentFilters struct {
 	Limit      *int
 }
 
-// ListOrganizationDocuments returns every document rolling up to one account,
+// ListCompanyDocuments returns every document rolling up to one account,
 // pinned first and then newest.
 //
 // The caller must be able to read the ACCOUNT to ask the question at all; each
 // row then passes its own parent's gate. Both are needed: the first stops the
 // endpoint being an oracle for accounts the caller cannot see, the second stops
 // the roll-up widening what a parent already refuses.
-func (s *Store) ListOrganizationDocuments(
-	ctx context.Context, orgID ids.UUID, in DocumentFilters,
+func (s *Store) ListCompanyDocuments(
+	ctx context.Context, companyID ids.UUID, in DocumentFilters,
 ) ([]crmcontracts.Attachment, storekit.Page, error) {
-	if err := auth.Require(ctx, "organization", principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
 		return nil, storekit.Page{}, err
 	}
 	lim := storekit.ClampLimit(in.Limit)
@@ -70,13 +70,13 @@ func (s *Store) ListOrganizationDocuments(
 		page storekit.Page
 	)
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureVisible(ctx, tx, "organization", orgID); err != nil {
+		if err := auth.EnsureVisible(ctx, tx, "company", companyID); err != nil {
 			return err
 		}
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		where := []string{
-			fmt.Sprintf("at.organization_id = $%d", arg(orgID)),
+			fmt.Sprintf("at.company_id = $%d", arg(companyID)),
 			"at.archived_at IS NULL",
 		}
 		// Keyset, not offset: the library is ordered pinned-then-newest and a
@@ -242,7 +242,7 @@ const scopeUnbounded = "TRUE"
 // clause over their own columns. `activity` is not one of them — its scope is
 // the link walk — so it gets its own arm in activityParentClause rather than
 // being forced into this shape, which would widen it.
-var documentParentKinds = []string{linkEntityOrganization, linkEntityDeal, linkEntityPerson}
+var documentParentKinds = []string{linkEntityCompany, linkEntityDeal, linkEntityPerson}
 
 // activityParentClause is the arm for a file hanging off an activity. It uses
 // the link-walk scope every other activity read uses (ADR-0054 §8: scope policy

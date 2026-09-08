@@ -28,7 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// seedActivityAndOrg writes one activity of the given kind and one organization,
+// seedActivityAndCompany writes one activity of the given kind and one company,
 // and answers both ids. Nothing links them: each test decides what to attempt.
 // meetingWorkspace binds a workspace the same way the other capture
 // integration tests do, so the triggers are exercised under real RLS binding
@@ -51,9 +51,9 @@ func meetingWorkspaceWithOwner(t *testing.T) (context.Context, *database.DB, *pg
 	return ctx, database.BindTo(pool, ids.From[ids.WorkspaceKind](ws)), owner
 }
 
-func seedActivityAndOrg(ctx context.Context, t *testing.T, db *database.DB, kind string) (ids.UUID, ids.UUID) {
+func seedActivityAndCompany(ctx context.Context, t *testing.T, db *database.DB, kind string) (ids.UUID, ids.UUID) {
 	t.Helper()
-	activityID, orgID := ids.NewV7(), ids.NewV7()
+	activityID, companyID := ids.NewV7(), ids.NewV7()
 	if err := db.Tx(ctx, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO activity (id, kind, occurred_at, source, captured_by)
@@ -61,20 +61,20 @@ func seedActivityAndOrg(ctx context.Context, t *testing.T, db *database.DB, kind
 			return err
 		}
 		_, err := tx.Exec(ctx, `
-			INSERT INTO organization (id, display_name, source, captured_by)
-			VALUES ($1, 'Kugellager Test GmbH', 'manual', 'test')`, orgID)
+			INSERT INTO company (id, display_name, source, captured_by)
+			VALUES ($1, 'Kugellager Test GmbH', 'manual', 'test')`, companyID)
 		return err
 	}); err != nil {
 		t.Fatalf("seed %s: %v", kind, err)
 	}
-	return activityID, orgID
+	return activityID, companyID
 }
 
-func linkToOrg(ctx context.Context, db *database.DB, activityID, orgID ids.UUID) error {
+func linkToCompany(ctx context.Context, db *database.DB, activityID, companyID ids.UUID) error {
 	return db.Tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
-			INSERT INTO activity_link (activity_id, entity_type, organization_id)
-			VALUES ($1, 'organization', $2)`, activityID, orgID)
+			INSERT INTO activity_link (activity_id, entity_type, company_id)
+			VALUES ($1, 'company', $2)`, activityID, companyID)
 		return err
 	})
 }
@@ -85,9 +85,9 @@ func TestACompanyCannotBeMetOrCalled(t *testing.T) {
 
 	for _, kind := range []string{"meeting", "call"} {
 		t.Run(kind, func(t *testing.T) {
-			activityID, orgID := seedActivityAndOrg(ctx, t, db, kind)
+			activityID, companyID := seedActivityAndCompany(ctx, t, db, kind)
 
-			err := linkToOrg(ctx, db, activityID, orgID)
+			err := linkToCompany(ctx, db, activityID, companyID)
 			if err == nil {
 				t.Fatalf("a %s was linked straight to a company; the estate must refuse it", kind)
 			}
@@ -108,8 +108,8 @@ func TestANoteAboutACompanyIsStillAllowed(t *testing.T) {
 
 	for _, kind := range []string{"note", "task", "email"} {
 		t.Run(kind, func(t *testing.T) {
-			activityID, orgID := seedActivityAndOrg(ctx, t, db, kind)
-			if err := linkToOrg(ctx, db, activityID, orgID); err != nil {
+			activityID, companyID := seedActivityAndCompany(ctx, t, db, kind)
+			if err := linkToCompany(ctx, db, activityID, companyID); err != nil {
 				t.Fatalf("a %s about a company must still be allowed: %v", kind, err)
 			}
 		})
@@ -122,8 +122,8 @@ func TestANoteAboutACompanyIsStillAllowed(t *testing.T) {
 func TestARekindCannotSmuggleACompanyMeetingPast(t *testing.T) {
 	ctx, db := meetingWorkspace(t)
 
-	activityID, orgID := seedActivityAndOrg(ctx, t, db, "note")
-	if err := linkToOrg(ctx, db, activityID, orgID); err != nil {
+	activityID, companyID := seedActivityAndCompany(ctx, t, db, "note")
+	if err := linkToCompany(ctx, db, activityID, companyID); err != nil {
 		t.Fatalf("seed the legal note link: %v", err)
 	}
 
@@ -145,7 +145,7 @@ func TestARekindCannotSmuggleACompanyMeetingPast(t *testing.T) {
 func TestAMeetingWithAPersonIsUntouched(t *testing.T) {
 	ctx, db := meetingWorkspace(t)
 
-	activityID, _ := seedActivityAndOrg(ctx, t, db, "meeting")
+	activityID, _ := seedActivityAndCompany(ctx, t, db, "meeting")
 	personID, ownerID := ids.NewV7(), ids.NewV7()
 
 	if err := db.Tx(ctx, func(tx pgx.Tx) error {
@@ -174,7 +174,7 @@ func TestAMeetingWithAPersonIsUntouched(t *testing.T) {
 // single-row checks stops being a rule.
 //
 // Read unlocked, neither trigger can see what the other transaction is doing:
-// one inserts the organization link while the activity is still a `note`, the
+// one inserts the company link while the activity is still a `note`, the
 // other re-kinds that same activity to `meeting` before the link is visible.
 // Both checks pass, both commit, and the row neither was allowed to make exists.
 //
@@ -183,7 +183,7 @@ func TestAMeetingWithAPersonIsUntouched(t *testing.T) {
 // COMMITTED — seeing whichever half landed first, and refusing.
 func TestTwoTransactionsCannotAssembleACompanyMeetingBetweenThem(t *testing.T) {
 	ctx, db, owner := meetingWorkspaceWithOwner(t)
-	activityID, orgID := seedActivityAndOrg(ctx, t, db, "note")
+	activityID, companyID := seedActivityAndCompany(ctx, t, db, "note")
 
 	linked, rekinded := make(chan error, 1), make(chan error, 1)
 	inserted, release := make(chan struct{}), make(chan struct{})
@@ -196,8 +196,8 @@ func TestTwoTransactionsCannotAssembleACompanyMeetingBetweenThem(t *testing.T) {
 	go func() {
 		linked <- db.Tx(ctx, func(tx pgx.Tx) error {
 			if _, err := tx.Exec(ctx, `
-				INSERT INTO activity_link (activity_id, entity_type, organization_id)
-				VALUES ($1, 'organization', $2)`, activityID, orgID); err != nil {
+				INSERT INTO activity_link (activity_id, entity_type, company_id)
+				VALUES ($1, 'company', $2)`, activityID, companyID); err != nil {
 				close(inserted)
 				return err
 			}
@@ -249,7 +249,7 @@ func TestTwoTransactionsCannotAssembleACompanyMeetingBetweenThem(t *testing.T) {
 	if err := db.Tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT count(*) FROM activity a JOIN activity_link l ON l.activity_id = a.id
-			 WHERE a.id = $1 AND a.kind IN ('meeting', 'call') AND l.entity_type = 'organization'`,
+			 WHERE a.id = $1 AND a.kind IN ('meeting', 'call') AND l.entity_type = 'company'`,
 			activityID).Scan(&forbidden)
 	}); err != nil {
 		t.Fatalf("reading back what the two transactions left: %v", err)

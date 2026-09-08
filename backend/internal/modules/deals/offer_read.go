@@ -150,7 +150,7 @@ func attachOfferLines(ctx context.Context, tx pgx.Tx, offers []crmcontracts.Offe
 }
 
 const offerColumns = `id, deal_id, offer_number, revision, status, currency,
-	buyer_org_id, buyer_snapshot, issuer_snapshot, valid_until, intro_text, terms_text,
+	buyer_company_id, buyer_snapshot, issuer_snapshot, valid_until, intro_text, terms_text,
 	net_minor, tax_minor, gross_minor, fx_rate_to_base::text, fx_rate_date, pdf_asset_ref,
 	template_id, accepted_at, source, captured_by, version, created_at, updated_at, archived_at`
 
@@ -184,7 +184,7 @@ func readOfferWithLines(ctx context.Context, tx pgx.Tx, id ids.OfferID, archived
 func scanOffer(row pgx.Row) (crmcontracts.Offer, error) {
 	var o crmcontracts.Offer
 	var id, dealID ids.UUID
-	var buyerOrgID, templateID *ids.UUID
+	var buyerCompanyID, templateID *ids.UUID
 	var offerNumber string
 	var revision int
 	var status string
@@ -195,7 +195,7 @@ func scanOffer(row pgx.Row) (crmcontracts.Offer, error) {
 	var version int64
 
 	err := row.Scan(&id, &dealID, &offerNumber, &revision, &status, &o.Currency,
-		&buyerOrgID, &buyerSnapshot, &issuerSnapshot, &validUntil, &o.IntroText, &o.TermsText,
+		&buyerCompanyID, &buyerSnapshot, &issuerSnapshot, &validUntil, &o.IntroText, &o.TermsText,
 		&netMinor, &taxMinor, &grossMinor, &o.FxRateToBase, &fxRateDate, &o.PdfAssetRef,
 		&templateID, &o.AcceptedAt, &o.Source, &capturedBy, &version, &o.CreatedAt, &o.UpdatedAt, &o.ArchivedAt)
 	if err != nil {
@@ -204,7 +204,7 @@ func scanOffer(row pgx.Row) (crmcontracts.Offer, error) {
 
 	o.Id = openapi_types.UUID(id)
 	o.DealId = openapi_types.UUID(dealID)
-	o.BuyerOrgId = uuidPtr(buyerOrgID)
+	o.BuyerCompanyId = uuidPtr(buyerCompanyID)
 	o.TemplateId = uuidPtr(templateID)
 	o.OfferNumber = &offerNumber
 	o.Revision = &revision

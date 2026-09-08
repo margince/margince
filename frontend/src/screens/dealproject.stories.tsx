@@ -36,7 +36,7 @@ function deal(over: Partial<Deal>): Deal {
   return {
     id: "d-1",
     name: "Depot rollout",
-    organization_id: "o-1",
+    company_id: "o-1",
     status: "open",
     project_id: null,
     version: 3,

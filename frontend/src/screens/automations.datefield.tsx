@@ -29,7 +29,7 @@ import { throwProblem } from "./common";
 // the endpoint would refuse.
 const CUSTOM_FIELD_QUERY_OBJECTS = new Set([
   "person",
-  "organization",
+  "company",
   "deal",
   "lead",
   "project",
@@ -37,7 +37,7 @@ const CUSTOM_FIELD_QUERY_OBJECTS = new Set([
 
 type CustomFieldQueryObject =
   | "person"
-  | "organization"
+  | "company"
   | "deal"
   | "lead"
   | "project";

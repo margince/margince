@@ -38,7 +38,7 @@ beforeEach(() => {
 // contact graph — the ≥60/40–59/<40 score thresholds, eligibility-gated
 // promote, and a lead row navigating to the LEAD detail (never the person
 // screen). Below that: the same P-14/15/16/1 shared-block wiring as contacts
-// (contacts.test.tsx) and companies (organizations.test.tsx) — search/sort/
+// (contacts.test.tsx) and companies (companies.test.tsx) — search/sort/
 // pagination + a status filter, the rich create modal (full_name/email/
 // linkedin_url/company_name), the lead-360 If-Match edit
 // (Promote + badges preserved), and the duplicate_email dedupe link.

@@ -64,14 +64,12 @@ function harness() {
 describe("the vocabulary read", () => {
   it("asks for the resource it was given", async () => {
     const { seen, wrapper } = harness();
-    const { result } = renderHook(() => useFilterVocabulary("organization"), {
+    const { result } = renderHook(() => useFilterVocabulary("company"), {
       wrapper,
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(seen.some((url) => url.includes("resource=organization"))).toBe(
-      true,
-    );
+    expect(seen.some((url) => url.includes("resource=company"))).toBe(true);
   });
 
   it("serves a second reader of the same resource from cache", async () => {

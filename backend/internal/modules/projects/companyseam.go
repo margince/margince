@@ -28,7 +28,7 @@ import (
 // edge that already exists is left as it is rather than duplicated.
 type AttachCompany func(
 	ctx context.Context, tx pgx.Tx,
-	projectID ids.ProjectID, organizationID ids.OrganizationID, role, by string,
+	projectID ids.ProjectID, companyID ids.CompanyID, role, by string,
 ) error
 
 // ProjectCompanies lists the companies on a project, in the order they were
@@ -39,9 +39,9 @@ type ProjectCompanies func(
 
 // CompanyOnProject is one company's place on a project.
 type CompanyOnProject struct {
-	OrganizationID ids.OrganizationID
-	DisplayName    string
-	Role           string
+	CompanyID   ids.CompanyID
+	DisplayName string
+	Role        string
 }
 
 // CompaniesFrom adapts a reader that answers rows of some other shape into the
@@ -62,7 +62,7 @@ func CompaniesFrom[R CompanyRow](read func(context.Context, pgx.Tx, ids.ProjectI
 		out := make([]CompanyOnProject, 0, len(rows))
 		for _, r := range rows {
 			out = append(out, CompanyOnProject{
-				OrganizationID: r.Company(), DisplayName: r.Name(), Role: r.OnProjectAs(),
+				CompanyID: r.Company(), DisplayName: r.Name(), Role: r.OnProjectAs(),
 			})
 		}
 		return out, nil
@@ -72,7 +72,7 @@ func CompaniesFrom[R CompanyRow](read func(context.Context, pgx.Tx, ids.ProjectI
 // CompanyRow is what CompaniesFrom needs of a row: which company, what it is
 // called, and what it is to the project.
 type CompanyRow interface {
-	Company() ids.OrganizationID
+	Company() ids.CompanyID
 	Name() string
 	OnProjectAs() string
 }
@@ -88,7 +88,7 @@ const CompanyRoleCustomer = "customer"
 // create projects nobody's company page can find, which looks exactly like the
 // project not existing.
 func refusingAttachCompany() AttachCompany {
-	return func(context.Context, pgx.Tx, ids.ProjectID, ids.OrganizationID, string, string) error {
+	return func(context.Context, pgx.Tx, ids.ProjectID, ids.CompanyID, string, string) error {
 		return errCompanySeamUnwired("the company attach")
 	}
 }

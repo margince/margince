@@ -28,7 +28,7 @@ import (
 // carries a filter name of its own.
 var listOperations = []struct{ recordType, operationID string }{
 	{"person", "listPeople"},
-	{"organization", "listOrganizations"},
+	{"company", "listCompanies"},
 	{"deal", "listDeals"},
 	{"lead", "listLeads"},
 	{"project", "listProjects"},
@@ -44,7 +44,7 @@ var notAFieldFilter = map[string]string{
 	// that conflation inside the tool meant to end it.
 	"q": "text search is search_records' verb",
 	// `include_anchor` toggles the discovery narrowing every read of an
-	// organization carries. It widens what is visible rather than filtering it,
+	// company carries. It widens what is visible rather than filtering it,
 	// which is a governance question and not a caller's filter.
 	"include_anchor": "widens discovery rather than filtering",
 }

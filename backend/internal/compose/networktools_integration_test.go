@@ -33,12 +33,12 @@ import (
 
 // employAt records one contact's live employment at an account, the edge an
 // intro route walks its second hop over.
-func employAt(t *testing.T, e *integration.Env, person, org ids.UUID) {
+func employAt(t *testing.T, e *integration.Env, person, company ids.UUID) {
 	t.Helper()
 	seedAsAdmin(t, e, func(ctx context.Context, tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
-			INSERT INTO relationship (kind, person_id, organization_id, source, captured_by)
-			VALUES ('employment', $1, $2, 'manual', 'human:test')`, person, org)
+			INSERT INTO relationship (kind, person_id, company_id, source, captured_by)
+			VALUES ('employment', $1, $2, 'manual', 'human:test')`, person, company)
 		return err
 	}, "recording employment")
 }
@@ -58,11 +58,11 @@ func TestIntroPathNamesBothEndsOfTheRouteAndSaysWhenItWasCapped(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 
-	var orgID ids.UUID
+	var companyID ids.UUID
 	seedAsAdmin(t, e, func(ctx context.Context, tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
-			INSERT INTO organization (display_name, source, captured_by)
-			VALUES ('Acme GmbH', 'manual', 'human:test') RETURNING id`).Scan(&orgID)
+			INSERT INTO company (display_name, source, captured_by)
+			VALUES ('Acme GmbH', 'manual', 'human:test') RETURNING id`).Scan(&companyID)
 	}, "seeding the account")
 	person, err := e.People.CreatePerson(ctx, people.CreatePersonInput{
 		FullName: "Jonas Bach", Source: "manual",
@@ -70,11 +70,11 @@ func TestIntroPathNamesBothEndsOfTheRouteAndSaysWhenItWasCapped(t *testing.T) {
 	if err != nil {
 		t.Fatalf("seeding the contact: %v", err)
 	}
-	employAt(t, e, ids.UUID(person.Id), orgID)
+	employAt(t, e, ids.UUID(person.Id), companyID)
 	// One recorded interaction, which is what makes a route rather than a name.
 	seedInteractionEdge(t, e, e.Rep1, ids.UUID(person.Id))
 
-	routes, truncated, err := introPathLister(e.Pool)(ctx, orgID)
+	routes, truncated, err := introPathLister(e.Pool)(ctx, companyID)
 	if err != nil {
 		t.Fatalf("intro path: %v", err)
 	}
@@ -234,10 +234,10 @@ func coverageDeniedPerms() principal.Permissions {
 	return principal.Permissions{
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
-			"deal":         {Read: true},
-			"person":       {Read: true},
-			"organization": {Read: true},
-			"activity":     {Read: true},
+			"deal":     {Read: true},
+			"person":   {Read: true},
+			"company":  {Read: true},
+			"activity": {Read: true},
 		},
 		RowScope: principal.RowScopeAll,
 	}
@@ -326,7 +326,7 @@ func personDeniedPerms() principal.Permissions {
 		Objects: map[string]principal.ObjectGrant{
 			"deal":         {Read: true},
 			"relationship": {Read: true},
-			"organization": {Read: true},
+			"company":      {Read: true},
 			"activity":     {Read: true},
 		},
 		RowScope: principal.RowScopeAll,

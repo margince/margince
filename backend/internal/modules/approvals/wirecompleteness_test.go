@@ -83,7 +83,7 @@ func TestEveryRequiredApprovalFieldIsAnswered(t *testing.T) {
 // dropped it.
 func fullyPopulatedRow(t *testing.T, now time.Time) row {
 	t.Helper()
-	targetType, summary, version := tableOrganization, "Rename Acme GmbH", int64(7)
+	targetType, summary, version := tableCompany, "Rename Acme GmbH", int64(7)
 	targetID, bundleID := ids.NewV7(), ids.NewV7()
 	onBehalfOf := ids.New[ids.UserKind]()
 	passportID := ids.New[ids.PassportKind]()
@@ -96,7 +96,7 @@ func fullyPopulatedRow(t *testing.T, now time.Time) row {
 	}
 	return row{
 		ID:             ids.New[ids.ApprovalKind](),
-		Kind:           "orgname",
+		Kind:           "companyname",
 		Status:         statusPending,
 		ProposedBy:     "agent:test",
 		OnBehalfOf:     &onBehalfOf,

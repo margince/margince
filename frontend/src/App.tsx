@@ -173,14 +173,14 @@ const OfferScreen = lazy(
 );
 const CompaniesScreen = lazy(
   routed(() =>
-    import("./screens/organizations").then((m) => ({
+    import("./screens/companies").then((m) => ({
       default: m.CompaniesScreen,
     })),
   ),
 );
 const CompanyScreen = lazy(
   routed(() =>
-    import("./screens/organizations").then((m) => ({
+    import("./screens/companies").then((m) => ({
       default: m.CompanyScreen,
     })),
   ),
@@ -711,7 +711,7 @@ export function App() {
 // UnavailableOrClaimable splits the 503 the boundary already reached into its
 // two product states. "Not ready" is true of both, but only one of them has
 // something the person in front of the browser can do: an installation that
-// holds no organization and is WAITING to be claimed (ADR-0105) gets the claim
+// holds no company and is WAITING to be claimed (ADR-0105) gets the claim
 // screen; anything else keeps the availability message.
 //
 // The probe runs only on this branch, and only for the installation kind: a
@@ -827,7 +827,7 @@ function AuthedApp({
   const progress = useJourneyProgress(
     authed && described && me.data?.authorization?.seat_type === "full",
   );
-  // The organization's clock, for every record date under this boundary. Read
+  // The company's clock, for every record date under this boundary. Read
   // here rather than per screen so all of them agree, and gated on the session
   // for the same reason the company probe is: an unauthenticated read would
   // 401 and say nothing about the installation.

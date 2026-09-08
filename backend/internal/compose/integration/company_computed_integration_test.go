@@ -1,0 +1,578 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+//go:build integration
+
+package integration
+
+// The RD-T08 formula-field display rows on GET /companies/{id}
+// (arc 2b Task 3) exercised over a real migrated Postgres: the gated
+// 5-row assembly with a real computed open_pipeline value, the two
+// honest-floor states (no view row at all vs. a row whose aggregate is
+// itself NULL), the STATE-4 absent-key proof, and the security_invoker
+// proof that RLS — not company_id happening to be unique — is what
+// keeps one workspace's deals out of another's roll-up.
+//
+// Deals never carry fx_rate_to_base while status='open' through any
+// real write path (deal_closed_fx only requires it once a deal leaves
+// 'open', and no code path sets it early) — so a genuinely computable
+// open_pipeline figure is fabricated here via the owner connection, the
+// same "seed what the write paths cannot produce" pattern
+// dealhealth_integration_test.go uses for its stage-history timestamps.
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"testing"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+)
+
+// directOpenPipelineRead is the test's own ground truth: the exact
+// query company_computed.go's openPipelineRollup runs, executed
+// independently here so the assertions below prove the store's
+// assembled figure against the view, not against itself. found is false
+// for the view's honest "nothing to sum" case (no row at all).
+func directOpenPipelineRead(ctx context.Context, t *testing.T, e *Env, companyID ids.UUID) (minor *int64, count int, found bool) {
+	t.Helper()
+	minor, count, _, found = directOpenPipelineReadPriced(ctx, t, e, companyID)
+	return minor, count, found
+}
+
+// directOpenPipelineReadPriced is the same read plus priced_deal_count, for the
+// tests whose subject is which deals REACHED the sum.
+//
+// Separate rather than a fourth return on every caller, because most of them
+// are about the total and the count of deals; a test that wants to know how
+// many were priced is asking a different question and says so by asking this.
+func directOpenPipelineReadPriced(
+	ctx context.Context, t *testing.T, e *Env, companyID ids.UUID,
+) (minor *int64, count, priced int, found bool) {
+	t.Helper()
+	// The same day the reader binds (people.rollupAsOf): the rollup is asked for
+	// a date, and a test that let the database pick its own CURRENT_DATE would
+	// be reading a rollup at a date the product never asks for — a whole day
+	// apart at midnight in the database's zone, which is the divergence binding
+	// the date removed.
+	asOf := time.Now().UTC().Truncate(24 * time.Hour)
+	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`SELECT open_pipeline_minor_base, open_deal_count, priced_deal_count
+			 FROM company_open_pipeline_rollup($2) WHERE company_id = $1`,
+			companyID, asOf).Scan(&minor, &count, &priced)
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, 0, 0, false
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	return minor, count, priced, true
+}
+
+// computedFieldByKey indexes the assembled rows for the reason/floor
+// assertions that don't care about row order.
+func computedFieldByKey(rows []crmcontracts.ComputedField, key string) crmcontracts.ComputedField {
+	for _, r := range rows {
+		if r.Key == key {
+			return r
+		}
+	}
+	return crmcontracts.ComputedField{}
+}
+
+// assertHonestFloors checks the four non-computable rows: weighted_pipeline
+// names the read that actually serves it (poc-v1 HAS that read, unlike
+// the poc-1 reference this ports), the other three are genuinely unbuilt.
+func assertHonestFloors(t *testing.T, rows []crmcontracts.ComputedField) {
+	t.Helper()
+	want := map[string]string{
+		"weighted_pipeline":     "served_by_hierarchy_rollup",
+		"customer_age":          "not_yet_built",
+		"net_revenue_retention": "not_yet_built",
+		"blended_gross_margin":  "not_yet_built",
+	}
+	for key, reason := range want {
+		row := computedFieldByKey(rows, key)
+		if row.Key == "" {
+			t.Fatalf("missing floor row %q", key)
+		}
+		if row.Computable {
+			t.Fatalf("%s must be computable=false, got %+v", key, row)
+		}
+		if row.Reason == nil || *row.Reason != reason {
+			t.Fatalf("%s.reason = %v, want %q", key, row.Reason, reason)
+		}
+		if row.ValueMinor != nil || row.Value != nil {
+			t.Fatalf("%s must carry no value while computable=false, got %+v", key, row)
+		}
+	}
+}
+
+// pipelineFixtureFor is DealFixture's body, parameterized over ctx so a
+// second workspace (the cross-tenant suite below) can seed its own
+// default pipeline — DealFixture itself is hard-wired to e.Admin(),
+// which is always bound to the harness's primary workspace.
+func pipelineFixtureFor(ctx context.Context, t *testing.T, store *deals.Store) (pipeline ids.PipelineID, open ids.StageID) {
+	t.Helper()
+	if err := store.SeedDefaults(ctx); err != nil {
+		t.Fatal(err)
+	}
+	p, err := store.DefaultPipeline(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, st := range *p.Stages {
+		if st.Semantic == "open" {
+			open = ids.From[ids.StageKind](ids.UUID(st.Id))
+			break
+		}
+	}
+	return ids.From[ids.PipelineKind](ids.UUID(p.Id)), open
+}
+
+// computedFieldNoGrantPerms mirrors a real role's company:read grant
+// with the computed_field object simply absent from the policy document
+// — the STATE-4 shape every non-admin custom role predates 0066's
+// backfill would have had, and exactly what the plan asks be minted by
+// hand since every one of poc-v1's five SEEDED system roles already
+// carries computed_field:read (0066/policy.go).
+var computedFieldNoGrantPerms = principal.Permissions{
+	RoleKeys: []string{"custom-no-computed-field"},
+	Objects: map[string]principal.ObjectGrant{
+		"company":               {Read: true},
+		"installation_settings": {Read: true},
+	},
+	RowScope: principal.RowScopeAll,
+}
+
+// TestCompanyComputed_GatedVisible_RealValueMatchesDirectViewRead is
+// the happy path: two open deals with their FX frozen (the owner-conn
+// fixture above) sum to a known figure that must match both the view
+// read directly AND the assembled open_pipeline row, and the four floor
+// rows must carry their exact honest reasons.
+func TestCompanyComputed_GatedVisible_RealValueMatchesDirectViewRead(t *testing.T) {
+	e := Setup(t)
+	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
+	companyID := e.SeedCompany(t, "Acme Corp", nil)
+
+	// The two deals are EUR against a EUR base, so the rollup view converts
+	// them by the same-currency shortcut and needs no rate loaded.
+	_, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
+		Name: "D1", AmountMinor: int64Ptr(100000), Currency: strPtr("EUR"),
+		PipelineID: pipeline, StageID: open, CompanyID: companyIDPtr(companyIDOf(companyID)), Source: "manual",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
+		Name: "D2", AmountMinor: int64Ptr(250000), Currency: strPtr("EUR"),
+		PipelineID: pipeline, StageID: open, CompanyID: companyIDPtr(companyIDOf(companyID)), Source: "manual",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantMinor, wantCount, found := directOpenPipelineRead(e.Admin(), t, e, companyID)
+	if !found || wantMinor == nil || *wantMinor != 350000 || wantCount != 2 {
+		t.Fatalf("test fixture: direct view read = %v/%d/%v, want 350000/2/true", wantMinor, wantCount, found)
+	}
+
+	company, err := e.People.GetCompany(e.Admin(), companyIDOf(companyID), storekit.IncludeArchived)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if company.ComputedFields == nil || len(*company.ComputedFields) != 5 {
+		t.Fatalf("want exactly 5 computed_fields rows, got %v", company.ComputedFields)
+	}
+	rows := *company.ComputedFields
+	open0 := computedFieldByKey(rows, "open_pipeline")
+	if !open0.Computable || open0.Reason != nil {
+		t.Fatalf("open_pipeline must be computable with no floor reason, got %+v", open0)
+	}
+	if open0.ValueMinor == nil || *open0.ValueMinor != *wantMinor {
+		t.Fatalf("open_pipeline.value_minor = %v, want %d (the direct view read)", open0.ValueMinor, *wantMinor)
+	}
+	if open0.Kind != crmcontracts.ComputedFieldKindCurrencyMinor {
+		t.Fatalf("open_pipeline.kind = %q, want currency_minor", open0.Kind)
+	}
+	if open0.FormulaSql == "" {
+		t.Fatal("open_pipeline.formula_sql must be non-empty")
+	}
+	assertHonestFloors(t, rows)
+}
+
+// TestCompanyComputed_NoOpenDeals_FloorsToZero is the view's honest
+// "nothing to sum" state: a company with no open deals produces no
+// view row at all, and the assembler floors that to a real 0 — the
+// poc-1-tested behaviour, since a tile has no way to render "unknown".
+func TestCompanyComputed_NoOpenDeals_FloorsToZero(t *testing.T) {
+	e := Setup(t)
+	companyID := e.SeedCompany(t, "No Deals Inc", nil)
+
+	if _, _, found := directOpenPipelineRead(e.Admin(), t, e, companyID); found {
+		t.Fatal("test fixture: expected NO view row for a company with no open deals")
+	}
+
+	company, err := e.People.GetCompany(e.Admin(), companyIDOf(companyID), storekit.IncludeArchived)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := *company.ComputedFields
+	open0 := computedFieldByKey(rows, "open_pipeline")
+	if !open0.Computable {
+		t.Fatal("the zero floor is still computable=true — a real (zero) sum, not a missing one")
+	}
+	if open0.ValueMinor == nil || *open0.ValueMinor != 0 {
+		t.Fatalf("open_pipeline.value_minor = %v, want 0", open0.ValueMinor)
+	}
+}
+
+// A mix of priced and unpriced deals reports NO figure, not a short one.
+//
+// This is the defect a converting view introduces if nobody looks for it: SUM
+// ignores the deal it could not price, silently, so an account with one EUR
+// deal and one unpriceable JPY deal produces a real number covering half the
+// pipeline. Shown as a total it is worse than the "not computable" it replaced
+// — the reader cannot see what is missing from it.
+func TestCompanyComputed_SomeDealsUnpriceable_RefusesTheShortTotal(t *testing.T) {
+	e := Setup(t)
+	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
+	companyID := e.SeedCompany(t, "Half Priced GmbH", nil)
+
+	for _, deal := range []struct {
+		amount   int64
+		currency string
+	}{
+		{75_000, "EUR"},    // prices: the installation's own currency
+		{5_000_000, "JPY"}, // cannot: no rate is loaded for the pair
+	} {
+		if _, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
+			Name: "Deal", AmountMinor: int64Ptr(deal.amount), Currency: strPtr(deal.currency),
+			PipelineID: pipeline, StageID: open, CompanyID: companyIDPtr(companyIDOf(companyID)), Source: "manual",
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	company, err := e.People.GetCompany(e.Admin(), companyIDOf(companyID), storekit.IncludeArchived)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := computedFieldByKey(*company.ComputedFields, "open_pipeline")
+	if got.Computable {
+		t.Fatalf("a total covering 1 of 2 open deals was reported as computable: %+v", got)
+	}
+	if got.ValueMinor != nil {
+		t.Errorf("open_pipeline.value_minor = %v, want absent — 75000 is real but it is not the pipeline", got.ValueMinor)
+	}
+	if got.Reason == nil || *got.Reason != "partial_pipeline" {
+		t.Errorf("open_pipeline.reason = %v, want \"partial_pipeline\"", got.Reason)
+	}
+}
+
+// The case this field got wrong for every installation: an ordinary open
+// pipeline, in the installation's own currency, needing no conversion at all.
+//
+// The view summed deal.amount_minor_base, which is null on every OPEN deal
+// because the rate freezes on close. So a perfectly computable pipeline
+// reported "awaiting FX" — for deals that needed no FX — and the field was
+// effectively dead on every account that had not closed and reopened a deal.
+func TestCompanyComputed_OpenDealsInTheBaseCurrency_ReportTheirTotal(t *testing.T) {
+	e := Setup(t)
+	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
+	companyID := e.SeedCompany(t, "Ordinary Pipeline GmbH", nil)
+
+	for _, amount := range []int64{75_000, 125_000} {
+		if _, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
+			Name: "Open deal", AmountMinor: int64Ptr(amount), Currency: strPtr("EUR"),
+			PipelineID: pipeline, StageID: open, CompanyID: companyIDPtr(companyIDOf(companyID)), Source: "manual",
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	company, err := e.People.GetCompany(e.Admin(), companyIDOf(companyID), storekit.IncludeArchived)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := computedFieldByKey(*company.ComputedFields, "open_pipeline")
+	if !got.Computable {
+		t.Fatalf("an open EUR pipeline on a EUR installation is not computable: %+v — it needs no rate to convert", got)
+	}
+	if got.ValueMinor == nil || *got.ValueMinor != 200_000 {
+		t.Errorf("open_pipeline.value_minor = %v, want 200000 (750.00 + 1250.00)", got.ValueMinor)
+	}
+}
+
+// TestCompanyComputed_OpenDealsWithNoUsableRate_AwaitingFX is the OTHER
+// honest "not computable yet" state: open deals exist (the view row IS present,
+// open_deal_count > 0) but not one of them can be converted, because the
+// installation holds no rate on or before today for the currency they are held
+// in. The aggregate is NULL and flooring it to a real 0 would be dishonest — it
+// would sit beside a non-zero weighted_pipeline as a fabricated "no pipeline"
+// figure. The assembler floors it to computable:false, reason:"awaiting_fx",
+// with no value_minor on the wire, distinct from the genuine-zero no-row case
+// the next test covers.
+//
+// The deals are held in JPY on purpose. This state used to be reachable with
+// deals in the installation's OWN currency, because the view summed
+// amount_minor_base — null on every open deal — so an ordinary EUR pipeline on
+// a EUR installation reported "awaiting FX" while needing no FX at all. The
+// view converts now, so reaching this state takes a currency the rate sheet
+// genuinely cannot price.
+func TestCompanyComputed_OpenDealsWithNoUsableRate_AwaitingFX(t *testing.T) {
+	e := Setup(t)
+	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
+	companyID := e.SeedCompany(t, "Unpriced Pipeline LLC", nil)
+
+	for _, amount := range []int64{75000, 125000} {
+		if _, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
+			Name: "Unpriced deal", AmountMinor: int64Ptr(amount), Currency: strPtr("JPY"),
+			PipelineID: pipeline, StageID: open, CompanyID: companyIDPtr(companyIDOf(companyID)), Source: "manual",
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	minor, count, found := directOpenPipelineRead(e.Admin(), t, e, companyID)
+	if !found {
+		t.Fatal("test fixture: expected a view row (2 open deals reference this company)")
+	}
+	if minor != nil {
+		t.Fatalf("test fixture: expected a NULL aggregate (no rate prices JPY here), got %d", *minor)
+	}
+	if count != 2 {
+		t.Fatalf("test fixture: open_deal_count = %d, want 2", count)
+	}
+
+	company, err := e.People.GetCompany(e.Admin(), companyIDOf(companyID), storekit.IncludeArchived)
+	if err != nil {
+		t.Fatal(err)
+	}
+	open0 := computedFieldByKey(*company.ComputedFields, "open_pipeline")
+	if open0.Computable {
+		t.Fatalf("a NULL-aggregate row with open deals present must be computable=false, got %+v", open0)
+	}
+	if open0.Reason == nil || *open0.Reason != "awaiting_fx" {
+		t.Fatalf("open_pipeline.reason = %v, want \"awaiting_fx\"", open0.Reason)
+	}
+	if open0.ValueMinor != nil {
+		t.Fatalf("open_pipeline.value_minor = %v, want absent (awaiting_fx carries no value)", open0.ValueMinor)
+	}
+	if open0.FormulaSql == "" {
+		t.Fatal("open_pipeline.formula_sql must stay populated: the formula exists, only a rate for this currency does not")
+	}
+
+	raw, err := json.Marshal(company)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var wire map[string]any
+	if err := json.Unmarshal(raw, &wire); err != nil {
+		t.Fatal(err)
+	}
+	fields, ok := wire["computed_fields"].([]any)
+	if !ok {
+		t.Fatalf("computed_fields not a JSON array in the wire payload: %v", wire["computed_fields"])
+	}
+	for _, f := range fields {
+		row, ok := f.(map[string]any)
+		if !ok || row["key"] != "open_pipeline" {
+			continue
+		}
+		if _, present := row["value_minor"]; present {
+			t.Fatalf("open_pipeline.value_minor key must be entirely absent from the wire for awaiting_fx, got %v", row["value_minor"])
+		}
+	}
+}
+
+// TestCompanyComputed_UngatedPrincipal_ComputedFieldsKeyAbsentFromWire
+// is the STATE-4 proof: every one of poc-v1's five seeded system roles
+// already carries computed_field:read (0066's backfill + policy.go), so
+// this mints a custom permission set — company:read without
+// computed_field — the shape a bespoke pre-0066 role's policy document
+// would have had. The raw-map decode (not a struct field check) proves
+// the key is absent from the wire entirely, not merely nil in Go.
+func TestCompanyComputed_UngatedPrincipal_ComputedFieldsKeyAbsentFromWire(t *testing.T) {
+	e := Setup(t)
+	companyID := e.SeedCompany(t, "Gated Company", nil)
+	ctx := e.As(e.Rep1, nil, computedFieldNoGrantPerms)
+
+	company, err := e.People.GetCompany(ctx, companyIDOf(companyID), storekit.IncludeArchived)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if company.ComputedFields != nil {
+		t.Fatalf("want a nil ComputedFields pointer for an ungated viewer, got %v", company.ComputedFields)
+	}
+
+	raw, err := json.Marshal(company)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var wire map[string]any
+	if err := json.Unmarshal(raw, &wire); err != nil {
+		t.Fatal(err)
+	}
+	if _, present := wire["computed_fields"]; present {
+		t.Fatalf("want the computed_fields KEY entirely absent from the wire, got %v", wire["computed_fields"])
+	}
+}
+
+// companyIDPtr matches int64Ptr/strPtr's convention (companyrollup_integration_test.go
+// / authz_integration_test.go): the *ids.CompanyID CreateDealInput wants.
+func companyIDPtr(id ids.CompanyID) *ids.CompanyID { return &id }
+
+// TestCompanyComputed_AnUnrepresentableDeal_RefusesOneFigureNotTheRecord
+// is the case that took a whole company record down.
+//
+// The view cast its converted amount straight to bigint, and Postgres raises
+// `numeric field overflow` on a result that does not fit — which failed the
+// statement, which failed GetCompany, which made the company
+// unreadable. One implausible amount against a large rate, and the record it
+// sits on could not be opened at all.
+//
+// The deal now contributes nothing and stays counted, exactly as a deal with no
+// usable rate does, and the record opens.
+func TestCompanyComputed_AnUnrepresentableDeal_RefusesOneFigureNotTheRecord(t *testing.T) {
+	e := Setup(t)
+	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
+	companyID := e.SeedCompany(t, "Overflow Logistics", nil)
+
+	// The largest rate the column can hold, against an amount near the top of
+	// its own range. Neither is a number anyone would type on purpose — which
+	// is the point: a data-entry mistake is precisely the input that must not
+	// be able to take a record offline.
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(e.Admin(), `
+			INSERT INTO fx_rate (from_currency, to_currency, rate, rate_date)
+			VALUES ('JPY', (SELECT (value #>> '{}')::text FROM setting WHERE key = 'installation.base_currency'),
+			        9999999999, CURRENT_DATE)
+			ON CONFLICT DO NOTHING`)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the outsized rate: %v", err)
+	}
+
+	for _, deal := range []struct {
+		name     string
+		amount   int64
+		currency string
+	}{
+		// Converts to roughly 9.2e27, which no bigint holds.
+		{"Unrepresentable deal", 9_200_000_000_000_000_000, "JPY"},
+		// And one in the installation's own base currency (harnessinstallation.go
+		// seeds EUR), so a partial total has something to be partial ABOUT — a
+		// test where nothing converts would pass on a view that refused
+		// everything.
+		{"Ordinary deal", 125_000, "EUR"},
+	} {
+		in := deals.CreateDealInput{
+			Name: deal.name, AmountMinor: int64Ptr(deal.amount),
+			PipelineID: pipeline, StageID: open,
+			CompanyID: companyIDPtr(companyIDOf(companyID)), Source: "manual",
+		}
+		in.Currency = strPtr(deal.currency)
+		if _, err := e.Deals.CreateDeal(e.Admin(), in); err != nil {
+			t.Fatalf("seeding %s: %v", deal.name, err)
+		}
+	}
+
+	// The read that used to fail outright.
+	company, err := e.People.GetCompany(e.Admin(), companyIDOf(companyID), storekit.IncludeArchived)
+	if err != nil {
+		t.Fatalf("the company could not be read at all: %v — one deal the view cannot represent "+
+			"must refuse one figure, never the record", err)
+	}
+
+	_, count, found := directOpenPipelineRead(e.Admin(), t, e, companyID)
+	if !found {
+		t.Fatal("the view returned no row for a company with two open deals")
+	}
+	if count != 2 {
+		t.Errorf("open_deal_count = %d, want 2 — a deal that cannot be priced is still a deal", count)
+	}
+
+	// A total covering one of two deals is not a total. The field floors, and
+	// it floors to PARTIAL_PIPELINE rather than awaiting_fx: one deal was
+	// priced, so this is a short sum and not an absent one, and the two reasons
+	// are what tells a reader which. Asserted rather than left to Computable,
+	// because "some deals could not be priced" and "none could" are different
+	// sentences on the page.
+	open0 := computedFieldByKey(*company.ComputedFields, "open_pipeline")
+	if open0.Computable {
+		t.Errorf("open_pipeline reads computable with one of two deals priced: %+v — a short total is "+
+			"worse than no total", open0)
+	}
+	if open0.Reason == nil || *open0.Reason != "partial_pipeline" {
+		t.Errorf("open_pipeline.reason = %v, want \"partial_pipeline\" — one deal reached the sum and "+
+			"one could not be represented, which is a short figure rather than no figure", open0.Reason)
+	}
+	if open0.ValueMinor != nil {
+		t.Errorf("open_pipeline.value_minor = %v, want absent — a short sum is not published as a total",
+			open0.ValueMinor)
+	}
+}
+
+// TestCompanyComputed_ATotalThatCannotBeRepresented_RefusesTheFigure is the
+// same hazard one level up.
+//
+// Guarding each deal and not the total would have moved the failure rather than
+// removed it: sum(bigint) answers in numeric, so a set of individually
+// representable deals can add to a figure no bigint holds — and the reader
+// scans that column into an int64. The record would have been unreadable
+// because the deals are large rather than because one of them is.
+func TestCompanyComputed_ATotalThatCannotBeRepresented_RefusesTheFigure(t *testing.T) {
+	e := Setup(t)
+	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
+	companyID := e.SeedCompany(t, "Big Numbers GmbH", nil)
+
+	// Two deals, each a legal bigint, whose sum is not. No conversion is
+	// involved — both are in the installation's own currency — so this is the
+	// aggregate's bound and nothing else.
+	for _, amount := range []int64{9_000_000_000_000_000_000, 9_000_000_000_000_000_000} {
+		if _, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
+			Name: "Large deal", AmountMinor: int64Ptr(amount), Currency: strPtr("EUR"),
+			PipelineID: pipeline, StageID: open, CompanyID: companyIDPtr(companyIDOf(companyID)), Source: "manual",
+		}); err != nil {
+			t.Fatalf("seeding a large deal: %v", err)
+		}
+	}
+
+	company, err := e.People.GetCompany(e.Admin(), companyIDOf(companyID), storekit.IncludeArchived)
+	if err != nil {
+		t.Fatalf("the company could not be read at all: %v — a total nobody can represent must "+
+			"refuse the figure, never the record", err)
+	}
+
+	minor, count, priced, found := directOpenPipelineReadPriced(e.Admin(), t, e, companyID)
+	if !found {
+		t.Fatal("the view returned no row for a company with two open deals")
+	}
+	if count != 2 {
+		t.Errorf("open_deal_count = %d, want 2", count)
+	}
+	// BOTH deals reached the sum, which is what makes this a test about the
+	// AGGREGATE. Without it the case passes on a view where neither converted:
+	// a null total and a non-computable field look identical whether the sum
+	// overflowed or nothing was priced at all.
+	if priced != 2 {
+		t.Fatalf("priced_deal_count = %d, want 2 — both deals are in the installation's own currency, so "+
+			"a lower count means this test is measuring something other than the sum's bound", priced)
+	}
+	if minor != nil {
+		t.Errorf("open_pipeline_minor_base = %d, want NULL — a sum that does not fit is not a sum", *minor)
+	}
+	if open0 := computedFieldByKey(*company.ComputedFields, "open_pipeline"); open0.Computable {
+		t.Errorf("open_pipeline reads computable over a total that cannot be represented: %+v", open0)
+	}
+}

@@ -5,7 +5,7 @@ package network
 
 // Writing the forwardable note, with a template underneath it.
 //
-// The shape mirrors org360's introdraftwrite.go deliberately — model lane,
+// The shape mirrors company360's introdraftwrite.go deliberately — model lane,
 // deterministic floor, generated_by on the way out — because a second drafting
 // site that degraded differently would be a second contract for what happens
 // when the lane is missing. What differs is the PROMPT and the wording table,
@@ -145,7 +145,7 @@ func noteSchema() json.RawMessage {
 func parseIntroNote(raw string, facts noteFacts) (introNote, error) {
 	// The recipient is ADDRESSED, so their first name is what a greeting
 	// carries; the colleague is TALKED ABOUT, so they are named in full. The
-	// asymmetry is org360's, and it is not cosmetic: requiring the recipient's
+	// asymmetry is company360's, and it is not cosmetic: requiring the recipient's
 	// surname refused this site's own template, whose greeting is "Hi Philipp,".
 	subject, body, err := draftreply.Parse(raw,
 		draftfloor.FirstName(facts.contact), facts.requester)
@@ -175,7 +175,7 @@ func noteLang(lang textlang.Lang) textlang.Lang {
 
 // noteWording is one language's phrasing for a note somebody forwards.
 //
-// Its own table rather than org360's introTable, and the difference is the
+// Its own table rather than company360's introTable, and the difference is the
 // register: that one asks a teammate for a favour, and this one is read by a
 // customer. Bending the internal wording outward would send a prospect a
 // message that reads like office chat about them.
@@ -369,7 +369,7 @@ func noteRelationshipLabel(facts noteFacts) string {
 // rebuilds its subject measures a copy that stays green through the change
 // which breaks the original.
 //
-// It is org360.IntroFixture's sibling and NOT its twin, and the differences are
+// It is company360.IntroFixture's sibling and NOT its twin, and the differences are
 // the endpoint's rather than this type's. This site is handed a route, so it
 // carries an intermediary and the rep's own free-text reason; and it carries no
 // correspondence, because this endpoint does not read one — see Band and the
@@ -406,7 +406,7 @@ type IntroNoteFixture struct {
 // It builds the route and calls factsFromRoute rather than restating what that
 // function does. The first version of this seam restated it, and drifted
 // immediately: it detected the output language from the contact's
-// correspondence the way org360's sibling does, while this endpoint sets
+// correspondence the way company360's sibling does, while this endpoint sets
 // textlang.Unknown and lets the writer default. A German scenario would have
 // certified a prompt the product cannot send. Going through the assembler makes
 // that class of divergence unrepresentable rather than merely absent today.

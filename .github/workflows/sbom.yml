@@ -5,7 +5,7 @@ name: SBOM
 # so the runner needs only Docker — pre-installed on ubuntu-latest.
 #
 # This used to run on every dependency-set change that landed on main, about 48
-# runs a week. Those runs drew on the same org-wide ceiling of 20 concurrent
+# runs a week. Those runs drew on the same company-wide ceiling of 20 concurrent
 # runners that the PR gates queue in, and a starved lane there delays a verdict
 # somebody is waiting on. Nothing consumed the output at that cadence: this
 # repository has no releases yet, so each run published bundles for a tree no

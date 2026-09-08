@@ -15,9 +15,9 @@ import { LocaleProvider } from "../i18n";
 import { PartnersScreen, PartnerTab } from "./partners";
 
 // Partner tab (company 360) + #/partners list (P-6): the Partner tab treats
-// GET /organizations/{id}/partner's 404 as "not a partner yet" (an honest
+// GET /companies/{id}/partner's 404 as "not a partner yet" (an honest
 // empty state + setup form), never as an error; the list reads GET /partners
-// with role/cert filters and a row click goes to that org's 360.
+// with role/cert filters and a row click goes to that company's 360.
 
 afterEach(() => {
   cleanup();
@@ -60,7 +60,7 @@ function stubFetch(
 }
 
 const partner = {
-  organization_id: "o-1",
+  company_id: "o-1",
   partner_role: "hosting",
   cert_status: "certified",
   margin_tier: "tier2_20",
@@ -79,10 +79,10 @@ describe("PartnerTab — not yet a partner", () => {
     let putBody: unknown = null;
     let putHeader: string | null = null;
     stubFetch(async (url, method, request) => {
-      if (url.includes("/organizations/o-1/partner") && method === "GET") {
+      if (url.includes("/companies/o-1/partner") && method === "GET") {
         return jsonResponse({ title: "Not found", detail: "no partner" }, 404);
       }
-      if (url.includes("/organizations/o-1/partner") && method === "PUT") {
+      if (url.includes("/companies/o-1/partner") && method === "PUT") {
         putHeader = request.headers.get("If-Match");
         putBody = JSON.parse(await request.text());
         return jsonResponse({ ...partner, cert_status: "applied" });
@@ -90,7 +90,7 @@ describe("PartnerTab — not yet a partner", () => {
       throw new Error(`unexpected request ${method} ${url}`);
     });
 
-    render(<PartnerTab organizationId="o-1" />);
+    render(<PartnerTab companyId="o-1" />);
 
     await waitFor(() =>
       expect(screen.getByText("Not a partner yet")).toBeTruthy(),
@@ -113,10 +113,10 @@ describe("PartnerTab — existing partner", () => {
     let putHeader: string | null = null;
     let putBody: unknown = null;
     stubFetch(async (url, method, request) => {
-      if (url.includes("/organizations/o-1/partner") && method === "GET") {
+      if (url.includes("/companies/o-1/partner") && method === "GET") {
         return jsonResponse(partner);
       }
-      if (url.includes("/organizations/o-1/partner") && method === "PUT") {
+      if (url.includes("/companies/o-1/partner") && method === "PUT") {
         putHeader = request.headers.get("If-Match");
         putBody = JSON.parse(await request.text());
         return jsonResponse({ ...partner, next_step: "Book QBR" });
@@ -124,7 +124,7 @@ describe("PartnerTab — existing partner", () => {
       throw new Error(`unexpected request ${method} ${url}`);
     });
 
-    render(<PartnerTab organizationId="o-1" />);
+    render(<PartnerTab companyId="o-1" />);
 
     await waitFor(() =>
       expect(screen.getByText("Renew certification")).toBeTruthy(),
@@ -207,7 +207,7 @@ describe("PartnersScreen", () => {
     ).toBeTruthy();
   });
 
-  it("navigates to the org's 360 on row click", async () => {
+  it("navigates to the company's 360 on row click", async () => {
     stubFetch(async () =>
       jsonResponse({
         data: [partner],

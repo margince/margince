@@ -101,7 +101,7 @@ describe("routeHash", () => {
   });
 
   it("round-trips share hashes through parse and back", () => {
-    const hash = "#/share/organization/o-1";
+    const hash = "#/share/company/o-1";
     expect(routeHash(parseHash(hash))).toBe(hash);
   });
 });

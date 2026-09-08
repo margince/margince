@@ -30,7 +30,7 @@ const SECTION_LABELS: Readonly<Record<string, MessageKey>> = {
   recent_touches: "context.recentTouches",
   open_tasks: "context.openTasks",
   related_people: "context.relatedContacts",
-  related_organizations: "context.relatedCompanies",
+  related_companies: "context.relatedCompanies",
   related_deals: "context.relatedDeals",
   related_projects: "context.relatedProjects",
   who_knows: "context.whoKnows",

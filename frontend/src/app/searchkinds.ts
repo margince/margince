@@ -25,7 +25,7 @@ export type SearchHitType = NonNullable<
 // the label they were filed under.
 export const SEARCH_HIT_ORDER = [
   "person",
-  "organization",
+  "company",
   "deal",
   "project",
   "product",
@@ -41,7 +41,7 @@ export const SEARCH_HIT_ORDER = [
 export const SEARCH_HIT_GROUP_KEY: Readonly<Record<SearchHitType, MessageKey>> =
   {
     person: "search.group.person",
-    organization: "search.group.organization",
+    company: "search.group.company",
     deal: "search.group.deal",
     project: "search.group.project",
     product: "search.group.product",
@@ -61,13 +61,13 @@ export const SEARCH_HIT_GROUP_KEY: Readonly<Record<SearchHitType, MessageKey>> =
 //
 // Each singular matches the plural heading above it and takes no side on which
 // noun this product uses for a record type: whether `person` reads as Contacts
-// or People, and `organization` as Company or Organization, is one open
+// or People, and `company` as Company or Company, is one open
 // decision across both surfaces, and a key added here is not the place to
 // settle it by half.
 export const SEARCH_HIT_KIND_KEY: Readonly<Record<SearchHitType, MessageKey>> =
   {
     person: "search.kind.contact",
-    organization: "search.kind.organization",
+    company: "search.kind.company",
     deal: "search.kind.deal",
     project: "search.kind.project",
     product: "search.kind.product",

@@ -95,7 +95,7 @@ func TestSyncStatusShowsWhichClassHoldsAnOlderProjection(t *testing.T) {
 			switch canonical {
 			case "person":
 				return []string{IncumbentClassContacts}, true
-			case "organization":
+			case "company":
 				return []string{IncumbentClassCompanies}, true
 			default:
 				return nil, false
@@ -108,7 +108,7 @@ func TestSyncStatusShowsWhichClassHoldsAnOlderProjection(t *testing.T) {
 		{"person", "p-legacy", "contacts-declaration-superseded"},
 		// companies has no current declaration injected, and widget has no
 		// mapping at all — neither class can be judged, so neither is stale.
-		{"organization", "org-1", "companies-declaration-retired"},
+		{"company", "company-1", "companies-declaration-retired"},
 		{"widget", "w-1", "widget-declaration-retired"},
 	} {
 		if err := store.Ingest(ctx, Record{
@@ -130,9 +130,9 @@ func TestSyncStatusShowsWhichClassHoldsAnOlderProjection(t *testing.T) {
 		states[s.Object] = s.State
 	}
 	want := map[string]string{
-		"person":       syncStateStale,
-		"organization": syncStateFresh,
-		"widget":       syncStateFresh,
+		"person":  syncStateStale,
+		"company": syncStateFresh,
+		"widget":  syncStateFresh,
 	}
 	for object, wantState := range want {
 		if states[object] != wantState {

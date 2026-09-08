@@ -31,7 +31,7 @@ const captureSettingsObject = "capture_settings"
 // rather than two that happen to agree.
 const SettingsObject = captureSettingsObject
 
-// AutoEnrich is the captured-organization auto-enrich posture (CAP-PARAM-7,
+// AutoEnrich is the captured-company auto-enrich posture (CAP-PARAM-7,
 // ADR-0072/A118).
 //
 // Default true preserves 0121's column default, so an installation that never
@@ -100,7 +100,7 @@ var SharedPostureAllowed = settings.Define[bool](
 //
 // It is the default rather than the answer: `capture_connection.signature_enrich_enabled`
 // overrides it per mailbox, and a mailbox that never chose follows this. That
-// split is what a Betriebsvereinbarung negotiation asks for — an organization
+// split is what a Betriebsvereinbarung negotiation asks for — a company
 // can turn the whole workspace off, or leave it on and let one mailbox opt out,
 // without the two answers being the same knob.
 //

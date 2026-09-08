@@ -29,9 +29,9 @@ import (
 // `person` bypasses nothing. It runs the same identity ladder every other person
 // create runs, and an email already belonging to someone else refuses the row.
 const (
-	ObjectLead         = "lead"
-	ObjectOrganization = "organization"
-	ObjectPerson       = "person"
+	ObjectLead    = "lead"
+	ObjectCompany = "company"
+	ObjectPerson  = "person"
 	// ConnectorCSV is the direct migrate-in connector this source serves
 	// (UC-E11-03). Its sibling constants name the flip's own sources.
 	ConnectorCSV = "csv"

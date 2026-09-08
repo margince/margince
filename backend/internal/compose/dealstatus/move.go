@@ -186,7 +186,7 @@ func move(action, reason string, args map[string]any, evidence ...crmcontracts.D
 }
 
 // upcomingMeeting is the soonest booked meeting inside the horizon. A meeting
-// with no status is booked — the predicate person360 and org360's next-meeting
+// with no status is booked — the predicate person360 and company360's next-meeting
 // reads spell — so the card and the record pages agree about which is next.
 func upcomingMeeting(f facts) (crmcontracts.Activity, bool) {
 	var best crmcontracts.Activity

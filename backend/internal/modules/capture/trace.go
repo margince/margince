@@ -99,7 +99,7 @@ const (
 	// no call site outside this module has occasion to state it.
 	traceReasonNoCounterparty = "no_counterparty"
 	// TraceReasonRoleMailbox is mail from an address that names a FUNCTION an
-	// organization answers — `support@`, `billing@`, a helpdesk vendor's ticket
+	// company answers — `support@`, `billing@`, a helpdesk vendor's ticket
 	// address. The message commits and stays visible, so the naive trace is
 	// `captured`, and the record it did not create is the thing a member is
 	// looking for: "why is there no contact for this?" answered with "it was

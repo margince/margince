@@ -17,7 +17,7 @@ You connect these yourself, at **Settings → Connections → Connected inboxes*
 | **Google Calendar** | "Your Google calendar. It connects separately from Gmail." | No |
 | **Microsoft** | "Mail and calendar on a Microsoft work account, over the Graph API. Capture only." | No |
 | **IMAP mailbox** | "Any other mail host, with an app password. Capture only." | No |
-| **Telegram** | One bot for the whole organization. An administrator connects it, not you. | Yes |
+| **Telegram** | One bot for the whole company. An administrator connects it, not you. | Yes |
 
 A mailbox connected before sending existed **cannot be upgraded in place**. The
 provider only grants sending on a fresh connection, so you have to reconnect.
@@ -178,7 +178,7 @@ rejected one can never delete anything.
 
 ### Two safety limits
 
-Margince holds at most **500 open sender questions** per organization, and at
+Margince holds at most **500 open sender questions** per company, and at
 most **50 from any one sender domain**. When either limit is hit, the log
 records *which* one — so "the queue is full" and "one domain is flooding it" are
 never confused with each other.
@@ -294,7 +294,7 @@ never offered again by any mailbox.
 
 **Keep out of capture** (Settings → Capture activity) — addresses and domains
 whose messages never enter the CRM. Your own rules bind only the mailboxes you
-connected; the organization's rules bind everyone, and only an administrator may
+connected; the company's rules bind everyone, and only an administrator may
 change one of those. Takes effect from the next message; messages already
 captured stay.
 
@@ -317,7 +317,7 @@ mailbox) — the posture that mailbox asks for. Three answers:
 - **Always held** — the same, minus the classifier. You share a thread yourself,
   one at a time, from its row on the record timeline.
 - **Shared with the team** — a captured message is readable the moment it lands.
-  Off unless an admin allows it for the organization, because reading an
+  Off unless an admin allows it for the company, because reading an
   employee's mailbox into a shared CRM is what a works-council agreement covers
   in Germany and Austria. Margince does not verify that one exists.
 
@@ -337,7 +337,7 @@ one party to the people on it, without deciding message by message. A domain
 hold covers the whole firm, which is usually what you want for a lawyer or an
 accountant. It binds mail from then on, and lifting it re-opens nothing.
 
-**Email sharing** (Settings → Capture, admin) — the organization-wide floor. On
+**Email sharing** (Settings → Capture, admin) — the company-wide floor. On
 by default; turned off, every message captured from then on is held to its
 participants whatever any mailbox asks for. The app warns you honestly that
 doing so "will make usage of the CRM difficult."
@@ -346,10 +346,10 @@ doing so "will make usage of the CRM difficult."
 
 Your own connections need no permission from anyone — it is your own mail.
 
-Messages that arrived through an organization-wide connection, like the Telegram
+Messages that arrived through a company-wide connection, like the Telegram
 bot, belong to nobody in particular and are shown to people granted that access.
 
-**No permission grant ever reaches a colleague's mailbox.** The organization-wide
+**No permission grant ever reaches a colleague's mailbox.** The company-wide
 view never returns a member's personal rows.
 
 A held message is not hidden — it is visible as a row with its date and kind,

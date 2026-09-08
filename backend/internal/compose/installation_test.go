@@ -20,7 +20,7 @@ func discardLogger() *slog.Logger {
 	return slog.New(slog.NewTextHandler(io.Discard, nil))
 }
 
-func TestEnsureInstallationRefusesAnAdminWithoutAnOrganization(t *testing.T) {
+func TestEnsureInstallationRefusesAnAdminWithoutAnCompany(t *testing.T) {
 	cfg := deployconfig.Config{
 		Version: 1,
 		BootstrapAdmin: &deployconfig.BootstrapAdmin{
@@ -28,14 +28,14 @@ func TestEnsureInstallationRefusesAnAdminWithoutAnOrganization(t *testing.T) {
 		},
 	}
 	err := EnsureInstallation(context.Background(), nil, discardLogger(), cfg)
-	if err == nil || !strings.Contains(err.Error(), "organization.name") {
-		t.Fatalf("err = %v, want the missing-organization refusal", err)
+	if err == nil || !strings.Contains(err.Error(), "company.name") {
+		t.Fatalf("err = %v, want the missing-company refusal", err)
 	}
 }
 
 // An unreadable password file is proven to surface by
 // TestFirstBootStillFailsLoudlyOnAnUnreadableSecret in the integration lane, not
-// here. The secret is now read only on the branch that creates the organization
+// here. The secret is now read only on the branch that creates the company
 // — after the database reports itself empty — so no assertion driven by a nil
 // pool can reach it. The property is unchanged and the coverage is stronger for
 // running against a real database; what moved is where it can be observed.

@@ -67,7 +67,7 @@ func TestABookingThatNamesNoRecordIsRefusedAtBothDoors(t *testing.T) {
 }
 
 // Every link is checked, not just the one the inbox displays. A booking that
-// mixes a local deal with a mirrored organization is exactly what a
+// mixes a local deal with a mirrored company is exactly what a
 // first-link-only guard would wave through into an approval nobody could
 // release.
 func TestABookingRefusesAMirroredLinkBehindALocalOne(t *testing.T) {
@@ -76,7 +76,7 @@ func TestABookingRefusesAMirroredLinkBehindALocalOne(t *testing.T) {
 
 	_, err := bookMeetingTool{comms: &recordingComms{}, p: p}.StageInfo(context.Background(),
 		json.RawMessage(fmt.Sprintf(
-			`{"start":"2026-08-03T09:00:00Z","end":"2026-08-03T09:30:00Z","links":[{"entity_type":"deal","entity_id":%q},{"entity_type":"organization","entity_id":%q}]}`,
+			`{"start":"2026-08-03T09:00:00Z","end":"2026-08-03T09:30:00Z","links":[{"entity_type":"deal","entity_id":%q},{"entity_type":"company","entity_id":%q}]}`,
 			local, mirrored)))
 
 	if !errors.Is(err, apperrors.ErrUnsupportedBySoR) {

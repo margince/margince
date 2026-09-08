@@ -35,7 +35,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// seedEmploymentEdge links a person to an organization through the people
+// seedEmploymentEdge links a person to a company through the people
 // store's own write path — the one that stamps the audit row under test. A
 // hand-rolled INSERT would prove nothing about production: the action, the
 // entity_type and the image on that row are exactly what the admission reads.
@@ -45,12 +45,12 @@ import (
 // admission cares what the role says when it does not.
 const seededEdgeRole = "cto"
 
-func seedEmploymentEdge(t *testing.T, e *integration.Env, person, org ids.UUID) ids.UUID {
+func seedEmploymentEdge(t *testing.T, e *integration.Env, person, company ids.UUID) ids.UUID {
 	t.Helper()
 	role := seededEdgeRole
-	personID, orgID := ids.From[ids.PersonKind](person), ids.From[ids.OrganizationKind](org)
+	personID, companyID := ids.From[ids.PersonKind](person), ids.From[ids.CompanyKind](company)
 	edge, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
-		Kind: "employment", PersonID: &personID, OrganizationID: &orgID,
+		Kind: "employment", PersonID: &personID, CompanyID: &companyID,
 		Role: &role, Source: "manual",
 	})
 	if err != nil {
@@ -105,11 +105,11 @@ func answeredAbsent(t *testing.T, err error, probe string) {
 func TestALinkWhoseOtherEndTheCallerCannotSeeIsNotReversible(t *testing.T) {
 	e := integration.Setup(t)
 	person := e.SeedPerson(t, "Ada Employed", nil)
-	org := e.SeedOrg(t, "Secret Holdings GmbH", nil)
-	edge := seedEmploymentEdge(t, e, person, org)
+	company := e.SeedCompany(t, "Secret Holdings GmbH", nil)
+	edge := seedEmploymentEdge(t, e, person, company)
 	// Captured privately by Rep1. Capture privacy does not yield to
 	// row_scope=all, so even the admin reading the person cannot see the company.
-	e.MakeCapturePrivate(t, "organization", org, e.Rep1)
+	e.MakeCapturePrivate(t, "company", company, e.Rep1)
 
 	auditID := latestAuditRowID(t, e, edgeEntityType, edge, "create")
 	_, err := restoreSeamFor(e).Restore(e.Admin(), "person", person, auditID,
@@ -126,8 +126,8 @@ func TestALinkWhoseOtherEndTheCallerCannotSeeIsNotReversible(t *testing.T) {
 func TestALinkWhoseOtherEndWasErasedIsNotReversible(t *testing.T) {
 	e := integration.Setup(t)
 	person := e.SeedPerson(t, "Selma Subject", nil)
-	org := e.SeedOrg(t, "Employer GmbH", nil)
-	edge := seedEmploymentEdge(t, e, person, org)
+	company := e.SeedCompany(t, "Employer GmbH", nil)
+	edge := seedEmploymentEdge(t, e, person, company)
 	auditID := latestAuditRowID(t, e, edgeEntityType, edge, "create")
 
 	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(),
@@ -135,8 +135,8 @@ func TestALinkWhoseOtherEndWasErasedIsNotReversible(t *testing.T) {
 		t.Fatalf("erasing the subject: %v", err)
 	}
 
-	_, err := restoreSeamFor(e).Restore(e.Admin(), "organization", org, auditID,
-		currentVersion(t, e, "organization", org))
+	_, err := restoreSeamFor(e).Restore(e.Admin(), "company", company, auditID,
+		currentVersion(t, e, "company", company))
 	// The erasure also archives the subject and its links, so a path that admitted
 	// the entry would answer one of the edge branch's own refusals — which names
 	// the entry, and is the outcome absence is separated from here.
@@ -171,8 +171,8 @@ func TestAnEntryFromAnotherRecordsHistoryIsNotReversible(t *testing.T) {
 func TestALinkTheCallerCanSeeIsReversible(t *testing.T) {
 	e := integration.Setup(t)
 	person := e.SeedPerson(t, "Ada Employed", nil)
-	org := e.SeedOrg(t, "Employer GmbH", nil)
-	edge := seedEmploymentEdge(t, e, person, org)
+	company := e.SeedCompany(t, "Employer GmbH", nil)
+	edge := seedEmploymentEdge(t, e, person, company)
 
 	auditID := latestAuditRowID(t, e, edgeEntityType, edge, "create")
 	entry, err := restoreSeamFor(e).Restore(e.Admin(), "person", person, auditID,

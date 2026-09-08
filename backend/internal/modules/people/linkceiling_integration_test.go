@@ -31,7 +31,7 @@ import (
 )
 
 // seedActivityAtTheCeiling writes one activity already filed under `filed`
-// organizations — the shape a busy meeting reaches, and the one every count
+// companies — the shape a busy meeting reaches, and the one every count
 // guard is about.
 func seedActivityAtTheCeiling(ctx context.Context, t *testing.T, e *dedupeEnv, filed int) ids.ActivityID {
 	t.Helper()
@@ -45,16 +45,16 @@ func seedActivityAtTheCeiling(ctx context.Context, t *testing.T, e *dedupeEnv, f
 			return err
 		}
 		for i := range filed {
-			orgID := ids.NewV7()
+			companyID := ids.NewV7()
 			if _, err := tx.Exec(ctx, `
-				INSERT INTO organization (id, display_name, source, captured_by)
+				INSERT INTO company (id, display_name, source, captured_by)
 				VALUES ($1, $2, 'gmail:seed', 'connector:gmail')`,
-				orgID, "Filed Co "+orgID.String()[:8]); err != nil {
+				companyID, "Filed Co "+companyID.String()[:8]); err != nil {
 				return err
 			}
 			if _, err := tx.Exec(ctx, `
-				INSERT INTO activity_link (activity_id, entity_type, organization_id)
-				VALUES ($1, 'organization', $2)`, activityID, orgID); err != nil {
+				INSERT INTO activity_link (activity_id, entity_type, company_id)
+				VALUES ($1, 'company', $2)`, activityID, companyID); err != nil {
 				return err
 			}
 			_ = i
@@ -66,19 +66,19 @@ func seedActivityAtTheCeiling(ctx context.Context, t *testing.T, e *dedupeEnv, f
 	return activityID
 }
 
-// linkAnOrganization files the activity under one more organization, in its own
+// linkAnCompany files the activity under one more company, in its own
 // transaction, and answers what the database said.
-func linkAnOrganization(ctx context.Context, e *dedupeEnv, activityID ids.ActivityID) error {
+func linkAnCompany(ctx context.Context, e *dedupeEnv, activityID ids.ActivityID) error {
 	return e.store.tx(ctx, func(tx pgx.Tx) error {
-		orgID := ids.NewV7()
+		companyID := ids.NewV7()
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO organization (id, display_name, source, captured_by)
-			VALUES ($1, 'One More', 'gmail:seed', 'connector:gmail')`, orgID); err != nil {
+			INSERT INTO company (id, display_name, source, captured_by)
+			VALUES ($1, 'One More', 'gmail:seed', 'connector:gmail')`, companyID); err != nil {
 			return err
 		}
 		_, err := tx.Exec(ctx, `
-			INSERT INTO activity_link (activity_id, entity_type, organization_id)
-			VALUES ($1, 'organization', $2)`, activityID, orgID)
+			INSERT INTO activity_link (activity_id, entity_type, company_id)
+			VALUES ($1, 'company', $2)`, activityID, companyID)
 		return err
 	})
 }
@@ -96,15 +96,15 @@ func TestTwoWritersCannotPushOneActivityPastTheCeiling(t *testing.T) {
 	var announce sync.Once
 	go func() {
 		holding <- e.store.tx(ctx, func(tx pgx.Tx) error {
-			orgID := ids.NewV7()
+			companyID := ids.NewV7()
 			if _, err := tx.Exec(ctx, `
-				INSERT INTO organization (id, display_name, source, captured_by)
-				VALUES ($1, 'The 25th', 'gmail:seed', 'connector:gmail')`, orgID); err != nil {
+				INSERT INTO company (id, display_name, source, captured_by)
+				VALUES ($1, 'The 25th', 'gmail:seed', 'connector:gmail')`, companyID); err != nil {
 				return err
 			}
 			if _, err := tx.Exec(ctx, `
-				INSERT INTO activity_link (activity_id, entity_type, organization_id)
-				VALUES ($1, 'organization', $2)`, activityID, orgID); err != nil {
+				INSERT INTO activity_link (activity_id, entity_type, company_id)
+				VALUES ($1, 'company', $2)`, activityID, companyID); err != nil {
 				return err
 			}
 			announce.Do(func() { close(held) })
@@ -130,15 +130,15 @@ func TestTwoWritersCannotPushOneActivityPastTheCeiling(t *testing.T) {
 		if _, err := tx.Exec(ctx, `SET LOCAL lock_timeout = '2s'`); err != nil {
 			return err
 		}
-		orgID := ids.NewV7()
+		companyID := ids.NewV7()
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO organization (id, display_name, source, captured_by)
-			VALUES ($1, 'The 26th', 'gmail:seed', 'connector:gmail')`, orgID); err != nil {
+			INSERT INTO company (id, display_name, source, captured_by)
+			VALUES ($1, 'The 26th', 'gmail:seed', 'connector:gmail')`, companyID); err != nil {
 			return err
 		}
 		_, err := tx.Exec(ctx, `
-			INSERT INTO activity_link (activity_id, entity_type, organization_id)
-			VALUES ($1, 'organization', $2)`, activityID, orgID)
+			INSERT INTO activity_link (activity_id, entity_type, company_id)
+			VALUES ($1, 'company', $2)`, activityID, companyID)
 		return err
 	})
 	var pgErr *pgconn.PgError
@@ -154,7 +154,7 @@ func TestTwoWritersCannotPushOneActivityPastTheCeiling(t *testing.T) {
 	}
 
 	// And once it can see the row, it is refused rather than admitted.
-	err := linkAnOrganization(ctx, e, activityID)
+	err := linkAnCompany(ctx, e, activityID)
 	if !errors.As(err, &pgErr) || pgErr.Code != "23514" {
 		t.Fatalf("the twenty-sixth link got %v, want a check violation", err)
 	}
@@ -170,7 +170,7 @@ func TestAnActivityUnderTheCeilingStillTakesALink(t *testing.T) {
 	ctx := e.as()
 	activityID := seedActivityAtTheCeiling(ctx, t, e, 3)
 
-	if err := linkAnOrganization(ctx, e, activityID); err != nil {
+	if err := linkAnCompany(ctx, e, activityID); err != nil {
 		t.Fatalf("filing an activity with room under one more record: %v", err)
 	}
 	if got := linkCount(ctx, t, e, activityID); got != 4 {

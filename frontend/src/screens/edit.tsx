@@ -26,7 +26,7 @@ import {
 // one; every other screen this hook also serves (products, offer templates,
 // relationships, webhooks, pipeline stages...) gets none.
 const EDIT_MUTATION_HEAD: Readonly<Partial<Record<string, string>>> = {
-  organization: "company-edit",
+  company: "company-edit",
   person: "contact-edit",
   deal: "deal-edit",
   lead: "lead-edit",

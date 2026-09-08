@@ -40,7 +40,7 @@ func TestAnUntypedSweepDoesNotVisitPartner(t *testing.T) {
 		t.Fatalf("untyped sweep: %v", err)
 	}
 	if slices.Contains(walk, datasource.EntityPartner) {
-		t.Fatal("an untyped sweep visits partner; every word it would match lives on the organization, so the same company answers twice")
+		t.Fatal("an untyped sweep visits partner; every word it would match lives on the company, so the same company answers twice")
 	}
 	if !slices.Equal(walk, searchable) {
 		t.Fatalf("untyped walk = %v, want searchable %v", walk, searchable)

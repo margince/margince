@@ -11,7 +11,7 @@ package aicert
 // The corpus census next door (corpus_test.go) is per SITE. A site whose model
 // answers from a CLOSED vocabulary satisfies that with ONE scenario and can
 // leave most of the vocabulary never once scored — which is how role_mailbox,
-// organization_sender and transactional shipped uncertified while the report
+// company_sender and transactional shipped uncertified while the report
 // called capture_counterparty_verdict covered, and how the confidentiality
 // verdict shipped with four of its seven kinds unmeasured.
 //

@@ -58,7 +58,7 @@ func TestTheColdStartParksBothMarksAndTheConfirmationBindsEachToItsSlot(t *testi
 	company := confirmTheAnchor(t, e, args)
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
 	for slot, want := range map[people.LogoSlot]string{people.LogoWide: *wideKey, people.LogoIcon: *iconKey} {
-		bound, err := e.People.OrganizationLogoKey(ctx, company.OrganizationID, slot)
+		bound, err := e.People.CompanyLogoKey(ctx, company.CompanyID, slot)
 		if err != nil {
 			t.Fatalf("the confirmed anchor has no %s: %v", slot, err)
 		}
@@ -73,12 +73,12 @@ func TestTheColdStartParksBothMarksAndTheConfirmationBindsEachToItsSlot(t *testi
 		}
 	}
 	// The profile the shell reads carries both URLs, each on its own path.
-	profile, err := e.People.GetCompany(ctx)
+	profile, err := e.People.GetAnchorCompany(ctx)
 	if err != nil {
 		t.Fatalf("read the company profile: %v", err)
 	}
 	wire := toContractCompany(profile)
-	wantIcon := *people.LogoURL(company.OrganizationID.UUID, iconKey, people.LogoIcon)
+	wantIcon := *people.LogoURL(company.CompanyID.UUID, iconKey, people.LogoIcon)
 	if wire.LogoIconUrl == nil || *wire.LogoIconUrl != wantIcon {
 		t.Fatalf("the profile's logo_icon_url = %v, want %q — the badge the collapsed rail draws", wire.LogoIconUrl, wantIcon)
 	}
@@ -86,8 +86,8 @@ func TestTheColdStartParksBothMarksAndTheConfirmationBindsEachToItsSlot(t *testi
 	var capturedBy string
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT captured_by FROM field_provenance
-			WHERE object_type = 'organization' AND object_id = $1 AND field_name = 'logo_icon'
-			ORDER BY captured_at DESC, id DESC LIMIT 1`, company.OrganizationID).Scan(&capturedBy)
+			WHERE object_type = 'company' AND object_id = $1 AND field_name = 'logo_icon'
+			ORDER BY captured_at DESC, id DESC LIMIT 1`, company.CompanyID).Scan(&capturedBy)
 	}); err != nil {
 		t.Fatalf("reading the badge's provenance: %v", err)
 	}
@@ -107,7 +107,7 @@ func TestAColdStartWithoutALockupLeavesTheBadgeSlotEmpty(t *testing.T) {
 		t.Fatalf("an icon-only site parked a badge at %q beside the wide mark it already serves", *key)
 	}
 	company := confirmTheAnchor(t, e, args)
-	_, err := e.People.OrganizationLogoKey(e.As(e.Rep1, nil, integration.AdminPerms), company.OrganizationID, people.LogoIcon)
+	_, err := e.People.CompanyLogoKey(e.As(e.Rep1, nil, integration.AdminPerms), company.CompanyID, people.LogoIcon)
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("the anchor's badge slot answers %v, want not-found so the rail falls back to the wide mark", err)
 	}
@@ -125,14 +125,14 @@ func TestTheConfirmationKeepsTheBadgeAPersonChoseAndStillLandsTheLockup(t *testi
 	if err != nil {
 		t.Fatalf("describe the company by hand: %v", err)
 	}
-	uploaded := blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](e.WS), organizationLogoKind,
-		saved.OrganizationID.String()+"/uploaded-badge")
+	uploaded := blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](e.WS), companyLogoKind,
+		saved.CompanyID.String()+"/uploaded-badge")
 	chosen := logoFixture(t, 64, 64)
 	if err := blob.Put(context.Background(), uploaded, bytes.NewReader(chosen),
 		int64(len(chosen)), imagenorm.ContentType); err != nil {
 		t.Fatalf("store the person's own badge: %v", err)
 	}
-	if _, err := e.People.SetCompanyLogo(human, people.LogoIcon, uploaded, "badge.png"); err != nil {
+	if _, err := e.People.SetAnchorCompanyLogo(human, people.LogoIcon, uploaded, "badge.png"); err != nil {
 		t.Fatalf("record the person's own badge: %v", err)
 	}
 
@@ -148,16 +148,16 @@ func TestTheConfirmationKeepsTheBadgeAPersonChoseAndStillLandsTheLockup(t *testi
 	}
 
 	engine := &deepReadEngine{people: e.People, blob: blob, log: slog.New(slog.DiscardHandler)}
-	orgID := confirmTheAnchorAsTheAPIDoes(t, e, engine, args)
+	companyID := confirmTheAnchorAsTheAPIDoes(t, e, engine, args)
 
-	boundIcon, err := e.People.OrganizationLogoKey(human, orgID, people.LogoIcon)
+	boundIcon, err := e.People.CompanyLogoKey(human, companyID, people.LogoIcon)
 	if err != nil {
 		t.Fatalf("the anchor lost its badge: %v", err)
 	}
 	if boundIcon != uploaded {
 		t.Fatalf("the anchor's badge is %q, want the one the person chose at %q", boundIcon, uploaded)
 	}
-	boundWide, err := e.People.OrganizationLogoKey(human, orgID, people.LogoWide)
+	boundWide, err := e.People.CompanyLogoKey(human, companyID, people.LogoWide)
 	if err != nil {
 		t.Fatalf("the anchor has no wide mark: %v", err)
 	}

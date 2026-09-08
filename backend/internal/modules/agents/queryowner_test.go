@@ -52,7 +52,7 @@ func rowsFor(records ...datasource.Record) []QueryWorkspaceRow {
 // to name the owner and say it is not the caller.
 func TestARecordOwnedByAColleagueIsNamedAndMarkedNotYours(t *testing.T) {
 	me, sofia := ids.NewV7(), ids.NewV7()
-	rows := rowsFor(ownedRecord(datasource.EntityOrganization, sofia))
+	rows := rowsFor(ownedRecord(datasource.EntityCompany, sofia))
 
 	named, _ := attachOwners(humanCtx(me), func(_ context.Context, seats []ids.UUID) (map[ids.UUID]string, error) {
 		return map[ids.UUID]string{sofia: "Sofia Meier"}, nil
@@ -76,7 +76,7 @@ func TestARecordOwnedByAColleagueIsNamedAndMarkedNotYours(t *testing.T) {
 // the signal is noise and a reader learns to ignore it.
 func TestYourOwnRecordIsMarkedAsYours(t *testing.T) {
 	me := ids.NewV7()
-	rows := rowsFor(ownedRecord(datasource.EntityOrganization, me))
+	rows := rowsFor(ownedRecord(datasource.EntityCompany, me))
 
 	named, _ := attachOwners(humanCtx(me), func(_ context.Context, seats []ids.UUID) (map[ids.UUID]string, error) {
 		return map[ids.UUID]string{me: "Lars"}, nil
@@ -90,7 +90,7 @@ func TestYourOwnRecordIsMarkedAsYours(t *testing.T) {
 // An unowned record has no owner to check with, and saying it has one would be
 // a false claim about a colleague who does not exist.
 func TestAnUnownedRecordCarriesNoOwner(t *testing.T) {
-	rows := rowsFor(ownedRecord(datasource.EntityOrganization, ids.UUID{}))
+	rows := rowsFor(ownedRecord(datasource.EntityCompany, ids.UUID{}))
 
 	named, _ := attachOwners(humanCtx(ids.NewV7()), func(_ context.Context, seats []ids.UUID) (map[ids.UUID]string, error) {
 		t.Error("an unowned record still asked for a seat name")
@@ -107,10 +107,10 @@ func TestAnUnownedRecordCarriesNoOwner(t *testing.T) {
 func TestAPageOfRowsIsNamedInOneLookup(t *testing.T) {
 	sofia, lena := ids.NewV7(), ids.NewV7()
 	rows := rowsFor(
-		ownedRecord(datasource.EntityOrganization, sofia),
-		ownedRecord(datasource.EntityOrganization, lena),
-		ownedRecord(datasource.EntityOrganization, sofia),
-		ownedRecord(datasource.EntityOrganization, sofia),
+		ownedRecord(datasource.EntityCompany, sofia),
+		ownedRecord(datasource.EntityCompany, lena),
+		ownedRecord(datasource.EntityCompany, sofia),
+		ownedRecord(datasource.EntityCompany, sofia),
 	)
 
 	calls, asked := 0, 0
@@ -133,7 +133,7 @@ func TestAPageOfRowsIsNamedInOneLookup(t *testing.T) {
 // exists to prevent.
 func TestAnArchivedOwnerStillReadsAsOwnedBySomeoneElse(t *testing.T) {
 	gone := ids.NewV7()
-	rows := rowsFor(ownedRecord(datasource.EntityOrganization, gone))
+	rows := rowsFor(ownedRecord(datasource.EntityCompany, gone))
 
 	named, _ := attachOwners(humanCtx(ids.NewV7()), func(_ context.Context, seats []ids.UUID) (map[ids.UUID]string, error) {
 		return map[ids.UUID]string{}, nil
@@ -159,7 +159,7 @@ func TestAnArchivedOwnerStillReadsAsOwnedBySomeoneElse(t *testing.T) {
 // of those means "ask around before you contact this account".
 func TestANamingFailureDisclosesTheOwnerAndSaysItFailed(t *testing.T) {
 	sofia := ids.NewV7()
-	rows := rowsFor(ownedRecord(datasource.EntityOrganization, sofia))
+	rows := rowsFor(ownedRecord(datasource.EntityCompany, sofia))
 
 	named, note := attachOwners(humanCtx(ids.NewV7()), func(_ context.Context, seats []ids.UUID) (map[ids.UUID]string, error) {
 		return nil, context.DeadlineExceeded
@@ -183,7 +183,7 @@ func TestANamingFailureDisclosesTheOwnerAndSaysItFailed(t *testing.T) {
 // failure, and must not raise the alarm. An owner who left is an ordinary
 // answer.
 func TestAnArchivedOwnerRaisesNoFailureNote(t *testing.T) {
-	rows := rowsFor(ownedRecord(datasource.EntityOrganization, ids.NewV7()))
+	rows := rowsFor(ownedRecord(datasource.EntityCompany, ids.NewV7()))
 
 	_, note := attachOwners(humanCtx(ids.NewV7()), func(_ context.Context, seats []ids.UUID) (map[ids.UUID]string, error) {
 		return map[ids.UUID]string{}, nil
@@ -198,7 +198,7 @@ func TestAnArchivedOwnerRaisesNoFailureNote(t *testing.T) {
 // discloses ownership, unnamed.
 func TestNoSeatNamerStillDisclosesTheOwner(t *testing.T) {
 	sofia := ids.NewV7()
-	rows := rowsFor(ownedRecord(datasource.EntityOrganization, sofia))
+	rows := rowsFor(ownedRecord(datasource.EntityCompany, sofia))
 
 	named, _ := attachOwners(humanCtx(ids.NewV7()), nil, rows)
 	if named[0].Owner == nil || named[0].Owner.ID != sofia {
@@ -215,7 +215,7 @@ func TestNoSeatNamerStillDisclosesTheOwner(t *testing.T) {
 // to check with themselves.
 func TestAnAgentReadsAsTheHumanItActsFor(t *testing.T) {
 	me := ids.NewV7()
-	rows := rowsFor(ownedRecord(datasource.EntityOrganization, me))
+	rows := rowsFor(ownedRecord(datasource.EntityCompany, me))
 
 	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
@@ -239,7 +239,7 @@ func TestAnAgentReadsAsTheHumanItActsFor(t *testing.T) {
 // reads it, or the marker means nothing.
 func TestAnAgentStillSeesAColleaguesRecordAsTheirs(t *testing.T) {
 	me, sofia := ids.NewV7(), ids.NewV7()
-	rows := rowsFor(ownedRecord(datasource.EntityOrganization, sofia))
+	rows := rowsFor(ownedRecord(datasource.EntityCompany, sofia))
 
 	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
@@ -259,7 +259,7 @@ func TestAnAgentStillSeesAColleaguesRecordAsTheirs(t *testing.T) {
 // A system principal has no human behind it, so nothing is its own.
 func TestASystemPrincipalOwnsNothing(t *testing.T) {
 	owner := ids.NewV7()
-	rows := rowsFor(ownedRecord(datasource.EntityOrganization, owner))
+	rows := rowsFor(ownedRecord(datasource.EntityCompany, owner))
 
 	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
@@ -281,7 +281,7 @@ func TestASystemPrincipalOwnsNothing(t *testing.T) {
 func TestEveryOwnedRecordTypeIsNamed(t *testing.T) {
 	owner := ids.NewV7()
 	for _, entity := range []datasource.EntityType{
-		datasource.EntityOrganization, datasource.EntityDeal,
+		datasource.EntityCompany, datasource.EntityDeal,
 		datasource.EntityPerson, datasource.EntityLead,
 	} {
 		rows := rowsFor(ownedRecord(entity, owner))
@@ -314,13 +314,13 @@ func TestTheCopyTellsTheModelWhatAnOwnerMeans(t *testing.T) {
 // BYTES because that is what a client actually reads.
 func TestAServedRowCarriesItsOwnerThroughTheWholeCall(t *testing.T) {
 	me, sofia := ids.NewV7(), ids.NewV7()
-	owned := ownedRecord(datasource.EntityOrganization, sofia)
+	owned := ownedRecord(datasource.EntityCompany, sofia)
 
 	tool := queryWorkspace{
 		p: &queryProbeProvider{records: map[ids.UUID]datasource.Record{owned.Ref.ID: owned}},
 		run: func(context.Context, json.RawMessage) (QueryAnswer, error) {
 			return QueryAnswer{
-				Refs:     []QueryRef{{Type: "organization", ID: owned.Ref.ID}},
+				Refs:     []QueryRef{{Type: "company", ID: owned.Ref.ID}},
 				Coverage: CoverageCompleteExact, Limit: 25,
 			}, nil
 		},
@@ -329,7 +329,7 @@ func TestAServedRowCarriesItsOwnerThroughTheWholeCall(t *testing.T) {
 		},
 	}
 
-	raw, err := tool.Handle(humanCtx(me), json.RawMessage(`{"plan":{"version":"v1","target":"organization"}}`))
+	raw, err := tool.Handle(humanCtx(me), json.RawMessage(`{"plan":{"version":"v1","target":"company"}}`))
 	if err != nil {
 		t.Fatalf("handling a plan over an owned record: %v", err)
 	}

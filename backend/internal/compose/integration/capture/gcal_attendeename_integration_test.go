@@ -8,7 +8,7 @@ package capture
 // A contact named by the invitation that named them.
 //
 // A person minted from a calendar notification addressed to a bare address is
-// named by its local part: `chris@erlerventures.org` produced a contact called
+// named by its local part: `chris@erlerventures.company` produced a contact called
 // "Chris", unconfident, first and last name null. The event that carried the
 // invitation names them in full — every provider sends the attendee's display
 // name — and the whole chain from decode to person row dropped it.

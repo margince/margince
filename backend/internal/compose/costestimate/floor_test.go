@@ -45,7 +45,7 @@ func TestUnitsFloorTracksTheYieldlessRatios(t *testing.T) {
 	}
 
 	// embeddings cold-start floor counts MESSAGE-embeds only — captured ≈ scanned
-	// at connect. Person/org embeds are omitted from the floor on purpose: the
+	// at connect. Person/company embeds are omitted from the floor on purpose: the
 	// floor prices every embed unit at a full email (embedItemTokens), so folding
 	// in expected persons would charge each name-sized person embed as a full
 	// email — a per-person overquote on the cheapest input-only lane. The observed

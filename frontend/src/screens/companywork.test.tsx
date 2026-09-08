@@ -16,11 +16,11 @@ import {
 // a screenshot — the header states counts and never a reason, and a section a
 // reader may not see is never reported as a section with nothing in it.
 
-type Organization360 = components["schemas"]["Organization360"];
+type Company360 = components["schemas"]["Company360"];
 
 const page = { has_more: false, next_cursor: null };
 
-const org = {
+const company = {
   id: "o-1",
   display_name: "Brandt Automotive GmbH",
   captured_by: "human:u1",
@@ -30,10 +30,10 @@ const org = {
   updated_at: "2026-06-01T08:00:00Z",
 };
 
-function view(overrides: Partial<Organization360> = {}): Organization360 {
+function view(overrides: Partial<Company360> = {}): Company360 {
   return {
     as_of: "2026-08-01T09:00:00Z",
-    organization: org,
+    company: company,
     sections_omitted: [],
     deals: {
       data: [],
@@ -65,7 +65,7 @@ const project = {
 } as const;
 
 function draw(
-  three60: Organization360,
+  three60: Company360,
   onOpenRecord: OpenRecord = () => {},
   onOpenEmail?: (activityId: string) => void,
 ) {

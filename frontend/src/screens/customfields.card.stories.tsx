@@ -15,7 +15,7 @@ import {
 // currency with its code, a picklist as its chosen value, a boolean as yes/no
 // rather than true/false.
 const base = {
-  object: "organization" as const,
+  object: "company" as const,
   status: "active" as const,
   created_by: "u-1",
   created_at: "2026-06-01T08:00:00Z",
@@ -77,7 +77,7 @@ function story(
     });
     return (
       <StoryProviders>
-        <CustomFieldsCard object="organization" record={record} />
+        <CustomFieldsCard object="company" record={record} />
       </StoryProviders>
     );
   };

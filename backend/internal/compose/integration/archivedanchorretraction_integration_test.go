@@ -38,10 +38,10 @@ import (
 var retractionAdmin = principal.Permissions{
 	RoleKeys: []string{"admin"},
 	Objects: map[string]principal.ObjectGrant{
-		"person":       {Create: true, Read: true, Update: true, Delete: true},
-		"organization": {Create: true, Read: true, Update: true, Delete: true},
-		"deal":         {Create: true, Read: true, Update: true, Delete: true},
-		"deal_room":    {Create: true, Read: true, Update: true, Delete: true},
+		"person":    {Create: true, Read: true, Update: true, Delete: true},
+		"company":   {Create: true, Read: true, Update: true, Delete: true},
+		"deal":      {Create: true, Read: true, Update: true, Delete: true},
+		"deal_room": {Create: true, Read: true, Update: true, Delete: true},
 	},
 	RowScope: principal.RowScopeAll,
 }
@@ -210,24 +210,24 @@ func TestArchivingADealFreezesACommissionApprovalAndNeverItsVoid(t *testing.T) {
 func TestAShareOnAnArchivedRecordCanStillBeRevoked(t *testing.T) {
 	e := Setup(t)
 	ctx := e.As(e.AdminUser, nil, retractionAdmin)
-	org := e.SeedOrg(t, "Northgate Holding", &e.Rep1)
+	company := e.SeedCompany(t, "Northgate Holding", &e.Rep1)
 
 	shares := identity.NewServiceFor(e.DB())
 	grant, err := shares.CreateRecordGrant(ctx, identity.CreateGrantInput{
-		RecordType: "organization", RecordID: org,
+		RecordType: "company", RecordID: company,
 		SubjectType: "user", SubjectID: e.Rep3, Access: "read",
 	})
 	if err != nil {
 		t.Fatalf("sharing the record: %v", err)
 	}
 
-	if _, err := e.People.ArchiveOrganization(ctx, ids.From[ids.OrganizationKind](org), nil); err != nil {
+	if _, err := e.People.ArchiveCompany(ctx, ids.From[ids.CompanyKind](company), nil); err != nil {
 		t.Fatalf("archiving the shared record: %v", err)
 	}
 
 	// Frozen: a NEW share of a retired record is a claim, and refused.
 	if _, err := shares.CreateRecordGrant(ctx, identity.CreateGrantInput{
-		RecordType: "organization", RecordID: org,
+		RecordType: "company", RecordID: company,
 		SubjectType: "user", SubjectID: e.Rep2, Access: "read",
 	}); err == nil {
 		t.Error("sharing an archived record succeeded")
@@ -239,7 +239,7 @@ func TestAShareOnAnArchivedRecordCanStillBeRevoked(t *testing.T) {
 	var left int
 	if err := e.DB().Tx(context.Background(), func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT count(*) FROM record_grant WHERE record_id = $1`, org).Scan(&left)
+			`SELECT count(*) FROM record_grant WHERE record_id = $1`, company).Scan(&left)
 	}); err != nil {
 		t.Fatalf("counting the shares left: %v", err)
 	}

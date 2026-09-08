@@ -49,7 +49,7 @@ var offlineEpoch = time.Date(2026, time.August, 1, 0, 0, 0, 0, time.UTC)
 type OfflineProvider struct {
 	workspace string
 	// customers is the directory this provider answers. The sync maps them
-	// onto organizations by an explicit link, so the names here are the
+	// onto companies by an explicit link, so the names here are the
 	// source's own and need not match any company in the CRM.
 	customers []SourceCustomer
 }
@@ -64,7 +64,7 @@ func NewOfflineProvider(workspace string, customers []SourceCustomer) *OfflinePr
 func (p *OfflineProvider) Name() string { return OfflineProviderName }
 
 // Customers answers the directory this generator was built with. A human maps
-// an organization onto one of these; nothing here is matched automatically.
+// a company onto one of these; nothing here is matched automatically.
 func (p *OfflineProvider) Customers(context.Context) ([]SourceCustomer, error) {
 	return p.customers, nil
 }

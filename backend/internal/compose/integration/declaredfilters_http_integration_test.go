@@ -112,19 +112,19 @@ func TestThePersonListNarrowsByTagOnTheWire(t *testing.T) {
 	}
 }
 
-func TestTheOrganizationListNarrowsByDomainOnTheWire(t *testing.T) {
+func TestTheCompanyListNarrowsByDomainOnTheWire(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	held := createdRecord(t, e, "/v1/organizations", AnyMap{
+	held := createdRecord(t, e, "/v1/companies", AnyMap{
 		"display_name": "Acme", "domains": []AnyMap{{"domain": "acme.example", "is_primary": true}},
 	})
-	createdRecord(t, e, "/v1/organizations", AnyMap{
+	createdRecord(t, e, "/v1/companies", AnyMap{
 		"display_name": "Other", "domains": []AnyMap{{"domain": "other.example", "is_primary": true}},
 	})
 
-	onlyRecord(t, e, "/v1/organizations?domain=acme.example", held, "the account that lists the domain")
-	onlyRecord(t, e, "/v1/organizations?domain=ACME.example", held, "the same account, asked for in another case")
+	onlyRecord(t, e, "/v1/companies?domain=acme.example", held, "the account that lists the domain")
+	onlyRecord(t, e, "/v1/companies?domain=ACME.example", held, "the same account, asked for in another case")
 }
 
 func TestTheActivityListNarrowsByAssigneeOnTheWire(t *testing.T) {
@@ -257,11 +257,11 @@ func TestTheActivityListNarrowsByProjectOnTheWire(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	org := createdRecord(t, e, "/v1/organizations", AnyMap{"display_name": "Acme"})
+	company := createdRecord(t, e, "/v1/companies", AnyMap{"display_name": "Acme"})
 	person := createdRecord(t, e, "/v1/people", AnyMap{"full_name": "Dana Buyer"})
 	project := func(name string) string {
 		return createdRecord(t, e, "/v1/projects", AnyMap{
-			"name": name, "organization_id": org, "source": "manual",
+			"name": name, "company_id": company, "source": "manual",
 		})
 	}
 	erp, migration := project("ERP rollout"), project("Datacentre migration")

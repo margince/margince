@@ -29,7 +29,7 @@ func TestAFinishedDispositionNeverExceedsTheRowsRead(t *testing.T) {
 	run := migration.Run{
 		Status: migration.StatusComplete,
 		Report: &migration.Report{Objects: []migration.ObjectReport{{
-			Object:      migration.ObjectOrganization,
+			Object:      migration.ObjectCompany,
 			MirrorCount: 1,
 			WillCreate:  0,
 			Created:     1,

@@ -28,7 +28,7 @@ import (
 // marker is the write every case either sends or does not. Shared by all of
 // them so that a case differs from its neighbours in WHERE the statement lives
 // and in nothing else.
-const marker = `UPDATE organization SET legal_name = $2 WHERE id = $1`
+const marker = `UPDATE company SET legal_name = $2 WHERE id = $1`
 
 // statementReadingCase is one synthetic package and the verdict the reader owes
 // it.
@@ -49,7 +49,7 @@ func write(tx T) { tx.Exec(ctx, ` + "`" + marker + "`" + `) }`,
 		judged: true,
 	}, {
 		// The shape the tree already wrote: coldStartColumns and
-		// companyFields held eight organization writes between them, and
+		// companyFields held eight company writes between them, and
 		// the function that sent each one named a table rather than a
 		// statement.
 		name: "held in a package-level table the function indexes",
@@ -76,7 +76,7 @@ func write(tx T) { tx.Exec(ctx, held) }`,
 		// fragments and matched neither.
 		name: "assembled at package level from two literals",
 		source: `package p
-var held = ` + "`UPDATE organization SET legal_name = $2 `" + ` + ` + "`WHERE id = $1`" + `
+var held = ` + "`UPDATE company SET legal_name = $2 `" + ` + ` + "`WHERE id = $1`" + `
 func write(tx T) { tx.Exec(ctx, held) }`,
 		judged: true,
 	}, {
@@ -86,22 +86,22 @@ func write(tx T) { tx.Exec(ctx, held) }`,
 		// would have fixed one half of one shape.
 		name: "assembled in the body from two literals",
 		source: `package p
-func write(tx T) { tx.Exec(ctx, ` + "`UPDATE organization SET legal_name = $2 `" + ` + ` + "`WHERE id = $1`" + `) }`,
+func write(tx T) { tx.Exec(ctx, ` + "`UPDATE company SET legal_name = $2 `" + ` + ` + "`WHERE id = $1`" + `) }`,
 		judged: true,
 	}, {
 		name: "assembled in the body around a helper's output",
 		source: `package p
-func write(tx T) { tx.Exec(ctx, ` + "`UPDATE organization SET legal_name = $2 WHERE id = $1 AND `" + ` + extra()) }`,
+func write(tx T) { tx.Exec(ctx, ` + "`UPDATE company SET legal_name = $2 WHERE id = $1 AND `" + ` + extra()) }`,
 		judged: true,
 	}, {
 		// The third spelling of the same assembly, and the one
-		// anchorOrganization uses to append the row lock that guards the
+		// anchorCompany uses to append the row lock that guards the
 		// company form — so a reader blind to it cannot see the guard
 		// either, not just the statement.
 		name: "appended to a local with +=",
 		source: `package p
 func write(tx T) {
-	statement := ` + "`UPDATE organization SET legal_name = $2 `" + `
+	statement := ` + "`UPDATE company SET legal_name = $2 `" + `
 	statement += ` + "`WHERE id = $1`" + `
 	tx.Exec(ctx, statement)
 }`,
@@ -110,7 +110,7 @@ func write(tx T) {
 		name: "appended to a var declared with a keyword",
 		source: `package p
 func write(tx T, cond bool) {
-	var statement = ` + "`UPDATE organization SET legal_name = $2 `" + `
+	var statement = ` + "`UPDATE company SET legal_name = $2 `" + `
 	if cond {
 		statement += ` + "`WHERE id = $1`" + `
 	}
@@ -125,7 +125,7 @@ func write(tx T, cond bool) {
 		name: "an inner declaration of a name the outer scope is still building",
 		source: `package p
 func write(tx T, cond bool) {
-	statement := ` + "`UPDATE organization SET legal_name = $2 `" + `
+	statement := ` + "`UPDATE company SET legal_name = $2 `" + `
 	if cond {
 		statement := "SELECT 1"
 		_ = statement

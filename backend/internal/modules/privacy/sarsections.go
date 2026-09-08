@@ -114,7 +114,7 @@ func sarIdentitySections(pkg *SARPackage) []sarSection {
 		             SELECT 1 FROM relationship r
 		              WHERE r.person_id = $1 AND r.kind = 'employment'
 		                AND r.archived_at IS NULL
-		                AND r.organization_id = g.matched_org_id))`, nil},
+		                AND r.company_id = g.matched_company_id))`, nil},
 	}
 }
 
@@ -123,7 +123,7 @@ func sarIdentitySections(pkg *SARPackage) []sarSection {
 // from, and their timeline with the files hanging off it.
 func sarRecordSections(pkg *SARPackage) []sarSection {
 	return []sarSection{
-		{&pkg.Relationships, `SELECT kind, organization_id, deal_id, role, started_at, ended_at
+		{&pkg.Relationships, `SELECT kind, company_id, deal_id, role, started_at, ended_at
 		   FROM relationship WHERE person_id = $1 AND archived_at IS NULL`, nil},
 		{&pkg.Deals, `SELECT d.id, d.name, d.status, d.amount_minor, d.currency
 		   FROM deal d JOIN relationship r ON r.deal_id = d.id

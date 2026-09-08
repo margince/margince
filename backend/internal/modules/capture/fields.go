@@ -40,7 +40,7 @@ type ActivityFields struct {
 }
 
 // LeadFields is a captured prospect bound for the lead pool — never
-// directly a person/organization (ADR-0008: leads graduate, raw
+// directly a person/company (ADR-0008: leads graduate, raw
 // capture does not mint clean-core rows).
 type LeadFields struct {
 	FullName    string

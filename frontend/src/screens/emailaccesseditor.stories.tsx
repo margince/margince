@@ -109,7 +109,7 @@ function Access({ access }: Readonly<{ access: Partial<EmailAccess> }>) {
 }
 
 /**
- * A captured thread this reader has shared with the organization, which is the
+ * A captured thread this reader has shared with the company, which is the
  * drawer's most common heading. "Make private" sits immediately after the word
  * it flips, and the caption under it says what the press REACHES — this
  * reader's side of the whole thread, not this one message.

@@ -27,13 +27,13 @@ func NewHandlers(db *database.DB, baseCurrency BaseCurrencyFunc) Handlers {
 	return Handlers{store: NewStore(db, baseCurrency)}
 }
 
-// GetOrganizationFinanceSummary implements
-// GET /organizations/{id}/finance-summary.
-func (h Handlers) GetOrganizationFinanceSummary(
+// GetCompanyFinanceSummary implements
+// GET /companies/{id}/finance-summary.
+func (h Handlers) GetCompanyFinanceSummary(
 	w http.ResponseWriter, r *http.Request, id crmcontracts.Id,
 ) {
 	summary, err := h.store.SummaryFor(r.Context(),
-		ids.From[ids.OrganizationKind](ids.UUID(id)))
+		ids.From[ids.CompanyKind](ids.UUID(id)))
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

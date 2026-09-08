@@ -167,16 +167,16 @@ func championSeats(
 //
 // THE COMPLEMENT OF THE VISIBLE READ, not a reading of one of its arms. An edge
 // is admitted by a conjunction over EVERY endpoint it carries — person_id,
-// counterparty_person_id, organization_id, counterparty_org_id, deal_id,
+// counterparty_person_id, company_id, counterparty_company_id, deal_id,
 // project_id (auth.RelationshipEndpointScope) — so "a seat this reader may not
 // read" is exactly `NOT (that conjunction)`. A single arm answers a narrower
 // question that looks the same until a seat is refused by one of the other five,
 // and then reports a committee as fully readable while a champion sits in it.
 //
-// A seat refused through `counterparty_org_id` is the reachable case rather than
-// the theoretical one: `rel_stakeholder_shape` pins organization_id, project_id
+// A seat refused through `counterparty_company_id` is the reachable case rather than
+// the theoretical one: `rel_stakeholder_shape` pins company_id, project_id
 // and counterparty_person_id to NULL on a deal_stakeholder and says nothing
-// about counterparty_org_id, and CreateRelationshipInput accepts it.
+// about counterparty_company_id, and CreateRelationshipInput accepts it.
 //
 // Negating the whole clause is also what keeps this true as the edge grows: a
 // seventh endpoint column reaches this statement the day it is added.
@@ -213,7 +213,7 @@ func withheldSeats(
 	// An empty clause cannot be negated: `NOT ()` is a syntax error, not a
 	// permissive read. RelationshipEndpointScope answers "" only for the system
 	// principal — UnboundedFor refuses every other actor at `person` and
-	// `organization`, which carry capture privacy — and the system principal is
+	// `company`, which carry capture privacy — and the system principal is
 	// refused no row, so nothing is withheld from it.
 	if admitted == "" {
 		return map[ids.UUID]bool{}, nil

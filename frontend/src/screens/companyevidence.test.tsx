@@ -55,7 +55,7 @@ function show(
     >
       <LocaleProvider initial="en">
         <EvidenceModal
-          orgId="o-1"
+          companyId="o-1"
           cited={{ entityType: "profile_field", entityId: "p-1" }}
           onClose={() => {}}
           onStep={onStep}

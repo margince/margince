@@ -158,18 +158,18 @@ func lockPhoneLane(ctx context.Context, tx pgx.Tx, keys []string) error {
 	return nil
 }
 
-// manualDedupeOrganization runs PO-F-2 for a manual organization create,
+// manualDedupeCompany runs PO-F-2 for a manual company create,
 // before the insert for the same self-match reason. The domains are the
-// org's own claimed domains, not derived email hosts, so the free-mail
+// company's own claimed domains, not derived email hosts, so the free-mail
 // filtering PO-F-2 delegates to callers does not apply here — a manual
 // claim of gmail.com should still collide. The exact tier cannot fire:
-// ensureOrgDomainsUnclaimed already refused every claimed domain.
-func manualDedupeOrganization(ctx context.Context, tx pgx.Tx, in CreateOrganizationInput) (OrganizationMatch, error) {
+// ensureCompanyDomainsUnclaimed already refused every claimed domain.
+func manualDedupeCompany(ctx context.Context, tx pgx.Tx, in CreateCompanyInput) (CompanyMatch, error) {
 	domains := make([]string, 0, len(in.Domains))
 	for _, d := range in.Domains {
 		domains = append(domains, d.Domain)
 	}
-	return DedupeOrganizationForCreate(ctx, tx, OrganizationCandidate{
+	return DedupeCompanyForCreate(ctx, tx, CompanyCandidate{
 		DisplayName: in.DisplayName,
 		LegalName:   deref(in.LegalName),
 		Domains:     domains,
@@ -191,7 +191,7 @@ func (m PersonResolution) recordIfReview(ctx context.Context, tx pgx.Tx, created
 	case DecisionNameCollisionReview:
 		// One person, a second business card, a different address: the case a
 		// rep actually hits, and the one the fuzzy tier cannot reach because a
-		// create carries no employer for its org term to agree with.
+		// create carries no employer for its company term to agree with.
 		//
 		// The incumbent's name is read back rather than reused from the request
 		// so the evidence shows the two SPELLINGS a human will compare. They are
@@ -287,14 +287,14 @@ func (m PersonResolution) recordSharedPhone(ctx context.Context, tx pgx.Tx, crea
 // collide on their registered names while their display names differ, and
 // rendering that as a display-name collision would show a reviewer a
 // comparison nobody made.
-func (m OrganizationMatch) recordIfReview(ctx context.Context, tx pgx.Tx, createdID ids.OrganizationID, createdName, source, by string) error {
+func (m CompanyMatch) recordIfReview(ctx context.Context, tx pgx.Tx, createdID ids.CompanyID, createdName, source, by string) error {
 	if m.Decision != DecisionFuzzyReview {
 		return nil
 	}
-	// fuzzyOrganization only returns this decision with a non-empty Ranked, so
+	// fuzzyCompany only returns this decision with a non-empty Ranked, so
 	// the winner is always there to read.
 	best := m.Ranked[0]
-	return recordNearMatch(ctx, tx, entityOrganization, createdID.UUID, m.OrganizationID.UUID, m.Confidence,
+	return recordNearMatch(ctx, tx, entityCompany, createdID.UUID, m.CompanyID.UUID, m.Confidence,
 		nearMatchEvidence(best.MatchedField, best.CandidateValue, best.IncumbentValue, m.Confidence), source, by)
 }
 

@@ -64,7 +64,7 @@ const TALLIES: readonly { key: keyof BackfillCounts; label: MessageKey }[] = [
   { key: "captured", label: "ob.backread.tallyCaptured" },
   { key: "skipped", label: "ob.backread.tallySkipped" },
   { key: "people_created", label: "ob.backread.tallyContacts" },
-  { key: "organizations_created", label: "ob.backread.tallyCompanies" },
+  { key: "companies_created", label: "ob.backread.tallyCompanies" },
 ];
 
 // The template-ready `{detail}` value for a mutation that may or may not

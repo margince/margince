@@ -124,7 +124,7 @@ func TestEveryReleasableKindSaysWhetherItsReleaseSends(t *testing.T) {
 	// in the module because this is the list that grows with the composition.
 	inert := map[string]bool{
 		"coldstart": true, "enrich": true, "deepread": true, "site_lead": true,
-		"capture_counterparty": true, "org_name_promotion": true, "linkedin_match": true,
+		"capture_counterparty": true, "company_name_promotion": true, "linkedin_match": true,
 		"vcard_create":     true,
 		"lifecycle_change": true, "assign_owner": true, "close_date_correction": true,
 		"deal_follow_up": true, "transcript_proposal": true,

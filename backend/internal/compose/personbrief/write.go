@@ -40,9 +40,9 @@ type Completer interface {
 // company brief's sentence shape (doc.go: the mirroring is the ruling), so it
 // is that enum for both.
 const (
-	natureFact           = string(crmcontracts.OrganizationBriefSentenceNatureFact)
-	natureAssessment     = string(crmcontracts.OrganizationBriefSentenceNatureAssessment)
-	natureRecommendation = string(crmcontracts.OrganizationBriefSentenceNatureRecommendation)
+	natureFact           = string(crmcontracts.CompanyBriefSentenceNatureFact)
+	natureAssessment     = string(crmcontracts.CompanyBriefSentenceNatureAssessment)
+	natureRecommendation = string(crmcontracts.CompanyBriefSentenceNatureRecommendation)
 )
 
 // knownNature is the vocabulary a reply may label a claim with. Anything else

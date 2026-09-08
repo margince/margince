@@ -2,7 +2,7 @@
 // isolation so the screen's derivations (immutable API key, the pending DDL
 // preview, and the structural-word refusal) are proven independently.
 
-export type CfObject = "deal" | "organization" | "person" | "lead";
+export type CfObject = "deal" | "company" | "person" | "lead";
 export type CfType =
   | "text"
   | "number"
@@ -22,7 +22,7 @@ export type CfType =
 // admit it, so a project carries no cf_* columns to define a field on.
 export const CF_OBJECTS: readonly CfObject[] = [
   "deal",
-  "organization",
+  "company",
   "person",
   "lead",
 ];

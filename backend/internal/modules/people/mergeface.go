@@ -136,7 +136,7 @@ func (s *Store) DecidableForMerge(
 // opened, and refused the same way whatever the caller asked for.
 func isMergeFaceEntity(entityType string) bool {
 	switch entityType {
-	case entityPerson, entityOrganization, entityLead:
+	case entityPerson, entityCompany, entityLead:
 		return true
 	default:
 		return false
@@ -149,8 +149,8 @@ func readMergeFaces(
 	switch entityType {
 	case entityPerson:
 		return readPersonFaces(ctx, tx, rowIDs, into)
-	case entityOrganization:
-		return readOrganizationFaces(ctx, tx, rowIDs, into)
+	case entityCompany:
+		return readCompanyFaces(ctx, tx, rowIDs, into)
 	default:
 		return readLeadFaces(ctx, tx, rowIDs, into)
 	}
@@ -192,13 +192,13 @@ func readPersonFaces(ctx context.Context, tx pgx.Tx, rowIDs []ids.UUID, into map
 	return rows.Err()
 }
 
-// readOrganizationFaces names accounts, with the first domain as the detail and
+// readCompanyFaces names accounts, with the first domain as the detail and
 // the visible contact count as the roll-up.
 //
-// ORDER BY is_primary DESC, created_at matches attachOrgDomains, for the reason
+// ORDER BY is_primary DESC, created_at matches attachCompanyDomains, for the reason
 // the person read matches its own.
 //
-// The count carries the SAME two gates attachOrgCounts applies, and for its
+// The count carries the SAME two gates attachCompanyCounts applies, and for its
 // reasons. It needs person.read because a number that moves when a colleague
 // captures a private contact discloses that contact, and relationship.read
 // because "how many people work at Acme" is a fact about the employment pairs
@@ -207,7 +207,7 @@ func readPersonFaces(ctx context.Context, tx pgx.Tx, rowIDs []ids.UUID, into map
 // when either is missing, never zero: zero is a wrong number on screen where
 // nothing at all is a withheld one. The row scope narrows it further, set-wise
 // here as it is per page there.
-func readOrganizationFaces(ctx context.Context, tx pgx.Tx, rowIDs []ids.UUID, into map[ids.UUID]MergeFace) error {
+func readCompanyFaces(ctx context.Context, tx pgx.Tx, rowIDs []ids.UUID, into map[ids.UUID]MergeFace) error {
 	args := []any{rowIDs}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	countable := grantVisible(ctx, entityPerson) && grantVisible(ctx, "relationship")
@@ -230,17 +230,17 @@ func readOrganizationFaces(ctx context.Context, tx pgx.Tx, rowIDs []ids.UUID, in
 		contacts = `(SELECT count(*)
 		          FROM relationship rel
 		          JOIN person cp ON cp.id = rel.person_id AND cp.archived_at IS NULL
-		         WHERE rel.organization_id = o.id
+		         WHERE rel.company_id = o.id
 		           AND rel.kind = 'employment'
 		           AND ` + employment.CurrentPrimarySQL("rel") + `
 		           AND rel.archived_at IS NULL` + edgeBound + scope + `)`
 	}
 	rows, err := tx.Query(ctx, `
 		SELECT o.id, o.display_name, o.created_at, d.domain, `+contacts+`
-		FROM organization o
+		FROM company o
 		LEFT JOIN LATERAL (
-			SELECT od.domain FROM organization_domain od
-			WHERE od.organization_id = o.id AND od.archived_at IS NULL
+			SELECT od.domain FROM company_domain od
+			WHERE od.company_id = o.id AND od.archived_at IS NULL
 			ORDER BY od.is_primary DESC, od.created_at
 			LIMIT 1
 		) d ON true

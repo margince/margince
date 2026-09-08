@@ -19,11 +19,11 @@ import (
 // withheld (fieldmask.go). They are wire names, which is why they are not the
 // column constants they happen to match today.
 const (
-	filterOrganizationID     = "organization_id"
+	filterCompanyID          = "company_id"
 	filterTag                = "tag_id"
 	filterTagMode            = "tag_mode"
 	filterOwnerID            = "owner_id"
-	filterPartnerOrgID       = "partner_org_id"
+	filterPartnerCompanyID   = "partner_company_id"
 	filterPartnerAttribution = "partner_attribution"
 	filterPartnerSourced     = "partner_sourced"
 	filterPipelineID         = "pipeline_id"
@@ -47,11 +47,11 @@ var dealListFilters = storekit.FilterSet[ListDealsInput]{
 		}
 		in.TagMode = mode
 	}),
-	filterOrganizationID: storekit.FilterID(
-		func(in *ListDealsInput, id *ids.OrganizationID) { in.OrganizationID = id }),
+	filterCompanyID: storekit.FilterID(
+		func(in *ListDealsInput, id *ids.CompanyID) { in.CompanyID = id }),
 	filterOwnerID: storekit.FilterID(func(in *ListDealsInput, id *ids.UserID) { in.OwnerID = id }),
-	filterPartnerOrgID: storekit.FilterID(
-		func(in *ListDealsInput, id *ids.OrganizationID) { in.PartnerOrgID = id }),
+	filterPartnerCompanyID: storekit.FilterID(
+		func(in *ListDealsInput, id *ids.CompanyID) { in.PartnerCompanyID = id }),
 	filterPartnerAttribution: storekit.FilterWord(
 		func(in *ListDealsInput, v *string) { in.PartnerAttribution = v }),
 	filterPartnerSourced: storekit.FilterFlag(func(in *ListDealsInput, v *bool) { in.PartnerSourced = v }),

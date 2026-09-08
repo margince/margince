@@ -49,7 +49,7 @@ func TestOverlaySearchSweepsEveryMirroredTypeAndPagesThroughThem(t *testing.T) {
 	// about matching.
 	e.seed(t, "person", "9401", map[string]any{"first_name": "Sweepable", "last_name": "One"})
 	e.seed(t, "person", "9402", map[string]any{"first_name": "Sweepable", "last_name": "Two"})
-	e.seed(t, "organization", "9403", map[string]any{"display_name": "Sweepable Org"})
+	e.seed(t, "company", "9403", map[string]any{"display_name": "Sweepable Company"})
 	e.seed(t, "deal", "9404", map[string]any{"name": "Sweepable Renewal", "currency": "EUR"})
 	e.seed(t, "lead", "9405", map[string]any{"full_name": "Sweepable Lead"})
 	e.seed(t, "activity", "9406", map[string]any{"kind": "call", "subject": "Sweepable Call"})
@@ -89,7 +89,7 @@ func TestOverlaySearchSweepsEveryMirroredTypeAndPagesThroughThem(t *testing.T) {
 	if len(seen) != 6 {
 		t.Fatalf("the sweep reached %d of the 6 seeded records: %v", len(seen), seen)
 	}
-	for _, want := range []string{"person", "organization", "deal", "lead", "activity"} {
+	for _, want := range []string{"person", "company", "deal", "lead", "activity"} {
 		found := false
 		for _, recordType := range seen {
 			found = found || recordType == want

@@ -42,7 +42,7 @@ var auditGovernedTypes = []string{
 //
 // The four collateral routes, each verified against the baseline schema:
 //
-//   - attachment hangs off SEVEN parent types, not one: person, organization,
+//   - attachment hangs off SEVEN parent types, not one: person, company,
 //     deal, lead, activity, project and relationship, by its own CHECK. Only the
 //     activity parent has an audience, so the route reads the polymorphic
 //     (entity_type, entity_id) pair and resolves nothing for the other six.

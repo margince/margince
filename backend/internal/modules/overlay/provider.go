@@ -205,7 +205,7 @@ func (p *Provider) Read(ctx context.Context, ref datasource.EntityRef) (datasour
 // UnsupportedEntityError.
 var knownEntityTypes = []datasource.EntityType{
 	datasource.EntityPerson,
-	datasource.EntityOrganization,
+	datasource.EntityCompany,
 	datasource.EntityDeal,
 	datasource.EntityLead,
 	datasource.EntityActivity,

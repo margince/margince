@@ -353,5 +353,5 @@ func TestEmailSourcedMappingSkipsASeatArchivedAfterTheCandidateRead(t *testing.T
 
 // A suite here used to pin behaviour that only a SECOND workspace could produce.
 // ADR-0091 §8 phase D took the tenant column off app_user, and an installation
-// serves one organization (ADR-0061), so the fixture it needed is a state the
+// serves one company (ADR-0061), so the fixture it needed is a state the
 // product cannot reach — the guarantee has no subject rather than a weaker one.

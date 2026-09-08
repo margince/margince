@@ -24,9 +24,9 @@ import (
 // budget is the pacer's full interval plus the HTTP client's own timeout,
 // because the pacer holds a lookup before the request is even built.
 func TestTheGeocodeCeilingStaysClearOfWhatTheJobCanWaitFor(t *testing.T) {
-	spec, declared := jobs.SpecFor("geocode_organization")
+	spec, declared := jobs.SpecFor("geocode_company")
 	if !declared {
-		t.Fatal("geocode_organization is not declared, so nothing bounds it")
+		t.Fatal("geocode_company is not declared, so nothing bounds it")
 	}
 	const httpTimeout = 20 * time.Second // geocode.NewNominatim's default client
 	budget := geocode.RecurringInterval + httpTimeout

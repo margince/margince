@@ -68,7 +68,7 @@ export const Editable: Story = { render: story(SETTINGS, MANAGER) };
 export const ProfileDialog: Story = {
   render: story(SETTINGS, MANAGER),
   play: async ({ canvasElement }) => {
-    await openFrom(canvasElement, /edit organization name/i);
+    await openFrom(canvasElement, /edit company name/i);
   },
 };
 

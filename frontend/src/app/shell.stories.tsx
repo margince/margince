@@ -109,7 +109,7 @@ function SeedInstallation({
   const client = useQueryClient();
   if (client.getQueryData(["company"]) === undefined) {
     client.setQueryData(["company"], {
-      organization_id: "org-1",
+      company_id: "company-1",
       display_name: "Gradion GmbH",
       logo_url: logoUrl,
       logo_icon_url: logoIconUrl,

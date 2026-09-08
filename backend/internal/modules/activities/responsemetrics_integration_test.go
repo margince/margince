@@ -36,7 +36,7 @@ func asOther(e *loadEnv) context.Context {
 			RoleKeys: []string{"manager"},
 			Objects: map[string]principal.ObjectGrant{
 				"activity": {Read: true, Update: true}, "person": {Read: true},
-				"deal": {Read: true}, "organization": {Read: true},
+				"deal": {Read: true}, "company": {Read: true},
 				"lead": {Read: true},
 			},
 			RowScope: principal.RowScopeAll,

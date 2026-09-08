@@ -10,7 +10,7 @@ package datasource
 // WHICH field failed, this one says what to tell the caller about it. The rule
 // every function here keeps is that a phrase names the WIRE shape and never the
 // Go type — the type name is the leak the refusal exists to avoid, and `int64`,
-// `uuid.UUID` and `crmcontracts.OrganizationDomainInput` all describe this
+// `uuid.UUID` and `crmcontracts.CompanyDomainInput` all describe this
 // program rather than the request.
 
 import (

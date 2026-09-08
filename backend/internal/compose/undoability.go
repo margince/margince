@@ -171,7 +171,7 @@ const (
 //
 //nolint:goconst // the six this path serves, listed once
 var undoableRecordTypes = []string{
-	"person", "organization", "deal", "lead", "project", "activity",
+	"person", "company", "deal", "lead", "project", "activity",
 }
 
 // replayableVerbs are the two an image replay can reverse.

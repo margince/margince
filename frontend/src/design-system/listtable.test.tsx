@@ -714,7 +714,7 @@ describe("a chip with an async search source", () => {
   ): readonly ListChip[] {
     return [
       {
-        key: "org",
+        key: "company",
         label: "Company",
         allLabel: "All companies",
         options: [],

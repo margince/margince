@@ -269,7 +269,7 @@ func TestProviderSearchRefusesATypeTheMirrorCannotHold(t *testing.T) {
 // token has to mean the same place when the request presenting it is not the
 // one that minted it.
 func TestASweepCursorNamesAPositionInTheMirrorRatherThanInOneRequest(t *testing.T) {
-	minted, err := storekit.EncodeSweepCursor(storekit.SweepCursor{Stream: string(datasource.EntityOrganization), Inner: "mirror-42"})
+	minted, err := storekit.EncodeSweepCursor(storekit.SweepCursor{Stream: string(datasource.EntityCompany), Inner: "mirror-42"})
 	if err != nil {
 		t.Fatalf("minting a position: %v", err)
 	}
@@ -277,8 +277,8 @@ func TestASweepCursorNamesAPositionInTheMirrorRatherThanInOneRequest(t *testing.
 	if err != nil {
 		t.Fatalf("decoding a cursor the sweep minted: %v", err)
 	}
-	if resumeAt != datasource.EntityOrganization || inner != "mirror-42" {
-		t.Errorf("resume position = (%q, %q), want the organization stream at its own mirror cursor", resumeAt, inner)
+	if resumeAt != datasource.EntityCompany || inner != "mirror-42" {
+		t.Errorf("resume position = (%q, %q), want the company stream at its own mirror cursor", resumeAt, inner)
 	}
 
 	// An empty cursor is the start of the walk, not a malformed one.
@@ -319,7 +319,7 @@ func sweepCursorFor(t *testing.T, et datasource.EntityType) string {
 // still a token this server minted.
 func TestAResumedSweepSurvivesTheWalkChangingUnderIt(t *testing.T) {
 	all := []datasource.EntityType{
-		datasource.EntityPerson, datasource.EntityOrganization,
+		datasource.EntityPerson, datasource.EntityCompany,
 		datasource.EntityDeal, datasource.EntityLead, datasource.EntityActivity,
 	}
 	for _, probe := range []struct {

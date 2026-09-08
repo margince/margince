@@ -29,7 +29,7 @@ package compose
 //
 // What the expectation MEANS here: the facts this page must ground, as field to
 // value. Facts are what this lane is named for and what the deep read stores as
-// organization facts, and their vocabulary is the closed menu the schema enum
+// company facts, and their vocabulary is the closed menu the schema enum
 // offers — which is what lets an unanswerable expectation be named at Prepare
 // instead of measured as a zero. The same call carries the people and entity
 // lanes for the kinds whose menu asks for them, and every refusal in those lanes
@@ -205,7 +205,7 @@ func refuseUngroundableFacts(
 // does not decide the verdict. Every other field states one value and is held to
 // all of it.
 func factIdentity(field, value string) string {
-	if people.OrganizationFactMultiValue[field] {
+	if people.CompanyFactMultiValue[field] {
 		return factName(value)
 	}
 	return strings.TrimSpace(value)

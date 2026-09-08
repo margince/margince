@@ -35,7 +35,7 @@ const (
 	leadSourceColumn  = "source"
 	createdAtColumn   = "created_at"
 	updatedAtColumn   = "updated_at"
-	// lastActivityColumn is the timeline clock person and organization carry
+	// lastActivityColumn is the timeline clock person and company carry
 	// (DM-VOCAB-1/2), maintained in the schema on the activity-link write.
 	lastActivityColumn = "last_activity_at"
 )

@@ -47,7 +47,7 @@ type connectorAppComposition struct {
 	// byte-identical to what the vendor receives is the drift this avoids.
 	redirectURIs []crmcontracts.ConnectorAppRedirectUri
 	// envTenant is the directory the DEPLOYMENT pinned its app to, empty for one
-	// that authorizes any organization and for a vendor with no directories.
+	// that authorizes any company and for a vendor with no directories.
 	//
 	// Carried beside the client id rather than left out: the connector
 	// authorizes against it, so a read that dropped it would show an operator an

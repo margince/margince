@@ -5,7 +5,7 @@ package people
 
 // Whether each lead on a page is this caller's to change.
 //
-// A lead has no attach step the way a person and an organization do — nothing
+// A lead has no attach step the way a person and a company do — nothing
 // hangs off it that a second query fills in — so the three read paths (the
 // single read, the list, and the work queue) would each have spelled this for
 // themselves. One function instead, called by all three: a client that saw the

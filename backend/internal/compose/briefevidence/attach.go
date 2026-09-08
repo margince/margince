@@ -144,10 +144,10 @@ func Attach(ctx context.Context, reader Reader, targets []Target) error {
 
 // evidenceTargets collects the activity citations out of one evidence slice,
 // addressing the real elements so the setter writes back into the response.
-func evidenceTargets(out *[]Target, evidence []crmcontracts.OrganizationBriefEvidence) {
+func evidenceTargets(out *[]Target, evidence []crmcontracts.CompanyBriefEvidence) {
 	for i := range evidence {
 		row := &evidence[i]
-		if row.EntityType != crmcontracts.OrganizationBriefEvidenceEntityTypeActivity {
+		if row.EntityType != crmcontracts.CompanyBriefEvidenceEntityTypeActivity {
 			continue
 		}
 		*out = append(*out, Target{
@@ -159,7 +159,7 @@ func evidenceTargets(out *[]Target, evidence []crmcontracts.OrganizationBriefEvi
 
 // FromEvidence is the collector for a bare evidence slice — a growth-fit
 // sub-score's sources, one sentence's citations on their own.
-func FromEvidence(evidence []crmcontracts.OrganizationBriefEvidence) []Target {
+func FromEvidence(evidence []crmcontracts.CompanyBriefEvidence) []Target {
 	var targets []Target
 	evidenceTargets(&targets, evidence)
 	return targets
@@ -171,8 +171,8 @@ func FromEvidence(evidence []crmcontracts.OrganizationBriefEvidence) []Target {
 // It takes the pointer rather than a copy for the reason the whole package
 // takes addresses: an enriched copy is thrown away, and the response ships the
 // bare citation while every test over the collector passes.
-func FromEvidenceRef(row *crmcontracts.OrganizationBriefEvidence) []Target {
-	if row == nil || row.EntityType != crmcontracts.OrganizationBriefEvidenceEntityTypeActivity {
+func FromEvidenceRef(row *crmcontracts.CompanyBriefEvidence) []Target {
+	if row == nil || row.EntityType != crmcontracts.CompanyBriefEvidenceEntityTypeActivity {
 		return nil
 	}
 	return []Target{{
@@ -183,7 +183,7 @@ func FromEvidenceRef(row *crmcontracts.OrganizationBriefEvidence) []Target {
 
 // FromSentences is the collector for grounded prose: the brief's sections, the
 // dossier's, the answer to a prepared question, the deal card's story.
-func FromSentences(sentences []crmcontracts.OrganizationBriefSentence) []Target {
+func FromSentences(sentences []crmcontracts.CompanyBriefSentence) []Target {
 	var targets []Target
 	for i := range sentences {
 		evidenceTargets(&targets, sentences[i].Evidence)
@@ -193,7 +193,7 @@ func FromSentences(sentences []crmcontracts.OrganizationBriefSentence) []Target 
 
 // FromSuggestions is the collector for the account page's advice, whose
 // evidence is what the rule fired on.
-func FromSuggestions(suggestions []crmcontracts.Organization360Suggestion) []Target {
+func FromSuggestions(suggestions []crmcontracts.Company360Suggestion) []Target {
 	var targets []Target
 	for i := range suggestions {
 		evidenceTargets(&targets, suggestions[i].Evidence)

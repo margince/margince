@@ -18,7 +18,7 @@ import (
 type ListRelationshipsInput struct {
 	Kind            *string
 	PersonID        *ids.PersonID
-	OrganizationID  *ids.OrganizationID
+	CompanyID       *ids.CompanyID
 	DealID          *ids.DealID
 	ProjectID       *ids.ProjectID
 	IncludeArchived bool
@@ -77,7 +77,7 @@ func listRelationshipsInTx(ctx context.Context, tx pgx.Tx, in ListRelationshipsI
 	return out, page, nil
 }
 
-// relationshipListWhere renders the list filters (kind/person/org/deal,
+// relationshipListWhere renders the list filters (kind/person/company/deal,
 // archived, cursor) plus the endpoint-visibility scope into WHERE clauses,
 // binding each value through arg.
 func relationshipListWhere(ctx context.Context, in ListRelationshipsInput, arg func(any) int) ([]string, error) {
@@ -86,15 +86,15 @@ func relationshipListWhere(ctx context.Context, in ListRelationshipsInput, arg f
 		where = append(where, storekit.SQLf("r.kind = $%d", arg(*in.Kind)))
 	}
 	if in.PersonID != nil {
-		// EITHER end, the same rule the org filter keeps below: a works_with
+		// EITHER end, the same rule the company filter keeps below: a works_with
 		// edge names a person in whichever column, and a tab that read one
 		// column would show the pair on one page and not the other.
 		pos := arg(*in.PersonID)
 		where = append(where, storekit.SQLf("(r.person_id = $%d OR r.counterparty_person_id = $%d)", pos, pos))
 	}
-	if in.OrganizationID != nil {
-		pos := arg(*in.OrganizationID)
-		where = append(where, storekit.SQLf("(r.organization_id = $%d OR r.counterparty_org_id = $%d)", pos, pos))
+	if in.CompanyID != nil {
+		pos := arg(*in.CompanyID)
+		where = append(where, storekit.SQLf("(r.company_id = $%d OR r.counterparty_company_id = $%d)", pos, pos))
 	}
 	if in.DealID != nil {
 		where = append(where, storekit.SQLf("r.deal_id = $%d", arg(*in.DealID)))

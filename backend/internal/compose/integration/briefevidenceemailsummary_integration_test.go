@@ -29,11 +29,11 @@ import (
 // citing is one brief sentence resting on one activity — the shape every
 // producer emits, built here rather than run through a model lane so the test
 // is about the enrichment and not about what a writer chose to cite.
-func citing(id ids.UUID) []crmcontracts.OrganizationBriefSentence {
-	return []crmcontracts.OrganizationBriefSentence{{
+func citing(id ids.UUID) []crmcontracts.CompanyBriefSentence {
+	return []crmcontracts.CompanyBriefSentence{{
 		Text: "They asked which locale wins and nobody has answered.",
-		Evidence: []crmcontracts.OrganizationBriefEvidence{{
-			EntityType: crmcontracts.OrganizationBriefEvidenceEntityTypeActivity,
+		Evidence: []crmcontracts.CompanyBriefEvidence{{
+			EntityType: crmcontracts.CompanyBriefEvidenceEntityTypeActivity,
 			EntityId:   openapi_types.UUID(id),
 		}},
 	}}

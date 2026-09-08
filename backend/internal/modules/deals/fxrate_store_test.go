@@ -141,7 +141,7 @@ func TestEveryUninjectedInstallationSeamRefuses(t *testing.T) {
 				if seam == nil {
 					t.Fatalf("%s is nil after orRefusing; an un-injected seam must refuse, not panic", field)
 				}
-				err = seam(context.Background(), nil, ids.OrganizationID{})
+				err = seam(context.Background(), nil, ids.CompanyID{})
 			case EnsureProjectAttachable:
 				if seam == nil {
 					t.Fatalf("%s is nil after orRefusing; an un-injected seam must refuse, not panic", field)

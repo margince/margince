@@ -22,7 +22,7 @@ type VoiceViolation struct {
 var (
 	abstractContrast = regexp.MustCompile(`(?i)\b(?:it(?:'s| is)|this is)\s+not\b[^.!?]{0,100}\bbut\b|\bnot about\b[^.!?]{0,100}\bbut\b|\b(?:es (?:ist|geht)|das ist)\s+nicht\b[^.!?]{0,100}\bsondern\b|\bnicht um\b[^.!?]{0,100}\bsondern\b`)
 	cannedOpener     = regexp.MustCompile(`(?i)^\s*(?:here(?:['’]s| is) the thing|the truth is|let(?:['’]s| us) be honest|die wahrheit ist|mal ehrlich)\b`)
-	genericCTA       = regexp.MustCompile(`(?i)\b(?:what do you think|agree\?|are you ready\?|is your (?:team|organization|unternehmen) ready|wie siehst du das\?|was denkst du\?)`)
+	genericCTA       = regexp.MustCompile(`(?i)\b(?:what do you think|agree\?|are you ready\?|is your (?:team|company|unternehmen) ready|wie siehst du das\?|was denkst du\?)`)
 	aiEse            = regexp.MustCompile(`(?i)\b(?:delve|unlock|leverage|game[- ]changer|transformative|ever[- ]evolving|navigate the complexities|synergy|paradigm shift|ganzheitlich|bahnbrechend|in einer sich ständig wandelnden welt)\b`)
 )
 

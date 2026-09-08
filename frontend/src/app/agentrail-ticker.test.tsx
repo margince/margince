@@ -82,10 +82,10 @@ describe("useAgentTicker", () => {
     render(harness(<Ticker />));
     // The list the reader arrived from carried the name, which is the case that
     // lets the record read be named the moment it starts.
-    await read(["organizations"], {
+    await read(["companies"], {
       data: [{ id: "o-1", name: "zenloop" }],
     });
-    await read(["organization360", "o-1"], { id: "o-1", name: "zenloop" });
+    await read(["company360", "o-1"], { id: "o-1", name: "zenloop" });
     expect(line()).toBe("Reading everything about zenloop");
   });
 
@@ -99,7 +99,7 @@ describe("useAgentTicker", () => {
         type: "updated",
         query: client
           .getQueryCache()
-          .build(client, { queryKey: ["organization360", "unknown-id"] }),
+          .build(client, { queryKey: ["company360", "unknown-id"] }),
         action: { type: "fetch" },
       });
     });

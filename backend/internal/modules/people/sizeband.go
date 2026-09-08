@@ -22,7 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
-// sizeBands mirrors the organization.size_band CHECK (0005) in ascending
+// sizeBands mirrors the company.size_band CHECK (0005) in ascending
 // order; the top band is open-ended.
 var sizeBands = []struct {
 	label  string
@@ -151,7 +151,7 @@ func bandContaining(n int) (string, bool) {
 // maps cleanly. On abstention the fact row stays the evidence and the column
 // stays fillable by a later, cleaner read.
 //
-// appliedFacts is upsertOrganizationFacts' report of what actually landed: a
+// appliedFacts is upsertCompanyFacts' report of what actually landed: a
 // proposal whose employee_range the human-precedence guard refused must not
 // promote either, or the column would contradict the standing human fact.
 func fillSizeBandFromFacts(ctx context.Context, tx pgx.Tx, in DeepReadProposal, by string, appliedFacts []map[string]any) error {
@@ -171,13 +171,13 @@ func fillSizeBandFromFacts(ctx context.Context, tx pgx.Tx, in DeepReadProposal, 
 			return nil
 		}
 		// archived_at IS NULL beside size_band IS NULL: the deep-read apply
-		// that calls this probes a live organization, and the statement says so
+		// that calls this probes a live company, and the statement says so
 		// itself rather than inheriting it, because a promotion onto an archived
 		// company is wrong no matter which caller reaches this helper.
 		tag, err := tx.Exec(ctx,
-			`UPDATE organization SET size_band = $2
+			`UPDATE company SET size_band = $2
 			  WHERE id = $1 AND size_band IS NULL AND archived_at IS NULL`,
-			in.OrganizationID, band)
+			in.CompanyID, band)
 		if err != nil {
 			return fmt.Errorf("fill size_band: %w", err)
 		}
@@ -187,7 +187,7 @@ func fillSizeBandFromFacts(ctx context.Context, tx pgx.Tx, in DeepReadProposal, 
 			if f.SourceURL != "" {
 				stamp.EvidenceRef = &f.SourceURL
 			}
-			if err := storekit.StampFields(ctx, tx, "organization", in.OrganizationID.UUID,
+			if err := storekit.StampFields(ctx, tx, "company", in.CompanyID.UUID,
 				companySourceSiteRead, by, []storekit.FieldStamp{stamp}); err != nil {
 				return err
 			}

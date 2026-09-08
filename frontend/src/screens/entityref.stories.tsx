@@ -22,11 +22,11 @@ const meta: Meta<typeof EntityRef> = {
   decorators: [
     (Story) => {
       installFetchStub({
-        "GET /organizations/o-1": () =>
+        "GET /companies/o-1": () =>
           jsonResponse({ id: "o-1", display_name: "Brandt Automotive GmbH" }),
         // Refused rather than missing: a 404 is an answer (the record is gone
         // or hidden) and keeps the id, while a 403 is the read never arriving.
-        "GET /organizations/o-refused": () =>
+        "GET /companies/o-refused": () =>
           jsonResponse({ title: "permission denied" }, 403),
         // A roster that offers another cursor for every page it answers: the
         // walk spends its page budget and still has not reached the end, which
@@ -50,15 +50,15 @@ export default meta;
 type Story = StoryObj<typeof EntityRef>;
 
 export const ResolvedBacklink: Story = {
-  args: { kind: "organization", id: "o-1" },
+  args: { kind: "company", id: "o-1" },
 };
 
 export const UnresolvedFallsBackToId: Story = {
-  args: { kind: "organization", id: "o-unknown" },
+  args: { kind: "company", id: "o-unknown" },
 };
 
 export const FailedReadSaysSo: Story = {
-  args: { kind: "organization", id: "o-refused" },
+  args: { kind: "company", id: "o-refused" },
 };
 
 export const RosterStoppedShortSaysNameDidNotLoad: Story = {

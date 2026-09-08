@@ -28,7 +28,7 @@ package compose
 // the SAME seam runner.go's Surface-B loop and the intent tools already
 // ride (compose/runnerservice.go, compose/registry.go), backed by
 // modules/search's fixed-depth graph walk (activities linked to the deal,
-// plus the people/orgs/deals those activities also touch). This file
+// plus the people/companies/deals those activities also touch). This file
 // invents no new context store: it is the one retrieval seam every other
 // AI consumer already shares, so "grounded in the deal's context" means
 // the same thing everywhere in the codebase.

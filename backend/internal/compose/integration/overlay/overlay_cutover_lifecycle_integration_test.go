@@ -124,7 +124,7 @@ func TestOverlayCutoverRetirementAndReconstruction(t *testing.T) {
 
 	// Native data and the audit spine survive retirement.
 	counts := f.nativeEstateRows(t)
-	for object, n := range map[string]int{"person": 3, "organization": 2, "deal": 2, "lead": 1, "activity": 1} {
+	for object, n := range map[string]int{"person": 3, "company": 2, "deal": 2, "lead": 1, "activity": 1} {
 		if counts[object] != n {
 			t.Errorf("native %s rows after retirement = %d, want %d", object, counts[object], n)
 		}
@@ -180,13 +180,13 @@ func TestOverlayCutoverRetirementAndReconstruction(t *testing.T) {
 		}
 	}
 	assertCount("reconstructed persons", `SELECT count(*) FROM person WHERE source LIKE 'mirror:hubspot:%'`, 3)
-	assertCount("reconstructed organizations", `SELECT count(*) FROM organization WHERE source LIKE 'mirror:hubspot:%'`, 2)
+	assertCount("reconstructed companies", `SELECT count(*) FROM company WHERE source LIKE 'mirror:hubspot:%'`, 2)
 	assertCount("reconstructed deals", `SELECT count(*) FROM deal WHERE source LIKE 'mirror:hubspot:%'`, 2)
 	assertCount("reconstructed leads", `SELECT count(*) FROM lead WHERE source_system = 'mirror:hubspot'`, 1)
 	assertCount("reconstructed activities", `SELECT count(*) FROM activity WHERE source_system = 'mirror:hubspot'`, 1)
-	assertCount("reconstructed deal→org FK", `
-		SELECT count(*) FROM deal d JOIN organization o ON o.id = d.organization_id
-		WHERE d.source = 'mirror:hubspot:deal:d-open' AND o.source = 'mirror:hubspot:organization:org-1'`, 1)
+	assertCount("reconstructed deal→company FK", `
+		SELECT count(*) FROM deal d JOIN company o ON o.id = d.company_id
+		WHERE d.source = 'mirror:hubspot:deal:d-open' AND o.source = 'mirror:hubspot:company:company-1'`, 1)
 	assertCount("reconstructed employment", `
 		SELECT count(*) FROM relationship r JOIN person p ON p.id = r.person_id
 		WHERE r.kind = 'employment' AND p.source = 'mirror:hubspot:person:p-1'`, 1)
@@ -236,18 +236,18 @@ func seedCleanInstance(t *testing.T, f flipEstate) context.Context {
 	}
 	// The source estate goes first, and that is the point rather than a
 	// workaround. Pipeline names, the default pipeline and the anchor
-	// organization are installation-wide keys since ADR-0091 §8 phase B, so a
+	// company are installation-wide keys since ADR-0091 §8 phase B, so a
 	// clean instance cannot be stood up BESIDE the estate it rebuilds — and it
 	// never could in reality either: a reconstruction restores THE
 	// installation from its export, after the estate it came from is gone.
 	// The bundle is already in memory, so deleting the source loses nothing
 	// this test still needs.
 	// The order is the foreign keys' — a deal points at its stage, its pipeline
-	// and its organization. No workspace predicate on any of them: ADR-0091 §8
+	// and its company. No workspace predicate on any of them: ADR-0091 §8
 	// phase D has now taken the column off all seven, so the estate IS every
 	// row of these tables.
 	for _, table := range []string{
-		"deal", "stage", "pipeline", "organization", "person", "lead", "activity",
+		"deal", "stage", "pipeline", "company", "person", "lead", "activity",
 	} {
 		if _, err := f.e.Owner.Exec(ctx, "DELETE FROM "+table); err != nil {
 			t.Fatalf("retiring the source estate's %s rows before the rebuild: %v", table, err)

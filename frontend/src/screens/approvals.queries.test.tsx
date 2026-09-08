@@ -255,7 +255,7 @@ describe("useDecidedApprovals", () => {
 describe("useTargetApprovals", () => {
   it("asks the server for one record's queue and keeps only what is pending", async () => {
     const seen = stubPages({
-      "pending|org-1": {
+      "pending|company-1": {
         data: [
           approval({ id: "live" }),
           approval({ id: "aged", status: "expired" }),
@@ -265,7 +265,7 @@ describe("useTargetApprovals", () => {
     });
 
     const { result } = renderHook(
-      () => useTargetApprovals("organization", "org-1"),
+      () => useTargetApprovals("company", "company-1"),
       { wrapper: wrapper() },
     );
 
@@ -274,14 +274,14 @@ describe("useTargetApprovals", () => {
     // The record is a SERVER-side filter, not a client-side one: reading the
     // whole workspace queue and narrowing here would page past the record's own
     // approvals long before it found them.
-    expect(seen).toContain("pending|org-1");
+    expect(seen).toContain("pending|company-1");
   });
 
   it("asks nothing while it is gated", async () => {
     const seen = stubPages({});
 
     const { result } = renderHook(
-      () => useTargetApprovals("organization", "org-1", false),
+      () => useTargetApprovals("company", "company-1", false),
       { wrapper: wrapper() },
     );
 

@@ -110,7 +110,7 @@ var contractViewResources = []crmcontracts.SavedViewResource{
 	crmcontracts.SavedViewResourceActivities,
 	crmcontracts.SavedViewResourceDeals,
 	crmcontracts.SavedViewResourceLeads,
-	crmcontracts.SavedViewResourceOrganizations,
+	crmcontracts.SavedViewResourceCompanies,
 	crmcontracts.SavedViewResourcePartners,
 	crmcontracts.SavedViewResourcePeople,
 	crmcontracts.SavedViewResourceProjects,

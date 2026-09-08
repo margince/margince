@@ -135,9 +135,9 @@ func knownRecords(in Input) map[string]string {
 // matching a type the wire no longer carries — a citation that silently stops
 // grounding.
 var (
-	citeDeal     = string(crmcontracts.OrganizationBriefEvidenceEntityTypeDeal)
-	citeActivity = string(crmcontracts.OrganizationBriefEvidenceEntityTypeActivity)
-	citePerson   = string(crmcontracts.OrganizationBriefEvidenceEntityTypePerson)
+	citeDeal     = string(crmcontracts.CompanyBriefEvidenceEntityTypeDeal)
+	citeActivity = string(crmcontracts.CompanyBriefEvidenceEntityTypeActivity)
+	citePerson   = string(crmcontracts.CompanyBriefEvidenceEntityTypePerson)
 )
 
 // SystemPromptFor is the assembled system turn, for the compose-level parity

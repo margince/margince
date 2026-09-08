@@ -42,7 +42,7 @@ writing anything.
 | Topic kind | The choke point | Where |
 |---|---|---|
 | Writing a domain row | the module's store method, and `storekit.Audit`/`Emit` inside one tx | `modules/<name>/`, `platform/database/storekit` |
-| Reading one record's world | `person360.Service.Assemble` / `org360.Service.Assemble`, reached through the `Assembler` interface each consumer declares | `compose/person360`, `compose/org360` |
+| Reading one record's world | `person360.Service.Assemble` / `company360.Service.Assemble`, reached through the `Assembler` interface each consumer declares | `compose/person360`, `compose/company360` |
 | An MCP tool that answers a question a page already answers | a `compose/*seam*.go` file | `internal/compose/` |
 | A model system prompt for correspondence | `draftrules.Shared` | `compose/draftrules` |
 | Fetching a tenant-supplied URL | `platform/webread` (SSRF-guarded via `platform/netguard`) | `platform/webread` |

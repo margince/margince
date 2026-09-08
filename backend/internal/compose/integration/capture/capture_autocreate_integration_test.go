@@ -53,12 +53,12 @@ func TestCaptureAutoCreatesTheCounterpartyBehindAThread(t *testing.T) {
 		// acme.example is exactly what produced junk named after people.
 		// NOT is_anchor: the installation's own company is created by cold
 		// start, not derived from a captured domain.
-		if n := countRows(t, e, `SELECT count(*) FROM organization WHERE NOT is_anchor`); n != 0 {
-			t.Fatalf("%d organizations from an unjudged domain, want 0", n)
+		if n := countRows(t, e, `SELECT count(*) FROM company WHERE NOT is_anchor`); n != 0 {
+			t.Fatalf("%d companies from an unjudged domain, want 0", n)
 		}
 		// What capture DOES record is the question, once, for the domain.
 		if n := countRows(t, e, `
-			SELECT count(*) FROM organization_domain_disposition
+			SELECT count(*) FROM company_domain_disposition
 			WHERE domain = 'acme.example' AND status = 'pending'`); n != 1 {
 			t.Fatalf("%d open company questions for acme.example, want exactly 1", n)
 		}
@@ -84,8 +84,8 @@ func TestCaptureAutoCreatesTheCounterpartyBehindAThread(t *testing.T) {
 			WHERE email = 'alice@acme.example'`); n != 1 {
 			t.Fatalf("%d ledger rows for alice, want 1 — the cold first message deferred", n)
 		}
-		if n := countRows(t, e, `SELECT count(*) FROM activity_link WHERE entity_type = 'organization'`); n != 0 {
-			t.Fatalf("%d org links, want 0 — the org rolls up through employment", n)
+		if n := countRows(t, e, `SELECT count(*) FROM activity_link WHERE entity_type = 'company'`); n != 0 {
+			t.Fatalf("%d company links, want 0 — the company rolls up through employment", n)
 		}
 		// Connector-created rows belong to the MAILBOX OWNER until something
 		// judges their sender a business counterparty. Connecting a mailbox
@@ -117,7 +117,7 @@ func TestCaptureAutoCreatesTheCounterpartyBehindAThread(t *testing.T) {
 	})
 	t.Run("a fuzzy near-match creates anyway and queues the pair", func(t *testing.T) {
 		// A near-identical name on the SAME employer domain: the PO-F-1
-		// score (0.55·name + 0.45·org) crosses the review threshold. The
+		// score (0.55·name + 0.45·company) crosses the review threshold. The
 		// near-match needs someone to be near, so this captures both halves
 		// rather than leaning on whoever a sibling subtest created.
 		// Both are written to first: a stranger defers, so a dedupe pair only
@@ -211,8 +211,8 @@ func TestCaptureRefusesToDeriveARecord(t *testing.T) {
 			WHERE pe.email = 'carol@myco.example'`); n != 0 {
 			t.Fatal("a colleague must not become a CRM person")
 		}
-		if n := countRows(t, e, `SELECT count(*) FROM organization WHERE display_name = 'myco.example'`); n != 0 {
-			t.Fatal("the workspace's own domain must not become a CRM organization")
+		if n := countRows(t, e, `SELECT count(*) FROM company WHERE display_name = 'myco.example'`); n != 0 {
+			t.Fatal("the workspace's own domain must not become a CRM company")
 		}
 		if n := countRows(t, e, `SELECT count(*) FROM activity WHERE source_id = 'c1@myco.example'`); n != 0 {
 			t.Fatal("colleague mail must not be stored — a link-less activity is readable workspace-wide")

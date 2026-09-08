@@ -37,14 +37,14 @@ const meta: Meta = {
 export default meta;
 
 type Story = StoryObj;
-type View = components["schemas"]["Organization360"];
-type FinanceSummary = components["schemas"]["OrganizationFinanceSummary"];
+type View = components["schemas"]["Company360"];
+type FinanceSummary = components["schemas"]["CompanyFinanceSummary"];
 
 const page = { has_more: false, next_cursor: null };
 
 const populated = {
   as_of: "2026-07-13T09:00:00Z",
-  organization: {
+  company: {
     id: "o-1",
     display_name: "Brandt Automotive GmbH",
     lifecycle: "customer",
@@ -318,13 +318,13 @@ const empty = {
 
 function Cards({ view }: Readonly<{ view: View }>) {
   installFetchStub({
-    "GET /me": meRoute({ organization: ["read", "update"] }),
+    "GET /me": meRoute({ company: ["read", "update"] }),
     "GET /signals": () => jsonResponse({ data: [], page }),
     // The prepared questions answer from the account; the story serves the
     // deterministic floor, which is what a deployment with no model lane shows.
-    "POST /organizations/o-1/ask": () =>
+    "POST /companies/o-1/ask": () =>
       jsonResponse({
-        organization_id: "o-1",
+        company_id: "o-1",
         question: "whats_open",
         generated_at: "2026-07-13T09:00:00Z",
         generated_by: "deterministic",
@@ -407,14 +407,14 @@ const recommending = {
 
 function RecommendedStep() {
   installFetchStub({
-    "GET /me": meRoute({ organization: ["read", "update"] }),
+    "GET /me": meRoute({ company: ["read", "update"] }),
   });
   return (
     <StoryProviders>
       <div style={{ display: "grid", gap: "var(--space-3)", maxWidth: 420 }}>
         <NextSteps
           view={recommending}
-          proposed={<ProposedNextSteps orgId="o-1" view={recommending} />}
+          proposed={<ProposedNextSteps companyId="o-1" view={recommending} />}
         />
       </div>
     </StoryProviders>
@@ -437,7 +437,7 @@ export const NextStepRecommended: Story = {
 // than one year's worth of it, and a slot that reached for the wrong window
 // would be visibly wrong rather than plausibly wrong.
 const connectedFinance: FinanceSummary = {
-  organization_id: "o-1",
+  company_id: "o-1",
   state: "connected",
   provider: "offline_demo",
   last_synced_at: "2026-08-10T06:00:00Z",
@@ -464,23 +464,23 @@ const connectedFinance: FinanceSummary = {
 // `Strip` itself returns `<StoryProviders>`, so it sits outside the
 // LocaleProvider it renders and cannot call `useT` directly; `StripBody`
 // is the inner component that mounts inside that context, mirroring the
-// real caller's label wiring (organizations.tsx's CompanyBand) rather than
+// real caller's label wiring (companies.tsx's CompanyBand) rather than
 // the identity functions that used to stand in for it and rendered the raw
 // wire enum instead of its copy.
 function StripBody({ view }: Readonly<{ view?: View }>) {
-  return <StateStrip orgId="o-1" view={view} />;
+  return <StateStrip companyId="o-1" view={view} />;
 }
 
 function Strip({
   view,
-  finance = { organization_id: "o-1", state: "no_connection" },
+  finance = { company_id: "o-1", state: "no_connection" },
 }: Readonly<{ view?: View; finance?: FinanceSummary }>) {
   installFetchStub({
-    "GET /me": meRoute({ organization: ["read", "update"] }), // The customer branch's money slot reads this directly (MoneyStat) —
+    "GET /me": meRoute({ company: ["read", "update"] }), // The customer branch's money slot reads this directly (MoneyStat) —
     // the same query the finance card and the payment health dimension run —
     // so a customer story with nothing stubbed here fires a real request the
     // static build has nowhere to send.
-    "GET /organizations/o-1/finance-summary": () => jsonResponse(finance),
+    "GET /companies/o-1/finance-summary": () => jsonResponse(finance),
   });
   return (
     <StoryProviders>

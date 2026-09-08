@@ -8,7 +8,7 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // What the company IS, read from its own recorded facts (see companydossier.tsx's
 // own doc comment). Fixture mirrors companydossier.test.tsx's DESCRIBED — a
-// COMPLETE OrganizationDossier, not a cast one, so a missing required field
+// COMPLETE CompanyDossier, not a cast one, so a missing required field
 // fails here rather than rendering an unlabelled heading.
 
 const meta: Meta = {
@@ -18,10 +18,10 @@ const meta: Meta = {
 export default meta;
 
 type Story = StoryObj;
-type Dossier = components["schemas"]["OrganizationDossier"];
+type Dossier = components["schemas"]["CompanyDossier"];
 
 const described: Dossier = {
-  organization_id: "o-1",
+  company_id: "o-1",
   generated_at: "2026-08-08T09:00:00Z",
   generated_by: "deterministic",
   sections: [
@@ -50,12 +50,12 @@ const described: Dossier = {
 
 function Dossier({ body }: Readonly<{ body: unknown }>) {
   installFetchStub({
-    "GET /organizations/o-1/dossier": () => jsonResponse(body),
+    "GET /companies/o-1/dossier": () => jsonResponse(body),
   });
   return (
     <StoryProviders>
       <div style={{ maxWidth: 480 }}>
-        <DossierPanel orgId="o-1" enabled />
+        <DossierPanel companyId="o-1" enabled />
       </div>
     </StoryProviders>
   );

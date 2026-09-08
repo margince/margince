@@ -23,7 +23,7 @@ const NOON = new Date("2026-08-19T12:00:00");
 function employment(over: Partial<Employment>): Employment {
   return {
     relationship_id: "rel-1",
-    organization_id: "o-1",
+    company_id: "o-1",
     is_current_primary: false,
     ended_at: null,
     ...over,

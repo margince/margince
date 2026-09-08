@@ -117,7 +117,7 @@ describe("moveHref — the draft_reply move", () => {
   // A deal has no composer to open, so a link claiming to draft there would
   // promise what the click cannot do. It reaches the record and says so.
   it("reaches the record, and claims no draft, where there is no composer", () => {
-    for (const type of ["deal", "organization"]) {
+    for (const type of ["deal", "company"]) {
       const item = replyRow({ type, id: "x-1" });
       expect(moveHref(item)).not.toContain("compose=");
       expect(moveHref(item)).toBeTruthy();

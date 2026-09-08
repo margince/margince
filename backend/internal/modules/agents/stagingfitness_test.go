@@ -73,7 +73,7 @@ func TestEveryStageableToolRefusesATargetHeldElsewhere(t *testing.T) {
 		// links are what carry the refusal here.
 		"send_account_email": fmt.Sprintf(
 			`{"to":["a@example.test"],"subject":"s","body":"b","consent_purpose":"support",`+
-				`"links":[{"entity_type":"organization","entity_id":%q}]}`, ids.NewV7()),
+				`"links":[{"entity_type":"company","entity_id":%q}]}`, ids.NewV7()),
 		// The whole-call staging the tier floor produces (#982). It patches an
 		// existing row, so it carries the same obligation as its siblings.
 		"update_record": fmt.Sprintf(`{"record_type":"person","id":%q,"fields":{"full_name":"X"}}`, person),

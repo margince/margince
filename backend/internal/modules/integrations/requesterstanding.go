@@ -37,7 +37,7 @@ func (s *Store) WithRequesterStanding(holds RequesterHoldsFunc) *Store {
 }
 
 // employerWithheldFrom reports whether the human who asked for this run may not
-// read organizations, so the employer must not travel with the subject.
+// read companies, so the employer must not travel with the subject.
 //
 // A run with no requester is the automatic sweep: it acts for the installation
 // rather than for a person, and there is no scope to answer for.
@@ -61,7 +61,7 @@ func (s *Store) employerWithheldFrom(ctx context.Context, tx pgx.Tx, runID strin
 }
 
 // withholdEmployerIfUnreadable strips the employer from a request when the
-// human who asked for the run may not read organizations, and reports whether
+// human who asked for the run may not read companies, and reports whether
 // what remains is still worth sending.
 //
 // Withheld rather than refused: an employer they may not read is one field of a

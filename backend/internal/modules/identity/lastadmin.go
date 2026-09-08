@@ -4,7 +4,7 @@
 package identity
 
 // The one invariant user administration cannot be allowed to break: an
-// organization always keeps at least one administrator who can actually
+// company always keeps at least one administrator who can actually
 // administer it. Every path that could remove the last one — deactivating an
 // admin, demoting an admin — asks here first.
 
@@ -18,7 +18,7 @@ import (
 )
 
 // lastActiveAdmin reports whether userID is an active admin and the ONLY one —
-// deactivating them would leave the organization with no administrator and no
+// deactivating them would leave the company with no administrator and no
 // in-app way to recover. Runs inside the caller's row-locked transaction.
 func lastActiveAdmin(ctx context.Context, tx pgx.Tx, userID ids.UserID) (bool, error) {
 	// Serialize the admin-count check+act across the whole workspace: without

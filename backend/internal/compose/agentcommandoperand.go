@@ -5,7 +5,7 @@ package compose
 
 // The REST door's half of the eight commands whose operand is a SECOND path
 // parameter or a second path segment, not the route's own {id}
-// (margince/margince#928 task 5): an organization fact or profile
+// (margince/margince#928 task 5): a company fact or profile
 // field, a custom field's retire/options actions, and a project stakeholder.
 // The decoding shape is the same one archiveCommand/patchCommand set in
 // agentcommand.go — parse {id} as the existence-hiding 404 (routedID, shared
@@ -302,7 +302,7 @@ func withRoomID(body []byte, roomID ids.UUID) (json.RawMessage, error) {
 }
 
 // setCompanyCommand decodes PUT /v1/projects/{id}/companies. The body's
-// organization_id is held here for the same reason the stakeholder attach holds
+// company_id is held here for the same reason the stakeholder attach holds
 // person_id: an attach that names no company cannot run, and refusing at
 // staging tells the caller that rather than staging an approval that will fail
 // when it is redeemed.
@@ -313,30 +313,30 @@ func setCompanyCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, bod
 	if err != nil {
 		return nil, err
 	}
-	if err := requireCompanyOrganization(body); err != nil {
+	if err := requireCompanyCompany(body); err != nil {
 		return nil, err
 	}
 	return agents.NewSetCompanyCall(deps.records, agents.SetCompanyCommand{ID: id}), nil
 }
 
-// requireCompanyOrganization holds the body to the one member the attach cannot
+// requireCompanyCompany holds the body to the one member the attach cannot
 // run without. A body that is not even an object is answered as the same
-// missing organization_id, since neither carries one.
-func requireCompanyOrganization(body []byte) error {
+// missing company_id, since neither carries one.
+func requireCompanyCompany(body []byte) error {
 	var payload struct {
-		OrganizationID string `json:"organization_id"`
+		CompanyID string `json:"company_id"`
 	}
-	if err := json.Unmarshal(body, &payload); err != nil || payload.OrganizationID == "" {
-		return httperr.Validation("organization_id", "missing", "organization_id is required")
+	if err := json.Unmarshal(body, &payload); err != nil || payload.CompanyID == "" {
+		return httperr.Validation("company_id", "missing", "company_id is required")
 	}
-	if _, err := ids.Parse(payload.OrganizationID); err != nil {
-		return httperr.Validation("organization_id", "invalid", "organization_id must be a uuid")
+	if _, err := ids.Parse(payload.CompanyID); err != nil {
+		return httperr.Validation("company_id", "invalid", "company_id must be a uuid")
 	}
 	return nil
 }
 
 // removeCompanyCommand decodes DELETE
-// /v1/projects/{id}/companies/{organization_id} — the company is a second PATH
+// /v1/projects/{id}/companies/{company_id} — the company is a second PATH
 // operand, so it is read from the route rather than a body.
 //
 //nolint:ireturn // the call IS the product: a concrete resolver here is exactly the thing that must not leave the agents package
@@ -345,14 +345,14 @@ func removeCompanyCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, 
 	if err != nil {
 		return nil, err
 	}
-	raw, err := pathOperand(r, "organization_id")
+	raw, err := pathOperand(r, "company_id")
 	if err != nil {
 		return nil, err
 	}
-	organizationID, perr := ids.Parse(raw)
+	companyID, perr := ids.Parse(raw)
 	if perr != nil {
-		return nil, httperr.Validation("organization_id", "invalid", "organization_id must be a uuid")
+		return nil, httperr.Validation("company_id", "invalid", "company_id must be a uuid")
 	}
 	return agents.NewRemoveCompanyCall(deps.records,
-		agents.RemoveCompanyCommand{ID: id, OrganizationID: organizationID}), nil
+		agents.RemoveCompanyCommand{ID: id, CompanyID: companyID}), nil
 }

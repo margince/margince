@@ -284,7 +284,7 @@ describe("the connect-time backfill payoff", () => {
         countsStatus("running", {
           captured: 128,
           people_created: 47,
-          organizations_created: 12,
+          companies_created: 12,
           messages_scanned: 150,
         }),
       ],
@@ -307,7 +307,7 @@ describe("the connect-time backfill payoff", () => {
         countsStatus("done", {
           captured: 512,
           people_created: 90,
-          organizations_created: 20,
+          companies_created: 20,
           messages_scanned: 600,
         }),
       ],

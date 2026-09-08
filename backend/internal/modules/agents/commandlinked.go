@@ -107,7 +107,7 @@ type accountSendResolver struct {
 //
 // A LINK CANNOT BE THE TARGET here, the way a booking's first link is. The pin
 // is taken SERVER-SIDE from the target pair (approvals.resolveTargetVersion),
-// so an organization target pins a version that an enrichment run bumps while
+// so a company target pins a version that an enrichment run bumps while
 // an overnight proposal waits for someone's morning inbox — cancelling a send
 // the record's own content never invalidated. The waiver that declines a pin
 // is reserved for kinds whose effect approvals itself applies

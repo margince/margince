@@ -17,8 +17,8 @@ import type { IntroTarget } from "./introrequest";
 // contact nobody can reach, a route through a colleague who has left — could
 // only be seen by seeding an account that has them.
 
-type Coverage = components["schemas"]["OrganizationCoverage"];
-type Seat = components["schemas"]["OrganizationCoverageSeat"];
+type Coverage = components["schemas"]["CompanyCoverage"];
+type Seat = components["schemas"]["CompanyCoverageSeat"];
 
 // A colleague's id in the drawing. Nodes of different kinds share one id
 // space, so a person and a colleague carrying the same uuid must not collide —
@@ -109,12 +109,12 @@ export function mapModelFromCoverage(
 
   // The account, and the deal the committee belongs to.
   nodes.push({
-    id: "org",
-    kind: "organization",
+    id: "company",
+    kind: "company",
     label: accountName,
     sublabel: copy.account,
   });
-  const centre = ["org"];
+  const centre = ["company"];
   const deal = coverage.deals.find(
     (candidate) => candidate.deal_id === coverage.selected_deal_id,
   );

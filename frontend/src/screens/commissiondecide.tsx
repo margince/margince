@@ -116,11 +116,11 @@ async function decide(
 export function CommissionDecision({
   entry,
   decision,
-  organizationId,
+  companyId,
 }: Readonly<{
   entry: CommissionEntry;
   decision: Decision;
-  organizationId: string;
+  companyId: string;
 }>) {
   const t = useT();
   const { show: showToast } = useToast();
@@ -151,7 +151,7 @@ export function CommissionDecision({
       // decision: version skew".
       if (err instanceof ProblemError && isVersionSkew(err.problem)) {
         queryClient.invalidateQueries({
-          queryKey: ["partner-commissions", organizationId],
+          queryKey: ["partner-commissions", companyId],
         });
       }
     },
@@ -161,7 +161,7 @@ export function CommissionDecision({
       // second key nothing reads would be a line that looks like caution and
       // does nothing.
       queryClient.invalidateQueries({
-        queryKey: ["partner-commissions", organizationId],
+        queryKey: ["partner-commissions", companyId],
       });
       setOpen(false);
       setReason("");

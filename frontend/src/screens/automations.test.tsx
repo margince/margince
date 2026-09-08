@@ -771,7 +771,7 @@ const renewalReminderSchema = {
     },
     object: {
       type: "string",
-      enum: ["person", "organization", "deal", "lead", "project"],
+      enum: ["person", "company", "deal", "lead", "project"],
       description: "Which record type owns the watched date field.",
     },
     recurs_yearly: {
@@ -884,7 +884,7 @@ describe("renewal_reminder's schema-driven params (GH-706)", () => {
         key: "object",
         kind: "enum",
         initial: "",
-        options: ["person", "organization", "deal", "lead", "project"],
+        options: ["person", "company", "deal", "lead", "project"],
       },
       { key: "recurs_yearly", kind: "boolean", initial: "false" },
     ]);

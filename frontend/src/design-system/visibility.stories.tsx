@@ -35,7 +35,7 @@ export const EveryState: Story = {
 };
 
 /** The mark beside the verb that changes it, as the mail drawer draws it for
- * a captured thread this reader has shared with the organization. The verb
+ * a captured thread this reader has shared with the company. The verb
  * follows the mark rather than taking the far end of the row: on a wide
  * surface — and this one is 480px of a heading that is wider still — a button
  * pushed right is a verb the reader has to travel to and back from. */

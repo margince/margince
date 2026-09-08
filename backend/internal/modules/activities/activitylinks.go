@@ -65,7 +65,7 @@ func (e *TooManyLinksError) FieldFault() (field, code, message string) {
 }
 
 // insertActivityLinks writes the polymorphic link rows. The last_activity_at
-// clocks on deal, person and organization move with them, but not from here:
+// clocks on deal, person and company move with them, but not from here:
 // migration 1787032690 keeps them on the activity_link row itself (a trigger
 // recomputing from the timeline), because this is one of several writers of
 // that row — capture, ensure, relink and message identity insert links too —
@@ -167,7 +167,7 @@ func insertActivityLinks(ctx context.Context, tx pgx.Tx, activityID ids.Activity
 // that excludes no held row. The relink path takes the trigger's answer
 // instead — it holds no kind and would need that read to name one.
 func refuseACompanyMeeting(kind string, link ActivityLinkInput) error {
-	if !personalActivityKinds[kind] || link.EntityType != linkEntityOrganization {
+	if !personalActivityKinds[kind] || link.EntityType != linkEntityCompany {
 		return nil
 	}
 	return &CompanyMeetingError{Kind: kind}

@@ -29,11 +29,11 @@ import "./company360.css";
 // every other figure on the page. The record exists now, so the block reports
 // it instead.
 
-type Organization360 = components["schemas"]["Organization360"];
-type Deal = NonNullable<Organization360["deals"]>["data"][number];
+type Company360 = components["schemas"]["Company360"];
+type Deal = NonNullable<Company360["deals"]>["data"][number];
 type Offer = components["schemas"]["Offer"];
 type ContractStrip = NonNullable<
-  NonNullable<Organization360["state_strip"]>["contracts"]
+  NonNullable<Company360["state_strip"]>["contracts"]
 >;
 
 /**
@@ -47,9 +47,7 @@ type ContractStrip = NonNullable<
  * with no offer to name is not a section, and an empty block under the deal
  * rows would read as a missing feature rather than as "there is none".
  */
-export function CompanyLastOffer({
-  view,
-}: Readonly<{ view?: Organization360 }>) {
+export function CompanyLastOffer({ view }: Readonly<{ view?: Company360 }>) {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
@@ -187,7 +185,7 @@ const OFFER_TONE: Record<
  */
 export function CompanyContractState({
   view,
-}: Readonly<{ view?: Organization360 }>) {
+}: Readonly<{ view?: Company360 }>) {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();

@@ -21,7 +21,7 @@ import (
 // change, a MessageFault names a condition no single argument owns.
 
 // RelationshipShapeError refuses an edge whose endpoints do not match its kind
-// — an employment without an organization, a deal stakeholder without a deal.
+// — an employment without a company, a deal stakeholder without a deal.
 //
 // MessageFault, not FieldFault: the mismatch is between the kind and the PAIR of
 // endpoints, so no single argument is the wrong one. Naming one would send the
@@ -40,7 +40,7 @@ func (e *RelationshipShapeError) Error() string {
 // the wrong one.
 func (e *RelationshipShapeError) MessageFault() (code, message string) {
 	return "relationship_shape_invalid",
-		e.Error() + " — check which person/organization/deal/project fields this kind requires"
+		e.Error() + " — check which person/company/deal/project fields this kind requires"
 }
 
 // relationshipKindField is the wire path both kind refusals name: the omitted-kind

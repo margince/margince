@@ -29,7 +29,7 @@ import (
 //
 // The 360 orders employments with the current primary first, so the first row
 // is the only one that can be it. A row that is not current, or one carrying no
-// organization name, answers empty rather than the next-best guess: "used to
+// company name, answers empty rather than the next-best guess: "used to
 // work at" is a different sentence from "works at", and a draft that gets it
 // wrong tells somebody about a job they have left.
 func CurrentEmployer(view crmcontracts.Person360) string {
@@ -37,10 +37,10 @@ func CurrentEmployer(view crmcontracts.Person360) string {
 		return ""
 	}
 	first := view.Employments.Data[0]
-	if !first.IsCurrentPrimary || first.OrganizationName == nil {
+	if !first.IsCurrentPrimary || first.CompanyName == nil {
 		return ""
 	}
-	return *first.OrganizationName
+	return *first.CompanyName
 }
 
 // OmittedNames is what the caller could NOT see, as plain strings.

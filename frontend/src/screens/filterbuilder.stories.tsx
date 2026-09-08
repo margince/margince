@@ -39,11 +39,11 @@ const FIELDS: VocabularyField[] = [
   {
     // Unbounded: a workspace has as many accounts as customers, so this one
     // keeps a plain box rather than a dropdown that could never be complete.
-    name: "organization_id",
+    name: "company_id",
     type: "id",
     operators: ["eq", "neq", "in", "exists"],
     custom: false,
-    references: "organization",
+    references: "company",
   },
   {
     name: "full_name",
@@ -116,7 +116,7 @@ export const RecordPickerOnAPartialRoster: Story = {
 export const UnboundedTargetKeepsABox: Story = {
   // The documented exception. A dropdown here could never be complete, and a
   // half-filled one would read as "this account does not exist".
-  render: story(newGroup("and", [newLeaf("organization_id", "eq", "")])),
+  render: story(newGroup("and", [newLeaf("company_id", "eq", "")])),
 };
 
 export const OperatorAnswersTheQuestion: Story = {

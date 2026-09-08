@@ -128,7 +128,7 @@ describe("history field labels", () => {
       "activity",
       "deal",
       "lead",
-      "organization",
+      "company",
       "person",
       "project",
     ]);

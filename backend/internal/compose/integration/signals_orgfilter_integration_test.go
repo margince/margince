@@ -5,10 +5,10 @@
 
 package integration
 
-// A signal reaches an organization two ways, and the account filter answers
-// for both: the resolver stamps resolved_org_id on the item it attributed,
-// and a signal created directly ABOUT the organization carries the
-// (entity_type, entity_id) subject pair and no resolved_org_id at all.
+// A signal reaches a company two ways, and the account filter answers
+// for both: the resolver stamps resolved_company_id on the item it attributed,
+// and a signal created directly ABOUT the company carries the
+// (entity_type, entity_id) subject pair and no resolved_company_id at all.
 // A deal-subject signal belongs to its deal and stays out of both arms.
 
 import (
@@ -25,7 +25,7 @@ import (
 var signalReaderPerms = principal.Permissions{
 	RoleKeys: []string{"admin"},
 	Objects: map[string]principal.ObjectGrant{
-		"organization":          {Create: true, Read: true},
+		"company":               {Create: true, Read: true},
 		"signal":                {Create: true, Read: true},
 		"installation_settings": {Read: true},
 	},
@@ -44,37 +44,37 @@ func seedSignalRow(t *testing.T, owner *pgx.Conn, sql string) ids.UUID {
 	return id
 }
 
-func TestListSignalsByOrganizationCoversResolvedAndDirectSubjects(t *testing.T) {
+func TestListSignalsByCompanyCoversResolvedAndDirectSubjects(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, signalReaderPerms)
 	store := signals.NewStore(e.DB(), nil)
 
-	acme := e.SeedOrg(t, "Acme", &e.Rep1)
-	other := e.SeedOrg(t, "Contoso", &e.Rep1)
+	acme := e.SeedCompany(t, "Acme", &e.Rep1)
+	other := e.SeedCompany(t, "Contoso", &e.Rep1)
 
 	direct := seedSignalRow(t, owner, `INSERT INTO signal
 		(id, kind, source_channel, entity_type, entity_id, resolution_state, severity, summary, detected_at, source, captured_by)
-		VALUES ($1, 'risk', 'derived', 'organization', '`+acme.String()+`', 'resolved', 'warn',
+		VALUES ($1, 'risk', 'derived', 'company', '`+acme.String()+`', 'resolved', 'warn',
 		        'Budget freeze mentioned on the call', now(), 'manual', 'human:x')`)
 	// The resolver's shape: the SUBJECT is a person, and the account it
-	// belongs to is stamped on resolved_org_id. Matching on the subject pair
-	// alone would miss it; matching on resolved_org_id alone would miss the
+	// belongs to is stamped on resolved_company_id. Matching on the subject pair
+	// alone would miss it; matching on resolved_company_id alone would miss the
 	// direct one above. The filter has to carry both arms.
 	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
 	resolved := seedSignalRow(t, owner, `INSERT INTO signal
-		(id, kind, source_channel, entity_type, entity_id, resolved_org_id,
+		(id, kind, source_channel, entity_type, entity_id, resolved_company_id,
 		 resolution_state, severity, summary, detected_at, source, captured_by)
 		VALUES ($1, 'buying_intent', 'web', 'person', '`+contact.String()+`', '`+acme.String()+`', 'resolved', 'warn',
 		        'Pricing page visited five times', now(), 'manual', 'human:x')`)
 	// A signal about a different account must not leak into the filter.
 	seedSignalRow(t, owner, `INSERT INTO signal
-		(id, kind, source_channel, entity_type, entity_id, resolved_org_id,
+		(id, kind, source_channel, entity_type, entity_id, resolved_company_id,
 		 resolution_state, severity, summary, detected_at, source, captured_by)
-		VALUES ($1, 'risk', 'web', 'organization', '`+other.String()+`', '`+other.String()+`', 'resolved', 'warn',
+		VALUES ($1, 'risk', 'web', 'company', '`+other.String()+`', '`+other.String()+`', 'resolved', 'warn',
 		        'Contoso churn risk', now(), 'manual', 'human:x')`)
 
-	got, _, err := store.ListSignals(ctx, signals.ListSignalsInput{OrganizationID: &acme})
+	got, _, err := store.ListSignals(ctx, signals.ListSignalsInput{CompanyID: &acme})
 	if err != nil {
 		t.Fatalf("list signals for one account: %v", err)
 	}
@@ -83,7 +83,7 @@ func TestListSignalsByOrganizationCoversResolvedAndDirectSubjects(t *testing.T) 
 		found[ids.UUID(sig.Id)] = true
 	}
 	if !found[direct] {
-		t.Error("a signal created directly about the organization is missing — it carries no resolved_org_id, so the subject pair is the only way to find it")
+		t.Error("a signal created directly about the company is missing — it carries no resolved_company_id, so the subject pair is the only way to find it")
 	}
 	if !found[resolved] {
 		t.Error("a resolver-attributed signal is missing from its own account's list")

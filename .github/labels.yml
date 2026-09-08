@@ -85,7 +85,7 @@
   description: "Erasure, retention, consent"
 - name: "area: records"
   color: "BFD4F2"
-  description: "People, organizations, employment, custom fields, merge and dedupe"
+  description: "People, companies, employment, custom fields, merge and dedupe"
 - name: "area: reports"
   color: "BFD4F2"
   description: "Reporting, saved views, filters, export"

@@ -174,7 +174,7 @@ describe("speak", () => {
         kind: "summarize",
         state: "done",
         subject_label: "Acme",
-        subject_type: "organization",
+        subject_type: "company",
         subject_id: "019f7e65-fbf7-7114-b114-40af4af63a77",
       },
       (key) => en[key],
@@ -229,7 +229,7 @@ describe("speak", () => {
         subject_id: "019f7e65-fbf7-7114-b114-40af4af63a77",
       },
     ],
-    ["a name with no id", { subject_type: "organization" }],
+    ["a name with no id", { subject_type: "company" }],
     [
       "a name with no kind",
       { subject_id: "019f7e65-fbf7-7114-b114-40af4af63a77" },

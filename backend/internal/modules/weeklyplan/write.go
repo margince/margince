@@ -224,7 +224,7 @@ func checkLink(recordType string, id ids.UUID) error {
 	if _, ok := linkTables[recordType]; !ok {
 		return &values.ParseError{
 			Field: "linked_record_type", Code: "unknown",
-			Message: "a commitment links a deal, a lead, a person, an organization or a project",
+			Message: "a commitment links a deal, a lead, a person, a company or a project",
 		}
 	}
 	return nil
@@ -239,11 +239,11 @@ func checkLink(recordType string, id ids.UUID) error {
 // same five words at the other end — two writers of one list, so a sixth type
 // added there and not here is refused rather than written.
 var linkTables = map[string]string{
-	"deal":         "deal",
-	"lead":         "lead",
-	"person":       "person",
-	"organization": "organization",
-	"project":      "project",
+	"deal":    "deal",
+	"lead":    "lead",
+	"person":  "person",
+	"company": "company",
+	"project": "project",
 }
 
 // ensureLinkVisible refuses a link to a record the caller cannot open.

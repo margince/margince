@@ -113,9 +113,9 @@ func toContractBlockedDomain(e people.BlockedDomain) crmcontracts.BlockedDomain 
 		Source:    crmcontracts.BlockedDomainSource(e.Source),
 		DecidedAt: e.DecidedAt,
 	}
-	if e.OrganizationID != nil {
-		id := openapi_types.UUID(e.OrganizationID.UUID)
-		out.OrganizationId = &id
+	if e.CompanyID != nil {
+		id := openapi_types.UUID(e.CompanyID.UUID)
+		out.CompanyId = &id
 	}
 	return out
 }

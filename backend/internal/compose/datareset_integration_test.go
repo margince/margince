@@ -36,7 +36,7 @@ func TestSweepWorkspaceDataClearsDomainKeepsIdentity(t *testing.T) {
 	ctx := e.Admin()
 
 	e.SeedPerson(t, "Alice", nil)
-	e.SeedOrg(t, "Acme", nil)
+	e.SeedCompany(t, "Acme", nil)
 
 	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		tables, err := resetTargetTables(ctx, tx)
@@ -52,15 +52,15 @@ func TestSweepWorkspaceDataClearsDomainKeepsIdentity(t *testing.T) {
 	if got := e.WsCount(t, "SELECT count(*) FROM person"); got != 0 {
 		t.Errorf("person count after sweep = %d, want 0", got)
 	}
-	if got := e.WsCount(t, "SELECT count(*) FROM organization"); got != 0 {
-		t.Errorf("organization count after sweep = %d, want 0", got)
+	if got := e.WsCount(t, "SELECT count(*) FROM company"); got != 0 {
+		t.Errorf("company count after sweep = %d, want 0", got)
 	}
 	// The harness seeds four humans (Rep1, Rep2, Rep3 and the admin seat);
 	// identity must survive a reset untouched.
 	if got := e.WsCount(t, "SELECT count(*) FROM app_user"); got != 4 {
 		t.Errorf("app_user count after sweep = %d, want 4 (identity preserved)", got)
 	}
-	// SeedPerson/SeedOrg each wrote an audit_log row as a side effect of the
+	// SeedPerson/SeedCompany each wrote an audit_log row as a side effect of the
 	// store write shape; the ledger is append-only and must survive the sweep.
 	if got := e.WsCount(t, "SELECT count(*) FROM audit_log"); got < 1 {
 		t.Errorf("audit_log count after sweep = %d, want >= 1 (ledger preserved)", got)
@@ -320,32 +320,32 @@ var deleteGuardedSweepTargets = gatekit.Waive(map[string]string{
 	// Not guards at all (migration 1787032690).
 	"activity_link activity_link_last_activity": "a clock-maintenance trigger, not a guard: it recomputes the last_activity_at of the records the deleted link reached and refuses no delete; the sweep deletes those records too, so the recompute is discarded with them",
 	// The same shape one column over (migration 1787320000): the project clock
-	// rather than the person/organization one. Recorded on its own line and not
+	// rather than the person/company one. Recorded on its own line and not
 	// folded into the entry above, because this map is keyed on the PAIR for the
 	// reason its own comment gives — a table-keyed entry would ratify the next
 	// DELETE trigger on activity_link sight unseen, including one that blocks.
 	"activity_link activity_link_project_last_activity": "a clock-maintenance trigger, not a guard: it recomputes project.last_activity_at for the project the deleted link filed the activity against and refuses no delete; `project` is not preserved, so the sweep deletes those rows too and the recompute is discarded with them",
 	"relationship relationship_last_activity":           "a clock-maintenance trigger, not a guard: it recomputes the employer's last_activity_at and refuses no delete",
-	// Also not a guard (migration 1787226902): BEFORE DELETE ON organization, it
-	// sets deal.partner_org_id and deal.partner_attribution to NULL so a deleted
+	// Also not a guard (migration 1787226902): BEFORE DELETE ON company, it
+	// sets deal.partner_company_id and deal.partner_attribution to NULL so a deleted
 	// partner leaves no dangling attribution. It refuses no delete.
 	//
 	// It is not free, either, and "the deals go too" is not why it is safe.
 	// resetTargetTables orders alphabetically and the sweep retries per pass, so
 	// `deal` sorts before `offer` — whose deal_id is ON DELETE RESTRICT — and any
-	// installation holding one offer defers `deal` to a later pass. `organization`
+	// installation holding one offer defers `deal` to a later pass. `company`
 	// is then deleted in that same pass with `deal` still fully populated, and the
-	// trigger runs its UPDATE once per organization row. The only index on the
+	// trigger runs its UPDATE once per company row. The only index on the
 	// column, idx_deal_partner, is partial on `archived_at IS NULL` while the
 	// trigger's predicate carries no archived_at term, so the planner cannot use
-	// it: each organization costs a sequential scan of `deal`, repeated on every
+	// it: each company costs a sequential scan of `deal`, repeated on every
 	// deferred pass.
 	//
 	// It is safe because the work is discarded — `deal` is swept before the reset
 	// commits either way — not because it never happens. A workspace with tens of
-	// thousands of both pays O(orgs x deals) inside the reset transaction, and
+	// thousands of both pays O(companies x deals) inside the reset transaction, and
 	// that is the cost this entry exists to put on the record.
-	"organization organization_delete_clears_deal_partner": "a clear-the-reference trigger, not a guard: it nulls the partner attribution on deals that named the deleted organization and refuses no delete. Not free — the sweep can defer `deal` behind `offer`'s ON DELETE RESTRICT, so this runs against a populated `deal` with a predicate idx_deal_partner cannot serve (it is partial on archived_at IS NULL), costing a scan per organization; the rows are swept afterwards regardless, so the work is discarded rather than wrong",
+	"company company_delete_clears_deal_partner": "a clear-the-reference trigger, not a guard: it nulls the partner attribution on deals that named the deleted company and refuses no delete. Not free — the sweep can defer `deal` behind `offer`'s ON DELETE RESTRICT, so this runs against a populated `deal` with a predicate idx_deal_partner cannot serve (it is partial on archived_at IS NULL), costing a scan per company; the rows are swept afterwards regardless, so the work is discarded rather than wrong",
 })
 
 func TestSweepTargetsCarryNoDeleteBlockingTrigger(t *testing.T) {
@@ -393,7 +393,7 @@ func TestSweepTargetsCarryNoDeleteBlockingTrigger(t *testing.T) {
 // TestResetReturnsAnOverlayWorkspaceToNativeMode: a reset restores first-boot
 // state, and a first-boot installation is native.
 //
-// The workspace row is in the preserved set — it carries the organization, so
+// The workspace row is in the preserved set — it carries the company, so
 // the sweep must not delete it — but the overlay-mode columns living on that
 // row are configuration a connect flow wrote, not identity. Everything overlay
 // mode depends on IS swept: the incumbent connection, the mirror, the budget

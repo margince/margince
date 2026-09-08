@@ -34,7 +34,7 @@ its own, so you can also come straight to the one you need.
   deal, files a deal picks up from its email, having a file read for deal fields,
   and document sets you can ask questions of. Every size limit, with its number.
 - **[What is kept, what is destroyed](retention-exports-and-deletion.md)** — the
-  six retention rules a new organization starts with, archive versus delete,
+  six retention rules a new company starts with, archive versus delete,
   erasure and what it cascades to, the statutory floor no administrator can
   override, consent, the audit trail, and what you can export.
 - **[Seats, roles and who can see what](seats-roles-and-access.md)** — full and

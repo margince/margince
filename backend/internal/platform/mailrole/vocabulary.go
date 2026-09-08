@@ -4,7 +4,7 @@
 package mailrole
 
 // roleTokens are the words that name a FUNCTION rather than a person. A local
-// part containing one of them, as a whole word, is a mailbox an organization
+// part containing one of them, as a whole word, is a mailbox a company
 // answers.
 //
 // German and English both appear because this product's installations
@@ -24,7 +24,7 @@ package mailrole
 // `general`, `personal`, `security`, `legal`, `finance`, `payments`, `orders`,
 // `service`, `contact`, `help`, `news`, `press`, `admin`, `alerts`. Each is a
 // real word other lists in this tree legitimately hold — an RBAC object, a
-// refusal phrase, an org-name stopword — and matching them here would refuse
+// refusal phrase, a company-name stopword — and matching them here would refuse
 // contacts on a word a person's address may honestly contain. The AI verdict
 // owns the addresses this list cannot reach; a deterministic list that guessed
 // would be worse than one that abstains.
@@ -35,7 +35,7 @@ package mailrole
 //
 // Held by: TestOnlyOnePackageDeclaresRoleMailboxes (backend/gates/rolemailboxonelist_test.go)
 var roleTokens = map[string]struct{}{
-	// Reaching the organization. `mail` and `post` are here because a mailbox
+	// Reaching the company. `mail` and `post` are here because a mailbox
 	// called after the medium names nobody — `mail@petereich.com` was the case
 	// that first put a contact called "Mail" in this tree.
 	"info": {}, "kontakt": {}, "hello": {}, "hallo": {}, "enquiries": {},

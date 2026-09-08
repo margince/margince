@@ -21,7 +21,7 @@ type Story = StoryObj;
 type Receipt = components["schemas"]["ClaimEvidence"];
 
 function evidencePath(cited: CitedRecord): string {
-  return `GET /organizations/o-1/evidence/${cited.entityType}/${cited.entityId}`;
+  return `GET /companies/o-1/evidence/${cited.entityType}/${cited.entityId}`;
 }
 
 function Drawer({
@@ -39,7 +39,7 @@ function Drawer({
   return (
     <StoryProviders>
       <EvidenceModal
-        orgId="o-1"
+        companyId="o-1"
         cited={cited}
         onClose={() => {}}
         onStep={onStep}
@@ -56,10 +56,10 @@ function Drawer({
 export const SiteReadUnconfirmed: Story = {
   render: () => (
     <Drawer
-      cited={{ entityType: "organization", entityId: "org-1" }}
+      cited={{ entityType: "company", entityId: "company-1" }}
       receipt={{
-        entity_type: "organization",
-        entity_id: "org-1",
+        entity_type: "company",
+        entity_id: "company-1",
         source_kind: "site_read",
         label: "Industry",
         value: "Automotive",
@@ -167,14 +167,14 @@ export const RuleWithGaps: Story = {
 
 function PendingDrawer() {
   installFetchStub({
-    "GET /organizations/o-1/evidence/organization/org-1": () =>
+    "GET /companies/o-1/evidence/company/company-1": () =>
       new Promise<Response>(() => {}),
   });
   return (
     <StoryProviders>
       <EvidenceModal
-        orgId="o-1"
-        cited={{ entityType: "organization", entityId: "org-1" }}
+        companyId="o-1"
+        cited={{ entityType: "company", entityId: "company-1" }}
         onClose={() => {}}
       />
     </StoryProviders>
@@ -196,7 +196,7 @@ export const Pending: Story = {
 export const Unavailable: Story = {
   render: () => (
     <Drawer
-      cited={{ entityType: "organization", entityId: "org-missing" }}
+      cited={{ entityType: "company", entityId: "company-missing" }}
       receipt={undefined}
     />
   ),

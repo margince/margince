@@ -106,9 +106,9 @@ const withheldDeal = {
   ...deal,
   amount_minor: null,
   currency: null,
-  organization_id: null,
-  partner_org_id: null,
-  masked_fields: ["amount_minor", "organization_id", "partner_org_id"],
+  company_id: null,
+  partner_company_id: null,
+  masked_fields: ["amount_minor", "company_id", "partner_company_id"],
 };
 
 function installDealStub(offers: unknown[], record: unknown = deal) {
@@ -193,14 +193,14 @@ const boardStages = [
 ];
 
 const boardDeals = [
-  { ...deal, id: "b1", name: "Fleet retrofit", organization_id: "o1" },
+  { ...deal, id: "b1", name: "Fleet retrofit", company_id: "o1" },
   {
     ...deal,
     id: "b2",
     name: "Depot rollout",
     stage_id: "s2",
     amount_minor: 1_250_000,
-    organization_id: "o1",
+    company_id: "o1",
     stalled: true,
   },
   // The reader may not read this one's company: the wire sends no id and names
@@ -209,8 +209,8 @@ const boardDeals = [
     ...deal,
     id: "b3",
     name: "Northgate framework",
-    organization_id: null,
-    masked_fields: ["organization_id"],
+    company_id: null,
+    masked_fields: ["company_id"],
   },
 ];
 
@@ -270,7 +270,7 @@ function installBoardStub() {
         ],
         page: { next_cursor: null },
       }),
-    "GET /organizations": () =>
+    "GET /companies": () =>
       jsonResponse({
         data: [{ id: "o1", display_name: "Acme GmbH" }],
         page: { next_cursor: null },

@@ -22,7 +22,7 @@ them runs in CI, so nothing here changes unless somebody chooses to measure.
 
 | ID | Operation | Published budget | Measured p95 | Verdict | Measured on |
 |---|---|---|---|---|---|
-| `PERF-1` | Record open (person/org/deal) | < 100 ms server | 3.2 ms | within budget | 2026-08-15 |
+| `PERF-1` | Record open (person/company/deal) | < 100 ms server | 3.2 ms | within budget | 2026-08-15 |
 | `PERF-2` | List/table view (50 rows, filtered) | < 150 ms server | — | **not measured** | — |
 | `PERF-3` | Search (full-text) | < 200 ms | 76.5 ms | within budget | 2026-08-15 |
 | `PERF-4` | Save/mutation | < 150 ms server | 6.1 ms | within budget | 2026-08-15 |
@@ -98,7 +98,7 @@ A latency is only true of the machine that produced it.
 | measurement | p50 | p95 | p99 | budget | samples |
 |---|---|---|---|---|---|
 | `record_open_person` | 2.9 ms | 3.2 ms | 3.4 ms | 100 ms | 30 |
-| `record_open_organization` | 2.8 ms | 3.2 ms | 3.3 ms | 100 ms | 30 |
+| `record_open_company` | 2.8 ms | 3.2 ms | 3.3 ms | 100 ms | 30 |
 | `record_open_deal` | 2.3 ms | 2.5 ms | 2.7 ms | 100 ms | 30 |
 | `record_save_person` | 5.6 ms | 6.1 ms | 6.4 ms | 150 ms | 30 |
 

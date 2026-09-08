@@ -86,7 +86,7 @@ target "role" {
   # the release without running the image — which is the only way to read it
   # off the web image, whose runtime is nginx and runs none of our code.
   labels = {
-    "org.opencontainers.image.version" = VERSION
+    "company.opencontainers.image.version" = VERSION
   }
 }
 

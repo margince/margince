@@ -22,7 +22,7 @@ var registeredIDTypes = []struct{ scalar, slice any }{
 	{ids.UserID{}, []ids.UserID{}},
 	{ids.TeamID{}, []ids.TeamID{}},
 	{ids.PersonID{}, []ids.PersonID{}},
-	{ids.OrganizationID{}, []ids.OrganizationID{}},
+	{ids.CompanyID{}, []ids.CompanyID{}},
 	{ids.LeadID{}, []ids.LeadID{}},
 	{ids.DealID{}, []ids.DealID{}},
 	{ids.PipelineID{}, []ids.PipelineID{}},

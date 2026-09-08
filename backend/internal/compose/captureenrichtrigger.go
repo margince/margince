@@ -12,7 +12,7 @@ package compose
 // opens the record right after the mail lands, and that is when it should be
 // current.
 //
-// THE TRIGGER IS THE EVENT, NOT THE WRITER, the same rule the organization
+// THE TRIGGER IS THE EVENT, NOT THE WRITER, the same rule the company
 // trigger states: activity.captured reaches the outbox because the write shape
 // puts it there, so every connector and every ingest path lands here without
 // knowing this consumer exists.

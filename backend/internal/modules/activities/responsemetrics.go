@@ -132,7 +132,7 @@ const firstResponseSQL = `
 	         SELECT 1 FROM activity_link sales
 	          WHERE sales.activity_id = inbound.id
 	            AND (sales.person_id IS NOT NULL
-	              OR sales.organization_id IS NOT NULL
+	              OR sales.company_id IS NOT NULL
 	              OR EXISTS (SELECT 1 FROM deal d
 	                          WHERE d.id = sales.deal_id AND %[2]s)
 	              OR EXISTS (SELECT 1 FROM lead ld

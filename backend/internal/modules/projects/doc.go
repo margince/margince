@@ -29,7 +29,7 @@
 // table under the caller's DEAL row scope and priced by the deals module's
 // installation seam, so it stays there and this module consumes it through a
 // port compose injects. The deal↔project company rule
-// (deals.DealProjectOrgMismatchError) likewise faults a deal's field on a deal
+// (deals.DealProjectCompanyMismatchError) likewise faults a deal's field on a deal
 // write.
 //
 // The edges the other direction are ports too: deals asks this module whether a

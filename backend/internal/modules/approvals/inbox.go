@@ -32,7 +32,7 @@ type row struct {
 	OnBehalfOf *ids.UserID
 	PassportID *ids.PassportID
 	// TargetType + TargetID are the polymorphic pointer to the entity the
-	// staging acts on (deal, org, person, lead, activity, …); the id stays
+	// staging acts on (deal, company, person, lead, activity, …); the id stays
 	// untyped because the pair IS the discriminated reference.
 	TargetType    *string
 	TargetID      *ids.UUID

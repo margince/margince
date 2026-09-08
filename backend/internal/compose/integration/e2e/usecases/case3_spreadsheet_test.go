@@ -77,7 +77,7 @@ func (s *scenario) previewImport(t *testing.T, csv string) agents.ImportPreviewR
 		mapping["country"] = "address.country"
 	}
 	got := s.MCP.CallOK(t, "preview_import", map[string]any{
-		"object": "organization", "csv": csv, "mapping": mapping,
+		"object": "company", "csv": csv, "mapping": mapping,
 	})
 	var preview agents.ImportPreviewResult
 	got.JSON(t, &preview)
@@ -123,7 +123,7 @@ func TestCase3ThePreviewTellsTheTruth(t *testing.T) {
 	}
 	// Nothing is written yet. A preview that had already created the rows
 	// would make the count true and the promise meaningless.
-	if s.countRows(t, `SELECT count(*) FROM organization WHERE display_name LIKE '%GmbH'
+	if s.countRows(t, `SELECT count(*) FROM company WHERE display_name LIKE '%GmbH'
 		OR display_name LIKE '%AG' OR display_name LIKE '%KG'`) != 0 {
 		t.Fatalf("case 3 criterion 1: the dry run already wrote companies, so the numbers it " +
 			"showed were a description of the past rather than a promise")
@@ -149,7 +149,7 @@ func TestCase3ThePreviewTellsTheTruth(t *testing.T) {
 		{"Rheinpark Automation KG", "Köln", "201-500"},
 		{"Alpenblick Sensorik GmbH", "München", "11-50"},
 	} {
-		if n := s.countRows(t, `SELECT count(*) FROM organization
+		if n := s.countRows(t, `SELECT count(*) FROM company
 			WHERE display_name = $1 AND address_city = $2 AND size_band = $3`,
 			want.name, want.city, want.size); n != 1 {
 			t.Fatalf("case 3 criterion 2: the file says %s is in %s at %s, and %d rows match",
@@ -185,7 +185,7 @@ func TestCase3ImportingTheSameFileTwiceChangesNothing(t *testing.T) {
 		t.Fatalf("case 3 criterion 3: the second run reports %d unchanged, want all 4",
 			second.report.Disposition.Unchanged)
 	}
-	if total := s.countRows(t, `SELECT count(*) FROM organization
+	if total := s.countRows(t, `SELECT count(*) FROM company
 		WHERE display_name IN ('Nordwind Logistik GmbH','Elbmarsch Systeme AG',
 		                       'Rheinpark Automation KG','Alpenblick Sensorik GmbH')`); total != 4 {
 		t.Fatalf("case 3 criterion 3: the CRM holds %d of the file's companies after importing it "+
@@ -199,7 +199,7 @@ func TestCase3ImportingTheSameFileTwiceChangesNothing(t *testing.T) {
 	// updates would produce identical counts. The row version is what a write
 	// actually leaves behind: it is bumped by every real update, so four rows
 	// still at version 1 is the claim the disposition alone cannot make.
-	if untouched := s.countRows(t, `SELECT count(*) FROM organization
+	if untouched := s.countRows(t, `SELECT count(*) FROM company
 		WHERE display_name IN ('Nordwind Logistik GmbH','Elbmarsch Systeme AG',
 		                       'Rheinpark Automation KG','Alpenblick Sensorik GmbH')
 		  AND version = 1`); untouched != 4 {
@@ -235,12 +235,12 @@ func TestCase3ChangingOneRowUpdatesOneRecord(t *testing.T) {
 	// and the size — and a city change alone is enough to report one update, so
 	// asserting only the city would pass while losing half of what was asked.
 	if city := s.readStringWhere(t,
-		`SELECT coalesce(address_city, '') FROM organization WHERE display_name = $1`,
+		`SELECT coalesce(address_city, '') FROM company WHERE display_name = $1`,
 		"Nordwind Logistik GmbH"); city != "Hamburg" {
 		t.Fatalf("case 3 criterion 4: Nordwind should have moved to Hamburg and sits in %q", city)
 	}
 	if size := s.readStringWhere(t,
-		`SELECT coalesce(size_band, '') FROM organization WHERE display_name = $1`,
+		`SELECT coalesce(size_band, '') FROM company WHERE display_name = $1`,
 		"Nordwind Logistik GmbH"); size != "201-500" {
 		t.Fatalf("case 3 criterion 4: the correction said 201-500 people and the record reads %q — "+
 			"one update was reported and half the correction was dropped", size)
@@ -248,7 +248,7 @@ func TestCase3ChangingOneRowUpdatesOneRecord(t *testing.T) {
 	// Criterion 5: a field the correction's file does not CARRY is untouched.
 	// The original import set DE; the correction has no country column at all.
 	if country := s.readStringWhere(t,
-		`SELECT coalesce(address_country, '') FROM organization WHERE display_name = $1`,
+		`SELECT coalesce(address_country, '') FROM company WHERE display_name = $1`,
 		"Nordwind Logistik GmbH"); country != "DE" {
 		t.Fatalf("case 3 criterion 5: the correction file carries no country column and the "+
 			"country now reads %q — an import must not blank what it was not told about", country)

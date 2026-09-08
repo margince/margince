@@ -73,7 +73,7 @@ func TestTheComposedMCPMountPublishesTheQueryVocabulary(t *testing.T) {
 	}
 
 	// The derivation survives the trip: the deal record's own contract fields
-	// and its derived organization hop are both there.
+	// and its derived company hop are both there.
 	deal := dealVocabulary(t, doc)
 	if !slices.ContainsFunc(deal.Fields, func(f vocabularyField) bool {
 		return f.Name == "amount_minor" && f.Kind == "number"
@@ -81,9 +81,9 @@ func TestTheComposedMCPMountPublishesTheQueryVocabulary(t *testing.T) {
 		t.Error("the published deal vocabulary has no amount_minor number field")
 	}
 	if !slices.ContainsFunc(deal.Relations, func(r vocabularyRelation) bool {
-		return r.Name == "organization" && r.Via == "organization_id"
+		return r.Name == "company" && r.Via == "company_id"
 	}) {
-		t.Error("the published deal vocabulary has no derived organization hop")
+		t.Error("the published deal vocabulary has no derived company hop")
 	}
 
 	// within_radius ANSWERS now (#2171: a company carries coordinates), so the
@@ -99,11 +99,11 @@ func TestTheComposedMCPMountPublishesTheQueryVocabulary(t *testing.T) {
 	}
 	// The other half: it has to be REACHABLE, or "not declared unavailable"
 	// would be satisfied by an operator nobody can discover.
-	org := targetVocabulary(t, doc, "organization")
-	if !slices.ContainsFunc(org.Fields, func(f vocabularyField) bool {
+	company := targetVocabulary(t, doc, "company")
+	if !slices.ContainsFunc(company.Fields, func(f vocabularyField) bool {
 		return slices.Contains(f.Ops, search.OpWithinRadius)
 	}) {
-		t.Error("no organization field publishes within_radius, so the operator answers but no caller can find it")
+		t.Error("no company field publishes within_radius, so the operator answers but no caller can find it")
 	}
 	// And it stays absent where it cannot be answered at all: a deal is never
 	// anywhere, which is a fact about the record type rather than about this

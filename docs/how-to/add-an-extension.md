@@ -299,7 +299,7 @@ restricted role against a throwaway database and re-reads the catalog):
 - Create tables only in the `ext` schema, named `ext_<name>_<table>` — the schema is shared by every
   installed unit, so the prefix is what keeps two of them apart.
 - Carry NO workspace column, no row-level security and no policy — an installation holds one
-  organization, so such a predicate would separate nothing, and the gate refuses all three outright.
+  company, so such a predicate would separate nothing, and the gate refuses all three outright.
 - `GRANT SELECT, INSERT, UPDATE, DELETE ... TO margince_app` — **exactly those four**, on every unit
   table. Not more: no unit verb issues a `TRUNCATE`, and `REFERENCES` and `TRIGGER` are refused too.
   Not fewer, and not none: the gate used to ask only "nothing outside the list", which granting

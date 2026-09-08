@@ -262,7 +262,7 @@ The model returns one of six kinds:
 |---|---|
 | `person` | Create the contact. Queue the domain for `site_triage` |
 | `role_mailbox` (e.g. `support@`) | Keep the mail visible. Create no contact — there is no person to record |
-| `organization_sender` | Same as above |
+| `company_sender` | Same as above |
 | `newsletter` | Hide the mail, and mark the domain as "not a company" |
 | `transactional` | Same as above |
 | `spam` | Same as above |

@@ -69,7 +69,7 @@ const unreadableUpload =
   "the upload answered something this screen cannot read";
 
 function isImportObject(value: unknown): value is ImportObject {
-  return value === "lead" || value === "organization" || value === "person";
+  return value === "lead" || value === "company" || value === "person";
 }
 
 function isMapping(value: unknown): value is Record<string, string> {
@@ -151,7 +151,7 @@ type Recovered =
   | Readonly<{ kind: "unreachable" }>;
 
 // A refusal that settles the question of whether this reader may see this run:
-// gone, never theirs (another organization's or another seat's — existence is
+// gone, never theirs (another company's or another seat's — existence is
 // hidden as a 404), or a grant they no longer hold.
 function refused(status: number): boolean {
   return status === 403 || status === 404 || status === 410;
@@ -445,7 +445,7 @@ export function useImportFlow() {
       // is the documented way back, and the row they want to keep is edited on
       // another screen. So the reference outlives this mount.
       noteRun(value.run);
-      // The import wrote leads, organizations and their events. Every cached
+      // The import wrote leads, companies and their events. Every cached
       // list is stale, not only the ones this card could name.
       queryClient.invalidateQueries();
     },
@@ -485,7 +485,7 @@ export function useImportFlow() {
       // A reversal that finished spends the reference; one that stopped part-way
       // keeps it, because continuing it is the whole point of `undoing`.
       noteRun(value.run);
-      // Every reversed row is a lead or organization archived. Every cached
+      // Every reversed row is a lead or company archived. Every cached
       // list is stale, not only the ones this card could name.
       queryClient.invalidateQueries();
     },

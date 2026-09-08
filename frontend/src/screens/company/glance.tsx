@@ -20,7 +20,7 @@ import type { CompanyTab } from "../companytab";
 import { CompanyWorkCard } from "../companywork";
 import "./glance.css";
 
-type Organization360 = components["schemas"]["Organization360"];
+type Company360 = components["schemas"]["Company360"];
 
 // How many exchanges the fold opens. The 360 is a glance; the History tab is
 // where the rest of the thread reads.
@@ -58,7 +58,7 @@ export function ThreadFold({
   onOpenHistory,
   onOpenRecord,
 }: Readonly<{
-  view?: Organization360;
+  view?: Company360;
   loading: boolean;
   onOpenHistory?: () => void;
   // The page's own router, the same door the spine above this fold takes. The
@@ -140,7 +140,7 @@ export function ThreadFold({
  * cannot say two things about one renewal.
  */
 export function MoneyPane({
-  organizationId,
+  companyId,
   view,
   loading,
   readOnly,
@@ -149,8 +149,8 @@ export function MoneyPane({
   onOpenEmail,
   verbs,
 }: Readonly<{
-  organizationId: string;
-  view?: Organization360;
+  companyId: string;
+  view?: Company360;
   loading: boolean;
   // An archived company joins no new project, so the group offers no verb
   // that would only be refused.
@@ -209,7 +209,7 @@ export function MoneyPane({
           second page starting. */}
       {projectsState === "ready" || projectsState === "empty" ? (
         <CompanyProjects
-          organizationId={organizationId}
+          companyId={companyId}
           projects={projects}
           readOnly={readOnly}
           bare
@@ -247,7 +247,7 @@ export function PeopleChips({
   loading,
   onOpenTab,
 }: Readonly<{
-  view?: Organization360;
+  view?: Company360;
   loading: boolean;
   onOpenTab?: (tab: CompanyTab) => void;
 }>) {

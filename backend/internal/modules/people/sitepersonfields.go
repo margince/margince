@@ -15,11 +15,11 @@ package people
 //
 // "Unmistakably" is deliberately narrow, and it is the whole safety argument:
 //
-//   - an exact live email match among that organization's own employees, or
-//   - exactly ONE employee of that organization whose name matches confidently.
+//   - an exact live email match among that company's own employees, or
+//   - exactly ONE employee of that company whose name matches confidently.
 //
 // Zero matches, or more than one, means the site person is not identifiable and
-// the lead stages exactly as before. The scope is the organization's employees
+// the lead stages exactly as before. The scope is the company's employees
 // rather than the workspace, because the site is claiming this person works
 // THERE: filling a title from company X's site onto a person the CRM records at
 // company Y is a conflict a human should see, not one a sweep should settle.
@@ -67,11 +67,11 @@ type SitePersonFields struct {
 // company's own site publishes about them. It reports whether a person was
 // matched at all — false means the caller stages the lead, which is the
 // unchanged path for every stranger and every ambiguous name.
-func (s *Store) ApplySitePersonFields(ctx context.Context, orgID ids.OrganizationID, in SitePersonFields) (bool, error) {
+func (s *Store) ApplySitePersonFields(ctx context.Context, companyID ids.CompanyID, in SitePersonFields) (bool, error) {
 	var matched bool
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		matched, err = s.applySitePersonFieldsTx(ctx, tx, orgID, in)
+		matched, err = s.applySitePersonFieldsTx(ctx, tx, companyID, in)
 		return err
 	})
 	if err != nil {
@@ -80,7 +80,7 @@ func (s *Store) ApplySitePersonFields(ctx context.Context, orgID ids.Organizatio
 	return matched, nil
 }
 
-func (s *Store) applySitePersonFieldsTx(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, in SitePersonFields) (bool, error) {
+func (s *Store) applySitePersonFieldsTx(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, in SitePersonFields) (bool, error) {
 	if err := auth.Require(ctx, entityPerson, principal.ActionUpdate); err != nil {
 		return false, err
 	}
@@ -91,18 +91,18 @@ func (s *Store) applySitePersonFieldsTx(ctx context.Context, tx pgx.Tx, orgID id
 	if strings.TrimSpace(in.Name) == "" {
 		return false, errors.New("people: a site person needs the name the page published")
 	}
-	// The organization is a KNOWN row and this is a read of it: row-scope is
-	// re-checked so a leaked org id buys nothing (existence-hiding 404).
-	if err := auth.EnsureVisible(ctx, tx, entityOrganization, orgID.UUID); err != nil {
+	// The company is a KNOWN row and this is a read of it: row-scope is
+	// re-checked so a leaked company id buys nothing (existence-hiding 404).
+	if err := auth.EnsureVisible(ctx, tx, entityCompany, companyID.UUID); err != nil {
 		return false, err
 	}
 
-	personID, ok, err := matchSitePerson(ctx, tx, orgID, in)
+	personID, ok, err := matchSitePerson(ctx, tx, companyID, in)
 	if err != nil || !ok {
 		return false, err
 	}
-	// The person is resolved from the organization's employment edges, so the
-	// probe above says nothing about it: the org gate is a gate on a DIFFERENT
+	// The person is resolved from the company's employment edges, so the
+	// probe above says nothing about it: the company gate is a gate on a DIFFERENT
 	// table. Probe the record this function is about to write, the way every
 	// sibling fill does (ApplyDiscoveredFields, SaveResearchClaims,
 	// ApplyEnrichment, ApplyDeepReadTx).
@@ -160,20 +160,20 @@ func (s *Store) applySitePersonFieldsTx(ctx context.Context, tx pgx.Tx, orgID id
 }
 
 // matchSitePerson resolves the published person to at most ONE employee of the
-// organization: exact live email first, then a confident name match that must be
+// company: exact live email first, then a confident name match that must be
 // unique. Ambiguity is not a tie to break — it is the answer "not identifiable",
 // and it stages a lead like any stranger.
-func matchSitePerson(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, in SitePersonFields) (ids.PersonID, bool, error) {
+func matchSitePerson(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, in SitePersonFields) (ids.PersonID, bool, error) {
 	if email := strings.ToLower(strings.TrimSpace(in.PublishedEmail)); email != "" {
 		var id ids.PersonID
 		err := tx.QueryRow(ctx, `
 			SELECT p.id
 			  FROM person p
 			  JOIN person_email pe ON pe.person_id = p.id AND pe.email = $2 AND pe.archived_at IS NULL
-			  JOIN relationship r ON r.person_id = p.id AND r.organization_id = $1
+			  JOIN relationship r ON r.person_id = p.id AND r.company_id = $1
 			   AND r.kind = 'employment' AND r.archived_at IS NULL
 			 WHERE p.archived_at IS NULL AND p.merged_into_id IS NULL
-			 LIMIT 1`, orgID, email).Scan(&id)
+			 LIMIT 1`, companyID, email).Scan(&id)
 		if err == nil {
 			return id, true, nil
 		}
@@ -185,11 +185,11 @@ func matchSitePerson(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, i
 	rows, err := tx.Query(ctx, `
 		SELECT p.id, p.full_name
 		  FROM person p
-		  JOIN relationship r ON r.person_id = p.id AND r.organization_id = $1
+		  JOIN relationship r ON r.person_id = p.id AND r.company_id = $1
 		   AND r.kind = 'employment' AND r.archived_at IS NULL
-		 WHERE p.archived_at IS NULL AND p.merged_into_id IS NULL`, orgID)
+		 WHERE p.archived_at IS NULL AND p.merged_into_id IS NULL`, companyID)
 	if err != nil {
-		return ids.PersonID{}, false, fmt.Errorf("people: reading the organization's employees: %w", err)
+		return ids.PersonID{}, false, fmt.Errorf("people: reading the company's employees: %w", err)
 	}
 	defer rows.Close()
 	var match ids.PersonID

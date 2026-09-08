@@ -49,7 +49,7 @@ const floorVersion = "person-brief-floor-v2"
 // included — so editing that wording bumps it whether or not anybody remembers
 // to.
 //
-// Digested at ONE fixed language, the way orgbrief, orgdossier and dealstatus
+// Digested at ONE fixed language, the way companybrief, companydossier and dealstatus
 // do it. The language is its own component of Fingerprint below, so folding it
 // in here would say the same thing twice — and this is a package-level var
 // computed at init, where no installation's setting is readable at all. What it

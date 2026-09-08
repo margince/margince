@@ -26,7 +26,7 @@ function deal(over: Partial<Deal>): Deal {
   return {
     id: "d-1",
     name: "Depot rollout",
-    organization_id: "o-9",
+    company_id: "o-9",
     status: "open",
     currency: "EUR",
     amount_minor: 4_500_000,
@@ -43,12 +43,12 @@ function Panel({ deals }: Readonly<{ deals: Deal[] }>) {
         data: deals,
         page: { next_cursor: null, has_more: false },
       }),
-    "GET /organizations/o-9": () =>
+    "GET /companies/o-9": () =>
       jsonResponse({ id: "o-9", display_name: "Nordwerk GmbH" }),
   });
   return (
     <StoryProviders>
-      <PartnerDeals organizationId="p-1" />
+      <PartnerDeals companyId="p-1" />
     </StoryProviders>
   );
 }
@@ -69,7 +69,7 @@ export const SourcedAndInfluenced: Story = {
   ),
 };
 
-// The row this panel exists to get right: `organization_id` is null and the
+// The row this panel exists to get right: `company_id` is null and the
 // field is named in `masked_fields`, so the customer is WITHHELD rather than
 // unset, and the column says so instead of drawing the em dash an unlinked deal
 // gets.
@@ -80,8 +80,8 @@ export const CustomerWithheld: Story = {
         deal({
           id: "d-3",
           name: "Regional expansion",
-          organization_id: null,
-          masked_fields: ["organization_id"],
+          company_id: null,
+          masked_fields: ["company_id"],
         }),
         deal({}),
       ]}

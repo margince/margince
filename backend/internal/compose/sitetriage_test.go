@@ -20,7 +20,7 @@ func TestTriageVerdictStopsTheCrawlOnlyWhenItIsSureAndNegative(t *testing.T) {
 		{"a confident mailbox vendor stops the crawl", siteTriageVerdict{Kind: siteKindProvider, Confidence: 0.9}, true},
 		{"a confident parked domain stops the crawl", siteTriageVerdict{Kind: siteKindParked, Confidence: 0.85}, true},
 		// A company answer has nothing to stop: the crawl is exactly what
-		// produces the dossier the organization is then named from.
+		// produces the dossier the company is then named from.
 		{"a company reads on", siteTriageVerdict{Kind: siteKindCompany, Confidence: 1}, false},
 		{"unclear reads on", siteTriageVerdict{Kind: siteKindUnclear, Confidence: 1}, false},
 		// Below the floor the deterministic evidence gets its say. Aborting on

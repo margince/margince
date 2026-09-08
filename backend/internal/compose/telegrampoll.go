@@ -78,7 +78,7 @@ const (
 // it: a dispatcher with no poll worker would queue jobs nothing works, and a poll
 // worker with no way to unseal a bot's token could only fail every job it was
 // handed. A nil api takes the real Bot API client — the acceptance suites pass a
-// fake, because a poller left on the real client would reach api.telegram.org from
+// fake, because a poller left on the real client would reach api.telegram.company from
 // a test run.
 func registerTelegramPoll(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger) []*river.PeriodicJob {
 	if cfg.ChannelVault == nil {

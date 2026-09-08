@@ -34,10 +34,10 @@ func (t previewImport) Spec() mcp.ToolSpec {
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "createImportRun",
 		InputSchema: schema(`{"type":"object","required":["object","csv"],"properties":{
-			"object":{"type":"string","enum":["` + importObjectOrganization + `","` + importObjectLead + `","` + importObjectPerson + `"]},
+			"object":{"type":"string","enum":["` + importObjectCompany + `","` + importObjectLead + `","` + importObjectPerson + `"]},
 			"csv":{"type":"string","description":"The file's contents, header row first."},
 			"mapping":{"type":"object","additionalProperties":{"type":"string"},
-			  "description":"Source column name → field name. Omit to accept the proposal this call would make, which it will only make if it can place EVERY column — a file whose headers are spelled the way a human would (\"Company\", \"City\") matches no field by name and is refused with the list, so send a mapping for those. Map a column to \"id\" to name the company a row corrects: that row updates it instead of creating one. A row whose \"id\" is empty is a new company, so one file may both correct and add. On a PERSON run, map the company column to \"organization_name\" to link each person to their employer: the company must already be in the CRM, so import companies first, and a name matching none or matching two links nothing while the person still lands."},
+			  "description":"Source column name → field name. Omit to accept the proposal this call would make, which it will only make if it can place EVERY column — a file whose headers are spelled the way a human would (\"Company\", \"City\") matches no field by name and is refused with the list, so send a mapping for those. Map a column to \"id\" to name the company a row corrects: that row updates it instead of creating one. A row whose \"id\" is empty is a new company, so one file may both correct and add. On a PERSON run, map the company column to \"company_name\" to link each person to their employer: the company must already be in the CRM, so import companies first, and a name matching none or matching two links nothing while the person still lands."},
 			"on_duplicate":{"type":"string","enum":["` + importOnDuplicateCreate + `","` + importOnDuplicateSkip + `"],
 			  "description":"A record already here: create (default) lands a second and files the pair for review; skip leaves the incumbent. For people an address already held is refused either way — an email is a real key, a company name is not."}},
 			"additionalProperties":false}`),

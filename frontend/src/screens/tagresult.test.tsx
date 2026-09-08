@@ -41,7 +41,7 @@ describe("the tag page names what carries the word", () => {
       [`GET /tags/${TAG}`]: tagRead({ people: 1, companies: 1, deals: 1 }),
       "GET /people": () =>
         jsonResponse({ data: [{ id: "p-1", full_name: "Katrin Hofmann" }] }),
-      "GET /organizations": () =>
+      "GET /companies": () =>
         jsonResponse({ data: [{ id: "o-1", display_name: "MiTek" }] }),
       "GET /deals": () =>
         jsonResponse({
@@ -201,7 +201,7 @@ describe("the tag page names what carries the word", () => {
           usage: { people: 2, companies: 2, deals: 2 },
         }),
       "GET /people": () => jsonResponse({ data: [] }),
-      "GET /organizations": () => jsonResponse({ data: [] }),
+      "GET /companies": () => jsonResponse({ data: [] }),
       "GET /deals": () => jsonResponse({ data: [] }),
     });
     render(

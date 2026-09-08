@@ -120,7 +120,7 @@ export const NotConnected: Story = {
 };
 
 // Region and token are two inputs submitted together, so they live behind the
-// row's verb in the confirm that names the org-wide consequence (every seat's
+// row's verb in the confirm that names the company-wide consequence (every seat's
 // reads switch source) — the sentence is on screen while the token is pasted,
 // and the dialog's own button is the only press that POSTs. This story captures
 // that dialog open, before any confirm click, so the gate itself is visible in

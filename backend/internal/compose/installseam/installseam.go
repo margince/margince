@@ -31,7 +31,7 @@ func Deals() deals.Installation {
 		StampCorrespondence: activities.StampCorrespondenceForDeal,
 		// people owns `partner`, so the "is this company a partner" read lives
 		// there and the edge is injected here for the same reason.
-		EnsurePartner: people.EnsureOrganizationIsPartner,
+		EnsurePartner: people.EnsureCompanyIsPartner,
 		// projects owns `project`, so the attach check and the delivery advance
 		// live there and the edges are injected here for the same reason.
 		EnsureProjectAttachable: projects.EnsureAttachable,

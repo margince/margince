@@ -479,15 +479,15 @@ describe("SettingsScreen restructured pages", () => {
       ).toBe("page"),
     );
     // A passport is minted by the HUMAN who holds it, so the surface that mints
-    // and lists one opens for a seat holding no org grant and no writing
-    // licence at all — gating it behind the org group would have meant only
+    // and lists one opens for a seat holding no company grant and no writing
+    // licence at all — gating it behind the company group would have meant only
     // admins could mint one.
     expect(
       await screen.findByRole("heading", { name: "Agent passports" }),
     ).toBeTruthy();
     expect(screen.getByText("Scout")).toBeTruthy();
     // And the autonomy table the passports sit under, which came off the
-    // organization's AI entry with them.
+    // company's AI entry with them.
     expect(
       screen.getByRole("heading", { name: "Autonomy tiers" }),
     ).toBeTruthy();
@@ -688,7 +688,7 @@ describe("SettingsScreen restructured pages", () => {
 // Where a settings card LIVES is a claim about WHOSE setting it is, and the
 // catalog says that in two fields: the group names the subject, and `scope` says
 // whose state the page changes — `self` for a credential or connection the
-// reader personally holds, `workspace` or `installation` for the organization's
+// reader personally holds, `workspace` or `installation` for the company's
 // posture.
 //
 // The Google app is one app per installation, supplied by whoever operates it,
@@ -739,7 +739,7 @@ describe("installation-wide cards live off the personal pages", () => {
     expect(hosts).toHaveLength(1);
     expect(hosts[0]?.scope).toBe("installation");
     // And the group with it: `scope` alone would be satisfied by any page the
-    // organization owns, while the claim is that this card belongs beside the
+    // company owns, while the claim is that this card belongs beside the
     // sign-in policy the same OAuth client now serves.
     expect(hosts[0]?.group).toBe("company");
   });

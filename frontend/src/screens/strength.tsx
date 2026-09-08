@@ -45,7 +45,7 @@ const BUCKET_TONE: Record<
 };
 
 async function fetchStrength(
-  kind: "person" | "organization",
+  kind: "person" | "company",
   id: string,
 ): Promise<RelationshipStrength> {
   if (kind === "person") {
@@ -57,7 +57,7 @@ async function fetchStrength(
     }
     return data;
   }
-  const { data, error } = await api.GET("/organizations/{id}/strength", {
+  const { data, error } = await api.GET("/companies/{id}/strength", {
     params: { path: { id } },
   });
   if (error) {
@@ -75,7 +75,7 @@ export function StrengthCard({
   id,
   onOpenEmail,
 }: Readonly<{
-  kind: "person" | "organization";
+  kind: "person" | "company";
   id: string;
   // Opens one cited message in the host's own drawer. A host that mounts none
   // passes nothing, and the receipts render without an opener.

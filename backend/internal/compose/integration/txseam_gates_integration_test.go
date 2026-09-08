@@ -145,36 +145,36 @@ func TestBothPersonCreatesRefuseTheSameThings(t *testing.T) {
 	}
 }
 
-func TestBothOrganizationCreatesRefuseTheSameThings(t *testing.T) {
+func TestBothCompanyCreatesRefuseTheSameThings(t *testing.T) {
 	f := setupGates(t)
-	valid := people.CreateOrganizationInput{DisplayName: "Analytical Engines", Source: "ui"}
+	valid := people.CreateCompanyInput{DisplayName: "Analytical Engines", Source: "ui"}
 
-	if _, err := f.people.CreateOrganization(f.ungated, valid); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := f.people.CreateCompany(f.ungated, valid); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("the store-opened create answered %v for a seat without the grant, want the refusal", err)
 	}
-	probe := f.refusedInTx(f.ungated, t, "organization", func(tx pgx.Tx) error {
-		_, err := f.people.CreateOrganizationTx(f.ungated, tx, valid)
+	probe := f.refusedInTx(f.ungated, t, "company", func(tx pgx.Tx) error {
+		_, err := f.people.CreateCompanyTx(f.ungated, tx, valid)
 		return err
 	})
 	if !errors.Is(probe.err, apperrors.ErrPermissionDenied) {
 		t.Errorf("the caller-opened create answered %v for a seat without the grant, want the refusal", probe.err)
 	}
 	if probe.rows != 0 {
-		t.Errorf("organization rows inside the refusing transaction = %d, want 0 — the gate ran after the write", probe.rows)
+		t.Errorf("company rows inside the refusing transaction = %d, want 0 — the gate ran after the write", probe.rows)
 	}
 
 	// A size band outside the vocabulary: refused on create, not only on the
 	// patch, so the database never has to answer for it.
 	band := "enormous"
-	bad := people.CreateOrganizationInput{DisplayName: "Analytical Engines", Source: "ui", SizeBand: &band}
-	_, storeOpened := f.people.CreateOrganization(f.granted, bad)
-	probe = f.refusedInTx(f.granted, t, "organization", func(tx pgx.Tx) error {
-		_, err := f.people.CreateOrganizationTx(f.granted, tx, bad)
+	bad := people.CreateCompanyInput{DisplayName: "Analytical Engines", Source: "ui", SizeBand: &band}
+	_, storeOpened := f.people.CreateCompany(f.granted, bad)
+	probe = f.refusedInTx(f.granted, t, "company", func(tx pgx.Tx) error {
+		_, err := f.people.CreateCompanyTx(f.granted, tx, bad)
 		return err
 	})
 	assertSameRefusal(t, storeOpened, probe.err)
 	if probe.rows != 0 {
-		t.Errorf("organization rows inside the refusing transaction = %d, want 0 — the validation ran after the write", probe.rows)
+		t.Errorf("company rows inside the refusing transaction = %d, want 0 — the validation ran after the write", probe.rows)
 	}
 }
 

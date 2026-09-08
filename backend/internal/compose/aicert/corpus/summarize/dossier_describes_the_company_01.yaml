@@ -1,6 +1,6 @@
 name: dossier_describes_the_company_not_the_relationship
 task: summarize
-site: org_dossier
+site: company_dossier
 source: hand_authored
 sanitized_by: hand_authored/claude-fable-5
 fixture:

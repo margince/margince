@@ -48,9 +48,9 @@ func TestAgentMintedStagingDoesNotInvokeAServerSideEffect(t *testing.T) {
 	agentCtx := e.AgentCtxWithPassport(e.SeedPassport(t, OwnerConn(t), "provenance probe"))
 	approvalID, err := svc.Stage(agentCtx, approvals.StageInput{
 		Kind:           kind,
-		ProposedChange: json.RawMessage(`{"operation":"scrapeCompany","path":"/v1/organizations/x/enrich","body":null}`),
+		ProposedChange: json.RawMessage(`{"operation":"scrapeCompany","path":"/v1/companies/x/enrich","body":null}`),
 		DiffHash:       "h-" + ids.NewV7().String(),
-		Summary:        "Agent REST POST /v1/organizations/x/enrich",
+		Summary:        "Agent REST POST /v1/companies/x/enrich",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -92,7 +92,7 @@ func TestServerMintedProposalStillInvokesItsEffect(t *testing.T) {
 
 	approvalID, err := svc.Stage(admin, approvals.StageInput{
 		Kind:           kind,
-		ProposedChange: json.RawMessage(`{"organization_id":"018f2a10-0000-7000-8000-000000000001","fields":[]}`),
+		ProposedChange: json.RawMessage(`{"company_id":"018f2a10-0000-7000-8000-000000000001","fields":[]}`),
 		DiffHash:       "h-" + ids.NewV7().String(),
 		Summary:        "Enrichment proposal for Acme",
 	})

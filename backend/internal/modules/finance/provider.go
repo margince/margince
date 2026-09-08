@@ -27,7 +27,7 @@ type Provider interface {
 	// shown beside the figures so a reader knows what they are looking at.
 	Name() string
 	// Customers lists the source's own customer directory — what a human maps
-	// an organization onto. Never matched automatically: guessing which
+	// a company onto. Never matched automatically: guessing which
 	// customer is which company is how money lands on the wrong account.
 	Customers(ctx context.Context) ([]SourceCustomer, error)
 	// InvoicesFor answers one customer's invoices and the payments against

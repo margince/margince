@@ -16,7 +16,7 @@ func personEmployerSource(t *testing.T, body string) *CSVSource {
 	mapping := map[string]string{
 		"Email":   "email",
 		"Name":    "full_name",
-		"Company": AssocTargetOrganizationName,
+		"Company": AssocTargetCompanyName,
 	}
 	return NewCSVSource(seedCSV(t, body), testCSVKey, ObjectPerson, mapping, "Email")
 }
@@ -39,7 +39,7 @@ func TestAPersonFileOffersOneEmployerEdgePerNamedCompany(t *testing.T) {
 	if edges[0].FromID != "ada@x.test" || edges[0].ToID != "Analytical Engines" {
 		t.Fatalf("edge = %+v, want the row's source key and the company as written", edges[0])
 	}
-	if edges[0].FromType != ObjectPerson || edges[0].ToType != AssocTargetOrganizationName {
+	if edges[0].FromType != ObjectPerson || edges[0].ToType != AssocTargetCompanyName {
 		t.Fatalf("edge endpoints = %s→%s, want a person and a company NAME", edges[0].FromType, edges[0].ToType)
 	}
 	if edges[0].Category != assocCategoryEmployment {
@@ -100,9 +100,9 @@ func TestNoEmployerColumnAndNoPersonRunOfferNoEdges(t *testing.T) {
 		t.Fatalf("edges = %d, want none — the file mapped no company column", len(edges))
 	}
 
-	orgs := NewCSVSource(seedCSV(t, "Company\nAcme\n"), testCSVKey,
-		ObjectOrganization, map[string]string{"Company": "display_name"}, "Company")
-	edges, err = orgs.Associations(context.Background())
+	companies := NewCSVSource(seedCSV(t, "Company\nAcme\n"), testCSVKey,
+		ObjectCompany, map[string]string{"Company": "display_name"}, "Company")
+	edges, err = companies.Associations(context.Background())
 	if err != nil {
 		t.Fatalf("Associations: %v", err)
 	}

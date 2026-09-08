@@ -10,7 +10,7 @@
 // them movable together is that each one starts a worker, and none of them owes an
 // unexported helper to a suite that stayed.
 //
-// This package has a doc and its sibling suite packages (capture, org360, overlay)
+// This package has a doc and its sibling suite packages (capture, company360, overlay)
 // do not, because their names answer the question this one's does not: a suite
 // named for a fan-out is not automatically at home here. webhookretry and
 // embedreindex are periodic dispatch fan-outs too, and they stayed in package

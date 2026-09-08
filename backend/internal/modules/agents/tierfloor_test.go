@@ -147,9 +147,9 @@ func TestAStagedCreateRefusesWhatItsHandlerWouldRefuse(t *testing.T) {
 
 // The summary is the whole of what a triaging human reads on the inbox row.
 func TestAGenericWriteSaysWhatItWouldSet(t *testing.T) {
-	line := describeGenericWrite("Create", "project", json.RawMessage(`{"name":"N","organization_id":"o"}`))
+	line := describeGenericWrite("Create", "project", json.RawMessage(`{"name":"N","company_id":"o"}`))
 	if !strings.Contains(line, "project") || !strings.Contains(line, "name") ||
-		!strings.Contains(line, "organization_id") {
+		!strings.Contains(line, "company_id") {
 		t.Errorf("summary %q names neither the record type nor the fields the call sets", line)
 	}
 

@@ -110,9 +110,9 @@ func advanceProject(ctx context.Context, t *testing.T, e *Env, project ids.Proje
 func TestActivitiesByKindFiltersAndGroupsByProject(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
-	org := e.SeedOrg(t, "Effort Co", nil)
-	erp := seedProject(admin, t, e, "ERP replacement", org, nil)
-	crm := seedProject(admin, t, e, "CRM rollout", org, nil)
+	company := e.SeedCompany(t, "Effort Co", nil)
+	erp := seedProject(admin, t, e, "ERP replacement", company, nil)
+	crm := seedProject(admin, t, e, "CRM rollout", company, nil)
 	// The label rule has two arms — the key when the project has one, the name
 	// otherwise — so one project here must have no key. The store mints a key
 	// for every project it creates, so the only way to reach the second arm is
@@ -153,8 +153,8 @@ func TestActivitiesByKindFiltersAndGroupsByProject(t *testing.T) {
 func TestProjectFilterRunsTheProjectReadGate(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
-	org := e.SeedOrg(t, "Gated Co", nil)
-	p := seedProject(admin, t, e, "Hidden work", org, nil)
+	company := e.SeedCompany(t, "Gated Co", nil)
+	p := seedProject(admin, t, e, "Hidden work", company, nil)
 
 	noProjectGrant := principal.Permissions{
 		Objects: map[string]principal.ObjectGrant{
@@ -176,9 +176,9 @@ func TestProjectFilterRunsTheProjectReadGate(t *testing.T) {
 
 	// The gate passed, the filter binds: only the project's deal is counted.
 	pipeline, open, _ := DealFixture(t, e)
-	orgID := orgIDOf(org)
+	companyID := companyIDOf(company)
 	for _, name := range []string{"on the project", "elsewhere"} {
-		in := deals.CreateDealInput{Name: name, PipelineID: pipeline, StageID: open, OrganizationID: &orgID, Source: "manual"}
+		in := deals.CreateDealInput{Name: name, PipelineID: pipeline, StageID: open, CompanyID: &companyID, Source: "manual"}
 		if name == "on the project" {
 			in.ProjectID = &p.ID
 		}
@@ -205,16 +205,16 @@ func TestProjectsByPhaseCountsAndFoldsDealValue(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
 	pipeline, open, won := DealFixture(t, e)
-	org := e.SeedOrg(t, "Phase Co", nil)
-	orgID := orgIDOf(org)
-	pursued := seedProject(admin, t, e, "Pursued", org, nil)
+	company := e.SeedCompany(t, "Phase Co", nil)
+	companyID := companyIDOf(company)
+	pursued := seedProject(admin, t, e, "Pursued", company, nil)
 	advanceProject(admin, t, e, pursued.ID, projects.PhasePursuing)
-	seedProject(admin, t, e, "Idea", org, nil)
+	seedProject(admin, t, e, "Idea", company, nil)
 
 	amount := int64(250000)
 	eur := "EUR"
 	openDeal, err := e.Deals.CreateDeal(admin, deals.CreateDealInput{
-		Name: "Open", PipelineID: pipeline, StageID: open, OrganizationID: &orgID,
+		Name: "Open", PipelineID: pipeline, StageID: open, CompanyID: &companyID,
 		ProjectID: &pursued.ID, AmountMinor: &amount, Currency: &eur, Source: "manual",
 	})
 	if err != nil {
@@ -222,7 +222,7 @@ func TestProjectsByPhaseCountsAndFoldsDealValue(t *testing.T) {
 	}
 	wonAmount := int64(100000)
 	wonDeal, err := e.Deals.CreateDeal(admin, deals.CreateDealInput{
-		Name: "Won", PipelineID: pipeline, StageID: open, OrganizationID: &orgID,
+		Name: "Won", PipelineID: pipeline, StageID: open, CompanyID: &companyID,
 		ProjectID: &pursued.ID, AmountMinor: &wonAmount, Currency: &eur, Source: "manual",
 	})
 	if err != nil {
@@ -254,9 +254,9 @@ func TestProjectsByPhaseCountsAndFoldsDealValue(t *testing.T) {
 func TestProjectCommitmentsCountsOpenAndOverdueFirst(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
-	org := e.SeedOrg(t, "Promise Co", nil)
-	calm := seedProject(admin, t, e, "Calm", org, nil)
-	late := seedProject(admin, t, e, "Late", org, nil)
+	company := e.SeedCompany(t, "Promise Co", nil)
+	calm := seedProject(admin, t, e, "Calm", company, nil)
+	late := seedProject(admin, t, e, "Late", company, nil)
 	past := time.Now().UTC().Add(-48 * time.Hour)
 	future := time.Now().UTC().Add(72 * time.Hour)
 	fileTask(admin, t, e, calm.ID, future)
@@ -282,15 +282,15 @@ func TestProjectCommitmentsCountsOpenAndOverdueFirst(t *testing.T) {
 func TestProjectsGoneQuietHonoursTheDaysThreshold(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
-	org := e.SeedOrg(t, "Quiet Co", nil)
+	company := e.SeedCompany(t, "Quiet Co", nil)
 	now := time.Now().UTC()
-	stale := seedProject(admin, t, e, "Stale", org, &e.Rep1)
+	stale := seedProject(admin, t, e, "Stale", company, &e.Rep1)
 	advanceProject(admin, t, e, stale.ID, projects.PhasePursuing)
 	fileActivity(admin, t, e, "note", now.AddDate(0, 0, -40), &stale.ID)
-	recent := seedProject(admin, t, e, "Recent", org, nil)
+	recent := seedProject(admin, t, e, "Recent", company, nil)
 	advanceProject(admin, t, e, recent.ID, projects.PhaseDelivering)
 	fileActivity(admin, t, e, "note", now.AddDate(0, 0, -5), &recent.ID)
-	idea := seedProject(admin, t, e, "Idea", org, nil)
+	idea := seedProject(admin, t, e, "Idea", company, nil)
 	fileActivity(admin, t, e, "note", now.AddDate(0, 0, -90), &idea.ID)
 
 	rows := runPrebuiltReport(admin, t, e, "projects-gone-quiet", "")
@@ -331,19 +331,19 @@ func TestProjectReportMeasuresTakeTheirOwnRecordGrant(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
 	pipeline, open, _ := DealFixture(t, e)
-	org := e.SeedOrg(t, "Grant Co", nil)
-	orgID := orgIDOf(org)
-	p := seedProject(admin, t, e, "Priced", org, nil)
+	company := e.SeedCompany(t, "Grant Co", nil)
+	companyID := companyIDOf(company)
+	p := seedProject(admin, t, e, "Priced", company, nil)
 	amount, eur := int64(5000), "EUR"
 	if _, err := e.Deals.CreateDeal(admin, deals.CreateDealInput{
-		Name: "Open", PipelineID: pipeline, StageID: open, OrganizationID: &orgID,
+		Name: "Open", PipelineID: pipeline, StageID: open, CompanyID: &companyID,
 		ProjectID: &p.ID, AmountMinor: &amount, Currency: &eur, Source: "manual",
 	}); err != nil {
 		t.Fatalf("create the deal: %v", err)
 	}
 	fileTask(admin, t, e, p.ID, time.Now().UTC().Add(-time.Hour))
 
-	projectOnly := e.readerWith("project", "organization")
+	projectOnly := e.readerWith("project", "company")
 	rows := runPrebuiltReport(projectOnly, t, e, "projects-by-phase", "")
 	if len(rows) != 1 || cell(rows[0], "projects") != "1" {
 		t.Fatalf("projects-by-phase for a project-only seat = %v, want the one project counted", rows)
@@ -357,7 +357,7 @@ func TestProjectReportMeasuresTakeTheirOwnRecordGrant(t *testing.T) {
 		`{"aggregates":[{"fn":"sum","field":"open_deal_value_minor","as":"money"}]}`); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("summing deal money without deal.read → %v, want ErrPermissionDenied", err)
 	}
-	withDeals := e.readerWith("project", "organization", "deal")
+	withDeals := e.readerWith("project", "company", "deal")
 	if rows := runPrebuiltReport(withDeals, t, e, "projects-by-phase", ""); cell(rows[0], "open_deal_value_minor") != "5000" {
 		t.Errorf("with deal.read the money is served: %v", rows)
 	}
@@ -373,7 +373,7 @@ func TestProjectReportMeasuresTakeTheirOwnRecordGrant(t *testing.T) {
 		`{"aggregates":[{"fn":"sum","field":"overdue_commitments","as":"late"}]}`); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("counting tasks without activity.read → %v, want ErrPermissionDenied", err)
 	}
-	withTasks := e.readerWith("project", "organization", "activity")
+	withTasks := e.readerWith("project", "company", "activity")
 	if rows := runPrebuiltReport(withTasks, t, e, "project-commitments", ""); cell(rows[0], "overdue_commitments") != "1" {
 		t.Errorf("with activity.read the counts are served: %v", rows)
 	}
@@ -385,8 +385,8 @@ func TestProjectReportMeasuresTakeTheirOwnRecordGrant(t *testing.T) {
 func TestActivitiesByProjectDimensionsTakeTheProjectGrant(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
-	org := e.SeedOrg(t, "Label Co", nil)
-	p := seedProject(admin, t, e, "Secret rollout", org, nil)
+	company := e.SeedCompany(t, "Label Co", nil)
+	p := seedProject(admin, t, e, "Secret rollout", company, nil)
 	fileActivity(admin, t, e, "meeting", time.Now().UTC().Add(-time.Hour), &p.ID)
 
 	activityOnly := e.readerWith("activity")

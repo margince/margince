@@ -5,7 +5,7 @@
 // sites take, and refuses what a reader must not be handed.
 //
 // It exists because two sites wrote this rule independently and both wrote it
-// wrong the same way. The introduction REQUEST (org360, addressed to a
+// wrong the same way. The introduction REQUEST (company360, addressed to a
 // colleague) and the introduction NOTE (network, forwarded to a customer) are
 // two prompts with two registers, deliberately — each says so beside its own
 // wording table, and merging them would produce a customer email in a

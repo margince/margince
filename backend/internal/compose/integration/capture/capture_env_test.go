@@ -272,7 +272,7 @@ func seedCaptureRole(t *testing.T, e *integration.SearchEnv) {
 		if err := tx.QueryRow(context.Background(), `
 			INSERT INTO role (key, name, permissions)
 			VALUES ('capture_rep', 'Capture Rep',
-			        '{"objects":{"activity":{"create":true,"read":true,"update":true},"person":{"create":true,"read":true},"organization":{"create":true,"read":true},"project":{"read":true},"deal":{"read":true}},"row_scope":"all"}'::jsonb)
+			        '{"objects":{"activity":{"create":true,"read":true,"update":true},"person":{"create":true,"read":true},"company":{"create":true,"read":true},"project":{"read":true},"deal":{"read":true}},"row_scope":"all"}'::jsonb)
 			RETURNING id`).Scan(&roleID); err != nil {
 			return err
 		}
@@ -373,15 +373,15 @@ func newCaptureEnv(t *testing.T) captureEnv {
 	// verified — a connected mailbox alone proves whose mailbox it is, never
 	// whose domain it is (ADR-0082/A127 §2).
 	if err := database.WithWorkspaceTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
-		orgID := ids.NewV7()
+		companyID := ids.NewV7()
 		if _, err := tx.Exec(wsCtx, `
-			INSERT INTO organization (id, display_name, is_anchor, source, captured_by)
-			VALUES ($1, 'Our Company', true, 'manual', 'human:test')`, orgID); err != nil {
+			INSERT INTO company (id, display_name, is_anchor, source, captured_by)
+			VALUES ($1, 'Our Company', true, 'manual', 'human:test')`, companyID); err != nil {
 			return err
 		}
 		_, err := tx.Exec(wsCtx, `
-			INSERT INTO organization_domain (organization_id, domain, is_primary, source, captured_by)
-			VALUES ($1, 'myco.example', true, 'manual', 'human:test')`, orgID)
+			INSERT INTO company_domain (company_id, domain, is_primary, source, captured_by)
+			VALUES ($1, 'myco.example', true, 'manual', 'human:test')`, companyID)
 		return err
 	}); err != nil {
 		t.Fatalf("seeding the anchor company: %v", err)

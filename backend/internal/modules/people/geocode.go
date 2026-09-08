@@ -68,12 +68,12 @@ const defaultGeocodeBackoff = 24 * time.Hour
 // address still writes, and no job is queued. Same shape as SiteReadEnqueue,
 // and for the same reason — the address is what the caller asked for; the
 // coordinates are what this installation can offer.
-type GeocodeEnqueue func(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) error
+type GeocodeEnqueue func(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) error
 
 // GeocodableAddress is one company's address, ready to be asked about.
 type GeocodableAddress struct {
-	OrganizationID ids.OrganizationID
-	Query          string
+	CompanyID ids.CompanyID
+	Query     string
 	// InputHash identifies the address this query was built from, so the
 	// worker can skip one it has already resolved. Reingestion is the backfill
 	// in this design, and without the hash every re-read of a website would
@@ -89,14 +89,14 @@ type GeocodableAddress struct {
 // any workspace's row — and this path runs under the SYSTEM principal from a
 // job whose args name their own workspace, which means the args would
 // otherwise be the authority on which tenant's data is touched. A job carrying
-// workspace A and an organization id from workspace B would read and write B.
+// workspace A and a company id from workspace B would read and write B.
 //
 // It answers false for THREE different situations and the caller does not need
 // to tell them apart: no address at all, an address already resolved to the
 // same coordinates, and an address whose attempts are spent. Each means "do
 // not ask the geocoder", which is the only question the worker has.
-func (s *Store) AddressForGeocode(ctx context.Context, orgID ids.OrganizationID) (GeocodableAddress, bool, error) {
-	if err := auth.Require(ctx, "organization", principal.ActionRead); err != nil {
+func (s *Store) AddressForGeocode(ctx context.Context, companyID ids.CompanyID) (GeocodableAddress, bool, error) {
+	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
 		return GeocodableAddress{}, false, err
 	}
 	var (
@@ -111,9 +111,9 @@ func (s *Store) AddressForGeocode(ctx context.Context, orgID ids.OrganizationID)
 			SELECT o.address_line1, o.address_line2, o.address_city, o.address_region,
 			       o.address_postal_code, o.address_country, o.geocode_input_hash, o.geocode_status,
 			       coalesce(g.attempts, 0), g.next_attempt_at
-			  FROM organization o
-			  LEFT JOIN organization_geocode_state g ON g.organization_id = o.id
-			 WHERE o.id = $1 AND o.archived_at IS NULL`, orgID).
+			  FROM company o
+			  LEFT JOIN company_geocode_state g ON g.company_id = o.id
+			 WHERE o.id = $1 AND o.archived_at IS NULL`, companyID).
 			Scan(&line1, &line2, &city, &region, &postal, &country, &currentHash, &status,
 				&attempts, &nextAttempt)
 	})
@@ -142,7 +142,7 @@ func (s *Store) AddressForGeocode(ctx context.Context, orgID ids.OrganizationID)
 		// limit wants the backoff this ledger recorded, not an immediate retry.
 		return GeocodableAddress{}, false, nil
 	}
-	return GeocodableAddress{OrganizationID: orgID, Query: query, InputHash: hash}, true, nil
+	return GeocodableAddress{CompanyID: companyID, Query: query, InputHash: hash}, true, nil
 }
 
 // settledFor reports whether this address already has a final answer.
@@ -217,13 +217,13 @@ func addressHash(query string) string {
 // lookup; this one asks "is this still the address I looked up", after it. One
 // query serving both would have to answer the second with data read for the
 // first, which is the staleness this whole file is about.
-func addressHashInTx(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) (string, error) {
+func addressHashInTx(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (string, error) {
 	var line1, line2, city, region, postal, country *string
 	if err := tx.QueryRow(ctx, `
 		SELECT address_line1, address_line2, address_city, address_region,
 		       address_postal_code, address_country
-		  FROM organization
-		 WHERE id = $1 AND archived_at IS NULL`, orgID).
+		  FROM company
+		 WHERE id = $1 AND archived_at IS NULL`, companyID).
 		Scan(&line1, &line2, &city, &region, &postal, &country); err != nil {
 		return "", fmt.Errorf("re-reading the address before recording its point: %w", err)
 	}
@@ -242,9 +242,9 @@ func addressHashInTx(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) (
 // together in one transaction, so a crash between them cannot leave a company
 // looking resolvable forever.
 func (s *Store) RecordGeocode(
-	ctx context.Context, orgID ids.OrganizationID, status string, lat, lon *float64, provider, inputHash string,
+	ctx context.Context, companyID ids.CompanyID, status string, lat, lon *float64, provider, inputHash string,
 ) error {
-	return s.recordGeocodeAfter(ctx, orgID, status, lat, lon, provider, inputHash, 0)
+	return s.recordGeocodeAfter(ctx, companyID, status, lat, lon, provider, inputHash, 0)
 }
 
 // RecordGeocodeBackoff is RecordGeocode for a failure the PROVIDER put a clock
@@ -255,23 +255,23 @@ func (s *Store) RecordGeocode(
 // becomes a block, and this installation shares one budget across every
 // company it will ever geocode.
 func (s *Store) RecordGeocodeBackoff(
-	ctx context.Context, orgID ids.OrganizationID, inputHash string, wait time.Duration,
+	ctx context.Context, companyID ids.CompanyID, inputHash string, wait time.Duration,
 ) error {
-	return s.recordGeocodeAfter(ctx, orgID, GeocodeFailed, nil, nil, "", inputHash, wait)
+	return s.recordGeocodeAfter(ctx, companyID, GeocodeFailed, nil, nil, "", inputHash, wait)
 }
 
 func (s *Store) recordGeocodeAfter(
-	ctx context.Context, orgID ids.OrganizationID, status string, lat, lon *float64,
+	ctx context.Context, companyID ids.CompanyID, status string, lat, lon *float64,
 	provider, inputHash string, wait time.Duration,
 ) error {
-	if err := auth.Require(ctx, "organization", principal.ActionUpdate); err != nil {
+	if err := auth.Require(ctx, "company", principal.ActionUpdate); err != nil {
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
 		// The geocode sweep runs unbounded, so this returns nil without a
 		// query today. It is here so the write is scoped the day anything
 		// human-facing asks for a company to be re-geocoded.
-		if err := auth.EnsureWritable(ctx, tx, "organization", orgID.UUID); err != nil {
+		if err := auth.EnsureWritable(ctx, tx, "company", companyID.UUID); err != nil {
 			return err
 		}
 		// CONDITIONAL ON THE ADDRESS NOT HAVING MOVED, and this is the whole
@@ -289,7 +289,7 @@ func (s *Store) recordGeocodeAfter(
 		// geocode_input_hash: that column records what was last RESOLVED, so
 		// matching it would accept a write for an address the row no longer
 		// has. The live columns are the only authority on what the address IS.
-		current, err := addressHashInTx(ctx, tx, orgID)
+		current, err := addressHashInTx(ctx, tx, companyID)
 		if err != nil {
 			return err
 		}
@@ -300,11 +300,11 @@ func (s *Store) recordGeocodeAfter(
 			return nil
 		}
 		if _, err := tx.Exec(ctx, `
-			UPDATE organization
+			UPDATE company
 			   SET geocode_lat = $2, geocode_lon = $3, geocode_status = $4,
 			       geocode_provider = $5, geocode_input_hash = $6, geocoded_at = now()
 			 WHERE id = $1`,
-			orgID, lat, lon, status, provider, inputHash); err != nil {
+			companyID, lat, lon, status, provider, inputHash); err != nil {
 			return fmt.Errorf("recording the geocode: %w", err)
 		}
 		// A success RESETS the attempts. The next address change starts with a
@@ -312,11 +312,11 @@ func (s *Store) recordGeocodeAfter(
 		// than a pass that skips everything that once failed.
 		if status == GeocodeOK {
 			_, err := tx.Exec(ctx, `
-				INSERT INTO organization_geocode_state (organization_id, attempts, last_outcome, updated_at)
+				INSERT INTO company_geocode_state (company_id, attempts, last_outcome, updated_at)
 				VALUES ($1, 0, $2, now())
-				ON CONFLICT (organization_id) DO UPDATE
+				ON CONFLICT (company_id) DO UPDATE
 				   SET attempts = 0, last_outcome = $2, next_attempt_at = NULL, updated_at = now()`,
-				orgID, status)
+				companyID, status)
 			return err
 		}
 		// The provider's own wait when it gave one, and a day otherwise. A day
@@ -328,21 +328,21 @@ func (s *Store) recordGeocodeAfter(
 			next = wait
 		}
 		_, err = tx.Exec(ctx, `
-			INSERT INTO organization_geocode_state
-			       (organization_id, attempts, last_outcome, next_attempt_at, updated_at)
+			INSERT INTO company_geocode_state
+			       (company_id, attempts, last_outcome, next_attempt_at, updated_at)
 			VALUES ($1, 1, $2, now() + $3::interval, now())
-			ON CONFLICT (organization_id) DO UPDATE
-			   SET attempts = organization_geocode_state.attempts + 1,
+			ON CONFLICT (company_id) DO UPDATE
+			   SET attempts = company_geocode_state.attempts + 1,
 			       last_outcome = $2,
 			       next_attempt_at = now() + $3::interval,
-			       updated_at = now()`, orgID, status, next.String())
+			       updated_at = now()`, companyID, status, next.String())
 		return err
 	})
 }
 
-// organizationAddressColumns is the set an address change touches. Named once
+// companyAddressColumns is the set an address change touches. Named once
 // so a caller asking "did the address move" cannot ask about five of six.
-var organizationAddressColumns = []string{
+var companyAddressColumns = []string{
 	"address_line1", "address_line2", "address_city",
 	"address_region", "address_postal_code", "address_country",
 }
@@ -355,7 +355,7 @@ var organizationAddressColumns = []string{
 // with an unchanged address would otherwise spend a lookup, and every lookup is
 // fifteen seconds of a rate the whole installation shares.
 func movedAddress(after map[string]any) bool {
-	for _, column := range organizationAddressColumns {
+	for _, column := range companyAddressColumns {
 		if _, assigned := after[column]; assigned {
 			return true
 		}
@@ -385,16 +385,16 @@ func namesAPlace(address *crmcontracts.Address) bool {
 	return locatable(address.Line1, address.City, address.PostalCode)
 }
 
-func (s *Store) enqueueGeocode(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) error {
+func (s *Store) enqueueGeocode(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) error {
 	if s.geocodeEnqueue == nil {
 		return nil
 	}
-	return s.geocodeEnqueue(ctx, tx, orgID)
+	return s.geocodeEnqueue(ctx, tx, companyID)
 }
 
 // GeocodedPoint is one company's resolved position, for the query executor.
 type GeocodedPoint struct {
-	OrganizationID ids.OrganizationID
-	Lat, Lon       float64
-	GeocodedAt     time.Time
+	CompanyID  ids.CompanyID
+	Lat, Lon   float64
+	GeocodedAt time.Time
 }

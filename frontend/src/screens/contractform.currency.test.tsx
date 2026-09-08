@@ -24,7 +24,7 @@ import { ContractForm } from "./contractform";
 // dong one — wrote the hundredfold figure down as expected.
 
 const SETTINGS = {
-  organization_name: "Brandt Automotive GmbH",
+  company_name: "Brandt Automotive GmbH",
   timezone: "Europe/Berlin",
   base_currency: "VND",
   base_currency_locked: false,
@@ -35,7 +35,7 @@ const SETTINGS = {
 // CHECK allows a currency-less contract to have.
 const CONTRACT: components["schemas"]["Contract"] = {
   id: "c-1",
-  organization_id: "o-1",
+  company_id: "o-1",
   title: "MSA 2026",
   status: "active",
   under_contract: true,
@@ -116,7 +116,7 @@ describe("recording an agreement's value", () => {
   it("writes the installation's own currency, not one this file chose", async () => {
     const user = userEvent.setup();
     const seen = stubApi({ body: SETTINGS });
-    show(<ContractForm orgId="o-1" open onClose={() => {}} />);
+    show(<ContractForm companyId="o-1" open onClose={() => {}} />);
     await waitFor(() => expect(screen.getByLabelText(/^Title/)).toBeTruthy());
 
     await recordAgreement(user);
@@ -139,7 +139,7 @@ describe("recording an agreement's value", () => {
     // half a money pair where the reader can see the refusal, whereas dropping
     // the amount would report a saved agreement whose value went nowhere.
     const seen = stubApi({ body: { detail: "unavailable" }, status: 503 });
-    show(<ContractForm orgId="o-1" open onClose={() => {}} />);
+    show(<ContractForm companyId="o-1" open onClose={() => {}} />);
     await waitFor(() => expect(screen.getByLabelText(/^Title/)).toBeTruthy());
 
     await recordAgreement(user);
@@ -166,7 +166,7 @@ describe("correcting an agreement's value", () => {
     // leaves the unit exactly as recorded.
     show(
       <ContractForm
-        orgId="o-1"
+        companyId="o-1"
         contract={{ ...CONTRACT, value_minor: 700_000, currency: "USD" }}
         open
         onClose={() => {}}
@@ -191,7 +191,12 @@ describe("correcting an agreement's value", () => {
     // currency carries no amount either: it is being priced here for the first
     // time, which is the same act as pricing a new one.
     show(
-      <ContractForm orgId="o-1" contract={CONTRACT} open onClose={() => {}} />,
+      <ContractForm
+        companyId="o-1"
+        contract={CONTRACT}
+        open
+        onClose={() => {}}
+      />,
     );
     await waitFor(() => expect(screen.getByLabelText(/^Title/)).toBeTruthy());
 

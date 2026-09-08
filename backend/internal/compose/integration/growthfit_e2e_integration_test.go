@@ -30,7 +30,7 @@ import (
 const bootstrappedAdminEmail = "ada@example.com"
 
 type growthFitResponse struct {
-	OrganizationID   string  `json:"organization_id"`
+	CompanyID        string  `json:"company_id"`
 	Band             string  `json:"band"`
 	BandCappedReason *string `json:"band_capped_reason"`
 	NextStep         *string `json:"next_step"`
@@ -45,11 +45,11 @@ type growthFitResponse struct {
 func TestGrowthFitAbstainsAndNamesWhatToGather(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	orgID := createBareOrganization(t, e)
+	companyID := createBareCompany(t, e)
 
 	// A company we hold nothing about. The panel must not read as "poor fit".
 	var fresh growthFitResponse
-	if status := e.Call(t, "GET", "/v1/organizations/"+orgID+"/growth-fit", nil, nil, &fresh); status != http.StatusOK {
+	if status := e.Call(t, "GET", "/v1/companies/"+companyID+"/growth-fit", nil, nil, &fresh); status != http.StatusOK {
 		t.Fatalf("GET growth-fit = %d, want 200", status)
 	}
 	if fresh.Band != "unknown" {
@@ -77,10 +77,10 @@ func TestGrowthFitAbstainsAndNamesWhatToGather(t *testing.T) {
 	// the two fresh ones may count, and the figure must MOVE, because a reader
 	// that is not seeing rows the database holds looks exactly like a company
 	// with nothing recorded.
-	seedRequiredProfileFields(t, e, orgID)
+	seedRequiredProfileFields(t, e, companyID)
 
 	var enriched growthFitResponse
-	if status := e.Call(t, "POST", "/v1/organizations/"+orgID+"/growth-fit", nil, nil, &enriched); status != http.StatusOK {
+	if status := e.Call(t, "POST", "/v1/companies/"+companyID+"/growth-fit", nil, nil, &enriched); status != http.StatusOK {
 		t.Fatalf("POST growth-fit = %d, want 200", status)
 	}
 	if enriched.DataCompleteness.Present != 2 {
@@ -116,7 +116,7 @@ func TestGrowthFitAbstainsAndNamesWhatToGather(t *testing.T) {
 func TestTheGrowthFitCacheRowIsKeyedToTheReaderWhoAskedForIt(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	orgID := createBareOrganization(t, e)
+	companyID := createBareCompany(t, e)
 
 	// One real read first, purely to MINT a row. Its fingerprint is the one
 	// this company's facts compute to, and a hand-written one would not be:
@@ -124,7 +124,7 @@ func TestTheGrowthFitCacheRowIsKeyedToTheReaderWhoAskedForIt(t *testing.T) {
 	// reader, so a seeded row with an invented fingerprint is refused for the
 	// wrong reason and an unkeyed read would pass this test too.
 	var first growthFitResponse
-	if status := e.Call(t, "GET", "/v1/organizations/"+orgID+"/growth-fit", nil, nil, &first); status != http.StatusOK {
+	if status := e.Call(t, "GET", "/v1/companies/"+companyID+"/growth-fit", nil, nil, &first); status != http.StatusOK {
 		t.Fatalf("GET growth-fit = %d, want 200", status)
 	}
 	if first.Band == otherReadersBand {
@@ -135,10 +135,10 @@ func TestTheGrowthFitCacheRowIsKeyedToTheReaderWhoAskedForIt(t *testing.T) {
 	// band this company could not produce, and leave the acting reader with
 	// nothing of their own. The row is live: it would be served on sight.
 	acting := readerByEmail(t, e, bootstrappedAdminEmail)
-	giveTheCachedRowToAnotherReader(t, e, orgID, acting)
+	giveTheCachedRowToAnotherReader(t, e, companyID, acting)
 
 	var second growthFitResponse
-	if status := e.Call(t, "GET", "/v1/organizations/"+orgID+"/growth-fit", nil, nil, &second); status != http.StatusOK {
+	if status := e.Call(t, "GET", "/v1/companies/"+companyID+"/growth-fit", nil, nil, &second); status != http.StatusOK {
 		t.Fatalf("second GET growth-fit = %d, want 200", status)
 	}
 	if second.Band == otherReadersBand {
@@ -149,8 +149,8 @@ func TestTheGrowthFitCacheRowIsKeyedToTheReaderWhoAskedForIt(t *testing.T) {
 	// same guarantee seen from the write side.
 	var mine ids.UUID
 	if err := e.Owner.QueryRow(context.Background(),
-		`SELECT user_id FROM org_growth_fit WHERE organization_id = $1 AND user_id = $2`,
-		orgID, acting).Scan(&mine); err != nil {
+		`SELECT user_id FROM company_growth_fit WHERE company_id = $1 AND user_id = $2`,
+		companyID, acting).Scan(&mine); err != nil {
 		t.Fatalf("the acting reader's own row is missing after their read: %v", err)
 	}
 }
@@ -164,17 +164,17 @@ func namesMissingInput(missing []string, want string) bool {
 	return false
 }
 
-func createBareOrganization(t *testing.T, e *apptest.AppEnv) string {
+func createBareCompany(t *testing.T, e *apptest.AppEnv) string {
 	t.Helper()
-	var org struct {
+	var company struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/organizations", AnyMap{
+	if status := e.Call(t, "POST", "/v1/companies", AnyMap{
 		"display_name": "Voltaq Systems GmbH", "source": "ui",
-	}, nil, &org); status != http.StatusCreated {
-		t.Fatalf("create organization = %d, want 201", status)
+	}, nil, &company); status != http.StatusCreated {
+		t.Fatalf("create company = %d, want 201", status)
 	}
-	return org.ID
+	return company.ID
 }
 
 // seedRequiredProfileFields writes three of the required inputs the way the
@@ -186,13 +186,13 @@ func createBareOrganization(t *testing.T, e *apptest.AppEnv) string {
 // Freshness therefore runs off `updated_at`, which is what production measures
 // today. Two rows are written now and count; the third is backdated past the
 // window and must not, which is the boundary the served figure rests on.
-func seedRequiredProfileFields(t *testing.T, e *apptest.AppEnv, orgID string) {
+func seedRequiredProfileFields(t *testing.T, e *apptest.AppEnv, companyID string) {
 	t.Helper()
 	// updated_at is written explicitly because the row's own trigger stamps
 	// now() on every write, so a backdated value cannot be produced by an
 	// UPDATE after the fact.
 	const insert = `
-		INSERT INTO organization_profile_field (id, organization_id, field, value, source, evidence_snippet, source_url, confidence, captured_by, updated_at)
+		INSERT INTO company_profile_field (id, company_id, field, value, source, evidence_snippet, source_url, confidence, captured_by, updated_at)
 		VALUES ($1, $2, $3, $4, 'site_read', $5, 'https://voltaq.example/about', 0.9,
 		        'site_read:seed', $6)`
 	now := time.Now().UTC()
@@ -205,7 +205,7 @@ func seedRequiredProfileFields(t *testing.T, e *apptest.AppEnv, orgID string) {
 		"industry":      {"Industrial software", now.Add(-400 * 24 * time.Hour)},
 	} {
 		if _, err := e.Owner.Exec(context.Background(), insert,
-			ids.NewV7(), orgID, field, seed.value, seed.value, seed.written); err != nil {
+			ids.NewV7(), companyID, field, seed.value, seed.value, seed.written); err != nil {
 			t.Fatalf("seed profile field %s: %v", field, err)
 		}
 	}
@@ -236,7 +236,7 @@ func readerByEmail(t *testing.T, e *apptest.AppEnv, email string) ids.UUID {
 // with keying — and the test would pass over an unkeyed read. This row carries
 // the fingerprint the next read will compute, so it is live: an unkeyed read
 // finds it, accepts it, and serves it.
-func giveTheCachedRowToAnotherReader(t *testing.T, e *apptest.AppEnv, orgID string, acting ids.UUID) {
+func giveTheCachedRowToAnotherReader(t *testing.T, e *apptest.AppEnv, companyID string, acting ids.UUID) {
 	t.Helper()
 	other := ids.NewV7()
 	if _, err := e.Owner.Exec(context.Background(),
@@ -244,11 +244,11 @@ func giveTheCachedRowToAnotherReader(t *testing.T, e *apptest.AppEnv, orgID stri
 		t.Fatalf("create the other reader: %v", err)
 	}
 	tag, err := e.Owner.Exec(context.Background(),
-		`UPDATE org_growth_fit
+		`UPDATE company_growth_fit
 		    SET user_id = $1,
 		        payload = jsonb_set(payload, '{band}', to_jsonb($2::text))
-		  WHERE organization_id = $3 AND user_id = $4`,
-		other, otherReadersBand, orgID, acting)
+		  WHERE company_id = $3 AND user_id = $4`,
+		other, otherReadersBand, companyID, acting)
 	if err != nil {
 		t.Fatalf("hand the cached row to the other reader: %v", err)
 	}

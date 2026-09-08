@@ -9,8 +9,8 @@ package privacy
 // A relationship is seven kinds in ONE table with FIVE endpoint columns, and a
 // record's history is the history of the edges it currently occupies an end of.
 // Which column holds the anchor follows from the anchor's KIND — a person id can
-// only be person_id, an organization id is organization_id or
-// counterparty_org_id — so the lookup is a set of sargable equality branches,
+// only be person_id, a company id is company_id or
+// counterparty_company_id — so the lookup is a set of sargable equality branches,
 // never a disjunction: the read this widens rides an ordered index walk to LIMIT
 // on idx_audit_entity, and an OR makes the planner materialise both sides and
 // sort instead.
@@ -46,18 +46,18 @@ const EdgeEntityType = "relationship"
 // forgotten column is a silently one-sided edge, and a co-sell that appears on
 // only one of the two companies looks exactly like a co-sell nobody made.
 //
-// Two columns point at `organization`, which is what makes this a slice and not
+// Two columns point at `company`, which is what makes this a slice and not
 // a map — and is also the case that a single-anchor design drops.
-// entityTypeOrganization is named because TWO endpoint columns point at it, and
+// entityTypeCompany is named because TWO endpoint columns point at it, and
 // a slice of literals would spell the same table twice with nothing holding the
 // two spellings together.
-const entityTypeOrganization = "organization"
+const entityTypeCompany = "company"
 
 var edgeEndpoints = []edgeEndpoint{
 	{column: "person_id", entityType: "person", labelColumn: "full_name"},
 	{column: "counterparty_person_id", entityType: "person", labelColumn: "full_name"},
-	{column: "organization_id", entityType: entityTypeOrganization, labelColumn: "display_name"},
-	{column: "counterparty_org_id", entityType: entityTypeOrganization, labelColumn: "display_name"},
+	{column: "company_id", entityType: entityTypeCompany, labelColumn: "display_name"},
+	{column: "counterparty_company_id", entityType: entityTypeCompany, labelColumn: "display_name"},
 	{column: "deal_id", entityType: "deal", labelColumn: "name"},
 	{column: "project_id", entityType: "project", labelColumn: "name"},
 }
@@ -101,7 +101,7 @@ func edgeAnchorsFor(entityType string) []edgeEndpoint {
 // `relationship` in it is that column's equality. That is what keeps the lookup
 // on the endpoint index: a branch that also required the OTHER columns to be
 // null would hand the planner a second indexable access path, and on a table
-// where most rows have organization_id null it takes it — measured, and the
+// where most rows have company_id null it takes it — measured, and the
 // reason the other end is resolved by expression here rather than by a branch
 // per (anchor, other) pair.
 //
@@ -210,7 +210,7 @@ func edgeBranchParts(anchor edgeEndpoint, claimed []edgeEndpoint, anchorPos, scr
 	// `relationship`: rel_partner_shape, rel_project_stakeholder_shape and
 	// rel_project_company_shape each name their two columns and NULL every
 	// other. rel_employment_shape and rel_stakeholder_shape do NOT — neither
-	// nulls counterparty_org_id — and the create path takes the endpoints it is
+	// nulls counterparty_company_id — and the create path takes the endpoints it is
 	// given, so a three-endpoint employment is admissible rather than impossible.
 	// Closing that is the write path's or the constraint's to do; what it costs
 	// here is a line that names one of the two other ends and not the other.

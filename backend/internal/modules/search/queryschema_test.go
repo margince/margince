@@ -39,7 +39,7 @@ func readSchema(ctx context.Context, t *testing.T, resource *QuerySchemaResource
 // question, and is the exact failure the declaration originally prevented in
 // the other direction.
 func TestThePublishedVocabularyOffersWithinRadiusOnACompany(t *testing.T) {
-	doc := readSchema(readerFor("organization"), t, NewQuerySchemaResource(NewVocabularyResolver()))
+	doc := readSchema(readerFor("company"), t, NewQuerySchemaResource(NewVocabularyResolver()))
 
 	if i := slices.IndexFunc(doc.Unavailable, func(u querySchemaUnavailable) bool {
 		return u.Op == OpWithinRadius
@@ -48,13 +48,13 @@ func TestThePublishedVocabularyOffersWithinRadiusOnACompany(t *testing.T) {
 			"this deployment can now answer", OpWithinRadius)
 	}
 
-	org := targetIn(t, doc, "organization")
-	place := slices.IndexFunc(org.Fields, func(f querySchemaField) bool { return f.Name == "address" })
-	if place < 0 || !slices.Contains(org.Fields[place].Ops, OpWithinRadius) {
+	company := targetIn(t, doc, "company")
+	place := slices.IndexFunc(company.Fields, func(f querySchemaField) bool { return f.Name == "address" })
+	if place < 0 || !slices.Contains(company.Fields[place].Ops, OpWithinRadius) {
 		t.Error("no field publishes the operator, so it can never be reached")
 	}
-	city := slices.IndexFunc(org.Fields, func(f querySchemaField) bool { return f.Name == "address.city" })
-	if city < 0 || !slices.Contains(org.Fields[city].Ops, OpEq) {
+	city := slices.IndexFunc(company.Fields, func(f querySchemaField) bool { return f.Name == "address.city" })
+	if city < 0 || !slices.Contains(company.Fields[city].Ops, OpEq) {
 		t.Error("city is not published as an exact predicate; it works today and must say so")
 	}
 }
@@ -74,12 +74,12 @@ func targetIn(t *testing.T, doc querySchemaDoc, name string) querySchemaTarget {
 func TestThePublishedVocabularyIsComposedPerCaller(t *testing.T) {
 	resource := NewQuerySchemaResource(NewVocabularyResolver())
 
-	wide := readSchema(readerFor("deal", "organization"), t, resource)
+	wide := readSchema(readerFor("deal", "company"), t, resource)
 	if len(wide.Targets) != 2 {
 		t.Fatalf("a caller reading two record types sees %d targets", len(wide.Targets))
 	}
 
-	narrow := readSchema(readerFor("organization"), t, resource)
+	narrow := readSchema(readerFor("company"), t, resource)
 	for _, target := range narrow.Targets {
 		if target.Target == "deal" {
 			t.Error("the published document advertises a record type the caller cannot read")
@@ -99,7 +99,7 @@ func TestThePublishedVocabularyIsComposedPerCaller(t *testing.T) {
 // them one: an advertised field the validator refuses is a refusal that reads
 // like a bug.
 func TestEveryPublishedFieldAndOperatorValidates(t *testing.T) {
-	ctx := readerFor("deal", "organization")
+	ctx := readerFor("deal", "company")
 	doc := readSchema(ctx, t, NewQuerySchemaResource(NewVocabularyResolver()))
 	validator := NewPlanValidator(NewVocabularyResolver())
 

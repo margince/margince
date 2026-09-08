@@ -46,7 +46,7 @@ func refusals(inc refusingIncumbent) map[string]error {
 	_, modifiedErr := inc.Modified(ctx, "person", epoch, "")
 	_, deletionsErr := inc.Deletions(ctx, "person", epoch, "")
 	_, getErr := inc.Get(ctx, "person", "1")
-	_, assocErr := inc.Associations(ctx, "person", "1", "organization")
+	_, assocErr := inc.Associations(ctx, "person", "1", "company")
 	_, ownerEmailErr := inc.OwnerEmail(ctx, "owner-1")
 	_, ownersErr := inc.Owners(ctx)
 	_, accountErr := inc.AccountID(ctx)

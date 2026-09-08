@@ -20,7 +20,7 @@ export default meta;
 type Story = StoryObj;
 
 const company = {
-  organization_id: "018f3a1b-0000-7000-8000-0000000000a1",
+  company_id: "018f3a1b-0000-7000-8000-0000000000a1",
   display_name: "Gradion",
   website: "gradion.com",
   legal_name: "Gradion GmbH",

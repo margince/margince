@@ -211,8 +211,8 @@ function LeadCard({
         {leadIdentityName(lead) || t("lead.unnamed")}
       </span>
       {lead.company_name && (
-        <span className="deal-org">
-          <span className="deal-org-name">{lead.company_name}</span>
+        <span className="deal-company">
+          <span className="deal-company-name">{lead.company_name}</span>
         </span>
       )}
       <span className="deal-meta">

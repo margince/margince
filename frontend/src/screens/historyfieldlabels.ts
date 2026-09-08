@@ -12,7 +12,7 @@ import type { MessageKey } from "../i18n/en";
 // It is its own map rather than a reuse of the three that already exist,
 // because none of them is about this subject: `COLD_FIELD_LABELS`
 // (screens/common.tsx) names the enrichment vocabulary, `PROFILE_FIELD_LABELS`
-// (screens/organizations.tsx) names company profile facts, and today.merge's
+// (screens/companies.tsx) names company profile facts, and today.merge's
 // map names the fields a merge compares. This one names the columns a record's
 // UPDATE writes, and `historyfieldlabels.test.ts` derives that set from the
 // contract so a field added upstream fails the gate instead of reaching a
@@ -25,7 +25,7 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
   ["amount_minor", "history.field.amount_minor"],
   ["assignee_id", "history.field.assignee_id"],
   ["body", "history.field.body"],
-  ["candidate_org_key", "history.field.candidate_org_key"],
+  ["candidate_company_key", "history.field.candidate_company_key"],
   ["company_name", "history.field.company_name"],
   ["currency", "history.field.currency"],
   ["description", "history.field.description"],
@@ -51,11 +51,11 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
   ["meeting_status", "history.field.meeting_status"],
   ["name", "history.field.name"],
   ["occurred_at", "history.field.occurred_at"],
-  ["organization_id", "history.field.organization_id"],
+  ["company_id", "history.field.company_id"],
   ["owner_id", "history.field.owner_id"],
-  ["parent_org_id", "history.field.parent_org_id"],
+  ["parent_company_id", "history.field.parent_company_id"],
   ["partner_attribution", "history.field.partner_attribution"],
-  ["partner_org_id", "history.field.partner_org_id"],
+  ["partner_company_id", "history.field.partner_company_id"],
   ["phones", "history.field.phones"],
   ["project_id", "history.field.project_id"],
   ["relationship_types", "history.field.relationship_types"],

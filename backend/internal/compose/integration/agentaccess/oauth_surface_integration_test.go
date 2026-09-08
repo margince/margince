@@ -55,7 +55,7 @@ func TestApprovalTokenIsASignedEffectBoundJWS(t *testing.T) {
 		Detail string `json:"detail"`
 	}
 	if status := o.Call(t, "POST", "/v1/webhook-subscriptions", integration.AnyMap{
-		"target_url": "https://jws.example/hook", "event_types": []string{"organization.created"},
+		"target_url": "https://jws.example/hook", "event_types": []string{"company.created"},
 	}, agentBearer, &problem); status != http.StatusForbidden {
 		t.Fatalf("agent webhook-subscription create → %d, want staged 403", status)
 	}

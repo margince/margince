@@ -43,10 +43,10 @@ func (e *AnchorProtectedError) FieldFault() (field, code, message string) {
 }
 
 // refuseIfAnchor stops an operation naming the installation's own company.
-func refuseIfAnchor(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, field, action string) error {
+func refuseIfAnchor(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, field, action string) error {
 	var anchor bool
 	switch err := tx.QueryRow(ctx,
-		`SELECT is_anchor FROM organization WHERE id = $1`, orgID).Scan(&anchor); {
+		`SELECT is_anchor FROM company WHERE id = $1`, companyID).Scan(&anchor); {
 	case err == nil:
 	case errors.Is(err, pgx.ErrNoRows):
 		// A row that is not there is not the anchor, and the caller's own
@@ -57,7 +57,7 @@ func refuseIfAnchor(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, fi
 		// dead connection or an aborted transaction PERMIT the operation this
 		// guard exists to refuse — and in a merge that means relinking a
 		// customer's people, deals and history before the schema stops it.
-		return fmt.Errorf("people: reading the anchor flag for organization %s: %w", orgID, err)
+		return fmt.Errorf("people: reading the anchor flag for company %s: %w", companyID, err)
 	}
 	if anchor {
 		return &AnchorProtectedError{Field: field, Action: action}
@@ -65,7 +65,7 @@ func refuseIfAnchor(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, fi
 	return nil
 }
 
-// refuseIfSoleCompanyOnALiveProject stops an organization archive that would
+// refuseIfSoleCompanyOnALiveProject stops a company archive that would
 // leave a live project with no company.
 //
 // The archive cascades over `relationship`, which takes the company off every
@@ -73,25 +73,25 @@ func refuseIfAnchor(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, fi
 // project keeps at least one company (projectcompany.go), and a cascade is not
 // a place to make that decision — the operator archiving a company is not
 // looking at the projects it is the only company on, and the write grant they
-// hold is on the ORGANIZATION, not on those projects.
+// hold is on the COMPANY, not on those projects.
 //
 // So it refuses and names them. The fix is a decision somebody makes on the
 // project — put another company on it, or archive the project — and both are
 // one call away.
-func refuseIfSoleCompanyOnALiveProject(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) error {
+func refuseIfSoleCompanyOnALiveProject(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) error {
 	var stranded int
 	if err := tx.QueryRow(ctx, `
 		SELECT count(*)
 		  FROM relationship mine
 		  JOIN project p ON p.id = mine.project_id AND p.archived_at IS NULL
-		 WHERE mine.kind = 'project_company' AND mine.organization_id = $1
+		 WHERE mine.kind = 'project_company' AND mine.company_id = $1
 		   AND mine.archived_at IS NULL
 		   AND NOT EXISTS (
 		       SELECT 1 FROM relationship other
 		        WHERE other.kind = 'project_company' AND other.project_id = mine.project_id
-		          AND other.organization_id <> $1 AND other.archived_at IS NULL)`,
-		orgID).Scan(&stranded); err != nil {
-		return fmt.Errorf("people: counting the projects organization %s is the only company on: %w", orgID, err)
+		          AND other.company_id <> $1 AND other.archived_at IS NULL)`,
+		companyID).Scan(&stranded); err != nil {
+		return fmt.Errorf("people: counting the projects company %s is the only company on: %w", companyID, err)
 	}
 	if stranded > 0 {
 		return &SoleProjectCompanyError{Projects: stranded}

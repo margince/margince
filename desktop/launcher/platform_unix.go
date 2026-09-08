@@ -33,7 +33,7 @@ func exeName(name string) string { return name }
 const openNoFollow = syscall.O_NOFOLLOW
 
 // localTimezone reports the IANA zone name macOS records, so the first-run
-// organization is created in the user's own time rather than UTC.
+// company is created in the user's own time rather than UTC.
 func localTimezone() string {
 	target, err := os.Readlink("/etc/localtime")
 	if err != nil {

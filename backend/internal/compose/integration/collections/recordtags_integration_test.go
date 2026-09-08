@@ -53,16 +53,16 @@ func TestRecordTagsAnswersForAllThreeAdvertisedTypes(t *testing.T) {
 
 	person := createPersonWithTag(t, e, "Tagged Person", tag)
 
-	var org integration.AnyMap
-	if status := e.Call(t, "POST", "/v1/organizations", integration.AnyMap{
+	var company integration.AnyMap
+	if status := e.Call(t, "POST", "/v1/companies", integration.AnyMap{
 		"display_name": "Tagged Company", "source": "ui",
-	}, nil, &org); status != http.StatusCreated {
-		t.Fatalf("creating the company: status=%d body=%v", status, org)
+	}, nil, &company); status != http.StatusCreated {
+		t.Fatalf("creating the company: status=%d body=%v", status, company)
 	}
-	orgID, _ := org["id"].(string)
+	companyID, _ := company["id"].(string)
 	var applied integration.AnyMap
 	if status := e.Call(t, "POST", "/v1/tags/"+tag+"/apply", integration.AnyMap{
-		"entity_type": "organization", "entity_id": orgID,
+		"entity_type": "company", "entity_id": companyID,
 	}, nil, &applied); status != http.StatusCreated {
 		t.Fatalf("tagging the company: status=%d body=%v", status, applied)
 	}
@@ -88,7 +88,7 @@ func TestRecordTagsAnswersForAllThreeAdvertisedTypes(t *testing.T) {
 
 	for _, c := range []struct{ entityType, id string }{
 		{"person", person},
-		{"organization", orgID},
+		{"company", companyID},
 		{"deal", dealID},
 	} {
 		body, status := readRecordTags(t, e, c.entityType, c.id)

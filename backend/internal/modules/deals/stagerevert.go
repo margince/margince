@@ -8,7 +8,7 @@ package deals
 // A SEPARATE VERB from the general undo path, and the reason is structural
 // rather than a preference. The replay engine restores a record by writing its
 // fields back, which works for a corrected close date or a renamed
-// organization — one column, one restore. A stage move wrote deal_stage_history
+// company — one column, one restore. A stage move wrote deal_stage_history
 // and the progression ledger BESIDE the column, so writing stage_id back would
 // leave the history saying the deal is somewhere it is not. The engine refuses
 // `advance_stage` by name for exactly this, so the move carries its own undo.

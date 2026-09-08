@@ -162,7 +162,7 @@ func TestCSVImportOfAClaimedEmailPreviewsWhatTheCommitDoes(t *testing.T) {
 func TestCSVImportLinksPeopleToTheirEmployers(t *testing.T) {
 	e := setupImportApp(t)
 	for _, name := range []string{"Analytical Engines", "Bletchley Ltd"} {
-		if status := e.Call(t, http.MethodPost, "/v1/organizations",
+		if status := e.Call(t, http.MethodPost, "/v1/companies",
 			map[string]any{"display_name": name}, nil, nil); status != http.StatusCreated {
 			t.Fatalf("creating %q → %d, want 201", name, status)
 		}
@@ -180,7 +180,7 @@ func TestCSVImportLinksPeopleToTheirEmployers(t *testing.T) {
 		t.Fatalf("upload → %d, want 200", status)
 	}
 	mapping := map[string]string{
-		"Email": "email", "Full Name": "full_name", "Company": "organization_name",
+		"Email": "email", "Full Name": "full_name", "Company": "company_name",
 	}
 	run, runStatus := createRunWithMapping(t, e, "person", profile.SourceRef, mapping)
 	if runStatus != http.StatusAccepted {
@@ -234,13 +234,13 @@ func TestCSVImportLinksPeopleToTheirEmployers(t *testing.T) {
 // A company whose legal form differs from the file's is NOT the same company.
 //
 // This is the finding that makes the difference between a review queue and a
-// write. NormalizeOrgName strips legal suffixes, so `Acme Inc` and `Acme GmbH`
+// write. NormalizeCompanyName strips legal suffixes, so `Acme Inc` and `Acme GmbH`
 // normalize alike — right for asking a human "are these two the same?", wrong
 // for deciding it. Two different legal entities linked by a guess is a wrong
 // answer nobody sees; a missing link is one the report names.
 func TestCSVImportDoesNotLinkAcrossLegalForms(t *testing.T) {
 	e := setupImportApp(t)
-	if status := e.Call(t, http.MethodPost, "/v1/organizations",
+	if status := e.Call(t, http.MethodPost, "/v1/companies",
 		map[string]any{"display_name": "Northwind GmbH"}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("creating the company → %d, want 201", status)
 	}
@@ -251,7 +251,7 @@ func TestCSVImportDoesNotLinkAcrossLegalForms(t *testing.T) {
 		t.Fatalf("upload → %d, want 200", status)
 	}
 	run, runStatus := createRunWithMapping(t, e, "person", profile.SourceRef, map[string]string{
-		"Email": "email", "Full Name": "full_name", "Company": "organization_name",
+		"Email": "email", "Full Name": "full_name", "Company": "company_name",
 	})
 	if runStatus != http.StatusAccepted {
 		t.Fatalf("create run → %d, want 202", runStatus)
@@ -277,7 +277,7 @@ func TestCSVImportDoesNotLinkAcrossLegalForms(t *testing.T) {
 // the disagreement the whole dry run exists to prevent.
 func TestCSVImportDoesNotPromiseLinksForRowsThatWillNotLand(t *testing.T) {
 	e := setupImportApp(t)
-	if status := e.Call(t, http.MethodPost, "/v1/organizations",
+	if status := e.Call(t, http.MethodPost, "/v1/companies",
 		map[string]any{"display_name": "Analytical Engines"}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("creating the company → %d, want 201", status)
 	}
@@ -292,7 +292,7 @@ func TestCSVImportDoesNotPromiseLinksForRowsThatWillNotLand(t *testing.T) {
 		t.Fatalf("upload → %d, want 200", status)
 	}
 	run, runStatus := createRunWithMapping(t, e, "person", profile.SourceRef, map[string]string{
-		"Email": "email", "Full Name": "full_name", "Company": "organization_name",
+		"Email": "email", "Full Name": "full_name", "Company": "company_name",
 	})
 	if runStatus != http.StatusAccepted {
 		t.Fatalf("create run → %d, want 202", runStatus)

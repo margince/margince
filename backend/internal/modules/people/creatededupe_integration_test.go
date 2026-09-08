@@ -235,12 +235,12 @@ func TestCreatePersonSharingAPhoneCreatesAndRecordsThePair(t *testing.T) {
 	}
 }
 
-func TestCreateOrganizationFuzzyNearMatchCreatesAndRecords(t *testing.T) {
+func TestCreateCompanyFuzzyNearMatchCreatesAndRecords(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	incumbent, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+	incumbent, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: "Wayne Enterprises GmbH", Source: "manual",
-		Domains: []OrgDomainInput{{Domain: "wayne.test", IsPrimary: true}},
+		Domains: []CompanyDomainInput{{Domain: "wayne.test", IsPrimary: true}},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -249,17 +249,17 @@ func TestCreateOrganizationFuzzyNearMatchCreatesAndRecords(t *testing.T) {
 	// Same stem, different legal suffix, no shared domain: suffix
 	// normalization scores 1.0 → fuzzy review. Different legal entities
 	// are a human's call, so the create proceeds and the pair records.
-	created, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+	created, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: "Wayne Enterprises Inc", Source: "manual",
-		Domains: []OrgDomainInput{{Domain: "wayne-us.test", IsPrimary: true}},
+		Domains: []CompanyDomainInput{{Domain: "wayne-us.test", IsPrimary: true}},
 	})
 	if err != nil {
 		t.Fatalf("a fuzzy near-match must create, not block: %v", err)
 	}
 
-	lines := nearMatchLines(ctx, t, e, "organization", ids.UUID(created.Id))
+	lines := nearMatchLines(ctx, t, e, "company", ids.UUID(created.Id))
 	if len(lines) != 1 {
-		t.Fatalf("got %d dedupe_near_match lines for the created org, want exactly 1", len(lines))
+		t.Fatalf("got %d dedupe_near_match lines for the created company, want exactly 1", len(lines))
 	}
 	if lines[0].MatchedID != ids.UUID(incumbent.Id).String() {
 		t.Fatalf("recorded matched_id = %s, want the incumbent %s", lines[0].MatchedID, incumbent.Id)
@@ -268,25 +268,25 @@ func TestCreateOrganizationFuzzyNearMatchCreatesAndRecords(t *testing.T) {
 		t.Fatalf("recorded confidence %.4f below the review threshold %.2f", lines[0].Confidence, dedupeReviewThreshold)
 	}
 
-	if clean := nearMatchLines(ctx, t, e, "organization", ids.UUID(incumbent.Id)); len(clean) != 0 {
+	if clean := nearMatchLines(ctx, t, e, "company", ids.UUID(incumbent.Id)); len(clean) != 0 {
 		t.Fatalf("a no-match create left %d dedupe_near_match lines, want 0", len(clean))
 	}
 }
 
-func TestCreateOrganizationExactDomainStillRefusesWith409(t *testing.T) {
+func TestCreateCompanyExactDomainStillRefusesWith409(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	incumbent, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+	incumbent, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: "Stark Industries GmbH", Source: "manual",
-		Domains: []OrgDomainInput{{Domain: "stark.test", IsPrimary: true}},
+		Domains: []CompanyDomainInput{{Domain: "stark.test", IsPrimary: true}},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = e.store.CreateOrganization(ctx, CreateOrganizationInput{
+	_, err = e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: "Totally Unrelated Name", Source: "manual",
-		Domains: []OrgDomainInput{{Domain: "STARK.TEST", IsPrimary: true}},
+		Domains: []CompanyDomainInput{{Domain: "STARK.TEST", IsPrimary: true}},
 	})
 	var dup *DuplicateDomainError
 	if !errors.As(err, &dup) {
@@ -314,7 +314,7 @@ func TestCreateOrganizationExactDomainStillRefusesWith409(t *testing.T) {
 func TestCreatePersonWithASecondAddressAtTheSameEmployerIsQueuedForAHuman(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	lucyID, orgID := e.seedEmployedPerson(ctx, t,
+	lucyID, companyID := e.seedEmployedPerson(ctx, t,
 		"Lucy Vo", "lucy.vo@terralogic.test", "Terralogic", "terralogic.test")
 
 	// The second card: identical name, an address nobody has seen, no phone.
@@ -331,7 +331,7 @@ func TestCreatePersonWithASecondAddressAtTheSameEmployerIsQueuedForAHuman(t *tes
 	createdID := ids.From[ids.PersonKind](ids.UUID(created.Id))
 	primary := true
 	if _, err := e.store.CreateRelationship(ctx, CreateRelationshipInput{
-		Kind: "employment", PersonID: &createdID, OrganizationID: &orgID,
+		Kind: "employment", PersonID: &createdID, CompanyID: &companyID,
 		IsCurrentPrimary: &primary, Source: "manual",
 	}); err != nil {
 		t.Fatalf("attach the second card's employer: %v", err)
@@ -361,7 +361,7 @@ func TestAnIdenticalNameCreatesASecondRecordAndNeverMergesIt(t *testing.T) {
 		"Karl Fischer", "karl.fischer@fischerbau.test", "Fischer Bau", "fischerbau.test")
 
 	// The junior's address is on a DIFFERENT domain, deliberately. A shared
-	// employer domain scores 0.8 on the org term and carries the pair over the
+	// employer domain scores 0.8 on the company term and carries the pair over the
 	// fuzzy bar on its own — which would prove the old tier still works and say
 	// nothing about the name lane. This pair has the name and nothing else.
 	junior, err := e.store.CreatePerson(ctx, CreatePersonInput{

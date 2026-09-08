@@ -221,7 +221,7 @@ func replayTableFor(target replayTarget, body string) (string, error) {
 // ensureCompanionsVisible re-checks every OTHER record the body names.
 //
 // An absent or null field names nothing and is skipped: these are optional by
-// contract, and a person captured with no employer carries no organization id.
+// contract, and a person captured with no employer carries no company id.
 // The value is resolved ONCE and by the same walk that reads it — a separate
 // presence test would answer for a different path than the one the probe uses,
 // and the disagreement resolves to a skip, which is a pass.

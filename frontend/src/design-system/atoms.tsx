@@ -463,12 +463,12 @@ export function Avatar({
   /**
    * What KIND of thing this chip stands for, which decides its shape.
    *
-   * A person is round, the way a face is drawn everywhere; an organization is
+   * A person is round, the way a face is drawn everywhere; a company is
    * a rounded square, the way a logo is. The distinction is not decoration —
    * on a page carrying both, the shape is what tells a reader whether a chip
    * is a company or somebody at it before they have read a word of it.
    */
-  shape?: "person" | "organization";
+  shape?: "person" | "company";
 }>) {
   // An image that fails to load falls back to the monogram for the rest of
   // this mount. Keyed by src so a record whose logo changes gets a fresh try
@@ -501,7 +501,7 @@ export function Avatar({
     tone = (tone + (char.codePointAt(0) ?? 0)) % AVATAR_TONES;
   }
   const classes = ["avatar", `avatar-t${tone}`, `avatar-${size}`];
-  if (shape === "organization") classes.push("avatar-org");
+  if (shape === "company") classes.push("avatar-company");
   if (src && !broken) classes.push("avatar-has-logo");
   if (painted) classes.push("avatar-painted");
   return (

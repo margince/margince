@@ -115,7 +115,7 @@ export function TagResultScreen({ tagID }: Readonly<{ tagID?: string }>) {
             tagID={tagID}
           />
           <ResultGroup
-            kind="organization"
+            kind="company"
             title={t("tagResult.companies")}
             icon={Building2}
             count={usage.companies}
@@ -137,7 +137,7 @@ export function TagResultScreen({ tagID }: Readonly<{ tagID?: string }>) {
 /** What each record type is called on the wire, and where its rows live. */
 const GROUPS = {
   person: { path: "/people", screen: "contacts" },
-  organization: { path: "/organizations", screen: "companies" },
+  company: { path: "/companies", screen: "companies" },
   deal: { path: "/deals", screen: "deals" },
 } as const;
 

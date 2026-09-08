@@ -48,14 +48,14 @@ const STATUS_TONES: Record<CommissionStatus, "accent" | "success" | "warn"> = {
 // the worst way for a money figure to be wrong. The panel totals nothing today,
 // but a list that claims to be the ledger has to be the ledger.
 async function fetchPartnerCommissions(
-  organizationId: string,
+  companyId: string,
 ): Promise<CommissionEntry[]> {
   const entries: CommissionEntry[] = [];
   let cursor: string | undefined;
   do {
     const { data, error } = await api.GET("/commissions", {
       params: {
-        query: { partner_org_id: organizationId, limit: 50, cursor },
+        query: { partner_company_id: companyId, limit: 50, cursor },
       },
     });
     if (error) {
@@ -109,13 +109,13 @@ export function outstandingByCurrency(
  * and a partner asking "what happened to that one" needs to see both halves.
  */
 export function PartnerCommissions({
-  organizationId,
-}: Readonly<{ organizationId: string }>) {
+  companyId,
+}: Readonly<{ companyId: string }>) {
   const t = useT();
   const { locale } = useLocale();
   const query = useQuery({
-    queryKey: ["partner-commissions", organizationId],
-    queryFn: () => fetchPartnerCommissions(organizationId),
+    queryKey: ["partner-commissions", companyId],
+    queryFn: () => fetchPartnerCommissions(companyId),
   });
 
   return (
@@ -132,7 +132,7 @@ export function PartnerCommissions({
               <CommissionLedger
                 entries={entries}
                 locale={locale}
-                organizationId={organizationId}
+                companyId={companyId}
               />
             </PanelBody>
           )
@@ -182,11 +182,11 @@ function OutstandingStrip({
 function CommissionLedger({
   entries,
   locale,
-  organizationId,
+  companyId,
 }: Readonly<{
   entries: CommissionEntry[];
   locale: Locale;
-  organizationId: string;
+  companyId: string;
 }>) {
   const t = useT();
   // The object grant decides whether the verbs are drawn at all. Without this
@@ -277,7 +277,7 @@ function CommissionLedger({
                       key={decision}
                       entry={entry}
                       decision={decision}
-                      organizationId={organizationId}
+                      companyId={companyId}
                     />
                   ))}
                 </div>

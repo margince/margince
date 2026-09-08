@@ -56,16 +56,16 @@ type vcardCreateProposal struct {
 	// The rest of what an approval RELEASES, flattened for the card: the
 	// decider is shown every field the create will write, or they are
 	// approving more than they were asked. Empty fields are omitted so the
-	// card carries facts, not blanks — Organization is the one exception:
+	// card carries facts, not blanks — Company is the one exception:
 	// it also joins the identity below, and the engine's containment check
 	// refuses an identity asserting a field the payload omits. A card
 	// naming no company still displays as nothing; omitempty just cannot
 	// be the reason it does, or that card can never be staged at all.
-	Organization string `json:"organization"`
-	Title        string `json:"title,omitempty"`
-	Phones       string `json:"phones,omitempty"`
-	URL          string `json:"url,omitempty"`
-	Address      string `json:"address,omitempty"`
+	Company string `json:"company"`
+	Title   string `json:"title,omitempty"`
+	Phones  string `json:"phones,omitempty"`
+	URL     string `json:"url,omitempty"`
+	Address string `json:"address,omitempty"`
 	// CandidatePersonID names the near-match the import saw, when the
 	// importer could see it too. Informational for the decider; the create
 	// itself does not read it.
@@ -113,14 +113,14 @@ func vcardCreateStager(pool *pgxpool.Pool) func(ctx context.Context, entry peopl
 			// The dedupe lane's own folding, not a plain lowercase: a name it
 			// treats as the same person must hit the same decline memory, or
 			// a re-spelt card walks past a refusal.
-			FullName:     people.NormalizePersonName(entry.FullName),
-			Emails:       loweredCardEmails(entry),
-			Organization: strings.TrimSpace(entry.Organization),
-			Title:        strings.TrimSpace(entry.Title),
-			Phones:       strings.Join(phones, ", "),
-			URL:          strings.TrimSpace(entry.URL),
-			Address:      strings.TrimSpace(entry.Address),
-			StagedBy:     subject.String(),
+			FullName: people.NormalizePersonName(entry.FullName),
+			Emails:   loweredCardEmails(entry),
+			Company:  strings.TrimSpace(entry.Company),
+			Title:    strings.TrimSpace(entry.Title),
+			Phones:   strings.Join(phones, ", "),
+			URL:      strings.TrimSpace(entry.URL),
+			Address:  strings.TrimSpace(entry.Address),
+			StagedBy: subject.String(),
 		}
 		if candidate != nil {
 			id := openapi_types.UUID(candidate.UUID)
@@ -135,7 +135,7 @@ func vcardCreateStager(pool *pgxpool.Pool) func(ctx context.Context, entry peopl
 		// tweaks a title is still the same question, and a decline keyed on
 		// the full payload would be forgotten the first time a field moved.
 		// staged_by joins it for a different reason than the card fields do:
-		// full_name, emails and organization say WHICH card; staged_by says
+		// full_name, emails and company say WHICH card; staged_by says
 		// WHOSE — and without it, two members' cards naming the same person
 		// (or, for a bare name with no other addressing at all, simply
 		// sharing one) would be one question in the engine's eyes, answerable
@@ -146,10 +146,10 @@ func vcardCreateStager(pool *pgxpool.Pool) func(ctx context.Context, entry peopl
 		// JSON omits, and a card whose value is legitimately empty (no email,
 		// no company) is not exempt from being asked about.
 		identity, err := json.Marshal(map[string]any{
-			fieldFullName:                  proposal.FullName,
-			"emails":                       proposal.Emails,
-			string(recordTypeOrganization): proposal.Organization,
-			"staged_by":                    proposal.StagedBy,
+			fieldFullName:             proposal.FullName,
+			"emails":                  proposal.Emails,
+			string(recordTypeCompany): proposal.Company,
+			"staged_by":               proposal.StagedBy,
 		})
 		if err != nil {
 			return fmt.Errorf("compose: encoding the vCard proposal identity: %w", err)

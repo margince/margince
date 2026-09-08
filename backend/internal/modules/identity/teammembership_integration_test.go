@@ -186,7 +186,7 @@ func TestACallerIsTheirOwnTeammate(t *testing.T) {
 
 // A caller with no human behind it is refused rather than answered.
 //
-// "false" would read as a fact about the organization chart — that these two
+// "false" would read as a fact about the company chart — that these two
 // are not teammates — where the truth is that the asker has no place on it. The
 // refusal keeps an agent seat or a background pass from probing the chart.
 func TestACallerWithNoHumanBehindItIsRefused(t *testing.T) {

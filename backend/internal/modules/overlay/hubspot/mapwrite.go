@@ -29,7 +29,7 @@ import (
 // object class the write targets and the HubSpot properties to set. Props
 // carries only WRITABLE properties — a canonical field flagged read-only by
 // OVA-MAP-W (full_name, occurred_at, lead email/company_name/status, deal
-// pipeline_id/stage_id, org size_band, activity meeting_status) never
+// pipeline_id/stage_id, company size_band, activity meeting_status) never
 // appears. An empty Props on a CREATE means the write touched only read-only
 // fields (the caller is told); on an UPDATE it means the patch changed
 // nothing writable.
@@ -52,8 +52,8 @@ func mapWrite(canonicalClass string, fields map[string]any, forUpdate bool) (wri
 	case personTarget:
 		props, err := copyDirect(fields, personWriteFields, forUpdate)
 		return writeMapping{ObjectClass: objectClassContacts, Props: props}, err
-	case organizationTarget:
-		props, err := copyDirect(fields, organizationWriteFields, forUpdate)
+	case companyTarget:
+		props, err := copyDirect(fields, companyWriteFields, forUpdate)
 		return writeMapping{ObjectClass: objectClassCompanies, Props: props}, err
 	case leadTarget:
 		props, err := copyDirect(fields, leadWriteFields, forUpdate)
@@ -88,11 +88,11 @@ var personWriteFields = []directWriteField{
 	{Canonical: "title", HSProp: "jobtitle"},
 }
 
-// organizationWriteFields — the inverse of companiesMapping's 1:1 columns.
+// companyWriteFields — the inverse of companiesMapping's 1:1 columns.
 // size_band is read-only: numberofemployees→size_band is a lossy band bucketing
 // (employees_to_size_band) with no unambiguous inverse. address, domains, and
 // owner_id are the same V1 deferrals as person's.
-var organizationWriteFields = []directWriteField{
+var companyWriteFields = []directWriteField{
 	{Canonical: "display_name", HSProp: propName},
 	{Canonical: industryField, HSProp: industryField},
 }

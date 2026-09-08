@@ -132,7 +132,7 @@ export function profileLabel(state: ProviderProfileState): MessageKey {
  *  empty, padded element behind. */
 export function roleOf(
   contact: Pick<
-    components["schemas"]["Organization360Contact"],
+    components["schemas"]["Company360Contact"],
     "title" | "provider_title"
   >,
 ): string {

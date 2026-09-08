@@ -8,9 +8,9 @@ import {
   groupFacts,
 } from "./factview";
 
-type OrganizationFact = components["schemas"]["OrganizationFact"];
+type CompanyFact = components["schemas"]["CompanyFact"];
 
-function fact(over: Partial<OrganizationFact> = {}): OrganizationFact {
+function fact(over: Partial<CompanyFact> = {}): CompanyFact {
   return {
     // The stored row's id, so a claim written from this fact can cite
     // something the reader can open.
@@ -252,9 +252,7 @@ describe("groupFacts", () => {
     // reaches a German reader as English snake_case. A hand-written list would
     // have proved neither: its annotation rejects invalid names without
     // requiring the valid ones.
-    const fields = Object.keys(
-      FACT_FIELD_LABELS,
-    ) as OrganizationFact["field"][];
+    const fields = Object.keys(FACT_FIELD_LABELS) as CompanyFact["field"][];
     expect(fields.length).toBeGreaterThan(0);
     for (const field of fields) {
       expect(factFieldLabelKey(field)).toBe(`co.factField.${field}`);

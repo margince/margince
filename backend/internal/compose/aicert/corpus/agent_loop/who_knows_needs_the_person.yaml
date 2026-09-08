@@ -20,7 +20,7 @@ expect:
   rubric: >
     The question is about one named person's relationships inside the workspace,
     which is what who_knows answers. Score high only if the turn calls it on the
-    person the grounding identifies. intro_path_to takes an organization and
+    person the grounding identifies. intro_path_to takes a company and
     answers about an account rather than an individual, and a search would only
     re-find the person already supplied.
   near_misses:

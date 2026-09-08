@@ -167,10 +167,10 @@ var decisionGrants = map[string][]grantRequirement{
 	"relink_thread":     {{objectActivity, principal.ActionUpdate}},
 	"relink_activities": {{objectActivity, principal.ActionUpdate}},
 	// Accepting a cold-start read-back writes enrichment fields onto an
-	// organization; "enrich" is the same effect staged through the
+	// company; "enrich" is the same effect staged through the
 	// transport gate by an agent caller.
-	"coldstart": {{tableOrganization, principal.ActionUpdate}},
-	"enrich":    {{tableOrganization, principal.ActionUpdate}},
+	"coldstart": {{tableCompany, principal.ActionUpdate}},
+	"enrich":    {{tableCompany, principal.ActionUpdate}},
 	// A rate refresh proposes an effective-dated row on a workspace-shared price
 	// sheet, and deciding it requires BOTH write verbs on that sheet.
 	//
@@ -197,8 +197,8 @@ var decisionGrants = map[string][]grantRequirement{
 		{targetAIModelRate, principal.ActionUpdate},
 	},
 	// Accepting a deep site read writes profile fields and category facts
-	// onto the target organization — the same update authority enrich needs.
-	"deepread": {{tableOrganization, principal.ActionUpdate}},
+	// onto the target company — the same update authority enrich needs.
+	"deepread": {{tableCompany, principal.ActionUpdate}},
 	// Accepting a site_lead proposal (a published person from a deep read's
 	// team page) captures them as a LEAD through the capture sink — the
 	// effect is a lead create, so deciding it needs that grant.
@@ -209,27 +209,27 @@ var decisionGrants = map[string][]grantRequirement{
 	kindLinkedInMatch: {{tablePerson, principal.ActionUpdate}},
 	// Accepting a capture_counterparty proposal (ADR-0072/A118: a first-time
 	// sender the verdict engine could not judge) creates the person and, unless
-	// the domain is free-mail, the organization behind them — so deciding it
+	// the domain is free-mail, the company behind them — so deciding it
 	// needs both create grants, exactly as if the approver had typed them in.
-	"capture_counterparty": {{tablePerson, principal.ActionCreate}, {tableOrganization, principal.ActionCreate}},
+	"capture_counterparty": {{tablePerson, principal.ActionCreate}, {tableCompany, principal.ActionCreate}},
 	// Accepting a vcard_create proposal (an imported card the dedupe pass
 	// refused to create beside its near-match) creates the person; when the
 	// card names an employer, also the employment edge (relationship create
 	// plus the person-anchor update that edge takes), and when nobody holds
-	// that employer yet, the organization behind them. Deciding needs every
+	// that employer yet, the company behind them. Deciding needs every
 	// grant the release can spend, exactly as if the approver had typed the
 	// card in — a shorter list would show the card to an approver whose
 	// approval then fails partway.
 	"vcard_create": {
 		{tablePerson, principal.ActionCreate},
 		{tablePerson, principal.ActionUpdate},
-		{tableOrganization, principal.ActionCreate},
+		{tableCompany, principal.ActionCreate},
 		{targetRelationship, principal.ActionCreate},
 	},
-	// Accepting an org_name_promotion proposal (PO-F-2a: one employee's
+	// Accepting a company_name_promotion proposal (PO-F-2a: one employee's
 	// signature naming their company, with nothing corroborating it) renames
-	// the organization — the same update authority the name editor needs.
-	"org_name_promotion": {{tableOrganization, principal.ActionUpdate}},
+	// the company — the same update authority the name editor needs.
+	"company_name_promotion": {{tableCompany, principal.ActionUpdate}},
 	// Accepting a lifecycle_change proposal (the account-intelligence arc: the
 	// correspondence says the contract ended while the record still reads as
 	// live) moves the account's stage — the same update authority the header's
@@ -237,10 +237,10 @@ var decisionGrants = map[string][]grantRequirement{
 	//
 	// It also carries the signal's own summary in its payload and settles that
 	// signal on accept, so it needs the signal grant too. Without it an
-	// organization editor could read model-derived correspondence and close a
+	// company editor could read model-derived correspondence and close a
 	// signal they have no standing to see — the ordinary triage path takes
 	// signal:update and EnsureSignalVisible for exactly that reason.
-	"lifecycle_change": {{tableOrganization, principal.ActionUpdate}, {targetSignal, principal.ActionUpdate}},
+	"lifecycle_change": {{tableCompany, principal.ActionUpdate}, {targetSignal, principal.ActionUpdate}},
 	// Confirming a nightly close-date correction (formulas §11 🟡 tier)
 	// releases an expected_close_date write onto the deal.
 	"close_date_correction": {{tableDeal, principal.ActionUpdate}},

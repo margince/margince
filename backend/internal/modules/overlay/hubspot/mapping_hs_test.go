@@ -274,21 +274,21 @@ func TestHubSpotCompanyMapping(t *testing.T) {
 		t.Errorf("address.city = %v, want Munich", got)
 	}
 
-	// domain maps into the organization_domain child (the same 1:N child
+	// domain maps into the company_domain child (the same 1:N child
 	// shape contacts' email → person_email uses), lowercased — so it is
 	// consumed, never left unmapped.
-	domains, ok := out["organization_domain"].([]map[string]any)
+	domains, ok := out["company_domain"].([]map[string]any)
 	if !ok {
-		t.Fatalf("organization_domain = %#v, want a child collection", out["organization_domain"])
+		t.Fatalf("company_domain = %#v, want a child collection", out["company_domain"])
 	}
 	if len(domains) != 1 {
-		t.Fatalf("organization_domain has %d rows, want the one domain the company carries", len(domains))
+		t.Fatalf("company_domain has %d rows, want the one domain the company carries", len(domains))
 	}
 	if got := domains[0]["domain"]; got != "muller-gmbh.example" {
-		t.Errorf("organization_domain[0].domain = %v, want the lowercased domain", got)
+		t.Errorf("company_domain[0].domain = %v, want the lowercased domain", got)
 	}
 	if domains[0]["is_primary"] != true {
-		t.Errorf("organization_domain[0] = %v, want the primary attribute the mapping declares", domains[0])
+		t.Errorf("company_domain[0] = %v, want the primary attribute the mapping declares", domains[0])
 	}
 	if containsString(unmapped, "domain") {
 		t.Errorf("unmapped = %v, want it NOT to contain %q now that it maps to the child", unmapped, "domain")
@@ -307,12 +307,12 @@ func TestHubSpotCompanyDomainLowercases(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Apply: %v", err)
 	}
-	rows, ok := out["organization_domain"].([]map[string]any)
+	rows, ok := out["company_domain"].([]map[string]any)
 	if !ok || len(rows) != 1 {
-		t.Fatalf("organization_domain = %#v, want a one-row child collection", out["organization_domain"])
+		t.Fatalf("company_domain = %#v, want a one-row child collection", out["company_domain"])
 	}
 	if got := rows[0]["domain"]; got != "muller-gmbh.example" {
-		t.Errorf("organization_domain[0].domain = %v, want the lowercased domain", got)
+		t.Errorf("company_domain[0].domain = %v, want the lowercased domain", got)
 	}
 }
 
@@ -602,7 +602,7 @@ func TestIncumbentClassesForReverseResolvesEveryMappedTarget(t *testing.T) {
 		want      []string
 	}{
 		{"person", []string{"contacts"}},
-		{"organization", []string{"companies"}},
+		{"company", []string{"companies"}},
 		{"deal", []string{"deals"}},
 		{"lead", []string{"leads"}},
 		{"activity", []string{"calls", "meetings", "emails", "notes", "tasks"}},

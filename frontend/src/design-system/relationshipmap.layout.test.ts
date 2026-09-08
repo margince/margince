@@ -21,7 +21,7 @@ function model(over: Partial<RelationshipMapModel> = {}): RelationshipMapModel {
     nodes: [
       { id: "u-1", kind: "user", label: "Sofia Meier" },
       { id: "u-2", kind: "user", label: "Lars Meyer" },
-      { id: "o-1", kind: "organization", label: "Brandt GmbH" },
+      { id: "o-1", kind: "company", label: "Brandt GmbH" },
       { id: "d-1", kind: "deal", label: "Retrofit 2026" },
       { id: "p-1", kind: "person", label: "Philipp Königs" },
       { id: "p-2", kind: "person", label: "Ute Sommer" },

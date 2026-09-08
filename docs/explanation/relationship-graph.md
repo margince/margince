@@ -229,7 +229,7 @@ has barely met them, and that gap *is* the answer to "who should make the introd
 excludes the person doing the reading, so on a contact they correspond with themselves the warmest way
 in *is* them — which is the most useful fact the surface can report and never an introduction to
 request. Both writers refuse it (`introductions.Store.Create` and the account draft in
-`compose/org360`, each with `ErrInvalidArgument`), and both surfaces say so in the second person rather
+`compose/company360`, each with `ErrInvalidArgument`), and both surfaces say so in the second person rather
 than printing the reader's own name back at them as a third party.
 
 The vocabularies are deliberately different on screen too — the per-user bands are
@@ -388,7 +388,7 @@ see [authorization.md](authorization.md) and [privacy-and-consent.md](privacy-an
   Stated in the migration rather than hidden; recency is exact and dominates the score.
 - **Calendar attendees are not backfilled.** The historical pass recovers the mailbox owner and the
   linked counterparty; parsing attendees out of stored originals is its own slice.
-- **`OrganizationLinkedInReach` is wired to nothing.** The per-colleague, per-account ghost count
+- **`CompanyLinkedInReach` is wired to nothing.** The per-colleague, per-account ghost count
   exists in `people` and is exercised by tests, but no HTTP surface, agent tool or screen reads it
   today. The shipped account-level answer is the member's own
   [`/me/linkedin-reach`](../how-to/import-your-linkedin-network.md).

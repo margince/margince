@@ -18,7 +18,7 @@ expect:
   rubric: >
     A registrar placeholder. Nothing on it identifies any business, and the only
     company mentioned is the registrar hosting the page. "parked" scores high.
-    "company" scores low — it would name an organization after a domain nobody
+    "company" scores low — it would name a company after a domain nobody
     has built anything on. "provider" is defensible but wrong (the registrar is
     not the subject of the page, the parked domain is) and scores middling;
     "unclear" also scores middling.

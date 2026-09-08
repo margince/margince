@@ -14,7 +14,7 @@ import (
 )
 
 // "Open deal" is a definition, not a column: a status, an archive check, and a
-// currency conversion, spelled once in the 0065 rollup view. The organization
+// currency conversion, spelled once in the 0065 rollup view. The company
 // list's count and the company page's open-pipeline tile both read it, which is
 // the only reason a company page cannot show a number the list disagrees with.
 //
@@ -40,7 +40,7 @@ import (
 // against. A query that constrains deal status here is assembling the
 // definition here, and which values it names is not the question.
 
-const openPipelineRollupView = "organization_open_pipeline_rollup"
+const openPipelineRollupView = "company_open_pipeline_rollup"
 
 // dealStatusConstraint matches a restriction on a status column: an equality,
 // an inequality, a set membership or its negation. `= ANY(…)` is an equality

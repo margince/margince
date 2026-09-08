@@ -72,9 +72,9 @@ func TestCaptureWaitsOnThePersonsEmploymentLock(t *testing.T) {
 	person := e.seedUnmarkedIncumbent(ctx, t)
 	// The company that owns the person's OWN email domain, so capture has an
 	// employment to plant rather than one that already exists.
-	if _, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+	if _, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: "New Employer GmbH", Source: "manual",
-		Domains: []OrgDomainInput{{Domain: "newemployer-race.test", IsPrimary: true}},
+		Domains: []CompanyDomainInput{{Domain: "newemployer-race.test", IsPrimary: true}},
 	}); err != nil {
 		t.Fatalf("seeding the capture target: %v", err)
 	}
@@ -157,7 +157,7 @@ func (e *dedupeEnv) asEditor() context.Context {
 			RoleKeys: []string{"rep"},
 			Objects: map[string]principal.ObjectGrant{
 				"person":       {Create: true, Read: true, Update: true},
-				"organization": {Create: true, Read: true, Update: true},
+				"company":      {Create: true, Read: true, Update: true},
 				"relationship": {Create: true, Read: true, Update: true},
 			},
 			RowScope: principal.RowScopeAll,

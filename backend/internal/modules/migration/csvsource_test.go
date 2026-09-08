@@ -162,7 +162,7 @@ func TestCSVSourceReportsAMissingObject(t *testing.T) {
 	mapping, sourceKey := leadMapping()
 	src := NewCSVSource(seedCSV(t, "Email,First Name\na@x.test,A\n"), testCSVKey, ObjectLead, mapping, sourceKey)
 
-	if _, err := src.Rows(context.Background(), ObjectOrganization, 0, 10); !errors.Is(err, ErrObjectNotInSource) {
+	if _, err := src.Rows(context.Background(), ObjectCompany, 0, 10); !errors.Is(err, ErrObjectNotInSource) {
 		t.Fatalf("err = %v, want ErrObjectNotInSource", err)
 	}
 }

@@ -33,7 +33,7 @@ func partnerAuditImage(r partnerRow) map[string]any {
 	}
 }
 
-// emptyPartnerAuditImage is the before-image of an organization that is not a
+// emptyPartnerAuditImage is the before-image of a company that is not a
 // partner yet: every field explicitly null, so a promotion diffs against the
 // absence it replaced rather than against an absent key. "It held nothing" and
 // "nobody looked" are different answers and field history renders them apart.
@@ -49,15 +49,15 @@ func emptyPartnerAuditImage() map[string]any {
 }
 
 // readPartnerImage reads the partner row as it stands before an upsert. The
-// caller holds the organization row lock, which is what makes this image and
+// caller holds the company row lock, which is what makes this image and
 // the upsert that follows one transaction's work: read unlocked, a concurrent
 // edit landing between them would be attributed to this request.
 //
 // An archived partner is read rather than skipped — the upsert revives it, so
 // its stored values are genuinely what the revival replaced.
-func readPartnerImage(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) (map[string]any, error) {
+func readPartnerImage(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (map[string]any, error) {
 	current, err := scanPartner(tx.QueryRow(ctx,
-		`SELECT `+partnerColumns+` FROM partner WHERE organization_id = $1`, orgID))
+		`SELECT `+partnerColumns+` FROM partner WHERE company_id = $1`, companyID))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return emptyPartnerAuditImage(), nil
 	}

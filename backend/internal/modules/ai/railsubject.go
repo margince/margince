@@ -25,7 +25,7 @@ import (
 // through the context so the occurrence carries them to the rail.
 type Subject struct {
 	// Ref is the record, typed by the kernel's own entity vocabulary
-	// ("organization", "person", "activity"), which is the vocabulary the
+	// ("company", "person", "activity"), which is the vocabulary the
 	// projection stores as subject_type.
 	Ref ids.Ref
 	// Label is what the product calls that record elsewhere, already cut to

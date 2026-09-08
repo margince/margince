@@ -1099,9 +1099,11 @@ describe("two chips on one list", () => {
         chips={[
           {
             key: "lifecycle",
-            label: "org.lifecycle",
-            allLabel: "org.filterLifecycleAll",
-            options: [{ value: "customer", label: "org.lifecycle.customer" }],
+            label: "company.lifecycle",
+            allLabel: "company.filterLifecycleAll",
+            options: [
+              { value: "customer", label: "company.lifecycle.customer" },
+            ],
           },
         ]}
         dataChips={[

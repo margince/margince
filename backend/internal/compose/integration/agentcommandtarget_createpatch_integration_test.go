@@ -37,7 +37,7 @@ func TestARestCreateStagesItsRecordTypeWithNoTargetID(t *testing.T) {
 		Detail string `json:"detail"`
 	}
 	if status := e.Call(t, "POST", "/v1/webhook-subscriptions", AnyMap{
-		"target_url": "https://example.test/hook", "event_types": []string{"organization.created"},
+		"target_url": "https://example.test/hook", "event_types": []string{"company.created"},
 	}, bearer, &problem); status != http.StatusForbidden || problem.Code != "approval_required" {
 		t.Fatalf("agent webhook-subscription create → %d %q, want 403 approval_required", status, problem.Code)
 	}

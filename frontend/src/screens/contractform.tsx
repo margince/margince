@@ -36,7 +36,7 @@ type ValueBasis = NonNullable<
 // installation stated, never a default this file picked on their behalf.
 //
 // Exported: RenewContractRequest's terms are the same shape minus
-// organization_id, so contractlifecycle.tsx's renewal form reuses this type,
+// company_id, so contractlifecycle.tsx's renewal form reuses this type,
 // contractTermsBody and ContractTermsFields rather than a second copy of each.
 export type ContractDraft = {
   title: string;
@@ -69,12 +69,12 @@ const EMPTY_DRAFT: ContractDraft = {
 };
 
 export function ContractForm({
-  orgId,
+  companyId,
   contract,
   open,
   onClose,
 }: Readonly<{
-  orgId: string;
+  companyId: string;
   contract?: Contract;
   open: boolean;
   onClose: () => void;
@@ -122,7 +122,7 @@ export function ContractForm({
     mutationFn: async (submitted: { draft: ContractDraft; file?: File }) => {
       const id = contract
         ? await patchContract(contract, submitted.draft)
-        : await createContract(orgId, submitted.draft);
+        : await createContract(companyId, submitted.draft);
       if (submitted.file) {
         // A SECOND request, which can fail on its own. The agreement is saved
         // by then, so a failure here says the FILE did not attach rather than
@@ -132,7 +132,7 @@ export function ContractForm({
         // so the signed paper also appears in the account's own library rather
         // than only under the contract.
         await uploadAttachment(
-          { entityType: "organization", entityId: orgId },
+          { entityType: "company", entityId: companyId },
           submitted.file,
           { contract_id: id },
         );
@@ -140,14 +140,18 @@ export function ContractForm({
       return id;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["orgContracts", orgId] });
-      queryClient.invalidateQueries({ queryKey: ["organization360", orgId] });
-      queryClient.invalidateQueries({ queryKey: ["orgDocuments", orgId] });
+      queryClient.invalidateQueries({
+        queryKey: ["companyContracts", companyId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["company360", companyId] });
+      queryClient.invalidateQueries({
+        queryKey: ["companyDocuments", companyId],
+      });
       // The paper list this form and the contract row BOTH read. Without it an
       // upload lands on the server and neither surface shows it: the row keeps
       // the pre-upload list, and reopening the form serves the same stale cache
       // while it refetches behind.
-      queryClient.invalidateQueries({ queryKey: ["contractPaper", orgId] });
+      queryClient.invalidateQueries({ queryKey: ["contractPaper", companyId] });
       onClose();
     },
   });
@@ -167,7 +171,7 @@ export function ContractForm({
       />
 
       <SignedFileField
-        orgId={orgId}
+        companyId={companyId}
         contractID={contract?.id}
         file={file}
         onPick={setFile}
@@ -247,7 +251,7 @@ function draftOf(contract: Contract | undefined): ContractDraft {
  * date — shared between recording one (this file) and renewing one
  * (contractlifecycle.tsx's ContractRenewModal). Both write the same shape of
  * request (RenewContractRequest's terms are CreateContractRequest's minus
- * organization_id), so this is the one place the fields are drawn rather than
+ * company_id), so this is the one place the fields are drawn rather than
  * a second, driftable copy of each.
  */
 export function ContractTermsFields({
@@ -446,18 +450,18 @@ export function pricedIn(
  * and merely made invisible.
  */
 export function SignedFileField({
-  orgId,
+  companyId,
   contractID,
   file,
   onPick,
 }: Readonly<{
-  orgId: string;
+  companyId: string;
   contractID?: string;
   file?: File;
   onPick: (file: File) => void;
 }>) {
   const t = useT();
-  const filed = useContractPaper(orgId, contractID);
+  const filed = useContractPaper(companyId, contractID);
 
   const paper = filed.data;
   const onFile = paper?.documents ?? [];
@@ -529,11 +533,11 @@ export function SignedFileField({
 }
 
 async function createContract(
-  orgId: string,
+  companyId: string,
   draft: ContractDraft,
 ): Promise<string> {
   const { data, error } = await api.POST("/contracts", {
-    body: contractBody(orgId, draft),
+    body: contractBody(companyId, draft),
   });
   if (error) {
     throwProblem(error);
@@ -651,11 +655,11 @@ export function contractTermsBody(draft: ContractDraft): ContractTermsFragment {
 }
 
 export function contractBody(
-  orgId: string,
+  companyId: string,
   draft: ContractDraft,
 ): components["schemas"]["CreateContractRequest"] {
   return {
-    organization_id: orgId,
+    company_id: companyId,
     title: draft.title.trim(),
     value_basis: draft.valueBasis,
     // Stated rather than defaulted: whether an agreement renews itself is a

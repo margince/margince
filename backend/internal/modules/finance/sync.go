@@ -60,7 +60,7 @@ type SyncResult struct {
 // no request and no human actor. The accounting source is the authority for
 // what it says, and there is no object grant a schedule could hold.
 //
-// It resolves the organizations from the LINK table rather than from anything
+// It resolves the companies from the LINK table rather than from anything
 // the provider says. A provider names its own customers; which company one of
 // those is remains a human's decision, and a sync that inferred it would put
 // money on the wrong account.
@@ -113,15 +113,15 @@ func (s *Store) SyncConnection(
 	return out, nil
 }
 
-// link is one accounting customer's mapping onto an organization.
+// link is one accounting customer's mapping onto a company.
 type link struct {
-	organizationID     ids.OrganizationID
+	companyID          ids.CompanyID
 	externalCustomerID string
 }
 
 func readLinks(ctx context.Context, tx pgx.Tx, connectionID ids.UUID) ([]link, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT organization_id, external_customer_id
+		SELECT company_id, external_customer_id
 		  FROM finance_customer_link
 		 WHERE connection_id = $1 AND archived_at IS NULL
 		 ORDER BY external_customer_id`, connectionID)
@@ -132,7 +132,7 @@ func readLinks(ctx context.Context, tx pgx.Tx, connectionID ids.UUID) ([]link, e
 	var out []link
 	for rows.Next() {
 		var each link
-		if err := rows.Scan(&each.organizationID, &each.externalCustomerID); err != nil {
+		if err := rows.Scan(&each.companyID, &each.externalCustomerID); err != nil {
 			return nil, fmt.Errorf("scan a customer link: %w", err)
 		}
 		out = append(out, each)

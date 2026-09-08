@@ -19,9 +19,9 @@ import (
 
 // Hanging a file on a record changes that record, so an archived one refuses
 // it. Before this the upload wrote an attachment row, an audit row and an
-// outbox event against a deal, person or organization that every live write
+// outbox event against a deal, person or company that every live write
 // path already refused. The activity arm always refused — EnsureActivityWritable
-// reaches EnsureActivityContentVisibleLive — and the deal/person/organization
+// reaches EnsureActivityContentVisibleLive — and the deal/person/company
 // arm did not, which is the whole reason both live in one function.
 //
 // This says nothing about whether such a file can be READ back. It can:
@@ -36,7 +36,7 @@ func TestUploadingOntoAnArchivedParentIsRefused(t *testing.T) {
 	pipeline, open, _ := DealFixture(t, e)
 
 	person := e.SeedPerson(t, "Archived Parent", &e.Rep1)
-	org := e.SeedOrg(t, "Archived Parent GmbH", &e.Rep1)
+	company := e.SeedCompany(t, "Archived Parent GmbH", &e.Rep1)
 	deal := e.SeedDeal(t, "Archived Parent deal", pipeline, open, &e.Rep1)
 
 	// Retired through the product's own archive writers rather than by column,
@@ -45,8 +45,8 @@ func TestUploadingOntoAnArchivedParentIsRefused(t *testing.T) {
 	if _, err := e.People.ArchivePerson(ctx, ids.From[ids.PersonKind](person), nil); err != nil {
 		t.Fatalf("archive person: %v", err)
 	}
-	if _, err := e.People.ArchiveOrganization(ctx, ids.From[ids.OrganizationKind](org), nil); err != nil {
-		t.Fatalf("archive organization: %v", err)
+	if _, err := e.People.ArchiveCompany(ctx, ids.From[ids.CompanyKind](company), nil); err != nil {
+		t.Fatalf("archive company: %v", err)
 	}
 	if _, err := e.Deals.ArchiveDeal(ctx, ids.From[ids.DealKind](deal), nil); err != nil {
 		t.Fatalf("archive deal: %v", err)
@@ -57,7 +57,7 @@ func TestUploadingOntoAnArchivedParentIsRefused(t *testing.T) {
 		id         ids.UUID
 	}{
 		{"person", person},
-		{"organization", org},
+		{"company", company},
 		{"deal", deal},
 	} {
 		t.Run(tc.entityType, func(t *testing.T) {

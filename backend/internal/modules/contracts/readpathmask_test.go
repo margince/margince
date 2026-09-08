@@ -21,7 +21,7 @@ import (
 // The distinction lives in two function names, and a name is not an obligation.
 // A sixth store method added next year reaches for the shorter name — it is the
 // one that reads like "read the contract" — and ships an unmasked
-// organization_id to a caller admitted through the deal. That is #1876's defect
+// company_id to a caller admitted through the deal. That is #1876's defect
 // arriving through the door #1983 closed, so it is held here rather than
 // explained in a comment nobody greps.
 func TestTheUnmaskedContractReadIsForWritesOnly(t *testing.T) {
@@ -40,7 +40,7 @@ func TestTheUnmaskedContractReadIsForWritesOnly(t *testing.T) {
 			continue
 		}
 		t.Errorf("%s calls %s, which does not withhold the references its reader may not open.\n\n"+
-			"A contract is admitted by its deal OR its organization, and that disjunction is about "+
+			"A contract is admitted by its deal OR its company, and that disjunction is about "+
 			"admission — a reader admitted through the deal may still not open the company. If this "+
 			"answer reaches a caller, go through %s. If it is a write's pre-image, its anchor or its "+
 			"audit image, add it to unmaskedReadCallers with what it does with the row.",

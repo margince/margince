@@ -35,7 +35,7 @@
   "scenarios": [
     {
       "scenario": "ask_meeting_prep_stays_silent_about_a_withheld_section",
-      "site": "org_ask",
+      "site": "company_ask",
       "stamp": "77db95f1dec24a932e2e48afdbacdc55ae891288198353cd207b184c532719e3ad007724c8d3feb2dc808c88d4f44a172066aa0a9b226fbd15f2adf72e260fd0b3cd924b9023436b986239a315792ef0f951e2187b48c25e881d669e2d014ee0",
       "verdict": "supported_degraded",
       "runs": 3,
@@ -47,7 +47,7 @@
     },
     {
       "scenario": "ask_whats_open_answers_the_pipeline_not_the_history",
-      "site": "org_ask",
+      "site": "company_ask",
       "stamp": "3af5febd1aef7fa09cabf0f71100af55e7f64d0f2724a22692c24f03cdd02a8f829c6a48dd12b4e3d7ace647bfda5cae77686e6d91cd573106123fd75894be2343c424087c12979da5fad816ba54f48e61cba2d5ca5b35dfe84b81dba9093f76",
       "verdict": "certified",
       "runs": 3,
@@ -59,7 +59,7 @@
     },
     {
       "scenario": "dossier_describes_the_company_not_the_relationship",
-      "site": "org_dossier",
+      "site": "company_dossier",
       "stamp": "2d8474959c2931f03b683da1aa04a2e083f53cdf9146622e04ff39d0654df2fd2b1fda4dc57c4cf46a0b89054c88e44b93c81d6441d015555716bd24404c06834f2abf07a398b794ba3e28f155ff91c143c35f7aa7e99816ee4756b55a4c2eb1",
       "verdict": "certified",
       "runs": 3,
@@ -107,7 +107,7 @@
     },
     {
       "scenario": "brief_stays_silent_about_a_withheld_section",
-      "site": "org_brief",
+      "site": "company_brief",
       "stamp": "1683338902071fb7c8746b42089612aca0a86543c297e19a18133017f349b2070704295d86c038b0e4a3842e7ea2ac5297a8061c0e6c55779ff3574c2ad23240e195fc11ecf2f122d890b7e2a75e2bbca000ad81d8bc11854d4855146146b0c9",
       "verdict": "not_supported",
       "runs": 3,
@@ -119,7 +119,7 @@
     },
     {
       "scenario": "brief_names_the_stalled_deal_and_the_last_touch",
-      "site": "org_brief",
+      "site": "company_brief",
       "stamp": "12973e0cf1b9eba672c1058c55a86a20ef50ee817d2e0b89b06a9820739d301f3374ee02f983d39ba8f45af2470c6d32968ad0eddfe7d364df32c55c2612a2eb788474a99f84c4273b5b2c76e69d79b3f1d6b1545ef0a05216c431f47e4aec43",
       "verdict": "not_supported",
       "runs": 3,

@@ -42,7 +42,7 @@ func seedSweepable(t *testing.T, e *Env) {
 	t.Helper()
 	for _, name := range []string{"Sweepable One", "Sweepable Two"} {
 		e.SeedPerson(t, name, nil)
-		e.SeedOrg(t, name, nil)
+		e.SeedCompany(t, name, nil)
 		lead := name
 		if _, _, err := e.People.CreateLead(e.Admin(), people.CreateLeadInput{
 			FullName: &lead, Status: "contacted", Source: "manual",
@@ -115,7 +115,7 @@ func TestTheNativeSweepPagesThroughEveryTypeWithoutRepeating(t *testing.T) {
 	if len(seen) != 6 {
 		t.Fatalf("the sweep reached %d of the 6 seeded records: %v", len(seen), seen)
 	}
-	for _, want := range []datasource.EntityType{datasource.EntityPerson, datasource.EntityOrganization, datasource.EntityLead} {
+	for _, want := range []datasource.EntityType{datasource.EntityPerson, datasource.EntityCompany, datasource.EntityLead} {
 		found := false
 		for _, got := range seen {
 			found = found || got == want
@@ -130,30 +130,30 @@ func TestTheNativeSweepAnswersTheTypesASeatMayReadRatherThanRefusingAll(t *testi
 	e := Setup(t)
 	seedSweepable(t, e)
 
-	// A seat with organization read and nothing else. The sweep it asks for
+	// A seat with company read and nothing else. The sweep it asks for
 	// covers five types; four of them it may not see.
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	orgOnly := principal.WithActor(ctx, principal.Principal{
+	companyOnly := principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,
 		Permissions: principal.Permissions{
-			Objects:  map[string]principal.ObjectGrant{"organization": {Read: true}},
+			Objects:  map[string]principal.ObjectGrant{"company": {Read: true}},
 			RowScope: principal.RowScopeAll,
 		},
 	})
 	provider := sweepingProvider(e)
 
-	res, err := provider.Search(orgOnly, datasource.SearchQuery{Text: "Sweepable", Limit: 50})
+	res, err := provider.Search(companyOnly, datasource.SearchQuery{Text: "Sweepable", Limit: 50})
 	if err != nil {
 		t.Fatalf("sweeping as a seat that may read one type: %v — a sweep answers what the seat can see, "+
 			"and refusing the whole walk for one missing grant makes the advertised all-types search "+
 			"unusable for any seat that is not universal", err)
 	}
 	if len(res.Records) != 2 {
-		t.Fatalf("the sweep answered %d records, want the 2 organizations this seat may read", len(res.Records))
+		t.Fatalf("the sweep answered %d records, want the 2 companies this seat may read", len(res.Records))
 	}
 	for _, rec := range res.Records {
-		if rec.Ref.Type != datasource.EntityOrganization {
-			t.Errorf("the sweep answered a %s to a seat granted only organizations", rec.Ref.Type)
+		if rec.Ref.Type != datasource.EntityCompany {
+			t.Errorf("the sweep answered a %s to a seat granted only companies", rec.Ref.Type)
 		}
 	}
 
@@ -161,7 +161,7 @@ func TestTheNativeSweepAnswersTheTypesASeatMayReadRatherThanRefusingAll(t *testi
 	// that type, and an empty page would say it holds nothing. The DENIAL
 	// specifically — any-error would also accept a pool failure or a missing
 	// fixture, which would prove nothing about the path under test.
-	_, err = provider.Search(orgOnly, datasource.SearchQuery{
+	_, err = provider.Search(companyOnly, datasource.SearchQuery{
 		Text: "Sweepable", EntityTypes: []datasource.EntityType{datasource.EntityPerson},
 	})
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {

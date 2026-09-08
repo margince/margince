@@ -85,9 +85,9 @@ describe("which surface answers a target", () => {
 });
 
 describe("a target this module cannot enumerate", () => {
-  it("asks for nothing and offers nothing for an organization", async () => {
+  it("asks for nothing and offers nothing for a company", async () => {
     const { seen, wrapper } = harness({ data: [], page });
-    const { result } = renderHook(() => useReferenceOptions("organization"), {
+    const { result } = renderHook(() => useReferenceOptions("company"), {
       wrapper,
     });
 
@@ -259,8 +259,8 @@ describe("boundedReference", () => {
     },
   );
 
-  it("an organization cannot", () => {
-    expect(boundedReference("organization")).toBe(false);
+  it("a company cannot", () => {
+    expect(boundedReference("company")).toBe(false);
   });
 
   it("nor can a field that names no target", () => {

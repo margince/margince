@@ -22,7 +22,7 @@ package capture
 //
 // PERSON links only. A meeting may never link straight to a company
 // (activities.refuseACompanyMeeting, and a trigger behind it): the account is
-// reached through the attendee's employment, which is exactly what the org
+// reached through the attendee's employment, which is exactly what the company
 // reach walk's third arm does. Filing the meeting under the person is therefore
 // enough to put it on the company page too.
 //

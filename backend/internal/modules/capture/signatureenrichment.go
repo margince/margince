@@ -6,7 +6,7 @@ package capture
 // One mailbox's own answer to the nightly signature pass.
 //
 // The tenant default lives in the settings table (SignatureEnrich); this is the
-// override beside it, and the two are separate on purpose: an organization can
+// override beside it, and the two are separate on purpose: a company can
 // turn the whole thing off, or leave it on and let one mailbox opt out, without
 // those being the same knob. It is the granularity a works-council negotiation
 // asks for, which is why it ships before it is demanded.

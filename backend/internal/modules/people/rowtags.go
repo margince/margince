@@ -10,7 +10,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
-// wireRowTags renders one row's tag chips for the person and organization
+// wireRowTags renders one row's tag chips for the person and company
 // lists, which both draw them. The deals module carries its own twin, because
 // a module never imports a sibling. Both render the contract's generated
 // RowTag, so a change to the shape is a compile error in each.

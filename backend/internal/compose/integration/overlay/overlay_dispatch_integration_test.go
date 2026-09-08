@@ -160,12 +160,12 @@ func seedOverlayModeWorkspace(t *testing.T) (ws, user ids.UUID) {
 // the store's mirror_visibility deny-join (HubSpot-owner mapping), not the
 // RBAC owner predicate — an unmapped actor still sees zero rows despite
 // RowScopeAll. (integration.ReadOnlyPerms would under-grant here: it omits
-// organization/lead/activity, which these overlay tests also read.)
+// company/lead/activity, which these overlay tests also read.)
 var overlayReaderPerms = principal.Permissions{
 	RoleKeys: []string{"read_only"},
 	Objects: map[string]principal.ObjectGrant{
 		"person":                {Read: true},
-		"organization":          {Read: true},
+		"company":               {Read: true},
 		"deal":                  {Read: true},
 		"lead":                  {Read: true},
 		"activity":              {Read: true},

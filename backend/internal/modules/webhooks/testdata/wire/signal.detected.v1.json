@@ -1,6 +1,6 @@
 {
   "entity_id": "ffffffff-ffff-ffff-ffff-ffffffffffff",
-  "entity_type": "organization",
+  "entity_type": "company",
   "kind": "champion_left",
   "resolution_confidence": 0.95,
   "resolution_state": "resolved",

@@ -25,11 +25,11 @@ func acmeBase(t *testing.T) *url.URL {
 }
 
 func TestTheJSONLDLogoLeadsAndTheLabelledImagesFollow(t *testing.T) {
-	// The schema.org block says "logo" in a vocabulary made for the purpose;
+	// The schema.company block says "logo" in a vocabulary made for the purpose;
 	// the header <img> says it in its alt text. Both count, the explicit one
 	// first, and a relative address resolves against where the page came from.
 	page := `<html><head>
-		<script type="application/ld+json">{"@type":"Organization","name":"Acme","logo":"/brand/acme-lockup.png"}</script>
+		<script type="application/ld+json">{"@type":"Company","name":"Acme","logo":"/brand/acme-lockup.png"}</script>
 		</head><body>
 		<header><a href="/"><img src="../img/header.svg" alt="Acme Logo"></a></header>
 		<main><img src="/img/hero.jpg" alt="Our team at work"></main>
@@ -92,10 +92,10 @@ func TestALogoNeedsAnAddressWorthFetching(t *testing.T) {
 }
 
 func TestAJSONLDLogoMayBeAnImageObjectOrAList(t *testing.T) {
-	// schema.org lets a logo be a URL, an ImageObject, or several; the reader
+	// schema.company lets a logo be a URL, an ImageObject, or several; the reader
 	// takes each spelling, and a repeated address once.
-	page := ldPage(`[{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://cdn.acme.example/lockup.png"}},
-		{"@type":"WebSite","publisher":{"@type":"Organization","logo":["https://cdn.acme.example/lockup.png", {"contentUrl":"/second.png"}]}}]`)
+	page := ldPage(`[{"@type":"Company","logo":{"@type":"ImageObject","url":"https://cdn.acme.example/lockup.png"}},
+		{"@type":"WebSite","publisher":{"@type":"Company","logo":["https://cdn.acme.example/lockup.png", {"contentUrl":"/second.png"}]}}]`)
 	got := declaredLogos(page, acmeBase(t))
 	want := []string{"https://cdn.acme.example/lockup.png", "https://acme.example/second.png"}
 	if !reflect.DeepEqual(got, want) {

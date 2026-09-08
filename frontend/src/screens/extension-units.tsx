@@ -28,7 +28,7 @@ import "./extension-units.css";
 // unit names a destination. See app/extensions.ts's unitsForSecretScope.
 //
 // The permission story is the page, and it was already written: Connections is
-// per-person and ungated, Integrations is the organization's and opens on the
+// per-person and ungated, Integrations is the company's and opens on the
 // grants its cards ask for OR on a workspace-scoped unit being composed at all,
 // because this page is the only place such a unit is offered. The rows here add
 // no gate of their own — the rail rows they replace had none either, and a

@@ -7,7 +7,7 @@ package people
 // request body survives the generated types' AdditionalProperties
 // catch-all into the store input on BOTH surfaces (the HTTP handlers and
 // the SoR provider decode through these same functions), for person and
-// organization alike. Which keys actually land is the store's decision
+// company alike. Which keys actually land is the store's decision
 // (active catalog columns only, drop-on-mismatch) — the mapping must
 // stay a faithful carrier, never a filter.
 
@@ -52,24 +52,24 @@ func TestPersonUpdateInputCarriesCustomFieldKeys(t *testing.T) {
 	}
 }
 
-func TestOrganizationCreateInputCarriesCustomFieldKeys(t *testing.T) {
-	var req crmcontracts.CreateOrganizationRequest
+func TestCompanyCreateInputCarriesCustomFieldKeys(t *testing.T) {
+	var req crmcontracts.CreateCompanyRequest
 	decodeInto(t, `{"display_name":"Acme","source":"ui","cf_region":"emea"}`, &req)
 
-	in, err := organizationCreateInput(req)
+	in, err := companyCreateInput(req)
 	if err != nil {
-		t.Fatalf("organizationCreateInput: %v", err)
+		t.Fatalf("companyCreateInput: %v", err)
 	}
 	if got := in.CustomFields["cf_region"]; got != "emea" {
 		t.Errorf(`CustomFields["cf_region"] = %v, want "emea"`, got)
 	}
 }
 
-func TestOrganizationUpdateInputCarriesCustomFieldKeys(t *testing.T) {
-	var req crmcontracts.UpdateOrganizationRequest
+func TestCompanyUpdateInputCarriesCustomFieldKeys(t *testing.T) {
+	var req crmcontracts.UpdateCompanyRequest
 	decodeInto(t, `{"industry":"robotics","cf_region":"apac"}`, &req)
 
-	in := organizationUpdateInput(req, nil)
+	in := companyUpdateInput(req, nil)
 	if got := in.CustomFields["cf_region"]; got != "apac" {
 		t.Errorf(`CustomFields["cf_region"] = %v, want "apac"`, got)
 	}

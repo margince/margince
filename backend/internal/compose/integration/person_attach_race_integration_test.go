@@ -34,7 +34,7 @@ import (
 func TestAnAttachCannotOutrunTheArchive(t *testing.T) {
 	e := Setup(t)
 	person := ids.From[ids.PersonKind](e.SeedPerson(t, "Retiring Stakeholder", nil))
-	org := ids.From[ids.OrganizationKind](e.SeedOrg(t, "Attaching Company", nil))
+	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Attaching Company", nil))
 
 	// The archive, held open. It IS the holder — the real interleaving, and the
 	// transaction the attach actually races.
@@ -53,9 +53,9 @@ func TestAnAttachCannotOutrunTheArchive(t *testing.T) {
 	attached := make(chan error, 1)
 	go func() {
 		_, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
-			Kind:           "employment",
-			PersonID:       &person,
-			OrganizationID: &org,
+			Kind:      "employment",
+			PersonID:  &person,
+			CompanyID: &company,
 		})
 		attached <- err
 	}()

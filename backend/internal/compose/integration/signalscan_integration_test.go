@@ -53,20 +53,20 @@ func ghostedPass(t *testing.T, e *Env, now time.Time) compose.GhostedPass {
 // — the shape capture writes, where the message names a PERSON and the account
 // is reached only through their employment. Each call is a different contact,
 // so two calls are two colleagues at the same account.
-func mailViaEmployee(t *testing.T, e *Env, org ids.UUID, subject, direction string, at time.Time) {
+func mailViaEmployee(t *testing.T, e *Env, company ids.UUID, subject, direction string, at time.Time) {
 	t.Helper()
 	owner := OwnerConn(t)
 	id := AccountMailDirectedAt(t, owner, e.WS, subject, direction, at)
-	LinkActivity(t, owner, id, "person", employeeOf(t, e, org, subject+" contact"))
+	LinkActivity(t, owner, id, "person", employeeOf(t, e, company, subject+" contact"))
 }
 
-func openSignalKinds(t *testing.T, e *Env, org ids.UUID) []string {
+func openSignalKinds(t *testing.T, e *Env, company ids.UUID) []string {
 	t.Helper()
 	var kinds []string
 	ctx := e.Admin()
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx,
-			`SELECT kind FROM signal WHERE resolved_org_id = $1 AND status = 'open'`, org)
+			`SELECT kind FROM signal WHERE resolved_company_id = $1 AND status = 'open'`, company)
 		if err != nil {
 			return err
 		}
@@ -89,17 +89,17 @@ func TestGhostedThreadIsRaisedOnceAndSurvivesARepeatPass(t *testing.T) {
 	e := Setup(t)
 	now := time.Now().UTC()
 
-	org := e.SeedOrg(t, "Silent Co", &e.Rep1)
+	company := e.SeedCompany(t, "Silent Co", &e.Rep1)
 	// An account worth chasing: without this the rule stays quiet, because an
 	// unanswered fortnight on an account nobody works is not an observation
 	// about a relationship.
-	e.WsExec(t, `UPDATE organization SET lifecycle = 'opportunity' WHERE id = $1`, org)
-	mailViaEmployee(t, e, org, "Update zu Margince", "outbound", now.AddDate(0, 0, -20))
+	e.WsExec(t, `UPDATE company SET lifecycle = 'opportunity' WHERE id = $1`, company)
+	mailViaEmployee(t, e, company, "Update zu Margince", "outbound", now.AddDate(0, 0, -20))
 
 	if written := ghostedScan(t, e, now); written != 1 {
 		t.Fatalf("first pass wrote %d signals, want 1", written)
 	}
-	if kinds := openSignalKinds(t, e, org); len(kinds) != 1 || kinds[0] != "ghosted_thread" {
+	if kinds := openSignalKinds(t, e, company); len(kinds) != 1 || kinds[0] != "ghosted_thread" {
 		t.Fatalf("open signals = %v, want one ghosted_thread", kinds)
 	}
 
@@ -107,7 +107,7 @@ func TestGhostedThreadIsRaisedOnceAndSurvivesARepeatPass(t *testing.T) {
 	if written := ghostedScan(t, e, now.Add(time.Hour)); written != 0 {
 		t.Errorf("a repeat pass wrote %d signals, want none", written)
 	}
-	if kinds := openSignalKinds(t, e, org); len(kinds) != 1 {
+	if kinds := openSignalKinds(t, e, company); len(kinds) != 1 {
 		t.Errorf("open signals after the repeat pass = %v, want the original one", kinds)
 	}
 }
@@ -116,12 +116,12 @@ func TestADismissedGhostedSignalDoesNotComeBack(t *testing.T) {
 	e := Setup(t)
 	now := time.Now().UTC()
 
-	org := e.SeedOrg(t, "Dismissed Co", &e.Rep1)
-	e.WsExec(t, `UPDATE organization SET lifecycle = 'customer' WHERE id = $1`, org)
-	mailViaEmployee(t, e, org, "Following up", "outbound", now.AddDate(0, 0, -30))
+	company := e.SeedCompany(t, "Dismissed Co", &e.Rep1)
+	e.WsExec(t, `UPDATE company SET lifecycle = 'customer' WHERE id = $1`, company)
+	mailViaEmployee(t, e, company, "Following up", "outbound", now.AddDate(0, 0, -30))
 	ghostedScan(t, e, now)
 
-	e.WsExec(t, `UPDATE signal SET status = 'dismissed' WHERE resolved_org_id = $1`, org)
+	e.WsExec(t, `UPDATE signal SET status = 'dismissed' WHERE resolved_company_id = $1`, company)
 
 	// The fingerprint index covers dismissed rows, so the same silence cannot
 	// raise again — an index that freed the key on dismissal would be the
@@ -140,14 +140,14 @@ func TestGhostedStaysQuietWhenTheyWroteLastOrNobodyIsWorkingTheAccount(t *testin
 	// direct link on the message could not see that at all: the reply named a
 	// different person, so the account looked unanswered and the rule fired on
 	// a relationship that was in fact alive.
-	answered := e.SeedOrg(t, "They Replied", &e.Rep1)
-	e.WsExec(t, `UPDATE organization SET lifecycle = 'opportunity' WHERE id = $1`, answered)
+	answered := e.SeedCompany(t, "They Replied", &e.Rep1)
+	e.WsExec(t, `UPDATE company SET lifecycle = 'opportunity' WHERE id = $1`, answered)
 	mailViaEmployee(t, e, answered, "Proposal", "outbound", now.AddDate(0, 0, -30))
 	mailViaEmployee(t, e, answered, "Re: Proposal", "inbound", now.AddDate(0, 0, -20))
 
 	// Nobody is working this one: no open deal, and a lifecycle that is not live.
-	idle := e.SeedOrg(t, "Nobody's Account", &e.Rep1)
-	e.WsExec(t, `UPDATE organization SET lifecycle = 'disqualified' WHERE id = $1`, idle)
+	idle := e.SeedCompany(t, "Nobody's Account", &e.Rep1)
+	e.WsExec(t, `UPDATE company SET lifecycle = 'disqualified' WHERE id = $1`, idle)
 	mailViaEmployee(t, e, idle, "Last try", "outbound", now.AddDate(0, 0, -60))
 
 	if written := ghostedScan(t, e, now); written != 0 {
@@ -162,12 +162,12 @@ func TestGhostedStaysQuietWhenTheyWroteLastOrNobodyIsWorkingTheAccount(t *testin
 // purpose: the only thing left that can withhold a row is the signal's own
 // visibility, so a test using it cannot pass because some other gate happened
 // to fire.
-func openSignalKindsAs(t *testing.T, e *Env, user ids.UUID, org ids.UUID) []string {
+func openSignalKindsAs(t *testing.T, e *Env, user ids.UUID, company ids.UUID) []string {
 	t.Helper()
 	ctx := e.As(user, []ids.UUID{e.Team1}, AdminWithSignals)
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	orgPos := arg(org)
+	companyPos := arg(company)
 	clause, err := auth.SignalScopeClause(ctx, "s", arg)
 	if err != nil {
 		t.Fatalf("build the signal scope clause: %v", err)
@@ -179,8 +179,8 @@ func openSignalKindsAs(t *testing.T, e *Env, user ids.UUID, org ids.UUID) []stri
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, fmt.Sprintf(
 			`SELECT s.kind FROM signal s
-			  WHERE s.resolved_org_id = $%d AND s.status = 'open'
-			    AND s.archived_at IS NULL AND %s`, orgPos, clause), args...)
+			  WHERE s.resolved_company_id = $%d AND s.status = 'open'
+			    AND s.archived_at IS NULL AND %s`, companyPos, clause), args...)
 		if err != nil {
 			return err
 		}

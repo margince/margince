@@ -189,7 +189,7 @@ export function CompanyAct({
   }, []);
   // A confirm 409 that this driver has already resolved into a next step,
   // rather than a bare failure. The server gives each of its three refusals
-  // its own code (crm.yaml, confirmCompanySiteRead), so each notice states
+  // its own code (crm.yaml, confirmAnchorCompanySiteRead), so each notice states
   // what the server itself said: "skew" is `version_skew`, the draft changed
   // under the human; "notReady" is `not_confirmable`, this read has no draft
   // to confirm; and "checkFailed" is the one thing left unresolved after an
@@ -648,7 +648,7 @@ export function CompanyAct({
     () => allRows.filter((row) => isWork(row.state)),
     [allRows],
   );
-  // The ONLY rows that stop the human continuing: `confirmCompanySiteRead`
+  // The ONLY rows that stop the human continuing: `confirmAnchorCompanySiteRead`
   // 422s exactly when one of REQUIRED_FIELDS is still empty — checked here
   // against `isRequired` itself, the same source the server enforces
   // against, never assumed from `row.state === "required"` alone. Every
@@ -727,7 +727,7 @@ export function CompanyAct({
    * readers see, while the card behind it correctly stayed shut.
    *
    * Every term is a reason the SERVER would refuse:
-   * - a required field is still empty, which `confirmCompanySiteRead` 422s on;
+   * - a required field is still empty, which `confirmAnchorCompanySiteRead` 422s on;
    * - a question the server still considers open is stranded, for the one
    *   render between a clarify settling and its successor landing;
    * - the act is not on a phase that has anything to confirm;
@@ -1149,7 +1149,7 @@ function boardHeading(
 }
 
 // The one predicate for "does this row stop the human continuing" — the
-// server's `confirmCompanySiteRead` 422s exactly when one of REQUIRED_FIELDS
+// server's `confirmAnchorCompanySiteRead` 422s exactly when one of REQUIRED_FIELDS
 // (`isRequired`) is still empty, so that is the whole test. Never widened to
 // `row.state === "required"` on its own: `rowFor` happens to assign that
 // state for exactly this case today, but the check goes through `isRequired`

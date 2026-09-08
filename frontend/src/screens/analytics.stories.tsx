@@ -115,13 +115,13 @@ const forecastRows = [
 
 const companyRows = [
   {
-    organization_id: "BÄR Pharma GmbH",
+    company_id: "BÄR Pharma GmbH",
     raw_minor: 2500000,
     deal_count: 4,
     currency: "EUR",
   },
   {
-    organization_id: "Brandt Systemtechnik",
+    company_id: "Brandt Systemtechnik",
     raw_minor: 870000,
     deal_count: 2,
     currency: "EUR",

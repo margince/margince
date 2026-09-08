@@ -7,7 +7,7 @@ package gates
 
 // A {subject, body} model reply has ONE reader.
 //
-// It had two. The introduction REQUEST (org360, written to a colleague) and the
+// It had two. The introduction REQUEST (company360, written to a colleague) and the
 // introduction NOTE (network, forwarded to a customer) each unmarshalled the
 // same envelope and each refused on the same three conditions, written
 // independently. The prompts differ deliberately — two registers, argued in the

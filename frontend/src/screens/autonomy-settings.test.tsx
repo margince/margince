@@ -212,26 +212,26 @@ describe("AutonomySettingsCard", () => {
   });
 
   it("switches a kind back off", async () => {
-    const backend = backendFor([row("org_name_promotion", "auto", 3)]);
+    const backend = backendFor([row("company_name_promotion", "auto", 3)]);
     vi.stubGlobal("fetch", backend.fetchMock);
     const user = userEvent.setup();
     render(<AutonomySettingsCard />);
 
     const toggle = await screen.findByTestId<HTMLButtonElement>(
-      "autonomy-toggle-org_name_promotion",
+      "autonomy-toggle-company_name_promotion",
     );
     expect(toggle.getAttribute("aria-checked")).toBe("true");
     await user.click(toggle);
 
     await waitFor(() =>
       expect(backend.patches()).toEqual([
-        { kind: "org_name_promotion", auto: false },
+        { kind: "company_name_promotion", auto: false },
       ]),
     );
     await waitFor(() =>
       expect(
         screen
-          .getByTestId("autonomy-toggle-org_name_promotion")
+          .getByTestId("autonomy-toggle-company_name_promotion")
           .getAttribute("aria-checked"),
       ).toBe("false"),
     );

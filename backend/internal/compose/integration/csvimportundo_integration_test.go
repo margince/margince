@@ -147,38 +147,38 @@ func TestCSVImportUndoRefusesBeforeTheRunCommits(t *testing.T) {
 	}
 }
 
-const orgProspectCSV = "Company,Legal Name,Industry\n" +
+const companyProspectCSV = "Company,Legal Name,Industry\n" +
 	"Initech,Initech GmbH,software\n" +
 	"Umbrella,Umbrella AG,biotech\n"
 
-func organizationRows(t *testing.T, e *apptest.AppEnv) []leadRowDTO {
+func companyRows(t *testing.T, e *apptest.AppEnv) []leadRowDTO {
 	t.Helper()
-	var orgs struct {
+	var companies struct {
 		Data []leadRowDTO `json:"data"`
 	}
-	if status := e.Call(t, http.MethodGet, "/v1/organizations?limit=100", nil, nil, &orgs); status != http.StatusOK {
-		t.Fatalf("GET /v1/organizations → %d, want 200", status)
+	if status := e.Call(t, http.MethodGet, "/v1/companies?limit=100", nil, nil, &companies); status != http.StatusOK {
+		t.Fatalf("GET /v1/companies → %d, want 200", status)
 	}
-	return orgs.Data
+	return companies.Data
 }
 
-// Reverse's other object branch: an import of organizations undoes through
-// ArchiveOrganization exactly as a lead import undoes through DisqualifyLead.
-func TestCSVImportUndoReversesOrganizations(t *testing.T) {
+// Reverse's other object branch: an import of companies undoes through
+// ArchiveCompany exactly as a lead import undoes through DisqualifyLead.
+func TestCSVImportUndoReversesCompanies(t *testing.T) {
 	e := setupImportApp(t)
-	before := len(organizationRows(t, e))
+	before := len(companyRows(t, e))
 
-	profile, _ := uploadCSV(t, e, "organization", orgProspectCSV)
+	profile, _ := uploadCSV(t, e, "company", companyProspectCSV)
 	mapping := map[string]string{"Company": "display_name", "Legal Name": "legal_name", "Industry": "industry"}
-	run, status := createRunWithMapping(t, e, "organization", profile.SourceRef, mapping)
+	run, status := createRunWithMapping(t, e, "company", profile.SourceRef, mapping)
 	if status != http.StatusAccepted {
 		t.Fatalf("create run → %d, want 202", status)
 	}
 	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", status)
 	}
-	if got := len(organizationRows(t, e)); got != before+2 {
-		t.Fatalf("organizations after approval = %d, want %d", got, before+2)
+	if got := len(companyRows(t, e)); got != before+2 {
+		t.Fatalf("companies after approval = %d, want %d", got, before+2)
 	}
 
 	var undone importRunDTO
@@ -190,10 +190,10 @@ func TestCSVImportUndoReversesOrganizations(t *testing.T) {
 		t.Fatalf("report after undo → %d, want 200", status)
 	}
 	if report.Undo == nil || report.Undo.ReversedCount != 2 || len(report.Undo.Kept) != 0 {
-		t.Fatalf("undo report = %+v, want both organizations reversed and none kept", report.Undo)
+		t.Fatalf("undo report = %+v, want both companies reversed and none kept", report.Undo)
 	}
-	if got := len(organizationRows(t, e)); got != before {
-		t.Fatalf("organizations after undo = %d, want %d (both reversed)", got, before)
+	if got := len(companyRows(t, e)); got != before {
+		t.Fatalf("companies after undo = %d, want %d (both reversed)", got, before)
 	}
 }
 

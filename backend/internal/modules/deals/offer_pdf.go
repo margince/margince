@@ -124,7 +124,7 @@ type pdfTranslator func(string) string
 // writeOfferPDFHeader writes the title/revision/issuer block, the
 // template layout's header_text (when the layout carries one), and the buyer
 // legal block underneath it. A block that NAMES no buyer — nil, as an unsent
-// draft with no buyer org is, or one carrying neither display_name nor
+// draft with no buyer company is, or one carrying neither display_name nor
 // legal_name — omits the section entirely rather than printing an empty
 // heading.
 func writeOfferPDFHeader(pdf *fpdf.Fpdf, tr pdfTranslator, o crmcontracts.Offer, buyerBlock map[string]any, issuerName string, layout map[string]any, labels pdfLabels) {
@@ -153,7 +153,7 @@ func writeOfferPDFHeader(pdf *fpdf.Fpdf, tr pdfTranslator, o crmcontracts.Offer,
 	}
 
 	// The buyer is identified by NAME. The snapshot also carries our internal
-	// organization_id, and printing it put a UUID — under a hardcoded English
+	// company_id, and printing it put a UUID — under a hardcoded English
 	// label, on an otherwise translated document — as the first line the
 	// customer read about themselves. It identifies the record to us and
 	// nothing to them.
@@ -165,7 +165,7 @@ func writeOfferPDFHeader(pdf *fpdf.Fpdf, tr pdfTranslator, o crmcontracts.Offer,
 	//
 	// Reachable through the FROZEN snapshot, which resolveRenderBuyerBlock
 	// returns verbatim from jsonb (offer_render.go). Both of today's writers
-	// set display_name beside the id, and organization.display_name is NOT
+	// set display_name beside the id, and company.display_name is NOT
 	// NULL, so a block this release builds always names its buyer — but the
 	// stored bag is not constrained to that shape, and this renderer's job is
 	// to print what it was handed rather than to assume what wrote it.
@@ -264,7 +264,7 @@ func writeOfferPDFFooter(pdf *fpdf.Fpdf, tr pdfTranslator, layout map[string]any
 // inputs (see offer_render.go's PrepareRender): o carries the offer
 // header and its server-computed totals, lines are its accepted line
 // items, buyerBlock is the frozen buyer_snapshot once sent or the live
-// buyer organization while still draft (nil when the offer has none),
+// buyer company while still draft (nil when the offer has none),
 // issuerName is the seller's display name, locale drives the DE/EN label
 // set, and layout is the selected template's layout bag (nil or empty
 // when the offer carries no template) — see this file's doc comment for

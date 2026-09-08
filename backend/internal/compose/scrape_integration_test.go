@@ -5,10 +5,10 @@
 
 package compose
 
-// scrapeCompany (EP05): the enrich verb on a KNOWN org. The shared no-guess
+// scrapeCompany (EP05): the enrich verb on a KNOWN company. The shared no-guess
 // gate keeps only evidence-grounded fields, the surviving fields stage a 🟡
-// approval BOUND to the org (nothing touches the record), an org the caller
-// cannot see is existence-hidden (404), and acceptance fills only the org's
+// approval BOUND to the company (nothing touches the record), a company the caller
+// cannot see is existence-hidden (404), and acceptance fills only the company's
 // empty fields as agent:scrape — exactly once.
 
 import (
@@ -31,7 +31,7 @@ import (
 var scrapePerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
-		"organization": {Read: true, Update: true},
+		"company": {Read: true, Update: true},
 	},
 	RowScope: principal.RowScopeTeam,
 }
@@ -46,47 +46,47 @@ const acmeExtraction = `{"fields":[
 	{"field":"industry","value":"Software","evidence_snippet":"Acme GmbH","confidence":1.7},
 	{"field":"made_up_field","value":"x","evidence_snippet":"Acme GmbH","confidence":0.5}]}`
 
-// insertOrg creates an org owned by owner, optionally with a domain and a
+// insertCompany creates a company owned by owner, optionally with a domain and a
 // human-set industry, and returns its id.
-func insertOrg(t *testing.T, e *integration.Env, owner ids.UUID, domain, industry string) ids.UUID {
+func insertCompany(t *testing.T, e *integration.Env, owner ids.UUID, domain, industry string) ids.UUID {
 	t.Helper()
-	orgID := ids.NewV7()
+	companyID := ids.NewV7()
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
-			INSERT INTO organization (id, owner_id, display_name, industry, source, captured_by)
+			INSERT INTO company (id, owner_id, display_name, industry, source, captured_by)
 			VALUES ($1, $2, 'Acme', NULLIF($3,''), 'manual', 'human:owner')`,
-			orgID, owner, industry); err != nil {
+			companyID, owner, industry); err != nil {
 			return err
 		}
 		if domain == "" {
 			return nil
 		}
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO organization_domain (organization_id, domain, is_primary, source, captured_by)
-			VALUES ($1, $2, true, 'manual', 'human:owner')`, orgID, domain)
+			INSERT INTO company_domain (company_id, domain, is_primary, source, captured_by)
+			VALUES ($1, $2, true, 'manual', 'human:owner')`, companyID, domain)
 		return err
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	return orgID
+	return companyID
 }
 
-func TestScrapeStagesEnrichmentBoundToOrg(t *testing.T) {
+func TestScrapeStagesEnrichmentBoundToCompany(t *testing.T) {
 	e := integration.Setup(t)
-	orgID := insertOrg(t, e, e.Rep1, "acme.example", "")
+	companyID := insertCompany(t, e, e.Rep1, "acme.example", "")
 	fake := ai.NewFakeClient().Script(acmeExtraction)
 	engine := &scrapeEngine{extract: evidenceExtractor{fetch: acmePage, brain: fakeModelPath(t, fake).ColdStart}, people: e.People, approvals: approvals.NewService(e.DB())}
 
-	proposal, err := engine.Propose(e.As(e.Rep1, []ids.UUID{e.Team1}, scrapePerms), orgID, "")
+	proposal, err := engine.Propose(e.As(e.Rep1, []ids.UUID{e.Team1}, scrapePerms), companyID, "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if ids.UUID(proposal.OrganizationId) != orgID {
-		t.Fatalf("proposal bound to %s, want the target org %s", ids.UUID(proposal.OrganizationId), orgID)
+	if ids.UUID(proposal.CompanyId) != companyID {
+		t.Fatalf("proposal bound to %s, want the target company %s", ids.UUID(proposal.CompanyId), companyID)
 	}
 	if proposal.SourceUrl != "https://acme.example" {
-		t.Fatalf("source url = %q, want the org's own domain", proposal.SourceUrl)
+		t.Fatalf("source url = %q, want the company's own domain", proposal.SourceUrl)
 	}
 	if len(proposal.Fields) != 2 {
 		t.Fatalf("gate let %d fields through, want 2 (hallucinated evidence, bad confidence, unknown name drop): %+v", len(proposal.Fields), proposal.Fields)
@@ -95,7 +95,7 @@ func TestScrapeStagesEnrichmentBoundToOrg(t *testing.T) {
 		t.Fatalf("proposal not staged: %+v", proposal)
 	}
 
-	// The staged row is bound to the org and emitted the enrichment event.
+	// The staged row is bound to the company and emitted the enrichment event.
 	var kind, status, targetType string
 	var targetID ids.UUID
 	var eventCount int
@@ -114,64 +114,64 @@ func TestScrapeStagesEnrichmentBoundToOrg(t *testing.T) {
 	if kind != "enrich" || status != "pending" || eventCount != 1 {
 		t.Fatalf("staging landed kind=%s status=%s approval.requested=%d, want enrich/pending/1", kind, status, eventCount)
 	}
-	if targetType != "organization" || targetID != orgID {
-		t.Fatalf("approval not bound to the org (target %s/%s)", targetType, targetID)
+	if targetType != "company" || targetID != companyID {
+		t.Fatalf("approval not bound to the company (target %s/%s)", targetType, targetID)
 	}
 }
 
-func TestScrapeHidesAnInvisibleOrg(t *testing.T) {
+func TestScrapeHidesAnInvisibleCompany(t *testing.T) {
 	e := integration.Setup(t)
-	// Capture-private to rep3 (team2): an organization is otherwise readable by
+	// Capture-private to rep3 (team2): a company is otherwise readable by
 	// every seat, so visibility='owner' is what makes it invisible to rep1.
-	hidden := insertOrg(t, e, e.Rep3, "hidden.example", "")
-	e.MakeCapturePrivate(t, "organization", hidden, e.Rep3)
+	hidden := insertCompany(t, e, e.Rep3, "hidden.example", "")
+	e.MakeCapturePrivate(t, "company", hidden, e.Rep3)
 	fake := ai.NewFakeClient().Script(acmeExtraction)
 	engine := &scrapeEngine{extract: evidenceExtractor{fetch: acmePage, brain: fakeModelPath(t, fake).ColdStart}, people: e.People, approvals: approvals.NewService(e.DB())}
 
-	// Both the domain path and the override path must 404 an org the caller
+	// Both the domain path and the override path must 404 a company the caller
 	// cannot see — existence-hiding, before any egress on their behalf.
 	if _, err := engine.Propose(e.As(e.Rep1, []ids.UUID{e.Team1}, scrapePerms), hidden, ""); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Fatalf("enrich a hidden org (domain path) → %v, want ErrNotFound", err)
+		t.Fatalf("enrich a hidden company (domain path) → %v, want ErrNotFound", err)
 	}
 	if _, err := engine.Propose(e.As(e.Rep1, []ids.UUID{e.Team1}, scrapePerms), hidden, "https://attacker.example"); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Fatalf("enrich a hidden org (override path) → %v, want ErrNotFound", err)
+		t.Fatalf("enrich a hidden company (override path) → %v, want ErrNotFound", err)
 	}
 	// A never-existed id is 404 too (same EnsureVisible path).
 	if _, err := engine.Propose(e.As(e.Rep1, []ids.UUID{e.Team1}, scrapePerms), ids.NewV7(), ""); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Fatalf("enrich a nonexistent org → %v, want ErrNotFound", err)
+		t.Fatalf("enrich a nonexistent company → %v, want ErrNotFound", err)
 	}
 }
 
 func TestScrapeDegradesHonestly(t *testing.T) {
 	e := integration.Setup(t)
-	// (a) A visible org with a domain but nothing survives the gate → unreadable.
-	orgID := insertOrg(t, e, e.Rep1, "acme.example", "")
+	// (a) A visible company with a domain but nothing survives the gate → unreadable.
+	companyID := insertCompany(t, e, e.Rep1, "acme.example", "")
 	allHallucinated := ai.NewFakeClient().Script(
 		`{"fields":[{"field":"icp","value":"guessed","evidence_snippet":"nowhere on the page","confidence":0.9}]}`)
 	engine := &scrapeEngine{extract: evidenceExtractor{fetch: acmePage, brain: fakeModelPath(t, allHallucinated).ColdStart}, people: e.People, approvals: approvals.NewService(e.DB())}
 	var unreadable *unreadableError
-	if _, err := engine.Propose(e.As(e.Rep1, []ids.UUID{e.Team1}, scrapePerms), orgID, ""); !errors.As(err, &unreadable) {
+	if _, err := engine.Propose(e.As(e.Rep1, []ids.UUID{e.Team1}, scrapePerms), companyID, ""); !errors.As(err, &unreadable) {
 		t.Fatalf("all-hallucinated extraction → %v, want unreadable", err)
 	}
 
-	// (b) A visible org with NO domain and no override → no target to read.
-	noDomain := insertOrg(t, e, e.Rep1, "", "")
+	// (b) A visible company with NO domain and no override → no target to read.
+	noDomain := insertCompany(t, e, e.Rep1, "", "")
 	if _, err := engine.Propose(e.As(e.Rep1, []ids.UUID{e.Team1}, scrapePerms), noDomain, ""); !errors.Is(err, people.ErrNoEnrichTarget) {
-		t.Fatalf("org without a domain → %v, want ErrNoEnrichTarget", err)
+		t.Fatalf("company without a domain → %v, want ErrNoEnrichTarget", err)
 	}
 }
 
 func TestScrapeAcceptFillsOnlyEmptyFields(t *testing.T) {
 	e := integration.Setup(t)
 	// Human already set the industry; legal_name is empty.
-	orgID := insertOrg(t, e, e.Rep1, "acme.example", "Handcrafted Industry")
+	companyID := insertCompany(t, e, e.Rep1, "acme.example", "Handcrafted Industry")
 	fake := ai.NewFakeClient().Script(acmeExtraction, acmeExtraction)
 
 	svc := approvals.NewService(e.DB())
 	svc.WithEffect("enrich", scrapeAcceptEffect(svc, e.People))
 	engine := &scrapeEngine{extract: evidenceExtractor{fetch: acmePage, brain: fakeModelPath(t, fake).ColdStart}, people: e.People, approvals: svc}
 
-	proposal, err := engine.Propose(e.As(e.Rep1, []ids.UUID{e.Team1}, scrapePerms), orgID, "")
+	proposal, err := engine.Propose(e.As(e.Rep1, []ids.UUID{e.Team1}, scrapePerms), companyID, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -180,24 +180,24 @@ func TestScrapeAcceptFillsOnlyEmptyFields(t *testing.T) {
 	}
 
 	var industry, capturedBy, source string
-	var profileRows, orgs int
+	var profileRows, companies int
 	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(),
-			`SELECT industry FROM organization WHERE id = $1`, orgID).Scan(&industry); err != nil {
+			`SELECT industry FROM company WHERE id = $1`, companyID).Scan(&industry); err != nil {
 			return err
 		}
-		if err := tx.QueryRow(context.Background(), `SELECT count(*) FROM organization`).Scan(&orgs); err != nil {
+		if err := tx.QueryRow(context.Background(), `SELECT count(*) FROM company`).Scan(&companies); err != nil {
 			return err
 		}
 		return tx.QueryRow(context.Background(),
-			`SELECT count(*), max(captured_by), max(source) FROM organization_profile_field WHERE organization_id = $1`,
-			orgID).Scan(&profileRows, &capturedBy, &source)
+			`SELECT count(*), max(captured_by), max(source) FROM company_profile_field WHERE company_id = $1`,
+			companyID).Scan(&profileRows, &capturedBy, &source)
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if orgs != 1 {
-		t.Fatalf("enrichment created a duplicate org (%d rows) instead of targeting the named one", orgs)
+	if companies != 1 {
+		t.Fatalf("enrichment created a duplicate company (%d rows) instead of targeting the named one", companies)
 	}
 	if industry != "Handcrafted Industry" {
 		t.Fatalf("accept OVERWROTE a human-set industry: %q", industry)
@@ -218,7 +218,7 @@ func TestScrapeAcceptFillsOnlyEmptyFields(t *testing.T) {
 	}
 
 	// A REJECTED enrichment writes nothing.
-	proposal2, err := engine.Propose(e.As(e.Rep1, []ids.UUID{e.Team1}, scrapePerms), orgID, "")
+	proposal2, err := engine.Propose(e.As(e.Rep1, []ids.UUID{e.Team1}, scrapePerms), companyID, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -228,7 +228,7 @@ func TestScrapeAcceptFillsOnlyEmptyFields(t *testing.T) {
 	var rejectedRows int
 	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT count(*) FROM organization_profile_field WHERE organization_id = $1`, orgID).Scan(&rejectedRows)
+			`SELECT count(*) FROM company_profile_field WHERE company_id = $1`, companyID).Scan(&rejectedRows)
 	})
 	if err != nil || rejectedRows != 2 {
 		t.Fatalf("reject changed the profile rows to %d (err=%v), want the 2 from the accepted proposal", rejectedRows, err)

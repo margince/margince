@@ -14,7 +14,7 @@ package people
 // That is not hypothetical — it happened. Cleaning LinkedIn's headline company
 // field ("najahak.io | نجاحك" → "najahak.io") altered the key for every row
 // whose company carried a tagline, and re-importing the same export produced
-// 209 duplicate connections on a real workspace. Every org-level reach count
+// 209 duplicate connections on a real workspace. Every company-level reach count
 // those rows feed was then double-counted.
 //
 // So a normalizer change owes a backfill, and this is it: recompute every
@@ -151,7 +151,7 @@ func groupByCurrentKey(all []ghostKeyRow) (map[string][]ghostKeyRow, map[ids.UUI
 	for _, r := range all {
 		key := ""
 		if r.company != nil {
-			key = NormalizeOrgName(cleanLinkedInCompany(*r.company))
+			key = NormalizeCompanyName(cleanLinkedInCompany(*r.company))
 		}
 		wanted[r.id] = key
 		groups[r.dupGroup+"|"+key] = append(groups[r.dupGroup+"|"+key], r)
@@ -223,7 +223,7 @@ func foldGhostInto(ctx context.Context, tx pgx.Tx, keep, doomed ids.UUID) error 
 		       matched_person_id = CASE
 		         WHEN array_position($3::text[], d.match_status) > array_position($3::text[], k.match_status)
 		           THEN d.matched_person_id ELSE coalesce(k.matched_person_id, d.matched_person_id) END,
-		       matched_org_id      = coalesce(k.matched_org_id, d.matched_org_id),
+		       matched_company_id      = coalesce(k.matched_company_id, d.matched_company_id),
 		       -- The stronger decision wins, and it must be spelled here as
 		       -- well as in survivor(): the survivor is chosen before the fold,
 		       -- so a rejected copy of a kept unmatched row would otherwise be

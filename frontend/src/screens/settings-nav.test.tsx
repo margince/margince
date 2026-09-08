@@ -463,11 +463,11 @@ const SEEDED_READS: GrantSpec = {
   knowledge_corpus: ["read"],
   offer_template: ["read"],
   // The write, because the seeded roles really hold it: rep carries
-  // `organization` create+update and manager carries all four. It is what keeps
+  // `company` create+update and manager carries all four. It is what keeps
   // Company profile open for them — the company profile the AI reads is a thing
   // a rep legitimately edits, which is why that page did not follow the other
   // three out of her rail.
-  organization: ["read", "create", "update"],
+  company: ["read", "create", "update"],
   overlay_connection: ["read"],
   pipeline: ["read"],
   product: ["read"],
@@ -512,7 +512,7 @@ const SEEDED_READ_PAGES = pagesNamed(
   "agents",
   "connections",
   "capture-activity",
-  // `company` is NOT here: its requirement ANDs the organization write with the
+  // `company` is NOT here: its requirement ANDs the company write with the
   // `company_context` deployment flag, and this fixture leaves that flag off.
   // The page's own availability cases are the ones that turn it on.
   //
@@ -1250,12 +1250,12 @@ describe("SettingsScreen page visibility", () => {
     );
   });
 
-  it("shows Company profile to an admin holding the organization read once the company rollout flag is on", async () => {
+  it("shows Company profile to an admin holding the company read once the company rollout flag is on", async () => {
     vi.stubGlobal(
       "fetch",
       settingsNavBackend({
         roles: ["admin"],
-        allow: { ...readOn("organization"), organization: ["read", "update"] },
+        allow: { ...readOn("company"), company: ["read", "update"] },
         companyReadEnabled: true,
       }),
     );
@@ -1277,7 +1277,7 @@ describe("SettingsScreen page visibility", () => {
     // before the snapshot it reads. The race is gone rather than untested, which
     // is why the second moment went with it.
     //
-    // The organization WRITE is the only term of Company profile's requirement
+    // The company WRITE is the only term of Company profile's requirement
     // this fixture grants, which is what leaves the flag decisive. Granting the
     // read alone would hide the page whatever the flag said, and the case would
     // pass while proving nothing about the flag.
@@ -1286,8 +1286,8 @@ describe("SettingsScreen page visibility", () => {
       settingsNavBackend({
         roles: ["admin"],
         allow: {
-          ...readOn("organization"),
-          organization: ["read", "update"],
+          ...readOn("company"),
+          company: ["read", "update"],
           // The witness, so the absence below is asserted against a
           // RESOLVED snapshot rather than the loading render.
           pipeline: ["read"],
@@ -1321,8 +1321,8 @@ describe("SettingsScreen page visibility", () => {
         // alone the page is shut anyway and the absent-availability arm this
         // case exists to hold would never be reached.
         allow: {
-          ...readOn("organization"),
-          organization: ["read", "update"],
+          ...readOn("company"),
+          company: ["read", "update"],
           // The witness, so the absence below is asserted against a
           // RESOLVED snapshot rather than the loading render.
           pipeline: ["read"],
@@ -1373,7 +1373,7 @@ describe("the scope a settings page publishes", () => {
   }
 
   // `company` is deliberately not among these: its requirement ANDs the
-  // organization write with the `company_context` deployment flag, which the
+  // company write with the `company_context` deployment flag, which the
   // default fixture leaves off, so the page is shut and has no heading to carry
   // a scope. The installation scope is covered by the pure catalog test instead.
   // `account` and `connections` are deliberately NOT here. Both open on

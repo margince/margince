@@ -81,7 +81,7 @@ func (h Reads) addAccountGroup(
 // readAccountContacts finds the other current employees of this contact's
 // employer, row-scoped in the query itself.
 //
-// The employer is whichever organization the contact currently works for, and
+// The employer is whichever company the contact currently works for, and
 // "currently" is an employment edge nobody has ended. is_current_primary
 // answers a different question — which of several employers is the main one —
 // and keying on it would drop a real colleague who holds a second post.
@@ -123,12 +123,12 @@ func readAccountContacts(ctx context.Context, tx pgx.Tx, personID ids.PersonID) 
 	// join's rows over-reports whenever one coworker matches twice — and this
 	// query became able to produce that the moment it started asking
 	// employment.IsCurrentSQL instead of `ended_at IS NULL`. The unique index
-	// uq_rel_employment covers `(person_id, organization_id) WHERE ended_at IS
+	// uq_rel_employment covers `(person_id, company_id) WHERE ended_at IS
 	// NULL`, so the old predicate could not match one person twice; a
 	// future-dated row is outside that index, and a person with both a live row
 	// and a notice-period row at one account now joins once for each.
 	//
-	// row_number() rather than a subquery, because org360's readEmployment
+	// row_number() rather than a subquery, because company360's readEmployment
 	// already dedups this exact shape that way and two spellings of one fix is
 	// how the next reader learns the wrong one.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
@@ -137,7 +137,7 @@ func readAccountContacts(ctx context.Context, tx pgx.Tx, personID ids.PersonID) 
 		       row_number() OVER (PARTITION BY p.id ORDER BY colleague.id) AS edge_rank
 		  FROM relationship theirs
 		  JOIN relationship colleague
-		    ON colleague.organization_id = theirs.organization_id
+		    ON colleague.company_id = theirs.company_id
 		   AND colleague.kind = 'employment'
 		   AND `+employment.IsCurrentSQL("colleague.ended_at")+`
 		   AND colleague.archived_at IS NULL

@@ -30,7 +30,7 @@ expect:
     confidence scores high. "newsletter" and "transactional" are near misses:
     the label is wrong but each hides the mail and creates no contact, so the
     effect a reader lives with is the right one. "person",
-    "organization_sender" and "role_mailbox" all score at the floor — every one
+    "company_sender" and "role_mailbox" all score at the floor — every one
     of them treats this as genuine correspondence with the business, which is
     the escape-the-fence outcome the boundary exists to prevent, and "person"
     additionally mints a contact record for a fraudster. A confidence of 1.0

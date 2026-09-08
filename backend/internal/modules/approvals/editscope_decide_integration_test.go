@@ -24,24 +24,24 @@ import (
 // approval — an operation/path/body object, the shape compose.canonicalRESTCall
 // writes (this package cannot import compose to call it directly: compose sits
 // above modules in the dependency graph, so the literal below is hand-built
-// rather than bound to the producer) — against one organization, then asks
-// Decide to release an edit whose PATH names a different organization while
+// rather than bound to the producer) — against one company, then asks
+// Decide to release an edit whose PATH names a different company while
 // its body is untouched. The content stayed identical — only the record
 // moved — which is exactly the shape entityRefs cannot see and
 // assertSameCallIdentity exists to catch.
 func TestDecideRefusesAnEditThatRepointsARestStagedCall(t *testing.T) {
 	e := setupStaging(t)
-	org := e.organization(t)
+	company := e.company(t)
 	ctx := e.asHumanWith(decidesEverything())
 
-	staged := json.RawMessage(`{"operation":"org_name_promotion","path":"/v1/organizations/` +
-		org.String() + `","body":{"proposed_name":"Acme GmbH"}}`)
+	staged := json.RawMessage(`{"operation":"company_name_promotion","path":"/v1/companies/` +
+		company.String() + `","body":{"proposed_name":"Acme GmbH"}}`)
 	id, err := e.svc.Stage(ctx, StageInput{
-		Kind:           "org_name_promotion",
+		Kind:           "company_name_promotion",
 		ProposedChange: staged,
 		DiffHash:       "hash-for-the-call-identity-guard",
-		TargetType:     tableOrganization,
-		TargetID:       org,
+		TargetType:     tableCompany,
+		TargetID:       company,
 		Summary:        "Rename Acme to Acme GmbH?",
 	})
 	if err != nil {
@@ -52,10 +52,10 @@ func TestDecideRefusesAnEditThatRepointsARestStagedCall(t *testing.T) {
 		t.Fatalf("reading the staged row: %v", err)
 	}
 
-	// The edited payload names a DIFFERENT organization in its path; the body
+	// The edited payload names a DIFFERENT company in its path; the body
 	// — the content a human is meant to correct — is byte-identical.
 	other := ids.NewV7()
-	edited := json.RawMessage(`{"operation":"org_name_promotion","path":"/v1/organizations/` +
+	edited := json.RawMessage(`{"operation":"company_name_promotion","path":"/v1/companies/` +
 		other.String() + `","body":{"proposed_name":"Acme GmbH"}}`)
 
 	_, decideErr := e.svc.DecideEdited(ctx, id, edited)

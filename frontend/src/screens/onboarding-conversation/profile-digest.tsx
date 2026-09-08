@@ -134,7 +134,7 @@ function ProfileMark({
     (identity === undefined ? "" : hostOf(identity.rootUrl));
   return (
     <Avatar
-      shape="organization"
+      shape="company"
       size="md"
       name={name}
       identity={identity?.rootUrl}

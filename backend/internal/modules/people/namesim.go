@@ -24,7 +24,7 @@ const (
 	jaroWinklerMaxPrefix   = 4
 )
 
-// legalSuffixes is PO-PARAM-1: the trailing tokens org-name
+// legalSuffixes is PO-PARAM-1: the trailing tokens company-name
 // normalization strips so "Acme Inc" and "Acme GmbH" both reduce to
 // "acme" and meet at the fuzzy tier for a human to judge.
 var legalSuffixes = map[string]bool{
@@ -37,7 +37,7 @@ var legalSuffixes = map[string]bool{
 	// Turkey put theirs at the end alone.
 	//
 	// EVERY ENTRY HERE MUST BE A WORD NO COMPANY IS CALLED, because this map
-	// feeds NormalizeOrgName, which is a stored grouping key: a word wrongly
+	// feeds NormalizeCompanyName, which is a stored grouping key: a word wrongly
 	// listed does not merely inflate a score, it files two unrelated companies
 	// under one key. Measured, "zoo" (the Polish "z o.o.") made "San Diego Zoo"
 	// and "San Diego" the same key, and "as" took the last word off "Trading
@@ -147,14 +147,14 @@ func NormalizePersonName(s string) string {
 	return strings.Join(strings.Fields(normalizeName(s)), " ")
 }
 
-// NormalizeOrgName is normalizeName plus the PO-PARAM-1 legal-suffix
+// NormalizeCompanyName is normalizeName plus the PO-PARAM-1 legal-suffix
 // strip, applied only to the trailing token: "Co" inside "Coca Co" is a
 // name, "Co" at the end is a suffix.
 //
 // The strip never consumes the whole name: "Co" alone stays "co", because a
 // company may BE its suffix and an empty key would collide with every other
 // empty key.
-func NormalizeOrgName(s string) string {
+func NormalizeCompanyName(s string) string {
 	fields := strings.Fields(normalizeName(strings.ReplaceAll(s, ",", " ")))
 	strippedOne := false
 	for len(fields) > 1 {
@@ -203,12 +203,12 @@ func nameSimilarity(a, b string) float64 {
 // names take a full second and the cost grows with the square — while
 // `display_name` is `text` with no maxLength in the contract, so one create can
 // hand it a megabyte. That scoring runs inside the writing transaction holding
-// the organization-name lock, so an unbounded score pins a pool connection and
-// every organization-name writer in the workspace behind it.
+// the company-name lock, so an unbounded score pins a pool connection and
+// every company-name writer in the workspace behind it.
 //
 // The cap lives HERE and not in normalizeName, which looked like the tidier
 // place and is not: normalizeName also produces exact-match and grouping keys
-// (orgMatchKeys in linkedinimport.go, the promotion sweep's name buckets), and
+// (companyMatchKeys in linkedinimport.go, the promotion sweep's name buckets), and
 // truncating there would make two distinct names compare EQUAL as keys past the
 // bound — a match, not a capped score. Capping the metric changes only how
 // similar two things are said to be, which is all this bound is entitled to do.

@@ -40,8 +40,8 @@ func TestAnApprovedEffectThatFailsIsMarkedOnTheRow(t *testing.T) {
 		return errors.New("the capture sink refused this lead: relation lead_intake, host db-3")
 	})
 	ctx := e.asHumanWith(decidesEverything())
-	org := e.organization(t)
-	id := e.stageInto(ctx, t, ids.NewV7(), org, kindSiteLead, "lead-anna")
+	company := e.company(t)
+	id := e.stageInto(ctx, t, ids.NewV7(), company, kindSiteLead, "lead-anna")
 
 	_, decideErr := e.svc.Decide(ctx, id, true, nil)
 
@@ -68,8 +68,8 @@ func TestAnApprovedEffectThatRunsLeavesNoFailureMark(t *testing.T) {
 		return nil
 	})
 	ctx := e.asHumanWith(decidesEverything())
-	org := e.organization(t)
-	id := e.stageInto(ctx, t, ids.NewV7(), org, kindSiteLead, "lead-anna")
+	company := e.company(t)
+	id := e.stageInto(ctx, t, ids.NewV7(), company, kindSiteLead, "lead-anna")
 
 	if _, err := e.svc.Decide(ctx, id, true, nil); err != nil {
 		t.Fatalf("deciding: %v", err)
@@ -89,8 +89,8 @@ func TestAFailedEffectIsListedForItsDeciderAlone(t *testing.T) {
 		return errors.New("the capture sink refused this lead")
 	})
 	deciding := e.asHumanWith(decidesEverything())
-	org := e.organization(t)
-	id := e.stageInto(deciding, t, ids.NewV7(), org, kindSiteLead, "lead-anna")
+	company := e.company(t)
+	id := e.stageInto(deciding, t, ids.NewV7(), company, kindSiteLead, "lead-anna")
 	if _, err := e.svc.Decide(deciding, id, true, nil); err == nil {
 		t.Fatal("the failing effect reported no error")
 	}
@@ -111,7 +111,7 @@ func TestAFailedEffectIsListedForItsDeciderAlone(t *testing.T) {
 	// probe that would re-ask "could you decide this now" answers a
 	// different question.
 	if _, err := e.owner.Exec(context.Background(),
-		`UPDATE organization SET archived_at = now() WHERE id = $1`, org); err != nil {
+		`UPDATE company SET archived_at = now() WHERE id = $1`, company); err != nil {
 		t.Fatal(err)
 	}
 	rows, _, err = e.svc.ListWire(deciding, ListInput{FailedForDecider: true, Limit: 8})

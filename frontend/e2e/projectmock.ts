@@ -26,7 +26,7 @@ export type MockProject = {
   workspace_id: string;
   name: string;
   key: string | null;
-  organization_id: string;
+  company_id: string;
   owner_id: string | null;
   // What the server's write gate would answer for the signed-in caller. The
   // real API sends it on every project; a mock that leaves it out models a
@@ -47,7 +47,7 @@ export type MockProject = {
 
 type MockDeal = {
   id: string;
-  organization_id: string;
+  company_id: string;
   project_id?: string | null;
   status: string;
   amount_minor: number | null;
@@ -80,7 +80,7 @@ function page(data: unknown[]) {
 
 export function projectMock(input: {
   seeded: MockProject;
-  organizationName: string;
+  companyName: string;
   deals: () => MockDeal[];
   activities: () => MockActivity[];
 }) {
@@ -137,9 +137,9 @@ export function projectMock(input: {
       as_of: NOW,
       project,
       sections_omitted: [],
-      organization: {
-        id: project.organization_id,
-        name: input.organizationName,
+      company: {
+        id: project.company_id,
+        name: input.companyName,
       },
       phase_history: {
         data: transitions,
@@ -206,7 +206,7 @@ export function projectMock(input: {
           // what it was handed, and a second implementation of the stem
           // algorithm here would drift from the real one silently.
           key: body.key ?? MOCK_MINTED_KEY,
-          organization_id: String(body.organization_id),
+          company_id: String(body.company_id),
           owner_id: body.owner_id ?? null,
           description: body.description ?? null,
           target_end_date: body.target_end_date ?? null,

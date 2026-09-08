@@ -36,7 +36,7 @@ function renderSection(companies: readonly unknown[]) {
 
 describe("the companies on a project", () => {
   const netcare = {
-    organization_id: "01a02be9-2293-75d2-9dd2-3027d9b63dc2",
+    company_id: "01a02be9-2293-75d2-9dd2-3027d9b63dc2",
     display_name: "netcare",
     role: "customer",
   };
@@ -49,12 +49,12 @@ describe("the companies on a project", () => {
     const links = screen.getAllByRole("link", { name: /netcare/ });
     expect(links.length).toBeGreaterThan(0);
 
-    // The defect this holds: `#/organizations/<id>` parses to not-found, so the
+    // The defect this holds: `#/companies/<id>` parses to not-found, so the
     // row rendered fine and the click landed on an empty page.
     for (const link of links) {
       const route = parseHash(link.getAttribute("href") ?? "");
       expect(route.screen).not.toBe("not-found");
-      expect(route.id).toBe(netcare.organization_id);
+      expect(route.id).toBe(netcare.company_id);
     }
   });
 });

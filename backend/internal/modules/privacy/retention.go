@@ -7,7 +7,7 @@ package privacy
 // evaluates ONE workspace's enabled policies and applies the policy's
 // single action to over-age records, one audited transaction per
 // record. legal_hold rows are NEVER auto-acted, and an activity is
-// held transitively when any linked person/organization/deal is held —
+// held transitively when any linked person/company/deal is held —
 // a hold on the subject must cover the evidence about them.
 //
 // The fleet is somebody else's problem: this engine takes the workspace it

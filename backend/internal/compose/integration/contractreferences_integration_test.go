@@ -5,15 +5,15 @@
 
 package integration
 
-// A contract is admitted by its deal OR its organization, and that disjunction
+// A contract is admitted by its deal OR its company, and that disjunction
 // is about ADMISSION. A reader let in through the deal may not be able to open
 // the company, the delivery or even the deal itself as a KIND of record — so
 // the three references the projection carries are withheld from a reader who
 // could not open them, and named in masked_fields.
 //
 // The sibling of dealreferences_integration_test.go, and the half that closes a
-// hole that one left: `deal_project_same_org` forces a deal's project and its
-// organization to name one company, so a caller who reads the project and not
+// hole that one left: `deal_project_same_company` forces a deal's project and its
+// company to name one company, so a caller who reads the project and not
 // the company recovered in one hop, through the contract, the id the deal read
 // had just withheld.
 
@@ -30,13 +30,13 @@ import (
 // reached through an anchor the reader CAN see so the mask is the only thing
 // standing between them and the id.
 type contractReferenceFixture struct {
-	// onPrivateOrg is anchored on a capture-private company, admitted through
+	// onPrivateCompany is anchored on a capture-private company, admitted through
 	// its deal.
-	onPrivateOrg ids.ContractID
+	onPrivateCompany ids.ContractID
 	// onOtherTeamsProject names a delivery, on a company the reader can open.
 	onOtherTeamsProject ids.ContractID
-	openOrg             ids.UUID
-	privateOrg          ids.UUID
+	openCompany         ids.UUID
+	privateCompany      ids.UUID
 	project             ids.ProjectID
 }
 
@@ -48,36 +48,36 @@ func seedContractReferenceFixture(t *testing.T, e *Env) contractReferenceFixture
 	// Seeded workspace-visible so the admin's writes pass their own
 	// EnsureLinkTarget gate; capture privacy lands afterwards, which is the
 	// order a connector-captured company reaches this state in anyway.
-	privateOrg := e.SeedOrg(t, "Meridian Labs", &e.Rep3)
-	openOrg := e.SeedOrg(t, "Kestrel Foods", nil)
+	privateCompany := e.SeedCompany(t, "Meridian Labs", &e.Rep3)
+	openCompany := e.SeedCompany(t, "Kestrel Foods", nil)
 
 	privateDeal := e.SeedDeal(t, "Meridian renewal", pipeline, open, &e.Rep1)
-	anchorOnOrg(t, e, privateDeal, privateOrg)
-	onPrivateOrg := seedContract(t, e, contracts.CreateContractInput{
-		OrganizationID: orgIDOf(privateOrg),
-		DealID:         dealIDPtr(privateDeal),
-		Title:          "An agreement with a company the reader cannot open",
-		ValueBasis:     contracts.BasisTotal,
-		Source:         "manual",
+	anchorOnCompany(t, e, privateDeal, privateCompany)
+	onPrivateCompany := seedContract(t, e, contracts.CreateContractInput{
+		CompanyID:  companyIDOf(privateCompany),
+		DealID:     dealIDPtr(privateDeal),
+		Title:      "An agreement with a company the reader cannot open",
+		ValueBasis: contracts.BasisTotal,
+		Source:     "manual",
 	})
-	e.MakeCapturePrivate(t, "organization", privateOrg, e.Rep3)
+	e.MakeCapturePrivate(t, "company", privateCompany, e.Rep3)
 
-	project := seedProject(admin, t, e, "Kestrel rollout", openOrg, &e.Rep3)
+	project := seedProject(admin, t, e, "Kestrel rollout", openCompany, &e.Rep3)
 	openDeal := e.SeedDeal(t, "Kestrel expansion", pipeline, open, &e.Rep1)
-	anchorOnOrg(t, e, openDeal, openOrg)
+	anchorOnCompany(t, e, openDeal, openCompany)
 	onOtherTeamsProject := seedContract(t, e, contracts.CreateContractInput{
-		OrganizationID: orgIDOf(openOrg),
-		DealID:         dealIDPtr(openDeal),
-		ProjectID:      &project.ID,
-		Title:          "An agreement funding a delivery",
-		ValueBasis:     contracts.BasisTotal,
-		Source:         "manual",
+		CompanyID:  companyIDOf(openCompany),
+		DealID:     dealIDPtr(openDeal),
+		ProjectID:  &project.ID,
+		Title:      "An agreement funding a delivery",
+		ValueBasis: contracts.BasisTotal,
+		Source:     "manual",
 	})
 	return contractReferenceFixture{
-		onPrivateOrg:        onPrivateOrg,
+		onPrivateCompany:    onPrivateCompany,
 		onOtherTeamsProject: onOtherTeamsProject,
-		openOrg:             openOrg,
-		privateOrg:          privateOrg,
+		openCompany:         openCompany,
+		privateCompany:      privateCompany,
 		project:             project.ID,
 	}
 }
@@ -118,15 +118,15 @@ func TestAContractDoesNotNameRecordsItsReaderCannotRead(t *testing.T) {
 
 	// Admitted through the deal, which every seat reads. The company it names
 	// is capture-private to a colleague, so the id does not travel with it.
-	got, err := e.Contracts.GetContract(rep, fx.onPrivateOrg)
+	got, err := e.Contracts.GetContract(rep, fx.onPrivateCompany)
 	if err != nil {
 		t.Fatalf("a rep reading a contract whose company is capture-private: %v", err)
 	}
-	if got.OrganizationId != nil {
-		t.Errorf("organization_id = %v, want withheld: the reader was admitted through the deal "+
-			"and cannot open the company", got.OrganizationId)
+	if got.CompanyId != nil {
+		t.Errorf("company_id = %v, want withheld: the reader was admitted through the deal "+
+			"and cannot open the company", got.CompanyId)
 	}
-	assertContractMaskNames(t, got, "organization_id")
+	assertContractMaskNames(t, got, "company_id")
 
 	// A project is read by every seat HOLDING THE OBJECT GRANT, and this rep
 	// holds no project grant at all. Row scope is not the only gate on a
@@ -140,9 +140,9 @@ func TestAContractDoesNotNameRecordsItsReaderCannotRead(t *testing.T) {
 	if delivery.ProjectId != nil {
 		t.Errorf("project_id = %v, want withheld: this rep holds no project.read grant", delivery.ProjectId)
 	}
-	if delivery.OrganizationId == nil || ids.UUID(*delivery.OrganizationId) != fx.openOrg {
-		t.Errorf("organization_id = %v, want the workspace-visible company the reader CAN open",
-			delivery.OrganizationId)
+	if delivery.CompanyId == nil || ids.UUID(*delivery.CompanyId) != fx.openCompany {
+		t.Errorf("company_id = %v, want the workspace-visible company the reader CAN open",
+			delivery.CompanyId)
 	}
 	assertContractMaskNames(t, delivery, "project_id")
 
@@ -174,15 +174,15 @@ func TestAContractDoesNotNameRecordsItsReaderCannotRead(t *testing.T) {
 	// A reader who can see all three still receives all three, or the fix
 	// closed the oracle by breaking the feature.
 	full, err := e.Contracts.GetContract(e.Admin(), fx.onOtherTeamsProject)
-	if err != nil || full.OrganizationId == nil || full.DealId == nil ||
+	if err != nil || full.CompanyId == nil || full.DealId == nil ||
 		full.ProjectId == nil || full.MaskedFields != nil {
-		t.Errorf("the admin's read = org %v deal %v project %v masked %v (%v), want every reference",
-			full.OrganizationId, full.DealId, full.ProjectId, full.MaskedFields, err)
+		t.Errorf("the admin's read = company %v deal %v project %v masked %v (%v), want every reference",
+			full.CompanyId, full.DealId, full.ProjectId, full.MaskedFields, err)
 	}
 }
 
-// The one-hop recovery this ticket exists to close: `deal_project_same_org`
-// forces a deal's project and its organization to name one company, so a caller
+// The one-hop recovery this ticket exists to close: `deal_project_same_company`
+// forces a deal's project and its company to name one company, so a caller
 // who reads the PROJECT and not the company must not be handed that company's
 // id by the paper hanging off it.
 func TestAContractIsNotTheWayBackToACompanyTheProjectAlreadyWithholds(t *testing.T) {
@@ -190,19 +190,19 @@ func TestAContractIsNotTheWayBackToACompanyTheProjectAlreadyWithholds(t *testing
 	admin := e.Admin()
 	pipeline, open, _ := DealFixture(t, e)
 
-	org := e.SeedOrg(t, "Halden Industries", &e.Rep3)
-	project := seedProject(admin, t, e, "Halden migration", org, &e.Rep3)
+	company := e.SeedCompany(t, "Halden Industries", &e.Rep3)
+	project := seedProject(admin, t, e, "Halden migration", company, &e.Rep3)
 	deal := e.SeedDeal(t, "Halden platform", pipeline, open, &e.Rep1)
-	anchorOnOrg(t, e, deal, org)
+	anchorOnCompany(t, e, deal, company)
 	contract := seedContract(t, e, contracts.CreateContractInput{
-		OrganizationID: orgIDOf(org),
-		DealID:         dealIDPtr(deal),
-		ProjectID:      &project.ID,
-		Title:          "The paper on a company the reader cannot open",
-		ValueBasis:     contracts.BasisTotal,
-		Source:         "manual",
+		CompanyID:  companyIDOf(company),
+		DealID:     dealIDPtr(deal),
+		ProjectID:  &project.ID,
+		Title:      "The paper on a company the reader cannot open",
+		ValueBasis: contracts.BasisTotal,
+		Source:     "manual",
 	})
-	e.MakeCapturePrivate(t, "organization", org, e.Rep3)
+	e.MakeCapturePrivate(t, "company", company, e.Rep3)
 
 	perms := contractReaderPerms()
 	perms.Objects["project"] = principal.ObjectGrant{Read: true}
@@ -212,23 +212,23 @@ func TestAContractIsNotTheWayBackToACompanyTheProjectAlreadyWithholds(t *testing
 	if err != nil {
 		t.Fatalf("a rep reading the project itself: %v", err)
 	}
-	if seen.OrganizationId != nil {
-		t.Fatalf("the project already hands back organization_id = %v; this test's premise is that "+
-			"it does not, so the contract is the only remaining hop", seen.OrganizationId)
+	if seen.CompanyId != nil {
+		t.Fatalf("the project already hands back company_id = %v; this test's premise is that "+
+			"it does not, so the contract is the only remaining hop", seen.CompanyId)
 	}
 
 	got, err := e.Contracts.GetContract(reader, contract)
 	if err != nil {
 		t.Fatalf("the same rep reading the contract: %v", err)
 	}
-	if got.OrganizationId != nil {
-		t.Errorf("organization_id = %v from the contract, want withheld — the project read just "+
-			"refused it, and one hop through the paper recovers it", got.OrganizationId)
+	if got.CompanyId != nil {
+		t.Errorf("company_id = %v from the contract, want withheld — the project read just "+
+			"refused it, and one hop through the paper recovers it", got.CompanyId)
 	}
 	if got.ProjectId == nil || ids.UUID(*got.ProjectId) != project.ID.UUID {
 		t.Errorf("project_id = %v, want the delivery this reader CAN open", got.ProjectId)
 	}
-	assertContractMaskNames(t, got, "organization_id")
+	assertContractMaskNames(t, got, "company_id")
 }
 
 // The page path, not only the single-row one: a list is where an existence
@@ -238,8 +238,8 @@ func TestTheContractListWithholdsTheSameReferencesAsTheGet(t *testing.T) {
 	fx := seedContractReferenceFixture(t, e)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, contractReaderPerms())
 
-	page, err := e.Contracts.ListOrganizationContracts(rep, contracts.ListContractsInput{
-		OrganizationID: orgIDOf(fx.openOrg),
+	page, err := e.Contracts.ListCompanyContracts(rep, contracts.ListContractsInput{
+		CompanyID: companyIDOf(fx.openCompany),
 	})
 	if err != nil {
 		t.Fatalf("listing a readable company's contracts: %v", err)
@@ -279,14 +279,14 @@ func TestEveryContractMutationResponseWithholdsTheSameReferences(t *testing.T) {
 		call func() (crmcontracts.Contract, error)
 	}{
 		{"a patch that changes nothing still echoes the row", func() (crmcontracts.Contract, error) {
-			return e.Contracts.UpdateContract(rep, fx.onPrivateOrg, crmcontracts.UpdateContractRequest{}, nil)
+			return e.Contracts.UpdateContract(rep, fx.onPrivateCompany, crmcontracts.UpdateContractRequest{}, nil)
 		}},
 		{"a patch that changes something", func() (crmcontracts.Contract, error) {
-			return e.Contracts.UpdateContract(rep, fx.onPrivateOrg,
+			return e.Contracts.UpdateContract(rep, fx.onPrivateCompany,
 				crmcontracts.UpdateContractRequest{Title: &retitled}, nil)
 		}},
 		{"activating the agreement", func() (crmcontracts.Contract, error) {
-			return e.Contracts.ChangeStatus(rep, fx.onPrivateOrg, contracts.StatusActive, nil)
+			return e.Contracts.ChangeStatus(rep, fx.onPrivateCompany, contracts.StatusActive, nil)
 		}},
 	}
 	for _, tc := range cases {
@@ -295,10 +295,10 @@ func TestEveryContractMutationResponseWithholdsTheSameReferences(t *testing.T) {
 			if err != nil {
 				t.Fatalf("%s: %v", tc.name, err)
 			}
-			if got.OrganizationId != nil {
-				t.Errorf("%s handed back organization_id %v, want it withheld", tc.name, got.OrganizationId)
+			if got.CompanyId != nil {
+				t.Errorf("%s handed back company_id %v, want it withheld", tc.name, got.CompanyId)
 			}
-			assertContractMaskNames(t, got, "organization_id")
+			assertContractMaskNames(t, got, "company_id")
 		})
 	}
 }

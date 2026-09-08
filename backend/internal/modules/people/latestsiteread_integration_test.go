@@ -26,9 +26,9 @@ import (
 func TestLatestSiteReadAnswersTheNewestAttempt(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	orgID := seedOrgForRead(ctx, t, e)
+	companyID := seedCompanyForRead(ctx, t, e)
 
-	first, _, err := e.store.StartSiteRead(ctx, orgID, "https://voltaq.test", "human:"+e.rep.String())
+	first, _, err := e.store.StartSiteRead(ctx, companyID, "https://voltaq.test", "human:"+e.rep.String())
 	if err != nil {
 		t.Fatalf("start the first read: %v", err)
 	}
@@ -37,7 +37,7 @@ func TestLatestSiteReadAnswersTheNewestAttempt(t *testing.T) {
 	// first so the second is a genuinely new attempt.
 	failRead(ctx, t, e, first.ID)
 
-	second, _, err := e.store.StartSiteRead(ctx, orgID, "https://voltaq.test", "human:"+e.rep.String())
+	second, _, err := e.store.StartSiteRead(ctx, companyID, "https://voltaq.test", "human:"+e.rep.String())
 	if err != nil {
 		t.Fatalf("start the second read: %v", err)
 	}
@@ -45,7 +45,7 @@ func TestLatestSiteReadAnswersTheNewestAttempt(t *testing.T) {
 		t.Fatal("the second start joined the finished read instead of opening a new one")
 	}
 
-	latest, err := e.store.LatestSiteRead(ctx, orgID)
+	latest, err := e.store.LatestSiteRead(ctx, companyID)
 	if err != nil {
 		t.Fatalf("read the latest: %v", err)
 	}
@@ -60,15 +60,15 @@ func TestLatestSiteReadAnswersTheNewestAttempt(t *testing.T) {
 func TestLatestSiteReadCarriesAFailedStatus(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	orgID := seedOrgForRead(ctx, t, e)
+	companyID := seedCompanyForRead(ctx, t, e)
 
-	read, _, err := e.store.StartSiteRead(ctx, orgID, "https://voltaq.test", "human:"+e.rep.String())
+	read, _, err := e.store.StartSiteRead(ctx, companyID, "https://voltaq.test", "human:"+e.rep.String())
 	if err != nil {
 		t.Fatalf("start the read: %v", err)
 	}
 	failRead(ctx, t, e, read.ID)
 
-	latest, err := e.store.LatestSiteRead(ctx, orgID)
+	latest, err := e.store.LatestSiteRead(ctx, companyID)
 	if err != nil {
 		t.Fatalf("read the latest: %v", err)
 	}
@@ -85,9 +85,9 @@ func TestLatestSiteReadCarriesAFailedStatus(t *testing.T) {
 func TestLatestSiteReadIsNotFoundWhenNothingWasEverRead(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	orgID := seedOrgForRead(ctx, t, e)
+	companyID := seedCompanyForRead(ctx, t, e)
 
-	if _, err := e.store.LatestSiteRead(ctx, orgID); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := e.store.LatestSiteRead(ctx, companyID); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("expected ErrNotFound for an account never read, got %v", err)
 	}
 }
@@ -99,22 +99,22 @@ func TestLatestSiteReadHidesAnAccountTheCallerCannotSee(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 
-	unknown := ids.From[ids.OrganizationKind](ids.NewV7())
+	unknown := ids.From[ids.CompanyKind](ids.NewV7())
 	if _, err := e.store.LatestSiteRead(ctx, unknown); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("expected existence-hiding ErrNotFound, got %v", err)
 	}
 }
 
-func seedOrgForRead(ctx context.Context, t *testing.T, e *dedupeEnv) ids.OrganizationID {
+func seedCompanyForRead(ctx context.Context, t *testing.T, e *dedupeEnv) ids.CompanyID {
 	t.Helper()
-	org, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: "Voltaq Systems GmbH", Source: "manual",
-		Domains: []OrgDomainInput{{Domain: "voltaq.test", IsPrimary: true}},
+		Domains: []CompanyDomainInput{{Domain: "voltaq.test", IsPrimary: true}},
 	})
 	if err != nil {
-		t.Fatalf("seed org: %v", err)
+		t.Fatalf("seed company: %v", err)
 	}
-	return ids.From[ids.OrganizationKind](ids.UUID(org.Id))
+	return ids.From[ids.CompanyKind](ids.UUID(company.Id))
 }
 
 // failRead closes a read the way a real crawl failure closes one. The engine

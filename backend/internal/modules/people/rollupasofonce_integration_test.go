@@ -28,7 +28,7 @@ import (
 func TestOneCompanyReadBindsOneAsOfDate(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	org, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: "Midnight Glazing GmbH", Source: "manual",
 	})
 	if err != nil {
@@ -45,8 +45,8 @@ func TestOneCompanyReadBindsOneAsOfDate(t *testing.T) {
 		return samples[len(samples)-1]
 	}
 
-	if _, err := e.store.GetOrganization(ctx,
-		ids.From[ids.OrganizationKind](ids.UUID(org.Id)), storekit.LiveOnly); err != nil {
+	if _, err := e.store.GetCompany(ctx,
+		ids.From[ids.CompanyKind](ids.UUID(company.Id)), storekit.LiveOnly); err != nil {
 		t.Fatal(err)
 	}
 

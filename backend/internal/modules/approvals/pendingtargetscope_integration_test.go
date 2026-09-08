@@ -41,7 +41,7 @@ func sharedSeat(ws, user ids.UUID) context.Context {
 		Permissions: principal.Permissions{
 			RowScope: principal.RowScopeOwn,
 			Objects: map[string]principal.ObjectGrant{
-				tableOrganization: {Create: true, Read: true, Update: true, Delete: true},
+				tableCompany: {Create: true, Read: true, Update: true, Delete: true},
 			},
 		},
 	})
@@ -59,7 +59,7 @@ func TestAReadOnlyShareIsNotEnoughToSeeAPendingDecision(t *testing.T) {
 	}
 	target := ids.NewV7()
 	if _, err := e.owner.Exec(ctx, `
-		INSERT INTO organization (id, display_name, source, captured_by, owner_id)
+		INSERT INTO company (id, display_name, source, captured_by, owner_id)
 		VALUES ($1, 'Gitex', 'test', 'human:seed', $2)`, target, e.rep); err != nil {
 		t.Fatalf("seeding the account: %v", err)
 	}
@@ -67,10 +67,10 @@ func TestAReadOnlyShareIsNotEnoughToSeeAPendingDecision(t *testing.T) {
 	// only thing between the sharee and the row is which half of the target
 	// predicate the panel hoists.
 	if _, err := e.svc.Stage(e.asAgent(t), StageInput{
-		Kind:           "org_name_promotion",
+		Kind:           "company_name_promotion",
 		ProposedChange: []byte(`{"proposed_name":"Gitex Global"}`),
 		DiffHash:       "promotion-" + target.String(),
-		TargetType:     tableOrganization,
+		TargetType:     tableCompany,
 		TargetID:       target,
 		Summary:        "Rename Gitex?",
 	}); err != nil {
@@ -89,7 +89,7 @@ func TestAReadOnlyShareIsNotEnoughToSeeAPendingDecision(t *testing.T) {
 		}
 		if _, err := e.owner.Exec(ctx, `
 			INSERT INTO record_grant (record_type, record_id, subject_type, subject_id, access, granted_by)
-			VALUES ('organization', $1, 'user', $2, $3, $4)`, target, sharee, access, e.rep); err != nil {
+			VALUES ('company', $1, 'user', $2, $3, $4)`, target, sharee, access, e.rep); err != nil {
 			t.Fatalf("granting %s: %v", access, err)
 		}
 	}
@@ -97,7 +97,7 @@ func TestAReadOnlyShareIsNotEnoughToSeeAPendingDecision(t *testing.T) {
 		t.Helper()
 		var n int
 		if err := e.svc.db.Tx(as, func(tx pgx.Tx) error {
-			out, err := e.svc.PendingForTarget(as, tx, tableOrganization, target, PendingScanCap)
+			out, err := e.svc.PendingForTarget(as, tx, tableCompany, target, PendingScanCap)
 			n = len(out)
 			return err
 		}); err != nil {

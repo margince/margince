@@ -46,19 +46,19 @@ func (e *privacyEnv) seedContact(t *testing.T, name, email string) ids.PersonID 
 	return id
 }
 
-// seedAccount writes one organization with one domain.
-func (e *privacyEnv) seedAccount(t *testing.T, name, domain string) ids.OrganizationID {
+// seedAccount writes one company with one domain.
+func (e *privacyEnv) seedAccount(t *testing.T, name, domain string) ids.CompanyID {
 	t.Helper()
-	id := ids.New[ids.OrganizationKind]()
+	id := ids.New[ids.CompanyKind]()
 	ctx := e.as(e.owner, principal.RowScopeOwn)
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO organization (id, display_name, owner_id, source, captured_by)
+			INSERT INTO company (id, display_name, owner_id, source, captured_by)
 			VALUES ($1, $2, $3, 'manual', 'human:test')`, id, name, e.owner); err != nil {
 			return err
 		}
 		_, err := tx.Exec(ctx, `
-			INSERT INTO organization_domain (organization_id, domain, is_primary, source, captured_by)
+			INSERT INTO company_domain (company_id, domain, is_primary, source, captured_by)
 			VALUES ($1, $2, true, 'manual', 'human:test')`, id, domain)
 		return err
 	}); err != nil {
@@ -82,9 +82,9 @@ func (e *privacyEnv) findPeople(t *testing.T, q string) []ids.UUID {
 
 func (e *privacyEnv) findAccounts(t *testing.T, q string) []ids.UUID {
 	t.Helper()
-	rows, _, err := e.store.ListOrganizations(e.as(e.owner, principal.RowScopeAll), ListOrganizationsInput{Query: &q})
+	rows, _, err := e.store.ListCompanies(e.as(e.owner, principal.RowScopeAll), ListCompaniesInput{Query: &q})
 	if err != nil {
-		t.Fatalf("searching organizations for %q: %v", q, err)
+		t.Fatalf("searching companies for %q: %v", q, err)
 	}
 	out := make([]ids.UUID, 0, len(rows))
 	for _, r := range rows {

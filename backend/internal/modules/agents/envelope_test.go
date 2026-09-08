@@ -225,7 +225,7 @@ func TestFreshnessReportsTheOldestContributingRecord(t *testing.T) {
 func TestOneMirrorBackedRecordTaintsTheAnswer(t *testing.T) {
 	env := sealedEnvelope(t, invokeSealed(readingAgent(), t, unboundedAuthority{}, readToolOver(
 		recordAt(datasource.EntityPerson, time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC), true),
-		recordAt(datasource.EntityOrganization, time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC), false),
+		recordAt(datasource.EntityCompany, time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC), false),
 	)))
 
 	if env.Freshness.Authoritative {

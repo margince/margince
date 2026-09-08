@@ -120,7 +120,7 @@ func ResolveRouting(ctx context.Context, pool *pgxpool.Pool, routingPath string,
 // SeedRoutingIfUnset plants the deployment's declared binding on an
 // installation that holds none, and does nothing to one that does.
 //
-// WHY THIS EXISTS AT BOOT and not only at organization creation. The seed used
+// WHY THIS EXISTS AT BOOT and not only at company creation. The seed used
 // to be applied by a boot that found the setting unset; it was narrowed to the
 // creating transaction so that two files — the `--ai-routing` file and
 // `seeds.ai_routing` — could not both plant one installation's binding with
@@ -129,7 +129,7 @@ func ResolveRouting(ctx context.Context, pool *pgxpool.Pool, routingPath string,
 //
 // What it costs is every installation that exists before its operator chooses a
 // provider, and the desktop bundles are all of them: they ship a database, so
-// the organization was created on the build machine and the recipient's
+// the company was created on the build machine and the recipient's
 // `seeds.ai_routing` is read by nothing. They set a key, and their AI surfaces
 // answer from the offline fake — plausibly, in canned text — with the one
 // screen that looks like the fix naming the file that was already ignored.
@@ -320,7 +320,7 @@ func readStoredRouting(ctx context.Context, pool *pgxpool.Pool) (ai.RoutingConfi
 // the zero id when it has not been provisioned yet.
 //
 // One installation is exactly one workspace. That is the rule every boot-time
-// read here rests on: the deployment file describes a single organization, so
+// read here rests on: the deployment file describes a single company, so
 // "which workspace" has one answer or the installation is not one this code
 // can serve. ADR-0061.
 //

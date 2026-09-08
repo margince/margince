@@ -3,7 +3,7 @@
 
 // Package activities owns the activity timeline — logging (with
 // source-system idempotency), reading and listing activities and their
-// polymorphic links to person/organization/deal records — as store +
+// polymorphic links to person/company/deal records — as store +
 // contract mapping + transport handlers + the activities slice of the
 // datasource provider, flat per ADR-0054 §3.
 //

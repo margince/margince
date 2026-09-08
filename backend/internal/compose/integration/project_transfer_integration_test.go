@@ -50,11 +50,11 @@ func assertOwner(t *testing.T, e *Env, id ids.ProjectID, want ids.UUID, why stri
 // images and its own outbox event, exactly what two single updates write.
 func TestTransferProjectOwnershipMovesEveryLiveProjectTheFromOwnerHolds(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "BAER Pharma", nil)
-	first := seedProject(e.Admin(), t, e, "ERP replacement", org, &e.Rep1)
-	second := seedProject(e.Admin(), t, e, "Warehouse rollout", org, &e.Rep1)
-	retired := seedProject(e.Admin(), t, e, "Old intranet", org, &e.Rep1)
-	foreign := seedProject(e.Admin(), t, e, "Rep3's project", org, &e.Rep3)
+	company := e.SeedCompany(t, "BAER Pharma", nil)
+	first := seedProject(e.Admin(), t, e, "ERP replacement", company, &e.Rep1)
+	second := seedProject(e.Admin(), t, e, "Warehouse rollout", company, &e.Rep1)
+	retired := seedProject(e.Admin(), t, e, "Old intranet", company, &e.Rep1)
+	foreign := seedProject(e.Admin(), t, e, "Rep3's project", company, &e.Rep3)
 	if _, err := e.Projects.ArchiveProject(e.Admin(), retired.ID, nil); err != nil {
 		t.Fatalf("archive project: %v", err)
 	}
@@ -107,9 +107,9 @@ func TestTransferProjectOwnershipMovesEveryLiveProjectTheFromOwnerHolds(t *testi
 // update door would have let them change.
 func TestTransferProjectOwnershipMovesOnlyWhatTheCallerCouldWrite(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "BAER Pharma", nil)
-	shared := seedProject(e.Admin(), t, e, "Shared for writing", org, &e.Rep3)
-	readOnly := seedProject(e.Admin(), t, e, "Shared for reading", org, &e.Rep3)
+	company := e.SeedCompany(t, "BAER Pharma", nil)
+	shared := seedProject(e.Admin(), t, e, "Shared for writing", company, &e.Rep3)
+	readOnly := seedProject(e.Admin(), t, e, "Shared for reading", company, &e.Rep3)
 
 	granter := e.As(e.Rep3, []ids.UUID{e.Team2}, principal.Permissions{
 		Objects:  map[string]principal.ObjectGrant{"project": {Read: true, Update: true}},
@@ -151,8 +151,8 @@ func TestTransferProjectOwnershipMovesOnlyWhatTheCallerCouldWrite(t *testing.T) 
 // nothing moves.
 func TestTransferProjectOwnershipRefusesAReceiverWhoCannotOwn(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "BAER Pharma", nil)
-	project := seedProject(e.Admin(), t, e, "ERP replacement", org, &e.Rep1)
+	company := e.SeedCompany(t, "BAER Pharma", nil)
+	project := seedProject(e.Admin(), t, e, "ERP replacement", company, &e.Rep1)
 
 	// Carries the admin fixture's grants, not just the role name. Deactivating a
 	// member is gated on user_admin.delete now, so an identity holding a name

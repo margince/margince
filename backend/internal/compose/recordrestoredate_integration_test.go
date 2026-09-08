@@ -85,12 +85,12 @@ func TestALinksDateGoesBackWhereItWas(t *testing.T) {
 	ctx := e.Admin()
 
 	personID := e.SeedPerson(t, "Ada Dated", nil)
-	orgID := e.SeedOrg(t, "Dated GmbH", nil)
+	companyID := e.SeedCompany(t, "Dated GmbH", nil)
 	person := ids.From[ids.PersonKind](personID)
-	org := ids.From[ids.OrganizationKind](orgID)
+	company := ids.From[ids.CompanyKind](companyID)
 	role := "cto"
 	edge, err := e.People.CreateRelationship(ctx, people.CreateRelationshipInput{
-		Kind: "employment", PersonID: &person, OrganizationID: &org,
+		Kind: "employment", PersonID: &person, CompanyID: &company,
 		Role: &role, Source: "manual",
 	})
 	if err != nil {

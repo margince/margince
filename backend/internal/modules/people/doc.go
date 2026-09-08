@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package people owns the person, organization and lead aggregates —
+// Package people owns the person, company and lead aggregates —
 // creation, dedupe, keyset listing, optimistic updates, archive, the
 // two-record merge (features/01 §1.3) and lead promotion (§6.4) — as
 // store + contract mapping + transport handlers + the people slice of
 // the datasource provider, flat per ADR-0054 §3.
 //
 // Tables owned: person, person_email, person_phone, person_consent,
-// person_profile_field, organization, organization_domain, relationship,
+// person_profile_field, company, company_domain, relationship,
 // partner, lead, lead_score_history, lead_manual_signal, lead_source,
 // lead_disqualify_reason, person_signature_enrich_state,
-// person_provider_claim, provider_applied_field, organization_vat_check,
+// person_provider_claim, provider_applied_field, company_vat_check,
 // relationship_nudge_dismissal, sdr_handoff, sdr_handoff_event,
 // sdr_handoff_reason.
 // The sdr_handoff trio is a prospect being passed from an SDR to an account
@@ -22,7 +22,7 @@
 // that creates a deal and accepts a handoff in one act. Not the delivery
 // briefing the agent surface calls a handoff, which is about a project already
 // sold.
-// organization_vat_check is what the EU register answered about a company's
+// company_vat_check is what the EU register answered about a company's
 // VAT ID and the consultation number proving we asked: the profile field
 // holds the number a page stated, this holds whether it is real.
 // lead_source and lead_disqualify_reason are the two administered lead

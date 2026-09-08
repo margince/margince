@@ -267,7 +267,7 @@ const OWNER_WRITE = {
   deal: { path: "/deals/{id}", field: "owner_id" },
   lead: { path: "/leads/{id}", field: "owner_id" },
   person: { path: "/people/{id}", field: "owner_id" },
-  organization: { path: "/organizations/{id}", field: "owner_id" },
+  company: { path: "/companies/{id}", field: "owner_id" },
   project: { path: "/projects/{id}", field: "owner_id" },
   activity: { path: "/activities/{id}", field: "assignee_id" },
 } as const satisfies Record<

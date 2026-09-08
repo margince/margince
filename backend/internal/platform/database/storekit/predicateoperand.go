@@ -295,7 +295,7 @@ func scalarBoolOperand(value any, invalid func(string) error) (any, error) {
 // scalarDomainOperand folds a domain operand to the host the column stores.
 //
 // `https://www.acme.example/careers`, `WWW.Acme.Example` and `acme.example` are
-// one question, and values.ParseDomain is the answer the organization list
+// one question, and values.ParseDomain is the answer the company list
 // already gives it — the same function on both surfaces, so the two answer the
 // same rows.
 //

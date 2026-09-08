@@ -132,7 +132,7 @@ func admissionBeforeImage(ctx context.Context, t *testing.T, e *dedupeEnv, dispo
 			SELECT before FROM audit_log
 			 WHERE entity_type = $1 AND entity_id = $2 AND action = 'update'
 			 ORDER BY occurred_at, id
-			 LIMIT 1 OFFSET $3`, entityOrganization, dispositionID, nth-1).Scan(&beforeJSON)
+			 LIMIT 1 OFFSET $3`, entityCompany, dispositionID, nth-1).Scan(&beforeJSON)
 	}); err != nil {
 		t.Fatalf("reading decision %d's audit row: %v", nth, err)
 	}

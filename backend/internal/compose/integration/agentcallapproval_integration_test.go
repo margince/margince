@@ -9,7 +9,7 @@ package integration
 //
 // The reported loop, against real Postgres: an `enrich` call was refused 🟡,
 // staged, approved by a human, and then staged AGAIN three more times, so one
-// organization carried four approvals at the same version with the same diff
+// company carried four approvals at the same version with the same diff
 // hash. A human answered all four and not one was ever spent. Two things made
 // that possible and both are proven here — the gate minted a fresh approval per
 // attempt instead of recognizing the one already on the table, and a retry that
@@ -41,10 +41,10 @@ func TestOneRefusedAgentCallCollectsExactlyOneApprovalHoweverOftenItIsRetried(t 
 	// second confirmation from the person who granted it, so the sends do not.
 	c := setupChannelSend(t)
 	invoke := c.enrichInvoker(t, c.mintPassport(t, []string{"read", "enrich"}))
-	org := c.enrichTarget(t)
+	company := c.enrichTarget(t)
 
-	args := enrichArgs(org)
-	retry := func(approvalID string) string { return enrichRetry(org, approvalID) }
+	args := enrichArgs(company)
+	retry := func(approvalID string) string { return enrichRetry(company, approvalID) }
 
 	first := c.stagedApproval(t, invoke, args)
 	if first.AlreadyApproved {
@@ -156,14 +156,14 @@ func (c *channelSendEnv) assertApprovalCountOf(t *testing.T, kind string, want i
 // present an id, presents it, and is refused for a reason it cannot fix.
 //
 // A target that moved is the case that bit staging hardest. Four approved
-// enrich tokens were left pinned to organization v2 after the record reached v3,
+// enrich tokens were left pinned to company v2 after the record reached v3,
 // so every one of them would now fail the redemption's own skew check — pointing
 // a retry at any of them would strand the call permanently.
 func TestAnApprovedCallWhoseTargetMovedIsStagedAfreshRatherThanHandedBackDead(t *testing.T) {
 	c := setupChannelSend(t)
 	invoke := c.enrichInvoker(t, c.mintPassport(t, []string{"read", "enrich"}))
-	org := c.enrichTarget(t)
-	args := enrichArgs(org)
+	company := c.enrichTarget(t)
+	args := enrichArgs(company)
 
 	staged := c.stagedApproval(t, invoke, args)
 	if status := c.Call(t, "POST", "/v1/approvals/"+staged.ApprovalID.String()+"/approve", AnyMap{}, nil, nil); status != http.StatusOK {
@@ -171,7 +171,7 @@ func TestAnApprovedCallWhoseTargetMovedIsStagedAfreshRatherThanHandedBackDead(t 
 	}
 	// A human edits the record the approval is pinned to, which is ordinary work
 	// on the very company the enrich would rewrite.
-	if status := c.Call(t, "PATCH", "/v1/organizations/"+org,
+	if status := c.Call(t, "PATCH", "/v1/companies/"+company,
 		AnyMap{"industry": "logistics"}, nil, nil); status != http.StatusOK {
 		t.Fatalf("human edit of the target → %d", status)
 	}
@@ -201,8 +201,8 @@ func TestAnApprovedCallWhoseTargetMovedIsStagedAfreshRatherThanHandedBackDead(t 
 // principal can be built without one.
 func TestAnApprovalStagedByOnePassportIsNeverOfferedToAnother(t *testing.T) {
 	c := setupChannelSend(t)
-	org := c.enrichTarget(t)
-	args := enrichArgs(org)
+	company := c.enrichTarget(t)
+	args := enrichArgs(company)
 
 	first := c.enrichInvoker(t, c.mintPassport(t, []string{"read", "enrich"}))
 	mine := c.stagedApproval(t, first, args)

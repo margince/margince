@@ -50,7 +50,7 @@ func siteLeadAcceptEffect(svc *approvals.Service, sink connector.Sink) approvals
 		// made.
 		if proposal.NaturalKey == "" {
 			proposal.NaturalKey = siteLeadSourceID(
-				proposal.OrganizationID, proposal.Name, proposal.PublishedEmail)
+				proposal.CompanyID, proposal.Name, proposal.PublishedEmail)
 		}
 		// The capture executes as the siteread executor on behalf of the
 		// human whose approval released it. The Sink admits connector
@@ -75,7 +75,7 @@ func siteLeadAcceptEffect(svc *approvals.Service, sink connector.Sink) approvals
 		// lead (the column goes NULL and the email dedupe is skipped); the
 		// natural key alone keeps the capture idempotent. The staged
 		// proposal itself is the raw original: it carries the role, the
-		// evidence snippet, the source URL, and the org the read targeted.
+		// evidence snippet, the source URL, and the company the read targeted.
 		_, err := sink.Upsert(execCtx, connector.NormalizedRecord{
 			EntityType: datasource.EntityLead,
 			NaturalKey: connector.NaturalKey{

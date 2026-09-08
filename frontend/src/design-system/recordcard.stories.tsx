@@ -53,10 +53,10 @@ export const Person: Story = {
  * shapes are the reason `kind` exists: on a page carrying both, the square is
  * what tells a reader which chips are companies before they read a word.
  */
-export const Organization: Story = {
+export const Company: Story = {
   render: () => (
     <RecordCard
-      kind="organization"
+      kind="company"
       name="Nordwind Logistik GmbH"
       identity="o-1"
       href="#/companies/o-1"

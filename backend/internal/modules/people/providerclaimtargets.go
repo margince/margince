@@ -44,30 +44,30 @@ func insertSocialHandle(ctx context.Context, tx pgx.Tx, personID ids.UUID, platf
 	return rowID, true, nil
 }
 
-// organizationByDomain answers which company owns a domain, and whether one
+// companyByDomain answers which company owns a domain, and whether one
 // does at all.
 //
 // Domain only, never display name. Two live companies may share a name — the
 // schema permits it and nothing dedupes it — so matching on one would attach a
 // contact's employment to whichever row sorted first, which is a false
 // statement about where somebody works. A domain is unique by constraint.
-func organizationByDomain(ctx context.Context, tx pgx.Tx, domain string) (ids.OrganizationID, bool, error) {
-	var org ids.OrganizationID
+func companyByDomain(ctx context.Context, tx pgx.Tx, domain string) (ids.CompanyID, bool, error) {
+	var company ids.CompanyID
 	err := tx.QueryRow(ctx, `
-		SELECT d.organization_id
-		  FROM organization_domain d
-		  JOIN organization o ON o.id = d.organization_id
+		SELECT d.company_id
+		  FROM company_domain d
+		  JOIN company o ON o.id = d.company_id
 		 WHERE lower(d.domain) = lower($1)
 		   AND d.archived_at IS NULL
 		   AND o.archived_at IS NULL
-		 LIMIT 1`, domain).Scan(&org)
+		 LIMIT 1`, domain).Scan(&company)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return ids.OrganizationID{}, false, nil
+		return ids.CompanyID{}, false, nil
 	}
 	if err != nil {
-		return ids.OrganizationID{}, false, fmt.Errorf("people: resolving a bought employer's domain: %w", err)
+		return ids.CompanyID{}, false, fmt.Errorf("people: resolving a bought employer's domain: %w", err)
 	}
-	return org, true, nil
+	return company, true, nil
 }
 
 // plantProviderEmploymentEdge attaches a contact to a company a provider named,
@@ -80,7 +80,7 @@ func organizationByDomain(ctx context.Context, tx pgx.Tx, domain string) (ids.Or
 // The audit says `origin: provider`, not `capture`. Somebody was paid to assert
 // this, which is a different kind of claim from one inferred out of the
 // installation's own correspondence.
-func plantProviderEmploymentEdge(ctx context.Context, tx pgx.Tx, personID ids.UUID, orgID ids.OrganizationID, providerName string) (ids.UUID, bool, error) {
+func plantProviderEmploymentEdge(ctx context.Context, tx pgx.Tx, personID ids.UUID, companyID ids.CompanyID, providerName string) (ids.UUID, bool, error) {
 	subject := ids.PersonID{UUID: personID}
 	// The edge hangs off the person, so an archive in flight must not be
 	// outrun — the same reason the capture path's edge takes it. The hand-off
@@ -92,14 +92,14 @@ func plantProviderEmploymentEdge(ctx context.Context, tx pgx.Tx, personID ids.UU
 	}
 	var edgeID ids.UUID
 	err := tx.QueryRow(ctx, `
-		INSERT INTO relationship (kind, person_id, organization_id, is_current_primary, source, captured_by)
+		INSERT INTO relationship (kind, person_id, company_id, is_current_primary, source, captured_by)
 		SELECT 'employment', $1, $2, true, $3, $4
 		WHERE NOT EXISTS (
 			SELECT 1 FROM relationship
 			WHERE person_id = $1 AND `+employment.CurrentPrimarySlotSQL("")+`)
 		ON CONFLICT DO NOTHING
 		RETURNING id`,
-		personID, orgID, providerName, connectorCapturedBy(providerName)).Scan(&edgeID)
+		personID, companyID, providerName, connectorCapturedBy(providerName)).Scan(&edgeID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Either guard skipped it: the contact already has a current employer,
 		// or this exact edge exists. Nothing written, so nothing audited.
@@ -108,7 +108,7 @@ func plantProviderEmploymentEdge(ctx context.Context, tx pgx.Tx, personID ids.UU
 	if err != nil {
 		return ids.UUID{}, false, fmt.Errorf("people: linking a contact to a bought employer: %w", err)
 	}
-	if err := auditCapturedEmployment(ctx, tx, edgeID, subject, orgID, relationshipOriginProvider); err != nil {
+	if err := auditCapturedEmployment(ctx, tx, edgeID, subject, companyID, relationshipOriginProvider); err != nil {
 		return ids.UUID{}, false, err
 	}
 	return edgeID, true, nil

@@ -367,7 +367,7 @@ function Node({
         y={placed.y}
         width={placed.w}
         height={placed.h}
-        rx={placed.kind === "organization" ? 12 : 8}
+        rx={placed.kind === "company" ? 12 : 8}
       />
       <text className="rmap-name" x={placed.x + 12} y={placed.y + 22}>
         {truncate(node.label)}

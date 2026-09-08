@@ -73,7 +73,7 @@ An installation that wants every send confirmed can set a floor on the send
 action, and it then stages into the inbox exactly as anything else does. That is
 an operator decision made in the deployment, not a switch in Settings.
 
-If you need sends confirmed in your organization, ask whoever runs your
+If you need sends confirmed in your company, ask whoever runs your
 installation whether that floor is set. Do not assume it.
 
 > **A note on wording.** Some screens in the app still describe an older, stricter
@@ -272,7 +272,7 @@ five, and they are exact rather than nested: holding one never implies another.
 - **read** — reads only. The only scope a read-only seat may spend at all.
 - **draft** — proposes text. Note this is not read-only: one drafting action
   saves a draft on the deal's timeline.
-- **write** — every change that stays inside your organization.
+- **write** — every change that stays inside your company.
 - **send** — the three actions that put something on the wire.
 - **enrich** — the one action that fetches from a third party.
 
@@ -328,10 +328,10 @@ the same moment. That is why a refusal says "when the window rolls" rather than
 naming a number of hours.
 
 Nobody but the person who approved the connection can answer a step-up. Not an
-administrator, not the owner of the organization. An agent's ceiling is that
+administrator, not the owner of the company. An agent's ceiling is that
 person's own authority.
 
-The app's own summary: "Point any MCP-capable agent at your organization and
+The app's own summary: "Point any MCP-capable agent at your company and
 approve the access it asks for. There is nothing to set up first."
 
 When an outside application asks to connect, you get a consent screen that

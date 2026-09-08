@@ -43,7 +43,7 @@ const people = [
   { id: "p-1", full_name: "Katrin Hofmann" },
   { id: "p-2", full_name: "Devrim Aksoy" },
 ];
-const organizations = [
+const companies = [
   { id: "o-1", display_name: "MiTek" },
   { id: "o-2", display_name: "Nordfracht" },
 ];
@@ -57,7 +57,7 @@ export const RecordsInEveryGroup: Story = {
     installFetchStub({
       [`GET /tags/${TAG}`]: tagRead({ people: 2, companies: 2, deals: 1 }),
       "GET /people": () => jsonResponse({ data: people }),
-      "GET /organizations": () => jsonResponse({ data: organizations }),
+      "GET /companies": () => jsonResponse({ data: companies }),
       "GET /deals": () => jsonResponse({ data: deals }),
     });
     return (
@@ -92,7 +92,7 @@ export const RowsStillLoading: Story = {
     installFetchStub({
       [`GET /tags/${TAG}`]: tagRead({ people: 2, companies: 2, deals: 1 }),
       "GET /people": () => new Promise<Response>(() => {}),
-      "GET /organizations": () => new Promise<Response>(() => {}),
+      "GET /companies": () => new Promise<Response>(() => {}),
       "GET /deals": () => new Promise<Response>(() => {}),
     });
     return (

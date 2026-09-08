@@ -14,7 +14,7 @@ describe("a debounced search", () => {
   it("keeps the last answer while the next one is still coming", async () => {
     const search = vi
       .fn()
-      .mockResolvedValueOnce([{ value: "org-1", label: "Northgate" }])
+      .mockResolvedValueOnce([{ value: "company-1", label: "Northgate" }])
       .mockImplementation(() => new Promise(() => {}));
     const { result, rerender } = renderHook(
       ({ query }) => useDebouncedSearch(search, query),
@@ -34,7 +34,7 @@ describe("a debounced search", () => {
   it("drops the last answer when the next search fails", async () => {
     const search = vi
       .fn()
-      .mockResolvedValueOnce([{ value: "org-1", label: "Northgate" }])
+      .mockResolvedValueOnce([{ value: "company-1", label: "Northgate" }])
       .mockRejectedValue(new Error("network"));
     const { result, rerender } = renderHook(
       ({ query }) => useDebouncedSearch(search, query),
@@ -54,7 +54,7 @@ describe("a debounced search", () => {
   it("drops the answer when the box goes back to empty", async () => {
     const search = vi
       .fn()
-      .mockResolvedValue([{ value: "org-1", label: "Northgate" }]);
+      .mockResolvedValue([{ value: "company-1", label: "Northgate" }]);
     const { result, rerender } = renderHook(
       ({ query }) => useDebouncedSearch(search, query),
       { initialProps: { query: "north" } },

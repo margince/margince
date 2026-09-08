@@ -30,9 +30,9 @@ import (
 // scopeFixture is one account running two engagements, plus ordinary
 // correspondence belonging to neither — the shape the rule exists for.
 type scopeFixture struct {
-	person ids.UUID
-	org    ids.UUID
-	erp    ids.ProjectID
+	person  ids.UUID
+	company ids.UUID
+	erp     ids.ProjectID
 	// other is the second engagement, the one a scope to erp must drop.
 	other ids.ProjectID
 	// The keys the SERVER minted for the two projects. A caller no longer
@@ -68,7 +68,7 @@ type scopeFixture struct {
 func seedTwoEngagementAccount(t *testing.T, e *Env) scopeFixture {
 	t.Helper()
 	admin := e.Admin()
-	org := e.SeedOrg(t, "Acme", &e.Rep1)
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	person := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
 	// Somebody at the account who was in the room. A meeting is with a person
 	// and cannot be filed against a company, so an ATTENDEE WITH A JOB THERE is
@@ -76,16 +76,16 @@ func seedTwoEngagementAccount(t *testing.T, e *Env) scopeFixture {
 	// contact, because `person` is deliberately unemployed here (the person
 	// page's project routes are proved one at a time, seat before employer).
 	attendee := e.SeedPerson(t, "Ilse Teilnehmer", &e.Rep1)
-	attendeeID, orgID := PersonIDOf(attendee), orgIDOf(org)
+	attendeeID, companyID := PersonIDOf(attendee), companyIDOf(company)
 	if _, err := e.People.CreateRelationship(admin, people.CreateRelationshipInput{
-		Kind: "employment", PersonID: &attendeeID, OrganizationID: &orgID,
+		Kind: "employment", PersonID: &attendeeID, CompanyID: &companyID,
 	}); err != nil {
 		t.Fatalf("employing the attendee: %v", err)
 	}
 
 	newProject := func(name string) (ids.ProjectID, string) {
 		p, err := e.Projects.CreateProject(admin, projects.CreateProjectInput{
-			Name: name, OrganizationID: orgIDOf(org), Source: "manual",
+			Name: name, CompanyID: companyIDOf(company), Source: "manual",
 		})
 		if err != nil {
 			t.Fatalf("create project %q: %v", name, err)
@@ -101,9 +101,9 @@ func seedTwoEngagementAccount(t *testing.T, e *Env) scopeFixture {
 
 	// Three exchanges with the same contact on the same account: one per
 	// engagement, and one ordinary message nobody filed. Each names the person,
-	// and names the ORGANIZATION too where the kind permits it — a meeting is
+	// and names the COMPANY too where the kind permits it — a meeting is
 	// with a person and reaches the account through the contact's employer
-	// instead, which is the arm activities.OrgLinkedActivityExists walks.
+	// instead, which is the arm activities.CompanyLinkedActivityExists walks.
 	log := func(in activities.LogActivityInput, subject string, within *ids.ProjectID, occurredAt time.Time, others ...ids.UUID) string {
 		in.Subject, in.OccurredAt = &subject, &occurredAt
 		in.Links = []activities.ActivityLinkInput{
@@ -112,7 +112,7 @@ func seedTwoEngagementAccount(t *testing.T, e *Env) scopeFixture {
 		if in.Kind == "meeting" || in.Kind == "call" {
 			in.Links = append(in.Links, activities.ActivityLinkInput{EntityType: "person", EntityID: attendee})
 		} else {
-			in.Links = append(in.Links, activities.ActivityLinkInput{EntityType: "organization", EntityID: org})
+			in.Links = append(in.Links, activities.ActivityLinkInput{EntityType: "company", EntityID: company})
 		}
 		for _, other := range others {
 			in.Links = append(in.Links, activities.ActivityLinkInput{EntityType: "person", EntityID: other})
@@ -143,7 +143,7 @@ func seedTwoEngagementAccount(t *testing.T, e *Env) scopeFixture {
 	}
 	otherAt := roomFixedNow.AddDate(0, 0, -1)
 	return scopeFixture{
-		person: person, org: org, erp: erp, other: migration, bystander: bystander, otherAt: otherAt,
+		person: person, company: company, erp: erp, other: migration, bystander: bystander, otherAt: otherAt,
 		erpKey: erpKey, otherKey: migrationKey,
 		onERP:     mail("ERP cutover plan", &erp, roomFixedNow.AddDate(0, 0, -3)),
 		onOther:   mail("Rack decommissioning", &migration, otherAt, bystander),
@@ -269,7 +269,7 @@ func TestAssembledContextScopedToOneProjectDropsPeopleReachedOnlyThroughTheOther
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
 	retriever := search.NewRetriever(search.NewStore(harnessDB(e.Pool, e.WS)), nil)
-	anchor := datasource.EntityRef{Type: datasource.EntityOrganization, ID: f.org}
+	anchor := datasource.EntityRef{Type: datasource.EntityCompany, ID: f.company}
 
 	scoped := walkIDs(e.Admin(), t, retriever, anchor, retrieval.AssembleOptions{MaxItems: 25, ProjectID: f.erp.String()})
 	if scoped[f.bystander.String()] {

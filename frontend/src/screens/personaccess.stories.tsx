@@ -46,7 +46,7 @@ function Access({ person }: Readonly<{ person: Person }>) {
   );
 }
 
-/** A contact the organization can read, with the verb that seals it beside the
+/** A contact the company can read, with the verb that seals it beside the
  *  word that says so. */
 export const SharedWithTheTeam: Story = {
   render: () => (

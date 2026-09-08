@@ -9,7 +9,7 @@ import { routeHash } from "../app/router";
  * A figure that counts deals names a set, and the deals list can already be
  * narrowed to exactly that set — a filter chip's key IS its wire parameter
  * (`screens/deals.tsx`'s `dealFilterChips`), so `stage_id` and
- * `organization_id` are addresses rather than something to add.
+ * `company_id` are addresses rather than something to add.
  *
  * Spelled once, here, because three surfaces ask for it: the pipeline report's
  * stage table, its open-deals-per-company table, and the company record's own
@@ -17,7 +17,7 @@ import { routeHash } from "../app/router";
  * somewhere that answers a different question.
  *
  * The dials this can name are the ones the deals endpoint actually reads:
- * `stage_id`, `organization_id` and `status` are query parameters on `/deals`,
+ * `stage_id`, `company_id` and `status` are query parameters on `/deals`,
  * while `currency`, `forecast_category` and a confirmed-close-date bound are
  * not. A figure grouped by something the endpoint cannot filter on has no
  * address, and the caller draws the number plainly rather than being handed one

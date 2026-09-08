@@ -64,7 +64,7 @@ func TestEveryEntityKindReportsItsDiscriminator(t *testing.T) {
 		"user":            New[UserKind]().EntityType(),
 		"team":            New[TeamKind]().EntityType(),
 		"person":          New[PersonKind]().EntityType(),
-		"organization":    New[OrganizationKind]().EntityType(),
+		"company":         New[CompanyKind]().EntityType(),
 		"lead":            New[LeadKind]().EntityType(),
 		"deal":            New[DealKind]().EntityType(),
 		"pipeline":        New[PipelineKind]().EntityType(),

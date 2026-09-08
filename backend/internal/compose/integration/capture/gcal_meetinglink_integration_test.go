@@ -119,7 +119,7 @@ func syncOneGcalMeeting(t *testing.T, e *integration.SearchEnv) ids.ActivityID {
 
 // meetingFiling answers how the captured meeting was filed and what audience it
 // was born with — the two halves this change moves together.
-func meetingFiling(t *testing.T, e *integration.SearchEnv, activity ids.ActivityID) (people []ids.UUID, orgs int, audience string, reason *string) {
+func meetingFiling(t *testing.T, e *integration.SearchEnv, activity ids.ActivityID) (people []ids.UUID, companies int, audience string, reason *string) {
 	t.Helper()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(),
@@ -140,8 +140,8 @@ func meetingFiling(t *testing.T, e *integration.SearchEnv, activity ids.Activity
 			return err
 		}
 		if err := tx.QueryRow(context.Background(),
-			`SELECT count(*) FROM activity_link WHERE activity_id = $1 AND entity_type = 'organization'`,
-			activity).Scan(&orgs); err != nil {
+			`SELECT count(*) FROM activity_link WHERE activity_id = $1 AND entity_type = 'company'`,
+			activity).Scan(&companies); err != nil {
 			return err
 		}
 		return tx.QueryRow(context.Background(),
@@ -149,7 +149,7 @@ func meetingFiling(t *testing.T, e *integration.SearchEnv, activity ids.Activity
 	}); err != nil {
 		t.Fatal(err)
 	}
-	return people, orgs, audience, reason
+	return people, companies, audience, reason
 }
 
 // The attendee is already a contact, so the meeting is filed under them and is
@@ -168,7 +168,7 @@ func TestACapturedMeetingIsFiledUnderTheAttendeeWhoIsAContact(t *testing.T) {
 	}
 
 	activity := syncOneGcalMeeting(t, e)
-	linked, orgs, audience, reason := meetingFiling(t, e, activity)
+	linked, companies, audience, reason := meetingFiling(t, e, activity)
 
 	if len(linked) != 1 || linked[0] != buyer {
 		t.Fatalf("meeting filed under %v, want exactly the attendee %s — without a link the meeting reaches no company or person page",
@@ -177,8 +177,8 @@ func TestACapturedMeetingIsFiledUnderTheAttendeeWhoIsAContact(t *testing.T) {
 	// A meeting may never link straight to a company: the account is reached
 	// through the attendee's employment, and the DB trigger refuses the direct
 	// link outright.
-	if orgs != 0 {
-		t.Errorf("meeting carries %d organization links, want 0 — a meeting is a person's, and the company is reached through their employer", orgs)
+	if companies != 0 {
+		t.Errorf("meeting carries %d company links, want 0 — a meeting is a person's, and the company is reached through their employer", companies)
 	}
 	if audience != "workspace" || reason != nil {
 		t.Errorf("meeting born audience=%q reason=%v, want workspace/nil — it was filed under a record, so it is not the link-less mail the limiter holds",

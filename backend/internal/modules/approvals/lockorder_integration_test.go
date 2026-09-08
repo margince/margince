@@ -39,28 +39,28 @@ const lockNotAvailable = "55P03"
 func TestTheGroupPreLockHoldsEveryPendingMemberAtOnce(t *testing.T) {
 	e := setupStaging(t)
 	ctx := e.asHumanWith(decidesEverything())
-	org := e.organization(t)
+	company := e.company(t)
 	bundle := ids.NewV7()
 
 	// Three members of one act, staged as separate transactions so their
 	// created_at really differ — the batch stager's loop would reach the third
 	// last, which is exactly the row a per-member lock leaves free the longest.
 	members := []ids.ApprovalID{
-		e.stageInto(ctx, t, bundle, org, kindSiteLead, "lead-one"),
-		e.stageInto(ctx, t, bundle, org, kindSiteLead, "lead-two"),
-		e.stageInto(ctx, t, bundle, org, kindSiteLead, "lead-three"),
+		e.stageInto(ctx, t, bundle, company, kindSiteLead, "lead-one"),
+		e.stageInto(ctx, t, bundle, company, kindSiteLead, "lead-two"),
+		e.stageInto(ctx, t, bundle, company, kindSiteLead, "lead-three"),
 	}
 	// A proposal of a different kind against the same account, to show the
 	// pre-lock takes the group it named and not the whole target: locking rows a
 	// batch will never touch would block decisions for no reason.
-	other := e.stageInto(ctx, t, bundle, org, kindDeepRead, "the company facts")
+	other := e.stageInto(ctx, t, bundle, company, kindDeepRead, "the company facts")
 
 	held := make(chan struct{})
 	released := make(chan struct{})
 	done := make(chan error, 1)
 	go func() {
 		done <- database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
-			if err := e.svc.LockPendingGroupInTx(ctx, tx, org, kindSiteLead); err != nil {
+			if err := e.svc.LockPendingGroupInTx(ctx, tx, company, kindSiteLead); err != nil {
 				return err
 			}
 			close(held)
@@ -104,17 +104,17 @@ func TestTheGroupPreLockHoldsEveryPendingMemberAtOnce(t *testing.T) {
 func TestAMultiKindActLocksEveryKindItStages(t *testing.T) {
 	e := setupStaging(t)
 	ctx := e.asHumanWith(decidesEverything())
-	org := e.organization(t)
+	company := e.company(t)
 	bundle := ids.NewV7()
 
-	lead := e.stageInto(ctx, t, bundle, org, kindSiteLead, "the published person")
-	facts := e.stageInto(ctx, t, bundle, org, kindDeepRead, "the company facts")
+	lead := e.stageInto(ctx, t, bundle, company, kindSiteLead, "the published person")
+	facts := e.stageInto(ctx, t, bundle, company, kindDeepRead, "the company facts")
 
 	held, released := make(chan struct{}), make(chan struct{})
 	done := make(chan error, 1)
 	go func() {
 		done <- database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
-			if err := e.svc.LockPendingGroupInTx(ctx, tx, org, kindDeepRead, kindSiteLead); err != nil {
+			if err := e.svc.LockPendingGroupInTx(ctx, tx, company, kindDeepRead, kindSiteLead); err != nil {
 				return err
 			}
 			close(held)

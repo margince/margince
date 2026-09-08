@@ -337,12 +337,12 @@ const PROJECT = {
   name: "Nordwand retrofit",
   key: "NW-12",
   phase: "delivering",
-  organization_id: "org-1",
+  company_id: "company-1",
   version: 1,
 };
 
 const ORG_360 = {
-  organization: { id: "org-1", name: "Nordwand GmbH" },
+  company: { id: "company-1", name: "Nordwand GmbH" },
   people: {
     data: [
       {
@@ -363,7 +363,7 @@ function fileStubs(
     "GET /projects/proj-1": () => jsonResponse(PROJECT),
     // The endpoint answers the 360 itself; the ready/overlay wrapper is the
     // hook's own reading of it, not something the wire carries.
-    "GET /organizations/org-1/360": () => jsonResponse(ORG_360),
+    "GET /companies/company-1/360": () => jsonResponse(ORG_360),
     ...overrides,
   });
 }

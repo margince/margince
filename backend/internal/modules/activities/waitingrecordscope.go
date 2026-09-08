@@ -24,15 +24,15 @@ import (
 
 // waitingReplyEntityClause narrows the thread walk to one record, in the SAME
 // vocabulary linktarget.go and listActivitiesFilter's own entity_type/id
-// filter use — a record type added to linkColumn or the organization arm
+// filter use — a record type added to linkColumn or the company arm
 // reaches this walk too, rather than a second copy silently missing it.
 func waitingReplyEntityClause(entityType string, entityID ids.UUID, arg func(any) int) (string, error) {
-	if entityType == string(datasource.RecordOrganization) {
+	if entityType == string(datasource.RecordCompany) {
 		// An account's timeline is wider than its direct links (mail is filed
 		// against the person it was with), so this reuses the SAME three-arm
 		// walk the timeline list and the company view both read through —
-		// see OrgLinkedActivityExists.
-		return OrgLinkedActivityExists(arg(entityID)), nil
+		// see CompanyLinkedActivityExists.
+		return CompanyLinkedActivityExists(arg(entityID)), nil
 	}
 	column := linkColumn(entityType)
 	if column == "" {

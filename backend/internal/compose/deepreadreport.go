@@ -97,13 +97,13 @@ func (w *siteDeepReadWorker) dossierStatus(ctx context.Context, readID ids.UUID,
 
 // landFindings puts the gated findings where the requesting lane says they
 // belong, and answers the proposal ids the dossier records. An onboarding draft
-// still unbound to an organization has nothing to land them against.
+// still unbound to a company has nothing to land them against.
 func (w *siteDeepReadWorker) landFindings(ctx context.Context, args SiteDeepReadArgs, claim people.SiteReadClaim, mergedFields []evidencedField, merged pageFactsResult, pagesRead int) ([]ids.UUID, error) {
-	if claim.OrganizationID == nil {
+	if claim.CompanyID == nil {
 		return nil, nil
 	}
 	if isAutoEnrichRequest(claim.RequestedBy) {
-		// The auto-enrich lane applies the org's fields + facts directly
+		// The auto-enrich lane applies the company's fields + facts directly
 		// (fill-empty, human-precedence) instead of staging a confirm-first
 		// proposal — the system chose to enrich this company, so there is no
 		// human to confirm. Site people still stage as leads (strangers stay
@@ -114,7 +114,7 @@ func (w *siteDeepReadWorker) landFindings(ctx context.Context, args SiteDeepRead
 	// A read a human ASKED for applies its findings directly too: pressing
 	// "read the full site" is the decision, and staging what was just
 	// requested asks the same person the same question twice. Starting the
-	// read already required organization:update on this row
+	// read already required company:update on this row
 	// (createOrJoinSiteRead), so the authority the apply needs was checked
 	// when it was commissioned. The findings stay marked as model-derived and
 	// reversible — direct is not unattributed. Site people still stage as

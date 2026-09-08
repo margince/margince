@@ -158,7 +158,7 @@ export function AudienceMembers({
   if (candidates.length === 0) {
     // The list has not answered yet, or answered with nobody. Either way the
     // reader is told rather than shown an empty box that reads as an
-    // organization with no people in it.
+    // company with no people in it.
     return <p className="t-caption">{t("compose.audienceMembersLoading")}</p>;
   }
   return (

@@ -33,12 +33,12 @@ export type IntroTarget = Readonly<{
  * through the clipboard.
  */
 export function IntroRequestModal({
-  orgId,
+  companyId,
   target,
   dealId,
   onClose,
 }: Readonly<{
-  orgId: string;
+  companyId: string;
   target: IntroTarget | null;
   dealId?: string | null;
   onClose: () => void;
@@ -57,9 +57,9 @@ export function IntroRequestModal({
   const draft = useMutation({
     mutationFn: async (ask: IntroTarget): Promise<Draft> => {
       const { data, error } = await api.POST(
-        "/organizations/{id}/intro-request-draft",
+        "/companies/{id}/intro-request-draft",
         {
-          params: { path: { id: orgId } },
+          params: { path: { id: companyId } },
           body: {
             person_id: ask.personId,
             via_user_id: ask.viaUserId,

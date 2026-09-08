@@ -105,7 +105,7 @@ func carriesTheSlot(t *testing.T, typeName string) bool {
 	}
 	for _, sample := range []any{
 		crmcontracts.Person{},
-		crmcontracts.Organization{},
+		crmcontracts.Company{},
 		crmcontracts.Deal{},
 		crmcontracts.Lead{},
 		crmcontracts.Project{},

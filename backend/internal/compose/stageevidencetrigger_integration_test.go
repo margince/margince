@@ -486,11 +486,11 @@ func (e *evidenceTriggerEnv) seedContract(t *testing.T) ids.UUID {
 	t.Helper()
 	var id ids.UUID
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		org := e.SeedOrg(t, "Acme GmbH", &e.AdminUser)
+		company := e.SeedCompany(t, "Acme GmbH", &e.AdminUser)
 		return tx.QueryRow(context.Background(), `
-			INSERT INTO contract (organization_id, deal_id, title, status, starts_on, captured_by)
+			INSERT INTO contract (company_id, deal_id, title, status, starts_on, captured_by)
 			VALUES ($1, $2, 'Rollout agreement', 'draft', current_date, 'human:test')
-			RETURNING id`, org, e.dealID.UUID).Scan(&id)
+			RETURNING id`, company, e.dealID.UUID).Scan(&id)
 	}); err != nil {
 		t.Fatalf("seeding a contract: %v", err)
 	}

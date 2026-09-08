@@ -41,7 +41,7 @@ function render(ui: ReactNode, locale: "en" | "de" = "en") {
 
 test("names each engagement state in its own words", async () => {
   stubContacts(contactsFixture());
-  render(<CompanyPeopleList orgId="o-1" />);
+  render(<CompanyPeopleList companyId="o-1" />);
 
   // Four different words, because "their mail sits unanswered", "we replied",
   // "we wrote and heard nothing" and "nobody has tried" are four different
@@ -57,7 +57,7 @@ test("names each engagement state in its own words", async () => {
 
 test("a contact who went quiet is never called never approached", async () => {
   stubContacts(contactsFixture());
-  render(<CompanyPeopleList orgId="o-1" />);
+  render(<CompanyPeopleList companyId="o-1" />);
 
   // The two columns are folded from different windows: the state from 90-day
   // counts, the last-touch date from the whole history. A contact whose only
@@ -72,7 +72,7 @@ test("a contact who went quiet is never called never approached", async () => {
 
 test("says which side the conversation is owed, not just when it moved", async () => {
   stubContacts(contactsFixture());
-  render(<CompanyPeopleList orgId="o-1" />);
+  render(<CompanyPeopleList companyId="o-1" />);
 
   // A date alone reads the same whoever sent it. The direction is the fact.
   expect((await screen.findAllByText(/They wrote/)).length).toBeGreaterThan(0);
@@ -82,11 +82,11 @@ test("says which side the conversation is owed, not just when it moved", async (
 
 test("asks the server for the account's own contacts and lets it choose the order", async () => {
   const calls = stubContacts(contactsFixture());
-  render(<CompanyPeopleList orgId="o-1" />);
+  render(<CompanyPeopleList companyId="o-1" />);
 
   await screen.findByText("Dietmar Rietsch");
   const url = calls.at(-1) ?? "";
-  expect(url).toContain("/organizations/o-1/contacts");
+  expect(url).toContain("/companies/o-1/contacts");
   // No sort on the first read: the server's own order IS the recommendation,
   // and naming one here would open the page on an alphabet.
   expect(url).not.toContain("sort=");
@@ -94,7 +94,7 @@ test("asks the server for the account's own contacts and lets it choose the orde
 
 test("renders the German words under a German locale", async () => {
   stubContacts(contactsFixture());
-  render(<CompanyPeopleList orgId="o-1" />, "de");
+  render(<CompanyPeopleList companyId="o-1" />, "de");
 
   // The engagement WORDS, not the column head: "Kontaktstand" labels both the
   // column and its filter, and asserting it would pass on the chrome alone.
@@ -105,7 +105,7 @@ test("renders the German words under a German locale", async () => {
 test("a second press on a column asks for the reverse, and the server accepts it", async () => {
   const calls = stubContacts(contactsFixture());
   const user = userEvent.setup();
-  render(<CompanyPeopleList orgId="o-1" />);
+  render(<CompanyPeopleList companyId="o-1" />);
 
   await screen.findByText("Dietmar Rietsch");
   const header = screen.getByRole("button", { name: "Sort by Last exchange" });
@@ -125,7 +125,7 @@ test("a second press on a column asks for the reverse, and the server accepts it
 test("does not let a pasted cursor or limit override the paging it computed", async () => {
   const calls = stubContacts(contactsFixture());
   window.location.hash = "#/companies/o-1/contacts?cursor=garbage&limit=1";
-  render(<CompanyPeopleList orgId="o-1" />);
+  render(<CompanyPeopleList companyId="o-1" />);
 
   await screen.findByText("Dietmar Rietsch");
   // The address is the reader's to edit; the paging keys are not theirs to set.

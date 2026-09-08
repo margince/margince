@@ -51,7 +51,7 @@ var graphPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
 		"person":                {Read: true},
-		"organization":          {Read: true},
+		"company":               {Read: true},
 		"relationship":          {Read: true},
 		"activity":              {Read: true},
 		"installation_settings": {Read: true},
@@ -175,7 +175,7 @@ func TestPersonGraphWithholdsReceiptsFromACallerWithNoActivityGrant(t *testing.T
 
 	noActivity := graphPerms
 	noActivity.Objects = map[string]principal.ObjectGrant{
-		"person": {Read: true}, "organization": {Read: true}, "relationship": {Read: true},
+		"person": {Read: true}, "company": {Read: true}, "relationship": {Read: true},
 	}
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, noActivity)
 
@@ -200,7 +200,7 @@ func TestPersonGraphWithholdsReceiptsFromACallerWithNoActivityGrant(t *testing.T
 func TestPersonGraphHidesCoworkersOutsideRowScope(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
-	org := e.SeedOrg(t, "ScaleCommerce", &e.Rep1)
+	company := e.SeedCompany(t, "ScaleCommerce", &e.Rep1)
 	mine := e.SeedPerson(t, "Anna Weber", &e.Rep1)
 	visible := e.SeedPerson(t, "Visible Coworker", &e.Rep1)
 	hidden := e.SeedPerson(t, "Hidden Coworker", &e.Rep3)
@@ -208,8 +208,8 @@ func TestPersonGraphHidesCoworkersOutsideRowScope(t *testing.T) {
 
 	for _, p := range []ids.UUID{mine, visible, hidden} {
 		SeedIDRow(t, owner, `INSERT INTO relationship
-			(id, kind, person_id, organization_id, source, captured_by)
-			VALUES ($1, 'employment', '`+p.String()+`', '`+org.String()+`', 'manual', 'human:x')`)
+			(id, kind, person_id, company_id, source, captured_by)
+			VALUES ($1, 'employment', '`+p.String()+`', '`+company.String()+`', 'manual', 'human:x')`)
 	}
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, graphPerms)
@@ -301,14 +301,14 @@ func TestPersonGraphServiceReturnsNotFoundForAForeignContact(t *testing.T) {
 func TestPersonGraphGivesAColleagueOneNodeAcrossBothArms(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
-	org := e.SeedOrg(t, "ScaleCommerce", &e.Rep1)
+	company := e.SeedCompany(t, "ScaleCommerce", &e.Rep1)
 	mine := e.SeedPerson(t, "Anna Weber", &e.Rep1)
 	coworker := e.SeedPerson(t, "Their Colleague", &e.Rep1)
 
 	for _, p := range []ids.UUID{mine, coworker} {
 		SeedIDRow(t, owner, `INSERT INTO relationship
-			(id, kind, person_id, organization_id, source, captured_by)
-			VALUES ($1, 'employment', '`+p.String()+`', '`+org.String()+`', 'manual', 'human:x')`)
+			(id, kind, person_id, company_id, source, captured_by)
+			VALUES ($1, 'employment', '`+p.String()+`', '`+company.String()+`', 'manual', 'human:x')`)
 	}
 	// The SAME colleague corresponds with both.
 	seedExchange(t, e, e.Rep1, mine, "with Anna")
@@ -357,14 +357,14 @@ func TestPersonGraphGivesAColleagueOneNodeAcrossBothArms(t *testing.T) {
 func TestPersonGraphAccountEdgesCarryCountsAndNoMessages(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
-	org := e.SeedOrg(t, "ScaleCommerce", &e.Rep1)
+	company := e.SeedCompany(t, "ScaleCommerce", &e.Rep1)
 	mine := e.SeedPerson(t, "Anna Weber", &e.Rep1)
 	coworker := e.SeedPerson(t, "Their Colleague", &e.Rep1)
 
 	for _, p := range []ids.UUID{mine, coworker} {
 		SeedIDRow(t, owner, `INSERT INTO relationship
-			(id, kind, person_id, organization_id, source, captured_by)
-			VALUES ($1, 'employment', '`+p.String()+`', '`+org.String()+`', 'manual', 'human:x')`)
+			(id, kind, person_id, company_id, source, captured_by)
+			VALUES ($1, 'employment', '`+p.String()+`', '`+company.String()+`', 'manual', 'human:x')`)
 	}
 	// Nobody knows Anna; somebody knows her coworker. That is exactly the case
 	// the account arm exists for.

@@ -38,7 +38,7 @@ type ImportCommand struct {
 	Verb  string
 	RunID ids.UUID
 	// Object is what the file's rows are, carried so the summary a person
-	// reads says "import 400 organizations" rather than "import a file".
+	// reads says "import 400 companies" rather than "import a file".
 	Object string
 }
 

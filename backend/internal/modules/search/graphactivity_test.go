@@ -57,14 +57,14 @@ func attendee(t *testing.T, role, digit string) activitySubject {
 // currently works for, inferred rather than asserted.
 func employer(t *testing.T, role, digit string) activitySubject {
 	t.Helper()
-	organization := string(datasource.EntityOrganization)
+	company := string(datasource.EntityCompany)
 	rank, ok := participantRoleRank[role]
 	if !ok {
 		rank = unrankedRole
 	}
 	return activitySubject{
-		entityType: organization, id: idOf(t, digit), title: "employer" + digit,
-		tier: subjectTier[organization], named: namedByEmployer, role: rank,
+		entityType: company, id: idOf(t, digit), title: "employer" + digit,
+		tier: subjectTier[company], named: namedByEmployer, role: rank,
 	}
 }
 
@@ -94,11 +94,11 @@ func assertOrder(t *testing.T, got []activitySubject, want ...string) {
 func TestTheWorkOutranksTheAccountOutranksTheContact(t *testing.T) {
 	got := foldSubjects([]activitySubject{
 		link(t, string(datasource.EntityPerson), "1"),
-		link(t, string(datasource.EntityOrganization), "2"),
+		link(t, string(datasource.EntityCompany), "2"),
 		link(t, string(datasource.EntityProject), "3"),
 		link(t, string(datasource.EntityDeal), "4"),
 	})
-	assertOrder(t, got, "deal4", "project3", "organization2", "person1")
+	assertOrder(t, got, "deal4", "project3", "company2", "person1")
 }
 
 // A link is something capture ASSERTED about the record; a participant is
@@ -162,10 +162,10 @@ func TestOneRecordNamedTwiceIsOneSubjectAtItsBestRank(t *testing.T) {
 // Two records the precedence cannot separate still come back in one order, so
 // the same event prepares against the same record every time it is asked.
 func TestSubjectsTiedOnEveryRankFallBackToTheId(t *testing.T) {
-	organization := string(datasource.EntityOrganization)
-	first, second := link(t, organization, "1"), link(t, organization, "2")
-	assertOrder(t, foldSubjects([]activitySubject{second, first}), "organization1", "organization2")
-	assertOrder(t, foldSubjects([]activitySubject{first, second}), "organization1", "organization2")
+	company := string(datasource.EntityCompany)
+	first, second := link(t, company, "1"), link(t, company, "2")
+	assertOrder(t, foldSubjects([]activitySubject{second, first}), "company1", "company2")
+	assertOrder(t, foldSubjects([]activitySubject{first, second}), "company1", "company2")
 }
 
 // The company reached through the attendee is still the account: it outranks
@@ -184,8 +184,8 @@ func TestAnAttendeesEmployerOutranksTheAttendee(t *testing.T) {
 // job. Reached both ways the company is one subject at the asserted rank, so a
 // directly-linked account is never displaced by the same account inferred.
 func TestALinkedCompanyOutranksAnInferredEmployer(t *testing.T) {
-	organization := string(datasource.EntityOrganization)
-	linked := link(t, organization, "1")
+	company := string(datasource.EntityCompany)
+	linked := link(t, company, "1")
 	inferred := employer(t, "organizer", "1")
 
 	for name, candidates := range map[string][]activitySubject{
@@ -199,8 +199,8 @@ func TestALinkedCompanyOutranksAnInferredEmployer(t *testing.T) {
 	// Two DIFFERENT companies, so nothing folds and the ordering itself is
 	// what is being read.
 	assertOrder(t, foldSubjects([]activitySubject{
-		employer(t, "organizer", "2"), link(t, organization, "3"),
-	}), "organization3", "employer2")
+		employer(t, "organizer", "2"), link(t, company, "3"),
+	}), "company3", "employer2")
 }
 
 // Among the inferred companies, the party who convened the meeting decides

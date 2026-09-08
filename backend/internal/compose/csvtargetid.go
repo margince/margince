@@ -57,7 +57,7 @@ func (w *csvWriters) targetIDOf(ctx context.Context, row migration.Row) targetID
 	if raw == "" {
 		return targetID{}
 	}
-	if w.object != migration.ObjectOrganization {
+	if w.object != migration.ObjectCompany {
 		return targetID{named: true, reason: fmt.Sprintf(
 			"only a company row can name an %q; a %s row is identified by its own key",
 			csvTargetID, w.object)}
@@ -71,13 +71,13 @@ func (w *csvWriters) targetIDOf(ctx context.Context, row migration.Row) targetID
 			"%q is not a company id; export the companies to get theirs, or leave the column empty "+
 				"to import this row as a new company", raw)}
 	}
-	// GetOrganization runs under the caller's own row scope, so a company they
+	// GetCompany runs under the caller's own row scope, so a company they
 	// may not read answers not-found here exactly as it would anywhere else.
 	// That is what makes one sentence cover both cases honestly.
 	// Likewise: a read that does not answer means no company this caller can see
 	// has that id, which is the sentence the report shows. Distinguishing "gone"
 	// from "not yours" would tell a caller that an id they cannot read exists.
-	if _, err := w.people.GetOrganization(ctx, ids.From[ids.OrganizationKind](parsed),
+	if _, err := w.people.GetCompany(ctx, ids.From[ids.CompanyKind](parsed),
 		storekit.LiveOnly); err != nil {
 		return targetID{named: true, reason: fmt.Sprintf(
 			"no company you can see has the id %q; it may have been archived, merged away, or belong "+

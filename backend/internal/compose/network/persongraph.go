@@ -43,7 +43,7 @@ import (
 
 // The caps. Both are reading limits: past ten colleagues or a dozen
 // colleagues-at-the-company nobody is choosing a route any more, they are
-// reading an org chart.
+// reading a company chart.
 const (
 	graphDirectCap  = 10
 	graphAccountCap = 12

@@ -60,7 +60,7 @@ func TestTheFloorWritesANoteTheColleagueCanForward(t *testing.T) {
 
 // The note is addressed to the CONTACT and never mentions the ask behind it.
 //
-// This is the difference from org360's drafter, which writes the internal
+// This is the difference from company360's drafter, which writes the internal
 // request. A note that said "Lena asked me to introduce you" tells a prospect
 // they are the subject of an internal favour — true, and not something anybody
 // would choose to put in front of them.
@@ -166,7 +166,7 @@ func TestEveryFactIsFencedBeforeItReachesTheModel(t *testing.T) {
 // outsideEveryNoteSpan reports whether the needle occurs anywhere that is not
 // between two markers.
 //
-// Its own copy rather than org360's: that one is an unexported test helper in
+// Its own copy rather than company360's: that one is an unexported test helper in
 // another package, and exporting a test-only function to share four lines of
 // string walking would put a seam in production code for a test's convenience.
 func outsideEveryNoteSpan(content, marker, needle string) bool {

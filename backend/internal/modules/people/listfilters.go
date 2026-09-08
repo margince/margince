@@ -57,14 +57,14 @@ var personListFilters = storekit.FilterSet[ListPeopleInput]{
 	}),
 }
 
-var organizationListFilters = storekit.FilterSet[ListOrganizationsInput]{
-	filterDomain:    storekit.FilterWord(func(in *ListOrganizationsInput, v *string) { in.Domain = v }),
-	filterLifecycle: storekit.FilterWord(func(in *ListOrganizationsInput, v *string) { in.Lifecycle = v }),
-	filterOwnerID:   storekit.FilterID(func(in *ListOrganizationsInput, id *ids.UserID) { in.OwnerID = id }),
+var companyListFilters = storekit.FilterSet[ListCompaniesInput]{
+	filterDomain:    storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.Domain = v }),
+	filterLifecycle: storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.Lifecycle = v }),
+	filterOwnerID:   storekit.FilterID(func(in *ListCompaniesInput, id *ids.UserID) { in.OwnerID = id }),
 	filterRelationshipType: storekit.FilterWord(
-		func(in *ListOrganizationsInput, v *string) { in.RelationshipType = v }),
-	filterTag: storekit.FilterIDList[ids.TagKind](func(in *ListOrganizationsInput, v []ids.UUID) { in.TagIDs = v }),
-	filterTagMode: storekit.FilterWord(func(in *ListOrganizationsInput, v *string) {
+		func(in *ListCompaniesInput, v *string) { in.RelationshipType = v }),
+	filterTag: storekit.FilterIDList[ids.TagKind](func(in *ListCompaniesInput, v []ids.UUID) { in.TagIDs = v }),
+	filterTagMode: storekit.FilterWord(func(in *ListCompaniesInput, v *string) {
 		in.TagMode = tagModeOrDefault(v)
 	}),
 }
@@ -90,8 +90,8 @@ func (p *Provider) ListFilters(t datasource.EntityType) []string {
 	switch t {
 	case datasource.EntityPerson:
 		return personListFilters.Names()
-	case datasource.EntityOrganization:
-		return organizationListFilters.Names()
+	case datasource.EntityCompany:
+		return companyListFilters.Names()
 	case datasource.EntityLead:
 		return leadListFilters.Names()
 	case datasource.EntityPartner:

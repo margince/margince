@@ -362,8 +362,8 @@ export const Avatars: Story = {
           it
         </span>
         <div style={row}>
-          <Avatar identity="org_7f3" name="Voltaq Systems" />
-          <Avatar identity="org_7f3" name="Voltaq Systems GmbH" size="md" />
+          <Avatar identity="company_7f3" name="Voltaq Systems" />
+          <Avatar identity="company_7f3" name="Voltaq Systems GmbH" size="md" />
         </div>
       </div>
       <div style={stack}>

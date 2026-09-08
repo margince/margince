@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // The lead half of the capture Sink: a captured prospect never becomes a
-// person or organization directly (ADR-0008 — leads graduate, raw capture does
+// person or company directly (ADR-0008 — leads graduate, raw capture does
 // not mint clean-core rows), and a collision with a live lead from another
 // source stages a merge proposal instead of folding the two together.
 

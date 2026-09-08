@@ -421,7 +421,7 @@ func TestTheGateRecognisesEverySpellingOfTheIdleBase(t *testing.T) {
 		"an ORDER BY over the base": "" +
 			"func f() { q(`ORDER BY coalesce(d.last_activity_at, d.created_at), d.id`) }",
 		"a projection selecting the base": "" +
-			"func f() { q(`\n\t\tSELECT status, organization_id, coalesce(last_activity_at, created_at),\n" +
+			"func f() { q(`\n\t\tSELECT status, company_id, coalesce(last_activity_at, created_at),\n" +
 			"\t\t       last_activity_at IS NOT NULL\n\t\t  FROM deal WHERE id = $1`) }",
 		"a row scan folding the base into a field": "" +
 			"func f() {\n\tr.idleSince = createdAt\n\tif lastActivityAt != nil {\n\t\tr.idleSince = *lastActivityAt\n\t}\n}",

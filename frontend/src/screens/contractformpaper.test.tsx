@@ -22,7 +22,7 @@ afterEach(() => {
 
 const CONTRACT: components["schemas"]["Contract"] = {
   id: "c-1",
-  organization_id: "o-1",
+  company_id: "o-1",
   title: "valantic GmbH — Rahmenvertrag",
   source: "manual",
   captured_by: "human:u-1",
@@ -43,7 +43,7 @@ const PAPER: components["schemas"]["Attachment"] = {
   doc_state: "current",
   pinned: false,
   created_at: "2026-01-02T09:00:00Z",
-  entity_type: "organization",
+  entity_type: "company",
   entity_id: "o-1",
   contract_id: "c-1",
   source: "upload",
@@ -199,7 +199,12 @@ describe("the signed document on the contract form", () => {
   it("offers the filed PDF as a download", async () => {
     stub([PAPER]);
     show(
-      <ContractForm orgId="o-1" contract={CONTRACT} open onClose={() => {}} />,
+      <ContractForm
+        companyId="o-1"
+        contract={CONTRACT}
+        open
+        onClose={() => {}}
+      />,
     );
 
     const link = await screen.findByRole("link", {
@@ -230,7 +235,12 @@ describe("the signed document on the contract form", () => {
       },
     ]);
     show(
-      <ContractForm orgId="o-1" contract={CONTRACT} open onClose={() => {}} />,
+      <ContractForm
+        companyId="o-1"
+        contract={CONTRACT}
+        open
+        onClose={() => {}}
+      />,
     );
 
     // The page it holds is still shown — a truncation notice is not a reason to
@@ -253,7 +263,12 @@ describe("the signed document on the contract form", () => {
       })),
     );
     show(
-      <ContractForm orgId="o-1" contract={CONTRACT} open onClose={() => {}} />,
+      <ContractForm
+        companyId="o-1"
+        contract={CONTRACT}
+        open
+        onClose={() => {}}
+      />,
     );
 
     expect(await screen.findByText("Showing part of the list")).toBeTruthy();
@@ -282,7 +297,12 @@ describe("the signed document on the contract form", () => {
       }),
     );
     show(
-      <ContractForm orgId="o-1" contract={CONTRACT} open onClose={() => {}} />,
+      <ContractForm
+        companyId="o-1"
+        contract={CONTRACT}
+        open
+        onClose={() => {}}
+      />,
     );
 
     expect(
@@ -308,7 +328,7 @@ describe("the signed document on the contract form", () => {
     vi.stubGlobal("fetch", fetched);
     // No contract: there is no id yet, so asking for "this agreement's
     // documents" would be a request about a record that does not exist.
-    show(<ContractForm orgId="o-1" open onClose={() => {}} />);
+    show(<ContractForm companyId="o-1" open onClose={() => {}} />);
 
     await screen.findByText("Record an agreement");
     await waitFor(() => {

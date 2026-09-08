@@ -20,7 +20,7 @@ const BY_VERDICT = {
   reason: "a newsletter platform, not a customer",
   source: "verdict",
   decided_at: "2026-07-30T09:12:00Z",
-  organization_id: null,
+  company_id: null,
 };
 const BY_HEURISTIC = {
   domain: "expensify.example",
@@ -28,7 +28,7 @@ const BY_HEURISTIC = {
   reason: "bulk sender: no reply address, list-unsubscribe header",
   source: "heuristic",
   decided_at: "2026-08-02T14:40:00Z",
-  organization_id: null,
+  company_id: null,
 };
 const BY_HUMAN = {
   domain: "mckinsey.example",
@@ -36,7 +36,7 @@ const BY_HUMAN = {
   reason: "they became a client in July",
   source: "human",
   decided_at: "2026-08-11T07:05:00Z",
-  organization_id: "018f3a1b-0000-7000-8000-00000000c001",
+  company_id: "018f3a1b-0000-7000-8000-00000000c001",
 };
 
 function story(
@@ -59,9 +59,9 @@ function story(
   };
 }
 
-// Reading is every human role's; changing an entry is organization:update.
-const OPS = { organization: ["read", "update"] } as const;
-const READER = { organization: ["read"] } as const;
+// Reading is every human role's; changing an entry is company:update.
+const OPS = { company: ["read", "update"] } as const;
+const READER = { company: ["read"] } as const;
 
 const meta: Meta<typeof BlockedDomainsCard> = {
   title: "Settings/Data/Capture rules/Refused domains",

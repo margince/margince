@@ -117,9 +117,9 @@ func (h Handlers) SetProjectCompany(w http.ResponseWriter, r *http.Request, id c
 		role = *req.Role
 	}
 	on, err := h.store.SetProjectCompany(r.Context(), SetProjectCompanyInput{
-		ProjectID:      pathID[ids.ProjectKind](id),
-		OrganizationID: pathID[ids.OrganizationKind](req.OrganizationId),
-		Role:           role,
+		ProjectID: pathID[ids.ProjectKind](id),
+		CompanyID: pathID[ids.CompanyKind](req.CompanyId),
+		Role:      role,
 	})
 	if err != nil {
 		writeStoreErr(w, r, err)
@@ -130,9 +130,9 @@ func (h Handlers) SetProjectCompany(w http.ResponseWriter, r *http.Request, id c
 
 // RemoveProjectCompany takes a company off a project by archiving the edge —
 // taking off is not deleting, and the company keeps every record it owns.
-func (h Handlers) RemoveProjectCompany(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, organizationID openapi_types.UUID, _ crmcontracts.RemoveProjectCompanyParams) {
+func (h Handlers) RemoveProjectCompany(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, companyID openapi_types.UUID, _ crmcontracts.RemoveProjectCompanyParams) {
 	err := h.store.RemoveProjectCompany(r.Context(),
-		pathID[ids.ProjectKind](id), ids.From[ids.OrganizationKind](ids.UUID(organizationID)))
+		pathID[ids.ProjectKind](id), ids.From[ids.CompanyKind](ids.UUID(companyID)))
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
@@ -145,9 +145,9 @@ func wireProjectCompanies(on []ProjectCompany) []crmcontracts.ProjectCompany {
 	out := make([]crmcontracts.ProjectCompany, 0, len(on))
 	for _, one := range on {
 		out = append(out, crmcontracts.ProjectCompany{
-			OrganizationId: openapi_types.UUID(one.OrganizationID.UUID),
-			DisplayName:    one.DisplayName,
-			Role:           one.Role,
+			CompanyId:   openapi_types.UUID(one.CompanyID.UUID),
+			DisplayName: one.DisplayName,
+			Role:        one.Role,
 		})
 	}
 	return out

@@ -81,14 +81,14 @@ func commitDeals() storekit.Predicate {
 // TestFilteredExportIsScopedAndFiltered is the pinned intersection: a
 // caller's filtered export contains exactly the rows that are both visible to
 // them and match the predicate — excluding invisible rows AND non-matching
-// rows. The specimen is an organization: every shareable record type is read
+// rows. The specimen is a company: every shareable record type is read
 // by every seat (platform/auth tableclass.go), so capture privacy is the one
 // narrowing left that can show the visibility half of the intersection, and
 // an unpromoted capture belongs to its own owner alone.
 func TestFilteredExportIsScopedAndFiltered(t *testing.T) {
 	e := SetupSearch(t)
 	company := func(owner ids.UUID, name, industry, visibility string) ids.UUID {
-		return e.SeedID(t, `INSERT INTO organization (id, display_name, owner_id, industry, visibility, source, captured_by)
+		return e.SeedID(t, `INSERT INTO company (id, display_name, owner_id, industry, visibility, source, captured_by)
 			VALUES ($1, $2, $3, $4, $5, 'manual', 'human:x')`, name, owner, industry, visibility)
 	}
 	matchOwn := company(e.Rep1, "Match Own", "pharma", "workspace")  // visible AND matches
@@ -96,10 +96,10 @@ func TestFilteredExportIsScopedAndFiltered(t *testing.T) {
 	// Matches, but it is an unpromoted capture of Rep3's: only Rep3 reads it.
 	matchOther := company(e.Rep3, "Match Other", "pharma", "owner")
 
-	ctx := e.orgReader(&e.Rep1, &e.Team1, principal.RowScopeTeam)
-	engine, ok, err := compose.NewCollectionsStore(e.Pool).SegmentEngine(ctx, "organization")
+	ctx := e.companyReader(&e.Rep1, &e.Team1, principal.RowScopeTeam)
+	engine, ok, err := compose.NewCollectionsStore(e.Pool).SegmentEngine(ctx, "company")
 	if err != nil || !ok {
-		t.Fatalf("resolve organization engine: ok=%v err=%v", ok, err)
+		t.Fatalf("resolve company engine: ok=%v err=%v", ok, err)
 	}
 	result, err := compose.NewFilteredExportWriter(e.Pool).WriteFiltered(
 		ctx, engine, storekit.Predicate{Field: "industry", Op: "eq", Value: "pharma"}, "csv",

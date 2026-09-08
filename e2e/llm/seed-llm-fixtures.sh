@@ -162,7 +162,7 @@ if ! login_as "$ADMIN_PASSWORD"; then
   if ! login_as "$BOOTSTRAP_PASSWORD"; then
     echo "could not sign in as $ADMIN_EMAIL with either the chosen password or" >&2
     echo "the bootstrap one ($BOOTSTRAP_PASSWORD_FILE). The api bootstraps the demo" >&2
-    echo "organization at boot from config/margince.yaml; if those credentials" >&2
+    echo "company at boot from config/margince.yaml; if those credentials" >&2
     echo "changed, reset the dev database and restart the stack." >&2
     exit 1
   fi
@@ -229,8 +229,8 @@ fi
 # splits on its newlines, and the server answers 422 malformed_json. The `|| true`
 # on these calls then hid it, so the seed printed success having created
 # nothing. Keep the bodies in variables.
-org_id_by_name() {
-  api GET "/organizations?q=$(url_encode "$1")&limit=50" | python3 -c 'import json,sys
+company_id_by_name() {
+  api GET "/companies?q=$(url_encode "$1")&limit=50" | python3 -c 'import json,sys
 want = sys.argv[1]
 for row in json.load(sys.stdin).get("data", []):
     if row.get("display_name") == want:
@@ -241,7 +241,7 @@ else:
 
 seed_cologne() {
   local name="$1" lat="$2" lon="$3" body existing
-  existing="$(org_id_by_name "$name")"
+  existing="$(company_id_by_name "$name")"
   if [[ -n "$existing" ]]; then
     echo "  $name already present"
     return 0
@@ -249,32 +249,32 @@ seed_cologne() {
   body="$(printf '{"display_name":"%s","owner_id":"%s",' "$name" "$colleague")"
   body="$body$(printf '"address":{"line1":"Domkloster 4","city":"Köln","country":"DE"},')"
   body="$body$(printf '"geocode":{"lat":%s,"lon":%s}}' "$lat" "$lon")"
-  create_or_die "/organizations" "$body" "$name" >/dev/null
+  create_or_die "/companies" "$body" "$name" >/dev/null
 }
 seed_cologne "Dom Digital GmbH"    50.9375 6.9603
 seed_cologne "Rheinufer AG"        50.9475 6.9603
 seed_cologne "Vorort Systeme KG"   51.0175 6.9603
 
 # --- CASE 5: the Vietnam partner, with a promise nobody kept -----------------
-vietnam="$(org_id_by_name "Vietnam Partner JSC")"
+vietnam="$(company_id_by_name "Vietnam Partner JSC")"
 if [[ -z "$vietnam" ]]; then
   body="$(printf '{"display_name":"Vietnam Partner JSC","owner_id":"%s"}' "$colleague")"
-  vietnam="$(create_or_die "/organizations" "$body" "Vietnam Partner JSC")"
+  vietnam="$(create_or_die "/companies" "$body" "Vietnam Partner JSC")"
 fi
 
 mai="$(person_id_by_email "Mai Nguyen" "mai.nguyen@vietnampartner.test")"
 if [[ -z "$mai" ]]; then
   body="$(printf '{"full_name":"Mai Nguyen","owner_id":"%s","emails":[{"email":"mai.nguyen@vietnampartner.test","is_primary":true}]}' "$colleague")"
   mai="$(create_or_die "/people" "$body" "Mai Nguyen")"
-  body="$(printf '{"kind":"employment","person_id":"%s","organization_id":"%s"}' "$mai" "$vietnam")"
+  body="$(printf '{"kind":"employment","person_id":"%s","company_id":"%s"}' "$mai" "$vietnam")"
   api POST /relationships "$body" >/dev/null
 
   # THE PROMISE. An outbound message saying the list will be sent, and nothing
   # after it. Criterion 5 is whether a model notices the silence.
-  body="$(printf '{"kind":"email","direction":"outbound","occurred_at":"%s","body":"Ich schicke die Aufstellung mit.","links":[{"entity_type":"person","entity_id":"%s"},{"entity_type":"organization","entity_id":"%s"}]}' \
+  body="$(printf '{"kind":"email","direction":"outbound","occurred_at":"%s","body":"Ich schicke die Aufstellung mit.","links":[{"entity_type":"person","entity_id":"%s"},{"entity_type":"company","entity_id":"%s"}]}' \
     "$(days_ago 18)" "$mai" "$vietnam")"
   create_or_die "/activities" "$body" "the unkept promise" >/dev/null
-  body="$(printf '{"kind":"email","direction":"inbound","occurred_at":"%s","body":"Cảm ơn — we will review the appendix this week.","links":[{"entity_type":"person","entity_id":"%s"},{"entity_type":"organization","entity_id":"%s"}]}' \
+  body="$(printf '{"kind":"email","direction":"inbound","occurred_at":"%s","body":"Cảm ơn — we will review the appendix this week.","links":[{"entity_type":"person","entity_id":"%s"},{"entity_type":"company","entity_id":"%s"}]}' \
     "$(days_ago 20)" "$mai" "$vietnam")"
   create_or_die "/activities" "$body" "the inbound reply" >/dev/null
 fi
@@ -284,26 +284,26 @@ fi
 # An email dated in September, and a note written later whose prose says the
 # complaint was raised "im Oktober". The record is right; the prose is wrong.
 # This is the fixture the sharpest assertion in the lane rests on.
-reply="$(org_id_by_name "Reply Deutschland Betreuerwechsel")"
+reply="$(company_id_by_name "Reply Deutschland Betreuerwechsel")"
 if [[ -z "$reply" ]]; then
   body="$(printf '{"display_name":"Reply Deutschland Betreuerwechsel","owner_id":"%s","industry":"Managed Services"}' "$colleague")"
-  reply="$(create_or_die "/organizations" "$body" "Reply Deutschland")"
+  reply="$(create_or_die "/companies" "$body" "Reply Deutschland")"
 fi
 
 katrin="$(person_id_by_email "Katrin Sommer" "katrin.sommer@reply.test")"
 if [[ -z "$katrin" ]]; then
   body="$(printf '{"full_name":"Katrin Sommer","owner_id":"%s","emails":[{"email":"katrin.sommer@reply.test","is_primary":true}]}' "$colleague")"
   katrin="$(create_or_die "/people" "$body" "Katrin Sommer")"
-  body="$(printf '{"kind":"employment","person_id":"%s","organization_id":"%s"}' "$katrin" "$reply")"
+  body="$(printf '{"kind":"employment","person_id":"%s","company_id":"%s"}' "$katrin" "$reply")"
   api POST /relationships "$body" >/dev/null
 
   # The record. September. This date is the assertion case 6 rests on.
-  body="$(printf '{"kind":"email","direction":"inbound","occurred_at":"2025-09-18T09:12:00Z","subject":"Wechsel der Ansprechpartner","body":"Der ständige Wechsel der Ansprechpartner ist für uns ein echtes Problem.","links":[{"entity_type":"person","entity_id":"%s"},{"entity_type":"organization","entity_id":"%s"}]}' \
+  body="$(printf '{"kind":"email","direction":"inbound","occurred_at":"2025-09-18T09:12:00Z","subject":"Wechsel der Ansprechpartner","body":"Der ständige Wechsel der Ansprechpartner ist für uns ein echtes Problem.","links":[{"entity_type":"person","entity_id":"%s"},{"entity_type":"company","entity_id":"%s"}]}' \
     "$katrin" "$reply")"
   create_or_die "/activities" "$body" "the September complaint" >/dev/null
 
   # The prose. Wrong about the month, exactly as a real post-mortem was.
-  body="$(printf '{"kind":"note","occurred_at":"2025-12-03T10:00:00Z","subject":"Post-mortem Betreuerwechsel","body":"Der Kunde hat das im Oktober klar angesprochen; wir haben zu spät reagiert.","links":[{"entity_type":"organization","entity_id":"%s"}]}' \
+  body="$(printf '{"kind":"note","occurred_at":"2025-12-03T10:00:00Z","subject":"Post-mortem Betreuerwechsel","body":"Der Kunde hat das im Oktober klar angesprochen; wir haben zu spät reagiert.","links":[{"entity_type":"company","entity_id":"%s"}]}' \
     "$reply")"
   create_or_die "/activities" "$body" "the Oktober post-mortem" >/dev/null
 fi
@@ -311,11 +311,11 @@ fi
 # Two more accounts that lived through the same thing, so "did we have this in
 # the past" has a pattern to find rather than a single case.
 for company in "valantic AG Betreuerwechsel" "Körber Digital Betreuerwechsel"; do
-  org="$(org_id_by_name "$company")"
-  [[ -n "$org" ]] && continue
+  company="$(company_id_by_name "$company")"
+  [[ -n "$company" ]] && continue
   body="$(printf '{"display_name":"%s","owner_id":"%s","industry":"Managed Services"}' "$company" "$colleague")"
-  org="$(create_or_die "/organizations" "$body" "$company")"
-  body="$(printf '{"kind":"email","direction":"inbound","occurred_at":"2025-11-04T08:00:00Z","body":"Nach dem Wechsel des Ansprechpartners kam fünf Tage lang keine Antwort.","links":[{"entity_type":"organization","entity_id":"%s"}]}' "$org")"
+  company="$(create_or_die "/companies" "$body" "$company")"
+  body="$(printf '{"kind":"email","direction":"inbound","occurred_at":"2025-11-04T08:00:00Z","body":"Nach dem Wechsel des Ansprechpartners kam fünf Tage lang keine Antwort.","links":[{"entity_type":"company","entity_id":"%s"}]}' "$company")"
   create_or_die "/activities" "$body" "$company's silence" >/dev/null
 done
 

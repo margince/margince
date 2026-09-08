@@ -66,7 +66,7 @@ func TestOverlayArchivesThreeOfTheNativeSix(t *testing.T) {
 	}
 
 	want := []datasource.EntityType{
-		datasource.EntityDeal, datasource.EntityOrganization, datasource.EntityPerson,
+		datasource.EntityDeal, datasource.EntityCompany, datasource.EntityPerson,
 	}
 	if !slices.Equal(types, want) {
 		t.Errorf("overlay archives %v, want %v — project, relationship and activity are archived by "+

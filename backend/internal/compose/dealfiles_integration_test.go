@@ -57,10 +57,10 @@ func asRep(ctx context.Context, userID ids.UUID) context.Context {
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"rep"},
 			Objects: map[string]principal.ObjectGrant{
-				"deal":         {Read: true, Update: true},
-				"activity":     {Read: true},
-				"organization": {Read: true},
-				"person":       {Read: true},
+				"deal":     {Read: true, Update: true},
+				"activity": {Read: true},
+				"company":  {Read: true},
+				"person":   {Read: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},

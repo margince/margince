@@ -119,7 +119,7 @@ func TestOnboardingSiteReadTransportStartsPollsAndConfirmsTheDraft(t *testing.T)
 	start := onboardingPOST(human, t, "/v1/company/site-reads",
 		crmcontracts.StartCompanySiteReadRequest{Url: "  " + seedURL + "  "})
 	startRec := httptest.NewRecorder()
-	engine.startCompanySiteRead(startRec, start)
+	engine.startAnchorCompanySiteRead(startRec, start)
 	if startRec.Code != http.StatusAccepted {
 		t.Fatalf("start → %d %s, want 202", startRec.Code, startRec.Body.String())
 	}
@@ -139,7 +139,7 @@ func TestOnboardingSiteReadTransportStartsPollsAndConfirmsTheDraft(t *testing.T)
 	ready := finishOnboardingDraft(t, e, read)
 	pollRec := httptest.NewRecorder()
 	poll := httptest.NewRequest(http.MethodGet, "/v1/company/site-reads/"+ready.ID.String(), nil).WithContext(human)
-	engine.getCompanySiteRead(pollRec, poll, openapi_types.UUID(ready.ID))
+	engine.getAnchorCompanySiteRead(pollRec, poll, openapi_types.UUID(ready.ID))
 	if pollRec.Code != http.StatusOK {
 		t.Fatalf("poll → %d %s, want 200", pollRec.Code, pollRec.Body.String())
 	}
@@ -165,7 +165,7 @@ func TestOnboardingSiteReadTransportStartsPollsAndConfirmsTheDraft(t *testing.T)
 	confirm := onboardingPOST(human, t,
 		"/v1/company/site-reads/"+ready.ID.String()+"/confirm", confirmBody)
 	confirmRec := httptest.NewRecorder()
-	engine.confirmCompanySiteRead(confirmRec, confirm, openapi_types.UUID(ready.ID))
+	engine.confirmAnchorCompanySiteRead(confirmRec, confirm, openapi_types.UUID(ready.ID))
 	if confirmRec.Code != http.StatusOK {
 		t.Fatalf("confirm → %d %s, want 200", confirmRec.Code, confirmRec.Body.String())
 	}
@@ -176,7 +176,7 @@ func TestOnboardingSiteReadTransportStartsPollsAndConfirmsTheDraft(t *testing.T)
 	replay := onboardingPOST(human, t,
 		"/v1/company/site-reads/"+ready.ID.String()+"/confirm", confirmBody)
 	replayRec := httptest.NewRecorder()
-	engine.confirmCompanySiteRead(replayRec, replay, openapi_types.UUID(ready.ID))
+	engine.confirmAnchorCompanySiteRead(replayRec, replay, openapi_types.UUID(ready.ID))
 	var replayProblem struct {
 		Code string `json:"code"`
 	}
@@ -190,12 +190,12 @@ func TestOnboardingSiteReadTransportStartsPollsAndConfirmsTheDraft(t *testing.T)
 	confirmedRec := httptest.NewRecorder()
 	confirmedPoll := httptest.NewRequest(http.MethodGet,
 		"/v1/company/site-reads/"+ready.ID.String(), nil).WithContext(human)
-	engine.getCompanySiteRead(confirmedRec, confirmedPoll, openapi_types.UUID(ready.ID))
+	engine.getAnchorCompanySiteRead(confirmedRec, confirmedPoll, openapi_types.UUID(ready.ID))
 	var confirmed crmcontracts.CompanySiteRead
 	if err := json.Unmarshal(confirmedRec.Body.Bytes(), &confirmed); err != nil {
 		t.Fatal(err)
 	}
-	if confirmed.Status != crmcontracts.CompanySiteReadStatusConfirmed || confirmed.OrganizationId == nil {
+	if confirmed.Status != crmcontracts.CompanySiteReadStatusConfirmed || confirmed.CompanyId == nil {
 		t.Fatalf("confirmed dossier = %+v, want confirmed and bound", confirmed)
 	}
 }
@@ -211,7 +211,7 @@ func TestOnboardingSiteReadPollKeepsTheDossierWhenOptionalRuntimeTelemetryFails(
 
 	poll := httptest.NewRequest(http.MethodGet, "/v1/company/site-reads/"+ready.ID.String(), nil).WithContext(human)
 	recorder := httptest.NewRecorder()
-	engine.getCompanySiteRead(recorder, poll, openapi_types.UUID(ready.ID))
+	engine.getAnchorCompanySiteRead(recorder, poll, openapi_types.UUID(ready.ID))
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("optional telemetry failure hid the dossier: %d %s", recorder.Code, recorder.Body.String())
 	}
@@ -221,7 +221,7 @@ func TestOnboardingSiteReadPollKeepsTheDossierWhenOptionalRuntimeTelemetryFails(
 
 	engine.runtime = failingRunTransparency{err: apperrors.ErrPermissionDenied}
 	denied := httptest.NewRecorder()
-	engine.getCompanySiteRead(denied, poll, openapi_types.UUID(ready.ID))
+	engine.getAnchorCompanySiteRead(denied, poll, openapi_types.UUID(ready.ID))
 	if denied.Code != http.StatusForbidden {
 		t.Fatalf("runtime authorization denial = %d, want 403", denied.Code)
 	}
@@ -240,7 +240,7 @@ func TestOnboardingSiteReadTransportRejectsInvalidManualInputs(t *testing.T) {
 	badStart := onboardingPOST(human, t, "/v1/company/site-reads",
 		crmcontracts.StartCompanySiteReadRequest{Url: "mailto:team@acme.example"})
 	badStartRec := httptest.NewRecorder()
-	engine.startCompanySiteRead(badStartRec, badStart)
+	engine.startAnchorCompanySiteRead(badStartRec, badStart)
 	if badStartRec.Code != http.StatusUnprocessableEntity {
 		t.Fatalf("invalid URL start → %d, want 422", badStartRec.Code)
 	}
@@ -258,7 +258,7 @@ func TestOnboardingSiteReadTransportRejectsInvalidManualInputs(t *testing.T) {
 				DraftVersion: 1, ProposalHash: "hash", Profile: profile, SelectedFactKeys: []string{},
 			})
 		rec := httptest.NewRecorder()
-		engine.confirmCompanySiteRead(rec, req, openapi_types.UUID(ids.NewV7()))
+		engine.confirmAnchorCompanySiteRead(rec, req, openapi_types.UUID(ids.NewV7()))
 		if rec.Code != http.StatusUnprocessableEntity {
 			t.Fatalf("invalid confirmation %d → %d, want 422", i, rec.Code)
 		}
@@ -267,7 +267,7 @@ func TestOnboardingSiteReadTransportRejectsInvalidManualInputs(t *testing.T) {
 	missingID := openapi_types.UUID(ids.NewV7())
 	missingRec := httptest.NewRecorder()
 	missingPoll := httptest.NewRequest(http.MethodGet, "/v1/company/site-reads/missing", nil).WithContext(human)
-	engine.getCompanySiteRead(missingRec, missingPoll, missingID)
+	engine.getAnchorCompanySiteRead(missingRec, missingPoll, missingID)
 	if missingRec.Code != http.StatusNotFound {
 		t.Fatalf("missing poll → %d, want 404", missingRec.Code)
 	}
@@ -278,7 +278,7 @@ func TestOnboardingSiteReadTransportRejectsInvalidManualInputs(t *testing.T) {
 			DraftVersion: 1, ProposalHash: "hash", Profile: valid, SelectedFactKeys: []string{},
 		})
 	missingConfirmRec := httptest.NewRecorder()
-	engine.confirmCompanySiteRead(missingConfirmRec, missingConfirm, missingID)
+	engine.confirmAnchorCompanySiteRead(missingConfirmRec, missingConfirm, missingID)
 	if missingConfirmRec.Code != http.StatusNotFound {
 		t.Fatalf("missing confirmation → %d, want 404", missingConfirmRec.Code)
 	}
@@ -287,14 +287,14 @@ func TestOnboardingSiteReadTransportRejectsInvalidManualInputs(t *testing.T) {
 	queueRequest := onboardingPOST(human, t, "/v1/company/site-reads",
 		crmcontracts.StartCompanySiteReadRequest{Url: seedURL})
 	queueRec := httptest.NewRecorder()
-	brokenQueue.startCompanySiteRead(queueRec, queueRequest)
+	brokenQueue.startAnchorCompanySiteRead(queueRec, queueRequest)
 	if queueRec.Code != http.StatusInternalServerError {
 		t.Fatalf("broken queue start → %d, want 500", queueRec.Code)
 	}
 
 	malformed := httptest.NewRequest(http.MethodPost, "/v1/company/site-reads", bytes.NewBufferString("{"))
 	malformedRec := httptest.NewRecorder()
-	engine.startCompanySiteRead(malformedRec, malformed.WithContext(human))
+	engine.startAnchorCompanySiteRead(malformedRec, malformed.WithContext(human))
 	if malformedRec.Code != http.StatusUnprocessableEntity {
 		t.Fatalf("malformed start → %d, want 422", malformedRec.Code)
 	}
@@ -303,15 +303,15 @@ func TestOnboardingSiteReadTransportRejectsInvalidManualInputs(t *testing.T) {
 func TestOnboardingSiteReadConfirmsSelectedDataAndKeepsPeopleSeparate(t *testing.T) {
 	e := integration.Setup(t)
 	ready := onboardingDraft(t, e)
-	if e.WsCount(t, `SELECT count(*) FROM organization WHERE is_anchor`) != 0 ||
-		e.WsCount(t, `SELECT count(*) FROM organization_profile_field`) != 0 ||
-		e.WsCount(t, `SELECT count(*) FROM organization_fact`) != 0 {
+	if e.WsCount(t, `SELECT count(*) FROM company WHERE is_anchor`) != 0 ||
+		e.WsCount(t, `SELECT count(*) FROM company_profile_field`) != 0 ||
+		e.WsCount(t, `SELECT count(*) FROM company_fact`) != 0 {
 		t.Fatal("the operational onboarding draft wrote company domain truth before confirmation")
 	}
 
 	engine := &deepReadEngine{people: e.People, approvals: approvals.NewService(e.DB())}
 	offer, editedICP, website := "Employee onboarding software", "B2B RevOps teams with 50–500 employees", seedURL
-	company, _, err := e.People.ConfirmCompanySiteRead(e.As(e.Rep1, nil, integration.AdminPerms), people.ConfirmCompanySiteReadInput{
+	company, _, err := e.People.ConfirmAnchorCompanySiteRead(e.As(e.Rep1, nil, integration.AdminPerms), people.ConfirmCompanySiteReadInput{
 		ReadID: ready.ID, DraftVersion: ready.DraftVersion, ProposalHash: ready.ProposalHash,
 		DisplayName: "Acme", Website: &website,
 		Fields:           map[string]*string{"offer_summary": &offer, "icp": &editedICP},
@@ -325,15 +325,15 @@ func TestOnboardingSiteReadConfirmsSelectedDataAndKeepsPeopleSeparate(t *testing
 	}
 
 	var siteRows, humanRows, leads, leadProposals int
-	var confirmedOrg ids.UUID
+	var confirmedCompany ids.UUID
 	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
-		if err := tx.QueryRow(ctx, `SELECT count(*) FROM organization_profile_field
-			WHERE organization_id = $1 AND source = 'site_read' AND captured_by = 'agent:site-read'`, company.OrganizationID).Scan(&siteRows); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT count(*) FROM company_profile_field
+			WHERE company_id = $1 AND source = 'site_read' AND captured_by = 'agent:site-read'`, company.CompanyID).Scan(&siteRows); err != nil {
 			return err
 		}
-		if err := tx.QueryRow(ctx, `SELECT count(*) FROM organization_profile_field
-			WHERE organization_id = $1 AND field = 'icp' AND source = 'human'`, company.OrganizationID).Scan(&humanRows); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT count(*) FROM company_profile_field
+			WHERE company_id = $1 AND field = 'icp' AND source = 'human'`, company.CompanyID).Scan(&humanRows); err != nil {
 			return err
 		}
 		if err := tx.QueryRow(ctx, `SELECT count(*) FROM lead`).Scan(&leads); err != nil {
@@ -342,7 +342,7 @@ func TestOnboardingSiteReadConfirmsSelectedDataAndKeepsPeopleSeparate(t *testing
 		if err := tx.QueryRow(ctx, `SELECT count(*) FROM approval WHERE kind = 'site_lead'`).Scan(&leadProposals); err != nil {
 			return err
 		}
-		return tx.QueryRow(ctx, `SELECT organization_id FROM site_read WHERE id = $1 AND confirmed_at IS NOT NULL`, ready.ID).Scan(&confirmedOrg)
+		return tx.QueryRow(ctx, `SELECT company_id FROM site_read WHERE id = $1 AND confirmed_at IS NOT NULL`, ready.ID).Scan(&confirmedCompany)
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -353,11 +353,11 @@ func TestOnboardingSiteReadConfirmsSelectedDataAndKeepsPeopleSeparate(t *testing
 	if leads != 0 || leadProposals != 1 {
 		t.Fatalf("people lane created %d leads and %d proposals, want 0 leads and 1 separate proposal", leads, leadProposals)
 	}
-	if confirmedOrg != company.OrganizationID.UUID {
-		t.Fatalf("dossier bound to %s, want anchor %s", confirmedOrg, company.OrganizationID)
+	if confirmedCompany != company.CompanyID.UUID {
+		t.Fatalf("dossier bound to %s, want anchor %s", confirmedCompany, company.CompanyID)
 	}
 
-	_, _, err = e.People.ConfirmCompanySiteRead(e.As(e.Rep1, nil, integration.AdminPerms), people.ConfirmCompanySiteReadInput{
+	_, _, err = e.People.ConfirmAnchorCompanySiteRead(e.As(e.Rep1, nil, integration.AdminPerms), people.ConfirmCompanySiteReadInput{
 		ReadID: ready.ID, DraftVersion: ready.DraftVersion, ProposalHash: ready.ProposalHash,
 		DisplayName: "Acme", Fields: map[string]*string{"offer_summary": &offer, "icp": &editedICP},
 	}, nil)
@@ -382,7 +382,7 @@ func TestCorrectingAFactAtColdStartStoresItAsTheHumansOwnAssertion(t *testing.T)
 	accepted, wrong := ready.Facts[0], ready.Facts[1]
 	corrected := "ClickHouse — data platform"
 	offer, icp := "Employee onboarding software", "Growing RevOps teams"
-	company, _, err := e.People.ConfirmCompanySiteRead(human, people.ConfirmCompanySiteReadInput{
+	company, _, err := e.People.ConfirmAnchorCompanySiteRead(human, people.ConfirmCompanySiteReadInput{
 		ReadID: ready.ID, DraftVersion: ready.DraftVersion, ProposalHash: ready.ProposalHash,
 		DisplayName:      "Acme",
 		Fields:           map[string]*string{"offer_summary": &offer, "icp": &icp},
@@ -419,9 +419,9 @@ func TestCorrectingAFactAtColdStartStoresItAsTheHumansOwnAssertion(t *testing.T)
 
 	var dossierLinks int
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(context.Background(), `SELECT count(*) FROM organization_fact
-			WHERE organization_id = $1 AND source = 'human' AND site_read_id IS NOT NULL`,
-			company.OrganizationID).Scan(&dossierLinks)
+		return tx.QueryRow(context.Background(), `SELECT count(*) FROM company_fact
+			WHERE company_id = $1 AND source = 'human' AND site_read_id IS NOT NULL`,
+			company.CompanyID).Scan(&dossierLinks)
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -447,7 +447,7 @@ func TestCompanySiteReadRefreshRequiresConflictDecisionsAndPreservesProvenance(t
 	ready := onboardingDraft(t, e)
 	engine := &deepReadEngine{people: e.People, approvals: approvals.NewService(e.DB())}
 
-	_, comparisons, err := e.People.GetCompanySiteRead(human, ready.ID)
+	_, comparisons, err := e.People.GetAnchorCompanySiteRead(human, ready.ID)
 	if err != nil {
 		t.Fatalf("compare refresh: %v", err)
 	}
@@ -471,7 +471,7 @@ func TestCompanySiteReadRefreshRequiresConflictDecisionsAndPreservesProvenance(t
 			"registered_address": &proposedAddress,
 		},
 	}
-	if _, _, err := e.People.ConfirmCompanySiteRead(human, base, engine.stageOnboardingPeople); err == nil {
+	if _, _, err := e.People.ConfirmAnchorCompanySiteRead(human, base, engine.stageOnboardingPeople); err == nil {
 		t.Fatal("refresh committed without resolving its human conflicts")
 	} else {
 		var invalid *people.InvalidSiteReadResolutionError
@@ -479,7 +479,7 @@ func TestCompanySiteReadRefreshRequiresConflictDecisionsAndPreservesProvenance(t
 			t.Fatalf("unresolved refresh = %v, want InvalidSiteReadResolutionError", err)
 		}
 	}
-	unchanged, err := e.People.GetCompany(human)
+	unchanged, err := e.People.GetAnchorCompany(human)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -494,7 +494,7 @@ func TestCompanySiteReadRefreshRequiresConflictDecisionsAndPreservesProvenance(t
 		{Key: "icp", Action: "accept_proposal"},
 		{Key: "registered_address", Action: "accept_proposal"},
 	}
-	confirmed, _, err := e.People.ConfirmCompanySiteRead(human, base, engine.stageOnboardingPeople)
+	confirmed, _, err := e.People.ConfirmAnchorCompanySiteRead(human, base, engine.stageOnboardingPeople)
 	if err != nil {
 		t.Fatalf("confirm resolved refresh: %v", err)
 	}
@@ -516,8 +516,8 @@ func TestCompanySiteReadRefreshRequiresConflictDecisionsAndPreservesProvenance(t
 	}
 	var storedAddress string
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(context.Background(), `SELECT address_line1 FROM organization WHERE id = $1`,
-			confirmed.OrganizationID).Scan(&storedAddress)
+		return tx.QueryRow(context.Background(), `SELECT address_line1 FROM company WHERE id = $1`,
+			confirmed.CompanyID).Scan(&storedAddress)
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -530,19 +530,19 @@ func TestOnboardingConfirmationRollsBackWhenSeparatePeopleCannotStage(t *testing
 	e := integration.Setup(t)
 	ready := onboardingDraft(t, e)
 	offer, icp := "Employee onboarding software", "Growing RevOps teams"
-	stageFailure := func(context.Context, pgx.Tx, ids.OrganizationID, people.SiteRead, []people.SiteReadPerson) ([]ids.UUID, error) {
+	stageFailure := func(context.Context, pgx.Tx, ids.CompanyID, people.SiteRead, []people.SiteReadPerson) ([]ids.UUID, error) {
 		return nil, errors.New("approval store unavailable")
 	}
-	_, _, err := e.People.ConfirmCompanySiteRead(e.As(e.Rep1, nil, integration.AdminPerms), people.ConfirmCompanySiteReadInput{
+	_, _, err := e.People.ConfirmAnchorCompanySiteRead(e.As(e.Rep1, nil, integration.AdminPerms), people.ConfirmCompanySiteReadInput{
 		ReadID: ready.ID, DraftVersion: ready.DraftVersion, ProposalHash: ready.ProposalHash,
 		DisplayName: "Acme", Fields: map[string]*string{"offer_summary": &offer, "icp": &icp},
 	}, stageFailure)
 	if err == nil {
 		t.Fatal("confirmation succeeded while its separate people staging failed")
 	}
-	if e.WsCount(t, `SELECT count(*) FROM organization WHERE is_anchor`) != 0 ||
-		e.WsCount(t, `SELECT count(*) FROM organization_profile_field`) != 0 ||
-		e.WsCount(t, `SELECT count(*) FROM organization_fact`) != 0 {
+	if e.WsCount(t, `SELECT count(*) FROM company WHERE is_anchor`) != 0 ||
+		e.WsCount(t, `SELECT count(*) FROM company_profile_field`) != 0 ||
+		e.WsCount(t, `SELECT count(*) FROM company_fact`) != 0 {
 		t.Fatal("a failed confirmation left partially committed company truth")
 	}
 	var confirmed int
@@ -621,7 +621,7 @@ func TestConfirmingAReadThatNamedNobodySucceeds(t *testing.T) {
 
 	engine := &deepReadEngine{people: e.People, approvals: approvals.NewService(e.DB())}
 	website := seedURL
-	company, _, err := e.People.ConfirmCompanySiteRead(ctx, people.ConfirmCompanySiteReadInput{
+	company, _, err := e.People.ConfirmAnchorCompanySiteRead(ctx, people.ConfirmCompanySiteReadInput{
 		ReadID: ready.ID, DraftVersion: ready.DraftVersion, ProposalHash: ready.ProposalHash,
 		DisplayName: "Acme", Website: &website,
 	}, engine.stageOnboardingPeople)
@@ -629,8 +629,8 @@ func TestConfirmingAReadThatNamedNobodySucceeds(t *testing.T) {
 		t.Fatalf("confirming a read that named nobody: %v\n"+
 			"this is the ordinary company website, and onboarding cannot finish without it", err)
 	}
-	if company.OrganizationID.UUID == ids.Nil {
-		t.Fatal("the confirmation returned no organization")
+	if company.CompanyID.UUID == ids.Nil {
+		t.Fatal("the confirmation returned no company")
 	}
 
 	// The row records an empty list, not a null one.

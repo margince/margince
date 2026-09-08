@@ -7,7 +7,7 @@ import "strings"
 
 // interactionKinds is the closed set of activity kinds that represent a real
 // exchange worth SCORING: the deal-health window, person strength, and the
-// organization signal scan.
+// company signal scan.
 //
 // A task is intent and a note is a record of thinking; neither means two people
 // spoke, and counting them would let a rep's own to-do list score as a

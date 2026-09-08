@@ -162,21 +162,21 @@ func (e ActivityAudience) Valid() bool {
 
 // Defines values for ActivityLinkEntityType.
 const (
-	ActivityLinkEntityTypeDeal         ActivityLinkEntityType = "deal"
-	ActivityLinkEntityTypeLead         ActivityLinkEntityType = "lead"
-	ActivityLinkEntityTypeOrganization ActivityLinkEntityType = "organization"
-	ActivityLinkEntityTypePerson       ActivityLinkEntityType = "person"
-	ActivityLinkEntityTypeProject      ActivityLinkEntityType = "project"
+	ActivityLinkEntityTypeCompany ActivityLinkEntityType = "company"
+	ActivityLinkEntityTypeDeal    ActivityLinkEntityType = "deal"
+	ActivityLinkEntityTypeLead    ActivityLinkEntityType = "lead"
+	ActivityLinkEntityTypePerson  ActivityLinkEntityType = "person"
+	ActivityLinkEntityTypeProject ActivityLinkEntityType = "project"
 )
 
 // Valid indicates whether the value is a known member of the ActivityLinkEntityType enum.
 func (e ActivityLinkEntityType) Valid() bool {
 	switch e {
+	case ActivityLinkEntityTypeCompany:
+		return true
 	case ActivityLinkEntityTypeDeal:
 		return true
 	case ActivityLinkEntityTypeLead:
-		return true
-	case ActivityLinkEntityTypeOrganization:
 		return true
 	case ActivityLinkEntityTypePerson:
 		return true
@@ -237,21 +237,21 @@ func (e CreateActivityRequestKind) Valid() bool {
 
 // Defines values for CreateActivityRequestLinksEntityType.
 const (
-	CreateActivityRequestLinksEntityTypeDeal         CreateActivityRequestLinksEntityType = "deal"
-	CreateActivityRequestLinksEntityTypeLead         CreateActivityRequestLinksEntityType = "lead"
-	CreateActivityRequestLinksEntityTypeOrganization CreateActivityRequestLinksEntityType = "organization"
-	CreateActivityRequestLinksEntityTypePerson       CreateActivityRequestLinksEntityType = "person"
-	CreateActivityRequestLinksEntityTypeProject      CreateActivityRequestLinksEntityType = "project"
+	CreateActivityRequestLinksEntityTypeCompany CreateActivityRequestLinksEntityType = "company"
+	CreateActivityRequestLinksEntityTypeDeal    CreateActivityRequestLinksEntityType = "deal"
+	CreateActivityRequestLinksEntityTypeLead    CreateActivityRequestLinksEntityType = "lead"
+	CreateActivityRequestLinksEntityTypePerson  CreateActivityRequestLinksEntityType = "person"
+	CreateActivityRequestLinksEntityTypeProject CreateActivityRequestLinksEntityType = "project"
 )
 
 // Valid indicates whether the value is a known member of the CreateActivityRequestLinksEntityType enum.
 func (e CreateActivityRequestLinksEntityType) Valid() bool {
 	switch e {
+	case CreateActivityRequestLinksEntityTypeCompany:
+		return true
 	case CreateActivityRequestLinksEntityTypeDeal:
 		return true
 	case CreateActivityRequestLinksEntityTypeLead:
-		return true
-	case CreateActivityRequestLinksEntityTypeOrganization:
 		return true
 	case CreateActivityRequestLinksEntityTypePerson:
 		return true
@@ -402,7 +402,7 @@ type Activity struct {
 	// EmailSummary Present exactly when `kind=email`. What the canonical email row renders, so a list does not have to fetch a message per visible line to draw one. Every other kind carries none, and a reader branches on its presence rather than on the kind word.
 	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
 
-	// HostUserId Meeting only: the member of this organization who held it. It is the one place an activity names OUR side of an exchange — a mail says only which contact it was with, and the mailbox behind it is not on the row. Null on every other kind, and on a meeting nobody was recorded as hosting.
+	// HostUserId Meeting only: the member of this company who held it. It is the one place an activity names OUR side of an exchange — a mail says only which contact it was with, and the mailbox behind it is not on the row. Null on every other kind, and on a meeting nobody was recorded as hosting.
 	HostUserId *string `json:"host_user_id,omitempty"`
 	Id         string  `json:"id"`
 

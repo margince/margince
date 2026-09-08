@@ -19,7 +19,7 @@ import (
 )
 
 // openTriage puts a domain in the state the ensure ladder leaves it: the person
-// exists, the organization question is open, and no company row was invented.
+// exists, the company question is open, and no company row was invented.
 //
 // Only the FIRST sender on a domain reports TriagePending — the question is
 // opened once and one crawl answers it, however many colleagues write in.
@@ -29,13 +29,13 @@ func (e *dedupeEnv) openTriage(ctx context.Context, t *testing.T, email, display
 	if err != nil {
 		t.Fatalf("ensure %s: %v", email, err)
 	}
-	if res.OrganizationID != nil {
+	if res.CompanyID != nil {
 		t.Fatalf("ensure %s = %+v, want NO company from an unjudged domain", email, res)
 	}
 	var open int
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
-			SELECT count(*) FROM organization_domain_disposition
+			SELECT count(*) FROM company_domain_disposition
 			WHERE domain = $1 AND status = 'pending'`, domain).Scan(&open)
 	}); err != nil {
 		t.Fatal(err)
@@ -68,7 +68,7 @@ func (e *dedupeEnv) startTriageRead(ctx context.Context, t *testing.T, domain st
 	return read.ID
 }
 
-func TestCompanyVerdictCreatesTheOrganizationAndWiresEveryoneWaitingOnIt(t *testing.T) {
+func TestCompanyVerdictCreatesTheCompanyAndWiresEveryoneWaitingOnIt(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -93,8 +93,8 @@ func TestCompanyVerdictCreatesTheOrganizationAndWiresEveryoneWaitingOnIt(t *test
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
 	}
-	if !res.OrgCreated || res.OrganizationID == nil {
-		t.Fatalf("resolve = %+v, want the organization created", res)
+	if !res.CompanyCreated || res.CompanyID == nil {
+		t.Fatalf("resolve = %+v, want the company created", res)
 	}
 	// Both waiting people get their edge, not only the one that happened to
 	// trigger the crawl.
@@ -106,19 +106,19 @@ func TestCompanyVerdictCreatesTheOrganizationAndWiresEveryoneWaitingOnIt(t *test
 	var employed int
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(ctx,
-			`SELECT display_name, name_source FROM organization WHERE id = $1`,
-			res.OrganizationID).Scan(&name, &nameSource); err != nil {
+			`SELECT display_name, name_source FROM company WHERE id = $1`,
+			res.CompanyID).Scan(&name, &nameSource); err != nil {
 			return err
 		}
 		if err := tx.QueryRow(ctx,
-			`SELECT status FROM organization_domain_disposition WHERE domain = 'basecom.test'`).Scan(&status); err != nil {
+			`SELECT status FROM company_domain_disposition WHERE domain = 'basecom.test'`).Scan(&status); err != nil {
 			return err
 		}
 		return tx.QueryRow(ctx, `
 			SELECT count(*) FROM relationship
-			WHERE organization_id = $1 AND kind = 'employment' AND is_current_primary
+			WHERE company_id = $1 AND kind = 'employment' AND is_current_primary
 			  AND person_id = ANY($2)`,
-			res.OrganizationID, []ids.PersonID{first.PersonID, second.PersonID}).Scan(&employed)
+			res.CompanyID, []ids.PersonID{first.PersonID, second.PersonID}).Scan(&employed)
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -126,7 +126,7 @@ func TestCompanyVerdictCreatesTheOrganizationAndWiresEveryoneWaitingOnIt(t *test
 	// title-cased domain label — and says so, which is what stops a later
 	// dossier overwriting it.
 	if name != "basecom GmbH" || nameSource != nameSourceDossier {
-		t.Fatalf("organization = %q/%s, want the dossier-stated name", name, nameSource)
+		t.Fatalf("company = %q/%s, want the dossier-stated name", name, nameSource)
 	}
 	if status != DomainCompany {
 		t.Fatalf("disposition = %q, want %q", status, DomainCompany)
@@ -135,7 +135,7 @@ func TestCompanyVerdictCreatesTheOrganizationAndWiresEveryoneWaitingOnIt(t *test
 		t.Fatalf("%d of the waiting people were employed, want 2", employed)
 	}
 
-	// The next message from the domain attaches to the organization the verdict
+	// The next message from the domain attaches to the company the verdict
 	// made, and asks nothing further.
 	third, err := e.store.EnsureCounterparty(ctx, e.ensureInput(ctx, t, "rolf@basecom.test", "Rolf Adam", "basecom.test"))
 	if err != nil {
@@ -144,8 +144,8 @@ func TestCompanyVerdictCreatesTheOrganizationAndWiresEveryoneWaitingOnIt(t *test
 	if third.TriagePending {
 		t.Fatal("a settled domain must not re-open its question")
 	}
-	if third.OrganizationID == nil || third.OrganizationID.UUID != res.OrganizationID.UUID {
-		t.Fatalf("ensure after the verdict = %+v, want the verdict's organization", third)
+	if third.CompanyID == nil || third.CompanyID.UUID != res.CompanyID.UUID {
+		t.Fatalf("ensure after the verdict = %+v, want the verdict's company", third)
 	}
 }
 
@@ -164,22 +164,22 @@ func TestPersonalVerdictRefusesTheCompanyForGood(t *testing.T) {
 		t.Fatalf("resolve: %v", err)
 	}
 
-	var orgs int
+	var companies int
 	var status string
 	var nextAttempt *string
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(ctx,
-			`SELECT count(*) FROM organization_domain WHERE domain = 'kestner.test'`).Scan(&orgs); err != nil {
+			`SELECT count(*) FROM company_domain WHERE domain = 'kestner.test'`).Scan(&companies); err != nil {
 			return err
 		}
 		return tx.QueryRow(ctx, `
-			SELECT status, next_attempt_at::text FROM organization_domain_disposition
+			SELECT status, next_attempt_at::text FROM company_domain_disposition
 			WHERE domain = 'kestner.test'`).Scan(&status, &nextAttempt)
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if orgs != 0 {
-		t.Fatalf("%d organizations on a personal domain, want 0", orgs)
+	if companies != 0 {
+		t.Fatalf("%d companies on a personal domain, want 0", companies)
 	}
 	if status != DomainPersonal {
 		t.Fatalf("disposition = %q, want %q", status, DomainPersonal)
@@ -195,7 +195,7 @@ func TestPersonalVerdictRefusesTheCompanyForGood(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ensure after the verdict: %v", err)
 	}
-	if again.TriagePending || again.OrganizationID != nil {
+	if again.TriagePending || again.CompanyID != nil {
 		t.Fatalf("ensure after a personal verdict = %+v, want person only, no company, no new question", again)
 	}
 	if !again.PersonCreated {
@@ -203,7 +203,7 @@ func TestPersonalVerdictRefusesTheCompanyForGood(t *testing.T) {
 	}
 }
 
-func TestCompanyVerdictAdoptsAnOrganizationAHumanCreatedMidTriage(t *testing.T) {
+func TestCompanyVerdictAdoptsAnCompanyAHumanCreatedMidTriage(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -211,9 +211,9 @@ func TestCompanyVerdictAdoptsAnOrganizationAHumanCreatedMidTriage(t *testing.T) 
 	readID := e.startTriageRead(ctx, t, "midtriage.test")
 
 	// While the crawl ran, a human typed the company in.
-	org, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: "Mid Triage AG", Source: "manual",
-		Domains: []OrgDomainInput{{Domain: "midtriage.test", IsPrimary: true}},
+		Domains: []CompanyDomainInput{{Domain: "midtriage.test", IsPrimary: true}},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -226,21 +226,21 @@ func TestCompanyVerdictAdoptsAnOrganizationAHumanCreatedMidTriage(t *testing.T) 
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
 	}
-	if res.OrgCreated {
-		t.Fatal("the verdict created a second organization for a domain a human had already claimed")
+	if res.CompanyCreated {
+		t.Fatal("the verdict created a second company for a domain a human had already claimed")
 	}
-	if res.OrganizationID == nil || res.OrganizationID.UUID != ids.UUID(org.Id) {
-		t.Fatalf("resolve = %+v, want the human's organization %s adopted", res, org.Id)
+	if res.CompanyID == nil || res.CompanyID.UUID != ids.UUID(company.Id) {
+		t.Fatalf("resolve = %+v, want the human's company %s adopted", res, company.Id)
 	}
 
 	var name string
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `SELECT display_name FROM organization WHERE id = $1`, org.Id).Scan(&name)
+		return tx.QueryRow(ctx, `SELECT display_name FROM company WHERE id = $1`, company.Id).Scan(&name)
 	}); err != nil {
 		t.Fatal(err)
 	}
 	if name != "Mid Triage AG" {
-		t.Fatalf("organization = %q — a verdict must never rename what a human typed", name)
+		t.Fatalf("company = %q — a verdict must never rename what a human typed", name)
 	}
 }
 
@@ -283,7 +283,7 @@ func TestListDueDomainsOffersOnlyTheQuestionsWorthAsking(t *testing.T) {
 	// load must not be re-crawled forever.
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
-			UPDATE organization_domain_disposition
+			UPDATE company_domain_disposition
 			   SET attempts = $1, next_attempt_at = now() - interval '1 day'
 			 WHERE domain = 'exhausted.test'`, DomainTriageMaxAttempts)
 		return err
@@ -313,7 +313,7 @@ func TestMarkTriageQueuedSpendsAnAttemptAndBacksOff(t *testing.T) {
 	var due bool
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
-			SELECT attempts, next_attempt_at <= now() FROM organization_domain_disposition
+			SELECT attempts, next_attempt_at <= now() FROM company_domain_disposition
 			WHERE domain = 'backoff.test'`).Scan(&attempts, &due)
 	}); err != nil {
 		t.Fatal(err)
@@ -327,37 +327,37 @@ func TestMarkTriageQueuedSpendsAnAttemptAndBacksOff(t *testing.T) {
 	}
 }
 
-// countOrgsOn reports how many organizations claim a domain — the check that a
+// countCompaniesOn reports how many companies claim a domain — the check that a
 // withheld or suppressed domain minted nothing.
-func (e *dedupeEnv) countOrgsOn(ctx context.Context, t *testing.T, domain string) int {
+func (e *dedupeEnv) countCompaniesOn(ctx context.Context, t *testing.T, domain string) int {
 	t.Helper()
 	var n int
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
-			`SELECT count(*) FROM organization_domain WHERE domain = $1`, domain).Scan(&n)
+			`SELECT count(*) FROM company_domain WHERE domain = $1`, domain).Scan(&n)
 	}); err != nil {
-		t.Fatalf("counting organizations on %s: %v", domain, err)
+		t.Fatalf("counting companies on %s: %v", domain, err)
 	}
 	return n
 }
 
 // dispositionRow reads the columns these tests are about.
-func (e *dedupeEnv) dispositionRow(ctx context.Context, t *testing.T, domain string) (status, pendingReason, admission, source string, orgID *ids.OrganizationID) {
+func (e *dedupeEnv) dispositionRow(ctx context.Context, t *testing.T, domain string) (status, pendingReason, admission, source string, companyID *ids.CompanyID) {
 	t.Helper()
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT status, COALESCE(pending_reason, ''), COALESCE(admission, ''),
-			       COALESCE(admission_source, ''), organization_id
-			  FROM organization_domain_disposition WHERE domain = $1`, domain).
-			Scan(&status, &pendingReason, &admission, &source, &orgID)
+			       COALESCE(admission_source, ''), company_id
+			  FROM company_domain_disposition WHERE domain = $1`, domain).
+			Scan(&status, &pendingReason, &admission, &source, &companyID)
 	}); err != nil {
 		t.Fatalf("reading the disposition of %s: %v", domain, err)
 	}
-	return status, pendingReason, admission, source, orgID
+	return status, pendingReason, admission, source, companyID
 }
 
 // An unreadable site no longer invents the company. This is the shape that
-// produced 40 of 108 organizations in a real import — "Pwc", "Mckinsey",
+// produced 40 of 108 companies in a real import — "Pwc", "Mckinsey",
 // "Ausgezeichnet" — each named after its domain label with every field empty.
 func TestAnUnreadableSiteWithholdsTheCompanyInsteadOfInventingIt(t *testing.T) {
 	e := setupDedupe(t)
@@ -371,18 +371,18 @@ func TestAnUnreadableSiteWithholdsTheCompanyInsteadOfInventingIt(t *testing.T) {
 		t.Fatalf("resolve unreadable: %v", err)
 	}
 
-	if n := e.countOrgsOn(ctx, t, "pwc.example"); n != 0 {
-		t.Fatalf("%d organizations from a site nothing could read, want 0", n)
+	if n := e.countCompaniesOn(ctx, t, "pwc.example"); n != 0 {
+		t.Fatalf("%d companies from a site nothing could read, want 0", n)
 	}
-	status, reason, _, _, orgID := e.dispositionRow(ctx, t, "pwc.example")
+	status, reason, _, _, companyID := e.dispositionRow(ctx, t, "pwc.example")
 	if status != DomainPending {
 		t.Errorf("status = %q, want it left open — a withheld domain must stay askable", status)
 	}
 	if reason != "unevidenced" {
 		t.Errorf("pending_reason = %q, want unevidenced — the row must say WHY it has no company", reason)
 	}
-	if orgID != nil {
-		t.Errorf("organization_id = %v, want none", orgID)
+	if companyID != nil {
+		t.Errorf("company_id = %v, want none", companyID)
 	}
 }
 
@@ -402,8 +402,8 @@ func TestAnUnreadableSiteThatIsSomebodysNameIsStillTheirs(t *testing.T) {
 	if status != DomainPersonal {
 		t.Fatalf("status = %q, want personal — a domain that is somebody's name is theirs", status)
 	}
-	if n := e.countOrgsOn(ctx, t, "lentin.example"); n != 0 {
-		t.Fatalf("%d organizations for a personal domain, want 0", n)
+	if n := e.countCompaniesOn(ctx, t, "lentin.example"); n != 0 {
+		t.Fatalf("%d companies for a personal domain, want 0", n)
 	}
 }
 
@@ -428,14 +428,14 @@ func TestASuppressedDomainNeverBecomesACompany(t *testing.T) {
 	if res.PersonID.IsZero() {
 		t.Fatal("the person was refused; only the company is suppressed")
 	}
-	if res.OrganizationID != nil {
-		t.Fatalf("organization = %v, want none for a suppressed domain", res.OrganizationID)
+	if res.CompanyID != nil {
+		t.Fatalf("company = %v, want none for a suppressed domain", res.CompanyID)
 	}
 	if res.TriagePending {
 		t.Error("a suppressed domain opened a triage question; the refusal means stop asking")
 	}
-	if n := e.countOrgsOn(ctx, t, "expensify.example"); n != 0 {
-		t.Fatalf("%d organizations on a suppressed domain, want 0", n)
+	if n := e.countCompaniesOn(ctx, t, "expensify.example"); n != 0 {
+		t.Fatalf("%d companies on a suppressed domain, want 0", n)
 	}
 
 	// The path that actually mints companies: a crawl that was already in
@@ -449,8 +449,8 @@ func TestASuppressedDomainNeverBecomesACompany(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("resolve company on a suppressed domain: %v", err)
 	}
-	if n := e.countOrgsOn(ctx, t, "expensify.example"); n != 0 {
-		t.Fatalf("%d organizations after a company verdict on a suppressed domain, want 0", n)
+	if n := e.countCompaniesOn(ctx, t, "expensify.example"); n != 0 {
+		t.Fatalf("%d companies after a company verdict on a suppressed domain, want 0", n)
 	}
 
 	// And the sweep does not offer it for crawling in the first place.
@@ -542,8 +542,8 @@ func TestClaimingASuppressedDomainForACompanyLiftsTheRefusal(t *testing.T) {
 		t.Fatalf("suppress: %v", err)
 	}
 
-	if _, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
-		DisplayName: "McKinsey", Domains: []OrgDomainInput{{Domain: "mckinsey.example"}},
+	if _, err := e.store.CreateCompany(ctx, CreateCompanyInput{
+		DisplayName: "McKinsey", Domains: []CompanyDomainInput{{Domain: "mckinsey.example"}},
 	}); err != nil {
 		t.Fatalf("create the company on a refused domain: %v", err)
 	}
@@ -620,8 +620,8 @@ func TestUnblockingADomainReopensTheCompanyQuestion(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("resolve after unblock: %v", err)
 	}
-	if n := e.countOrgsOn(ctx, t, "mckinsey.example"); n != 1 {
-		t.Fatalf("%d organizations after unblocking and reading the site, want exactly 1", n)
+	if n := e.countCompaniesOn(ctx, t, "mckinsey.example"); n != 1 {
+		t.Fatalf("%d companies after unblocking and reading the site, want exactly 1", n)
 	}
 }
 
@@ -697,7 +697,7 @@ func (e *dedupeEnv) dispositionOwner(ctx context.Context, t *testing.T, domain s
 	var owner *ids.UUID
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
-			`SELECT owner_id FROM organization_domain_disposition WHERE domain = $1`, domain).Scan(&owner)
+			`SELECT owner_id FROM company_domain_disposition WHERE domain = $1`, domain).Scan(&owner)
 	}); err != nil {
 		t.Fatalf("reading the owner of %s: %v", domain, err)
 	}
@@ -705,10 +705,10 @@ func (e *dedupeEnv) dispositionOwner(ctx context.Context, t *testing.T, domain s
 }
 
 // The blocked-domain list may not hand out a pointer to a record the caller
-// cannot read. A capture-PRIVATE organization (visibility='owner') answers to
+// cannot read. A capture-PRIVATE company (visibility='owner') answers to
 // its owner alone, and that privacy does not yield to row_scope=all — so
 // returning its id here would leak what the record's own endpoint correctly
-// 404s, to every colleague with organization:read.
+// 404s, to every colleague with company:read.
 func TestTheBlockedDomainListWithholdsAnInvisibleCompany(t *testing.T) {
 	e := setupDedupe(t)
 	owner := e.as()
@@ -725,7 +725,7 @@ func TestTheBlockedDomainListWithholdsAnInvisibleCompany(t *testing.T) {
 		t.Fatalf("resolve: %v", err)
 	}
 	if err := e.store.tx(owner, func(tx pgx.Tx) error {
-		_, err := tx.Exec(owner, `UPDATE organization SET visibility = 'owner' WHERE id = $1`, resolved.OrganizationID)
+		_, err := tx.Exec(owner, `UPDATE company SET visibility = 'owner' WHERE id = $1`, resolved.CompanyID)
 		return err
 	}); err != nil {
 		t.Fatalf("holding the company owner-private: %v", err)
@@ -740,7 +740,7 @@ func TestTheBlockedDomainListWithholdsAnInvisibleCompany(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list as the owner: %v", err)
 	}
-	if len(mine) != 1 || mine[0].OrganizationID == nil {
+	if len(mine) != 1 || mine[0].CompanyID == nil {
 		t.Fatalf("the owner's list = %+v, want their own company named", mine)
 	}
 
@@ -753,7 +753,7 @@ func TestTheBlockedDomainListWithholdsAnInvisibleCompany(t *testing.T) {
 	if len(theirs) != 1 {
 		t.Fatalf("the colleague's list = %+v, want the decision to be visible", theirs)
 	}
-	if theirs[0].OrganizationID != nil {
+	if theirs[0].CompanyID != nil {
 		t.Fatal("the list handed a colleague the id of an owner-private company")
 	}
 	if theirs[0].Domain != "private.example" || theirs[0].Reason == "" {

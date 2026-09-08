@@ -28,7 +28,7 @@ describe("DealCard + PipelineBoard", () => {
   const deal = {
     id: "d1",
     name: "Fleet retrofit",
-    org: "Brandt Automotive",
+    company: "Brandt Automotive",
     valueMinor: 4_800_000,
     currency: "EUR",
     ageMs: 62 * 86_400_000,
@@ -51,7 +51,7 @@ describe("DealCard + PipelineBoard", () => {
   it("opens the deal and the company separately", () => {
     render(
       <DealCard
-        deal={{ ...deal, orgHref: "#/companies/o-1" }}
+        deal={{ ...deal, companyHref: "#/companies/o-1" }}
         href="#/deals/d1"
         zone="Europe/Berlin"
       />,
@@ -90,7 +90,7 @@ describe("DealCard + PipelineBoard", () => {
   it("draws the mask over a withheld company, never words for it", () => {
     const { container } = render(
       <DealCard
-        deal={{ ...deal, org: "", orgWithheld: true }}
+        deal={{ ...deal, company: "", companyWithheld: true }}
         href="#/deals/d1"
         zone="Europe/Berlin"
       />,
@@ -98,7 +98,7 @@ describe("DealCard + PipelineBoard", () => {
     expect(screen.getByLabelText(MASK)).toBeTruthy();
     // No name and no mark beside it: a monogram cut from the word for
     // "withheld" would be a mark no company has.
-    expect(container.querySelector(".deal-org-name")).toBeNull();
+    expect(container.querySelector(".deal-company-name")).toBeNull();
     expect(container.querySelector(".avatar")).toBeNull();
   });
 
@@ -128,13 +128,13 @@ describe("DealCard + PipelineBoard", () => {
   it("draws no company slot at all for a deal that names none", () => {
     const { container } = render(
       <DealCard
-        deal={{ ...deal, org: "" }}
+        deal={{ ...deal, company: "" }}
         href="#/deals/d1"
         zone="Europe/Berlin"
       />,
     );
     expect(screen.queryByLabelText(MASK)).toBeNull();
-    expect(container.querySelector(".deal-org")).toBeNull();
+    expect(container.querySelector(".deal-company")).toBeNull();
   });
 
   it("a staged deal renders visibly distinct from a real one", () => {

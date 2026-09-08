@@ -5,7 +5,7 @@
 
 package integration
 
-// last_activity_at on person and organization (PO-DDL-1/-4 as amended
+// last_activity_at on person and company (PO-DDL-1/-4 as amended
 // 2026-08-18): kept on the writes themselves by migration 1787032690's
 // triggers, over a real migrated Postgres. A note on a contact moves the
 // contact's clock and the clock of every account currently employing them; a
@@ -32,22 +32,22 @@ func TestLastActivity_MovesThePersonAndEveryAccountItReaches(t *testing.T) {
 	e := Setup(t)
 	// Seeded FIRST: on the default recency tie-break quiet would sort ahead of
 	// the others, so its place at the end below can only be NULLS LAST.
-	quiet := e.SeedOrg(t, "Quiet Clock", nil)
-	acme := e.SeedOrg(t, "Acme Clock", nil)
-	other := e.SeedOrg(t, "Other Clock", nil)
-	late := e.SeedOrg(t, "Late Employer Clock", nil)
+	quiet := e.SeedCompany(t, "Quiet Clock", nil)
+	acme := e.SeedCompany(t, "Acme Clock", nil)
+	other := e.SeedCompany(t, "Other Clock", nil)
+	late := e.SeedCompany(t, "Late Employer Clock", nil)
 	staff := e.SeedPerson(t, "Works At Acme", nil)
 	personID := ids.From[ids.PersonKind](staff)
-	orgID := ids.From[ids.OrganizationKind](acme)
+	companyID := ids.From[ids.CompanyKind](acme)
 	if _, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
-		Kind: "employment", PersonID: &personID, OrganizationID: &orgID, IsCurrentPrimary: boolPtr(true), Source: "manual",
+		Kind: "employment", PersonID: &personID, CompanyID: &companyID, IsCurrentPrimary: boolPtr(true), Source: "manual",
 	}); err != nil {
 		t.Fatal(err)
 	}
 	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
 	deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
 		Name: "Other's deal", AmountMinor: int64Ptr(100), Currency: strPtr("EUR"),
-		PipelineID: pipeline, StageID: open, OrganizationID: orgIDPtr(orgIDOf(other)), Source: "manual",
+		PipelineID: pipeline, StageID: open, CompanyID: companyIDPtr(companyIDOf(other)), Source: "manual",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -79,7 +79,7 @@ func TestLastActivity_MovesThePersonAndEveryAccountItReaches(t *testing.T) {
 	// it must move both clocks — the trigger recomputes per link row.
 	newestNote := log(newest,
 		activities.ActivityLinkInput{EntityType: "person", EntityID: staff},
-		activities.ActivityLinkInput{EntityType: "organization", EntityID: other})
+		activities.ActivityLinkInput{EntityType: "company", EntityID: other})
 	// A back-dated capture arriving later must not move a clock backwards.
 	log(older, activities.ActivityLinkInput{EntityType: "person", EntityID: staff})
 	log(older, activities.ActivityLinkInput{EntityType: "deal", EntityID: ids.UUID(deal.Id)})
@@ -91,9 +91,9 @@ func TestLastActivity_MovesThePersonAndEveryAccountItReaches(t *testing.T) {
 	if person.LastActivityAt == nil || !person.LastActivityAt.Equal(newest) {
 		t.Fatalf("person.last_activity_at = %v, want %v (the newest, not the last written)", person.LastActivityAt, newest)
 	}
-	clock := func(org ids.UUID) *time.Time {
+	clock := func(company ids.UUID) *time.Time {
 		t.Helper()
-		o, err := e.People.GetOrganization(e.Admin(), orgIDOf(org), storekit.LiveOnly)
+		o, err := e.People.GetCompany(e.Admin(), companyIDOf(company), storekit.LiveOnly)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -117,9 +117,9 @@ func TestLastActivity_MovesThePersonAndEveryAccountItReaches(t *testing.T) {
 
 	// An employment that starts AFTER the notes brings the contact's history to
 	// the new account: the reach set moved without any activity being written.
-	lateID := ids.From[ids.OrganizationKind](late)
+	lateID := ids.From[ids.CompanyKind](late)
 	if _, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
-		Kind: "employment", PersonID: &personID, OrganizationID: &lateID, IsCurrentPrimary: boolPtr(false), Source: "manual",
+		Kind: "employment", PersonID: &personID, CompanyID: &lateID, IsCurrentPrimary: boolPtr(false), Source: "manual",
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -152,9 +152,9 @@ func TestLastActivity_MovesThePersonAndEveryAccountItReaches(t *testing.T) {
 
 	// The list sorts by it, newest first: acme, other, then the untouched one.
 	sort := "-last_activity_at"
-	page, _, err := e.People.ListOrganizations(e.Admin(), people.ListOrganizationsInput{Sort: &sort})
+	page, _, err := e.People.ListCompanies(e.Admin(), people.ListCompaniesInput{Sort: &sort})
 	if err != nil {
-		t.Fatalf("sorting organizations by last activity: %v", err)
+		t.Fatalf("sorting companies by last activity: %v", err)
 	}
 	var order []ids.UUID
 	for _, o := range page {
@@ -263,12 +263,12 @@ func TestLastActivity_TheAccountClockSeeksInsteadOfScanningTheTimeline(t *testin
 	owner := OwnerConn(t)
 	ctx := context.Background()
 
-	acme := e.SeedOrg(t, "Seeking Clock", nil)
+	acme := e.SeedCompany(t, "Seeking Clock", nil)
 	staff := e.SeedPerson(t, "Employed At Seeking", nil)
 	personID := ids.From[ids.PersonKind](staff)
-	orgID := ids.From[ids.OrganizationKind](acme)
+	companyID := ids.From[ids.CompanyKind](acme)
 	if _, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
-		Kind: "employment", PersonID: &personID, OrganizationID: &orgID, IsCurrentPrimary: boolPtr(true), Source: "manual",
+		Kind: "employment", PersonID: &personID, CompanyID: &companyID, IsCurrentPrimary: boolPtr(true), Source: "manual",
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -286,11 +286,11 @@ func TestLastActivity_TheAccountClockSeeksInsteadOfScanningTheTimeline(t *testin
 	before := sequentialScansOf(ctx, t, owner, "activity_link")
 	for range calls {
 		var clock *time.Time
-		if err := owner.QueryRow(ctx, `SELECT last_activity_of_organization($1)`, acme).Scan(&clock); err != nil {
+		if err := owner.QueryRow(ctx, `SELECT last_activity_of_company($1)`, acme).Scan(&clock); err != nil {
 			t.Fatalf("reading the account clock: %v", err)
 		}
 		if clock == nil || !clock.Equal(newest) {
-			t.Fatalf("last_activity_of_organization = %v, want %v — the employment arm must reach the contact's note", clock, newest)
+			t.Fatalf("last_activity_of_company = %v, want %v — the employment arm must reach the contact's note", clock, newest)
 		}
 	}
 	scans := sequentialScansOf(ctx, t, owner, "activity_link") - before
@@ -304,7 +304,7 @@ func TestLastActivity_TheAccountClockSeeksInsteadOfScanningTheTimeline(t *testin
 // plan and the planner's choice is not a coin toss.
 //
 // The rows hang off ONE lead. A lead link carries no person, deal or
-// organization, so the maintenance trigger still fires on every row and finds
+// company, so the maintenance trigger still fires on every row and finds
 // nothing to move — real rows through the real write path, with none of the
 // recompute cost that would make seeding the volume the slow part of the test.
 func seedTimelineVolume(ctx context.Context, t *testing.T, owner *pgx.Conn, rows int) {

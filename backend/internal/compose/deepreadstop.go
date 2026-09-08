@@ -81,7 +81,7 @@ func diagnoseCrawlFailure(cause error) (code, detail string) {
 // autoEnrichMaxPages is the page ceiling every AUTOMATIC read runs under
 // (ADR-0072 §9). A read nobody asked for should cost a fraction of one somebody
 // did: the setting is on by default and sweeps up to autoEnrichDailyCap (500)
-// organizations a day per workspace, so the deployment-wide crawler budget is
+// companies a day per workspace, so the deployment-wide crawler budget is
 // the wrong unit here.
 const autoEnrichMaxPages = 12
 

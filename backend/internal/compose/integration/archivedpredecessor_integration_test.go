@@ -24,7 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func TestBootSaysNothingWhenNoOrganizationWasArchived(t *testing.T) {
+func TestBootSaysNothingWhenNoCompanyWasArchived(t *testing.T) {
 	env := Setup(t)
 	var out bytes.Buffer
 
@@ -37,7 +37,7 @@ func TestBootSaysNothingWhenNoOrganizationWasArchived(t *testing.T) {
 	}
 }
 
-func TestBootNamesWhatAnArchivedOrganizationLeftBehind(t *testing.T) {
+func TestBootNamesWhatAnArchivedCompanyLeftBehind(t *testing.T) {
 	env := Setup(t)
 	ctx := context.Background()
 
@@ -54,7 +54,7 @@ func TestBootNamesWhatAnArchivedOrganizationLeftBehind(t *testing.T) {
 	}
 	said := out.String()
 	if said == "" {
-		t.Fatal("an installation carrying an archived organization's rows was told nothing; " +
+		t.Fatal("an installation carrying an archived company's rows was told nothing; " +
 			"no other query can find them, so this line is the whole notice")
 	}
 	// What it says matters more than that it said something: an operator who

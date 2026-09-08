@@ -234,7 +234,7 @@ func (s *Service) DeactivateUser(ctx context.Context, actor Identity, in Deactiv
 			return nil
 		}
 		// Never deactivate the last active admin — it would lock the whole
-		// organization out of user administration with no recovery in-app.
+		// company out of user administration with no recovery in-app.
 		lastAdmin, err := lastActiveAdmin(ctx, tx, in.UserID)
 		if err != nil {
 			return err

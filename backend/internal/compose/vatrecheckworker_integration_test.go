@@ -55,9 +55,9 @@ func (r *refusingRegister) Check(_ context.Context, _ string) (vatcheck.Result, 
 // been consulted — the state in which the automatic rule declines.
 type vatRecheckEnv struct {
 	*integration.Env
-	worker   *vatCheckWorker
-	register *countingRegister
-	orgID    ids.OrganizationID
+	worker    *vatCheckWorker
+	register  *countingRegister
+	companyID ids.CompanyID
 }
 
 func setupVatRecheck(t *testing.T) *vatRecheckEnv {
@@ -74,24 +74,24 @@ func setupVatRecheck(t *testing.T) *vatRecheckEnv {
 
 	ctx := e.Admin()
 	store := e.People
-	org, err := store.CreateOrganization(ctx, people.CreateOrganizationInput{
+	company, err := store.CreateCompany(ctx, people.CreateCompanyInput{
 		DisplayName: "Belegpflicht GmbH", Source: "manual",
 	})
 	if err != nil {
-		t.Fatalf("seed org: %v", err)
+		t.Fatalf("seed company: %v", err)
 	}
-	v.orgID = ids.From[ids.OrganizationKind](ids.UUID(org.Id))
+	v.companyID = ids.From[ids.CompanyKind](ids.UUID(company.Id))
 
 	// Seeded through the real writers: the number as a person states it, and the
 	// answer as the worker records it. A hand-inserted pair proves nothing about
 	// the rows production makes, and this test turns on those rows agreeing.
 	number := "DE811907980"
-	if _, err := store.UpdateOrganizationProfileField(ctx, v.orgID, "register_vat",
+	if _, err := store.UpdateCompanyProfileField(ctx, v.companyID, "register_vat",
 		people.ProfileFieldWriteInput{Value: &number}); err != nil {
 		t.Fatalf("state the VAT number: %v", err)
 	}
 	if err := store.RecordVatCheck(ctx, people.VatCheck{
-		OrganizationID: v.orgID, Number: number, Status: people.VatCheckValid,
+		CompanyID: v.companyID, Number: number, Status: people.VatCheckValid,
 		CheckedAt: time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC),
 	}); err != nil {
 		t.Fatalf("record the standing answer: %v", err)
@@ -101,11 +101,11 @@ func setupVatRecheck(t *testing.T) *vatRecheckEnv {
 
 func (v *vatRecheckEnv) work(t *testing.T, requested bool) {
 	t.Helper()
-	err := v.worker.Work(context.Background(), &river.Job[CheckOrganizationVatArgs]{
-		Args: CheckOrganizationVatArgs{
-			Workspace:      v.WS,
-			OrganizationID: v.orgID.UUID,
-			Requested:      requested,
+	err := v.worker.Work(context.Background(), &river.Job[CheckCompanyVatArgs]{
+		Args: CheckCompanyVatArgs{
+			Workspace: v.WS,
+			CompanyID: v.companyID.UUID,
+			Requested: requested,
 		},
 	})
 	if err != nil {
@@ -130,7 +130,7 @@ func TestANumberThatIsNotAVatIdIsInvalid(t *testing.T) {
 	// Stated by a person, through the real writer — the shape a rep produces
 	// when they mistype into the field.
 	malformed := "122323235sdf"
-	if _, err := v.People.UpdateOrganizationProfileField(ctx, v.orgID, "register_vat",
+	if _, err := v.People.UpdateCompanyProfileField(ctx, v.companyID, "register_vat",
 		people.ProfileFieldWriteInput{Value: &malformed}); err != nil {
 		t.Fatalf("state the malformed number: %v", err)
 	}
@@ -140,7 +140,7 @@ func TestANumberThatIsNotAVatIdIsInvalid(t *testing.T) {
 	if register.asked != 1 {
 		t.Fatalf("the client was consulted %d time(s), want 1 — it is what judges the shape", register.asked)
 	}
-	stored, err := v.People.VatCheckFor(ctx, v.orgID)
+	stored, err := v.People.VatCheckFor(ctx, v.companyID)
 	if err != nil {
 		t.Fatalf("read the recorded answer: %v", err)
 	}
@@ -184,8 +184,8 @@ func TestAPersonsRequestStillAsksNothingWhenNoNumberIsStated(t *testing.T) {
 	v := setupVatRecheck(t)
 	ctx := v.Admin()
 	if _, err := v.Pool.Exec(ctx,
-		`DELETE FROM organization_profile_field WHERE organization_id = $1 AND field = 'register_vat'`,
-		v.orgID.UUID); err != nil {
+		`DELETE FROM company_profile_field WHERE company_id = $1 AND field = 'register_vat'`,
+		v.companyID.UUID); err != nil {
 		t.Fatalf("clear the stated number: %v", err)
 	}
 

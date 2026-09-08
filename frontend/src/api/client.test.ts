@@ -109,7 +109,7 @@ describe("a gateway that gave up on the app behind it", () => {
       ),
     );
 
-    const { error, response } = await api.GET("/organizations/{id}/dossier", {
+    const { error, response } = await api.GET("/companies/{id}/dossier", {
       params: { path: { id: "01a0-4cd2" } },
     });
 
@@ -137,7 +137,7 @@ describe("a gateway that gave up on the app behind it", () => {
       ),
     );
 
-    const { error } = await api.GET("/organizations/{id}/dossier", {
+    const { error } = await api.GET("/companies/{id}/dossier", {
       params: { path: { id: "01a0-4cd2" } },
     });
 
@@ -157,7 +157,7 @@ describe("a gateway that gave up on the app behind it", () => {
       ),
     );
 
-    const { error } = await api.GET("/organizations/{id}/dossier", {
+    const { error } = await api.GET("/companies/{id}/dossier", {
       params: { path: { id: "01a0-4cd2" } },
     });
 
@@ -307,7 +307,7 @@ describe("the api client's model-call count", () => {
       }),
     );
 
-    await api.GET("/organizations/{id}/dossier", {
+    await api.GET("/companies/{id}/dossier", {
       params: { path: { id: "01a0-4cd2" } },
     });
 
@@ -335,7 +335,7 @@ describe("the api client's model-call count", () => {
       ),
     );
 
-    const pending = api.GET("/organizations/{id}/dossier", {
+    const pending = api.GET("/companies/{id}/dossier", {
       params: { path: { id: "01a0-4cd2" } },
     });
     expect(modelCallsInFlight()).toBe(0);

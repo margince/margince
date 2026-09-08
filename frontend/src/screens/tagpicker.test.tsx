@@ -28,7 +28,7 @@ function mount(truncated: boolean) {
   render(
     <StoryProviders>
       <AddTagDialog
-        entityType="organization"
+        entityType="company"
         entityID={ORG}
         current={[]}
         onClose={() => {}}

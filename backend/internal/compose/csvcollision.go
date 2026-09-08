@@ -18,7 +18,7 @@ package compose
 // The cost is a twin the dedupe review queue picks up like any other and a merge
 // resolves. The cost of the alternative is a disclosure no merge undoes.
 //
-// The ladder itself still reads every organization, by design: it is the write
+// The ladder itself still reads every company, by design: it is the write
 // path's collision check. What is filtered is what this caller is TOLD, never
 // what the estate knows.
 
@@ -52,15 +52,15 @@ import (
 // Not leads: a lead's identity is its email, which the store's own unique key
 // already refuses, so there is no silent twin to warn about.
 //
-// A read-only transaction, and NOT DedupeOrganizationForCreate — that one takes
+// A read-only transaction, and NOT DedupeCompanyForCreate — that one takes
 // a write lock to serialize concurrent creates, which a preview has no business
 // holding. The answer can go stale between the preview and the commit; the
 // create path runs the locking version itself and its answer is the one that
 // decides.
 func (w *csvWriters) collidesWithExisting(ctx context.Context, row migration.Row) (bool, error) {
 	switch w.object {
-	case migration.ObjectOrganization:
-		return w.organizationCollides(ctx, row)
+	case migration.ObjectCompany:
+		return w.companyCollides(ctx, row)
 	case migration.ObjectPerson:
 		return w.personCollides(ctx, row)
 	default:
@@ -68,9 +68,9 @@ func (w *csvWriters) collidesWithExisting(ctx context.Context, row migration.Row
 	}
 }
 
-func (w *csvWriters) organizationCollides(ctx context.Context, row migration.Row) (bool, error) {
+func (w *csvWriters) companyCollides(ctx context.Context, row migration.Row) (bool, error) {
 	fields := textFields(row.Fields)
-	candidate := people.OrganizationCandidate{
+	candidate := people.CompanyCandidate{
 		DisplayName: strings.TrimSpace(fields[fieldDisplayName]),
 		LegalName:   strings.TrimSpace(fields["legal_name"]),
 	}
@@ -79,7 +79,7 @@ func (w *csvWriters) organizationCollides(ctx context.Context, row migration.Row
 	}
 	var visible bool
 	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
-		match, err := people.DedupeOrganization(ctx, tx, candidate)
+		match, err := people.DedupeCompany(ctx, tx, candidate)
 		if err != nil || match.Decision == people.DecisionNoMatch {
 			return err
 		}
@@ -99,7 +99,7 @@ func (w *csvWriters) organizationCollides(ctx context.Context, row migration.Row
 		// as far as they are told, not there — and Ranked carries the set that
 		// question has to be asked of.
 		//
-		// The ladder itself still reads every organization, by design: it is the
+		// The ladder itself still reads every company, by design: it is the
 		// write path's collision check. What is filtered is what this caller is
 		// TOLD, never what the estate knows.
 		// EVERY candidate is asked, with no early exit once one answers yes.
@@ -113,7 +113,7 @@ func (w *csvWriters) organizationCollides(ctx context.Context, row migration.Row
 		// The loop is bounded by the ladder's own threshold, so the cost is the
 		// candidate set and not the estate.
 		for _, candidate := range candidatesOf(match) {
-			seen, err := auth.VisibleTo(ctx, tx, "organization", candidate.UUID)
+			seen, err := auth.VisibleTo(ctx, tx, "company", candidate.UUID)
 			if err != nil {
 				return err
 			}
@@ -127,22 +127,22 @@ func (w *csvWriters) organizationCollides(ctx context.Context, row migration.Row
 	return visible, nil
 }
 
-// candidatesOf answers every organization the ladder matched, best first.
+// candidatesOf answers every company the ladder matched, best first.
 //
 // Held by: TestEveryMatchedCandidateIsAskedAboutNotJustTheWinner
 // (backend/internal/compose/csvcollisionvisibility_test.go)
 //
 // Ranked is the full set at or above the review threshold and is what a
 // visibility question must be asked of. It is empty for an exact (domain)
-// collision, which carries its answer in OrganizationID instead — so that one is
+// collision, which carries its answer in CompanyID instead — so that one is
 // added when Ranked has nothing, and never twice.
-func candidatesOf(match people.OrganizationMatch) []ids.OrganizationID {
+func candidatesOf(match people.CompanyMatch) []ids.CompanyID {
 	if len(match.Ranked) == 0 {
-		return []ids.OrganizationID{match.OrganizationID}
+		return []ids.CompanyID{match.CompanyID}
 	}
-	out := make([]ids.OrganizationID, 0, len(match.Ranked))
+	out := make([]ids.CompanyID, 0, len(match.Ranked))
 	for _, scored := range match.Ranked {
-		out = append(out, scored.OrganizationID)
+		out = append(out, scored.CompanyID)
 	}
 	return out
 }

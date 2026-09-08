@@ -10,13 +10,13 @@ import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
-// The organization capture-settings card (CAP-WIRE-7, ADR-0072/A118): the
-// captured-organization auto-enrich toggle. Every role reads it; only admin/ops
+// The company capture-settings card (CAP-WIRE-7, ADR-0072/A118): the
+// captured-company auto-enrich toggle. Every role reads it; only admin/ops
 // may change it, so the toggle is refused (never hidden) for other roles — a
 // rep still sees whether auto-enrich is on. Mirrors the WebhooksCard gating.
 
 // Exported because the connectors card reads it too: a mailbox row has to say
-// whether its switch is showing that mailbox's own answer or the organization's,
+// whether its switch is showing that mailbox's own answer or the company's,
 // and two queries against one path are two answers that can disagree on screen.
 export function useCaptureSettings() {
   return useQuery({

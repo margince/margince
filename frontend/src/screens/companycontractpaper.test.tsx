@@ -20,7 +20,7 @@ afterEach(() => {
 
 const CONTRACT = {
   id: "c-1",
-  organization_id: "o-1",
+  company_id: "o-1",
   title: "Framework agreement 2026",
   contract_number: "GR-2026-0092",
   source: "manual",
@@ -42,7 +42,7 @@ const PAPER = {
   doc_state: "final",
   pinned: false,
   created_at: "2026-01-02T09:00:00Z",
-  entity_type: "organization",
+  entity_type: "company",
   entity_id: "o-1",
   contract_id: "c-1",
   source: "upload",
@@ -144,7 +144,7 @@ function show(ui: ReactNode) {
 describe("a contract's signed paper", () => {
   it("offers the PDF filed against that agreement, named by its file", async () => {
     stub({ "c-1": [PAPER] });
-    show(<CompanyContractsCard orgId="o-1" />);
+    show(<CompanyContractsCard companyId="o-1" />);
 
     // The FILENAME is the link text. This row is the only place the paper is
     // read — the library below leaves agreement paper to its agreement — so a
@@ -164,7 +164,7 @@ describe("a contract's signed paper", () => {
         { ...PAPER, id: "a-2", filename: "GR-2026-0092-annex-a.pdf" },
       ],
     });
-    show(<CompanyContractsCard orgId="o-1" />);
+    show(<CompanyContractsCard companyId="o-1" />);
 
     // The signed original and its annex differ by one word in the filename and
     // by nothing else on the row. A reader who cannot tell them apart before
@@ -195,7 +195,7 @@ describe("a contract's signed paper", () => {
         next: null,
       },
     ]);
-    show(<CompanyContractsCard orgId="o-1" />);
+    show(<CompanyContractsCard companyId="o-1" />);
 
     // The page the row holds is still offered: the notice is about what is
     // missing, not a reason to withhold what is there.
@@ -207,7 +207,7 @@ describe("a contract's signed paper", () => {
 
   it("claims nothing about a remainder when the page IS the whole list", async () => {
     stubPages([{ docs: [PAPER], next: null }]);
-    show(<CompanyContractsCard orgId="o-1" />);
+    show(<CompanyContractsCard companyId="o-1" />);
 
     await screen.findByRole("link", { name: "GR-2026-0092.pdf" });
     // `has_more: false` is the one answer that entitles the row to read as
@@ -227,7 +227,7 @@ describe("a contract's signed paper", () => {
       CONTRACT,
       SLA,
     ]);
-    show(<CompanyContractsCard orgId="o-1" />);
+    show(<CompanyContractsCard companyId="o-1" />);
     await screen.findByText("Framework agreement 2026");
 
     // Recording what was agreed and filing the PDF are separate acts: a

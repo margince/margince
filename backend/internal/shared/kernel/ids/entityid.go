@@ -11,7 +11,7 @@ import (
 // ID is one entity's identifier: the UUID plus a phantom kind tag. Two
 // entities' IDs are distinct types — assignment AND conversion between
 // them are compile errors (the zero-size [0]K field blocks conversion),
-// so MergePerson(orgID, personID) stops compiling instead of silently
+// so MergePerson(companyID, personID) stops compiling instead of silently
 // merging the wrong records. Embedding keeps the UUID's String/IsZero/
 // text-marshalling; Value/Scan below carry it through pgx (pgtype falls
 // back to driver.Valuer / sql.Scanner for wrapper structs).
@@ -80,72 +80,72 @@ func (id *ID[K]) Scan(src any) error {
 // are exported so signatures can name ID[PersonKind] generically, and
 // the aliases are the everyday spelling.
 type (
-	WorkspaceKind    struct{}
-	UserKind         struct{}
-	TeamKind         struct{}
-	PersonKind       struct{}
-	OrganizationKind struct{}
-	LeadKind         struct{}
-	DealKind         struct{}
-	ProjectKind      struct{}
-	PipelineKind     struct{}
-	StageKind        struct{}
-	OfferKind        struct{}
-	ProductKind      struct{}
-	ActivityKind     struct{}
-	SignalKind       struct{}
-	ListKind         struct{}
-	TagKind          struct{}
-	SavedViewKind    struct{}
-	ApprovalKind     struct{}
-	AutomationKind   struct{}
-	PassportKind     struct{}
-	PurposeKind      struct{}
+	WorkspaceKind  struct{}
+	UserKind       struct{}
+	TeamKind       struct{}
+	PersonKind     struct{}
+	CompanyKind    struct{}
+	LeadKind       struct{}
+	DealKind       struct{}
+	ProjectKind    struct{}
+	PipelineKind   struct{}
+	StageKind      struct{}
+	OfferKind      struct{}
+	ProductKind    struct{}
+	ActivityKind   struct{}
+	SignalKind     struct{}
+	ListKind       struct{}
+	TagKind        struct{}
+	SavedViewKind  struct{}
+	ApprovalKind   struct{}
+	AutomationKind struct{}
+	PassportKind   struct{}
+	PurposeKind    struct{}
 )
 
-func (WorkspaceKind) kind() string    { return "workspace" }
-func (UserKind) kind() string         { return "user" }
-func (TeamKind) kind() string         { return "team" }
-func (PersonKind) kind() string       { return "person" }
-func (OrganizationKind) kind() string { return "organization" }
-func (LeadKind) kind() string         { return "lead" }
-func (DealKind) kind() string         { return "deal" }
-func (ProjectKind) kind() string      { return "project" }
-func (PipelineKind) kind() string     { return "pipeline" }
-func (StageKind) kind() string        { return "stage" }
-func (OfferKind) kind() string        { return "offer" }
-func (ProductKind) kind() string      { return "product" }
-func (ActivityKind) kind() string     { return "activity" }
-func (SignalKind) kind() string       { return "signal" }
-func (ListKind) kind() string         { return "list" }
-func (TagKind) kind() string          { return "tag" }
-func (SavedViewKind) kind() string    { return "saved_view" }
-func (ApprovalKind) kind() string     { return "approval" }
-func (AutomationKind) kind() string   { return "automation" }
-func (PassportKind) kind() string     { return "passport" }
-func (PurposeKind) kind() string      { return "consent_purpose" }
+func (WorkspaceKind) kind() string  { return "workspace" }
+func (UserKind) kind() string       { return "user" }
+func (TeamKind) kind() string       { return "team" }
+func (PersonKind) kind() string     { return "person" }
+func (CompanyKind) kind() string    { return "company" }
+func (LeadKind) kind() string       { return "lead" }
+func (DealKind) kind() string       { return "deal" }
+func (ProjectKind) kind() string    { return "project" }
+func (PipelineKind) kind() string   { return "pipeline" }
+func (StageKind) kind() string      { return "stage" }
+func (OfferKind) kind() string      { return "offer" }
+func (ProductKind) kind() string    { return "product" }
+func (ActivityKind) kind() string   { return "activity" }
+func (SignalKind) kind() string     { return "signal" }
+func (ListKind) kind() string       { return "list" }
+func (TagKind) kind() string        { return "tag" }
+func (SavedViewKind) kind() string  { return "saved_view" }
+func (ApprovalKind) kind() string   { return "approval" }
+func (AutomationKind) kind() string { return "automation" }
+func (PassportKind) kind() string   { return "passport" }
+func (PurposeKind) kind() string    { return "consent_purpose" }
 
 type (
-	WorkspaceID    = ID[WorkspaceKind]
-	UserID         = ID[UserKind]
-	TeamID         = ID[TeamKind]
-	PersonID       = ID[PersonKind]
-	OrganizationID = ID[OrganizationKind]
-	LeadID         = ID[LeadKind]
-	DealID         = ID[DealKind]
-	PipelineID     = ID[PipelineKind]
-	StageID        = ID[StageKind]
-	OfferID        = ID[OfferKind]
-	ProductID      = ID[ProductKind]
-	ActivityID     = ID[ActivityKind]
-	SignalID       = ID[SignalKind]
-	ListID         = ID[ListKind]
-	TagID          = ID[TagKind]
-	SavedViewID    = ID[SavedViewKind]
-	ApprovalID     = ID[ApprovalKind]
-	AutomationID   = ID[AutomationKind]
-	PassportID     = ID[PassportKind]
-	PurposeID      = ID[PurposeKind]
+	WorkspaceID  = ID[WorkspaceKind]
+	UserID       = ID[UserKind]
+	TeamID       = ID[TeamKind]
+	PersonID     = ID[PersonKind]
+	CompanyID    = ID[CompanyKind]
+	LeadID       = ID[LeadKind]
+	DealID       = ID[DealKind]
+	PipelineID   = ID[PipelineKind]
+	StageID      = ID[StageKind]
+	OfferID      = ID[OfferKind]
+	ProductID    = ID[ProductKind]
+	ActivityID   = ID[ActivityKind]
+	SignalID     = ID[SignalKind]
+	ListID       = ID[ListKind]
+	TagID        = ID[TagKind]
+	SavedViewID  = ID[SavedViewKind]
+	ApprovalID   = ID[ApprovalKind]
+	AutomationID = ID[AutomationKind]
+	PassportID   = ID[PassportKind]
+	PurposeID    = ID[PurposeKind]
 	// ProjectID identifies a project — the body of work a client
 	// relationship is made of.
 	ProjectID = ID[ProjectKind]

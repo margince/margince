@@ -292,11 +292,11 @@ describe("ComposeModal dead recipients", () => {
   // from the record it was opened on.
   it("warns for the contact picked in an account draft", async () => {
     stubRoutes({
-      "GET /organizations/org-1/360": () =>
+      "GET /companies/company-1/360": () =>
         jsonResponse({
           state: "ready",
           as_of: "2026-01-01T00:00:00Z",
-          organization: { id: "org-1", display_name: "Demo GmbH" },
+          company: { id: "company-1", display_name: "Demo GmbH" },
           people: { data: [{ person_id: "p-1", full_name: "Anna Weiss" }] },
           deals: { data: [] },
           sections_omitted: [],
@@ -306,8 +306,8 @@ describe("ComposeModal dead recipients", () => {
     });
     render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         open
         onClose={vi.fn()}
       />,
@@ -315,7 +315,7 @@ describe("ComposeModal dead recipients", () => {
 
     const user = userEvent.setup();
     // Pick the contact, which is what tells this composer whose addresses to
-    // ask about — before that it knows an organization and nobody.
+    // ask about — before that it knows a company and nobody.
     await user.click(await screen.findByRole("combobox", { name: "Draft to" }));
     await user.click(await screen.findByRole("option", { name: "Anna Weiss" }));
     await user.click(await screen.findByLabelText("To"));

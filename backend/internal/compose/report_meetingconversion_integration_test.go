@@ -56,14 +56,14 @@ func TestOnlyHeldMeetingsCountTowardTheConversion(t *testing.T) {
 // number, and the number would look better than the truth.
 func TestACoincidentalDealAtTheSameCompanyConvertsNothing(t *testing.T) {
 	e := setupForecast(t)
-	org := e.seedHandoffOrg(t)
+	company := e.seedHandoffCompany(t)
 	metNobodyHandedOn := e.seedHandoffLead(t, "met-only@customer.test")
 	e.seedMeeting(t, "held", metNobodyHandedOn, "2026-04-01T10:00:00Z")
 	// A deal at that same company, sourced by somebody else entirely: no handoff
 	// names this prospect, so nothing connects the two but the account.
-	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, organization_id, amount_minor, currency, source, captured_by)
+	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, company_id, amount_minor, currency, source, captured_by)
 		VALUES ($1, 'Someone else''s deal', $2, $3, $4, 900000, 'EUR', 'manual', 'human:x')`,
-		e.pipeline, e.stages[60], org)
+		e.pipeline, e.stages[60], company)
 
 	result := e.runReport(e.activityReader(tableLead), t, "meeting-conversion",
 		`{"group_by":["became_opportunity"],"aggregates":[{"fn":"count","as":"meetings"}]}`)
@@ -200,9 +200,9 @@ func (e *forecastEnv) acceptHandoff(t *testing.T, lead ids.UUID, decidedAt strin
 		lead, e.Rep1, deal, decidedAt)
 }
 
-func (e *forecastEnv) seedHandoffOrg(t *testing.T) ids.UUID {
+func (e *forecastEnv) seedHandoffCompany(t *testing.T) ids.UUID {
 	t.Helper()
-	return e.seedID(t, `INSERT INTO organization (id, display_name, source, captured_by)
+	return e.seedID(t, `INSERT INTO company (id, display_name, source, captured_by)
 		VALUES ($1, 'Handoff Customer', 'manual', 'human:x')`)
 }
 

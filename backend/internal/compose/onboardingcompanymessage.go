@@ -44,7 +44,7 @@ type onboardingStateReader interface {
 }
 
 type onboardingSiteReadReader interface {
-	GetCompanySiteRead(context.Context, ids.UUID) (people.SiteRead, []people.SiteReadComparison, error)
+	GetAnchorCompanySiteRead(context.Context, ids.UUID) (people.SiteRead, []people.SiteReadComparison, error)
 }
 
 type onboardingConversationContext struct {
@@ -345,7 +345,7 @@ func (a *onboardingCompanyAssistant) onboardingEvidence(ctx context.Context, sta
 	if state.SiteReadID == nil {
 		return nil, state.ID, onboardingResearchState{ready: true}, nil, nil, nil
 	}
-	read, comparisons, err := a.people.GetCompanySiteRead(ctx, *state.SiteReadID)
+	read, comparisons, err := a.people.GetAnchorCompanySiteRead(ctx, *state.SiteReadID)
 	if err != nil {
 		return nil, ids.UUID{}, onboardingResearchState{}, nil, nil, err
 	}

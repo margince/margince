@@ -132,9 +132,9 @@ func promoteByVerdict(t *testing.T, e *integration.SearchEnv, email string, acti
 		SeatType: principal.SeatFull,
 		Permissions: principal.Permissions{
 			Objects: map[string]principal.ObjectGrant{
-				"person":       {Create: true, Read: true, Update: true},
-				"organization": {Create: true, Read: true},
-				"activity":     {Read: true},
+				"person":   {Create: true, Read: true, Update: true},
+				"company":  {Create: true, Read: true},
+				"activity": {Read: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},

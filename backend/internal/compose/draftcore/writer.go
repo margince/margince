@@ -69,7 +69,7 @@ type Reason struct {
 // Input is what a surface's folded record must be able to answer.
 //
 // An interface rather than a struct, because the two surfaces fold genuinely
-// different records — an Organization360 and a Person360 — and a shared struct
+// different records — a Company360 and a Person360 — and a shared struct
 // would be one shape with half its fields empty on either side. What the writer
 // needs is only this: something to serialize, the envelope it is written into,
 // the names a greeting repair recognises, and where it goes.

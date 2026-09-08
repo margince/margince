@@ -64,7 +64,7 @@ Or:
 
 ```bash
 curl -sS -b cookies.txt -X PATCH \
-  "$BASE/v1/organizations/$ORG/profile-fields/register_vat" \
+  "$BASE/v1/companies/$ORG/profile-fields/register_vat" \
   -H 'content-type: application/json' \
   -d '{"value":"DE811907980"}'
 ```
@@ -111,7 +111,7 @@ somebody asks for a fresh one.
 Open the shield and press **Check again** (or **Check with the register**, on a company never consulted).
 
 ```bash
-curl -sS -b cookies.txt -X POST "$BASE/v1/organizations/$ORG/vat-check"
+curl -sS -b cookies.txt -X POST "$BASE/v1/companies/$ORG/vat-check"
 # 202 Accepted, no body
 ```
 
@@ -169,7 +169,7 @@ the api's, and remember `make dev` after changing it: the api and worker are com
 Confirm what is on record with:
 
 ```bash
-curl -sS -b cookies.txt "$BASE/v1/organizations/$ORG/vat-check"
+curl -sS -b cookies.txt "$BASE/v1/companies/$ORG/vat-check"
 ```
 
 `404` means never consulted; a body with `"status"` means an answer is on record. If the job ran and
@@ -178,7 +178,7 @@ still nothing landed, the worker had no register to ask:
 ```bash
 # the job completed, and recorded nothing
 psql "$DSN" -c "SELECT state, attempt FROM river_job
-                 WHERE kind = 'check_organization_vat' ORDER BY id DESC LIMIT 3;"
+                 WHERE kind = 'check_company_vat' ORDER BY id DESC LIMIT 3;"
 ```
 
 **A number I know is real reads Not valid.** Check its shape first. A VAT ID starts with a two-letter

@@ -14,7 +14,7 @@ package compose
 // worth holding.
 //
 // These held the enrich-on-capture trigger until capture stopped creating
-// organizations; the gates, their order and the shared budget counter are the
+// companies; the gates, their order and the shared budget counter are the
 // same, and the trigger they now guard is the one that still runs.
 //
 // The budget counter these gates spend from is tested here too, next to the
@@ -44,7 +44,7 @@ func openQuestion(t *testing.T, e *integration.Env, domain string) {
 	t.Helper()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO organization_domain_disposition (domain, status, owner_id)
+			INSERT INTO company_domain_disposition (domain, status, owner_id)
 			VALUES ($1, 'pending', $2)`, domain, e.Rep1)
 		return err
 	}); err != nil {
@@ -111,7 +111,7 @@ func TestTriageOnCaptureRespectsTheSettingBeforeSpendingAnything(t *testing.T) {
 	}
 }
 
-func TestTriageOnCaptureLeavesTheOrgToTheSweepAtTheDailyCap(t *testing.T) {
+func TestTriageOnCaptureLeavesTheCompanyToTheSweepAtTheDailyCap(t *testing.T) {
 	e := integration.Setup(t)
 	setAutoEnrich(t, e, true)
 	openQuestion(t, e, "capped.example")
@@ -139,15 +139,15 @@ func TestTriageOnCaptureLeavesTheOrgToTheSweepAtTheDailyCap(t *testing.T) {
 		t.Fatalf("budget spent = %d, want the cap %d — the trigger must not spend past it", n, testCap)
 	}
 	if !stillDue(t, e, "capped.example") {
-		t.Fatal("a capped trigger retired the organization — it must stay due for a later sweep")
+		t.Fatal("a capped trigger retired the company — it must stay due for a later sweep")
 	}
 }
 
-// Every way the trigger can give up has to leave the organization findable by
+// Every way the trigger can give up has to leave the company findable by
 // the sweep. This drives the give-up that is hardest to reason about — the read
 // itself failing to start — by running with no ambient River client, which is
 // exactly what a missing queue looks like from here.
-func TestTriageOnCaptureLeavesTheOrgToTheSweepWhenTheReadCannotStart(t *testing.T) {
+func TestTriageOnCaptureLeavesTheCompanyToTheSweepWhenTheReadCannotStart(t *testing.T) {
 	e := integration.Setup(t)
 	setAutoEnrich(t, e, true)
 	openQuestion(t, e, "no-queue.example")
@@ -156,7 +156,7 @@ func TestTriageOnCaptureLeavesTheOrgToTheSweepWhenTheReadCannotStart(t *testing.
 	trigger.domainPending(e.Admin(), "no-queue.example")
 
 	if !stillDue(t, e, "no-queue.example") {
-		t.Fatal("a trigger that could not start the read retired the organization anyway")
+		t.Fatal("a trigger that could not start the read retired the company anyway")
 	}
 	// And the slot it reserved goes back. Reserving before starting is what makes
 	// the cap a cap; refunding what did not start is what stops the day's
@@ -339,7 +339,7 @@ func dispositionOf(t *testing.T, e *integration.Env, domain string) string {
 	var status string
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT coalesce(max(status), '') FROM organization_domain_disposition WHERE domain = $1`,
+			`SELECT coalesce(max(status), '') FROM company_domain_disposition WHERE domain = $1`,
 			domain).Scan(&status)
 	}); err != nil {
 		t.Fatal(err)
@@ -353,7 +353,7 @@ func spendTriageAttempts(t *testing.T, e *integration.Env, domain string) {
 	t.Helper()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
-			UPDATE organization_domain_disposition
+			UPDATE company_domain_disposition
 			   SET attempts = $2, next_attempt_at = now() - interval '1 day'
 			 WHERE domain = $1`, domain, people.DomainTriageMaxAttempts)
 		return err
@@ -390,8 +390,8 @@ func TestTriageSweepSettlesADomainThatRanOutOfAttempts(t *testing.T) {
 	if stillDue(t, e, "unreachable.example") {
 		t.Fatal("a withheld domain is still being offered for a crawl")
 	}
-	if n := countRows(t, e, `SELECT count(*) FROM organization WHERE NOT is_anchor`); n != 0 {
-		t.Fatalf("%d organizations from a domain nothing could read, want 0", n)
+	if n := countRows(t, e, `SELECT count(*) FROM company WHERE NOT is_anchor`); n != 0 {
+		t.Fatalf("%d companies from a domain nothing could read, want 0", n)
 	}
 }
 
@@ -424,7 +424,7 @@ func pendingReasonOf(t *testing.T, e *integration.Env, domain string) string {
 	var reason string
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
-			SELECT COALESCE(pending_reason, '') FROM organization_domain_disposition
+			SELECT COALESCE(pending_reason, '') FROM company_domain_disposition
 			WHERE domain = $1`, domain).Scan(&reason)
 	}); err != nil {
 		t.Fatalf("reading the pending reason of %s: %v", domain, err)

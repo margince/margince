@@ -409,7 +409,7 @@ describe("the tallies", () => {
         captured: 512,
         skipped: 88,
         people_created: 90,
-        organizations_created: 20,
+        companies_created: 20,
         dedupe_candidates: 7,
       },
     });

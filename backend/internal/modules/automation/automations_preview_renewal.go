@@ -128,7 +128,7 @@ func validateRenewalPreviewDateField(ctx context.Context, catalog fieldcatalog.R
 // renewalPreviewDef builds one renewal_reminder instance's previewDef at
 // request time: table is the instance's own validated object (one of
 // renewalReminderObjects, all five of which carry archived_at — verified
-// against migrations/core's own DDL for person/organization/deal/lead/
+// against migrations/core's own DDL for person/company/deal/lead/
 // project, not assumed), and the one field is the instance's own
 // date_field column, quoted via pgx.Identifier — the SAME quoting
 // pgx.Identifier{}.Sanitize() customfields/engine.go's quoteIdentifier

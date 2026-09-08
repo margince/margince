@@ -38,7 +38,7 @@ function installAppStub() {
     if (url.endsWith("/v1/company")) {
       return new Response(
         JSON.stringify({
-          organization_id: "018f3a1b-0000-7000-8000-0000000000a1",
+          company_id: "018f3a1b-0000-7000-8000-0000000000a1",
           display_name: "Acme Freight",
         }),
         { status: 200, headers: { "Content-Type": "application/json" } },
@@ -63,7 +63,7 @@ function installAppStub() {
     if (url.endsWith("/v1/company")) {
       return new Response(
         JSON.stringify({
-          organization_id: "01a00000-0000-7000-8000-0000000000ac",
+          company_id: "01a00000-0000-7000-8000-0000000000ac",
           display_name: "Acme Fördertechnik",
         }),
         { status: 200, headers: { "Content-Type": "application/json" } },

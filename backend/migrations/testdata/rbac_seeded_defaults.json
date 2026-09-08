@@ -217,7 +217,7 @@
         "read": true,
         "update": true
       },
-      "organization": {
+      "company": {
         "create": true,
         "delete": true,
         "read": true,
@@ -564,7 +564,7 @@
         "read": true,
         "update": true
       },
-      "organization": {
+      "company": {
         "create": true,
         "delete": true,
         "read": true,
@@ -911,7 +911,7 @@
         "read": true,
         "update": true
       },
-      "organization": {
+      "company": {
         "create": true,
         "delete": true,
         "read": true,
@@ -1258,7 +1258,7 @@
         "read": true,
         "update": true
       },
-      "organization": {
+      "company": {
         "create": true,
         "delete": true,
         "read": true,
@@ -1605,7 +1605,7 @@
         "read": true,
         "update": false
       },
-      "organization": {
+      "company": {
         "create": false,
         "delete": false,
         "read": true,
@@ -1952,7 +1952,7 @@
         "read": true,
         "update": true
       },
-      "organization": {
+      "company": {
         "create": true,
         "delete": false,
         "read": true,

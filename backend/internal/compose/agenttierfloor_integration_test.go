@@ -65,13 +65,13 @@ func TestATierFlooredForOneRecordTypeBindsTheToolDoorToo(t *testing.T) {
 
 	registry := composedRegistryFlooring(e, "project")
 
-	org := seedOrgForTierFloor(human, t, native)
+	company := seedCompanyForTierFloor(human, t, native)
 
 	// The identical effect POST /v1/projects performs, asked for through the
 	// verb whose tier the contract never tightened.
 	_, err := registry.Invoke(tierFloorAgent(t, e), "create_record",
 		json.RawMessage(`{"record_type":"project","fields":{"name":"Unapproved",`+
-			`"organization_id":"`+org.String()+`"}}`))
+			`"company_id":"`+company.String()+`"}}`))
 
 	// Three assertions, answering three different questions, because any two of
 	// them pass for the wrong reason.
@@ -105,8 +105,8 @@ func TestATightenedUpdateAlsoStagesOnTheToolDoor(t *testing.T) {
 	native := NewProvider(e.Pool)
 	registry := composedRegistryFlooring(e, "project")
 
-	org := seedOrgForTierFloor(human, t, native)
-	project := seedProjectForTierFloor(human, t, native, org)
+	company := seedCompanyForTierFloor(human, t, native)
+	project := seedProjectForTierFloor(human, t, native, company)
 
 	_, err := registry.Invoke(tierFloorAgent(t, e), "update_record",
 		json.RawMessage(`{"record_type":"project","id":"`+project.String()+
@@ -122,25 +122,25 @@ func TestATightenedUpdateAlsoStagesOnTheToolDoor(t *testing.T) {
 	assertStagedApprovalRow(human, t, e, stagedRow{kind: "update_record", targetType: "project", hasTargetID: true})
 }
 
-// An ordinary organization patch must NOT stage. `updateOrganization` is
+// An ordinary company patch must NOT stage. `updateCompany` is
 // auto-execute, and the confirm-first routes that share (update_record,
-// organization) — the fact and profile-field corrections — write a sidecar row
-// this verb cannot reach. A floor that collapsed them tightened every org patch
+// company) — the fact and profile-field corrections — write a sidecar row
+// this verb cannot reach. A floor that collapsed them tightened every company patch
 // on the tool door while REST kept it automatic: #982 in reverse, which is what
 // this test exists to catch and what the first draft of the fix did.
-func TestAnOrdinaryOrganizationPatchStillRunsUnattended(t *testing.T) {
+func TestAnOrdinaryCompanyPatchStillRunsUnattended(t *testing.T) {
 	e := integration.Setup(t)
 	human := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	native := NewProvider(e.Pool)
 	registry := composedRegistry(e)
 
-	org := seedOrgForTierFloor(human, t, native)
+	company := seedCompanyForTierFloor(human, t, native)
 
 	if _, err := registry.Invoke(tierFloorAgent(t, e), "update_record",
-		json.RawMessage(`{"record_type":"organization","id":"`+org.String()+
+		json.RawMessage(`{"record_type":"company","id":"`+company.String()+
 			`","fields":{"industry":"Logistics"}}`)); err != nil {
-		t.Fatalf("an ordinary organization patch answered %v, want it to run — the contract "+
-			"declares updateOrganization auto-execute, and tightening it here would make the tool "+
+		t.Fatalf("an ordinary company patch answered %v, want it to run — the contract "+
+			"declares updateCompany auto-execute, and tightening it here would make the tool "+
 			"door stage what the REST door performs", err)
 	}
 }
@@ -217,11 +217,11 @@ func assertStagedApprovalRow(as context.Context, t *testing.T, e *integration.En
 
 // seedProjectForTierFloor creates one project through the real writer, so the
 // update case patches a row the store actually wrote.
-func seedProjectForTierFloor(as context.Context, t *testing.T, p *Provider, org ids.UUID) ids.UUID {
+func seedProjectForTierFloor(as context.Context, t *testing.T, p *Provider, company ids.UUID) ids.UUID {
 	t.Helper()
 	ref, err := p.Create(as, datasource.CreateInput{
 		EntityType: datasource.EntityProject,
-		Fields:     json.RawMessage(`{"name":"Tier floor project","organization_id":"` + org.String() + `"}`),
+		Fields:     json.RawMessage(`{"name":"Tier floor project","company_id":"` + company.String() + `"}`),
 		Source:     "test",
 	})
 	if err != nil {
@@ -230,12 +230,12 @@ func seedProjectForTierFloor(as context.Context, t *testing.T, p *Provider, org 
 	return ref.ID
 }
 
-// seedOrgForTierFloor creates the anchor company a project requires, through the
+// seedCompanyForTierFloor creates the anchor company a project requires, through the
 // real writer.
-func seedOrgForTierFloor(as context.Context, t *testing.T, p *Provider) ids.UUID {
+func seedCompanyForTierFloor(as context.Context, t *testing.T, p *Provider) ids.UUID {
 	t.Helper()
 	ref, err := p.Create(as, datasource.CreateInput{
-		EntityType: datasource.EntityOrganization,
+		EntityType: datasource.EntityCompany,
 		Fields:     json.RawMessage(`{"display_name":"Tier floor anchor"}`),
 		Source:     "test",
 	})

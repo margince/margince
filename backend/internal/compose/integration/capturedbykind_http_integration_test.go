@@ -30,13 +30,13 @@ func TestCapturedByKindRefusesAValueOutsideTheEnum(t *testing.T) {
 
 	for _, path := range []string{
 		"/v1/people?captured_by_kind=ai",
-		"/v1/organizations?captured_by_kind=robot",
+		"/v1/companies?captured_by_kind=robot",
 		"/v1/leads?captured_by_kind=Agent",
 		// Present-but-empty is a VALUE, and not one the enum has. Reading it as
 		// "no filter" would answer the whole list to a caller who did ask to
 		// filter — the same wrong answer, arrived at more quietly.
 		"/v1/people?captured_by_kind=",
-		"/v1/organizations?captured_by_kind=",
+		"/v1/companies?captured_by_kind=",
 		"/v1/leads?captured_by_kind=",
 	} {
 		if status := e.Call(t, "GET", path, nil, nil, nil); status != http.StatusUnprocessableEntity {
@@ -48,7 +48,7 @@ func TestCapturedByKindRefusesAValueOutsideTheEnum(t *testing.T) {
 	// vocabulary rather than the parameter being rejected outright.
 	for _, path := range []string{
 		"/v1/people?captured_by_kind=agent",
-		"/v1/organizations?captured_by_kind=human",
+		"/v1/companies?captured_by_kind=human",
 		"/v1/leads?captured_by_kind=connector",
 		"/v1/people?captured_by_kind=system",
 	} {

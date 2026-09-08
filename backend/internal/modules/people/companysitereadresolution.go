@@ -180,7 +180,7 @@ func applyFactResolution(in *ConfirmCompanySiteReadInput, proposal DeepReadFact,
 func acceptSiteReadFact(in *ConfirmCompanySiteReadInput, key string) {
 	in.SelectedFactKeys = append(in.SelectedFactKeys, key)
 	// The accepted value has to land even when a human row holds the slot:
-	// upsertOrganizationFacts never writes over one, so taking the website's
+	// upsertCompanyFacts never writes over one, so taking the website's
 	// value means clearing what the human previously asserted there.
 	in.overwriteFactKeys[key] = true
 }
@@ -206,7 +206,7 @@ func removeFactKey(keys []string, unwanted string) []string {
 func applyResolvedHumanFacts(
 	ctx context.Context,
 	tx pgx.Tx,
-	orgID ids.OrganizationID,
+	companyID ids.CompanyID,
 	by string,
 	edits []resolvedHumanFact,
 ) ([]map[string]any, error) {
@@ -214,24 +214,24 @@ func applyResolvedHumanFacts(
 	for _, edit := range edits {
 		oldKey := edit.proposal.ValueKey
 		newKey := oldKey
-		if OrganizationFactMultiValue[edit.proposal.Field] {
+		if CompanyFactMultiValue[edit.proposal.Field] {
 			newKey = NormalizeFactValueKey(edit.value)
 		}
-		if _, err := tx.Exec(ctx, `DELETE FROM organization_fact
-			WHERE organization_id = $1 AND category = $2
-			  AND field = $3 AND value_key = $4`, orgID,
+		if _, err := tx.Exec(ctx, `DELETE FROM company_fact
+			WHERE company_id = $1 AND category = $2
+			  AND field = $3 AND value_key = $4`, companyID,
 			edit.proposal.Category, edit.proposal.Field, oldKey); err != nil {
-			return nil, fmt.Errorf("replace human organization fact %s.%s: %w",
+			return nil, fmt.Errorf("replace human company fact %s.%s: %w",
 				edit.proposal.Category, edit.proposal.Field, err)
 		}
-		if _, err := tx.Exec(ctx, `INSERT INTO organization_fact (organization_id, category, field, value, value_key, evidence_snippet, source_url, confidence, source, captured_by, site_read_id)
+		if _, err := tx.Exec(ctx, `INSERT INTO company_fact (company_id, category, field, value, value_key, evidence_snippet, source_url, confidence, source, captured_by, site_read_id)
 			VALUES ($1, $2, $3, $4, $5, '', '', 1, 'human', $6, NULL)
-			ON CONFLICT (organization_id, category, field, value_key)
+			ON CONFLICT (company_id, category, field, value_key)
 			DO UPDATE SET value = EXCLUDED.value, evidence_snippet = '', source_url = '',
 			 confidence = 1, source = 'human', captured_by = EXCLUDED.captured_by,
-			 site_read_id = NULL, captured_at = now()`, orgID,
+			 site_read_id = NULL, captured_at = now()`, companyID,
 			edit.proposal.Category, edit.proposal.Field, edit.value, newKey, by); err != nil {
-			return nil, fmt.Errorf("save human organization fact %s.%s: %w",
+			return nil, fmt.Errorf("save human company fact %s.%s: %w",
 				edit.proposal.Category, edit.proposal.Field, err)
 		}
 		applied = append(applied, map[string]any{

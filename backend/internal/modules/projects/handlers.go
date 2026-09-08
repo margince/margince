@@ -27,7 +27,7 @@ func (h Handlers) ListProjects(w http.ResponseWriter, r *http.Request, params cr
 		Sort:            params.Sort,
 		CustomFilters:   httperr.CustomFieldFilters(r),
 	}
-	in.OrganizationID = idArg[ids.OrganizationKind](params.OrganizationId)
+	in.CompanyID = idArg[ids.CompanyKind](params.CompanyId)
 	in.OwnerID = idArg[ids.UserKind](params.OwnerId)
 	if params.Phase != nil {
 		phase := string(*params.Phase)
@@ -181,22 +181,22 @@ func projectCreateInput(req crmcontracts.CreateProjectRequest) (CreateProjectInp
 	if err != nil {
 		return CreateProjectInput{}, err
 	}
-	// A project belongs to a company, and the contract makes organization_id
+	// A project belongs to a company, and the contract makes company_id
 	// required — but an absent key decodes to the zero UUID, which reaches
 	// EnsureLinkTarget and comes back as a bare not-found naming no argument.
-	if err := requireBodyID("organization_id", req.OrganizationId); err != nil {
+	if err := requireBodyID("company_id", req.CompanyId); err != nil {
 		return CreateProjectInput{}, err
 	}
 	if err := refuseCallerChosenKey(req.AdditionalProperties); err != nil {
 		return CreateProjectInput{}, err
 	}
 	in := CreateProjectInput{
-		Name:           name,
-		OrganizationID: pathID[ids.OrganizationKind](req.OrganizationId),
-		OwnerID:        idArg[ids.UserKind](req.OwnerId),
-		Description:    req.Description,
-		Source:         req.Source,
-		CustomFields:   req.AdditionalProperties,
+		Name:         name,
+		CompanyID:    pathID[ids.CompanyKind](req.CompanyId),
+		OwnerID:      idArg[ids.UserKind](req.OwnerId),
+		Description:  req.Description,
+		Source:       req.Source,
+		CustomFields: req.AdditionalProperties,
 	}
 	if req.StartedAt != nil {
 		in.StartedAt = &req.StartedAt.Time

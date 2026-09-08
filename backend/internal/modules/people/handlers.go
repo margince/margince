@@ -4,7 +4,7 @@
 package people
 
 // Handlers is the people module's transport surface: the contract
-// operations over persons, organizations and leads (incl. merge and
+// operations over persons, companies and leads (incl. merge and
 // lead promotion). Wire concerns only — decode, validate, map store
 // errors to the sentinel registry; the store owns the transactional
 // write shape.
@@ -32,7 +32,7 @@ type Handlers struct {
 	stageVCardReview func(ctx context.Context, entry VCardEntry, candidate *ids.PersonID) error
 
 	store *Store
-	// blob serves the organization logo's bytes. Nil is a role that stores no
+	// blob serves the company logo's bytes. Nil is a role that stores no
 	// objects: the logo endpoint then answers 501 rather than nil-derefing,
 	// and no logo can have been resolved for it to serve anyway.
 	blob blobstore.Store
@@ -94,7 +94,7 @@ func (h Handlers) WithVatCheckEnqueue(enqueue VatCheckEnqueue) Handlers {
 	return h
 }
 
-// WithBlobstore wires the object store the organization-logo stream reads.
+// WithBlobstore wires the object store the company-logo stream reads.
 func (h Handlers) WithBlobstore(blob blobstore.Store) Handlers {
 	h.blob = blob
 	return h

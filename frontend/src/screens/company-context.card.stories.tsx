@@ -14,7 +14,7 @@ import {
 // What the AI is told about the company it is selling for. Two independent
 // conditions govern this card and they mean different things: a rollout FLAG
 // says whether the surface exists on this installation at all, and the
-// organization grant says whether this reader may change it.
+// company grant says whether this reader may change it.
 const PROFILE = {
   display_name: "Brandt Automotive GmbH",
   legal_name: "Brandt Automotive GmbH",
@@ -95,8 +95,8 @@ function story(
   };
 }
 
-const EDITOR = { organization: ["read", "update"] } as const;
-const READER = { organization: ["read"] } as const;
+const EDITOR = { company: ["read", "update"] } as const;
+const READER = { company: ["read"] } as const;
 
 const meta: Meta<typeof CompanyContextCard> = {
   title: "Settings/Company/Company profile/Company profile",

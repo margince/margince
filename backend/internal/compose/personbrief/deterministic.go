@@ -29,9 +29,9 @@ import (
 // longer carries — a citation that silently stops grounding, on a card whose
 // whole promise is that a reader can check it.
 const (
-	citePerson   = string(crmcontracts.OrganizationBriefEvidenceEntityTypePerson)
-	citeActivity = string(crmcontracts.OrganizationBriefEvidenceEntityTypeActivity)
-	citeDeal     = string(crmcontracts.OrganizationBriefEvidenceEntityTypeDeal)
+	citePerson   = string(crmcontracts.CompanyBriefEvidenceEntityTypePerson)
+	citeActivity = string(crmcontracts.CompanyBriefEvidenceEntityTypeActivity)
+	citeDeal     = string(crmcontracts.CompanyBriefEvidenceEntityTypeDeal)
 )
 
 // Deterministic writes the brief from the assembled input alone.

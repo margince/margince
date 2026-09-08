@@ -5,7 +5,7 @@ package identity
 
 // The installation's own settings (ADR-0090/A135). Identity owns them because
 // it owns the installation: it is the module that bootstraps the singleton
-// organization and resolves it on every boot (ADR-0061 §3).
+// company and resolves it on every boot (ADR-0061 §3).
 //
 // These moved off columns on the `workspace` row. Two of them were never
 // reachable by a human at all — an installation that mistyped its base
@@ -58,13 +58,13 @@ const authenticationPolicyObject = "authentication_policy"
 // rather than two that happen to agree.
 const SettingsObject = installationSettingsObject
 
-// Name is the organization's display name. Seeded from margince.yaml at
+// Name is the company's display name. Seeded from margince.yaml at
 // bootstrap; the row is authoritative afterwards, so renaming the
-// organization does not require a redeployment.
+// company does not require a redeployment.
 //
 // The CEILING lives here because this entry is the only thing that governs the
 // value: without it the unauthenticated setup claim stores a name as large as
-// the body limit allows, and every screen that renders an organization carries
+// the body limit allows, and every screen that renders a company carries
 // it thereafter.
 //
 // 200 rather than the 63 an earlier bound happened to impose. That number was a
@@ -82,12 +82,12 @@ var Name = settings.Define[string](
 	func(v string) error {
 		trimmed := strings.TrimSpace(v)
 		if trimmed == "" {
-			return fmt.Errorf("the organization needs a name")
+			return fmt.Errorf("the company needs a name")
 		}
 		// Counted in RUNES, like every other length bound in this module: a name
 		// of 200 CJK characters is not three times too long.
 		if n := utf8.RuneCountInString(trimmed); n > maxInstallationNameLen {
-			return fmt.Errorf("an organization name is at most %d characters; this one is %d",
+			return fmt.Errorf("a company name is at most %d characters; this one is %d",
 				maxInstallationNameLen, n)
 		}
 		return nil

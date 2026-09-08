@@ -203,7 +203,7 @@ func TestTheCustomFieldNoteNamesTheTypesThatTakeNone(t *testing.T) {
 	}
 }
 
-// Both writes say what an organization's description is FOR.
+// Both writes say what a company's description is FOR.
 //
 // The field's shape says "string" and nothing else, so a caller holding a
 // meeting transcript writes a summary of the MEETING into the company header —

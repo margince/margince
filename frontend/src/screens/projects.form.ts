@@ -40,7 +40,7 @@ export type ProjectCompanyOption = { id: string; display_name: string };
 /**
  * The fields both dialogs share. The company is the one difference: a project
  * names its company at birth and the update body carries no
- * `organization_id`, so the edit form shows the company as a fact rather
+ * `company_id`, so the edit form shows the company as a fact rather
  * than as a picker.
  */
 export function projectFields(
@@ -72,7 +72,7 @@ export function projectFields(
     ...(opts.mode === "create"
       ? [
           {
-            key: "organization_id",
+            key: "company_id",
             label: "project.company" as const,
             type: "select" as const,
             required: true,
@@ -116,7 +116,7 @@ export function mapProjectCreate(
 ): CreateProjectRequest {
   return {
     name: str(values.name),
-    organization_id: str(values.organization_id),
+    company_id: str(values.company_id),
     owner_id: str(values.owner_id) || null,
     description: str(values.description) || null,
     target_end_date: str(values.target_end_date) || null,

@@ -121,7 +121,7 @@ describe("editing a value where it is read", () => {
     const onSave = vi.fn(async () => {
       throw new ProblemError({
         code: "permission_denied",
-        detail: "organization.update: permission denied",
+        detail: "company.update: permission denied",
       });
     });
     renderChoice({ onSave });
@@ -136,7 +136,7 @@ describe("editing a value where it is read", () => {
       ),
     );
     const alert = screen.getByRole("alert").textContent ?? "";
-    expect(alert).not.toContain("organization.update");
+    expect(alert).not.toContain("company.update");
     expect(alert).not.toContain("permission denied");
   });
 

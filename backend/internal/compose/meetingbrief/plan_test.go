@@ -125,7 +125,7 @@ func TestReadinessReportsWhatSurvived(t *testing.T) {
 func TestEveryAdvanceLegSurvives(t *testing.T) {
 	in := fullInput()
 	plan := planOf(in)
-	for name, leg := range map[string]crmcontracts.OrganizationBriefSentence{
+	for name, leg := range map[string]crmcontracts.CompanyBriefSentence{
 		"minimum": plan.Advance.Minimum, "best": plan.Advance.Best, "fallback": plan.Advance.Fallback,
 	} {
 		if strings.TrimSpace(leg.Text) == "" {

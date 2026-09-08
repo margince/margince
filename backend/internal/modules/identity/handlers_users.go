@@ -74,7 +74,7 @@ func (h Handlers) InviteUser(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		err = conflictIf(err, errEmailTaken, "email_taken",
-			"a user with this email already exists in this organization; if they were "+
+			"a user with this email already exists in this company; if they were "+
 				"deactivated, reactivate them from the roster instead of inviting again")
 		httperr.Write(w, r, unknownRoleRefusal(err))
 		return
@@ -95,7 +95,7 @@ func (h Handlers) ChangeUserRole(w http.ResponseWriter, r *http.Request, id crmc
 	}
 	if err := h.svc.ChangeUserRole(r.Context(), actor, ids.UserID{UUID: ids.UUID(id)}, string(req.Role)); err != nil {
 		err = conflictIf(err, errLastActiveAdmin, "last_active_admin",
-			"this user is the organization's only active administrator; give another "+
+			"this user is the company's only active administrator; give another "+
 				"user the admin role first, then change this one's")
 		err = conflictIf(err, errAgentSeatHoldsNoRole, "agent_seat_holds_no_role",
 			"this is the workspace's agent identity; what an agent may do comes from the "+
@@ -126,7 +126,7 @@ func (h Handlers) DeactivateUser(w http.ResponseWriter, r *http.Request, id crmc
 		Reason: req.Reason,
 	}); err != nil {
 		httperr.Write(w, r, conflictIf(err, errLastActiveAdmin, "last_active_admin",
-			"this user is the organization's only active administrator; deactivating them "+
+			"this user is the company's only active administrator; deactivating them "+
 				"would leave nobody able to manage users — give another user the admin role first"))
 		return
 	}
@@ -249,12 +249,12 @@ func conflictIf(err, cause error, code, detail string) error {
 // MEMBER and an unknown ROLE. Both invite and change-role look a role key up, so
 // the wording lives here rather than being written out at each — an admin who
 // mistyped a role would otherwise be told the member was not found and go
-// looking for the wrong thing. The roles an organization defines are not a fixed
+// looking for the wrong thing. The roles a company defines are not a fixed
 // list (a workspace may define its own), so the detail points at where the truth
 // lives instead of reciting an enum that can drift.
 func unknownRoleRefusal(err error) error {
 	return refuseAs(err, errUnknownRole, http.StatusNotFound, "unknown_role",
-		"this organization defines no role with that key; check the roles it does "+
+		"this company defines no role with that key; check the roles it does "+
 			"define and use one of those")
 }
 

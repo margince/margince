@@ -20,7 +20,7 @@ test.beforeEach(async ({ page }) => {
 
 type Page = import("@playwright/test").Page;
 
-// The installation's own name, edited in the dialog the organization card's
+// The installation's own name, edited in the dialog the company card's
 // verb opens.
 //
 // Chosen over the account page's sign-off because THIS draft is the one that
@@ -28,10 +28,10 @@ type Page = import("@playwright/test").Page;
 // unsaved edit is still unsaved on the way out of the page — which is the state
 // the guard exists to notice. A sign-off half-typed into a dialog nobody
 // reopened is discarded by design, so it never reaches the guard at all.
-const orgName = (page: Page) =>
+const companyName = (page: Page) =>
   page.getByRole("textbox", { name: "Name der Organisation" });
 
-const editOrgName = (page: Page) =>
+const editCompanyName = (page: Page) =>
   page.getByRole("button", { name: "Name der Organisation ändern" });
 
 // Types into the dialog and closes it again, leaving the draft behind on a page
@@ -42,8 +42,8 @@ const editOrgName = (page: Page) =>
 // the app rewrites out from under it.
 const typeAndCloseDialog = async (page: Page, name: string) => {
   await page.goto("/#/settings/company");
-  await editOrgName(page).click();
-  await orgName(page).fill(name);
+  await editCompanyName(page).click();
+  await companyName(page).fill(name);
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toBeHidden();
 };
@@ -73,8 +73,8 @@ test("a settings draft holds the page when the reader leaves for another screen"
   await expect(page).toHaveURL(/#\/settings\/company$/);
   // The draft survived the question: reopening the dialog shows what was typed
   // rather than the value the server still holds.
-  await editOrgName(page).click();
-  await expect(orgName(page)).toHaveValue("Gradion Nord GmbH");
+  await editCompanyName(page).click();
+  await expect(companyName(page)).toHaveValue("Gradion Nord GmbH");
 });
 
 test("discarding leaves for the screen the reader asked for", async ({

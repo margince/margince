@@ -36,12 +36,12 @@ function Panel({
   canEdit = true,
 }: Readonly<{ tags: PanelTag[]; withheld?: boolean; canEdit?: boolean }>) {
   installFetchStub({
-    [`GET /records/organization/${ORG}/tags`]: () =>
+    [`GET /records/company/${ORG}/tags`]: () =>
       jsonResponse({ data: tags, withheld }),
   });
   return (
     <StoryProviders>
-      <TagsPanel entityType="organization" entityID={ORG} canEdit={canEdit} />
+      <TagsPanel entityType="company" entityID={ORG} canEdit={canEdit} />
     </StoryProviders>
   );
 }

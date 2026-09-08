@@ -16,7 +16,7 @@ func TestEveryShareableTableIsWorkspaceReadable(t *testing.T) {
 	// A record type that arrives scoped-read must say so here rather than land
 	// silently: the write arm, not the read arm, is what keeps a row its
 	// owner's. A table free of capture privacy renders the predicate away
-	// entirely; person and organization keep an owner arm because an
+	// entirely; person and company keep an owner arm because an
 	// owner-private capture still answers to its owner alone.
 	rep := human(principal.RowScopeOwn)
 	for table := range shareableTables {
@@ -58,7 +58,7 @@ func TestIdentityTablesAreReadByEverySeat(t *testing.T) {
 			t.Errorf("UnboundedFor(rep, %s) = false; list paths would still render a clause", table)
 		}
 	}
-	for _, table := range []string{"person", "organization"} {
+	for _, table := range []string{"person", "company"} {
 		sql := rendered(rep, table)
 		if strings.Contains(sql, "t.owner_id IS NULL OR t.owner_id = $") {
 			t.Errorf("%s predicate for a rep still carries the own-scope arm: %s", table, sql)
@@ -202,7 +202,7 @@ func TestTheOwnerScopedSetIsNotEveryOwnedTable(t *testing.T) {
 	// names the measured or attributed subject rather than an access owner.
 	attributionOnlyOwners := []string{
 		"webhook_subscription", "capture_pending_counterparty",
-		"organization_domain_disposition", "signal", "email_signature",
+		"company_domain_disposition", "signal", "email_signature",
 	}
 	for _, table := range attributionOnlyOwners {
 		if ownerScopedTables[table] {

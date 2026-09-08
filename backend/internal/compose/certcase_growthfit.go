@@ -5,8 +5,8 @@ package compose
 
 // The certification case for growth_fit.
 //
-// It certifies the shipped path: the request is built by orgdossier's own
-// writer and the reply is read by orgdossier's own parser and grounding
+// It certifies the shipped path: the request is built by companydossier's own
+// writer and the reply is read by companydossier's own parser and grounding
 // filter. A case that rebuilt either would measure a copy, and a copy stays
 // green through the change that breaks the original.
 //
@@ -33,7 +33,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
-	"github.com/margince/margince/backend/internal/compose/orgdossier"
+	"github.com/margince/margince/backend/internal/compose/companydossier"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -99,8 +99,8 @@ func (growthFitCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prepar
 
 // growthFitInput builds the production input, minting one id per labelled
 // record so no id in the reply can have come from the corpus.
-func growthFitInput(f growthFitFixture) (orgdossier.Input, map[string]string, error) {
-	in := orgdossier.Input{OrganizationID: ids.NewV7().String()}
+func growthFitInput(f growthFitFixture) (companydossier.Input, map[string]string, error) {
+	in := companydossier.Input{CompanyID: ids.NewV7().String()}
 	label := map[string]string{}
 	for _, field := range f.ProfileFields {
 		if err := refuseUnnameable(field.Label, "profile field", label); err != nil {
@@ -122,9 +122,9 @@ func growthFitInput(f growthFitFixture) (orgdossier.Input, map[string]string, er
 		id := ids.NewV7()
 		label[fact.Label] = id.String()
 		wireID := openapi_types.UUID(id)
-		in.Facts = append(in.Facts, crmcontracts.OrganizationFact{
+		in.Facts = append(in.Facts, crmcontracts.CompanyFact{
 			Id:    &wireID,
-			Field: crmcontracts.OrganizationFactField(fact.Field),
+			Field: crmcontracts.CompanyFactField(fact.Field),
 			Value: fact.Value,
 		})
 	}
@@ -149,7 +149,7 @@ func refuseUngroundableFit(want growthFitExpectation, label map[string]string) e
 	}
 	distinct := map[string]bool{}
 	for _, band := range want.Bands {
-		if !orgdossier.BandIsJudgeable(crmcontracts.GrowthFitBand(band)) {
+		if !companydossier.BandIsJudgeable(crmcontracts.GrowthFitBand(band)) {
 			return fmt.Errorf(
 				"the scenario accepts band %q, which is not a band the model may propose", band)
 		}
@@ -157,7 +157,7 @@ func refuseUngroundableFit(want growthFitExpectation, label map[string]string) e
 		// accepts-everything check below while still accepting everything.
 		distinct[band] = true
 	}
-	if len(distinct) == orgdossier.JudgeableBandCount {
+	if len(distinct) == companydossier.JudgeableBandCount {
 		return errors.New("the scenario accepts every band, so no reply could disagree with it")
 	}
 	return nil
@@ -165,7 +165,7 @@ func refuseUngroundableFit(want growthFitExpectation, label map[string]string) e
 
 // growthFitCase certifies one assessment of one company.
 type growthFitCase struct {
-	in       orgdossier.Input
+	in       companydossier.Input
 	label    map[string]string
 	expected growthFitExpectation
 }
@@ -177,7 +177,7 @@ func (c *growthFitCase) Run(ctx context.Context, completer aitasks.Completer) (a
 	// certification record grades a fixed corpus, and a score that moved with a
 	// settings row would not be comparable between two installations. The rule
 	// is PRESENT for the same reason — production sends one.
-	req := orgdossier.GrowthFitRequest(c.in, string(textlang.English))
+	req := companydossier.GrowthFitRequest(c.in, string(textlang.English))
 	trace := aitasks.Trace{Requests: []model.Request{req}}
 	resp, err := completer.Complete(ctx, req)
 	if err != nil {
@@ -191,7 +191,7 @@ func (c *growthFitCase) Run(ctx context.Context, completer aitasks.Completer) (a
 // questions the scenario poses: is the band defensible, and did the claims
 // behind it rest on the records that matter.
 func (c *growthFitCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
-	band, kept, err := orgdossier.ParseGrowthFit(trace.Output, c.in)
+	band, kept, err := companydossier.ParseGrowthFit(trace.Output, c.in)
 	if err != nil {
 		// A reply production would discard. Abstention and a malformed answer
 		// are both "no assessment", and the parser draws that line already.

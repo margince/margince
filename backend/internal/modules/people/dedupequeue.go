@@ -7,7 +7,7 @@ package people
 // confidence-sorted reads with the detection-time evidence snapshot
 // (DH-N-8 — rendered as captured, never re-derived), and the two
 // dispositions. `merge` executes the owner's merge verb — mergePerson /
-// mergeOrganization, ONE merge in the system — and `not_a_duplicate`
+// mergeCompany, ONE merge in the system — and `not_a_duplicate`
 // flips the row that suppresses the pair from every future sweep
 // (AC-dedupe-7: the unique pair index meets the row and re-proposes
 // nothing).
@@ -48,7 +48,7 @@ func (e *DedupeInputError) FieldFault() (field, code, message string) {
 // DedupeCandidateRow is one queue row as stored.
 type DedupeCandidateRow struct {
 	ID          ids.UUID
-	EntityType  string // person | organization | lead
+	EntityType  string // person | company | lead
 	LeftID      ids.UUID
 	RightID     ids.UUID
 	Confidence  float64
@@ -138,8 +138,8 @@ func requireDedupeRead(ctx context.Context, entityType string) error {
 			return err
 		}
 	}
-	if entityType == "" || entityType == entityOrganization {
-		if err := auth.Require(ctx, entityOrganization, principal.ActionRead); err != nil {
+	if entityType == "" || entityType == entityCompany {
+		if err := auth.Require(ctx, entityCompany, principal.ActionRead); err != nil {
 			return err
 		}
 	}
@@ -181,7 +181,7 @@ func (s *Store) ListDedupeCandidates(ctx context.Context, in DedupeQueueInput) (
 		return nil, "", err
 	}
 	query := `
-		SELECT id, entity_type, coalesce(left_person_id, left_org_id, left_lead_id), coalesce(right_person_id, right_org_id, right_lead_id),
+		SELECT id, entity_type, coalesce(left_person_id, left_company_id, left_lead_id), coalesce(right_person_id, right_company_id, right_lead_id),
 		       confidence, evidence, disposition, disposed_by, disposed_at, created_at,
 		       ` + decidable + `
 		FROM dedupe_candidate
@@ -333,7 +333,7 @@ func bothSidesReadable(ctx context.Context, tx pgx.Tx, row DedupeCandidateRow) e
 func readDedupeCandidate(ctx context.Context, tx pgx.Tx, id ids.UUID) (DedupeCandidateRow, error) {
 	var r DedupeCandidateRow
 	err := tx.QueryRow(ctx, `
-		SELECT id, entity_type, coalesce(left_person_id, left_org_id, left_lead_id), coalesce(right_person_id, right_org_id, right_lead_id),
+		SELECT id, entity_type, coalesce(left_person_id, left_company_id, left_lead_id), coalesce(right_person_id, right_company_id, right_lead_id),
 		       confidence, evidence, disposition, disposed_by, disposed_at, created_at
 		FROM dedupe_candidate WHERE id = $1 AND archived_at IS NULL`, id).
 		Scan(&r.ID, &r.EntityType, &r.LeftID, &r.RightID, &r.Confidence,
@@ -377,8 +377,8 @@ func (s *Store) OpenCandidatesNaming(ctx context.Context, entityType string, id 
 	}
 	args := []any{dispositionOpen, id}
 	query := fmt.Sprintf(`
-		SELECT id, entity_type, coalesce(left_person_id, left_org_id, left_lead_id),
-		       coalesce(right_person_id, right_org_id, right_lead_id),
+		SELECT id, entity_type, coalesce(left_person_id, left_company_id, left_lead_id),
+		       coalesce(right_person_id, right_company_id, right_lead_id),
 		       confidence, evidence, disposition, disposed_by, disposed_at, created_at
 		  FROM dedupe_candidate
 		 WHERE disposition = $1 AND archived_at IS NULL

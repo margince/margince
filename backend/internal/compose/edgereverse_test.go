@@ -119,7 +119,7 @@ func TestReversingTheCreationOfARemovedLinkSaysTheLinkIsGone(t *testing.T) {
 
 // An edge's write authority is its ANCHOR's, and the two ends are NOT
 // symmetric: an employment anchors the person, so a seat holding
-// organization-write and not person-write is refused the button on the COMPANY's
+// company-write and not person-write is refused the button on the COMPANY's
 // page — where the record they are reading is one they may change.
 //
 // The refusal itself is not surfaced. It separates "not yours" from "does not

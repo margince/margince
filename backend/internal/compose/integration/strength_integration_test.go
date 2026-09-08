@@ -7,7 +7,7 @@ package integration
 
 // Relationship strength (B-E13.16, formulas-and-rules §4) over real
 // rows: fixed seed + fixed clock → the spec's worked example exactly;
-// leads contribute nothing (ADR-0008); the org roll-up is the max over
+// leads contribute nothing (ADR-0008); the company roll-up is the max over
 // current employees.
 
 import (
@@ -28,9 +28,9 @@ func TestRelationshipStrengthOverSeededRows(t *testing.T) {
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms)
 
 	person := SeedIDRow(t, owner, `INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, 'Warm Contact', 'manual', 'human:x')`)
-	org := SeedIDRow(t, owner, `INSERT INTO organization (id, display_name, source, captured_by) VALUES ($1, 'Warm GmbH', 'manual', 'human:x')`)
+	company := SeedIDRow(t, owner, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Warm GmbH', 'manual', 'human:x')`)
 	if _, err := owner.Exec(context.Background(),
-		`INSERT INTO relationship (kind, person_id, organization_id, source, captured_by) VALUES ('employment', $1, $2, 'manual', 'human:x')`, person, org); err != nil {
+		`INSERT INTO relationship (kind, person_id, company_id, source, captured_by) VALUES ('employment', $1, $2, 'manual', 'human:x')`, person, company); err != nil {
 		t.Fatal(err)
 	}
 
@@ -91,12 +91,12 @@ func TestRelationshipStrengthOverSeededRows(t *testing.T) {
 		t.Fatalf("same seed + clock → %d then %d", got.Strength, again.Strength)
 	}
 
-	// Org roll-up: max over current employees — here, the one person.
-	orgStrength, err := store.OrganizationStrength(ctx, orgIDOf(org), now)
+	// Company roll-up: max over current employees — here, the one person.
+	companyStrength, err := store.CompanyStrength(ctx, companyIDOf(company), now)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if orgStrength.Strength != got.Strength {
-		t.Fatalf("org roll-up → %d, want the max employee strength %d", orgStrength.Strength, got.Strength)
+	if companyStrength.Strength != got.Strength {
+		t.Fatalf("company roll-up → %d, want the max employee strength %d", companyStrength.Strength, got.Strength)
 	}
 }

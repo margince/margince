@@ -20,12 +20,12 @@ import "testing"
 // member fails here rather than reading as a pass.
 func TestEveryRoutableLeadFieldResolvesToItsOwnFact(t *testing.T) {
 	facts := leadRoutingFacts{
-		Source:          "the source",
-		CompanyName:     "the company name",
-		CandidateOrgKey: "the candidate org key",
+		Source:              "the source",
+		CompanyName:         "the company name",
+		CandidateCompanyKey: "the candidate company key",
 	}
 	markers := map[string]bool{
-		facts.Source: true, facts.CompanyName: true, facts.CandidateOrgKey: true,
+		facts.Source: true, facts.CompanyName: true, facts.CandidateCompanyKey: true,
 	}
 	if len(markers) != 3 {
 		t.Fatal("the markers are no longer distinct, so a mixed-up arm would read as a pass")
@@ -59,7 +59,7 @@ func TestEveryRoutableLeadFieldResolvesToItsOwnFact(t *testing.T) {
 // fact the switch happens to fall through to. This is what makes the empty
 // string above a reliable signal instead of an accident of arm order.
 func TestAnUnroutableFieldNameResolvesToNothing(t *testing.T) {
-	facts := leadRoutingFacts{Source: "s", CompanyName: "c", CandidateOrgKey: "k"}
+	facts := leadRoutingFacts{Source: "s", CompanyName: "c", CandidateCompanyKey: "k"}
 	if got := facts.field("owner_id"); got != "" {
 		t.Errorf("leadRoutingFacts.field resolved the unroutable name %q to %q; routing is "+
 			"lead-local by design and a name outside RoutableLeadFields must reach no fact",

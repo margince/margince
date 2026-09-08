@@ -50,7 +50,7 @@ paths = [
 ]
 
 # The agent tool registry names the contract operations a tool composes —
-# "getPerson/getOrganization/getDeal + listActivities". Slash-joined camelCase
+# "getPerson/getCompany/getDeal + listActivities". Slash-joined camelCase
 # reads as high-entropy to the generic detector; it is an operation id, and the
 # gen-agentpolicy drift gate would fail if it were anything else.
 #

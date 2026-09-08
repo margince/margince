@@ -47,7 +47,7 @@ func TestCompanySiteReadMessageUsesTheStoredDossierAndReturnsRuntime(t *testing.
 
 	request := companyReadMessageRequest(human, t, read.ID.String(), "Please update the display name to Acme from the website.")
 	recorder := httptest.NewRecorder()
-	engine.messageCompanySiteRead(recorder, request, openapi_types.UUID(read.ID))
+	engine.messageAnchorCompanySiteRead(recorder, request, openapi_types.UUID(read.ID))
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("message → %d %s", recorder.Code, recorder.Body.String())
 	}
@@ -72,7 +72,7 @@ func TestCompanySiteReadMessageUsesTheStoredDossierAndReturnsRuntime(t *testing.
 	} {
 		t.Run(name, func(t *testing.T) {
 			recorder := httptest.NewRecorder()
-			engine.messageCompanySiteRead(recorder, companyReadMessageRequest(human, t, read.ID.String(), message), openapi_types.UUID(read.ID))
+			engine.messageAnchorCompanySiteRead(recorder, companyReadMessageRequest(human, t, read.ID.String(), message), openapi_types.UUID(read.ID))
 			if recorder.Code != http.StatusUnprocessableEntity {
 				t.Fatalf("status = %d, want 422: %s", recorder.Code, recorder.Body.String())
 			}

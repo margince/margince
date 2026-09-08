@@ -86,7 +86,7 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 	// credential (no deployment-wide OAuth app to gate on), so there is nothing
 	// to check for before wiring it up.
 	addDeclaredWorker[TelegramIngestArgs](reg, newTelegramIngestWorker(pool, cfg.CaptureConfig, log))
-	// The captured-organization auto-enrich sweep (ADR-0072/A118): always
+	// The captured-company auto-enrich sweep (ADR-0072/A118): always
 	// registered, it enqueues system deep reads the site worker applies.
 	autoEnrich := newCaptureAutoEnrichSweepWorker(pool, log)
 	addDeclaredWorker[CaptureAutoEnrichSweepArgs](reg, autoEnrich)
@@ -126,11 +126,11 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 		})
 	}
 
-	// Registered unconditionally: the org-name promotion weighs evidence rows
+	// Registered unconditionally: the company-name promotion weighs evidence rows
 	// the enrich pass already wrote, so it needs no model. Gating it on a brain
 	// would leave an AI-less deployment unable to act on signatures it had
 	// already collected.
-	addDeclaredWorker[OrgNamePromotionArgs](reg, &orgNamePromotionWorker{pool: pool, promoter: NewOrgNamePromoter(pool, log)})
+	addDeclaredWorker[CompanyNamePromotionArgs](reg, &companyNamePromotionWorker{pool: pool, promoter: NewCompanyNamePromoter(pool, log)})
 
 	// Registered unconditionally for a different reason: only the counterparty
 	// verdict's JUDGING stage needs a model, and the worker skips that stage

@@ -11,7 +11,7 @@ import { CaptureExclusionsCard } from "./capture-exclusions";
 
 // The two scopes this card draws are two different permissions, and that is the
 // whole subject: a rule that binds only the reader is theirs to write, while one
-// that binds the organization is admin/ops work. So every case below fixes the
+// that binds the company is admin/ops work. So every case below fixes the
 // grant and asks what the card offers.
 const CAPTURE_EDITOR: GrantSpec = { capture_settings: ["read", "update"] };
 const READER: GrantSpec = { capture_settings: ["read"] };
@@ -100,13 +100,13 @@ describe("CaptureExclusionsCard", () => {
     // The answer beside each rule is what it binds and what kind it is — the
     // two facts that decide whether this reader may take it back.
     expect(screen.getByText("Only me · Address")).toBeTruthy();
-    expect(screen.getByText("Whole organization · Domain")).toBeTruthy();
+    expect(screen.getByText("Whole company · Domain")).toBeTruthy();
   });
 
   // The permission split, on the row: a reader may take back their own rule and
-  // may not take back the organization's, and the refusal names one sentence
+  // may not take back the company's, and the refusal names one sentence
   // rather than printing it per row.
-  it("refuses only the organization-wide rule to a seat without the update grant", async () => {
+  it("refuses only the company-wide rule to a seat without the update grant", async () => {
     const { fetchMock } = backend(READER);
     vi.stubGlobal("fetch", fetchMock);
     render(
@@ -206,7 +206,7 @@ describe("CaptureExclusionsCard", () => {
 
   // The scope a seat may not write is refused where that choice is made, rather
   // than by a card that offered the form and then rejected the submission.
-  it("refuses the organization scope inside the dialog", async () => {
+  it("refuses the company scope inside the dialog", async () => {
     const user = userEvent.setup();
     const { fetchMock, calls } = backend(READER, [RULES[0]]);
     vi.stubGlobal("fetch", fetchMock);

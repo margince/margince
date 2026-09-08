@@ -50,7 +50,7 @@ func (e *stagingEnv) lentPassport(t *testing.T, human ids.UUID) context.Context 
 		Permissions: principal.Permissions{
 			RowScope: principal.RowScopeAll,
 			Objects: map[string]principal.ObjectGrant{
-				tableOrganization: {Create: true, Read: true, Update: true, Delete: true},
+				tableCompany: {Create: true, Read: true, Update: true, Delete: true},
 			},
 		},
 	})
@@ -69,7 +69,7 @@ func TestASecondPersonsPassportDoesNotReleaseAConfirmationRequiredAction(t *test
 	}
 	target := ids.NewV7()
 	if _, err := e.owner.Exec(ctx, `
-		INSERT INTO organization (id, display_name, source, captured_by)
+		INSERT INTO company (id, display_name, source, captured_by)
 		VALUES ($1, 'Gitex', 'gmail:seed', 'connector:gmail')`, target); err != nil {
 		t.Fatalf("seeding the target: %v", err)
 	}
@@ -83,10 +83,10 @@ func TestASecondPersonsPassportDoesNotReleaseAConfirmationRequiredAction(t *test
 
 	staging := func(name, hash string) StageInput {
 		return StageInput{
-			Kind:           "org_name_promotion",
+			Kind:           "company_name_promotion",
 			ProposedChange: []byte(`{"proposed_name":"` + name + `"}`),
 			DiffHash:       hash + "-" + target.String(),
-			TargetType:     tableOrganization,
+			TargetType:     tableCompany,
 			TargetID:       target,
 			Summary:        "Rename Gitex to " + name + "?",
 		}

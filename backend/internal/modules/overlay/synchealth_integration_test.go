@@ -119,7 +119,7 @@ func TestSyncHealthReportsRecentlyOverwrittenClassesAndThenForgetsThem(t *testin
 		t.Fatalf("Connect: %v", err)
 	}
 
-	const objectClass = "organization"
+	const objectClass = "company"
 	oldBaseline := time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC)
 	// Two rows of the same class, so the reading proves the aggregation and
 	// not merely that one conflict arrives.

@@ -22,7 +22,7 @@ import (
 func TestTheBriefOpensOnAPersonTheMeetingNames(t *testing.T) {
 	person := ids.NewV7()
 	got := personOnMeeting(withLinks(
-		link("organization", ids.NewV7()),
+		link("company", ids.NewV7()),
 		link("person", person),
 	))
 	if got != person {

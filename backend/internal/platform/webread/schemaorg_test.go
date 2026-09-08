@@ -8,7 +8,7 @@ package webread
 // The case behind these: a Next.js marketing site serves a shell with no body
 // text, so the read judged it "no readable text" and settled the domain as
 // parked — a real company on file as an empty address. The words were in the
-// markup the whole time, in the schema.org block the framework emitted.
+// markup the whole time, in the schema.company block the framework emitted.
 
 import (
 	"context"
@@ -25,9 +25,9 @@ func ldPage(block string) string {
 		`</script></head><body><div id="__next"></div></body></html>`
 }
 
-func TestAShellDeclaringAnOrganizationIsNotAnEmptyPage(t *testing.T) {
+func TestAShellDeclaringAnCompanyIsNotAnEmptyPage(t *testing.T) {
 	got := linkedDataClaims(ldPage(`{
-		"@context":"https://schema.org","@type":"Organization",
+		"@context":"https://schema.org","@type":"Company",
 		"name":"Intouch Sports","description":"Coaching for teams that travel."}`))
 
 	want := []string{"Intouch Sports", "Coaching for teams that travel."}
@@ -37,10 +37,10 @@ func TestAShellDeclaringAnOrganizationIsNotAnEmptyPage(t *testing.T) {
 }
 
 // The type is deliberately unfiltered, and this is the case that decides it:
-// schema.org's organization vocabulary is open, so a list of accepted types
+// schema.org's company vocabulary is open, so a list of accepted types
 // would read a site declaring itself a LocalBusiness subtype as declaring
 // nothing at all.
-func TestAnOrganizationSubtypeIsReadLikeAnyOther(t *testing.T) {
+func TestAnCompanySubtypeIsReadLikeAnyOther(t *testing.T) {
 	for _, kind := range []string{"Corporation", "NGO", "Dentist", "SportsActivityLocation"} {
 		got := linkedDataClaims(ldPage(fmt.Sprintf(
 			`{"@context":"https://schema.org","@type":%q,"name":"Nordic Works"}`, kind)))
@@ -54,7 +54,7 @@ func TestAnOrganizationSubtypeIsReadLikeAnyOther(t *testing.T) {
 func TestAGraphIsWalkedAndTheNamesDeduped(t *testing.T) {
 	got := linkedDataClaims(ldPage(`{"@context":"https://schema.org","@graph":[
 		{"@type":"WebSite","name":"Nordic Works"},
-		{"@type":"Organization","name":"Nordic Works","description":"We build boats."}]}`))
+		{"@type":"Company","name":"Nordic Works","description":"We build boats."}]}`))
 
 	want := []string{"Nordic Works", "We build boats."}
 	if !slices.Equal(got, want) {
@@ -82,7 +82,7 @@ func TestACatalogueIsCutToTheClaimBound(t *testing.T) {
 // A page's own broken JSON is not this crawl's problem to report: the block is
 // one source of prose among several, and the head and the body still read.
 func TestMalformedLinkedDataIsSkippedRatherThanFailing(t *testing.T) {
-	got := linkedDataClaims(ldPage(`{"@type":"Organization","name":`))
+	got := linkedDataClaims(ldPage(`{"@type":"Company","name":`))
 	if len(got) != 0 {
 		t.Errorf("claims = %q, want none from an unparseable block", got)
 	}
@@ -102,7 +102,7 @@ func TestAFetchedShellCarriesWhatItDeclared(t *testing.T) {
 		w.Header().Set("Content-Type", "text/html")
 		_, _ = w.Write([]byte(`<html><head>` +
 			`<meta name="description" content="Coaching for teams that travel.">` +
-			`<script type="application/ld+json">{"@type":"Organization","name":"Intouch Sports"}</script>` +
+			`<script type="application/ld+json">{"@type":"Company","name":"Intouch Sports"}</script>` +
 			`<script type="module" src="/_next/main.js"></script>` +
 			`</head><body><div id="__next"></div></body></html>`))
 	}))
@@ -118,7 +118,7 @@ func TestAFetchedShellCarriesWhatItDeclared(t *testing.T) {
 		t.Fatalf("page text = %q, want the empty body this case is about", page.Text)
 	}
 	if !slices.Contains(page.HeadText, "Intouch Sports") {
-		t.Errorf("head text = %q, want it to carry the organization the markup declared — "+
+		t.Errorf("head text = %q, want it to carry the company the markup declared — "+
 			"without it this page reads as having no readable text and settles as parked",
 			page.HeadText)
 	}

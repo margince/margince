@@ -231,7 +231,7 @@ describe("ProjectsScreen", () => {
     await waitFor(() => expect(posted).toBeTruthy());
     expect(posted).toEqual({
       name: "CRM rollout",
-      organization_id: "o-1",
+      company_id: "o-1",
       owner_id: null,
       description: null,
       target_end_date: null,

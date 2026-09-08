@@ -87,7 +87,7 @@ into consent's handlers.
   workspace's enabled policies and applies the policy's single action to over-age records, **one
   audited transaction per record**, and a tenant whose pass fails fails its own job row.
   `legal_hold` rows are never auto-acted, and an activity is held transitively when any linked
-  person/organization/deal is held. A policy whose scope the engine doesn't understand is
+  person/company/deal is held. A policy whose scope the engine doesn't understand is
   **skipped loudly**, never half-applied.
 
 ## The single-transaction cross-store exception

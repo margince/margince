@@ -21,11 +21,11 @@ import type { MessageKey } from "../../i18n/en";
  * One sentence of grounded prose, with what it rests on.
  *
  * Typed against the contract's own shared sentence — which the contract
- * spells `OrganizationBriefSentence` and uses for the org brief, the deal
+ * spells `CompanyBriefSentence` and uses for the company brief, the deal
  * status card, Person360 and the growth-fit panel alike. The name is the
  * contract's; the shape has never been a company's.
  */
-export type BriefSentence = components["schemas"]["OrganizationBriefSentence"];
+export type BriefSentence = components["schemas"]["CompanyBriefSentence"];
 
 /** One record a sentence was written from. */
 export type Cited = BriefSentence["evidence"][number];
@@ -213,9 +213,9 @@ const RECEIPT_CITATIONS = new Set(["fact", "profile_field"]);
 // open their screens; `fact` and `profile_field` open their receipt instead —
 // where the value came from, when it was read, and what could not be recorded.
 //
-// `activity` is not here, and `organization` is not either, for two different
+// `activity` is not here, and `company` is not either, for two different
 // reasons. An activity lives in a timeline and has no route; what it CAN open
-// is the message itself, decided per row by `emailOf` below. An organization
+// is the message itself, decided per row by `emailOf` below. A company
 // citation is usually the page the reader is already on.
 const ROUTABLE_CITATIONS = new Set(["deal", "person", "fact", "profile_field"]);
 

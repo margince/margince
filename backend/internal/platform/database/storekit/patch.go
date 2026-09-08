@@ -33,7 +33,7 @@ const (
 	IncludeArchived
 	// NoArchiveColumn is for a table that has no archived_at at all — a
 	// dependent row deleted with its parent rather than retired on its own,
-	// such as the organization evidence sidecars. It renders the same empty
+	// such as the company evidence sidecars. It renders the same empty
 	// predicate as IncludeArchived and is a separate value on purpose: at a
 	// call site, IncludeArchived reads as "this write deliberately reaches
 	// archived rows", which for such a table is a claim about rows that cannot

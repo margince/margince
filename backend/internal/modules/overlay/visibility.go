@@ -223,7 +223,7 @@ func (s *MirrorStore) RecomputeForOwner(ctx context.Context, incumbentUserID str
 // leader-elected poller plus occasional manual remaps), so serializing them
 // installation-wide costs effectively nothing.
 func lockWorkspaceVisibility(ctx context.Context, tx pgx.Tx) error {
-	// A constant key: one installation is one organization (ADR-0061), so the
+	// A constant key: one installation is one company (ADR-0061), so the
 	// workspace this used to carry distinguished nothing. It reads no GUC, so
 	// an unbound transaction cannot change what it locks.
 	if _, err := tx.Exec(ctx,

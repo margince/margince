@@ -36,16 +36,16 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// CheckOrganizationVatArgs is one queued consultation: the tenant and the
+// CheckCompanyVatArgs is one queued consultation: the tenant and the
 // company.
 //
 // The NUMBER IS NOT among them, deliberately. The worker reads it from the row
 // when it runs, so a consultation queued before a correction asks about the
 // number the company actually states rather than the one it stated when the job
 // was made. A copy in the args would be a receipt for the wrong number.
-type CheckOrganizationVatArgs struct {
-	Workspace      ids.UUID `json:"workspace_id"`
-	OrganizationID ids.UUID `json:"organization_id"`
+type CheckCompanyVatArgs struct {
+	Workspace ids.UUID `json:"workspace_id"`
+	CompanyID ids.UUID `json:"company_id"`
 	// Requested marks a consultation a PERSON asked for, and it does two things
 	// that both matter.
 	//
@@ -62,10 +62,10 @@ type CheckOrganizationVatArgs struct {
 }
 
 // Kind is the stable job identifier River persists in river_job.
-func (CheckOrganizationVatArgs) Kind() string { return "check_organization_vat" }
+func (CheckCompanyVatArgs) Kind() string { return "check_company_vat" }
 
 // WorkspaceID binds this consultation to its tenant (jobs.WorkspaceScoped).
-func (a CheckOrganizationVatArgs) WorkspaceID() ids.UUID { return a.Workspace }
+func (a CheckCompanyVatArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
 // vatCheckQueue is declared in api/jobs.yaml at one worker; the name is spelled
 // here because the insert has to name it.
@@ -91,7 +91,7 @@ func VatCheckEnqueueFor(enqueue vatCheckEnqueuer) people.VatCheckEnqueue {
 	if enqueue == nil {
 		return nil
 	}
-	return func(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, requested bool) error {
+	return func(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, requested bool) error {
 		ws, ok := principal.WorkspaceID(ctx)
 		if !ok {
 			// No tenant bound means no job that could ever be worked: River
@@ -99,10 +99,10 @@ func VatCheckEnqueueFor(enqueue vatCheckEnqueuer) people.VatCheckEnqueue {
 			// dequeues. Refusing is louder than inserting an orphan.
 			return errors.New("compose: checking a company's VAT number outside any workspace")
 		}
-		return enqueue.EnqueueTx(ctx, tx, CheckOrganizationVatArgs{
-			Workspace:      ws,
-			OrganizationID: orgID.UUID,
-			Requested:      requested,
+		return enqueue.EnqueueTx(ctx, tx, CheckCompanyVatArgs{
+			Workspace: ws,
+			CompanyID: companyID.UUID,
+			Requested: requested,
 		}, vatCheckInsertOpts())
 	}
 }
@@ -137,7 +137,7 @@ func vatCheckInsertOpts() *river.InsertOpts {
 // answerable, and a worker that was never registered leaves it stuck rather
 // than recorded.
 type vatCheckWorker struct {
-	river.WorkerDefaults[CheckOrganizationVatArgs]
+	river.WorkerDefaults[CheckCompanyVatArgs]
 	pool    *pgxpool.Pool
 	checker vatcheck.Checker
 	clock   func() time.Time
@@ -162,7 +162,7 @@ func newVatCheckWorker(pool *pgxpool.Pool, checker vatcheck.Checker, clock func(
 // failure, and a company whose stated number is not real is exactly the finding
 // this lane exists to surface — forgetting it would re-ask forever and tell
 // nobody.
-func (w *vatCheckWorker) Work(ctx context.Context, job *river.Job[CheckOrganizationVatArgs]) error {
+func (w *vatCheckWorker) Work(ctx context.Context, job *river.Job[CheckCompanyVatArgs]) error {
 	args := job.Args
 	// Bound through the shared helper, so the args' own WorkspaceID() IS the
 	// binding: a worker that picked its own could claim one workspace and work
@@ -175,9 +175,9 @@ func (w *vatCheckWorker) Work(ctx context.Context, job *river.Job[CheckOrganizat
 	store := people.NewStore(database.Bind(w.pool, func(context.Context) (ids.WorkspaceID, error) {
 		return ids.From[ids.WorkspaceKind](args.Workspace), nil
 	}))
-	orgID := ids.From[ids.OrganizationKind](args.OrganizationID)
+	companyID := ids.From[ids.CompanyKind](args.CompanyID)
 
-	number, ok, err := store.VatNumberForCheck(wsCtx, orgID)
+	number, ok, err := store.VatNumberForCheck(wsCtx, companyID)
 	if err != nil {
 		return jobs.FaultContext(wsCtx, fmt.Errorf("reading the VAT number to check: %w", err))
 	}
@@ -217,10 +217,10 @@ func (w *vatCheckWorker) Work(ctx context.Context, job *river.Job[CheckOrganizat
 		// producer of that status and the distinction it protected was never
 		// visible to anybody.
 		return jobs.FaultContext(wsCtx, store.RecordVatCheck(wsCtx, people.VatCheck{
-			OrganizationID: orgID,
-			Number:         number,
-			Status:         people.VatCheckInvalid,
-			CheckedAt:      w.clock(),
+			CompanyID: companyID,
+			Number:    number,
+			Status:    people.VatCheckInvalid,
+			CheckedAt: w.clock(),
 		}))
 	}
 	var refused *vatcheck.ProviderRefusedError
@@ -243,7 +243,7 @@ func (w *vatCheckWorker) Work(ctx context.Context, job *river.Job[CheckOrganizat
 		consultedAt = w.clock()
 	}
 	return jobs.FaultContext(wsCtx, store.RecordVatCheck(wsCtx, people.VatCheck{
-		OrganizationID:     orgID,
+		CompanyID:          companyID,
 		Number:             number,
 		Status:             people.VatCheckStatus(result.Status),
 		ConsultationNumber: result.ConsultationNumber,

@@ -30,9 +30,9 @@ const RECORD_WRITE_KEYS: Record<EntityKind, (id: string) => QueryKey[]> = {
     ["person360", id],
     ["personBrief", id],
   ],
-  organization: (id) => [
-    ["organization", id],
-    ["organization360", id],
+  company: (id) => [
+    ["company", id],
+    ["company360", id],
     ["account-scan", id],
   ],
   deal: (id) => dealRecordKeys(id),

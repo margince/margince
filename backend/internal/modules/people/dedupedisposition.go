@@ -38,8 +38,8 @@ import (
 //
 // The object grant is not that authority and never was. requireDedupeWrite asks
 // for update on the PAIR'S OWN type, and all three types are workspace-readable
-// identity — so a seat holding organization:update passes it over every
-// colleague's organizations, and likewise for the other two.
+// identity — so a seat holding company:update passes it over every
+// colleague's companies, and likewise for the other two.
 //
 // It refuses with 403, not 404: GetDedupeCandidate has already told this caller
 // the pair is theirs to read, so there is nothing left for existence-hiding to
@@ -163,8 +163,8 @@ func (s *Store) executeDedupeMergeTx(
 	case entityPerson:
 		_, err := s.mergePersonTx(ctx, tx, ids.From[ids.PersonKind](loser), ids.From[ids.PersonKind](winner), active)
 		return err
-	case entityOrganization:
-		_, err := mergeOrganizationTx(ctx, tx, ids.From[ids.OrganizationKind](loser), ids.From[ids.OrganizationKind](winner), active)
+	case entityCompany:
+		_, err := mergeCompanyTx(ctx, tx, ids.From[ids.CompanyKind](loser), ids.From[ids.CompanyKind](winner), active)
 		return err
 	case entityLead:
 		_, err := mergeLeadTx(ctx, tx, ids.From[ids.LeadKind](loser), ids.From[ids.LeadKind](winner), active, capturedBy)

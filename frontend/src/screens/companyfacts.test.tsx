@@ -17,12 +17,12 @@ import { CompanyFacts } from "./companyfacts";
 // pixel apart on screen and opposite facts about the account: one says the
 // reader cannot see, the other says there is nothing to see.
 
-type Organization360 = components["schemas"]["Organization360"];
-type Organization = components["schemas"]["Organization"];
+type Company360 = components["schemas"]["Company360"];
+type Company = components["schemas"]["Company"];
 
 const page = { has_more: false, next_cursor: null };
 
-const org: Organization = {
+const company: Company = {
   id: "o-1",
   display_name: "Brandt Automotive GmbH",
   captured_by: "human:u1",
@@ -30,12 +30,12 @@ const org: Organization = {
   version: 1,
   created_at: "2026-06-01T08:00:00Z",
   updated_at: "2026-06-01T08:00:00Z",
-} as Organization;
+} as Company;
 
-function view(overrides: Partial<Organization360> = {}): Organization360 {
+function view(overrides: Partial<Company360> = {}): Company360 {
   return {
     as_of: "2026-08-01T09:00:00Z",
-    organization: org,
+    company: company,
     sections_omitted: [],
     deals: {
       data: [],
@@ -55,7 +55,7 @@ function view(overrides: Partial<Organization360> = {}): Organization360 {
       },
     },
     ...overrides,
-  } as unknown as Organization360;
+  } as unknown as Company360;
 }
 
 // The owner control reads the roster through react-query, so the box needs a
@@ -80,7 +80,7 @@ describe("what the open pipeline says", () => {
   it("names a figure when the deals are readable and priced", () => {
     draw(
       <CompanyFacts
-        org={org}
+        company={company}
         view={view({
           state_strip: {
             account: { lifecycle: "customer", relationship_types: [] },
@@ -93,7 +93,7 @@ describe("what the open pipeline says", () => {
               base_currency: "EUR",
             },
           },
-        } as Partial<Organization360>)}
+        } as Partial<Company360>)}
       />,
     );
 
@@ -101,7 +101,7 @@ describe("what the open pipeline says", () => {
   });
 
   it("says the account has no open deals rather than showing nothing", () => {
-    draw(<CompanyFacts org={org} view={view()} />);
+    draw(<CompanyFacts company={company} view={view()} />);
 
     expect(screen.getByText("No open deals")).toBeTruthy();
   });
@@ -111,12 +111,12 @@ describe("what the open pipeline says", () => {
   it("says withheld, not 'no deals', when the commercial half is absent", () => {
     draw(
       <CompanyFacts
-        org={org}
+        company={company}
         view={view({
           state_strip: {
             account: { lifecycle: "customer", relationship_types: [] },
           },
-        } as Partial<Organization360>)}
+        } as Partial<Company360>)}
       />,
     );
 
@@ -131,7 +131,7 @@ describe("what the open pipeline says", () => {
   it("says the pipeline is unpriced rather than printing a zero", () => {
     draw(
       <CompanyFacts
-        org={org}
+        company={company}
         view={view({
           state_strip: {
             account: { lifecycle: "customer", relationship_types: [] },
@@ -142,7 +142,7 @@ describe("what the open pipeline says", () => {
               converted_count: 0,
             },
           },
-        } as Partial<Organization360>)}
+        } as Partial<Company360>)}
       />,
     );
 
@@ -155,7 +155,7 @@ describe("what the in-flight count says", () => {
   it("counts the open deals and the live projects", () => {
     draw(
       <CompanyFacts
-        org={org}
+        company={company}
         view={view({
           deals: {
             data: [{ deal_id: "d-1" }, { deal_id: "d-2" }],
@@ -167,7 +167,7 @@ describe("what the in-flight count says", () => {
             { project_id: "p-1", name: "Rollout", phase: "delivering" },
             { project_id: "p-2", name: "Done", phase: "closed" },
           ],
-        } as unknown as Partial<Organization360>)}
+        } as unknown as Partial<Company360>)}
       />,
     );
 
@@ -183,11 +183,11 @@ describe("what the in-flight count says", () => {
   it("gives no count at all when either half is withheld", () => {
     draw(
       <CompanyFacts
-        org={org}
+        company={company}
         view={view({
           projects: undefined,
           sections_omitted: ["projects"],
-        } as unknown as Partial<Organization360>)}
+        } as unknown as Partial<Company360>)}
       />,
     );
 
@@ -207,7 +207,7 @@ describe("what the in-flight count says", () => {
   });
 
   it("says nothing is in flight when both halves are readable and empty", () => {
-    draw(<CompanyFacts org={org} view={view()} />);
+    draw(<CompanyFacts company={company} view={view()} />);
 
     expect(screen.getByText("Nothing")).toBeTruthy();
   });
@@ -217,7 +217,7 @@ describe("what the in-flight count says", () => {
   it("marks the count as a floor when a section was cut short", () => {
     draw(
       <CompanyFacts
-        org={org}
+        company={company}
         view={view({
           deals: {
             data: [{ deal_id: "d-1" }],
@@ -225,7 +225,7 @@ describe("what the in-flight count says", () => {
             won_lifetime: { amount_minor: 0, currency: "EUR" },
             lost_count: 0,
           },
-        } as unknown as Partial<Organization360>)}
+        } as unknown as Partial<Company360>)}
       />,
     );
 
@@ -238,7 +238,7 @@ describe("what the in-flight count says", () => {
 // answered states a fact the page does not have yet.
 describe("before the composite has answered", () => {
   it("says it is still reading rather than reporting an absence", () => {
-    draw(<CompanyFacts org={org} view={undefined} />);
+    draw(<CompanyFacts company={company} view={undefined} />);
 
     expect(screen.getAllByText("Reading…").length).toBe(2);
     expect(screen.queryByText("No open deals")).toBeNull();

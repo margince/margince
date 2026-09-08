@@ -5,7 +5,7 @@
 //
 // There are three: the reply to an activity, the person composer, and
 // account-started outbound. They differ in what a draft is grounded IN — an
-// activity, a Person360, an Organization360 — and that difference is real and
+// activity, a Person360, a Company360 — and that difference is real and
 // stays with each surface. What they share is the machinery around generation,
 // and every time a copy of it drifted, a defect shipped on one surface and not
 // the others.

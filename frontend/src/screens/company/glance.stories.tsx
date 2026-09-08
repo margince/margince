@@ -27,7 +27,7 @@ const meta: Meta<typeof PeopleChips> = {
 export default meta;
 
 type Story = StoryObj<typeof PeopleChips>;
-type View = components["schemas"]["Organization360"];
+type View = components["schemas"]["Company360"];
 
 const strength = {
   score: 71,
@@ -38,7 +38,7 @@ const strength = {
 function view(people: View["people"], omitted: string[] = []): View {
   return {
     as_of: "2026-07-13T09:00:00Z",
-    organization: {
+    company: {
       id: "o-1",
       display_name: "Brandt Automotive GmbH",
       captured_by: "human:u1",

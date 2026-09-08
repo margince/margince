@@ -35,9 +35,9 @@ func (s *Store) PersonLabels(ctx context.Context, want []ids.UUID) (map[ids.UUID
 	return s.labelsOf(ctx, entityPerson, "person", "full_name", want)
 }
 
-// OrganizationLabels answers each named company's display name.
-func (s *Store) OrganizationLabels(ctx context.Context, want []ids.UUID) (map[ids.UUID]string, error) {
-	return s.labelsOf(ctx, entityOrganization, "organization", "display_name", want)
+// CompanyLabels answers each named company's display name.
+func (s *Store) CompanyLabels(ctx context.Context, want []ids.UUID) (map[ids.UUID]string, error) {
+	return s.labelsOf(ctx, entityCompany, "company", "display_name", want)
 }
 
 // LeadLabels answers each named lead's display name. A lead captured without

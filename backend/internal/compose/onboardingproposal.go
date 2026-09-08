@@ -64,7 +64,7 @@ func (e *onboardingProposalEngine) get(w http.ResponseWriter, r *http.Request, p
 		httperr.Write(w, r, apperrors.ErrNotFound)
 		return
 	}
-	read, comparisons, err := e.people.GetCompanySiteRead(r.Context(), *state.SiteReadID)
+	read, comparisons, err := e.people.GetAnchorCompanySiteRead(r.Context(), *state.SiteReadID)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

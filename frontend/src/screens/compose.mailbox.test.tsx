@@ -129,8 +129,8 @@ describe("whose mailbox the composer is answering from", () => {
     stubRoutes(mailboxRoutes(mailboxUserIds));
     render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         open
         onClose={vi.fn()}
       />,
@@ -191,8 +191,8 @@ describe("whose mailbox the composer is answering from", () => {
     });
     render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         open
         onClose={vi.fn()}
       />,
@@ -218,8 +218,8 @@ describe("whose mailbox the composer is answering from", () => {
     });
     render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         open
         onClose={vi.fn()}
       />,
@@ -242,8 +242,8 @@ describe("whose mailbox the composer is answering from", () => {
     });
     render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         open
         onClose={vi.fn()}
       />,
@@ -287,8 +287,8 @@ describe("whose mailbox the composer is answering from", () => {
     });
     const view = render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         activityId="act-charlotte"
         open
         onClose={vi.fn()}
@@ -302,8 +302,8 @@ describe("whose mailbox the composer is answering from", () => {
       <QueryClientProvider client={view.queryClient}>
         <LocaleProvider initial="en">
           <ComposeModal
-            entityType="organization"
-            entityId="org-1"
+            entityType="company"
+            entityId="company-1"
             activityId="act-mine"
             open
             onClose={vi.fn()}
@@ -331,8 +331,8 @@ describe("whose mailbox the composer is answering from", () => {
     });
     render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         open
         onClose={vi.fn()}
       />,

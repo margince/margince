@@ -298,7 +298,7 @@ func TestAnEdgeEntryCarriesNoRecordFieldImages(t *testing.T) {
 		actorType: actorTypeHuman, actorID: "human:x", action: actionCreate,
 		after: map[string]any{"role": "cto", "is_current_primary": true},
 		edge: &edgeSubject{
-			kind: "employment", otherType: "organization",
+			kind: "employment", otherType: "company",
 			otherID: ids.NewV7(), otherLabel: strPtr("Employer GmbH"),
 		},
 	}

@@ -50,7 +50,7 @@ function grounded(field: ColdField["field"], value: string): ColdField {
   };
 }
 
-// The three fields `confirmCompanySiteRead` 422s without. Filled, so nothing
+// The three fields `confirmAnchorCompanySiteRead` 422s without. Filled, so nothing
 // but the server's own refusal can hold Continue down.
 const REQUIRED_TRIO: ColdField[] = [
   grounded("display_name", "Gradion"),
@@ -61,7 +61,7 @@ const REQUIRED_TRIO: ColdField[] = [
 const READ: CompanySiteRead = {
   id: READ_ID,
   target_kind: "onboarding",
-  organization_id: null,
+  company_id: null,
   root_url: SITE_URL,
   status: "ready",
   status_code: null,

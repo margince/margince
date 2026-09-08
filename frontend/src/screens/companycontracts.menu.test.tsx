@@ -24,7 +24,7 @@ afterEach(() => {
 
 const ACTIVE = {
   id: "c-1",
-  organization_id: "o-1",
+  company_id: "o-1",
   title: "Framework agreement 2024",
   source: "manual",
   captured_by: "human:u-1",
@@ -79,7 +79,7 @@ describe("the contract row menu", () => {
   it("offers renew, change status and cancel on a live agreement", async () => {
     stub([ACTIVE]);
     const user = userEvent.setup();
-    show(<CompanyContractsCard orgId="o-1" />);
+    show(<CompanyContractsCard companyId="o-1" />);
 
     await user.click(
       await screen.findByRole("button", { name: "Contract actions" }),
@@ -95,7 +95,7 @@ describe("the contract row menu", () => {
   it("withholds change-status and cancel from a terminal agreement, but not renew", async () => {
     stub([EXPIRED]);
     const user = userEvent.setup();
-    show(<CompanyContractsCard orgId="o-1" />);
+    show(<CompanyContractsCard companyId="o-1" />);
 
     await user.click(
       await screen.findByRole("button", { name: "Contract actions" }),
@@ -118,7 +118,7 @@ describe("the contract row menu", () => {
   it("withholds renew from an already-superseded agreement", async () => {
     stub([{ ...ACTIVE, status: "superseded" }]);
     const user = userEvent.setup();
-    show(<CompanyContractsCard orgId="o-1" />);
+    show(<CompanyContractsCard companyId="o-1" />);
 
     await user.click(
       await screen.findByRole("button", { name: "Contract actions" }),
@@ -136,7 +136,7 @@ describe("the contract row menu", () => {
     // press of Renew refused by the server.
     stub([ACTIVE], meFixture({ allow: { contract: ["read", "update"] } }));
     const user = userEvent.setup();
-    show(<CompanyContractsCard orgId="o-1" />);
+    show(<CompanyContractsCard companyId="o-1" />);
 
     await user.click(
       await screen.findByRole("button", { name: "Contract actions" }),
@@ -151,7 +151,7 @@ describe("the contract row menu", () => {
 
   it("offers no menu at all to a seat with no write grants", async () => {
     stub([ACTIVE], meFixture({ allow: { contract: ["read"] } }));
-    show(<CompanyContractsCard orgId="o-1" />);
+    show(<CompanyContractsCard companyId="o-1" />);
 
     await screen.findByText("Framework agreement 2024");
     expect(
@@ -166,7 +166,7 @@ describe("the contract row menu", () => {
 describe("the contract row's linked deal", () => {
   it("names the deal a contract carries", async () => {
     stub([{ ...ACTIVE, deal_id: RENEWED_DEAL.id }]);
-    show(<CompanyContractsCard orgId="o-1" />);
+    show(<CompanyContractsCard companyId="o-1" />);
 
     await screen.findByText("Framework agreement 2024");
     expect(await screen.findByText(RENEWED_DEAL.name)).toBeTruthy();
@@ -174,7 +174,7 @@ describe("the contract row's linked deal", () => {
 
   it("shows nothing where a contract carries no deal", async () => {
     stub([ACTIVE]);
-    show(<CompanyContractsCard orgId="o-1" />);
+    show(<CompanyContractsCard companyId="o-1" />);
 
     await screen.findByText("Framework agreement 2024");
     expect(screen.queryByText(RENEWED_DEAL.name)).toBeNull();

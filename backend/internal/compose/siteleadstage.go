@@ -64,10 +64,10 @@ func (w *siteDeepReadWorker) stageSiteLeadsInTx(ctx context.Context, tx pgx.Tx, 
 	if len(found) == 0 {
 		return nil, nil
 	}
-	if claim.OrganizationID == nil {
+	if claim.CompanyID == nil {
 		return nil, fmt.Errorf("compose: site read %s claims no account to file its leads under", readID)
 	}
-	if err := w.approvals.LockPendingGroupInTx(ctx, tx, *claim.OrganizationID, siteLeadProposalKind); err != nil {
+	if err := w.approvals.LockPendingGroupInTx(ctx, tx, *claim.CompanyID, siteLeadProposalKind); err != nil {
 		return nil, err
 	}
 	var proposalIDs []ids.UUID
@@ -91,7 +91,7 @@ func (w *siteDeepReadWorker) stageSiteLeadsInTx(ctx context.Context, tx pgx.Tx, 
 // read their name off the about page, and re-proposing them spends the
 // queue on a confirmation that would land on the row that is already there.
 func (w *siteDeepReadWorker) stageSiteLead(ctx context.Context, tx pgx.Tx, readID ids.UUID, claim people.SiteReadClaim, person sitePerson, bundleID ids.UUID) (ids.ApprovalID, bool, error) {
-	if claim.OrganizationID == nil {
+	if claim.CompanyID == nil {
 		return ids.ApprovalID{}, false, errors.New("site deep read: an unbound onboarding draft cannot stage a lead proposal")
 	}
 	probeCtx, err := w.probeCtx(ctx)
@@ -119,7 +119,7 @@ func (w *siteDeepReadWorker) stageSiteLead(ctx context.Context, tx pgx.Tx, readI
 			"read", readID.String(), "url", person.SourceURL)
 		return ids.ApprovalID{}, false, nil
 	}
-	in, err := siteLeadStageInput(readID, *claim.OrganizationID, claim.SeedURL, person, bundleID)
+	in, err := siteLeadStageInput(readID, *claim.CompanyID, claim.SeedURL, person, bundleID)
 	if err != nil {
 		return ids.ApprovalID{}, false, err
 	}
@@ -190,10 +190,10 @@ func (w *siteDeepReadWorker) probeCtx(ctx context.Context) (context.Context, err
 // second would expire the first's still-undecided approval. The natural key
 // normalizes the name and carries the published email, so it separates exactly
 // the people the accept path keeps separate.
-func siteLeadStageInput(readID, organizationID ids.UUID, seedURL string, person sitePerson, bundleID ids.UUID) (approvals.StageInput, error) {
-	naturalKey := siteLeadSourceID(organizationID, person.Name, person.PublishedEmail)
+func siteLeadStageInput(readID, companyID ids.UUID, seedURL string, person sitePerson, bundleID ids.UUID) (approvals.StageInput, error) {
+	naturalKey := siteLeadSourceID(companyID, person.Name, person.PublishedEmail)
 	proposedChange, err := json.Marshal(siteLeadProposal{
-		OrganizationID:  organizationID,
+		CompanyID:       companyID,
 		SiteReadID:      readID,
 		NaturalKey:      naturalKey,
 		Name:            person.Name,
@@ -216,7 +216,7 @@ func siteLeadStageInput(readID, organizationID ids.UUID, seedURL string, person 
 		ProposedChange: proposedChange,
 		DiffHash:       hex.EncodeToString(digest[:]),
 		TargetType:     enrichTargetType,
-		TargetID:       organizationID,
+		TargetID:       companyID,
 		Identity:       identity,
 		JoinPending:    true,
 		BundleID:       bundleID,

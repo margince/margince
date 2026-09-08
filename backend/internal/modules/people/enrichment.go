@@ -248,9 +248,9 @@ func SubjectIdentifiers(ctx context.Context, tx pgx.Tx, personID string) (provid
 	//
 	// Gated on BOTH questions about the account on the far side of the edge.
 	// The employment is the caller's to see; the company is not the same fact.
-	// auth.Require answers whether they may read organizations at all — the
+	// auth.Require answers whether they may read companies at all — the
 	// statement asked nothing of the sort, so every workspace-visible employer
-	// came back to a caller holding no organization grant — and the scope
+	// came back to a caller holding no company grant — and the scope
 	// clause answers which ones are theirs.
 	//
 	// A refusal loses the employer and keeps everything else, which is the
@@ -266,7 +266,7 @@ func SubjectIdentifiers(ctx context.Context, tx pgx.Tx, personID string) (provid
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		personArg := arg(personID)
-		scope, err := auth.ScopeClauseFor(ctx, "organization", "o", arg)
+		scope, err := auth.ScopeClauseFor(ctx, "company", "o", arg)
 		if err != nil {
 			return provider.PersonIdentifiers{}, err
 		}
@@ -280,9 +280,9 @@ func SubjectIdentifiers(ctx context.Context, tx pgx.Tx, personID string) (provid
 		if err := tx.QueryRow(ctx, storekit.SQLf(`
 		SELECT coalesce(o.display_name, ''), coalesce(d.domain, '')
 		  FROM relationship r
-		  JOIN organization o ON o.id = r.organization_id
-		  LEFT JOIN organization_domain d
-		    ON d.organization_id = o.id AND d.is_primary AND d.archived_at IS NULL
+		  JOIN company o ON o.id = r.company_id
+		  LEFT JOIN company_domain d
+		    ON d.company_id = o.id AND d.is_primary AND d.archived_at IS NULL
 		 WHERE r.kind = 'employment' AND r.person_id = $%d
 		   AND %s AND r.archived_at IS NULL
 		   AND %s
@@ -325,14 +325,14 @@ func derefOr(s *string) string {
 	return *s
 }
 
-// employerReadable reports whether this caller may read organizations at all.
+// employerReadable reports whether this caller may read companies at all.
 //
 // A permission denial is an ANSWER here, not a failure: the employer is one
 // optional half of a provider lookup, and losing it leaves the person's own
 // identifiers intact. Anything else — a missing principal, a broken policy —
 // is a real error and stays one.
 func employerReadable(ctx context.Context) (bool, error) {
-	switch err := auth.Require(ctx, "organization", principal.ActionRead); {
+	switch err := auth.Require(ctx, "company", principal.ActionRead); {
 	case err == nil:
 		return true, nil
 	case errors.Is(err, apperrors.ErrPermissionDenied):

@@ -24,13 +24,13 @@ import {
 // next — over the whole account, which is why it is a list surface with the
 // account's own filters rather than a longer card.
 
-type OrganizationContact = components["schemas"]["OrganizationContact"];
+type CompanyContact = components["schemas"]["CompanyContact"];
 type Engagement = components["schemas"]["ContactEngagement"];
 type ContactStatus = Engagement | undefined;
 type ContactSort =
   | NonNullable<
       NonNullable<
-        paths["/organizations/{id}/contacts"]["get"]["parameters"]["query"]
+        paths["/companies/{id}/contacts"]["get"]["parameters"]["query"]
       >["sort"]
     >
   | undefined;
@@ -81,10 +81,10 @@ export const ENGAGEMENT_LABELS: Record<
 };
 
 export function CompanyPeopleList({
-  orgId,
+  companyId,
   bandSlot,
 }: Readonly<{
-  orgId: string;
+  companyId: string;
   /**
    * Drawn above the table, inside this component, so the band's doors can
    * narrow the list without the two sharing state through the screen. It
@@ -102,15 +102,15 @@ export function CompanyPeopleList({
       async (
         query: ListQuery,
         cursor: string | null,
-      ): Promise<ListPage<OrganizationContact>> => {
+      ): Promise<ListPage<CompanyContact>> => {
         // The declared filters, named one by one rather than spread. `filters`
         // carries whatever the address holds, and the address is the reader's
         // to edit: a spread after the paging keys lets `?cursor=` or `?limit=`
         // from a pasted URL overwrite the ones this function just computed,
         // which breaks paging with a 422 the reader cannot explain.
-        const { data, error } = await api.GET("/organizations/{id}/contacts", {
+        const { data, error } = await api.GET("/companies/{id}/contacts", {
           params: {
-            path: { id: orgId },
+            path: { id: companyId },
             query: {
               q: query.q || undefined,
               sort: (query.sort || undefined) as ContactSort,
@@ -135,11 +135,11 @@ export function CompanyPeopleList({
           },
         };
       },
-    [orgId],
+    [companyId],
   );
 
-  const state = useListQuery<OrganizationContact>({
-    key: `company-contacts:${orgId}`,
+  const state = useListQuery<CompanyContact>({
+    key: `company-contacts:${companyId}`,
     // The server's own order, which is the recommendation. Naming a sort here
     // would make the page open on an alphabet and bury the person who answered.
     initialSort: "",
@@ -165,7 +165,7 @@ export function CompanyPeopleList({
         // The colleague-by-contact comparison, kept as the diagnostic it is
         // rather than a headline: it answers "where are we thin across the
         // team", which a reader asks after choosing somebody, not before.
-        tools={<CoverageExplorer orgId={orgId} />}
+        tools={<CoverageExplorer companyId={companyId} />}
         chips={[
           {
             key: "status",
@@ -184,7 +184,7 @@ export function CompanyPeopleList({
           {
             key: "name",
             header: t("people.name"),
-            cell: (contact: OrganizationContact) => (
+            cell: (contact: CompanyContact) => (
               <span>
                 <strong>{contact.full_name}</strong>
                 {contact.title && (
@@ -198,7 +198,7 @@ export function CompanyPeopleList({
           {
             key: "engagement",
             header: t("co.people.engagement"),
-            cell: (contact: OrganizationContact) => (
+            cell: (contact: CompanyContact) => (
               <Badge tone={ENGAGEMENT_TONES[contact.engagement]}>
                 {t(ENGAGEMENT_LABELS[contact.engagement])}
               </Badge>
@@ -207,16 +207,14 @@ export function CompanyPeopleList({
           {
             key: "last_interaction",
             header: t("co.people.lastInteraction"),
-            cell: (contact: OrganizationContact) => (
-              <LastTouch contact={contact} />
-            ),
+            cell: (contact: CompanyContact) => <LastTouch contact={contact} />,
             sort: "last_interaction",
             numeric: true,
           },
           {
             key: "strength",
             header: t("co.people.strength"),
-            cell: (contact: OrganizationContact) => (
+            cell: (contact: CompanyContact) => (
               <span className="t-caption">
                 {t(`strength.bucket.${contact.strength.bucket}`)}
               </span>
@@ -225,8 +223,8 @@ export function CompanyPeopleList({
             numeric: true,
           },
         ]}
-        rowKey={(contact: OrganizationContact) => contact.person_id}
-        rowRoute={(contact: OrganizationContact) => ({
+        rowKey={(contact: CompanyContact) => contact.person_id}
+        rowRoute={(contact: CompanyContact) => ({
           screen: "contacts",
           id: contact.person_id,
         })}
@@ -242,7 +240,7 @@ export function CompanyPeopleList({
  * wrote or we did, and those are opposite next moves. The direction is the
  * fact worth the column.
  */
-function LastTouch({ contact }: { readonly contact: OrganizationContact }) {
+function LastTouch({ contact }: { readonly contact: CompanyContact }) {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();

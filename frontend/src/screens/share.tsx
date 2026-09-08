@@ -141,7 +141,7 @@ function reassertKind(held: RecordGrant, next: DraftFields): ReassertKind {
 
 const RECORD_TYPES: readonly RecordType[] = [
   "person",
-  "organization",
+  "company",
   "deal",
   "lead",
   "project",
@@ -152,7 +152,7 @@ function isRecordType(value: string): value is RecordType {
 }
 
 // The per-screen "Share" affordance, extracted from four verbatim copies that
-// lived inline in the person/organization/deal/lead 360 action clusters
+// lived inline in the person/company/deal/lead 360 action clusters
 // (mirrors EditAction/ArchiveAction — a thin prop component owning its label
 // and its navigation, nothing else). recordType is the narrow union, so a
 // screen can't wire a share link to a record kind the route can't resolve.

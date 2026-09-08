@@ -57,14 +57,14 @@ func TestParseBundleReadsTheEstateAndItsOwnerMap(t *testing.T) {
 						"fields": map[string]any{"full_name": "First"},
 					},
 					map[string]any{
-						"object_class": "organization", "external_id": "org-1",
+						"object_class": "company", "external_id": "company-1",
 						"fields": map[string]any{"display_name": "Acme"},
 					},
 				},
 				"overlay_association": []any{
 					map[string]any{
 						"from_type": "person", "from_id": "p-1",
-						"to_type": "organization", "to_id": "org-1", "category": "employment",
+						"to_type": "company", "to_id": "company-1", "category": "employment",
 					},
 				},
 				"mirror_user_map": []any{
@@ -108,8 +108,8 @@ func TestParseBundleReadsTheEstateAndItsOwnerMap(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Counts: %v", err)
 	}
-	if counts["person"] != 2 || counts["organization"] != 1 {
-		t.Errorf("counts = %v, want 2 persons and 1 organization", counts)
+	if counts["person"] != 2 || counts["company"] != 1 {
+		t.Errorf("counts = %v, want 2 persons and 1 company", counts)
 	}
 	assocs, err := contents.source.Associations(t.Context())
 	if err != nil || len(assocs) != 1 || assocs[0].FromID != "p-1" {

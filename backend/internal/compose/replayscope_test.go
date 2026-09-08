@@ -210,7 +210,7 @@ func TestReplayRefusesACompanionItCannotRead(t *testing.T) {
 		{
 			name:  "quick capture names an unreadable employer",
 			route: "POST /v1/people/quick-capture",
-			body:  `{"person":{"id":"01a00000-0000-7000-8000-000000000001"},"organization_id":"garbage"}`,
+			body:  `{"person":{"id":"01a00000-0000-7000-8000-000000000001"},"company_id":"garbage"}`,
 		},
 		{
 			name:  "a promotion names an unreadable deal",
@@ -233,7 +233,7 @@ func TestReplayRefusesACompanionItCannotRead(t *testing.T) {
 
 // A companion that is absent, or present and null, names no record — these
 // fields are optional by contract, and a person captured with no employer
-// carries no organization id. Skipping them is not a hole: there is nothing to
+// carries no company id. Skipping them is not a hole: there is nothing to
 // probe.
 //
 // Asserted against ensureCompanionsVisible DIRECTLY, and it has to be: through
@@ -247,13 +247,13 @@ func TestReplaySkipsACompanionTheBodyDoesNotName(t *testing.T) {
 	// The companion this case is ABOUT, not merely one: with a different path
 	// both bodies below read as absent and the case passes having exercised
 	// nothing.
-	if !slices.Contains(target.companions, companionRef{table: tableOrganization, idPath: companionOrgField}) {
-		t.Fatalf("%s declares companions %+v, and this case is about {organization, %s} — with a different path both bodies read as absent",
-			route, target.companions, companionOrgField)
+	if !slices.Contains(target.companions, companionRef{table: tableCompany, idPath: companionCompanyField}) {
+		t.Fatalf("%s declares companions %+v, and this case is about {company, %s} — with a different path both bodies read as absent",
+			route, target.companions, companionCompanyField)
 	}
 	for _, body := range []string{
 		`{"person":{"id":"01a00000-0000-7000-8000-000000000001"}}`,
-		`{"person":{"id":"01a00000-0000-7000-8000-000000000001"},"organization_id":null}`,
+		`{"person":{"id":"01a00000-0000-7000-8000-000000000001"},"company_id":null}`,
 	} {
 		if err := ensureCompanionsVisible(context.Background(), nil, target, body); err != nil {
 			t.Errorf("body %s: err = %v, want nil — an optional companion the body does not name is skipped, not refused", body, err)
@@ -342,7 +342,7 @@ func TestReplayTableForPicksTheShapeTheBodyIs(t *testing.T) {
 // not there" does not.
 func TestReplayRefusesAnEmptyCompanionID(t *testing.T) {
 	err := ensureReplayVisible(context.Background(), nil, nil, "POST /v1/people/quick-capture",
-		`{"person":{"id":"01a00000-0000-7000-8000-000000000001"},"organization_id":""}`)
+		`{"person":{"id":"01a00000-0000-7000-8000-000000000001"},"company_id":""}`)
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("err = %v, want ErrNotFound", err)
 	}

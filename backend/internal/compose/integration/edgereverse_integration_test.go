@@ -37,12 +37,12 @@ type relationshipList struct {
 // linkedPair is one employment, its two records, and the versions a caller
 // reading either record's history would have in hand.
 type linkedPair struct {
-	person string
-	org    string
-	edge   relationshipRecord
+	person  string
+	company string
+	edge    relationshipRecord
 }
 
-// seedEmployment creates the person, the organization and the link between them
+// seedEmployment creates the person, the company and the link between them
 // through the product's own endpoints. Seeding the edge any other way would
 // prove nothing about the audit row this reversal reads.
 //
@@ -58,15 +58,15 @@ func seedEmploymentOverHTTP(t *testing.T, e *apptest.AppEnv) linkedPair {
 		AnyMap{"full_name": "Ada Employed"}, nil, &person); status != 201 {
 		t.Fatalf("create person → %d", status)
 	}
-	var org struct {
+	var company struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/organizations",
-		AnyMap{"display_name": "Employer GmbH"}, nil, &org); status != 201 {
-		t.Fatalf("create organization → %d", status)
+	if status := e.Call(t, "POST", "/v1/companies",
+		AnyMap{"display_name": "Employer GmbH"}, nil, &company); status != 201 {
+		t.Fatalf("create company → %d", status)
 	}
-	return linkedPair{person: person.ID, org: org.ID, edge: linkEdge(t, e, AnyMap{
-		"kind": "employment", "person_id": person.ID, "organization_id": org.ID,
+	return linkedPair{person: person.ID, company: company.ID, edge: linkEdge(t, e, AnyMap{
+		"kind": "employment", "person_id": person.ID, "company_id": company.ID,
 		"role": role, "source": "manual",
 	})}
 }
@@ -172,15 +172,15 @@ func TestEndToEnd_anEdgeIsReversibleFromTheOtherEndToo(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	pair := seedEmploymentOverHTTP(t, e)
 
-	entry := theEdgeEntry(t, readHistory(t, e, "organization", pair.org), "create")
-	var org struct {
+	entry := theEdgeEntry(t, readHistory(t, e, "company", pair.company), "create")
+	var company struct {
 		Version int64 `json:"version"`
 	}
-	if status := e.Call(t, "GET", "/v1/organizations/"+pair.org, nil, nil, &org); status != 200 {
-		t.Fatalf("read organization → %d", status)
+	if status := e.Call(t, "GET", "/v1/companies/"+pair.company, nil, nil, &company); status != 200 {
+		t.Fatalf("read company → %d", status)
 	}
 
-	status, reversal := reverseEntry(t, e, "organization", pair.org, entry.ID, org.Version)
+	status, reversal := reverseEntry(t, e, "company", pair.company, entry.ID, company.Version)
 	if status != 200 {
 		t.Fatalf("reverse from the company → %d, want 200 (reason %v)", status, reversal.Undoable.Reason)
 	}
@@ -259,21 +259,21 @@ func TestEndToEnd_reversingAnUnlinkRefusesByNameAndWritesNothing(t *testing.T) {
 func TestEndToEnd_reversingAProjectCompanyRefusesByNameAndWritesNothing(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	var org struct {
+	var company struct {
 		ID      string `json:"id"`
 		Version int64  `json:"version"`
 	}
-	if status := e.Call(t, "POST", "/v1/organizations",
-		AnyMap{"display_name": "Client GmbH"}, nil, &org); status != 201 {
-		t.Fatalf("create organization → %d", status)
+	if status := e.Call(t, "POST", "/v1/companies",
+		AnyMap{"display_name": "Client GmbH"}, nil, &company); status != 201 {
+		t.Fatalf("create company → %d", status)
 	}
 	if status := e.Call(t, "POST", "/v1/projects", AnyMap{
-		"name": "Joint rollout", "organization_id": org.ID, "source": "manual",
+		"name": "Joint rollout", "company_id": company.ID, "source": "manual",
 	}, nil, nil); status != 201 {
 		t.Fatalf("create project → %d", status)
 	}
 
-	before := readHistory(t, e, "organization", org.ID)
+	before := readHistory(t, e, "company", company.ID)
 	entry := theEdgeEntry(t, before, "create")
 	if entry.Edge.Kind != "project_company" {
 		t.Fatalf("the company's newest link is %q, want the project_company the project's create wrote", entry.Edge.Kind)
@@ -285,13 +285,13 @@ func TestEndToEnd_reversingAProjectCompanyRefusesByNameAndWritesNothing(t *testi
 		t.Errorf("the refusal detail is %v, want the kind named", entry.Undoable.Detail)
 	}
 
-	if status := e.Call(t, "GET", "/v1/organizations/"+org.ID, nil, nil, &org); status != 200 {
-		t.Fatalf("read organization → %d", status)
+	if status := e.Call(t, "GET", "/v1/companies/"+company.ID, nil, nil, &company); status != 200 {
+		t.Fatalf("read company → %d", status)
 	}
-	if status, _ := reverseEntry(t, e, "organization", org.ID, entry.ID, org.Version); status != 409 {
+	if status, _ := reverseEntry(t, e, "company", company.ID, entry.ID, company.Version); status != 409 {
 		t.Errorf("reversing a project's company → %d, want 409", status)
 	}
-	if after := readHistory(t, e, "organization", org.ID); len(after.Data) != len(before.Data) {
+	if after := readHistory(t, e, "company", company.ID); len(after.Data) != len(before.Data) {
 		t.Errorf("the refusal wrote a row: history went from %d to %d lines",
 			len(before.Data), len(after.Data))
 	}
@@ -369,16 +369,16 @@ func TestEndToEnd_twoReversesOfOneLinkFromOppositeEndsLeaveExactlyOne(t *testing
 	pair := seedEmploymentOverHTTP(t, e)
 
 	fromPerson := theEdgeEntry(t, readHistory(t, e, "person", pair.person), "create")
-	fromOrg := theEdgeEntry(t, readHistory(t, e, "organization", pair.org), "create")
-	if fromPerson.ID != fromOrg.ID {
-		t.Fatalf("the two ends name different entries for one link: %s vs %s", fromPerson.ID, fromOrg.ID)
+	fromCompany := theEdgeEntry(t, readHistory(t, e, "company", pair.company), "create")
+	if fromPerson.ID != fromCompany.ID {
+		t.Fatalf("the two ends name different entries for one link: %s vs %s", fromPerson.ID, fromCompany.ID)
 	}
 	person := readPerson(t, e, pair.person)
-	var org struct {
+	var company struct {
 		Version int64 `json:"version"`
 	}
-	if status := e.Call(t, "GET", "/v1/organizations/"+pair.org, nil, nil, &org); status != 200 {
-		t.Fatalf("read organization → %d", status)
+	if status := e.Call(t, "GET", "/v1/companies/"+pair.company, nil, nil, &company); status != 200 {
+		t.Fatalf("read company → %d", status)
 	}
 
 	type outcome struct {
@@ -391,7 +391,7 @@ func TestEndToEnd_twoReversesOfOneLinkFromOppositeEndsLeaveExactlyOne(t *testing
 		results <- outcome{status, reasonOf(entry)}
 	}()
 	go func() {
-		status, entry := reverseEntry(t, e, "organization", pair.org, fromOrg.ID, org.Version)
+		status, entry := reverseEntry(t, e, "company", pair.company, fromCompany.ID, company.Version)
 		results <- outcome{status, reasonOf(entry)}
 	}()
 

@@ -244,7 +244,7 @@ func (t *StageEvidenceTrigger) onContractStatus(ctx context.Context, env events.
 	}
 	dealID, err := t.dealOfContract(ctx, env.Entity.ID)
 	if err != nil {
-		// A contract naming no deal is an organization-level agreement. It
+		// A contract naming no deal is a company-level agreement. It
 		// settles no deal's criteria, which is an ordinary outcome.
 		if errors.Is(err, apperrors.ErrNotFound) {
 			return nil

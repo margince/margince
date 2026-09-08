@@ -4,7 +4,7 @@
 // Package person360 assembles the person record page in one round trip —
 // the person half of the one-composite-read doctrine (PO-EXT-3).
 //
-// It is the organization 360's sibling and deliberately its mirror: one
+// It is the company 360's sibling and deliberately its mirror: one
 // workspace transaction so the sections describe one moment, a mandatory
 // root read whose refusal is the whole read's refusal, and every other
 // section attempted independently and OMITTED-AND-NAMED when the caller
@@ -118,7 +118,7 @@ func (s *Service) Assemble(ctx context.Context, personID ids.PersonID) (crmcontr
 
 // AssembleScoped is Assemble narrowed by opts.
 func (s *Service) AssembleScoped(ctx context.Context, personID ids.PersonID, opts AssembleOptions) (crmcontracts.Person360, error) {
-	// The person half of the same admission org360.AssembleScoped states, and
+	// The person half of the same admission company360.AssembleScoped states, and
 	// for the same reason: GetPersonTx below asks it, and that read is still
 	// what refuses an unreadable contact, but an admission living entirely in
 	// another package is one refactor from living nowhere.

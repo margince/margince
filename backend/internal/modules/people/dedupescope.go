@@ -31,7 +31,7 @@ type dedupePairSide struct{ entity, left, right string }
 
 var dedupePairSides = []dedupePairSide{
 	{entityPerson, "left_person_id", "right_person_id"},
-	{entityOrganization, "left_org_id", "right_org_id"},
+	{entityCompany, "left_company_id", "right_company_id"},
 	{entityLead, "left_lead_id", "right_lead_id"},
 }
 
@@ -81,7 +81,7 @@ func dedupeVisibilityClause(ctx context.Context, arg func(any) int, mustBeLive b
 //
 // Emitted unconditionally, where the predicate this replaced was skipped whole
 // when no record type narrowed the caller. That was not the bug — person and
-// organization are capture-private, so even an all-scope human is bounded on
+// company are capture-private, so even an all-scope human is bounded on
 // them and the clause was built anyway — but it made the liveness term depend on
 // a scope the reader might not have. A system principal is unbounded on all
 // three (auth.Unbounded), so on the day one reads this queue the old shape would

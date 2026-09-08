@@ -19,7 +19,7 @@ func TestTheGrantRecordTypesMatchTheContractEnum(t *testing.T) {
 	for _, rt := range []crmcontracts.CreateRecordGrantRequestRecordType{
 		crmcontracts.CreateRecordGrantRequestRecordTypeDeal,
 		crmcontracts.CreateRecordGrantRequestRecordTypeLead,
-		crmcontracts.CreateRecordGrantRequestRecordTypeOrganization,
+		crmcontracts.CreateRecordGrantRequestRecordTypeCompany,
 		crmcontracts.CreateRecordGrantRequestRecordTypePerson,
 		crmcontracts.CreateRecordGrantRequestRecordTypeProject,
 	} {

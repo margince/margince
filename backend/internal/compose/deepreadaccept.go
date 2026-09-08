@@ -6,7 +6,7 @@ package compose
 // The deep-read ACCEPT executor (R4): a human approval of a staged
 // "deepread" proposal lands the whole read in one transaction — profile
 // fields fill-empty like a quick scrape, category facts into
-// organization_fact — with human-set values taking precedence on both.
+// company_fact — with human-set values taking precedence on both.
 // Redeem-then-execute like every 🟡 executor: the single-use redemption
 // is the exactly-once claim, so a replayed or re-driven decision applies
 // nothing twice.

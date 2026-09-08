@@ -33,7 +33,7 @@ type ChannelCounterpartyEnsurer interface {
 }
 
 // EnsureChannelRequest names one inbound channel message's counterparty for the
-// resolver. It carries no OwnerID and no SuppressOrg, and the omissions are the
+// resolver. It carries no OwnerID and no SuppressCompany, and the omissions are the
 // design: a workspace bot has no granting human for anything created to belong
 // to (design D2 — the person is ownerless), and no company is derived here even
 // when an address rides along — a corroborating address is evidence about WHO

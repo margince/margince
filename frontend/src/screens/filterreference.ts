@@ -9,7 +9,7 @@
 // engine gains, whereas a map keyed on `stage` covers every field that ever
 // points at a stage.
 //
-// One target is enumerated differently. An organization list is unbounded — a
+// One target is enumerated differently. A company list is unbounded — a
 // workspace has as many accounts as it has customers — so it cannot be read
 // whole into a dropdown; it is SEARCHED instead. `boundedReference` says which
 // targets this module can list, so the caller reaches for the search box rather
@@ -30,7 +30,7 @@ export type Reference = NonNullable<
 export type ReferenceOption = Readonly<{ value: string; label: string }>;
 
 /**
- * Organizations by name, for the one reference that is searched rather than
+ * Companies by name, for the one reference that is searched rather than
  * listed.
  *
  * Bounded at twenty like the list toolbar's own company filter: a picker is for
@@ -38,28 +38,31 @@ export type ReferenceOption = Readonly<{ value: string; label: string }>;
  * to scroll rather than more to find. Somebody who cannot see their account in
  * twenty needs more of its name typed, not more rows.
  */
-export async function searchOrganizations(
+export async function searchCompanies(
   query: string,
 ): Promise<readonly ReferenceOption[]> {
-  const { data, error } = await api.GET("/organizations", {
+  const { data, error } = await api.GET("/companies", {
     params: { query: { q: query, limit: 20 } },
   });
   if (error) {
     throwProblem(error);
   }
-  return data.data.map((org) => ({ value: org.id, label: org.display_name }));
+  return data.data.map((company) => ({
+    value: company.id,
+    label: company.display_name,
+  }));
 }
 
 /**
  * Whether this module can enumerate the target.
  *
- * Only `organization` cannot: it is the one reference whose set grows with the
+ * Only `company` cannot: it is the one reference whose set grows with the
  * business rather than with configuration. Everything else is either workspace
  * configuration a human maintains — tags, pipelines, stages, projects — or the
  * workspace roster, which the shared walk enumerates for every picker here.
  */
 export function boundedReference(reference: Reference | undefined): boolean {
-  return reference !== undefined && reference !== "organization";
+  return reference !== undefined && reference !== "company";
 }
 
 /**
@@ -97,8 +100,8 @@ function rosterKindOf(reference: Reference | undefined): RosterKind | null {
  * a target this module does not enumerate.
  *
  * Keyed on the target rather than on the field, so two fields pointing at the
- * same record type share one cache entry and one request — `organization_id` and
- * `partner_org_id` would, if organizations were bounded, and `owner_id` on five
+ * same record type share one cache entry and one request — `company_id` and
+ * `partner_company_id` would, if companies were bounded, and `owner_id` on five
  * resources already does.
  */
 export function useReferenceOptions(reference: Reference | undefined) {
@@ -195,7 +198,7 @@ async function readOptions(
       }));
     }
     default:
-      // `organization`, an absent target, and the two roster targets all land
+      // `company`, an absent target, and the two roster targets all land
       // here. The query is disabled for every one of them, so this is
       // unreachable rather than a silent empty answer — and the arms above stay
       // one per target so a new one added to the contract arrives here as an

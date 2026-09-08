@@ -7,7 +7,7 @@ package activities
 // automation/seams.go's ActivityScan): which linked entities have gone
 // quiet. Sourced from this module's OWN tables (activity + activity_link)
 // rather than the schema-maintained last_activity_at columns (deal, person,
-// organization; migration 1787032690's triggers), because this scan asks a
+// company; migration 1787032690's triggers), because this scan asks a
 // narrower question those columns do not — it excludes automation-engine
 // writes and wants live-work eligibility — and a module
 // reaches records only through seams (ADR-0054 §9), and this file is the
@@ -44,7 +44,7 @@ type LastTouchCandidate struct {
 // lastTouchCandidateQuery is LastTouchBefore's read: every linked entity's most
 // recent genuine engagement, narrowed to the ones carrying live work. It is a
 // function rather than a constant because two of its fragments are built —
-// the link-id coalesce, and the organization walk — and it sits apart from the
+// the link-id coalesce, and the company walk — and it sits apart from the
 // scan so the scan reads as what it does with the rows.
 //
 // $1/$4/$5 are the source and captured_by the automation engine stamps —
@@ -72,11 +72,11 @@ func lastTouchCandidateQuery() string {
 				GROUP BY al.entity_type, %[1]s
 			), accounts AS (
 				SELECT '%[3]s' AS entity_type,
-				       reach.organization_id AS entity_id,
+				       reach.company_id AS entity_id,
 				       max(g.occurred_at) AS last_touch
 				FROM (%[6]s) reach
 				JOIN genuine g ON g.id = reach.activity_id
-				GROUP BY reach.organization_id
+				GROUP BY reach.company_id
 			), quiet AS (
 				SELECT entity_type, entity_id, last_touch FROM direct
 				UNION ALL
@@ -91,8 +91,8 @@ func lastTouchCandidateQuery() string {
 			           AND d.status = 'open' AND d.archived_at IS NULL
 			           AND d.created_at < $2))
 			   OR (q.entity_type = '%[3]s' AND EXISTS (
-			         SELECT 1 FROM organization o
-			         JOIN deal d ON d.organization_id = o.id
+			         SELECT 1 FROM company o
+			         JOIN deal d ON d.company_id = o.id
 			                    AND d.status = 'open' AND d.archived_at IS NULL
 			         WHERE o.id = q.entity_id
 			           AND o.archived_at IS NULL
@@ -115,9 +115,9 @@ func lastTouchCandidateQuery() string {
 			ORDER BY q.last_touch, q.entity_id
 			LIMIT $3`,
 		linkIDCoalesceQualified("al"),
-		datasource.RecordDeal, datasource.RecordOrganization,
+		datasource.RecordDeal, datasource.RecordCompany,
 		datasource.RecordPerson, datasource.RecordLead,
-		OrgReachSet())
+		CompanyReachSet())
 }
 
 // LastTouchBefore returns the entities that are BOTH quiet and worth
@@ -149,15 +149,15 @@ func lastTouchCandidateQuery() string {
 // What counts as live work, per type:
 //
 //   - deal — the deal itself is open and unarchived.
-//   - organization — it has at least one open, unarchived deal. The
+//   - company — it has at least one open, unarchived deal. The
 //     account is what the rep works, so the reminder belongs on the
 //     account, once.
 //
-// An account's last touch is read through the three-arm walk (OrgReachSet)
+// An account's last touch is read through the three-arm walk (CompanyReachSet)
 // rather than off its own links, and that is the difference between this
 // trigger working and not. Capture files mail against the PERSON it was with,
 // so on a real workspace an account's correspondence carries no direct
-// organization link at all: counting only direct links, an account whose reps
+// company link at all: counting only direct links, an account whose reps
 // mailed a contact yesterday looked untouched and earned a reminder about a
 // relationship somebody is actively working, while an account that never got a
 // direct link was never drawn at all. The other three types keep their own
@@ -171,7 +171,7 @@ func lastTouchCandidateQuery() string {
 //   - person — they hold a live deal_stakeholder seat on an open deal.
 //     Deliberately NOT "their employer has an open deal": that would mint
 //     one reminder per employee of every busy account, each one a
-//     duplicate of the single organization reminder that account already
+//     duplicate of the single company reminder that account already
 //     earns.
 //   - lead — still in the working part of its lifecycle ('new' or
 //     'contacted'); a promoted or disqualified lead is finished business.

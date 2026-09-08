@@ -181,7 +181,7 @@ func TestGetRecordContextReturnsAnchorAndIsRowScoped(t *testing.T) {
 
 	// A lead is a valid anchor (it is in the path enum) but carries no
 	// activity_link neighborhood — the link shape admits only
-	// person/organization/deal — so its context is the profile alone: a
+	// person/company/deal — so its context is the profile alone: a
 	// 200 with an honestly-empty timeline, never the 500 an unsupported
 	// anchor would raise.
 	t.Run("200 lead anchor yields profile-only context", func(t *testing.T) {

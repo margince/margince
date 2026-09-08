@@ -29,11 +29,11 @@ func TestEveryObservedRoleAddressIsRefused(t *testing.T) {
 // The limit of a deterministic list, stated as a test so nobody assumes a
 // coverage this package does not have.
 //
-// `singapur@advantageaustria.org` is a trade office's shared mailbox and
+// `singapur@advantageaustria.company` is a trade office's shared mailbox and
 // `hello@thesentry.com.vn` signs itself with a company name — both became
 // "contacts" in the incident this package answers. Neither carries a role WORD:
 // one is a city, the other a business. Recognising them needs to know what the
-// organization is, which is the AI verdict's question, and a list that guessed
+// company is, which is the AI verdict's question, and a list that guessed
 // at city and company names would refuse people called Paris and Mercer.
 //
 // So this package answers no here, deliberately, and the verdict lane owns the

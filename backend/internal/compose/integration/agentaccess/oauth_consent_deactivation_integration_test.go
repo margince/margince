@@ -45,7 +45,7 @@ func TestAPendingConsentDoesNotSurviveItsHumansDeactivation(t *testing.T) {
 	code := o.authorize(t, url.Values{"scope": {"read"}})
 
 	// The consenting human is the bootstrap admin, and the last active admin
-	// may not be deactivated — the organization would lose user administration
+	// may not be deactivated — the company would lose user administration
 	// with no way back. A second admin is what the guard is protecting
 	// against, so inviting one is what lets the real endpoint run.
 	if status := o.Call(t, "POST", "/v1/users", integration.AnyMap{

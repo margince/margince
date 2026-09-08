@@ -62,7 +62,7 @@ type Result struct {
 
 // License is the metadata of the license the module verified.
 //
-// Org, ContactName and ContactEmail are empty for a license issued before those
+// Company, ContactName and ContactEmail are empty for a license issued before those
 // claims existed. A zero IssuedAt or NotBefore means the token carried no such
 // claim. InGrace reports a license past its expiry that the grace period still
 // accepts: the check passes today and will stop passing.
@@ -71,16 +71,18 @@ type Result struct {
 // because the alternative is a decode that has to change before anyone can use
 // them, and this file is the one that has to match upstream byte for byte.
 type License struct {
-	IssuedAt     time.Time `json:"issued_at"`
-	NotBefore    time.Time `json:"not_before"`
-	Expiry       time.Time `json:"expiry"`
-	ID           string    `json:"id"`
-	Subject      string    `json:"subject"`
-	Org          string    `json:"org,omitempty"`
-	ContactName  string    `json:"name,omitempty"`
-	ContactEmail string    `json:"email,omitempty"`
-	KeyID        string    `json:"key_id"`
-	InGrace      bool      `json:"in_grace"`
+	IssuedAt  time.Time `json:"issued_at"`
+	NotBefore time.Time `json:"not_before"`
+	Expiry    time.Time `json:"expiry"`
+	ID        string    `json:"id"`
+	Subject   string    `json:"subject"`
+	// The wire name is the issuer's, not ours: renaming the tag would
+	// stop every license already signed from decoding.
+	Company      string `json:"org,omitempty"`
+	ContactName  string `json:"name,omitempty"`
+	ContactEmail string `json:"email,omitempty"`
+	KeyID        string `json:"key_id"`
+	InGrace      bool   `json:"in_grace"`
 }
 
 // ErrVerdict marks an error as the module's JUDGMENT about a license — an

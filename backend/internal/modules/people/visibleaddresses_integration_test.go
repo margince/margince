@@ -51,7 +51,7 @@ func (e *privacyEnv) withoutPersonGrant() context.Context {
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"rep"},
 			Objects: map[string]principal.ObjectGrant{
-				"organization": {Read: true},
+				"company": {Read: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},

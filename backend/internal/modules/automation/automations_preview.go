@@ -89,7 +89,7 @@ type previewDef struct {
 // two catalog entries genuinely do not fit that shape yet —
 // no_activity_reminder and check_in_cadence's candidate set spans every
 // linked entity type (activities/lasttouch.go's LastTouchBefore
-// coalesces person/organization/deal/lead) with no single RBAC resource
+// coalesces person/company/deal/lead) with no single RBAC resource
 // to scope a row-visibility clause against, and BOTH their own "if" is
 // relative to "now minus the instance's own N days" — a runtime value
 // this registry's static map cannot parameterize on. Fabricating either

@@ -76,9 +76,9 @@ type companyReadProposedChange struct {
 	SourceIDs []string `json:"source_ids"`
 }
 
-func (e *deepReadEngine) messageCompanySiteRead(w http.ResponseWriter, r *http.Request, readID openapi_types.UUID) {
+func (e *deepReadEngine) messageAnchorCompanySiteRead(w http.ResponseWriter, r *http.Request, readID openapi_types.UUID) {
 	if e.brain == nil {
-		httperr.NotImplemented(w, r, "messageCompanySiteRead (no model path configured)")
+		httperr.NotImplemented(w, r, "messageAnchorCompanySiteRead (no model path configured)")
 		return
 	}
 	var req crmcontracts.CompanySiteReadMessageRequest
@@ -94,7 +94,7 @@ func (e *deepReadEngine) messageCompanySiteRead(w http.ResponseWriter, r *http.R
 		httperr.Write(w, r, httperr.Validation("message", "too_long", "message must be at most 2000 characters"))
 		return
 	}
-	read, _, err := e.people.GetCompanySiteRead(r.Context(), ids.UUID(readID))
+	read, _, err := e.people.GetAnchorCompanySiteRead(r.Context(), ids.UUID(readID))
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -463,14 +463,14 @@ func contractCompanyReadReply(reply companyReadModelReply, evidence []companyRea
 	}
 }
 
-func (h siteReadHandlers) MessageCompanySiteRead(w http.ResponseWriter, r *http.Request, readID openapi_types.UUID) {
+func (h siteReadHandlers) MessageAnchorCompanySiteRead(w http.ResponseWriter, r *http.Request, readID openapi_types.UUID) {
 	if !companyContextReadEnabled(h.companyContextRollout) {
-		httperr.NotImplemented(w, r, "messageCompanySiteRead (company context read rollout is disabled)")
+		httperr.NotImplemented(w, r, "messageAnchorCompanySiteRead (company context read rollout is disabled)")
 		return
 	}
 	if h.engine == nil {
-		httperr.NotImplemented(w, r, "messageCompanySiteRead (no crawl runner configured)")
+		httperr.NotImplemented(w, r, "messageAnchorCompanySiteRead (no crawl runner configured)")
 		return
 	}
-	h.engine.messageCompanySiteRead(w, r, readID)
+	h.engine.messageAnchorCompanySiteRead(w, r, readID)
 }

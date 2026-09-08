@@ -167,7 +167,7 @@ func (s *Server) firstRunAnswer(svc *identity.Service) func(context.Context) (bo
 	return func(ctx context.Context) (bool, error) {
 		wsID, err := svc.InstallationWorkspace(ctx)
 		if errors.Is(err, identity.ErrNotBootstrapped) {
-			// No organization has been claimed yet (ADR-0105): the most "first
+			// No company has been claimed yet (ADR-0105): the most "first
 			// run" an installation gets, and every other boot-time reader of
 			// this state treats it as "not yet" rather than as an error.
 			return true, nil

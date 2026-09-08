@@ -30,7 +30,7 @@ func WithColdStart(fetch PageFetcher, brain completer) Option {
 	}
 }
 
-// WithScrape enables per-organization enrichment (scrapeCompany) over the same
+// WithScrape enables per-company enrichment (scrapeCompany) over the same
 // fetch and model seams as the read-back. Without it the operation stays an
 // explicit 501 — the api role must DECLARE its model path, never pick one
 // silently.

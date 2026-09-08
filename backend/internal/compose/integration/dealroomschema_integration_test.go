@@ -79,7 +79,7 @@ func TestArchivingARoomMovesItsStateAndItsStampTogether(t *testing.T) {
 	// database. Without this the single patch is a convention, and a later edit
 	// splitting it would fail on the first archive anyone tried rather than here.
 	// The deal is free again now that the first room is archived, so the probe
-	// row costs no second organization.
+	// row costs no second company.
 	var reopened AnyMap
 	if status := e.Call(t, "POST", "/v1/deal-rooms", AnyMap{
 		"deal_id": dealID, "title": "Half an archive", "source": "ui",

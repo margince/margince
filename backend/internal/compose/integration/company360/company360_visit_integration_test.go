@@ -1,0 +1,218 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+//go:build integration
+
+package company360
+
+// The visit baseline and the three counts it answers.
+//
+// The mark is per user and moves only through the explicit acknowledgment,
+// monotonically. The counts it drives run against it read-only: a GET that
+// advanced the mark would destroy the answer the caller opened the page for.
+//
+// Every fixture here sets its timestamps explicitly. The read's clock is
+// pinned to company360Clock while the database's now() is not, so a fixture on
+// now() would land on one side of the baseline by accident.
+
+import (
+	"errors"
+	"slices"
+	"testing"
+	"time"
+
+	company360svc "github.com/margince/margince/backend/internal/compose/company360"
+	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+)
+
+func TestCompanyViewAckIsMonotonicAndPerUser(t *testing.T) {
+	e := integration.Setup(t)
+	svc := company360Service(e)
+	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
+	rep1 := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
+
+	first, err := svc.Acknowledge(rep1, company)
+	if err != nil {
+		t.Fatalf("first acknowledgment: %v", err)
+	}
+	if !first.LastViewedAt.Equal(company360Clock) {
+		t.Errorf("last_viewed_at = %v, want the pinned instant %v", first.LastViewedAt, company360Clock)
+	}
+
+	// A second tab whose clock lags must not rewind the mark: the upsert
+	// keeps the later of the two.
+	lagging := company360svc.NewService(e.DB().Pool(), people.NewStore(e.DB()), e.Deals, e.Projects, approvals.NewService(e.DB()),
+		func() time.Time { return company360Clock.Add(-time.Hour) })
+	second, err := lagging.Acknowledge(rep1, company)
+	if err != nil {
+		t.Fatalf("lagging acknowledgment: %v", err)
+	}
+	if !second.LastViewedAt.Equal(company360Clock) {
+		t.Errorf("last_viewed_at = %v after a lagging ack, want the earlier %v to be kept",
+			second.LastViewedAt, company360Clock)
+	}
+
+	// Rep2 shares Rep1's team and can read the same account, but has never
+	// visited it: the baseline is per user, not per record.
+	rep2 := e.As(e.Rep2, []ids.UUID{e.Team1}, integration.AccountRepPerms)
+	view, err := svc.Assemble(rep2, company)
+	if err != nil {
+		t.Fatalf("assemble as the second rep: %v", err)
+	}
+	if view.SinceLastVisit == nil {
+		t.Fatal("since_last_visit absent for a rep holding the activity grant")
+	}
+	if view.SinceLastVisit.BaselineAt != nil {
+		t.Errorf("baseline_at = %v for a rep who never acknowledged this account, want null",
+			view.SinceLastVisit.BaselineAt)
+	}
+}
+
+// The 360 is a read: it must never advance the mark it reports against,
+// or the "what changed" answer destroys itself on first sight.
+func TestCompany360DoesNotAdvanceTheVisitBaseline(t *testing.T) {
+	e := integration.Setup(t)
+	svc := company360Service(e)
+	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
+
+	if _, err := svc.Assemble(rep, company); err != nil {
+		t.Fatalf("assemble: %v", err)
+	}
+	if marks := e.WsCount(t, `SELECT count(*) FROM user_record_view WHERE entity_id = $1`, company.UUID); marks != 0 {
+		t.Errorf("user_record_view rows after a GET = %d, want 0 — only the ack writes the baseline", marks)
+	}
+	if _, err := svc.Acknowledge(rep, company); err != nil {
+		t.Fatalf("acknowledge: %v", err)
+	}
+	if marks := e.WsCount(t, `SELECT count(*) FROM user_record_view WHERE entity_id = $1`, company.UUID); marks != 1 {
+		t.Errorf("user_record_view rows after an ack = %d, want 1", marks)
+	}
+}
+
+// An agent acting through a passport is not a VISITOR: acknowledging a visit
+// consumes the human's own unread marker, and nobody but that human may spend
+// it — a briefing read on their behalf must not tell them they have already
+// seen what changed.
+//
+// What it may do is READ, and the staged proposals are part of that. They are
+// filtered by the same decidability rule the inbox applies for whoever is
+// asking (ADR-0055), so an agent sees exactly what the person it acts for could
+// answer, and the section is present rather than omitted — which is the whole
+// point of a briefing that says what is waiting.
+func TestCompany360RefusesTheVisitBaselineToAnAgentAndStillShowsWhatIsWaiting(t *testing.T) {
+	e := integration.Setup(t)
+	svc := company360Service(e)
+	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
+
+	if _, err := svc.Acknowledge(integration.AgentWithCompanyRead(e), company); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("agent acknowledgment → %v, want ErrPermissionDenied", err)
+	}
+	view, err := svc.Assemble(integration.AgentWithCompanyRead(e), company)
+	if err != nil {
+		t.Fatalf("assemble as an agent: %v", err)
+	}
+	if view.PendingApprovals == nil {
+		t.Error("pending_approvals omitted for an agent — the person it acts for can answer these, so the " +
+			"briefing that leaves them out is the one that reads as nothing waiting")
+	}
+	if slices.Contains(view.SectionsOmitted, "pending_approvals") {
+		t.Errorf("sections_omitted = %v, and it names a section this caller was served", view.SectionsOmitted)
+	}
+}
+
+// The three deltas the header line is built from. dealStageMoves is the
+// most easily-wrong query in the read — it has to count moves without
+// counting the deal's creation — so it is seeded both ways.
+func TestCompany360CountsWhatChangedSinceTheAcknowledgedVisit(t *testing.T) {
+	e := integration.Setup(t)
+	owner := integration.OwnerConn(t)
+	svc := company360Service(e)
+	pipeline, stage, won := integration.DealFixture(t, e)
+	// A REAL seeded user, not e.Admin()'s synthetic one: the baseline row
+	// carries a composite foreign key to app_user, so only a user that
+	// exists can acknowledge a visit.
+	admin := e.As(e.Rep1, nil, integration.AdminPerms)
+	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
+
+	// A deal created and an activity logged BEFORE the visit: neither is news.
+	// created_at is set explicitly on both sides of the baseline, because the
+	// read's clock is pinned to company360Clock while the database's now() is not
+	// — a fixture that used now() would sit on one side of the baseline by
+	// accident rather than by design.
+	before := e.SeedDeal(t, "Old deal", pipeline, stage, &e.Rep1)
+	e.WsExec(t, `UPDATE deal SET company_id = $2 WHERE id = $1`, before, company.UUID)
+	old := integration.SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, created_at, source, captured_by)
+		VALUES ($1, 'note', 'before the visit', '2026-05-01T09:00:00Z', '2026-05-01T09:00:00Z', 'manual', 'human:x')`)
+	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, company_id)
+		VALUES ($1, 'company', $2)`, old, company.UUID)
+
+	if _, err := svc.Acknowledge(admin, company); err != nil {
+		t.Fatalf("acknowledge: %v", err)
+	}
+
+	// Now: one new activity, one real stage move, and one NEW deal — whose
+	// creation writes a first-stage history row that must not count as a move.
+	fresh := integration.SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, created_at, source, captured_by)
+		VALUES ($1, 'note', 'after the visit', '2026-06-15T09:00:00Z', '2026-06-15T09:00:00Z', 'manual', 'human:x')`)
+	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, company_id)
+		VALUES ($1, 'company', $2)`, fresh, company.UUID)
+	created := e.SeedDeal(t, "Brand new deal", pipeline, stage, &e.Rep1)
+	e.WsExec(t, `UPDATE deal SET company_id = $2 WHERE id = $1`, created, company.UUID)
+	if _, err := e.Deals.AdvanceDeal(admin, ids.From[ids.DealKind](before), deals.AdvanceDealInput{ToStageID: won, WonWithoutContractReason: integration.WonByImport()}); err != nil {
+		t.Fatalf("advancing the old deal: %v", err)
+	}
+
+	view, err := svc.Assemble(admin, company)
+	if err != nil {
+		t.Fatalf("assemble: %v", err)
+	}
+	delta := view.SinceLastVisit
+	if delta == nil {
+		t.Fatal("since_last_visit absent for an admin")
+	}
+	if delta.BaselineAt == nil {
+		t.Fatal("baseline_at is null after an acknowledgment")
+	}
+	if delta.NewActivities != 1 {
+		t.Errorf("new_activities = %d, want 1 — only the activity logged after the visit is news",
+			delta.NewActivities)
+	}
+	if delta.DealStageMoves == nil {
+		t.Fatal("deal_stage_moves is null for a caller holding the deal grant")
+	}
+	if *delta.DealStageMoves != 1 {
+		t.Errorf("deal_stage_moves = %d, want 1 — a deal CREATED since the visit is a new deal, not a move",
+			*delta.DealStageMoves)
+	}
+}
+
+// The first visit is not "nothing happened": a caller who has never opened
+// the account gets the whole history counted, against a null baseline.
+func TestCompany360CountsTheWholeHistoryOnAFirstVisit(t *testing.T) {
+	e := integration.Setup(t)
+	owner := integration.OwnerConn(t)
+	svc := company360Service(e)
+	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
+	logged := integration.SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
+		VALUES ($1, 'note', 'first contact', now(), 'manual', 'human:x')`)
+	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, company_id)
+		VALUES ($1, 'company', $2)`, logged, company.UUID)
+
+	view, err := svc.Assemble(e.Admin(), company)
+	if err != nil {
+		t.Fatalf("assemble: %v", err)
+	}
+	if view.SinceLastVisit == nil || view.SinceLastVisit.BaselineAt != nil {
+		t.Fatalf("since_last_visit = %+v, want a null baseline on a first visit", view.SinceLastVisit)
+	}
+	if view.SinceLastVisit.NewActivities != 1 {
+		t.Errorf("new_activities = %d on a first visit, want the account's whole history counted",
+			view.SinceLastVisit.NewActivities)
+	}
+}

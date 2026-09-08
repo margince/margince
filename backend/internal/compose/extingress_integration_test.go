@@ -93,7 +93,7 @@ func bindCaptureForTest(t *testing.T, e *extRuntimeEnv) {
 }
 
 // capturePolicy is the narrowest grant that lets a captured message land: the
-// activity itself, plus the person and organization the counterparty ladder may
+// activity itself, plus the person and company the counterparty ladder may
 // mint beside it.
 //
 // Narrow rather than an admin document on purpose. What these tests assert is
@@ -102,7 +102,7 @@ func bindCaptureForTest(t *testing.T, e *extRuntimeEnv) {
 const capturePolicy = `{"objects":{
 	"activity":{"read":true,"create":true,"update":true},
 	"person":{"read":true,"create":true,"update":true},
-	"organization":{"read":true,"create":true,"update":true}},
+	"company":{"read":true,"create":true,"update":true}},
 	"row_scope":"all"}`
 
 // grantCapture gives the member a real role carrying capturePolicy, because the
@@ -463,7 +463,7 @@ func TestAFreemailSenderDefersThePersonAndNamesNoCompany(t *testing.T) {
 		t.Fatalf("Ingest: %v", err)
 	}
 	// An extension's record walks the SAME tier ladder as a mailbox sync, which
-	// is the point of this arm: a consumer mailbox settles the organization
+	// is the point of this arm: a consumer mailbox settles the company
 	// question by itself and settles nothing about the person, so the sender
 	// goes to the verdict rather than being minted on sight. An extension that
 	// could mint what a mailbox defers would be a second answer on a public
@@ -478,11 +478,11 @@ func TestAFreemailSenderDefersThePersonAndNamesNoCompany(t *testing.T) {
 	// must leave neither. Without these the arm reads as asserted while a
 	// change that started minting a company from a consumer mailbox passes.
 	if got := e.countAsWorkspace(t,
-		`SELECT count(*) FROM organization_domain WHERE domain = $1`, "gmail.com"); got != 0 {
-		t.Errorf("organization domain rows for gmail.com = %d, want none — a consumer mailbox is not a company", got)
+		`SELECT count(*) FROM company_domain WHERE domain = $1`, "gmail.com"); got != 0 {
+		t.Errorf("company domain rows for gmail.com = %d, want none — a consumer mailbox is not a company", got)
 	}
 	if got := e.countAsWorkspace(t,
-		`SELECT count(*) FROM organization_domain_disposition WHERE domain = $1`, "gmail.com"); got != 0 {
+		`SELECT count(*) FROM company_domain_disposition WHERE domain = $1`, "gmail.com"); got != 0 {
 		t.Errorf("triage rows for gmail.com = %d, want none — the domain answers the question itself, so nothing is queued", got)
 	}
 }
@@ -636,7 +636,7 @@ func TestAMemberOfAnotherWorkspaceCannotBeActedFor(t *testing.T) {
 
 // A suite here used to pin behaviour that only a SECOND workspace could produce.
 // ADR-0091 §8 phase D took the tenant column off app_user, and an installation
-// serves one organization (ADR-0061), so the fixture it needed is a state the
+// serves one company (ADR-0061), so the fixture it needed is a state the
 // product cannot reach — the guarantee has no subject rather than a weaker one.
 
 // The nesting refusal, on a POOL OF ONE — which is the configuration where the

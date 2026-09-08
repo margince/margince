@@ -189,7 +189,7 @@ func TestRateObjectsAreAdminOnly(t *testing.T) {
 			}
 		}
 		// Every non-admin/ops role is denied ALL four actions — the editor is
-		// org-gated in the SPA, so these roles have no legitimate consumer.
+		// company-gated in the SPA, so these roles have no legitimate consumer.
 		for _, key := range []string{"manager", "rep", "read_only"} {
 			doc, err := Parse(MustDefaultJSON(key))
 			if err != nil {

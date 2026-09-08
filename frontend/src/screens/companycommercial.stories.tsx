@@ -20,7 +20,7 @@ const meta: Meta = {
 export default meta;
 
 type Story = StoryObj;
-type View = components["schemas"]["Organization360"];
+type View = components["schemas"]["Company360"];
 
 const page = { has_more: false, next_cursor: null };
 

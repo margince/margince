@@ -56,12 +56,12 @@ func TestTheAgentSeamCannotChooseAProjectsKey(t *testing.T) {
 	e := Setup(t)
 	p := projectProvider(e)
 	ctx := e.Admin()
-	org := e.SeedOrg(t, "Minted GmbH", nil)
+	company := e.SeedCompany(t, "Minted GmbH", nil)
 
 	_, err := p.Create(ctx, datasource.CreateInput{
 		EntityType: datasource.EntityProject,
 		Fields: map[string]any{
-			"name": "Warehouse rollout", "organization_id": org.String(), "key": "MINE",
+			"name": "Warehouse rollout", "company_id": company.String(), "key": "MINE",
 		},
 		Source: "agent",
 	})
@@ -75,7 +75,7 @@ func TestTheAgentSeamCannotChooseAProjectsKey(t *testing.T) {
 	// And the ordinary create still mints one from the NAME.
 	created, err := p.Create(ctx, datasource.CreateInput{
 		EntityType: datasource.EntityProject,
-		Fields:     map[string]any{"name": "Warehouse rollout", "organization_id": org.String()},
+		Fields:     map[string]any{"name": "Warehouse rollout", "company_id": company.String()},
 		Source:     "agent",
 	})
 	if err != nil {
@@ -96,12 +96,12 @@ func TestProjectThroughTheAgentSeam(t *testing.T) {
 	e := Setup(t)
 	p := projectProvider(e)
 	ctx := e.Admin()
-	org := e.SeedOrg(t, "Seam GmbH", nil)
+	company := e.SeedCompany(t, "Seam GmbH", nil)
 
 	created, err := p.Create(ctx, datasource.CreateInput{
 		EntityType: datasource.EntityProject,
 		Fields: map[string]any{
-			"name": "Agent-opened work", "organization_id": org.String(),
+			"name": "Agent-opened work", "company_id": company.String(),
 		},
 		Source: "agent",
 	})
@@ -152,12 +152,12 @@ func TestProjectThroughTheAgentSeam(t *testing.T) {
 func TestTheAgentSeamCannotSetPhaseThroughAnUnrecognisedField(t *testing.T) {
 	e := Setup(t)
 	p := projectProvider(e)
-	org := e.SeedOrg(t, "Strict GmbH", nil)
+	company := e.SeedCompany(t, "Strict GmbH", nil)
 
 	created, err := p.Create(e.Admin(), datasource.CreateInput{
 		EntityType: datasource.EntityProject,
 		Fields: map[string]any{
-			"name": "Typo carrier", "organization_id": org.String(),
+			"name": "Typo carrier", "company_id": company.String(),
 			"phase": "delivering",
 		},
 		Source: "agent",
@@ -182,11 +182,11 @@ func TestTheAgentSeamCannotSetPhaseThroughAnUnrecognisedField(t *testing.T) {
 func TestTheAgentSeamAppliesTheSameProjectRulesAsREST(t *testing.T) {
 	e := Setup(t)
 	p := projectProvider(e)
-	org := e.SeedOrg(t, "Rules GmbH", nil)
+	company := e.SeedCompany(t, "Rules GmbH", nil)
 
 	for name, fields := range map[string]map[string]any{
-		"no name":    {"organization_id": org.String()},
-		"blank name": {"name": "   ", "organization_id": org.String()},
+		"no name":    {"company_id": company.String()},
+		"blank name": {"name": "   ", "company_id": company.String()},
 	} {
 		t.Run(name, func(t *testing.T) {
 			if _, err := p.Create(e.Admin(), datasource.CreateInput{
@@ -224,12 +224,12 @@ func TestTheAgentSeamNamesAnEntityItDoesNotServe(t *testing.T) {
 func TestTheAgentSeamStillEnforcesTheProjectGrant(t *testing.T) {
 	e := Setup(t)
 	p := projectProvider(e)
-	org := e.SeedOrg(t, "Gated GmbH", nil)
+	company := e.SeedCompany(t, "Gated GmbH", nil)
 
 	readOnly := e.As(e.Rep1, []ids.UUID{e.Team1}, principalReadOnlyProject())
 	_, err := p.Create(readOnly, datasource.CreateInput{
 		EntityType: datasource.EntityProject,
-		Fields:     map[string]any{"name": "Not allowed", "organization_id": org.String()},
+		Fields:     map[string]any{"name": "Not allowed", "company_id": company.String()},
 		Source:     "agent",
 	})
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
@@ -245,7 +245,7 @@ func principalReadOnlyProject() principal.Permissions {
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
 			"project":               {Read: true},
-			"organization":          {Read: true},
+			"company":               {Read: true},
 			"installation_settings": {Read: true},
 		},
 		RowScope: principal.RowScopeOwn,

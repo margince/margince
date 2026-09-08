@@ -33,7 +33,7 @@ import { fieldLabel, groupFields, type VocabularyField } from "./filterdata";
 import {
   boundedReference,
   type Reference,
-  searchOrganizations,
+  searchCompanies,
   useReferenceOptions,
 } from "./filterreference";
 import {
@@ -480,7 +480,7 @@ function ValueControl({
  *
  * Which control depends on the target and not on the operator: a set this
  * module can read whole is a list to pick from, and the one that cannot be —
- * organizations, as many as the workspace has customers — is searched. `many`
+ * companies, as many as the workspace has customers — is searched. `many`
  * only decides whether picking replaces the value or appends to it.
  */
 function ReferenceValue({
@@ -561,7 +561,7 @@ function chosenIDs(value: LeafValue): readonly string[] {
 }
 
 /**
- * The one reference too large to list: an organization, found by typing part of
+ * The one reference too large to list: a company, found by typing part of
  * its name.
  *
  * A box was the previous answer and it was the wrong one for the reason this
@@ -594,7 +594,7 @@ function SearchedRecordValue({
   // shows instead — see ChosenRecords.
   const [names, setNames] = useState<ReadonlyMap<string, string>>(new Map());
   const { results, pending, failed } = useDebouncedSearch(
-    searchOrganizations,
+    searchCompanies,
     query,
   );
   const ids = chosenIDs(value);
@@ -674,7 +674,7 @@ function SearchedRecordValue({
 /**
  * An id comparison as the RECORD it names, not its uuid.
  *
- * Only for a target the options module can enumerate. An organization reference
+ * Only for a target the options module can enumerate. A company reference
  * falls through to the plain box, because a workspace's accounts are as many as
  * its customers and a dropdown cannot hold them — the async picker that case
  * needs is its own change, and a half-filled list would be worse than a box.

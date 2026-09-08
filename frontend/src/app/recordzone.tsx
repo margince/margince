@@ -8,7 +8,7 @@ import { logUnexpectedError } from "../screens/common";
 import { useInstallationSettings } from "./uploadlimit";
 
 /**
- * The organization's own clock, as the installation configured it.
+ * The company's own clock, as the installation configured it.
  *
  * This is the reading half of `installation.timezone`. The admin has been able
  * to set that value since the settings card shipped; until now nothing on a
@@ -40,7 +40,7 @@ const RecordZoneContext = createContext<string>(FALLBACK_RECORD_ZONE);
  * it: a close date, a renewal, an invoice's issue day and a timeline's day
  * headings must read the same for every colleague, or two people quoting the
  * same page quote different days. That is the rule `format/timezone.ts` states,
- * and this hook is where the organization's answer to it now comes from.
+ * and this hook is where the company's answer to it now comes from.
  *
  * For a moment the reader relates to their own clock — when a credential they
  * are lending expires, when a slot they are booking starts — the answer is

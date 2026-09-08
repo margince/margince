@@ -57,7 +57,7 @@ const (
 
 // AccountCoverage is one company's relationship breadth.
 type AccountCoverage struct {
-	OrganizationID ids.UUID
+	CompanyID ids.UUID
 	// Stakeholders the reader may open, deduplicated across every deal and
 	// project of this account. A person on three deals is one relationship.
 	VisibleStakeholders []ids.UUID
@@ -85,11 +85,11 @@ type AccountCoverage struct {
 // than an empty answer — the same shape CoverageFor uses, and for the same
 // reason: every stakeholder is an edge, so a caller without the grant would
 // otherwise be served zero contacts and told the account is uncovered.
-func AccountCoverageFor(ctx context.Context, tx pgx.Tx, orgID ids.UUID) (AccountCoverage, error) {
-	out := AccountCoverage{OrganizationID: orgID}
+func AccountCoverageFor(ctx context.Context, tx pgx.Tx, companyID ids.UUID) (AccountCoverage, error) {
+	out := AccountCoverage{CompanyID: companyID}
 	// The ACCOUNT first, before anything is read about it.
 	//
-	// Without this the function answers about any organization id a caller can
+	// Without this the function answers about any company id a caller can
 	// name, whether or not they may open it — and the incompleteness flag then
 	// tells them something about a company they were never admitted to. The
 	// edge admission below does not cover it: relationship.read says a caller
@@ -97,10 +97,10 @@ func AccountCoverageFor(ctx context.Context, tx pgx.Tx, orgID ids.UUID) (Account
 	//
 	// EnsureVisibleLive rather than Require alone, so an archived or
 	// out-of-scope account is not-found rather than answered.
-	if err := auth.Require(ctx, "organization", principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
 		return out, err
 	}
-	if err := auth.EnsureVisibleLive(ctx, tx, "organization", orgID); err != nil {
+	if err := auth.EnsureVisibleLive(ctx, tx, "company", companyID); err != nil {
 		return out, err
 	}
 	if err := auth.EdgeReadAdmitted(ctx); err != nil {
@@ -112,11 +112,11 @@ func AccountCoverageFor(ctx context.Context, tx pgx.Tx, orgID ids.UUID) (Account
 		return out, err
 	}
 
-	visible, roles, err := visibleAccountStakeholders(ctx, tx, orgID)
+	visible, roles, err := visibleAccountStakeholders(ctx, tx, companyID)
 	if err != nil {
 		return out, err
 	}
-	total, err := countAccountStakeholders(ctx, tx, orgID)
+	total, err := countAccountStakeholders(ctx, tx, companyID)
 	if err != nil {
 		return out, err
 	}
@@ -158,11 +158,11 @@ func threadingVerdict(visible int, incomplete bool) ThreadingVerdict {
 // Deduplicated across edges: somebody on three deals of one account is one
 // relationship, and counting them three times would clear the threading floor
 // on a single contact.
-func visibleAccountStakeholders(ctx context.Context, tx pgx.Tx, orgID ids.UUID) ([]ids.UUID, []string, error) {
+func visibleAccountStakeholders(ctx context.Context, tx pgx.Tx, companyID ids.UUID) ([]ids.UUID, []string, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	orgPos := arg(orgID)
-	edge, err := accountStakeholderEdge(ctx, orgPos, arg)
+	companyPos := arg(companyID)
+	edge, err := accountStakeholderEdge(ctx, companyPos, arg)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -234,11 +234,11 @@ func visibleAccountStakeholders(ctx context.Context, tx pgx.Tx, orgID ids.UUID) 
 // predicate, and the answer is a COUNT — no id, no name, no role. What a caller
 // learns is that their own view is incomplete, which is what stops the verdict
 // being wrong about the customer.
-func countAccountStakeholders(ctx context.Context, tx pgx.Tx, orgID ids.UUID) (int, error) {
+func countAccountStakeholders(ctx context.Context, tx pgx.Tx, companyID ids.UUID) (int, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	orgPos := arg(orgID)
-	edge, err := accountStakeholderEdge(ctx, orgPos, arg)
+	companyPos := arg(companyID)
+	edge, err := accountStakeholderEdge(ctx, companyPos, arg)
 	if err != nil {
 		return 0, err
 	}
@@ -260,7 +260,7 @@ func countAccountStakeholders(ctx context.Context, tx pgx.Tx, orgID ids.UUID) (i
 // Both statements above render this same predicate, because the visible set and
 // the total have to cover the SAME population: any difference between them
 // lands in the withheld count and reads as hidden people who are not there.
-func accountStakeholderEdge(ctx context.Context, orgPos int, arg func(any) int) (string, error) {
+func accountStakeholderEdge(ctx context.Context, companyPos int, arg func(any) int) (string, error) {
 	// The deal and project the seat hangs off, under the caller's own scope for
 	// each. Both statements carry this, so the ONLY difference between the
 	// visible set and the total is the person — which is what makes their
@@ -286,12 +286,12 @@ func accountStakeholderEdge(ctx context.Context, orgPos int, arg func(any) int) 
 	return fmt.Sprintf(`(
 		   (r.kind = 'deal_stakeholder' AND EXISTS (
 		      SELECT 1 FROM deal d WHERE d.id = r.deal_id
-		        AND d.organization_id = $%[1]d AND d.archived_at IS NULL
+		        AND d.company_id = $%[1]d AND d.archived_at IS NULL
 		        AND (%[2]s)))
 		OR (r.kind = 'project_stakeholder' AND EXISTS (
 		      SELECT 1 FROM relationship pc
 		        JOIN project pr ON pr.id = pc.project_id AND pr.archived_at IS NULL
 		       WHERE pc.kind = 'project_company' AND pc.project_id = r.project_id
-		         AND pc.organization_id = $%[1]d AND pc.archived_at IS NULL
-		         AND (%[3]s))))`, orgPos, dealScope, projectScope), nil
+		         AND pc.company_id = $%[1]d AND pc.archived_at IS NULL
+		         AND (%[3]s))))`, companyPos, dealScope, projectScope), nil
 }

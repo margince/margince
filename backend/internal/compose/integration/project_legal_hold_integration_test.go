@@ -41,10 +41,10 @@ type projectHoldFixture struct {
 
 func seedProjectHoldFixture(t *testing.T, e *Env) projectHoldFixture {
 	t.Helper()
-	org := e.SeedOrg(t, "Acme GmbH", nil)
+	company := e.SeedCompany(t, "Acme GmbH", nil)
 	create := func(name string) ids.UUID {
 		p, err := e.Projects.CreateProject(e.Admin(), projects.CreateProjectInput{
-			Name: name, OrganizationID: orgIDOf(org), Source: "manual",
+			Name: name, CompanyID: companyIDOf(company), Source: "manual",
 		})
 		if err != nil {
 			t.Fatalf("create project %q: %v", name, err)

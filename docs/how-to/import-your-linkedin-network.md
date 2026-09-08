@@ -151,10 +151,10 @@ matched 13 — the rest were people and employers the CRM learned about minutes 
 
 Two mechanisms close that gap, and neither needs you to re-upload:
 
-- **The event path** (`cg:linkedin-match`). `person.created`, `person.updated` and the organization
+- **The event path** (`cg:linkedin-match`). `person.created`, `person.updated` and the company
   events already reach the outbox because the write shape puts them there, so manual entry, capture, a
   site read, a merge and an import all trigger a re-match without any of them knowing the matcher
-  exists. Organization events matter for a sharper reason: most unmatched ghosts are waiting on an
+  exists. Company events matter for a sharper reason: most unmatched ghosts are waiting on an
   *employer*, not on a name, so an account appearing unblocks a batch at once.
 - **The `linkedin_rematch` sweep**, which fans out per workspace **every hour**. The job contract says
   why hourly rather than daily: the window it covers is a workspace's first day — an export uploaded
@@ -173,7 +173,7 @@ answer the import is for. Per account it reports:
 
 | Column | Meaning |
 |---|---|
-| **Account** | the organization, linking to its company page |
+| **Account** | the company, linking to its company page |
 | **You know** | how many of *your* connections work there |
 | **Already contacts** | how many of those are confirmed matches, shown as `{on file} of {total}` |
 
@@ -196,7 +196,7 @@ curl --cookie 'crm_session=<session>' 'http://localhost:8080/v1/me/linkedin-reac
 They count different things, on purpose:
 
 - The **import summary** counts rows in your file: `rows`, `imported`, `skipped`.
-- The **reach view** counts only connections that were **placed at an organization you can read**.
+- The **reach view** counts only connections that were **placed at a company you can read**.
   Everything else lands in `unresolved_connections`.
 
 So a connection is "unresolved" in three distinct situations, and the view deliberately cannot tell them

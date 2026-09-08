@@ -142,11 +142,11 @@ func TestNoArchiveColumnIsOnlyPassedForTablesWithoutOne(t *testing.T) {
 	t.Parallel()
 	archivable := tablesWithArchivedAt(t)
 	// Both halves are derived, so both can go silently empty and leave the
-	// comparison vacuously true. `organization` is the archivable table this
+	// comparison vacuously true. `company` is the archivable table this
 	// whole guard exists around; if the schema reader cannot see its
 	// archived_at, it is reading nothing.
-	if !archivable["organization"] {
-		t.Fatal("the migration reader found no archived_at on organization — it has stopped reading the schema it derives from")
+	if !archivable["company"] {
+		t.Fatal("the migration reader found no archived_at on company — it has stopped reading the schema it derives from")
 	}
 	claimed := tablesPassedNoArchiveColumn(t)
 	if len(claimed) == 0 {

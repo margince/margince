@@ -49,11 +49,11 @@ describe("projectFields", () => {
     // choices a create could offer would both resolve to them anyway.
     expect(create.map((field) => field.key)).toEqual([
       "name",
-      "organization_id",
+      "company_id",
       "description",
       "target_end_date",
     ]);
-    expect(edit.map((field) => field.key)).not.toContain("organization_id");
+    expect(edit.map((field) => field.key)).not.toContain("company_id");
     expect(edit.map((field) => field.key)).toContain("owner_id");
   });
 
@@ -82,14 +82,14 @@ describe("mapProjectCreate / mapProjectUpdate", () => {
         // server mints the key and a body carrying one would be sending a
         // matcher nobody asked for.
         key: "CALLER-CHOSE",
-        organization_id: "o-1",
+        company_id: "o-1",
         owner_id: "",
         description: "",
         target_end_date: "2026-12-31",
       }),
     ).toEqual({
       name: "Rollout",
-      organization_id: "o-1",
+      company_id: "o-1",
       owner_id: null,
       description: null,
       target_end_date: "2026-12-31",

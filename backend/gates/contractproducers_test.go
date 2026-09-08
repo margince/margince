@@ -11,7 +11,7 @@ package gates
 // handler fills what the contract advertises, so a schema property with no
 // producer ships as permanently absent — and absent, on these composites,
 // reads as a fact about the account. `last_meeting_at` sat on
-// Organization360Health for exactly that reason: promised, never set, and
+// Company360Health for exactly that reason: promised, never set, and
 // rendering as "no meeting" on every company in the product.
 //
 // This is the shape of bug that adding fields to a composite creates, so it is
@@ -34,9 +34,9 @@ import (
 // The composites the company record page reads. Each is assembled by hand from
 // several sources, which is the shape this gate guards.
 var producedSchemas = []string{
-	"Organization360Health",
-	"OrganizationGrowthFit",
-	"Organization360Suggestion",
+	"Company360Health",
+	"CompanyGrowthFit",
+	"Company360Suggestion",
 }
 
 // A Go field declaration inside a generated struct: `\tName Type `json:...“.

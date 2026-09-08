@@ -31,7 +31,7 @@ package gates
 //
 // WHAT IT CANNOT SEE. A download that carries no filename sets no
 // Content-Disposition, so a handler serving inline bytes under Content-Type
-// alone is outside this net (the organization logo is such a response, and it
+// alone is outside this net (the company logo is such a response, and it
 // goes through Download anyway). Nor can it see a header set through a
 // variable holding the name, or one written with Add rather than Set. It is a
 // net under the shape the tree reaches for, not a proof.

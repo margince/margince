@@ -179,15 +179,15 @@ func TestASharedKindStillMatchesAcrossMembers(t *testing.T) {
 	other := e.secondMember(t)
 	target := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO organization (id, display_name, source, captured_by)
+		INSERT INTO company (id, display_name, source, captured_by)
 		VALUES ($1, 'Gitex', 'gmail:seed', 'connector:gmail')`, target); err != nil {
 		t.Fatal(err)
 	}
 	rename := StageInput{
-		Kind:           "org_name_promotion",
+		Kind:           "company_name_promotion",
 		ProposedChange: []byte(`{"proposed_name":"Gitex Global"}`),
 		DiffHash:       "one-shared-proposal",
-		TargetType:     "organization",
+		TargetType:     "company",
 		TargetID:       target,
 		Summary:        "Rename Gitex to Gitex Global?",
 		JoinPending:    true,

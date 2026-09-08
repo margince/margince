@@ -18,7 +18,7 @@ import { CoverageBand } from "./summary";
 // workspace grants full RBAC and seeds a complete committee — so this is the
 // only place the withheld and partial readings can be looked at side by side.
 
-type Coverage = components["schemas"]["OrganizationCoverage"];
+type Coverage = components["schemas"]["CompanyCoverage"];
 
 function coverage(over: Partial<Coverage>): Coverage {
   return {
@@ -40,8 +40,8 @@ function coverage(over: Partial<Coverage>): Coverage {
 
 function stub(body: Coverage) {
   installFetchStub({
-    "GET /me": meRoute({ organization: ["read"], person: ["read"] }),
-    "GET /organizations/o-1/coverage": () => jsonResponse(body),
+    "GET /me": meRoute({ company: ["read"], person: ["read"] }),
+    "GET /companies/o-1/coverage": () => jsonResponse(body),
   });
 }
 
@@ -60,7 +60,7 @@ function story(body: Coverage) {
     return (
       <StoryProviders>
         <CoverageBand
-          orgId="o-1"
+          companyId="o-1"
           accountName="Brandt GmbH"
           onNarrow={() => {}}
         />
@@ -71,7 +71,7 @@ function story(body: Coverage) {
 
 /** The account a rep hopes for: a way in, and one hole to close. */
 export const AWayInAndAGap: Story = {
-  args: { orgId: "o-1", accountName: "Brandt GmbH", onNarrow: () => {} },
+  args: { companyId: "o-1", accountName: "Brandt GmbH", onNarrow: () => {} },
   render: story(
     coverage({
       best_way_in: {
@@ -102,7 +102,7 @@ export const AWayInAndAGap: Story = {
  * the card says so rather than dressing a fourth follow-up up as an opening.
  */
 export const NobodyHasAnswered: Story = {
-  args: { orgId: "o-1", accountName: "Brandt GmbH", onNarrow: () => {} },
+  args: { companyId: "o-1", accountName: "Brandt GmbH", onNarrow: () => {} },
   render: story(
     coverage({
       summary: {
@@ -128,7 +128,7 @@ export const NobodyHasAnswered: Story = {
  * champion": the deal may well have one this reader cannot see.
  */
 export const CommitteeWithheld: Story = {
-  args: { orgId: "o-1", accountName: "Brandt GmbH", onNarrow: () => {} },
+  args: { companyId: "o-1", accountName: "Brandt GmbH", onNarrow: () => {} },
   render: story(
     coverage({
       deals: [],
@@ -147,7 +147,7 @@ export const CommitteeWithheld: Story = {
  * a committee, and reporting a hole over a partial reading would invent one.
  */
 export const SeatsHidden: Story = {
-  args: { orgId: "o-1", accountName: "Brandt GmbH", onNarrow: () => {} },
+  args: { companyId: "o-1", accountName: "Brandt GmbH", onNarrow: () => {} },
   render: story(
     coverage({
       committee: { seats: [], gaps: [], unlisted_seats: 3 },
@@ -166,7 +166,7 @@ export const SeatsHidden: Story = {
  * behalf is not a verb this page has.
  */
 export const SeatReadFromMessages: Story = {
-  args: { orgId: "o-1", accountName: "Brandt GmbH", onNarrow: () => {} },
+  args: { companyId: "o-1", accountName: "Brandt GmbH", onNarrow: () => {} },
   render: story(
     coverage({
       deals: [{ deal_id: "d-1", name: "Retrofit 2026" }],
@@ -205,7 +205,7 @@ export const SeatReadFromMessages: Story = {
  * nothing about what the account is missing.
  */
 export const NoDealToReadRolesOnto: Story = {
-  args: { orgId: "o-1", accountName: "Brandt GmbH", onNarrow: () => {} },
+  args: { companyId: "o-1", accountName: "Brandt GmbH", onNarrow: () => {} },
   render: story(
     coverage({
       deals: [],

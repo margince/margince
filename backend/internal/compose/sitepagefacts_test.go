@@ -41,7 +41,7 @@ func TestFactFieldNamesAreGloballyUniqueAcrossCategories(t *testing.T) {
 	// The compact reply names no category — the field implies it, which
 	// only works while no field name appears in two categories.
 	seen := map[string]string{}
-	for category, fields := range people.OrganizationFactFields {
+	for category, fields := range people.CompanyFactFields {
 		for _, field := range fields {
 			if prior, dup := seen[field]; dup {
 				t.Fatalf("fact field %q lives in both %s and %s — the category inference breaks", field, prior, category)

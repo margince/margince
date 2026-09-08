@@ -6,7 +6,7 @@ package capture
 // The ADR-0063 counterparty auto-create follow-up: after a captured mail
 // activity commits, the Sink ensures the human behind it exists — person
 // always, company unless suppressed — through the resolver seam compose
-// injects. Capture itself never touches person/organization SQL.
+// injects. Capture itself never touches person/company SQL.
 
 import (
 	"context"
@@ -25,7 +25,7 @@ import (
 // mail activity commits, the pipeline ensures the human behind it exists —
 // person always, company unless suppressed — through the ONE dedupe
 // chokepoint. Compose injects the people module's implementation; capture
-// itself never touches person/organization SQL.
+// itself never touches person/company SQL.
 type CounterpartyEnsurer interface {
 	EnsureCounterparty(ctx context.Context, in EnsureRequest) (EnsureOutcome, error)
 }
@@ -42,7 +42,7 @@ type EnsureOutcome struct {
 	// accumulated `+ 1` could only be lost.
 	PersonID ids.UUID
 	// CompanyQueued reports that this counterparty's domain was put in the
-	// queue for an organization verdict. Capture no longer creates companies
+	// queue for a company verdict. Capture no longer creates companies
 	// itself — it withholds one until a site read says the domain deserves it —
 	// so counting creations here would report zero for every run and hide the
 	// work it actually did.
@@ -55,14 +55,14 @@ type EnsureOutcome struct {
 
 // EnsureRequest names one captured message's counterparty for the resolver.
 type EnsureRequest struct {
-	Email       string
-	DisplayName string // untrusted header text
-	Domain      string
-	OwnerID     ids.UUID // the granting human — owner of anything created
-	ActivityID  ids.UUID
-	Source      string
-	CapturedBy  string
-	SuppressOrg bool // free-mail domain: person yes, company no
+	Email           string
+	DisplayName     string // untrusted header text
+	Domain          string
+	OwnerID         ids.UUID // the granting human — owner of anything created
+	ActivityID      ids.UUID
+	Source          string
+	CapturedBy      string
+	SuppressCompany bool // free-mail domain: person yes, company no
 	// Replied says this counterparty wrote to US. A record is also created for
 	// somebody we wrote to twice with no answer, and the two must not be
 	// recorded as the same act: only the first is the person initiating
@@ -102,15 +102,15 @@ func (s *Sink) ensureCounterparty(ctx context.Context, rec connector.NormalizedR
 	// The party the ladder judged — see counterpartyDecision.subject.
 	cp := decision.subject
 	outcome, err := s.ensurer.EnsureCounterparty(ctx, EnsureRequest{
-		Email:       cp.Email,
-		DisplayName: cp.DisplayName,
-		Domain:      cp.Domain,
-		OwnerID:     decision.owner,
-		ActivityID:  ref.ID,
-		Source:      captureSource(rec),
-		CapturedBy:  decision.capturedBy,
-		SuppressOrg: decision.suppressOrg,
-		Replied:     decision.replied,
+		Email:           cp.Email,
+		DisplayName:     cp.DisplayName,
+		Domain:          cp.Domain,
+		OwnerID:         decision.owner,
+		ActivityID:      ref.ID,
+		Source:          captureSource(rec),
+		CapturedBy:      decision.capturedBy,
+		SuppressCompany: decision.suppressCompany,
+		Replied:         decision.replied,
 	})
 	if err != nil {
 		s.logEnsureFault(ctx, rec, err)
@@ -131,10 +131,10 @@ type counterpartyDecision struct {
 	// written to twice. Both create a record; only the first is the person
 	// initiating contact, and the acquisition evidence must not claim the
 	// stronger fact for the weaker case.
-	replied     bool
-	suppressOrg bool
-	owner       ids.UUID
-	capturedBy  string
+	replied         bool
+	suppressCompany bool
+	owner           ids.UUID
+	capturedBy      string
 	// channel routes the post-commit step to the channel ensure seam. The two
 	// seams take different contracts — one names its human by an address, the
 	// other by a provider identity — so which one a record belongs to is
@@ -294,7 +294,7 @@ func (s *Sink) decideCounterparty(ctx context.Context, tx pgx.Tx, rec connector.
 	}
 
 	// T3 free-mail (CAP-PARAM-5). A consumer mailbox says what it is not — an
-	// organization — so the org is suppressed either way. What it does NOT say
+	// company — so the company is suppressed either way. What it does NOT say
 	// is whether the person behind it is a counterparty: a customer's private
 	// gmail and a founder's sister arrive identically, and minting on sight put
 	// nineteen of the latter in a shared CRM. So the address defers to the
@@ -305,7 +305,7 @@ func (s *Sink) decideCounterparty(ctx context.Context, tx pgx.Tx, rec connector.
 		return counterpartyDecision{}, err
 	}
 	if consumer {
-		decision.suppressOrg = true
+		decision.suppressCompany = true
 	}
 
 	if !decision.create {
@@ -356,7 +356,7 @@ func (s *Sink) alreadyDecided(ctx context.Context, tx pgx.Tx, rec connector.Norm
 
 // priorKnownNonPerson is what priorDispositionTx reports for an address the
 // workspace judged real correspondence with no human behind it — a shared
-// mailbox, or an organization writing under its own name. It is not a stored
+// mailbox, or a company writing under its own name. It is not a stored
 // status; the ledger holds `real` plus a kind, and this is how that pair
 // reaches the tier ladder as one answer.
 const priorKnownNonPerson = "known_nonperson"
@@ -389,7 +389,7 @@ func (s *Sink) priorDispositionTx(ctx context.Context, tx pgx.Tx, email string) 
 		         ELSE coalesce((
 		           -- A real-status row whose KIND names no human is not an
 		           -- instruction to create one. role_mailbox and
-		           -- organization_sender resolve to real because the mail is
+		           -- company_sender resolve to real because the mail is
 		           -- genuine correspondence that must stay visible — but there
 		           -- is nobody to record, and reading the status alone would
 		           -- create the very contact the verdict declined to create,

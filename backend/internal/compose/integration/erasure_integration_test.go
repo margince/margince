@@ -293,7 +293,7 @@ func TestErasureRetiresTheSubjectsPreferenceToken(t *testing.T) {
 
 // TestErasurePreservesActivityUnderTransitiveHold pins F-011: a person is
 // not itself held, but one of its subject-only activities is ALSO linked to
-// an organization under legal_hold. Retention freezes such an activity
+// a company under legal_hold. Retention freezes such an activity
 // transitively ("a hold on the subject must cover the evidence about them"),
 // so the person-erase cascade must not destroy it either. A sibling
 // subject-only activity with no hold IS redacted, proving the predicate
@@ -305,7 +305,7 @@ func TestErasurePreservesActivityUnderTransitiveHold(t *testing.T) {
 	personID := ids.NewV7()
 	heldActivity := ids.NewV7()
 	freeActivity := ids.NewV7()
-	orgID := ids.NewV7()
+	companyID := ids.NewV7()
 
 	err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
@@ -315,12 +315,12 @@ func TestErasurePreservesActivityUnderTransitiveHold(t *testing.T) {
 			return err
 		}
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO organization (id, display_name, legal_hold, source, captured_by)
-			 VALUES ($1, 'Counterparty GmbH', true, 'manual', 'human:x')`, orgID); err != nil {
+			`INSERT INTO company (id, display_name, legal_hold, source, captured_by)
+			 VALUES ($1, 'Counterparty GmbH', true, 'manual', 'human:x')`, companyID); err != nil {
 			return err
 		}
 		// The held-evidence note: subject-only to the person, but also linked
-		// to the org under legal_hold. A 'note' kind (not correspondence)
+		// to the company under legal_hold. A 'note' kind (not correspondence)
 		// carries no statutory floor, so its survival here is attributable to
 		// the legal_hold alone, not the GoBD floor this binary also arms.
 		if _, err := tx.Exec(ctx,
@@ -335,8 +335,8 @@ func TestErasurePreservesActivityUnderTransitiveHold(t *testing.T) {
 			return err
 		}
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO activity_link (activity_id, entity_type, organization_id)
-			 VALUES ($1, 'organization', $2)`, heldActivity, orgID); err != nil {
+			`INSERT INTO activity_link (activity_id, entity_type, company_id)
+			 VALUES ($1, 'company', $2)`, heldActivity, companyID); err != nil {
 			return err
 		}
 		// The sibling note: subject-only, NOT transitively held, and (being a

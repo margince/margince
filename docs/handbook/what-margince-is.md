@@ -11,7 +11,7 @@ to use it.
 
 Most CRMs bolt AI on as a panel that summarises what you typed in yourself.
 
-In Margince, an AI agent connects to your organization properly and gets a set of
+In Margince, an AI agent connects to your company properly and gets a set of
 governed tools. It can look things up, draft replies, read a document for you,
 enrich a company, move a deal along. Everything it does is recorded and
 attributed.
@@ -71,7 +71,7 @@ You are meant to be able to check it. That is the design.
 Five kinds of record:
 
 - **Contacts** — people
-- **Companies** — the organizations they work for
+- **Companies** — the companies they work for
 - **Leads** — prospects, kept deliberately apart from contacts
 - **Deals** — pieces of business moving toward won or lost
 - **Projects** — the work itself, which starts during the deal and outlives it
@@ -110,15 +110,15 @@ numbers on the page rather than nagging from the edge of the screen.
 
 ## Words this handbook uses
 
-**Organization** — your tenant. The whole of your company's data in Margince. One
-installation serves one organization.
+**Company** — your tenant. The whole of your company's data in Margince. One
+installation serves one company.
 
 **Installation** — the running deployment. Whoever operates it decides things
 like upload limits and whether sends need confirming.
 
-**Company** — a record type. The word "organization" is the underlying name for
+**Company** — a record type. The word "company" is the underlying name for
 it and shows through on a few screens, which is confusing; when a search result
-group says "Organizations", it means companies.
+group says "Companies", it means companies.
 
 **Passport** — the credential a person mints so an AI agent can act as them.
 

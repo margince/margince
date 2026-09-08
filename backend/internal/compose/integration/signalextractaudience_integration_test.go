@@ -35,9 +35,9 @@ import (
 // own limit. There is no owner for whom extracting it is free.
 func TestAThreadWithALimitedMessageIsNotOfferedToTheModel(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "Acme", &e.Rep1)
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	at := extractClock.Add(-48 * time.Hour)
-	contact := employeeOf(t, e, org, "Ada at Acme")
+	contact := employeeOf(t, e, company, "Ada at Acme")
 
 	// Two messages on one conversation: one ordinary, one limited. The pass
 	// reads a whole thread at once, so what it writes is as private as the most
@@ -80,9 +80,9 @@ func TestAThreadWithALimitedMessageIsNotOfferedToTheModel(t *testing.T) {
 // compose/signalextractwindow_integration_test.go.
 func TestAConversationIsNotReReadAfterOneOfItsMessagesIsLimited(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "Acme", &e.Rep1)
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	at := extractClock.Add(-48 * time.Hour)
-	contact := employeeOf(t, e, org, "Ada at Acme")
+	contact := employeeOf(t, e, company, "Ada at Acme")
 
 	seedMessage(t, e, contact, "thread-mid", "Renewal", "Happy to continue.", "inbound", at)
 	late := seedMessage(t, e, contact, "thread-mid", "Renewal",
@@ -144,9 +144,9 @@ type recordingBrain struct {
 // with nothing on the summary to say a part is missing.
 func TestAHandLoggedLimitedMessageTakesItsThreadOutOfThePass(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "Acme", &e.Rep1)
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	at := extractClock.Add(-48 * time.Hour)
-	contact := employeeOf(t, e, org, "Ada at Acme")
+	contact := employeeOf(t, e, company, "Ada at Acme")
 
 	seedMessage(t, e, contact, "thread-mixed", "Renewal", "Happy to continue.", "inbound", at)
 

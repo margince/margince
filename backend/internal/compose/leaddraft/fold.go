@@ -49,7 +49,7 @@ func recipientOf(lead crmcontracts.Lead, activities []crmcontracts.Activity) per
 		FirstName: first,
 		LastName:  last,
 		// The company as the lead WROTE it. `company_name` is free text on the
-		// lead rather than an organization link — the contract says so where
+		// lead rather than a company link — the contract says so where
 		// the column is declared — so this is what they called themselves and
 		// never a record we hold about them.
 		Employer: deref(lead.CompanyName),

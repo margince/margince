@@ -83,19 +83,19 @@ func TestOverlayWirePersonNamelessFallsBackToEmailThenUnnamed(t *testing.T) {
 	}
 }
 
-func TestOverlayWireOrganizationSurfacesDomain(t *testing.T) {
-	rec := wireRecord(t, datasource.EntityOrganization, map[string]any{
-		"display_name":        "Acme",
-		"organization_domain": []map[string]any{{"domain": "acme.io", "is_primary": true, "position": 0}},
+func TestOverlayWireCompanySurfacesDomain(t *testing.T) {
+	rec := wireRecord(t, datasource.EntityCompany, map[string]any{
+		"display_name":   "Acme",
+		"company_domain": []map[string]any{{"domain": "acme.io", "is_primary": true, "position": 0}},
 	})
-	org, err := overlayWireOrganization(wireCtx(), rec)
+	company, err := overlayWireCompany(wireCtx(), rec)
 	if err != nil {
-		t.Fatalf("overlayWireOrganization: %v", err)
+		t.Fatalf("overlayWireCompany: %v", err)
 	}
-	if org.Domains == nil || len(*org.Domains) != 1 {
-		t.Fatalf("Domains = %#v, want exactly one mirrored domain", org.Domains)
+	if company.Domains == nil || len(*company.Domains) != 1 {
+		t.Fatalf("Domains = %#v, want exactly one mirrored domain", company.Domains)
 	}
-	d := (*org.Domains)[0]
+	d := (*company.Domains)[0]
 	if d.Domain != "acme.io" {
 		t.Errorf("domain = %q, want acme.io", d.Domain)
 	}
@@ -111,9 +111,9 @@ func TestOverlayWireOrganizationSurfacesDomain(t *testing.T) {
 	// The synthesized id is STABLE across reads: an overlay domain has no
 	// native row of its own, so a churning id would be a fresh identity on
 	// every request.
-	again, err := overlayWireOrganization(wireCtx(), rec)
+	again, err := overlayWireCompany(wireCtx(), rec)
 	if err != nil {
-		t.Fatalf("overlayWireOrganization (second read): %v", err)
+		t.Fatalf("overlayWireCompany (second read): %v", err)
 	}
 	if (*again.Domains)[0].Id != d.Id {
 		t.Errorf("domain id churned across reads: %v then %v", d.Id, (*again.Domains)[0].Id)
@@ -124,22 +124,22 @@ func TestOverlayWireOrganizationSurfacesDomain(t *testing.T) {
 // are. The wire-coverage gate only asks that the slot is non-empty and differs
 // from the fallback, so a reader publishing the leading row alone passes it
 // while dropping every domain after the first.
-func TestOverlayWireOrganizationPublishesEveryDomainRow(t *testing.T) {
-	rec := wireRecord(t, datasource.EntityOrganization, map[string]any{
+func TestOverlayWireCompanyPublishesEveryDomainRow(t *testing.T) {
+	rec := wireRecord(t, datasource.EntityCompany, map[string]any{
 		"display_name": "Acme",
-		"organization_domain": []map[string]any{
+		"company_domain": []map[string]any{
 			{"domain": "acme.io", "is_primary": true, "position": 0},
 			{"domain": "acme.de", "position": 1},
 		},
 	})
-	org, err := overlayWireOrganization(wireCtx(), rec)
+	company, err := overlayWireCompany(wireCtx(), rec)
 	if err != nil {
-		t.Fatalf("overlayWireOrganization: %v", err)
+		t.Fatalf("overlayWireCompany: %v", err)
 	}
-	if org.Domains == nil || len(*org.Domains) != 2 {
-		t.Fatalf("Domains = %#v, want both mirrored rows", org.Domains)
+	if company.Domains == nil || len(*company.Domains) != 2 {
+		t.Fatalf("Domains = %#v, want both mirrored rows", company.Domains)
 	}
-	rows := *org.Domains
+	rows := *company.Domains
 	if rows[0].Domain != "acme.io" || rows[1].Domain != "acme.de" {
 		t.Errorf("domains = %q then %q, want the mapping's declared order", rows[0].Domain, rows[1].Domain)
 	}
@@ -153,14 +153,14 @@ func TestOverlayWireOrganizationPublishesEveryDomainRow(t *testing.T) {
 	}
 }
 
-func TestOverlayWireOrganizationWithoutDomainOmitsDomains(t *testing.T) {
-	rec := wireRecord(t, datasource.EntityOrganization, map[string]any{"display_name": "Acme"})
-	org, err := overlayWireOrganization(wireCtx(), rec)
+func TestOverlayWireCompanyWithoutDomainOmitsDomains(t *testing.T) {
+	rec := wireRecord(t, datasource.EntityCompany, map[string]any{"display_name": "Acme"})
+	company, err := overlayWireCompany(wireCtx(), rec)
 	if err != nil {
-		t.Fatalf("overlayWireOrganization: %v", err)
+		t.Fatalf("overlayWireCompany: %v", err)
 	}
-	if org.Domains != nil {
-		t.Errorf("Domains = %#v, want nil when the mirror carries no domain", org.Domains)
+	if company.Domains != nil {
+		t.Errorf("Domains = %#v, want nil when the mirror carries no domain", company.Domains)
 	}
 }
 
@@ -473,7 +473,7 @@ func TestOverlayWireTitlePicksThePerTypeDisplayField(t *testing.T) {
 		want   string
 	}{
 		{datasource.EntityPerson, map[string]any{"first_name": "Ada", "last_name": "O"}, "Ada O"},
-		{datasource.EntityOrganization, map[string]any{"display_name": "Acme GmbH"}, "Acme GmbH"},
+		{datasource.EntityCompany, map[string]any{"display_name": "Acme GmbH"}, "Acme GmbH"},
 		{datasource.EntityDeal, map[string]any{"name": "Renewal"}, "Renewal"},
 		{datasource.EntityLead, map[string]any{"full_name": "Lea D"}, "Lea D"},
 		{datasource.EntityActivity, map[string]any{"subject": "Kickoff"}, "Kickoff"},
@@ -484,11 +484,11 @@ func TestOverlayWireTitlePicksThePerTypeDisplayField(t *testing.T) {
 	}
 }
 
-// orgDomainOf reduces the collection overlayOrganizationDomains publishes to
+// companyDomainOf reduces the collection overlayCompanyDomains publishes to
 // its leading domain, so a case table can hold that reader next to
 // overlayPersonEmail's value-only shape.
-func orgDomainOf(fields map[string]any) string {
-	domains := overlayOrganizationDomains(openapi_types.UUID{}, fields)
+func companyDomainOf(fields map[string]any) string {
+	domains := overlayCompanyDomains(openapi_types.UUID{}, fields)
 	if domains == nil || len(*domains) == 0 {
 		return ""
 	}
@@ -519,8 +519,8 @@ func TestOverlayChildReadersReadWhatTheMappingPipelineWrites(t *testing.T) {
 		{
 			incumbentClass: "companies",
 			raw:            map[string]any{"hs_object_id": "2", "domain": "Acme.IO"},
-			parent:         "organization_domain",
-			read:           orgDomainOf,
+			parent:         "company_domain",
+			read:           companyDomainOf,
 			want:           "acme.io",
 		},
 	}
@@ -562,14 +562,14 @@ func TestOverlayChildReadersReadWhatTheMappingPipelineWrites(t *testing.T) {
 // the wire.
 func TestOverlayChildReadersStillReadTheSingleObjectShape(t *testing.T) {
 	legacy := map[string]any{
-		"person_email":        map[string]any{"email": "ada@example.test"},
-		"organization_domain": map[string]any{"domain": "acme.io"},
+		"person_email":   map[string]any{"email": "ada@example.test"},
+		"company_domain": map[string]any{"domain": "acme.io"},
 	}
 	if got := overlayPersonEmail(legacy); got != "ada@example.test" {
 		t.Errorf("overlayPersonEmail = %q, want the address the pre-collection payload holds", got)
 	}
-	if got := orgDomainOf(legacy); got != "acme.io" {
-		t.Errorf("orgDomainOf = %q, want the domain the pre-collection payload holds", got)
+	if got := companyDomainOf(legacy); got != "acme.io" {
+		t.Errorf("companyDomainOf = %q, want the domain the pre-collection payload holds", got)
 	}
 	// A payload holding neither shape answers absent rather than erroring:
 	// the true value always survives in raw.
@@ -631,7 +631,7 @@ func TestFlipCarriesTheChildRowsDeclaredAttributes(t *testing.T) {
 		t.Errorf("emails = %+v for a record holding no address, want none", got)
 	}
 
-	domains := flipOrgDomains(map[string]any{"organization_domain": []any{map[string]any{
+	domains := flipCompanyDomains(map[string]any{"company_domain": []any{map[string]any{
 		"domain": "acme.io", "is_primary": false,
 	}}})
 	if len(domains) != 1 || domains[0].Domain != "acme.io" || domains[0].IsPrimary {

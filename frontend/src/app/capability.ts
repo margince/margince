@@ -117,7 +117,7 @@ export function useCanWrite(object: RbacObject, action: RbacAction): boolean {
  * ceiling, and the server's own per-row answer, all three.
  *
  * The axes are independent and each is necessary. A rep holds
- * `organization.update` on the OBJECT and still may not write a colleague's
+ * `company.update` on the OBJECT and still may not write a colleague's
  * company; a full seat with the grant still may not write an archived one. The
  * per-row half comes from the server as `record.writable`, because ownership,
  * team membership and record grants are not in the /me snapshot — re-deriving
@@ -249,7 +249,7 @@ export function useHoldsAdminRole(): boolean {
  * Whether the principal holds an OPERATOR seat — `admin` or `ops`.
  *
  * This is the Admin settings section's gate. The section is installation
- * posture: what the organization is, who is on it, what it captures, what it
+ * posture: what the company is, who is on it, what it captures, what it
  * keeps, what it spends. A rep or a manager configures none of that, and the
  * entries inside it are the only place the product offers it — so the section
  * is absent for them rather than a page of withheld cards, which is the one

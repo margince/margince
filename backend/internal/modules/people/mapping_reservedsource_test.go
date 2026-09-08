@@ -48,7 +48,7 @@ func TestLeadCreateInputAcceptsAnOrdinarySourceSystem(t *testing.T) {
 }
 
 // EVERY create wire that accepts provenance refuses the namespace. The
-// flip stamps `source` inside it on persons, organizations and deals —
+// flip stamps `source` inside it on persons, companies and deals —
 // classes with no (source_system, source_id) replay key — so a gap in
 // any one of these lets a planted row be adopted as the importer's own.
 func TestEveryProvenanceWireRefusesTheImporterNamespace(t *testing.T) {
@@ -60,10 +60,10 @@ func TestEveryProvenanceWireRefusesTheImporterNamespace(t *testing.T) {
 	}); !errors.As(err, &refused) {
 		t.Errorf("person: err = %v, want the namespace refused", err)
 	}
-	if _, err := organizationCreateInput(crmcontracts.CreateOrganizationRequest{
+	if _, err := companyCreateInput(crmcontracts.CreateCompanyRequest{
 		DisplayName: "Planted", Source: reserved,
 	}); !errors.As(err, &refused) {
-		t.Errorf("organization: err = %v, want the namespace refused", err)
+		t.Errorf("company: err = %v, want the namespace refused", err)
 	}
 	if _, err := leadCreateInput(crmcontracts.CreateLeadRequest{
 		FullName: ptr("Planted"), Source: reserved,

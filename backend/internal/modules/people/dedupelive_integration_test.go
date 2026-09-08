@@ -57,16 +57,16 @@ func asArchiver(e *dedupeEnv) context.Context {
 func TestArchivingOneSideClosesTheDuplicateDecision(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := asArchiver(e)
-	first, _ := seedOrgPair(ctx, t, e)
-	if got := len(openCandidates(ctx, t, e, "organization")); got != 1 {
+	first, _ := seedCompanyPair(ctx, t, e)
+	if got := len(openCandidates(ctx, t, e, "company")); got != 1 {
 		t.Fatalf("the seed left %d open candidates, want 1", got)
 	}
 
-	if _, err := e.store.ArchiveOrganization(ctx, ids.From[ids.OrganizationKind](first), nil); err != nil {
+	if _, err := e.store.ArchiveCompany(ctx, ids.From[ids.CompanyKind](first), nil); err != nil {
 		t.Fatalf("archiving one side: %v", err)
 	}
 
-	if got := len(openCandidates(ctx, t, e, "organization")); got != 0 {
+	if got := len(openCandidates(ctx, t, e, "company")); got != 0 {
 		t.Errorf("after archiving one side the queue still serves %d decisions, want 0 — "+
 			"they are about a company nobody can open, and they hold their rank by "+
 			"confidence for good", got)
@@ -80,7 +80,7 @@ func TestArchivingOneSideClosesTheDuplicateDecision(t *testing.T) {
 func TestTheOpenCountDropsWhenASubjectIsArchived(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := asArchiver(e)
-	first, _ := seedOrgPair(ctx, t, e)
+	first, _ := seedCompanyPair(ctx, t, e)
 	before, err := e.store.CountOpenDedupeCandidates(ctx)
 	if err != nil {
 		t.Fatalf("counting before: %v", err)
@@ -89,7 +89,7 @@ func TestTheOpenCountDropsWhenASubjectIsArchived(t *testing.T) {
 		t.Fatalf("the seed counted %d open candidates, want 1", before)
 	}
 
-	if _, err := e.store.ArchiveOrganization(ctx, ids.From[ids.OrganizationKind](first), nil); err != nil {
+	if _, err := e.store.ArchiveCompany(ctx, ids.From[ids.CompanyKind](first), nil); err != nil {
 		t.Fatalf("archiving one side: %v", err)
 	}
 
@@ -109,22 +109,22 @@ func TestTheOpenCountDropsWhenASubjectIsArchived(t *testing.T) {
 func TestAPairOfLiveCompaniesIsStillServed(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := asArchiver(e)
-	seedOrgPair(ctx, t, e)
+	seedCompanyPair(ctx, t, e)
 
 	// A DIFFERENT company is archived; the pair is about neither of its sides.
-	bystander, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+	bystander, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: "Unrelated Holdings", Source: "manual",
-		Domains: []OrgDomainInput{{Domain: "unrelated.test", IsPrimary: true}},
+		Domains: []CompanyDomainInput{{Domain: "unrelated.test", IsPrimary: true}},
 	})
 	if err != nil {
 		t.Fatalf("seeding the bystander: %v", err)
 	}
-	if _, err := e.store.ArchiveOrganization(ctx,
-		ids.From[ids.OrganizationKind](ids.UUID(bystander.Id)), nil); err != nil {
+	if _, err := e.store.ArchiveCompany(ctx,
+		ids.From[ids.CompanyKind](ids.UUID(bystander.Id)), nil); err != nil {
 		t.Fatalf("archiving the bystander: %v", err)
 	}
 
-	if got := len(openCandidates(ctx, t, e, "organization")); got != 1 {
+	if got := len(openCandidates(ctx, t, e, "company")); got != 1 {
 		t.Errorf("a pair of live companies is served %d times, want 1 — archiving an "+
 			"unrelated record has closed a decision that still has both its subjects", got)
 	}
@@ -132,7 +132,7 @@ func TestAPairOfLiveCompaniesIsStillServed(t *testing.T) {
 
 // A person archived on their own closes their duplicate decisions too.
 //
-// The same rule, on the other record type the queue serves. Organizations are
+// The same rule, on the other record type the queue serves. Companies are
 // where it was measured; nothing about the cause is specific to them.
 func TestArchivingAPersonClosesTheirDuplicateDecision(t *testing.T) {
 	e := setupDedupe(t)
@@ -157,7 +157,7 @@ func TestArchivingAPersonClosesTheirDuplicateDecision(t *testing.T) {
 //
 // The third record type the queue serves, and the one whose row-scope clause is
 // EMPTY for an all-scope reader — lead is not capture-private, where person and
-// organization are. So this is the case where the liveness term stands on its
+// company are. So this is the case where the liveness term stands on its
 // own rather than riding a scope predicate that happens to be there anyway.
 //
 // Disqualifying is the lead's own archive: it stamps archived_at, and it is what
@@ -231,8 +231,8 @@ func TestTheSpendFenceClustersOnlyLiveTwins(t *testing.T) {
 func TestAMergedPairIsStillListedAsMerged(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := asArchiver(e)
-	first, _ := seedOrgPair(ctx, t, e)
-	open := openCandidates(ctx, t, e, entityOrganization)
+	first, _ := seedCompanyPair(ctx, t, e)
+	open := openCandidates(ctx, t, e, entityCompany)
 	if len(open) != 1 {
 		t.Fatalf("the seed left %d open candidates, want 1", len(open))
 	}
@@ -241,7 +241,7 @@ func TestAMergedPairIsStillListedAsMerged(t *testing.T) {
 	}
 
 	merged, _, err := e.store.ListDedupeCandidates(ctx, DedupeQueueInput{
-		EntityType: entityOrganization, Status: "merged",
+		EntityType: entityCompany, Status: "merged",
 	})
 	if err != nil {
 		t.Fatalf("listing the merged pairs: %v", err)
@@ -260,14 +260,14 @@ func TestAMergedPairIsStillListedAsMerged(t *testing.T) {
 // pair and read its evidence snapshot, which carries the names, addresses and
 // phone numbers that made the two look alike.
 //
-// Acting on it is worse than reading it. merge_organization.go already names
+// Acting on it is worse than reading it. merge_company.go already names
 // what happens to a pair whose side is archived: merging answers AlreadyMerged,
 // which reopens it — "a pair no human can ever dispose of".
 func TestAnOpenPairNamingAnArchivedRecordIsNotReadableOrActionable(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := asArchiver(e)
-	first, _ := seedOrgPair(ctx, t, e)
-	open := openCandidates(ctx, t, e, entityOrganization)
+	first, _ := seedCompanyPair(ctx, t, e)
+	open := openCandidates(ctx, t, e, entityCompany)
 	if len(open) != 1 {
 		t.Fatalf("the seed left %d open candidates, want 1", len(open))
 	}
@@ -279,7 +279,7 @@ func TestAnOpenPairNamingAnArchivedRecordIsNotReadableOrActionable(t *testing.T)
 		t.Fatalf("a live pair must be readable by id: %v", err)
 	}
 
-	if _, err := e.store.ArchiveOrganization(ctx, ids.From[ids.OrganizationKind](first), nil); err != nil {
+	if _, err := e.store.ArchiveCompany(ctx, ids.From[ids.CompanyKind](first), nil); err != nil {
 		t.Fatalf("archiving one side: %v", err)
 	}
 

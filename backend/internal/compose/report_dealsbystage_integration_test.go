@@ -223,21 +223,21 @@ func TestDealsByStageGroupsByCurrencySeparately(t *testing.T) {
 	}
 }
 
-func TestDealsByStageFiltersByOrganizationID(t *testing.T) {
+func TestDealsByStageFiltersByCompanyID(t *testing.T) {
 	e := setupForecast(t)
-	orgA := e.seedID(t, `INSERT INTO organization (id, display_name, source, captured_by) VALUES ($1, 'A', 'manual', 'human:x')`)
-	orgB := e.seedID(t, `INSERT INTO organization (id, display_name, source, captured_by) VALUES ($1, 'B', 'manual', 'human:x')`)
-	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, organization_id, amount_minor, currency, source, captured_by)
-		VALUES ($1, 'Deal A', $2, $3, $4, 10000, 'EUR', 'manual', 'human:x')`, e.pipeline, e.stages[60], orgA)
-	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, organization_id, amount_minor, currency, source, captured_by)
-		VALUES ($1, 'Deal B', $2, $3, $4, 20000, 'EUR', 'manual', 'human:x')`, e.pipeline, e.stages[60], orgB)
+	companyA := e.seedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'A', 'manual', 'human:x')`)
+	companyB := e.seedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'B', 'manual', 'human:x')`)
+	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, company_id, amount_minor, currency, source, captured_by)
+		VALUES ($1, 'Deal A', $2, $3, $4, 10000, 'EUR', 'manual', 'human:x')`, e.pipeline, e.stages[60], companyA)
+	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, company_id, amount_minor, currency, source, captured_by)
+		VALUES ($1, 'Deal B', $2, $3, $4, 20000, 'EUR', 'manual', 'human:x')`, e.pipeline, e.stages[60], companyB)
 
 	result := e.runReport(e.Admin(), t, "deals-by-stage", fmt.Sprintf(
-		`{"group_by":["stage_id","currency"],"aggregates":[{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"}],"filters":{"organization_id":%q}}`,
-		orgA.String()))
+		`{"group_by":["stage_id","currency"],"aggregates":[{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"}],"filters":{"company_id":%q}}`,
+		companyA.String()))
 	row := dealsByStageRow(t, result, e.stages[60].String())
 	if got := wireInt(t, row, "deals"); got != 1 {
-		t.Fatalf("deals = %d, want 1 (only org A's deal)", got)
+		t.Fatalf("deals = %d, want 1 (only company A's deal)", got)
 	}
 	if got := wireInt(t, row, "amount_minor_sum"); got != 10000 {
 		t.Errorf("amount_minor_sum = %d, want 10000", got)
@@ -249,21 +249,21 @@ func TestDealsByStageFiltersByOrganizationID(t *testing.T) {
 // the report could say "these deals came from some partner" and never say which.
 func TestDealsByStageGroupsRevenueByPartner(t *testing.T) {
 	e := setupForecast(t)
-	northgate := e.seedID(t, `INSERT INTO organization (id, display_name, source, captured_by) VALUES ($1, 'Northgate', 'manual', 'human:x')`)
-	kestrel := e.seedID(t, `INSERT INTO organization (id, display_name, source, captured_by) VALUES ($1, 'Kestrel', 'manual', 'human:x')`)
-	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, partner_org_id, partner_attribution, amount_minor, currency, source, captured_by)
+	northgate := e.seedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Northgate', 'manual', 'human:x')`)
+	kestrel := e.seedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Kestrel', 'manual', 'human:x')`)
+	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, partner_company_id, partner_attribution, amount_minor, currency, source, captured_by)
 		VALUES ($1, 'Northgate one', $2, $3, $4, 'sourced', 30000, 'EUR', 'manual', 'human:x')`, e.pipeline, e.stages[60], northgate)
-	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, partner_org_id, partner_attribution, amount_minor, currency, source, captured_by)
+	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, partner_company_id, partner_attribution, amount_minor, currency, source, captured_by)
 		VALUES ($1, 'Northgate two', $2, $3, $4, 'influenced', 20000, 'EUR', 'manual', 'human:x')`, e.pipeline, e.stages[60], northgate)
-	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, partner_org_id, partner_attribution, amount_minor, currency, source, captured_by)
+	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, partner_company_id, partner_attribution, amount_minor, currency, source, captured_by)
 		VALUES ($1, 'Kestrel one', $2, $3, $4, 'sourced', 70000, 'EUR', 'manual', 'human:x')`, e.pipeline, e.stages[60], kestrel)
 
 	result := e.runReport(e.Admin(), t, "deals-by-stage",
-		`{"group_by":["partner_org_id","currency"],"aggregates":[{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"}],"filters":{"partner_sourced":true}}`)
+		`{"group_by":["partner_company_id","currency"],"aggregates":[{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"}],"filters":{"partner_sourced":true}}`)
 
 	byPartner := map[string]int64{}
 	for _, row := range result.Rows {
-		id, ok := row["partner_org_id"].(string)
+		id, ok := row["partner_company_id"].(string)
 		if !ok {
 			continue
 		}
@@ -279,8 +279,8 @@ func TestDealsByStageGroupsRevenueByPartner(t *testing.T) {
 
 // Grouping by partner must not report a partner the caller could not open.
 //
-// A normal deal read masks partner_org_id per row when the referenced
-// organization is out of reach (deals/fieldmask.go). The report engine gates
+// A normal deal read masks partner_company_id per row when the referenced
+// company is out of reach (deals/fieldmask.go). The report engine gates
 // only the deal entity, so without the reference-scope clause an aggregate
 // would hand back exactly the id the same caller's own read withholds — and an
 // aggregate has no per-row place to write "withheld".
@@ -288,22 +288,22 @@ func TestGroupingByPartnerDoesNotNameAPartnerTheCallerCannotOpen(t *testing.T) {
 	e := setupForecast(t)
 	// Capture-private to Rep3: readable to its owner, invisible to every other
 	// seat, exactly as a connector-captured company can be.
-	hidden := e.seedID(t, `INSERT INTO organization (id, owner_id, display_name, visibility, source, captured_by)
+	hidden := e.seedID(t, `INSERT INTO company (id, owner_id, display_name, visibility, source, captured_by)
 		VALUES ($1, $2, 'Hidden Partners', 'owner', 'manual', 'human:x')`, e.Rep3)
-	open := e.seedID(t, `INSERT INTO organization (id, display_name, source, captured_by)
+	open := e.seedID(t, `INSERT INTO company (id, display_name, source, captured_by)
 		VALUES ($1, 'Open Partners', 'manual', 'human:x')`)
-	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, partner_org_id, partner_attribution, amount_minor, currency, source, captured_by)
+	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, partner_company_id, partner_attribution, amount_minor, currency, source, captured_by)
 		VALUES ($1, 'From the hidden partner', $2, $3, $4, 'sourced', 90000, 'EUR', 'manual', 'human:x')`, e.pipeline, e.stages[60], hidden)
-	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, partner_org_id, partner_attribution, amount_minor, currency, source, captured_by)
+	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, partner_company_id, partner_attribution, amount_minor, currency, source, captured_by)
 		VALUES ($1, 'From the open partner', $2, $3, $4, 'sourced', 10000, 'EUR', 'manual', 'human:x')`, e.pipeline, e.stages[60], open)
 
-	// A reader of every deal who holds no organization grant at all.
+	// A reader of every deal who holds no company grant at all.
 	reader := e.dealReadCtx(ids.NewV7(), nil, principal.RowScopeAll)
 	result := e.runReport(reader, t, "deals-by-stage",
-		`{"group_by":["partner_org_id","currency"],"aggregates":[{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"}],"filters":{"partner_sourced":true}}`)
+		`{"group_by":["partner_company_id","currency"],"aggregates":[{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"}],"filters":{"partner_sourced":true}}`)
 
 	for _, row := range result.Rows {
-		if id, ok := row["partner_org_id"].(string); ok && id == hidden.String() {
+		if id, ok := row["partner_company_id"].(string); ok && id == hidden.String() {
 			t.Errorf("the report named partner %s, which this caller's own deal read masks", id)
 		}
 	}
@@ -311,7 +311,7 @@ func TestGroupingByPartnerDoesNotNameAPartnerTheCallerCannotOpen(t *testing.T) {
 	// not blank the whole dimension.
 	var sawOpen bool
 	for _, row := range result.Rows {
-		if id, ok := row["partner_org_id"].(string); ok && id == open.String() {
+		if id, ok := row["partner_company_id"].(string); ok && id == open.String() {
 			sawOpen = true
 			if got := wireInt(t, row, "amount_minor_sum"); got != 10000 {
 				t.Errorf("open partner total = %d, want 10000", got)
@@ -325,8 +325,8 @@ func TestGroupingByPartnerDoesNotNameAPartnerTheCallerCannotOpen(t *testing.T) {
 
 func TestDealsByStageFiltersByPartnerSourced(t *testing.T) {
 	e := setupForecast(t)
-	partner := e.seedID(t, `INSERT INTO organization (id, display_name, source, captured_by) VALUES ($1, 'Partner', 'manual', 'human:x')`)
-	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, partner_org_id, partner_attribution, amount_minor, currency, source, captured_by)
+	partner := e.seedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Partner', 'manual', 'human:x')`)
+	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, partner_company_id, partner_attribution, amount_minor, currency, source, captured_by)
 		VALUES ($1, 'Sourced', $2, $3, $4, 'sourced', 10000, 'EUR', 'manual', 'human:x')`, e.pipeline, e.stages[60], partner)
 	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, amount_minor, currency, source, captured_by)
 		VALUES ($1, 'Direct', $2, $3, 20000, 'EUR', 'manual', 'human:x')`, e.pipeline, e.stages[60])
@@ -435,15 +435,15 @@ func dealsByStageRow(t *testing.T, result reportResultWire, stageID string) map[
 // total and is not one.
 func TestDealsByStageNarrowsToOnePartner(t *testing.T) {
 	e := setupForecast(t)
-	wanted := e.seedID(t, `INSERT INTO organization (id, display_name, source, captured_by) VALUES ($1, 'Wanted', 'manual', 'human:x')`)
-	other := e.seedID(t, `INSERT INTO organization (id, display_name, source, captured_by) VALUES ($1, 'Other', 'manual', 'human:x')`)
-	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, partner_org_id, partner_attribution, amount_minor, currency, source, captured_by)
+	wanted := e.seedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Wanted', 'manual', 'human:x')`)
+	other := e.seedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Other', 'manual', 'human:x')`)
+	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, partner_company_id, partner_attribution, amount_minor, currency, source, captured_by)
 		VALUES ($1, 'Theirs', $2, $3, $4, 'sourced', 40000, 'EUR', 'manual', 'human:x')`, e.pipeline, e.stages[60], wanted)
-	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, partner_org_id, partner_attribution, amount_minor, currency, source, captured_by)
+	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, partner_company_id, partner_attribution, amount_minor, currency, source, captured_by)
 		VALUES ($1, 'Somebody else', $2, $3, $4, 'sourced', 90000, 'EUR', 'manual', 'human:x')`, e.pipeline, e.stages[60], other)
 
 	result := e.runReport(e.Admin(), t, "deals-by-stage",
-		fmt.Sprintf(`{"group_by":["stage_id","currency"],"aggregates":[{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"}],"filters":{"partner_org_id":%q}}`, wanted.String()))
+		fmt.Sprintf(`{"group_by":["stage_id","currency"],"aggregates":[{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"}],"filters":{"partner_company_id":%q}}`, wanted.String()))
 
 	// One partner's deals only. Both would read as a working narrow to anyone
 	// who checked the partner they asked for and stopped.

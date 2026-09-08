@@ -28,20 +28,20 @@ func storedVerdict(t *testing.T, verdict *crmcontracts.DealStatusCardVerdict) []
 	return payload
 }
 
-func citedLine(text string, cites ...crmcontracts.OrganizationBriefEvidence) crmcontracts.OrganizationBriefSentence {
-	return crmcontracts.OrganizationBriefSentence{Text: text, Evidence: cites}
+func citedLine(text string, cites ...crmcontracts.CompanyBriefEvidence) crmcontracts.CompanyBriefSentence {
+	return crmcontracts.CompanyBriefSentence{Text: text, Evidence: cites}
 }
 
-func citesActivity(id ids.UUID) crmcontracts.OrganizationBriefEvidence {
-	return crmcontracts.OrganizationBriefEvidence{
-		EntityType: crmcontracts.OrganizationBriefEvidenceEntityTypeActivity,
+func citesActivity(id ids.UUID) crmcontracts.CompanyBriefEvidence {
+	return crmcontracts.CompanyBriefEvidence{
+		EntityType: crmcontracts.CompanyBriefEvidenceEntityTypeActivity,
 		EntityId:   openapi_types.UUID(id),
 	}
 }
 
-func citesDeal(id ids.UUID) crmcontracts.OrganizationBriefEvidence {
-	return crmcontracts.OrganizationBriefEvidence{
-		EntityType: crmcontracts.OrganizationBriefEvidenceEntityTypeDeal,
+func citesDeal(id ids.UUID) crmcontracts.CompanyBriefEvidence {
+	return crmcontracts.CompanyBriefEvidence{
+		EntityType: crmcontracts.CompanyBriefEvidenceEntityTypeDeal,
 		EntityId:   openapi_types.UUID(id),
 	}
 }
@@ -54,7 +54,7 @@ func TestAWrittenCardHandsItsStandingThrough(t *testing.T) {
 	payload := storedVerdict(t, &crmcontracts.DealStatusCardVerdict{
 		Standing: "blocked",
 		Because: crmcontracts.DealStatusCardSection{
-			Sentences: []crmcontracts.OrganizationBriefSentence{
+			Sentences: []crmcontracts.CompanyBriefSentence{
 				citedLine("Legal has not returned the DPA.", citesActivity(cited)),
 			},
 		},
@@ -115,7 +115,7 @@ func TestTheDecisiveLineIsTheFirstSentenceAndNotAJoin(t *testing.T) {
 	payload := storedVerdict(t, &crmcontracts.DealStatusCardVerdict{
 		Standing: "drifting",
 		Because: crmcontracts.DealStatusCardSection{
-			Sentences: []crmcontracts.OrganizationBriefSentence{
+			Sentences: []crmcontracts.CompanyBriefSentence{
 				citedLine("Nobody has written since June."),
 				citedLine("The champion changed roles."),
 			},
@@ -137,7 +137,7 @@ func TestAnEmptyLeadingSentenceIsSkipped(t *testing.T) {
 	payload := storedVerdict(t, &crmcontracts.DealStatusCardVerdict{
 		Standing: "live",
 		Because: crmcontracts.DealStatusCardSection{
-			Sentences: []crmcontracts.OrganizationBriefSentence{
+			Sentences: []crmcontracts.CompanyBriefSentence{
 				citedLine(""),
 				citedLine("They booked the security review."),
 			},
@@ -163,7 +163,7 @@ func TestOnlyTheCitedMessagesAreNamedForTheAudienceQuestion(t *testing.T) {
 	payload := storedVerdict(t, &crmcontracts.DealStatusCardVerdict{
 		Standing: "blocked",
 		Because: crmcontracts.DealStatusCardSection{
-			Sentences: []crmcontracts.OrganizationBriefSentence{
+			Sentences: []crmcontracts.CompanyBriefSentence{
 				citedLine("Legal has not returned the DPA.",
 					citesActivity(message), citesDeal(ids.NewV7())),
 			},

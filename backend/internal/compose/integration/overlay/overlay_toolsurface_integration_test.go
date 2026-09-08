@@ -71,7 +71,7 @@ func nativeOnlyAgentTools(anchor ids.UUID) map[string]string {
 		"prep_for_meeting":         fmt.Sprintf(`{"record_type":"person","record_id":%q}`, anchor),
 		"whats_slipping_this_week": `{}`,
 		"draft_follow_ups_for":     `{"segment":"slipping"}`,
-		"intro_path_to":            fmt.Sprintf(`{"organization_id":%q}`, anchor),
+		"intro_path_to":            fmt.Sprintf(`{"company_id":%q}`, anchor),
 		"at_risk_relationships":    `{}`,
 		"list_pipelines":           `{}`,
 		// The query-plan executor: one SELECT over the target's own native

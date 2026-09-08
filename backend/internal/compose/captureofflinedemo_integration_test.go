@@ -33,7 +33,7 @@ func TestTheDirectoryReadsThroughTheSeam(t *testing.T) {
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	seat := ids.UUID(e.Rep1)
 
-	org := seedOfflineDemoAccount(t, e, seat, "acme")
+	company := seedOfflineDemoAccount(t, e, seat, "acme")
 
 	box, err := offlineDemoDirectory{pool: e.Pool}.Mailbox(ctx, seat.String())
 	if err != nil {
@@ -47,7 +47,7 @@ func TestTheDirectoryReadsThroughTheSeam(t *testing.T) {
 	}
 	var found bool
 	for _, a := range box.Accounts {
-		if a.OrganizationID == org.String() {
+		if a.CompanyID == company.String() {
 			found = true
 			if len(a.People) == 0 {
 				t.Error("the account carries no contacts, so the generator writes to nobody")
@@ -58,7 +58,7 @@ func TestTheDirectoryReadsThroughTheSeam(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Errorf("the seat owns %s and the directory did not return it", org)
+		t.Errorf("the seat owns %s and the directory did not return it", company)
 	}
 }
 
@@ -77,13 +77,13 @@ func TestTheDirectoryOnlyReturnsThisSeatsAccounts(t *testing.T) {
 		t.Fatalf("reading the mailbox: %v", err)
 	}
 	for _, a := range box.Accounts {
-		if a.OrganizationID == theirs.String() {
+		if a.CompanyID == theirs.String() {
 			t.Errorf("the mailbox for one seat returned %s, which another seat owns", theirs)
 		}
 	}
 	var sawMine bool
 	for _, a := range box.Accounts {
-		if a.OrganizationID == mine.String() {
+		if a.CompanyID == mine.String() {
 			sawMine = true
 		}
 	}
@@ -97,13 +97,13 @@ func TestTheDirectoryOnlyReturnsThisSeatsAccounts(t *testing.T) {
 func seedOfflineDemoAccount(t *testing.T, e *integration.Env, owner ids.UUID, slug string) ids.UUID {
 	t.Helper()
 	ctx := context.Background()
-	var orgID ids.UUID
+	var companyID ids.UUID
 	err := e.Pool.QueryRow(ctx, `
-		INSERT INTO organization (display_name, lifecycle, owner_id, source, captured_by)
+		INSERT INTO company (display_name, lifecycle, owner_id, source, captured_by)
 		VALUES ($2, 'customer', $1, 'test', 'human:test')
-		RETURNING id`, owner, slug+" GmbH").Scan(&orgID)
+		RETURNING id`, owner, slug+" GmbH").Scan(&companyID)
 	if err != nil {
-		t.Fatalf("seeding an organization: %v", err)
+		t.Fatalf("seeding a company: %v", err)
 	}
 	var personID ids.UUID
 	err = e.Pool.QueryRow(ctx, `
@@ -118,9 +118,9 @@ func seedOfflineDemoAccount(t *testing.T, e *integration.Env, owner ids.UUID, sl
 		t.Fatalf("seeding an address: %v", err)
 	}
 	if _, err := e.Pool.Exec(ctx, `
-		INSERT INTO relationship (kind, person_id, organization_id, role, source, captured_by)
-		VALUES ('employment', $1, $2, 'Head of IT', 'test', 'human:test')`, personID, orgID); err != nil {
+		INSERT INTO relationship (kind, person_id, company_id, role, source, captured_by)
+		VALUES ('employment', $1, $2, 'Head of IT', 'test', 'human:test')`, personID, companyID); err != nil {
 		t.Fatalf("seeding an employment: %v", err)
 	}
-	return orgID
+	return companyID
 }

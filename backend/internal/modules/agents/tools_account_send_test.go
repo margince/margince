@@ -31,8 +31,8 @@ func accountSendArgs(links string) json.RawMessage {
 		links))
 }
 
-func orgLink(id ids.UUID) string {
-	return fmt.Sprintf(`{"entity_type":"organization","entity_id":%q}`, id)
+func companyLink(id ids.UUID) string {
+	return fmt.Sprintf(`{"entity_type":"company","entity_id":%q}`, id)
 }
 
 // ADR-0087 §6: the agent surface gains this operation governed identically to
@@ -67,11 +67,11 @@ func TestTheAccountStartedSendGovernsAsTheReplyDoes(t *testing.T) {
 // be taken from. One operation staged two ways is a human deciding a different
 // question depending on which transport the agent used.
 func TestTheAccountStartedSendStagesACreate(t *testing.T) {
-	org := ids.NewV7()
+	company := ids.NewV7()
 	p := &multiLinkProvider{}
 
 	info, err := sendAccountEmailTool{comms: &recordingComms{}, p: p}.
-		StageInfo(context.Background(), accountSendArgs(orgLink(org)))
+		StageInfo(context.Background(), accountSendArgs(companyLink(company)))
 	if err != nil {
 		t.Fatalf("StageInfo: %v", err)
 	}
@@ -86,7 +86,7 @@ func TestTheAccountStartedSendStagesACreate(t *testing.T) {
 		t.Errorf("TargetVersion = %v, want none — pinning a linked record's version would refuse an "+
 			"approved message because somebody edited that record in between", *info.TargetVersion)
 	}
-	if len(p.read) != 1 || p.read[0].ID != org {
+	if len(p.read) != 1 || p.read[0].ID != company {
 		t.Errorf("read %v, want the one named link — the store refuses a link the caller cannot see, "+
 			"and staging must ask that question before a human is asked anything", p.read)
 	}
@@ -97,7 +97,7 @@ func TestTheAccountStartedSendStagesACreate(t *testing.T) {
 func TestTheAccountStartedSendSummaryNamesEveryArgumentItReleases(t *testing.T) {
 	got := describeAccountSend(SendAccountEmailCommand{
 		To: []string{"buyer@example.test"}, Cc: []string{"rival@example.test"}, Subject: "Q3 pricing",
-	}, []RecordLink{{EntityType: "organization", EntityID: ids.NewV7()}})
+	}, []RecordLink{{EntityType: "company", EntityID: ids.NewV7()}})
 
 	for _, want := range []string{"buyer@example.test", "rival@example.test", `"Q3 pricing"`, "1 record(s)"} {
 		if !strings.Contains(got, want) {
@@ -120,7 +120,7 @@ func TestAnUnsendableAccountStartedCallIsRefusedAtBothDoors(t *testing.T) {
 	}{
 		{
 			name:  "no addressee",
-			args:  `{"to":[],"subject":"s","body":"b","consent_purpose":"sales","links":[{"entity_type":"organization","entity_id":"019ff000-0000-7000-8000-000000000001"}]}`,
+			args:  `{"to":[],"subject":"s","body":"b","consent_purpose":"sales","links":[{"entity_type":"company","entity_id":"019ff000-0000-7000-8000-000000000001"}]}`,
 			names: "`to`",
 		},
 		{
@@ -170,7 +170,7 @@ func TestAnUnsendableAccountStartedCallIsRefusedAtBothDoors(t *testing.T) {
 func TestAnAccountStartedSendCanStillDescribeItsStaging(t *testing.T) {
 	tool := sendAccountEmailTool{comms: &recordingComms{}, p: &multiLinkProvider{}}
 
-	info, err := tool.StageInfo(sendCtx(), accountSendArgs(orgLink(ids.NewV7())))
+	info, err := tool.StageInfo(sendCtx(), accountSendArgs(companyLink(ids.NewV7())))
 	if err != nil {
 		t.Fatalf("StageInfo: %v — a floored installation could not stage this verb", err)
 	}
@@ -202,7 +202,7 @@ func TestAnAccountStartedSendRefusesALinkTheCallerCannotSee(t *testing.T) {
 	registry := NewRegistry(approvals, auth.NewGate(fullSeatAuthority{}))
 	RegisterCommsTools(registry, &recordingComms{}, unreadableProvider{})
 
-	_, err := registry.Invoke(sendCtx(), "send_account_email", accountSendArgs(orgLink(ids.NewV7())))
+	_, err := registry.Invoke(sendCtx(), "send_account_email", accountSendArgs(companyLink(ids.NewV7())))
 
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("Invoke err = %v, want the row-scope answer — a record the caller cannot read is not a "+
@@ -235,7 +235,7 @@ func TestTheAccountStartedSendRefusesAMirroredLinkBehindALocalOne(t *testing.T) 
 	p := &multiLinkProvider{heldElsewhere: map[ids.UUID]bool{mirrored: true}}
 
 	_, err := sendAccountEmailTool{comms: &recordingComms{}, p: p}.StageInfo(context.Background(),
-		accountSendArgs(fmt.Sprintf(`{"entity_type":"deal","entity_id":%q},%s`, local, orgLink(mirrored))))
+		accountSendArgs(fmt.Sprintf(`{"entity_type":"deal","entity_id":%q},%s`, local, companyLink(mirrored))))
 
 	if !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
 		t.Fatalf("StageInfo err = %v, want ErrUnsupportedBySoR — the second link was never validated", err)
@@ -253,7 +253,7 @@ func TestAnAccountStartedSendIsBoundedAndDeduplicatedBeforeItReadsAnything(t *te
 	t.Run("refuses more links than a message could be about", func(t *testing.T) {
 		links := make([]string, maxRecordLinks+1)
 		for i := range links {
-			links[i] = orgLink(ids.NewV7())
+			links[i] = companyLink(ids.NewV7())
 		}
 		p := &multiLinkProvider{}
 
@@ -270,10 +270,10 @@ func TestAnAccountStartedSendIsBoundedAndDeduplicatedBeforeItReadsAnything(t *te
 	})
 
 	t.Run("reads a repeated link once", func(t *testing.T) {
-		org := ids.NewV7()
+		company := ids.NewV7()
 		repeated := make([]string, 10)
 		for i := range repeated {
-			repeated[i] = orgLink(org)
+			repeated[i] = companyLink(company)
 		}
 		p := &multiLinkProvider{}
 
@@ -294,16 +294,16 @@ func TestAnAccountStartedSendIsBoundedAndDeduplicatedBeforeItReadsAnything(t *te
 // The approved call sends what was staged, through the seam, with the links
 // deduplicated exactly as the staged summary counted them.
 func TestAnApprovedAccountStartedSendReachesTheSeam(t *testing.T) {
-	org := ids.NewV7()
+	company := ids.NewV7()
 	comms := &recordingComms{}
 	tool := sendAccountEmailTool{comms: comms, p: &multiLinkProvider{}}
 
 	out, err := tool.Handle(withApprovalRedeemed(sendCtx(), 0, false),
-		accountSendArgs(orgLink(org)+","+orgLink(org)))
+		accountSendArgs(companyLink(company)+","+companyLink(company)))
 	if err != nil {
 		t.Fatalf("Handle: %v", err)
 	}
-	if len(comms.accountSent) != 1 || comms.accountSent[0].EntityID != org {
+	if len(comms.accountSent) != 1 || comms.accountSent[0].EntityID != company {
 		t.Fatalf("seam reached with %v, want the one deduplicated link", comms.accountSent)
 	}
 	var result SendEmailResult

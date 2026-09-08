@@ -41,9 +41,9 @@ const scopeAll = "true"
 
 // dealFacts is the deal's own row, as the risk rules need it.
 type dealFacts struct {
-	status         string
-	organizationID ids.UUID
-	lastTouchAt    time.Time
+	status      string
+	companyID   ids.UUID
+	lastTouchAt time.Time
 	// everTouched says an activity has actually been captured against the
 	// deal, which lastTouchAt cannot answer: it coalesces to the creation
 	// date, so a deal nobody has contacted and one contacted the day it was
@@ -62,17 +62,17 @@ type dealFacts struct {
 // measures from, not a second coalesce that agrees with it by inspection.
 func readDealFacts(ctx context.Context, tx pgx.Tx, dealID ids.DealID) (dealFacts, error) {
 	var out dealFacts
-	var org *ids.UUID
+	var company *ids.UUID
 	err := tx.QueryRow(ctx, fmt.Sprintf(`
-		SELECT status, organization_id, %s,
+		SELECT status, company_id, %s,
 		       last_activity_at IS NOT NULL, now()
 		  FROM deal WHERE id = $1`, idlebase.SQL("")), dealID).
-		Scan(&out.status, &org, &out.lastTouchAt, &out.everTouched, &out.asOf)
+		Scan(&out.status, &company, &out.lastTouchAt, &out.everTouched, &out.asOf)
 	if err != nil {
 		return out, fmt.Errorf("network: reading the deal a coverage view describes: %w", err)
 	}
-	if org != nil {
-		out.organizationID = *org
+	if company != nil {
+		out.companyID = *company
 	}
 	return out, nil
 }
@@ -123,13 +123,13 @@ func readDealFacts(ctx context.Context, tx pgx.Tx, dealID ids.DealID) (dealFacts
 // stops a future caller arriving another way, and a read whose safety rests on
 // the order its package happens to call things in is one refactor from
 // disclosing.
-func readDeparted(ctx context.Context, tx pgx.Tx, orgID ids.UUID, people []ids.UUID) ([]ids.UUID, error) {
-	if orgID == ids.Nil || len(people) == 0 {
+func readDeparted(ctx context.Context, tx pgx.Tx, companyID ids.UUID, people []ids.UUID) ([]ids.UUID, error) {
+	if companyID == ids.Nil || len(people) == 0 {
 		return nil, nil
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	orgPos, peoplePos := arg(orgID), arg(people)
+	companyPos, peoplePos := arg(companyID), arg(people)
 	edgeBound, err := auth.EdgeReadScope(ctx, "r", arg)
 	if err != nil {
 		return nil, err
@@ -141,7 +141,7 @@ func readDeparted(ctx context.Context, tx pgx.Tx, orgID ids.UUID, people []ids.U
 		SELECT DISTINCT r.person_id
 		  FROM relationship r
 		 WHERE r.kind = 'employment'
-		   AND r.organization_id = $%[1]d
+		   AND r.company_id = $%[1]d
 		   AND r.person_id = ANY($%[2]d)
 		   AND r.archived_at IS NULL
 		   AND NOT `+employment.IsCurrentSQL("r.ended_at")+`
@@ -149,11 +149,11 @@ func readDeparted(ctx context.Context, tx pgx.Tx, orgID ids.UUID, people []ids.U
 		   AND NOT EXISTS (
 		       SELECT 1 FROM relationship live
 		        WHERE live.kind = 'employment'
-		          AND live.organization_id = r.organization_id
+		          AND live.company_id = r.company_id
 		          AND live.person_id = r.person_id
 		          AND live.archived_at IS NULL
 		          AND `+employment.IsCurrentSQL("live.ended_at")+`)
-		 ORDER BY r.person_id`, orgPos, peoplePos, edgeBound), args...)
+		 ORDER BY r.person_id`, companyPos, peoplePos, edgeBound), args...)
 	if err != nil {
 		return nil, fmt.Errorf("network: reading which stakeholders have left the account: %w", err)
 	}

@@ -6,7 +6,7 @@ package network
 // The note a colleague FORWARDS, as distinct from the ask they receive.
 //
 // Two messages exist in one workflow and they are written for different
-// readers. org360's draftIntroRequest writes the internal ask — its own prompt
+// readers. company360's draftIntroRequest writes the internal ask — its own prompt
 // says "the message is TO the colleague" — and this writes the prospect-facing
 // note that colleague pastes into the mail they send onward. Collapsing them
 // would put an internal favour-ask in front of a customer.
@@ -80,7 +80,7 @@ type noteFacts struct {
 	requester string
 	// band is how warm the colleague's relationship is, in the vocabulary the
 	// page already shows. Carried rather than recomputed here, for the reason
-	// org360's introFacts carries it.
+	// company360's introFacts carries it.
 	band string
 	// lastAt is when the colleague and the contact last spoke, nil when
 	// nothing is recorded.

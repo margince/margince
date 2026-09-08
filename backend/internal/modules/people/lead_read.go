@@ -33,7 +33,7 @@ const liveOnlyClause = ` AND archived_at IS NULL`
 // signal. Every lead read is FROM the unaliased table, which is what lets
 // them name lead.id. A restricted activity (A165: held under a statutory
 // retention obligation) is in none of them, the same as in every other read.
-var leadColumns = `id, full_name, email, title, company_name, candidate_org_key,
+var leadColumns = `id, full_name, email, title, company_name, candidate_company_key,
 	linkedin_url, status, score, score_override_reason, score_computed, owner_id, project_id, source_system, source_id,
 	promoted_person_id, promoted_at, source, captured_by, version, created_at, updated_at, archived_at,
 	routed_at, first_response_at,
@@ -134,7 +134,7 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, e
 	var openTasks int
 
 	dests := []any{
-		&id, &l.FullName, &email, &l.Title, &l.CompanyName, &l.CandidateOrgKey,
+		&id, &l.FullName, &email, &l.Title, &l.CompanyName, &l.CandidateCompanyKey,
 		&l.LinkedinUrl, &status, &l.Score, &l.ScoreOverrideReason, &l.ScoreComputed, &ownerID, &projectID, &l.SourceSystem, &l.SourceId,
 		&promotedPerson, &l.PromotedAt, &l.Source, &l.CapturedBy, &version, &l.CreatedAt, &l.UpdatedAt, &l.ArchivedAt,
 		&l.RoutedAt, &l.FirstResponseAt, &l.SourceLabel, &disqualifyReason, &l.DisqualifyNote, &l.DisqualifyReason,

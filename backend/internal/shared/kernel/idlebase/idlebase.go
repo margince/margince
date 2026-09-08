@@ -6,7 +6,7 @@
 //
 // Held by: TestTheIdleBaseIsSpelledOnce (backend/gates/oneidlebase_test.go)
 //
-// Deal, project, organization and person all carry the same pair: a
+// Deal, project, company and person all carry the same pair: a
 // last_activity_at maintained from the timeline, and the created_at that is
 // always there. Every surface that measures silence — the stalled-deal rule,
 // the gone-quiet project report, an account's coverage view, the ranked

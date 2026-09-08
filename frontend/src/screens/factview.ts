@@ -17,9 +17,9 @@ import type { MessageKey } from "../i18n/en";
 // same canonical form; once it is, this stays correct and simply has nothing
 // left to collapse.
 
-type OrganizationFact = components["schemas"]["OrganizationFact"];
-type FactField = OrganizationFact["field"];
-type FactCategory = OrganizationFact["category"];
+type CompanyFact = components["schemas"]["CompanyFact"];
+type FactField = CompanyFact["field"];
+type FactCategory = CompanyFact["category"];
 
 /**
  * canonical is the form two spellings of one fact share.
@@ -72,10 +72,10 @@ export function factFieldLabelKey(field: FactField): MessageKey {
 
 /** FACT_CATEGORY_LABELS names every fact category in the reader's language. */
 const FACT_CATEGORY_LABELS: Record<FactCategory, MessageKey> = {
-  company: "org.factCategory.company",
-  offering: "org.factCategory.offering",
-  market: "org.factCategory.market",
-  signal: "org.factCategory.signal",
+  company: "company.factCategory.company",
+  offering: "company.factCategory.offering",
+  market: "company.factCategory.market",
+  signal: "company.factCategory.signal",
 };
 
 export function factCategoryLabelKey(category: FactCategory): MessageKey {
@@ -97,7 +97,7 @@ const OFFERING_RANK: Partial<Record<FactField, number>> = {
 
 export type FactGroup = {
   category: FactCategory;
-  facts: OrganizationFact[];
+  facts: CompanyFact[];
 };
 
 /** The order every category-grouped fact list reads in, company outward. */
@@ -109,7 +109,7 @@ export const FACT_CATEGORY_ORDER: FactCategory[] = [
 ];
 
 /** better reports whether `a` should survive a collapse against `b`. */
-function better(a: OrganizationFact, b: OrganizationFact): boolean {
+function better(a: CompanyFact, b: CompanyFact): boolean {
   // A human-held value outranks anything a read proposed, whatever the model
   // scored it and whatever field it was filed under: somebody looked at this
   // one. This has to be decided BEFORE the offering rank, or a site read's
@@ -155,11 +155,11 @@ function better(a: OrganizationFact, b: OrganizationFact): boolean {
 // Category ordering and the within-category sort are shared, because those are
 // about reading rather than about identity.
 export function listFacts(
-  facts: readonly OrganizationFact[],
+  facts: readonly CompanyFact[],
   t: Translator,
   locale: Locale,
 ): FactGroup[] {
-  const groups = new Map<FactCategory, OrganizationFact[]>();
+  const groups = new Map<FactCategory, CompanyFact[]>();
   for (const fact of facts) {
     groups.set(fact.category, [...(groups.get(fact.category) ?? []), fact]);
   }
@@ -174,11 +174,11 @@ export function listFacts(
 }
 
 export function groupFacts(
-  facts: readonly OrganizationFact[],
+  facts: readonly CompanyFact[],
   t: Translator,
   locale: Locale,
 ): FactGroup[] {
-  const groups = new Map<FactCategory, Map<string, OrganizationFact>>();
+  const groups = new Map<FactCategory, Map<string, CompanyFact>>();
   for (const fact of facts) {
     const byKey = groups.get(fact.category) ?? new Map();
     groups.set(fact.category, byKey);
@@ -226,8 +226,8 @@ export function groupFacts(
 // Two facts of equal confidence with the same label and value are the same
 // fact, so this is still a total order on what a reader can tell apart.
 function order(
-  a: OrganizationFact,
-  b: OrganizationFact,
+  a: CompanyFact,
+  b: CompanyFact,
   t: Translator,
   locale: Locale,
 ): number {

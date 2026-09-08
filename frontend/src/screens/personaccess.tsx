@@ -19,7 +19,7 @@ type Person = components["schemas"]["Person"];
  * that, and the edit affordances draw themselves from it. It is "why can I see
  * this at all", which until the server sent `visibility` no surface could
  * answer: a contact private to the reader's own mailbox and one shared with
- * the whole organization looked identical, and the owner of the private one
+ * the whole company looked identical, and the owner of the private one
  * had no way to tell, let alone to change it.
  *
  * BOTH DIRECTIONS, and gated on `writable` rather than on ownership. The panel
@@ -104,7 +104,7 @@ export function PersonAccess({ person }: Readonly<{ person: Person }>) {
         <p className="t-caption">
           {isPrivate
             ? t("personAccess.privateToYou")
-            : t("personAccess.organization")}
+            : t("personAccess.company")}
         </p>
       </PanelBody>
     </Panel>

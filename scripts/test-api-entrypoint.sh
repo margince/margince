@@ -27,7 +27,7 @@ failures=0
 
 # run PROBE [--password VALUE] [--existing VALUE]
 #
-# PROBE is what the stubbed `margince-migrate org-exists` reports: "true",
+# PROBE is what the stubbed `margince-migrate workspace-exists` reports: "true",
 # "false", or "fail" to exit non-zero without answering.
 #
 # The two values are FLAGS rather than positions so that "the operator set no
@@ -55,7 +55,7 @@ run() {
 
     cat >"$work/bin/margince-migrate" <<STUB
 #!/bin/sh
-[ "\$1" = "org-exists" ] || exit 0
+[ "\$1" = "workspace-exists" ] || exit 0
 [ "$probe" = "fail" ] && { echo "stub: probe failed" >&2; exit 1; }
 echo "$probe"
 STUB
@@ -125,16 +125,16 @@ run true --password "s3cret-passw0rd" || status=$?
 served "$status" "provisioned"
 verdict absent "$([[ -e "$pwfile" ]] && echo present || echo absent)" \
     "a provisioned installation is never handed the supplied credential"
-verdict yes "$(grep -q "already has an organization" <<<"$out" && echo yes || echo no)" \
+verdict yes "$(grep -q "already has a company" <<<"$out" && echo yes || echo no)" \
     "and says so, because an ignored credential must not look like an applied one"
 
-# A file an EARLIER boot wrote is spent the moment the organization exists. The
+# A file an EARLIER boot wrote is spent the moment the company exists. The
 # invariant is that none is at rest, not merely that this start added none.
 status=0
 run true --existing "left-by-an-earlier-boot" || status=$?
 served "$status" "provisioned with a stale file"
 verdict absent "$([[ -e "$pwfile" ]] && echo present || echo absent)" \
-    "a credential left by an earlier boot is retired once the organization exists"
+    "a credential left by an earlier boot is retired once the company exists"
 
 # An empty spent file is the same defect wearing a different shape: something
 # truncated it instead of removing it, and it is still a path the api reads.

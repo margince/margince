@@ -95,7 +95,7 @@ func unitsFloor(task ai.Task, scanned int64) int64 {
 		return int64(float64(scanned) * defaultPersonsPerMsg)
 	default:
 		// classify AND embeddings: captured ≈ scanned at first connect. The
-		// cold-start embed floor counts MESSAGE-embeds only — person/org embeds are
+		// cold-start embed floor counts MESSAGE-embeds only — person/company embeds are
 		// omitted here on purpose. The floor prices every embed unit at
 		// embedItemTokens (a full email); a person embed's real input is just a
 		// name (a few tokens), so folding expected persons into this count would
@@ -103,7 +103,7 @@ func unitsFloor(task ai.Task, scanned int64) int64 {
 		// cheapest, input-only lane. The two simple sizings are both worse than the
 		// omission (email-size = overquote; a name-size special-case = added
 		// complexity for a negligible term), so message-embeds it is. The OBSERVED
-		// path is unaffected: it still counts captured + people + orgs from real
+		// path is unaffected: it still counts captured + people + companies from real
 		// yields (rules.go). Documented in the ADR-0068 design note and
 		// docs/explanation/ai-runtime.md.
 		return scanned

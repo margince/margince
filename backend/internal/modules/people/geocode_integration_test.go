@@ -7,9 +7,9 @@ package people
 
 // The geocode store's three statements, run against a real database.
 //
-// Every one of them named `organization.workspace_id` when the feature shipped,
+// Every one of them named `company.workspace_id` when the feature shipped,
 // three days after ADR-0091 §8 phase D dropped that column — so all three
-// failed at the first query, and geocoding an organization could never have
+// failed at the first query, and geocoding a company could never have
 // worked. Nothing caught it because geocode_test.go is a unit suite with no
 // database: it exercises the address-hashing and backoff arithmetic, which is
 // the half that needs no Postgres, and the SQL had never been executed at all.
@@ -34,7 +34,7 @@ func TestEveryGeocodeStatementRunsAgainstTheRealSchema(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 
-	org, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: "Geocodable Gmbh", Source: "manual",
 		Address: &crmcontracts.Address{
 			Line1:      strPtr("Rosenthaler Str. 40"),
@@ -44,13 +44,13 @@ func TestEveryGeocodeStatementRunsAgainstTheRealSchema(t *testing.T) {
 		},
 	})
 	if err != nil {
-		t.Fatalf("seeding the organization to geocode: %v", err)
+		t.Fatalf("seeding the company to geocode: %v", err)
 	}
-	orgID := ids.From[ids.OrganizationKind](ids.UUID(org.Id))
+	companyID := ids.From[ids.CompanyKind](ids.UUID(company.Id))
 
-	// 1. The read. It joins organization_geocode_state, which is the statement
+	// 1. The read. It joins company_geocode_state, which is the statement
 	//    the shipped bug failed on first.
-	addr, ok, err := e.store.AddressForGeocode(ctx, orgID)
+	addr, ok, err := e.store.AddressForGeocode(ctx, companyID)
 	if err != nil {
 		t.Fatalf("AddressForGeocode: %v", err)
 	}
@@ -65,35 +65,35 @@ func TestEveryGeocodeStatementRunsAgainstTheRealSchema(t *testing.T) {
 	//    geocode that landed against a CHANGED address must not be recorded,
 	//    so RecordGeocode reads the hash back inside its own transaction.
 	lat, lon := 52.5244, 13.4105
-	if err := e.store.RecordGeocode(ctx, orgID, "ok", &lat, &lon, "fake", addr.InputHash); err != nil {
+	if err := e.store.RecordGeocode(ctx, companyID, "ok", &lat, &lon, "fake", addr.InputHash); err != nil {
 		t.Fatalf("RecordGeocode: %v", err)
 	}
 
 	// The point is readable back, which is what makes the write above a write
 	// rather than a statement that merely did not error.
-	if status, lat, lon := readGeocode(t, e, orgID); status != "ok" || lat == nil || lon == nil {
-		t.Fatalf("after an ok geocode the organization reads status %q with point (%v, %v); want ok and a point", status, lat, lon)
+	if status, lat, lon := readGeocode(t, e, companyID); status != "ok" || lat == nil || lon == nil {
+		t.Fatalf("after an ok geocode the company reads status %q with point (%v, %v); want ok and a point", status, lat, lon)
 	}
 
 	// 3. The backoff write, on the same row, so the state table's upsert path
 	//    runs too. It records a FAILURE, so it is asserted as one rather than
 	//    with the success above — a backoff that left the point standing would
 	//    report a resolved address the provider never resolved.
-	if err := e.store.RecordGeocodeBackoff(ctx, orgID, addr.InputHash, 0); err != nil {
+	if err := e.store.RecordGeocodeBackoff(ctx, companyID, addr.InputHash, 0); err != nil {
 		t.Fatalf("RecordGeocodeBackoff: %v", err)
 	}
-	if status, _, _ := readGeocode(t, e, orgID); status != "failed" {
-		t.Errorf("after a backoff the organization reads status %q, want failed", status)
+	if status, _, _ := readGeocode(t, e, companyID); status != "failed" {
+		t.Errorf("after a backoff the company reads status %q, want failed", status)
 	}
 }
 
 // readGeocode reads the three columns the writes above are about, on the owner
 // pool, so the assertion does not depend on the store it is checking.
-func readGeocode(t *testing.T, e *dedupeEnv, orgID ids.OrganizationID) (status string, lat, lon *float64) {
+func readGeocode(t *testing.T, e *dedupeEnv, companyID ids.CompanyID) (status string, lat, lon *float64) {
 	t.Helper()
 	if err := e.store.db.Pool().QueryRow(context.Background(),
-		`SELECT coalesce(geocode_status, ''), geocode_lat, geocode_lon FROM organization WHERE id = $1`,
-		orgID).Scan(&status, &lat, &lon); err != nil {
+		`SELECT coalesce(geocode_status, ''), geocode_lat, geocode_lon FROM company WHERE id = $1`,
+		companyID).Scan(&status, &lat, &lon); err != nil {
 		t.Fatalf("reading the recorded geocode: %v", err)
 	}
 	return status, lat, lon
@@ -110,7 +110,7 @@ func TestTheSweepFindsCompaniesNoWriteWillEverReach(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 
-	located, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+	located, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: "Findable GmbH", Source: "manual",
 		Address: &crmcontracts.Address{City: strPtr("Stuttgart"), Country: strPtr("DE")},
 	})
@@ -118,13 +118,13 @@ func TestTheSweepFindsCompaniesNoWriteWillEverReach(t *testing.T) {
 		t.Fatalf("seeding a company with an address: %v", err)
 	}
 	// A country alone is not a place; the sweep must not spend a lookup on it.
-	if _, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+	if _, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: "Nowhere GmbH", Source: "manual",
 		Address: &crmcontracts.Address{Country: strPtr("DE")},
 	}); err != nil {
 		t.Fatalf("seeding a company with no usable address: %v", err)
 	}
-	if _, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+	if _, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: "Addressless GmbH", Source: "manual",
 	}); err != nil {
 		t.Fatalf("seeding a company with no address: %v", err)
@@ -134,7 +134,7 @@ func TestTheSweepFindsCompaniesNoWriteWillEverReach(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListGeocodeOrphans: %v", err)
 	}
-	wantID := ids.From[ids.OrganizationKind](ids.UUID(located.Id))
+	wantID := ids.From[ids.CompanyKind](ids.UUID(located.Id))
 	if !slices.Contains(due, wantID) {
 		t.Errorf("the sweep listed %v, want the company with a city among them — "+
 			"a seeded database is the case this exists for", due)
@@ -186,27 +186,27 @@ func TestAStaleCompanyWithNoJobComingIsSwept(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 
-	org, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: "Moved GmbH", Source: "manual",
 		Address: &crmcontracts.Address{City: strPtr("Hamburg"), Country: strPtr("DE")},
 	})
 	if err != nil {
 		t.Fatalf("seeding: %v", err)
 	}
-	orgID := ids.From[ids.OrganizationKind](ids.UUID(org.Id))
+	companyID := ids.From[ids.CompanyKind](ids.UUID(company.Id))
 
 	// Give it a point, the way the worker would.
-	located, ok, err := e.store.AddressForGeocode(ctx, orgID)
+	located, ok, err := e.store.AddressForGeocode(ctx, companyID)
 	if err != nil || !ok {
 		t.Fatalf("AddressForGeocode: %v (ok=%v)", err, ok)
 	}
 	lat, lon := 53.5511, 9.9937
-	if err := e.store.RecordGeocode(ctx, orgID, GeocodeOK, &lat, &lon, "test", located.InputHash); err != nil {
+	if err := e.store.RecordGeocode(ctx, companyID, GeocodeOK, &lat, &lon, "test", located.InputHash); err != nil {
 		t.Fatalf("recording a point: %v", err)
 	}
 	if swept, err := e.store.ListGeocodeOrphans(ctx, GeocodeBackfillBatch); err != nil {
 		t.Fatalf("ListGeocodeOrphans: %v", err)
-	} else if slices.Contains(swept, orgID) {
+	} else if slices.Contains(swept, companyID) {
 		t.Fatal("a located company is swept, so the pass re-asks what it already knows")
 	}
 
@@ -215,7 +215,7 @@ func TestAStaleCompanyWithNoJobComingIsSwept(t *testing.T) {
 	// site-read apply produces in production, where the column is written
 	// through table-driven SQL with no seam to carry a callback. Either way the
 	// row ends up stale with nothing coming, and the sweep is what finds it.
-	if _, err := e.store.UpdateOrganization(ctx, orgID, UpdateOrganizationInput{
+	if _, err := e.store.UpdateCompany(ctx, companyID, UpdateCompanyInput{
 		Address: &crmcontracts.Address{City: strPtr("München"), Country: strPtr("DE")},
 	}); err != nil {
 		t.Fatalf("moving the company: %v", err)
@@ -224,7 +224,7 @@ func TestAStaleCompanyWithNoJobComingIsSwept(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListGeocodeOrphans after the move: %v", err)
 	}
-	if !slices.Contains(swept, orgID) {
+	if !slices.Contains(swept, companyID) {
 		t.Error("a company marked stale by the trigger is not swept, so its coordinates " +
 			"are gone and nothing will ever replace them")
 	}
@@ -241,15 +241,15 @@ func TestAFailedLookupIsAskedAgainOnceItsBackoffExpires(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 
-	org, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: "Unreachable GmbH", Source: "manual",
 		Address: &crmcontracts.Address{City: strPtr("Leipzig"), Country: strPtr("DE")},
 	})
 	if err != nil {
 		t.Fatalf("seeding: %v", err)
 	}
-	orgID := ids.From[ids.OrganizationKind](ids.UUID(org.Id))
-	address, ok, err := e.store.AddressForGeocode(ctx, orgID)
+	companyID := ids.From[ids.CompanyKind](ids.UUID(company.Id))
+	address, ok, err := e.store.AddressForGeocode(ctx, companyID)
 	if err != nil || !ok {
 		t.Fatalf("AddressForGeocode: %v (ok=%v)", err, ok)
 	}
@@ -257,14 +257,14 @@ func TestAFailedLookupIsAskedAgainOnceItsBackoffExpires(t *testing.T) {
 	// A failure records a wait — the provider's own, or a day when it gave
 	// none. Inside that wait the row is left alone: the ledger asked for it,
 	// and re-nominating every pass is how a rate limit becomes a block.
-	if err := e.store.RecordGeocode(ctx, orgID, GeocodeFailed, nil, nil, "", address.InputHash); err != nil {
+	if err := e.store.RecordGeocode(ctx, companyID, GeocodeFailed, nil, nil, "", address.InputHash); err != nil {
 		t.Fatalf("recording the refusal: %v", err)
 	}
 	waiting, err := e.store.ListGeocodeOrphans(ctx, GeocodeBackfillBatch)
 	if err != nil {
 		t.Fatalf("ListGeocodeOrphans during the backoff: %v", err)
 	}
-	if slices.Contains(waiting, orgID) {
+	if slices.Contains(waiting, companyID) {
 		t.Error("a company still inside its backoff is swept, so the pass asks again " +
 			"exactly when the ledger said not to")
 	}
@@ -277,8 +277,8 @@ func TestAFailedLookupIsAskedAgainOnceItsBackoffExpires(t *testing.T) {
 	// later and these are exactly the rows that need asking.
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx,
-			`UPDATE organization_geocode_state SET next_attempt_at = now() - interval '1 minute'
-			  WHERE organization_id = $1`, orgID)
+			`UPDATE company_geocode_state SET next_attempt_at = now() - interval '1 minute'
+			  WHERE company_id = $1`, companyID)
 		return err
 	}); err != nil {
 		t.Fatalf("spending the backoff: %v", err)
@@ -287,7 +287,7 @@ func TestAFailedLookupIsAskedAgainOnceItsBackoffExpires(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListGeocodeOrphans after the backoff: %v", err)
 	}
-	if !slices.Contains(swept, orgID) {
+	if !slices.Contains(swept, companyID) {
 		t.Error("a company whose lookup never completed and whose wait is spent is not " +
 			"swept — nothing else will ever ask, so it stays unlocated forever")
 	}

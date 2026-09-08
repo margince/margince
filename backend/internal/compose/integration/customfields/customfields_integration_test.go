@@ -216,11 +216,11 @@ func TestCustomFieldCreate_BusyTableAnswersRetryableConflict(t *testing.T) {
 		t.Fatal(err)
 	}
 	var rows int
-	if err := blockTx.QueryRow(context.Background(), `SELECT count(*) FROM organization`).Scan(&rows); err != nil {
+	if err := blockTx.QueryRow(context.Background(), `SELECT count(*) FROM company`).Scan(&rows); err != nil {
 		t.Fatal(err)
 	}
 
-	spec := customfieldsmod.FieldSpec{Object: "organization", Label: "Region", Type: customfieldsmod.TypeText, Source: "ui"}
+	spec := customfieldsmod.FieldSpec{Object: "company", Label: "Region", Type: customfieldsmod.TypeText, Source: "ui"}
 	_, err = svc.Create(ctx, spec)
 	if !errors.Is(err, customfieldsmod.ErrTableBusy) {
 		t.Fatalf("a busy table must answer ErrTableBusy, got %v", err)

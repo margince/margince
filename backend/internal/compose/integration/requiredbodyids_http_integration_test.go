@@ -62,23 +62,23 @@ func namesField(problem problemBody, field string) bool {
 // legitimately name. A missing PATH id would 404 for its own reasons and prove
 // nothing about the body.
 type requiredIDFixtures struct {
-	person, organization, activity string
-	tag, project                   string
-	deal, subjectUser              string
+	person, company, activity string
+	tag, project              string
+	deal, subjectUser         string
 }
 
 func seedRequiredIDFixtures(t *testing.T, e *apptest.AppEnv) requiredIDFixtures {
 	t.Helper()
 	var out requiredIDFixtures
 	out.person = createAndID(t, e, "/v1/people", AnyMap{"full_name": "Merge Source"})
-	out.organization = createAndID(t, e, "/v1/organizations", AnyMap{"display_name": "Merge Org"})
+	out.company = createAndID(t, e, "/v1/companies", AnyMap{"display_name": "Merge Company"})
 	out.activity = createAndID(t, e, "/v1/activities", AnyMap{
 		"kind": "note", "body": "relink probe",
 		"links": []AnyMap{{"entity_type": "person", "entity_id": out.person}},
 	})
 	out.tag = createAndID(t, e, "/v1/tags", AnyMap{"name": "required-ids"})
 	out.project = createAndID(t, e, "/v1/projects", AnyMap{
-		"name": "Stakeholder probe", "organization_id": out.organization, "source": "manual",
+		"name": "Stakeholder probe", "company_id": out.company, "source": "manual",
 	})
 	out.deal = seedDealForRequiredIDs(t, e)
 
@@ -160,8 +160,8 @@ func requiredIDCases(f requiredIDFixtures, absent string) map[string]requiredIDC
 			method: "POST", path: "/v1/people/" + f.person + "/merge",
 			omitted: AnyMap{}, supplied: AnyMap{"target_id": absent}, field: "target_id",
 		},
-		"MergeOrganizationJSONBody.target_id": {
-			method: "POST", path: "/v1/organizations/" + f.organization + "/merge",
+		"MergeCompanyJSONBody.target_id": {
+			method: "POST", path: "/v1/companies/" + f.company + "/merge",
 			omitted: AnyMap{}, supplied: AnyMap{"target_id": absent}, field: "target_id",
 		},
 		"RelinkActivityJSONBody.entity_id": {

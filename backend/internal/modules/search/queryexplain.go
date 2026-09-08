@@ -48,7 +48,7 @@ func explainPlan(plan ValidatedPlan) string {
 
 // explainHop renders the traversal, naming the record type the hop lands on
 // rather than the relation's own name, since a caller reads "at an
-// organization" more readily than "over the organization relation".
+// company" more readily than "over the company relation".
 func explainHop(plan ValidatedPlan, budget *echoBudget) string {
 	if plan.Hop == nil || plan.Plan.Traverse == nil {
 		return ""
@@ -75,7 +75,7 @@ func explainUnavailable(plan ValidatedPlan) string {
 }
 
 // article picks the indefinite article a record type's name takes. It is a
-// sentence a person reads, and "a organization" is the kind of seam that makes
+// sentence a person reads, and "a company" is the kind of seam that makes
 // a generated explanation read as machine output rather than as an answer.
 func article(word string) string {
 	if word == "" || !strings.ContainsRune("aeiou", rune(word[0])) {

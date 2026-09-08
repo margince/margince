@@ -36,8 +36,8 @@ type hopBinding struct {
 	branch   searchBranch
 	columns  *storage
 	// column is the reference column, and forward says whose it is: the
-	// target's (`deal.organization_id` → organization) or the hop record's
-	// (organization → the deals that point back at it). Both are empty for a
+	// target's (`deal.company_id` → company) or the hop record's
+	// (company → the deals that point back at it). Both are empty for a
 	// join edge, which holds its two columns on relation.Join because neither
 	// record carries one.
 	column  string
@@ -48,13 +48,13 @@ type hopBinding struct {
 //
 // A JOIN edge is recognised first and by its Join member, never by its text:
 // its Via is prose for a human, and a Via read for structure would find the
-// dot in `relationship(person_id → organization_id)` and take a join edge for
+// dot in `relationship(person_id → company_id)` and take a join edge for
 // an inverse one — an edge that would then compile against a column the join
 // table does not have.
 //
 // A scalar edge is read off Relation.Via, which records the contract reference
-// the relation was DERIVED from in two spellings: a bare `organization_id` is
-// the target's own column, and a qualified `deal.organization_id` is the
+// the relation was DERIVED from in two spellings: a bare `company_id` is
+// the target's own column, and a qualified `deal.company_id` is the
 // referring record's.
 func newHopBinding(relation Relation, branch searchBranch, columns *storage) hopBinding {
 	if relation.Join != nil {
@@ -181,7 +181,7 @@ func (c *planCompiler) compileStatement(ctx context.Context, plan ValidatedPlan,
 // them.
 //
 // The hop carries its own admission and its own row scope: a caller who cannot
-// see the Stuttgart organization cannot use it to select deals either.
+// see the Stuttgart company cannot use it to select deals either.
 func (c *planCompiler) lateralHop(ctx context.Context, plan ValidatedPlan, binding planBinding) (
 	join, selection string, refusals []apperrors.FieldRefusal, admitted bool, err error,
 ) {
@@ -196,7 +196,7 @@ func (c *planCompiler) lateralHop(ctx context.Context, plan ValidatedPlan, bindi
 	where := []string{"h.archived_at IS NULL", c.edgeCondition(*hop)}
 	// The hop carries the SAME discovery narrowing the target does. A
 	// traversal selects the hop record by its attributes, which is discovery
-	// by any other name — so a plan asking for "deals at an organization in
+	// by any other name — so a plan asking for "deals at a company in
 	// Stuttgart" must not reach the installation's own company through a door
 	// the search arm keeps shut.
 	if narrowing := hop.branch.narrowing("h"); narrowing != "" {

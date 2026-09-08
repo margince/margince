@@ -103,21 +103,21 @@ func seedRequesterCanReadPeople(t *testing.T, e *integration.Env, user ids.UUID)
 
 // runTeamDeepRead crawls acmeTeamSite with the people reply as the one
 // corpus answer and returns the finished dossier.
-func runTeamDeepRead(t *testing.T, e *integration.Env, org ids.UUID) (people.SiteRead, *approvals.Service) {
+func runTeamDeepRead(t *testing.T, e *integration.Env, company ids.UUID) (people.SiteRead, *approvals.Service) {
 	t.Helper()
-	return runTeamDeepReadOn(t, e, org, acmeTeamSite(), teamDeepBrain())
+	return runTeamDeepReadOn(t, e, company, acmeTeamSite(), teamDeepBrain())
 }
 
 // runTeamDeepReadOn is runTeamDeepRead over a caller-chosen site and corpus
 // answer, for the reads that need the page to say something different.
-func runTeamDeepReadOn(t *testing.T, e *integration.Env, org ids.UUID, site *fakeSite, brain laneFake) (people.SiteRead, *approvals.Service) {
+func runTeamDeepReadOn(t *testing.T, e *integration.Env, company ids.UUID, site *fakeSite, brain laneFake) (people.SiteRead, *approvals.Service) {
 	t.Helper()
 	worker, svc := newDeepReadTestWorker(e, site, brain)
-	read, args := startDeepRead(t, e, org)
+	read, args := startDeepRead(t, e, company)
 	if err := worker.run(context.Background(), args); err != nil {
 		t.Fatalf("run: %v", err)
 	}
-	done, err := e.People.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), orgIDOf(org), read.ID)
+	done, err := e.People.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -147,8 +147,8 @@ func siteLeadProposalRow(t *testing.T, e *integration.Env, id ids.UUID) (string,
 
 func TestDeepReadTeamPageStagesOneThinSiteLeadPerPublishedPerson(t *testing.T) {
 	e := integration.Setup(t)
-	org := insertOrg(t, e, e.Rep1, "acme.example", "")
-	done, _ := runTeamDeepRead(t, e, org)
+	company := insertCompany(t, e, e.Rep1, "acme.example", "")
+	done, _ := runTeamDeepRead(t, e, company)
 
 	// People are proposals, not facts: the dossier reports an honest done
 	// with fact_count 0 and one staging for the person the page published an
@@ -167,7 +167,7 @@ func TestDeepReadTeamPageStagesOneThinSiteLeadPerPublishedPerson(t *testing.T) {
 	}
 	if anna.Name != "Anna Muster" || anna.Role != "Chief Executive Officer" ||
 		anna.PublishedEmail != "anna@acme.example" ||
-		anna.OrganizationID != org || anna.SiteReadID != done.ID ||
+		anna.CompanyID != company || anna.SiteReadID != done.ID ||
 		anna.SourceURL != seedURL+"/team" {
 		t.Fatalf("Anna's payload = %+v, want the page's published identity with provenance", anna)
 	}
@@ -190,7 +190,7 @@ func TestDeepReadTeamPageStagesOneThinSiteLeadPerPublishedPerson(t *testing.T) {
 }
 
 // A lead is filed under the company it was read from, but creating it reads
-// nothing off that company. The staging used to pin the organization's version
+// nothing off that company. The staging used to pin the company's version
 // anyway, and any unrelated write to the company — the very enrichment run
 // that discovers the leads writes its profile fields — bumped that version and
 // made the lead permanently un-acceptable. Worse than a failed click: the
@@ -199,15 +199,15 @@ func TestDeepReadTeamPageStagesOneThinSiteLeadPerPublishedPerson(t *testing.T) {
 // decided". The lead was gone.
 func TestSiteLeadStaysAcceptableAfterAnUnrelatedWriteToItsCompany(t *testing.T) {
 	e := integration.Setup(t)
-	org := insertOrg(t, e, e.Rep1, "acme.example", "")
-	done, svc := runTeamDeepRead(t, e, org)
+	company := insertCompany(t, e, e.Rep1, "acme.example", "")
+	done, svc := runTeamDeepRead(t, e, company)
 
 	// Anything at all that touches the company. The version trigger fires on
 	// every UPDATE, so the narrowest possible write is the honest test.
 	if err := database.WithWorkspaceTx(e.As(e.Rep1, nil, integration.AdminPerms), e.Pool,
 		func(tx pgx.Tx) error {
 			_, err := tx.Exec(context.Background(),
-				`UPDATE organization SET industry = 'Manufacturing' WHERE id = $1`, org)
+				`UPDATE company SET industry = 'Manufacturing' WHERE id = $1`, company)
 			return err
 		}); err != nil {
 		t.Fatalf("touch the company: %v", err)
@@ -241,9 +241,9 @@ func TestSiteLeadStaysAcceptableAfterAnUnrelatedWriteToItsCompany(t *testing.T) 
 
 func TestSiteLeadAcceptCapturesALeadIdempotentAcrossReReads(t *testing.T) {
 	e := integration.Setup(t)
-	org := insertOrg(t, e, e.Rep1, "acme.example", "")
+	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 	seedRequesterCanReadPeople(t, e, e.Rep1)
-	done, svc := runTeamDeepRead(t, e, org)
+	done, svc := runTeamDeepRead(t, e, company)
 
 	// Accepting Anna captures her as a LEAD via the Sink, with her published
 	// email.
@@ -279,7 +279,7 @@ func TestSiteLeadAcceptCapturesALeadIdempotentAcrossReReads(t *testing.T) {
 	// nobody about her. She is on file now, so the question is already
 	// answered; re-staging it would spend a human decision on a confirmation
 	// that could only land on the lead row that already exists.
-	again, _ := runTeamDeepRead(t, e, org)
+	again, _ := runTeamDeepRead(t, e, company)
 	if len(again.ProposalIDs) != 0 {
 		t.Fatalf("re-read proposal_ids = %v, want none — Anna is already on file", again.ProposalIDs)
 	}
@@ -294,7 +294,7 @@ func TestSiteLeadAcceptCapturesALeadIdempotentAcrossReReads(t *testing.T) {
 // back in front of a human.
 func TestAPersonAlreadyOnFileIsNotStagedAgain(t *testing.T) {
 	e := integration.Setup(t)
-	org := insertOrg(t, e, e.Rep1, "acme.example", "")
+	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 	seedRequesterCanReadPeople(t, e, e.Rep1)
 
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
@@ -306,7 +306,7 @@ func TestAPersonAlreadyOnFileIsNotStagedAgain(t *testing.T) {
 		t.Fatalf("seeding the contact who already emails us: %v", err)
 	}
 
-	done, _ := runTeamDeepRead(t, e, org)
+	done, _ := runTeamDeepRead(t, e, company)
 	if done.Status != "done" {
 		t.Fatalf("dossier status = %q, want done — a fully known roster is not a failure", done.Status)
 	}
@@ -321,10 +321,10 @@ func TestAPersonAlreadyOnFileIsNotStagedAgain(t *testing.T) {
 // and the newer staging supersedes the older one.
 func TestASecondReadSupersedesTheUndecidedFirst(t *testing.T) {
 	e := integration.Setup(t)
-	org := insertOrg(t, e, e.Rep1, "acme.example", "")
+	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 
-	first, _ := runTeamDeepRead(t, e, org)
-	second, svc := runTeamDeepRead(t, e, org)
+	first, _ := runTeamDeepRead(t, e, company)
+	second, svc := runTeamDeepRead(t, e, company)
 	if len(first.ProposalIDs) != 1 || len(second.ProposalIDs) != 1 {
 		t.Fatalf("proposals = %v then %v, want one per read", first.ProposalIDs, second.ProposalIDs)
 	}
@@ -340,7 +340,7 @@ func TestASecondReadSupersedesTheUndecidedFirst(t *testing.T) {
 	// The identity is the natural key, so it survives the site reprinting the
 	// same person's name differently. A raw-name identity passes every
 	// assertion above and still stacks a second question here.
-	reflowed, _ := runTeamDeepReadOn(t, e, org, reflowedTeamSite(), reflowedTeamBrain())
+	reflowed, _ := runTeamDeepReadOn(t, e, company, reflowedTeamSite(), reflowedTeamBrain())
 	if len(reflowed.ProposalIDs) != 1 {
 		t.Fatalf("reflowed re-read proposal_ids = %v, want its own fresh staging", reflowed.ProposalIDs)
 	}
@@ -371,8 +371,8 @@ func TestASecondReadSupersedesTheUndecidedFirst(t *testing.T) {
 
 func TestSiteLeadRejectionCapturesNothing(t *testing.T) {
 	e := integration.Setup(t)
-	org := insertOrg(t, e, e.Rep1, "acme.example", "")
-	done, svc := runTeamDeepRead(t, e, org)
+	company := insertCompany(t, e, e.Rep1, "acme.example", "")
+	done, svc := runTeamDeepRead(t, e, company)
 
 	for _, id := range done.ProposalIDs {
 		if _, err := svc.Decide(e.As(e.Rep2, nil, integration.AdminPerms), ids.From[ids.ApprovalKind](id), false, nil); err != nil {

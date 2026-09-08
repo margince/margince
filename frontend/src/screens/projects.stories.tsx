@@ -48,9 +48,9 @@ const rows = [
 function sharedRoutes(): RouteMap {
   return {
     "GET /me": meRoute({}),
-    "GET /organizations": () =>
+    "GET /companies": () =>
       jsonResponse({ data: [ORG], page: { next_cursor: null } }),
-    [`GET /organizations/${ORG.id}`]: () => jsonResponse(ORG),
+    [`GET /companies/${ORG.id}`]: () => jsonResponse(ORG),
     "GET /users": () =>
       jsonResponse({
         data: [{ id: "u-me", display_name: "Me", status: "active" }],

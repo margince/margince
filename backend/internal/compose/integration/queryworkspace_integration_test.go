@@ -29,7 +29,7 @@ import (
 )
 
 // The Stuttgart question, end to end: deals of a certain size at an
-// organization in one city. It exercises the whole v1 grammar a client can
+// company in one city. It exercises the whole v1 grammar a client can
 // reach — an exact predicate, a traversal hop with its own predicate — and
 // asserts the thing that distinguishes this PR from the last one: rows come
 // back as RECORDS, with the fields a caller can act on, and the hop that
@@ -42,7 +42,7 @@ func TestQueryWorkspaceAnswersTheStuttgartQuestionAsRecords(t *testing.T) {
 	sealed := invokeQuery(q.admin(), t, registry, `{"plan":{
 		"version": "v1", "target": "deal",
 		"where": [{"field": "amount_minor", "op": "eq", "value": 100000}],
-		"traverse": {"relation": "organization",
+		"traverse": {"relation": "company",
 		             "where": [{"field": "address.city", "op": "eq", "value": "Stuttgart"}]}}}`)
 	answer := queryPayload(t, sealed.Data)
 
@@ -59,8 +59,8 @@ func TestQueryWorkspaceAnswersTheStuttgartQuestionAsRecords(t *testing.T) {
 	if len(row.Record.Fields) == 0 || row.Record.Version == 0 {
 		t.Errorf("the row is a reference, not a record: fields=%s version=%d", row.Record.Fields, row.Record.Version)
 	}
-	if len(row.Evidence) != 1 || row.Evidence[0].ID != f.rep1Org ||
-		row.Evidence[0].RecordType != "organization" {
+	if len(row.Evidence) != 1 || row.Evidence[0].ID != f.rep1Company ||
+		row.Evidence[0].RecordType != "company" {
 		t.Fatalf("the hop that admitted the row did not survive hydration: %+v", row.Evidence)
 	}
 	if answer.Coverage != agents.CoverageCompleteExact {
@@ -71,11 +71,11 @@ func TestQueryWorkspaceAnswersTheStuttgartQuestionAsRecords(t *testing.T) {
 	}
 	// The hop is a record this answer rests on, so the envelope names it
 	// alongside the row. It reaches the caller as a reason to act — the
-	// organization's own title — and content the envelope does not account for
+	// company's own title — and content the envelope does not account for
 	// is content whose trust tier nothing decided.
-	if !sealedNames(sealed, f.rep1Org) {
-		t.Errorf("the envelope does not name the hop organization %s among the records behind this answer: %+v",
-			f.rep1Org, sealed.Evidence)
+	if !sealedNames(sealed, f.rep1Company) {
+		t.Errorf("the envelope does not name the hop company %s among the records behind this answer: %+v",
+			f.rep1Company, sealed.Evidence)
 	}
 }
 
@@ -133,7 +133,7 @@ func TestQueryWorkspaceSourcesEveryRowItAnswersWith(t *testing.T) {
 // cannot see would leak exactly what the row scope withheld, and nothing in the
 // executor's suite can see the envelope.
 //
-// The target is `organization`, the record type that still narrows a reader:
+// The target is `company`, the record type that still narrows a reader:
 // every shareable record type is read by every seat holding the object grant
 // (platform/auth tableclass.go), so capture privacy is the one narrowing left
 // and two principals asking about anything else get the same answer by design.
@@ -142,15 +142,15 @@ func TestQueryWorkspaceAnswersTwoPrincipalsFromOneCorpusWithoutLeaking(t *testin
 	// Rep1's unpromoted capture: theirs alone until a human promotes it, and
 	// capture privacy does not yield to row_scope=all — so the two principals
 	// compared here are the capture's OWNER and a colleague.
-	rep1Capture := q.SeedID(t, `INSERT INTO organization (id, owner_id, display_name, visibility, source, captured_by)
+	rep1Capture := q.SeedID(t, `INSERT INTO company (id, owner_id, display_name, visibility, source, captured_by)
 		VALUES ($1, $2, 'Rollout', 'owner', 'manual', 'human:x')`, q.Rep1)
 	// An ownerless workspace-visible company is visible at every tier.
-	sharedOrg := q.SeedID(t, `INSERT INTO organization (id, display_name, source, captured_by)
+	sharedCompany := q.SeedID(t, `INSERT INTO company (id, display_name, source, captured_by)
 		VALUES ($1, 'Rollout', 'manual', 'human:x')`)
-	rep3Org := q.SeedID(t, `INSERT INTO organization (id, owner_id, display_name, source, captured_by)
+	rep3Company := q.SeedID(t, `INSERT INTO company (id, owner_id, display_name, source, captured_by)
 		VALUES ($1, $2, 'Rollout', 'manual', 'human:x')`, q.Rep3)
 	registry := compose.NewRegistry(q.Pool, compose.SendPath{})
-	const plan = `{"plan":{"version": "v1", "target": "organization",
+	const plan = `{"plan":{"version": "v1", "target": "company",
 		"where": [{"field": "display_name", "op": "eq", "value": "Rollout"}]}}`
 
 	ownerSealed := invokeQuery(q.teamRep(q.Rep1, q.Team1), t, registry, plan)
@@ -161,7 +161,7 @@ func TestQueryWorkspaceAnswersTwoPrincipalsFromOneCorpusWithoutLeaking(t *testin
 	if len(ownerRows) != 3 {
 		t.Fatalf("the capture's owner sees %d of 3 companies — the corpus is not what the narrowed arm is measured against", len(ownerRows))
 	}
-	if !colleagueRows[sharedOrg] || !colleagueRows[rep3Org] {
+	if !colleagueRows[sharedCompany] || !colleagueRows[rep3Company] {
 		t.Fatalf("the colleague cannot see the rows they are entitled to: %v", colleagueRows)
 	}
 	if colleagueRows[rep1Capture] {
@@ -195,7 +195,7 @@ func TestQueryWorkspaceAnswersTwoPrincipalsFromOneCorpusWithoutLeaking(t *testin
 }
 
 // A hop is a READ of the record it lands on. A caller who cannot see the
-// organization cannot use it to select deals either — otherwise the hop becomes
+// company cannot use it to select deals either — otherwise the hop becomes
 // a side channel that answers questions about records the caller was denied.
 func TestAHopThroughARecordTheCallerCannotSeeAdmitsNothing(t *testing.T) {
 	q := setupQuery(t)
@@ -204,15 +204,15 @@ func TestAHopThroughARecordTheCallerCannotSeeAdmitsNothing(t *testing.T) {
 	const plan = `{"plan":{
 		"version": "v1", "target": "deal",
 		"where": [{"field": "amount_minor", "op": "eq", "value": 250000}],
-		"traverse": {"relation": "organization",
+		"traverse": {"relation": "company",
 		             "where": [{"field": "address.city", "op": "eq", "value": "Stuttgart"}]}}}`
 
 	admin := queryPayload(t, invokeQuery(q.admin(), t, registry, plan).Data)
-	// Capture privacy is what keeps an organization out of a colleague's row
+	// Capture privacy is what keeps a company out of a colleague's row
 	// scope; the deal behind it stays readable in itself.
 	if _, err := q.Owner.Exec(context.Background(),
-		`UPDATE organization SET visibility = 'owner' WHERE id = $1`, f.rep3Org); err != nil {
-		t.Fatalf("capturing the organization privately: %v", err)
+		`UPDATE company SET visibility = 'owner' WHERE id = $1`, f.rep3Company); err != nil {
+		t.Fatalf("capturing the company privately: %v", err)
 	}
 	rep := queryPayload(t, invokeQuery(q.teamRep(q.Rep1, q.Team1), t, registry, plan).Data)
 
@@ -220,7 +220,7 @@ func TestAHopThroughARecordTheCallerCannotSeeAdmitsNothing(t *testing.T) {
 		t.Fatalf("the unbounded reader sees %d rows through the hop, want the other team's deal", len(admin.Rows))
 	}
 	if len(rep.Rows) != 0 {
-		t.Errorf("the rep reached %d rows through an organization they cannot see", len(rep.Rows))
+		t.Errorf("the rep reached %d rows through a company they cannot see", len(rep.Rows))
 	}
 }
 
@@ -236,13 +236,13 @@ func TestARefinedQueryPreservesTheProvenanceOfEveryRowItKeeps(t *testing.T) {
 	broad := queryPayload(t, invokeQuery(q.admin(), t, registry, `{"plan":{
 		"version": "v1", "target": "deal",
 		"where": [{"field": "status", "op": "eq", "value": "open"}],
-		"traverse": {"relation": "organization",
+		"traverse": {"relation": "company",
 		             "where": [{"field": "address.city", "op": "eq", "value": "Stuttgart"}]}}}`).Data)
 	refined := queryPayload(t, invokeQuery(q.admin(), t, registry, `{"plan":{
 		"version": "v1", "target": "deal",
 		"where": [{"field": "status", "op": "eq", "value": "open"},
 		          {"field": "amount_minor", "op": "lte", "value": 100000}],
-		"traverse": {"relation": "organization",
+		"traverse": {"relation": "company",
 		             "where": [{"field": "address.city", "op": "eq", "value": "Stuttgart"}]}}}`).Data)
 
 	if len(broad.Rows) <= len(refined.Rows) || len(refined.Rows) == 0 {

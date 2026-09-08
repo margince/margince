@@ -69,7 +69,7 @@ env template is [`.env.example`](../.env.example). The essentials:
 | `MARGINCE_OWNER_DSN` | api | owner-role DSN — migrations + custom-fields DDL (read by the entrypoint) |
 | `MARGINCE_DSN` | api, worker | app-role DSN the process serves under |
 | `MARGINCE_REDIS` | api, worker | Redis address (event bus / outbox relay) |
-| `MARGINCE_CONFIG` | api, worker | path to the mounted `margince.yaml` (bootstrap org + admin) |
+| `MARGINCE_CONFIG` | api, worker | path to the mounted `margince.yaml` (bootstrap company + admin) |
 | `MARGINCE_ADMIN_PASSWORD` | api | first-boot admin password (entrypoint writes it to the file `margince.yaml` references) |
 | `MARGINCE_AI_ROUTING` | api, worker | **ignored, and warns.** The AI binding is a stored setting: declare it under `seeds.ai_routing` in `margince.yaml` before first boot, or set it under Settings → AI afterwards |
 | `MARGINCE_PUBLIC_BASE_URL` | api, worker | canonical external base URL (buyer-facing links / marketing mail) |
@@ -86,7 +86,7 @@ below.
 
 ### First-boot bootstrap config
 
-On the first boot against an empty database the api bootstraps the organization +
+On the first boot against an empty database the api bootstraps the company +
 admin from the file `MARGINCE_CONFIG` points to. Mount your own `margince.yaml`
 (see [`config/margince.example.yaml`](../config/margince.example.yaml)) at that
 path and set `MARGINCE_ADMIN_PASSWORD`. A missing config file just boots an
@@ -146,8 +146,8 @@ your config. (The example config's default differs, so change it to match.)
 **After the first boot succeeds, retire both:** remove the `bootstrap_admin`
 section from `margince.yaml` and unset `MARGINCE_ADMIN_PASSWORD`. ADR-0061 §2
 consumes bootstrap values exactly once — restarts never reconcile them into an
-existing organization — so past that point the credential grants nothing and only
-sits at rest. The entrypoint stops writing the file once an organization exists
+existing company — so past that point the credential grants nothing and only
+sits at rest. The entrypoint stops writing the file once a company exists
 and says so on stderr if the variable is still set. Change an existing user's
 password with `margince-migrate reset-password` instead.
 
@@ -201,7 +201,7 @@ derived from one build argument (`MARGINCE_RELEASE_VERSION`, set from
 
 | Where | How to read it | Who reads it |
 |---|---|---|
-| OCI label `org.opencontainers.image.version` | `docker inspect` / `crane config` — no pull needed | an operator diffing a set |
+| OCI label `company.opencontainers.image.version` | `docker inspect` / `crane config` — no pull needed | an operator diffing a set |
 | `/etc/margince/release-version` | `docker run --rm <image> cat /etc/margince/release-version`, or `kubectl exec` into a running one | an operator inspecting a role that is running or crash-looping. It is the only place the **web** image's release can be read from the outside, because nginx runs none of our code — but it is not what the web tier itself compares against |
 | the Go binary's link-time stamp, and the SPA bundle's compiled-in copy | the guard below. This is the value each role actually compares; the label and the file are for people | the software itself |
 

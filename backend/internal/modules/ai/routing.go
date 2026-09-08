@@ -250,7 +250,7 @@ func FromStored(stored RoutingConfig, keys config.Lookup) (RoutingConfig, error)
 func (cfg RoutingConfig) bindingDigest() string {
 	// A plain struct of strings, ints and a string-keyed map — marshal cannot
 	// fail on it, and the same spelling guards the sibling fingerprints in
-	// compose/orgbrief and compose/orgdossier that this digest feeds.
+	// compose/companybrief and compose/companydossier that this digest feeds.
 	encoded, _ := json.Marshal(cfg) //nolint:errchkjson // plain scalars and a string-keyed map; marshal cannot fail
 	sum := sha256.Sum256(encoded)
 	return hex.EncodeToString(sum[:])

@@ -165,7 +165,7 @@ function boardDeal(
   return {
     id,
     name,
-    org: "Acme GmbH",
+    company: "Acme GmbH",
     valueMinor,
     currency: "EUR",
     ageMs: ageDays * 24 * 60 * 60 * 1000,
@@ -280,7 +280,7 @@ export const BoardInSurface: StoryObj = {
           ],
         },
         {
-          key: "organization_id",
+          key: "company_id",
           label: "Company",
           allLabel: "All companies",
           options: [{ value: "acme", label: "Acme GmbH" }],
@@ -398,10 +398,10 @@ const withheldCompanyColumns: BoardMoneyColumn[] = [
     deals: [
       boardDeal("w1", "Contoso renewal", 12_000, 3),
       boardDeal("w2", "Fabrikam expansion", 33_000, 9, {
-        org: "",
-        orgWithheld: true,
+        company: "",
+        companyWithheld: true,
       }),
-      boardDeal("w3", "Inbound, unlinked", 54_000, 5, { org: "" }),
+      boardDeal("w3", "Inbound, unlinked", 54_000, 5, { company: "" }),
     ],
   },
 ];

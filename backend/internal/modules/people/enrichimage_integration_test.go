@@ -16,7 +16,7 @@ package people
 // that query however it wrote.
 //
 // So the protection can no longer rest on the image being uninformative. It
-// rests on the writer: applyUnclaimedOrgColumn fills only a column nobody has
+// rests on the writer: applyUnclaimedCompanyColumn fills only a column nobody has
 // claimed, so an enrichment never holds a key a human typed. That is a property
 // of this writer, not of the gate, and it is held here.
 
@@ -30,15 +30,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// orgAuditImages reads the images of the newest update row for one organization.
-func orgAuditImages(ctx context.Context, t *testing.T, e *dedupeEnv, orgID ids.OrganizationID) (before, after map[string]any) {
+// companyAuditImages reads the images of the newest update row for one company.
+func companyAuditImages(ctx context.Context, t *testing.T, e *dedupeEnv, companyID ids.CompanyID) (before, after map[string]any) {
 	t.Helper()
 	var beforeJSON, afterJSON []byte
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`SELECT before, after FROM audit_log
-			  WHERE entity_type = 'organization' AND entity_id = $1 AND action = 'update'
-			  ORDER BY occurred_at DESC, id DESC LIMIT 1`, orgID,
+			  WHERE entity_type = 'company' AND entity_id = $1 AND action = 'update'
+			  ORDER BY occurred_at DESC, id DESC LIMIT 1`, companyID,
 		).Scan(&beforeJSON, &afterJSON)
 	}); err != nil {
 		t.Fatalf("reading the audit row: %v", err)
@@ -60,10 +60,10 @@ func orgAuditImages(ctx context.Context, t *testing.T, e *dedupeEnv, orgID ids.O
 func TestAnEnrichmentRecordsTheEmptyColumnItFilled(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	_, orgID := e.seedEmployedPerson(ctx, t,
+	_, companyID := e.seedEmployedPerson(ctx, t,
 		"Mira Halvorsen", "mira@voltaq.test", "Voltaq Systems GmbH", "voltaq.test")
 
-	if err := e.store.ApplyEnrichment(ctx, orgID, ApplyColdStartProfileInput{
+	if err := e.store.ApplyEnrichment(ctx, companyID, ApplyColdStartProfileInput{
 		SourceURL: "https://voltaq.test/about",
 		Fields: []ColdStartFieldInput{{
 			Field: "industry", Value: "Automotive", Confidence: 0.9,
@@ -73,7 +73,7 @@ func TestAnEnrichmentRecordsTheEmptyColumnItFilled(t *testing.T) {
 		t.Fatalf("ApplyEnrichment: %v", err)
 	}
 
-	before, after := orgAuditImages(ctx, t, e, orgID)
+	before, after := companyAuditImages(ctx, t, e, companyID)
 	if value, present := before["industry"]; !present || value != nil {
 		t.Errorf("before[industry] = %v (present=%t), want a recorded absence", value, present)
 	}
@@ -94,16 +94,16 @@ func TestAnEnrichmentRecordsTheEmptyColumnItFilled(t *testing.T) {
 func TestAnEnrichmentDoesNotRecordAColumnAHumanTyped(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	_, orgID := e.seedEmployedPerson(ctx, t,
+	_, companyID := e.seedEmployedPerson(ctx, t,
 		"Mira Halvorsen", "mira@voltaq.test", "Voltaq Systems GmbH", "voltaq.test")
 
 	// The human types it first.
 	human := "Automotive"
-	if _, err := e.store.UpdateOrganization(ctx, orgID, UpdateOrganizationInput{Industry: &human}); err != nil {
+	if _, err := e.store.UpdateCompany(ctx, companyID, UpdateCompanyInput{Industry: &human}); err != nil {
 		t.Fatalf("human update: %v", err)
 	}
 
-	if err := e.store.ApplyEnrichment(ctx, orgID, ApplyColdStartProfileInput{
+	if err := e.store.ApplyEnrichment(ctx, companyID, ApplyColdStartProfileInput{
 		SourceURL: "https://voltaq.test/about",
 		Fields: []ColdStartFieldInput{{
 			Field: "industry", Value: "Aerospace", Confidence: 0.9,
@@ -113,7 +113,7 @@ func TestAnEnrichmentDoesNotRecordAColumnAHumanTyped(t *testing.T) {
 		t.Fatalf("ApplyEnrichment: %v", err)
 	}
 
-	before, after := orgAuditImages(ctx, t, e, orgID)
+	before, after := companyAuditImages(ctx, t, e, companyID)
 	if _, claimed := after["industry"]; claimed {
 		t.Errorf("the enrichment took ownership of a human-typed column: after = %v", after)
 	}
@@ -123,7 +123,7 @@ func TestAnEnrichmentDoesNotRecordAColumnAHumanTyped(t *testing.T) {
 
 	var stored string
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `SELECT industry FROM organization WHERE id = $1`, orgID).Scan(&stored)
+		return tx.QueryRow(ctx, `SELECT industry FROM company WHERE id = $1`, companyID).Scan(&stored)
 	}); err != nil {
 		t.Fatalf("reading the column back: %v", err)
 	}

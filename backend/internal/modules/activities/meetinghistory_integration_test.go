@@ -69,7 +69,7 @@ func meetingCtx(e *sendEnv) context.Context {
 			Objects: map[string]principal.ObjectGrant{
 				"activity": {Read: true, Create: true, Update: true},
 				"person":   {Read: true}, "deal": {Read: true},
-				"organization": {Read: true}, "project": {Read: true},
+				"company": {Read: true}, "project": {Read: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},

@@ -268,11 +268,11 @@ func linkedInRowFrom(record []string, index map[string]int) (linkedInRow, bool) 
 		normalized: normalizeName(name),
 		position:   at(csvPosition),
 		company:    at(csvCompany),
-		// NormalizeOrgName, not normalizeName: it strips the legal suffix,
+		// NormalizeCompanyName, not normalizeName: it strips the legal suffix,
 		// so a connection at "Acme GmbH" matches the account stored as "Acme".
 		// Through the LinkedIn cleaner first, because the field is a free-text
 		// headline on LinkedIn and not a company name.
-		normCompany: NormalizeOrgName(cleanLinkedInCompany(at(csvCompany))),
+		normCompany: NormalizeCompanyName(cleanLinkedInCompany(at(csvCompany))),
 		email:       normalizeEmail(at(csvEmail)),
 		profileURL:  at(csvURL),
 	}
@@ -355,7 +355,7 @@ func upsertGhost(ctx context.Context, tx pgx.Tx, owner ids.UUID, row linkedInRow
 // as a marketing headline: ".NFQ | Digital Creatives", "tagtu | Result-Driven
 // Business Travel". Everything after the first separator is a tagline, and a
 // leading dot or bullet is styling. Handled HERE rather than inside
-// NormalizeOrgName because this is LinkedIn's junk, not a property of company
+// NormalizeCompanyName because this is LinkedIn's junk, not a property of company
 // names — the account dedupe must not start splitting customer names on
 // punctuation because one importer needed it to.
 func cleanLinkedInCompany(s string) string {
@@ -374,7 +374,7 @@ func cleanLinkedInCompany(s string) string {
 // genuinely called "X.Y Consulting" is untouched.
 var webTLDs = []string{".de", ".com", ".io", ".ai", ".net", ".org", ".co", ".eu", ".at", ".ch"}
 
-// orgMatchKeys are the keys ONE company string may be looked up under, in
+// companyMatchKeys are the keys ONE company string may be looked up under, in
 // descending order of how much it claims.
 //
 // The exact key always comes first and is the only one the account dedupe uses.
@@ -390,8 +390,8 @@ var webTLDs = []string{".de", ".com", ".io", ".ai", ".net", ".org", ".co", ".eu"
 // A fallback is a LOOKUP key, never a claim: the caller only accepts one when
 // it resolves to exactly one account, so "NFQ Technologies" still reaches
 // nothing while two accounts are called Nfq.
-func orgMatchKeys(company string) []string {
-	exact := NormalizeOrgName(cleanLinkedInCompany(company))
+func companyMatchKeys(company string) []string {
+	exact := NormalizeCompanyName(cleanLinkedInCompany(company))
 	if exact == "" {
 		return nil
 	}

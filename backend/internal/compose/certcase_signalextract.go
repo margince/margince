@@ -94,7 +94,7 @@ func (signalExtractCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pr
 	if err := refuseUnreachableEvents(want, len(messages)); err != nil {
 		return nil, err
 	}
-	thread := settledThread{Key: "cert-thread", OrganizationID: ids.NewV7()}
+	thread := settledThread{Key: "cert-thread", CompanyID: ids.NewV7()}
 	for _, message := range messages {
 		thread.Messages = append(thread.Messages, threadMessage{
 			ID:        ids.NewV7(),

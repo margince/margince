@@ -263,8 +263,8 @@ func TestDecodeResultCarriesTheLicenseItVerified(t *testing.T) {
 	if err != nil {
 		t.Fatalf("decodeResult: %v", err)
 	}
-	if result.License.Subject != "acme-prod" || result.License.Org != "Acme GmbH" {
-		t.Errorf("subject/org = %q/%q, want acme-prod/Acme GmbH", result.License.Subject, result.License.Org)
+	if result.License.Subject != "acme-prod" || result.License.Company != "Acme GmbH" {
+		t.Errorf("subject/company = %q/%q, want acme-prod/Acme GmbH", result.License.Subject, result.License.Company)
 	}
 	if result.License.ID == "" || result.License.Expiry.IsZero() {
 		t.Errorf("id/expiry = %q/%s, want both set", result.License.ID, result.License.Expiry)

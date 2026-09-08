@@ -13,7 +13,7 @@ package compose
 // the write, so the boot has to bind them itself.
 //
 // Spelled once because the pre-bootstrap case is the subtle half: an
-// installation with no organization yet has no workspace to record against, so
+// installation with no company yet has no workspace to record against, so
 // there is nothing to write and nothing to compare — a boot step must treat that
 // as "not yet", never as an error and never as an empty answer it then acts on.
 // The integration lane covers that arm for both facts.
@@ -60,7 +60,7 @@ func bootLedgerScope(ctx context.Context, pool *pgxpool.Pool, actor string) (con
 //
 // ONE statement for both facts, parameterized by the fact's name. The workspace
 // this key used to carry went with ADR-0091 §5: an installation serves one
-// organization (ADR-0061), so it distinguished nothing.
+// company (ADR-0061), so it distinguished nothing.
 //
 // It keeps a NAMESPACE prefix rather than hashing the bare fact name, because
 // the workspace suffix was doing that job too. hashtext over an unqualified

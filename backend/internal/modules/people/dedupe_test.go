@@ -9,21 +9,21 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func orgIDPtr(id ids.OrganizationID) *ids.OrganizationID { return &id }
+func companyIDPtr(id ids.CompanyID) *ids.CompanyID { return &id }
 
 // PO-F-1's worked examples pin the arithmetic end to end; these assert
 // the confidence AND which side of the threshold it lands on, because
 // the number only matters through that comparison.
 func TestPersonConfidenceReproducesTheSpecWorkedExamples(t *testing.T) {
-	acme := ids.New[ids.OrganizationKind]()
-	globex := ids.New[ids.OrganizationKind]()
+	acme := ids.New[ids.CompanyKind]()
+	globex := ids.New[ids.CompanyKind]()
 
 	t.Run("same name-ish, same employer, queues for review", func(t *testing.T) {
 		// "Jon Doe" vs "John Doe", both current-primary at Acme:
 		// 0.55*0.9667 + 0.45*1.0 = 0.982 ≥ 0.72 → 🟡, not merged.
 		got := personConfidence(
-			PersonCandidate{FullName: "Jon Doe", CurrentPrimaryOrgID: orgIDPtr(acme)},
-			personCandidateRow{fullName: "John Doe", orgID: &acme},
+			PersonCandidate{FullName: "Jon Doe", CurrentPrimaryCompanyID: companyIDPtr(acme)},
+			personCandidateRow{fullName: "John Doe", companyID: &acme},
 		)
 		if !closeToPrinted(got, 0.982) {
 			t.Fatalf("confidence = %.4f, spec pins 0.982", got)
@@ -37,8 +37,8 @@ func TestPersonConfidenceReproducesTheSpecWorkedExamples(t *testing.T) {
 		// Same names, Globex vs Acme: 0.55*0.9667 + 0.45*0.0 = 0.532
 		// < 0.72 → NO_MATCH. Two different people who share a name.
 		got := personConfidence(
-			PersonCandidate{FullName: "Jon Doe", CurrentPrimaryOrgID: orgIDPtr(globex)},
-			personCandidateRow{fullName: "John Doe", orgID: &acme},
+			PersonCandidate{FullName: "Jon Doe", CurrentPrimaryCompanyID: companyIDPtr(globex)},
+			personCandidateRow{fullName: "John Doe", companyID: &acme},
 		)
 		if !closeToPrinted(got, 0.532) {
 			t.Fatalf("confidence = %.4f, spec pins 0.532", got)
@@ -52,43 +52,43 @@ func TestPersonConfidenceReproducesTheSpecWorkedExamples(t *testing.T) {
 func TestDedupeWeightsSumToOne(t *testing.T) {
 	// The spec pins "weights sum to 1.0 so confidence ∈ [0,1]" — the
 	// threshold comparison is only meaningful while that holds.
-	if sum := dedupeNameWeight + dedupeOrgDomainWeight; !closeEnough(sum, 1.0) {
+	if sum := dedupeNameWeight + dedupeCompanyDomainWeight; !closeEnough(sum, 1.0) {
 		t.Fatalf("weights sum to %.4f, want 1.0 — confidence is no longer in [0,1]", sum)
 	}
 }
 
-func TestOrgMatchPrefersTheMostSpecificEvidence(t *testing.T) {
-	acme := ids.New[ids.OrganizationKind]()
-	other := ids.New[ids.OrganizationKind]()
+func TestCompanyMatchPrefersTheMostSpecificEvidence(t *testing.T) {
+	acme := ids.New[ids.CompanyKind]()
+	other := ids.New[ids.CompanyKind]()
 	domain := "acme.com"
 
 	t.Run("shared current-primary employer scores 1.0", func(t *testing.T) {
-		got := orgMatch(
-			PersonCandidate{CurrentPrimaryOrgID: orgIDPtr(acme)},
-			personCandidateRow{orgID: &acme, orgDomain: &domain},
+		got := companyMatch(
+			PersonCandidate{CurrentPrimaryCompanyID: companyIDPtr(acme)},
+			personCandidateRow{companyID: &acme, companyDomain: &domain},
 		)
 		if got != 1.0 {
-			t.Fatalf("org_match = %.2f, want 1.0", got)
+			t.Fatalf("company_match = %.2f, want 1.0", got)
 		}
 	})
 
 	t.Run("shared email domain scores 0.8", func(t *testing.T) {
-		got := orgMatch(
-			PersonCandidate{Emails: []string{"NEW.HIRE@Acme.com"}, CurrentPrimaryOrgID: orgIDPtr(other)},
-			personCandidateRow{orgID: &acme, orgDomain: &domain},
+		got := companyMatch(
+			PersonCandidate{Emails: []string{"NEW.HIRE@Acme.com"}, CurrentPrimaryCompanyID: companyIDPtr(other)},
+			personCandidateRow{companyID: &acme, companyDomain: &domain},
 		)
 		if got != 0.8 {
-			t.Fatalf("org_match = %.2f, want 0.8 — the domain match survives case", got)
+			t.Fatalf("company_match = %.2f, want 0.8 — the domain match survives case", got)
 		}
 	})
 
 	t.Run("no employer evidence scores 0", func(t *testing.T) {
-		got := orgMatch(
+		got := companyMatch(
 			PersonCandidate{Emails: []string{"someone@globex.com"}},
-			personCandidateRow{orgID: &acme, orgDomain: &domain},
+			personCandidateRow{companyID: &acme, companyDomain: &domain},
 		)
 		if got != 0.0 {
-			t.Fatalf("org_match = %.2f, want 0.0", got)
+			t.Fatalf("company_match = %.2f, want 0.0", got)
 		}
 	})
 }

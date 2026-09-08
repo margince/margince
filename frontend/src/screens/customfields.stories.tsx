@@ -74,7 +74,7 @@ export const BuilderText: Story = {
   render: () => (
     <StoryProviders>
       <FieldBuilder
-        object="organization"
+        object="company"
         pending={false}
         onSubmit={noop}
         onCancel={noop}
@@ -94,7 +94,7 @@ export const BuilderTextDark: Story = {
   render: () => (
     <StoryProviders>
       <FieldBuilder
-        object="organization"
+        object="company"
         pending={false}
         onSubmit={noop}
         onCancel={noop}
@@ -155,7 +155,7 @@ export const BuilderRefusal: Story = {
   render: () => (
     <StoryProviders>
       <FieldBuilder
-        object="organization"
+        object="company"
         pending={false}
         onSubmit={noop}
         onCancel={noop}

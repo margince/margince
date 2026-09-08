@@ -7,7 +7,7 @@ package compose
 // where the report says to fetch it, and the route that streams it. Its own
 // file beside the transport because it is the one part of the dossier that
 // is bytes rather than a report, and it reads and answers like the
-// organization's own logo route rather than like the rest of the read.
+// company's own logo route rather than like the rest of the read.
 
 import (
 	"errors"
@@ -35,19 +35,19 @@ func siteReadLogoURL(read people.SiteRead) *string {
 	return &path
 }
 
-// getCompanySiteReadLogo streams the mark a read parked on its dossier, so
+// getAnchorCompanySiteReadLogo streams the mark a read parked on its dossier, so
 // the review shows the company it is about before the record exists. The
-// same response discipline as the organization's own logo route: the type is
+// same response discipline as the company's own logo route: the type is
 // fixed to the server's own PNG re-encode rather than read back from the
 // object, so nothing a site influenced decides how its bytes are interpreted.
-func (e *deepReadEngine) getCompanySiteReadLogo(w http.ResponseWriter, r *http.Request, readID openapi_types.UUID) {
+func (e *deepReadEngine) getAnchorCompanySiteReadLogo(w http.ResponseWriter, r *http.Request, readID openapi_types.UUID) {
 	key, err := e.people.SiteReadLogoKey(r.Context(), ids.UUID(readID))
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
 	if e.blob == nil {
-		httperr.NotImplemented(w, r, "GetCompanySiteReadLogo")
+		httperr.NotImplemented(w, r, "GetAnchorCompanySiteReadLogo")
 		return
 	}
 	rc, obj, err := e.blob.Get(r.Context(), key)
@@ -73,14 +73,14 @@ func (e *deepReadEngine) getCompanySiteReadLogo(w http.ResponseWriter, r *http.R
 	}, "site read logo "+readID.String())
 }
 
-func (h siteReadHandlers) GetCompanySiteReadLogo(w http.ResponseWriter, r *http.Request, readID openapi_types.UUID) {
+func (h siteReadHandlers) GetAnchorCompanySiteReadLogo(w http.ResponseWriter, r *http.Request, readID openapi_types.UUID) {
 	if !companyContextReadEnabled(h.companyContextRollout) {
-		httperr.NotImplemented(w, r, "getCompanySiteReadLogo (company context read rollout is disabled)")
+		httperr.NotImplemented(w, r, "getAnchorCompanySiteReadLogo (company context read rollout is disabled)")
 		return
 	}
 	if h.engine == nil {
-		httperr.NotImplemented(w, r, "getCompanySiteReadLogo (no crawl runner configured)")
+		httperr.NotImplemented(w, r, "getAnchorCompanySiteReadLogo (no crawl runner configured)")
 		return
 	}
-	h.engine.getCompanySiteReadLogo(w, r, readID)
+	h.engine.getAnchorCompanySiteReadLogo(w, r, readID)
 }

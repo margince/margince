@@ -66,7 +66,7 @@ type SiteReadDebugReport struct {
 	// declarations for the WIDE slot, and LogoIcon for the square badge beside
 	// it. The debug run resolves and normalizes exactly as the cold-start
 	// worker does but stores nothing — it is DB-less and blob-less. An
-	// enrichment read of an existing organization stores the wide mark only,
+	// enrichment read of an existing company stores the wide mark only,
 	// on the terms resolveLogo states.
 	Logo     DebugLogo `json:"logo"`
 	LogoIcon DebugLogo `json:"logo_icon"`

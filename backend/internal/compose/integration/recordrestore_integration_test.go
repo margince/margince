@@ -822,13 +822,13 @@ func TestEndToEnd_anEntryTouchingAFieldHeldElsewhereIsStillUndoable(t *testing.T
 		ID      string `json:"id"`
 		Version int64  `json:"version"`
 	}
-	if status := e.Call(t, "POST", "/v1/organizations",
+	if status := e.Call(t, "POST", "/v1/companies",
 		AnyMap{"display_name": "Held Elsewhere Ltd"}, nil, &created); status != 201 {
 		t.Fatalf("create → %d", status)
 	}
 	// domains and relationship_types live in their own tables; industry is an
 	// ordinary column, so the entry mixes both kinds.
-	if status := e.Call(t, "PATCH", "/v1/organizations/"+created.ID, AnyMap{
+	if status := e.Call(t, "PATCH", "/v1/companies/"+created.ID, AnyMap{
 		"industry":           "Manufacturing",
 		"domains":            []AnyMap{{"domain": "held.test", "is_primary": true}},
 		"relationship_types": []string{"customer"},
@@ -836,7 +836,7 @@ func TestEndToEnd_anEntryTouchingAFieldHeldElsewhereIsStillUndoable(t *testing.T
 		t.Fatalf("patch → %d", status)
 	}
 
-	page := readHistory(t, e, "organization", created.ID)
+	page := readHistory(t, e, "company", created.ID)
 	entry := theUpdateEntry(t, page)
 	if !entry.Undoable.Undoable {
 		t.Fatalf("the newest entry refused as %q (%q); nothing was written after it, and a "+

@@ -158,9 +158,9 @@ func applyStatusTx(ctx context.Context, tx pgx.Tx, id ids.ContractID, existing c
 		return crmcontracts.Contract{}, fmt.Errorf("audit contract status change: %w", err)
 	}
 	changed := crmcontracts.PublicEventContractStatusChanged{
-		FromStatus:     statusOf(existing),
-		ToStatus:       to,
-		OrganizationId: existing.OrganizationId,
+		FromStatus: statusOf(existing),
+		ToStatus:   to,
+		CompanyId:  existing.CompanyId,
 	}
 	if supersededBy != nil {
 		successor := openapi_types.UUID(supersededBy.UUID)
@@ -280,7 +280,7 @@ func (s *Store) Renew(ctx context.Context, id ids.ContractID, successor CreateCo
 		if err != nil {
 			return err
 		}
-		successor.OrganizationID = ids.OrganizationID{UUID: anchor}
+		successor.CompanyID = ids.CompanyID{UUID: anchor}
 
 		created, err := createContractTx(ctx, tx, successor, by, s.today())
 		if err != nil {

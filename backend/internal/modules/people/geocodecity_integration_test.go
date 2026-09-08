@@ -36,7 +36,7 @@ func TestACityNameResolvesFromTheCompaniesLocatedInIt(t *testing.T) {
 		{"Elsewhere Gmbh", "Hamburg", 53.5511, 9.9937},
 	}
 	for _, row := range located {
-		org, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+		company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 			DisplayName: row.name, Source: "manual",
 			Address: &crmcontracts.Address{
 				Line1: strPtr("Teststrasse 1"),
@@ -46,12 +46,12 @@ func TestACityNameResolvesFromTheCompaniesLocatedInIt(t *testing.T) {
 		if err != nil {
 			t.Fatalf("seeding %q: %v", row.name, err)
 		}
-		orgID := ids.From[ids.OrganizationKind](ids.UUID(org.Id))
-		addr, ok, err := e.store.AddressForGeocode(ctx, orgID)
+		companyID := ids.From[ids.CompanyKind](ids.UUID(company.Id))
+		addr, ok, err := e.store.AddressForGeocode(ctx, companyID)
 		if err != nil || !ok {
 			t.Fatalf("reading %q back for geocoding: %v (found %v)", row.name, err, ok)
 		}
-		if err := e.store.RecordGeocode(ctx, orgID, GeocodeOK,
+		if err := e.store.RecordGeocode(ctx, companyID, GeocodeOK,
 			&row.lat, &row.lon, "fake", addr.InputHash); err != nil {
 			t.Fatalf("locating %q: %v", row.name, err)
 		}
@@ -85,20 +85,20 @@ func TestACityLookupFoldsCaseAndRefusesWhatItCannotAnswer(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 
-	org, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: "Folded Case Gmbh", Source: "manual",
 		Address: &crmcontracts.Address{Line1: strPtr("Teststrasse 2"), City: strPtr("Düsseldorf")},
 	})
 	if err != nil {
 		t.Fatalf("seeding: %v", err)
 	}
-	orgID := ids.From[ids.OrganizationKind](ids.UUID(org.Id))
-	addr, ok, err := e.store.AddressForGeocode(ctx, orgID)
+	companyID := ids.From[ids.CompanyKind](ids.UUID(company.Id))
+	addr, ok, err := e.store.AddressForGeocode(ctx, companyID)
 	if err != nil || !ok {
 		t.Fatalf("reading back for geocoding: %v (found %v)", err, ok)
 	}
 	lat, lon := 51.2277, 6.7735
-	if err := e.store.RecordGeocode(ctx, orgID, GeocodeOK, &lat, &lon, "fake", addr.InputHash); err != nil {
+	if err := e.store.RecordGeocode(ctx, companyID, GeocodeOK, &lat, &lon, "fake", addr.InputHash); err != nil {
 		t.Fatalf("locating: %v", err)
 	}
 
@@ -139,19 +139,19 @@ func TestAStaleCoordinateIsNotAveragedIntoACity(t *testing.T) {
 	ctx := e.as()
 
 	locate := func(name, city string, lat, lon float64, status string) {
-		org, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+		company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 			DisplayName: name, Source: "manual",
 			Address: &crmcontracts.Address{Line1: strPtr("Teststrasse 1"), City: strPtr(city)},
 		})
 		if err != nil {
 			t.Fatalf("seeding %q: %v", name, err)
 		}
-		orgID := ids.From[ids.OrganizationKind](ids.UUID(org.Id))
-		addr, ok, err := e.store.AddressForGeocode(ctx, orgID)
+		companyID := ids.From[ids.CompanyKind](ids.UUID(company.Id))
+		addr, ok, err := e.store.AddressForGeocode(ctx, companyID)
 		if err != nil || !ok {
 			t.Fatalf("reading %q back: %v (found %v)", name, err, ok)
 		}
-		if err := e.store.RecordGeocode(ctx, orgID, status, &lat, &lon, "fake", addr.InputHash); err != nil {
+		if err := e.store.RecordGeocode(ctx, companyID, status, &lat, &lon, "fake", addr.InputHash); err != nil {
 			t.Fatalf("locating %q: %v", name, err)
 		}
 	}
@@ -192,19 +192,19 @@ func TestACityNameCoveringTwoPlacesResolvesToNeither(t *testing.T) {
 		{"Frankfurt Main Gmbh", 50.1109, 8.6821},  // Frankfurt am Main
 		{"Frankfurt Oder Gmbh", 52.3412, 14.5506}, // Frankfurt (Oder), ~5.9° east
 	} {
-		org, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+		company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 			DisplayName: row.name, Source: "manual",
 			Address: &crmcontracts.Address{Line1: strPtr("Teststrasse 1"), City: strPtr("Frankfurt")},
 		})
 		if err != nil {
 			t.Fatalf("seeding %q: %v", row.name, err)
 		}
-		orgID := ids.From[ids.OrganizationKind](ids.UUID(org.Id))
-		addr, ok, err := e.store.AddressForGeocode(ctx, orgID)
+		companyID := ids.From[ids.CompanyKind](ids.UUID(company.Id))
+		addr, ok, err := e.store.AddressForGeocode(ctx, companyID)
 		if err != nil || !ok {
 			t.Fatalf("reading %q back: %v (found %v)", row.name, err, ok)
 		}
-		if err := e.store.RecordGeocode(ctx, orgID, GeocodeOK,
+		if err := e.store.RecordGeocode(ctx, companyID, GeocodeOK,
 			&row.lat, &row.lon, "fake", addr.InputHash); err != nil {
 			t.Fatalf("locating %q: %v", row.name, err)
 		}

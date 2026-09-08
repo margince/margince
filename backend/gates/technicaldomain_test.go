@@ -25,7 +25,7 @@ import (
 )
 
 // technicalDomainReaders matches a SQL statement that SELECTS the domain
-// value out of organization_domain.
+// value out of company_domain.
 //
 // The value is the point, not the table: the sweep's due-list asks whether a
 // company has any domain at all (an EXISTS with no column read), which decides
@@ -42,7 +42,7 @@ var technicalDomainReaders = regexp.MustCompile(`(?s)SELECT\s+domain\s`)
 //
 // It asserts the narrow thing that is actually true: within the technical
 // lookup's own files, exactly one function reads the domain. Other paths in
-// the module read organization_domain for their own reasons — the list filter,
+// the module read company_domain for their own reasons — the list filter,
 // the dedupe — and this says nothing about those.
 func TestTheTechnicalLookupReadsTheDomainFromTheRecordAlone(t *testing.T) {
 	t.Parallel()
@@ -54,7 +54,7 @@ func TestTheTechnicalLookupReadsTheDomainFromTheRecordAlone(t *testing.T) {
 	readers := 0
 	for _, entry := range entries {
 		name := entry.Name()
-		if !strings.HasPrefix(name, "technical") && !strings.HasPrefix(name, "organizationtechnical") {
+		if !strings.HasPrefix(name, "technical") && !strings.HasPrefix(name, "companytechnical") {
 			continue
 		}
 		if strings.HasSuffix(name, "_test.go") {
@@ -90,7 +90,7 @@ func TestTheTechnicalLookupTakesNoDomainFromACaller(t *testing.T) {
 		}
 		// A Domain field on an args struct or a decoded request is the shape
 		// this refuses. The worker and the handler both receive an
-		// organization id and read the domain from the record.
+		// company id and read the domain from the record.
 		if regexp.MustCompile(`(?m)^\s*Domain\s+string`).Match(body) {
 			t.Errorf("%s carries a domain in %s — the lookup reads the one the record holds, "+
 				"and a caller-supplied domain is how this becomes company discovery",
@@ -108,7 +108,7 @@ func TestTheTechnicalLookupTakesNoDomainFromACaller(t *testing.T) {
 // nothing of what that lane reads.
 func TestEveryTechnicalLaneIsDerivedFromItsFields(t *testing.T) {
 	t.Parallel()
-	body, err := os.ReadFile("internal/modules/people/organizationtechnical.go")
+	body, err := os.ReadFile("internal/modules/people/companytechnical.go")
 	if err != nil {
 		t.Fatalf("reading the technical apply: %v", err)
 	}

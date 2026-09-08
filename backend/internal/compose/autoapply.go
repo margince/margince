@@ -49,14 +49,14 @@ const autoApplyActorID = "agent:auto-apply"
 //
 // Two entries, because two is what the eligible kinds can name: a close-date
 // correction targets a deal, and both a rename and a lifecycle move target an
-// organization. A kind joining AutoApplyKinds against another record type adds
+// company. A kind joining AutoApplyKinds against another record type adds
 // its row here, and until then a speculative entry would be a table this can
 // reach that nothing asks it to.
 //
 //nolint:goconst // wire record-type names read as data; a shared constant would tie this map to whichever other concept spells the same word
 var ownedTables = map[string]string{
-	"deal":         "deal",
-	"organization": "organization",
+	"deal":    "deal",
+	"company": "company",
 }
 
 // kindPolicy answers whether ONE proposal of an admin-governed kind may apply
@@ -242,7 +242,7 @@ func (a autoApplier) ownerOf(ctx context.Context, entityType string, entityID id
 //
 // What it does NOT bound is every write that follows. Two of the three
 // eligible effects deliberately swap in a system principal before writing —
-// an org rename and a lifecycle move stamp their own machine provenance — so
+// a company rename and a lifecycle move stamp their own machine provenance — so
 // the honest statement is that the DECISION is gated by the owner's authority
 // and the effect then runs exactly as it does after a human's click. That is
 // the same bound a person gets, which is the point: this path is not a wider

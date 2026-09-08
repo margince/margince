@@ -10,12 +10,12 @@ fixture:
     - source_id: user:0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e0a
       trust_tier: T1
       content: acting rep — user_42
-    - source_id: org:0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e14
+    - source_id: company:0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e14
       trust_tier: T1
-      content: Nordwind Energie GmbH — organization_id=0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e14, Hamburg
-    - source_id: org:0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e15
+      content: Nordwind Energie GmbH — company_id=0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e14, Hamburg
+    - source_id: company:0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e15
       trust_tier: T1
-      content: Nordwind Logistik AG — organization_id=0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e15, Rostock
+      content: Nordwind Logistik AG — company_id=0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e15, Rostock
   tools: catalog
 expect:
   outcome: accepted

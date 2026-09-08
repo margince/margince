@@ -136,7 +136,7 @@ func buildLeadSurvivorshipPatch(target, source crmcontracts.Lead) *storekit.Patc
 	p := storekit.NewPatch()
 	fillString(p, "title", target.Title, source.Title)
 	fillString(p, leadCompanyColumn, target.CompanyName, source.CompanyName)
-	fillString(p, "candidate_org_key", target.CandidateOrgKey, source.CandidateOrgKey)
+	fillString(p, "candidate_company_key", target.CandidateCompanyKey, source.CandidateCompanyKey)
 	fillString(p, "linkedin_url", target.LinkedinUrl, source.LinkedinUrl)
 	if target.Email == nil && source.Email != nil {
 		p.Set(leadEmailColumn, nil, string(*source.Email))

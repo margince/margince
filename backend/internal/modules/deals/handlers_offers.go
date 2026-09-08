@@ -146,12 +146,12 @@ func (h Handlers) CreateOffer(w http.ResponseWriter, r *http.Request, id crmcont
 		}
 	}
 	in := CreateOfferInput{
-		Currency:   req.Currency,
-		BuyerOrgID: idArg[ids.OrganizationKind](req.BuyerOrgId),
-		IntroText:  req.IntroText,
-		TermsText:  req.TermsText,
-		TemplateID: idArg[ids.OfferTemplateKind](req.TemplateId),
-		Source:     req.Source,
+		Currency:       req.Currency,
+		BuyerCompanyID: idArg[ids.CompanyKind](req.BuyerCompanyId),
+		IntroText:      req.IntroText,
+		TermsText:      req.TermsText,
+		TemplateID:     idArg[ids.OfferTemplateKind](req.TemplateId),
+		Source:         req.Source,
 	}
 	if req.ValidUntil != nil {
 		v := req.ValidUntil.Format("2006-01-02")
@@ -194,12 +194,12 @@ func (h Handlers) UpdateOffer(w http.ResponseWriter, r *http.Request, id crmcont
 		return
 	}
 	in := UpdateOfferInput{
-		Currency:   req.Currency,
-		BuyerOrgID: idArg[ids.OrganizationKind](req.BuyerOrgId),
-		IntroText:  req.IntroText,
-		TermsText:  req.TermsText,
-		TemplateID: idArg[ids.OfferTemplateKind](req.TemplateId),
-		IfVersion:  ifVersion,
+		Currency:       req.Currency,
+		BuyerCompanyID: idArg[ids.CompanyKind](req.BuyerCompanyId),
+		IntroText:      req.IntroText,
+		TermsText:      req.TermsText,
+		TemplateID:     idArg[ids.OfferTemplateKind](req.TemplateId),
+		IfVersion:      ifVersion,
 	}
 	if req.ValidUntil != nil {
 		v := req.ValidUntil.Format("2006-01-02")

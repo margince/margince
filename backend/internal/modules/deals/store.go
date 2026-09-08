@@ -90,16 +90,16 @@ type Installation struct {
 	// StartDeliveryForWonDeal moves a won deal's project into delivery, in the
 	// transaction that recorded the win (projectseam.go).
 	StartDeliveryForWonDeal StartDeliveryForWonDeal
-	// EnsurePartner refuses a partner_org_id that names a company with no
+	// EnsurePartner refuses a partner_company_id that names a company with no
 	// partner programme. `people` owns that table, so the edge is injected
 	// here rather than read across the module boundary (ADR-0054).
 	EnsurePartner EnsurePartner
 }
 
-// EnsurePartner answers whether an organization may be named as a deal's
+// EnsurePartner answers whether a company may be named as a deal's
 // partner, inside the caller's own transaction so the answer cannot go stale
 // between the check and the write.
-type EnsurePartner func(ctx context.Context, tx pgx.Tx, organizationID ids.OrganizationID) error
+type EnsurePartner func(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) error
 
 // NewStore binds the store to the pool every tenant query runs through, and
 // to the seam that answers the installation's own values.
@@ -146,10 +146,10 @@ func (i Installation) orRefusing() Installation {
 // refuses every attribution rather than admitting every one. A seam that failed
 // OPEN here would silently restore the hole it exists to close.
 func refusingEnsurePartner() EnsurePartner {
-	return func(context.Context, pgx.Tx, ids.OrganizationID) error {
+	return func(context.Context, pgx.Tx, ids.CompanyID) error {
 		return errors.New("deals: the EnsurePartner seam was not injected; " +
 			"construct this store with installseam.Deals(), which binds people's " +
-			"EnsureOrganizationIsPartner")
+			"EnsureCompanyIsPartner")
 	}
 }
 

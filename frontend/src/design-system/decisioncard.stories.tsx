@@ -235,7 +235,7 @@ export const FieldChange: Story = {
         "A mail from Helvetia Rail ended the contract, so this account looks like a former customer.",
       confidence: 0.62,
       proposed_change: {
-        organization_id: "0198c3aa-7f10-7bbb-8888-000000000042",
+        company_id: "0198c3aa-7f10-7bbb-8888-000000000042",
         current_lifecycle: "customer",
         proposed_lifecycle: "former_customer",
         because: "the framework agreement was not renewed for 2027",

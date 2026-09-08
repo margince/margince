@@ -296,7 +296,7 @@ model-call hot path.
   - **Expected units** come from the connection's completed backfill yields:
     messages to classify, people to enrich, entities to embed. A run measures its
     own yield as it pages — the counterparty resolver reports whether an ensure
-    *minted* a person/organization or merely resolved onto rows that already
+    *minted* a person/company or merely resolved onto rows that already
     existed, and those counts commit in the same statement as `scanned`/`captured`,
     so a page that fails to commit counts nothing.
   - **When there's nothing to price from, the preview says so instead of
@@ -306,12 +306,12 @@ model-call hot path.
     cost-read failure degrades it to a plain message count — never a block on the
     consent flow.
 
-  *(Two deliberate under-counts. The people/org yields count only what a run's own
+  *(Two deliberate under-counts. The people/company yields count only what a run's own
   pages minted: a sender the tier gate defers is resolved by the verdict engine
   long after that page, and the person it may eventually mint is nobody's page to
   claim. So a run that minted nobody reports "ratio unavailable" rather than zero
   people, floating the enrich line to its `heuristic` floor instead of quoting a
-  confident $0. And the cold-start floor counts message embeds only: person/org
+  confident $0. And the cold-start floor counts message embeds only: person/company
   embeds would over-quote at its full-email unit size.)*
 
 ## Certification — proving a binding is good enough

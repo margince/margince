@@ -56,7 +56,7 @@ function paper(id: string, filename: string) {
   return {
     id,
     filename,
-    entity_type: "organization",
+    entity_type: "company",
     entity_id: "o-1",
     contract_id: "c-1",
     byte_size: 184_320,
@@ -68,7 +68,7 @@ function paper(id: string, filename: string) {
 
 function routes(data: Contract[]) {
   installFetchStub({
-    "GET /organizations/o-1/contracts": () => jsonResponse({ data, page }),
+    "GET /companies/o-1/contracts": () => jsonResponse({ data, page }),
     "GET /me": meRoute({ ...FULL_GRANTS }),
   });
 }
@@ -80,7 +80,7 @@ export const Populated: Story = {
     return (
       <StoryProviders>
         <div style={{ maxWidth: 720 }}>
-          <CompanyContractsCard orgId="o-1" />
+          <CompanyContractsCard companyId="o-1" />
         </div>
       </StoryProviders>
     );
@@ -96,10 +96,10 @@ export const PaperBeyondOnePage: Story = {
     // in the order the row asks for them.
     let asked = 0;
     installFetchStub({
-      "GET /organizations/o-1/contracts": () =>
+      "GET /companies/o-1/contracts": () =>
         jsonResponse({ data: contracts, page }),
       "GET /me": meRoute({ ...FULL_GRANTS }),
-      "GET /organizations/o-1/documents": () => {
+      "GET /companies/o-1/documents": () => {
         asked += 1;
         return asked === 1
           ? jsonResponse({
@@ -118,7 +118,7 @@ export const PaperBeyondOnePage: Story = {
     return (
       <StoryProviders>
         <div style={{ maxWidth: 720 }}>
-          <CompanyContractsCard orgId="o-1" />
+          <CompanyContractsCard companyId="o-1" />
         </div>
       </StoryProviders>
     );
@@ -133,7 +133,7 @@ export const Empty: Story = {
     return (
       <StoryProviders>
         <div style={{ maxWidth: 720 }}>
-          <CompanyContractsCard orgId="o-1" />
+          <CompanyContractsCard companyId="o-1" />
         </div>
       </StoryProviders>
     );
@@ -147,7 +147,7 @@ export const FormOpen: Story = {
     routes(contracts);
     return (
       <StoryProviders>
-        <ContractForm orgId="o-1" open onClose={() => {}} />
+        <ContractForm companyId="o-1" open onClose={() => {}} />
       </StoryProviders>
     );
   },

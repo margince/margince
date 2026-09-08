@@ -29,14 +29,14 @@ export function entityTimelineKeys(
   return keys;
 }
 
-const ORGANIZATION_360_KEY = (id: string): QueryKey => ["organization360", id];
+const COMPANY_360_KEY = (id: string): QueryKey => ["company360", id];
 
 // The composite reads that carry a timeline's first page, by record kind —
 // spelled the way each page's own query spells its key.
 const TIMELINE_SEED_KEYS: Partial<
   Record<EntityKind, (entityId: string) => QueryKey>
 > = {
-  organization: (id) => ORGANIZATION_360_KEY(id),
+  company: (id) => COMPANY_360_KEY(id),
   person: (id) => ["person360", id],
   project: (id) => ["project", id, "360"],
 };
@@ -109,20 +109,18 @@ export function taskWriteKeys(
 // its project into delivery in the same server write, so besides the project
 // page and list, the company page — it embeds the account's projects with
 // their phase — is stale the moment the advance returns. A deal names no
-// contact of its own (the Deal schema carries organization_id and project_id
+// contact of its own (the Deal schema carries company_id and project_id
 // only), so there is no person page to reach from here. Derived beside the
 // timeline keys so the 360 keys keep one spelling.
 export function dealWinKeys(
-  deal:
-    | { project_id?: string | null; organization_id?: string | null }
-    | undefined,
+  deal: { project_id?: string | null; company_id?: string | null } | undefined,
 ): QueryKey[] {
   const keys: QueryKey[] = [["projects"]];
   if (deal?.project_id) {
     keys.push(["project", deal.project_id]);
   }
-  if (deal?.organization_id) {
-    keys.push(ORGANIZATION_360_KEY(deal.organization_id));
+  if (deal?.company_id) {
+    keys.push(COMPANY_360_KEY(deal.company_id));
   }
   return keys;
 }

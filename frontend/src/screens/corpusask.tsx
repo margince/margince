@@ -23,7 +23,7 @@ import { problemMessageOf, throwProblem } from "./common";
 // What makes the free-text box defensible here, and what the whole surface has
 // to keep visible: the search is BOUNDED. "Everything" is one finite set the
 // workspace chose, so the answer can prove what it did not find — which is
-// exactly what `POST /organizations/{id}/ask` refused to promise, and why that
+// exactly what `POST /companies/{id}/ask` refused to promise, and why that
 // one takes its questions from a fixed list instead.
 //
 // So the three refusals are drawn as three different things, never as one

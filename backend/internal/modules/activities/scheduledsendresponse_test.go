@@ -33,9 +33,9 @@ func scheduledRow() ScheduledSend {
 func TestTheWireCarriesEveryInputThePreviewAsksWith(t *testing.T) {
 	t.Parallel()
 	deal := ids.NewV7()
-	org := ids.NewV7()
+	company := ids.NewV7()
 	row := scheduledRow()
-	row.Links = []ActivityLinkInput{{EntityType: "organization", EntityID: org}}
+	row.Links = []ActivityLinkInput{{EntityType: "company", EntityID: company}}
 	row.Context = commsauthz.CategoryMarketing
 	row.MarketingPurpose = "newsletter"
 	row.ConsentPurpose = "marketing_email"
@@ -44,8 +44,8 @@ func TestTheWireCarriesEveryInputThePreviewAsksWith(t *testing.T) {
 	out := scheduledSendResponse(row)
 
 	wantLinks := []crmcontracts.ActivityLinkInput{{
-		EntityType: crmcontracts.ActivityLinkInputEntityType("organization"),
-		EntityId:   openapi_types.UUID(org),
+		EntityType: crmcontracts.ActivityLinkInputEntityType("company"),
+		EntityId:   openapi_types.UUID(company),
 	}}
 	if out.Links == nil || !reflect.DeepEqual(*out.Links, wantLinks) {
 		t.Errorf("links on the wire = %v, want %v", out.Links, wantLinks)
@@ -100,7 +100,7 @@ func TestAControllerOnlyCategoryNeverReachesTheWire(t *testing.T) {
 func TestFrozenRecordLinksRoundTrip(t *testing.T) {
 	t.Parallel()
 	links := []ActivityLinkInput{
-		{EntityType: "organization", EntityID: ids.NewV7()},
+		{EntityType: "company", EntityID: ids.NewV7()},
 		{EntityType: "deal", EntityID: ids.NewV7()},
 	}
 	frozen, err := marshalOriginLinks(FromAccount(links))

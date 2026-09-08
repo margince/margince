@@ -130,7 +130,7 @@ While it pages, the run measures its own yield — and this is what makes the *n
 
 The counterparty resolver reports what each ensure actually did. `people_created` counts persons
 **minted**, not resolved onto — an email from someone already in the CRM triggers no enrich call
-either. `organizations_created` counts something subtly different: **domains this run queued for a
+either. `companies_created` counts something subtly different: **domains this run queued for a
 company verdict**, because capture creates no companies at all. A run that met twelve new domains did
 that work whether or not the crawls have answered yet, and reporting zero would hide it.
 
@@ -178,12 +178,12 @@ on the morning screen instead of waiting for the nightly pass. It fires only on 
 moves a live run to `done`, so a lost race can never produce a spurious digest.
 
 While it runs, the status surface reports `messages_scanned`, `captured`, `skipped`, `people_created`,
-`organizations_created` and `dedupe_candidates`, alongside the estimate the run started with as the
+`companies_created` and `dedupe_candidates`, alongside the estimate the run started with as the
 progress denominator.
 
 ## Honest limitations
 
-- **The people/org yields under-count** deferred senders, as above. Deliberate, and the zero case is
+- **The people/company yields under-count** deferred senders, as above. Deliberate, and the zero case is
   handled rather than papered over.
 - **The scope count is capped** at 20,000 messages; beyond that the preview reports a floor.
 - **The estimate assumes your next messages look like your recent ones.** Longer mail costs more.

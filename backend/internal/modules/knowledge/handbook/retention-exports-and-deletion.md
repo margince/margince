@@ -5,9 +5,9 @@ delete actually destroys, and what you can get out of the system.
 
 Read it before you promise anything to a customer or an auditor.
 
-## A new organization starts with six rules
+## A new company starts with six rules
 
-Margince does not ship empty here. A new organization is created with six
+Margince does not ship empty here. A new company is created with six
 retention rules already in place, so it is compliant with storage-limitation
 from the first day rather than after someone remembers to configure it.
 
@@ -23,7 +23,7 @@ These are the defaults. All six are editable.
 | AI call payloads | 365 days | Erase |
 
 There is a seventh scope you can write a rule for — **Won deals** — and it is
-deliberately left empty. The product takes no view on when your organization
+deliberately left empty. The product takes no view on when your company
 should stop keeping a won deal. That is your decision, not its default.
 
 If you delete every rule, the screen tells you what that means: "No retention
@@ -93,7 +93,7 @@ drains over several nights rather than in one.
 ### One window nobody can change
 
 AI embedding call traces are kept for **90 days**, fixed. It is an operational
-cap, not a per-organization setting, and no administrator can edit it.
+cap, not a per-company setting, and no administrator can edit it.
 
 ### Turning a policy off, versus deleting it
 
@@ -173,7 +173,7 @@ you sent. Plan for that.
 
 ### Erasure requests
 
-An erasure request **must name a contact in this organization**. A free-text
+An erasure request **must name a contact in this company**. A free-text
 subject cannot be erased, because there is no record to erase.
 
 Fulfilling one is deliberately hard to do by accident. You type **ERASE** to
@@ -240,7 +240,7 @@ held — every erasure so far could be completed in full."
 ## Consent
 
 **Settings → Privacy & retention** carries a registry of **purposes** — the reasons
-this organization processes personal data. Each purpose has a key, a label, and
+this company processes personal data. Each purpose has a key, a label, and
 a flag for whether it requires double opt-in.
 
 The catalogue is **append-only**. "A purpose cannot be renamed or removed once

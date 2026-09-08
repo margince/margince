@@ -209,7 +209,7 @@ function toColdField(fixture: FieldFixture): ColdField {
 const REVIEW_READ: CompanySiteRead = {
   id: REVIEW_READ_ID,
   target_kind: "onboarding",
-  organization_id: null,
+  company_id: null,
   root_url: "https://gradion.com",
   status: "ready",
   status_code: null,
@@ -475,7 +475,7 @@ const CONFIRM_PATH = `POST /company/site-reads/${REVIEW_READ_ID}/confirm`;
 const MOVED_DRAFT = { draft_version: 2, proposal_hash: "proposal-2" } as const;
 
 // The sentence a refused confirm reads as, one per code the server documents
-// for this operation (crm.yaml, confirmCompanySiteRead): the read has no
+// for this operation (crm.yaml, confirmAnchorCompanySiteRead): the read has no
 // draft to confirm, and the read was confirmed already but the company it
 // created could not be loaded. Read from the catalog rather than transcribed:
 // what these cases are about is WHICH notice appears, and a copy edit that

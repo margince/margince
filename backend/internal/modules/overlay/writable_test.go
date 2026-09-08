@@ -32,7 +32,7 @@ func seatWith(actions ...principal.Action) context.Context {
 		}
 	}
 	objects := map[string]principal.ObjectGrant{}
-	for _, object := range []string{"person", "organization", "deal", "lead", "project", "activity"} {
+	for _, object := range []string{"person", "company", "deal", "lead", "project", "activity"} {
 		objects[object] = grant
 	}
 	return principal.WithActor(context.Background(), principal.Principal{
@@ -48,7 +48,7 @@ func TestASupportedTypeWithTheGrantIsWritable(t *testing.T) {
 	ctx := seatWith(principal.ActionRead, principal.ActionUpdate)
 
 	for _, et := range []datasource.EntityType{
-		datasource.EntityPerson, datasource.EntityOrganization,
+		datasource.EntityPerson, datasource.EntityCompany,
 		datasource.EntityDeal, datasource.EntityLead,
 	} {
 		if !SupportsWrite(WriteUpdate, et) {

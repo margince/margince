@@ -75,7 +75,7 @@ func sarMessagingSections(pkg *SARPackage, personID ids.PersonID, emails []strin
 		// attachments too, and it is not covered by the attachment query
 		// below: that one finds files hanging off the subject or an activity
 		// linked to them, while a send may carry any file its sender could see
-		// — one attached to an organization or a deal reaches the subject
+		// — one attached to a company or a deal reaches the subject
 		// without ever being attached TO them.
 		{&pkg.SentMessages, `SELECT o.subject, o.body, o.html_body, o.from_name, o.attachments, o.recipients, o.cc,
 		      (SELECT coalesce(jsonb_agg(addr), '[]'::jsonb)

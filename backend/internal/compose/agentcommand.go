@@ -94,7 +94,7 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	"archiveTag":           archiveCommand,
 	"archiveOffer":         archiveCommand,
 	"archiveOfferTemplate": archiveCommand,
-	"archiveOrganization":  archiveCommand,
+	"archiveCompany":       archiveCommand,
 	"archivePerson":        archiveCommand,
 	"archiveProduct":       archiveCommand,
 	"archiveProject":       archiveCommand,
@@ -109,7 +109,7 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	"createImportRun":           previewImportCommand,
 	"createLead":                createCommand,
 	"createOfferTemplate":       createCommand,
-	"createOrganization":        createCommand,
+	"createCompany":             createCommand,
 	"createPerson":              createCommand,
 	"createProduct":             createCommand,
 	"createTag":                 createCommand,
@@ -124,7 +124,7 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	"updateDeal":                patchCommand,
 	"updateLead":                patchCommand,
 	"updateOffer":               patchCommand,
-	"updateOrganization":        patchCommand,
+	"updateCompany":             patchCommand,
 	"updatePerson":              patchCommand,
 	"updateProduct":             patchCommand,
 	"updateTag":                 patchCommand,
@@ -139,18 +139,18 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	// removeProjectStakeholder, a second path parameter) that a projection
 	// onto update_record's own {record_type, id, fields} arguments cannot
 	// express (margince/margince#928 task 5).
-	"confirmOrganizationFact":         confirmFactCommand,
-	"createOrganizationFact":          createFactCommand,
-	"deleteOrganizationFact":          deleteFactCommand,
-	"updateOrganizationFact":          updateFactCommand,
-	"confirmOrganizationProfileField": confirmProfileFieldCommand,
-	"updateOrganizationProfileField":  updateProfileFieldCommand,
-	"retireCustomField":               retireCustomFieldCommand,
-	"updateCustomFieldOptions":        updateCustomFieldOptionsCommand,
-	"setProjectStakeholder":           setStakeholderCommand,
-	"removeProjectStakeholder":        removeStakeholderCommand,
-	"setProjectCompany":               setCompanyCommand,
-	"removeProjectCompany":            removeCompanyCommand,
+	"confirmCompanyFact":         confirmFactCommand,
+	"createCompanyFact":          createFactCommand,
+	"deleteCompanyFact":          deleteFactCommand,
+	"updateCompanyFact":          updateFactCommand,
+	"confirmCompanyProfileField": confirmProfileFieldCommand,
+	"updateCompanyProfileField":  updateProfileFieldCommand,
+	"retireCustomField":          retireCustomFieldCommand,
+	"updateCustomFieldOptions":   updateCustomFieldOptionsCommand,
+	"setProjectStakeholder":      setStakeholderCommand,
+	"removeProjectStakeholder":   removeStakeholderCommand,
+	"setProjectCompany":          setCompanyCommand,
+	"removeProjectCompany":       removeCompanyCommand,
 
 	// The five bespoke auto-execute commands (agentcommandnested.go). All
 	// five are nested creates or child actions that are 🟢 today and have
@@ -184,7 +184,7 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	// because every one of these operations is reachable as a tool call too.
 	//
 	// Two commands serve two operations each, and neither pair is a duplicate:
-	// merge_records is the person and organization halves of one verb, and
+	// merge_records is the person and company halves of one verb, and
 	// enrich is one verb at its two DEPTHS — a page read and a whole-site
 	// crawl, told apart by which decoder was reached rather than by anything on
 	// the wire (agentcommandrecord.go says why that has to be structural).
@@ -202,7 +202,7 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	"advanceProjectPhase": advanceProjectPhaseCommand,
 	"advanceDeal":         advanceDealCommand,
 	"mergePerson":         mergeCommand,
-	"mergeOrganization":   mergeCommand,
+	"mergeCompany":        mergeCommand,
 	// mergeTags is NOT one of those two. They fold a record into another
 	// record through the SoR provider; this folds a vocabulary word, which no
 	// provider serves, so it resolves against the tag seam instead.

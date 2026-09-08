@@ -4,9 +4,9 @@
 package people
 
 // The deep-read dossier (site_read, 0085): one row per async crawl of an
-// organization's website, created queued when a human asks for the read,
+// company's website, created queued when a human asks for the read,
 // advanced by the worker (queued → running → deferred|done|partial|failed), and
-// polled by the SPA. At most one read per organization is in flight
+// polled by the SPA. At most one read per company is in flight
 // (uq_site_read_inflight): a second click while one runs JOINS it
 // instead of racing a rival crawl. The dossier itself is operational
 // status, not a record fact — the facts a read produces land through
@@ -42,27 +42,27 @@ type SiteReadSkip struct {
 
 // SiteRead is the dossier as the SPA polls it.
 type SiteRead struct {
-	ID             ids.UUID
-	OrganizationID *ids.OrganizationID
-	TargetKind     string
-	SeedURL        string
-	Status         string
-	StatusCode     *string
-	StatusDetail   *string
-	NextAttemptAt  *time.Time
-	Pages          []SiteReadPage
-	Skipped        []SiteReadSkip
-	StoppedReason  *string
-	FactCount      int
-	ProposalIDs    []ids.UUID
-	RequestedBy    string
-	ProfileFields  []DeepReadField
-	LegalEntities  []SiteReadLegalEntity
-	Facts          []DeepReadFact
-	People         []SiteReadPerson
-	Warnings       []string
-	DraftVersion   int
-	ProposalHash   string
+	ID            ids.UUID
+	CompanyID     *ids.CompanyID
+	TargetKind    string
+	SeedURL       string
+	Status        string
+	StatusCode    *string
+	StatusDetail  *string
+	NextAttemptAt *time.Time
+	Pages         []SiteReadPage
+	Skipped       []SiteReadSkip
+	StoppedReason *string
+	FactCount     int
+	ProposalIDs   []ids.UUID
+	RequestedBy   string
+	ProfileFields []DeepReadField
+	LegalEntities []SiteReadLegalEntity
+	Facts         []DeepReadFact
+	People        []SiteReadPerson
+	Warnings      []string
+	DraftVersion  int
+	ProposalHash  string
 	// Phase and PagesRead are the worker's live-progress hints while
 	// Status is 'running' (crawling | extracting + committed page count);
 	// the terminal report is the authority once Status ends.
@@ -131,15 +131,15 @@ type SiteReadPerson struct {
 
 // siteReadColumns is the ONE column list every dossier read scans —
 // scanSiteRead pairs with it positionally.
-const siteReadColumns = `id, organization_id, target_kind, seed_url, status, status_code, status_detail, next_attempt_at, pages, skipped,
+const siteReadColumns = `id, company_id, target_kind, seed_url, status, status_code, status_detail, next_attempt_at, pages, skipped,
 	stopped_reason, fact_count, proposal_ids, requested_by, profile_fields, facts, people, legal_entities, warnings,
 	draft_version, proposal_hash, phase, pages_read, logo_object_key, logo_icon_object_key, attempt, attempt_at,
 	created_at, updated_at, started_at, first_grounded_at, finished_at, confirmed_at`
 
-// siteReadOrgKey names the audit payload's org reference once (the goconst
+// siteReadCompanyKey names the audit payload's company reference once (the goconst
 // pin): the same string in relationship.go is that file's column vocabulary —
 // a different concept, deliberately not shared.
-const siteReadOrgKey = "organization_id"
+const siteReadCompanyKey = "company_id"
 
 const siteReadBudgetDetail = "AI budget reached its current limit. This website read will resume automatically."
 
@@ -153,11 +153,11 @@ var finishedSiteReadStatuses = map[string]bool{
 }
 
 // The three things a dossier can be ABOUT (site_read.target_kind). An
-// organization read enriches a row that exists; the other two run before their
+// company read enriches a row that exists; the other two run before their
 // subject does, and bind it only once a human (onboarding) or a verdict
 // (triage) says it should exist.
 const (
-	TargetKindOrganization = "organization"
+	TargetKindCompany      = "company"
 	TargetKindOnboarding   = "onboarding"
 	TargetKindDomainTriage = "domain_triage"
 )
@@ -173,24 +173,24 @@ var siteReadStopReasons = map[string]bool{
 // preserves people-module ownership of the operational row.
 type SiteReadEnqueue func(context.Context, pgx.Tx, SiteRead) error
 
-// StartSiteRead creates the queued dossier for orgID, or JOINS the one
+// StartSiteRead creates the queued dossier for companyID, or JOINS the one
 // already in flight — re-clicking "read the site" attaches the caller to
 // the running read rather than racing a second crawl. joined reports
-// which happened. Row-scoped: an org the caller cannot see is
+// which happened. Row-scoped: a company the caller cannot see is
 // ErrNotFound (existence-hiding).
-func (s *Store) StartSiteRead(ctx context.Context, orgID ids.OrganizationID, seedURL, requestedBy string) (SiteRead, bool, error) {
-	return s.createOrJoinSiteRead(ctx, &orgID, TargetKindOrganization, seedURL, requestedBy, nil)
+func (s *Store) StartSiteRead(ctx context.Context, companyID ids.CompanyID, seedURL, requestedBy string) (SiteRead, bool, error) {
+	return s.createOrJoinSiteRead(ctx, &companyID, TargetKindCompany, seedURL, requestedBy, nil)
 }
 
-// StartSiteReadQueued is the production organization-enrichment start. The
+// StartSiteReadQueued is the production company-enrichment start. The
 // dossier and River job commit together, so no queued row can exist without
 // work behind it.
-func (s *Store) StartSiteReadQueued(ctx context.Context, orgID ids.OrganizationID, seedURL, requestedBy string, enqueue SiteReadEnqueue) (SiteRead, bool, error) {
-	return s.createOrJoinSiteRead(ctx, &orgID, TargetKindOrganization, seedURL, requestedBy, enqueue)
+func (s *Store) StartSiteReadQueued(ctx context.Context, companyID ids.CompanyID, seedURL, requestedBy string, enqueue SiteReadEnqueue) (SiteRead, bool, error) {
+	return s.createOrJoinSiteRead(ctx, &companyID, TargetKindCompany, seedURL, requestedBy, enqueue)
 }
 
 // StartOnboardingSiteRead creates an unbound operational dossier. It writes no
-// organization, profile field, fact, or lead before confirmation.
+// company, profile field, fact, or lead before confirmation.
 func (s *Store) StartOnboardingSiteRead(ctx context.Context, seedURL, requestedBy string, enqueue SiteReadEnqueue) (SiteRead, bool, error) {
 	return s.createOrJoinSiteRead(ctx, nil, TargetKindOnboarding, seedURL, requestedBy, enqueue)
 }
@@ -205,32 +205,32 @@ const TriageSeedScheme = "https://"
 func TriageSeedURL(domain string) string { return TriageSeedScheme + domain }
 
 // StartDomainTriageSiteRead creates the dossier that decides whether a mail
-// domain deserves an organization at all. It starts unbound for the same reason
+// domain deserves a company at all. It starts unbound for the same reason
 // an onboarding read does: the row it may eventually name does not exist yet. A
 // company verdict binds it as it creates that row.
 func (s *Store) StartDomainTriageSiteRead(ctx context.Context, domain, requestedBy string, enqueue SiteReadEnqueue) (SiteRead, bool, error) {
 	return s.createOrJoinSiteRead(ctx, nil, TargetKindDomainTriage, TriageSeedURL(domain), requestedBy, enqueue)
 }
 
-func (s *Store) createOrJoinSiteRead(ctx context.Context, orgID *ids.OrganizationID, targetKind, seedURL, requestedBy string, enqueue SiteReadEnqueue) (SiteRead, bool, error) {
+func (s *Store) createOrJoinSiteRead(ctx context.Context, companyID *ids.CompanyID, targetKind, seedURL, requestedBy string, enqueue SiteReadEnqueue) (SiteRead, bool, error) {
 	// An unbound read is not updating anything — it runs to decide whether a
 	// row should exist at all — so create is the honest permission for it.
-	if err := auth.Require(ctx, "organization", principal.ActionUpdate); err != nil {
-		if targetKind == TargetKindOrganization {
+	if err := auth.Require(ctx, "company", principal.ActionUpdate); err != nil {
+		if targetKind == TargetKindCompany {
 			return SiteRead{}, false, err
 		}
-		if createErr := auth.Require(ctx, "organization", principal.ActionCreate); createErr != nil {
+		if createErr := auth.Require(ctx, "company", principal.ActionCreate); createErr != nil {
 			return SiteRead{}, false, createErr
 		}
 	}
 	var out SiteRead
 	var joined bool
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		if orgID != nil {
+		if companyID != nil {
 			// LIVE: a dossier is commissioned FOR a company, so an archived one
 			// has none to commission. The site_read row is the child here and
-			// the organization is its anchor.
-			if err := auth.EnsureWritableLive(ctx, tx, "organization", orgID.UUID); err != nil {
+			// the company is its anchor.
+			if err := auth.EnsureWritableLive(ctx, tx, "company", companyID.UUID); err != nil {
 				return err
 			}
 		}
@@ -240,11 +240,11 @@ func (s *Store) createOrJoinSiteRead(ctx context.Context, orgID *ids.Organizatio
 		// transaction alive, so the join SELECT below sees the winning row
 		// in the same tx — no second-transaction gap for it to finish in.
 		inserted := tx.QueryRow(ctx, `
-			INSERT INTO site_read (id, organization_id, target_kind, seed_url, requested_by)
+			INSERT INTO site_read (id, company_id, target_kind, seed_url, requested_by)
 			VALUES ($1, $2, $3, $4, $5)
 			ON CONFLICT DO NOTHING
 			RETURNING `+siteReadColumns,
-			readID, orgID, targetKind, seedURL, requestedBy)
+			readID, companyID, targetKind, seedURL, requestedBy)
 		var err error
 		out, err = scanSiteRead(inserted)
 		if err == nil {
@@ -259,7 +259,7 @@ func (s *Store) createOrJoinSiteRead(ctx context.Context, orgID *ids.Organizatio
 			// is itself, to the AI-activity projection: a queued read is work
 			// in flight to the person who asked for it.
 			auditID, err := storekit.Audit(ctx, tx, "create", "site_read", readID, nil, map[string]any{
-				siteReadOrgKey: orgID, "target_kind": targetKind, "seed_url": seedURL, "requested_by": requestedBy,
+				siteReadCompanyKey: companyID, "target_kind": targetKind, "seed_url": seedURL, "requested_by": requestedBy,
 			})
 			if err != nil {
 				return fmt.Errorf("audit site read start: %w", err)
@@ -272,8 +272,8 @@ func (s *Store) createOrJoinSiteRead(ctx context.Context, orgID *ids.Organizatio
 		joined = true
 		inFlight := tx.QueryRow(ctx, `
 			SELECT `+siteReadColumns+` FROM site_read
-			WHERE target_kind = $1 AND organization_id IS NOT DISTINCT FROM $2
-			  AND seed_url = $3 AND status IN ('queued','deferred','running')`, targetKind, orgID, seedURL)
+			WHERE target_kind = $1 AND company_id IS NOT DISTINCT FROM $2
+			  AND seed_url = $3 AND status IN ('queued','deferred','running')`, targetKind, companyID, seedURL)
 		out, err = scanSiteRead(inFlight)
 		if err != nil {
 			return fmt.Errorf("join in-flight site read: %w", err)
@@ -435,7 +435,7 @@ func marshalSiteReadList[T any](list []T) ([]byte, error) {
 func scanSiteRead(row pgx.Row) (SiteRead, error) {
 	var sr SiteRead
 	var pagesRaw, skippedRaw, profileRaw, factsRaw, peopleRaw, entitiesRaw, warningsRaw []byte
-	if err := row.Scan(&sr.ID, &sr.OrganizationID, &sr.TargetKind, &sr.SeedURL, &sr.Status,
+	if err := row.Scan(&sr.ID, &sr.CompanyID, &sr.TargetKind, &sr.SeedURL, &sr.Status,
 		&sr.StatusCode, &sr.StatusDetail, &sr.NextAttemptAt, &pagesRaw, &skippedRaw,
 		&sr.StoppedReason, &sr.FactCount, &sr.ProposalIDs, &sr.RequestedBy,
 		&profileRaw, &factsRaw, &peopleRaw, &entitiesRaw, &warningsRaw, &sr.DraftVersion, &sr.ProposalHash,

@@ -89,7 +89,7 @@ func agentMeetingBrief(brief crmcontracts.MeetingBrief) agents.MeetingBriefResul
 	return out
 }
 
-func agentBriefLine(sentence crmcontracts.OrganizationBriefSentence) agents.MeetingBriefLine {
+func agentBriefLine(sentence crmcontracts.CompanyBriefSentence) agents.MeetingBriefLine {
 	line := agents.MeetingBriefLine{Text: sentence.Text}
 	if sentence.Nature != nil {
 		line.Nature = string(*sentence.Nature)

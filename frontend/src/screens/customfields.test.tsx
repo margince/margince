@@ -51,7 +51,7 @@ function builder(
   wrap(
     <ToastProvider>
       <FieldBuilder
-        object="organization"
+        object="company"
         pending={false}
         onSubmit={onSubmit}
         onCancel={onCancel}
@@ -68,7 +68,7 @@ describe("FieldBuilder", () => {
     builder();
     await userEvent.type(screen.getByLabelText(/Label/i), "Contract end date");
     const key = screen.getByLabelText(/API key/i) as HTMLInputElement;
-    expect(key.value).toBe("organization.cf_contract_end_date");
+    expect(key.value).toBe("company.cf_contract_end_date");
     expect(key).toBeDisabled();
   });
 
@@ -78,7 +78,7 @@ describe("FieldBuilder", () => {
     await userEvent.click(screen.getByRole("button", { name: /^Date$/i }));
     expect(
       screen.getByText(
-        /ALTER organization ADD COLUMN cf_contract_end_date \(date\)/,
+        /ALTER company ADD COLUMN cf_contract_end_date \(date\)/,
       ),
     ).toBeInTheDocument();
   });
@@ -138,7 +138,7 @@ describe("FieldBuilder", () => {
     );
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({
-        object: "organization",
+        object: "company",
         label: "Renewal date",
         type: "date",
       }),
@@ -271,7 +271,7 @@ const FIELD_MANAGER: GrantSpec = { custom_field: ["create", "update"] };
 
 function customFieldsBackend(
   dealFields: CustomField[],
-  orgFields: CustomField[],
+  companyFields: CustomField[],
   calls: Recorded[],
   allow: GrantSpec = FIELD_MANAGER,
   opts: { failCreate?: boolean } = {},
@@ -323,7 +323,7 @@ function customFieldsBackend(
     if (url.includes("/custom-fields")) {
       const object = new URL(url).searchParams.get("object");
       calls.push({ method, url, body: null });
-      const data = object === "organization" ? orgFields : dealFields;
+      const data = object === "company" ? companyFields : dealFields;
       return jsonResponse({ data, page: { next_cursor: null } });
     }
     return jsonResponse({ data: [], page: { next_cursor: null } });
@@ -394,7 +394,7 @@ describe("CustomFieldsAdmin", () => {
     }
   });
 
-  it("swaps to the organization fields when the Company chip is clicked", async () => {
+  it("swaps to the company fields when the Company chip is clicked", async () => {
     const calls: Recorded[] = [];
     vi.stubGlobal(
       "fetch",
@@ -403,7 +403,7 @@ describe("CustomFieldsAdmin", () => {
         [
           field({
             id: "o1",
-            object: "organization",
+            object: "company",
             label: "Industry code",
             column_name: "cf_industry_code",
             type: "text",
@@ -421,7 +421,7 @@ describe("CustomFieldsAdmin", () => {
       expect(screen.getByText("Industry code")).toBeInTheDocument(),
     );
     expect(screen.queryByText("Renewal date")).toBeNull();
-    expect(calls.some((call) => call.url.includes("object=organization"))).toBe(
+    expect(calls.some((call) => call.url.includes("object=company"))).toBe(
       true,
     );
   });

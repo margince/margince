@@ -190,7 +190,7 @@ const draftInputSnippetRunes = 400
 // draft is about. It returns the recipient it resolved, or an error naming the
 // field, so the caller's own refusal comes from one place.
 func FromView(
-	view crmcontracts.Organization360, req Request,
+	view crmcontracts.Company360, req Request,
 ) (Input, error) {
 	contact, err := findContact(view, req.PersonID)
 	if err != nil {
@@ -199,16 +199,16 @@ func FromView(
 	in := Input{
 		Intent:     strings.TrimSpace(req.Intent),
 		Envelope:   req.Envelope,
-		Company:    view.Organization.DisplayName,
+		Company:    view.Company.DisplayName,
 		Recipient:  recipientOf(contact),
 		Recent:     foldRecent(view),
 		Commitment: foldCommitment(view),
 	}
-	if view.Organization.Industry != nil {
-		in.Industry = *view.Organization.Industry
+	if view.Company.Industry != nil {
+		in.Industry = *view.Company.Industry
 	}
-	if view.Organization.Description != nil {
-		in.Description = *view.Organization.Description
+	if view.Company.Description != nil {
+		in.Description = *view.Company.Description
 	}
 	// An unnamed deal is the account in general, which is ordinary — so the
 	// lookup only runs when the caller named one.
@@ -233,7 +233,7 @@ func FromView(
 // The scoped read has already refused a project the caller cannot see; what
 // is left to refuse here is a project the caller CAN see that is not this
 // account's, which a draft about this account may not be grounded in.
-func findProject(view crmcontracts.Organization360, projectID ids.ProjectID) (ProjectIn, error) {
+func findProject(view crmcontracts.Company360, projectID ids.ProjectID) (ProjectIn, error) {
 	if view.Projects == nil {
 		return ProjectIn{}, fieldError("project_id", "the account's projects are not readable by you")
 	}
@@ -249,7 +249,7 @@ func findProject(view crmcontracts.Organization360, projectID ids.ProjectID) (Pr
 // projectFact is the one project as the draft reads it. The open-commitment
 // count comes from the SCOPED next-steps section, which is this project's
 // open tasks and the unfiled ones — never another project's.
-func projectFact(project crmcontracts.Organization360Project, view crmcontracts.Organization360) ProjectIn {
+func projectFact(project crmcontracts.Company360Project, view crmcontracts.Company360) ProjectIn {
 	out := ProjectIn{
 		ID:    project.ProjectId.String(),
 		Name:  project.Name,
@@ -271,7 +271,7 @@ func projectFact(project crmcontracts.Organization360Project, view crmcontracts.
 // because a project's target end has no time of day.
 const isoDate = "2006-01-02"
 
-func recipientOf(contact crmcontracts.Organization360Contact) RecipientIn {
+func recipientOf(contact crmcontracts.Company360Contact) RecipientIn {
 	out := RecipientIn{
 		ID:        contact.PersonId.String(),
 		Name:      contact.FullName,
@@ -329,7 +329,7 @@ func lastName(full string) string {
 // foldCommitment takes the soonest open task. `next_steps.data` arrives
 // ordered overdue → due → undated, so the head is it and this makes no
 // ordering decision of its own.
-func foldCommitment(view crmcontracts.Organization360) *TaskIn {
+func foldCommitment(view crmcontracts.Company360) *TaskIn {
 	if view.NextSteps == nil || len(view.NextSteps.Data) == 0 {
 		return nil
 	}
@@ -348,7 +348,7 @@ func foldCommitment(view crmcontracts.Organization360) *TaskIn {
 // first touch. That is the conservative end of the axis and the right answer
 // here: a caller who cannot see the history has no basis for a draft that
 // refers to it.
-func ConversationState(view crmcontracts.Organization360, now time.Time) convstate.State {
+func ConversationState(view crmcontracts.Company360, now time.Time) convstate.State {
 	return convstate.Classify(now, instant(view.LastInboundAt), instant(view.LastOutboundAt))
 }
 
@@ -368,7 +368,7 @@ func instant(at *time.Time) time.Time {
 // conversation, so the text is evidence about the ACCOUNT's language rather
 // than about a thread being answered — a German account gets a German first
 // touch even though nothing is being replied to.
-func CorrespondenceText(view crmcontracts.Organization360) string {
+func CorrespondenceText(view crmcontracts.Company360) string {
 	if view.Activities == nil {
 		return ""
 	}
@@ -387,7 +387,7 @@ func CorrespondenceText(view crmcontracts.Organization360) string {
 	return text.String()
 }
 
-func foldRecent(view crmcontracts.Organization360) []ActIn {
+func foldRecent(view crmcontracts.Company360) []ActIn {
 	if view.Activities == nil {
 		return nil
 	}
@@ -419,10 +419,10 @@ func foldRecent(view crmcontracts.Organization360) []ActIn {
 // 422 as a person id that names nobody. Deliberately not a separate people
 // read — that would find contacts the 360 deliberately withheld.
 func findContact(
-	view crmcontracts.Organization360, personID string,
-) (crmcontracts.Organization360Contact, error) {
+	view crmcontracts.Company360, personID string,
+) (crmcontracts.Company360Contact, error) {
 	if view.People == nil {
-		return crmcontracts.Organization360Contact{}, fieldError("person_id",
+		return crmcontracts.Company360Contact{}, fieldError("person_id",
 			"the account's contacts are not readable by you, so there is nobody here to write to")
 	}
 	for _, contact := range view.People.Data {
@@ -430,7 +430,7 @@ func findContact(
 			return contact, nil
 		}
 	}
-	return crmcontracts.Organization360Contact{}, fieldError("person_id",
+	return crmcontracts.Company360Contact{}, fieldError("person_id",
 		"that person is not a contact you can see on this account")
 }
 
@@ -438,7 +438,7 @@ func findContact(
 // unnamed one before calling: a draft about the account in general is an
 // ordinary case rather than a missing field, so it is not this function's
 // business to answer "nothing, and that is fine".
-func findDeal(view crmcontracts.Organization360, dealID string) (DealIn, error) {
+func findDeal(view crmcontracts.Company360, dealID string) (DealIn, error) {
 	if view.Deals == nil {
 		return DealIn{}, fieldError("deal_id",
 			"the account's deals are not readable by you")

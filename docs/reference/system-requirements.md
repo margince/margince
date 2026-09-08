@@ -26,7 +26,7 @@ Redis and the object store keep all permanent state.
 
 ## Volume tiers
 
-| Tier | Persons | Organizations | Activities |
+| Tier | Persons | Companies | Activities |
 |---|---|---|---|
 | **Small** | 10,000 | 1,000 | 20,000 |
 | **Mid-market** | 250,000 | 10,000 | 500,000 |

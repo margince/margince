@@ -64,8 +64,8 @@ func NewRunTransparency(db *database.DB) *RunTransparency {
 
 // Get returns the complete attempt and cost account for one correlation id.
 func (s *RunTransparency) Get(ctx context.Context, correlationID ids.UUID) (RunSummary, error) {
-	if err := auth.Require(ctx, "organization", principal.ActionRead); err != nil {
-		if createErr := auth.Require(ctx, "organization", principal.ActionCreate); createErr != nil {
+	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
+		if createErr := auth.Require(ctx, "company", principal.ActionCreate); createErr != nil {
 			return RunSummary{}, createErr
 		}
 	}

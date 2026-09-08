@@ -6,7 +6,7 @@
 package integration
 
 // A pasted URL and a bare host select the same account on BOTH surfaces that
-// filter organizations by domain.
+// filter companies by domain.
 //
 // The list parameter has folded its value all along — a caller who pasted
 // `https://www.acme.example/careers` out of an email signature is asking about
@@ -31,8 +31,8 @@ func TestADomainFilterAnswersTheSameAccountOnBothSurfaces(t *testing.T) {
 	admin := e.Admin()
 	lists := collections.NewStore(e.DB())
 
-	acme := seedOrgWithDomain(t, e, "Acme", "acme.example")
-	seedOrgWithDomain(t, e, "Other", "other.example")
+	acme := seedCompanyWithDomain(t, e, "Acme", "acme.example")
+	seedCompanyWithDomain(t, e, "Other", "other.example")
 
 	// The three spellings of one question: what the column holds, the same
 	// with a subdomain and a path, and a difference of case alone.
@@ -42,7 +42,7 @@ func TestADomainFilterAnswersTheSameAccountOnBothSurfaces(t *testing.T) {
 		"ACME.Example",
 	} {
 		t.Run(asked, func(t *testing.T) {
-			listed, _, err := e.People.ListOrganizations(admin, people.ListOrganizationsInput{Domain: &asked})
+			listed, _, err := e.People.ListCompanies(admin, people.ListCompaniesInput{Domain: &asked})
 			if err != nil {
 				t.Fatalf("the list parameter refused %q: %v", asked, err)
 			}
@@ -51,7 +51,7 @@ func TestADomainFilterAnswersTheSameAccountOnBothSurfaces(t *testing.T) {
 			}
 
 			segment, err := lists.CreateList(admin, collections.CreateListInput{
-				Name: "by domain " + asked, EntityType: "organization", ListType: "dynamic",
+				Name: "by domain " + asked, EntityType: "company", ListType: "dynamic",
 				Definition: map[string]any{"field": "domain", "op": "eq", "value": asked},
 			})
 			if err != nil {
@@ -78,7 +78,7 @@ func TestASegmentRefusesAValueThatIsNotADomain(t *testing.T) {
 	lists := collections.NewStore(e.DB())
 
 	_, err := lists.CreateList(e.Admin(), collections.CreateListInput{
-		Name: "not a domain", EntityType: "organization", ListType: "dynamic",
+		Name: "not a domain", EntityType: "company", ListType: "dynamic",
 		Definition: map[string]any{"field": "domain", "op": "eq", "value": "not a domain at all"},
 	})
 	if err == nil {
@@ -87,19 +87,19 @@ func TestASegmentRefusesAValueThatIsNotADomain(t *testing.T) {
 	}
 }
 
-// seedOrgWithDomain creates an account carrying one domain, through the real
-// writer — the column the leaf reads is written by CreateOrganization's own
+// seedCompanyWithDomain creates an account carrying one domain, through the real
+// writer — the column the leaf reads is written by CreateCompany's own
 // domain path, and a fixture inserting the row itself would prove nothing about
 // the form that path stores.
-func seedOrgWithDomain(t *testing.T, e *Env, name, domain string) ids.UUID {
+func seedCompanyWithDomain(t *testing.T, e *Env, name, domain string) ids.UUID {
 	t.Helper()
-	org, err := e.People.CreateOrganization(e.Admin(), people.CreateOrganizationInput{
+	company, err := e.People.CreateCompany(e.Admin(), people.CreateCompanyInput{
 		DisplayName: name,
-		Domains:     []people.OrgDomainInput{{Domain: domain, IsPrimary: true}},
+		Domains:     []people.CompanyDomainInput{{Domain: domain, IsPrimary: true}},
 		Source:      "manual",
 	})
 	if err != nil {
 		t.Fatalf("seeding %s: %v", name, err)
 	}
-	return ids.UUID(org.Id)
+	return ids.UUID(company.Id)
 }

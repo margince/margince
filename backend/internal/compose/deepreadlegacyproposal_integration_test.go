@@ -41,18 +41,18 @@ func stageLegacyDeepReadProposal(
 	t *testing.T,
 	e *integration.Env,
 	svc *approvals.Service,
-	org ids.UUID,
+	company ids.UUID,
 	readID ids.UUID,
 	fields []people.DeepReadField,
 	facts []people.DeepReadFact,
 ) ids.UUID {
 	t.Helper()
 	proposedChange, err := json.Marshal(people.DeepReadProposal{
-		OrganizationID: ids.From[ids.OrganizationKind](org),
-		SourceURL:      seedURL,
-		SiteReadID:     readID,
-		Fields:         fields,
-		Facts:          facts,
+		CompanyID:  ids.From[ids.CompanyKind](company),
+		SourceURL:  seedURL,
+		SiteReadID: readID,
+		Fields:     fields,
+		Facts:      facts,
 	})
 	if err != nil {
 		t.Fatalf("marshalling the legacy proposal: %v", err)
@@ -67,7 +67,7 @@ func stageLegacyDeepReadProposal(
 			ProposedChange: proposedChange,
 			DiffHash:       hex.EncodeToString(digest[:]),
 			TargetType:     enrichTargetType,
-			TargetID:       org,
+			TargetID:       company,
 			Summary:        "Deep site read of " + seedURL,
 			JoinPending:    true,
 			BundleID:       ids.NewV7(),

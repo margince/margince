@@ -20,7 +20,7 @@ import (
 func TestEveryDeclaredProjectsFilterNarrowsSomething(t *testing.T) {
 	id := ids.NewV7().String()
 	assertEveryFilterNarrows(t, "project", projectListFilters, map[string]string{
-		"key": "ACME", "organization_id": id, "owner_id": id, "phase": "delivering",
+		"key": "ACME", "company_id": id, "owner_id": id, "phase": "delivering",
 	})
 }
 
@@ -29,7 +29,7 @@ func TestEveryDeclaredProjectsFilterNarrowsSomething(t *testing.T) {
 // table hands out a vocabulary the store then refuses, and comparing
 // ListFilters against the table it returns would never see it.
 func TestAProjectIsOfferedItsOwnVocabulary(t *testing.T) {
-	want := []string{"key", "organization_id", "owner_id", "phase"}
+	want := []string{"key", "company_id", "owner_id", "phase"}
 	if got := (&Provider{}).ListFilters(datasource.EntityProject); !slices.Equal(got, want) {
 		t.Errorf("project is offered %v, want %v", got, want)
 	}

@@ -40,7 +40,7 @@ Name each source column and the field it feeds. The importer does not guess:
 
 ```json
 {
-  "object": "organization",
+  "object": "company",
   "csv": "name,city,country,size\nHelios Logistik GmbH,Hamburg,DE,51-200\n",
   "mapping": {
     "name": "display_name",
@@ -188,7 +188,7 @@ The report keeps its shape afterwards: the same fields report what the run *did*
 
 Over MCP this is one instruction:
 
-> Import this CSV as organizations. Tell me how many are new and how many are
+> Import this CSV as companies. Tell me how many are new and how many are
 > already here before you commit anything.
 
 Or, for a corrections file:

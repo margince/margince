@@ -48,7 +48,7 @@ func (m Message) SkipReason() (string, bool) {
 // anything is written.
 //
 // Deliberately NARROWER than "looks automated". A no-reply or notifications
-// address is a real organization writing to the workspace — a signed envelope,
+// address is a real company writing to the workspace — a signed envelope,
 // an invoice, a shipping notice — and ADR-0072 §1 is explicit that such a
 // message keeps its place on the timeline while the tier gate suppresses the
 // person and company derivation. Dropping it here would make that promise false

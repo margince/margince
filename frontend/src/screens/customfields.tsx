@@ -301,7 +301,7 @@ function typeLabels(t: ReturnType<typeof useT>): Record<CfType, string> {
 function objectLabels(t: ReturnType<typeof useT>): Record<CfObject, string> {
   return {
     deal: t("cf.obj.deal"),
-    organization: t("cf.obj.organization"),
+    company: t("cf.obj.company"),
     person: t("cf.obj.person"),
     lead: t("cf.obj.lead"),
   };
@@ -525,7 +525,7 @@ function auditState(
 }
 
 // The add-field create body (CUSTOM-FIELDS-WIRE-2): a plain manual field carries
-// `source:"manual"` (the FE convention across deals/leads/organizations), and the
+// `source:"manual"` (the FE convention across deals/leads/companies), and the
 // two conditional shapes ride only on their own type — currency on a currency
 // field, options on a picklist — never on the others.
 function createBody(
@@ -867,7 +867,7 @@ export function CustomFieldsAdmin() {
 
           `wide` is the variant's stated case: the builder carries the pending
           DDL, and a 440px dialog wraps
-          `ALTER organization ADD COLUMN cf_contract_end_date (date)` into an
+          `ALTER company ADD COLUMN cf_contract_end_date (date)` into an
           unreadable stack — the one line a reader is meant to check before
           confirming a live schema change. It also keeps the label and the API
           key derived from it side by side. */}

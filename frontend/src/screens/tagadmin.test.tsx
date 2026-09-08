@@ -125,7 +125,7 @@ describe("the tag vocabulary card", () => {
       "key-account",
     );
     expect(
-      await screen.findByText(/Close to a word this organization already has/),
+      await screen.findByText(/Close to a word this company already has/),
     ).toBeInTheDocument();
   });
 

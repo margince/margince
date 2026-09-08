@@ -421,7 +421,7 @@ func TestTheDraftedFollowUpUsesTheExistingHeldDraftKind(t *testing.T) {
 // the deal has no next step, and no address reaches the card.
 func TestADraftIsNotComposedForAnOwnerWhoMayNotReadPeople(t *testing.T) {
 	e := setupReconcileWithOwnerPolicy(t, `{"objects":{"activity":{"create":true,"read":true,"update":true},
-		  "deal":{"read":true,"update":true},"organization":{"read":true},
+		  "deal":{"read":true,"update":true},"company":{"read":true},
 		  "pipeline":{"read":true}},"row_scope":"all"}`)
 	deal := e.SeedDeal(t, "No person read", e.pipeline, e.open, &e.Rep1)
 	e.seedAnswerableThread(t, deal, "Kickoff")

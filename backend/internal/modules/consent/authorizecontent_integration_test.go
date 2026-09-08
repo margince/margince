@@ -48,7 +48,7 @@ func stageThenTransmit(
 	// A live confirm link, which is what authorizes a record-confirmation send.
 	// The category is chosen for how LITTLE it needs: the subject of these tests
 	// is the fingerprint, and an invoice or a deal would put a chain of
-	// organization, employment and document rows between the test and its point.
+	// company, employment and document rows between the test and its point.
 	//
 	// Through the sibling's own fixture helper, which already argues why direct
 	// SQL is right here: the real writer mints a token AND stages the mail that

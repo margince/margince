@@ -32,8 +32,8 @@ const siteLeadProposalKind = "site_lead"
 // siteLeadProposal is the thin staged payload — exactly what the site
 // published, plus the provenance the accept effect and the inbox need.
 type siteLeadProposal struct {
-	OrganizationID ids.UUID `json:"organization_id"`
-	SiteReadID     ids.UUID `json:"site_read_id"`
+	CompanyID  ids.UUID `json:"company_id"`
+	SiteReadID ids.UUID `json:"site_read_id"`
 	// NaturalKey is siteLeadSourceID for this person — the SAME key the accept
 	// effect captures the lead under, carried in the payload because the
 	// approval's logical identity has to be a field the payload contains
@@ -95,11 +95,11 @@ func sitePersonIdentity(name, publishedEmail string) string {
 }
 
 // siteLeadSourceID is the lead's idempotency key under source_system
-// "siteread": the ORGANIZATION plus sitePersonIdentity. Keyed on the org, not
+// "siteread": the COMPANY plus sitePersonIdentity. Keyed on the company, not
 // the page URL, so the same person is the same lead whether they were found on
 // /team or /about, and whether a later crawl's page layout moved — a page-URL
 // key would duplicate them.
-func siteLeadSourceID(orgID ids.UUID, name, publishedEmail string) string {
-	digest := sha256.Sum256([]byte(orgID.String() + "|" + sitePersonIdentity(name, publishedEmail)))
+func siteLeadSourceID(companyID ids.UUID, name, publishedEmail string) string {
+	digest := sha256.Sum256([]byte(companyID.String() + "|" + sitePersonIdentity(name, publishedEmail)))
 	return hex.EncodeToString(digest[:])
 }

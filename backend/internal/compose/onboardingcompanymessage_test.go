@@ -36,7 +36,7 @@ type onboardingSiteReadReaderStub struct {
 	err         error
 }
 
-func (s onboardingSiteReadReaderStub) GetCompanySiteRead(context.Context, ids.UUID) (people.SiteRead, []people.SiteReadComparison, error) {
+func (s onboardingSiteReadReaderStub) GetAnchorCompanySiteRead(context.Context, ids.UUID) (people.SiteRead, []people.SiteReadComparison, error) {
 	return s.read, s.comparisons, s.err
 }
 

@@ -33,7 +33,7 @@ type SenderDecision = components["schemas"]["CaptureSenderDecision"];
 const kindLabel: Record<string, MessageKey> = {
   person: "senders.kind.person",
   role_mailbox: "senders.kind.roleMailbox",
-  organization_sender: "senders.kind.organizationSender",
+  company_sender: "senders.kind.companySender",
   newsletter: "senders.kind.newsletter",
   transactional: "senders.kind.transactional",
   spam: "senders.kind.spam",
@@ -44,7 +44,7 @@ const kindLabel: Record<string, MessageKey> = {
 // Which kinds mean "this sender's mail is in the CRM as a contact". The tone
 // carries it at a glance down the column; the words still say it, because
 // colour is never the only signal.
-const admitted = new Set(["person", "role_mailbox", "organization_sender"]);
+const admitted = new Set(["person", "role_mailbox", "company_sender"]);
 
 function useSenders() {
   return useQuery({

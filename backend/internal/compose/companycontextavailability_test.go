@@ -73,7 +73,7 @@ func TestOneWriterDecidesWhetherTheCompanyPageExists(t *testing.T) {
 //
 // This is the case the earlier wiring got wrong, and it got it wrong invisibly.
 // An unset rollout means every stage is on — companyContextReadEnabled says so
-// and GetCompanyContextCapabilities re-derives it — while the injected boolean
+// and GetAnchorCompanyContextCapabilities re-derives it — while the injected boolean
 // was the zero value, false. So /me reported the Company page absent on a server
 // whose endpoints served it, and only a server that HAD the option agreed.
 //

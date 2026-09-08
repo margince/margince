@@ -13,7 +13,7 @@
 // # What belongs here, and what does not
 //
 // The integration lane already has eleven topic packages beside this one
-// (agentaccess, capture, channels, org360, …). They are the right home for a
+// (agentaccess, capture, channels, company360, …). They are the right home for a
 // SUBSYSTEM: the connector's discovery chain, the capture pipeline, the
 // custom-field resolver. Each asks whether one part of the product is correct.
 //

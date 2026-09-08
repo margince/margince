@@ -8,7 +8,7 @@ package compose
 // What ACCEPTANCE does to the record, which is a different question from
 // whether the read ran. The lifecycle suite next door proves the worker
 // crawls, extracts, stages one proposal and records an honest outcome; these
-// prove what the organization becomes once a human answers that proposal.
+// prove what the company becomes once a human answers that proposal.
 //
 // Three rules, each a place where a careless apply would look identical to a
 // correct one on the dossier alone: offerings dedupe on their value key and
@@ -41,22 +41,22 @@ import (
 // row is seeded BEFORE the read for the same reason.
 func TestDeepReadOfferingsDedupeOnValueKeyAndTheApplyRespectsHumanPrecedence(t *testing.T) {
 	e := integration.Setup(t)
-	org := insertOrg(t, e, e.Rep1, "acme.example", "")
+	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 
 	// A human has claimed the service fact. The read must land the product
 	// beside it and leave this row exactly as it is.
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO organization_fact (organization_id, category, field, value, value_key, evidence_snippet, source_url, confidence, source, captured_by)
+			INSERT INTO company_fact (company_id, category, field, value, value_key, evidence_snippet, source_url, confidence, source, captured_by)
 			VALUES ($1, 'offering', 'service', 'CRM Rollout (human curated)', 'crm rollout',
 			        'set by hand', '', 1, 'human', $2)`,
-			org, "human:"+e.Rep1.String())
+			company, "human:"+e.Rep1.String())
 		return err
 	}); err != nil {
 		t.Fatal(err)
 	}
 
-	done, _ := runServicesDeepRead(t, e, org)
+	done, _ := runServicesDeepRead(t, e, company)
 
 	// The citation gate is binary (no model confidence), so a value_key
 	// duplicate keeps its FIRST spelling — deterministic, page-ordered. The
@@ -75,23 +75,23 @@ func TestDeepReadOfferingsDedupeOnValueKeyAndTheApplyRespectsHumanPrecedence(t *
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if err := tx.QueryRow(ctx,
-			`SELECT count(*) FROM organization_fact WHERE organization_id = $1`, org).Scan(&factRows); err != nil {
+			`SELECT count(*) FROM company_fact WHERE company_id = $1`, company).Scan(&factRows); err != nil {
 			return err
 		}
 		if err := tx.QueryRow(ctx,
-			`SELECT value, captured_by FROM organization_fact
-			 WHERE organization_id = $1 AND field = 'service' AND value_key = 'crm rollout'`,
-			org).Scan(&serviceValue, &serviceCapturedBy); err != nil {
+			`SELECT value, captured_by FROM company_fact
+			 WHERE company_id = $1 AND field = 'service' AND value_key = 'crm rollout'`,
+			company).Scan(&serviceValue, &serviceCapturedBy); err != nil {
 			return err
 		}
 		return tx.QueryRow(ctx,
-			`SELECT coalesce(max(value), '') FROM organization_fact
-			 WHERE organization_id = $1 AND field = 'product'`, org).Scan(&productValue)
+			`SELECT coalesce(max(value), '') FROM company_fact
+			 WHERE company_id = $1 AND field = 'product'`, company).Scan(&productValue)
 	}); err != nil {
 		t.Fatal(err)
 	}
 	if factRows != 2 {
-		t.Fatalf("%d organization_fact rows after the read, want 2 (the human's service + the landed product)", factRows)
+		t.Fatalf("%d company_fact rows after the read, want 2 (the human's service + the landed product)", factRows)
 	}
 	if serviceValue != "CRM Rollout (human curated)" || serviceCapturedBy != "human:"+e.Rep1.String() {
 		t.Fatalf("service row = %q by %q — the read overwrote a human-claimed fact", serviceValue, serviceCapturedBy)
@@ -111,11 +111,11 @@ func TestAcceptedEmployeeRangeFactFillsSizeBandWhenUnambiguous(t *testing.T) {
 			EvidenceSnippet: "our team of " + value, SourceURL: "https://acme.example/about", Confidence: 0.9,
 		}}
 	}
-	readSizeBand := func(org ids.UUID) *string {
+	readSizeBand := func(company ids.UUID) *string {
 		var sizeBand *string
 		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			return tx.QueryRow(context.Background(),
-				`SELECT size_band FROM organization WHERE id = $1`, org).Scan(&sizeBand)
+				`SELECT size_band FROM company WHERE id = $1`, company).Scan(&sizeBand)
 		}); err != nil {
 			t.Fatalf("reading size_band: %v", err)
 		}
@@ -123,37 +123,37 @@ func TestAcceptedEmployeeRangeFactFillsSizeBandWhenUnambiguous(t *testing.T) {
 	}
 
 	// A cleanly-phrased range fills the chip's column on accept.
-	org := insertOrg(t, e, e.Rep1, "acme.example", "")
+	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 	if err := store.ApplyDeepRead(ctx, people.DeepReadProposal{
-		OrganizationID: ids.From[ids.OrganizationKind](org),
-		SourceURL:      "https://acme.example",
-		Facts:          employeeRangeFact("25 to 50"),
+		CompanyID: ids.From[ids.CompanyKind](company),
+		SourceURL: "https://acme.example",
+		Facts:     employeeRangeFact("25 to 50"),
 	}); err != nil {
 		t.Fatalf("ApplyDeepRead: %v", err)
 	}
-	if got := readSizeBand(org); got == nil || *got != "11-50" {
+	if got := readSizeBand(company); got == nil || *got != "11-50" {
 		t.Fatalf("size_band after accept = %v, want 11-50", got)
 	}
 
 	// A later read never overwrites the standing value — fill-once.
 	if err := store.ApplyDeepRead(ctx, people.DeepReadProposal{
-		OrganizationID: ids.From[ids.OrganizationKind](org),
-		SourceURL:      "https://acme.example",
-		Facts:          employeeRangeFact("about 300 people"),
+		CompanyID: ids.From[ids.CompanyKind](company),
+		SourceURL: "https://acme.example",
+		Facts:     employeeRangeFact("about 300 people"),
 	}); err != nil {
 		t.Fatalf("second ApplyDeepRead: %v", err)
 	}
-	if got := readSizeBand(org); got == nil || *got != "11-50" {
+	if got := readSizeBand(company); got == nil || *got != "11-50" {
 		t.Fatalf("size_band after re-accept = %v, want the first fill kept", got)
 	}
 
 	// A range spanning two bands abstains: the fact lands as evidence, the
 	// column stays empty rather than holding a guess.
-	vague := insertOrg(t, e, e.Rep1, "vague.example", "")
+	vague := insertCompany(t, e, e.Rep1, "vague.example", "")
 	if err := store.ApplyDeepRead(ctx, people.DeepReadProposal{
-		OrganizationID: ids.From[ids.OrganizationKind](vague),
-		SourceURL:      "https://vague.example",
-		Facts:          employeeRangeFact("50-200 employees"),
+		CompanyID: ids.From[ids.CompanyKind](vague),
+		SourceURL: "https://vague.example",
+		Facts:     employeeRangeFact("50-200 employees"),
 	}); err != nil {
 		t.Fatalf("ambiguous ApplyDeepRead: %v", err)
 	}
@@ -163,8 +163,8 @@ func TestAcceptedEmployeeRangeFactFillsSizeBandWhenUnambiguous(t *testing.T) {
 	var factValue string
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT value FROM organization_fact
-			  WHERE organization_id = $1 AND field = 'employee_range'`, vague).Scan(&factValue)
+			`SELECT value FROM company_fact
+			  WHERE company_id = $1 AND field = 'employee_range'`, vague).Scan(&factValue)
 	}); err != nil {
 		t.Fatalf("reading the fact row: %v", err)
 	}
@@ -175,10 +175,10 @@ func TestAcceptedEmployeeRangeFactFillsSizeBandWhenUnambiguous(t *testing.T) {
 	// A human-claimed employee_range fact blocks the whole promotion: the
 	// upsert refuses the agent's fact, so the column must not contradict the
 	// human's standing statement either.
-	claimed := insertOrg(t, e, e.Rep1, "claimed.example", "")
+	claimed := insertCompany(t, e, e.Rep1, "claimed.example", "")
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO organization_fact (organization_id, category, field, value, value_key, evidence_snippet, source_url, confidence, source, captured_by)
+			INSERT INTO company_fact (company_id, category, field, value, value_key, evidence_snippet, source_url, confidence, source, captured_by)
 			VALUES ($1, 'company', 'employee_range', '11-50', '',
 			        'set by hand', '', 1, 'human', $2)`,
 			claimed, "human:"+e.Rep1.String())
@@ -187,9 +187,9 @@ func TestAcceptedEmployeeRangeFactFillsSizeBandWhenUnambiguous(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := store.ApplyDeepRead(ctx, people.DeepReadProposal{
-		OrganizationID: ids.From[ids.OrganizationKind](claimed),
-		SourceURL:      "https://claimed.example",
-		Facts:          employeeRangeFact("about 300 people"),
+		CompanyID: ids.From[ids.CompanyKind](claimed),
+		SourceURL: "https://claimed.example",
+		Facts:     employeeRangeFact("about 300 people"),
 	}); err != nil {
 		t.Fatalf("ApplyDeepRead against a human-claimed fact: %v", err)
 	}
@@ -203,18 +203,18 @@ func TestAcceptedEmployeeRangeFactFillsSizeBandWhenUnambiguous(t *testing.T) {
 // nothing left for a rejection to be observed against.
 func TestDeepReadRejectionLandsNothing(t *testing.T) {
 	e := integration.Setup(t)
-	org := insertOrg(t, e, e.Rep1, "acme.example", "")
+	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 	_, svc := newDeepReadTestWorker(e, acmeServicesSite(), servicesDeepBrain())
-	read, _ := startDeepRead(t, e, org)
-	proposal := stageLegacyDeepReadProposal(t, e, svc, org, read.ID, nil, servicesOfferings())
+	read, _ := startDeepRead(t, e, company)
+	proposal := stageLegacyDeepReadProposal(t, e, svc, company, read.ID, nil, servicesOfferings())
 
 	if _, err := svc.Decide(e.As(e.Rep2, nil, integration.AdminPerms), ids.From[ids.ApprovalKind](proposal), false, nil); err != nil {
 		t.Fatalf("reject: %v", err)
 	}
-	if n := e.WsCount(t, `SELECT count(*) FROM organization_fact`); n != 0 {
-		t.Fatalf("%d organization_fact rows after a rejection, want 0", n)
+	if n := e.WsCount(t, `SELECT count(*) FROM company_fact`); n != 0 {
+		t.Fatalf("%d company_fact rows after a rejection, want 0", n)
 	}
-	if n := e.WsCount(t, `SELECT count(*) FROM organization_profile_field`); n != 0 {
+	if n := e.WsCount(t, `SELECT count(*) FROM company_profile_field`); n != 0 {
 		t.Fatalf("%d profile-field rows after a rejection, want 0", n)
 	}
 }
@@ -243,12 +243,12 @@ func newDeepReadTestEngine(e *integration.Env, inserter *fakeInserter) *deepRead
 
 // postDeepRead drives the start handler as the given caller and decodes
 // the 202 handle (or fails the test on any other status when want202).
-func postDeepRead(t *testing.T, e *integration.Env, engine *deepReadEngine, caller ids.UUID, org ids.UUID) (*httptest.ResponseRecorder, crmcontracts.SiteReadStarted) {
+func postDeepRead(t *testing.T, e *integration.Env, engine *deepReadEngine, caller ids.UUID, company ids.UUID) (*httptest.ResponseRecorder, crmcontracts.SiteReadStarted) {
 	t.Helper()
-	req := httptest.NewRequest(http.MethodPost, "/v1/organizations/"+org.String()+"/deep-read", nil).
+	req := httptest.NewRequest(http.MethodPost, "/v1/companies/"+company.String()+"/deep-read", nil).
 		WithContext(e.As(caller, nil, integration.AdminPerms))
 	rec := httptest.NewRecorder()
-	engine.start(rec, req, openapi_types.UUID(org))
+	engine.start(rec, req, openapi_types.UUID(company))
 	var started crmcontracts.SiteReadStarted
 	if rec.Code == http.StatusAccepted {
 		if err := json.Unmarshal(rec.Body.Bytes(), &started); err != nil {

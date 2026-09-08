@@ -11,7 +11,7 @@ package privacy
 // never DROPs), so a retired column still holds PII the workspace is
 // accountable for. The catalog read reaches every custom_field in the
 // installation — core 0229 dropped the table's workspace column, so there
-// is nothing narrower to read, and A107/ADR-0061's one organization per
+// is nothing narrower to read, and A107/ADR-0061's one company per
 // installation is what makes that the right set. Every column name is
 // catalog-derived (server-minted at field creation), never client text,
 // and is still identifier-quoted

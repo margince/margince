@@ -4,7 +4,7 @@
 
 import { describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
-import { scanStates } from "./organizations";
+import { scanStates } from "./companies";
 
 type SiteReadReport = components["schemas"]["SiteReadReport"];
 
@@ -16,7 +16,7 @@ type SiteReadReport = components["schemas"]["SiteReadReport"];
 function report(over: Partial<SiteReadReport>): SiteReadReport {
   return {
     read_id: "r-1",
-    organization_id: "o-1",
+    company_id: "o-1",
     seed_url: "https://example.test",
     status: "running",
     status_code: null,

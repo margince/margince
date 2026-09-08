@@ -117,7 +117,7 @@ func (e *promiseEnv) as() context.Context {
 			Objects: map[string]principal.ObjectGrant{
 				"activity": {Read: true}, "person": {Read: true},
 				"deal": {Read: true}, "project": {Read: true},
-				"organization": {Read: true},
+				"company": {Read: true},
 			},
 			RowScope: principal.RowScopeOwn,
 		},
@@ -212,24 +212,24 @@ func TestAPromiseNamesOnlyTheRecordsItsReaderMaySee(t *testing.T) {
 // otherwise the reply "here are its promises" is itself the disclosure.
 func TestNarrowingToAnUnreadableRecordAnswersNotFound(t *testing.T) {
 	e := setupPromises(t)
-	hiddenOrgID, taskID := ids.NewV7(), ids.NewV7()
+	hiddenCompanyID, taskID := ids.NewV7(), ids.NewV7()
 	// Another rep's unpromoted capture: capture privacy holds it to its own
 	// owner, and every other shareable record type is read by every seat
 	// (platform/auth tableclass.go), so this is the narrowing target a caller
 	// can genuinely not reach.
-	e.exec(t, `INSERT INTO organization (id, display_name, owner_id, visibility, source, captured_by)
-		VALUES ($1, 'Zeta GmbH', $2, 'owner', 'seed', 'system')`, hiddenOrgID, e.other)
+	e.exec(t, `INSERT INTO company (id, display_name, owner_id, visibility, source, captured_by)
+		VALUES ($1, 'Zeta GmbH', $2, 'owner', 'seed', 'system')`, hiddenCompanyID, e.other)
 	// The task is assigned to the CALLER, so nothing about the task itself is
 	// what hides it — only the company the sweep is narrowed to.
 	e.exec(t, `INSERT INTO activity (id, kind, subject, occurred_at, due_at, assignee_id, is_done, source, captured_by)
 		VALUES ($1, 'task', 'Ship the Zeta rollout', now(), now(), $2, false, 'seed', 'system')`,
 		taskID, e.rep)
-	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, organization_id)
-		VALUES ($1, $2, 'organization', $3)`, ids.NewV7(), taskID, hiddenOrgID)
+	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, company_id)
+		VALUES ($1, $2, 'company', $3)`, ids.NewV7(), taskID, hiddenCompanyID)
 
-	orgType := "organization"
+	companyType := "company"
 	_, _, err := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))).ListOpenTasks(e.as(), ListOpenTasksInput{
-		EntityType: &orgType, EntityID: &hiddenOrgID,
+		EntityType: &companyType, EntityID: &hiddenCompanyID,
 	})
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("narrowing to another rep's unpromoted capture → %v, want ErrNotFound — an "+

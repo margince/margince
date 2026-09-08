@@ -39,10 +39,10 @@ type threadFixture struct {
 func seedThreadFixture(t *testing.T, e *Env, owner *pgx.Conn) threadFixture {
 	t.Helper()
 	f := threadFixture{key: "thread:" + ids.NewV7().String()}
-	org := e.SeedOrg(t, "Acme GmbH", nil)
+	company := e.SeedCompany(t, "Acme GmbH", nil)
 	f.project = ids.NewV7()
-	e.WsExec(t, `INSERT INTO project (id, name, key, organization_id, phase, source, captured_by)
-		VALUES ($1, 'ERP rollout', 'ERP27', $2, 'delivering', 'manual', 'human:x')`, f.project, org)
+	e.WsExec(t, `INSERT INTO project (id, name, key, company_id, phase, source, captured_by)
+		VALUES ($1, 'ERP rollout', 'ERP27', $2, 'delivering', 'manual', 'human:x')`, f.project, company)
 
 	myPerson := e.SeedPerson(t, "My Contact", &e.Rep1)
 	for i := range f.mine {

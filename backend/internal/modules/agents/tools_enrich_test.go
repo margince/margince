@@ -21,22 +21,22 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-// stubOrgProvider answers one organization record, so the staging path can be
+// stubCompanyProvider answers one company record, so the staging path can be
 // driven without a database. It embeds the package's probe provider so only the
 // method StageInfo actually reaches — Read — is spelled here; any other call is
 // the probe's loud failure rather than a silent zero value.
-type stubOrgProvider struct {
+type stubCompanyProvider struct {
 	seamProbeProvider
 	rec datasource.Record
 }
 
-func (p stubOrgProvider) Read(context.Context, datasource.EntityRef) (datasource.Record, error) {
+func (p stubCompanyProvider) Read(context.Context, datasource.EntityRef) (datasource.Record, error) {
 	return p.rec, nil
 }
 
-func orgRecord(id ids.UUID, authoritative bool) datasource.Record {
+func companyRecord(id ids.UUID, authoritative bool) datasource.Record {
 	return datasource.Record{
-		Ref:       datasource.EntityRef{Type: datasource.EntityOrganization, ID: id},
+		Ref:       datasource.EntityRef{Type: datasource.EntityCompany, ID: id},
 		Fields:    json.RawMessage(`{"name":"Acme"}`),
 		Version:   4,
 		Freshness: datasource.FreshnessInfo{Authoritative: authoritative},
@@ -47,15 +47,15 @@ func orgRecord(id ids.UUID, authoritative bool) datasource.Record {
 // an approval whose summary omits the target is a decision made blind.
 func TestEnrichStagesTheReadItIsAboutToPerform(t *testing.T) {
 	id := ids.NewV7()
-	tool := enrichCompany{p: stubOrgProvider{rec: orgRecord(id, true)}}
+	tool := enrichCompany{p: stubCompanyProvider{rec: companyRecord(id, true)}}
 
 	info, err := tool.StageInfo(context.Background(),
-		json.RawMessage(`{"organization_id":"`+id.String()+`","url":"https://acme.test/about","depth":"site"}`))
+		json.RawMessage(`{"company_id":"`+id.String()+`","url":"https://acme.test/about","depth":"site"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if info.TargetType != string(datasource.EntityOrganization) || info.TargetID != id {
-		t.Fatalf("staged against %s/%s, want the organization", info.TargetType, info.TargetID)
+	if info.TargetType != string(datasource.EntityCompany) || info.TargetID != id {
+		t.Fatalf("staged against %s/%s, want the company", info.TargetType, info.TargetID)
 	}
 	if info.TargetVersion == nil || *info.TargetVersion != 4 {
 		t.Fatalf("target version = %v, want the version the read returned", info.TargetVersion)
@@ -64,7 +64,7 @@ func TestEnrichStagesTheReadItIsAboutToPerform(t *testing.T) {
 		t.Fatalf("summary = %q, want the URL and depth the call will actually use", info.Summary)
 	}
 
-	info, err = tool.StageInfo(context.Background(), json.RawMessage(`{"organization_id":"`+id.String()+`"}`))
+	info, err = tool.StageInfo(context.Background(), json.RawMessage(`{"company_id":"`+id.String()+`"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,13 +73,13 @@ func TestEnrichStagesTheReadItIsAboutToPerform(t *testing.T) {
 	}
 }
 
-// A mirror-held organization cannot be released, so staging one mints an
+// A mirror-held company cannot be released, so staging one mints an
 // approval no human could ever act on.
-func TestEnrichRefusesToStageAMirrorHeldOrganization(t *testing.T) {
+func TestEnrichRefusesToStageAMirrorHeldCompany(t *testing.T) {
 	id := ids.NewV7()
-	tool := enrichCompany{p: stubOrgProvider{rec: orgRecord(id, false)}}
+	tool := enrichCompany{p: stubCompanyProvider{rec: companyRecord(id, false)}}
 
-	_, err := tool.StageInfo(context.Background(), json.RawMessage(`{"organization_id":"`+id.String()+`"}`))
+	_, err := tool.StageInfo(context.Background(), json.RawMessage(`{"company_id":"`+id.String()+`"}`))
 	if !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
 		t.Fatalf("err = %v, want ErrUnsupportedBySoR", err)
 	}
@@ -100,7 +100,7 @@ func TestEnrichHandlePassesTheAdmittedArgumentsThrough(t *testing.T) {
 	tool := enrichCompany{enricher: seam}
 
 	if _, err := tool.Handle(context.Background(),
-		json.RawMessage(`{"organization_id":"`+ids.NewV7().String()+`","url":"https://acme.test"}`)); err != nil {
+		json.RawMessage(`{"company_id":"`+ids.NewV7().String()+`","url":"https://acme.test"}`)); err != nil {
 		t.Fatal(err)
 	}
 	if seam.url != "https://acme.test" {
@@ -114,7 +114,7 @@ func TestEnrichHandlePassesTheAdmittedArgumentsThrough(t *testing.T) {
 func TestReadEnrichArgsDefaultsTheDepthAndRefusesAnUnservedOne(t *testing.T) {
 	id := ids.NewV7().String()
 
-	args, err := readEnrichArgs(json.RawMessage(`{"organization_id":"` + id + `"}`))
+	args, err := readEnrichArgs(json.RawMessage(`{"company_id":"` + id + `"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -123,7 +123,7 @@ func TestReadEnrichArgsDefaultsTheDepthAndRefusesAnUnservedOne(t *testing.T) {
 			args.Depth, EnrichDepthPage)
 	}
 
-	if _, err := readEnrichArgs(json.RawMessage(`{"organization_id":"` + id + `","depth":"crawl"}`)); err == nil {
+	if _, err := readEnrichArgs(json.RawMessage(`{"company_id":"` + id + `","depth":"crawl"}`)); err == nil {
 		t.Fatal("depth \"crawl\" was accepted; the tool serves two depths")
 	}
 }
@@ -137,7 +137,7 @@ func TestReadEnrichArgsRefusesATargetThatIsNotAnAbsoluteHTTPURL(t *testing.T) {
 		"javascript:alert(1)", // not a fetch at all
 	} {
 		t.Run(target, func(t *testing.T) {
-			_, err := readEnrichArgs(json.RawMessage(`{"organization_id":"` + id + `","url":"` + target + `"}`))
+			_, err := readEnrichArgs(json.RawMessage(`{"company_id":"` + id + `","url":"` + target + `"}`))
 			if err == nil {
 				t.Fatalf("%q was accepted as a fetch target", target)
 			}
@@ -147,7 +147,7 @@ func TestReadEnrichArgsRefusesATargetThatIsNotAnAbsoluteHTTPURL(t *testing.T) {
 		})
 	}
 
-	if _, err := readEnrichArgs(json.RawMessage(`{"organization_id":"` + id + `","url":"https://example.com/about"}`)); err != nil {
+	if _, err := readEnrichArgs(json.RawMessage(`{"company_id":"` + id + `","url":"https://example.com/about"}`)); err != nil {
 		t.Fatalf("an absolute https URL must be accepted: %v", err)
 	}
 }

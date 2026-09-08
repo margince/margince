@@ -525,7 +525,7 @@ func TestCSVImportRunNamesWhoOpenedIt(t *testing.T) {
 	}
 }
 
-type organizationListDTO struct {
+type companyListDTO struct {
 	Data []struct {
 		DisplayName string `json:"display_name"`
 		LegalName   string `json:"legal_name"`
@@ -534,48 +534,48 @@ type organizationListDTO struct {
 	} `json:"data"`
 }
 
-func organizations(t *testing.T, e *apptest.AppEnv) organizationListDTO {
+func companies(t *testing.T, e *apptest.AppEnv) companyListDTO {
 	t.Helper()
-	var orgs organizationListDTO
-	if status := e.Call(t, http.MethodGet, "/v1/organizations?limit=100", nil, nil, &orgs); status != http.StatusOK {
-		t.Fatalf("GET /v1/organizations → %d, want 200", status)
+	var companies companyListDTO
+	if status := e.Call(t, http.MethodGet, "/v1/companies?limit=100", nil, nil, &companies); status != http.StatusOK {
+		t.Fatalf("GET /v1/companies → %d, want 200", status)
 	}
-	return orgs
+	return companies
 }
 
 // The second object an import can land, end to end — and the fields a create
 // path is easy to forget: legal_name and description reach the stored record
 // on the FIRST import, not only when a second upload happens to patch them.
-func TestCSVImportLandsOrganizationsWithEveryMappedField(t *testing.T) {
+func TestCSVImportLandsCompaniesWithEveryMappedField(t *testing.T) {
 	e := setupImportApp(t)
 
 	const file = "Company,Legal Name,Industry,Description\n" +
 		"Initech,Initech GmbH,software,They make software\n" +
 		"Umbrella,Umbrella AG,biotech,They make other things\n"
-	profile, status := uploadCSV(t, e, "organization", file)
+	profile, status := uploadCSV(t, e, "company", file)
 	if status != http.StatusOK {
 		t.Fatalf("upload → %d, want 200", status)
 	}
-	// "Company" matches no organization field by name, so the human maps it.
+	// "Company" matches no company field by name, so the human maps it.
 	mapping := map[string]string{
 		"Company": "display_name", "Legal Name": "legal_name",
 		"Industry": "industry", "Description": "description",
 	}
-	run, status := createRunWithMapping(t, e, "organization", profile.SourceRef, mapping)
+	run, status := createRunWithMapping(t, e, "company", profile.SourceRef, mapping)
 	if status != http.StatusAccepted {
 		t.Fatalf("create run → %d, want 202", status)
 	}
-	before := len(organizations(t, e).Data)
+	before := len(companies(t, e).Data)
 	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", status)
 	}
 
-	orgs := organizations(t, e)
-	if len(orgs.Data) != before+2 {
-		t.Fatalf("organizations = %d, want %d", len(orgs.Data), before+2)
+	companies := companies(t, e)
+	if len(companies.Data) != before+2 {
+		t.Fatalf("companies = %d, want %d", len(companies.Data), before+2)
 	}
 	var found bool
-	for _, o := range orgs.Data {
+	for _, o := range companies.Data {
 		if o.DisplayName != "Initech" {
 			continue
 		}
@@ -585,7 +585,7 @@ func TestCSVImportLandsOrganizationsWithEveryMappedField(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatal("the imported organization is missing")
+		t.Fatal("the imported company is missing")
 	}
 
 	// A corrected file rewrites the fields that changed, on the object whose
@@ -593,8 +593,8 @@ func TestCSVImportLandsOrganizationsWithEveryMappedField(t *testing.T) {
 	const corrected = "Company,Legal Name,Industry,Description\n" +
 		"Initech,Initech SE,software,They make software\n" +
 		"Umbrella,Umbrella AG,biotech,They make other things\n"
-	edited, _ := uploadCSV(t, e, "organization", corrected)
-	editedRun, status := createRunWithMapping(t, e, "organization", edited.SourceRef, mapping)
+	edited, _ := uploadCSV(t, e, "company", corrected)
+	editedRun, status := createRunWithMapping(t, e, "company", edited.SourceRef, mapping)
 	if status != http.StatusAccepted {
 		t.Fatalf("create corrected run → %d, want 202", status)
 	}
@@ -608,13 +608,13 @@ func TestCSVImportLandsOrganizationsWithEveryMappedField(t *testing.T) {
 	if status := e.Call(t, http.MethodPost, "/v1/imports/"+editedRun.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
 		t.Fatalf("approve corrected → %d, want 202", status)
 	}
-	for _, o := range organizations(t, e).Data {
+	for _, o := range companies(t, e).Data {
 		if o.DisplayName == "Initech" && o.LegalName != "Initech SE" {
 			t.Fatalf("legal name = %q, want the corrected value", o.LegalName)
 		}
 	}
-	if got := len(organizations(t, e).Data); got != before+2 {
-		t.Fatalf("organizations = %d, want %d — a correction updates, it does not duplicate", got, before+2)
+	if got := len(companies(t, e).Data); got != before+2 {
+		t.Fatalf("companies = %d, want %d — a correction updates, it does not duplicate", got, before+2)
 	}
 }
 
@@ -645,15 +645,15 @@ func TestCSVImportMeetsAnExistingCompanyAndABadSizeBand(t *testing.T) {
 	// previous CSV run. That distinction is the whole test: the importer's
 	// identity map only remembers rows IT wrote, so a company captured from
 	// mail, a connector or a seed is invisible to it.
-	if status := e.Call(t, http.MethodPost, "/v1/organizations",
+	if status := e.Call(t, http.MethodPost, "/v1/companies",
 		map[string]any{"display_name": "Akeneo", "industry": "retail"}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("creating the incumbent → %d, want 201", status)
 	}
 
 	// A spreadsheet naming that same company.
 	const second = "Company,Industry\nAkeneo,retail software\n"
-	profile2, _ := uploadCSV(t, e, "organization", second)
-	run2, _ := createRunWithMapping(t, e, "organization", profile2.SourceRef,
+	profile2, _ := uploadCSV(t, e, "company", second)
+	run2, _ := createRunWithMapping(t, e, "company", profile2.SourceRef,
 		map[string]string{"Company": "display_name", "Industry": "industry"})
 
 	var report importReportDTO
@@ -685,7 +685,7 @@ func TestCSVImportMeetsAnExistingCompanyAndABadSizeBand(t *testing.T) {
 	}
 
 	named := 0
-	for _, o := range organizations(t, e).Data {
+	for _, o := range companies(t, e).Data {
 		if o.DisplayName == "Akeneo" {
 			named++
 		}
@@ -695,7 +695,7 @@ func TestCSVImportMeetsAnExistingCompanyAndABadSizeBand(t *testing.T) {
 	var pairs int
 	if err := e.DB().Tx(context.Background(), func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT count(*) FROM dedupe_candidate WHERE entity_type = 'organization'`).Scan(&pairs)
+			`SELECT count(*) FROM dedupe_candidate WHERE entity_type = 'company'`).Scan(&pairs)
 	}); err != nil {
 		t.Fatalf("counting dedupe pairs: %v", err)
 	}
@@ -709,8 +709,8 @@ func TestCSVImportMeetsAnExistingCompanyAndABadSizeBand(t *testing.T) {
 	// say so — a dry run that reports a clean create for a row the commit
 	// cannot land has told the user the opposite of what will happen.
 	const bands = "Company,Employees\nNordwind Logistik,240\n"
-	profile3, _ := uploadCSV(t, e, "organization", bands)
-	run3, status3 := createRunWithMapping(t, e, "organization", profile3.SourceRef,
+	profile3, _ := uploadCSV(t, e, "company", bands)
+	run3, status3 := createRunWithMapping(t, e, "company", profile3.SourceRef,
 		map[string]string{"Company": "display_name", "Employees": "size_band"})
 
 	if status3 != http.StatusAccepted {
@@ -730,7 +730,7 @@ func TestCSVImportMeetsAnExistingCompanyAndABadSizeBand(t *testing.T) {
 	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run3.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
 		t.Fatalf("approve 3 → %d, want 202", status)
 	}
-	for _, o := range organizations(t, e).Data {
+	for _, o := range companies(t, e).Data {
 		if o.DisplayName == "Nordwind Logistik" {
 			t.Error("the commit landed a row the preview disclosed as skipped")
 		}
@@ -752,8 +752,8 @@ func TestCSVImportOfOneAddressColumnKeepsTheRestOfTheAddress(t *testing.T) {
 	// Land the company through the import, with a full address.
 	const full = "Company,Street,City,Postal,Country\n" +
 		"Baqend,Stresemannstr. 23,Hamburg,22769,DE\n"
-	p1, _ := uploadCSV(t, e, "organization", full)
-	r1, _ := createRunWithMapping(t, e, "organization", p1.SourceRef, map[string]string{
+	p1, _ := uploadCSV(t, e, "company", full)
+	r1, _ := createRunWithMapping(t, e, "company", p1.SourceRef, map[string]string{
 		"Company": "display_name", "Street": "address.line1", "City": "address.city",
 		"Postal": "address.postal_code", "Country": "address.country",
 	})
@@ -763,14 +763,14 @@ func TestCSVImportOfOneAddressColumnKeepsTheRestOfTheAddress(t *testing.T) {
 
 	// A corrected file carrying the company and ONE address field.
 	const partial = "Company,City\nBaqend,Berlin\n"
-	profile, _ := uploadCSV(t, e, "organization", partial)
-	run, _ := createRunWithMapping(t, e, "organization", profile.SourceRef,
+	profile, _ := uploadCSV(t, e, "company", partial)
+	run, _ := createRunWithMapping(t, e, "company", profile.SourceRef,
 		map[string]string{"Company": "display_name", "City": "address.city"})
 	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", status)
 	}
 
-	var orgs struct {
+	var companies struct {
 		Data []struct {
 			DisplayName string `json:"display_name"`
 			Address     struct {
@@ -781,10 +781,10 @@ func TestCSVImportOfOneAddressColumnKeepsTheRestOfTheAddress(t *testing.T) {
 			} `json:"address"`
 		} `json:"data"`
 	}
-	if status := e.Call(t, http.MethodGet, "/v1/organizations?limit=100", nil, nil, &orgs); status != http.StatusOK {
+	if status := e.Call(t, http.MethodGet, "/v1/companies?limit=100", nil, nil, &companies); status != http.StatusOK {
 		t.Fatalf("listing → %d, want 200", status)
 	}
-	for _, o := range orgs.Data {
+	for _, o := range companies.Data {
 		if o.DisplayName != "Baqend" {
 			continue
 		}
@@ -804,15 +804,15 @@ func TestCSVImportOfOneAddressColumnKeepsTheRestOfTheAddress(t *testing.T) {
 func TestCSVImportSkipDuplicatesPreviewsWhatItWillDo(t *testing.T) {
 	e := setupImportApp(t)
 
-	if status := e.Call(t, http.MethodPost, "/v1/organizations",
+	if status := e.Call(t, http.MethodPost, "/v1/companies",
 		map[string]any{"display_name": "Kestrel Data"}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("creating the incumbent → %d, want 201", status)
 	}
-	orgsBefore := len(organizations(t, e).Data)
+	companiesBefore := len(companies(t, e).Data)
 
 	const file = "Company\nKestrel Data\nNordwind Logistik\n"
-	profile, _ := uploadCSV(t, e, "organization", file)
-	run, status := createRunOnDuplicate(t, e, "organization", profile.SourceRef,
+	profile, _ := uploadCSV(t, e, "company", file)
+	run, status := createRunOnDuplicate(t, e, "company", profile.SourceRef,
 		map[string]string{"Company": "display_name"}, "skip")
 	if status != http.StatusAccepted {
 		t.Fatalf("create run → %d, want 202", status)
@@ -839,9 +839,9 @@ func TestCSVImportSkipDuplicatesPreviewsWhatItWillDo(t *testing.T) {
 	}
 
 	// Exactly one company added, and no second Kestrel.
-	after := organizations(t, e).Data
-	if len(after) != orgsBefore+1 {
-		t.Errorf("companies went from %d to %d; the preview promised one new company", orgsBefore, len(after))
+	after := companies(t, e).Data
+	if len(after) != companiesBefore+1 {
+		t.Errorf("companies went from %d to %d; the preview promised one new company", companiesBefore, len(after))
 	}
 	kestrels := 0
 	for _, o := range after {
@@ -857,10 +857,10 @@ func TestCSVImportSkipDuplicatesPreviewsWhatItWillDo(t *testing.T) {
 // An unknown policy is refused rather than silently treated as create.
 func TestCSVImportRefusesAnUnknownDuplicatePolicy(t *testing.T) {
 	e := setupImportApp(t)
-	profile, _ := uploadCSV(t, e, "organization", "Company\nInitech\n")
+	profile, _ := uploadCSV(t, e, "company", "Company\nInitech\n")
 	// Decoded into nothing: a refusal answers a problem document, not a run.
 	status := e.Call(t, http.MethodPost, "/v1/imports", map[string]any{
-		"connector": "csv", "object": "organization", "source_ref": profile.SourceRef,
+		"connector": "csv", "object": "company", "source_ref": profile.SourceRef,
 		"mapping": map[string]string{"Company": "display_name"}, "on_duplicate": "merge",
 	}, nil, nil)
 	if status != http.StatusUnprocessableEntity {
@@ -884,8 +884,8 @@ func TestCSVImportCountsTheDuplicatesTheCommitMetNotTheOnesThePreviewPredicted(t
 	e := setupImportApp(t)
 
 	const file = "Company,Industry\nZephyr Freight,logistics\n"
-	profile, _ := uploadCSV(t, e, "organization", file)
-	run, status := createRunWithMapping(t, e, "organization", profile.SourceRef,
+	profile, _ := uploadCSV(t, e, "company", file)
+	run, status := createRunWithMapping(t, e, "company", profile.SourceRef,
 		map[string]string{"Company": "display_name", "Industry": "industry"})
 	if status != http.StatusAccepted {
 		t.Fatalf("create run → %d, want 202", status)
@@ -904,7 +904,7 @@ func TestCSVImportCountsTheDuplicatesTheCommitMetNotTheOnesThePreviewPredicted(t
 	// A colleague creates the company, after the preview and before the
 	// approval. Directly, the way real ones arrive: the importer's identity map
 	// remembers only rows IT wrote, so this one is invisible to it.
-	if code := e.Call(t, http.MethodPost, "/v1/organizations",
+	if code := e.Call(t, http.MethodPost, "/v1/companies",
 		map[string]any{"display_name": "Zephyr Freight", "industry": "logistics"}, nil, nil); code != http.StatusCreated {
 		t.Fatalf("creating the company between preview and approval → %d, want 201", code)
 	}

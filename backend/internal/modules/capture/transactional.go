@@ -6,12 +6,12 @@ package capture
 // The transactional / ESP suppression registry (CAP-PARAM-6, ADR-0072/A118).
 // Some mail arrives over infrastructure that is not the counterparty's company:
 // a DocuSign envelope from dse@eu.docusign.net, a conference blast from
-// no-reply@event.gitex.com, a SendGrid relay. Naming an organization after that
+// no-reply@event.gitex.com, a SendGrid relay. Naming a company after that
 // domain manufactures junk ("eu.docusign.net" as a company). This gate
-// suppresses BOTH person and org derivation for such senders while KEEPING the
+// suppresses BOTH person and company derivation for such senders while KEEPING the
 // activity — a DocuSign envelope is a real timeline item, it just has no CRM
 // counterparty. That is the difference from the free-mail gate (CAP-PARAM-5),
-// which suppresses only the org and keeps the person.
+// which suppresses only the company and keeps the person.
 //
 // Precedence is deliberate and conservative, because a false suppression hides a
 // real contact:
@@ -127,7 +127,7 @@ func NewTransactionalList(extra, never []string) *TransactionalList {
 
 // Suppress reports whether record creation must be suppressed for this sender,
 // and a stable reason breadcrumb (recorded for observability). The activity is
-// unaffected — only person/org derivation is gated.
+// unaffected — only person/company derivation is gated.
 func (l *TransactionalList) Suppress(in TransactionalInput) (bool, string) {
 	base := freemail.Registrable(in.Domain)
 	if base == "" {

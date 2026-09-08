@@ -112,7 +112,7 @@ func TestEndToEnd_humanEditPrecedenceOnAgentUpdate(t *testing.T) {
 // catch-all and is dropped as a non-catalog custom key. The write is a
 // no-op (200), and the human value is left intact. Lead is exercised here
 // because it was the last object to gain the catch-all (custom fields on
-// records); the protection is now uniform across person/org/deal/lead.
+// records); the protection is now uniform across person/company/deal/lead.
 func TestEndToEnd_caseVariantKeyCannotBypassPrecedence(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)

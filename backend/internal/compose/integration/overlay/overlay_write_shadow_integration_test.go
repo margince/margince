@@ -185,7 +185,7 @@ func TestOverlayUpdateDealWritesBackAndReturnsTheMirroredRow(t *testing.T) {
 
 // Archive reaches the incumbent for the types it supports: the response is
 // the contract's own 200-with-body (never a bare 204 for a domain row,
-// matching every native ArchivePerson/ArchiveOrganization/ArchiveDeal), and
+// matching every native ArchivePerson/ArchiveCompany/ArchiveDeal), and
 // the incumbent — not just the mirror — loses the record.
 //
 // The body must describe the record as it is AFTER the call: the contract
@@ -405,7 +405,7 @@ type overlayArchiveCase struct {
 func TestOverlayWriteShadowsRoundTripEveryMirroredType(t *testing.T) {
 	updates := []overlayUpdateCase{
 		{"person", "/v1/people", "9301", map[string]any{"first_name": "Marie"}, integration.AnyMap{"first_name": "Marie2"}, "first_name", "Marie2"},
-		{"organization", "/v1/organizations", "9302", map[string]any{"display_name": "Acme Org"}, integration.AnyMap{"display_name": "Acme Org 2"}, "display_name", "Acme Org 2"},
+		{"company", "/v1/companies", "9302", map[string]any{"display_name": "Acme Company"}, integration.AnyMap{"display_name": "Acme Company 2"}, "display_name", "Acme Company 2"},
 		{"deal", "/v1/deals", "9303", map[string]any{"name": "Widget Deal"}, integration.AnyMap{"name": "Widget Deal 2"}, "name", "Widget Deal 2"},
 		{"lead", "/v1/leads", "9304", map[string]any{"full_name": "Grace Lead"}, integration.AnyMap{"full_name": "Grace Lead 2"}, "full_name", "Grace Lead 2"},
 		{"activity", "/v1/activities", "9305", map[string]any{"kind": "call", "subject": "Intro Call"}, integration.AnyMap{"subject": "Intro Call 2"}, "subject", "Intro Call 2"},
@@ -415,7 +415,7 @@ func TestOverlayWriteShadowsRoundTripEveryMirroredType(t *testing.T) {
 	// that case seeded.
 	//
 	// The archive loop keeps a fixture of its own, and that is not tidiness:
-	// it seeds a SECOND person and a second organization, and firstListedID
+	// it seeds a SECOND person and a second company, and firstListedID
 	// cannot say which of two records at one path it means.
 	updateEnv := setupOverlayWrite(t)
 	for _, tc := range updates {
@@ -436,7 +436,7 @@ func TestOverlayWriteShadowsRoundTripEveryMirroredType(t *testing.T) {
 
 	archives := []overlayArchiveCase{
 		{"person", "/v1/people", "9311", map[string]any{"first_name": "Isaac"}, "first_name", "Isaac"},
-		{"organization", "/v1/organizations", "9312", map[string]any{"display_name": "Beta Org"}, "display_name", "Beta Org"},
+		{"company", "/v1/companies", "9312", map[string]any{"display_name": "Beta Company"}, "display_name", "Beta Company"},
 		{"deal", "/v1/deals", "9313", map[string]any{"name": "Small Deal"}, "name", "Small Deal"},
 	}
 	archiveEnv := setupOverlayWrite(t)
@@ -460,23 +460,23 @@ func TestOverlayWriteShadowsRoundTripEveryMirroredType(t *testing.T) {
 	}
 }
 
-// A mirror-backed organization is one of the incumbent's accounts, and the
+// A mirror-backed company is one of the incumbent's accounts, and the
 // installation's own company is a native row that is never among them. The
 // wire says so explicitly rather than omitting the field, so a client reading
 // an overlay page never has to guess which row the workspace itself is
 // (ADR-0082/A127).
-func TestMirroredOrganizationsStateTheyAreNotTheOwnCompany(t *testing.T) {
+func TestMirroredCompaniesStateTheyAreNotTheOwnCompany(t *testing.T) {
 	e := setupOverlayWrite(t)
-	e.seed(t, "organization", "9320", map[string]any{"display_name": "Mirrored Org"})
+	e.seed(t, "company", "9320", map[string]any{"display_name": "Mirrored Company"})
 
-	var page crmcontracts.OrganizationListResponse
-	if status := e.Call(t, "GET", "/v1/organizations", nil, nil, &page); status != http.StatusOK {
-		t.Fatalf("GET /v1/organizations = %d", status)
+	var page crmcontracts.CompanyListResponse
+	if status := e.Call(t, "GET", "/v1/companies", nil, nil, &page); status != http.StatusOK {
+		t.Fatalf("GET /v1/companies = %d", status)
 	}
 	if len(page.Data) != 1 {
-		t.Fatalf("overlay organization list = %d rows, want the one mirrored organization", len(page.Data))
+		t.Fatalf("overlay company list = %d rows, want the one mirrored company", len(page.Data))
 	}
-	if org := page.Data[0]; org.IsAnchor == nil || *org.IsAnchor {
-		t.Fatalf("mirrored organization %q carries is_anchor=%v, want an explicit false", org.DisplayName, org.IsAnchor)
+	if company := page.Data[0]; company.IsAnchor == nil || *company.IsAnchor {
+		t.Fatalf("mirrored company %q carries is_anchor=%v, want an explicit false", company.DisplayName, company.IsAnchor)
 	}
 }

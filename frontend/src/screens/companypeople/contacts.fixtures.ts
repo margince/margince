@@ -10,7 +10,7 @@ import type { components } from "../../api/schema";
 // sending. JSX-free on purpose — `scripts/fe-uat.mjs` reads every `.tsx` under
 // `src/` as a component that owes a story.
 
-type OrganizationContact = components["schemas"]["OrganizationContact"];
+type CompanyContact = components["schemas"]["CompanyContact"];
 
 /**
  * contactsFixture is one account holding all four engagement states.
@@ -19,7 +19,7 @@ type OrganizationContact = components["schemas"]["OrganizationContact"];
  * them proves a label renders, not that a reader can tell the four apart —
  * which is the whole job of this screen.
  */
-export function contactsFixture(): OrganizationContact[] {
+export function contactsFixture(): CompanyContact[] {
   return [
     {
       person_id: "p-dietmar",
@@ -102,7 +102,7 @@ export function contactsFixture(): OrganizationContact[] {
  * test can assert the dials the screen actually sent rather than the ones it
  * meant to.
  */
-export function stubContacts(rows: OrganizationContact[]): string[] {
+export function stubContacts(rows: CompanyContact[]): string[] {
   const calls: string[] = [];
   // The api client hands fetch a Request, not a string — reading `.url` is what
   // the other screen fixtures do, and a `toString()` on the Request yields
@@ -116,7 +116,7 @@ export function stubContacts(rows: OrganizationContact[]): string[] {
           ? input.href
           : input.url;
     calls.push(url);
-    if (url.includes("/organizations/") && url.includes("/contacts")) {
+    if (url.includes("/companies/") && url.includes("/contacts")) {
       return Promise.resolve(
         new Response(
           JSON.stringify({

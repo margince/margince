@@ -139,7 +139,7 @@ function NamedMembers({ access }: Readonly<{ access: EmailAccess }>) {
         <li key={memberKey(member)} className="emailaccess__member">
           {/* A member the roster has not answered for yet, or one it no longer
               carries. The id is not shown: a uuid tells a reader nothing, and
-              a seat that has left the organization is still a real limit on
+              a seat that has left the company is still a real limit on
               the message. */}
           {nameOf.get(memberKey(member)) ?? t("email.access.unnamedMember")}
         </li>

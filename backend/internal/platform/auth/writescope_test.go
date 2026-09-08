@@ -31,7 +31,7 @@ func writeArm(p principal.Principal, table string) string {
 }
 
 func TestTheWriteArmCountsOnlyAWriteGrant(t *testing.T) {
-	for _, table := range []string{"person", "organization", "deal", "lead", "project"} {
+	for _, table := range []string{"person", "company", "deal", "lead", "project"} {
 		for _, scope := range []principal.RowScope{principal.RowScopeOwn, principal.RowScopeTeam} {
 			sql := writeArm(human(scope), table)
 			if !strings.Contains(sql, "rg.access = 'write'") {
@@ -56,7 +56,7 @@ func TestTheVisibilityArmStillCountsEveryLiveGrant(t *testing.T) {
 	// capture-private tables are left to check: every seat reads deal, lead
 	// and project whole (tableclass.go), so a grant has nothing to widen there
 	// and the arm is not rendered at all.
-	for _, table := range []string{"person", "organization"} {
+	for _, table := range []string{"person", "company"} {
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		sql := VisiblePredicate(human(principal.RowScopeTeam), table, arg)("t")

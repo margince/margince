@@ -49,8 +49,8 @@ type AuditHistoryEntry = components["schemas"]["AuditHistoryEntry"];
 
 const employer: NonNullable<components["schemas"]["HistoryEdge"]> = {
   kind: "employment",
-  other_entity_type: "organization",
-  other_entity_id: "org-9",
+  other_entity_type: "company",
+  other_entity_id: "company-9",
   other_label: "Employer GmbH",
 };
 
@@ -76,7 +76,7 @@ function servingHistory(
 ) {
   return vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input instanceof Request ? input.url : input);
-    if (url.includes("/organizations/")) {
+    if (url.includes("/companies/")) {
       if (!onOtherLookup) {
         throw new Error(`unexpected endpoint lookup: ${url}`);
       }
@@ -114,7 +114,7 @@ describe("an edge row in a record's history", () => {
       await screen.findByRole("link", { name: "Employer GmbH" }),
     );
 
-    expect(globalThis.location.hash).toBe("#/companies/org-9");
+    expect(globalThis.location.hash).toBe("#/companies/company-9");
   });
 
   // A read that could not name the other end says so. Neither the word "null"
@@ -261,7 +261,7 @@ describe("a link's columns never reach a pair's face", () => {
     after: { role: "cto", started_at: "2026-01-01", is_primary: true },
     edge: {
       kind: "employment",
-      other_entity_type: "organization",
+      other_entity_type: "company",
       other_entity_id: "11111111-1111-1111-1111-111111111111",
       other_label: "Employer GmbH",
     },
@@ -279,7 +279,7 @@ describe("a link's columns never reach a pair's face", () => {
     after: { role: null },
     edge: {
       kind: "employment",
-      other_entity_type: "organization",
+      other_entity_type: "company",
       other_entity_id: "11111111-1111-1111-1111-111111111111",
       other_label: "Employer GmbH",
     },
