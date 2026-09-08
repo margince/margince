@@ -92,18 +92,23 @@ func (s *Store) RevertCorrection(
 	}
 	var out crmcontracts.Deal
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
-		correction, err := lockReversibleCorrection(ctx, tx, correctionID)
+		// AUTHORITY BEFORE ANY CONFLICT, the module's rule everywhere. The row
+		// is located and locked first because the deal it belongs to is not
+		// known until then — but nothing about its STATE reaches a caller before
+		// the probe: an already-reversed correction on a deal somebody may not
+		// see would otherwise answer "already taken back" where it owes a 404,
+		// and the shape of the refusal would tell them the deal exists.
+		correction, err := lockCorrection(ctx, tx, correctionID)
 		if err != nil {
 			return err
 		}
-		// VISIBILITY BEFORE ANY CONFLICT, the module's rule everywhere: asked
-		// after the refusals below, a caller with the object grant but no row
-		// scope could tell a live correction from an already-reversed one by the
-		// shape of the 409 and learn that a deal exists.
 		if err := auth.EnsureWritable(ctx, tx, dealTable, correction.DealID.UUID); err != nil {
 			return err
 		}
-		if err := restoreCorrectedFields(ctx, tx, correction); err != nil {
+		if correction.Reversed() {
+			return &CorrectionReversalError{Reason: alreadyTakenBack}
+		}
+		if err := s.restoreCorrectedFields(ctx, tx, correction); err != nil {
 			return err
 		}
 		// Read inside the transaction that just took write authority on this
@@ -121,7 +126,7 @@ func (s *Store) RevertCorrection(
 //
 // Split from RevertCorrection so each function holds one question: that one
 // decides WHETHER this correction may be taken back, this one performs it.
-func restoreCorrectedFields(ctx context.Context, tx pgx.Tx, correction DealCorrection) error {
+func (s *Store) restoreCorrectedFields(ctx context.Context, tx pgx.Tx, correction DealCorrection) error {
 	before, err := priorImage(ctx, tx, correction)
 	if err != nil {
 		return err
@@ -131,7 +136,7 @@ func restoreCorrectedFields(ctx context.Context, tx pgx.Tx, correction DealCorre
 		return err
 	}
 	patch := storekit.NewPatch()
-	if err := buildReversalPatch(ctx, tx, correction, before, patch); err != nil {
+	if err := s.buildReversalPatch(ctx, tx, correction, before, patch); err != nil {
 		return err
 	}
 	if patch.Empty() {
@@ -166,13 +171,16 @@ func restoreCorrectedFields(ctx context.Context, tx pgx.Tx, correction DealCorre
 	return nil
 }
 
-// lockReversibleCorrection takes the correction row and refuses one already
-// taken back.
+// lockCorrection takes the correction row for update.
 //
 // FOR UPDATE is what makes a repeated Undo idempotent rather than a toggle: two
 // calls racing on one correction serialize here, the first stamps it reversed,
 // and the second reads that stamp and refuses instead of restoring twice.
-func lockReversibleCorrection(ctx context.Context, tx pgx.Tx, id ids.UUID) (DealCorrection, error) {
+//
+// It does NOT judge whether the correction may be taken back: that needs the
+// caller's authority over the deal, which is not known until this row names it,
+// so the caller asks the probe first and the state second.
+func lockCorrection(ctx context.Context, tx pgx.Tx, id ids.UUID) (DealCorrection, error) {
 	var c DealCorrection
 	err := tx.QueryRow(ctx, `
 		SELECT id, deal_id, audit_log_id, correction, fields, applied_at,
@@ -189,9 +197,6 @@ func lockReversibleCorrection(ctx context.Context, tx pgx.Tx, id ids.UUID) (Deal
 	}
 	if err != nil {
 		return DealCorrection{}, fmt.Errorf("read the correction to reverse: %w", err)
-	}
-	if c.Reversed() {
-		return DealCorrection{}, &CorrectionReversalError{Reason: alreadyTakenBack}
 	}
 	return c, nil
 }
@@ -229,7 +234,7 @@ func priorImage(ctx context.Context, tx pgx.Tx, c DealCorrection) (map[string]js
 // renamed the deal after the correction still gets their undo — the name is not
 // what was corrected — while a rep who re-dated it does not have that answer
 // silently overwritten by a machine reversal.
-func buildReversalPatch(
+func (s *Store) buildReversalPatch(
 	ctx context.Context, tx pgx.Tx, c DealCorrection,
 	before map[string]json.RawMessage, patch *storekit.Patch,
 ) error {
@@ -241,36 +246,42 @@ func buildReversalPatch(
 	if err != nil {
 		return err
 	}
-	// The provisional flag is decided last, by markRestoredDateUnresolved: a
-	// restored past date must stay marked, and restoring the prior value here
-	// would then be immediately contradicted.
-	pastDate, err := restoresAPastDate(ctx, tx, before)
+	// A restored PAST date leaves the provisional flag to
+	// markRestoredDateUnresolved, which SETS it rather than restoring it. The
+	// conflict check below still runs for that field: a person who confirmed
+	// the machine's date cleared the flag deliberately, and an undo that
+	// re-marked it without asking would overwrite their answer.
+	pastDate, err := s.restoresAPastDate(ctx, tx, before)
 	if err != nil {
 		return err
 	}
 	for _, field := range c.Fields {
-		if field == provisionalField && pastDate {
-			continue
-		}
 		wanted, ok := before[field]
 		if !ok {
 			// The correction created a value where there was none; putting it
 			// back means clearing it.
 			wanted = json.RawMessage("null")
 		}
+		// ALREADY BACK is asked before CHANGED SINCE, and the order matters: a
+		// person who restored this field by hand has done the undo's work, and
+		// reading their value as an unrelated later edit would refuse the undo
+		// for having already happened.
+		if jsonEqual(wanted, current[field]) {
+			continue
+		}
 		applied, ok := after[field]
 		if ok && !jsonEqual(applied, current[field]) {
 			return &CorrectionReversalError{Reason: fmt.Sprintf(
 				"%s has been changed since this correction, so taking it back would overwrite that", field)}
 		}
-		if jsonEqual(wanted, current[field]) {
+		if field == provisionalField && pastDate {
 			continue
 		}
 		if err := setReversalField(patch, field, current[field], wanted); err != nil {
 			return err
 		}
 	}
-	return markRestoredDateUnresolved(ctx, tx, c, before, patch)
+	return s.markRestoredDateUnresolved(ctx, tx, c, before, patch)
 }
 
 // markRestoredDateUnresolved keeps a restored PAST date visibly unresolved.
@@ -289,11 +300,11 @@ func buildReversalPatch(
 //
 // A restored FUTURE date needs none of this: it is a plan that has not lapsed,
 // and its prior flag is restored like any other field.
-func markRestoredDateUnresolved(
+func (s *Store) markRestoredDateUnresolved(
 	ctx context.Context, tx pgx.Tx, c DealCorrection,
 	before map[string]json.RawMessage, patch *storekit.Patch,
 ) error {
-	pastDate, err := restoresAPastDate(ctx, tx, before)
+	pastDate, err := s.restoresAPastDate(ctx, tx, before)
 	if err != nil || !pastDate {
 		return err
 	}
@@ -375,119 +386,54 @@ func markReversedOrConflict(ctx context.Context, tx pgx.Tx, c DealCorrection) er
 	return nil
 }
 
-func jsonEqual(a, b json.RawMessage) bool {
-	var x, y any
-	if err := json.Unmarshal(nullIfEmpty(a), &x); err != nil {
-		return false
-	}
-	if err := json.Unmarshal(nullIfEmpty(b), &y); err != nil {
-		return false
-	}
-	return fmt.Sprintf("%v", x) == fmt.Sprintf("%v", y)
-}
-
-func nullIfEmpty(raw json.RawMessage) json.RawMessage {
-	if len(raw) == 0 {
-		return json.RawMessage("null")
-	}
-	return raw
-}
-
-// currentCorrectedValues reads what the deal holds NOW in the columns the
-// correction touched, as json so it compares like-for-like against the audit
-// images.
-func currentCorrectedValues(ctx context.Context, tx pgx.Tx, c DealCorrection) (map[string]json.RawMessage, error) {
-	var raw []byte
-	if err := tx.QueryRow(ctx, `
-		SELECT to_jsonb(d) FROM deal d WHERE d.id = $1`, c.DealID).Scan(&raw); err != nil {
-		return nil, fmt.Errorf("read the deal's current values: %w", err)
-	}
-	var row map[string]json.RawMessage
-	if err := json.Unmarshal(raw, &row); err != nil {
-		return nil, fmt.Errorf("decode the deal's current values: %w", err)
-	}
-	out := make(map[string]json.RawMessage, len(c.Fields))
-	for _, field := range c.Fields {
-		out[field] = row[field]
-	}
-	return out, nil
-}
-
-// correctionAfterImage is what the correction WROTE, used to tell "a person has
-// edited this since" from "the value is simply what the correction made it".
-func correctionAfterImage(ctx context.Context, tx pgx.Tx, c DealCorrection) (map[string]json.RawMessage, error) {
-	var raw []byte
-	err := tx.QueryRow(ctx, `SELECT after FROM audit_log WHERE id = $1`, c.AuditLogID).Scan(&raw)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, &CorrectionReversalError{
-			Reason: "the change this correction recorded is no longer in the record's history",
-		}
-	}
-	if err != nil {
-		return nil, fmt.Errorf("read the correction's applied image: %w", err)
-	}
-	var after map[string]json.RawMessage
-	if err := json.Unmarshal(raw, &after); err != nil {
-		return nil, fmt.Errorf("decode the correction's applied image: %w", err)
-	}
-	return after, nil
-}
-
-// decodeAuditDate reads a close date out of an audit image.
+// ReversalBlocksConfirming reports whether taking a correction back has already
+// answered the question a staged confirm would re-ask.
 //
-// expected_close_date is a DATE column, so to_jsonb and the audit writer render
-// it as "2026-08-27" rather than an RFC 3339 instant — and time.Time's own JSON
-// decoder only accepts the latter. Reading it as a plain string and parsing the
-// date layout is what makes a restore of a date-typed column work at all.
-// The second return says whether there WAS a date, rather than a nil pointer
-// standing for it: a deal with no close date is the ordinary case, not a fault,
-// and every caller here has to branch on it anyway.
-func decodeAuditDate(raw json.RawMessage) (time.Time, bool, error) {
-	if len(raw) == 0 {
-		return time.Time{}, false, nil
-	}
-	var text *string
-	if err := json.Unmarshal(raw, &text); err != nil {
-		return time.Time{}, false, err
-	}
-	if text == nil {
-		return time.Time{}, false, nil
-	}
-	parsed, err := time.Parse(time.DateOnly, *text)
-	if err != nil {
-		// An instant is accepted too, so a column that ever carries one does
-		// not fail here for a reason a reader would find baffling.
-		parsed, err = time.Parse(time.RFC3339, *text)
-		if err != nil {
-			return time.Time{}, false, err
-		}
-	}
-	return parsed, true, nil
+// The approval path is a SECOND door onto the same write, and an unattended one:
+// close_date_correction is in approvals.AutoApplyKinds, so a rep with autonomy
+// on has these redeemed without looking. A confirm staged before a reversal and
+// redeemed after it would put back exactly what the reversal removed.
+//
+// The version pin makes that window small — a reversal writes the deal, so a
+// pinned redemption loses the compare — but the pin is a property of how this
+// KIND is staged, and a memory that holds only while a configuration elsewhere
+// stays put is not one to rely on.
+func (s *Store) ReversalBlocksConfirming(
+	ctx context.Context, correction CloseDateCorrection, standing *time.Time,
+) (bool, error) {
+	var blocked bool
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		blocked, err = s.ReversalAnsweredThis(ctx, tx, correction.DealID,
+			EvidenceOf(correction, standing))
+		return err
+	})
+	return blocked, err
 }
 
-// restoresAPastDate reports whether the prior image puts a date back that the
+// restoresAPastDate reports whether the prior image puts back a date the
 // calendar has already passed — the case a reversal must leave visibly
 // unresolved rather than presenting as a plan.
-func restoresAPastDate(ctx context.Context, tx pgx.Tx, before map[string]json.RawMessage) (bool, error) {
+//
+// The INSTALLATION's today, not the session's. A close date is a DATE, so which
+// day it falls on is a question about the reporting zone: asked in the session
+// zone, a deal near local midnight is judged against the wrong day and the
+// provisional flag goes the wrong way. This is the same reading
+// rejectPastCloseDate takes, which is the rule this path is the narrow
+// exception to.
+func (s *Store) restoresAPastDate(
+	ctx context.Context, tx pgx.Tx, before map[string]json.RawMessage,
+) (bool, error) {
 	restored, has, err := decodeAuditDate(before[closeDateField])
 	if err != nil || !has {
 		return false, err
 	}
-	var today time.Time
-	if err := tx.QueryRow(ctx, `SELECT (now())::date`).Scan(&today); err != nil {
-		return false, fmt.Errorf("read today for the restored date: %w", err)
+	today, err := s.installationToday(ctx, tx)
+	if err != nil {
+		return false, err
 	}
 	return restored.Before(today), nil
 }
 
 // provisionalField is the column saying nobody has confirmed the deal's date.
 const provisionalField = "close_date_provisional"
-
-// datePtr renders a decoded date as the pointer storekit.SetDate takes, where
-// absent is nil.
-func datePtr(at time.Time, has bool) *time.Time {
-	if !has {
-		return nil
-	}
-	return &at
-}

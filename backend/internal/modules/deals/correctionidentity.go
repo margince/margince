@@ -167,6 +167,13 @@ func (s *Store) CorrectionForAudit(ctx context.Context, tx pgx.Tx, auditID ids.U
 	if err != nil {
 		return DealCorrection{}, fmt.Errorf("deals: reading the correction: %w", err)
 	}
+	// The object grant alone is not enough: a correction names a deal, so
+	// handing one back is a read of that deal. Without this a caller with
+	// deal:read but no scope over the row learns it exists — and learns what a
+	// machine did to it — from a lookup keyed on an audit id.
+	if err := auth.EnsureVisible(ctx, tx, dealTable, out.DealID.UUID); err != nil {
+		return DealCorrection{}, err
+	}
 	return out, nil
 }
 
@@ -198,6 +205,34 @@ func reversedCorrections(ctx context.Context, tx pgx.Tx, dealID ids.DealID) ([]C
 		out = append(out, e)
 	}
 	return out, rows.Err()
+}
+
+// ReversalAnsweredThis reports whether a person has already taken back a
+// correction answering this same question.
+//
+// Exported for the approval path, which is a SECOND door onto the same write:
+// close_date_correction is in approvals.AutoApplyKinds, so a rep with autonomy
+// on has staged confirms redeemed unattended. The staging's own memory is read
+// when the card is raised; a reversal landing between then and the redemption
+// would otherwise reapply the very change that reversal undid.
+//
+// The version pin makes that window small — a reversal writes the deal, so a
+// pinned redemption loses the compare — but the pin is a property of the KIND's
+// staging configuration, and a memory that only holds while a configuration
+// elsewhere stays put is not one anybody can rely on.
+func (s *Store) ReversalAnsweredThis(
+	ctx context.Context, tx pgx.Tx, dealID ids.DealID, asking CorrectionEvidence,
+) (bool, error) {
+	earlier, err := reversedCorrections(ctx, tx, dealID)
+	if err != nil {
+		return false, err
+	}
+	for _, e := range earlier {
+		if asking.SameQuestionAs(e) {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // markReversed stamps a correction as taken back, in the transaction that
