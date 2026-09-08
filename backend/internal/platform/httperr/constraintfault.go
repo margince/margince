@@ -59,6 +59,14 @@ func constraintFault(err error) (Fault, bool) {
 				"the same request will fail the same way.",
 			InfraCause: err,
 		}, true
+	case storekit.IsInvalidValueForType(err):
+		return Fault{
+			Status: http.StatusUnprocessableEntity, Code: "value_wrong_type",
+			Detail: "a value in this request is not of the type the field it names holds — a " +
+				"malformed id, a number where text was sent, a date that is not one. Check each " +
+				"value against this operation's schema; do not retry unchanged.",
+			InfraCause: err,
+		}, true
 	case isConstrainedValue(err):
 		return Fault{
 			Status: http.StatusUnprocessableEntity, Code: "value_not_allowed",

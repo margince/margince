@@ -19,6 +19,17 @@ const (
 	pgQueryCanceled       = "57014"
 	pgLockNotAvailable    = "55P03"
 	pgProgramLimitExceed  = "54000"
+
+	// The representation errors: a value the caller supplied is not of the type
+	// the column it was compared against holds. Listed rather than matched on
+	// the whole "22" class, which also carries arithmetic — a division by zero
+	// is a server's sum, not a caller's spelling — and substring faults that
+	// say nothing about the request.
+	pgInvalidTextRepresentation = "22P02"
+	pgNumericValueOutOfRange    = "22003"
+	pgStringDataRightTruncation = "22001"
+	pgInvalidDatetimeFormat     = "22007"
+	pgDatetimeFieldOverflow     = "22008"
 )
 
 // pgViolation names the violated constraint when err is the given
@@ -133,4 +144,27 @@ func IsQueryCanceled(err error) bool {
 func IsProgramLimitExceeded(err error) bool {
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) && pgErr.Code == pgProgramLimitExceed
+}
+
+// IsInvalidValueForType detects a value the database could not read as the type
+// it was compared against: a malformed uuid, a number where a numeric column
+// was expected, a date that is not one.
+//
+// It is the caller's spelling, not a server fault. The report engine binds a
+// caller's own `filters` and derivation predicates straight onto typed columns,
+// so `{"stage_id": "not-a-uuid"}` reached the transport as an opaque 500 whose
+// advice was to retry — advice that can never work, since the same text is the
+// same non-uuid forever.
+func IsInvalidValueForType(err error) bool {
+	var pgErr *pgconn.PgError
+	if !errors.As(err, &pgErr) {
+		return false
+	}
+	switch pgErr.Code {
+	case pgInvalidTextRepresentation, pgNumericValueOutOfRange,
+		pgStringDataRightTruncation, pgInvalidDatetimeFormat, pgDatetimeFieldOverflow:
+		return true
+	default:
+		return false
+	}
 }

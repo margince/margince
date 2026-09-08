@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/search"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/retrieval"
@@ -253,5 +254,48 @@ func TestAssembleContextFixedDepthWalk(t *testing.T) {
 	if _, err := retriever.AssembleContext(e.AsTeamRep(e.Rep1, e.Team1),
 		datasource.EntityRef{Type: datasource.EntityPerson, ID: privatePerson}, retrieval.AssembleOptions{}); err == nil {
 		t.Fatal("foreign anchor must be absent, not assembled")
+	}
+}
+
+// A value the caller spelled wrong is the CALLER's mistake, and the report
+// engine binds one straight onto a typed column.
+//
+// `owner_id` is a uuid, so `"not-a-uuid"` reaches Postgres as text it cannot
+// read: SQLSTATE 22P02, which the classification net did not know, so the
+// caller got an opaque 500 whose advice was to retry a plan that fails the same
+// way forever. Nothing about a client typo is a server fault.
+func TestAWrongTypedFilterIsTheCallersMistakeNotAServerFault(t *testing.T) {
+	e := SetupSearch(t)
+	provider := compose.NewProvider(e.Pool)
+
+	_, err := provider.RunReport(e.AsTeamRep(e.Rep1, e.Team1), datasource.ReportPlan{
+		Entity:  datasource.EntityPerson,
+		GroupBy: []string{"source"},
+		Filter:  map[string]string{"owner_id": "not-a-uuid"},
+	})
+	if err == nil {
+		t.Fatal("a filter value no uuid column can read was accepted; either the plan stopped " +
+			"binding it or this fixture no longer reaches the type it is about")
+	}
+
+	fault, ok := httperr.Classify(err)
+	if !ok {
+		t.Fatalf("the refusal reached the unhandled path, which answers 500 internal: %v", err)
+	}
+	if fault.Status != http.StatusUnprocessableEntity {
+		t.Errorf("status = %d, want 422 — retrying the same spelling can never work", fault.Status)
+	}
+	if fault.Code != "value_wrong_type" {
+		t.Errorf("code = %q, want %q", fault.Code, "value_wrong_type")
+	}
+	// Postgres names the type and quotes the value back; the caller gets the
+	// sentence, the operator gets the cause.
+	for _, leak := range []string{"22P02", "uuid", "not-a-uuid"} {
+		if strings.Contains(fault.Detail, leak) {
+			t.Errorf("the refusal leaks %q: %q", leak, fault.Detail)
+		}
+	}
+	if fault.InfraCause == nil {
+		t.Error("the cause reaches no log — withholding a message is not the same as losing it")
 	}
 }

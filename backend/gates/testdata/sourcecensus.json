@@ -528,7 +528,7 @@
     "arm": "one-spelling",
     "want": "silent",
     "name": "an unrelated SQLSTATE-shaped literal",
-    "body": "const probeLen = \"22001\""
+    "body": "const probeLen = \"22012\""
   },
   {
     "gate": "one-spelling",

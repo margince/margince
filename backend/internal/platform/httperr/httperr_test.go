@@ -261,6 +261,28 @@ func TestClassify_anUntranslatedConstraintIsTheCallersMistakeNotAServerFault(t *
 				"Shorten it — most often this is a long text body — and send it again; " +
 				"the same request will fail the same way.",
 		},
+		{
+			// The report engine binds a caller's own `filters` onto typed
+			// columns, so `{"stage_id":"not-a-uuid"}` reaches the database as
+			// text a uuid column cannot read. Nothing about it is a server
+			// fault, and the same text is the same non-uuid forever.
+			name:     "a value that is not of the type its field holds",
+			sqlstate: "22P02", table: "deal", constraint: "",
+			pgMessage: `invalid input syntax for type uuid: "not-a-uuid"`,
+			wantCode:  "value_wrong_type",
+			wantDetail: "a value in this request is not of the type the field it names holds — a " +
+				"malformed id, a number where text was sent, a date that is not one. Check each " +
+				"value against this operation's schema; do not retry unchanged.",
+		},
+		{
+			name:     "a number the column cannot hold",
+			sqlstate: "22003", table: "deal", constraint: "",
+			pgMessage: "numeric field overflow",
+			wantCode:  "value_wrong_type",
+			wantDetail: "a value in this request is not of the type the field it names holds — a " +
+				"malformed id, a number where text was sent, a date that is not one. Check each " +
+				"value against this operation's schema; do not retry unchanged.",
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			err := fmt.Errorf("writing the row: %w", &pgconn.PgError{
