@@ -1,0 +1,110 @@
+# Did a reviewer read the commit that fixes the review?
+#
+# A branch review reads the branch as it stood when the review was launched, so
+# the fixes for that review's own findings are always outside it. The normal,
+# correct workflow therefore produces an unreviewed commit by construction —
+# and it is the commit carrying changes a reviewer just judged risky enough to
+# flag. Four landed that way in one afternoon across three sessions; the fourth
+# author had just finished explaining the trap to somebody else.
+#
+# It is NOT a gate. `ci` is the one required check and this job is not it, so a
+# red here blocks nothing. Prevention is a branch-protection decision (#2496)
+# and is not this workflow's to make; what it does is make the fact visible on
+# the pull request, at the moment it becomes true, instead of leaving it to be
+# noticed by whoever reads the review timeline carefully enough.
+#
+# It reads what GitHub records. A review carries the commit it was made
+# against, so this speaks precisely for the reviewers that leave one — and says
+# so, because a coverage report read as exhaustive is worse than none: an
+# in-session review posts nothing here and its silence is not coverage.
+name: review-coverage
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+  # A review is half the comparison, so a submission has to refresh it too.
+  # Without this the report goes red on the fix commit and STAYS red through
+  # the re-review that answers it, until somebody happens to push again — a
+  # stale finding that outlives its own cause, which is how a report earns the
+  # habit of being ignored.
+  pull_request_review:
+    types: [submitted]
+
+permissions:
+  contents: read
+
+# Per pull request, cancelling in flight: only the tip's answer is worth having,
+# and a report about a commit that has already been superseded is noise on the
+# pull request rather than a finding anybody can act on. The opposite of
+# merge-attest, whose subject is one commit that will never come round again.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  coverage:
+    name: review coverage (reports, never blocks)
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # NAMED, because the two events land somewhere different by default:
+          # a pull_request run checks out the merge ref, a pull_request_review
+          # run checks out the base branch. Neither contains the branch's own
+          # commits reliably, and the walk below is over exactly those.
+          ref: ${{ github.event.pull_request.head.sha }}
+          # The branch's own commits, which is what a reviewed sha is looked up
+          # in. A shallow clone would make every review older than the fetch
+          # depth read as naming a commit the branch does not have — the report
+          # would be loudest exactly on the longest-lived pull requests.
+          fetch-depth: 0
+      - name: What each reviewer read, and what has landed since
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          # A review's `commit_id` is the tree it was made against — the one
+          # thing on a pull request that records WHAT was read rather than that
+          # something was. `--paginate` because a long-running pull request
+          # accumulates more reviews than one page holds, and a report that
+          # read the first page would go quiet on exactly the pull requests
+          # most likely to need it.
+          reviews="$(gh api --paginate "repos/${{ github.repository }}/pulls/${PR}/reviews" \
+            --jq '[.[] | select(.commit_id != null) | {reviewer: .user.login, sha: .commit_id, at: .submitted_at}]' \
+            | jq -s 'add // []')"
+
+          # This branch only, WITH its parent edges. `git rev-list base..head`
+          # is the set of commits the pull request is proposing, which is the
+          # set a review of it can have covered; walking the whole history
+          # would let a review of some ancestor on main read as covering this
+          # branch.
+          #
+          # `--parents` because the report needs ancestry rather than order. A
+          # pull request carrying a merge brings in a side branch whose commits
+          # are older than the reviewed one, and rev-list sorts by date — so
+          # order alone reads them as already covered.
+          history="$(git rev-list --parents "${BASE_SHA}..${HEAD_SHA}")"
+
+          # Captured rather than piped into the summary, so the report's own
+          # exit status is what fails the step. Through a pipe it would be
+          # tee's, and the job would stay green while printing the finding.
+          status=0
+          out="$(REVIEW_COVERAGE_HEAD="$HEAD_SHA" \
+                 REVIEW_COVERAGE_HISTORY="$history" \
+                 REVIEW_COVERAGE_REVIEWS="$reviews" \
+                 ./scripts/check-review-coverage.sh 2>&1)" || status=$?
+          printf '%s\n' "$out"
+          {
+            echo '```'
+            printf '%s\n' "$out"
+            echo '```'
+          } >>"$GITHUB_STEP_SUMMARY"
+          exit "$status"
