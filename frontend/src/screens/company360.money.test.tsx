@@ -29,7 +29,7 @@ type Money = components["schemas"]["Money"];
 
 const PAGE = { has_more: false, next_cursor: null };
 
-const ORG: components["schemas"]["Company"] = {
+const COMPANY: components["schemas"]["Company"] = {
   id: "o-1",
   display_name: "Brandt Automotive GmbH",
   source: "manual",
@@ -60,7 +60,7 @@ function dealsSection(
 function view(deals: Company360Deals): Company360 {
   return {
     as_of: "2026-06-01T09:00:00Z",
-    company: ORG,
+    company: COMPANY,
     sections_omitted: [],
     deals,
   };

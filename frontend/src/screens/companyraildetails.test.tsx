@@ -29,7 +29,7 @@ type ProfileField = components["schemas"]["CompanyProfileField"];
 // A COMPLETE Company, not a cast one: a fixture asserted into the contract
 // type can drop a required field and still compile, so the test would go on
 // passing after the wire shape moved under it.
-const ORG: Company = {
+const COMPANY: Company = {
   id: "o-1",
   // The server answers this per row; a fixture without it reads as NOT
   // writable, which is the correct fail-closed default and would strip the
@@ -130,7 +130,7 @@ function json(body: unknown) {
 }
 
 // A sidecar claim as the wire carries it. Complete rather than cast, for the
-// same reason ORG is: a fixture missing a required field still compiles.
+// same reason COMPANY is: a fixture missing a required field still compiles.
 function profileField(
   field: ProfileField["field"],
   value: string,
@@ -182,7 +182,7 @@ async function renderSettledGrid(
 // field a person most often knows was the field they could never record.
 describe("the legal identity a person can state", () => {
   it("invites a VAT number and a registry address on a record carrying neither", async () => {
-    await renderSettledGrid(ORG);
+    await renderSettledGrid(COMPANY);
 
     // Visible, not merely present: these sit in the identity grid beside the
     // legal name, never inside the address disclosure, which is closed here.
@@ -198,7 +198,7 @@ describe("the legal identity a person can state", () => {
   // for the old surface too — what has to be held is that it renders HERE.
   it("carries the register's verdict beside the number it answers for", async () => {
     await renderSettledGrid(
-      ORG,
+      COMPANY,
       [profileField("register_vat", "DE811907980")],
       {
         vatCheck: () =>
@@ -278,7 +278,7 @@ describe("the legal identity a person can state", () => {
         return json({});
       }),
     );
-    renderGrid(ORG);
+    renderGrid(COMPANY);
     await screen.findByRole("button", { name: "Change Industry" });
 
     // The industry row edits (it reads the company, which HAS answered);
@@ -301,7 +301,7 @@ describe("the legal identity a person can state", () => {
     // mark whether or not the field guard exists. Waiting for the VAT mark to
     // appear is what makes the address's own absence a settled fact.
     await renderSettledGrid(
-      ORG,
+      COMPANY,
       [
         profileField("register_vat", "DE811907980"),
         profileField("registered_address", "Kaiserdamm 1, 14057 Berlin"),
@@ -327,7 +327,7 @@ describe("the legal identity a person can state", () => {
   });
 
   it("reads back the values the crawl already found", async () => {
-    await renderSettledGrid(ORG, [
+    await renderSettledGrid(COMPANY, [
       profileField("register_vat", "DE811907980"),
       profileField("registered_address", "Kaiserdamm 1, 14057 Berlin"),
     ]);
@@ -339,7 +339,7 @@ describe("the legal identity a person can state", () => {
 
   it("states a typed VAT number through the profile-field correction", async () => {
     const user = userEvent.setup();
-    const calls = await renderSettledGrid(ORG);
+    const calls = await renderSettledGrid(COMPANY);
 
     await user.click(
       screen.getByRole("button", { name: "Change Register / VAT ID" }),
@@ -367,7 +367,7 @@ describe("the legal identity a person can state", () => {
 
   it("pins the row when correcting a value somebody already stated", async () => {
     const user = userEvent.setup();
-    const calls = await renderSettledGrid(ORG, [
+    const calls = await renderSettledGrid(COMPANY, [
       profileField("register_vat", "DE111111111"),
     ]);
     await screen.findByText("DE111111111");
@@ -396,7 +396,7 @@ describe("the legal identity a person can state", () => {
   it("shows the refusal when a stated value is cleared", async () => {
     const user = userEvent.setup();
     await renderSettledGrid(
-      ORG,
+      COMPANY,
       [profileField("register_vat", "DE811907980")],
       {
         patch: () =>
@@ -433,7 +433,7 @@ describe("the legal identity a person can state", () => {
 
 describe("the postal address, behind one line until it has something in it", () => {
   it("holds the six parts behind one line that invites the first of them", async () => {
-    await renderSettledGrid(ORG);
+    await renderSettledGrid(COMPANY);
 
     expect(screen.getByText("Add an address")).toBeVisible();
     expect(document.querySelector("details")?.open).toBe(false);

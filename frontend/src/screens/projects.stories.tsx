@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { ProjectScreen } from "./project360";
 import { ProjectsScreen } from "./projects";
-import { ORG, project, project360 } from "./projects.fixtures";
+import { COMPANY, project, project360 } from "./projects.fixtures";
 import {
   emptyPage,
   installFetchStub,
@@ -49,8 +49,8 @@ function sharedRoutes(): RouteMap {
   return {
     "GET /me": meRoute({}),
     "GET /companies": () =>
-      jsonResponse({ data: [ORG], page: { next_cursor: null } }),
-    [`GET /companies/${ORG.id}`]: () => jsonResponse(ORG),
+      jsonResponse({ data: [COMPANY], page: { next_cursor: null } }),
+    [`GET /companies/${COMPANY.id}`]: () => jsonResponse(COMPANY),
     "GET /users": () =>
       jsonResponse({
         data: [{ id: "u-me", display_name: "Me", status: "active" }],
