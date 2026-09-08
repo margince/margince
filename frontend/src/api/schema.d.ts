@@ -28834,6 +28834,28 @@ export interface components {
             policy_version: string;
             /** @description The exact wording shown, stored with the consent event for demonstrability. */
             wording?: string | null;
+            /**
+             * @description An affirmative marketing tick the subject made on the same form. It does NOT record a
+             *     grant: the surface mails a single-use confirmation link to the address on the booking
+             *     and the grant exists only once the subject spends it. That is what lets an anonymous
+             *     form carry the question at all — a stranger who knows an address can cause one
+             *     confirmation mail to be sent to its owner, never a subscription in their name.
+             *
+             *     Omit it for a form with no tick, or a tick left unchecked. An unchecked box writes
+             *     nothing and mails nothing.
+             */
+            marketing?: {
+                /**
+                 * Format: uuid
+                 * @description The marketing purpose being asked about. It must require double opt-in; a purpose
+                 *     that does not is refused, because there would be nothing for the mailed link to ask.
+                 */
+                purpose_id: string;
+                /** @description Version id of the marketing wording shown to the subject. */
+                policy_version: string;
+                /** @description The exact marketing wording shown, carried onto the grant the confirmation records. */
+                wording: string;
+            };
         };
         /**
          * @description The buyer-facing preference center's per-purpose view (B-E11.32): each tracked consent purpose

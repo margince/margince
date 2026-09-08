@@ -162,8 +162,10 @@ func (h Handlers) IssueDoubleOptIn(w http.ResponseWriter, r *http.Request, id cr
 		httperr.Write(w, r, err)
 		return
 	}
+	// No expected address: this door names a PERSON, and the mint derives the
+	// mailbox from their record. There is no second address to disagree with.
 	issued, err := h.store.IssueConsentLink(r.Context(),
-		pathID[ids.PersonKind](id), ids.From[ids.PurposeKind](ids.UUID(req.PurposeId)))
+		pathID[ids.PersonKind](id), ids.From[ids.PurposeKind](ids.UUID(req.PurposeId)), "")
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return
