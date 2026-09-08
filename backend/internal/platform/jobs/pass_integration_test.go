@@ -26,6 +26,32 @@ import (
 // spec lookup answers a real number rather than a zero this test invented.
 const aScheduledKind = "capture_counterparty_verdict"
 
+// declaredCadence is that kind's cadence, READ from the spec rather than
+// written down here.
+//
+// It was `time.Hour`, spelled in three assertions, and a change to the yaml that
+// regenerated the specs turned both into failures about a number no reader of
+// this file could see was stale. The property under test is that PassFor
+// answers the DECLARED cadence and projects from the last tick by it — neither
+// half is about which number the declaration happens to hold, so neither should
+// break when it changes.
+//
+// It still fails loudly if the kind stops declaring one: a zero cadence would
+// make the projection assertion vacuous, which is the one way this could go
+// quiet.
+func declaredCadence(t *testing.T) time.Duration {
+	t.Helper()
+	spec, ok := jobs.SpecFor(aScheduledKind)
+	if !ok {
+		t.Fatalf("%s is not a declared job kind, so this suite is about nothing", aScheduledKind)
+	}
+	if spec.Cadence.Fixed <= 0 {
+		t.Fatalf("%s declares no fixed cadence (%v), and a zero would make the projection "+
+			"assertion below pass against any answer", aScheduledKind, spec.Cadence.Fixed)
+	}
+	return spec.Cadence.Fixed
+}
+
 func TestAScheduledRunIsWhenThePassRuns(t *testing.T) {
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
@@ -43,8 +69,8 @@ func TestAScheduledRunIsWhenThePassRuns(t *testing.T) {
 	if pass.NextAt == nil || !pass.NextAt.Equal(next) {
 		t.Errorf("next = %v, want the scheduled row's own time %v", pass.NextAt, next)
 	}
-	if pass.Every != time.Hour {
-		t.Errorf("cadence = %v, want the hour api/jobs.yaml declares", pass.Every)
+	if want := declaredCadence(t); pass.Every != want {
+		t.Errorf("cadence = %v, want the %v api/jobs.yaml declares", pass.Every, want)
 	}
 	if pass.Running {
 		t.Error("no row is running and the read says one is")
@@ -54,6 +80,7 @@ func TestAScheduledRunIsWhenThePassRuns(t *testing.T) {
 func TestWithNothingScheduledThePassIsTheLastRunPlusItsCadence(t *testing.T) {
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
+	cadence := declaredCadence(t)
 	ran := time.Now().Add(-12 * time.Minute).Truncate(time.Second)
 
 	// Two completed runs: the LATEST is the one the next pass follows, and a
@@ -66,7 +93,7 @@ func TestWithNothingScheduledThePassIsTheLastRunPlusItsCadence(t *testing.T) {
 	// kinds is up to the twenty minutes their timeout allows.
 	seedJob(ctx, t, pool, seed{
 		Kind: aScheduledKind, State: "completed",
-		Scheduled: ran.Add(-time.Hour), CreatedAt: ran.Add(-time.Hour).Add(9 * time.Minute),
+		Scheduled: ran.Add(-cadence), CreatedAt: ran.Add(-cadence).Add(9 * time.Minute),
 	})
 	seedJob(ctx, t, pool, seed{
 		Kind: aScheduledKind, State: "completed",
@@ -77,7 +104,7 @@ func TestWithNothingScheduledThePassIsTheLastRunPlusItsCadence(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the pass: %v", err)
 	}
-	want := ran.Add(time.Hour)
+	want := ran.Add(cadence)
 	if pass.NextAt == nil || !pass.NextAt.Equal(want) {
 		t.Errorf("next = %v, want the last TICK plus the cadence %v — a projection off the "+
 			"finish runs late by however long the pass took", pass.NextAt, want)
@@ -161,8 +188,9 @@ func TestAKindWithNoHistoryNamesNoTime(t *testing.T) {
 		t.Errorf("next = %v for a kind with no scheduled and no completed run, want no answer",
 			pass.NextAt)
 	}
-	if pass.Every != time.Hour {
-		t.Errorf("cadence = %v — the declaration is knowable even where the next run is not", pass.Every)
+	if want := declaredCadence(t); pass.Every != want {
+		t.Errorf("cadence = %v, want the declared %v — the declaration is knowable even where the "+
+			"next run is not", pass.Every, want)
 	}
 }
 

@@ -598,6 +598,17 @@ func TestPerson360AssemblesEverySectionFromRealRows(t *testing.T) {
 		VALUES ($1, 'email', 'Re: pricing', 'body', '2026-08-01T09:00:00Z',
 		        'inbound', 'manual', 'human:x')`)
 	LinkActivity(t, owner, inbound, "person", mine)
+	// And it says THEY sent it. `last_inbound_at` is a claim about authorship,
+	// not about reachability: a thread is linked to everybody it concerns, so
+	// reading the date off the link alone would tell a reader "they wrote last"
+	// about a message somebody else sent into a conversation they are on. A
+	// fixture with no `from` participant models a message that reached them,
+	// which is the OUTBOUND question.
+	if _, err := owner.Exec(t.Context(), `
+		INSERT INTO activity_participant (activity_id, role, person_id)
+		VALUES ($1, 'from', $2)`, inbound, mine); err != nil {
+		t.Fatalf("seeding the sender: %v", err)
+	}
 	task := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, due_at, is_done, source, captured_by)
 		VALUES ($1, 'task', 'Send the quote', '2026-07-28T09:00:00Z', '2026-07-30T09:00:00Z',
 		        false, 'manual', 'human:x')`)
