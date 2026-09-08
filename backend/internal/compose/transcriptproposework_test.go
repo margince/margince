@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 	"github.com/riverqueue/river"
 
@@ -50,6 +51,16 @@ func (s *recordingReadStore) ReadTranscript(context.Context, ids.ActivityID) (ac
 
 func (s *recordingReadStore) FinishTranscriptRead(
 	_ context.Context, _ ids.UUID, outcome activities.TranscriptReadOutcome,
+) error {
+	s.finished = append(s.finished, outcome)
+	return s.finishErr
+}
+
+// The Tx door answers exactly as the pooled one does: these cases never reach
+// a database, and the two doors are one behaviour by construction in the store
+// they stand in for.
+func (s *recordingReadStore) FinishTranscriptReadTx(
+	_ context.Context, _ pgx.Tx, _ ids.UUID, outcome activities.TranscriptReadOutcome,
 ) error {
 	s.finished = append(s.finished, outcome)
 	return s.finishErr

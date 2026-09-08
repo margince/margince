@@ -20,8 +20,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -154,24 +158,87 @@ func (p *TranscriptProposer) Read(ctx context.Context, store transcriptReadStore
 			LineCount: len(reading.Lines),
 		})
 	}
-	staged, err := p.stage(ctx, kept, reading, activityID)
+	return p.stageAndFinish(ctx, store, readID, kept, reading, activityID)
+}
+
+// stageAndFinish commits the quotations and the record that produced them as
+// ONE fact, under the lock the engines that destroy a transcript take.
+//
+// They were separate transactions, and nothing ordered either against those
+// engines. So an erasure could land while the model call was out: it nulled the
+// body, found no proposals to scrub because none were staged yet, deleted the
+// reading, and committed certifying the words destroyed — and this worker then
+// came back and staged them. Nothing revisits those rows (storekit.
+// LockTranscriptBody says why), so the quotations stayed in the approvals inbox
+// permanently.
+//
+// The lock is taken FIRST and the reading re-read under it, so the two
+// interleavings both land somewhere honest: an erasure that got here first has
+// already deleted the reading and this stages nothing, and one that arrives
+// second waits, then finds the proposals and scrubs them with everything else.
+//
+// A re-check without the lock only narrows the window while reading as
+// complete, which is worse than the honest gap.
+func (p *TranscriptProposer) stageAndFinish(
+	ctx context.Context,
+	store transcriptReadStore,
+	readID ids.UUID,
+	kept []proposedStep,
+	reading activities.TranscriptReading,
+	activityID ids.ActivityID,
+) error {
+	return database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
+		if err := storekit.LockTranscriptBody(ctx, tx, []ids.UUID{activityID.UUID}); err != nil {
+			return err
+		}
+		// Under the lock, before any staging: a reading whose row is gone is a
+		// reading whose transcript was destroyed, and the work of quoting it is
+		// work that must not happen rather than work to roll back.
+		live, err := readingIsRunning(ctx, tx, readID)
+		if err != nil {
+			return err
+		}
+		if !live {
+			p.log.WarnContext(ctx, "transcript reading abandoned: its record is gone",
+				"transcript_read_id", readID, "activity_id", activityID)
+			return nil
+		}
+		staged, err := p.stage(ctx, tx, kept, reading, activityID)
+		if err != nil {
+			return err
+		}
+		outcome := activities.TranscriptReadOutcome{
+			Status:      activities.TranscriptReadDone,
+			ProposalIDs: staged,
+			LineCount:   len(reading.Lines),
+		}
+		if len(staged) == 0 {
+			// The reading found commitments and raised none of them: every one
+			// was already answered, either waiting in the queue or turned down
+			// before. That is a real outcome and it needs saying — a run that
+			// finishes with nothing and no reason reads exactly like a broken
+			// one, which is the distinction FinishTranscriptRead refuses to let
+			// collapse.
+			outcome.Detail = "every next step this transcript states has already been put to you"
+		}
+		return store.FinishTranscriptReadTx(ctx, tx, readID, outcome)
+	})
+}
+
+// readingIsRunning asks whether the reading this worker holds still exists and
+// is still the running one, with the row locked so a destructive pass queues
+// behind this transaction rather than inside it.
+func readingIsRunning(ctx context.Context, tx pgx.Tx, readID ids.UUID) (bool, error) {
+	var one int
+	err := tx.QueryRow(ctx,
+		`SELECT 1 FROM transcript_read WHERE id = $1 AND status = 'running' FOR UPDATE`, readID).Scan(&one)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
 	if err != nil {
-		return err
+		return false, fmt.Errorf("compose: re-reading the transcript reading under its lock: %w", err)
 	}
-	outcome := activities.TranscriptReadOutcome{
-		Status:      activities.TranscriptReadDone,
-		ProposalIDs: staged,
-		LineCount:   len(reading.Lines),
-	}
-	if len(staged) == 0 {
-		// The reading found commitments and raised none of them: every one was
-		// already answered, either waiting in the queue or turned down before.
-		// That is a real outcome and it needs saying — a run that finishes with
-		// nothing and no reason reads exactly like a broken one, which is the
-		// distinction FinishTranscriptRead refuses to let collapse.
-		outcome.Detail = "every next step this transcript states has already been put to you"
-	}
-	return store.FinishTranscriptRead(ctx, readID, outcome)
+	return true, nil
 }
 
 // unreadableTranscript separates a refusal a rep can act on from a fault the
@@ -212,7 +279,8 @@ func (p *TranscriptProposer) fail(ctx context.Context, store transcriptReadStore
 // still keeps its own diff hash, expiry and verdict — accepting two and
 // rejecting one is the whole point.
 func (p *TranscriptProposer) stage(
-	ctx context.Context, steps []proposedStep, reading activities.TranscriptReading, activityID ids.ActivityID,
+	ctx context.Context, tx pgx.Tx, steps []proposedStep,
+	reading activities.TranscriptReading, activityID ids.ActivityID,
 ) ([]ids.UUID, error) {
 	bundleID := ids.NewV7()
 	staged := make([]ids.UUID, 0, len(steps))
@@ -257,7 +325,7 @@ func (p *TranscriptProposer) stage(
 		if err != nil {
 			return nil, fmt.Errorf("compose: marshal transcript step identity: %w", err)
 		}
-		approvalID, staged1, err := p.approval.StageUnlessDeclined(ctx, approvals.StageInput{
+		approvalID, staged1, err := p.approval.StageUnlessDeclinedTx(ctx, tx, approvals.StageInput{
 			Kind:           TranscriptProposalKind,
 			ProposedChange: canonical,
 			DiffHash:       hash,

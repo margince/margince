@@ -757,3 +757,66 @@ func TestAFirstNameAloneDoesNotResolveToAColleague(t *testing.T) {
 			"substring search finds is not the one a person meant", assigned)
 	}
 }
+
+// erasingBrain is the erasure landing WHILE the model call is out, which is
+// where it landed in the incident: the reading has loaded the lines and has not
+// staged anything yet, so the citing scrub finds nothing to scrub.
+type erasingBrain struct {
+	reply string
+	erase func()
+}
+
+func (b erasingBrain) Complete(context.Context, model.Request) (model.Response, error) {
+	b.erase()
+	return model.Response{Text: b.reply}, nil
+}
+
+// The reading comes back to a transcript that no longer exists, and stages
+// nothing.
+//
+// Before the interlock it staged its proposals anyway — each quoting up to 500
+// characters of a body the erasure had just nulled and certified destroyed —
+// and only then discovered its own record was gone. Nothing revisits those
+// rows: the erasure set archived_at so the retention selector can never pick
+// the activity up, the body is NULL so the transcript selector cannot either,
+// and a subject-only activity is redacted by no other person's erasure. The
+// quotations stayed in the approvals inbox permanently.
+//
+// It is not an error the job should retry, either: asking the same question of
+// a transcript that is gone gets the same answer.
+func TestAReadingWhoseTranscriptWasErasedMidCallStagesNothing(t *testing.T) {
+	e := setupTranscript(t)
+	before := e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = $1`, TranscriptProposalKind)
+
+	started, _, err := e.Activities.StartTranscriptReadQueued(e.ctx, e.activity, "human:"+e.Rep1.String(), nil)
+	if err != nil {
+		t.Fatalf("starting the reading: %v", err)
+	}
+	quiet := slog.New(slog.NewTextHandler(os.Stderr, nil))
+	brain := erasingBrain{
+		reply: groundedReply(t, 3, 0.9),
+		erase: func() {
+			// What the erasure does to this activity: the reading deleted, the
+			// body nulled, the row archived.
+			if _, err := e.owner.Exec(t.Context(),
+				`DELETE FROM transcript_read WHERE activity_id = $1`, e.activity); err != nil {
+				t.Errorf("erasing the reading: %v", err)
+			}
+			if _, err := e.owner.Exec(t.Context(),
+				`UPDATE activity SET body = NULL, archived_at = now() WHERE id = $1`, e.activity); err != nil {
+				t.Errorf("erasing the body: %v", err)
+			}
+		},
+	}
+	proposer := NewTranscriptProposer(e.Pool, brain, e.svc, time.Now, quiet)
+	if err := proposer.Read(e.ctx, e.Activities, started.ID, e.activity); err != nil {
+		t.Fatalf("the reading answered %v; a transcript that is gone is a finished run, not a fault "+
+			"for the job to retry against the same absence", err)
+	}
+
+	after := e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = $1`, TranscriptProposalKind)
+	if after != before {
+		t.Errorf("%d transcript proposals were staged over an erased body; the approvals inbox now "+
+			"quotes words a tombstone says were destroyed", after-before)
+	}
+}
