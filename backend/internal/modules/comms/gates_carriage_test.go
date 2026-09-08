@@ -76,6 +76,49 @@ func TestAttachmentCarriageGateParksRatherThanStripping(t *testing.T) {
 		{name: "a long body with NO files is not the caption case", carriage: connector.Carriage{Carries: true, MaxBodyWithFiles: 8}, files: 0, bodyLen: 4096},
 		{name: "a sub-MiB bound is reported as itself, not as 0 MiB", carriage: connector.Carriage{Carries: true, MaxBytesPerFile: 900 << 10}, files: 1, fileBytes: 1 << 20, wantPark: true, wantReason: []string{"900.0 KiB"}},
 		{name: "a bound that is not a whole MiB is not rounded up", carriage: connector.Carriage{Carries: true, MaxBytesPerFile: 10_000_000}, files: 1, fileBytes: 20 << 20, wantPark: true, wantReason: []string{"9.5 MiB"}},
+
+		// The issue's own scenario: three 8 MiB files on a transport declaring
+		// 10 × 20 MiB. Every per-file bound admits it, the count admits it, and
+		// together they are more than a send may carry. Before this bound the
+		// composer called the message fine, the gate passed, and the read path
+		// refused after opening every object — the human heard "the retry ladder
+		// is exhausted", which names no cause.
+		{
+			name:      "three files under every per-file bound are over the aggregate",
+			carriage:  connector.Carriage{Carries: true, MaxFiles: 10, MaxBytesPerFile: 20 << 20},
+			files:     3,
+			fileBytes: 8 << 20,
+			wantPark:  true,
+			// The total AND the bound: "too big" without either number leaves a
+			// person guessing how much to drop.
+			wantReason: []string{"3 files", "24.0 MiB", "20.0 MiB", "several messages"},
+		},
+		{
+			name:      "the same three files under the aggregate go",
+			carriage:  connector.Carriage{Carries: true, MaxFiles: 10, MaxBytesPerFile: 20 << 20},
+			files:     3,
+			fileBytes: 6 << 20,
+		},
+		// A provider whose OWN aggregate is tighter than the product's is held
+		// to its own; one declaring none is held to the product's, which is the
+		// case above. This is the only bound with no "zero means unbounded"
+		// reading, because the product always has one.
+		{
+			name:       "a provider's tighter aggregate binds before the product's",
+			carriage:   connector.Carriage{Carries: true, MaxFiles: 10, MaxBytesPerFile: 20 << 20, MaxTotalBytes: 5 << 20},
+			files:      2,
+			fileBytes:  3 << 20,
+			wantPark:   true,
+			wantReason: []string{"6.0 MiB", "5.0 MiB"},
+		},
+		{
+			name:       "a provider's LOOSER aggregate does not widen the product's",
+			carriage:   connector.Carriage{Carries: true, MaxFiles: 10, MaxBytesPerFile: 50 << 20, MaxTotalBytes: 45 << 20},
+			files:      3,
+			fileBytes:  8 << 20,
+			wantPark:   true,
+			wantReason: []string{"24.0 MiB", "20.0 MiB"},
+		},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			d, store := gateHarness(t)

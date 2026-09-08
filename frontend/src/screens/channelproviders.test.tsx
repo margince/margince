@@ -46,6 +46,9 @@ function transport(provider: string, label: string): Entry {
       max_files: 0,
       max_bytes_per_file: 0,
       max_body_with_files: 0,
+      // Never zero on the wire: every transport has an aggregate, because the
+      // product has one whether or not the provider declares its own.
+      max_total_bytes: 20 * 1024 * 1024,
     },
   };
 }

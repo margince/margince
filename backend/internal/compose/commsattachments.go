@@ -170,21 +170,20 @@ func (a commsAttachments) ReadForSend(
 // published bounds admit, because a transport declaring ten files at 20 MiB each
 // promises ten times what this allows, so parking is the least it owes the
 // person who was told the message would go.
+// It is now the BACKSTOP rather than the first thing a person hears: the
+// carriage gate applies the same budget from the staged sizes, before any
+// object is opened, and parks with a reason naming the total and the bound.
+// This still runs, because the sizes it sums are the bytes actually read while
+// the gate's are the ones the rows recorded, and a send may not carry more than
+// the budget whichever of the two is wrong.
 func overSendBudget(total int64) error {
-	if total <= maxSendBytes {
+	if total <= comms.MaxSendBytes {
 		return nil
 	}
 	return fmt.Errorf(
 		"comms: this message's files total more than %d MiB, which is more than a send may carry: %w",
-		maxSendBytes>>20, connector.ErrFilesNotCarried)
+		comms.MaxSendBytes>>20, connector.ErrFilesNotCarried)
 }
-
-// maxSendBytes caps what ONE message may carry in total.
-//
-// Below what mailbox providers accept (Gmail refuses past 25 MiB after
-// encoding), so a message this passes is one the provider will take rather than
-// one this product built and the wire refused.
-const maxSendBytes = 20 << 20
 
 // readOne reads one attachment fully, closing the object either way.
 func (a commsAttachments) readOne(ctx context.Context, id ids.UUID) ([]byte, error) {

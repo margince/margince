@@ -72,10 +72,10 @@ func (d *Dispatcher) gateSendAuthority(ctx context.Context, del Delivery, grante
 // a different provider, a file added by a later edit. The human should get the
 // message back with a reason, which is what parking does.
 //
-// It checks FOUR things, not one: whether files may go at all, how many may ride
-// in one message, how large each may be, and — for a transport that carries
-// text-with-files as a caption — how long the covering text may be. All four are
-// the provider's own limits, published on the channel directory so the composer
+// It checks FIVE things, not one: whether files may go at all, how many may
+// ride in one message, how large each may be, how large they are TOGETHER, and
+// — for a transport that carries text-with-files as a caption — how long the
+// covering text may be. Four are the provider's own limits, published on the channel directory so the composer
 // warns first, and every one of them parks for the same reason: a message that
 // went out missing a file, or truncated to fit a caption, is not the message a
 // human approved.
@@ -92,6 +92,42 @@ func (d *Dispatcher) gateAttachmentCarriage(ctx context.Context, del Delivery, s
 	return outcomeUndecided, 0, nil
 }
 
+// MaxSendBytes caps what ONE message may carry in total, across every file on
+// it.
+//
+// Below what mailbox providers accept (Gmail refuses past 25 MiB after
+// encoding), so a message this passes is one the provider will take rather than
+// one this product built and the wire refused. It also bounds what a worker
+// serving every send in the installation holds at once: ten files at the upload
+// limit is a quarter of a gigabyte, and base64 encoding doubles it.
+//
+// It lives HERE, with the gate that tells a human about it, and the read path
+// that enforces it as a backstop reads this same constant
+// (compose/commsattachments.go). Two spellings of one budget is how the number
+// a composer is shown comes to differ from the number a send applies, which is
+// the whole defect this bound had.
+const MaxSendBytes = 20 << 20
+
+// aggregateBound is the largest total a message on this transport may carry:
+// the provider's own aggregate where it declares one, and the product's budget
+// otherwise — whichever is smaller.
+//
+// Published by the channel directory and applied by carriageRefusal from this
+// one function, so the number the composer warns with is the number the send
+// refuses on. A provider declaring no aggregate of its own is held to the
+// product's, which is the same "a zero bound means no limit beyond the
+// contract's own" rule the other three bounds follow.
+func aggregateBound(carriage connector.Carriage) int64 {
+	if carriage.MaxTotalBytes > 0 && carriage.MaxTotalBytes < MaxSendBytes {
+		return carriage.MaxTotalBytes
+	}
+	return MaxSendBytes
+}
+
+// AggregateCarriageBound is aggregateBound for the channel directory, which
+// publishes the same number this package refuses on.
+func AggregateCarriageBound(carriage connector.Carriage) int64 { return aggregateBound(carriage) }
+
 // carriageRefusal is why this message may not go out as staged, or "" when it
 // may. ONE function so the four refusals read together and none can be added
 // without a reason a person can act on.
@@ -99,7 +135,9 @@ func (d *Dispatcher) gateAttachmentCarriage(ctx context.Context, del Delivery, s
 // A zero bound means "no limit beyond the contract's own", never "zero allowed"
 // — the only field that says nothing may go is Carries. A connector that
 // declares carriage without naming a limit is therefore held to the contract's
-// own caps rather than parked on every send.
+// own caps rather than parked on every send. The aggregate is the one bound the
+// contract always has: a provider that declares none of its own still gets
+// MaxSendBytes.
 func carriageRefusal(del Delivery, carriage connector.Carriage) string {
 	if !carriage.Carries {
 		return fmt.Sprintf(
@@ -120,6 +158,21 @@ func carriageRefusal(del Delivery, carriage connector.Carriage) string {
 					"share it another way, or send a smaller version",
 				file.Filename, humanBytes(carriage.MaxBytesPerFile), del.Provider)
 		}
+	}
+	// The AGGREGATE, which the three bounds above cannot see between them: ten
+	// files each under the per-file cap can still total ten times what a send
+	// may carry. Without it the read path refuses instead — correctly, but only
+	// after the composer said the message was fine, and after every object has
+	// been opened.
+	var total int64
+	for _, file := range del.Attachments {
+		total += file.ByteSize
+	}
+	if bound := aggregateBound(carriage); total > bound {
+		return fmt.Sprintf(
+			"this message's %d files come to %s together, and the %s channel carries at most %s in one "+
+				"message; it was not sent — send them across several messages, or share the largest another way",
+			len(del.Attachments), humanBytes(total), del.Provider, humanBytes(bound))
 	}
 	if body := utf8.RuneCountInString(del.Body); carriage.MaxBodyWithFiles > 0 && body > carriage.MaxBodyWithFiles {
 		return fmt.Sprintf(
