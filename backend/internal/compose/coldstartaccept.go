@@ -62,6 +62,11 @@ func approvalsServiceWithEffects(pool *pgxpool.Pool) *approvals.Service {
 	svc.WithEffect(orgNameProposalKind, orgNameAcceptEffect(svc, store))
 	svc.WithEffect(captureCollisionKind, captureCollisionAcceptEffect(svc, store))
 	svc.WithEffect(linkedInMatchKind, linkedInMatchAcceptEffect(svc, store))
+	// Both halves, like the held message above and for the same reason: the
+	// subject of this card is a row that is already sitting in a state, and a
+	// card whose buttons only dismissed it would report a decision the record
+	// never heard.
+	svc.WithDeclinedEffect(linkedInMatchKind, linkedInMatchDeclineEffect(store))
 	svc.WithEffect(lifecycleProposalKind, lifecycleAcceptEffect(svc, store))
 	svc.WithEffect(vcardCreateKind, vcardCreateAcceptEffect(svc, people.NewStore(InstallationDB(pool))))
 	svc.WithPrecheck(vcardCreateKind, vcardCreatePrecheck())

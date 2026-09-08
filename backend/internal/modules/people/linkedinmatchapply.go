@@ -256,7 +256,7 @@ func applyLinkedInMatchInTx(ctx context.Context, tx pgx.Tx, connectionID, ownerI
 	if err != nil {
 		return err
 	}
-	return auditLinkedInMatch(ctx, tx, connectionID, ownerID, personID, matchImages(wasStatus, wasPerson, personID), wrote)
+	return auditLinkedInMatch(ctx, tx, connectionID, ownerID, personID, matchImages(wasStatus, wasPerson, matchConfirmed, &personID), wrote)
 }
 
 // matchImagePair is the connection's own columns on either side of a confirmed
@@ -265,21 +265,41 @@ func applyLinkedInMatchInTx(ctx context.Context, tx pgx.Tx, connectionID, ownerI
 // publish a decision the row did not record.
 type matchImagePair struct{ before, after map[string]any }
 
-func matchImages(wasStatus string, wasPerson *ids.UUID, personID ids.UUID) matchImagePair {
-	// Dereferenced, because the two sides are compared by value: a *ids.UUID and
-	// an ids.UUID never read as equal however they point, so a re-confirm of the
-	// same contact would publish matched_person_id moving to what it already
-	// held — which is the change this narrowing exists to leave out.
-	var wasPersonValue any
-	if wasPerson != nil {
-		wasPersonValue = *wasPerson
-	}
+// matchImages builds the field image for either decision about a suggestion —
+// the confirm and the refusal both call it. They move the same two columns, and
+// a second builder that named those columns its own way would make one decision
+// unreadable beside the other in the same field history.
+func matchImages(wasStatus string, wasPerson *ids.UUID, toStatus string, toPerson *ids.UUID) matchImagePair {
+	// Dereferenced on both sides, because they are compared by value: a
+	// *ids.UUID and an ids.UUID never read as equal however they point, so a
+	// re-confirm of the same contact would publish matched_person_id moving to
+	// what it already held — which is the change this narrowing exists to leave
+	// out. A nil stays nil, which is how a refusal says the row now names
+	// nobody.
 	before, after := storekit.ChangedColumns(
-		map[string]any{"match_status": wasStatus, "matched_person_id": wasPersonValue},
-		map[string]any{"match_status": matchConfirmed, "matched_person_id": personID},
+		map[string]any{matchStatusColumn: wasStatus, matchedPersonColumn: personValue(wasPerson)},
+		map[string]any{matchStatusColumn: toStatus, matchedPersonColumn: personValue(toPerson)},
 	)
 	return matchImagePair{before: before, after: after}
 }
+
+// personValue is a matched_person_id as the image comparison reads it.
+//
+//craft:ignore naked-any the field-image maps are map[string]any, and this feeds one — a typed return would be converted at the call site and say less
+func personValue(id *ids.UUID) any {
+	if id == nil {
+		return nil
+	}
+	return *id
+}
+
+// The two columns a decision about a suggestion moves. They are constants
+// because both decisions write them and a field history is read across the two,
+// so a typo on one side would silently split one column's history in half.
+const (
+	matchStatusColumn   = "match_status"
+	matchedPersonColumn = "matched_person_id"
+)
 
 // auditLinkedInMatch commits the write shape. The connection's own audit row
 // records the link; a handle that reached the contact is a second mutation of a
@@ -407,89 +427,4 @@ func touchPerson(ctx context.Context, tx pgx.Tx, personID ids.UUID) error {
 		return fmt.Errorf("people: bumping the contact a LinkedIn handle changed: %w", err)
 	}
 	return nil
-}
-
-// RecordLinkedInMatchRefused writes the terminal state a refused suggestion has
-// always had a value for and never a writer.
-//
-// The migration that created the column defines `rejected`; nothing in the tree
-// wrote it. Rejecting a proposal runs no effect — the approvals engine
-// dispatches its effect table on APPROVE only — so a refused connection stayed
-// `suggested` and non-tombstoned for ever, and nothing reading the row could
-// tell a finished suggestion from a live one.
-//
-// The refusal itself was never lost: StageUnlessDeclined reads the declined
-// offers and will not re-propose. What was lost is the cost. The sweep
-// enumerates every connection in (unmatched, suggested), so a refused one paid
-// an RBAC resolve, a whole-network match, a pending read and a staging
-// transaction on every hourly pass and every organization event, for a
-// guaranteed-empty result — a permanent per-pass charge that grows with the
-// size of the imported network, for a state that is supposed to be the cheap
-// one.
-//
-// Written where the refusal is OBSERVED rather than where it is made: the
-// stager already learns it, because StageUnlessDeclined answers "not staged"
-// for exactly this reason. That keeps the whole change on this side of the
-// seam — no reject-side effect table, which would be a new concept in the
-// approvals engine for one caller — and it is self-healing: a connection
-// refused before this shipped is marked the first time a sweep reaches it.
-//
-// Idempotent by predicate. A second pass finds the row already rejected, the
-// UPDATE matches nothing, and no audit row is written for a decision nobody
-// made twice.
-func (s *Store) RecordLinkedInMatchRefused(ctx context.Context, connectionID ids.UUID) error {
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.UserID == ids.Nil {
-		return apperrors.ErrPermissionDenied
-	}
-	// person:read, the grant its SIBLING WRITER of this column takes.
-	// MatchLinkedInConnections sets match_status to `suggested` under the read
-	// grant, because what these rows are is one member's own imported network
-	// and the authority over them is owning them. person:update is what
-	// ApplyLinkedInMatch takes, and it takes it because it writes to a PERSON —
-	// copying that here would refuse the whole staging pass for a ghost owner
-	// holding read-only person grants, which is most of them.
-	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
-		return err
-	}
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		var wasStatus string
-		err := tx.QueryRow(ctx, `
-			UPDATE linkedin_connection c
-			   SET match_status = $2, updated_at = now()
-			  FROM linkedin_connection was
-			 WHERE c.id = $1 AND was.id = c.id AND c.tombstoned_at IS NULL
-			   AND c.owner_user_id = $3
-			   AND c.match_status = $4
-			 RETURNING was.match_status`,
-			connectionID, matchRejected, actor.UserID, matchSuggested).Scan(&wasStatus)
-		if errors.Is(err, pgx.ErrNoRows) {
-			// Every way this matches nothing is a no-op and none is wrong.
-			//
-			// SUGGESTED and nothing else, which is the narrow predicate and the
-			// one that matters: the refusal was observed against a snapshot, and
-			// between that read and this write the row may have been confirmed
-			// by the exact-name matcher or reset to unmatched by a re-import.
-			// A refusal is only ever about the suggestion it answered, so a
-			// stale observation must leave a newer state alone rather than
-			// overwrite a link somebody now has.
-			//
-			// The owner clause is the same authority the read had: one member
-			// marking another's connection is not a refusal they made.
-			//
-			// Already rejected, tombstoned or gone are the ordinary cases — the
-			// sweep re-reaches a refused row on every pass until the
-			// enumeration stops covering it, which is the point of it being
-			// cheap to answer.
-			return nil
-		}
-		if err != nil {
-			return fmt.Errorf("people: recording a refused LinkedIn match: %w", err)
-		}
-		before, after := storekit.ChangedColumns(
-			map[string]any{"match_status": wasStatus},
-			map[string]any{"match_status": matchRejected})
-		_, err = storekit.Audit(ctx, tx, "update", "linkedin_connection", connectionID, before, after)
-		return err
-	})
 }
