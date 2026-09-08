@@ -92,7 +92,15 @@ func NewAutoEnrichStore(db *database.DB) *AutoEnrichStore { return &AutoEnrichSt
 // The order is on the ID rather than created_at because it must be TOTAL: two
 // companies captured in the same statement share an instant, and a tie under a
 // LIMIT is a coin toss that can seat the same row at the boundary every pass.
-// The id is a uuidv7, so ordering by it is ordering by arrival anyway.
+//
+// TOTAL and STABLE is all the argument above needs. A uuidv7 sorts by its
+// millisecond and then by bits that are process-local or random, so ids minted
+// on two app instances inside one millisecond can interleave — it is very
+// nearly arrival order, not exactly it. That costs nothing here: a company can
+// be overtaken only by rows sharing its millisecond, which is a bounded
+// reordering and not a queue it can sit behind. What would break the argument
+// is an order that is not total, or one a new row can enter arbitrarily far
+// ahead in — and the id is neither.
 //
 // The org-name sweep pages this same set to exhaustion instead
 // (people/orgnamepromotion.go). It can: its per-candidate work is one in-memory
