@@ -92,33 +92,51 @@ fi
 # commit sorts below it and would have been read as already covered — silently,
 # and on exactly the pull requests complicated enough to need this report.
 #
-# commits_after <sha> is everything reachable from the tip that is not the
-# reviewed commit or one of ITS ancestors: reachable(head) minus
-# ancestors(sha), which is the set a re-review would have to read.
-parents_of() {
-	awk -v want="$1" '$1 == want { $1 = ""; print; exit }' <<<"$history"
-}
-
-reachable_from() {
-	local frontier="$1" seen="" next parent
-	while [[ -n "$frontier" ]]; do
-		next=""
-		for parent in $frontier; do
-			grep -qxF "$parent" <<<"$seen" && continue
-			seen+="${parent}"$'\n'
-			next+=" $(parents_of "$parent")"
-		done
-		frontier="$next"
-	done
-	printf '%s' "$seen"
-}
-
+# ONE awk pass, because the obvious shape is quadratic. Walking the graph in
+# shell re-scans the history for every commit visited, and spawns a process to
+# do it: on a long-lived pull request that is the report timing out rather than
+# saying anything, which is worse than the wrong answer it replaced because
+# nothing is left to read at all. awk indexes the edges once and walks them.
+#
+# commits_after <sha> is everything reachable from the tip that is NOT the
+# reviewed commit or one of its ancestors — reachable(head) minus
+# ancestors(reviewed), the set a re-review would have to read.
 commits_after() {
-	local covered
-	covered="$(reachable_from "$1")"
-	# Oldest first is the order the commits were written, which is how the
-	# report lists them; the walk produces no useful order of its own.
-	grep -vxF -f <(printf '%s' "$covered") <<<"$(reachable_from "$head")" || true
+	awk -v head="$head" -v reviewed="$1" '
+		function walk(start,   stack, top, sha, kid, i) {
+			delete reached
+			stack[0] = start
+			top = 1
+			while (top > 0) {
+				sha = stack[--top]
+				if (sha in reached) continue
+				reached[sha] = 1
+				if (!(sha in parents)) continue
+				split(parents[sha], kid, " ")
+				for (i in kid) if (kid[i] != "") stack[top++] = kid[i]
+			}
+		}
+		{
+			order[NR] = $1
+			rows = NR
+			edges = ""
+			for (i = 2; i <= NF; i++) edges = edges " " $i
+			parents[$1] = edges
+		}
+		END {
+			walk(reviewed)
+			for (sha in reached) covered[sha] = 1
+			walk(head)
+			for (sha in reached) fromTip[sha] = 1
+			# Oldest first, which is the order the commits were written: the
+			# history arrives newest first, so it is read back to front. The
+			# walk itself produces no useful order.
+			for (i = rows; i >= 1; i--) {
+				sha = order[i]
+				if ((sha in fromTip) && !(sha in covered)) print sha
+			}
+		}
+	' <<<"$history"
 }
 
 in_history() {

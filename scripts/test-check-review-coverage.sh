@@ -128,6 +128,64 @@ else
 	echo "ok: a review of the tip covers every ancestor the merge brought with it"
 fi
 
+# OLDEST FIRST, which the report's own prose promises and a reader relies on:
+# the list reads in the order the commits were written, so the fix commit that
+# needs re-reading is where you expect it. The graph walk produces no order of
+# its own, so this is not a property that survives on its own.
+order_out="$(REVIEW_COVERAGE_HEAD=ccc3333 REVIEW_COVERAGE_HISTORY="$history" \
+	REVIEW_COVERAGE_REVIEWS="[$(review cubic aaa1111 2026-09-01T10:00:00Z)]" "$report" 2>&1 || true)"
+if [[ "$(grep -cE '^(bbb2222|ccc3333)$' <<<"$order_out")" -ne 2 ]] ||
+	[[ "$(grep -nE '^bbb2222$' <<<"$order_out" | cut -d: -f1)" -gt "$(grep -nE '^ccc3333$' <<<"$order_out" | cut -d: -f1)" ]]; then
+	echo "FAIL: the unread commits were not listed oldest first" >&2
+	printf '%s\n' "$order_out" >&2
+	failures=$((failures + 1))
+else
+	echo "ok: the unread commits are listed oldest first"
+fi
+
+# A long branch is where the shape of the walk stops being an aesthetic
+# question. Re-scanning the history per visited commit is quadratic AND spawns
+# a process to do it, so the report times out and says nothing — which is worse
+# than a wrong answer, because nothing is left to read.
+# A long branch is where the shape of the walk stops being an aesthetic
+# question. Re-scanning the history once per visited commit is quadratic AND
+# spawns a process to do it, so a long-lived pull request gets no report at all
+# rather than a wrong one — which is worse, because nothing is left to read.
+#
+# COUNTED, not timed. A wall-clock bound wide enough not to flake on a loaded
+# runner is too wide to separate a quadratic walk from a linear one at any
+# input size a suite can afford; and the property is not "fast", it is "the
+# history is indexed once rather than re-read per commit". So the report runs
+# with a counting shim ahead of awk on PATH, and the count is the assertion.
+shim="$(mktemp -d)"
+trap 'rm -rf "$shim"' EXIT
+real_awk="$(command -v awk)"
+cat >"$shim/awk" <<SHIM
+#!/usr/bin/env bash
+echo . >>"$shim/calls"
+exec "$real_awk" "\$@"
+SHIM
+chmod +x "$shim/awk"
+: >"$shim/calls"
+
+# Built by awk rather than by appending in a loop: bash string concatenation is
+# itself quadratic, and a fixture that cost more to build than to judge would
+# be measuring the wrong thing. (Through the real awk, so it is not counted.)
+long_history="$("$real_awk" 'BEGIN { for (i = 200; i >= 1; i--) printf "c%06d c%06d\n", i, i - 1 }')"
+long_out="$(PATH="$shim:$PATH" REVIEW_COVERAGE_HEAD=c000200 REVIEW_COVERAGE_HISTORY="$long_history" \
+	REVIEW_COVERAGE_REVIEWS="[$(review cubic c000001 2026-09-01T10:00:00Z)]" "$report" 2>&1 || true)"
+awk_calls="$(grep -c . "$shim/calls" || true)"
+if ! grep -qF "199 commit(s) landed after cubic" <<<"$long_out"; then
+	echo "FAIL: a 200-commit branch was not counted correctly" >&2
+	printf '%s\n' "$long_out" | head -3 >&2
+	failures=$((failures + 1))
+elif (( awk_calls > 10 )); then
+	echo "FAIL: the report read the history $awk_calls times for a 200-commit branch — it is re-reading per commit, so a long-lived pull request will get no report at all" >&2
+	failures=$((failures + 1))
+else
+	echo "ok: a 200-commit branch is judged in $awk_calls pass(es) over the history"
+fi
+
 if [[ "$failures" -ne 0 ]]; then
 	echo "FAIL: $failures case(s)" >&2
 	exit 1
