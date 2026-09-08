@@ -17,6 +17,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/weekly/narrative"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -415,5 +417,94 @@ func TestTheWriterRefusesProseTheColumnCannotHold(t *testing.T) {
 	}
 	if err := e.engine.Narrate(e.repCtx, review.ID, atCeiling+"ü", weekClock); err == nil {
 		t.Error("the writer accepted prose past the column's ceiling")
+	}
+}
+
+// A meeting is the HOST's, whoever filed it.
+//
+// Read by captured_by alone, a meeting a colleague minuted or a calendar
+// connector imported counted for whoever recorded it rather than the rep who
+// sat in it — so the same meeting moved between reps' weeks depending on how it
+// reached the CRM, and a rep whose calendar syncs automatically showed none.
+func TestTheWeekCountsMeetingsByHostRatherThanByWhoFiledThem(t *testing.T) {
+	e := setupWeekly(t)
+	owner := integration.OwnerConn(t)
+	inWeek := weekClock.AddDate(0, 0, -3)
+
+	// Hosted by Rep1, filed by somebody else: the connector-import shape.
+	integration.SeedIDRow(t, owner, `
+		INSERT INTO activity (id, kind, subject, occurred_at, meeting_status,
+		                      host_user_id, source, captured_by)
+		VALUES ($1, 'meeting', 'Imported', $2, 'held', $3, 'manual', 'human:someone-else')`,
+		inWeek, e.Rep1)
+	// Hosted by a colleague. Without it the fixture reads 1 either way, and the
+	// assertion could not tell host attribution from capturer attribution.
+	integration.SeedIDRow(t, owner, `
+		INSERT INTO activity (id, kind, subject, occurred_at, meeting_status,
+		                      host_user_id, source, captured_by)
+		VALUES ($1, 'meeting', 'Not mine', $2, 'held', $3, 'manual', 'human:someone-else')`,
+		inWeek, e.Rep2)
+
+	review, _, err := e.engine.AssembleFor(e.repCtx, weekClock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if review.Counts.MeetingsHeld != 1 {
+		t.Errorf("counted %d meetings held for a rep who hosted one of the two, want 1",
+			review.Counts.MeetingsHeld)
+	}
+}
+
+// A task raised after the week closed is not what the meeting produced.
+//
+// "Left a next step" joins a task to a meeting through a shared record, and the
+// join had a lower bound only — so a task created weeks later on the same
+// account credited a meeting that had nothing to do with it, and a review of a
+// closed week changed its answer every time somebody added a task.
+func TestAMeetingsNextStepMustBeRaisedInsideTheWeek(t *testing.T) {
+	e := setupWeekly(t)
+	owner := integration.OwnerConn(t)
+	inWeek := weekClock.AddDate(0, 0, -3)
+
+	meeting := integration.SeedIDRow(t, owner, `
+		INSERT INTO activity (id, kind, subject, occurred_at, meeting_status,
+		                      host_user_id, source, captured_by)
+		VALUES ($1, 'meeting', 'The meeting', $2, 'held', $3, 'manual', 'human:x')`,
+		inWeek, e.Rep1)
+	// A meeting is with a PERSON — the schema refuses a company link, and says
+	// the company sees it through them — so the shared record the join runs
+	// over is the attendee.
+	person := integration.SeedIDRow(t, owner,
+		`INSERT INTO person (id, full_name, source, captured_by)
+		 VALUES ($1, 'The attendee', 'manual', 'human:x')`)
+	linkToPerson(t, owner, meeting, person)
+
+	// Raised AFTER the week closed, on the same account. Real work, and not
+	// this meeting's outcome.
+	late := integration.SeedIDRow(t, owner, `
+		INSERT INTO activity (id, kind, subject, occurred_at, created_at,
+		                      assignee_id, source, captured_by)
+		VALUES ($1, 'task', 'Weeks later', $2, $2, $3, 'manual', 'human:x')`,
+		weekClock.AddDate(0, 0, 14), e.Rep1)
+	linkToPerson(t, owner, late, person)
+
+	review, _, err := e.engine.AssembleFor(e.repCtx, weekClock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if review.Counts.MeetingsWithNextStep != 0 {
+		t.Errorf("a task raised after the week closed credited the meeting with a next step (%d)",
+			review.Counts.MeetingsWithNextStep)
+	}
+}
+
+// linkToPerson files one activity under a person, which is how a meeting and
+// the task that follows it are related — there is no meeting_id on a task.
+func linkToPerson(t *testing.T, owner *pgx.Conn, activity, person ids.UUID) {
+	t.Helper()
+	if _, err := owner.Exec(context.Background(), `
+		INSERT INTO activity_link (activity_id, entity_type, person_id)
+		VALUES ($1, 'person', $2)`, activity, person); err != nil {
+		t.Fatalf("linking the activity to its person: %v", err)
 	}
 }
