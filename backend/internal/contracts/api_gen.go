@@ -51738,7 +51738,7 @@ type ServerInterface interface {
 	// Mail this contact a single-use link to see what is held about them, correct it, and answer on marketing.
 	// (POST /people/{id}/consent/confirm-request)
 	RequestDetailsConfirmation(w http.ResponseWriter, r *http.Request, id Id)
-	// Double-opt-in issuance — not available until the confirmation mail is durable.
+	// Mail the subject a single-use link that confirms one marketing purpose.
 	// (POST /people/{id}/consent/double-opt-in)
 	IssueDoubleOptIn(w http.ResponseWriter, r *http.Request, id Id)
 	// May we write to this person right now — per purpose and channel, with the reason.
@@ -54852,7 +54852,7 @@ func (_ Unimplemented) RequestDetailsConfirmation(w http.ResponseWriter, r *http
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Double-opt-in issuance — not available until the confirmation mail is durable.
+// Mail the subject a single-use link that confirms one marketing purpose.
 // (POST /people/{id}/consent/double-opt-in)
 func (_ Unimplemented) IssueDoubleOptIn(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
