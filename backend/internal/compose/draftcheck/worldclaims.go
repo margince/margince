@@ -14,6 +14,21 @@ package draftcheck
 
 import "github.com/margince/margince/backend/internal/shared/kernel/textlang"
 
+// Grounds is what the RECORD supports, as opposed to what the draft says.
+//
+// A struct rather than two bools side by side: they are both about "can this
+// claim be sourced", they were adjacent in the signature, and a caller that
+// transposed them would ground a first message on a thread it does not have
+// and refuse a booked meeting its own day — silently, and in both directions.
+type Grounds struct {
+	// Threaded: this draft answers a real inbound message, so it may echo a
+	// call the counterparty themselves named.
+	Threaded bool
+	// Booked: the record carries a meeting with this recipient, so the draft
+	// may refer to its day.
+	Booked bool
+}
+
 // spokenExchange are the ways a draft asserts that a CONVERSATION happened —
 // a call, a meeting, a chat — as opposed to the messages the record holds.
 //
@@ -83,5 +98,48 @@ var attributedClaim = map[textlang.Lang][]string{
 	},
 	textlang.Vietnamese: {
 		"anh/chị đã đề cập", "anh/chị đã nói",
+	},
+}
+
+// scheduledArrangement are the ways a draft asserts a meeting is ALREADY SET,
+// on a day, when the record books none.
+//
+// Checked only where nothing is booked, which is what separates it from
+// spokenExchange above. With a meeting on file "am Donnerstag" is the drafter
+// doing its job — the person prompt asks for exactly that phrasing over a
+// timestamp. With none, the same words hand a customer an appointment nobody
+// made.
+//
+// The reported defect: a request for two untranslated product examples, with no
+// meeting anywhere in the input, produced "unsere geplante Demonstration der
+// Übersetzungsregeln für morgen".
+//
+// THE PHRASE HAS TO ASSERT THE BOOKING, not merely name a day. A draft that
+// PROPOSES one is what this product exists to write — "it would be great to
+// connect next week", "es freut mich, dass wir nächste Woche sprechen können" —
+// and a list refusing those refuses the good drafts along with the invented
+// ones. So the entries carry the possessive or the planning word that makes the
+// arrangement a settled fact: "our call tomorrow" asserts a call exists,
+// "shall we speak tomorrow" asks for one. That distinction is why this is a
+// phrase list and not a list of days.
+var scheduledArrangement = map[textlang.Lang][]string{
+	textlang.English: {
+		"our meeting tomorrow", "our call tomorrow", "our demo tomorrow",
+		"our meeting next week", "our call next week",
+		"the meeting tomorrow", "the call tomorrow", "the demo tomorrow",
+		"scheduled for tomorrow", "planned for tomorrow", "booked for tomorrow",
+		"as scheduled tomorrow",
+	},
+	// German pays for "morgen" twice: it is both "tomorrow" and "morning", so
+	// the bare word appears in "guten Morgen" and "morgen früh" without
+	// scheduling anything. Every entry here carries the arrangement with it.
+	textlang.German: {
+		"geplante demonstration", "geplanten demonstration", "geplante vorführung",
+		"unser termin morgen", "unser gespräch morgen", "unser telefonat morgen",
+		"unsere demo morgen", "für morgen geplant", "für morgen vereinbart",
+		"für morgen angesetzt", "termin für morgen", "demonstration für morgen",
+	},
+	textlang.Vietnamese: {
+		"cuộc họp ngày mai", "buổi demo ngày mai", "đã lên lịch ngày mai",
 	},
 }

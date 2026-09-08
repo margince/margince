@@ -93,6 +93,14 @@ type Input interface {
 	Addresses() []string
 	// Threaded says whether this draft continues an existing subject line.
 	Threaded() bool
+	// Booked says whether the record carries a meeting with this recipient.
+	//
+	// False is the common answer and the one that binds: with nothing booked, a
+	// draft naming a day is naming a day nobody agreed to. A prompt asking for
+	// two product examples came back proposing "unsere geplante Demonstration
+	// der Übersetzungsregeln für morgen" — grounded in nothing, and the kind of
+	// sentence a customer reads as a commitment.
+	Booked() bool
 }
 
 // Surface is what one drafting site decides for itself.
@@ -165,7 +173,7 @@ func writeChecked(
 	ctx context.Context, lane Completer, surface Surface, in Input, voice draftvoice.Context,
 ) (Draft, error) {
 	envelope := in.WrittenInto()
-	draft, err := CorrectOnce(ctx, envelope.Lang(), envelope.Band(),
+	draft, err := CorrectOnce(ctx, envelope.Lang(), envelope.Band(), in.Booked(),
 		func(ctx context.Context, correction string) (Draft, error) {
 			return writeWithModel(ctx, lane, surface, in, voice, correction)
 		},

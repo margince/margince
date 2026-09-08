@@ -22,10 +22,16 @@ package compose
 //
 // A TASK ALREADY DONE IS LEFT DONE. OpenTaskFor answers with the cycle's task
 // for a subject whether or not somebody has completed it, and a finding arriving
-// afterwards files under that same task rather than minting a fresh one. Within
-// one night a rep is asked once. If the condition is still there tomorrow, it is
-// tomorrow's cycle that asks again — which is the honest re-ask, because a night
-// has passed and the finding was re-observed.
+// afterwards files under that same task rather than minting a fresh one. If a
+// rep has answered it and the condition is still there, the next cycle asks
+// again — which is the honest re-ask, because the finding was re-observed after
+// somebody acted on it.
+//
+// A TASK STILL OPEN IS NOT ASKED TWICE. The cycle is one night, so cycle scope
+// alone left one indistinguishable task per night behind: same subject line, no
+// body, nothing to choose between them. A subject whose earlier task is still
+// open adopts it (adoptOpenTask), and the extras an installation already
+// accumulated are archived as the sweep meets them.
 
 import (
 	"context"
@@ -34,8 +40,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/assurance"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -110,7 +118,7 @@ func bundleRunFindings(
 	// carried and the walk continues.
 	var failed []error
 	for _, subject := range groupBySubject(open) {
-		wasMinted, subjectErr := bundleSubject(ctx, deps, cycle, subject)
+		wasMinted, subjectErr := bundleSubject(ctx, deps, runID, cycle, subject)
 		if subjectErr != nil {
 			failed = append(failed, subjectErr)
 			continue
@@ -242,16 +250,25 @@ func groupBySubject(open []assurance.Exception) []subjectFindings {
 // bundleSubject files one subject's findings under one task, minting it if the
 // cycle has none yet, and says whether it minted.
 func bundleSubject(
-	ctx context.Context, deps bundleDeps, cycle ids.UUID, subject subjectFindings,
+	ctx context.Context, deps bundleDeps, runID, cycle ids.UUID, subject subjectFindings,
 ) (bool, error) {
 	task, found, err := deps.bundles.OpenTaskFor(ctx, cycle, subject.kind, subject.id)
 	if err != nil {
 		return false, fmt.Errorf("compose: asking for the subject's task: %w", err)
 	}
+	if !found {
+		// Nothing in THIS cycle, so ask across the earlier ones. A task still
+		// open is the same question already on the rep's list, and asking it
+		// again as a second row does not make it more likely to be answered.
+		task, found, err = adoptOpenTask(ctx, deps, subject)
+		if err != nil {
+			return false, err
+		}
+	}
 
 	minted := false
 	if !found {
-		task, err = mintBundleTask(ctx, deps, subject)
+		task, err = mintBundleTask(ctx, deps, runID, subject)
 		if err != nil {
 			return false, err
 		}
@@ -270,6 +287,9 @@ func bundleSubject(
 	return minted, nil
 }
 
+// bundleTaskSource names this writer in the activity's natural key.
+var bundleTaskSource = "assurance"
+
 // mintBundleTask writes the task a subject's findings hang from.
 //
 // The assignee is the exception's own owner — the deal's owner as the scan saw
@@ -278,13 +298,21 @@ func bundleSubject(
 // names nobody, and an unassigned remediation task is one that reaches the
 // unassigned queue rather than the person whose deal it is about.
 func mintBundleTask(
-	ctx context.Context, deps bundleDeps, subject subjectFindings,
+	ctx context.Context, deps bundleDeps, runID ids.UUID, subject subjectFindings,
 ) (ids.UUID, error) {
 	line := bundleTaskSubject(len(subject.findings))
+	// The natural key that makes a River retry a no-op. It is the RUN, not the
+	// cycle: a retry that re-scans opens a fresh cycle with a new id, so a
+	// cycle-keyed name would differ on exactly the attempt it exists to
+	// deduplicate. activity.replayedActivity resolves this pair before
+	// inserting, against uq_activity_source.
+	sourceID := subject.kind + ":" + subject.id.String() + ":" + runID.String()
 	in := activities.LogActivityInput{
-		Kind:    activityKindTask,
-		Subject: &line,
-		Source:  systemActor,
+		Kind:         activityKindTask,
+		Subject:      &line,
+		Source:       systemActor,
+		SourceSystem: &bundleTaskSource,
+		SourceID:     &sourceID,
 		// system_remediation, and the whole feature depends on it.
 		//
 		// Every recency reading folds the newest activity into last_activity_at,
@@ -363,4 +391,74 @@ func writeBundleTask(
 		return nil
 	})
 	return task, err
+}
+
+// adoptOpenTask finds a still-open task an earlier cycle raised for this
+// subject, and settles the extras when several are open at once.
+//
+// TWO JOBS, and they are one function because the second is how an
+// installation that already accumulated duplicates gets back to one row. The
+// cycle-scoped lookup this stands behind could only ever see one night, so a
+// finding that stayed true for a week left a week of identical tasks: same
+// subject line, no body, nothing to tell them apart. Newest survives — it is
+// the one a rep has most likely already seen — and the rest are archived
+// through the activities door, which writes their audit and outbox rows.
+//
+// A task somebody has DONE is not adopted and not archived. The finding being
+// true again after a rep answered it is a new question, honestly asked.
+func adoptOpenTask(
+	ctx context.Context, deps bundleDeps, subject subjectFindings,
+) (ids.UUID, bool, error) {
+	known, err := deps.bundles.TaskIDsForSubject(ctx, subject.kind, subject.id)
+	if err != nil {
+		return ids.UUID{}, false, fmt.Errorf("compose: reading the subject's earlier tasks: %w", err)
+	}
+	var open []ids.UUID
+	for _, id := range known {
+		act, err := deps.activities.GetActivity(ctx, ids.From[ids.ActivityKind](id), storekit.LiveOnly)
+		if errors.Is(err, apperrors.ErrNotFound) {
+			// Archived, erased, or swept. Gone is gone: the cycle mints.
+			continue
+		}
+		if err != nil {
+			return ids.UUID{}, false, fmt.Errorf("compose: reading an earlier task: %w", err)
+		}
+		// THE TASK MUST STILL BE ABOUT THIS SUBJECT. assurance_task_item records
+		// where a task was FILED, and a relink moves where it lives: a task
+		// raised for deal A and since relinked to deal B is B's now, and
+		// adopting it would hang A's findings off B's row — or archive a task
+		// somebody moved on purpose.
+		if !linksToSubject(act, subject) {
+			continue
+		}
+		if act.IsDone != nil && *act.IsDone {
+			continue
+		}
+		open = append(open, id)
+	}
+	if len(open) == 0 {
+		return ids.UUID{}, false, nil
+	}
+	// TaskIDsForSubject answers newest first, so the head is the survivor.
+	for _, extra := range open[1:] {
+		if _, err := deps.activities.ArchiveActivity(ctx, ids.From[ids.ActivityKind](extra), nil); err != nil {
+			return ids.UUID{}, false, fmt.Errorf("compose: settling a duplicate task: %w", err)
+		}
+	}
+	return open[0], true, nil
+}
+
+// linksToSubject reports whether a task still names the subject it was raised
+// for. A link is a live fact about the task; the bundling row records only
+// where it was filed on the night it was minted.
+func linksToSubject(act crmcontracts.Activity, subject subjectFindings) bool {
+	if act.Links == nil {
+		return false
+	}
+	for _, link := range *act.Links {
+		if string(link.EntityType) == subject.kind && ids.UUID(link.EntityId) == subject.id {
+			return true
+		}
+	}
+	return false
 }

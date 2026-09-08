@@ -47,6 +47,7 @@ function coverageBody(coverage: Partial<Coverage>): Coverage {
       answered: 1,
       no_reply: 0,
       untried: 2,
+      lapsed: 0,
     },
     deals: [],
     completeness: { committee_read: true },
@@ -116,6 +117,7 @@ test("says nobody has answered rather than naming a fallback", async () => {
       answered: 0,
       no_reply: 2,
       untried: 0,
+      lapsed: 0,
     },
   });
   render(

@@ -388,14 +388,17 @@ kinds:
     queue: default
     timeout: 20m
     opts_owner: caller
-    cadence: 1h
+    cadence: 10m
     reason: >-
-      Hourly, like capture_classify and for the same reason: the ledger's
-      due-index makes an empty pass one cheap probe, and a deferred sender
-      should not wait a day to become a record. Every stage runs in dependency
-      order inside one workspace's job — judging fills the unsure backlog that
-      staging then offers, and redaction only ever acts on windows that closed
-      before the tick.
+      Every ten minutes, like capture_confidentiality_verdict and for the same
+      reason: the ledger's due-index makes an empty pass one cheap probe, so the
+      cadence is paid for by the mail that arrives rather than by the tick. An
+      hour was the wrong price on the other side — a sender who writes just
+      after a tick waited most of an hour to become a record, and the person
+      waiting for them cannot tell that from the message not having arrived.
+      Every stage runs in dependency order inside one workspace's job — judging
+      fills the unsure backlog that staging then offers, and redaction only ever
+      acts on windows that closed before the tick.
 
 
   capture_confidentiality_verdict:

@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -139,5 +141,88 @@ func TestAnExcerptKeepsTheSenderAndDropsQuotedHistory(t *testing.T) {
 	}
 	if got := excerpt("> A quoted message only"); got != "" {
 		t.Fatalf("quoted-only message became authored evidence: %q", got)
+	}
+}
+
+// roomThread builds one thread with a single comment from the given side.
+func roomThread(side, state, body string) crmcontracts.DealRoomThread {
+	return crmcontracts.DealRoomThread{
+		Id:    openapi_types.UUID(ids.NewV7()),
+		State: state,
+		Comments: []crmcontracts.DealRoomComment{{
+			Body:   body,
+			Author: crmcontracts.DealRoomAuthor{Side: side, Name: "Someone"},
+		}},
+	}
+}
+
+func TestARoomsPostsCarryWhichSideWroteThem(t *testing.T) {
+	// A room holds both sides' posts in one list. Handed over without the side,
+	// our own follow-up reads exactly like the customer engaging — which is how
+	// a card came to say "the customer remains actively engaged in the deal
+	// room" about a room only we had ever written in.
+	room := crmcontracts.DealRoom{State: "open"}
+	f := facts{room: &room, threads: []crmcontracts.DealRoomThread{
+		roomThread("seller", "open", "Sending the rollout plan over."),
+		roomThread("seller", "resolved", "Answered internally."),
+	}}
+	got := roomIn(f)
+	if got == nil {
+		t.Fatal("no room in the input")
+	}
+	if got.BuyerPosts != 0 {
+		t.Errorf("buyer_posts = %d for a room only the seller has written in, want 0", got.BuyerPosts)
+	}
+	for _, th := range got.Threads {
+		if th.OpenerSide != "seller" {
+			t.Errorf("opener_side = %q, want seller: the model cannot tell whose words these are otherwise", th.OpenerSide)
+		}
+	}
+
+	// And it counts the buyer when there is one, or the zero above proves
+	// nothing but that the field is always zero.
+	f.threads = append(f.threads, roomThread("buyer", "open", "Phase 3 needs clarification."))
+	if got := roomIn(f); got.BuyerPosts != 1 {
+		t.Errorf("buyer_posts = %d with one buyer comment, want 1", got.BuyerPosts)
+	}
+}
+
+func TestAnOpenThreadOutRanksASettledOneForTheModelsAttention(t *testing.T) {
+	// maxThreadRows is what the model sees. A room whose settled threads come
+	// first in room order would spend the whole allowance on finished
+	// conversation and drop the one still open.
+	room := crmcontracts.DealRoom{State: "open"}
+	var threads []crmcontracts.DealRoomThread
+	for range maxThreadRows {
+		threads = append(threads, roomThread("seller", "resolved", "Settled."))
+	}
+	live := roomThread("buyer", "open", "Still waiting on this.")
+	threads = append(threads, live)
+
+	got := roomIn(facts{room: &room, threads: threads})
+	if len(got.Threads) != maxThreadRows {
+		t.Fatalf("%d threads carried, want the cap of %d", len(got.Threads), maxThreadRows)
+	}
+	if got.Threads[0].ID != live.Id.String() {
+		t.Errorf("the first thread is %q, want the OPEN one (%q) — the cap dropped the live conversation",
+			got.Threads[0].ID, live.Id.String())
+	}
+}
+
+func TestTheModelIsToldWhoWroteEachRoomPost(t *testing.T) {
+	// Through the wire shape, not the struct: the model reads JSON, and a field
+	// renamed or dropped in the marshal is a field it never receives.
+	room := crmcontracts.DealRoom{State: "open"}
+	in := StatusInput{Room: roomIn(facts{room: &room, threads: []crmcontracts.DealRoomThread{
+		roomThread("seller", "open", "Our own note."),
+	}})}
+	body, err := json.Marshal(in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`"opener_side":"seller"`, `"buyer_posts":0`} {
+		if !strings.Contains(string(body), want) {
+			t.Errorf("the model's input does not carry %s\ngot: %s", want, body)
+		}
 	}
 }

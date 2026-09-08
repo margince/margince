@@ -4,7 +4,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useId } from "react";
+import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
@@ -330,6 +330,8 @@ export function TaskDetailModal({
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   const titleId = useId();
+  // The meeting the task came from, open in its own reader over this dialog.
+  const [openSource, setOpenSource] = useState<string | null>(null);
   const query = useQuery({
     queryKey: ["activity", activityId],
     queryFn: async () => {
@@ -357,6 +359,22 @@ export function TaskDetailModal({
       {task && (
         <div className="form-stack">
           {task.body && <p className="t-body">{task.body}</p>}
+          {/* The record the promise was read out of. The body names it in
+              words — "committed to this in the meeting transcript (line 6)" —
+              and the sentence alone left the only route back through the
+              record's history and an exact-subject search. The reader below
+              asks the server for the meeting under this seat's own scope, so
+              somebody who may not open it is told so there rather than here. */}
+          {task.source_activity_id && (
+            <div>
+              <Button
+                variant="ghost"
+                onClick={() => setOpenSource(task.source_activity_id ?? null)}
+              >
+                {t("tasks.openSource")}
+              </Button>
+            </div>
+          )}
           <p className="t-caption task-detail-meta">
             {task.due_at ? (
               <span>
@@ -392,6 +410,72 @@ export function TaskDetailModal({
                 showDuePicker
               />
             </div>
+          )}
+        </div>
+      )}
+      {openSource && (
+        <SourceMeeting
+          activityId={openSource}
+          onClose={() => setOpenSource(null)}
+        />
+      )}
+    </Modal>
+  );
+}
+
+/**
+ * The meeting a task was read out of.
+ *
+ * It asks GET /activities/{id}, not the email presentation: that endpoint
+ * refuses anything whose kind is not `email` — with a 404, so a reader clicking
+ * through to a MEETING would have been told it does not exist. The plain
+ * activity read serves every kind and carries the same row scope, so a reader
+ * who may not see the meeting still gets the refusal that is theirs to get.
+ */
+function SourceMeeting({
+  activityId,
+  onClose,
+}: Readonly<{ activityId: string; onClose: () => void }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const recordZone = useRecordZone();
+  const titleId = useId();
+  const query = useQuery({
+    queryKey: ["activity", activityId],
+    queryFn: async () => {
+      const { data, error } = await api.GET("/activities/{id}", {
+        params: { path: { id: activityId } },
+      });
+      if (error) {
+        throwProblem(error, t);
+      }
+      return data;
+    },
+  });
+  const meeting: Activity | undefined = query.data;
+  return (
+    <Modal open onClose={onClose} labelledBy={titleId}>
+      <h2 id={titleId} className="t-h2 modal-title">
+        {meeting?.subject ?? t("tasks.source")}
+      </h2>
+      {query.isPending && <PendingBody label={t("tasks.detailLoading")} />}
+      {query.isError && (
+        <p className="t-caption form-error">
+          {problemMessageOf(query.error, t)}
+        </p>
+      )}
+      {meeting && (
+        <div className="form-stack">
+          <p className="t-caption">
+            {formatDateTime(meeting.occurred_at, locale, recordZone)}
+          </p>
+          {/* The transcript, as it was captured. `pre-wrap` because a
+              transcript is line-per-turn and reflowing it into a paragraph
+              takes away the one structure it has. */}
+          {meeting.body && (
+            <p className="t-body" style={{ whiteSpace: "pre-wrap" }}>
+              {meeting.body}
+            </p>
           )}
         </div>
       )}

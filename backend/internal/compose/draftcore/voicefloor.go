@@ -133,5 +133,5 @@ func servable(draft Draft) bool {
 // helper, and it reads nothing a surface owns.
 func phrasingFindings(in Input, draft Draft) []draftcheck.Finding {
 	envelope := in.WrittenInto()
-	return Findings(draft, envelope.Lang(), envelope.Band(), DraftText, DraftSubject(in))
+	return Findings(draft, envelope.Lang(), envelope.Band(), in.Booked(), DraftText, DraftSubject(in))
 }

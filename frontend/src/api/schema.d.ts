@@ -1906,12 +1906,15 @@ export interface paths {
          *     This is the one ranking, shared with the 360's section — a client that re-sorts
          *     is answering a different question than the server did.
          *
-         *     **Engagement is four states and they are not degrees of one thing.** `waiting`
+         *     **Engagement is five states and they are not degrees of one thing.** `waiting`
          *     means their latest message has no reply from us. `answered` means we replied to
          *     their latest message, inside the 90-day window. `no_reply` means we wrote and
-         *     heard nothing. `untried` means nobody has written to them at all. Untried and
-         *     no-reply look alike in a roster and call for opposite next actions, which is why
-         *     they are separate values rather than a boolean plus a date.
+         *     heard nothing. `lapsed` means the exchange is real but older than the window.
+         *     `untried` means nobody has written to them at all. Untried and no-reply look
+         *     alike in a roster and call for opposite next actions, which is why they are
+         *     separate values rather than a boolean plus a date — and lapsed is separate from
+         *     untried for the same reason, since a row saying "not approached" beside that
+         *     contact's own "they wrote, 1 June" is telling a rep two contradictory things.
          *
          *     **Row scope, per contact.** The list carries the caller's person scope, so a
          *     contact they may not read is absent rather than named — the same answer
@@ -21044,6 +21047,8 @@ export interface components {
             no_reply: number;
             /** @description Contacts nobody has written to at all. */
             untried: number;
+            /** @description Contacts whose exchange is real but older than the 90-day window. The five counts partition contacts_total, so a reader that ignores this one is short by exactly the contacts who have gone quiet. */
+            lapsed: number;
         };
         OrganizationCoverageDeal: {
             /** Format: uuid */
@@ -21191,6 +21196,10 @@ export interface components {
          *     `answered` — we replied to their latest message. The conversation is current
          *     from our side; the ball is with them.
          *     `no_reply` — we have written and had nothing back. Writing again is a decision.
+         *     `lapsed` — the exchange is real but every message in it predates the window.
+         *     Picking a conversation back up is a different move from opening one, and
+         *     reporting it as `untried` contradicted the contact's own last-touch date on
+         *     the same row.
          *     `untried` — nobody has written to them at all. Free to approach.
          *
          *     Waiting is deliberately not folded into answered: one inbound mail nobody has
@@ -21200,7 +21209,7 @@ export interface components {
          *     actions.
          * @enum {string}
          */
-        ContactEngagement: "waiting" | "answered" | "no_reply" | "untried";
+        ContactEngagement: "waiting" | "answered" | "no_reply" | "lapsed" | "untried";
         OrganizationContact: {
             /** Format: uuid */
             person_id: string;
@@ -22640,6 +22649,11 @@ export interface components {
             source_system?: string | null;
             /** @description Provider message/event id — idempotency key part. */
             source_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The activity this one was derived FROM — today, the meeting whose transcript proposed a task. Null on almost every row: a task somebody typed came from nowhere but them. It is a reference, not a grant: opening it goes through the activity read path under the caller's own scope, so a reader who may not see the meeting gets the same answer they would get by asking for it directly.
+             */
+            readonly source_activity_id?: string | null;
             /** @description One activity may link to >1 entity (person + deal). */
             links?: components["schemas"]["ActivityLink"][];
             source: string;
@@ -33951,7 +33965,7 @@ export interface operations {
                  *     Mutually exclusive with `owner_id` and `owner_team_id`; combining them is `422`.
                  */
                 unassigned?: boolean;
-                /** @description Full-text query over name/title (tsvector). */
+                /** @description Full-text query over name/title (tsvector), plus an exact match on the record's own identifier: a contact's email address, an organization's domain. A query containing "@" also tries the part after it against the domain, so pasting a sender finds their company. Identifier matching is exact, never a prefix. */
                 q?: string;
                 /**
                  * @description Narrow to the records carrying these tags. Repeat the parameter for several.

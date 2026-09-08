@@ -3973,6 +3973,7 @@ func (e ConsumerMailDomainKind) Valid() bool {
 // Defines values for ContactEngagement.
 const (
 	ContactEngagementAnswered ContactEngagement = "answered"
+	ContactEngagementLapsed   ContactEngagement = "lapsed"
 	ContactEngagementNoReply  ContactEngagement = "no_reply"
 	ContactEngagementUntried  ContactEngagement = "untried"
 	ContactEngagementWaiting  ContactEngagement = "waiting"
@@ -3982,6 +3983,8 @@ const (
 func (e ContactEngagement) Valid() bool {
 	switch e {
 	case ContactEngagementAnswered:
+		return true
+	case ContactEngagementLapsed:
 		return true
 	case ContactEngagementNoReply:
 		return true
@@ -16983,6 +16986,9 @@ type Activity struct {
 	RemindAt *time.Time `json:"remind_at,omitempty"`
 	Source   string     `json:"source"`
 
+	// SourceActivityId The activity this one was derived FROM — today, the meeting whose transcript proposed a task. Null on almost every row: a task somebody typed came from nowhere but them. It is a reference, not a grant: opening it goes through the activity read path under the caller's own scope, so a reader who may not see the meeting gets the same answer they would get by asking for it directly.
+	SourceActivityId *openapi_types.UUID `json:"source_activity_id,omitempty"`
+
 	// SourceId Provider message/event id — idempotency key part.
 	SourceId *string `json:"source_id,omitempty"`
 
@@ -21323,6 +21329,10 @@ type ConsumerMailDomainListResponse struct {
 // `answered` — we replied to their latest message. The conversation is current
 // from our side; the ball is with them.
 // `no_reply` — we have written and had nothing back. Writing again is a decision.
+// `lapsed` — the exchange is real but every message in it predates the window.
+// Picking a conversation back up is a different move from opening one, and
+// reporting it as `untried` contradicted the contact's own last-touch date on
+// the same row.
 // `untried` — nobody has written to them at all. Free to approach.
 //
 // Waiting is deliberately not folded into answered: one inbound mail nobody has
@@ -28117,6 +28127,10 @@ type OrganizationContact struct {
 	// `answered` — we replied to their latest message. The conversation is current
 	// from our side; the ball is with them.
 	// `no_reply` — we have written and had nothing back. Writing again is a decision.
+	// `lapsed` — the exchange is real but every message in it predates the window.
+	// Picking a conversation back up is a different move from opening one, and
+	// reporting it as `untried` contradicted the contact's own last-touch date on
+	// the same row.
 	// `untried` — nobody has written to them at all. Free to approach.
 	//
 	// Waiting is deliberately not folded into answered: one inbound mail nobody has
@@ -28210,6 +28224,10 @@ type OrganizationCoverageRoute struct {
 	// `answered` — we replied to their latest message. The conversation is current
 	// from our side; the ball is with them.
 	// `no_reply` — we have written and had nothing back. Writing again is a decision.
+	// `lapsed` — the exchange is real but every message in it predates the window.
+	// Picking a conversation back up is a different move from opening one, and
+	// reporting it as `untried` contradicted the contact's own last-touch date on
+	// the same row.
 	// `untried` — nobody has written to them at all. Free to approach.
 	//
 	// Waiting is deliberately not folded into answered: one inbound mail nobody has
@@ -28250,6 +28268,10 @@ type OrganizationCoverageSeat struct {
 	// `answered` — we replied to their latest message. The conversation is current
 	// from our side; the ball is with them.
 	// `no_reply` — we have written and had nothing back. Writing again is a decision.
+	// `lapsed` — the exchange is real but every message in it predates the window.
+	// Picking a conversation back up is a different move from opening one, and
+	// reporting it as `untried` contradicted the contact's own last-touch date on
+	// the same row.
 	// `untried` — nobody has written to them at all. Free to approach.
 	//
 	// Waiting is deliberately not folded into answered: one inbound mail nobody has
@@ -28303,6 +28325,9 @@ type OrganizationCoverageSummary struct {
 
 	// ContactsTotal Every contact the caller may see at this account, not a page of them.
 	ContactsTotal int `json:"contacts_total"`
+
+	// Lapsed Contacts whose exchange is real but older than the 90-day window. The five counts partition contacts_total, so a reader that ignores this one is short by exactly the contacts who have gone quiet.
+	Lapsed int `json:"lapsed"`
 
 	// NoReply Contacts we have written to with nothing back.
 	NoReply int `json:"no_reply"`
@@ -40077,7 +40102,7 @@ type ListPeopleParams struct {
 	// Mutually exclusive with `owner_id` and `owner_team_id`; combining them is `422`.
 	Unassigned *bool `form:"unassigned,omitempty" json:"unassigned,omitempty"`
 
-	// Q Full-text query over name/title (tsvector).
+	// Q Full-text query over name/title (tsvector), plus an exact match on the record's own identifier: a contact's email address, an organization's domain. A query containing "@" also tries the part after it against the domain, so pasting a sender finds their company. Identifier matching is exact, never a prefix.
 	Q *string `form:"q,omitempty" json:"q,omitempty"`
 
 	// TagId Narrow to the records carrying these tags. Repeat the parameter for several.

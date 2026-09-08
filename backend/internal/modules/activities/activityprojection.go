@@ -39,6 +39,10 @@ type activityScan struct {
 	// assigneeID and hostUserID are typed ids in the row and openapi UUIDs on
 	// the record.
 	assigneeID, hostUserID *ids.UUID
+	// sourceActivityID is the activity this one was derived from — the meeting
+	// whose transcript proposed a task. Scanned as a typed id and mapped to the
+	// contract's openapi UUID, like the two above.
+	sourceActivityID *ids.UUID
 	// language is scanned as text and mapped to the contract enum: the column
 	// is a CHECK-constrained string, and a row written before the enum existed
 	// must not fail a read.
@@ -92,6 +96,7 @@ var activityProjection = []activityColumn{
 	{"a.source_system", func(s *activityScan) any { return &s.a.SourceSystem }},
 	{"a.source_id", func(s *activityScan) any { return &s.a.SourceId }},
 	{"a.source", func(s *activityScan) any { return &s.a.Source }},
+	{"a.source_activity_id", func(s *activityScan) any { return &s.sourceActivityID }},
 	{"a.language", func(s *activityScan) any { return &s.language }},
 	{"a.captured_by", func(s *activityScan) any { return &s.a.CapturedBy }},
 	{"a.version", func(s *activityScan) any { return &s.version }},
@@ -157,6 +162,10 @@ func (s *activityScan) record() crmcontracts.Activity {
 
 	a.Id = openapi_types.UUID(s.id)
 	a.AssigneeId = uuidPtr(s.assigneeID)
+	// The meeting a task was read out of. A marker, not content: which record
+	// produced this one is a fact like its date, and opening it is a separate
+	// read under the caller's own scope.
+	a.SourceActivityId = uuidPtr(s.sourceActivityID)
 	// Our own side of a meeting. Not gated by the content audience: who held a
 	// meeting is a marker like its date and its direction, and a caller who may
 	// discover the row may know whose meeting it was.

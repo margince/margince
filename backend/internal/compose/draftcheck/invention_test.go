@@ -34,7 +34,7 @@ func TestTheServedInventedDraftIsRefusedAtEveryBand(t *testing.T) {
 		convstate.BandWeeks, convstate.BandMonths,
 	} {
 		t.Run(string(band), func(t *testing.T) {
-			findings := Body(servedInventedDraft, textlang.English, band, false)
+			findings := Body(servedInventedDraft, textlang.English, band, Grounds{})
 			if len(findings) == 0 {
 				t.Fatalf("the served draft passed clean at band %s", band)
 			}
@@ -51,7 +51,7 @@ func TestTheServedInventedDraftIsRefusedAtEveryBand(t *testing.T) {
 // A rep reads the correction, so it has to name the phrase back. A finding that
 // says only "something is wrong" leaves the model guessing on the retry.
 func TestTheCorrectionNamesTheInventedPhrase(t *testing.T) {
-	feedback := Feedback(Body(servedInventedDraft, textlang.English, convstate.BandFresh, false))
+	feedback := Feedback(Body(servedInventedDraft, textlang.English, convstate.BandFresh, Grounds{}))
 
 	if !strings.Contains(feedback, "pleasure connecting") {
 		t.Errorf("the correction did not name the invented meeting: %q", feedback)
@@ -74,7 +74,7 @@ func TestAnHonestDraftStaysClean(t *testing.T) {
 			"the provider comparison, here is what our side can commit to.",
 	} {
 		t.Run(name, func(t *testing.T) {
-			if findings := Body(body, textlang.English, convstate.BandFresh, false); len(findings) > 0 {
+			if findings := Body(body, textlang.English, convstate.BandFresh, Grounds{}); len(findings) > 0 {
 				t.Fatalf("an honest draft was refused: %+v", findings)
 			}
 		})
@@ -89,10 +89,10 @@ func TestAThreadedReplyMayAnswerACallTheCounterpartyNamed(t *testing.T) {
 	body := "Thanks — after our call I pulled the figures you mentioned, and the " +
 		"August timeline still works on our side."
 
-	if findings := Body(body, textlang.English, convstate.BandFresh, true); len(findings) > 0 {
+	if findings := Body(body, textlang.English, convstate.BandFresh, Grounds{Threaded: true}); len(findings) > 0 {
 		t.Fatalf("a grounded reply was refused: %+v", findings)
 	}
-	if findings := Body(body, textlang.English, convstate.BandFresh, false); len(findings) == 0 {
+	if findings := Body(body, textlang.English, convstate.BandFresh, Grounds{}); len(findings) == 0 {
 		t.Fatal("the same words opening a new conversation must still be refused")
 	}
 }
@@ -105,15 +105,20 @@ func TestForwardLookingAndUnrelatedTextIsNotAnInventedCall(t *testing.T) {
 		body string
 		lang textlang.Lang
 	}{
-		"proposes a call":            {"It would be great to connect next week.", textlang.English},
-		"names a call still to come": {"We can cover that in our call tomorrow.", textlang.English},
+		"proposes a call": {"It would be great to connect next week.", textlang.English},
+		// Note what this one does NOT say. It offers to cover the topic on a
+		// call; it does not assert that a call is booked for a named day.
+		// "our call tomorrow" with nothing on the record is refused by
+		// unscheduled-arrangement, which is a different rule and a real defect
+		// — a customer reads it as an appointment they agreed to.
+		"names a call still to come": {"We can cover that on a call.", textlang.English},
 		"connects two people":        {"Good to connect you with Anna, who runs delivery.", textlang.English},
 		"asks for a call":            {"Shall we set up a call?", textlang.English},
 		"proposes a German call":     {"Es freut mich, dass wir nächste Woche sprechen können.", textlang.German},
 		"a German call to come":      {"Unser Telefonat nächsten Dienstag passt mir gut.", textlang.German},
 	} {
 		t.Run(name, func(t *testing.T) {
-			if findings := Body(tc.body, tc.lang, convstate.BandFresh, false); len(findings) > 0 {
+			if findings := Body(tc.body, tc.lang, convstate.BandFresh, Grounds{}); len(findings) > 0 {
 				t.Fatalf("a legitimate draft was refused: %+v", findings)
 			}
 		})
@@ -130,7 +135,7 @@ func TestGermanInventionIsCaught(t *testing.T) {
 		"after a phone call":      "Marine, nach unserem Telefonat habe ich die Zahlen geprüft.",
 	} {
 		t.Run(name, func(t *testing.T) {
-			if findings := Body(body, textlang.German, convstate.BandFresh, false); len(findings) == 0 {
+			if findings := Body(body, textlang.German, convstate.BandFresh, Grounds{}); len(findings) == 0 {
 				t.Fatalf("a German invention passed clean")
 			}
 		})

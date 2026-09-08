@@ -151,6 +151,9 @@ type listFilters struct {
 	entity string
 	// nameColumn is the quick-find target — the record's display column.
 	nameColumn string
+	// identifier is the record's address or domain table, when it has one.
+	// Empty for a record identified only by name.
+	identifier storekit.Identifier
 }
 
 // capturedByKindClause is the ONE spelling of the provenance filter
@@ -316,7 +319,7 @@ func (f listFilters) clauses(active []fieldcatalog.Column, sorted *storekit.List
 		where = append(where, ai)
 	}
 	if f.Query != nil && *f.Query != "" {
-		where = append(where, storekit.QuickFindClause(arg(*f.Query), f.nameColumn))
+		where = append(where, storekit.QuickFindClauseWith(arg(quickFindTerm(*f.Query, f.entity)), f.nameColumn, f.identifier))
 	}
 	cfClauses, err := storekit.CustomFilterClauses(active, f.CustomFilters, arg)
 	if err != nil {
@@ -378,4 +381,22 @@ func capturedByKindArg[T ~string](v *T) *string {
 	}
 	s := string(*v)
 	return &s
+}
+
+// quickFindTerm is what the identifier arm matches on.
+//
+// An organization is identified by its DOMAIN, and the thing a rep has in hand
+// is usually a person's address at that company. Taking the part after the "@"
+// makes "annabelle@example.com" find the account as readily as "example.com"
+// does, which is what somebody pasting a sender into the company search means.
+// The name arms see the same term; a domain is not a name, so nothing that
+// matched before stops matching.
+func quickFindTerm(q, entity string) string {
+	if entity != entityOrganization {
+		return q
+	}
+	if _, domain, found := strings.Cut(q, "@"); found && domain != "" {
+		return domain
+	}
+	return q
 }

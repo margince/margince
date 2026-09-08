@@ -83,6 +83,11 @@ func transcriptProposalEffect(
 				SourceID:     &sourceID,
 				Source:       transcriptProposalSourceSystem,
 				Links:        proposal.Links,
+				// The meeting itself, beside the sentence naming it. The body
+				// tells a rep the promise came from a transcript and the id is
+				// what lets them go and read it — without which the only route
+				// back is the record's history and an exact-subject search.
+				SourceActivityID: &proposal.ActivityID,
 			}
 			if err := stampTranscriptDue(ctx, tx, &in, proposal.DueDate); err != nil {
 				return err

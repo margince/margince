@@ -112,6 +112,14 @@ since either side wrote.
   that the budget round has concluded" is an invented fact, and a draft that
   reasons from one is worse than a draft that asks.
 
+NOTHING IS SCHEDULED UNLESS YOU WERE GIVEN IT
+A meeting, call, demonstration or session exists only if the data names one.
+Where it does not, do not refer to any arrangement between you and the
+recipient, and do not put a day on one: no "tomorrow", "morgen", "next week",
+"nächste Woche", no weekday, no date. Preparing something, proposing something
+and having it booked are three different states, and a draft that promotes the
+first to the third puts a commitment in front of a customer that nobody made.
+
 GAPS
 If you want a figure, a date, a name or a commitment that you were not given,
 do not invent one and do not approximate. Either leave it out and write around

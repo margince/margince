@@ -128,6 +128,15 @@ const (
 	// ATTRIBUTION, and reporting it as an ungrounded value would send a
 	// reader looking for text that is right there.
 	dropLegalBlockNotThisEntity = "legal_block_not_this_entity"
+	// dropSignatureNotThisPerson marks a signature field refused because the
+	// block it was read from names somebody else. The candidate query already
+	// requires this person to have SENT the message, so this catches the other
+	// shape: their own mail carrying a colleague's or a correspondent's
+	// signature below theirs, quoted or forwarded. Its own reason for
+	// dropLegalBlockNotThisEntity's reason — the value is verbatim in the
+	// window, so reporting it as ungrounded would send a reader hunting for
+	// text that is plainly there.
+	dropSignatureNotThisPerson = "signature_not_this_person"
 	// dropParaphraseLowOverlap is WARNING-class, never a refusal: a
 	// paraphrase profile field whose value shares no content word with
 	// its cited passage. Multilingual sites trip it legitimately; the

@@ -99,6 +99,7 @@ Return ONLY a JSON object: {"sections":[{"kind":"snapshot|fit|health|activity|ne
 The sections answer, in order: what this company is; why it matters to US; how the relationship stands; what actually happened; what to do next. Omit a section you have nothing real to say in.
 Label every sentence. A FACT restates what the summary says and cites the record it came from. An ASSESSMENT is a judgment you draw by combining the summary with the company context — say it plainly, and cite the records that support it. A RECOMMENDATION is one concrete move; cite the account-side record that motivates it.
 Facts may appear in any section. Assessments belong only in fit and health. Recommendations belong only in next_step, and there are at most two.
+Keep every qualification. A message that accepts one thing and reserves another says both, and reporting only the acceptance drops the part somebody still has to act on.
 Never invent a fact. If the summary does not say it, you may still ASSESS it — but then it is an assessment and must be labelled one.
 The company context describes US, the people reading this. It is never a fact about THEM, and never a citation: our own profile is not a record the reader can open.
 Cite the ids the summary gave you. A sentence about the account itself cites the organization.

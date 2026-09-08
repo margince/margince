@@ -13,7 +13,7 @@ import (
 // Answered is earned by replying, not by receiving: a contact whose latest
 // message has no outbound after it reads as waiting however much traffic the
 // window holds, because one unprompted mail nobody answered is not a success.
-func TestEngagementOfReadsTheFourStatesOffWhoWroteLast(t *testing.T) {
+func TestEngagementOfReadsTheStatesOffWhoWroteLast(t *testing.T) {
 	t.Parallel()
 	base := time.Date(2026, 8, 1, 12, 0, 0, 0, time.UTC)
 	at := func(daysLater int) *time.Time {
@@ -54,6 +54,18 @@ func TestEngagementOfReadsTheFourStatesOffWhoWroteLast(t *testing.T) {
 			"their reply aged out of the window and we chased since",
 			RelationshipStrength{Outbound90d: 1, LastInbound: at(-200), LastOutbound: at(0)},
 			EngagementNoReply,
+		},
+		{
+			// The defect this state exists for: reported as untried, this row
+			// said "Not approached" beside its own "They wrote, 1 June".
+			"their mail is real but older than the window",
+			RelationshipStrength{LastInbound: at(-200)},
+			EngagementLapsed,
+		},
+		{
+			"we wrote once, long ago, and nothing since either way",
+			RelationshipStrength{LastOutbound: at(-200)},
+			EngagementLapsed,
 		},
 		{
 			"nobody has written at all",
@@ -168,5 +180,35 @@ func assertOrder(t *testing.T, got []ContactStrength, want []ids.PersonID) {
 		if got[i].PersonID != want[i] {
 			t.Fatalf("position %d: got %s, want %s", i, got[i].PersonID.UUID, want[i].UUID)
 		}
+	}
+}
+
+// Every state a contact can hold has a rank, and every rank names a state.
+//
+// Both directions, because each misses what the other catches. A state absent
+// from the order sorts as zero — it would silently lead the list, above the
+// people actually waiting on a reply — and a rank naming no state is a value
+// somebody removed from the vocabulary and left behind here.
+func TestEveryEngagementStateHasARankAndEveryRankAState(t *testing.T) {
+	t.Parallel()
+	all := []Engagement{
+		EngagementWaiting, EngagementAnswered, EngagementNoReply,
+		EngagementLapsed, EngagementUntried,
+	}
+	for _, state := range all {
+		if _, ok := engagementOrder[state]; !ok {
+			t.Errorf("%q has no rank, so it sorts as 0 and leads the triage list", state)
+		}
+	}
+	if len(engagementOrder) != len(all) {
+		t.Errorf("%d ranks for %d states — one of them names a state nobody returns",
+			len(engagementOrder), len(all))
+	}
+	seen := map[int]Engagement{}
+	for state, rank := range engagementOrder {
+		if other, clash := seen[rank]; clash {
+			t.Errorf("%q and %q share rank %d, so their order is the scan's", state, other, rank)
+		}
+		seen[rank] = state
 	}
 }

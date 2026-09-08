@@ -338,6 +338,24 @@ const (
 	// The floor that catches an extractor which has stopped reading, far below
 	// the real count.
 	wantMinimumModuleSites = 60
-	// What the tier holds today. A ratchet: it may only fall.
-	modulesTierUnscopedCeiling = 95
+	// What the tier holds today. A ratchet: it may only fall, and it has risen
+	// exactly once.
+	//
+	// THE ONE RISE, and why it is not a widening anybody should copy.
+	// people.RetractMisattributedSignatureFields takes back the profile fields
+	// an earlier build wrote off a message the person never sent. It is a
+	// repair pass, chosen by DATA — the same SenderPredicate that decides what
+	// may be written decides what may still stand — and run by the enrichment
+	// job's own system principal, which has no seat for a scope to narrow to.
+	// Narrowing it to one caller's rows would leave every other contact wearing
+	// another sender's title while the pass reported success, which is the
+	// storage-limitation shape the privacy sweeps are exempted for.
+	//
+	// The scope clause was tried and is the WRONG tool: this path writes, and
+	// auth.ScopeClauseFor answers about visibility, so a manual read-share
+	// would have admitted a caller who may not edit the record —
+	// TestEveryMutationOfAShareableRecordProbesForWriteAuthority says so and is
+	// right. The authority it takes instead is auth.Require(person, update),
+	// and its confinement is stated beside it in writesWithoutARowProbe.
+	modulesTierUnscopedCeiling = 96
 )
