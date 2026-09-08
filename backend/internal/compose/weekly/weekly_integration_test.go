@@ -435,15 +435,15 @@ func TestTheWeekCountsMeetingsByHostRatherThanByWhoFiledThem(t *testing.T) {
 	integration.SeedIDRow(t, owner, `
 		INSERT INTO activity (id, kind, subject, occurred_at, meeting_status,
 		                      host_user_id, source, captured_by)
-		VALUES ($1, 'meeting', 'Imported', $2, 'held', $3, 'manual', 'human:someone-else')`,
-		inWeek, e.Rep1)
+		VALUES ($1, 'meeting', 'Imported', $2, 'held', $3, 'manual', 'human:' || $4::text)`,
+		inWeek, e.Rep1, e.Rep3)
 	// Hosted by a colleague. Without it the fixture reads 1 either way, and the
 	// assertion could not tell host attribution from capturer attribution.
 	integration.SeedIDRow(t, owner, `
 		INSERT INTO activity (id, kind, subject, occurred_at, meeting_status,
 		                      host_user_id, source, captured_by)
-		VALUES ($1, 'meeting', 'Not mine', $2, 'held', $3, 'manual', 'human:someone-else')`,
-		inWeek, e.Rep2)
+		VALUES ($1, 'meeting', 'Not mine', $2, 'held', $3, 'manual', 'human:' || $4::text)`,
+		inWeek, e.Rep2, e.Rep3)
 
 	review, _, err := e.engine.AssembleFor(e.repCtx, weekClock)
 	if err != nil {
@@ -452,6 +452,18 @@ func TestTheWeekCountsMeetingsByHostRatherThanByWhoFiledThem(t *testing.T) {
 	if review.Counts.MeetingsHeld != 1 {
 		t.Errorf("counted %d meetings held for a rep who hosted one of the two, want 1",
 			review.Counts.MeetingsHeld)
+	}
+	// The other side of the same question, in the same test: the person who
+	// FILED both meetings hosted neither, and must be credited with none. A
+	// broken NULL-guard in the fallback would show up here and nowhere else.
+	filer := e.As(e.Rep3, []ids.UUID{e.Team1}, integration.AdminPerms)
+	theirs, _, err := e.engine.AssembleFor(filer, weekClock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if theirs.Counts.MeetingsHeld != 0 {
+		t.Errorf("the rep who only recorded the meetings was credited with %d of them",
+			theirs.Counts.MeetingsHeld)
 	}
 }
 

@@ -199,10 +199,11 @@ func scoreLeads(
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	startPos, endPos, userPos := arg(start), arg(end), arg(userID)
-	// A meeting has no owner and captured_by is a principal STRING, not a
-	// user id — the same attribution countWeekMeetings uses, and the reason
-	// this is not simply userID: comparing the text column to a uuid is a
-	// type error, and comparing it to the bare uuid text would never match.
+	// The RECORDER, used only where a meeting names no host — the same
+	// fallback countWeekMeetings applies. captured_by is a principal STRING
+	// rather than a user id, which is why this is not simply userID: comparing
+	// the text column to a uuid is a type error, and comparing it to the bare
+	// uuid text would never match.
 	capturedPos := arg("human:" + userID.String())
 	scope, err := auth.ScopeClauseFor(ctx, "lead", "l", arg)
 	if err != nil {
@@ -248,7 +249,13 @@ func scoreLeads(
 		  SELECT h.status, h.partial_pre_history
 		    FROM activity_meeting_history h
 		    JOIN activity m ON m.id = h.activity_id
-		   WHERE m.kind = 'meeting' AND m.captured_by = $%[6]d
+		   -- By HOST, falling back to the recorder only where no host is
+		   -- named, exactly as countWeekMeetings attributes the tally beside
+		   -- it. Two spellings of one question let this panel and the
+		   -- headline count credit the same meeting to different people.
+		   WHERE m.kind = 'meeting'
+		     AND (m.host_user_id = $%[3]d
+		          OR (m.host_user_id IS NULL AND m.captured_by = $%[6]d))
 		     AND m.archived_at IS NULL
 		     AND h.effective_at >= $%[1]d AND h.effective_at < $%[2]d
 		     AND (%[7]s))

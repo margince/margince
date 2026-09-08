@@ -187,11 +187,20 @@ func countWeekLeads(
 // twice across two reps' weeks.
 //
 // "Left a next step" is a task raised AFTER the meeting against a record the
-// meeting was also filed under — through the shared record rather than a direct
-// pointer, because there is no meeting_id on a task. Bounded at BOTH ends: a
-// task created months later on the same account is not something the meeting
-// produced, and one created after the week closed belongs to the week it was
-// created in.
+// meeting was also filed under. Through the SHARED RECORD rather than
+// activity.source_activity_id, which does exist: only some writers populate it
+// — the transcript accept path names the meeting it read, a task typed by hand
+// names nothing — so joining on it would report a rep who writes their own
+// follow-ups as having produced none.
+//
+// Bounded at BOTH ends. A task created months later on the same account is not
+// something the meeting produced, and one created after the week closed belongs
+// to the week it was created in — a frozen review that changed its answer every
+// time somebody added a task would not be frozen.
+//
+// The heuristic is what the data supports, and it is a heuristic: a task raised
+// the Monday after a Friday meeting is plausibly its outcome and is not counted
+// here. Tightening that needs source_activity_id on every writer first.
 func countWeekMeetings(
 	ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.Time,
 ) (held, withNextStep int, err error) {
