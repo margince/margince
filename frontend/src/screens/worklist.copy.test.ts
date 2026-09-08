@@ -441,7 +441,7 @@ describe("an unavailable source", () => {
 // The brief is not a page of its own: it opens as `?prep=<activity>` on a
 // PERSON's record, so the address needs both ids and the row's subject — the
 // meeting — carries only one.
-describe("moveHref — the open_meeting_brief move", () => {
+describe("the open_meeting_brief move", () => {
   it("opens the brief on the person the meeting names", () => {
     const href = moveHref(briefRow("p-9"));
     expect(href).toContain("#/contacts/p-9");
@@ -462,8 +462,9 @@ describe("moveHref — the open_meeting_brief move", () => {
     expect(moveOpensComposer(briefRow("p-9"))).toBe(false);
   });
 
-  // moveLabel has no branch for this move, so it fell through to the reply
-  // wording on a row that is plainly a meeting, not a message.
+  // A meeting row's move opens a brief, not a composer — the label must say
+  // so on its own rather than borrow the reply wording, which is only the
+  // fall-through for a verb with no words of its own.
   it("names itself as the brief, not as a reply", () => {
     expect(moveLabel(briefRow("p-9"), t)).toBe("Prepare for the meeting");
   });

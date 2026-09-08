@@ -9097,6 +9097,8 @@ export const en = {
   // conversation that has not happened yet.
   "worklist.verb.draft_email": "Open to write",
   "worklist.verb.draft_email_now": "Draft the email",
+  // A brief, not a message — one key, because the control never opens a
+  // composer and so never needs the reply/write "now" split above.
   "worklist.verb.open_meeting_brief": "Prepare for the meeting",
   "worklist.deal.closes": "closes {date}",
   "worklist.when.starts": "starts {when}",

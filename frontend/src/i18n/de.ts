@@ -8964,6 +8964,9 @@ export const de = {
   // Eine ERSTE Nachricht, keine Antwort auf eine bestehende.
   "worklist.verb.draft_email": "Zum Schreiben öffnen",
   "worklist.verb.draft_email_now": "E-Mail entwerfen",
+  // Ein Briefing, keine Nachricht — ein einziger Schlüssel, weil die
+  // Steuerung nie den Editor öffnet und daher die "jetzt"-Aufteilung oben
+  // nicht braucht.
   "worklist.verb.open_meeting_brief": "Auf das Meeting vorbereiten",
   "worklist.deal.closes": "Abschluss {date}",
   "worklist.when.starts": "beginnt {when}",
