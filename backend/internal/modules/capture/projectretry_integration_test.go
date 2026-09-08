@@ -40,7 +40,7 @@ type failingOnceMatcher struct {
 	calls   int
 }
 
-func (m *failingOnceMatcher) MatchProjectKey(_ context.Context, _ []string) (ids.UUID, error) {
+func (m *failingOnceMatcher) MatchProjectKey(_ context.Context, _ pgx.Tx, _ []string) (ids.UUID, error) {
 	m.calls++
 	if m.calls == 1 {
 		return ids.Nil, errors.New("a transient matcher fault")
