@@ -2,6 +2,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { RecordZoneProvider } from "../app/recordzone";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
@@ -25,6 +26,23 @@ import { BriefReadingsStrip } from "./brief.readings";
 // pace, because targets were retired from the product — and the interesting
 // cases are what replaced them: a pipeline figure that must never read as a
 // target, and must say whose pipeline it measured.
+
+// drawInZone renders the strip under a named record zone, which is what a
+// date-only wire value must be read in.
+function drawInZone(zone: string, ...args: Parameters<typeof readingsDay>) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return render(
+    <QueryClientProvider client={client}>
+      <RecordZoneProvider zone={zone}>
+        <LocaleProvider initial="en">
+          <BriefReadingsStrip day={readingsDay(...args)} />
+        </LocaleProvider>
+      </RecordZoneProvider>
+    </QueryClientProvider>,
+  );
+}
 
 function draw(...args: Parameters<typeof readingsDay>) {
   // A QueryClient, because the pipeline reading is a read of its own: it is the
@@ -433,5 +451,62 @@ describe("the leads reading", () => {
 
     expect(leadsCard().textContent).toContain("2");
     expect(screen.getByText(en["brief.readings.leadsBasis"])).toBeTruthy();
+  });
+});
+
+// A period is a CALENDAR window, not an instant, and it reads the same for
+// every colleague.
+//
+// period_start and period_end are date-only wire values. Read in the viewer's
+// own clock west of UTC they parse as UTC midnight and print the day before, so
+// a rep in Los Angeles saw the third quarter labelled "30 Jun – 29 Sept" while
+// a colleague in Berlin saw "1 Jul – 30 Sept" — two people quoting one page and
+// quoting different quarters. The record's zone is the only answer that is the
+// same for both.
+describe("the pipeline period", () => {
+  afterEach(cleanup);
+
+  it("names the same days west of UTC as it does east of it", async () => {
+    const payload = {
+      period_start: "2026-07-01",
+      period_end: "2026-09-30",
+      scope_kind: "owner",
+      open_minor: 42_000_000,
+      weighted_minor: 16_800_000,
+      best_case_minor: 0,
+      evidence_minor: 0,
+      eligible_count: 12,
+      priced_count: 11,
+      confirmed_date_count: 8,
+      fx_missing_count: 0,
+      as_of: "2026-09-03T06:42:00Z",
+      base_currency: "EUR",
+    };
+    stubPipeline(
+      () =>
+        new Response(JSON.stringify(payload), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+    );
+
+    // The VIEWER sits west of UTC while the installation's calendar does not.
+    // Without this the suite's own machine decides whether the bug can appear
+    // at all: east of UTC a viewer-zone read prints the right days by luck, and
+    // the assertion passes over code that is wrong for half the world.
+    const resolved = Intl.DateTimeFormat.prototype.resolvedOptions;
+    vi.spyOn(
+      Intl.DateTimeFormat.prototype,
+      "resolvedOptions",
+    ).mockImplementation(function (this: Intl.DateTimeFormat) {
+      return { ...resolved.call(this), timeZone: "America/Los_Angeles" };
+    });
+
+    drawInZone("Europe/Berlin");
+    expect(await screen.findByText(/1 Jul 2026 – 30 Sept 2026/)).toBeTruthy();
+    cleanup();
+
+    drawInZone("Asia/Tokyo");
+    expect(await screen.findByText(/1 Jul 2026 – 30 Sept 2026/)).toBeTruthy();
   });
 });
