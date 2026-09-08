@@ -94,24 +94,30 @@ else
 	echo "ok: an unset review list refuses rather than reading as no reviews"
 fi
 
-# The shape the flat listing got wrong. A merge brings in a side branch whose
-# commits are OLDER than the reviewed one, so `rev-list`'s date order sorts them
-# below it and slicing the list read them as already covered — silently, on
-# exactly the pull requests complicated enough to need this report.
+# The shape the flat listing got wrong. A merge brings in a side branch that
+# diverged BEFORE the reviewed commit, so its commits are older and `rev-list`'s
+# date order sorts them below the review point — slicing the list read them as
+# already covered, silently, on exactly the pull requests complicated enough to
+# need this report.
 #
-#   aaa1111 (reviewed) ... ccc3333 --- mmm4444 (merge)
-#                          sss0001 --/          (older date, never reviewed)
-merge_history=$'mmm4444 ccc3333 sss0001\nccc3333 bbb2222\nsss0001 aaa1111\nbbb2222 aaa1111\naaa1111 base000'
+#   base000 --- aaa1111 (reviewed) --- bbb2222 --- ccc3333 --- mmm4444 (merge)
+#           \-- sss0001 -------------------------------------/
+#
+# The side branch forks from base000, NOT from aaa1111: a child of the reviewed
+# commit is structurally newer and would sort above it, which is the case the
+# flat slice already got right. It is listed after aaa1111 below, because the
+# order of these lines is what stands in for `rev-list`'s date order.
+merge_history=$'mmm4444 ccc3333 sss0001\nccc3333 bbb2222\nbbb2222 aaa1111\naaa1111 base000\nsss0001 base000'
 merge_out=""
 merge_status=0
 merge_out="$(REVIEW_COVERAGE_HEAD=mmm4444 REVIEW_COVERAGE_HISTORY="$merge_history" \
 	REVIEW_COVERAGE_REVIEWS="[$(review cubic aaa1111 2026-09-01T10:00:00Z)]" "$report" 2>&1)" || merge_status=$?
 if [[ "$merge_status" -ne 1 ]] || ! grep -qF "sss0001" <<<"$merge_out"; then
-	echo "FAIL: a side branch merged in after the review was not reported — it is reachable from the tip and is not an ancestor of what was read, so a re-review has to cover it" >&2
+	echo "FAIL: a side branch that forked before the review was not reported — it is reachable from the tip and is not an ancestor of what was read, so a re-review has to cover it" >&2
 	printf '%s\n' "$merge_out" >&2
 	failures=$((failures + 1))
 else
-	echo "ok: a side branch older than the review is still reported as uncovered"
+	echo "ok: a side branch that forked before the review is still reported as uncovered"
 fi
 
 # The other half of ancestry: the reviewed commit's OWN ancestors are covered,
