@@ -42,6 +42,13 @@ const ANCHOR_ORDER: readonly RelinkKind[] = [
   "organization",
 ];
 
+/**
+ * The message's own filing, read through the order above.
+ *
+ * Order in the LIST must not decide it: the server sends links in its own
+ * order, and an anchor taken from that would move whenever the read's ordering
+ * did. Null when the message is filed against nothing at all.
+ */
 export function replyAnchor(
   links: readonly ActivityLink[],
 ): ActivityLink | null {

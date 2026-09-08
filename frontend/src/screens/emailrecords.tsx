@@ -22,11 +22,18 @@ import { EntityRef } from "./entityref";
 
 type EmailPresentation = components["schemas"]["EmailPresentation"];
 
+/**
+ * The message's filed records, named and linked, or nothing when it is filed
+ * against none.
+ *
+ * Null rather than an empty fragment: the drawer reads the answer to decide
+ * whether to draw the label at all, and an empty element is truthy — a label
+ * over nothing says the message is filed somewhere the drawer has lost track
+ * of, which is a different claim from being filed nowhere.
+ */
 export function EmailRecordLinks({
   presentation,
 }: Readonly<{ presentation: EmailPresentation }>) {
-  // Null, not an empty fragment: the drawer reads a nullish answer as "nothing
-  // is filed here" and leaves the label off, and an empty element is truthy.
   if (presentation.links.length === 0) {
     return null;
   }

@@ -30,6 +30,13 @@ const ACTIVITY = "01a05500-0000-7000-8000-0000000000a1";
 const ANA = "01a05500-0000-7000-8000-0000000000c1";
 const BRANDT = "01a05500-0000-7000-8000-0000000000o1";
 
+/**
+ * One presentation carrying the filing the case is about.
+ *
+ * Typed as the generated contract shape rather than a literal, so a fixture
+ * that drifts from what the server sends fails the build instead of proving
+ * the component handles a message nobody will ever receive.
+ */
 function presentation(links: EmailPresentation["links"]): EmailPresentation {
   return {
     id: ACTIVITY,
@@ -68,8 +75,12 @@ function presentation(links: EmailPresentation["links"]): EmailPresentation {
   };
 }
 
-// The record reads `EntityRef` makes to name an id, answered by path. Anything
-// else throws, so a request this component should not make fails loudly.
+/**
+ * Draw the list with the record reads `EntityRef` makes answered by path.
+ *
+ * Anything else throws, so a request this component should not make fails
+ * loudly rather than resolving into a name the case then asserts on.
+ */
 function draw(node: ReactNode) {
   vi.stubGlobal(
     "fetch",

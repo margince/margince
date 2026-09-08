@@ -41,6 +41,19 @@ export function emailDetailKey(activityId: string) {
   return ["email-presentation", activityId] as const;
 }
 
+/**
+ * One email, read whole.
+ *
+ * The message's own read is made HERE rather than handed in, because what the
+ * drawer may show is an authorization result: the read is the only thing that
+ * knows whether this reader is inside the message's audience, and a caller
+ * passing a presentation it fetched elsewhere would be passing an answer that
+ * may already be stale about that.
+ *
+ * Everything it cannot do without reaching the API a second time — naming a
+ * filed record, changing who may read the message, answering it — arrives as a
+ * render prop instead.
+ */
 export function EmailDetail({
   activityId,
   onClose,
@@ -210,6 +223,14 @@ export function EmailDetail({
   );
 }
 
+/**
+ * The message itself: its envelope, its words, and what came with it.
+ *
+ * The withheld case returns EARLY and shares nothing below it — no parties, no
+ * filing, no files. Each of those is a fact about the message, and a reader
+ * outside the audience is owed the fact that there is a message rather than
+ * any of its contents.
+ */
 function EmailBody({
   presentation,
   formatWhen,
@@ -365,14 +386,19 @@ function PartyName({ party }: Readonly<{ party: EmailParty }>) {
   );
 }
 
+/**
+ * One role's participants on one envelope line — From, To, Cc.
+ *
+ * Only the parties that can actually be NAMED. A row carrying neither a name
+ * nor an address says nothing to a reader, and joining it in puts a gap in the
+ * list where a person should be — so it is dropped, and a line with nobody
+ * left to name does not draw at all, rather than drawing a label over
+ * punctuation.
+ */
 function PartyLine({
   label,
   parties,
 }: Readonly<{ label: string; parties: EmailParty[] }>) {
-  // Only the parties that can actually be named. A row carrying neither a name
-  // nor an address says nothing to a reader, and joining it in puts a gap in
-  // the list where a person should be — so it is dropped, and a line with
-  // nobody left to name does not draw at all.
   const named = parties.filter((party) => partyName(party) !== "");
   if (named.length === 0) {
     return null;
@@ -400,6 +426,14 @@ function PartyLine({
   );
 }
 
+/**
+ * The envelope: who the message was with, when it was sent, and what it is
+ * filed against — everything a reader wants BEFORE the words.
+ *
+ * These facts used to be scattered under the body, so on a message longer than
+ * a screen the date arrived after the reader had finished reading. They are
+ * one block above it because they are one kind of thing.
+ */
 function Parties({
   presentation,
   formatWhen,

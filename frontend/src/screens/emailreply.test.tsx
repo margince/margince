@@ -99,6 +99,13 @@ function draw(node: ReactNode) {
   );
 }
 
+/**
+ * The verb, or null when the drawer offers none.
+ *
+ * By ROLE and label rather than by test id: what a reader can press is what
+ * these cases are about, and a query that found a hidden node or a plain span
+ * would pass on a verb nobody can reach.
+ */
 function reply() {
   return screen.queryByRole("button", { name: "Reply" });
 }

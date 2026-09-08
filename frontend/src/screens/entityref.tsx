@@ -433,6 +433,14 @@ function rosterName(kind: RosterKind, entry: User | Team): string | null {
   return (entry as Team).name ?? null;
 }
 
+/**
+ * A cross-record reference, as the target's display name and a way to it.
+ *
+ * Records point at each other by id across the contract, and a raw uuid on a
+ * line is honest and unreadable. This is the one place that turns one into a
+ * name — so a reference that cannot be named degrades the same way wherever it
+ * appears, rather than each surface inventing its own fallback.
+ */
 export function EntityRef({
   kind,
   id,
@@ -515,7 +523,7 @@ function RosterRef({
   return <span title={id}>{resolved}</span>;
 }
 
-// A record with a 360 behind it: a resolved name is also the backlink.
+/** A record with a 360 behind it: a resolved name is also the backlink. */
 function RecordRef({
   kind,
   id,
