@@ -147,12 +147,12 @@ func overlayPinnedToolVerbs(t *testing.T) map[string]bool {
 // one-sided assertion while breaking every native workspace.
 func TestTheDisqualifyGuardRefusesInOverlayAndPassesInNative(t *testing.T) {
 	guard := nativeOnlyDisqualifier(overlayMode(), refusingDisqualifier{})
-	if _, err := guard.DisqualifyLead(context.Background(), ids.NewV7()); !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
+	if _, err := guard.DisqualifyLead(context.Background(), ids.NewV7(), nil); !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
 		t.Errorf("overlay mode = %v, want ErrUnsupportedBySoR", err)
 	}
 
 	guard = nativeOnlyDisqualifier(nativeMode(), refusingDisqualifier{})
-	if _, err := guard.DisqualifyLead(context.Background(), ids.NewV7()); !errors.Is(err, errSeamReached) {
+	if _, err := guard.DisqualifyLead(context.Background(), ids.NewV7(), nil); !errors.Is(err, errSeamReached) {
 		t.Errorf("native mode = %v, want the seam reached", err)
 	}
 }
@@ -162,6 +162,6 @@ var errSeamReached = errors.New("seam reached")
 
 type refusingDisqualifier struct{}
 
-func (refusingDisqualifier) DisqualifyLead(context.Context, ids.UUID) (json.RawMessage, error) {
+func (refusingDisqualifier) DisqualifyLead(context.Context, ids.UUID, *int64) (json.RawMessage, error) {
 	return nil, errSeamReached
 }

@@ -302,7 +302,7 @@ type disqualifierGuard struct {
 	inner agents.LeadDisqualifier
 }
 
-func (g disqualifierGuard) DisqualifyLead(ctx context.Context, id ids.UUID) (json.RawMessage, error) {
+func (g disqualifierGuard) DisqualifyLead(ctx context.Context, id ids.UUID, ifVersion *int64) (json.RawMessage, error) {
 	overlay, err := g.mode.isOverlayUncached(ctx)
 	if err != nil {
 		return nil, err
@@ -310,7 +310,7 @@ func (g disqualifierGuard) DisqualifyLead(ctx context.Context, id ids.UUID) (jso
 	if overlay {
 		return nil, apperrors.ErrUnsupportedBySoR
 	}
-	return g.inner.DisqualifyLead(ctx, id)
+	return g.inner.DisqualifyLead(ctx, id, ifVersion)
 }
 
 // nativeOnlyDemoter guards demote_lead, for the reason nativeOnlyDisqualifier

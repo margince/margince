@@ -24,13 +24,17 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // WriteOption is a precondition a caller attaches to a write.
 type WriteOption func(*writeOptions)
 
-type writeOptions struct{ untouchedSince *time.Time }
+type writeOptions struct {
+	untouchedSince *time.Time
+	atVersion      *int64
+}
 
 // NotTouchedByHumanSince refuses the write when a HUMAN has acted on the record
 // since `at`. What counts as acting is any human-actor audit row on the entity,
@@ -41,12 +45,51 @@ func NotTouchedByHumanSince(at time.Time) WriteOption {
 	return func(o *writeOptions) { o.untouchedSince = &at }
 }
 
+// OnlyAtVersion refuses the write unless the record is still at this version —
+// the option form of the contract's optional If-Match, asked inside the
+// transaction that writes and under the row lock it already holds.
+//
+// A nil version attaches no precondition, so a caller that has one and a caller
+// that does not spell the call the same way. That matters at the seam this
+// exists for: an agent write carries the version its approval was released
+// against, and an unapproved call at a static tier carries none.
+func OnlyAtVersion(v *int64) WriteOption {
+	return func(o *writeOptions) { o.atVersion = v }
+}
+
 func collectWriteOptions(opts []WriteOption) writeOptions {
 	var out writeOptions
 	for _, apply := range opts {
 		apply(&out)
 	}
 	return out
+}
+
+// refuseIfVersionMoved answers skew when the locked row is no longer at the
+// version the caller's authority was granted against.
+//
+// current comes from a read taken AFTER the row lock, so what it compares is
+// the row this transaction is about to write — which is the whole point of the
+// pin travelling this far. A check before the lock proves the row was right a
+// moment ago and nothing about the write.
+func refuseIfVersionMoved(entity string, current *int64, o writeOptions) error {
+	if o.atVersion == nil {
+		return nil
+	}
+	// A row that answers no version cannot satisfy a pin, so it refuses rather
+	// than passing. The alternative reads as "checked" and is not: an unversioned
+	// read would wave through exactly the write the pin was attached to stop.
+	if current == nil {
+		return fmt.Errorf(
+			"the %s carries no version to compare against the %d this write was authorised at: %w",
+			entity, *o.atVersion, apperrors.ErrVersionSkew)
+	}
+	if *current == *o.atVersion {
+		return nil
+	}
+	return fmt.Errorf(
+		"the %s is at version %d, not the version %d this write was authorised against: %w",
+		entity, *current, *o.atVersion, apperrors.ErrVersionSkew)
 }
 
 // HumanTouchedError refuses a write whose caller asked for it only while the
