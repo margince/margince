@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer attaches the description to Strategic Accts, the word the criterion says goes, and claims it is the survivor rather than reporting the meaning on Strategic Account.",
+  "model": "claude-opus-5",
+  "criterion": "Criterion 3. The answer reports that the word which survives, Strategic Account, now carries the meaning the user asked for — an account with a named exec sponsor. Any wording of that meaning will do, in any language. Answer no if the answer never reports the description at all, and no if the description it reports belongs to the word that goes.",
+  "answer": "Strategic Account is on 41 accounts and Strategic Accts on 3.\n\nI have staged the fold the way you asked: Strategic Account goes into Strategic Accts, so Strategic Accts is the word that survives. Nobody has released it yet, so nothing has moved on the records so far.\n\nStrategic Accts now reads: an account with a named exec sponsor."
+}

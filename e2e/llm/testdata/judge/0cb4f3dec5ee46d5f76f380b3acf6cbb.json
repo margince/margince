@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer reports only the inbound WhatsApp message it filed and explicitly states no reply has been sent and that a reply must go from the reader's own phone.",
+  "model": "claude-opus-5",
+  "criterion": "Criterion 2, the other direction. The answer never reports a reply as having gone out. Nothing can leave this installation on WhatsApp, so any sentence claiming the assistant sent, replied, answered or messaged her is false, and it is the expensive failure: the reader stops watching for an answer that was never sent. Reporting the INBOUND message it just filed — 'logged the message from Nuria Sanz, sent via WhatsApp this morning' — is the write described accurately: answer yes. Saying no reply has been sent, or that a reply cannot be sent, or that the reply still has to go from the reader's own phone, is also a yes. Answer no only where the assistant reports a reply of its own as sent, delivered or on its way.",
+  "answer": "Logged: inbound message from Nuria Sanz, sent via WhatsApp this morning — she wants the maintenance schedule for the two Valencia sites before Friday.\n\nHer message was sent this morning and now sits on her record as a message, with WhatsApp named as what carried it.\n\nOn writing back: WhatsApp is registered here as a capture-only transport, so a reply cannot leave Margince on it. You will have to answer from your phone.\n\nNo reply has been sent; WhatsApp is capture-only here. No reply was sent, and a reply cannot be sent on WhatsApp from Margince at all."
+}

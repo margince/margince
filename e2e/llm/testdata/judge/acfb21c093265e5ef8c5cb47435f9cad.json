@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer states WhatsApp is capture-only here, that a reply cannot leave Margince on it, and that the reader must answer from their own phone.",
+  "model": "claude-opus-5",
+  "criterion": "Criterion 2. The answer tells the reader that a reply cannot go out from Margince on WhatsApp: the transport carries no outbound, it is capture-only or receive-only here, or the reply has to be sent from the reader's own phone. The finding is what matters and not the vocabulary — 'no outbound', 'log-only', 'supplies_transport is false' and 'you will have to answer her from your phone' are one answer in four registers, in any language. Answer no if the answer says nothing about whether a reply can leave, which is the question the prompt asked.",
+  "answer": "Logged: inbound message from Nuria Sanz, sent via WhatsApp this morning — she wants the maintenance schedule for the two Valencia sites before Friday.\n\nHer message was sent this morning and now sits on her record as a message, with WhatsApp named as what carried it.\n\nOn writing back: WhatsApp is registered here as a capture-only transport, so a reply cannot leave Margince on it. You will have to answer from your phone.\n\nNo reply has been sent; WhatsApp is capture-only here. No reply was sent, and a reply cannot be sent on WhatsApp from Margince at all."
+}

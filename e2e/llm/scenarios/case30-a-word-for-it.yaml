@@ -90,43 +90,29 @@ must_mention:
   # the prose rather than the finding.
   - "Dom Digital"
 
-must_not_mention:
-  # THE SPLIT VOCABULARY. Affirmative constructions only — "I created a new tag
-  # for K5" is the defect, and "I did not create a new K5 tag" is a correct
-  # answer saying so. An unanchored "creat.*tag.*K5" cannot tell them apart and
-  # would red the run that got it right.
-  #
-  # K5 HAS TO BE THE NAME OF THE THING CREATED, not a word further along the
-  # sentence. The right answer reports both halves of the errand in one breath —
-  # "I created the new tag Revisit Q1 and applied K5 Conference 2026" — and a
-  # loose gap between "tag" and "K5" reads that as the coinage it is warning
-  # about. So the gap is a naming distance ("tag called K5", "a second K5 tag")
-  # and the reverse order is spelled out rather than bought with a wider window.
-  # A semicolon ends that distance as a full stop does: "I created Revisit Q1 as
-  # a new tag; K5 Conference 2026 was already there" is two clauses.
-  #
-  # AND THE COINED WORD IS THE BARE ONE. K5 followed by "Conference" is the word
-  # the workspace already had, so no sentence applying it can be the coinage —
-  # which also reaches the shape a list answer takes, "New tags created: K5,
-  # Revisit Q1", where no verb of creation stands next to the name at all.
-  #
-  # THE COINING VERB IS NOT ALWAYS "created". "So I set up a second K5 word
-  # alongside it" and "a fresh K5 entry now sits beside it" are the same
-  # second spelling. The NOUN stays required: "I applied K5 to all three" and
-  # "added K5 to the accounts" are what a correct answer says about the word
-  # that was already there, and nothing here can tell those from a coinage
-  # without one.
-  - "(?:I|we) (?:have |just )?(?:created|coined|added|made|set up|introduced|registered)[^.;\n]{0,20}(?:new |second |another |separate |fresh )?(?:tag|word|spelling|entry)[^.;\n]{0,12}(?:called |named |for |\")?K5\b(?!\s+Conference)|(?:I|we) (?:have |just )?(?:created|coined|added|made|set up|introduced|registered)[^.;\n]{0,20}(?:new |second |another |separate |fresh )?[\"']?K5\b(?!\s+Conference)[^.;\n]{0,20}(?:tag|word|spelling|entry)|(?:new |second )?tags? (?:created|coined|added)[^.\n]{0,20}\bK5\b(?!\s+Conference)"
-  # And it must not report the existing word as absent. Being refused "k5" says
-  # nothing about what the workspace holds — the same false conclusion case 7
-  # guards, in the vocabulary the tag tools publish.
-  #
-  # ABSENT FROM THE VOCABULARY, which is the claim that is false. The fixture
-  # leaves the word applied to NOTHING, so "no existing K5 tag is on any account
-  # yet" is simply true and a correct answer may write it; the alternatives
-  # therefore each need an existence or a vocabulary anchor — in the workspace,
-  # in the tag list, "does not exist" — before they fire.
-  - "(?:no|not any) (?:existing )?K5 (?:tag|word)[^.\n]{0,30}(?:exists?|in the (?:CRM|workspace|vocabulary|tag list|system)|available|set up|to use)|(?:workspace|CRM|vocabulary|tag list)[^.\n]{0,25}(?:has|had|holds|contains) no (?:existing )?K5|K5[^.]{0,30}(?:does not exist|is not in the (?:vocabulary|workspace|tag list|CRM)|no such tag|had to be created)"
+# THE SEMANTIC HALF. Both entries are one criterion in plain words, and the
+# sentence is BOTH the question put to the judge and the documentation of what
+# this case asks. A criterion is a statement ABOUT THE ANSWER and "yes" means it
+# holds, for the forbidding ones too.
+#
+# BOTH WERE REGEXES, and both are the shape this lane has measured not working:
+# a claim the answer must not make, enumerated as phrasings. The coinage half was
+# widened four times — a naming distance between the noun and the name, a
+# semicolon counted as a sentence break, a negative lookahead for "Conference" so
+# the word that was already there could not be read as the coinage, then a second
+# verb list once "so I set up a second K5 word alongside it" walked through it —
+# and it still red the answer that did the errand right, because "…tag Revisit Q1
+# and applied K5 Conference 2026" puts K5 twenty-four characters after the word
+# "tag". The absence half fired on "no existing K5 tag is applied to any account
+# yet", which the fixture makes literally TRUE: the word is deliberately on
+# nothing, so the sentence a correct answer writes about it is the sentence the
+# pattern forbade.
+#
+# The names stay a regex above: K5 Conference 2026, Revisit Q1 and Dom Digital
+# are mechanical, and none of the three has ever leaked.
+judge:
+  - "Criterion 1. The answer never reports having created, coined, added, set up or registered a second word for K5. The workspace already holds K5 Conference 2026 and reusing it is the whole errand; a run that coined its own K5 has split the vocabulary. Reporting that it APPLIED the existing word — 'I applied K5 to all three', 'added K5 Conference 2026 to the accounts' — is what a correct answer does: answer yes. Saying it did NOT create a second K5 word is also a yes. Creating the other word the user did ask for, Revisit Q1, is not a K5 coinage: answer yes to that too. Answer no only where the answer reports a new K5 word of its own, in prose or in a list of what it created."
+  - "Criterion 1, the other direction. The answer never tells the reader that the workspace, the tag list, the vocabulary or the CRM holds no word for K5, or that no such tag exists there. It does hold one, K5 Conference 2026. Judge ONLY that claim about what the vocabulary contains: an answer that reports coining a K5 word of its own is already caught by the criterion above and is not to be failed twice here, so answer yes to it unless it also says the vocabulary was empty of one. The word is applied to no account yet, so reporting THAT — 'no account carries it so far' — is true and is a yes."
 
 runs: 3
 pass_at: 2

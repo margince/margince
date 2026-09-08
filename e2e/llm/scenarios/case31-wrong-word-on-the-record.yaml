@@ -20,7 +20,7 @@
 #
 # What this case CANNOT see, stated rather than papered over: check.py has no
 # must_not_call, so a run that removes the tagging AND also retires the word
-# would be caught only if it said so. The positive assertion below — that the
+# would be caught only if it said so. The positive criterion below — that the
 # word survives for the other accounts — is the whole guard, and a silent
 # retirement passes it. Reaching that needs the database read back after the
 # run, which this lane does not do.
@@ -67,55 +67,39 @@ may_call:
   - list_colleagues
 
 must_mention:
-  # Criterion 1: the retired word, which only get_record_tags could have shown.
-  # This is the whole point of the case — the user says they cannot see one,
-  # and the record row agrees with them.
+  # Criterion 1, MECHANICAL: the retired word, which only get_record_tags could
+  # have shown. This is the whole point of the case — the user says they cannot
+  # see one, and the record row agrees with them. A name is what a regex is
+  # reliable for, and this one has never leaked.
   - "K5 Conference 2025"
-  # Criterion 2, first half: the tagging came off THIS account. Anchored to the
-  # account both ways round, because an answer may lead with either.
-  # THE VERB IS NOT ALWAYS ONE WORD. "Took the strategic-account tagging off
-  # Vorort" splits "took" from "off" around the thing removed, and
-  # "un-flagged" and "de-tagged" name the same act without either word. The
-  # split form still has to reach an "off", so a sentence that merely READ
-  # the record ("I took a look at Vorort") is not mistaken for the removal.
-  - "Vorort[^.]{0,100}(?:remov\w*|(?:took|taken|take)[^.]{0,40}\boff\b|no longer|un-?flagg\w*|de-?tagg\w*)|(?:remov\w*|(?:took|taken|take)[^.]{0,40}\boff\b|un-?flagg\w*|de-?tagg\w*)[^.]{0,100}Vorort"
-  # Criterion 2, second half: the word itself survived. Asserted POSITIVELY
-  # rather than by forbidding a retirement, because "I did not retire the word"
-  # is the correct answer and every pattern that forbids the phrase reds it.
-  #
-  # THE SURVIVAL GETS STATED AS A STATE, not only as a continuation.
-  # "Strategic Account survives for everyone else", "the tag itself is
-  # untouched" and "three other accounts keep it" are the same finding as
-  # "the word still exists", and none of them carried "remains", "stays" or
-  # a "still". Every alternative is still a POSITIVE statement about the
-  # word: a negated one ("nothing was retired") is a claim about the
-  # RECORD, which is the sentence the forbidden half below exists to catch,
-  # and accepting it here would require and forbid one sentence again.
-  - "(?:word|tag|Strategic Account)[^.]{0,80}(?:remains|stays|surviv\w*|(?:is|are|stayed) (?:intact|unchanged|untouched|unaffected)|still (?:exists|in use|available|applies|on|a\b|live|valid))|left (?:it |the (?:word|tag) )?(?:in place|alone|untouched)|other (?:accounts|companies|records)[^.]{0,40}(?:still|keep|carry|retain)"
 
-must_not_mention:
-  # The answer the record row alone produces: nothing retired here. It is a
-  # claim about the record, and this caller — an admin who can read the whole
-  # vocabulary — has no honest way to make it.
-  #
-  # AN EXCEPTION CLAUSE IS NOT THAT CLAIM. After the removal, "no other tags
-  # remain on Vorort apart from the retired K5 Conference 2025" is literally
-  # true and names the very word this case exists to surface — so a bare "no
-  # other tags" red the answer that found it. A following "apart from", "other
-  # than", "except" or the retired word itself withdraws the claim, and the
-  # guard withdraws with it — in front of the claim as well as behind it, since
-  # "Besides the retired K5 Conference 2025, no other tags remain" says the same
-  # thing in the other order.
-  #
-  # AND `no other tags` IS GONE from this half. It was never the claim this case
-  # is about — that claim is "nothing retired here" — and after the removal it is
-  # a true roll-call of a record whose only remaining word IS the retired one. An
-  # answer that never saw the retired word fails the required half above by name,
-  # so nothing is lost by not forbidding a sentence that can be honest.
-  - "(?:^|[.;!?\n])(?:(?!\b(?:not[ _]connected|not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;!?\n])*?(?:no (?:retired|archived|old) tags?\b|nothing (?:retired|archived)|no (?:retired|archived|old) (?:word|words))(?![^.\n]{0,60}(?:apart from|other than|besides|except|aside from|but the|save for|K5))"
-  # And the capability denial, the family case 7 guards: a refusal is not a
-  # missing feature.
-  - "cannot remove (?:a |the )?tag|no way to (?:remove|take off) a tag"
+# THE SEMANTIC HALF. Each entry is one criterion in plain words, and that
+# sentence is BOTH the question put to the judge and the documentation of what
+# this case asks — one text, so the two cannot drift the way a regex and the
+# comment explaining it did. A criterion is a statement ABOUT THE ANSWER and
+# "yes" means it holds, the forbidding ones included.
+#
+# ALL FOUR OF THESE WERE REGEXES, and all four were measured leaking. The paid
+# guards sweep wrote five correct answers to this prompt and the removal half
+# missed every one of them: "took the tagging off Vorort" splits the verb around
+# the thing removed, and "un-flagged" and "de-tagged" name the act with neither
+# word in them. The survival half missed all five too, because the word's
+# survival is stated as a STATE — "the tag itself is untouched", "three other
+# accounts keep it" — and the pattern knew only continuations. Each round of
+# widening bought a sentence and left the next one, which is what an unbounded
+# space of phrasings does to an enumeration of it.
+#
+# The forbidding two are the same instrument turned around, and they carried the
+# same defect: the false-clean claim needed a negation guard, an exception guard
+# in front of the claim AND one behind it, and a carve-out for the retired word
+# itself — because after the removal "no other tags remain apart from the
+# retired K5 Conference 2025" is literally TRUE and names the very word this case
+# exists to surface.
+judge:
+  - "Criterion 2. The answer reports that the strategic-account tagging was taken off Vorort Systeme KG. Any verb of removal will do — removed, took it off, un-flagged, de-tagged, dropped, cleared — in any language, and reporting it as done to that one company is what this asks. Answer no if the answer only describes reading the record without ever saying the tagging came off, or if the removal it reports is of some other word or on some other record."
+  - "Criterion 2, the other half. The answer tells the reader that the word Strategic Account itself survives — it stays in the workspace, is untouched or unchanged, still applies to the other accounts, or those accounts keep it. Stating it as a state rather than as a continuation is the same finding: answer yes. Answer no if the answer says nothing at all about the word's own fate, and no if it reports the word as retired, archived or removed from the workspace, which is the one thing the user forbade."
+  - "Criterion 1, the other direction. The answer never tells the reader that Vorort Systeme KG carried no retired, archived or old tag. It does carry one. Naming the retired word and then reporting the rest of the record honestly — 'no other tags remain apart from the retired K5 Conference 2025' — is what a correct answer does: answer yes to that, in either order. Answer no only where the answer claims there was no retired word on this record."
+  - "Criterion 2, the capability. The answer never tells the reader that Margince cannot take a tag off a record, or that there is no way to remove one — not off this company, and not off a person or any other kind of record either, since remove_tag serves all of them and this run has just used it. Reporting that some NEIGHBOURING act needs a person or was not attempted — retiring the word for the whole workspace, folding two words together — is not a claim about this capability: answer yes."
 
 runs: 3
 pass_at: 2

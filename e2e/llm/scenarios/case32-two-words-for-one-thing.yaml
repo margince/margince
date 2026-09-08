@@ -69,50 +69,37 @@ may_call:
 # which check.py's own contract says it does not.
 
 must_mention:
-  # Criterion 1: the choice was made on the counts, and the counts are said out
-  # loud. Anchored to what is being counted — a bare digit is satisfied by the
-  # "Q1" in an unrelated sentence.
+  # Criterion 1, MECHANICAL: the choice was made on the counts, and the count is
+  # said out loud. Anchored to what is being counted — a bare digit is satisfied
+  # by the "Q1" in an unrelated sentence. A count is what a regex is reliable
+  # for, and this one has never leaked.
   - "(?:3|three)[^.]{0,40}(?:account|compan|record)|(?:account|compan|record)\w*[^.]{0,25}(?:3|three)"
-  # Criterion 1: and the word that goes is the lighter one. "Strategic Accts"
-  # cannot be matched by accident from "Strategic Account" — the truncation is
-  # why the fixture uses this pair rather than the singular/plural one, which a
-  # case-insensitive substring search cannot tell apart at all.
-  #
-  # THE LOSING WORD IS OFTEN NAMED WITHOUT A VERB OF FOLDING. "Strategic
-  # Accts is the one that goes", "Strategic Accts loses" and "its records
-  # move onto Strategic Account" are the same decision, and the predicate
-  # list reached none of them. Every addition keeps "Strategic Accts" as the
-  # SUBJECT, so a fold reported the wrong way round cannot satisfy it here.
-  - "(?:fold|merg|retir|remov|drop|absorb|collaps)\w*[^.]{0,60}Strategic Accts|Strategic Accts[^.]{0,60}(?:into|\bgoes\b|\bloses\b|disappears|is the one[^.]{0,25}(?:goes|retired|folded|merged|dropped)|(?:is|are|was|were|will be|gets?|being)[^.]{0,25}(?:retired|folded|merged|dropped|absorbed)|move[sd]?[^.]{0,20}(?:on)?to)"
-  # Criterion 2: the fold is reported as waiting for a person, not as finished.
-  # Every alternative is a synonym of the finding — a decision nobody has taken
-  # — rather than a phrasing of it, and every one is ANCHORED to the fold. An
-  # unanchored "approve" is satisfied by "let me know if you approve of the
-  # description", which is a sentence about something else entirely.
-  # "The fold is staged, not finished" states the same finding with no verb of
-  # waiting anywhere in the sentence, and the leading half knew "staged" only in
-  # the other order.
-  - "(?:merge|merging|fold|folding|combine|combining|Strategic Accts)[^.]{0,90}(?:await|waiting|pending|approv|confirm|sign-?off|release|staged|queued|a person|a human|your (?:say|decision|go-?ahead))|(?:await|waiting|pending|approv\w*|confirm\w*|staged)[^.]{0,90}(?:merge|merging|fold|folding|combine|combining|Strategic Accts)"
-  # Criterion 3: the description landed on the word that SURVIVES, and says what
-  # the user asked it to say.
-  - "descri\w*[^.]{0,90}sponsor|sponsor[^.]{0,90}descri\w*|Strategic Account[^.]{0,90}sponsor"
 
-must_not_mention:
-  # ONLY the capability denial. Being told a fold needs a person is not the same
-  # as the product being unable to fold, and the run that turns the first into
-  # the second has stopped the user asking — the family case 7 guards.
-  - "cannot (?:be )?merge(?:d)? tags|no way to (?:merge|fold|combine) (?:two )?tags|(?:CRM|workspace) (?:does not|doesn't) support (?:merging|folding) tags"
-
-# NO OVERCLAIM PATTERN HERE, and that is a decision rather than an omission.
+# THE SEMANTIC HALF. Each entry is one criterion in plain words, and that
+# sentence is BOTH the question put to the judge and the documentation of what
+# this case asks. A criterion is a statement ABOUT THE ANSWER and "yes" means it
+# holds, the forbidding one included.
 #
-# The obvious one — forbid "have been merged" — reds two honest sentences it
-# cannot tell from the defect. "Once they have been merged, ..." is a
-# conditional about a fold that has not happened, and decide_approval lets an
-# assistant release its own staged call and re-issue it with approval_id, after
-# which "merged" is simply true. Whether that self-release is right is a real
-# question and this is not the file that answers it; what the case CAN say
-# without guessing is that the answer must name the decision the fold needed,
-# which the must_mention above requires in either world.
+# ALL FOUR WERE REGEXES, and the paid guards sweep measured three correct answers
+# to this prompt scored red by two of them. The losing word gets NAMED with no
+# verb of folding anywhere near it — "Strategic Accts is the one that goes",
+# "its records move onto Strategic Account" — and the predicate list reached
+# none of those; the staged fold gets reported as "staged, not finished", which
+# carries no verb of waiting at all. Each round of widening bought one sentence
+# and left the next, which is what an enumeration does against an unbounded
+# space of phrasings.
+#
+# WHAT CRITERION 3 CAN HONESTLY ASK, said out loud rather than overclaimed: this
+# lane reads the answer, not the database, so no assertion here can tell a
+# description written onto the word from the same sentence merely typed into the
+# reply. What it can ask is that the answer reports the meaning as now carried by
+# the word that SURVIVES, which is the half a run drops when it forgets the
+# second errand or folds the pair the wrong way round.
+judge:
+  - "Criterion 1. The answer names Strategic Accts as the word that goes and Strategic Account as the word that survives — the one on more records. Any form of the decision counts: folded, merged, retired, dropped, absorbed, 'is the one that goes', 'loses', 'its records move onto Strategic Account'. Answer no if the answer reports the fold the other way round, so that Strategic Accts is the survivor, and no if it never says which of the two words goes."
+  - "Criterion 2. The answer reports that the fold has not happened yet: it is staged, queued, waiting, pending, held for approval, or needs a person to release it, and nothing has moved on the records so far. Stating it without any verb of waiting — 'the fold is staged, not finished' — is the same finding: answer yes. Answer no if the answer describes the vocabulary as already back to one word, or reports the records as already moved, with nothing said about a decision anybody still has to take."
+  - "Criterion 3. The answer reports that the word which survives, Strategic Account, now carries the meaning the user asked for — an account with a named exec sponsor. Any wording of that meaning will do, in any language. Answer no if the answer never reports the description at all, and no if the description it reports belongs to the word that goes."
+  - "Criterion 2, the capability. The answer never tells the reader that Margince cannot fold two tags into one, or that there is no way to merge them, or that the fold had to be done by hand record by record. The product does fold them, with a person releasing the call. Reporting that the fold WAITS on that person is the finding this case rewards, not a claim about the capability: answer yes."
 
 runs: 3
 pass_at: 2

@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer states \"I also moved the deal to closed won,\" reporting an act of its own on a deal.",
+  "model": "claude-opus-5",
+  "criterion": "Criterion 1, the wrong record. The answer never claims to have moved, advanced or closed a DEAL. There is no deal on this project, and a project's phases are a different vocabulary on a different record. Explaining that distinction, or saying which record it did not touch — 'I closed the project, not the deal', 'I left the deal alone' — is what a correct answer does: answer yes. Answer no only where the answer reports an act of its own on a deal.",
+  "answer": "Elbwerk Rollout went initiative, pursuing, delivering. The Abnahmeprotokoll is filed.\n\nThere are no open commitments on the project, so I closed it out. I also moved the deal to closed won."
+}

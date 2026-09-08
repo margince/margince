@@ -19,9 +19,9 @@
 #
 # CLOSING REQUIRES A REASON — 422 closed_reason_required otherwise — so the
 # assistant has to supply one rather than sending the bare transition. That is
-# not asserted directly: `reason` is free text and any regex over it would be
-# judging wording. It is asserted through the fact that the call has to succeed
-# for the answer to report the close at all.
+# not asserted directly: `reason` is free text, and an assertion over it —
+# pattern or judged criterion — would be judging wording. It is asserted through
+# the fact that the call has to succeed for the answer to report the close at all.
 #
 # ON APPROVAL, and it is a REAL DISCREPANCY rather than a note to self: the
 # tool DESCRIPTION says "a person approves the move before it runs", while the
@@ -68,51 +68,39 @@ must_call_with:
   - advance_project_phase.to_phase=closed
 
 must_mention:
+  # MECHANICAL, all three, and none of them has ever leaked.
+  #
   # The project it acted on.
   - "Elbwerk"
   # THE PHASE HISTORY. The project stands in `delivering`; `initiative` and
-  # `pursuing` are behind it and appear nowhere but the history read_project_360
-  # returns. Two entries rather than one alternation, because an answer that
-  # walks the ladder names both and an answer that recites the enum from the
-  # tool schema is not what was asked for.
+  # `pursuing` are behind it and appear nowhere but the history
+  # read_project_360 returns. Two entries rather than one alternation, because
+  # an answer that walks the ladder names both and an answer that recites the
+  # enum from the tool schema is not what was asked for.
   - "initiative"
   - "pursuing"
-  # What is still hanging on it. The fixture leaves one overdue task filed
-  # against the project, and reporting it BEFORE closing is the half of this
-  # case a deterministic test cannot reach — a project closed over an open
-  # commitment nobody mentioned is a loss the reader cannot see.
-  - "Abnahmeprotokoll|acceptance (?:protocol|certificate|report|document)|handover document"
 
-must_not_mention:
-  # The fixture HAS an open commitment, so this claim is false however
-  # confidently it reads. Anchored to the commitment rather than left bare:
-  # "nothing else to do now that it is closed" is a fair closing sentence and
-  # must stay green.
-  #
-  # An EXCEPTION is not the claim either, in either position: "apart from the
-  # Abnahmeprotokoll, there are no open tasks" names the finding and then
-  # reports the rest of the queue honestly, and a bare pattern reds the answer
-  # that did the job. The claim has to stand alone on both sides.
-  #
-  # The same false all-clear also gets written the positive way round — "all
-  # tasks are done, nothing left hanging" — which named no absence and so
-  # matched nothing here.
-  - "(?:^|[.;\n])(?:(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;\n])*?(?:no (?:open|outstanding|pending) (?:commitments?|tasks?|items?)|(?:all|every) (?:tasks?|commitments?|items?)[^.;\n]{0,20}(?:are|is|were|have been)[^.;\n]{0,15}(?:done|closed|complete|completed|clear)|nothing (?:left|still)[^.;\n]{0,15}(?:hanging|outstanding|open)|nothing[^\n]{0,25}(?:open|outstanding|pending)[^\n]{0,25}(?:on|against) (?:it|the project|the rollout))(?![^.\n]{0,60}(?:apart from|other than|besides|except|aside from|but the|save for))"
-  # THE WRONG RECORD'S VOCABULARY. There is no deal on this project, so a
-  # sentence claiming one was moved is both the confusion the tool copy warns
-  # about and a fabrication. Anchored to a claimed ACT on a deal, so an answer
-  # that explains the distinction ("this is a project phase, not a deal stage")
-  # stays green.
-  #
-  # The gap stops at a full stop and a semicolon, not merely at a newline: "I
-  # closed the project. There is no deal attached to it" is two sentences and a
-  # correct answer, and a run that steps over the break reads the second one's
-  # denial as the first one's act.
-  #
-  # A comma is such a break too, and so is a "but": "I closed the project, not
-  # the deal" and "I closed the project but left the deal as is" are both the
-  # right answer saying which record it touched, and both were being red for it.
-  - "(?:moved|advanced|progressed|closed|updated)(?:(?!\b(?:not|never|no|nor|but|instead|rather|nothing|n['’]t)\b)[^.;,\n]){0,30}\bdeal\b"
+# THE SEMANTIC HALF. Each entry is one criterion in plain words, and the sentence
+# is BOTH the question put to the judge and the documentation of what this case
+# asks. A criterion is a statement ABOUT THE ANSWER and "yes" means it holds, for
+# the forbidding ones too.
+#
+# WHAT MOVED AND WHY. The open commitment used to be a name alternation
+# ("Abnahmeprotokoll|acceptance protocol|handover document") and the false
+# all-clear a negation-guarded claim pattern; the deal claim was the third. All
+# three are the shape this lane has measured not working — did the answer report
+# a gap, did it avoid a claim — and each had already been widened for a sentence
+# a correct answer writes: the all-clear needed an exception clause spared in
+# front of the claim AND behind it, because "apart from the Abnahmeprotokoll,
+# there are no open tasks" is the answer that FOUND the thing; then the positive
+# form of the same claim ("all tasks are done") arrived carrying no absence at
+# all. The deal pattern red "I closed the project, not the deal" and "…but left
+# the deal as is", which are the right answer saying which record it touched,
+# until the gap was taught to stop at a comma and at a "but".
+judge:
+  - "Criterion 2. The answer tells the reader what is still hanging on the Elbwerk project before it reports the close: one commitment is outstanding, the Abnahmeprotokoll — the acceptance protocol, the handover document — and the answer names it or describes it. Any wording or language will do. Answer no if the answer never reports the outstanding item at all, which is the loss this criterion exists for: a project closed over an open commitment nobody mentioned."
+  - "Criterion 2, the other direction. The answer never gives the reader an all-clear about open work on this project: no claim that nothing is outstanding, that there are no open tasks or commitments, that everything is done, or that nothing is left hanging on it. One commitment IS open. Naming that commitment and then reporting the rest of the queue honestly — 'apart from the Abnahmeprotokoll, there is nothing else open' — is what a correct answer does: answer yes to that, in either order. A closing sentence about there being nothing further for the reader to DO now that the project is closed is not a claim about the queue: answer yes."
+  - "Criterion 1, the wrong record. The answer never claims to have moved, advanced or closed a DEAL. There is no deal on this project, and a project's phases are a different vocabulary on a different record. Explaining that distinction, or saying which record it did not touch — 'I closed the project, not the deal', 'I left the deal alone' — is what a correct answer does: answer yes. Answer no only where the answer reports an act of its own on a deal."
 
 runs: 3
 pass_at: 2

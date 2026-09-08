@@ -96,6 +96,7 @@ if [[ -n "$KEEP_DIR" ]]; then mkdir -p "$KEEP_DIR"; fi
 
 SCANNED=0
 WITH_FINDINGS=0
+UNMEASURED=0
 SUMMARY="$WORK/summary.txt"
 : > "$SUMMARY"
 
@@ -130,19 +131,45 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
 
   if [[ -n "$KEEP_DIR" ]]; then cp "$candidates" "$KEEP_DIR/"; fi
 
-  SCANNED=$((SCANNED + 1))
-  if python3 "$ROOT/e2e/llm/probe.py" --jsonl "$scenario" < "$candidates"; then
-    echo "  $name: the guards agreed with every candidate" | tee -a "$SUMMARY"
-  else
-    WITH_FINDINGS=$((WITH_FINDINGS + 1))
-    echo "  $name: FINDINGS above — read them, do not act on them blind" | tee -a "$SUMMARY"
-  fi
+  # THREE OUTCOMES, NOT TWO. probe.py answers 0 for agreement, 1 for findings
+  # and 2 for "I could not measure" — an unreachable judge, a malformed
+  # candidate file. Folding 2 into 1 is how a round reported "scenarios
+  # audited: 21, with findings: 19" having actually read five: the account's
+  # session limit stopped the judge partway, every remaining scenario answered
+  # 2, and each was counted as a scenario that had been examined and found
+  # wanting. A number that cannot tell "unsound" from "unread" is the defect
+  # this tool exists to find, in the tool.
+  set +e
+  python3 "$ROOT/e2e/llm/probe.py" --jsonl "$scenario" < "$candidates"
+  probe_status=$?
+  set -e
+  case "$probe_status" in
+    0)
+      SCANNED=$((SCANNED + 1))
+      echo "  $name: the guards agreed with every candidate" | tee -a "$SUMMARY"
+      ;;
+    1)
+      SCANNED=$((SCANNED + 1))
+      WITH_FINDINGS=$((WITH_FINDINGS + 1))
+      echo "  $name: FINDINGS above — read them, do not act on them blind" | tee -a "$SUMMARY"
+      ;;
+    *)
+      UNMEASURED=$((UNMEASURED + 1))
+      echo "  $name: NOT MEASURED — the probe could not judge (see above)" | tee -a "$SUMMARY"
+      ;;
+  esac
 done
 
 echo
 echo "============ e2e-llm-guards ============"
 cat "$SUMMARY"
-echo "scenarios audited: $SCANNED, with findings: $WITH_FINDINGS"
+echo "scenarios audited: $SCANNED, with findings: $WITH_FINDINGS, NOT measured: $UNMEASURED"
+if [[ "$UNMEASURED" -gt 0 ]]; then
+  echo
+  echo "$UNMEASURED scenario(s) were NOT measured. Their guards are unexamined — not sound."
+  echo "The usual cause is the account's session limit stopping the judge partway. Re-run"
+  echo "with SCENARIO=<name> per scenario so a limit costs one scenario rather than the round."
+fi
 echo
 echo "A finding is a QUESTION for a human: the candidate may be misjudged by the"
 echo "guard, or mislabelled by the model that wrote it. Read the sentence before"

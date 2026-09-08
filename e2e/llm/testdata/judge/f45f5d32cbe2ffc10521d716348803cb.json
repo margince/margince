@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer never states any description or meaning for Strategic Account, only counts and the staged fold.",
+  "model": "claude-opus-5",
+  "criterion": "Criterion 3. The answer reports that the word which survives, Strategic Account, now carries the meaning the user asked for — an account with a named exec sponsor. Any wording of that meaning will do, in any language. Answer no if the answer never reports the description at all, and no if the description it reports belongs to the word that goes.",
+  "answer": "The tag list holds both, and their own reads carry the counts: Strategic Account 41 accounts, Strategic Accts 3.\n\nStrategic Accts is the one that goes, and its 3 records move onto Strategic Account. The fold is staged and waiting on somebody to release it — nothing has moved yet.\n\nThat leaves you with one word for this again."
+}

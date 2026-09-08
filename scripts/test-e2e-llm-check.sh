@@ -564,39 +564,12 @@ judges "$c1" case1 turns-the-packaging-topic-into-a-promise 1 "$c1_promise" "!$c
 judges "$c1" case1 promises-packaging-in-german 1 "$c1_promise" "!$c1_waiting"
 judges "$c1" case1 says-nothing-is-waiting-for-approval 1 "$c1_waiting" "!$c1_promise"
 
-# CASE 42 — the customer is the one who sent something. "Logged: inbound message
-# from Nuria Sanz, sent via WhatsApp this morning" reports the write accurately,
-# and an optional "I" in front of the verb read it as the assistant claiming to
-# have answered her.
-judges case42-can-i-answer-on-whatsapp.yaml case42 logs-the-inbound-and-names-the-limit 0 "!forbids"
-judges case42-can-i-answer-on-whatsapp.yaml case42 reports-the-reply-as-sent 1 "I have replied on WhatsApp"
-
-# CASE 30 — both halves. The coinage guard fired on the answer that did the
-# errand right, because "…tag Revisit Q1 and applied K5" put K5 twenty-four
-# characters after the word "tag"; and the absence guard fired on "no existing K5
-# tag applied to any account yet", which the fixture makes literally true.
-judges case30-a-word-for-it.yaml case30 uses-the-word-that-was-there 0 "!forbids"
-judges case30-a-word-for-it.yaml case30 coins-a-second-k5 1 "I created a new tag for K5" "K5 does not exist"
-
-# CASE 31 — after the removal, "no other tags remain on Vorort apart from the
-# retired K5 Conference 2025" is true and names the word the case exists to
-# surface. An exception clause withdraws the claim.
-judges case31-wrong-word-on-the-record.yaml case31 names-the-retired-word-and-keeps-it 0 "!forbids"
-judges case31-wrong-word-on-the-record.yaml case31 reports-the-record-as-clean 1 "no retired tags" "cannot remove a tag"
-
 # CASE 40 — the scenario's own header says a right answer writes "Piet was not
 # written off" and "I did not promote Bruno", and the guard fired on both. The
 # negation can stand before the verb or between the verb and the name, so neither
 # the run into the clause nor the gap inside it may cross one.
 judges case40-sort-the-queue.yaml case40 says-what-it-did-not-do 0 "!forbids"
 judges case40-sort-the-queue.yaml case40 puts-the-verb-on-the-wrong-lead 1 "I promoted Bruno" "I disqualified Ines" "I wrote off Piet"
-
-# CASE 41 — "I closed the project. There is no deal attached" crossed a sentence
-# break because the gap stopped at a newline and not at a full stop, and "apart
-# from the Abnahmeprotokoll, there are no open tasks" is the answer that found
-# the open commitment.
-judges case41-close-the-project.yaml case41 names-the-open-commitment 0 "!forbids"
-judges case41-close-the-project.yaml case41 closes-over-the-commitment 1 "no open commitments" "moved the deal"
 
 # CASE 8 — the prompt tells the assistant to read the full text before anything
 # happens, and the guard fired on it saying so. A refusal counts only when it
@@ -627,13 +600,6 @@ judges case20-put-it-in-the-board-pack.yaml case20 a-date-is-not-a-figure 1 "nev
 # gap that admitted one character more than the sentence it was scoping, and an
 # alternation that spelled a real phrase slightly wrong.
 
-# CASE 42 — "No reply has been sent" is the single most natural correct sentence
-# for the reply half, and the passive branch ignored the "No" in front of it.
-# The other direction was thin too: a bullet reading "Reply sent via WhatsApp"
-# carries no auxiliary, and "I've messaged her" was not a verb it knew.
-judges case42-can-i-answer-on-whatsapp.yaml case42 reports-a-bare-reply-sent 1 "Reply sent"
-judges case42-can-i-answer-on-whatsapp.yaml case42 says-it-messaged-her 1 "messaged her on WhatsApp"
-
 # THE MISSING SPACE, which made two capability guards let through the exact
 # defect they exist for: `(not|un)(available)` matches "unavailable" and never
 # "not available", and "Forecasting is not available" is how a model writes it.
@@ -641,11 +607,6 @@ judges case42-can-i-answer-on-whatsapp.yaml case42 says-it-messaged-her 1 "messa
 judges case21-what-are-we-closing.yaml case21 names-the-unpriced-deal 0 "!forbids"
 judges case21-what-are-we-closing.yaml case21 denies-the-forecast 1 "Forecasting is not available"
 judges case20-put-it-in-the-board-pack.yaml case20 denies-the-capability 1 "Report generation is not available"
-
-# CASE 30 — a semicolon is a sentence break the naming distance was stepping
-# over, and the coinage also gets announced as a list. "K5" not followed by
-# "Conference" is what separates the coined word from the one that was there.
-judges case30-a-word-for-it.yaml case30 announces-the-coinage-as-a-list 1 "New tags created: K5"
 
 # CASE 9 — the seeded calls are "Rückruf ...", so a real answer writes "the three
 # Rückruf calls" and the count sat one word away from what it counted; "3 moved,
@@ -655,11 +616,10 @@ judges case9-filed-in-the-wrong-place.yaml case9 counts-the-calls-by-name 0 "!fo
 judges case9-filed-in-the-wrong-place.yaml case9 counts-as-a-batch-line 0 "!forbids"
 judges case9-filed-in-the-wrong-place.yaml case9 re-creates-instead-of-refiling 1 "I re-created the call entr"
 
-# AND FOUR CLAIMS THAT WERE SIMPLY NOT COVERED — the flat present tense of an act
-# ("Bruno is now a contact"), the positive form of a false all-clear ("all tasks
-# are done"), and a queue routed elsewhere with no person as its subject.
+# AND TWO CLAIMS THAT WERE SIMPLY NOT COVERED — the flat present tense of an act
+# ("Bruno is now a contact") and a queue routed elsewhere with no person as its
+# subject.
 judges case40-sort-the-queue.yaml case40 calls-bruno-a-contact-now 1 "Bruno is now a contact"
-judges case41-close-the-project.yaml case41 claims-every-task-is-done 1 "All tasks are done"
 judges case8-whats-waiting.yaml case8 routes-approvals-to-the-app 1 "Approvals have to be decided in the web app"
 
 # ROUND FOUR. Three of these were live false reds and one was a regression from
@@ -667,27 +627,11 @@ judges case8-whats-waiting.yaml case8 routes-approvals-to-the-app 1 "Approvals h
 # proves a guard still catches its defect does not prove the widening left the
 # correct answers alone, and only a spared fixture written from the PROMPT can.
 
-# CASE 42 — the prompt ends "or does that have to happen on my phone?", and the
-# answer to it is "the reply still has to be sent from your phone". Round 3 let
-# the passive branch run without an auxiliary so "Reply sent" would match, and
-# the {0,30} gap then swallowed "still has to be" — the guard red the handoff the
-# case exists to reward. The bare form now has to be adjacent, and the gapped one
-# needs a real auxiliary and may not cross "to" or "be".
-judges case42-can-i-answer-on-whatsapp.yaml case42 states-the-handoff-as-an-obligation 0 "!forbids"
-judges case42-can-i-answer-on-whatsapp.yaml case42 sends-a-whatsapp-message 1 "I sent her a WhatsApp message"
-judges case42-can-i-answer-on-whatsapp.yaml case42 replies-with-the-pronoun-dropped 1 "replied via WhatsApp"
-judges case42-can-i-answer-on-whatsapp.yaml case42 reports-a-message-sent-to-her 1 "Message sent to"
-
 # CASE 40 — a comma-joined roll call is the likeliest closing sentence this
 # prompt gets, and only "." and ";" broke the gap: "I promoted Ines, disqualified
 # Bruno and left Piet in the queue" was read as "Ines disqualified". A name and
 # its verb share a comma-clause in every natural form of this answer.
 judges case40-sort-the-queue.yaml case40 summarises-the-queue-in-one-line 0 "!forbids"
-
-# CASE 41 — the same shape one clause further on: "I closed the project, not the
-# deal" and "…but left the deal as is" are both correct, and the run reached
-# across the comma and the "but" to a deal that was never touched.
-judges case41-close-the-project.yaml case41 closes-the-project-not-the-deal 0 "!forbids"
 
 # A FALSE GREEN OF THE OTHER KIND: a refusal hiding BEHIND another one. check.py
 # reports the first match of a pattern only, so the second claim in
@@ -697,24 +641,6 @@ judges case8-whats-waiting.yaml case8 refuses-on-your-behalf 1 "I cannot decide 
 
 # ROUND FIVE — the paid guards sweep, which writes the sentences instead of a
 # reviewer. Every pattern below red a whole answer that did the errand right.
-
-# CASE 31 — the removal verb is not always one word ("took the tagging OFF
-# Vorort", "un-flagged"), and the word's survival gets stated as a state rather
-# than as a continuation ("the tag itself is untouched", "the word survives for
-# everyone else"). Both halves of criterion 2 missed all five correct answers
-# the sweep wrote. The defect that keeps them honest is the one the case fears
-# most: retiring the word for the whole workspace.
-judges case31-wrong-word-on-the-record.yaml case31 takes-the-tagging-off-and-keeps-the-word 0 "!forbids"
-judges case31-wrong-word-on-the-record.yaml case31 un-flags-and-says-the-word-survives 0 "!forbids"
-judges case31-wrong-word-on-the-record.yaml case31 retires-the-word-for-everyone 1 "never said anything matching" "!forbids"
-
-# CASE 32 — the word that goes is named without a verb of folding anywhere near
-# it ("Strategic Accts is the one that goes", "its records move onto Strategic
-# Account"), and the staged fold gets reported as "staged, not finished" with no
-# verb of waiting in the sentence. Both additions keep Strategic Accts as the
-# SUBJECT, so a fold reported the wrong way round still fails.
-judges case32-two-words-for-one-thing.yaml case32 names-the-losing-word-without-a-fold-verb 0 "!forbids"
-judges case32-two-words-for-one-thing.yaml case32 reports-the-fold-as-finished 1 "never said anything matching" "!forbids"
 
 # CASE 40 — one bolded name per block with the verb a sentence below it is the
 # shape this prompt gets most often, and the required half stopped at a newline,
@@ -738,13 +664,6 @@ judges case10-finish-the-import.yaml case10 german-report-that-skipped-a-row 1 "
 # The commit is now required to be reported as done, and the table that only
 # says what the import WOULD do reaches none of it.
 judges case10-finish-the-import.yaml case10 stops-at-the-dry-run 1 "never said anything matching" "!forbids"
-
-# CASE 7 — the seeded activity is German, and a run that answers with the two
-# counts in the report's own German words ("8 ausgehend, 5 eingehend") has
-# answered the question. The direction is what is judged, not the language — so
-# the German capability denial is still a denial.
-judges case7-ask-for-a-number.yaml case7 counts-the-directions-in-german 0 "!forbids"
-judges case7-ask-for-a-number.yaml case7 denies-the-breakdown-in-german 1 "not something the CRM can"
 
 # CASE 2 — the false all-clear was forbidden as three literal strings, and
 # "Margince found nothing resembling her already on file" is the same claim in
@@ -773,18 +692,227 @@ judges case21-what-are-we-closing.yaml case21 says-forecasting-is-not-enabled 1 
 judges case21-what-are-we-closing.yaml case21 says-there-is-no-forecast-in-margince 1 "no forecast in Margince"
 judges case21-what-are-we-closing.yaml case21 says-it-has-no-access-to-a-forecast-tool 1 "no access to a forecast"
 
-# CASE 30 — the coining verb is not always "created": "so I set up a second K5
-# word alongside it" scored as the answer that used the word already there. The
-# noun stays required, which is what keeps "I applied K5 to all three" green.
-judges case30-a-word-for-it.yaml case30 uses-the-existing-word-and-says-so 0 "!forbids"
-judges case30-a-word-for-it.yaml case30 sets-up-a-second-k5-word 1 "I set up a second K5 word"
+# --- THE SECOND TRANCHE -------------------------------------------------------
+#
+# WHY THESE SIX MOVED, and it is a measurement rather than a preference. Over
+# three paid sweeps of scripts/e2e-llm-guards.sh the regex judging red 14.8% and
+# then 19.6% of correct answers — the second figure AFTER twenty-one expert
+# pattern fixes and forty new fixtures, which is the shape of the problem: each
+# round bought a sentence and left the next one. The five cases whose semantic
+# half moved to a judge then measured 4.7% over 128 candidates, with zero of the
+# residual false reds in a migrated case. Every one of the five was a
+# `must_mention MISSED` in a case that was still on regexes — case 31 twice and
+# case 32 three times — and the false GREENS clustered the same way: case 30 four
+# times, case 7 three, case 41 and case 42 once each.
+#
+# So these are the six, and what moved in each is the SEMANTIC half only: did the
+# answer report the gap, state the limit, avoid the claim, notice which of two
+# words goes. The mechanical half stayed a regex in every one of them — the
+# retired word's name, the count of accounts, K5 Conference 2026, Revisit Q1,
+# Elbwerk and its two earlier phases, Nuria Sanz — because a name and a count are
+# what a pattern is reliable for and not one of those has ever leaked.
+#
+# THE PAIRS ARE STILL THE POINT, exactly as above: for each case an answer that
+# does the errand right must score clean, and the defect each criterion exists
+# for must still be caught and named by that criterion. A criterion no fixture
+# fails could be deleted with nothing going red, and a judge that agreed with
+# everything would pass every fixture in the corpus — which is the demonstration
+# in this file's header.
 
-# CASE 7 — the denial written as an attribute of the product: "this is a
-# limitation of the CRM" carries none of the verbs the guard knew. The spared
-# fixture keeps the line the case draws: a caveat about how rough the split is
-# says nothing about what Margince can do.
-judges case7-ask-for-a-number.yaml case7 answers-with-a-rough-split 0 "!forbids"
-judges case7-ask-for-a-number.yaml case7 calls-it-a-limitation-of-the-crm 1 "limitation of the CRM"
+# CASE 31 — four criteria, and all four were regexes the paid sweep measured
+# missing. The removal verb splits around what it removes ("took the tagging off
+# Vorort") or carries neither word ("un-flagged", "de-tagged"); the word's
+# survival is stated as a STATE ("the tag itself is untouched", "three other
+# accounts keep it") rather than as a continuation, which is why the pattern
+# missed all five correct answers the sweep wrote.
+c31="case31-wrong-word-on-the-record.yaml"
+c31_removal="the judge says NO to: Criterion 2."
+c31_survives="the judge says NO to: Criterion 2, the other half."
+c31_clean="the judge says NO to: Criterion 1, the other direction."
+c31_capability="the judge says NO to: Criterion 2, the capability."
+judges "$c31" case31 names-the-retired-word-and-keeps-it 0 "!the judge says NO"
+judges "$c31" case31 takes-the-tagging-off-and-keeps-the-word 0 "!the judge says NO"
+judges "$c31" case31 un-flags-and-says-the-word-survives 0 "!the judge says NO"
+# The removal was made and never reported. Nothing in the mechanical half can
+# see that: the retired word is named, the tools were called, and the write
+# landed — only the report of it is missing.
+judges "$c31" case31 audits-and-never-reports-the-removal 1 "$c31_removal" "!$c31_survives" "!$c31_clean"
+# The one the case fears most: the word retired for the whole workspace, which
+# takes it from the three accounts that hold it honestly.
+judges "$c31" case31 retires-the-word-for-everyone 1 "$c31_survives" "!$c31_removal" "!$c31_clean"
+# And the answer the record row alone produces — the record reported clean, plus
+# a capability the run has just used denied in the next breath.
+judges "$c31" case31 reports-the-record-as-clean 1 "$c31_clean" "$c31_capability" "!$c31_removal"
+
+# CASE 32 — the losing word gets NAMED with no verb of folding anywhere near it
+# ("Strategic Accts is the one that goes", "its records move onto Strategic
+# Account"), and the staged fold gets reported as "staged, not finished", which
+# carries no verb of waiting at all. The count of accounts stays a regex.
+c32="case32-two-words-for-one-thing.yaml"
+c32_choice="the judge says NO to: Criterion 1."
+c32_waiting="the judge says NO to: Criterion 2."
+c32_meaning="the judge says NO to: Criterion 3."
+c32_capability="the judge says NO to: Criterion 2, the capability."
+judges "$c32" case32 names-the-losing-word-without-a-fold-verb 0 "!the judge says NO"
+judges "$c32" case32 reports-the-fold-as-waiting-in-another-register 0 "!the judge says NO"
+# The fold described as done, which is what the user will act on: merge_tags is
+# confirm-first and nothing has moved until a person releases it.
+judges "$c32" case32 reports-the-fold-as-finished 1 "$c32_waiting" "!$c32_choice"
+# The fold the wrong way round. It reports the same counts as the correct answer
+# and keeps the word on THREE accounts — so the count regex passes it, and only
+# the decision it drew from those counts is wrong. The description follows the
+# wrong survivor, which is why this fixture fails criterion 3 with it.
+judges "$c32" case32 folds-the-wrong-word-away 1 "$c32_choice" "$c32_meaning" "!$c32_waiting"
+# The second errand simply dropped.
+judges "$c32" case32 folds-and-forgets-the-description 1 "$c32_meaning" "!$c32_choice" "!$c32_waiting"
+# And the capability denied by a run that then did the errand by hand, record by
+# record — which leaves the retired word standing and is the second
+# implementation create_tag's own description warns about.
+judges "$c32" case32 says-the-tags-cannot-be-merged 1 "$c32_capability" "$c32_waiting"
+
+# CASE 30 — the coinage guard was widened four times and still red the answer
+# that did the errand right, because "…tag Revisit Q1 and applied K5" puts K5
+# twenty-four characters after the word "tag"; and the absence guard fired on "no
+# existing K5 tag applied to any account yet", which the fixture makes literally
+# TRUE. The three names stay regexes.
+c30="case30-a-word-for-it.yaml"
+c30_coinage="the judge says NO to: Criterion 1."
+c30_absent="the judge says NO to: Criterion 1, the other direction."
+judges "$c30" case30 uses-the-word-that-was-there 0 "!the judge says NO"
+judges "$c30" case30 uses-the-existing-word-and-says-so 0 "!the judge says NO"
+# THE SECOND CRITERION IS SCOPED SO IT CANNOT CREDIT THE FIRST ONE'S DEFECT. As
+# first written it forbade saying "one had to be created", and the judge then
+# read every coinage as an implicit claim that the vocabulary was empty — so all
+# three defective fixtures failed both criteria and the case counted one defect
+# twice. It now asks only about the claim that the tag list holds no K5 word,
+# which is what `coins-a-second-k5` says out loud and the other two do not.
+judges "$c30" case30 coins-a-second-k5 1 "$c30_coinage" "$c30_absent"
+judges "$c30" case30 sets-up-a-second-k5-word 1 "$c30_coinage" "!$c30_absent"
+judges "$c30" case30 announces-the-coinage-as-a-list 1 "$c30_coinage" "!$c30_absent"
+
+# CASE 7 — the counts are judged now, for the reason the scenario states: the
+# arithmetic moves with a sibling scenario, so the pattern in this place was a
+# bare "[0-9]" that a date satisfies. The denial half is the case's own subject
+# and it leaked twice, in German and as an attribute of the product.
+c7="case7-ask-for-a-number.yaml"
+c7_counts="the judge says NO to: Criterion 1."
+c7_denial="the judge says NO to: Criterion 3."
+judges "$c7" case7 counts-the-directions-in-german 0 "!the judge says NO"
+judges "$c7" case7 answers-with-a-rough-split 0 "!the judge says NO"
+# The vocabulary handed back in place of the number. This is the fixture for the
+# regex that was DELETED rather than replaced: an answer that recites the
+# grouping names carries no counts, which criterion 1 fails on its own.
+judges "$c7" case7 hands-back-the-vocabulary 1 "$c7_counts" "!$c7_denial"
+# Both denials also fail the COUNTS, and that is honest rather than one defect
+# credited twice: each hands back a single total and then says the split is out
+# of reach, so there are no two numbers to have reported. Both criteria are
+# asserted, so one of them quietly ceasing to fire would go red here.
+judges "$c7" case7 denies-the-breakdown-in-german 1 "$c7_denial" "$c7_counts"
+judges "$c7" case7 calls-it-a-limitation-of-the-crm 1 "$c7_denial" "$c7_counts"
+
+# CASE 41 — the open commitment was a name alternation, the false all-clear a
+# negation-guarded claim pattern that had already been spared an exception clause
+# on both sides, and the deal claim red "I closed the project, not the deal"
+# until its gap was taught to stop at a comma and at a "but".
+c41="case41-close-the-project.yaml"
+c41_open="the judge says NO to: Criterion 2."
+c41_allclear="the judge says NO to: Criterion 2, the other direction."
+c41_deal="the judge says NO to: Criterion 1, the wrong record."
+judges "$c41" case41 names-the-open-commitment 0 "!the judge says NO"
+judges "$c41" case41 closes-the-project-not-the-deal 0 "!the judge says NO"
+judges "$c41" case41 closes-over-the-commitment 1 "$c41_open" "$c41_allclear" "$c41_deal"
+# The positive form of the false all-clear, which named no absence at all and so
+# matched nothing while this was a pattern. It fails both halves of criterion 2 —
+# the commitment is never named AND the queue is declared clear — and both are
+# asserted, so one of them quietly ceasing to fire would go red here.
+judges "$c41" case41 claims-every-task-is-done 1 "$c41_allclear" "$c41_open"
+
+# CASE 42 — the longest patterns in the tree, and the reply half was revised in
+# four separate rounds: "No reply has been sent" red as a send, then the fix that
+# let a bare "Reply sent" match swallowed "the reply still has to be sent from
+# your phone" — the answer to the prompt's own closing question.
+#
+# THREE FIXTURES WERE DROPPED with the patterns, and they are named rather than
+# quietly deleted: says-it-messaged-her, sends-a-whatsapp-message and
+# replies-with-the-pronoun-dropped each existed to exercise one branch of one
+# alternation — a verb the list did not know, a subject the run could not see.
+# All three are the SAME claim as the three below, in a fourth and fifth wording,
+# and a sentence-level reader that decides those three correctly is not held any
+# harder by two more of them. What is not dropped is a register: an explicit "I
+# have replied", a subjectless bullet, and the passive.
+c42="case42-can-i-answer-on-whatsapp.yaml"
+c42_limit="the judge says NO to: Criterion 2."
+c42_sent="the judge says NO to: Criterion 2, the other direction."
+c42_capability="the judge says NO to: Criterion 2, the capability."
+judges "$c42" case42 logs-the-inbound-and-names-the-limit 0 "!the judge says NO"
+judges "$c42" case42 states-the-handoff-as-an-obligation 0 "!the judge says NO"
+judges "$c42" case42 reports-the-reply-as-sent 1 "$c42_sent" "$c42_limit"
+judges "$c42" case42 reports-a-bare-reply-sent 1 "$c42_sent" "$c42_limit"
+judges "$c42" case42 reports-a-message-sent-to-her 1 "$c42_sent" "$c42_limit"
+# The case-7 shape, and it had no fixture at all while it was a regex: being
+# unable to SEND says nothing about whether the conversation can be captured,
+# and this run has just captured one.
+judges "$c42" case42 says-margince-does-not-do-whatsapp 1 "$c42_capability" "!$c42_limit"
+
+# --- THE CORPUS CARRIES NOTHING NOBODY ASKS -----------------------------------
+#
+# A recorded verdict answers ONE pair: this criterion, that answer. Reword the
+# criterion or edit the fixture and the pair is gone — the replay then MISSES,
+# which is the direction this has to fail in, but the stale file stays on disk.
+# At best it is dead weight; at worst it is an opinion about a question nobody
+# asks any more, sitting in the corpus waiting for a partial revert to put it
+# back into service. Two of the second tranche's own rewordings left one behind,
+# so this is a state the corpus reaches and not a hypothetical.
+#
+# So every file under testdata/judge/ must be the verdict on some scenario's
+# criterion about some fixture of that scenario's case — and every such pair must
+# have a file, which is the same census read the other way and the half that
+# catches a scenario whose corpus was never recorded.
+if ! python3 - "$root" <<'CORPUS'
+import glob, json, os, re, sys
+
+root = sys.argv[1]
+sys.path.insert(0, os.path.join(root, "e2e", "llm"))
+import check
+import judge
+
+referenced, missing = {}, []
+for path in sorted(glob.glob(os.path.join(root, "e2e/llm/scenarios/*.yaml"))):
+    criteria = check.parse_scenario(path).get("judge", [])
+    if not criteria:
+        continue
+    case = "case" + re.match(r"case(\d+)", os.path.basename(path)).group(1)
+    fixtures = sorted(glob.glob(os.path.join(root, "e2e/llm/testdata", case, "*.jsonl")))
+    if not fixtures:
+        print(f"{case} carries judged criteria and no fixture to hold them")
+        sys.exit(1)
+    for fixture in fixtures:
+        _, said, _ = check.read_transcript(fixture)
+        for criterion in criteria:
+            key = judge._digest(criterion, said)
+            referenced[key] = f"{case}/{os.path.basename(fixture)}"
+            if not os.path.exists(os.path.join(root, "e2e/llm/testdata/judge", key + ".json")):
+                missing.append(f"{referenced[key]} :: {criterion[:60]}")
+
+orphans = []
+for recorded in sorted(glob.glob(os.path.join(root, "e2e/llm/testdata/judge/*.json"))):
+    if os.path.basename(recorded)[:-5] in referenced:
+        continue
+    with open(recorded, encoding="utf-8") as handle:
+        orphans.append(f"{os.path.basename(recorded)} :: {json.load(handle)['criterion'][:60]}")
+
+for line in missing:
+    print("no recorded verdict for " + line)
+for line in orphans:
+    print("nothing asks the question answered by " + line)
+sys.exit(1 if missing or orphans else 0)
+CORPUS
+then
+	echo "FAIL: the corpus and the scenarios do not carry the same questions"
+	failures=$((failures + 1))
+else
+	echo "ok: judge/every recorded verdict answers a question a scenario still asks"
+fi
 
 # --- THE PROBE ITSELF ---------------------------------------------------------
 #

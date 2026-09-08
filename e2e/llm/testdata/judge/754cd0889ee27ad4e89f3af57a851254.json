@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer names the open Abnahmeprotokoll commitment as overdue and still outstanding before reporting the rest of the queue as clear, which the criterion explicitly permits.",
+  "model": "claude-opus-5",
+  "criterion": "Criterion 2, the other direction. The answer never gives the reader an all-clear about open work on this project: no claim that nothing is outstanding, that there are no open tasks or commitments, that everything is done, or that nothing is left hanging on it. One commitment IS open. Naming that commitment and then reporting the rest of the queue honestly — 'apart from the Abnahmeprotokoll, there is nothing else open' — is what a correct answer does: answer yes to that, in either order. A closing sentence about there being nothing further for the reader to DO now that the project is closed is not a claim about the queue: answer yes.",
+  "answer": "Elbwerk Rollout came through initiative, then pursuing, then delivering, which is where it stood until now.\n\nApart from the Abnahmeprotokoll, there are no open tasks on it — that one is overdue and still has to come back signed.\n\nI closed the project. There is no deal attached to it: a project's phases are a different vocabulary from a deal's pipeline stages."
+}

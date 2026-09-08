@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer gives two per-direction counts, 8 ausgehend and 5 eingehend.",
+  "model": "claude-opus-5",
+  "criterion": "Criterion 1. The answer gives a count for each of the two directions — how much was outbound, us reaching out, and how much was inbound, them coming to us. Two numbers, one per direction, in any language: the report answers in German too, so 'acht ausgehend, fünf eingehend' is exactly as good as 'seven outbound against four inbound'. Answer no if the answer gives only a single total, or describes the split in words with no numbers behind it, or reports the report's grouping and filter names instead of the counts. Which of the two is larger, and whether the answer hedges about precision, is not yours to judge.",
+  "answer": "Kurz: 8 ausgehend, 5 eingehend.\n\nIch habe dafür den Bericht activities-by-kind laufen lassen und nach direction gruppiert — den Feldnamen habe ich nicht geraten, sondern vorher im Vokabular nachgesehen.\n\nDie Notizen sind auf Deutsch erfasst, eine davon zum Beispiel als \"Rückruf vereinbart\"; an der Zählung ändert das nichts."
+}

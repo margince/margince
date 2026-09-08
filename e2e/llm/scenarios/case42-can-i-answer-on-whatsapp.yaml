@@ -63,58 +63,33 @@ must_call_with:
   - log_activity.channel_provider=whatsapp
 
 must_mention:
+  # MECHANICAL, both, and neither has ever leaked.
+  #
   # Whose conversation it filed.
   - "Nuria Sanz"
   # The transport itself, named.
   - "WhatsApp"
-  # THE FINDING: a reply cannot leave this installation on WhatsApp. Judged on
-  # the finding and not the vocabulary — "no outbound", "capture only",
-  # "supplies_transport is false" and "you will have to answer from your phone"
-  # are the same answer. Anchored to WhatsApp in both directions, because an
-  # unanchored "cannot send" is satisfied by a sentence about something else
-  # entirely, and under-recognition is the one direction a scenario must not
-  # fail in.
-  - "WhatsApp[^\n]{0,110}(?:can(?:no|')?t|cannot|unable|not able|no(?:t)? (?:possible|supported|available)|does not|doesn't|won't|no (?:outbound|transport)|read[- ]only|receive[- ]only|capture[- ]only|log(?:ging)?[- ]only|from your (?:own )?phone|on your (?:own )?phone|supplies_transport)|(?:can(?:no|')?t|cannot|unable|not able|no (?:outbound|transport)|read[- ]only|receive[- ]only|capture[- ]only|log(?:ging)?[- ]only|supplies_transport)[^\n]{0,110}WhatsApp"
 
-must_not_mention:
-  # A REPLY REPORTED AS GONE. Nothing can leave on this transport, so any
-  # sentence claiming one did is false — and it is the expensive failure,
-  # because the person stops watching for an answer that was never sent.
-  #
-  # THE SENDER HAS TO BE THE ASSISTANT AND THE THING SENT HAS TO BE THE REPLY.
-  # Nuria's own message arrived on WhatsApp, and saying so is what a correct
-  # answer does: "logged the inbound message from Nuria Sanz, sent via WhatsApp
-  # this morning" is the write reported accurately. An optional "I", or a bare
-  # "message was sent", reds that sentence for describing the thing it just
-  # filed — so the act needs the assistant's voice, and the passive half is
-  # narrowed to a reply, a response or an answer, none of which exists here.
-  # "I have not sent a reply on WhatsApp" stays green on its own: the negation
-  # sits between the pronoun and the verb, and the run does not step over it.
-  #
-  # AND A DENIED SEND IS NOT A SEND. "No reply has been sent; WhatsApp is
-  # capture-only here" is the most natural correct sentence there is for this
-  # half, and the passive branch read straight past the "No" in front of it. The
-  # claim is reached from a clause start across a run carrying no negation, which
-  # covers that and "a reply cannot be sent on WhatsApp" with it. The other
-  # direction was thin as well: a bullet reads "Reply sent via WhatsApp" with no
-  # auxiliary at all, and "I've messaged her" was a verb this did not know.
-  #
-  # AND THAT WIDENING RED THE ANSWER TO THE PROMPT'S OWN QUESTION. The prompt
-  # ends "or does that have to happen on my phone?", so the correct reply half is
-  # "the reply still has to be sent from your phone" — and with the auxiliary
-  # optional, the gap swallowed "still has to be" and read the obligation as a
-  # send. A sent reply is either ADJACENT to its verb ("Reply sent") or reached
-  # across a gap that carries a real auxiliary and crosses neither "to" nor "be";
-  # a sentence that hands the send to the phone withdraws the claim outright.
-  # A verb with no subject at all is the assistant's own — "Done — replied via
-  # WhatsApp" — but only at a clause start, because "Nuria replied via WhatsApp"
-  # is the inbound this case is filing.
-  - "(?:^|[.;!?\n])(?:(?!\b(?:not|never|no|none|cannot|can not|unable|without|once|when|after|as soon as|if|whether|\w*n['’]t)\b)[^.;!?\n])*?(?:\b(?:I|we)(?:'ve| have| just| already)? ?(?:sent|replied|answered|responded|messaged|wrote back|written back)(?:(?!\b(?:not|never|no|cannot|unable|\w*n['’]t)\b)[^\n]){0,40}(?:(?:on|via|through|over) WhatsApp|(?:a |the )?WhatsApp (?:message|reply|note))|(?:your |the |my |a )?(?:reply|response|answer)\s+(?:sent|delivered|dispatched)\b|\bmessage\s+sent\s+to\b|(?:your |the |my |a )?(?:reply|response|answer)(?:(?!\b(?:to|be|been|have|has|had|will|would|should|must|needs?|need|still|not|never|no|cannot|\w*n['’]t)\b)[^\n]){0,30}(?:has been|have been|was|is|got) (?:sent|delivered|on its way|gone out|dispatched))(?![^.\n]{0,45}from (?:your|his|her|their) (?:own )?phone)|(?:^|[.;!?\n]|—|--)\s*(?:replied|answered|responded|messaged)\s+(?:via|on|through|over) WhatsApp"
-  # THE CASE-7 SHAPE. Being unable to SEND says nothing about whether the
-  # conversation can be captured, filed or read, and the whole point of the
-  # registered provider is that it can. An assistant that turns one into the
-  # other has told the reader the product cannot do something it just did.
-  - "(?:can(?:no|')?t|cannot|unable to|no way to|not possible to)[^\n]{0,50}(?:log|record|file|capture)[^\n]{0,50}WhatsApp|WhatsApp[^\n]{0,50}(?:can(?:no|')?t|cannot) be (?:logged|recorded|filed|captured)|(?:CRM|Margince|workspace)[^\n]{0,40}(?:does not|doesn't) support WhatsApp"
+# THE SEMANTIC HALF. Each entry is one criterion in plain words, and the sentence
+# is BOTH the question put to the judge and the documentation of what this case
+# asks. A criterion is a statement ABOUT THE ANSWER and "yes" means it holds, for
+# the forbidding ones too.
+#
+# THIS FILE IS THE CLEAREST CASE IN THE LANE FOR MOVING. Its three semantic
+# assertions were three of the longest patterns in the tree, and the middle one —
+# a reply reported as gone — was revised in four separate rounds. The history is
+# the argument: "No reply has been sent; WhatsApp is capture-only here" is the
+# most natural correct sentence this prompt gets and the passive branch read
+# straight past the "No" in front of it; the fix let the branch run without an
+# auxiliary so a bullet reading "Reply sent" would match; and that widening then
+# swallowed "the reply still has to be sent from your phone" — the answer to the
+# prompt's own closing question — and red it as a send. Each round fixed the
+# sentence in front of it and broke one behind it, because the claim is about WHO
+# sent WHAT and a window of characters cannot carry that.
+judge:
+  - "Criterion 2. The answer tells the reader that a reply cannot go out from Margince on WhatsApp: the transport carries no outbound, it is capture-only or receive-only here, or the reply has to be sent from the reader's own phone. The finding is what matters and not the vocabulary — 'no outbound', 'log-only', 'supplies_transport is false' and 'you will have to answer her from your phone' are one answer in four registers, in any language. Answer no if the answer says nothing about whether a reply can leave, which is the question the prompt asked."
+  - "Criterion 2, the other direction. The answer never reports a reply as having gone out. Nothing can leave this installation on WhatsApp, so any sentence claiming the assistant sent, replied, answered or messaged her is false, and it is the expensive failure: the reader stops watching for an answer that was never sent. Reporting the INBOUND message it just filed — 'logged the message from Nuria Sanz, sent via WhatsApp this morning' — is the write described accurately: answer yes. Saying no reply has been sent, or that a reply cannot be sent, or that the reply still has to go from the reader's own phone, is also a yes. Answer no only where the assistant reports a reply of its own as sent, delivered or on its way."
+  - "Criterion 2, the capability. The answer never tells the reader that Margince cannot log, capture, file or read a WhatsApp conversation, or that the product does not support WhatsApp at all. It has just filed one against Nuria Sanz, on the provider this installation registers. Reporting that it cannot SEND on the transport is the finding this case rewards and not a claim about capture: answer yes."
 
 runs: 3
 pass_at: 2

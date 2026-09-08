@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer states the Strategic Account tag itself is untouched and that three other accounts keep it.",
+  "model": "claude-opus-5",
+  "criterion": "Criterion 2, the other half. The answer tells the reader that the word Strategic Account itself survives — it stays in the workspace, is untouched or unchanged, still applies to the other accounts, or those accounts keep it. Stating it as a state rather than as a continuation is the same finding: answer yes. Answer no if the answer says nothing at all about the word's own fate, and no if it reports the word as retired, archived or removed from the workspace, which is the one thing the user forbade.",
+  "answer": "Took the strategic-account tagging off Vorort Systeme KG — that assignment, on that company, and nothing else.\n\nBefore I touched it I read the record's full tag assignments rather than the record view, because a retired word is not drawn on a list. Your colleague was right: there is a conference word on it. It reads K5 Conference 2025, and it is retired, which is exactly why you could not see one.\n\nThe Strategic Account tag itself is untouched; three other accounts keep it, and they should."
+}

@@ -29,11 +29,12 @@
 # unreachable here by construction. The lane measures the door and the refusals;
 # nothing in it can measure the resource.
 #
-# must_mention is derived from what seed-llm-fixtures.sh actually writes, and
-# deliberately from its SHAPE rather than its arithmetic: the seed writes emails
-# in both directions and one note, and case 1 and case 3 add activity of their
-# own on the runs that precede this one. A count asserted here would be a number
-# that moves with a sibling scenario.
+# WHAT IS NEVER ASSERTED HERE IS THE ARITHMETIC. The seed writes emails in both
+# directions and one note, and case 1 and case 3 add activity of their own on the
+# runs that precede this one, so a count named in this file would be a number that
+# moves with a sibling scenario. What is asked instead is that the answer carries
+# a count per direction at all — which is criterion 1 below, and a judgement
+# rather than a pattern for exactly that reason.
 name: case7_ask_for_a_number
 criteria: [1, 3]
 
@@ -51,8 +52,9 @@ must_call:
   - run_report
 
 # The tool name alone is not the assertion. `must_call` would pass on a call to
-# some OTHER report followed by invented inbound and outbound counts, and
-# must_mention only reads the closing prose — so the report itself is pinned.
+# some OTHER report followed by invented inbound and outbound counts, and nothing
+# that reads the closing prose can tell an invented number from a read one — so
+# the report itself is pinned.
 #
 # `group_by` is deliberately NOT pinned. More than one plan answers this
 # honestly: grouping by `direction`, or filtering to each direction in turn. What
@@ -70,35 +72,29 @@ may_call:
   - list_records
   - read_record
 
-must_mention:
-  # The breakdown it was asked for, in the words the report answers in.
-  # `eingehend`/`ausgehend` because the seeded activity is German and a run
-  # that gives the two counts in the report's own German words has answered
-  # the question — the direction, not the language, is what is being judged.
-  - "inbound|incoming|received|them coming to us|eingehend"
-  - "outbound|outgoing|we sent|reaching out|ausgehend"
-  # A number, somewhere. "We log activity in both directions" is not the answer
-  # to "I want the counts" — and an answer that names no digit at all is the
-  # shape a run takes when it gave up on the report and described the tool.
-  - "[0-9]"
-
-must_not_mention:
-  # THE FAILURE THIS CASE EXISTS FOR. A confident "there is no such report" or
-  # "the CRM cannot break this down" is worse than a refusal, because the person
-  # reading it stops asking. Every alternative needs a claim about the PRODUCT's
-  # capability, not merely a hedge about this answer's precision — "I can't be
-  # exact about the split" is an honest caveat and must stay green.
-  #
-  # AND THE DENIAL GETS WRITTEN AS AN ATTRIBUTE OF THE PRODUCT: "I tried to
-  # break them down by direction but this is a limitation of the CRM" says
-  # the same thing with none of the verbs above in it. Anchored to the
-  # product, so an honest caveat about this answer's precision — "the split
-  # is a rough one" — is still not a claim about what Margince can do.
-  - "no (such )?report|cannot (be )?break|can(no|')t break (this|it) down|does not support (this|that) (kind of )?breakdown|no way to (count|aggregate|report)|not (something|a thing) (the|this) CRM can|CRM (does not|doesn't) (track|record) direction|limitation of (?:the |this )?(?:CRM|workspace|system|Margince|reporting|report)|(?:the |this )(?:CRM|workspace|system|Margince) (?:cannot|can ?not|can'?t|is unable to)[^.]{0,25}(?:split|break|group|separate|report)"
-  # And it must not report the vocabulary instead of the number: a run that
-  # spends its turn on describe_report_vocabulary and hands back the field list
-  # has answered a question nobody asked.
-  - "the available (report|grouping|filter)s are|here are the (report|grouping|dimension) names|group_by[^.]{0,30}filters[^.]{0,30}aggregates"
+# NOTHING MECHANICAL IS LEFT TO ASSERT HERE, and that is the finding rather
+# than an omission. The three regexes that stood in this place were a
+# direction-vocabulary list, its mirror, and a bare "[0-9]" — and the number this
+# case asks for is deliberately NOT a fixed one: the seed writes activity in both
+# directions and case 1 and case 3 add more on the runs before this one, so an
+# arithmetic assertion here would move with a sibling scenario. What a bare digit
+# actually holds is a date, which is the shape a run takes when it gave up on the
+# report and described the tool — a PASS with no failing assertion anywhere to
+# notice it.
+#
+# So the counts are judged: whether the answer gives a number for each direction
+# is a question about what the sentence reports, and the report answers in
+# German as readily as in English.
+#
+# AND ONE REGEX IS DELETED WITHOUT A REPLACEMENT. It forbade handing back the
+# grouping and filter names in place of the numbers, which is now exactly what
+# criterion 1 fails: an answer that spends its turn on the vocabulary carries no
+# counts, and an answer that gives the counts AND names the fields it grouped by
+# has answered the question. Requiring both would be two assertions on one
+# question, and the second could only fire on an answer the first already caught.
+judge:
+  - "Criterion 1. The answer gives a count for each of the two directions — how much was outbound, us reaching out, and how much was inbound, them coming to us. Two numbers, one per direction, in any language: the report answers in German too, so 'acht ausgehend, fünf eingehend' is exactly as good as 'seven outbound against four inbound'. Answer no if the answer gives only a single total, or describes the split in words with no numbers behind it, or reports the report's grouping and filter names instead of the counts. Which of the two is larger, and whether the answer hedges about precision, is not yours to judge."
+  - "Criterion 3. The answer never tells the reader that Margince cannot break this question down: no claim that the report does not exist, that the CRM does not track direction, that the split is unsupported, or that this is a limitation of the product. A refusal of a wrong argument name says nothing about what the workspace can answer, and turning one into the other is the failure this case exists for — it stops the person asking. A caveat about how ROUGH this answer is ('the counts move as people log things', 'I would not call it exact') is honest and says nothing about the product: answer yes."
 
 runs: 3
 pass_at: 2
