@@ -48,11 +48,12 @@ h1 {
   margin: 0 0 var(--space-1);
   font-size: var(--fs-lead);
   font-weight: 600;
+  color: var(--textPrimary);
 }
 
 .meta {
   margin: 0 0 var(--space-4);
-  color: var(--textSecondary);
+  color: var(--textMeta);
   font-size: var(--fs-meta);
 }
 
@@ -76,7 +77,7 @@ h1 {
 }
 
 .rank {
-  color: var(--textSecondary);
+  color: var(--textMeta);
   font-variant-numeric: tabular-nums;
   font-size: var(--fs-meta);
 }
@@ -99,7 +100,7 @@ h1 {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1) var(--space-3);
-  color: var(--textSecondary);
+  color: var(--textMeta);
   font-size: var(--fs-meta);
 }
 
@@ -108,7 +109,7 @@ h1 {
 }
 
 .state {
-  color: var(--textSecondary);
+  color: var(--textMeta);
   font-size: var(--fs-meta);
 }
 
@@ -116,8 +117,8 @@ h1 {
    both themes — and "none" is exactly the band a rep has to be able to read.
    Measured on the canon's own values, named by token because check-ds-purity.sh
    greps comments too and a hex here would fail the gate this comment explains:
-   --success 5.01:1 light / 9.25:1 dark, --warn 7.09 / 9.65,
-   --textSecondary 4.82 / 5.88. All four clear the bar as they stand, which is
+   --success 4.88:1 light / 9.84:1 dark, --warn 6.89 / 10.27,
+   --textMeta 5.36 / 6.25. All four clear the bar as they stand, which is
    why they are read directly rather than mixed toward one. */
 .band-high {
   color: var(--success);
@@ -131,13 +132,13 @@ h1 {
 
 .band-low,
 .band-none {
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 /* A promise's state, and a handover's gaps. Both are TEXT, so each clears
    4.5:1 against --bgElevated in both themes on the canon's own values —
-   --danger 6.47:1 light / 5.83:1 dark, --warn 7.09 / 9.65,
-   --textSecondary 4.82 / 5.88. Named by token because check-ds-purity.sh
+   --danger 6.29:1 light / 6.20:1 dark, --warn 6.89 / 10.27,
+   --textMeta 5.36 / 6.25. Named by token because check-ds-purity.sh
    greps comments too, and a hex here would fail the gate this note explains.
 
    "overdue" is the one that has to carry weight: it is the only state on
@@ -149,7 +150,7 @@ h1 {
 
 .state-upcoming,
 .state-undated {
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 /* A view that reports several kinds of thing at once needs them separated, or
@@ -160,7 +161,7 @@ h1 {
 
 .section-title {
   margin: 0 0 var(--space-2);
-  color: var(--textSecondary);
+  color: var(--textPrimary);
   font-size: var(--fs-meta);
   font-weight: 600;
   text-transform: uppercase;
@@ -186,7 +187,7 @@ h1 {
    system-ui: that token resolves to a web font, and a web font is a network
    request this document's empty origin allowlist can never admit. */
 .source {
-  color: var(--textSecondary);
+  color: var(--textMeta);
   font-family: ui-monospace, monospace;
   font-size: var(--fs-eyebrow);
   white-space: nowrap;
@@ -199,7 +200,7 @@ h1 {
   border: 1px dashed var(--borderSubtle);
   border-radius: var(--r-sm);
   padding: var(--space-4);
-  color: var(--textSecondary);
+  color: var(--textMeta);
   text-align: center;
 }
 

@@ -57,7 +57,7 @@
   flex-shrink: 0;
   border: 0;
   background: transparent;
-  color: var(--textSecondary);
+  color: var(--textMeta);
   font: inherit;
   font-size: var(--fs-sm);
   font-weight: 500;
@@ -173,7 +173,7 @@
   align-items: center;
   gap: var(--space-2);
   font-size: var(--fs-meta);
-  color: var(--textSecondary);
+  color: var(--textMeta);
   cursor: pointer;
 }
 /* Sized like every other tick in the product. Its box sits outside a
@@ -207,7 +207,7 @@
   corner-shape: round;
   font: inherit;
   font-size: var(--fs-sm);
-  color: var(--textSecondary);
+  color: var(--textMeta);
   cursor: pointer;
   white-space: nowrap;
 }
@@ -276,7 +276,7 @@
   background: transparent;
   font: inherit;
   font-size: var(--fs-sm);
-  color: var(--textSecondary);
+  color: var(--textMeta);
   cursor: pointer;
   white-space: nowrap;
 }
@@ -306,7 +306,7 @@
   border: 0;
   border-left: 1px solid var(--borderSubtle);
   background: transparent;
-  color: var(--textSecondary);
+  color: var(--textMeta);
   cursor: pointer;
 }
 .lt-frow-more:hover {
@@ -420,7 +420,7 @@
 .lt-mi-dir {
   display: inline-flex;
   align-items: center;
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 /* WHICH ORDER IS IN FORCE, on the right edge where a reader checks it. Always
@@ -877,7 +877,7 @@
 .lt-empty td {
   padding: var(--space-6);
   text-align: center;
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 .lt-linkish {
@@ -900,7 +900,7 @@
   border-top: 1px solid var(--borderSubtle);
   background: var(--bgPage);
   font-size: var(--fs-sm);
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 /* The paging slot the caller fills with its keyset "Load more". */
@@ -937,7 +937,7 @@
   background: none;
   font: inherit;
   font-size: var(--fs-sm);
-  color: var(--textSecondary);
+  color: var(--textMeta);
   border-radius: var(--r-sm);
   cursor: pointer;
 }
@@ -986,7 +986,7 @@
 .lt-perpage .select-control {
   font: inherit;
   font-size: var(--fs-meta);
-  color: var(--textSecondary);
+  color: var(--textMeta);
   background: var(--bgElevated);
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-sm);

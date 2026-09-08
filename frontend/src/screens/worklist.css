@@ -38,12 +38,12 @@
    on itself rather than a row of work, and it must not compete with the queue
    for the reader's eye. */
 .worklist-completeness {
-  color: var(--textSecondary);
+  color: var(--textMeta);
   margin: 0;
 }
 
 .worklist-clear {
-  color: var(--textSecondary);
+  color: var(--textMeta);
   margin: var(--space-4) 0;
 }
 
@@ -100,7 +100,7 @@
    which is what lets a band with no rows draw a heading and a line saying so.
    The first heading needs no gap above it. */
 .worklist-band {
-  color: var(--textSecondary);
+  color: var(--textMeta);
   display: block;
   margin: var(--space-5) 0 var(--space-2);
 }
@@ -112,7 +112,7 @@
 /* What an empty band says. Set in the secondary colour so a clear band reads as
    a quiet answer rather than as the same weight as work. */
 .worklist-band-clear {
-  color: var(--textSecondary);
+  color: var(--textMeta);
   margin: 0;
 }
 
@@ -182,7 +182,7 @@
    put in its first band, where the kind is also the reason it is there. Wraps
    rather than elides: "Customer waiting" is two words and both are the fact. */
 .worklist-row-kind {
-  color: var(--textSecondary);
+  color: var(--textMeta);
   padding-top: var(--space-1);
   text-wrap: balance;
 }
@@ -212,7 +212,7 @@
    stand in the same column — a pressable rank and a bare one at different
    widths would put the titles beside them at two different x. */
 .worklist-rank {
-  color: var(--textSecondary);
+  color: var(--textMeta);
   display: inline-block;
   flex: 0 0 auto;
   min-width: var(--space-6);
@@ -250,7 +250,7 @@
 .worklist-row-because,
 .worklist-row-consequence,
 .worklist-row-above {
-  color: var(--textSecondary);
+  color: var(--textMeta);
   margin: 0;
 }
 
@@ -269,7 +269,7 @@
 
 .worklist-row-verdict-source,
 .worklist-row-verdict-when {
-  color: var(--textTertiary, var(--textSecondary));
+  color: var(--textTertiary, var(--textMeta));
 }
 
 .worklist-row-verdict-line {
@@ -340,12 +340,12 @@
 /* Every figure is a floor when the read was cut. Stated before the numbers, and
    in the tone the surface uses for warnings about itself. */
 .worklist-hidden-truncated {
-  color: var(--textSecondary);
+  color: var(--textMeta);
   margin: 0;
 }
 
 .worklist-hidden-clear {
-  color: var(--textSecondary);
+  color: var(--textMeta);
   margin: 0;
 }
 
@@ -374,12 +374,12 @@
 /* The detail sits under the label rather than beside it: it is a sentence about
    whose choice the rule was, and a third column would squeeze it to one word. */
 .worklist-hidden-detail {
-  color: var(--textSecondary);
+  color: var(--textMeta);
   grid-column: 2;
 }
 
 .worklist-hidden-shown {
-  color: var(--textSecondary);
+  color: var(--textMeta);
   margin: 0;
 }
 

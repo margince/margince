@@ -60,8 +60,8 @@ least risky once the tokens hold.
    `.06`/`.10` light and `.10`/`.20` dark). Re-run the luminance ladder and
    the contrast math; the ladder order is asserted, so pick values that keep
    it, not values that look right in isolation.
-2. **Inks.** `--textPrimary/--textContent/--textSecondary/--textTertiary/
-   --textMuted/--textMeta` take the `--ink…--ink4` values from `DESIGN.md`
+2. **Inks.** `--textPrimary/--textContent/--textTertiary/--textMuted/
+   --textMeta` take the `--ink…--ink4` values from `DESIGN.md`
    §3. All six must clear 4.5:1 on all five grounds in both themes.
 3. **Accent and agent.** `--accent` stays `#0b7a53` (pinned). `--ai` family
    stays; add `--aiBg` (the row tint) and `--aiLine` if the existing

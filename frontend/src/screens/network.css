@@ -48,7 +48,7 @@
 .net-name {
   flex: 1 1 8rem;
   min-width: 0;
-  color: var(--textContent);
+  color: var(--textPrimary);
   font: 500 0.875rem / 1.4 var(--f-body);
   overflow-wrap: anywhere;
 }

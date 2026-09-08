@@ -869,7 +869,7 @@ function PersonRow({ person }: Readonly<{ person: SitePerson }>) {
   return (
     <li className="ob-triage-person">
       <span className="ob-triage-person-name">{person.name}</span>
-      <span className="ob-triage-person-role">{person.role}</span>
+      <span className="t-sub">{person.role}</span>
       {person.published_email && (
         <span className="t-caption">{person.published_email}</span>
       )}
@@ -909,7 +909,7 @@ function PeopleGroupSection({
         )}
       </div>
       {people.length === 0 ? (
-        <p className="ob-triage-people-empty">
+        <p className="ob-triage-people-empty t-sub">
           {t("ob.conv.triage.contactsEmpty")}
         </p>
       ) : (
@@ -1277,7 +1277,11 @@ function ReviewContinueBar({
           exactly what the button below is disabled on, so a screen reader
           hears why the moment it changes rather than only if focus happens
           to land on this paragraph first. */}
-      <p id={statusId} className="ob-triage-continue-status" role="status">
+      <p
+        id={statusId}
+        className="ob-triage-continue-status t-sub"
+        role="status"
+      >
         {t(statusKey, { count: formatNumber(remaining, locale) })}
       </p>
       <Button

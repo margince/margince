@@ -255,7 +255,7 @@ export function FieldBuilder({
         }
       >
         <p>{t("cf.gate.body", { object: t(`cf.obj.${object}`) })}</p>
-        <code className="cf-ddl">
+        <code className="cf-ddl t-caption">
           {ddlPreview(object, label, type, currency)}
         </code>
       </Callout>
@@ -401,7 +401,7 @@ export function FieldTable({
       render: (field) => {
         const Icon = TYPE_ICON[field.type];
         return (
-          <span className="cf-typechip">
+          <span className="cf-typechip t-caption">
             <Icon aria-hidden />
             {typeChip(field)}
           </span>

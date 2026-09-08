@@ -230,13 +230,10 @@
   line-height: 1.15;
   color: var(--textPrimary);
 }
-/* --textSecondary, not --textMeta: this line is body copy under the heading, and
-   --textMeta is the small-text role for 11-13px meta. Read at 14.5px it was the
-   quietest thing on a screen with only three sentences on it. */
 .auth-card .card-sub {
   margin-top: var(--space-2);
   font-size: var(--fs-lead);
-  color: var(--textSecondary);
+  color: var(--textMeta);
   line-height: 1.55;
   /* Balanced, not merely orphan-free: two lines of roughly equal length under a
      centred heading read as part of the same block; a long line over a short one

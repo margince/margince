@@ -1009,7 +1009,7 @@
   max-width: 68ch;
   font-size: var(--fs-sm);
   line-height: var(--lh-normal);
-  color: var(--textSecondary);
+  color: var(--textContent);
 }
 /* The heading IS the switcher at phone width: the h1 carries no type of its own
    there, because the control inside it brings the page's name at the size the

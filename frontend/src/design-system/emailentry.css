@@ -27,7 +27,7 @@
   gap: var(--space-2);
   min-width: 0;
   font-size: var(--fs-meta);
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 .emailentry__lead > svg {
@@ -64,7 +64,7 @@
  * made a timeline of them unreadable. */
 .emailentry__preview {
   overflow: hidden;
-  color: var(--textSecondary);
+  color: var(--textMeta);
   font-size: var(--fs-sm);
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -76,7 +76,7 @@
 .emailentry__words {
   display: -webkit-box;
   overflow: hidden;
-  color: var(--textSecondary);
+  color: var(--textMeta);
   font-size: var(--fs-sm);
   line-height: 1.45;
   -webkit-box-orient: vertical;
@@ -91,7 +91,7 @@
 }
 
 .emailentry__move {
-  color: var(--textSecondary);
+  color: var(--textMeta);
   font-size: var(--fs-meta);
 }
 
@@ -99,7 +99,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  color: var(--textSecondary);
+  color: var(--textMeta);
   font-size: var(--fs-meta);
 }
 

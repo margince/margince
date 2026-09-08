@@ -265,7 +265,7 @@ function ArtifactBody(props: CompanyActArtifactProps) {
           onFieldBlur={persistLater}
         />
         <div className="mw-confirm-company">
-          <p>{t("ob.ai.confirmBoundary")}</p>
+          <p className="t-caption">{t("ob.ai.confirmBoundary")}</p>
           <Button
             variant="primary"
             disabled={props.confirmDisabled || props.confirmPending}

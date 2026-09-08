@@ -192,7 +192,7 @@ function SpendReading({
   const { locale } = useLocale();
   const months = connection.spend?.months ?? [];
   if (months.length === 0) {
-    return <p className="provider-empty">{t("provider.spend.none")}</p>;
+    return <p className="t-sub">{t("provider.spend.none")}</p>;
   }
   // The series only carries months that HAD spend, so its newest entry is not
   // necessarily this one — an installation that bought nothing yet this month
@@ -264,7 +264,7 @@ function CreditsReading({
     // Two different silences. With no key we never asked, and saying the
     // provider "has not told us" would blame them for our own empty state.
     return (
-      <p className="provider-empty">
+      <p className="t-sub">
         {connection.credential_present
           ? t("provider.credits.none")
           : t("provider.credits.notConnected")}

@@ -63,7 +63,7 @@
   color: var(--accentText);
 }
 .ob-sub {
-  color: var(--textSecondary);
+  color: var(--textMeta);
   font-size: var(--fs-lead);
   line-height: var(--lh-relaxed);
   max-width: 520px;
@@ -157,7 +157,7 @@
 }
 .readfail .rfp {
   font-size: var(--fs-sm);
-  color: var(--textSecondary);
+  color: var(--textContent);
   line-height: var(--lh-normal);
   margin-top: var(--space-1);
 }
@@ -184,8 +184,6 @@
   display: flex;
   align-items: flex-start;
   gap: var(--space-2);
-  font-size: var(--fs-meta);
-  color: var(--textSecondary);
   margin-top: var(--space-3);
   line-height: var(--lh-normal);
 }
@@ -195,13 +193,6 @@
   color: var(--teal);
   flex: none;
   margin-top: 2px; /* ds:ignore optical: sets the glyph on the first text line */
-}
-.seclabel {
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
-  color: var(--textSecondary);
 }
 
 /* step 5 connect */
@@ -314,7 +305,7 @@
   justify-content: center;
   gap: var(--space-3);
   min-height: 180px;
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 .confirm-origin {
   display: flex;
@@ -322,8 +313,6 @@
   gap: var(--space-3);
   margin-top: var(--space-6);
   padding: var(--space-3) var(--space-4);
-  color: var(--textSecondary);
-  font-size: var(--fs-meta);
   line-height: var(--lh-normal);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
@@ -563,8 +552,6 @@
 }
 .core-findings > p {
   margin: var(--space-1) var(--space-5) 0;
-  color: var(--textSecondary);
-  font-size: var(--fs-meta);
 }
 .legal-preview {
   padding: var(--space-5);
@@ -579,8 +566,6 @@
 .legal-preview > p {
   max-width: 620px;
   margin: var(--space-1) 0 0;
-  color: var(--textSecondary);
-  font-size: var(--fs-meta);
   line-height: var(--lh-normal);
 }
 .legal-preview-grid {
@@ -601,8 +586,6 @@
   display: block;
 }
 .legal-preview-card span {
-  color: var(--textSecondary);
-  font-size: var(--fs-meta);
   line-height: var(--lh-normal);
 }
 .legal-preview-card small {
@@ -673,7 +656,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  color: var(--textSecondary);
+  color: var(--textMeta);
   font-size: var(--fs-eyebrow);
   font-weight: var(--fw-semibold);
   text-transform: uppercase;
@@ -704,10 +687,8 @@
 .read-coverage {
   margin: 0 var(--space-5) var(--space-5);
   padding: var(--space-3);
-  color: var(--textSecondary);
   border-radius: var(--r-md);
   background: var(--bgHover);
-  font-size: var(--fs-meta);
 }
 .read-coverage summary {
   display: flex;
@@ -873,7 +854,8 @@
 }
 .mw-conversation .ob-manual-question > p {
   margin: var(--space-1) 0 var(--space-3);
-  color: var(--textSecondary);
+  color: var(--textMeta);
+  /* ds:ignore .t-caption loses to `.ob-core-dialog > p`, the dark scene's ink */
   font-size: var(--fs-meta);
 }
 .mw-conversation .ob-core-url {
@@ -890,7 +872,7 @@
   margin-top: var(--space-2);
 }
 .mw-conversation .ob-core-link {
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 /* The manual interview card also renders inside the workbench artifact rail
  * (.ob-conv-artifact), a light panel rather than the dark scene backdrop
@@ -908,7 +890,7 @@
   color: var(--textPrimary);
 }
 .ob-conv-artifact .ob-core-dialog > p {
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 .ob-conv-artifact .ob-manual-input {
   color: var(--textPrimary);
@@ -920,7 +902,7 @@
   box-shadow: var(--focus-glow);
 }
 .ob-conv-artifact .ob-core-link {
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 .ob-conv-artifact .ob-core-link:hover,
 .ob-conv-artifact .ob-core-link:focus-visible {
@@ -961,11 +943,9 @@
 }
 .mw-read-activity > div span {
   padding: var(--space-1) var(--space-2);
-  color: var(--textSecondary);
   border-radius: var(--r-full);
   corner-shape: round;
   background: var(--bgHover);
-  font-size: var(--fs-meta);
 }
 .mw-read-activity b {
   color: var(--textPrimary);
@@ -1006,8 +986,6 @@
 }
 .mw-composer > small {
   grid-column: 1 / -1;
-  color: var(--textSecondary);
-  font-size: var(--fs-meta);
 }
 .mw-thinking {
   display: flex;
@@ -1080,11 +1058,6 @@
   border-radius: var(--r-sm);
   background: var(--bgElevated);
 }
-.mw-proposal li span,
-.mw-proposal li small {
-  color: var(--textSecondary);
-  font-size: var(--fs-meta);
-}
 .mw-proposal li strong {
   color: var(--textPrimary);
   font-size: var(--fs-meta);
@@ -1107,8 +1080,6 @@
 }
 .mw-review-heading p {
   margin: var(--space-1) 0 0;
-  color: var(--textSecondary);
-  font-size: var(--fs-meta);
 }
 .mw-review .core-findings {
   margin-top: 0;
@@ -1148,8 +1119,6 @@
 }
 .mw-confirm-company p {
   margin: 0;
-  color: var(--textSecondary);
-  font-size: var(--fs-meta);
 }
 .live-fact-preview {
   margin-top: var(--space-6);
@@ -1229,7 +1198,7 @@
    keeps the card's own colour. Under a legal entity the same line is the
    registered address, which is detail beneath the name, and reads as such. */
 .legal-card span span {
-  color: var(--textSecondary);
+  color: var(--textMeta);
   line-height: var(--lh-normal);
 }
 .legal-card small {

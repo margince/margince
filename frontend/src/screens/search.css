@@ -30,7 +30,7 @@
   flex-wrap: wrap;
 }
 .search-hit-snippet {
-  color: var(--textSecondary);
+  color: var(--textContent);
   font-size: var(--fs-sm);
 }
 

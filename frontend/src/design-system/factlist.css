@@ -29,7 +29,7 @@
 }
 
 .factlist-term {
-  color: var(--textSecondary);
+  color: var(--textMeta);
   font-size: var(--fs-sm);
   line-height: var(--lh-normal);
   margin: 0;

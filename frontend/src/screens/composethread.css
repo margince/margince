@@ -55,7 +55,6 @@
 .compose-thread-head {
   flex: none;
   padding-block-end: var(--space-3);
-  color: var(--textMeta);
 }
 
 /* The pane scrolls, the form scrolls, the drawer does not. min-block-size: 0

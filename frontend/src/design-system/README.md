@@ -450,7 +450,7 @@ inside it overrides the primitive from the call site — which is how one screen
 came to say "there is none" at 12px while the card beside it said the same thing
 at 14px, and thirty-one call sites drew that sentence a step smaller than the
 rest. A sentence a card shows INSTEAD of content is card body text
-(`--fs-body`) in `--textSecondary`, and `SurfaceState`, `EmptyState` and the
+(`--fs-body`) in `--textMeta`, and `SurfaceState`, `EmptyState` and the
 `.empty` plate all draw it that way.
 
 `Switch` versus `Checkbox` follows from the same honesty: a `Checkbox` states an

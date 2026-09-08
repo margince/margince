@@ -36,7 +36,7 @@
    one form do not disagree about which is more important. */
 .choicelist-legend {
   padding: 0;
-  color: var(--textSecondary);
+  color: var(--textMeta);
   font-size: var(--fs-sm);
   font-weight: var(--fw-medium);
 }

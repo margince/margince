@@ -81,7 +81,7 @@ const key: CSSProperties = {
 };
 const note: CSSProperties = {
   fontSize: "var(--fs-sm)",
-  color: "var(--textSecondary)",
+  color: "var(--textMeta)",
 };
 
 /** Each rung at its own size, with the role that picks it. */
