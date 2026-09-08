@@ -139,9 +139,9 @@ func idempotency(pool *pgxpool.Pool, probes map[string]replayProbe) func(http.Ha
 			next.ServeHTTP(rec, r.WithContext(ctx))
 			// Zero records: this door charges no read bound, so its claims carry
 			// no cost to record (0198).
-			if err := settleClaim(ctx, pool, actor.ID, key, endpoint,
+			if err := settleClaim(r.Context(), pool, actor.ID, key, endpoint,
 				rec.status, rec.buf.String(), rec.Header().Get("Content-Type"), 0, effect.committed); err != nil {
-				slog.ErrorContext(ctx, "idempotency claim settlement failed", "err", err)
+				slog.ErrorContext(r.Context(), "idempotency claim settlement failed", "err", err)
 			}
 		})
 	}
