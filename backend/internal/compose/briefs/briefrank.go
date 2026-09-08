@@ -143,7 +143,7 @@ func (e *BriefEngine) gather(ctx context.Context, now time.Time, userID ids.UUID
 		if err := briefCandidates(ctx, tx, userID, now, base, out.facts, &out.order); err != nil {
 			return err
 		}
-		out.seatsReadable, err = briefEvidenceRows(ctx, tx, lastView, out.facts, out.order, out.stakeholders)
+		out.seatsReadable, err = briefEvidenceRows(ctx, tx, lastView, now, out.facts, out.order, out.stakeholders)
 		if err != nil {
 			return err
 		}
@@ -391,7 +391,7 @@ func briefCandidates(ctx context.Context, tx pgx.Tx, userID ids.UUID, now time.T
 // factor on every deal, which reorders the queue; the caller has to be told, or
 // they read an order that is wrong rather than one that is short.
 func briefEvidenceRows(
-	ctx context.Context, tx pgx.Tx, lastView *time.Time,
+	ctx context.Context, tx pgx.Tx, lastView *time.Time, asOf time.Time,
 	facts map[ids.UUID]briefDealFacts, order []ids.UUID, stakeholders map[ids.UUID][]ids.UUID,
 ) (seatsReadable bool, err error) {
 	// The seat edge's admission is resolved ONCE, ahead of the loop: it is a
@@ -409,8 +409,12 @@ func briefEvidenceRows(
 			JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = $1
 			WHERE a.archived_at IS NULL
 			  AND ($2::timestamptz IS NULL OR a.occurred_at > $2)
+			  -- Bounded at the cutoff, the way the dismissal filter above is: a
+			  -- future-dated row has not happened, so counting it as overnight
+			  -- movement claims the deal moved for something still to come.
+			  AND a.occurred_at <= $3
 			ORDER BY a.occurred_at DESC, a.id DESC
-			LIMIT $3`, dealID, lastView, briefOvernightEvidenceCap))
+			LIMIT $4`, dealID, lastView, asOf.UTC(), briefOvernightEvidenceCap))
 		if err != nil {
 			return false, err
 		}

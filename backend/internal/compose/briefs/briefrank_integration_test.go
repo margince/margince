@@ -675,3 +675,39 @@ func TestALaterActRetiresTheDismissalLineage(t *testing.T) {
 		}
 	}
 }
+
+// A future-dated activity is not overnight momentum.
+//
+// Momentum folds any evidence in the window to 1.0 against a 0.4 baseline, so a
+// task dated next week would say the deal moved — on every morning until that
+// date arrives. Evidence of movement is bounded by the cutoff it is evidence
+// for.
+func TestAFutureDatedActivityIsNotOvernightMomentum(t *testing.T) {
+	b := setupBrief(t)
+	owner := integration.OwnerConn(t)
+
+	// Dated a week past the clock this run judges against, so it cannot have
+	// happened by the time the queue is built.
+	ahead := briefClock.Add(7 * 24 * time.Hour)
+	scheduled := integration.SeedIDRow(t, owner, `
+		INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
+		VALUES ($1, 'task', 'prepare the renewal deck', $2, 'manual', 'human:x')`,
+		ahead)
+	integration.LinkActivity(t, owner, scheduled, "deal", b.dealB)
+
+	ranking, err := b.engine.Rank(b.repCtx, briefClock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, item := range ranking.Queue {
+		if item.DealID != b.dealB {
+			continue
+		}
+		if item.Features.Momentum != briefMomentumUnchanged {
+			t.Errorf("momentum = %v, want the %v baseline — nothing has happened on this deal yet",
+				item.Features.Momentum, briefMomentumUnchanged)
+		}
+		return
+	}
+	t.Fatal("deal B left the queue entirely; this test can say nothing about its momentum")
+}

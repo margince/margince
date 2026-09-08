@@ -69,12 +69,28 @@ func leadSLAFields(policy leadSLAPolicy, routedAt *time.Time, createdAt time.Tim
 //
 // With the target switched off no lead is in any SLA state, so the filter
 // matches nothing rather than pretending a default target.
+// leadOwesAReplySQL is the one spelling of "this lead still owes a first
+// reply": live, and nobody has answered it.
+//
+// FOUR readers ask it — the SLA state filter, the breach scan, the work
+// queue's band, and the list's own unanswered dial — and the question is one.
+// Spelled separately they drift, and a queue that disagrees with the filter
+// feeding it reports a count nobody can reconcile.
+//
+// Deliberately NOT a statement about the status ladder. A lead the system moved
+// to `contacted` because a cold outbound went out has had no genuine response,
+// and §18.1 is explicit that an auto-touch does not satisfy first response — so
+// the rung a lead sits on says nothing about whether somebody replied to it.
+//
+// Held by: TestTheOwesAReplyPredicateHasOneSpelling (leadowespelling_test.go)
+const leadOwesAReplySQL = "archived_at IS NULL AND first_response_at IS NULL"
+
 func slaStateClause(policy leadSLAPolicy, state crmcontracts.ListLeadsParamsSlaState, arg func(any) int) string {
 	if !policy.enabled {
 		return "FALSE"
 	}
 	deadline := "COALESCE(routed_at, created_at) + $%d * interval '1 minute'"
-	open := "archived_at IS NULL AND first_response_at IS NULL AND "
+	open := leadOwesAReplySQL + " AND "
 	minutes := policy.targetMinutes()
 	now := leadSLAClock().UTC()
 	switch crmcontracts.LeadSlaState(state) {
@@ -141,7 +157,7 @@ func (s *Store) ScanLeadSLA(ctx context.Context, now time.Time) ([]SLABreach, er
 			SELECT id, owner_id, COALESCE(routed_at, created_at) + $1 * interval '1 minute',
 			       COALESCE(NULLIF(btrim(full_name), ''), email::text, '')
 			FROM lead
-			WHERE archived_at IS NULL AND first_response_at IS NULL AND sla_breached_at IS NULL
+			WHERE `+leadOwesAReplySQL+` AND sla_breached_at IS NULL
 			  AND COALESCE(routed_at, created_at) + $1 * interval '1 minute' < $2
 			ORDER BY created_at
 			FOR UPDATE SKIP LOCKED`,
