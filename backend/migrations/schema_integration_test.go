@@ -347,3 +347,69 @@ func TestMigrations_downRefusesAnEditedMigration(t *testing.T) {
 		t.Errorf("the revert of the content that was applied refused: %v", err)
 	}
 }
+
+// Up REFUSES to migrate past a version whose applied content is not the content
+// this binary holds, and refuses before applying ANY of the namespace.
+//
+// The refusal is the decision #2141 asked for. An edited migration is skipped as
+// done, so the edit is absent on this database and present on every fresh
+// installation, and every later migration is then applied on top of a schema
+// the source cannot describe — the divergence compounds a boot at a time and
+// nothing says so. Warning instead would leave that silent, and the same defect
+// arriving as a RENUMBER is already refused here (assertLedgerMatches), so
+// warning about one and refusing the other would be two answers to one
+// question.
+//
+// Driven through dbmigrate.Up rather than against the predicate, because the
+// predicate was already right and unread: what this pins is that the production
+// migrate path consults it.
+func TestMigrations_upRefusesAnEditedMigrationBeforeApplyingAny(t *testing.T) {
+	ownerDSN, _ := dsns(t)
+	conn := connect(t, ownerDSN)
+	resetSchema(t, conn)
+	ctx := context.Background()
+
+	core, err := migrations.Core()
+	if err != nil {
+		t.Fatalf("loading core: %v", err)
+	}
+
+	// Applied WITHOUT the newest migration, so the run under test has real work
+	// to do. A namespace with nothing left to apply would refuse on an empty
+	// loop and prove nothing about the ordering below.
+	head := len(core.Migrations) - 1
+	partial := core
+	partial.Migrations = core.Migrations[:head]
+	if _, err := dbmigrate.Up(ctx, conn, partial); err != nil {
+		t.Fatalf("up to the penultimate migration: %v", err)
+	}
+
+	// The edit a contributor would make, to a migration this database has
+	// ALREADY applied — the first one, so the pending work sits after it.
+	edited := core
+	edited.Migrations = append([]dbmigrate.Migration(nil), core.Migrations...)
+	edited.Migrations[0].UpSQL += "\n-- an edit made after this was applied\n"
+
+	applied, err := dbmigrate.Up(ctx, conn, edited)
+	if err == nil {
+		t.Fatal("the migration ran past a version whose applied content differs from the source — " +
+			"the edit is absent here and present on every fresh installation, and nothing says so")
+	}
+	if !strings.Contains(err.Error(), "applied content does not match the source") {
+		t.Fatalf("the run was refused by something else: %v", err)
+	}
+	// BEFORE any of them. Judged inside the apply loop, the edit on migration
+	// one would be caught before anything ran; judged there with the edit on a
+	// LATER version, the run would move the database somewhere new and then
+	// refuse, and the operator would learn one defect per boot.
+	if applied != 0 {
+		t.Errorf("applied %d migration(s) before refusing, want 0 — a run that half-migrates and "+
+			"then stops leaves the database at a version neither source describes as current", applied)
+	}
+
+	// The unedited run still completes, so the guard refuses an edit rather
+	// than refusing migration.
+	if _, err := dbmigrate.Up(ctx, conn, core); err != nil {
+		t.Errorf("the run of the content that was applied refused: %v", err)
+	}
+}
