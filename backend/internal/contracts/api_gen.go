@@ -34697,7 +34697,18 @@ type UpdateLeadRequest struct {
 	CompanyName     *string              `json:"company_name,omitempty"`
 	Email           *openapi_types.Email `json:"email,omitempty"`
 	FullName        *string              `json:"full_name,omitempty"`
-	OwnerId         *openapi_types.UUID  `json:"owner_id,omitempty"`
+
+	// OwnerId Who owns this lead. The destination must be a seat that can be handed work — an
+	// active, unarchived human seat that is not read-only, and one inside the caller's own
+	// row scope — else `422 owner_not_assignable`, which names no more than that so the
+	// refusal does not disclose the roster or the team graph.
+	//
+	// A lead NOBODY owns is assignable by a caller who could not otherwise write it: that
+	// is the door out of the unassigned queue, and it admits an ownership-only change. A
+	// patch carrying any other field alongside `owner_id` is refused unless the caller can
+	// already write the row. To take an unowned lead for yourself, prefer
+	// `POST /records/lead/{id}/claim`, which is the same act with a version precondition.
+	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// ProjectId The body of work this lead belongs to; carries no same-company guard (a lead has no company).
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`

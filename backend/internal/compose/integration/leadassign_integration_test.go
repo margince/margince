@@ -8,6 +8,7 @@ package integration
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/people"
@@ -254,5 +255,51 @@ func mustStayUnowned(t *testing.T, e *Env, id ids.LeadID) {
 	t.Helper()
 	if n := e.WsCount(t, `SELECT count(*) FROM lead WHERE id = $1 AND owner_id IS NULL`, id.UUID); n != 1 {
 		t.Errorf("the lead did not stay unowned after a refused assignment")
+	}
+}
+
+// Two seats reaching for the same ownerless lead: one gets it, and the other
+// does not quietly take it away again.
+//
+// The gate turns on whether the lead is ownerless, so that fact has to be read
+// under the row lock. Read unlocked, both callers see "nobody owns this", both
+// pass, and the second write lands on a lead the first had just taken — a
+// record the loser could not otherwise have touched at all.
+func TestTwoSeatsRacingForOneOwnerlessLeadDoNotBothWin(t *testing.T) {
+	e := Setup(t)
+	id := seedOwnerlessLead(t, e, "Contested")
+	first := e.As(e.Rep1, []ids.UUID{e.Team1}, leadRepPerms())
+	second := e.As(e.Rep3, []ids.UUID{e.Team2}, leadRepPerms())
+
+	var running sync.WaitGroup
+	errs := make([]error, 2)
+	start := make(chan struct{})
+	for slot, actor := range []context.Context{first, second} {
+		running.Add(1)
+		go func(slot int, actor context.Context, dest ids.UUID) {
+			defer running.Done()
+			<-start
+			errs[slot] = assignLead(actor, e, id, dest)
+		}(slot, actor, []ids.UUID{e.Rep1, e.Rep3}[slot])
+	}
+	close(start)
+	running.Wait()
+
+	// Whoever the row ended up with, it is one of the two and the OTHER one's
+	// call must not have reported success: a refused assignment that answers
+	// nil is the shape that loses a lead silently.
+	if e.WsCount(t, `SELECT count(*) FROM lead WHERE id = $1 AND owner_id IS NULL`, id.UUID) == 1 {
+		t.Fatal("the contested lead ended ownerless: neither racer took it")
+	}
+	winner := 0
+	if e.WsCount(t, `SELECT count(*) FROM lead WHERE id = $1 AND owner_id = $2`, id.UUID, e.Rep3) == 1 {
+		winner = 1
+	}
+	if errs[winner] != nil {
+		t.Errorf("the seat that owns the lead reported %v, want success", errs[winner])
+	}
+	if errs[1-winner] == nil {
+		t.Errorf("the seat that did NOT get the lead reported success: " +
+			"the other call wrote nothing and said it had")
 	}
 }

@@ -831,6 +831,17 @@ function useLeadPatch(lead: Lead, id: string, onChanged: () => void) {
   });
   const save = (body: UpdateLeadRequest) => patch.mutate(write(body));
 
+  // Taking an unowned lead is a CLAIM, not a patch: the write arm refuses an
+  // ownerless row on purpose, so the request that works here is the claim
+  // door. It lives beside `patch` rather than in the control that calls it
+  // because the page states what a write refused in ONE banner, and a refusal
+  // thrown inside a rail that is not currently rendered reaches nobody.
+  const claim = useMutation({
+    mutationKey: ["lead-claim", lead.id],
+    mutationFn: useClaimRecord("lead", lead.id, lead.version),
+    onSuccess: onChanged,
+  });
+
   // The inline rows await their save and render what it throws, so they need a
   // promise rather than the mutation's fire-and-forget. mutateAsync is that
   // same mutation — one PATCH shape, one If-Match, one invalidation.
@@ -838,7 +849,25 @@ function useLeadPatch(lead: Lead, id: string, onChanged: () => void) {
     await patch.mutateAsync(write(body));
   };
 
-  return { patch, readOnly, readOnlyReason, save, saveField };
+  return { patch, claim, readOnly, readOnlyReason, save, saveField };
+}
+
+// What the page's write refused, stated once for both of them.
+//
+// Two mutations, one sentence: the patch every field goes through, and the
+// claim that takes an unowned lead. They are alternatives — a pick is one or
+// the other — so whichever refused is the one to name.
+function LeadWriteRefusal({ writer }: Readonly<{ writer: LeadWriter }>) {
+  const t = useT();
+  const error = writer.patch.error ?? writer.claim.error;
+  if (!error) {
+    return null;
+  }
+  return (
+    <Callout tone="danger" live="alert">
+      {problemMessageOf(error, t)}
+    </Callout>
+  );
 }
 
 /**
@@ -915,10 +944,8 @@ function LeadRail({
   writer: LeadWriter;
   terminalReasonId: string;
 }>) {
-  const { readOnly } = writer;
   const t = useT();
   const me = useMe();
-  const claim = useClaimRecord("lead", lead.id, lead.version);
   return (
     <div className="record-stack">
       <LeadIdentityFields
@@ -932,8 +959,19 @@ function LeadRail({
           <LeadOwner
             lead={lead}
             meId={me.data?.user?.id}
-            refusedReasonId={readOnly ? terminalReasonId : undefined}
-            pending={writer.patch.isPending || readOnly}
+            // Assignment asks a DIFFERENT question from editing, so it does
+            // not take the editor's answer. `writable` is false on a lead
+            // nobody owns — that is the write arm being right — and gating
+            // this control on it would shut the only door out of the
+            // unassigned queue, which is the bug this whole change is about.
+            // An ARCHIVED lead is still refused: a terminal record is nobody's
+            // to hand on.
+            refusedReasonId={lead.archived_at ? terminalReasonId : undefined}
+            pending={
+              writer.patch.isPending ||
+              writer.claim.isPending ||
+              Boolean(lead.archived_at)
+            }
             // A lead nobody owns is nobody's to change, so the PATCH this
             // control used to send for EVERY pick was refused for the one
             // pick a rep makes most: taking an unassigned lead. Picking
@@ -942,7 +980,7 @@ function LeadRail({
             // stays a patch, which the assignment gate answers.
             onAssign={(ownerId) =>
               !lead.owner_id && ownerId === me.data?.user?.id
-                ? claim()
+                ? writer.claim.mutate()
                 : writer.save({ owner_id: ownerId })
             }
           />
@@ -1990,11 +2028,7 @@ function LeadRecord({
               it REFUSES is stated where both are visible. In the ladder panel
               this reached only the Overview tab, and a rail write refused
               while the reader was on History said nothing at all. */}
-          {writer.patch.isError && (
-            <Callout tone="danger" live="alert">
-              {problemMessageOf(writer.patch.error, t)}
-            </Callout>
-          )}
+          <LeadWriteRefusal writer={writer} />
           {/* Stated ONCE for the page. Every control the closure refuses
               points at this element by id, so a screen reader reaches it from
               each of them without the sentence being printed beside all six. */}

@@ -2114,6 +2114,31 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
     expect(patched).toBe(false);
   });
 
+  // The fixture above says `writable: true`, which an ownerless lead is NOT:
+  // the write arm refuses a row nobody owns, and the server answers the
+  // read with `writable: false`. A test that only ever renders the writable
+  // fixture cannot see the control being shut, which is how the first fix for
+  // this shipped with the picker still disabled for every ordinary seat.
+  it("offers assignment on an unowned lead the reader may not otherwise write", async () => {
+    stubFetchWithMe(async (url) => {
+      if (url.includes("/leads/l-1")) {
+        return jsonResponse({ ...lead, owner_id: null, writable: false });
+      }
+      if (url.includes("/users")) {
+        return jsonResponse({
+          data: [{ id: "u-9", display_name: "Me" }],
+          page: { next_cursor: null, has_more: false },
+        });
+      }
+      return undefined;
+    }, "u-9");
+    render(<LeadScreen id="l-1" />);
+
+    await waitFor(() => expect(screen.getByText("Unassigned")).toBeTruthy());
+    const assign = await screen.findByRole("button", { name: "Assign" });
+    expect(assign.hasAttribute("disabled")).toBe(false);
+  });
+
   it("hides Assign to me when the lead is already owned by the current user", async () => {
     const { urls } = stubFetchWithMe(
       async () => jsonResponse({ ...lead, owner_id: "u-9" }),

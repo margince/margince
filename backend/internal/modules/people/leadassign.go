@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -29,6 +30,16 @@ import (
 func ensureLeadUpdateAuthority(ctx context.Context, tx pgx.Tx, id ids.LeadID, in UpdateLeadInput) error {
 	if in.OwnerID == nil {
 		return auth.EnsureWritable(ctx, tx, "lead", id.UUID)
+	}
+	// The LOCK comes before the decision, the same order ClaimOwnership takes
+	// and for the same reason. Whether this lead is ownerless is the fact the
+	// whole gate turns on, and reading it unlocked leaves an interval in which
+	// somebody else claims it: two reps both pass the ownerless arm, both
+	// write, and the second silently takes a lead off the first — a record
+	// neither rep could otherwise have touched. Holding the row makes the
+	// loser's gate see the winner's name.
+	if _, err := storekit.LockRow(ctx, tx, "lead", id.UUID, storekit.LiveOnly); err != nil {
+		return err
 	}
 	if !ownershipOnlyLeadUpdate(in) {
 		// Mixed content: the write arm answers, so an ownerless lead refuses

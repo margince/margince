@@ -2972,8 +2972,10 @@ export interface paths {
          *     `write` share) moves to `to_owner_id`; archived projects and projects the caller cannot
          *     write are left where they are and are not counted. Each moved project gets its own
          *     `update` audit row with the `owner_id` before/after images, so its field history shows
-         *     the move, and its own `project.updated` event. `to_owner_id` must name an active user of
-         *     the workspace, else `422`.
+         *     the move, and its own `project.updated` event. `to_owner_id` must name a seat that can be
+         *     handed work — an active, unarchived human seat that is not read-only, and one inside the
+         *     caller's own row scope — else `422`. The same rule gates `updateProject.owner_id`, so a
+         *     destination refused in bulk is refused one project at a time.
          */
         post: operations["transferProjectOwnership"];
         delete?: never;
@@ -24411,7 +24413,19 @@ export interface components {
             score?: number | null;
             /** @description Written reason for the Commercial Judgement override (formulas §3.1). REQUIRED when `score` is set (422 otherwise); the override is sticky — it suppresses recompute until cleared. */
             score_override_reason?: string | null;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Who owns this lead. The destination must be a seat that can be handed work — an
+             *     active, unarchived human seat that is not read-only, and one inside the caller's own
+             *     row scope — else `422 owner_not_assignable`, which names no more than that so the
+             *     refusal does not disclose the roster or the team graph.
+             *
+             *     A lead NOBODY owns is assignable by a caller who could not otherwise write it: that
+             *     is the door out of the unassigned queue, and it admits an ownership-only change. A
+             *     patch carrying any other field alongside `owner_id` is refused unless the caller can
+             *     already write the row. To take an unowned lead for yourself, prefer
+             *     `POST /records/lead/{id}/claim`, which is the same act with a version precondition.
+             */
             owner_id?: string | null;
         } & {
             [key: string]: unknown;
