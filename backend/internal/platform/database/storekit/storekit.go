@@ -236,7 +236,7 @@ func Emit(ctx context.Context, tx pgx.Tx, auditID ids.UUID, eventType, entityTyp
 		return err
 	}
 	_, err = tx.Exec(ctx,
-		`INSERT INTO event_outbox (stream, envelope) VALUES ($1, $2)`,
+		`INSERT INTO `+TableOutbox+` (stream, envelope) VALUES ($1, $2)`,
 		stream, body)
 	return err
 }
