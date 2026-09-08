@@ -39,7 +39,10 @@ type Service struct {
 	// because a seam was not wired would look exactly like one with nothing in
 	// it.
 	troubled TroubledRuns
-	now      func() time.Time
+	// undo is OPTIONAL for the same reason: unbound, every done line reads
+	// not-undoable with a stated reason rather than the page refusing.
+	undo UndoJudge
+	now  func() time.Time
 }
 
 // NewService binds the read.
@@ -109,6 +112,11 @@ func (s *Service) Read(
 			return err
 		}
 		receipt.Done = linesOf(entries, limit)
+		// Asked after the lines are drawn and inside the page's own
+		// transaction: the judge reads the record each line names, and a
+		// second connection inside this one can deadlock against a lock it
+		// holds.
+		s.judgeUndoOn(ctx, tx, receipt.Done)
 		receipt.NotShown = notShownOf(notShown)
 		failed, refused, err := s.couldNotComplete(ctx, from, limit)
 		if err != nil {

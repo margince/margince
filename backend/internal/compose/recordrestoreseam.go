@@ -266,4 +266,16 @@ func (s *Server) wireReversal(pool *pgxpool.Pool) {
 	s.privacyHandlers = s.privacyHandlers.
 		WithChangeRestorer(seam).
 		WithUndoabilityReader(NewUndoabilityPage(seam))
+	// The receipt's undo answer comes from THIS seam, not a second one built
+	// for it: the line offering an Undo and the write performing it must agree,
+	// and one evaluator is how they stay agreed. It also inherits the server's
+	// own dispatcher, so the overlay question is answered once.
+	//
+	// Assembly order is load-bearing here and stated rather than assumed: the
+	// receipt is built before this runs, and a nil service would leave every
+	// line reading "not evaluated" with nothing failing to say so.
+	if s.magicService == nil {
+		panic("compose: the receipt must be assembled before its undo judge is bound")
+	}
+	s.magicService.WithUndoJudge(magicUndoJudge{seam: seam})
 }

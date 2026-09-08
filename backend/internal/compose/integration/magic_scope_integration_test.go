@@ -340,3 +340,91 @@ func TestTheWindowRefusesToReachBackToInstallation(t *testing.T) {
 func personRepPerms() principal.Permissions {
 	return RepPerms
 }
+
+// judgeStub answers the undo question without the real evaluator behind it.
+//
+// The wiring is what this proves — that a bound judge's answer reaches the line
+// — not the evaluator's judgment, which has its own suite. A stub keeps the two
+// questions apart: a failure here means the seam is unbound or the answer is
+// dropped, never that some refusal rule moved.
+type judgeStub struct {
+	undoable bool
+	reason   string
+	asked    int
+}
+
+func (j *judgeStub) JudgeUndo(
+	_ context.Context, _ pgx.Tx, _ ids.UUID, _ string,
+) (bool, string, error) {
+	j.asked++
+	return j.undoable, j.reason, nil
+}
+
+// The done lane used to hardcode Undoable: false on every row, which was true
+// by accident — no path could reverse a sweep's correction, so a blanket no was
+// not wrong. It is wrong now that corrections carry their own undo, and a
+// receipt that says "the machine changed your deal" while greying out the only
+// control answering that is worse than one that never mentioned the change.
+func TestTheReceiptAsksWhetherEachChangeCanBeTakenBack(t *testing.T) {
+	e := Setup(t)
+	since := time.Now().Add(-time.Hour)
+	seedMachineAction(t, e, e.Rep1, "agent", "agent:auto-apply", "advance_stage")
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
+
+	judge := &judgeStub{undoable: true}
+	receipt, err := magic.NewService(e.Pool, nil, time.Now).
+		WithUndoJudge(judge).Read(ctx, &since, 20)
+	if err != nil {
+		t.Fatalf("reading the receipt: %v", err)
+	}
+	if len(receipt.Done) == 0 {
+		t.Fatal("the seeded machine action did not reach the done lane")
+	}
+	if judge.asked != len(receipt.Done) {
+		t.Errorf("judged %d lines of %d — every drawn line is asked", judge.asked, len(receipt.Done))
+	}
+	line := receipt.Done[0]
+	if line.Undo == nil || !line.Undo.Undoable {
+		t.Fatalf("undo = %+v, want undoable", line.Undo)
+	}
+	// A client draws the control from audit_id; one without it has nothing to
+	// send, which is the state the contract's own comment forbids.
+	if line.Undo.AuditId == nil {
+		t.Error("an undoable line carries no audit id for the control to name")
+	}
+
+	// A refusal carries its reason rather than a blank: the reason is what the
+	// client renders beside the greyed control.
+	refusing := &judgeStub{undoable: false, reason: "record_archived"}
+	refused, err := magic.NewService(e.Pool, nil, time.Now).
+		WithUndoJudge(refusing).Read(ctx, &since, 20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := refused.Done[0].Undo
+	if got == nil || got.Undoable || got.Reason == nil || *got.Reason != "record_archived" {
+		t.Errorf("refused undo = %+v, want undoable=false carrying the reason", got)
+	}
+	if got != nil && got.AuditId != nil {
+		t.Error("a refused line carries an audit id, so a client could draw a control that only fails")
+	}
+}
+
+// An installation that has not wired the judge says so, rather than reading as
+// "this cannot be undone" — the product did not look, which is a different
+// thing and must not be presented as the same.
+func TestAnUnwiredUndoJudgeSaysItDidNotLook(t *testing.T) {
+	e := Setup(t)
+	since := time.Now().Add(-time.Hour)
+	seedMachineAction(t, e, e.Rep1, "agent", "agent:auto-apply", "advance_stage")
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
+
+	receipt, err := magic.NewService(e.Pool, nil, time.Now).Read(ctx, &since, 20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	undo := receipt.Done[0].Undo
+	if undo == nil || undo.Undoable || undo.Reason == nil || *undo.Reason != "undo_not_evaluated" {
+		t.Errorf("unwired undo = %+v, want a stated not-evaluated reason", undo)
+	}
+}

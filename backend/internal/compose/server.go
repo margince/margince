@@ -288,7 +288,8 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 	// The machinery's receipt: what ran without being asked, in the window since
 	// the reader last looked. It reads the same clock the rest of the surface
 	// does, so "since your brief" means the same instant everywhere.
-	srv.magicHandlers = magic.NewHandlers(newMagicService(pool, time.Now))
+	srv.magicService = newMagicService(pool, time.Now)
+	srv.magicHandlers = magic.NewHandlers(srv.magicService)
 	srv.wireAnalyticsSurface(pool)
 	srv.wireCaptureSettingsSurface(pool)
 	srv.wireExportSurface(pool, log)
