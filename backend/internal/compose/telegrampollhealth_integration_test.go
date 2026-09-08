@@ -157,6 +157,54 @@ func TestAConflictAWebhookClearRepairsLeavesTheConnectionLive(t *testing.T) {
 	}
 }
 
+// A rival that stops is reported as a rival, not as a cleared webhook.
+//
+// deleteWebhook is idempotent and answers ok whether or not anything was there,
+// so a clear followed by a poll that succeeds used to be read as "the webhook
+// was the cause" — even when no webhook had ever been registered and another
+// consumer had simply let go. The log then sent an operator looking for a
+// registration that does not exist while the actual rival went unnamed, and the
+// two causes have opposite remedies.
+//
+// The bot here carries NO webhook and meets a rival that holds one poll.
+func TestAConflictWithNoWebhookIsReportedAsARivalRatherThanAClear(t *testing.T) {
+	e := integration.Setup(t)
+	integration.ApplyRiverSchema(t)
+	vault := keyvault.NewMemory()
+
+	api := &telegramPollFakeAPI{
+		bot:  telegram.Bot{ID: 92000014, Username: "rival_consumer_bot"},
+		held: []json.RawMessage{telegramPrivateUpdate(7201, 781201, 112, "after the rival let go")},
+	}
+	conn := connectTestTelegramBot(t, e, vault, api, 92000014, "rival_consumer_bot")
+	// One refusal, and no webhook anywhere: the rival has the bot and then
+	// stops, which is exactly the pair the old report could not tell apart.
+	api.rivalHolds = 1
+	api.webhookRegistered = false
+
+	err := runOnePoll(t, newTestPollWorker(e, vault, api, ambientPollInserter(t, e)), e.WS, conn)
+	if err == nil {
+		t.Fatal("the conflict was swallowed — a poll that collected nothing must not report success")
+	}
+	// WHICH cause it names is asserted at the unit level, where the raw error
+	// is the return value: this job's failure reaches the caller sanitised, so
+	// a report assertion here would be checking the redaction rather than the
+	// diagnosis. What this proves is the half that needs a database — that a
+	// rival letting go leaves a live connection that goes on to collect.
+
+	// The connection stays live: a rival is not a reason to retire a bot that
+	// is now pollable, and the retry proves it is.
+	if status := telegramConnectionStatus(t, e, conn); status != "connected" {
+		t.Fatalf("status = %q, want connected", status)
+	}
+	if err := runOnePoll(t, newTestPollWorker(e, vault, api, ambientPollInserter(t, e)), e.WS, conn); err != nil {
+		t.Fatalf("the poll after the rival let go: %v", err)
+	}
+	if n := rawCaptureCount(t, e, conn, 7201); n != 1 {
+		t.Errorf("%d raw rows after the retry, want 1", n)
+	}
+}
+
 // telegramConnectionStatus reads the connection's status through the same
 // transaction seam the poller writes it through.
 func telegramConnectionStatus(t *testing.T, e *integration.Env, conn capture.ChannelConnection) string {

@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -142,19 +144,78 @@ func TestTheTelegramPollJobTimeoutExceedsItsLongPoll(t *testing.T) {
 	}
 }
 
+// The report names the cause it established, and the two causes have opposite
+// remedies.
+//
+// deleteWebhook is idempotent and answers ok whether or not anything was there,
+// so a clear followed by a poll that succeeds cannot tell "the webhook was the
+// cause" from "a rival let go" — and the old report always said the former. It
+// sent an operator looking for a registration that was not there while the
+// actual rival went unnamed.
+func TestAConflictReportsWhichCauseItEstablished(t *testing.T) {
+	for _, c := range []struct {
+		name       string
+		registered bool
+		want       string
+		wantNot    string
+	}{
+		{
+			name:       "a webhook was registered and cleared",
+			registered: true,
+			want:       "had a webhook registered, now cleared",
+		},
+		{
+			name:       "no webhook: another consumer had the bot and let go",
+			registered: false,
+			want:       "refused by a rival consumer that has since stopped",
+			wantNot:    "had a webhook registered",
+		},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			api := &clearRecordingAPI{webhookRegistered: c.registered}
+			w := newTelegramPollWorker(nil, nil, api, nil, quietTestLogger())
+
+			err := w.answerPollFailure(context.Background(), capture.ChannelPollTarget{ID: ids.NewV7()},
+				"1:x", fmt.Errorf("telegram: getUpdates: %w", telegram.ErrWebhookActive))
+			if err == nil {
+				t.Fatal("the conflict was swallowed")
+			}
+			if !strings.Contains(err.Error(), c.want) {
+				t.Errorf("got %v, want it to say %q", err, c.want)
+			}
+			if c.wantNot != "" && strings.Contains(err.Error(), c.wantNot) {
+				t.Errorf("got %v, which claims %q — that registration does not exist, and looking for it is not the remedy", err, c.wantNot)
+			}
+		})
+	}
+}
+
 // clearRecordingAPI is the provider boundary for the failure arms: it records
 // every webhook clear and answers a bare re-ask, because these cases are about
 // what the poller DOES with a refusal, not about a batch.
 type clearRecordingAPI struct {
 	telegram.API
 	cleared []string
+	// asked records every call in order, so a test can assert the webhook was
+	// ASKED ABOUT before it was cleared. Afterwards there is nothing left to
+	// ask: getWebhookInfo would answer "none" whichever cause was true, so the
+	// order is the property rather than the calls being present.
+	asked []string
+	// webhookRegistered is what WebhookRegistered answers.
+	webhookRegistered bool
 	// reaskTimeouts is the interval each getUpdates was asked to hold for. The
 	// re-ask after a clear must name ZERO: a second long poll would spend the job's
 	// remaining budget learning what an immediate ask answers.
 	reaskTimeouts []int
 }
 
+func (a *clearRecordingAPI) WebhookRegistered(context.Context, string) (bool, error) {
+	a.asked = append(a.asked, "getWebhookInfo")
+	return a.webhookRegistered, nil
+}
+
 func (a *clearRecordingAPI) DeleteWebhook(_ context.Context, token string) error {
+	a.asked = append(a.asked, "deleteWebhook")
 	a.cleared = append(a.cleared, token)
 	return nil
 }
@@ -185,6 +246,13 @@ func TestAConflictClearsTheWebhookThenRe_asksToEstablishTheCause(t *testing.T) {
 	}
 	if len(api.reaskTimeouts) != 1 || api.reaskTimeouts[0] != 0 {
 		t.Fatalf("the re-ask asked Telegram to hold for %v, want a single ask of 0 — a second long poll would spend the job's whole budget on it", api.reaskTimeouts)
+	}
+	// ASKED FIRST. After the clear there is nothing left to establish: the
+	// answer would be "no webhook" whichever cause was true, so a poller that
+	// asked afterwards could only report a guess.
+	want := []string{"getWebhookInfo", "deleteWebhook"}
+	if !slices.Equal(api.asked, want) {
+		t.Fatalf("provider calls %v, want %v — the registration has to be established before it is cleared", api.asked, want)
 	}
 }
 
