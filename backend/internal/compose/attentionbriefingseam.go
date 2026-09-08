@@ -13,6 +13,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/briefs"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -63,6 +64,15 @@ func (a attentionBriefing) Queue(ctx context.Context) ([]attention.BriefEntry, b
 	if err != nil {
 		return nil, false, time.Time{}, err
 	}
+	// Whether this run could read the relationship at all. A run that could not
+	// scores every deal's warmth zero, and a zero nobody measured must not be
+	// read as a cold relationship — see SignalOf.
+	warmthKnown := true
+	for _, factor := range run.FactorsOmitted {
+		if factor == string(crmcontracts.Warmth) {
+			warmthKnown = false
+		}
+	}
 	unanswered := make([]attention.BriefEntry, 0, len(run.Items))
 	named := make([]ids.UUID, 0, len(run.Items))
 	for _, item := range run.Items {
@@ -75,7 +85,7 @@ func (a attentionBriefing) Queue(ctx context.Context) ([]attention.BriefEntry, b
 			// Derived from the persisted vector rather than stored beside it:
 			// the vector IS the reason, so a second column could disagree with
 			// the numbers a reader can already see decomposed on the card.
-			Signal: string(briefs.SignalOf(item.Features)),
+			Signal: string(briefs.SignalOf(item.Features, warmthKnown)),
 		})
 		named = append(named, item.DealID)
 	}

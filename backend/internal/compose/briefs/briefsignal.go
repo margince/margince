@@ -58,15 +58,25 @@ const (
 // this exists to make. A deal the night ranked highly with no urgency, no
 // silence and no movement is one worth attention on its merits; labelling it
 // at-risk describes a problem nobody found.
-func SignalOf(v BriefFeatureVector) BriefSignal {
+//
+// warmthKnown says whether this run could read the relationship at all. A run
+// that could not scores every deal's warmth zero — see omittedFactors — and a
+// zero it never measured must not be read as a cold one.
+func SignalOf(v BriefFeatureVector, warmthKnown bool) BriefSignal {
 	switch {
 	case v.Timing >= signalUrgent:
 		return SignalClosingSoon
-	case v.Momentum <= briefMomentumUnchanged && v.Warmth < signalStrong:
+	case v.Momentum <= briefMomentumUnchanged && warmthKnown && v.Warmth < signalStrong:
 		// Nothing has happened AND the relationship is cold. Either alone is
 		// ordinary — a warm deal between conversations is not stalling, and a
 		// deal that moved yesterday is not quiet — so the pair is what makes
 		// silence worth naming.
+		//
+		// warmthKnown is the third term because a withheld factor arrives as
+		// zero, indistinguishable from a genuinely cold relationship. Reading
+		// it as cold turns "we could not see this" into an asserted problem on
+		// every quiet deal, for a reader whose only fault is lacking the person
+		// grant. Silence alone is not enough to call a deal stalled.
 		return SignalStalled
 	case v.Momentum > briefMomentumUnchanged:
 		return SignalMoved
