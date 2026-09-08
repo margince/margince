@@ -298,13 +298,15 @@ func reEngagedMoment(_ context.Context, now time.Time, page *crmcontracts.Person
 		// not news.
 		return crmcontracts.PersonMoment{}, false
 	}
-	// The silence this message broke: measured against our own last outbound,
-	// because a gap only means something relative to what came before it.
+	// The gap this rung fires on, and it is OURS: the page carries the latest
+	// message in each direction and nothing between them, so the only interval
+	// derivable here is from our most recent outbound to their most recent
+	// inbound. What that measures is how long it has been since WE wrote.
 	if page.LastOutboundAt == nil {
 		return crmcontracts.PersonMoment{}, false
 	}
-	quiet := elapsed.Days(*page.LastOutboundAt, inbound)
-	if quiet < reEngagedQuietDays {
+	sinceWeWrote := elapsed.Days(*page.LastOutboundAt, inbound)
+	if sinceWeWrote < reEngagedQuietDays {
 		return crmcontracts.PersonMoment{}, false
 	}
 	evidence := []crmcontracts.PersonMomentEvidence{inboundEvidence(page, inbound)}
@@ -313,11 +315,23 @@ func reEngagedMoment(_ context.Context, now time.Time, page *crmcontracts.Person
 		Rule:                crmcontracts.PersonMomentRuleReEngaged,
 		RuleVersion:         ptr(ruleVersion),
 		EvidenceFingerprint: fingerprintOf(evidence),
-		Headline:            fmt.Sprintf("They replied after %d quiet days", quiet),
-		WhyNow:              "A conversation that had stopped has restarted. The window where a reply is expected is now.",
-		Confidence:          crmcontracts.PersonMomentConfidenceObservedFact,
-		Evidence:            evidence,
-		FreshnessAt:         &inbound,
+		// What the two dates support, and no more. "They replied after N quiet
+		// days" said the SILENCE was theirs, and the page cannot know that: it
+		// holds one timestamp per direction, so every message between the two
+		// is invisible here. A contact who wrote every week for two months
+		// while nobody answered produced "They replied after 60 quiet days" —
+		// a number specific enough to sound checked, about a quiet period that
+		// never happened. A rep who tests one of these against the thread and
+		// finds it wrong stops believing the parts that are right.
+		//
+		// The interval itself is real; only its owner was wrong. It is the age
+		// of OUR last message, which is the fact this rung fires on anyway.
+		Headline: fmt.Sprintf("They wrote — we last wrote %d days before", sinceWeWrote),
+		WhyNow: "They are waiting on us, and our last message to them is older than the re-engagement " +
+			"rule allows. The window where a reply is expected is now.",
+		Confidence:  crmcontracts.PersonMomentConfidenceObservedFact,
+		Evidence:    evidence,
+		FreshnessAt: &inbound,
 		RecommendedAction: crmcontracts.PersonMomentAction{
 			Kind:  crmcontracts.PersonMomentActionKindDraftReply,
 			Label: "Draft a reply",
