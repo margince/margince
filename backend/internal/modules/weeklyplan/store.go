@@ -248,7 +248,7 @@ func (s *Store) planForOwner(ctx context.Context, owner ids.UUID, now time.Time)
 	// Outside the transaction above: the seam reads other modules' tables and
 	// opens its own, and holding this one open across it would make a read of
 	// the plan wait on a read of the calendar.
-	plan.Capacity, err = s.capacityFor(ctx, owner, now)
+	plan.Capacity, err = s.capacityFor(ctx, owner, plan.LocalWeekStart)
 	if err != nil {
 		return Plan{}, err
 	}

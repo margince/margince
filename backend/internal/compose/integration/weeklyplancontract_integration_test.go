@@ -119,7 +119,7 @@ func TestAnAbsentCapacitySeamLeavesCapacityAbsentNotZero(t *testing.T) {
 // exactly one thing: whether a reader is composed at all.
 type stubCapacity struct{ committed weeklyplan.Committed }
 
-func (s stubCapacity) NextWeek(_ context.Context, _ ids.UUID, _ time.Time) (weeklyplan.Committed, error) {
+func (s stubCapacity) ForWeek(_ context.Context, _ ids.UUID, _ time.Time) (weeklyplan.Committed, error) {
 	return s.committed, nil
 }
 

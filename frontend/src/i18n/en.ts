@@ -2706,7 +2706,7 @@ export const en = {
   "brief.weekly.scorecard.forecastMovesBasis": "{down} downgraded",
   // The week ahead. The frozen review says what happened; this is the only part
   // of that page anybody can still change.
-  "plan.title": "Plan next week",
+  "plan.title": "Plan your week",
   // The head of the ranked queue, on the page a rep opens first. The same rows
   // the Worklist draws, in the order the server decided.
   // The Brief's opening sentence, composed from the rows the page is showing —
@@ -2847,8 +2847,8 @@ export const en = {
   "plan.contract.save": "Save",
   "plan.contract.cancel": "Cancel",
   "plan.contract.capacityLine":
-    "Next week already holds {meetings} meetings and {tasks} tasks.",
-  "plan.contract.crowded": "Next week is already full",
+    "That week already holds {meetings} meetings and {tasks} tasks.",
+  "plan.contract.crowded": "That week is already full",
   "plan.contract.crowdedBody":
     "{committed} things are already booked and you have written {commitments} commitments. Something will have to give.",
   "plan.help.ask": "Ask for help",
