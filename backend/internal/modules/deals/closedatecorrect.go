@@ -96,10 +96,11 @@ func setCloseDate(p *storekit.Patch, before *time.Time, proposed time.Time) {
 // that did not happen, forever.
 //
 // The comparison is against the EFFECTIVE category rather than the stored
-// column, and that distinction is the whole guard: the column is nullable, and
-// a deal with a NULL forecast_category whose probability already reads
-// "omitted" is not moved by writing "omitted" into it. Comparing against the
-// raw NULL would call that a change and put it in the diff.
+// column, because the column is nullable and the two disagree: a deal with no
+// override carries NULL while reading as its probability-derived default. The
+// notch is computed from the effective reading, so the guard has to ask the
+// same question — comparing against a raw NULL would find every value
+// different and write on every pass, which is the bug it exists to stop.
 func setForecastCategory(p *storekit.Patch, stored *string, effective, notched string) {
 	if effective == notched {
 		return

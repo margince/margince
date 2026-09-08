@@ -273,25 +273,32 @@ func TestOverdueIsAskedInTheInstallationsZone(t *testing.T) {
 // happened. Thirty-two of forty such rows in one installation were identical
 // before/after images.
 func TestAnUnchangedForecastCategoryIsNotWritten(t *testing.T) {
-	omitted := "omitted"
+	omitted, pipeline := "omitted", "pipeline"
+	// Below every forecast threshold, so a deal with no override derives
+	// "pipeline" — the state a first downgrade actually moves away from.
+	const lowStageWinProbability = 20
 	cases := []struct {
 		name      string
 		stored    *string
-		effective string
 		notched   string
 		wantWrite bool
 	}{
-		{"already at the floor, stored explicitly", &omitted, "omitted", "omitted", false},
-		// The nullable column is why the comparison is against the EFFECTIVE
-		// category: this deal carries no override, its probability already
-		// reads omitted, and writing "omitted" into the NULL changes nothing
-		// a reader can see. Comparing the raw NULL would call it a move.
-		{"already at the floor, derived from probability", nil, "omitted", "omitted", false},
-		{"a real notch down still writes", &omitted, "pipeline", "omitted", true},
+		// The floor case, and the one that wrote a row every night: an
+		// explicitly-omitted deal notches to omitted, which is where it
+		// already is.
+		{"already at the floor", &omitted, "omitted", false},
+		// A deal carrying no override sits at the probability-derived
+		// default, so the first notch down is a real move and must write.
+		{"no override, first notch down", nil, "omitted", true},
+		{"a real notch down still writes", &pipeline, "omitted", true},
 	}
 	for _, c := range cases {
+		// Derive the effective category the way the sweep does rather than
+		// stating it: a hand-written pair can describe a deal
+		// effectiveForecastCategory would never produce.
+		effective := effectiveForecastCategory(c.stored, lowStageWinProbability)
 		p := storekit.NewPatch()
-		setForecastCategory(p, c.stored, c.effective, c.notched)
+		setForecastCategory(p, c.stored, effective, c.notched)
 		if p.Empty() == c.wantWrite {
 			t.Errorf("%s: patch empty = %v, want a write = %v", c.name, p.Empty(), c.wantWrite)
 		}
