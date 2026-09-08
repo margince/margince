@@ -5220,7 +5220,6 @@ export const vi = {
   "ob.conv.connect.networkTitle": "Mạng lưới quan hệ của bạn",
   "ob.conv.connect.networkHint":
     "Lưu hồ sơ của bạn để mạng lưới bạn nhập sau này được ghi nhận cho bạn. Việc nhập nằm trong Cài đặt.",
-  "ob.conv.connect.required": "bắt buộc",
   "ob.conv.connect.recommended": "nên có",
   "ob.conv.connect.gmailBrings": "Email được đọc và gửi qua Google",
   "ob.conv.connect.microsoftBrings": "Email được đọc và gửi qua Microsoft",
