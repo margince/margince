@@ -5,7 +5,7 @@
     "driven": 7,
     "never_driven": 67,
     "permitted_but_never_required": 13,
-    "tokens_served_but_never_driven": 18322,
+    "tokens_served_but_never_driven": 18330,
     "use_case_cases": 7,
     "cases_with_a_committed_run": 7,
     "acceptance_criteria_named": 6,
@@ -270,7 +270,7 @@
     },
     {
       "name": "progress_deal",
-      "tokens": 501,
+      "tokens": 505,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [],
@@ -300,7 +300,7 @@
     },
     {
       "name": "advance_deal",
-      "tokens": 443,
+      "tokens": 447,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [],

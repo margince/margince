@@ -32,7 +32,7 @@ alone. A frame that grows a paragraph spends it on every run of every agent.
 |---|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 1634 | 4% | 21576 | 6 | 6 |
 | `overnight_at_risk_sweep` | 7 | 2509 | 7% | 20701 | 15 | 10 |
-| _whole served catalog, for scale_ | 74 | 22325 | 68% | — | — | — |
+| _whole served catalog, for scale_ | 74 | 22333 | 68% | — | — | — |
 
 ### `morning_brief`
 
@@ -143,12 +143,12 @@ a term in an addition.
 | `update_record` | 572 | 4 scenarios |
 | `send_message` | 518 | — |
 | `list_records` | 508 | — |
-| `progress_deal` | 501 | 3 scenarios |
+| `progress_deal` | 505 | 3 scenarios |
 | `resolve_entities` | 498 | — |
 | `query_workspace` | 484 | 3 scenarios |
 | `create_record` | 473 | 1 scenario |
 | `run_analytics_query` | 465 | — |
-| `advance_deal` | 443 | 1 scenario |
+| `advance_deal` | 447 | 1 scenario |
 | `annotate_brief` | 418 | — |
 | `review_commitments` | 401 | 1 scenario |
 | `book_meeting` | 393 | — |

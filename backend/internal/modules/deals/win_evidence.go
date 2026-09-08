@@ -137,6 +137,15 @@ func saysSomething(detail *string) bool {
 // product there is no paper should not then be told there is none. Only a win
 // that claims nothing goes looking for evidence.
 func ensureWinEvidence(ctx context.Context, tx pgx.Tx, dealID ids.DealID, in AdvanceDealInput) error {
+	// Before the branch, because the bound belongs to the COLUMN and not to
+	// the reason arm. A win writes the detail whichever branch it takes
+	// (deal_advance.go sets both fields on every won landing), so a length
+	// asked only inside the reason arm would leave a signed-contract win free
+	// to store whatever it sent — the schema advertising a bound the product
+	// applies to some callers is the state this whole check exists to end.
+	if err := ensureDetailWithinBound(in.WonWithoutContractDetail); err != nil {
+		return err
+	}
 	if in.WonWithoutContractReason != nil {
 		return validateWonReason(*in.WonWithoutContractReason, in.WonWithoutContractDetail)
 	}
@@ -169,10 +178,20 @@ func validateWonReason(reason string, detail *string) error {
 	// Checked for EVERY reason, not only the one that requires a detail: a
 	// caller may send one alongside any reason, and the column takes whatever
 	// arrives.
-	if detail != nil {
-		if n := utf8.RuneCountInString(*detail); n > maxWonReasonDetail {
-			return &WonReasonDetailTooLongError{Length: n}
-		}
+	return ensureDetailWithinBound(detail)
+}
+
+// ensureDetailWithinBound is the length rule, in the one place both callers
+// reach it: the advance, which asks before it branches on the reason, and the
+// exported precheck, which asks for a proposal that has not run yet. A second
+// copy would be a bound one path applies and the other does not, which is the
+// defect this replaced rather than a new spelling of it.
+func ensureDetailWithinBound(detail *string) error {
+	if detail == nil {
+		return nil
+	}
+	if n := utf8.RuneCountInString(*detail); n > maxWonReasonDetail {
+		return &WonReasonDetailTooLongError{Length: n}
 	}
 	return nil
 }

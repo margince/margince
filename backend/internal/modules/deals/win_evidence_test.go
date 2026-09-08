@@ -4,6 +4,7 @@
 package deals
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"testing"
@@ -185,5 +186,37 @@ func TestTheBoundHoldsForAReasonThatNeedsNoDetail(t *testing.T) {
 	var tooLong *WonReasonDetailTooLongError
 	if !errors.As(validateWonReason("purchase_order", &over), &tooLong) {
 		t.Error("an over-long detail rode in on a reason that requires none")
+	}
+}
+
+// The bound belongs to the COLUMN, so it is asked before the branch that looks
+// for a reason.
+//
+// Every test above drives validateWonReason, which is only reached when the
+// caller states a reason — and that is exactly how the gap survived them. A win
+// that sends a detail and NO reason takes the contract-lookup branch, and
+// deal_advance.go writes both fields on every won landing, so the detail landed
+// unmeasured however long it was.
+//
+// The transaction is nil on purpose. If the bound is asked before the branch,
+// the refusal returns without a database ever being reached; if it moves back
+// behind the reason arm, this panics rather than quietly passing.
+func TestAnOverlongDetailIsRefusedEvenWhenNoReasonIsStated(t *testing.T) {
+	over := strings.Repeat("x", maxWonReasonDetail+1)
+
+	var tooLong *WonReasonDetailTooLongError
+	err := ensureWinEvidence(context.Background(), nil, ids.DealID{UUID: ids.NewV7()},
+		AdvanceDealInput{WonWithoutContractDetail: &over})
+	if !errors.As(err, &tooLong) {
+		t.Fatalf("a %d-character detail with no stated reason was admitted (%v) — a win with a signed contract would have written it, past the bound the schema advertises",
+			maxWonReasonDetail+1, err)
+	}
+
+	// A detail within the bound and no reason falls through to the contract
+	// lookup, which is the ordinary path. Asserting the refusal alone would
+	// pass against a gate that refused every such win.
+	within := strings.Repeat("x", maxWonReasonDetail)
+	if err := ensureDetailWithinBound(&within); err != nil {
+		t.Errorf("a detail of exactly %d characters was refused: %v", maxWonReasonDetail, err)
 	}
 }

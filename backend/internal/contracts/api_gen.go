@@ -17244,8 +17244,8 @@ type AdvanceDealRequest struct {
 	//
 	// Bounded because it is free text that a record page shows back beside the deal's
 	// status: an unbounded value reaches every reader of that deal, and the header it
-	// lands in is a line of short facts. 500 is the same bound the operator notes on
-	// this contract carry.
+	// lands in is a line of short facts. 500 is a few sentences — long enough to say
+	// what happened, short enough that the line stays readable.
 	WonWithoutContractDetail *string `json:"won_without_contract_detail,omitempty"`
 
 	// WonWithoutContractReason Why this win has no agreement behind it (ADR-0109 §6). Omit when the deal has a signed contract with its paper attached — the server looks for one, and refuses a win that offers neither. Both answers are legitimate; recording which is what makes the gap countable.

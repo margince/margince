@@ -56,17 +56,21 @@ export function WonWithoutContractFact({
   if (!detail) {
     return <IdentityFact>{label}</IdentityFact>;
   }
-  // Free text on a line of SHORT facts, so it is bounded — visually, and with
-  // the whole string still in the DOM.
+  // Free text on a line of SHORT facts, so its WIDTH is bounded and its
+  // content is not: it wraps inside a max-width rather than clipping.
   //
-  // It used to be trimmed in TS with the rest in a `title`. That reads as
-  // solved and is not: a tooltip wants a mouse, is ignored by most screen
-  // readers, and never appears for a keyboard or touch reader — so the people
-  // who could not read the answer would have included the person checking the
-  // words they had just typed, which is who this fact exists for.
+  // Two earlier spellings were worse. Trimmed in TS with the rest in a `title`
+  // reads as solved and is not — a tooltip wants a mouse, is ignored by most
+  // screen readers, and never appears for a keyboard or touch reader. Clipped
+  // with no `title` is simply unreadable for everyone looking at it. Either way
+  // the reader who loses is the person checking the words they just typed,
+  // which is who this fact exists for.
   //
-  // The clamp is a class on this screen's own stylesheet rather than a rule in
-  // the design system: one screen's free-text field is not a shape the shared
+  // Wrapping is affordable because the server bounds the value: 500 characters
+  // is a few lines, and the identity line already wraps.
+  //
+  // The rule is a class on this screen's own stylesheet rather than one in the
+  // design system: one screen's free-text field is not a shape the shared
   // identity row owes everybody, and IdentityFact already takes a className for
   // exactly this.
   return <IdentityFact className="deal-win-detail">{detail}</IdentityFact>;

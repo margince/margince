@@ -10,16 +10,16 @@
   "totals": {
     "tools": 74,
     "resources": 12,
-    "tool_catalog_bytes": 213120,
+    "tool_catalog_bytes": 213152,
     "resource_catalog_bytes": 4584,
-    "approx_wire_tokens_total": 54426,
+    "approx_wire_tokens_total": 54434,
     "largest_tool_bytes": 8980,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
       "description_bytes": 51869,
-      "input_schema_bytes": 45443,
+      "input_schema_bytes": 45475,
       "output_schema_bytes": 99854,
-      "description_plus_input_schema_bytes": 97312
+      "description_plus_input_schema_bytes": 97344
     }
   },
   "tools": {
@@ -306,6 +306,7 @@
             },
             "won_without_contract_detail": {
               "description": "What the reason was, required when it is other",
+              "maxLength": 500,
               "type": "string"
             },
             "won_without_contract_reason": {
@@ -8253,6 +8254,7 @@
             },
             "won_without_contract_detail": {
               "description": "What the reason was, required when it is other",
+              "maxLength": 500,
               "type": "string"
             },
             "won_without_contract_reason": {
