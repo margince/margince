@@ -50,15 +50,19 @@ func TestAToolsRetryKeyRunsItsCallOnceAndReplaysTheResult(t *testing.T) {
 	ctx := agentCtxAs(e, "agent:"+ids.NewV7().String())
 	recorded := json.RawMessage(`{"schema_version":"1.0.0","evidence":[],"data":{"sent":true}}`)
 
-	if first := claimState(ctx, t, claims, "send_email", "k-1", "digest-a"); first.State != agents.ClaimFresh {
+	first := claimState(ctx, t, claims, "send_email", "k-1", "digest-a")
+	if first.State != agents.ClaimFresh {
 		t.Fatalf("the first claim = %v, want fresh", first.State)
+	}
+	if first.Attempt == "" {
+		t.Fatal("a fresh claim named no attempt, so nothing can settle it")
 	}
 	// Before the first attempt settles, a concurrent retry must not run: the
 	// claim row is written insert-first precisely so the loser sees it.
 	if inFlight := claimState(ctx, t, claims, "send_email", "k-1", "digest-a"); inFlight.State != agents.ClaimInFlight {
 		t.Fatalf("a retry mid-flight = %v, want in-flight", inFlight.State)
 	}
-	if err := claims.Settle(ctx, "send_email", "k-1", recorded, 3); err != nil {
+	if err := claims.Settle(ctx, "send_email", "k-1", first.Attempt, recorded, 3); err != nil {
 		t.Fatalf("settle: %v", err)
 	}
 
@@ -81,10 +85,11 @@ func TestAToolsRetryKeyRefusesADifferentCall(t *testing.T) {
 	claims := toolIdempotency(e.Pool)
 	ctx := agentCtxAs(e, "agent:"+ids.NewV7().String())
 
-	if first := claimState(ctx, t, claims, "update_record", "k-2", "digest-a"); first.State != agents.ClaimFresh {
+	first := claimState(ctx, t, claims, "update_record", "k-2", "digest-a")
+	if first.State != agents.ClaimFresh {
 		t.Fatalf("the first claim = %v, want fresh", first.State)
 	}
-	if err := claims.Settle(ctx, "update_record", "k-2", json.RawMessage(`{"data":{}}`), 1); err != nil {
+	if err := claims.Settle(ctx, "update_record", "k-2", first.Attempt, json.RawMessage(`{"data":{}}`), 1); err != nil {
 		t.Fatalf("settle: %v", err)
 	}
 	// Same key, different arguments. Replaying the first result here would
@@ -107,10 +112,11 @@ func TestAReleasedKeyIsClaimableAgain(t *testing.T) {
 	claims := toolIdempotency(e.Pool)
 	ctx := agentCtxAs(e, "agent:"+ids.NewV7().String())
 
-	if first := claimState(ctx, t, claims, "archive_record", "k-3", "digest-a"); first.State != agents.ClaimFresh {
+	first := claimState(ctx, t, claims, "archive_record", "k-3", "digest-a")
+	if first.State != agents.ClaimFresh {
 		t.Fatalf("the first claim = %v, want fresh", first.State)
 	}
-	if err := claims.Release(ctx, "archive_record", "k-3"); err != nil {
+	if err := claims.Release(ctx, "archive_record", "k-3", first.Attempt); err != nil {
 		t.Fatalf("release: %v", err)
 	}
 	if again := claimState(ctx, t, claims, "archive_record", "k-3", "digest-a"); again.State != agents.ClaimFresh {
@@ -127,11 +133,11 @@ func TestReleasingASettledKeyDoesNotDiscardItsResult(t *testing.T) {
 	ctx := agentCtxAs(e, "agent:"+ids.NewV7().String())
 	recorded := json.RawMessage(`{"schema_version":"1.0.0","evidence":[],"data":{"sent":true}}`)
 
-	claimState(ctx, t, claims, "send_email", "k-4", "digest-a")
-	if err := claims.Settle(ctx, "send_email", "k-4", recorded, 2); err != nil {
+	held := claimState(ctx, t, claims, "send_email", "k-4", "digest-a")
+	if err := claims.Settle(ctx, "send_email", "k-4", held.Attempt, recorded, 2); err != nil {
 		t.Fatalf("settle: %v", err)
 	}
-	if err := claims.Release(ctx, "send_email", "k-4"); err != nil {
+	if err := claims.Release(ctx, "send_email", "k-4", held.Attempt); err != nil {
 		t.Fatalf("release: %v", err)
 	}
 	replay := claimState(ctx, t, claims, "send_email", "k-4", "digest-a")
@@ -167,7 +173,7 @@ func TestOneKeyIsThreeDifferentClaims(t *testing.T) {
 	// And the REST door. The endpoint spelling is what keeps a tool's key out of
 	// a request path's; this proves the two really do write different rows.
 	actor, _ := principal.Actor(agentA)
-	outcome, _, err := claimKey(agentA, e.Pool, actor.ID, key, "POST /v1/offer-templates", "digest-a")
+	outcome, _, _, err := claimKey(agentA, e.Pool, actor.ID, key, "POST /v1/offer-templates", "digest-a")
 	if err != nil {
 		t.Fatalf("the REST claim failed: %v", err)
 	}
@@ -184,10 +190,11 @@ func TestAFailedRunIsRecordedAndItsKeyIsNotReusable(t *testing.T) {
 	claims := toolIdempotency(e.Pool)
 	ctx := agentCtxAs(e, "agent:"+ids.NewV7().String())
 
-	if first := claimState(ctx, t, claims, "create_record", "k-5", "digest-a"); first.State != agents.ClaimFresh {
-		t.Fatalf("the first claim = %v, want fresh", first.State)
+	ran := claimState(ctx, t, claims, "create_record", "k-5", "digest-a")
+	if ran.State != agents.ClaimFresh {
+		t.Fatalf("the first claim = %v, want fresh", ran.State)
 	}
-	if err := claims.Fail(ctx, "create_record", "k-5", "it conflicted with another change"); err != nil {
+	if err := claims.Fail(ctx, "create_record", "k-5", ran.Attempt, "it conflicted with another change"); err != nil {
 		t.Fatalf("fail: %v", err)
 	}
 
@@ -219,13 +226,13 @@ func TestAClaimWithNoPrincipalIsRefused(t *testing.T) {
 			if _, err := claims.Claim(tc.ctx, "send_email", "k-6", "digest-a"); err == nil {
 				t.Fatal("the claim was taken")
 			}
-			if err := claims.Settle(tc.ctx, "send_email", "k-6", json.RawMessage(`{}`), 0); err == nil {
+			if err := claims.Settle(tc.ctx, "send_email", "k-6", ids.NewV7().String(), json.RawMessage(`{}`), 0); err == nil {
 				t.Fatal("the settlement was written")
 			}
-			if err := claims.Fail(tc.ctx, "send_email", "k-6", "why"); err == nil {
+			if err := claims.Fail(tc.ctx, "send_email", "k-6", ids.NewV7().String(), "why"); err == nil {
 				t.Fatal("the failure was written")
 			}
-			if err := claims.Release(tc.ctx, "send_email", "k-6"); err == nil {
+			if err := claims.Release(tc.ctx, "send_email", "k-6", ids.NewV7().String()); err == nil {
 				t.Fatal("the release ran")
 			}
 		})

@@ -73,6 +73,16 @@ const (
 type Claim struct {
 	State  ClaimState
 	Result json.RawMessage
+	// Attempt names THIS attempt's hold on the key, opaque here and meaningful
+	// to the store. It travels back on every settlement so a settle or a
+	// release lands on the attempt that made it: a key past its replay window
+	// is re-claimed in place, so the same (principal, key, tool) can name a
+	// DIFFERENT attempt by the time a slow caller returns.
+	//
+	// Empty for every state but Fresh: a caller that did not take the key has
+	// nothing to settle, and the store refuses a settlement that names no
+	// attempt rather than falling back to the key.
+	Attempt string
 	// Records is what the recorded answer was charged against the read bound
 	// when it was produced. A replay of it costs the same (see chargeReplay).
 	Records int
@@ -94,11 +104,17 @@ type Idempotency interface {
 	Claim(ctx context.Context, tool, key, digest string) (Claim, error)
 	// Settle records a successful result, and the number of records it hands
 	// over, so a replay of it costs the caller what the call cost.
-	Settle(ctx context.Context, tool, key string, result json.RawMessage, records int) error
+	//
+	// attempt is the token Claim answered with. The three settling verbs take
+	// it rather than re-deriving the row from (tool, key), because that triple
+	// does not name an attempt: a key past its replay window is re-claimed in
+	// place, and a settlement matched on the triple alone can land on somebody
+	// else's live claim.
+	Settle(ctx context.Context, tool, key, attempt string, result json.RawMessage, records int) error
 	// Fail records that the tool ran under this key and produced no result.
-	Fail(ctx context.Context, tool, key, reason string) error
+	Fail(ctx context.Context, tool, key, attempt, reason string) error
 	// Release gives an unrun key back, so the caller may retry it.
-	Release(ctx context.Context, tool, key string) error
+	Release(ctx context.Context, tool, key, attempt string) error
 }
 
 // WithIdempotency installs the claim store that makes `idempotency_key` mean
@@ -130,12 +146,12 @@ func WithReplayReader(reader ReplayReader) RegistryOption {
 // `send_email` — the exact call whose response was lost, and the most
 // irreversible act on this surface — dies on the consumed approval and never
 // reaches the result the first attempt recorded.
-func (r *Registry) claimFor(ctx context.Context, spec mcp.ToolSpec, res reserved) (fresh bool, out json.RawMessage, records int, err error) {
+func (r *Registry) claimFor(ctx context.Context, spec mcp.ToolSpec, res reserved) (fresh bool, attempt string, out json.RawMessage, records int, err error) {
 	if res.RetryKey == "" {
-		return true, nil, 0, nil
+		return true, "", nil, 0, nil
 	}
 	if err := r.refuseUnkeyableCall(spec); err != nil {
-		return false, nil, 0, err
+		return false, "", nil, 0, err
 	}
 	claim, err := r.claims.Claim(ctx, spec.Name, res.RetryKey, res.DiffHash)
 	if err != nil {
@@ -144,22 +160,22 @@ func (r *Registry) claimFor(ctx context.Context, spec mcp.ToolSpec, res reserved
 		// promise the retry then discovers was never kept.
 		slog.ErrorContext(ctx, "the idempotency claim failed; refusing the call rather than running it unprotected",
 			"tool", spec.Name, "err", err)
-		return false, nil, 0, fmt.Errorf(
+		return false, "", nil, 0, fmt.Errorf(
 			"%s could not be made safe to retry just now, so it was not run; retry the identical call: %w",
 			spec.Name, apperrors.ErrConflict)
 	}
 	switch claim.State {
 	case ClaimFresh:
-		return true, nil, 0, nil
+		return true, claim.Attempt, nil, 0, nil
 	case ClaimReplay:
 		out, err := r.replay(ctx, spec, claim)
-		return false, out, claim.Records, err
+		return false, "", out, claim.Records, err
 	case ClaimInFlight:
-		return false, nil, 0, fmt.Errorf(
+		return false, "", nil, 0, fmt.Errorf(
 			"an earlier %s call with this idempotency_key has not finished yet; wait for it rather than "+
 				"repeating it: %w", spec.Name, apperrors.ErrConflict)
 	case ClaimMismatch:
-		return false, nil, 0, fmt.Errorf(
+		return false, "", nil, 0, fmt.Errorf(
 			"this idempotency_key was already used for a DIFFERENT %s call; send a new key to make this "+
 				"call, or repeat the original arguments to read its result: %w", spec.Name, apperrors.ErrConflict)
 	case ClaimFailed:
@@ -167,14 +183,14 @@ func (r *Registry) claimFor(ctx context.Context, spec mcp.ToolSpec, res reserved
 		// attempt reached the tool, so whether it took effect is exactly what
 		// this surface does not know — and a fresh key here would be a second
 		// attempt at something that may already have happened.
-		return false, nil, 0, fmt.Errorf(
+		return false, "", nil, 0, fmt.Errorf(
 			"an earlier %s call with this idempotency_key failed after it had already started, so it may or "+
 				"may not have taken effect (%s); check the record before retrying under a NEW key: %w",
 			spec.Name, claim.Reason, apperrors.ErrConflict)
 	default:
 		// A state this switch does not know cannot be resolved into "safe to
 		// run", so it is refused rather than guessed at.
-		return false, nil, 0, fmt.Errorf("crmagents: unknown idempotency claim state %d: %w", claim.State, apperrors.ErrConflict)
+		return false, "", nil, 0, fmt.Errorf("crmagents: unknown idempotency claim state %d: %w", claim.State, apperrors.ErrConflict)
 	}
 }
 
@@ -238,20 +254,20 @@ func (r *Registry) unitOwnedTool(name string) bool {
 // committed — create_record commits the row and then reads it back — so "the
 // call returned an error" is not "nothing happened", and freeing the key there
 // is how one key creates two records.
-func (r *Registry) settleRun(ctx context.Context, spec mcp.ToolSpec, res reserved, out json.RawMessage, records int, runErr error) {
+func (r *Registry) settleRun(ctx context.Context, spec mcp.ToolSpec, res reserved, attempt string, out json.RawMessage, records int, runErr error) {
 	if res.RetryKey == "" {
 		return
 	}
 	book := context.WithoutCancel(ctx)
 	if runErr != nil {
-		if err := r.claims.Fail(book, spec.Name, res.RetryKey, safeFailureReason(runErr)); err != nil {
+		if err := r.claims.Fail(book, spec.Name, res.RetryKey, attempt, safeFailureReason(runErr)); err != nil {
 			slog.ErrorContext(book, "recording a failed call against its idempotency key failed; a retry of "+
 				"this key will report it as still in flight",
 				"tool", spec.Name, "err", err)
 		}
 		return
 	}
-	if err := r.claims.Settle(book, spec.Name, res.RetryKey, out, records); err != nil {
+	if err := r.claims.Settle(book, spec.Name, res.RetryKey, attempt, out, records); err != nil {
 		slog.ErrorContext(book, "recording a completed call for replay failed; a retry of this key will "+
 			"report it as still in flight rather than answering",
 			"tool", spec.Name, "err", err)
@@ -288,12 +304,12 @@ func safeFailureReason(err error) string {
 // BEFORE the tool ran — today, a refused approval redemption. Nothing else may
 // use it: for any failure at or after the handler, whether an effect landed is
 // exactly what this surface cannot know.
-func (r *Registry) releaseUnrunKey(ctx context.Context, spec mcp.ToolSpec, res reserved) {
+func (r *Registry) releaseUnrunKey(ctx context.Context, spec mcp.ToolSpec, res reserved, attempt string) {
 	if res.RetryKey == "" {
 		return
 	}
 	book := context.WithoutCancel(ctx)
-	if err := r.claims.Release(book, spec.Name, res.RetryKey); err != nil {
+	if err := r.claims.Release(book, spec.Name, res.RetryKey, attempt); err != nil {
 		slog.ErrorContext(book, "releasing an unrun call's idempotency claim failed; the key stays held "+
 			"until the retention sweep reaches it", "tool", spec.Name, "err", err)
 	}

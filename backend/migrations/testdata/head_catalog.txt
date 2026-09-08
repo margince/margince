@@ -2799,6 +2799,7 @@ public.graph_interaction_edge.person_id uuid NOT NULL gen=- def=-
 public.graph_interaction_edge.user_id uuid NOT NULL gen=- def=-
 public.graph_interaction_edge_pkey CREATE UNIQUE INDEX graph_interaction_edge_pkey ON public.graph_interaction_edge USING btree (user_id, person_id)
 public.idempotency_key acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.idempotency_key.attempt_id uuid NOT NULL gen=- def=uuidv7()
 public.idempotency_key.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.idempotency_key.endpoint text NOT NULL gen=- def=-
 public.idempotency_key.idempotency_key_pkey PRIMARY KEY (principal_id, key, endpoint)
