@@ -885,6 +885,14 @@ export const en = {
   "consent.purposesUnavailable":
     "Couldn't load the consent purpose catalogue, so which purposes need a double opt-in can't be shown right now.",
 
+  "org.reject": "Not a company",
+  "org.rejectConfirm":
+    "This archives “{name}” and refuses {domain} a company, so the next message from that domain will not create it again. An administrator can let the domain back in from Settings → Capture.",
+  "org.rejectReasonLabel": "Why is this not a company?",
+  "org.rejectReasonHint":
+    "One sentence somebody reviewing the blocked-domain list can act on. The refusal outlives the record.",
+  "org.rejectDone":
+    "“{name}” archived, and {domain} will not create a company again",
   "org.name": "Company",
   "org.description": "What they do",
   "org.website": "Website",

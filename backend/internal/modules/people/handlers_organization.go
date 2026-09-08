@@ -5,11 +5,14 @@ package people
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
+	"strings"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -256,6 +259,59 @@ func (h Handlers) ArchiveOrganization(w http.ResponseWriter, r *http.Request, id
 	}
 	httperr.WriteJSON(w, http.StatusOK, org)
 }
+
+// RejectOrganization serves "this is not a company": the archive and the
+// standing refusal of the company's domain, in the store's one transaction.
+//
+// The reason's shape is checked HERE so a caller learns which field is wrong;
+// the store re-checks it because other callers reach it, and its error is an
+// internal one. The DOMAIN is deliberately not a field — the store reads the
+// company's current primary under the lock it writes with, so no request can
+// name a domain that has since stopped being the one mail arrives on.
+func (h Handlers) RejectOrganization(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.RejectOrganizationParams) {
+	// Human-only (x-agent-access), like the rest of the capture posture: the
+	// admission this writes is a HUMAN one, and human admissions are sticky
+	// against every later machine decision. An agent minting one would launder
+	// a machine judgement into a decision no verdict may revisit.
+	if err := auth.RequireHuman(r.Context()); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	var req crmcontracts.RejectOrganizationRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	reason := strings.TrimSpace(req.Reason)
+	if reason == "" {
+		httperr.Write(w, r, httperr.Validation(fieldKeyReason, "required",
+			"say why this is not a company: the refusal outlives the record, and only a reason makes it reviewable"))
+		return
+	}
+	// The contract says maxLength: 500 and the generated type does not enforce
+	// it. Unchecked, one caller stores a megabyte on the domain and every
+	// reader of the blocked list is served it back in full.
+	if len([]rune(reason)) > maxRejectReason {
+		httperr.Write(w, r, httperr.Validation(fieldKeyReason, "too_long",
+			fmt.Sprintf("a reason is at most %d characters; this one is %d", maxRejectReason, len([]rune(reason)))))
+		return
+	}
+	ifVersion, ok := httperr.IfMatchVersion(w, r)
+	if !ok {
+		return
+	}
+	out, err := h.store.RejectOrganization(r.Context(), pathID[ids.OrganizationKind](id), reason, ifVersion)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.RejectOrganizationResponse{
+		Organization: out.Organization,
+		Domain:       ToContractBlockedDomain(out.Domain),
+	})
+}
+
+// maxRejectReason mirrors the contract's maxLength for the rejection reason.
+const maxRejectReason = 500
 
 // enumArg reads an optional generated enum query parameter as the plain string
 // the store filters on. A nil parameter stays nil: an omitted filter is not a

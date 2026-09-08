@@ -829,6 +829,14 @@ export const de = {
   "consent.purposesUnavailable":
     "Der Einwilligungszweck-Katalog konnte nicht geladen werden — welche Zwecke ein Double-Opt-in brauchen, lässt sich gerade nicht anzeigen.",
 
+  "org.reject": "Kein Unternehmen",
+  "org.rejectConfirm":
+    "Damit wird „{name}“ archiviert und {domain} als Unternehmen abgelehnt — die nächste Nachricht von dieser Domain legt es nicht erneut an. Eine Administratorin oder ein Administrator kann die Domain unter Einstellungen → Erfassung wieder zulassen.",
+  "org.rejectReasonLabel": "Warum ist das kein Unternehmen?",
+  "org.rejectReasonHint":
+    "Ein Satz, mit dem jemand die Liste gesperrter Domains prüfen kann. Die Ablehnung überdauert den Datensatz.",
+  "org.rejectDone":
+    "„{name}“ archiviert, und {domain} legt kein Unternehmen mehr an",
   "org.name": "Firma",
   "org.description": "Was sie tun",
   "org.website": "Website",

@@ -815,6 +815,13 @@ export const vi = {
   "consent.purposesUnavailable":
     "Không tải được danh mục mục đích chấp thuận, nên hiện chưa thể cho biết mục đích nào cần xác nhận kép.",
 
+  "org.reject": "Không phải công ty",
+  "org.rejectConfirm":
+    "Thao tác này lưu trữ “{name}” và từ chối cấp công ty cho {domain}, nên thư tiếp theo từ tên miền đó sẽ không tạo lại nó. Quản trị viên có thể cho tên miền vào lại ở Cài đặt → Thu thập.",
+  "org.rejectReasonLabel": "Vì sao đây không phải công ty?",
+  "org.rejectReasonHint":
+    "Một câu đủ rõ để rà soát lại trong danh sách tên miền bị chặn. Quyết định từ chối tồn tại lâu hơn bản ghi.",
+  "org.rejectDone": "Đã lưu trữ “{name}”, và {domain} sẽ không tạo công ty nữa",
   "org.name": "Công ty",
   "org.description": "Họ làm gì",
   "org.website": "Trang web",

@@ -27,6 +27,7 @@ import {
 } from "./common";
 import { DecisionsChip } from "./companyapprovals";
 import { RELATIONSHIP_TYPE_LABELS, relationshipBadges } from "./companylookups";
+import { CompanyRejectAction } from "./companyreject";
 import { ComposeModal } from "./compose";
 import { joinMultiselectValue } from "./create";
 import { useObjectCustomFields } from "./customfields.form";
@@ -790,6 +791,16 @@ export function CompanyActionBadges({
               the account's name. Absent when nothing waits. */}
         {onOpenDecisions && (
           <DecisionsChip view={view} onOpen={onOpenDecisions} />
+        )}
+        {/* Beside Archive because it IS an archive, and separate from it
+            because archiving alone does not settle the question: this record
+            came from mail, so the same domain mints it again next week. Drawn
+            only where there is a domain to refuse and only for a seat holding
+            both halves — CompanyRejectAction decides both, and returns nothing
+            when either says no. Hidden in overlay with the rest of the native
+            verbs; the server refuses it there too. */}
+        {!overlay && (
+          <CompanyRejectAction org={org} disabledReasonId={refusedByState} />
         )}
         {/* Last, and set apart by the panel's own seam (atoms.css). This is
             the one verb here a reader cannot walk back from the header, so it

@@ -91,7 +91,7 @@ func TestRunReportOverRESTRefusesInOverlayMode(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/v1/reports/deals-by-stage", nil)
 
-	refuseReportInOverlayMode(rec, req, overlayMode())
+	refuseInOverlayMode(rec, req, overlayMode())
 
 	if rec.Code != http.StatusUnprocessableEntity {
 		t.Fatalf("status = %d, want 422", rec.Code)
@@ -107,7 +107,7 @@ func TestRunReportOverRESTServesNativeMode(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/v1/reports/deals-by-stage", nil)
 
-	if refused := refuseReportInOverlayMode(rec, req, nativeMode()); refused {
+	if refused := refuseInOverlayMode(rec, req, nativeMode()); refused {
 		t.Fatal("a native workspace was refused its own report")
 	}
 	if rec.Body.Len() != 0 {

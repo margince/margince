@@ -31667,6 +31667,27 @@ type RejectOfferRequest struct {
 	Reason *string `json:"reason,omitempty"`
 }
 
+// RejectOrganizationRequest defines model for RejectOrganizationRequest.
+type RejectOrganizationRequest struct {
+	// Reason Why this is not a company. Required: the refusal outlives the record, and the next
+	// operator to find the domain on the blocked list can only review a decision that
+	// says something.
+	Reason string `json:"reason"`
+}
+
+// RejectOrganizationResponse Both halves of the one decision, because both landed. A caller that showed only the
+// archived record would leave the standing domain refusal — the half that stops the
+// company coming back — invisible to the person who just made it.
+type RejectOrganizationResponse struct {
+	// Domain One domain carrying a standing admission decision. `suppressed` refuses it a company —
+	// a vendor or bulk sender the business does not sell to — while `admitted` is a human
+	// deliberately letting one in, which no later verdict may undo.
+	Domain BlockedDomain `json:"domain"`
+
+	// Organization A company. Mirrors the `organization` table.
+	Organization Organization `json:"organization"`
+}
+
 // RejectVoiceDraftRequest defines model for RejectVoiceDraftRequest.
 type RejectVoiceDraftRequest struct {
 	DraftRef string `json:"draft_ref"`
@@ -40212,6 +40233,32 @@ type ConfirmOrganizationProfileFieldParams struct {
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
+// RejectOrganizationParams defines parameters for RejectOrganization.
+type RejectOrganizationParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
 // DismissOrganizationSuggestionJSONBody defines parameters for DismissOrganizationSuggestion.
 type DismissOrganizationSuggestionJSONBody struct {
 	// Fingerprint The `fingerprint` from the suggestion being dismissed, unchanged — a
@@ -42647,6 +42694,9 @@ type UpsertPartnerJSONRequestBody = UpsertPartnerRequest
 
 // UpdateOrganizationProfileFieldJSONRequestBody defines body for UpdateOrganizationProfileField for application/json ContentType.
 type UpdateOrganizationProfileFieldJSONRequestBody = UpdateOrganizationProfileFieldRequest
+
+// RejectOrganizationJSONRequestBody defines body for RejectOrganization for application/json ContentType.
+type RejectOrganizationJSONRequestBody = RejectOrganizationRequest
 
 // EnsureOrganizationScanJSONRequestBody defines body for EnsureOrganizationScan for application/json ContentType.
 type EnsureOrganizationScanJSONRequestBody = OrganizationScanRequest
@@ -51887,6 +51937,9 @@ type ServerInterface interface {
 	// Confirm a profile field without changing its value.
 	// (POST /organizations/{id}/profile-fields/{field}/confirm)
 	ConfirmOrganizationProfileField(w http.ResponseWriter, r *http.Request, id Id, field ProfileFieldKey, params ConfirmOrganizationProfileFieldParams)
+	// This is not a company — archive it and refuse its domain another (admin/ops).
+	// (POST /organizations/{id}/reject)
+	RejectOrganization(w http.ResponseWriter, r *http.Request, id Id, params RejectOrganizationParams)
 	// What this account needs, as the model last read it for this reader.
 	// (GET /organizations/{id}/scan)
 	GetOrganizationScan(w http.ResponseWriter, r *http.Request, id Id)
@@ -54881,6 +54934,12 @@ func (_ Unimplemented) UpdateOrganizationProfileField(w http.ResponseWriter, r *
 // Confirm a profile field without changing its value.
 // (POST /organizations/{id}/profile-fields/{field}/confirm)
 func (_ Unimplemented) ConfirmOrganizationProfileField(w http.ResponseWriter, r *http.Request, id Id, field ProfileFieldKey, params ConfirmOrganizationProfileFieldParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// This is not a company — archive it and refuse its domain another (admin/ops).
+// (POST /organizations/{id}/reject)
+func (_ Unimplemented) RejectOrganization(w http.ResponseWriter, r *http.Request, id Id, params RejectOrganizationParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -72202,6 +72261,81 @@ func (siw *ServerInterfaceWrapper) ConfirmOrganizationProfileField(w http.Respon
 	handler.ServeHTTP(w, r)
 }
 
+// RejectOrganization operation middleware
+func (siw *ServerInterfaceWrapper) RejectOrganization(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RejectOrganizationParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RejectOrganization(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetOrganizationScan operation middleware
 func (siw *ServerInterfaceWrapper) GetOrganizationScan(w http.ResponseWriter, r *http.Request) {
 
@@ -83850,6 +83984,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/organizations/{id}/profile-fields/{field}/confirm", wrapper.ConfirmOrganizationProfileField)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/organizations/{id}/reject", wrapper.RejectOrganization)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/organizations/{id}/scan", wrapper.GetOrganizationScan)
