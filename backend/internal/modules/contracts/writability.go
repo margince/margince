@@ -56,10 +56,13 @@ import (
 // here would refuse a write this module admits today, which is a different
 // change from the ordering one.
 //
-// The first read still guards existence. LockRow carries no visibility clause,
-// so a caller who cannot see the row takes the lock and is then answered 404 by
-// the read under it — the same answer, for the transaction's lifetime, which is
-// what LockPair's own note says about resolving ids before locking them.
+// The visibility read stays FIRST, and what it buys is not the 404 — the read
+// UNDER the lock answers that either way, since LockRow carries no visibility
+// clause and the row is refused the moment it is read. What it buys is that an
+// authenticated caller who cannot see a contract does not get to take a lock on
+// it: without it, a caller outside the row scope would queue every writer of an
+// agreement they may not even know exists, for the length of their own
+// transaction.
 func writableContract(ctx context.Context, tx pgx.Tx, id ids.ContractID, asOf time.Time) (crmcontracts.Contract, error) {
 	if _, err := readContract(ctx, tx, id, asOf); err != nil {
 		return crmcontracts.Contract{}, err

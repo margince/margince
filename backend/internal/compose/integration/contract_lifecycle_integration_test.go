@@ -265,6 +265,16 @@ func TestAnInvisibleContractIsAbsentRatherThanRefused(t *testing.T) {
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("a contract outside the caller's scope: err = %v, want ErrNotFound (existence stays hidden)", err)
 	}
+
+	// And a WRITE says the same. The write path now locks the row before it
+	// reads what it decides, and the lock carries no visibility clause of its
+	// own — so this is the assertion that the read under it still refuses, and
+	// a caller who cannot see the contract cannot learn it exists by trying to
+	// change it.
+	if _, err := e.Contracts.ChangeStatus(rep3, contractID, contracts.StatusActive, nil); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("changing a contract outside the caller's scope: err = %v, want ErrNotFound — a "+
+			"denial would confirm the agreement exists", err)
+	}
 }
 
 // A renewal names its OWN deal, and the successor keeps it.
