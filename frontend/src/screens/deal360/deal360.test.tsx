@@ -434,6 +434,39 @@ describe("the identity line says what it is worth, where it is, and whose it is"
     ).not.toBeInTheDocument();
   });
 
+  it("keeps a long hand-written reason from pushing the facts off the line", () => {
+    // The identity line is a row of SHORT facts — the stage, the owner, the
+    // partner. This is the only free text on it, and the contract's 500-char
+    // bound stops a value nobody can read without stopping one that crowds out
+    // its neighbours. The opening rides the line; the whole answer stays
+    // reachable, because the reader most likely to look is the person checking
+    // what they typed.
+    const long =
+      `Renewed on a handshake at the trade fair ${"and again ".repeat(20)}`.trim();
+    show(
+      <DealIdentityLine
+        deal={{
+          amount_minor: 1000,
+          currency: "EUR",
+          stage_id: "st-1",
+          status: "won",
+          won_without_contract_reason: "other",
+          won_without_contract_detail: long,
+        }}
+        stages={stages}
+        locale="en"
+      />,
+    );
+    expect(screen.queryByText(long)).not.toBeInTheDocument();
+    const shown = screen.getByTitle(long);
+    expect(shown.textContent ?? "").toMatch(
+      /^Renewed on a handshake at the trade fair/,
+    );
+    expect((shown.textContent ?? "").length).toBeLessThan(long.length);
+    // The stage is still on the line beside it, which is the point.
+    expect(screen.getByText("Qualified")).toBeInTheDocument();
+  });
+
   it("says nothing about paperwork on a won deal a contract carried", () => {
     // The ordinary case, and it needs no sentence. A line on every won deal
     // would bury the ones that need reading — which is the whole point of

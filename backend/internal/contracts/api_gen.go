@@ -17241,6 +17241,11 @@ type AdvanceDealRequest struct {
 	ToStageId openapi_types.UUID `json:"to_stage_id"`
 
 	// WonWithoutContractDetail What the reason was. Required when it is `other`, which explains nothing alone.
+	//
+	// Bounded because it is free text that a record page shows back beside the deal's
+	// status: an unbounded value reaches every reader of that deal, and the header it
+	// lands in is a line of short facts. 500 is the same bound the operator notes on
+	// this contract carry.
 	WonWithoutContractDetail *string `json:"won_without_contract_detail,omitempty"`
 
 	// WonWithoutContractReason Why this win has no agreement behind it (ADR-0109 §6). Omit when the deal has a signed contract with its paper attached — the server looks for one, and refuses a win that offers neither. Both answers are legitimate; recording which is what makes the gap countable.

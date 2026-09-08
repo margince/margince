@@ -21839,7 +21839,14 @@ export interface components {
              * @enum {string|null}
              */
             won_without_contract_reason?: "imported" | "purchase_order" | "verbal" | "renewal_by_email" | "other" | null;
-            /** @description What the reason was. Required when it is `other`, which explains nothing alone. */
+            /**
+             * @description What the reason was. Required when it is `other`, which explains nothing alone.
+             *
+             *     Bounded because it is free text that a record page shows back beside the deal's
+             *     status: an unbounded value reaches every reader of that deal, and the header it
+             *     lands in is a line of short facts. 500 is the same bound the operator notes on
+             *     this contract carry.
+             */
             won_without_contract_detail?: string | null;
         };
         DealListResponse: {
