@@ -81,6 +81,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // Names this rename leaves alone: Settings → People, and the tab it heads.
     "co.relationships.title",
     "settings.group.people",
+    // "a person" here is a HUMAN BEING deciding, not the contact record.
+    "stageAutomation.noRules",
     "tab.relationships",
     // A colleague, a user, an admin, an operator — somebody with a seat here.
     "confirm.done.body",
@@ -157,6 +159,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // Names this rename leaves alone: Settings → People, and the tab it heads.
     "co.relationships.title",
     "settings.group.people",
+    // "a person" here is a HUMAN BEING deciding, not the contact record.
+    "stageAutomation.noRules",
     "tab.relationships",
     // A colleague, a user, an admin, an operator — somebody with a seat here.
     "analytics.share.liveHelp",
@@ -342,6 +346,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "share.rosterLoading",
     "share.subject",
     "signInMethods.sub",
+    // "a person" here is a HUMAN BEING deciding, not the contact record.
+    "stageAutomation.noRules",
     "stageAutomation.reviewedHint",
     "teamweekly.agenda.sub",
     "users.access.title",

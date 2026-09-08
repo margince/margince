@@ -19810,6 +19810,26 @@ type CaptureConnectionListResponse struct {
 // (EP07 capture contract, `features/07`; feedback/11 + /14). Names the purpose and the exact
 // wording/version shown, so the resulting grant is demonstrable (Art 7(1)).
 type CaptureConsent struct {
+	// Marketing An affirmative marketing tick the subject made on the same form. It does NOT record a
+	// grant: the surface mails a single-use confirmation link to the address on the booking
+	// and the grant exists only once the subject spends it. That is what lets an anonymous
+	// form carry the question at all — a stranger who knows an address can cause one
+	// confirmation mail to be sent to its owner, never a subscription in their name.
+	//
+	// Omit it for a form with no tick, or a tick left unchecked. An unchecked box writes
+	// nothing and mails nothing.
+	Marketing *struct {
+		// PolicyVersion Version id of the marketing wording shown to the subject.
+		PolicyVersion string `json:"policy_version"`
+
+		// PurposeId The marketing purpose being asked about. It must require double opt-in; a purpose
+		// that does not is refused, because there would be nothing for the mailed link to ask.
+		PurposeId openapi_types.UUID `json:"purpose_id"`
+
+		// Wording The exact marketing wording shown, carried onto the grant the confirmation records.
+		Wording string `json:"wording"`
+	} `json:"marketing,omitempty"`
+
 	// PolicyVersion Version id of the consent wording shown to the subject.
 	PolicyVersion string             `json:"policy_version"`
 	PurposeId     openapi_types.UUID `json:"purpose_id"`

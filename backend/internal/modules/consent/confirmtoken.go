@@ -114,7 +114,7 @@ type ConfirmRef struct {
 // resolve path needs no extra state. Delivery of the plaintext is the caller's,
 // which is what keeps this store free of a mail dependency.
 func (s *Store) IssueConfirmToken(ctx context.Context, personID ids.PersonID) (IssuedConfirm, error) {
-	return s.issueLink(ctx, personID, LinkRecordConfirmation, ids.PurposeID{})
+	return s.issueLink(ctx, personID, LinkRecordConfirmation, ids.PurposeID{}, "")
 }
 
 // IssueConsentLink mints the link a double-opt-in purpose is confirmed by.
@@ -126,11 +126,23 @@ func (s *Store) IssueConfirmToken(ctx context.Context, personID ids.PersonID) (I
 // endpoint had none of those properties — it handed the plaintext to an
 // operator, so one person could complete both halves of a round trip whose only
 // value is that the subject completed it.
-func (s *Store) IssueConsentLink(ctx context.Context, personID ids.PersonID, purposeID ids.PurposeID) (IssuedConfirm, error) {
+// expectedAddress is the address the REQUESTER named, and it is checked against
+// the address the link will actually reach rather than replacing it. Pass ""
+// when the caller named a person rather than typing an address.
+//
+// A caller who could CHOOSE the destination could choose a stranger's, so the
+// mint keeps deriving it from the person's own record. But a typed address
+// resolves to whatever person already holds it, including on a NON-primary
+// address, and the link then goes to that person's primary instead. That is how
+// a subscription requested from an address somebody stopped using arrives at
+// the one they still read. Refusing the mismatch is the only honest answer: the
+// two addresses disagree about who asked, and the mint cannot tell which is
+// right.
+func (s *Store) IssueConsentLink(ctx context.Context, personID ids.PersonID, purposeID ids.PurposeID, expectedAddress string) (IssuedConfirm, error) {
 	if err := httperr.RequireBodyID(purposeIDField, purposeID.UUID); err != nil {
 		return IssuedConfirm{}, err
 	}
-	return s.issueLink(ctx, personID, LinkConsentConfirmation, purposeID)
+	return s.issueLink(ctx, personID, LinkConsentConfirmation, purposeID, expectedAddress)
 }
 
 // deliveryAddressTx reads the subject's own live primary address, the same way
@@ -159,29 +171,47 @@ func deliveryAddressTx(ctx context.Context, tx pgx.Tx, personID ids.PersonID) (s
 // cannot honestly ask about. A record-confirmation link names no purpose and is
 // exempt.
 //
-// TWO refusals, because they fail differently for the reader. An ARCHIVED
-// purpose would mint and mail and then dead-end: consentCardFor resolves only a
-// live purpose, so the subject opens a 404 sent in the installation's name. A
-// purpose that does not REQUIRE double opt-in is a different mistake — the mail
-// would ask somebody to confirm a subscription whose grant never needed
+// THREE answers, because they fail differently for the reader.
+//
+// A purpose that RESOLVES TO NOTHING — never existed, or belongs to a workspace
+// this caller cannot see — is not found. It is deliberately not a 422 naming
+// the field: every other required body id on this surface answers 404 for an id
+// that names no visible row, so that a caller cannot tell "no such purpose"
+// from "not yours" and read the difference as an enumeration. Claiming such an
+// id was ARCHIVED is also simply untrue, and it sends an operator looking for a
+// purpose to unarchive that nobody ever created.
+//
+// An ARCHIVED purpose exists and is refused with its own sentence: a link
+// minted against it would mail and then dead-end, because consentCardFor
+// resolves only a live purpose, so the subject opens a 404 sent in the
+// installation's own name.
+//
+// A purpose that does not REQUIRE double opt-in is a different mistake — the
+// mail would ask somebody to confirm a subscription whose grant never needed
 // confirming, and the answer would be recorded as mailbox-proven evidence
 // nobody asked for. The endpoint's whole subject is the double-opt-in purpose.
 func requireConfirmablePurposeTx(ctx context.Context, tx pgx.Tx, purposeID ids.PurposeID) error {
 	if purposeID.UUID == (ids.UUID{}) {
 		return nil
 	}
-	var requiresDOI bool
+	var requiresDOI, archived bool
+	// Read WITHOUT the live filter, so absence and archival stay separable. The
+	// filtered read answered no-rows for both and had to guess which; it always
+	// guessed archived.
 	err := tx.QueryRow(ctx,
-		`SELECT requires_double_opt_in FROM consent_purpose
-		  WHERE id = $1 AND archived_at IS NULL`, purposeID).Scan(&requiresDOI)
+		`SELECT requires_double_opt_in, archived_at IS NOT NULL FROM consent_purpose
+		  WHERE id = $1`, purposeID).Scan(&requiresDOI, &archived)
 	if errors.Is(err, pgx.ErrNoRows) {
+		return apperrors.ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+	if archived {
 		return &ValidationError{
 			Field:  purposeIDField,
 			Reason: "this purpose is archived, so a link asking somebody to confirm it could not be answered",
 		}
-	}
-	if err != nil {
-		return err
 	}
 	if !requiresDOI {
 		return &ValidationError{
@@ -192,7 +222,7 @@ func requireConfirmablePurposeTx(ctx context.Context, tx pgx.Tx, purposeID ids.P
 	return nil
 }
 
-func (s *Store) issueLink(ctx context.Context, personID ids.PersonID, kind string, purposeID ids.PurposeID) (IssuedConfirm, error) {
+func (s *Store) issueLink(ctx context.Context, personID ids.PersonID, kind string, purposeID ids.PurposeID, expectedAddress string) (IssuedConfirm, error) {
 	if err := auth.Require(ctx, "person", principal.ActionUpdate); err != nil {
 		return IssuedConfirm{}, err
 	}
@@ -202,21 +232,11 @@ func (s *Store) issueLink(ctx context.Context, personID ids.PersonID, kind strin
 	}
 	var out IssuedConfirm
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// Live, and HELD before this transaction takes any other row lock — the
-		// same ordering the erasure path takes and for the same reason. What
-		// this mints is a working link to one person's record; an erasure
-		// committing after an unheld probe would leave the installation posting
-		// it to somebody it had just been told to forget.
-		if err := auth.HoldWritableLive(ctx, tx, "person", personID.UUID); err != nil {
-			return err
-		}
-		// A purpose this mail can honestly ask about, checked inside the
-		// transaction that mints against it. The two ways it can fail, and why
-		// neither is caught by the foreign key, are on the function itself.
-		if err := requireConfirmablePurposeTx(ctx, tx, purposeID); err != nil {
-			return err
-		}
-		deliveredTo, err := deliveryAddressTx(ctx, tx, personID)
+		deliveredTo, err := admitLinkTx(ctx, tx, linkRequest{
+			personID:        personID,
+			purposeID:       purposeID,
+			expectedAddress: expectedAddress,
+		})
 		if err != nil {
 			return err
 		}

@@ -289,6 +289,18 @@ func stageOrgReplaceSets(ctx context.Context, tx pgx.Tx, id ids.OrganizationID,
 		if err := ensureOrgDomainsUnclaimedExcept(ctx, tx, id, *in.Domains); err != nil {
 			return "", err
 		}
+		// And elect the primary HERE, for the same reason and on the same
+		// slice. The reconcile elects one either way, but on a copy — so an
+		// election left to it lands on the row while the audit after-image,
+		// built from this slice, still reports the domain as ordinary. The
+		// trail would then say a company has no primary domain while the row
+		// says it does, and is_primary is exactly what admits that company to
+		// the website read the trail exists to explain.
+		live, err := livePrimaryDomain(ctx, tx, id)
+		if err != nil {
+			return "", err
+		}
+		*in.Domains = electPrimary(*in.Domains, live)
 	}
 	// A replace-set changes no column on the row itself, so this bump is what
 	// makes the patch non-empty and carries the version guard. Once, after both

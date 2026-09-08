@@ -382,46 +382,6 @@ func (c *consentEnv) grantMarketingByConfirmLink(t *testing.T) string {
 	return token
 }
 
-// Issuance mints nothing, and says so.
-//
-// This replaces a test of the issuance round trip — non-DOI purposes refused,
-// a fresh token superseding a stale one, both mints audited. None of that
-// exists now: the endpoint returns a conflict for every caller, nothing writes
-// consent_doi_token, and the redemption arm is gone. A double-opt-in purpose
-// confirms through a spent confirm-details link instead, which
-// TestConsentDoubleOptInNorm exercises.
-//
-// What is worth holding is that the refusal is a refusal: the same answer
-// whatever purpose is named, and no row behind it. An endpoint in the public
-// contract that quietly minted again would hand an operator both halves of a
-// round trip whose only value is that the subject completed one of them.
-func TestDOIIssuanceMintsNothingWhicheverPurposeIsNamed(t *testing.T) {
-	c := setupConsent(t)
-
-	// A purpose that requires double opt-in, and one that does not, get the
-	// same answer. The endpoint resolves no id, so it can tell a caller nothing
-	// about which purposes exist.
-	for _, purpose := range []string{"marketing_email", "transactional"} {
-		if status := c.Call(t, "POST", "/v1/people/"+c.personID+"/consent/double-opt-in", AnyMap{
-			"purpose_id": c.purposes[purpose],
-		}, nil, nil); status != http.StatusConflict {
-			t.Errorf("issuance under %s → %d, want 409", purpose, status)
-		}
-	}
-
-	// And nothing was written. The table keeps its history and takes no new
-	// rows, so an unredeemed invitation cannot outlive the change.
-	var audit struct {
-		Data []AnyMap `json:"data"`
-	}
-	if status := c.Call(t, "GET", "/v1/audit-log?entity_type=consent_doi_token", nil, nil, &audit); status != http.StatusOK {
-		t.Fatalf("audit read → %d", status)
-	}
-	if len(audit.Data) != 0 {
-		t.Fatalf("a refused issuance audited %d row(s), want none", len(audit.Data))
-	}
-}
-
 func TestConsentProofLogIsAppendOnlyAndIdempotent(t *testing.T) {
 	c := setupConsent(t)
 	grant := func() int {

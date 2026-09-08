@@ -27,6 +27,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/pkg/extension/messaging"
 )
 
@@ -69,6 +71,14 @@ type Verdict struct {
 	// matching on Reason, which is an operator-facing sentence, means an
 	// ordinary copy edit silently reclassifies a legal fact.
 	Code string
+	// Suppression names WHICH communication_suppression kind bound, set only
+	// when Code is BlockSuppressed. blockedReasonCode (authorizetransmit.go)
+	// reads it rather than guessing: the transmit path re-derives the same
+	// answer from the message's own resolved category a moment later
+	// (applySuppression), but a caller that reads Code alone — the only one
+	// today, and any future one — must not get a block reason this function
+	// invented rather than the one the record actually names.
+	Suppression string
 	// QualifyingDerived marks a Qualifying that was READ OFF the timeline
 	// rather than read from a stored row.
 	//
@@ -143,6 +153,29 @@ func VerdictForPerson(ctx context.Context, tx pgx.Tx, personID string, purpose P
 	}
 	if suppressed {
 		return Verdict{State: VerdictBlocked, Reason: objectionReason(at), Code: BlockObjection}, nil
+	}
+
+	// The same communication_suppression table the transmit gate reads
+	// (liveSuppression, authorizetransmit.go), asked here so the preview this
+	// function answers for cannot say "allowed" a moment after the real send
+	// would refuse. A different table from the person_consent read above: that
+	// one is this PURPOSE's own recorded state; this one binds by CATEGORY
+	// regardless of what was ever granted for it — an Art. 21 objection blocks
+	// marketing even though nobody ever withdrew consent for it in words.
+	//
+	// No address: this answers about the PERSON in general, the question a
+	// guard read asks, not about one message to one address — an address-level
+	// hard bounce on a stale mailbox must not read as "this person is blocked"
+	// when they have another channel on file.
+	kinds, err := liveSuppression(ctx, tx, personID, connector.Recipient{})
+	if err != nil {
+		return Verdict{}, err
+	}
+	category := categoryForClass(purpose.Class)
+	for _, kind := range kinds {
+		if suppressionBinds(kind, category) {
+			return Verdict{State: VerdictBlocked, Reason: suppressionReason(kind), Code: BlockSuppressed, Suppression: kind}, nil
+		}
 	}
 
 	switch purpose.Class {
@@ -275,6 +308,23 @@ func objectionReason(at time.Time) string {
 	}
 	return fmt.Sprintf("they objected on %s, and an objection overrides every other basis",
 		at.Format("2 Jan 2006"))
+}
+
+// suppressionReason states a live communication_suppression the way a rep can
+// repeat it, alongside objectionReason and qualifyingReason.
+func suppressionReason(kind string) string {
+	switch kind {
+	case commsauthz.ReasonObjection:
+		return "they objected to marketing, and an objection overrides every other basis"
+	case commsauthz.ReasonRestricted:
+		return "a statutory restriction is recorded against writing to them"
+	case commsauthz.ReasonSubjectRequest:
+		return "they asked us to stop, and a rep recorded it"
+	case commsauthz.ReasonHardBounce:
+		return "their address does not accept mail"
+	default:
+		return "a suppression is recorded against writing to them"
+	}
 }
 
 func qualifyingReason(event QualifyingEvent) string {

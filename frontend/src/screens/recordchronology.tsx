@@ -9,9 +9,10 @@ import { FilterPills } from "../design-system/filterpills";
 import type { RecordTimeline } from "../design-system/recordtimeline";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { coldFieldLabel, LoadMoreButton, useViewerId } from "./common";
+import { LoadMoreButton, useViewerId } from "./common";
 import { changeTimeline, useFieldHistory } from "./history";
 import { mergeChronology } from "./history.logic";
+import { historyFieldLabel } from "./historyfieldlabels";
 import type { HistoryValueCtx } from "./historyvalues";
 
 // A record has ONE chronology, and this is where it is assembled — for any
@@ -231,9 +232,13 @@ export function useRecordChronology({
       ? { ...entry, onOpenEmail: () => onOpenEmail(entry.id) }
       : entry,
   );
+  // historyFieldLabel, not coldFieldLabel: changeRows is the same
+  // FieldHistoryEntry feed the Changes tab renders, and COLD_FIELD_LABELS
+  // names a different vocabulary (site-read/enrichment fields) that has no
+  // reason to know an ordinary record field's word.
   const changeEntries = changeTimeline(
     changeRows,
-    (field) => coldFieldLabel(field, t),
+    (field) => historyFieldLabel(field, t),
     values,
     t("timeline.fieldUpdated"),
     viewerId,
