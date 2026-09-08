@@ -219,13 +219,22 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 		// a fault here is logged for the link_reconcile sweep rather than
 		// surfaced as a capture failure (the 60s p95 already delivered).
 		s.ensureCounterparty(ctx, rec, ref, decision)
-		// The project ladder runs on the same terms and for the same reasons:
-		// after the commit, in its own transaction, never failing the capture.
-		// It is independent of the counterparty decision — a message from a
-		// sender no record was created for still belongs to the project its
-		// subject names.
-		s.attributeProject(ctx, rec, ref)
 	}
+	// The project ladder runs on the same terms as the counterparty step —
+	// after the commit, in its own transaction, never failing the capture —
+	// and on EVERY capture of the activity rather than only the first.
+	//
+	// A transient fault used to leave the message unfiled forever: the ladder
+	// ran only on creation, so every later replay found the activity present
+	// and skipped it, and the reconcile the comment promised has no caller.
+	// Running it again is the retry. It is safe by construction —
+	// linkActivityToProject is ON CONFLICT DO NOTHING and stamps either way —
+	// and cheap because an activity already filed under a project stops on one
+	// indexed read before the rungs.
+	//
+	// Independent of the counterparty decision: a message from a sender no
+	// record was created for still belongs to the project its subject names.
+	s.attributeProject(ctx, rec, ref)
 	if dedupeHit != nil && s.stager != nil {
 		// Staged OUTSIDE the capture transaction on purpose: the capture
 		// itself wrote nothing (the collision blocked it), and the

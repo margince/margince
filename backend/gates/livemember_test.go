@@ -85,7 +85,6 @@ var cannotReachIdentity = gatekit.Waive(map[string]string{
 	"internal/modules/people/leadrouting.go":         "people cannot import identity (ADR-0054 §3); the predicate must move tier first",
 	"internal/modules/people/linkedinmatch.go":       "people cannot import identity (ADR-0054 §3); the predicate must move tier first",
 	"internal/modules/projects/surface.go":           "projects cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/projects/transfer.go":          "projects cannot import identity (ADR-0054 §3); the predicate must move tier first",
 	"internal/modules/search/graphedge.go":           "search cannot import identity (ADR-0054 §3); the predicate must move tier first",
 })
 

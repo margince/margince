@@ -400,7 +400,7 @@ export const vi = {
     "Bản ghi đã thay đổi kể từ khi bạn mở — tải lại rồi thử lại.",
 
   "merge.contact": "Gộp liên hệ",
-  "merge.org": "Gộp công ty",
+  "merge.company": "Gộp công ty",
   "merge.searchPlaceholder": "Tìm kiếm…",
   "merge.pickTarget": "Chọn bản ghi được giữ lại",
   "merge.confirm": "Gộp {source} vào {target}? {source} sẽ được lưu trữ.",

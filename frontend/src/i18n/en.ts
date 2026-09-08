@@ -416,7 +416,7 @@ export const en = {
     "This record changed since you opened it — reload and try again.",
 
   "merge.contact": "Merge contact",
-  "merge.org": "Merge company",
+  "merge.company": "Merge company",
   "merge.searchPlaceholder": "Search…",
   "merge.pickTarget": "Select the surviving record",
   "merge.confirm": "Merge {source} into {target}? {source} will be archived.",

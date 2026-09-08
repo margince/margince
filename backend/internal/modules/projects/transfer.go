@@ -91,17 +91,20 @@ func (s *Store) TransferProjectOwnership(ctx context.Context, in TransferProject
 }
 
 // ensureActiveOwner refuses a receiver who could not be handed a project by a
-// single update either: app_user carries no row scope, so membership and an
-// active status are the whole check.
+// single update either.
+//
+// auth.EnsureAssignee is that question, asked once for every record kind: an
+// active, unarchived, non-agent seat that can write, inside the caller's own
+// write scope. This function keeps its name and its own error so the handover
+// contract's 422 is unchanged, and delegates the rule rather than keeping a
+// second, weaker copy of it — the copy here checked status and archival only,
+// so it admitted an agent seat and a read seat.
 func ensureActiveOwner(ctx context.Context, tx pgx.Tx, owner ids.UserID) error {
-	var active bool
-	if err := tx.QueryRow(ctx,
-		`SELECT EXISTS (SELECT 1 FROM app_user WHERE id = $1 AND status = 'active' AND archived_at IS NULL)`,
-		owner).Scan(&active); err != nil {
+	if err := auth.EnsureAssignee(ctx, tx, owner.UUID); err != nil {
+		if errors.As(err, new(*auth.AssigneeNotAllowedError)) {
+			return &OwnerNotActiveError{}
+		}
 		return fmt.Errorf("check receiving owner: %w", err)
-	}
-	if !active {
-		return &OwnerNotActiveError{}
 	}
 	return nil
 }

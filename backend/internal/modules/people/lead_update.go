@@ -231,7 +231,7 @@ func blank(value *string) bool { return value == nil || *value == "" }
 // caller's transaction. active names the workspace's custom-field columns
 // (fetched before the tx opened).
 func (s *Store) updateLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in UpdateLeadInput, active []fieldcatalog.Column) (crmcontracts.Lead, error) {
-	if err := auth.EnsureWritable(ctx, tx, "lead", id.UUID); err != nil {
+	if err := ensureLeadUpdateAuthority(ctx, tx, id, in); err != nil {
 		return crmcontracts.Lead{}, err
 	}
 	current, err := readLead(ctx, tx, id, storekit.LiveOnly, active)

@@ -393,7 +393,7 @@ export const de = {
     "Dieser Datensatz hat sich geändert, seit du ihn geöffnet hast — neu laden und erneut versuchen.",
 
   "merge.contact": "Kontakt zusammenführen",
-  "merge.org": "Firma zusammenführen",
+  "merge.company": "Firma zusammenführen",
   "merge.searchPlaceholder": "Suchen…",
   "merge.pickTarget": "Überlebenden Datensatz auswählen",
   "merge.confirm":
