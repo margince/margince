@@ -178,11 +178,14 @@ describe("the record's chronology", () => {
 
     await user.click(screen.getByRole("button", { name: "All" }));
 
-    await waitFor(() => expect(screen.getByText("owner id")).toBeTruthy());
+    // "Owner", not the raw "owner id" the field name would fall back to —
+    // this feed is the same FieldHistoryEntry rows the Changes tab labels
+    // through historyFieldLabel, and the combined view owes it the same word.
+    await waitFor(() => expect(screen.getByText("Owner")).toBeTruthy());
     const rows = screen.getAllByRole("listitem");
     const text = rows.map((row) => row.textContent ?? "");
     const mailFirst = text.findIndex((row) => row.includes("Fleet renewal"));
-    const changed = text.findIndex((row) => row.includes("owner id"));
+    const changed = text.findIndex((row) => row.includes("Owner"));
     const mailLast = text.findIndex((row) => row.includes("Depot access"));
     // 11 Aug, then the 10 Aug change, then 9 Aug: interleaved by time rather
     // than one feed appended to the other.

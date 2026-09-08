@@ -74,6 +74,29 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
   ["wait_until", "history.field.wait_until"],
 ]);
 
+// Fields a SYNTHETIC AuditEvent payload names — a write with no before/after
+// image of a real column, described instead by its own free-form keys. The
+// three consent-module writers that emit them today:
+// backend/internal/modules/consent/suppress.go (`kind`, `decided_by_level`),
+// qualifyingevent.go (`qualifying_event`, `note`), and authorizebasis.go
+// (`communication_basis`, `resolved_category`).
+//
+// A SEPARATE map from HISTORY_FIELD_LABELS on purpose: the census below derives
+// that one from what an `Update<Type>Request` actually writes, and its own
+// "no word for an unwritten field" direction would fail the moment a synthetic
+// key appeared there — these never will be one, because nothing here forces
+// upstream to keep it in sync with these Go literals. That absence of a gate is
+// exactly what margince#4350 found: a field named here has no other census to
+// fall back on, so an outgrown or misspelled key would fail only by rotting.
+const SYNTHETIC_AUDIT_FIELD_LABELS = new Map<string, MessageKey>([
+  ["communication_basis", "history.field.communication_basis"],
+  ["decided_by_level", "history.field.decided_by_level"],
+  ["kind", "history.field.kind"],
+  ["note", "history.field.note"],
+  ["qualifying_event", "history.field.qualifying_event"],
+  ["resolved_category", "history.field.resolved_category"],
+]);
+
 // The label a history row shows for one field.
 //
 // A field with no key falls back to its own name with the underscores spaced
@@ -84,13 +107,21 @@ export function historyFieldLabel(
   field: string,
   t: (key: MessageKey) => string,
 ): string {
-  const key = HISTORY_FIELD_LABELS.get(field);
+  const key =
+    HISTORY_FIELD_LABELS.get(field) ?? SYNTHETIC_AUDIT_FIELD_LABELS.get(field);
   return key ? t(key) : field.replaceAll("_", " ");
 }
 
 // The same map as a lookup, for the census that holds it against the contract.
 export function historyFieldLabelKey(field: string): MessageKey | undefined {
   return HISTORY_FIELD_LABELS.get(field);
+}
+
+// The synthetic map's own keys, for the test that holds each one to an i18n
+// key that actually exists — the one direction a Go-literal vocabulary can
+// still be checked from this side of the contract.
+export function syntheticAuditFieldLabelled(): string[] {
+  return [...SYNTHETIC_AUDIT_FIELD_LABELS.keys()];
 }
 
 // Every field this map claims a word for — the census reads it to hold the
