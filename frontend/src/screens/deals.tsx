@@ -3454,7 +3454,10 @@ function DealActions({
           archivedMessage={t("record.archiveDone", { name: deal.name })}
           archive={async () => {
             const { data, error } = await api.DELETE("/deals/{id}", {
-              params: { path: { id: deal.id } },
+              params: {
+                path: { id: deal.id },
+                ...ifMatch(requireVersion(deal.version)),
+              },
             });
             if (error) {
               throwProblem(error);

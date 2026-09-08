@@ -2,7 +2,14 @@
 import "@testing-library/jest-dom/vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render as rtlRender, screen } from "@testing-library/react";
+import {
+  cleanup,
+  render as rtlRender,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
@@ -45,6 +52,15 @@ const STAGE: Stage = {
   position: 1,
   semantic: "open",
   win_probability: 40,
+};
+
+// A stage the fixture deal is NOT in: the bar leaves a row alone when the move
+// would not move it, so a one-stage fixture proves nothing about the move verb.
+const OTHER_STAGE: Stage = {
+  ...STAGE,
+  id: "s-2",
+  name: "Proposal",
+  position: 2,
 };
 
 function json(body: unknown) {
@@ -97,7 +113,13 @@ afterEach(() => {
 describe("the bulk bar's roster caveat", () => {
   it("comes after every verb, never between the owner picker and the button that applies it", async () => {
     stubTruncatedRoster();
-    render(<DealBulkBar deals={[DEAL]} stages={[STAGE]} onDone={() => {}} />);
+    render(
+      <DealBulkBar
+        deals={[DEAL]}
+        stages={[STAGE, OTHER_STAGE]}
+        onDone={() => {}}
+      />,
+    );
 
     const note = await screen.findByText(en["state.partial"]);
     for (const label of [
@@ -117,7 +139,13 @@ describe("the bulk bar's roster caveat", () => {
 
   it("stays attached to the picker it is about, through the picker's description", async () => {
     stubTruncatedRoster();
-    render(<DealBulkBar deals={[DEAL]} stages={[STAGE]} onDone={() => {}} />);
+    render(
+      <DealBulkBar
+        deals={[DEAL]}
+        stages={[STAGE, OTHER_STAGE]}
+        onDone={() => {}}
+      />,
+    );
 
     const note = await screen.findByText(en["state.partial"]);
     const picker = screen.getByRole("combobox", {
@@ -130,7 +158,13 @@ describe("the bulk bar's roster caveat", () => {
 
   it("does not announce itself as news inside the bar's live region", async () => {
     stubTruncatedRoster();
-    render(<DealBulkBar deals={[DEAL]} stages={[STAGE]} onDone={() => {}} />);
+    render(
+      <DealBulkBar
+        deals={[DEAL]}
+        stages={[STAGE, OTHER_STAGE]}
+        onDone={() => {}}
+      />,
+    );
 
     // The bar is `aria-live="polite"`, so the caveat arriving when the walk
     // finishes would be read out mid-interaction — a fact about a list the
@@ -139,5 +173,128 @@ describe("the bulk bar's roster caveat", () => {
       "aria-live",
       "off",
     );
+  });
+});
+
+// Every verb in the bar sends the row's own version guard.
+//
+// The bar's promise is that each row carries its own guard, and archive was the
+// verb that did not: a deal edited between the moment the list was drawn and the
+// moment the archive reached the server was archived anyway, and the edit went
+// with it. Bulk archive is the gesture most likely to race somebody else's edit,
+// and it was the one verb of three that could not lose the race.
+//
+// All three are asserted, not archive alone: a test naming only the verb that
+// was broken passes just as well after a refactor drops the header from its
+// neighbours.
+describe("the bulk bar's version guards", () => {
+  // One page of owners, so the roster caveat never appears and cannot collide
+  // with the button lookups below.
+  function stubDealWrites(): Request[] {
+    const sent: Request[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const request = input instanceof Request ? input : null;
+        if (request && request.method !== "GET") {
+          sent.push(request);
+          return json(DEAL);
+        }
+        return json({
+          data: [{ id: "u-1", display_name: "Member" }],
+          page: { has_more: false },
+        });
+      }),
+    );
+    return sent;
+  }
+
+  // The row's OWN version, not merely a header that is present: a guard pinned
+  // to the wrong revision refuses a write nobody raced.
+  function expectGuarded(request: Request, method: string, path: string) {
+    expect(request.method).toBe(method);
+    expect(new URL(request.url, "https://test.local").pathname).toBe(path);
+    expect(request.headers.get("If-Match")).toBe(String(DEAL.version));
+  }
+
+  it("pins the row's version when assigning an owner", async () => {
+    const sent = stubDealWrites();
+    const user = userEvent.setup();
+    render(
+      <DealBulkBar
+        deals={[DEAL]}
+        stages={[STAGE, OTHER_STAGE]}
+        onDone={() => {}}
+      />,
+    );
+
+    await user.click(
+      await screen.findByRole("combobox", { name: en["deals.bulkOwner"] }),
+    );
+    await user.click(
+      within(screen.getByRole("listbox")).getByRole("option", {
+        name: "Member",
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: en["deals.bulkAssign"] }),
+    );
+
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expectGuarded(sent[0], "PATCH", "/v1/deals/d-1");
+  });
+
+  it("pins the row's version when moving a stage", async () => {
+    const sent = stubDealWrites();
+    const user = userEvent.setup();
+    render(
+      <DealBulkBar
+        deals={[DEAL]}
+        stages={[STAGE, OTHER_STAGE]}
+        onDone={() => {}}
+      />,
+    );
+
+    // The deal is in s-1 already, and the bar skips a row that would not move —
+    // so the fixture needs a SECOND stage for the move to be a move at all.
+    await user.click(
+      screen.getByRole("combobox", { name: en["deals.bulkStage"] }),
+    );
+    await user.click(
+      within(screen.getByRole("listbox")).getByRole("option", {
+        name: OTHER_STAGE.name,
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: en["deals.bulkMove"] }),
+    );
+
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expectGuarded(sent[0], "POST", "/v1/deals/d-1/advance");
+  });
+
+  it("pins the row's version when archiving", async () => {
+    const sent = stubDealWrites();
+    const user = userEvent.setup();
+    render(
+      <DealBulkBar
+        deals={[DEAL]}
+        stages={[STAGE, OTHER_STAGE]}
+        onDone={() => {}}
+      />,
+    );
+
+    // Archiving asks first, so the verb is two gestures: the bar's button opens
+    // the confirmation, and the modal's button is the one that writes.
+    await user.click(
+      screen.getByRole("button", { name: en["deals.bulkArchive"] }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    await user.click(
+      within(dialog).getByRole("button", { name: en["deals.bulkArchive"] }),
+    );
+
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expectGuarded(sent[0], "DELETE", "/v1/deals/d-1");
   });
 });
