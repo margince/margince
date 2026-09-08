@@ -44,6 +44,9 @@ func constraintFault(err error) (Fault, bool) {
 	if fault, ok := retentionHoldFault(err); ok {
 		return fault, true
 	}
+	if fault, ok := sideEffectFault(err); ok {
+		return fault, true
+	}
 	switch {
 	case storekit.IsForeignKeyViolation(err):
 		return Fault{
@@ -77,6 +80,42 @@ func constraintFault(err error) (Fault, bool) {
 	default:
 		return Fault{}, false
 	}
+}
+
+// sideEffectFault answers a constraint on a row the REQUEST never wrote.
+//
+// Every mutation writes three rows in one transaction — the domain record, an
+// audit entry and an outbox event — and only the first carries anything the
+// caller sent. From a SQLSTATE the three are indistinguishable, so the net
+// below answered all of them the same way: 422, "a value in this request is
+// outside what its field accepts", "do not retry unchanged".
+//
+// For the two the caller did not write, every clause of that is wrong. It is
+// not their value; there is nothing in their request to check against the
+// schema; and "do not retry unchanged" tells a client to give up on a call that
+// would succeed the moment the defect is fixed. The case that surfaced it was a
+// connector write whose audit verb was missing from audit_log_action_check: the
+// admin was told to check a request that was entirely valid, and the real fault
+// — ours — took a browser walk to find rather than one log line.
+//
+// So it is what it is: a server fault. The caller gets the opaque 500 that says
+// so, and the operator gets the constraint through InfraCause, which is where a
+// defect in code the caller cannot see belongs.
+//
+// A Detail is deliberately absent. There is nothing true to say to the caller
+// beyond the status — naming the constraint would leak the schema this file
+// exists not to leak, and any sentence about "a value" would be the same
+// falsehood in shorter form.
+func sideEffectFault(err error) (Fault, bool) {
+	table, ok := storekit.ViolatedTable(err)
+	if !ok || !storekit.IsSideEffectTable(table) {
+		return Fault{}, false
+	}
+	return Fault{
+		Status:     http.StatusInternalServerError,
+		Code:       "internal",
+		InfraCause: err,
+	}, true
 }
 
 // activityRestrictedImmutable is the constraint name the data-layer guard

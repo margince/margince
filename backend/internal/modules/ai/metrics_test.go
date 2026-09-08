@@ -500,3 +500,24 @@ func TestANegativeItemizedCountNeverReachesACounter(t *testing.T) {
 		}
 	}
 }
+
+// Gemini shouts its terminals and OpenAI whispers them. One series each, not
+// two — and the abnormal ones must survive as themselves, because "retry
+// smaller", "do not retry" and "change the prompt" are different answers and
+// folding them into "other" throws away which one applies.
+func TestVendorFinishReasonsNormalizeRatherThanFold(t *testing.T) {
+	m := newCallMetrics()
+	for _, reason := range []string{"MAX_TOKENS", "max_tokens", "SAFETY", "end_turn"} {
+		m.observeAttempt(served(func(c *Call) { c.FinishReason = reason }))
+	}
+
+	out := render(m)
+	mustContain(t, out,
+		"margince_ai_call_finish_reasons_total{"+servedLabels+`,reason="max_tokens"} 2`,
+		"margince_ai_call_finish_reasons_total{"+servedLabels+`,reason="safety"} 1`,
+		"margince_ai_call_finish_reasons_total{"+servedLabels+`,reason="end_turn"} 1`,
+	)
+	if strings.Contains(out, `reason="other"`) {
+		t.Errorf("a terminal a provider actually reports was folded away:\n%s", out)
+	}
+}

@@ -152,9 +152,9 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 
-	// The api serves the write, this role only ever reads — so without this it
-	// would keep serving whatever binding it resolved at boot while the api
-	// served the new one, which is the two-roles-disagree failure moving
+	// The api serves the routing write, this role only ever reads — so without
+	// this it would keep serving whatever binding it resolved at boot while the
+	// api served the new one, which is the two-roles-disagree failure moving
 	// routing into the database was meant to end (compose/routingwatcher).
 	go compose.NewRoutingWatcher(pool, &modelPath, config.FromOS, logger).Run(ctx)
 

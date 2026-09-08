@@ -124,6 +124,64 @@ func TestASkippedRecordAdvancesTheRowJustAsAnAcceptedOneDoes(t *testing.T) {
 	}
 }
 
+// A record the core's grammar refuses is this row's own terminal fault, and it
+// arrives as a DISPOSITION rather than an error.
+//
+// The core moved that distinction into its return value so a unit can tell "the
+// core skipped this deliberately" from "I built something it cannot use"
+// without matching on an error class — a change that must not quietly turn a
+// permanent refusal into a landing. What a member reads on their own screen is
+// the same class it always was.
+func TestARecordTheCoreCannotRepresentParksRatherThanLanding(t *testing.T) {
+	t.Parallel()
+	rt := draining(queuedRow(firstRequestID, 0, landable(t, "m-1")))
+	rt.results = []extension.Result{{
+		Disposition: extension.DispositionUnrepresentable,
+		Reason:      "activity.body: too long",
+	}}
+	if err := drain(context.Background(), rt); err != nil {
+		t.Fatalf("a request only its own sender can fix failed the tick: %v", err)
+	}
+	_, args := rt.tx.statementMentioning(t, "last_error_class = $3")
+	if args[1] != stateParked {
+		t.Fatalf("the request was left in state %v; the same bytes build the same record every time", args[1])
+	}
+	if args[2] != classRefusedByTheCore.Class {
+		t.Fatalf("the row records class %v, want %v — a disposition must reach the same class the "+
+			"error class did, or a member reads something new for an unchanged fact",
+			args[2], classRefusedByTheCore.Class)
+	}
+	if len(rt.tx.audited) != 1 {
+		t.Fatalf("parking recorded %d ledger row(s); a message this installation accepted and will "+
+			"never act on is a fact somebody asks about", len(rt.tx.audited))
+	}
+	// The core's own complaint travels into the ledger row: the class says
+	// which wall the message hit, and only this says what about the message hit
+	// it — which is the whole of what the sender can act on.
+	if detail := string(rt.tx.audited[0].Detail); !strings.Contains(detail, "activity.body: too long") {
+		t.Errorf("the ledger row reads %s, want it to carry the core's reason", detail)
+	}
+}
+
+// An outcome this build has never heard of is NOT an acceptance.
+//
+// The published contract says so, and a switch that landed everything except
+// the refusals it knows would mark a future one as landed the day it ships —
+// silently, on a row nobody looks at again.
+func TestADispositionThisBuildDoesNotKnowIsNotALanding(t *testing.T) {
+	t.Parallel()
+	rt := draining(queuedRow(firstRequestID, 0, landable(t, "m-1")))
+	rt.results = []extension.Result{{Disposition: extension.Disposition("from_a_later_core")}}
+	if err := drain(context.Background(), rt); err != nil {
+		t.Fatalf("an unknown disposition failed the tick: %v", err)
+	}
+	_, args := rt.tx.statementMentioning(t, "last_error_class = $3")
+	if args[1] != stateParked {
+		t.Fatalf("an unrecognised outcome left the request in state %v, want it parked rather than "+
+			"marked as landed", args[1])
+	}
+}
+
 // A request nothing will ever land parks on the FIRST attempt rather than
 // spending five ticks at the head of a queue, and parking is never a silent
 // drop: the row stays, carrying the class, and a ledger row says what happened.
@@ -323,7 +381,7 @@ func TestAnOutageDoesNotSpendTheRequestsOwnAttemptBudget(t *testing.T) {
 	t.Parallel()
 	req := queued{id: "11111111-1111-1111-1111-111111111111", attempts: maxDrainAttempts - 1}
 	rt := &fakeRuntime{tx: &fakeTx{}}
-	if err := markStalled(context.Background(), rt, req, classCaptureUnavailable, false); err != nil {
+	if err := markStalled(context.Background(), rt, req, classCaptureUnavailable, false, ""); err != nil {
 		t.Fatalf("marking stalled: %v", err)
 	}
 	_, args := rt.tx.statementMentioning(t, "SET state =")
@@ -367,7 +425,7 @@ func TestAFaultTheRequestOwnsStillSpendsItsBudget(t *testing.T) {
 			}
 			req := queued{id: "11111111-1111-1111-1111-111111111111", attempts: maxDrainAttempts - 1}
 			rt := &fakeRuntime{tx: &fakeTx{}}
-			if err := markStalled(context.Background(), rt, req, class, terminal); err != nil {
+			if err := markStalled(context.Background(), rt, req, class, terminal, ""); err != nil {
 				t.Fatalf("marking stalled: %v", err)
 			}
 			_, args := rt.tx.statementMentioning(t, "SET state =")

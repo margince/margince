@@ -20,6 +20,10 @@
 // than one copy. It carries no workspace id and no tenant data at all, which
 // is what makes it a NARROWER surface than the api's /metrics rather than a
 // second copy of it.
+//
+// The AI counters are not an exception to that rule but an instance of it: a
+// call is routed by ONE process, so the counter is a property of the process
+// that made it, and the api cannot report what the lanes here dispatched.
 package main
 
 import (
@@ -126,18 +130,21 @@ func startObserveListener(ctx context.Context, cfg workerConfig, pool *pgxpool.P
 	// of a shared table the api already serves, and a second copy of one
 	// number is a worse operator surface than one copy.
 	//
-	// Extra is NOT nil, and the reasoning that once left it so was the trap
-	// this listener exists to avoid. It said "this process keeps no metric of
-	// its own" — but this role resolves a model path (main.go), and every
-	// Router in the binary increments ai's process-wide collector, so the
-	// worker's briefs, enrichment and embedding calls were all counted here
-	// and rendered by nobody. Process-local state is exactly what this
-	// listener carries; only shared-table reads belong to the api.
+	// Extra carries the AI counters, and they belong here by the same test
+	// everything else on this listener passes: they count what THIS process
+	// routed, so they differ per target and no other role can answer them.
+	// While this was nil every call the enrichment lanes made was missing from
+	// the AI panels entirely — and because the lanes are where the bulk of the
+	// routing happens, a per-tier error rate read from the api alone described
+	// a small minority of the traffic while appearing to describe all of it.
+	// Undercounting a denominator is the failure mode that reports a healthy
+	// tier as broken.
 	//
-	// It is wired unconditionally rather than from the resolved model path,
-	// because this listener starts BEFORE that resolution — deliberately, so a
-	// slow boot is observable — and the counters are the process's, not any
-	// one router's.
+	// Wired unconditionally at construction rather than published once the
+	// model path resolves. The collector is process-wide — every Router in the
+	// binary increments the same one — so nothing here needs the path, and the
+	// listener keeps starting before that resolution, which is what lets it
+	// explain a slow boot.
 	mux.HandleFunc("/metrics", httpserver.Metrics(httpserver.MetricsInput{
 		Pool:      pool,
 		Published: events.PublishedTotal,

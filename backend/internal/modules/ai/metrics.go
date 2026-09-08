@@ -5,6 +5,7 @@ package ai
 
 import (
 	"io"
+	"strings"
 	"sync"
 
 	"github.com/margince/margince/backend/internal/platform/httpserver"
@@ -203,20 +204,42 @@ func plainCompletionTokens(tokensOut, reasoning int) int {
 	return plain
 }
 
-// finishReasons is the closed set the reason label may take. A provider's raw
-// stop reason is a string it chooses, so folding it here is what keeps the
-// family's cardinality a property of this tree rather than of an upstream; the
-// unfolded value is still recorded on the ai_call row, where a series count is
-// not at stake.
+// finishReasons is the closed set the reason label may take: the terminals the
+// providers this tree binds actually report, lowercased so a vendor shouting
+// MAX_TOKENS and one saying max_tokens are ONE series rather than two.
+//
+// A provider's raw stop reason is a string it chooses, so folding is what keeps
+// this family's cardinality a property of this tree rather than of an upstream.
+// The set is wide rather than minimal on purpose: the distinctions here are the
+// ones that call for opposite responses — retry smaller, do not retry, change
+// the prompt — so collapsing them into "other" would throw away exactly what
+// makes an abnormal terminal actionable. The unfolded value is still on the
+// ai_call row either way; only the series count is at stake here.
 var finishReasons = map[string]bool{
+	// OpenAI and the OpenAI-compatible wire.
 	"stop": true, "length": true, "content_filter": true,
-	"tool_calls": true, "function_call": true, "error": true,
+	"tool_calls": true, "function_call": true,
+	// Anthropic.
+	"end_turn": true, "max_tokens": true, "stop_sequence": true, "tool_use": true,
+	"pause_turn": true, "refusal": true,
+	// Gemini, whose abnormal terminals reach the trace as a named error.
+	"safety": true, "recitation": true, "language": true, "blocklist": true,
+	"prohibited_content": true, "spii": true, "malformed_function_call": true,
+	"image_safety": true, "unexpected_tool_call": true, "too_many_tool_calls": true,
+	// Ours, for a call that failed before any provider named a terminal.
+	"error": true, "other": true,
 }
 
-// finishReasonLabel folds anything the closed set does not name into "other".
+// finishReasonLabel normalizes case and folds anything the set does not name.
+//
+// "other" is a value Gemini itself reports, so an unrecognised terminal and a
+// reported OTHER land on the same series. That is accepted rather than
+// papered over with a second sentinel: both mean "the provider stopped for a
+// reason this dashboard cannot act on", and the ai_call row separates them.
 func finishReasonLabel(reason string) string {
-	if finishReasons[reason] {
-		return reason
+	folded := strings.ToLower(strings.TrimSpace(reason))
+	if finishReasons[folded] {
+		return folded
 	}
 	return "other"
 }

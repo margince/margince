@@ -86,13 +86,14 @@ var labelSections = []struct {
 	{heading: "## Priority", prefix: "priority: "},
 	{heading: "## Area", prefix: "area: ", bare: true},
 	{heading: "## Status", prefix: "status: "},
+	{heading: "## Claim", prefix: "claim: "},
 	{heading: "## Provenance", prefix: "", bare: true},
 }
 
 // labelSpan matches a label name as the page writes one: a fenced span holding
 // only the name, so `gh issue list --label "area: <x>"` — which has spaces — is
 // prose about a label rather than a listing of one.
-var labelSpan = regexp.MustCompile("`((?:priority: |area: |status: )?[a-z][a-z-]*)`")
+var labelSpan = regexp.MustCompile("`((?:priority: |area: |status: |claim: )?[a-z][a-z-]*)`")
 
 func TestEachSectionOfTheReferencePageListsExactlyItsLabels(t *testing.T) {
 	t.Parallel()

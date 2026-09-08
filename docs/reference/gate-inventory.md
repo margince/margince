@@ -15,7 +15,7 @@ edit its `//gate:kind` line, then regenerate from the backend directory:
 The eight shapes, what each is for, and how each one silently passes:
 [gate-patterns.md](gate-patterns.md).
 
-## Parity (98)
+## Parity (99)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -105,6 +105,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `providername_test.go` | H2 | The rule a REGISTERED NAME must satisfy is the contract's, on both surfaces that have one. |
 | `publicevents_test.go` | H3 | The public-events contract as a cross-cutting fitness function (A15): the outbound-webhook surface has three moving parts that must stay in lock-step, and nothing in the build forces them to. |
 | `rbacvocabulary_test.go` | H3 | The RBAC vocabulary is DECLARED in the contract and restated in Go, and the two must not drift. |
+| `redmainclaim_test.go` | H2 | Every `claim:` label the prose tells a session to search for is one `.github/labels.yml` declares. |
 | `reopenconditionparity_test.go` | H3 | What a snooze may wait for is spelled in four places, and all four must agree. |
 | `rowscopetables_test.go` | H2 | WHICH table a row-scope call bounds, and which column names a reference to one. |
 | `runneractivityparity_test.go` | H3 | The runner's own status vocabulary must be TOTAL over the column it reads. |

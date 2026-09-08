@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -37,7 +38,7 @@ type fakeUndoWriters struct {
 	failUnreachable ids.UUID
 }
 
-func (w *fakeUndoWriters) Reverse(_ context.Context, _ string, nativeID ids.UUID) error {
+func (w *fakeUndoWriters) Reverse(_ context.Context, _ string, nativeID ids.UUID, _ time.Time) error {
 	if nativeID == w.failAlways {
 		return fmt.Errorf("simulated business-rule refusal: %w", apperrors.ErrConflict)
 	}
