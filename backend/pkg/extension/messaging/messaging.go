@@ -42,11 +42,14 @@ type Rules struct {
 	// Jurisdiction is whose rules these are, lower-case ISO 3166-1 alpha-2.
 	Jurisdiction jurisdiction.Code
 
-	// Version is the rule set's own version, stamped onto every decision taken
-	// under it. A decision a subject later asks about must be readable against
-	// the rules that were live when it was taken, and those rules change — so
-	// the number is recorded rather than re-derived from whatever the code says
-	// today.
+	// Version is the rule set's own version. A decision a subject later asks
+	// about must be readable against the rules that were live when it was
+	// taken, and those rules change, so the number is meant to be recorded
+	// rather than re-derived from whatever the code says today.
+	//
+	// DECLARED, NOT YET APPLIED: no decision records it. Held by
+	// TestEveryDeclaredMessagingObligationIsAppliedOrRecorded
+	// (backend/gates/messagingruleapplied_test.go), which carries the reason.
 	Version int
 
 	// ReplyWindow is how long an inbound message keeps making a reply a reply
@@ -69,10 +72,20 @@ type Rules struct {
 	MarketingExceptions []MarketingException
 
 	// Disclosures are what a first message to somebody must carry.
+	//
+	// DECLARED, NOT YET APPLIED: no consumer renders a disclosure into a
+	// message body. Held by TestEveryDeclaredMessagingObligationIsAppliedOrRecorded
+	// (backend/gates/messagingruleapplied_test.go), which fails when a pack
+	// declares an obligation the engine does not discharge and no entry
+	// records why.
 	Disclosures []Disclosure
 
-	// SubjectPrefix is prepended to an advertising message's subject, exactly
-	// once. Empty means none.
+	// SubjectPrefix is the marking an advertising message's subject must carry,
+	// exactly once. Empty means none.
+	//
+	// DECLARED, NOT YET APPLIED: nothing prepends it. No send path consults a
+	// pack's prefix before composing a subject. Held by the same gate as
+	// Disclosures.
 	SubjectPrefix string
 
 	// FrequencyCap bounds advertising to one address in a window. Nil means
@@ -80,7 +93,10 @@ type Rules struct {
 	FrequencyCap *FrequencyCap
 
 	// OptOutAcknowledgement records whether an opt-out is owed a confirming
-	// message. False means none is sent, which is the default.
+	// message. False means none is owed, which is the default.
+	//
+	// DECLARED, NOT YET APPLIED: nothing sends the acknowledgement. Held by the
+	// same gate as Disclosures.
 	OptOutAcknowledgement bool
 }
 
@@ -146,8 +162,12 @@ func (e MarketingException) Validate() error {
 }
 
 // DisclosureKind names something a first message must carry. Closed for the
-// reason ExceptionKind is: the engine renders each kind it knows, and one it
-// does not know would be an obligation nothing discharges.
+// reason ExceptionKind is: a pack may only name an obligation the engine can
+// be held to, and one outside this set is an obligation nothing could ever
+// discharge.
+//
+// The set being closed is not a claim that the kinds are rendered. None of them
+// is today — see Disclosures above for what holds that gap visible.
 type DisclosureKind string
 
 const (
@@ -170,7 +190,7 @@ func (k DisclosureKind) Validate() error {
 	case ControllerIdentity, PrivacyContact, ObjectionRoute, AdvertiserContact:
 		return nil
 	}
-	return fmt.Errorf("disclosure %q is not one the engine renders", string(k))
+	return fmt.Errorf("disclosure %q is not one this contract defines", string(k))
 }
 
 // Disclosure is one obligation a message carries, and where it binds.
