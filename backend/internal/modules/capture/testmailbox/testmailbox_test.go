@@ -91,6 +91,7 @@ type fakeLedger struct {
 	unechoed []capture.SentMessage
 	marked   []markedEcho
 
+	recordSentErr error
 	unechoedErr   error
 	markEchoedErr error
 }
@@ -108,6 +109,9 @@ type markedEcho struct {
 }
 
 func (f *fakeLedger) RecordSent(_ context.Context, userID ids.UUID, messageID string, to, cc []string, subject string) error {
+	if f.recordSentErr != nil {
+		return f.recordSentErr
+	}
 	f.recorded = append(f.recorded, recordedSend{userID: userID.String(), messageID: messageID, to: to, cc: cc, subject: subject})
 	return nil
 }

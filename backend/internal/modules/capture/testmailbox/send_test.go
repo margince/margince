@@ -157,6 +157,17 @@ func TestSendEmailRecordsTheSendForItsOwnEcho(t *testing.T) {
 	}
 }
 
+func TestSendEmailWrapsALedgerFailure(t *testing.T) {
+	wantErr := errors.New("ledger unavailable")
+	ledger := &fakeLedger{recordSentErr: wantErr}
+	_, err := New(ledger).SendEmail(context.Background(), testAuth(t, ids.NewV7()), connector.EmailMessage{
+		MessageID: "x@test.example", To: []string{"buyer@example.com"},
+	})
+	if !errors.Is(err, wantErr) {
+		t.Errorf("SendEmail: err = %v, want it to wrap %v", err, wantErr)
+	}
+}
+
 // TestPackageNeverImportsTheNetwork is the honest fitness test for "never
 // reaches the network" when there is no HTTP client to inject a spy for:
 // this package's own source must not import net or net/http, structurally.
