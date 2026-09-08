@@ -13,11 +13,32 @@ package finance
 //
 // **Deterministic, and deterministic in the right way.** The seed is
 // sha256(workspace | external customer id), so the same customer produces the
-// same ledger on every machine, in every test, forever. What it does NOT
-// depend on is the clock: a second sync on a later day must produce the same
-// records, or every morning's pass would rewrite every row and the mirror
-// would report change where none happened. Dates are generated backwards from
-// a fixed epoch rather than from `now` for exactly that reason.
+// same amounts, archetype and payment behaviour on every machine, in every
+// test, forever. What it does NOT depend on is the clock: a second sync on a
+// later day must produce the same records, or every morning's pass would
+// rewrite every row and the mirror would report change where none happened.
+//
+// Dates are generated backwards from an ANCHOR the caller supplies, and the
+// anchor is a STORED value — the finance connection's own creation instant —
+// rather than the clock or a constant in this file. Both of the obvious
+// alternatives fail:
+//
+//   - `now` (or any boundary derived from it — start of month, start of week)
+//     moves, so the generated ledger moves with it and every sync past the
+//     boundary rewrites every row. That is the defect the anchor exists to
+//     prevent, and anchoring to a boundary only makes it periodic, which also
+//     makes the no-rewrite invariant depend on which day the suite runs.
+//   - A constant here does not move, and that is its problem: every figure the
+//     card shows is folded over a window measured back from now (365 days for
+//     net invoiced, 180 for timeliness), so as the calendar leaves the constant
+//     behind, fewer generated invoices fall inside the windows until the card
+//     is a set of refusals. Moving the constant forward periodically is a chore
+//     nobody remembers, and the ledger rots silently between bumps.
+//
+// A stored anchor is fixed for a given installation and fresh for a new one.
+// What it costs is stated plainly: the ledger is no longer byte-identical
+// ACROSS installations, only within one. The same shape, positioned per
+// installation.
 
 import (
 	"context"
@@ -32,31 +53,32 @@ import (
 // who sees this string knows the figures are demonstration data.
 const OfflineProviderName = "offline_demo"
 
-// offlineEpoch is the fixed point every generated date is measured back from.
-//
-// NOT time.Now(). A generator keyed on today produces a different ledger every
-// day for a customer nobody touched, so every sync would rewrite every row —
-// and the sync's whole job is to notice what actually changed.
-//
-// The cost of that choice is that the ledger ages: the figures are computed
-// over windows measured back from NOW, so as the calendar leaves the epoch
-// behind, fewer and fewer generated invoices fall inside them. Anything that
-// asserts a FIGURE over this ledger therefore reads it at a clock pinned to
-// this epoch, or it is measuring how long ago the epoch was.
-var offlineEpoch = time.Date(2026, time.August, 1, 0, 0, 0, 0, time.UTC)
-
 // OfflineProvider generates one workspace's demonstration ledger.
 type OfflineProvider struct {
 	workspace string
+	// anchor is the fixed point every generated date is measured back from,
+	// truncated to a UTC day so the ledger reads as dates rather than instants.
+	// Supplied by the caller and stored, never read from the clock — see this
+	// file's header for why neither `now` nor a constant works.
+	anchor time.Time
 	// customers is the directory this provider answers. The sync maps them
 	// onto companies by an explicit link, so the names here are the
 	// source's own and need not match any company in the CRM.
 	customers []SourceCustomer
 }
 
-// NewOfflineProvider builds the generator for one workspace's customers.
-func NewOfflineProvider(workspace string, customers []SourceCustomer) *OfflineProvider {
-	return &OfflineProvider{workspace: workspace, customers: customers}
+// NewOfflineProvider builds the generator for one workspace's customers,
+// measuring its ledger back from anchor.
+//
+// anchor is the connection's own creation instant in production. It is a
+// parameter rather than a clock read so the property that matters is visible at
+// the call site: pass a moving value here and every sync rewrites every row.
+func NewOfflineProvider(workspace string, customers []SourceCustomer, anchor time.Time) *OfflineProvider {
+	return &OfflineProvider{
+		workspace: workspace,
+		anchor:    anchor.UTC().Truncate(24 * time.Hour),
+		customers: customers,
+	}
 }
 
 // Name is the string stored on the connection and shown beside the figures,
@@ -117,7 +139,7 @@ func (p *OfflineProvider) InvoicesFor(
 	// Oldest first, so the settled ones the timeliness window reads sit at the
 	// front and the open tail is genuinely the recent end.
 	for period := offlineInvoices - 1; period >= 0; period-- {
-		issued := offlineEpoch.AddDate(0, 0, -period*offlineCadenceDays)
+		issued := p.anchor.AddDate(0, 0, -period*offlineCadenceDays)
 		due := issued.AddDate(0, 0, paymentTermDays)
 		invoice := SourceInvoice{
 			ExternalID: fmt.Sprintf("%s-INV-%04d", externalCustomerID, offlineInvoices-period),
@@ -156,7 +178,7 @@ func (p *OfflineProvider) InvoicesFor(
 			})
 		}
 	}
-	out.Invoices = append(out.Invoices, creditNoteFor(out.Invoices, externalCustomerID, rng))
+	out.Invoices = append(out.Invoices, creditNoteFor(out.Invoices, externalCustomerID, rng, p.anchor))
 	return out, nil
 }
 
@@ -209,18 +231,18 @@ func settle(invoice *SourceInvoice, kind archetype, rng *rand.Rand, due time.Tim
 // figure that has never been reduced is a figure nobody has checked.
 //
 // The target must be old enough that the note still lands on or before the
-// epoch. A note dated after it would be a generated row that moved past the
+// anchor. A note dated after it would be a generated row that moved past the
 // fixed point the whole ledger is measured back from — which is the one thing
 // this generator promises not to do.
 func creditNoteFor(
-	invoices []SourceInvoice, customerID string, rng *rand.Rand,
+	invoices []SourceInvoice, customerID string, rng *rand.Rand, anchor time.Time,
 ) SourceInvoice {
 	// Oldest first (InvoicesFor builds them that way), so the eligible targets
 	// are a PREFIX of the ledger — and the oldest invoice, eighteen months
 	// back, always qualifies, which is what makes this count at least one.
 	eligible := 0
 	for _, inv := range invoices {
-		if inv.IssuedOn.AddDate(0, 0, creditNoteDelayDays).After(offlineEpoch) {
+		if inv.IssuedOn.AddDate(0, 0, creditNoteDelayDays).After(anchor) {
 			break
 		}
 		eligible++

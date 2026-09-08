@@ -227,6 +227,23 @@ func decideBirthTx(
 	if err != nil {
 		return birthDecision{}, err
 	}
+	if posture == PostureClassified {
+		// `classified` holds a message until something judges its sender, and for
+		// this sender something already has. Holding it anyway would record a
+		// question that is answered — and nothing later re-asks it, so the message
+		// would stay limited for good.
+		//
+		// Only this rung is affected. Steps 1 to 4 have already run and any hold
+		// they placed survives, because they set decision.posture and this does
+		// not clear it.
+		cleared, err := senderClearedPersonTx(ctx, tx, rec.Counterparty.Email)
+		if err != nil {
+			return birthDecision{}, err
+		}
+		if cleared {
+			posture = PostureShared
+		}
+	}
 	if posture != PostureShared {
 		// The mailbox's own standing answer, recorded even when something
 		// stricter already decided. It outlives any one counterparty hold, so a
