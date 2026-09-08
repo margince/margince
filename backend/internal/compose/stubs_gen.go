@@ -883,6 +883,10 @@ func (stubs) ListStageEvidence(w nethttp.ResponseWriter, r *nethttp.Request, id 
 	httperr.NotImplemented(w, r, "ListStageEvidence")
 }
 
+func (stubs) RevertStageProgression(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, approvalId openapi_types.UUID, params crmcontracts.RevertStageProgressionParams) {
+	httperr.NotImplemented(w, r, "RevertStageProgression")
+}
+
 func (stubs) ListDealStakeholders(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "ListDealStakeholders")
 }

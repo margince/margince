@@ -3287,6 +3287,54 @@ export interface paths {
         patch: operations["updateStage"];
         trace?: never;
     };
+    "/deals/{id}/stage-progressions/{approvalId}/revert": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                /** @description The stage-progression approval whose move is being taken back. */
+                approvalId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take back a stage move the product made by itself.
+         * @description Undo for an AUTOMATICALLY applied stage move, inside the window the
+         *     transition's rule allows (`undo_window_hours`, default 72).
+         *
+         *     It is a separate verb rather than the general undo path because a stage
+         *     move is not restorable by writing the field back: it wrote
+         *     `deal_stage_history` and the progression ledger beside the column, so
+         *     restoring `stage_id` alone would leave the history saying the deal is
+         *     somewhere it is not. The general replay engine refuses `advance_stage`
+         *     for exactly this reason.
+         *
+         *     What it does: moves the deal back to the stage it came from, appends a
+         *     new `deal_stage_history` row for the move back (history is append-only;
+         *     nothing is erased), and marks the progression ledger row `reversed` with
+         *     who did it and when.
+         *
+         *     **A reversal does not refute the evidence.** Taking a move back says the
+         *     deal should not have moved, which is a different claim from "the
+         *     criteria were wrongly read" — a rep may agree with every observation and
+         *     still want the deal where it was. Evidence is withdrawn only through its
+         *     own correction path.
+         *
+         *     Refused after the window closes: the move stands, the audit trail keeps
+         *     it, and moving the deal back by hand is the remaining route — which is
+         *     counted as a reversal too, on the same ledger.
+         */
+        post: operations["revertStageProgression"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/deals/{id}/stage-evidence": {
         parameters: {
             query?: never;
@@ -38424,6 +38472,78 @@ export interface operations {
             };
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    revertStageProgression: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                /** @description The stage-progression approval whose move is being taken back. */
+                approvalId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The deal, back at the stage it came from. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Deal"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /**
+             * @description No such deal, no such progression, or the caller may not see it.
+             *     Also the answer when the approval names a different deal, so a
+             *     caller cannot learn that a progression exists by probing ids.
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description The move cannot be taken back: the undo window has closed, the move
+             *     was made by a person rather than automatically, or it has already
+             *     been reversed.
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };
