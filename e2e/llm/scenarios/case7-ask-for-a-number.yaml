@@ -72,8 +72,11 @@ may_call:
 
 must_mention:
   # The breakdown it was asked for, in the words the report answers in.
-  - "inbound|incoming|received|them coming to us"
-  - "outbound|outgoing|we sent|reaching out"
+  # `eingehend`/`ausgehend` because the seeded activity is German and a run
+  # that gives the two counts in the report's own German words has answered
+  # the question — the direction, not the language, is what is being judged.
+  - "inbound|incoming|received|them coming to us|eingehend"
+  - "outbound|outgoing|we sent|reaching out|ausgehend"
   # A number, somewhere. "We log activity in both directions" is not the answer
   # to "I want the counts" — and an answer that names no digit at all is the
   # shape a run takes when it gave up on the report and described the tool.
@@ -85,7 +88,13 @@ must_not_mention:
   # reading it stops asking. Every alternative needs a claim about the PRODUCT's
   # capability, not merely a hedge about this answer's precision — "I can't be
   # exact about the split" is an honest caveat and must stay green.
-  - "no (such )?report|cannot (be )?break|can(no|')t break (this|it) down|does not support (this|that) (kind of )?breakdown|no way to (count|aggregate|report)|not (something|a thing) (the|this) CRM can|CRM (does not|doesn't) (track|record) direction"
+  #
+  # AND THE DENIAL GETS WRITTEN AS AN ATTRIBUTE OF THE PRODUCT: "I tried to
+  # break them down by direction but this is a limitation of the CRM" says
+  # the same thing with none of the verbs above in it. Anchored to the
+  # product, so an honest caveat about this answer's precision — "the split
+  # is a rough one" — is still not a claim about what Margince can do.
+  - "no (such )?report|cannot (be )?break|can(no|')t break (this|it) down|does not support (this|that) (kind of )?breakdown|no way to (count|aggregate|report)|not (something|a thing) (the|this) CRM can|CRM (does not|doesn't) (track|record) direction|limitation of (?:the |this )?(?:CRM|workspace|system|Margince|reporting|report)|(?:the |this )(?:CRM|workspace|system|Margince) (?:cannot|can ?not|can'?t|is unable to)[^.]{0,25}(?:split|break|group|separate|report)"
   # And it must not report the vocabulary instead of the number: a run that
   # spends its turn on describe_report_vocabulary and hands back the field list
   # has answered a question nobody asked.

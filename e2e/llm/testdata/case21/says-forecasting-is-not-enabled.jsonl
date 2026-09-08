@@ -1,0 +1,3 @@
+{"type": "system", "subtype": "init", "tools": ["mcp__margince__forecast_readings"]}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__forecast_readings", "input": {}}]}}
+{"type": "result", "subtype": "success", "is_error": false, "result": "I should flag up front that forecasting is not enabled on this installation, so what follows is arithmetic rather than a forecast.\n\nOpen pipeline reads 1,240,000 for the quarter, weighted 412,000, committed 180,000. Six of the seven deals carry an amount; Weserbund carries none, so it sits outside the total."}

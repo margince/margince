@@ -73,11 +73,25 @@ must_mention:
   - "K5 Conference 2025"
   # Criterion 2, first half: the tagging came off THIS account. Anchored to the
   # account both ways round, because an answer may lead with either.
-  - "Vorort[^.]{0,100}(?:remov|took off|taken off|no longer)|(?:remov|took off|taken off)\w*[^.]{0,100}Vorort"
+  # THE VERB IS NOT ALWAYS ONE WORD. "Took the strategic-account tagging off
+  # Vorort" splits "took" from "off" around the thing removed, and
+  # "un-flagged" and "de-tagged" name the same act without either word. The
+  # split form still has to reach an "off", so a sentence that merely READ
+  # the record ("I took a look at Vorort") is not mistaken for the removal.
+  - "Vorort[^.]{0,100}(?:remov\w*|(?:took|taken|take)[^.]{0,40}\boff\b|no longer|un-?flagg\w*|de-?tagg\w*)|(?:remov\w*|(?:took|taken|take)[^.]{0,40}\boff\b|un-?flagg\w*|de-?tagg\w*)[^.]{0,100}Vorort"
   # Criterion 2, second half: the word itself survived. Asserted POSITIVELY
   # rather than by forbidding a retirement, because "I did not retire the word"
   # is the correct answer and every pattern that forbids the phrase reds it.
-  - "(?:word|tag|Strategic Account)[^.]{0,80}(?:remains|stays|still (?:exists|in use|available|applies|on))|left (?:it |the (?:word|tag) )?(?:in place|alone|untouched)|other (?:accounts|companies|records)[^.]{0,40}still"
+  #
+  # THE SURVIVAL GETS STATED AS A STATE, not only as a continuation.
+  # "Strategic Account survives for everyone else", "the tag itself is
+  # untouched" and "three other accounts keep it" are the same finding as
+  # "the word still exists", and none of them carried "remains", "stays" or
+  # a "still". Every alternative is still a POSITIVE statement about the
+  # word: a negated one ("nothing was retired") is a claim about the
+  # RECORD, which is the sentence the forbidden half below exists to catch,
+  # and accepting it here would require and forbid one sentence again.
+  - "(?:word|tag|Strategic Account)[^.]{0,80}(?:remains|stays|surviv\w*|(?:is|are|stayed) (?:intact|unchanged|untouched|unaffected)|still (?:exists|in use|available|applies|on|a\b|live|valid))|left (?:it |the (?:word|tag) )?(?:in place|alone|untouched)|other (?:accounts|companies|records)[^.]{0,40}(?:still|keep|carry|retain)"
 
 must_not_mention:
   # The answer the record row alone produces: nothing retired here. It is a

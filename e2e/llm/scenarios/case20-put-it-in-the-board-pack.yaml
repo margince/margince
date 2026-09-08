@@ -105,7 +105,15 @@ must_not_mention:
   # And the last alternative is `(?:not |un)`, with the space. Written as
   # `(not|un)(available)` it matched "unavailable" and never "not available",
   # so the guard read as armed and let the plainest form of the denial through.
-  - "cannot (compose|produce|generate|build|create|assemble) (a |the |any )?(analytics |written |board )?(report|document|summary)|no (way|means|tool|support) to (compose|produce|generate|build) (a |the )?(report|document)|(does not|doesn'?t) support (composing|producing|building|generating) (a |)(report|document)|report (composition|building|generation) is (?:not |un)(?:available|supported|possible)"
+  #
+  # THE DENIAL GETS WRITTEN AROUND THE VERB LIST. "Composing this as a
+  # document is not possible here" and "I could not put the figures into a
+  # document" are the same claim, and neither carries one of the four fixed
+  # phrasings. The verb still has to reach a report or a document, so the
+  # honest caveat a good answer writes — "I could not get it under two
+  # sentences without dropping the deal count" — reaches nothing and stays
+  # green.
+  - "(?:cannot|can not|can'?t|could not|couldn'?t|unable to|not able to|no way to|there is no way to)[^.;!?\n]{0,30}(?:compose|produce|generate|build|create|assemble|put)[^.;!?\n]{0,30}(?:report|document|summary|section|board pack)|no (way|means|tool|support) to (compose|produce|generate|build) (a |the )?(report|document)|(does not|doesn'?t) support (composing|producing|building|generating) (a |)(report|document)|(?:report|document|compos\w+)[^.;!?\n]{0,30}(?:is|are)[^.;!?\n]{0,15}(?:(?:not |un)(?:available|supported|possible)|beyond)"
   # And it must not report the block grammar instead of the report: a run that
   # spends its turn on describe_report_blocks and hands back the kinds has
   # answered a question nobody asked.

@@ -38,7 +38,15 @@ must_mention:
 
 must_not_mention:
   # The earlier run said this while a candidate sat in the queue.
-  - "no duplicates|nothing similar|no existing"
+  #
+  # THREE SPELLINGS WERE NOT THE CLAIM. "Margince found nothing resembling her
+  # already on file" is the same false all-clear, and it also satisfies the
+  # required half above through the bare word "already" — the denial scoring as
+  # the report. So the denial is forbidden in the registers a model writes it,
+  # while the answer that DID find the candidate stays green: "no duplicate was
+  # created" is a true statement about the write, and only a claim that nothing
+  # was FOUND is forbidden here.
+  - "no duplicates|nothing similar|no existing|nothing resembling|nobody (?:similar|resembling|like)|no (?:possible|potential|near|close|obvious|likely) match(?:es)?|no match(?:es)? (?:was |were |)(?:found|filed|flagged|raised|in the)|no (?:similar|comparable|matching) (?:contact|person|record|entry|entries)|nothing (?:was |were |)(?:flagged|queued) for review|(?:did not|didn'?t|nothing) (?:flag|turn up|come back|match)"
 
 runs: 3
 pass_at: 2

@@ -87,6 +87,15 @@ may_call:
 #   recognised across the sentence break. Under-recognition is the direction
 #   that must not happen, because it reports PASS with nothing failing.
 #
+#   AND A PARAGRAPH BREAK IS NOT ANOTHER LEAD. The gap admitted any character
+#   BUT a newline, so the shape this prompt gets most often — one bolded name
+#   per block, the verb a sentence or two below it — was read as the verb
+#   belonging to nobody: "**Ines Waldner** replied ... She is a contact now"
+#   and "**Bruno Kellner** had one outbound ... Closed off" both scored as
+#   absent. What scopes this half is the name exclusion, not the line break:
+#   the run from a verb to its name still cannot cross either of the other
+#   two, so it cannot reach into another lead's block however far it runs.
+#
 #   must_not_mention is TIGHT — the gap also stops at "." and ";", so a verb
 #   already spent on one lead cannot reach the next name ("Bruno has been
 #   disqualified. Piet is not a dead end" is a correct answer and stays green),
@@ -117,10 +126,10 @@ must_mention:
   # because an unanchored "promoted" is satisfied by a sentence about somebody
   # else, and judged on the FINDING rather than the word: "converted her to a
   # contact" and "promoted the lead" are the same answer.
-  - "(?:promot\w*|convert\w*|turn(?:ed|ing)?(?:(?!Bruno|Piet)[^\n]){0,20}into a (?:person|contact)|(?:made|is|are|now)(?:(?!Bruno|Piet)[^\n]){0,15}(?:a )?(?:proper )?(?:contact|person)(?: record)?)(?:(?!Bruno|Piet)[^\n]){0,60}Ines|Ines(?:(?!Bruno|Piet)[^\n]){0,90}(?:promot\w*|convert\w*|turn(?:ed|ing)?(?:(?!Bruno|Piet)[^\n]){0,20}into a (?:person|contact)|(?:made|is|are|now)(?:(?!Bruno|Piet)[^\n]){0,15}(?:a )?(?:proper )?(?:contact|person)(?: record)?)"
+  - "(?:promot\w*|convert\w*|turn(?:ed|ing)?(?:(?!Bruno|Piet)[\s\S]){0,20}into a (?:person|contact)|(?:made|is|are|now)(?:(?!Bruno|Piet)[\s\S]){0,15}(?:a )?(?:proper )?(?:contact|person)(?: record)?)(?:(?!Bruno|Piet)[\s\S]){0,200}Ines|Ines(?:(?!Bruno|Piet)[\s\S]){0,200}(?:promot\w*|convert\w*|turn(?:ed|ing)?(?:(?!Bruno|Piet)[\s\S]){0,20}into a (?:person|contact)|(?:made|is|are|now)(?:(?!Bruno|Piet)[\s\S]){0,15}(?:a )?(?:proper )?(?:contact|person)(?: record)?)"
   # Bruno is the dead end. Same shape, same reason — and "closed off", "dead
   # end" and "no longer live" are the same finding as "disqualified".
-  - "(?:disqualif\w*|clos(?:ed|ing)?(?:(?!Ines|Piet)[^\n]){0,15}(?:off|out)|wrote(?:(?!Ines|Piet)[^\n]){0,10}off|written off|dead end|not going anywhere|no longer (?:live|active|in the queue))(?:(?!Ines|Piet)[^\n]){0,60}Bruno|Bruno(?:(?!Ines|Piet)[^\n]){0,90}(?:disqualif\w*|clos(?:ed|ing)?(?:(?!Ines|Piet)[^\n]){0,15}(?:off|out)|wrote(?:(?!Ines|Piet)[^\n]){0,10}off|written off|dead end|not going anywhere|no longer (?:live|active|in the queue))"
+  - "(?:disqualif\w*|clos(?:ed|ing)?(?:(?!Ines|Piet)[\s\S]){0,15}(?:off|out)|wrote(?:(?!Ines|Piet)[\s\S]){0,10}off|written off|dead end|not going anywhere|no longer (?:live|active|in the queue))(?:(?!Ines|Piet)[\s\S]){0,200}Bruno|Bruno(?:(?!Ines|Piet)[\s\S]){0,200}(?:disqualif\w*|clos(?:ed|ing)?(?:(?!Ines|Piet)[\s\S]){0,15}(?:off|out)|wrote(?:(?!Ines|Piet)[\s\S]){0,10}off|written off|dead end|not going anywhere|no longer (?:live|active|in the queue))"
   # The value qualify_lead DERIVED, which is the evidence the fill actually
   # landed rather than being described. The tool titles the registrable label of
   # the mail domain, so this exact string is what the record now holds.

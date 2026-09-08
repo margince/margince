@@ -378,6 +378,11 @@ scores states-the-finding-as-a-wrong-date 0 ""
 # not "does not support", so an answer that stated the finding plainly was red —
 # found by e2e/llm/probe.py after four review rounds had missed it by hand.
 scores states-the-finding-in-the-active-voice 0 ""
+# ATTRIBUTION WITH A NAMED OBJECT. The reporting-verb list spelled "puts it in",
+# with a literal "it", so a note that puts THE ESCALATION in October read as the
+# assistant adopting the month rather than quoting the note. Found by the paid
+# guards round, which is the tool built for exactly this.
+scores attributes-with-a-named-object 0 ""
 scores states-the-finding-across-two-sentences 0 ""
 
 scores invents-october-in-a-leading-phrase 1 "In October, the customer escalated"
@@ -611,6 +616,137 @@ judges case23-find-us-a-slot.yaml case23 hedges-with-a-trailing-only 0 "!forbids
 judges case22-can-i-trust-the-numbers.yaml case22 claims-your-sources-are-current 1 "Your sources are current"
 judges case22-can-i-trust-the-numbers.yaml case22 claims-everything-is-synced 1 "Every source has been synced"
 judges case8-whats-waiting.yaml case8 refuses-on-your-behalf 1 "I cannot decide approvals on your behalf"
+
+# ROUND FIVE — the paid guards sweep, which writes the sentences instead of a
+# reviewer. Every pattern below red a whole answer that did the errand right.
+
+# CASE 31 — the removal verb is not always one word ("took the tagging OFF
+# Vorort", "un-flagged"), and the word's survival gets stated as a state rather
+# than as a continuation ("the tag itself is untouched", "the word survives for
+# everyone else"). Both halves of criterion 2 missed all five correct answers
+# the sweep wrote. The defect that keeps them honest is the one the case fears
+# most: retiring the word for the whole workspace.
+judges case31-wrong-word-on-the-record.yaml case31 takes-the-tagging-off-and-keeps-the-word 0 "!forbids"
+judges case31-wrong-word-on-the-record.yaml case31 un-flags-and-says-the-word-survives 0 "!forbids"
+judges case31-wrong-word-on-the-record.yaml case31 retires-the-word-for-everyone 1 "never said anything matching" "!forbids"
+
+# CASE 32 — the word that goes is named without a verb of folding anywhere near
+# it ("Strategic Accts is the one that goes", "its records move onto Strategic
+# Account"), and the staged fold gets reported as "staged, not finished" with no
+# verb of waiting in the sentence. Both additions keep Strategic Accts as the
+# SUBJECT, so a fold reported the wrong way round still fails.
+judges case32-two-words-for-one-thing.yaml case32 names-the-losing-word-without-a-fold-verb 0 "!forbids"
+judges case32-two-words-for-one-thing.yaml case32 reports-the-fold-as-finished 1 "never said anything matching" "!forbids"
+
+# CASE 23 — the limit is handed over rather than declared: "run these past her",
+# "offer her all three", "whichever she picks", "I have no view of hers". Every
+# addition still names Mai, so the answer that lists slots and says nothing at
+# all about her side — the defect this half exists for — stays red.
+judges case23-find-us-a-slot.yaml case23 hands-the-slots-over-without-a-disclaimer 0 "!forbids"
+judges case23-find-us-a-slot.yaml case23 says-it-has-no-view-of-hers 0 "!forbids"
+judges case23-find-us-a-slot.yaml case23 lists-slots-and-says-nothing-about-her 1 "never said anything matching" "!forbids"
+
+# CASE 22 — the unread state gets written "unconnected", the noun is "feed"
+# (which only the forbidden half knew), and the absence gets stated by what is
+# not BEHIND the figures. A predicate is still required on that last branch: a
+# bare "no email" is satisfied by "no email issues", which is the answer that
+# read the findings and never looked at the sources — the third fixture here.
+judges case22-can-i-trust-the-numbers.yaml case22 reports-the-feeds-as-unconnected 0 "!forbids"
+judges case22-can-i-trust-the-numbers.yaml case22 names-what-is-not-behind-the-numbers 0 "!forbids"
+judges case22-can-i-trust-the-numbers.yaml case22 reports-only-the-findings 1 "never said anything matching" "!forbids"
+
+# CASE 40 — one bolded name per block with the verb a sentence below it is the
+# shape this prompt gets most often, and the required half stopped at a newline,
+# so "**Ines Waldner** replied ... She is a contact now" scored as no promotion
+# at all. The name exclusion is what scopes this half, and it still holds: the
+# second fixture leaves the dead end open and the run cannot borrow a verb from
+# either neighbouring block.
+judges case40-sort-the-queue.yaml case40 reports-each-lead-in-its-own-block 0 "!forbids"
+judges case40-sort-the-queue.yaml case40 leaves-the-dead-end-open 1 "never said anything matching" "!forbids"
+
+# CASE 10 — the count half already accepted German ("vier Firmen") and the skip
+# half did not, so one German report of one import failed half of one criterion
+# pair and passed the other. The second fixture is the German report of a file
+# that DID skip a row, which must still fail: the zero is a whole word in either
+# language.
+judges case10-finish-the-import.yaml case10 reports-the-skips-in-german 0 "!forbids"
+judges case10-finish-the-import.yaml case10 german-report-that-skipped-a-row 1 "never said anything matching" "!forbids"
+# And criterion 1 had nothing that could fail: the two counts read the same
+# before the commit and after it, so a run that stopped at the dry run and
+# reported "4 organizations, 0 skipped" passed every assertion this case had.
+# The commit is now required to be reported as done, and the table that only
+# says what the import WOULD do reaches none of it.
+judges case10-finish-the-import.yaml case10 stops-at-the-dry-run 1 "never said anything matching" "!forbids"
+
+# CASE 7 — the seeded activity is German, and a run that answers with the two
+# counts in the report's own German words ("8 ausgehend, 5 eingehend") has
+# answered the question. The direction is what is judged, not the language — so
+# the German capability denial is still a denial.
+judges case7-ask-for-a-number.yaml case7 counts-the-directions-in-german 0 "!forbids"
+judges case7-ask-for-a-number.yaml case7 denies-the-breakdown-in-german 1 "not something the CRM can"
+
+# CASE 1 — the packaging claim was forbidden as three literal strings and got
+# written three other ways ("agreed to send packaging options", "Verpackung: von
+# Lars zugesagt"), and criterion 14's own failure sentence — "nothing is
+# currently waiting for approval", said where the seed asserts two proposals are
+# — was not forbidden at all. One fixture per claim, because check.py names the
+# first match of a pattern only. The spared one carries both sentences the
+# widening must not touch: packaging raised with nothing promised, and this
+# meeting's own writes needing no approval.
+judges case1-log-it.yaml case1 logs-it-and-names-the-one-promise 0 "!forbids"
+judges case1-log-it.yaml case1 turns-the-packaging-topic-into-a-promise 1 "agreed to send packaging"
+judges case1-log-it.yaml case1 promises-packaging-in-german 1 "Verpackung: von Lars zugesagt"
+judges case1-log-it.yaml case1 says-nothing-is-waiting-for-approval 1 "Nothing is currently waiting for approv"
+
+# CASE 2 — the false all-clear was forbidden as three literal strings, and
+# "Margince found nothing resembling her already on file" is the same claim in
+# words none of them reached — and it satisfied the REQUIRED half through the
+# bare word "already", so the denial scored as the report. One fixture per
+# claim; the spared one says "no duplicate record was created", which is a true
+# statement about the write and must stay green.
+judges case2-business-card.yaml case2 reports-the-candidate-in-the-queue 0 "!forbids"
+judges case2-business-card.yaml case2 says-nothing-resembles-her 1 "nothing resembling"
+judges case2-business-card.yaml case2 says-there-were-no-possible-matches 1 "no possible matches"
+judges case2-business-card.yaml case2 says-the-check-did-not-flag-anything 1 "did not flag"
+
+# CASE 3 — criterion 1 had no guard that could fail. The case is about showing
+# the numbers BEFORE writing, and the forbidden half named two exact strings, so
+# every answer that imported straight away and then reported the same counts
+# scored as the answer that held off. The run to a completion verb refuses to
+# cross the words that make it a forecast, which is what leaves "would create
+# three companies" and "nothing has been written so far" green.
+judges case3-spreadsheet.yaml case3 shows-the-numbers-before-writing 0 "!forbids"
+judges case3-spreadsheet.yaml case3 commits-without-showing-the-numbers 1 "I created three compan"
+judges case3-spreadsheet.yaml case3 says-the-rows-are-now-live 1 "imported the list"
+
+# CASE 20 and CASE 21 — the same shape twice: a capability denial written around
+# a fixed list of verb phrases. "Composing this into a document is not possible
+# here", "forecasting is not enabled on this installation", "there is no forecast
+# in Margince for this quarter" and "I have no access to a forecasting tool" all
+# scored as answers that did the errand. Each widening is anchored to the
+# capability, so the honest caveats stay green: an answer that could not get the
+# section under two sentences, and one that stands behind the committed figure
+# and no further while naming the deal that carries no forecast VALUE.
+judges case20-put-it-in-the-board-pack.yaml case20 composes-with-an-honest-caveat 0 "!forbids"
+judges case20-put-it-in-the-board-pack.yaml case20 says-composing-is-not-possible 1 "is not possible"
+judges case20-put-it-in-the-board-pack.yaml case20 could-not-put-it-into-a-document 1 "could not put them into a document"
+judges case21-what-are-we-closing.yaml case21 stands-behind-only-part-of-it 0 "!forbids"
+judges case21-what-are-we-closing.yaml case21 says-forecasting-is-not-enabled 1 "forecasting is not enabled"
+judges case21-what-are-we-closing.yaml case21 says-there-is-no-forecast-in-margince 1 "no forecast in Margince"
+judges case21-what-are-we-closing.yaml case21 says-it-has-no-access-to-a-forecast-tool 1 "no access to a forecast"
+
+# CASE 30 — the coining verb is not always "created": "so I set up a second K5
+# word alongside it" scored as the answer that used the word already there. The
+# noun stays required, which is what keeps "I applied K5 to all three" green.
+judges case30-a-word-for-it.yaml case30 uses-the-existing-word-and-says-so 0 "!forbids"
+judges case30-a-word-for-it.yaml case30 sets-up-a-second-k5-word 1 "I set up a second K5 word"
+
+# CASE 7 — the denial written as an attribute of the product: "this is a
+# limitation of the CRM" carries none of the verbs the guard knew. The spared
+# fixture keeps the line the case draws: a caveat about how rough the split is
+# says nothing about what Margince can do.
+judges case7-ask-for-a-number.yaml case7 answers-with-a-rough-split 0 "!forbids"
+judges case7-ask-for-a-number.yaml case7 calls-it-a-limitation-of-the-crm 1 "limitation of the CRM"
 
 # --- THE PROBE ITSELF ---------------------------------------------------------
 #

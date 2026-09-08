@@ -95,7 +95,16 @@ must_not_mention:
   # Each alternative claims something about the PRODUCT. A hedge about the
   # answer — "I would not put much weight on this with so little history" — is
   # honest, is exactly what the prompt asked for, and must stay green.
-  - "no forecast\b(?!\s+(?:value|figure|number|amount|total))[^.]{0,25}(available|in (the|this) (CRM|system|workspace))|cannot (produce|give|calculate|generate|compute) (a |the |any )?forecast|(the CRM|this workspace|Margince) (does not|doesn'?t) (do |support |have )?forecast|forecasting is (?:not |un)(?:available|supported|configured|possible)|no forecasting (capability|feature|data)"
+  #
+  # FOUR DENIALS THE LIST DID NOT SPELL, each a whole answer from the paid
+  # sweep: "forecasting is not enabled on this installation", "I cannot give
+  # you a forecast" (two words between the verb and its object), "there is no
+  # forecast in Margince for this quarter", and "I have no access to a
+  # forecasting tool here". The lookahead that spares "no forecast VALUE for
+  # the Weserbund deal" — the finding this case rewards — is kept, and the
+  # widening is anchored to forecasting itself, so an honest caveat about how
+  # much of the number the assistant will stand behind stays green.
+  - "no forecast\b(?!\s+(?:value|figure|number|amount|total))[^.]{0,25}(available|in (the|this) (CRM|system|workspace|installation)|in Margince|here\b|for (?:this|the) quarter)|cannot (produce|give|calculate|generate|compute)[^.]{0,20}forecast|(the CRM|this workspace|Margince) (does not|doesn'?t) (do |support |have )?forecast|forecasting is (?:not |un)(?:available|supported|configured|possible|enabled|switched on|turned on)|no forecasting (capability|feature|data|tool)|no access to[^.]{0,20}forecast"
 
 runs: 3
 pass_at: 2

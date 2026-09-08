@@ -77,13 +77,22 @@ must_mention:
   # cannot be matched by accident from "Strategic Account" — the truncation is
   # why the fixture uses this pair rather than the singular/plural one, which a
   # case-insensitive substring search cannot tell apart at all.
-  - "(?:fold|merg|retir|remov|drop|absorb|collaps)\w*[^.]{0,60}Strategic Accts|Strategic Accts[^.]{0,60}(?:into|is (?:the |being )?(?:one |word )?(?:retired|folded|merged|dropped))"
+  #
+  # THE LOSING WORD IS OFTEN NAMED WITHOUT A VERB OF FOLDING. "Strategic
+  # Accts is the one that goes", "Strategic Accts loses" and "its records
+  # move onto Strategic Account" are the same decision, and the predicate
+  # list reached none of them. Every addition keeps "Strategic Accts" as the
+  # SUBJECT, so a fold reported the wrong way round cannot satisfy it here.
+  - "(?:fold|merg|retir|remov|drop|absorb|collaps)\w*[^.]{0,60}Strategic Accts|Strategic Accts[^.]{0,60}(?:into|\bgoes\b|\bloses\b|disappears|is the one[^.]{0,25}(?:goes|retired|folded|merged|dropped)|(?:is|are|was|were|will be|gets?|being)[^.]{0,25}(?:retired|folded|merged|dropped|absorbed)|move[sd]?[^.]{0,20}(?:on)?to)"
   # Criterion 2: the fold is reported as waiting for a person, not as finished.
   # Every alternative is a synonym of the finding — a decision nobody has taken
   # — rather than a phrasing of it, and every one is ANCHORED to the fold. An
   # unanchored "approve" is satisfied by "let me know if you approve of the
   # description", which is a sentence about something else entirely.
-  - "(?:merge|merging|fold|folding|combine|combining|Strategic Accts)[^.]{0,90}(?:await|waiting|pending|approv|confirm|sign-?off|release|a person|a human|your (?:say|decision|go-?ahead))|(?:await|waiting|pending|approv\w*|confirm\w*|staged)[^.]{0,90}(?:merge|merging|fold|folding|combine|combining|Strategic Accts)"
+  # "The fold is staged, not finished" states the same finding with no verb of
+  # waiting anywhere in the sentence, and the leading half knew "staged" only in
+  # the other order.
+  - "(?:merge|merging|fold|folding|combine|combining|Strategic Accts)[^.]{0,90}(?:await|waiting|pending|approv|confirm|sign-?off|release|staged|queued|a person|a human|your (?:say|decision|go-?ahead))|(?:await|waiting|pending|approv\w*|confirm\w*|staged)[^.]{0,90}(?:merge|merging|fold|folding|combine|combining|Strategic Accts)"
   # Criterion 3: the description landed on the word that SURVIVES, and says what
   # the user asked it to say.
   - "descri\w*[^.]{0,90}sponsor|sponsor[^.]{0,90}descri\w*|Strategic Account[^.]{0,90}sponsor"

@@ -109,7 +109,14 @@ must_not_mention:
   # the workspace already had, so no sentence applying it can be the coinage —
   # which also reaches the shape a list answer takes, "New tags created: K5,
   # Revisit Q1", where no verb of creation stands next to the name at all.
-  - "(?:I|we) (?:have |just )?(?:created|coined|added)[^.;\n]{0,20}(?:new |second |another |separate )?(?:tag|word)[^.;\n]{0,12}(?:called |named |for |\")?K5\b(?!\s+Conference)|(?:I|we) (?:have |just )?(?:created|coined|added)[^.;\n]{0,20}(?:new |second |another |separate )?[\"']?K5\b(?!\s+Conference)[^.;\n]{0,20}(?:tag|word)|(?:new |second )?tags? (?:created|coined|added)[^.\n]{0,20}\bK5\b(?!\s+Conference)"
+  #
+  # THE COINING VERB IS NOT ALWAYS "created". "So I set up a second K5 word
+  # alongside it" and "a fresh K5 entry now sits beside it" are the same
+  # second spelling. The NOUN stays required: "I applied K5 to all three" and
+  # "added K5 to the accounts" are what a correct answer says about the word
+  # that was already there, and nothing here can tell those from a coinage
+  # without one.
+  - "(?:I|we) (?:have |just )?(?:created|coined|added|made|set up|introduced|registered)[^.;\n]{0,20}(?:new |second |another |separate |fresh )?(?:tag|word|spelling|entry)[^.;\n]{0,12}(?:called |named |for |\")?K5\b(?!\s+Conference)|(?:I|we) (?:have |just )?(?:created|coined|added|made|set up|introduced|registered)[^.;\n]{0,20}(?:new |second |another |separate |fresh )?[\"']?K5\b(?!\s+Conference)[^.;\n]{0,20}(?:tag|word|spelling|entry)|(?:new |second )?tags? (?:created|coined|added)[^.\n]{0,20}\bK5\b(?!\s+Conference)"
   # And it must not report the existing word as absent. Being refused "k5" says
   # nothing about what the workspace holds — the same false conclusion case 7
   # guards, in the vocabulary the tag tools publish.

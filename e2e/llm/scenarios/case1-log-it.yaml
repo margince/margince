@@ -54,7 +54,29 @@ must_mention:
 must_not_mention:
   # The packaging question was DISCUSSED and nobody promised anything about it.
   # Reporting it as a commitment is the failure this transcript is shaped for.
-  - "committed to packaging|promised.{0,20}Verpackung|action item.{0,20}packaging"
+  #
+  # THREE LITERAL PHRASINGS WERE NOT THE CLAIM, they were three ways of writing
+  # it: "committed to sending packaging samples" puts a word between the verb and
+  # the noun, "promised packaging options" never reaches the German spelling, and
+  # "Verpackung: von Lars zugesagt" says it in the language the transcript is in.
+  # The claim is what is forbidden, in either order.
+  #
+  # ONLY A COMMITMENT. Recording that packaging was raised is what logging the
+  # transcript MEANS, and proposing to pick it up next week is a suggestion
+  # rather than a promise — so the verbs here are verbs of undertaking, and the
+  # run to them refuses to cross a negation: "packaging was discussed and nothing
+  # was promised about it" is the answer that got criterion 8 right.
+  - "(?:commit\w*|promis\w*|zusag\w*|zugesagt|agreed[^.;!?\n]{0,15}to|undertook|undertaken|action item|owes?\b)(?:(?!\b(?:not|no|nothing|never|nobody|none|kein\w*|nichts|nie)\b)[^.;!?\n]){0,40}(?:packaging|Verpackung)|(?:packaging|Verpackung)(?:(?!\b(?:not|no|nothing|never|nobody|none|kein\w*|nichts|nie)\b)[^.;!?\n]){0,40}(?:commit\w*|promis\w*|zusag\w*|zugesagt|agreed|undertook|undertaken|action item|owed?\b)"
+  # CRITERION 14, and the sentence the run of 2026-08-25 wrote: "nothing is
+  # pending approval", said into a workspace where two proposals are waiting.
+  # The seed asserts exactly those two before it exits, so this claim is false in
+  # case 1's world whenever it is made.
+  #
+  # A CLAIM ABOUT THE QUEUE, not about this meeting's own writes. Both writes
+  # here execute outright, so "nothing from this transcript needed approval" is
+  # true and stays green: the run to the state verb refuses to cross a word that
+  # scopes it to this errand.
+  - "(?:nothing|none|no items?|no approvals?|no proposals?)(?:(?!\b(?:this|these|that|here|today|from|about|of the meeting|needed|required|need)\b)[^.;!?\n]){0,30}(?:is |are |)(?:currently |still |)(?:pending|awaiting|outstanding|waiting)[^.;!?\n]{0,25}(?:approv|confirm|sign-?off|decision)|(?:approval|decision)s? queue is empty"
 
 runs: 3
 pass_at: 2

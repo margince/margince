@@ -27,7 +27,11 @@ prompt: |
 must_call:
   - preview_import
 may_call:
-  - commit_import
+  # NOT commit_import, and its absence is the case. Criterion 1 is that the
+  # numbers are shown BEFORE anything is written, and the prose half now fails a
+  # run that reports the import as done — so permitting the tool that does it
+  # would license the very act the case exists to catch. The commit follow-through
+  # is case 10's subject, with its own goal and its own fixture.
   - read_import_run
   - read_import_report
   - query_workspace
@@ -41,6 +45,18 @@ must_mention:
 
 must_not_mention:
   - "all 4 companies were created|imported all four"
+  # CRITERION 1 ITSELF, which nothing above could fail. The case is about
+  # showing the numbers BEFORE writing, and the only guard on it forbade two
+  # exact strings — so "Done, the trade-fair list is in the CRM", "I've imported
+  # the list and the three usable rows are now live" and "three new companies
+  # exist now" all scored as the answer that held off. Case 10 is the other half
+  # of the same rule and the person there has already looked; here nobody has.
+  #
+  # A CLAIM THAT THE WRITE HAPPENED, and the run to it refuses to cross the
+  # words that make it a forecast instead: "would create three companies", "3
+  # rows will be created once you confirm" and "nothing has been written" are
+  # what a correct answer says, and each of them stops the run before the verb.
+  - "(?:^|[.;!?\n])(?:(?!\b(?:would|will|going to|about to|once|after|if|before|not|nothing|no|never|preview|previewed|dry|haven'?t|hasn'?t|yet|ready)\b)[^.;!?\n])*?(?:(?:I |we |)(?:have |'ve |)(?:created|imported|added|put)\b(?:(?!\b(?:would|will|not|no|nothing)\b)[^.;!?\n]){0,40}(?:compan|organi|record|row|list|them\b|it in)|(?:compan\w+|organi\w+|record\w*|row\w*)(?:(?!\b(?:would|will|not|no|nothing)\b)[^.;!?\n]){0,30}(?:have been|has been|are now|is now|were|now) (?:created|imported|added|live|in the|exist)|the (?:list|import|file|rows)(?:(?!\b(?:would|will|not|no|nothing)\b)[^.;!?\n]){0,30}(?:is in the|are in the|landed|went in))"
 
 runs: 3
 pass_at: 2

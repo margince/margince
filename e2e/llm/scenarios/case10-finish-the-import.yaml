@@ -93,7 +93,24 @@ must_mention:
   # processed, 1 skipped" satisfies this — the report of a file that DID skip a
   # row scoring as the report that nothing was, which is the one direction a
   # criterion must not fail in.
-  - "(?:\bno\b|\bnone\b|nothing|\bzero\b|\b0\b)[^\n]{0,40}(?:skipp|fail|unusable|reject|error|issue|problem)|(?:skipp\w*|fail\w*|unusable|issues?|errors?|problems?)[^\n]{0,30}(?:\bnone\b|nothing|\bzero\b|:\s*0\b|=\s*0\b|\b0\b)"
+  #
+  # AND IT ANSWERS IN GERMAN, which the count half above already knows ("vier
+  # Firmen") and this half did not: the same report, "nichts wurde
+  # übersprungen", failed one half of one criterion pair and passed the other.
+  - "(?:\bno\b|\bnone\b|nothing|\bzero\b|\b0\b|\bkeine\b|nichts)[^\n]{0,40}(?:skipp|fail|unusable|reject|error|issue|problem|übersprung|ausgelassen|verworfen|fehlgeschlag|Fehler|Problem)|(?:skipp\w*|fail\w*|unusable|issues?|errors?|problems?|übersprung\w*|ausgelassen|verworfen|fehlgeschlagen|Fehler|Probleme?)[^\n]{0,30}(?:\bnone\b|nothing|\bzero\b|\bkeine\b|nichts|:\s*0\b|=\s*0\b|\b0\b)"
+  # CRITERION 1, WHICH NOTHING ABOVE COULD FAIL. The two counts are the same
+  # before the commit and after it — that is exactly why read_import_report is
+  # the tool for both — so a run that stopped at the dry run and reported "4
+  # organizations, 0 skipped" satisfied every assertion this case had while
+  # doing the one thing it exists to catch. The forbidden half below only sees
+  # an answer that ASKS; an answer that simply stops asks nothing.
+  #
+  # So the commit has to be reported as DONE. The run to the verb refuses to
+  # cross the words that make it a forecast or an offer, and stops at a table
+  # cell, so "Would create 4 organizations" and "ready to commit once you
+  # confirm" reach nothing while "4 organizations created", "the partner list is
+  # committed" and "vier Organisationen angelegt" all land.
+  - "(?:^|[.;:!?\n|])(?:(?!\b(?:would|will|going to|about to|once|after|if|before|not|nothing|no|never|shall|should|ready|awaiting|waiting|pending|to)\b)[^.;:!?\n|])*?(?:(?:I |we |)(?:have |'ve |has |had |)(?:committed|imported|created|added|landed)\b|(?:is|are) (?:now )?(?:committed|imported|in the (?:CRM|workspace|system))|\bdrin\b|angelegt|eingelesen)"
 
 must_not_mention:
   # THE FAILURE THIS CASE EXISTS FOR. The person pre-authorized the write in the

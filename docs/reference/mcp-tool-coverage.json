@@ -1701,9 +1701,7 @@
       "required_by_cases": [
         "case10_finish_the_import"
       ],
-      "permitted_in_cases": [
-        "case3_spreadsheet"
-      ],
+      "permitted_in_cases": [],
       "driven": true,
       "graded_by_certification_tasks": null,
       "measured": null

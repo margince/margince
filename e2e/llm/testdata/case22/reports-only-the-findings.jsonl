@@ -1,0 +1,3 @@
+{"type": "system", "subtype": "init", "tools": ["mcp__margince__data_coverage"]}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__data_coverage", "input": {}}]}}
+{"type": "result", "subtype": "success", "is_error": false, "result": "I ran the input checks before touching the figures. The last nightly run logged no email issues and no calendar issues, and there is nothing outstanding against any of the checks.\n\nOn that basis the quarterly pack looks fine to send."}

@@ -70,6 +70,13 @@ must_mention:
   # herself, because the bare verbs are satisfied by unrelated true sentences:
   # an unanchored "confirm" appears in "confirm the appendix version first".
   #
+  # AND WIDER AGAIN THAN THAT. The handoff gets written with the slots as the
+  # object and her as the indirect one — "offer her all three", "run these
+  # past her" — where the preposition list found nothing; the limit gets
+  # stated as "I have no view of hers"; and the deferral gets left to her in
+  # the flat present, "whichever she picks". Each addition still names Mai or
+  # her, so an answer that simply lists slots and says nothing about her side
+  # stays red — which is the defect this half is here for.
   # THE REGISTERS ARE WIDER THAN A DISCLAIMER. "Mai will need to confirm" puts
   # the subject before the verb; "I have no visibility of Mai's availability"
   # names the limit as a fact about this installation; "her side I cannot see"
@@ -77,7 +84,7 @@ must_mention:
   # it as a question it cannot answer. All four are the finding and none of them
   # matched. `(?:not |un)` also replaces `(not|un)`, which matched "unavailable"
   # and never "not available".
-  - "(only|just)[^.]{0,45}(your|our|my|the host'?s?|one)[^.]{0,20}(calendar|diary|availability|side|schedule)|(cannot|can'?t|do(es)? not|don'?t|unable to|no way to)[^.]{0,55}(see|know|read|access|check|tell)[^.]{0,35}(Mai|her|their|the customer'?s?|Vietnam Partner|external|the other side)|(Mai|her|she)[^.]{0,45}(calendar|diary|availability|schedule)[^.]{0,35}(?:not |un)(known|available|visible|connected)|(confirm|check|propose|offer|send|suggest|ask)[^.]{0,40}(these |them |the (times|slots|options) )?(with|to|and let|so) (Mai|her)|(subject to|pending|depending on|assuming)[^.]{0,30}(Mai|her|their)[^.]{0,25}(availability|calendar|confirmation)|(Mai|her|she)[^.]{0,45}(will need to|needs to|has to|must|would have to|can)[^.]{0,25}(confirm|check|say|reply|come back|let (you|us) know|pick)|no visibility[^.]{0,30}(Mai|her|the customer|their|external)|(her|Mai'?s?)[^.]{0,30}(side|calendar|diary|availability|schedule)[^.]{0,40}(I |we )?(cannot|can'?t|do(es)? not|don'?t)[^.]{0,20}(see|know|read|access|check|tell)|whether[^.]{0,45}(Mai|she|her)[^.]{0,45}(free|available)[^.]{0,70}(cannot|can'?t|no way|not something|unknown|do(es)? not|nothing here)"
+  - "(only|just)[^.]{0,45}(your|our|my|the host'?s?|one)[^.]{0,20}(calendar|diary|availability|side|schedule)|(cannot|can'?t|do(es)? not|don'?t|unable to|no way to)[^.]{0,55}(see|know|read|access|check|tell)[^.]{0,35}(Mai|her|their|the customer'?s?|Vietnam Partner|external|the other side)|(Mai|her|she)[^.]{0,45}(calendar|diary|availability|schedule)[^.]{0,35}(?:not |un)(known|available|visible|connected)|(confirm|check|propose|offer|send|suggest|ask)[^.]{0,40}(these |them |the (times|slots|options) )?(with|to|and let|so) (Mai|her)|(subject to|pending|depending on|assuming)[^.]{0,30}(Mai|her|their)[^.]{0,25}(availability|calendar|confirmation)|(Mai|her|she)[^.]{0,45}(will need to|needs to|has to|must|would have to|can)[^.]{0,25}(confirm|check|say|reply|come back|let (you|us) know|pick)|no visibility[^.]{0,30}(Mai|her|the customer|their|external)|(her|Mai'?s?)[^.]{0,30}(side|calendar|diary|availability|schedule)[^.]{0,40}(I |we )?(cannot|can'?t|do(es)? not|don'?t)[^.]{0,20}(see|know|read|access|check|tell)|whether[^.]{0,45}(Mai|she|her)[^.]{0,45}(free|available)[^.]{0,70}(cannot|can'?t|no way|not something|unknown|do(es)? not|nothing here)|(propose|offer|suggest|send|float|run|put)[^.]{0,30}(these|them|all three|the (times|slots|options))[^.]{0,25}(to |past |by |with |and let |so )(Mai|her)|(propose|offer|suggest|send|float|run|put)[^.]{0,10}(Mai|her)\b[^.]{0,25}(these|them|all three|the (times|slots|options))|no (visibility|view|sight|read)[^.]{0,30}(Mai|her|the customer|their|external)|(whichever|whatever)[^.]{0,25}(Mai|she)[^.]{0,20}(picks|prefers|chooses|works)|(Mai|she)[^.]{0,20}(picks|prefers|chooses|confirms|replies|decides)"
 
 must_not_mention:
   # THE CLAIM THIS CASE EXISTS FOR. Not a hedge — a statement, in the
