@@ -66,6 +66,14 @@
      window turns the same question into a different composition on every
      screen. */
   --ob-stage-min: clamp(560px, 72vh, 860px);
+  /* How far the room stands off the window, as ONE number: the margin below
+     spends it and the height cap subtracts it. Two independent spellings would
+     be a card that is a few pixels taller than what is left for it, which is a
+     page-length scroll of exactly that much with the way onward at the end of
+     it. */
+  --ob-stage-inset: clamp(var(--space-3), 2.5vh, var(--space-8));
+  --ob-stage-window: 100vh;
+  --ob-stage-room: calc(var(--ob-stage-window) - 2 * var(--ob-stage-inset));
   /* How far the board keeps off the left edge, which is what reserves the
      Core's place. The Core is positioned rather than columned, so this is the
      only thing standing between the two. */
@@ -97,8 +105,18 @@
      generously; the width follows, so the margin is never eaten by the cap. */
   width: calc(100% - 2 * clamp(var(--space-3), 3vw, var(--space-10)));
   max-width: 1560px;
-  margin: clamp(var(--space-3), 2.5vh, var(--space-8)) auto;
-  min-height: var(--ob-stage-min);
+  margin: var(--ob-stage-inset) auto;
+  /* The room never runs past the window, and that is what puts the way onward
+     in view: the foot is the card's last row, so a card the window contains is
+     a foot the reader can always reach. What gives instead is the BOARD, which
+     scrolls inside the room (see .ob-stage-board) — the band stays at the top,
+     the Core keeps its place, and only the question moves.
+
+     The proportion yields to the cap rather than overriding it: `min-height`
+     beats `max-height` in CSS, so a room asking for 560px on a 400px window
+     would have won and hung its own foot below the fold. */
+  min-height: min(var(--ob-stage-min), var(--ob-stage-room));
+  max-height: var(--ob-stage-room);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -109,6 +127,14 @@
      a composition this quiet, and the drawing has the stage lighter than the
      page it sits on rather than darker. */
   background: var(--bgElevated);
+}
+@supports (height: 100dvh) {
+  /* 100vh on mobile Safari measures the viewport with the URL bar collapsed, so
+     a room sized against it runs taller than the screen — and the part hanging
+     off the bottom edge is the foot the cap exists to keep on it. */
+  .ob-stage {
+    --ob-stage-window: 100dvh;
+  }
 }
 
 /*
@@ -373,8 +399,26 @@
   z-index: 2;
   flex: 1 1 auto;
   min-width: 0;
+  /* The one thing in the room that scrolls. The band names where the reader is
+     and the foot carries the way onward, so neither may leave the screen; the
+     question between them is the part that can be longer than the room, and it
+     gives ground by scrolling inside it instead of pushing the card past the
+     window's edge.
+     `min-height: 0` is what lets it: a flex item's automatic minimum is its
+     content, so without this the board simply refuses to be shorter than what
+     is on it and grows the room instead — which is the stacked layout's case,
+     where the board is a column item under the Core rather than stretched
+     beside it. Sideways it clips rather than scrolls: every overlay a board can
+     raise is portalled to the body, so nothing legitimate needs the room, and
+     a box that scrolls in one axis and merely clips in the other is a sideways
+     scroll into empty space one trackpad flick away. */
+  min-height: 0;
+  overflow: hidden auto;
   display: grid;
-  align-content: center;
+  /* SAFE centring, the same reason `.ob-page` uses it: a board taller than the
+     room overflows a centred track equally at both ends, and the top half is
+     the half no scroll can reach back to. */
+  align-content: safe center;
   /*
    * Children take the board's width, which is the grid default and what the
    * screens already assume. `justify-items: start` sized every child to its own
@@ -431,12 +475,14 @@
  * sits outside the board and does not arrive with it.
  */
 .ob-stage-foot {
-  /* Held to the bottom of the window while a long board scrolls, so the way
-     onward is in view from wherever the reader is on the board; it settles
-     back onto the card's own edge once that edge is on screen. Opaque, because
-     the board passes underneath it. */
-  position: sticky;
-  bottom: 0;
+  /* Always in view, and by the room's shape rather than by a stick line: the
+     card is capped to the window and the board scrolls inside it, so the last
+     row of the card is on screen wherever the reader is on the board.
+     `position: sticky` used to stand here and did nothing — the room is
+     `overflow: hidden`, which makes it the scrollport a sticky child resolves
+     against, and the room never scrolls.
+     Above the Core, whose halo reaches past the scene it hangs in; z-index
+     applies to a flex item with no position of its own. */
   z-index: 3;
   display: flex;
   align-items: center;
@@ -546,8 +592,15 @@
      there. */
   .ob-stage {
     width: 100%;
+    /* Full bleed, so the room is exactly the window: no inset to stand off it
+       with, and none to subtract from the cap either. Stating it as the inset
+       rather than as a second height keeps the floor and the ceiling agreeing —
+       a bare `100vh` floor here would have beaten the `100dvh` cap on mobile
+       Safari and hung the foot off the bottom edge, which is the one thing this
+       layout may not do. */
+    --ob-stage-inset: 0px;
     margin: 0;
-    min-height: 100vh;
+    min-height: var(--ob-stage-room);
     border: 0;
     border-radius: 0;
     box-shadow: none;

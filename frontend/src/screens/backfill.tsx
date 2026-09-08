@@ -250,19 +250,15 @@ function BackfillSetup({
         choices={WINDOWS.map((w) => ({ value: w.value, label: t(w.label) }))}
         onChange={onWindowChange}
       />
-      {previewPending && !previewData && (
-        <p className="t-caption">{t("backfill.previewLoading")}</p>
-      )}
       {previewErrorMessage && (
         <p className="t-caption backfill-error">{previewErrorMessage}</p>
       )}
-      {previewData && (
-        <EstimateCard
-          preview={previewData}
-          starting={startPending}
-          onStart={onStart}
-        />
-      )}
+      <EstimateCard
+        preview={previewData}
+        counting={previewPending && !previewData}
+        starting={startPending}
+        onStart={onStart}
+      />
       {startErrorMessage && (
         <p className="t-caption backfill-error">
           {narrowing ? t("backfill.narrowingNote") : startErrorMessage}
@@ -280,26 +276,42 @@ function BackfillSetup({
   );
 }
 
-// EstimateCard is the consent surface: the labeled estimate the user acts on.
+// EstimateCard is the consent surface: whatever is known about the scope, and
+// the verb that acts on it.
+//
+// The verb stands in every scope state — counted, still counting, or refused.
+// The window is what the reader picked and what bounds the run; the estimate
+// only describes that window, so a count that is slow or that failed is a
+// reason to say so, never a reason to withhold the import. Drawing the card
+// only on a landed estimate took the start button off screen for exactly the
+// mailboxes slow enough to make someone wonder, and off screen for good when
+// the estimator refused.
 function EstimateCard({
   preview,
+  counting,
   starting,
   onStart,
 }: {
-  preview: components["schemas"]["BackfillPreview"];
+  preview: components["schemas"]["BackfillPreview"] | undefined;
+  /** No estimate for this window yet and one is on its way. A refused estimate
+   *  is neither: its sentence is already above the card. */
+  counting: boolean;
   starting: boolean;
   onStart: () => void;
 }) {
   const t = useT();
   const { locale } = useLocale();
-  const costMinor = preview.estimated_cost_minor ?? 0;
+  const costMinor = preview?.estimated_cost_minor ?? 0;
   return (
     <div className="backfill-estimate">
-      <p>
-        {t("backfill.estimateMessages")}{" "}
-        <strong>~{formatNumber(preview.estimated_messages, locale)}</strong>
-      </p>
-      {costMinor > 0 && (
+      {counting && <p className="t-caption">{t("backfill.previewLoading")}</p>}
+      {preview && (
+        <p>
+          {t("backfill.estimateMessages")}{" "}
+          <strong>~{formatNumber(preview.estimated_messages, locale)}</strong>
+        </p>
+      )}
+      {preview && costMinor > 0 && (
         <p className="t-caption">
           {t("backfill.estimateCost")} ~
           {formatMoney(

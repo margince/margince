@@ -1180,7 +1180,13 @@ export type MockApiOptions = Readonly<{
   // company saved, no wizard row — which is what the onboarding AC has to
   // reach; under the default, the conversation would (rightly) send a
   // finished reader home.
-  journey?: "finished" | "unstarted";
+  // "unconfigured" is "unstarted" plus an installation that has bound no model
+  // yet, which is the very first screen anyone meets: the cold start asks for
+  // the model before it asks for a website, because a read it cannot perform is
+  // a question it should not put. It is the one journey state whose board
+  // carries a form long enough to outgrow a short window, so it is what the
+  // way-onward-stays-in-view claim is measured on.
+  journey?: "finished" | "unstarted" | "unconfigured";
 }>;
 
 export async function mockApi(
@@ -1194,6 +1200,13 @@ export async function mockApi(
   // native within the SAME test (AC-overlay-6) — /me below reads this on
   // every call, the same per-page-state pattern `automations`/`brief` use.
   let sorMode: "native" | "overlay" = options?.sor ?? "native";
+  // An installation nobody has described yet: no company row and no wizard row.
+  // Both journeys before the gate answer the same way about those two, and
+  // "unconfigured" only adds the unbound model on top — so the condition is
+  // named once rather than spelled at each route, where the third state would
+  // have been added to one of them and quietly missed by the other.
+  const undescribed =
+    options?.journey === "unstarted" || options?.journey === "unconfigured";
   // The auth gate (App.tsx) short-circuits to the signup screen when no
   // workspace slug is resolved, before it ever probes /me — so a hermetic run
   // must seed a slug in localStorage or every authed screen renders auth. The
@@ -1569,13 +1582,28 @@ export async function mockApi(
         onboarding_enabled: true,
       });
     }
+    // What the installation still has to be told before it can do any thinking.
+    // Every journey but "unconfigured" reports it done: an outstanding blocking
+    // step puts the model question in front of the website one, which is right
+    // for a fresh install and wrong for every AC that means to reach a screen
+    // behind it.
+    if (path === "/installation/setup" && method === "GET") {
+      const configured = options?.journey !== "unconfigured";
+      return json({
+        complete: configured,
+        steps: [
+          { step: "ai_models", configured, blocking: true },
+          { step: "oauth_app", configured, blocking: false },
+        ],
+      });
+    }
     // The installation's own company. A described installation is the state
     // every AC below assumes: the shell gates on this, and a 404 would (rightly)
     // redirect them all into onboarding — which is exactly what an "unstarted"
     // journey asks for. Shaped as the contract's CompanyProfile — the generic
     // list fallthrough is not a company, and the form would read display_name
     // off it and crash.
-    if (path === "/company" && options?.journey === "unstarted") {
+    if (path === "/company" && undescribed) {
       return json(
         { type: "about:blank", title: "Not Found", status: 404 },
         404,
@@ -1588,7 +1616,7 @@ export async function mockApi(
     // is the state a described installation's admin is in; "unstarted" has no
     // row, which the contract spells as 404.
     if (path === "/onboarding/state" && method === "GET") {
-      if (options?.journey === "unstarted") {
+      if (undescribed) {
         return json(
           { type: "about:blank", title: "Not Found", status: 404 },
           404,

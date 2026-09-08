@@ -247,7 +247,7 @@ func TestAConsentLinkDischargesNoDisclosureDuty(t *testing.T) {
 		Scan(&purpose); err != nil {
 		t.Fatalf("read the marketing purpose: %v", err)
 	}
-	issued, err := e.store.IssueConsentLink(e.ctx, e.person, purpose)
+	issued, err := e.store.IssueConsentLink(e.ctx, e.person, purpose, "")
 	if err != nil {
 		t.Fatalf("mint a consent link: %v", err)
 	}

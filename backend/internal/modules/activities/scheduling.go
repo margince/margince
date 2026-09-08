@@ -15,7 +15,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -415,40 +414,8 @@ func (h Handlers) BookMeeting(w http.ResponseWriter, r *http.Request, _ crmcontr
 	// give it. Recording it is mandatory once the field is present; a
 	// process role composed without the consent seam refuses rather than
 	// booking with an unrecorded consent.
-	if req.Consent != nil {
-		if h.publicConsent == nil {
-			httperr.Write(w, r, apperrors.ErrPermissionDenied)
-			return
-		}
-		if req.Consent.PolicyVersion == "" {
-			httperr.Write(w, r, httperr.Validation("consent.policy_version", "required", "the consent wording version shown to the subject is required"))
-			return
-		}
-		// Both halves of the proof row are settled before anything is written,
-		// for the reason stated above: recording is mandatory once the field is
-		// present, and a grant that cannot say what the subject read is not
-		// demonstrable.
-		if req.Consent.Wording == nil || strings.TrimSpace(*req.Consent.Wording) == "" {
-			httperr.Write(w, r, httperr.Validation("consent.wording", "required", "the consent wording shown to the subject is required"))
-			return
-		}
-		personID, ok := consentSubjectLink(w, r, in.Links)
-		if !ok {
-			return
-		}
-		purposeID := ids.UUID(req.Consent.PurposeId)
-		if err := h.publicConsent.ValidatePurpose(r.Context(), purposeID); err != nil {
-			writeStoreErr(w, r, err)
-			return
-		}
-		if err := h.publicConsent.CaptureBookingConsent(r.Context(), personID, BookingConsent{
-			PurposeID:     purposeID,
-			PolicyVersion: req.Consent.PolicyVersion,
-			Wording:       req.Consent.Wording,
-		}); err != nil {
-			writeStoreErr(w, r, err)
-			return
-		}
+	if !h.captureBookingConsent(w, r, req.Consent, in.Links) {
+		return
 	}
 
 	booked, err := h.store.BookMeeting(r.Context(), in)

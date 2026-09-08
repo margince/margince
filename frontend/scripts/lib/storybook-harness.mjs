@@ -52,6 +52,18 @@ export function serveStaticStorybook(staticDir) {
   const root = resolve(staticDir);
   const server = createServer((req, res) => {
     const urlPath = decodeURIComponent((req.url ?? "/").split("?")[0]);
+    // The browser's own tab-icon probe, which no story asked for: Chromium
+    // requests /favicon.ico once per origin when the document declares no icon,
+    // and Storybook's iframe declares none. A 404 to it is a console error, and
+    // the render gate charged that error to whichever story happened to be
+    // rendered FIRST — a red that names an innocent story and does not
+    // reproduce when that story is opened on its own. Answered empty rather
+    // than allowlisted at the gate: the request is the server's to explain, and
+    // a filter there would have to know why it is exempt.
+    if (urlPath === "/favicon.ico") {
+      res.writeHead(204).end();
+      return;
+    }
     const rel = urlPath === "/" ? "index.html" : urlPath.replace(/^\/+/, "");
     const file = resolve(root, rel);
     if (file !== root && !file.startsWith(root + sep)) {

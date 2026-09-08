@@ -2886,3 +2886,139 @@ test.describe("filters and views", () => {
     ).toBeVisible();
   });
 });
+
+test.describe("stage automation, in German", () => {
+  // The rule and the report the page draws. Routed rather than seeded, because
+  // what is under test is the German surface over a KNOWN state — a suspension
+  // with a reason, and a transition nobody has decided about — and neither is a
+  // state the seed happens to produce.
+  const SUSPENDED_REASON =
+    "ein Zug hat einen Datensatz außerhalb des eigenen Workspace erreicht";
+
+  async function stubStageAutomation(
+    page: Page,
+    options: { suspended?: boolean } = {},
+  ) {
+    const suspended = options.suspended ?? true;
+    await page.route("**/stage-automation/report**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          window_days: 30,
+          data: [
+            {
+              pipeline_id: "p1",
+              from_stage_id: "s1",
+              to_stage_id: "s2",
+              from_stage_name: "Erstkontakt",
+              to_stage_name: "Angebot",
+              reviewed: 240,
+              proposed: 0,
+              expired: 0,
+              superseded: 0,
+              accepted_clean: 236,
+              accepted_edited: 2,
+              rejected: 2,
+              auto_applied: 0,
+              unsafe: 1,
+              observation_days: 34,
+              clean_acceptance_rate: 0.98,
+              edit_rate: 0.01,
+              rejection_rate: 0.01,
+              // UNDER the 1% ceiling. The rule below is suspended for a SAFETY
+              // defect, which needs no volume — so the record has to be good,
+              // or the page would rightly draw "not earned yet" instead of the
+              // undo window this test is about.
+              unsafe_rate: 0.004,
+              evidence_kinds: [],
+            },
+          ],
+        }),
+      });
+    });
+    await page.route("**/stage-automation/policies/**", async (route) => {
+      if (route.request().method() !== "GET") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: "{}",
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          data: [
+            {
+              id: "r1",
+              pipeline_id: "p1",
+              from_stage_id: "s1",
+              to_stage_id: "s2",
+              mode: "auto",
+              clean_acceptance_threshold: 0.95,
+              correction_reversal_threshold: 0.01,
+              min_reviewed: 200,
+              min_observation_days: 28,
+              window_days: 30,
+              undo_window_hours: 72,
+              version: 3,
+              ...(suspended
+                ? {
+                    suspended_at: "2026-09-03T10:00:00Z",
+                    suspended_reason: SUSPENDED_REASON,
+                  }
+                : {}),
+            },
+          ],
+        }),
+      });
+    });
+  }
+
+  test("a suspended transition says in German why it stopped, and promises no undo while it is stopped", async ({
+    page,
+  }) => {
+    await stubStageAutomation(page);
+    await page.goto("/#/settings/stageautomation");
+    await page.waitForLoadState("networkidle");
+
+    // The switch carries the transition's own stage names, so an admin reading
+    // three rules can tell which move each one governs.
+    await expect(
+      page.getByRole("switch", { name: /Erstkontakt → Angebot/ }),
+    ).toBeVisible();
+
+    // The product's own reason, in the reader's language and unabridged. It is
+    // the entire basis for deciding whether to start the transition again.
+    await expect(page.getByText(SUSPENDED_REASON)).toBeVisible();
+
+    // A SUSPENDED rule promises no undo window, because it applies nothing —
+    // and a screen saying "Rückgängig für 72 h" beside "Margince hat das
+    // gestoppt" would offer an undo for moves that are not being made.
+    await expect(page.getByText(/Rückgängig für/)).toBeHidden();
+
+    // The way back is a deliberate act with its own confirmation, not a
+    // toggle: lifting a safety stop by mis-click is the failure this guards.
+    await page.getByRole("button", { name: "Wieder starten" }).click();
+    await expect(
+      page.getByText(/überspringt die Schwelle nicht/),
+    ).toBeVisible();
+  });
+
+  test("a running transition says in German how long a move can be taken back", async ({
+    page,
+  }) => {
+    await stubStageAutomation(page, { suspended: false });
+    await page.goto("/#/settings/stageautomation");
+    await page.waitForLoadState("networkidle");
+
+    // "Rückgängig", with the window a person actually has. A screen that
+    // offered undo without saying how long it lasts leaves somebody to find
+    // out by trying it too late.
+    await expect(page.getByText(/Rückgängig für 72 h/)).toBeVisible();
+    // And nothing about a stop, because there is none.
+    await expect(page.getByText("Margince hat das gestoppt")).toBeHidden();
+  });
+});
