@@ -65,9 +65,11 @@ var _ weeklyplan.Capacity = weeklyPlanCapacity{}
 // after it, and the heading, the stored row and this line each answered about a
 // different seven days.
 //
-// Booked only, never held: this is a question about a week that has not
-// happened, so a meeting's outcome cannot be known and `held` there would mean
-// somebody backdated it. Canceled and no_show are absent for the same reason.
+// Booked only, never held. The question is what is COMMITTED — what a rep must
+// leave room for — and an outcome is not a commitment: a held meeting is time
+// already spent rather than time still owed, and counting it would price a week
+// against work that is finished. Canceled and no_show are absent for the same
+// reason, from the other side.
 //
 // The window is the LOCAL week resolved to instants, through weekly's own
 // WeekStartOf, so the plan and the review beside it agree about which seven
