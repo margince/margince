@@ -8964,6 +8964,7 @@ export const de = {
   // Eine ERSTE Nachricht, keine Antwort auf eine bestehende.
   "worklist.verb.draft_email": "Zum Schreiben öffnen",
   "worklist.verb.draft_email_now": "E-Mail entwerfen",
+  "worklist.verb.open_meeting_brief": "Auf das Meeting vorbereiten",
   "worklist.deal.closes": "Abschluss {date}",
   "worklist.when.starts": "beginnt {when}",
   "worklist.when.due": "fällig {when}",

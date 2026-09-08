@@ -461,6 +461,12 @@ describe("moveHref — the open_meeting_brief move", () => {
   it("is not a draft", () => {
     expect(moveOpensComposer(briefRow("p-9"))).toBe(false);
   });
+
+  // moveLabel has no branch for this move, so it fell through to the reply
+  // wording on a row that is plainly a meeting, not a message.
+  it("names itself as the brief, not as a reply", () => {
+    expect(moveLabel(briefRow("p-9"), t)).toBe("Prepare for the meeting");
+  });
 });
 
 function briefRow(withPerson: string | undefined) {

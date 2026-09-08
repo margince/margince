@@ -31,6 +31,7 @@ func TestOnlyTheModelRoutesTakeTheLongerDeadline(t *testing.T) {
 		"/v1/organizations/01a0-4cd2/dossier":             true,
 		"/v1/organizations/01a0-4cd2/growth-fit":          true,
 		"/v1/activities/01a0-4cd3/meeting-brief":          true,
+		"/v1/brief":                                       true,
 		"/v1/organizations/01a0-4cd2/ask":                 true,
 		"/v1/knowledge/corpora/01a0-4cd2/ask":             true,
 		"/v1/people/01a0-4cd2/intro-note-draft":           true,

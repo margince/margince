@@ -17,15 +17,17 @@ import (
 // seconds — measured on a real installation, a reply draft takes 13 to 45 —
 // and the server's WriteTimeout is 30s for every other endpoint's protection.
 //
-// Suffix rather than a full path because each of these is mounted under an
+// Suffix rather than a full path because most of these are mounted under an
 // id-bearing prefix (/activities/{id}/draft-email, /organizations/{id}/dossier),
 // and a list of formatted paths would be a second copy of the router that
-// drifts the day a route moves.
+// drifts the day a route moves. `/brief` carries no id — it assembles the
+// caller's own day — but the same suffix match still names it uniquely.
 var modelRouteSuffixes = []string{
 	"/draft-email",
 	"/dossier",
 	"/growth-fit",
 	"/meeting-brief",
+	"/brief",
 	"/ask",
 	"/intro-note-draft",
 	"/intro-request-draft",

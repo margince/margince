@@ -9097,6 +9097,7 @@ export const en = {
   // conversation that has not happened yet.
   "worklist.verb.draft_email": "Open to write",
   "worklist.verb.draft_email_now": "Draft the email",
+  "worklist.verb.open_meeting_brief": "Prepare for the meeting",
   "worklist.deal.closes": "closes {date}",
   "worklist.when.starts": "starts {when}",
   "worklist.when.due": "due {when}",
