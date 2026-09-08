@@ -117,7 +117,7 @@ const indexedFunctionFloor = 2000
 func indexPackageFunctions(t *testing.T, roots []string) funcIndex {
 	t.Helper()
 	tree := moduleRoot(t)
-	holders := txHoldingReceivers(t, roots)
+	holders, _ := txHoldingReceivers(t, roots)
 	idx := funcIndex{}
 	fset := token.NewFileSet()
 	counted := 0
