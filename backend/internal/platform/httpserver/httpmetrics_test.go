@@ -425,14 +425,19 @@ func TestLabelValuesUseOnlyPrometheusEscapes(t *testing.T) {
 		"/v1/with\"quote":   `"/v1/with\"quote"`,
 		`/v1/with\slash`:    `"/v1/with\\slash"`,
 		"/v1/with\nnewline": `"/v1/with\nnewline"`,
-		// Dropped rather than escaped: %q would have written \t and \x00 here,
-		// and neither is a legal Prometheus escape.
-		"/v1/with\ttab":    `"/v1/withtab"`,
-		"/v1/with\x00null": `"/v1/withnull"`,
+		// Substituted rather than escaped: %q would have written \t and \x00
+		// here, and neither is a legal Prometheus escape. Each control byte
+		// gets its OWN picture rather than a shared replacement rune, so two
+		// values differing only in which control byte they carry stay two
+		// series instead of colliding into one.
+		"/v1/with\ttab":    "\"/v1/with\u2409tab\"",
+		"/v1/with\x00null": "\"/v1/with\u2400null\"",
+		"/v1/with\x01soh":  "\"/v1/with\u2401soh\"",
+		"/v1/with\x7fdel":  "\"/v1/with\u2421del\"",
 	}
 	for in, want := range cases {
-		if got := label(in); got != want {
-			t.Errorf("label(%q) = %s, want %s", in, got, want)
+		if got := Label(in); got != want {
+			t.Errorf("Label(%q) = %s, want %s", in, got, want)
 		}
 	}
 }

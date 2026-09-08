@@ -52,12 +52,12 @@ func TestNothingIsMeasuredForAScrapeThatHasAlreadyGone(t *testing.T) {
 	// it measures anything.
 	w := &hangUp{ResponseWriter: httptest.NewRecorder(), accepts: 1}
 
-	Metrics(nil,
-		func(context.Context) (int64, error) { measured["backlog"] = true; return 0, nil },
-		func() uint64 { return 0 },
-		func(io.Writer) { measured["extra"] = true },
-		func(context.Context, io.Writer) error { measured["jobs"] = true; return nil },
-		&OverlayMetrics{
+	Metrics(MetricsInput{
+		Backlog:   func(context.Context) (int64, error) { measured["backlog"] = true; return 0, nil },
+		Published: func() uint64 { return 0 },
+		Extra:     func(io.Writer) { measured["extra"] = true },
+		JobStats:  func(context.Context, io.Writer) error { measured["jobs"] = true; return nil },
+		Overlay: &OverlayMetrics{
 			SourceLag: func(context.Context) (map[string]time.Duration, error) {
 				measured["overlay"] = true
 				return map[string]time.Duration{}, nil
@@ -66,7 +66,7 @@ func TestNothingIsMeasuredForAScrapeThatHasAlreadyGone(t *testing.T) {
 			ConflictTotal: func() uint64 { return 0 },
 			DeletedTotal:  func() uint64 { return 0 },
 		},
-	)(w, httptest.NewRequest(http.MethodGet, "/metrics", nil))
+	})(w, httptest.NewRequest(http.MethodGet, "/metrics", nil))
 
 	// The runtime section is first and does the refusing, so everything after
 	// it is work for a body that cannot be delivered.
@@ -105,16 +105,15 @@ func TestNoCounterIsReadForAScrapeThatHasAlreadyGone(t *testing.T) {
 	read := map[string]bool{}
 	w := &hangUp{ResponseWriter: httptest.NewRecorder(), accepts: 1}
 
-	Metrics(nil, nil,
-		func() uint64 { read["published"] = true; return 0 },
-		nil, nil,
-		&OverlayMetrics{
+	Metrics(MetricsInput{
+		Published: func() uint64 { read["published"] = true; return 0 },
+		Overlay: &OverlayMetrics{
 			SourceLag:     func(context.Context) (map[string]time.Duration, error) { return map[string]time.Duration{}, nil },
 			SyncedTotal:   func() uint64 { read["synced"] = true; return 0 },
 			ConflictTotal: func() uint64 { read["conflict"] = true; return 0 },
 			DeletedTotal:  func() uint64 { read["deleted"] = true; return 0 },
 		},
-	)(w, httptest.NewRequest(http.MethodGet, "/metrics", nil))
+	})(w, httptest.NewRequest(http.MethodGet, "/metrics", nil))
 
 	for _, supplier := range []string{"published", "synced", "conflict", "deleted"} {
 		if read[supplier] {
@@ -143,5 +142,25 @@ func TestReadyzStopsWritingWhenItsReaderHangsUp(t *testing.T) {
 	if w.writes != 2 {
 		t.Errorf("the probe body attempted %d writes, want 2 — the first is the answer, the second "+
 			"is what discovers the reader is gone, and nothing after it should be tried", w.writes)
+	}
+}
+
+// Two distinct values must not render to one label set. A family emitting the
+// same label set twice is a duplicate sample Prometheus discards with a warning
+// — the number on the dashboard is then wrong with nothing failing — and the AI
+// families are keyed by an identity that comes off a provider's wire.
+//
+// The second pair is the one a single shared replacement rune still collapsed:
+// substitution alone is not enough, it has to be injective.
+func TestDistinctLabelValuesStayDistinctThroughEscaping(t *testing.T) {
+	for _, pair := range [][2]string{
+		{"gpt-x\x01", "gpt-x"},
+		{"gpt-x\x01", "gpt-x\x02"},
+		{"gpt-x\t", "gpt-x\x7f"},
+	} {
+		if Label(pair[0]) == Label(pair[1]) {
+			t.Errorf("Label(%q) and Label(%q) both render %s; two model identities collapse into one series",
+				pair[0], pair[1], Label(pair[0]))
+		}
 	}
 }

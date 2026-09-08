@@ -152,7 +152,11 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 
-	serveResolvedModelPath(ctx, observe, pool, &modelPath, logger)
+	// The api serves the routing write, this role only ever reads — so without
+	// this it would keep serving whatever binding it resolved at boot while the
+	// api served the new one, which is the two-roles-disagree failure moving
+	// routing into the database was meant to end (compose/routingwatcher).
+	go compose.NewRoutingWatcher(pool, &modelPath, config.FromOS, logger).Run(ctx)
 
 	// The lanes' lifetime is created and DEFERRED HERE, before anything can
 	// start on it. That ordering used to live inside startEventLanes and be
@@ -205,30 +209,6 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 
 	relayUntilSignal(ctx, cfg, pool, rdb, logger, stdout)
 	return releaseSkewRefusal(releaseSkewErr)
-}
-
-// serveResolvedModelPath hands the resolved path to both things that read it
-// for the rest of the process's life, which is why they sit together: the
-// operator surface renders this process's AI counters from it, and the watcher
-// keeps it current.
-//
-// The counters belong to the process that routed the call, so the api cannot
-// answer for what the lanes here dispatched — while this was unpublished, an
-// AI error rate computed from the api's exposition alone described a minority
-// of the installation's calls while appearing to describe all of them.
-//
-// The watcher rebinds INSIDE the *ai.Router the path holds rather than
-// replacing the value, so publishing once is enough: a routing change is
-// picked up through the same path the section already renders.
-//
-// The api serves the routing write and this role only ever reads it — without
-// the watcher this process would keep serving whatever binding it resolved at
-// boot while the api served the new one, which is the two-roles-disagree
-// failure that moving routing into the database was meant to end
-// (compose/routingwatcher).
-func serveResolvedModelPath(ctx context.Context, observe observeListener, pool *pgxpool.Pool, path *compose.ModelPath, log *slog.Logger) {
-	observe.PublishAIMetrics(path.WriteMetrics)
-	go compose.NewRoutingWatcher(pool, path, config.FromOS, log).Run(ctx)
 }
 
 // releaseSkewRefusal is why the relay returned: a signal, or the release guard.

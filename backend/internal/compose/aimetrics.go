@@ -9,19 +9,25 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// WithAIMetrics sets this role's /metrics AI renderer. A process resolves
-// one ModelPath and registers this exactly once over it, so /metrics
-// exposes one AI metric family instance for the process's one Router.
+// WithAIMetrics sets this role's /metrics AI renderer.
+//
+// The renderer is ai.WriteProcessMetrics in both binaries, and both wire it
+// UNCONDITIONALLY: the counters belong to the process, not to a router, so a
+// role that resolved no model path still publishes the (empty) families rather
+// than leaving an operator unable to tell "made no calls" from "renders no
+// counters". Registering twice is harmless for the same reason — both
+// registrations name one process-wide collector.
 func WithAIMetrics(write func(io.Writer)) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
 		s.aiMetrics = write
 	}
 }
 
-// writeAIMetrics renders this role's AI counters exactly once. A role
-// with none wired writes nothing — /metrics stays honest about an
-// AI-less process rather than emitting an empty or fabricated counter
-// family.
+// writeAIMetrics renders this process's AI counters exactly once.
+//
+// The nil branch survives for the tests that build a Server without the option;
+// no binary leaves it unset, so it is not the "AI-less role" posture the
+// fleet-wide sections take.
 func (s Server) writeAIMetrics(w io.Writer) {
 	if s.aiMetrics != nil {
 		s.aiMetrics(w)

@@ -15,7 +15,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -317,6 +316,13 @@ func (r *Router) flush(ctx context.Context, b *binding, lc *logicalCall) {
 	}
 	term := lc.terminal()
 	if r.metrics != nil {
+		// Every attempt, then the terminal. The two answer different
+		// questions -- what the ladder cost versus what the caller asked for
+		// -- and a surface that counted only one of them reports a tier that
+		// fails over on every call as identical to one that never does.
+		for i := range lc.attempts {
+			r.metrics.observeAttempt(lc.attempts[i])
+		}
 		r.metrics.observe(term)
 	}
 	r.log.InfoContext(ctx, "ai.call",
@@ -344,7 +350,3 @@ func (r *Router) flush(ctx context.Context, b *binding, lc *logicalCall) {
 		r.log.ErrorContext(ctx, "ai: recording call trace failed", "task", string(term.Task), "err", err)
 	}
 }
-
-// WriteMetrics renders the router's AI counters in Prometheus text form —
-// the composition layer wires it into the /metrics handler.
-func (r *Router) WriteMetrics(w io.Writer) { r.metrics.WritePrometheus(w) }

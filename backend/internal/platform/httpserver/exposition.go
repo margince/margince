@@ -6,6 +6,7 @@ package httpserver
 import (
 	"fmt"
 	"io"
+	"strings"
 )
 
 // exposition is the one thing every /readyz and /metrics section writes
@@ -63,4 +64,83 @@ func (e *exposition) printf(format string, a ...any) {
 		return
 	}
 	_, e.err = fmt.Fprintf(e.w, format, a...)
+}
+
+// WriteLine is how every hand-rolled family in this tree writes a line, and the
+// ONE place any of them discards a write error. The exposition writer is why
+// that is sound: it holds the first refusal, no-ops on every write after it,
+// and is asked once by the handler at the end of the scrape.
+//
+// Exported for the same reason Label and Histogram are. Five renderers across
+// three packages had their own `_, _ = fmt.Fprintf`, which is five answers to
+// "what does a refused write mean" and five waivers to keep in step; there is
+// one now, here, with the writer whose contract makes it true.
+//
+//craft:ignore swallowed-errors the exposition writer holds the first error and no-ops after it; the handler asks it once per scrape
+func WriteLine(w io.Writer, format string, a ...any) {
+	_, _ = fmt.Fprintf(w, format, a...)
+}
+
+// The Unicode Control Pictures for the bytes Label substitutes: the block
+// begins at U+2400 for NUL and runs in step with the code point it depicts,
+// and DEL has its own picture out of sequence at U+2421.
+const (
+	controlPicture = '\u2400'
+	deletePicture  = '\u2421'
+)
+
+// Label renders a Prometheus label VALUE with only the three escapes the text
+// format defines: backslash, double quote, and newline.
+//
+// Not %q. strconv.Quote is Go's escaping, not Prometheus', and the two agree
+// only by coincidence on ordinary input: %q also emits \t, \r, \xNN and
+// \uNNNN, and Prometheus' parser rejects those as an invalid escape sequence.
+// It rejects the WHOLE SCRAPE when it does, not the offending line — so one
+// stray byte in one label would take every family in this process off the
+// dashboard at once.
+//
+// Exported because the reachable case is no longer hypothetical. Route comes
+// from a compile-time template and method from a closed set, but the AI
+// router labels by a tier binding's model id, which an operator types.
+//
+// A control byte is SUBSTITUTED, and substituted INJECTIVELY. Dropping reads
+// best in isolation — a control byte is not information an operator can use —
+// and folding every one onto a single replacement rune reads nearly as well,
+// but both map distinct values onto one rendered label set. A family emitting
+// the same label set twice is a duplicate sample Prometheus discards with only
+// a warning, so the count on the dashboard would be wrong with nothing failing,
+// and the AI families are now keyed by a model identity that comes off a
+// provider's wire.
+//
+// Each control byte therefore becomes its own picture from the Unicode Control
+// Pictures block: U+0000-U+001F map to U+2400-U+241F, and U+007F to U+2421.
+// Printable, valid UTF-8, and distinct for every input this can receive.
+//
+// One aliasing case survives and is left: an input containing a literal Control
+// Pictures character collides with the input containing the byte it depicts.
+// Closing it needs an escape of the escape, which buys nothing here — a value
+// reaching this function is already length- and cardinality-bounded by its
+// caller, so the pair could at worst merge two series a person invented.
+func Label(value string) string {
+	var b strings.Builder
+	b.Grow(len(value) + 2)
+	b.WriteByte('"')
+	for _, r := range value {
+		switch {
+		case r == '\\':
+			b.WriteString(`\\`)
+		case r == '"':
+			b.WriteString(`\"`)
+		case r == '\n':
+			b.WriteString(`\n`)
+		case r < 0x20:
+			b.WriteRune(controlPicture + r)
+		case r == 0x7f:
+			b.WriteRune(deletePicture)
+		default:
+			b.WriteRune(r)
+		}
+	}
+	b.WriteByte('"')
+	return b.String()
 }
