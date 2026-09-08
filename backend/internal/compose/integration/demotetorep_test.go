@@ -8,6 +8,7 @@ package integration
 import (
 	"context"
 	"net/http"
+	"slices"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
@@ -102,8 +103,16 @@ func assertSignedInAsRep(t *testing.T, e *apptest.AppEnv) {
 	if status := e.Call(t, "GET", "/v1/me", nil, nil, &me); status != http.StatusOK {
 		t.Fatalf("re-reading the seat after demotion → %d", status)
 	}
-	if len(me.Roles) != 1 || me.Roles[0] != "rep" {
-		t.Fatalf("the session holds %v after demotion, want exactly [rep] — an admin-only endpoint would answer this seat 200 and the caller would read that as the product letting a rep through",
+	// The two things the callers depend on, and not the SIZE of the set. An
+	// exact `[rep]` would turn every caller red the day the product grants
+	// every human a baseline role — a change that leaves this helper's promise
+	// entirely intact, since what a caller needs is that the seat is a rep and
+	// is no longer an admin.
+	if !slices.Contains(me.Roles, "rep") {
+		t.Fatalf("the session holds %v after demotion and no rep role — the demotion did not reach the seat making the requests", me.Roles)
+	}
+	if slices.Contains(me.Roles, "admin") {
+		t.Fatalf("the session still holds admin after demotion (%v) — an admin-only endpoint would answer this seat 200 and the caller would read that as the product letting a rep through",
 			me.Roles)
 	}
 }
