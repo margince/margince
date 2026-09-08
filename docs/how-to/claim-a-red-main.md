@@ -50,9 +50,18 @@ gh pr create --draft --label "claim: main-red" \
   --body "$(printf 'Claiming:\n- TestOne\n- TestTwo\n\nCause: unknown so far.\n')"
 ```
 
-An empty commit is the honest first state: you are claiming the work, not
-reporting a fix. Draft is not decoration either — `ci.yml` gates the frontend
-and UAT lanes on `draft == false`, so a claim costs a fraction of a full run.
+**A pull request with no diff is allowed, and this one has none.** GitHub asks
+only that the head branch carry a commit the base does not, which the empty
+commit provides — so the claim opens before a single line is written, which is
+the whole point of it. Do not talk yourself out of the empty commit and wait
+until you have a fix to show: by then the second session has already started.
+
+It is close to free. Measured on a zero-diff draft: fourteen of the sixteen
+checks skip, because the change classifier sees no files and every lane it gates
+skips with it. Only the `ci` fan-in and the review bot run.
+
+An empty commit is also the honest first state — you are claiming the work, not
+reporting a fix.
 
 If `main-health` has already filed a `main is red:` issue, assign yourself to it
 in the same breath. Unassigned reads as unclaimed, and the issue is where anyone
