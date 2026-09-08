@@ -224,7 +224,8 @@ func technicalChanges(in TechnicalEnrichment, held []heldFact, removed []map[str
 		// a rep acts on, and it needs the value that was replaced.
 		if previous, ok := replacedValue(heldByField[observation.Field], observation.Field); ok {
 			change.Kind = TechnicalMoved
-			change.Previous = previous
+			change.Previous = previous.Value
+			change.PreviousKey = previous.ValueKey
 		}
 		changes = append(changes, change)
 	}
@@ -261,7 +262,7 @@ func goneChanges(
 		changes = append(changes, TechnicalChange{
 			OrganizationID: in.OrganizationID,
 			Field:          field, ValueKey: valueKey, Value: value,
-			Previous: value, Kind: TechnicalGone,
+			Previous: value, PreviousKey: valueKey, Kind: TechnicalGone,
 			Evidence: heldByKey[field+technicalKeySeparator+valueKey].Value,
 		})
 	}
@@ -282,14 +283,14 @@ var singleValuedTechnicalFields = map[string]bool{
 
 // replacedValue reports the value a single-valued field held before, when the
 // row that held it was not a human's.
-func replacedValue(held []heldFact, field string) (string, bool) {
+func replacedValue(held []heldFact, field string) (heldFact, bool) {
 	if !singleValuedTechnicalFields[field] {
-		return "", false
+		return heldFact{}, false
 	}
 	for _, fact := range held {
 		if !fact.HumanHeld {
-			return fact.Value, true
+			return fact, true
 		}
 	}
-	return "", false
+	return heldFact{}, false
 }

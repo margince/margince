@@ -96,6 +96,7 @@ func WriteProjectQuietSignals(ctx context.Context, tx pgx.Tx, now time.Time) (Gh
 	if err != nil {
 		return GhostedPass{}, err
 	}
+	said := signalSummaryCopyFor(baseLanguageForSummary(ctx, tx))
 	pass := GhostedPass{Considered: len(found)}
 	for _, project := range found {
 		days := int(now.Sub(project.QuietSince).Hours() / 24)
@@ -103,7 +104,7 @@ func WriteProjectQuietSignals(ctx context.Context, tx pgx.Tx, now time.Time) (Gh
 			Kind:           kindProjectGoneQuiet,
 			OrganizationID: project.OrganizationID,
 			ProjectID:      project.ProjectID,
-			Summary:        fmt.Sprintf("Nothing has been filed on %s for %d days.", project.Name, days),
+			Summary:        fmt.Sprintf(said.projectQuiet, project.Name, days),
 			Severity:       severityWarn,
 			Fingerprint:    fingerprintOf(kindProjectGoneQuiet, project.ProjectID.String(), project.QuietSince.UTC().Format(time.RFC3339Nano)),
 			Audit: map[string]any{
