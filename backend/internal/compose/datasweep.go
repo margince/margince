@@ -367,3 +367,81 @@ func dropResetCustomFieldColumns(ctx context.Context, schemaPool *pgxpool.Pool) 
 	}
 	return nil
 }
+
+// orphanedSecretRefs reads every sealed-credential handle in vault_secret that
+// NO live handle column still references.
+//
+// It runs AFTER the sweep's transaction commits, and that is the whole point.
+// collectWorkspaceSecretRefs takes a snapshot inside the sweep, and a snapshot
+// is a list of what was referenced THEN: a connection write that repoints a
+// handle to a fresh ref, committing between that read and the sweep's delete,
+// leaves the old ref purged and the new one resident with the row that named it
+// gone. The reset reports a clean installation over sealed material nobody can
+// reach and nothing will ever collect.
+//
+// Asking the invariant instead of the snapshot closes it for every such race at
+// once, without knowing which write lost: after the sweep, a vault_secret row
+// that no handle column names is unreachable by construction, whenever it
+// arrived. It is also self-healing — a ref stranded by an earlier partial reset
+// is collected by the next one.
+//
+// The column set is derived the same way collectWorkspaceSecretRefs derives it,
+// through credentialHandleColumns, so a table that gains a handle column is
+// covered here without anybody remembering this function.
+func orphanedSecretRefs(ctx context.Context, tx pgx.Tx) ([]string, error) {
+	columns, err := credentialHandleColumns(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	// No handle column at all means every sealed ref is orphaned, which is a
+	// true statement and a dangerous one to act on: the likeliest cause is that
+	// the derivation stopped matching, not that the installation grew a vault
+	// nothing references. Refuse rather than purge the vault on a census that
+	// returned nothing.
+	if len(columns) == 0 {
+		return nil, fmt.Errorf("data reset: no table declares a credential handle column, so every sealed " +
+			"ref would read as orphaned — the handle-column derivation has stopped matching this schema")
+	}
+	referenced := make([]string, 0, len(columns)+1)
+	for _, c := range columns {
+		table, column := pgx.Identifier{c.table}.Sanitize(), pgx.Identifier{c.column}.Sanitize()
+		referenced = append(referenced,
+			`SELECT `+column+` AS ref FROM `+table+` WHERE `+column+` IS NOT NULL`)
+	}
+	// A SECOND source, and leaving it out is what makes this census
+	// destructive rather than merely incomplete. The deployment credentials —
+	// the license token and the SMTP password — hold their vault ref in a
+	// SETTINGS entry, not in a column named `*_ref`, so the derivation above
+	// cannot see them; they are also the two refs that must SURVIVE a reset,
+	// because the sweep preserves the rows naming them. A census that reads
+	// short here does not under-report, it deletes a live credential, and the
+	// installation loses its licence on a wipe that was supposed to leave the
+	// deployment intact.
+	//
+	// Keyed from the seal path's own declarations rather than a list here, so a
+	// third deployment credential is covered by being declared.
+	keys := deploymentSecretRefKeys()
+	if len(keys) == 0 {
+		return nil, fmt.Errorf("data reset: no deployment credential declares a settings key for its vault " +
+			"ref, so the refs that must SURVIVE the reset would read as orphaned and be purged")
+	}
+	referenced = append(referenced,
+		`SELECT trim(both '"' from value::text) AS ref FROM setting WHERE key = ANY($1)`)
+	rows, err := tx.Query(ctx, `
+		SELECT v.ref FROM vault_secret v
+		 WHERE NOT EXISTS (SELECT 1 FROM (`+strings.Join(referenced, " UNION ALL ")+`) held
+		                    WHERE held.ref = v.ref)`, keys)
+	if err != nil {
+		return nil, fmt.Errorf("data reset: reading sealed credentials no handle references: %w", err)
+	}
+	defer rows.Close()
+	var refs []string
+	for rows.Next() {
+		var ref string
+		if err := rows.Scan(&ref); err != nil {
+			return nil, fmt.Errorf("data reset: reading a sealed credential no handle references: %w", err)
+		}
+		refs = append(refs, ref)
+	}
+	return refs, rows.Err()
+}

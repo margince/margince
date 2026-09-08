@@ -323,3 +323,22 @@ func sealedSecret(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vault,
 	b := vaultBinding{pool: pool, vault: vault, ws: ids.From[ids.WorkspaceKind](ws), log: log}
 	return resolveSecret(bootCtx(ctx, ws, secretSealActor), b, s, declared)
 }
+
+// deploymentSecretRefKeys is the settings key each deployment credential keeps
+// its vault ref under.
+//
+// Read by the reset's orphan census, which purges every sealed ref nothing
+// references — and these two are referenced from a SETTINGS row rather than
+// from a column named `*_ref`, so a census built from the schema alone cannot
+// see them and would purge the licence off a running installation.
+//
+// Derived from the declarations above rather than listed again, so a third
+// deployment credential is covered by being declared.
+func deploymentSecretRefKeys() []string {
+	secrets := []deploymentSecret{smtpPassword, licenseToken}
+	keys := make([]string, 0, len(secrets))
+	for _, s := range secrets {
+		keys = append(keys, s.ref.Key())
+	}
+	return keys
+}
