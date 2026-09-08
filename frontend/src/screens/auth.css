@@ -230,10 +230,14 @@
   line-height: 1.15;
   color: var(--textPrimary);
 }
+/* --textContent, not --textMeta: read at 15px this is body copy under the
+   heading, and meta grey is the role for the 11-13px lines ABOUT a thing rather
+   than the thing itself — it made the only three sentences on the screen the
+   quietest text on it. */
 .auth-card .card-sub {
   margin-top: var(--space-2);
   font-size: var(--fs-lead);
-  color: var(--textMeta);
+  color: var(--textContent);
   line-height: 1.55;
   /* Balanced, not merely orphan-free: two lines of roughly equal length under a
      centred heading read as part of the same block; a long line over a short one

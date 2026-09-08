@@ -235,6 +235,11 @@
      `nowrap` on `.btn`; this one has to be allowed to take a second line rather
      than push its own box past the column it fills. */
   white-space: normal;
+  /* And the leading that second line needs. `.btn` pins `line-height: 1`
+     because a one-line label should add none of its own to a box `min-block-size`
+     decides; this is the only variant that can wrap, and two lines set solid
+     touch. */
+  line-height: 1.25;
   border-radius: var(--r-control);
   border-color: var(--borderControl);
   background: var(--bgElevated);

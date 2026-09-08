@@ -109,8 +109,8 @@
   margin-top: 0;
 }
 
-/* What an empty band says. Set in the secondary colour so a clear band reads as
-   a quiet answer rather than as the same weight as work. */
+/* What an empty band says. Set in the meta ink so a clear band reads as a quiet
+   answer rather than as the same weight as work. */
 .worklist-band-clear {
   color: var(--textMeta);
   margin: 0;
