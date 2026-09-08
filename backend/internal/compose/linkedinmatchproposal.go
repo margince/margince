@@ -152,13 +152,15 @@ func stagePendingLinkedInMatches(
 		}
 		// Not staged means one thing here and the engine is precise about it:
 		// StageUnlessDeclined refuses only when a prior offer for this identity
-		// was REJECTED. So this is the moment the refusal becomes observable on
-		// this side of the seam, and the connection is marked terminal.
+		// was REJECTED. So this is where a refusal made BEFORE the decline
+		// effect shipped becomes observable, and the connection is marked
+		// terminal — a repair pass, not the path a rejection takes now.
 		//
-		// Recorded here rather than by a reject-side effect, which the approvals
-		// engine has no notion of — its effect table dispatches on approve only,
-		// and inventing the other half for one caller would put a new concept in
-		// a shared engine to write one column.
+		// A rejection made today lands in linkedInMatchDeclineEffect, inside the
+		// decision's own transaction, so the ghost goes terminal at the moment
+		// the human says no rather than on the next hourly sweep. This call
+		// stays because it is what heals the rows refused before that existed,
+		// and because it costs one predicate that matches nothing once they are.
 		//
 		// The cost of not doing it is what makes it worth a write: the sweep
 		// enumerates (unmatched, suggested), so a refused row was matched,
@@ -213,6 +215,34 @@ func employerOrPlaceholder(s string) string {
 		return "an unnamed employer"
 	}
 	return s
+}
+
+// linkedInMatchDeclineEffect marks the ghost row terminal when a member says no.
+//
+// Rejecting used to change nothing on the connection. The approvals record said
+// declined and the domain record still said suggested, and the two disagreed
+// until a sweep happened to notice — up to an hour, and only because
+// StageUnlessDeclined refused to re-propose. The dead branches were the tell:
+// matchRankOrder carried a `rejected` slot and the pending read carried
+// `<> 'rejected'`, and no writer in the tree could produce a row for either.
+//
+// The DECISION's transaction, handed in: the rejection and the mark commit
+// together, so a failed mark takes the rejection with it and the member can
+// answer again. Rejected-but-still-suggested is the one outcome this card
+// cannot produce — the same shape heldDeclineEffect takes, and for the same
+// reason.
+func linkedInMatchDeclineEffect(store *people.Store) approvals.DeclinedEffect {
+	return func(ctx context.Context, tx pgx.Tx, _ ids.ApprovalID, proposedChange json.RawMessage) error {
+		var p linkedInMatchProposal
+		if err := json.Unmarshal(proposedChange, &p); err != nil {
+			return fmt.Errorf("compose: unreadable LinkedIn match proposal: %w", err)
+		}
+		// The OWNER and the PERSON the proposal named, not the deciding actor
+		// and not whoever the row points at now: a refusal answers one
+		// suggestion, and the store binds on the pair for the same reason the
+		// apply does.
+		return people.RecordLinkedInMatchRefusedTx(ctx, tx, p.ConnectionID, p.OwnerUserID, p.PersonID)
+	}
 }
 
 // linkedInMatchAcceptEffect links the connection to the contact and puts the

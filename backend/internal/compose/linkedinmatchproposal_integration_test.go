@@ -463,3 +463,161 @@ func TestAFailedLinkedInApplyLeavesTheApprovalUnconsumed(t *testing.T) {
 			"on its own, so the member's yes is spent and the connection was never linked", *consumed)
 	}
 }
+
+// linkedInMatchPair reads the connection's status AND the person it points at,
+// because a refusal has to move both: a row left pointing at the contact it was
+// refused for still carries a pair claim nobody released.
+func linkedInMatchPair(t *testing.T, e *integration.Env) (string, *ids.UUID) {
+	t.Helper()
+	var status string
+	var person *ids.UUID
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT match_status, matched_person_id FROM linkedin_connection`).Scan(&status, &person)
+	}); err != nil {
+		t.Fatalf("reading the connection's match pair: %v", err)
+	}
+	return status, person
+}
+
+// Rejecting the card moves the ghost row, in the decision's own transaction.
+//
+// It used to change nothing. The approvals record said declined and the
+// connection still said suggested, and the two disagreed until a sweep happened
+// to observe it — up to an hour, and only because StageUnlessDeclined refused to
+// re-propose. Asserted WITHOUT running a sweep afterwards, which is the whole
+// point: the state has to be right the moment the member answers.
+func TestRejectingALinkedInMatchMarksTheGhostRowAtTheMomentItIsRejected(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
+	linkedInMatchFixture(ctx, t, e)
+	grantReadPeopleRole(t, e, e.Rep1, "all")
+
+	store := people.NewStore(e.DB())
+	if _, err := store.MatchLinkedInConnections(ctx, e.Rep1); err != nil {
+		t.Fatalf("matching: %v", err)
+	}
+	svc := approvalsServiceWithEffects(e.Pool)
+	if _, err := StageLinkedInMatches(ctx, svc, store); err != nil {
+		t.Fatalf("staging: %v", err)
+	}
+
+	if _, err := svc.Decide(ctx, onlyPendingLinkedInMatch(t, e), false, nil); err != nil {
+		t.Fatalf("rejecting: %v", err)
+	}
+
+	status, person := linkedInMatchPair(t, e)
+	if status != "rejected" {
+		t.Errorf("the connection is %q immediately after the rejection, want rejected — the card says "+
+			"declined and the record still offers the suggestion, and nothing closes the gap until a "+
+			"sweep happens to run", status)
+	}
+	if person != nil {
+		t.Errorf("the refused connection still names person %s — the row's answer was no, and a pair "+
+			"claim nobody released is what matchRankOrder and the pending read must not find", person)
+	}
+}
+
+// The previously dead `<> 'rejected'` predicate now has a row it excludes.
+//
+// Both halves are the assertion. The refused connection is absent from the
+// pending read — which is what the predicate is for — and the ROW is still
+// there, carrying the terminal status. Without the second half an empty result
+// would pass for the wrong reason: a read returning nothing because the table
+// is empty looks identical to one excluding a rejection.
+func TestThePendingReadExcludesARefusedConnectionThatIsStillThere(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
+	linkedInMatchFixture(ctx, t, e)
+	grantReadPeopleRole(t, e, e.Rep1, "all")
+
+	store := people.NewStore(e.DB())
+	if _, err := store.MatchLinkedInConnections(ctx, e.Rep1); err != nil {
+		t.Fatalf("matching: %v", err)
+	}
+	before, err := store.PendingLinkedInMatches(ctx)
+	if err != nil {
+		t.Fatalf("reading the pending matches: %v", err)
+	}
+	if len(before) != 1 {
+		t.Fatalf("the fixture produced %d suggestion(s), want 1 — this test compares the read on either "+
+			"side of one refusal and cannot do that from a different starting point", len(before))
+	}
+	refused := before[0].ConnectionID
+
+	// Through the real reject, which is what a member does.
+	svc := approvalsServiceWithEffects(e.Pool)
+	if _, err := StageLinkedInMatches(ctx, svc, store); err != nil {
+		t.Fatalf("staging: %v", err)
+	}
+	if _, err := svc.Decide(ctx, onlyPendingLinkedInMatch(t, e), false, nil); err != nil {
+		t.Fatalf("rejecting: %v", err)
+	}
+
+	after, err := store.PendingLinkedInMatches(ctx)
+	if err != nil {
+		t.Fatalf("re-reading the pending matches: %v", err)
+	}
+	for _, m := range after {
+		if m.ConnectionID == refused {
+			t.Errorf("the refused connection is still offered by the pending read — the `<> 'rejected'` " +
+				"predicate had no row to exclude before this, and still has none")
+		}
+	}
+	if status, _ := linkedInMatchPair(t, e); status != "rejected" {
+		t.Fatalf("the connection reads %q, so the empty result above says nothing about the predicate — "+
+			"the row it was supposed to exclude is not in the state that excludes it", status)
+	}
+}
+
+// A refusal answers the SUGGESTION it was staged for, and leaves a suggestion
+// nobody was asked about alone.
+//
+// TestARefusalDoesNotOverwriteAMatchConfirmedSince covers the status half: a
+// row that moved to confirmed is not refused. This is the pair half, and the
+// two are different rows in the same table. Between staging and the member's
+// answer the matcher can re-point a still-suggested connection at a different
+// contact — a re-import, a name correction, a new employment edge — and the
+// card the member is looking at names the OLD one. Refusing whoever the row
+// points at now would discard a suggestion that was never offered.
+func TestARefusalDoesNotDiscardASuggestionStagedForSomebodyElse(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
+	linkedInMatchFixture(ctx, t, e)
+	grantReadPeopleRole(t, e, e.Rep1, "all")
+
+	store := people.NewStore(e.DB())
+	if _, err := store.MatchLinkedInConnections(ctx, e.Rep1); err != nil {
+		t.Fatalf("matching: %v", err)
+	}
+	svc := approvalsServiceWithEffects(e.Pool)
+	if _, err := StageLinkedInMatches(ctx, svc, store); err != nil {
+		t.Fatalf("staging: %v", err)
+	}
+
+	// The matcher moves the still-suggested row to a different contact after
+	// the card was staged. Written directly because what is under test is the
+	// refusal's predicate, not how the row came to point elsewhere.
+	moved, err := e.People.CreatePerson(ctx, people.CreatePersonInput{FullName: "Andrea Muller", Source: "manual"})
+	if err != nil {
+		t.Fatalf("seeding the contact the row moves to: %v", err)
+	}
+	seedAsAdmin(t, e, func(c context.Context, tx pgx.Tx) error {
+		_, execErr := tx.Exec(c, `UPDATE linkedin_connection SET matched_person_id = $1`, ids.UUID(moved.Id))
+		return execErr
+	}, "re-pointing the suggestion")
+
+	if _, err := svc.Decide(ctx, onlyPendingLinkedInMatch(t, e), false, nil); err != nil {
+		t.Fatalf("rejecting: %v", err)
+	}
+
+	status, person := linkedInMatchPair(t, e)
+	if status != "suggested" {
+		t.Errorf("the connection is %q, want it left at suggested — the member refused a suggestion for "+
+			"somebody else, and this one has never been put to them", status)
+	}
+	if person == nil || *person != ids.UUID(moved.Id) {
+		t.Errorf("the connection names %v, want the contact it was moved to (%s) — a refusal aimed at "+
+			"one pair discarded another", person, ids.UUID(moved.Id))
+	}
+}
