@@ -148,13 +148,13 @@ func (a *ExtractionAccept) Accept(ctx context.Context, attachmentID ids.UUID, re
 	// inside its transaction; a refusal there rolls the whole write back
 	// (deal AND notes — same tx) before any note exists.
 	dealID := ids.From[ids.DealKind](ids.UUID(att.EntityId))
-	// Where the custom-field catalog read belongs: above the transaction, never
-	// inside it — the read opens one of its own, and the write below holds a
-	// connection for as long as the deal update and every per-field note take.
-	// This store has no catalog wired, so the answer is empty today and the
-	// deal's cf values ride neither the patch nor its audit before-image
-	// (issue #1050); wiring one is then a one-line change here rather than a
-	// second-connection bug inside the write.
+	// Where a custom-field catalog read would belong if this path needed one:
+	// above the transaction, never inside it — the read opens one of its own,
+	// and the write below holds a connection for as long as the deal update and
+	// every per-field note take. It needs none. setAcceptedDealField's switch
+	// refuses a cf_* key outright, so the patch carries core columns only, and
+	// the audit image is the patch rather than the row — an unwired catalog
+	// widens no diff and drops no value here.
 	active, err := a.deals.ActiveDealColumns(ctx)
 	if err != nil {
 		return zero, err
