@@ -8495,8 +8495,12 @@ export const vi = {
   "worklist.completeness": "Hiển thị {shown} trong {considered}",
   "worklist.review.partial":
     "Hiển thị {loaded} trong {total} — xem tiếp trong ngày để thấy phần còn lại",
-  "worklist.completeness.bounded": "Hiển thị {shown} · {sources} nguồn còn nữa",
+  "worklist.completeness.bounded_one":
+    "Hiển thị {shown} · {sources} nguồn còn nữa",
+  "worklist.completeness.bounded_other":
+    "Hiển thị {shown} · {sources} nguồn còn nữa",
   "worklist.clear": "Không có gì đang chờ bạn.",
+  "worklist.clearFor": "Không có gì đang chờ {name}.",
   "worklist.clearOfTasksToday":
     "Hôm nay không có công việc đến hạn và không có việc quá hạn. Công việc về sau nằm ở tab Công việc của từng hồ sơ.",
   "worklist.clearOfWhatWasRead":
@@ -8522,6 +8526,8 @@ export const vi = {
   "worklist.pane.lastInbound": "Họ viết lần cuối",
   "worklist.pane.lastOutbound": "Chúng ta viết lần cuối",
   "worklist.pane.never": "Chưa bao giờ",
+  "worklist.pane.company": "Làm việc cho",
+  "worklist.pane.role": "Vai trò của họ",
   "worklist.band.now": "Bây giờ",
   "worklist.band.build_pipeline": "Xây dựng pipeline",
   "worklist.band.keep_momentum": "Giữ đà",
@@ -8560,7 +8566,7 @@ export const vi = {
   "worklist.scope.unassigned": "Chưa có người phụ trách",
   "worklist.scope.team": "Nhóm của tôi",
   "worklist.scope.all": "Tất cả",
-  "worklist.owner.label": "Hàng việc của ai",
+  "worklist.owner.visibleLabel": "Ngày của ai",
   "worklist.manager.cancel": "Huỷ",
   "worklist.owner.mine": "Ngày của tôi",
   "worklist.owner.backToMine": "Quay lại ngày của tôi",
@@ -8598,6 +8604,7 @@ export const vi = {
   "worklist.walk.refresh": "Làm mới",
   "worklist.handled.empty": "Hôm nay chưa có việc nào được xử lý giúp bạn.",
   "worklist.handled.loading": "Đang đọc những việc đã xử lý",
+  "worklist.handled.count": "{count} đã làm thay bạn",
   "worklist.handled.what": "Điều đã xảy ra",
   "worklist.handled.about": "Về",
   "worklist.handled.when": "Khi nào",
@@ -8606,6 +8613,7 @@ export const vi = {
     "Còn nhiều hơn thế. Danh sách dừng ở mức một lần xem có thể chứa.",
   "worklist.exceptions.empty": "Hiện chưa có việc nào trong nhóm cần đến bạn.",
   "worklist.exceptions.loading": "Đang đọc nhóm",
+  "worklist.exceptions.count": "{count} cần bạn",
   "worklist.exceptions.condition": "Việc gì",
   "worklist.exceptions.subject": "Về",
   "worklist.exceptions.owner": "Ai chịu trách nhiệm",

@@ -8600,9 +8600,12 @@ export const de = {
   "worklist.completeness": "{shown} von {considered} angezeigt",
   "worklist.review.partial":
     "{loaded} von {total} angezeigt — blättern Sie den Tag weiter, um den Rest zu erreichen",
-  "worklist.completeness.bounded":
+  "worklist.completeness.bounded_one":
+    "{shown} angezeigt · {sources} Quelle hat mehr",
+  "worklist.completeness.bounded_other":
     "{shown} angezeigt · {sources} Quellen haben mehr",
   "worklist.clear": "Nichts wartet auf dich.",
+  "worklist.clearFor": "Für {name} wartet nichts.",
   "worklist.clearOfTasksToday":
     "Heute ist keine Aufgabe fällig und nichts ist überfällig. Spätere Aufgaben stehen im Tab „Aufgaben“ des jeweiligen Datensatzes.",
   "worklist.clearOfWhatWasRead":
@@ -8629,6 +8632,8 @@ export const de = {
   "worklist.pane.lastInbound": "Zuletzt geschrieben",
   "worklist.pane.lastOutbound": "Wir zuletzt geschrieben",
   "worklist.pane.never": "Nie",
+  "worklist.pane.company": "Arbeitet für",
+  "worklist.pane.role": "Ihre Rolle",
   "worklist.band.now": "Jetzt",
   "worklist.band.build_pipeline": "Pipeline aufbauen",
   "worklist.band.keep_momentum": "In Bewegung halten",
@@ -8664,7 +8669,7 @@ export const de = {
   "worklist.scope.unassigned": "Ohne Zuständigkeit",
   "worklist.scope.team": "Mein Team",
   "worklist.scope.all": "Alle",
-  "worklist.owner.label": "Wessen Liste",
+  "worklist.owner.visibleLabel": "Wessen Tag",
   "worklist.manager.cancel": "Abbrechen",
   "worklist.owner.mine": "Mein eigener Tag",
   "worklist.owner.backToMine": "Zurück zu meinem Tag",
@@ -8701,6 +8706,7 @@ export const de = {
   "worklist.walk.refresh": "Aktualisieren",
   "worklist.handled.empty": "Heute wurde nichts für Sie erledigt.",
   "worklist.handled.loading": "Erledigtes wird gelesen",
+  "worklist.handled.count": "{count} für Sie erledigt",
   "worklist.handled.what": "Was geschehen ist",
   "worklist.handled.about": "Wozu",
   "worklist.handled.when": "Wann",
@@ -8709,6 +8715,7 @@ export const de = {
     "Mehr als das. Die Liste endet bei dem, was eine Sitzung fasst.",
   "worklist.exceptions.empty": "Im Team braucht Sie gerade nichts.",
   "worklist.exceptions.loading": "Team wird gelesen",
+  "worklist.exceptions.count": "{count} brauchen Sie",
   "worklist.exceptions.condition": "Was",
   "worklist.exceptions.subject": "Wozu",
   "worklist.exceptions.owner": "Wer antwortet",

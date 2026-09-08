@@ -8,16 +8,19 @@
 // a queue hiding real work looks exactly like a queue with none, so the page
 // cannot report its own worst failure. This is the surface that can.
 //
-// Behind a disclosure, closed by default, and that is the honest placement
-// rather than a hedge. On a healthy installation every figure is zero, and a
-// row of zeros drawn above the queue every morning would train a reader to
-// scroll past the one morning it is not — while a rep whose job is to work the
-// queue is not the person who acts on a horizon that is set wrong.
+// A titled panel among the LEAD's panels, in the team board's own chrome, and
+// that is the honest placement rather than a hedge. A rep whose job is to work
+// the queue is not the person who acts on a horizon that is set wrong, so this
+// sits with the rest of a lead's read of the team rather than over the day; and
+// it stands open there, because a guardrail folded shut is one nobody checks.
+// On a healthy installation the whole panel is one sentence saying nothing is
+// held back, which is a cheap thing to draw and the only thing worth reading.
 
-import { Disclosure } from "../design-system/atoms";
+import { Panel, PanelBody } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
+import { AFTER_THE_DAY } from "./worklist.layout";
 import { type HiddenBacklog, useHiddenBacklog } from "./worklist.queries";
 import "./worklist.css";
 
@@ -37,6 +40,7 @@ export function HiddenBacklogPanel({
   enabled,
 }: Readonly<{ enabled: boolean }>) {
   const t = useT();
+  const { locale } = useLocale();
   const hidden = useHiddenBacklog(enabled);
   if (!enabled) {
     return null;
@@ -58,17 +62,34 @@ export function HiddenBacklogPanel({
         ? "empty"
         : "ready";
   return (
-    <Disclosure summary={t("worklist.hidden.title")}>
-      <SurfaceState
-        state={state}
-        loadingLabel={t("worklist.hidden.loading")}
-        emptyLabel={t("worklist.hidden.clear")}
-      >
-        {hidden.data && !hidden.data.clear && (
-          <HiddenFigures backlog={hidden.data} />
-        )}
-      </SurfaceState>
-    </Disclosure>
+    <Panel
+      className={AFTER_THE_DAY}
+      title={t("worklist.hidden.title")}
+      // What the queue itself carries, against what is held back above it. It
+      // belongs to the whole panel rather than to any one rule's row, which is
+      // the footer band's own job — and it is a fact about the queue rather
+      // than a caveat about this read, so it stays out of the body where the
+      // truncation sentence has to come FIRST.
+      footer={
+        hidden.data && !hidden.data.clear
+          ? t("worklist.hidden.shown", {
+              count: formatNumber(hidden.data.shown, locale),
+            })
+          : undefined
+      }
+    >
+      <PanelBody>
+        <SurfaceState
+          state={state}
+          loadingLabel={t("worklist.hidden.loading")}
+          emptyLabel={t("worklist.hidden.clear")}
+        >
+          {hidden.data && !hidden.data.clear && (
+            <HiddenFigures backlog={hidden.data} />
+          )}
+        </SurfaceState>
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -76,6 +97,10 @@ export function HiddenBacklogPanel({
 //
 // Exported for its story: the panel above fetches, so a story that mounted it
 // would draw a loading skeleton and never the readings it exists to show.
+//
+// What the QUEUE carries is not here. That figure describes the whole panel
+// rather than any one rule, so it rides the panel's own footer band — the one
+// place a reader learns to look for a section's total.
 export function HiddenFigures({
   backlog,
 }: Readonly<{ backlog: HiddenBacklog }>) {
@@ -132,11 +157,6 @@ export function HiddenFigures({
           t={t}
         />
       </ul>
-      <p className="t-caption worklist-hidden-shown">
-        {t("worklist.hidden.shown", {
-          count: formatNumber(backlog.shown, locale),
-        })}
-      </p>
     </div>
   );
 }

@@ -13,11 +13,21 @@
 // invented for the reading — and that basis is drawn beside the row. A lead
 // disputing a line can see the rule rather than the verdict alone, which is the
 // difference between a page they trust and one they stop opening.
+//
+// A TITLED PANEL, open, in the team board's own chrome — Panel, PanelBody,
+// SurfaceState, table. It stood behind a disclosure, and a table of exceptions
+// folded away reads as a block that failed to load rather than as one waiting
+// to be asked for: this is a reading a lead came to the page FOR, and the
+// first thing they would do with the control is open it.
 
-import { DataTable, Disclosure } from "../design-system/atoms";
+import { DataTable } from "../design-system/atoms";
+import { Panel, PanelBody } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import { useViewerId } from "./common";
+import { AFTER_THE_DAY } from "./worklist.layout";
+import { listReadState } from "./worklist.listread";
 import { TakeOwnershipControl } from "./worklist.manager";
 import { type TeamException, useTeamExceptions } from "./worklist.queries";
 
@@ -44,117 +54,147 @@ function TeamExceptions({
   onOwner,
 }: Readonly<{ onOwner: (id: string) => void }>) {
   const t = useT();
+  const { locale } = useLocale();
   const viewerId = useViewerId();
   const exceptions = useTeamExceptions(true);
-  const state = exceptions.isPending
-    ? "loading"
-    : exceptions.isError
-      ? "failed"
-      : "ready";
+  const rows = exceptions.data?.exceptions;
+  // Off the LIST, not off the query's flags alone. A clear team is the healthy
+  // answer and the contract says the list is empty then, so a state read from
+  // `isPending`/`isError` called that `ready` and drew a table's header row
+  // over no rows — five column names and a silence, where "nothing on the team
+  // needs you right now" is the answer a lead came for.
+  const state = listReadState(exceptions, rows);
   return (
-    <Disclosure summary={t("worklist.exceptions.title")}>
-      <SurfaceState
-        state={state}
-        emptyLabel={t("worklist.exceptions.empty")}
-        loadingLabel={t("worklist.exceptions.loading")}
-        detail={{ onRetry: () => void exceptions.refetch() }}
-      >
-        {/* The rows, where the read gave any. A body without them is not a
-            clear team — it is a response this panel cannot read — and mapping
-            over the absence would take the whole page down with a type error
-            rather than saying nothing here. */}
-        {exceptions.data?.exceptions && (
-          <>
-            <DataTable
-              label={t("worklist.exceptions.title")}
-              rows={exceptions.data?.exceptions ?? []}
-              rowKey={(row) => `${row.kind}-${row.subject.id}`}
-              // Every row opens the queue of whoever answers for it, which is
-              // the intervention this page routes to. A row nobody holds opens
-              // the unassigned scope instead: the work is real and somebody has
-              // to take it.
-              //
-              // Read off the OWNER'S KIND, not off the id. A `user` row whose
-              // id this caller may not resolve still has somebody carrying it,
-              // and sending the manager to the unassigned scope for it would
-              // route them to a queue the work is not in.
-              onRowClick={(row) =>
-                row.owner.kind === "user" && row.owner.id
-                  ? onOwner(row.owner.id)
-                  : onOwner("")
-              }
-              columns={[
-                {
-                  key: "kind",
-                  header: t("worklist.exceptions.condition"),
-                  render: (row: TeamException) =>
-                    t(`worklist.exceptions.kind.${row.kind}`),
-                },
-                {
-                  key: "subject",
-                  header: t("worklist.exceptions.subject"),
-                  render: (row: TeamException) =>
-                    row.subject.label ?? row.subject.id,
-                },
-                {
-                  key: "owner",
-                  header: t("worklist.exceptions.owner"),
-                  // Three answers, because there are three facts and the wire
-                  // tells them apart: a name, somebody this caller may not
-                  // name, and nobody at all.
-                  //
-                  // Falling back to "Nobody yet" on a missing LABEL conflated
-                  // the last two. An exception owned by a real person whose
-                  // name the reader cannot resolve was reported as unassigned
-                  // work — which is not a display nicety: a lead reads that as
-                  // "this is going nowhere" and takes it, when a teammate is
-                  // already carrying it.
-                  //
-                  // Never the raw id either: a uuid in front of a lead is the
-                  // defect the label exists to prevent.
-                  render: (row: TeamException) =>
-                    row.owner.kind === "unassigned"
-                      ? t("worklist.exceptions.nobody")
-                      : (row.owner.label ??
-                        t("worklist.exceptions.ownerWithheld")),
-                },
-                {
-                  key: "threshold",
-                  header: t("worklist.exceptions.basis"),
-                  render: (row: TeamException) => row.threshold,
-                },
-                {
-                  key: "take",
-                  header: t("worklist.exceptions.intervene"),
-                  // The press must not ALSO open the owner's queue. Every row
-                  // navigates on click, so a button inside one fires both: the
-                  // handover runs and the page walks away from its own
-                  // confirmation, which reads as a control that did something
-                  // unrelated to what it said.
-                  //
-                  // The control stops it on its own buttons rather than under a
-                  // wrapper: a handler on a static element is invisible to a
-                  // keyboard and the a11y lint rejects it, and the buttons are
-                  // already the interactive things the event comes from.
-                  render: (row: TeamException) => (
-                    <TakeOwnershipControl
-                      subject={row.subject}
-                      viewerId={viewerId ?? ""}
-                      insideAClickableRow
-                    />
-                  ),
-                },
-              ]}
-            />
-            {/* A bounded page is not a clear team. The server says when it read
+    <Panel
+      className={AFTER_THE_DAY}
+      title={t("worklist.exceptions.title")}
+      // HOW MANY need this lead, in the band that belongs to the whole panel.
+      //
+      // Only over a read that reached its own end. `truncated` means the server
+      // stopped early, so the length is a floor — and a floor printed as a count
+      // is a wrong number in the one direction this surface must not get wrong:
+      // a lead told "4" over a figure that is really 4-or-more will not go
+      // looking. The caveat in the body is what they get instead.
+      footer={
+        rows && rows.length > 0 && !exceptions.data?.truncated
+          ? t("worklist.exceptions.count", {
+              count: formatNumber(rows.length, locale),
+            })
+          : undefined
+      }
+    >
+      {/* The table carries its own cell padding but not the panel's inset, so
+          it sits in a `PanelBody` with the truncation caveat rather than
+          full-bleed against the panel's own edges — the arrangement the team
+          board beside it already draws. */}
+      <PanelBody>
+        <SurfaceState
+          state={state}
+          emptyLabel={t("worklist.exceptions.empty")}
+          loadingLabel={t("worklist.exceptions.loading")}
+          detail={{ onRetry: () => void exceptions.refetch() }}
+        >
+          {/* `ready` already means there are rows — the state above is derived
+              from the list — so this narrows the type rather than deciding
+              anything. A response carrying no list at all resolved to
+              `unavailable` and never reaches here: mapping over the absence
+              would take the whole page down with a type error, and calling it a
+              clear team would be the refusal reported as good news. */}
+          {rows && (
+            <>
+              <DataTable
+                label={t("worklist.exceptions.title")}
+                rows={rows}
+                rowKey={(row) => `${row.kind}-${row.subject.id}`}
+                // Every row opens the queue of whoever answers for it, which is
+                // the intervention this page routes to. A row nobody holds opens
+                // the unassigned scope instead: the work is real and somebody has
+                // to take it.
+                //
+                // Read off the OWNER'S KIND, not off the id. A `user` row whose
+                // id this caller may not resolve still has somebody carrying it,
+                // and sending the manager to the unassigned scope for it would
+                // route them to a queue the work is not in.
+                onRowClick={(row) =>
+                  row.owner.kind === "user" && row.owner.id
+                    ? onOwner(row.owner.id)
+                    : onOwner("")
+                }
+                columns={[
+                  {
+                    key: "kind",
+                    header: t("worklist.exceptions.condition"),
+                    render: (row: TeamException) =>
+                      t(`worklist.exceptions.kind.${row.kind}`),
+                  },
+                  {
+                    key: "subject",
+                    header: t("worklist.exceptions.subject"),
+                    render: (row: TeamException) =>
+                      row.subject.label ?? row.subject.id,
+                  },
+                  {
+                    key: "owner",
+                    header: t("worklist.exceptions.owner"),
+                    // Three answers, because there are three facts and the wire
+                    // tells them apart: a name, somebody this caller may not
+                    // name, and nobody at all.
+                    //
+                    // Falling back to "Nobody yet" on a missing LABEL conflated
+                    // the last two. An exception owned by a real person whose
+                    // name the reader cannot resolve was reported as unassigned
+                    // work — which is not a display nicety: a lead reads that as
+                    // "this is going nowhere" and takes it, when a teammate is
+                    // already carrying it.
+                    //
+                    // Never the raw id either: a uuid in front of a lead is the
+                    // defect the label exists to prevent.
+                    render: (row: TeamException) =>
+                      row.owner.kind === "unassigned"
+                        ? t("worklist.exceptions.nobody")
+                        : (row.owner.label ??
+                          t("worklist.exceptions.ownerWithheld")),
+                  },
+                  {
+                    key: "threshold",
+                    header: t("worklist.exceptions.basis"),
+                    render: (row: TeamException) => row.threshold,
+                  },
+                  {
+                    key: "take",
+                    header: t("worklist.exceptions.intervene"),
+                    // The press must not ALSO open the owner's queue. Every row
+                    // navigates on click, so a button inside one fires both: the
+                    // handover runs and the page walks away from its own
+                    // confirmation, which reads as a control that did something
+                    // unrelated to what it said.
+                    //
+                    // The control stops it on its own buttons rather than under a
+                    // wrapper: a handler on a static element is invisible to a
+                    // keyboard and the a11y lint rejects it, and the buttons are
+                    // already the interactive things the event comes from.
+                    render: (row: TeamException) => (
+                      <TakeOwnershipControl
+                        subject={row.subject}
+                        viewerId={viewerId ?? ""}
+                        insideAClickableRow
+                      />
+                    ),
+                  },
+                ]}
+              />
+              {/* A bounded page is not a clear team. The server says when it read
                 to its own bound, and a lead who took this list for the whole
                 of it would stop looking exactly where the rest begins. */}
-            {exceptions.data?.truncated && (
-              <p className="t-caption">{t("worklist.exceptions.truncated")}</p>
-            )}
-          </>
-        )}
-      </SurfaceState>
-    </Disclosure>
+              {exceptions.data?.truncated && (
+                <p className="t-caption">
+                  {t("worklist.exceptions.truncated")}
+                </p>
+              )}
+            </>
+          )}
+        </SurfaceState>
+      </PanelBody>
+    </Panel>
   );
 }

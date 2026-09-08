@@ -22,6 +22,44 @@
   color: var(--textContent);
 }
 
+/* The two dials over the day, at the trailing end of the sentence they change.
+   They replace each other rather than stacking — a named owner outranks the
+   scope word — so this is a group of one most of the time and wraps as a unit
+   when the sentence takes the line. */
+.worklist-header-dials {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+
+/* CONTENT-SIZED, not page-wide. Full width the picker read as a control over
+   the pills below it rather than as a dial on the day above; the ceiling is
+   what keeps a roster of long names from taking the sentence's line. Below the
+   fold it may have the row to itself — at 390px a capped control beside a
+   wrapped sentence is neither. */
+.worklist-owner-field {
+  max-width: 20rem;
+  min-width: 0;
+}
+
+@media (max-width: 720px) {
+  .worklist-owner-field {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+}
+
+/* The cuts through the queue and the sentence about what they left out, as one
+   block: the caption qualifies the pills, so it sits a step under them while
+   the pair keeps the header's own rhythm. On the header's gap it read as a
+   third control in the strip. */
+.worklist-header-cuts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
 /* A manager's control over one row: the picker or the question, then the verbs
    that answer it, on one line. The class was in the markup from the start and
    in no stylesheet, so all three of these clusters rendered as a block — the
@@ -76,16 +114,27 @@
   outline-offset: 2px;
 }
 
-.worklist-pane-facts {
-  display: grid;
-  gap: var(--space-1) var(--space-3);
-  grid-template-columns: auto 1fr;
-  margin: 0;
+/* The person the pane is about: their chip and their name, on one line, as the
+   panel's title. The name is a link, so the pair has to sit on a baseline the
+   heading's own type sets rather than on the chip's. */
+.worklist-pane-head {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
-.worklist-pane-facts dt,
-.worklist-pane-facts dd {
-  margin: 0;
+/* THE INSET THE PANEL PAYS FOR, on the blocks that are its direct children.
+   `PanelRow` carries the panel's own margin and these do not, so a band
+   heading, an empty band's sentence and the way to the rest of the backlog all
+   began a full --padPanel to the left of every row they stand over — three
+   lines that read as having escaped the card. They stay direct children
+   because a `PanelBody` around them would draw the panel's seam hairline
+   between a heading and the rows it heads, which is the one place panel.css
+   says a rule must never fall. */
+.worklist-band,
+.worklist-band-clear,
+.worklist-more {
+  padding-inline: var(--padPanel);
 }
 
 /* The band heading, above its own <ol>. The page draws one list per band, so
@@ -172,9 +221,25 @@
   grid-column: 2;
 }
 
-.worklist-hidden-shown {
-  color: var(--textMeta);
-  margin: 0;
+/* FIVE UPPERCASE HEADINGS ON A PHONE.
+   At 390px each column of the board is narrower than its own longest word, and
+   a word wider than its column breaks: "Promises due" drew as "PRO" over
+   "DUE". A heading that cannot break makes the table wider than the panel
+   instead, which is the state `TableScroll` exists to answer — it takes the
+   overflow, announces itself as a region and scrolls, and the reader gets the
+   whole heading rather than a clipped one. */
+.worklist-board-table th {
+  white-space: nowrap;
+}
+
+/* The way to the rest of the backlog: the button and, when a page was refused,
+   the line saying so beside it. */
+.worklist-more {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding-block: var(--space-3);
 }
 
 /* A duplicate pair, decided on the row.
@@ -295,10 +360,19 @@
    * are the frame for what follows, and a caveat met after the thing it
    * qualifies is a caveat nobody reads. `order` moves the PAINT, not the tree.
    *
-   * Everything else keeps `order: 0`, so the queue, the team board and the
-   * hidden-backlog panel stay in their written order and only this one block
-   * moves past them. A rule naming each sibling would go stale the day the page
-   * grows another.
+   * THREE tiers rather than two, because the readings have somewhere to BE.
+   * `order: 1` alone put them dead last, behind a lead's read of the team and
+   * behind the receipt of what was handled — past the point a rep scrolls to at
+   * all. They belong directly under the day they describe: after the queue, the
+   * pane and what is left to review, and before everything that is not this
+   * reader's own morning.
+   *
+   * That second group is named by the BLOCKS, through `AFTER_THE_DAY`
+   * (worklist.layout.ts), rather than by a list of selectors here: a sheet
+   * naming today's trailing panels goes stale the day the page grows another,
+   * while a panel that forgets the class paints above the readings — a wrong a
+   * reader can see. Everything in the day itself keeps `order: 0` and stays in
+   * its written order.
    *
    * Held by AC-WORKLIST-SDR-01 in e2e/ac.spec.ts, which measures the first
    * row's verb against the viewport on the real route rather than in a canvas.
@@ -310,6 +384,10 @@
 
   .worklist-readings {
     order: 1;
+  }
+
+  .worklist-after-day {
+    order: 2;
   }
 }
 

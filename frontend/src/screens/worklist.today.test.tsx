@@ -5,7 +5,13 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { day, renderWorklist, row, stub } from "./worklist.testkit";
+import {
+  day,
+  jsonResponse,
+  renderWorklist,
+  row,
+  stub,
+} from "./worklist.testkit";
 
 // One morning, drawn ONCE.
 //
@@ -162,6 +168,26 @@ describe("the day is one panel", () => {
     expect(marked[0].textContent).toContain("Kirsten replied");
   });
 
+  // No LIST on a clear day either, which is one half of "no panel is drawn to
+  // report a zero" — worklist.test.tsx holds the other, that no day TITLE is
+  // drawn. Counted rather than named, exactly as the full-day case above: the
+  // words the old focus cards used are gone from every catalog, so asserting
+  // their absence would test nothing a regression could fail.
+  it("draws no list of its own on a day with no rows", async () => {
+    stub(
+      day({
+        queue: [],
+        summary: { urgent: 0, due: 0, lower_priority: 0, total: 0 },
+      }),
+    );
+    const { container } = renderWorklist();
+
+    // Waited on the sentence a clear day DOES draw, so this is not a case that
+    // passes because the page had not finished rendering.
+    await screen.findByText(/Nothing is waiting on you/);
+    expect(container.querySelectorAll("ol.worklist-list")).toHaveLength(0);
+  });
+
   // A clear day has no first row to put in hand, and asking for one must not
   // draw an aside describing nothing.
   it("draws no context pane on a day with no rows", async () => {
@@ -176,6 +202,66 @@ describe("the day is one panel", () => {
     await waitFor(() => {
       expect(screen.queryByRole("complementary")).toBeNull();
     });
+  });
+});
+
+// WHOSE day is clear.
+//
+// The unqualified sentence says "on YOU", and on a colleague's queue that named
+// the reader over somebody else's empty day — a lead reading Rep One's morning
+// was told nothing was waiting on themselves. The name comes from the roster
+// the owner picker already reads, so these serve it.
+describe("a clear day says whose it is", () => {
+  const REP = "01a05500-0000-7000-8000-0000000000f1";
+
+  function stubClearDayFor(roster: readonly { id: string; name: string }[]) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input instanceof Request ? input.url : input);
+        if (url.includes("/worklist")) {
+          return jsonResponse(
+            day({
+              queue: [],
+              scope_options: ["mine", "team"],
+              summary: { urgent: 0, due: 0, lower_priority: 0, total: 0 },
+            }),
+          );
+        }
+        if (url.includes("/users")) {
+          return jsonResponse({
+            data: roster.map((entry) => ({
+              id: entry.id,
+              display_name: entry.name,
+            })),
+            page: { next_cursor: null, has_more: false },
+          });
+        }
+        return jsonResponse({ data: [] });
+      }),
+    );
+  }
+
+  it("names the colleague rather than the reader", async () => {
+    stubClearDayFor([{ id: REP, name: "Rep One" }]);
+    renderWorklist("en", REP);
+
+    expect(
+      await screen.findByText("Nothing is waiting on Rep One."),
+    ).toBeTruthy();
+    // The reader is not the subject of somebody else's empty day.
+    expect(screen.queryByText("Nothing is waiting on you.")).toBeNull();
+  });
+
+  // A colleague the roster cannot name falls back to the sentence that names
+  // nobody. An id in the sentence would be worse than one word too general,
+  // and the reader is still not the subject.
+  it("falls back to the general sentence when the name has not landed", async () => {
+    stubClearDayFor([]);
+    renderWorklist("en", REP);
+
+    expect(await screen.findByText("Nothing is waiting on you.")).toBeTruthy();
+    expect(screen.queryByText(new RegExp(REP))).toBeNull();
   });
 });
 

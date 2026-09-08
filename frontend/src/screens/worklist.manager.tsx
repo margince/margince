@@ -15,13 +15,14 @@
 
 import { UserRoundArrowLeft } from "lucide-react";
 import { useState } from "react";
-import { Button, SegmentedControl } from "../design-system/atoms";
+import { Button, Field, SegmentedControl } from "../design-system/atoms";
 import { IconAction } from "../design-system/iconaction";
 import { Select } from "../design-system/select";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { useMe } from "./common";
 import { useRoster } from "./entityref";
+import { AFTER_THE_DAY } from "./worklist.layout";
 import {
   subjectAcceptsAnOwner,
   type TeamException,
@@ -50,6 +51,14 @@ type CoachKind = (typeof COACH_KINDS)[number];
 // drawn from a membership read this screen does not have would hide people the
 // reader is entitled to open. An ask it refuses answers 403 and the page says
 // so, which is the same contract every other control on this page keeps.
+//
+// A LABELLED FIELD, and the label is visible. The control carried its name in
+// `aria-label` alone, so a sighted reader met a dropdown reading "My own day"
+// with nothing on screen saying what it chose — and "My own day" is a value,
+// not a question. `Field` puts the words above the control and points the
+// control at them, which makes the visible label the accessible name: ONE
+// spelling, rather than a label a screen reader hears and a label a reader
+// sees being two different strings.
 export function OwnerPicker({
   owner,
   onOwner,
@@ -64,12 +73,19 @@ export function OwnerPicker({
     })),
   ];
   return (
-    <Select
-      options={options}
-      value={owner}
-      onChange={onOwner}
-      aria-label={t("worklist.owner.label")}
-    />
+    <Field
+      label={t("worklist.owner.visibleLabel")}
+      className="worklist-owner-field"
+    >
+      {(control) => (
+        <Select
+          {...control}
+          options={options}
+          value={owner}
+          onChange={onOwner}
+        />
+      )}
+    </Field>
   );
 }
 
@@ -197,13 +213,17 @@ export function CoachControl({ owner }: Readonly<{ owner: string }>) {
 
   if (!open) {
     return (
-      <Button variant="ghost" onClick={() => setOpen(true)}>
+      <Button
+        variant="ghost"
+        className={AFTER_THE_DAY}
+        onClick={() => setOpen(true)}
+      >
         {t("worklist.manager.coach")}
       </Button>
     );
   }
   return (
-    <div className="worklist-manager-coach">
+    <div className={`worklist-manager-coach ${AFTER_THE_DAY}`}>
       <SegmentedControl
         options={COACH_KINDS}
         value={kind}

@@ -20,6 +20,12 @@ import {
 // something. A rank that toggles a pressed state over no pane teaches the
 // reader that the page lies about what is pressable, so these cases assert
 // both halves: a button where a pane exists, a plain number where none does.
+//
+// WHICH row is in hand needs no press: the first row that HAS a pane is taken
+// up as the page arrives, which is what lets the queue be the focus without a
+// card above it repeating its own first row. A page with nothing in hand is
+// what a row carrying no pane produces, not what an arrival does — the two
+// cases after the toggle are where that is held.
 
 afterEach(() => {
   cleanup();
@@ -27,31 +33,6 @@ afterEach(() => {
 });
 
 describe("what the selected row is about", () => {
-  it("draws no pane until the reader picks a row", async () => {
-    stub(
-      day({
-        queue: [
-          row({
-            id: "one",
-            title: "A task",
-            subject: {
-              type: "person",
-              id: "01a05500-0000-7000-8000-0000000000aa",
-              label: "Kirsten Vogel",
-            },
-          }),
-        ],
-        summary: { urgent: 0, due: 0, lower_priority: 0, total: 1 },
-      }),
-    );
-    renderWorklist();
-
-    // The full-width list a reader had before selection existed. An empty
-    // column standing ready reads as a pane that failed to load.
-    await screen.findByText("A task · Kirsten Vogel");
-    expect(screen.queryByText("They last wrote")).toBeNull();
-  });
-
   it("has the first row in hand on arrival, and closes it on a press", async () => {
     stub(
       day({

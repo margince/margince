@@ -8740,9 +8740,12 @@ export const en = {
   "worklist.completeness": "{shown} of {considered} shown",
   "worklist.review.partial":
     "{loaded} of {total} shown — page the day to reach the rest",
-  "worklist.completeness.bounded":
+  "worklist.completeness.bounded_one":
+    "{shown} shown · {sources} source has more",
+  "worklist.completeness.bounded_other":
     "{shown} shown · {sources} sources have more",
   "worklist.clear": "Nothing is waiting on you.",
+  "worklist.clearFor": "Nothing is waiting on {name}.",
   "worklist.clearOfTasksToday":
     "No tasks are due today or overdue. Later work is on each record's own Tasks tab.",
   "worklist.clearOfWhatWasRead":
@@ -8768,6 +8771,8 @@ export const en = {
   "worklist.pane.lastInbound": "They last wrote",
   "worklist.pane.lastOutbound": "We last wrote",
   "worklist.pane.never": "Never",
+  "worklist.pane.company": "Works for",
+  "worklist.pane.role": "Their role",
   "worklist.band.now": "Now",
   "worklist.band.build_pipeline": "Build pipeline",
   "worklist.band.keep_momentum": "Keep momentum",
@@ -8805,7 +8810,7 @@ export const en = {
   "worklist.scope.unassigned": "Unassigned",
   "worklist.scope.team": "My team",
   "worklist.scope.all": "All",
-  "worklist.owner.label": "Whose queue",
+  "worklist.owner.visibleLabel": "Whose day",
   "worklist.manager.cancel": "Cancel",
   "worklist.owner.mine": "My own day",
   "worklist.owner.backToMine": "Back to my own day",
@@ -8843,6 +8848,7 @@ export const en = {
   "worklist.walk.refresh": "Refresh",
   "worklist.handled.empty": "Nothing was done on your behalf today.",
   "worklist.handled.loading": "Reading what was done",
+  "worklist.handled.count": "{count} done for you",
   "worklist.handled.what": "What happened",
   "worklist.handled.about": "About",
   "worklist.handled.when": "When",
@@ -8851,6 +8857,7 @@ export const en = {
     "More than this. The list stops at what one sitting can hold.",
   "worklist.exceptions.empty": "Nothing on the team needs you right now.",
   "worklist.exceptions.loading": "Reading the team",
+  "worklist.exceptions.count": "{count} needing you",
   "worklist.exceptions.condition": "What",
   "worklist.exceptions.subject": "About",
   "worklist.exceptions.owner": "Who answers",

@@ -64,10 +64,20 @@ export default meta;
 
 type Story = StoryObj<typeof CoachControl>;
 
-/** Whose queue the page is answering. "My own day" is the first entry rather
- *  than a blank, so the dial always names what it is showing. */
+/** Whose queue the page is answering. The label is VISIBLE and is the control's
+ *  accessible name — the dial carried its name in `aria-label` alone, so a
+ *  sighted reader met a dropdown reading "My own day" with nothing on screen
+ *  saying what it chose. "My own day" is the first entry rather than a blank,
+ *  so the closed face always names what it is showing. Content-sized and
+ *  capped: full width it read as a control over the page below it. */
 export const WhoseQueue: Story = {
   render: () => frame(<OwnerPicker owner="" onOwner={() => {}} />),
+};
+
+/** The same dial with a colleague chosen — the state that stands in place of
+ *  the scope switch on the header line beside it. */
+export const AColleaguesDay: Story = {
+  render: () => frame(<OwnerPicker owner={LENA} onOwner={() => {}} />),
 };
 
 /** Both verbs at rest — one ghost button each, and nothing on screen yet about
