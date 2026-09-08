@@ -149,6 +149,52 @@ func TestAThreadVerdictThatHeldOutranksAClearedSender(t *testing.T) {
 	}
 }
 
+// The import row's own status is not proof its thread is unjudged. Stamping a
+// settled verdict onto a thread's siblings is bounded per transaction, so a
+// long thread keeps rows reading NULL after a `held` verdict has committed —
+// and those are precisely the messages a seat asked to keep back.
+func TestAHeldThreadsUnstampedMessagesAreNotPublishedByASenderVerdict(t *testing.T) {
+	e := integration.Setup(t)
+	const sender = "chi@fvhospital.example"
+	mail := seedCapturedMail(t, e, sender, "Gehaltsanpassung")
+	seedPostureHeldImport(t, e, mail, e.Rep1)
+	// The verdict is settled on the THREAD while this message's own import row
+	// still says nothing — the state a bounded stamping pass leaves behind.
+	holdThreadFor(t, e, mail, e.Rep1)
+	dispositionID := seedPendingDisposition(t, e, sender, "fvhospital.example", mail)
+
+	judgeSenderAs(t, e, dispositionID, capture.KindPerson)
+
+	if got, _ := audienceAndReason(t, e, mail); got != "participants" {
+		t.Errorf("a message on a thread its seat held is %q: the release read the import row's "+
+			"own status as proof the thread was unjudged, and published mail a confidentiality "+
+			"verdict had already held", got)
+	}
+}
+
+// holdThreadFor settles this seat's confidentiality verdict on the message's
+// thread, leaving the message's own import row unstamped.
+func holdThreadFor(t *testing.T, e *integration.Env, activityID, seat ids.UUID) {
+	t.Helper()
+	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		// The seeded mail carries no thread of its own, so the conversation this
+		// verdict is about has to be named first.
+		if _, err := tx.Exec(context.Background(),
+			`UPDATE activity SET thread_key = 'thread-' || $1::text WHERE id = $1`,
+			activityID); err != nil {
+			return err
+		}
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO capture_thread_verdict (thread_key, user_id, status, seen_addresses)
+			SELECT a.thread_key, $2, 'held', ARRAY[]::text[]
+			  FROM activity a WHERE a.id = $1`, activityID, seat)
+		return err
+	})
+	if err != nil {
+		t.Fatalf("holding the thread: %v", err)
+	}
+}
+
 // A row written before the product recorded more than one reason says only
 // which rule matched first. It is not PROVABLY posture-only, so it is refused
 // rather than guessed at — the same trade widenhistory makes.

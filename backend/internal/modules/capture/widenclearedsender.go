@@ -27,6 +27,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -55,6 +56,13 @@ const clearedSenderBatch = 500
 //     is not ours to move. That verdict is written onto the import row without
 //     touching verdict_reasons, so the exact-array clause below does NOT imply
 //     it stayed silent.
+//   - and no HOLDING verdict on the thread itself, asked of that ledger rather
+//     than of the import row. The row's own status is not proof the thread has
+//     none: stamping a settled verdict onto a thread's siblings is bounded per
+//     transaction, so a long thread keeps unstamped rows reading NULL for as
+//     long as the repair takes. Those rows are exactly the mail a seat's
+//     confidentiality verdict just held, and the pass that would eventually
+//     stamp them arrives after this one would have published them.
 //   - verdict_reasons = ARRAY['posture'] — EXACT match, the same argument
 //     widenDue makes: a message held by the posture AND anything else records
 //     both, and releasing it would discard the other reason. A row written
@@ -73,6 +81,10 @@ const clearedSenderWidenDue = `EXISTS (
 			 WHERE p.email = $1 AND p.status = 'real' AND p.kind = 'person')
 	   AND i.posture_at_import = 'classified'
 	   AND i.verdict_status IS NULL
+	   AND NOT EXISTS (
+			SELECT 1 FROM capture_thread_verdict v
+			 WHERE v.thread_key = a.thread_key AND v.user_id = i.user_id
+			   AND v.status IN ('held', 'unsure', 'held_by_owner', 'pending'))
 	   AND i.verdict_reasons = ARRAY['posture']
 	   AND a.counterparty_email = $1
 	   AND a.restricted_at IS NULL`
@@ -164,19 +176,18 @@ func sortActivityIDs(list []ids.ActivityID) {
 //
 // Senders rather than rows: the widen claims per sender, and asking for the work
 // this way lets each one take its own transaction.
+//
+// It asks the SAME predicate the claim asks, with the sender's own address
+// substituted for the parameter, because a selector that admits what the writer
+// refuses never drains: the pass would find the sender every tick, move nothing,
+// and its progress check would fail a run that had no work to do. Spelling the
+// clauses again here is what would let the two drift apart.
 func ClearedSendersDueTx(ctx context.Context, tx pgx.Tx, limit int) ([]string, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT DISTINCT a.counterparty_email
 		  FROM capture_import i
 		  JOIN activity a ON a.id = i.activity_id
-		 WHERE EXISTS (
-		           SELECT 1 FROM capture_pending_counterparty p
-		            WHERE p.email = a.counterparty_email
-		              AND p.status = 'real' AND p.kind = 'person')
-		   AND i.posture_at_import = 'classified'
-		   AND i.verdict_status IS NULL
-		   AND i.verdict_reasons = ARRAY['posture']
-		   AND a.restricted_at IS NULL
+		 WHERE `+strings.ReplaceAll(clearedSenderWidenDue, "$1", "a.counterparty_email")+`
 		 ORDER BY a.counterparty_email
 		 LIMIT $1`, limit)
 	if err != nil {
