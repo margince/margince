@@ -218,6 +218,11 @@ func fullRegistry(t *testing.T) *Registry {
 	// where the production renderer belongs and the encoding walk would be
 	// checking the double's schema.
 	RegisterReportVocabularyTool(r, NewReportVocabularyResource(probeReportCatalog))
+	// The analytics vocabulary's production renderer lives with the derived
+	// schema in the composition root, which this module cannot import — so the
+	// encoding walk checks the tool over a stub document. The schema it
+	// verifies is the tool's own, which restates nothing about the document.
+	RegisterAnalyticsVocabularyTool(r, &fakeAnalyticsVocabulary{doc: "pipeline-current\n"})
 	RegisterContextSearchTool(r, nil, inertRetriever{})
 	RegisterResolveTool(r, nil, func(context.Context, []ResolveCandidate) ([]ResolveOutcome, error) {
 		return nil, nil

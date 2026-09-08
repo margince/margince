@@ -26,12 +26,23 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // AnalyticsSchemaFor derives what this caller may ask about.
 func AnalyticsSchemaFor(ctx context.Context) analyticsquery.Schema {
 	entities := map[string]analyticsquery.Entity{}
 	for key, spec := range prebuiltReports {
+		// The population's OWN read gate, applied at derivation. grantedSpec
+		// below narrows only the fields that read ANOTHER record type
+		// (spec.grants); the base entity's grant is the engine's admission
+		// gate, and a derivation that skipped it would name populations —
+		// here, in the vocabulary document, and in the unknown-name refusal —
+		// to a seat that may not read a row of them.
+		if auth.Require(ctx, string(spec.entity), principal.ActionRead) != nil {
+			continue
+		}
 		granted := grantedSpec(ctx, spec)
 		entity := analyticsquery.Entity{
 			Name: key,

@@ -25,11 +25,11 @@ This page does not grade single steps or name a best model per site — that is
 
 | | |
 |---|---:|
-| Tools the assistant is offered | 74 |
+| Tools the assistant is offered | 75 |
 | … some case requires | 7 |
-| … **no case requires** | 67 |
+| … **no case requires** | 68 |
 | … of those, permitted somewhere but never required | 13 |
-| Prompt tokens spent on tools no case requires | 18330 |
+| Prompt tokens spent on tools no case requires | 18627 |
 | Use cases | 7 |
 | … with a committed run | 7 |
 | Acceptance criteria the cases declare | 15 |
@@ -106,7 +106,7 @@ stopped being able to call it. A tool in the `permitted` column is worse than on
 | `list_records` | 508 | — | `morning_brief`, `overnight_at_risk_sweep` |
 | `progress_deal` | 505 | — | — |
 | `resolve_entities` | 498 | `case1_log_it`, `case2_business_card` | — |
-| `run_analytics_query` | 465 | — | — |
+| `run_analytics_query` | 476 | — | — |
 | `advance_deal` | 447 | — | — |
 | `annotate_brief` | 418 | — | `morning_brief` |
 | `review_commitments` | 401 | — | `overnight_at_risk_sweep` |
@@ -119,6 +119,7 @@ stopped being able to call it. A tool in the `permitted` column is worse than on
 | `prep_for_meeting` | 326 | `case5_before_the_meeting` | — |
 | `demote_lead` | 316 | — | — |
 | `merge_records` | 292 | — | — |
+| `describe_analytics_vocabulary` | 286 | — | — |
 | `catch_me_up_on` | 280 | `case5_before_the_meeting`, `case6_ask_the_company` | `morning_brief`, `overnight_at_risk_sweep` |
 | `advance_project_phase` | 279 | — | — |
 | `draft_email` | 279 | — | — |

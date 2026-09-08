@@ -50,23 +50,34 @@ type AnalyticsAnswer struct {
 func RunAnalyticsQuery(
 	ctx context.Context, tx pgx.Tx, q analyticsquery.Query, floor analyticsquery.Floor,
 ) (AnalyticsAnswer, error) {
-	// The population's own read gate, asked BEFORE anything is compiled. The
-	// schema derivation already drops entities this caller cannot read, so
-	// reaching here with an unreadable one means the derivation and this gate
-	// disagree — and the safe reading of that is to refuse.
+	schema := AnalyticsSchemaFor(ctx)
 	spec, ok := prebuiltReports[q.Entity]
 	if !ok {
+		// A name no catalog entry carries is judged by the caller's own
+		// derived vocabulary, so the refusal is Validate's — the one writer
+		// of it, and the one that answers with the names that would work.
+		if err := q.Validate(schema); err != nil {
+			return AnalyticsAnswer{}, err
+		}
+		// Validate admits only schema entities and the schema is derived from
+		// this catalog, so reaching here is a wiring fault, and the safe
+		// reading of it is to refuse.
 		return AnalyticsAnswer{}, &analyticsquery.RefusalError{
 			Kind:    analyticsquery.RefusalUnsupported,
 			Message: "no population by that name",
 			Suggest: "call the schema endpoint for the populations this seat may ask about",
 		}
 	}
+	// The population's own read gate, asked BEFORE anything is compiled. A
+	// catalog population the caller may not read answers the permission
+	// sentinel rather than "no such population": the catalog is the
+	// installation's compile-time table, so the name's existence is not the
+	// caller's secret to be kept — and a saved run's reader must hear the
+	// denial, not be told the population their citation names does not exist.
 	if err := auth.Require(ctx, string(spec.entity), principal.ActionRead); err != nil {
 		return AnalyticsAnswer{}, err
 	}
 
-	schema := AnalyticsSchemaFor(ctx)
 	plan, err := analyticsquery.Compile(q, schema, analyticsScope(ctx, tx, spec, q))
 	if err != nil {
 		return AnalyticsAnswer{}, err

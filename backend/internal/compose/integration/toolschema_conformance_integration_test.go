@@ -177,6 +177,10 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		// reason: no arguments, no seam this lane is missing, so the census gets
 		// a call rather than a waiver.
 		{"describe_report_vocabulary", `{}`},
+		// The vocabulary run_analytics_query's plan is written against, for
+		// the same reason: no arguments, no seam this lane is missing, so the
+		// census gets a call rather than a waiver.
+		{"describe_analytics_vocabulary", `{}`},
 		{"read_record", `{"record_type":"deal","id":"` + deal.String() + `"}`},
 		// A ranked sweep that finds rows and one that finds none. The empty page
 		// is the one worth pinning: it still carries `coverage` and `notes`, and

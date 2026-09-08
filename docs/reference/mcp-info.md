@@ -11,11 +11,11 @@ receives it. This page is rendered from that file.
 
 | | |
 |---|---:|
-| Tools | 74 |
+| Tools | 75 |
 | Resources | 12 |
-| Tool catalog | 208.2 KB |
+| Tool catalog | 210.4 KB |
 | Resource catalog | 4.5 KB |
-| Approx. wire tokens | 54434 |
+| Approx. wire tokens | 55013 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 97.5 KB | 46% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 50.7 KB | 24% | Yes, every step |
-| Input schemas | 44.4 KB | 21% | Yes, every step |
-| _Names, annotations, punctuation_ | 15.6 KB | 7% | Partly |
-| **Description + input schema** | **95.1 KB** | **45%** | **the recurring cost** |
+| Output schemas | 98.3 KB | 46% | **No** — a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 51.8 KB | 24% | Yes, every step |
+| Input schemas | 44.5 KB | 21% | Yes, every step |
+| _Names, annotations, punctuation_ | 15.8 KB | 7% | Partly |
+| **Description + input schema** | **96.3 KB** | **45%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -60,7 +60,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 - [`ui://margince/pipeline-review.html`](#pipeline_review_view) — Pipeline review
 - [`ui://margince/geo-probe.html`](#geo_probe_view) — Location check
 
-### Tools (74)
+### Tools (75)
 
 | Tool | What it is for | Read-only | View | Size |
 |---|---|:-:|---|---:|
@@ -84,6 +84,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`decide_approval`](#decide_approval) | Approve or reject one staged action |  |  | 2.9 KB |
 | [`decide_approval_bundle`](#decide_approval_bundle) | Approve or reject one act's proposals together |  |  | 2.9 KB |
 | [`demote_lead`](#demote_lead) | Reverse a lead promotion |  |  | 2.4 KB |
+| [`describe_analytics_vocabulary`](#describe_analytics_vocabulary) | Describe the analytics vocabulary | yes |  | 2.2 KB |
 | [`describe_query_vocabulary`](#describe_query_vocabulary) | Describe the query vocabulary | yes |  | 2.1 KB |
 | [`describe_report_blocks`](#describe_report_blocks) | Describe the report block grammar | yes |  | 2.0 KB |
 | [`describe_report_vocabulary`](#describe_report_vocabulary) | Describe the report vocabulary | yes |  | 2.4 KB |
@@ -3792,6 +3793,122 @@ Reverse a promotion that should not have happened, putting the lead back on the 
       "required": [
         "lead",
         "unwind"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+### describe_analytics_vocabulary
+
+**Describe the analytics vocabulary**
+
+Answer what an analytics query may SAY for THIS seat: the populations that can be measured, the group_by dimensions and measures each carries, and the aggregate functions and filter operators the grammar takes. It is the vocabulary run_analytics_query refuses against, so it holds the spelling of a population or field a query got wrong. It describes the vocabulary; it computes nothing — run_analytics_query does that. The document is derived per caller and narrowed to what this seat may already see, so a withheld field is simply absent rather than marked. It answers the same document as the margince://schema/analytics resource, for a caller that reads tools rather than resources. Call run_analytics_query directly when the names are already known — an unknown population is refused with the allowed set, so a near-miss costs one round trip rather than a lookup. Take population, dimension and measure names verbatim — a name outside the document is refused rather than approximated. The version line is the schema_version a saved run answers with. (Governance: runs immediately; requires passport scope "read".)
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "properties": {},
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "vocabulary": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "vocabulary"
       ],
       "type": "object"
     },
@@ -12497,7 +12614,7 @@ Renders its result in [`ui://margince/commitments.html`](#commitments_view), vis
 
 **Run an analytics query**
 
-Compute a grouped aggregate — counts, sums, averages, medians — over a governed population, in the database. The answer carries its columns, rows and schema version; groups too small to disclose are withheld, never estimated. Populations, dimensions and measures come from margince://schema/analytics, derived for this seat; a name outside it is refused with what would work. Money measures are minor units. An omitted scope is this seat's own default population, never the workspace. run_report answers a prebuilt report by key; query_workspace lists exact records; the forecast tools answer forecast readings and movement. This one is for a novel aggregate no prebuilt report shapes. Set save to get a run_id whose cells compose_analytics_report can cite; without it the answer is served once and not stored. (Governance: runs immediately; requires passport scope "read".)
+Compute a grouped aggregate — counts, sums, averages, medians — over a governed population, in the database. The answer carries its columns, rows and schema version; groups too small to disclose are withheld, never estimated. Populations, dimensions and measures come from margince://schema/analytics, derived for this seat and answered by describe_analytics_vocabulary; a name outside it is refused with what would work. Money measures are minor units. An omitted scope is this seat's own default population, never the workspace. run_report answers a prebuilt report by key; query_workspace lists exact records; the forecast tools answer forecast readings and movement. This one is for a novel aggregate no prebuilt report shapes. Set save to get a run_id whose cells compose_analytics_report can cite; without it the answer is served once and not stored. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 

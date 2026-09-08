@@ -127,3 +127,59 @@ func TestTheSchemaVersionMovesWhenTheVocabularyDoes(t *testing.T) {
 		t.Error("the same vocabulary hashed to two versions, so every plan is refused")
 	}
 }
+
+// The resource and the vocabulary tool's reader serve one document. The two
+// doors share analyticsVocabularyText today; this holds the sharing, so a
+// second rendering cannot arrive under either door without failing here.
+func TestTheAnalyticsResourceAndTheToolReaderServeOneDocument(t *testing.T) {
+	t.Parallel()
+	ctx := seatWith("deal", "activity", "person", "organization", "project", "partner")
+	contents, err := analyticsSchemaResource{}.ReadResource(ctx, AnalyticsSchemaURI)
+	if err != nil {
+		t.Fatalf("the resource: %v", err)
+	}
+	viaTool, err := analyticsVocabularyReader{}.AnalyticsVocabularyDocument(ctx)
+	if err != nil {
+		t.Fatalf("the tool's reader: %v", err)
+	}
+	if contents.Text != viaTool {
+		t.Errorf("the resource and the tool serve two documents:\nresource: %q\ntool:     %q",
+			contents.Text, viaTool)
+	}
+	// The equality above must be over a real vocabulary, not two empty
+	// strings agreeing.
+	if !strings.Contains(viaTool, "group by") {
+		t.Errorf("the shared document describes no population, so the equality proved nothing: %q", viaTool)
+	}
+}
+
+// A population whose base entity the seat may not read is absent from the
+// derived schema — not narrowed, not refused by name: absent. The vocabulary
+// document and the unknown-name refusal both serve the schema, so this is
+// what keeps them from naming populations ahead of the object gate.
+func TestAPopulationWhoseEntityTheSeatCannotReadIsAbsent(t *testing.T) {
+	t.Parallel()
+	sansDeal := AnalyticsSchemaFor(seatWith("activity", "person", "organization", "project", "partner"))
+	wide := AnalyticsSchemaFor(seatWith("deal", "activity", "person", "organization", "project", "partner"))
+
+	// Judged against the WHOLE catalog, so a new deal population cannot land
+	// outside the assertion.
+	dealPopulations := 0
+	for key, spec := range prebuiltReports {
+		if string(spec.entity) != "deal" {
+			continue
+		}
+		dealPopulations++
+		if _, ok := sansDeal.Entities[key]; ok {
+			t.Errorf("%q reads deals and is offered to a seat without deal read", key)
+		}
+		// The positive control: the same population reaches a seat holding
+		// the grant, or the absence above proves nothing.
+		if _, ok := wide.Entities[key]; !ok {
+			t.Errorf("%q is absent from a fully-granted seat too, so the withholding above is vacuous", key)
+		}
+	}
+	if dealPopulations == 0 {
+		t.Fatal("no prebuilt report reads deals, so this test swept nothing")
+	}
+}
