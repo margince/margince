@@ -927,9 +927,11 @@ function LeadLadderPanel({
   );
 }
 
-// The lead's owner, wherever it is shown: the header where a reader acts, and
-// the details pane where they consult. ONE component, so the two cannot
-// disagree about who owns the lead or about whether the control is pressable.
+// The lead's owner, in the header where a reader acts.
+//
+// Its own component rather than inline in the header's props, because what
+// makes it pressable is three separate questions and they belong beside each
+// other rather than spread through a JSX attribute list.
 function LeadOwnerControl({
   lead,
   writer,
@@ -979,12 +981,12 @@ function LeadOwnerControl({
 }
 
 /**
- * The rail: the lead's own words, and who owns it.
+ * The rail: the lead's own words.
  *
- * Both are things a rep CONSULTS while doing the work in the column beside
- * it. The score used to fold into this column too; it is a reading with an
- * edit behind it and sits in the record's reading now, beside the inputs that
- * feed it.
+ * What a rep CONSULTS while doing the work in the column beside it. Two things
+ * have left this column for the same reason — the score, which is a reading
+ * with an edit behind it and belongs beside the inputs that feed it, and the
+ * owner, which is a thing a reader ACTS on and belongs in the header.
  */
 function LeadRail({
   lead,
@@ -1974,12 +1976,15 @@ function LeadRecord({
       // record was a printout. It opens the composer on this lead, as the
       // Email verb beside it does, and like that verb it is refused on a
       // closed lead — as text, since the verb already carries the reason.
-      // Owner beside the address, because both are things a reader ACTS on.
+      // Owner above the address: both are things a reader ACTS on, and the
+      // wide header stacks its pulse rather than laying it out in a row.
+      //
       // Ownership lived only in the details pane, which is open by default and
-      // remembers being hidden — so the one control that takes a lead out of
+      // REMEMBERS being hidden — so the one control that takes a lead out of
       // the unassigned queue was, for anyone who had ever collapsed the pane,
-      // behind a toggle they had to remember. The pane keeps its copy: same
-      // component, same data, one answer.
+      // behind a toggle they had to remember. It is rendered here and nowhere
+      // else: a second copy in the pane made every owner query on the page
+      // ambiguous, which is two controls disagreeing waiting to happen.
       pulse={
         <>
           <LeadOwnerControl
