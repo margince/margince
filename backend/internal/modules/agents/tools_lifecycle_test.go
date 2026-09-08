@@ -157,11 +157,14 @@ func (a *recordingAdvancer) AdvanceProjectPhase(
 	return nil, nil
 }
 
-// recordingDisqualifier captures the id Handle passed to the store.
-type recordingDisqualifier struct{ id ids.UUID }
+// recordingDisqualifier captures the id and the pin Handle passed to the store.
+type recordingDisqualifier struct {
+	id  ids.UUID
+	pin *int64
+}
 
-func (d *recordingDisqualifier) DisqualifyLead(_ context.Context, id ids.UUID) (json.RawMessage, error) {
-	d.id = id
+func (d *recordingDisqualifier) DisqualifyLead(_ context.Context, id ids.UUID, ifVersion *int64) (json.RawMessage, error) {
+	d.id, d.pin = id, ifVersion
 	return nil, nil
 }
 
@@ -182,6 +185,44 @@ func TestDisqualifyLeadHandsTheNamedLeadToTheStore(t *testing.T) {
 
 	if _, err := tool.Handle(context.Background(), json.RawMessage(`{"lead_id":"not-a-uuid"}`)); err == nil {
 		t.Fatal("a malformed lead_id was accepted")
+	}
+}
+
+// A redeemed retry carries the version its approval was released against, and
+// this tool takes no if_version of its own — so the released pin is the ONLY
+// thing that can condition the write.
+//
+// Without it the write is unconditioned: redemption commits its own transaction
+// and this handler opens a fresh one, so the skew check inside redemption proves
+// the row was at the approved version when the approval was CONSUMED, not when
+// the disqualify lands — and the agent controls both sides of that window.
+func TestDisqualifyLeadCarriesTheReleasedPinToTheStore(t *testing.T) {
+	seam := &recordingDisqualifier{}
+	tool := disqualifyLead{disqualifier: seam}
+	id := ids.NewV7()
+	const approvedAt = int64(7)
+
+	ctx := withApprovalRedeemed(context.Background(), approvedAt, true)
+	if _, err := tool.Handle(ctx, json.RawMessage(`{"lead_id":"`+id.String()+`"}`)); err != nil {
+		t.Fatal(err)
+	}
+	if seam.pin == nil {
+		t.Fatal("the store was handed no version — a redeemed retry then writes unconditioned")
+	}
+	if *seam.pin != approvedAt {
+		t.Errorf("store saw version %d, want the %d the approval was released against", *seam.pin, approvedAt)
+	}
+
+	// An unapproved call at a static tier has nothing to pin, and must not
+	// invent one: a version nothing established would refuse writes that are
+	// perfectly fine.
+	unapproved := &recordingDisqualifier{}
+	plain := disqualifyLead{disqualifier: unapproved}
+	if _, err := plain.Handle(context.Background(), json.RawMessage(`{"lead_id":"`+id.String()+`"}`)); err != nil {
+		t.Fatal(err)
+	}
+	if unapproved.pin != nil {
+		t.Errorf("an unapproved call pinned version %d; nothing established one", *unapproved.pin)
 	}
 }
 
