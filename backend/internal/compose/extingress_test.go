@@ -214,8 +214,13 @@ func TestAnIngestInsideTheUnitsOwnTransactionIsRefused(t *testing.T) {
 	// this test needing a database to prove it.
 	unkeyed := aRecord()
 	unkeyed.Key = ""
-	if _, err := rt.Ingest(context.Background(), member, unkeyed); !errors.Is(err, extension.ErrInvalid) {
-		t.Fatalf("err = %v, want the next refusal along — the nesting one outlived the transactions it is about", err)
+	res, err := rt.Ingest(context.Background(), member, unkeyed)
+	if err != nil {
+		t.Fatalf("err = %v, want the call to reach the grammar — the nesting refusal outlived the "+
+			"transactions it is about", err)
+	}
+	if res.Disposition != extension.DispositionUnrepresentable {
+		t.Fatalf("disposition = %q, want the next answer along, which is the grammar's", res.Disposition)
 	}
 }
 
@@ -292,9 +297,21 @@ func TestARecordTheGrammarRefusesNeverReachesCapture(t *testing.T) {
 	unkeyed := aRecord()
 	unkeyed.Key = ""
 
-	_, err := ingestingRuntime(t).Ingest(context.Background(), extension.UserID(ids.NewV7().String()), unkeyed)
-	if !errors.Is(err, extension.ErrInvalid) {
-		t.Fatalf("err = %v, want ErrInvalid", err)
+	res, err := ingestingRuntime(t).Ingest(context.Background(), extension.UserID(ids.NewV7().String()), unkeyed)
+	if err != nil {
+		t.Fatalf("err = %v, want a disposition rather than an error class: a unit cannot stop its "+
+			"whole connection on one malformed record, so it moves past this either way", err)
+	}
+	if res.Disposition != extension.DispositionUnrepresentable {
+		t.Errorf("disposition = %q, want %q", res.Disposition, extension.DispositionUnrepresentable)
+	}
+	if res.Ref != (extension.Ref{}) {
+		t.Errorf("ref = %+v, want none — nothing was written", res.Ref)
+	}
+	// The complaint travels, so a unit logs the same sentence it used to read
+	// off the error rather than losing why the record was refused.
+	if res.Reason == "" {
+		t.Error("the refusal says nothing about what was wrong with the record")
 	}
 }
 

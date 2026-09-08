@@ -405,6 +405,33 @@ const (
 	// connector's watermark, so a unit treats this exactly as it treats
 	// Accepted: move the cursor past it.
 	DispositionSkipped Disposition = "skipped"
+
+	// DispositionUnrepresentable is a record the core's grammar refuses: the
+	// unit built something this contract cannot express.
+	//
+	// It was an ErrInvalid, and that put the one distinction a unit most needs
+	// into error matching. A unit polling a provider cannot stop on a single
+	// malformed message — that parks the whole connection over one record — so
+	// it moves its cursor past it either way. What it could not do was tell
+	// "the core skipped this deliberately" from "I built something the core
+	// cannot use", because the first arrived as a Disposition and the second as
+	// an error class, and a provider format change that made EVERY record
+	// unrepresentable then presented exactly like a healthy quiet feed.
+	//
+	// It is a SUCCESS carrying a zero Ref, on the same terms as Skipped: the
+	// cursor advances, because waiting does not make a malformed record
+	// representable. And it is the one disposition a unit must COUNT. A run
+	// answering it for everything it pulled is a broken unit or a changed
+	// provider, and nothing else in the system is in a position to say so —
+	// the core writes no breadcrumb for it yet (the second half of the seam,
+	// which needs a table and its own decision about what such a row may hold).
+	//
+	// A unit switching on Disposition without a default gains an unhandled
+	// case here. Go does not enforce exhaustiveness, so nothing stops
+	// compiling; a unit that wants the count treats an unknown disposition as
+	// this one, which is the safe direction — an unrecognised outcome is not an
+	// acceptance.
+	DispositionUnrepresentable Disposition = "unrepresentable"
 )
 
 // Ref names a record the core holds.
@@ -415,12 +442,24 @@ type Ref struct {
 
 // Result is what one ingest did.
 //
-// BOTH DISPOSITIONS ADVANCE A CURSOR, and that is the point of returning one
-// instead of an error for the skip: a unit's watermark moves past every record
-// the core has finished deciding about, whether or not a row came of it.
+// EVERY DISPOSITION ADVANCES A CURSOR, and that is the point of returning one
+// instead of an error: a unit's watermark moves past every record the core has
+// finished deciding about, whether or not a row came of it — a deliberate skip
+// and a record the grammar refuses are both finished, and re-offering either on
+// the next poll would repeat it forever.
 type Result struct {
 	Ref         Ref
 	Disposition Disposition
+	// Reason says WHY, for the dispositions that are a refusal. It carries the
+	// core's complaint about an unrepresentable record so a unit can log the
+	// same sentence it used to read off the error — and it is empty for an
+	// acceptance and for a deliberate skip, where there is nothing the unit
+	// could act on.
+	//
+	// Prose for a log, never a value to branch on: the Disposition is what a
+	// unit decides from, and a unit parsing this string would be reading core
+	// text that is free to change.
+	Reason string
 }
 
 // The refusals an ingest can answer. Sentinels rather than typed errors,

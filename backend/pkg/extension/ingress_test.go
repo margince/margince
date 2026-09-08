@@ -245,14 +245,29 @@ func TestTheDeclarationGrammar(t *testing.T) {
 // this type does NOT draw is the point of it: a replay answers Accepted like
 // any other landing, because the pipeline reports no difference and a
 // "replayed" value would be a promise this side cannot keep.
-func TestTheDispositionsAreTheTwoTheCoreCanHonestlyReport(t *testing.T) {
-	if extension.DispositionAccepted == extension.DispositionSkipped {
-		t.Fatal("the two dispositions are one value")
+func TestTheDispositionsAreTheThreeTheCoreCanHonestlyReport(t *testing.T) {
+	published := []extension.Disposition{
+		extension.DispositionAccepted,
+		extension.DispositionSkipped,
+		extension.DispositionUnrepresentable,
 	}
-	for _, d := range []extension.Disposition{extension.DispositionAccepted, extension.DispositionSkipped} {
+	// Distinct, because the whole value of the third is telling a deliberate
+	// skip from a record this unit built wrong — two of them sharing a value
+	// would put that distinction back where it was.
+	seen := map[extension.Disposition]bool{}
+	for _, d := range published {
 		if strings.TrimSpace(string(d)) == "" {
 			t.Errorf("a disposition renders as empty, which a unit cannot log or branch on")
 		}
+		if seen[d] {
+			t.Errorf("%q is published twice", d)
+		}
+		seen[d] = true
+	}
+	// The zero value is none of them. A Result a unit forgot to fill must not
+	// read as an acceptance.
+	if seen[extension.Disposition("")] {
+		t.Error("the empty disposition is one of the published ones, so an unset Result reads as an outcome")
 	}
 }
 

@@ -21,9 +21,11 @@ package openchannel
 // stopped mid-batch therefore leaves everything it had not reached still
 // pending, which is the state it arrived in.
 //
-// EVERY Disposition IS A SUCCESS, Skipped included. The core drops a
-// wholly-internal message deliberately and commits a breadcrumb saying so;
-// treating that as a failure would retry a deliberate drop forever, on a cadence.
+// A Disposition IS THE ANSWER, and two of the three are successes. The core
+// drops a wholly-internal message deliberately and commits a breadcrumb saying
+// so; treating that as a failure would retry a deliberate drop forever, on a
+// cadence. The third — a record the grammar refuses — is this row's own
+// terminal fault, and it parks for the reason it always did.
 
 import (
 	"context"
@@ -128,14 +130,23 @@ func landAll(ctx context.Context, rt extension.Runtime, pending []queued) error 
 	landed := 0
 	for _, req := range pending {
 		result, err := ingestOne(ctx, rt, req)
-		if err == nil {
+		// A record the core's grammar refuses arrives as a DISPOSITION rather
+		// than an error, and it is this row's own terminal fault either way:
+		// the same bytes build the same record on every attempt. Routed to the
+		// same class the error used to reach, so what a member reads on their
+		// own screen is unchanged by where the core says it.
+		unrepresentable := err == nil && result.Disposition == extension.DispositionUnrepresentable
+		if err == nil && !unrepresentable {
 			landed++
 			if noted := markLanded(ctx, rt, req, result); noted != nil {
 				return extension.Failure(classDrainFailed, noted)
 			}
 			continue
 		}
-		class, terminal := drainFailure(err)
+		class, terminal := classRefusedByTheCore, true
+		if !unrepresentable {
+			class, terminal = drainFailure(err)
+		}
 		// On the tick's own context, and it is the one write that must not be
 		// lost: it is what stops the next tick starting at the same request with
 		// no record of why the last one stopped.
