@@ -249,13 +249,8 @@ func scoreLeads(
 		  SELECT h.status, h.partial_pre_history
 		    FROM activity_meeting_history h
 		    JOIN activity m ON m.id = h.activity_id
-		   -- By HOST, falling back to the recorder only where no host is
-		   -- named, exactly as countWeekMeetings attributes the tally beside
-		   -- it. Two spellings of one question let this panel and the
-		   -- headline count credit the same meeting to different people.
 		   WHERE m.kind = 'meeting'
-		     AND (m.host_user_id = $%[3]d
-		          OR (m.host_user_id IS NULL AND m.captured_by = $%[6]d))
+		     AND `+meetingIsTheirsSQL("$%[3]d", "$%[6]d")+`
 		     AND m.archived_at IS NULL
 		     AND h.effective_at >= $%[1]d AND h.effective_at < $%[2]d
 		     AND (%[7]s))

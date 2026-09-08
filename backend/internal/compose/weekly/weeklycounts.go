@@ -201,6 +201,25 @@ func countWeekLeads(
 // The heuristic is what the data supports, and it is a heuristic: a task raised
 // the Monday after a Friday meeting is plausibly its outcome and is not counted
 // here. Tightening that needs source_activity_id on every writer first.
+// meetingIsTheirsSQL is the one spelling of "this meeting is that rep's":
+// hosted by them, or — where no host was recorded — filed by them.
+//
+// TWO readers ask it, the headline count here and the funnel in
+// weeklyscorecard.go, and they must not disagree: a meeting credited to
+// different people by the two panels is one page contradicting itself about the
+// same week. The caller supplies its own placeholders because the two queries
+// number their arguments differently.
+//
+// The fallback is bounded to rows with NO host on purpose. A meeting naming one
+// is that person's, and letting its recorder also claim it would count one
+// meeting twice across two reps.
+//
+// Held by: TestTheMeetingAttributionHasOneSpelling (meetingattribution_test.go)
+func meetingIsTheirsSQL(hostPos, capturedPos string) string {
+	return fmt.Sprintf("(m.host_user_id = %s OR (m.host_user_id IS NULL AND m.captured_by = %s))",
+		hostPos, capturedPos)
+}
+
 func countWeekMeetings(
 	ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.Time,
 ) (held, withNextStep int, err error) {
@@ -213,10 +232,9 @@ func countWeekMeetings(
 	if err != nil {
 		return 0, 0, err
 	}
-	const heldByRep = `m.kind = 'meeting' AND m.archived_at IS NULL
+	heldByRep := `m.kind = 'meeting' AND m.archived_at IS NULL
 		      AND m.meeting_status = 'held'
-		      AND (m.host_user_id = $%[5]d
-		           OR (m.host_user_id IS NULL AND m.captured_by = $%[3]d))
+		      AND ` + meetingIsTheirsSQL("$%[5]d", "$%[3]d") + `
 		      AND m.occurred_at >= $%[1]d AND m.occurred_at < $%[2]d
 		      AND (%[4]s)`
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
