@@ -12,7 +12,7 @@ import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { useRecordWriteRefusal } from "../app/capability";
+import { useCanWrite, useRecordWriteRefusal } from "../app/capability";
 import { PageAsideToggle, usePageAside } from "../app/pageaside";
 import { useRecordZone } from "../app/recordzone";
 import { navigate, useRoute } from "../app/router";
@@ -56,6 +56,7 @@ import { leadIdentityName } from "../format/leadname";
 import { viewerZone } from "../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useClaimRecord } from "./claimrecord";
 import {
   LoadMoreButton,
   OverlayUnavailable,
@@ -830,6 +831,17 @@ function useLeadPatch(lead: Lead, id: string, onChanged: () => void) {
   });
   const save = (body: UpdateLeadRequest) => patch.mutate(write(body));
 
+  // Taking an unowned lead is a CLAIM, not a patch: the write arm refuses an
+  // ownerless row on purpose, so the request that works here is the claim
+  // door. It lives beside `patch` rather than in the control that calls it
+  // because the page states what a write refused in ONE banner, and a refusal
+  // thrown inside a rail that is not currently rendered reaches nobody.
+  const claim = useMutation({
+    mutationKey: ["lead-claim", lead.id],
+    mutationFn: useClaimRecord("lead", lead.id, lead.version),
+    onSuccess: onChanged,
+  });
+
   // The inline rows await their save and render what it throws, so they need a
   // promise rather than the mutation's fire-and-forget. mutateAsync is that
   // same mutation — one PATCH shape, one If-Match, one invalidation.
@@ -837,7 +849,25 @@ function useLeadPatch(lead: Lead, id: string, onChanged: () => void) {
     await patch.mutateAsync(write(body));
   };
 
-  return { patch, readOnly, readOnlyReason, save, saveField };
+  return { patch, claim, readOnly, readOnlyReason, save, saveField };
+}
+
+// What the page's write refused, stated once for both of them.
+//
+// Two mutations, one sentence: the patch every field goes through, and the
+// claim that takes an unowned lead. They are alternatives — a pick is one or
+// the other — so whichever refused is the one to name.
+function LeadWriteRefusal({ writer }: Readonly<{ writer: LeadWriter }>) {
+  const t = useT();
+  const error = writer.patch.error ?? writer.claim.error;
+  if (!error) {
+    return null;
+  }
+  return (
+    <Callout tone="danger" live="alert">
+      {problemMessageOf(error, t)}
+    </Callout>
+  );
 }
 
 /**
@@ -914,9 +944,13 @@ function LeadRail({
   writer: LeadWriter;
   terminalReasonId: string;
 }>) {
-  const { readOnly } = writer;
   const t = useT();
   const me = useMe();
+  // The object grant and the seat ceiling, without the per-row answer: see the
+  // control below for why the row half is deliberately absent.
+  const mayAssign = useCanWrite("lead", "update");
+  const assignRefusedReasonId =
+    lead.archived_at || !mayAssign ? terminalReasonId : undefined;
   return (
     <div className="record-stack">
       <LeadIdentityFields
@@ -930,9 +964,35 @@ function LeadRail({
           <LeadOwner
             lead={lead}
             meId={me.data?.user?.id}
-            refusedReasonId={readOnly ? terminalReasonId : undefined}
-            pending={writer.patch.isPending || readOnly}
-            onAssign={(ownerId) => writer.save({ owner_id: ownerId })}
+            // Assignment asks a DIFFERENT question from editing, so it drops
+            // the PER-ROW half of the editor's answer and keeps the rest.
+            // `writable` is false on a lead nobody owns — the write arm being
+            // right — and gating on it would shut the only door out of the
+            // unassigned queue, which is the bug this whole change is about.
+            //
+            // The other two axes still bind. useCanWrite is the object grant
+            // AND the seat ceiling: a read seat, or one holding no
+            // `lead.update`, gets no pressable control, because the server
+            // refuses them and a button that only fails is worse than none. An
+            // archived lead is refused too — a terminal record is nobody's to
+            // hand on.
+            refusedReasonId={assignRefusedReasonId}
+            pending={
+              writer.patch.isPending ||
+              writer.claim.isPending ||
+              Boolean(assignRefusedReasonId)
+            }
+            // A lead nobody owns is nobody's to change, so the PATCH this
+            // control used to send for EVERY pick was refused for the one
+            // pick a rep makes most: taking an unassigned lead. Picking
+            // yourself on an unowned lead goes through the claim door, which
+            // is the write the server actually admits; naming a colleague
+            // stays a patch, which the assignment gate answers.
+            onAssign={(ownerId) =>
+              !lead.owner_id && ownerId === me.data?.user?.id
+                ? writer.claim.mutate()
+                : writer.save({ owner_id: ownerId })
+            }
           />
         </PanelBody>
       </Panel>
@@ -1978,11 +2038,7 @@ function LeadRecord({
               it REFUSES is stated where both are visible. In the ladder panel
               this reached only the Overview tab, and a rail write refused
               while the reader was on History said nothing at all. */}
-          {writer.patch.isError && (
-            <Callout tone="danger" live="alert">
-              {problemMessageOf(writer.patch.error, t)}
-            </Callout>
-          )}
+          <LeadWriteRefusal writer={writer} />
           {/* Stated ONCE for the page. Every control the closure refuses
               points at this element by id, so a screen reader reaches it from
               each of them without the sentence being printed beside all six. */}

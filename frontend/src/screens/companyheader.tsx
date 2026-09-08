@@ -17,6 +17,7 @@ import { ProvenanceTag } from "../design-system/trust";
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { ArchiveAction } from "./archive";
+import { useClaimRecord } from "./claimrecord";
 import {
   provenanceOf,
   throwProblem,
@@ -504,32 +505,6 @@ export function useCompanyVerbRefusal(org: Organization): string | undefined {
     archived: t("record.archivedReadOnly"),
     notYours: t("record.notYoursToChange"),
   });
-}
-
-// useClaimRecord is the claim door: POST /records/{type}/{id}/claim makes the
-// caller the owner of an unowned record (or re-confirms one already theirs)
-// and refreshes what shows it. Used wherever an owner control lets a reader
-// pick themselves on a record nobody owns.
-export function useClaimRecord(
-  recordType: "organization" | "person" | "lead" | "deal",
-  id: string,
-  version: number | undefined,
-) {
-  const queryClient = useQueryClient();
-  return async () => {
-    const { error } = await api.POST("/records/{record_type}/{id}/claim", {
-      params: {
-        path: { record_type: recordType, id },
-        ...ifMatch(requireVersion(version)),
-      },
-    });
-    if (error) {
-      throwProblem(error);
-    }
-    await queryClient.invalidateQueries({ queryKey: [`${recordType}s`] });
-    await queryClient.invalidateQueries({ queryKey: [`${recordType}360`, id] });
-    await queryClient.invalidateQueries({ queryKey: [recordType, id] });
-  };
 }
 
 function CompanyEditAction({

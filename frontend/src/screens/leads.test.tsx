@@ -2065,11 +2065,24 @@ describe("LeadScreen — score explain + override (P-10)", () => {
 });
 
 describe("LeadScreen — owner display + assign to me (P-11)", () => {
-  it("shows Unassigned and assigning to yourself PATCHes owner_id to the current user", async () => {
-    let patchBody: unknown = null;
-    stubFetchWithMe(async (url, method, request) => {
+  // The server refuses a PATCH against a lead nobody owns — an ownerless row is
+  // nobody's to change — so the request this asserts is the claim, not the
+  // patch. Asserting the patch is what let the 403 ship: the stub answered a
+  // request the real backend would have rejected.
+  it("shows Unassigned and taking an unowned lead yourself goes through the claim door", async () => {
+    let claimed = false;
+    let patched = false;
+    stubFetchWithMe(async (url, method) => {
+      if (method === "POST" && url.includes("/records/lead/l-1/claim")) {
+        claimed = true;
+        return jsonResponse({
+          record_type: "lead",
+          record_id: "l-1",
+          owner_id: "u-9",
+        });
+      }
       if (method === "PATCH" && url.includes("/leads/l-1")) {
-        patchBody = JSON.parse(await request.text());
+        patched = true;
         return jsonResponse({ ...lead, owner_id: "u-9", version: 2 });
       }
       if (url.includes("/users")) {
@@ -2097,8 +2110,68 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
       await screen.findByRole("option", { name: "Assign to me" }),
     );
 
-    await waitFor(() => expect(patchBody).toBeTruthy());
-    expect(patchBody).toMatchObject({ owner_id: "u-9" });
+    await waitFor(() => expect(claimed).toBe(true));
+    expect(patched).toBe(false);
+  });
+
+  // The fixture above says `writable: true`, which an ownerless lead is NOT:
+  // the write arm refuses a row nobody owns, and the server answers the
+  // read with `writable: false`. A test that only ever renders the writable
+  // fixture cannot see the control being shut, which is how the first fix for
+  // this shipped with the picker still disabled for every ordinary seat.
+  it("offers assignment on an unowned lead the reader may not otherwise write", async () => {
+    stubFetchWithMe(async (url) => {
+      if (url.includes("/leads/l-1")) {
+        return jsonResponse({ ...lead, owner_id: null, writable: false });
+      }
+      if (url.includes("/users")) {
+        return jsonResponse({
+          data: [{ id: "u-9", display_name: "Me" }],
+          page: { next_cursor: null, has_more: false },
+        });
+      }
+      return undefined;
+    }, "u-9");
+    render(<LeadScreen id="l-1" />);
+
+    await waitFor(() => expect(screen.getByText("Unassigned")).toBeTruthy());
+    const assign = await screen.findByRole("button", { name: "Assign" });
+    expect(assign.hasAttribute("disabled")).toBe(false);
+  });
+
+  // Dropping the per-row half of the write answer must not drop the other two.
+  // A read seat cannot be handed work and the server refuses its assignment, so
+  // an enabled control here would only ever fail in the reader's face.
+  it("offers no enabled assignment to a seat that may not write leads", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        if (request.url.endsWith("/v1/connectors")) {
+          return jsonResponse({ data: [] });
+        }
+        if (request.url.endsWith("/v1/me")) {
+          return jsonResponse({
+            user: { id: "u-9", display_name: "Me" },
+            roles: ["read_only"],
+            teams: [],
+            authorization: meFixture({ seat: "read", allow: LEAD_GRANTS })
+              .authorization,
+          });
+        }
+        if (request.url.includes("/leads/l-1")) {
+          return jsonResponse({ ...lead, owner_id: null, writable: false });
+        }
+        return jsonResponse({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+        });
+      }),
+    );
+    render(<LeadScreen id="l-1" />);
+
+    await waitFor(() => expect(screen.getByText("Unassigned")).toBeTruthy());
+    const assign = await screen.findByRole("button", { name: "Assign" });
+    expect(assign.hasAttribute("disabled")).toBe(true);
   });
 
   it("hides Assign to me when the lead is already owned by the current user", async () => {

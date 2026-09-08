@@ -58,6 +58,16 @@ func (s *Store) UpdateProject(ctx context.Context, id ids.ProjectID, in UpdatePr
 		if err := auth.EnsureWritable(ctx, tx, projectObject, id.UUID); err != nil {
 			return err
 		}
+		// A named owner is an assignment, and the destination is asked the
+		// same question the bulk handover asks. The two used to disagree —
+		// the handover refused an inactive receiver and this path took any
+		// row app_user held — so a project could be handed one at a time to
+		// a seat the handover would have refused in bulk.
+		if in.OwnerID != nil {
+			if err := auth.EnsureAssignee(ctx, tx, in.OwnerID.UUID); err != nil {
+				return err
+			}
+		}
 		// current reads WITH active columns so the patch's audit
 		// before-image carries the honest pre-update cf values.
 		current, err := readProject(ctx, tx, id, storekit.LiveOnly, active)
@@ -102,11 +112,11 @@ func (s *Store) UpdateProject(ctx context.Context, id ids.ProjectID, in UpdatePr
 	return out, err
 }
 
-// projectUpdatePatch builds the column patch. Every FK it can set points
-// at app_user, which carries no row scope of its own — any workspace
-// member may own a project — so the composite FK is the whole check; the
-// anchor company is not re-pointable here, because moving a project to
-// another company would silently orphan the deals that inherited it.
+// projectUpdatePatch builds the column patch. The owner it can set is gated by
+// the caller (auth.EnsureAssignee) rather than here, because the question needs
+// a transaction and this builds a patch; the anchor company is not re-pointable
+// here at all, because moving a project to another company would silently
+// orphan the deals that inherited it.
 // The date columns a project carries. Each is read by the patch builder, the
 // clearable set and the row read, and a literal repeated across the three is
 // how the three come to disagree about which column they mean.
