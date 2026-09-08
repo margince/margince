@@ -25,11 +25,11 @@ package httpserver
 // caller's router for the matched pattern and folds a miss into one bucket.
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"sort"
 	"strconv"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -122,7 +122,7 @@ func normalizeMethod(method string) string {
 type HTTPMetrics struct {
 	mu       sync.Mutex
 	requests map[requestKey]uint64
-	latency  map[routeKey]*latencyHistogram
+	latency  map[routeKey]*Histogram
 	inFlight atomic.Int64
 
 	// The overflow bucket is ONE counter and ONE histogram, held OUTSIDE the
@@ -132,7 +132,7 @@ type HTTPMetrics struct {
 	// key still carried a dimension the caller controls -- first the method,
 	// then the status. A bucket that cannot grow has to be a field, not a key.
 	overflowRequests uint64
-	overflowLatency  latencyHistogram
+	overflowLatency  *Histogram
 }
 
 type requestKey struct {
@@ -146,32 +146,15 @@ type routeKey struct {
 	method string
 }
 
-type latencyHistogram struct {
-	counts []uint64 // one per latencyBounds entry, plus the +Inf terminator
-	sum    float64
-	count  uint64
-}
-
-// observe records one duration. Cumulative at WRITE time rather than at read
 // time: a bucket counts every observation at or below its bound, so
 // incrementing each bound the sample clears keeps the read a straight walk.
-func (h *latencyHistogram) observe(seconds float64) {
-	if h.counts == nil {
-		h.counts = make([]uint64, len(latencyBounds)+1)
-	}
-	h.sum += seconds
-	h.count++
-	// SearchFloat64s finds the first bound the sample does NOT exceed.
-	for i := sort.SearchFloat64s(latencyBounds, seconds); i < len(h.counts); i++ {
-		h.counts[i]++
-	}
-}
 
 // NewHTTPMetrics returns an empty, ready store.
 func NewHTTPMetrics() *HTTPMetrics {
 	return &HTTPMetrics{
-		requests: make(map[requestKey]uint64),
-		latency:  make(map[routeKey]*latencyHistogram),
+		requests:        make(map[requestKey]uint64),
+		latency:         make(map[routeKey]*Histogram),
+		overflowLatency: NewHistogram(latencyBounds),
 	}
 }
 
@@ -260,16 +243,16 @@ func (m *HTTPMetrics) observe(route, method string, status int, took time.Durati
 	// asserted about one is not a bound on the other.
 	if (!named && len(m.latency) >= maxRouteSeries) || (!counted && len(m.requests) >= maxRequestSeries) {
 		m.overflowRequests++
-		m.overflowLatency.observe(seconds)
+		m.overflowLatency.Observe(seconds)
 		return
 	}
 
 	if !named {
-		hist = &latencyHistogram{}
+		hist = NewHistogram(latencyBounds)
 		m.latency[rk] = hist
 	}
 	m.requests[req]++
-	hist.observe(seconds)
+	hist.Observe(seconds)
 }
 
 // Write renders the three families in Prometheus text format. Called by the
@@ -284,18 +267,12 @@ func (m *HTTPMetrics) Write(w io.Writer) {
 	for k, v := range m.requests {
 		requests[k] = v
 	}
-	latency := make(map[routeKey]latencyHistogram, len(m.latency))
+	latency := make(map[routeKey]Histogram, len(m.latency))
 	for k, v := range m.latency {
-		counts := make([]uint64, len(v.counts))
-		copy(counts, v.counts)
-		latency[k] = latencyHistogram{counts: counts, sum: v.sum, count: v.count}
+		latency[k] = v.Snapshot()
 	}
 	overflowRequests := m.overflowRequests
-	overflowLatency := latencyHistogram{sum: m.overflowLatency.sum, count: m.overflowLatency.count}
-	if m.overflowLatency.counts != nil {
-		overflowLatency.counts = make([]uint64, len(m.overflowLatency.counts))
-		copy(overflowLatency.counts, m.overflowLatency.counts)
-	}
+	overflowLatency := m.overflowLatency.Snapshot()
 	inFlight := m.inFlight.Load()
 	m.mu.Unlock()
 
@@ -343,11 +320,11 @@ func writeRequestCounters(out *exposition, requests map[requestKey]uint64) {
 			status = "other"
 		}
 		out.printf("margince_http_requests_total{route=%s,method=%s,status=%s} %d\n",
-			label(k.route), label(k.method), label(status), requests[k])
+			Label(k.route), Label(k.method), Label(status), requests[k])
 	}
 }
 
-func writeLatencyHistogram(out *exposition, latency map[routeKey]latencyHistogram) {
+func writeLatencyHistogram(out *exposition, latency map[routeKey]Histogram) {
 	out.printf("# HELP margince_http_request_duration_seconds Request duration by matched route pattern and method.\n")
 	out.printf("# TYPE margince_http_request_duration_seconds histogram\n")
 	keys := make([]routeKey, 0, len(latency))
@@ -363,52 +340,6 @@ func writeLatencyHistogram(out *exposition, latency map[routeKey]latencyHistogra
 	const name = "margince_http_request_duration_seconds"
 	for _, k := range keys {
 		h := latency[k]
-		for i, bound := range latencyBounds {
-			out.printf("%s_bucket{route=%s,method=%s,le=%s} %d\n",
-				name, label(k.route), label(k.method), label(strconv.FormatFloat(bound, 'g', -1, 64)), h.counts[i])
-		}
-		// The +Inf bucket equals _count by definition, and a histogram without
-		// it is not a histogram: every quantile read walks to the terminator.
-		out.printf("%s_bucket{route=%s,method=%s,le=\"+Inf\"} %d\n", name, label(k.route), label(k.method), h.count)
-		out.printf("%s_sum{route=%s,method=%s} %g\n", name, label(k.route), label(k.method), h.sum)
-		out.printf("%s_count{route=%s,method=%s} %d\n", name, label(k.route), label(k.method), h.count)
+		h.WriteSeries(out, name, fmt.Sprintf("route=%s,method=%s", Label(k.route), Label(k.method)))
 	}
-}
-
-// label renders a Prometheus label VALUE with only the three escapes the text
-// format defines: backslash, double quote, and newline.
-//
-// Not %q, which is what this used. strconv.Quote is Go's escaping, not
-// Prometheus', and the two agree only by coincidence on ordinary input: %q also
-// emits \t, \r, \xNN and \uNNNN, and Prometheus' parser rejects those as an
-// invalid escape sequence. It rejects the WHOLE SCRAPE when it does, not the
-// offending line -- so one stray byte in one label would take every family in
-// this process off the dashboard at once.
-//
-// Nothing can reach that today: route comes from a compile-time router
-// template, method from a closed set, status from digits. But Measure is
-// exported and takes its route from a caller-supplied resolver, so the
-// exposition should not depend on every future caller having thought about it.
-// Anything else that is not printable is dropped rather than escaped, because a
-// control byte in a label value is not information an operator can use.
-func label(value string) string {
-	var b strings.Builder
-	b.Grow(len(value) + 2)
-	b.WriteByte('"')
-	for _, r := range value {
-		switch {
-		case r == '\\':
-			b.WriteString(`\\`)
-		case r == '"':
-			b.WriteString(`\"`)
-		case r == '\n':
-			b.WriteString(`\n`)
-		case r < 0x20 || r == 0x7f:
-			// Dropped, per the note above.
-		default:
-			b.WriteRune(r)
-		}
-	}
-	b.WriteByte('"')
-	return b.String()
 }

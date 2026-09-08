@@ -99,7 +99,7 @@
   height: 100vh;
   box-sizing: border-box;
   /* The lit ground (DESIGN.md §2): the emerald light behind the sidebar at the
-     top-left, the indigo one at the bottom-right, painted into the page colour.
+     top-left, the indigo one at the top-right, painted into the page colour.
      Declared once in tokens.css, because the buyer's Deal Room stands on the
      same ground from outside this shell. */
   background: var(--groundLit);
@@ -1203,8 +1203,8 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: var(--tracking-eyebrow);
-  color: var(--textMeta);
-  background: var(--bgCard);
+  color: var(--textChip);
+  background: var(--bgChip);
   border-radius: var(--r-full);
   corner-shape: round;
   padding: 1px var(--space-2); /* ds:ignore a cap-height band on a 10.5px label, not spaced content */

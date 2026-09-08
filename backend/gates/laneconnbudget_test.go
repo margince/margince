@@ -47,7 +47,7 @@ const (
 	// to a file that may not hold the number.
 	gateWorkflowLabel = "../.github/workflows/{ci,_lane-*}.yml"
 	laneScriptPath    = "../scripts/lib-testdb.sh"
-	composeInfraYML   = "../infra/docker-compose.dev.yml"
+	composeDevYML     = "../docker-compose.dev.yml"
 )
 
 // laneTerm reads one `NAME=<int>` assignment from the lane script. Anchored to
@@ -124,11 +124,11 @@ func composeMaxConnections(t *testing.T, compose string) int {
 	re := regexp.MustCompile(`(?m)^\s*-\s*max_connections=(\d+)\s*$`)
 	m := re.FindStringSubmatch(compose)
 	if m == nil {
-		t.Fatalf("%s passes no `-c max_connections=…` to postgres, so the lane runs against the stock 100 — which is the state #1109 reported", composeInfraYML)
+		t.Fatalf("%s passes no `-c max_connections=…` to postgres, so the lane runs against the stock 100 — which is the state #1109 reported", composeDevYML)
 	}
 	n, err := strconv.Atoi(m[1])
 	if err != nil || n <= 0 {
-		t.Fatalf("%s sets max_connections=%q, which is not a positive count", composeInfraYML, m[1])
+		t.Fatalf("%s sets max_connections=%q, which is not a positive count", composeDevYML, m[1])
 	}
 	return n
 }
@@ -180,7 +180,7 @@ func TestTheLaneFitsInsideTheClusterItRunsAgainst(t *testing.T) {
 	perPool := laneTerm(t, script, "LANE_POOL_MAX_CONNS")
 	perPackage := laneTerm(t, script, "LANE_CONNS_PER_PACKAGE")
 	fixed := laneTerm(t, script, "LANE_FIXED_CONNS")
-	maxConns := composeMaxConnections(t, readRepoFile(t, composeInfraYML))
+	maxConns := composeMaxConnections(t, readRepoFile(t, composeDevYML))
 
 	// A per-package allowance below a single pool's ceiling is not a budget: one
 	// pool alone could spend it, and the second pool testdb opens would then be
@@ -204,12 +204,12 @@ func TestTheLaneFitsInsideTheClusterItRunsAgainst(t *testing.T) {
 Raise max_connections in %s to at least %d, or lower a term. Do not leave them
 apart: they were unrelated numbers once, and the lane failed at connect time in a
 different package set every run (#1109).`,
-			demand, composeInfraYML, maxConns,
+			demand, composeDevYML, maxConns,
 			jobs, gateWorkflowLabel,
 			perPackage, laneScriptPath,
 			fixed, laneScriptPath,
 			demand, maxConns,
-			composeInfraYML, demand)
+			composeDevYML, demand)
 	}
 }
 

@@ -113,7 +113,7 @@ describe("Top bar search (AC-shell-7)", () => {
     );
 
     await user.click(
-      screen.getByRole("button", { name: "Search everything…" }),
+      screen.getByRole("button", { name: "Find or ask Margince" }),
     );
     expect(onOpenSearch).toHaveBeenCalledTimes(1);
     // A field here would be a second search that answers to nothing: the
@@ -130,7 +130,7 @@ describe("Top bar search (AC-shell-7)", () => {
   });
 
   // The shortcut cap is a hint about how else to get here, not a second name: a
-  // reader who says "Search everything" must reach it, and none of them should
+  // reader who says "Find or ask Margince" must reach it, and none of them should
   // be made to spell out ⌘K. `name` is an exact match on the computed name, so
   // a kbd that leaked into it fails this.
   it("is named for what it does, with the shortcut kept out of that name", () => {
@@ -139,7 +139,7 @@ describe("Top bar search (AC-shell-7)", () => {
       { onToggle: ignoreToggle },
     );
     expect(
-      screen.getByRole("button", { name: "Search everything…" }),
+      screen.getByRole("button", { name: "Find or ask Margince" }),
     ).toBeTruthy();
     // One cap per key, and the GROUP is what is hidden — a per-cap attribute
     // would leave the group announcing itself as the caps' container.

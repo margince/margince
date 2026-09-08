@@ -92,3 +92,16 @@ export const Pending: Story = {
     pending: true,
   },
 };
+
+// Held, with nothing to say. The precondition is "not yet" rather than a fact
+// about this reader or this record — the quiet verbs of a row wait out the
+// write its primary started — so there is no sentence to point at and `reason`
+// would owe one. Hover still names it: the handlers ride the wrapping span, not
+// the disabled control inside it.
+export const Held: Story = {
+  args: {
+    label: "Call",
+    icon: <Phone size={15} aria-hidden="true" />,
+    disabled: true,
+  },
+};

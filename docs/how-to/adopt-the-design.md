@@ -127,7 +127,7 @@ unless a primitive is added (`variant="agent"` is a prop, not a primitive).
 ### Step 4 — The shell (`shell.css`, `shell.tsx`, `topbar.css`, `agentrail.css`, `agent-edge.css`, `navlevel.tsx`)
 
 1. **Ground and glows.** `.app` paints `--bgPage` with the two radial glows
-   (`--glowA` top-left, `--glowB` bottom-right) as a background, not an
+   (`--glowA` top-left, `--glowB` top-right) as a background, not an
    element and not an animation.
 2. **Rail.** Glass (`--bgSidebar` + blur) over the glow, a hairline on the
    right, no dark ground. Collapsed stays **64px** (the 44px touch targets

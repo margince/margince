@@ -87,7 +87,10 @@ func (s *Service) ContactPage(
 		if _, err := s.people.GetCompanyTx(ctx, tx, companyID, storekit.LiveOnly, active); err != nil {
 			return err
 		}
-		all, err := people.StrengthForCompanyContacts(ctx, tx, companyID, now)
+		// nil: this endpoint takes no project. It is the account's whole
+		// contact list, and narrowing it to a body of work would answer a
+		// question nobody asked here.
+		all, err := people.StrengthForCompanyContacts(ctx, tx, companyID, now, nil)
 		if err != nil {
 			return err
 		}

@@ -366,7 +366,7 @@ type Server struct {
 	// process-wide callMetrics collector (ai/metrics.go), so both
 	// registrations point at one shared renderer: last-wins is correct
 	// and /metrics still reports the single honest total exactly once.
-	// nil means an AI-less role reports no AI counters at all.
+	// Both binaries set it unconditionally; nil is the tests-only path.
 	aiMetrics func(io.Writer)
 	aiState   string // the /readyz AI line (aistate.go); never a readiness gate
 

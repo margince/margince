@@ -3,10 +3,12 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
-import { type ReactNode, useId } from "react";
+import { Fragment, type ReactNode, useId } from "react";
 
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { ENTITY } from "../app/entity";
+import { routeHash } from "../app/router";
 import { splitEmailBody } from "../format/emailtext";
 import { formatBytes, formatNumber } from "../format/format";
 import { translatePlural, useLocale, useT } from "../i18n";
@@ -39,11 +41,26 @@ export function emailDetailKey(activityId: string) {
   return ["email-presentation", activityId] as const;
 }
 
+/**
+ * One email, read whole.
+ *
+ * The message's own read is made HERE rather than handed in, because what the
+ * drawer may show is an authorization result: the read is the only thing that
+ * knows whether this reader is inside the message's audience, and a caller
+ * passing a presentation it fetched elsewhere would be passing an answer that
+ * may already be stale about that.
+ *
+ * Everything it cannot do without reaching the API a second time — naming a
+ * filed record, changing who may read the message, answering it — arrives as a
+ * render prop instead.
+ */
 export function EmailDetail({
   activityId,
   onClose,
   formatWhen,
   renderAccess,
+  renderRecords,
+  renderReply,
 }: Readonly<{
   activityId: string;
   onClose: () => void;
@@ -62,6 +79,26 @@ export function EmailDetail({
    * writes — and absent means no region, never an empty one.
    */
   renderAccess?: (presentation: EmailPresentation) => ReactNode;
+  /**
+   * The records this message is filed against, NAMED — drawn on the envelope
+   * line this component labels.
+   *
+   * Passed in for the reason `renderAccess` is: `links` carries ids and no
+   * names, so naming one is a record read per link, and a catalog component
+   * that fetched records would stop being something a story can draw with no
+   * API behind it.
+   *
+   * Answering null is what says there is nothing filed here — the label is not
+   * drawn over an empty value.
+   */
+  renderRecords?: (presentation: EmailPresentation) => ReactNode;
+  /**
+   * The verb that answers this message, beside the way out of the drawer.
+   *
+   * Passed in for the reason above and one more: replying is a SEND, and the
+   * composer that performs it lives with the app's other writes.
+   */
+  renderReply?: (presentation: EmailPresentation) => ReactNode;
 }>) {
   const t = useT();
   // Generated rather than fixed: two drawers mounted at once would otherwise
@@ -135,14 +172,25 @@ export function EmailDetail({
               never one whose access nobody asked about. */}
           {read.data && renderAccess?.(read.data)}
         </div>
-        <Button
-          small
-          iconOnly
-          onClick={onClose}
-          aria-label={t("email.detail.close")}
-        >
-          <X aria-hidden="true" />
-        </Button>
+        {/* The verb that ANSWERS the message, beside the one that puts it
+            away. A reader who has just read a mail and wants to reply had to
+            close the drawer, find the row again on the timeline behind it and
+            press Reply there — the message they were answering no longer on
+            screen. It sits with the close button rather than under the body
+            for the reason the date and the access line moved up: a message
+            runs past a screen, and an action found only at the end of one is
+            an action most readers never reach. */}
+        <div className="emaildetail__actions">
+          {read.data && renderReply?.(read.data)}
+          <Button
+            small
+            iconOnly
+            onClick={onClose}
+            aria-label={t("email.detail.close")}
+          >
+            <X aria-hidden="true" />
+          </Button>
+        </div>
       </div>
       {read.isPending ? (
         <SurfaceState
@@ -165,18 +213,32 @@ export function EmailDetail({
           {null}
         </SurfaceState>
       ) : (
-        <EmailBody presentation={read.data} formatWhen={formatWhen} />
+        <EmailBody
+          presentation={read.data}
+          formatWhen={formatWhen}
+          renderRecords={renderRecords}
+        />
       )}
     </Modal>
   );
 }
 
+/**
+ * The message itself: its envelope, its words, and what came with it.
+ *
+ * The withheld case returns EARLY and shares nothing below it — no parties, no
+ * filing, no files. Each of those is a fact about the message, and a reader
+ * outside the audience is owed the fact that there is a message rather than
+ * any of its contents.
+ */
 function EmailBody({
   presentation,
   formatWhen,
+  renderRecords,
 }: Readonly<{
   presentation: EmailPresentation;
   formatWhen: (iso: string) => string;
+  renderRecords?: (presentation: EmailPresentation) => ReactNode;
 }>) {
   const t = useT();
   if (presentation.access.content_state === "withheld") {
@@ -200,7 +262,11 @@ function EmailBody({
   const parts = splitEmailBody(presentation.body ?? "");
   return (
     <div className="emaildetail__body">
-      <Parties presentation={presentation} formatWhen={formatWhen} />
+      <Parties
+        presentation={presentation}
+        formatWhen={formatWhen}
+        renderRecords={renderRecords}
+      />
       <p className="emaildetail__main">{parts.main}</p>
       {/* A SIGN-OFF is the sender still speaking, and it is two lines. It is
           shown, quietly, under the message it belongs to.
@@ -288,32 +354,94 @@ function partyName(party: EmailParty): string {
   return party.display_name?.trim() || party.address.trim();
 }
 
+/**
+ * One participant, named — and a way to their record when the address is one
+ * this reader may see resolved to a contact.
+ *
+ * A NEW TAB, and that is the whole point of the link. The reader is inside a
+ * drawer over the record they were working on; following the contact in this
+ * tab would close the message they are part-way through reading to reach a
+ * page they could have opened from behind it. Opening beside it keeps both.
+ *
+ * `person_id` is the server's own resolution — set only when the address
+ * belongs to a contact this caller may see — so a stranger's address stays
+ * text rather than becoming a link into a 404.
+ */
+function PartyName({ party }: Readonly<{ party: EmailParty }>) {
+  const name = partyName(party);
+  if (!party.person_id) {
+    return <>{name}</>;
+  }
+  return (
+    <a
+      className="entity-link"
+      href={routeHash(ENTITY.person.route(party.person_id))}
+      // `rel` travels with `target`, never behind it: a blank target without
+      // `noopener` hands the opened page a live handle back into this one.
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      {name}
+    </a>
+  );
+}
+
+/**
+ * One role's participants on one envelope line — From, To, Cc.
+ *
+ * Only the parties that can actually be NAMED. A row carrying neither a name
+ * nor an address says nothing to a reader, and joining it in puts a gap in the
+ * list where a person should be — so it is dropped, and a line with nobody
+ * left to name does not draw at all, rather than drawing a label over
+ * punctuation.
+ */
 function PartyLine({
   label,
   parties,
 }: Readonly<{ label: string; parties: EmailParty[] }>) {
-  // Only the parties that can actually be named. A row carrying neither a name
-  // nor an address says nothing to a reader, and joining it in puts a gap in
-  // the list where a person should be — so it is dropped, and a line with
-  // nobody left to name does not draw at all.
-  const named = parties.map(partyName).filter(Boolean);
+  const named = parties.filter((party) => partyName(party) !== "");
   if (named.length === 0) {
     return null;
   }
   return (
     <p className="emaildetail__party">
       <span className="emaildetail__partyLabel">{label}</span>
-      {named.join(", ")}
+      {/* Separators drawn between the names rather than joined into one
+          string: each name is now its own element, and a `join` on elements
+          is a string that reads "[object Object], [object Object]". */}
+      {named.map((party, index) => (
+        // Keyed the way the participant table identifies a row within one
+        // role: the address AND whoever it resolved to. The address alone is
+        // not it — the same address recorded once as a contact and once as a
+        // seat is two rows the server sends on one line, and two children
+        // under one key is a rendering React warns about and then gets wrong.
+        <Fragment
+          key={`${party.address}|${party.person_id ?? ""}|${party.user_id ?? ""}`}
+        >
+          {index > 0 && ", "}
+          <PartyName party={party} />
+        </Fragment>
+      ))}
     </p>
   );
 }
 
+/**
+ * The envelope: who the message was with, when it was sent, and what it is
+ * filed against — everything a reader wants BEFORE the words.
+ *
+ * These facts used to be scattered under the body, so on a message longer than
+ * a screen the date arrived after the reader had finished reading. They are
+ * one block above it because they are one kind of thing.
+ */
 function Parties({
   presentation,
   formatWhen,
+  renderRecords,
 }: Readonly<{
   presentation: EmailPresentation;
   formatWhen: (iso: string) => string;
+  renderRecords?: (presentation: EmailPresentation) => ReactNode;
 }>) {
   const t = useT();
   return (
@@ -340,6 +468,42 @@ function Parties({
           {t("email.detail.bccWithheld")}
         </p>
       )}
+      <FiledUnder presentation={presentation} render={renderRecords} />
     </div>
+  );
+}
+
+/**
+ * WHICH records this message is filed against, on the envelope block with the
+ * rest of what a reader wants before the words.
+ *
+ * The label is this component's and the names are the caller's, so a caller
+ * that can name nothing — a story, a preview, a host that wired no reader —
+ * draws no label over an empty value.
+ *
+ * It asks the PRESENTATION whether there is anything to label, never the node
+ * the caller would return. A render prop hands back an element whose component
+ * has not run yet, so `<Host …/>` is truthy even when `Host` will draw nothing
+ * — testing that put "Filed under" over an empty value on every message filed
+ * against nothing, and only a caller that returned a literal null looked right.
+ */
+function FiledUnder({
+  presentation,
+  render,
+}: Readonly<{
+  presentation: EmailPresentation;
+  render?: (presentation: EmailPresentation) => ReactNode;
+}>) {
+  const t = useT();
+  if (!render || presentation.links.length === 0) {
+    return null;
+  }
+  return (
+    <p className="emaildetail__party">
+      <span className="emaildetail__partyLabel">
+        {t("email.detail.filedUnder")}
+      </span>
+      {render(presentation)}
+    </p>
   );
 }

@@ -36,6 +36,11 @@ type Answers = Readonly<{
   recent?: readonly unknown[];
   /** A mailbox import in flight, as the connections read reports it. */
   importing?: Readonly<{ scanned: number; estimated: number | null }>;
+  /** What the month cost, in minor units, when anything in it was priced.
+   *  Absent is the ordinary case and a real one: a month where nothing carried
+   *  a price prints no figure at all, which is a different statement from
+   *  "this cost nothing". */
+  pricedMinor?: number;
 }>;
 
 /** One occurrence as the wire spells it. */
@@ -59,6 +64,12 @@ const OPERATOR: GrantSpec = {
   license: ["read"],
   automation: ["update"],
 };
+
+// The month's spend is served on `ai_diagnostics:read` and is the
+// administrator's figure, so the story that shows it holds that grant on top of
+// the two above. Kept apart from OPERATOR because every other story here is
+// about an installation posture rather than about what this seat may read.
+const SPEND_READER: GrantSpec = { ...OPERATOR, ai_diagnostics: ["read"] };
 
 const NOW = Date.parse("2026-08-19T10:00:00Z");
 
@@ -156,8 +167,40 @@ function story(
         }),
       "GET /ai/usage": () =>
         jsonResponse({
-          days: [],
-          budget: { monthly_tokens: 0, spent_tokens: 0, band: "normal" },
+          // One priced task and one the server could not price, which is the
+          // shape the month actually arrives in: the total is the priced lines
+          // and the unpriced one adds nothing to it.
+          days:
+            answers.pricedMinor === undefined
+              ? []
+              : [
+                  {
+                    date: "2026-08-01",
+                    tasks: [
+                      {
+                        task: "enrich",
+                        tier: "cheap_cloud",
+                        calls: 2,
+                        tokens_in: 100,
+                        tokens_out: 40,
+                        cost_est_minor: answers.pricedMinor,
+                      },
+                      {
+                        task: "summarize",
+                        tier: "cheap_cloud",
+                        calls: 1,
+                        tokens_in: 30,
+                        tokens_out: 10,
+                      },
+                    ],
+                  },
+                ],
+          budget: {
+            monthly_tokens: 0,
+            spent_tokens: 0,
+            band: "normal",
+            currency: "USD",
+          },
         }),
       "GET /me/ai-activity": () =>
         jsonResponse({
@@ -194,8 +237,31 @@ const meta: Meta<typeof AgentRail> = {
 export default meta;
 type Story = StoryObj<typeof AgentRail>;
 
-/** Idle: every source reachable, nothing waiting, a model bound, a valid licence. */
+/** Idle: every source reachable, nothing waiting, a model bound, a valid licence.
+ *
+ *  It is also the block's last line with no figure on it: this seat holds no
+ *  `ai_diagnostics:read`, so the row carries the chevron alone. The row is what
+ *  makes that state legible — the disclosure keeps its place instead of moving
+ *  up into the corner when there is nothing to spend beside it. */
 export const Idle: Story = { render: story(HEALTHY) };
+
+/** The month's spend, on the block's last line with the chevron that opens the
+ *  panel behind it: one figure, the scope it was spent in, and the disclosure,
+ *  all on one baseline. The seat is an administrator holding
+ *  `ai_diagnostics:read`, which is the only seat the server serves it to. */
+export const SpendReported: Story = {
+  render: story({ ...HEALTHY, pricedMinor: 1_240 }, "expanded", SPEND_READER),
+};
+
+/** The same figure in dark, and it is the money that needs looking at rather
+ *  than the block: the figure and the scope beside it are both `--textMeta` at
+ *  eyebrow size, on a rail whose ground is the translucent `--pane` over the
+ *  page's glow — so the smallest type on the surface stands on a composite that
+ *  each theme mixes differently. */
+export const SpendReportedDark: Story = {
+  globals: { theme: "dark" },
+  render: story({ ...HEALTHY, pricedMinor: 1_240 }, "expanded", SPEND_READER),
+};
 
 /** Ingest: evidence arriving. Which half of the live vocabulary a run puts the
  *  orb in comes from the KIND of work (ai-activity-orb.ts), and a document being
@@ -266,6 +332,32 @@ export const NoModelConfigured: Story = {
 /** The development path: it answers, and every answer it gives is invented. */
 export const DevelopmentModel: Story = {
   render: story({ ...HEALTHY, aiState: "development" }),
+};
+
+/**
+ * The line changing, which is the only motion this block has of its own.
+ *
+ * Two true readings and a queue, so the resting rotation has more than one
+ * thing to say and swaps every `IDLE_HOLD_MS`. Watch the slot rather than the
+ * orb: the outgoing sentence fades out under the incoming one over a single
+ * `--dur-enter`, the two-line room holds still, and nothing under it moves.
+ *
+ * Every story on this page plays the same crossfade once at mount — the
+ * section's own reads are named ones, so the ticker says "Checking what needs
+ * you" and hands the slot back when the read settles (`agentrail-ticker.ts`).
+ * This is the one that keeps doing it.
+ */
+export const IdleRotation: Story = {
+  render: story({ ...HEALTHY, aiState: "development", approvals: 3 }),
+};
+
+/** The rotation in dark, where the crossfade is the thing to watch: both layers
+ *  are `--textPrimary` and the outgoing one is drawn OVER the incoming one, so
+ *  a fade whose midpoint reads as two sentences on light can read as one
+ *  smeared sentence on a ground with less contrast to spend. */
+export const IdleRotationDark: Story = {
+  globals: { theme: "dark" },
+  render: story({ ...HEALTHY, aiState: "development", approvals: 3 }),
 };
 
 /** A fresh installation: a model is bound and nothing has run through it yet. */

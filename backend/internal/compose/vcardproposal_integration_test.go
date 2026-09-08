@@ -127,7 +127,7 @@ func TestAVCardNearMatchBecomesOneDurableProposal(t *testing.T) {
 	}
 }
 
-// companyLessReviewedCard is a near-match with no ORG line at all — an email
+// companyLessReviewedCard is a near-match with no COMPANY line at all — an email
 // still gives it real addressing, but the identity asserts company too
 // (as the empty string), and the staged payload must carry that same key or
 // the engine's containment check refuses the mismatch.

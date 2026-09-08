@@ -62,11 +62,11 @@ func insertRunIfDayFree(ctx context.Context, tx pgx.Tx, run BriefRun) (bool, err
 	tag, err := tx.Exec(ctx, `
 		INSERT INTO brief_run (
 			id, user_id, generated_at, as_of, local_day, candidate_count,
-			revenue_norm_minor, revenue_norm_currency)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+			revenue_norm_minor, revenue_norm_currency, factors_omitted)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		ON CONFLICT ON CONSTRAINT uq_brief_run_user_day DO NOTHING`,
 		run.ID, run.UserID, run.GeneratedAt, run.AsOf, run.LocalDay, run.CandidateCount,
-		run.RevenueNormMinor, run.RevenueNormCurrency)
+		run.RevenueNormMinor, run.RevenueNormCurrency, run.FactorsOmitted)
 	if err != nil {
 		return false, err
 	}

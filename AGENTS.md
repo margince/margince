@@ -109,7 +109,7 @@ Three binaries, all wired through `internal/compose`: `cmd/api`, `cmd/worker`,
 
 Commands and flags: [docs/reference/make-targets.md](docs/reference/make-targets.md).
 Config and endpoints: [docs/reference/configuration.md](docs/reference/configuration.md).
-CI: [infra/ci-pipeline.md](infra/ci-pipeline.md).
+CI: [docs/explanation/ci-pipeline.md](docs/explanation/ci-pipeline.md).
 
 ## One dev stack per worktree
 

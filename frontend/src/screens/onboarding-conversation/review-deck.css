@@ -94,7 +94,7 @@
   padding: var(--space-1) var(--space-3);
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--bgCard);
+  background: var(--bgChip);
   color: var(--aiText);
 }
 .rdeck-tag[data-required="true"] {

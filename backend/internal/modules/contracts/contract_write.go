@@ -360,7 +360,11 @@ func ensureLinksShareCompany(ctx context.Context, tx pgx.Tx, companyID ids.UUID,
 		if ref.id == nil {
 			continue
 		}
-		var linkedCompany ids.UUID
+		// Nullable, because deal.company_id is — a deal may be worked
+		// before anyone knows whose it is, and the create form leaves Company
+		// optional. project.company_id is NOT NULL, so only the deal arm
+		// ever reads absent.
+		var linkedCompany *ids.UUID
 		//nolint:gosec // the table name is a package literal from dealRef/projectRef, never client input
 		query := "SELECT company_id FROM " + ref.table + " WHERE id = $1"
 		err := tx.QueryRow(ctx, query, *ref.id).Scan(&linkedCompany)
@@ -372,7 +376,14 @@ func ensureLinksShareCompany(ctx context.Context, tx pgx.Tx, companyID ids.UUID,
 		if err != nil {
 			return fmt.Errorf("read %s company: %w", ref.table, err)
 		}
-		if linkedCompany != companyID {
+		// A deal naming no company is not a company this contract disagrees
+		// with. The leak this check exists against is A's agreement reaching
+		// everyone who can see B's deal; with no B there is nobody it reaches
+		// that the deal itself does not already admit.
+		if linkedCompany == nil {
+			continue
+		}
+		if *linkedCompany != companyID {
 			return &CrossCompanyLinkError{Field: ref.table + "_id"}
 		}
 	}

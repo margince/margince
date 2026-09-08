@@ -165,6 +165,7 @@ export const ranked: MorningBrief = {
   generated_at: "2026-08-21T05:30:00Z",
   as_of: "2026-08-21T05:00:00Z",
   candidate_count: 9,
+  factors_omitted: [],
   items: [
     briefItem("bi-1", "d-1", 1, 0.74),
     briefItem("bi-2", "d-2", 2, 0.61),

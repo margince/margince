@@ -851,6 +851,9 @@ describe("AgentRail", () => {
       ),
     );
     expect(container.querySelector(".arspend")).toBeNull();
+    // Whether the panel is open is a fact about the block rather than about the
+    // money, so the line the two share outlives the figure on it.
+    expect(container.querySelector(".arlast > .archev")).not.toBeNull();
   });
 
   // The exact figure, not merely a figure: 120 minor units of the budget's
@@ -864,6 +867,11 @@ describe("AgentRail", () => {
         "$1.20",
       ),
     );
+    // And on the same line as the disclosure: one row of chrome, not a figure
+    // with a chevron half a line below it.
+    const foot = container.querySelector(".arlast");
+    expect(foot?.querySelector(".arspend")).not.toBeNull();
+    expect(foot?.querySelector(".archev")).not.toBeNull();
   });
 
   // The server serves the figure on `ai_diagnostics:read`, which the ops seat

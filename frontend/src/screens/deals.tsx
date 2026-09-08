@@ -5,6 +5,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import { Trash2 } from "lucide-react";
 import {
   type ComponentProps,
   type Dispatch,
@@ -28,6 +29,7 @@ import { useRecordZone } from "../app/recordzone";
 import { navigate, routeHash } from "../app/router";
 import { useInstallationSettings } from "../app/uploadlimit";
 import { currentParams, type UrlParams, useUrlParams } from "../app/urlstate";
+import { ActionRow } from "../design-system/actionrow";
 import { activityTimeline } from "../design-system/activitytimeline";
 import {
   Badge,
@@ -47,6 +49,7 @@ import {
   PipelineBoard,
   RecordView,
 } from "../design-system/composed";
+import { IconAction } from "../design-system/iconaction";
 import {
   IdentityFact,
   IdentityLine,
@@ -3540,25 +3543,31 @@ function DealApprovals({
               provenance={provenanceOf(approval.proposed_by, viewerId)}
             />
           </div>
-          <div className="approval-gate">
-            <Button
-              variant="primary"
+          <ActionRow
+            className="approval-gate"
+            primary={
+              <Button
+                variant="primary"
+                small
+                onClick={() =>
+                  decide({ approvalId: approval.id, verdict: "approve" })
+                }
+              >
+                {t("trust.accept")}
+              </Button>
+            }
+          >
+            {/* Dismiss here sends the `reject` verdict — the same answer the
+                decision card's trash can gives, so it wears the same glyph. */}
+            <IconAction
               small
-              onClick={() =>
-                decide({ approvalId: approval.id, verdict: "approve" })
-              }
-            >
-              {t("trust.accept")}
-            </Button>
-            <Button
-              small
+              label={t("trust.dismiss")}
+              icon={<Trash2 aria-hidden />}
               onClick={() =>
                 decide({ approvalId: approval.id, verdict: "reject" })
               }
-            >
-              {t("trust.dismiss")}
-            </Button>
-          </div>
+            />
+          </ActionRow>
         </div>
       ))}
     </Card>

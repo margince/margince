@@ -141,7 +141,7 @@ func TestTheScanReadsTheAccountForTheReaderAndTheReaderCanPutAFindingOff(t *test
 	// Putting it off: the dismissal endpoint recognises the scan's finding
 	// through the same seam it recognises a rule's row, and the next read
 	// carries it no more.
-	if err := view.DismissSuggestion(rep, company, found.Fingerprint); err != nil {
+	if err := view.DismissSuggestion(rep, company, found.Fingerprint, nil); err != nil {
 		t.Fatalf("dismiss: %v", err)
 	}
 	after, err := svc.Get(rep, company)

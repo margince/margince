@@ -433,3 +433,71 @@ func TestTwoConcurrentRenewalsLeaveOneSuccessor(t *testing.T) {
 		}
 	}
 }
+
+// A deal may name no company. The create form leaves Company optional and
+// `deal.company_id` is nullable, so a deal worked before anyone knows
+// whose it is is an ordinary state, not a broken one.
+//
+// It used to end the request in a 500: the cross-company check scanned that
+// column into a non-nullable target, so the read failed before the rule it
+// serves was ever asked. Because winning a deal requires a signed contract on
+// it, that made a company-less deal impossible to win, and said nothing about
+// why.
+//
+// The rule itself still has to hold, so this asserts both halves: the absent
+// company is admitted, and a company that DISAGREES is still refused by field.
+func TestAContractAttachesToADealThatNamesNoCompany(t *testing.T) {
+	e := Setup(t)
+	admin := e.Admin()
+	pipeline, open, _ := DealFixture(t, e)
+
+	unattached, err := e.Deals.CreateDeal(admin, deals.CreateDealInput{
+		Name: "Inbound, company unknown", PipelineID: pipeline, StageID: open,
+	})
+	if err != nil {
+		t.Fatalf("creating a deal with no company: %v", err)
+	}
+	if unattached.CompanyId != nil {
+		t.Fatalf("the fixture deal names a company (%v), so it cannot prove anything about one that does not",
+			unattached.CompanyId)
+	}
+	dealID := ids.From[ids.DealKind](ids.UUID(unattached.Id))
+	company := e.SeedCompany(t, "Acme", nil)
+
+	created, err := e.Contracts.CreateContract(admin, contracts.CreateContractInput{
+		CompanyID: ids.From[ids.CompanyKind](company),
+		Title:     "MSA 2026", ValueBasis: contracts.BasisTotal, Source: "manual",
+		DealID: &dealID,
+	})
+	if err != nil {
+		t.Fatalf("a contract on a company-less deal was refused: %v", err)
+	}
+	if created.DealId == nil || ids.UUID(*created.DealId) != ids.UUID(unattached.Id) {
+		t.Errorf("the contract came back naming deal %v, want %v", created.DealId, unattached.Id)
+	}
+
+	// The other way round, so the admission above is the absent company and not
+	// the check having stopped asking: a deal belonging to somebody ELSE is
+	// still refused, and named by field.
+	elsewhere := e.SeedCompany(t, "Contoso", nil)
+	elsewhereID := ids.From[ids.CompanyKind](elsewhere)
+	otherDeal, err := e.Deals.CreateDeal(admin, deals.CreateDealInput{
+		Name: "Contoso expansion", PipelineID: pipeline, StageID: open, CompanyID: &elsewhereID,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	otherDealID := ids.From[ids.DealKind](ids.UUID(otherDeal.Id))
+	_, err = e.Contracts.CreateContract(admin, contracts.CreateContractInput{
+		CompanyID: ids.From[ids.CompanyKind](company),
+		Title:     "MSA 2026 (misfiled)", ValueBasis: contracts.BasisTotal, Source: "manual",
+		DealID: &otherDealID,
+	})
+	var crossCompany *contracts.CrossCompanyLinkError
+	if !errors.As(err, &crossCompany) {
+		t.Fatalf("a contract on another company's deal was admitted (err = %v)", err)
+	}
+	if crossCompany.Field != "deal_id" {
+		t.Errorf("refused by field %q, want deal_id", crossCompany.Field)
+	}
+}

@@ -178,7 +178,7 @@ func (s *Service) proposalInput(
 	if err := auth.EnsureWritableLive(ctx, tx, "deal", dealID.UUID); err != nil {
 		return "", nil, err
 	}
-	roster, err := people.StrengthForCompanyContacts(ctx, tx, companyID, now)
+	roster, err := people.StrengthForCompanyContacts(ctx, tx, companyID, now, nil)
 	if err != nil {
 		return "", nil, err
 	}

@@ -386,7 +386,7 @@ port_listeners() { # port
 }
 
 # The Redis instance serves 80 logical databases in three blocks that must not
-# overlap (infra/docker-compose.dev.yml says the same): 0 is the primary
+# overlap (docker-compose.dev.yml says the same): 0 is the primary
 # worktree's stack, 1..63 belong to the parallel integration lane one per
 # package, and 64..79 are these per-worktree stacks. A stack landing in the test
 # range would have its streams FLUSHDB'd mid-run by a suite that believes it
@@ -665,7 +665,7 @@ dev_app_url="$(with_database "$APP_DSN" "$db")"
 # `make db-init` applies scripts/db-init.sql.
 #
 # WHICH container is resolved from the DSN's own port, not from the compose
-# project. infra/docker-compose.dev.yml pins `name: margince`, so every checkout
+# project. docker-compose.dev.yml pins `name: margince`, so every checkout
 # on one machine resolves to the same project and `compose exec` lands in
 # whichever brought the stack up first — while the api, the worker and the
 # migrator connect through this DSN. Two ways to name one database, and when

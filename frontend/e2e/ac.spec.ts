@@ -1637,10 +1637,16 @@ test.describe("§3.8: 390px mobile", () => {
       // draws none — an inline decision offers several equal answers — the
       // LOWEST control is measured instead, because a row is only workable
       // when the reader can reach all of it.
+      //
+      // Read off the ROW, never from a list of the containers it groups its
+      // verbs into. A selector naming those is a claim about which groups
+      // exist, and a renamed group leaves it matching nothing: this case then
+      // reports "the first row drew no action to measure" for a row that draws
+      // four, which is under-recognition and reads exactly like a pass. The
+      // rank is excluded because it opens the pane rather than answering the
+      // work; a title link is not a `.btn` and is not a verb.
       const controls = Array.from(
-        row.querySelectorAll(
-          ".worklist-row-verbs button, .worklist-row-verbs a, .worklist-row-dispositions button, .worklist-row-decision button",
-        ),
+        row.querySelectorAll("button:not(.worklist-rank-select), a.btn"),
       ).filter((element) => element.getBoundingClientRect().height > 0);
       if (controls.length === 0) {
         return null;

@@ -265,7 +265,7 @@ even now that this workflow has no filter of its own: a workflow-level `paths:`
 filter produces no check run when it does not match, and a required context that
 never posts blocks a merge forever — so a gate that must be required cannot live
 behind one. Job-level gating reports a path skip as passing instead. See
-[infra/ci-pipeline.md](../../infra/ci-pipeline.md).
+[ci-pipeline.md](../explanation/ci-pipeline.md).
 
 Workflow-level `permissions: contents: read` is the floor for every job. The
 OIDC minting credential is **not** granted there — only the `sign` job requests

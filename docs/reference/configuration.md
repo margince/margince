@@ -413,13 +413,38 @@ re-serves no fleet-wide reading:
 
 | Family | Meaning |
 |---|---|
-| `margince_process_goroutines` | goroutines in the scraped process |
-| `margince_process_heap_bytes` / `margince_process_heap_sys_bytes` | heap in use, and heap held from the OS |
-| `margince_process_gc_cycles_total` | completed GC cycles since this process started |
+| `go_goroutines`, `go_threads` | goroutines and OS threads in the scraped process |
+| `go_memstats_*` | heap in use, heap held from the OS, and where the next GC fires |
+| `go_gc_duration_seconds` | GC pause quantiles — the stop-the-world cost, not merely the cycle count |
+| `process_cpu_seconds_total`, `process_resident_memory_bytes` | this process's CPU and RSS, which cAdvisor can only give per container |
+| `process_start_time_seconds` | uptime, and a crash loop that restarts between scrapes |
 | `margince_pgxpool_conns` | this process's own connection pool, by class |
 | `margince_relay_published_total` | outbox rows *this* relay has shipped since start |
+| `margince_ai_*` | the AI calls *this* process made — every Router in a binary increments one process-wide collector |
 
-The same `margince_process_*` section is served by `cmd/api` too — it describes
+The AI families are labelled by `provider`, `model`, `served_identity_source`,
+`task` and `tier`. `model` is the **served** identity, not the configured one: a
+tier binding need not declare a model (no `--ai-fake` deployment does), and
+`served_identity_source` grades what the label is worth — `response` is a vendor
+confirming what ran, `echo` is an OpenAI-compatible wire reflecting the request
+back, `configured` is nobody having said.
+
+Two grains, and reading the wrong one is the easy mistake.
+`margince_ai_calls_total` counts **one per logical call**: the served-or-failed
+decision the caller actually got. `margince_ai_call_attempts_total` counts
+**every ladder rung**, so their ratio is how much failing over a tier is doing.
+`margince_ai_call_errors_total` is per ATTEMPT — it exceeded calls_total the day
+attempts were added, so an `errors / calls` panel now reads above 1 on a tier
+that fails over, and the honest denominator for it is attempts.
+
+The `go_*` and `process_*` families come from client_golang's runtime and
+process collectors, gathered into the same exposition as the hand-rolled
+`margince_*` ones. They replaced four hand-read `margince_process_*` gauges,
+which measured a strict subset of the same thing under a prefix whose only
+stated purpose was to avoid colliding with these collectors — and cost a second
+stop-the-world read of `runtime.MemStats` per scrape to do it.
+
+The same runtime section is served by `cmd/api` too — it describes
 whichever process answered, which is exactly what makes it worth having on both.
 `margince_outbox_unpublished`, the job-table gauges and the declared catalogue
 stay a **single** reading on the api: two roles answering one fleet number is a

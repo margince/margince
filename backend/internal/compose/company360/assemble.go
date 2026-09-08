@@ -221,7 +221,11 @@ func (a *assembly) contactStrengths() ([]people.ContactStrength, error) {
 	if a.contactsRead {
 		return a.contacts, nil
 	}
-	contacts, err := people.StrengthForCompanyContacts(a.ctx, a.tx, a.companyID, a.now)
+	// Narrowed with the rest of the page. The health block reads its
+	// active-contact count, its reply balance and its single-threaded flag off
+	// these strengths, so an unscoped read put a number computed across every
+	// project under a timeline showing one.
+	contacts, err := people.StrengthForCompanyContacts(a.ctx, a.tx, a.companyID, a.now, a.opts.ProjectID)
 	if err != nil {
 		return nil, err
 	}
@@ -347,7 +351,7 @@ func (a *assembly) suggestionInputsOnce() (suggestionInputs, error) {
 				return a.advice, a.adviceErr
 			}
 			a.advice, a.adviceErr = gatherSuggestionInputs(
-				a.ctx, a.tx, a.companyID, a.now, facts, heading, base)
+				a.ctx, a.tx, a.companyID, a.now, facts, heading, base, a.opts)
 		}
 		a.adviceRead = true
 	}

@@ -25,7 +25,7 @@ func acmeBase(t *testing.T) *url.URL {
 }
 
 func TestTheJSONLDLogoLeadsAndTheLabelledImagesFollow(t *testing.T) {
-	// The schema.company block says "logo" in a vocabulary made for the purpose;
+	// The schema.org block says "logo" in a vocabulary made for the purpose;
 	// the header <img> says it in its alt text. Both count, the explicit one
 	// first, and a relative address resolves against where the page came from.
 	page := `<html><head>
@@ -92,7 +92,7 @@ func TestALogoNeedsAnAddressWorthFetching(t *testing.T) {
 }
 
 func TestAJSONLDLogoMayBeAnImageObjectOrAList(t *testing.T) {
-	// schema.company lets a logo be a URL, an ImageObject, or several; the reader
+	// schema.org lets a logo be a URL, an ImageObject, or several; the reader
 	// takes each spelling, and a repeated address once.
 	page := ldPage(`[{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://cdn.acme.example/lockup.png"}},
 		{"@type":"WebSite","publisher":{"@type":"Organization","logo":["https://cdn.acme.example/lockup.png", {"contentUrl":"/second.png"}]}}]`)

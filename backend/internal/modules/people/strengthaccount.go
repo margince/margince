@@ -80,7 +80,7 @@ func AccountStrengthFor(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
 	if err := auth.Require(ctx, "relationship", principal.ActionRead); err != nil {
 		return AccountStrength{}, err
 	}
-	contacts, err := StrengthForCompanyContacts(ctx, tx, companyID, now)
+	contacts, err := StrengthForCompanyContacts(ctx, tx, companyID, now, nil)
 	if errors.Is(err, apperrors.ErrPermissionDenied) {
 		// A caller holding company:read but not person:read sees an
 		// account with no contacts they may read, so the roll-up is dormant

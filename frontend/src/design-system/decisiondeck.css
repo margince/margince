@@ -401,8 +401,8 @@
    it takes the chip ground and not a tone. */
 .ddeck-bundle-count {
   font-size: var(--fs-meta);
-  color: var(--textMeta);
-  background: var(--bgCard);
+  color: var(--textChip);
+  background: var(--bgChip);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-full);
   corner-shape: round;

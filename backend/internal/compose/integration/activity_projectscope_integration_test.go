@@ -18,6 +18,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/company360"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/projects"
@@ -282,4 +284,218 @@ func TestAssembledContextScopedToOneProjectDropsPeopleReachedOnlyThroughTheOther
 	if !wide[f.bystander.String()] {
 		t.Error("an unscoped walk lost the other engagement's contact, so the scoped absence proves nothing")
 	}
+}
+
+// The DERIVED sections narrow with the timeline they sit under.
+// The scope reached the timeline, next steps, next meeting, last touch and
+// since-last-visit. It did not reach the AGGREGATES: relationship strength and
+// account health folded every project's activity, so a page showing one
+// engagement's mail reported a surface counted over both.
+//
+// Asserted BOTH ways round against the two-engagement fixture. A test that only
+// checked the scoped number would pass against a read that lost the row for any
+// other reason, so the unscoped read of the same account has to still carry it.
+func TestAScopedAccountPageDerivesItsHealthFromOneEngagement(t *testing.T) {
+	e := Setup(t)
+	f := seedTwoEngagementAccount(t, e)
+	employAtAccount(t, e, f)
+	// The bystander is the whole lever here: a contact at the account who has
+	// spoken on the OTHER engagement and nowhere else. Employing them is what
+	// puts them in the account's contact set at all, and the fixture leaves it
+	// to the tests that want it — the sections proved elsewhere count contacts
+	// and would each have to be retaught a third one.
+	bystanderID, companyID := PersonIDOf(f.bystander), companyIDOf(f.company)
+	if _, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
+		Kind: "employment", PersonID: &bystanderID, CompanyID: &companyID,
+	}); err != nil {
+		t.Fatalf("employing the bystander: %v", err)
+	}
+	// A meeting that has already happened on each engagement, the other
+	// engagement's the more recent. The fixture's own meetings are both booked
+	// for the future, which is the question "when do we next see them" rather
+	// than "when did we last".
+	held := func(subject string, within ids.ProjectID, daysAgo int) time.Time {
+		at := roomFixedNow.AddDate(0, 0, -daysAgo)
+		logged, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+			Kind: "meeting", MeetingStatus: strPtr("booked"), Subject: &subject, OccurredAt: &at,
+			Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: f.person}},
+		})
+		if err != nil {
+			t.Fatalf("log %q: %v", subject, err)
+		}
+		id := ids.From[ids.ActivityKind](ids.UUID(logged.Id))
+		if _, err := e.Activities.RelinkActivity(e.Admin(), id, activities.RelinkActivityInput{
+			EntityType: "project", EntityID: within.UUID,
+		}); err != nil {
+			t.Fatalf("file %q under its project: %v", subject, err)
+		}
+		return at
+	}
+	erpMet := held("ERP discovery workshop", f.erp, 6)
+	held("Rack survey", f.other, 2)
+
+	svc := companySurfaceService(e)
+
+	scoped, err := svc.AssembleScoped(e.Admin(), companyID, company360.AssembleOptions{ProjectID: &f.erp})
+	if err != nil {
+		t.Fatalf("assemble scoped: %v", err)
+	}
+	wide, err := svc.AssembleScoped(e.Admin(), companyID, company360.AssembleOptions{})
+	if err != nil {
+		t.Fatalf("assemble unscoped: %v", err)
+	}
+	if scoped.Health == nil || wide.Health == nil {
+		t.Fatal("the health block is missing from one of the two reads")
+	}
+
+	// Three people have spoken to us across the account — the contact, the
+	// meeting attendee and the bystander — but only two of them within the ERP
+	// rollout. "How many ways in do we have here" has to answer for the page
+	// the reader is on, or the count contradicts the timeline under it.
+	if got := deref(t, scoped.Health.ActiveContacts, "scoped active contacts"); got != 2 {
+		t.Errorf("the ERP page reports %d active contacts, want 2 (the contact and the meeting attendee) "+
+			"— the bystander has only ever spoken on the datacentre migration", got)
+	}
+	if got := deref(t, wide.Health.ActiveContacts, "unscoped active contacts"); got != 3 {
+		t.Errorf("the unscoped page reports %d active contacts, want 3 — if the bystander is missing "+
+			"here too then the scoped count above proves nothing about the scope", got)
+	}
+
+	// The account's newest exchange is the other engagement's, so an unscoped
+	// health block dates itself from a message the scoped page does not show.
+	scopedAge := deref(t, scoped.Health.DaysSinceLastInbound, "scoped last-inbound age")
+	wideAge := deref(t, wide.Health.DaysSinceLastInbound, "unscoped last-inbound age")
+	// The last meeting is the same question one more time, on the read that
+	// answers "when did we last sit down with them".
+	if scoped.Health.LastMeetingAt == nil || wide.Health.LastMeetingAt == nil {
+		t.Fatal("one of the two pages reports no last meeting, though each engagement has held one")
+	}
+	if !scoped.Health.LastMeetingAt.Equal(erpMet) {
+		t.Errorf("the ERP page dates its last meeting to %s, want the ERP discovery workshop at %s "+
+			"— the rack survey belongs to the engagement this page is not showing",
+			scoped.Health.LastMeetingAt.Format(time.RFC3339), erpMet.Format(time.RFC3339))
+	}
+	if wide.Health.LastMeetingAt.Equal(erpMet) {
+		t.Errorf("the unscoped page also stops at the ERP workshop, so the assertion above proves " +
+			"nothing about the scope")
+	}
+
+	if scopedAge == wideAge {
+		t.Errorf("both pages date their health from a message %d days old — the other engagement's mail "+
+			"is the account's newest, so a scoped read that agrees with the unscoped one is still folding it",
+			scopedAge)
+	}
+}
+
+// deref reads a health figure the page is expected to carry, failing loudly
+// rather than comparing against a zero the reader would never have seen.
+func deref(t *testing.T, got *int, what string) int {
+	t.Helper()
+	if got == nil {
+		t.Fatalf("the page reported no %s, so this proves nothing either way", what)
+	}
+	return *got
+}
+
+// The suggestion rules narrow too. This needs a different account from the
+// fixture above: the no-reply rule fires on the newest exchange being something
+// WE sent and nobody answered, and the two-engagement fixture's newest exchange
+// is a booked meeting, which is the rule declining to chase someone we are
+// about to see.
+//
+// So: one contact, two engagements, an unanswered message on each, and the
+// other engagement's the more recent. A scoped page must chase the message it
+// is showing and never the one it is not — advice a reader cannot check against
+// anything on the page is worse than no advice.
+func TestAScopedAccountPageChasesOnlyTheEngagementItShows(t *testing.T) {
+	e := Setup(t)
+	admin := e.Admin()
+	person := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
+	personID, companyID := PersonIDOf(person), companyIDOf(company)
+	if _, err := e.People.CreateRelationship(admin, people.CreateRelationshipInput{
+		Kind: "employment", PersonID: &personID, CompanyID: &companyID,
+	}); err != nil {
+		t.Fatalf("employing the contact: %v", err)
+	}
+
+	project := func(name string) ids.ProjectID {
+		p, err := e.Projects.CreateProject(admin, projects.CreateProjectInput{
+			Name: name, CompanyID: companyID, Source: "manual",
+		})
+		if err != nil {
+			t.Fatalf("create project %q: %v", name, err)
+		}
+		return projectIDOf(ids.UUID(p.Id))
+	}
+	// Both are past noReplyDays, so the rule has a candidate either way and the
+	// only thing deciding which it names is the scope.
+	unanswered := func(subject string, within ids.ProjectID, daysAgo int) string {
+		at := roomFixedNow.AddDate(0, 0, -daysAgo)
+		logged, _, err := e.Activities.LogActivity(admin, activities.LogActivityInput{
+			Kind: "email", Direction: strPtr("outbound"), Subject: &subject, OccurredAt: &at,
+			Links: []activities.ActivityLinkInput{
+				{EntityType: "person", EntityID: person},
+				{EntityType: "company", EntityID: company},
+			},
+		})
+		if err != nil {
+			t.Fatalf("log %q: %v", subject, err)
+		}
+		id := ids.From[ids.ActivityKind](ids.UUID(logged.Id))
+		if _, err := e.Activities.RelinkActivity(admin, id, activities.RelinkActivityInput{
+			EntityType: "project", EntityID: within.UUID,
+		}); err != nil {
+			t.Fatalf("file %q under its project: %v", subject, err)
+		}
+		return ids.UUID(logged.Id).String()
+	}
+	erp, migration := project("ERP rollout"), project("Datacentre migration")
+	onERP := unanswered("ERP cutover plan", erp, 20)
+	onOther := unanswered("Rack decommissioning", migration, 8)
+
+	svc := companySurfaceService(e)
+	scoped, err := svc.AssembleScoped(admin, companyID, company360.AssembleOptions{ProjectID: &erp})
+	if err != nil {
+		t.Fatalf("assemble scoped: %v", err)
+	}
+	wide, err := svc.AssembleScoped(admin, companyID, company360.AssembleOptions{})
+	if err != nil {
+		t.Fatalf("assemble unscoped: %v", err)
+	}
+
+	// The unscoped half is not decoration: if no rule fires on the account at
+	// all, the scoped assertion below is satisfied by silence.
+	if !citesActivity(wide, onOther) {
+		t.Fatalf("the unscoped page chases nothing about the datacentre migration's unanswered mail (%s), "+
+			"so it cannot show that the scoped page dropped it", onOther)
+	}
+	if citesActivity(scoped, onOther) {
+		t.Errorf("a suggestion on the page scoped to the ERP rollout cites the datacentre migration's "+
+			"mail (%s) — the reader cannot see it here, so the advice cannot be checked", onOther)
+	}
+	if !citesActivity(scoped, onERP) {
+		t.Errorf("the ERP page chases nothing, though its own mail (%s) has gone unanswered for longer "+
+			"— a scope that silences the rule is dropping the section, not narrowing it", onERP)
+	}
+}
+
+// citesActivity reports whether any suggestion on the page rests on the given
+// activity — as the evidence a reader checks, or as the message the card's
+// button would open.
+func citesActivity(page crmcontracts.Company360, activityID string) bool {
+	if page.Suggestions == nil {
+		return false
+	}
+	for _, s := range *page.Suggestions {
+		if s.Action != nil && s.Action.ActivityId != nil && s.Action.ActivityId.String() == activityID {
+			return true
+		}
+		for _, ev := range s.Evidence {
+			if ev.EntityId.String() == activityID {
+				return true
+			}
+		}
+	}
+	return false
 }

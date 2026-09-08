@@ -55,6 +55,12 @@ type BriefRun struct {
 	// RevenueNormCurrency is what RevenueNormMinor is in. Empty on a run stored
 	// before the column existed, which the wire omits rather than guessing at.
 	RevenueNormCurrency string
+	// FactorsOmitted names the ranking factors the run had no input for. Empty
+	// is the ordinary answer AND what a run stored before the column existed
+	// reads as — unlike the currency above, which the wire omits: an empty list
+	// is the honest reading of a run nobody recorded an omission for, and those
+	// age out within a day.
+	FactorsOmitted []string
 	// Narrative is the overnight agent's sentence about the night, empty when
 	// no pass has written one — which AnnotatedAt is what distinguishes from a
 	// pass that ran and had nothing to say.
@@ -148,6 +154,7 @@ func (e *BriefEngine) SnapshotRunForDay(ctx context.Context, now time.Time) (Bri
 		CandidateCount:      ranking.CandidateCount,
 		RevenueNormMinor:    ranking.RevenueNormMinor,
 		RevenueNormCurrency: ranking.RevenueNormCurrency,
+		FactorsOmitted:      ranking.FactorsOmitted,
 	}
 	queueDeals := make([]ids.UUID, 0, len(ranking.Queue))
 	var joinedExisting bool
@@ -186,6 +193,7 @@ func (e *BriefEngine) SnapshotRunForDay(ctx context.Context, now time.Time) (Bri
 			"candidate_count":       run.CandidateCount,
 			"revenue_norm_minor":    run.RevenueNormMinor,
 			"revenue_norm_currency": run.RevenueNormCurrency,
+			"factors_omitted":       run.FactorsOmitted,
 			"queue_deal_ids":        queueDeals,
 		})
 		return err
@@ -323,7 +331,7 @@ func (e *BriefEngine) LatestRun(ctx context.Context, now time.Time) (BriefRun, e
 // carries a zero.
 const runSelect = `
 	SELECT id, user_id, generated_at, as_of, local_day, candidate_count, revenue_norm_minor,
-	       revenue_norm_currency, coalesce(narrative, ''), annotated_at
+	       revenue_norm_currency, factors_omitted, coalesce(narrative, ''), annotated_at
 	FROM brief_run`
 
 // scanRun reads one runSelect row, answering ErrNotFound for no row.
@@ -331,7 +339,7 @@ func scanRun(row pgx.Row) (BriefRun, error) {
 	var run BriefRun
 	err := row.Scan(&run.ID, &run.UserID, &run.GeneratedAt, &run.AsOf, &run.LocalDay,
 		&run.CandidateCount, &run.RevenueNormMinor, &run.RevenueNormCurrency,
-		&run.Narrative, &run.AnnotatedAt)
+		&run.FactorsOmitted, &run.Narrative, &run.AnnotatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return BriefRun{}, apperrors.ErrNotFound
 	}

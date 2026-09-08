@@ -256,7 +256,7 @@ func TestMetricsHandsTheJobSectionItsOwnDeadlineNotTheRequests(t *testing.T) {
 	rec := httptest.NewRecorder()
 	// A request context with NO deadline of its own, so a deadline seen by
 	// the section can only have come from the handler.
-	Metrics(nil, unreadableBacklog, zeroPublished, nil, jobStats, nil)(
+	Metrics(MetricsInput{Backlog: unreadableBacklog, Published: zeroPublished, JobStats: jobStats})(
 		rec, httptest.NewRequest(http.MethodGet, "/metrics", nil))
 
 	if !deadlineSet {
@@ -283,7 +283,7 @@ func TestMetricsStopsWritingWhenTheJobSectionRefusesAWrite(t *testing.T) {
 	overlayReached := false
 
 	rec := httptest.NewRecorder()
-	Metrics(nil, unreadableBacklog, zeroPublished, nil, jobStats, &OverlayMetrics{
+	Metrics(MetricsInput{Backlog: unreadableBacklog, Published: zeroPublished, JobStats: jobStats, Overlay: &OverlayMetrics{
 		SourceLag: func(context.Context) (map[string]time.Duration, error) {
 			overlayReached = true
 			return nil, errors.New("unreached")
@@ -291,7 +291,7 @@ func TestMetricsStopsWritingWhenTheJobSectionRefusesAWrite(t *testing.T) {
 		SyncedTotal:   func() uint64 { return 0 },
 		ConflictTotal: func() uint64 { return 0 },
 		DeletedTotal:  func() uint64 { return 0 },
-	})(rec, httptest.NewRequest(http.MethodGet, "/metrics", nil))
+	}})(rec, httptest.NewRequest(http.MethodGet, "/metrics", nil))
 
 	if overlayReached {
 		t.Error("the handler kept writing after the job section reported the writer was gone")
@@ -303,8 +303,10 @@ func TestMetricsStopsWritingWhenTheJobSectionRefusesAWrite(t *testing.T) {
 // still serve the families it does have.
 func TestMetricsWithNoJobSectionWiredStillServesTheRest(t *testing.T) {
 	rec := httptest.NewRecorder()
-	Metrics(nil, func(context.Context) (int64, error) { return 7, nil },
-		func() uint64 { return 3 }, nil, nil, nil)(rec, httptest.NewRequest(http.MethodGet, "/metrics", nil))
+	Metrics(MetricsInput{
+		Backlog:   func(context.Context) (int64, error) { return 7, nil },
+		Published: func() uint64 { return 3 },
+	})(rec, httptest.NewRequest(http.MethodGet, "/metrics", nil))
 
 	if !strings.Contains(rec.Body.String(), "margince_outbox_unpublished 7") {
 		t.Errorf("a nil job section suppressed the rest of the exposition:\n%s", rec.Body.String())
@@ -325,7 +327,7 @@ func zeroPublished() uint64 { return 0 }
 // reported as an idle one.
 func TestMetricsOmitsThePoolGaugesWhenNoPoolIsInjected(t *testing.T) {
 	rec := httptest.NewRecorder()
-	Metrics(nil, unreadableBacklog, zeroPublished, nil, nil, nil)(
+	Metrics(MetricsInput{Backlog: unreadableBacklog, Published: zeroPublished})(
 		rec, httptest.NewRequest(http.MethodGet, "/metrics", nil))
 
 	if strings.Contains(rec.Body.String(), "margince_pgxpool_conns") {

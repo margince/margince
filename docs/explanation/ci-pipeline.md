@@ -1,9 +1,11 @@
 # CI pipeline
 
 The merge gate as GitHub Actions. The workflow is
-[`.github/workflows/ci.yml`](../.github/workflows/ci.yml); this document
+[`.github/workflows/ci.yml`](../../.github/workflows/ci.yml); this document
 explains **how it is wired and why** — the job graph, the change classifier
-that decides which jobs run, and how coverage flows into SonarCloud.
+that decides which jobs run, and how coverage flows into SonarCloud. The
+workflows that run beside the gate rather than inside it have their own page:
+[the workflows beside the merge gate](../reference/ci-workflows.md).
 
 `make check` on its own runs only the no-database lane, so the
 tenant-isolation and GDPR-erasure fitness tests (`//go:build integration`,
@@ -15,7 +17,8 @@ the merge instead of shipping.
 
 Two lanes run but deliberately do **not** block: `vuln` and the SonarCloud scan.
 Both were traded off the required set for merge speed during heavy development,
-and both are re-checked daily on `main` by `scheduled.yml` — see below for why a
+and both are re-checked daily on `main` by `scheduled.yml` — see
+[the workflows beside the merge gate](../reference/ci-workflows.md) for why a
 non-blocking gate needs that backstop to stay honest. `live-boot` is likewise
 advisory. Promoting the two of them is deliberate future work rather than an
 oversight; the reason it is not bundled with the merge queue is in
@@ -83,8 +86,8 @@ collide in that group.
 are **manual dispatch only**, so neither is triggered by a merge. They keep their
 JOB-scoped groups for the case of two deliberate dispatches, where cancellation
 must reach the expensive generation halves and never the step that publishes or
-signs — see [The other workflows](#the-other-workflows). `scheduled.yml` groups
-without cancelling; nothing supersedes a daily run. `cache-warm.yml` groups
+signs — see [the workflows beside the merge gate](../reference/ci-workflows.md).
+`scheduled.yml` groups without cancelling; nothing supersedes a daily run. `cache-warm.yml` groups
 without cancelling for a different reason: a cancelled run saves no cache, so
 finishing is the entire point.
 
@@ -154,27 +157,27 @@ would report a documentation PR as a broken integration lane.
 
 | Scope | Paths | Gates |
 |---|---|---|
-| `backend_db` | `backend/**`, `infra/**/!(*.md)`, `go.work`, `go.work.sum`, `Makefile`, `scripts/**`, `extensions/**`, `fixtures/**`, `composition/**`, `.github/workflows/ci.yml`, `.github/workflows/_lane-*.yml` (the caller plus every lane it invokes — globbed so a lane added later is covered the day it lands), `.github/actions/**`, `sonar-project.properties`, `frontend/src/mcp-apps/forbidden.json` | the integration shards and the `integration` fan-in — every lane that opens a database |
-| `backend` | `backend_db` (by YAML anchor, so the two cannot drift) plus the agent rulebooks `AGENTS.md` and `CLAUDE.md` | Go build/gate, extension reference, craftsmanship, unit coverage, vuln |
+| `backend_db` | `backend/**`, `docker-compose.dev.yml`, `go.work`, `go.work.sum`, `Makefile`, `scripts/**`, `extensions/**`, `fixtures/**`, `composition/**`, `.github/workflows/ci.yml`, `.github/workflows/_lane-*.yml` (the caller plus every lane it invokes — globbed so a lane added later is covered the day it lands), `.github/actions/**`, `sonar-project.properties`, `frontend/src/mcp-apps/forbidden.json` | the integration shards and the `integration` fan-in — every lane that opens a database |
+| `backend` | `backend_db` (by YAML anchor, so the two cannot drift) plus everything a Go gate READS rather than executes: the agent rulebooks `AGENTS.md`, `CLAUDE.md`, `frontend/AGENTS.md` and `frontend/CLAUDE.md`, and `docs/**` | Go build/gate, extension reference, craftsmanship, unit coverage, vuln |
 | `frontend` | `frontend/**`, `backend/api/**` (the contract drives FE types), plus the composition inputs the lane now typechecks against — `extensions/**`, `fixtures/**`, `composition/**`, `backend/tools/gen-composition/**`, `Makefile` — and the install inputs `pnpm-lock.yaml`, `pnpm-workspace.yaml` and the root `package.json`, which decide *which* dependency the SPA builds on and which one `openapi-typescript` parses the contract with (`overrides` lives in the workspace file, so it resolves versions the lockfile then merely records; `packageManager` lives in the manifest and decides which pnpm reads both) | frontend lane, UAT |
-| `e2e` | `backend/**`, `frontend/**`, `infra/**/!(*.md)`, `extensions/**`, `fixtures/**`, `composition/**` | full-stack live-boot |
+| `e2e` | `backend/**`, `frontend/**`, `docker-compose.dev.yml`, `extensions/**`, `fixtures/**`, `composition/**` | full-stack live-boot |
 | `deps` | `go.work`, `go.work.sum`, `**/go.mod`, `**/go.sum`, `**/package.json`, `**/pnpm-lock.yaml`, `pnpm-workspace.yaml` (`overrides` lives there, so it decides resolved versions the way a manifest does), `.syft.yaml`, `.grant.yaml`, `sbom-schemas/**`, `Makefile`, `.github/workflows/**` (syft catalogs a `uses:` as a package, so any workflow gaining a reference changes what the gate judges — a pinned remote action brings its license, a local reusable workflow brings none), `.github/actions/**` | the license gate |
 
 Consequences:
 
-- A **docs-only PR** matches no scope → every code gate skips **on the PR**, and
-  runs in full when the PR reaches the queue. That includes the prose under
-  `infra/` — this file documents the classifier, it is not an input to any gate,
-  so the two `!(*.md)` extglobs keep an edit to it from booting the sharded
-  integration fleet on the PR side. Each is written as one positive pattern
-  because the action ORs its patterns: a separate `!infra/**/*.md` entry would
-  match every path outside `infra/` and fire the filter on everything.
+- A **prose-only PR** matches `backend` and nothing narrower, so the Go gates
+  that read prose run and the sharded integration fleet does not. `docs/**` is
+  in `backend` and not in `backend_db` for exactly that reason, and this page is
+  one of the pages it buys: `make ci-doc-parity` holds the table above to the
+  filters in `ci.yml`, and it runs in `deterministic-gates` — so an edit to this
+  file alone still runs the gate that can tell it has gone stale.
 
-  This is the case that used to be dangerous. A docs-only commit landing on
-  `main` after a breaking one matched no scope, skipped every gate, and reported
-  green — `main` went red twice with the breakage masked exactly that way. The
-  queue closes it: the docs-only entry is gated against the full tree it is
-  merging into.
+  A prose-only PR touching nothing under `docs/` — the root `README.md`, say —
+  matches no scope at all, and that is the case that used to be dangerous. Such
+  a commit landing on `main` after a breaking one skipped every gate and
+  reported green; `main` went red twice with the breakage masked exactly that
+  way. The queue closes it: the prose-only entry is gated against the full tree
+  it is merging into.
 - A **Dockerfile-only PR** (the root `Dockerfile`, `.dockerignore`,
   `docker-bake.hcl`) matches the `images` scope and runs the **`images (build
   only)`** job: a `docker buildx bake` of the default group — the three roles —
@@ -251,8 +254,8 @@ changes ──┬─> deterministic-gates ──> craftsmanship
 
 `integration` and `frontend` are `workflow_call` jobs: the caller decides whether
 the lane runs, and the lane's jobs live in
-[`_lane-integration.yml`](../.github/workflows/_lane-integration.yml) and
-[`_lane-frontend.yml`](../.github/workflows/_lane-frontend.yml). Those two
+[`_lane-integration.yml`](../../.github/workflows/_lane-integration.yml) and
+[`_lane-frontend.yml`](../../.github/workflows/_lane-frontend.yml). Those two
 clusters were a third of `ci.yml` — the six-way shard matrix, the coverage
 plumbing, the two fan-ins — and none of it is read when the merge gate itself
 changes.
@@ -312,7 +315,7 @@ ruleset that names it; `main-required-ai-reviewers` names CodeRabbit and is
 (margince/margince#2544, where three comments in `ci.yml` said otherwise).
 
 It reaches a verdict from
-`needs.*.result` through [`scripts/ci-verdict.sh`](../scripts/ci-verdict.sh),
+`needs.*.result` through [`scripts/ci-verdict.sh`](../../scripts/ci-verdict.sh),
 which is unit-tested by `make test-ci-verdict` and wired into `check-backend`.
 
 The rule it exists to enforce: **a skipped job is not a passing one on
@@ -369,7 +372,7 @@ compile half is a build-once problem, not a sharding one.
 ## The shared Go build cache
 
 Every Go job restores
-[`.github/actions/go-build-cache`](../.github/actions/go-build-cache/action.yml)
+[`.github/actions/go-build-cache`](../../.github/actions/go-build-cache/action.yml)
 before it compiles.
 
 It exists because `actions/setup-go` cannot do this job. Its cache key hashes
@@ -394,7 +397,7 @@ package builds themselves and only the dependency builds underneath are common:
 ### The writer lives in `cache-warm.yml`, on a schedule
 
 `ci.yml` only ever **restores**. The writing lives in
-[`.github/workflows/cache-warm.yml`](../.github/workflows/cache-warm.yml), which
+[`.github/workflows/cache-warm.yml`](../../.github/workflows/cache-warm.yml), which
 runs on `main` every three hours plus `workflow_dispatch`, and **gates nothing** —
 a red or cancelled run there costs latency on the next lane and nothing else.
 
@@ -470,7 +473,7 @@ produced, then runs only the scanner — so there is no second
 Postgres/Redis/MinIO stack and no duplicated test run.
 
 Why CI-based rather than SonarCloud's Automatic Analysis: the scanner reads the
-committed [`sonar-project.properties`](../sonar-project.properties)
+committed [`sonar-project.properties`](../../sonar-project.properties)
 (exclusions + rule tuning + coverage report paths), so that file is the single
 source of truth for analysis scope. Disable Automatic Analysis in SonarCloud →
 project → Administration → Analysis Method so the two don't compete.
@@ -546,262 +549,3 @@ Wiring details:
 - Every `uses:` and container `image:` is pinned to an immutable SHA (the
   `check-image-pins` gate enforces it).
 
-## The other workflows
-
-`ci.yml` is the merge gate, and `_lane-integration.yml` / `_lane-frontend.yml` are
-part of it — called by it, never triggered on their own (see
-[Two lanes are called](#two-lanes-are-called-not-inlined)). Eight workflows sit
-beside the gate, deliberately outside it:
-
-- **`cache-warm.yml`** — the Go build cache's only writer, on `main` every three
-  hours plus manual dispatch. **Gates nothing**: a red or cancelled run costs
-  latency on the next lane and nothing else. It exists as a separate workflow
-  because the two things a `main` push used to do — reach a verdict, and seed the
-  cache — have different homes now: the verdict moved to the merge queue, and the
-  cache cannot follow it there (`actions/cache` scopes a write to the writing
-  branch plus the default branch, and a queue ref is throwaway). See
-  [The shared Go build cache](#the-shared-go-build-cache) for why it is scheduled
-  rather than per-push.
-
-- **`merge-attest.yml`** — on every push to `main`. It runs no lane, but it does
-  **wait**: `ci` is a fan-in that starts only once every other lane has finished,
-  so it posts minutes after the merge and a read at push time would see nothing.
-  The wait is bounded at 20 minutes, and reaching that bound is not a finding.
-
-  It reports exactly two things: a commit **no pull request names** at all, and a
-  required check that **reported an adverse verdict** — the tree on `main` does
-  not pass its own required check. It says nothing about a verdict that was
-  merely *absent* at merge time. A repository role merging past `ci` is a
-  standing decision here, so an absent verdict is the expected shape of that
-  decision and not an incident; an alarm that fires on the expected state is one
-  that gets muted, and it would bury the two findings above.
-
-  **Gates nothing, and never will.** It runs after the merge. What it changes is
-  that a bad verdict is loud and attributed at push time, instead of surfacing
-  two hours later as somebody else's pull request going red against a base they
-  did not break. Prevention is a branch-protection decision (#2496). Judged by
-  [`scripts/check-merge-verdict.sh`](../scripts/check-merge-verdict.sh), which
-  reads its evidence from the environment so every arm is drivable from a
-  fixture (`make test-merge-verdict`); a finding is filed as one issue per
-  offending pull request through the same reporter the health check uses.
-
-- **`main-health.yml`** — every two hours on `main`: the backend gate, the
-  real-Postgres lane, the SPA lane (those two called, not copied — it `uses:`
-  `_lane-integration.yml` and `_lane-frontend.yml`), the screen-acceptance UAT,
-  and `main`'s SonarCloud analysis published from the three coverage reports the
-  backend gate, the real-Postgres lane and the SPA lane produce between them.
-  The UAT produces none, which is why it is named here and absent there.
-
-  The UAT lane runs **unconditionally** here, unlike on a pull request where it
-  is gated on the change classifier. That gate is right on a PR and wrong on the
-  tip: it is the SPA lane that can be green over a tree whose pages throw at
-  runtime — biome, tsc and vitest all pass on code that builds and never mounts —
-  and a classifier-gated UAT means a broken screen waits for whoever's pull
-  request happens to touch `frontend/` next, then goes red on their unrelated
-  change. It does not block `sonar`, which needs the coverage producers and gets
-  none from Playwright: a red UAT should not freeze `main`'s analysis.
-  **It is not a gate and never will be**: it reports on a tree that has already
-  landed.
-
-  It exists because of a deliberate asymmetry. A merge can land over a red `ci` —
-  a repository-role bypass is sanctioned here, to keep the fastest contributor
-  fast — so breakage on `main` will keep happening and nothing in this workflow
-  tries to prevent it. What it changes is the **delay and the attribution**:
-  without it, a breakage is discovered when somebody else's unrelated pull request
-  goes red for a reason they did not cause. On failure it files one issue per
-  broken lane carrying the commits that landed since the health check was last
-  green, with authors ([`scripts/main-health-range.sh`](../scripts/main-health-range.sh)).
-  That range is a deliberate over-approximation: naming a dozen candidates is
-  useful, guessing one sends the wrong person looking.
-
-  It is also the **only** publisher of `main`'s SonarCloud analysis. The
-  push-to-`main` scan is gone and the `merge_group` scan that replaced it only
-  runs while the queue rule is enabled, which it is not — and a stored analysis
-  does not vanish when it stops being refreshed, it FREEZES, while the nightly
-  quality-gate job goes on reporting that frozen verdict as current.
-
-  Being the only publisher is what makes the scan job's inputs load-bearing, and
-  they were wrong. It downloaded `backend/coverage.out` alone while
-  `sonar-project.properties` names three reports, so the scanner's Zero Coverage
-  Sensor published `frontend/src` at 0.0% over 17,781 lines to cover and
-  `extensions/` at 0.0% over 708, while the vitest suite and the extension units
-  were both reporting real coverage on every run that measured them. That was
-  the whole of `main`'s `new_coverage` gate failure (72.1 against a threshold of
-  80; the `ci.yml` scan that downloaded all three read 84.0). The job now `needs` every
-  producer and requires each to have SUCCEEDED: a red lane freezes the analysis
-  for two hours, which the report job files an issue about, while a scan missing
-  a report replaces it with a number describing a tree that does not exist. The
-  report job now watches the scan itself for the same reason — a failed publish
-  leaves the previous analysis answering, which reads identically to a current
-  one, so it was the one failure here nobody was told about.
-
-  The cadence is the knob: two hours costs ~15 jobs a run and narrows the suspect
-  range to roughly a dozen commits at eight merges an hour.
-
-- **`scheduled.yml`** — daily on `main`, plus a **weekly Monday cron** for the
-  two jobs too expensive to ask daily; the checks whose answer changes when
-  nothing is being merged. `ci.yml` asks "is this diff sound?" and runs because a
-  diff exists; these ask "is `main` still sound?", which a PR gate structurally
-  cannot answer. `govulncheck` runs against a vulnerability database that changes
-  daily, so a per-PR scan proves the day it merged and nothing since. The
-  **SonarCloud quality gate** is read through the API (not re-scanned) because it
-  is no longer a required PR check — a gate nobody is blocked by is a gate nobody
-  reads; the analysis it reads is published by the `merge_group` scan, per batch.
-  And the **backend lane** re-runs unconditionally — the reason it was written is
-  that `main`'s last-known-green was not evidence `main` was green, because a
-  docs-only commit landing after a breaking one matched no classifier scope, so
-  every gate skipped and the run reported green over a broken tree. That happened
-  more than once. **The merge queue closes that hole, which makes this job
-  redundant on paper** — it is kept deliberately as the one instrument that does
-  not trust the queue. If it goes red while every `merge_group` build was green,
-  the queue has a hole and this is how anyone finds out.
-  The **frontend clock-drift** lane is the same argument at its purest: it runs
-  the vitest suite as if it were 200 days from now and requires the same verdict,
-  because a fixture whose absolute date the component compares to `now` is broken
-  by the CALENDAR rather than by a diff — three tests began failing on a day
-  nobody edited anything (#1977), and the classifier's frontend skip kept `main`
-  green over them for a month. No static rule finds the next one: "an absolute
-  date in a file that never pins the clock" matches 129 files, nearly all
-  harmless, so the gate is a second run rather than a pattern.
-  Two jobs run **weekly** rather than daily, on their own Monday cron. The
-  **PERF-3/PERF-7 budgets** seed a quarter of a million contacts twice, and
-  weekly is the honest cadence for a budget nobody merges against. The
-  **model-driven use cases** (`make e2e-llm`) drive the six deck scenarios with
-  a real assistant and check what it SAID — the half the deterministic suite
-  cannot reach, since those tests pin payloads and refusals and would stay green
-  while the surface became undrivable by a model. It costs real tokens, so it is
-  weekly, and it skips rather than fails when `ANTHROPIC_API_KEY` is absent: a
-  lane nobody has funded must not turn `main` red every Monday, and a skipped job
-  says "not configured" where a red one says "broken". It is not deterministic by
-  construction — three runs per scenario, passing at two — and its transcripts
-  are uploaded as an artifact, because the verdict line says which scenario
-  failed and only the transcript says what the assistant actually did.
-  Findings become **issues** (`scripts/scheduled-report.sh`), one open issue per
-  check keyed on an exact title, because a red scheduled run notifies nobody and
-  these checks exist precisely for the case where nothing prompts a human to look.
-  Two of those checks split one job result into **two** findings — the perf
-  budgets and the model lane both distinguish "the thing under test is wrong"
-  from "the lane could not run", because filing the former for the latter sends
-  somebody bisecting a regression that was never measured.
-  The reporting job is the sole holder of `issues: write` and runs no build code —
-  the same permission isolation `sbom.yml` uses for signing.
-
-- **`sbom.yml`** — **manual dispatch only; no automatic trigger at all** (the
-  `sbom` job runs on any ref, `sign` only on `main`). Regenerates the source-tree
-  SBOMs, license-gates them, and signs them from a separate job that is the sole
-  holder of `id-token: write`. Signing is isolated from all branch-controlled code
-  because a keyless signature lands permanently in a public transparency log and
-  cannot be retracted, so a feature branch must never produce one — and the
-  license gate stays on this path because `sign`'s `needs: sbom` is what keeps a
-  policy-failing SBOM from reaching it.
-  It previously ran on a path-filtered push to `main`, about 48 runs a week. That
-  was dropped for the same reason as `release.yml` below: the runs drew on the
-  20-concurrent ceiling the PR gates queue in, and with no releases yet they
-  published bundles and burned irretractable Rekor signatures for trees no
-  consumer would fetch. **No license enforcement was lost** — the `license gate`
-  job in `ci.yml` (above) is job-gated on the `deps` scope, and it now runs on the
-  merge queue as well as the pull request, so `main` receives a dependency change
-  only through a queue build that gate passed. Not itself a required
-  check; the mechanics are in
-  [docs/reference/supply-chain.md](../docs/reference/supply-chain.md).
-  Cancellation is scoped to the **`sbom` job**, not the workflow: a newer run
-  supersedes a lane still cataloguing an older tree, but `sign` carries no group
-  and cannot be interrupted — it writes to Rekor before the bundles upload, and a
-  lane cut between the two would leave a permanent signature for a tree whose
-  bundles nobody can fetch. Superseding therefore only takes effect *before*
-  signing begins — while `sbom` is pending or running.
-- **`release.yml`** — **manual dispatch only**, cuts a margince-constellation
-  release versioned `1970.<build>` (the year pinned to the epoch while the
-  flow is a PoC, so these releases order below any real dated release; the
-  build is the workflow run number) in the dist service of the constellation
-  deployment at test.margince.com. A constellation release is a server
-  deployment, which GitHub does not host, so this is not a GitHub release —
-  with one exception, the desktop bundles, below.
-  It used to run on **every push to `main`**: about 400 runs a week, ~10
-  runner-minutes each on arm64, three jobs apiece drawn from the same
-  20-concurrent company ceiling the PR gates queue in — a full-stack merge already
-  schedules 28 jobs against it. Releasing per commit spent that budget on
-  versions nobody asked for, which the epoch-pinned `1970.*` scheme says out
-  loud: the repository is under heavy development and has no real releases yet.
-  A release is now a decision somebody makes. Two consequences are recorded
-  where they bite rather than here — the role images lose their only build
-  (the Dockerfile-only bullet above,
-  https://github.com/margince/margince/issues/1965) and the patch range
-  degenerates to one commit (below).
-  The release-management CLI cuts the
-  incremental patch and uploads it with `draft-release`
-  together with the three source-tree SBOMs regenerated at the release commit
-  (`make sbom` — the dist service verifies the SBOMs attest every file the
-  patch produces, so the possibly-lagging committed `sboms/` are never
-  uploaded), then the three role images are built through the bake file
-  (`docker-bake.hcl`, linux/amd64 + linux/arm64 with `mode=max` provenance
-  attestations — the builder stages cross-compile natively, only runtime
-  layers run emulated). The bake warms up from two Actions caches, because
-  the runner is ephemeral: `CACHE=gha` exports the layer cache per role
-  (its durable win is the dependency-download layer, which busts only on a
-  module-pin change), and buildkit-cache-dance + actions/cache carry the
-  BuildKit cache-mount contents (Go compile cache, pnpm store, tsc
-  `.tsbuildinfo`) across runs — mounts are not layers, so no layer cache
-  covers them. Corepack's download is deliberately not among them: the image
-  bakes the pinned pnpm into a layer, and a mount over Corepack's home would
-  hide it. Both live in the repo's 10 GB Actions cache, which the CI
-  lanes' Go caches keep near the cap, so entries older than a few hours are
-  routinely LRU-evicted: the caches bridge releases that land close
-  together — the busy-day case where they matter — and a release after a
-  quiet night simply bakes cold. The images are pushed to the constellation
-  registry
-  (`registry.test.margince.com/margince/<role>`, authenticated as the
-  registry publisher via the `MARGINCE_AUTH_PUBLISHER_TOKEN` secret), added to
-  the draft as digest-pinned references with `add-artifacts`, and the release
-  is published with `publish-release`. The dist uploads authenticate with the
-  dist publisher token (the `MARGINCE_DIST_PUBLISHER_TOKEN` secret).
-  **The patch range is now always `HEAD~1..HEAD`.** A dispatch carries no push
-  range, so the base falls back to the parent commit — meaning a dispatched
-  release's patch describes **one commit**, however many landed since the last
-  release, and a consumer applying patches in order cannot use this stream to
-  move forward at all. That is strictly worse than it was under the push trigger,
-  where the range at least spanned the push; it is recorded rather than blocking
-  because nothing consumes the stream today. Deriving the base from the last
-  **published** release is what fixes it, and is the prerequisite for any
-  automatic trigger ever coming back
-  ([#1798](https://github.com/margince/margince/issues/1798)).
-  Concurrency still matters only for two deliberate dispatches: `draft` and
-  `docker-image` each carry a cancelling group so a superseded bake stops, while
-  `publish` carries a group that **serializes instead of cancelling** — a publish
-  that has started always finishes, and a publish still pending when a newer one
-  arrives gives up its place. That is mutual exclusion, not ordering: nothing on
-  this path rejects a stale version, so a re-run or a dispatch of an older commit
-  can still publish after a newer one
-  ([#1810](https://github.com/margince/margince/issues/1810)) — a
-  sharper edge now that dispatching an arbitrary ref is the only way in.
-  Not a gate — it never blocks a merge.
-
-  **When the `desktop` dispatch input is set** (a checkbox on the Run-workflow
-  form, default **off**), three further jobs attach the desktop bundles
-  to a **GitHub** release under the same `1970.<build>` version, which is the
-  page a person browses to download a build: `desktop-macos` and
-  `desktop-windows` are *called*, not copied — the same reusable workflows the
-  pull-request check runs, so a release bundle cannot differ from the bundle CI
-  blessed — and `github-release` re-names the two artifacts after the version,
-  re-zips the Windows tree that `download-artifact` expanded, and creates the
-  release as a **prerelease** (a `1970.*` build must not present itself as the
-  product's latest). It carries the only `contents: write` in the workflow. It
-  needs `draft` and the two build jobs but deliberately **not** `publish`: the
-  dist completeness gate is about the patch and the SBOMs, so a dist-side
-  failure must not withhold bundles that already built correctly.
-  The input exists because the trigger used to carry this distinction — a push
-  got the dist release, a dispatch also got the bundles — and with the push
-  trigger gone, `github.event_name == 'workflow_dispatch'` is true on every run,
-  so it would have made every release compile Postgres from source twice. Default
-  off keeps a dist-only release cheap; all three jobs share the one input so the
-  GitHub release appears exactly when the bundles it would hold do.
-- **`desktop-macos.yml` / `desktop-windows.yml`** — build the self-contained
-  desktop folder for their own platform, which is the only platform it can be
-  built on: pgvector has no build system but `nmake` against MSVC, the event bus
-  needs MSYS2, and the macOS half rewrites every Mach-O load command to `@rpath`
-  and re-signs each patched file. Path-scoped to `desktop/**` on pull requests
-  so an ordinary change never pays for a Postgres compile, plus manual dispatch,
-  plus `workflow_call` from `release.yml`. Neither is a required check. The
-  macOS lane uploads a **tarball** because `upload-artifact` does not preserve
-  the executable bit, and a `margince` a tester cannot run is worse than no
-  artifact; the Windows lane has no such bit and uploads the folder.

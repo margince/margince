@@ -124,7 +124,7 @@ describe("a row claims no verb it cannot perform", () => {
       // that draws nothing.
       //
       // The third spelling is the dispatch table's. ANSWER_BY_SOURCE pairs a
-      // source with the verb that unlocks it and RowAnswer asks
+      // source with the verb that unlocks it and `rowAnswer` asks
       // `includes(keyed.verb)` once for all of them — so the guard is real and
       // the verb's name is a `verb:` field rather than a literal argument. The
       // pattern anchors on that field name, not on the bare word, so a verb

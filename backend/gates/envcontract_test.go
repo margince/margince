@@ -87,15 +87,15 @@ const (
 	deploymentDoc = "../docs/deployment.md"
 )
 
-// deploySurfaceRoots are the non-Go trees that configure a deployment: the
-// entrypoints and helper scripts, the compose/CI definitions, and the images.
+// deploySurfaceRoots are the non-Go paths that configure a deployment: the
+// entrypoints and helper scripts, the dev compose stack, and the CI definitions.
 // A variable read only here is as real as one Go reads, so obligations 2 and 3
 // must accept it. MARGINCE_ADMIN_PASSWORD is the current example: the entrypoint
 // turns it into the file reference margince.yaml names — OPS-CFG-3 keeps secret
 // VALUES out of every config layer the product reads — so a Go-only definition of
 // "live" would report it as dead in a file whose purpose is to offer it to an
 // operator.
-var deploySurfaceRoots = []string{"../scripts", "../infra", "../.github/workflows"}
+var deploySurfaceRoots = []string{"../scripts", "../docker-compose.dev.yml", "../.github/workflows"}
 
 // envVarsReadByGoCode maps each MARGINCE_* name a Go string literal spells to
 // the first file spelling it. The trees are the ones the license sweep covers

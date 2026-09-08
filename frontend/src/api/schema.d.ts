@@ -23607,6 +23607,14 @@ export interface components {
              *     Repeated ids are collapsed — attaching one file twice is not something a message
              *     can mean — and naming more distinct files than `maxItems` is refused with
              *     422 `too_many_attachments`.
+             *
+             *     A file with NO CONTENT is refused with 422 `empty_attachment`, naming the file.
+             *     It is a separate code from the size one on purpose: an empty file is not a file
+             *     that is too big, and a client that reported it as a limit would send somebody
+             *     off to shrink something already as small as it can be. Nothing anywhere can send
+             *     it, so it is refused here rather than by whichever transport happens to carry
+             *     the message — an upload is refused for the same reason, so a file that reaches
+             *     this field with no bytes was captured that way from an inbound message.
              */
             attachment_ids?: string[];
             to: string[];
@@ -24017,6 +24025,14 @@ export interface components {
              *     Repeated ids are collapsed — attaching one file twice is not something a message
              *     can mean — and naming more distinct files than `maxItems` is refused with
              *     422 `too_many_attachments`.
+             *
+             *     A file with NO CONTENT is refused with 422 `empty_attachment`, naming the file.
+             *     It is a separate code from the size one on purpose: an empty file is not a file
+             *     that is too big, and a client that reported it as a limit would send somebody
+             *     off to shrink something already as small as it can be. Nothing anywhere can send
+             *     it, so it is refused here rather than by whichever transport happens to carry
+             *     the message — an upload is refused for the same reason, so a file that reaches
+             *     this field with no bytes was captured that way from an inbound message.
              */
             attachment_ids?: string[];
             /**
@@ -24200,6 +24216,14 @@ export interface components {
              *     Repeated ids are collapsed — attaching one file twice is not something a message
              *     can mean — and naming more distinct files than `maxItems` is refused with
              *     422 `too_many_attachments`.
+             *
+             *     A file with NO CONTENT is refused with 422 `empty_attachment`, naming the file.
+             *     It is a separate code from the size one on purpose: an empty file is not a file
+             *     that is too big, and a client that reported it as a limit would send somebody
+             *     off to shrink something already as small as it can be. Nothing anywhere can send
+             *     it, so it is refused here rather than by whichever transport happens to carry
+             *     the message — an upload is refused for the same reason, so a file that reaches
+             *     this field with no bytes was captured that way from an inbound message.
              *
              *     A messaging channel carries this message's text as a CAPTION, which is bounded
              *     far below a text-only message; `GET /v1/channel-providers` publishes that bound
@@ -30365,6 +30389,29 @@ export interface components {
              *     without it, a model that never ran and a night with nothing in it look identical.
              */
             annotated_at?: string | null;
+            /**
+             * @description The ranking factors this run could not read, so a client can say "the order does
+             *     not account for this" instead of presenting a queue as fully ranked. Never
+             *     returned absent, and empty on the ordinary read: empty and withheld are different
+             *     answers, and a factor that floors silently makes a deal rank lower than it is with
+             *     nothing marking why.
+             *
+             *     `warmth` is omitted for a caller with no `relationship` edge grant. Every seat on
+             *     a deal is a `deal_stakeholder` edge, so such a caller runs no stakeholder read at
+             *     all and the factor has no input for ANY deal — which is why this is a property of
+             *     the run and not of an item.
+             *
+             *     A named factor still appears in each item's `feature_vector`, at its floor. The
+             *     decomposition is what the run scored with, and editing it here would leave a
+             *     reader unable to check the `composite` against its parts; this array is what says
+             *     the floor is an absence rather than a reading.
+             *
+             *     Stored with the run. The grant can be given or taken away afterwards, and a queue
+             *     ranked without warmth must not later be read as one that had it. Empty on a run
+             *     assembled before this field existed — a rep has one run per local day, so those
+             *     age out within a day.
+             */
+            factors_omitted: "warmth"[];
         };
         /**
          * @description One ranked queue entry: the §10.1 composite, its per-factor decomposition (no mystery
@@ -36632,6 +36679,23 @@ export interface operations {
                      *     description for why those two answers differ.
                      */
                     fingerprint: string;
+                    /**
+                     * Format: uuid
+                     * @description The project the page was scoped to when the suggestion was rendered,
+                     *     absent on the whole-account page.
+                     *
+                     *     A suggestion's fingerprint is derived from its EVIDENCE, and a scoped
+                     *     page reasons over one project's activity — so the same advice raised
+                     *     on a scoped page and on the account page are two different
+                     *     fingerprints. This route re-derives the suggestions to check the
+                     *     fingerprint is one the account really raises for this caller, and it
+                     *     can only reproduce a scoped one by narrowing the same way.
+                     *
+                     *     Send the project the reader was looking at. Omit it and a dismissal
+                     *     from a scoped page matches nothing and silently stores nothing, which
+                     *     a reader sees as the card refusing to go away.
+                     */
+                    project_id?: string;
                 };
             };
         };

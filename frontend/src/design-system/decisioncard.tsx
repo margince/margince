@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { Pencil, RotateCcwClock, Trash2 } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
 import type { components } from "../api/schema";
+import { ActionRow } from "./actionrow";
 import { Badge, Button } from "./atoms";
 import { type Fact, FactList } from "./factlist";
+import { IconAction } from "./iconaction";
 import type { SectionState } from "./surfacestate";
 import { SurfaceState } from "./surfacestate";
 import {
@@ -905,11 +908,20 @@ export function DecisionCard({
 
 // The verbs.
 //
-// Accept is the control that STARTS the write, so it is the one that goes busy:
-// it keeps the reader's focus and says a verdict is on its way. The other three
-// stay `disabled` while it is out, and the difference is the whole point of
-// having two props — they did not start anything, they are simply not available
-// yet. Drawing Reject busy would claim a rejection nobody sent.
+// ONE of the four is a call to action, and the row says so: Accept keeps its
+// word and its fill on the trailing edge, the three that decline sit on the
+// leading one as glyphs. Four labelled buttons in a flow made the reader read
+// all four every time a card arrived, and a queue is answered card after card —
+// the whole cost of that row is paid once per decision. The three are exactly
+// the case `IconAction` is for: a trash can, a clock turned back and a pencil
+// are verbs a reader already knows, and each still carries its translated name
+// to a screen reader and to a pointer through the one `label`.
+//
+// Accept is also the control that STARTS the write, so it is the one that goes
+// busy: it keeps the reader's focus and says a verdict is on its way. The other
+// three stay `disabled` while it is out, and the difference is the whole point
+// of having two props — they did not start anything, they are simply not
+// available yet. Drawing Reject busy would claim a rejection nobody sent.
 function DecisionVerbs({
   labels,
   pending,
@@ -929,27 +941,43 @@ function DecisionVerbs({
     return null;
   }
   return (
-    <div className="approval-gate dcard-verbs">
-      {onAccept && (
-        <Button variant="primary" small pending={pending} onClick={onAccept}>
-          {labels.accept}
-        </Button>
-      )}
-      {onEdit && (
-        <Button small disabled={pending} onClick={onEdit}>
-          {labels.edit}
-        </Button>
-      )}
+    <ActionRow
+      className="dcard-verbs"
+      primary={
+        onAccept ? (
+          <Button variant="primary" small pending={pending} onClick={onAccept}>
+            {labels.accept}
+          </Button>
+        ) : undefined
+      }
+    >
       {onReject && (
-        <Button small disabled={pending} onClick={onReject}>
-          {labels.reject}
-        </Button>
+        <IconAction
+          small
+          label={labels.reject}
+          icon={<Trash2 aria-hidden />}
+          disabled={pending}
+          onClick={onReject}
+        />
       )}
       {onSkip && labels.skip && (
-        <Button small disabled={pending} onClick={onSkip}>
-          {labels.skip}
-        </Button>
+        <IconAction
+          small
+          label={labels.skip}
+          icon={<RotateCcwClock aria-hidden />}
+          disabled={pending}
+          onClick={onSkip}
+        />
       )}
-    </div>
+      {onEdit && (
+        <IconAction
+          small
+          label={labels.edit}
+          icon={<Pencil aria-hidden />}
+          disabled={pending}
+          onClick={onEdit}
+        />
+      )}
+    </ActionRow>
   );
 }

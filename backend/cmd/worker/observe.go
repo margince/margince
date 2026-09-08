@@ -14,12 +14,12 @@
 //
 // So this listener carries only what is PROCESS-LOCAL and therefore differs
 // per target — the Go runtime, this process's own pool, this process's relay
-// counter, and the AI counters of the Router this process routes through. It
-// re-serves no job-table gauge, and passes a nil outbox backlog for the same
-// reason: that read is the api's, and a second copy of a fleet-wide number is
-// a worse operator surface than one copy. It carries no workspace id and no
-// tenant data at all, which is what makes it a NARROWER surface than the
-// api's /metrics rather than a second copy of it.
+// counter, and the AI calls this process made. It re-serves no job-table
+// gauge, and passes a nil outbox backlog for the same reason: that read is the
+// api's, and a second copy of a fleet-wide number is a worse operator surface
+// than one copy. It carries no workspace id and no tenant data at all, which
+// is what makes it a NARROWER surface than the api's /metrics rather than a
+// second copy of it.
 //
 // The AI counters are not an exception to that rule but an instance of it: a
 // call is routed by ONE process, so the counter is a property of the process
@@ -30,7 +30,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"net"
 	"net/http"
@@ -41,6 +40,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/events"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 )
@@ -104,18 +104,6 @@ func (g *bootGate) check(context.Context) error {
 type observeListener struct {
 	Stop func()
 	Addr string
-
-	// PublishAIMetrics installs the /metrics AI section, and exists because
-	// this listener is started BEFORE the model path is resolved — that
-	// ordering is deliberate (a listener started later reports nothing during
-	// exactly the window a slow boot needs explaining), so the section has to
-	// arrive afterwards. Until it does, a scrape omits the family rather than
-	// serving one reading zero calls, which a rate would render as a healthy
-	// tier instead of an absent one.
-	//
-	// Always non-nil, including when the surface is off, so a caller publishes
-	// unconditionally rather than guarding a call it cannot see the shape of.
-	PublishAIMetrics func(func(io.Writer))
 }
 
 // startObserveListener serves the worker's probes and metrics on cfg.observeAddr.
@@ -132,35 +120,36 @@ type observeListener struct {
 // logged into a process that carries on looking healthy.
 func startObserveListener(ctx context.Context, cfg workerConfig, pool *pgxpool.Pool, rdb *redis.Client, boot *bootGate, log *slog.Logger) (observeListener, error) {
 	if cfg.observeAddr == "" {
-		return observeListener{Stop: func() {}, PublishAIMetrics: func(func(io.Writer)) {}}, nil
+		return observeListener{Stop: func() {}}, nil
 	}
-
-	// Held atomically because the scrape goroutine reads what this process's
-	// boot writes, and a plain field would be a data race the detector fails.
-	var aiSection atomic.Value
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", httpserver.Healthz)
 	mux.HandleFunc("/readyz", httpserver.Readyz("", nil, workerReadyChecks(pool, rdb, boot)...))
-	// nil backlog: the outbox backlog is a fleet-wide read the api already
-	// serves. nil jobStats and nil overlay for the same reason — both are
-	// projections of shared tables, not of this process.
+	// Backlog, JobStats and Overlay are nil because each is a fleet-wide read
+	// of a shared table the api already serves, and a second copy of one
+	// number is a worse operator surface than one copy.
 	//
-	// `extra` carries the AI counters, and they belong here by the same test
+	// Extra carries the AI counters, and they belong here by the same test
 	// everything else on this listener passes: they count what THIS process
-	// routed through its own Router, so they differ per target and no other
-	// role can answer them. The api's exposition covers the api's calls only,
-	// so while this was nil every call the enrichment lanes made was missing
-	// from the AI panels entirely — and because the lanes are where the bulk
-	// of the routing happens, a per-tier error rate read from the api alone
-	// describes a small minority of the traffic while appearing to describe
-	// all of it. Undercounting a denominator is the failure mode that reports
-	// a healthy tier as broken.
-	mux.HandleFunc("/metrics", httpserver.Metrics(pool, nil, events.PublishedTotal, func(w io.Writer) {
-		if write, ok := aiSection.Load().(func(io.Writer)); ok && write != nil {
-			write(w)
-		}
-	}, nil, nil))
+	// routed, so they differ per target and no other role can answer them.
+	// While this was nil every call the enrichment lanes made was missing from
+	// the AI panels entirely — and because the lanes are where the bulk of the
+	// routing happens, a per-tier error rate read from the api alone described
+	// a small minority of the traffic while appearing to describe all of it.
+	// Undercounting a denominator is the failure mode that reports a healthy
+	// tier as broken.
+	//
+	// Wired unconditionally at construction rather than published once the
+	// model path resolves. The collector is process-wide — every Router in the
+	// binary increments the same one — so nothing here needs the path, and the
+	// listener keeps starting before that resolution, which is what lets it
+	// explain a slow boot.
+	mux.HandleFunc("/metrics", httpserver.Metrics(httpserver.MetricsInput{
+		Pool:      pool,
+		Published: events.PublishedTotal,
+		Extra:     ai.WriteProcessMetrics,
+	}))
 
 	srv := &http.Server{
 		Addr: cfg.observeAddr,
@@ -189,9 +178,7 @@ func startObserveListener(ctx context.Context, cfg workerConfig, pool *pgxpool.P
 		}
 	}()
 
-	return observeListener{Addr: bound, PublishAIMetrics: func(write func(io.Writer)) {
-		aiSection.Store(write)
-	}, Stop: func() {
+	return observeListener{Addr: bound, Stop: func() {
 		// Its own window, detached from the run context: at shutdown that
 		// context is already cancelled, and passing it would turn every
 		// graceful drain into an immediate close.

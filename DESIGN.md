@@ -126,9 +126,9 @@ styleseed visual-craft rules and Emil Kowalski's design-engineering notes.
 
 1. **A lit ground, and one pane per zone.** The page is a pale green paper lit
    from two corners, an emerald glow behind the sidebar and an indigo one
-   behind the far edge. Each zone of a record is one white pane on it, with a
-   hairline edge and a 20px corner, and inside a pane there is only ever a
-   title, a rule and rows. Dark is the same room with the lights down.
+   at the top of the far edge. Each zone of a record is one white pane on it,
+   with a hairline edge and a 20px corner, and inside a pane there is only ever
+   a title, a rule and rows. Dark is the same room with the lights down.
 2. **Everything is a list.** A record's attributes are a list of label and
    value in a panel on the left that folds. What happened is a list. What
    needs you is a list. Money is a list. Because every list is the same list,
@@ -141,8 +141,8 @@ styleseed visual-craft rules and Emil Kowalski's design-engineering notes.
    the rest.
 5. **Colour means something.** Emerald is the one filled verb, a link and the
    light behind the sidebar. Indigo is a tinted row that says an agent wrote
-   it, and the light behind the far edge. Green, amber and red are a dot
-   before a word. Nothing is coloured to look nice.
+   it, and the light at the top of the far edge. Green, amber and red are a
+   dot before a word. Nothing is coloured to look nice.
 
 Rules 1 and 5 are already held by gates; this file adds 2, 3 and 4.
 
@@ -165,9 +165,11 @@ edge is `--aiMed`, and status is `--success` / `--warn` / `--danger`.
 | Token | Value | Role |
 |---|---|---|
 | `--bg` | `#f1f5f2` | The paper the page is read on. |
-| `--glowA` / `--glowB` | `rgba(24,190,120,.06)` / `rgba(91,97,214,.10)` | The emerald light at the top-left corner behind the sidebar; the indigo light at the bottom-right. Radials of 900×620, the only decoration on the page. |
+| `--glowA` / `--glowB` | `rgba(24,190,120,.06)` / `rgba(91,97,214,.10)` | The emerald light at the top-left corner behind the sidebar; the indigo light at the top-right. Radials of 900×620, the only decoration on the page. |
 | `--pane` / `--paneEdge` | `rgba(255,255,255,.72)` + `blur(12px)` / `rgba(16,26,21,.08)` | A zone, the details panel, a board card, a control at rest. |
 | `--bg2` / `--bg3` | `rgba(255,255,255,.55)` / `rgba(16,26,21,.05)` | The sidebar (glass over the glow, `blur(20px)`); a pill, a keycap, the active sidebar row. |
+| `--bgChip` | `rgba(16,26,21,.07)` | The shipped spelling of `--bg3`'s pill and keycap: the fill under a badge, a key-cap, a segmented strip, the trough of a meter. TRANSLUCENT, so a chip reads one step deeper than whatever ground it lands on — an opaque value can only be a step off one, and on a plate drawn in the same grey it is a chip nobody can see. `.07` and no deeper: `--accentText` on this fill reads 4.57:1 over `--bgCard`, the worst of the four grounds a chip lands on, and `.08` would take that to 4.49:1 — under the floor. |
+| `--textChip` | `#57645e` | Meta text ON `--bgChip`, and a token rather than `--textMeta` because that fill costs the four per cent of contrast headroom `--textMeta` had — 4.68:1 on `--bgCard`, and anything laid under it fails. The same split, for the same reason, as `--accentText` and `--tealText`. |
 | `--line` / `--line2` | `rgba(16,26,21,.08)` / `.16` | The hairline between rows; a control's outline, the spine's axis. |
 | `--ink` / `--ink2` / `--ink3` / `--ink4` | `#101a15` / `#33403a` / `#66736c` / `#9aa59f` | Names and values / body / labels and meta / placeholders and dates. |
 | `--accent` / `--accentText` / `--accentBg` | `#0b7a53` / `#0a6f4b` / `#e8f3ee` | The one filled verb; a link; a selected row or a done stage. |
@@ -181,7 +183,9 @@ The same room with the lights down: `--bg #0c1311` (a hair above the mock's
 (`.10` / `.20`) because they are the only light, panes at
 `rgba(255,255,255,.045)` with a `.09` edge, ink from `#eef3ef` down to
 `#5c6862`, the accent lifted to `#2bb673` with dark ink on it, the indigo text
-lifted to `#b3b7f5`. The three-state theme pattern (`:root`,
+lifted to `#b3b7f5`. The chip inverts rather than mirrors: `--bgChip` becomes
+`rgba(255,255,255,.09)`, because a chip on a dark ground has only one direction
+to step, and `--textChip` lifts with it to `#95a69f`. The three-state theme pattern (`:root`,
 `prefers-color-scheme` guarded by `:not([data-theme="light"])`,
 `[data-theme="dark"]`) is how they switch.
 
@@ -344,7 +348,7 @@ scrolls inside itself.
   record (people, seats, tags, the Deal Room, documents). It is where the
   current product keeps its context column, so a rep's hand does not move.
 - **The glows**: the emerald light at the top-left is faint (`.06` in light,
-  `.10` in dark); the indigo one at the bottom-right a step stronger. They are
+  `.10` in dark); the indigo one at the top-right a step stronger. They are
   atmosphere, not a feature, and the eye should not find them.
 
 ## 7. How the tool feels, and how a page is structured

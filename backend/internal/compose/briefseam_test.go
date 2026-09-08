@@ -63,9 +63,10 @@ func TestEveryPersistedBriefFieldIsServedOrNamedAsWithheld(t *testing.T) {
 		ID: runID, UserID: userID, GeneratedAt: generated, AsOf: asOf,
 		LocalDay:       time.Date(2026, 8, 8, 0, 0, 0, 0, time.UTC),
 		CandidateCount: 17, RevenueNormMinor: 918_273, RevenueNormCurrency: "CHF",
-		Narrative:   "Two replies overnight, one deal went quiet.",
-		AnnotatedAt: &annotatedAt,
-		PreviousDay: time.Date(2026, 8, 7, 0, 0, 0, 0, time.UTC),
+		FactorsOmitted: []string{"warmth"},
+		Narrative:      "Two replies overnight, one deal went quiet.",
+		AnnotatedAt:    &annotatedAt,
+		PreviousDay:    time.Date(2026, 8, 7, 0, 0, 0, 0, time.UTC),
 		Items: []briefs.BriefRunItem{{
 			ID: itemID, DealID: dealID, Rank: 3, Composite: 0.815,
 			Features: briefs.BriefFeatureVector{
@@ -119,6 +120,9 @@ func TestEveryPersistedBriefFieldIsServedOrNamedAsWithheld(t *testing.T) {
 		// it — the structural version of the guarantee the digits above only
 		// have by probability.
 		"RevenueNormCurrency": "CHF",
+		// Served, not withheld: it says the ORDER the agent is reading is not
+		// the order, which no other field on the run can say.
+		"FactorsOmitted": `"factors_omitted":["warmth"]`,
 		// The items are covered field by field below; what this row asserts is
 		// that the list itself arrived.
 		"Items": `"deal_id":"` + dealID.String(),

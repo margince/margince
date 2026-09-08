@@ -8,7 +8,7 @@ package webread
 // The case behind these: a Next.js marketing site serves a shell with no body
 // text, so the read judged it "no readable text" and settled the domain as
 // parked — a real company on file as an empty address. The words were in the
-// markup the whole time, in the schema.company block the framework emitted.
+// markup the whole time, in the schema.org block the framework emitted.
 
 import (
 	"context"

@@ -2705,7 +2705,16 @@
   padding: 1px var(--space-2);
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--bgCard);
+  background: var(--bgChip);
+}
+/* The ink the fill above costs. `.t-label` carries the size and sets --textMeta
+   with it, which reads 4.07:1 over the chip on --bgCard; --textChip is the same
+   role one step along, and it is the token that exists for text on this fill.
+   BOTH classes, not one: `.t-label` sets its colour at a single class of
+   specificity, so a rule naming only the pill would win or lose on whichever
+   sheet the bundler put last. */
+.t-label.ob-triage-row-provenance {
+  color: var(--textChip);
 }
 
 /* The expanded weight: the same card, taller — the value editable in
@@ -2979,8 +2988,15 @@
   padding: 0 var(--space-2);
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--bgCard);
+  background: var(--bgChip);
   font-weight: var(--fw-medium);
+}
+/* Same as the provenance pill above: the count sits ON the chip fill, so it
+   takes --textChip rather than the --textMeta `.t-caption` sets beside its
+   size, and it names both classes so the override does not depend on sheet
+   order. */
+.t-caption.ob-triage-fact-type-count {
+  color: var(--textChip);
 }
 
 /* The atom wraps its children; the rows are the panel, so the wrapper adds
@@ -3173,7 +3189,7 @@
   block-size: var(--space-2);
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--bgCard);
+  background: var(--bgChip);
   overflow: hidden;
 }
 

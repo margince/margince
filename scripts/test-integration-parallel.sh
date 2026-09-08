@@ -131,7 +131,7 @@ build_template
 GO_DIRS=(backend)
 
 # Redis logical dbs available to the lane: every db the server serves except 0,
-# which `make dev` owns. Must match --databases in infra/docker-compose.dev.yml.
+# which `make dev` owns. Must match --databases in docker-compose.dev.yml.
 # It is one PER PACKAGE, not per concurrent job — a package's keys must survive
 # the whole package, and a slot freed by a finished package cannot be handed on
 # while its successor is still reading.
@@ -400,9 +400,9 @@ NPKGS=$(wc -l < "$WORK" | tr -d ' ')
 # overlaybudget's budgettest both FLUSHDB between tests, so a collision wipes the
 # other package's keys mid-test and the failure surfaces in whichever suite was
 # reading them, with nothing pointing back here. Redis serves REDIS_DBS+1
-# databases (infra/docker-compose.dev.yml); db 0 is reserved for `make dev`.
+# databases (docker-compose.dev.yml); db 0 is reserved for `make dev`.
 if (( NPKGS > REDIS_DBS )); then
-  echo "FAIL: $NPKGS integration packages but only $REDIS_DBS Redis logical dbs — raise all three together: REDIS_DBS here, testdb.RedisDBs in backend/internal/platform/testdb/redis.go (same value), and --databases in infra/docker-compose.dev.yml (one MORE, it counts the reserved db 0)"
+  echo "FAIL: $NPKGS integration packages but only $REDIS_DBS Redis logical dbs — raise all three together: REDIS_DBS here, testdb.RedisDBs in backend/internal/platform/testdb/redis.go (same value), and --databases in docker-compose.dev.yml (one MORE, it counts the reserved db 0)"
   exit 1
 fi
 # Say what was left to the unit lane. An unreported exclusion and a broken

@@ -189,7 +189,8 @@ arch-lint, unit and fitness tests, contract drift, and the script gates)
 plus `check-fe` (the frontend lane). The real-Postgres lane is
 `make test-integration` — it runs in parallel on per-package clone
 databases and needs `make db-up`. The CI pipeline that runs these as
-required checks is [infra/ci-pipeline.md](infra/ci-pipeline.md).
+required checks is
+[docs/explanation/ci-pipeline.md](docs/explanation/ci-pipeline.md).
 
 The web UI is the Vite/React app in `frontend/`. It is a standalone static
 build, served separately from the API binary, and a plain client of the

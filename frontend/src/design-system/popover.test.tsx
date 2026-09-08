@@ -1,5 +1,6 @@
 /** @vitest-environment jsdom */
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -7,10 +8,15 @@ import {
   waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { Popover } from "./popover";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  // A no-op unless a case below took the clock. One case does, and a fake
+  // clock left standing would hand the next test a `setTimeout` nobody runs.
+  vi.useRealTimers();
+});
 
 // The whole reason this is not a Disclosure: the aside is not on the page
 // until it is asked for, and asking for it does not move what is around it.
@@ -148,4 +154,102 @@ it("still opens on a click when it opens on hover", async () => {
   await userEvent.click(screen.getByRole("button"));
 
   expect(screen.getByText("Two of three invoices are late.")).toBeTruthy();
+});
+
+// The text-trigger shape, so the refusal is held on the bare `<button>` branch
+// as well as on the `Button` one below — a prop honoured for one of a
+// component's two shapes is a prop that works until someone drops the variant.
+it("does not open when the trigger is refused", async () => {
+  const user = userEvent.setup();
+  render(
+    <Popover label="How it stands" disabled>
+      Two of three invoices are late.
+    </Popover>,
+  );
+  const trigger = screen.getByRole("button");
+  expect(trigger.hasAttribute("disabled")).toBe(true);
+
+  await user.click(trigger);
+
+  expect(screen.queryByText("Two of three invoices are late.")).toBeNull();
+  expect(trigger.getAttribute("aria-expanded")).toBe("false");
+});
+
+// `disabled` blocks the OPENING and only that.
+//
+// A panel already open can hold the control that started the write — busy, and
+// holding the reader's focus — so closing it under them is the one thing this
+// state must not do. And the trigger stays focusable for as long as the panel
+// is up, because both close paths hand focus back to it and `.focus()` on a
+// natively disabled button is a silent no-op.
+it("keeps an open panel, and a focusable trigger, when the caller refuses it", async () => {
+  // One instance for the whole test: it carries the input-device state, so a
+  // second one would forget which buttons and keys the first left held.
+  const user = userEvent.setup();
+  const { rerender } = render(
+    <Popover label="How it stands" variant="ghost">
+      Two of three invoices are late.
+    </Popover>,
+  );
+  const trigger = screen.getByRole("button");
+  await user.click(trigger);
+
+  rerender(
+    <Popover label="How it stands" variant="ghost" disabled>
+      Two of three invoices are late.
+    </Popover>,
+  );
+
+  expect(screen.getByText("Two of three invoices are late.")).toBeTruthy();
+  expect(trigger.hasAttribute("disabled")).toBe(false);
+  trigger.focus();
+  expect(document.activeElement).toBe(trigger);
+
+  await user.keyboard("{Escape}");
+
+  // Closed by the reader, and only now refused — so the panel a write has
+  // emptied cannot be opened a second time while that write is out.
+  expect(screen.queryByText("Two of three invoices are late.")).toBeNull();
+  expect(trigger.hasAttribute("disabled")).toBe(true);
+});
+
+// The settled pointer is the SECOND way in, and `disabled` has to refuse it
+// too. The hover pair is spread on the same element as the press, so the native
+// attribute looks like the guard — it is not: some browsers deliver pointer
+// events to a disabled control, and the panel spreads the same pair on itself.
+it("does not open on a settled pointer when the trigger is refused", async () => {
+  // The hook reasons in `performance.now()`, so that clock is faked alongside
+  // the timers. Left running, the poll measures a real elapsed time against a
+  // simulated one, the settle never fires, and this case would pass without
+  // the guard it exists to hold (hoverintent.ts says so in its own header).
+  vi.useFakeTimers({
+    toFake: [
+      "setTimeout",
+      "clearTimeout",
+      "setInterval",
+      "clearInterval",
+      "performance",
+    ],
+  });
+  render(
+    <Popover label="How it stands" onHover disabled>
+      Two of three invoices are late.
+    </Popover>,
+  );
+  const trigger = screen.getByRole("button");
+
+  // The pointer arrives by a raw dispatch rather than through `userEvent`,
+  // which is how hoverintent.test.tsx drives this hook as well: `userEvent`
+  // waits on the clock between events, and that clock is the one this case has
+  // taken, so its first interaction never returns.
+  fireEvent.pointerEnter(trigger);
+  // Past the hook's CEILING, which settles whatever the pointer is doing — so
+  // the settle callback really did run, and the guard is the only thing left
+  // between it and an open panel.
+  act(() => {
+    vi.advanceTimersByTime(500);
+  });
+
+  expect(screen.queryByText("Two of three invoices are late.")).toBeNull();
+  expect(trigger.getAttribute("aria-expanded")).toBe("false");
 });

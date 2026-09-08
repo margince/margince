@@ -1,7 +1,9 @@
-import { ArrowRight, ChevronRight } from "lucide-react";
+import { ArrowRight, ChevronRight, Pencil, Trash2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { usePlural, useT } from "../i18n";
+import { ActionRow } from "./actionrow";
 import { Button } from "./atoms";
+import { IconAction } from "./iconaction";
 import "./trust.css";
 
 // The Margince trust primitives (B-EP09.3a, design-language §4): the
@@ -366,6 +368,13 @@ export function ProvenanceTag({
   );
 }
 
+// The universal triad, with ONE of the three a call to action. Accept keeps its
+// word and its fill on the trailing edge; Dismiss and Edit sit on the leading
+// one as glyphs, which is what `IconAction` is for — a trash can and a pencil
+// are verbs a reader already knows, and each still carries its translated name
+// to a pointer and to a screen reader through the one `label`. Three labelled
+// buttons in a flow made a reader read all three before answering, and a staged
+// value is answered card after card.
 export function ApprovalGate({
   onAccept,
   onEdit,
@@ -377,17 +386,27 @@ export function ApprovalGate({
 }>) {
   const t = useT();
   return (
-    <div className="approval-gate">
-      <Button variant="primary" small onClick={onAccept}>
-        {t("trust.accept")}
-      </Button>
-      <Button small onClick={onEdit}>
-        {t("trust.edit")}
-      </Button>
-      <Button small onClick={onDismiss}>
-        {t("trust.dismiss")}
-      </Button>
-    </div>
+    <ActionRow
+      className="approval-gate"
+      primary={
+        <Button variant="primary" small onClick={onAccept}>
+          {t("trust.accept")}
+        </Button>
+      }
+    >
+      <IconAction
+        small
+        label={t("trust.dismiss")}
+        icon={<Trash2 aria-hidden />}
+        onClick={onDismiss}
+      />
+      <IconAction
+        small
+        label={t("trust.edit")}
+        icon={<Pencil aria-hidden />}
+        onClick={onEdit}
+      />
+    </ActionRow>
   );
 }
 
@@ -470,6 +489,10 @@ export function StagedProposal({
       </p>
       {proposal.evidence && <EvidenceChip evidence={proposal.evidence} />}
       {state.phase === "editing" ? (
+        // A field and its submit, not a row of verbs that divide: `ActionRow`
+        // says in as many words that a form's submit row is not its shape, and
+        // holding this one apart would put the air of a decision between a
+        // value and the button that commits it.
         <form
           className="approval-gate"
           onSubmit={(event) => {

@@ -11,9 +11,9 @@ package gates
 // coming back.
 //
 // It never had to come back, because it never left: the product said company
-// on every screen while the schema said organization, parts of the code said
-// org, and the tool surface said account. A model asking for record_type
-// "company" was refused by a registry that admitted only "organization", and a
+// on every screen while the schema said company, parts of the code said
+// company, and the tool surface said account. A model asking for record_type
+// "company" was refused by a registry that admitted only "company", and a
 // reader grepping for the company table found nothing. Nothing failed, because
 // nothing was looking — which is why the fix is a test and not a sweep.
 //
@@ -39,13 +39,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// theOtherWord matches the record type's former names. `org` only where it is
+// theOtherWord matches the record type's former names. `company` only where it is
 // a whole identifier component: it is a substring of forget, Georgia, morgue
 // and borgen, and a census that fired on those would be turned off.
 //
 // The camelCase HUMP is spelled out rather than folded into a case-insensitive
-// class, and that is the case this test was written without: `orgID` and
-// `partnerOrgID` are the commonest form the abbreviation takes, and an earlier
+// class, and that is the case this test was written without: `companyID` and
+// `partnerCompanyID` are the commonest form the abbreviation takes, and an earlier
 // version of this pattern read a boundary as "not a letter" and so matched
 // neither. It reported a clean tree over a planted one.
 var theOtherWord = regexp.MustCompile(
@@ -64,7 +64,7 @@ var notThisRecordType = regexp.MustCompile(
 
 // hostname matches a .org TLD. There are 275 in this tree — a go.mod require,
 // a disposable-email fixture list, schema.company in a comment — and in each one
-// `org` sits between a dot and a slash or a quote exactly as an identifier
+// `company` sits between a dot and a slash or a quote exactly as an identifier
 // component would.
 var hostname = regexp.MustCompile(`[a-z0-9][a-z0-9.-]*\.orgs?\b`)
 
@@ -82,23 +82,23 @@ var exempt = gatekit.Waive(map[string]string{
 	".github/workflows/release.yml": "a GitHub organisation — the account a repository belongs " +
 		"to, not this record type",
 
-	// Microsoft's authority alias: `organizations` is a literal path segment at
+	// Microsoft's authority alias: `companies` is a literal path segment at
 	// login.microsoftonline.com beside `common` and `consumers`, and renaming
 	// it stops sign-in working.
-	"backend/internal/compose/microsoftsignin.go":           "Microsoft's `organizations` authority alias",
-	"backend/internal/compose/microsoftsignin_test.go":      "Microsoft's `organizations` authority alias",
+	"backend/internal/compose/microsoftsignin.go":           "Microsoft's `companies` authority alias",
+	"backend/internal/compose/microsoftsignin_test.go":      "Microsoft's `companies` authority alias",
 	"backend/internal/compose/capturegraph.go":              "Microsoft's `common` authority, which admits any tenant",
-	"backend/internal/modules/capture/connectorapp.go":      "Microsoft's `organizations` authority alias",
-	"backend/internal/modules/capture/connectorapp_test.go": "Microsoft's `organizations` authority alias",
+	"backend/internal/modules/capture/connectorapp.go":      "Microsoft's `companies` authority alias",
+	"backend/internal/modules/capture/connectorapp_test.go": "Microsoft's `companies` authority alias",
 	"backend/internal/modules/capture/graph/client.go":      "Microsoft's `common` authority, which admits any tenant",
 	"backend/cmd/api/config.go":                             "flag help for the Microsoft authority aliases",
 	".env.example":                                          "the Microsoft authority aliases, in the operator's own file",
 	"docs/reference/configuration.md":                       "the Microsoft authority aliases",
 
-	"backend/internal/platform/licensecheck/host.go": "the licence payload's `org` key. The Go " +
+	"backend/internal/platform/licensecheck/host.go": "the licence payload's `company` key. The Go " +
 		"name is ours; the key belongs to whoever signs the licence, and renaming it would stop " +
 		"every licence already issued from decoding",
-	"backend/internal/platform/licensecheck/licensecheck_test.go": "the licence payload's `org` key",
+	"backend/internal/platform/licensecheck/licensecheck_test.go": "the licence payload's `company` key",
 
 	"backend/internal/modules/people/companynamegate.go": "the .org TLD, in the stopword list that " +
 		"stops a brand written as its own domain from reducing to its suffix",
@@ -107,10 +107,10 @@ var exempt = gatekit.Waive(map[string]string{
 		"`{\"target\":\"organisation\"}` is the call the schema has to refuse",
 	"backend/internal/modules/agents/tools_vocabulary_test.go": "the same deliberately wrong argument",
 
-	"backend/internal/platform/webread/schemaorg.go": "schema.org's Organization type — its word " +
+	"backend/internal/platform/webread/schemaorg.go": "schema.org's Company type — its word " +
 		"for this thing, published by the sites we read",
-	"backend/internal/platform/webread/schemaorg_test.go":  "schema.org's Organization type",
-	"backend/internal/platform/webread/logoimages_test.go": "schema.org's Organization type",
+	"backend/internal/platform/webread/schemaorg_test.go":  "schema.org's Company type",
+	"backend/internal/platform/webread/logoimages_test.go": "schema.org's Company type",
 
 	"backend/internal/modules/people/vcard.go":                                "vCard's ORG property (RFC 6350)",
 	"backend/internal/modules/people/vcard_test.go":                           "vCard's ORG property (RFC 6350)",

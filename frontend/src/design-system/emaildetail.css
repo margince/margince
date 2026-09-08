@@ -36,6 +36,20 @@
   color: var(--textSecondary);
 }
 
+/* A name on an envelope line that is also a way to the record. It keeps the
+   line's own type and colour until it is hovered, so a header reads as a
+   header rather than as a row of links. */
+.emaildetail__party .entity-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--borderStrong);
+  text-underline-offset: 2px;
+}
+.emaildetail__party .entity-link:hover {
+  color: var(--accentText);
+  text-decoration-color: currentcolor;
+}
+
 .emaildetail__party--withheld {
   color: var(--textSecondary);
   font-style: italic;
@@ -83,6 +97,17 @@
      margin on the type would have sat between the subject and its badges
      instead of under both. */
   margin-bottom: var(--space-3);
+}
+
+/* Answer the message, or put it away — the two verbs of the header, on one
+   line at its far end. It does not shrink: the subject beside it wraps, and a
+   Reply that gave up its width to a long one would ellipsize into a verb
+   nobody can read. */
+.emaildetail__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
 }
 
 /* The subject with its access line under it, as one block beside the close

@@ -138,11 +138,19 @@ func TestTheWorkerMetricsAreProcessLocalAndReServeNoFleetGauge(t *testing.T) {
 	}
 
 	for _, family := range []string{
-		"margince_process_goroutines",
-		"margince_process_heap_bytes",
-		"margince_process_heap_sys_bytes",
-		"margince_process_gc_cycles_total",
+		// The runtime collectors, which say which PROCESS is wedged.
+		"go_goroutines",
+		"go_memstats_heap_alloc_bytes",
+		"go_gc_duration_seconds",
+		"process_cpu_seconds_total",
 		"margince_relay_published_total",
+		// The AI counters. This role resolves a model path and runs the briefs,
+		// the sweeps and the embedding lane through it, and every Router in the
+		// binary increments one process-wide collector — so a worker that
+		// renders none of it counts its own calls and tells nobody.
+		"margince_ai_calls_total",
+		"margince_ai_call_duration_seconds",
+		"margince_ai_tokens_total",
 	} {
 		if !strings.Contains(body, "# TYPE "+family+" ") {
 			t.Errorf("the worker publishes no %s; it is process-local and served nowhere else\ngot:\n%s", family, body)
@@ -215,55 +223,49 @@ func TestTheWorkerMetricsOmitThePoolSectionRatherThanZeroingIt(t *testing.T) {
 // to describe the installation's: the lanes in this binary do the bulk of the
 // routing, so the denominator is short by most of its calls.
 func TestTheWorkerServesItsOwnAICounters(t *testing.T) {
-	const family = `margince_ai_calls_total{provider="gemini",task="site_extract",tier="premium"} 7`
-	observe, err := startObserveListener(t.Context(), workerConfig{observeAddr: "127.0.0.1:0"},
-		nil, nil, &bootGate{}, quietLog())
-	if err != nil {
-		t.Fatalf("startObserveListener: %v", err)
-	}
-	t.Cleanup(observe.Stop)
+	_, body := get(t, startForTest(t)+"/metrics")
 
-	// Published AFTER the listener is already serving, which is the ordering
-	// run() has: the surface comes up before the model path is resolved.
-	observe.PublishAIMetrics(func(w io.Writer) { _, _ = io.WriteString(w, family+"\n") })
-
-	status, body := get(t, "http://"+observe.Addr+"/metrics")
-	if status != http.StatusOK {
-		t.Fatalf("GET /metrics = %d, want 200", status)
-	}
-	if !strings.Contains(body, family) {
-		t.Errorf("the published AI section never reached the exposition\ngot:\n%s", body)
+	if !strings.Contains(body, "# TYPE margince_ai_calls_total counter") {
+		t.Errorf("the worker serves no AI section, so every call its lanes route is missing from the "+
+			"AI panels\ngot:\n%s", body)
 	}
 	// Additive, not a replacement: the process section this listener exists
 	// for still has to be there beside it.
-	if !strings.Contains(body, "margince_process_heap_sys_bytes") {
-		t.Errorf("the process section went missing once an AI section was published\ngot:\n%s", body)
+	if !strings.Contains(body, "go_goroutines") {
+		t.Errorf("the process section went missing beside the AI section\ngot:\n%s", body)
 	}
 }
 
-// TestTheWorkerMetricsOmitTheAISectionUntilItIsPublished — the same "declared
-// or absent" posture the pool section takes, and it has to hold for the whole
-// boot window: the listener is serving before the model path is resolved, so
-// a scrape landing in between must omit the family rather than serve one
-// reading zero calls, which a rate renders as a healthy tier instead of none.
-func TestTheWorkerMetricsOmitTheAISectionUntilItIsPublished(t *testing.T) {
+// The invariant behind "declared or absent", stated as what actually protects a
+// rate: a process that has routed nothing must serve no SAMPLE, or a per-tier
+// error rate computed over it reads as a healthy tier rather than as no tier.
+//
+// The family HEADER may be present — it is, from boot, because the collector is
+// process-wide and needs no model path to exist. A header carries no sample, so
+// rate() and increase() see nothing either way; it is the sample that would
+// lie, and there is none until a call is made.
+func TestTheWorkerServesNoAISampleBeforeAnyCallIsRouted(t *testing.T) {
 	_, body := get(t, startForTest(t)+"/metrics")
-	if strings.Contains(body, "margince_ai_calls_total") {
-		t.Errorf("an unpublished model path produced AI counters, which read as a healthy tier rather than as no tier\ngot:\n%s", body)
+
+	for _, line := range strings.Split(body, "\n") {
+		if strings.HasPrefix(line, "margince_ai_") {
+			t.Errorf("a worker that has routed no call served an AI sample, which a rate reads as a "+
+				"healthy tier: %s", line)
+		}
 	}
 }
 
-// TestPublishAIMetricsIsSafeWhenTheSurfaceIsOff — off is the default, and
-// run() publishes unconditionally, so a nil seam here would panic every
-// worker that never enabled the listener.
-func TestPublishAIMetricsIsSafeWhenTheSurfaceIsOff(t *testing.T) {
+// Off is the default for this listener, and the AI section is wired at
+// construction — so an off surface must still be a legitimate configuration
+// that renders nothing rather than a boot that fails or a nil that panics.
+func TestTheAISectionIsHarmlessWhenTheSurfaceIsOff(t *testing.T) {
 	observe, err := startObserveListener(t.Context(), workerConfig{}, nil, nil, &bootGate{}, quietLog())
 	if err != nil {
 		t.Fatalf("an empty --observe-addr must be a legitimate configuration, got: %v", err)
 	}
 	t.Cleanup(observe.Stop)
-	if observe.PublishAIMetrics == nil {
-		t.Fatal("no publish seam returned; run() calls it unconditionally and would panic")
+
+	if observe.Addr != "" {
+		t.Errorf("an off surface bound %q; nothing should be listening", observe.Addr)
 	}
-	observe.PublishAIMetrics(func(io.Writer) { t.Fatal("an off surface must never render a section") })
 }

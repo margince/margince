@@ -8305,6 +8305,21 @@ func (e MeetingPlanUnknownKind) Valid() bool {
 	}
 }
 
+// Defines values for MorningBriefFactorsOmitted.
+const (
+	Warmth MorningBriefFactorsOmitted = "warmth"
+)
+
+// Valid indicates whether the value is a known member of the MorningBriefFactorsOmitted enum.
+func (e MorningBriefFactorsOmitted) Valid() bool {
+	switch e {
+	case Warmth:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MorningBriefItemReopenOn.
 const (
 	MorningBriefItemReopenOnMeeting MorningBriefItemReopenOn = "meeting"
@@ -28361,6 +28376,28 @@ type MorningBrief struct {
 	// CandidateCount Deals that cleared the §10 honest-short bar (may exceed the queue length).
 	CandidateCount int `json:"candidate_count"`
 
+	// FactorsOmitted The ranking factors this run could not read, so a client can say "the order does
+	// not account for this" instead of presenting a queue as fully ranked. Never
+	// returned absent, and empty on the ordinary read: empty and withheld are different
+	// answers, and a factor that floors silently makes a deal rank lower than it is with
+	// nothing marking why.
+	//
+	// `warmth` is omitted for a caller with no `relationship` edge grant. Every seat on
+	// a deal is a `deal_stakeholder` edge, so such a caller runs no stakeholder read at
+	// all and the factor has no input for ANY deal — which is why this is a property of
+	// the run and not of an item.
+	//
+	// A named factor still appears in each item's `feature_vector`, at its floor. The
+	// decomposition is what the run scored with, and editing it here would leave a
+	// reader unable to check the `composite` against its parts; this array is what says
+	// the floor is an absence rather than a reading.
+	//
+	// Stored with the run. The grant can be given or taken away afterwards, and a queue
+	// ranked without warmth must not later be read as one that had it. Empty on a run
+	// assembled before this field existed — a rep has one run per local day, so those
+	// age out within a day.
+	FactorsOmitted []MorningBriefFactorsOmitted `json:"factors_omitted"`
+
 	// GeneratedAt When this run was assembled.
 	GeneratedAt time.Time          `json:"generated_at"`
 	Id          openapi_types.UUID `json:"id"`
@@ -28383,6 +28420,9 @@ type MorningBrief struct {
 	// RevenueNormMinor The workspace-P90 (or fallback) base value the revenue factor normalized against.
 	RevenueNormMinor *int64 `json:"revenue_norm_minor,omitempty"`
 }
+
+// MorningBriefFactorsOmitted defines model for MorningBrief.FactorsOmitted.
+type MorningBriefFactorsOmitted string
 
 // MorningBriefFeatureVector The §10.1 factor decomposition, each normalized 0..1 — the composite reconciles to it.
 type MorningBriefFeatureVector struct {
@@ -32501,6 +32541,14 @@ type SendAccountEmailRequest struct {
 	// Repeated ids are collapsed — attaching one file twice is not something a message
 	// can mean — and naming more distinct files than `maxItems` is refused with
 	// 422 `too_many_attachments`.
+	//
+	// A file with NO CONTENT is refused with 422 `empty_attachment`, naming the file.
+	// It is a separate code from the size one on purpose: an empty file is not a file
+	// that is too big, and a client that reported it as a limit would send somebody
+	// off to shrink something already as small as it can be. Nothing anywhere can send
+	// it, so it is refused here rather than by whichever transport happens to carry
+	// the message — an upload is refused for the same reason, so a file that reaches
+	// this field with no bytes was captured that way from an inbound message.
 	AttachmentIds *[]openapi_types.UUID `json:"attachment_ids,omitempty"`
 
 	// Bcc Blind copies. They receive the message and are therefore owed consent
@@ -32762,6 +32810,14 @@ type SendEmailRequest struct {
 	// Repeated ids are collapsed — attaching one file twice is not something a message
 	// can mean — and naming more distinct files than `maxItems` is refused with
 	// 422 `too_many_attachments`.
+	//
+	// A file with NO CONTENT is refused with 422 `empty_attachment`, naming the file.
+	// It is a separate code from the size one on purpose: an empty file is not a file
+	// that is too big, and a client that reported it as a limit would send somebody
+	// off to shrink something already as small as it can be. Nothing anywhere can send
+	// it, so it is refused here rather than by whichever transport happens to carry
+	// the message — an upload is refused for the same reason, so a file that reaches
+	// this field with no bytes was captured that way from an inbound message.
 	AttachmentIds *[]openapi_types.UUID `json:"attachment_ids,omitempty"`
 
 	// Bcc Blind copies. They receive the message and are therefore owed consent
@@ -32899,6 +32955,14 @@ type SendMessageRequest struct {
 	// Repeated ids are collapsed — attaching one file twice is not something a message
 	// can mean — and naming more distinct files than `maxItems` is refused with
 	// 422 `too_many_attachments`.
+	//
+	// A file with NO CONTENT is refused with 422 `empty_attachment`, naming the file.
+	// It is a separate code from the size one on purpose: an empty file is not a file
+	// that is too big, and a client that reported it as a limit would send somebody
+	// off to shrink something already as small as it can be. Nothing anywhere can send
+	// it, so it is refused here rather than by whichever transport happens to carry
+	// the message — an upload is refused for the same reason, so a file that reaches
+	// this field with no bytes was captured that way from an inbound message.
 	//
 	// A messaging channel carries this message's text as a CAPTION, which is bounded
 	// far below a text-only message; `GET /v1/channel-providers` publishes that bound
@@ -38667,6 +38731,21 @@ type DismissCompanySuggestionJSONBody struct {
 	// currently raise is a `204` that stores nothing; see this operation's
 	// description for why those two answers differ.
 	Fingerprint string `json:"fingerprint"`
+
+	// ProjectId The project the page was scoped to when the suggestion was rendered,
+	// absent on the whole-account page.
+	//
+	// A suggestion's fingerprint is derived from its EVIDENCE, and a scoped
+	// page reasons over one project's activity — so the same advice raised
+	// on a scoped page and on the account page are two different
+	// fingerprints. This route re-derives the suggestions to check the
+	// fingerprint is one the account really raises for this caller, and it
+	// can only reproduce a scoped one by narrowing the same way.
+	//
+	// Send the project the reader was looking at. Omit it and a dismissal
+	// from a scoped page matches nothing and silently stores nothing, which
+	// a reader sees as the card refusing to go away.
+	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
 }
 
 // GetAnchorCompanyContextParams defines parameters for GetAnchorCompanyContext.

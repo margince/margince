@@ -116,7 +116,7 @@ func TestTheContactCountNeedsBothThePersonAndTheEdgeGrant(t *testing.T) {
 func TestTheCompanyRosterIsRefusedBeforeItReachesAStatement(t *testing.T) {
 	ctx := edgeGrantCtx(map[string]principal.ObjectGrant{"person": {Read: true}})
 	if _, err := StrengthForCompanyContacts(ctx, nil, ids.From[ids.CompanyKind](ids.NewV7()),
-		time.Now().UTC()); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		time.Now().UTC(), nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("StrengthForCompanyContacts(no edge grant) = %v, want ErrPermissionDenied", err)
 	}
 }

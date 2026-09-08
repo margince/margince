@@ -426,7 +426,7 @@ func TestPuttingOffAFindingNobodyRaisedStoresNothing(t *testing.T) {
 	// rules' rows and then the scan's: a fingerprint neither raised. The
 	// dismissal succeeds, saying nothing, and records nothing.
 	unraised := strings.Repeat("0", 64)
-	if err := view.DismissSuggestion(rep, company, unraised); err != nil {
+	if err := view.DismissSuggestion(rep, company, unraised, nil); err != nil {
 		t.Fatalf("dismissing a finding nobody raised: %v, want a quiet success", err)
 	}
 	var stored int
