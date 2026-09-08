@@ -6,7 +6,7 @@ name: Release
 # patch, SBOMs) and GitHub hosts none of that.
 #
 # This ran on every push to main: about 400 runs a week, roughly 10 runner-
-# minutes each on arm64, and three jobs drawn from the same company-wide ceiling of
+# minutes each on arm64, and three jobs drawn from the same org-wide ceiling of
 # 20 concurrent runners the PR gates queue in. ci.yml already explains what that
 # ceiling costs — a full-stack merge schedules 28 jobs against it, so overlapping
 # lanes turn a 9-minute gate into a much longer one and starve the PR lanes
@@ -80,9 +80,9 @@ permissions:
 env:
   # The release-management CLI image, published :latest from constellation's
   # main (gradionhq/margince-constellation). NOTE: since this repo moved to the
-  # margince company, the job's default GITHUB_TOKEN can NO LONGER read that package
-  # — it is private and owned by another organisation. A release dispatched
-  # before a cross-company PAT (read:packages on gradionhq) is wired into the three
+  # margince GitHub org, the job's default GITHUB_TOKEN can NO LONGER read that
+  # package — it is private and owned by a different GitHub org. A release
+  # dispatched before a cross-org PAT (read:packages on gradionhq) is wired into the three
   # `docker login ghcr.io` steps below WILL FAIL at login.
   RELEASE_MANAGEMENT_IMAGE: ghcr.io/gradionhq/margince-constellation/release-management:latest
   # The dist service of the constellation deployment the release is drafted

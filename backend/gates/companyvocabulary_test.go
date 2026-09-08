@@ -127,6 +127,8 @@ var exempt = gatekit.Waive(map[string]string{
 	"backend/gates/rlsclaimsprose_test.go": "its waiver keys quote shipped migrations verbatim, " +
 		"and a shipped migration is never edited — the quote has to keep the word the SQL says",
 
+	"backend/internal/compose/auditlegacytype.go": "the word audit rows written before the\n		rename still carry. `trg_audit_no_mutate` refuses an UPDATE on audit_log, so those rows\n		keep it forever and the two reads that filter the trail by record type have to match it —\n		the file exists to say so once instead of twice",
+
 	"backend/gates/companyvocabulary_test.go": "this file names the word in order to refuse it",
 })
 

@@ -130,7 +130,7 @@ func (g *Gate) validateRequestedFollowup(ctx context.Context, tx pgx.Tx, subject
 
 // validateInvoice answers a message about a named financial event.
 //
-// An invoice belongs to an COMPANY, so reaching a person means going
+// An invoice belongs to a COMPANY, so reaching a person means going
 // through employment. That is a real gap in ordinary CRM data — a finance
 // contact who was never linked to the customer record — and it is a data gap
 // rather than a legal one. So a missing link is unsupported with a reason a

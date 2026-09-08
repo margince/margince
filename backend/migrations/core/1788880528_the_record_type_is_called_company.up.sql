@@ -16,9 +16,15 @@
 -- 'organizer' stays. It is the role a person plays in a meeting, not this
 -- record type, and it is the one word here a blind substitution breaks.
 --
--- audit_log is not touched. It records what was true when each row was written,
--- a trigger holds it immutable, and no product read path filters it by this
--- literal -- so old rows keep the old word, which is what an audit log is for.
+-- audit_log is not touched, because it cannot be: trg_audit_no_mutate refuses
+-- an UPDATE on it, which is the property that makes the trail worth having. So
+-- rows written before this migration keep the old word forever.
+--
+-- Two product read paths DO filter the trail by this literal, and both are
+-- widened to accept it in compose/auditlegacytype.go rather than left to miss:
+-- the human-precedence join that decides whether an agent may overwrite a
+-- field, and the bounded audit export. Neither fails loudly on a miss, which
+-- is why they are named here.
 --
 -- This takes ACCESS EXCLUSIVE on most of the schema for one transaction. The
 -- timeout below bounds the WAIT for each lock and not the HOLD: once granted,
@@ -847,6 +853,32 @@ UPDATE approval_autonomy_policy SET kind = 'company_name_promotion' WHERE kind =
 
 -- A subscription names the streams it wants, and the relay now publishes
 -- company.*. Left alone, a subscription would go quiet with nothing reporting it.
+-- An approval names the record its staged actions act on. These are PENDING
+-- work: a target left under the old word is an approval whose owner nothing
+-- resolves, so it sits unappliable with nothing reporting it.
+UPDATE approval SET target_entity_type = 'company' WHERE target_entity_type = 'organization';
+UPDATE approval SET co_target_entity_type = 'company' WHERE co_target_entity_type = 'organization';
+
+-- A delivery row carries the record it was about and the event it carried.
+-- Retries read both, and the history is what an operator reconciles against.
+UPDATE webhook_delivery SET entity_type = 'company' WHERE entity_type = 'organization';
+UPDATE webhook_delivery
+   SET event_type = 'company.' || substring(event_type from 14)
+ WHERE event_type LIKE 'organization.%';
+
+-- An outbox row that has not been relayed yet still names the stream it will
+-- be published to, and its envelope names both the event and the record. A
+-- published row is history and is left alone; an unpublished one is about to
+-- become a message nobody is subscribed to.
+UPDATE event_outbox
+   SET stream = 'company.' || substring(stream from 14),
+       envelope = jsonb_set(envelope, '{type}',
+         to_jsonb('company.' || substring(envelope ->> 'type' from 14)))
+ WHERE published_at IS NULL AND stream LIKE 'organization.%';
+UPDATE event_outbox
+   SET envelope = jsonb_set(envelope, '{entity,type}', '"company"')
+ WHERE published_at IS NULL AND envelope #>> '{entity,type}' = 'organization';
+
 UPDATE webhook_subscription
    SET event_types = (
          SELECT array_agg(replace(t, 'organization.', 'company.') ORDER BY t)

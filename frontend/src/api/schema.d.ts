@@ -4037,7 +4037,7 @@ export interface paths {
          *     detail saying so — never as a failure, because a rep who cannot tell those apart will either
          *     distrust a good answer or trust a broken one.
          *
-         *     Human-only. The `enrich` verb reads an COMPANY from its website and takes an
+         *     Human-only. The `enrich` verb reads a COMPANY from its website and takes an
          *     company id, so it cannot express reading one activity; and this operation exists to put
          *     a question in front of the person who was in the meeting. An agent that wants the same
          *     outcome proposes the task directly through its own governed tool, where the confirm-first

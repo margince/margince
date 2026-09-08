@@ -108,7 +108,7 @@ func TestCase4TheAssistantCanDiscoverThatAddressesAreSearchableByDistance(t *tes
 	// the same document advertises an address radius for people — which is
 	// exactly the predicate this case's third test proves unanswerable.
 	if !advertisesOperator(t, answer.Vocabulary, "company", "address", "within_radius") {
-		t.Fatalf("case 4 criterion 1: the vocabulary does not say that an COMPANY's `address` "+
+		t.Fatalf("case 4 criterion 1: the vocabulary does not say that a COMPANY's `address` "+
 			"supports `within_radius`, so an assistant asked who is NEARBY has no way to learn a "+
 			"distance search over companies exists:\n%s", string(answer.Vocabulary))
 	}

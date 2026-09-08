@@ -18,6 +18,23 @@ UPDATE field_mask SET object = 'organization' WHERE object = 'company';
 UPDATE approval SET kind = 'org_name_promotion' WHERE kind = 'company_name_promotion';
 UPDATE approval_autonomy_policy SET kind = 'org_name_promotion' WHERE kind = 'company_name_promotion';
 
+UPDATE approval SET target_entity_type = 'organization' WHERE target_entity_type = 'company';
+UPDATE approval SET co_target_entity_type = 'organization' WHERE co_target_entity_type = 'company';
+
+UPDATE webhook_delivery SET entity_type = 'organization' WHERE entity_type = 'company';
+UPDATE webhook_delivery
+   SET event_type = 'organization.' || substring(event_type from 9)
+ WHERE event_type LIKE 'company.%';
+
+UPDATE event_outbox
+   SET stream = 'organization.' || substring(stream from 9),
+       envelope = jsonb_set(envelope, '{type}',
+         to_jsonb('organization.' || substring(envelope ->> 'type' from 9)))
+ WHERE published_at IS NULL AND stream LIKE 'company.%';
+UPDATE event_outbox
+   SET envelope = jsonb_set(envelope, '{entity,type}', '"organization"')
+ WHERE published_at IS NULL AND envelope #>> '{entity,type}' = 'company';
+
 UPDATE webhook_subscription
    SET event_types = (
          SELECT array_agg(replace(t, 'company.', 'organization.') ORDER BY t)

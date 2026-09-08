@@ -129,13 +129,13 @@ func (f fieldOwnership) HumanOwnedConflicts(ctx context.Context, entityType stri
 			         a.actor_type, a.after -> p.key AS current_value
 			  FROM proposed p
 			  JOIN audit_log a
-			    ON a.entity_type = $1 AND a.entity_id = $2 AND a.after ? p.key
+			    ON a.entity_type = ANY($1) AND a.entity_id = $2 AND a.after ? p.key
 			  ORDER BY p.key, a.occurred_at DESC, a.id DESC
 			),
 			human_created AS (
 			  SELECT EXISTS (
 			    SELECT 1 FROM audit_log a
-			    WHERE a.entity_type = $1 AND a.entity_id = $2
+			    WHERE a.entity_type = ANY($1) AND a.entity_id = $2
 			      AND a.action = 'create' AND a.actor_type = 'human'
 			  ) AS yes
 			)
@@ -147,7 +147,7 @@ func (f fieldOwnership) HumanOwnedConflicts(ctx context.Context, entityType stri
 			  AND NOT EXISTS (SELECT 1 FROM latest l WHERE l.key = p.key)
 			  AND `+unauditedHolder(table)+`
 			ORDER BY 1`,
-			entityType, id, patch)
+			auditTypesFor(entityType), id, patch)
 		if err != nil {
 			return err
 		}

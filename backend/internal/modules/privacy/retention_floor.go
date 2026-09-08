@@ -112,7 +112,7 @@ func floorWindowEnd(intervalArg, anchorArg int) string {
 // A deal QUALIFIES when it is won, or carries an offer past draft — a sent
 // Angebot documents the preparation of a Handelsgeschäft whether or not it
 // closed, which is why DEPACK-PARAM-5 prices sent offers at six years
-// alongside accepted ones. An COMPANY link is deliberately not enough: an
+// alongside accepted ones. A COMPANY link is deliberately not enough: an
 // company is a party, not a transaction, and a Handelsbrief hangs off the
 // transaction.
 //
