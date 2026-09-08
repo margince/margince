@@ -31,6 +31,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// companyIDColumn is the reference every scope clause narrows a record by.
+const companyIDColumn = "company_id"
+
 // LinkTargetVisibleClause answers, for ONE activity_link row, whether the
 // record it points at is visible under the caller's row scope. An empty
 // string means a caller for whom every target is visible — which, since
@@ -82,7 +85,7 @@ func linkTargetVisible(p principal.Principal, alias string, arg func(any) int) s
 	arms := make([]string, 0, len(linkTargetTables))
 	for _, t := range []struct{ column, table, probe string }{
 		{"person_id", tablePerson, "sp"},
-		{"company_id", tableCompany, "so"},
+		{companyIDColumn, tableCompany, "so"},
 		{"deal_id", tableDeal, "sd"},
 		{"lead_id", tableLead, "sl"},
 		{"project_id", tableProject, "spr"},

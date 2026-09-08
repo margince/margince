@@ -15,6 +15,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// companyAnchor is the record type a delivery or approval is filed under.
+const (
+	companyAnchor = "company"
+	dealAnchor    = "deal"
+)
+
 // workspaceLevelEntities are the event subject types with NO per-owner row
 // scope: workspace/admin-level facts (pipeline & stage config, the
 // identity/access-revocation cascade, the audit ledger, the onboarding
@@ -127,7 +133,7 @@ var workspaceLevelEntities = map[string]struct{}{
 // (not entity type) because their runtime subject class collides with the
 // row-scoped entity names above. The overlay mirror.* events stamp the
 // diverged record's RUNTIME canonical class (rec.ObjectClass / ref.Type /
-// del.ObjectClass — e.g. "person", "deal") as their entity type, but the
+// del.ObjectClass — e.g. "person", dealAnchor) as their entity type, but the
 // id they carry is a mirror-synthetic key (externalIDToUUID) or a
 // pre-materialization EntityRef — NOT a live record id the owner's grants
 // can be probed against. An entity-type probe would therefore either miss
@@ -202,7 +208,7 @@ func (s *Store) entityVisibleTo(ctx context.Context, eventType, entityType strin
 		return ok && actor.UserID != ids.Nil && actor.UserID == entityID, nil
 	}
 	switch entityType {
-	case "person", "company", "deal", "lead", "project", "voice_profile":
+	case "person", companyAnchor, dealAnchor, "lead", "project", "voice_profile":
 		return s.rowScopedVisible(ctx, entityType, func(c context.Context, tx pgx.Tx) error {
 			return auth.EnsureVisible(c, tx, entityType, entityID)
 		})
@@ -343,9 +349,9 @@ func (s *Store) contractVisibleTo(ctx context.Context, contractID ids.UUID) (boo
 	if err != nil {
 		return false, err
 	}
-	anchor, anchorID := "company", companyID
+	anchor, anchorID := companyAnchor, companyID
 	if dealID != nil {
-		anchor, anchorID = "deal", *dealID
+		anchor, anchorID = dealAnchor, *dealID
 	}
 	return s.probeVisible(ctx, func(c context.Context, tx pgx.Tx) error {
 		return auth.EnsureVisibleLive(c, tx, anchor, anchorID)
@@ -371,8 +377,8 @@ func (s *Store) dealRoomVisibleTo(ctx context.Context, roomID ids.UUID) (bool, e
 	if err != nil {
 		return false, err
 	}
-	return s.rowScopedVisible(ctx, "deal", func(c context.Context, tx pgx.Tx) error {
-		return auth.EnsureVisible(c, tx, "deal", dealID)
+	return s.rowScopedVisible(ctx, dealAnchor, func(c context.Context, tx pgx.Tx) error {
+		return auth.EnsureVisible(c, tx, dealAnchor, dealID)
 	})
 }
 
@@ -395,8 +401,8 @@ func (s *Store) commissionVisibleTo(ctx context.Context, entryID ids.UUID) (bool
 	if err != nil {
 		return false, err
 	}
-	return s.rowScopedVisible(ctx, "deal", func(c context.Context, tx pgx.Tx) error {
-		return auth.EnsureVisible(c, tx, "deal", dealID)
+	return s.rowScopedVisible(ctx, dealAnchor, func(c context.Context, tx pgx.Tx) error {
+		return auth.EnsureVisible(c, tx, dealAnchor, dealID)
 	})
 }
 
@@ -417,7 +423,7 @@ func (s *Store) offerDealVisible(ctx context.Context, offerID ids.UUID) (bool, e
 		return false, err
 	}
 	return s.probeVisible(ctx, func(c context.Context, tx pgx.Tx) error {
-		return auth.EnsureVisible(c, tx, "deal", dealID)
+		return auth.EnsureVisible(c, tx, dealAnchor, dealID)
 	})
 }
 

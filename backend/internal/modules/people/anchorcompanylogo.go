@@ -32,7 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// SetCompanyLogo points the anchor company at bytes a person uploaded.
+// SetAnchorCompanyLogo points the anchor company at bytes a person uploaded.
 // `named` is the name of the file they chose: it is what the field's history
 // shows for the change, and it is written as the row's origin, where a resolve
 // puts the page it read — the column says where a mark came from, whichever
@@ -81,7 +81,7 @@ func (s *Store) SetAnchorCompanyLogo(ctx context.Context, slot LogoSlot, objectK
 	return supersededKey, nil
 }
 
-// ClearCompanyLogo takes one slot's mark off the anchor company and hands
+// ClearAnchorCompanyLogo takes one slot's mark off the anchor company and hands
 // back the key its bytes lived at, so the caller can collect them. A slot that
 // held no mark is not an error: nothing is written, nothing is collected, and
 // the caller's request is already true.

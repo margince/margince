@@ -15,6 +15,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
+// descriptionField is the free-text column an import may map onto.
+const descriptionField = "description"
+
 // fieldFullName is a lead's own name column, spelled once for the three places
 // that map onto it.
 const fieldFullName = "full_name"
@@ -65,7 +68,7 @@ var csvTargets = map[string][]string{
 	// falls back to matching names — which two real companies may legitimately
 	// share. It round-trips: the create input takes a domain set and the patch
 	// input takes the same set as a replace-set.
-	migration.ObjectCompany: append([]string{fieldDisplayName, "legal_name", fieldIndustry, "size_band", "description", fieldDomain}, recordAddressTargets...),
+	migration.ObjectCompany: append([]string{fieldDisplayName, fieldLegalName, fieldIndustry, fieldSizeBand, descriptionField, fieldDomain}, recordAddressTargets...),
 	// `phone`, `social` and `owner_id` are deliberately absent. A person's
 	// patch input carries no Phones member and no single-column spelling of
 	// Social, and an owner is a uuid a spreadsheet cannot honestly carry —
@@ -397,7 +400,7 @@ func unwritableReason(object string, fields map[string]string) string {
 			return fmt.Sprintf("%q is not a domain that can be written", domain)
 		}
 	}
-	band, given := fields["size_band"]
+	band, given := fields[fieldSizeBand]
 	if !given || strings.TrimSpace(band) == "" {
 		return ""
 	}

@@ -373,7 +373,7 @@ func RelationshipEndpointScope(ctx context.Context, alias string, arg func(any) 
 var relationshipEndpointColumns = []struct{ column, table string }{
 	{"person_id", tablePerson},
 	{"counterparty_person_id", tablePerson},
-	{"company_id", tableCompany},
+	{companyIDColumn, tableCompany},
 	{"counterparty_company_id", tableCompany},
 	{"deal_id", tableDeal},
 	{"project_id", tableProject},

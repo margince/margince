@@ -226,8 +226,8 @@ func ensureRelationshipEndpoints(ctx context.Context, tx pgx.Tx, in CreateRelati
 	}{
 		{anchorPerson, untypedPtr(in.PersonID)},
 		{anchorPerson, untypedPtr(in.CounterpartyPersonID)},
-		{"company", untypedPtr(in.CompanyID)},
-		{"company", untypedPtr(in.CounterpartyCompanyID)},
+		{companyEntity, untypedPtr(in.CompanyID)},
+		{companyEntity, untypedPtr(in.CounterpartyCompanyID)},
 		{anchorDeal, untypedPtr(in.DealID)},
 		{projectObjectName, untypedPtr(in.ProjectID)},
 	} {

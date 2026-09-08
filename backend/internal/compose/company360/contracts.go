@@ -49,6 +49,26 @@ type contractStrip struct {
 //
 // Conversion is one multiply per contract at its own frozen rate, before the
 // sum, so the headline reconciles with the rows beneath it.
+// noteDates folds one contract's renewal and cancellation dates into the strip,
+// keeping the EARLIEST of each: the card answers "what happens next", and a
+// later date is not the next thing.
+//
+// Notice recorded and the end date still ahead means the customer IS under
+// contract, so the strip says "ends on" rather than reading as though they had
+// already gone.
+func (s *contractStrip) noteDates(renewalOn, cancelOn *time.Time) {
+	if renewalOn != nil && (s.nearestRenewalOn == nil || renewalOn.Before(*s.nearestRenewalOn)) {
+		s.nearestRenewalOn = renewalOn
+	}
+	if cancelOn == nil {
+		return
+	}
+	s.cancellationPending = true
+	if s.cancellationOn == nil || cancelOn.Before(*s.cancellationOn) {
+		s.cancellationOn = cancelOn
+	}
+}
+
 func readContractStrip(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
 	asOf time.Time, baseCcy string,
 ) (contractStrip, error) {
@@ -106,18 +126,7 @@ func readContractStrip(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
 		}
 		strip.activeCount++
 
-		if renewalOn != nil && (strip.nearestRenewalOn == nil || renewalOn.Before(*strip.nearestRenewalOn)) {
-			strip.nearestRenewalOn = renewalOn
-		}
-		// Notice recorded and the end date still ahead: the customer IS under
-		// contract, and the card says "ends on" rather than reading as though
-		// they had already gone.
-		if cancelOn != nil {
-			strip.cancellationPending = true
-			if strip.cancellationOn == nil || cancelOn.Before(*strip.cancellationOn) {
-				strip.cancellationOn = cancelOn
-			}
-		}
+		strip.noteDates(renewalOn, cancelOn)
 
 		converted, ok := contractValueInBase(valueMinor, currency, rate, baseCcy)
 		if !ok {

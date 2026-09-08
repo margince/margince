@@ -304,7 +304,7 @@ func reconcileCompanyReplaceSets(ctx context.Context, tx pgx.Tx, id ids.CompanyI
 	in UpdateCompanyInput, before, after map[string]any,
 ) error {
 	if in.Domains != nil {
-		domainsBefore, err := reconcileCompanyDomains(ctx, tx, workspaceID(ctx), id, by, *in.Domains)
+		domainsBefore, err := reconcileCompanyDomains(ctx, tx, id, by, *in.Domains)
 		if err != nil {
 			return err
 		}
@@ -312,7 +312,7 @@ func reconcileCompanyReplaceSets(ctx context.Context, tx pgx.Tx, id ids.CompanyI
 		after["domains"] = domainSummaries(*in.Domains)
 	}
 	if in.RelationshipTypes != nil {
-		typesBefore, err := reconcileCompanyRelationshipTypes(ctx, tx, workspaceID(ctx), id, "manual", by, *in.RelationshipTypes)
+		typesBefore, err := reconcileCompanyRelationshipTypes(ctx, tx, id, "manual", by, *in.RelationshipTypes)
 		if err != nil {
 			return err
 		}

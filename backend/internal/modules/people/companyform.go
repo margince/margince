@@ -27,6 +27,45 @@ import (
 // their column (a human's own form overwrites — unlike a read-back, which only
 // fills blanks), and every one onto its provenance row. Returns what changed,
 // for the audit delta.
+// clearCompanyProfileField drops the stored answer for one field. An emptied
+// box on the form means "I have no value for this", which is not the same as
+// never having been asked — the row goes, the field stays askable.
+func clearCompanyProfileField(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, field string) error {
+	if _, err := tx.Exec(ctx,
+		`DELETE FROM company_profile_field
+		 WHERE company_id = $1 AND field = $2`,
+		companyID, field); err != nil {
+		return fmt.Errorf("clear company field %s: %w", field, err)
+	}
+	return nil
+}
+
+// writeFormColumn lands the fields that have a column of their own, and
+// reports whether this write moved the legal name — the axis a duplicate check
+// hangs off. A field with no column is nothing to do here.
+func writeFormColumn(
+	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, spec companyField, trimmed, by string,
+) (movedLegalName bool, err error) {
+	if spec.column == "" {
+		return false, nil
+	}
+	moved, err := setCompanyColumn(ctx, tx, companyID, spec, trimmed)
+	if err != nil {
+		return false, err
+	}
+	// A description this form actually landed is a person's sentence, and a
+	// later site read asks field_provenance whose it is before replacing it.
+	// The profile-field row says source=human too, but that table answers for
+	// the FIELD; the column has its own owner, and descriptionHeldByHuman
+	// reads this layer.
+	if moved && spec.name == fieldOfferSummary {
+		if err := stampDescriptionAuthor(ctx, tx, companyID, by); err != nil {
+			return false, err
+		}
+	}
+	return moved && spec.name == fieldLegalName, nil
+}
+
 func writeCompanyFields(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, by string, fields map[string]*string) (map[string]any, error) {
 	applied := map[string]any{}
 	renamed := false
@@ -37,29 +76,14 @@ func writeCompanyFields(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
 			continue
 		}
 		trimmed := strings.TrimSpace(*value)
-		if spec.column != "" {
-			moved, err := setCompanyColumn(ctx, tx, companyID, spec, trimmed)
-			if err != nil {
-				return nil, err
-			}
-			renamed = renamed || (moved && field == fieldLegalName)
-			// A description this form actually landed is a person's sentence,
-			// and a later site read asks field_provenance whose it is before
-			// replacing it. The profile-field row above says source=human too,
-			// but that table answers for the FIELD; the column has its own
-			// owner, and descriptionHeldByHuman reads this layer.
-			if moved && field == fieldOfferSummary {
-				if err := stampDescriptionAuthor(ctx, tx, companyID, by); err != nil {
-					return nil, err
-				}
-			}
+		movedLegalName, err := writeFormColumn(ctx, tx, companyID, spec, trimmed, by)
+		if err != nil {
+			return nil, err
 		}
+		renamed = renamed || movedLegalName
 		if trimmed == "" {
-			if _, err := tx.Exec(ctx,
-				`DELETE FROM company_profile_field
-				 WHERE company_id = $1 AND field = $2`,
-				companyID, field); err != nil {
-				return nil, fmt.Errorf("clear company field %s: %w", field, err)
+			if err := clearCompanyProfileField(ctx, tx, companyID, field); err != nil {
+				return nil, err
 			}
 			applied[field] = nil
 			continue

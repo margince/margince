@@ -33,7 +33,7 @@ type fieldOwnership struct {
 // back to the stricter answer rather than to an identifier built from
 // caller input.
 var precedenceTables = newRecordTypeSet(
-	"person", "company", "deal", "lead", "activity",
+	"person", string(recordTypeCompany), "deal", "lead", "activity",
 	"offer", "offer_template", "product", "list", "tag",
 	"relationship", "custom_field", "saved_view", "webhook_subscription",
 )
@@ -109,7 +109,7 @@ func (f fieldOwnership) HumanOwnedConflicts(ctx context.Context, entityType stri
 	// keyed by company_id and the route's {id} IS the company) — the
 	// ownership question reads the trail where those writes actually land.
 	if entityType == "partner" {
-		entityType = "company"
+		entityType = string(recordTypeCompany)
 	}
 	// No table to read the current value from means the unaudited half
 	// cannot be narrowed; the empty name makes it fail closed, treating

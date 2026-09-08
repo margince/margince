@@ -245,7 +245,7 @@ func resolveToCompany(ctx context.Context, tx pgx.Tx, actor principal.Principal,
 		signalID, chosen.Confidence, chosen.CompanyID, personID); err != nil {
 		return nil, fmt.Errorf("stamp resolved signal: %w", err)
 	}
-	after := map[string]any{"resolution_state": "resolved", "resolved_company_id": chosen.CompanyID, "matched_on": chosen.MatchedOn}
+	after := map[string]any{"resolution_state": resolutionResolved, "resolved_company_id": chosen.CompanyID, "matched_on": chosen.MatchedOn}
 	if personID != nil {
 		after["resolved_person_id"] = *personID
 	}

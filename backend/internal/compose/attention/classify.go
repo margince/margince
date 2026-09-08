@@ -49,6 +49,15 @@ const sourceAtRisk = "deal_at_risk"
 // subjectDeal is the subject type a deal-shaped row names.
 const subjectDeal = "deal"
 
+// The rest of the subject vocabulary, for the reason subjectPerson gives: a
+// suppressor matches on these, and a misspelt literal matches nothing, drops
+// nothing, and reads green. subjectLead is beside its own reader in bands.go.
+const (
+	subjectCompany  = "company"
+	subjectProject  = "project"
+	subjectActivity = "activity"
+)
+
 // subjectPerson is the subject type a person-shaped row names.
 //
 // A constant for the reason sourceDecay is one: the suppressor pairing the

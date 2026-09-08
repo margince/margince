@@ -92,7 +92,7 @@ func TestAnExactNameAtAMatchedEmployerConfirmsWithoutAsking(t *testing.T) {
 	// Asking a human about it teaches them to click through the queue without
 	// reading, which is what makes the uncertain ones dangerous.
 	e := setupDedupe(t)
-	company := e.seedCompanyNamed(t, "Acme GmbH")
+	company := e.seedCompanyNamed(t)
 	andreas := e.seedContact(t, "Andreas Müller")
 	e.employ(t, andreas, company)
 
@@ -108,7 +108,7 @@ func TestAnExactNameAtAMatchedEmployerConfirmsWithoutAsking(t *testing.T) {
 
 func TestAnAddressMatchConfirmsAndANameMatchOnlySuggests(t *testing.T) {
 	e := setupDedupe(t)
-	company := e.seedCompanyNamed(t, "Acme GmbH")
+	company := e.seedCompanyNamed(t)
 
 	// Dana is a known contact WITH the address the export carries.
 	dana := e.seedContact(t, "Dana Buyer")
@@ -143,7 +143,7 @@ func TestAnAddressMatchConfirmsAndANameMatchOnlySuggests(t *testing.T) {
 
 func TestTwoContactsOfTheSameNameAtOneEmployerAreNotGuessedBetween(t *testing.T) {
 	e := setupDedupe(t)
-	company := e.seedCompanyNamed(t, "Acme GmbH")
+	company := e.seedCompanyNamed(t)
 	// The case the whole suggest/confirm split exists for.
 	first := e.seedContact(t, "Andreas Müller")
 	second := e.seedContact(t, "Andreas Müller")
@@ -182,7 +182,11 @@ func TestImportingConnectionsCreatesNoPeople(t *testing.T) {
 }
 
 // seedCompanyNamed writes one account under the given display name.
-func (e *dedupeEnv) seedCompanyNamed(t *testing.T, name string) ids.CompanyID {
+// The name is the fixture's: every company this helper seeds is the same
+// incumbent the near-match cases are matched against.
+const seededCompanyName = "Acme GmbH"
+
+func (e *dedupeEnv) seedCompanyNamed(t *testing.T) ids.CompanyID {
 	t.Helper()
 	id := ids.New[ids.CompanyKind]()
 	ctx := e.as()
@@ -190,10 +194,10 @@ func (e *dedupeEnv) seedCompanyNamed(t *testing.T, name string) ids.CompanyID {
 		_, err := tx.Exec(ctx, `
 			INSERT INTO company (id, display_name, name_source, owner_id, source, captured_by, visibility)
 			VALUES ($1, $2, 'human', $3, 'manual', 'human:test', 'workspace')`,
-			id, name, e.rep)
+			id, seededCompanyName, e.rep)
 		return err
 	}); err != nil {
-		t.Fatalf("seeding company %s: %v", name, err)
+		t.Fatalf("seeding company %s: %v", seededCompanyName, err)
 	}
 	return id
 }
@@ -228,7 +232,7 @@ func (e *dedupeEnv) employ(t *testing.T, person ids.PersonID, company ids.Compan
 
 func TestAnUnmatchedGhostStillNamesTheSubject(t *testing.T) {
 	e := setupDedupe(t)
-	company := e.seedCompanyNamed(t, "Acme GmbH")
+	company := e.seedCompanyNamed(t)
 	// Andreas is a contact at Acme. The export names him, but carries no
 	// address, so the matcher only SUGGESTS — it never confirms.
 	// Spelled without the umlaut, so the match stays a SUGGESTION: an exact
@@ -291,7 +295,7 @@ func TestAContactTheWorkspaceLearnsAboutLaterIsStillMatched(t *testing.T) {
 	}
 
 	// Capture then does its work: the account and the contact appear.
-	company := e.seedCompanyNamed(t, "Acme GmbH")
+	company := e.seedCompanyNamed(t)
 	// Fold-only spelling keeps this one a SUGGESTION: an exact name confirms
 	// itself, and the sweep's two-tier report is what this test pins.
 	andreas := e.seedContact(t, "Andreas Muller")

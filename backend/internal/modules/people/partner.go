@@ -281,6 +281,7 @@ func upsertPartnerRow(ctx context.Context, tx pgx.Tx, in UpsertPartnerInput, fit
 	return scanPartner(row)
 }
 
+// GetPartner reads the partner row a company plays, if it plays one.
 func (s *Store) GetPartner(ctx context.Context, companyID ids.CompanyID) (partnerRow, error) {
 	if err := auth.Require(ctx, "partner", principal.ActionRead); err != nil {
 		return partnerRow{}, err

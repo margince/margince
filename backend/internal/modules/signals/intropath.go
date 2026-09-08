@@ -37,7 +37,8 @@ func (s *Store) IntroPath(ctx context.Context, signalID ids.SignalID, now time.T
 	}
 	if !warmth.Warm {
 		return crmcontracts.SignalIntroPath{}, &NoWarmthError{
-			Reason: "signal is cold: no live contact at the resolved company, so there is no warm path to propose"}
+			Reason: "signal is cold: no live contact at the resolved company, so there is no warm path to propose",
+		}
 	}
 
 	var sig crmcontracts.Signal
@@ -80,8 +81,7 @@ func (s *Store) IntroPath(ctx context.Context, signalID ids.SignalID, now time.T
 	}
 	out.NextMove.Kind = kind
 	var disclosure string
-	out.NextMove.DraftSubject, out.NextMove.DraftBody, disclosure =
-		renderIntroDraft(kind, route, companyName, sig.Summary)
+	out.NextMove.DraftSubject, out.NextMove.DraftBody, disclosure = renderIntroDraft(kind, route, companyName, sig.Summary)
 	// The machine-readable field carries the SAME sentence the body does, in
 	// the same language. Two spellings of one disclosure is a reader being told
 	// one thing and an auditor another.

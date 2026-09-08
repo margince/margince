@@ -149,7 +149,7 @@ func applyColdStartTx(ctx context.Context, tx pgx.Tx, in ApplyColdStartProfileIn
 	} else if before, err = readColdStartColumnImages(ctx, tx, companyID); err != nil {
 		return ids.CompanyID{}, err
 	}
-	applied, err := applyEvidenceFields(ctx, tx, wsID, companyID, companySourceSiteRead, by, in.Fields)
+	applied, err := applyEvidenceFields(ctx, tx, wsID, companyID, by, in.Fields)
 	if err != nil {
 		return ids.CompanyID{}, err
 	}
@@ -269,7 +269,7 @@ func resolveOrCreateColdStartCompany(ctx context.Context, tx pgx.Tx, host, by st
 	if err != nil {
 		return ids.CompanyID{}, false, err
 	}
-	if err := match.recordIfReview(ctx, tx, companyID, displayName, coldStartSource, by); err != nil {
+	if err := match.recordIfReview(ctx, tx, companyID, coldStartSource, by); err != nil {
 		return ids.CompanyID{}, false, err
 	}
 	return companyID, true, nil
@@ -281,8 +281,8 @@ func resolveOrCreateColdStartCompany(ctx context.Context, tx pgx.Tx, host, by st
 // identically; the caller supplies the executing principal (by) and owns the
 // audit source. A re-accept refreshes an agent-captured row and never touches
 // one a human has since claimed.
-func applyEvidenceFields(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, companyID ids.CompanyID, source, by string, fields []ColdStartFieldInput) (map[string]any, error) {
-	return applyEvidenceFieldsWithOverwrite(ctx, tx, wsID, companyID, source, by, fields, nil)
+func applyEvidenceFields(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, companyID ids.CompanyID, by string, fields []ColdStartFieldInput) (map[string]any, error) {
+	return applyEvidenceFieldsWithOverwrite(ctx, tx, wsID, companyID, companySourceSiteRead, by, fields, nil)
 }
 
 func applyEvidenceFieldsWithOverwrite(

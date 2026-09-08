@@ -17,6 +17,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
+// CreateCompanyInput is what a caller may set when a company is first
+// written. Everything a read-back derives is absent here.
 type CreateCompanyInput struct {
 	DisplayName string
 	LegalName   *string
@@ -36,6 +38,8 @@ type CreateCompanyInput struct {
 	CustomFields map[string]any
 }
 
+// CreateCompany writes one company and answers with the record as it now
+// reads, so a caller never has to guess what the store derived.
 func (s *Store) CreateCompany(ctx context.Context, in CreateCompanyInput) (crmcontracts.Company, error) {
 	if err := auth.Require(ctx, "company", principal.ActionCreate); err != nil {
 		return crmcontracts.Company{}, err
@@ -193,7 +197,7 @@ func createCompanyInTx(ctx context.Context, tx pgx.Tx, in CreateCompanyInput, by
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventCompanyCreated{DisplayName: &in.DisplayName}); err != nil {
 		return crmcontracts.Company{}, fmt.Errorf("emit company.created: %w", err)
 	}
-	if err := match.recordIfReview(ctx, tx, id, in.DisplayName, in.Source, by); err != nil {
+	if err := match.recordIfReview(ctx, tx, id, in.Source, by); err != nil {
 		return crmcontracts.Company{}, err
 	}
 	out, err := readCompany(ctx, tx, id, storekit.LiveOnly, active)

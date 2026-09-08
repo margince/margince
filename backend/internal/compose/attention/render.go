@@ -438,13 +438,25 @@ func subjectOf(entityType string, id ids.UUID) *crmcontracts.AttentionSubject {
 // pointed a reader at the wrong record would be worse than one that pointed
 // nowhere.
 var subjectKinds = map[string]crmcontracts.AttentionSubjectType{
-	"company":  "company",
-	"person":   "person",
-	"deal":     "deal",
-	"lead":     "lead",
-	"activity": "activity",
-	"project":  "project",
+	subjectCompany:      subjectCompany,
+	subjectPerson:       subjectPerson,
+	subjectDeal:         subjectDeal,
+	string(subjectLead): crmcontracts.AttentionSubjectType(subjectLead),
+	subjectActivity:     subjectActivity,
+	subjectProject:      subjectProject,
 }
+
+// openableSubjects is subjectKinds minus the one kind with no page of its own,
+// derived rather than restated: the two lists disagreeing is a card offering
+// navigation the router refuses, or withholding it where the router would have
+// answered.
+var openableSubjects = func() map[crmcontracts.AttentionSubjectType]bool {
+	out := make(map[crmcontracts.AttentionSubjectType]bool, len(subjectKinds)-1)
+	for _, kind := range subjectKinds {
+		out[kind] = kind != subjectActivity
+	}
+	return out
+}()
 
 // openableSubject reports whether a subject names a record with a page of its
 // own — the only kind `open` may be offered on. An activity is a timeline
@@ -454,9 +466,5 @@ func openableSubject(subject *crmcontracts.AttentionSubject) bool {
 	if subject == nil {
 		return false
 	}
-	switch subject.Type {
-	case "company", "person", "deal", "lead", "project":
-		return true
-	}
-	return false
+	return openableSubjects[subject.Type]
 }

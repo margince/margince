@@ -92,7 +92,7 @@ func TestApplyingAnApprovedMatchPutsTheLinkedInURLOnTheContact(t *testing.T) {
 	// automatic exact-name path performs — the difference is only who released
 	// it, a string comparison there and a person here.
 	e := setupDedupe(t)
-	company := e.seedCompanyNamed(t, "Acme GmbH")
+	company := e.seedCompanyNamed(t)
 	andreas := e.seedContact(t, "Andreas Muller")
 	e.employ(t, andreas, company)
 	e.importAndMatch(t)
@@ -116,7 +116,7 @@ func TestApplyingAMatchNeverOverwritesAHandleTheContactAlreadyHad(t *testing.T) 
 	// A value already on a record is somebody's statement, and approving a
 	// match is not grounds to replace it.
 	e := setupDedupe(t)
-	company := e.seedCompanyNamed(t, "Acme GmbH")
+	company := e.seedCompanyNamed(t)
 	andreas := e.seedContact(t, "Andreas Muller")
 	e.employ(t, andreas, company)
 	existing := "https://www.linkedin.com/in/the-one-we-already-had"
@@ -146,7 +146,7 @@ func TestApplyingAMatchNeverOverwritesAHandleTheContactAlreadyHad(t *testing.T) 
 
 func TestTheMatchesAwaitingADecisionAreTheCallersOwnAndCarryTheExportsSpelling(t *testing.T) {
 	e := setupDedupe(t)
-	company := e.seedCompanyNamed(t, "Acme GmbH")
+	company := e.seedCompanyNamed(t)
 	andreas := e.seedContact(t, "Andreas Muller")
 	e.employ(t, andreas, company)
 	e.importAndMatch(t)
@@ -171,7 +171,7 @@ func TestTheMatchesAwaitingADecisionAreTheCallersOwnAndCarryTheExportsSpelling(t
 
 func TestReachCountsConnectionsPerAccountAndSaysWhatItCannotShow(t *testing.T) {
 	e := setupDedupe(t)
-	company := e.seedCompanyNamed(t, "Acme GmbH")
+	company := e.seedCompanyNamed(t)
 	dana := e.seedContact(t, "Dana Buyer")
 	e.seedEmail(t, dana, "dana@acme.test")
 	e.employ(t, dana, company)
@@ -214,7 +214,7 @@ func TestReachCountsConnectionsPerAccountAndSaysWhatItCannotShow(t *testing.T) {
 
 func TestCollapseNeverLetsAMachineGuessOverrideAHumanConfirmation(t *testing.T) {
 	e := setupDedupe(t)
-	company := e.seedCompanyNamed(t, "Acme GmbH")
+	company := e.seedCompanyNamed(t)
 	guessed := e.seedContact(t, "Guessed Person")
 	confirmed := e.seedContact(t, "Confirmed Person")
 	e.employ(t, guessed, company)
@@ -271,7 +271,7 @@ func TestCollapseNeverLetsAMachineGuessOverrideAHumanConfirmation(t *testing.T) 
 
 func TestAConnectionNeverMatchesAContactItsOwnerMayNotSee(t *testing.T) {
 	e := setupDedupe(t)
-	company := e.seedCompanyNamed(t, "Acme GmbH")
+	company := e.seedCompanyNamed(t)
 	// A contact somebody ELSE captured privately. Capture privacy makes it
 	// theirs alone — not even an admin reads it — and the matcher runs as a
 	// system principal, which is exempt from that rule by design. Without the

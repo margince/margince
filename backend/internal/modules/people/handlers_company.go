@@ -16,7 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// MergeCompany: POST /companies/{id}/merge — merge this company (A,
+// MergeCompany serves POST /companies/{id}/merge — it merges this company (A,
 // the path id) into target_id (B, the survivor). Returns the survivor. The
 // store re-homes the hierarchy, deal/partner attributions, and the 1:1
 // partner extension; this handler is wire-only.
@@ -33,6 +33,7 @@ func (h Handlers) MergeCompany(w http.ResponseWriter, r *http.Request, id crmcon
 	httperr.WriteJSON(w, http.StatusOK, survivor)
 }
 
+// ListCompanies serves GET /companies, row-scoped and keyset-paginated.
 func (h Handlers) ListCompanies(w http.ResponseWriter, r *http.Request, params crmcontracts.ListCompaniesParams) {
 	in := ListCompaniesInput{
 		Cursor:           params.Cursor,
@@ -69,6 +70,7 @@ func (h Handlers) ListCompanies(w http.ResponseWriter, r *http.Request, params c
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.CompanyListResponse{Data: companies, Page: pageInfo(page)})
 }
 
+// CreateCompany serves POST /companies and answers with the record it wrote.
 func (h Handlers) CreateCompany(w http.ResponseWriter, r *http.Request, _ crmcontracts.CreateCompanyParams) {
 	var req crmcontracts.CreateCompanyRequest
 	if !httperr.Decode(w, r, &req) {
@@ -89,6 +91,8 @@ func (h Handlers) CreateCompany(w http.ResponseWriter, r *http.Request, _ crmcon
 	httperr.WriteJSON(w, http.StatusCreated, company)
 }
 
+// GetCompany serves GET /companies/{id}. It reads archived rows too: a
+// reader following a link to one is told it is archived, not that it is gone.
 func (h Handlers) GetCompany(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	company, err := h.store.GetCompany(r.Context(), pathID[ids.CompanyKind](id), storekit.IncludeArchived)
 	if err != nil {
@@ -98,6 +102,7 @@ func (h Handlers) GetCompany(w http.ResponseWriter, r *http.Request, id crmcontr
 	httperr.WriteJSON(w, http.StatusOK, company)
 }
 
+// UpdateCompany serves PATCH /companies/{id} under an If-Match version.
 func (h Handlers) UpdateCompany(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.UpdateCompanyParams) {
 	ifVersion, ok := httperr.IfMatchVersion(w, r)
 	if !ok {

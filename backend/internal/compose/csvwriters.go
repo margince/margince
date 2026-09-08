@@ -11,7 +11,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/migration"
@@ -410,6 +409,11 @@ func (w *csvWriters) createLead(ctx context.Context, row migration.Row) (migrati
 	return migration.EnsureResult{Created: true}, nil
 }
 
+// different input builder, a different store call, a different emptiness to
+// refuse and a different sentence to refuse it with. Folding them together
+// would mean a generic seam whose only caller is this linter.
+//
+//nolint:dupl // createPerson has the same SHAPE and not the same job: a
 func (w *csvWriters) createCompany(ctx context.Context, row migration.Row) (migration.EnsureResult, error) {
 	in := companyCreateFrom(textFields(row.Fields), w.provenanceOf(row.ExternalID))
 	if in.DisplayName == "" {

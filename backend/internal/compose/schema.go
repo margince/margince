@@ -49,7 +49,7 @@ var schemaObjects = []datasource.ObjectDef{
 		{Name: "status", Type: "text"},
 		{Name: "pipeline_id", Type: "uuid"},
 		{Name: "stage_id", Type: "uuid"},
-		{Name: "company_id", Type: "uuid", Nullable: true},
+		{Name: paramCompanyID, Type: "uuid", Nullable: true},
 		{Name: "owner_id", Type: "uuid", Nullable: true},
 		{Name: "expected_close_date", Type: "date", Nullable: true},
 		{Name: "created_at", Type: "timestamptz"},
@@ -72,7 +72,7 @@ var schemaObjects = []datasource.ObjectDef{
 	{Type: datasource.EntityProject, Label: "Project", Fields: []datasource.FieldDef{
 		{Name: "name", Type: "text"},
 		{Name: "key", Type: "text", Nullable: true},
-		{Name: "company_id", Type: "uuid"},
+		{Name: paramCompanyID, Type: "uuid"},
 		{Name: "owner_id", Type: "uuid", Nullable: true},
 		{Name: "phase", Type: "text"},
 		{Name: "started_at", Type: "date", Nullable: true},

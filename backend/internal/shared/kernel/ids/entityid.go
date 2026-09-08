@@ -126,26 +126,47 @@ func (PassportKind) kind() string   { return "passport" }
 func (PurposeKind) kind() string    { return "consent_purpose" }
 
 type (
-	WorkspaceID  = ID[WorkspaceKind]
-	UserID       = ID[UserKind]
-	TeamID       = ID[TeamKind]
-	PersonID     = ID[PersonKind]
-	CompanyID    = ID[CompanyKind]
-	LeadID       = ID[LeadKind]
-	DealID       = ID[DealKind]
-	PipelineID   = ID[PipelineKind]
-	StageID      = ID[StageKind]
-	OfferID      = ID[OfferKind]
-	ProductID    = ID[ProductKind]
-	ActivityID   = ID[ActivityKind]
-	SignalID     = ID[SignalKind]
-	ListID       = ID[ListKind]
-	TagID        = ID[TagKind]
-	SavedViewID  = ID[SavedViewKind]
-	ApprovalID   = ID[ApprovalKind]
+	// WorkspaceID identifies the installation's one tenant. One per install.
+	WorkspaceID = ID[WorkspaceKind]
+	// UserID identifies a person who signs in — a seat, not a record.
+	UserID = ID[UserKind]
+	// TeamID identifies a group of seats a record can be shared with.
+	TeamID = ID[TeamKind]
+	// PersonID identifies a human the workspace knows.
+	PersonID = ID[PersonKind]
+	// CompanyID identifies a company — the record every deal, contract and
+	// employment hangs off.
+	CompanyID = ID[CompanyKind]
+	// LeadID identifies a thin, segregated prospect, before it is a person.
+	LeadID = ID[LeadKind]
+	// DealID identifies one opportunity moving through a pipeline.
+	DealID = ID[DealKind]
+	// PipelineID identifies an ordered set of stages a deal moves through.
+	PipelineID = ID[PipelineKind]
+	// StageID identifies one position in a pipeline.
+	StageID = ID[StageKind]
+	// OfferID identifies a priced proposal made on a deal.
+	OfferID = ID[OfferKind]
+	// ProductID identifies something the workspace sells.
+	ProductID = ID[ProductKind]
+	// ActivityID identifies one logged interaction — a mail, a meeting, a note.
+	ActivityID = ID[ActivityKind]
+	// SignalID identifies a surfaced "worth attention" item.
+	SignalID = ID[SignalKind]
+	// ListID identifies a named, hand-curated set of records.
+	ListID = ID[ListKind]
+	// TagID identifies one word in the workspace's filing vocabulary.
+	TagID = ID[TagKind]
+	// SavedViewID identifies a stored list query with its filters and sort.
+	SavedViewID = ID[SavedViewKind]
+	// ApprovalID identifies one staged proposal awaiting a human.
+	ApprovalID = ID[ApprovalKind]
+	// AutomationID identifies a rule that acts without being asked each time.
 	AutomationID = ID[AutomationKind]
-	PassportID   = ID[PassportKind]
-	PurposeID    = ID[PurposeKind]
+	// PassportID identifies a credential an agent acts under.
+	PassportID = ID[PassportKind]
+	// PurposeID identifies one consent purpose a contact may be reached under.
+	PurposeID = ID[PurposeKind]
 	// ProjectID identifies a project — the body of work a client
 	// relationship is made of.
 	ProjectID = ID[ProjectKind]

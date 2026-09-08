@@ -186,7 +186,7 @@ func TestAnEvidenceApplyWithoutANameDoesNotWaitOnTheNameLock(t *testing.T) {
 			if err != nil {
 				return err
 			}
-			_, err = applyEvidenceFields(ctx, tx, workspaceID(ctx), companyID, "site_read", by,
+			_, err = applyEvidenceFields(ctx, tx, workspaceID(ctx), companyID, by,
 				[]ColdStartFieldInput{{
 					Field: "industry", Value: "logistics",
 					EvidenceSnippet: "Spedition und Logistik seit 1974",
