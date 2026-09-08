@@ -33,14 +33,17 @@ func TestAnArchiveAskedOnlyForAnUntouchedRecordRefusesATouchedOne(t *testing.T) 
 	e := Setup(t)
 	admin := e.Admin()
 
-	// The instant an import would have landed the row: everything the fixture
-	// does afterwards is "since" it.
-	imported := time.Now().UTC()
-
 	org := e.SeedOrg(t, "Imported Ltd", nil)
 	orgID := ids.From[ids.OrganizationKind](org)
 	person := e.SeedPerson(t, "Imported Contact", nil)
 	personID := ids.From[ids.PersonKind](person)
+
+	// The instant the import landed the row, taken AFTER the seed and never
+	// before it: the undo's own reference is import_record_map.created_at, and
+	// the creation of the row is not somebody touching it. Read before the
+	// seed, this instant makes the row's own creation audit a human edit — and
+	// then the untouched case passes or fails on how fast the fixture ran.
+	imported := seedInstant(t)
 
 	// A human acts on both — any human-actor audit row counts, which is the
 	// point: somebody who independently archived an imported row is exactly
@@ -84,9 +87,9 @@ func TestAnArchiveAskedOnlyForAnUntouchedRecordRefusesATouchedOne(t *testing.T) 
 func TestAnArchiveWithNoPreconditionOrAnUnbrokenOneStillLands(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
-	imported := time.Now().UTC()
 
 	untouched := e.SeedOrg(t, "Untouched Ltd", nil)
+	imported := seedInstant(t)
 	if _, err := e.People.ArchiveOrganization(admin, ids.From[ids.OrganizationKind](untouched), nil,
 		people.NotTouchedByHumanSince(imported)); err != nil {
 		t.Errorf("archiving a company nobody touched → %v, want it to land", err)
@@ -97,4 +100,20 @@ func TestAnArchiveWithNoPreconditionOrAnUnbrokenOneStillLands(t *testing.T) {
 		t.Errorf("archiving with no precondition at all → %v, want the behaviour every other caller "+
 			"of this verb has always had", err)
 	}
+}
+
+// seedInstant is now, read from the DATABASE's clock rather than the test
+// process's.
+//
+// The comparison this fixture sets up is against audit_log.occurred_at, which
+// Postgres writes with its own now(). A Go instant is a second clock, and the
+// two agree only as closely as the machines do — which on a CI runner is close
+// enough to pass most of the time and not close enough to be a test.
+func seedInstant(t *testing.T) time.Time {
+	t.Helper()
+	var at time.Time
+	if err := OwnerConn(t).QueryRow(t.Context(), `SELECT now()`).Scan(&at); err != nil {
+		t.Fatalf("reading the database clock: %v", err)
+	}
+	return at
 }
