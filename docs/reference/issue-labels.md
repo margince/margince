@@ -69,6 +69,23 @@ work. Leaving one off puts that issue in somebody's queue:
   in the issue what it is waiting for, so the reader who filters it back in
   knows what changed.
 
+## Claim
+
+The one axis that goes on a **pull request** rather than an issue, and the one
+that says who is working rather than what the work is.
+
+- `claim: main-red` — a session is already fixing this red on `main`. It rides a
+  DRAFT pull request whose body lists the failing lanes and tests it covers, and
+  that list is the point: `main` is regularly red for two unrelated reasons at
+  once, so a claim naming one of them leaves the other unclaimed and free to
+  take. Check for one before you investigate a failure you did not cause, and
+  open one before you start fixing if none covers yours. The procedure, and when
+  a stale claim may be taken over, is
+  [../how-to/claim-a-red-main.md](../how-to/claim-a-red-main.md).
+
+  Not a `status:` label: those mark an issue nobody should pick up, and this
+  marks work somebody already has.
+
 ## Provenance
 
 **Provenance**, additive and independent of the three axes: `bug`,
