@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 74 |
 | Resources | 12 |
-| Tool catalog | 208.0 KB |
+| Tool catalog | 208.1 KB |
 | Resource catalog | 4.5 KB |
-| Approx. wire tokens | 54406 |
+| Approx. wire tokens | 54426 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,7 +29,7 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 97.4 KB | 46% | **No** — a result's shape, never listed to a model |
+| Output schemas | 97.5 KB | 46% | **No** — a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 50.7 KB | 24% | Yes, every step |
 | Input schemas | 44.4 KB | 21% | Yes, every step |
 | _Names, annotations, punctuation_ | 15.6 KB | 7% | Partly |
@@ -115,7 +115,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`qualify_lead`](#qualify_lead) | Qualify a lead |  |  | 2.4 KB |
 | [`query_workspace`](#query_workspace) | Query the workspace | yes |  | 4.0 KB |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes |  | 2.4 KB |
-| [`read_brief`](#read_brief) | Read the morning brief | yes | [`ui://margince/account-brief.html`](#account_brief_view) | 3.1 KB |
+| [`read_brief`](#read_brief) | Read the morning brief | yes | [`ui://margince/account-brief.html`](#account_brief_view) | 3.2 KB |
 | [`read_import_report`](#read_import_report) | Read an import report | yes |  | 2.9 KB |
 | [`read_import_run`](#read_import_run) | Read an import run | yes |  | 1.4 KB |
 | [`read_project_360`](#read_project_360) | Read a project's page | yes |  | 6.4 KB |
@@ -9997,6 +9997,12 @@ Renders its result in [`ui://margince/account-brief.html`](#account_brief_view),
         "candidate_count": {
           "type": "integer"
         },
+        "factors_omitted": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "generated_at": {
           "type": "string"
         },
@@ -10110,6 +10116,7 @@ Renders its result in [`ui://margince/account-brief.html`](#account_brief_view),
         "as_of",
         "brief_id",
         "candidate_count",
+        "factors_omitted",
         "generated_at",
         "items",
         "local_day"

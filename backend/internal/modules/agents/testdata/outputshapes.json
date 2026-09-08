@@ -7177,6 +7177,12 @@
           "candidate_count": {
             "type": "integer"
           },
+          "factors_omitted": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "generated_at": {
             "type": "string"
           },
@@ -7290,6 +7296,7 @@
           "as_of",
           "brief_id",
           "candidate_count",
+          "factors_omitted",
           "generated_at",
           "items",
           "local_day"
