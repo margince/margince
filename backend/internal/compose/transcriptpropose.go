@@ -29,6 +29,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/promptlang"
@@ -363,4 +364,7 @@ type transcriptReadStore interface {
 	BeginTranscriptRead(ctx context.Context, readID ids.UUID, reclaimAfter time.Duration) (activities.TranscriptRead, error)
 	ReadTranscript(ctx context.Context, activityID ids.ActivityID) (activities.TranscriptReading, error)
 	FinishTranscriptRead(ctx context.Context, readID ids.UUID, outcome activities.TranscriptReadOutcome) error
+	// The Tx form, for the close that has to commit with the proposals it is
+	// closing over — see stageAndFinish.
+	FinishTranscriptReadTx(ctx context.Context, tx pgx.Tx, readID ids.UUID, outcome activities.TranscriptReadOutcome) error
 }

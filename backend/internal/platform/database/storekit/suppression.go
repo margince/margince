@@ -18,6 +18,8 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // SuppressionHash is the one identifier hashing rule: sha256 hex over
@@ -154,6 +156,44 @@ func LockSubjectKeys(ctx context.Context, tx pgx.Tx, keys []ChannelIdentityKey, 
 			SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
 			hash); err != nil {
 			return fmt.Errorf("storekit: locking a subject identifier against a concurrent erasure: %w", err)
+		}
+	}
+	return nil
+}
+
+// LockTranscriptBody serialises a reading of one activity's transcript against
+// the engines that destroy it, and holds it until the transaction ends.
+//
+// It is the mutex between a reading and an erasure of the SAME body, and both
+// sides must take it or neither is protected. A reading loads the lines, puts
+// them to a model — seconds — and only then stages proposals quoting up to 500
+// characters of them. Nothing ordered that against the two engines that empty
+// the same activity, so an erasure could land in the middle: the timeline scrub
+// nulled the body, the citing scrub found no proposals because none were staged
+// yet, and the tombstone committed certifying the words destroyed. The worker
+// then came back and staged them.
+//
+// Nothing heals that. The erasure set archived_at, so the retention selector
+// (`archived_at IS NULL`) can never pick the activity up again; the body is
+// NULL, so the transcript selector (`body IS NOT NULL`) cannot either; and a
+// subject-only activity is redacted by no other person's erasure. The
+// quotations stay in the approvals inbox permanently.
+//
+// A re-check without this lock only narrows the window while reading as
+// complete, which is worse than the honest gap.
+//
+// The activities are locked in a FIXED order, deduplicated, for the reason
+// LockChannelIdentities states: two transactions taking one pair in opposite
+// orders deadlock, and Postgres resolves that by killing one — an erasure or a
+// rep's reading lost to an ordering nobody chose.
+func LockTranscriptBody(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) error {
+	sorted := slices.Clone(activityIDs)
+	slices.SortFunc(sorted, func(a, b ids.UUID) int { return strings.Compare(a.String(), b.String()) })
+	for _, id := range slices.Compact(sorted) {
+		if _, err := tx.Exec(ctx, `
+			SELECT pg_advisory_xact_lock(hashtextextended('activity_transcript:' || $1, 0))`,
+			id.String()); err != nil {
+			return fmt.Errorf("storekit: locking an activity's transcript against a concurrent erasure: %w", err)
 		}
 	}
 	return nil

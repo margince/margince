@@ -361,60 +361,6 @@ type TranscriptReadOutcome struct {
 	LineCount int
 }
 
-// FinishTranscriptRead records what the reading produced and closes it.
-func (s *Store) FinishTranscriptRead(ctx context.Context, readID ids.UUID, outcome TranscriptReadOutcome) error {
-	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
-		return err
-	}
-	if outcome.Status != TranscriptReadDone && outcome.Status != TranscriptReadFailed {
-		return fmt.Errorf("activities: a transcript read finishes done or failed, not %q", outcome.Status)
-	}
-	if outcome.Detail == "" && (outcome.Status == TranscriptReadFailed || len(outcome.ProposalIDs) == 0) {
-		return errors.New("activities: a failed or empty transcript read must say why, or its result cannot be told from a broken one")
-	}
-	return s.tx(ctx, func(tx pgx.Tx) error {
-		proposals := outcome.ProposalIDs
-		if proposals == nil {
-			proposals = []ids.UUID{}
-		}
-		var detail *string
-		if outcome.Detail != "" {
-			detail = &outcome.Detail
-		}
-		tag, err := tx.Exec(ctx, `
-			UPDATE transcript_read
-			   SET status = $2, status_detail = $3, proposal_ids = $4, finished_at = now(),
-			       line_count = COALESCE($5, line_count)
-			 WHERE id = $1 AND status = 'running'`,
-			readID, outcome.Status, detail, proposals, readLineCount(outcome.LineCount))
-		if err != nil {
-			return fmt.Errorf("finish transcript read: %w", err)
-		}
-		if tag.RowsAffected() != 1 {
-			return fmt.Errorf("%w: transcript read %s is not running", apperrors.ErrConflict, readID)
-		}
-		// AuditEvent, not Audit: the compare-and-set above proves the row was
-		// running, so a prior state exists — it is simply a run record's own
-		// progress rather than a field a person edited, and nothing would ever
-		// be restored to it.
-		if _, err := storekit.AuditEvent(ctx, tx, "update", "transcript_read", readID, map[string]any{
-			"status": outcome.Status, "proposals": len(proposals),
-		}); err != nil {
-			return fmt.Errorf("audit transcript read finish: %w", err)
-		}
-		return nil
-	})
-}
-
-// readLineCount keeps the door's own count when the outcome names none — a
-// reading that failed before it split the body has nothing truer to say.
-func readLineCount(count int) *int {
-	if count <= 0 {
-		return nil
-	}
-	return &count
-}
-
 // GetTranscriptRead answers the client's poll. It is a read of a record, so it
 // carries the row-scope gate like every other one: a reading of a transcript
 // the caller cannot see does not exist.
