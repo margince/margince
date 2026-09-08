@@ -32,6 +32,27 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
+// commsSendQueue isolates transmission from the default queue.
+//
+// A send became long and outbound-bound when it started carrying files: the
+// upload's request budget is three minutes, because a 20 MiB album cannot cross
+// the wire in thirty seconds. On the shared queue five concurrent sends held
+// every worker for minutes, and that queue also carries Telegram polls, capture
+// syncs and close-date jobs — so a burst of large sends made inbound capture
+// late and nothing said why.
+//
+// jobqueues' own posture was written for this category: the AI-capture pool's
+// reason names "delay sends, Telegram polls, and capture syncs" as the thing to
+// avoid, and the send had since joined the set it was avoiding.
+//
+// THREE rather than deep read's two. A crawl is a background sweep; a send is a
+// message somebody pressed a button for and is waiting on, so the pool is wide
+// enough that an ordinary text send is not queued behind two album uploads.
+const (
+	commsSendQueue      = "comms_send"
+	commsSendMaxWorkers = 3
+)
+
 // SendEmailArgs transmits ONE staged delivery. The workspace travels with it
 // because comms_outbound reads are workspace-predicated and a job carries no
 // session: the worker binds this workspace before the dispatcher reads
