@@ -806,7 +806,10 @@ export function CompanyActionBadges({
             when either says no. Hidden in overlay with the rest of the native
             verbs; the server refuses it there too. */}
         {!overlay && (
-          <CompanyRejectAction company={company} disabledReasonId={refusedByState} />
+          <CompanyRejectAction
+            company={company}
+            disabledReasonId={refusedByState}
+          />
         )}
         {/* Last, and set apart by the panel's own seam (atoms.css). This is
             the one verb here a reader cannot walk back from the header, so it

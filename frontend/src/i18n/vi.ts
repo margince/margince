@@ -821,7 +821,8 @@ export const vi = {
   "company.rejectReasonLabel": "Vì sao đây không phải công ty?",
   "company.rejectReasonHint":
     "Một câu đủ rõ để rà soát lại trong danh sách tên miền bị chặn. Quyết định từ chối tồn tại lâu hơn bản ghi.",
-  "company.rejectDone": "Đã lưu trữ “{name}”, và {domain} sẽ không tạo công ty nữa",
+  "company.rejectDone":
+    "Đã lưu trữ “{name}”, và {domain} sẽ không tạo công ty nữa",
   "company.name": "Công ty",
   "company.description": "Họ làm gì",
   "company.website": "Trang web",
