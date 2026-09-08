@@ -95,9 +95,15 @@ func TestStrengthFoldLeavesTheInboundAnchorEmptyWhenNobodyWroteIn(t *testing.T) 
 // The two are answering different questions. "They last wrote eighteen months
 // ago" is history and stays true however old it gets. The anchor is an action —
 // it is what a Follow up button opens a reply against — and it has to agree
-// with the state the counts report. This contact reads untried, because nothing
-// inside the window says otherwise; offering to answer a thread from last year
+// with the state the counts report; offering to answer a thread from last year
 // would contradict the same page's own summary.
+//
+// The state is LAPSED and not untried. Untried means nobody has written to them
+// at all, and saying it about a contact whose own message the row prints beside
+// it put a contradiction on one line: "They wrote, 1 June" next to "Not
+// approached". Lapsed is the exchange that is real and over rather than absent,
+// which is the difference between picking a conversation back up and opening
+// one (people/engagement.go).
 func TestStrengthFoldDropsAnInboundAnchorOlderThanTheWindow(t *testing.T) {
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
@@ -119,8 +125,8 @@ func TestStrengthFoldDropsAnInboundAnchorOlderThanTheWindow(t *testing.T) {
 		t.Fatalf("a reply from %s is outside the 90-day window and must not be offered as a reply anchor, got %s",
 			longAgo.Format("2006-01-02"), got.LastInboundActivity)
 	}
-	if people.EngagementOf(got) != people.EngagementUntried {
-		t.Fatalf("a contact whose only message predates the window reads as %q, want untried",
+	if people.EngagementOf(got) != people.EngagementLapsed {
+		t.Fatalf("a contact whose only message predates the window reads as %q, want lapsed — the exchange is over, not absent",
 			people.EngagementOf(got))
 	}
 }

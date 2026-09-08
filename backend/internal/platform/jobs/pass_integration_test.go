@@ -26,6 +26,28 @@ import (
 // spec lookup answers a real number rather than a zero this test invented.
 const aScheduledKind = "capture_counterparty_verdict"
 
+// declaredCadence reads that kind's interval from the spec table instead of
+// naming it here.
+//
+// What these tests are about is the plumbing that carries a declaration out to
+// a reader — that a scheduled row wins over a projection, that the projection
+// measures from the tick and not the finish, that a kind with no history still
+// knows its own interval. The NUMBER is a product decision and none of their
+// business, so a copy of it here is a second declaration that only agrees until
+// somebody revises the first. Three of these tests asserted a literal hour and
+// went red on `main` the day the interval moved, having found nothing wrong.
+func declaredCadence(t *testing.T) time.Duration {
+	t.Helper()
+	spec, ok := jobs.SpecFor(aScheduledKind)
+	if !ok {
+		t.Fatalf("%s is not a declared kind — these tests need one that is", aScheduledKind)
+	}
+	if spec.Cadence.Fixed == 0 {
+		t.Fatalf("%s declares no fixed cadence, so there is no interval for these tests to read", aScheduledKind)
+	}
+	return spec.Cadence.Fixed
+}
+
 func TestAScheduledRunIsWhenThePassRuns(t *testing.T) {
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
@@ -43,8 +65,8 @@ func TestAScheduledRunIsWhenThePassRuns(t *testing.T) {
 	if pass.NextAt == nil || !pass.NextAt.Equal(next) {
 		t.Errorf("next = %v, want the scheduled row's own time %v", pass.NextAt, next)
 	}
-	if pass.Every != time.Hour {
-		t.Errorf("cadence = %v, want the hour api/jobs.yaml declares", pass.Every)
+	if want := declaredCadence(t); pass.Every != want {
+		t.Errorf("cadence = %v, want the %v api/jobs.yaml declares", pass.Every, want)
 	}
 	if pass.Running {
 		t.Error("no row is running and the read says one is")
@@ -77,7 +99,7 @@ func TestWithNothingScheduledThePassIsTheLastRunPlusItsCadence(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the pass: %v", err)
 	}
-	want := ran.Add(time.Hour)
+	want := ran.Add(declaredCadence(t))
 	if pass.NextAt == nil || !pass.NextAt.Equal(want) {
 		t.Errorf("next = %v, want the last TICK plus the cadence %v — a projection off the "+
 			"finish runs late by however long the pass took", pass.NextAt, want)
@@ -161,8 +183,9 @@ func TestAKindWithNoHistoryNamesNoTime(t *testing.T) {
 		t.Errorf("next = %v for a kind with no scheduled and no completed run, want no answer",
 			pass.NextAt)
 	}
-	if pass.Every != time.Hour {
-		t.Errorf("cadence = %v — the declaration is knowable even where the next run is not", pass.Every)
+	if want := declaredCadence(t); pass.Every != want {
+		t.Errorf("cadence = %v, want %v — the declaration is knowable even where the next run is not",
+			pass.Every, want)
 	}
 }
 
