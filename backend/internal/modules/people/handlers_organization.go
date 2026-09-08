@@ -281,12 +281,12 @@ func (h Handlers) RejectOrganization(w http.ResponseWriter, r *http.Request, id 
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	// Trimmed here and judged by the STORE, which refuses an empty reason for
+	// every caller rather than only for this door. Repeating that check here
+	// spelled the same sentence twice, and two writers of one refusal are two
+	// answers waiting to disagree — the length check below has no such twin,
+	// which is why it stays.
 	reason := strings.TrimSpace(req.Reason)
-	if reason == "" {
-		httperr.Write(w, r, httperr.Validation(fieldKeyReason, "required",
-			"say why this is not a company: the refusal outlives the record, and only a reason makes it reviewable"))
-		return
-	}
 	// The contract says maxLength: 500 and the generated type does not enforce
 	// it. Unchecked, one caller stores a megabyte on the domain and every
 	// reader of the blocked list is served it back in full.
