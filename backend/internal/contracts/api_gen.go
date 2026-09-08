@@ -7264,6 +7264,21 @@ func (e MeetingPlanUnknownKind) Valid() bool {
 	}
 }
 
+// Defines values for MorningBriefFactorsOmitted.
+const (
+	Warmth MorningBriefFactorsOmitted = "warmth"
+)
+
+// Valid indicates whether the value is a known member of the MorningBriefFactorsOmitted enum.
+func (e MorningBriefFactorsOmitted) Valid() bool {
+	switch e {
+	case Warmth:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MorningBriefItemReopenOn.
 const (
 	MorningBriefItemReopenOnMeeting MorningBriefItemReopenOn = "meeting"
@@ -26507,6 +26522,28 @@ type MorningBrief struct {
 	// CandidateCount Deals that cleared the §10 honest-short bar (may exceed the queue length).
 	CandidateCount int `json:"candidate_count"`
 
+	// FactorsOmitted The ranking factors this run could not read, so a client can say "the order does
+	// not account for this" instead of presenting a queue as fully ranked. Never
+	// returned absent, and empty on the ordinary read: empty and withheld are different
+	// answers, and a factor that floors silently makes a deal rank lower than it is with
+	// nothing marking why.
+	//
+	// `warmth` is omitted for a caller with no `relationship` edge grant. Every seat on
+	// a deal is a `deal_stakeholder` edge, so such a caller runs no stakeholder read at
+	// all and the factor has no input for ANY deal — which is why this is a property of
+	// the run and not of an item.
+	//
+	// A named factor still appears in each item's `feature_vector`, at its floor. The
+	// decomposition is what the run scored with, and editing it here would leave a
+	// reader unable to check the `composite` against its parts; this array is what says
+	// the floor is an absence rather than a reading.
+	//
+	// Stored with the run. The grant can be given or taken away afterwards, and a queue
+	// ranked without warmth must not later be read as one that had it. Empty on a run
+	// assembled before this field existed — a rep has one run per local day, so those
+	// age out within a day.
+	FactorsOmitted []MorningBriefFactorsOmitted `json:"factors_omitted"`
+
 	// GeneratedAt When this run was assembled.
 	GeneratedAt time.Time          `json:"generated_at"`
 	Id          openapi_types.UUID `json:"id"`
@@ -26529,6 +26566,9 @@ type MorningBrief struct {
 	// RevenueNormMinor The workspace-P90 (or fallback) base value the revenue factor normalized against.
 	RevenueNormMinor *int64 `json:"revenue_norm_minor,omitempty"`
 }
+
+// MorningBriefFactorsOmitted defines model for MorningBrief.FactorsOmitted.
+type MorningBriefFactorsOmitted string
 
 // MorningBriefFeatureVector The §10.1 factor decomposition, each normalized 0..1 — the composite reconciles to it.
 type MorningBriefFeatureVector struct {

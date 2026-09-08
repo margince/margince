@@ -189,7 +189,21 @@ func briefRunToWire(run BriefRun) crmcontracts.MorningBrief {
 		Narrative:           nullableText(run.Narrative),
 		AnnotatedAt:         run.AnnotatedAt,
 		Items:               items,
+		FactorsOmitted:      omittedFactorsWire(run.FactorsOmitted),
 	}
+}
+
+// omittedFactorsWire renders the run's withheld factors, never absent.
+//
+// An empty array and an absent field are different answers: the contract says
+// this is always present, so a client can render "the order does not account
+// for this" without first having to decide whether the server simply forgot.
+func omittedFactorsWire(stored []string) []crmcontracts.MorningBriefFactorsOmitted {
+	out := make([]crmcontracts.MorningBriefFactorsOmitted, 0, len(stored))
+	for _, factor := range stored {
+		out = append(out, crmcontracts.MorningBriefFactorsOmitted(factor))
+	}
+	return out
 }
 
 // nullableText serves empty prose as JSON null rather than "".

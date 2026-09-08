@@ -96,6 +96,19 @@ type ReadBriefResult struct {
 	// Items is never null on the wire. An agent reading `null` has to decide
 	// whether it means "nothing is queued" or "the queue was not read".
 	Items []BriefItem `json:"items"`
+	// FactorsOmitted names the ranking factors this run had no input for, and
+	// is never null for the same reason Items is not.
+	//
+	// It is served rather than withheld, unlike the revenue base above: that
+	// one explains a number the agent already has normalized, while this one
+	// says the ORDER in front of it is not the order. An agent told a queue is
+	// ranked will reason about why the third deal is third; if warmth was
+	// withheld, the honest answer is that nobody knows, and only this field can
+	// say so.
+	//
+	// A named factor still appears in each item's Factors, at its floor — the
+	// decomposition has to reconcile to the composite the run actually scored.
+	FactorsOmitted []string `json:"factors_omitted"`
 }
 
 // BriefItem is one queue entry: the deal it is about, why it ranked, and what
