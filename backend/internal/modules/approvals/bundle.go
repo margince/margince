@@ -214,10 +214,17 @@ func outcomeOf(status string) BundleOutcome {
 // the decision transaction has committed.
 //
 // A failure is that member's outcome and no one else's. The decisions are
-// committed, so there is nothing to roll back and nothing to retry: the member
-// reads approved-and-unredeemed, its audit trail says how far it got, and the
-// caller is told which one did not land. The cause goes to the log because the
-// wire deliberately carries no internals to a client.
+// committed, so there is nothing to roll back here: the member reads
+// approved-and-unredeemed, its audit trail says how far it got, and the caller
+// is told which one did not land. The cause goes to the log because the wire
+// deliberately carries no internals to a client.
+//
+// It is no longer a dead end, which it used to be. Approving that member
+// singly re-drives its effect rather than answering already-decided
+// (effectIsStillOwed, decide.go), so the failure this reports is one a caller
+// can act on. This function does not re-drive on its own: a bundle call is
+// "decide these", and a member it did not decide keeps the outcome that says
+// so.
 func (s *Service) releaseDecidedMembers(ctx context.Context, members []BundleMember, approve bool) {
 	if !approve {
 		return // a rejection releases nothing
