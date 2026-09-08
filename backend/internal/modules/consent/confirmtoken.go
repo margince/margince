@@ -114,7 +114,7 @@ type ConfirmRef struct {
 // resolve path needs no extra state. Delivery of the plaintext is the caller's,
 // which is what keeps this store free of a mail dependency.
 func (s *Store) IssueConfirmToken(ctx context.Context, personID ids.PersonID) (IssuedConfirm, error) {
-	return s.issueLink(ctx, personID, LinkRecordConfirmation, ids.PurposeID{})
+	return s.issueLink(ctx, personID, LinkRecordConfirmation, ids.PurposeID{}, "")
 }
 
 // IssueConsentLink mints the link a double-opt-in purpose is confirmed by.
@@ -126,11 +126,23 @@ func (s *Store) IssueConfirmToken(ctx context.Context, personID ids.PersonID) (I
 // endpoint had none of those properties — it handed the plaintext to an
 // operator, so one person could complete both halves of a round trip whose only
 // value is that the subject completed it.
-func (s *Store) IssueConsentLink(ctx context.Context, personID ids.PersonID, purposeID ids.PurposeID) (IssuedConfirm, error) {
+// expectedAddress is the address the REQUESTER named, and it is checked against
+// the address the link will actually reach rather than replacing it. Pass ""
+// when the caller named a person rather than typing an address.
+//
+// A caller who could CHOOSE the destination could choose a stranger's, so the
+// mint keeps deriving it from the person's own record. But a typed address
+// resolves to whatever person already holds it, including on a NON-primary
+// address, and the link then goes to that person's primary instead. That is how
+// a subscription requested from an address somebody stopped using arrives at
+// the one they still read. Refusing the mismatch is the only honest answer: the
+// two addresses disagree about who asked, and the mint cannot tell which is
+// right.
+func (s *Store) IssueConsentLink(ctx context.Context, personID ids.PersonID, purposeID ids.PurposeID, expectedAddress string) (IssuedConfirm, error) {
 	if err := httperr.RequireBodyID(purposeIDField, purposeID.UUID); err != nil {
 		return IssuedConfirm{}, err
 	}
-	return s.issueLink(ctx, personID, LinkConsentConfirmation, purposeID)
+	return s.issueLink(ctx, personID, LinkConsentConfirmation, purposeID, expectedAddress)
 }
 
 // deliveryAddressTx reads the subject's own live primary address, the same way
@@ -192,7 +204,7 @@ func requireConfirmablePurposeTx(ctx context.Context, tx pgx.Tx, purposeID ids.P
 	return nil
 }
 
-func (s *Store) issueLink(ctx context.Context, personID ids.PersonID, kind string, purposeID ids.PurposeID) (IssuedConfirm, error) {
+func (s *Store) issueLink(ctx context.Context, personID ids.PersonID, kind string, purposeID ids.PurposeID, expectedAddress string) (IssuedConfirm, error) {
 	if err := auth.Require(ctx, "person", principal.ActionUpdate); err != nil {
 		return IssuedConfirm{}, err
 	}
@@ -202,21 +214,11 @@ func (s *Store) issueLink(ctx context.Context, personID ids.PersonID, kind strin
 	}
 	var out IssuedConfirm
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// Live, and HELD before this transaction takes any other row lock — the
-		// same ordering the erasure path takes and for the same reason. What
-		// this mints is a working link to one person's record; an erasure
-		// committing after an unheld probe would leave the installation posting
-		// it to somebody it had just been told to forget.
-		if err := auth.HoldWritableLive(ctx, tx, "person", personID.UUID); err != nil {
-			return err
-		}
-		// A purpose this mail can honestly ask about, checked inside the
-		// transaction that mints against it. The two ways it can fail, and why
-		// neither is caught by the foreign key, are on the function itself.
-		if err := requireConfirmablePurposeTx(ctx, tx, purposeID); err != nil {
-			return err
-		}
-		deliveredTo, err := deliveryAddressTx(ctx, tx, personID)
+		deliveredTo, err := admitLinkTx(ctx, tx, linkRequest{
+			personID:        personID,
+			purposeID:       purposeID,
+			expectedAddress: expectedAddress,
+		})
 		if err != nil {
 			return err
 		}
