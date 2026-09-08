@@ -289,11 +289,23 @@ func recordProgressionDecidedTx(
 	// saying auto_applied with the column false is one the report and the
 	// column would answer differently about the same move.
 	err := tx.QueryRow(ctx, `
-		UPDATE stage_progression_outcome
+		UPDATE stage_progression_outcome o
 		   SET outcome = $2, rejection_reason = $3, evidence_corrected = $4,
-		       decided_by_system = ($2 = $6), decided_at = now()
-		 WHERE approval_id = $1 AND outcome = $5
-		RETURNING id, deal_id, pipeline_id, from_stage_id, to_stage_id`,
+		       decided_by_system = ($2 = $6), decided_at = now(),
+		       -- The undo window is frozen HERE, on an automatic move only,
+		       -- because this is when the promise is made. Read live at undo
+		       -- time it would be whatever the rule says then, so an admin
+		       -- shortening it would close the window on moves already made
+		       -- and lengthening it would reopen ones people were told had
+		       -- closed.
+		       undo_window_hours = CASE WHEN $2 = $6 THEN (
+		           SELECT p.undo_window_hours FROM stage_progression_policy p
+		            WHERE p.pipeline_id = o.pipeline_id
+		              AND p.from_stage_id = o.from_stage_id
+		              AND p.to_stage_id = o.to_stage_id
+		       ) END
+		 WHERE o.approval_id = $1 AND o.outcome = $5
+		RETURNING o.id, o.deal_id, o.pipeline_id, o.from_stage_id, o.to_stage_id`,
 		approvalID, outcome, reason, edited, ProgressionProposed,
 		ProgressionAutoApplied).
 		Scan(&id, &dealID, &moved.PipelineID, &moved.FromStageID, &moved.ToStageID)

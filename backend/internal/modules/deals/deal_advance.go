@@ -42,6 +42,21 @@ type AdvanceDealInput struct {
 	// product, not overruling it, so a move made THROUGH one must not protect
 	// the deal against the next proposal. Nil for an ordinary advance.
 	ApprovalID *ids.UUID
+	// IsExplicitUndo marks the move RevertStageProgression makes.
+	//
+	// It suppresses the automatic reversal detection below, which would
+	// otherwise find the very move being undone and mark it — and the undo
+	// then marks it again, so one reversal is counted twice and the safety
+	// rate reads double. The undo does its own marking, because only it knows
+	// which card the caller asked about.
+	IsExplicitUndo bool
+	// ReversalOf names the deal_stage_history row this move undoes.
+	//
+	// Written into the history row, where readProtection reads it: a move that
+	// was undone once is a move this deal has already had the argument about,
+	// and the product must not propose it again. Without it a reversed move is
+	// re-proposable the moment the fortnight's human-move protection lapses.
+	ReversalOf *ids.UUID
 }
 
 // StagePipelineMismatchError maps to 422: the target stage exists but
@@ -175,11 +190,25 @@ func (s *Store) advanceOnTx(
 		// rationale). Won/lost stages carry their semantic 100/0 in the same
 		// column, so terminal moves snapshot too.
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO deal_stage_history (deal_id, from_stage_id, to_stage_id, changed_by, amount_minor_at_change, currency_at_change, win_probability_at_change, approval_id)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+			`INSERT INTO deal_stage_history (deal_id, from_stage_id, to_stage_id, changed_by, amount_minor_at_change, currency_at_change, win_probability_at_change, approval_id, reversal_of)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
 			id, ids.UUID(*current.StageId), in.ToStageID, by,
-			current.AmountMinor, current.Currency, winProbability, in.ApprovalID); err != nil {
+			current.AmountMinor, current.Currency, winProbability, in.ApprovalID,
+			in.ReversalOf); err != nil {
 			return fmt.Errorf("record stage history: %w", err)
+		}
+
+		// A move BACK over a recent automatic one is a reversal, counted on the
+		// same ledger as the undo button. Not doing this here would let the
+		// safety number be dodged by the obvious route: a rep who disagrees
+		// with what the autopilot did drags the deal back by hand, the rate
+		// that governs the transition never moves, and it keeps applying.
+		if !in.IsExplicitUndo {
+			if err := countAManualMoveBackAsAReversal(
+				ctx, tx, id, ids.StageID{UUID: ids.UUID(*current.StageId)}, in,
+				s.clock()); err != nil {
+				return err
+			}
 		}
 
 		if err := announceStageAdvance(ctx, tx, id, in, current, p, status, winProbability); err != nil {

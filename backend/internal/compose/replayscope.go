@@ -180,9 +180,17 @@ var replayableOperations = map[string]replayTarget{
 	"PATCH /v1/organizations/{id}/facts/{factKey}":               {object: tableOrganization, table: tableOrganization, pathParam: "id"},
 	"DELETE /v1/organizations/{id}/facts/{factKey}":              {object: tableOrganization, rowNote: "the removal answers 204: the row is gone, so a replay has no record to re-probe — what the original write was gated on was the organization named in the path, and that gate ran then"},
 	"POST /v1/organizations/{id}/facts/{factKey}/confirm":        {object: tableOrganization, table: tableOrganization, pathParam: "id"},
-	"POST /v1/deals":                       {object: tableDeal, table: tableDeal, idPath: "id"},
-	"PATCH /v1/deals/{id}":                 {object: tableDeal, table: tableDeal, idPath: "id"},
-	"POST /v1/deals/{id}/advance":          {object: tableDeal, table: tableDeal, idPath: "id"},
+	"POST /v1/deals":              {object: tableDeal, table: tableDeal, idPath: "id"},
+	"PATCH /v1/deals/{id}":        {object: tableDeal, table: tableDeal, idPath: "id"},
+	"POST /v1/deals/{id}/advance": {object: tableDeal, table: tableDeal, idPath: "id"},
+	// Taking back an automatic stage move answers the deal, and the deal's
+	// grant governs it — the progression ledger carries no authority of its
+	// own. A retried undo must replay rather than re-execute: the second run
+	// would find the move already reversed and refuse with a 409, telling the
+	// caller their own retry had failed.
+	"POST /v1/deals/{id}/stage-progressions/{approvalId}/revert": {
+		object: tableDeal, table: tableDeal, idPath: "id",
+	},
 	"POST /v1/contracts":                   {object: probeContract, moduleProbe: probeContract, idPath: "id", rowNote: "a contract carries no owner column; visibility is inherited from its deal or organization, so the contracts store owns the probe"},
 	"POST /v1/deal-rooms":                  {object: probeDealRoom, moduleProbe: probeDealRoom, idPath: "id", rowNote: "a Deal Room carries no owner column; its visibility is its parent deal's, so the dealrooms store owns the probe"},
 	"POST /v1/projects":                    {object: tableProject, table: tableProject, idPath: "id"},

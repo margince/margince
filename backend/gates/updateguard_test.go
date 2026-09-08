@@ -152,6 +152,13 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	// consequence), and one clearing is one clearing. Both send the conditional
 	// UPDATE through QueryRow so the row the write produced is the row the
 	// audit describes.
+	// A reversal, from both doors that can make one: the undo verb and the
+	// detection of a manual move back. Both LOCK the ledger row first (FOR
+	// UPDATE OF o in lockReversibleMove and in the detection query), and the
+	// write is conditioned on reversed_at IS NULL on top of that — so a second
+	// caller gets ErrNoRows and treats it as the decline it is. One reversal
+	// counted twice would double the safety rate that governs the transition.
+	"internal/modules/deals:markMoveReversed":          "the caller holds the row (FOR UPDATE) and the write is conditioned on reversed_at IS NULL; ErrNoRows means somebody reversed it first, which is a decline rather than a failure",
 	"internal/modules/deals:suspendTransitionPolicyTx": "conditioned on suspended_at IS NULL; ErrNoRows means a concurrent pass suspended it first and that reason stands",
 	"internal/modules/deals:ResumeTransitionPolicy":    "conditioned on suspended_at IS NOT NULL; ErrNoRows means a concurrent caller already cleared it",
 

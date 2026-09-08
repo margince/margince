@@ -4946,6 +4946,84 @@ paths:
         '422': { $ref: '#/components/responses/ValidationError' }
 
   # ------------------------ /deals/{id}/stage-evidence ------------------------
+  /deals/{id}/stage-progressions/{approvalId}/revert:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - name: approvalId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+        description: The stage-progression approval whose move is being taken back.
+    post:
+      tags: [Deals]
+      operationId: revertStageProgression
+      summary: Take back a stage move the product made by itself.
+      # human-only, and deliberately. Undoing what the autopilot did is a
+      # judgement about whether the product was right, and an agent reversing
+      # the product's own moves would be one machine grading another with
+      # nobody in the loop. A person disagrees; that is the whole verb.
+      x-agent-access: human-only
+      description: |
+        Undo for an AUTOMATICALLY applied stage move, inside the window the
+        transition's rule allows (`undo_window_hours`, default 72).
+
+        It is a separate verb rather than the general undo path because a stage
+        move is not restorable by writing the field back: it wrote
+        `deal_stage_history` and the progression ledger beside the column, so
+        restoring `stage_id` alone would leave the history saying the deal is
+        somewhere it is not. The general replay engine refuses `advance_stage`
+        for exactly this reason.
+
+        What it does: moves the deal back to the stage it came from, appends a
+        new `deal_stage_history` row for the move back (history is append-only;
+        nothing is erased), and marks the progression ledger row `reversed` with
+        who did it and when.
+
+        **A reversal does not refute the evidence.** Taking a move back says the
+        deal should not have moved, which is a different claim from "the
+        criteria were wrongly read" — a rep may agree with every observation and
+        still want the deal where it was. Evidence is withdrawn only through its
+        own correction path.
+
+        Refused after the window closes: the move stands, the audit trail keeps
+        it, and moving the deal back by hand is the remaining route — which is
+        counted as a reversal too, on the same ledger.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: The deal, back at the stage it came from.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Deal' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: |
+            No such deal, no such progression, or the caller may not see it.
+            Also the answer when the approval names a different deal, so a
+            caller cannot learn that a progression exists by probing ids.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '409':
+          description: |
+            The move cannot be taken back: the undo window has closed, the move
+            was made by a person rather than automatically, or it has already
+            been reversed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              examples:
+                windowClosed:
+                  value:
+                    type: 'https://errors.gradion.com/undo_window_closed'
+                    title: The undo window has closed
+                    status: 409
+                    code: undo_window_closed
+                    detail: This move can no longer be taken back automatically; move the deal by hand instead.
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /deals/{id}/stage-evidence:
     parameters:
       - $ref: '#/components/parameters/Id'
