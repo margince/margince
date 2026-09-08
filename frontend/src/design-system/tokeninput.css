@@ -89,7 +89,7 @@
   border: 0;
   padding: 0;
   background: transparent;
-  color: var(--textSecondary);
+  color: var(--textMeta);
   cursor: pointer;
 }
 

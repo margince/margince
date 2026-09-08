@@ -48,7 +48,7 @@ export function RelayPanel({
               key={step.key}
               aria-current={step.state === "current" ? "step" : undefined}
             >
-              <span className="pn-relay-num" aria-hidden="true">
+              <span className="pn-relay-num t-caption" aria-hidden="true">
                 {step.state === "done" ? (
                   <Check size={14} />
                 ) : (

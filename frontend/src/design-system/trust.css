@@ -178,7 +178,7 @@ button.evidence-chip:hover {
    it says. Close to what it explains: a full line's air between the two would
    read as a second, unrelated fact.
  *
- * Demoted by SIZE, not by ink. `--textSecondary` measures 4.33:1 against this
+ * Demoted by SIZE, not by ink. `--textMeta` measures 4.33:1 against this
  * card's AI-tinted ground and fails AA — the staging card paints `--aiLight`
  * over the card, so the same token that passes on a plain card does not pass
  * here. This is the ancestor-dependent contrast trap the Badge hit before it

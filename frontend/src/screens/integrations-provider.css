@@ -79,7 +79,7 @@
 .provider-block-hint {
   margin: 0;
   font-size: var(--fs-sm);
-  color: var(--textSecondary);
+  color: var(--textContent);
 }
 
 /* One row per credit pool. The grid's term/value split is proportional, so on a
@@ -102,7 +102,7 @@
 .provider-spend-table th {
   text-align: left;
   font-weight: var(--fw-medium);
-  color: var(--textSecondary);
+  color: var(--textMeta);
   padding-bottom: var(--space-2);
   border-bottom: 1px solid var(--borderSubtle);
 }
@@ -140,7 +140,7 @@
 /* A held figure is not a charge. It reads quieter than the total beside it so
  * nobody adds the two together by eye. */
 .provider-held {
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 /* Why the write a row just started was refused, under that row at its full
@@ -150,11 +150,6 @@
 .settinglist > .provider-row-note {
   padding-bottom: var(--space-3);
   border-top: 0;
-}
-
-.provider-empty {
-  font-size: var(--fs-sm);
-  color: var(--textSecondary);
 }
 
 /* The two sentences under the lookup switch. A description is one <p>, and the

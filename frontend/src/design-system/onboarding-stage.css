@@ -461,7 +461,7 @@
   margin: 0;
   font-size: var(--fs-lead);
   line-height: var(--lh-relaxed);
-  color: var(--textSecondary);
+  color: var(--textMeta);
   max-width: 52ch;
 }
 

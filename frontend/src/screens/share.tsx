@@ -663,7 +663,7 @@ function ShareScreenBody({
           <Link2 aria-hidden />
           <EntityRef kind={recordType} id={recordId} />
         </div>
-        <p className="share-ceiling">
+        <p className="share-ceiling t-caption">
           <ShieldCheck aria-hidden />
           <span>
             {t("share.ceiling.pre")}

@@ -86,7 +86,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 .ext-brings-def {
@@ -95,7 +95,7 @@
 }
 
 .ext-none {
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 .ext-chips {
@@ -169,7 +169,7 @@
 }
 
 .ext-matrix thead th {
-  color: var(--textSecondary);
+  color: var(--textMeta);
   font-weight: 500;
   white-space: nowrap;
 }
@@ -186,7 +186,7 @@
 
 .ext-role-note {
   display: block;
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 /* Each cell is one Switch whose label is screen-reader-only, so what the cell
@@ -212,6 +212,6 @@
 }
 
 .ext-note {
-  color: var(--textSecondary);
+  color: var(--textMeta);
   margin: var(--space-2) 0 0;
 }

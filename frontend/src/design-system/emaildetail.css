@@ -33,7 +33,7 @@
 .emaildetail__partyLabel {
   display: inline-block;
   min-width: 5.5rem;
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 /* A name on an envelope line that is also a way to the record. It keeps the
@@ -51,7 +51,7 @@
 }
 
 .emaildetail__party--withheld {
-  color: var(--textSecondary);
+  color: var(--textMeta);
   font-style: italic;
 }
 
@@ -69,7 +69,7 @@
  * which is not what a sign-off is. */
 .emaildetail__signoff {
   margin: var(--space-3) 0 0;
-  color: var(--textSecondary);
+  color: var(--textMeta);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
@@ -81,7 +81,7 @@
 
 .emaildetail__quoted > p {
   margin: var(--space-2) 0 0;
-  color: var(--textSecondary);
+  color: var(--textMeta);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
@@ -136,7 +136,7 @@
 }
 .emaildetail__filesLabel {
   font-size: var(--fs-meta);
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 .emaildetail__fileList {
   display: flex;

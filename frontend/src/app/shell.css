@@ -1002,14 +1002,13 @@
   overflow-wrap: anywhere;
 }
 /* The line under the page's name, for a page whose name alone does not say what
-   it is for. Quiet and one step down the type scale: it explains the heading, so
-   reading it must never compete with reading the heading. */
+   it is for. Quiet meta one step down the type scale, which is `t-sub` on the
+   element: it explains the heading, so reading it must never compete with
+   reading the heading. */
 .pagesub {
   margin: 0;
   max-width: 68ch;
-  font-size: var(--fs-sm);
   line-height: var(--lh-normal);
-  color: var(--textSecondary);
 }
 /* The heading IS the switcher at phone width: the h1 carries no type of its own
    there, because the control inside it brings the page's name at the size the

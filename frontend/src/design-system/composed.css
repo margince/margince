@@ -396,7 +396,7 @@
 }
 .deal-card .deal-name {
   font-size: var(--fs-sm);
-  color: var(--textContent);
+  color: var(--textPrimary);
 }
 /* The company and, at the far edge of its line, who carries the deal: a mark
    only, because a rep on a team board scans for their own initials and the
@@ -1332,7 +1332,7 @@
   align-items: center;
   gap: var(--space-2);
   font-size: var(--fs-sm);
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 .tl-msg-who {
   font-weight: var(--fw-medium);

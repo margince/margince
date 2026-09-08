@@ -61,7 +61,7 @@
    */
   --catCompany: color-mix(in oklab, var(--accent) 58%, var(--overlayLight));
   --catOffering: color-mix(in oklab, var(--accent) 88%, var(--overlayDark));
-  --catMarket: color-mix(in oklab, var(--accent) 38%, var(--textSecondary));
+  --catMarket: color-mix(in oklab, var(--accent) 38%, var(--textMeta));
   --catSignal: color-mix(in oklab, var(--warn) 86%, var(--overlayLight));
 
   /* The warn family's page-level wash. --warnBg is a fill strong enough to

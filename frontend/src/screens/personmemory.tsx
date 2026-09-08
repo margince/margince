@@ -90,12 +90,12 @@ export function PersonMemory({
       )}
       {shown.map((row) => (
         <PanelRow className="pe-memory-row" key={row.key}>
-          <span className="pe-memory-date">{row.date}</span>
+          <span className="pe-memory-date t-sub">{row.date}</span>
           {/* The icon reads the KIND and the label reads the transport: a chat
               message drawn from its provider key alone fell through to the
               envelope, which told a contact with no email address that they
               had been mailed. */}
-          <span className="pe-memory-channel">
+          <span className="pe-memory-channel t-caption">
             {interactionIcon(row.kind)}
             {row.channelLabel}
           </span>
@@ -125,7 +125,7 @@ export function PersonMemory({
           ) : (
             <span />
           )}
-          <span className="pe-memory-time">{row.time}</span>
+          <span className="pe-memory-time t-sub">{row.time}</span>
           {/* Reply, on the same terms the 360 timelines offer it: available on
               any row, and WITHHELD on a channel row whose person cannot be
               reached on the transport that carried it. Mail behaves exactly as

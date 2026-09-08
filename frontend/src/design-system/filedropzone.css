@@ -52,7 +52,7 @@
 }
 
 .fdz-label {
-  color: var(--textSecondary);
+  color: var(--textMeta);
   font-size: var(--fs-sm);
   /* Inert to the pointer — this text only, never the input stretched beside
    * it, which is the whole control. `dragleave` fires on the move from one

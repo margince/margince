@@ -49,7 +49,7 @@ export function BriefHeader({
   return (
     <>
       {preparedFor && (
-        <p className="mb-prepared-for">
+        <p className="mb-prepared-for t-sub">
           {preparedFor.organizationName
             ? t("person.meeting.preparedForAt", {
                 name: preparedFor.name,
@@ -69,7 +69,7 @@ export function BriefHeader({
           )}
           <div className="mb-meeting-text">
             <strong>{meeting.subject}</strong>
-            {when && <span>{when}</span>}
+            {when && <span className="t-sub">{when}</span>}
           </div>
         </div>
       )}

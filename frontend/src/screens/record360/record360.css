@@ -52,7 +52,7 @@
    all-clear, and painting it green told a reader a word nobody could read was
    good news. */
 .r360-standing-unknown {
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 .r360-standing-accent {

@@ -45,7 +45,7 @@
 }
 .select-chevron {
   flex: none;
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 /* The turn itself is unconditional — it is the state, and a reader who asked for
    less motion still needs the chevron to point at an open list. Only the tween is

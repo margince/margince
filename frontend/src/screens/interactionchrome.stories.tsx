@@ -51,7 +51,7 @@ function Catalog() {
     <div className="pe-chiprow">
       {CATALOG.map((entry) => (
         <span
-          className="pe-memory-channel"
+          className="pe-memory-channel t-caption"
           key={`${entry.kind}-${entry.provider ?? "none"}`}
         >
           {interactionIcon(entry.kind)}

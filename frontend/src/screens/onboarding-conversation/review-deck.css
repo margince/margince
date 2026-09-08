@@ -118,7 +118,7 @@
 
 .rdeck-evidence {
   margin: 0;
-  color: var(--textSecondary);
+  color: var(--textContent);
   font-size: var(--fs-sm);
   line-height: var(--lh-normal);
 }
@@ -204,6 +204,6 @@
 }
 .rdeck-clear {
   margin: 0;
-  color: var(--textSecondary);
+  color: var(--textMeta);
   font-size: var(--fs-lead);
 }

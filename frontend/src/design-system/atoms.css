@@ -4,7 +4,7 @@
 .badge {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--space-1);
   font-size: var(--fs-meta);
   /* Medium at 20px: the pill states one standing fact beside a name and must
      not outweigh the name. Semibold at this size reads as a warning. */
@@ -62,12 +62,13 @@
  * as the label's, so the status is still tellable at a glance; the fill and
  * the pill padding are what go. It overrides the tone tints above, which is
  * why it is declared after them and repeats `background` rather than relying
- * on the cascade of a class the caller may or may not have passed. */
+ * on the cascade of a class the caller may or may not have passed. It sets no
+ * size of its own: a table cell reads the meta rung, and a rung of its own put
+ * the one plain-text status in a row a step above every value beside it. */
 .badge-quiet {
   background: none;
   padding: 0;
   font-weight: 400;
-  font-size: var(--fs-sm);
 }
 .badge-quiet::before {
   content: "";
@@ -391,7 +392,7 @@
 .empty {
   text-align: start;
   padding: var(--space-5) 0;
-  color: var(--textSecondary);
+  color: var(--textMeta);
   font-size: var(--fs-body);
 }
 /* The instructional variant: a heading in the primary ink, a measured
@@ -426,7 +427,7 @@
   margin: 0;
   font-size: var(--fs-sm);
   font-weight: var(--fw-medium);
-  color: var(--textContent);
+  color: var(--textPrimary);
 }
 /* What this kind of thing is FOR, under the line saying there is none of it.
    Held to a measure: a definition set across the full pane width reads as body
@@ -931,7 +932,7 @@
   margin-top: var(--space-2);
   font-size: var(--fs-sm);
   line-height: var(--lh-normal);
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 .section-header h2 {
   /* --fs-lead IS 15px: the same value the raw number held, now named. The
@@ -1994,9 +1995,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-}
-.stat-card-basis-head {
-  color: var(--textMeta);
 }
 
 /* The proportion, under the words that state it. Its own quiet track so an

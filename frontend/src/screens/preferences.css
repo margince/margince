@@ -74,7 +74,7 @@
 .pref-lock-icon {
   width: 14px;
   height: 14px;
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 .pref-lock-badge {
@@ -89,7 +89,7 @@
 }
 
 .pref-state {
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 .pref-locked-why {
@@ -142,7 +142,7 @@
    like one product rather than two. */
 .unsub-lead {
   margin: 0 0 var(--space-5);
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 .unsub-kind {

@@ -121,7 +121,7 @@ export function PersonResearchDrawer({
             <p className="pe-staged-notice">
               {t("person.research.staged", { name: personName })}
             </p>
-            <p className="pe-today-foot">
+            <p className="pe-today-foot t-caption">
               {t("person.research.stats", {
                 sources: formatNumber(run.data.sources_read ?? 0, locale),
                 claims: formatNumber(claims.length, locale),
@@ -145,7 +145,7 @@ export function PersonResearchDrawer({
                       webUrl(source.url) ? (
                         <a
                           key={source.url}
-                          className="pe-memory-channel"
+                          className="pe-memory-channel t-caption"
                           href={source.url}
                           target="_blank"
                           rel="noreferrer"
@@ -154,7 +154,10 @@ export function PersonResearchDrawer({
                           <ExternalLink size={12} aria-hidden="true" />
                         </a>
                       ) : (
-                        <span key={source.url} className="pe-memory-channel">
+                        <span
+                          key={source.url}
+                          className="pe-memory-channel t-caption"
+                        >
                           {source.label}
                         </span>
                       ),
@@ -181,7 +184,7 @@ export function PersonResearchDrawer({
       </div>
 
       <div className="drawer-foot">
-        <span className="pe-disclosure">
+        <span className="pe-disclosure t-caption">
           {t("person.research.evidenceOrOmit")}
         </span>
         <div className="pe-drawer-actions">
