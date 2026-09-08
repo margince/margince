@@ -165,14 +165,22 @@
   gap: var(--gapActions);
 }
 
-/* ROOM FOR AN INLINE FORM. The hand-off opens a picker and two verbs inside
-   this line (`worklist.manager.tsx`), which is a control and a sentence rather
-   than one more verb: sharing the line, it pushes the answer off the trailing
-   edge and reads as four peers. A line of its own under the verbs, on the same
-   edge they stand on, so what the reader opened is a block and not a wrap. */
+/* ROOM FOR AN INLINE FORM, AFTER THE VERBS IT BELONGS TO.
+   The hand-off opens a picker and two verbs inside this line
+   (`worklist.manager.tsx`), which is a control and a sentence rather than one
+   more verb: sharing the line, it pushes the answer off the trailing edge and
+   reads as four peers. So it takes a line of its own, on the same edge the
+   verbs stand on.
+   AN OPEN FORM MUST NOT SPLIT THE VERBS IT BELONGS TO. Left in source order the
+   form's line falls where the hand-off glyph sat — mid-line — and everything
+   after it, the lane's answer included, is pushed to a THIRD line: the reader
+   opens a picker and the row's `Done` moves under it, alone. `order: 1` is the
+   only value in this container, so the form is last however many verbs the row
+   carries and the verbs above it stay one line. */
 .worklist-row-acts > .worklist-manager-control {
   flex: 1 1 100%;
   justify-content: flex-end;
+  order: 1;
 }
 
 /* The standing line: a badge, who is speaking, and the sentence.
