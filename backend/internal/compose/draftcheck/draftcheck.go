@@ -181,7 +181,7 @@ func Reasoning(labels []string, lang textlang.Lang, band convstate.Band) []Findi
 		// booked=false for the same reason as threaded: a chip explains what the
 		// product wrote from, and a date in one is our own claim rather than
 		// something the record handed the reader.
-		findings = append(findings, Body(label, lang, band, false, false)...)
+		findings = append(findings, Body(label, lang, band, Grounds{})...)
 	}
 	return findings
 }
@@ -251,7 +251,7 @@ var resolvedEvent = map[textlang.Lang][]string{
 // opening a new conversation has no such ground — whatever it says about a
 // call, it invented. So the world-claim rules run on unthreaded drafts, where
 // the claim cannot be sourced, and stand down on replies, where it can.
-func Body(body string, lang textlang.Lang, band convstate.Band, threaded, booked bool) []Finding {
+func Body(body string, lang textlang.Lang, band convstate.Band, on Grounds) []Finding {
 	lowered := strings.ToLower(body)
 	var findings []Finding
 
@@ -268,7 +268,7 @@ func Body(body string, lang textlang.Lang, band convstate.Band, threaded, booked
 		}
 	}
 
-	if !threaded {
+	if !on.Threaded {
 		findings = append(findings, firstMatch(lowered, spokenExchange[lang],
 			"invented-conversation",
 			"this message opens a new conversation, so nothing in the input says a "+
@@ -284,7 +284,7 @@ func Body(body string, lang textlang.Lang, band convstate.Band, threaded, booked
 	// than on the thread: neither a reply nor an opener can source an
 	// arrangement the record does not carry. A draft PROPOSING one is
 	// untouched — that is the message this product exists to write.
-	if !booked {
+	if !on.Booked {
 		findings = append(findings, firstMatch(lowered, scheduledArrangement[lang],
 			"unscheduled-arrangement",
 			"nothing in the input books a meeting with this recipient, so writing about one "+

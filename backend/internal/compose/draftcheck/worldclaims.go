@@ -14,6 +14,21 @@ package draftcheck
 
 import "github.com/margince/margince/backend/internal/shared/kernel/textlang"
 
+// Grounds is what the RECORD supports, as opposed to what the draft says.
+//
+// A struct rather than two bools side by side: they are both about "can this
+// claim be sourced", they were adjacent in the signature, and a caller that
+// transposed them would ground a first message on a thread it does not have
+// and refuse a booked meeting its own day — silently, and in both directions.
+type Grounds struct {
+	// Threaded: this draft answers a real inbound message, so it may echo a
+	// call the counterparty themselves named.
+	Threaded bool
+	// Booked: the record carries a meeting with this recipient, so the draft
+	// may refer to its day.
+	Booked bool
+}
+
 // spokenExchange are the ways a draft asserts that a CONVERSATION happened —
 // a call, a meeting, a chat — as opposed to the messages the record holds.
 //

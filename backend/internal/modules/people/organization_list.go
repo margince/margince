@@ -136,8 +136,10 @@ func foldDomainQuery(raw string) string {
 // ListOrganizations is the row-scoped organization list read:
 // quick-find, owner, domain, classification and custom-field filters,
 // keyset pagination under the validated sort.
-func (s *Store) ListOrganizations(ctx context.Context, in ListOrganizationsInput) ([]crmcontracts.Organization, storekit.Page, error) {
-	shared := listFilters{
+// orgListFilters is the shared filter set for an account list: every dial the
+// person and lead lists also carry, plus the domain an account is found by.
+func orgListFilters(in ListOrganizationsInput) listFilters {
+	return listFilters{
 		IncludeArchived: in.IncludeArchived,
 		CapturedByKind:  in.CapturedByKind,
 		AiWritten:       in.AiWritten,
@@ -153,6 +155,12 @@ func (s *Store) ListOrganizations(ctx context.Context, in ListOrganizationsInput
 			Table: "organization_domain", FK: orgFK, Column: domainColumn,
 		},
 	}
+}
+
+// ListOrganizations answers one page of accounts under the caller's row scope,
+// filtered by the dials the contract declares and ordered by the shared sort.
+func (s *Store) ListOrganizations(ctx context.Context, in ListOrganizationsInput) ([]crmcontracts.Organization, storekit.Page, error) {
+	shared := orgListFilters(in)
 	return listPage(ctx, s, in.Sort, in.Limit, listPageSpec[crmcontracts.Organization]{
 		entity:  organizationEntity,
 		columns: orgColumns,
