@@ -39,7 +39,9 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"io/fs"
 	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -89,17 +91,27 @@ func TestATxAcceptingFunctionAcquiresNoConnectionOfItsOwn(t *testing.T) {
 		// owns its own connection is not one.
 	})
 	roots := []string{"internal", "cmd"}
+	holders, declared := txHoldingReceivers(t, roots)
 	scope := gatekit.Scope{
-		Roots:   roots,
-		Subject: func(_ string, file *ast.File) bool { return len(txBorrowingBodies(file)) > 0 },
-		Exempt:  exempt,
+		Roots: roots,
+		// A file holding any tx-borrowing body, by either rule. The parameter
+		// rule alone excluded a port that keeps the caller's transaction in a
+		// FIELD — its methods take no pgx.Tx at all — so `holders` is read
+		// here too, and it is built from a walk of its own rather than from
+		// this scope: the type and its verbs live in the same file today, and
+		// a subject rule that assumed so would report PASS the day somebody
+		// moves them apart.
+		Subject: func(p string, file *ast.File) bool {
+			return len(txBorrowingBodies(file, holders[path.Dir(p)], declared[path.Dir(p)])) > 0
+		},
+		Exempt: exempt,
 	}
 	defer exempt.AssertAllMatched(t)
 
 	index := indexPackageFunctions(t, roots)
 	for _, parsed := range scope.Files(t) {
 		dir := path.Dir(parsed.Path)
-		for _, body := range txBorrowingBodies(parsed.File) {
+		for _, body := range txBorrowingBodies(parsed.File, holders[dir], declared[dir]) {
 			for _, found := range body.acquires() {
 				t.Errorf("%s: %s runs on a caller's pgx.Tx and then %s (%s) — fetch it before the "+
 					"transaction opens and thread the result in, as mergePersonTx and createDealTx do; "+
@@ -139,15 +151,62 @@ type txBorrowing struct {
 	// pgxName is the local name the file imports pgx under, so a seam in a
 	// file that aliases the import is judged rather than skipped.
 	pgxName string
+	// recv and heldTx describe the third shape: a method on a receiver that
+	// HOLDS the caller's transaction in a field. `recv` is the receiver's own
+	// name in this method (`c` in `func (c extensionCore) …`) and heldTx the
+	// fields carrying a pgx.Tx, so a call spelled `c.tx.Query(…)` is read as
+	// running on the borrowed transaction rather than as a second connection.
+	// Both empty for the parameter and callback shapes. recvType names the
+	// receiver's type, which is what lets the reach walk resolve a call on it.
+	// A heldTx entry of promotedTx means the type EMBEDS the transaction, so
+	// its methods are reached on the receiver itself.
+	recv     string
+	recvType string
+	heldTx   []string
+	// declares names the methods the receiver's type declares itself, so a
+	// declared name is not mistaken for a promoted one.
+	declares map[string]bool
+}
+
+// promotedTx is the heldTx entry for an EMBEDDED pgx.Tx, which has no field
+// name to spell: its methods are promoted onto the receiver.
+const promotedTx = ""
+
+// promotedTxMethods are the acquirer names that belong to pgx.Tx ITSELF, so a
+// call on a receiver embedding one is the borrowed handle rather than a method
+// the embedding type declared.
+//
+// Only Begin, because it is the only name in connectionAcquirers that pgx.Tx
+// has: the rest are the pool's, the bound handle's, or this tree's own catalog
+// reads, and a type embedding a transaction is as free to declare a method
+// called Acquire or activeColumns as any other. Read without this, an
+// embedding receiver made every acquirer on itself invisible — the one shape
+// that looks most like a borrowed handle hiding the defect best.
+var promotedTxMethods = map[string]bool{"Begin": true}
+
+// embedsTx reports whether this body's receiver embeds the transaction rather
+// than naming a field for it.
+func (b txBorrowing) embedsTx() bool {
+	for _, field := range b.heldTx {
+		if field == promotedTx {
+			return true
+		}
+	}
+	return false
 }
 
 // txBorrowingBodies answers every tx-borrowing body in one file, outermost
-// first.
-func txBorrowingBodies(file *ast.File) []txBorrowing {
-	pgxName, imported := pgxLocalName(file)
-	if !imported {
-		return nil
-	}
+// first. `holders` names the receiver types in this file's PACKAGE that keep a
+// caller's transaction in a field, and the fields that carry it.
+func txBorrowingBodies(file *ast.File, holders map[string][]string, declared map[string]map[string]bool) []txBorrowing {
+	// No early return on a file that does not import pgx. The parameter rule
+	// needs the import — a body cannot take a pgx.Tx without naming the package
+	// — but a METHOD on a receiver that holds one does not: it reads `c.tx` and
+	// mentions pgx nowhere. Returning here left every verb of a port whose type
+	// is declared in a SIBLING file invisible, which is the same blindness this
+	// rule was widened to remove, one file over. An absent import makes the
+	// parameter rule match nothing, which is the right answer for it.
+	pgxName, _ := pgxLocalName(file)
 	var out []txBorrowing
 	add := func(name string, params *ast.FieldList, body *ast.BlockStmt) bool {
 		if body == nil || !takesPgxTx(params, pgxName) {
@@ -161,7 +220,16 @@ func txBorrowingBodies(file *ast.File) []txBorrowing {
 		if !ok || fn.Body == nil {
 			continue
 		}
-		add(fn.Name.Name, fn.Type.Params, fn.Body)
+		// Both rules, not one or the other. A method on a tx-holding receiver
+		// that ALSO takes a pgx.Tx borrows two, and recording it under the
+		// parameter rule alone left its receiver unknown — so its own `c.tx`
+		// read came back as a second connection, and the gate accused a body
+		// that was doing the right thing twice over.
+		if add(fn.Name.Name, fn.Type.Params, fn.Body) {
+			attachHeldTx(&out[len(out)-1], fn, holders, declared)
+		} else {
+			addHeldTxMethod(&out, fn, holders, declared, pgxName)
+		}
 		ast.Inspect(fn.Body, func(n ast.Node) bool {
 			lit, ok := n.(*ast.FuncLit)
 			if !ok {
@@ -173,6 +241,173 @@ func txBorrowingBodies(file *ast.File) []txBorrowing {
 		})
 	}
 	return out
+}
+
+// addHeldTxMethod records a method whose RECEIVER holds the caller's
+// transaction, which is the same obligation reached a different way.
+//
+// It exists because a port can keep the transaction instead of passing it:
+// compose/extcore.go's extensionCore does, and every verb on it runs on that
+// field. Judged by the parameter rule alone the whole file was invisible, and
+// it did not stay hypothetical — the first version of that port read the
+// workspace's mode through a second pool acquire inside the caller's open
+// transaction, the exact deadlock this gate refuses, and the gate was green.
+// Review caught it; the class was still uncaught.
+func addHeldTxMethod(out *[]txBorrowing, fn *ast.FuncDecl, holders map[string][]string, declared map[string]map[string]bool, pgxName string) {
+	if fn.Recv == nil || len(fn.Recv.List) == 0 {
+		return
+	}
+	if _, holds := holders[receiverTypeName(fn)]; !holds {
+		return
+	}
+	body := txBorrowing{
+		name:    receiverTypeName(fn) + "." + fn.Name.Name,
+		params:  fn.Type.Params,
+		body:    fn.Body,
+		pgxName: pgxName,
+	}
+	attachHeldTx(&body, fn, holders, declared)
+	*out = append(*out, body)
+}
+
+// attachHeldTx records which transaction a body's receiver holds, so a call on
+// it reads as the borrowed handle rather than as a second connection.
+//
+// An unnamed or blank receiver cannot spell `c.tx`, so nothing in the body can
+// be reading the held transaction and every acquirer found is a second
+// connection. Left with no receiver name rather than skipped.
+func attachHeldTx(body *txBorrowing, fn *ast.FuncDecl, holders map[string][]string, declared map[string]map[string]bool) {
+	if fn.Recv == nil || len(fn.Recv.List) == 0 {
+		return
+	}
+	fields, holds := holders[receiverTypeName(fn)]
+	if !holds {
+		return
+	}
+	body.recvType, body.heldTx = receiverTypeName(fn), fields
+	body.declares = declared[receiverTypeName(fn)]
+	if names := fn.Recv.List[0].Names; len(names) > 0 && names[0].Name != "_" {
+		body.recv = names[0].Name
+	}
+}
+
+// txHoldingReceivers indexes, per package directory, the struct types that keep
+// a pgx.Tx in a field and the fields that hold it.
+//
+// It walks the roots itself rather than reading the gate's own scope, and the
+// two reasons are the same reason. The scope is SELECTED by this answer, so
+// deriving it from the scope would be circular; and a type declared in one file
+// and given its verbs in another is the ordinary arrangement, which a per-file
+// answer would report PASS on. A census that can only see the tidy case has
+// already failed.
+func txHoldingReceivers(t *testing.T, roots []string) (map[string]map[string][]string, map[string]map[string]map[string]bool) {
+	t.Helper()
+	tree := moduleRoot(t)
+	out := map[string]map[string][]string{}
+	declared := map[string]map[string]map[string]bool{}
+	fset := token.NewFileSet()
+	for _, root := range roots {
+		err := filepath.WalkDir(filepath.Join(tree, root),
+			func(p string, d fs.DirEntry, err error) error {
+				if err != nil || d.IsDir() || !strings.HasSuffix(p, ".go") ||
+					strings.HasSuffix(p, "_test.go") {
+					return err
+				}
+				file, parseErr := parser.ParseFile(fset, p, nil, 0)
+				if parseErr != nil {
+					return parseErr
+				}
+				rel, relErr := filepath.Rel(tree, p)
+				if relErr != nil {
+					return relErr
+				}
+				dir := filepath.ToSlash(filepath.Dir(rel))
+				addTxHolders(out, dir, file)
+				addTxDeclaredMethods(declared, dir, file)
+				return nil
+			})
+		if err != nil {
+			t.Fatalf("indexing %s for tx-holding receivers: %v", root, err)
+		}
+	}
+	return out, declared
+}
+
+// addTxDeclaredMethods records, per package directory, the method names each
+// type declares itself.
+//
+// It exists for the case a type that EMBEDS pgx.Tx creates by declaring its own
+// `Begin`. `c.Begin(…)` resolves to that method, not to the promoted
+// transaction's, so exempting it by name waves through an acquire wearing a
+// name this walk otherwise reads as a savepoint. A declared name wins over a
+// promoted one in Go, and this is what lets the walk say so.
+func addTxDeclaredMethods(out map[string]map[string]map[string]bool, dir string, file *ast.File) {
+	for _, decl := range file.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok || fn.Recv == nil {
+			continue
+		}
+		recv := receiverTypeName(fn)
+		if recv == "" {
+			continue
+		}
+		if out[dir] == nil {
+			out[dir] = map[string]map[string]bool{}
+		}
+		if out[dir][recv] == nil {
+			out[dir][recv] = map[string]bool{}
+		}
+		out[dir][recv][fn.Name.Name] = true
+	}
+}
+
+// addTxHolders records one file's struct types that hold a pgx.Tx.
+func addTxHolders(out map[string]map[string][]string, dir string, file *ast.File) {
+	pgxName, imported := pgxLocalName(file)
+	if !imported {
+		return
+	}
+	for _, decl := range file.Decls {
+		gen, ok := decl.(*ast.GenDecl)
+		if !ok || gen.Tok != token.TYPE {
+			continue
+		}
+		for _, spec := range gen.Specs {
+			ts, ok := spec.(*ast.TypeSpec)
+			if !ok {
+				continue
+			}
+			st, ok := ts.Type.(*ast.StructType)
+			if !ok || st.Fields == nil {
+				continue
+			}
+			var held []string
+			for _, field := range st.Fields.List {
+				if !isPgxTx(field.Type, pgxName) {
+					continue
+				}
+				if len(field.Names) == 0 {
+					// EMBEDDED. There is no field name to spell, and the
+					// transaction's own methods are promoted onto the receiver:
+					// the borrowed handle is reached as `c.Begin(…)`, which
+					// without this reads as a second connection taken by the
+					// very body already holding one.
+					held = append(held, promotedTx)
+					continue
+				}
+				for _, name := range field.Names {
+					held = append(held, name.Name)
+				}
+			}
+			if len(held) == 0 {
+				continue
+			}
+			if out[dir] == nil {
+				out[dir] = map[string][]string{}
+			}
+			out[dir][ts.Name.Name] = held
+		}
+	}
 }
 
 // pgxLocalName answers the name this file spells the pgx package under, and
@@ -233,7 +468,7 @@ func (b txBorrowing) acquires() []string {
 			if _, isAcquirer := connectionAcquirers[fn.Sel.Name]; !isAcquirer {
 				return true
 			}
-			if b.receiverIsTheBorrowedTx(fn.X) {
+			if b.receiverIsTheBorrowedTx(fn.X, fn.Sel.Name) {
 				return true
 			}
 			found = append(found, fn.Sel.Name)
@@ -255,12 +490,27 @@ func (b txBorrowing) acquires() []string {
 	return found
 }
 
-// receiverIsTheBorrowedTx reports whether a call's receiver is one of this
-// body's own pgx.Tx parameters.
-func (b txBorrowing) receiverIsTheBorrowedTx(recv ast.Expr) bool {
+// receiverIsTheBorrowedTx reports whether a call's receiver is the transaction
+// this body borrowed: one of its own pgx.Tx parameters, or the field its
+// receiver holds one in.
+func (b txBorrowing) receiverIsTheBorrowedTx(recv ast.Expr, called string) bool {
+	if sel, ok := recv.(*ast.SelectorExpr); ok {
+		return b.isHeldTxField(sel)
+	}
 	ident, ok := recv.(*ast.Ident)
 	if !ok {
 		return false
+	}
+	// A receiver that EMBEDS the transaction reaches it by its own name — but
+	// only for pgx.Tx's OWN methods, and only where the type has not DECLARED
+	// one of that name itself. `c.Begin(…)` on such a receiver is the promoted
+	// savepoint; `c.ActiveColumns(…)` is a method the embedding type declared,
+	// and so is a `Begin` it declared, which in Go wins over the promoted one.
+	// Exempting either by name alone waves through an acquire wearing a name
+	// this walk otherwise reads as a savepoint.
+	if b.recv != "" && ident.Name == b.recv && b.embedsTx() &&
+		promotedTxMethods[called] && !b.declares[called] {
+		return true
 	}
 	for _, param := range b.params.List {
 		if !isPgxTx(param.Type, b.pgxName) {
@@ -270,6 +520,25 @@ func (b txBorrowing) receiverIsTheBorrowedTx(recv ast.Expr) bool {
 			if name.Name == ident.Name {
 				return true
 			}
+		}
+	}
+	return false
+}
+
+// isHeldTxField reports whether `x.y` names the transaction this method's
+// receiver holds — `c.tx` in a method on extensionCore.
+//
+// Anchored on the RECEIVER's name and not on the field's alone: `other.tx` is a
+// different object's transaction, and reading it as this one's would wave
+// through a call on a handle this body never borrowed.
+func (b txBorrowing) isHeldTxField(sel *ast.SelectorExpr) bool {
+	base, ok := sel.X.(*ast.Ident)
+	if !ok || b.recv == "" || base.Name != b.recv {
+		return false
+	}
+	for _, field := range b.heldTx {
+		if sel.Sel.Name == field {
+			return true
 		}
 	}
 	return false
@@ -377,7 +646,7 @@ import "github.com/jackc/pgx/v5"
 // count.
 func assertGateReads(t *testing.T, src, body string, want ...string) {
 	t.Helper()
-	bodies := txBorrowingBodies(parseGateFixture(t, src))
+	bodies := txBorrowingBodies(parseGateFixture(t, src), nil, nil)
 	for _, b := range bodies {
 		if b.name != body {
 			continue
@@ -406,7 +675,7 @@ func (s *Store) ClaimAndEnqueue(ctx context.Context, enqueue func(tx pgx.Tx) err
 	return s.claim(ctx, enqueue)
 }
 `
-	for _, b := range txBorrowingBodies(parseGateFixture(t, callbackTaker)) {
+	for _, b := range txBorrowingBodies(parseGateFixture(t, callbackTaker), nil, nil) {
 		if b.name == "ClaimAndEnqueue" {
 			t.Fatal("a function whose only pgx.Tx is the type of a callback it accepts was judged as borrowing a transaction")
 		}
@@ -420,4 +689,296 @@ func parseGateFixture(t *testing.T, src string) *ast.File {
 		t.Fatalf("parsing the gate fixture: %v\n%s", err, strings.TrimSpace(src))
 	}
 	return file
+}
+
+// A port that HOLDS the caller's transaction is judged like one that takes it.
+//
+// This is the shape the parameter rule could not see, and it is not a
+// hypothetical one: compose/extcore.go's first version read the workspace's
+// record mode through a second pool acquire inside the caller's open
+// transaction — the deadlock this gate refuses — and the gate was green,
+// because no method on that receiver takes a pgx.Tx.
+func TestTheGateSeesAnAcquireInAMethodOnAReceiverHoldingTheTransaction(t *testing.T) {
+	t.Parallel()
+	const port = fixtureImports + `
+type core struct {
+	tx   pgx.Tx
+	pool *pgxpool.Pool
+}
+
+func (c core) RefuseOverlay(ctx context.Context) error {
+	conn, err := c.pool.Acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+	return readMode(ctx, conn)
+}
+`
+	assertHeldTxGateReads(t, port, "core.RefuseOverlay", "Acquire")
+}
+
+// The repair, one line apart: the same read on the transaction the receiver is
+// already holding. Without this case the one above would pass against a rule
+// that flagged every method on a tx-holding type, which would make the gate
+// unusable and get it waived rather than obeyed.
+func TestTheGateLeavesAMethodThatReadsTheHeldTransactionAlone(t *testing.T) {
+	t.Parallel()
+	const repaired = fixtureImports + `
+type core struct {
+	tx pgx.Tx
+}
+
+func (c core) RefuseOverlay(ctx context.Context) error {
+	return readMode(ctx, c.tx)
+}
+
+func (c core) Nested(ctx context.Context) error {
+	_, err := c.tx.Begin(ctx)
+	return err
+}
+`
+	assertHeldTxGateReads(t, repaired, "core.RefuseOverlay")
+	// `Begin` IS a registered acquirer, and on the borrowed handle it is a
+	// savepoint rather than a second connection — the same reasoning the
+	// parameter rule already applies to `tx.Begin`.
+	assertHeldTxGateReads(t, repaired, "core.Nested")
+}
+
+// Another object's transaction is not this body's to read. A rule keyed on the
+// FIELD name alone would wave `other.tx` through, which is a second connection
+// wearing the borrowed one's spelling.
+func TestTheGateReadsAnotherObjectsTransactionAsAnAcquire(t *testing.T) {
+	t.Parallel()
+	// `other` is a local, so the call reads `other.tx` — an identifier that is
+	// not this method's receiver. It is the shape the anchor exists for: a
+	// rule keyed on the field name alone reads it as the borrowed handle and
+	// waves the second connection through, and it is the ONLY shape that
+	// distinguishes the two rules — `c.other.tx` fails a receiver-name test
+	// for the unrelated reason that its base is not an identifier at all.
+	const foreign = fixtureImports + `
+type core struct {
+	tx pgx.Tx
+}
+
+func (c core) Read(ctx context.Context) error {
+	other := sibling()
+	_, err := other.tx.Begin(ctx)
+	return err
+}
+`
+	assertHeldTxGateReads(t, foreign, "core.Read", "Begin")
+}
+
+// assertHeldTxGateReads is assertGateReads for the receiver-held shape: the
+// holder index is derived from the fixture itself, exactly as the live gate
+// derives it from the package.
+func assertHeldTxGateReads(t *testing.T, src, body string, want ...string) {
+	t.Helper()
+	file := parseGateFixture(t, src)
+	holders := map[string]map[string][]string{}
+	declared := map[string]map[string]map[string]bool{}
+	addTxHolders(holders, ".", file)
+	addTxDeclaredMethods(declared, ".", file)
+	bodies := txBorrowingBodies(file, holders["."], declared["."])
+	for _, b := range bodies {
+		if b.name != body {
+			continue
+		}
+		got := b.acquires()
+		if len(got) != len(want) {
+			t.Fatalf("the gate read %v from %q, want %v", got, body, want)
+		}
+		for i := range got {
+			if got[i] != want[i] {
+				t.Fatalf("the gate read %v from %q, want %v", got, body, want)
+			}
+		}
+		return
+	}
+	t.Fatalf("the gate found no body named %q in the fixture — it judged %d others", body, len(bodies))
+}
+
+// The rule has a live subject, and says so if it stops having one.
+//
+// Every case above is a fixture, and a widened rule that matches nothing in the
+// tree is a rule nobody is held to: it would report PASS over a tree it had
+// stopped reading, which is the one way a gate must not fail. This names the
+// port the widening was written for.
+func TestTheHeldTransactionRuleHasARealSubject(t *testing.T) {
+	t.Parallel()
+	holders, _ := txHoldingReceivers(t, []string{"internal", "cmd"})
+	compose, ok := holders["internal/compose"]
+	if !ok {
+		t.Fatal("no receiver in internal/compose holds a pgx.Tx — the rule this file widened for reads nothing, and every case proving it is a fixture")
+	}
+	fields, held := compose["extensionCore"]
+	if !held {
+		t.Fatalf("extensionCore no longer holds a transaction; internal/compose holds %d other(s) that do — if the port was renamed, name the new one here", len(compose))
+	}
+	if len(fields) != 1 || fields[0] != "tx" {
+		t.Fatalf("extensionCore holds its transaction in %v, want [tx]", fields)
+	}
+}
+
+// A port's VERBS may live in a file that never names pgx.
+//
+// A method on a tx-holding receiver reads `c.tx` and mentions the package
+// nowhere, so a file holding nothing but such methods has no pgx import — and
+// the walk used to return before consulting the holder index at all. Every verb
+// of a port whose type is declared in a sibling file was therefore invisible,
+// which is the blindness this rule was widened to remove, one file over.
+//
+// It was not hypothetical either: dropping that early return immediately found
+// project360's organization section reading the custom-field catalog inside the
+// page's own transaction, fixed in the same change.
+func TestTheGateJudgesAHolderMethodInAFileThatNeverNamesPgx(t *testing.T) {
+	t.Parallel()
+	const declaration = `package compose
+
+import "github.com/jackc/pgx/v5"
+
+type core struct {
+	tx   pgx.Tx
+	pool *pgxpool.Pool
+}
+`
+	// No pgx import: this file needs none, which is the whole point.
+	const verbs = `package compose
+
+func (c core) RefuseOverlay(ctx context.Context) error {
+	conn, err := c.pool.Acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+	return nil
+}
+`
+	holders := map[string]map[string][]string{}
+	declared := map[string]map[string]map[string]bool{}
+	addTxHolders(holders, ".", parseGateFixture(t, declaration))
+	verbsFile := parseGateFixture(t, verbs)
+	addTxDeclaredMethods(declared, ".", verbsFile)
+	bodies := txBorrowingBodies(verbsFile, holders["."], declared["."])
+	if len(bodies) != 1 || bodies[0].name != "core.RefuseOverlay" {
+		t.Fatalf("the walk judged %d body/bodies in a file with no pgx import, want the one method on the holder", len(bodies))
+	}
+	if got := bodies[0].acquires(); len(got) != 1 || got[0] != "Acquire" {
+		t.Fatalf("the gate read %v, want [Acquire]", got)
+	}
+}
+
+// A method that holds a transaction AND takes one borrows two.
+//
+// Recorded under the parameter rule alone its receiver was unknown, so its own
+// `c.tx` read came back as a second connection: the gate accused a body that
+// was doing the right thing twice over. A false positive here is worse than the
+// hole it closes, because a gate that cries wolf gets waived.
+func TestTheGateReadsBothTransactionsOfAMethodThatHoldsAndTakesOne(t *testing.T) {
+	t.Parallel()
+	const both = fixtureImports + `
+type core struct {
+	tx pgx.Tx
+}
+
+func (c core) Reconcile(ctx context.Context, other pgx.Tx) error {
+	if _, err := c.tx.Begin(ctx); err != nil {
+		return err
+	}
+	_, err := other.Begin(ctx)
+	return err
+}
+`
+	assertHeldTxGateReads(t, both, "Reconcile")
+}
+
+// A receiver that EMBEDS the transaction reaches it by its own name.
+//
+// The census dropped it — an anonymous field has no `field.Names` — so the type
+// held nothing as far as the gate could see, and its verbs went unjudged. Worse
+// than absent: the promoted `c.Begin(…)` is a savepoint on the borrowed handle,
+// and once the type IS recognised, reading it as an acquire would accuse every
+// such method.
+func TestTheGateReadsAnEmbeddedTransactionAsTheBorrowedOne(t *testing.T) {
+	t.Parallel()
+	const embedded = fixtureImports + `
+type core struct {
+	pgx.Tx
+	pool *pgxpool.Pool
+}
+
+func (c core) Nested(ctx context.Context) error {
+	_, err := c.Begin(ctx)
+	return err
+}
+
+func (c core) Second(ctx context.Context) error {
+	conn, err := c.pool.Acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+	return nil
+}
+`
+	assertHeldTxGateReads(t, embedded, "core.Nested")
+	assertHeldTxGateReads(t, embedded, "core.Second", "Acquire")
+}
+
+// An embedding type's OWN method is not the promoted transaction.
+//
+// `c.Begin(…)` on a receiver embedding pgx.Tx is that transaction's; `c.Tx(…)`
+// or `c.activeColumns(…)` is a method the type declared, and reading it as the
+// borrowed handle because the receiver happens to embed one would hide an
+// acquire inside the shape that looks most like a borrowed handle. Nothing
+// stops a type embedding a transaction from declaring either name.
+func TestTheGateJudgesAnEmbeddingTypesOwnMethodRatherThanPromotingIt(t *testing.T) {
+	t.Parallel()
+	const shadowing = fixtureImports + `
+type core struct {
+	pgx.Tx
+}
+
+func (c core) Read(ctx context.Context) error {
+	_, err := c.activeColumns(ctx, "person")
+	return err
+}
+`
+	assertHeldTxGateReads(t, shadowing, "core.Read", "activeColumns")
+}
+
+// A `Begin` the embedding type DECLARES is that method, not the promoted one.
+//
+// Go resolves a declared method over a promoted one, so `c.Begin(…)` here runs
+// the type's own — and exempting it by name would wave through an acquire
+// wearing a name this walk otherwise treats as a savepoint. That is the worst
+// place to leave a hole: a shape that reads as a borrowed handle.
+func TestTheGateJudgesADeclaredBeginOverThePromotedOne(t *testing.T) {
+	t.Parallel()
+	const shadowed = fixtureImports + `
+type core struct {
+	pgx.Tx
+	pool *pgxpool.Pool
+}
+
+func (c core) Begin(ctx context.Context) error {
+	conn, err := c.pool.Acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+	return nil
+}
+
+func (c core) Nested(ctx context.Context) error {
+	_, err := c.Begin(ctx)
+	return err
+}
+`
+	// The declaring method is judged on its own body, which takes a connection.
+	assertHeldTxGateReads(t, shadowed, "core.Begin", "Acquire")
+	// And its CALLER's `c.Begin(…)` is that method rather than a savepoint, so
+	// the promoted exemption does not apply to it either.
+	assertHeldTxGateReads(t, shadowed, "core.Nested", "Begin")
 }

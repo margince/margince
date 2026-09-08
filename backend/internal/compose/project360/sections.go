@@ -35,12 +35,11 @@ func (a *assembly) readOrganization() error {
 	if a.out.Project.OrganizationId == nil {
 		return apperrors.ErrPermissionDenied
 	}
-	active, err := a.svc.people.ActiveOrganizationColumns(a.ctx)
-	if err != nil {
-		return err
-	}
 	orgID := ids.From[ids.OrganizationKind](ids.UUID(*a.out.Project.OrganizationId))
-	org, err := a.svc.people.GetOrganizationTx(a.ctx, a.tx, orgID, storekit.LiveOnly, active)
+	// The catalog comes from ABOVE the transaction, like the project's and the
+	// deal's. Read here it opened a connection of its own while this one held
+	// the page's transaction.
+	org, err := a.svc.people.GetOrganizationTx(a.ctx, a.tx, orgID, storekit.LiveOnly, a.cats.organization)
 	if err != nil {
 		return err
 	}

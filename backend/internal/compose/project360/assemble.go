@@ -72,6 +72,13 @@ func NewService(
 type catalogs struct {
 	project projects.CustomColumns
 	deal    deals.CustomColumns
+	// organization is here for the same reason as the two above and was
+	// missing: the organization section read the catalog itself, from inside
+	// the page's transaction, which is a second connection taken while this
+	// one is held. Under a loaded pool that waits on the connection it is
+	// already inside — a deadlock Postgres cannot break, because it sees two
+	// unrelated sessions rather than one goroutine waiting on itself.
+	organization people.CustomColumns
 }
 
 func (s *Service) readCatalogs(ctx context.Context) (catalogs, error) {
@@ -81,6 +88,23 @@ func (s *Service) readCatalogs(ctx context.Context) (catalogs, error) {
 		return catalogs{}, err
 	}
 	if c.deal, err = s.deals.ActiveDealColumns(ctx); err != nil {
+		return catalogs{}, err
+	}
+	// The organization catalog is read HERE like the two above, and a caller
+	// without the organization grant is not refused the page for it.
+	//
+	// That read is gated on organization:read — the same grant the section
+	// itself is gated on — so a refusal here is not news: readOrganization
+	// still asks, still refuses, and the assembly still omits the section and
+	// names it. Propagating it would turn a NARROWED page into a refused one
+	// for every reader who may see the project and not its company.
+	//
+	// Only a denial is swallowed. Any other failure is a real one, and empty
+	// columns handed to a caller who does hold the grant would silently drop
+	// the company's custom fields from the page.
+	switch c.organization, err = s.people.ActiveOrganizationColumns(ctx); {
+	case err == nil, errors.Is(err, apperrors.ErrPermissionDenied):
+	default:
 		return catalogs{}, err
 	}
 	return c, nil
