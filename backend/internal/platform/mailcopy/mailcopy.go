@@ -27,7 +27,11 @@
 // (backend/gates/mailcopy_test.go)
 package mailcopy
 
-import "strings"
+import (
+	"slices"
+	"strings"
+	"time"
+)
 
 // Language is a base language this installation can send in. The set is the
 // contract's `base_language` enum, and English is what an installation that
@@ -51,6 +55,47 @@ const (
 // build that adds a language to the contract and not to this catalog is caught
 // by the gate, not by a rep's mailbox.
 const Fallback = English
+
+// DateLayout is how a date is written in this installation's mail, in every
+// language.
+//
+// ISO, and that is deliberate: `2 January 2006` puts an English month name in
+// the middle of a German sentence — the half-translated message this catalog
+// exists to stop — and a numeric order like 06/01 is read as 6 January by half
+// the world. Go's layouts name months in English and nothing here translates
+// one, so a formatted date is the one part of a mail a catalog cannot fix.
+//
+// It lives beside the copy rather than beside each sender. The weekly, the
+// morning brief and the confirm link all write dates a recipient reads, and
+// three constants would be three chances to decide this differently.
+const DateLayout = time.DateOnly
+
+// Languages is every language this build carries copy for, in a stable order.
+//
+// DERIVED from the catalog rather than restated. The set is already written
+// three times — the constants above, the map catalog.go builds, and
+// textlang.Shipped — and a fourth hand-written list would be the one that goes
+// stale: a language added to the catalog but forgotten here would publish two
+// wordings where three are needed and pin two hashes where three are, with
+// nothing failing to say so.
+//
+// Sorted so a caller writing one row per language writes them the same way on
+// every boot. Map iteration is random, and a bootstrap that inserted three rows
+// in a different order each time would be harder to read in an audit log than
+// it needs to be.
+//
+// Held by: TestTheMailCatalogSpeaksEveryLanguageTheContractAdmits
+// (backend/gates/mailcopy_test.go), which fails when the contract admits a
+// language the catalog has no copy for — so a set this returns short is a set
+// that gate has already refused.
+func Languages() []Language {
+	out := make([]Language, 0, len(catalog))
+	for language := range catalog {
+		out = append(out, language)
+	}
+	slices.Sort(out)
+	return out
+}
 
 // For is the copy one installation's mail is written in.
 func For(language string) Copy {
@@ -133,6 +178,34 @@ type Copy struct {
 	WeeklyOutcomeWon   string
 	WeeklyOutcomeLost  string
 	WeeklyOutcomeMoved string
+
+	// The two links the installation sends as ITSELF rather than on a rep's
+	// behalf: the confirm-details link and the double-opt-in link.
+	//
+	// These are the hardest copy in the catalog to get wrong safely. Both go to
+	// somebody who did not ask for them and may not remember the company, so a
+	// bare "confirm your details" reads exactly like a phishing mail; and both
+	// are EVIDENCE — the consent proof records which version a person was
+	// shown, so what these say is what an installation will one day have to
+	// stand behind. A translation that softens "we will not write to you about
+	// it" into a pleasantry changes what was promised, not just how it reads.
+	ConfirmRecordSubject  string
+	ConfirmRecordBody     string
+	ConfirmConsentSubject string
+	ConfirmConsentBody    string
+	// ConfirmPersonal says the link is the reader's alone. ConfirmExpiry is
+	// APPENDED to it when the link has a date, with the date as %s.
+	//
+	// Two strings rather than one sentence with a substitution: the shipped
+	// English replaced a phrase inside its own body text, which only works
+	// while every language spells that sentence the same way.
+	ConfirmPersonal string
+	ConfirmExpiry   string
+	// The closing line, different for the two messages: a record confirmation
+	// asks nothing of its reader, while an unanswered opt-in withholds the
+	// permission until they answer.
+	ConfirmRecordIgnore  string
+	ConfirmConsentIgnore string
 
 	// The morning brief. Shorter than the weekly on purpose: it arrives every
 	// working day, so it names the top of the queue and links to the rest

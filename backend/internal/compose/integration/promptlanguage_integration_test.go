@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/orgdossier"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
@@ -32,14 +33,18 @@ import (
 	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
+// Takes the POOL rather than a harness, because two harnesses need it: the
+// prompt suite runs on Env and the confirm-mail suite on apptest.AppEnv, and
+// the setting is the same row under both.
+//
 // setBaseLanguage writes the setting through settings.SeedValue, which is the
 // writer bootstrap itself uses. It seeds rather than updates, so the existing
 // row is cleared first — SeedValue's whole contract is that it does not
 // overwrite, and a helper that ignored that would silently leave the old
 // language in place and make every assertion below pass for the wrong reason.
-func setBaseLanguage(ctx context.Context, t *testing.T, e *Env, code string) {
+func setBaseLanguage(ctx context.Context, t *testing.T, pool *pgxpool.Pool, code string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(),
 			`DELETE FROM setting WHERE key = $1`, identity.BaseLanguage.Key()); err != nil {
 			return err
@@ -64,7 +69,7 @@ func TestTheBaseLanguageSetOnTheInstallationReachesThePrompt(t *testing.T) {
 	e := Setup(t)
 	ctx := e.Admin()
 
-	setBaseLanguage(ctx, t, e, "de")
+	setBaseLanguage(ctx, t, e.Pool, "de")
 
 	rule := promptlang.Rule(identity.BaseLanguageForPrompt(ctx, e.Pool))
 	if !strings.Contains(rule, "German") {
@@ -74,7 +79,7 @@ func TestTheBaseLanguageSetOnTheInstallationReachesThePrompt(t *testing.T) {
 	// The other direction, and it is the one that catches a resolver that
 	// happens to return a constant. A test asserting only "German appears"
 	// passes against code that always says German.
-	setBaseLanguage(ctx, t, e, "vi")
+	setBaseLanguage(ctx, t, e.Pool, "vi")
 
 	rule = promptlang.Rule(identity.BaseLanguageForPrompt(ctx, e.Pool))
 	if !strings.Contains(rule, "Vietnamese") {
@@ -119,7 +124,7 @@ func TestTheDossierAndGrowthFitPromptsCarryTheInstallationsLanguage(t *testing.T
 	e := Setup(t)
 	ctx := e.Admin()
 
-	setBaseLanguage(ctx, t, e, "vi")
+	setBaseLanguage(ctx, t, e.Pool, "vi")
 	lang := identity.BaseLanguageForPrompt(ctx, e.Pool)
 
 	dossier := orgdossier.DossierRequest(orgdossier.Input{}, lang)

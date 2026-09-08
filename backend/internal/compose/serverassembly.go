@@ -361,6 +361,12 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 // resolves the same jurisdiction windows. Without the country seam it would
 // answer on the core defaults while a pack shortened the real ones, and tell a
 // rep a send is allowed that the engine then refuses.
+//
+// The language seam is beside it because the two are the same shape: a setting
+// identity owns, read on the caller's transaction, that consent cannot import
+// its way to. Unwired, the confirm mail is written in English — which is what it
+// was before the catalog existed, and is why this is not part of the
+// confirmation lane's all-three-or-none rule.
 func newConsentHandlers(pool *pgxpool.Pool) consent.Handlers {
 	return consent.NewHandlers(InstallationDB(pool)).
 		WithEraser(privacy.NewEraser(InstallationDB(pool))).
@@ -368,5 +374,6 @@ func newConsentHandlers(pool *pgxpool.Pool) consent.Handlers {
 		WithInstallationName(consent.InstallationNameFunc(func(ctx context.Context) (string, error) {
 			return identity.InstallationNameForPublicPage(ctx, pool)
 		})).
-		WithInstallationCountry(consent.InstallationCountryFunc(identity.CountryOf))
+		WithInstallationCountry(consent.InstallationCountryFunc(identity.CountryOf)).
+		WithMailLanguage(consent.MailLanguageFunc(identity.LanguageOf))
 }
