@@ -42,6 +42,9 @@ type Store struct {
 	// people never imports a sibling. Nil files links and derives nothing —
 	// which is what every fixture is until it says otherwise.
 	recomputeAudience AudienceRecompute
+	// seatReadsLeads answers whether another seat may read leads; see the
+	// type below. Nil is a composition that did not wire it.
+	seatReadsLeads SeatReadsLeads
 	// vatCheckEnqueue queues a VIES consultation when a VAT number is written.
 	// Nil is a real composition, for geocodeEnqueue's reason: the number is
 	// what the page stated, the verification is what an installation can offer.
@@ -107,6 +110,21 @@ func (s *Store) WithFieldCatalog(catalog fieldcatalog.Reader) *Store {
 // every writer gets it without any of them having to remember.
 func (s *Store) WithGeocodeEnqueue(enqueue GeocodeEnqueue) *Store {
 	s.geocodeEnqueue = enqueue
+	return s
+}
+
+// SeatReadsLeads answers whether ANOTHER seat's grants admit reading a lead.
+//
+// Injected because the answer lives in identity's role tables and a module
+// never imports a sibling: compose binds it. Nil means no installation wired
+// it, and a caller treats that as "cannot confirm" rather than "yes" —
+// nominating a desk to receive records it may not open is the mistake this
+// exists to refuse.
+type SeatReadsLeads func(ctx context.Context, tx pgx.Tx, seat ids.UUID) (bool, error)
+
+// WithSeatReadsLeads wires the grant read the escalation-seat check makes.
+func (s *Store) WithSeatReadsLeads(reads SeatReadsLeads) *Store {
+	s.seatReadsLeads = reads
 	return s
 }
 
