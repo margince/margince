@@ -4,7 +4,7 @@
 .badge {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--space-1);
   font-size: var(--fs-meta);
   /* Medium at 20px: the pill states one standing fact beside a name and must
      not outweigh the name. Semibold at this size reads as a warning. */

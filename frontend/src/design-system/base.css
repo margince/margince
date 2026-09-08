@@ -53,10 +53,12 @@
   cursor: pointer;
   border-radius: var(--r-control);
   padding: 8px 14px;
-  /* Pinned rather than inherited: the control's height is derived from it, and
-     an inherited line-height makes that height a property of whatever the button
-     happens to sit inside. */
-  line-height: 1.25;
+  /* Pinned rather than inherited: an inherited line-height would make the box a
+     property of whatever the button happens to sit inside. Pinned to the label's
+     own size, so the label adds no leading of its own and `min-block-size` below
+     is the single thing that decides the height — which is what lets a button
+     and the field beside it share one token and land on one line. */
+  line-height: 1;
   min-block-size: var(--control-h);
   /* Named properties, not `all`. `transition: <time>` alone is the shorthand
      for `transition-property: all`, which put min-block-size, padding, width
@@ -86,7 +88,7 @@
      rows and toolbars, where a 96px minimum is what would break the layout. An
      icon-only control opts out through .btn-icon, which is square by intent. */
   min-inline-size: 6rem;
-  gap: 7px;
+  gap: var(--space-1);
   white-space: nowrap;
   text-decoration: none;
 }
@@ -213,11 +215,11 @@
  * than one of our verbs.
  *
  * The 44px target is this variant's own floor rather than `--control-h`'s. That
- * token is 40px for a fine pointer and rises to 44 only for a coarse one, and
- * `.btn` pins `line-height: 1.25` — so on a mouse the box settles at 41px, tall
- * enough for a verb and short of the target a sign-in door owes every pointer.
- * `max()` rather than a flat 44, so a future rise in the shared control height
- * is not capped here. */
+ * token is the shared control height and sits below 44 for a fine pointer,
+ * rising to 44 only for a coarse one — tall enough for a verb in a row of them,
+ * and short of the target a sign-in door owes every pointer, since a door taken
+ * with a mouse is the same door. `max()` rather than a flat 44, so a future rise
+ * in the shared control height is not capped here. */
 .btn-federated {
   inline-size: 100%;
   min-block-size: max(var(--control-h), 44px);
