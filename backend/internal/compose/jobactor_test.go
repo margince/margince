@@ -245,12 +245,8 @@ var anyFunc = regexp.MustCompile(`(?m)^func (\([^)]*\) )?(\w+)\(`)
 // scanner, the webhook deliverer) is not read at all, which is why a worker
 // whose only binding lives in another module still needs an entry above.
 //
-// What it does NOT do is guess which body a name means. Only receiver-less
-// functions are indexed, because a bare call can reach nothing else — a method
-// indexed under its bare name would let an unrelated `(s *Store) mode()` answer
-// for a call to `mode()`, and a binder in a body the worker never reaches would
-// read as the worker's own. Go forbids two package-level functions of one name,
-// so every name that resolves here resolves to exactly one body.
+// What it does NOT do is guess which body a name means — indexFunctions says
+// why, and it is the reason this follow resolves rather than guesses.
 func withCalledHelpers(body string, pkg map[string]string) string {
 	var b strings.Builder
 	b.WriteString(body)
@@ -284,11 +280,10 @@ var callee = regexp.MustCompile(`(?:^|[^.\w])(\w+)\(`)
 
 // The follow resolves a name; it does not guess which body the name means.
 //
-// A METHOD indexed under its bare name would answer for a call no worker can
-// make: `mode()` in a Work body cannot reach `(s *Store) mode()`, and letting
-// it would report a worker as bound on the strength of a binder in a body it
-// never runs. That is the gate's own failure direction — a waiver it never
-// asked for, granted silently.
+// The rule and its reason are on indexFunctions; this is the case that fails
+// when the rule goes. What it costs to lose is the gate's own failure
+// direction: a worker reported as bound on the strength of a binder in a body
+// it never runs, which is a waiver nobody asked for, granted silently.
 func TestTheFollowDoesNotResolveABareCallToAMethod(t *testing.T) {
 	t.Parallel()
 	const pkg = `package compose
