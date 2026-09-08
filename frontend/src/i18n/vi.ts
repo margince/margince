@@ -8646,8 +8646,7 @@ export const vi = {
   "worklist.readings.prospecting.detail":
     "Cơ hội mới đang chờ phản hồi đầu tiên",
   "worklist.readings.review": "Xem xét",
-  "worklist.readings.review.detail":
-    "Việc thường lệ đang chờ sau một quyết định",
+  "worklist.readings.review.detail": "Quyết định chỉ bạn mới xử lý được",
   "worklist.readings.truncated":
     "Có nhiều việc hơn số đếm được ở đây. Đây là mức tối thiểu, không phải tổng số.",
   "worklist.hidden.title": "Những gì danh sách không hiển thị",

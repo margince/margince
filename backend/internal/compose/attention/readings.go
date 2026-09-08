@@ -77,6 +77,29 @@ func readingsOf(
 			// hundred alike approvals read as a hundred here even where the queue
 			// draws them as one row. The strip says how much work there is; the
 			// queue says how much reading it costs.
+			//
+			// A row this reader cannot settle is not their decision. The verb is
+			// the test, because the producers already resolved authority to
+			// decide whether to offer one: a duplicate pair reaches
+			// duplicateItem with a merge action only when the reader could write
+			// BOTH records, and an approval carries its verbs only where the
+			// inbox admits them. Counting the rest tells somebody a person is
+			// blocked on an answer they are not able to give.
+			//
+			// KNOWN NARROWING, and it is the safe direction rather than an
+			// oversight. A duplicate pair the reader may write but nobody may
+			// MERGE — two organizations each carrying live projects — can still
+			// be dismissed as not-a-duplicate, and reaches here with no verb
+			// because the surface offers no dismiss control for this source
+			// yet (issue 5066). Such a pair is missing from this count until it
+			// does. The
+			// alternative was counting every undecidable row, which is the
+			// defect: a headline naming work the reader cannot do teaches them
+			// to distrust the number, while one that is short by a case nobody
+			// can currently action from this page stays true to what it claims.
+			if len(row.item.Actions) == 0 {
+				continue
+			}
 			out.Review++
 		case crmcontracts.WorklistItemCategoryDealsAtRisk:
 			if !row.hasExpected {

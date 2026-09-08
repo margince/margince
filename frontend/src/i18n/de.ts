@@ -8753,7 +8753,7 @@ export const de = {
     "Neugeschäft, das eine erste Antwort schuldet",
   "worklist.readings.review": "Prüfung",
   "worklist.readings.review.detail":
-    "Routinearbeit, die hinter einer Entscheidung wartet",
+    "Entscheidungen, die nur Sie treffen können",
   "worklist.readings.truncated":
     "Es gibt mehr Arbeit, als hier gezählt werden konnte. Das sind Untergrenzen, keine Gesamtzahlen.",
   "worklist.hidden.title": "Was die Liste nicht zeigt",
