@@ -11,10 +11,22 @@ package compose
 // a silent replay of mismatched intent). The claim row is written
 // insert-first, so two concurrent attempts under one key can never both
 // execute: the loser sees the claim and answers 409 while the first is
-// in flight. Only a 2xx outcome is recorded; a failed attempt releases
-// the claim so the client may retry the same key — replaying stored
-// failures would pin transient faults for 24h and would break the
-// stage-then-redeem approval flow, whose retry is the same request.
+// in flight.
+//
+// A 2xx outcome is recorded for replay. A refusal is judged by whether it
+// CHANGED anything, which is not one answer:
+//
+//   - A refusal that wrote nothing releases the claim, so the client may retry
+//     the same key. Replaying stored failures would pin transient faults for
+//     24h and would break the stage-then-redeem approval flow, whose retry is
+//     the same request.
+//   - A refusal that had already written is recorded instead. Releasing it
+//     hands back a key whose retry re-runs the committed half — the one thing
+//     the key exists to prevent — so the next attempt meets the claimFailed
+//     answer: this request failed after it had already started, check whether
+//     it took effect before retrying under a new key. Handlers report a write
+//     through markWriteCommitted (partialwrite.go); the per-field split's
+//     staging half is the only door that does today.
 
 import (
 	"bytes"
