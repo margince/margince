@@ -24,6 +24,14 @@ import (
 // about who may SEE a row. Such a test would pass whatever the row scope was. That
 // is not left to this comment: backend/gates/retentionscope_test.go holds the fixture to
 // the retention engine as its only sink, and fails a use that is anything else.
+// It is a COPY of the worker's own retentionPassProvenance rather than a call
+// to it, and it cannot be one: internal/compose has in-package integration
+// tests that import this package, so importing compose back from a non-test
+// file here is an import cycle. What that costs is that these suites hold the
+// retention ENGINE under a pass's provenance and not the pass's own binding —
+// deleting that line from the worker leaves them green. The binding is held
+// instead by TestEveryJobWorkerThatReachesAStoreBindsAnActor, which reads the
+// worker; #4952 is the one-source-of-truth follow-up.
 func RetentionPassCtx(ws ids.UUID) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), ws)
 	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "system"})
