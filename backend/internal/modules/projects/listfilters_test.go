@@ -29,7 +29,7 @@ func TestEveryDeclaredProjectsFilterNarrowsSomething(t *testing.T) {
 // table hands out a vocabulary the store then refuses, and comparing
 // ListFilters against the table it returns would never see it.
 func TestAProjectIsOfferedItsOwnVocabulary(t *testing.T) {
-	want := []string{"key", "company_id", "owner_id", "phase"}
+	want := []string{"company_id", "key", "owner_id", "phase"}
 	if got := (&Provider{}).ListFilters(datasource.EntityProject); !slices.Equal(got, want) {
 		t.Errorf("project is offered %v, want %v", got, want)
 	}

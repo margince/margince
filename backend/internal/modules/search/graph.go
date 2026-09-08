@@ -468,9 +468,16 @@ func sortAndTrim(items *[]graphItem, maxItems int) {
 	*items = list
 }
 
+// plural names a hop that may land on many rows. The two record types whose
+// name does not take a bare s are spelled out. Company joined person here
+// when the record type was renamed: the word it replaced pluralized
+// regularly, so this rule had never been asked about it.
 func plural(entity string) string {
-	if strings.HasSuffix(entity, "person") {
+	switch {
+	case strings.HasSuffix(entity, "person"):
 		return "people"
+	case strings.HasSuffix(entity, "company"):
+		return strings.TrimSuffix(entity, "company") + "companies"
 	}
 	return entity + "s"
 }

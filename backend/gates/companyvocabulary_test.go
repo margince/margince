@@ -138,6 +138,13 @@ func TestTheRecordTypeIsCalledCompany(t *testing.T) {
 			}
 			continue
 		}
+		// The PATH says the word as loudly as the contents do, and a census
+		// that read only the contents let graphorgreach.go, csvorgwriter.go
+		// and linkedinorgplace.go through — three files whose bodies had been
+		// renamed and whose names had not.
+		if namesTheOtherWord(f.path) {
+			t.Errorf("%s is NAMED for the record type's old name. It is called company.", f.path)
+		}
 		body, err := os.ReadFile(filepath.Join(repoRoot, f.path))
 		if err != nil {
 			t.Fatalf("reading %s: %v", f.path, err)

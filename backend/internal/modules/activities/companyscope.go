@@ -69,7 +69,7 @@ func CompanyLinkedActivityExistsAny(companiesPos int) string {
 // other — while the shapes differ for a reason that will not go away
 // (CompanyReachSet says what it is).
 //
-// search/graphorgreach.go spells the SAME arms for the context walk, because a
+// search/graphcompanyreach.go spells the SAME arms for the context walk, because a
 // module never imports a sibling (ADR-0054). The two texts are held equal by
 // gates/accountreachcopies_test.go rather than by anybody remembering to change
 // both — an arm added here alone is a failure, not a divergence nobody sees.

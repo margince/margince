@@ -28,8 +28,8 @@ func TestEnsureInstallationRefusesAnAdminWithoutAWorkspace(t *testing.T) {
 		},
 	}
 	err := EnsureInstallation(context.Background(), nil, discardLogger(), cfg)
-	if err == nil || !strings.Contains(err.Error(), "company.name") {
-		t.Fatalf("err = %v, want the missing-company refusal", err)
+	if err == nil || !strings.Contains(err.Error(), "workspace.name") {
+		t.Fatalf("err = %v, want the missing-workspace refusal", err)
 	}
 }
 

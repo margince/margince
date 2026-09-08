@@ -485,7 +485,7 @@ internal/modules/people/leadmanualsignal.go#func manualSignalImage
 internal/modules/people/leadstatus.go#method LeadStatus.Open
 internal/modules/people/linkedinmatch.go#method Store.MatchLinkedInConnections
 internal/modules/people/linkedinmatch.go#var suggestNameEmployerMatchSQL
-internal/modules/people/linkedinorgplace.go#func companyKeys
+internal/modules/people/linkedincompanyplace.go#func companyKeys
 internal/modules/people/linkedinrenormalize.go#func matchRank
 internal/modules/people/linkedinrenormalize.go#var matchRankOrder
 internal/modules/people/listfilters.go#const block at const filterOwnerID
