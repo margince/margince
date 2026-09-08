@@ -233,6 +233,46 @@ func TestCompleteRecordsFinishReasonCarriedByTheError(t *testing.T) {
 	}
 }
 
+// A rung the walk FELL BACK from is stored through traceForFailedRung, not
+// through finalizeAttempt, and it is the row most likely to carry a terminal:
+// an abnormal finish is exactly what sends the walk to the next rung. Both
+// writers derive the reason from one helper, so neither can be the blank one.
+func TestAFallenBackRungRecordsItsFinishReason(t *testing.T) {
+	fcs := &fakeCallStore{}
+	r := assembleRouter(
+		map[Tier]model.Client{
+			TierCheapCloud: stubClient{err: stoppedError{reason: "MAX_TOKENS"}},
+			TierPremium:    stubClient{resp: model.Response{Text: "served"}},
+		},
+		stubClient{}, ProfileCloudFrontier, stubMeter{}, unlimitedBudget{}, fcs,
+		map[Tier]routeMeta{
+			TierCheapCloud: {provider: "gemini", model: "flash-lite"},
+			TierPremium:    {provider: "gemini", model: "flash"},
+		},
+		false, nil,
+	)
+	r.now = func() time.Time { return time.Unix(0, 0) }
+
+	if _, _, err := r.serveCompletion(wsCtx(), TaskColdStart, []Tier{TierCheapCloud, TierPremium}, model.Request{}); err != nil {
+		t.Fatalf("the ladder should have escalated and served: %v", err)
+	}
+	if len(fcs.recorded) != 2 {
+		t.Fatalf("want the failed rung and the served one, got %d: %+v", len(fcs.recorded), fcs.recorded)
+	}
+	fell := fcs.recorded[0]
+	if fell.Tier != TierCheapCloud || fell.IsTerminal {
+		t.Fatalf("first row is not the fallen-back rung: %+v", fell)
+	}
+	if fell.FinishReason != "MAX_TOKENS" {
+		t.Errorf("the fallen-back rung lost its terminal, which is the row that explains WHY it fell back: %+v", fell)
+	}
+	// The rung that answered reported no terminal of its own, and nothing
+	// should have leaked the failed rung's onto it.
+	if served := fcs.recorded[1]; served.FinishReason != "" {
+		t.Errorf("the served rung carries a terminal it never reported: %+v", served)
+	}
+}
+
 // The Response's own report wins whenever there is one, so a successful call
 // that reports its terminal is never overwritten by a stale error accessor.
 func TestCompleteKeepsTheResponsesOwnFinishReason(t *testing.T) {

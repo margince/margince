@@ -102,20 +102,7 @@ func (r *Router) finalizeAttempt(ctx context.Context, b *binding, lc *logicalCal
 	// both are reports or they are nothing. An absent ServedProvider
 	// means no broker named an upstream, and substituting the configured
 	// provider would turn "nobody told us" into a claim about who served.
-	trace.ServedProvider, trace.FinishReason = resp.ServedProvider, resp.FinishReason
-	// A failed attempt has no Response to read the terminal off, so an
-	// abnormal one arrives on the error instead (gemini.go's stoppedError).
-	// The stored row is otherwise blank on exactly the calls finish_reason
-	// describes: MAX_TOKENS, SAFETY and RECITATION share the one
-	// `provider_error` sentinel and are separable only by this field. The
-	// Response's own report wins whenever there is one, because a provider
-	// that stated its terminal outranks an inference from an error value.
-	if trace.FinishReason == "" && callErr != nil {
-		var stopped interface{ FinishReason() string }
-		if errors.As(callErr, &stopped) {
-			trace.FinishReason = stopped.FinishReason()
-		}
-	}
+	trace.ServedProvider, trace.FinishReason = resp.ServedProvider, finishReasonFor(resp.FinishReason, callErr)
 	// Payload capture is best-effort and, like the trace write itself, must
 	// not become a new way for a working model call to fail (contrast the
 	// meter, which fails loudly to protect the budget guardrail). flush()
@@ -255,7 +242,38 @@ func (r *Router) traceForFailedRung(b *binding, base Call, t Tier, callErr error
 	c.ServedModel, c.ServedIdentitySource = servedIdentity(c.Provider, c.ModelID, "")
 	c.LatencyMS = r.now().Sub(start).Milliseconds()
 	c.AttemptReason = attemptReasonProviderError
+	// A rung that fell back is stored too, so it needs the terminal for the
+	// same reason the finalized attempt does — and it is the row most likely
+	// to carry one, since an abnormal finish is exactly what sends the walk
+	// to the next rung. There is no Response on this path at all: the rung
+	// failed, so the reason can only have come from the error.
+	c.FinishReason = finishReasonFor("", callErr)
 	return c
+}
+
+// finishReasonFor derives the terminal for one stored attempt, and is the ONE
+// place it is derived because both writers above record one — a finalized
+// attempt and a rung the walk fell back from — and two derivations of the
+// same field would drift.
+//
+// `reported` is what the Response said, and it wins whenever it is set: a
+// provider that stated its terminal outranks anything inferred from an error
+// value. A failed attempt has no Response to read, so an abnormal terminal
+// arrives on the error instead (gemini.go's stoppedError).
+//
+// Without this the stored row is blank on exactly the calls finish_reason
+// exists to describe: MAX_TOKENS, SAFETY and RECITATION all classify to the
+// single `provider_error` sentinel and are separable only by this field,
+// though they call for opposite responses.
+func finishReasonFor(reported string, callErr error) string {
+	if reported != "" {
+		return reported
+	}
+	var stopped interface{ FinishReason() string }
+	if errors.As(callErr, &stopped) {
+		return stopped.FinishReason()
+	}
+	return ""
 }
 
 // tierOnLadder reports whether t survives on the budget- and
