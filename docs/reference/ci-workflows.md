@@ -37,6 +37,31 @@ Eight workflows sit beside the gate, deliberately outside it:
   fixture (`make test-merge-verdict`); a finding is filed as one issue per
   offending pull request through the same reporter the health check uses.
 
+- **`review-coverage.yml`** — on every pull request push. A branch review reads
+  the branch **as it stood when the review was launched**, so the fixes for that
+  review's own findings are always outside it: the normal workflow produces an
+  unreviewed commit by construction, and it is the one carrying changes a
+  reviewer just judged risky enough to flag.
+
+  It reports two things, per reviewer rather than per pull request: commits that
+  landed **after** the newest record that reviewer left, named as a
+  `<reviewed>..<head>` range so re-reviewing is a copyable command; and a record
+  naming a commit **the branch no longer has**, which is what a force-push after
+  a review leaves behind — the verdict goes on standing against a tree nobody
+  compared it to, and nothing else on the pull request says so.
+
+  It says nothing about a pull request **nobody has reviewed yet**. That is
+  every pull request for most of its life, and it is the same reason
+  `merge-attest.yml` stays quiet about an absent verdict.
+
+  **Gates nothing.** `ci` is the required check and this job is not it. It reads
+  what GitHub records — a review carries the commit it was made against — so it
+  speaks only for reviewers that leave one, and **its silence is not coverage**:
+  an in-session review posts no record here at all. Reported by
+  [`scripts/check-review-coverage.sh`](../../scripts/check-review-coverage.sh),
+  which reads its evidence from the environment so every arm is drivable from a
+  fixture (`make test-review-coverage`).
+
 - **`main-health.yml`** — every two hours on `main`: the backend gate, the
   real-Postgres lane, the SPA lane (those two called, not copied — it `uses:`
   `_lane-integration.yml` and `_lane-frontend.yml`), the screen-acceptance UAT,
