@@ -9208,6 +9208,23 @@ export const de = {
     "Margince hat auf dieser Pipeline noch keinen Phasenwechsel vorgeschlagen.",
   "stageAutomation.noPipelines":
     "Es gibt noch keine Pipeline, \u00fcber die berichtet werden k\u00f6nnte.",
+  "stageAutomation.readOnly":
+    "Sie sehen, was jeder Übergang verdient hat. Um zu ändern, was einer darf, brauchen Sie das Recht, Pipelines zu bearbeiten.",
+  "stageAutomation.rules": "Was jeder Übergang darf",
+  "stageAutomation.rulesIntro":
+    "Einen Übergang einzuschalten setzt noch nichts in Bewegung. Margince fragt weiter nach, bis die Bilanz oben die Schwelle erreicht, und wendet ihn dann von selbst an — Sie müssen nicht noch einmal herkommen.",
+  "stageAutomation.modeHint":
+    "Ist das an und hat die Bilanz es verdient, verschiebt Margince den Deal und sagt es Ihnen danach.",
+  "stageAutomation.notEarnedYet": "Noch nicht verdient: {why}",
+  "stageAutomation.suspended": "Margince hat das gestoppt",
+  "stageAutomation.suspendedSince": "Gestoppt am {date}",
+  "stageAutomation.resume": "Wieder starten",
+  "stageAutomation.resumeTitle": "Diesen Übergang wieder Deals bewegen lassen?",
+  "stageAutomation.resumeBody":
+    "Margince hat ihn gestoppt, weil: {reason}\n\nEin Neustart überspringt die Schwelle nicht. Der Übergang kehrt zu dem zurück, was Sie eingestellt haben, und muss die Bilanz oben weiterhin erreichen, bevor er von selbst etwas bewegt.",
+  "stageAutomation.noRules":
+    "Über keinen Übergang dieser Pipeline wurde bisher entschieden, also wird jede Bewegung einer Person vorgeschlagen.",
+  "stageAutomation.undoWindow": "Rückgängig für {hours} h",
   "stageAutomation.nothingReviewed":
     "Vorgeschlagen, aber noch nicht beantwortet.",
 } as const satisfies Record<MessageKey, string>;
