@@ -6,7 +6,7 @@
   "catalog": {
     "tools": 74,
     "system_frame_tokens": 353,
-    "tokens": 22325,
+    "tokens": 22333,
     "median_tool_tokens": 264,
     "mean_tool_tokens": 301
   },
@@ -104,7 +104,7 @@
     },
     {
       "name": "progress_deal",
-      "tokens": 501
+      "tokens": 505
     },
     {
       "name": "resolve_entities",
@@ -124,7 +124,7 @@
     },
     {
       "name": "advance_deal",
-      "tokens": 443
+      "tokens": 447
     },
     {
       "name": "annotate_brief",

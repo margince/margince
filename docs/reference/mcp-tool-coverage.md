@@ -29,7 +29,7 @@ This page does not grade single steps or name a best model per site — that is
 | … some case requires | 7 |
 | … **no case requires** | 67 |
 | … of those, permitted somewhere but never required | 13 |
-| Prompt tokens spent on tools no case requires | 18322 |
+| Prompt tokens spent on tools no case requires | 18330 |
 | Use cases | 7 |
 | … with a committed run | 7 |
 | Acceptance criteria the cases declare | 15 |
@@ -104,10 +104,10 @@ stopped being able to call it. A tool in the `permitted` column is worse than on
 | `update_record` | 572 | — | — |
 | `send_message` | 518 | — | — |
 | `list_records` | 508 | — | `morning_brief`, `overnight_at_risk_sweep` |
-| `progress_deal` | 501 | — | — |
+| `progress_deal` | 505 | — | — |
 | `resolve_entities` | 498 | `case1_log_it`, `case2_business_card` | — |
 | `run_analytics_query` | 465 | — | — |
-| `advance_deal` | 443 | — | — |
+| `advance_deal` | 447 | — | — |
 | `annotate_brief` | 418 | — | `morning_brief` |
 | `review_commitments` | 401 | — | `overnight_at_risk_sweep` |
 | `book_meeting` | 393 | — | — |

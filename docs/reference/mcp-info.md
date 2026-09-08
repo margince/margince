@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 74 |
 | Resources | 12 |
-| Tool catalog | 208.1 KB |
+| Tool catalog | 208.2 KB |
 | Resource catalog | 4.5 KB |
-| Approx. wire tokens | 54426 |
+| Approx. wire tokens | 54434 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,7 +33,7 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 | Descriptions (incl. governance clause) | 50.7 KB | 24% | Yes, every step |
 | Input schemas | 44.4 KB | 21% | Yes, every step |
 | _Names, annotations, punctuation_ | 15.6 KB | 7% | Partly |
-| **Description + input schema** | **95.0 KB** | **45%** | **the recurring cost** |
+| **Description + input schema** | **95.1 KB** | **45%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -640,6 +640,7 @@ Move a deal to a different stage of its pipeline. The stage is named by id from 
     },
     "won_without_contract_detail": {
       "description": "What the reason was, required when it is other",
+      "maxLength": 500,
       "type": "string"
     },
     "won_without_contract_reason": {
@@ -9023,6 +9024,7 @@ Move a deal to a new stage and leave a note on its timeline saying why, in one c
     },
     "won_without_contract_detail": {
       "description": "What the reason was, required when it is other",
+      "maxLength": 500,
       "type": "string"
     },
     "won_without_contract_reason": {
