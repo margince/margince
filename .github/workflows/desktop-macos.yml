@@ -26,6 +26,24 @@ on:
     paths:
       - desktop/**
       - .github/workflows/desktop-macos.yml
+  # And again on main once the merge has happened, for the same paths.
+  #
+  # A pull-request run judges the MERGE ref, so it is a prediction about a main
+  # that does not exist yet; two lanes landing in the same window each pass
+  # against a main without the other. Nothing re-asked the question afterwards,
+  # and because this lane is path-scoped nothing asked it on the next ordinary
+  # pull request either — so a broken bundle waited for the next change to
+  # desktop/ to discover it, which was three weeks the first time. This is the
+  # cheapest arrangement that gives main its own answer.
+  #
+  # It does NOT make this lane a merge gate: it reports after the fact, the way
+  # main-health does, and the standing decision about what blocks a merge is
+  # unaffected.
+  push:
+    branches: [main]
+    paths:
+      - desktop/**
+      - .github/workflows/desktop-macos.yml
   # On demand, once this workflow is on the default branch — GitHub resolves a
   # dispatch against the default branch only.
   workflow_dispatch:
