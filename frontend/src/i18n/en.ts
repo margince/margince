@@ -4979,6 +4979,7 @@ export const en = {
   "connectors.provGraph": "Outlook",
   "connectors.provGraphCal": "Outlook Calendar",
   "connectors.provImap": "IMAP mailbox",
+  "connectors.provTestMailbox": "Test mailbox",
   "connectors.statusConnected": "Capturing",
   "connectors.statusPending": "Pending — not yet confirmed live",
   "connectors.statusReauth": "Needs reconnect",
@@ -5107,6 +5108,8 @@ export const en = {
     "Your Outlook calendar. It connects separately from your Outlook mail.",
   "connectors.addImapBrings":
     "Any other mail host, with an app password. Capture only.",
+  "connectors.addTestMailboxBrings":
+    "A QC-only fake mailbox — no real mail is ever sent or received.",
   "connectors.providerNotConfigured":
     "{provider} isn't configured in this deployment.",
 

@@ -437,7 +437,7 @@ func (h backfillHandlers) writeBackfillError(w http.ResponseWriter, r *http.Requ
 		})
 	case errors.Is(err, capture.ErrBackfillUnsupported):
 		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusUnprocessableEntity, Code: "connector_unsupported",
+			Status: http.StatusUnprocessableEntity, Code: codeConnectorUnsupported,
 			Detail: "This provider cannot enumerate a mailbox backward from a date.",
 		})
 	case errors.Is(err, apperrors.ErrConflict):

@@ -25,6 +25,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/capture/testmailbox"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -94,6 +95,11 @@ func (s *Server) mailAppConfigured(provider string) bool {
 		return s.gmailAppConfigured
 	case providerGraph:
 		return s.graphAppConfigured
+	case testmailbox.Name:
+		// No credential to check — the deployment flag itself IS the whole
+		// configuration question for this connector, already recorded on
+		// s.captureConfig by WithCaptureConfig (compose/capture.go).
+		return s.captureConfig.AllowTestMailbox
 	default:
 		return false
 	}

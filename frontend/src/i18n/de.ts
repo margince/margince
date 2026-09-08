@@ -4875,6 +4875,7 @@ export const de = {
   "connectors.provGraph": "Outlook",
   "connectors.provGraphCal": "Outlook-Kalender",
   "connectors.provImap": "IMAP-Postfach",
+  "connectors.provTestMailbox": "Test-Postfach",
   "connectors.statusConnected": "Aktiv",
   "connectors.statusPending": "Ausstehend — noch nicht bestätigt aktiv",
   "connectors.statusReauth": "Neu verbinden nötig",
@@ -5004,6 +5005,8 @@ export const de = {
     "Dein Outlook-Kalender. Er wird getrennt von deiner Outlook-Mail verbunden.",
   "connectors.addImapBrings":
     "Jeder andere Mail-Host, mit einem App-Passwort. Nur Erfassung.",
+  "connectors.addTestMailboxBrings":
+    "Ein reines QC-Testpostfach — es wird nie echte Post gesendet oder empfangen.",
   "connectors.providerNotConfigured":
     "{provider} ist in dieser Installation nicht konfiguriert.",
 

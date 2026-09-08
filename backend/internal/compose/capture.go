@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/imap"
 	"github.com/margince/margince/backend/internal/modules/capture/offlinedemo"
 	"github.com/margince/margince/backend/internal/modules/capture/telegram"
+	"github.com/margince/margince/backend/internal/modules/capture/testmailbox"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -111,6 +112,14 @@ type CaptureConfig struct {
 	// drop a separately-assigned keeper, which is a failure with no error and
 	// no missing file to notice.
 	Blob blobstore.Store
+	// AllowTestMailbox is operations.allow_test_mailbox — a deployment-file
+	// kill switch (deployconfig.Operations), not a capture.* tuning knob, so
+	// it is NOT set by CaptureConfigFromDeploy below (which is scoped to
+	// deployconfig.Capture only). Each boot path (cmd/api/main.go,
+	// cmd/worker/main.go) sets it explicitly, right after calling
+	// CaptureConfigFromDeploy. The zero value is false: NewCaptureRegistry
+	// registers the test_mailbox connector only when this is true.
+	AllowTestMailbox bool
 }
 
 // logger is the configured logger, or the process default.
@@ -200,6 +209,16 @@ func NewCaptureRegistry(pool *pgxpool.Pool, vault keyvault.Vault, cfg CaptureCon
 	// so there is nothing to configure and nothing to gate on; the finance
 	// mirror's offline_demo provider is registered on the same terms.
 	r.Register(offlinedemo.New(offlineDemoDirectory{pool: pool}))
+	// The QC-only test_mailbox connector — unlike offline_demo, it is NOT
+	// registered unconditionally: it can both capture AND send, so a stray
+	// registration on a real deployment would let a fake send look real.
+	// Gated on the same deployment flag mailAppConfigured reads
+	// (s.captureConfig.AllowTestMailbox), so a production install with no
+	// such flag set has no test_mailbox connector to reach at all — not
+	// merely one absent from the UI.
+	if cfg.AllowTestMailbox {
+		r.Register(testmailbox.New(capture.NewTestMailboxLedger(db)))
+	}
 	// The derived channel vocabulary is NOT reconciled here. Constructing this
 	// registry is config-gated — a role builds it only when a keyvault root key
 	// is configured — and the registry write is not, so it runs as its own boot

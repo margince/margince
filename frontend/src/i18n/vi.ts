@@ -4815,6 +4815,7 @@ export const vi = {
   "connectors.provGraph": "Outlook",
   "connectors.provGraphCal": "Lịch Outlook",
   "connectors.provImap": "Hộp thư IMAP",
+  "connectors.provTestMailbox": "Hộp thư kiểm thử",
   "connectors.statusConnected": "Đang thu thập",
   "connectors.statusPending": "Đang chờ — chưa xác nhận là đã chạy",
   "connectors.statusReauth": "Cần kết nối lại",
@@ -4941,6 +4942,8 @@ export const vi = {
     "Lịch Outlook của bạn. Nó được kết nối riêng với thư Outlook.",
   "connectors.addImapBrings":
     "Bất kỳ máy chủ thư nào khác, bằng mật khẩu ứng dụng. Chỉ thu thập.",
+  "connectors.addTestMailboxBrings":
+    "Hộp thư giả chỉ dành cho QC — không bao giờ gửi hoặc nhận thư thật.",
   "connectors.providerNotConfigured":
     "{provider} chưa được cấu hình trên bản triển khai này.",
 
