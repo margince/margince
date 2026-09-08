@@ -32498,6 +32498,14 @@ type SendAccountEmailRequest struct {
 	// Repeated ids are collapsed — attaching one file twice is not something a message
 	// can mean — and naming more distinct files than `maxItems` is refused with
 	// 422 `too_many_attachments`.
+	//
+	// A file with NO CONTENT is refused with 422 `empty_attachment`, naming the file.
+	// It is a separate code from the size one on purpose: an empty file is not a file
+	// that is too big, and a client that reported it as a limit would send somebody
+	// off to shrink something already as small as it can be. Nothing anywhere can send
+	// it, so it is refused here rather than by whichever transport happens to carry
+	// the message — an upload is refused for the same reason, so a file that reaches
+	// this field with no bytes was captured that way from an inbound message.
 	AttachmentIds *[]openapi_types.UUID `json:"attachment_ids,omitempty"`
 
 	// Bcc Blind copies. They receive the message and are therefore owed consent
@@ -32759,6 +32767,14 @@ type SendEmailRequest struct {
 	// Repeated ids are collapsed — attaching one file twice is not something a message
 	// can mean — and naming more distinct files than `maxItems` is refused with
 	// 422 `too_many_attachments`.
+	//
+	// A file with NO CONTENT is refused with 422 `empty_attachment`, naming the file.
+	// It is a separate code from the size one on purpose: an empty file is not a file
+	// that is too big, and a client that reported it as a limit would send somebody
+	// off to shrink something already as small as it can be. Nothing anywhere can send
+	// it, so it is refused here rather than by whichever transport happens to carry
+	// the message — an upload is refused for the same reason, so a file that reaches
+	// this field with no bytes was captured that way from an inbound message.
 	AttachmentIds *[]openapi_types.UUID `json:"attachment_ids,omitempty"`
 
 	// Bcc Blind copies. They receive the message and are therefore owed consent
@@ -32896,6 +32912,14 @@ type SendMessageRequest struct {
 	// Repeated ids are collapsed — attaching one file twice is not something a message
 	// can mean — and naming more distinct files than `maxItems` is refused with
 	// 422 `too_many_attachments`.
+	//
+	// A file with NO CONTENT is refused with 422 `empty_attachment`, naming the file.
+	// It is a separate code from the size one on purpose: an empty file is not a file
+	// that is too big, and a client that reported it as a limit would send somebody
+	// off to shrink something already as small as it can be. Nothing anywhere can send
+	// it, so it is refused here rather than by whichever transport happens to carry
+	// the message — an upload is refused for the same reason, so a file that reaches
+	// this field with no bytes was captured that way from an inbound message.
 	//
 	// A messaging channel carries this message's text as a CAPTION, which is bounded
 	// far below a text-only message; `GET /v1/channel-providers` publishes that bound
