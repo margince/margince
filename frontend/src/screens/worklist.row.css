@@ -263,6 +263,12 @@
   .worklist-row {
     display: flex;
     flex-wrap: wrap;
+    /* The rank and its kind read as ONE pair on the first line, so they take
+       the tighter step: at the row's own --space-4 the digit and the kind's dot
+       sat far enough apart to read as two columns of a grid that is not there
+       at this width. It reaches the gesture's box too — `.swipe-row` takes
+       `gap: inherit` — so both ways the row is drawn keep the one rhythm. */
+    column-gap: var(--space-2);
   }
 
   /* Named without the row in front of them on purpose: below this width the
@@ -284,8 +290,15 @@
      also carries the approval's own three decisions, and those were the
      smallest targets on the page at 32px. A selector naming today's groups is
      a claim about which controls exist, and it goes stale the day a row grows
-     another one. */
-  .worklist-row button,
+     another one.
+     THE RANK IS NOT ONE OF THEM. It is a marker that happens to be pressable —
+     it opens the pane beside the queue and files nothing — and it keeps the
+     24px target its own rule gives it. At 44px it set the height of the row's
+     FIRST LINE, which a button centres its content in: the digit sat a dozen
+     pixels below the kind beside it, and the title started under a dead band
+     of the same height. A hit area is worth widening a control for; it is not
+     worth moving the row's own baseline. */
+  .worklist-row button:not(.worklist-rank-select),
   .worklist-row a.btn,
   .worklist-row .link-button {
     min-block-size: 44px;

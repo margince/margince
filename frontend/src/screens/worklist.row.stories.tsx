@@ -224,8 +224,8 @@ export const ATaskNobodyOwnsBeingPutDown: Story = {
 // The state the old mobile test could not see: above this breakpoint the row is
 // rank, text and verbs on one line, and the verbs never yield width — so at
 // 390px the title column was squeezed to a few characters while three buttons
-// held their full size beside it. Here the text takes the line and the verbs
-// drop below it at a real target height.
+// held their full size beside it. Here the rank and its kind lead the line, the
+// work takes the next, and the verbs the one after, at a real target height.
 //
 // Worth a story of its own rather than a note on the desktop one: this is a
 // different layout, and the two are checked by looking at both.
@@ -612,6 +612,21 @@ export const AWaitingBuyerAsTheMessage: Story = {
   },
 };
 
+// THE WAITING ROW ON A PHONE, which is the row this width breaks.
+//
+// A task's every line wraps, so a task row fits any column. This one draws
+// `EmailEntry`, whose subject and preview are one unwrappable line each — and
+// an unwrappable line is a MINIMUM width, which the gesture's own wrapper
+// carried up to the card and past its edge: the date and the snippet clipped,
+// the meta line drawn on one line instead of wrapping, and the verbs given
+// hundreds of pixels of room nobody could see, so they never wrapped either.
+// Nothing at desktop width shows any of it — the work column's track has a zero
+// floor there — so this arrangement needs the story `ATaskOnAPhone` cannot be.
+export const AWaitingBuyerOnAPhone: Story = {
+  ...AWaitingBuyerAsTheMessage,
+  globals: { viewport: { value: "phone" } },
+};
+
 // The same row where the reader may see LESS of it.
 //
 // Two limits at once, and they are different limits. The message is on a
@@ -729,9 +744,12 @@ export const ADealAtRiskWithItsFigures: Story = {
         { kind: "quiet_days", value: { kind: "days", days: 21 } },
         { kind: "closing_soon" },
         { kind: "no_champion" },
+        // `minor` is what a REASON's typed value carries. The deal's own facts
+        // below spell the same amount as `amount_minor`: two different objects
+        // on the wire rather than one field under two names.
         {
           kind: "expected_revenue",
-          value: { kind: "money", amount_minor: 16010000, currency: "EUR" },
+          value: { kind: "money", minor: 16010000, currency: "EUR" },
         },
       ],
       above_next: {
