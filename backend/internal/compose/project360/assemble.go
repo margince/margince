@@ -90,7 +90,21 @@ func (s *Service) readCatalogs(ctx context.Context) (catalogs, error) {
 	if c.deal, err = s.deals.ActiveDealColumns(ctx); err != nil {
 		return catalogs{}, err
 	}
-	if c.organization, err = s.people.ActiveOrganizationColumns(ctx); err != nil {
+	// The organization catalog is read HERE like the two above, and a caller
+	// without the organization grant is not refused the page for it.
+	//
+	// That read is gated on organization:read — the same grant the section
+	// itself is gated on — so a refusal here is not news: readOrganization
+	// still asks, still refuses, and the assembly still omits the section and
+	// names it. Propagating it would turn a NARROWED page into a refused one
+	// for every reader who may see the project and not its company.
+	//
+	// Only a denial is swallowed. Any other failure is a real one, and empty
+	// columns handed to a caller who does hold the grant would silently drop
+	// the company's custom fields from the page.
+	switch c.organization, err = s.people.ActiveOrganizationColumns(ctx); {
+	case err == nil, errors.Is(err, apperrors.ErrPermissionDenied):
+	default:
 		return catalogs{}, err
 	}
 	return c, nil
