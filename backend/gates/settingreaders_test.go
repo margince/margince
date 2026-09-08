@@ -70,17 +70,28 @@ var settingReadLiteral = gatekit.TableReadPattern(settingTable)
 
 // rawSettingReads ratifies every raw read of the table outside its owner.
 //
-// Keyed `<path>:<function>`, so a second raw read added to a file does not
-// inherit the verdict the first one earned. A package-level SQL fragment has no
-// function and is keyed by path alone.
+// Keyed `<path>:<function>:<statement>`, and the statement is in the key
+// because the two shorter forms both let a read go unjudged. Keyed by path, one
+// entry ratifies a whole file. Keyed by path and function — which is where this
+// started — a SECOND read added inside an already-ratified function inherits the
+// first one's verdict: gatekit attributes every matching literal in a body to
+// that one function name, so the new read is admitted by a rationale written
+// about a different statement, and neither the finding path nor the staleness
+// sweep has anything to report. That is the same hole in "considered" the header
+// says this gate exists to close, one level in.
+//
+// The cost is that editing a statement's first line invalidates its entry, and
+// the gate then reports the waiver as matching nothing. That is the intended
+// direction for this table: a raw read whose text changed is a read whose cost
+// somebody should look at again.
 var rawSettingReads = gatekit.Waive(map[string]string{
-	"internal/modules/identity/service.go:Authenticate":                   "the session read, which runs BEFORE a principal exists — it is the query that builds one. Asking the installation_settings object gate here would be circular: auth.Require has no actor to judge, so the answer would be a refusal for every login rather than a control. The setting rides the session read as a subquery rather than a second statement for the reason the locale and zone beside it do: /me needs the label before the SPA draws anything, and a second round trip would paint the wrong one first. What it discloses is the installation label the sign-in page already shows an anonymous visitor",
-	"internal/modules/identity/settingsentry.go:InstallationNameOf":       "the installation's label, for the two surfaces that have no seat to gate: the login that has not built a principal yet, and the public preference page, which has no session at all. Coalesced to the empty string rather than erroring, because a display label missing is a misconfiguration and must not turn a working page into a 500. What it discloses is the installation's own name, not tenant data",
-	"internal/modules/deals/basecurrencyfreeze.go:ratesPricedAgainstBase": "the freeze probe, which runs INSIDE the settings write's own transaction and before the new value is stored. The gated readers answer callers asking what the value IS; this is the write asking what it is about to replace, so Get/GetTx would take the object gate a second time on a caller the write already gated and read through a store whose transaction this is. What it reads is the outgoing value of the setting being written, and it is compared against nothing but the rate sheet",
-	"internal/modules/people/leadsettings.go:loadLeadSLAPolicy":           "the lead SLA policy, read by key inside the caller's transaction and deliberately without the settings object gate: the policy is an INPUT to a lead read that is already gated on lead:read, and a connector or agent principal reading leads must not need a settings grant to see them. Two keys in one statement rather than two ApplyTx calls, and what reaches the caller is an SLA band on their own lead rows, never the setting values",
-	"internal/compose/vcardingest.go:asMailboxGrantor":                    "the per-mailbox capture switch, as a subquery of the mailbox-grant SELECT. It is read from the row rather than through the store because that store gates on auth.Require and this read is what DECIDES whether to build a principal — it cannot use the one it gates. capture.SignatureEnrich is declared MachineryApplied for exactly this shape; what is not available is a Go-level call, because the value is the COALESCE fallback for a per-connection column in the same statement. What it discloses is whether a mailbox owner agreed to contact extraction",
-	"internal/compose/weekly/weeklycompare.go:baseCurrency":               "the installation's reporting currency, read inside a weekly-plan read that is already gated on its own object. Same ground leadSLAPolicy states: the currency is an INPUT to a figure the caller is separately authorised for, and a seat that may read its own week must not also need installation_settings:read to see the money in it. What reaches the caller is a converted total over their own rows, never the setting",
-	"internal/compose/analyticssharehandlers.go:snapshotFrame":            "the display timezone a frozen forecast is rendered in, LEFT JOINed into the snapshot read rather than fetched separately — the frame is one row, and a second statement for one label would be a round trip inside the share's transaction. The surface is a tokenized share link with no seat at all, which is the same ground the public preference page stands on: there is no principal to gate against. What it discloses is the installation's timezone, and it is coalesced to UTC when unset",
+	"internal/modules/identity/service.go:Authenticate:SELECT s.id, u.id, u.email, u.display_name, u.seat_type, u.must_change_password, …":   "the session read, which runs BEFORE a principal exists — it is the query that builds one. Asking the installation_settings object gate here would be circular: auth.Require has no actor to judge, so the answer would be a refusal for every login rather than a control. The setting rides the session read as a subquery rather than a second statement for the reason the locale and zone beside it do: /me needs the label before the SPA draws anything, and a second round trip would paint the wrong one first. What it discloses is the installation label the sign-in page already shows an anonymous visitor",
+	"internal/modules/identity/settingsentry.go:InstallationNameOf:SELECT coalesce((SELECT value #>> '{}' FROM setting WHERE key = $1), '')": "the installation's label, for the two surfaces that have no seat to gate: the login that has not built a principal yet, and the public preference page, which has no session at all. Coalesced to the empty string rather than erroring, because a display label missing is a misconfiguration and must not turn a working page into a 500. What it discloses is the installation's own name, not tenant data",
+	"internal/modules/deals/basecurrencyfreeze.go:ratesPricedAgainstBase:SELECT value #>> '{}' FROM setting WHERE key = $1":                  "the freeze probe, which runs INSIDE the settings write's own transaction and before the new value is stored. The gated readers answer callers asking what the value IS; this is the write asking what it is about to replace, so Get/GetTx would take the object gate a second time on a caller the write already gated and read through a store whose transaction this is. What it reads is the outgoing value of the setting being written, and it is compared against nothing but the rate sheet",
+	"internal/modules/people/leadsettings.go:loadLeadSLAPolicy:SELECT key, value FROM setting WHERE key = ANY($1)":                           "the lead SLA policy, read by key inside the caller's transaction and deliberately without the settings object gate: the policy is an INPUT to a lead read that is already gated on lead:read, and a connector or agent principal reading leads must not need a settings grant to see them. Two keys in one statement rather than two ApplyTx calls, and what reaches the caller is an SLA band on their own lead rows, never the setting values",
+	"internal/compose/vcardingest.go:asMailboxGrantor:SELECT cc.user_id, cc.provider …":                                                      "the per-mailbox capture switch, as a subquery of the mailbox-grant SELECT. It is read from the row rather than through the store because that store gates on auth.Require and this read is what DECIDES whether to build a principal — it cannot use the one it gates. capture.SignatureEnrich is declared MachineryApplied for exactly this shape; what is not available is a Go-level call, because the value is the COALESCE fallback for a per-connection column in the same statement. What it discloses is whether a mailbox owner agreed to contact extraction",
+	"internal/compose/weekly/weeklycompare.go:baseCurrency:SELECT (value #>> '{}')::text FROM setting …":                                     "the installation's reporting currency, read inside a weekly-plan read that is already gated on its own object. Same ground leadSLAPolicy states: the currency is an INPUT to a figure the caller is separately authorised for, and a seat that may read its own week must not also need installation_settings:read to see the money in it. What reaches the caller is a converted total over their own rows, never the setting",
+	"internal/compose/analyticssharehandlers.go:snapshotFrame:SELECT s.period_start, s.period_end, s.base_currency, s.taken_at, …":           "the display timezone a frozen forecast is rendered in, LEFT JOINed into the snapshot read rather than fetched separately — the frame is one row, and a second statement for one label would be a round trip inside the share's transaction. The surface is a tokenized share link with no seat at all, which is the same ground the public preference page stands on: there is no principal to gate against. What it discloses is the installation's timezone, and it is coalesced to UTC when unset",
 })
 
 // settingReadFloor is set below the live count of raw reads so ordinary
@@ -118,10 +129,7 @@ func unratifiedSettingReads(t testing.TB, waivers *gatekit.Waivers[string], file
 			if path.Dir(parsed.Path) == settingOwner || strings.HasPrefix(parsed.Path, settingOwner+"/") {
 				continue
 			}
-			subject := parsed.Path
-			if read.Function != "" {
-				subject += ":" + read.Function
-			}
+			subject := settingReadSubject(parsed.Path, read)
 			if waivers.Waived(t, subject) {
 				continue
 			}
@@ -136,6 +144,14 @@ func unratifiedSettingReads(t testing.TB, waivers *gatekit.Waivers[string], file
 		}
 	}
 	return findings, seen
+}
+
+// settingReadSubject names one read: where it is, whose body it sits in, and
+// WHICH statement it is. The last part is what keeps two reads in one function
+// from sharing a verdict; the SQL is collapsed to its first line so the key
+// stays something a reader can match against the code by eye.
+func settingReadSubject(filePath string, read gatekit.TableRead) string {
+	return filePath + ":" + read.Function + ":" + gatekit.FirstLineOf(read.SQL)
 }
 
 func TestEveryRawReaderOfTheSettingTableCarriesAVerdict(t *testing.T) {
@@ -225,4 +241,60 @@ func slicesContainsPrefix(findings []string, prefix string) bool {
 		}
 	}
 	return false
+}
+
+// A SECOND raw read inside an already-ratified function is still a finding.
+//
+// This is the case the key's shape exists for, and the one the shorter key
+// could not have. gatekit attributes every matching literal in a body to that
+// body's function name, so keyed `<path>:<function>` a new read lands on the
+// entry the first one earned — admitted by a rationale written about a
+// different statement, with nothing for the finding path or the staleness
+// sweep to report.
+//
+// A fixture rather than the tree, because the tree has no such function: the
+// defect this refuses is one somebody adds tomorrow, and a case that could only
+// be written after the mistake was made is not a guard.
+func TestASecondReadInARatifiedFunctionIsNotCoveredByTheFirst(t *testing.T) {
+	t.Parallel()
+	const twoReads = `package settingfixture
+
+func loadTwo(ctx context.Context, tx pgx.Tx) error {
+	if err := tx.QueryRow(ctx, ` + "`SELECT value FROM setting WHERE key = 'a'`" + `).Scan(&a); err != nil {
+		return err
+	}
+	return tx.QueryRow(ctx, ` + "`SELECT value FROM setting WHERE key = 'b'`" + `).Scan(&b)
+}
+`
+	const fixturePath = "internal/modules/fixture/two.go"
+	files := []gatekit.ParsedFile{{Path: fixturePath, File: parseGateFixture(t, twoReads)}}
+
+	// The shape this replaced, first, because it is the defect rather than the
+	// fix: an entry keyed `<path>:<function>` covers BOTH reads, so a second
+	// one is admitted by a rationale written about the first and the census
+	// reports nothing at all.
+	byFunction := gatekit.Waive(map[string]string{
+		fixturePath + ":loadTwo": "the older key shape, which names no statement. It costs the second read's verdict",
+	})
+	blanket, seenBlanket := unratifiedSettingReads(t, byFunction, files)
+	if seenBlanket != 2 {
+		t.Fatalf("the census saw %d reads in the fixture, want 2 — it is not seeing the shape this case is about", seenBlanket)
+	}
+	if len(blanket) != 2 {
+		t.Errorf("a verdict naming only the function ratified %d of the 2 reads — a key that does "+
+			"not name the statement admits every later read in the same body", 2-len(blanket))
+	}
+
+	// Ratifying the FIRST read only, by the key the census mints for it.
+	first := gatekit.Waive(map[string]string{
+		fixturePath + ":loadTwo:SELECT value FROM setting WHERE key = 'a'": "the first read, ratified. It costs nothing: this is a fixture",
+	})
+	findings, _ := unratifiedSettingReads(t, first, files)
+	if len(findings) != 1 {
+		t.Fatalf("findings = %d, want exactly 1: the first read is ratified and the second is not.\n%v",
+			len(findings), findings)
+	}
+	if !strings.Contains(findings[0], "key = 'b'") {
+		t.Errorf("the finding names the wrong read: %s", findings[0])
+	}
 }
