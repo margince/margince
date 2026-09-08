@@ -182,6 +182,12 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 	if err != nil {
 		// Drafting is an assistive read, not the authority to send. Preserve
 		// the deterministic floor and leave the routed ai_call failure visible.
+		//
+		// THIS is completeVoiced's containment, and it is the whole of it: that
+		// method propagates rather than degrading, and what it degrades to is
+		// the deterministic draft below — never a retry without the voice
+		// profile. Weaken this branch and a transient model failure becomes a
+		// failed draft_reply instead of a plain one.
 		d.logger().WarnContext(ctx, "model reply draft unavailable; using deterministic draft", "err", err)
 		return activities.DraftResult{Subject: fallbackSubject, Body: fallbackBody, VoiceDegraded: voice.Degraded}, nil
 	}
