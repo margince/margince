@@ -47,13 +47,24 @@ BEGIN {
   }
   close(waivers)
 }
+# A test, a story or a fixture reads as a spec and carries its own data, so it
+# takes the wider ceiling — the same split the Go gate makes.
+#
+# The tree spells fixtures FOUR ways: `x.fixtures.ts`, a bare `fixtures.ts`, a
+# singular `fixture.ts` and a hyphenated `test-fixtures.ts`. A predicate that
+# knew only the dotted form would hand the other three the product cap, which
+# is a rule nobody wrote applied to files nobody meant.
+function istest(f) {
+  return f ~ /\.test\.tsx?$/ ||
+         f ~ /\.stories\.tsx?$/ ||
+         f ~ /\.testkit\.tsx?$/ ||
+         f ~ /(^|[\/.-])fixtures?\.tsx?$/
+}
 $2 == "total" { next }
 {
   lines = $1 + 0
   file = $2
-  # A test or a story reads as a spec and carries its fixtures, so it takes the
-  # wider ceiling — the same split the Go gate makes.
-  limit = (file ~ /\.test\.tsx?$/ || file ~ /\.stories\.tsx?$/ || file ~ /\.testkit\.tsx?$/ || file ~ /\.fixtures\.tsx?$/) ? testcap : cap
+  limit = istest(file) ? testcap : cap
   if (file in waived) {
     seen[file] = 1
     if (lines > waived[file]) {
