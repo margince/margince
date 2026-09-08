@@ -74,6 +74,7 @@ var hostname = regexp.MustCompile(`[a-z0-9][a-z0-9.-]*\.orgs?\b`)
 var exempt = gatekit.Waive(map[string]string{
 	"backend/migrations/core": "shipped migrations are never edited — the SQL that built the " +
 		"old names is the record of how the schema got here",
+	"backend/migrations/custom": "the same, one namespace over — and the migration that MOVES a\n\t\tstored value has to name the value it is moving",
 	"backend/migrations/testdata/rbac_baseline_era_defaults.json": "pinned byte for byte to the " +
 		"baseline commit by rbacbaselineerafixture_test.go; it IS the matrix the server seeded then",
 	"CHANGELOG.md": "entries say what they said when they were written",
