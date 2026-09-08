@@ -28,6 +28,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -176,7 +177,7 @@ func (c *CloseDateCorrector) sweepWorkspace(ctx context.Context) error {
 			WaitUntil:           cand.waitUntil,
 			StageWinProbability: cand.winProbability,
 			RemainingOpenStages: cand.remainingOpen,
-			InForecastCommit:    category == "commit" || category == "best_case",
+			InForecastCommit:    category == forecastCommit || category == forecastBestCase,
 			StageVelocityDays:   velocity,
 		}, now, loc)
 		if err := c.correct(ctx, cand, hygiene, category, now, loc); err != nil {
@@ -215,154 +216,6 @@ func (c *CloseDateCorrector) stageVelocityDays(ctx context.Context, pipelineID i
 	return *medianSeconds / 86400, nil
 }
 
-// effectiveForecastCategory is the §7 reading: the rep's explicit
-// override wins; otherwise the stage probability derives the default
-// (commit ≥ 90, best-case ≥ 50).
-func effectiveForecastCategory(override *string, winProbability int) string {
-	if override != nil {
-		return *override
-	}
-	switch {
-	case winProbability >= forecastCommitMinProb:
-		return "commit"
-	case winProbability >= lateStageMinProb:
-		return "best_case"
-	default:
-		return "pipeline"
-	}
-}
-
-// forecastDowngrade is the 🔻 notch: Commit→Best-case→Pipeline→Omitted,
-// never below Omitted.
-func forecastDowngrade(category string) string {
-	switch category {
-	case "commit":
-		return "best_case"
-	case "best_case":
-		return "pipeline"
-	default:
-		return "omitted"
-	}
-}
-
-// setCloseDate assigns the sweep's proposed date only where it differs from the
-// one the deal already claims.
-//
-// The sweep re-flags a deal every night it stays quiet, and its proposal is
-// derived from stage velocity rather than from the calendar — so it frequently
-// recomputes the date the deal already has. storekit.Patch records an assignment
-// without comparing it, so an unconditional Set would put that date in the audit
-// diff and in deal_forecast_history on every pass, and a reconstruction would
-// read a forecast moving nightly while standing still.
-func setCloseDate(p *storekit.Patch, before *time.Time, proposed time.Time) {
-	if before != nil && before.Equal(proposed) {
-		return
-	}
-	p.SetDate(closeDateField, before, &proposed)
-}
-
-// correct applies one deal's A6 tier. The write runs in its own audited
-// transaction; the 🟡 staging follows it (Stage opens its own) — if the
-// staging fails the provisional row simply re-enters the next sweep.
-func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidate, hygiene CloseDateHygiene, category string, now time.Time, loc *time.Location) error {
-	if !hygiene.Flagged {
-		if cand.provisional {
-			// The date itself is clean (the sweep set it), but the human
-			// has not confirmed it yet: keep the 🟡 surface alive if the
-			// previous staging expired undecided.
-			//
-			return c.ensureStaged(ctx, cand, 0, CloseDateCorrection{
-				DealID:              cand.id,
-				ExpectedCloseDate:   cand.expectedClose.Format(time.DateOnly),
-				PreviousCloseDate:   dateString(cand.expectedClose),
-				RemainingOpenStages: StagesRemaining(cand.remainingOpen),
-				Asking:              AskingIsThisDateRight,
-				Basis:               quietHoldingBasis,
-			})
-		}
-		return nil
-	}
-
-	proposal := CloseDateCorrection{
-		DealID:              cand.id,
-		ExpectedCloseDate:   hygiene.ProposedClose.Format(time.DateOnly),
-		PreviousCloseDate:   dateString(cand.expectedClose),
-		RemainingOpenStages: StagesRemaining(cand.remainingOpen),
-		Asking:              AskingIsThisDateRight,
-		Flags:               hygiene.Flags,
-		Basis:               pacedBasis(StagesToGo(cand.remainingOpen)),
-	}
-
-	switch hygiene.Action {
-	case CloseDateActionAutoApply:
-		_, err := c.apply(ctx, cand, "auto_apply", func(p *storekit.Patch) {
-			setCloseDate(p, cand.expectedClose, *hygiene.ProposedClose)
-			if cand.provisional {
-				p.Set("close_date_provisional", true, false)
-			}
-		}, map[string]any{"flags": hygiene.Flags, "basis": proposal.Basis})
-		return err
-
-	case CloseDateActionProvisionalConfirm:
-		version, err := c.apply(ctx, cand, "provisional_confirm", func(p *storekit.Patch) {
-			setCloseDate(p, cand.expectedClose, *hygiene.ProposedClose)
-			if !cand.provisional {
-				p.Set("close_date_provisional", false, true)
-			}
-		}, map[string]any{"flags": hygiene.Flags, "basis": proposal.Basis})
-		if err != nil {
-			return err
-		}
-		return c.ensureStaged(ctx, cand, version, proposal)
-
-	case CloseDateActionDowngradeAndReview:
-		notched := forecastDowngrade(category)
-		version, err := c.apply(ctx, cand, "downgrade_and_review", func(p *storekit.Patch) {
-			p.Set("forecast_category", cand.forecastCat, notched)
-			if hygiene.Provisional {
-				// Only the invariant forces a date onto a quiet deal —
-				// never an optimistic re-date on top of the downgrade.
-				setCloseDate(p, cand.expectedClose, *hygiene.ProposedClose)
-				if !cand.provisional {
-					p.Set("close_date_provisional", false, true)
-				}
-			}
-		}, map[string]any{"flags": hygiene.Flags, "at_risk": true})
-		if err != nil {
-			return err
-		}
-		// The 🟡 review: gone quiet — still alive? The proposal keeps the
-		// stage-velocity date the assessment computed, on BOTH branches. It
-		// used to be overwritten here with the deal's CURRENT date whenever the
-		// invariant did not force a re-date, which asked a human to confirm the
-		// date the deal already had — a card with nothing in it to approve.
-		review := proposal
-		// A different question from the 🟡 confirm, and the memory keys on which:
-		// a rep who said this date is fine has not said the deal is still alive.
-		review.Asking = AskingIsThisDealAlive
-		review.Basis = c.quietBasis(ctx, cand.id, now, loc)
-		return c.ensureStaged(ctx, cand, version, review)
-	}
-	return fmt.Errorf("close-date sweep: no executor for action %q", hygiene.Action)
-}
-
-// quietBasis is the reason the quiet review shows: which way the silence runs,
-// who is on the far end of it, and how long it has lasted.
-//
-// A failure to READ the correspondence is not a reason to fail the sweep — the
-// downgrade has already committed and the review is what is left to raise. So a
-// read error degrades to the generic sentence and is logged, rather than
-// aborting a pass over every other deal in the workspace.
-func (c *CloseDateCorrector) quietBasis(ctx context.Context, dealID ids.DealID, now time.Time, loc *time.Location) string {
-	facts, names, err := c.reviewer.ReadForOwner(ctx, dealID)
-	if err != nil {
-		c.log.WarnContext(ctx, "close-date quiet review fell back to a generic reason",
-			"deal_id", dealID, "error", err)
-		return quietFallbackBasis
-	}
-	return quietReason(facts, names, now, loc)
-}
-
 // apply runs one tier's write shape: re-verify the deal is still open
 // and live under a row lock, patch it, audit with the exact before/after
 // diff (the reversibility the 🟢 tier promises), and emit deal.updated —
@@ -386,6 +239,18 @@ func (c *CloseDateCorrector) apply(ctx context.Context, cand closeDateCandidate,
 		}
 		if DealStatus(status) != DealOpen {
 			return nil
+		}
+		// The kill switch, read here rather than once per pass: an operator who
+		// switches maintenance off mid-sweep stops the next deal's write, not
+		// the one after it. A halted write is not a failure — the pass carries
+		// on assessing, and the version is still read so a 🟡 staging binds to
+		// the row a human would see.
+		on, err := settings.ApplyTx(ctx, tx, MaintenanceWritesEnabled)
+		if err != nil {
+			return fmt.Errorf("read whether deal maintenance may write: %w", err)
+		}
+		if !on {
+			return tx.QueryRow(ctx, `SELECT version FROM deal WHERE id = $1`, cand.id).Scan(&version)
 		}
 		patch := storekit.NewPatch()
 		build(patch)

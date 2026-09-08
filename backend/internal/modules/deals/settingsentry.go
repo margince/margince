@@ -5,8 +5,9 @@ package deals
 
 // The deals module's own settings declarations.
 //
-// One entry today, and it is a kill switch rather than a preference: the
-// installation's answer to whether stage automation may move a deal at all.
+// Both entries are kill switches rather than preferences: the installation's
+// answer to whether stage automation may move a deal, and whether the nightly
+// maintenance sweep may write to one.
 
 import (
 	"github.com/margince/margince/backend/internal/platform/settings"
@@ -41,7 +42,41 @@ var StageAutopilotEnabled = settings.Define[bool](
 // answer to who owns a pipeline.
 const stageAutomationObject = "pipeline"
 
+// MaintenanceWritesEnabled is the installation-wide answer to whether the
+// nightly close-date sweep may write to a deal at all.
+//
+// DEFAULT TRUE, unlike its sibling above, because the sweep already ships on: a
+// switch that defaulted to off would silently stop work an installation is
+// relying on the moment it appeared. What this entry buys is a way to STOP the
+// sweep without a redeploy — the tier it governs was a compile-time constant,
+// so halting a misbehaving pass meant shipping a new binary.
+//
+// It gates EVERY automatic write the sweep makes: the direct re-date, the
+// provisional write and the downgrade. A switch that stopped one branch while
+// two others kept writing would not be a kill switch, and an operator reaching
+// for it is not distinguishing between tiers.
+//
+// Read INSIDE each write's own transaction, for the reason
+// StageAutopilotModeTx gives: read once at the top of a pass instead, it would
+// authorize writes on an answer that was true when the pass started.
+//
+// Assessment, the receipt and Undo stay outside its reach on purpose. Switching
+// maintenance off stops NEW changes; it does not hide the changes already made
+// or take away a reader's ability to reverse one.
+var MaintenanceWritesEnabled = settings.Define[bool](
+	"deals.maintenance_writes_enabled",
+	maintenanceObject,
+	"update",
+	true,
+	nil, // a bool has two values and both mean something; nothing to validate
+).MachineryApplied() // the sweep reads it; no request carries it
+
+// maintenanceObject is the RBAC object gating maintenance governance. `deal`,
+// because a deal is what the sweep writes — the grant that lets somebody update
+// a deal is the one that lets them say whether the machine may.
+const maintenanceObject = "deal"
+
 // Definitions is the deals module's contribution to the settings catalog.
 func Definitions() []settings.Definition {
-	return []settings.Definition{StageAutopilotEnabled}
+	return []settings.Definition{StageAutopilotEnabled, MaintenanceWritesEnabled}
 }

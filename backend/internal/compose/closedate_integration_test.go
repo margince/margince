@@ -248,7 +248,7 @@ func TestForecastExcludesFlaggedDealsFromCommitAndBestCase(t *testing.T) {
 
 // --- B-E09.20: the A6 tiers ---
 
-func TestCloseDateSweepAutoRollsClearOverdueActiveDeal(t *testing.T) {
+func TestCloseDateSweepRollsClearOverdueActiveDealProvisionally(t *testing.T) {
 	e := setupCloseDate(t)
 	// Early stage (20%), plainly overdue, touched 3 days ago, no forecast
 	// override → the §11 worked example's 🟢 case. Two open stages remain
@@ -264,11 +264,17 @@ func TestCloseDateSweepAutoRollsClearOverdueActiveDeal(t *testing.T) {
 	if swept.expectedClose == nil || !swept.expectedClose.Equal(want) {
 		t.Errorf("auto-rolled date = %v, want %s (2 stages × 14-day fallback)", swept.expectedClose, want.Format(time.DateOnly))
 	}
-	if swept.provisional {
-		t.Error("🟢 auto-apply is final — the date must not be provisional")
+	// The rolled date is a stage-velocity estimate, so it lands PROVISIONAL
+	// and asks. The 🟢 tier buys promptness — the deal stops claiming a date
+	// that has passed, tonight, without waiting for a human — not the claim
+	// that a buyer agreed to the replacement. Nothing on this path read a
+	// buyer's message, and a date nobody confirmed must not enter supported
+	// forecast claims looking confirmed.
+	if !swept.provisional {
+		t.Error("the auto-rolled date is a velocity estimate — it must be provisional")
 	}
-	if got := e.pendingCorrections(t, id); got != 0 {
-		t.Errorf("🟢 tier staged %d approvals, want none (the rep is informed, not asked)", got)
+	if got := e.pendingCorrections(t, id); got != 1 {
+		t.Errorf("🟢 tier staged %d approvals, want 1 — an estimate is confirmed, not announced", got)
 	}
 
 	// Reversibility: the audit row carries the exact before/after images.

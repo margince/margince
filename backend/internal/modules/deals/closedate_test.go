@@ -9,6 +9,8 @@ package deals
 import (
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 // closeClock is noon UTC so the workspace-zone date is unambiguous.
@@ -113,9 +115,11 @@ func TestCloseDateActionTiers(t *testing.T) {
 		wantDowngrade   bool
 	}{
 		// §11 worked example: early-stage, clear-overdue, active, outside
-		// the forecast → the agent rolls the date, final.
-		{"clear overdue on an active low-stakes deal auto-applies",
-			activeDeal(datep(-12)), CloseDateActionAutoApply, false, false},
+		// the forecast → the agent rolls the date at once rather than
+		// leaving it for a human. PROVISIONAL, because what it rolls to is
+		// a stage-velocity estimate: 🟢 buys promptness, never the claim
+		// that a buyer agreed to the replacement.
+		{"clear overdue auto-applies provisionally", activeDeal(datep(-12)), CloseDateActionAutoApply, true, false},
 		{"forecast-bearing overdue goes provisional",
 			commit(activeDeal(datep(-12))), CloseDateActionProvisionalConfirm, true, false},
 		{"late stage overdue goes provisional", func() CloseDateInput {
@@ -258,5 +262,38 @@ func TestOverdueIsAskedInTheInstallationsZone(t *testing.T) {
 	tomorrow := time.Date(2026, 8, 24, 0, 0, 0, 0, time.UTC)
 	if CloseIsOverdue(tomorrow, now, saigon) {
 		t.Error("a deal expected on the 24th is overdue on the 24th in Saigon")
+	}
+}
+
+// The 🔻 branch used to assign the notched category unconditionally. Since
+// forecastDowngrade floors at "omitted", a deal already sitting there was
+// assigned "omitted" again every night it stayed quiet — and storekit.Patch
+// records an assignment without comparing it, so that non-empty patch became
+// a real audit row and a real deal.updated event for a change that never
+// happened. Thirty-two of forty such rows in one installation were identical
+// before/after images.
+func TestAnUnchangedForecastCategoryIsNotWritten(t *testing.T) {
+	omitted := "omitted"
+	cases := []struct {
+		name      string
+		stored    *string
+		effective string
+		notched   string
+		wantWrite bool
+	}{
+		{"already at the floor, stored explicitly", &omitted, "omitted", "omitted", false},
+		// The nullable column is why the comparison is against the EFFECTIVE
+		// category: this deal carries no override, its probability already
+		// reads omitted, and writing "omitted" into the NULL changes nothing
+		// a reader can see. Comparing the raw NULL would call it a move.
+		{"already at the floor, derived from probability", nil, "omitted", "omitted", false},
+		{"a real notch down still writes", &omitted, "pipeline", "omitted", true},
+	}
+	for _, c := range cases {
+		p := storekit.NewPatch()
+		setForecastCategory(p, c.stored, c.effective, c.notched)
+		if p.Empty() == c.wantWrite {
+			t.Errorf("%s: patch empty = %v, want a write = %v", c.name, p.Empty(), c.wantWrite)
+		}
 	}
 }

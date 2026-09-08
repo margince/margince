@@ -24,8 +24,15 @@ const (
 	// CloseDateMinHistory is CLOSE_DATE_MIN_HISTORY: won deals required
 	// before the workspace's observed stage velocity outranks the fallback.
 	CloseDateMinHistory = 20
-	// CloseDateAutoApplyEnabled is CLOSE_DATE_AUTOAPPLY, the master enable
-	// for the 🟢 tier; off routes every correction 🟡 provisional-confirm.
+	// CloseDateAutoApplyEnabled is CLOSE_DATE_AUTOAPPLY, which selects whether
+	// a clearly-overdue early-stage date is replaced on the spot (🟢) or left
+	// for the human to correct on the 🟡 card.
+	//
+	// It no longer decides whether the replacement is FINAL. Both tiers write a
+	// provisional date and raise the confirm, because both write the same
+	// stage-velocity estimate — see CloseDateActionAutoApply in the sweep. The
+	// operational stop is deals.MaintenanceWritesEnabled, which is a live
+	// setting rather than this compile-time constant.
 	CloseDateAutoApplyEnabled = true
 
 	// unrealisticSoonMaxProb bounds the §11 unrealistic_soon flag: at or
@@ -147,10 +154,13 @@ func CloseDateAssessment(in CloseDateInput, now time.Time, workspaceTZ *time.Loc
 	out.ProposedClose = &proposed
 	out.Action = closeDateAction(findings, in, CloseDateAutoApplyEnabled)
 	out.Downgrade = out.Action == CloseDateActionDowngradeAndReview
-	// A 🟡 date is a guess by definition; a 🔻 deal only gets a guessed
-	// date when the invariant forces one (past or missing) — it is never
-	// re-dated optimistically on top of the downgrade.
+	// Every date this assessment proposes is a guess: proposedCloseDate reads
+	// stage velocity, never a buyer's message. So 🟢 and 🟡 are both
+	// provisional, and a 🔻 deal gets one only where the invariant forces a
+	// date (past or missing) — it is never re-dated optimistically on top of
+	// the downgrade.
 	out.Provisional = out.Action == CloseDateActionProvisionalConfirm ||
+		out.Action == CloseDateActionAutoApply ||
 		(out.Downgrade && (findings.overdue || findings.missing))
 	return out
 }
