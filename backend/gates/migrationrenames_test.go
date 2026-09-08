@@ -15,9 +15,10 @@ package gates
 // themselves, never listed here: a gate that hard-codes part of its subject has
 // become a second copy of it, and this one would go stale at the next rename.
 //
-// This lives in a NON-test file so it is compiled under every build tag. A
-// helper behind `//go:build !integration` is invisible to `make lint`, which
-// sets that tag.
+// It carries NO build constraint, for the reason repoRoot beside it does not:
+// a helper behind `//go:build !integration` is invisible to `make lint`, which
+// sets that tag, so a gate using it would compile under `go test` and fail to
+// compile under the linter.
 
 import (
 	"os"
