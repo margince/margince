@@ -84,6 +84,30 @@ export const PrimaryOnly: Story = {
   ),
 };
 
+// A secondary that is PRESENT and draws nothing — the shape a queue row takes
+// where the server offers it no judgements and `<DispositionVerbs/>` is one
+// child returning null. It has to read exactly like `PrimaryOnly` above: the
+// leading group IS drawn, because the row cannot know what a child will render,
+// and `.action-row-lead:empty` then takes it off the flex line so the one verb
+// keeps its own line rather than sitting under a band of air.
+function NoVerbsHere() {
+  return null;
+}
+
+export const SecondariesRenderNothing: Story = {
+  render: () => (
+    <ActionRow
+      primary={
+        <Button variant="primary" small>
+          Save changes
+        </Button>
+      }
+    >
+      <NoVerbsHere />
+    </ActionRow>
+  ),
+};
+
 /**
  * At 390px, where words on both sides run the row out of line and the trail
  * drops BELOW the secondaries — still on the trailing edge, which is the reason

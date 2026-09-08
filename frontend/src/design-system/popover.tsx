@@ -120,6 +120,16 @@ export function Popover({
 
   const hover = useHoverIntent(
     () => {
+      // The refusal reaches the SETTLE, not the pair. `disabled` is a rule
+      // about opening, and the settled pointer is the second way in — the
+      // native attribute on the trigger is not the guard, because a disabled
+      // element still delivers pointer events in some browsers and the panel
+      // spreads this same pair on itself. Only the open path is guarded: the
+      // close one has to keep working, or a panel that was up when the caller
+      // refused the trigger could never be left by the pointer that opened it.
+      if (disabled === true) {
+        return;
+      }
       setOpenedBy("hover");
       setOpen(true);
     },

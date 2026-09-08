@@ -34,6 +34,15 @@ import "./actionrow.css";
  * button onto a second, under a line of air holding nothing. `Children.toArray`
  * rather than `Children.count`, because a caller's `{canDiscard && <Button/>}`
  * is a child that counts and renders nothing.
+ *
+ * That gate answers half the question and `.action-row-lead:empty` in
+ * actionrow.css answers the other, which is why the row keeps both. This one
+ * runs BEFORE the children render, so all it can see is a child that is absent;
+ * a child that is present and returns null — `<DispositionVerbs/>` on a row the
+ * server offers no judgements for — counts here and would draw the group
+ * anyway. The sheet is asked after the render and takes the line back. Neither
+ * half belongs to the caller: a flag per call site is a rule every future
+ * caller has to know before its row lays out correctly.
  */
 export function ActionRow({
   children,
