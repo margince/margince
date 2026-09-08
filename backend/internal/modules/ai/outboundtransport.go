@@ -4,6 +4,7 @@
 package ai
 
 import (
+	"net"
 	"net/http"
 	"time"
 )
@@ -91,15 +92,30 @@ const (
 	idleConnTimeout = 60 * time.Second
 )
 
+// dialTimeout bounds establishing one connection. Cloned transports inherit
+// DefaultTransport's dialer settings; replacing the dialer to carry the egress
+// guard means restating them, and this is the value net/http itself uses.
+const dialTimeout = 30 * time.Second
+
 // newOutboundClient is the HTTP client EVERY provider adapter calls a vendor
 // with: one transport shape for all seven, so hardening the outbound path is a
 // change here rather than seven changes that drift.
 //
+// The binding names where the call goes, and a binding is operator-supplied, so
+// the client is built FROM the provider rather than shared across providers:
+// its dialer carries that lane's egress guard (outboundegress.go), refusing the
+// resolved address post-DNS so a name cannot smuggle one past it.
+//
 // One client per adapter rather than one shared package-level client, because
 // the pool is per-transport and a shared pool would let one vendor's stalled
 // connections crowd out another's.
-func newOutboundClient() *http.Client {
+func newOutboundClient(provider string) *http.Client {
 	transport := http.DefaultTransport.(*http.Transport).Clone() //nolint:forcetypeassert // net/http's own DefaultTransport is a *http.Transport by construction
+	transport.DialContext = (&net.Dialer{
+		Timeout:   dialTimeout,
+		KeepAlive: dialTimeout,
+		Control:   dialGuard(egressFor(provider)),
+	}).DialContext
 	transport.IdleConnTimeout = idleConnTimeout
 	transport.ForceAttemptHTTP2 = true
 	transport.HTTP2 = &http.HTTP2Config{

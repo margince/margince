@@ -1258,12 +1258,31 @@ else's host**, because the provider name alone would let a deployment declare
 zero egress and send every call over the public internet. Under that profile
 each binding's resolved `base_url` (an omitted one is the provider default,
 which is loopback) must name an address on infrastructure you control:
-loopback, link-local, or a private range (`10.x`, `172.16–31.x`, `192.168.x`,
-or an IPv6 unique-local address). **A private-range host on another machine
-counts** — your own GPU box is your own infrastructure. A **DNS name is
-refused** even when it looks internal: resolving it at boot says only where it
-pointed at boot, and a profile satisfied by an answer that can change an hour
-later is not a guarantee. Use the IP, or `localhost`.
+loopback or a private range (`10.x`, `172.16–31.x`, `192.168.x`, or an IPv6
+unique-local address). **A private-range host on another machine counts** — your
+own GPU box is your own infrastructure. A **DNS name is refused** even when it
+looks internal: resolving it at boot says only where it pointed at boot, and a
+profile satisfied by an answer that can change an hour later is not a guarantee.
+Use the IP, or `localhost`.
+
+Two egress rules bind **every** profile, checked when the binding is written and
+again on the socket the call actually opens (so a name that resolves — or
+rebinds — to a refused address is stopped at connect time):
+
+- `ollama`, `vllm` and `openai_compatible` may reach loopback, a private range,
+  or a public host — the local model, the GPU box, the self-hosted gateway.
+- `anthropic`, `openai` and `gemini` may reach a **public host only**. Their
+  `base_url` overrides a vendor's own API host, and the call carries this
+  installation's model key in a header (`x-api-key`, `x-goog-api-key`) that no
+  redirect rule strips. To reach a gateway on your own network, bind
+  `openai_compatible` instead.
+
+Neither lane may reach the ranges that serve nobody: link-local
+(`169.254.0.0/16`, `fe80::/10` — where every cloud's instance-metadata service
+lives), carrier-grade NAT, the documentation ranges, and the encapsulations that
+carry another address inside them. A `base_url` carrying userinfo
+(`http://user:token@host`) is refused outright — a binding never carries a
+credential.
 
 An editor with a YAML language server picks up
 [`config/margince.schema.json`](../../config/margince.schema.json)

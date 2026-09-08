@@ -162,8 +162,25 @@ The endpoint is checked too, because a local provider name is not on its own a
 local endpoint: `ollama` and `vllm` take a `base_url`, and one pointed at a
 third-party host would send every call of a zero-egress deployment over the
 public internet. Under this profile each binding's resolved `base_url` must be
-loopback, link-local, or a private range — your own GPU box on your own network
-counts; a DNS name does not, since what it resolves to can change after boot.
+loopback or a private range — your own GPU box on your own network counts; a DNS
+name does not, since what it resolves to can change after boot.
+
+## Where a `base_url` may point, on every profile
+
+Outside `sovereign` a `base_url` is not a promise about egress, but it is still
+the address this server dials, so each provider reaches only what its lane is
+for. `ollama`, `vllm` and `openai_compatible` may name loopback, a private range
+or a public host. `anthropic`, `openai` and `gemini` may name a **public host
+only**: the call carries this installation's model key in a header no redirect
+rule strips, and pointing one at your own network would send that key there. Use
+`openai_compatible` for a gateway you host.
+
+Neither lane may name link-local (`169.254.0.0/16`, `fe80::/10`), carrier-grade
+NAT or the documentation ranges — nothing serves inference from those, and the
+first of them is where every cloud keeps its instance-metadata service. The rule
+is checked at the write and again on the socket, so a DNS name that resolves to
+a refused address fails at connect time rather than slipping past. A `base_url`
+carrying userinfo is refused: a binding never carries a credential.
 
 ## Troubleshooting
 
@@ -174,6 +191,8 @@ counts; a DNS name does not, since what it resolves to can change after boot.
 | Boot error *"needs an api key — set X_API_KEY …"* | The bound cloud provider's key env var is unset. Export the one the error names (e.g. `GEMINI_API_KEY`). |
 | Boot error *"field api_key not found"* | You put an `api_key:` in the `seeds.ai_routing` binding — remove it; the key comes from the env var (see the table above). |
 | Boot error *"needs a base_url …"* | `openai_compatible` has no `base_url`. Add the vendor host root (no `/v1`). |
+| Boot error *"must name a public host"* | A native vendor binding (`anthropic`/`openai`/`gemini`) points inside your network. Bind `openai_compatible` for a self-hosted gateway (see "Where a `base_url` may point"). |
+| Boot error *"not an address inference is served from"* | The `base_url` names a link-local, CGNAT or documentation address. Give the endpoint's own address (see "Where a `base_url` may point"). |
 | `http 404` on `/embeddings` | That `openai_compatible` vendor is chat-only. Rebind `embeddings:` to a lane-serving vendor or a local `bge-m3` (§3). |
 | Embed error *"returned N vectors of width W, need 1×D"* | On `openai_compatible` the adapter never sends `dimensions`, so `dimensions:` must equal the model's NATIVE width (§3). Set it to `W`. |
 | Model 404 / *"model not found"* | A drifting `-latest` alias or a wrong id. Pin an explicit versioned model, or resolve it from the vendor's `/models` endpoint. |

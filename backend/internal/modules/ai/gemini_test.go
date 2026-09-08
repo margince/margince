@@ -28,7 +28,7 @@ func newGeminiForTest(t *testing.T, handler http.HandlerFunc) model.Client {
 	t.Helper()
 	srv := httptest.NewServer(handler)
 	t.Cleanup(srv.Close)
-	client, err := SelectBrain(ProviderConfig{Provider: providerGemini, BaseURL: srv.URL, Model: "gemini-x"}, cloudKeyFor("gemini", testGeminiKey))
+	client, err := selectLocalBrain(ProviderConfig{Provider: providerGemini, BaseURL: srv.URL, Model: "gemini-x"}, cloudKeyFor("gemini", testGeminiKey))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -119,17 +119,22 @@ func verdictName(v hostVerdict) string {
 
 func TestWhichHostsCountAsCustomerControlled(t *testing.T) {
 	for host, want := range map[string]hostVerdict{
-		"127.0.0.1":       hostIsLocal,
-		"::1":             hostIsLocal,
-		"localhost":       hostIsLocal,
-		"LOCALHOST":       hostIsLocal, // host names are case-insensitive
-		"gpu.localhost":   hostIsLocal,
-		"10.4.1.20":       hostIsLocal,
-		"172.16.0.9":      hostIsLocal,
-		"172.32.0.9":      hostIsElsewhere, // just past RFC 1918, which ends at 172.31
-		"192.168.1.5":     hostIsLocal,
-		"fd00::1":         hostIsLocal, // IPv6 unique-local
-		"169.254.7.7":     hostIsLocal, // link-local
+		"127.0.0.1":     hostIsLocal,
+		"::1":           hostIsLocal,
+		"localhost":     hostIsLocal,
+		"LOCALHOST":     hostIsLocal, // host names are case-insensitive
+		"gpu.localhost": hostIsLocal,
+		"10.4.1.20":     hostIsLocal,
+		"172.16.0.9":    hostIsLocal,
+		"172.32.0.9":    hostIsElsewhere, // just past RFC 1918, which ends at 172.31
+		"192.168.1.5":   hostIsLocal,
+		"fd00::1":       hostIsLocal, // IPv6 unique-local
+		// Link-local is NOT ours. 169.254.169.254 is the cloud metadata service
+		// on every major provider, and inference is not served from an
+		// autoconfiguration address — an operator with a box on the same
+		// segment gives it a private address.
+		"169.254.7.7":     hostIsElsewhere,
+		"169.254.169.254": hostIsElsewhere,
 		"8.8.8.8":         hostIsElsewhere,
 		"2606:4700::1111": hostIsElsewhere,
 		// An IPv4-mapped IPv6 address is judged by its IPv4 rules, so the
@@ -150,9 +155,9 @@ func TestWhichHostsCountAsCustomerControlled(t *testing.T) {
 		// call local an endpoint the dial resolves elsewhere.
 		"localhost.": hostIsLocal,
 		"127.0.0.1.": hostIsAName,
-		// A zone says which interface a link-local address is reached on. It
-		// cannot make that address non-local.
-		"fe80::1%eth0": hostIsLocal,
+		// A zone says which interface an address is reached on; it cannot
+		// change what the address IS, and fe80::/10 is link-local either way.
+		"fe80::1%eth0": hostIsElsewhere,
 	} {
 		if got := classifyHost(host); got != want {
 			t.Errorf("classifyHost(%q) = %s, want %s", host, verdictName(got), verdictName(want))
@@ -186,9 +191,11 @@ func TestASchemeThisAdapterCannotCallIsRefusedEvenOnALocalHost(t *testing.T) {
 			t.Errorf("base_url %q must be refused for its scheme, got %v", baseURL, err)
 		}
 	}
-	// A bracketed IPv6 endpoint with a zone is the case this must not catch.
-	if err := requireSovereignEndpoint("tier local_large", providerVLLM, "http://[fe80::1%25eth0]:8000"); err != nil {
-		t.Errorf("a zoned link-local endpoint is local and must be accepted, got %v", err)
+	// A bracketed IPv6 endpoint with a zone is the case this must not catch: it
+	// is refused, but for its ADDRESS being link-local, never for its scheme.
+	err := requireSovereignEndpoint("tier local_large", providerVLLM, "http://[fd00::1%25eth0]:8000")
+	if err != nil {
+		t.Errorf("a zoned unique-local endpoint is local and must be accepted, got %v", err)
 	}
 }
 

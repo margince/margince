@@ -318,7 +318,7 @@ func TestEveryAdapterPlacesAnAttachmentOnTheSameTurn(t *testing.T) {
 			defer srv.Close()
 
 			for name, read := range placementReaders {
-				client, err := SelectBrain(placementBinding(name, srv.URL), allCloudKeys())
+				client, err := selectLocalBrain(placementBinding(name, srv.URL), allCloudKeys())
 				if err != nil {
 					t.Fatalf("%s: %v", name, err)
 				}

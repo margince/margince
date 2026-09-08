@@ -331,6 +331,11 @@ func (cfg RoutingConfig) validate() error {
 			return err
 		}
 	}
+	// The embed lane dials an operator-supplied host like any chat tier, so it
+	// carries the same egress rule on every profile.
+	if err := requireDialableEndpoint("the embeddings lane", cfg.Embeddings.Provider, cfg.Embeddings.BaseURL); err != nil {
+		return err
+	}
 	// AFTER the sovereign check, matching ValidateTierBinding's order. A
 	// sovereign profile forbids openai_compatible outright, so reporting a
 	// missing host first would answer a question the reader does not have and
@@ -389,6 +394,14 @@ func ValidateTierBinding(profile Profile, tier Tier, binding ProviderConfig) err
 		if err := requireSovereignEndpoint(fmt.Sprintf("tier %s", tier), binding.Provider, binding.BaseURL); err != nil {
 			return err
 		}
+	}
+	// EVERY profile, not only sovereign. base_url is the address this server
+	// dials, and outside the sovereign branch above nothing looked at it at
+	// all: any string that parsed was persisted and later handed to the
+	// outbound client. What each lane may reach is outboundegress.go's rule,
+	// asked here so the operator hears it at the write.
+	if err := requireDialableEndpoint(fmt.Sprintf("tier %s", tier), binding.Provider, binding.BaseURL); err != nil {
+		return err
 	}
 	// An OpenAI-wire host has no default to fall back on, so a binding without
 	// one cannot be SERVED — SelectBrain refuses to build the client. Refused
