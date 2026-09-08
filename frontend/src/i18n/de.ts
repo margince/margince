@@ -2885,7 +2885,7 @@ export const de = {
   "brief.readings.pipeline": "Pipeline",
   "brief.readings.pipelineWorkspace": "Pipeline · gesamte Organisation",
   "brief.readings.pipelineBasis":
-    "{weighted} gewichtet · {priced} von {eligible} bewertet",
+    "{period} · {weighted} gewichtet · {priced} von {eligible} bewertet",
   "brief.readings.pipelineUnread": "die Pipeline war nicht lesbar",
   "brief.readings.pipelineReading": "Pipeline wird gelesen",
   "brief.readings.openLane": "Diese öffnen",

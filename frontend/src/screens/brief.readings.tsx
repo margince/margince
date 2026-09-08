@@ -5,6 +5,7 @@ import { navigate } from "../app/router";
 import { StatCard } from "../design-system/atoms";
 import { StatStrip } from "../design-system/statstrip";
 import {
+  formatDateAbbrev,
   formatDateTime,
   formatMoneyCompact,
   formatMoneyOrAbsent,
@@ -403,7 +404,16 @@ function PipelineOutlook() {
       // The weighted figure and the completeness in one line, because they are
       // read together: a weighted number over a partly priced population is a
       // floor, and a reader who cannot see the second cannot judge the first.
+      // The PERIOD first, because the money means nothing without it. The
+      // headline reads a quarter's open pipeline, and a reader who cannot see
+      // which quarter cannot reconcile it against the currency totals beside
+      // it — one is a window, the other is everything open.
       detail={t("brief.readings.pipelineBasis", {
+        period: `${formatDateAbbrev(
+          data.period_start,
+          locale,
+          viewerZone(),
+        )} – ${formatDateAbbrev(data.period_end, locale, viewerZone())}`,
         weighted: formatMoneyOrAbsent(
           data.weighted_minor,
           data.base_currency,

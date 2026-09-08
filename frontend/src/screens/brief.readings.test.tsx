@@ -272,6 +272,10 @@ describe("the brief readings strip", () => {
     // reader who cannot see the second cannot judge the first.
     expect(screen.getByText(/168,000/)).toBeTruthy();
     expect(screen.getByText(/11 of 12 priced/)).toBeTruthy();
+    // THE WINDOW the money covers. €420k of open pipeline means nothing without
+    // it: the same page carries a by-currency total of everything open, and a
+    // reader with no period cannot tell why the two disagree.
+    expect(screen.getByText(/1 Jul 2026 – 30 Sept 2026/)).toBeTruthy();
     // Never a target word. The quota table was dropped by founder decision.
     const strip = screen.getByTestId("brief-readings");
     expect(strip.textContent).not.toMatch(/on track|target|attainment|gap/i);

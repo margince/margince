@@ -2975,7 +2975,7 @@ export const en = {
   "brief.readings.pipeline": "Pipeline outlook",
   "brief.readings.pipelineWorkspace": "Pipeline outlook · whole organization",
   "brief.readings.pipelineBasis":
-    "{weighted} weighted · {priced} of {eligible} priced",
+    "{period} · {weighted} weighted · {priced} of {eligible} priced",
   "brief.readings.pipelineUnread": "the pipeline could not be read",
   "brief.readings.pipelineReading": "reading the pipeline",
   "brief.readings.openLane": "Open these",
