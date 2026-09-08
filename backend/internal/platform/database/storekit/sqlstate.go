@@ -18,6 +18,7 @@ const (
 	pgExclusionViolation  = "23P01"
 	pgQueryCanceled       = "57014"
 	pgLockNotAvailable    = "55P03"
+	pgProgramLimitExceed  = "54000"
 )
 
 // pgViolation names the violated constraint when err is the given
@@ -113,4 +114,23 @@ func CheckViolation(err error) (constraint string, ok bool) {
 func IsQueryCanceled(err error) bool {
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) && pgErr.Code == pgQueryCanceled
+}
+
+// IsProgramLimitExceeded detects a 54000: a value the database accepted as
+// input but cannot store or index at that size.
+//
+// The case that earned it is `activity.search_tsv`, a GENERATED column whose
+// to_tsvector output has a hard 1,048,575-byte ceiling. Output runs about
+// 1.10x input for word-dense text, so a body around 950 KB overflows it —
+// comfortably inside the HTTP chassis's 1 MiB request cap, which means a
+// legal-sized request produced an unexplained server fault.
+//
+// It is a CLASS rather than that one limit, and it is named that way on
+// purpose: 54000 also covers a row too wide for an index and a statement with
+// too many arguments. What every member has in common is the only thing a
+// caller can act on — the value they sent is too large — and none of them is a
+// server fault to retry.
+func IsProgramLimitExceeded(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == pgProgramLimitExceed
 }

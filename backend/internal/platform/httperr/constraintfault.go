@@ -23,8 +23,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
-// constraintFault answers a foreign-key or CHECK violation that reached the
-// transport untranslated.
+// constraintFault answers a foreign-key, CHECK or size violation that reached
+// the transport untranslated.
 //
 // It exists because the alternative is a 500 telling the caller to retry, and a
 // constraint breach is deterministic: the same call fails the same way forever.
@@ -49,6 +49,14 @@ func constraintFault(err error) (Fault, bool) {
 		return Fault{
 			Status: http.StatusUnprocessableEntity, Code: "reference_not_found",
 			Detail:     referenceNotFoundDetail(err),
+			InfraCause: err,
+		}, true
+	case storekit.IsProgramLimitExceeded(err):
+		return Fault{
+			Status: http.StatusUnprocessableEntity, Code: "value_too_large",
+			Detail: "a value in this request is too large for the database to store or index. " +
+				"Shorten it — most often this is a long text body — and send it again; " +
+				"the same request will fail the same way.",
 			InfraCause: err,
 		}, true
 	case isConstrainedValue(err):
