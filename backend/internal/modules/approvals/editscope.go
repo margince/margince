@@ -37,6 +37,7 @@ package approvals
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -165,10 +166,32 @@ func isRESTStaging(payload map[string]json.RawMessage) bool {
 	return hasOp || hasPath
 }
 
+// errJSONNull names the one non-object that decodes into a map without error.
+var errJSONNull = errors.New("it is the JSON literal null")
+
+// jsonObjectMembers narrows one jsonb payload to its members, refusing every
+// shape that is not an object.
+//
+// The nil check is not belt-and-braces: `null` unmarshals into a NIL map and
+// returns no error, so a decode alone answers "object" for it. A null staging
+// that reached the comparison below produced two empty member sets, matched
+// nothing against nothing, and let an edit through the identity guard
+// untouched — the opposite of what a payload nobody can read should get.
+func jsonObjectMembers(raw json.RawMessage) (map[string]json.RawMessage, error) {
+	var members map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &members); err != nil {
+		return nil, err
+	}
+	if members == nil {
+		return nil, errJSONNull
+	}
+	return members, nil
+}
+
 // assertSameCallIdentity refuses an edit that changes which call was staged.
 func assertSameCallIdentity(original, edited json.RawMessage) error {
-	var before, after map[string]json.RawMessage
-	if err := json.Unmarshal(original, &before); err != nil {
+	before, err := jsonObjectMembers(original)
+	if err != nil {
 		// The STAGED payload is not an object. `proposed_change` is jsonb, which
 		// permits an array or a scalar, and nothing this comparison can say
 		// about such a payload is the caller's to fix — but answering a bare
@@ -178,7 +201,8 @@ func assertSameCallIdentity(original, edited json.RawMessage) error {
 		return &InvalidEditError{Cause: fmt.Errorf(
 			"the staged change is not a JSON object, so an edit cannot be compared against it: %w", err)}
 	}
-	if err := json.Unmarshal(edited, &after); err != nil {
+	after, err := jsonObjectMembers(edited)
+	if err != nil {
 		return &InvalidEditError{Cause: fmt.Errorf("the edit is not a JSON object: %w", err)}
 	}
 	if !isRESTStaging(before) && !isRESTStaging(after) {

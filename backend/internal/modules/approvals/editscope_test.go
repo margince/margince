@@ -315,6 +315,18 @@ func TestANonObjectStagedChangeIsRefusedAsAnInvalidEditNotAServerFault(t *testin
 		{"an array", `[1,2,3]`, `{"body":{}}`},
 		{"a scalar", `"just a string"`, `{"body":{}}`},
 		{"an edit that is not an object", `{"operation":"x","path":"/v1/y","body":{}}`, `[1,2,3]`},
+		// The null cases are the ones a decode-only check cannot see: `null`
+		// unmarshals into a NIL map and returns no error, so a decode alone
+		// answers "object" for it. Both wrong answers it produced are here.
+		// Against a REST staging the empty side made every member read as
+		// removed, so an unreadable payload came back as a retarget — a
+		// refusal that names a cause the human cannot act on.
+		{"a null staging", `null`, `{"operation":"x","path":"/v1/y","body":{}}`},
+		{"a null edit", `{"operation":"x","path":"/v1/y","body":{}}`, `null`},
+		// And null on both sides is the silent one: two empty member sets,
+		// isRESTStaging false for each, so the guard returned nil and let the
+		// edit through untouched.
+		{"null on both sides", `null`, `null`},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			err := assertSameCallIdentity(json.RawMessage(tc.staged), json.RawMessage(tc.editedTo))
