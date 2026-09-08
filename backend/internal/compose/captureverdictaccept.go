@@ -23,6 +23,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/people"
@@ -169,6 +170,18 @@ func applyCounterpartyAccept(ctx context.Context, tx pgx.Tx, store *people.Store
 	// Accepting the offer IS the assertion that a person is behind the address —
 	// the queue's whole question is whether to create this contact — so the
 	// ledger records that kind rather than leaving the model's guess standing.
-	return created.TriageDomain, pending.ResolveReviewedAs(ctx, tx, proposal.DispositionID,
-		capture.PendingStatusReal, capture.KindPerson, "accepted in the review queue")
+	if err := pending.ResolveReviewedAs(ctx, tx, proposal.DispositionID,
+		capture.PendingStatusReal, capture.KindPerson, "accepted in the review queue"); err != nil {
+		return "", err
+	}
+	// The same release the machine verdict makes, because this door settles the
+	// same question. Bounded here too, with the reconciling pass behind it. The
+	// widen re-reads the ledger itself, so a resolution that did not take
+	// releases nothing.
+	if _, err := capture.WidenClearedSenderTx(
+		ctx, tx, proposal.Email, clearedSenderLiveBound, activities.RecomputeAudienceTx,
+	); err != nil {
+		return "", err
+	}
+	return created.TriageDomain, nil
 }
