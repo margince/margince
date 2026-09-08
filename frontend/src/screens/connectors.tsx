@@ -246,17 +246,15 @@ const PROVIDER_BLURB: Record<Provider, MessageKey> = {
 //
 // It was a row whose control held a strip of four buttons — the shape the
 // spacing contract names outright: three or more verbs in a row's right column
-// collapse behind one. Four picks squeezed against a wrapping description also
-// left no room for the sentence each provider needs, and made Gmail the
-// primary of a card that exists to REPORT the roster rather than to push one
-// mailbox.
+// collapse behind one. Four squeezed picks left no room for each provider's
+// sentence too, and made Gmail the primary of a card that exists to REPORT
+// the roster rather than to push one mailbox.
 //
 // So the picks are rows of their own in here: the provider names itself on the
 // left, its sentence under that, and one verb at the same x as every other
-// answer in the product. The reasons a connect failed — a provider this
-// deployment never wired, or a refusal from the one it did — land in the dialog
-// the press happened in, which is the only place that names the button they
-// answer.
+// answer in the product. The reasons a connect failed — unwired here, or a
+// refusal from the one that is — land in the dialog the press opened, the
+// only place that names the button they answer.
 function AddConnectionDialog({
   open,
   onClose,

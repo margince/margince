@@ -9,7 +9,7 @@ package migrations_test
 // give for free: TestMigrations_applyReverseReapply reverses every
 // migration in one pass, but seedLedgerRowsForReversal seeds only the
 // append-only ledgers, never a capture_connection row — so it could not
-// have caught 1788859088's own down-migration refusing a real
+// have caught 1788873520's own down-migration refusing a real
 // connect-then-disconnect lifecycle. This test seeds exactly that lifecycle
 // and proves the down-migration survives it.
 
