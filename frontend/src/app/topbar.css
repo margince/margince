@@ -108,6 +108,11 @@
   background: var(--pane);
   text-align: left;
   cursor: pointer;
+  /* Pinned the way `.btn` pins it, and for the same reason: this button is a
+     row of unlike boxes — a glyph, a label and two key caps on `line-height: 1`
+     — and the body's 1.55 puts half a line of leading under the label alone, so
+     its glyphs settle below the caps they sit beside. */
+  line-height: 1.25;
 }
 .topbar-search:hover {
   border-color: var(--borderStrong);

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { watchStartedAiRun } from "../app/ai-activity";
+import { ActionRow } from "../design-system/actionrow";
 import { Button, TextInput } from "../design-system/atoms";
 import { EvidenceMark } from "../design-system/evidencemark";
 import type { ConfidenceLevel } from "../design-system/trust";
@@ -389,19 +390,27 @@ function ExtractionBody({
       </ul>
       <OmittedList omitted={extraction.omitted} />
       {canAccept && (
-        <div className="approval-gate">
-          <Button
-            onClick={() => onAccept(extraction.fields)}
-            disabled={accepting}
-          >
-            {plural("extraction.accept", extraction.fields.length, {
-              count: formatNumber(extraction.fields.length, locale),
-            })}
-          </Button>
+        <ActionRow
+          className="approval-gate"
+          primary={
+            <Button
+              variant="primary"
+              onClick={() => onAccept(extraction.fields)}
+              disabled={accepting}
+            >
+              {plural("extraction.accept", extraction.fields.length, {
+                count: formatNumber(extraction.fields.length, locale),
+              })}
+            </Button>
+          }
+        >
+          {/* Dismiss keeps its word here: it writes nothing and records no
+              verdict, it only puts this reading away for this viewer. A trash
+              can would claim the reading had been rejected. */}
           <Button variant="ghost" onClick={onDismiss}>
             {t("extraction.dismiss")}
           </Button>
-        </div>
+        </ActionRow>
       )}
       {acceptFailed && (
         <p className="t-caption">{t("extraction.acceptFailed")}</p>

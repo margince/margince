@@ -132,8 +132,8 @@
   width: 30px;
   height: 30px;
   border-radius: var(--r-sm);
-  background: var(--bgCard);
-  color: var(--textSecondary);
+  background: var(--bgChip);
+  color: var(--textChip);
   display: grid;
   place-items: center;
   flex: none;
@@ -173,8 +173,8 @@
   gap: var(--space-1);
   font-size: var(--fs-meta);
   font-weight: 500;
-  color: var(--textSecondary);
-  background: var(--bgCard);
+  color: var(--textChip);
+  background: var(--bgChip);
   border-radius: var(--r-full);
   corner-shape: round;
   padding: var(--space-1) var(--space-3);

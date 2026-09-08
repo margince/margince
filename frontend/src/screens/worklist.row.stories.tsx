@@ -7,6 +7,14 @@ import type { components } from "../api/schema";
 import { Panel } from "../design-system/panel";
 import { jsonResponse, StoryProviders } from "./story-utils";
 import { WorklistRow } from "./worklist.row";
+// The row's own layout, the same way every surface that mounts these rows picks
+// it up — worklist.tsx, brief.feed.tsx and worklist.hidden.tsx each import it.
+// Without it the story drew the row as a stack of unstyled lines: the rank ran
+// into the kind, the verbs were a single flow with no groups, and the panel the
+// snooze caret opens laid its four lines out as a grid of pills. A story that
+// does not carry the stylesheet is a picture of markup rather than of the
+// screen, which is the one thing it exists to be.
+import "./worklist.css";
 
 // One row of the queue, standing on its own — the unit worklist.stories.tsx
 // exercises through the whole screen. Covered here directly because fe-uat
@@ -181,8 +189,8 @@ export const AMeetingWithNobodyToBriefAgainst: Story = {
 // A task nobody has taken, with the date it is due and how it is put down.
 //
 // Three states the row gained at once: the due moment drawn, "nobody owns it"
-// said out loud, and the spans behind "For how long" — opened here, because a
-// popover closed is a story that shows nothing about what it holds.
+// said out loud, and the spans behind the snooze's caret — opened here, because
+// a popover closed is a story that shows nothing about what it holds.
 export const ATaskNobodyOwnsBeingPutDown: Story = {
   args: {
     ...baseArgs,
@@ -225,6 +233,88 @@ export const ATaskOnAPhone: Story = {
   ...ATaskNobodyOwnsBeingPutDown,
   globals: { viewport: { value: "phone" } },
   play: undefined,
+};
+
+// EVERY VERB A ROW CAN CARRY, on one line, with the answer at its end.
+//
+// The row that has the most of them: a buyer waiting on a reply carries the way
+// into the record, the three judgements the server offers, the reader's pin and
+// the reply itself. Drawn because this is the state the layout was rebuilt for
+// and the one a screenshot has to be checked in — the two groups are what says
+// which verb is the answer, and at this width the leading group is long enough
+// to be a real test of that.
+//
+// The snooze's chooser is OPEN, because the split control is the other half of
+// the change: the press means tomorrow, the caret means "not tomorrow", and a
+// closed caret is a story showing neither.
+export const AWaitingBuyerWithEveryVerb: Story = {
+  args: {
+    ...baseArgs,
+    item: {
+      id: "01a05500-0000-7000-8000-0000000000a1",
+      source: "customer_waiting",
+      category: "customer_waiting",
+      level: 1,
+      consequence: "buyer_waits",
+      title: "Re: pricing for the retrofit",
+      detail: "“Can you confirm the lead time before Friday?”",
+      because: [{ kind: "waiting_days", value: { kind: "days", days: 4 } }],
+      actions: ["open", "reply"],
+      dispositions: ["snooze", "not_mine", "not_sales"],
+      subject: {
+        type: "deal",
+        id: "01a05500-0000-7000-8000-0000000000bb",
+        label: "Acme Expansion",
+      },
+      move: {
+        action: "draft_reply",
+        activity_id: "01a05500-0000-7000-8000-0000000000a1",
+      },
+    },
+  },
+  render: (args) => {
+    stubRow(false);
+    return <WorklistRow {...args} />;
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "For how long" }),
+    );
+  },
+};
+
+// The hand-off, opened.
+//
+// Closed it is a glyph, which is the whole reason it fits on a row that already
+// carries six controls; opened it is the picker and its confirm, and the two
+// states are checked by looking at both. Only a task can be handed on — a group
+// row names no single activity to move.
+export const ATaskBeingHandedOn: Story = {
+  args: {
+    ...baseArgs,
+    item: {
+      id: "01a05500-0000-7000-8000-0000000000a2",
+      source: "task",
+      category: "tasks",
+      level: 3,
+      consequence: "task_slips",
+      title: "Send the retrofit quote",
+      due_at: "2026-09-02T15:00:00Z",
+      because: [{ kind: "due_today" }],
+      actions: [],
+    },
+  },
+  render: (args) => {
+    stubRow(false);
+    return <WorklistRow {...args} />;
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Reassign" }),
+    );
+  },
 };
 
 // The five sources the row could draw and no story showed.

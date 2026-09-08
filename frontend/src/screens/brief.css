@@ -16,42 +16,6 @@
  * around it would make it one more panel to read rather than the sentence the
  * page opens with. */
 
-/* ── Atmosphere ────────────────────────────────────────────────────────────
- * The Brief carries a light of its own over the shell's two corner glows: an
- * indigo pool behind the top of the page, where the readings sit, so the glass
- * panes there have something to be glass OVER. Faint enough that the eye does
- * not find it, and never animated — the rule the shell's own lights keep.
- *
- * ON A LAYER OF ITS OWN, sized to the VIEWPORT rather than to the page column.
- * A light is a thing in the room, so it has to be painted by something the size
- * of the room: as a background on the column it was clipped to that column's
- * box, and the pool met the column's top and right edges at full strength and
- * simply stopped — a straight seam across the page, which is what a light never
- * has.
- *
- * `fixed` is what makes the layer the viewport's rather than the column's, and
- * it is also why this cannot repeat the defect the background was reaching for:
- * a fixed box is laid out against the viewport and contributes nothing to any
- * scroller's width, where the absolutely positioned box this replaces bled 10%
- * past the column and pushed the shell's content scroller 39px past a 390px
- * viewport. Held by §3.8's own criteria, which measure exactly that.
- *
- * Behind the page's content and inert: it is atmosphere, and atmosphere that
- * can be clicked is a control nobody meant to draw. */
-.brief-wrap::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background: radial-gradient(
-      900px 620px at 100% 0,
-      var(--glowB),
-      transparent 70%
-    )
-    no-repeat;
-}
-
 /* ── Arrival ───────────────────────────────────────────────────────────────
  * The page composes itself in reading order: greeting, then the figures one
  * after another, then the day, then the work. One movement, from a step below

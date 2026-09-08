@@ -59,14 +59,24 @@ async function sentBodies(
   return bodies;
 }
 
-function draw() {
-  const fetch = vi.fn(
-    async () =>
-      new Response(JSON.stringify({}), {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      }),
-  );
+// A write answered at once, which is what every assertion about the WIRE wants.
+async function settled(): Promise<Response> {
+  return new Response(JSON.stringify({}), {
+    status: 200,
+    headers: { "content-type": "application/json" },
+  });
+}
+
+// A write that never answers — the only way to observe the band while one
+// judgement is in flight, since the state lasts exactly as long as the request.
+// A duration would not do it: the band settles when the response arrives and
+// not when a clock says so.
+function neverSettles(): Promise<Response> {
+  return new Promise<Response>(() => {});
+}
+
+function draw(respond: () => Promise<Response> = settled) {
+  const fetch = vi.fn(respond);
   vi.stubGlobal("fetch", fetch);
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -82,6 +92,22 @@ function draw() {
     </QueryClientProvider>,
   );
   return fetch;
+}
+
+// What the panel's line for a span is CALLED.
+//
+// A whole sentence — "Snooze for 3 days" — and not the bare span it used to be.
+// The lines sit behind a caret now rather than under a labelled "For how long"
+// trigger, so a reader who opens the panel from the keyboard hears the line and
+// nothing else: "3 days" alone is a fragment whose verb they have to remember
+// pressing. Read from the catalogue rather than retyped, because a test naming
+// its own copy proves only that it was named.
+function spanLine(days: number): string {
+  const template =
+    days === 1
+      ? en["worklist.disposition.snoozeForDays_one"]
+      : en["worklist.disposition.snoozeForDays_other"];
+  return template.replace("{value}", String(days));
 }
 
 // Days between the frozen now and the instant the client sent.
@@ -135,9 +161,7 @@ describe("how long a row is put down for", () => {
 
       await user.click(screen.getByRole("button", { name: "For how long" }));
       await user.click(
-        await screen.findByRole("button", {
-          name: days === 1 ? "1 day" : `${days} days`,
-        }),
+        await screen.findByRole("button", { name: spanLine(days) }),
       );
 
       await waitFor(async () =>
@@ -230,7 +254,7 @@ describe("how long a row is put down for", () => {
     draw();
 
     await user.click(screen.getByRole("button", { name: "For how long" }));
-    await user.click(await screen.findByRole("button", { name: "7 days" }));
+    await user.click(await screen.findByRole("button", { name: spanLine(7) }));
 
     expect(
       await screen.findByText("Back on your list in 7 days."),
@@ -261,6 +285,78 @@ describe("how long a row is put down for", () => {
 
     await user.click(screen.getByRole("button", { name: "For how long" }));
 
-    expect(await screen.findByRole("button", { name: "1 day" })).toBeTruthy();
+    expect(
+      await screen.findByRole("button", { name: spanLine(1) }),
+    ).toBeTruthy();
+  });
+});
+
+// Which control a write in flight belongs to.
+//
+// The band offers alternative answers to one row, so a second press while the
+// first is out files two contradictory judgements — every answer has to refuse
+// one. What these hold is that the refusals are not the same refusal: the
+// control the reader PRESSED keeps its focus and says a write is out, and the
+// others say only "not yet". Spelling both as `disabled` is what detaches focus
+// on the very click that started the write, leaving the announcement with
+// nobody standing on it, and spelling both as `pending` claims a write from
+// every control on the row.
+describe("while one answer is being written", () => {
+  const SNOOZE = en["worklist.disposition.verb.snooze"];
+  const NOT_MINE = en["worklist.disposition.verb.not_mine"];
+
+  it("keeps the pressed verb focused and swallows its second press", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const fetch = draw(neverSettles);
+
+    const snooze = screen.getByRole("button", { name: SNOOZE });
+    await user.click(snooze);
+
+    // Focus is the point. `disabled` would have moved it to <body>, so the
+    // button turning a mark and announcing itself busy would be announcing it
+    // to a reader who is no longer there.
+    expect(document.activeElement).toBe(snooze);
+    expect(snooze.hasAttribute("disabled")).toBe(false);
+    expect(snooze.getAttribute("aria-disabled")).toBe("true");
+    expect(snooze.getAttribute("aria-busy")).toBe("true");
+
+    await user.click(snooze);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("stands the answers the reader did not press down", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const fetch = draw(neverSettles);
+
+    await user.click(screen.getByRole("button", { name: NOT_MINE }));
+
+    const snooze = screen.getByRole("button", { name: SNOOZE });
+    // Disabled, and NOT busy: it started nothing, and a mark turning on it
+    // would claim a snooze nobody sent.
+    expect(snooze.hasAttribute("disabled")).toBe(true);
+    expect(snooze.hasAttribute("aria-busy")).toBe(false);
+    await user.click(snooze);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("marks the span the reader chose, not the half beside it", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    draw(neverSettles);
+
+    await user.click(screen.getByRole("button", { name: "For how long" }));
+    const week = await screen.findByRole("button", { name: spanLine(7) });
+    await user.click(week);
+
+    // The line stays where the reader left it: the chooser is not closed under
+    // them and the control they pressed is still the focused one.
+    expect(document.activeElement).toBe(week);
+    expect(week.getAttribute("aria-busy")).toBe("true");
+    // The default half sends the same judgement and is still a different
+    // press, so it stands down rather than claiming the write.
+    const snooze = screen.getByRole("button", { name: SNOOZE });
+    expect(snooze.hasAttribute("disabled")).toBe(true);
+    expect(snooze.hasAttribute("aria-busy")).toBe(false);
+    const threeDays = screen.getByRole("button", { name: spanLine(3) });
+    expect(threeDays.hasAttribute("disabled")).toBe(true);
   });
 });

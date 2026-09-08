@@ -25,8 +25,8 @@
   gap: 6px;
   font-family: var(--f-mono);
   font-size: var(--fs-meta);
-  color: var(--textMeta);
-  background: var(--bgCard);
+  color: var(--textChip);
+  background: var(--bgChip);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
   padding: 3px 8px;
@@ -120,7 +120,7 @@ button.evidence-chip:hover {
   color: var(--aiText);
 }
 .provenance-human {
-  background: var(--bgCard);
+  background: var(--bgChip);
   /* --tealText, not --teal: the two are byte-identical in light, and only
      --tealText is lifted for dark. Unlifted teal on a dark card measures
      2.74:1 at this size — under the 4.5:1 text floor, on the most-rendered
@@ -128,27 +128,27 @@ button.evidence-chip:hover {
   color: var(--tealText);
 }
 /* The installation's own housekeeping: neither a person nor a model, so it
-   borrows neither the human teal nor the AI tint. Plain ink on the card ground
-   is the quietest thing that is still a claim — a scheduled sweep drawn in the
-   AI colour would tell a reader a model decided something here. */
+   borrows neither the human teal nor the AI tint. Plain ink on the neutral chip
+   fill is the quietest thing that is still a claim — a scheduled sweep drawn in
+   the AI colour would tell a reader a model decided something here. */
 .provenance-system {
-  background: var(--bgCard);
+  background: var(--bgChip);
   color: var(--textPrimary);
 }
-/* A buyer typed it, so the tag keeps the human arm's plain card ground and
+/* A buyer typed it, so the tag keeps the human arm's neutral chip fill and
    never the AI tint — a person did this. The ink is the accent rather than the
    colleague teal because a buyer is a person from OUTSIDE the organization, and
    the accent is already how the product marks a buyer's own contribution (the
    stripe on their Deal Room comment). */
 .provenance-buyer {
-  background: var(--bgCard);
+  background: var(--bgChip);
   color: var(--accentText);
 }
 /* An unrecorded source claims neither a person nor a machine, and reads as
    the absence it is rather than borrowing either one's colour. */
 .provenance-unknown {
-  background: var(--bgCard);
-  color: var(--textMeta);
+  background: var(--bgChip);
+  color: var(--textChip);
   font-style: italic;
 }
 
@@ -198,10 +198,22 @@ button.evidence-chip:hover {
   padding: var(--space-4) var(--space-5);
 }
 
+/* The staged proposal's gate, in its two shapes, which want the same air and
+ * only one of them wants the row.
+ *
+ * The VERDICT shape is an `ActionRow` — Accept alone on the trailing edge, the
+ * verbs that decline as glyphs on the leading one — and it takes this class as
+ * its placement hook, for the margin alone: its own layout, wrap and action
+ * gap are `.action-row`'s, spelled there in the same values. The margin is the
+ * rung `.dcard-verbs` takes, which is the same decision drawn on a card.
+ *
+ * The EDITING shape is a form holding a field and its submit, which
+ * `ActionRow` is explicitly not for, and the flex row below is what lays that
+ * one out. */
 .approval-gate {
   display: flex;
   gap: var(--gapActions);
-  margin-top: 12px;
+  margin-top: var(--space-3);
   flex-wrap: wrap;
 }
 
@@ -353,6 +365,6 @@ button.evidence-chip:hover {
 }
 .evidence-chip:active,
 .evidence-chip-toggle:active {
-  background-color: var(--bgCard);
+  background-color: var(--bgChip);
   transition-duration: var(--dur-tap);
 }

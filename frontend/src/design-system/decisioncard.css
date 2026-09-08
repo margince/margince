@@ -191,6 +191,10 @@
   margin-top: 0;
 }
 
+/* Only the air above the verbs. Their layout — the two groups, the wrap and the
+   action gap — belongs to `ActionRow`, which this class is passed to as the
+   deck band's hook. `.approval-gate` supplied it here before, and its margin was
+   this same rung, so the row lost nothing when it stopped carrying both. */
 .dcard-verbs {
   margin-top: var(--space-3);
 }

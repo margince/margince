@@ -3,7 +3,7 @@
  * company page's completeness readings. */
 .meterbar {
   height: 8px;
-  background: var(--bgCard);
+  background: var(--bgChip);
   border-radius: var(--r-full);
   corner-shape: round;
   overflow: hidden;
