@@ -208,6 +208,44 @@ func TestCompleteRecordsFailure(t *testing.T) {
 	}
 }
 
+// A failed attempt has no Response to read the terminal off, so an abnormal
+// finishReason reaches the trace only from the error. MAX_TOKENS, SAFETY and
+// RECITATION share the single `provider_error` sentinel, so a blank
+// finish_reason leaves the stored row unable to say which occurred.
+func TestCompleteRecordsFinishReasonCarriedByTheError(t *testing.T) {
+	fcs := &fakeCallStore{}
+	r := newTracingRouter(t, stubClient{err: stoppedError{reason: "MAX_TOKENS"}}, fcs)
+	if _, _, err := r.serveCompletion(wsCtx(), TaskColdStart, []Tier{TierCheapCloud}, model.Request{}); err == nil {
+		t.Fatal("expected error when the only tier fails")
+	}
+	if len(fcs.recorded) != 1 {
+		t.Fatalf("want exactly one traced attempt, got %+v", fcs.recorded)
+	}
+	got := fcs.recorded[0]
+	if got.FinishReason != "MAX_TOKENS" {
+		t.Fatalf("finish_reason lost on the failure path: %+v", got)
+	}
+	// The sentinel stays put: carrying the terminal is additive, and moving
+	// an abnormal finish out of `provider_error` would change what every
+	// error rate over this counter means.
+	if got.ErrorSentinel != "provider_error" {
+		t.Fatalf("classification moved, which would change every error rate: %q", got.ErrorSentinel)
+	}
+}
+
+// The Response's own report wins whenever there is one, so a successful call
+// that reports its terminal is never overwritten by a stale error accessor.
+func TestCompleteKeepsTheResponsesOwnFinishReason(t *testing.T) {
+	fcs := &fakeCallStore{}
+	r := newTracingRouter(t, stubClient{resp: model.Response{Text: "ok", FinishReason: "stop"}}, fcs)
+	if _, _, err := r.serveCompletion(wsCtx(), TaskColdStart, []Tier{TierCheapCloud}, model.Request{}); err != nil {
+		t.Fatalf("serveCompletion: %v", err)
+	}
+	if len(fcs.recorded) != 1 || fcs.recorded[0].FinishReason != "stop" {
+		t.Fatalf("want the response's own finish reason, got %+v", fcs.recorded)
+	}
+}
+
 // TestCompleteEmitsSlog verifies that the router's observeCall emits an
 // "ai.call" slog line with the expected attributes (task, tier, provider,
 // tokens_in, tokens_out, latency_ms, cache_hit, degraded, error).

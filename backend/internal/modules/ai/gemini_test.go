@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -322,6 +323,36 @@ func TestGeminiAbnormalFinishReasonIsAnError(t *testing.T) {
 	_, err := client.Complete(context.Background(), model.Request{Messages: []model.Message{{Role: "user", Content: "q"}}})
 	if err == nil || !strings.Contains(err.Error(), "MAX_TOKENS") {
 		t.Fatalf("want error naming MAX_TOKENS, got %v", err)
+	}
+}
+
+// The terminal has to survive as DATA, not only inside the message: every
+// abnormal finishReason classifies to the one `provider_error` sentinel, so
+// without an accessor the stored row cannot separate a truncated answer
+// (MAX_TOKENS — retry smaller) from a refused one (SAFETY — retrying is
+// pointless). The message is asserted byte-for-byte because callers and the
+// test above match on its text, so carrying the reason must not reword it.
+func TestGeminiAbnormalFinishReasonCarriesTheTerminalAsData(t *testing.T) {
+	for _, reason := range []string{"MAX_TOKENS", "SAFETY", "RECITATION"} {
+		t.Run(reason, func(t *testing.T) {
+			client := newGeminiForTest(t, func(w http.ResponseWriter, r *http.Request) {
+				_, _ = w.Write([]byte(`{"candidates":[{"content":{"parts":[{"text":"x"}]},"finishReason":"` + reason + `"}]}`))
+			})
+			_, err := client.Complete(context.Background(), model.Request{Messages: []model.Message{{Role: "user", Content: "q"}}})
+			if err == nil {
+				t.Fatal("want an error for an abnormal finishReason")
+			}
+			if want := "ai: gemini: generation stopped: " + reason; err.Error() != want {
+				t.Fatalf("message changed:\n got %q\nwant %q", err.Error(), want)
+			}
+			var stopped interface{ FinishReason() string }
+			if !errors.As(err, &stopped) {
+				t.Fatalf("error does not expose FinishReason(), so the trace cannot record it: %T", err)
+			}
+			if got := stopped.FinishReason(); got != reason {
+				t.Fatalf("FinishReason() = %q, want %q", got, reason)
+			}
+		})
 	}
 }
 

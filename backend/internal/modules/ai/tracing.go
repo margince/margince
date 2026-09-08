@@ -103,6 +103,19 @@ func (r *Router) finalizeAttempt(ctx context.Context, b *binding, lc *logicalCal
 	// means no broker named an upstream, and substituting the configured
 	// provider would turn "nobody told us" into a claim about who served.
 	trace.ServedProvider, trace.FinishReason = resp.ServedProvider, resp.FinishReason
+	// A failed attempt has no Response to read the terminal off, so an
+	// abnormal one arrives on the error instead (gemini.go's stoppedError).
+	// The stored row is otherwise blank on exactly the calls finish_reason
+	// describes: MAX_TOKENS, SAFETY and RECITATION share the one
+	// `provider_error` sentinel and are separable only by this field. The
+	// Response's own report wins whenever there is one, because a provider
+	// that stated its terminal outranks an inference from an error value.
+	if trace.FinishReason == "" && callErr != nil {
+		var stopped interface{ FinishReason() string }
+		if errors.As(callErr, &stopped) {
+			trace.FinishReason = stopped.FinishReason()
+		}
+	}
 	// Payload capture is best-effort and, like the trace write itself, must
 	// not become a new way for a working model call to fail (contrast the
 	// meter, which fails loudly to protect the budget guardrail). flush()
