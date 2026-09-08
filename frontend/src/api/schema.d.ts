@@ -33819,10 +33819,14 @@ export interface components {
          *     `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
          *     cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
          *     accepted multi-field spelling; any other comma-separated multi-field spec returns
-         *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
-         *     enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
-         *     columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
-         *     an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
+         *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
+         *     resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+         *     index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
+         *     they can order by: a header that cannot be clicked is a dead control. Some columns are not
+         *     yet offered even so — one that orders by a JOINED value, such as a stage by its position in
+         *     its pipeline or a partner by its organization's name, needs a sort the server cannot express
+         *     yet — and a resource's own list documents which. An out-of-vocabulary field returns
+         *     `422 code: sort_field_not_allowed`.
          */
         Sort: string;
         /** @description Include soft-deleted (archived) rows. Default false. */
@@ -34484,10 +34488,14 @@ export interface operations {
                  *     `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
                  *     cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
                  *     accepted multi-field spelling; any other comma-separated multi-field spec returns
-                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
-                 *     enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
-                 *     columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
-                 *     an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
+                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
+                 *     resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+                 *     index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
+                 *     they can order by: a header that cannot be clicked is a dead control. Some columns are not
+                 *     yet offered even so — one that orders by a JOINED value, such as a stage by its position in
+                 *     its pipeline or a partner by its organization's name, needs a sort the server cannot express
+                 *     yet — and a resource's own list documents which. An out-of-vocabulary field returns
+                 *     `422 code: sort_field_not_allowed`.
                  */
                 sort?: components["parameters"]["Sort"];
                 /** @description Include soft-deleted (archived) rows. Default false. */
@@ -35981,10 +35989,14 @@ export interface operations {
                  *     `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
                  *     cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
                  *     accepted multi-field spelling; any other comma-separated multi-field spec returns
-                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
-                 *     enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
-                 *     columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
-                 *     an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
+                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
+                 *     resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+                 *     index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
+                 *     they can order by: a header that cannot be clicked is a dead control. Some columns are not
+                 *     yet offered even so — one that orders by a JOINED value, such as a stage by its position in
+                 *     its pipeline or a partner by its organization's name, needs a sort the server cannot express
+                 *     yet — and a resource's own list documents which. An out-of-vocabulary field returns
+                 *     `422 code: sort_field_not_allowed`.
                  */
                 sort?: components["parameters"]["Sort"];
                 /** @description Include soft-deleted (archived) rows. Default false. */
@@ -37658,10 +37670,14 @@ export interface operations {
                  *     `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
                  *     cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
                  *     accepted multi-field spelling; any other comma-separated multi-field spec returns
-                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
-                 *     enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
-                 *     columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
-                 *     an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
+                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
+                 *     resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+                 *     index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
+                 *     they can order by: a header that cannot be clicked is a dead control. Some columns are not
+                 *     yet offered even so — one that orders by a JOINED value, such as a stage by its position in
+                 *     its pipeline or a partner by its organization's name, needs a sort the server cannot express
+                 *     yet — and a resource's own list documents which. An out-of-vocabulary field returns
+                 *     `422 code: sort_field_not_allowed`.
                  */
                 sort?: components["parameters"]["Sort"];
                 partner_role?: "hosting" | "consulting" | "strategic";
@@ -37837,10 +37853,14 @@ export interface operations {
                  *     `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
                  *     cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
                  *     accepted multi-field spelling; any other comma-separated multi-field spec returns
-                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
-                 *     enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
-                 *     columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
-                 *     an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
+                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
+                 *     resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+                 *     index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
+                 *     they can order by: a header that cannot be clicked is a dead control. Some columns are not
+                 *     yet offered even so — one that orders by a JOINED value, such as a stage by its position in
+                 *     its pipeline or a partner by its organization's name, needs a sort the server cannot express
+                 *     yet — and a resource's own list documents which. An out-of-vocabulary field returns
+                 *     `422 code: sort_field_not_allowed`.
                  */
                 sort?: components["parameters"]["Sort"];
                 /** @description Include soft-deleted (archived) rows. Default false. */
@@ -38193,10 +38213,14 @@ export interface operations {
                  *     `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
                  *     cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
                  *     accepted multi-field spelling; any other comma-separated multi-field spec returns
-                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
-                 *     enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
-                 *     columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
-                 *     an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
+                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
+                 *     resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+                 *     index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
+                 *     they can order by: a header that cannot be clicked is a dead control. Some columns are not
+                 *     yet offered even so — one that orders by a JOINED value, such as a stage by its position in
+                 *     its pipeline or a partner by its organization's name, needs a sort the server cannot express
+                 *     yet — and a resource's own list documents which. An out-of-vocabulary field returns
+                 *     `422 code: sort_field_not_allowed`.
                  */
                 sort?: components["parameters"]["Sort"];
                 /** @description Include soft-deleted (archived) rows. Default false. */
@@ -39568,10 +39592,14 @@ export interface operations {
                  *     `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
                  *     cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
                  *     accepted multi-field spelling; any other comma-separated multi-field spec returns
-                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
-                 *     enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
-                 *     columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
-                 *     an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
+                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
+                 *     resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+                 *     index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
+                 *     they can order by: a header that cannot be clicked is a dead control. Some columns are not
+                 *     yet offered even so — one that orders by a JOINED value, such as a stage by its position in
+                 *     its pipeline or a partner by its organization's name, needs a sort the server cannot express
+                 *     yet — and a resource's own list documents which. An out-of-vocabulary field returns
+                 *     `422 code: sort_field_not_allowed`.
                  */
                 sort?: components["parameters"]["Sort"];
                 /** @description Include soft-deleted (archived) rows. Default false. */
@@ -41817,10 +41845,14 @@ export interface operations {
                  *     `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
                  *     cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
                  *     accepted multi-field spelling; any other comma-separated multi-field spec returns
-                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
-                 *     enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
-                 *     columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
-                 *     an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
+                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
+                 *     resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+                 *     index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
+                 *     they can order by: a header that cannot be clicked is a dead control. Some columns are not
+                 *     yet offered even so — one that orders by a JOINED value, such as a stage by its position in
+                 *     its pipeline or a partner by its organization's name, needs a sort the server cannot express
+                 *     yet — and a resource's own list documents which. An out-of-vocabulary field returns
+                 *     `422 code: sort_field_not_allowed`.
                  */
                 sort?: components["parameters"]["Sort"];
                 /** @description Include soft-deleted (archived) rows. Default false. */
@@ -47816,10 +47848,14 @@ export interface operations {
                  *     `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
                  *     cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
                  *     accepted multi-field spelling; any other comma-separated multi-field spec returns
-                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
-                 *     enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
-                 *     columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
-                 *     an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
+                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
+                 *     resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+                 *     index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
+                 *     they can order by: a header that cannot be clicked is a dead control. Some columns are not
+                 *     yet offered even so — one that orders by a JOINED value, such as a stage by its position in
+                 *     its pipeline or a partner by its organization's name, needs a sort the server cannot express
+                 *     yet — and a resource's own list documents which. An out-of-vocabulary field returns
+                 *     `422 code: sort_field_not_allowed`.
                  */
                 sort?: components["parameters"]["Sort"];
                 /** @description Target core object (CUSTOM-FIELDS-PARAM-2). */
@@ -50388,10 +50424,14 @@ export interface operations {
                  *     `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
                  *     cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
                  *     accepted multi-field spelling; any other comma-separated multi-field spec returns
-                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
-                 *     enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
-                 *     columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
-                 *     an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
+                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
+                 *     resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+                 *     index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
+                 *     they can order by: a header that cannot be clicked is a dead control. Some columns are not
+                 *     yet offered even so — one that orders by a JOINED value, such as a stage by its position in
+                 *     its pipeline or a partner by its organization's name, needs a sort the server cannot express
+                 *     yet — and a resource's own list documents which. An out-of-vocabulary field returns
+                 *     `422 code: sort_field_not_allowed`.
                  */
                 sort?: components["parameters"]["Sort"];
                 /** @description Include soft-deleted (archived) rows. Default false. */
@@ -50574,10 +50614,14 @@ export interface operations {
                  *     `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
                  *     cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
                  *     accepted multi-field spelling; any other comma-separated multi-field spec returns
-                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
-                 *     enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
-                 *     columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
-                 *     an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
+                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
+                 *     resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+                 *     index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
+                 *     they can order by: a header that cannot be clicked is a dead control. Some columns are not
+                 *     yet offered even so — one that orders by a JOINED value, such as a stage by its position in
+                 *     its pipeline or a partner by its organization's name, needs a sort the server cannot express
+                 *     yet — and a resource's own list documents which. An out-of-vocabulary field returns
+                 *     `422 code: sort_field_not_allowed`.
                  */
                 sort?: components["parameters"]["Sort"];
                 /** @description Include soft-deleted (archived) rows. Default false. */
@@ -51333,10 +51377,14 @@ export interface operations {
                  *     `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
                  *     cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
                  *     accepted multi-field spelling; any other comma-separated multi-field spec returns
-                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
-                 *     enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
-                 *     columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
-                 *     an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
+                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
+                 *     resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+                 *     index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
+                 *     they can order by: a header that cannot be clicked is a dead control. Some columns are not
+                 *     yet offered even so — one that orders by a JOINED value, such as a stage by its position in
+                 *     its pipeline or a partner by its organization's name, needs a sort the server cannot express
+                 *     yet — and a resource's own list documents which. An out-of-vocabulary field returns
+                 *     `422 code: sort_field_not_allowed`.
                  */
                 sort?: components["parameters"]["Sort"];
                 /** @description Include soft-deleted (archived) rows. Default false. */
