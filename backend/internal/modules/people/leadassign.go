@@ -5,13 +5,107 @@ package people
 
 import (
 	"context"
+	"errors"
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
+
+// AssignLeadsInput is one destination and the leads to hand to it.
+type AssignLeadsInput struct {
+	OwnerID ids.UserID
+	Leads   []AssignLeadItem
+}
+
+// AssignLeadItem names one lead, and optionally the version the caller read.
+type AssignLeadItem struct {
+	ID ids.LeadID
+	// IfVersion makes this row's write conditional exactly as If-Match does on
+	// the single update. Nil assigns whatever the lead is now.
+	IfVersion *int64
+}
+
+// AssignLeadOutcome is what happened to one named lead.
+type AssignLeadOutcome struct {
+	LeadID  ids.LeadID
+	Outcome crmcontracts.AssignLeadOutcomeKind
+	// Version after the write; nil unless the lead was read back.
+	Version *int64
+}
+
+// AssignLeads hands a named set of leads to one owner, one row at a time.
+//
+// PER ROW rather than one transaction, which is the opposite of the choice
+// relinkActivities makes and for a stated reason: its rows are one
+// conversation, and these are a manager's screenful of independent records.
+// Refusing the whole selection because the fortieth lead moved under the
+// reader would make the queue unworkable, so each lead answers for itself.
+//
+// Every row goes through UpdateLead — the same writer the single assignment
+// uses, with the same gate, the same audit row and the same event. A second
+// assignment path that wrote the owner itself would be a second answer to who
+// may hand on a lead, and the two would drift.
+func (s *Store) AssignLeads(ctx context.Context, in AssignLeadsInput) ([]AssignLeadOutcome, error) {
+	if err := auth.Require(ctx, "lead", principal.ActionUpdate); err != nil {
+		return nil, err
+	}
+	// Putting somebody's name on a customer record is a human's act, in bulk
+	// exactly as it is one at a time (ClaimRecord says the same).
+	if err := auth.RequireHuman(ctx); err != nil {
+		return nil, err
+	}
+	// The destination is a fact about a SEAT, not about any lead, so it is
+	// asked once before anything is written: a run that assigned thirty leads
+	// and then discovered the owner was suspended would leave the reader to
+	// undo thirty writes by hand. Each row re-asks it inside its own
+	// transaction, because a seat can be suspended mid-run.
+	if err := s.tx(ctx, func(tx pgx.Tx) error {
+		return auth.EnsureAssignee(ctx, tx, in.OwnerID.UUID)
+	}); err != nil {
+		return nil, err
+	}
+
+	owner := in.OwnerID
+	out := make([]AssignLeadOutcome, 0, len(in.Leads))
+	for _, item := range in.Leads {
+		lead, err := s.UpdateLead(ctx, item.ID, UpdateLeadInput{
+			OwnerID:   &owner,
+			IfVersion: item.IfVersion,
+		})
+		out = append(out, assignOutcomeOf(item.ID, lead, err))
+	}
+	return out, nil
+}
+
+// assignOutcomeOf reads one row's answer off what the writer returned.
+//
+// The refusals a bulk run reports are the ones a caller can act on — retry the
+// row, drop it from the selection, ask somebody else. Anything else is a fault
+// in the run itself and is not turned into a row outcome, because a result
+// that reports "forbidden" for a database that went away tells the reader to
+// fix the wrong thing.
+func assignOutcomeOf(id ids.LeadID, lead crmcontracts.Lead, err error) AssignLeadOutcome {
+	switch {
+	case err == nil:
+		return AssignLeadOutcome{
+			LeadID:  id,
+			Outcome: crmcontracts.AssignLeadOutcomeKindAssigned,
+			Version: lead.Version,
+		}
+	case errors.Is(err, apperrors.ErrVersionSkew), errors.Is(err, apperrors.ErrConflict):
+		return AssignLeadOutcome{LeadID: id, Outcome: crmcontracts.AssignLeadOutcomeKindConflict}
+	case errors.Is(err, apperrors.ErrNotFound):
+		return AssignLeadOutcome{LeadID: id, Outcome: crmcontracts.AssignLeadOutcomeKindNotFound}
+	default:
+		return AssignLeadOutcome{LeadID: id, Outcome: crmcontracts.AssignLeadOutcomeKindForbidden}
+	}
+}
 
 // ensureLeadUpdateAuthority is the write gate in front of a lead update, and
 // it asks a different question when the update hands the lead to somebody.

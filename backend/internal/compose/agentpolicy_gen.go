@@ -501,6 +501,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/lead-disqualify-reasons":                                   {Op: "createLeadDisqualifyReason", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/lead-sources":                                              {Op: "createLeadSource", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/leads":                                                     {Op: "createLead", Access: "tool", Tool: "create_record", RecordType: "lead", Tier: "auto_execute", Scope: "write"},
+	"POST /v1/leads/assign-bulk":                                         {Op: "assignLeads", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/leads/{id}/demote":                                         {Op: "demoteLead", Access: "tool", Tool: "demote_lead", RecordType: "lead", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/leads/{id}/draft-email":                                    {Op: "draftLeadEmail", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/leads/{id}/promote":                                        {Op: "promoteLead", Access: "tool", Tool: "promote_lead", RecordType: "lead", Tier: "auto_execute", Scope: "write"},

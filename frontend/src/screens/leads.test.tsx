@@ -1199,15 +1199,14 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
     expect(screen.getByText("Due soon")).toBeTruthy();
   });
 
-  it("bulk-assigns selected leads one PATCH each, every row with its own If-Match, and names the row that refused", async () => {
-    // A naive fan-out sends one version to every row and 428s/409s on all but
-    // the row it came from. Each row carries the version the list holds; a
-    // row that moved under the reader is reported by name, not swallowed.
-    const patches: Array<{
-      id: string;
-      ifMatch: string | null;
-      body: unknown;
-    }> = [];
+  it("bulk-assigns in ONE request carrying each row's own version, and names the row that refused", async () => {
+    // One request, not one per row: the server owns the rule about who may
+    // receive a lead and answers for each lead in the same breath. Each row
+    // still carries the version the LIST holds — a single shared version would
+    // conflict on every row but the one it came from — and a row that moved
+    // under the reader is reported by name rather than swallowed.
+    let sent: { owner_id?: string; leads?: unknown } | null = null;
+    let patchCount = 0;
     stubFetch(async (url, method, request) => {
       if (url.includes("/users")) {
         return jsonResponse({
@@ -1216,27 +1215,17 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
         });
       }
       if (method === "PATCH") {
-        const id = url.split("/leads/")[1] ?? "";
-        patches.push({
-          id,
-          ifMatch: request.headers.get("If-Match"),
-          body: JSON.parse(await request.text()),
+        patchCount += 1;
+        return jsonResponse(lead);
+      }
+      if (url.includes("/leads/assign-bulk")) {
+        sent = JSON.parse(await request.text());
+        return jsonResponse({
+          results: [
+            { lead_id: "l-1", outcome: "assigned", version: 4 },
+            { lead_id: "l-2", outcome: "conflict" },
+          ],
         });
-        if (id === "l-2") {
-          return new Response(
-            JSON.stringify({
-              title: "Conflict",
-              status: 409,
-              code: "version_skew",
-              detail: "moved",
-            }),
-            {
-              status: 409,
-              headers: { "content-type": "application/problem+json" },
-            },
-          );
-        }
-        return jsonResponse({ ...lead, id, owner_id: "u-9", version: 8 });
       }
       return jsonResponse({
         data: [
@@ -1262,17 +1251,18 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
     );
     await userEvent.click(screen.getByRole("button", { name: "Assign" }));
 
-    await waitFor(() => expect(patches).toHaveLength(2));
-    expect(patches.map((p) => [p.id, p.ifMatch])).toEqual([
-      ["l-1", "3"],
-      ["l-2", "7"],
-    ]);
-    expect(
-      patches.every(
-        (p) => JSON.stringify(p.body) === JSON.stringify({ owner_id: "u-9" }),
-      ),
-    ).toBe(true);
-    // The row that refused is named, with the server's reason.
+    await waitFor(() => expect(sent).not.toBeNull());
+    expect(sent).toEqual({
+      owner_id: "u-9",
+      leads: [
+        { id: "l-1", version: 3 },
+        { id: "l-2", version: 7 },
+      ],
+    });
+    // The old shape is gone, not merely unused: a per-row PATCH here would be
+    // the unvalidated path the bulk endpoint exists to replace.
+    expect(patchCount).toBe(0);
+    // The row that refused is named, with the outcome the server reported.
     expect(await screen.findByText(/1 not applied/)).toBeTruthy();
     expect(screen.getByText(/Otto Fischer: /)).toBeTruthy();
   });

@@ -207,6 +207,7 @@ var replayableOperations = map[string]replayTarget{
 	"POST /v1/projects/transfer-ownership": {object: tableProject, rowNote: "the response is a count, not a record: the handover's rows were each gated on the caller's write authority when it ran, and a replay hands back the number alone"},
 	"POST /v1/leads":                       {object: tableLead, table: tableLead, idPath: "id"},
 	"PATCH /v1/leads/{id}":                 {object: tableLead, table: tableLead, idPath: "id"},
+	"POST /v1/leads/assign-bulk":           {object: tableLead, rowNote: "the response is a per-row verdict, not a record: every named lead was gated on the caller's sight and assignment authority when it ran, and a replay hands back the same verdicts"},
 	// The demote answers the lead it restored plus the person it was demoted
 	// FROM — a second record, beside the one the replay is keyed on.
 	"POST /v1/leads/{id}/demote": {

@@ -11,6 +11,7 @@ import (
 	"sync"
 	"testing"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -301,5 +302,122 @@ func TestTwoSeatsRacingForOneOwnerlessLeadDoNotBothWin(t *testing.T) {
 	if errs[1-winner] == nil {
 		t.Errorf("the seat that did NOT get the lead reported success: " +
 			"the other call wrote nothing and said it had")
+	}
+}
+
+// A manager works the queue a screenful at a time, and the rows answer one at
+// a time: a selection where one lead moved under the reader and another is
+// somebody else's must still assign the rest.
+//
+// This is the difference between a bulk verb over a work queue and one over a
+// conversation. relinkActivities refuses everything when one row refuses,
+// because its rows belong together; these do not.
+func TestBulkAssignAnswersForEachLeadSeparately(t *testing.T) {
+	e := Setup(t)
+	manager := e.As(e.Rep2, []ids.UUID{e.Team1}, leadManagerPerms())
+
+	movable := seedOwnerlessLead(t, e, "Bulk Movable")
+	alsoMovable := seedOwnerlessLead(t, e, "Bulk Also Movable")
+	stale := seedOwnerlessLead(t, e, "Bulk Stale")
+
+	// A lead owned by somebody outside the manager's team: theirs to see and
+	// not theirs to hand on.
+	strangerName := "Bulk Stranger's"
+	strangerOwner := ids.From[ids.UserKind](e.Rep3)
+	strangerLead, _, err := e.People.CreateLead(e.Admin(), people.CreateLeadInput{
+		FullName: &strangerName, Source: "manual", OwnerID: &strangerOwner,
+	})
+	if err != nil {
+		t.Fatalf("seeding the stranger's lead: %v", err)
+	}
+
+	staleVersion := int64(1)
+	outcomes, err := e.People.AssignLeads(manager, people.AssignLeadsInput{
+		OwnerID: ids.From[ids.UserKind](e.Rep1),
+		Leads: []people.AssignLeadItem{
+			{ID: movable},
+			{ID: ids.From[ids.LeadKind](ids.UUID(strangerLead.Id))},
+			{ID: stale, IfVersion: &staleVersion},
+			{ID: alsoMovable},
+		},
+	})
+	if err != nil {
+		t.Fatalf("a bulk assign carrying refusable rows failed as a whole: %v", err)
+	}
+	if len(outcomes) != 4 {
+		t.Fatalf("%d outcomes for 4 named leads: every row answers", len(outcomes))
+	}
+	want := []crmcontracts.AssignLeadOutcomeKind{
+		crmcontracts.AssignLeadOutcomeKindAssigned,
+		crmcontracts.AssignLeadOutcomeKindForbidden,
+		crmcontracts.AssignLeadOutcomeKindConflict,
+		crmcontracts.AssignLeadOutcomeKindAssigned,
+	}
+	for i, got := range outcomes {
+		if got.Outcome != want[i] {
+			t.Errorf("row %d answered %q, want %q", i, got.Outcome, want[i])
+		}
+	}
+	// The two that could move did, and the two that could not are untouched.
+	for _, id := range []ids.LeadID{movable, alsoMovable} {
+		if e.WsCount(t, `SELECT count(*) FROM lead WHERE id = $1 AND owner_id = $2`, id.UUID, e.Rep1) != 1 {
+			t.Errorf("a lead reported assigned did not move")
+		}
+	}
+	if e.WsCount(t, `SELECT count(*) FROM lead WHERE id = $1 AND owner_id IS NULL`, stale.UUID) != 1 {
+		t.Errorf("the stale-version lead moved anyway")
+	}
+	if e.WsCount(t, `SELECT count(*) FROM lead WHERE id = $1 AND owner_id = $2`,
+		ids.UUID(strangerLead.Id), e.Rep3) != 1 {
+		t.Errorf("the stranger's lead was taken off them")
+	}
+}
+
+// An ineligible destination stops the run before it starts. Discovering it on
+// row thirty would leave the reader twenty-nine writes to undo by hand.
+func TestBulkAssignRefusesAnIneligibleOwnerBeforeWritingAnything(t *testing.T) {
+	e := Setup(t)
+	first := seedOwnerlessLead(t, e, "Bulk Untouched One")
+	second := seedOwnerlessLead(t, e, "Bulk Untouched Two")
+	e.WsExec(t, `UPDATE app_user SET status = 'suspended' WHERE id = $1`, e.Rep3)
+	defer e.WsExec(t, `UPDATE app_user SET status = 'active' WHERE id = $1`, e.Rep3)
+
+	_, err := e.People.AssignLeads(e.Admin(), people.AssignLeadsInput{
+		OwnerID: ids.From[ids.UserKind](e.Rep3),
+		Leads:   []people.AssignLeadItem{{ID: first}, {ID: second}},
+	})
+	if !errors.As(err, new(*auth.AssigneeNotAllowedError)) {
+		t.Fatalf("a bulk assign to a suspended seat → %v, want AssigneeNotAllowedError", err)
+	}
+	for _, id := range []ids.LeadID{first, second} {
+		mustStayUnowned(t, e, id)
+	}
+}
+
+// A rep may take a lead for themselves and may not hand one to a colleague, in
+// bulk exactly as one at a time: the same gate answers, because the same
+// writer runs.
+func TestBulkAssignHoldsTheSameRuleAsTheSingleWrite(t *testing.T) {
+	e := Setup(t)
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, leadRepPerms())
+	id := seedOwnerlessLead(t, e, "Bulk Rep Reach")
+
+	if _, err := e.People.AssignLeads(rep, people.AssignLeadsInput{
+		OwnerID: ids.From[ids.UserKind](e.Rep2),
+		Leads:   []people.AssignLeadItem{{ID: id}},
+	}); !errors.As(err, new(*auth.AssigneeNotAllowedError)) {
+		t.Fatalf("a rep bulk-assigning to a teammate → %v, want AssigneeNotAllowedError", err)
+	}
+	mustStayUnowned(t, e, id)
+
+	outcomes, err := e.People.AssignLeads(rep, people.AssignLeadsInput{
+		OwnerID: ids.From[ids.UserKind](e.Rep1),
+		Leads:   []people.AssignLeadItem{{ID: id}},
+	})
+	if err != nil {
+		t.Fatalf("a rep bulk-assigning to themselves: %v", err)
+	}
+	if outcomes[0].Outcome != crmcontracts.AssignLeadOutcomeKindAssigned {
+		t.Errorf("a rep taking their own lead answered %q, want assigned", outcomes[0].Outcome)
 	}
 }

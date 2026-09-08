@@ -1111,6 +1111,33 @@ func (e ApprovalEvidenceSourceType) Valid() bool {
 	}
 }
 
+// Defines values for AssignLeadOutcomeKind.
+const (
+	AssignLeadOutcomeKindAssigned  AssignLeadOutcomeKind = "assigned"
+	AssignLeadOutcomeKindConflict  AssignLeadOutcomeKind = "conflict"
+	AssignLeadOutcomeKindForbidden AssignLeadOutcomeKind = "forbidden"
+	AssignLeadOutcomeKindNotFound  AssignLeadOutcomeKind = "not_found"
+	AssignLeadOutcomeKindUnchanged AssignLeadOutcomeKind = "unchanged"
+)
+
+// Valid indicates whether the value is a known member of the AssignLeadOutcomeKind enum.
+func (e AssignLeadOutcomeKind) Valid() bool {
+	switch e {
+	case AssignLeadOutcomeKindAssigned:
+		return true
+	case AssignLeadOutcomeKindConflict:
+		return true
+	case AssignLeadOutcomeKindForbidden:
+		return true
+	case AssignLeadOutcomeKindNotFound:
+		return true
+	case AssignLeadOutcomeKindUnchanged:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AssistantConfiguredModelProvider.
 const (
 	AssistantModelProviderAnthropic        AssistantConfiguredModelProvider = "anthropic"
@@ -15318,25 +15345,25 @@ func (e StartOidcSignInParamsProvider) Valid() bool {
 
 // Defines values for ListAutomationRunsParamsOutcome.
 const (
-	ListAutomationRunsParamsOutcomeBlocked           ListAutomationRunsParamsOutcome = "blocked"
-	ListAutomationRunsParamsOutcomeFailed            ListAutomationRunsParamsOutcome = "failed"
-	ListAutomationRunsParamsOutcomeFired             ListAutomationRunsParamsOutcome = "fired"
-	ListAutomationRunsParamsOutcomeQueuedForApproval ListAutomationRunsParamsOutcome = "queued_for_approval"
-	ListAutomationRunsParamsOutcomeSkipped           ListAutomationRunsParamsOutcome = "skipped"
+	Blocked           ListAutomationRunsParamsOutcome = "blocked"
+	Failed            ListAutomationRunsParamsOutcome = "failed"
+	Fired             ListAutomationRunsParamsOutcome = "fired"
+	QueuedForApproval ListAutomationRunsParamsOutcome = "queued_for_approval"
+	Skipped           ListAutomationRunsParamsOutcome = "skipped"
 )
 
 // Valid indicates whether the value is a known member of the ListAutomationRunsParamsOutcome enum.
 func (e ListAutomationRunsParamsOutcome) Valid() bool {
 	switch e {
-	case ListAutomationRunsParamsOutcomeBlocked:
+	case Blocked:
 		return true
-	case ListAutomationRunsParamsOutcomeFailed:
+	case Failed:
 		return true
-	case ListAutomationRunsParamsOutcomeFired:
+	case Fired:
 		return true
-	case ListAutomationRunsParamsOutcomeQueuedForApproval:
+	case QueuedForApproval:
 		return true
-	case ListAutomationRunsParamsOutcomeSkipped:
+	case Skipped:
 		return true
 	default:
 		return false
@@ -18112,6 +18139,60 @@ type ApprovalListResponse struct {
 type ApproveRequest struct {
 	// EditedPayload Optional edits — the edited payload is re-admitted, then it executes (edit-then-send).
 	EditedPayload *map[string]interface{} `json:"edited_payload,omitempty"`
+}
+
+// AssignLeadOutcome What happened to one named lead.
+type AssignLeadOutcome struct {
+	LeadId openapi_types.UUID `json:"lead_id"`
+
+	// Outcome `assigned` moved the lead. `unchanged` found it already owned by the destination and
+	// wrote nothing, which is not a failure. `forbidden` is a lead the caller may not hand on.
+	// `conflict` is a version that no longer holds.
+	//
+	// `not_found` is a lead the caller cannot see — and also an ARCHIVED one, because the
+	// write resolves live rows only and a promoted or disqualified lead is no longer among
+	// them. The two deliberately read alike: which of them it was is a fact about a record the
+	// caller was not shown, and separating them would answer that a lead exists.
+	Outcome AssignLeadOutcomeKind `json:"outcome"`
+
+	// Version The lead's version after the write. Present on `assigned` and `unchanged`.
+	Version *int64 `json:"version,omitempty"`
+}
+
+// AssignLeadOutcomeKind `assigned` moved the lead. `unchanged` found it already owned by the destination and
+// wrote nothing, which is not a failure. `forbidden` is a lead the caller may not hand on.
+// `conflict` is a version that no longer holds.
+//
+// `not_found` is a lead the caller cannot see — and also an ARCHIVED one, because the
+// write resolves live rows only and a promoted or disqualified lead is no longer among
+// them. The two deliberately read alike: which of them it was is a fact about a record the
+// caller was not shown, and separating them would answer that a lead exists.
+type AssignLeadOutcomeKind string
+
+// AssignLeadsItem defines model for AssignLeadsItem.
+type AssignLeadsItem struct {
+	Id openapi_types.UUID `json:"id"`
+
+	// Version The version the caller read. Optional; supplying it makes the row's write conditional
+	// exactly as `If-Match` does on `updateLead`, so a lead somebody else moved answers
+	// `conflict` instead of losing their change.
+	Version *int64 `json:"version,omitempty"`
+}
+
+// AssignLeadsRequest One destination owner, and the leads to hand to them. The owner is checked before any
+// lead is touched; the leads answer one at a time.
+type AssignLeadsRequest struct {
+	Leads []AssignLeadsItem `json:"leads"`
+
+	// OwnerId The seat to hand them to. Must be one that can be handed work — an active, unarchived
+	// human seat that is not read-only, inside the caller's own row scope — else
+	// `422 owner_not_assignable` and nothing moves.
+	OwnerId openapi_types.UUID `json:"owner_id"`
+}
+
+// AssignLeadsResult defines model for AssignLeadsResult.
+type AssignLeadsResult struct {
+	Results []AssignLeadOutcome `json:"results"`
 }
 
 // AssistantConfiguredModel defines model for AssistantConfiguredModel.
@@ -39256,6 +39337,25 @@ type CreateLeadParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// AssignLeadsParams defines parameters for AssignLeads.
+type AssignLeadsParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // UpdateLeadParams defines parameters for UpdateLead.
 type UpdateLeadParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -42586,6 +42686,9 @@ type UpdateLeadSourceJSONRequestBody = UpdateLeadSourceRequest
 
 // CreateLeadJSONRequestBody defines body for CreateLead for application/json ContentType.
 type CreateLeadJSONRequestBody = CreateLeadRequest
+
+// AssignLeadsJSONRequestBody defines body for AssignLeads for application/json ContentType.
+type AssignLeadsJSONRequestBody = AssignLeadsRequest
 
 // UpdateLeadSettingsJSONRequestBody defines body for UpdateLeadSettings for application/json ContentType.
 type UpdateLeadSettingsJSONRequestBody = UpdateLeadSettingsRequest
@@ -51658,6 +51761,9 @@ type ServerInterface interface {
 	// Create a lead.
 	// (POST /leads)
 	CreateLead(w http.ResponseWriter, r *http.Request, params CreateLeadParams)
+	// Hand a named set of leads to one owner.
+	// (POST /leads/assign-bulk)
+	AssignLeads(w http.ResponseWriter, r *http.Request, params AssignLeadsParams)
 	// How this installation handles leads.
 	// (GET /leads/settings)
 	GetLeadSettings(w http.ResponseWriter, r *http.Request)
@@ -54376,6 +54482,12 @@ func (_ Unimplemented) ListLeads(w http.ResponseWriter, r *http.Request, params 
 // Create a lead.
 // (POST /leads)
 func (_ Unimplemented) CreateLead(w http.ResponseWriter, r *http.Request, params CreateLeadParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Hand a named set of leads to one owner.
+// (POST /leads/assign-bulk)
+func (_ Unimplemented) AssignLeads(w http.ResponseWriter, r *http.Request, params AssignLeadsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -67747,6 +67859,53 @@ func (siw *ServerInterfaceWrapper) CreateLead(w http.ResponseWriter, r *http.Req
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateLead(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AssignLeads operation middleware
+func (siw *ServerInterfaceWrapper) AssignLeads(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params AssignLeadsParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AssignLeads(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -83705,6 +83864,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/leads", wrapper.CreateLead)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/leads/assign-bulk", wrapper.AssignLeads)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/leads/settings", wrapper.GetLeadSettings)

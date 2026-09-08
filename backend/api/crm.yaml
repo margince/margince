@@ -7587,6 +7587,51 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /leads/assign-bulk:
+    post:
+      tags: [Leads]
+      operationId: assignLeads
+      summary: Hand a named set of leads to one owner.
+      description: |
+        The explicit-id twin of `updateLead.owner_id`, for a queue a manager works a screenful at
+        a time. The caller names up to 500 leads and one destination; each lead is assigned
+        exactly as a single `updateLead` would assign it, with its own `audit_log` row and
+        `lead.updated` event.
+
+        PER ROW, not one transaction, and the result says so. A bulk verb over a work queue is a
+        selection of independent records, and refusing forty because the fortieth moved under the
+        reader would make the screen unworkable — so each lead answers for itself and the result
+        names every one that did not move. That is the opposite of `relinkActivities`, which is
+        all-or-nothing because its rows are one conversation.
+
+        The destination is checked ONCE before anything is written, because it is a fact about a
+        seat rather than about any lead: an ineligible owner answers `422 owner_not_assignable`
+        and nothing moves. It is then re-checked inside each row's transaction, since a seat can
+        be suspended midway through a long run.
+
+        Each `version` is optional and behaves as `If-Match` does on the single write: supply it
+        and a lead that moved since the caller read it answers `conflict` rather than overwriting
+        somebody's work.
+      x-agent-access: human-only
+      # Session cookie only, matching auth.RequireHuman: putting somebody's name on a customer
+      # record is a human's act, in bulk exactly as it is one at a time.
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AssignLeadsRequest' }
+      responses:
+        '200':
+          description: What happened to each named lead.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AssignLeadsResult' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /leads/settings:
     get:
       tags: [Leads]
@@ -31744,6 +31789,72 @@ components:
           type: boolean
           default: false
           description: When true, replaces each activity's existing link of the same entity_type (move) rather than adding (associate).
+
+    AssignLeadsRequest:
+      type: object
+      description: |
+        One destination owner, and the leads to hand to them. The owner is checked before any
+        lead is touched; the leads answer one at a time.
+      required: [leads, owner_id]
+      properties:
+        owner_id:
+          type: string
+          format: uuid
+          description: |
+            The seat to hand them to. Must be one that can be handed work — an active, unarchived
+            human seat that is not read-only, inside the caller's own row scope — else
+            `422 owner_not_assignable` and nothing moves.
+        leads:
+          type: array
+          minItems: 1
+          maxItems: 500
+          items: { $ref: '#/components/schemas/AssignLeadsItem' }
+
+    AssignLeadsItem:
+      type: object
+      required: [id]
+      properties:
+        id: { type: string, format: uuid }
+        version:
+          type: integer
+          format: int64
+          description: |
+            The version the caller read. Optional; supplying it makes the row's write conditional
+            exactly as `If-Match` does on `updateLead`, so a lead somebody else moved answers
+            `conflict` instead of losing their change.
+
+    AssignLeadsResult:
+      type: object
+      required: [results]
+      properties:
+        results:
+          type: array
+          items: { $ref: '#/components/schemas/AssignLeadOutcome' }
+
+    AssignLeadOutcome:
+      type: object
+      description: What happened to one named lead.
+      required: [lead_id, outcome]
+      properties:
+        lead_id: { type: string, format: uuid }
+        outcome: { $ref: '#/components/schemas/AssignLeadOutcomeKind' }
+        version:
+          type: integer
+          format: int64
+          description: The lead's version after the write. Present on `assigned` and `unchanged`.
+
+    AssignLeadOutcomeKind:
+      type: string
+      description: |
+        `assigned` moved the lead. `unchanged` found it already owned by the destination and
+        wrote nothing, which is not a failure. `forbidden` is a lead the caller may not hand on.
+        `conflict` is a version that no longer holds.
+
+        `not_found` is a lead the caller cannot see — and also an ARCHIVED one, because the
+        write resolves live rows only and a promoted or disqualified lead is no longer among
+        them. The two deliberately read alike: which of them it was is a fact about a record the
+        caller was not shown, and separating them would answer that a lead exists.
+      enum: [assigned, unchanged, not_found, forbidden, conflict]
 
     RelinkActivitiesRequest:
       type: object

@@ -2,7 +2,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { ifMatch, requireVersion } from "../api/version";
 import { Button } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Select } from "../design-system/select";
@@ -27,9 +26,37 @@ export type BulkOutcome = { id: string; name: string; error?: string };
  * render state would run whatever the previous render closed over, and the
  * click that carries the variable belongs to the render the reader pressed.
  */
-export type BulkAction =
-  | { kind: "assign"; ownerId: string; ownerName: string }
-  | { kind: "disqualify"; reasonId: string };
+export type AssignAction = {
+  kind: "assign";
+  ownerId: string;
+  ownerName: string;
+};
+export type DisqualifyAction = { kind: "disqualify"; reasonId: string };
+export type BulkAction = AssignAction | DisqualifyAction;
+
+// What the server said about one lead, as a sentence for the reader — or
+// undefined when the lead moved, which is the only outcome that is not a
+// refusal to report.
+//
+// `unchanged` counts as moved: a lead already owned by the destination is
+// where the reader wanted it, and calling that a failure would report forty
+// problems for a re-run that fixed the two rows that mattered.
+function assignOutcomeMessage(
+  outcome: components["schemas"]["AssignLeadOutcomeKind"],
+  t: ReturnType<typeof useT>,
+): string | undefined {
+  switch (outcome) {
+    case "assigned":
+    case "unchanged":
+      return undefined;
+    case "conflict":
+      return t("lead.bulkOutcomeConflict");
+    case "forbidden":
+      return t("lead.bulkOutcomeForbidden");
+    default:
+      return t("lead.bulkOutcomeNotFound");
+  }
+}
 
 /**
  * One bulk run: the verb, and the rows it applies to.
@@ -88,20 +115,7 @@ export function LeadBulkBar({
   // its version come from the row in hand; the owner or the reason comes from
   // the mutation's variable, so neither can be a value that had left the
   // screen by the time the write went out.
-  const apply = async (lead: Lead, action: BulkAction) => {
-    if (action.kind === "assign") {
-      const { error } = await api.PATCH("/leads/{id}", {
-        params: {
-          path: { id: lead.id },
-          ...ifMatch(requireVersion(lead.version)),
-        },
-        body: { owner_id: action.ownerId },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return;
-    }
+  const apply = async (lead: Lead, action: DisqualifyAction) => {
     const { error } = await api.DELETE("/leads/{id}", {
       params: { path: { id: lead.id } },
       body: { reason_id: action.reasonId },
@@ -111,12 +125,48 @@ export function LeadBulkBar({
     }
   };
 
+  // Assignment is ONE request for the whole selection, because the server owns
+  // the rule about who may receive a lead and asking it forty times over forty
+  // round trips answered forty times as slowly for no more safety. The server
+  // checks the destination once before writing anything and then answers for
+  // each lead, so the outcomes below are its words rather than this screen's
+  // reading of forty separate refusals.
+  const assignAll = async (
+    rows: readonly Lead[],
+    action: AssignAction,
+  ): Promise<BulkOutcome[]> => {
+    const { data, error } = await api.POST("/leads/assign-bulk", {
+      body: {
+        owner_id: action.ownerId,
+        leads: rows.map((lead) => ({ id: lead.id, version: lead.version })),
+      },
+    });
+    if (error) {
+      throwProblem(error, t);
+    }
+    const byId = new Map(rows.map((lead) => [lead.id, lead]));
+    return (data?.results ?? []).map((result) => {
+      const lead = byId.get(result.lead_id);
+      const name = (lead && leadIdentityName(lead)) || result.lead_id;
+      return {
+        id: result.lead_id,
+        name,
+        error: assignOutcomeMessage(result.outcome, t),
+      };
+    });
+  };
+
   const run = useMutation({
-    mutationFn: async ({ action, rows }: BulkRun): Promise<BulkOutcome[]> =>
+    mutationFn: async ({ action, rows }: BulkRun): Promise<BulkOutcome[]> => {
+      if (action.kind === "assign") {
+        return assignAll(rows, action);
+      }
+      // Disqualify stays a row at a time: it is a DELETE per lead with its own
+      // reason, and it has no bulk twin on the server to send it to.
       // Sequential, not Promise.all: a bulk verb over a work queue is a
       // handful of rows, and a burst of concurrent writes against one
       // rep's own leads buys nothing but contention.
-      rows.reduce<Promise<BulkOutcome[]>>(async (acc, lead) => {
+      return rows.reduce<Promise<BulkOutcome[]>>(async (acc, lead) => {
         const done = await acc;
         // The id, not the word: this name goes into a per-row outcome the
         // reader reads back afterwards, and two unnamed leads must be tellable
@@ -136,7 +186,8 @@ export function LeadBulkBar({
           });
         }
         return done;
-      }, Promise.resolve([])),
+      }, Promise.resolve([]));
+    },
     onSuccess: async (result, { action }) => {
       // EVERY lead the run touched, refused ones included, and not only the
       // list.
