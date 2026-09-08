@@ -104,18 +104,42 @@ var auditImageEntity = regexp.MustCompile(`(?is)\bentity_type\s*=\s*'([a-z_]+)'`
 // something else takes it out, which is the one direction where being wrong
 // costs a false PASS rather than a false finding.
 func readsAnActivitysAuditImage(text string) bool {
-	for _, window := range auditImageRead.FindAllString(text, -1) {
-		bound := auditImageEntity.FindAllStringSubmatch(window, -1)
-		if len(bound) == 0 {
+	for _, at := range auditImageRead.FindAllStringIndex(text, -1) {
+		if !boundToAnotherRecordType(text[at[0]:min(at[1]+auditImageBindingReach, len(text))]) {
 			return true
-		}
-		for _, match := range bound {
-			if match[1] == "activity" {
-				return true
-			}
 		}
 	}
 	return false
+}
+
+// auditImageBindingReach is how far past the matched read the record-type
+// binding is looked for.
+//
+// The match itself is not enough, and the reason is asymmetric: when the
+// projection sits BEFORE its FROM — `SELECT before FROM audit_log WHERE ...` —
+// the window ends at the table name and the WHERE that binds the record type
+// is entirely outside it. So the lookup runs on from the match rather than
+// within it.
+//
+// Forward only. A binding written before the projection is not read, which
+// leaves the reader in the census: that is the safe direction, and reaching
+// backwards would let an `entity_type = 'person'` belonging to some earlier
+// query in the same declaration answer for this one.
+const auditImageBindingReach = 300
+
+// boundToAnotherRecordType reports whether every record type this statement
+// names is one an activity cannot be.
+func boundToAnotherRecordType(statement string) bool {
+	bound := auditImageEntity.FindAllStringSubmatch(statement, -1)
+	if len(bound) == 0 {
+		return false
+	}
+	for _, match := range bound {
+		if match[1] == "activity" {
+			return false
+		}
+	}
+	return true
 }
 
 // scopeMarkers are the shared gates that carry the availability test: a reader
@@ -222,6 +246,7 @@ var restrictedReadersAdmitted = gatekit.Waive(map[string]string{
 	// What this widening buys is that the door is now VISIBLE: before it, these
 	// five readers were not subjects of this gate at all, and the verdict it
 	// gave them was the verdict it gives a file that gates nothing.
+	"internal/compose/magicseam.go:magicUndoJudge.judgeOne":                  "reads ONE audit row to decide whether the change it records can be taken back, and projects a VERDICT: magicOffer carries the audit id the caller already holds, magicRefusal a reason from a closed vocabulary. No image leaves it. The entry is one the caller can already see in that record's history — privacy.HistoryServesEntry is asked before the evaluation, and the target record goes through the seam's own visibility check with the row-scope miss and the object denial kept apart. Cost: an activity's before/after decides whether an undo control is offered beside an entry that reader was already being shown",
 	"internal/compose/recordrestore.go:RestoreSeam.readRow":                  "reads ONE audit row by its own id to decide what restoring it means, entity_type parameterized. The image it reads is the image the caller is already looking at on that record's history — this read reveals nothing the history did not — and the restore it drives writes to the target row rather than disclosing the trail. Cost: an activity's before/after passes through this seam when a caller restores one",
 	"internal/compose/humanprecedence.go:fieldOwnership.HumanOwnedConflicts": "asks which fields of ONE record a human last set, by looking for the field's key in an after-image. It projects no image: the statement's output is the set of field KEYS a human owns, so an activity's content cannot leave through it. Cost: an activity's after-image decides which of its own field names are reported as human-owned",
 	"internal/compose/superseded.go:moneyMovedUnderIt":                       "asks whether a later audit row moved money under the row being judged, reading the after-image to compare one amount. It projects a boolean, never the image. Cost: an activity's after-image is read to answer a question about the row it belongs to",

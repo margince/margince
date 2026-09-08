@@ -210,8 +210,16 @@ func lockCorrection(ctx context.Context, tx pgx.Tx, id ids.UUID) (DealCorrection
 // asked for.
 func priorImage(ctx context.Context, tx pgx.Tx, c DealCorrection) (map[string]json.RawMessage, error) {
 	var raw []byte
+	// Bound to the record type it means. The id is the deal's own audit row —
+	// recordCorrection stores the id storekit wrote for the deal update in the
+	// same transaction — so this predicate refuses nothing that should arrive.
+	// What it buys is that a read by a bare id off a stored column cannot
+	// return another record's image if that id is ever wrong: the correction
+	// would otherwise compare a deal against something that is not one, and
+	// the audit trail is one table for every record the product keeps.
 	err := tx.QueryRow(ctx,
-		`SELECT before FROM audit_log WHERE id = $1`, c.AuditLogID).Scan(&raw)
+		`SELECT before FROM audit_log WHERE id = $1 AND entity_type = 'deal'`,
+		c.AuditLogID).Scan(&raw)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, &CorrectionReversalError{
 			Reason: "the change this correction recorded is no longer in the record's history",
