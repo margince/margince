@@ -17,6 +17,7 @@ package integration
 import (
 	"context"
 	"net/http"
+	"slices"
 	"testing"
 	"time"
 
@@ -135,7 +136,7 @@ func TestTheGrowthFitCacheRowIsKeyedToTheReaderWhoAskedForIt(t *testing.T) {
 	// band this company could not produce, and leave the acting reader with
 	// nothing of their own. The row is live: it would be served on sight.
 	acting := readerByEmail(t, e, bootstrappedAdminEmail)
-	giveTheCachedRowToAnotherReader(t, e, orgID, acting)
+	other := giveTheCachedRowToAnotherReader(t, e, orgID, acting)
 
 	var second growthFitResponse
 	if status := e.Call(t, "GET", "/v1/organizations/"+orgID+"/growth-fit", nil, nil, &second); status != http.StatusOK {
@@ -145,14 +146,48 @@ func TestTheGrowthFitCacheRowIsKeyedToTheReaderWhoAskedForIt(t *testing.T) {
 		t.Fatal("the read served another reader's cached assessment — the cache is keyed on write and not on read")
 	}
 
-	// And it wrote its own row rather than overwriting theirs, which is the
-	// same guarantee seen from the write side.
-	var mine ids.UUID
-	if err := e.Owner.QueryRow(context.Background(),
-		`SELECT user_id FROM org_growth_fit WHERE organization_id = $1 AND user_id = $2`,
-		orgID, acting).Scan(&mine); err != nil {
-		t.Fatalf("the acting reader's own row is missing after their read: %v", err)
+	// And it wrote its own row rather than overwriting theirs — BOTH halves,
+	// because either alone is satisfied by the defect. A write keyed on the
+	// organization and not the reader replaces the other reader's row and still
+	// leaves the acting reader with one of their own, so "mine exists" passes
+	// for exactly the keying this test exists to refuse. What separates them is
+	// that theirs is still there.
+	readers := cachedGrowthFitReaders(t, e, orgID)
+	if !slices.Contains(readers, acting) {
+		t.Errorf("the acting reader has no row of their own after their read; the cache holds %v", readers)
 	}
+	if !slices.Contains(readers, other) {
+		t.Errorf("the other reader's cached row is gone after somebody else read the same company — the "+
+			"cache write is keyed on the organization rather than on (organization, reader), so one "+
+			"reader's assessment evicts another's; the cache holds %v", readers)
+	}
+}
+
+// cachedGrowthFitReaders returns the readers holding a cached assessment of
+// this company. Read as a SET rather than probed one id at a time: what the
+// assertions above are about is which rows survived a write, and a per-id
+// existence check reports the first missing one without saying what is there
+// instead.
+func cachedGrowthFitReaders(t *testing.T, e *apptest.AppEnv, orgID string) []ids.UUID {
+	t.Helper()
+	rows, err := e.Owner.Query(context.Background(),
+		`SELECT user_id FROM org_growth_fit WHERE organization_id = $1 ORDER BY user_id`, orgID)
+	if err != nil {
+		t.Fatalf("reading the cached growth-fit rows: %v", err)
+	}
+	defer rows.Close()
+	var readers []ids.UUID
+	for rows.Next() {
+		var reader ids.UUID
+		if scanErr := rows.Scan(&reader); scanErr != nil {
+			t.Fatalf("scanning a cached growth-fit row: %v", scanErr)
+		}
+		readers = append(readers, reader)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("reading the cached growth-fit rows: %v", err)
+	}
+	return readers
 }
 
 func namesMissingInput(missing []string, want string) bool {
@@ -236,7 +271,11 @@ func readerByEmail(t *testing.T, e *apptest.AppEnv, email string) ids.UUID {
 // with keying — and the test would pass over an unkeyed read. This row carries
 // the fingerprint the next read will compute, so it is live: an unkeyed read
 // finds it, accepts it, and serves it.
-func giveTheCachedRowToAnotherReader(t *testing.T, e *apptest.AppEnv, orgID string, acting ids.UUID) {
+// giveTheCachedRowToAnotherReader returns the reader it handed the row to, so
+// the caller can assert that reader's row is still there afterwards. Without
+// the id there is nothing to look for, and "the acting reader has a row" is
+// satisfied by a write that replaced the other one.
+func giveTheCachedRowToAnotherReader(t *testing.T, e *apptest.AppEnv, orgID string, acting ids.UUID) ids.UUID {
 	t.Helper()
 	other := ids.NewV7()
 	if _, err := e.Owner.Exec(context.Background(),
@@ -255,4 +294,5 @@ func giveTheCachedRowToAnotherReader(t *testing.T, e *apptest.AppEnv, orgID stri
 	if tag.RowsAffected() != 1 {
 		t.Fatalf("moved %d cache rows, want exactly the one the first read wrote", tag.RowsAffected())
 	}
+	return other
 }
