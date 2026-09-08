@@ -335,13 +335,21 @@ func taskItem(task Task, asOf time.Time) crmcontracts.AttentionItem {
 // already calls, so this lane adds no second way to answer a brief item.
 func briefItem(entry BriefEntry) crmcontracts.AttentionItem {
 	rank := entry.Rank
-	return crmcontracts.AttentionItem{
+	item := crmcontracts.AttentionItem{
 		Id:      entry.ID.String(),
 		Source:  crmcontracts.AttentionItemSource("brief_item"),
 		Rank:    &rank,
 		Subject: subjectOf("deal", entry.DealID),
 		Actions: []crmcontracts.AttentionItemActions{"act", "set_aside", "dismiss"},
 	}
+	// WHY the night picked it, in the field that exists for a producer's own
+	// sub-type. A run stored before the signal existed carries none, and the
+	// classifier answers as it always did rather than inventing one.
+	if entry.Signal != "" {
+		signal := entry.Signal
+		item.Kind = &signal
+	}
+	return item
 }
 
 // commitmentItem renders one promise this rep made.

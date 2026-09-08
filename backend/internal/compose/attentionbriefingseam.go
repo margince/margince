@@ -72,6 +72,10 @@ func (a attentionBriefing) Queue(ctx context.Context) ([]attention.BriefEntry, b
 		unanswered = append(unanswered, attention.BriefEntry{
 			ID: item.ID, DealID: item.DealID, Rank: item.Rank,
 			Composite: item.Composite, Finding: item.Finding,
+			// Derived from the persisted vector rather than stored beside it:
+			// the vector IS the reason, so a second column could disagree with
+			// the numbers a reader can already see decomposed on the card.
+			Signal: string(briefs.SignalOf(item.Features)),
 		})
 		named = append(named, item.DealID)
 	}
