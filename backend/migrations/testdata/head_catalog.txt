@@ -365,6 +365,7 @@ public.activity_retention_evidence.activity_retention_evidence_basis_check CHECK
 public.activity_retention_evidence.activity_retention_evidence_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE SET NULL
 public.activity_retention_evidence.activity_retention_evidence_decided_by_fkey FOREIGN KEY (decided_by) REFERENCES app_user(id) ON DELETE SET NULL
 public.activity_retention_evidence.activity_retention_evidence_is_frozen CREATE TRIGGER activity_retention_evidence_is_frozen BEFORE DELETE OR UPDATE ON public.activity_retention_evidence FOR EACH ROW EXECUTE FUNCTION activity_retention_evidence_is_frozen()
+public.activity_retention_evidence.activity_retention_evidence_names_its_record CREATE TRIGGER activity_retention_evidence_names_its_record BEFORE INSERT ON public.activity_retention_evidence FOR EACH ROW EXECUTE FUNCTION activity_retention_evidence_names_its_record()
 public.activity_retention_evidence.activity_retention_evidence_pkey PRIMARY KEY (id)
 public.activity_retention_evidence.activity_retention_evidence_project_id_fkey FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE SET NULL
 public.activity_retention_evidence.are_deal_name_with_id CHECK (((deal_id IS NULL) OR (deal_name IS NOT NULL)))
@@ -409,15 +410,43 @@ BEGIN
      OR NEW.decided_by_name IS DISTINCT FROM OLD.decided_by_name
      OR NEW.reason       IS DISTINCT FROM OLD.reason
      OR NEW.created_at   IS DISTINCT FROM OLD.created_at
-     -- The reference may be CLEARED by its FK, never repointed.
+     -- The reference may be cleared BY ITS FK, never repointed and never
+     -- cleared by hand. ON DELETE SET NULL fires once the parent row is
+     -- already gone, so "does the record still exist" is exactly what tells a
+     -- statement somebody wrote from the FK doing its job — the same test the
+     -- DELETE arm above applies to the activity.
+     --
+     -- This is not tidiness. The uniqueness index stops covering a row whose
+     -- reference has been cleared, and that is only safe while clearing means
+     -- "the record is gone": a hand-cleared row leaves the index quietly, and
+     -- the next stamp for the same record inserts beside it instead of being
+     -- deduplicated.
+     --
+     -- decided_by is left as it was. It is ON DELETE SET NULL to app_user and
+     -- carries the same shape, but a pin is outside the index this protects,
+     -- so tightening it here would be a claim about a different invariant.
      OR (NEW.deal_id IS NOT NULL AND NEW.deal_id IS DISTINCT FROM OLD.deal_id)
+     OR (NEW.deal_id IS NULL AND OLD.deal_id IS NOT NULL
+         AND EXISTS (SELECT 1 FROM deal d WHERE d.id = OLD.deal_id))
      OR (NEW.project_id IS NOT NULL AND NEW.project_id IS DISTINCT FROM OLD.project_id)
+     OR (NEW.project_id IS NULL AND OLD.project_id IS NOT NULL
+         AND EXISTS (SELECT 1 FROM project p WHERE p.id = OLD.project_id))
      OR (NEW.decided_by IS NOT NULL AND NEW.decided_by IS DISTINCT FROM OLD.decided_by) THEN
     RAISE EXCEPTION 'retention evidence % is frozen at the moment it qualified and may not be rewritten', OLD.id
       USING ERRCODE = 'check_violation',
             CONSTRAINT = 'activity_retention_evidence_frozen';
   END IF;
 
+  RETURN NEW;
+END;
+
+public.activity_retention_evidence_names_its_record() secdef=false cfg=- acl=- 
+BEGIN
+  IF NEW.basis <> 'controller_pin' AND NEW.deal_id IS NULL AND NEW.project_id IS NULL THEN
+    RAISE EXCEPTION 'retention evidence on activity % is derived from a % that it does not name; the qualifying record''s id is what keeps two same-named records apart once either is deleted', NEW.activity_id, NEW.basis
+      USING ERRCODE = 'check_violation',
+            CONSTRAINT = 'activity_retention_evidence_names_its_record';
+  END IF;
   RETURN NEW;
 END;
 
@@ -5644,7 +5673,7 @@ END;
 public.uq_activity_link CREATE UNIQUE INDEX uq_activity_link ON public.activity_link USING btree (activity_id, entity_type, COALESCE(person_id, organization_id, deal_id, lead_id, project_id))
 public.uq_activity_link_project CREATE UNIQUE INDEX uq_activity_link_project ON public.activity_link USING btree (activity_id) WHERE (entity_type = 'project'::text)
 public.uq_activity_participant CREATE UNIQUE INDEX uq_activity_participant ON public.activity_participant USING btree (activity_id, role, COALESCE(user_id, '00000000-0000-0000-0000-000000000000'::uuid), COALESCE(person_id, '00000000-0000-0000-0000-000000000000'::uuid), COALESCE(address, ''::text), COALESCE(channel_user_id, ''::text))
-public.uq_activity_retention_evidence CREATE UNIQUE INDEX uq_activity_retention_evidence ON public.activity_retention_evidence USING btree (activity_id, deal_id, deal_name, project_id, project_name, basis) NULLS NOT DISTINCT WHERE (basis <> 'controller_pin'::text)
+public.uq_activity_retention_evidence CREATE UNIQUE INDEX uq_activity_retention_evidence ON public.activity_retention_evidence USING btree (activity_id, deal_id, deal_name, project_id, project_name, basis) NULLS NOT DISTINCT WHERE ((basis <> 'controller_pin'::text) AND ((deal_id IS NOT NULL) OR (project_id IS NOT NULL)))
 public.uq_activity_source CREATE UNIQUE INDEX uq_activity_source ON public.activity USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))
 public.uq_agent_standing_grant_user_spec CREATE UNIQUE INDEX uq_agent_standing_grant_user_spec ON public.agent_standing_grant USING btree (user_id, agent_spec)
 public.uq_ai_call_ws_id CREATE UNIQUE INDEX uq_ai_call_ws_id ON public.ai_call USING btree (id)
