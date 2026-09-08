@@ -47,7 +47,7 @@
 2062 frontend/src/screens/company360.tsx
 579 frontend/src/screens/companycontracts.tsx
 587 frontend/src/screens/companyfinance.tsx
-964 frontend/src/screens/companyheader.tsx
+975 frontend/src/screens/companyheader.tsx
 790 frontend/src/screens/companypeople/summary.tsx
 1135 frontend/src/screens/companyrail.test.tsx
 697 frontend/src/screens/companyrail.tsx
@@ -80,12 +80,12 @@
 629 frontend/src/screens/knowledge.tsx
 562 frontend/src/screens/leadpresentation.tsx
 635 frontend/src/screens/leads.list.tsx
-2712 frontend/src/screens/leads.test.tsx
+2752 frontend/src/screens/leads.test.tsx
 2168 frontend/src/screens/leads.tsx
 906 frontend/src/screens/leadvocab.tsx
 1328 frontend/src/screens/listquery.test.tsx
 1402 frontend/src/screens/listquery.tsx
-610 frontend/src/screens/logactivity.tsx
+616 frontend/src/screens/logactivity.tsx
 1418 frontend/src/screens/offers.tsx
 525 frontend/src/screens/onboarding-backread.tsx
 630 frontend/src/screens/onboarding-connect-panels.tsx
