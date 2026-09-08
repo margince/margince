@@ -49,7 +49,7 @@ const COMPANY: Company = {
 // The same record with one address part filled — the state that keeps the
 // disclosure open. Typed, so a part name the wire stops carrying fails here
 // rather than quietly asserting on a field the grid no longer reads.
-const ORG_WITH_CITY: Company = { ...ORG, address: { city: "Berlin" } };
+const COMPANY_WITH_CITY: Company = { ...COMPANY, address: { city: "Berlin" } };
 
 // The six part labels, in the order the grid draws them.
 const PART_LABELS = [
@@ -240,7 +240,7 @@ describe("the legal identity a person can state", () => {
           checked_at: "2026-08-14T09:12:00Z",
         }),
     });
-    renderGrid({ ...ORG, writable: false });
+    renderGrid({ ...COMPANY, writable: false });
 
     await user.click(
       await screen.findByRole("button", { name: "VAT ID: Valid" }),
@@ -448,7 +448,7 @@ describe("the postal address, behind one line until it has something in it", () 
   });
 
   it("opens on a half-filled address and reads the part that is set", async () => {
-    await renderSettledGrid(ORG_WITH_CITY);
+    await renderSettledGrid(COMPANY_WITH_CITY);
 
     expect(document.querySelector("details")?.open).toBe(true);
     expect(screen.getByText("Address")).toBeVisible();

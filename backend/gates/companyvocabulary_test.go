@@ -28,18 +28,30 @@ package gates
 // an untracked scratch file is not.
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 // theOtherWord matches the record type's former names. `org` only where it is
 // a whole identifier component: it is a substring of forget, Georgia, morgue
 // and borgen, and a census that fired on those would be turned off.
+//
+// The camelCase HUMP is spelled out rather than folded into a case-insensitive
+// class, and that is the case this test was written without: `orgID` and
+// `partnerOrgID` are the commonest form the abbreviation takes, and an earlier
+// version of this pattern read a boundary as "not a letter" and so matched
+// neither. It reported a clean tree over a planted one.
 var theOtherWord = regexp.MustCompile(
-	`(?i)organi[sz]ation|(?:^|[^a-z0-9_.])orgs?(?:[^a-z0-9_]|$)`)
+	`[Oo]rgani[sz]ation|ORGANI[SZ]ATION` +
+		`|(?:^|[^A-Za-z0-9.])orgs?(?:[^A-Za-z0-9]|$)` +
+		`|(?:^|[^A-Za-z0-9])orgs?[A-Z0-9]` +
+		`|Orgs?(?:[^A-Za-z0-9]|$)|Orgs?[A-Z0-9]` +
+		`|(?:^|[^A-Za-z0-9])ORGS?(?:[^A-Za-z0-9]|$)`)
 
 // notThisRecordType is the words that merely look like it: a meeting organizer,
 // the ordinary adjective, the ordinary verb. Removed before the match rather
@@ -130,6 +142,9 @@ func TestTheRecordTypeIsCalledCompany(t *testing.T) {
 		if err != nil {
 			t.Fatalf("reading %s: %v", f.path, err)
 		}
+		if binary(body) {
+			continue
+		}
 		read++
 		for i, line := range strings.Split(string(body), "\n") {
 			if !namesTheOtherWord(line) {
@@ -167,13 +182,21 @@ func exemptionFor(path string) (string, bool) {
 	return "", false
 }
 
-// readableAsText keeps binaries and lockfiles out: a .png cannot say the word,
-// and a lockfile says whatever the registry named the package.
+// readableAsText keeps lockfiles out — a lockfile says whatever the registry
+// named the package, which is not this tree's vocabulary to choose.
 func readableAsText(path string) bool {
 	switch filepath.Ext(path) {
-	case ".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".woff", ".woff2",
-		".pdf", ".zip", ".gz", ".sum", ".lock", ".svg", ".pen":
+	case ".sum", ".lock":
 		return false
 	}
 	return filepath.Base(path) != "pnpm-lock.yaml"
+}
+
+// binary reports content no reader reads as prose. Decided by the BYTES rather
+// than by a list of extensions, because the list is the thing that goes short:
+// an .mp4 under docs/evidence matched the pattern inside its compressed stream
+// and was reported as a finding, and every extension nobody thought of would
+// have done the same.
+func binary(body []byte) bool {
+	return bytes.IndexByte(body, 0) >= 0 || !utf8.Valid(body)
 }

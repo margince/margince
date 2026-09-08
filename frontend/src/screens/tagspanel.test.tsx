@@ -171,7 +171,7 @@ describe("the tags panel", () => {
 // gated on permission alone floated above no panel and opened a picker whose
 // apply the server refuses.
 describe("the company mount's add-tag verb", () => {
-  const ORG_ROW = {
+  const COMPANY_ROW = {
     id: COMPANY,
     name: "Aurora GmbH",
     writable: true,
@@ -191,7 +191,7 @@ describe("the company mount's add-tag verb", () => {
     render(
       <StoryProviders>
         <CompanyTagsSection
-          company={{ ...ORG_ROW, ...row } as never}
+          company={{ ...COMPANY_ROW, ...row } as never}
           companyId={COMPANY}
         />
       </StoryProviders>,

@@ -426,7 +426,7 @@ describe("an archived account's verbs", () => {
     const user = userEvent.setup();
     renderInApp(
       <CompanyActionBadges
-        company={{ ...ORG, archived_at: "2026-07-13T00:00:00Z" }}
+        company={{ ...COMPANY, archived_at: "2026-07-13T00:00:00Z" }}
         onOpenHistory={() => undefined}
         onSetUpPartner={() => undefined}
       />,
@@ -477,7 +477,7 @@ describe("an account whose lifecycle and relationship agree", () => {
     stub([{ id: "u-owner", display_name: "Mira Voss" }]);
     renderInApp(
       <CompanyRelationshipBadges
-        company={{ ...ORG, relationship_types: ["customer", "partner"] }}
+        company={{ ...COMPANY, relationship_types: ["customer", "partner"] }}
       />,
     );
 
@@ -492,7 +492,7 @@ describe("an account whose lifecycle and relationship agree", () => {
     renderInApp(
       <CompanyRelationshipBadges
         company={{
-          ...ORG,
+          ...COMPANY,
           lifecycle: "prospect",
           relationship_types: ["customer"],
         }}

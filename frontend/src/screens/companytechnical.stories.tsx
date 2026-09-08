@@ -129,7 +129,8 @@ export const Read: Story = {
   render: () => {
     installFetchStub({
       "GET /me": A_READER,
-      [`GET /companies/${COMPANY}/facts`]: () => jsonResponse({ data: READ_FACTS }),
+      [`GET /companies/${COMPANY}/facts`]: () =>
+        jsonResponse({ data: READ_FACTS }),
       [`GET /companies/${COMPANY}/technical-enrich/latest`]: () =>
         jsonResponse(lanes()),
     });
@@ -229,7 +230,8 @@ export const AfterAHumanCorrection: Story = {
     );
     installFetchStub({
       "GET /me": A_READER,
-      [`GET /companies/${COMPANY}/facts`]: () => jsonResponse({ data: corrected }),
+      [`GET /companies/${COMPANY}/facts`]: () =>
+        jsonResponse({ data: corrected }),
       [`GET /companies/${COMPANY}/technical-enrich/latest`]: () =>
         jsonResponse(lanes()),
     });

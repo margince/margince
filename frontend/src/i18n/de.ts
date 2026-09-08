@@ -655,8 +655,7 @@ export const de = {
   "overlay.tokenHint": "Wird im Vault versiegelt; wird nie wieder angezeigt.",
   "overlay.connect": "HubSpot verbinden",
   "overlay.reconnect": "Erneut verbinden",
-  "overlay.connectConfirmTitle":
-    "HubSpot für die ganze Firma verbinden?",
+  "overlay.connectConfirmTitle": "HubSpot für die ganze Firma verbinden?",
   "overlay.reconnectConfirmTitle":
     "HubSpot für die ganze Firma erneut verbinden?",
   "overlay.connectConfirmBody":
@@ -799,8 +798,7 @@ export const de = {
     "Der Link wurde für {address} erstellt, aber diese Installation verschickt keine Mails — es hat ihn also niemand bekommen.",
   "consent.askExpires": "Der Link gilt bis",
   "consent.noRecord": "kein Eintrag",
-  "consent.noPurposes":
-    "Diese Firma erfasst noch keine Einwilligungszwecke.",
+  "consent.noPurposes": "Diese Firma erfasst noch keine Einwilligungszwecke.",
   "consent.defaultDeny":
     "Ausgehende Kommunikation ist pro Zweck standardmäßig gesperrt: ein Versand wird blockiert, sofern keine aktive, nachgewiesene Einwilligung für diesen Zweck vorliegt. Eine Einwilligung für einen Zweck berechtigt niemals einen anderen.",
   "consent.basis": "Grundlage: {basis}",
@@ -1976,8 +1974,7 @@ export const de = {
   "tags.options": "Optionen für {name}",
   "tags.addedBy": "Hinzugefügt von {who} · {when}",
   "tags.addedOn": "Hinzugefügt {when}",
-  "tags.visibleWorkspaceWide":
-    "Tag-Namen sind in der gesamten Firma sichtbar.",
+  "tags.visibleWorkspaceWide": "Tag-Namen sind in der gesamten Firma sichtbar.",
   "tags.removeFromRecord": "Von diesem Datensatz entfernen",
   "tags.withheld": "Verborgen — Ihre Rolle kann das Tag-Vokabular nicht lesen",
   "tags.emptyTitle": "Noch keine Tags",
@@ -3485,8 +3482,7 @@ export const de = {
   "compose.multiRecipientWarning":
     "Dieser Zweck führt einen Abmeldelink mit sich; ein Versand an mehr als eine Adresse wird deshalb abgelehnt. Senden Sie einzeln, ohne Cc.",
   "compose.relinkTitle": "Diese Aktivität neu verknüpfen",
-  "compose.relinkTarget":
-    "Kontakt, Firma, Deal, Lead oder Projekt suchen",
+  "compose.relinkTarget": "Kontakt, Firma, Deal, Lead oder Projekt suchen",
   "compose.relinkNoVersion":
     "Diese Aktivität wurde ohne Version gelesen, daher kann eine Neuverknüpfung nicht sagen, was sie ändert. Öffne sie erneut und versuche es noch einmal.",
   "compose.relinkReplace": "Verschieben statt zusätzlich verknüpfen",
