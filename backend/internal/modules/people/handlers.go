@@ -115,6 +115,13 @@ func (h Handlers) WithSettings(store *settings.Store) Handlers {
 	return h
 }
 
+// WithSeatReadsLeads wires the identity-side grant read the escalation-seat
+// check makes.
+func (h Handlers) WithSeatReadsLeads(reads SeatReadsLeads) Handlers {
+	h.store = h.store.WithSeatReadsLeads(reads)
+	return h
+}
+
 // WithDealOpener wires the deals-side seam a qualify call opens its deal on.
 func (h Handlers) WithDealOpener(opener LeadDealOpener) Handlers {
 	h.store = h.store.WithDealOpener(opener)

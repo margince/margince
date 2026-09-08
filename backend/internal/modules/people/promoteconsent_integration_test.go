@@ -102,7 +102,20 @@ func setupPromoteConsent(t *testing.T) *promoteConsentEnv {
 	// would go on writing into the database the NEXT test just reset.
 	t.Cleanup(func() { testdb.AssertPoolsQuiesced(t) })
 	e.store = NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws))).
-		WithSettings(settings.New(pool, settings.NewRegistry(Definitions()...)))
+		WithSettings(settings.New(pool, settings.NewRegistry(Definitions()...))).
+		// The grant read compose binds to identity. Spelled here over the same
+		// role tables rather than stubbed to true: a stub would make every
+		// nomination pass and the refusal it exists to prove would be the one
+		// case the suite could not reach.
+		WithSeatReadsLeads(func(ctx context.Context, tx pgx.Tx, seat ids.UUID) (bool, error) {
+			var reads bool
+			err := tx.QueryRow(ctx, `
+				SELECT EXISTS (
+				  SELECT 1 FROM role_assignment ra JOIN role r ON r.id = ra.role_id
+				   WHERE ra.user_id = $1
+				     AND (r.permissions->'objects'->'lead'->>'read')::boolean)`, seat).Scan(&reads)
+			return reads, err
+		})
 
 	opCtx := principal.WithWorkspaceID(context.Background(), e.ws)
 	opCtx = principal.WithCorrelationID(opCtx, ids.NewV7())

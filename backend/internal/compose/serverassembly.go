@@ -62,6 +62,7 @@ func newPeopleHandlers(pool *pgxpool.Pool) peopleHandlers {
 		WithMatchStager(linkedInMatchStager(pool)).
 		WithVCardReviewStager(vcardCreateStager(pool)).
 		WithSettings(NewSettingsStore(pool)).
+		WithSeatReadsLeads(seatReadsLeads(pool)).
 		WithDealOpener(leadDealOpener{deals: deals.NewStore(InstallationDB(pool), DealsInstallation())})
 }
 
