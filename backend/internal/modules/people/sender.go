@@ -50,6 +50,36 @@ func SenderPredicate(person, activity string) string {
 	return fmt.Sprintf(senderPredicateSQL, person, activity)
 }
 
+// AuthoredPredicate renders the weaker question a reader's own timeline asks:
+// "does anything recorded say somebody ELSE wrote this message".
+//
+// SenderPredicate above demands proof of authorship, and the enrichment pass
+// must keep demanding it — a signature block mined off an unproven message is
+// the defect that predicate exists to refuse, and absence of evidence there has
+// to read as no.
+//
+// A last-touch fold asks the opposite way round. Only capture writes
+// participants (capture/participant.go, and the backfill behind it), so a
+// message a rep LOGGED BY HAND carries none at all: no 'from' row exists to
+// name the author, and the activity_link the rep created is the whole of what
+// anybody recorded about who this message was with. Judged by SenderPredicate,
+// every hand-logged inbound message stops counting as "they wrote" — which on
+// an installation with no mailbox connected is every message there is.
+//
+// So the arm is added for a message with NO participant row whatsoever, and
+// deliberately not for a message that has some. A captured mail always carries
+// its parties, machine notifications included: those have a 'from' row naming a
+// robot, they fail the strict test on its merits, and this predicate leaves
+// them refused. The confusion stays refused too — Marcus's mail to Judith
+// carries Marcus as its sender, so it is Marcus who wrote last and not Judith,
+// which is the case TestLastInboundNamesTheAuthorAndNotEverybodyOnTheThread
+// holds in both directions.
+func AuthoredPredicate(person, activity string) string {
+	return fmt.Sprintf(`(%s OR NOT EXISTS (
+		SELECT 1 FROM activity_participant ap WHERE ap.activity_id = %s.id))`,
+		SenderPredicate(person, activity), activity)
+}
+
 const senderPredicateSQL = `EXISTS (
 		SELECT 1 FROM activity_participant ap
 		 WHERE ap.activity_id = %[2]s.id AND ap.role = 'from'

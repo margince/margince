@@ -327,12 +327,17 @@ func (s *Service) lastTouchSection(ctx context.Context, tx pgx.Tx, personID ids.
 	// wrote" is a claim about authorship, and a thread is linked to everybody it
 	// concerns — so reading it off reachability told a reader "they wrote last"
 	// about a message somebody else sent into a conversation this person is on.
+	//
+	// AuthoredPredicate and not SenderPredicate, because a participant row is
+	// something only capture writes: a rep who logs a call or an email by hand
+	// records the author in the link and nowhere else, and the strict predicate
+	// reads that as nobody having written it.
 	return tx.QueryRow(ctx, fmt.Sprintf(`
 		SELECT max(a.occurred_at) FILTER (WHERE a.direction = 'inbound' AND %s),
 		       max(a.occurred_at) FILTER (WHERE a.direction = 'outbound')
 		FROM activity a
 		WHERE a.archived_at IS NULL AND %s AND (%s)%s%s`,
-		people.SenderPredicate(fmt.Sprintf("$%d", personPos), "a"),
+		people.AuthoredPredicate(fmt.Sprintf("$%d", personPos), "a"),
 		fmt.Sprintf(personReachesActivity, personPos), scope, projectScope(opts, arg),
 		auth.AudienceWorkspaceOnly("a")), args...).
 		Scan(&out.LastInboundAt, &out.LastOutboundAt)
