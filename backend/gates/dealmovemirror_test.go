@@ -33,6 +33,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -52,7 +53,7 @@ var dealMoveMirrorSites = []struct {
 		openConst: "stageSemanticOpen", constFile: "internal/modules/agents/dealmove.go",
 	},
 	{
-		file: "internal/modules/deals/deal_advance.go", function: "autoExecutedMoveIsOpenToOpen",
+		file: "internal/modules/deals/dealadmittedmove.go", function: "autoExecutedMoveIsOpenToOpen",
 		// The deals module keeps its semantic vocabulary in one place, so the
 		// constant is not in the file that spells the rule.
 		openConst: "SemanticOpen", constFile: "internal/modules/deals/status.go",
@@ -68,17 +69,14 @@ func TestTheDealMoveTierRuleReadsTheSameOnBothSides(t *testing.T) {
 
 	for _, site := range dealMoveMirrorSites {
 		fn := functionNamed(t, tree, site.file, site.function)
-		compared := identsComparedTo(fn, site.openConst)
-		if len(compared) != 2 {
-			t.Errorf("%s in %s compares %d value(s) against %s, want exactly 2 — the rule is about "+
-				"BOTH endpoints of the move, and a side that checks one has stopped mirroring the "+
-				"other. Comparisons found: %v",
-				site.function, site.file, len(compared), site.openConst, compared)
-		}
-		if ands := countLogicalAnds(fn); ands != 1 {
-			t.Errorf("%s in %s joins its comparisons with %d && , want exactly 1 — an OR here admits "+
-				"a move with one terminal endpoint, which is the reopen half of what this rule refuses",
-				site.function, site.file, ands)
+		compared, ok := endpointsJoinedByAnd(fn, site.openConst)
+		if !ok {
+			t.Errorf("%s in %s does not read as TWO comparisons against %s joined by one &&.\n"+
+				"  The rule is about BOTH endpoints: a side that checks one has stopped mirroring the "+
+				"other, and an OR admits a move with one terminal endpoint — the reopen half of what "+
+				"this refuses.\n"+
+				"  Direct operands of an && found comparing against %s: %v",
+				site.function, site.file, site.openConst, site.openConst, compared)
 		}
 	}
 
@@ -113,50 +111,64 @@ func functionNamed(t *testing.T, tree, relPath, name string) *ast.FuncDecl {
 	return nil
 }
 
-// identsComparedTo names every expression compared for equality against the
-// constant, sorted so the report is stable.
-func identsComparedTo(fn *ast.FuncDecl, constName string) []string {
-	var compared []string
+// endpointsJoinedByAnd finds an && whose two DIRECT operands are each a
+// comparison against the constant, and answers what they compare.
+//
+// Structural rather than a count of && nodes, which is what this asked first:
+// two comparisons and one && somewhere in the function is satisfied by
+// `a == open && unrelated` beside a second comparison the rule never reads. The
+// operands have to BE the comparisons for the sentence to be the rule.
+func endpointsJoinedByAnd(fn *ast.FuncDecl, constName string) ([]string, bool) {
+	var found []string
+	joined := false
 	ast.Inspect(fn, func(n ast.Node) bool {
-		bin, isBinary := n.(*ast.BinaryExpr)
-		if !isBinary || bin.Op != token.EQL {
+		and, isBinary := n.(*ast.BinaryExpr)
+		if !isBinary || and.Op != token.LAND || joined {
 			return true
 		}
-		if names(bin.Y, constName) {
-			compared = append(compared, render(bin.X))
+		left, leftOK := comparedTo(and.X, constName)
+		right, rightOK := comparedTo(and.Y, constName)
+		if leftOK && rightOK && left != right {
+			found, joined = []string{left, right}, true
 		}
-		if names(bin.X, constName) {
-			compared = append(compared, render(bin.Y))
-		}
-		return true
+		return !joined
 	})
-	return compared
+	return found, joined
 }
 
-// names reports whether the expression is the constant, bare or as a
-// conversion around it — StageSemantic(semantic) == SemanticOpen and
+// comparedTo answers what an expression compares for equality against the
+// constant, and whether it is such a comparison at all.
+func comparedTo(expr ast.Expr, constName string) (string, bool) {
+	bin, isBinary := expr.(*ast.BinaryExpr)
+	if !isBinary || bin.Op != token.EQL {
+		return "", false
+	}
+	if names(bin.Y, constName) {
+		return render(bin.X), true
+	}
+	if names(bin.X, constName) {
+		return render(bin.Y), true
+	}
+	return "", false
+}
+
+// names reports whether the expression is the PACKAGE-LOCAL constant, bare or
+// inside a conversion — StageSemantic(semantic) == SemanticOpen and
 // semantic == stageSemanticOpen are the same sentence.
+//
+// A qualified selector is deliberately NOT one. Matching on the field name alone
+// accepted any `somepkg.SemanticOpen`, so a side could come to read an imported
+// constant this gate never checks the value of, and the mirror would drift while
+// reading green. What each side must compare against is the constant declared in
+// its own package, which is the one constValueIn reads.
 func names(expr ast.Expr, constName string) bool {
 	switch e := expr.(type) {
 	case *ast.Ident:
 		return e.Name == constName
-	case *ast.SelectorExpr:
-		return e.Sel.Name == constName
 	case *ast.CallExpr:
 		return len(e.Args) == 1 && names(e.Args[0], constName)
 	}
 	return false
-}
-
-func countLogicalAnds(fn *ast.FuncDecl) int {
-	ands := 0
-	ast.Inspect(fn, func(n ast.Node) bool {
-		if bin, isBinary := n.(*ast.BinaryExpr); isBinary && bin.Op == token.LAND {
-			ands++
-		}
-		return true
-	})
-	return ands
 }
 
 // render is an expression as its source words, enough to name it in a failure.
@@ -176,31 +188,68 @@ func render(expr ast.Expr) string {
 	return "?"
 }
 
-// constValueIn reads one string constant's literal value out of a file.
+// constValueIn reads one string CONSTANT's value out of a file.
+//
+// Three things it insists on, each because the loose version accepted something
+// that is not the declaration this gate is about:
+//
+//   - a `const` GenDecl, not any ValueSpec. Go spells `var` with the same node,
+//     so the loose reader passed happily after the semantic stopped being a
+//     constant — which is a change to the thing being mirrored, made invisible.
+//   - one name to one value. A grouped `a, b = "x", "y"` line indexes by
+//     position, and reading the wrong half of one would compare the wrong string.
+//   - strconv.Unquote rather than trimming quote characters. A raw literal has
+//     no quotes to trim and an escaped one means something other than its
+//     source text, so trimming answers a value the compiler never sees.
 func constValueIn(t *testing.T, tree, relPath, name string) string {
 	t.Helper()
 	file, err := parser.ParseFile(token.NewFileSet(), tree+"/"+relPath, nil, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", relPath, err)
 	}
-	found := ""
-	ast.Inspect(file, func(n ast.Node) bool {
-		spec, isValue := n.(*ast.ValueSpec)
-		if !isValue {
-			return true
+	for _, decl := range file.Decls {
+		gen, isGen := decl.(*ast.GenDecl)
+		if !isGen || gen.Tok != token.CONST {
+			continue
 		}
-		for i, ident := range spec.Names {
-			if ident.Name != name || i >= len(spec.Values) {
-				continue
-			}
-			if lit, isLit := spec.Values[i].(*ast.BasicLit); isLit && lit.Kind == token.STRING {
-				found = strings.Trim(lit.Value, `"`)
+		for _, spec := range gen.Specs {
+			value, found := constSpecValue(t, spec, relPath, name)
+			if found {
+				return value
 			}
 		}
-		return true
-	})
-	if found == "" {
-		t.Fatalf("%s declares no string constant %s — the mirror's vocabulary moved", relPath, name)
 	}
-	return found
+	t.Fatalf("%s declares no string constant %s — the mirror's vocabulary moved, and the OTHER "+
+		"side should be checked for having moved with it", relPath, name)
+	return ""
+}
+
+func constSpecValue(t *testing.T, spec ast.Spec, relPath, name string) (string, bool) {
+	t.Helper()
+	value, isValue := spec.(*ast.ValueSpec)
+	if !isValue {
+		return "", false
+	}
+	for i, ident := range value.Names {
+		if ident.Name != name {
+			continue
+		}
+		if len(value.Names) != len(value.Values) {
+			t.Fatalf("%s declares %s in a grouped const with %d name(s) and %d value(s); this gate "+
+				"reads one name to one value and would otherwise compare the wrong string",
+				relPath, name, len(value.Names), len(value.Values))
+		}
+		lit, isLit := value.Values[i].(*ast.BasicLit)
+		if !isLit || lit.Kind != token.STRING {
+			t.Fatalf("%s declares %s as something other than a string literal, so what the two sides "+
+				"mean by it is no longer readable here", relPath, name)
+		}
+		unquoted, err := strconv.Unquote(lit.Value)
+		if err != nil {
+			t.Fatalf("%s declares %s as a string literal this gate cannot read (%s): %v",
+				relPath, name, lit.Value, err)
+		}
+		return unquoted, true
+	}
+	return "", false
 }

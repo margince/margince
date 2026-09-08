@@ -169,7 +169,7 @@ func (s *Store) advanceOnTx(
 		}
 		// Under the lock resolveAdvanceTarget just took on the target row, and
 		// before anything is written.
-		if err := refuseAMoveTheGateDidNotAdmit(ctx, tx, current, StageSemantic(semantic)); err != nil {
+		if err := refuseAMoveTheGateDidNotAdmit(ctx, tx, current, in.ToStageID); err != nil {
 			return err
 		}
 		// Checked inside the transaction that writes the transition, and
@@ -356,58 +356,6 @@ func resolveAdvanceTarget(ctx context.Context, tx pgx.Tx, toStage ids.StageID, c
 		return "", 0, &StagePipelineMismatchError{StageID: toStage}
 	}
 	return semantic, winProbability, nil
-}
-
-// autoExecutedMoveIsOpenToOpen is the tier rule this store re-checks, and it is
-// a DECLARED MIRROR of agents.advanceDealTier — the resolver that admits an
-// unattended deal move exactly when both endpoints are open.
-//
-// Spelled twice because a module never imports a sibling: the resolver lives in
-// the agents module and this is the deals module, so the two cannot share the
-// function. What holds them equal is a gate rather than a convention —
-// backend/gates/dealmovemirror_test.go fails when either spelling moves — for
-// the reason AGENTS.md gives about an invariant spelled on both sides of a
-// wire: fixing one side alone can be a regression rather than half a fix.
-func autoExecutedMoveIsOpenToOpen(source, target StageSemantic) bool {
-	return source == SemanticOpen && target == SemanticOpen
-}
-
-// refuseAMoveTheGateDidNotAdmit re-derives, inside the writing transaction, the
-// premise the tier gate admitted this call on.
-//
-// The gate auto-executes a deal move only when it can prove BOTH endpoints
-// open, and it proves that by reading two STAGE rows. The version pin it
-// carries forward binds the DEAL, and a stage row is mutable independently of
-// any deal — so an admin changing the target stage's semantic to `won` in the
-// window between the gate's read and this write leaves the pin perfectly
-// satisfied and closes a deal on a verdict about an open-to-open move. The
-// mirror case reopens a closed one.
-//
-// The racing actor is a human admin rather than the agent, so this is not the
-// window the deal's own pin was added for; it is the one that pin cannot see.
-// Re-deriving here is what makes the premise true at the moment it is acted on
-// instead of at the moment it was read.
-//
-// It costs nothing on any other path. A call the gate did not admit unattended
-// carries no pin: an approved move was judged by a human who saw the sentence,
-// and a human's own move is not governed by the tier model at all.
-func refuseAMoveTheGateDidNotAdmit(
-	ctx context.Context, tx pgx.Tx, current crmcontracts.Deal, target StageSemantic,
-) error {
-	if _, autoExecuted := auth.AutoExecutePin(ctx); !autoExecuted {
-		return nil
-	}
-	source, err := stageSemanticOf(ctx, tx, ids.From[ids.StageKind](ids.UUID(*current.StageId)))
-	if err != nil {
-		return fmt.Errorf("re-read the deal's current stage semantic: %w", err)
-	}
-	if autoExecutedMoveIsOpenToOpen(source, target) {
-		return nil
-	}
-	return fmt.Errorf(
-		"this move was admitted unattended as open-to-open and is now %s-to-%s — "+
-			"a stage's semantic changed after the gate read it: %w",
-		source, target, apperrors.ErrVersionSkew)
 }
 
 // stageTransitionPatch derives the row changes one stage move implies

@@ -24,6 +24,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/installseam"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -118,15 +119,15 @@ func wonReasonImported() *string {
 // be asserting against its own fixture rather than against the gate.
 func admitOpenToOpenMove(t *testing.T, e *Env) context.Context {
 	t.Helper()
-	spec := mcp.ToolSpec{
-		Name: "advance_deal", RequiredScope: principal.ScopeWrite, Tier: mcp.TierDynamic,
-		TierResolver: func(in mcp.TierResolverInput) mcp.RiskTier {
-			if in.SourceStageSemantic == "open" && in.TargetStageSemantic == "open" {
-				return mcp.TierAutoExecute
-			}
-			return mcp.TierConfirmationRequired
-		},
-	}
+	// advance_deal's OWN spec, out of the registry this build composes — the
+	// resolver included. A resolver written here would be a second copy of the
+	// rule under test, so a case about the gate's verdict would stop depending
+	// on the gate: narrow the real one and this would go on admitting the move,
+	// proving the store re-checks a premise nothing establishes any more.
+	spec := specNamed(t, "advance_deal")
+	// The input a real open-to-open move produces. It is stated rather than
+	// read, because what this case needs is the gate's verdict on that input;
+	// how DealMoveTierInput reads a deal is its own suite's subject.
 	version := int64(1)
 	resolve := func() (mcp.TierResolverInput, error) {
 		return mcp.TierResolverInput{
@@ -172,4 +173,17 @@ func (fullAuthority) SeatType(context.Context, ids.UUID, ids.UUID) (principal.Se
 
 func (fullAuthority) AdmittedAuthority(context.Context, ids.UUID, ids.UUID, ids.UUID) (authz.RBAC, principal.SeatType, error) {
 	return authz.RBAC{Permissions: AdminPerms}, principal.SeatFull, nil
+}
+
+// specNamed answers one tool's spec from the registry this build composes, so a
+// case drives the production declaration rather than a fixture of it.
+func specNamed(t *testing.T, name string) mcp.ToolSpec {
+	t.Helper()
+	for _, spec := range compose.NewRegistry(nil, compose.SendPath{}).Specs() {
+		if spec.Name == name {
+			return spec
+		}
+	}
+	t.Fatalf("this build registers no %s, so the case below would drive nothing", name)
+	return mcp.ToolSpec{}
 }
