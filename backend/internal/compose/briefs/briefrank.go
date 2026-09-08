@@ -343,6 +343,27 @@ func briefCandidates(ctx context.Context, tx pgx.Tx, userID ids.UUID, now time.T
 	if scope != "" {
 		q += " AND " + scope
 	}
+	// RESPONSIBILITY, not merely visibility — and it belongs HERE rather than
+	// after the ranking, which is the whole defect.
+	//
+	// A deal is workspace-readable in this product: auth.ScopeClauseFor renders
+	// no predicate for a rep on `deal`, so every seat that may read one may read
+	// them all. The overnight queue then takes the top seven by score and the
+	// worklist narrows to "mine" afterwards — so a rep whose colleagues carry
+	// larger deals watched all seven slots fill with deals that were never
+	// theirs to act on, and their own work never entered the ranking at all.
+	// One observed morning selected six colleague deals out of seven.
+	//
+	// Applied before the cap, the ranking competes among the deals this person
+	// can actually move. Access to a colleague's deal is not responsibility for
+	// it; the team view is where breadth belongs.
+	q += fmt.Sprintf(`
+		  AND (d.owner_id = $%d
+		       OR EXISTS (
+			SELECT 1 FROM activity a
+			JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = d.id
+			WHERE a.kind = 'task' AND NOT a.is_done
+			  AND a.archived_at IS NULL AND a.assignee_id = $%d))`, userPos, userPos)
 	q += " ORDER BY d.id"
 
 	rows, err := tx.Query(ctx, q, args...)

@@ -23,39 +23,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
-// sourceWaiting names the who-is-waiting producer. A named constant rather
-// than the literal at each site: the classifier, the dedupe and the
-// source-unavailable report all reach for it, and a typo in any of them would
-// produce a lane nothing joins up — silently, because each half would still
-// compile.
-const sourceWaiting = "customer_waiting"
-
-// sourceTask names the open-task producer. Named for the reason sourceWaiting
-// is: the owner filter asks whether a row came from the lane that narrowed to
-// one person in its own query, and a typo there would silently drop every task
-// out of the queue it was asked for.
-const sourceTask = "task"
-
-// sourceClaim names the rep's own promises. keepUnowned reads it: a claim has
-// no assignee column, so the row arrives ownerless while already belonging to
-// the rep whose query produced it.
-const sourceClaim = "conversation_claim"
-
-// sourceAtRisk names the quiet-deal producer. Three readers spell it — the
-// bounds table, the category map and the classifier — which is two more than a
-// literal survives.
-const sourceAtRisk = "deal_at_risk"
-
-// subjectDeal is the subject type a deal-shaped row names.
-const subjectDeal = "deal"
-
-// subjectPerson is the subject type a person-shaped row names.
-//
-// A constant for the reason sourceDecay is one: the suppressor pairing the
-// decay lane against a waiting row matches on it, and a misspelt literal there
-// fails silently — it matches nothing, drops nothing, and reads green.
-const subjectPerson = "person"
-
 // classifyDay turns the assembled lanes into ranked candidates.
 //
 // Order of appearance does not matter — rankAll decides the order — so the lanes

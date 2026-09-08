@@ -452,3 +452,39 @@ func (teammatesFailing) SharesLiveTeamWithCaller(context.Context, ids.UUID) (boo
 func (teammatesFailing) LiveTeammatesOfCaller(context.Context) ([]TeamMember, bool, error) {
 	return nil, false, errors.New("reading team membership")
 }
+
+// An assist survives the owner filter, and does not follow the reader onto
+// somebody else's page.
+//
+// The overnight brief ranks against the acting reader's own responsibility —
+// their deal, or one they hold an open assigned task on. So a brief row is
+// already bound to the person asking, and judging it afterwards by DEAL OWNER
+// drops exactly the assist the ranking admitted: the night picks a colleague's
+// deal because this rep has work on it, and the filter removes it before they
+// ever see it. That is the starvation the ranking fix closed, one layer down.
+//
+// The second half is the limit. `mine` is the acting reader; a named owner is
+// somebody else, and a manager opening a rep's queue must not inherit their own
+// overnight picks under that rep's heading.
+func TestAnAssistedDealSurvivesMineAndStaysOffANamedOwnersPage(t *testing.T) {
+	reader := ids.MustParse("01a05500-0000-7000-8000-000000000001")
+	colleague := ids.MustParse("01a05500-0000-7000-8000-0000000000ff")
+	ctx := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalHuman, UserID: reader,
+		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
+	})
+	// A brief row on a deal somebody else owns: the night admitted it because
+	// this reader has an open assigned task on it.
+	assist := ownedDeal("assist", colleague)
+	assist.Source = "brief_item"
+	rows := []ranked{{item: assist}}
+
+	if kept := keepReadersOwn(ctx, rows); len(kept) != 1 {
+		t.Errorf("the reader's own overnight pick was dropped by the owner filter (%d kept)", len(kept))
+	}
+	// The same row under a NAMED owner is not that person's work: it is the
+	// acting reader's, and this is not their page.
+	if kept := keepOwnedBy(rows, colleague); len(kept) != 0 {
+		t.Errorf("a named owner's page inherited the reader's own overnight pick (%d kept)", len(kept))
+	}
+}
