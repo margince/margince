@@ -119,11 +119,16 @@ export function OnboardingBackread({
   // `preview.data`/`preview.error` are the mutation's LAST result, which
   // survives past the render where `selected` changes to a window nobody has
   // previewed yet. `preview.variables` is the window that result actually
-  // belongs to, so it gates both what scope is shown and whether Start may
-  // fire: a stale estimate for the old window is withheld rather than shown
-  // as though it answered the new pick, and Start waits for THIS selection's
-  // preview to settle — successfully or not (an estimate that failed is still
-  // a settled answer; see `BackreadScope`).
+  // belongs to, so it gates what scope is shown: a stale estimate for the old
+  // window is withheld rather than shown as though it answered the new pick,
+  // and until THIS selection's own count settles the scope says it is still
+  // counting rather than standing empty.
+  //
+  // Start does not wait on it. The window is the consent — it is what the
+  // reader picked and what bounds the run — while the estimate only describes
+  // that window, and counting a large mailbox takes seconds. A verb held shut
+  // for those seconds gives no reason for being shut, so it reads as a broken
+  // button at the one moment the reader is least sure anything is working.
   const previewForSelection = preview.variables === selected;
   const previewSettled = previewForSelection && !preview.isPending;
 
@@ -172,7 +177,7 @@ export function OnboardingBackread({
             ? safeDetail(preview.isError, preview.error, t)
             : null
         }
-        previewReady={previewSettled}
+        counting={!previewSettled}
         starting={start.isPending}
         held={disabled}
         startProblem={safeDetail(start.isError, start.error, t)}
@@ -204,7 +209,7 @@ function BackreadSetup({
   onSelect,
   preview,
   previewProblem,
-  previewReady,
+  counting,
   starting,
   startProblem,
   held,
@@ -219,10 +224,10 @@ function BackreadSetup({
    *  begin ahead of it. Separate from `starting`, which also drives the verb's
    *  own copy — a button reading "starting…" when nothing started is a lie. */
   held?: boolean;
-  /** True once THIS selection's own preview has settled (found or failed).
-   *  Start waits for it so a read can never fire against a scope the reader
-   *  has not actually seen. */
-  previewReady: boolean;
+  /** THIS selection's estimate has not settled yet (found or failed), so the
+   *  scope is still being counted. It is a sentence in the scope panel, never
+   *  a hold on the start: see the note in `OnboardingBackread`. */
+  counting: boolean;
   starting: boolean;
   startProblem: string | null;
   onStart: () => void;
@@ -247,14 +252,14 @@ function BackreadSetup({
           />
         ))}
       </fieldset>
-      <BackreadScope preview={preview} problem={previewProblem} />
+      <BackreadScope
+        preview={preview}
+        problem={previewProblem}
+        counting={counting}
+      />
       <p className="ob-backread-note t-caption">{t("ob.backread.note")}</p>
       <div className="ob-backread-acts">
-        <Button
-          variant="primary"
-          disabled={starting || !previewReady || held}
-          onClick={onStart}
-        >
+        <Button variant="primary" disabled={starting || held} onClick={onStart}>
           {t("ob.backread.start")}
         </Button>
         <Button disabled={held} onClick={() => onDone()}>
@@ -270,13 +275,19 @@ function BackreadSetup({
   );
 }
 
-// What the selected window would touch. An estimator that failed is stated and
-// leaves the start available: not knowing the size of the mailbox is a reason
-// to say so, never a reason to refuse the read.
+// What the selected window would touch. An estimate still being counted, and an
+// estimator that failed, are each stated here and neither stands in the way of
+// the start: not knowing the size of the mailbox yet is a reason to say so,
+// never a reason to refuse the read.
 function BackreadScope({
   preview,
   problem,
-}: Readonly<{ preview: BackfillPreview | undefined; problem: string | null }>) {
+  counting,
+}: Readonly<{
+  preview: BackfillPreview | undefined;
+  problem: string | null;
+  counting: boolean;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   // Absent when no model rate applied to this window — an unpriced estimate
@@ -292,6 +303,11 @@ function BackreadScope({
 
   return (
     <div className="ob-backread-scope" aria-live="polite">
+      {counting && (
+        <p className="ob-backread-counting t-caption">
+          {t("ob.backread.estimating")}
+        </p>
+      )}
       {preview && (
         <p className="ob-backread-estimate">
           {t("ob.backread.estimate", {

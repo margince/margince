@@ -85,10 +85,10 @@ describe("the scope preview", () => {
     );
   });
 
-  // Changing the window must not leave the old window's estimate on screen,
-  // and Start must not fire for a scope the reader never actually saw a
-  // preview for.
-  it("clears the previous window's estimate and holds Start until the new one settles", async () => {
+  // Changing the window must not leave the old window's estimate on screen —
+  // and while the new one is being counted the scope says so, rather than
+  // standing empty behind a start nobody can press.
+  it("clears the previous window's estimate and says it is counting the new one", async () => {
     // A box, not a bare `let`: TS's control-flow narrowing otherwise loses
     // the function type across the callback boundary that assigns it.
     const deferred: { resolve: ((r: Response) => void) | null } = {
@@ -107,11 +107,6 @@ describe("the scope preview", () => {
     render({ state: "none" });
 
     await screen.findByText("About 100 messages in that window.");
-    await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: "Connect and read" }),
-      ).not.toBeDisabled(),
-    );
 
     await userEvent.click(screen.getByRole("radio", { name: /12 months/ }));
 
@@ -122,18 +117,42 @@ describe("the scope preview", () => {
       screen.queryByText(/messages in that window\./),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Connect and read" }),
-    ).toBeDisabled();
+      screen.getByText("Counting the messages in that window…"),
+    ).toBeInTheDocument();
 
     deferred.resolve?.(previewOf({ estimated_messages: 900 }));
     expect(
       await screen.findByText("About 900 messages in that window."),
     ).toBeInTheDocument();
-    await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: "Connect and read" }),
-      ).not.toBeDisabled(),
-    );
+    expect(screen.queryByText(/Counting the messages/)).not.toBeInTheDocument();
+  });
+
+  // The count is a description of the window, not the consent to it: the
+  // reader picked the window, and holding the verb shut until a number lands
+  // reads as a broken button on exactly the mailbox slow enough to need one.
+  it("starts on the picked window while its count is still running", async () => {
+    const starts: unknown[] = [];
+    installFetchStub({
+      // Never settles: the whole case is what the reader can do meanwhile.
+      [PREVIEW_ROUTE]: () => new Promise<Response>(() => {}),
+      [START_ROUTE]: (body) => {
+        starts.push(body);
+        return jsonResponse({ state: "queued" }, 202);
+      },
+      [STATUS_ROUTE]: () => jsonResponse({ state: "queued" }),
+    });
+    render({ state: "none" });
+
+    expect(
+      await screen.findByText("Counting the messages in that window…"),
+    ).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("radio", { name: /3 months/ }));
+    const start = screen.getByRole("button", { name: "Connect and read" });
+    expect(start).toBeEnabled();
+    await userEvent.click(start);
+
+    await waitFor(() => expect(starts).toEqual([{ window: "3m" }]));
   });
 
   it("qualifies an estimate the server only guessed at", async () => {

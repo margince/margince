@@ -5590,6 +5590,7 @@ export const de = {
   "ob.backread.window12m": "12 Monate — ganzer Vertriebszyklus",
   "ob.backread.window24m": "2 Jahre — die Beziehung, nicht nur der Deal",
   "ob.backread.window60m": "5 Jahre — alles, was das Postfach noch hat",
+  "ob.backread.estimating": "Nachrichten in diesem Zeitraum werden gezählt…",
   "ob.backread.estimate": "Etwa {messages} Nachrichten in diesem Zeitraum.",
   "ob.backread.estimateHeuristic":
     "Aus dem Postfach geschätzt, noch nicht gezählt.",

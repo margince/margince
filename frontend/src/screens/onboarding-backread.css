@@ -68,7 +68,9 @@
 /* ---- the scope before the spend ---------------------------------------- */
 
 /* Reserves the estimate's own two lines: the panel is laid out before the
-   preview answers, and the answer must not push the actions down the page. */
+   preview answers, and the answer must not push the actions down the page. It
+   is never empty while it waits — the counting line stands where the number
+   will land, so the arriving estimate replaces a sentence rather than a gap. */
 .ob-backread-scope {
   display: flex;
   flex-direction: column;

@@ -5523,6 +5523,7 @@ export const vi = {
   "ob.backread.window12m": "12 tháng — trọn một chu kỳ bán hàng",
   "ob.backread.window24m": "2 năm — cả mối quan hệ, không chỉ deal",
   "ob.backread.window60m": "5 năm — tất cả những gì hộp thư còn giữ",
+  "ob.backread.estimating": "Đang đếm thư trong khoảng thời gian đó…",
   "ob.backread.estimate": "Khoảng {messages} thư trong khoảng thời gian đó.",
   "ob.backread.estimateHeuristic": "Ước tính từ hộp thư, chưa đếm thật.",
   "ob.backread.estimateCost": "Khoảng {cost} tiền gọi mô hình.",
