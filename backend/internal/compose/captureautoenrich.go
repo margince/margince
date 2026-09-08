@@ -98,13 +98,17 @@ func AutoEnrichDailyCapFromEnv(env config.Lookup) (int, error) {
 }
 
 // autoEnrichDailyCap resolves the cap for a constructor that cannot refuse to
-// boot. The error branch is unreachable once a role is running — both cmd
-// roles refuse an invalid value before any constructor runs, and a Go
-// process's environment is fixed at exec — but the compiler cannot see that,
-// so it is handled, in the direction that spends less.
-func autoEnrichDailyCap() int {
+// boot. A booted role never reaches the error branch — both cmd roles refuse
+// an invalid value before any constructor runs, and a process environment is
+// fixed at exec — but entry points that dispatch before that refusal (the
+// worker's siteread debug subcommand) construct through here too, so an
+// unreadable value is reported and paced at the compiled default, the
+// direction that spends less.
+func autoEnrichDailyCap(log *slog.Logger) int {
 	n, err := AutoEnrichDailyCapFromEnv(config.FromOS)
 	if err != nil {
+		log.Warn("auto-enrich: unreadable daily cap, pacing at the compiled default",
+			"err", err, "default", defaultAutoEnrichDailyCap)
 		return defaultAutoEnrichDailyCap
 	}
 	return n
@@ -142,7 +146,7 @@ func newCaptureAutoEnrichSweepWorker(pool *pgxpool.Pool, log *slog.Logger) *capt
 		people:     people.NewStore(InstallationDB(pool)),
 		settings:   capture.NewSettings(NewSettingsStore(pool)),
 		autoEnrich: capture.NewAutoEnrichStore(InstallationDB(pool)),
-		dailyCap:   autoEnrichDailyCap(),
+		dailyCap:   autoEnrichDailyCap(log),
 		log:        log,
 	}
 }
