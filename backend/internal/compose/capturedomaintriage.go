@@ -43,7 +43,7 @@ func newDomainTriageTrigger(pool *pgxpool.Pool, log *slog.Logger) *domainTriageT
 		people:     people.NewStore(InstallationDB(pool)),
 		settings:   capture.NewSettings(NewSettingsStore(pool)),
 		autoEnrich: capture.NewAutoEnrichStore(InstallationDB(pool)),
-		dailyCap:   autoEnrichDailyCap,
+		dailyCap:   autoEnrichDailyCap(log),
 		log:        log,
 	}
 }
