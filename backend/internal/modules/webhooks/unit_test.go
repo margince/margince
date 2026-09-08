@@ -475,7 +475,13 @@ func TestLinkedInAccountEventsReachOnlyTheMemberTheyAreAbout(t *testing.T) {
 		})
 	}
 
-	for _, eventType := range []string{"linkedin_account.changed", "linkedin_network.imported"} {
+	// All three, including the decided match. It was in selfOnlyEvents and out
+	// of this loop, which is how it came to be emitted with a CONNECTION id
+	// under a rule that can only ever admit a USER id — the map said self-only
+	// and nothing asked what "self" was.
+	for _, eventType := range []string{
+		"linkedin_account.changed", "linkedin_network.imported", "linkedin_match.decided",
+	} {
 		t.Run(eventType, func(t *testing.T) {
 			mine, err := s.entityVisibleTo(ownerCtx(member), eventType, "user", member)
 			if err != nil {

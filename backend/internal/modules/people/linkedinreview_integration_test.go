@@ -398,3 +398,45 @@ func TestAProposalWithNoOwnerStillAppliesAgainstItsConnection(t *testing.T) {
 			status, person)
 	}
 }
+
+// The decided event names the MEMBER, not the connection.
+//
+// linkedin_match.decided is a self-only event — a colleague's professional
+// network is theirs — so delivery admits it only when the subscriber IS the
+// user its entity id names. It was emitted with the CONNECTION id, which can
+// never equal a user id, so the event was silently undeliverable for every
+// subscriber, always.
+//
+// Asserted on the outbox row rather than through the deliverer: what was wrong
+// is the id this write puts on the wire, and that is a fact about this
+// transaction. Whether the visibility rule then admits the right subscriber is
+// the webhooks suite's own subject, and it covers all three self-only events.
+func TestTheDecidedEventCarriesTheMembersOwnID(t *testing.T) {
+	e := setupDedupe(t)
+	org := e.seedOrgNamed(t, "Acme GmbH")
+	andreas := e.seedContact(t, "Andreas Muller")
+	e.employ(t, andreas, org)
+	e.importAndMatch(t)
+	ghost := e.ghostID(t)
+
+	if err := e.store.ApplyLinkedInMatch(e.as(), ghost, e.rep, andreas.UUID); err != nil {
+		t.Fatalf("applying the approved match: %v", err)
+	}
+
+	var entityID ids.UUID
+	if err := e.store.tx(e.as(), func(tx pgx.Tx) error {
+		return tx.QueryRow(e.as(),
+			`SELECT (envelope->'entity'->>'id')::uuid FROM event_outbox
+			  WHERE envelope->>'type' = 'linkedin_match.decided'`).Scan(&entityID)
+	}); err != nil {
+		t.Fatalf("reading the decided event: %v", err)
+	}
+	if entityID == ghost {
+		t.Fatal("the decided event names the CONNECTION — a self-only rule compares its id against a " +
+			"subscriber's own user id, so no subscriber can ever receive it")
+	}
+	if entityID != e.rep {
+		t.Errorf("the decided event names %s, want the member whose network produced the match (%s)",
+			entityID, e.rep)
+	}
+}
