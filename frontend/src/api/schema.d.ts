@@ -1552,7 +1552,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * This is not a company — archive it and refuse its domain another (admin/ops).
+         * This is not a company — archive it and refuse its domain as one (admin/ops).
          * @description Archiving alone does not settle it: the next message from the same domain mints the
          *     company again, and the person who deleted it learns nothing about why it came back.
          *     This does both halves in ONE transaction — the domain is recorded `suppressed` with a

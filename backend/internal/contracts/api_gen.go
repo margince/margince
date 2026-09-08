@@ -51937,7 +51937,7 @@ type ServerInterface interface {
 	// Confirm a profile field without changing its value.
 	// (POST /organizations/{id}/profile-fields/{field}/confirm)
 	ConfirmOrganizationProfileField(w http.ResponseWriter, r *http.Request, id Id, field ProfileFieldKey, params ConfirmOrganizationProfileFieldParams)
-	// This is not a company — archive it and refuse its domain another (admin/ops).
+	// This is not a company — archive it and refuse its domain as one (admin/ops).
 	// (POST /organizations/{id}/reject)
 	RejectOrganization(w http.ResponseWriter, r *http.Request, id Id, params RejectOrganizationParams)
 	// What this account needs, as the model last read it for this reader.
@@ -54937,7 +54937,7 @@ func (_ Unimplemented) ConfirmOrganizationProfileField(w http.ResponseWriter, r 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// This is not a company — archive it and refuse its domain another (admin/ops).
+// This is not a company — archive it and refuse its domain as one (admin/ops).
 // (POST /organizations/{id}/reject)
 func (_ Unimplemented) RejectOrganization(w http.ResponseWriter, r *http.Request, id Id, params RejectOrganizationParams) {
 	w.WriteHeader(http.StatusNotImplemented)

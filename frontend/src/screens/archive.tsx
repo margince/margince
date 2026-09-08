@@ -15,14 +15,17 @@ import { problemMessageOf } from "./common";
 // control against them. Mirrors useUpdateRecord/EditAction (edit.tsx): the
 // screen supplies the transport, this stays resource-agnostic.
 
-export function useArchiveRecord<Archived extends { id: string }>({
+export function useArchiveRecord<Archived extends { id: string }, Vars = void>({
   archive,
   invalidate,
   recordKey,
   archivedMessage,
   onDone,
 }: Readonly<{
-  archive: () => Promise<Archived>;
+  // Takes the caller's own variables, so a form's value reaches the request as
+  // an argument rather than through a closure the render decides. A caller with
+  // nothing to pass leaves Vars at void and calls mutate() as before.
+  archive: (vars: Vars) => Promise<Archived>;
   invalidate: string;
   recordKey: string;
   // What the reader is told once it is gone, already translated. REQUIRED, and

@@ -160,16 +160,45 @@ func TestRejectingNeedsBothTheArchiveAndTheDomainAuthority(t *testing.T) {
 	seed := e.asRejector()
 	org := e.seedCompanyOnDomain(seed, t, "Expensify Ltd", "expensify.test")
 
-	// e.as() is the seeded rep: organization create/read/update, no delete.
-	if _, err := e.store.RejectOrganization(e.as(), org, "a tool we use", nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Fatalf("a rep holding update and not delete = %v, want ErrPermissionDenied", err)
+	// BOTH directions, because one seat only proves one gate. e.as() is the
+	// seeded rep — organization create/read/update, no delete — and the seat
+	// beside it is its mirror. A case for the first alone would keep passing
+	// after somebody dropped the second gate, which is the half that stops a
+	// domain being suppressed by a caller who may not archive.
+	for _, tc := range []struct {
+		seat string
+		ctx  context.Context
+	}{
+		{"update and not delete", e.as()},
+		{"delete and not update", e.asHalfSeat(principal.ObjectGrant{Read: true, Delete: true})},
+	} {
+		if _, err := e.store.RejectOrganization(tc.ctx, org, "a tool we use", nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Fatalf("a seat holding %s = %v, want ErrPermissionDenied", tc.seat, err)
+		}
+		if e.archived(seed, t, org) {
+			t.Fatalf("a seat holding %s archived the company", tc.seat)
+		}
+		if admission, _, _ := e.admissionOf(seed, t, "expensify.test"); admission != "" {
+			t.Fatalf("a seat holding %s left the domain %q — a suppression behind a company that is still there is the two-call defect",
+				tc.seat, admission)
+		}
 	}
-	if e.archived(seed, t, org) {
-		t.Error("the company was archived by a refused rejection")
-	}
-	if admission, _, _ := e.admissionOf(seed, t, "expensify.test"); admission != "" {
-		t.Errorf("the refused rejection left the domain %q — a suppression behind a company that is still there is the two-call defect", admission)
-	}
+}
+
+// asHalfSeat is a principal holding exactly one grant on organization, for the
+// pair of refusals above. Every other object is absent: what is under test is
+// which half of the organization authority is missing.
+func (e *dedupeEnv) asHalfSeat(grant principal.ObjectGrant) context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,
+		Permissions: principal.Permissions{
+			RoleKeys: []string{"admin"},
+			Objects:  map[string]principal.ObjectGrant{"organization": grant},
+			RowScope: principal.RowScopeAll,
+		},
+	})
 }
 
 // The domain is the company's CURRENT primary, read here.

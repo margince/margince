@@ -37,6 +37,15 @@ export function CompanyRejectAction({
   const headingId = useId();
   const [confirming, setConfirming] = useState(false);
   const [reason, setReason] = useState("");
+  // ONE key per confirmation, held across retries. Without it a response lost
+  // after the transaction committed comes back as a version conflict on the
+  // retry: the record is archived, its version has moved, and the reader is
+  // told their rejection failed when it landed. Regenerated when the dialog
+  // opens, because a second decision about the same company is a second
+  // decision and must not replay the first one's answer.
+  const [idempotencyKey, setIdempotencyKey] = useState(() =>
+    crypto.randomUUID(),
+  );
   // BOTH grants, because the write needs both and asks for both up front: the
   // archive is `organization:delete` and the standing domain decision is
   // `organization:update`. Offering this to a seat holding one of them is what
@@ -52,14 +61,26 @@ export function CompanyRejectAction({
   // again inside the transaction, and the message on the way out names the one
   // it actually refused.
   const primary = (org.domains ?? []).find((d) => d.is_primary);
-  const mutation = useArchiveRecord({
-    archive: async () => {
+  const mutation = useArchiveRecord<
+    { id: string; domain: string },
+    { reason: string }
+  >({
+    // The reason arrives as a VARIABLE rather than from the closure. Closed
+    // over, the value the request carries is the one the render that produced
+    // this handler saw, so a confirmation landing before React Query installs
+    // the latest render sends the previous text — refusing a filled form, or
+    // recording a reason the reader had already replaced.
+    archive: async ({ reason: typed }) => {
       const { data, error } = await api.POST("/organizations/{id}/reject", {
         params: {
           path: { id: org.id },
-          ...ifMatch(requireVersion(org.version)),
+          // Through ifMatch's own second argument: it owns the header map, and
+          // a sibling `header` beside it is silently overwritten.
+          ...ifMatch(requireVersion(org.version), {
+            "Idempotency-Key": idempotencyKey,
+          }),
         },
-        body: { reason: reason.trim() },
+        body: { reason: typed.trim() },
       });
       if (error) {
         throwProblem(error, t);
@@ -76,6 +97,13 @@ export function CompanyRejectAction({
     },
   });
 
+  const open = () => {
+    // A fresh key for a fresh decision: the previous one belongs to the
+    // rejection it was minted for, and reusing it would replay that answer.
+    setIdempotencyKey(crypto.randomUUID());
+    setConfirming(true);
+  };
+
   // Absent rather than disabled: STATE-4a sorts by CAUSE, and a control the
   // reader has no authority for — or one with nothing to act on — reports no
   // fact about this account worth showing them.
@@ -89,7 +117,7 @@ export function CompanyRejectAction({
         small
         variant="danger"
         reasonId={disabledReasonId}
-        onClick={() => setConfirming(true)}
+        onClick={open}
         data-testid="reject-company"
       >
         {t("org.reject")}
@@ -154,7 +182,7 @@ export function CompanyRejectAction({
             // empty field the reader can see is a round trip that teaches
             // them nothing.
             disabled={!ready || mutation.isPending}
-            onClick={() => mutation.mutate()}
+            onClick={() => mutation.mutate({ reason })}
             data-testid="reject-company-confirm"
           >
             {t("org.reject")}

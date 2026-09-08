@@ -62,7 +62,13 @@ afterEach(() => {
 // Every request the component made, so a case can assert there was exactly
 // ONE — the property that replaced the two-call version and the only one a
 // count can see.
-type Sent = { method: string; url: string; body: unknown };
+type Sent = {
+  method: string;
+  url: string;
+  body: unknown;
+  idempotency: string | null;
+  ifMatch: string | null;
+};
 
 function stub(allow: GrantSpec, reject: (body: unknown) => Response): Sent[] {
   const sent: Sent[] = [];
@@ -77,7 +83,13 @@ function stub(allow: GrantSpec, reject: (body: unknown) => Response): Sent[] {
         });
       }
       const body = request.body ? await request.clone().json() : null;
-      sent.push({ method: request.method, url: url.pathname, body });
+      sent.push({
+        method: request.method,
+        url: url.pathname,
+        body,
+        idempotency: request.headers.get("Idempotency-Key"),
+        ifMatch: request.headers.get("If-Match"),
+      });
       return reject(body);
     }),
   );
@@ -142,6 +154,14 @@ it("rejects a company in one request and reports the domain the server refused",
   // The reason travels; the DOMAIN does not. A domain in the body is the stale
   // snapshot defect, and this is the case that fails if one is added back.
   expect(sent[0]?.body).toEqual({ reason: "a tool we use" });
+  // The version this page was holding, and a key the retry can reuse. Without
+  // the key, a response lost after the transaction committed comes back as a
+  // version conflict: the record is archived, its version has moved, and the
+  // reader is told their rejection failed when it landed.
+  expect(sent[0]?.ifMatch).toBe("4");
+  expect(sent[0]?.idempotency).toMatch(
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+  );
 
   // And the reader is told which domain was refused — the server's answer, not
   // the one this page was showing when they pressed.
@@ -194,4 +214,28 @@ it("will not send until a reason is written", async () => {
   await user.type(screen.getByLabelText(/why is this not a company/i), "   ");
   expect(screen.getByTestId("reject-company-confirm")).toBeDisabled();
   expect(sent).toHaveLength(0);
+});
+
+// A second decision about the same company is a second decision.
+//
+// The key is held across retries of ONE confirmation and regenerated when the
+// dialog opens again — reused, the second rejection would replay the first
+// one's recorded answer, which is the opposite of what a fresh decision means.
+it("mints a new idempotency key for each confirmation", async () => {
+  const user = userEvent.setup();
+  const sent = stub({ organization: ["read", "update", "delete"] }, rejected);
+  render(<CompanyRejectAction org={ORG} />);
+
+  for (const reason of ["a tool we use", "still a tool we use"]) {
+    await user.click(await screen.findByTestId("reject-company"));
+    await user.type(
+      screen.getByLabelText(/why is this not a company/i),
+      reason,
+    );
+    await user.click(screen.getByTestId("reject-company-confirm"));
+    await screen.findByRole("status");
+  }
+
+  expect(sent).toHaveLength(2);
+  expect(sent[0]?.idempotency).not.toBe(sent[1]?.idempotency);
 });

@@ -2509,7 +2509,7 @@ paths:
       operationId: rejectOrganization
       security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
       x-agent-access: human-only
-      summary: This is not a company — archive it and refuse its domain another (admin/ops).
+      summary: This is not a company — archive it and refuse its domain as one (admin/ops).
       description: |
         Archiving alone does not settle it: the next message from the same domain mints the
         company again, and the person who deleted it learns nothing about why it came back.
@@ -22855,6 +22855,10 @@ components:
           type: string
           minLength: 1
           maxLength: 500
+          # A non-whitespace character, because the handler trims before it
+          # judges: `minLength` alone admits "   ", which is then refused with
+          # a 422 the contract gave no way to predict.
+          pattern: '\S'
           description: |
             Why this is not a company. Required: the refusal outlives the record, and the next
             operator to find the domain on the blocked list can only review a decision that

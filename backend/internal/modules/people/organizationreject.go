@@ -25,6 +25,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -85,6 +86,22 @@ func (s *Store) RejectOrganization(
 		// anchor WITH a domain would have its refusal decided by the read.
 		if err := refuseIfAnchor(ctx, tx, id, "id",
 			"it cannot be rejected. Reject a different company, or edit this one on the company page"); err != nil {
+			return err
+		}
+		// THE COMPANY ROW FIRST, before the domain read locks anything.
+		//
+		// Both this verb and a plain archive touch the same two tables, and
+		// only the order is negotiable: ArchiveOrganization takes the company
+		// row under its guarded patch and then updates organization_domain, so
+		// a rejection that locked the domain first and the company second would
+		// meet it head-on. Two transactions each holding what the other wants
+		// is a deadlock Postgres breaks by aborting one of them — a rejection
+		// or somebody's archive failing at random, under exactly the concurrency
+		// that makes it hard to reproduce.
+		//
+		// The archive below takes this same lock again; a second acquire of a
+		// row this transaction already holds is free.
+		if _, err := storekit.LockRow(ctx, tx, entityOrganization, id.UUID, storekit.LiveOnly); err != nil {
 			return err
 		}
 		// The domain is read BEFORE the archive, because the archive retires

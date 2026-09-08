@@ -887,7 +887,7 @@ export const en = {
 
   "org.reject": "Not a company",
   "org.rejectConfirm":
-    "This archives “{name}” and refuses {domain} a company, so the next message from that domain will not create it again. An administrator can let the domain back in from Settings → Capture.",
+    "This archives “{name}” and refuses {domain} as a company, so the next message from that domain will not create it again. An administrator can let the domain back in from Settings → Capture.",
   "org.rejectReasonLabel": "Why is this not a company?",
   "org.rejectReasonHint":
     "One sentence somebody reviewing the blocked-domain list can act on. The refusal outlives the record.",
