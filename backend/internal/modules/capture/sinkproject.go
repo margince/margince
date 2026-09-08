@@ -106,6 +106,10 @@ func (s *Sink) attributeProject(ctx context.Context, rec connector.NormalizedRec
 	}
 	activityID := ids.From[ids.ActivityKind](ref.ID)
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		filed, err := alreadyFiledUnderAProject(ctx, tx, activityID)
+		if err != nil || filed {
+			return err
+		}
 		projectID, err := s.decideProject(ctx, tx, rec, activityID)
 		if err != nil || projectID.IsZero() {
 			return err
@@ -117,11 +121,45 @@ func (s *Sink) attributeProject(ctx context.Context, rec connector.NormalizedRec
 	}
 }
 
+// alreadyFiledUnderAProject is what makes the ladder safe to run on a REPLAY,
+// and cheap to.
+//
+// It used to run only when the capture had just created the activity. A
+// transient fault — a SQL error, a matcher failure — logged for a reconcile
+// that has no caller, and every later replay of that mailbox found the
+// activity already present and skipped the ladder. The message stayed unfiled
+// forever, and the breadcrumb was the whole record that the question went
+// unanswered (#2108).
+//
+// So the ladder runs on every capture of the activity, not only the first.
+// linkActivityToProject was already idempotent — ON CONFLICT DO NOTHING, and it
+// stamps whether or not it inserted — so a second run was always SAFE; what it
+// was not is free, and this is what makes it so. An activity already filed
+// stops here, before the three rungs, on one indexed read.
+//
+// Only a project link counts. An activity filed under a person or a deal has
+// not been asked this question yet, and treating any link as an answer would
+// make the retry it exists for unreachable for exactly the messages that carry
+// other links — which is most of them.
+func alreadyFiledUnderAProject(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) (bool, error) {
+	var filed bool
+	err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM activity_link
+			 WHERE activity_id = $1 AND entity_type = 'project'
+		)`, activityID).Scan(&filed)
+	if err != nil {
+		return false, fmt.Errorf("capture: reading whether the activity is already filed: %w", err)
+	}
+	return filed, nil
+}
+
 // logProjectAttributionFault records a failed attribution in system_log, on its
 // own transaction — the one this fault came out of is already rolled back. The
 // activity stands, filed under nothing. There is no partial state to repair,
-// because a failed transaction wrote no link — and no pass re-runs the ladder,
-// so the breadcrumb is the whole record that the question went unanswered.
+// because a failed transaction wrote no link — and the next capture of that
+// activity runs the ladder again, so this records a question that went
+// unanswered THIS time rather than one nothing will ask again.
 //
 // It logs rather than returns for the reason every post-commit step does: the
 // message is on the timeline and nothing here may take it off.
