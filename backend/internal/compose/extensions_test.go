@@ -6,8 +6,10 @@ package compose
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
+	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -69,6 +71,86 @@ func TestRegisterExtensionsAppliesDeclaredCapabilities(t *testing.T) {
 	}
 	if _, ok := jurisdiction.For("zx"); !ok {
 		t.Fatal("the declared pack did not reach the jurisdiction registry")
+	}
+}
+
+// TestRegisterExtensionsAppliesDeclaredMessagingRules is the messaging half of
+// the test above, and it was missing.
+//
+// The capability census holds that some live unit DECLARES Messaging. Nothing
+// held that a declared rule set reaches the registry the authorization engine
+// asks. Those are different failures and only the second one is silent: with
+// the wiring gone the unit is still reported as composed while its policy is
+// absent, and every consent test goes on passing because each registers rules
+// of its own.
+//
+// This holds the MECHANISM on a synthetic unit. That the SHIPPED packs reach it
+// is a different question and a different corpus, held by
+// TestEveryDeclaredMessagingRuleSetIsRegistered (backend/gates/messagingpackreach_test.go)
+// — a test supplying its own unit cannot see an apply loop that skips somebody
+// else's.
+//
+// The code is used ONCE in this process, like every other code in this file.
+// messagingrules has no deregister, and preflight refuses a code the registry
+// already holds — so a second run inside one binary meets its own leftover.
+// That is why this fails under -count=2, exactly as its jurisdiction sibling
+// above does, and why a new case here takes a new code rather than reusing one.
+func TestRegisterExtensionsAppliesDeclaredMessagingRules(t *testing.T) {
+	const replyWindow = 9 * 24 * time.Hour
+	err := RegisterExtensions(composableAll([]extension.Extension{{
+		Name:    "msg-ok",
+		Version: "0.0.1",
+		Messaging: []messagingrules.Rules{{
+			Jurisdiction: "zw",
+			Version:      1,
+			ReplyWindow:  replyWindow,
+		}},
+	}}), nil, nil)
+	if err != nil {
+		t.Fatalf("RegisterExtensions: %v", err)
+	}
+	landed, ok := messagingrules.For("zw")
+	if !ok {
+		t.Fatal("the declared rule set did not reach the messaging registry — the unit is still " +
+			"reported as composed in, while the engine resolves its country to no rules at all")
+	}
+	// The CONTENT, not merely a row under that code. A registry entry carrying
+	// somebody else's windows answers the engine as confidently as the right
+	// one, and asking only whether the code is present cannot tell them apart.
+	if landed.ReplyWindow != replyWindow {
+		t.Errorf("the registered reply window is %v, want the declared %v", landed.ReplyWindow, replyWindow)
+	}
+}
+
+// TestNoMessagingRulesApplyWhenTheSetIsInvalid is the other half: a rejected
+// composition must leave the registry untouched.
+//
+// The registry is process-wide and has no deregister, so a rule set applied by
+// a boot that then aborted would still be answering for that jurisdiction in
+// whatever came next.
+//
+// The set is refused by an UNDECLARED JOB, which is deliberate.
+// buildExtensionJobs is the last of the five fallible steps that run before
+// anything applies, so a refusal there holds the whole validate-then-apply
+// window. A refusal from the first step would say nothing about the other four:
+// TestRegisterExtensionsRejectsAnInvalidUnitName beside it asserts the error and
+// nothing about the registry, which is the shape this must not take.
+func TestNoMessagingRulesApplyWhenTheSetIsInvalid(t *testing.T) {
+	err := RegisterExtensions(composableAll([]extension.Extension{{
+		Name:      "undeclared-job-msg",
+		Version:   "0.0.1",
+		Messaging: []messagingrules.Rules{{Jurisdiction: "zp", Version: 1}},
+		Jobs:      []extension.Job{{Name: "refresh", Handle: noopTick}},
+	}}), nil, nil)
+	// The MESSAGE, not merely an error. Asked as "did it fail", this would pass
+	// on a refusal from any of the five steps — including one that fired before
+	// the loop this is about, which would make the assertion below true for a
+	// reason that says nothing about the window.
+	if err == nil || !strings.Contains(err.Error(), "no kind in its api/jobs.yaml fragment declares it") {
+		t.Fatalf("err = %v, want the undeclared-job rejection from buildExtensionJobs", err)
+	}
+	if _, ok := messagingrules.For("zp"); ok {
+		t.Fatal("the unit's rules landed although the composed set failed validation")
 	}
 }
 
