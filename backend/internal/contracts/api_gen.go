@@ -2367,11 +2367,12 @@ func (e CaptureConnectionMailPosture) Valid() bool {
 
 // Defines values for CaptureConnectionProvider.
 const (
-	CaptureConnectionProviderGcal     CaptureConnectionProvider = "gcal"
-	CaptureConnectionProviderGmail    CaptureConnectionProvider = "gmail"
-	CaptureConnectionProviderGraph    CaptureConnectionProvider = "graph"
-	CaptureConnectionProviderGraphcal CaptureConnectionProvider = "graphcal"
-	CaptureConnectionProviderImap     CaptureConnectionProvider = "imap"
+	CaptureConnectionProviderGcal        CaptureConnectionProvider = "gcal"
+	CaptureConnectionProviderGmail       CaptureConnectionProvider = "gmail"
+	CaptureConnectionProviderGraph       CaptureConnectionProvider = "graph"
+	CaptureConnectionProviderGraphcal    CaptureConnectionProvider = "graphcal"
+	CaptureConnectionProviderImap        CaptureConnectionProvider = "imap"
+	CaptureConnectionProviderTestMailbox CaptureConnectionProvider = "test_mailbox"
 )
 
 // Valid indicates whether the value is a known member of the CaptureConnectionProvider enum.
@@ -2386,6 +2387,8 @@ func (e CaptureConnectionProvider) Valid() bool {
 	case CaptureConnectionProviderGraphcal:
 		return true
 	case CaptureConnectionProviderImap:
+		return true
+	case CaptureConnectionProviderTestMailbox:
 		return true
 	default:
 		return false
@@ -7311,11 +7314,12 @@ func (e MorningBriefItemState) Valid() bool {
 
 // Defines values for MorningDigestConnectorsProvider.
 const (
-	MorningDigestConnectorsProviderGcal     MorningDigestConnectorsProvider = "gcal"
-	MorningDigestConnectorsProviderGmail    MorningDigestConnectorsProvider = "gmail"
-	MorningDigestConnectorsProviderGraph    MorningDigestConnectorsProvider = "graph"
-	MorningDigestConnectorsProviderGraphcal MorningDigestConnectorsProvider = "graphcal"
-	MorningDigestConnectorsProviderImap     MorningDigestConnectorsProvider = "imap"
+	MorningDigestConnectorsProviderGcal        MorningDigestConnectorsProvider = "gcal"
+	MorningDigestConnectorsProviderGmail       MorningDigestConnectorsProvider = "gmail"
+	MorningDigestConnectorsProviderGraph       MorningDigestConnectorsProvider = "graph"
+	MorningDigestConnectorsProviderGraphcal    MorningDigestConnectorsProvider = "graphcal"
+	MorningDigestConnectorsProviderImap        MorningDigestConnectorsProvider = "imap"
+	MorningDigestConnectorsProviderTestMailbox MorningDigestConnectorsProvider = "test_mailbox"
 )
 
 // Valid indicates whether the value is a known member of the MorningDigestConnectorsProvider enum.
@@ -7330,6 +7334,8 @@ func (e MorningDigestConnectorsProvider) Valid() bool {
 	case MorningDigestConnectorsProviderGraphcal:
 		return true
 	case MorningDigestConnectorsProviderImap:
+		return true
+	case MorningDigestConnectorsProviderTestMailbox:
 		return true
 	default:
 		return false
@@ -14931,11 +14937,12 @@ func (e WrittenBy) Valid() bool {
 
 // Defines values for CaptureProvider.
 const (
-	CaptureProviderGcal     CaptureProvider = "gcal"
-	CaptureProviderGmail    CaptureProvider = "gmail"
-	CaptureProviderGraph    CaptureProvider = "graph"
-	CaptureProviderGraphcal CaptureProvider = "graphcal"
-	CaptureProviderImap     CaptureProvider = "imap"
+	CaptureProviderGcal        CaptureProvider = "gcal"
+	CaptureProviderGmail       CaptureProvider = "gmail"
+	CaptureProviderGraph       CaptureProvider = "graph"
+	CaptureProviderGraphcal    CaptureProvider = "graphcal"
+	CaptureProviderImap        CaptureProvider = "imap"
+	CaptureProviderTestMailbox CaptureProvider = "test_mailbox"
 )
 
 // Valid indicates whether the value is a known member of the CaptureProvider enum.
@@ -14950,6 +14957,8 @@ func (e CaptureProvider) Valid() bool {
 	case CaptureProviderGraphcal:
 		return true
 	case CaptureProviderImap:
+		return true
+	case CaptureProviderTestMailbox:
 		return true
 	default:
 		return false
