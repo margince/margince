@@ -79,6 +79,20 @@ func hostOf(baseURL string) (string, error) {
 	return parsed.Hostname(), nil
 }
 
+// withoutUserinfo is a base_url safe to name in an error or a boot log.
+//
+// url.URL.Redacted() is NOT that, which is the trap this exists to close: it
+// replaces the PASSWORD with xxxxx and keeps the USERNAME, and a token pasted
+// into a base_url arrives as the username at least as often as it arrives after
+// a colon (http://sk-live-...@host). So the whole userinfo goes, not half of it.
+//
+// Held by: TestARefusalNamesNoPartOfTheUserinfo (backend/internal/modules/ai/sovereignendpoint_test.go)
+func withoutUserinfo(parsed *url.URL) string {
+	shown := *parsed
+	shown.User = nil
+	return shown.String()
+}
+
 // parsedEndpoint parses a base_url and refuses a value that cannot be an
 // endpoint at all: one that names no host — not a formatting nit here, since
 // "no host" is exactly the shape a check written as a string comparison would
@@ -99,10 +113,10 @@ func parsedEndpoint(baseURL string) (*url.URL, error) {
 		return nil, fmt.Errorf("base_url cannot be parsed as a url: %w", parseFault(err))
 	}
 	if parsed.Hostname() == "" {
-		// Redacted for the same reason: Redacted() replaces any password with
-		// xxxxx, and a value with no host is exactly the malformed shape most
-		// likely to have been pasted with a credential still in it.
-		return nil, fmt.Errorf("base_url %q names no host; write the whole url, e.g. http://127.0.0.1:11434", parsed.Redacted())
+		// Stripped of its userinfo for the same reason: a value with no host is
+		// exactly the malformed shape most likely to have been pasted with a
+		// credential still in it.
+		return nil, fmt.Errorf("base_url %q names no host; write the whole url, e.g. http://127.0.0.1:11434", withoutUserinfo(parsed))
 	}
 	// The scheme is checked HERE rather than left to the first call: a scheme
 	// this adapter cannot dial makes the endpoint unreachable, and an endpoint
@@ -110,11 +124,11 @@ func parsedEndpoint(baseURL string) (*url.URL, error) {
 	// deployment that fails at 3am with a transport error instead of at boot
 	// with a config one.
 	if scheme := strings.ToLower(parsed.Scheme); scheme != "http" && scheme != "https" {
-		// Redacted, like the two branches above: a scheme this adapter cannot
+		// Stripped, like the two branches above: a scheme this adapter cannot
 		// dial is a malformed value, and a malformed value is the shape most
 		// likely to have been pasted with a credential still in it. The scheme
 		// itself is safe to name and is what the operator has to change.
-		return nil, fmt.Errorf("base_url %q must be an http(s) url; %q is not a scheme this adapter can call", parsed.Redacted(), parsed.Scheme)
+		return nil, fmt.Errorf("base_url %q must be an http(s) url; %q is not a scheme this adapter can call", withoutUserinfo(parsed), parsed.Scheme)
 	}
 	return parsed, nil
 }

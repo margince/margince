@@ -4,6 +4,7 @@
 package ai
 
 import (
+	"net/url"
 	"strings"
 	"testing"
 )
@@ -241,6 +242,48 @@ func TestEveryLocalProviderWithAnEndpointIsChecked(t *testing.T) {
 		if _, ok := localBaseURLDefaults[provider]; !ok {
 			t.Errorf("local provider %q has no entry in localBaseURLDefaults, so a sovereign binding to it is never endpoint-checked", provider)
 		}
+	}
+}
+
+// Every refusal that names a base_url names NO part of its userinfo — the
+// username as much as the password.
+//
+// url.Redacted() hides only the password, and this test is the reason the code
+// does not use it: a model key pasted into a base_url is at least as likely to
+// arrive as `http://sk-live-…@host` as it is with a colon after it, and that
+// spelling would otherwise be copied verbatim into a boot log. Every exit that
+// shows the value is walked, because one that forgot is one leak.
+func TestARefusalNamesNoPartOfTheUserinfo(t *testing.T) {
+	const secret = "sk-live-stands-in-for-a-token"
+	for name, baseURL := range map[string]string{
+		"as the username":                 "http://" + secret + "@/",
+		"as the password":                 "http://user:" + secret + "@/",
+		"as the username on a bad scheme": "ftp://" + secret + "@example.test/",
+		"as the username with no host":    "http://" + secret + "@",
+	} {
+		t.Run(name, func(t *testing.T) {
+			host, err := hostOf(baseURL)
+			if err == nil {
+				t.Fatalf("hostOf(%q) returned host %q and no error", baseURL, host)
+			}
+			if strings.Contains(err.Error(), secret) {
+				t.Errorf("the refusal carries the credential: %v", err)
+			}
+		})
+	}
+	// The rule the exits share, asked of the helper itself: a value carrying
+	// userinfo in either position comes back with neither.
+	parsed, err := url.Parse("https://" + secret + ":" + secret + "@vendor.example/v1")
+	if err != nil {
+		t.Fatalf("parsing the fixture: %v", err)
+	}
+	if shown := withoutUserinfo(parsed); strings.Contains(shown, secret) {
+		t.Errorf("withoutUserinfo kept the credential: %q", shown)
+	}
+	// And the refusal an operator is most likely to trigger with one.
+	err = requireDialableEndpoint("tier premium", providerAnthropic, "https://"+secret+"@vendor.example")
+	if err == nil || strings.Contains(err.Error(), secret) {
+		t.Errorf("the userinfo refusal must refuse and must not echo the credential, got %v", err)
 	}
 }
 

@@ -100,9 +100,20 @@ func addressAllowed(class egressClass, ip net.IP) bool {
 // pre-checked and then dialed anyway.
 func dialGuard(class egressClass) func(string, string, syscall.RawConn) error {
 	return func(network, address string, conn syscall.RawConn) error {
-		if host, _, err := net.SplitHostPort(address); err == nil {
-			if ip := net.ParseIP(host); ip != nil && addressAllowed(class, ip) {
-				return nil
+		host, port, err := net.SplitHostPort(address)
+		if err == nil {
+			// parseHostAddress, not net.ParseIP: a link-local or unique-local
+			// address arrives here carrying its zone ("fe80::1%eth0"), which
+			// ParseIP does not take — and the write-time rule already drops it.
+			// A second reading of the same address is how the two ends of one
+			// rule start disagreeing.
+			if ip := parseHostAddress(host); ip != nil {
+				if addressAllowed(class, ip) {
+					return nil
+				}
+				// The zone stripped, so netguard names the address it judged
+				// rather than reporting a zoned one as "not a literal IP".
+				address = net.JoinHostPort(ip.String(), port)
 			}
 		}
 		// Refused, or a shape this cannot judge for itself. netguard owns both
@@ -143,8 +154,17 @@ func customerControlled(ip net.IP) bool {
 // change after boot, which is exactly why dialGuard checks the resolved address
 // rather than trusting this.
 func requireDialableEndpoint(label, provider, baseURL string) error {
-	if strings.TrimSpace(baseURL) == "" {
+	if baseURL == "" {
 		return nil // no host of its own; the adapter's compiled default applies
+	}
+	if _, known := providerEgress[provider]; !known {
+		// No lane to judge. SelectBrain refuses a provider this build has no
+		// adapter for, so the binding reaches no socket at all — and answering
+		// here would report an egress fault for a binding whose actual problem
+		// is the provider name, which is the error the operator has to act on.
+		// TestEveryProviderDeclaresAnEgressClass keeps this from ever skipping
+		// a provider that CAN be served.
+		return nil
 	}
 	parsed, err := parsedEndpoint(baseURL)
 	if err != nil {
@@ -165,7 +185,7 @@ func requireDialableEndpoint(label, provider, baseURL string) error {
 func userinfoRefused(label string, parsed *url.URL) error {
 	return fmt.Errorf(
 		"ai: routing config: %s: base_url %q carries userinfo, and a binding never carries a credential — it would be sent to whatever host the value names. Give the host root alone; a model key belongs in the key vault",
-		label, parsed.Redacted())
+		label, withoutUserinfo(parsed))
 }
 
 // unreachableAddressRefused tells the operator which rule they met and what to

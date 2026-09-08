@@ -130,9 +130,17 @@ func TestTheWriteRuleAndTheDialerAgree(t *testing.T) {
 			"127.0.0.1", "::1", "10.4.1.20", "192.168.1.5", "fd00::1", "::ffff:10.0.0.1",
 			"169.254.169.254", "fe80::1", "64:ff9b::a9fe:a9fe", "100.64.0.1", "192.0.2.10",
 			"0.0.0.0", "2002:7f00:1::1", "172.32.0.9",
+			// Zoned, which is how a link-local or unique-local address actually
+			// reaches a dialer. The zone is not part of the judgement, and the
+			// two ends must drop it the same way or they disagree here.
+			"fd00::1%eth0", "fe80::1%eth0",
 		} {
 			hostPort := net.JoinHostPort(address, "8080")
-			atTheWrite := requireDialableEndpoint("tier premium", provider, "http://"+hostPort) == nil
+			// A zone is written `%25` inside a url and bare on a dial address —
+			// RFC 6874's escaping, not a quirk of this test. The two ends see
+			// the same endpoint spelled the two ways they each really get it.
+			inAURL := net.JoinHostPort(strings.Replace(address, "%", "%25", 1), "8080")
+			atTheWrite := requireDialableEndpoint("tier premium", provider, "http://"+inAURL) == nil
 			atTheSocket := guard("tcp", hostPort, nil) == nil
 			if atTheWrite != atTheSocket {
 				t.Errorf("provider %q, address %s: the write rule says allowed=%v and the dialer says allowed=%v",
@@ -164,22 +172,25 @@ func TestSelectBrainIsTheOnlyBuilderOfAnOutboundClient(t *testing.T) {
 		if err != nil {
 			t.Fatalf("parsing %s: %v", name, err)
 		}
-		for _, decl := range file.Decls {
-			fn, ok := decl.(*ast.FuncDecl)
-			if !ok {
-				continue
+		// The WHOLE file, not its func declarations: a package-level
+		// `var shared = newOutboundClient(...)` is a GenDecl and would walk
+		// straight past a scan that only entered functions — an unguarded
+		// client built where this test cannot see it is the one failure a
+		// census like this must not have.
+		enclosing := "package scope"
+		ast.Inspect(file, func(node ast.Node) bool {
+			if fn, ok := node.(*ast.FuncDecl); ok {
+				enclosing = fn.Name.Name
 			}
-			ast.Inspect(fn, func(node ast.Node) bool {
-				call, ok := node.(*ast.CallExpr)
-				if !ok {
-					return true
-				}
-				if ident, ok := call.Fun.(*ast.Ident); ok && ident.Name == "newOutboundClient" {
-					callers = append(callers, name+":"+fn.Name.Name)
-				}
+			call, ok := node.(*ast.CallExpr)
+			if !ok {
 				return true
-			})
-		}
+			}
+			if ident, ok := call.Fun.(*ast.Ident); ok && ident.Name == "newOutboundClient" {
+				callers = append(callers, name+":"+enclosing)
+			}
+			return true
+		})
 	}
 	if len(callers) != 1 || callers[0] != "selectbrain.go:SelectBrain" {
 		t.Errorf("newOutboundClient is called from %v, want only selectbrain.go:SelectBrain — every other builder dials unguarded", callers)
@@ -203,6 +214,31 @@ func TestTheDialGuardRefusesWhatItCannotJudge(t *testing.T) {
 	} {
 		if err := guard("tcp", address, nil); err == nil {
 			t.Errorf("the guard dialed %q", address)
+		}
+	}
+}
+
+// A guard on the dialer is only a guard while the dial goes to the binding's
+// host. http.DefaultTransport carries ProxyFromEnvironment, and the clone
+// inherits it, so on any deployment with HTTPS_PROXY set the socket would open
+// to the PROXY — a public address, admitted — and the proxy would then be asked
+// to CONNECT wherever the binding pointed, which this side never sees.
+//
+// One environment variable is the whole distance between this guard and no
+// guard, which is why it is asserted rather than left to the reader.
+func TestTheOutboundClientCannotBeRoutedThroughAProxy(t *testing.T) {
+	t.Parallel()
+
+	for _, provider := range KnownProviders() {
+		transport, ok := newOutboundClient(provider).Transport.(*http.Transport)
+		if !ok {
+			t.Fatalf("provider %q: the outbound client's transport is not an *http.Transport, so nothing below binds", provider)
+		}
+		if transport.Proxy != nil {
+			t.Errorf("provider %q: the outbound transport honours a proxy, so HTTPS_PROXY routes every dial around the egress guard", provider)
+		}
+		if transport.DialContext == nil {
+			t.Errorf("provider %q: the outbound transport has no DialContext, so the egress guard is never consulted", provider)
 		}
 	}
 }
@@ -307,6 +343,18 @@ embeddings: { provider: ollama, base_url: "http://169.254.169.254", model: bge-m
 `,
 			names: "169.254.169.254",
 		},
+		// Whitespace is not an omitted base_url: `defaulted` only falls back on
+		// the empty string, so a blank one would reach the adapter as its host
+		// and fail on the first call as an unparseable url.
+		"a base_url that is only whitespace": {
+			routing: `
+profile: eu_hosted
+tiers:
+  local_large: { provider: ollama, base_url: "   ", model: m }
+embeddings: { provider: ollama, model: bge-m3 }
+`,
+			names: "names no host",
+		},
 		"a credential smuggled in as userinfo": {
 			routing: `
 profile: eu_hosted
@@ -330,6 +378,26 @@ embeddings: { provider: ollama, model: bge-m3 }
 				t.Errorf("the refusal echoes the credential it was given: %v", err)
 			}
 		})
+	}
+}
+
+// A provider this build has no adapter for gets no egress verdict, because it
+// gets no socket: SelectBrain refuses to construct a client, so there is no lane
+// to judge — and answering here would report an egress fault for a binding whose
+// actual problem is the provider name.
+//
+// Both halves, because the first alone would also pass if the rule had simply
+// stopped working: the refusal has to come from somewhere, and it does.
+func TestAnUnservableProviderIsLeftToSelectBrain(t *testing.T) {
+	t.Parallel()
+
+	const unknown = "not-a-vendor"
+	if err := requireDialableEndpoint("tier premium", unknown, "http://10.0.0.5:6379"); err != nil {
+		t.Errorf("the endpoint rule answered for a provider with no adapter: %v", err)
+	}
+	_, err := SelectBrain(ProviderConfig{Provider: unknown, BaseURL: "http://10.0.0.5:6379"}, noCloudKeys())
+	if err == nil || !strings.Contains(err.Error(), unknown) {
+		t.Errorf("SelectBrain must refuse the binding and name the provider, got %v", err)
 	}
 }
 
