@@ -9334,6 +9334,23 @@ export const en = {
   "stageAutomation.empty":
     "Margince has not proposed a stage move on this pipeline yet.",
   "stageAutomation.noPipelines": "There is no pipeline to report on yet.",
+  "stageAutomation.readOnly":
+    "You can see what each transition has earned. Changing what one may do needs permission to edit pipelines.",
+  "stageAutomation.rules": "What each transition may do",
+  "stageAutomation.rulesIntro":
+    "Turning a transition on does not start it moving deals. Margince keeps asking until the record above clears the bar, then starts applying on its own — you do not have to come back.",
+  "stageAutomation.modeHint":
+    "When this is on and the record has earned it, Margince moves the deal and tells you afterwards.",
+  "stageAutomation.notEarnedYet": "Not earned yet: {why}",
+  "stageAutomation.suspended": "Margince stopped this",
+  "stageAutomation.suspendedSince": "Stopped {date}",
+  "stageAutomation.resume": "Start again",
+  "stageAutomation.resumeTitle": "Let this transition move deals again?",
+  "stageAutomation.resumeBody":
+    "Margince stopped it because: {reason}\n\nStarting it again does not skip the bar. It goes back to what you asked for, and still has to clear the record above before it moves anything by itself.",
+  "stageAutomation.noRules":
+    "No transition on this pipeline has been decided about yet, so every move is proposed for a person to answer.",
+  "stageAutomation.undoWindow": "Undo for {hours} h",
   "stageAutomation.nothingReviewed":
     "Proposed, but nobody has answered one yet.",
 } as const;

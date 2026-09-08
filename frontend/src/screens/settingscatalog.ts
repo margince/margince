@@ -539,10 +539,14 @@ export const SETTINGS_PAGES = [
     // endpoint, so `pipeline` read is exactly what opens it — the same grant
     // that shows the stages the transitions are between.
     requires: reads("pipeline"),
-    // Read-only in this release. The per-transition policy that will turn
-    // automation on is its own page and its own grant; a reader here can see
-    // what a transition has earned and change nothing.
-    changes: readingIsTheAct,
+    // The page now carries the per-transition switches beneath its report, so
+    // it WRITES. The table above them stays read-only, which is a layout
+    // decision rather than a permission one.
+    //
+    // UPDATE only. A rule is created by the same PUT that edits one, and this
+    // page never creates a pipeline — so a custom role holding pipeline:create
+    // without update would open a page whose every switch is refused.
+    changes: acts(writes("pipeline", ["update"])),
   },
   {
     id: "leads",
