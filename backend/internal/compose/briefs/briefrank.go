@@ -409,13 +409,9 @@ func briefEvidenceRows(
 			JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = $1
 			WHERE a.archived_at IS NULL
 			  AND ($2::timestamptz IS NULL OR a.occurred_at > $2)
-			  -- BOUNDED AT THE CUTOFF, the way the dismissal filter beside it is
-			  -- and for the same reason: a future-dated row has not happened, so
-			  -- counting it as "the deal moved overnight" is a claim about
-			  -- something still to come. A task dated next Tuesday, written days
-			  -- ago, kept lifting momentum from its 0.4 baseline to 1.0 on every
-			  -- morning in between — the audit found three of the seven selected
-			  -- deals riding evidence dated after the brief's own cutoff.
+			  -- Bounded at the cutoff, the way the dismissal filter above is: a
+			  -- future-dated row has not happened, so counting it as overnight
+			  -- movement claims the deal moved for something still to come.
 			  AND a.occurred_at <= $3
 			ORDER BY a.occurred_at DESC, a.id DESC
 			LIMIT $4`, dealID, lastView, asOf.UTC(), briefOvernightEvidenceCap))

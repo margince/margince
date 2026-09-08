@@ -137,6 +137,9 @@ func leadQueueWhere(ctx context.Context, in ListLeadsInput, active []fieldcatalo
 	if in.Status != nil {
 		where = append(where, storekit.SQLf(leadStatusColumn+" = $%d", arg(*in.Status)))
 	}
+	if in.OwedAReply != nil && *in.OwedAReply {
+		where = append(where, leadOwesAReplySQL)
+	}
 	if in.MinScore != nil {
 		where = append(where, storekit.SQLf(leadScoreColumn+" >= $%d", arg(*in.MinScore)))
 	}
@@ -154,7 +157,15 @@ func leadQueueWhere(ctx context.Context, in ListLeadsInput, active []fieldcatalo
 // falls through to score, then age.
 func leadQueueRank(policy leadSLAPolicy, arg func(any) int, asOf time.Time) string {
 	if !policy.enabled {
-		return fmt.Sprintf("%d", leadQueueRankInactive)
+		// No target, so no lead is LATE — but a lead still owes a first reply,
+		// and the queue's job is to put the ones that do in front of the ones
+		// that do not. Ranking every row the same made an answered lead with a
+		// high score outrank an unanswered one, which is the queue's whole
+		// question answered backwards. within_target is the honest band for
+		// "owed, with nothing measuring by when".
+		return fmt.Sprintf(`CASE
+			WHEN archived_at IS NOT NULL OR first_response_at IS NOT NULL THEN %d
+			ELSE %d END`, leadQueueRankInactive, leadQueueRankWithinTarget)
 	}
 	minutes := policy.targetMinutes()
 	risk := int(policy.atRisk() / time.Minute)

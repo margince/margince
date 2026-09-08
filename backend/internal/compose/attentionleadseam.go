@@ -42,8 +42,9 @@ func (l attentionLeadResponses) Owed(
 	ctx context.Context, scope attention.TaskScope, owner ids.UUID, limit int,
 ) ([]attention.OwedLead, bool, error) {
 	// Asked FIRST, and the answer is not a filter. With no target set no lead
-	// owes a reply at a stated time, so the lane is absent rather than empty —
-	// the difference between "nothing is late" and "nothing measures late".
+	// owes a reply at a stated TIME, which is why the answer rides back to the
+	// caller rather than filtering here: it decides whether a row can carry a
+	// deadline, not whether the row exists.
 	//
 	// It is asked WITHOUT the lead grant, deliberately. Whether this
 	// installation measures first response is a property of the installation,
@@ -55,7 +56,11 @@ func (l attentionLeadResponses) Owed(
 		return nil, false, err
 	}
 
-	in := people.ListLeadsInput{Limit: &limit}
+	// Narrowed in the QUERY, for the reason stated below about the task lane:
+	// the page is bounded, so cutting answered leads out of it afterwards loses
+	// the unanswered ones behind them and reports the shortfall as none owed.
+	owed := true
+	in := people.ListLeadsInput{Limit: &limit, OwedAReply: &owed}
 	// Narrowed in the QUERY, the way the task lane is: filtering afterwards
 	// would let a colleague's leads fill the bound and hide the reader's own
 	// overdue one behind a cut that had already happened.
@@ -103,37 +108,24 @@ func (l attentionLeadResponses) Owed(
 	if err != nil {
 		return nil, false, err
 	}
-	owed := make([]attention.OwedLead, 0, len(keep))
+	owedLeads := make([]attention.OwedLead, 0, len(keep))
 	for _, row := range keep {
-		// UNANSWERED is the question, and the SLA state is not it.
-		//
-		// leadSLAFields returns a nil state for every lead when the
-		// installation sets no first-response target — so selecting on the
-		// state dropped the whole lane wherever nobody had configured one, and
-		// the tile read "0 owed a first answer" beside five leads nobody had
-		// replied to. A policy decides whether a reply is LATE; whether one is
-		// owed at all is a property of the lead.
-		//
-		// An archived lead owes nothing, and neither does an answered one.
-		if row.ArchivedAt != nil || row.FirstResponseAt != nil {
-			continue
-		}
 		lead := attention.OwedLead{
 			ID:      ids.UUID(row.Id),
 			Name:    leadDisplayName(row),
 			OwnerID: ownerOfLead(row),
 		}
-		// The deadline and its state exist only where a policy states one.
-		// Left zero and empty otherwise, which OwedLead declares as the
-		// untracked case: the lane says a reply is owed without inventing a
-		// time it was owed by.
+		// A deadline and its state exist only where a policy states one: with
+		// the target off leadSLAFields returns nil for every lead. Left zero
+		// and empty, which OwedLead declares as that case — a reply is owed,
+		// and nothing measures by when.
 		if row.SlaState != nil {
 			lead.DeadlineAt = deadlineOfLead(row)
 			lead.State = string(*row.SlaState)
 		}
-		owed = append(owed, lead)
+		owedLeads = append(owedLeads, lead)
 	}
-	return owed, tracked, nil
+	return owedLeads, tracked, nil
 }
 
 // leadDisplayName is what the row calls the lead, or NOTHING.

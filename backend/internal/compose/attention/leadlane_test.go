@@ -175,14 +175,10 @@ func TestAnAtRiskLeadWithNoDeadlineNamesNoMoment(t *testing.T) {
 
 // A reply is owed whether or not anything measures when it was owed by.
 //
-// The lane used to drop itself entirely with no first-response target set, on
-// the reasoning that nothing is LATE without one. But "owed" and "late" are
-// different questions: a rep with five unanswered leads read "0 owed a first
-// answer", which is not a cautious answer, it is a wrong one. The policy
-// decides the deadline; the lead decides whether a reply is outstanding.
-//
-// So the rows appear, carrying no deadline and no state — the lane says a reply
-// is owed without inventing a time it was owed by.
+// Owed and late are different questions: the policy decides the deadline, the
+// lead decides whether a reply is outstanding. So the rows appear with no
+// first-response target set, carrying no deadline and no state — the lane says
+// a reply is owed without inventing a time it was owed by.
 func TestLeadsOweAReplyEvenWithNoFirstResponseTarget(t *testing.T) {
 	svc := leadLaneService(&stubLeads{tracked: false, rows: []OwedLead{
 		{ID: ids.NewV7(), Name: "a lead"},
@@ -252,30 +248,38 @@ func TestANamedOwnersQueueKeepsTheirOwedLeads(t *testing.T) {
 	rowFor(t, day, "their lead")
 }
 
-// A read that happened and found nothing publishes its reach row.
+// A read that happened and found nothing publishes its reach row — and it does
+// so whether or not a first-response target exists.
 //
-// The lane no longer disappears when no first-response target is set — it reads
-// the leads either way — so the reach row is now the honest record of a read
-// that ran: considered zero, shown zero. Suppressing it would put the lane back
-// in the state where "nothing to report" and "nobody looked" are the same page.
-func TestAnUntrackedLaneWithNoLeadsStillReportsItsReach(t *testing.T) {
-	svc := leadLaneService(&stubLeads{tracked: false})
+// Both positions are asserted because the lane's behaviour must NOT differ
+// between them: a page that suppressed the row when nothing measured deadlines
+// would make "nothing to report" and "nobody looked" the same page. Asserting
+// only the untracked case would pass even with the policy plumbing deleted.
+func TestTheLeadLaneReportsItsReachWithOrWithoutATarget(t *testing.T) {
+	for _, tracked := range []bool{false, true} {
+		svc := leadLaneService(&stubLeads{tracked: tracked})
 
-	day, err := svc.Worklist(leadReader(), "", "", ids.UUID{}, 25, "")
-	if err != nil {
-		t.Fatalf("worklist: %v", err)
-	}
+		day, err := svc.Worklist(leadReader(), "", "", ids.UUID{}, 25, "")
+		if err != nil {
+			t.Fatalf("tracked=%v: worklist: %v", tracked, err)
+		}
 
-	for _, reach := range day.Reach {
-		if reach.Source == sourceLeadResponse {
-			if reach.Considered != 0 || reach.Shown != 0 {
-				t.Errorf("reach = considered %d shown %d, want an honest empty read",
-					reach.Considered, reach.Shown)
+		var found bool
+		for _, reach := range day.Reach {
+			if reach.Source != sourceLeadResponse {
+				continue
 			}
-			return
+			found = true
+			if reach.Considered != 0 || reach.Shown != 0 {
+				t.Errorf("tracked=%v: reach = considered %d shown %d, want an honest empty read",
+					tracked, reach.Considered, reach.Shown)
+			}
+		}
+		if !found {
+			t.Errorf("tracked=%v: the lane published no reach row, so the page cannot tell "+
+				"an empty read from an absent one", tracked)
 		}
 	}
-	t.Fatal("the lane published no reach row, so the page cannot tell an empty read from an absent one")
 }
 
 // One late reply is ONE row.

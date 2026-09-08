@@ -678,14 +678,10 @@ func TestALaterActRetiresTheDismissalLineage(t *testing.T) {
 
 // A future-dated activity is not overnight momentum.
 //
-// The evidence read had a lower bound and no upper one, so a row dated ahead of
-// the brief's own cutoff counted as "the deal moved". A task written days ago
-// and dated next Tuesday therefore lifted momentum from its 0.4 baseline to 1.0
-// on every morning in between — the audit found three of seven selected deals
-// riding evidence dated after the cutoff that produced them.
-//
-// The dismissal filter in the same query already bounds itself this way, and
-// says why: a future-dated activity has not happened. The two reads disagreed.
+// Momentum folds any evidence in the window to 1.0 against a 0.4 baseline, so a
+// task dated next week would say the deal moved — on every morning until that
+// date arrives. Evidence of movement is bounded by the cutoff it is evidence
+// for.
 func TestAFutureDatedActivityIsNotOvernightMomentum(t *testing.T) {
 	b := setupBrief(t)
 	owner := integration.OwnerConn(t)

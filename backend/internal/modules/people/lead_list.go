@@ -90,6 +90,9 @@ func (s *Store) ListLeads(ctx context.Context, in ListLeadsInput) ([]crmcontract
 			if in.Status != nil {
 				where = append(where, storekit.SQLf(leadStatusColumn+" = $%d", arg(*in.Status)))
 			}
+			if in.OwedAReply != nil && *in.OwedAReply {
+				where = append(where, leadOwesAReplySQL)
+			}
 			if in.MinScore != nil {
 				where = append(where, storekit.SQLf(leadScoreColumn+" >= $%d", arg(*in.MinScore)))
 			}
