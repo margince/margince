@@ -10,10 +10,11 @@
   "pass_at": 2,
   "usage": {
     "input_tokens": 24,
-    "output_tokens": 1774,
-    "cache_creation_input_tokens": 20144,
-    "cache_read_input_tokens": 669782,
+    "output_tokens": 1600,
+    "cache_creation_input_tokens": 19284,
+    "cache_read_input_tokens": 666068,
     "runs_measured": 3,
-    "cost_usd": 0.2323
+    "runs_costed": 3,
+    "cost_usd": 0.2264
   }
 }

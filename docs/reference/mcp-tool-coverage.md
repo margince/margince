@@ -41,13 +41,13 @@ Which model drove the lane, and how it went. The tool columns further down are t
 |---|---:|---:|---:|---:|---:|
 | `claude-haiku-4-5-20251001` | 21 of 21 | 10 | 11 | 29/63 | 46% |
 | `claude-opus-5` | 21 of 21 | 17 | 4 | 50/63 | 79% |
-| `claude-sonnet-5` | 21 of 21 | 12 | 9 | 36/63 | 57% |
+| `claude-sonnet-5` | 21 of 21 | 13 | 8 | 40/63 | 63% |
 
 > `claude-haiku-4-5-20251001` below its bar on: case10_finish_the_import, case20_put_it_in_the_board_pack, case23_find_us_a_slot, case31_wrong_word_on_the_record, case32_two_words_for_one_thing, case33_two_cards_for_one_company, case41_close_the_project, case4_use_the_moment, case5_before_the_meeting, case6_ask_the_company, case8_whats_waiting
 
 > `claude-opus-5` below its bar on: case2_business_card, case3_spreadsheet, case40_sort_the_queue, case6_ask_the_company
 
-> `claude-sonnet-5` below its bar on: case20_put_it_in_the_board_pack, case2_business_card, case32_two_words_for_one_thing, case40_sort_the_queue, case41_close_the_project, case4_use_the_moment, case5_before_the_meeting, case6_ask_the_company, case9_filed_in_the_wrong_place
+> `claude-sonnet-5` below its bar on: case20_put_it_in_the_board_pack, case2_business_card, case32_two_words_for_one_thing, case33_two_cards_for_one_company, case41_close_the_project, case4_use_the_moment, case5_before_the_meeting, case6_ask_the_company
 
 ## The two surfaces
 
@@ -132,13 +132,13 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case32_two_words_for_one_thing](../../e2e/llm/scenarios/case32-two-words-for-one-thing.yaml) | `claude-sonnet-5` | **FAIL** | 0/3 | 2 | **1** The surviving word is chosen by what carries it<br>**2** A fold nobody has released is reported as waiting<br>**3** The surviving word is given its meaning | `get_tag`, `list_tags`, `merge_tags`, `update_tag` |
 | [case33_two_cards_for_one_company](../../e2e/llm/scenarios/case33-two-cards-for-one-company.yaml) | `claude-haiku-4-5-20251001` | **FAIL** | 0/3 | 2 | **1** The duplicate is merged, and which record survives is said<br>**2** The company that shut down is archived, not merged<br>**3** The account is handed to a named colleague | `archive_record`, `list_colleagues`, `merge_records` |
 | [case33_two_cards_for_one_company](../../e2e/llm/scenarios/case33-two-cards-for-one-company.yaml) | `claude-opus-5` | pass | 3/3 | 2 | **1** The duplicate is merged, and which record survives is said<br>**2** The company that shut down is archived, not merged<br>**3** The account is handed to a named colleague | `archive_record`, `list_colleagues`, `merge_records` |
-| [case33_two_cards_for_one_company](../../e2e/llm/scenarios/case33-two-cards-for-one-company.yaml) | `claude-sonnet-5` | pass | 2/3 | 2 | **1** The duplicate is merged, and which record survives is said<br>**2** The company that shut down is archived, not merged<br>**3** The account is handed to a named colleague | `archive_record`, `list_colleagues`, `merge_records` |
+| [case33_two_cards_for_one_company](../../e2e/llm/scenarios/case33-two-cards-for-one-company.yaml) | `claude-sonnet-5` | **FAIL** | 1/3 | 2 | **1** The duplicate is merged, and which record survives is said<br>**2** The company that shut down is archived, not merged<br>**3** The account is handed to a named colleague | `archive_record`, `list_colleagues`, `merge_records` |
 | [case4_use_the_moment](../../e2e/llm/scenarios/case4-use-the-moment.yaml) | `claude-haiku-4-5-20251001` | **FAIL** | 0/3 | 2 | **1** Nearby is worked out to be a distance search<br>**6** Check with the owner before turning up | `query_workspace` |
 | [case4_use_the_moment](../../e2e/llm/scenarios/case4-use-the-moment.yaml) | `claude-opus-5` | pass | 2/3 | 2 | **1** Nearby is worked out to be a distance search<br>**6** Check with the owner before turning up | `query_workspace` |
-| [case4_use_the_moment](../../e2e/llm/scenarios/case4-use-the-moment.yaml) | `claude-sonnet-5` | **FAIL** | 0/3 | 2 | **1** Nearby is worked out to be a distance search<br>**6** Check with the owner before turning up | `query_workspace` |
+| [case4_use_the_moment](../../e2e/llm/scenarios/case4-use-the-moment.yaml) | `claude-sonnet-5` | **FAIL** | 1/3 | 2 | **1** Nearby is worked out to be a distance search<br>**6** Check with the owner before turning up | `query_workspace` |
 | [case40_sort_the_queue](../../e2e/llm/scenarios/case40-sort-the-queue.yaml) | `claude-haiku-4-5-20251001` | pass | 2/3 | 2 | **1** The record decides which verb, not the request<br>**2** What was filled and what is still missing are both reported<br>**3** A terminal verb lands on the lead it belongs to | `disqualify_lead`, `promote_lead`, `qualify_lead` |
 | [case40_sort_the_queue](../../e2e/llm/scenarios/case40-sort-the-queue.yaml) | `claude-opus-5` | **FAIL** | 1/3 | 2 | **1** The record decides which verb, not the request<br>**2** What was filled and what is still missing are both reported<br>**3** A terminal verb lands on the lead it belongs to | `disqualify_lead`, `promote_lead`, `qualify_lead` |
-| [case40_sort_the_queue](../../e2e/llm/scenarios/case40-sort-the-queue.yaml) | `claude-sonnet-5` | **FAIL** | 0/3 | 2 | **1** The record decides which verb, not the request<br>**2** What was filled and what is still missing are both reported<br>**3** A terminal verb lands on the lead it belongs to | `disqualify_lead`, `promote_lead`, `qualify_lead` |
+| [case40_sort_the_queue](../../e2e/llm/scenarios/case40-sort-the-queue.yaml) | `claude-sonnet-5` | pass | 2/3 | 2 | **1** The record decides which verb, not the request<br>**2** What was filled and what is still missing are both reported<br>**3** A terminal verb lands on the lead it belongs to | `disqualify_lead`, `promote_lead`, `qualify_lead` |
 | [case41_close_the_project](../../e2e/llm/scenarios/case41-close-the-project.yaml) | `claude-haiku-4-5-20251001` | **FAIL** | 0/3 | 2 | **1** How it moved is a different question from where it stands<br>**2** What is still open is said before the project is closed | `advance_project_phase`, `read_project_360` |
 | [case41_close_the_project](../../e2e/llm/scenarios/case41-close-the-project.yaml) | `claude-opus-5` | pass | 3/3 | 2 | **1** How it moved is a different question from where it stands<br>**2** What is still open is said before the project is closed | `advance_project_phase`, `read_project_360` |
 | [case41_close_the_project](../../e2e/llm/scenarios/case41-close-the-project.yaml) | `claude-sonnet-5` | **FAIL** | 0/3 | 2 | **1** How it moved is a different question from where it stands<br>**2** What is still open is said before the project is closed | `advance_project_phase`, `read_project_360` |
@@ -156,10 +156,10 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case7_ask_for_a_number](../../e2e/llm/scenarios/case7-ask-for-a-number.yaml) | `claude-sonnet-5` | pass | 3/3 | 2 | **1** The counts asked for come back as counts<br>**3** A refusal is not reported as a missing capability | `run_report` |
 | [case8_whats_waiting](../../e2e/llm/scenarios/case8-whats-waiting.yaml) | `claude-haiku-4-5-20251001` | **FAIL** | 1/3 | 2 | **1** The staged change is read, not just listed<br>**2** Each verdict lands on the item it was given for<br>**3** The decision is taken, not handed back | `decide_approval`, `list_approvals`, `read_approval` |
 | [case8_whats_waiting](../../e2e/llm/scenarios/case8-whats-waiting.yaml) | `claude-opus-5` | pass | 3/3 | 2 | **1** The staged change is read, not just listed<br>**2** Each verdict lands on the item it was given for<br>**3** The decision is taken, not handed back | `decide_approval`, `list_approvals`, `read_approval` |
-| [case8_whats_waiting](../../e2e/llm/scenarios/case8-whats-waiting.yaml) | `claude-sonnet-5` | pass | 3/3 | 2 | **1** The staged change is read, not just listed<br>**2** Each verdict lands on the item it was given for<br>**3** The decision is taken, not handed back | `decide_approval`, `list_approvals`, `read_approval` |
+| [case8_whats_waiting](../../e2e/llm/scenarios/case8-whats-waiting.yaml) | `claude-sonnet-5` | pass | 2/3 | 2 | **1** The staged change is read, not just listed<br>**2** Each verdict lands on the item it was given for<br>**3** The decision is taken, not handed back | `decide_approval`, `list_approvals`, `read_approval` |
 | [case9_filed_in_the_wrong_place](../../e2e/llm/scenarios/case9-filed-in-the-wrong-place.yaml) | `claude-haiku-4-5-20251001` | pass | 3/3 | 2 | **1** A misfiled message is moved, not also-linked<br>**2** A picked set moves as one act<br>**3** History is re-filed, never re-written | `relink_activities`, `relink_activity` |
 | [case9_filed_in_the_wrong_place](../../e2e/llm/scenarios/case9-filed-in-the-wrong-place.yaml) | `claude-opus-5` | pass | 3/3 | 2 | **1** A misfiled message is moved, not also-linked<br>**2** A picked set moves as one act<br>**3** History is re-filed, never re-written | `relink_activities`, `relink_activity` |
-| [case9_filed_in_the_wrong_place](../../e2e/llm/scenarios/case9-filed-in-the-wrong-place.yaml) | `claude-sonnet-5` | **FAIL** | 0/3 | 2 | **1** A misfiled message is moved, not also-linked<br>**2** A picked set moves as one act<br>**3** History is re-filed, never re-written | `relink_activities`, `relink_activity` |
+| [case9_filed_in_the_wrong_place](../../e2e/llm/scenarios/case9-filed-in-the-wrong-place.yaml) | `claude-sonnet-5` | pass | 3/3 | 2 | **1** A misfiled message is moved, not also-linked<br>**2** A picked set moves as one act<br>**3** History is re-filed, never re-written | `relink_activities`, `relink_activity` |
 
 ## What the criteria ask
 
@@ -268,14 +268,13 @@ Every run of every case requiring this tool passed, for the model named.
 | `log_activity` | 1.00 | 6 | `case1_log_it`, `case42_can_i_answer_on_whatsapp` |
 | `preview_import` | 1.00 | 6 | `case10_finish_the_import`, `case3_spreadsheet` |
 | `forecast_readings` | 1.00 | 3 | `case21_what_are_we_closing` |
-| `decide_approval` | 1.00 | 3 | `case8_whats_waiting` |
-| `list_approvals` | 1.00 | 3 | `case8_whats_waiting` |
+| `relink_activity` | 1.00 | 3 | `case9_filed_in_the_wrong_place` |
 | `check_availability` | 1.00 | 3 | `case23_find_us_a_slot` |
 | `apply_tag` | 1.00 | 3 | `case30_a_word_for_it` |
+| `relink_activities` | 1.00 | 3 | `case9_filed_in_the_wrong_place` |
 | `create_tag` | 1.00 | 3 | `case30_a_word_for_it` |
 | `list_channel_providers` | 1.00 | 3 | `case42_can_i_answer_on_whatsapp` |
 | `remove_tag` | 1.00 | 3 | `case31_wrong_word_on_the_record` |
-| `read_approval` | 1.00 | 3 | `case8_whats_waiting` |
 | `get_record_tags` | 1.00 | 3 | `case31_wrong_word_on_the_record` |
 | `commit_import` | 1.00 | 3 | `case10_finish_the_import` |
 | `data_coverage` | 1.00 | 3 | `case22_can_i_trust_the_numbers` |
@@ -343,24 +342,25 @@ Driven, and not every run passed. Open the case to see what was asked.
 
 | Tool | Reliability | Passed | Below its bar | Required by |
 |---|---:|---:|---|---|
-| `query_workspace` | 0.00 | 0/3 | `case4_use_the_moment` | `case4_use_the_moment` |
+| `query_workspace` | 0.33 | 1/3 | `case4_use_the_moment` | `case4_use_the_moment` |
 | `run_analytics_query` | 0.00 | 0/3 | `case20_put_it_in_the_board_pack` | `case20_put_it_in_the_board_pack` |
 | `create_record` | 0.50 | 3/6 | `case2_business_card` | `case1_log_it`, `case2_business_card` |
 | `compose_analytics_report` | 0.00 | 0/3 | `case20_put_it_in_the_board_pack` | `case20_put_it_in_the_board_pack` |
 | `search_records` | 0.33 | 1/3 | `case5_before_the_meeting` | `case5_before_the_meeting` |
 | `search_context` | 0.00 | 0/3 | `case6_ask_the_company` | `case6_ask_the_company` |
-| `merge_records` | 0.67 | 2/3 | — | `case33_two_cards_for_one_company` |
+| `merge_records` | 0.33 | 1/3 | `case33_two_cards_for_one_company` | `case33_two_cards_for_one_company` |
 | `advance_project_phase` | 0.00 | 0/3 | `case41_close_the_project` | `case41_close_the_project` |
-| `relink_activity` | 0.00 | 0/3 | `case9_filed_in_the_wrong_place` | `case9_filed_in_the_wrong_place` |
-| `promote_lead` | 0.00 | 0/3 | `case40_sort_the_queue` | `case40_sort_the_queue` |
-| `archive_record` | 0.67 | 2/3 | — | `case33_two_cards_for_one_company` |
-| `qualify_lead` | 0.00 | 0/3 | `case40_sort_the_queue` | `case40_sort_the_queue` |
+| `decide_approval` | 0.67 | 2/3 | — | `case8_whats_waiting` |
+| `promote_lead` | 0.67 | 2/3 | — | `case40_sort_the_queue` |
+| `list_approvals` | 0.67 | 2/3 | — | `case8_whats_waiting` |
+| `archive_record` | 0.33 | 1/3 | `case33_two_cards_for_one_company` | `case33_two_cards_for_one_company` |
+| `qualify_lead` | 0.67 | 2/3 | — | `case40_sort_the_queue` |
 | `update_tag` | 0.00 | 0/3 | `case32_two_words_for_one_thing` | `case32_two_words_for_one_thing` |
-| `relink_activities` | 0.00 | 0/3 | `case9_filed_in_the_wrong_place` | `case9_filed_in_the_wrong_place` |
 | `merge_tags` | 0.00 | 0/3 | `case32_two_words_for_one_thing` | `case32_two_words_for_one_thing` |
-| `disqualify_lead` | 0.00 | 0/3 | `case40_sort_the_queue` | `case40_sort_the_queue` |
+| `disqualify_lead` | 0.67 | 2/3 | — | `case40_sort_the_queue` |
 | `read_project_360` | 0.00 | 0/3 | `case41_close_the_project` | `case41_close_the_project` |
-| `list_colleagues` | 0.67 | 2/3 | — | `case33_two_cards_for_one_company` |
+| `read_approval` | 0.67 | 2/3 | — | `case8_whats_waiting` |
+| `list_colleagues` | 0.33 | 1/3 | `case33_two_cards_for_one_company` | `case33_two_cards_for_one_company` |
 | `list_tags` | 0.50 | 3/6 | `case32_two_words_for_one_thing` | `case30_a_word_for_it`, `case32_two_words_for_one_thing` |
 | `get_tag` | 0.00 | 0/3 | `case32_two_words_for_one_thing` | `case32_two_words_for_one_thing` |
 
