@@ -138,7 +138,7 @@ func TestSendMessageMCPLoopSendsOnASendScopedPassportAgainstRealPostgres(t *test
 	token := c.mintPassport(t, []string{"read", "send"})
 	invoke := c.sendMessageInvoker(t, token)
 
-	args := fmt.Sprintf(`{"activity_id":%q,"body":"Yes — shipping Monday.","consent_purpose":sendPurpose}`, c.activityID)
+	args := fmt.Sprintf(`{"activity_id":%q,"body":"Yes — shipping Monday.","consent_purpose":%q}`, c.activityID, sendPurpose)
 
 	out, err := invoke(args)
 	if err != nil {

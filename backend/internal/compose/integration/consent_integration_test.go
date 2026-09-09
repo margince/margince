@@ -143,16 +143,22 @@ func TestConsentDefaultDenySuppressesSends(t *testing.T) {
 // correctly ignored. Correspondence is allowed on a recorded qualifying event
 // and needs no consent object at all — while transactional mail, whose basis is
 // the contract itself, needs neither.
-func TestCorrespondenceAndTransactionalAreNotConsentGated(t *testing.T) {
+func TestCorrespondenceIsNotConsentGatedAndATransactionalClaimIsNotEvidence(t *testing.T) {
 	c := setupConsent(t)
 
 	// The fixture's person wrote to us: setupConsent captures an INBOUND
 	// activity from them, which is the qualifying event correspondence needs.
-	if status, code := c.send(t, "transactional"); status != http.StatusAccepted {
-		t.Fatalf("transactional send → %d %q, want 202 — the contract is the basis, not consent", status, code)
-	}
+	// No consent record anywhere, and the send is allowed — a derived basis is
+	// a basis.
 	if status, code := c.send(t, "business_correspondence"); status != http.StatusAccepted {
 		t.Fatalf("correspondence send → %d %q, want 202 — they wrote to us first", status, code)
+	}
+	// The transactional key NAMES a claim; it is not evidence for one. A
+	// contract basis belongs to a person with an invoice or an agreement behind
+	// them, and this fixture's person has neither — so the key alone buys
+	// nothing, which is the whole of what it used to buy.
+	if status, code := c.send(t, "transactional"); status != http.StatusConflict {
+		t.Fatalf("transactional send → %d %q, want 409 — the purpose key is a claim, and nothing here evidences it", status, code)
 	}
 }
 

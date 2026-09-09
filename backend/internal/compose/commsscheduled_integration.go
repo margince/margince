@@ -84,12 +84,13 @@ func ScheduleAsAgentForTest(
 	anchor ids.ActivityID,
 	in activities.SendEmailInput,
 	at time.Time,
+	origin SendOrigin,
 ) (activities.SendOutcome, error) {
 	inserter, err := jobs.NewInserter(pool, slog.New(slog.DiscardHandler))
 	if err != nil {
 		return activities.SendOutcome{}, err
 	}
-	store := sendStore(pool, SendPath{})
+	store := sendStore(pool, origin.sendPath())
 	agentCtx := principal.WithCorrelationID(
 		principal.WithActor(principal.WithWorkspaceID(ctx, workspace), actor), ids.NewV7())
 	return store.SendOrSchedule(agentCtx, activities.FromActivity(anchor), in,

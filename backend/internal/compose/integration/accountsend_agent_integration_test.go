@@ -45,6 +45,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
@@ -55,7 +56,7 @@ import (
 func accountSendBody(org, subject string) AnyMap {
 	return AnyMap{
 		"subject": subject, "body": "Good morning — introducing ourselves.",
-		"to": []string{"buyer@preflight.test"}, "consent_purpose": sendPurpose,
+		"to": []string{"buyer@preflight.test"}, "consent_purpose": sendPurpose, "communication_context": agentSendContext,
 		"links": []AnyMap{{"entity_type": "organization", "entity_id": org}},
 	}
 }
@@ -66,6 +67,21 @@ type accountSendEnv struct {
 	*preflightEnv
 	org string
 }
+
+// agentSendContext is what every send in this suite claims.
+//
+// CLAIMED rather than left to the legacy arm, and the reason is not style. An
+// unclaimed correspondence send derives a one-click unsubscribe link, and the
+// link is built from the installation's public origin — which the APPROVED
+// RETRY path cannot reach: an accepted held message is re-armed through
+// heldSendActors, which composes sendStore(pool, SendPath{}) with no origin at
+// all. That is a real defect in the product and is tracked as #5153; it is not
+// this suite's subject, which is who authorized an agent's send and when.
+//
+// Answering an account that wrote to us carries no link, so these sends do not
+// depend on the origin either way — and when #5153 lands, nothing here has to
+// change.
+const agentSendContext = string(commsauthz.CategoryReplyToInbound)
 
 func setupAccountSend(t *testing.T) *accountSendEnv {
 	t.Helper()
@@ -158,7 +174,7 @@ func TestTheMCPDoorStagesTheSameShapeAsTheRESTDoor(t *testing.T) {
 
 	args, err := json.Marshal(map[string]any{
 		"to": []string{"buyer@preflight.test"}, "subject": "Hello over MCP",
-		"body": "Good morning.", "consent_purpose": sendPurpose,
+		"body": "Good morning.", "consent_purpose": sendPurpose, "communication_context": agentSendContext,
 		"links": []map[string]string{{"entity_type": "organization", "entity_id": a.org}},
 	})
 	if err != nil {
@@ -214,7 +230,7 @@ func TestAFlooredAccountSendStagesAndOnlyLeavesOnceApproved(t *testing.T) {
 	token := a.mintAccountSendPassport(t)
 	args, err := json.Marshal(map[string]any{
 		"to": []string{"buyer@preflight.test"}, "subject": "Hello from an agent",
-		"body": "Good morning.", "consent_purpose": sendPurpose,
+		"body": "Good morning.", "consent_purpose": sendPurpose, "communication_context": agentSendContext,
 		"links": []map[string]string{{"entity_type": "organization", "entity_id": a.org}},
 	})
 	if err != nil {
@@ -263,7 +279,7 @@ func TestAFlooredAccountSendStagesAndOnlyLeavesOnceApproved(t *testing.T) {
 	// exact message.
 	retry, err := json.Marshal(map[string]any{
 		"to": []string{"buyer@preflight.test"}, "subject": "Hello from an agent",
-		"body": "Good morning.", "consent_purpose": sendPurpose,
+		"body": "Good morning.", "consent_purpose": sendPurpose, "communication_context": agentSendContext,
 		"links":       []map[string]string{{"entity_type": "organization", "entity_id": a.org}},
 		"approval_id": approvalID,
 	})

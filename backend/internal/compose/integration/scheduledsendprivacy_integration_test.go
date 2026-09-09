@@ -36,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 func TestErasingARecipientEmptiesAndStopsTheirScheduledMail(t *testing.T) {
@@ -153,6 +154,12 @@ func TestABlindCopiedSubjectSeesTheirOwnMailAndNobodyElsesAddress(t *testing.T) 
 		"to":              []string{"visible@preflight.test"},
 		"bcc":             []string{"buyer@preflight.test", otherBlind},
 		"consent_purpose": sendPurpose,
+		// CLAIMED, because this message goes to several people at once. A send
+		// that carries a one-click unsubscribe link reaches one addressee at a
+		// time — the link is personal to whoever it opts out — so a blind-copied
+		// message can only exist under a category that carries none. Answering
+		// people who wrote to us is such a category; marketing is not.
+		"communication_context": string(commsauthz.CategoryReplyToInbound),
 		"links": []AnyMap{
 			{"entity_type": "person", "entity_id": p.personID},
 		},

@@ -26,6 +26,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // sendMarketing issues an authenticated send-email and returns the status
@@ -35,11 +36,26 @@ import (
 // (transmittedBody), not this response: the API caller is not the recipient
 // and has nothing to unsubscribe from. host/xfProto let a test forge the
 // request origin to prove the emitted link ignores them.
+// lockedPurpose is the one purpose the preference center refuses to change.
+// Named apart from sendPurpose because the two stopped being the same word:
+// `transactional` is still the locked lane and no longer authorizes a send, so
+// a case about locking and a case about sending now need different purposes.
+const lockedPurpose = "transactional"
+
 func sendMarketing(t *testing.T, e *apptest.AppEnv, activityID, purpose, host, xfProto string) (int, string) {
 	t.Helper()
-	raw, err := json.Marshal(AnyMap{
-		"subject": "Newsletter", "body": "hello", "to": []string{"subject@consent.test"}, "consent_purpose": purpose,
-	})
+	return postSend(t, e, activityID, AnyMap{
+		"subject": "Newsletter", "body": "hello", "to": []string{"subject@consent.test"},
+		"consent_purpose": purpose,
+	}, host, xfProto)
+}
+
+// postSend is the poster both send helpers call. The forged-origin headers it
+// sets are the subject of a case in this file, so a second copy of them would
+// be a second place for them to stop being sent.
+func postSend(t *testing.T, e *apptest.AppEnv, activityID string, body AnyMap, host, xfProto string) (int, string) {
+	t.Helper()
+	raw, err := json.Marshal(body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -191,12 +207,31 @@ func sendAndAssertUnsubscribeLink(t *testing.T, c *consentEnv) string {
 		t.Fatalf("hostile Host reshaped the unsubscribe link: %q", hostileLink)
 	}
 
-	// A transactional (locked) send has nothing to unsubscribe from, so
-	// nothing is appended to what the sender wrote.
-	if _, tbody := sendMarketing(t, c.AppEnv, c.activityID, sendPurpose, "", ""); strings.Contains(tbody, "/unsubscribe") {
-		t.Fatalf("transactional send carried an unsubscribe link:\n%s", tbody)
+	// A send with nothing to unsubscribe FROM appends nothing to what the
+	// sender wrote. The claim is what decides it: only the marketing category
+	// carries a link, so a reply to somebody's own message carries none.
+	//
+	// Claimed rather than left blank. An unclaimed send falls to the legacy
+	// arm, where the purpose KEY decides — and the one key that suppressed a
+	// link there was `transactional`, which no longer authorizes a send at all.
+	// Leaving it blank would test the vestigial half of that rule through a
+	// send the engine now refuses.
+	if _, tbody := sendReplyToInbound(t, c.AppEnv, c.activityID); strings.Contains(tbody, "/unsubscribe") {
+		t.Fatalf("a reply to an inbound message carried an unsubscribe link:\n%s", tbody)
 	}
 	return token
+}
+
+// sendReplyToInbound sends under a claimed non-marketing category — the shape
+// that has nothing to unsubscribe from because it is answering a message the
+// recipient sent.
+func sendReplyToInbound(t *testing.T, e *apptest.AppEnv, activityID string) (int, string) {
+	t.Helper()
+	return postSend(t, e, activityID, AnyMap{
+		"subject": "Re: your question", "body": "hello",
+		"to":                    []string{"subject@consent.test"},
+		"communication_context": string(commsauthz.CategoryReplyToInbound),
+	}, "", "")
 }
 
 // prefView is the no-login preference center's response shape.
@@ -283,8 +318,10 @@ func assertWithdrawalProvenanceAndWriteShape(t *testing.T, c *consentEnv, token,
 func TestPreferenceCenterOneClickUnsubscribe(t *testing.T) {
 	c := setupConsent(t)
 
-	// A live deal's transactional lane stays open throughout.
-	grantPurpose(t, c, c.purposes[sendPurpose])
+	// The locked lane stays granted throughout — it is what the assertion
+	// below is about, and it is `transactional` by name: locking is a property
+	// of THAT purpose, unrelated to which purpose a send may claim.
+	grantPurpose(t, c, c.purposes[lockedPurpose])
 
 	newsletterID := createNewsletterPurpose(t, c)
 	grantPurpose(t, c, newsletterID)
@@ -296,8 +333,8 @@ func TestPreferenceCenterOneClickUnsubscribe(t *testing.T) {
 	if s, _ := purposeStateOf(t, view, "newsletter"); s != "granted" {
 		t.Fatalf("newsletter shows %q before opt-out, want granted", s)
 	}
-	if s, locked := purposeStateOf(t, view, sendPurpose); s != "granted" || !locked {
-		t.Fatalf("transactional shows state=%q locked=%v, want granted+locked", s, locked)
+	if s, locked := purposeStateOf(t, view, lockedPurpose); s != "granted" || !locked {
+		t.Fatalf("%s shows state=%q locked=%v, want granted+locked", lockedPurpose, s, locked)
 	}
 
 	// A GET/prefetch on the unsubscribe path must NOT withdraw (RFC 8058

@@ -50,10 +50,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// sendPurpose is what every scheduled send in this file claims. Named once so
-// the grant the fixture writes and the purpose the send names cannot drift into
-// disagreeing — a send whose purpose has no grant is held, and the failure
-// reads as the scheduler's rather than the fixture's.
+// sendPurpose is what every scheduled send in this file claims, and what the
+// fixture's grant and a case's withdrawal are both written against.
+//
+// All three read it from here rather than repeating the word, so they answer
+// about one purpose. A send whose purpose has no grant is held, and the failure
+// then reads as the scheduler's rather than the fixture's.
 const sendPurpose = "business_correspondence"
 
 // seedConsentedRecipient creates a person a send may lawfully reach: one
