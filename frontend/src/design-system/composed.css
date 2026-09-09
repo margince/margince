@@ -518,7 +518,10 @@
    compact sizes — this applies only where the header runs wide. */
 .record-head-wide h1 {
   font-size: var(--fs-record-fluid);
-  line-height: 1.05;
+  /* The head box is `overflow: hidden` for the ellipsis, so a line box shorter
+     than the glyphs crops them: at 1.05 the record rung's fluid size cut the
+     descenders and accents out of a name. 1.15 gives them their box. */
+  line-height: 1.15;
   /* Tighter than the display rung's tracking: a name set this large wears the
      scale's own spacing as gaps between its letters. */
   letter-spacing: -0.035em; /* ds:ignore optical, at the record rung's fluid size: --tracking-display reads as gaps between letters this large */
