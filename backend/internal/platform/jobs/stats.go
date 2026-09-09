@@ -79,7 +79,11 @@ type StateRow struct {
 }
 
 // SweepPass is one fan-out kind read per workspace: how many workspaces it
-// covers, and how many of those it is currently failing.
+// covers, and how many of those it is currently failing. For a Fleet kind
+// that fans out to nothing (ADR-0103's collapsed pass — the row itself
+// answers for the whole installation, not one workspace's share of it),
+// Workspaces is 1 when the latest tagged row exists at all, the closest
+// reading this pair has to "the pass ran".
 type SweepPass struct {
 	Kind       string
 	Workspaces int64
@@ -188,6 +192,30 @@ func subWorkspaceFanOutsOf(units map[string]FanOutUnit) (kinds, argsKeys []strin
 	return kinds, argsKeys
 }
 
+// standaloneFleetKinds answers the kinds statsBySweep must read PER KIND
+// rather than per workspace_id: a Fleet kind (jobs.FleetWide) that fans out
+// to nothing is ADR-0103's collapsed pass — it owns no tenant by
+// declaration, so no row of it ever carries a workspace_id, and its own
+// tagged row is the whole pass rather than a dispatcher's row a child kind
+// elsewhere makes visible. A Fleet kind that DOES fan out (FanOutTo set) is
+// the opposite case: its own row is excluded exactly as before, because the
+// children it enqueues are the real per-workspace signal.
+func standaloneFleetKinds() []string {
+	return standaloneFleetKindsOf(allSpecs())
+}
+
+// standaloneFleetKindsOf is the selection itself, over a table a test can
+// build — the same split subWorkspaceFanOutsOf keeps for the same reason.
+func standaloneFleetKindsOf(table map[string]Spec) []string {
+	var kinds []string
+	for _, kind := range slices.Sorted(maps.Keys(table)) {
+		if spec := table[kind]; spec.Fleet && spec.FanOutTo == "" {
+			kinds = append(kinds, kind)
+		}
+	}
+	return kinds
+}
+
 func statsByState(ctx context.Context, pool *pgxpool.Pool) ([]StateRow, error) {
 	// The age is EXTRACTed from the database's own now(), never subtracted
 	// from the app clock: the two clocks differ by enough to move an exact
@@ -255,26 +283,52 @@ func statsByState(ctx context.Context, pool *pgxpool.Pool) ([]StateRow, error) {
 //
 // The sweep tag is what separates a fleet pass from a workspace job someone
 // triggered by hand. A dispatcher's own row carries no workspace and is
-// excluded: it is not one workspace's share of anything. A row whose
-// workspace key is PRESENT but empty is excluded by the same test rather
-// than counted as a workspace of its own — it is malformed, and a phantom
-// tenant here would misreport how much of the fleet a pass actually covers.
+// excluded: it is not one workspace's share of anything — the children it
+// enqueues are, and those are what this query counts for that kind. A row
+// whose workspace key is PRESENT but empty is excluded by the same test
+// rather than counted as a workspace of its own — it is malformed, and a
+// phantom tenant here would misreport how much of the fleet a pass actually
+// covers.
+//
+// A Fleet kind that fans out to NOTHING is a different shape, not a
+// malformed row: ADR-0103's collapsed pass owns no tenant by declaration, so
+// none of its rows will EVER carry a workspace_id — the first arm's
+// predicate excludes every one of them, forever, which is the defect this
+// query used to have (margince#4983). standaloneFleetKinds() names exactly
+// those kinds, and the second arm reads the latest tagged row PER KIND for
+// them instead of per workspace — the closest reading "did the last pass
+// happen" has when there is no workspace grain to read at all. The two arms
+// are kind-disjoint by construction (a kind is declared with a FanOutTo or
+// without one, never both), so UNION ALL cannot double-count one kind
+// between them; the exclusion in the first arm is defensive, so the split
+// holds even if that ever stopped being true of the data.
 func statsBySweep(ctx context.Context, pool *pgxpool.Pool) ([]SweepPass, error) {
+	standalone := standaloneFleetKinds()
 	const q = `
 		SELECT kind,
 		       count(*)::bigint,
 		       count(*) FILTER (WHERE state IN ` + terminalBadStates + `)::bigint
 		FROM (
-		    SELECT DISTINCT ON (kind, args->>'workspace_id')
-		           kind, state::text AS state
-		    FROM river_job
-		    WHERE ` + sweepTagPredicate + `
-		      AND coalesce(args->>'workspace_id', '') <> ''
-		    ORDER BY kind, args->>'workspace_id', created_at DESC, id DESC
+		    (SELECT DISTINCT ON (kind, args->>'workspace_id')
+		            kind, state::text AS state
+		     FROM river_job
+		     WHERE ` + sweepTagPredicate + `
+		       AND coalesce(args->>'workspace_id', '') <> ''
+		       AND NOT (kind = ANY(coalesce($1::text[], ARRAY[]::text[])))
+		     ORDER BY kind, args->>'workspace_id', created_at DESC, id DESC)
+
+		    UNION ALL
+
+		    (SELECT DISTINCT ON (kind)
+		            kind, state::text AS state
+		     FROM river_job
+		     WHERE ` + sweepTagPredicate + `
+		       AND kind = ANY(coalesce($1::text[], ARRAY[]::text[]))
+		     ORDER BY kind, created_at DESC, id DESC)
 		) latest
 		GROUP BY kind`
 
-	cursor, err := pool.Query(ctx, q)
+	cursor, err := pool.Query(ctx, q, standalone)
 	if err != nil {
 		return nil, fmt.Errorf("jobs: reading sweep passes: %w", err)
 	}

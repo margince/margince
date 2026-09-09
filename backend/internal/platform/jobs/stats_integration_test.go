@@ -595,6 +595,75 @@ func TestSweepOmitsADispatchersOwnRow(t *testing.T) {
 	}
 }
 
+// TestSweepCountsAStandaloneFleetPassByKindNotByWorkspace — margince#4983:
+// a Fleet kind that fans out to nothing (embed_drift_sweep, ADR-0103's
+// collapsed shape) never carries a workspace_id, so its own tagged row used
+// to be filtered out by the same test that correctly excludes a
+// dispatcher's row above — leaving the gauge unable to see ANY of its
+// passes, ever, and reading greenest exactly when one was failing.
+// embed_drift_sweep is used rather than a made-up kind for the same reason
+// TestTheUnitPairSeesAFailedConnectionTheWorkspacePairMasks uses
+// telegram_poll: the standalone-kind arm is derived from the contract, so a
+// fixture kind would prove a query that never runs.
+func TestSweepCountsAStandaloneFleetPassByKindNotByWorkspace(t *testing.T) {
+	_, pool := migratedAppPool(t)
+	ctx := t.Context()
+
+	seedJob(ctx, t, pool, seed{
+		Kind: "embed_drift_sweep", State: "discarded",
+		Tags: []string{jobs.SweepTag},
+	})
+
+	snap, err := jobs.Stats(ctx, pool)
+	if err != nil {
+		t.Fatalf("Stats: %v", err)
+	}
+	pass, ok := sweepFor(snap, "embed_drift_sweep")
+	if !ok {
+		t.Fatal("a tagged row of a standalone Fleet kind is missing from the sweep read entirely")
+	}
+	if pass.Workspaces != 1 {
+		t.Errorf("Workspaces = %d, want 1: there is no workspace grain for this kind, and the pass ran once", pass.Workspaces)
+	}
+	if pass.Failed != 1 {
+		t.Errorf("Failed = %d, want 1: the only tick discarded", pass.Failed)
+	}
+}
+
+// TestSweepReadsOnlyTheLatestTickOfAStandaloneFleetPass proves the
+// "latest outcome, never a batch" rule statsBySweep's own doc states also
+// holds for the per-kind arm: an earlier failing tick a later successful
+// one supersedes must not still read as failed.
+func TestSweepReadsOnlyTheLatestTickOfAStandaloneFleetPass(t *testing.T) {
+	_, pool := migratedAppPool(t)
+	ctx := t.Context()
+	earlier, later := time.Now().Add(-2*time.Hour), time.Now().Add(-time.Hour)
+
+	seedJob(ctx, t, pool, seed{
+		Kind: "embed_drift_sweep", State: "discarded",
+		Tags: []string{jobs.SweepTag}, CreatedAt: earlier,
+	})
+	seedJob(ctx, t, pool, seed{
+		Kind: "embed_drift_sweep", State: "completed",
+		Tags: []string{jobs.SweepTag}, CreatedAt: later,
+	})
+
+	snap, err := jobs.Stats(ctx, pool)
+	if err != nil {
+		t.Fatalf("Stats: %v", err)
+	}
+	pass, ok := sweepFor(snap, "embed_drift_sweep")
+	if !ok {
+		t.Fatal("no sweep reported for a tagged standalone Fleet kind")
+	}
+	if pass.Workspaces != 1 {
+		t.Errorf("Workspaces = %d, want 1", pass.Workspaces)
+	}
+	if pass.Failed != 0 {
+		t.Errorf("Failed = %d, want 0: the LATEST tick succeeded", pass.Failed)
+	}
+}
+
 // TestStatsOnAnEmptyJobTableIsAnEmptySnapshotNotAnError — the honest empty
 // case. A fleet with nothing queued is a real state, and the reader above
 // must be able to tell it from a failed read.
