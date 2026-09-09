@@ -14,6 +14,7 @@ package integration
 import (
 	"bytes"
 	"context"
+	"errors"
 	"image"
 	"image/color"
 	"image/png"
@@ -66,6 +67,42 @@ func waitForPutCount(t *testing.T, blob *countingBlobstore, key string, want int
 		}
 		//craft:ignore test-sleep the poll interval for a condition wait bounded by the deadline above, not the fixed-duration sleep this check exists to catch
 		time.Sleep(time.Millisecond)
+	}
+}
+
+// failingFlushWriter forces http.ResponseController.Flush to report an
+// error: ResponseController prefers a FlushError() error method over the
+// plain Flusher it falls back to, and a bare httptest.ResponseRecorder only
+// implements the latter — so nothing exercises streamLogo's flush-failure
+// branch without this.
+type failingFlushWriter struct {
+	*httptest.ResponseRecorder
+}
+
+func (w *failingFlushWriter) FlushError() error {
+	return errors.New("forced flush failure")
+}
+
+// A flush failure is best-effort, logged and nothing else: the reader
+// already has their bytes buffered in the ResponseWriter by the time this
+// runs, and a store that then also fails the write-back (memory, seeded
+// with real bytes) still leaves the response streamLogo already decided.
+func TestOrganizationLogoLogsRatherThanFailsWhenTheFlushErrors(t *testing.T) {
+	e := Setup(t)
+	blob := blobstore.NewMemory()
+	handlers := people.NewHandlers(e.DB()).WithBlobstore(blob)
+	ctx := e.Admin()
+	orgID := seedLoggedOrg(ctx, t, e, blob, logoPNG(t))
+
+	rec := &failingFlushWriter{ResponseRecorder: httptest.NewRecorder()}
+	req := httptest.NewRequest(http.MethodGet, "/v1/organizations/"+orgID.String()+"/logo", nil).WithContext(ctx)
+	handlers.GetOrganizationLogo(rec, req, crmcontracts.Id(orgID.UUID))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET logo = %d, want 200: %s", rec.Code, rec.Body.String())
+	}
+	if !bytes.Equal(rec.Body.Bytes(), logoPNG(t)) {
+		t.Fatal("a failed flush must not change the bytes the reader receives")
 	}
 }
 
