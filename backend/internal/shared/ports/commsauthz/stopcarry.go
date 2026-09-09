@@ -28,10 +28,12 @@ type StopSubject struct {
 	LeadID   ids.LeadID
 }
 
-// PersonStopSubject and LeadStopSubject build the two shapes, so a caller
-// cannot pass a half-filled struct by accident.
+// PersonStopSubject names a person, so a caller cannot pass a half-filled
+// struct by accident.
 func PersonStopSubject(id ids.PersonID) StopSubject { return StopSubject{PersonID: id} }
-func LeadStopSubject(id ids.LeadID) StopSubject     { return StopSubject{LeadID: id} }
+
+// LeadStopSubject names a lead, the other half of the same guard.
+func LeadStopSubject(id ids.LeadID) StopSubject { return StopSubject{LeadID: id} }
 
 // IsZero reports a subject naming nobody, which is a caller bug rather than an
 // empty case: every carry has two real sides.

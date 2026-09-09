@@ -60,7 +60,7 @@ func (s *Store) CarryStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz
 	//
 	// Deliberately not ratified into ungatedEntryPoints. An entry there has to
 	// argue that no gate could apply; here one plainly does.
-	if err := auth.Require(ctx, "person", principal.ActionUpdate); err != nil {
+	if err := auth.Require(ctx, entityPerson, principal.ActionUpdate); err != nil {
 		return err
 	}
 	by, err := storekit.CapturedBy(ctx)
@@ -125,9 +125,9 @@ func (s *Store) CarryStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz
 	// Audited against the SURVIVOR, which is the record whose sending
 	// behaviour just changed. A reader asking "why is this person suppressed"
 	// finds the merge that brought it.
-	entity, entityID := "person", to.PersonID.UUID
+	entity, entityID := entityPerson, to.PersonID.UUID
 	if entityID.IsZero() {
-		entity, entityID = "lead", to.LeadID.UUID
+		entity, entityID = entityLead, to.LeadID.UUID
 	}
 	// AuditEvent, not Audit: an `update` audit demands a before-image, and
 	// there is no prior state to record. The survivor did not have a stop that

@@ -33,15 +33,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
-// liveStops counts one subject's live stops of a given kind, which is the
-// question the send engine asks.
-func liveStops(t *testing.T, e *integration.Env, personID ids.UUID, kind string) int {
+// liveObjections counts one subject's live marketing objections, which is the
+// question the send engine asks of them.
+func liveObjections(t *testing.T, e *integration.Env, personID ids.UUID) int {
 	t.Helper()
 	var n int
 	if err := e.Pool.QueryRow(context.Background(), `
 		SELECT count(*) FROM communication_suppression
 		 WHERE person_id = $1 AND kind = $2 AND revoked_at IS NULL`,
-		personID, kind).Scan(&n); err != nil {
+		personID, commsauthz.ReasonObjection).Scan(&n); err != nil {
 		t.Fatalf("counting live stops: %v", err)
 	}
 	return n
@@ -64,7 +64,7 @@ func TestAMergeCarriesTheRetiringPersonsObjection(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("recording the objection: %v", err)
 	}
-	if got := liveStops(t, e, survivor, commsauthz.ReasonObjection); got != 0 {
+	if got := liveObjections(t, e, survivor); got != 0 {
 		t.Fatalf("precondition: the survivor already holds %d objection(s)", got)
 	}
 
@@ -74,14 +74,14 @@ func TestAMergeCarriesTheRetiringPersonsObjection(t *testing.T) {
 
 	// THE WHOLE POINT: the survivor is the record the engine now evaluates,
 	// so the stop has to be reachable from there.
-	if got := liveStops(t, e, survivor, commsauthz.ReasonObjection); got != 1 {
+	if got := liveObjections(t, e, survivor); got != 1 {
 		t.Fatalf("the survivor holds %d live objection(s) after the merge, want 1 — "+
 			"marketing would resume against somebody who refused it", got)
 	}
 	// AND THE ORIGINAL SURVIVES, because it is evidence about the record that
 	// actually made the objection. Repointing it would make the history say
 	// the objection was made about a different person.
-	if got := liveStops(t, e, objector, commsauthz.ReasonObjection); got != 1 {
+	if got := liveObjections(t, e, objector); got != 1 {
 		t.Errorf("the retired record holds %d objection(s), want its own kept as evidence", got)
 	}
 
@@ -155,7 +155,7 @@ func TestACarryDoesNotDuplicateAStopTheSurvivorAlreadyHolds(t *testing.T) {
 		t.Fatalf("merging: %v", err)
 	}
 
-	if got := liveStops(t, e, survivor, commsauthz.ReasonObjection); got != 1 {
+	if got := liveObjections(t, e, survivor); got != 1 {
 		t.Errorf("the survivor holds %d live objections after the merge, want exactly 1", got)
 	}
 }
@@ -204,7 +204,7 @@ func TestAnUnwiredMergeRefusesOnlyWhenAStopWouldBeLost(t *testing.T) {
 	}
 	// And the stop is still where it was: the refusal rolled the merge back
 	// rather than half-applying it.
-	if got := liveStops(t, e, stoppedSrc, commsauthz.ReasonObjection); got != 1 {
+	if got := liveObjections(t, e, stoppedSrc); got != 1 {
 		t.Errorf("the refused merge left %d stop(s) on the source, want its own intact", got)
 	}
 }
