@@ -261,7 +261,7 @@ func (s *Store) issueLink(ctx context.Context, personID ids.PersonID, kind strin
 			INSERT INTO confirm_token (person_id, token_hash, delivered_to, issued_at, expires_at, kind, purpose_id)
 			VALUES ($1, $2, $3, $4, $5, $6, $7)
 			RETURNING id`,
-			personID, hashConfirmToken(token), deliveredTo, issued, expires,
+			personID, hashPublicToken(token), deliveredTo, issued, expires,
 			kind, nullablePurpose(purposeID)).Scan(&tokenRowID); err != nil {
 			return err
 		}
@@ -352,7 +352,7 @@ func (s *Store) ResolveConfirmToken(ctx context.Context, token string) (ConfirmR
 			  AND EXISTS (SELECT 1 FROM person p
 			               WHERE p.id = ct.person_id AND p.archived_at IS NULL)
 			RETURNING ct.person_id, ct.id, ct.delivered_to, ct.kind, ct.purpose_id`,
-			hashConfirmToken(token), s.now().UTC()).Scan(
+			hashPublicToken(token), s.now().UTC()).Scan(
 			&ref.PersonID, &ref.TokenID, &ref.DeliveredTo, &ref.Kind, &purposeID)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
@@ -389,7 +389,7 @@ func (s *Store) subjectOfConfirmTokenTx(ctx context.Context, tx pgx.Tx, token st
 		 WHERE ct.token_hash = $1 AND ct.consumed_at IS NULL AND ct.expires_at > $2
 		   AND EXISTS (SELECT 1 FROM person p
 		                WHERE p.id = ct.person_id AND p.archived_at IS NULL)`,
-		hashConfirmToken(token), s.now().UTC()).Scan(&personID, &kind)
+		hashPublicToken(token), s.now().UTC()).Scan(&personID, &kind)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.PersonID{}, "", fmt.Errorf("confirm token: %w", apperrors.ErrNotFound)
 	}
@@ -412,7 +412,7 @@ func (s *Store) spendConfirmTokenTx(ctx context.Context, tx pgx.Tx, token string
 		  AND EXISTS (SELECT 1 FROM person p
 		               WHERE p.id = ct.person_id AND p.archived_at IS NULL)
 		RETURNING ct.person_id, ct.id, ct.delivered_to, ct.kind, ct.purpose_id`,
-		hashConfirmToken(token), s.now().UTC()).Scan(
+		hashPublicToken(token), s.now().UTC()).Scan(
 		&ref.PersonID, &ref.TokenID, &ref.DeliveredTo, &ref.Kind, &purposeID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ConfirmRef{}, fmt.Errorf("confirm token: %w", apperrors.ErrNotFound)
@@ -431,7 +431,11 @@ func newConfirmToken() (string, error) {
 	return "cfm_" + base64.RawURLEncoding.EncodeToString(buf[:]), nil
 }
 
-func hashConfirmToken(token string) string {
+// hashPublicToken hashes any credential a public link carries — a confirm
+// token and a withdrawal credential both. Named for the surface rather than
+// for the first caller, because the second one arrived and a shared helper
+// called hashConfirmToken would have read as the wrong function being reused.
+func hashPublicToken(token string) string {
 	sum := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(sum[:])
 }

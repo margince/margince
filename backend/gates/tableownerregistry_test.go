@@ -215,6 +215,7 @@ var tableOwners = map[string]string{
 	// what the token authorises is a consent decision and the address it was
 	// delivered to is the evidence that decision rests on.
 	"confirm_token":             "internal/modules/consent",
+	"withdrawal_credential":     "internal/modules/consent",
 	"person_confirm_submission": "internal/modules/consent",
 	// retention_policy sits in consent's DDL block (DM-DDL-10) but is OWNED by
 	// privacy, because ownership here names the module whose store owns the
