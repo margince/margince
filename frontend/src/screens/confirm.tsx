@@ -103,14 +103,21 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
   // is how the two drift.
   const marketingWording = t("confirm.marketing.ask");
 
+  // Narrowed BEFORE any record field is read, including here. A subscription
+  // body carries no correctable field at all, and indexing it by `full_name` is
+  // the same mistake the discriminator exists to stop. The typechecker says so
+  // now that the union is honest, which is how this one was found — it ran on
+  // both bodies before, silently.
+  const record = card?.kind === "record_confirmation" ? card : undefined;
+
   const corrections = useMemo(() => {
-    if (!card) {
+    if (!record) {
       return [];
     }
     return CORRECTABLE.filter(
-      (field) => edits[field] !== undefined && edits[field] !== card[field],
+      (field) => edits[field] !== undefined && edits[field] !== record[field],
     ).map((field) => ({ field, value: edits[field] ?? "" }));
-  }, [card, edits]);
+  }, [record, edits]);
 
   const submit = useMutation({
     // The SUBSCRIPTION flag arrives as a variable, not off render state.
