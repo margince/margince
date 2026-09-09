@@ -1506,7 +1506,10 @@
 .co-reading-today-actions {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  /* A control row's own rung, by role rather than by rung: the disclosure and
+     the verb read as one strip of controls, and the head band beside them is
+     spaced by the panel. */
+  gap: var(--gapActions);
   flex: none;
 }
 /* The three rated dimensions under the verdict: a dot in the dimension's

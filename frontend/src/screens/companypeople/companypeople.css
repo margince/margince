@@ -8,6 +8,7 @@
  * again as tall as the confirmed ones beside them. Two classes, so that
  * measure wins wherever the two sheets land in the bundle. */
 .cp-seat.staging-card {
+  /* ds:ignore a board tile: a card's inset overtops the seats beside it */
   padding: var(--space-2);
 }
 
