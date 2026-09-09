@@ -149,8 +149,8 @@ const customFieldPrefix = "cf_"
 //
 // A cf_-prefixed key passes: whether that custom field is active in this
 // workspace is the store's ratified question, not a shape this tool can judge.
-func rejectUnknownFields(shapes map[datasource.EntityType]reflect.Type, recordType string, fields json.RawMessage) error {
-	shape, ok := shapes[datasource.EntityType(recordType)]
+func rejectUnknownFields(shapes writeShapes, recordType string, fields json.RawMessage) error {
+	shape, ok := shapes.types[datasource.EntityType(recordType)]
 	if !ok {
 		// An unknown record_type is the provider's refusal to make, and it
 		// names the served vocabulary when it does.
@@ -202,9 +202,10 @@ func rejectUnknownFields(shapes map[datasource.EntityType]reflect.Type, recordTy
 		// unknown KEYS inside it, which are not contract fields at all and
 		// which a client cannot look up. A refusal naming a key the schema does
 		// not have points at nothing.
-		Field:    fieldsArg,
-		Cause:    fmt.Errorf("%s does not accept %s", recordType, strings.Join(unknown, ", ")),
-		Guidance: "accepts " + strings.Join(contractFieldNames(shape), ", ") + " (or cf_<slug> for an active custom field)",
+		Field: fieldsArg,
+		Cause: fmt.Errorf("%s does not accept %s", recordType, strings.Join(unknown, ", ")),
+		Guidance: "accepts " + shapes.acceptedBy(recordType, shape) +
+			" (or cf_<slug> for an active custom field)",
 	}
 }
 
@@ -279,3 +280,41 @@ func UpdatableFields(recordType datasource.EntityType) ([]string, bool) {
 // fieldsArg is the argument name every refusal above blames, as the contract
 // spells it: the payload is `fields` on both the create and the patch shape.
 const fieldsArg = "fields"
+
+// writeShapes pairs the reflected types a decoder binds against with the
+// rendered shape a refusal hands back, so the two halves of "what this record
+// type accepts" cannot be looked up from different places and disagree.
+type writeShapes struct {
+	types map[datasource.EntityType]reflect.Type
+	// rendered is gen-recordfields' own line for each record type: every field
+	// with its JSON type, its closed vocabulary where it has one, and a `?` on
+	// the ones the body may omit.
+	rendered map[string]string
+}
+
+var (
+	createWriteShapes = writeShapes{types: createShapes, rendered: createRecordShapes}
+	updateWriteShapes = writeShapes{types: updateShapes, rendered: updateRecordShapes}
+)
+
+// acceptedBy renders what this record type accepts, for a caller that has just
+// proved it does not know.
+//
+// THE SHAPE, not the names. A bare name list answers the question the caller
+// already half-knew and leaves the next two refusals in place: a measured run
+// was told `organization` accepts `domains`, sent `["example.test"]`, was
+// refused for an array of strings, and then had to be told the item shape; a
+// second was told `relationship` accepts `kind` only after omitting it. Every
+// one of those facts is in gen-recordfields' line, which the tool DESCRIPTION
+// deliberately does not recite because reciting it there cost 18% of the whole
+// listing on every call. A refusal is paid only when it happens, and it is
+// paid by the caller who needs it.
+//
+// Falls back to the names when a record type has no rendered line — a shape the
+// generator did not reach is still a vocabulary this caller is owed.
+func (w writeShapes) acceptedBy(recordType string, shape reflect.Type) string {
+	if rendered, ok := w.rendered[recordType]; ok && rendered != "" {
+		return rendered
+	}
+	return strings.Join(contractFieldNames(shape), ", ")
+}

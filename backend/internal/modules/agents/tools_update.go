@@ -109,7 +109,7 @@ func (t updateRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
 	}
-	if err := rejectUnknownFields(updateShapes, args.RecordType, args.Fields); err != nil {
+	if err := rejectUnknownFields(updateWriteShapes, args.RecordType, args.Fields); err != nil {
 		return nil, err
 	}
 	if ApprovalRedeemed(ctx) {

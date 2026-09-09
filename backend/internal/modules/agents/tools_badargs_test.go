@@ -73,7 +73,7 @@ func TestALongUnknownKeyDoesNotEatTheAcceptedFieldList(t *testing.T) {
 	// list mid-word — deleting the only part of the message that says what to do
 	// next, precisely when the caller has proved it does not know.
 	long := strings.Repeat("wrongkey", 60)
-	err := rejectUnknownFields(createShapes, "person", json.RawMessage(`{"`+long+`":"x"}`))
+	err := rejectUnknownFields(createWriteShapes, "person", json.RawMessage(`{"`+long+`":"x"}`))
 
 	var bad *BadArgsError
 	if !errors.As(err, &bad) {
