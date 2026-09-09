@@ -36,13 +36,12 @@
     {
       "model": "claude-opus-5",
       "cases_with_a_committed_run": 21,
-      "cases_that_reached_their_bar": 16,
-      "cases_below_their_bar": 5,
+      "cases_that_reached_their_bar": 17,
+      "cases_below_their_bar": 4,
       "runs": 63,
-      "passed": 48,
-      "reliability": 0.7619047619047619,
+      "passed": 50,
+      "reliability": 0.7936507936507936,
       "cases_below_their_bar_named": [
-        "case20_put_it_in_the_board_pack",
         "case2_business_card",
         "case3_spreadsheet",
         "case40_sort_the_queue",
@@ -245,9 +244,9 @@
         {
           "model": "claude-opus-5",
           "runs": 3,
-          "passed": 0,
+          "passed": 2,
           "pass_at": 2,
-          "held": false
+          "held": true
         },
         {
           "model": "claude-sonnet-5",
@@ -1876,11 +1875,9 @@
         },
         "claude-opus-5": {
           "runs": 3,
-          "passed": 0,
-          "reliability": 0,
-          "cases_below_their_bar": [
-            "case20_put_it_in_the_board_pack"
-          ]
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
         },
         "claude-sonnet-5": {
           "runs": 3,
@@ -1951,11 +1948,9 @@
         },
         "claude-opus-5": {
           "runs": 3,
-          "passed": 0,
-          "reliability": 0,
-          "cases_below_their_bar": [
-            "case20_put_it_in_the_board_pack"
-          ]
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
         },
         "claude-sonnet-5": {
           "runs": 3,
