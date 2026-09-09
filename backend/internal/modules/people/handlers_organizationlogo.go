@@ -138,8 +138,17 @@ func (h Handlers) streamLogo(w http.ResponseWriter, r *http.Request, id crmcontr
 	// doc comment makes no promise either way). A blocked write on one of
 	// those must not hold this handler's goroutine, and with it the reader's
 	// connection, open for as long as the disk stays stuck.
+	// Coalesced by key: a burst of readers landing on the same untrimmed
+	// object right after an upload or a migration would otherwise each start
+	// their own write-back of the identical bytes to the identical key. Only
+	// the first claims it; the rest find it already in flight and skip —
+	// once that one write-back finishes, every later read finds the object
+	// already trimmed and TrimTransparentPNG returns src unchanged, so the
+	// map never needs more than one entry per key at a time.
 	if !bytes.Equal(logo, source) {
-		go h.writeBackTrimmedLogo(context.WithoutCancel(r.Context()), orgID, slot, key, logo)
+		if _, running := h.logoWritesInFlight.LoadOrStore(key, struct{}{}); !running {
+			go h.writeBackTrimmedLogo(context.WithoutCancel(r.Context()), orgID, slot, key, logo)
+		}
 	}
 }
 
@@ -154,13 +163,17 @@ func (h Handlers) streamLogo(w http.ResponseWriter, r *http.Request, id crmcontr
 // CPU this read already spent; the object at key still holds the correct, if
 // untrimmed, picture, and the next read tries again.
 //
-// Re-reads the slot's CURRENT key first and refuses to write if it has moved
-// on: this read may have raced a replace or an archive whose own cleanup
-// (deleteUnreferencedLogo, sitelogoreclaim.go) already deleted the object at
-// key, and a write-back landing after that delete would resurrect bytes
-// nothing references — the exact orphan knowledgeorphan_integration_test.go
-// exists to catch, one module over.
+// Re-reads the slot's CURRENT key both before and after the write: this read
+// may race a replace or an archive whose own cleanup (deleteUnreferencedLogo,
+// sitelogoreclaim.go) deletes the object at key, and a write-back landing on
+// either side of that delete would resurrect bytes nothing references — the
+// exact orphan knowledgeorphan_integration_test.go exists to catch, one
+// module over. The before check skips the write outright; the after check
+// covers the narrower race where the replace lands WHILE blob.Put is in
+// flight, by deleting straight back out what this call just wrote rather
+// than leaving it for nothing to ever reference again.
 func (h Handlers) writeBackTrimmedLogo(ctx context.Context, orgID ids.OrganizationID, slot LogoSlot, key string, logo []byte) {
+	defer h.logoWritesInFlight.Delete(key)
 	writeCtx, cancel := context.WithTimeout(ctx, logoWriteBackTimeout)
 	defer cancel()
 	current, err := h.store.OrganizationLogoKey(writeCtx, orgID, slot)
@@ -173,5 +186,17 @@ func (h Handlers) writeBackTrimmedLogo(ctx context.Context, orgID ids.Organizati
 	}
 	if err := h.blob.Put(writeCtx, key, bytes.NewReader(logo), int64(len(logo)), imagenorm.ContentType); err != nil {
 		slog.WarnContext(ctx, "writing back a trimmed organization logo", "err", err)
+		return
+	}
+	after, err := h.store.OrganizationLogoKey(writeCtx, orgID, slot)
+	if err != nil {
+		slog.WarnContext(ctx, "re-reading the current logo key after write-back", "err", err)
+		return
+	}
+	if after == key {
+		return
+	}
+	if err := h.blob.Delete(writeCtx, key); err != nil {
+		slog.WarnContext(ctx, "collecting a write-back that raced a logo replacement", "err", err)
 	}
 }

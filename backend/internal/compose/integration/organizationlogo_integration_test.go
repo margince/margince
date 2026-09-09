@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -382,6 +383,217 @@ func TestOrganizationLogoAnswers304WithoutTouchingBlobStorageWhenTheClientAlread
 	}
 	if got := blob.getCount(); got != 2 {
 		t.Fatalf("blob.Get calls after the stale-etag request = %d, want 2", got)
+	}
+}
+
+// gatedBlobstore lets a test hold one key's Put open at the exact instant a
+// concurrent write would race it — the write-back's own goroutine gives no
+// other hook to land a test's step in the middle of it. Unarmed by default so
+// seedLoggedOrg's own write to the SAME key (the object write-back later
+// overwrites) is never held.
+type gatedBlobstore struct {
+	*countingBlobstore
+	mu      sync.Mutex
+	heldKey string
+	armed   bool
+	entered chan struct{}
+	release chan struct{}
+}
+
+func newGatedBlobstore(inner *countingBlobstore) *gatedBlobstore {
+	return &gatedBlobstore{countingBlobstore: inner}
+}
+
+// hold arms the gate: the next Put(s) to key block after entering (signalling
+// on entered) until releaseHeld is called.
+func (g *gatedBlobstore) hold(key string) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.heldKey = key
+	g.armed = true
+	g.entered = make(chan struct{}, 8)
+	g.release = make(chan struct{})
+}
+
+func (g *gatedBlobstore) releaseHeld() {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.armed = false
+	close(g.release)
+}
+
+func (g *gatedBlobstore) Put(ctx context.Context, key string, r io.Reader, size int64, contentType string) error {
+	g.mu.Lock()
+	gate := g.armed && key == g.heldKey
+	entered, release := g.entered, g.release
+	g.mu.Unlock()
+	if gate {
+		entered <- struct{}{}
+		<-release
+	}
+	return g.countingBlobstore.Put(ctx, key, r, size, contentType)
+}
+
+// waitForNotFound polls rather than asserting immediately, for the same
+// reason waitForPutCount does: the collection this proves runs on the
+// write-back's own goroutine.
+func waitForNotFound(t *testing.T, blob blobstore.Store, key string) {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		_, _, err := blob.Get(context.Background(), key)
+		if errors.Is(err, blobstore.ErrNotFound) {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("Get(%s) never answered ErrNotFound after 2s (err=%v)", key, err)
+		}
+		//craft:ignore test-sleep the poll interval for a condition wait bounded by the deadline above, not the fixed-duration sleep this check exists to catch
+		time.Sleep(time.Millisecond)
+	}
+}
+
+// A burst of readers landing on the same untrimmed object must start at most
+// ONE write-back for it: streamLogo coalesces by key (handlers_organizationlogo.go)
+// precisely so a request storm right after an upload or a migration cannot pile
+// up one goroutine per reader, all racing to write the identical bytes to the
+// identical key.
+func TestOrganizationLogoWriteBackCoalescesConcurrentReadersOfTheSameUntrimmedKey(t *testing.T) {
+	e := Setup(t)
+	inner := newCountingBlobstore()
+	blob := newGatedBlobstore(inner)
+	handlers := people.NewHandlers(e.DB()).WithBlobstore(blob)
+	ctx := e.Admin()
+	wide := image.NewNRGBA(image.Rect(0, 0, 32, 8))
+	for y := range 8 {
+		for x := range 32 {
+			wide.SetNRGBA(x, y, color.NRGBA{R: 255, G: 90, A: 255})
+		}
+	}
+	legacy, err := imagenorm.SquarePNG(wide, 32)
+	if err != nil {
+		t.Fatalf("encoding a legacy square-canvas logo: %v", err)
+	}
+	orgID := seedLoggedOrg(ctx, t, e, blob, legacy)
+	key, err := e.People.OrganizationLogoKey(ctx, orgID, people.LogoWide)
+	if err != nil {
+		t.Fatalf("read the stored logo key: %v", err)
+	}
+	url := "/v1/organizations/" + orgID.String() + "/logo"
+
+	blob.hold(key)
+	const readers = 5
+	var wg sync.WaitGroup
+	for range readers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			rec := httptest.NewRecorder()
+			handlers.GetOrganizationLogo(rec,
+				httptest.NewRequest(http.MethodGet, url, nil).WithContext(ctx),
+				crmcontracts.Id(orgID.UUID))
+		}()
+	}
+	wg.Wait()
+
+	select {
+	case <-blob.entered:
+	case <-time.After(2 * time.Second):
+		t.Fatal("no write-back reached blob.Put within 2s")
+	}
+	select {
+	case <-blob.entered:
+		t.Fatal("a second write-back reached blob.Put concurrently — the readers were not coalesced")
+	case <-time.After(50 * time.Millisecond):
+	}
+	blob.releaseHeld()
+
+	// One write-back, whichever of the readers claimed it: the seed Put plus
+	// this one is 2, not 1+readers.
+	waitForPutCount(t, inner, key, 2)
+}
+
+// writeBackTrimmedLogo re-checks the slot's current key AFTER blob.Put, not
+// only before: a replace landing WHILE the write is in flight can otherwise
+// let a write-back resurrect the exact orphan deleteUnreferencedLogo exists to
+// prevent (handlers_organizationlogo.go). This proves the after-check: a
+// replace that lands mid-Put gets its own resurrected object collected, not
+// left for nothing to ever reference again.
+func TestOrganizationLogoWriteBackCollectsItsOwnObjectWhenAReplaceRacesTheWrite(t *testing.T) {
+	e := Setup(t)
+	inner := newCountingBlobstore()
+	blob := newGatedBlobstore(inner)
+	handlers := people.NewHandlers(e.DB()).WithBlobstore(blob)
+	ctx := e.Admin()
+	wide := image.NewNRGBA(image.Rect(0, 0, 32, 8))
+	for y := range 8 {
+		for x := range 32 {
+			wide.SetNRGBA(x, y, color.NRGBA{R: 255, G: 90, A: 255})
+		}
+	}
+	legacy, err := imagenorm.SquarePNG(wide, 32)
+	if err != nil {
+		t.Fatalf("encoding a legacy square-canvas logo: %v", err)
+	}
+	// The anchor organization, not a fresh one: a REPLACE that can actually
+	// out-rank the first mark needs the human-authored path (SetCompanyLogo),
+	// and that path always targets the installation's own company rather than
+	// taking a record id (companylogo.go says why).
+	offer, icp := "Revenue operations software", "RevOps at SaaS scale-ups"
+	company, err := e.People.SaveCompany(ctx, people.SaveCompanyInput{
+		DisplayName: "Voltaq Systems GmbH",
+		Fields:      map[string]*string{"offer_summary": &offer, "icp": &icp},
+	})
+	if err != nil {
+		t.Fatalf("save the company: %v", err)
+	}
+	orgID := company.OrganizationID
+	staleKey := blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](e.WS), "organization_logo", orgID.String()+"/"+ids.NewV7().String())
+	if err := blob.Put(ctx, staleKey, bytes.NewReader(legacy), int64(len(legacy)), imagenorm.ContentType); err != nil {
+		t.Fatalf("store the legacy logo bytes: %v", err)
+	}
+	if written, _, err := e.People.SetOrganizationLogo(ctx, orgID, staleKey, "https://voltaq.test/legacy.png"); err != nil {
+		t.Fatalf("SetOrganizationLogo (seed): %v", err)
+	} else if !written {
+		t.Fatal("the seed write reported no change on a fresh anchor organization")
+	}
+	url := "/v1/organizations/" + orgID.String() + "/logo"
+
+	blob.hold(staleKey)
+	rec := httptest.NewRecorder()
+	handlers.GetOrganizationLogo(rec, httptest.NewRequest(http.MethodGet, url, nil).WithContext(ctx), crmcontracts.Id(orgID.UUID))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET logo = %d, want 200: %s", rec.Code, rec.Body.String())
+	}
+	select {
+	case <-blob.entered:
+	case <-time.After(2 * time.Second):
+		t.Fatal("the write-back never reached blob.Put within 2s")
+	}
+
+	// A person replaces the mark WHILE the write-back above is blocked inside
+	// blob.Put(staleKey, ...) — the exact window the after-check exists for.
+	// SetCompanyLogo never declines, unlike a second resolve against the
+	// mark this test's own seed already set — the human write is the one
+	// case production actually lets race the write-back this way.
+	replacement := "organization_logo/" + orgID.String() + "/" + ids.NewV7().String()
+	if err := blob.Put(ctx, replacement, bytes.NewReader(logoPNG(t)), int64(len(logoPNG(t))), imagenorm.ContentType); err != nil {
+		t.Fatalf("store the replacement logo bytes: %v", err)
+	}
+	if _, err := e.People.SetCompanyLogo(ctx, people.LogoWide, replacement, "replacement.png"); err != nil {
+		t.Fatalf("SetCompanyLogo (replacement): %v", err)
+	}
+
+	blob.releaseHeld()
+	waitForPutCount(t, inner, staleKey, 2)
+	waitForNotFound(t, blob, staleKey)
+
+	current, err := e.People.OrganizationLogoKey(ctx, orgID, people.LogoWide)
+	if err != nil {
+		t.Fatalf("read the stored logo key: %v", err)
+	}
+	if current != replacement {
+		t.Fatalf("current logo key = %q, want the replacement %q", current, replacement)
 	}
 }
 
