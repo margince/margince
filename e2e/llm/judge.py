@@ -131,13 +131,14 @@ def _fenced(criterion, answer):
     )
 
 
-# The two fences, matched separately and each anchored to one end of the reply.
-# One alternation over `\s*` read the same and was two defects: neither branch
-# was anchored, so the engine retried its whitespace run from every position in
-# the reply, and nothing said which branch owned a run of blank lines between
-# them.
+# The opening fence, anchored to the start of the reply. One alternation over
+# `\s*` covered both fences in a line and was two defects: neither branch was
+# anchored, so the engine retried its whitespace run from every position in the
+# reply, and nothing said which branch owned a run of blank lines between them.
+# The closing fence is not a pattern at all — a regex for it can only be
+# anchored at the END, which leaves the same scan-from-everywhere cost the
+# alternation had. `endswith` asks the question once.
 _OPEN_FENCE = re.compile(r"\A```(?:json)?[^\S\n]*\n?")
-_CLOSE_FENCE = re.compile(r"\n?[^\S\n]*```\Z")
 
 
 def parse_verdict(text):
@@ -149,8 +150,10 @@ def parse_verdict(text):
     latitude is a markdown fence, which is what a fenced reply actually looks
     like when a model ignores the instruction not to write one.
     """
-    unfenced = _OPEN_FENCE.sub("", text.strip())
-    stripped = _CLOSE_FENCE.sub("", unfenced).strip()
+    unfenced = _OPEN_FENCE.sub("", text.strip()).rstrip()
+    if unfenced.endswith("```"):
+        unfenced = unfenced[: -len("```")]
+    stripped = unfenced.strip()
     try:
         reply = json.loads(stripped)
     except json.JSONDecodeError as err:
