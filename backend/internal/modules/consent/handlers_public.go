@@ -18,6 +18,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -47,12 +48,12 @@ func (h Handlers) OneClickUnsubscribe(w http.ResponseWriter, r *http.Request, to
 		httperr.Write(w, r, err)
 		return
 	}
-	ref, err := h.store.ResolvePreferenceToken(r.Context(), token)
+	subject, scoped, err := h.oneClickSubject(r.Context(), token, params)
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return
 	}
-	withdrawn, err := h.unsubscribe(r.Context(), ref.PersonID, params)
+	withdrawn, err := h.unsubscribe(r.Context(), subject, scoped)
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return
@@ -80,6 +81,52 @@ func (h Handlers) unsubscribe(
 		return h.store.PublicWithdrawAll(ctx, personID, []string{named})
 	}
 	return h.store.PublicWithdrawEverything(ctx, personID)
+}
+
+// oneClickSubject resolves the press to the person it acts for, accepting a
+// preference token OR a withdrawal credential.
+//
+// BOTH FAMILIES, because the whole point of the credential is that the link in
+// an old message keeps working after the preference token that rode with it has
+// rotated. A press is a press; which credential carried it is our bookkeeping,
+// not the recipient's problem.
+//
+// THE CREDENTIAL'S SCOPE OVERRIDES A NAMED PURPOSE from the query string. A
+// named-purpose credential may stop the one subscription it was minted for and
+// nothing else, so a request naming a different purpose is refused rather than
+// quietly widened — a link that stopped more than it was for would be acting
+// beyond the authority the recipient was handed.
+func (h Handlers) oneClickSubject(
+	ctx context.Context, token string, params crmcontracts.OneClickUnsubscribeParams,
+) (ids.PersonID, crmcontracts.OneClickUnsubscribeParams, error) {
+	if ref, err := h.store.ResolvePreferenceToken(ctx, token); err == nil {
+		return ref.PersonID, params, nil
+	}
+	ref, err := h.store.ResolveWithdrawalToken(ctx, token)
+	if err != nil {
+		return ids.PersonID{}, params, err
+	}
+	if ref.PersonID.IsZero() {
+		// A lead-only or address-only credential. Withdrawing a per-purpose
+		// consent state needs a person to hold it, and there is none; the stop
+		// such a link records belongs to A3's address-scoped path.
+		return ids.PersonID{}, params, apperrors.ErrNotFound
+	}
+	if ref.Scope == WithdrawalScopeNamedPurpose {
+		named, err := h.store.purposeKeyByID(ctx, ref.PurposeID)
+		if err != nil {
+			return ids.PersonID{}, params, err
+		}
+		if params.Purpose != nil && !strings.EqualFold(strings.TrimSpace(*params.Purpose), named) {
+			return ids.PersonID{}, params, &ValidationError{
+				Field: "purpose",
+				Reason: "this unsubscribe link stops one named subscription, and the request names " +
+					"a different one",
+			}
+		}
+		params.Purpose = &named
+	}
+	return ref.PersonID, params, nil
 }
 
 // maxPreferenceChoices bounds a single granular save. The consent purpose

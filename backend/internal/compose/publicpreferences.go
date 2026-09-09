@@ -12,6 +12,7 @@ package compose
 // actor_type=system) then works unchanged.
 
 import (
+	"context"
 	"net/http"
 	"strings"
 	"time"
@@ -72,7 +73,14 @@ func publicPreferences(store *consent.Store, limits publicPreferenceLimiters) fu
 			// to turn an unknown, revoked or expired token away before any of
 			// them run. Unknown and revoked read identically as absent — the
 			// surface never becomes a consent-state oracle.
-			if _, err := store.ResolvePreferenceToken(r.Context(), token); err != nil {
+			//
+			// EITHER FAMILY OPENS THIS EDGE, and only the one-click POST can
+			// act on the weaker of the two. A withdrawal credential resolves
+			// here so that press reaches its handler; every other route on this
+			// prefix reads or writes a consent state and refuses it again for
+			// itself, because a withdrawal credential carries no authority to
+			// see a purpose list, let alone grant one.
+			if err := resolvesOnThisEdge(r.Context(), store, token); err != nil {
 				httperr.Write(w, r, err)
 				return
 			}
@@ -87,4 +95,20 @@ func publicPreferences(store *consent.Store, limits publicPreferenceLimiters) fu
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
+}
+
+// resolvesOnThisEdge admits a token of either family, so the one-click POST
+// can carry the long-lived credential while the preference centre keeps
+// requiring the short-lived one.
+//
+// It answers the SAME error for both misses, which is what keeps the edge from
+// reporting which family a probed string belonged to.
+func resolvesOnThisEdge(ctx context.Context, store *consent.Store, token string) error {
+	if _, err := store.ResolvePreferenceToken(ctx, token); err == nil {
+		return nil
+	}
+	if _, err := store.ResolveWithdrawalToken(ctx, token); err != nil {
+		return apperrors.ErrNotFound
+	}
+	return nil
 }
