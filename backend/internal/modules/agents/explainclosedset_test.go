@@ -5,11 +5,8 @@ package agents
 
 // A refusal that names a closed set must deliver the WHOLE set.
 //
-// The defect these hold against: this renderer bounded a classified fault's
-// detail with the figure sized for a bad-args echo, so the set — the half a
-// caller acts on — was what the truncation took. A report's block grammar never
-// reached a caller at all, and the analytics populations arrived cut mid-name,
-// which is worse than absent because a partial list reads as a complete one.
+// The set is the half a caller acts on, so it is the half that must survive a
+// truncation rather than the half that pays for it.
 //
 // The vocabularies themselves are NOT named here. They live in compose, which
 // is downstream of this package, so this file proves the MECHANISM against a
@@ -24,11 +21,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/httperr"
 )
-
-func newTestDispatcher() *Dispatcher {
-	return NewDispatcher(nil, nil, "t", "0").
-		WithLogger(slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)))
-}
 
 // closedSetRefusal is the shape both real producers take: one detail carrying
 // prose that names what was refused and then the whole set that would have
@@ -46,7 +38,11 @@ func closedSetRefusal(detail string) error {
 	}
 }
 
-// blockKindRefusal is the report validator's message, as reportdoc spells it.
+// blockKindRefusal has the SHAPE the report validator's message has — prose
+// that names what was refused, then the set. Not a copy of it: reportdoc lives
+// in compose, which this package may not import, so the real vocabularies are
+// held where they are visible (compose's closed-set census) and this file proves
+// only the mechanism.
 func blockKindRefusal(members []string) string {
 	return `block 0 ("paragraph"): no such block kind. A renderer meeting one either draws ` +
 		`something nobody specified or drops it silently, and a report missing a block it ` +
@@ -61,7 +57,8 @@ func TestARefusalDeliversTheWholeClosedSet(t *testing.T) {
 		"record_table", "callout", "evidence_drawer",
 	}
 
-	got := newTestDispatcher().explain("compose_analytics_report", closedSetRefusal(blockKindRefusal(members)))
+	got := NewDispatcher(nil, nil, "t", "0").
+		WithLogger(slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))).explain("compose_analytics_report", closedSetRefusal(blockKindRefusal(members)))
 
 	for _, member := range members {
 		if !strings.Contains(got, member) {
@@ -77,7 +74,8 @@ func TestARefusalDeliversTheWholeClosedSet(t *testing.T) {
 // ceiling at all: the detail lands in a transcript whose later prompts the same
 // model reads, so an unbounded one is an unbounded write into every one of them.
 func TestAnOverlongDetailIsStillCut(t *testing.T) {
-	got := newTestDispatcher().explain("compose_analytics_report",
+	got := NewDispatcher(nil, nil, "t", "0").
+		WithLogger(slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))).explain("compose_analytics_report",
 		closedSetRefusal(strings.Repeat("x", MaxFaultDetail+64)))
 
 	if !strings.Contains(got, "…") {
@@ -98,7 +96,8 @@ func TestAnOverlongDetailIsStillCut(t *testing.T) {
 func TestARefusalUnderTheCeilingIsUntouched(t *testing.T) {
 	detail := blockKindRefusal([]string{"title", "summary", "callout"})
 
-	got := newTestDispatcher().explain("compose_analytics_report", closedSetRefusal(detail))
+	got := NewDispatcher(nil, nil, "t", "0").
+		WithLogger(slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))).explain("compose_analytics_report", closedSetRefusal(detail))
 
 	if !strings.Contains(got, detail) {
 		t.Errorf("a refusal inside the ceiling did not travel verbatim:\nwant substring: %s\ngot: %s", detail, got)

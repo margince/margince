@@ -56,9 +56,9 @@ type FieldNotAllowedError struct {
 
 func (e *FieldNotAllowedError) Error() string {
 	if e.Slot == "" {
-		return fmt.Sprintf("report: field %q is outside this report's vocabulary", e.Field)
+		return fmt.Sprintf("report: field %s is outside this report's vocabulary", httperr.QuoteCaller(e.Field))
 	}
-	return fmt.Sprintf("report: this report's `%s` does not accept %q", e.Slot, e.Field)
+	return fmt.Sprintf("report: this report's `%s` does not accept %s", e.Slot, httperr.QuoteCaller(e.Field))
 }
 
 // MessageFault carries the 422 verdict on the error itself, so the ONE taxonomy
@@ -142,8 +142,8 @@ type FilterValueNotAllowedError struct {
 }
 
 func (e *FilterValueNotAllowedError) Error() string {
-	return fmt.Sprintf("report: this report's `%s` cannot compare %s against %q",
-		slotFilters, e.Kind, e.Filter)
+	return fmt.Sprintf("report: this report's `%s` cannot compare %s against %s",
+		slotFilters, e.Kind, httperr.QuoteCaller(e.Filter))
 }
 
 // MessageFault reuses the contract's one declared 422 code, for the reason
@@ -240,7 +240,8 @@ func (e *EmptyReportPlanError) MessageFault() (code, message string) {
 type ReservedAliasError struct{ Alias string }
 
 func (e *ReservedAliasError) Error() string {
-	return fmt.Sprintf("report: %q is reserved for the drill-through handle this surface adds to every row", e.Alias)
+	return fmt.Sprintf("report: %s is reserved for the drill-through handle this surface adds to every row",
+		httperr.QuoteCaller(e.Alias))
 }
 
 // MessageFault reuses the contract's one declared 422 code, for the reason

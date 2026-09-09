@@ -212,7 +212,7 @@ func validateMeasures(entity Entity, measures []Measure) error {
 		if _, known := knownAggregates[m.Fn]; !known {
 			return &RefusalError{
 				Kind:    RefusalUnsupported,
-				Message: fmt.Sprintf("no aggregate named %q", m.Fn),
+				Message: fmt.Sprintf("no aggregate named %s", httperr.QuoteCaller(string(m.Fn))),
 				Suggest: "use one of: " + strings.Join(AggregateNames(), ", "),
 			}
 		}
@@ -224,7 +224,7 @@ func validateMeasures(entity Entity, measures []Measure) error {
 				return &RefusalError{
 					Kind:    RefusalInvalid,
 					Message: "count takes no field; it counts rows",
-					Suggest: fmt.Sprintf("use count_distinct on %q to count values", m.Field),
+					Suggest: fmt.Sprintf("use count_distinct on %s to count values", httperr.QuoteCaller(m.Field)),
 				}
 			}
 			continue
@@ -236,7 +236,7 @@ func validateMeasures(entity Entity, measures []Measure) error {
 		if numericAggregates[m.Fn] && field.Kind != KindMeasure {
 			return &RefusalError{
 				Kind:    RefusalInvalid,
-				Message: fmt.Sprintf("%s over %q, which is a %s", m.Fn, m.Field, field.Kind),
+				Message: fmt.Sprintf("%s over %s, which is a %s", m.Fn, httperr.QuoteCaller(m.Field), field.Kind),
 				Suggest: fmt.Sprintf("%s one of: %s", m.Fn,
 					strings.Join(entity.FieldNames(KindMeasure), ", ")),
 			}
@@ -270,7 +270,7 @@ func validateAliases(q Query) error {
 			if name == reserved {
 				return &RefusalError{
 					Kind:    RefusalInvalid,
-					Message: fmt.Sprintf("%q is the engine's own column", name),
+					Message: fmt.Sprintf("%s is the engine's own column", httperr.QuoteCaller(name)),
 					Suggest: "name the result something else",
 				}
 			}
@@ -278,7 +278,7 @@ func validateAliases(q Query) error {
 		if seen[name] {
 			return &RefusalError{
 				Kind:    RefusalInvalid,
-				Message: fmt.Sprintf("two result columns would both be called %q", name),
+				Message: fmt.Sprintf("two result columns would both be called %s", httperr.QuoteCaller(name)),
 				Suggest: "give each measure its own name",
 			}
 		}
@@ -305,7 +305,7 @@ func validateFilters(entity Entity, filters []Filter) error {
 		if _, ok := filterSQL[f.Op]; !ok {
 			return &RefusalError{
 				Kind:    RefusalUnsupported,
-				Message: fmt.Sprintf("no comparison named %q", f.Op),
+				Message: fmt.Sprintf("no comparison named %s", httperr.QuoteCaller(string(f.Op))),
 				Suggest: "use one of: " + strings.Join(FilterOpNames(), ", "),
 			}
 		}
@@ -316,8 +316,8 @@ func validateFilters(entity Entity, filters []Filter) error {
 			return &RefusalError{
 				Kind: RefusalInvalid,
 				Message: fmt.Sprintf(
-					"%s on %q was given the wrong shape: %s takes %s",
-					f.Op, f.Field, f.Op, valueShape(f.Op)),
+					"%s on %s was given the wrong shape: %s takes %s",
+					f.Op, httperr.QuoteCaller(f.Field), f.Op, valueShape(f.Op)),
 				Suggest: "drop the value, or use a comparison that takes one",
 			}
 		}
