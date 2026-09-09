@@ -536,14 +536,14 @@ function SeatCard({
   confirming: ReadonlySet<string>;
 }>) {
   const t = useT();
-  // Indigo, dashed, and only here: the treatment means "a machine decided this
-  // and nobody has confirmed it". A seat a colleague typed carries none of it,
-  // which is the whole point — a reader can see which half of the committee is
-  // the product's reading of the evidence and disagree with that half.
+  // `staging-card`, and only here: the product's one drawing of "a machine
+  // decided this and nobody has confirmed it" — the tint, the dashes, the
+  // corner. A seat a colleague typed carries none of it, which is the whole
+  // point: a reader can see which half of the committee is our reading.
   const suggested = seat.ai_suggested === true;
   return (
     <div
-      className={suggested ? "cp-seat cp-seat-suggested" : "cp-seat"}
+      className={suggested ? "cp-seat staging-card" : "cp-seat"}
       data-suggested={suggested ? "true" : undefined}
     >
       {suggested && (

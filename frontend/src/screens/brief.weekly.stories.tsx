@@ -126,7 +126,22 @@ type Story = StoryObj<typeof WeeklySection>;
 // The Monday the panel was designed for: the sentence marked as agent-authored,
 // five outcomes read across as one comparison, the other five figures as a list
 // under them, and the week's closed deals last.
+//
+// The indigo edge is around the SENTENCE alone, and the AI badge sits beside the
+// frozen mark rather than replacing it. Everything below that sentence is a
+// deterministic pass over a closed week, so a tinted panel head would claim a
+// model wrote the figures.
 export const NarratedWeek: Story = {
+  render: panel(
+    weekly(() => jsonResponse(narratedWeek), [WEEK_START, PRIOR_WEEK_START]),
+  ),
+};
+
+// The same week in the dark theme, where `--aiText` over `--aiLight` is the
+// pair the dark accent lift moves first — and where an indigo edge inside a
+// translucent panel is easiest to lose.
+export const NarratedWeekDark: Story = {
+  globals: { theme: "dark" },
   render: panel(
     weekly(() => jsonResponse(narratedWeek), [WEEK_START, PRIOR_WEEK_START]),
   ),

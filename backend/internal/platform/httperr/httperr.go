@@ -158,11 +158,15 @@ func clientInputValidation(err error) (error, bool) {
 // wrapped driver message through. Long enough for a real explanation, short
 // enough that nothing large rides out.
 //
-// Exported as a shared FIGURE, not a promise: the MCP renderer bounds the
-// message it echoes and borrows this number rather than inventing a second,
-// but this package applies it only on the module-declared path — a Message
-// from a direct Validation call arrives unbounded, and escaping can push one
-// that was inside it back over. The echoing surface does its own bounding.
+// Exported as a shared FIGURE, not a promise: this package applies it only on
+// the module-declared path — a Message from a direct Validation call arrives
+// unbounded, and escaping can push one that was inside it back over — so the
+// echoing surface does its own bounding, and the MCP renderer borrows this
+// number for the per-field remedy it writes.
+//
+// It is one of three figures the tool surface applies, each answering a
+// different question about whose words are being echoed.
+// agents.faultExplanation is where that table lives.
 const MaxFaultText = 300
 
 // boundFaultText caps one caller-facing value from a module-declared fault.

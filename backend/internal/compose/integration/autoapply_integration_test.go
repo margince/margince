@@ -276,7 +276,7 @@ func TestAnAutomaticChangeCanBePutBack(t *testing.T) {
 	e.WsExec(t, `UPDATE company SET name_source = 'domain' WHERE id = $1`, company)
 
 	proposal, err := json.Marshal(map[string]any{
-		"company_id":        company,
+		"company_id":   company,
 		"current_name":      "Weber GmbH",
 		"proposed_name":     "Weber Fahrzeugtechnik GmbH",
 		"proposed_name_key": "weber fahrzeugtechnik gmbh",
@@ -360,7 +360,7 @@ func TestAnAutomaticChangeCanBePutBack(t *testing.T) {
 	})
 	undoCtx = principal.WithCorrelationID(undoCtx, ids.NewV7())
 	seam := compose.NewRestoreSeam(e.Pool, compose.NewDispatcher(
-		compose.NewProvider(e.Pool), nil, e.Pool))
+		compose.NewProvider(e.Pool), nil, e.Pool), nil)
 	if _, err := seam.Restore(undoCtx, "company", company, auditID, version); err != nil {
 		t.Fatalf("undoing what the product applied on its own: %v", err)
 	}

@@ -99,23 +99,23 @@ public.activity_link acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd
 public.activity_link.activity_id uuid NOT NULL gen=- def=-
 public.activity_link.activity_link_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
 public.activity_link.activity_link_ceiling CREATE TRIGGER activity_link_ceiling BEFORE INSERT ON public.activity_link FOR EACH ROW EXECUTE FUNCTION activity_link_refuses_past_the_ceiling()
+public.activity_link.activity_link_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
 public.activity_link.activity_link_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
 public.activity_link.activity_link_entity_type_check CHECK ((entity_type = ANY (ARRAY['person'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text])))
 public.activity_link.activity_link_last_activity CREATE TRIGGER activity_link_last_activity AFTER INSERT OR DELETE OR UPDATE ON public.activity_link FOR EACH ROW EXECUTE FUNCTION trg_activity_link_last_activity()
 public.activity_link.activity_link_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE CASCADE
 public.activity_link.activity_link_no_company_meeting CREATE TRIGGER activity_link_no_company_meeting BEFORE INSERT OR UPDATE ON public.activity_link FOR EACH ROW EXECUTE FUNCTION activity_link_refuses_a_company_meeting()
-public.activity_link.activity_link_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
 public.activity_link.activity_link_person_id_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
 public.activity_link.activity_link_pkey PRIMARY KEY (id)
 public.activity_link.activity_link_project_id_fkey FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE
 public.activity_link.activity_link_project_last_activity CREATE TRIGGER activity_link_project_last_activity AFTER INSERT OR DELETE OR UPDATE ON public.activity_link FOR EACH ROW EXECUTE FUNCTION trg_activity_link_project_last_activity()
 public.activity_link.activity_link_shape CHECK ((((entity_type = 'person'::text) AND (person_id IS NOT NULL) AND (company_id IS NULL) AND (deal_id IS NULL) AND (lead_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'company'::text) AND (company_id IS NOT NULL) AND (person_id IS NULL) AND (deal_id IS NULL) AND (lead_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'deal'::text) AND (deal_id IS NOT NULL) AND (person_id IS NULL) AND (company_id IS NULL) AND (lead_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'lead'::text) AND (lead_id IS NOT NULL) AND (person_id IS NULL) AND (company_id IS NULL) AND (deal_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'project'::text) AND (project_id IS NOT NULL) AND (person_id IS NULL) AND (company_id IS NULL) AND (deal_id IS NULL) AND (lead_id IS NULL))))
+public.activity_link.company_id uuid gen=- def=-
 public.activity_link.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.activity_link.deal_id uuid gen=- def=-
 public.activity_link.entity_type text NOT NULL gen=- def=-
 public.activity_link.id uuid NOT NULL gen=- def=uuidv7()
 public.activity_link.lead_id uuid gen=- def=-
-public.activity_link.company_id uuid gen=- def=-
 public.activity_link.person_id uuid gen=- def=-
 public.activity_link.project_id uuid gen=- def=-
 public.activity_link_pkey CREATE UNIQUE INDEX activity_link_pkey ON public.activity_link USING btree (id)
@@ -1007,6 +1007,7 @@ public.attachment.byte_size bigint gen=- def=-
 public.attachment.captured_by text NOT NULL gen=- def=-
 public.attachment.category text NOT NULL gen=- def='other'::text
 public.attachment.checksum text gen=- def=-
+public.attachment.company_id uuid gen=- def=-
 public.attachment.content_type text gen=- def=-
 public.attachment.contract_id uuid gen=- def=-
 public.attachment.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -1019,7 +1020,6 @@ public.attachment.external_part_id text gen=- def=-
 public.attachment.external_source_id text gen=- def=-
 public.attachment.filename text NOT NULL gen=- def=-
 public.attachment.id uuid NOT NULL gen=- def=uuidv7()
-public.attachment.company_id uuid gen=- def=-
 public.attachment.pinned boolean NOT NULL gen=- def=false
 public.attachment.project_id uuid gen=- def=-
 public.attachment.source text NOT NULL gen=- def=-
@@ -1209,14 +1209,14 @@ public.capture_auto_enrich_budget.enqueued integer NOT NULL gen=- def=0
 public.capture_auto_enrich_budget_pkey CREATE UNIQUE INDEX capture_auto_enrich_budget_pkey ON public.capture_auto_enrich_budget USING btree (budget_date)
 public.capture_auto_enrich_state acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_auto_enrich_state.attempts integer NOT NULL gen=- def=0
-public.capture_auto_enrich_state.capture_auto_enrich_state_last_outcome_check CHECK (((last_outcome IS NULL) OR (last_outcome = ANY (ARRAY['queued'::text, 'applied'::text, 'empty'::text, 'failed'::text, 'exhausted'::text]))))
 public.capture_auto_enrich_state.capture_auto_enrich_state_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
+public.capture_auto_enrich_state.capture_auto_enrich_state_last_outcome_check CHECK (((last_outcome IS NULL) OR (last_outcome = ANY (ARRAY['queued'::text, 'applied'::text, 'empty'::text, 'failed'::text, 'exhausted'::text]))))
 public.capture_auto_enrich_state.capture_auto_enrich_state_pkey PRIMARY KEY (company_id)
+public.capture_auto_enrich_state.company_id uuid NOT NULL gen=- def=-
 public.capture_auto_enrich_state.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_auto_enrich_state.last_attempt_at timestamp with time zone gen=- def=-
 public.capture_auto_enrich_state.last_outcome text gen=- def=-
 public.capture_auto_enrich_state.next_attempt_at timestamp with time zone gen=- def=now()
-public.capture_auto_enrich_state.company_id uuid NOT NULL gen=- def=-
 public.capture_auto_enrich_state.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_auto_enrich_state_pkey CREATE UNIQUE INDEX capture_auto_enrich_state_pkey ON public.capture_auto_enrich_state USING btree (company_id)
 public.capture_backfill acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -1226,6 +1226,7 @@ public.capture_backfill.capture_backfill_pkey PRIMARY KEY (id)
 public.capture_backfill.capture_backfill_status_check CHECK ((status = ANY (ARRAY['queued'::text, 'running'::text, 'done'::text, 'error'::text, 'cancelled'::text])))
 public.capture_backfill.capture_backfill_window_months_check CHECK ((window_months = ANY (ARRAY[3, 6, 12, 24, 60])))
 public.capture_backfill.captured integer NOT NULL gen=- def=0
+public.capture_backfill.companies_created integer NOT NULL gen=- def=0
 public.capture_backfill.completed_at timestamp with time zone gen=- def=-
 public.capture_backfill.connection_id uuid NOT NULL gen=- def=-
 public.capture_backfill.consecutive_failures integer NOT NULL gen=- def=0
@@ -1237,7 +1238,6 @@ public.capture_backfill.inflight_captured integer NOT NULL gen=- def=0
 public.capture_backfill.inflight_scanned integer NOT NULL gen=- def=0
 public.capture_backfill.inflight_skipped integer NOT NULL gen=- def=0
 public.capture_backfill.last_error_class text gen=- def=-
-public.capture_backfill.companies_created integer NOT NULL gen=- def=0
 public.capture_backfill.people_created integer NOT NULL gen=- def=0
 public.capture_backfill.scanned integer NOT NULL gen=- def=0
 public.capture_backfill.skipped integer NOT NULL gen=- def=0
@@ -1749,6 +1749,449 @@ public.communication_suppression.source text NOT NULL gen=- def=-
 public.communication_suppression_live_address CREATE INDEX communication_suppression_live_address ON public.communication_suppression USING btree (lower(address)) WHERE ((address IS NOT NULL) AND (revoked_at IS NULL))
 public.communication_suppression_live_person CREATE INDEX communication_suppression_live_person ON public.communication_suppression USING btree (person_id) WHERE ((person_id IS NOT NULL) AND (revoked_at IS NULL))
 public.communication_suppression_pkey CREATE UNIQUE INDEX communication_suppression_pkey ON public.communication_suppression USING btree (id)
+public.company acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.company.address_city text gen=- def=-
+public.company.address_country text gen=- def=-
+public.company.address_line1 text gen=- def=-
+public.company.address_line2 text gen=- def=-
+public.company.address_postal_code text gen=- def=-
+public.company.address_region text gen=- def=-
+public.company.archived_at timestamp with time zone gen=- def=-
+public.company.captured_by text NOT NULL gen=- def=-
+public.company.classification text NOT NULL gen=- def='prospect'::text
+public.company.company_anchor_is_permanent CHECK (((NOT is_anchor) OR ((archived_at IS NULL) AND (merged_into_id IS NULL))))
+public.company.company_classification_check CHECK ((classification = ANY (ARRAY['prospect'::text, 'customer'::text, 'agency'::text, 'reseller'::text, 'tech_vendor'::text, 'platform'::text, 'partner'::text, 'competitor'::text, 'other'::text])))
+public.company.company_delete_clears_deal_partner CREATE TRIGGER company_delete_clears_deal_partner BEFORE DELETE ON public.company FOR EACH ROW EXECUTE FUNCTION deal_clear_partner_attribution_on_company_delete()
+public.company.company_description_length CHECK (((description IS NULL) OR (length(description) <= 500)))
+public.company.company_geocode_resolved_has_a_point CHECK (((geocode_status IS DISTINCT FROM 'ok'::text) OR ((geocode_lat IS NOT NULL) AND (geocode_lon IS NOT NULL) AND ((geocode_lat >= ('-90'::integer)::double precision) AND (geocode_lat <= (90)::double precision)) AND ((geocode_lon >= ('-180'::integer)::double precision) AND (geocode_lon <= (180)::double precision)))))
+public.company.company_geocode_status_check CHECK (((geocode_status IS NULL) OR (geocode_status = ANY (ARRAY['ok'::text, 'failed'::text, 'no_match'::text, 'stale'::text]))))
+public.company.company_lifecycle_check CHECK ((lifecycle = ANY (ARRAY['unknown'::text, 'target'::text, 'prospect'::text, 'opportunity'::text, 'customer'::text, 'former_customer'::text, 'disqualified'::text])))
+public.company.company_linkedin_url_shape CHECK (((linkedin_url IS NULL) OR (linkedin_url ~ '^https://([a-z]{2,3}\.)?linkedin\.com/company/[^/?#]+$'::text)))
+public.company.company_merged_into_id_fkey FOREIGN KEY (merged_into_id) REFERENCES company(id) ON DELETE SET NULL (merged_into_id)
+public.company.company_name_source_check CHECK ((name_source = ANY (ARRAY['human'::text, 'dossier'::text, 'signature'::text, 'domain'::text])))
+public.company.company_not_own_parent CHECK (((parent_company_id IS NULL) OR (parent_company_id <> id)))
+public.company.company_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
+public.company.company_owner_private_names_its_owner CHECK (((visibility <> 'owner'::text) OR (owner_id IS NOT NULL)))
+public.company.company_parent_company_id_fkey FOREIGN KEY (parent_company_id) REFERENCES company(id) ON DELETE SET NULL (parent_company_id)
+public.company.company_pkey PRIMARY KEY (id)
+public.company.company_refuse_anchor_retirement CREATE TRIGGER company_refuse_anchor_retirement BEFORE INSERT OR UPDATE OF merged_into_id, is_anchor ON public.company FOR EACH ROW EXECUTE FUNCTION company_refuse_anchor_retirement()
+public.company.company_relevance_check CHECK (((relevance IS NULL) OR ((relevance >= 0) AND (relevance <= 100))))
+public.company.company_size_band_check CHECK (((size_band IS NULL) OR (size_band = ANY (ARRAY['1-10'::text, '11-50'::text, '51-200'::text, '201-500'::text, '501-1000'::text, '1001-5000'::text, '5000+'::text]))))
+public.company.company_visibility_check CHECK ((visibility = ANY (ARRAY['workspace'::text, 'owner'::text])))
+public.company.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.company.description text gen=- def=-
+public.company.display_name text NOT NULL gen=- def=-
+public.company.geocode_input_hash text gen=- def=-
+public.company.geocode_lat double precision gen=- def=-
+public.company.geocode_lon double precision gen=- def=-
+public.company.geocode_provider text gen=- def=-
+public.company.geocode_status text gen=- def=-
+public.company.geocoded_at timestamp with time zone gen=- def=-
+public.company.id uuid NOT NULL gen=- def=uuidv7()
+public.company.industry text gen=- def=-
+public.company.is_anchor boolean NOT NULL gen=- def=false
+public.company.last_activity_at timestamp with time zone gen=- def=-
+public.company.legal_hold boolean NOT NULL gen=- def=false
+public.company.legal_name text gen=- def=-
+public.company.lifecycle text NOT NULL gen=- def='unknown'::text
+public.company.linkedin_url text gen=- def=-
+public.company.logo_icon_object_key text gen=- def=-
+public.company.logo_icon_origin text gen=- def=-
+public.company.logo_object_key text gen=- def=-
+public.company.logo_origin text gen=- def=-
+public.company.merged_into_id uuid gen=- def=-
+public.company.name_source text NOT NULL gen=- def='human'::text
+public.company.owner_id uuid gen=- def=-
+public.company.parent_company_id uuid gen=- def=-
+public.company.quarantined_at timestamp with time zone gen=- def=-
+public.company.raw jsonb gen=- def=-
+public.company.relevance smallint gen=- def=-
+public.company.search_tsv tsvector gen=s def=(((setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(display_name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(display_name, ''::text))), 'A'::"char")) || setweight(to_tsvector('simple'::regconfig, f_unaccent(((COALESCE(legal_name, ''::text) || ' '::text) || COALESCE(industry, ''::text)))), 'B'::"char")) || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(((COALESCE(legal_name, ''::text) || ' '::text) || COALESCE(industry, ''::text)))), 'B'::"char"))
+public.company.size_band text gen=- def=-
+public.company.source text NOT NULL gen=- def=-
+public.company.trg_company_geocode_stale CREATE TRIGGER trg_company_geocode_stale BEFORE UPDATE OF address_line1, address_line2, address_city, address_region, address_postal_code, address_country ON public.company FOR EACH ROW WHEN (((old.address_line1 IS DISTINCT FROM new.address_line1) OR (old.address_line2 IS DISTINCT FROM new.address_line2) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_region IS DISTINCT FROM new.address_region) OR (old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION company_geocode_goes_stale()
+public.company.trg_company_no_cycle CREATE TRIGGER trg_company_no_cycle BEFORE INSERT OR UPDATE OF parent_company_id ON public.company FOR EACH ROW WHEN ((new.parent_company_id IS NOT NULL)) EXECUTE FUNCTION company_no_ancestor_cycle()
+public.company.trg_company_updated CREATE TRIGGER trg_company_updated BEFORE UPDATE ON public.company FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
+public.company.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.company.version bigint NOT NULL gen=- def=1
+public.company.visibility text NOT NULL gen=- def='workspace'::text
+public.company_brief acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.company_brief.company_brief_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
+public.company_brief.company_brief_generated_by_check CHECK ((generated_by = ANY (ARRAY['model'::text, 'deterministic'::text])))
+public.company_brief.company_brief_pkey PRIMARY KEY (id)
+public.company_brief.company_brief_user_id_company_id_key UNIQUE (user_id, company_id)
+public.company_brief.company_brief_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.company_brief.company_id uuid NOT NULL gen=- def=-
+public.company_brief.fingerprint text NOT NULL gen=- def=-
+public.company_brief.generated_at timestamp with time zone NOT NULL gen=- def=-
+public.company_brief.generated_by text NOT NULL gen=- def=-
+public.company_brief.id uuid NOT NULL gen=- def=uuidv7()
+public.company_brief.payload jsonb NOT NULL gen=- def=-
+public.company_brief.user_id uuid NOT NULL gen=- def=-
+public.company_brief_company_ix CREATE INDEX company_brief_company_ix ON public.company_brief USING btree (company_id)
+public.company_brief_pkey CREATE UNIQUE INDEX company_brief_pkey ON public.company_brief USING btree (id)
+public.company_brief_user_id_company_id_key CREATE UNIQUE INDEX company_brief_user_id_company_id_key ON public.company_brief USING btree (user_id, company_id)
+public.company_domain acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.company_domain.archived_at timestamp with time zone gen=- def=-
+public.company_domain.captured_by text NOT NULL gen=- def=-
+public.company_domain.company_domain_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
+public.company_domain.company_domain_norm CHECK ((domain = lower(domain)))
+public.company_domain.company_domain_pkey PRIMARY KEY (id)
+public.company_domain.company_id uuid NOT NULL gen=- def=-
+public.company_domain.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.company_domain.domain text NOT NULL gen=- def=-
+public.company_domain.id uuid NOT NULL gen=- def=uuidv7()
+public.company_domain.is_primary boolean NOT NULL gen=- def=false
+public.company_domain.source text NOT NULL gen=- def=-
+public.company_domain.trg_company_domain_updated CREATE TRIGGER trg_company_domain_updated BEFORE UPDATE ON public.company_domain FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
+public.company_domain.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.company_domain.version bigint NOT NULL gen=- def=1
+public.company_domain_disposition acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.company_domain_disposition.admission text gen=- def=-
+public.company_domain_disposition.admission_at timestamp with time zone gen=- def=-
+public.company_domain_disposition.admission_reason text gen=- def=-
+public.company_domain_disposition.admission_source text gen=- def=-
+public.company_domain_disposition.attempts integer NOT NULL gen=- def=0
+public.company_domain_disposition.company_domain_disposition_admission_check CHECK (((admission IS NULL) OR (admission = ANY (ARRAY['suppressed'::text, 'admitted'::text]))))
+public.company_domain_disposition.company_domain_disposition_admission_shape CHECK ((((admission IS NULL) AND (admission_reason IS NULL) AND (admission_source IS NULL) AND (admission_at IS NULL)) OR ((admission IS NOT NULL) AND (admission_reason IS NOT NULL) AND (admission_source IS NOT NULL) AND (admission_at IS NOT NULL))))
+public.company_domain_disposition.company_domain_disposition_admission_source_check CHECK (((admission_source IS NULL) OR (admission_source = ANY (ARRAY['verdict'::text, 'heuristic'::text, 'human'::text]))))
+public.company_domain_disposition.company_domain_disposition_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
+public.company_domain_disposition.company_domain_disposition_domain_check CHECK (((domain = lower(domain)) AND (domain <> ''::text)))
+public.company_domain_disposition.company_domain_disposition_owner_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
+public.company_domain_disposition.company_domain_disposition_pending_reason_check CHECK (((pending_reason IS NULL) OR (pending_reason = 'unevidenced'::text)))
+public.company_domain_disposition.company_domain_disposition_pending_reason_shape CHECK (((pending_reason IS NULL) OR ((status = 'pending'::text) AND (admission IS DISTINCT FROM 'suppressed'::text))))
+public.company_domain_disposition.company_domain_disposition_pkey PRIMARY KEY (id)
+public.company_domain_disposition.company_domain_disposition_settled_shape CHECK ((((status = 'pending'::text) AND (source IS NULL)) OR ((status = 'company'::text) AND (source IS NOT NULL) AND (company_id IS NOT NULL)) OR ((status = ANY (ARRAY['personal'::text, 'provider'::text, 'no_site'::text])) AND (source IS NOT NULL))))
+public.company_domain_disposition.company_domain_disposition_site_read_fkey FOREIGN KEY (site_read_id) REFERENCES site_read(id) ON DELETE SET NULL (site_read_id)
+public.company_domain_disposition.company_domain_disposition_source_check CHECK (((source IS NULL) OR (source = ANY (ARRAY['site_read'::text, 'heuristic'::text, 'human'::text]))))
+public.company_domain_disposition.company_domain_disposition_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'company'::text, 'personal'::text, 'provider'::text, 'no_site'::text])))
+public.company_domain_disposition.company_id uuid gen=- def=-
+public.company_domain_disposition.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.company_domain_disposition.domain text NOT NULL gen=- def=-
+public.company_domain_disposition.evidence text gen=- def=-
+public.company_domain_disposition.id uuid NOT NULL gen=- def=uuidv7()
+public.company_domain_disposition.last_attempt_at timestamp with time zone gen=- def=-
+public.company_domain_disposition.next_attempt_at timestamp with time zone gen=- def=now()
+public.company_domain_disposition.owner_id uuid gen=- def=-
+public.company_domain_disposition.pending_reason text gen=- def=-
+public.company_domain_disposition.site_read_id uuid gen=- def=-
+public.company_domain_disposition.source text gen=- def=-
+public.company_domain_disposition.status text NOT NULL gen=- def='pending'::text
+public.company_domain_disposition.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.company_domain_disposition_pkey CREATE UNIQUE INDEX company_domain_disposition_pkey ON public.company_domain_disposition USING btree (id)
+public.company_domain_pkey CREATE UNIQUE INDEX company_domain_pkey ON public.company_domain USING btree (id)
+public.company_dossier acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.company_dossier.company_dossier_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
+public.company_dossier.company_dossier_generated_by_check CHECK ((generated_by = ANY (ARRAY['model'::text, 'deterministic'::text])))
+public.company_dossier.company_dossier_pkey PRIMARY KEY (user_id, company_id)
+public.company_dossier.company_dossier_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.company_dossier.company_id uuid NOT NULL gen=- def=-
+public.company_dossier.fingerprint text NOT NULL gen=- def=-
+public.company_dossier.generated_at timestamp with time zone NOT NULL gen=- def=now()
+public.company_dossier.generated_by text NOT NULL gen=- def=-
+public.company_dossier.payload jsonb NOT NULL gen=- def=-
+public.company_dossier.user_id uuid NOT NULL gen=- def=-
+public.company_dossier_company_ix CREATE INDEX company_dossier_company_ix ON public.company_dossier USING btree (company_id)
+public.company_dossier_pkey CREATE UNIQUE INDEX company_dossier_pkey ON public.company_dossier USING btree (user_id, company_id)
+public.company_fact acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.company_fact.captured_at timestamp with time zone NOT NULL gen=- def=now()
+public.company_fact.captured_by text NOT NULL gen=- def=-
+public.company_fact.category text NOT NULL gen=- def=-
+public.company_fact.company_fact_category_check CHECK ((category = ANY (ARRAY['company'::text, 'offering'::text, 'market'::text, 'signal'::text])))
+public.company_fact.company_fact_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
+public.company_fact.company_fact_confidence_check CHECK (((confidence IS NULL) OR ((confidence >= (0)::double precision) AND (confidence <= (1)::double precision))))
+public.company_fact.company_fact_field_vocab CHECK ((((category = 'company'::text) AND (field = ANY (ARRAY['founded_year'::text, 'employee_range'::text, 'phone'::text, 'contact_email'::text, 'location'::text]))) OR ((category = 'offering'::text) AND (field = ANY (ARRAY['service'::text, 'product'::text, 'capability'::text]))) OR ((category = 'market'::text) AND (field = ANY (ARRAY['served_industry'::text, 'company_size'::text, 'geography'::text, 'language'::text]))) OR ((category = 'signal'::text) AND (field = ANY (ARRAY['certification'::text, 'partner'::text, 'named_customer'::text, 'technology'::text, 'quantified_outcome'::text, 'mail_provider'::text, 'email_security'::text, 'hosting_provider'::text, 'operated_service'::text])))))
+public.company_fact.company_fact_pkey PRIMARY KEY (id)
+public.company_fact.company_fact_site_evidence CHECK (((source <> 'site_read'::text) OR ((evidence_snippet IS NOT NULL) AND (evidence_snippet <> ''::text) AND (source_url IS NOT NULL) AND (source_url <> ''::text) AND (confidence IS NOT NULL))))
+public.company_fact.company_fact_site_read_fkey FOREIGN KEY (site_read_id) REFERENCES site_read(id) ON DELETE SET NULL (site_read_id)
+public.company_fact.company_fact_source_check CHECK ((source = ANY (ARRAY['human'::text, 'site_read'::text, 'connector'::text, 'migration'::text, 'technical_lookup'::text])))
+public.company_fact.company_fact_technical_evidence CHECK (((source <> 'technical_lookup'::text) OR ((evidence_snippet IS NOT NULL) AND (evidence_snippet <> ''::text) AND (source_url IS NOT NULL) AND (source_url <> ''::text) AND (retrieved_at IS NOT NULL))))
+public.company_fact.company_fact_value_key_cardinality CHECK ((((category = 'company'::text) AND (field <> 'location'::text) AND (value_key = ''::text)) OR ((category = 'company'::text) AND (field = 'location'::text) AND (value_key <> ''::text)) OR ((category = ANY (ARRAY['offering'::text, 'market'::text, 'signal'::text])) AND (value_key <> ''::text))))
+public.company_fact.company_fact_verified_pair CHECK (((verified_at IS NULL) = (verified_by IS NULL)))
+public.company_fact.company_id uuid NOT NULL gen=- def=-
+public.company_fact.confidence real gen=- def=-
+public.company_fact.evidence_snippet text gen=- def=-
+public.company_fact.field text NOT NULL gen=- def=-
+public.company_fact.id uuid NOT NULL gen=- def=uuidv7()
+public.company_fact.retrieved_at timestamp with time zone gen=- def=-
+public.company_fact.site_read_id uuid gen=- def=-
+public.company_fact.source text NOT NULL gen=- def='site_read'::text
+public.company_fact.source_url text gen=- def=-
+public.company_fact.trg_company_fact_updated CREATE TRIGGER trg_company_fact_updated BEFORE UPDATE ON public.company_fact FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
+public.company_fact.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.company_fact.uq_company_fact UNIQUE (company_id, category, field, value_key)
+public.company_fact.value text NOT NULL gen=- def=-
+public.company_fact.value_key text NOT NULL gen=- def=''::text
+public.company_fact.verified_at timestamp with time zone gen=- def=-
+public.company_fact.verified_by uuid gen=- def=-
+public.company_fact.version bigint NOT NULL gen=- def=1
+public.company_fact_pkey CREATE UNIQUE INDEX company_fact_pkey ON public.company_fact USING btree (id)
+public.company_geocode_goes_stale() secdef=false cfg=- acl=- 
+BEGIN
+  -- Only when the coordinates exist and the writer did not speak for them:
+  -- stamping 'stale' on a row that was never resolved would say the
+  -- coordinates are out of date rather than absent, and overriding a writer
+  -- that set the status deliberately would undo the worker's own write.
+  IF NEW.geocode_status IS DISTINCT FROM OLD.geocode_status THEN
+    RETURN NEW;
+  END IF;
+  IF OLD.geocode_status IS NULL THEN
+    RETURN NEW;
+  END IF;
+  NEW.geocode_status := 'stale';
+  RETURN NEW;
+END;
+
+public.company_geocode_state acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.company_geocode_state.attempts integer NOT NULL gen=- def=0
+public.company_geocode_state.company_geocode_state_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
+public.company_geocode_state.company_geocode_state_pkey PRIMARY KEY (company_id)
+public.company_geocode_state.company_id uuid NOT NULL gen=- def=-
+public.company_geocode_state.last_outcome text gen=- def=-
+public.company_geocode_state.next_attempt_at timestamp with time zone gen=- def=-
+public.company_geocode_state.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.company_geocode_state_pkey CREATE UNIQUE INDEX company_geocode_state_pkey ON public.company_geocode_state USING btree (company_id)
+public.company_growth_fit acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.company_growth_fit.company_growth_fit_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
+public.company_growth_fit.company_growth_fit_generated_by_check CHECK ((generated_by = ANY (ARRAY['model'::text, 'deterministic'::text])))
+public.company_growth_fit.company_growth_fit_pkey PRIMARY KEY (user_id, company_id)
+public.company_growth_fit.company_growth_fit_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.company_growth_fit.company_id uuid NOT NULL gen=- def=-
+public.company_growth_fit.fingerprint text NOT NULL gen=- def=-
+public.company_growth_fit.generated_at timestamp with time zone NOT NULL gen=- def=now()
+public.company_growth_fit.generated_by text NOT NULL gen=- def=-
+public.company_growth_fit.payload jsonb NOT NULL gen=- def=-
+public.company_growth_fit.user_id uuid NOT NULL gen=- def=-
+public.company_growth_fit_company_ix CREATE INDEX company_growth_fit_company_ix ON public.company_growth_fit USING btree (company_id)
+public.company_growth_fit_pkey CREATE UNIQUE INDEX company_growth_fit_pkey ON public.company_growth_fit USING btree (user_id, company_id)
+public.company_linkedin_url_key CREATE UNIQUE INDEX company_linkedin_url_key ON public.company USING btree (lower(linkedin_url)) WHERE ((linkedin_url IS NOT NULL) AND (archived_at IS NULL))
+public.company_no_ancestor_cycle() secdef=false cfg=- acl=- 
+DECLARE
+  ancestor uuid := NEW.parent_company_id;
+BEGIN
+  WHILE ancestor IS NOT NULL LOOP
+    IF ancestor = NEW.id THEN
+      RAISE EXCEPTION 'company % would become its own ancestor', NEW.id
+        USING ERRCODE = 'check_violation';
+    END IF;
+    SELECT parent_company_id INTO ancestor FROM company WHERE id = ancestor;
+  END LOOP;
+  RETURN NEW;
+END;
+
+public.company_open_pipeline_rollup(as_of date) secdef=false cfg=- acl==X/margince_owner,margince_owner=X/margince_owner,margince_app=X/margince_owner 
+ SELECT d.company_id,
+    -- The SUM is bounded too, and separately from its summands. sum(bigint)
+    -- answers in numeric, so a set of individually representable deals can add
+    -- to a figure no bigint holds — and the reader scans this column into an
+    -- int64. Guarding one deal and not the total would have moved the same
+    -- failure one level up: the record unreadable because the deals are large
+    -- rather than because one of them is.
+    --
+    -- Out of range answers NULL, which the caller already knows how to report:
+    -- the deals were priced, the total cannot be stated, and a figure nobody
+    -- can represent is not a figure to publish.
+    CASE
+      WHEN sum(conv.minor_base)
+           BETWEEN -9223372036854775808 AND 9223372036854775807
+        THEN sum(conv.minor_base)
+      ELSE NULL
+    END AS open_pipeline_minor_base,
+    count(*) AS open_deal_count,
+    -- How many deals actually reached the sum. SUM ignores a null summand
+    -- silently, so without this a total covering one of two deals is
+    -- indistinguishable from one covering both — a confident figure that is
+    -- quietly short, which is worse than the "not computable" it replaces.
+    --
+    -- It counts the CONVERSION rather than restating when one is possible: a
+    -- deal with no rate and a deal whose converted amount does not fit are both
+    -- deals the sum did not reach, and one predicate answers for both.
+    count(*) FILTER (WHERE conv.minor_base IS NOT NULL) AS priced_deal_count
+   FROM deal d
+   -- LEFT, not CROSS: an installation whose base-currency row is somehow absent
+   -- must still report its open_deal_count. A cross join would return no row at
+   -- all for the company, which reads as "no open deals" — the one answer
+   -- that is definitely wrong. With no base currency nothing converts, every
+   -- deal contributes null, and the sum is null: not computable, honestly.
+   LEFT JOIN LATERAL (
+     SELECT (value #>> '{}')::text AS code
+       FROM setting
+      WHERE key = 'installation.base_currency'
+   ) base ON true
+   LEFT JOIN LATERAL (
+     SELECT r.rate
+       FROM fx_rate r
+      WHERE d.currency IS DISTINCT FROM base.code
+        AND r.from_currency = d.currency
+        AND r.to_currency = base.code
+        AND r.rate_date <= as_of
+      ORDER BY r.rate_date DESC
+      LIMIT 1
+   ) live ON true
+   -- Both currencies' minor-unit scales, each absent for an ordinary two-digit
+   -- code and coalesced to ISO's default below. LEFT so a code the table does
+   -- not name still converts, at two digits, rather than dropping the deal out
+   -- of the sum — an unnamed exception renders wrong for that code, where a
+   -- dropped deal silently shortens a total for every code.
+   LEFT JOIN currency_minor_digits deal_digits ON deal_digits.currency = d.currency
+   LEFT JOIN currency_minor_digits base_digits ON base_digits.currency = base.code
+   -- What this deal contributes to the total, or NULL when it contributes
+   -- nothing. Three cases, and the bound is written once here so the count
+   -- predicate below reads the same answer the sum does.
+   LEFT JOIN LATERAL (
+     SELECT CASE
+       -- Already in the installation's own currency: no rate needed, no scale
+       -- to cross, and none should be looked for. This is the ordinary deal.
+       WHEN d.currency = base.code THEN d.amount_minor
+       -- Converted, and only when the result is a number the column can hold.
+       -- The comparison runs in numeric, where the product already is, so it
+       -- decides the question BEFORE a cast can raise it.
+       --
+       -- amount × rate × 10^digits(base) ÷ 10^digits(deal), as ONE expression
+       -- so the single round() is the only rounding. numeric is exact, so the
+       -- intermediate carries no error to accumulate.
+       WHEN live.rate IS NOT NULL
+        AND round(d.amount_minor * live.rate
+                    * power(10::numeric, coalesce(base_digits.digits, 2))
+                    / power(10::numeric, coalesce(deal_digits.digits, 2)))
+            BETWEEN -9223372036854775808 AND 9223372036854775807
+         THEN round(d.amount_minor * live.rate
+                      * power(10::numeric, coalesce(base_digits.digits, 2))
+                      / power(10::numeric, coalesce(deal_digits.digits, 2)))::bigint
+       -- No usable rate, or a result too large to represent. Nothing is ever
+       -- converted at an invented rate of 1 — that would report ¥5,000,000 as
+       -- €5,000,000 — and nothing is ever clamped to the biggest number that
+       -- fits, which is the same lie with more digits.
+       ELSE NULL
+     END AS minor_base
+   ) conv ON true
+  WHERE ((d.status = 'open'::text) AND (d.company_id IS NOT NULL) AND (d.archived_at IS NULL))
+  GROUP BY d.company_id;
+
+public.company_pkey CREATE UNIQUE INDEX company_pkey ON public.company USING btree (id)
+public.company_profile_field acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.company_profile_field.captured_at timestamp with time zone NOT NULL gen=- def=now()
+public.company_profile_field.captured_by text NOT NULL gen=- def=-
+public.company_profile_field.company_id uuid NOT NULL gen=- def=-
+public.company_profile_field.company_profile_field_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
+public.company_profile_field.company_profile_field_confidence_check CHECK (((confidence IS NULL) OR ((confidence >= (0)::double precision) AND (confidence <= (1)::double precision))))
+public.company_profile_field.company_profile_field_field_check CHECK ((field = ANY (ARRAY['display_name'::text, 'offer_summary'::text, 'icp'::text, 'value_proposition'::text, 'usp'::text, 'customer_pains'::text, 'desired_outcomes'::text, 'buying_center'::text, 'buying_intents'::text, 'common_objections'::text, 'sales_motion'::text, 'legal_name'::text, 'registered_address'::text, 'register_vat'::text, 'industry'::text, 'history'::text, 'legal_form'::text, 'register_court'::text, 'register_number'::text])))
+public.company_profile_field.company_profile_field_pkey PRIMARY KEY (id)
+public.company_profile_field.company_profile_field_source_check CHECK ((source = ANY (ARRAY['human'::text, 'site_read'::text, 'connector'::text, 'migration'::text])))
+public.company_profile_field.company_profile_field_verified_pair CHECK (((verified_at IS NULL) = (verified_by IS NULL)))
+public.company_profile_field.company_profile_site_evidence CHECK (((source <> 'site_read'::text) OR ((evidence_snippet IS NOT NULL) AND (evidence_snippet <> ''::text) AND (source_url IS NOT NULL) AND (source_url <> ''::text) AND (confidence IS NOT NULL))))
+public.company_profile_field.confidence real gen=- def=-
+public.company_profile_field.evidence_snippet text gen=- def=-
+public.company_profile_field.field text NOT NULL gen=- def=-
+public.company_profile_field.id uuid NOT NULL gen=- def=uuidv7()
+public.company_profile_field.retrieved_at timestamp with time zone gen=- def=-
+public.company_profile_field.source text NOT NULL gen=- def='site_read'::text
+public.company_profile_field.source_url text gen=- def=-
+public.company_profile_field.trg_company_profile_field_updated CREATE TRIGGER trg_company_profile_field_updated BEFORE UPDATE ON public.company_profile_field FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
+public.company_profile_field.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.company_profile_field.uq_company_profile_field UNIQUE (company_id, field)
+public.company_profile_field.value text NOT NULL gen=- def=-
+public.company_profile_field.verified_at timestamp with time zone gen=- def=-
+public.company_profile_field.verified_by uuid gen=- def=-
+public.company_profile_field.version bigint NOT NULL gen=- def=1
+public.company_profile_field_pkey CREATE UNIQUE INDEX company_profile_field_pkey ON public.company_profile_field USING btree (id)
+public.company_refuse_anchor_retirement() secdef=false cfg=- acl=- 
+BEGIN
+  IF NEW.merged_into_id IS NOT NULL
+     AND EXISTS (SELECT 1 FROM company o
+                  WHERE o.id = NEW.merged_into_id AND o.is_anchor) THEN
+    RAISE EXCEPTION 'company % may not be merged into the anchor company', NEW.id
+      USING ERRCODE = 'check_violation',
+            CONSTRAINT = 'company_anchor_is_permanent';
+  END IF;
+  IF TG_OP = 'UPDATE' AND OLD.is_anchor AND NOT NEW.is_anchor
+     AND OLD.archived_at IS NULL AND OLD.merged_into_id IS NULL THEN
+    RAISE EXCEPTION 'company % is the anchor company and may not be demoted', NEW.id
+      USING ERRCODE = 'check_violation',
+            CONSTRAINT = 'company_anchor_is_permanent';
+  END IF;
+  RETURN NEW;
+END;
+
+public.company_relationship_type acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.company_relationship_type.archived_at timestamp with time zone gen=- def=-
+public.company_relationship_type.captured_by text NOT NULL gen=- def=-
+public.company_relationship_type.company_id uuid NOT NULL gen=- def=-
+public.company_relationship_type.company_relationship_typ_workspace_id_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
+public.company_relationship_type.company_relationship_type_pkey PRIMARY KEY (id)
+public.company_relationship_type.company_relationship_type_relationship_type_check CHECK ((relationship_type = ANY (ARRAY['customer'::text, 'partner'::text, 'supplier'::text, 'investor'::text, 'portfolio_company'::text, 'competitor'::text, 'other'::text])))
+public.company_relationship_type.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.company_relationship_type.id uuid NOT NULL gen=- def=uuidv7()
+public.company_relationship_type.relationship_type text NOT NULL gen=- def=-
+public.company_relationship_type.source text NOT NULL gen=- def=-
+public.company_relationship_type.trg_company_relationship_type_updated CREATE TRIGGER trg_company_relationship_type_updated BEFORE UPDATE ON public.company_relationship_type FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
+public.company_relationship_type.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.company_relationship_type.version bigint NOT NULL gen=- def=1
+public.company_relationship_type_pkey CREATE UNIQUE INDEX company_relationship_type_pkey ON public.company_relationship_type USING btree (id)
+public.company_scan acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.company_scan.attempt integer NOT NULL gen=- def=1
+public.company_scan.company_id uuid NOT NULL gen=- def=-
+public.company_scan.company_scan_attempt_check CHECK ((attempt >= 1))
+public.company_scan.company_scan_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
+public.company_scan.company_scan_generated_by_check CHECK (((generated_by IS NULL) OR (generated_by = ANY (ARRAY['model'::text, 'deterministic'::text]))))
+public.company_scan.company_scan_pkey PRIMARY KEY (id)
+public.company_scan.company_scan_read_deals_check CHECK (((read_deals IS NULL) OR (read_deals >= 0)))
+public.company_scan.company_scan_read_exchanges_check CHECK (((read_exchanges IS NULL) OR (read_exchanges >= 0)))
+public.company_scan.company_scan_running_has_started CHECK (((status <> 'running'::text) OR (started_at IS NOT NULL)))
+public.company_scan.company_scan_settled_has_finish CHECK (((status = ANY (ARRAY['done'::text, 'degraded'::text, 'failed'::text])) = (finished_at IS NOT NULL)))
+public.company_scan.company_scan_status_check CHECK ((status = ANY (ARRAY['queued'::text, 'running'::text, 'done'::text, 'degraded'::text, 'failed'::text])))
+public.company_scan.company_scan_user_id_company_id_key UNIQUE (user_id, company_id)
+public.company_scan.company_scan_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.company_scan.degrade_reason text gen=- def=-
+public.company_scan.findings jsonb NOT NULL gen=- def='[]'::jsonb
+public.company_scan.fingerprint text gen=- def=-
+public.company_scan.finished_at timestamp with time zone gen=- def=-
+public.company_scan.generated_at timestamp with time zone gen=- def=-
+public.company_scan.generated_by text gen=- def=-
+public.company_scan.id uuid NOT NULL gen=- def=uuidv7()
+public.company_scan.next_attempt_at timestamp with time zone gen=- def=-
+public.company_scan.read_deals integer gen=- def=-
+public.company_scan.read_exchanges integer gen=- def=-
+public.company_scan.requested_at timestamp with time zone NOT NULL gen=- def=now()
+public.company_scan.started_at timestamp with time zone gen=- def=-
+public.company_scan.status text NOT NULL gen=- def=-
+public.company_scan.user_id uuid NOT NULL gen=- def=-
+public.company_scan_company_ix CREATE INDEX company_scan_company_ix ON public.company_scan USING btree (company_id)
+public.company_scan_pkey CREATE UNIQUE INDEX company_scan_pkey ON public.company_scan USING btree (id)
+public.company_scan_user_id_company_id_key CREATE UNIQUE INDEX company_scan_user_id_company_id_key ON public.company_scan USING btree (user_id, company_id)
+public.company_technical_state acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.company_technical_state.attempts integer NOT NULL gen=- def=0
+public.company_technical_state.company_id uuid NOT NULL gen=- def=-
+public.company_technical_state.company_technical_state_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
+public.company_technical_state.company_technical_state_lane_check CHECK ((lane = ANY (ARRAY['dns'::text, 'certlog'::text, 'homepage'::text])))
+public.company_technical_state.company_technical_state_outcome_check CHECK (((last_outcome IS NULL) OR (last_outcome = ANY (ARRAY['applied'::text, 'empty'::text, 'failed'::text, 'refused'::text]))))
+public.company_technical_state.company_technical_state_pkey PRIMARY KEY (company_id, lane)
+public.company_technical_state.lane text NOT NULL gen=- def=-
+public.company_technical_state.last_outcome text gen=- def=-
+public.company_technical_state.last_success_at timestamp with time zone gen=- def=-
+public.company_technical_state.next_attempt_at timestamp with time zone gen=- def=-
+public.company_technical_state.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.company_technical_state_pkey CREATE UNIQUE INDEX company_technical_state_pkey ON public.company_technical_state USING btree (company_id, lane)
+public.company_vat_check acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.company_vat_check.captured_by text NOT NULL gen=- def=-
+public.company_vat_check.checked_at timestamp with time zone NOT NULL gen=- def=now()
+public.company_vat_check.company_id uuid NOT NULL gen=- def=-
+public.company_vat_check.company_vat_check_company_fk FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
+public.company_vat_check.company_vat_check_number_not_blank CHECK ((btrim(vat_number) <> ''::text))
+public.company_vat_check.company_vat_check_one_per_company UNIQUE (company_id)
+public.company_vat_check.company_vat_check_pkey PRIMARY KEY (id)
+public.company_vat_check.company_vat_check_receipt_needs_an_answer CHECK (((consultation_number IS NULL) OR (status <> 'unavailable'::text)))
+public.company_vat_check.company_vat_check_status_check CHECK ((status = ANY (ARRAY['valid'::text, 'invalid'::text, 'unavailable'::text])))
+public.company_vat_check.consultation_number text gen=- def=-
+public.company_vat_check.id uuid NOT NULL gen=- def=uuidv7()
+public.company_vat_check.registered_address text gen=- def=-
+public.company_vat_check.registered_name text gen=- def=-
+public.company_vat_check.status text NOT NULL gen=- def=-
+public.company_vat_check.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.company_vat_check.vat_number text NOT NULL gen=- def=-
+public.company_vat_check.version bigint NOT NULL gen=- def=1
+public.company_vat_check_one_per_company CREATE UNIQUE INDEX company_vat_check_one_per_company ON public.company_vat_check USING btree (company_id)
+public.company_vat_check_pkey CREATE UNIQUE INDEX company_vat_check_pkey ON public.company_vat_check USING btree (id)
 public.confirm_token acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.confirm_token.confirm_token_hash_key UNIQUE (token_hash)
 public.confirm_token.confirm_token_kind CHECK ((kind = ANY (ARRAY['record_confirmation'::text, 'consent_confirmation'::text])))
@@ -1915,13 +2358,14 @@ public.contract.auto_renew boolean NOT NULL gen=- def=false
 public.contract.cancellation_effective_on date gen=- def=-
 public.contract.cancellation_notice_on date gen=- def=-
 public.contract.captured_by text NOT NULL gen=- def=-
+public.contract.company_id uuid NOT NULL gen=- def=-
 public.contract.contract_cancellation_order CHECK (((cancellation_notice_on IS NULL) OR (cancellation_effective_on IS NULL) OR (cancellation_effective_on >= cancellation_notice_on)))
 public.contract.contract_cancellation_within_term CHECK (((cancellation_effective_on IS NULL) OR (ends_on IS NULL) OR (cancellation_effective_on <= ends_on)))
+public.contract.contract_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE RESTRICT
 public.contract.contract_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE SET NULL
 public.contract.contract_fx_pair CHECK (((fx_rate_to_base IS NULL) = (fx_rate_date IS NULL)))
 public.contract.contract_notice_period_days_check CHECK (((notice_period_days IS NULL) OR (notice_period_days >= 0)))
 public.contract.contract_number text gen=- def=-
-public.contract.contract_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE RESTRICT
 public.contract.contract_pkey PRIMARY KEY (id)
 public.contract.contract_project_id_fkey FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE SET NULL
 public.contract.contract_set_updated_at CREATE TRIGGER contract_set_updated_at BEFORE UPDATE ON public.contract FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
@@ -1940,7 +2384,6 @@ public.contract.fx_rate_date date gen=- def=-
 public.contract.fx_rate_to_base numeric(20,10) gen=- def=-
 public.contract.id uuid NOT NULL gen=- def=uuidv7()
 public.contract.notice_period_days integer gen=- def=-
-public.contract.company_id uuid NOT NULL gen=- def=-
 public.contract.project_id uuid gen=- def=-
 public.contract.renewal_on date gen=- def=-
 public.contract.signed_on date gen=- def=-
@@ -2041,17 +2484,18 @@ public.deal.archived_at timestamp with time zone gen=- def=-
 public.deal.captured_by text NOT NULL gen=- def=-
 public.deal.close_date_provisional boolean NOT NULL gen=- def=false
 public.deal.closed_at timestamp with time zone gen=- def=-
+public.deal.company_id uuid gen=- def=-
 public.deal.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.deal.currency character(3) gen=- def=-
 public.deal.deal_amount_currency_pair CHECK (((amount_minor IS NULL) = (currency IS NULL)))
 public.deal.deal_closed_at CHECK (((status = 'open'::text) OR (closed_at IS NOT NULL)))
 public.deal.deal_closed_fx CHECK (((status = 'open'::text) OR (amount_minor IS NULL) OR (fx_rate_to_base IS NOT NULL)))
+public.deal.deal_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE SET NULL (company_id)
 public.deal.deal_currency_check CHECK (((currency IS NULL) OR (currency ~ '^[A-Z]{3}$'::text)))
 public.deal.deal_forecast_category_check CHECK (((forecast_category IS NULL) OR (forecast_category = ANY (ARRAY['commit'::text, 'best_case'::text, 'pipeline'::text, 'omitted'::text]))))
 public.deal.deal_last_activity CREATE TRIGGER deal_last_activity AFTER UPDATE OF company_id ON public.deal FOR EACH ROW WHEN ((old.company_id IS DISTINCT FROM new.company_id)) EXECUTE FUNCTION trg_deal_last_activity()
 public.deal.deal_lost_reason CHECK (((status <> 'lost'::text) OR (lost_reason IS NOT NULL)))
 public.deal.deal_lost_reason_only_when_lost CHECK (((lost_reason IS NULL) OR (status = 'lost'::text)))
-public.deal.deal_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE SET NULL (company_id)
 public.deal.deal_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
 public.deal.deal_partner_attribution_check CHECK (((partner_attribution IS NULL) OR (partner_attribution = ANY (ARRAY['sourced'::text, 'influenced'::text]))))
 public.deal.deal_partner_attribution_pairing CHECK (((partner_company_id IS NULL) = (partner_attribution IS NULL)))
@@ -2074,7 +2518,6 @@ public.deal.last_activity_at timestamp with time zone gen=- def=-
 public.deal.legal_hold boolean NOT NULL gen=- def=false
 public.deal.lost_reason text gen=- def=-
 public.deal.name text NOT NULL gen=- def=-
-public.deal.company_id uuid gen=- def=-
 public.deal.owner_id uuid gen=- def=-
 public.deal.partner_attribution text gen=- def=-
 public.deal.partner_company_id uuid gen=- def=-
@@ -2397,13 +2840,13 @@ public.dedupe_candidate.dedupe_candidate_disposed_by_fkey FOREIGN KEY (disposed_
 public.dedupe_candidate.dedupe_candidate_disposed_shape CHECK (((disposition = 'open'::text) = (disposed_at IS NULL)))
 public.dedupe_candidate.dedupe_candidate_disposition_check CHECK ((disposition = ANY (ARRAY['open'::text, 'merged'::text, 'not_a_duplicate'::text])))
 public.dedupe_candidate.dedupe_candidate_entity_type_check CHECK ((entity_type = ANY (ARRAY['person'::text, 'company'::text, 'lead'::text])))
-public.dedupe_candidate.dedupe_candidate_left_lead_id_fkey FOREIGN KEY (left_lead_id) REFERENCES lead(id) ON DELETE CASCADE
 public.dedupe_candidate.dedupe_candidate_left_company_id_fkey FOREIGN KEY (left_company_id) REFERENCES company(id) ON DELETE CASCADE
+public.dedupe_candidate.dedupe_candidate_left_lead_id_fkey FOREIGN KEY (left_lead_id) REFERENCES lead(id) ON DELETE CASCADE
 public.dedupe_candidate.dedupe_candidate_left_person_id_fkey FOREIGN KEY (left_person_id) REFERENCES person(id) ON DELETE CASCADE
 public.dedupe_candidate.dedupe_candidate_ordered CHECK ((COALESCE(left_person_id, left_company_id, left_lead_id) < COALESCE(right_person_id, right_company_id, right_lead_id)))
 public.dedupe_candidate.dedupe_candidate_pkey PRIMARY KEY (id)
-public.dedupe_candidate.dedupe_candidate_right_lead_id_fkey FOREIGN KEY (right_lead_id) REFERENCES lead(id) ON DELETE CASCADE
 public.dedupe_candidate.dedupe_candidate_right_company_id_fkey FOREIGN KEY (right_company_id) REFERENCES company(id) ON DELETE CASCADE
+public.dedupe_candidate.dedupe_candidate_right_lead_id_fkey FOREIGN KEY (right_lead_id) REFERENCES lead(id) ON DELETE CASCADE
 public.dedupe_candidate.dedupe_candidate_right_person_id_fkey FOREIGN KEY (right_person_id) REFERENCES person(id) ON DELETE CASCADE
 public.dedupe_candidate.dedupe_candidate_shape CHECK ((((entity_type = 'person'::text) AND (left_person_id IS NOT NULL) AND (right_person_id IS NOT NULL) AND (left_company_id IS NULL) AND (right_company_id IS NULL) AND (left_lead_id IS NULL) AND (right_lead_id IS NULL)) OR ((entity_type = 'company'::text) AND (left_company_id IS NOT NULL) AND (right_company_id IS NOT NULL) AND (left_person_id IS NULL) AND (right_person_id IS NULL) AND (left_lead_id IS NULL) AND (right_lead_id IS NULL)) OR ((entity_type = 'lead'::text) AND (left_lead_id IS NOT NULL) AND (right_lead_id IS NOT NULL) AND (left_person_id IS NULL) AND (right_person_id IS NULL) AND (left_company_id IS NULL) AND (right_company_id IS NULL))))
 public.dedupe_candidate.disposed_at timestamp with time zone gen=- def=-
@@ -2412,12 +2855,12 @@ public.dedupe_candidate.disposition text NOT NULL gen=- def='open'::text
 public.dedupe_candidate.entity_type text NOT NULL gen=- def=-
 public.dedupe_candidate.evidence jsonb NOT NULL gen=- def=-
 public.dedupe_candidate.id uuid NOT NULL gen=- def=uuidv7()
-public.dedupe_candidate.left_lead_id uuid gen=- def=-
 public.dedupe_candidate.left_company_id uuid gen=- def=-
+public.dedupe_candidate.left_lead_id uuid gen=- def=-
 public.dedupe_candidate.left_person_id uuid gen=- def=-
 public.dedupe_candidate.raw jsonb gen=- def=-
-public.dedupe_candidate.right_lead_id uuid gen=- def=-
 public.dedupe_candidate.right_company_id uuid gen=- def=-
+public.dedupe_candidate.right_lead_id uuid gen=- def=-
 public.dedupe_candidate.right_person_id uuid gen=- def=-
 public.dedupe_candidate.source text NOT NULL gen=- def=-
 public.dedupe_candidate.trg_dedupe_candidate_updated CREATE TRIGGER trg_dedupe_candidate_updated BEFORE UPDATE ON public.dedupe_candidate FOR EACH ROW EXECUTE FUNCTION set_updated_at()
@@ -2557,22 +3000,22 @@ public.finance_connection_pkey CREATE UNIQUE INDEX finance_connection_pkey ON pu
 public.finance_customer_link acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.finance_customer_link.archived_at timestamp with time zone gen=- def=-
 public.finance_customer_link.captured_by text NOT NULL gen=- def=-
+public.finance_customer_link.company_id uuid NOT NULL gen=- def=-
 public.finance_customer_link.connection_id uuid NOT NULL gen=- def=-
 public.finance_customer_link.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.finance_customer_link.external_customer_id text NOT NULL gen=- def=-
-public.finance_customer_link.finance_customer_link_connection_fk FOREIGN KEY (connection_id) REFERENCES finance_connection(id) ON DELETE RESTRICT
 public.finance_customer_link.finance_customer_link_company_fk FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE RESTRICT
+public.finance_customer_link.finance_customer_link_connection_fk FOREIGN KEY (connection_id) REFERENCES finance_connection(id) ON DELETE RESTRICT
 public.finance_customer_link.finance_customer_link_pkey PRIMARY KEY (id)
 public.finance_customer_link.id uuid NOT NULL gen=- def=uuidv7()
-public.finance_customer_link.company_id uuid NOT NULL gen=- def=-
 public.finance_customer_link.source text NOT NULL gen=- def=-
 public.finance_customer_link.source_updated_at timestamp with time zone gen=- def=-
 public.finance_customer_link.sync_hash text NOT NULL gen=- def=-
 public.finance_customer_link.trg_finance_customer_link_updated CREATE TRIGGER trg_finance_customer_link_updated BEFORE UPDATE ON public.finance_customer_link FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.finance_customer_link.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.finance_customer_link.version bigint NOT NULL gen=- def=1
-public.finance_customer_link_external_ux CREATE UNIQUE INDEX finance_customer_link_external_ux ON public.finance_customer_link USING btree (connection_id, external_customer_id) WHERE (archived_at IS NULL)
 public.finance_customer_link_company_ux CREATE UNIQUE INDEX finance_customer_link_company_ux ON public.finance_customer_link USING btree (connection_id, company_id) WHERE (archived_at IS NULL)
+public.finance_customer_link_external_ux CREATE UNIQUE INDEX finance_customer_link_external_ux ON public.finance_customer_link USING btree (connection_id, external_customer_id) WHERE (archived_at IS NULL)
 public.finance_customer_link_pkey CREATE UNIQUE INDEX finance_customer_link_pkey ON public.finance_customer_link USING btree (id)
 public.finance_external_customer acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.finance_external_customer.archived_at timestamp with time zone gen=- def=-
@@ -2596,6 +3039,7 @@ public.finance_external_customer_pkey CREATE UNIQUE INDEX finance_external_custo
 public.finance_invoice acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.finance_invoice.archived_at timestamp with time zone gen=- def=-
 public.finance_invoice.captured_by text NOT NULL gen=- def=-
+public.finance_invoice.company_id uuid NOT NULL gen=- def=-
 public.finance_invoice.connection_id uuid NOT NULL gen=- def=-
 public.finance_invoice.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.finance_invoice.credited_minor bigint NOT NULL gen=- def=0
@@ -2604,13 +3048,13 @@ public.finance_invoice.currency character(3) NOT NULL gen=- def=-
 public.finance_invoice.disputed_at timestamp with time zone gen=- def=-
 public.finance_invoice.due_at date gen=- def=-
 public.finance_invoice.external_id text NOT NULL gen=- def=-
+public.finance_invoice.finance_invoice_company_fk FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE RESTRICT
 public.finance_invoice.finance_invoice_connection_fk FOREIGN KEY (connection_id) REFERENCES finance_connection(id) ON DELETE RESTRICT
 public.finance_invoice.finance_invoice_connection_id_external_id_key UNIQUE (connection_id, external_id)
 public.finance_invoice.finance_invoice_credits_fk FOREIGN KEY (credits_invoice_id) REFERENCES finance_invoice(id) ON DELETE RESTRICT
 public.finance_invoice.finance_invoice_credits_not_self CHECK (((credits_invoice_id IS NULL) OR (credits_invoice_id <> id)))
 public.finance_invoice.finance_invoice_currency_check CHECK ((currency ~ '^[A-Z]{3}$'::text))
 public.finance_invoice.finance_invoice_fx_pair CHECK (((fx_rate_to_base IS NULL) = (fx_rate_date IS NULL)))
-public.finance_invoice.finance_invoice_company_fk FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE RESTRICT
 public.finance_invoice.finance_invoice_paid_status CHECK (((fully_paid_at IS NULL) OR (status = ANY (ARRAY['paid'::text, 'credited'::text, 'void'::text]))))
 public.finance_invoice.finance_invoice_pkey PRIMARY KEY (id)
 public.finance_invoice.finance_invoice_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'open'::text, 'partially_paid'::text, 'paid'::text, 'overdue'::text, 'disputed'::text, 'credited'::text, 'void'::text])))
@@ -2624,7 +3068,6 @@ public.finance_invoice.issued_at date NOT NULL gen=- def=-
 public.finance_invoice.net_minor bigint NOT NULL gen=- def=-
 public.finance_invoice.number text gen=- def=-
 public.finance_invoice.open_minor bigint NOT NULL gen=- def=0
-public.finance_invoice.company_id uuid NOT NULL gen=- def=-
 public.finance_invoice.raw_status text gen=- def=-
 public.finance_invoice.source text NOT NULL gen=- def=-
 public.finance_invoice.source_updated_at timestamp with time zone gen=- def=-
@@ -2644,19 +3087,19 @@ public.finance_payment acl=margince_owner=arwdDxt/margince_owner,margince_app=ar
 public.finance_payment.amount_minor bigint NOT NULL gen=- def=-
 public.finance_payment.archived_at timestamp with time zone gen=- def=-
 public.finance_payment.captured_by text NOT NULL gen=- def=-
+public.finance_payment.company_id uuid NOT NULL gen=- def=-
 public.finance_payment.connection_id uuid NOT NULL gen=- def=-
 public.finance_payment.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.finance_payment.currency character(3) NOT NULL gen=- def=-
 public.finance_payment.external_id text NOT NULL gen=- def=-
+public.finance_payment.finance_payment_company_fk FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE RESTRICT
 public.finance_payment.finance_payment_connection_fk FOREIGN KEY (connection_id) REFERENCES finance_connection(id) ON DELETE RESTRICT
 public.finance_payment.finance_payment_connection_id_external_id_key UNIQUE (connection_id, external_id)
 public.finance_payment.finance_payment_currency_check CHECK ((currency ~ '^[A-Z]{3}$'::text))
 public.finance_payment.finance_payment_invoice_fk FOREIGN KEY (invoice_id) REFERENCES finance_invoice(id) ON DELETE RESTRICT
-public.finance_payment.finance_payment_company_fk FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE RESTRICT
 public.finance_payment.finance_payment_pkey PRIMARY KEY (id)
 public.finance_payment.id uuid NOT NULL gen=- def=uuidv7()
 public.finance_payment.invoice_id uuid gen=- def=-
-public.finance_payment.company_id uuid NOT NULL gen=- def=-
 public.finance_payment.paid_at timestamp with time zone NOT NULL gen=- def=-
 public.finance_payment.source text NOT NULL gen=- def=-
 public.finance_payment.source_updated_at timestamp with time zone gen=- def=-
@@ -2845,9 +3288,9 @@ public.idx_agent_task_approval CREATE UNIQUE INDEX idx_agent_task_approval ON pu
 public.idx_agent_task_expiry CREATE INDEX idx_agent_task_expiry ON public.agent_task USING btree (expires_at)
 public.idx_agent_task_passport CREATE INDEX idx_agent_task_passport ON public.agent_task USING btree (passport_id)
 public.idx_ai_feedback_subject CREATE INDEX idx_ai_feedback_subject ON public.ai_feedback USING btree (subject_type, subject_id)
+public.idx_alink_company CREATE INDEX idx_alink_company ON public.activity_link USING btree (company_id) WHERE (company_id IS NOT NULL)
 public.idx_alink_deal CREATE INDEX idx_alink_deal ON public.activity_link USING btree (deal_id) WHERE (deal_id IS NOT NULL)
 public.idx_alink_lead CREATE INDEX idx_alink_lead ON public.activity_link USING btree (lead_id) WHERE (lead_id IS NOT NULL)
-public.idx_alink_company CREATE INDEX idx_alink_company ON public.activity_link USING btree (company_id) WHERE (company_id IS NOT NULL)
 public.idx_alink_person CREATE INDEX idx_alink_person ON public.activity_link USING btree (person_id) WHERE (person_id IS NOT NULL)
 public.idx_alink_project CREATE INDEX idx_alink_project ON public.activity_link USING btree (project_id) WHERE (project_id IS NOT NULL)
 public.idx_analytics_share_creator CREATE INDEX idx_analytics_share_creator ON public.analytics_share USING btree (created_by, created_at DESC)
@@ -2898,14 +3341,33 @@ public.idx_capture_watch_renew CREATE INDEX idx_capture_watch_renew ON public.ca
 public.idx_commission_deal CREATE INDEX idx_commission_deal ON public.commission_entry USING btree (deal_id)
 public.idx_commission_partner CREATE INDEX idx_commission_partner ON public.commission_entry USING btree (partner_company_id, status)
 public.idx_comms_outbound_parked CREATE INDEX idx_comms_outbound_parked ON public.comms_outbound USING btree (user_id, parked_at DESC) WHERE (parked_at IS NOT NULL)
+public.idx_company_class CREATE INDEX idx_company_class ON public.company USING btree (classification) WHERE (archived_at IS NULL)
+public.idx_company_created_keyset CREATE INDEX idx_company_created_keyset ON public.company USING btree (created_at DESC, id DESC) WHERE (archived_at IS NULL)
+public.idx_company_domain_company CREATE INDEX idx_company_domain_company ON public.company_domain USING btree (company_id) WHERE (archived_at IS NULL)
+public.idx_company_domain_disposition_due CREATE INDEX idx_company_domain_disposition_due ON public.company_domain_disposition USING btree (next_attempt_at) WHERE (next_attempt_at IS NOT NULL)
+public.idx_company_fact_lookup CREATE INDEX idx_company_fact_lookup ON public.company_fact USING btree (category, field, value_key)
+public.idx_company_geocoded CREATE INDEX idx_company_geocoded ON public.company USING btree (geocode_lat, geocode_lon) WHERE ((geocode_status = 'ok'::text) AND (archived_at IS NULL))
+public.idx_company_last_activity_keyset CREATE INDEX idx_company_last_activity_keyset ON public.company USING btree (last_activity_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
+public.idx_company_legal_name_trgm CREATE INDEX idx_company_legal_name_trgm ON public.company USING gin (f_fold_apostrophes(lower(legal_name)) gin_trgm_ops)
+public.idx_company_lifecycle CREATE INDEX idx_company_lifecycle ON public.company USING btree (lifecycle) WHERE (archived_at IS NULL)
+public.idx_company_name_keyset CREATE INDEX idx_company_name_keyset ON public.company USING btree (display_name, created_at DESC, id DESC) WHERE (archived_at IS NULL)
+public.idx_company_name_keyset_desc CREATE INDEX idx_company_name_keyset_desc ON public.company USING btree (display_name DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
+public.idx_company_name_trgm CREATE INDEX idx_company_name_trgm ON public.company USING gin (f_fold_apostrophes(lower(display_name)) gin_trgm_ops)
+public.idx_company_owner CREATE INDEX idx_company_owner ON public.company USING btree (owner_id) WHERE (archived_at IS NULL)
+public.idx_company_parent CREATE INDEX idx_company_parent ON public.company USING btree (parent_company_id) WHERE (parent_company_id IS NOT NULL)
+public.idx_company_rel_type_cascade CREATE INDEX idx_company_rel_type_cascade ON public.company_relationship_type USING btree (company_id)
+public.idx_company_rel_type_company CREATE INDEX idx_company_rel_type_company ON public.company_relationship_type USING btree (company_id) WHERE (archived_at IS NULL)
+public.idx_company_search CREATE INDEX idx_company_search ON public.company USING gin (search_tsv)
+public.idx_company_technical_state_due CREATE INDEX idx_company_technical_state_due ON public.company_technical_state USING btree (next_attempt_at) WHERE (next_attempt_at IS NOT NULL)
+public.idx_company_updated_keyset CREATE INDEX idx_company_updated_keyset ON public.company USING btree (updated_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.idx_consent_doi_token_person CREATE INDEX idx_consent_doi_token_person ON public.consent_doi_token USING btree (person_id, purpose_id)
 public.idx_consent_event_lead CREATE INDEX idx_consent_event_lead ON public.consent_event USING btree (lead_id, captured_at DESC) WHERE (lead_id IS NOT NULL)
 public.idx_consent_event_person CREATE INDEX idx_consent_event_person ON public.consent_event USING btree (person_id, captured_at DESC)
 public.idx_custom_field_object CREATE INDEX idx_custom_field_object ON public.custom_field USING btree (object, status)
 public.idx_deal_close CREATE INDEX idx_deal_close ON public.deal USING btree (expected_close_date) WHERE ((status = 'open'::text) AND (archived_at IS NULL))
+public.idx_deal_company CREATE INDEX idx_deal_company ON public.deal USING btree (company_id) WHERE ((company_id IS NOT NULL) AND (archived_at IS NULL))
 public.idx_deal_forecast_history_deal CREATE INDEX idx_deal_forecast_history_deal ON public.deal_forecast_history USING btree (deal_id, changed_at)
 public.idx_deal_name_trgm CREATE INDEX idx_deal_name_trgm ON public.deal USING gin (f_fold_apostrophes(lower(name)) gin_trgm_ops)
-public.idx_deal_company CREATE INDEX idx_deal_company ON public.deal USING btree (company_id) WHERE ((company_id IS NOT NULL) AND (archived_at IS NULL))
 public.idx_deal_owner CREATE INDEX idx_deal_owner ON public.deal USING btree (owner_id) WHERE (archived_at IS NULL)
 public.idx_deal_partner CREATE INDEX idx_deal_partner ON public.deal USING btree (partner_company_id) WHERE ((partner_company_id IS NOT NULL) AND (archived_at IS NULL))
 public.idx_deal_partner_attribution CREATE INDEX idx_deal_partner_attribution ON public.deal USING btree (partner_attribution) WHERE ((partner_attribution IS NOT NULL) AND (archived_at IS NULL))
@@ -2954,9 +3416,9 @@ public.idx_lead_score_history_series CREATE INDEX idx_lead_score_history_series 
 public.idx_lead_search CREATE INDEX idx_lead_search ON public.lead USING gin (search_tsv)
 public.idx_lead_sla_open CREATE INDEX idx_lead_sla_open ON public.lead USING btree (created_at) WHERE ((archived_at IS NULL) AND (first_response_at IS NULL) AND (sla_breached_at IS NULL))
 public.idx_lead_ws_live CREATE INDEX idx_lead_ws_live ON public.lead USING btree (status) WHERE (archived_at IS NULL)
+public.idx_linkedin_connection_company CREATE INDEX idx_linkedin_connection_company ON public.linkedin_connection USING btree (matched_company_id) WHERE ((matched_company_id IS NOT NULL) AND (tombstoned_at IS NULL))
 public.idx_linkedin_connection_email CREATE INDEX idx_linkedin_connection_email ON public.linkedin_connection USING btree (lower(email)) WHERE ((email IS NOT NULL) AND (tombstoned_at IS NULL))
 public.idx_linkedin_connection_match CREATE INDEX idx_linkedin_connection_match ON public.linkedin_connection USING btree (normalized_name, normalized_company) WHERE (tombstoned_at IS NULL)
-public.idx_linkedin_connection_company CREATE INDEX idx_linkedin_connection_company ON public.linkedin_connection USING btree (matched_company_id) WHERE ((matched_company_id IS NOT NULL) AND (tombstoned_at IS NULL))
 public.idx_list_member_entity CREATE INDEX idx_list_member_entity ON public.list_member USING btree (entity_type, entity_id)
 public.idx_list_member_list CREATE INDEX idx_list_member_list ON public.list_member USING btree (list_id)
 public.idx_mirror_user_map CREATE INDEX idx_mirror_user_map ON public.mirror_user_map USING btree (incumbent, incumbent_user_id)
@@ -2966,25 +3428,6 @@ public.idx_offer_status CREATE INDEX idx_offer_status ON public.offer USING btre
 public.idx_offer_template_fk CREATE INDEX idx_offer_template_fk ON public.offer USING btree (template_id) WHERE (template_id IS NOT NULL)
 public.idx_offer_template_search CREATE INDEX idx_offer_template_search ON public.offer_template USING gin (search_tsv)
 public.idx_oli_offer CREATE INDEX idx_oli_offer ON public.offer_line_item USING btree (offer_id, "position")
-public.idx_company_class CREATE INDEX idx_company_class ON public.company USING btree (classification) WHERE (archived_at IS NULL)
-public.idx_company_created_keyset CREATE INDEX idx_company_created_keyset ON public.company USING btree (created_at DESC, id DESC) WHERE (archived_at IS NULL)
-public.idx_company_domain_company CREATE INDEX idx_company_domain_company ON public.company_domain USING btree (company_id) WHERE (archived_at IS NULL)
-public.idx_company_fact_lookup CREATE INDEX idx_company_fact_lookup ON public.company_fact USING btree (category, field, value_key)
-public.idx_company_last_activity_keyset CREATE INDEX idx_company_last_activity_keyset ON public.company USING btree (last_activity_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
-public.idx_company_legal_name_trgm CREATE INDEX idx_company_legal_name_trgm ON public.company USING gin (f_fold_apostrophes(lower(legal_name)) gin_trgm_ops)
-public.idx_company_lifecycle CREATE INDEX idx_company_lifecycle ON public.company USING btree (lifecycle) WHERE (archived_at IS NULL)
-public.idx_company_name_keyset CREATE INDEX idx_company_name_keyset ON public.company USING btree (display_name, created_at DESC, id DESC) WHERE (archived_at IS NULL)
-public.idx_company_name_keyset_desc CREATE INDEX idx_company_name_keyset_desc ON public.company USING btree (display_name DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
-public.idx_company_name_trgm CREATE INDEX idx_company_name_trgm ON public.company USING gin (f_fold_apostrophes(lower(display_name)) gin_trgm_ops)
-public.idx_company_owner CREATE INDEX idx_company_owner ON public.company USING btree (owner_id) WHERE (archived_at IS NULL)
-public.idx_company_parent CREATE INDEX idx_company_parent ON public.company USING btree (parent_company_id) WHERE (parent_company_id IS NOT NULL)
-public.idx_company_rel_type_cascade CREATE INDEX idx_company_rel_type_cascade ON public.company_relationship_type USING btree (company_id)
-public.idx_company_rel_type_company CREATE INDEX idx_company_rel_type_company ON public.company_relationship_type USING btree (company_id) WHERE (archived_at IS NULL)
-public.idx_company_search CREATE INDEX idx_company_search ON public.company USING gin (search_tsv)
-public.idx_company_technical_state_due CREATE INDEX idx_company_technical_state_due ON public.company_technical_state USING btree (next_attempt_at) WHERE (next_attempt_at IS NOT NULL)
-public.idx_company_updated_keyset CREATE INDEX idx_company_updated_keyset ON public.company USING btree (updated_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
-public.idx_company_domain_disposition_due CREATE INDEX idx_company_domain_disposition_due ON public.company_domain_disposition USING btree (next_attempt_at) WHERE (next_attempt_at IS NOT NULL)
-public.idx_company_geocoded CREATE INDEX idx_company_geocoded ON public.company USING btree (geocode_lat, geocode_lon) WHERE ((geocode_status = 'ok'::text) AND (archived_at IS NULL))
 public.idx_overlay_association_to CREATE INDEX idx_overlay_association_to ON public.overlay_association USING btree (to_type, to_id)
 public.idx_overlay_sync_due CREATE INDEX idx_overlay_sync_due ON public.overlay_sync_state USING btree (next_sweep_at)
 public.idx_partner_stage CREATE INDEX idx_partner_stage ON public.partner USING btree (relationship_stage) WHERE (archived_at IS NULL)
@@ -3009,32 +3452,32 @@ public.idx_person_updated_keyset CREATE INDEX idx_person_updated_keyset ON publi
 public.idx_pph_project CREATE INDEX idx_pph_project ON public.project_phase_history USING btree (project_id, occurred_at DESC)
 public.idx_product_active CREATE INDEX idx_product_active ON public.product USING btree (active) WHERE (archived_at IS NULL)
 public.idx_product_search CREATE INDEX idx_product_search ON public.product USING gin (search_tsv)
-public.idx_project_last_activity_keyset CREATE INDEX idx_project_last_activity_keyset ON public.project USING btree (last_activity_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
-public.idx_project_name_trgm CREATE INDEX idx_project_name_trgm ON public.project USING gin (f_unaccent(lower(name)) gin_trgm_ops)
 public.idx_project_company CREATE INDEX idx_project_company ON public.project USING btree (company_id) WHERE (archived_at IS NULL)
 public.idx_project_company_open CREATE INDEX idx_project_company_open ON public.project USING btree (company_id) WHERE ((phase <> 'closed'::text) AND (archived_at IS NULL))
+public.idx_project_last_activity_keyset CREATE INDEX idx_project_last_activity_keyset ON public.project USING btree (last_activity_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
+public.idx_project_name_trgm CREATE INDEX idx_project_name_trgm ON public.project USING gin (f_unaccent(lower(name)) gin_trgm_ops)
 public.idx_project_owner CREATE INDEX idx_project_owner ON public.project USING btree (owner_id) WHERE (archived_at IS NULL)
 public.idx_project_search CREATE INDEX idx_project_search ON public.project USING gin (search_tsv)
 public.idx_record_grant_record CREATE INDEX idx_record_grant_record ON public.record_grant USING btree (record_type, record_id)
 public.idx_record_grant_subject CREATE INDEX idx_record_grant_subject ON public.record_grant USING btree (subject_type, subject_id)
+public.idx_rel_company_people CREATE INDEX idx_rel_company_people ON public.relationship USING btree (company_id) WHERE ((kind = 'employment'::text) AND (archived_at IS NULL))
 public.idx_rel_company_projects CREATE INDEX idx_rel_company_projects ON public.relationship USING btree (company_id) WHERE ((kind = 'project_company'::text) AND (archived_at IS NULL))
 public.idx_rel_deal_stakeholders CREATE INDEX idx_rel_deal_stakeholders ON public.relationship USING btree (deal_id) WHERE ((kind = 'deal_stakeholder'::text) AND (archived_at IS NULL))
 public.idx_rel_employer_people CREATE INDEX idx_rel_employer_people ON public.relationship USING btree (company_id, person_id) WHERE ((kind = 'employment'::text) AND (ended_at IS NULL) AND (archived_at IS NULL))
+public.idx_rel_history_company CREATE INDEX idx_rel_history_company ON public.relationship USING btree (company_id)
 public.idx_rel_history_counterparty CREATE INDEX idx_rel_history_counterparty ON public.relationship USING btree (counterparty_company_id)
 public.idx_rel_history_deal CREATE INDEX idx_rel_history_deal ON public.relationship USING btree (deal_id)
-public.idx_rel_history_company CREATE INDEX idx_rel_history_company ON public.relationship USING btree (company_id)
 public.idx_rel_history_person CREATE INDEX idx_rel_history_person ON public.relationship USING btree (person_id)
 public.idx_rel_history_project CREATE INDEX idx_rel_history_project ON public.relationship USING btree (project_id)
-public.idx_rel_company_people CREATE INDEX idx_rel_company_people ON public.relationship USING btree (company_id) WHERE ((kind = 'employment'::text) AND (archived_at IS NULL))
-public.idx_rel_partner_counterparty CREATE INDEX idx_rel_partner_counterparty ON public.relationship USING btree (counterparty_company_id) WHERE ((kind = ANY (ARRAY['partner_of'::text, 'referred_by'::text, 'co_sell_with'::text])) AND (archived_at IS NULL))
 public.idx_rel_partner_company CREATE INDEX idx_rel_partner_company ON public.relationship USING btree (company_id) WHERE ((kind = ANY (ARRAY['partner_of'::text, 'referred_by'::text, 'co_sell_with'::text])) AND (archived_at IS NULL))
+public.idx_rel_partner_counterparty CREATE INDEX idx_rel_partner_counterparty ON public.relationship USING btree (counterparty_company_id) WHERE ((kind = ANY (ARRAY['partner_of'::text, 'referred_by'::text, 'co_sell_with'::text])) AND (archived_at IS NULL))
 public.idx_rel_person_companies CREATE INDEX idx_rel_person_companies ON public.relationship USING btree (person_id) WHERE ((kind = 'employment'::text) AND (archived_at IS NULL))
 public.idx_rel_person_projects CREATE INDEX idx_rel_person_projects ON public.relationship USING btree (person_id) WHERE ((kind = 'project_stakeholder'::text) AND (archived_at IS NULL))
 public.idx_rel_project_companies CREATE INDEX idx_rel_project_companies ON public.relationship USING btree (project_id) WHERE ((kind = 'project_company'::text) AND (archived_at IS NULL))
 public.idx_rel_project_stakeholders CREATE INDEX idx_rel_project_stakeholders ON public.relationship USING btree (project_id) WHERE ((kind = 'project_stakeholder'::text) AND (archived_at IS NULL))
 public.idx_rel_stakeholder_deals CREATE INDEX idx_rel_stakeholder_deals ON public.relationship USING btree (person_id) WHERE ((kind = 'deal_stakeholder'::text) AND (archived_at IS NULL))
-public.idx_rel_traverse_deal CREATE INDEX idx_rel_traverse_deal ON public.relationship USING btree (deal_id) WHERE (archived_at IS NULL)
 public.idx_rel_traverse_company CREATE INDEX idx_rel_traverse_company ON public.relationship USING btree (company_id) WHERE (archived_at IS NULL)
+public.idx_rel_traverse_deal CREATE INDEX idx_rel_traverse_deal ON public.relationship USING btree (deal_id) WHERE (archived_at IS NULL)
 public.idx_rel_traverse_person CREATE INDEX idx_rel_traverse_person ON public.relationship USING btree (person_id) WHERE (archived_at IS NULL)
 public.idx_rel_traverse_project CREATE INDEX idx_rel_traverse_project ON public.relationship USING btree (project_id) WHERE (archived_at IS NULL)
 public.idx_rel_works_with_counterparty CREATE INDEX idx_rel_works_with_counterparty ON public.relationship USING btree (counterparty_person_id) WHERE ((kind = 'works_with'::text) AND (archived_at IS NULL))
@@ -3249,23 +3692,15 @@ public.knowledge_document_by_corpus CREATE INDEX knowledge_document_by_corpus ON
 public.knowledge_document_one_per_content CREATE UNIQUE INDEX knowledge_document_one_per_content ON public.knowledge_document USING btree (corpus_id, checksum) WHERE (archived_at IS NULL)
 public.knowledge_document_one_per_managed_page CREATE UNIQUE INDEX knowledge_document_one_per_managed_page ON public.knowledge_document USING btree (corpus_id, filename) WHERE ((managed_source IS NOT NULL) AND (archived_at IS NULL))
 public.knowledge_document_pkey CREATE UNIQUE INDEX knowledge_document_pkey ON public.knowledge_document USING btree (id)
-public.last_activity_of_deal(did uuid) secdef=false cfg=- acl=- 
-  SELECT max(a.occurred_at)
-    FROM activity_link l
-    JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
-     AND a.audience = 'workspace'
-     AND a.origin NOT IN ('system_remediation', 'system_notice')
-   WHERE l.deal_id = did
-
-public.last_activity_of_company(oid uuid) secdef=false cfg=- acl=- 
+public.last_activity_of_company(cid uuid) secdef=false cfg=- acl=- 
   SELECT max(v) FROM (
-    -- Filed against the account itself.
+    -- Filed against the company itself.
     SELECT max(a.occurred_at) AS v
       FROM activity_link l
       JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
        AND a.audience = 'workspace'
        AND a.origin NOT IN ('system_remediation', 'system_notice')
-     WHERE l.company_id = oid
+     WHERE l.company_id = cid
     UNION ALL
     -- Filed against one of its deals.
     SELECT max(a.occurred_at)
@@ -3274,7 +3709,7 @@ public.last_activity_of_company(oid uuid) secdef=false cfg=- acl=-
       JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
        AND a.audience = 'workspace'
        AND a.origin NOT IN ('system_remediation', 'system_notice')
-     WHERE d.company_id = oid
+     WHERE d.company_id = cid
     UNION ALL
     -- Filed against a contact it currently employs.
     SELECT max(a.occurred_at)
@@ -3283,9 +3718,17 @@ public.last_activity_of_company(oid uuid) secdef=false cfg=- acl=-
       JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
        AND a.audience = 'workspace'
        AND a.origin NOT IN ('system_remediation', 'system_notice')
-     WHERE r.company_id = oid AND r.kind = 'employment'
+     WHERE r.company_id = cid AND r.kind = 'employment'
        AND r.ended_at IS NULL AND r.archived_at IS NULL
   ) arms
+
+public.last_activity_of_deal(did uuid) secdef=false cfg=- acl=- 
+  SELECT max(a.occurred_at)
+    FROM activity_link l
+    JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
+     AND a.audience = 'workspace'
+     AND a.origin NOT IN ('system_remediation', 'system_notice')
+   WHERE l.deal_id = did
 
 public.last_activity_of_person(pid uuid) secdef=false cfg=- acl=- 
   SELECT max(a.occurred_at)
@@ -3760,449 +4203,6 @@ public.onboarding_wizard_state.voice_skipped boolean NOT NULL gen=- def=false
 public.onboarding_wizard_state.website_url text gen=- def=-
 public.onboarding_wizard_state_pkey CREATE UNIQUE INDEX onboarding_wizard_state_pkey ON public.onboarding_wizard_state USING btree (id)
 public.onboarding_wizard_state_user_id_key CREATE UNIQUE INDEX onboarding_wizard_state_user_id_key ON public.onboarding_wizard_state USING btree (user_id)
-public.org_brief acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.org_brief.fingerprint text NOT NULL gen=- def=-
-public.org_brief.generated_at timestamp with time zone NOT NULL gen=- def=-
-public.org_brief.generated_by text NOT NULL gen=- def=-
-public.org_brief.id uuid NOT NULL gen=- def=uuidv7()
-public.org_brief.org_brief_generated_by_check CHECK ((generated_by = ANY (ARRAY['model'::text, 'deterministic'::text])))
-public.org_brief.org_brief_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
-public.org_brief.org_brief_pkey PRIMARY KEY (id)
-public.org_brief.org_brief_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
-public.org_brief.org_brief_user_id_company_id_key UNIQUE (user_id, company_id)
-public.org_brief.company_id uuid NOT NULL gen=- def=-
-public.org_brief.payload jsonb NOT NULL gen=- def=-
-public.org_brief.user_id uuid NOT NULL gen=- def=-
-public.org_brief_company_ix CREATE INDEX company_brief_company_ix ON public.org_brief USING btree (company_id)
-public.org_brief_pkey CREATE UNIQUE INDEX company_brief_pkey ON public.org_brief USING btree (id)
-public.org_brief_user_id_company_id_key CREATE UNIQUE INDEX company_brief_user_id_company_id_key ON public.org_brief USING btree (user_id, company_id)
-public.org_dossier acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.org_dossier.fingerprint text NOT NULL gen=- def=-
-public.org_dossier.generated_at timestamp with time zone NOT NULL gen=- def=now()
-public.org_dossier.generated_by text NOT NULL gen=- def=-
-public.org_dossier.org_dossier_generated_by_check CHECK ((generated_by = ANY (ARRAY['model'::text, 'deterministic'::text])))
-public.org_dossier.org_dossier_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
-public.org_dossier.org_dossier_pkey PRIMARY KEY (user_id, company_id)
-public.org_dossier.org_dossier_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
-public.org_dossier.company_id uuid NOT NULL gen=- def=-
-public.org_dossier.payload jsonb NOT NULL gen=- def=-
-public.org_dossier.user_id uuid NOT NULL gen=- def=-
-public.org_dossier_company_ix CREATE INDEX company_dossier_company_ix ON public.org_dossier USING btree (company_id)
-public.org_dossier_pkey CREATE UNIQUE INDEX company_dossier_pkey ON public.org_dossier USING btree (user_id, company_id)
-public.org_growth_fit acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.org_growth_fit.fingerprint text NOT NULL gen=- def=-
-public.org_growth_fit.generated_at timestamp with time zone NOT NULL gen=- def=now()
-public.org_growth_fit.generated_by text NOT NULL gen=- def=-
-public.org_growth_fit.org_growth_fit_generated_by_check CHECK ((generated_by = ANY (ARRAY['model'::text, 'deterministic'::text])))
-public.org_growth_fit.org_growth_fit_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
-public.org_growth_fit.org_growth_fit_pkey PRIMARY KEY (user_id, company_id)
-public.org_growth_fit.org_growth_fit_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
-public.org_growth_fit.company_id uuid NOT NULL gen=- def=-
-public.org_growth_fit.payload jsonb NOT NULL gen=- def=-
-public.org_growth_fit.user_id uuid NOT NULL gen=- def=-
-public.org_growth_fit_company_ix CREATE INDEX company_growth_fit_company_ix ON public.org_growth_fit USING btree (company_id)
-public.org_growth_fit_pkey CREATE UNIQUE INDEX company_growth_fit_pkey ON public.org_growth_fit USING btree (user_id, company_id)
-public.org_scan acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.org_scan.attempt integer NOT NULL gen=- def=1
-public.org_scan.degrade_reason text gen=- def=-
-public.org_scan.findings jsonb NOT NULL gen=- def='[]'::jsonb
-public.org_scan.fingerprint text gen=- def=-
-public.org_scan.finished_at timestamp with time zone gen=- def=-
-public.org_scan.generated_at timestamp with time zone gen=- def=-
-public.org_scan.generated_by text gen=- def=-
-public.org_scan.id uuid NOT NULL gen=- def=uuidv7()
-public.org_scan.next_attempt_at timestamp with time zone gen=- def=-
-public.org_scan.org_scan_attempt_check CHECK ((attempt >= 1))
-public.org_scan.org_scan_generated_by_check CHECK (((generated_by IS NULL) OR (generated_by = ANY (ARRAY['model'::text, 'deterministic'::text]))))
-public.org_scan.org_scan_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
-public.org_scan.org_scan_pkey PRIMARY KEY (id)
-public.org_scan.org_scan_read_deals_check CHECK (((read_deals IS NULL) OR (read_deals >= 0)))
-public.org_scan.org_scan_read_exchanges_check CHECK (((read_exchanges IS NULL) OR (read_exchanges >= 0)))
-public.org_scan.org_scan_running_has_started CHECK (((status <> 'running'::text) OR (started_at IS NOT NULL)))
-public.org_scan.org_scan_settled_has_finish CHECK (((status = ANY (ARRAY['done'::text, 'degraded'::text, 'failed'::text])) = (finished_at IS NOT NULL)))
-public.org_scan.org_scan_status_check CHECK ((status = ANY (ARRAY['queued'::text, 'running'::text, 'done'::text, 'degraded'::text, 'failed'::text])))
-public.org_scan.org_scan_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
-public.org_scan.org_scan_user_id_company_id_key UNIQUE (user_id, company_id)
-public.org_scan.company_id uuid NOT NULL gen=- def=-
-public.org_scan.read_deals integer gen=- def=-
-public.org_scan.read_exchanges integer gen=- def=-
-public.org_scan.requested_at timestamp with time zone NOT NULL gen=- def=now()
-public.org_scan.started_at timestamp with time zone gen=- def=-
-public.org_scan.status text NOT NULL gen=- def=-
-public.org_scan.user_id uuid NOT NULL gen=- def=-
-public.org_scan_company_ix CREATE INDEX company_scan_company_ix ON public.org_scan USING btree (company_id)
-public.org_scan_pkey CREATE UNIQUE INDEX company_scan_pkey ON public.org_scan USING btree (id)
-public.org_scan_user_id_company_id_key CREATE UNIQUE INDEX company_scan_user_id_company_id_key ON public.org_scan USING btree (user_id, company_id)
-public.company acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.company.address_city text gen=- def=-
-public.company.address_country text gen=- def=-
-public.company.address_line1 text gen=- def=-
-public.company.address_line2 text gen=- def=-
-public.company.address_postal_code text gen=- def=-
-public.company.address_region text gen=- def=-
-public.company.archived_at timestamp with time zone gen=- def=-
-public.company.captured_by text NOT NULL gen=- def=-
-public.company.classification text NOT NULL gen=- def='prospect'::text
-public.company.created_at timestamp with time zone NOT NULL gen=- def=now()
-public.company.description text gen=- def=-
-public.company.display_name text NOT NULL gen=- def=-
-public.company.geocode_input_hash text gen=- def=-
-public.company.geocode_lat double precision gen=- def=-
-public.company.geocode_lon double precision gen=- def=-
-public.company.geocode_provider text gen=- def=-
-public.company.geocode_status text gen=- def=-
-public.company.geocoded_at timestamp with time zone gen=- def=-
-public.company.id uuid NOT NULL gen=- def=uuidv7()
-public.company.industry text gen=- def=-
-public.company.is_anchor boolean NOT NULL gen=- def=false
-public.company.last_activity_at timestamp with time zone gen=- def=-
-public.company.legal_hold boolean NOT NULL gen=- def=false
-public.company.legal_name text gen=- def=-
-public.company.lifecycle text NOT NULL gen=- def='unknown'::text
-public.company.linkedin_url text gen=- def=-
-public.company.logo_icon_object_key text gen=- def=-
-public.company.logo_icon_origin text gen=- def=-
-public.company.logo_object_key text gen=- def=-
-public.company.logo_origin text gen=- def=-
-public.company.merged_into_id uuid gen=- def=-
-public.company.name_source text NOT NULL gen=- def='human'::text
-public.company.company_anchor_is_permanent CHECK (((NOT is_anchor) OR ((archived_at IS NULL) AND (merged_into_id IS NULL))))
-public.company.company_classification_check CHECK ((classification = ANY (ARRAY['prospect'::text, 'customer'::text, 'agency'::text, 'reseller'::text, 'tech_vendor'::text, 'platform'::text, 'partner'::text, 'competitor'::text, 'other'::text])))
-public.company.company_delete_clears_deal_partner CREATE TRIGGER company_delete_clears_deal_partner BEFORE DELETE ON public.company FOR EACH ROW EXECUTE FUNCTION deal_clear_partner_attribution_on_company_delete()
-public.company.company_description_length CHECK (((description IS NULL) OR (length(description) <= 500)))
-public.company.company_geocode_resolved_has_a_point CHECK (((geocode_status IS DISTINCT FROM 'ok'::text) OR ((geocode_lat IS NOT NULL) AND (geocode_lon IS NOT NULL) AND ((geocode_lat >= ('-90'::integer)::double precision) AND (geocode_lat <= (90)::double precision)) AND ((geocode_lon >= ('-180'::integer)::double precision) AND (geocode_lon <= (180)::double precision)))))
-public.company.company_geocode_status_check CHECK (((geocode_status IS NULL) OR (geocode_status = ANY (ARRAY['ok'::text, 'failed'::text, 'no_match'::text, 'stale'::text]))))
-public.company.company_lifecycle_check CHECK ((lifecycle = ANY (ARRAY['unknown'::text, 'target'::text, 'prospect'::text, 'opportunity'::text, 'customer'::text, 'former_customer'::text, 'disqualified'::text])))
-public.company.company_linkedin_url_shape CHECK (((linkedin_url IS NULL) OR (linkedin_url ~ '^https://([a-z]{2,3}\.)?linkedin\.com/company/[^/?#]+$'::text)))
-public.company.company_merged_into_id_fkey FOREIGN KEY (merged_into_id) REFERENCES company(id) ON DELETE SET NULL (merged_into_id)
-public.company.company_name_source_check CHECK ((name_source = ANY (ARRAY['human'::text, 'dossier'::text, 'signature'::text, 'domain'::text])))
-public.company.company_not_own_parent CHECK (((parent_company_id IS NULL) OR (parent_company_id <> id)))
-public.company.company_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
-public.company.company_owner_private_names_its_owner CHECK (((visibility <> 'owner'::text) OR (owner_id IS NOT NULL)))
-public.company.company_parent_company_id_fkey FOREIGN KEY (parent_company_id) REFERENCES company(id) ON DELETE SET NULL (parent_company_id)
-public.company.company_pkey PRIMARY KEY (id)
-public.company.company_refuse_anchor_retirement CREATE TRIGGER company_refuse_anchor_retirement BEFORE INSERT OR UPDATE OF merged_into_id, is_anchor ON public.company FOR EACH ROW EXECUTE FUNCTION company_refuse_anchor_retirement()
-public.company.company_relevance_check CHECK (((relevance IS NULL) OR ((relevance >= 0) AND (relevance <= 100))))
-public.company.company_size_band_check CHECK (((size_band IS NULL) OR (size_band = ANY (ARRAY['1-10'::text, '11-50'::text, '51-200'::text, '201-500'::text, '501-1000'::text, '1001-5000'::text, '5000+'::text]))))
-public.company.company_visibility_check CHECK ((visibility = ANY (ARRAY['workspace'::text, 'owner'::text])))
-public.company.owner_id uuid gen=- def=-
-public.company.parent_company_id uuid gen=- def=-
-public.company.quarantined_at timestamp with time zone gen=- def=-
-public.company.raw jsonb gen=- def=-
-public.company.relevance smallint gen=- def=-
-public.company.search_tsv tsvector gen=s def=(((setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(display_name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(display_name, ''::text))), 'A'::"char")) || setweight(to_tsvector('simple'::regconfig, f_unaccent(((COALESCE(legal_name, ''::text) || ' '::text) || COALESCE(industry, ''::text)))), 'B'::"char")) || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(((COALESCE(legal_name, ''::text) || ' '::text) || COALESCE(industry, ''::text)))), 'B'::"char"))
-public.company.size_band text gen=- def=-
-public.company.source text NOT NULL gen=- def=-
-public.company.trg_company_geocode_stale CREATE TRIGGER trg_company_geocode_stale BEFORE UPDATE OF address_line1, address_line2, address_city, address_region, address_postal_code, address_country ON public.company FOR EACH ROW WHEN (((old.address_line1 IS DISTINCT FROM new.address_line1) OR (old.address_line2 IS DISTINCT FROM new.address_line2) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_region IS DISTINCT FROM new.address_region) OR (old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION company_geocode_goes_stale()
-public.company.trg_company_no_cycle CREATE TRIGGER trg_company_no_cycle BEFORE INSERT OR UPDATE OF parent_company_id ON public.company FOR EACH ROW WHEN ((new.parent_company_id IS NOT NULL)) EXECUTE FUNCTION company_no_ancestor_cycle()
-public.company.trg_company_updated CREATE TRIGGER trg_company_updated BEFORE UPDATE ON public.company FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
-public.company.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.company.version bigint NOT NULL gen=- def=1
-public.company.visibility text NOT NULL gen=- def='workspace'::text
-public.company_domain acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.company_domain.archived_at timestamp with time zone gen=- def=-
-public.company_domain.captured_by text NOT NULL gen=- def=-
-public.company_domain.created_at timestamp with time zone NOT NULL gen=- def=now()
-public.company_domain.domain text NOT NULL gen=- def=-
-public.company_domain.id uuid NOT NULL gen=- def=uuidv7()
-public.company_domain.is_primary boolean NOT NULL gen=- def=false
-public.company_domain.org_domain_norm CHECK ((domain = lower(domain)))
-public.company_domain.company_domain_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
-public.company_domain.company_domain_pkey PRIMARY KEY (id)
-public.company_domain.company_id uuid NOT NULL gen=- def=-
-public.company_domain.source text NOT NULL gen=- def=-
-public.company_domain.trg_company_domain_updated CREATE TRIGGER trg_company_domain_updated BEFORE UPDATE ON public.company_domain FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
-public.company_domain.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.company_domain.version bigint NOT NULL gen=- def=1
-public.company_domain_disposition acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.company_domain_disposition.admission text gen=- def=-
-public.company_domain_disposition.admission_at timestamp with time zone gen=- def=-
-public.company_domain_disposition.admission_reason text gen=- def=-
-public.company_domain_disposition.admission_source text gen=- def=-
-public.company_domain_disposition.attempts integer NOT NULL gen=- def=0
-public.company_domain_disposition.created_at timestamp with time zone NOT NULL gen=- def=now()
-public.company_domain_disposition.domain text NOT NULL gen=- def=-
-public.company_domain_disposition.evidence text gen=- def=-
-public.company_domain_disposition.id uuid NOT NULL gen=- def=uuidv7()
-public.company_domain_disposition.last_attempt_at timestamp with time zone gen=- def=-
-public.company_domain_disposition.next_attempt_at timestamp with time zone gen=- def=now()
-public.company_domain_disposition.company_domain_disposition_admission_check CHECK (((admission IS NULL) OR (admission = ANY (ARRAY['suppressed'::text, 'admitted'::text]))))
-public.company_domain_disposition.company_domain_disposition_admission_shape CHECK ((((admission IS NULL) AND (admission_reason IS NULL) AND (admission_source IS NULL) AND (admission_at IS NULL)) OR ((admission IS NOT NULL) AND (admission_reason IS NOT NULL) AND (admission_source IS NOT NULL) AND (admission_at IS NOT NULL))))
-public.company_domain_disposition.company_domain_disposition_admission_source_check CHECK (((admission_source IS NULL) OR (admission_source = ANY (ARRAY['verdict'::text, 'heuristic'::text, 'human'::text]))))
-public.company_domain_disposition.company_domain_disposition_domain_check CHECK (((domain = lower(domain)) AND (domain <> ''::text)))
-public.company_domain_disposition.company_domain_disposition_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
-public.company_domain_disposition.company_domain_disposition_owner_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
-public.company_domain_disposition.company_domain_disposition_pending_reason_check CHECK (((pending_reason IS NULL) OR (pending_reason = 'unevidenced'::text)))
-public.company_domain_disposition.company_domain_disposition_pending_reason_shape CHECK (((pending_reason IS NULL) OR ((status = 'pending'::text) AND (admission IS DISTINCT FROM 'suppressed'::text))))
-public.company_domain_disposition.company_domain_disposition_pkey PRIMARY KEY (id)
-public.company_domain_disposition.company_domain_disposition_settled_shape CHECK ((((status = 'pending'::text) AND (source IS NULL)) OR ((status = 'company'::text) AND (source IS NOT NULL) AND (company_id IS NOT NULL)) OR ((status = ANY (ARRAY['personal'::text, 'provider'::text, 'no_site'::text])) AND (source IS NOT NULL))))
-public.company_domain_disposition.company_domain_disposition_site_read_fkey FOREIGN KEY (site_read_id) REFERENCES site_read(id) ON DELETE SET NULL (site_read_id)
-public.company_domain_disposition.company_domain_disposition_source_check CHECK (((source IS NULL) OR (source = ANY (ARRAY['site_read'::text, 'heuristic'::text, 'human'::text]))))
-public.company_domain_disposition.company_domain_disposition_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'company'::text, 'personal'::text, 'provider'::text, 'no_site'::text])))
-public.company_domain_disposition.company_id uuid gen=- def=-
-public.company_domain_disposition.owner_id uuid gen=- def=-
-public.company_domain_disposition.pending_reason text gen=- def=-
-public.company_domain_disposition.site_read_id uuid gen=- def=-
-public.company_domain_disposition.source text gen=- def=-
-public.company_domain_disposition.status text NOT NULL gen=- def='pending'::text
-public.company_domain_disposition.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.company_domain_disposition_pkey CREATE UNIQUE INDEX company_domain_disposition_pkey ON public.company_domain_disposition USING btree (id)
-public.company_domain_pkey CREATE UNIQUE INDEX company_domain_pkey ON public.company_domain USING btree (id)
-public.company_fact acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.company_fact.captured_at timestamp with time zone NOT NULL gen=- def=now()
-public.company_fact.captured_by text NOT NULL gen=- def=-
-public.company_fact.category text NOT NULL gen=- def=-
-public.company_fact.confidence real gen=- def=-
-public.company_fact.evidence_snippet text gen=- def=-
-public.company_fact.field text NOT NULL gen=- def=-
-public.company_fact.id uuid NOT NULL gen=- def=uuidv7()
-public.company_fact.org_fact_field_vocab CHECK ((((category = 'company'::text) AND (field = ANY (ARRAY['founded_year'::text, 'employee_range'::text, 'phone'::text, 'contact_email'::text, 'location'::text]))) OR ((category = 'offering'::text) AND (field = ANY (ARRAY['service'::text, 'product'::text, 'capability'::text]))) OR ((category = 'market'::text) AND (field = ANY (ARRAY['served_industry'::text, 'company_size'::text, 'geography'::text, 'language'::text]))) OR ((category = 'signal'::text) AND (field = ANY (ARRAY['certification'::text, 'partner'::text, 'named_customer'::text, 'technology'::text, 'quantified_outcome'::text, 'mail_provider'::text, 'email_security'::text, 'hosting_provider'::text, 'operated_service'::text])))))
-public.company_fact.org_fact_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
-public.company_fact.org_fact_site_evidence CHECK (((source <> 'site_read'::text) OR ((evidence_snippet IS NOT NULL) AND (evidence_snippet <> ''::text) AND (source_url IS NOT NULL) AND (source_url <> ''::text) AND (confidence IS NOT NULL))))
-public.company_fact.org_fact_site_read_fkey FOREIGN KEY (site_read_id) REFERENCES site_read(id) ON DELETE SET NULL (site_read_id)
-public.company_fact.org_fact_technical_evidence CHECK (((source <> 'technical_lookup'::text) OR ((evidence_snippet IS NOT NULL) AND (evidence_snippet <> ''::text) AND (source_url IS NOT NULL) AND (source_url <> ''::text) AND (retrieved_at IS NOT NULL))))
-public.company_fact.org_fact_value_key_cardinality CHECK ((((category = 'company'::text) AND (field <> 'location'::text) AND (value_key = ''::text)) OR ((category = 'company'::text) AND (field = 'location'::text) AND (value_key <> ''::text)) OR ((category = ANY (ARRAY['offering'::text, 'market'::text, 'signal'::text])) AND (value_key <> ''::text))))
-public.company_fact.org_fact_verified_pair CHECK (((verified_at IS NULL) = (verified_by IS NULL)))
-public.company_fact.company_fact_category_check CHECK ((category = ANY (ARRAY['company'::text, 'offering'::text, 'market'::text, 'signal'::text])))
-public.company_fact.company_fact_confidence_check CHECK (((confidence IS NULL) OR ((confidence >= (0)::double precision) AND (confidence <= (1)::double precision))))
-public.company_fact.company_fact_pkey PRIMARY KEY (id)
-public.company_fact.company_fact_source_check CHECK ((source = ANY (ARRAY['human'::text, 'site_read'::text, 'connector'::text, 'migration'::text, 'technical_lookup'::text])))
-public.company_fact.company_id uuid NOT NULL gen=- def=-
-public.company_fact.retrieved_at timestamp with time zone gen=- def=-
-public.company_fact.site_read_id uuid gen=- def=-
-public.company_fact.source text NOT NULL gen=- def='site_read'::text
-public.company_fact.source_url text gen=- def=-
-public.company_fact.trg_company_fact_updated CREATE TRIGGER trg_company_fact_updated BEFORE UPDATE ON public.company_fact FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
-public.company_fact.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.company_fact.uq_company_fact UNIQUE (company_id, category, field, value_key)
-public.company_fact.value text NOT NULL gen=- def=-
-public.company_fact.value_key text NOT NULL gen=- def=''::text
-public.company_fact.verified_at timestamp with time zone gen=- def=-
-public.company_fact.verified_by uuid gen=- def=-
-public.company_fact.version bigint NOT NULL gen=- def=1
-public.company_fact_pkey CREATE UNIQUE INDEX company_fact_pkey ON public.company_fact USING btree (id)
-public.company_geocode_goes_stale() secdef=false cfg=- acl=- 
-BEGIN
-  -- Only when the coordinates exist and the writer did not speak for them:
-  -- stamping 'stale' on a row that was never resolved would say the
-  -- coordinates are out of date rather than absent, and overriding a writer
-  -- that set the status deliberately would undo the worker's own write.
-  IF NEW.geocode_status IS DISTINCT FROM OLD.geocode_status THEN
-    RETURN NEW;
-  END IF;
-  IF OLD.geocode_status IS NULL THEN
-    RETURN NEW;
-  END IF;
-  NEW.geocode_status := 'stale';
-  RETURN NEW;
-END;
-
-public.company_geocode_state acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.company_geocode_state.attempts integer NOT NULL gen=- def=0
-public.company_geocode_state.last_outcome text gen=- def=-
-public.company_geocode_state.next_attempt_at timestamp with time zone gen=- def=-
-public.company_geocode_state.company_geocode_state_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
-public.company_geocode_state.company_geocode_state_pkey PRIMARY KEY (company_id)
-public.company_geocode_state.company_id uuid NOT NULL gen=- def=-
-public.company_geocode_state.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.company_geocode_state_pkey CREATE UNIQUE INDEX company_geocode_state_pkey ON public.company_geocode_state USING btree (company_id)
-public.company_linkedin_url_key CREATE UNIQUE INDEX company_linkedin_url_key ON public.company USING btree (lower(linkedin_url)) WHERE ((linkedin_url IS NOT NULL) AND (archived_at IS NULL))
-public.company_no_ancestor_cycle() secdef=false cfg=- acl=- 
-DECLARE
-  ancestor uuid := NEW.parent_company_id;
-BEGIN
-  WHILE ancestor IS NOT NULL LOOP
-    IF ancestor = NEW.id THEN
-      RAISE EXCEPTION 'company % would become its own ancestor', NEW.id
-        USING ERRCODE = 'check_violation';
-    END IF;
-    SELECT parent_company_id INTO ancestor FROM company WHERE id = ancestor;
-  END LOOP;
-  RETURN NEW;
-END;
-
-public.company_open_pipeline_rollup(as_of date) secdef=false cfg=- acl==X/margince_owner,margince_owner=X/margince_owner,margince_app=X/margince_owner 
- SELECT d.company_id,
-    -- The SUM is bounded too, and separately from its summands. sum(bigint)
-    -- answers in numeric, so a set of individually representable deals can add
-    -- to a figure no bigint holds — and the reader scans this column into an
-    -- int64. Guarding one deal and not the total would have moved the same
-    -- failure one level up: the record unreadable because the deals are large
-    -- rather than because one of them is.
-    --
-    -- Out of range answers NULL, which the caller already knows how to report:
-    -- the deals were priced, the total cannot be stated, and a figure nobody
-    -- can represent is not a figure to publish.
-    CASE
-      WHEN sum(conv.minor_base)
-           BETWEEN -9223372036854775808 AND 9223372036854775807
-        THEN sum(conv.minor_base)
-      ELSE NULL
-    END AS open_pipeline_minor_base,
-    count(*) AS open_deal_count,
-    -- How many deals actually reached the sum. SUM ignores a null summand
-    -- silently, so without this a total covering one of two deals is
-    -- indistinguishable from one covering both — a confident figure that is
-    -- quietly short, which is worse than the "not computable" it replaces.
-    --
-    -- It counts the CONVERSION rather than restating when one is possible: a
-    -- deal with no rate and a deal whose converted amount does not fit are both
-    -- deals the sum did not reach, and one predicate answers for both.
-    count(*) FILTER (WHERE conv.minor_base IS NOT NULL) AS priced_deal_count
-   FROM deal d
-   -- LEFT, not CROSS: an installation whose base-currency row is somehow absent
-   -- must still report its open_deal_count. A cross join would return no row at
-   -- all for the company, which reads as "no open deals" — the one answer
-   -- that is definitely wrong. With no base currency nothing converts, every
-   -- deal contributes null, and the sum is null: not computable, honestly.
-   LEFT JOIN LATERAL (
-     SELECT (value #>> '{}')::text AS code
-       FROM setting
-      WHERE key = 'installation.base_currency'
-   ) base ON true
-   LEFT JOIN LATERAL (
-     SELECT r.rate
-       FROM fx_rate r
-      WHERE d.currency IS DISTINCT FROM base.code
-        AND r.from_currency = d.currency
-        AND r.to_currency = base.code
-        AND r.rate_date <= as_of
-      ORDER BY r.rate_date DESC
-      LIMIT 1
-   ) live ON true
-   -- Both currencies' minor-unit scales, each absent for an ordinary two-digit
-   -- code and coalesced to ISO's default below. LEFT so a code the table does
-   -- not name still converts, at two digits, rather than dropping the deal out
-   -- of the sum — an unnamed exception renders wrong for that code, where a
-   -- dropped deal silently shortens a total for every code.
-   LEFT JOIN currency_minor_digits deal_digits ON deal_digits.currency = d.currency
-   LEFT JOIN currency_minor_digits base_digits ON base_digits.currency = base.code
-   -- What this deal contributes to the total, or NULL when it contributes
-   -- nothing. Three cases, and the bound is written once here so the count
-   -- predicate below reads the same answer the sum does.
-   LEFT JOIN LATERAL (
-     SELECT CASE
-       -- Already in the installation's own currency: no rate needed, no scale
-       -- to cross, and none should be looked for. This is the ordinary deal.
-       WHEN d.currency = base.code THEN d.amount_minor
-       -- Converted, and only when the result is a number the column can hold.
-       -- The comparison runs in numeric, where the product already is, so it
-       -- decides the question BEFORE a cast can raise it.
-       --
-       -- amount × rate × 10^digits(base) ÷ 10^digits(deal), as ONE expression
-       -- so the single round() is the only rounding. numeric is exact, so the
-       -- intermediate carries no error to accumulate.
-       WHEN live.rate IS NOT NULL
-        AND round(d.amount_minor * live.rate
-                    * power(10::numeric, coalesce(base_digits.digits, 2))
-                    / power(10::numeric, coalesce(deal_digits.digits, 2)))
-            BETWEEN -9223372036854775808 AND 9223372036854775807
-         THEN round(d.amount_minor * live.rate
-                      * power(10::numeric, coalesce(base_digits.digits, 2))
-                      / power(10::numeric, coalesce(deal_digits.digits, 2)))::bigint
-       -- No usable rate, or a result too large to represent. Nothing is ever
-       -- converted at an invented rate of 1 — that would report ¥5,000,000 as
-       -- €5,000,000 — and nothing is ever clamped to the biggest number that
-       -- fits, which is the same lie with more digits.
-       ELSE NULL
-     END AS minor_base
-   ) conv ON true
-  WHERE ((d.status = 'open'::text) AND (d.company_id IS NOT NULL) AND (d.archived_at IS NULL))
-  GROUP BY d.company_id;
-
-public.company_pkey CREATE UNIQUE INDEX company_pkey ON public.company USING btree (id)
-public.company_profile_field acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.company_profile_field.captured_at timestamp with time zone NOT NULL gen=- def=now()
-public.company_profile_field.captured_by text NOT NULL gen=- def=-
-public.company_profile_field.confidence real gen=- def=-
-public.company_profile_field.evidence_snippet text gen=- def=-
-public.company_profile_field.field text NOT NULL gen=- def=-
-public.company_profile_field.id uuid NOT NULL gen=- def=uuidv7()
-public.company_profile_field.org_profile_field_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
-public.company_profile_field.org_profile_field_verified_pair CHECK (((verified_at IS NULL) = (verified_by IS NULL)))
-public.company_profile_field.org_profile_site_evidence CHECK (((source <> 'site_read'::text) OR ((evidence_snippet IS NOT NULL) AND (evidence_snippet <> ''::text) AND (source_url IS NOT NULL) AND (source_url <> ''::text) AND (confidence IS NOT NULL))))
-public.company_profile_field.company_id uuid NOT NULL gen=- def=-
-public.company_profile_field.company_profile_field_confidence_check CHECK (((confidence IS NULL) OR ((confidence >= (0)::double precision) AND (confidence <= (1)::double precision))))
-public.company_profile_field.company_profile_field_field_check CHECK ((field = ANY (ARRAY['display_name'::text, 'offer_summary'::text, 'icp'::text, 'value_proposition'::text, 'usp'::text, 'customer_pains'::text, 'desired_outcomes'::text, 'buying_center'::text, 'buying_intents'::text, 'common_objections'::text, 'sales_motion'::text, 'legal_name'::text, 'registered_address'::text, 'register_vat'::text, 'industry'::text, 'history'::text, 'legal_form'::text, 'register_court'::text, 'register_number'::text])))
-public.company_profile_field.company_profile_field_pkey PRIMARY KEY (id)
-public.company_profile_field.company_profile_field_source_check CHECK ((source = ANY (ARRAY['human'::text, 'site_read'::text, 'connector'::text, 'migration'::text])))
-public.company_profile_field.retrieved_at timestamp with time zone gen=- def=-
-public.company_profile_field.source text NOT NULL gen=- def='site_read'::text
-public.company_profile_field.source_url text gen=- def=-
-public.company_profile_field.trg_company_profile_field_updated CREATE TRIGGER trg_company_profile_field_updated BEFORE UPDATE ON public.company_profile_field FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
-public.company_profile_field.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.company_profile_field.uq_company_profile_field UNIQUE (company_id, field)
-public.company_profile_field.value text NOT NULL gen=- def=-
-public.company_profile_field.verified_at timestamp with time zone gen=- def=-
-public.company_profile_field.verified_by uuid gen=- def=-
-public.company_profile_field.version bigint NOT NULL gen=- def=1
-public.company_profile_field_pkey CREATE UNIQUE INDEX company_profile_field_pkey ON public.company_profile_field USING btree (id)
-public.company_refuse_anchor_retirement() secdef=false cfg=- acl=- 
-BEGIN
-  IF NEW.merged_into_id IS NOT NULL
-     AND EXISTS (SELECT 1 FROM company o
-                  WHERE o.id = NEW.merged_into_id AND o.is_anchor) THEN
-    RAISE EXCEPTION 'company % may not be merged into the anchor company', NEW.id
-      USING ERRCODE = 'check_violation',
-            CONSTRAINT = 'company_anchor_is_permanent';
-  END IF;
-  IF TG_OP = 'UPDATE' AND OLD.is_anchor AND NOT NEW.is_anchor
-     AND OLD.archived_at IS NULL AND OLD.merged_into_id IS NULL THEN
-    RAISE EXCEPTION 'company % is the anchor company and may not be demoted', NEW.id
-      USING ERRCODE = 'check_violation',
-            CONSTRAINT = 'company_anchor_is_permanent';
-  END IF;
-  RETURN NEW;
-END;
-
-public.company_relationship_type acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.company_relationship_type.archived_at timestamp with time zone gen=- def=-
-public.company_relationship_type.captured_by text NOT NULL gen=- def=-
-public.company_relationship_type.created_at timestamp with time zone NOT NULL gen=- def=now()
-public.company_relationship_type.id uuid NOT NULL gen=- def=uuidv7()
-public.company_relationship_type.company_id uuid NOT NULL gen=- def=-
-public.company_relationship_type.company_relationship_typ_workspace_id_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
-public.company_relationship_type.company_relationship_type_pkey PRIMARY KEY (id)
-public.company_relationship_type.company_relationship_type_relationship_type_check CHECK ((relationship_type = ANY (ARRAY['customer'::text, 'partner'::text, 'supplier'::text, 'investor'::text, 'portfolio_company'::text, 'competitor'::text, 'other'::text])))
-public.company_relationship_type.relationship_type text NOT NULL gen=- def=-
-public.company_relationship_type.source text NOT NULL gen=- def=-
-public.company_relationship_type.trg_company_relationship_type_updated CREATE TRIGGER trg_company_relationship_type_updated BEFORE UPDATE ON public.company_relationship_type FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
-public.company_relationship_type.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.company_relationship_type.version bigint NOT NULL gen=- def=1
-public.company_relationship_type_pkey CREATE UNIQUE INDEX company_relationship_type_pkey ON public.company_relationship_type USING btree (id)
-public.company_technical_state acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.company_technical_state.attempts integer NOT NULL gen=- def=0
-public.company_technical_state.lane text NOT NULL gen=- def=-
-public.company_technical_state.last_outcome text gen=- def=-
-public.company_technical_state.last_success_at timestamp with time zone gen=- def=-
-public.company_technical_state.next_attempt_at timestamp with time zone gen=- def=-
-public.company_technical_state.company_id uuid NOT NULL gen=- def=-
-public.company_technical_state.company_technical_state_lane_check CHECK ((lane = ANY (ARRAY['dns'::text, 'certlog'::text, 'homepage'::text])))
-public.company_technical_state.company_technical_state_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
-public.company_technical_state.company_technical_state_outcome_check CHECK (((last_outcome IS NULL) OR (last_outcome = ANY (ARRAY['applied'::text, 'empty'::text, 'failed'::text, 'refused'::text]))))
-public.company_technical_state.company_technical_state_pkey PRIMARY KEY (company_id, lane)
-public.company_technical_state.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.company_technical_state_pkey CREATE UNIQUE INDEX company_technical_state_pkey ON public.company_technical_state USING btree (company_id, lane)
-public.company_vat_check acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.company_vat_check.captured_by text NOT NULL gen=- def=-
-public.company_vat_check.checked_at timestamp with time zone NOT NULL gen=- def=now()
-public.company_vat_check.consultation_number text gen=- def=-
-public.company_vat_check.id uuid NOT NULL gen=- def=uuidv7()
-public.company_vat_check.company_id uuid NOT NULL gen=- def=-
-public.company_vat_check.company_vat_check_number_not_blank CHECK ((btrim(vat_number) <> ''::text))
-public.company_vat_check.company_vat_check_one_per_company UNIQUE (company_id)
-public.company_vat_check.company_vat_check_company_fk FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
-public.company_vat_check.company_vat_check_pkey PRIMARY KEY (id)
-public.company_vat_check.company_vat_check_receipt_needs_an_answer CHECK (((consultation_number IS NULL) OR (status <> 'unavailable'::text)))
-public.company_vat_check.company_vat_check_status_check CHECK ((status = ANY (ARRAY['valid'::text, 'invalid'::text, 'unavailable'::text])))
-public.company_vat_check.registered_address text gen=- def=-
-public.company_vat_check.registered_name text gen=- def=-
-public.company_vat_check.status text NOT NULL gen=- def=-
-public.company_vat_check.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.company_vat_check.vat_number text NOT NULL gen=- def=-
-public.company_vat_check.version bigint NOT NULL gen=- def=1
-public.company_vat_check_one_per_company CREATE UNIQUE INDEX company_vat_check_one_per_company ON public.company_vat_check USING btree (company_id)
-public.company_vat_check_pkey CREATE UNIQUE INDEX company_vat_check_pkey ON public.company_vat_check USING btree (id)
 public.overlay_association acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.overlay_association.category text NOT NULL gen=- def=-
 public.overlay_association.direction text NOT NULL gen=- def=-
@@ -4295,6 +4295,7 @@ public.partner.archived_at timestamp with time zone gen=- def=-
 public.partner.captured_by text NOT NULL gen=- def=-
 public.partner.cert_status text NOT NULL gen=- def='applied'::text
 public.partner.certified_staff smallint NOT NULL gen=- def=0
+public.partner.company_id uuid NOT NULL gen=- def=-
 public.partner.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.partner.id uuid NOT NULL gen=- def=uuidv7()
 public.partner.joined_at date gen=- def=-
@@ -4302,14 +4303,13 @@ public.partner.last_contact_at timestamp with time zone gen=- def=-
 public.partner.margin_tier text gen=- def=-
 public.partner.next_step text gen=- def=-
 public.partner.next_step_due_at date gen=- def=-
-public.partner.company_id uuid NOT NULL gen=- def=-
 public.partner.partner_cert_status_check CHECK ((cert_status = ANY (ARRAY['applied'::text, 'certified'::text, 'suspended'::text])))
+public.partner.partner_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
+public.partner.partner_company_id_key UNIQUE (company_id)
 public.partner.partner_fit_override_reason text gen=- def=-
 public.partner.partner_fit_score smallint gen=- def=-
 public.partner.partner_fit_score_computed smallint gen=- def=-
 public.partner.partner_margin_tier_check CHECK (((margin_tier IS NULL) OR (margin_tier = ANY (ARRAY['tier1_15'::text, 'tier2_20'::text, 'tier3_25'::text]))))
-public.partner.partner_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
-public.partner.partner_company_id_key UNIQUE (company_id)
 public.partner.partner_partner_fit_override_reason_check CHECK (((partner_fit_override_reason IS NULL) OR (length(btrim(partner_fit_override_reason)) > 0)))
 public.partner.partner_partner_fit_score_check CHECK (((partner_fit_score IS NULL) OR ((partner_fit_score >= 0) AND (partner_fit_score <= 100))))
 public.partner.partner_partner_fit_score_computed_check CHECK (((partner_fit_score_computed IS NULL) OR ((partner_fit_score_computed >= 0) AND (partner_fit_score_computed <= 100))))
@@ -4679,6 +4679,7 @@ public.project acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margi
 public.project.archived_at timestamp with time zone gen=- def=-
 public.project.captured_by text NOT NULL gen=- def=-
 public.project.closed_reason text gen=- def=-
+public.project.company_id uuid gen=- def=-
 public.project.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.project.description text gen=- def=-
 public.project.ended_at date gen=- def=-
@@ -4687,13 +4688,12 @@ public.project.key text gen=- def=-
 public.project.last_activity_at timestamp with time zone gen=- def=-
 public.project.legal_hold boolean NOT NULL gen=- def=false
 public.project.name text NOT NULL gen=- def=-
-public.project.company_id uuid gen=- def=-
 public.project.owner_id uuid gen=- def=-
 public.project.phase text NOT NULL gen=- def='initiative'::text
 public.project.project_closed_reason CHECK (((phase <> 'closed'::text) OR (closed_reason IS NOT NULL)))
+public.project.project_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE RESTRICT
 public.project.project_dates CHECK (((ended_at IS NULL) OR (started_at IS NULL) OR (ended_at >= started_at)))
 public.project.project_key_shape CHECK (((key IS NULL) OR (key ~ '^[A-Za-z][A-Za-z0-9_-]{1,23}$'::text)))
-public.project.project_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE RESTRICT
 public.project.project_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
 public.project.project_phase_check CHECK ((phase = ANY (ARRAY['initiative'::text, 'pursuing'::text, 'delivering'::text, 'closed'::text])))
 public.project.project_pkey PRIMARY KEY (id)
@@ -4875,7 +4875,7 @@ public.record_grant.subject_type text NOT NULL gen=- def=-
 public.record_grant.version bigint NOT NULL gen=- def=1
 public.record_grant_pkey CREATE UNIQUE INDEX record_grant_pkey ON public.record_grant USING btree (id)
 public.record_grant_unique CREATE UNIQUE INDEX record_grant_unique ON public.record_grant USING btree (record_type, record_id, subject_type, subject_id)
-public.refresh_last_activity_for_link(pid uuid, did uuid, oid uuid) secdef=false cfg=- acl=- 
+public.refresh_last_activity_for_link(pid uuid, did uuid, cid uuid) secdef=false cfg=- acl=- 
 DECLARE
   reached uuid;
 BEGIN
@@ -4885,7 +4885,7 @@ BEGIN
   -- same order, so they queue rather than deadlock.
   FOR reached IN
      SELECT x FROM (
-       SELECT oid AS x WHERE oid IS NOT NULL
+       SELECT cid AS x WHERE cid IS NOT NULL
        UNION SELECT d.company_id FROM deal d WHERE d.id = did AND d.company_id IS NOT NULL
        UNION SELECT r.company_id FROM relationship r
               WHERE r.person_id = pid AND r.kind = 'employment' AND r.ended_at IS NULL AND r.archived_at IS NULL
@@ -4898,6 +4898,7 @@ END;
 public.relationship acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.relationship.archived_at timestamp with time zone gen=- def=-
 public.relationship.captured_by text NOT NULL gen=- def=-
+public.relationship.company_id uuid gen=- def=-
 public.relationship.counterparty_company_id uuid gen=- def=-
 public.relationship.counterparty_person_id uuid gen=- def=-
 public.relationship.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -4906,7 +4907,6 @@ public.relationship.ended_at date gen=- def=-
 public.relationship.id uuid NOT NULL gen=- def=uuidv7()
 public.relationship.is_current_primary boolean NOT NULL gen=- def=false
 public.relationship.kind text NOT NULL gen=- def=-
-public.relationship.company_id uuid gen=- def=-
 public.relationship.person_id uuid gen=- def=-
 public.relationship.project_id uuid gen=- def=-
 public.relationship.rel_dates CHECK (((ended_at IS NULL) OR (started_at IS NULL) OR (ended_at >= started_at)))
@@ -4916,12 +4916,12 @@ public.relationship.rel_project_company_shape CHECK (((kind <> 'project_company'
 public.relationship.rel_project_stakeholder_shape CHECK (((kind <> 'project_stakeholder'::text) OR ((project_id IS NOT NULL) AND (person_id IS NOT NULL) AND (company_id IS NULL) AND (counterparty_company_id IS NULL) AND (deal_id IS NULL) AND (counterparty_person_id IS NULL))))
 public.relationship.rel_stakeholder_shape CHECK (((kind <> 'deal_stakeholder'::text) OR ((deal_id IS NOT NULL) AND (person_id IS NOT NULL) AND (company_id IS NULL) AND (project_id IS NULL) AND (counterparty_person_id IS NULL))))
 public.relationship.rel_works_with_shape CHECK (((kind <> 'works_with'::text) OR ((person_id IS NOT NULL) AND (counterparty_person_id IS NOT NULL) AND (person_id <> counterparty_person_id) AND (company_id IS NULL) AND (counterparty_company_id IS NULL) AND (deal_id IS NULL) AND (project_id IS NULL))))
+public.relationship.relationship_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
 public.relationship.relationship_counterparty_company_id_fkey FOREIGN KEY (counterparty_company_id) REFERENCES company(id) ON DELETE CASCADE
 public.relationship.relationship_counterparty_person_id_fkey FOREIGN KEY (counterparty_person_id) REFERENCES person(id) ON DELETE CASCADE
 public.relationship.relationship_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
 public.relationship.relationship_kind_check CHECK ((kind = ANY (ARRAY['employment'::text, 'deal_stakeholder'::text, 'partner_of'::text, 'referred_by'::text, 'co_sell_with'::text, 'project_stakeholder'::text, 'project_company'::text, 'works_with'::text])))
 public.relationship.relationship_last_activity CREATE TRIGGER relationship_last_activity AFTER INSERT OR DELETE OR UPDATE ON public.relationship FOR EACH ROW EXECUTE FUNCTION trg_relationship_last_activity()
-public.relationship.relationship_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
 public.relationship.relationship_person_id_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
 public.relationship.relationship_pkey PRIMARY KEY (id)
 public.relationship.relationship_project_id_fkey FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE
@@ -5079,23 +5079,23 @@ public.scheduled_send_pkey CREATE UNIQUE INDEX scheduled_send_pkey ON public.sch
 public.sdr_handoff acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.sdr_handoff.assigned_to uuid gen=- def=-
 public.sdr_handoff.captured_by text NOT NULL gen=- def=-
+public.sdr_handoff.company_id uuid gen=- def=-
 public.sdr_handoff.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.sdr_handoff.deal_id uuid gen=- def=-
 public.sdr_handoff.decided_at timestamp with time zone gen=- def=-
 public.sdr_handoff.id uuid NOT NULL gen=- def=uuidv7()
 public.sdr_handoff.lead_id uuid gen=- def=-
 public.sdr_handoff.note text gen=- def=-
-public.sdr_handoff.company_id uuid gen=- def=-
 public.sdr_handoff.person_id uuid gen=- def=-
 public.sdr_handoff.reason_applies_to text gen=- def=-
 public.sdr_handoff.reason_id uuid gen=- def=-
 public.sdr_handoff.sdr_handoff_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES app_user(id)
+public.sdr_handoff.sdr_handoff_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE SET NULL
 public.sdr_handoff.sdr_handoff_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE RESTRICT
 public.sdr_handoff.sdr_handoff_deal_when_accepted CHECK (((status = 'accepted'::text) = (deal_id IS NOT NULL)))
 public.sdr_handoff.sdr_handoff_decided_stamped CHECK (((status = ANY (ARRAY['accepted'::text, 'rejected'::text])) = (decided_at IS NOT NULL)))
 public.sdr_handoff.sdr_handoff_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE CASCADE
 public.sdr_handoff.sdr_handoff_one_subject CHECK (((lead_id IS NULL) <> (person_id IS NULL)))
-public.sdr_handoff.sdr_handoff_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE SET NULL
 public.sdr_handoff.sdr_handoff_person_id_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
 public.sdr_handoff.sdr_handoff_pkey PRIMARY KEY (id)
 public.sdr_handoff.sdr_handoff_reason_id_reason_applies_to_fkey FOREIGN KEY (reason_id, reason_applies_to) REFERENCES sdr_handoff_reason(id, applies_to) ON DELETE RESTRICT
@@ -5215,8 +5215,8 @@ public.signal.signal_owner_private_names_its_owner CHECK (((visibility <> 'owner
 public.signal.signal_pkey PRIMARY KEY (id)
 public.signal.signal_resolution_confidence_check CHECK (((resolution_confidence IS NULL) OR ((resolution_confidence >= (0)::numeric) AND (resolution_confidence <= (1)::numeric))))
 public.signal.signal_resolution_state_check CHECK ((resolution_state = ANY (ARRAY['resolved'::text, 'low_confidence'::text, 'unresolved'::text, 'dropped'::text])))
-public.signal.signal_resolved_has_entity CHECK (((resolution_state <> 'resolved'::text) OR (entity_type IS NOT NULL)))
 public.signal.signal_resolved_company_fkey FOREIGN KEY (resolved_company_id) REFERENCES company(id) ON DELETE SET NULL (resolved_company_id)
+public.signal.signal_resolved_has_entity CHECK (((resolution_state <> 'resolved'::text) OR (entity_type IS NOT NULL)))
 public.signal.signal_resolved_person_fkey FOREIGN KEY (resolved_person_id) REFERENCES person(id) ON DELETE SET NULL (resolved_person_id)
 public.signal.signal_severity_check CHECK ((severity = ANY (ARRAY['info'::text, 'warn'::text, 'urgent'::text])))
 public.signal.signal_source_channel_check CHECK ((source_channel = ANY (ARRAY['derived'::text, 'inbound'::text, 'web'::text, 'social'::text, 'deal_room_engagement'::text])))
@@ -5238,8 +5238,8 @@ public.signal_resolution.created_at timestamp with time zone NOT NULL gen=- def=
 public.signal_resolution.id uuid NOT NULL gen=- def=uuidv7()
 public.signal_resolution.match_confidence numeric gen=- def=-
 public.signal_resolution.match_detail jsonb gen=- def=-
-public.signal_resolution.matched_on text gen=- def=-
 public.signal_resolution.matched_company_id uuid gen=- def=-
+public.signal_resolution.matched_on text gen=- def=-
 public.signal_resolution.note text gen=- def=-
 public.signal_resolution.outcome text gen=- def=-
 public.signal_resolution.resolved_by uuid gen=- def=-
@@ -5282,6 +5282,7 @@ public.signing_key_pkey CREATE UNIQUE INDEX signing_key_pkey ON public.signing_k
 public.site_read acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.site_read.attempt integer NOT NULL gen=- def=1
 public.site_read.attempt_at timestamp with time zone NOT NULL gen=- def=now()
+public.site_read.company_id uuid gen=- def=-
 public.site_read.confirmed_at timestamp with time zone gen=- def=-
 public.site_read.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.site_read.draft_version integer NOT NULL gen=- def=1
@@ -5296,7 +5297,6 @@ public.site_read.logo_icon_origin text gen=- def=-
 public.site_read.logo_object_key text gen=- def=-
 public.site_read.logo_origin text gen=- def=-
 public.site_read.next_attempt_at timestamp with time zone gen=- def=-
-public.site_read.company_id uuid gen=- def=-
 public.site_read.pages jsonb NOT NULL gen=- def='[]'::jsonb
 public.site_read.pages_read integer NOT NULL gen=- def=0
 public.site_read.people jsonb NOT NULL gen=- def='[]'::jsonb
@@ -5307,8 +5307,8 @@ public.site_read.proposal_ids uuid[] NOT NULL gen=- def='{}'::uuid[]
 public.site_read.requested_by text NOT NULL gen=- def=-
 public.site_read.seed_url text NOT NULL gen=- def=-
 public.site_read.site_read_attempt_check CHECK ((attempt >= 1))
-public.site_read.site_read_draft_version_check CHECK ((draft_version > 0))
 public.site_read.site_read_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
+public.site_read.site_read_draft_version_check CHECK ((draft_version > 0))
 public.site_read.site_read_outcome_shape CHECK ((((status = 'deferred'::text) AND (status_code = 'budget_deferred'::text) AND (status_detail IS NOT NULL) AND (next_attempt_at IS NOT NULL)) OR ((status = 'failed'::text) AND (status_code IS NOT NULL) AND (status_code = ANY (ARRAY['bot_blocked'::text, 'http_client_error'::text, 'http_server_error'::text, 'timeout'::text, 'dns'::text, 'tls'::text, 'robots_disallowed'::text, 'unreadable'::text, 'internal'::text, 'stale_reclaim'::text])) AND (status_detail IS NOT NULL)) OR ((status = ANY (ARRAY['queued'::text, 'running'::text, 'done'::text, 'partial'::text, 'cancelled'::text])) AND (status_code IS NULL) AND (status_detail IS NULL) AND (next_attempt_at IS NULL))))
 public.site_read.site_read_phase_check CHECK ((phase = ANY (ARRAY['crawling'::text, 'extracting'::text])))
 public.site_read.site_read_pkey PRIMARY KEY (id)
@@ -5434,14 +5434,14 @@ public.stage_progression_policy.window_days integer NOT NULL gen=- def=30
 public.stage_progression_policy_pkey CREATE UNIQUE INDEX stage_progression_policy_pkey ON public.stage_progression_policy USING btree (id)
 public.stage_progression_policy_transition_key CREATE UNIQUE INDEX stage_progression_policy_transition_key ON public.stage_progression_policy USING btree (pipeline_id, from_stage_id, to_stage_id)
 public.suggestion_dismissal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.suggestion_dismissal.company_id uuid NOT NULL gen=- def=-
 public.suggestion_dismissal.fingerprint text NOT NULL gen=- def=-
 public.suggestion_dismissal.id uuid NOT NULL gen=- def=uuidv7()
-public.suggestion_dismissal.company_id uuid NOT NULL gen=- def=-
-public.suggestion_dismissal.suggestion_dismissal_fingerprint_shape CHECK ((fingerprint ~ '^[0-9a-f]{64}$'::text))
 public.suggestion_dismissal.suggestion_dismissal_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
+public.suggestion_dismissal.suggestion_dismissal_fingerprint_shape CHECK ((fingerprint ~ '^[0-9a-f]{64}$'::text))
 public.suggestion_dismissal.suggestion_dismissal_pkey PRIMARY KEY (id)
-public.suggestion_dismissal.suggestion_dismissal_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.suggestion_dismissal.suggestion_dismissal_user_id_company_id_f_key UNIQUE (user_id, company_id, fingerprint)
+public.suggestion_dismissal.suggestion_dismissal_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.suggestion_dismissal.user_id uuid NOT NULL gen=- def=-
 public.suggestion_dismissal_company_ix CREATE INDEX suggestion_dismissal_company_ix ON public.suggestion_dismissal USING btree (company_id)
 public.suggestion_dismissal_pkey CREATE UNIQUE INDEX suggestion_dismissal_pkey ON public.suggestion_dismissal USING btree (id)
@@ -5702,6 +5702,13 @@ public.uq_capture_freemail_domain CREATE UNIQUE INDEX uq_capture_freemail_domain
 public.uq_channel_connection_ws CREATE UNIQUE INDEX uq_channel_connection_ws ON public.channel_connection USING btree (provider) WHERE (archived_at IS NULL)
 public.uq_commission_live_per_deal CREATE UNIQUE INDEX uq_commission_live_per_deal ON public.commission_entry USING btree (deal_id) WHERE ((status <> 'void'::text) AND (reversal_of IS NULL))
 public.uq_commission_trigger_event CREATE UNIQUE INDEX uq_commission_trigger_event ON public.commission_entry USING btree (trigger_event_id) WHERE (trigger_event_id IS NOT NULL)
+public.uq_company_anchor CREATE UNIQUE INDEX uq_company_anchor ON public.company USING btree ((true)) WHERE (is_anchor AND (archived_at IS NULL))
+public.uq_company_domain CREATE UNIQUE INDEX uq_company_domain ON public.company_domain USING btree (domain) WHERE (archived_at IS NULL)
+public.uq_company_domain_disposition CREATE UNIQUE INDEX uq_company_domain_disposition ON public.company_domain_disposition USING btree (domain)
+public.uq_company_domain_primary CREATE UNIQUE INDEX uq_company_domain_primary ON public.company_domain USING btree (company_id) WHERE (is_primary AND (archived_at IS NULL))
+public.uq_company_fact CREATE UNIQUE INDEX uq_company_fact ON public.company_fact USING btree (company_id, category, field, value_key)
+public.uq_company_profile_field CREATE UNIQUE INDEX uq_company_profile_field ON public.company_profile_field USING btree (company_id, field)
+public.uq_company_rel_type CREATE UNIQUE INDEX uq_company_rel_type ON public.company_relationship_type USING btree (company_id, relationship_type) WHERE (archived_at IS NULL)
 public.uq_custom_field_column CREATE UNIQUE INDEX uq_custom_field_column ON public.custom_field USING btree (object, column_name)
 public.uq_custom_field_slug CREATE UNIQUE INDEX uq_custom_field_slug ON public.custom_field USING btree (object, slug)
 public.uq_deal_room_active CREATE UNIQUE INDEX uq_deal_room_active ON public.deal_room USING btree (deal_id) WHERE ((state = ANY (ARRAY['draft'::text, 'building'::text, 'ready'::text, 'publishing'::text, 'live'::text, 'paused'::text])) AND (archived_at IS NULL))
@@ -5733,13 +5740,6 @@ public.uq_offer_template_default CREATE UNIQUE INDEX uq_offer_template_default O
 public.uq_offer_template_ws_id CREATE UNIQUE INDEX uq_offer_template_ws_id ON public.offer_template USING btree (id)
 public.uq_offer_ws_id CREATE UNIQUE INDEX uq_offer_ws_id ON public.offer USING btree (id)
 public.uq_oli_position CREATE UNIQUE INDEX uq_oli_position ON public.offer_line_item USING btree (offer_id, "position")
-public.uq_company_domain CREATE UNIQUE INDEX uq_company_domain ON public.company_domain USING btree (domain) WHERE (archived_at IS NULL)
-public.uq_company_domain_primary CREATE UNIQUE INDEX uq_company_domain_primary ON public.company_domain USING btree (company_id) WHERE (is_primary AND (archived_at IS NULL))
-public.uq_company_fact CREATE UNIQUE INDEX uq_company_fact ON public.company_fact USING btree (company_id, category, field, value_key)
-public.uq_company_profile_field CREATE UNIQUE INDEX uq_company_profile_field ON public.company_profile_field USING btree (company_id, field)
-public.uq_company_rel_type CREATE UNIQUE INDEX uq_company_rel_type ON public.company_relationship_type USING btree (company_id, relationship_type) WHERE (archived_at IS NULL)
-public.uq_company_anchor CREATE UNIQUE INDEX uq_company_anchor ON public.company USING btree ((true)) WHERE (is_anchor AND (archived_at IS NULL))
-public.uq_company_domain_disposition CREATE UNIQUE INDEX uq_company_domain_disposition ON public.company_domain_disposition USING btree (domain)
 public.uq_passport_id_owner CREATE UNIQUE INDEX uq_passport_id_owner ON public.passport USING btree (id, on_behalf_of)
 public.uq_passport_ws_id CREATE UNIQUE INDEX uq_passport_ws_id ON public.passport USING btree (id)
 public.uq_person_channel_identity CREATE UNIQUE INDEX uq_person_channel_identity ON public.person_channel_identity USING btree (provider, channel_user_id) WHERE (archived_at IS NULL)
@@ -5761,8 +5761,8 @@ public.uq_rel_project_stakeholder CREATE UNIQUE INDEX uq_rel_project_stakeholder
 public.uq_rel_works_with CREATE UNIQUE INDEX uq_rel_works_with ON public.relationship USING btree (LEAST(person_id, counterparty_person_id), GREATEST(person_id, counterparty_person_id)) WHERE ((kind = 'works_with'::text) AND (archived_at IS NULL))
 public.uq_role_assignment CREATE UNIQUE INDEX uq_role_assignment ON public.role_assignment USING btree (role_id, user_id, COALESCE(team_id, '00000000-0000-0000-0000-000000000000'::uuid))
 public.uq_signal_fingerprint CREATE UNIQUE INDEX uq_signal_fingerprint ON public.signal USING btree (fingerprint) WHERE ((fingerprint IS NOT NULL) AND (archived_at IS NULL))
-public.uq_site_read_onboarding_inflight CREATE UNIQUE INDEX uq_site_read_onboarding_inflight ON public.site_read USING btree (seed_url) WHERE ((target_kind = 'onboarding'::text) AND (status = ANY (ARRAY['queued'::text, 'deferred'::text, 'running'::text])))
 public.uq_site_read_company_inflight CREATE UNIQUE INDEX uq_site_read_company_inflight ON public.site_read USING btree (company_id, seed_url) WHERE ((target_kind = 'company'::text) AND (status = ANY (ARRAY['queued'::text, 'deferred'::text, 'running'::text])))
+public.uq_site_read_onboarding_inflight CREATE UNIQUE INDEX uq_site_read_onboarding_inflight ON public.site_read USING btree (seed_url) WHERE ((target_kind = 'onboarding'::text) AND (status = ANY (ARRAY['queued'::text, 'deferred'::text, 'running'::text])))
 public.uq_site_read_triage_inflight CREATE UNIQUE INDEX uq_site_read_triage_inflight ON public.site_read USING btree (seed_url) WHERE ((target_kind = 'domain_triage'::text) AND (status = ANY (ARRAY['queued'::text, 'deferred'::text, 'running'::text])))
 public.uq_site_read_ws_id CREATE UNIQUE INDEX uq_site_read_ws_id ON public.site_read USING btree (id)
 public.uq_stage_position CREATE UNIQUE INDEX uq_stage_position ON public.stage USING btree (pipeline_id, "position") WHERE (archived_at IS NULL)

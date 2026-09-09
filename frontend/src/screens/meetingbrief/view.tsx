@@ -139,7 +139,10 @@ export function MeetingBriefView({
                       coaching={brief.plan.manager_coaching}
                       writtenByModel={brief.plan.generated_by === "model"}
                     />
-                    <MeetingPaths coaching={brief.plan.manager_coaching} />
+                    <MeetingPaths
+                      coaching={brief.plan.manager_coaching}
+                      writtenByModel={brief.plan.generated_by === "model"}
+                    />
                   </>
                 )}
                 {brief.plan && (

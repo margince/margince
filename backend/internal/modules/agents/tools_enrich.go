@@ -166,8 +166,16 @@ func readEnrichArgs(in json.RawMessage) (enrichArgs, error) {
 		args.Depth = EnrichDepthPage
 	}
 	if args.Depth != EnrichDepthPage && args.Depth != EnrichDepthSite && args.Depth != EnrichDepthTechnical {
-		return enrichArgs{}, &BadArgsError{Cause: fmt.Errorf("depth %q is not %q, %q or %q",
-			args.Depth, EnrichDepthPage, EnrichDepthSite, EnrichDepthTechnical)}
+		// The depth rides in Cause, which is bounded and escaped, and the SET
+		// rides in Guidance, which is ours. Both in Cause meant a long depth
+		// erased the three names the caller needed — the shape BadArgsError's
+		// own doc prescribes, applied.
+		return enrichArgs{}, &BadArgsError{
+			Cause: fmt.Errorf("depth %q is not one this tool takes", args.Depth),
+			Field: "depth",
+			Guidance: fmt.Sprintf("use %s, %s or %s",
+				EnrichDepthPage, EnrichDepthSite, EnrichDepthTechnical),
+		}
 	}
 	if err := requireEnrichURL(args.URL); err != nil {
 		return enrichArgs{}, err

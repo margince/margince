@@ -27,16 +27,21 @@ import (
 
 // NewRestoreSeam assembles the reversal executor over the installation pool and
 // the update dispatcher, with the evaluator's ports bound to the real readers.
-func NewRestoreSeam(pool *pgxpool.Pool, dispatcher *Dispatcher) RestoreSeam {
+//
+// corrections is nil-safe: an installation wired without it simply offers no
+// correction-aware reversal, every row falling through to the generic
+// evaluator exactly as before this seam knew corrections existed.
+func NewRestoreSeam(pool *pgxpool.Pool, dispatcher *Dispatcher, corrections *deals.Store) RestoreSeam {
 	// The edge's rules are the people module's, and so is its table. This seam
 	// reaches them through that module's own store rather than restating any of
 	// them, which is also why it owns no relationship SQL.
 	edges := people.NewStore(InstallationDB(pool))
 	return RestoreSeam{
-		pool:       pool,
-		dispatcher: dispatcher,
-		visible:    recordIsVisibleToCaller,
-		edges:      edges,
+		pool:        pool,
+		dispatcher:  dispatcher,
+		visible:     recordIsVisibleToCaller,
+		edges:       edges,
+		corrections: corrections,
 		evaluator: Evaluator{
 			Archived:      recordIsArchived,
 			Writable:      recordIsWritableByCaller,
@@ -146,6 +151,11 @@ func edgeIsWritableByCaller(edges *people.Store) func(context.Context, pgx.Tx, p
 // entityTypeActivity is the record kind whose row-scope checks dispatch
 // differently, named rather than typed inline at the branch above.
 const entityTypeActivity = "activity"
+
+// entityTypeDeal is the record kind a machine correction is always about —
+// deals.DealCorrection has no other subject today, so reverseCorrection
+// filters an audit row on it before asking the corrections store anything.
+const entityTypeDeal = "deal"
 
 // rowIsBehindTheErasureBoundary reuses privacy's own boundary predicate rather
 // than restating it. An Art. 17 erasure is one of the few rules where a second
@@ -263,7 +273,14 @@ var _ privacy.ChangeRestorer = RestoreSeam{}
 // makes — and two answers to that question is what the dispatcher exists to
 // prevent.
 func (s *Server) wireReversal(pool *pgxpool.Pool) {
-	seam := NewRestoreSeam(pool, s.sorDispatch)
+	// ONE instance, given to the seam that WRITES a reversal and to the judge
+	// that READS whether one is offered — the same reason the seam itself is
+	// shared below. Two separately constructed stores would still ask the
+	// database the same question, but a future difference between them (a
+	// second gate, a second cache) is exactly the kind of drift this line
+	// exists to make impossible rather than merely unlikely.
+	corrections := deals.NewStore(InstallationDB(pool), DealsInstallation())
+	seam := NewRestoreSeam(pool, s.sorDispatch, corrections)
 	s.privacyHandlers = s.privacyHandlers.
 		WithChangeRestorer(seam).
 		WithUndoabilityReader(NewUndoabilityPage(seam))
@@ -283,6 +300,6 @@ func (s *Server) wireReversal(pool *pgxpool.Pool) {
 		// The corrections store is what lets a machine close-date change read
 		// as undoable at all: the generic evaluator refuses exactly those rows,
 		// because they write a field the ordinary update shape cannot spell.
-		corrections: deals.NewStore(InstallationDB(pool), DealsInstallation()),
+		corrections: corrections,
 	})
 }

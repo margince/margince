@@ -118,7 +118,7 @@ describe("where a finished draft leaves the reader", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "Draft with AI" }),
     );
-    await screen.findByTestId("ai-disclosure-banner");
+    await screen.findByRole("heading", { name: "AI-assisted draft" });
 
     // The BODY is what is brought back, not the band that displaced it: the
     // band is the notice, and the words are what the press was for.

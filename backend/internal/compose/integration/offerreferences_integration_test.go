@@ -41,7 +41,24 @@ var offerDeskCompanyPerms = principal.Permissions{
 	Objects: map[string]principal.ObjectGrant{
 		"deal":                  {Create: true, Read: true, Update: true},
 		"offer":                 {Create: true, Read: true, Update: true},
-		"company":               {Read: true},
+		"company":          {Read: true},
+		"installation_settings": {Read: true},
+	},
+}
+
+// offerDeskWideNoCompanyPerms is the seat the RENDER needs: workspace-wide
+// authority over deals and offers, and no company grant at all.
+//
+// The render asks a harder question than the read — EnsureWritable on the deal,
+// not EnsureVisible — so an own-scoped colleague never reaches the buyer block
+// to be refused it. A deal desk operating across the workspace without CRM
+// company access does, and it is the seat that would have printed the name.
+var offerDeskWideNoCompanyPerms = principal.Permissions{
+	RoleKeys: []string{"deal_desk"},
+	RowScope: principal.RowScopeAll,
+	Objects: map[string]principal.ObjectGrant{
+		"deal":                  {Create: true, Read: true, Update: true},
+		"offer":                 {Create: true, Read: true, Update: true},
 		"installation_settings": {Read: true},
 	},
 }
@@ -236,5 +253,59 @@ func TestTheSendFreezesTheRealBuyerWhateverTheResponseWithholds(t *testing.T) {
 	}
 	if !strings.Contains(frozen, privateCompany.String()) {
 		t.Errorf("the stored buyer snapshot does not name the company the offer was sent to: %s", frozen)
+	}
+}
+
+// The DOCUMENT says no more than the read does.
+//
+// PrepareRender gathers the buyer legal block the PDF prints — display name
+// and, where the record carries one, legal name. That block is read from the
+// live company while the offer is a draft and from the frozen snapshot
+// once sent, and neither read asked whether this seat may open the company. So
+// the API withheld the buyer while the PDF printed its name: the two halves of
+// one offer disagreeing about the same record, with the more disclosing half
+// being the one that gets stored and sent.
+func TestARenderSaysNoMoreAboutTheBuyerThanTheReadDoes(t *testing.T) {
+	e := Setup(t)
+	offer, _, privateCompany := seedOfferOnAPrivateCompany(t, e)
+	desk := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskWideNoCompanyPerms)
+
+	ingredients, err := e.Deals.PrepareRender(desk, offer)
+	if err != nil {
+		t.Fatalf("preparing the render: %v — the offer is anchored on a deal this seat writes, so the render itself must reach its ingredients", err)
+	}
+	if ingredients.Offer.BuyerCompanyId != nil {
+		t.Errorf("the render's offer names buyer company %v, which this seat's own company read would refuse", *ingredients.Offer.BuyerCompanyId)
+	}
+	if ingredients.BuyerBlock != nil {
+		t.Errorf("the buyer block %v reaches the document — it carries the company's display name and legal name, which is strictly more than the id the API withholds beside it",
+			ingredients.BuyerBlock)
+	}
+	// Named so a future reader can see which company the block would have been
+	// about; the assertions above are what fail.
+	t.Logf("the buyer withheld from this seat is %v", privateCompany)
+}
+
+// And the colleague who CAN open the company still gets a complete document. A
+// render that omitted the buyer for everyone would pass the case above while
+// producing an offer PDF with no buyer on it, which is not a quieter answer but
+// a broken one.
+func TestARenderKeepsTheBuyerBlockForASeatThatCanOpenIt(t *testing.T) {
+	e := Setup(t)
+	offer, _, _ := seedOfferOnAPrivateCompany(t, e)
+	owner := e.As(e.Rep3, []ids.UUID{e.Team1}, offerDeskCompanyPerms)
+
+	ingredients, err := e.Deals.PrepareRender(owner, offer)
+	if err != nil {
+		t.Fatalf("preparing the render: %v", err)
+	}
+	if ingredients.Offer.BuyerCompanyId == nil {
+		t.Error("the render's offer names no buyer for the seat that owns the company")
+	}
+	if ingredients.BuyerBlock == nil {
+		t.Fatal("the document carries no buyer block for the seat that owns the company — the withholding emptied the field for everyone")
+	}
+	if ingredients.BuyerBlock["display_name"] == nil {
+		t.Errorf("the buyer block names no company: %v", ingredients.BuyerBlock)
 	}
 }

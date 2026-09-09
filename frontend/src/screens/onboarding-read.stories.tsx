@@ -3,9 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { configuredAiProfile } from "./onboarding.stories.fixtures";
-import { ReadCompanyStep } from "./onboarding-read";
+import { ConversationEntries, ReadCompanyStep } from "./onboarding-read";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 import "./onboarding.css";
+// `.staging-card` is the panel-ai family's staged member and lives in the
+// design system's own sheet; nothing in this surface's import graph pulls it,
+// so without this the staged box renders with no edge and no tint at all.
+import "../design-system/panel.css";
 
 const meta: Meta = {
   title: "Onboarding/Read the company",
@@ -222,4 +226,67 @@ export const NoModelAvailable: Story = {
   render: () => (
     <ReadStory error="No extraction model is configured. Manual setup remains fully available." />
   ),
+};
+
+// What the read proposes changing after a follow-up question, as a staged card
+// inside the reply that proposed it: dashed until Apply, and then the same
+// card with the verb spent. Only `ConversationEntries` can show it — the
+// entries live in the send mutation's own state, which no prop reaches.
+const suggested = {
+  role: "assistant" as const,
+  id: "018f3a1b-0000-7000-8000-0000000000c1",
+  reply: {
+    kind: "answer" as const,
+    act: "company" as const,
+    message: "Two lines on the site disagree with the draft.",
+    proposed_changes: [
+      {
+        field: "offer_summary" as const,
+        value: "Inventory software for growing retailers",
+        reason: "The homepage headline says it in those words.",
+      },
+      {
+        field: "icp" as const,
+        value: "Retail chains of 5 to 50 stores",
+        reason: "The customers page names the size band twice.",
+      },
+    ],
+    citations: [],
+    remaining_required_fields: [],
+    ai_runtime: {
+      currency: "USD" as const,
+      call_attempts: 1,
+      tokens_in: 2100,
+      tokens_out: 180,
+      latency_ms: 1400,
+      estimated_cost_microusd: 900,
+      unpriced_calls: 0,
+      models: [],
+    },
+  },
+};
+
+function ProposalStory({ applied }: Readonly<{ applied: boolean }>) {
+  return (
+    <StoryProviders>
+      <div className="ob-page">
+        <div className="mw-thread">
+          <ConversationEntries
+            entries={[suggested]}
+            applied={applied ? new Set([suggested.id]) : new Set()}
+            onApply={noAction}
+            onApplied={noAction}
+          />
+        </div>
+      </div>
+    </StoryProviders>
+  );
+}
+
+export const SuggestedChanges: Story = {
+  render: () => <ProposalStory applied={false} />,
+};
+
+export const SuggestedChangesApplied: Story = {
+  render: () => <ProposalStory applied />,
 };

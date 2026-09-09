@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -91,6 +90,10 @@ type planBinding struct {
 // planCompiler accumulates the statement's bound arguments.
 type planCompiler struct {
 	args []any
+	// refs counts the reference guards rendered so far, so each gets a subquery
+	// alias of its own — two guards sharing one would make the second EXISTS
+	// read the first's row.
+	refs int
 }
 
 //craft:ignore naked-any a bound parameter is whatever Go type the column's kind encodes as (string, int64, float64, bool, time.Time, ids.UUID) — the kind switch IS the conversion contract, so there is no narrower signature
@@ -116,7 +119,10 @@ func (c *planCompiler) compileStatement(ctx context.Context, plan ValidatedPlan,
 	if scope != "" {
 		where = append(where, scope)
 	}
-	predicates, refusals := c.predicates("t", binding.columns, plan.Target, "where", plan.Plan.Where, true)
+	predicates, refusals, err := c.predicates(ctx, "t", binding.columns, plan.Target, "where", plan.Plan.Where, true)
+	if err != nil {
+		return "", false, err
+	}
 	where = append(where, predicates...)
 
 	// The radius, when the plan carries one this deployment can answer. The
@@ -205,7 +211,10 @@ func (c *planCompiler) lateralHop(ctx context.Context, plan ValidatedPlan, bindi
 	if scope != "" {
 		where = append(where, scope)
 	}
-	predicates, refusals := c.predicates("h", hop.columns, plan.HopVocabulary, "traverse.where", plan.Plan.Traverse.Where, false)
+	predicates, refusals, err := c.predicates(ctx, "h", hop.columns, plan.HopVocabulary, "traverse.where", plan.Plan.Traverse.Where, false)
+	if err != nil {
+		return "", "", nil, false, err
+	}
 	where = append(where, predicates...)
 
 	// ORDER BY keeps the evidence deterministic when several hop rows match;
@@ -237,7 +246,10 @@ func (c *planCompiler) edgeCondition(hop hopBinding) string {
 // root says whether these predicates are the ones on the record being searched
 // for, as opposed to a traversal's. It decides one thing: whether a radius is
 // bound elsewhere (root) or has nowhere to go (a hop).
-func (c *planCompiler) predicates(alias string, columns *storage, vocab TargetVocabulary, path string, clauses []Predicate, root bool) ([]string, []apperrors.FieldRefusal) {
+func (c *planCompiler) predicates(
+	ctx context.Context, alias string, columns *storage, vocab TargetVocabulary,
+	path string, clauses []Predicate, root bool,
+) ([]string, []apperrors.FieldRefusal, error) {
 	var (
 		fragments []string
 		refusals  []apperrors.FieldRefusal
@@ -265,38 +277,61 @@ func (c *planCompiler) predicates(alias string, columns *storage, vocab TargetVo
 			}
 			continue
 		}
-		fragment, refusal := c.clause(alias, columns, vocab, at, clause)
+		field, expr, refusal := c.resolve(alias, columns, vocab, at, clause)
 		if refusal != nil {
 			refusals = append(refusals, *refusal)
 			continue
 		}
+		fragment, refusal := c.clause(expr, at, field, clause)
+		if refusal != nil {
+			refusals = append(refusals, *refusal)
+			continue
+		}
+		// The guard rides the predicate rather than the statement's where-list
+		// so a traversal's own clauses carry it too — predicates renders both.
+		guard, err := referenceGuard(ctx, vocab.Target, field, expr, refAlias(c.refs), c.arg)
+		if err != nil {
+			return nil, nil, err
+		}
+		if guard != "" {
+			c.refs++
+			fragment = "(" + fragment + ") AND " + guard
+		}
 		fragments = append(fragments, fragment)
 	}
-	return fragments, refusals
+	return fragments, refusals, nil
 }
 
-// clause renders one `field op value`.
-func (c *planCompiler) clause(alias string, columns *storage, vocab TargetVocabulary, at string, clause Predicate) (string, *apperrors.FieldRefusal) {
+// resolve reads the field a clause names and the expression it compiles to,
+// refusing a name this workspace cannot answer.
+//
+// Both refusals are unreachable through Execute: the validator settled
+// membership against this same vocabulary, and a published field compiles.
+// Reaching either means the executor was handed a plan that never passed
+// validation, which is a wiring fault to fail loudly on rather than a caller to
+// explain it to.
+func (c *planCompiler) resolve(
+	alias string, columns *storage, vocab TargetVocabulary, at string, clause Predicate,
+) (Field, string, *apperrors.FieldRefusal) {
 	field, ok := vocab.Field(clause.Field)
 	if !ok {
-		// Unreachable through Execute: the validator settled membership first,
-		// against this same vocabulary. Reaching it means the executor was
-		// handed a plan that never passed validation, which is a wiring fault
-		// to fail loudly on rather than a caller to explain it to.
-		return "", &apperrors.FieldRefusal{
+		return Field{}, "", &apperrors.FieldRefusal{
 			Field: at + ".field", Code: CodeUnknownField,
 			Message: "the query plan cannot name " + quote(clause.Field) + " on " + quote(vocab.Target),
 		}
 	}
 	expr, ok := columns.expr(alias, field)
 	if !ok {
-		// Same shape, same reason: a published field compiles, and the fitness
-		// function is what keeps that true.
-		return "", &apperrors.FieldRefusal{
+		return Field{}, "", &apperrors.FieldRefusal{
 			Field: at + ".field", Code: CodeUnknownField,
 			Message: quote(clause.Field) + " cannot be answered by this workspace's records",
 		}
 	}
+	return field, expr, nil
+}
+
+// clause renders one `field op value`.
+func (c *planCompiler) clause(expr, at string, field Field, clause Predicate) (string, *apperrors.FieldRefusal) {
 	if clause.Op == OpIn {
 		return c.inClause(expr, at, field, clause)
 	}
@@ -358,116 +393,6 @@ var sqlComparators = map[string]string{
 // own timestamp encoding instead (time.RFC3339, at the one call site that binds
 // one), so there is nothing to name twice.
 const dateLayout = "2006-01-02"
-
-// bind turns one JSON operand into a bound parameter under the field's kind,
-// with the cast the comparison needs.
-//
-// This is where a FORMAT is checked. The validator deliberately left it here
-// ("their format is the executor's business"): it had a shape to compare
-// against and no calendar, and refusing `"next tuesday"` at the moment it
-// would become a parameter is what keeps a malformed date a refusal rather
-// than a query that quietly matches nothing.
-//
-//craft:ignore naked-any a bound parameter is whatever Go type the column's kind encodes as (string, int64, float64, bool, time.Time, ids.UUID) — the kind switch IS the conversion contract, so there is no narrower signature
-func (c *planCompiler) bind(at string, field Field, raw json.RawMessage) (any, string, *apperrors.FieldRefusal) {
-	switch field.Kind {
-	case KindNumber:
-		return bindNumber(at, field, raw)
-	case KindBoolean:
-		var value bool
-		return value, "", decodeOperand(at, field, raw, &value, "true or false")
-	case KindID:
-		return bindID(at, field, raw)
-	case KindDate:
-		return bindTemporal(at, field, raw, dateLayout, "::date", "a date, as YYYY-MM-DD")
-	case KindTimestamp:
-		return bindTemporal(at, field, raw, time.RFC3339, "", "an instant, as RFC 3339 (2026-08-08T09:00:00Z)")
-	case KindText:
-		var value string
-		return value, "", decodeOperand(at, field, raw, &value, "text")
-	case KindGeo:
-		// A place is never compared: within_radius answers
-		// distance_ranking_unavailable and the executor stops before here.
-		return nil, "", operandFault(at, field, "a place, which this deployment cannot rank by")
-	default:
-		return nil, "", operandFault(at, field, "a value of a kind this workspace can compare")
-	}
-}
-
-//craft:ignore naked-any a bound parameter is whatever Go type the column's kind encodes as (string, int64, float64, bool, time.Time, ids.UUID) — the kind switch IS the conversion contract, so there is no narrower signature
-func bindNumber(at string, field Field, raw json.RawMessage) (any, string, *apperrors.FieldRefusal) {
-	var value json.Number
-	if refusal := decodeOperand(at, field, raw, &value, "a number"); refusal != nil {
-		return nil, "", refusal
-	}
-	// A whole number binds as one, so a bigint column compares against a
-	// bigint rather than against a float that rounded on the way in.
-	if whole, err := value.Int64(); err == nil {
-		return whole, "", nil
-	}
-	// A FRACTIONAL number binds as its own digits, cast to numeric. Through a
-	// float64 it would not: 0.1 is not representable in binary, so a `numeric`
-	// column holding exactly 0.1 would compare unequal to the 0.1 the caller
-	// wrote — an exact predicate answering "no rows" for a value that is
-	// there. The digits are the caller's own text and go through a bind
-	// parameter, so nothing is interpolated.
-	if _, err := value.Float64(); err != nil {
-		return nil, "", operandFault(at, field, "a number")
-	}
-	return value.String(), "::numeric", nil
-}
-
-//craft:ignore naked-any a bound parameter is whatever Go type the column's kind encodes as (string, int64, float64, bool, time.Time, ids.UUID) — the kind switch IS the conversion contract, so there is no narrower signature
-func bindID(at string, field Field, raw json.RawMessage) (any, string, *apperrors.FieldRefusal) {
-	var text string
-	if refusal := decodeOperand(at, field, raw, &text, "an identifier"); refusal != nil {
-		return nil, "", refusal
-	}
-	id, err := ids.Parse(text)
-	if err != nil {
-		return nil, "", operandFault(at, field, "an identifier, as a UUID")
-	}
-	return id, "", nil
-}
-
-// bindTemporal parses a date or an instant in the contract's own encoding and
-// binds it as TEXT with an explicit cast where one is needed. A date compared
-// through a timestamp would be resolved at the session's time zone, which
-// makes the same plan answer differently on two servers.
-//
-//craft:ignore naked-any a bound parameter is whatever Go type the column's kind encodes as (string, int64, float64, bool, time.Time, ids.UUID) — the kind switch IS the conversion contract, so there is no narrower signature
-func bindTemporal(at string, field Field, raw json.RawMessage, layout, cast, shape string) (any, string, *apperrors.FieldRefusal) {
-	var text string
-	if refusal := decodeOperand(at, field, raw, &text, shape); refusal != nil {
-		return nil, "", refusal
-	}
-	parsed, err := time.Parse(layout, text)
-	if err != nil {
-		return nil, "", operandFault(at, field, shape)
-	}
-	if cast == "" {
-		return parsed, "", nil
-	}
-	return parsed.Format(layout), cast, nil
-}
-
-// decodeOperand decodes one operand into its Go type, which IS the check: a
-// number offered where text belongs fails at the decode rather than after it.
-//
-//craft:ignore naked-any `into` is the caller's own destination for one operand; decoding INTO its Go type is the check, and a narrower signature would have to name every kind
-func decodeOperand(at string, field Field, raw json.RawMessage, into any, shape string) *apperrors.FieldRefusal {
-	if len(raw) == 0 || isJSONNull(raw) || json.Unmarshal(raw, into) != nil {
-		return operandFault(at, field, shape)
-	}
-	return nil
-}
-
-func operandFault(at string, field Field, shape string) *apperrors.FieldRefusal {
-	return &apperrors.FieldRefusal{
-		Field: at, Code: CodeValueTypeMismatch,
-		Message: quote(field.Name) + " is a " + string(field.Kind) + " field; its operand must be " + shape,
-	}
-}
 
 // idsIn renders a membership test over already-resolved ids. They are this
 // server's own, so the list is bound rather than rendered, and it exists only

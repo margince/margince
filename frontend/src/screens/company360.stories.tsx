@@ -9,6 +9,7 @@ import {
   NextSteps,
   ProposedNextSteps,
   StateStrip,
+  SuggestionsSection,
 } from "./company360";
 import { CompanyContractState } from "./companycommercial";
 import { CompanyWorkCard } from "./companywork";
@@ -423,6 +424,39 @@ function RecommendedStep() {
 
 export const NextStepRecommended: Story = {
   render: () => <RecommendedStep />,
+};
+
+// The same advice in its own panel, which is the chrome the rows are read in
+// wherever the merged daily brief is not what mounted them. Indigo rather than
+// accent: a rule wrote every row under this head, so the tint is the panel's
+// claim about WHO wrote it, and the badge in the band says it in words for a
+// reader who cannot tell the tints apart.
+function Suggestions() {
+  installFetchStub({
+    "GET /me": meRoute({ company: ["read", "update"] }),
+  });
+  return (
+    <StoryProviders>
+      <div style={{ display: "grid", gap: "var(--space-3)", maxWidth: 420 }}>
+        <SuggestionsSection
+          companyId="o-1"
+          view={recommending}
+          onOpenRecord={() => {}}
+          onOpenTasks={() => {}}
+        />
+      </div>
+    </StoryProviders>
+  );
+}
+
+export const MargincesSuggestions: Story = { render: () => <Suggestions /> };
+
+// The indigo head, the tinted rows and the filled verb are all color-mix() of
+// tokens that lift with the dark accent, so the panel can be right in light
+// and wrong here.
+export const MargincesSuggestionsDark: Story = {
+  ...MargincesSuggestions,
+  globals: { theme: "dark" },
 };
 
 // A connected finance source, shaped exactly like companyfinance.stories.tsx's

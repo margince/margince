@@ -43,6 +43,18 @@ type resolution struct {
 	Supported bool
 	// Reason is the code an unsupported resolution carries.
 	Reason string
+	// EvidenceChecked reports that this resolution went through validate, and
+	// therefore through refuseUnreadableEvidence — the caller was shown to hold
+	// the grants for every record they named.
+	//
+	// It gates what may be written to the decision row for the transmit phase
+	// to re-read. The thread and live-deal arms answer BEFORE validate runs, so
+	// a message allowed by one of them has evidence ids nobody has checked the
+	// caller may see. Carrying those forward would hand them to the transmit
+	// phase, which runs under the system principal — auth.Require returns nil
+	// for it — and so would turn an unchecked id into an authorization the
+	// sender could not have obtained themselves.
+	EvidenceChecked bool
 }
 
 // resolveCategory works out what this message is for one recipient.
@@ -204,14 +216,20 @@ func resolutionForClass(class Class) resolution {
 // at once. A single row taken for the whole delivery would judge every
 // recipient by whichever one the query happened to return.
 //
-// Only the CLAIM is carried forward, never the engine's earlier resolution.
-// Carrying the resolution would let a message ride an answer the record no
-// longer supports — a thread can be archived and a deal can close while a
-// delivery waits in the queue — and it would carry one recipient's answer onto
-// another's.
+// Only the CLAIM and the EVIDENCE POINTERS are carried forward, never the
+// engine's earlier resolution. Carrying the resolution would let a message ride
+// an answer the record no longer supports — a thread can be archived and a deal
+// can close while a delivery waits in the queue — and it would carry one
+// recipient's answer onto another's.
+//
+// The evidence is a different thing from the resolution: an invoice id is a
+// question to ask again, not an answer to reuse, and every check that ran at
+// staging runs again here against the record as it is now. Without it the
+// document validators arrive at transmit with a zero id and refuse a message
+// they had supported minutes earlier. See authorizeevidencecarry.go.
 func stagedClaims(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (map[string]stagedClaim, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT DISTINCT ON (recipient_address) recipient_address, requested_category
+		SELECT DISTINCT ON (recipient_address) recipient_address, requested_category, evidence
 		  FROM communication_decision
 		 WHERE delivery_id = $1 AND phase = 'staging'
 		 -- id, not decided_at: every row of one staging transaction carries the
@@ -227,13 +245,15 @@ func stagedClaims(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (map[stri
 	for rows.Next() {
 		var address string
 		var claimed *string
-		if err := rows.Scan(&address, &claimed); err != nil {
+		var evidence []byte
+		if err := rows.Scan(&address, &claimed, &evidence); err != nil {
 			return nil, fmt.Errorf("consent: read what this delivery was staged as: %w", err)
 		}
 		var out stagedClaim
 		if claimed != nil {
 			out.category = commsauthz.Category(*claimed)
 		}
+		out.evidence = evidenceFrom(evidence)
 		claims[address] = out
 	}
 	if err := rows.Err(); err != nil {
@@ -257,6 +277,10 @@ func stagedRequestFor(req commsauthz.TransmitRequest, r connector.Recipient, cla
 		Recipients:       []connector.Recipient{r},
 		Context:          staged.category,
 		LegacyPurposeKey: req.PurposeKey,
+		// The records this recipient's message was staged on. Re-validated
+		// here, never trusted: a voided invoice or an ended employment refuses
+		// at transmit exactly as it would have at staging.
+		Evidence: staged.evidence,
 		// The conversation, carried from the delivery row. Without it the thread
 		// arm cannot run at transmit and a reply authorized at staging parks.
 		ThreadKey: threadKey,
@@ -296,5 +320,7 @@ func deliveryThreadKey(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (str
 // written at STAGING, where the anchor is still in hand — see recordBasis's
 // caller.
 type stagedClaim struct {
+	// evidence is the ids the message was staged on, re-asked at transmit.
+	evidence commsauthz.Evidence
 	category commsauthz.Category
 }

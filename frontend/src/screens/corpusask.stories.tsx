@@ -147,27 +147,12 @@ function askCard(
   };
 }
 
-// The question is carried in, so pressing Ask is the whole interaction.
-//
-// Waiting for the button to lose `disabled` is the part that matters: the set
-// is chosen in a passive effect once the list arrives, so a press landing
-// before it has no corpus to ask — and a click the card refused is
-// indistinguishable on screen from one still in flight.
-async function pressAsk(canvasElement: HTMLElement): Promise<HTMLElement> {
-  const submit = await within(canvasElement).findByRole("button", {
-    name: "Ask",
-  });
-  await waitFor(() => expect(submit).not.toHaveAttribute("disabled"));
-  await userEvent.click(submit);
-  return submit;
-}
-
-// Then wait for the answer ITSELF rather than for the click to return: the
-// reply commits a microtask later, so a capture taken when play resolves shows
-// the empty form under a story named for what the card said.
-function askAndSee(settled: RegExp) {
+// A carried question is ASKED on arrival, so the outcome stories press nothing:
+// they wait for the answer ITSELF rather than for a click to return, because
+// the reply commits a microtask later and a capture taken any earlier shows an
+// empty form under a story named for what the card said.
+function seeAnswer(settled: RegExp) {
   return async ({ canvasElement }: { canvasElement: HTMLElement }) => {
-    await pressAsk(canvasElement);
     await within(canvasElement).findByText(settled);
   };
 }
@@ -189,7 +174,7 @@ export const Answered: Story = {
   render: askCard("how long are captured messages kept", () =>
     jsonResponse(ANSWERED),
   ),
-  play: askAndSee(/Captured messages are kept for 400 days/),
+  play: seeAnswer(/Captured messages are kept for 400 days/),
 };
 
 // The same answer on the dark ground. The "written from the passages" badge is
@@ -208,7 +193,7 @@ export const NotCovered: Story = {
   render: askCard("what does the Professional plan cost", () =>
     jsonResponse(NOT_COVERED),
   ),
-  play: askAndSee(/Not covered by this set/),
+  play: seeAnswer(/Not covered by this set/),
 };
 
 // The refusal about the SET: it is still being read, and nothing is wrong with
@@ -219,7 +204,7 @@ export const NotReady: Story = {
   render: askCard("how long are captured messages kept", () =>
     jsonResponse(NOT_READY),
   ),
-  play: askAndSee(/not finished being read/),
+  play: seeAnswer(/not finished being read/),
 };
 
 // The refusal about the INSTALLATION: no search lane is bound, so nothing was
@@ -229,7 +214,7 @@ export const RetrievalUnavailable: Story = {
   render: askCard("how long are captured messages kept", () =>
     jsonResponse(RETRIEVAL_UNAVAILABLE),
   ),
-  play: askAndSee(/Nothing was searched/),
+  play: seeAnswer(/Nothing was searched/),
 };
 
 // Neither an answer nor a refusal: the search found these passages and nothing
@@ -239,31 +224,72 @@ export const Unreviewed: Story = {
   render: askCard("what is the boiling point of nitrogen", () =>
     jsonResponse(UNREVIEWED),
   ),
-  play: askAndSee(/Nothing has read them/),
+  play: seeAnswer(/Nothing has read them/),
 };
 
-// Mid-ask. The pressed button keeps its label and its focus and says it is busy
-// beside it; swapping the word or disabling the control would move the reader
-// off the one thing about to tell them something.
+// Mid-ask, the state a carried question lands in. The button keeps its label
+// and says it is busy beside it; swapping the word or disabling the control
+// would move the reader off the one thing about to tell them something.
 export const Asking: Story = {
   render: askCard(
     "how long are captured messages kept",
     () => new Promise<Response>(() => {}),
   ),
   play: async ({ canvasElement }) => {
-    const submit = await pressAsk(canvasElement);
+    const submit = await within(canvasElement).findByRole("button", {
+      name: "Ask",
+    });
     await waitFor(() => expect(submit).toHaveAttribute("aria-busy", "true"));
+  },
+};
+
+// Nothing carried and nothing typed: the head's indigo and its AI-assisted
+// badge say who answers here, and the one indigo verb on the surface waits with
+// nothing to ask.
+export const Idle: Story = {
+  render: askCard("", () => jsonResponse(ANSWERED)),
+  play: async ({ canvasElement }) => {
+    const submit = await within(canvasElement).findByRole("button", {
+      name: "Ask",
+    });
+    await waitFor(() => expect(submit).toHaveAttribute("disabled"));
+  },
+};
+
+// The same resting surface on the dark ground. Every indigo on it — the panel's
+// border and header band, the badge's fill and text, the button's fill — is a
+// color-mix() of tokens that lift with the dark accent, and a head that reads
+// as a claim about a model in light can go illegible here.
+export const IdleDark: Story = {
+  ...Idle,
+  globals: { theme: "dark" },
+};
+
+// Typed rather than carried, which is the other half of the surface: the reader
+// composes the question and presses the one indigo verb themselves.
+export const HandTyped: Story = {
+  render: askCard("", () => jsonResponse(ANSWERED)),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.type(
+      await canvas.findByLabelText("Your question"),
+      "how long are captured messages kept",
+    );
+    // The set is chosen in a passive effect as the list lands, so a press
+    // before that has no corpus and the card refuses it — and a refused click
+    // is indistinguishable on screen from one still in flight.
+    const submit = canvas.getByRole("button", { name: "Ask" });
+    await waitFor(() => expect(submit).not.toHaveAttribute("disabled"));
+    await userEvent.click(submit);
+    await canvas.findByText(/Captured messages are kept for 400 days/);
   },
 };
 
 // Two sets, which is the only condition under which the picker exists — a
 // workspace with one is never asked which. It matters that the picker is drawn
 // ABOVE the question and pre-chosen: the box is never offered with no set
-// selected, so a reader who arrived carrying a question can just ask it.
+// selected, so a reader who arrives carrying a question can be answered without
+// choosing one first.
 export const WhichSet: Story = {
-  render: askCard(
-    "how long are captured messages kept",
-    () => jsonResponse(ANSWERED),
-    [SET, OTHER_SET],
-  ),
+  render: askCard("", () => jsonResponse(ANSWERED), [SET, OTHER_SET]),
 };

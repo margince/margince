@@ -124,6 +124,10 @@ export function DossierPanel({
       </span>
       <Button
         small
+        // The writer's own verb, inside a panel already tinted for it: quiet
+        // rather than filled, because a filled indigo control on indigo ground
+        // reads as the panel's call to action when it is its footnote.
+        variant="aiQuiet"
         onClick={() => rewrite.mutate()}
         pending={rewrite.isPending}
         busyLabel={t("co.dossier.rewriting")}
@@ -133,7 +137,14 @@ export function DossierPanel({
     </>
   );
   return (
-    <Panel title={t("co.dossier.title")} footer={footer}>
+    <Panel
+      title={t("co.dossier.title")}
+      footer={footer}
+      // The prose under this head is written, not recorded: the tint says a
+      // machine wrote it, and the badge in the band says so in words.
+      tone="ai"
+      titleAction={<Badge tone="ai">{t("co.assistant.aiTag")}</Badge>}
+    >
       <PanelBody className="co-brief-body">
         {dossier.isPending && <Skeleton width="100%" height={64} />}
         {!dossier.isPending && !readable && (

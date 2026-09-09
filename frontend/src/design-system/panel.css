@@ -331,7 +331,16 @@
   font-size: var(--fs-body);
   font-weight: var(--fw-semibold);
 }
-.panel-ai {
+/* The family's edge, and the members that are not panels read it here: a box
+   whose indigo drifted off the panel's would tell a reader the two were
+   different claims about who wrote what. `.staging-card` is trust.tsx's
+   StagingCard and the ground every DecisionCard carries; `.deal-card.staged`
+   is one deal on the board drawn as one. They live in this rule rather than in
+   their own sheets so the family has ONE declaration site — the sheets that
+   draw the rest of those boxes point here. */
+.panel-ai,
+.staging-card,
+.deal-card.staged {
   border-color: var(--aiMed);
 }
 .panel-ai > .panel-head {
@@ -343,4 +352,26 @@
 }
 .panel-ai > .panel-foot {
   border-top-color: var(--aiMed);
+}
+
+/* The STAGED modifier, and it is the only thing that separates these two from
+ * the panel above: `1.5px dashed` means an agent has proposed this and nobody
+ * has accepted it yet, and the dashes going solid is what acceptance looks
+ * like. So a panel a machine WROTE keeps the hairline it inherits from
+ * `.panel`, and a card a machine has only PROPOSED wears the dash until a
+ * person answers it.
+ *
+ * The tint goes under the TEXT rather than into a head band, because neither
+ * box has a head to put it in and the reader has to be able to tell a proposal
+ * from a recorded fact before reading a word of either. What that ground costs
+ * the ink over it is recorded in trust.css, on `.approval-why`. */
+.staging-card,
+.deal-card.staged {
+  border-width: 1.5px;
+  border-style: dashed;
+  background: var(--aiLight);
+}
+.staging-card {
+  border-radius: var(--r-md);
+  padding: var(--space-4) var(--space-5);
 }

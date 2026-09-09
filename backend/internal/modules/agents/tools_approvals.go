@@ -345,6 +345,12 @@ func verdict(decision string) (bool, error) {
 	case "reject":
 		return false, nil
 	default:
-		return false, &BadArgsError{Cause: fmt.Errorf("`decision` is %q; it is `approve` or `reject`", decision)}
+		// Same split as tools_enrich: the caller's word in Cause, the two words
+		// that would have worked in Guidance, so a long one cannot erase them.
+		return false, &BadArgsError{
+			Cause:    fmt.Errorf("`decision` is %q", decision),
+			Field:    "decision",
+			Guidance: "it is `approve` or `reject`",
+		}
 	}
 }

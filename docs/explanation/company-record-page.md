@@ -6,13 +6,6 @@ composite surface in the product and it is assembled almost entirely in
 `internal/compose` — thirteen gated section reads inside one transaction, plus
 two cross-module orchestration groups that own view state of their own.
 
-> **Name collision, worth clearing up once.**
-> [company-context.md](company-context.md) is about the **installation's own**
-> company — the singleton company profile born in onboarding. This page is
-> about the company **record** page: any customer, prospect or partner
-> company in the CRM. They share the word "company" and almost nothing
-> else.
-
 ## The shape at a glance
 
 Six endpoints serve one screen. Which one owns which part:

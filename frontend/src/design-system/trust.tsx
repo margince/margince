@@ -4,6 +4,7 @@ import { usePlural, useT } from "../i18n";
 import { ActionRow } from "./actionrow";
 import { Button } from "./atoms";
 import { IconAction } from "./iconaction";
+import "./panel.css"; // StagingCard's box is drawn by the panel-ai family.
 import "./trust.css";
 
 // The Margince trust primitives (B-EP09.3a, design-language §4): the
@@ -103,7 +104,6 @@ const SOURCE_DISPLAY_MAX = 40;
 const RECORD_REF =
   /^([a-z][a-z_]{0,31}):[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// The kind half of a record reference, or null for a source that is not one.
 function recordKind(source: string): string | null {
   return RECORD_REF.exec(source)?.[1] ?? null;
 }

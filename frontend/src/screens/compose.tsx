@@ -25,6 +25,7 @@ import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Eyebrow } from "../design-system/eyebrow";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
+import { Panel, PanelBody } from "../design-system/panel";
 import { Popover } from "../design-system/popover";
 import {
   liveProjects,
@@ -1553,27 +1554,23 @@ export function missingToSend(
   return missing;
 }
 
-// The band that says a MACHINE wrote the words below, and what it wrote them
-// from. It is the Art. 50 disclosure and the draft's reasoning in one block,
-// because to a reader they are one statement: this is not your colleague's
-// message, and here is what it stands on.
+// The card that says a MACHINE wrote the words below, and what it wrote them
+// from: to a reader the Art. 50 disclosure and the draft's reasoning are one
+// statement — not your colleague's message, and here is what it stands on.
 //
-// Indigo, like every other place a machine did the work. It is the loudest
-// thing in the drawer on purpose — a rep who misses it sends a model's words
-// under their own name.
+// `Panel tone="ai"` draws it, in the colour every other machine-authored
+// surface wears, its title at h3 under the drawer's own h2. Loudest thing in
+// the drawer on purpose: miss it and a model's words go out in a rep's name.
 //
 // The server's disclosure line is a compliance string rendered verbatim, never
 // reworded; a response that omits it still discloses, because a missing line
 // may not silently become a missing disclosure.
 //
-// The voice tag names the PROFILE version that styled the draft, and the
+// The voice tag names the PROFILE version that styled the draft; the
 // provisional label reports what that profile is today. Neither implies a
-// weaker draft: nothing gates drafting on maturity, so a provisional profile
-// styles this text exactly as a fuller one would. Both hang off the served
-// version, because maturity is a corpus-word band that reaches `provisional`
-// while the profile is still only collecting — and reporting a voice's
-// maturity over a draft no voice touched would overstate this surface's own
-// provenance, which Art. 50 does not permit.
+// weaker draft — nothing gates drafting on maturity. Both hang off the SERVED
+// version, because reporting a maturity over a draft no voice touched would
+// overstate this surface's own provenance, which Art. 50 does not permit.
 function DraftBand({
   provenance,
   maturity,
@@ -1583,63 +1580,66 @@ function DraftBand({
   provenance: DraftProvenance;
   maturity: VoiceProfile["maturity"] | undefined;
   reasons: components["schemas"]["AccountDraftReason"][];
-  // The steer and the verb that asks for another draft. They belong INSIDE
-  // the band once one exists: the band is the machine's own block, and asking
-  // it to write again is the same conversation rather than a control that
-  // happens to sit nearby.
+  // The steer and the verb that asks for another draft: the card is the
+  // machine's own block, so asking it to write again belongs inside it.
   children: ReactNode;
 }>) {
   const t = useT();
-  // The band's own drawer, mounted beside the reasons that open it. One per
-  // band rather than one per reason: a drawer per row would be several
-  // dialogs racing to be the one on top.
+  // One drawer per CARD rather than per reason: a drawer per row would be
+  // several dialogs racing to be the one on top.
   const [openEmail, setOpenEmail] = useOpenEmail();
   const zone = useRecordZone();
   if (!provenance.ai_generated) {
     return null;
   }
   return (
-    <section className="compose-band" data-testid="ai-disclosure-banner">
-      <Eyebrow>{t("compose.aiDisclosureTitle")}</Eyebrow>
-      <p className="t-body">
-        {provenance.ai_disclosure || t("compose.aiDisclosureFallback")}
-      </p>
-      <DraftReasons
-        reasons={reasons}
-        onOpenRecord={openCited}
-        onOpenEmail={setOpenEmail}
-      />
-      <OpenEmailDrawer
-        activityId={openEmail}
-        zone={zone}
-        onClose={() => setOpenEmail(null)}
-      />
-      {provenance.voice_degraded && (
-        // The one loss a sender cannot see in the text: their own voice is
-        // the register nobody proofreads for.
-        <Callout tone="warn" live="status">
-          {t("compose.voiceDegraded")}
-        </Callout>
-      )}
-      {provenance.voice_profile_version != null && (
-        <>
-          <p className="t-caption">
-            {/* A profile VERSION, never grouped: version 1234 is one
-                identifier, and "1.234" reads as a different one. */}
-            {t("compose.voiceVersion", {
-              n: identifierNumber(provenance.voice_profile_version),
-            })}
-          </p>
-          {maturity === "provisional" && (
+    <Panel
+      tone="ai"
+      title={t("compose.aiDisclosureTitle")}
+      titleLevel={3}
+      className="compose-band"
+    >
+      <PanelBody className="compose-band-body">
+        <p className="t-body">
+          {provenance.ai_disclosure || t("compose.aiDisclosureFallback")}
+        </p>
+        <DraftReasons
+          reasons={reasons}
+          onOpenRecord={openCited}
+          onOpenEmail={setOpenEmail}
+        />
+        <OpenEmailDrawer
+          activityId={openEmail}
+          zone={zone}
+          onClose={() => setOpenEmail(null)}
+        />
+        {provenance.voice_degraded && (
+          // The one loss a sender cannot see in the text: their own voice is
+          // the register nobody proofreads for.
+          <Callout tone="warn" live="status">
+            {t("compose.voiceDegraded")}
+          </Callout>
+        )}
+        {provenance.voice_profile_version != null && (
+          <>
             <p className="t-caption">
-              <Badge>{t("compose.provisional")}</Badge>{" "}
-              {t("compose.provisionalHint")}
+              {/* A profile VERSION, never grouped: version 1234 is one
+                  identifier, and "1.234" reads as a different one. */}
+              {t("compose.voiceVersion", {
+                n: identifierNumber(provenance.voice_profile_version),
+              })}
             </p>
-          )}
-        </>
-      )}
-      {children}
-    </section>
+            {maturity === "provisional" && (
+              <p className="t-caption">
+                <Badge>{t("compose.provisional")}</Badge>{" "}
+                {t("compose.provisionalHint")}
+              </p>
+            )}
+          </>
+        )}
+        {children}
+      </PanelBody>
+    </Panel>
   );
 }
 

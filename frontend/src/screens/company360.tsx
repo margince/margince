@@ -646,10 +646,10 @@ const QUESTIONS: readonly Question[] = Object.keys({
  * AskCard is "Ask Margince": three prepared questions, answered from this
  * account's own records.
  *
- * The questions are BUTTONS, not a text box. Each one names the records its
- * answer is written from, which is what lets every sentence carry a citation
- * the reader can open — and a text box that quietly answered from a subset
- * would look exactly like one that had searched everything.
+ * The questions are BUTTONS, not a text box — indigo, because the agent
+ * answers them, and quiet because no one of them is the move. Each names the
+ * records its answer is written from, so every sentence carries a citation the
+ * reader can open; a text box answering from a subset would look the same.
  */
 export function AskSection({
   companyId,
@@ -722,6 +722,7 @@ export function AskSection({
           <Button
             key={question}
             small
+            variant="aiQuiet"
             onClick={() => ask.mutate({ question, project: projectId })}
             disabled={ask.isPending}
           >
@@ -1765,10 +1766,8 @@ export function useSuggestionsBody({
   // "no advice" or "we cannot advise you" are not things a rep acts on.
   ready: boolean;
   rows: ReactNode;
-  // How many rows `rows` draws. A caller that wants to count them beside its
-  // own title cannot count a ReactNode, and a caller that recomputed the
-  // number from the same view would be a second answer free to disagree with
-  // the one on screen.
+  // How many rows `rows` draws: one node carries several, so a caller weighing
+  // what the list holds cannot count them for itself.
   count: number;
   // Whether any row this section DRAWS offers to answer a specific message.
   //
@@ -1997,11 +1996,11 @@ export function ProposedNextSteps({
 
 /**
  * SuggestionsSection is the advice rows on their own, in their own Panel —
- * used standalone where nothing else on the page carries this chrome (the
- * stories file, and the suites that exercise the rows without the rest of
- * the daily brief). The live record page mounts the merged brief instead
- * (`TodayOnThisAccount`, companytoday.tsx), which composes the same rows
- * body via `useSuggestionsBody` alongside its own context band.
+ * indigo, because a rule wrote every row under that head. Used standalone
+ * where nothing else carries this chrome (the stories file, and the suites
+ * that exercise the rows without the daily brief); the live record page mounts
+ * the merged brief instead (`TodayOnThisAccount`, companytoday.tsx), which
+ * composes the same body via `useSuggestionsBody` beside its context band.
  */
 export function SuggestionsSection({
   companyId,
@@ -2053,7 +2052,8 @@ export function SuggestionsSection({
     <Panel
       title={t("co.suggest.title")}
       footer={footer}
-      tone="accent"
+      tone="ai"
+      titleAction={<Badge tone="ai">{t("co.assistant.aiTag")}</Badge>}
       className="co-lead"
     >
       {body.rows}

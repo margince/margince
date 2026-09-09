@@ -132,19 +132,25 @@ export function GrowthFitPanel({
     <Panel
       className="co-worth"
       title={t("co.growthFit.title")}
+      // The assessment is a machine's, in every state it can be in — so the
+      // tint rides the panel rather than the readable payload.
+      tone="ai"
       // The same shape the account brief beside it keeps: the "as of" stamp
       // reads as the header's own fact — when this reading was assembled —
       // while who wrote it and the verb to have it written again sit together
       // in the footer band, which is the panel's sourcing rather than part of
-      // what it says.
+      // what it says. The disclosure closes the band, one badge to a head.
       titleAction={
-        readable && (
-          <span className="t-caption">
-            {t("co.brief.generatedAt", {
-              when: formatDateTime(readable.generated_at, locale, recordZone),
-            })}
-          </span>
-        )
+        <>
+          {readable && (
+            <span className="t-caption">
+              {t("co.brief.generatedAt", {
+                when: formatDateTime(readable.generated_at, locale, recordZone),
+              })}
+            </span>
+          )}
+          <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
+        </>
       }
       footer={
         readable && (
@@ -152,6 +158,10 @@ export function GrowthFitPanel({
             <WrittenBy by={readable.generated_by} />
             <Button
               small
+              // The assessor's own verb on the assessor's own ground: tinted
+              // rather than filled, so the panel's one filled control is not
+              // spent on having the reading written a second time.
+              variant="aiQuiet"
               onClick={() => reassess.mutate()}
               pending={reassess.isPending}
               busyLabel={t("co.growthFit.reassessing")}

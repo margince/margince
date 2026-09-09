@@ -78,6 +78,8 @@ export const Buttons: Story = {
           <Button variant="primary">Save</Button>
           <Button variant="ghost">Cancel</Button>
           <Button variant="danger">Delete</Button>
+          <Button variant="ai">Draft a reply</Button>
+          <Button variant="aiQuiet">Shorter</Button>
         </div>
       </div>
       {/* The text affordance, beside a real Button so the thing it must not
@@ -97,10 +99,8 @@ export const Buttons: Story = {
           <button type="button" className="link-button">
             View existing
           </button>
-          {/* With an icon: lucide hands over a 24px glyph, so without a size
-              rule on the class this label wrapped underneath its own icon.
-              Compare the glyph here with the one in the buttons above — one
-              size, owned by the control rather than by the call site. */}
+          {/* With an icon: lucide hands over a 24px glyph, so the BUTTON sizes
+              it — this label wrapped under its own icon until it did. */}
           <button type="button" className="link-button">
             <Plus aria-hidden />
             Add another

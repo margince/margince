@@ -262,8 +262,11 @@ func TestARadiusInsideATraversalRefusesRatherThanBeingDropped(t *testing.T) {
 	}
 	clauses := []Predicate{{Field: "address", Op: OpWithinRadius, Value: operand}}
 
-	fragments, refusals := c.predicates("h", unfilteredStorage(),
+	fragments, refusals, err := c.predicates(t.Context(), "h", unfilteredStorage(),
 		TargetVocabulary{Target: "company"}, "traverse.where", clauses, false)
+	if err != nil {
+		t.Fatalf("compiling the hop predicates: %v", err)
+	}
 	if len(fragments) != 0 {
 		t.Errorf("a hop radius compiled to %v; nothing binds it there", fragments)
 	}
@@ -277,8 +280,11 @@ func TestARadiusInsideATraversalRefusesRatherThanBeingDropped(t *testing.T) {
 
 	// The ROOT is the opposite: skipped here on purpose, because radius()
 	// renders it. Neither a fragment nor a refusal.
-	fragments, refusals = c.predicates("t", unfilteredStorage(),
+	fragments, refusals, err = c.predicates(t.Context(), "t", unfilteredStorage(),
 		TargetVocabulary{Target: "company"}, "where", clauses, true)
+	if err != nil {
+		t.Fatalf("compiling the root predicates: %v", err)
+	}
 	if len(fragments) != 0 || len(refusals) != 0 {
 		t.Errorf("the root radius produced fragments %v and refusals %v; radius() renders it",
 			fragments, refusals)

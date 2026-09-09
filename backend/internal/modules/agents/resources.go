@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"errors"
 
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -139,6 +140,23 @@ func (s *Dispatcher) resourceList(ctx context.Context, fr framing) []resourceDes
 // A host that renders views is unaffected: every route to a view's URI runs
 // through a tool's `_meta.ui`, which only an App-declaring request is served,
 // so a client that knows the URI at all is one that declared it can render it.
+// noResourceAt renders the not-found answer, so that no branch can quote the
+// caller's URI back raw by forgetting to.
+//
+// The URI arrives off the JSON body, where nothing bounds it but the transport's
+// megabyte cap, and the answer lands in a transcript whose later prompts the same
+// run reads. Raw, it carried both an unbounded write and a character the reader
+// treats as a line ending. Bounded and escaped, it still says which URI was
+// asked for — which is the whole value of naming it.
+//
+// Four branches answer with it, and they answer IDENTICALLY on purpose: an
+// unknown URI, one this caller's scopes do not reach, one the provider does not
+// serve, and an app document on a surface not offering apps. A caller must not
+// be able to tell "does not exist" from "not yours".
+func noResourceAt(uri string) string {
+	return "no resource at " + httperr.QuoteCaller(uri)
+}
+
 func (s *Dispatcher) readResource(ctx context.Context, params json.RawMessage, fr framing) (resourceContents, *rpcError) {
 	var p struct {
 		URI string `json:"uri"`
@@ -153,16 +171,16 @@ func (s *Dispatcher) readResource(ctx context.Context, params json.RawMessage, f
 		return resourceContents{}, &rpcError{Code: codeInvalidParams, Message: "invalid params: resources/read needs a non-empty \"uri\""}
 	}
 	if s.resources == nil {
-		return resourceContents{}, &rpcError{Code: resourceNotFound, Message: "no resource at " + p.URI}
+		return resourceContents{}, &rpcError{Code: resourceNotFound, Message: noResourceAt(p.URI)}
 	}
 	if !s.readableByThisCaller(ctx, p.URI) {
 		// The same answer an unknown URI gets: a caller whose scopes do not
 		// reach a document must not learn that it exists.
-		return resourceContents{}, &rpcError{Code: resourceNotFound, Message: "no resource at " + p.URI}
+		return resourceContents{}, &rpcError{Code: resourceNotFound, Message: noResourceAt(p.URI)}
 	}
 	contents, err := s.resources.ReadResource(ctx, p.URI)
 	if errors.Is(err, apperrors.ErrNotFound) {
-		return resourceContents{}, &rpcError{Code: resourceNotFound, Message: "no resource at " + p.URI}
+		return resourceContents{}, &rpcError{Code: resourceNotFound, Message: noResourceAt(p.URI)}
 	}
 	if err == nil && isAppDocument(contents.MIMEType) && !s.appsOffered(fr) {
 		// Judged on what the provider actually SERVED, not on what the
@@ -170,7 +188,7 @@ func (s *Dispatcher) readResource(ctx context.Context, params json.RawMessage, f
 		// catalogue names the first advertiser while this read takes the first
 		// that serves, and the bytes in hand are what the client would have to
 		// render.
-		return resourceContents{}, &rpcError{Code: resourceNotFound, Message: "no resource at " + p.URI}
+		return resourceContents{}, &rpcError{Code: resourceNotFound, Message: noResourceAt(p.URI)}
 	}
 	if err != nil {
 		// The cause is server-side knowledge (a pool fault, a wrapped SQL

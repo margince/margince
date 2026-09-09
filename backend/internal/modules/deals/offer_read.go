@@ -205,6 +205,20 @@ func withholdUnreadableBuyer(ctx context.Context, tx pgx.Tx, offers []crmcontrac
 	return nil
 }
 
+// withholdUnreadableBuyerOn is the single-offer spelling, and it exists so the
+// two callers cannot get the read-back wrong: a slice literal copies the offer,
+// so withholding against `[]Offer{offer}` mutates the copy and leaves the
+// caller's own value carrying the reference. That failure is silent — the read
+// path keeps working and the buyer is still there.
+func withholdUnreadableBuyerOn(ctx context.Context, tx pgx.Tx, offer *crmcontracts.Offer) error {
+	single := []crmcontracts.Offer{*offer}
+	if err := withholdUnreadableBuyer(ctx, tx, single); err != nil {
+		return err
+	}
+	*offer = single[0]
+	return nil
+}
+
 func readOffer(ctx context.Context, tx pgx.Tx, id ids.OfferID, archived storekit.ArchivedFilter) (crmcontracts.Offer, error) {
 	q := `SELECT ` + offerColumns + ` FROM offer WHERE id = $1`
 	if archived == storekit.LiveOnly {
@@ -232,11 +246,9 @@ func readOfferWithLines(ctx context.Context, tx pgx.Tx, id ids.OfferID, archived
 	if err != nil {
 		return crmcontracts.Offer{}, err
 	}
-	single := []crmcontracts.Offer{offer}
-	if err := withholdUnreadableBuyer(ctx, tx, single); err != nil {
+	if err := withholdUnreadableBuyerOn(ctx, tx, &offer); err != nil {
 		return crmcontracts.Offer{}, err
 	}
-	offer = single[0]
 	lines, err := readOfferLines(ctx, tx, id)
 	if err != nil {
 		return crmcontracts.Offer{}, err

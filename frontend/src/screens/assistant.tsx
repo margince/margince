@@ -41,6 +41,9 @@ export function AssistantPanel({
   return (
     <Panel
       title={t("co.assistant.title")}
+      // Indigo, because everything under this head is a machine's reading of
+      // the account: the questions are the agent's and so is every answer.
+      tone="ai"
       // The disclosure is the badge, and it rides in the header band so it is
       // read before anything under it. The sentence that used to sit beside it
       // explained the panel's own epistemology to a reader who came here to

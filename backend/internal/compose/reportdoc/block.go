@@ -11,7 +11,11 @@ package reportdoc
 // draw it or drop it silently, and both are worse than refusing the document
 // before anybody reads it.
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/margince/margince/backend/internal/platform/httperr"
+)
 
 // Kind names one block type.
 type Kind string
@@ -152,6 +156,11 @@ func (s Severity) known() bool {
 }
 
 // blockRef names a block in a refusal so a composer can find it.
+//
+// The kind is the CALLER's own string — an unknown one is exactly what the
+// refusal that carries this is about — so it is bounded where it enters. The
+// refusal it prefixes goes on to name the whole grammar, and a caller who sent
+// a long kind must not be able to spend the budget that set needs.
 func blockRef(i int, k Kind) string {
-	return fmt.Sprintf("block %d (%s)", i, k)
+	return fmt.Sprintf("block %d (%s)", i, httperr.QuoteCaller(string(k)))
 }

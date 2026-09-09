@@ -287,10 +287,15 @@
 }
 /* The edge firms up under the pointer. A background step would fight the
    staged card's own tint, and this card's whole job is to keep those two
-   readings apart. It is stated ABOVE the staged and archived rules on purpose:
-   both restate the whole border, so a card whose edge carries provenance keeps
-   that edge under the pointer rather than trading it for a hover colour. */
-.deal-card:hover {
+   readings apart.
+
+   A staged card is excluded rather than outranked: its dashed indigo edge is a
+   claim about who proposed the deal, and trading that for a hover colour drops
+   the claim for as long as the pointer rests there. Said as an exclusion
+   because the staged edge no longer lives in this sheet — it is the panel-ai
+   family's, in panel.css — and which of two equally specific rules the bundler
+   emits later is not something either file can promise. */
+.deal-card:not(.staged):hover {
   border-color: var(--borderStrong);
 }
 /* The ring follows the LINK's focus, drawn on the card: the anchor is what
@@ -320,10 +325,10 @@
 .deal-company-link:hover {
   text-decoration: underline;
 }
-.deal-card.staged {
-  background: var(--aiLight);
-  border: 1.5px dashed var(--aiMed);
-}
+/* `.deal-card.staged` — the AI tint and the dashed edge — is declared with the
+   rest of the panel-ai family in panel.css. A deal an agent proposed is the
+   same claim as a panel one wrote, and this card kept its own copy of it until
+   the two spellings could disagree. */
 .deal-card.archived {
   opacity: 0.6;
   border-style: dashed;

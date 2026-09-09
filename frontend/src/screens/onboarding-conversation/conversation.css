@@ -3236,26 +3236,13 @@
 }
 
 /* The pinned next-step line between the thread and the composer: one slim
-   button naming the blocking affordance that is scrolled out of view. */
+   button naming the blocking affordance that is scrolled out of view. The
+   button is a `Button` — the fill, the edge and the hover are the variant's,
+   so this line owns only where it sits. */
 .ob-conv-nextstep {
   display: flex;
   justify-content: center;
   padding: var(--space-1) var(--space-4);
-}
-
-.ob-conv-nextstep button {
-  border: 1px solid var(--aiMed);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--aiLight);
-  color: var(--aiText);
-  padding: var(--space-1) var(--space-3);
-  font: var(--fw-medium) var(--fs-sm) / var(--lh-normal) var(--f-body);
-  cursor: pointer;
-}
-
-.ob-conv-nextstep button:hover {
-  background: var(--aiMed);
 }
 
 /* The rail's composer, one size smaller than the split variant's: a single

@@ -34,6 +34,9 @@ const answer = {
   ],
 };
 
+// The panel and every question in it are the agent's, so the head is indigo
+// and the chips are its quiet variant rather than the neutral outline they
+// used to wear. Both themes: the tint stays put on dark and its ink lifts.
 export const Default: Story = {
   render: () => {
     installFetchStub({
@@ -47,4 +50,9 @@ export const Default: Story = {
       </StoryProviders>
     );
   },
+};
+
+export const DefaultDark: Story = {
+  ...Default,
+  globals: { theme: "dark" },
 };

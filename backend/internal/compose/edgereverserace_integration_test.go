@@ -23,6 +23,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -34,7 +35,8 @@ import (
 // pool.
 func restoreSeamFor(e *integration.Env) RestoreSeam {
 	return NewRestoreSeam(e.Pool, NewDispatcher(NewProvider(e.Pool),
-		NewOverlayProvider(e.Pool, failClosedOverlayMeter(), nil), e.Pool))
+		NewOverlayProvider(e.Pool, failClosedOverlayMeter(), nil), e.Pool),
+		deals.NewStore(e.DB(), DealsInstallation()))
 }
 
 // reversalsOf counts the audit rows that name this entry as the one they put

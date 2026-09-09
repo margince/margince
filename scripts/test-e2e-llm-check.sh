@@ -396,6 +396,18 @@ judge_is "a judge that says no fails the run" \
 	"cmd:printf '{\"verdict\":\"no\",\"reason\":\"it did not\"}'" \
 	1 "the judge says NO to:"
 
+# A REPLY WHOSE FENCE THE MODEL INDENTED. The parse is strict everywhere else and
+# the docstring names the fence as its one latitude, so the latitude owes a case
+# — and this is the shape that decides whether the stripping is anchored to the
+# reply or hunting for a fence line by line. A pattern matching at the start of
+# any LINE never sees this one, leaves the fence in place, and the reply is
+# refused as unreadable. Asserted through the "no" verdict rather than a pass: an
+# unstripped fence raises "not the expected JSON object" and exits 2, so the two
+# outcomes are told apart by exit code alone rather than by a message.
+judge_is "a reply whose fence is indented is read, not refused" \
+	"cmd:printf '  \`\`\`json\\n{\"verdict\":\"no\",\"reason\":\"it did not\"}\\n\`\`\`'" \
+	1 "the judge says NO to:"
+
 # A VERDICT ONE MODEL GAVE IS NOT ANOTHER MODEL'S. The recorded corpus is what
 # says this judge decides these fixtures correctly, and replaying it while a
 # different judge is pinned would report a model as held that has never been
@@ -1036,6 +1048,30 @@ cat >"$work/usage.renamed.jsonl" <<'JSONL'
 JSONL
 usage_is "usage/a renamed token field is unmeasured, not zero" 1 "0/1 runs measured" \
 	"$work/usage.renamed.jsonl"
+
+# --- judge-eval.py's one argument ------------------------------------------------
+#
+# The model id names the record file this script writes under its own records
+# directory, so an argument carrying a path separator would put that file
+# anywhere the caller pointed. The script is run by agents assembling their own
+# argument list, and the refusal has to land BEFORE the suite runs — a guard that
+# fires after a live judge has billed a run is a guard that costs money to
+# enforce.
+eval_refuses() {
+	local name="$1" argument="$2" out status=0
+	out="$(python3 "$root/e2e/llm/judge-eval.py" "$argument" 2>&1)" || status=$?
+	if [[ $status -ne 2 ]] || [[ "$out" != *"not a model id"* ]]; then
+		echo "FAIL: judge-eval/$name — exit $status, want 2 carrying 'not a model id'"
+		echo "$out" | sed 's/^/    /'
+		failures=$((failures + 1))
+		return
+	fi
+	echo "ok: judge-eval/$name"
+}
+
+eval_refuses "a relative escape is refused" "../../../tmp/escape"
+eval_refuses "an absolute path is refused" "/tmp/escape"
+eval_refuses "a bare separator is refused" "a/b"
 
 if [[ $failures -ne 0 ]]; then
 	echo "FAIL: $failures e2e-llm checker case(s) did not hold" >&2

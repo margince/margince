@@ -67,6 +67,24 @@ func (g *Gate) validate(ctx context.Context, tx pgx.Tx, req commsauthz.Request, 
 	if err := refuseUnreadableEvidence(ctx, tx, req); err != nil {
 		return resolution{}, err
 	}
+	res, err := g.validateCategory(ctx, tx, req, subject, category, w, unsupported)
+	if err != nil {
+		return resolution{}, err
+	}
+	// PAST THE READABILITY CHECK, so the ids this request named may be written
+	// down for the transmit phase to ask about again.
+	//
+	// Stamped here rather than inside each arm because it is a fact about the
+	// PATH and not about the answer: refuseUnreadableEvidence ran and admitted,
+	// which is true of every arm below this line and of no arm above it.
+	res.EvidenceChecked = true
+	return res, nil
+}
+
+// validateCategory is validate's dispatch, split out so the readability check
+// above and the EvidenceChecked stamp bracket every arm — rather than being
+// repeated in six places and forgotten in the seventh somebody adds.
+func (g *Gate) validateCategory(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, category commsauthz.Category, w packRules, unsupported resolution) (resolution, error) {
 	switch category {
 	case commsauthz.CategoryReplyToInbound, commsauthz.CategoryRequestedFollowup:
 		return g.validateRequestedFollowup(ctx, tx, subject, w, category)

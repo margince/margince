@@ -564,11 +564,21 @@ fi
 
 # --- CASE 20 + 21: a priced pipeline, and one deal nobody put a number on ----
 #
-# ONE stage, ONE owner, ONE currency, deliberately. The analytics floor withholds
-# any group under five rows AND the complement that would hand it back by
-# subtraction (compose/analyticsquery/floor.go), so a pipeline spread thin
-# answers "withheld" to every grouping a model might reach for. Seven in one
-# column clears the floor for all of them.
+# ONE stage and ONE owner, deliberately. The analytics floor withholds any group
+# under five rows AND the complement that would hand it back by subtraction
+# (compose/analyticsquery/floor.go), so a pipeline spread thin answers "withheld"
+# to every grouping a model might reach for. Seven in one column clears the floor
+# for the stage, the owner and the pipeline.
+#
+# NOT for the currency, and the claim that it did was false for as long as it
+# stood here. The seventh deal below carries no amount, and the product refuses a
+# currency without one — "amount_minor and currency come together or not at all"
+# — so the currency column holds six EUR rows and one null, the null group is
+# under the floor, and the anti-subtraction rule withholds the EUR group and the
+# total along with it. A grouping by currency is therefore WITHHELD here, and
+# correctly: that is the floor doing its job on a real pipeline, not a fixture
+# defect to seed around. The headline figure case 20 needs comes from any of the
+# other groupings, or from no grouping at all.
 pipeline="$(api GET /pipelines | python3 -c 'import json,sys
 rows = json.load(sys.stdin).get("data", [])
 print(next((r["id"] for r in rows if r.get("is_default")), rows[0]["id"] if rows else ""))')"
@@ -691,6 +701,138 @@ seed_deal "Körber Sensorik Rollout"        5600000 "${close_dates[5]}"
 # outstanding Vietnam deal with no value on it greened the criterion without
 # ever reading the correspondence.
 seed_deal "Weserbund Pilotphase"              null "${close_dates[6]}"
+
+# --- CASE 20: what we have WON, because the prompt asks for it ---------------
+#
+# "The headline open pipeline and what we have won so far" is two figures, and
+# for a long time this fixture held only the first. Every deal above is `open`,
+# so the win-loss population answered NO ROWS to every grouping a model could
+# reach for — and compose_analytics_report refuses a figure the composer typed
+# itself, so there was no legal way to answer half of what was asked. Three
+# models scored zero on this case and none of them was wrong to.
+#
+# FIVE, and the number is the disclosure floor rather than a taste. The
+# analytics engine withholds any group under five rows AND the smallest
+# remaining group beside it, so a subtraction cannot undo the withholding
+# (compose/analyticsquery/floor.go). Four won deals would answer "withheld" and
+# read exactly like the empty fixture this replaces.
+#
+# They are won IN THE CURRENT QUARTER, which is what a board pack means by "so
+# far", and they carry a `won_without_contract_reason` because the product
+# refuses a win that offers neither a signed contract nor a reason for its
+# absence. That refusal is right and this fixture answers it the way a real
+# installation does rather than routing around it.
+won_stage="$(api GET "/pipelines/$pipeline" | python3 -c 'import json,sys
+stages = json.load(sys.stdin).get("stages", [])
+print(next((s["id"] for s in stages if s.get("semantic") == "won"), ""))')"
+[[ -n "$won_stage" ]] || { echo "the default pipeline has no won stage to close a deal into" >&2; exit 1; }
+
+# seed_won_deal creates a deal open and then WINS it, because that is the only
+# path: a deal cannot be created closed, and INV-CLOSE-PAST refuses an open deal
+# a close date already past. So it opens inside this quarter and is advanced.
+seed_won_deal() {
+  local name="$1" amount="$2" close_date="$3" existing created id code
+  existing="$(api GET "/deals?stage_id=$won_stage&limit=100" | python3 -c 'import json,sys
+want = sys.argv[1]
+for row in json.load(sys.stdin).get("data", []):
+    if row.get("name") == want:
+        print(row["id"]); break
+else:
+    print("")' "$name")"
+  if [[ -n "$existing" ]]; then
+    echo "  $name already won"
+    return 0
+  fi
+  created="$(api POST /deals "$(printf '{"name":"%s","pipeline_id":"%s","stage_id":"%s","owner_id":"%s","amount_minor":%s,"currency":"EUR","expected_close_date":"%s","source":"%s"}'     "$name" "$pipeline" "$stage" "$colleague" "$amount" "$close_date" "$FIXTURE_SOURCE")")"
+  id="$(id_of "$created")"
+  [[ -n "$id" ]] || { echo "could not create the won deal $name: $created" >&2; exit 1; }
+  # purchase_order: the commonest honest answer in a CRM whose paper lives in
+  # somebody's mail client. The reason is REQUIRED, not cosmetic — a win with
+  # neither contract nor reason is refused.
+  code="$(status_of POST "/deals/$id/advance"     "$(printf '{"to_stage_id":"%s","status":"won","won_without_contract_reason":"purchase_order"}' "$won_stage")")"
+  [[ "$code" = "200" ]] || {
+    echo "winning $name answered HTTP $code, not the 200 that means it closed" >&2; exit 1; }
+}
+
+seed_won_deal "Emsland Werke Modernisierung"   2750000 "${close_dates[0]}"
+seed_won_deal "Sauerland Guss Anlagenbau"      1840000 "${close_dates[1]}"
+seed_won_deal "Altmark Logistik Systemwechsel"  620000 "${close_dates[2]}"
+seed_won_deal "Spreewald Technik Ausbaustufe"  3400000 "${close_dates[3]}"
+seed_won_deal "Lahntal Praezision Erstauftrag" 1150000 "${close_dates[4]}"
+
+# --- the fixture is handed over as it was written, or not at all -------------
+#
+# THE NIGHTLY CLOSE-DATE SWEEP EATS THIS FIXTURE, and it did so silently.
+#
+# deals.closeDateRun admits any open deal whose close date falls within the
+# stalled threshold, replaces the date with a machine proposal and marks the deal
+# `close_date_provisional` — and a provisional deal is held out of Commit and
+# Best-case. Every deal above closes inside the current quarter, so every one of
+# them is eligible, and the sweep runs on worker start: right alongside this
+# seeding.
+#
+# Measured, on the sweep that prompted this check: the three OLDEST deals — the
+# sweep takes the oldest first and is time-boxed, so it reached exactly three —
+# had their dates moved from inside the quarter to 2026-11-04, outside it. The
+# forecast then answered nine eligible deals and EUR 87,500 open where the
+# fixture had written twelve and EUR 179,000. Case 21 asserts on that reading and
+# case 20 quotes it, and nothing anywhere said the world had changed underneath
+# them. Three models were scored against it.
+#
+# So the fixture is VERIFIED rather than assumed. Not worked around: the sweep is
+# real product behaviour and a lane that switched it off would stop measuring the
+# product it is here to measure. What must not happen is measuring against a
+# world nobody described — so a moved date stops the lane and names itself.
+echo "  verifying the seeded pipeline survived the close-date sweep"
+# The expectation is passed as one NAME=DATE per line rather than as a long
+# argument list: the names carry spaces and umlauts, and a positional list of
+# fourteen strings was a line no reviewer could check against the seven
+# seed_deal calls above.
+SEEDED_PIPELINE="$(cat <<EXPECTED
+Dom Digital Rahmenvertrag=${close_dates[0]}
+Rheinufer Netzmodernisierung=${close_dates[1]}
+Vorort Systeme Ausbau=${close_dates[2]}
+Reply Deutschland Verlängerung=${close_dates[3]}
+valantic Migrationsprojekt=${close_dates[4]}
+Körber Sensorik Rollout=${close_dates[5]}
+Weserbund Pilotphase=${close_dates[6]}
+EXPECTED
+)"
+export SEEDED_PIPELINE
+api GET "/deals?limit=100" | python3 -c '
+import json, os, sys
+
+want = dict(
+    line.split("=", 1)
+    for line in os.environ["SEEDED_PIPELINE"].splitlines()
+    if line.strip()
+)
+rows = {r["name"]: r for r in json.load(sys.stdin).get("data", []) if r.get("name") in want}
+
+absent = sorted(set(want) - set(rows))
+if absent:
+    sys.exit("the seeded pipeline is incomplete — absent: " + ", ".join(absent))
+
+moved = []
+for name, expected in sorted(want.items()):
+    row = rows[name]
+    if row.get("expected_close_date") != expected:
+        moved.append("  %s: seeded %s, now %s" % (name, expected, row.get("expected_close_date")))
+    elif row.get("close_date_provisional"):
+        moved.append("  %s: still %s but marked provisional, so it is out of Commit" % (name, expected))
+
+if moved:
+    sys.exit(
+        "the close-date sweep moved the seeded pipeline, so cases 20 and 21 would be\n"
+        "measured against a forecast the fixture does not describe:\n"
+        + "\n".join(moved)
+        + "\n\nThe product is working as designed here — deals.closeDateRun proposes a date for\n"
+          "any open deal closing inside the stalled window and marks it provisional, and a\n"
+          "provisional deal is held out of Commit and Best-case. What is wrong is measuring\n"
+          "over it. Re-seed against a stack whose worker has finished its first sweep."
+    )
+print("  the seeded pipeline is intact")
+'
 
 # --- CASE 23: a week that is not empty --------------------------------------
 #
