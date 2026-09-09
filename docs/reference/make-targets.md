@@ -159,12 +159,11 @@ deriving it the first time.
 ### The `bench` lane — measurements, run by hand
 
 `bench-perf`, `bench-perf-check`, `bench-record`, `bench-capture` and
-`bench-dispatch` carry `//go:build integration && bench`, so **no MERGE gate
-runs them**: not `make check`, not the integration lane. They report
-the numbers behind the budgets `acceptance-standards.md` publishes rather than
-gating a merge on them, which is why each prints p50/p95/p99 beside its budget
-instead of only passing or failing. `bench-mobile` below is the frontend half of
-the same posture.
+`bench-dispatch` carry `//go:build integration && bench`, so **no MERGE gate runs
+them**: not `make check`, not the integration lane. They report the numbers behind
+the budgets `acceptance-standards.md` publishes rather than gating a merge on them,
+which is why each prints p50/p95/p99 beside its budget instead of only passing or
+failing. `bench-mobile` below is the frontend half of the same posture.
 
 They are still **type-checked** on every `make check`: both golangci passes carry
 the tag, and `gates/lintbuildtagreach_test.go` fails if either stops. That is load-bearing rather than
@@ -200,9 +199,8 @@ tree. The write-path regression the standing canary once caught by TIMING OUT
 rather than by measuring is held deterministically now, by the `seq_scan` count
 in `lastactivity_integration_test.go`.
 
-`bench-dispatch` arrived the same way and left NOTHING behind in the lane, which its
-own file says rather than implying cover it lacks: AC-W2 gated the merge until a
-`main-health` run read p95=201.63 ms against 200 ms, six shards sharing one Postgres.
+`bench-dispatch` arrived the same way: AC-W2 gated the merge until a `main-health`
+run read p95=201.63 ms against a 200 ms budget, six shards sharing one Postgres.
 
 ## Root-only (frontend lane)
 
