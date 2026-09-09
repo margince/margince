@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -86,11 +87,17 @@ func TestTheRecordGrantListServesThePageItWasAskedFor(t *testing.T) {
 // The default limit applies when the caller names none, which is what stops the
 // old behaviour — read the whole table, then one visibility query per row —
 // coming back for a caller who simply did not pass a dial.
+//
+// The corpus is one grant OVER that default, and the default is read from the
+// clamp rather than written here: a test seeding three rows passes whatever the
+// limit is, including no limit at all, and a hard-coded 50 stops testing the
+// bound the day the contract moves it.
 func TestTheRecordGrantListIsBoundedWithoutADial(t *testing.T) {
 	e := Setup(t)
 	ctx := e.As(e.AdminUser, nil, AdminPerms)
 	shares := identity.NewServiceFor(e.DB())
-	for range 3 {
+	bound := storekit.ClampLimit(nil)
+	for range bound + 1 {
 		org := e.SeedOrg(t, "Shared Holding", &e.Rep1)
 		if _, err := shares.CreateRecordGrant(ctx, identity.CreateGrantInput{
 			RecordType: "organization", RecordID: org,
@@ -100,11 +107,21 @@ func TestTheRecordGrantListIsBoundedWithoutADial(t *testing.T) {
 		}
 	}
 
-	grants, _, err := shares.ListRecordGrants(ctx, identity.ListGrantsInput{})
+	grants, page, err := shares.ListRecordGrants(ctx, identity.ListGrantsInput{})
 	if err != nil {
 		t.Fatalf("listing without a dial: %v", err)
 	}
-	if len(grants) == 0 {
-		t.Fatal("a caller passing no dial got nothing — the default limit must serve a page, not refuse one")
+	if len(grants) != bound {
+		t.Fatalf("a caller passing no dial got %d grant(s) over a corpus of %d; want the default page of %d — "+
+			"an unbounded read is what this list used to do, and it reads exactly like a short table",
+			len(grants), bound+1, bound)
+	}
+	// The page has to SAY it is short, or a caller who reads the whole list as
+	// the whole table is told nothing about the rest.
+	if !page.HasMore {
+		t.Fatal("the default page served every row it was going to and said there was no more")
+	}
+	if page.NextCursor == "" {
+		t.Fatal("the page says there is more and hands back no cursor to fetch it with")
 	}
 }
