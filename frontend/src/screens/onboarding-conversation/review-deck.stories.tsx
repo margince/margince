@@ -75,3 +75,10 @@ export const HintOnly: Story = {
 export const HintAndEvidence: Story = {
   render: () => <Deck card={WITH_EVIDENCE} />,
 };
+
+// A card Continue does not wait for. The two required stories above wear the
+// danger rail, so this is the only one that shows the staged card's resting
+// edge — the agent's own colour, on the agent's own ground.
+export const Optional: Story = {
+  render: () => <Deck card={{ ...WITH_EVIDENCE, required: false }} />,
+};

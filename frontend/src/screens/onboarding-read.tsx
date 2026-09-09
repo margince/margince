@@ -535,7 +535,7 @@ export function ConversationEntries({
           </div>
         )}
         {entry.reply.proposed_changes.length > 0 && (
-          <div className="mw-proposal">
+          <div className="mw-proposal staging-card">
             <div>
               <Sparkles aria-hidden />
               <strong>{t("ob.ai.suggestedChanges")}</strong>
