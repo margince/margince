@@ -1388,14 +1388,6 @@
    heading are already louder, and a lead that shouts over them stops reading
    as one part of a page. */
 
-/* The account's identity and its readings are two different statements — who
-   this is, then how it stands — so the row needs room to start rather than
-   sitting directly under the name it describes. */
-.record-head:has(.identity-meta) {
-  /* ds:ignore a head carrying an identity row pays for that row */
-  margin-bottom: var(--space-5);
-}
-
 .docs-filters {
   display: flex;
   gap: var(--space-2);

@@ -11,6 +11,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { meFixture } from "./mefixture";
+import { CREATE_ID } from "./nav";
 import {
   type Command,
   CommandPalette,
@@ -66,7 +67,7 @@ const commands: Command[] = [
     id: "action:new-deal",
     label: "New deal",
     type: "action",
-    route: { screen: "deals", id: "new" },
+    route: { screen: "deals", id: CREATE_ID },
   },
   {
     id: "record:brandt",

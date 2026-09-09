@@ -420,11 +420,20 @@
   display: flex;
 }
 
+/* `margin-bottom` owns the interval below the identity, one full step, on
+   EVERY record: the head is a register of its own and what opens the record's
+   rhythm is the strip or the band under it, not the name. One value, not one
+   per head — a head that draws an identity row and one that draws a name alone
+   are the same statement at different lengths, and keying the interval on what
+   the head happens to contain left the strip a hair under the name on a lead
+   and a full step under it on a company. `.record-head` is drawn by
+   `RecordHead` and nothing else, so this rule reaches every record page and no
+   other surface. */
 .record-head {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  margin-bottom: var(--space-1);
+  margin-bottom: var(--space-5);
   /* The verbs drop to their own row rather than squeezing the identity out of
      the header. The controls column does not shrink, so on a narrow work
      column every verb it gains takes its width from the name beside it — far
@@ -518,7 +527,10 @@
    compact sizes — this applies only where the header runs wide. */
 .record-head-wide h1 {
   font-size: var(--fs-record-fluid);
-  line-height: 1.05;
+  /* The head box is `overflow: hidden` for the ellipsis, so a line box shorter
+     than the glyphs crops them: at 1.05 the record rung's fluid size cut the
+     descenders and accents out of a name. `--lh-tight` gives them their box. */
+  line-height: var(--lh-tight);
   /* Tighter than the display rung's tracking: a name set this large wears the
      scale's own spacing as gaps between its letters. */
   letter-spacing: -0.035em; /* ds:ignore optical, at the record rung's fluid size: --tracking-display reads as gaps between letters this large */
@@ -740,33 +752,40 @@
   }
 }
 
-/* The full-width band between the identity and the columns: the account's
-   readings, then the bar that chooses which part of it to read. It spans both
-   columns because it FRAMES them — inside the work column it would sit beside
-   the rail as one more card, its cells squeezed to a third of the page.
-   Its own gap is the one that sets the record's vertical rhythm, so it is
-   stated here rather than left to whatever margins its children happen to
-   carry. */
-/* The band is its own register between the identity above it and the work
-   below, so it is spaced off both rather than sitting against the header: the
-   readings belong to the record, not to the name. Both intervals come from the
-   space scale, so every record page opens with the same rhythm. */
+/* The slot the tab strip sits in, directly under the identity on every record.
+   It has no rule of its own and wants none: the interval BELOW the strip
+   belongs to `.recordtabs` (design-system/recordtabs.css), which carries it to
+   every surface that draws the strip and not only to a record; the interval
+   above is the head's `margin-bottom`. A wrapper that also spelled the gap
+   would be a second answer to it, and the one a later author edited would be
+   the one with no effect, since the two collapse to whichever is larger.
+
+   The wrapper exists for what it does NOT do: it must not scroll. The strip
+   inside scrolls sideways on a narrow screen rather than wrapping, and it
+   breaks out past the reading column by half the work column's slack — a
+   scroller around it turned that overhang into scroll room, and the Details
+   control at the row's end taking focus dragged the whole row sideways by
+   it. */
+
+/* The full-width band between the strip and the columns: what describes the
+   WHOLE record — its readings, its stepper, the sentence that refuses an edit.
+   It spans both columns because it FRAMES them — inside the work column it
+   would sit beside the rail as one more card, its cells squeezed to a third of
+   the page. Its own gap is the one that sets the rhythm between its readings,
+   so it is stated here rather than left to whatever margins its children
+   happen to carry.
+
+   `margin-top` owns the interval ABOVE the band and `margin-bottom` the one
+   below it, one full step each, so the band is its own register rather than
+   sitting against what it follows. `.arrive-stack` is a block container, so
+   the top margin collapses with the strip's bottom margin into that one step
+   instead of doubling it — and the same value stands on a record that has no
+   strip, where the band follows the head. */
 .record-band {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  margin-top: var(--space-4);
-  margin-bottom: var(--space-5);
-}
-
-/* The bar that chooses which part of the record is drawn under it. The strip
-   inside scrolls sideways on a narrow screen rather than wrapping
-   (design-system/recordtabs.css); this wrapper owns only the interval under
-   it. It must NOT scroll itself: the strip breaks out past the reading column
-   by half the work column's slack, and a scroller around it turned that
-   overhang into scroll room — the Details control at the row's end taking
-   focus dragged the whole row sideways by it. */
-.record-tabs {
+  margin-top: var(--space-5);
   margin-bottom: var(--space-5);
 }
 
