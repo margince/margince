@@ -112,10 +112,15 @@ type scheduledSendWorker struct {
 // immediate one is: the signature, the sender name, the unsubscribe linker and
 // the draft-outcome recorder all present, all identical. A hand-built store
 // here would be a second send path wearing the first one's name.
-func newScheduledSendWorker(pool *pgxpool.Pool, delivery DeliveryMachinery, blob blobstore.Store, pacing SendPacing) *scheduledSendWorker {
+func newScheduledSendWorker(pool *pgxpool.Pool, delivery DeliveryMachinery, blob blobstore.Store, pacing SendPacing, origin SendOrigin) *scheduledSendWorker {
 	return &scheduledSendWorker{
-		pool:      pool,
-		store:     sendStore(pool, SendPath{}).WithBlobstore(blob),
+		pool: pool,
+		// The ORIGIN travels, because a fired message builds its unsubscribe
+		// link from it. An empty send path here refuses every scheduled
+		// correspondence and marketing send at fire time while the
+		// transactional ones beside it go out — which is what it did, and what
+		// nothing noticed, because every fixture scheduled a transactional one.
+		store:     sendStore(pool, origin.sendPath()).WithBlobstore(blob),
 		authority: identity.NewService(pool),
 		consent:   consentGateFor(pool),
 		// The SAME machinery every other send stages with, handed in rather

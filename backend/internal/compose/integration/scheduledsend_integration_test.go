@@ -194,7 +194,7 @@ func (p *preflightEnv) countDeliveries(t *testing.T) int {
 func (p *preflightEnv) fire(t *testing.T, id ids.UUID) {
 	t.Helper()
 	ws := p.workspaceID(t)
-	if err := compose.DriveScheduledSendForTest(context.Background(), p.Pool, ws, id); err != nil {
+	if err := compose.DriveScheduledSendForTest(context.Background(), p.Pool, ws, id, compose.SendOrigin{PublicBaseURL: preflightBaseURL}); err != nil {
 		t.Fatalf("driving the scheduled-send timer: %v", err)
 	}
 }
@@ -492,7 +492,8 @@ func (p *preflightEnv) rowVersion(t *testing.T, id ids.UUID) int64 {
 // for a worker whose attempt failed and is now holding what it saw.
 func (p *preflightEnv) holdAs(t *testing.T, id ids.UUID, reason string, observed int64) error {
 	t.Helper()
-	return compose.HoldScheduledSendForTest(context.Background(), p.Pool, p.workspaceID(t), id, reason, observed)
+	return compose.HoldScheduledSendForTest(context.Background(), p.Pool, p.workspaceID(t), id, reason, observed,
+		compose.SendOrigin{PublicBaseURL: preflightBaseURL})
 }
 
 // runRecovery drives the recovery pass once, through the production worker on
@@ -500,7 +501,7 @@ func (p *preflightEnv) holdAs(t *testing.T, id ids.UUID, reason string, observed
 // and a helper that supplied one would prove only that the helper works.
 func (p *preflightEnv) runRecovery(t *testing.T) error {
 	t.Helper()
-	return compose.DriveScheduledSendRecoveryForTest(context.Background(), p.Pool)
+	return compose.DriveScheduledSendRecoveryForTest(context.Background(), p.Pool, compose.SendOrigin{PublicBaseURL: preflightBaseURL})
 }
 
 // releasedActivity reads the activity a fired scheduled send produced.
