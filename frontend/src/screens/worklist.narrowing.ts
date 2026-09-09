@@ -14,12 +14,18 @@ import type { Worklist, WorklistFilter } from "./worklist.queries";
  * The per-category figures a narrowing is measured over, or null where they
  * cannot express it.
  *
- * Here rather than beside `completenessText`, because the answer depends on the
- * vocabulary this file owns. The seven kinds are one category each and `all` is
- * all of them. The two link-only narrowings are neither: `except_decisions` is
- * every category but one, which these figures DO express, and
- * `changed_since_brief` cuts across them per row on a freshness the counts do
- * not carry — so it has no answer here and says so.
+ * The seven kinds are one category each and `all` is all of them. NEITHER
+ * link-only narrowing is a category, and neither can be assembled from these
+ * figures:
+ *
+ *   - `changed_since_brief` cuts across every category on a per-row freshness
+ *     the counts do not carry.
+ *   - `except_decisions` excludes by SOURCE — the rows a brief draws as cards
+ *     are the `approval` ones — and these figures are keyed by category. The
+ *     complement of the `decisions` CATEGORY is a near-miss, not the same set:
+ *     it drops an introduction request the server keeps. `reach` carries the
+ *     per-source figures, but summing it here would be a second copy of the
+ *     source-to-category map the contract says the browser must not hold.
  *
  * Null rather than an empty list, and the difference is the defect: an empty
  * list sums to zero considered, which every reader of these figures reads as a
@@ -36,16 +42,8 @@ export function countsUnder(
   if (filter === "all") {
     return day.counts;
   }
-  if (filter === "except_decisions") {
-    return day.counts.filter((count) => count.category !== "decisions");
-  }
-  if (filter === "changed_since_brief") {
+  if (filter === "except_decisions" || filter === "changed_since_brief") {
     return null;
   }
   return day.counts.filter((count) => count.category === filter);
 }
-
-// The ways a row can be put down, derived from the item rather than spelled
-// again: the contract declares them inline, and a hand-written union would go
-// stale the moment the server gained a fourth — silently, because nothing
-// compares the two.

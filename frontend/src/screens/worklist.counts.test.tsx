@@ -262,41 +262,30 @@ describe("what the page says about what it is not showing", () => {
     expect(unfiltered).toContain("5/35");
   });
 
-  // A narrowing that spans several categories still reports what it hid.
+  // The two link-only narrowings say NOTHING, and for one reason each.
   //
-  // `except_decisions` matches no single `count.category`, so the per-category
-  // lookup found nothing, summed zero considered, and returned null — a
-  // truncated page reporting itself complete. Reading the complement is the
-  // honest answer, because these figures CAN express it.
-  it("reports completeness for a narrowing that spans categories", () => {
+  // `changed_since_brief` cuts across every category on a per-row freshness the
+  // counts do not carry. `except_decisions` excludes by SOURCE — the approvals a
+  // brief draws as cards — and these figures are keyed by category, so the
+  // near-miss complement of the `decisions` category would undercount: it drops
+  // an introduction request, which is a decision and is not an approval, that
+  // the server keeps.
+  //
+  // Silence is the honest answer. The danger is silence arrived at by accident,
+  // which is what the per-category lookup produced before — it found nothing,
+  // summed zero considered, and reported a truncated page as complete.
+  it("says nothing where the counts cannot describe the narrowing", () => {
     const page = day([
-      { category: "tasks", considered: 30, shown: 5, more_available: false },
+      { category: "tasks", considered: 30, shown: 5, more_available: true },
       { category: "decisions", considered: 4, shown: 4, more_available: false },
     ]);
     const t = ((key: string, vars?: Record<string, string>) =>
       `${key}:${vars?.shown}/${vars?.considered}`) as never;
 
-    // Five of the thirty tasks are on screen; the four decisions are not part
-    // of this cut and contribute to neither figure.
-    expect(completenessText(page, "except_decisions", t, "en")).toContain(
-      "5/30",
-    );
-  });
-
-  // And the one these figures genuinely cannot answer says nothing.
-  //
-  // `changed_since_brief` cuts across every category on a per-row freshness the
-  // counts do not carry. Silence is correct; the danger is silence arrived at by
-  // accident, which is what an empty per-category lookup produced — and which
-  // would have started printing a wrong number the moment the arms changed.
-  it("says nothing where the counts cannot describe the narrowing", () => {
-    const page = day([
-      { category: "tasks", considered: 30, shown: 5, more_available: true },
-    ]);
-    const t = ((key: string, vars?: Record<string, string>) =>
-      `${key}:${vars?.shown}/${vars?.considered}`) as never;
-
     expect(completenessText(page, "changed_since_brief", t, "en")).toBeNull();
+    // Not "5/30" either: that is the category complement, which is a DIFFERENT
+    // population from the one the server returns.
+    expect(completenessText(page, "except_decisions", t, "en")).toBeNull();
     // The control: the same day, asked a question the counts DO answer, speaks.
     expect(completenessText(page, "tasks", t, "en")).not.toBeNull();
   });

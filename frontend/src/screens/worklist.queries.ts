@@ -29,7 +29,10 @@ export type WorklistScope = Worklist["scope"];
 export const UNASSIGNED: WorklistScope = "unassigned";
 export type WorklistFilter = NonNullable<Worklist["filter"]>;
 export type WorklistCategory = WorklistItem["category"];
-
+// The ways a row can be put down, derived from the item rather than spelled
+// again: the contract declares them inline, and a hand-written union would go
+// stale the moment the server gained a fourth — silently, because nothing
+// compares the two.
 export type WorklistDisposition = NonNullable<
   WorklistItem["dispositions"]
 >[number];

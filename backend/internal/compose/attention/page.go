@@ -79,11 +79,20 @@ func opensTheDeck(filter string) bool {
 }
 
 // The categories batchKeyOf can fold, and therefore the ones a reader can ask
-// to see inside. Derived from that function's own branches; the census beside
-// it fails if a category learns to fold without arriving here.
+// to see inside.
+//
+// A DELIBERATE SELECTION over the category enum, not a set that fell short of
+// it: the other five carry no fold, so a filter naming one has no group to open
+// and unfolding for it would skip a fold the unfiltered page applies.
+//
+// Spelled with the generated constants so the closed-vocabulary gate can read
+// it. Written with this package's own short aliases the set was INVISIBLE to
+// that gate — it recognises a vocabulary by its keys being contract constants —
+// which is the quiet half of this kind of drift: the map is checked by nothing
+// and reports no shortfall because nobody is counting.
 var foldableCategories = map[crmcontracts.WorklistItemCategory]bool{
-	categoryDecisions: true,
-	categorySystem:    true,
+	crmcontracts.WorklistItemCategoryDecisions: true,
+	crmcontracts.WorklistItemCategorySystem:    true,
 }
 
 // keepFiltered narrows the candidates to what one filter value asks for.
@@ -129,26 +138,22 @@ func keepsRow(row ranked, want crmcontracts.WorklistFilter) bool {
 // alreadyACard says whether a decisions-drawing surface has already answered a
 // row, so the complement above must leave it out.
 //
-// BY SOURCE, matching the client rule exactly. The browser's spelling is
-// `item.source !== "approval"` (frontend/src/screens/brief.sentence.ts), and the
-// obvious server-side reading — category `decisions` — is a WIDER set: an
-// introduction request classifies there and is not an approval, so a category
-// test dropped from the door a row the count had included. A count and a door
-// that exclude differently is the defect this filter exists to remove, so the
-// two sides spell one rule.
+// ONE test on the row's OWN source, matching the client exactly. The browser's
+// spelling is `item.source !== "approval"` (frontend/src/screens/brief.sentence.ts),
+// and the two obvious server-side readings are both wider:
 //
-// A folded group stands for its members and inherits their exclusion; a batch of
-// duplicate questions is drawn as a card exactly as its members would be.
+//   - Category `decisions` includes an introduction request, which is not an
+//     approval, so a category test dropped from the door a row the count kept.
+//   - Walking a folded group's members drops a batch of approvals, whose own
+//     source is `batch` — so the client keeps it and a members-walking server
+//     would not. "Contains an approval" and "is an approval" are different
+//     predicates, and only the second is the rule both sides run.
+//
+// A batch is therefore its own row here, which is also the honest reading: the
+// deck draws approvals, and a group of them is a different row than the ones it
+// stands for.
 func alreadyACard(row ranked) bool {
-	if row.item.Source == deckAnswers {
-		return true
-	}
-	for _, folded := range row.foldedFrom {
-		if folded == deckAnswers {
-			return true
-		}
-	}
-	return false
+	return row.item.Source == deckAnswers
 }
 
 // deckAnswers is the source a brief's decisions deck draws as cards.

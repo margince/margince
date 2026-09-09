@@ -234,17 +234,23 @@ func TestAnIntroductionRequestIsNotOneOfTheDecksCards(t *testing.T) {
 func TestAFoldedGroupReachesTheChangedPageThroughWorklist(t *testing.T) {
 	t.Parallel()
 
+	// MIXED freshness, and every variant this test must reject depends on it.
+	// The last firing is after the night; the earlier ones are before it, so the
+	// group's own sort moment — its OLDEST member — is stale. All-fresh members
+	// would pass against "oldest member decides", against "any member decides",
+	// and against filtering before folding, all three.
 	cutoff := readInstant.Add(-6 * time.Hour)
-	fired := cutoff.Add(time.Hour)
 	rule := ids.New[ids.AutomationKind]()
 	runs := make([]TroubledAutomationRun, 0, batchFloor)
 	for at := range batchFloor {
+		fired := cutoff.Add(-time.Hour)
+		if at == batchFloor-1 {
+			fired = cutoff.Add(time.Hour)
+		}
 		runs = append(runs, TroubledAutomationRun{
 			ID: ids.NewV7(), AutomationID: rule, Name: "Route new leads",
 			Outcome: "failed", Reason: "the assignee seat is gone",
-			// Spread, so the group's own sort moment is the OLDEST — the value
-			// a freshness rule reading `occurred` would wrongly judge it by.
-			OccurredAt: fired.Add(time.Duration(at) * time.Minute),
+			OccurredAt: fired,
 		})
 	}
 	svc := NewService(
@@ -272,10 +278,46 @@ func TestAFoldedGroupReachesTheChangedPageThroughWorklist(t *testing.T) {
 	if err != nil {
 		t.Fatalf("narrowed worklist: %v", err)
 	}
+	// ONE row, and which one matters. Filtering before folding would answer the
+	// single fresh MEMBER — a row with no batch — and judging the group by its
+	// oldest member would answer nothing at all.
 	if len(narrowed.Queue) != 1 {
 		t.Fatalf("the changed page holds %d rows, wanted the incident group: a "+
 			"minted row inherits no flag, so the group was dropped from a notice "+
 			"its members belonged in", len(narrowed.Queue))
+	}
+	if narrowed.Queue[0].Batch == nil {
+		t.Fatalf("the changed page answered row %q, which carries no batch: the "+
+			"narrowing ran before the fold, so it kept the member and never saw "+
+			"the group that replaced it", narrowed.Queue[0].Id)
+	}
+}
+
+// TestAGroupOfApprovalsIsNotItselfAnApproval holds the batch's own source.
+//
+// "Contains an approval" and "IS an approval" are different predicates, and the
+// client runs the second: it tests `item.source !== "approval"`, and a folded
+// group's source is `batch`, so the browser keeps it. A server walking the
+// group's members to find an approval inside would drop it — the same
+// count-and-door disagreement the filter exists to remove, moved one level down
+// into the fold.
+func TestAGroupOfApprovalsIsNotItselfAnApproval(t *testing.T) {
+	t.Parallel()
+
+	group := ranked{
+		item: crmcontracts.WorklistItem{
+			Id: "group", Source: "batch", Category: categoryDecisions,
+		},
+		foldedFrom: []crmcontracts.WorklistItemSource{"approval", "approval"},
+	}
+	loose := ranked{item: crmcontracts.WorklistItem{
+		Id: "loose", Source: "approval", Category: categoryDecisions,
+	}}
+
+	kept := keepFiltered([]ranked{group, loose}, filterExceptDecisions)
+	if ids := rankedIDs(kept); len(ids) != 1 || ids[0] != "group" {
+		t.Fatalf("kept %v, wanted the group and not the loose approval: the deck "+
+			"draws approvals, and a group of them is a different row", ids)
 	}
 }
 
@@ -356,31 +398,71 @@ func TestANamedCategoryStillFiltersByEquality(t *testing.T) {
 // change reintroduced the same defect for `system` by keying the unfold on
 // `decisions` alone.
 //
-// The census drives real rows through batchKeyOf rather than reading the map
-// back to itself, so it fails in the direction that matters: a category that
-// folds and is missing here.
+// The census PROBES batchKeyOf rather than reading foldableCategories back to
+// itself, and it probes every category with every shape the fold admits — so a
+// category that learns to fold tomorrow is visible here whether or not anybody
+// remembered this test. Under-recognition is the one direction a census must not
+// fail in: it reads a smaller subject, reports PASS, and leaves no assertion to
+// notice.
+//
+// The SET's completeness against the contract enum is held elsewhere, by
+// gates/contractvocabulary_test.go, which reads any map keyed on generated enum
+// constants. This holds the other half: that the set matches the fold.
 func TestEveryFoldableCategoryOpensItsOwnGroup(t *testing.T) {
 	t.Parallel()
 
-	routine := levelRoutine
-	dupe := ranked{item: crmcontracts.WorklistItem{
-		Category: categoryDecisions, Level: routine, Source: "dedupe_candidate",
-	}}
+	// Every shape the fold admits, from batchKeyOf's own branches: a duplicate
+	// pair, the two routine decision kinds, and a system incident with a cause.
+	// Each is tried under EVERY category, so the probe cannot miss a category
+	// that starts folding by reusing one of these shapes.
+	held, capture := kindHeldDraft, "capture_counterparty"
 	cause := "one-broken-rule"
-	incident := ranked{item: crmcontracts.WorklistItem{
-		Category: categorySystem, Source: "automation_run", CauseRef: &cause,
-	}}
+	shapes := []crmcontracts.WorklistItem{
+		{Level: levelRoutine, Source: "dedupe_candidate"},
+		{Level: levelRoutine, Source: "approval", Kind: &held},
+		{Level: levelRoutine, Source: "approval", Kind: &capture},
+		{Source: "automation_run", CauseRef: &cause},
+	}
 
-	for _, row := range []ranked{dupe, incident} {
-		if _, folds := batchKeyOf(row); !folds {
-			t.Fatalf("a %q row did not fold — the fixture no longer models the "+
-				"case this census is about", row.item.Category)
+	folds := map[crmcontracts.WorklistItemCategory]bool{}
+	for category := range everyCategory() {
+		for _, shape := range shapes {
+			row := ranked{item: shape}
+			row.item.Category = category
+			if _, ok := batchKeyOf(row); ok {
+				folds[category] = true
+			}
 		}
-		if !opensTheDeck(string(row.item.Category)) {
-			t.Fatalf("category %q folds but a filter naming it does not open the "+
-				"group: pressing Review on one of these rows returns the group "+
-				"the reader pressed it on", row.item.Category)
+	}
+
+	// The premise: the probe found SOMETHING. A shape vocabulary gone stale
+	// would report no foldable category and pass every check below.
+	if len(folds) == 0 {
+		t.Fatal("no category folded any probe shape — the shapes no longer model " +
+			"what batchKeyOf admits, so this census is reading nothing")
+	}
+	for category := range everyCategory() {
+		if folds[category] != opensTheDeck(string(category)) {
+			t.Fatalf("category %q folds=%v but a filter naming it opens=%v: a "+
+				"foldable category whose filter does not unfold returns the group "+
+				"the reader pressed Review on, and the reverse skips a fold the "+
+				"unfiltered page applies",
+				category, folds[category], opensTheDeck(string(category)))
 		}
+	}
+}
+
+// everyCategory is the contract's own vocabulary, which the classifiers assign
+// and gates/contractvocabulary_test.go holds complete.
+func everyCategory() map[crmcontracts.WorklistItemCategory]bool {
+	return map[crmcontracts.WorklistItemCategory]bool{
+		crmcontracts.WorklistItemCategoryCustomerWaiting: true,
+		crmcontracts.WorklistItemCategoryDealsAtRisk:     true,
+		crmcontracts.WorklistItemCategoryDecisions:       true,
+		crmcontracts.WorklistItemCategoryLeads:           true,
+		crmcontracts.WorklistItemCategoryMeetings:        true,
+		crmcontracts.WorklistItemCategorySystem:          true,
+		crmcontracts.WorklistItemCategoryTasks:           true,
 	}
 }
 

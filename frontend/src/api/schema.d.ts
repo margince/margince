@@ -45878,15 +45878,19 @@ export interface operations {
                  *     link lands on a different population is a number that lies about where it goes.
                  *
                  *     `except_decisions` is everything a decisions-drawing surface has NOT already
-                 *     answered. It is the complement of `decisions`, not a kind of work, and no
-                 *     single category spells it.
+                 *     answered: every row whose SOURCE is not `approval`. Not a kind of work, and
+                 *     deliberately not the complement of the `decisions` CATEGORY, which is a wider
+                 *     set — an introduction request classifies as a decision and is not an approval,
+                 *     so a category reading would drop a row the counting surface kept. A folded
+                 *     group's source is `batch` and it is kept, like any other row that is not
+                 *     itself an approval.
                  *
                  *     `changed_since_brief` is the rows whose material moment falls after the
                  *     overnight run's data cutoff — the same test that stamps each row's
-                 *     `changed_since_brief` flag — and, like the value above, not the decisions a
-                 *     brief already draws as cards. With no run to compare against it answers empty
-                 *     rather than everything: absent is not false, and a reader asking what changed
-                 *     since a night that never happened is owed nothing, not the whole queue.
+                 *     `changed_since_brief` flag — and, like the value above, not the rows a brief
+                 *     already draws as cards. With no run to compare against it answers empty rather
+                 *     than everything: absent is not false, and a reader asking what changed since a
+                 *     night that never happened is owed nothing, not the whole queue.
                  */
                 filter?: "all" | "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "system" | "except_decisions" | "changed_since_brief";
                 /** @description How many ranked items to return. */
