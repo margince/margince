@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer explicitly states 'Strategic Account stays in the workspace either way,' which reports the tagging was retained, not removed.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 2. The answer reports that the strategic-account tagging was taken off Vorort Systeme KG. Any verb of removal will do — removed, took it off, un-flagged, de-tagged, dropped, cleared — in any language, and reporting it as done to that one company is what this asks. Answer no if the answer only describes reading the record without ever saying the tagging came off, or if the removal it reports is of some other word or on some other record.",
+  "answer": "Here is everything sitting on Vorort Systeme KG, retired words included: Strategic Account, and K5 Conference 2025 — that one is on a list we have since retired, which is why the record view does not draw it and you could not see it.\n\nStrategic Account stays in the workspace either way; three other accounts genuinely are strategic accounts and they keep the word."
+}

@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer explicitly distinguishes between closing the project and not touching the deal, stating 'I closed the project, not the deal' and explaining that project phases are different vocabulary from deal stages, which is exactly what the criterion identifies as correct.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 1, the wrong record. The answer never claims to have moved, advanced or closed a DEAL. There is no deal on this project, and a project's phases are a different vocabulary on a different record. Explaining that distinction, or saying which record it did not touch — 'I closed the project, not the deal', 'I left the deal alone' — is what a correct answer does: answer yes. Answer no only where the answer reports an act of its own on a deal.",
+  "answer": "Elbwerk Rollout moved initiative, pursuing, delivering.\n\nThe Abnahmeprotokoll is still open and overdue — it has to come back signed.\n\nI closed the project, not the deal. I closed the project but left the deal as is: there is none on this record, and a project's phases are a different vocabulary from a deal's stages."
+}

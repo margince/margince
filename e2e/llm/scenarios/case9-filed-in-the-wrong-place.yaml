@@ -1,0 +1,122 @@
+# CASE 9 — Filed in the wrong place.
+#
+# Housekeeping: history that landed on the wrong record, and the two verbs that
+# put it right. Nothing in the lane has ever re-associated anything, and the way
+# this goes wrong is not a bad sentence — it is a duplicate. An assistant that
+# reaches for log_activity here writes the mail a SECOND time onto the right
+# company and leaves the first where it was, so the timeline now shows two
+# events that were one, and the wrong company still shows it.
+#
+# TWO ASKS IN ONE CASE, deliberately, and this is the only place in the lane
+# where a prompt carries two clean-ups. Each run costs a stack boot and three of
+# them are paid twice over for the two models, so a second case whose whole
+# difference from this one is the NUMBER of activities being moved is not worth
+# what it costs. They stay legible as two: the halves name different companies
+# and check.py reports per-assertion, so a failure says which half broke.
+#
+# WHY BOTH VERBS ARE REQUIRED rather than one of them twice. relink_activity
+# moves one message; relink_activities moves up to 500 named ones ALL OR
+# NOTHING, and the prompt asks for that atomicity in the person's own words
+# ("all three or none"). Three separate single moves are three transactions, of
+# which the second can fail with the first already applied — which is the thing
+# the person said they did not want.
+#
+# THE KNOWN SOFT SPOT, stated because a scenario that hides one is worse than
+# one that has none: relink_activities carries replace_existing_of_type too, so
+# a run that moves the single mail with relink_activities has achieved the
+# person's outcome and will be scored a failure here. If that shape turns up in
+# a sweep, the honest fix is to say so in the report, not to widen must_call
+# until the case tests nothing.
+name: case9_filed_in_the_wrong_place
+criteria: [1, 2, 3]
+
+# WRITES: the author's own statement that this case changes the world. It is not
+# what decides the reset — the runner rebuilds whenever the LAST run dirtied the
+# world, because the assistant is offered the whole server and any run can write
+# regardless of what its file says. TestEveryWritingScenarioDeclaresThatItWrites
+# holds this line against the tools the case names.
+writes: true
+
+prompt: |
+  Two things got filed wrong this morning, can you sort them out.
+
+  The mail about the Wartungsvertrag is sitting on Rheinufer AG and it has
+  nothing to do with them — that one is Dom Digital's. Get it off Rheinufer
+  completely, it should not turn up on their timeline any more.
+
+  And the three mails that ended up on Vorort Systeme KG are all Aachener
+  Metallwerke's. Move all three across in one go — all three or none, I do not
+  want half of them landing.
+
+must_call:
+  - relink_activity
+  - relink_activities
+may_call:
+  # Finding the four activities is the assistant's own problem and more than one
+  # route answers it: the full-text search, the company's own timeline, or a
+  # list scoped to the record. None of them is the test, so none is required.
+  - search_context
+  - search_records
+  - read_record
+  - list_records
+  - query_workspace
+  - catch_me_up_on
+
+# THE PLAN, NOT JUST THE VERB. Both verbs default to ADDING the new link beside
+# the existing one, and the person asked for none of the mails to stay
+# where they are — "get it off Rheinufer", "move all three across". A run that
+# associates rather than moves leaves the wrong company still showing the
+# history, which is half the defect being fixed and reads as a pass on the tool
+# name alone.
+#
+# entity_type is pinned on the batch because the destination TYPE is the one
+# argument a wrong plan gets wrong in a way nothing else here would notice: a
+# project destination is not a company, it is a write-once retention mark that
+# needs a human, and it is not what was asked for.
+#
+# The ids and the destination id are uuids minted by the seed, so they cannot be
+# compared against anything a scenario file can hold; the destinations are named
+# in the prose assertions instead.
+must_call_with:
+  - relink_activity.replace_existing_of_type=true
+  - relink_activities.replace_existing_of_type=true
+  - relink_activities.entity_type=organization
+
+must_mention:
+  # Criterion 1 and 2: it says where each thing went. Both destinations, because
+  # an answer naming one has done half the job and the other half silently.
+  - "Dom Digital"
+  - "Aachener"
+  # The batch is reported as a batch. relink_activities answers with the count it
+  # moved, and a person who asked for all-or-nothing is owed the number.
+  #
+  # THE NUMBER HAS TO BE COUNTING SOMETHING. A bare "3|three|drei" is satisfied
+  # by "on 3 March", by a record id and by any other digit the prose happens to
+  # carry — a green tick for an answer that never reported a count at all, and
+  # nothing failing to say so. So the three either sits on the noun it counts
+  # ("three activities", "3 emails") or is reached from the verb as "all three".
+  # One word may stand between the two, because the seeded calls are "Rückruf …"
+  # and a real answer writes "the three Rückruf calls" — one word, and not a
+  # month, which is what keeps "3 March 2025" out. "3 moved, 0 failed" is the
+  # other shape a batch report takes.
+  - "\b(?:3|three|drei)\s+(?:(?!Jan|Feb|Mar|Apr|Ma[iy]|Jun|Jul|Aug|Sep|O[kc]t|Nov|De[czs])[\w-]+\s+){0,1}(?:activit\w*|e-?mails?|mails?|messages?|calls?|items?|records?|entries|Aktivit\w+|Anrufe?|Rückrufe?)|\b(?:3|three|drei)\s+(?:mov\w*|re-?link\w*|re-?fil\w*|transferr?\w*)|(?:mov\w*|re-?link\w*|re-?fil\w*|transferr?\w*)[^\n]{0,25}\ball (?:3|three|drei)\b|\ball (?:3|three|drei)\b[^\n]{0,30}(?:mov\w*|re-?link\w*|re-?fil\w*|transferr?\w*)"
+
+must_not_mention:
+  # CRITERION 3, and the failure this case exists for: re-writing history instead
+  # of re-filing it. log_activity is the neighbouring verb and it is the wrong
+  # one here — it records something not recorded yet, and everything here is
+  # already recorded.
+  #
+  # Shaped to fire only on the CLAIM. "I have not created a new activity" is a
+  # true sentence a careful answer may write, and it does not match: the verb
+  # follows the pronoun directly, so an intervening "not" breaks the run.
+  - "(?:I|I've|I have|we|we've) (?:logged|created|added|re-?created|re-?logged) (?:a |the )?(?:new|fresh|duplicate|second|copy of)[^\n]{0,20}(?:activity|note|e-?mail|call|entry|record)|(?:I|I've|I have|we|we've) re-?(?:created|logged|entered|added)[^\n]{0,20}(?:activit|note|e-?mail|call|entr|record)"
+  # And the false limitation. Re-association is exactly what these verbs are for,
+  # so an answer that reports the CRM cannot do it — or sends the person to the
+  # app for it — is a confident wrong answer about the product, which is worse
+  # than no answer. Anchored to an object of the verb, because "cannot move" on
+  # its own is a sentence about a deal stage or a meeting.
+  - "(?:cannot|can not|can't|unable to|no way to)[^\n]{0,20}(?:re-?link|re-?associate|re-?file|re-?assign|move)[^\n]{0,30}(?:activit|mail|message|call|timeline)|(?:re-?link|re-?file|move)[^\n]{0,30}(?:has to|have to|would have to|must) be done (?:by hand |manually )?in the (?:web )?app"
+
+runs: 3
+pass_at: 2

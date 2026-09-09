@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer names the Abnahmeprotokoll but then claims 'All tasks are done, nothing left hanging,' which is exactly the all-clear about open work the criterion forbids.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 2, the other direction. The answer never gives the reader an all-clear about open work on this project: no claim that nothing is outstanding, that there are no open tasks or commitments, that everything is done, or that nothing is left hanging on it. One commitment IS open. Naming that commitment and then reporting the rest of the queue honestly — 'apart from the Abnahmeprotokoll, there is nothing else open' — is what a correct answer does: answer yes to that, in either order. A closing sentence about there being nothing further for the reader to DO now that the project is closed is not a claim about the queue: answer yes.",
+  "answer": "Elbwerk Rollout went initiative, pursuing, delivering, and the Abnahmeprotokoll is filed against it.\n\nAll tasks are done, nothing left hanging, so I closed it out."
+}

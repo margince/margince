@@ -62,7 +62,7 @@ MINIO_PORT ?= 29000
 # answer lands in its own assignment so `set -e` sees the refusal — a helper
 # called inside another command's argument would fail unnoticed.
 
-.PHONY: help install dev-fresh check check-all check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-clock-drift fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows fitness-jurisdiction storybook fe-uat craft-static craft-test craft-residue check-craft-doc test-golangci-guard test-scheduled-report test-ci-verdict test-merge-verdict test-review-coverage test-laneorder secret-scan test-secret-scan test-sbom-sign test-dev-dsn test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations check-extension-modules contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze changelog-sections test-changelog-sections test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check sbom-gate
+.PHONY: help install dev-fresh check check-all check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-clock-drift fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows fitness-jurisdiction storybook fe-uat craft-static craft-test craft-residue check-craft-doc test-golangci-guard test-scheduled-report test-ci-verdict test-merge-verdict test-review-coverage test-laneorder secret-scan test-secret-scan test-sbom-sign test-dev-dsn test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations check-extension-modules contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze changelog-sections test-changelog-sections test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check sbom-gate
 
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
@@ -673,9 +673,37 @@ E2E_SHOT_DIR ?= /tmp/e2e-company
 ## bad run is the weather and two is a defect. Never touches :8080; it boots,
 ## seeds and tears down its own DEV_SLUG stack.
 ## SCENARIO=<name> runs one. E2E_LLM_KEEP=1 leaves the stack up.
+##
+## HALF THE JUDGING IS A MODEL. A scenario's mechanical assertions are regexes —
+## does the answer carry this name, this date, this count; its `judge:` criteria
+## are sentences a person can read, decided per run by a pinned model, because
+## the regexes that used to carry them scored 15% and 20% of CORRECT answers as
+## failures on two paid sweeps. That costs a few extra calls per run, and a lane
+## whose judge cannot be reached STOPS rather than scoring: E2E_LLM_JUDGE
+## defaults to `live` here and has no default anywhere else.
 e2e-llm: SHELL := /bin/bash
 e2e-llm:
 	@bash scripts/e2e-llm.sh
+
+## e2e-llm-guards — put the SCENARIOS' regex guards on trial rather than the
+## product. A real model writes answers a good assistant would give and answers
+## carrying the defect the scenario forbids, and e2e/llm/probe.py judges every
+## one of them through check.check itself — so a pattern that reds a correct
+## answer, or misses the defect it exists for, is named instead of waiting for
+## the next reviewer to construct the sentence by hand.
+##
+## COSTS MONEY and is opt-in: MARGINCE_E2E_LLM_GUARDS=1 make e2e-llm-guards.
+## Needs no stack. SCENARIO=<name> audits one, E2E_LLM_GUARDS_COUNT=<n> asks for
+## more answers, E2E_LLM_GUARDS_OUT=<dir> keeps the candidates.
+## The findings are for a HUMAN to judge: a model asked for a correct answer can
+## write an incorrect one, so nothing here ever rewrites a pattern.
+## To judge sentences you wrote yourself, no model and no opt-in are needed:
+##   python3 e2e/llm/probe.py <scenario.yaml> --expect correct "<answer>"
+## A scenario's judged criteria are audited too, at one model call each per
+## candidate; E2E_LLM_JUDGE=replay:<dir> audits only the patterns.
+e2e-llm-guards: SHELL := /bin/bash
+e2e-llm-guards:
+	@bash scripts/e2e-llm-guards.sh
 
 e2e-company: SHELL := /bin/bash
 e2e-company:
@@ -1023,7 +1051,10 @@ rls-store-path:
 
 ## test-e2e-llm-check — prove the e2e-llm checker tells a failed use case apart
 ## from a run that never reached the model: a refused credential is named as
-## one, and a genuinely bad answer is still a finding.
+## one, and a genuinely bad answer is still a finding. It also holds the judged
+## half offline, against verdicts a real judge gave the committed fixtures: a
+## judge that agreed with everything fails 22 of these cases, and a judge that
+## cannot be reached is a stop rather than a pass.
 test-e2e-llm-check:
 	@./scripts/test-e2e-llm-check.sh
 

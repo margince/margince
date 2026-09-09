@@ -1,0 +1,18 @@
+{
+  "model": "claude-sonnet-5",
+  "ground_truth": "human-authored fixtures in e2e/llm/testdata/<case>/, labelled by scripts/test-e2e-llm-check.sh",
+  "suite_exit": 1,
+  "cases_passed": 132,
+  "cases_failed": 7,
+  "judged_fixtures_passed": 107,
+  "judged_fixtures_failed": 6,
+  "failures": [
+    "case6/adopts-october",
+    "case6/invents-a-second-october-event",
+    "case6/implies-an-october-recurrence",
+    "case6/invents-october-as-a-possessive",
+    "judge/a verdict from another model is a stop",
+    "case22/claims-everything-is-synced",
+    "case31/reports-the-record-as-clean"
+  ]
+}

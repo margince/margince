@@ -1,0 +1,18 @@
+{
+  "scenario": "case30_a_word_for_it",
+  "criteria": [
+    1,
+    2
+  ],
+  "passed": 3,
+  "runs": 3,
+  "pass_at": 2,
+  "usage": {
+    "input_tokens": 102,
+    "output_tokens": 6242,
+    "cache_creation_input_tokens": 27347,
+    "cache_read_input_tokens": 530268,
+    "runs_measured": 3,
+    "cost_usd": 0.139
+  }
+}
