@@ -42,12 +42,26 @@ RECORDS = os.path.join(
 # that says the judge was scored against fixtures.
 JUDGED = re.compile(r"^case\d+/")
 
+# The model id becomes a file name under RECORDS, so it is checked before it is
+# joined rather than trusted because a person typed it. This script is driven by
+# agents that assemble their own argument list, and `os.path.join` with a value
+# carrying a separator writes wherever the caller pointed it — the one directory
+# this script owns is the only place its record belongs.
+MODEL_ID = re.compile(r"\A[A-Za-z0-9][A-Za-z0-9._-]*\Z")
+
 
 def main():
     if len(sys.argv) != 2:
         print(__doc__.strip().splitlines()[-3].strip(), file=sys.stderr)
         return 2
     model = sys.argv[1]
+    if not MODEL_ID.match(model):
+        print(
+            f"not a model id: {model!r} — expected something like "
+            "claude-haiku-4-5-20251001",
+            file=sys.stderr,
+        )
+        return 2
     done = subprocess.run(
         [os.path.join(ROOT, "scripts", "test-e2e-llm-check.sh")],
         capture_output=True,

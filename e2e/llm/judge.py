@@ -131,7 +131,13 @@ def _fenced(criterion, answer):
     )
 
 
-_FENCE = re.compile(r"^```(?:json)?\s*|\s*```$", re.MULTILINE)
+# The two fences, matched separately and each anchored to one end of the reply.
+# One alternation over `\s*` read the same and was two defects: neither branch
+# was anchored, so the engine retried its whitespace run from every position in
+# the reply, and nothing said which branch owned a run of blank lines between
+# them.
+_OPEN_FENCE = re.compile(r"\A```(?:json)?[^\S\n]*\n?")
+_CLOSE_FENCE = re.compile(r"\n?[^\S\n]*```\Z")
 
 
 def parse_verdict(text):
@@ -143,7 +149,8 @@ def parse_verdict(text):
     latitude is a markdown fence, which is what a fenced reply actually looks
     like when a model ignores the instruction not to write one.
     """
-    stripped = _FENCE.sub("", text).strip()
+    unfenced = _OPEN_FENCE.sub("", text.strip())
+    stripped = _CLOSE_FENCE.sub("", unfenced).strip()
     try:
         reply = json.loads(stripped)
     except json.JSONDecodeError as err:
